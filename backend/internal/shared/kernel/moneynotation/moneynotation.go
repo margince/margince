@@ -16,7 +16,13 @@ import (
 // marks: 12,345.00 in English, 12.345,00 in German and Vietnamese. The digits
 // come from values.MajorUnits, so no float ever rounds the amount.
 func Grouped(amountMinor int64, currency string, lang textlang.Lang) string {
-	whole, fraction, decimal := strings.Cut(values.MajorUnits(amountMinor, currency), ".")
+	return GroupedDecimal(values.MajorUnits(amountMinor, currency), lang)
+}
+
+// GroupedDecimal writes a plain decimal such as "-1234567.891" with the
+// language's thousands and decimal marks, as Grouped writes money.
+func GroupedDecimal(plain string, lang textlang.Lang) string {
+	whole, fraction, decimal := strings.Cut(plain, ".")
 	sign := ""
 	if strings.HasPrefix(whole, "-") {
 		sign, whole = "-", whole[1:]

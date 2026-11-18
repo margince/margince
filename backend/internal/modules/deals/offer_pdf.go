@@ -24,12 +24,11 @@ import (
 	"bytes"
 	"fmt"
 	"strconv"
-	"strings"
 
 	"github.com/go-pdf/fpdf"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/platform/mailcopy"
 )
 
 // The template layout keys the renderer prints, spelled as the offer-template
@@ -75,18 +74,17 @@ type pdfLabels struct {
 	lineTotal  string
 	units      map[string]string
 	validUntil string
-	dateLayout string
-	// The document's number separators, and its page footer with %d for the
-	// page and %s for the page count.
-	decimalSep string
-	groupSep   string
-	page       string
+	// The page footer, with %d for the page and %s for the page count.
+	page string
+	// The document language's number separators and date layout.
+	format mailcopy.Copy
 }
 
 // resolvePDFLabels maps a locale to its label set. A German locale gets German
 // labels, and so does "", which languageOfLocale reads as German. Every other
 // language gets English.
 func resolvePDFLabels(locale string) pdfLabels {
+	format := mailcopy.For(languageOfLocale(locale))
 	if languageOfLocale(locale) == languageOfLocale(defaultOfferTemplateLocale) {
 		return pdfLabels{
 			title:     "Angebot",
@@ -115,10 +113,8 @@ func resolvePDFLabels(locale string) pdfLabels {
 				unitPiece: "Stk.", unitHour: "Std.", unitDay: "Tag(e)", unitMonth: "Monat(e)", unitFlatFee: "pauschal",
 			},
 			validUntil: "Gültig bis",
-			dateLayout: "02.01.2006",
-			decimalSep: ",",
-			groupSep:   ".",
 			page:       "Seite %d von %s",
+			format:     format,
 		}
 	}
 	return pdfLabels{
@@ -148,10 +144,8 @@ func resolvePDFLabels(locale string) pdfLabels {
 			unitPiece: "pc.", unitHour: "h", unitDay: "day(s)", unitMonth: "month(s)", unitFlatFee: "flat fee",
 		},
 		validUntil: "Valid until",
-		dateLayout: "2 January 2006",
-		decimalSep: ".",
-		groupSep:   ",",
 		page:       "Page %d of %s",
+		format:     format,
 	}
 }
 
@@ -160,43 +154,21 @@ func resolvePDFLabels(locale string) pdfLabels {
 // itself (offer_totals.go) never touches a float, and this function never
 // re-derives the amount it formats.
 //
-// The decimal placement is values.MajorUnits' and not this file's, because the
+// Money takes the decimal placement from values.MajorUnits, because the
 // PDF is the document a buyer receives and signs. A hard-coded /100 states an
 // offer priced in VND, JPY or KRW at a hundredth of its value — those
 // currencies have no minor unit, so their integer IS the amount — and states
 // a KWD offer at a hundred times, since a dinar has three.
 func pdfFormatMinor(minor int64, currency string, labels pdfLabels) string {
-	return pdfLocalizeNumber(values.MajorUnits(minor, currency), labels) + " " + currency
+	return labels.format.Money(minor, currency)
 }
 
 func pdfFormatQuantity(quantity float64, labels pdfLabels) string {
-	return pdfLocalizeNumber(strconv.FormatFloat(quantity, 'f', -1, 64), labels)
+	return labels.format.Number(strconv.FormatFloat(quantity, 'f', -1, 64))
 }
 
 func pdfFormatPercent(pct float64, labels pdfLabels) string {
-	return pdfLocalizeNumber(strconv.FormatFloat(pct, 'f', -1, 64), labels) + " %"
-}
-
-// pdfLocalizeNumber writes a plain decimal such as "-1234567.891" with the
-// document's group and decimal separators.
-func pdfLocalizeNumber(plain string, labels pdfLabels) string {
-	sign, digits := "", plain
-	if rest, ok := strings.CutPrefix(plain, "-"); ok {
-		sign, digits = "-", rest
-	}
-	whole, fraction, hasFraction := strings.Cut(digits, ".")
-	var out strings.Builder
-	out.WriteString(sign)
-	for i, digit := range whole {
-		if i > 0 && (len(whole)-i)%3 == 0 {
-			out.WriteString(labels.groupSep)
-		}
-		out.WriteRune(digit)
-	}
-	if hasFraction {
-		out.WriteString(labels.decimalSep + fraction)
-	}
-	return out.String()
+	return labels.format.Number(strconv.FormatFloat(pct, 'f', -1, 64)) + " %"
 }
 
 // pdfOfferText reads one of the offer's own optional texts; null and an
@@ -249,7 +221,7 @@ func writeOfferPDFHeader(pdf *fpdf.Fpdf, tr pdfTranslator, o crmcontracts.Offer,
 	pdf.Cell(0, 6, tr(labels.revision+" "+strconv.Itoa(revision)))
 	pdf.Ln(7)
 	if o.ValidUntil != nil {
-		pdf.Cell(0, 6, tr(labels.validUntil+": "+o.ValidUntil.Format(labels.dateLayout)))
+		pdf.Cell(0, 6, tr(labels.validUntil+": "+labels.format.Date(o.ValidUntil.Time)))
 		pdf.Ln(7)
 	}
 	pdf.Cell(0, 6, tr(labels.issuer+": "+issuer.Name))

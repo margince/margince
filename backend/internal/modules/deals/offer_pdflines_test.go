@@ -59,7 +59,7 @@ func TestRenderOfferPDF_AnUngroundedLinePrintsNoAmount(t *testing.T) {
 func TestRenderOfferPDF_PrintsValidUntil(t *testing.T) {
 	o := testRenderOffer(100000, 19000, 119000)
 	o.ValidUntil = &openapi_types.Date{Time: time.Date(2026, time.December, 31, 0, 0, 0, 0, time.UTC)}
-	for locale, want := range map[string]string{"de-DE": "Gültig bis: 31.12.2026", "en": "Valid until: 31 December 2026"} {
+	for locale, want := range map[string]string{"de-DE": "Gültig bis: 31.12.2026", "en": "Valid until: 31 Dec 2026", "vi": "Valid until: 31/12/2026"} {
 		pdf, err := RenderOfferPDF(o, testRenderLines(), nil, issuedBy("Margince GmbH"), locale, nil)
 		if err != nil {
 			t.Fatal(err)
@@ -120,6 +120,7 @@ func TestRenderOfferPDF_FormatsNumbersForTheDocumentsLanguage(t *testing.T) {
 	for locale, want := range map[string][]string{
 		"de-DE": {"1.234.567,891 x 3.938 JPY", "Nettobetrag: 3.938 JPY"},
 		"en":    {"1,234,567.891 x 3,938 JPY", "Net: 3,938 JPY"},
+		"vi":    {"1.234.567,891 x 3.938 JPY", "Net: 3.938 JPY"},
 	} {
 		pdf, err := RenderOfferPDF(o, []crmcontracts.OfferLineItem{line}, nil, issuedBy("Margince GmbH"), locale, nil)
 		if err != nil {
@@ -130,17 +131,6 @@ func TestRenderOfferPDF_FormatsNumbersForTheDocumentsLanguage(t *testing.T) {
 			if !strings.Contains(drawn, needle) {
 				t.Errorf("%s: the PDF must print %q:\n%s", locale, needle, drawn)
 			}
-		}
-	}
-}
-
-func TestPDFLocalizeNumber(t *testing.T) {
-	german := resolvePDFLabels("de-DE")
-	for plain, want := range map[string]string{
-		"0": "0", "999": "999", "1000": "1.000", "-1234567.891": "-1.234.567,891", "12.5": "12,5",
-	} {
-		if got := pdfLocalizeNumber(plain, german); got != want {
-			t.Errorf("pdfLocalizeNumber(%q) = %q, want %q", plain, got, want)
 		}
 	}
 }
