@@ -76,7 +76,8 @@ export type MeetingOutcomeWrite = {
   // Without it, two readers answering one meeting both succeed, and the
   // later one wins with no warning.
   version: number | undefined;
-  status: "held" | "no_show" | "canceled" | "booked";
+  // `null` takes the status back off, which a meeting that never had one needs.
+  status: "held" | "no_show" | "canceled" | "booked" | null;
   followUpTask?: components["schemas"]["ActivityFollowUpTask"];
   dealFiling?: components["schemas"]["ActivityDealFiling"];
   // Each sent only when given, so an answer alone never touches the notes.
@@ -119,6 +120,14 @@ export async function writeMeetingOutcome(
     }),
     t,
   );
+}
+
+/** The status a meeting holds now, so a cancel can be taken back to exactly it. */
+export async function readMeetingStatus(id: string): Promise<"booked" | null> {
+  const { data } = await api.GET("/activities/{id}", {
+    params: { path: { id } },
+  });
+  return data?.meeting_status === "booked" ? "booked" : null;
 }
 
 /**

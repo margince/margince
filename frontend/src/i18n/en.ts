@@ -7904,6 +7904,8 @@ export const en = {
   "compose.savedDraftDelete": "Delete",
   "compose.savedDraftDeleted": "Saved draft deleted",
   "compose.savedDraftRestored": "Saved draft restored",
+  "compose.savedDraftUndoSent":
+    "The message was sent, so its draft stays deleted.",
   "compose.savedDraftRemove": "Delete saved draft",
   "compose.savedDraftByAgent": "Agent draft restored. Read it before sending.",
   "compose.waitingDraftTitle": "Draft waiting",

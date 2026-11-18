@@ -474,6 +474,171 @@ describe("a saved draft", () => {
     );
   });
 
+  describe("Undo after a delete", () => {
+    function hookFor(onRestore: (fields: unknown) => void) {
+      const client = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      });
+      return renderHook(
+        (props: { entityId: string; open: boolean }) =>
+          useSavedDraft({
+            where: {
+              answering: undefined,
+              entityType: "contact",
+              entityId: props.entityId,
+              isChannelReply: false,
+            },
+            open: props.open,
+            fields: {
+              to: [],
+              cc: [],
+              bcc: [],
+              subject: "",
+              body: "",
+              html: "",
+              files: [],
+              context: "",
+              sendAt: "",
+            },
+            replyTo: undefined,
+            offeredRecipient: undefined,
+            onRestore,
+            onClose: () => {},
+          }),
+        {
+          initialProps: { entityId: "p-1", open: true },
+          wrapper: ({ children }) => (
+            <QueryClientProvider client={client}>
+              <LocaleProvider initial="en">
+                <ToastProvider>
+                  {children}
+                  <ToastRegion />
+                </ToastProvider>
+              </LocaleProvider>
+            </QueryClientProvider>
+          ),
+        },
+      );
+    }
+    const routes = (extra: Record<string, Route> = {}) =>
+      stubRoutes({
+        "GET /mail-drafts": () => jsonResponse(SAVED),
+        "DELETE /mail-drafts/md-1": () => new Response(null, { status: 204 }),
+        "PUT /mail-drafts": () => jsonResponse({ ...SAVED, id: "md-2" }),
+        ...extra,
+      });
+    const deleteThenUndo = async (
+      hook: ReturnType<typeof hookFor>,
+      between: () => void = () => {},
+    ) => {
+      await waitFor(() => expect(hook.result.current.held).not.toBeNull());
+      act(() => hook.result.current.remove());
+      await screen.findByText("Saved draft deleted");
+      between();
+      await userEvent.click(screen.getByRole("button", { name: "Undo" }));
+    };
+
+    it("puts the server's answer on screen while the composer is still on that record", async () => {
+      const restored = vi.fn();
+      const sent = routes({
+        "PUT /mail-drafts": () =>
+          jsonResponse({ ...SAVED, id: "md-2", attachments: [] }),
+      });
+      const hook = hookFor(restored);
+      await waitFor(() => expect(hook.result.current.held).not.toBeNull());
+      restored.mockClear();
+      act(() => hook.result.current.remove());
+      await screen.findByText("Saved draft deleted");
+      await userEvent.click(screen.getByRole("button", { name: "Undo" }));
+
+      await waitFor(() =>
+        expect(restored).toHaveBeenLastCalledWith(
+          expect.objectContaining({
+            subject: "Pricing for 40 seats",
+            files: [],
+          }),
+        ),
+      );
+      expect(calls(sent, "PUT /mail-drafts")).toHaveLength(1);
+    });
+
+    it("leaves a file the server dropped off the restored words", async () => {
+      const restored = vi.fn();
+      routes({
+        "GET /mail-drafts": () =>
+          jsonResponse({
+            ...SAVED,
+            attachments: [{ id: "f-1", filename: "a.pdf", byte_size: 10 }],
+          }),
+        "PUT /mail-drafts": () =>
+          jsonResponse({ ...SAVED, id: "md-2", attachments: [] }),
+      });
+      const hook = hookFor(restored);
+      await deleteThenUndo(hook);
+
+      await waitFor(() =>
+        expect(restored).toHaveBeenLastCalledWith(
+          expect.objectContaining({ files: [] }),
+        ),
+      );
+    });
+
+    it("writes the draft back but injects nothing once the composer moved to another record", async () => {
+      const restored = vi.fn();
+      let reads = 0;
+      const sent = routes({
+        "GET /mail-drafts": () =>
+          reads++ === 0 ? jsonResponse(SAVED) : problem("not_found", 404),
+      });
+      const hook = hookFor(restored);
+      await deleteThenUndo(hook, () => {
+        hook.rerender({ entityId: "p-2", open: true });
+        restored.mockClear();
+      });
+
+      await waitFor(() =>
+        expect(calls(sent, "PUT /mail-drafts")).toHaveLength(1),
+      );
+      expect(calls(sent, "PUT /mail-drafts")[0]?.body).toMatchObject({
+        anchor_id: "p-1",
+      });
+      expect(restored).not.toHaveBeenCalled();
+    });
+
+    it("injects nothing into a composer that was closed", async () => {
+      const restored = vi.fn();
+      const sent = routes();
+      const hook = hookFor(restored);
+      await deleteThenUndo(hook, () => {
+        hook.rerender({ entityId: "p-1", open: false });
+        restored.mockClear();
+      });
+
+      await waitFor(() =>
+        expect(calls(sent, "PUT /mail-drafts")).toHaveLength(1),
+      );
+      expect(restored).not.toHaveBeenCalled();
+    });
+
+    it("does not bring a draft back after a send", async () => {
+      const restored = vi.fn();
+      const sent = routes();
+      const hook = hookFor(restored);
+      await deleteThenUndo(hook, () => {
+        act(() => hook.result.current.sent());
+        restored.mockClear();
+      });
+
+      expect(
+        await screen.findByText(
+          "The message was sent, so its draft stays deleted.",
+        ),
+      ).toBeTruthy();
+      expect(calls(sent, "PUT /mail-drafts")).toHaveLength(0);
+      expect(restored).not.toHaveBeenCalled();
+    });
+  });
+
   it("is deleted from the restored notice, and the fields empty", async () => {
     const sent = stubRoutes({
       "GET /mail-drafts": () => jsonResponse(SAVED),

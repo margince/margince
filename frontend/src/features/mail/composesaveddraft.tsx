@@ -109,7 +109,7 @@ function deleteFromToast(input: {
   id: string;
   t: ReturnType<typeof useT>;
   fields: SavedDraftFields;
-  sends: number;
+  where: DeletedFrom;
   onDeleted: () => void;
   onRestored: (fields: SavedDraftFields) => void;
 }) {
@@ -130,26 +130,42 @@ function deleteFromToast(input: {
   );
 }
 
+/** Where the composer stands now, so an Undo can tell whether its words still belong on screen. */
+type DeletedFrom = Readonly<{
+  sends: number;
+  now: () => Readonly<{ sends: number; here: boolean }>;
+}>;
+
 // A new draft with the same words: the server keeps no copy of a deleted one.
 // A draft written meanwhile refuses this as a conflict, which the toast names.
+// A send since the delete retired the draft for good, so nothing is written;
+// a composer that closed or moved to another record gets the draft on the
+// server only, never its words.
 function restoreDeleted(input: {
   queryClient: QueryClient;
   toast: Toast;
   t: ReturnType<typeof useT>;
   anchor: SavedDraftAnchor;
   fields: SavedDraftFields;
-  sends: number;
+  where: DeletedFrom;
   onRestored: (fields: SavedDraftFields) => void;
 }) {
+  const before = input.where.now();
+  if (before.sends !== input.where.sends) {
+    input.toast.show(input.t("compose.savedDraftUndoSent"), { tone: "danger" });
+    return;
+  }
   writeDraft({
     anchor: input.anchor,
     fields: input.fields,
     version: undefined,
-    sends: input.sends,
+    sends: input.where.sends,
   }).then(
     (saved) => {
+      const after = input.where.now();
+      if (after.sends !== input.where.sends) return;
       input.queryClient.setQueryData(draftKey(input.anchor), saved);
-      input.onRestored(input.fields);
+      if (after.here) input.onRestored(fieldsOfDraft(saved));
       input.toast.show(input.t("compose.savedDraftRestored"));
     },
     (error: unknown) =>
@@ -209,6 +225,19 @@ export function useSavedDraft(input: {
   // so the "Draft saved" toast, if it is still up, has said its piece.
   const savedToast = useOwnToast();
   const sends = useRef(0);
+  const anchorText = (a: SavedDraftAnchor | null) =>
+    a ? `${a.type}:${a.id}` : "";
+  const standing = useRef({ anchor: anchorText(anchor), open });
+  useEffect(() => {
+    standing.current = { anchor: anchorText(anchor), open };
+  });
+  const deletedFrom = (at: SavedDraftAnchor | null): DeletedFrom => ({
+    sends: sends.current,
+    now: () => ({
+      sends: sends.current,
+      here: standing.current.open && standing.current.anchor === anchorText(at),
+    }),
+  });
   useEffect(() => {
     if (open) savedToast.withdraw();
   }, [open, savedToast]);
@@ -274,7 +303,7 @@ export function useSavedDraft(input: {
               id: saved.id,
               t,
               fields: ask.fields,
-              sends: sends.current,
+              where: deletedFrom(ask.anchor),
               onDeleted: onCleared,
               onRestored: onRestore,
             });
@@ -313,6 +342,7 @@ export function useSavedDraft(input: {
         anchor: SavedDraftAnchor;
         id: string;
         fields: SavedDraftFields;
+        where: DeletedFrom;
       }>,
     ) => {
       await deleteDraft(target.id);
@@ -331,7 +361,7 @@ export function useSavedDraft(input: {
             t,
             anchor: target.anchor,
             fields: target.fields,
-            sends: sends.current,
+            where: target.where,
             onRestored: onRestore,
           }),
         ),
@@ -424,7 +454,12 @@ export function useSavedDraft(input: {
     requestClose,
     remove: () => {
       if (anchor && held)
-        remove.mutate({ anchor, id: held.id, fields: fieldsOfDraft(held) });
+        remove.mutate({
+          anchor,
+          id: held.id,
+          fields: fieldsOfDraft(held),
+          where: deletedFrom(anchor),
+        });
     },
     removing: remove.isPending,
     /** What is on screen is what the saved draft holds. */
@@ -435,7 +470,12 @@ export function useSavedDraft(input: {
       if (save.isPending || remove.isPending) return;
       if (anchor && held && !changedElsewhere) {
         remove.mutate(
-          { anchor, id: held.id, fields: fieldsOfDraft(held) },
+          {
+            anchor,
+            id: held.id,
+            fields: fieldsOfDraft(held),
+            where: deletedFrom(anchor),
+          },
           { onSuccess: onClose },
         );
         return;

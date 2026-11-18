@@ -7715,6 +7715,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.savedDraftDelete": "Xóa",
   "compose.savedDraftDeleted": "Đã xóa bản nháp đã lưu",
   "compose.savedDraftRestored": "Đã khôi phục bản nháp đã lưu",
+  "compose.savedDraftUndoSent": "Thư đã được gửi nên bản nháp vẫn bị xóa.",
   "compose.savedDraftRemove": "Xóa bản nháp đã lưu",
   "compose.savedDraftByAgent":
     "Đã khôi phục bản nháp của trợ lý AI. Đọc trước khi gửi.",
