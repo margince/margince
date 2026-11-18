@@ -218,15 +218,6 @@ func (m ModelPath) RoutingVersion() string {
 	return m.router.RoutingVersion()
 }
 
-// ConfiguredProfile is the public profile of the binding the lanes ride now,
-// so a rebind reaches the profile reads. A path with no router has no binding.
-func (m ModelPath) ConfiguredProfile() ai.PublicProfile {
-	if m.router == nil {
-		return ai.NewPublicProfile(AIStateUnconfigured, ai.RoutingConfig{})
-	}
-	return m.router.ConfiguredProfile()
-}
-
 func (m ModelPath) WithAgentTokenSpend(spend ai.AgentTokenSpender) ModelPath {
 	if m.router != nil {
 		m.router.WithAgentTokenSpend(spend)

@@ -154,8 +154,8 @@ func modelPathFor(ctx context.Context, cfg ai.RoutingConfig, spec modelPathSpec,
 			continue
 		}
 		profile := fixedProfile(ai.NewPublicProfile(candidate.state, candidate.cfg))
-		if candidate.state == compose.AIStateConfigured {
-			profile = modelPath.ConfiguredProfile
+		if router := modelPath.Router(); candidate.state == compose.AIStateConfigured && router != nil {
+			profile = router.ConfiguredProfile
 		}
 		return &modelPath, candidate.state, profile, nil
 	}

@@ -60,21 +60,12 @@ type keptAssessment struct {
 }
 
 func newSalesAssessments(reports *reporting.Service, decisions salesDecisions, db *database.DB) *salesAssessments {
-	return &salesAssessments{reports: reports, decisions: decisions, db: db, now: time.Now, kept: map[string]keptAssessment{}, inflight: map[string]chan struct{}{}}
+	return &salesAssessments{reports: reports, decisions: decisions, db: db, now: time.Now, routingVersion: func() string { return "" }, kept: map[string]keptAssessment{}, inflight: map[string]chan struct{}{}}
 }
 
-// routingVersion is read per assessment, so a rebind moves the key.
 func (s *salesAssessments) withLane(lane completer, routingVersion func() string) *salesAssessments {
 	s.lane, s.routingVersion = lane, routingVersion
 	return s
-}
-
-// routing is the binding the assessment is keyed under; empty with no lane.
-func (s *salesAssessments) routing() string {
-	if s.routingVersion == nil {
-		return ""
-	}
-	return s.routingVersion()
 }
 
 // Assess answers the assessment of one selection for the reader. The
@@ -117,7 +108,7 @@ func (s *salesAssessments) AssessProgress(ctx context.Context, period crmcontrac
 // flight for the same key, or writes anew. Refresh forces a new call.
 func (s *salesAssessments) answer(ctx context.Context, reader ids.UUID, subject []byte, evaluationKey string, in salesassessment.Input, refresh bool) (crmcontracts.SalesAssessment, error) {
 	lang := identity.BaseLanguageForPrompt(ctx, s.db.Pool())
-	key := salesassessment.Key(reader.String(), lang, s.routing(), subject, in)
+	key := salesassessment.Key(reader.String(), lang, s.routingVersion(), subject, in)
 	if !refresh {
 		if out, found := s.cached(key); found {
 			out.EvaluationKey = evaluationKey
