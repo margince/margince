@@ -110,10 +110,6 @@ func previewResponse(preview SendPreview) crmcontracts.SendAuthorizationPreview 
 		Recipients:      make([]crmcontracts.SendAuthorizationPreviewRecipient, 0, len(set.Decisions)),
 		ContentFindings: wireContentFindings(preview.ContentFindings),
 	}
-	if preview.MailboxUnavailable {
-		unavailable := false
-		out.MailboxSendCapable = &unavailable
-	}
 	for _, d := range set.Decisions {
 		entry := crmcontracts.SendAuthorizationPreviewRecipient{
 			Address:    openapi_types.Email(d.Recipient.Email),

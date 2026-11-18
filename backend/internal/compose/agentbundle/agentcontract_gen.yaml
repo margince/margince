@@ -42100,11 +42100,6 @@ components:
             of the recipients' jurisdiction packs. Advisory: a finding never refuses the send.
             Empty when no subject or body was given, or when the message is not advertising.
           items: {$ref: '#/components/schemas/DraftContentFinding'}
-        mailbox_send_capable:
-          type: boolean
-          description: |-
-            `false` when the caller has no connected mailbox that can transmit, so the send would
-            be refused whatever the recipients' answers are. Absent when a mailbox can send.
     DraftContentFinding:
       type: object
       required: [requirement, detail]
@@ -51438,6 +51433,12 @@ components:
           type: [string, 'null']
           description: |-
             The sentence a reader is shown about that failure, written for them and never copied from the executor's error. Present exactly when `effect_failed_at` is.
+        mailbox_send_capable:
+          type: boolean
+          description: |-
+            `false` on a pending mail proposal whose sender, the account the release runs as, has no
+            connected mailbox that can transmit, so approving could only be refused. Absent
+            otherwise.
         awaiting_agent:
           type: boolean
           description: |-

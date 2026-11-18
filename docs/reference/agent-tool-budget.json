@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 48,
     "system_frame_tokens": 672,
-    "tokens": 51295,
+    "tokens": 51226,
     "median_tool_tokens": 797,
-    "mean_tool_tokens": 1068
+    "mean_tool_tokens": 1066
   },
   "agents": [
     {
@@ -85,11 +85,11 @@
   "tool_cost": [
     {
       "name": "read_details",
-      "tokens": 4462
+      "tokens": 4440
     },
     {
       "name": "change_settings",
-      "tokens": 3168
+      "tokens": 3159
     },
     {
       "name": "change_activities",
@@ -117,7 +117,7 @@
     },
     {
       "name": "change_capture",
-      "tokens": 1870
+      "tokens": 1817
     },
     {
       "name": "change_attention",
@@ -133,7 +133,7 @@
     },
     {
       "name": "run_research",
-      "tokens": 1365
+      "tokens": 1344
     },
     {
       "name": "change_compliance",
@@ -213,7 +213,7 @@
     },
     {
       "name": "decide_approvals",
-      "tokens": 429
+      "tokens": 465
     },
     {
       "name": "annotate_brief",

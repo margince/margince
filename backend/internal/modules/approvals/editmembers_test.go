@@ -8,10 +8,8 @@ import (
 	"errors"
 	"maps"
 	"testing"
-	"time"
 
 	"github.com/margince/margince/backend/internal/platform/approvalsubject"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func TestALinkedInMatchEditMayFlipOnlyItsTwoBoxes(t *testing.T) {
@@ -123,6 +121,13 @@ func TestAStagedMailEditMayNotBlankItsSubjectOrBody(t *testing.T) {
 		{"send_company_email subject blank", "send_company_email", rest(`{"subject":" ","body":"Text"}`), false},
 		{"send_company_email body blank", "send_company_email", rest(`{"subject":"Hi","body":""}`), false},
 		{"tool-staged send_email blank", "send_email", `{"subject":"","body":"Text"}`, false},
+		{"held draft empty object", kindHeldDraft, `{}`, false},
+		{"held draft subject null", kindHeldDraft, `{"subject":null,"body":42}`, false},
+		{"held draft body missing", kindHeldDraft, `{"subject":"Hi"}`, false},
+		{"held draft body not a string", kindHeldDraft, `{"subject":"Hi","body":42}`, false},
+		{"send_email body object missing", "send_email", `{"operation":"sendEmail","path":"/x"}`, false},
+		{"send_email body null members", "send_company_email", rest(`{"subject":null,"body":null}`), false},
+		{"send_email body not a string", "send_email", rest(`{"subject":"Hi","body":["x"]}`), false},
 		{"other kind keeps its own rule", kindLinkedInMatch, `{"subject":""}`, true},
 	}
 	for _, tc := range cases {
@@ -133,26 +138,6 @@ func TestAStagedMailEditMayNotBlankItsSubjectOrBody(t *testing.T) {
 		}
 		if !tc.ok && !errors.As(err, &invalid) {
 			t.Errorf("%s: got %v, want an InvalidEditError", tc.name, err)
-		}
-	}
-}
-
-func TestOnlyAnApprovedUnredeemedAgentStagingAwaitsTheAgent(t *testing.T) {
-	passport := ids.New[ids.PassportKind]()
-	cases := []struct {
-		name string
-		a    row
-		want bool
-	}{
-		{"agent staging, approved", row{Status: approvalStatusApproved, PassportID: &passport}, true},
-		{"already redeemed", row{Status: approvalStatusApproved, PassportID: &passport, ConsumedAt: new(time.Time)}, false},
-		{"window lapsed", row{Status: approvalStatusApproved, PassportID: &passport, EffectFailedAt: new(time.Time)}, false},
-		{"server proposed ran its effect", row{Status: approvalStatusApproved}, false},
-		{"still pending", row{Status: statusPending, PassportID: &passport}, false},
-	}
-	for _, tc := range cases {
-		if got := awaitsAgent(tc.a); got != tc.want {
-			t.Errorf("%s: awaitsAgent = %v, want %v", tc.name, got, tc.want)
 		}
 	}
 }

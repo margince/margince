@@ -56,7 +56,7 @@ import {
   requiredMailFields,
 } from "./approvalkind";
 import { rowLabels, useApprovalDisplay } from "./approvalproposal";
-import { approvalAcceptable } from "./approvalresponsibility";
+import { approvalAcceptable, mailCannotBeSent } from "./approvalresponsibility";
 import { stagedSendOf } from "./approvalsend";
 import { ApprovalDecider, ApprovalTarget } from "./approvaltarget";
 import {
@@ -174,13 +174,6 @@ function editedAwayFromProposal(
   );
 }
 
-function mailboxCannotSend(
-  decided: boolean | undefined,
-  preview: ReturnType<typeof useSendPermission>["preview"],
-): boolean {
-  return !decided && preview?.mailbox_send_capable === false;
-}
-
 function MailboxBlocked({ blocked }: Readonly<{ blocked: boolean }>) {
   const t = useT();
   if (!blocked) return null;
@@ -254,9 +247,9 @@ export function ApprovalRow({
     enabled: !decided && staged !== undefined,
   });
 
-  // Approving a mail that no mailbox can send records a decision the send then
-  // refuses. The verbs wait until the server says it can go.
-  const mailboxBlocked = mailboxCannotSend(decided, permission.preview);
+  // The server marks a mail its sender cannot send. approvalAcceptable then
+  // withholds the verbs here and on every other surface that decides it.
+  const mailboxBlocked = mailCannotBeSent(approval, decided);
 
   // An agent-drafted mail to a recipient with no lawful basis on record waits
   // for the approver to confirm the warning, as the composer does.
@@ -356,7 +349,7 @@ export function ApprovalRow({
     setEditing(true);
   };
 
-  const acceptable = approvalAcceptable(approval, !mailboxBlocked);
+  const acceptable = approvalAcceptable(approval);
   // A mail must say something: the fields it cannot send without.
   const required = requiredMailFields(staged !== undefined, strings);
 

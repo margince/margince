@@ -3016,6 +3016,9 @@
       "data": {
         "type": "object",
         "properties": {
+          "awaiting_agent": {
+            "type": "boolean"
+          },
           "bundle_id": {
             "type": "string",
             "format": "uuid"
@@ -3169,6 +3172,9 @@
             }
           },
           "diff_hash": {
+            "type": "string"
+          },
+          "effect_failure": {
             "type": "string"
           },
           "effects": {
@@ -3625,6 +3631,9 @@
             "items": {
               "type": "object",
               "properties": {
+                "awaiting_agent": {
+                  "type": "boolean"
+                },
                 "bundle_id": {
                   "type": "string",
                   "format": "uuid"
@@ -3778,6 +3787,9 @@
                   }
                 },
                 "diff_hash": {
+                  "type": "string"
+                },
+                "effect_failure": {
                   "type": "string"
                 },
                 "effects": {
@@ -7642,6 +7654,9 @@
             "items": {
               "type": "object",
               "properties": {
+                "awaiting_agent": {
+                  "type": "boolean"
+                },
                 "bundle_id": {
                   "type": "string",
                   "format": "uuid"
@@ -7795,6 +7810,9 @@
                   }
                 },
                 "diff_hash": {
+                  "type": "string"
+                },
+                "effect_failure": {
                   "type": "string"
                 },
                 "effects": {
@@ -12336,6 +12354,9 @@
       "data": {
         "type": "object",
         "properties": {
+          "awaiting_agent": {
+            "type": "boolean"
+          },
           "bundle_id": {
             "type": "string",
             "format": "uuid"
@@ -12489,6 +12510,9 @@
             }
           },
           "diff_hash": {
+            "type": "string"
+          },
+          "effect_failure": {
             "type": "string"
           },
           "effects": {

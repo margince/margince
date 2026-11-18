@@ -165,6 +165,10 @@ func stagedActionFrom(a crmcontracts.Approval, withPayload bool) agents.StagedAp
 		ExpiresAt:      a.ExpiresAt,
 		DecidedAt:      a.DecidedAt,
 	}
+	out.AwaitingAgent = a.AwaitingAgent != nil && *a.AwaitingAgent
+	if a.EffectFailure != nil {
+		out.EffectFailure = *a.EffectFailure
+	}
 	// A withheld plan stays behind here too, whatever the wire carried.
 	withheld := approvalplan.Withheld(a.Preview)
 	if a.Summary != nil && !withheld {

@@ -613,14 +613,11 @@ describe("whether the staged mail may go", () => {
     ).toBe("/v1/activities/act-1/send-email:preview");
   });
 
-  it("offers no approve, and says where to fix it, when no mailbox can send", async () => {
-    stubEngine(() =>
-      jsonResponse({
-        ...allowedPreview(["anna@example.test"]),
-        mailbox_send_capable: false,
-      }),
+  it("offers no approve, and says where to fix it, when the server marks the mail unsendable", async () => {
+    stubEngine(() => jsonResponse(allowedPreview(["anna@example.test"])));
+    render(
+      <ApprovalRow approval={heldDraft({ mailbox_send_capable: false })} />,
     );
-    render(<ApprovalRow approval={heldDraft()} />);
 
     expect(
       await screen.findByText(en["decision.mailboxBlocked"]),

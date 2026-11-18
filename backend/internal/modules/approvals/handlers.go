@@ -349,17 +349,19 @@ func wire(ctx context.Context, a row, now time.Time) crmcontracts.Approval {
 	out.Evidence = wireEvidence(a.Evidence)
 	out.EffectFailedAt = a.EffectFailedAt
 	out.EffectFailure = a.EffectFailure
-	if awaitsAgent(a) {
+	if awaitsAgent(a, now) {
 		out.AwaitingAgent = new(true)
 	}
 	return out
 }
 
-// awaitsAgent is an approved agent staging nobody has redeemed. The decision
-// released no effect of its own. Nothing changes until the agent comes back.
-func awaitsAgent(a row) bool {
-	return a.Status == approvalStatusApproved && !serverProposed(a) &&
-		a.ConsumedAt == nil && a.EffectFailedAt == nil
+// awaitsAgent is an approved proposal the staging agent has not redeemed. The
+// decision released no effect of its own, so nothing changes until the agent
+// comes back inside the redemption window.
+func awaitsAgent(a row, now time.Time) bool {
+	return a.Status == approvalStatusApproved && agentRedeems(a) &&
+		a.ConsumedAt == nil && a.EffectRanAt == nil && a.EffectFailedAt == nil &&
+		!redemptionLapsed(a, now)
 }
 
 // wireEvidence maps the persisted evidence array onto the contract shape.

@@ -78,19 +78,27 @@ export function madeByRow(
   );
 }
 
+/** The server marked this mail as one its sender cannot send. */
+export function mailCannotBeSent(
+  approval: Readonly<{ mailbox_send_capable?: boolean }>,
+  decided: boolean | undefined,
+): boolean {
+  return !decided && approval.mailbox_send_capable === false;
+}
+
 export function approvalAcceptable(
   approval: Readonly<{
     assignee_inactive?: boolean;
+    mailbox_send_capable?: boolean;
     preview?: {
       version: number;
       state: string;
       conflicts?: readonly { blocks_approval: boolean }[];
     };
   }>,
-  sendable = true,
 ): boolean {
   return (
-    sendable &&
+    approval.mailbox_send_capable !== false &&
     approval.assignee_inactive !== true &&
     (!approval.preview ||
       ((approval.preview.version === 1 || approval.preview.version === 2) &&

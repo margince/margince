@@ -55,7 +55,7 @@ To approve a proposed change in Margince, open **Home** and show the **Worklist*
 4. Read the proposal and its evidence, then choose **Accept**.
 
 If it edited a record, the **Applied** message offers **Undo on record** to reverse it from the record's history; a sent email has no undo.
-When an agent asked for the change, approving only lets the agent run it. The message then reads "Approved. Waiting for the agent to run it." and offers no undo, because nothing has changed yet.
+When an agent asked to run the change itself, approving only lets that agent run it. The message then reads "Approved. Waiting for the agent to run it." and offers no undo, because nothing has changed yet.
 A new contact, company or deal can be taken back with **Undo** on its "Created" entry in the record's history, which archives it.
 Also called: confirm, accept, sign off, OK an agent action.
 

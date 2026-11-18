@@ -7173,6 +7173,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Pfeiltasten merken eine Entscheidung vor: → annehmen · ← ablehnen · ↑ bearbeiten · ↓ später · U rückgängig · Enter sendet vorgemerkte Entscheidungen",
   "brief.deck.behind_one": "1 weitere dahinter",
   "brief.deck.behind_other": "{count} weitere dahinter",
+  "brief.deck.awaitingAgent_one":
+    "1 freigegebene Entscheidung wartet auf ihren Agenten.",
+  "brief.deck.awaitingAgent_other":
+    "{count} freigegebene Entscheidungen warten auf ihre Agenten.",
+  "brief.deck.effectFailed_one":
+    "1 freigegebene Entscheidung wurde nicht ausgeführt.",
+  "brief.deck.effectFailed_other":
+    "{count} freigegebene Entscheidungen wurden nicht ausgeführt.",
   "brief.deck.staged_one": "1 Entscheidung vorgemerkt",
   "brief.deck.staged_other": "{count} Entscheidungen vorgemerkt",
   "brief.deck.commit": "Vorgemerkte Entscheidungen senden",

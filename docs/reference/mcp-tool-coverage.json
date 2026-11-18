@@ -6,7 +6,7 @@
     "required_only_as_one_of_a_set": 3,
     "never_driven": 8,
     "permitted_but_never_required": 3,
-    "tokens_served_but_never_driven": 6482,
+    "tokens_served_but_never_driven": 6497,
     "use_case_cases": 73,
     "acceptance_criteria_named": 120,
     "tools_added_by_shipped_units": 0,
@@ -3921,7 +3921,7 @@
     },
     {
       "name": "run_research",
-      "tokens": 1365,
+      "tokens": 1344,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -3959,7 +3959,7 @@
     },
     {
       "name": "decide_approvals",
-      "tokens": 429,
+      "tokens": 465,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -4171,7 +4171,7 @@
     },
     {
       "name": "read_details",
-      "tokens": 4462,
+      "tokens": 4440,
       "agents": [],
       "required_by_cases": [
         "case112_my_plan_and_the_dossier",
@@ -4550,7 +4550,7 @@
     },
     {
       "name": "change_capture",
-      "tokens": 1870,
+      "tokens": 1817,
       "agents": [],
       "required_by_cases": [
         "case82_keep_that_newsletter_out",

@@ -118,13 +118,9 @@ func assertMailHasText(kind string, edited json.RawMessage) error {
 		}
 	}
 	for _, member := range []string{"subject", "body"} {
-		raw, present := members[member]
-		if !present {
-			continue
-		}
 		var text string
-		if json.Unmarshal(raw, &text) == nil && strings.TrimSpace(text) == "" {
-			return &InvalidEditError{Cause: fmt.Errorf("%s must not be empty", member)}
+		if err := json.Unmarshal(members[member], &text); err != nil || strings.TrimSpace(text) == "" {
+			return &InvalidEditError{Cause: fmt.Errorf("%s must be written and not empty", member)}
 		}
 	}
 	return nil
