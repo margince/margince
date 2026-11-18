@@ -96,10 +96,11 @@ func TestThree(t *testing.T) { messagingrules.Register(messagingrules.Rules{Juri
 	}
 }
 
-// registeredCodes reads the codes the files register: a Jurisdiction keyed in
-// a Register call, and, inside a func literal that calls Register, one keyed in
-// a messagingrules.Rules literal or assigned to a variable it registers. A code is a string literal or a constant the
-// package declares as one. A place both rules reach is counted once.
+// registeredCodes reads the codes the files register. One is a Jurisdiction
+// keyed in a Register call. Inside a func literal that calls Register, it is
+// also one keyed in a messagingrules.Rules literal or assigned to a variable
+// the literal registers. A code is a string literal or a string constant, and
+// a place both rules reach is counted once.
 func registeredCodes(files []*ast.File) []registeredCode {
 	r := codeReader{consts: codeConsts(files), seen: map[token.Pos]string{}}
 	for _, file := range files {
@@ -192,8 +193,8 @@ type codeReader struct {
 }
 
 // jurisdictions adds each code under node that a messagingrules.Rules literal
-// keys as its Jurisdiction, or that is assigned to the Jurisdiction of a
-// variable node passes to Register.
+// keys as its Jurisdiction. It also adds each code assigned to the Jurisdiction
+// of a variable that node passes to Register.
 func (r codeReader) jurisdictions(node ast.Node) {
 	registered := registeredNames(node)
 	ast.Inspect(node, func(n ast.Node) bool {
