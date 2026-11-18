@@ -11,10 +11,14 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { formatDateAbbrev, formatMoneyOrAbsent } from "../format/format";
-import { toMajorUnits, toMinorUnits } from "../format/minorunits";
+import {
+  typedAmountFault,
+  typedAmountText,
+  typedMinorUnits,
+} from "../format/minorunits";
 import { browserZone } from "../format/timezone";
 import { webUrl } from "../format/weburl";
-import { type Locale, useLocale, useT } from "../i18n";
+import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import type { CfObject } from "../lib/customfields.logic";
 import { translatedLabel } from "../lib/labeltranslation";
 import { TEXT_LIMITS } from "../lib/textlimits_gen";
@@ -33,8 +37,8 @@ export type BooleanLabels = { yes: string; no: string };
 export function customFieldToFormField(
   field: CustomField,
   boolLabels: BooleanLabels,
-  tooPrecise: (currency: string) => string,
-  locale = "en",
+  t: Translator,
+  locale: Locale = "en",
 ): CreateField {
   const base = {
     key: field.column_name,
@@ -53,22 +57,17 @@ export function customFieldToFormField(
     case "currency":
       return {
         ...base,
-        type: "number",
-        toInput: (raw) => customFieldFormValue(field, raw),
-        validate: (value) => {
-          const code = field.currency ?? "";
-          return value.trim() !== "" &&
-            Number.isNaN(toMinorUnits(Number(value), code))
-            ? tooPrecise(code)
-            : undefined;
-        },
+        type: "decimal",
+        toInput: (raw) => customFieldFormValue(field, raw, locale),
+        validate: (value) =>
+          typedAmountFault(value, field.currency ?? "", locale, t),
       };
     case "multiselect":
       return {
         ...base,
         type: "multiselect",
         multiselectEncoding: "json",
-        toInput: (raw) => customFieldFormValue(field, raw),
+        toInput: (raw) => customFieldFormValue(field, raw, locale),
         options: optionChoices,
       };
     case "picklist":
@@ -145,6 +144,7 @@ function unhandledCustomFieldType<T>(_type: never, fallback: T): T {
 export function customFieldFormValue(
   field: CustomField,
   stored: unknown,
+  locale: Locale,
 ): string {
   if (stored == null || stored === "") {
     return "";
@@ -153,12 +153,12 @@ export function customFieldFormValue(
     return joinMultiselectValue(Array.isArray(stored) ? stored : [], "json");
   }
   if (field.type === "currency") {
-    return String(toMajorUnits(Number(stored), field.currency ?? ""));
+    return typedAmountText(Number(stored), field.currency ?? "", locale);
   }
   return String(stored).trim();
 }
 
-function coerceWrite(field: CustomField, raw: string): unknown {
+function coerceWrite(field: CustomField, raw: string, locale: Locale): unknown {
   const value = raw.trim();
   if (value === "") {
     return null;
@@ -168,11 +168,8 @@ function coerceWrite(field: CustomField, raw: string): unknown {
       // NaN is never sent: it serialises to null, and a null PATCH clears the
       // column. The control's validate refuses such a figure before it gets
       // here; past it, the typed text goes and the store refuses it by name.
-      const minor = toMinorUnits(Number(value), field.currency ?? "");
-      if (Number.isNaN(minor)) {
-        return value;
-      }
-      return minor;
+      const typed = typedMinorUnits(value, field.currency ?? "", locale);
+      return "minor" in typed ? typed.minor : value;
     }
     case "multiselect":
       return splitMultiselectValue(value, "json");
@@ -191,6 +188,7 @@ function coerceWrite(field: CustomField, raw: string): unknown {
 export function customFieldsToBody(
   values: Record<string, unknown>,
   fields: CustomField[],
+  locale: Locale,
 ): Record<string, unknown> {
   const body: Record<string, unknown> = {};
   for (const field of fields) {
@@ -198,6 +196,7 @@ export function customFieldsToBody(
     body[field.column_name] = coerceWrite(
       field,
       raw == null ? "" : String(raw),
+      locale,
     );
   }
   return body;
@@ -214,6 +213,7 @@ export function customFieldsToPatch(
   values: Record<string, unknown>,
   seeded: Record<string, unknown>,
   fields: CustomField[],
+  locale: Locale,
 ): Record<string, unknown> {
   const body: Record<string, unknown> = {};
   for (const field of fields) {
@@ -223,10 +223,15 @@ export function customFieldsToPatch(
     // the same spelling first, which is what the control was prefilled with.
     const submitted =
       values[column] == null ? "" : String(values[column]).trim();
-    if (submitted === customFieldFormValue(field, seeded[column])) {
+    if (submitted === customFieldFormValue(field, seeded[column], locale)) {
       continue;
     }
-    body[column] = coerceWrite(field, submitted);
+    const written = coerceWrite(field, submitted, locale);
+    // "12.5" over a stored 1250 is the same amount spelled another way.
+    if (typeof written === "number" && written === Number(seeded[column])) {
+      continue;
+    }
+    body[column] = written;
   }
   return body;
 }
@@ -409,12 +414,7 @@ export function useObjectCustomFields(
   const boolLabels = { yes: t("field.yes"), no: t("field.no") };
 
   const controls = fields.map((field) =>
-    customFieldToFormField(
-      field,
-      boolLabels,
-      (currency) => t("record.amountTooPrecise", { currency }),
-      locale,
-    ),
+    customFieldToFormField(field, boolLabels, t, locale),
   );
   const formFields: CreateField[] =
     controls.length === 0
@@ -437,7 +437,8 @@ export function useObjectCustomFields(
     },
     formFields,
     recordSlice: (record) => customFieldsRecordSlice(record, fields),
-    toBody: (values) => customFieldsToBody(values, fields),
-    toPatch: (values, seeded) => customFieldsToPatch(values, seeded, fields),
+    toBody: (values) => customFieldsToBody(values, fields, locale),
+    toPatch: (values, seeded) =>
+      customFieldsToPatch(values, seeded, fields, locale),
   };
 }

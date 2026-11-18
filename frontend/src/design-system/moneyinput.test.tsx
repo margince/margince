@@ -6,6 +6,7 @@ import {
   screen,
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { LocaleProvider } from "../i18n";
 import { MoneyInput } from "./moneyinput";
 
 // MoneyInput wraps the existing TextInput (field.tsx). It shows and edits
@@ -108,31 +109,28 @@ describe("MoneyInput", () => {
     expect(input.value).toBe("1500.00");
   });
 
+  // A number box takes its decimal sign from the browser, so an English
+  // browser read "33,33" as 3333. A text box reads both signs alike.
   it.each([
-    ["EUR", "0.01"],
-    ["KWD", "0.001"],
-    ["VND", "1"],
-  ])(
-    "steps by %s's own smallest unit, so native validation matches what we can store",
-    (currency, step) => {
-      // type="number" defaults to step="1" — without an explicit step, the
-      // browser's own constraint validation rejects a genuine cents amount
-      // like "12.34" as invalid. The other direction matters too: a dong has
-      // no fractional part, and a step of 0.01 invited one the API cannot
-      // hold.
-      rtlRender(
-        <MoneyInput
-          currency={currency}
-          valueMinor={0}
-          onChangeMinor={vi.fn()}
-          aria-label="Amount"
-        />,
-      );
-      expect((screen.getByLabelText("Amount") as HTMLInputElement).step).toBe(
-        step,
-      );
-    },
-  );
+    ["EUR", "33,33", 3333],
+    ["EUR", "0,5", 50],
+    ["EUR", "1250,5", 125_050],
+  ])("%s: %s commits %i minor units", (currency, typed, want) => {
+    const onChangeMinor = vi.fn();
+    rtlRender(
+      <MoneyInput
+        currency={currency}
+        valueMinor={0}
+        onChangeMinor={onChangeMinor}
+        aria-label="Amount"
+      />,
+    );
+    const input = screen.getByLabelText("Amount") as HTMLInputElement;
+    expect(input.type).toBe("text");
+    expect(input.inputMode).toBe("decimal");
+    fireEvent.change(input, { target: { value: typed } });
+    expect(onChangeMinor).toHaveBeenLastCalledWith(want);
+  });
 
   // The defect: this input multiplied by 100 whatever the currency, so an
   // offer line typed as 18,000,000 dong reached the API as 1,800,000,000 —
@@ -186,14 +184,15 @@ describe("MoneyInput", () => {
     },
   );
 
-  // Exponent notation has no decimal point, so counting the literal text let
-  // `15e-1` — one and a half — past the precision guard and it committed as 2
-  // minor units of a currency that cannot hold a half.
+  // Nobody types a price as an exponent, and reading one is how `15e-1` once
+  // slipped a half dong past the precision guard.
   it.each([
     ["VND", "15e-1"],
     ["VND", "1.5e0"],
     ["EUR", "1005e-3"],
-  ])("%s: %s is over-precise however it is written", (currency, typed) => {
+    ["VND", "150e-1"],
+    ["EUR", "1.2345e2"],
+  ])("%s: %s is refused, whatever it would scale to", (currency, typed) => {
     const onChangeMinor = vi.fn();
     rtlRender(
       <MoneyInput
@@ -207,28 +206,6 @@ describe("MoneyInput", () => {
       target: { value: typed },
     });
     expect(onChangeMinor).not.toHaveBeenCalled();
-  });
-
-  // A positive exponent shifts the point the other way and REMOVES decimals,
-  // so these are within precision and must still commit.
-  it.each([
-    ["VND", "150e-1", 15],
-    ["VND", "1.5e1", 15],
-    ["EUR", "1.2345e2", 12_345],
-  ])("%s: %s is exact after the exponent", (currency, typed, want) => {
-    const onChangeMinor = vi.fn();
-    rtlRender(
-      <MoneyInput
-        currency={currency}
-        valueMinor={0}
-        onChangeMinor={onChangeMinor}
-        aria-label="Amount"
-      />,
-    );
-    fireEvent.change(screen.getByLabelText("Amount"), {
-      target: { value: typed },
-    });
-    expect(onChangeMinor).toHaveBeenLastCalledWith(want);
   });
 
   // And the boundary on the other side: exactly as many decimals as the
@@ -389,5 +366,53 @@ describe("MoneyInput", () => {
     );
     const input = screen.getByLabelText("Amount") as HTMLInputElement;
     expect(input.value).toBe("5.00");
+  });
+});
+
+// In German "." groups thousands: "1.500" is fifteen hundred to the reader and
+// one and a half to the decimal rule, so it is refused and names both forms.
+describe("MoneyInput in German", () => {
+  function renderGerman(onChangeMinor: (minor: number) => void) {
+    rtlRender(
+      <LocaleProvider initial="de">
+        <MoneyInput
+          currency="EUR"
+          valueMinor={9900}
+          onChangeMinor={onChangeMinor}
+          aria-label="Betrag"
+        />
+      </LocaleProvider>,
+    );
+    return screen.findByLabelText("Betrag") as Promise<HTMLInputElement>;
+  }
+
+  it("opens on the stored amount written with a comma", async () => {
+    expect((await renderGerman(vi.fn())).value).toBe("99,00");
+  });
+
+  it("commits 12,5 as 1250 cents", async () => {
+    const onChangeMinor = vi.fn();
+    const input = await renderGerman(onChangeMinor);
+    fireEvent.change(input, { target: { value: "12,5" } });
+    expect(onChangeMinor).toHaveBeenLastCalledWith(1250);
+  });
+
+  it("refuses 1.500 typed key by key, and puts the amount back", async () => {
+    const onChangeMinor = vi.fn();
+    const input = await renderGerman(onChangeMinor);
+    fireEvent.focus(input);
+    for (const key of ["1", "1.", "1.5", "1.50", "1.500"]) {
+      fireEvent.change(input, { target: { value: key } });
+    }
+    fireEvent.blur(input);
+    expect(onChangeMinor).toHaveBeenLastCalledWith(9900);
+    expect(input.value).toBe("1.500");
+    expect(input.getAttribute("aria-invalid")).toBe("true");
+    const alert = screen.getByRole("alert");
+    expect(alert.textContent).toBe("Gib den Betrag als 1500 oder 1500,00 ein.");
+    expect(input.getAttribute("aria-describedby")).toBe(alert.id);
+    fireEvent.change(input, { target: { value: "1500" } });
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(onChangeMinor).toHaveBeenLastCalledWith(150_000);
   });
 });

@@ -141,7 +141,6 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
       render: (line: OfferLineItem) => (
         <NumericCell
           value={line.position}
-          step="1"
           width={60}
           testId={`line-position-${line.id}`}
           onSave={(num) => saveLine(line.id)({ position: num })}
@@ -168,7 +167,6 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
       render: (line: OfferLineItem) => (
         <NumericCell
           value={line.quantity}
-          step="0.001"
           width={90}
           testId={`line-quantity-${line.id}`}
           onSave={(num) => saveLine(line.id)({ quantity: num })}
@@ -195,7 +193,6 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
       render: (line: OfferLineItem) => (
         <NumericCell
           value={line.discount_pct}
-          step="0.01"
           width={90}
           testId={`line-discount-${line.id}`}
           onSave={(num) => saveLine(line.id)({ discount_pct: num })}
@@ -209,7 +206,6 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
         <>
           <NumericCell
             value={line.tax_rate}
-            step="0.01"
             width={90}
             testId={`line-tax-rate-${line.id}`}
             onSave={(num) => saveLine(line.id)({ tax_rate: num })}

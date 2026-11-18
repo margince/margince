@@ -3008,6 +3008,17 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "record.edit": "Sửa",
 
   "record.fieldRequired": "Trường này bắt buộc.",
+  "amount.refused.ambiguous": "Nhập số tiền dưới dạng {whole} hoặc {decimal}.",
+  "amount.refused.ambiguousWhole": "Nhập số tiền dưới dạng {whole}.",
+  "amount.refused.grouping":
+    "Nhập số tiền không có dấu phân cách hàng nghìn, ví dụ {example}.",
+  "amount.refused.notNumber": "Nhập số tiền bằng chữ số, ví dụ {example}.",
+  "amount.refused.tooLarge": "Số tiền này quá lớn để lưu.",
+  "amount.refused.negative": "Nhập số tiền từ 0 trở lên.",
+  "number.refused.ambiguous": "Nhập số dưới dạng {whole} hoặc {fraction}.",
+  "number.refused.grouping":
+    "Nhập số không có dấu phân cách hàng nghìn, ví dụ {example}.",
+  "number.refused.notNumber": "Nhập một số, ví dụ {example}.",
   "record.amountTooPrecise":
     "Số tiền này có nhiều chữ số thập phân hơn mức {currency} cho phép.",
   "record.registration": "Thông tin đăng ký",
@@ -5917,7 +5928,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.qualify.amount": "Số tiền ({currency})",
   "lead.qualify.amountHint":
     "Không bắt buộc. Số nguyên theo loại tiền cơ sở của bản cài đặt.",
-  "lead.qualify.amountInvalid": "Nhập một số hoặc để trống.",
   "lead.qualify.amountNoCurrency":
     "Chưa tải xong loại tiền cơ sở. Thử lại sau giây lát, hoặc để trống số tiền.",
   "lead.qualify.why": "Lý do",

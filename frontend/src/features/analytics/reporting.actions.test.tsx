@@ -239,7 +239,7 @@ it("creates a fiscal-quarter count target on every pipeline and pages the target
     dialog.getByRole("combobox", { name: /Month starting/ }),
     "October",
   );
-  fireEvent.change(dialog.getByRole("spinbutton", { name: /^Target/ }), {
+  fireEvent.change(dialog.getByRole("textbox", { name: /^Target/ }), {
     target: { value: "120" },
   });
   await user.type(dialog.getByLabelText(/Reason/), "Quarter commitment");
