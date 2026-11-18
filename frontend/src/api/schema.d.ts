@@ -28045,7 +28045,7 @@ export interface components {
              * @enum {string}
              */
             outcome_now: "captured" | "internal" | "suppressed" | "deferred" | "fault";
-            /** @description A class this installation chose, never a provider's text and never content. The ones that change what the outcome MEANS: `deferral_capped` (no verdict is coming — a ceiling refused the question), `noise_prior` and `decided_prior` (it landed, but a prior decision means no record will appear), `internal_only`, `no_granting_human`, `invisible_incumbent`, `derivation_failed`. */
+            /** @description A class this installation chose, never a provider's text and never content. The ones that change what the outcome MEANS: `deferral_capped` (no verdict is coming — a ceiling refused the question), `noise_prior` and `decided_prior` (it landed, but a prior decision means no record will appear), `internal_only`, `own_addresses_only` (every party was the mailbox owner's own address and no forwarded customer mail was found), `no_granting_human`, `invisible_incumbent`, `derivation_failed`. */
             reason?: string | null;
             /**
              * Format: uuid
@@ -30320,8 +30320,13 @@ export interface components {
             filename: string;
             byte_size?: number | null;
             content_type?: string | null;
-            /** @description True when the message is private to its owner and the file was recorded by name, size and type only. There are no bytes to fetch. */
+            /** @description True when the file was recorded by name, size and type only. There are no bytes to fetch; `withheld_reason` says why. */
             readonly bytes_withheld?: boolean;
+            /**
+             * @description Present when `bytes_withheld` is true. `private`: the message is private to its owner. `not_addressed`: no colleague here sent the message or was in its To line, so the bytes wait for a copy that was addressed to one.
+             * @enum {string}
+             */
+            readonly withheld_reason?: "private" | "not_addressed";
         };
         /**
          * @description Who reads this message, and what this caller may do about that. `can_change` and

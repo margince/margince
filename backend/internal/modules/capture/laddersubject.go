@@ -22,15 +22,18 @@ import (
 
 // ladderSubjectTx names the party the creation ladder is about.
 //
-// Ordinarily that is the message's derived counterparty. When the counterparty
-// is a colleague, it is the first external address the message names — the
-// prospect in an introduction — and when there is none it is nobody, which
-// leaves the ladder with nothing to decide.
+// Ordinarily that is the message's derived counterparty. On a forward to self
+// it is the original's sender, whom readForwardToSelfTx vetted. When the
+// counterparty is a colleague, it is the first external address the message
+// names: the prospect in an introduction. With none it is nobody.
 //
 // The returned Counterparty carries the SUBJECT's address and domain but keeps
 // the record's direction: direction describes the message, not the party.
 func (s *Sink) ladderSubjectTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) (connector.Counterparty, error) {
 	cp := rec.Counterparty
+	if original := forwardedOriginalOf(rec); original != nil {
+		return forwardedSubject(original, cp.Direction), nil
+	}
 	if cp.Email == "" {
 		return connector.Counterparty{}, nil
 	}

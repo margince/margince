@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/capture/captureauthority.go backend/internal/modules/capture/health.go backend/internal/modules/capture/healthfleet.go backend/internal/modules/contacts/employerresolve.go backend/internal/shared/ports/connector backend/internal/modules/capture/sink.go backend/internal/modules/capture/registry.go backend/internal/modules/capture/syncstate.go backend/internal/modules/capture/mailmap/mailmap.go backend/internal/compose/connectors.go backend/internal/compose/connectors_picture.go backend/internal/compose/capture.go backend/internal/modules/capture/gcal/client.go backend/internal/modules/capture/googleconn/userinfo.go backend/internal/compose/avatarprovider.go backend/internal/modules/identity/providerpicture.go backend/internal/compose/jobs.go frontend/src/features/capture/connectors.tsx backend/internal/modules/capture/graph/deletions.go -->
+<!-- describes: backend/internal/modules/capture/forwardtoself.go backend/internal/modules/capture/captureauthority.go backend/internal/modules/capture/health.go backend/internal/modules/capture/healthfleet.go backend/internal/modules/contacts/employerresolve.go backend/internal/shared/ports/connector backend/internal/modules/capture/sink.go backend/internal/modules/capture/registry.go backend/internal/modules/capture/syncstate.go backend/internal/modules/capture/mailmap/mailmap.go backend/internal/compose/connectors.go backend/internal/compose/connectors_picture.go backend/internal/compose/capture.go backend/internal/modules/capture/gcal/client.go backend/internal/modules/capture/googleconn/userinfo.go backend/internal/compose/avatarprovider.go backend/internal/modules/identity/providerpicture.go backend/internal/compose/jobs.go frontend/src/features/capture/connectors.tsx backend/internal/modules/capture/graph/deletions.go -->
 # Capture connectors: the inbound integration seam and the mail pipeline
 
 `internal/modules/capture` is the **inbound** integration surface of Margince. A *connector* works with an
@@ -112,16 +112,16 @@ checks the type, and skips a connector that does not:
 `Sink.Upsert` is the single write path (the picture under the core principle above). One transaction
 commits the raw original + the domain row + the `audit_log` entry + the outbox event. The audit entry is
 stamped from the *connector* principal, so nobody can forge it. It is idempotent on the
-`(source_system, source_id)` key, so any replay falls into a no-op. That covers a push delivered again, a
-cursor set back again, or a backfill page that overlaps. It also covers *the same message read by a
-second mail connector*.
+`(source_system, source_id)` key, so any replay falls into a no-op. That covers a push delivered again, a cursor set back again, or a backfill page that overlaps. It also covers *the same message read by a second mail connector*.
 
-Mail is keyed on one identity that does not depend on the transport (`connector.EmailSourceSystem`):
-`("email", Message-ID)`, the same key no matter which adapter read the message. One mailbox synced over
+Mail is keyed on one identity that does not depend on the transport (`connector.EmailSourceSystem`): `("email", Message-ID)`, the same key no matter which adapter read the message. One mailbox synced over
 both Gmail and IMAP lands one activity. The Sink refuses an email record keyed on an adapter's name. The
 adapter's name stays on `source` and `captured_by`, which answers "which mailbox". The first adapter to
 deliver a message gives the stored original and its attached files; a later copy adds no second set.
 Google Calendar's copy for each guest of one send joins the first copy's activity (`mailmap/calendarsend.go`).
+
+A seat's forward of a customer's mail to their connected mailbox is filed under that customer (`capture/forwardtoself.go`).
+It is marked `forwarded_to_self`, and every exchange reader skips it (`relstrength.ForwardToSelfSQL`).
 
 One pipeline step runs *inside* the Sink, before anything is written:
 

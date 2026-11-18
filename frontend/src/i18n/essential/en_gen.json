@@ -2179,6 +2179,7 @@
   "email.detail.attachments_one": "{count} attachment",
   "email.detail.attachments_other": "{count} attachments",
   "email.detail.attachmentWithheld": "Not kept, because the message is private.",
+  "email.detail.attachmentNotAddressed": "Not kept, because no colleague here sent this message or was in its To line.",
   "email.detail.showQuoted": "Show quoted history",
   "aiTask.name.reader_rendering": "Showing a message in your language",
   "readerRendering.show": "Show in my language",

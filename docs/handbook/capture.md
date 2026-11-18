@@ -6,7 +6,7 @@ Nobody should have to copy an email into a CRM by hand. **Capture** is the part 
 
 ### How does email get into Margince?
 Email gets into Margince through a mailbox you connect at **Settings → Connections**: Gmail, Outlook or an IMAP mailbox. On each sync, capture reads new mail and files it on the timelines of the contacts on it.
-There is no address to forward to and no step to copy and paste. Mail between colleagues is not stored by default.
+There is no shared address to forward to and no step to copy and paste. Mail between colleagues is not stored by default. Forward a customer's email to your connected address to file it on their timeline as your own, never as a reply.
 
 An admin can choose sources for [internal mail about work](who-can-see-an-email.md#mail-between-colleagues). Other mail follows the usual rules, and senders judged to be newsletters, automated tools or spam create no contact.
 For older mail, choose **Import older email** in the account's menu; to see what happened to one message, open **Settings → Connections → Activity**.
@@ -355,7 +355,7 @@ mail internal. Adding one cannot be taken back for mail already skipped: "Mail s
 registered is never offered again by any mailbox."
 
 **Your other addresses** (Settings → Connections): an address you send as, a private domain you
-read, an address you forward from. Mail between them is not captured and never creates a contact.
+read, an address you forward from. Mail between them is not captured, unless it forwards a customer's email to your connected mailbox.
 Private to you. Removing one takes effect at once, and **Undo** on the notice puts it back. Removing
 an address Margince found also stops Margince finding it again.
 
