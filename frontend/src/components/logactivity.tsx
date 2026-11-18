@@ -176,24 +176,27 @@ export function LogActivityForm({
           linkedDealIds: input.record.linkedDealIds ?? [],
         };
       }
-      const created = await createOnce(input.idempotencyKey, async () =>
-        unwrap(
-          await api.POST("/activities", {
-            params: { header: { "Idempotency-Key": input.idempotencyKey } },
-            body: {
-              ...activityRequestBody(
-                input.draft,
-                entityType,
-                entityId,
-                input.zone,
-                input.attendees,
-              ),
-              ...(input.inheritSourceLinks ? { links: undefined } : {}),
-              ...(recordsMeeting ? { records_meeting_id: recordsMeeting } : {}),
-            },
-          }),
-          t,
-        ),
+      const created = await createOnce(
+        input.idempotencyKey,
+        {
+          ...activityRequestBody(
+            input.draft,
+            entityType,
+            entityId,
+            input.zone,
+            input.attendees,
+          ),
+          ...(input.inheritSourceLinks ? { links: undefined } : {}),
+          ...(recordsMeeting ? { records_meeting_id: recordsMeeting } : {}),
+        },
+        async (body) =>
+          unwrap(
+            await api.POST("/activities", {
+              params: { header: { "Idempotency-Key": input.idempotencyKey } },
+              body,
+            }),
+            t,
+          ),
       );
       // After the create: a file needs the activity's id as its parent.
       const unattached = await attachLoggedFiles(

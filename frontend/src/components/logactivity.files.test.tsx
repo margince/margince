@@ -2,7 +2,7 @@
 
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { browserZone } from "../format/timezone";
 import { CompanyZoneProvider } from "../lib/companyzone";
@@ -19,6 +19,7 @@ const originalFetch = globalThis.fetch;
 afterEach(() => {
   cleanup();
   globalThis.fetch = originalFetch;
+  vi.useRealTimers();
 });
 
 // One request the page sent, and how it ended: a status, or "dropped" for a
@@ -27,9 +28,11 @@ type Call = {
   key: string;
   form: FormData | null;
   outcome?: number | "dropped";
-  // A JSON write's body and precondition, as the server would read them.
+  // A JSON write's body, precondition and key, as the server would read them.
   json?: unknown;
   ifMatch?: string | null;
+  text?: string;
+  idempotencyKey?: string | null;
 };
 
 const CREATED_ID = "act-kickoff";
@@ -62,6 +65,10 @@ type Behaviour = Readonly<{
   docs?: ReturnType<typeof contactDocuments>;
   // How many task completions the server answers with a 500 before one lands.
   completionFailures?: { left: number };
+  // How many creates the server stores and then loses the answer to.
+  lostCreateAnswers?: { left: number };
+  // How many creates the server refuses with a 422, storing nothing.
+  refusedCreates?: { left: number };
 }>;
 
 function stubApi(behaviour: Behaviour = {}): Call[] {
@@ -87,6 +94,24 @@ function stubApi(behaviour: Behaviour = {}): Call[] {
       return jsonResponse({ max_upload_bytes: MAX_UPLOAD_BYTES });
     }
     if (key === "POST /activities") {
+      call.text = await request?.clone().text();
+      call.idempotencyKey = request?.headers.get("Idempotency-Key");
+      const lost = behaviour.lostCreateAnswers;
+      if (lost && lost.left > 0) {
+        lost.left -= 1;
+        call.outcome = "dropped";
+        throw new TypeError("Failed to fetch");
+      }
+      const refusedCreate = behaviour.refusedCreates;
+      if (refusedCreate && refusedCreate.left > 0) {
+        refusedCreate.left -= 1;
+        return answer(
+          jsonResponse(
+            { type: "about:blank", title: "Unprocessable", status: 422 },
+            422,
+          ),
+        );
+      }
       return jsonResponse({ id: CREATED_ID, kind: "meeting" }, 201);
     }
     if (key === "GET /attachments") {
@@ -461,4 +486,40 @@ it("keeps a partially attached outcome open and retries only its missing file", 
     ["outcome.pdf", 201],
   ]);
   expect(creates(calls)).toBe(1);
+});
+
+it("resends the identical create under the same key when its answer was lost", async () => {
+  // Only Date is faked, so the clock can move between tries while events run.
+  vi.useFakeTimers({ toFake: ["Date"] });
+  const calls = stubApi({ lostCreateAnswers: { left: 1 } });
+  renderForm();
+  const user = userEvent.setup();
+  fireEvent.change(await screen.findByRole("textbox", { name: "Subject" }), {
+    target: { value: "Kickoff with Brandt IT" },
+  });
+  await user.click(screen.getByRole("button", { name: "Log" }));
+  await waitFor(() => expect(creates(calls)).toBe(1));
+  await screen.findByRole("alert");
+  vi.setSystemTime(Date.now() + 60_000);
+  await user.click(screen.getByRole("button", { name: "Log" }));
+  await waitFor(() => expect(creates(calls)).toBe(2));
+  const [lost, retry] = calls.filter((call) => call.key === "POST /activities");
+  expect(retry?.idempotencyKey).toBe(lost?.idempotencyKey);
+  expect(retry?.text).toBe(lost?.text);
+  expect(lost?.text).toContain('"occurred_at"');
+});
+
+it("sends an edited draft as edited after the server refused the create", async () => {
+  const calls = stubApi({ refusedCreates: { left: 1 } });
+  renderForm();
+  const user = userEvent.setup();
+  const subject = await screen.findByRole("textbox", { name: "Subject" });
+  fireEvent.change(subject, { target: { value: "Kickoff" } });
+  await user.click(screen.getByRole("button", { name: "Log" }));
+  await screen.findByRole("alert");
+  fireEvent.change(subject, { target: { value: "Kickoff with Brandt IT" } });
+  await user.click(screen.getByRole("button", { name: "Log" }));
+  await waitFor(() => expect(creates(calls)).toBe(2));
+  const retry = calls.filter((call) => call.key === "POST /activities")[1];
+  expect(retry?.text).toContain('"subject":"Kickoff with Brandt IT"');
 });
