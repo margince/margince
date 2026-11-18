@@ -282,8 +282,7 @@ describe("the IMAP form", () => {
     expect(screen.getByLabelText("App password *")).toBeTruthy();
     expect(screen.getByLabelText("Mailbox")).toBeTruthy();
     // Sending is opt-in: the one tick in the form starts off, and the
-    // outgoing server's fields show only once it is on. Scoped to the form:
-    // the step around it carries the overnight question's own checkbox.
+    // outgoing server's fields show only once it is on.
     const send = within(form).getByRole("checkbox");
     expect(send).not.toBeChecked();
     expect(within(form).queryByLabelText(/smtp/i)).toBeNull();
@@ -443,8 +442,7 @@ it("grants nothing when the reader skips connecting a mailbox", async () => {
   await userEvent.click(without);
   // The agent reads their mail to build the brief, so authority over a mailbox
   // that was never connected is authority over nothing — recorded as though
-  // the rep had agreed to something real. The box stays ticked; going on
-  // without a mailbox is what decides.
+  // the rep had agreed to something real.
   await waitFor(() =>
     expect(dispatch).toHaveBeenCalledWith({ type: "CONNECT_DONE" }),
   );

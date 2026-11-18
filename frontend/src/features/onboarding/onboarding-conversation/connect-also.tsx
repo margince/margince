@@ -21,8 +21,9 @@ import { useT } from "../../../i18n";
 import { useConnectorState } from "../../../lib/connector-state";
 import { liveConnection, usePassports } from "../../../lib/passports.queries";
 
-// What the connect step offers beside the mailbox, in either state: the
-// overnight brief, the LinkedIn profile and an AI tool. None gates the step.
+// What the connect step offers beside the mailbox: the LinkedIn profile and an
+// AI tool in either state, and the overnight brief once a mailbox is
+// connected, the only state in which its answer is recorded. None gates the step.
 //
 // LinkedIn is not a connection here. Nothing is authorized and nothing syncs.
 // The member records which profile their imported network is attributed to.
@@ -46,7 +47,9 @@ export type AlsoWorthDoingProps = Readonly<{
   linkedinError: string | null;
 }>;
 
-export function AlsoWorthDoing(props: AlsoWorthDoingProps) {
+export function AlsoWorthDoing(
+  props: AlsoWorthDoingProps & Readonly<{ mailConnected: boolean }>,
+) {
   const t = useT();
   return (
     <Panel title={t("ob.conv.connect.alsoTitle")}>
@@ -56,11 +59,13 @@ export function AlsoWorthDoing(props: AlsoWorthDoingProps) {
           {/* Asked on the step rather than in the ask, because a real OAuth
               allow leaves the page entirely: a switch flipped inside the ask
               would not survive the redirect back. */}
-          <OvernightGrantChoice
-            checked={props.wantsOvernight}
-            onChange={props.onWantsOvernightChange}
-            failed={props.overnightFailed}
-          />
+          {props.mailConnected && (
+            <OvernightGrantChoice
+              checked={props.wantsOvernight}
+              onChange={props.onWantsOvernightChange}
+              failed={props.overnightFailed}
+            />
+          )}
           <LinkedinRow {...props} />
           <AiToolRow />
         </SettingList>

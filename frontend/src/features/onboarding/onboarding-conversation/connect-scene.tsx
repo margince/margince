@@ -183,7 +183,7 @@ export function ConnectScene({
         <ConnectedStep
           account={live.account}
           mailbox={live.mailbox}
-          also={<AlsoWorthDoing {...also} />}
+          also={<AlsoWorthDoing {...also} mailConnected />}
           finishing={finishing}
           onFinish={() => onFinish(false)}
         />
@@ -218,7 +218,7 @@ export function ConnectScene({
             />
           )}
 
-          <AlsoWorthDoing {...also} />
+          <AlsoWorthDoing {...also} mailConnected={false} />
 
           <SkipWayOnward
             caption={

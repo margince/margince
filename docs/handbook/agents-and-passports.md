@@ -327,7 +327,7 @@ so a change applies at once rather than at the next sign-in.
 A scheduled agent runs while you are away, so it cannot take your rights from
 a session you are not in. You have to give them in advance. In
 the app this is the **Overnight preparation** card in **Settings →
-Account**, with the switch **Prepare my Morning brief overnight**. You were asked the same question once when you first joined.
+Account**, with the switch **Prepare my Morning brief overnight**. If you connected a mailbox when you first joined, you were asked the same question then.
 
 Turning it on creates your own passport in the same step. The overnight run
 then carries a passport that is yours. So everything it does is limited to

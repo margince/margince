@@ -185,9 +185,9 @@ export function ConnectAct({
     // and leaving an opt-out as unanswered is what makes the product ask the
     // declining rep again every night.
     //
-    // A rep who SKIPS the connect records nothing, whatever the box says — the
-    // agent reads their mail to build the brief, so an answer about a mailbox
-    // that was never connected is an answer about nothing.
+    // A rep who SKIPS the connect records nothing, and was never shown the
+    // switch: the agent reads their mail to build the brief, so an answer about
+    // a mailbox that was never connected is an answer about nothing.
     //
     // Its failure does not fail the step, but it is not swallowed either: the
     // rep is told, and the question is askable again in Settings. Blocking

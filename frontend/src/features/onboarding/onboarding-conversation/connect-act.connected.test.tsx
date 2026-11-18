@@ -555,10 +555,20 @@ describe("the LinkedIn row", () => {
 });
 
 // The overnight question rides with this step: preselected, and written when
-// the step COMPLETES rather than when the switch flips.
+// the step COMPLETES rather than when the switch flips. The brief is built
+// from the mailbox, so it is asked only once one is connected.
 describe("the overnight question", () => {
-  it("is asked preselected, and grants nothing yet", async () => {
+  const mailbox = () => roster(row("gmail", { backfill: { state: "done" } }));
+
+  it("is not offered while no mailbox is connected", async () => {
     stub({ "GET /connectors": roster() });
+    renderConnectAct();
+    await screen.findByRole("button", { name: "Skip for now" });
+    expect(screen.queryByTestId("overnight-grant-choice")).toBeNull();
+  });
+
+  it("is asked preselected, and grants nothing yet", async () => {
+    stub({ "GET /connectors": mailbox() });
     renderConnectAct();
     expect(await screen.findByTestId("overnight-grant-choice")).toHaveAttribute(
       "aria-checked",
@@ -571,9 +581,9 @@ describe("the overnight question", () => {
   // Without the remembered answer it would return at its default and grant
   // against an explicit opt-out.
   it("keeps an opt-out across the OAuth round trip", async () => {
-    stub({ "GET /connectors": roster() });
+    stub({ "GET /connectors": mailbox() });
     const first = renderConnectAct();
-    await userEvent.click(screen.getByTestId("overnight-grant-choice"));
+    await userEvent.click(await screen.findByTestId("overnight-grant-choice"));
     first.unmount();
 
     renderConnectAct();

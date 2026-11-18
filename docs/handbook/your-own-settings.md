@@ -16,7 +16,7 @@ Also called: my profile, my account, preferences, user settings.
 ### What happens the first time I sign in?
 The first time you sign in to Margince with a full seat, two steps come before the rest of the app: **Train your writing voice** and **Connect your mail and calendar**. If your role may not train a writing voice, the first step is left out and you start on the second.
 1. On **Train your writing voice**, drop or browse files you wrote, or choose **Paste text instead**. Then choose **Build my voice profile**, or **Skip voice for now**.
-2. On **Connect your mail and calendar**, pick Google, Microsoft or **Other mail provider**. **Also worth doing now** offers your LinkedIn profile, your AI tool and **Prepare my Morning brief overnight**. Choose **Continue**, or **Skip for now**.
+2. On **Connect your mail and calendar**, pick Google, Microsoft or **Other mail provider**. **Also worth doing now** offers your LinkedIn profile and your AI tool, and once a mailbox is connected, **Prepare my Morning brief overnight**. Choose **Continue**, or **Skip for now**.
 
 Home opens after the second step. Samples you added are kept even if you skip or the build does not finish. Whatever you skipped waits under **Finish setup**, and you can change all of it later in Settings under **Writing voice**, **Connections** and **Account**.
 Also called: onboarding, first sign-in, welcome steps.
