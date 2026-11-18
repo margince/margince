@@ -78,7 +78,7 @@ func frontendMomentVerbWrites(t *testing.T) map[string]bool {
 	}
 	body := tsComment.ReplaceAllString(string(source)[start:start+end], " ")
 	entries := map[string]bool{}
-	for _, entry := range strings.Split(body, ",") {
+	for entry := range strings.SplitSeq(body, ",") {
 		entry = strings.TrimSpace(entry)
 		if entry == "" {
 			continue
