@@ -112,24 +112,37 @@ func (n scheduledSendHeldNotifier) NotifyHeldInTx(ctx context.Context, tx pgx.Tx
 	return err
 }
 
-// ResolveHeldInTx withdraws the card once the rep has acted on the message
-// directly — rescheduled or cancelled it from its own surface, which IS the
-// answer. Without this a rep answers once and the card asks again.
+// ResolveHeldInTx withdraws the card once the message is answered: the rep
+// rescheduled or cancelled it, or it was sent after a confirmed review.
+// Without this a rep answers once and the card asks again.
 //
 // Found by the message named in the payload: the card carries no target id, for
 // the reason heldScheduledSendTarget gives.
-func (n scheduledSendHeldNotifier) ResolveHeldInTx(ctx context.Context, tx pgx.Tx, scheduledSendID ids.UUID) error {
+func (n scheduledSendHeldNotifier) ResolveHeldInTx(ctx context.Context, tx pgx.Tx, scheduledSendID ids.UUID, how activities.HeldResolution) error {
 	pending, err := n.pendingCardsFor(ctx, tx, scheduledSendID)
 	if err != nil {
 		return err
 	}
 	for _, id := range pending {
-		if _, err := n.approvals.WithdrawInTx(ctx, tx, id, "the rep rescheduled or cancelled this message"); err != nil {
+		if _, err := n.approvals.WithdrawInTx(ctx, tx, id, heldWithdrawalReason(how)); err != nil {
 			return fmt.Errorf("compose: clearing the held message's card: %w", err)
 		}
 	}
 	return nil
 }
+
+// heldWithdrawalReason is the audit reason a withdrawn card records.
+func heldWithdrawalReason(how activities.HeldResolution) string {
+	if how == activities.HeldResolvedBySending {
+		return heldSentAfterConfirmation
+	}
+	return heldMovedByRep
+}
+
+const (
+	heldMovedByRep            = "the rep rescheduled or cancelled this message"
+	heldSentAfterConfirmation = "the message was sent after its review was confirmed"
+)
 
 // pendingCardsFor finds the live cards raised for one message.
 func (n scheduledSendHeldNotifier) pendingCardsFor(ctx context.Context, tx pgx.Tx, scheduledSendID ids.UUID) ([]ids.ApprovalID, error) {

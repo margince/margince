@@ -305,7 +305,7 @@ func (s *Store) RescheduleInTx(ctx context.Context, tx pgx.Tx, id ids.UUID, sche
 		// time and finds a row whose due moment has moved, which it re-snoozes
 		// or ignores — the row is the schedule, the job is only an alarm.
 		// The rep answered the hold, so its card goes with it.
-		if err := s.resolveHeld(ctx, tx, id); err != nil {
+		if err := s.resolveHeld(ctx, tx, id, HeldResolvedByRep); err != nil {
 			return err
 		}
 		// The review stays live, because the decision is still outstanding.
@@ -354,7 +354,7 @@ func (s *Store) CancelInTx(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 		}
 		// Answered, like the reschedule above: a cancelled message needs no
 		// decision, so its card must not outlive it.
-		if err := s.resolveHeld(ctx, tx, id); err != nil {
+		if err := s.resolveHeld(ctx, tx, id, HeldResolvedByRep); err != nil {
 			return err
 		}
 		// AND THE REVIEW, if this message was one a refusal froze. Cancelling
@@ -395,11 +395,11 @@ func (s *Store) closeReview(
 
 // resolveHeld clears the inbox card a hold raised, once the rep has acted on
 // the message. A surface with no notifier wired has nothing to clear.
-func (s *Store) resolveHeld(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
+func (s *Store) resolveHeld(ctx context.Context, tx pgx.Tx, id ids.UUID, how HeldResolution) error {
 	if s.heldNotifier == nil {
 		return nil
 	}
-	return s.heldNotifier.ResolveHeldInTx(ctx, tx, id)
+	return s.heldNotifier.ResolveHeldInTx(ctx, tx, id, how)
 }
 
 // scanScheduledSend reads one row, thawing the payload for the fields the

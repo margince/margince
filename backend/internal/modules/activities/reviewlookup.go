@@ -57,3 +57,13 @@ func (s *Store) WithReviewLookup(lookup ReviewLookup) *Store {
 	clone.reviewLookup = lookup
 	return &clone
 }
+
+// HeldResolution is how a held message stopped needing its rep's card.
+type HeldResolution string
+
+const (
+	// HeldResolvedByRep: the rep rescheduled or cancelled it.
+	HeldResolvedByRep HeldResolution = "rep_moved"
+	// HeldResolvedBySending: it was sent after its review was confirmed.
+	HeldResolvedBySending HeldResolution = "sent_after_confirmation"
+)

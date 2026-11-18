@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/heldreason"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -121,10 +122,9 @@ const (
 // far worse than a quiet stop.
 type HeldNotifier interface {
 	NotifyHeldInTx(ctx context.Context, tx pgx.Tx, in HeldNotice) error
-	// ResolveHeldInTx clears the item once the rep has answered it. Rescheduling
-	// or cancelling IS the answer, and an item outliving it asks the same
-	// question twice.
-	ResolveHeldInTx(ctx context.Context, tx pgx.Tx, scheduledSendID ids.UUID) error
+	// ResolveHeldInTx clears the item once the message is answered, saying how.
+	// An item outliving the answer asks the same question twice.
+	ResolveHeldInTx(ctx context.Context, tx pgx.Tx, scheduledSendID ids.UUID, how HeldResolution) error
 }
 
 // HeldNotice is one stopped message as the rep needs to see it: whose it is,
@@ -220,7 +220,7 @@ const (
 // Hold reasons. Each names what a human has to decide about, because "held" on
 // its own tells a rep nothing they can act on.
 const (
-	HeldConsentWithdrawn = "consent_withdrawn"
+	HeldConsentWithdrawn = heldreason.ConsentWithdrawn
 	HeldSenderInactive   = "sender_inactive"
 	// HeldPassportRevoked is its own reason rather than sender_inactive: the
 	// human is fine, and telling them their account is inactive would send them
@@ -229,7 +229,7 @@ const (
 	HeldPassportRevoked = "passport_revoked"
 	HeldMissedWindow    = "missed_window"
 	HeldTimerExhausted  = "timer_exhausted"
-	HeldSendRefused     = "send_refused"
+	HeldSendRefused     = heldreason.SendRefused
 	HeldFollowupSettled = "followup_settled"
 	HeldMeetingCanceled = "meeting_canceled"
 )

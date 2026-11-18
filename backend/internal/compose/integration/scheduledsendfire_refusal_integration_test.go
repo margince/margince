@@ -18,6 +18,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -114,6 +115,10 @@ func TestARefusalAtFireOpensAReviewTheRepCanConfirm(t *testing.T) {
 		t.Fatalf("the held row offers %v, want [direct_send] for a rep who may direct it", row.ReviewActions)
 	}
 
+	card, found := p.heldCardFor(t, id)
+	if !found {
+		t.Fatal("the hold raised no card in the rep's inbox")
+	}
 	if code := p.confirmReview(t, review); code != http.StatusCreated {
 		t.Fatalf("confirming the review → %d, want 201", code)
 	}
@@ -128,6 +133,16 @@ func TestARefusalAtFireOpensAReviewTheRepCanConfirm(t *testing.T) {
 	}
 	if _, still := p.heldCardFor(t, id); still {
 		t.Error("the held card still asks about a message that has gone")
+	}
+	var withdrawnFor string
+	if err := p.Owner.QueryRow(context.Background(), `
+		SELECT evidence->>'reason' FROM audit_log
+		 WHERE entity_type = 'approval' AND entity_id = $1 AND after->>'status' = 'expired'`,
+		card.ID).Scan(&withdrawnFor); err != nil {
+		t.Fatalf("reading why the card was withdrawn: %v", err)
+	}
+	if withdrawnFor != "the message was sent after its review was confirmed" {
+		t.Errorf("the card was withdrawn as %q, which is not what happened to the message", withdrawnFor)
 	}
 	// A second press is refused and sends nothing more.
 	if code := p.confirmReview(t, review); code == http.StatusCreated {
@@ -260,4 +275,43 @@ func TestHoldsThatAreNotRefusalsOpenNoReview(t *testing.T) {
 			t.Errorf("%d review(s) for a missed window", all)
 		}
 	})
+}
+
+// A row held at fire takes a spelling correction under the same approval, as
+// a row held at the keyboard does. An interrupted send leaves the approval open.
+func TestARowHeldAtFireTakesAWordingCorrection(t *testing.T) {
+	p, id := heldByAnObjectionAtFire(t)
+	review := p.liveReviewFor(t, id)
+	if _, err := p.Owner.Exec(t.Context(), `CREATE FUNCTION reject_fire_wording_staging() RETURNS trigger LANGUAGE plpgsql
+		AS $$ BEGIN RAISE EXCEPTION 'delivery staging interrupted by the test'; END $$`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := p.Owner.Exec(t.Context(), `CREATE TRIGGER reject_fire_wording_staging BEFORE UPDATE ON communication_instruction
+		FOR EACH ROW WHEN (NEW.status='consumed') EXECUTE FUNCTION reject_fire_wording_staging()`); err != nil {
+		t.Fatal(err)
+	}
+	if code := p.confirmReview(t, review); code != http.StatusInternalServerError {
+		t.Fatalf("the interrupted confirmation → %d, want 500", code)
+	}
+	if _, err := p.Owner.Exec(t.Context(), `DROP FUNCTION reject_fire_wording_staging() CASCADE`); err != nil {
+		t.Fatal(err)
+	}
+	var current crmcontracts.CommunicationReview
+	if code := p.Call(t, "GET", "/v1/communication-reviews/"+review, nil, nil, &current); code != http.StatusOK {
+		t.Fatalf("reading the review → %d", code)
+	}
+	if current.WordingCorrection == nil {
+		t.Fatal("the review offers no wording correction on a row held at fire")
+	}
+	corrected := spellingCorrection(*current.WordingCorrection)
+	corrected["body"] = "Written the night before!"
+	delete(corrected, "html_body")
+	var result crmcontracts.WordingCorrectionResult
+	if code := p.Call(t, "POST", "/v1/communication-reviews/"+review+"/correct-wording",
+		corrected, nil, &result); code != http.StatusOK {
+		t.Fatalf("correcting the wording of a row held at fire → %d, want 200", code)
+	}
+	if result.Version != current.WordingCorrection.Version+1 {
+		t.Errorf("the correction answered version %d, want %d", result.Version, current.WordingCorrection.Version+1)
+	}
 }
