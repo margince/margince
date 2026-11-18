@@ -106,7 +106,7 @@ token:
 
 | Value | Provider | Meaning |
 |---|---|---|
-| `SendsWithScope` | `gmail` | The grant must carry `.../auth/gmail.send`; a connection without it parks with `"reconnect it to enable sending"`. |
+| `SendsWithScope` | `gmail`, `graph`, `imap` | The grant must carry the provider's send scope (`.../auth/gmail.send`, `Mail.Send`, `urn:margince:imap:send`); a connection without it parks with `"reconnect it to enable sending"`. An IMAP connection holds its scope only when its owner turned sending on and the SMTP login passed. |
 | `SendsWithoutScope` | `telegram` | The credential **is** the whole authority. A bot token carries no OAuth grant, so there is nothing to check it against. |
 | `CannotSend` | anything else | Nothing on this installation sends for it. It is the zero value, so a provider nobody answered for refuses instead of sending. |
 

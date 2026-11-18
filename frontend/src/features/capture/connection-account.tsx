@@ -30,7 +30,7 @@ import { connectInputFor } from "../../lib/connect-flow-draft";
 import {
   accountHealth,
   healthBadge,
-  missingSendGrant,
+  holdsSendGrant,
   needsReconnect,
   serviceReason,
 } from "../../lib/connector-status";
@@ -207,10 +207,7 @@ export function ConnectionAccountRow({
   const offerReconnect = canConnect && alert.offerReconnect;
   const setDefaultSender = useSetDefaultSender();
   const useForNewMail =
-    offerDefaultSender &&
-    mail &&
-    !mail.default_sender &&
-    !missingSendGrant(mail)
+    offerDefaultSender && mail && !mail.default_sender && holdsSendGrant(mail)
       ? () => setDefaultSender.mutate(mail)
       : undefined;
 
@@ -419,7 +416,7 @@ function AccountFacts({ account }: Readonly<{ account: ConnectionAccount }>) {
           {t("connectors.bringsNotes")}
         </Chip>
       )}
-      {vendorOfAccount(account) && mail && !missingSendGrant(mail) && (
+      {mail && holdsSendGrant(mail) && (
         <Chip icon={Send} dense>
           {t("connectors.bringsSend")}
         </Chip>

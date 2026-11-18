@@ -30844,6 +30844,20 @@ export interface components {
              * @default 50
              */
             max_messages: number;
+            smtp?: components["schemas"]["ImapSmtpSettings"];
+        };
+        /** @description Turns sending on for this mailbox. Mail goes out through this SMTP server, logged in with the IMAP username and secret, and a copy is filed in the Sent folder. The connect checks the SMTP login before it stores anything: a refused login answers `422` `smtp_login_rejected`, a server it cannot reach `502` `smtp_unreachable`. Absent keeps the connection read-only. */
+        ImapSmtpSettings: {
+            /** @description The SMTP server. Absent or empty uses the IMAP host. */
+            host?: string;
+            /** @description Absent uses 465 for `tls` and 587 for `starttls`. */
+            port?: number;
+            /**
+             * @description `tls` opens TLS at once (port 465). `starttls` upgrades a plain connection (port 587) and refuses a server that cannot.
+             * @default tls
+             * @enum {string}
+             */
+            security: "tls" | "starttls";
         };
         /** @description A mailbox no one owns. One team reads what it captures. */
         SharedMailbox: {

@@ -364,7 +364,7 @@ If the details come from the contact, the review ends. Data from someone else ma
 ### Why does Margince say "this installation cannot send mail"?
 "Not sent: this installation cannot send mail" means your installation has no server set up to send its own mail. So the privacy notice or confirmation link was not sent, and the duty stays open.
 
-This mail never goes through your connected Gmail or Outlook. It carries a private link to the contact's own record, which must not sit in your sent mail. Ask your administrator to set up the installation's own mail. Until then, tell the contact another way and press **End the duty…**.
+This mail never goes through your connected mailbox. It carries a private link to the contact's own record, which must not sit in your sent mail. Ask your administrator to set up the installation's own mail. Until then, tell the contact another way and press **End the duty…**.
 Also called: privacy notice not sent, cannot send notice.
 
 ### Which mailbox does Margince send from?

@@ -4,6 +4,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useId, useState } from "react";
 import { api } from "../../api/client";
+import type { components } from "../../api/schema";
 import { CaptureNotice } from "../../components/capture-notice";
 import { Button, Field, Modal, TextInput } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
@@ -12,6 +13,12 @@ import { formatNumber, identifierNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { problemCodeOf, problemMessageOf, unwrap } from "../../lib/problem";
+import {
+  ImapSendFields,
+  READ_ONLY,
+  smtpPort,
+  smtpRequest,
+} from "./imap-send-fields";
 import "../../design-system/querystates.css";
 import "./imap-connect-form.css";
 
@@ -26,14 +33,7 @@ import "./imap-connect-form.css";
 // platform step, inline. ImapMailboxForm is the one form; ImapConnectForm is
 // the dialog around it.
 
-type ImapConnectRequest = {
-  host: string;
-  port: number;
-  username: string;
-  secret: string;
-  mailbox: string;
-  max_messages: number;
-};
+type ImapConnectRequest = components["schemas"]["ImapCredentials"];
 
 const DEFAULT_PORT = "993";
 const DEFAULT_MAILBOX = "INBOX";
@@ -48,24 +48,22 @@ function inRange(value: number, { min, max }: Range): boolean {
   return Number.isInteger(value) && value >= min && value <= max;
 }
 
-// The two IMAP-specific server conditions get their own honest sentence;
-// every other failure reads the way failures read everywhere else. Neither
-// sentence ever echoes the submitted host — the server doesn't send it back
-// either, so there is nothing here to leak. Exported so the onboarding IMAP
-// panel (onboarding-connect-panels.imap.tsx) reads the same two sentences off the
-// same server codes. It keeps no copy of this mapping of its own.
-export function imapErrorMessage(
+// The IMAP and SMTP server conditions get their own sentence; every other
+// failure reads the way failures read everywhere else. No sentence echoes the
+// submitted host, and the server does not send it back either.
+const SERVER_SENTENCES: Readonly<Record<string, MessageKey>> = {
+  imap_login_rejected: "connectors.imapLoginRejected",
+  imap_unreachable: "connectors.imapUnreachable",
+  smtp_login_rejected: "connectors.smtpLoginRejected",
+  smtp_unreachable: "connectors.smtpUnreachable",
+};
+
+function imapErrorMessage(
   error: unknown,
   t: (key: MessageKey) => string,
 ): string {
-  const code = problemCodeOf(error);
-  if (code === "imap_login_rejected") {
-    return t("connectors.imapLoginRejected");
-  }
-  if (code === "imap_unreachable") {
-    return t("connectors.imapUnreachable");
-  }
-  return problemMessageOf(error, t);
+  const key = SERVER_SENTENCES[problemCodeOf(error) ?? ""];
+  return key ? t(key) : problemMessageOf(error, t);
 }
 
 /**
@@ -109,6 +107,7 @@ export function ImapMailboxForm({
   const [secret, setSecret] = useState("");
   const [mailbox, setMailbox] = useState(DEFAULT_MAILBOX);
   const [maxMessages, setMaxMessages] = useState(DEFAULT_MAX_MESSAGES);
+  const [send, setSend] = useState(READ_ONLY);
   // Whether Connect has been pressed with something still missing. The button
   // is always pressable; the press is what turns the missing fields red and
   // names them beside it, so a reader learns what is needed by trying rather
@@ -158,10 +157,12 @@ export function ImapMailboxForm({
     .map(([, label]) => label);
   const portInRange = inRange(parsedPort, PORT_RANGE);
   const maxInRange = inRange(parsedMax, MAX_MESSAGES_RANGE);
+  const smtpPortInRange = !send.on || inRange(smtpPort(send), PORT_RANGE);
   // Filled in but unusable: named like the missing fields, never a silent no-op.
   const outOfRange = [
     [!portInRange, t("connectors.imapPort")],
     [!maxInRange, t("connectors.imapMaxMessages")],
+    [!smtpPortInRange, t("connectors.imapSmtpPort")],
   ]
     .filter((bad): bad is [true, string] => bad[0] === true)
     .map(([, label]) => label);
@@ -210,6 +211,7 @@ export function ImapMailboxForm({
       secret,
       mailbox: mailbox.trim() || DEFAULT_MAILBOX,
       max_messages: parsedMax,
+      smtp: smtpRequest(send),
     });
   };
 
@@ -332,6 +334,12 @@ export function ImapMailboxForm({
               />
             )}
           </Field>
+          <ImapSendFields
+            draft={send}
+            onChange={setSend}
+            imapHost={host}
+            portError={ranged(smtpPortInRange, PORT_RANGE, identifierNumber)}
+          />
           <p className="t-caption imap-mailbox-span">
             {t("connectors.imapSecretHint")}
           </p>

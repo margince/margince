@@ -85,12 +85,11 @@ type mailboxAuthority struct {
 var _ activities.SendAuthority = mailboxAuthority{}
 
 // mailAppConfigured is the Server's answer to that question. It reads the fields
-// at CALL time, not at install. So the two install sites need no ordering rule
-// against the options that record the facts.
+// at CALL time, so the install sites need no order against the options.
 //
-// A provider with no arm is not configured, which is also the only honest
-// answer: comms.SendScopeFor gives a send scope to the mail providers alone, so
-// no other provider reaches this at all.
+// IMAP needs no app: its sealed credential carries the SMTP server. A provider
+// with no arm is not configured. comms.SendScopeFor scopes only mail providers,
+// so no other provider reaches this.
 func (s *Server) mailAppConfigured(ctx context.Context, provider string) (bool, error) {
 	switch provider {
 	case providerGmail:
@@ -98,10 +97,11 @@ func (s *Server) mailAppConfigured(ctx context.Context, provider string) (bool, 
 	case providerGraph:
 		return envOrStoredApp(ctx, s.graphAppConfigured, s.microsoftAppResolver)
 	case testmailbox.Name:
-		// No credential to check — the deployment flag itself IS the whole
-		// configuration question for this connector, already recorded on
-		// s.captureConfig by WithCaptureConfig (compose/capture.go).
+		// No credential to check: the deployment flag (WithCaptureConfig) is
+		// the whole configuration question for this connector.
 		return s.captureConfig.AllowTestMailbox, nil
+	case providerIMAP:
+		return true, nil
 	default:
 		return false, nil
 	}

@@ -14599,6 +14599,24 @@ func (e HomeRepairTaskSource) Valid() bool {
 	}
 }
 
+// Defines values for ImapSmtpSettingsSecurity.
+const (
+	ImapSmtpSettingsSecurityStarttls ImapSmtpSettingsSecurity = "starttls"
+	ImapSmtpSettingsSecurityTls      ImapSmtpSettingsSecurity = "tls"
+)
+
+// Valid indicates whether the value is a known member of the ImapSmtpSettingsSecurity enum.
+func (e ImapSmtpSettingsSecurity) Valid() bool {
+	switch e {
+	case ImapSmtpSettingsSecurityStarttls:
+		return true
+	case ImapSmtpSettingsSecurityTls:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ImportDraftStep.
 const (
 	ImportDraftStepFiles ImportDraftStep = "files"
@@ -52103,9 +52121,27 @@ type ImapCredentials struct {
 	// Secret Password or app-specific password. Sealed to the vault; never returned.
 	Secret *string `json:"secret,omitempty"`
 
+	// Smtp Turns sending on for this mailbox. Mail goes out through this SMTP server, logged in with the IMAP username and secret, and a copy is filed in the Sent folder. The connect checks the SMTP login before it stores anything: a refused login answers `422` `smtp_login_rejected`, a server it cannot reach `502` `smtp_unreachable`. Absent keeps the connection read-only.
+	Smtp *ImapSmtpSettings `json:"smtp,omitempty"`
+
 	// Username The mailbox login — an email address on most servers.
 	Username string `json:"username"`
 }
+
+// ImapSmtpSettings Turns sending on for this mailbox. Mail goes out through this SMTP server, logged in with the IMAP username and secret, and a copy is filed in the Sent folder. The connect checks the SMTP login before it stores anything: a refused login answers `422` `smtp_login_rejected`, a server it cannot reach `502` `smtp_unreachable`. Absent keeps the connection read-only.
+type ImapSmtpSettings struct {
+	// Host The SMTP server. Absent or empty uses the IMAP host.
+	Host *string `json:"host,omitempty"`
+
+	// Port Absent uses 465 for `tls` and 587 for `starttls`.
+	Port *int `json:"port,omitempty" maximum:"65535" minimum:"1"`
+
+	// Security `tls` opens TLS at once (port 465). `starttls` upgrades a plain connection (port 587) and refuses a server that cannot.
+	Security *ImapSmtpSettingsSecurity `json:"security,omitempty"`
+}
+
+// ImapSmtpSettingsSecurity `tls` opens TLS at once (port 465). `starttls` upgrades a plain connection (port 587) and refuses a server that cannot.
+type ImapSmtpSettingsSecurity string
 
 // ImportColumn One column of the uploaded file, described well enough to map it without opening the file elsewhere.
 type ImportColumn struct {

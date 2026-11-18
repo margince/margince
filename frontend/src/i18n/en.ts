@@ -12345,6 +12345,18 @@ export const en = {
     "The mailbox rejected these credentials. Check host, email and app password.",
   "connectors.imapUnreachable":
     "The mail server could not be reached. Check the host and port.",
+  "connectors.imapSend": "Send from this mailbox",
+  "connectors.imapSendHint":
+    "Mail you send from Margince goes out through this mailbox, and a copy lands in its Sent folder.",
+  "connectors.imapSmtpHost": "SMTP server",
+  "connectors.imapSmtpSecurity": "Security",
+  "connectors.imapSmtpTls": "SSL/TLS",
+  "connectors.imapSmtpStartTls": "STARTTLS",
+  "connectors.imapSmtpPort": "SMTP port",
+  "connectors.smtpLoginRejected":
+    "The SMTP server rejected this login. Check the server, the security and the app password.",
+  "connectors.smtpUnreachable":
+    "The SMTP server could not be reached. Check the server and port.",
 
   // The Telegram connector panel (Task 17, design §9.1-§9.2): one bot
   // connects for the whole workspace — no OAuth handshake, a BotFather
@@ -12638,17 +12650,6 @@ export const en = {
   "blockedDomains.reason.bulkSpam": "Mail from this domain was judged spam",
 
   "ob.s4.googleFailed": "Google connection not completed",
-  "ob.s4.imapHost": "IMAP host",
-  "ob.s4.imapHostPlaceholder": "imap.gmail.com",
-  "ob.s4.imapPort": "Port",
-  "ob.s4.imapEmail": "Email",
-  "ob.s4.imapPassword": "App password",
-  "ob.s4.imapMailbox": "Mailbox",
-  "ob.s4.imapMax": "Number of recent emails",
-  "ob.s4.imapHint":
-    "Use an app password. It is stored encrypted and deleted on disconnect.",
-  "ob.s4.imapConnect": "Test and connect",
-  "ob.s4.accessToggle": "Access granted",
   "ob.s4.scope1Lead": "Read access.",
   "ob.s4.scope1Rest":
     "Mail becomes contacts, companies and activities automatically.",
@@ -12659,7 +12660,6 @@ export const en = {
   "ob.s4.scope3Rest": "Export or delete everything at any time.",
   "ob.s4.scope4Lead": "Disconnect in one click.",
   "ob.s4.scope4Rest": "The CRM keeps working but stops capturing.",
-  "ob.s4.connectFailed": "Mailbox not connected",
   "ob.s4.notNow": "Not now",
 
   "ob.conv.read.started": "Reading {host}. I will report what I find.",
@@ -16225,7 +16225,7 @@ export const en = {
   "connectFlow.microsoft": "Outlook mail and calendar on a work account",
   "connectFlow.otherHost": "Another mail host",
   "connectFlow.otherHostDesc":
-    "IMAP with an app password. Mail only, no calendar, no sending.",
+    "IMAP with an app password. Mail only, no calendar. Sending is optional.",
   "connectFlow.alreadyConnected": "Already connected.",
   "connectFlow.pickAccount": "Choose an account first.",
   "connectFlow.titleVendor": "Connect {vendor}",

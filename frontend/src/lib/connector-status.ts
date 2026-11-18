@@ -42,7 +42,13 @@ export type ConnectorStatus =
 const SEND_SCOPES: Readonly<Record<string, string>> = {
   gmail: "https://www.googleapis.com/auth/gmail.send",
   graph: "Mail.Send",
+  imap: "urn:margince:imap:send",
 };
+
+/** Providers whose owner turns sending on by choice, with a switch on the
+ *  connect form. A read-only connection of one is that choice, not a grant
+ *  that went missing, so it is never badged as one. */
+const OPT_IN_SENDERS: ReadonlySet<string> = new Set(["imap"]);
 
 /** Whether this connection captures mail it will never be allowed to send.
  *  Neither Google nor Microsoft will widen an existing refresh token, so every
@@ -52,13 +58,17 @@ const SEND_SCOPES: Readonly<Record<string, string>> = {
  *  granted scopes say it, which is why this reads them rather than the status.
  *
  *  A provider absent from the table above is not "cannot send" — it is not a
- *  sending mailbox in the first place (a calendar, an IMAP box), and badging it
- *  would be a refusal nobody could act on. */
+ *  sending mailbox in the first place (a calendar), and badging it would be a
+ *  refusal nobody could act on. Nor is an opt-in sender left read-only. */
 export function missingSendGrant(
   connection: Pick<CaptureConnection, "provider" | "scopes">,
 ): boolean {
   const required = SEND_SCOPES[connection.provider];
-  return required !== undefined && !connection.scopes.includes(required);
+  return (
+    required !== undefined &&
+    !OPT_IN_SENDERS.has(connection.provider) &&
+    !connection.scopes.includes(required)
+  );
 }
 
 /** Whether this connection's grant can send mail: a sending provider whose

@@ -340,16 +340,16 @@ func SetChannelProviders(providers []string) {
 // mailSendScopes are the OAuth permissions a MAIL grant must carry to transmit,
 // per provider.
 //
-// A map rather than a chain of ifs because there are now two vendors and the
-// chain's failure mode is silent: a provider missing from it reports CannotSend,
-// and every one of its deliveries parks with "provider cannot send messages" —
-// a connector limitation that does not exist. Each value is a SECOND spelling of
-// a string a capture provider already declares (this module must not import
-// one), and compose holds the two against each other per provider in
-// compose/sendscope_test.go.
+// A provider missing from it reports CannotSend, and every one of its
+// deliveries parks with "provider cannot send messages". Each value spells a
+// second time a string a capture provider declares, which this module may not
+// import. compose/sendscope_test.go holds the two against each other.
 var mailSendScopes = map[string]string{
 	"gmail": "https://www.googleapis.com/auth/gmail.send",
 	"graph": "Mail.Send",
+	// imap has no OAuth grant either: the connector reports this scope when
+	// its owner turned sending on and the SMTP login passed at connect.
+	"imap": "urn:margince:imap:send",
 	// test_mailbox has no real OAuth grant — the connector always reports
 	// holding this scope (testmailbox.GrantedScopes) — so mailAppConfigured
 	// (the deployment flag) is the one gate that decides whether it can

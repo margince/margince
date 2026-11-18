@@ -125,12 +125,29 @@ func TestDispatchParksWhenTheGrantLacksSendScope(t *testing.T) {
 	}
 }
 
+// An IMAP mailbox whose owner never turned sending on holds no send scope, and
+// its delivery parks with the reason that names reconnecting.
+func TestDispatchParksAnIMAPDeliveryWhoseMailboxDoesNotSend(t *testing.T) {
+	sender := &fakeSender{}
+	store := &fakeStore{delivery: liveDelivery()}
+	store.delivery.Provider = "imap"
+	d := newTestDispatcher(store, fakeResolver{sender: sender, granted: []string{}}, &stubConsent{})
+
+	got, _ := dispatch(context.Background(), d, store.delivery.ID)
+	if got != OutcomeParked || sender.calls != 0 {
+		t.Errorf("outcome=%v calls=%d, want OutcomeParked/0", got, sender.calls)
+	}
+	if !strings.Contains(store.parked, "not granted the send scope") {
+		t.Errorf("parked reason = %q, want the send-scope reason", store.parked)
+	}
+}
+
 // A provider with no send capability at all has nothing to grant, so the
 // authority gate must refuse it rather than fall through to a nil scope.
 func TestDispatchParksWhenTheProviderCannotSendAtAll(t *testing.T) {
 	sender := &fakeSender{}
 	store := &fakeStore{delivery: liveDelivery()}
-	store.delivery.Provider = "imap"
+	store.delivery.Provider = "carrier-pigeon"
 	d := newTestDispatcher(store, fakeResolver{sender: sender, granted: []string{sendScope}}, &stubConsent{})
 
 	got, _ := dispatch(context.Background(), d, store.delivery.ID)

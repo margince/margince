@@ -19,12 +19,10 @@ import {
   OAuthReturnPanel,
 } from "./onboarding-connect-panels";
 
-// The onboarding IMAP panel (G-10): the wizard's connect step for the one
-// credential provider. It must post through the typed client, with the nested
-// `{imap:{...}}` shape a standing connect expects. It must never use a raw
-// fetch to the retired transient endpoint. A standing connect answers before
-// any mail is read, so the panel hands back to the step. The step's account
-// panel shows the mailbox from the roster.
+// The onboarding IMAP panel is the Settings mailbox form, tested in
+// imap-connect-form.test.tsx, with the step's own dismissal. Tested here: it
+// hands back to the step once connected. "Not now" neither contacts the server
+// nor closes over a connect still in flight.
 
 function render(ui: ReactNode, client?: QueryClient) {
   return rtlRender(
@@ -40,10 +38,15 @@ function render(ui: ReactNode, client?: QueryClient) {
 }
 
 async function fillValidForm() {
-  await userEvent.clear(screen.getByLabelText("IMAP host"));
-  await userEvent.type(screen.getByLabelText("IMAP host"), "mail.example.org");
-  await userEvent.type(screen.getByLabelText("Email"), "lars@example.org");
-  await userEvent.type(screen.getByLabelText("App password"), "app-password");
+  await userEvent.type(
+    screen.getByLabelText("IMAP server *"),
+    "mail.example.org",
+  );
+  await userEvent.type(
+    screen.getByLabelText("Email address *"),
+    "lars@example.org",
+  );
+  await userEvent.type(screen.getByLabelText("App password *"), "app-password");
 }
 
 afterEach(() => {
@@ -70,9 +73,7 @@ describe("ImapConnectPanel", () => {
     const onDone = vi.fn();
     render(<ImapConnectPanel onDone={onDone} onDismiss={() => {}} />);
     await fillValidForm();
-    await userEvent.click(
-      screen.getByRole("button", { name: /test and connect/i }),
-    );
+    await userEvent.click(screen.getByRole("button", { name: "Connect" }));
     await waitFor(() => expect(calls.length).toBe(1));
     expect(calls[0].body).toMatchObject({
       imap: {
@@ -81,94 +82,11 @@ describe("ImapConnectPanel", () => {
         username: "lars@example.org",
         secret: "app-password",
         mailbox: "INBOX",
-        max_messages: 30,
+        max_messages: 50,
       },
     });
 
     await waitFor(() => expect(onDone).toHaveBeenCalledTimes(1));
-  });
-
-  it("hands back to the step once the mailbox is live", async () => {
-    installFetchStub({
-      "POST /connectors/imap/connect": () =>
-        jsonResponse({
-          connection: {
-            id: "c1",
-            provider: "imap",
-            status: "connected",
-            scopes: [],
-          },
-        }),
-    });
-    const onDone = vi.fn();
-    render(<ImapConnectPanel onDone={onDone} onDismiss={() => {}} />);
-    await fillValidForm();
-    await userEvent.click(
-      screen.getByRole("button", { name: /test and connect/i }),
-    );
-    await waitFor(() => expect(onDone).toHaveBeenCalledTimes(1));
-  });
-
-  it("surfaces a rejected IMAP login without echoing the host back", async () => {
-    installFetchStub({
-      "POST /connectors/imap/connect": () =>
-        jsonResponse(
-          {
-            code: "imap_login_rejected",
-            detail: "The mailbox rejected these credentials.",
-          },
-          422,
-        ),
-    });
-    render(<ImapConnectPanel onDone={vi.fn()} onDismiss={() => {}} />);
-    await fillValidForm();
-    await userEvent.click(
-      screen.getByRole("button", { name: /test and connect/i }),
-    );
-    expect(
-      await screen.findByText(/rejected these credentials/i),
-    ).toBeInTheDocument();
-    expect(screen.queryByText(/mail\.example\.org/)).not.toBeInTheDocument();
-  });
-
-  it("never retains the password after a failed submit", async () => {
-    installFetchStub({
-      "POST /connectors/imap/connect": () =>
-        jsonResponse({ code: "imap_unreachable", detail: "unreachable" }, 502),
-    });
-    render(<ImapConnectPanel onDone={vi.fn()} onDismiss={() => {}} />);
-    await fillValidForm();
-    await userEvent.click(
-      screen.getByRole("button", { name: /test and connect/i }),
-    );
-    await screen.findByText(/could not be reached/i);
-    expect(screen.getByLabelText("App password")).toHaveValue("");
-  });
-
-  it("invalidates the shared connectors query so Settings picks up the new connection immediately", async () => {
-    installFetchStub({
-      "POST /connectors/imap/connect": () =>
-        jsonResponse({
-          connection: {
-            id: "c1",
-            provider: "imap",
-            status: "connected",
-            scopes: [],
-          },
-        }),
-    });
-    const client = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
-    const invalidateSpy = vi.spyOn(client, "invalidateQueries");
-    render(<ImapConnectPanel onDone={vi.fn()} onDismiss={() => {}} />, client);
-    await fillValidForm();
-    await userEvent.click(
-      screen.getByRole("button", { name: /test and connect/i }),
-    );
-    await waitFor(() =>
-      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["connectors"] }),
-    );
   });
 
   // "Not now" closes THIS dialog without deciding anything — it never
@@ -218,9 +136,7 @@ describe("ImapConnectPanel", () => {
     const onDone = vi.fn();
     render(<ImapConnectPanel onDone={onDone} onDismiss={onDismiss} />);
     await fillValidForm();
-    await userEvent.click(
-      screen.getByRole("button", { name: /test and connect/i }),
-    );
+    await userEvent.click(screen.getByRole("button", { name: "Connect" }));
     await waitFor(() =>
       expect(screen.getByRole("button", { name: "Not now" })).toBeDisabled(),
     );
@@ -266,9 +182,7 @@ describe("ImapConnectPanel", () => {
       />,
     );
     await fillValidForm();
-    await userEvent.click(
-      screen.getByRole("button", { name: /test and connect/i }),
-    );
+    await userEvent.click(screen.getByRole("button", { name: "Connect" }));
     await waitFor(() => expect(pendingChanges).toContain(true));
     deferred.resolve?.(
       jsonResponse({
