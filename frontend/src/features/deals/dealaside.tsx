@@ -12,6 +12,7 @@ import {
 } from "../../components/customfields.form";
 import { EntityRef } from "../../components/entityref";
 import { type RailEdit, RailField } from "../../components/railfield";
+import { TagsPanel } from "../../components/tagspanel";
 import { AppLink } from "../../design-system/applink";
 import { Badge } from "../../design-system/atoms";
 import { OffsiteLink } from "../../design-system/offsitelink";
@@ -364,17 +365,21 @@ function registrationRows(
       { keys: ["acquisition_source"] },
     ),
     row("created", "list.created", day(deal.created_at, facts)),
-    row(
-      "tags",
-      "tags.panelTitle",
-      tags.length > 0 ? (
-        <span className="deal-aside-chips">
-          {tags.map((tag) => (
-            <Badge key={tag.tag_id}>{tag.name}</Badge>
-          ))}
-        </span>
-      ) : null,
-    ),
+    {
+      key: "tags",
+      term: t("tags.panelTitle"),
+      block: true,
+      empty: tags.length === 0,
+      value: (
+        <TagsPanel
+          entityType="deal"
+          entityID={deal.id}
+          bare
+          archived={Boolean(deal.archived_at)}
+          canEdit={facts.canEdit}
+        />
+      ),
+    },
   ];
 }
 

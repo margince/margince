@@ -373,7 +373,6 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                       setTab(next);
                       scrollPageToTop();
                     }}
-                    onEditDetails={() => setEditingDetails(true)}
                     threadComplete={
                       threadQuery.isSuccess && !threadQuery.hasNextPage
                     }

@@ -42,6 +42,7 @@ function mount(grant: ("read" | "update")[], current = deal) {
   const sent: unknown[] = [];
   installFetchStub({
     "GET /me": meRoute({ deal: grant }, { seat: "full" }),
+    "GET /records/deal/d1/tags": () => jsonResponse({ data: [] }),
     "PATCH /deals/d1": (body) => {
       sent.push(body);
       return jsonResponse({ ...current, version: 5 });
@@ -102,4 +103,20 @@ it("changes the amount of a deal whose ARR an offer set", async () => {
   expect(
     await screen.findByRole("button", { name: /^Change Value/ }),
   ).toBeTruthy();
+});
+
+it("adds a tag from the Tags row and offers no add to a reader", async () => {
+  const user = userEvent.setup();
+  mount(["read", "update"]);
+  await user.click(
+    await screen.findByRole("button", { name: /^Show \d+ empty fields$/ }),
+  );
+  expect(await screen.findByRole("button", { name: "Add tag" })).toBeTruthy();
+  cleanup();
+  mount(["read"]);
+  await user.click(
+    await screen.findByRole("button", { name: /^Show \d+ empty fields$/ }),
+  );
+  await screen.findByText("Tags");
+  expect(screen.queryByRole("button", { name: "Add tag" })).toBeNull();
 });
