@@ -499,6 +499,52 @@ describe("deciding a duplicate pair on the row", () => {
     expect(new Set(names).size).toBe(2);
   });
 
+  // The cards a sighted reader compares must differ where the button names do.
+  // The creation minute replaces the day, and the ID joins it at one instant.
+  it.each([
+    {
+      when: "on one day",
+      at: ["2026-11-02T10:00:00Z", "2026-11-02T11:00:00Z"],
+      ids: [LEFT, RIGHT],
+    },
+    {
+      when: "at one instant",
+      at: ["2026-11-02T10:00:00Z", "2026-11-02T10:00:00Z"],
+      ids: [LEFT, RIGHT],
+    },
+    {
+      when: "at one instant with IDs ending alike",
+      at: ["2026-11-02T10:00:00Z", "2026-11-02T10:00:00Z"],
+      ids: [
+        "01a05500-0000-7000-8000-1000000000a1",
+        "01a05500-0000-7000-8000-2000000000a1",
+      ],
+    },
+  ])(
+    "shows what tells two same-name cards created $when apart",
+    ({ at, ids }) => {
+      draw(
+        pairRow({
+          pair: {
+            left: { id: ids[0], label: "Acme GmbH", created_at: at[0] },
+            right: { id: ids[1], label: "Acme GmbH", created_at: at[1] },
+            evidence: [],
+          },
+        }),
+      );
+
+      const cards = screen
+        .getAllByRole("listitem")
+        .filter((card) => card.classList.contains("worklist-pair-card"));
+      expect(cards).toHaveLength(2);
+      expect(cards[0].textContent).not.toBe(cards[1].textContent);
+      const names = screen
+        .getAllByRole("button", { name: /^Keep Acme GmbH — / })
+        .map((button) => button.getAttribute("aria-label"));
+      expect(new Set(names).size).toBe(2);
+    },
+  );
+
   // The ordinary pair keeps the short name: the detail is a disambiguator, not
   // decoration, and appending it always would make every button longer to say
   // the same thing.

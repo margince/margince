@@ -52,16 +52,24 @@ import type { WorklistItem } from "./worklist.queries";
 type PairSide = NonNullable<WorklistItem["pair"]>["left"];
 type Describe = (iso: string) => string;
 
-// What tells two same-name records apart: the detail line or creation day,
-// then the creation minute, then the tail of the ID. Each step is taken only
-// while the two still read alike.
+// Two same-name records are told apart by the first of these that differs:
+// detail or creation day, creation minute, ID tail, whole ID. A step
+// is taken only while the two still read alike. `step` names the one that told.
+type Told = Readonly<{
+  lines: readonly [string | undefined, string | undefined];
+  step: number;
+}>;
+
+const MINUTE_STEP = 1;
+const ID_STEP = 2;
+
 function sideDetails(
   pair: NonNullable<WorklistItem["pair"]>,
   created: Readonly<{ day: Describe; minute: Describe }>,
-): readonly [string | undefined, string | undefined] {
+): Told {
   const { left, right } = pair;
   if (left.label !== right.label) {
-    return [left.detail, right.detail];
+    return { lines: [left.detail, right.detail], step: 0 };
   }
   const steps: ((side: PairSide) => string | undefined)[] = [
     (side) =>
@@ -69,14 +77,12 @@ function sideDetails(
       (side.created_at ? created.day(side.created_at) : undefined),
     (side) => (side.created_at ? created.minute(side.created_at) : undefined),
     (side) => side.id.slice(-6),
+    (side) => side.id,
   ];
-  let told: readonly [string | undefined, string | undefined] = [
-    undefined,
-    undefined,
-  ];
-  for (const step of steps) {
-    told = [step(left), step(right)];
-    if (told[0] !== told[1]) {
+  let told: Told = { lines: [undefined, undefined], step: 0 };
+  for (const [step, describe] of steps.entries()) {
+    told = { lines: [describe(left), describe(right)], step };
+    if (told.lines[0] !== told.lines[1]) {
       break;
     }
   }
@@ -137,14 +143,16 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
   const mayDismiss = item.actions?.includes("dismiss") ?? false;
   const created = (iso: string) =>
     t("worklist.pair.created", { date: formatDate(iso, locale, zone) });
-  const [leftDetail, rightDetail] = sideDetails(pair, {
+  const told = sideDetails(pair, {
     day: created,
     minute: (iso) =>
       t("worklist.pair.created", { date: formatDateTime(iso, locale, zone) }),
   });
+  const toldOf = (side: PairSide) =>
+    told.lines[side.id === pair.left.id ? 0 : 1];
   const named = (side: PairSide): MergeSide => ({
     name: side.label,
-    detail: side.id === pair.left.id ? leftDetail : rightDetail,
+    detail: toldOf(side),
   });
   // The kept side and the side a merge into it archives.
   const merging = (keptId: string) =>
@@ -260,6 +268,8 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
             side={side}
             kind={item.subject?.type}
             created={created}
+            told={told.step >= MINUTE_STEP ? toldOf(side) : undefined}
+            byId={told.step >= ID_STEP}
           >
             {/* At the card's own FOOT, on its trailing edge: the verb belongs
                 to the record above it. It NAMES that record, so a reader who
@@ -315,11 +325,17 @@ function PairSideCard({
   side,
   kind,
   created,
+  told,
+  byId,
   children,
 }: Readonly<{
   side: PairSide;
   kind: string | undefined;
   created: Describe;
+  // Shown where the creation day alone reads the same on both cards: the
+  // creation minute in its place, or the ID beside it.
+  told: string | undefined;
+  byId: boolean;
   children: ReactNode;
 }>) {
   const t = useT();
@@ -333,9 +349,14 @@ function PairSideCard({
         <span>{side.label}</span>
       )}
       {side.detail && <span className="t-caption">{side.detail}</span>}
-      {side.created_at && (
-        <span className="t-caption">{created(side.created_at)}</span>
+      {told && !byId ? (
+        <span className="t-caption">{told}</span>
+      ) : (
+        side.created_at && (
+          <span className="t-caption">{created(side.created_at)}</span>
+        )
       )}
+      {told && byId && <span className="t-caption">{told}</span>}
       {/* The reader's best single signal for which side is the real one,
           where the record type carries such a count. */}
       {side.related_count !== undefined && (
