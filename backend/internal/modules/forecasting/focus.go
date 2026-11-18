@@ -10,7 +10,9 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/closerisk"
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
+	"github.com/margince/margince/backend/internal/shared/kernel/goalgap"
 )
 
 // FocusCap is the most deals one focus list names. A manager works a short
@@ -59,11 +61,7 @@ func RankFocus(readings Readings, gap int64, asOf time.Time) FocusList {
 		if !c.InOpen || c.InWon || c.BaseMinor == nil || c.WeightedMinor <= 0 {
 			continue
 		}
-		reason := FocusReason{CloseProvisional: c.CloseProvisional, Signals: c.Signals}
-		if c.EffectiveClose != nil {
-			closes := time.Date(c.EffectiveClose.Year(), c.EffectiveClose.Month(), c.EffectiveClose.Day(), 0, 0, 0, 0, asOf.Location())
-			reason.ClosesInDays = new(elapsed.Days(asOf, closes, asOf.Location()))
-		}
+		reason := FocusReason{CloseProvisional: c.CloseProvisional, Signals: c.Signals, ClosesInDays: closesInDays(asOf, c.EffectiveClose)}
 		risks := closeRisks(reason)
 		if onTarget && risks == 0 {
 			continue
@@ -85,21 +83,33 @@ func RankFocus(readings Readings, gap int64, asOf time.Time) FocusList {
 	return out
 }
 
-// closeRisks counts the facts that say a deal may not close on its date. The
-// date passed or is a guess. The date kept moving, or is near with no next
-// step booked.
+// closesInDays is how many days after asOf's local day closes falls, counted
+// in asOf's zone; nil without a close date. The freeze and every later read
+// count it the same way.
+func closesInDays(asOf time.Time, closes *time.Time) *int {
+	if closes == nil {
+		return nil
+	}
+	day := time.Date(closes.Year(), closes.Month(), closes.Day(), 0, 0, 0, 0, asOf.Location())
+	return new(elapsed.Days(asOf, day, asOf.Location()))
+}
+
+// closeRisks counts the facts that say a deal may not close on its date, by
+// the Worklist's own rule in closerisk. The date passed or is a guess. The
+// date kept moving, or is near with no next step booked.
 func closeRisks(reason FocusReason) int64 {
 	var risks int64
-	if reason.ClosesInDays != nil && *reason.ClosesInDays < 0 {
+	if reason.ClosesInDays != nil && closerisk.Passed(*reason.ClosesInDays) {
 		risks++
 	}
 	if reason.CloseProvisional {
 		risks++
 	}
+	near := reason.ClosesInDays != nil && closerisk.Near(*reason.ClosesInDays)
 	for _, signal := range reason.Signals {
 		code := crmcontracts.ForecastRiskSignalCode(signal.Code)
 		if code == crmcontracts.ForecastRiskSignalCodeClosePushed ||
-			(code == crmcontracts.ForecastRiskSignalCodeNoNextStep && signal.ClosesInDays != nil) {
+			(code == crmcontracts.ForecastRiskSignalCodeNoNextStep && near) {
 			risks++
 		}
 	}
@@ -113,7 +123,7 @@ func focusOf(in NewSnapshot, landing Landing) *FocusList {
 	if in.FocusGoal == nil || landing.Measure == "" {
 		return nil
 	}
-	list := RankFocus(in.Readings, *in.FocusGoal-landing.AmountMinor, in.TakenAt.In(in.Period.Zone))
+	list := RankFocus(in.Readings, goalgap.Of(*in.FocusGoal, landing.AmountMinor), in.TakenAt.In(in.Period.Zone))
 	return &list
 }
 

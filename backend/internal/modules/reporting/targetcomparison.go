@@ -11,6 +11,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/goalgap"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -142,7 +143,7 @@ func measure(out *crmcontracts.ReportingTargetComparison, ops ForecastOperands, 
 		out.TargetId, out.TargetRevision = &target.Id, &target.Revision
 	}
 	out.Target, out.Landing, out.Won = money(value), money(ops.LandingMinor), money(ops.WonMinor)
-	out.Gap, out.Remaining, out.OpenPipeline = money(value-ops.LandingMinor), money(remaining), money(ops.OpenMinor)
+	out.Gap, out.Remaining, out.OpenPipeline = money(goalgap.Of(value, ops.LandingMinor)), money(remaining), money(ops.OpenMinor)
 	out.Status = crmcontracts.ReportingTargetComparisonStatusTargetReached
 	if remaining > 0 {
 		out.Status = crmcontracts.ReportingTargetComparisonStatusCompared

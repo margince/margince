@@ -251,7 +251,7 @@ func newForecastHandlers(pool *pgxpool.Pool, now func() time.Time) forecasting.H
 		ForecastAssemble, ForecastPeriodAt, ForecastWritableScope,
 		ForecastConversionHistory, ForecastForwardMeasure, ForecastScopeHoldsDeals, now,
 	).WithCallBaseline(ForecastCallBaseline).WithStageChances(ForecastStageChances).
-		WithReaderRows(ForecastReaderContributions)
+		WithReaderRows(ForecastReaderContributions).WithGoalReadable(newReportingService(pool, now).GoalReadable)
 }
 
 func (s *Server) wireAnalyticsSurface(pool *pgxpool.Pool) {

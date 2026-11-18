@@ -20563,6 +20563,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.manager.kind.review_backlog": "Offene Prüfungen",
   "worklist.manager.kind.general": "Sonstiges",
   "worklist.board.title": "Teamarbeit mit Handlungsbedarf",
+  "worklist.gap.rankedOn": "Gereiht am {date}.",
+  "worklist.gap.masked_one":
+    "{count} Deal fehlt, weil du seinen Betrag nicht sehen darfst.",
+  "worklist.gap.masked_other":
+    "{count} Deals fehlen, weil du ihre Beträge nicht sehen darfst.",
   "worklist.gap.withheld":
     "Die Einzelleistung ist ausgeschaltet, daher werden keine Listen gezeigt, die Deals eines anderen Mitglieds nennen würden.",
   "worklist.gap.tabs": "Teamansicht",

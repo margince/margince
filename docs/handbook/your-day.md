@@ -370,7 +370,7 @@ On **Home → Team** you get the team board and the coaching suggestions. The re
 
 At **Team**, a switch above that panel opens **Close the gap**. It lists up to 20 open deals your team should work to meet its quarter goal. Behind the goal, the deals with the most weighted value come first, and a risk to the close date moves a deal up. On target, only deals whose close date is at risk are listed. A close date is at risk when it has passed, is not confirmed, keeps moving, or is within a week with no next step. **Why** lists those facts for each deal.
 
-Margince ranks a team once a day if two things hold. **Setup → Metric definitions** lists the team under **Record daily pipeline history**, for all pipelines. Every member has a goal for each month of the quarter.
+Margince ranks a team once a day if two things hold. **Setup → Metric definitions** lists the team under **Record daily pipeline history**, for all pipelines. Every member has a goal for each month of the quarter. You see a team's list only if you may read its goal. The list shows the day it was ranked. A deal whose amount you may not see is left out, and the list says how many.
 
 Your brief and digest stay personal. **Team**, **All**, and teammate views show shared work you may read, not a colleague's private messages or personal notices. A teammate's decision keeps its owner; it is not yours.
 

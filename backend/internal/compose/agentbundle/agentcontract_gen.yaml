@@ -47228,8 +47228,13 @@ components:
           items: {$ref: '#/components/schemas/ForecastFocusTeam'}
     ForecastFocusTeam:
       type: object
-      required: [team_id, snapshot_id, taken_at, base_currency, status, deals]
+      required: [team_id, snapshot_id, taken_at, base_currency, status, deals, masked_count]
       properties:
+        masked_count:
+          type: integer
+          minimum: 0
+          description: >-
+            Ranked deals left out because their amount is masked from the caller. The rest are numbered from 1 again, since a masked deal's place in the order would tell its size.
         team_id: {type: string, format: uuid}
         snapshot_id: {type: string, format: uuid}
         taken_at: {type: string, format: date-time}
@@ -47238,7 +47243,7 @@ components:
           type: string
           enum: [behind, on_target, no_goal]
           description: >-
-            `behind`: the expected landing was under the team goal. `on_target`: it met the goal. `no_goal`: a month of the quarter had no published goal for a member, so nothing was ranked.
+            `behind`: the expected landing was under the team goal. `on_target`: it met the goal. `no_goal`: a month of the quarter had no published goal for a member, so nothing was ranked, or the caller may not read the team's goal, so neither standing nor list is shown.
         deals:
           type: array
           items: {$ref: '#/components/schemas/ForecastFocusDeal'}
@@ -47263,7 +47268,7 @@ components:
       properties:
         closes_in_days:
           type: integer
-          description: Days from the freeze to the expected close date, negative once that date passed.
+          description: Days from the caller's day to the expected close date, negative once that date passed.
         close_provisional: {type: boolean}
         signals:
           type: array

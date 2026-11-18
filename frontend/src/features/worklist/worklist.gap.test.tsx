@@ -33,6 +33,7 @@ function focus(team: Partial<ForecastFocus["teams"][number]>): ForecastFocus {
         base_currency: "EUR",
         status: "behind",
         deals: [],
+        masked_count: 0,
         ...team,
       },
     ],
@@ -197,5 +198,22 @@ describe("the Close the gap tab", () => {
 
     expect(await screen.findByText(en["worklist.gap.withheld"])).toBeTruthy();
     expect(screen.queryByText(en["worklist.gap.empty"])).toBeNull();
+  });
+
+  it("says which day the list was ranked, and how many masked deals it leaves out", async () => {
+    stub(focus({ status: "on_target", masked_count: 2 }));
+    renderOversight("team");
+    await openGapTab();
+
+    expect(
+      await screen.findByText(
+        "2 deals are left out because you may not see their amounts.",
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText(/^Ranked on .*2026/)).toBeTruthy();
+    // An on-target team whose deals are only masked is not one with nothing
+    // at risk.
+    expect(screen.queryByText(en["worklist.gap.nothingAtRisk"])).toBeNull();
+    expect(screen.getByText(en["worklist.gap.onTarget"])).toBeTruthy();
   });
 });

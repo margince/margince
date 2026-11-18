@@ -29,6 +29,8 @@ type TeamFocus struct {
 	BaseCurrency string
 	// OnTarget is nil when the team had no goal, so nothing was ranked.
 	OnTarget *bool
+	// Masked counts the ranked deals left out because their amount is masked.
+	Masked int
 	// Deals are the ranked rows the reader may see, by rank.
 	Deals []Contribution
 }
@@ -136,7 +138,10 @@ func (h Handlers) GetForecastFocus(w http.ResponseWriter, r *http.Request, param
 		if focus, err = h.readerFocus(ctx, tx, focus); err != nil {
 			return err
 		}
-		out, err = focusToWire(period, focus)
+		if focus, err = h.readableGoals(ctx, tx, focus); err != nil {
+			return err
+		}
+		out, err = focusToWire(period, focus, h.now().In(period.Zone))
 		return err
 	})
 	if err != nil {
@@ -148,7 +153,9 @@ func (h Handlers) GetForecastFocus(w http.ResponseWriter, r *http.Request, param
 
 // readerFocus keeps the listed deals the reader may see one by one, by the
 // rule GET /forecast?contributions=true applies. With individual performance
-// off, that is the reader's own deals, with no owner named.
+// off, that is the reader's own deals, with no owner named. A deal whose
+// amount is masked is left out and counted. Its place in an order by amount
+// would tell its size, so the rest are numbered from 1 again.
 func (h Handlers) readerFocus(ctx context.Context, tx pgx.Tx, focus FocusRead) (FocusRead, error) {
 	if h.readerRows == nil {
 		return FocusRead{}, errors.New("forecasting: no reader lens is bound, so a focus list cannot be narrowed")
@@ -170,7 +177,13 @@ func (h Handlers) readerFocus(ctx context.Context, tx pgx.Tx, focus FocusRead) (
 	for i := range focus.Teams {
 		deals := make([]Contribution, 0, len(focus.Teams[i].Deals))
 		for _, deal := range focus.Teams[i].Deals {
-			if row, ok := kept[deal.Focus]; ok {
+			row, ok := kept[deal.Focus]
+			switch {
+			case !ok:
+			case row.BaseMinor == nil:
+				focus.Teams[i].Masked++
+			default:
+				row.Focus = &Focus{Rank: len(deals) + 1, Reason: row.Focus.Reason}
 				deals = append(deals, row)
 			}
 		}
@@ -179,7 +192,29 @@ func (h Handlers) readerFocus(ctx context.Context, tx pgx.Tx, focus FocusRead) (
 	return focus, nil
 }
 
-func focusToWire(period Period, focus FocusRead) (crmcontracts.ForecastFocus, error) {
+// readableGoals leaves a team's standing and list out where the reader may
+// not read its goal, since both are made from it. The team then reads as
+// having no goal, as Progress shows it.
+func (h Handlers) readableGoals(ctx context.Context, tx pgx.Tx, focus FocusRead) (FocusRead, error) {
+	if h.goalReadable == nil {
+		return FocusRead{}, errors.New("forecasting: no goal reader is bound, so a focus list cannot say whether its goal is readable")
+	}
+	for i, list := range focus.Teams {
+		id := openapi_types.UUID(list.Team)
+		readable, err := h.goalReadable(ctx, tx, crmcontracts.ReportingScope{Kind: crmcontracts.ReportingScopeKind(ScopeTeam), Id: &id})
+		if err != nil {
+			return FocusRead{}, err
+		}
+		if !readable {
+			focus.Teams[i].OnTarget, focus.Teams[i].Deals, focus.Teams[i].Masked = nil, nil, 0
+		}
+	}
+	return focus, nil
+}
+
+// focusToWire renders the lists as of asOf. Days to close are counted again on
+// the reader's day, since the freeze that ranked them may be a day old.
+func focusToWire(period Period, focus FocusRead, asOf time.Time) (crmcontracts.ForecastFocus, error) {
 	out := crmcontracts.ForecastFocus{
 		PeriodStart: openapi_types.Date{Time: period.StartDate},
 		PeriodEnd:   openapi_types.Date{Time: period.EndDate},
@@ -191,9 +226,10 @@ func focusToWire(period Period, focus FocusRead) (crmcontracts.ForecastFocus, er
 			TeamId: openapi_types.UUID(list.Team), SnapshotId: openapi_types.UUID(list.SnapshotID),
 			TakenAt: list.TakenAt, BaseCurrency: list.BaseCurrency,
 			Status: focusStatus(list.OnTarget), Deals: make([]crmcontracts.ForecastFocusDeal, 0, len(list.Deals)),
+			MaskedCount: list.Masked,
 		}
 		for _, deal := range list.Deals {
-			wire, err := focusDealToWire(deal)
+			wire, err := focusDealToWire(deal, asOf)
 			if err != nil {
 				return out, err
 			}
@@ -217,7 +253,7 @@ func focusStatus(onTarget *bool) crmcontracts.ForecastFocusTeamStatus {
 
 // focusDealToWire renders one ranked row. The lens nulls a masked deal's base
 // amount, and the weighted amount goes with it.
-func focusDealToWire(c Contribution) (crmcontracts.ForecastFocusDeal, error) {
+func focusDealToWire(c Contribution, asOf time.Time) (crmcontracts.ForecastFocusDeal, error) {
 	dealID, err := ids.Parse(c.DealID)
 	if err != nil {
 		return crmcontracts.ForecastFocusDeal{}, fmt.Errorf("forecasting: a focus row names a deal id it cannot parse: %w", err)
@@ -228,8 +264,8 @@ func focusDealToWire(c Contribution) (crmcontracts.ForecastFocusDeal, error) {
 	out := crmcontracts.ForecastFocusDeal{
 		Rank: c.Focus.Rank, DealId: openapi_types.UUID(dealID), DealName: c.Name, OwnerId: optionalWireID(c.Owner),
 		Reason: crmcontracts.ForecastFocusReason{
-			ClosesInDays: c.Focus.Reason.ClosesInDays, CloseProvisional: c.Focus.Reason.CloseProvisional,
-			Signals: wireSignals(c.Focus.Reason.Signals),
+			ClosesInDays: closesInDays(asOf, c.EffectiveClose), CloseProvisional: c.Focus.Reason.CloseProvisional,
+			Signals: wireSignals(undatedSignals(c.Focus.Reason.Signals)),
 		},
 	}
 	if c.BaseMinor != nil {
@@ -239,4 +275,18 @@ func focusDealToWire(c Contribution) (crmcontracts.ForecastFocusDeal, error) {
 		out.EffectiveCloseDate = &openapi_types.Date{Time: *c.EffectiveClose}
 	}
 	return out, nil
+}
+
+// undatedSignals drops the day count a no_next_step signal froze. The row says
+// when the deal closes, counted on the reader's day, so a frozen count beside
+// it would be a second, older answer.
+func undatedSignals(in []Signal) []Signal {
+	out := make([]Signal, len(in))
+	for i, signal := range in {
+		if crmcontracts.ForecastRiskSignalCode(signal.Code) == crmcontracts.ForecastRiskSignalCodeNoNextStep {
+			signal.ClosesInDays = nil
+		}
+		out[i] = signal
+	}
+	return out
 }

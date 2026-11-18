@@ -20304,6 +20304,11 @@ export const en = {
   "worklist.manager.kind.review_backlog": "Review backlog",
   "worklist.manager.kind.general": "Other",
   "worklist.board.title": "Team work needing attention",
+  "worklist.gap.rankedOn": "Ranked on {date}.",
+  "worklist.gap.masked_one":
+    "{count} deal is left out because you may not see its amount.",
+  "worklist.gap.masked_other":
+    "{count} deals are left out because you may not see their amounts.",
   "worklist.gap.withheld":
     "Individual performance is off, so lists that would name a colleague’s deals are not shown.",
   "worklist.gap.tabs": "Team view",

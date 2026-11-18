@@ -28,6 +28,7 @@ function team(over: Partial<FocusTeam>): ForecastFocus {
         base_currency: "EUR",
         status: "behind",
         deals: [],
+        masked_count: 0,
         ...over,
       },
     ],
@@ -60,13 +61,6 @@ const ranked: FocusTeam["deals"] = [
       signals: [{ code: "no_next_step", closes_in_days: 3 }],
     },
   },
-  {
-    rank: 3,
-    deal_id: "00000000-0000-4000-8000-0000000000d3",
-    deal_name: "Masked pilot",
-    owner_id: LENA,
-    reason: { closes_in_days: 21, close_provisional: false, signals: [] },
-  },
 ];
 
 function frame(body: ForecastFocus) {
@@ -97,14 +91,15 @@ export default meta;
 
 type Story = StoryObj<typeof CloseTheGap>;
 
-/** Behind the goal: the deals by weighted amount, raised for close-date risk. */
+/** Behind the goal: the deals by weighted amount, raised for close-date risk.
+ *  One deal whose amount the reader may not see is left out and counted. */
 export const BehindTheGoal: Story = {
-  render: () => frame(team({ deals: ranked })),
+  render: () => frame(team({ deals: ranked, masked_count: 1 })),
 };
 
 /** On target: only the deals whose close dates put the goal at risk. */
 export const OnTarget: Story = {
-  render: () => frame(team({ status: "on_target", deals: ranked.slice(0, 2) })),
+  render: () => frame(team({ status: "on_target", deals: ranked })),
 };
 
 /** On target with nothing at risk says so in one line. */

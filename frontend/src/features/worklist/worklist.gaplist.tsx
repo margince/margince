@@ -13,8 +13,10 @@ import { DataTable } from "../../design-system/datatable";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { formatMoneyOrAbsent, formatNumber } from "../../format/format";
+import { formatDate } from "../../format/format.dates";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { signalSentence } from "../../lib/forecastsignals";
+import { useViewerZone } from "../../lib/viewerzone";
 import { listReadState } from "../../lib/worklist.listread";
 import { AFTER_THE_DAY } from "./worklist.layout";
 import {
@@ -59,9 +61,12 @@ function TeamGap({ team }: Readonly<{ team: FocusTeam }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
+  const zone = useViewerZone();
   const number = (value: number) => formatNumber(value, locale);
   const line =
-    team.status === "on_target" && team.deals.length === 0
+    team.status === "on_target" &&
+    team.deals.length === 0 &&
+    team.masked_count === 0
       ? t("worklist.gap.nothingAtRisk")
       : t(STATUS_LINE[team.status] ?? "worklist.gap.noGoal");
   return (
@@ -129,6 +134,19 @@ function TeamGap({ team }: Readonly<{ team: FocusTeam }>) {
             ]}
           />
         )}
+        {team.masked_count > 0 && (
+          <p className="t-caption">
+            {plural("worklist.gap.masked", team.masked_count, {
+              count: number(team.masked_count),
+            })}
+          </p>
+        )}
+        {/* The list is the last daily ranking, so the reader sees its day. */}
+        <p className="t-caption">
+          {t("worklist.gap.rankedOn", {
+            date: formatDate(team.taken_at, locale, zone),
+          })}
+        </p>
       </PanelBody>
     </Panel>
   );

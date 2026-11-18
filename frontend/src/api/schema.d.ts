@@ -49691,6 +49691,8 @@ export interface components {
             teams: components["schemas"]["ForecastFocusTeam"][];
         };
         ForecastFocusTeam: {
+            /** @description Ranked deals left out because their amount is masked from the caller. The rest are numbered from 1 again, since a masked deal's place in the order would tell its size. */
+            masked_count: number;
             /** Format: uuid */
             team_id: string;
             /** Format: uuid */
@@ -49699,7 +49701,7 @@ export interface components {
             taken_at: string;
             base_currency: string;
             /**
-             * @description `behind`: the expected landing was under the team goal. `on_target`: it met the goal. `no_goal`: a month of the quarter had no published goal for a member, so nothing was ranked.
+             * @description `behind`: the expected landing was under the team goal. `on_target`: it met the goal. `no_goal`: a month of the quarter had no published goal for a member, so nothing was ranked, or the caller may not read the team's goal, so neither standing nor list is shown.
              * @enum {string}
              */
             status: "behind" | "on_target" | "no_goal";
@@ -49723,7 +49725,7 @@ export interface components {
         };
         /** @description The stored facts behind a rank. The score is never stored. */
         ForecastFocusReason: {
-            /** @description Days from the freeze to the expected close date, negative once that date passed. */
+            /** @description Days from the caller's day to the expected close date, negative once that date passed. */
             closes_in_days?: number;
             close_provisional: boolean;
             signals: components["schemas"]["ForecastRiskSignal"][];

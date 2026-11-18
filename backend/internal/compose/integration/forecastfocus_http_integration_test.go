@@ -140,24 +140,33 @@ func TestAFocusListKeepsToTheReadersTeamAndItsAmountMask(t *testing.T) {
 
 	maskDealField(t, f.e, "focus_team_lens", "amount_minor", "always")
 	masked := readFocus(t, f.e, "?team="+f.goalTeam)[f.goalTeam]
-	if len(masked.Deals) != 2 || masked.Deals[0].DealId.String() != f.big {
-		t.Fatalf("the masked list is %+v, want both deals in their frozen order", masked.Deals)
-	}
-	for _, deal := range masked.Deals {
-		if deal.WeightedMinor != nil {
-			t.Errorf("deal %s shows %d under an amount mask", deal.DealId, *deal.WeightedMinor)
-		}
+	if len(masked.Deals) != 0 || masked.MaskedCount != 2 {
+		t.Errorf("the masked list serves %+v and counts %d masked, want no deal in an order made from "+
+			"amounts the reader may not see, and both counted", masked.Deals, masked.MaskedCount)
 	}
 }
 
-// With individual performance off, the reader's own team keeps its list with
-// no owner named. A colleague's one-seller team would name that colleague's
-// deals, so it is refused when named, and the unnamed read leaves it out and
-// says so.
-func TestAFocusListUnderTheSwitchOffNamesNoColleague(t *testing.T) {
+// A seat that may not read sales targets is not shown whether its team meets
+// its goal, nor the list made from that goal.
+func TestAFocusListNeedsTheGoalToBeReadable(t *testing.T) {
 	f := freezeFocus(t)
-	if own := readFocus(t, f.e, "")[f.goalTeam]; len(own.Deals) != 2 || own.Deals[0].OwnerId == nil {
-		t.Fatalf("with the switch on the list reads %+v, want both deals with their owner", own.Deals)
+	if own := readFocus(t, f.e, "")[f.goalTeam]; own.Status != crmcontracts.ForecastFocusTeamStatusBehind || len(own.Deals) != 2 {
+		t.Fatalf("before the role narrows the team reads %+v, want its list behind the goal", own)
+	}
+	narrowSignedInRole(t, f.e, "focus_no_targets", `{"sales_target": {"create": false, "read": false, "update": false, "delete": false}}`)
+	if own := readFocus(t, f.e, "")[f.goalTeam]; own.Status != crmcontracts.ForecastFocusTeamStatusNoGoal || len(own.Deals) != 0 {
+		t.Errorf("without the goal grant the team reads %s with %d deals, want no_goal and none", own.Status, len(own.Deals))
+	}
+}
+
+// With individual performance off, a team's goal is withheld as Progress
+// withholds it, so even the reader's own team shows no standing and no list.
+// A colleague's one-seller team is refused when named, and the unnamed read
+// leaves it out and says so.
+func TestAFocusListUnderTheSwitchOffWithholdsTheGoal(t *testing.T) {
+	f := freezeFocus(t)
+	if own := readFocus(t, f.e, "")[f.goalTeam]; len(own.Deals) != 2 {
+		t.Fatalf("with the switch on the list reads %+v, want both deals", own.Deals)
 	}
 	mustCall(t, f.e, http.MethodPatch, "/v1/installation/settings", AnyMap{individualPerformanceKey: false}, http.StatusOK, nil)
 
@@ -166,8 +175,8 @@ func TestAFocusListUnderTheSwitchOffNamesNoColleague(t *testing.T) {
 	if !focus.Withheld || len(focus.Teams) != 1 || focus.Teams[0].TeamId.String() != f.goalTeam {
 		t.Fatalf("the unnamed read = withheld %v with %+v, want withheld and only the reader's own team", focus.Withheld, focus.Teams)
 	}
-	if deals := focus.Teams[0].Deals; len(deals) != 2 || deals[0].OwnerId != nil || deals[1].OwnerId != nil {
-		t.Errorf("the reader's own list reads %+v, want both deals with no owner named", deals)
+	if own := focus.Teams[0]; own.Status != crmcontracts.ForecastFocusTeamStatusNoGoal || len(own.Deals) != 0 {
+		t.Errorf("the reader's own team reads %s with %d deals, want no_goal and none", own.Status, len(own.Deals))
 	}
 	var problem struct {
 		Code string `json:"code"`

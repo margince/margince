@@ -20031,6 +20031,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.manager.kind.review_backlog": "Tồn đọng cần xem lại",
   "worklist.manager.kind.general": "Khác",
   "worklist.board.title": "Việc của nhóm cần chú ý",
+  "worklist.gap.rankedOn": "Xếp hạng ngày {date}.",
+  "worklist.gap.masked_one":
+    "{count} deal bị ẩn vì bạn không được xem giá trị của các deal đó.",
+  "worklist.gap.masked_other":
+    "{count} deal bị ẩn vì bạn không được xem giá trị của các deal đó.",
   "worklist.gap.withheld":
     "Hiệu suất cá nhân đang tắt, nên không hiển thị danh sách nêu deal của thành viên khác.",
   "worklist.gap.tabs": "Góc nhìn nhóm",

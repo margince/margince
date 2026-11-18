@@ -51191,7 +51191,7 @@ type ForecastFocusDeal struct {
 type ForecastFocusReason struct {
 	CloseProvisional bool `json:"close_provisional"`
 
-	// ClosesInDays Days from the freeze to the expected close date, negative once that date passed.
+	// ClosesInDays Days from the caller's day to the expected close date, negative once that date passed.
 	ClosesInDays *int                 `json:"closes_in_days,omitempty"`
 	Signals      []ForecastRiskSignal `json:"signals"`
 }
@@ -51200,15 +51200,18 @@ type ForecastFocusReason struct {
 type ForecastFocusTeam struct {
 	BaseCurrency string              `json:"base_currency"`
 	Deals        []ForecastFocusDeal `json:"deals"`
-	SnapshotId   openapi_types.UUID  `json:"snapshot_id"`
 
-	// Status `behind`: the expected landing was under the team goal. `on_target`: it met the goal. `no_goal`: a month of the quarter had no published goal for a member, so nothing was ranked.
+	// MaskedCount Ranked deals left out because their amount is masked from the caller. The rest are numbered from 1 again, since a masked deal's place in the order would tell its size.
+	MaskedCount int                `json:"masked_count" minimum:"0"`
+	SnapshotId  openapi_types.UUID `json:"snapshot_id"`
+
+	// Status `behind`: the expected landing was under the team goal. `on_target`: it met the goal. `no_goal`: a month of the quarter had no published goal for a member, so nothing was ranked, or the caller may not read the team's goal, so neither standing nor list is shown.
 	Status  ForecastFocusTeamStatus `json:"status"`
 	TakenAt time.Time               `json:"taken_at"`
 	TeamId  openapi_types.UUID      `json:"team_id"`
 }
 
-// ForecastFocusTeamStatus `behind`: the expected landing was under the team goal. `on_target`: it met the goal. `no_goal`: a month of the quarter had no published goal for a member, so nothing was ranked.
+// ForecastFocusTeamStatus `behind`: the expected landing was under the team goal. `on_target`: it met the goal. `no_goal`: a month of the quarter had no published goal for a member, so nothing was ranked, or the caller may not read the team's goal, so neither standing nor list is shown.
 type ForecastFocusTeamStatus string
 
 // ForecastLanding Where the period finishes if nothing changes, and what that answer rests on.
