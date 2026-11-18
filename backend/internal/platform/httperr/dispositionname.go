@@ -42,11 +42,15 @@ func percentEncodeAttrChars(s string) string {
 	var b strings.Builder
 	for i := 0; i < len(s); i++ {
 		c := s[i]
-		if c >= 0x80 || !(c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || strings.IndexByte(attrSpecials, c) >= 0) {
+		if !isAttrChar(c, attrSpecials) {
 			fmt.Fprintf(&b, "%%%02X", c)
 			continue
 		}
 		b.WriteByte(c)
 	}
 	return b.String()
+}
+
+func isAttrChar(c byte, specials string) bool {
+	return c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z' || c >= '0' && c <= '9' || strings.IndexByte(specials, c) >= 0
 }
