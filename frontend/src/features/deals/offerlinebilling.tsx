@@ -4,7 +4,11 @@
 import { type ReactNode, useState } from "react";
 import { Field, type FieldControl } from "../../design-system/atoms";
 import { Select } from "../../design-system/select";
-import type { LineBillingTerms } from "../../format/billingphrase";
+import {
+  BILLING_MONTHS,
+  CADENCE,
+  type LineBillingTerms,
+} from "../../format/billingphrase";
 import { useT } from "../../i18n";
 import type { OfferLineItem, UpdateOfferLineItemRequest } from "./offers";
 import "./offers.css";
@@ -45,10 +49,10 @@ function billingModelOptions(t: Translate) {
 function billingIntervalOptions(t: Translate) {
   return [
     { value: "", label: t("product.billingNoInterval") },
-    { value: "1", label: t("product.billingMonthly") },
-    { value: "3", label: t("product.billingQuarterly") },
-    { value: "6", label: t("product.billingHalfYearly") },
-    { value: "12", label: t("product.billingYearly") },
+    ...BILLING_MONTHS.map((months) => ({
+      value: String(months),
+      label: t(CADENCE[months]),
+    })),
   ];
 }
 
