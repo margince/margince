@@ -95,7 +95,7 @@ func (h sdrSummaryHandlers) ListSdrWaitingHandoffs(w http.ResponseWriter, r *htt
 	if params.ScopeKind != nil {
 		requested.Kind = string(*params.ScopeKind)
 	}
-	limit, after, err := sdrPageDials(params.Limit, params.Cursor)
+	limit, after, err := sdrPageDials("sdr_waiting_handoffs", params.Limit, params.Cursor)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

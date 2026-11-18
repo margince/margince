@@ -84,7 +84,7 @@ func (h sdrSummaryHandlers) ListSdrUpcomingMeetings(w http.ResponseWriter, r *ht
 	if params.ScopeKind != nil {
 		requested.Kind = string(*params.ScopeKind)
 	}
-	limit, after, err := sdrPageDials(params.Limit, params.Cursor)
+	limit, after, err := sdrPageDials("sdr_meetings", params.Limit, params.Cursor)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -145,7 +145,7 @@ func requestedWindow(ctx context.Context, tx pgx.Tx, start, end *time.Time, pagi
 }
 
 // sdrPageDials reads the page size and cursor every SDR summary list takes.
-func sdrPageDials(requested *int, cursor *string) (int, *storekit.Cursor, error) {
+func sdrPageDials(scope string, requested *int, cursor *string) (int, *storekit.Cursor, error) {
 	limit := sdrHandoffPageDefault
 	if requested != nil {
 		limit = *requested
@@ -156,7 +156,7 @@ func sdrPageDials(requested *int, cursor *string) (int, *storekit.Cursor, error)
 	if cursor == nil || *cursor == "" {
 		return limit, nil, nil
 	}
-	position, err := storekit.DecodeCursor("sdr_meetings", *cursor)
+	position, err := storekit.DecodeCursor(scope, *cursor)
 	if err != nil {
 		return 0, nil, err
 	}

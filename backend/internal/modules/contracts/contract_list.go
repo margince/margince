@@ -84,7 +84,7 @@ func listContractsTx(ctx context.Context, tx pgx.Tx, in ListContractsInput, asOf
 		where = append(where, UnderContractSQL(asOfPos))
 	}
 	if in.Cursor != nil && *in.Cursor != "" {
-		cursor, err := storekit.DecodeCursor("contracts", *in.Cursor)
+		cursor, err := storekit.DecodeCursor(contractCursorScope, *in.Cursor)
 		if err != nil {
 			return crmcontracts.ContractListResponse{}, err
 		}
@@ -283,8 +283,12 @@ func continueAfterTerm(cursor storekit.Cursor, arg func(any) int) string {
 // tail". SortField and SortDesc record which ordering the token was minted
 // under, so a cursor from a differently ordered list is legible rather than
 // silently applied to this one.
+// contractCursorScope binds a contract-list cursor to this list.
+const contractCursorScope = "contracts"
+
 func termCursor(c crmcontracts.Contract) (string, error) {
 	cur := storekit.Cursor{
+		Scope:     contractCursorScope,
 		CreatedAt: cursorTime(c.CreatedAt),
 		ID:        ids.UUID(c.Id),
 		SortField: startsOnColumn,

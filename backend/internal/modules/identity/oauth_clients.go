@@ -138,6 +138,9 @@ func (s *Service) ListAgentClients(ctx context.Context, actor Identity, cursor *
 	return agentClientPage(clients, limit)
 }
 
+// agentClientCursorScope binds an agent-client cursor to this list.
+const agentClientCursorScope = "oauth_clients"
+
 type agentClientCursor struct {
 	tier      *int
 	createdAt *time.Time
@@ -148,7 +151,7 @@ func decodeAgentClientCursor(token *string) (agentClientCursor, error) {
 	if token == nil || *token == "" {
 		return agentClientCursor{}, nil
 	}
-	c, err := storekit.DecodeCursor("oauth_clients", *token)
+	c, err := storekit.DecodeCursor(agentClientCursorScope, *token)
 	if err != nil {
 		return agentClientCursor{}, err
 	}
@@ -180,7 +183,7 @@ func agentClientPage(listed []listedClient, limit int) ([]AgentClient, storekit.
 	last := listed[limit-1]
 	key := strconv.Itoa(last.tier)
 	next, err := storekit.EncodeOpaque(storekit.Cursor{
-		CreatedAt: last.CreatedAt, ID: last.ID, SortField: agentClientTierSort, SortKey: &key,
+		Scope: agentClientCursorScope, CreatedAt: last.CreatedAt, ID: last.ID, SortField: agentClientTierSort, SortKey: &key,
 	})
 	if err != nil {
 		return nil, storekit.Page{}, err
