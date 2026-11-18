@@ -22,6 +22,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/threadverdict"
 )
 
 // ThreadHoldsItsCounterparty reports whether the thread carrying this activity
@@ -86,5 +87,5 @@ func CounterpartyHeldOn(alias string) string {
 		OR EXISTS (
 		      SELECT 1 FROM capture_thread_verdict v
 		       WHERE v.thread_key = %[1]s.thread_key AND %[1]s.thread_key <> ''
-		         AND v.status IN ('held', 'unsure', 'held_by_owner', 'pending')))`, alias, held)
+		         AND `+threadverdict.HoldsMessagesSQL("v.status")+`))`, alias, held)
 }

@@ -1055,6 +1055,7 @@ public.mail_draft.body exempt complete captured or authored source content must 
 public.mail_draft.cc_addresses document
 public.mail_draft.communication_context document
 public.mail_draft.html_body exempt complete captured or authored source content must retain its original text
+public.mail_draft.override_explanation note checked: refused past 1000 characters
 public.mail_draft.scheduled_tz document
 public.mail_draft.subject document checked: refused past 998 characters
 public.mail_draft.to_addresses document

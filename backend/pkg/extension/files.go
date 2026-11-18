@@ -217,28 +217,33 @@ func SafeFilename(name string, ordinal int) string {
 		return "attachment-" + strconv.Itoa(ordinal)
 	}
 	if len(cleaned) > maxFilenameLen {
-		// truncateFilename appends an ellipsis, so it is given room for one: the
-		// stated ceiling is what the column and every list that renders it must
-		// hold.
-		cleaned = truncateFilename(cleaned, maxFilenameLen-len("…"))
+		cleaned = truncateFilename(cleaned, maxFilenameLen)
 	}
 	return cleaned
 }
 
-// truncateFilename cuts to a byte ceiling and marks the cut, so a shortened name
-// is visibly shortened rather than silently different. The ceiling is in BYTES
-// because it is the column's ceiling. The cut backs off to a rune boundary, so
-// what is stored is never a broken UTF-8 sequence. It repeats textcut.BytesMarked
-// because this package imports only the standard library.
+// maxExtensionLen bounds what counts as a file extension when a long name is
+// shortened. A longer tail is a sentence with a dot in it, and keeping it would
+// leave no room for the part that names the file.
+const maxExtensionLen = 16
+
+// truncateFilename shortens a name in the middle and keeps its extension, so the
+// type badge and the download still show the file's type. The ellipsis marks the
+// cut. The ceiling is in BYTES, the column's unit, and the cut backs off to a
+// rune boundary.
 func truncateFilename(s string, limit int) string {
 	if len(s) <= limit {
 		return s
 	}
-	cut := limit
+	tail := ""
+	if dot := strings.LastIndexByte(s, '.'); dot > 0 && len(s)-dot <= maxExtensionLen {
+		tail = s[dot:]
+	}
+	cut := limit - len("…") - len(tail)
 	for cut > 0 && !utf8.RuneStart(s[cut]) {
 		cut--
 	}
-	return s[:cut] + "…"
+	return s[:max(cut, 0)] + "…" + tail
 }
 
 // Carriage is what a sending connector's provider can carry.

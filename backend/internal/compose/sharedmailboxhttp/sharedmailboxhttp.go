@@ -13,6 +13,7 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/capturehealth"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -184,5 +185,6 @@ func sharedMailboxOnWire(v capture.SharedMailboxView) crmcontracts.SharedMailbox
 		backup := openapi_types.UUID(*v.BackupOwner)
 		out.BackupOwnerId = &backup
 	}
+	out.UnreadPeriod = capturehealth.UnreadPeriodOf(v.UnreadFrom, v.UnreadTo)
 	return out
 }

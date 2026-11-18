@@ -30,9 +30,9 @@ import {
   isPreviewDoor,
   previewedAddresses,
 } from "../../testing/sendpermission.testkit";
-import { ComposeModal } from "./compose";
 import { pressSend } from "./compose.testkit";
 import { useSavedDraft } from "./composesaveddraft";
+import { ComposeWindow } from "./composewindow";
 
 // The rep's own unsent message, kept by the server: what the composer reads
 // back when it opens, writes when it closes, and hands the send to discard.
@@ -138,7 +138,7 @@ function render(ui: ReactNode) {
 
 function composer(onClose: () => void, activityId?: string) {
   return (
-    <ComposeModal
+    <ComposeWindow
       activityId={activityId}
       entityType="contact"
       entityId="p-1"
@@ -305,7 +305,7 @@ describe("a saved draft", () => {
           <button type="button" onClick={() => setOpen(true)}>
             Write again
           </button>
-          <ComposeModal
+          <ComposeWindow
             entityType="contact"
             entityId="p-1"
             contactId="p-1"
@@ -368,7 +368,7 @@ describe("a saved draft", () => {
           >
             Complete a task
           </button>
-          <ComposeModal
+          <ComposeWindow
             entityType="contact"
             entityId="p-1"
             contactId="p-1"
@@ -864,7 +864,7 @@ function foundUnderTyping(
 
 describe("a composer opened with a caller's own words", () => {
   const proposal = (onClose: () => void) => (
-    <ComposeModal
+    <ComposeWindow
       entityType="contact"
       entityId="p-1"
       contactId="p-1"

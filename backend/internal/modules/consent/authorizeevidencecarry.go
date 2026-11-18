@@ -48,6 +48,7 @@ type stagedEvidence struct {
 	ConsentEventID *ids.UUID                  `json:"consent_event_id,omitempty"`
 	BasisID        *ids.UUID                  `json:"basis_id,omitempty"`
 	LeadID         *ids.UUID                  `json:"lead_id,omitempty"`
+	AuthoredOffer  bool                       `json:"authored_offer,omitempty"`
 }
 
 // evidenceJSON renders the evidence a caller named for storage on the decision
@@ -64,6 +65,7 @@ func evidenceJSON(e commsauthz.Evidence) ([]byte, error) {
 		ConsentEventID: nonZeroID(e.ConsentEventID),
 		BasisID:        nonZeroID(e.BasisID),
 		LeadID:         nonZeroID(e.LeadID),
+		AuthoredOffer:  e.AuthoredOffer,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("consent: render the staged evidence: %w", err)
@@ -98,6 +100,7 @@ func evidenceFrom(raw []byte) commsauthz.Evidence {
 		ConsentEventID: derefID(in.ConsentEventID),
 		BasisID:        derefID(in.BasisID),
 		LeadID:         derefID(in.LeadID),
+		AuthoredOffer:  in.AuthoredOffer,
 	}
 }
 

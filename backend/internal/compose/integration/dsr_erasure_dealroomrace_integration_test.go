@@ -155,7 +155,7 @@ func TestADownloadRecordedAfterAnErasureIsRefused(t *testing.T) {
 func roomDocument(t *testing.T, e *Env, buyer buyerSeat) ids.UUID {
 	t.Helper()
 	files := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling).WithBlobstore(blobstore.NewMemory())
-	file := uploadDealAttachment(e.Admin(), t, files, roomDeal(t, buyer), "proposal.pdf", []byte("proposal bytes"))
+	file := uploadDealAttachment(e.Admin(), t, files, roomDeal(t, buyer), "proposal.pdf", []byte("%PDF-1.4 proposal bytes"))
 	doc, err := dealrooms.NewStore(e.DB()).AddDocument(e.As(e.AdminUser, nil, roomErasureAdmin), buyer.room,
 		dealrooms.AddDocumentInput{AttachmentID: ids.UUID(file.Id), GroupKey: "commercial", Source: "manual"})
 	if err != nil {

@@ -261,7 +261,7 @@ func (e *resolveEnv) decide(t *testing.T, req commsauthz.Request) commsauthz.Dec
 	t.Helper()
 	var out commsauthz.Decision
 	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
-		req, err := withSendingEntity(e.ctx, tx, req)
+		req, err := withSendFacts(e.ctx, tx, req)
 		if err != nil {
 			return err
 		}

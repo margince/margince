@@ -6168,7 +6168,7 @@ public.idx_activity_thread_reply_seek CREATE INDEX idx_activity_thread_reply_see
 public.idx_activity_unfolded_counterparty CREATE INDEX idx_activity_unfolded_counterparty ON public.activity USING btree (activity_unfolded_counterparty(counterparty_email)) WHERE (activity_unfolded_counterparty(counterparty_email) IS NOT NULL)
 public.idx_activity_unjudged CREATE INDEX idx_activity_unjudged ON public.activity USING btree (occurred_at) WHERE ((owed_verdict IS NULL) AND (direction = 'inbound'::text) AND (kind = ANY (ARRAY['email'::text, 'message'::text])) AND (archived_at IS NULL) AND (audience = 'workspace'::text) AND (restricted_at IS NULL))
 public.idx_activity_unjudged_reply CREATE INDEX idx_activity_unjudged_reply ON public.activity USING btree (occurred_at) WHERE ((reply_verdict IS NULL) AND (direction = 'inbound'::text) AND (kind = ANY (ARRAY['email'::text, 'message'::text])) AND (archived_at IS NULL) AND (audience = 'workspace'::text) AND (restricted_at IS NULL))
-public.idx_activity_unlabeled CREATE INDEX idx_activity_unlabeled ON public.activity USING btree (occurred_at) WHERE ((capture_label IS NULL) AND (captured_by ~~ 'connector:%'::text) AND (kind = 'email'::text))
+public.idx_activity_unlabeled CREATE INDEX idx_activity_unlabeled ON public.activity USING btree (occurred_at) WHERE ((capture_label IS NULL) AND (captured_by ~~ 'connector:%'::text) AND (kind = ANY (ARRAY['email'::text, 'message'::text])))
 public.idx_agent_run_awaiting CREATE INDEX idx_agent_run_awaiting ON public.agent_run USING btree (approval_id) WHERE (status = 'awaiting_approval'::text)
 public.idx_agent_standing_grant_live CREATE INDEX idx_agent_standing_grant_live ON public.agent_standing_grant USING btree (agent_spec, user_id) WHERE ((state = 'granted'::text) AND (passport_id IS NOT NULL))
 public.idx_agent_task_approval CREATE UNIQUE INDEX idx_agent_task_approval ON public.agent_task USING btree (approval_id)
@@ -6315,6 +6315,11 @@ END)) WHERE (archived_at IS NULL)
 public.idx_contact_email_trgm CREATE INDEX idx_contact_email_trgm ON public.contact_email USING gin (f_fold_apostrophes(lower(email)) gin_trgm_ops) WHERE (archived_at IS NULL)
 public.idx_contact_exact_digraph_name_key CREATE INDEX idx_contact_exact_digraph_name_key ON public.contact USING btree (btrim(regexp_replace(replace(f_fold_apostrophes(lower(replace(replace(replace(NORMALIZE(lower(full_name), NFC), 'ä'::text, 'ae'::text), 'ö'::text, 'oe'::text), 'ü'::text, 'ue'::text))), 'ς'::text, 'σ'::text), '\s+'::text, ' '::text, 'g'::text))) WHERE (archived_at IS NULL)
 public.idx_contact_exact_name_key CREATE INDEX idx_contact_exact_name_key ON public.contact USING btree (btrim(regexp_replace(replace(f_fold_apostrophes(lower(full_name)), 'ς'::text, 'σ'::text), '\s+'::text, ' '::text, 'g'::text))) WHERE (archived_at IS NULL)
+public.idx_contact_family_name_key CREATE INDEX idx_contact_family_name_key ON public.contact USING btree ("substring"(btrim(regexp_replace(replace(f_fold_apostrophes(lower(
+CASE
+    WHEN (full_name ~~ '%,%'::text) THEN split_part(full_name, ','::text, 1)
+    ELSE full_name
+END)), 'ς'::text, 'σ'::text), '\s+'::text, ' '::text, 'g'::text)), '[^ ]+$'::text)) WHERE (archived_at IS NULL)
 public.idx_contact_from_lead CREATE INDEX idx_contact_from_lead ON public.contact USING btree (converted_from_lead_id) WHERE (converted_from_lead_id IS NOT NULL)
 public.idx_contact_keyed_address_hashes CREATE INDEX idx_contact_keyed_address_hashes ON public.contact USING btree (anonymized_address_key_id) WHERE (anonymized_address_key_id IS NOT NULL)
 public.idx_contact_last_activity_keyset CREATE INDEX idx_contact_last_activity_keyset ON public.contact USING btree (last_activity_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)
@@ -6326,6 +6331,7 @@ public.idx_contact_name_trigram_candidates CREATE INDEX idx_contact_name_trigram
 public.idx_contact_owner CREATE INDEX idx_contact_owner ON public.contact USING btree (owner_id) WHERE (archived_at IS NULL)
 public.idx_contact_phone_contact CREATE INDEX idx_contact_phone_contact ON public.contact_phone USING btree (contact_id)
 public.idx_contact_phone_dedupe_scan CREATE INDEX idx_contact_phone_dedupe_scan ON public.contact_phone USING btree (updated_at, id)
+public.idx_contact_phone_live_phone CREATE INDEX idx_contact_phone_live_phone ON public.contact_phone USING btree (phone) WHERE (archived_at IS NULL)
 public.idx_contact_search CREATE INDEX idx_contact_search ON public.contact USING gin (search_tsv)
 public.idx_contact_signature_enrich_state_activity CREATE INDEX idx_contact_signature_enrich_state_activity ON public.contact_signature_enrich_state USING btree (activity_id)
 public.idx_contact_signature_enrich_state_retry_activity CREATE INDEX idx_contact_signature_enrich_state_retry_activity ON public.contact_signature_enrich_state USING btree (retry_activity_id) WHERE (retry_activity_id IS NOT NULL)
@@ -7491,12 +7497,13 @@ public.mail_draft.mail_draft_one_per_anchor UNIQUE (author_id, anchor_type, anch
 public.mail_draft.mail_draft_pkey PRIMARY KEY (id)
 public.mail_draft.mail_draft_schedule_pair CHECK (((scheduled_at IS NULL) = (scheduled_tz IS NULL)))
 public.mail_draft.mail_draft_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+public.mail_draft.override_explanation text gen=- def=-
 public.mail_draft.scheduled_at timestamp with time zone gen=- def=-
 public.mail_draft.scheduled_tz text gen=- def=-
 public.mail_draft.scheduled_wall timestamp without time zone gen=- def=-
 public.mail_draft.subject text NOT NULL gen=- def=''::text
-public.mail_draft.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.mail_draft FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"subject": 20000, "anchor_type": 20000, "cc_addresses": 20000, "scheduled_tz": 20000, "to_addresses": 20000, "bcc_addresses": 20000, "communication_context": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"anchor_type":20000,"bcc_addresses":20000,"cc_addresses":20000,"communication_context":20000,"scheduled_tz":20000,"subject":20000,"to_addresses":20000}')
-public.mail_draft.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.mail_draft FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"subject": 20000, "anchor_type": 20000, "cc_addresses": 20000, "scheduled_tz": 20000, "to_addresses": 20000, "bcc_addresses": 20000, "communication_context": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"anchor_type":20000,"bcc_addresses":20000,"cc_addresses":20000,"communication_context":20000,"scheduled_tz":20000,"subject":20000,"to_addresses":20000}')
+public.mail_draft.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.mail_draft FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"subject": 20000, "anchor_type": 20000, "cc_addresses": 20000, "scheduled_tz": 20000, "to_addresses": 20000, "bcc_addresses": 20000, "override_explanation": 2000, "communication_context": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"anchor_type":20000,"bcc_addresses":20000,"cc_addresses":20000,"communication_context":20000,"override_explanation":2000,"scheduled_tz":20000,"subject":20000,"to_addresses":20000}')
+public.mail_draft.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.mail_draft FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"subject": 20000, "anchor_type": 20000, "cc_addresses": 20000, "scheduled_tz": 20000, "to_addresses": 20000, "bcc_addresses": 20000, "override_explanation": 2000, "communication_context": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"anchor_type":20000,"bcc_addresses":20000,"cc_addresses":20000,"communication_context":20000,"override_explanation":2000,"scheduled_tz":20000,"subject":20000,"to_addresses":20000}')
 public.mail_draft.to_addresses text[] NOT NULL gen=- def='{}'::text[]
 public.mail_draft.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.mail_draft.version bigint NOT NULL gen=- def=1

@@ -279,7 +279,7 @@ var reasonCatalog = withUndoReasons(withActivityReasons(withDealReasons(map[Reas
 		textlang.Vietnamese: "Tham chiếu {ref:q} đã đại diện cho một công ty khác từ lần nhập trước nên hàng này không được áp dụng. Hãy dùng tham chiếu mới cho công ty này hoặc sửa cột mã.",
 	}},
 	ReasonRowKeyRepeated: {params: []string{paramColumn, paramValue, "line"}, text: map[textlang.Lang]string{
-		textlang.English:    "The “{column}” value “{value}” is already used by line {line}. Each row needs its own, because it is what a re-import matches on and what an undo finds this row by.",
+		textlang.English:    "The “{column}” value “{value}” is already used by row {line}. Each row needs its own, because it is what a re-import matches on and what an undo finds this row by.",
 		textlang.German:     "Der Wert {value:q} der Spalte {column:q} wird bereits in Zeile {line} verwendet. Jede Zeile braucht einen eigenen, weil ein erneuter Import und das Rückgängigmachen die Zeile daran erkennen.",
 		textlang.Vietnamese: "Giá trị {value:q} của cột {column:q} đã được dùng ở dòng {line}. Mỗi hàng cần một giá trị riêng vì nhập lại và hoàn tác nhận ra hàng theo giá trị đó.",
 	}},

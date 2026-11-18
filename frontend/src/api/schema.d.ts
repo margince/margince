@@ -8747,6 +8747,8 @@ export interface paths {
          *     An `email` on the erasure list answers 422 naming `email` with code `address_erased`.
          *     A lead for somebody who is already a contact is refused with 409 `contact_holds_email`:
          *     open a deal on the contact instead.
+         *     A body with none of `full_name`, `email`, `phone`, `linkedin_url` or `company_name`
+         *     answers 422 `lead_identity_required`.
          */
         post: operations["createLead"];
         delete?: never;
@@ -8804,7 +8806,8 @@ export interface paths {
          * How long a sent message may go unanswered before the worklist reminds its sender.
          * @description The workspace's follow-up window: a message a seat sent to a customer that is still
          *     the last word after this many days comes back on the sender's worklist as a
-         *     follow-up. Read by every role; changed by admin/ops. Governed by the
+         *     follow-up. It also carries whether the AI checks private mail for requests owed an
+         *     answer. Read by every role; changed by admin/ops. Governed by the
          *     `installation_settings` RBAC object.
          */
         get: operations["getFollowUpSettings"];
@@ -8813,7 +8816,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Change the follow-up window (admin/ops). */
+        /** Change the follow-up window or the private-mail request check (admin/ops). */
         patch: operations["updateFollowUpSettings"];
         trace?: never;
     };
@@ -17751,9 +17754,11 @@ export interface paths {
          *     instruction rather than under the engine's permission. A subject asking later why they
          *     received it is shown the refusal AND the decision, never a grant nobody made.
          *
-         *     A SUBJECT'S OWN STOP IS NEVER PASSED. A review that holds an objection, a withdrawal, a
-         *     restriction or a request to stop is refused with 403, admin included, even beside a refusal
-         *     a decision could pass.
+         *     WHAT A DECISION CAN PASS is each refusal's declared remedy. A holder of the exception grant
+         *     may send one message past a policy refusal and past the subject's own objection, withdrawal,
+         *     restriction or request to stop; the stop stays on record and binds the next message. A hard
+         *     bounce and a recipient the engine cannot name declare no remedy: a review holding one is
+         *     refused with 403, admin included, because the address needs a real repair.
          *
          *     THE DECISION IS THE USER'S, taken in their own session. The row names them as the one who
          *     took it on. An agent or a connector is refused: it may read the review and send its user
@@ -23773,7 +23778,8 @@ export interface paths {
          *     (a hidden or cross-tenant entity answers 404, never leaks existence).
          *     The file must be an accepted kind (PDF, Office, OpenDocument, RTF, text, CSV,
          *     Markdown, HTML, PNG, JPEG, GIF, WebP, HEIC, HEIF, TIFF, zip, .eml or .msg); any other type
-         *     answers 422 `unsupported_file_type`.
+         *     answers 422 `unsupported_file_type`. So does a file whose content does not match its
+         *     name or declared type, such as a program renamed to `.pdf`.
          *
          *     An agent may file one no larger than the `attach_document` tool takes: what one MCP
          *     request carries inline, or the operator's attachment limit when that is smaller. A
@@ -26086,7 +26092,7 @@ export interface paths {
         put?: never;
         /**
          * Add a document to this corpus.
-         * @description Accepts only files whose bytes are their own text — text/plain, text/markdown, text/csv, application/json. Anything else is refused naming what is accepted; there is no parser in this product, and a PDF arriving as an empty corpus is worse than a PDF refused. Ingest is asynchronous: the document lands `queued` and its progress is read back from this path's GET. The set that ships with Margince takes no uploads: only Margince files pages in it.
+         * @description Accepts only files whose bytes are their own text — text/plain, text/markdown, text/csv, application/json. Anything else is refused naming what is accepted; there is no parser in this product, and a PDF arriving as an empty corpus is worse than a PDF refused. A file whose content is not text, such as a program renamed to `.md`, is refused the same way. Ingest is asynchronous: the document lands `queued` and its progress is read back from this path's GET. The set that ships with Margince takes no uploads: only Margince files pages in it.
          */
         post: operations["uploadCorpusDocument"];
         delete?: never;
@@ -29917,6 +29923,12 @@ export interface components {
         EmailSummary: {
             /** @description An unfinished reminder covers this readable source request. This obligation fact names no private task, owner, or task content. Absent when the source is withheld. */
             request_has_reminder?: boolean;
+            /**
+             * @description Present on an open request with an unfinished reminder when our reply on its thread
+             *     is newer than it and is still the newest message there. The request stays open: a
+             *     reply settles nothing by itself. Absent when the source is withheld.
+             */
+            our_reply?: components["schemas"]["RequestReply"];
             /** Format: uuid */
             activity_id: string;
             /** @description Null when the message has none, and when the content is withheld. */
@@ -30729,6 +30741,8 @@ export interface components {
              * @description The reader-team member who gets the follow-up work of mail whose sender no reader owns, and owns the contacts that mail creates. Null when none is named: mail whose sender no reader owns then creates no work and no contact.
              */
             backup_owner_id?: string | null;
+            /** @description A period no sync read: a first sync failed for longer than its held point, or the mailbox held more mail than one round can read. Importing the mailbox's history over it clears it. Absent when there is none. */
+            unread_period?: components["schemas"]["CaptureUnreadPeriod"];
         };
         SharedMailboxList: {
             items: components["schemas"]["SharedMailbox"][];
@@ -37956,11 +37970,18 @@ export interface components {
             /**
              * Format: uuid
              * @description A confirmed current inbound request on this deal, admitted by the
-             *     request owner's responsibility, settlement and currency rules.
-             *     Absent for historical or unconfirmed review. Its absence makes no
+             *     request owner's responsibility, settlement and currency rules, that
+             *     is still owed our reply. Absent for historical or unconfirmed
+             *     review, and while `our_reply` is present. Its absence makes no
              *     claim about whether an unrecorded reply exists.
              */
             reply_to?: string | null;
+            /**
+             * @description The current request on this deal that we replied to, while our reply is the newest
+             *     message on its thread. The card then says we replied instead of saying the buyer
+             *     waits, and offers to mark the reminder done.
+             */
+            our_reply?: components["schemas"]["RequestReply"];
             /** Format: date-time */
             generated_at: string;
             generated_by: components["schemas"]["WrittenBy"];
@@ -38071,6 +38092,35 @@ export interface components {
             last_success_at?: string;
             /** Format: date-time */
             evaluated_at: string;
+        };
+        /**
+         * @description We replied after a request, and our reply is still the newest message on its thread.
+         *     One rule decides it, so the deal card, its risk line and its next move agree on whose
+         *     move it is. The request itself stays open until its reminder is done or a settlement
+         *     verdict records it settled.
+         */
+        RequestReply: {
+            /**
+             * Format: uuid
+             * @description The request we replied to.
+             */
+            request_activity_id: string;
+            /** @description The reader sent the reply. False when a colleague did. */
+            by_reader: boolean;
+            /**
+             * Format: date-time
+             * @description When our newest reply on the thread happened.
+             */
+            replied_at: string;
+            replied_precision: components["schemas"]["OccurredPrecision"];
+            /** @description What the settlement pass found still asked, quoted from the request. Absent when no still_owed verdict quoted one. */
+            still_asked?: string;
+            /**
+             * Format: uuid
+             * @description The request's unfinished reminder, when this reader may change it. Marking it done settles the request. `reminder_version` comes with it, for that write.
+             */
+            reminder_id?: string;
+            reminder_version?: components["schemas"]["RowVersion"];
         };
         /**
          * @description A recommendation's scoped source and classification. Known request kinds
@@ -44398,6 +44448,12 @@ export interface components {
             scheduled_at?: string | null;
             /** @description The IANA zone name `scheduled_at` was picked in. Required with `scheduled_at`. */
             scheduled_tz?: string | null;
+            /**
+             * @description The reason the rep typed for sending this message past a refusal, kept so a reopened
+             *     composer still holds it. It grants nothing: the send still needs its own decision. Omit
+             *     it for none.
+             */
+            override_explanation?: string;
         };
         /** @description One rep's unsent message, readable by its author and nobody else. Not an activity. */
         MailDraft: {
@@ -44442,6 +44498,8 @@ export interface components {
             scheduled_at?: string;
             /** @description The IANA zone `scheduled_at` was picked in. Present exactly when it is. */
             scheduled_tz?: string;
+            /** @description The reason the author typed for sending past a refusal. Absent when none was. */
+            override_explanation?: string;
             /** Format: date-time */
             created_at: string;
             /** Format: date-time */
@@ -44476,7 +44534,8 @@ export interface components {
         CommunicationContext: "reply_to_inbound" | "requested_followup" | "precontract_quote" | "active_deal_followup" | "customer_service" | "account_notice" | "contract_notice" | "invoice_or_payment" | "marketing";
         /**
          * @description What a composer is about to write, in the shape the engine judges. A `subject` and
-         *     `body` never reach a consent decision. When given, they are checked against the
+         *     `body` are read as the send reads them: words that make an offer (a discount, a quote,
+         *     a price) are judged as marketing even inside a reply. They are also checked against the
          *     advertising content rules of each recipient's jurisdiction pack and answered as
          *     `content_findings`.
          */
@@ -44506,10 +44565,17 @@ export interface components {
             consent_purpose?: string;
             /** @description Records the caller names in support of this message. Checked, never trusted. */
             evidence?: components["schemas"]["CommunicationEvidence"];
-            /** @description The draft's subject, checked only for `content_findings`. */
+            /** @description The draft's subject, read for an offer as the send reads it and checked for `content_findings`. */
             subject?: string;
-            /** @description The draft's plain text, checked only for `content_findings`. */
+            /** @description The draft's plain text, read for an offer as the send reads it and checked for `content_findings`. */
             body?: string;
+            /** @description The draft's markup beside the plain text. Its visible text is read for an offer as the send reads it. */
+            html_body?: string;
+            /**
+             * @description The files the message will carry, by the ids `/attachments` gave them. Their names are
+             *     read for an offer as the send reads them. A file the send would refuse is refused here.
+             */
+            attachment_ids?: string[];
         };
         /**
          * @description PreviewSendRequest plus the `links` an anchor would otherwise have supplied — the
@@ -44534,10 +44600,17 @@ export interface components {
              */
             consent_purpose?: string;
             evidence?: components["schemas"]["CommunicationEvidence"];
-            /** @description The draft's subject, checked only for `content_findings`. */
+            /** @description The draft's subject, read for an offer as the send reads it and checked for `content_findings`. */
             subject?: string;
-            /** @description The draft's plain text, checked only for `content_findings`. */
+            /** @description The draft's plain text, read for an offer as the send reads it and checked for `content_findings`. */
             body?: string;
+            /** @description The draft's markup beside the plain text. Its visible text is read for an offer as the send reads it. */
+            html_body?: string;
+            /**
+             * @description The files the message will carry, by the ids `/attachments` gave them. Their names are
+             *     read for an offer as the send reads them. A file the send would refuse is refused here.
+             */
+            attachment_ids?: string[];
         };
         LawfulBasisConfirmationRequest: {
             /**
@@ -45926,6 +45999,15 @@ export interface components {
             readonly locks?: components["schemas"]["SettingLocks"];
             /** @description Days a sent message may stay unanswered before its sender is reminded to follow up. */
             follow_up_after_days: number;
+            /**
+             * @description Whether the AI checks private mail for a request its reader owes an answer to
+             *     (`activities.private_mail_requests`, on by default). Only mail private by a
+             *     routine setting is checked; mail held as confidential, by a counterparty or
+             *     members-only hold, or by hand never is. A GET always carries it; a PATCH that
+             *     leaves it out leaves the setting unchanged. Only a human may change it, because
+             *     it decides which mail reaches a model.
+             */
+            private_mail_requests?: boolean;
         };
         LeadSettings: {
             locks?: components["schemas"]["SettingLocks"];
@@ -47948,6 +48030,13 @@ export interface components {
             target_source?: "target" | "sales_goals";
             /** Format: double */
             attainment?: number;
+            /**
+             * Format: double
+             * @description `target_actual` minus `target`, in the metric's unit: negative is still to reach,
+             *     positive is above the target. Present with both. A client shows it and `attainment`
+             *     as they are, and never works either out from the other figures.
+             */
+            target_delta?: number;
             coverage: components["schemas"]["ReportingCoverage"];
             evidence: components["schemas"]["ReportingEvidenceRef"];
             target_comparison?: components["schemas"]["ReportingTargetComparison"];
@@ -48283,6 +48372,47 @@ export interface components {
             amount_minor?: number;
         };
         /**
+         * @description Where a month may finish against its goal, read from the forecast of the same month and
+         *     scope that GET /forecast reads. Given only for a month that has not ended, against a goal
+         *     that is `set`. A year has none, because the forecast has no year period.
+         *
+         *     - `worst` is the money already won, as if nothing more closes.
+         *     - `expected` is the forecast landing under the installation's forward measure, the same
+         *       setting the Overview lands with. `landing` names the measure and what it rests on.
+         *     - `best` is the money won plus every open deal expected in the month, at face value.
+         *
+         *     Each case carries `delta_minor`, its amount minus the goal, signed as the reading's own
+         *     `delta_minor`: negative is short of the goal.
+         */
+        SalesProgressScenarios: {
+            /**
+             * Format: date-time
+             * @description When the deals were read.
+             */
+            as_of: string;
+            worst: components["schemas"]["SalesProgressScenario"];
+            expected: components["schemas"]["SalesProgressScenario"];
+            best: components["schemas"]["SalesProgressScenario"];
+            landing: components["schemas"]["ForecastLanding"];
+            /** @description Deals the forecast read for the month. */
+            eligible_count: number;
+            /** @description Of those, the deals with an amount. */
+            priced_count: number;
+            /** @description Priced deals no exchange rate reached; their money is in no case. */
+            fx_missing_count: number;
+            /** @description True when the reader cannot see every deal of the scope, so each case is smaller than the scope's own. */
+            scope_limited: boolean;
+        };
+        SalesProgressScenario: {
+            /** Format: int64 */
+            amount_minor: number;
+            /**
+             * Format: int64
+             * @description The amount minus the goal.
+             */
+            delta_minor: number;
+        };
+        /**
          * @description Closed revenue split by what each deal sold, from the category captured on its priced lines:
          *     software is a product sale and implementation a service. Other kinds, products nobody
          *     classified and the part no line carries are unresolved. The three parts add up to the
@@ -48396,6 +48526,7 @@ export interface components {
             members_withheld: boolean;
             /** @description The Analytics reading behind closed and planned revenue, the receipt `/analytics/evidence` takes. */
             evaluation?: components["schemas"]["ReportingEvaluation"];
+            scenarios?: components["schemas"]["SalesProgressScenarios"];
             capabilities: {
                 /** @description Whether the caller may set this scope's goals. */
                 write_goals: boolean;
@@ -49122,6 +49253,12 @@ export interface components {
             license_lapsed?: boolean;
             /** @description Whether this human caller may use the configured activity reader-rendering lane. Absent or false keeps generated text original until an explicit request. */
             reader_rendering_available?: boolean;
+            /**
+             * @description The `activities.inline_send_review` setting: whether the email composer is decided at
+             *     Send, with a refusal shown inline from the embedded review. Absent or false keeps the
+             *     check while writing and the confirmation dialog.
+             */
+            inline_send_review?: boolean;
             analytics_startup?: components["schemas"]["AnalyticsStartup"];
             user: components["schemas"]["User"];
             /** @description The installation's company name (the installation.name setting). Shown as the typed-confirmation target of the "Reset data" action — the exact string that endpoint validates. */
@@ -50065,6 +50202,46 @@ export interface components {
             };
         };
         /**
+         * @description A problem body whose `details` describe a refused send and the review it opened.
+         *     The envelope is `Problem`'s, restated rather than composed with `allOf` so the breaking-change check can read it; a gate holds the two property sets equal.
+         */
+        SendRefusal: {
+            /**
+             * Format: uri
+             * @default about:blank
+             */
+            type: string;
+            title?: string;
+            status: number;
+            code: string;
+            detail?: string;
+            /** Format: uri */
+            instance?: string;
+            details?: components["schemas"]["SendRefusalDetails"];
+        };
+        /** @description Present when the refusal opened a review. */
+        SendRefusalDetails: {
+            /** Format: uuid */
+            review_id?: string;
+            /** @description What this caller may do about the refusal, such as `direct_send`. */
+            available_actions?: string[];
+            /** @description Each refused address the caller named. */
+            refusals?: components["schemas"]["SendRefusalRecipient"][];
+            review?: components["schemas"]["CommunicationReview"];
+        } & {
+            [key: string]: unknown;
+        };
+        SendRefusalRecipient: {
+            address: string;
+            reason_code: string;
+            /** @description Whether a recorded reason may send this one message anyway. */
+            can_be_overruled: boolean;
+            /** @description The category the engine resolved. */
+            category?: string;
+            /** @description The category the sender claimed. */
+            requested_category?: string;
+        };
+        /**
          * @description A problem body whose `details` spell out an analytics refusal, present whenever the engine refused the question. A 400 the engine did not write — a malformed scope, a document outside the block grammar — carries the problem alone.
          *     The envelope is `Problem`'s, restated rather than composed with `allOf` so the breaking-change check can read it; a gate holds the two property sets equal.
          */
@@ -50635,7 +50812,7 @@ export interface components {
              */
             error_class?: string;
         };
-        /** @description The span between where a held first-sync anchor pointed and where the sync had to start instead. Both ends or neither: a start with no end is a period nobody can ask for again. */
+        /** @description The span between where a first sync was to read from and where it had to start instead. Both ends or neither: a start with no end is a period nobody can ask for again. */
         CaptureUnreadPeriod: {
             /**
              * Format: date-time
@@ -50675,7 +50852,7 @@ export interface components {
             /** @description Threads whose confidentiality question is still open, so their messages stay held. */
             threads_awaiting_verdict: number;
             /**
-             * @description A period no sync read, when a first sync failed for longer than the point it had held. Absent when there is none, which is the ordinary case.
+             * @description A period no sync read: a first sync failed for longer than the point it had held, or the mailbox held more mail than one round can read. A finished history import over it clears it. Absent when there is none, which is the ordinary case.
              *     It is reported because the alternative is a mailbox that looks synced and is missing a week. The backfill reaches this period, so the owner can ask for it back, and the dates are what they point it at.
              */
             unread_period?: components["schemas"]["CaptureUnreadPeriod"] | null;
@@ -54579,6 +54756,13 @@ export interface components {
              *     would have the record assert an acknowledgement of text nobody published.
              */
             warning?: components["schemas"]["OverrideWarning"];
+            /**
+             * @description Every warning this review is served with to this reader; a decision may name any of their
+             *     versions and no other. `warning` is always among them. The sender of a held message is
+             *     also served the composer's short warning (`inline-v1`), which a decision from any other
+             *     reader is refused for naming.
+             */
+            warnings?: components["schemas"]["OverrideWarning"][];
         };
         /**
          * @description The caution a human reads before overruling the engine, with the version that identifies
@@ -54661,8 +54845,7 @@ export interface components {
             /**
              * @description The refusal reason codes the director was shown, from the review's `refusals`. When the
              *     review's refusals changed since then, the decision is refused with `instruction_stale`
-             *     and the director opens the review again. A refusal the subject made themselves (an
-             *     objection, a withdrawal, a restriction or a request to stop) is never passed.
+             *     and the director opens the review again.
              */
             shown_reasons?: string[];
         };
@@ -60867,6 +61050,14 @@ export interface components {
              */
             informs_us: number;
             /**
+             * @description Threads `shown` counts whose mail no model will check for a request: mail held
+             *     on purpose (marked confidential, a counterparty or members-only hold, or by
+             *     hand), or any private mail while `activities.private_mail_requests` is off. Not
+             *     hidden, so `clear` ignores it. The queue ranks such mail as a request only when
+             *     the reader wrote on its conversation first.
+             */
+            private_unchecked: number;
+            /**
              * @description True when a read stopped at its own scan bound, which makes every figure above
              *     it a FLOOR rather than a count.
              *
@@ -62565,6 +62756,23 @@ export interface components {
             };
         };
         /**
+         * @description Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
+         *     When the refusal opened a review, `details` carries `review_id`, the
+         *     `available_actions` this caller may take, and `refusals`: each refused address
+         *     the caller named, with the engine's `reason_code`, resolved `category` and the
+         *     `requested_category` the caller claimed. `details.review` is the review exactly as
+         *     `GET /communication-reviews/{id}` serves it to this caller, so a client needs no second
+         *     request; it is absent when the caller may not read the review.
+         */
+        SendRefused: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["SendRefusal"];
+            };
+        };
+        /**
          * @description The installation cannot send its own mail (`conflict`), or the consent engine refuses this
          *     mail to this contact (`consent_not_granted`).
          */
@@ -62677,6 +62885,8 @@ export interface components {
         CaptureProvider: "gmail" | "gcal" | "gdocs" | "graph" | "graphcal" | "imap" | "test_mailbox";
         /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
         Id: string;
+        /** @description The revision token the picture's URL carries. Only a token naming the current picture makes the answer cacheable for a day. */
+        AssetRevision: string;
         /**
          * @description The act that staged a set of proposals together (`Approval.bundle_id`). It names a
          *     grouping over approval rows, not a resource of its own — there is nothing to GET, and a
@@ -74044,21 +74254,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /**
-             * @description Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
-             *     When the refusal opened a review, `details` carries `review_id`, the
-             *     `available_actions` this caller may take, and `refusals`: each refused address
-             *     the caller named, with the engine's `reason_code`, resolved `category` and the
-             *     `requested_category` the caller claimed.
-             */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
+            409: components["responses"]["SendRefused"];
             422: components["responses"]["SendValidationError"];
         };
     };
@@ -74146,21 +74342,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /**
-             * @description Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
-             *     When the refusal opened a review, `details` carries `review_id`, the
-             *     `available_actions` this caller may take, and `refusals`: each refused address
-             *     the caller named, with the engine's `reason_code`, resolved `category` and the
-             *     `requested_category` the caller claimed.
-             */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
+            409: components["responses"]["SendRefused"];
             422: components["responses"]["SendValidationError"];
         };
     };
@@ -74517,21 +74699,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
-            /**
-             * @description Consent not granted for the send purpose (`code: consent_not_granted`) — suppressed.
-             *     When the refusal opened a review, `details` carries `review_id`, the
-             *     `available_actions` this caller may take, and `refusals`: each refused address
-             *     the caller named, with the engine's `reason_code`, resolved `category` and the
-             *     `requested_category` the caller claimed.
-             */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/problem+json": components["schemas"]["Problem"];
-                };
-            };
+            409: components["responses"]["SendRefused"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -93228,8 +93396,8 @@ export interface operations {
     getUserAvatar: {
         parameters: {
             query?: {
-                /** @description The revision token `avatar_url` carries. Only a token naming the current picture makes the answer cacheable for a day. */
-                v?: string;
+                /** @description The revision token the picture's URL carries. Only a token naming the current picture makes the answer cacheable for a day. */
+                v?: components["parameters"]["AssetRevision"];
             };
             header?: never;
             path: {

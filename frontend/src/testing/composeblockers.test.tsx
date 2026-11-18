@@ -6,7 +6,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createQueryClient } from "../app/queryclient";
 import { writeMessage } from "../design-system/richtext-testing";
 import { pickOption } from "../design-system/select-testing";
-import { ComposeModal } from "../features/mail/compose";
 import { MailSendNotices } from "../features/mail/compose.parts";
 import {
   activity202,
@@ -18,6 +17,7 @@ import {
   newContactsOf,
   reasonTargetOf,
 } from "../features/mail/composeblockers";
+import { ComposeWindow } from "../features/mail/composewindow";
 import { refusalSentenceKey } from "../format/sendpermissionreason";
 import { meFixture } from "./mefixture";
 import {
@@ -225,7 +225,7 @@ describe("recording a fact where the refusal is read", () => {
     const user = userEvent.setup();
     const sent = requestBackend();
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="c-1"
@@ -299,7 +299,7 @@ describe("recording a fact where the refusal is read", () => {
         "deal-one",
       );
       render(
-        <ComposeModal
+        <ComposeWindow
           entityType={source === "deal page" ? "deal" : "contact"}
           entityId={source === "deal page" ? "deal-one" : "c-1"}
           contactId="c-1"
@@ -366,7 +366,7 @@ describe("recording a fact where the refusal is read", () => {
     const user = userEvent.setup();
     const sent = requestBackend();
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="contact"
         entityId="c-1"
         contactId="c-1"
@@ -394,7 +394,7 @@ describe("recording a fact where the refusal is read", () => {
     const user = userEvent.setup();
     const sent = requestBackend(DEAL_CLAIM_UNBACKED);
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="contact"
         entityId="c-1"
         contactId="c-1"
@@ -480,7 +480,7 @@ function answeringBackend(preview: ReturnType<typeof refusedPreview>) {
 async function newMessageTo(address: string) {
   const user = userEvent.setup();
   render(
-    <ComposeModal
+    <ComposeWindow
       entityType="contact"
       entityId="c-1"
       contactId="c-1"
@@ -554,7 +554,7 @@ describe("a reply the thread gives no reason for", () => {
     const user = userEvent.setup();
     requestBackend(UNPLACED);
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="c-1"
@@ -600,7 +600,7 @@ it("keeps an open exchange and its note through a background permission check", 
   requestBackend();
   const user = userEvent.setup();
   const { queryClient } = render(
-    <ComposeModal
+    <ComposeWindow
       activityId="act-1"
       entityType="contact"
       entityId="c-1"

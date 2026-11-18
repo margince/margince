@@ -54,3 +54,16 @@ func HoldsMessages(status string) bool {
 func HoldsSQL(column string) string {
 	return column + " IN ('" + strings.Join(HoldingStatuses(), "', '") + "')"
 }
+
+// HoldsMessagesSQL is HoldsMessages for set-based readers: a settled hold, or a
+// question still waiting for its verdict.
+func HoldsMessagesSQL(column string) string {
+	var statuses []string
+	for status := range statusRules {
+		if HoldsMessages(status) {
+			statuses = append(statuses, status)
+		}
+	}
+	slices.Sort(statuses)
+	return column + " IN ('" + strings.Join(statuses, "', '") + "')"
+}

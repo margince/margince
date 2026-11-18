@@ -69,7 +69,7 @@ func TestEnsureTransmittableAdmitsAFileTheSenderCanStillRead(t *testing.T) {
 	contact := e.SeedContact(t, "Rep1's Contact", &e.Rep1)
 
 	att, err := store.UploadAttachment(e.Admin(), activities.AttachmentInput{
-		EntityType: "contact", EntityID: contact, Filename: "offer.pdf", Content: bytes.NewReader([]byte("PDF")),
+		EntityType: "contact", EntityID: contact, Filename: "offer.pdf", Content: bytes.NewReader([]byte("%PDF-1.4")),
 	})
 	if err != nil {
 		t.Fatalf("seeding the attachment through the real writer: %v", err)
@@ -103,7 +103,7 @@ func TestEnsureTransmittableRefusesAFileTheSenderCanNoLongerSee(t *testing.T) {
 	contact := e.SeedContact(t, "Rep1's Contact", &e.Rep1)
 
 	att, err := store.UploadAttachment(e.Admin(), activities.AttachmentInput{
-		EntityType: "contact", EntityID: contact, Filename: "private.pdf", Content: bytes.NewReader([]byte("PDF")),
+		EntityType: "contact", EntityID: contact, Filename: "private.pdf", Content: bytes.NewReader([]byte("%PDF-1.4")),
 	})
 	if err != nil {
 		t.Fatalf("seeding the attachment: %v", err)
@@ -131,7 +131,7 @@ func TestEnsureTransmittableRefusesAFileTheSenderCanNoLongerSee(t *testing.T) {
 	// is admitted.
 	ownContact := e.SeedContact(t, "Rep3's Own Contact", &e.Rep3)
 	ownAtt, err := store.UploadAttachment(e.Admin(), activities.AttachmentInput{
-		EntityType: "contact", EntityID: ownContact, Filename: "mine.pdf", Content: bytes.NewReader([]byte("PDF")),
+		EntityType: "contact", EntityID: ownContact, Filename: "mine.pdf", Content: bytes.NewReader([]byte("%PDF-1.4")),
 	})
 	if err != nil {
 		t.Fatalf("seeding the sender's own attachment: %v", err)
@@ -162,7 +162,7 @@ func TestEnsureTransmittableRefusesAnUnknownFileIndistinguishablyFromAnInvisible
 	// A real file on a contact capture-private to Rep1, which Rep3 cannot see.
 	contact := e.SeedContact(t, "Rep1's Contact", &e.Rep1)
 	att, err := store.UploadAttachment(e.Admin(), activities.AttachmentInput{
-		EntityType: "contact", EntityID: contact, Filename: "private.pdf", Content: bytes.NewReader([]byte("PDF")),
+		EntityType: "contact", EntityID: contact, Filename: "private.pdf", Content: bytes.NewReader([]byte("%PDF-1.4")),
 	})
 	if err != nil {
 		t.Fatalf("seeding the attachment: %v", err)

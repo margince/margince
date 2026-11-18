@@ -880,6 +880,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.preview.status": "Freigabekontext",
   "approval.preview.stale":
     "Dieser Eintrag wurde nach dem Vorschlag geändert. Fordere vor der Freigabe einen neuen Vorschlag an.",
+  "approval.editRetargeted":
+    "Diese Änderung betrifft einen anderen Datensatz. Gib die Anfrage unverändert frei oder lehne sie ab.",
   "approval.preview.incomplete":
     "Die vollständige Änderung kann nicht angezeigt werden. Fordere vor der Freigabe einen neuen Vorschlag an.",
   "approval.preview.unavailable":
@@ -3100,6 +3102,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "record.edit": "Bearbeiten",
 
   "record.fieldRequired": "Dieses Feld ist erforderlich.",
+  "amount.refused.ambiguous": "Gib den Betrag als {whole} oder {decimal} ein.",
+  "amount.refused.ambiguousWhole": "Gib den Betrag als {whole} ein.",
+  "amount.refused.grouping":
+    "Gib den Betrag ohne Tausendertrennzeichen ein, etwa {example}.",
+  "amount.refused.notNumber": "Gib den Betrag in Ziffern ein, etwa {example}.",
+  "amount.refused.tooLarge": "Dieser Betrag ist zu groß zum Speichern.",
+  "amount.refused.negative": "Gib einen Betrag von null oder mehr ein.",
+  "number.refused.ambiguous": "Gib die Zahl als {whole} oder {fraction} ein.",
+  "number.refused.grouping":
+    "Gib die Zahl ohne Tausendertrennzeichen ein, etwa {example}.",
+  "number.refused.notNumber": "Gib eine Zahl ein, etwa {example}.",
   "record.amountTooPrecise":
     "Dieser Betrag hat mehr Nachkommastellen, als {currency} zulässt.",
   "record.registration": "Registrierung",
@@ -3455,6 +3468,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "common.loading": "Wird geladen…",
   "ref.nameLoadFailed": "Name wurde nicht geladen",
   "ref.memberLeft": "{name} (ausgeschieden)",
+  "ref.leadUnnamed": "Lead ohne Namen",
   "roster.failedUsers": "Die Teammitglieder konnten nicht geladen werden.",
   "roster.failedTeams": "Die Teams konnten nicht geladen werden.",
   "owner.rosterFailed":
@@ -6073,7 +6087,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.qualify.amount": "Betrag ({currency})",
   "lead.qualify.amountHint":
     "Optional. Ganze Einheiten in der Basiswährung der Installation.",
-  "lead.qualify.amountInvalid": "Gib eine Zahl ein oder lass das Feld leer.",
   "lead.qualify.amountNoCurrency":
     "Die Basiswährung ist noch nicht geladen. Versuche es gleich erneut oder lass den Betrag leer.",
   "lead.qualify.why": "Warum",
@@ -7275,8 +7288,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "vcardImport.working": "Karten werden gelesen…",
   "vcardImport.back": "Zurück zu den Kontakten",
   "vcardImport.noCards": "Die Datei enthält keine Karten.",
-  "vcardImport.failed":
-    "Die Karten konnten nicht importiert werden. Bitte versuche es erneut.",
+  "vcardImport.failed": "Die Karten wurden nicht importiert.",
   "vcardImport.outcome.created": "Hinzugefügt",
   "vcardImport.outcome.updated": "Aktualisiert",
   "vcardImport.outcome.needsReview": "Mögliches Duplikat",
@@ -14700,7 +14712,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "pipeline.reason.from_sending_systems":
     "dieser Thread enthält nur E-Mails von Systemen, etwa Benachrichtigungen, und wird nicht gelesen",
   "pipeline.reason.transport_not_read":
-    "dieser Schritt liest nur E-Mails, und die Nachricht kam über einen anderen Kanal",
+    "dieser Schritt liest keine Nachrichten, die auf diesem Weg kamen",
   "pipeline.reason.sender_undecided":
     "die Nachricht wird zurückgehalten, da die Prüfung der Absendeadresse noch aussteht",
   "pipeline.reason.archived": "die Nachricht ist archiviert",
@@ -20736,6 +20748,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.hidden.setAside.detail":
     "Zurückgestellt oder als nicht zuständig markiert. Zurückgestellte Einträge kommen automatisch zurück.",
   "worklist.hidden.shown": "Angezeigt in der Worklist: {count}.",
+  "worklist.hidden.privateUnchecked_one":
+    "{count} private E-Mail nicht von der KI geprüft",
+  "worklist.hidden.privateUnchecked_other":
+    "{count} private E-Mails nicht von der KI geprüft",
   "worklist.hidden.rows.loading": "Zurückgehaltene Nachrichten werden geladen…",
   "worklist.hidden.rows.outOfReach":
     "Bei dieser Menge konnte keine Nachricht gelesen werden. Einige Nachrichten werden möglicherweise trotzdem zurückgehalten.",
@@ -22310,6 +22326,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Verantwortliche Teammitglieder können einen Deal von der Rechtsabteilung prüfen lassen, und eine Phase kann deren Freigabe verlangen. Ist die Rechtsprüfung deaktiviert, ist beides ausgeblendet, und alle erfassten Prüfungen bleiben erhalten.",
   "legalReview.settingsReadOnly": "Diese Einstellung ändert ein Admin.",
   "legalReview.notSaved": "Einstellung wurde nicht gespeichert.",
+  "privateMailRequests.title": "Anfragen in privaten E-Mails",
+  "privateMailRequests.switch": "Private E-Mails auf Anfragen prüfen",
+  "privateMailRequests.hint":
+    "Die KI liest private E-Mails, um zu finden, worum ein Kunde euch bittet. Als vertraulich markierte oder bewusst zurückgehaltene E-Mails liest sie nie.",
+  "privateMailRequests.readOnly": "Diese Einstellung ändert ein Admin.",
+  "privateMailRequests.notSaved": "Einstellung wurde nicht gespeichert.",
   "stage.criteria.kindLegalReviewed": "Rechtlich freigegeben",
   "legalReview.docUnavailable":
     "Du kannst diese Datei nicht öffnen. Wende dich an das Teammitglied, das die Prüfung angefragt hat.",
@@ -22437,6 +22459,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Käuferseite hat vor {count} Tag geschrieben und wartet auf eine Antwort.",
   "deal.verdict.yourMoveDays_other":
     "Die Käuferseite hat vor {count} Tagen geschrieben und wartet auf eine Antwort.",
+  "deal.verdict.youReplied": "Du hast geantwortet",
+  "deal.verdict.teamReplied": "Dein Team hat geantwortet",
+  "deal.verdict.youRepliedOn":
+    "Du hast am {date} geantwortet. Die Anfrage ist noch offen.",
+  "deal.verdict.teamRepliedOn":
+    "Dein Team hat am {date} geantwortet. Die Anfrage ist noch offen.",
+  "deal.verdict.youRepliedAsked":
+    "Du hast am {date} geantwortet. Noch offen: {ask}",
+  "deal.verdict.teamRepliedAsked":
+    "Dein Team hat am {date} geantwortet. Noch offen: {ask}",
   "deal.verdict.goneQuiet": "Verstummt",
   "deal.verdict.goneQuietSince":
     "Seit {date} gab es keine Aktivität, daher gilt der Deal als festgefahren.",
@@ -23118,6 +23150,18 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "progress.serviceSales": "Services und Projekte",
   "progress.planned": "Offene Pipeline",
   "progress.plannedAt": "Offene Deals, Stand {at}",
+  "progress.scenarios": "Wo der Monat enden kann",
+  "progress.scenario.worst": "Schlechtester Fall",
+  "progress.scenario.worstWhy": "Wenn nichts mehr abschließt",
+  "progress.scenario.expected": "Erwartet",
+  "progress.scenario.best": "Bester Fall",
+  "progress.scenario.bestWhy": "Wenn jeder offene Deal des Monats abschließt",
+  "progress.scenarios.asOf": "Deals mit Stand {at}",
+  "progress.scenarios.unpriced":
+    "Deals ohne Betrag oder ohne Wechselkurs fehlen",
+  "progress.scenarios.limited": "Nur die Deals, die du siehst, zählen",
+  "progress.scenarios.yearUnavailable":
+    "Schlechtester, erwarteter und bester Fall gibt es für einen Monat. Die Prognose hat kein Jahr, aus dem sie sie lesen kann.",
   "progress.unclassified": "Nicht zugeordnet",
   "progress.unclassifiedDetail":
     "Dieser Umsatz ist keinem Produkt und keiner Dienstleistung zugeordnet.",
@@ -23211,7 +23255,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "goals.propose.noModel":
     "Ein Monatsvorschlag braucht ein eingerichtetes KI-Modell. Du kannst die Monate weiterhin von Hand eingeben.",
   "goals.propose.noHistory":
-    "{name} hat in {year} und im Jahr davor keinen gewonnenen Umsatz, aus dem sich ein Muster lesen lässt. Gib die Monate von Hand ein.",
+    "{name} hat in {year} und im Jahr davor keinen abgeschlossenen Monat mit gewonnenem Umsatz, daher lässt sich kein Muster lesen. Gib die Monate von Hand ein.",
   "goals.proposedByAi": "Von Margince vorgeschlagen",
   "goals.monthsSum": "Die Monate ergeben zusammen {total}.",
   "goals.monthsMissing_one": "{count} Monat ist nicht gesetzt.",

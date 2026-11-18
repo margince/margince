@@ -94,7 +94,7 @@ func (g *Gate) decidePreviewTx(ctx context.Context, tx pgx.Tx, req commsauthz.Re
 	if err != nil {
 		return set, err
 	}
-	if req, err = withSendingEntity(ctx, tx, req); err != nil {
+	if req, err = withSendFacts(ctx, tx, req); err != nil {
 		return set, err
 	}
 	for _, r := range req.Recipients {

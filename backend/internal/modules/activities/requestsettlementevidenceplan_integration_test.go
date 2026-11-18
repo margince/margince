@@ -18,7 +18,7 @@ import (
 // primary-key walk: an index scan with no index condition.
 func TestSettlementEvidenceReadsEachActivityByItsID(t *testing.T) {
 	plan := explainWithoutSeqScans(t, "",
-		`SELECT (`+settlementEvidenceSQL()+`) FROM activity a WHERE a.id = $2`,
+		`SELECT (`+settlementEvidenceSQL(true)+`) FROM activity a WHERE a.id = $2`,
 		clocktest.Now(t), ids.NewV7())
 	var seenReads, unkeyed int
 	plan.walk(func(n planNode) {

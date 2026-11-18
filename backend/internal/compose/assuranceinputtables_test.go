@@ -31,6 +31,8 @@ var announcedBy = map[string]struct{ family, why string }{
 	"capture_import": {"", "which mail connections delivered a deal's mail; a first import comes with its " +
 		"activity.captured, a later mailbox delivering the same message emits no event, and the viability " +
 		"fingerprint carries the set so a receipt read before it changed is stale"},
+	"comms_outbound": {"comms", "a returned send is comms.delivery_bounced; a send that parks or is still " +
+		"pending was written with its activity's own event, and the next run reads its state"},
 	"contact_email": {"", "the address a contact writes from; adding one moves no deal until mail " +
 		"from it arrives, which is an activity event"},
 	"import_run": {"", "tells an imported task edit from a human one; a finished import run does not change"},

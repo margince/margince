@@ -1,6 +1,6 @@
 import { postalLines } from "../format/address";
 import { formatDateAbbrev, formatMoney } from "../format/format";
-import { toMinorUnits } from "../format/minorunits";
+import { typedMinorUnits } from "../format/minorunits";
 import { browserZone } from "../format/timezone";
 import type { Locale, useT } from "../i18n";
 import {
@@ -128,6 +128,7 @@ function plainPart(
         ? optionLabel(field, value, values, t)
         : "";
     case "number":
+    case "decimal":
       return value && partCount > 1
         ? `${fieldLabel(field, t)}: ${value}`
         : value;
@@ -147,11 +148,12 @@ function moneyPart(
 ): string | undefined {
   if (!locale) return undefined;
   if (field.key === "currency") return "";
-  if (field.type !== "number" || !value) return undefined;
-  const minor = toMinorUnits(Number(value), code);
-  const shown = Number.isFinite(minor)
-    ? formatMoney(minor, code, locale)
-    : `${value} ${code}`;
+  if (field.type !== "decimal" || !value) return undefined;
+  const typed = typedMinorUnits(value, code, locale);
+  const shown =
+    "minor" in typed
+      ? formatMoney(typed.minor, code, locale)
+      : `${value} ${code}`;
   return partCount > 2 ? `${fieldLabel(field, t)}: ${shown}` : shown;
 }
 

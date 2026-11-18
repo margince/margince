@@ -315,7 +315,6 @@ internal/modules/capture/channelconnfixture_test.go#method fakeTelegram.clearedW
 internal/modules/capture/channelsend.go#method Registry.liveChannelBindings
 internal/modules/capture/freemaildomain.go#const block at const auditKeyDomain
 internal/modules/capture/gmail/send.go#method Connector.stampedIdentity
-internal/modules/capture/htmltext/htmltext.go#func linkText
 internal/modules/capture/lifecycleaudit.go#func connectionAuditImage
 internal/modules/capture/mailmap/mailmap.go#method Message.Addresses
 internal/modules/capture/mailmap/mailmap.go#type Message.addresses
@@ -498,6 +497,7 @@ internal/platform/events/dedupe.go#const DedupeKeyPrefix
 internal/platform/events/relay.go#func ClientOptions
 internal/platform/extsecrets/store.go#package extsecrets
 internal/platform/extsecrets/store_integration_test.go#func TestSecretsUserScopeRefusesAnUnknownUser
+internal/platform/htmltext/htmltext.go#func linkText
 internal/platform/httperr/decoderefusal.go#func fieldDecodeRefusal
 internal/platform/httperr/decoderefusal_test.go#var block at var intoAdvanceDeal
 internal/platform/httperr/decoderefusal_test.go#var decodeRefusalCases

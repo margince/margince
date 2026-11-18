@@ -17,7 +17,6 @@ import {
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { Heading } from "../../design-system/heading";
 import { Select } from "../../design-system/select";
-import { toMinorUnits } from "../../format/minorunits";
 import { useLocale, useT } from "../../i18n";
 import { leadPromotePreviewKey, leadWriteKeys } from "../../lib/leadkeys";
 import { defaultPipelineOf, usePipelines } from "../../lib/pipelines.queries";
@@ -27,6 +26,8 @@ import { useViewerZone } from "../../lib/viewerzone";
 import { useLeadCompanyNameReading } from "./leadcompany";
 import { leadIdentityName } from "./leadname";
 import {
+  amountState,
+  dealBlock,
   ExistingQualificationDeal,
   type QualificationDealChoice,
   qualificationConfirmState,
@@ -98,43 +99,6 @@ export function usePromotePreview(
 // triggerFor reads the wire trigger off the lead's captured evidence; a lead
 // with none is qualified by the human's own judgement.
 export { triggerFor } from "./leads.qualifyreason";
-
-// dealBlock is the wire's deal request from the dialog's fields. The money
-// pair holds from birth: an amount only travels with the currency, and an
-// empty or unreadable amount travels as no money at all.
-function dealBlock(input: {
-  pipelineId: string | undefined;
-  stageId: string | undefined;
-  name: string;
-  amount: string;
-  currency: string | undefined;
-}): NonNullable<PromoteLeadRequest["deal"]> {
-  const parsed = Number(input.amount);
-  const priced =
-    input.amount.trim() !== "" && Number.isFinite(parsed) && input.currency;
-  return {
-    pipeline_id: input.pipelineId ?? null,
-    stage_id: input.stageId ?? null,
-    name: input.name.trim() || null,
-    // priced is false without a currency, so the code below is always the
-    // real one — a lead promoted at a dong price is stored as dong, not as a
-    // hundredth of one.
-    amount_minor: priced ? toMinorUnits(parsed, input.currency ?? "") : null,
-    currency: priced ? (input.currency ?? null) : null,
-  };
-}
-
-// amountState is what the typed amount does to the confirm: an unreadable
-// number is refused, and a number with no currency to carry it waits — sent
-// as-is it would be dropped on the way to the server, which is worse than a
-// wait.
-function amountState(amount: string, currency: string | undefined) {
-  const typed = amount.trim() !== "";
-  return {
-    amountInvalid: typed && !Number.isFinite(Number(amount)),
-    amountWaitsForCurrency: typed && !currency,
-  };
-}
 
 function openStagesOf(pipeline: Pipeline | undefined) {
   return [...(pipeline?.stages ?? [])]
@@ -298,14 +262,17 @@ function QualificationForm({
             name: dealName.trim() || suggestedName,
             amount,
             currency,
+            locale,
           })
         : undefined,
     });
   };
 
-  const { amountInvalid, amountWaitsForCurrency } = amountState(
+  const { amountFault, amountInvalid, amountWaitsForCurrency } = amountState(
     amount,
     currency,
+    locale,
+    t,
   );
   const confirmation = qualificationConfirmState(
     { selectedDeal, withDeal, invalidSelection },
@@ -398,8 +365,8 @@ function QualificationForm({
             label={t("lead.qualify.amount", { currency: currency ?? "" })}
             hint={t("lead.qualify.amountHint")}
             error={
-              amountInvalid
-                ? t("lead.qualify.amountInvalid")
+              amountFault
+                ? amountFault
                 : amountWaitsForCurrency
                   ? t("lead.qualify.amountNoCurrency")
                   : undefined

@@ -33,6 +33,7 @@ func TestEveryEvidenceIDSurvivesTheRoundTrip(t *testing.T) {
 		ContractID:     ids.NewV7(),
 		ConsentEventID: ids.NewV7(),
 		BasisID:        ids.NewV7(),
+		AuthoredOffer:  true,
 	}
 	raw, err := evidenceJSON(in)
 	if err != nil {
@@ -45,6 +46,9 @@ func TestEveryEvidenceIDSurvivesTheRoundTrip(t *testing.T) {
 	}
 	if !reflect.DeepEqual(got.FooterFindings, in.FooterFindings) {
 		t.Fatalf("footer findings did not survive: %v", got.FooterFindings)
+	}
+	if !got.AuthoredOffer {
+		t.Fatal("the authored offer did not survive")
 	}
 	for _, c := range []struct {
 		field    string

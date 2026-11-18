@@ -4,10 +4,12 @@ import { Button } from "../../design-system/button";
 import { type Choice, ChoiceList } from "../../design-system/choicelist";
 import { Select } from "../../design-system/select";
 import { formatMoney } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
+import { typedAmountFault, typedMinorUnits } from "../../format/minorunits";
+import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 
 type Deal = components["schemas"]["Deal"];
 type Preview = components["schemas"]["PromoteLeadPreview"];
+type PromoteLeadRequest = components["schemas"]["PromoteLeadRequest"];
 export type QualificationDealChoice =
   | "new"
   | "none"
@@ -165,4 +167,51 @@ function qualificationConfirmLabel(
   if (existing) return "lead.qualify.confirmExisting";
   if (create) return "lead.qualify.confirmWithDeal";
   return "lead.qualify.confirm";
+}
+
+// dealBlock is the wire's deal request from the dialog's fields. The money
+// pair holds from birth: an amount only travels with the currency, and an
+// empty or unreadable amount travels as no money at all.
+export function dealBlock(input: {
+  pipelineId: string | undefined;
+  stageId: string | undefined;
+  name: string;
+  amount: string;
+  currency: string | undefined;
+  locale: Locale;
+}): NonNullable<PromoteLeadRequest["deal"]> {
+  const typed =
+    input.amount.trim() !== "" && input.currency
+      ? typedMinorUnits(input.amount, input.currency, input.locale)
+      : null;
+  // priced is false without a currency, so the code below is always the real
+  // one. A lead promoted at a dong price is stored as dong.
+  const priced = typed !== null && "minor" in typed;
+  return {
+    pipeline_id: input.pipelineId ?? null,
+    stage_id: input.stageId ?? null,
+    name: input.name.trim() || null,
+    amount_minor: priced ? typed.minor : null,
+    currency: priced ? (input.currency ?? null) : null,
+  };
+}
+
+// amountState is what the typed amount does to the confirm. A refused amount
+// names why under the field. A number with no currency to carry it waits,
+// because sent as-is it would be dropped on the way to the server.
+export function amountState(
+  amount: string,
+  currency: string | undefined,
+  locale: Locale,
+  t: Translator,
+) {
+  const typed = amount.trim() !== "";
+  const amountFault = currency
+    ? typedAmountFault(amount, currency, locale, t)
+    : undefined;
+  return {
+    amountFault,
+    amountInvalid: amountFault !== undefined,
+    amountWaitsForCurrency: typed && !currency,
+  };
 }
