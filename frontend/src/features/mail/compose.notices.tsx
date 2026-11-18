@@ -2,11 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../../api/schema";
+import { CitedLaws } from "../../components/citedlaw";
 import { Callout } from "../../design-system/callout";
 import { jurisdictionName } from "../../format/jurisdiction";
 import { languageName } from "../../format/languagename";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
-import { CitedLaws } from "./citedlaw";
 
 // Two things the composer says about the draft in front of the reader, rather
 // than about the message they are writing.

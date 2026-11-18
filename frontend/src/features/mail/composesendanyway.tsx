@@ -9,6 +9,7 @@ import {
   useRef,
 } from "react";
 import type { components } from "../../api/schema";
+import { CitedAttention, CitedLaws } from "../../components/citedlaw";
 import { Button, Field, Textarea } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { describedByIds } from "../../design-system/describedby";
@@ -24,7 +25,6 @@ import {
   useT,
 } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { CitedAttention, CitedLaws } from "./citedlaw";
 import { ComposeOutcome } from "./compose.parts";
 import type { InlineReview } from "./composeinlinereview";
 import type { Refusal } from "./composerefusal";

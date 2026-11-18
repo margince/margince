@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { components } from "../../api/schema";
-import { OffsiteLink } from "../../design-system/offsitelink";
-import { useT } from "../../i18n";
+import type { components } from "../api/schema";
+import { OffsiteLink } from "../design-system/offsitelink";
+import { useT } from "../i18n";
 
 type CitedProvision = components["schemas"]["CitedProvision"];
 

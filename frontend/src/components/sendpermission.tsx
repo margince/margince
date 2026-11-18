@@ -21,6 +21,7 @@ import {
   remedyCategoryOf,
   type SendStatus,
 } from "../lib/sendstatus";
+import { CitedLaws } from "./citedlaw";
 import { LawfulBasisCallout } from "./lawfulbasiswarning";
 
 // What the engine decided about this message, said where the rep is writing it.
@@ -277,12 +278,29 @@ function PermissionNotice({
           )}
         </p>
       ) : null}
+      <CitedLawsOf refused={status.refused} />
       <RefusalDetail
         status={status}
         named={namesRecipients}
         surface={surface}
       />
     </Callout>
+  );
+}
+
+// The law each refusal and its footer findings cite, after the facts.
+function CitedLawsOf({
+  refused,
+}: Readonly<{ refused: readonly RefusedRecipient[] }>) {
+  const provisions = refused.flatMap((item) => [
+    item.provision,
+    ...(item.footerFindings ?? []).map((finding) => finding.provision),
+  ]);
+  if (!provisions.some(Boolean)) return null;
+  return (
+    <p>
+      <CitedLaws provisions={provisions} />
+    </p>
   );
 }
 

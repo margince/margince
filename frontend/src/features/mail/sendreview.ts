@@ -128,6 +128,7 @@ function refusalsIn(raw: unknown): readonly RefusedRecipient[] {
     );
     out.push({
       ...(footerFindings.length ? { footerFindings } : {}),
+      ...citedIn(entry),
       address,
       reasonCode,
       category: typeof category === "string" ? category : undefined,
@@ -173,6 +174,7 @@ function parseFooterFindings(
     if (typeof kind !== "string") return [];
     return [
       {
+        ...citedIn(value),
         kind,
         language: typeof language === "string" ? language : "",
         missing_means: Array.isArray(means)
@@ -181,4 +183,22 @@ function parseFooterFindings(
       },
     ];
   });
+}
+
+// citedIn reads an entry's `provision`, kept only whole: a law with no link or
+// no part to name is dropped, and the row keeps its factual text.
+function citedIn(entry: object): {
+  provision?: components["schemas"]["CitedProvision"];
+} {
+  const raw: unknown = Reflect.get(entry, "provision");
+  if (!isRecord(raw)) return {};
+  const { instrument, provision, source_url: sourceUrl } = raw;
+  if (
+    typeof instrument !== "string" ||
+    typeof provision !== "string" ||
+    typeof sourceUrl !== "string"
+  ) {
+    return {};
+  }
+  return { provision: { instrument, provision, source_url: sourceUrl } };
 }
