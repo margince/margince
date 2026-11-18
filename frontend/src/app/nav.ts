@@ -230,7 +230,7 @@ export function opensCreateForm(route: Route): boolean {
   return route.id === CREATE_ID && CREATE_SCREENS.has(route.screen);
 }
 
-// A page of its own below the list, which the trail names.
+// A page of its own below the list.
 const RESERVED_PAGES: Readonly<
   Partial<Record<Screen, { id: string; titleKey: MessageKey }>>
 > = {
@@ -244,7 +244,7 @@ export function opensReservedPage(route: Route): boolean {
   );
 }
 
-// The trail, the agent's subject and the rail read a reserved page's name here.
+// The page heading, the agent's subject and the rail read its name here.
 export function reservedPageTitle(route: Route): MessageKey | undefined {
   const page = RESERVED_PAGES[route.screen];
   return route.id !== undefined && page?.id === route.id
@@ -252,7 +252,7 @@ export function reservedPageTitle(route: Route): MessageKey | undefined {
     : undefined;
 }
 
-// The trail, the page heading, the agent's subject and the rail all ask this.
+// The page heading, the agent's subject and the rail all ask this.
 export function recordKindOf(route: Route): EntityKind | undefined {
   return route.id === undefined || opensReservedPage(route)
     ? undefined
@@ -372,13 +372,9 @@ function primaryLevel(
   };
 }
 
-// Whether the active row is only the SECTION the page sits in rather than the
-// page itself: true exactly where the top bar's trail ends in a page of its own
-// below the screen. That is a record, a reserved segment that names its own page
-// (`#/contacts/import`), or a page below the Filters and views library. The trail
-// asks the same three predicates, which keeps exactly one element claiming
-// `aria-current="page"`; `route.id !== undefined` would demote the row on a
-// segment that opens no page, such as `#/filters/views`, the library itself.
+// Whether the active row is only the section the page sits in. That is a record,
+// a reserved page (`#/contacts/import`), or a page below the Filters library.
+// Not `route.id !== undefined`: `#/filters/views` is the library itself.
 function opensAPageBelow(route: Route): boolean {
   return (
     recordKindOf(route) !== undefined ||
@@ -390,11 +386,9 @@ function opensAPageBelow(route: Route): boolean {
 // Which primary row a route makes current. It is the route's screen for every
 // destination the product owns, and `settings` for a unit's — a unit screen
 // routes as `{screen: "ext", id: "<unit>"}` and has no row of its own. Nothing
-// in the sidebar renders that id today: Settings left the rail for the account
-// menu, so a unit route marks no row and the top bar's trail is what says where
-// the reader is (`Settings / <unit>`). The mapping stays because it is the
-// honest answer to the question — a unit IS reached from Settings — and because
-// the level machinery asks it for every route, unit routes included.
+// in the sidebar renders that id today, so a unit route marks no row. The
+// mapping stays because a unit is reached from Settings, and the level machinery
+// asks it for every route.
 function activeRowFor(route: Route): string {
   if (route.screen === EXTENSION_SCREEN) {
     return "settings";

@@ -396,8 +396,8 @@ and `min-width: 0`. A page never scrolls to the side; the thing that is too wide
   column is the current row and the workspace mark of a company that has no logo of its own.
 - **Its parts**: 256px open, 56px folded, and open is the default (the reader's last choice is kept).
   At the top is the workspace head: the company's mark in a 32px square and its name. The head has the
-  top bar's height, so the mark and the bar's controls share one centre line. While open,
-  it is one card with an edge.
+  top bar's height, so the mark and the bar's controls share one centre line. No card
+  frames it; under the pointer it takes the rows' tint.
 - **Its rows**: they come the rows, 32px each with an 18px icon. Their order is the
   one `frontend/src/app/nav.ts` holds, under the group labels Records, Work and Insights.
 - **Its states**: the group labels are quiet sentence case. The current row is an accent tint with
