@@ -4,8 +4,10 @@
 package consent
 
 import (
+	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/platform/htmltext"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
@@ -68,5 +70,15 @@ func TestAnOfferInTheMarkupAloneIsAnOffer(t *testing.T) {
 	pitched.AuthoredHTML = `<p>Siehe unten.</p><style>p{color:red}</style><p>Ihr <b>Sonder&shy;ange&shy;bot</b> f&uuml;r 2027</p>`
 	if !withAuthoredOffer(pitched).Evidence.AuthoredOffer {
 		t.Error("an offer in the markup alone did not read as an offer")
+	}
+}
+
+// Markup the renderer stopped reading is judged as an offer, so a pitch past
+// the cap cannot hide there.
+func TestMarkupPastTheRenderCapIsJudgedAsAnOffer(t *testing.T) {
+	long := strings.Repeat("<p>Können wir den Termin verschieben?</p>", htmltext.MaxRenderedLen/30)
+	req := commsauthz.Request{AuthoredBody: "Siehe unten.", AuthoredHTML: long + "<p>Unser Angebot</p>"}
+	if !withAuthoredOffer(req).Evidence.AuthoredOffer {
+		t.Error("a pitch past the render cap did not read as an offer")
 	}
 }

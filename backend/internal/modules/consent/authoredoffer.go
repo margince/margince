@@ -53,7 +53,13 @@ func authoredOffer(subject, body string, fileNames []string) bool {
 func withAuthoredOffer(req commsauthz.Request) commsauthz.Request {
 	body := req.AuthoredBody
 	if req.AuthoredHTML != "" {
-		visible, _ := htmltext.Render(req.AuthoredHTML)
+		visible, cut := htmltext.Render(req.AuthoredHTML)
+		if cut {
+			// Markup past the render cap was never read, so it is judged as
+			// though it made an offer.
+			req.Evidence.AuthoredOffer = true
+			return req
+		}
 		body += "\n" + visible
 	}
 	req.Evidence.AuthoredOffer = authoredOffer(req.AuthoredSubject, body, req.AuthoredFileNames)
