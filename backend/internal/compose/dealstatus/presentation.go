@@ -88,7 +88,7 @@ func (s *Service) cardAndTimeline(
 		GeneratedAt: card.GeneratedAt,
 		GeneratedBy: card.GeneratedBy,
 		Card:        card,
-		FactsOnly:   policy.factsOnly && verdict.askModel,
+		FactsOnly:   policy.factsOnly && verdict.askModel && s.lane != nil,
 	}); err != nil {
 		return crmcontracts.DealStatusCard{}, nil, err
 	}

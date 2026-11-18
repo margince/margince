@@ -134,8 +134,10 @@ that, and nothing in the contract claims it.
 **It steps down; it does not fail.** Take a case with no model lane set up, the workspace's AI
 budget spent, or a reply the validator refuses. Then the brief falls back to a fixed, structured summary
 over the same inputs (`companybrief/deterministic.go`). A floor written because the lane failed is
-served but not cached, so the next read asks the model again. A forced rewrite that fails keeps the
-model's brief for the same facts.
+served but not cached, so the next read that reaches the model asks it again. A read whose lane is
+withheld also serves its floor without caching it. A deployment with no model lane caches its floor
+until the fingerprint changes. A forced rewrite that fails keeps the model's brief only when the
+cached fingerprint matches: the facts, the routing version and the language.
 
 - It covers identity, pipeline, each stalled deal on its own line, the last touch, open tasks. Then it
   covers what the company *is*, from its picked profile fields.
