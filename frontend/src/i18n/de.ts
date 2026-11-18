@@ -22329,7 +22329,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "privateMailRequests.title": "Anfragen in privaten E-Mails",
   "privateMailRequests.switch": "Private E-Mails auf Anfragen prüfen",
   "privateMailRequests.hint":
-    "Die KI liest private E-Mails, um zu finden, worum ein Kunde den Empfänger bittet. Als vertraulich markierte oder bewusst zurückgehaltene E-Mails liest sie nie.",
+    "Die KI liest private E-Mails, um zu finden, worum ein Kunde euch bittet. Als vertraulich markierte oder bewusst zurückgehaltene E-Mails liest sie nie.",
   "privateMailRequests.readOnly": "Diese Einstellung ändert ein Admin.",
   "privateMailRequests.notSaved": "Einstellung wurde nicht gespeichert.",
   "stage.criteria.kindLegalReviewed": "Rechtlich freigegeben",
