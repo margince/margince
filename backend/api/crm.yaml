@@ -61415,7 +61415,8 @@ components:
       required: [to]
       description: |
         What a composer is about to write, in the shape the engine judges. A `subject` and
-        `body` never reach a consent decision. When given, they are checked against the
+        `body` are read as the send reads them: words that make an offer (a discount, a quote,
+        a price) are judged as marketing even inside a reply. They are also checked against the
         advertising content rules of each recipient's jurisdiction pack and answered as
         `content_findings`.
       properties:
