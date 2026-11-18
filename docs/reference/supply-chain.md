@@ -391,10 +391,10 @@ See also:
 [`third-party-files.txt`](../../third-party-files.txt) records each copied file, its source and version, its SPDX
 licence and its licence text. `make third-party-files` checks the licence files and their siblings, and refuses missing
 files, copies with no record, and a licence outside `copied-file-licenses`. One not also in `allow` needs its file in
-`ignore-packages`. A package with no licence text may use a recorded file whose source is `name@version`.
+`ignore-packages`. A copy with no licence text beside it fails if it has a recorded copy's bytes, another SPDX
+licence, or another owner than Gradion. A package with no licence text may use a recorded file whose source is
+`name@version`.
 
-The frontend build collects licence and notice texts from bundled code, CSS and copied files.
-Missing text fails the build. The app serves `/licenses/THIRD-PARTY-NOTICES.txt`; MCP App documents
-embed the text to stay in one file. `make sbom-supplement` sets the copied-file licences in all three
-formats. `make sbom-parity` refuses missing files or licences that do not match. `make test-third-party-files`
-tests those failures on test data.
+The frontend build collects licence and notice texts from bundled code, CSS and copied files, and missing text fails it.
+The app serves `/licenses/THIRD-PARTY-NOTICES.txt`; MCP App documents embed the text to stay in one file.
+`make sbom-supplement` sets the copied-file licences in all three formats, and `make sbom-parity` refuses files or licences that do not match.
