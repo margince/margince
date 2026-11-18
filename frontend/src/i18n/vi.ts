@@ -22634,7 +22634,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "goals.propose.noModel":
     "Đề xuất các tháng cần một mô hình AI đã được thiết lập. Bạn vẫn có thể tự nhập từng tháng.",
   "goals.propose.noHistory":
-    "{name} chưa có doanh số đã chốt trong năm {year} hay năm trước đó để đọc ra quy luật. Hãy tự nhập từng tháng.",
+    "{name} chưa có tháng nào đã kết thúc có doanh số đã chốt trong năm {year} hay năm trước đó, nên chưa có quy luật để đọc. Hãy tự nhập từng tháng.",
   "goals.proposedByAi": "Do Margince đề xuất",
   "goals.monthsSum": "Các tháng cộng lại là {total}.",
   "goals.monthsMissing_one": "{count} tháng chưa đặt.",

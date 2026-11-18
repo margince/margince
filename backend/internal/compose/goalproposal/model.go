@@ -55,11 +55,17 @@ type Input struct {
 	// add up to. The model reads it in whole major units.
 	YearlyGoalMinor int64  `json:"-"`
 	Lang            string `json:"-"`
+	// EarnedMinor is whether any finished month closed revenue above zero in
+	// minor units, which Closed cannot show for a month under one major unit.
+	EarnedMinor bool `json:"-"`
 }
 
 // HasHistory reports whether any month of the input closed revenue, which is
 // the least a pattern can be read from.
 func (in Input) HasHistory() bool {
+	if in.EarnedMinor {
+		return true
+	}
 	for _, year := range in.Closed {
 		for _, month := range year.Months {
 			if month != nil && *month > 0 {
