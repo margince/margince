@@ -16,8 +16,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// A status sent as null removes the answer: a canceled meeting asks again,
-// the history ends on booked, and one event says the status was cleared.
+// A status sent as null removes the answer. A canceled meeting asks again,
+// the history ends on booked, and one event reports the clear.
 func TestAMeetingStatusClearedWithNullAsksForTheOutcomeAgain(t *testing.T) {
 	e := setupSend(t)
 	id := bookMeeting(t, e, "Harbor review", clocktest.Now(t).Add(-48*time.Hour))

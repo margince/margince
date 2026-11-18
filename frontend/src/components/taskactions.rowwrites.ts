@@ -122,7 +122,7 @@ export async function writeMeetingOutcome(
   );
 }
 
-/** The status a meeting holds now, so a cancel can be taken back to exactly it. */
+/** The status a meeting holds now, so an Undo can put it back. */
 export async function readMeetingStatus(id: string): Promise<"booked" | null> {
   const { data } = await api.GET("/activities/{id}", {
     params: { path: { id } },

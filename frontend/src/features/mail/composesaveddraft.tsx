@@ -138,9 +138,8 @@ type DeletedFrom = Readonly<{
 
 // A new draft with the same words: the server keeps no copy of a deleted one.
 // A draft written meanwhile refuses this as a conflict, which the toast names.
-// A send since the delete retired the draft for good, so nothing is written;
-// a composer that closed or moved to another record gets the draft on the
-// server only, never its words.
+// After a send nothing is written. A closed composer, or one on another record,
+// gets the draft on the server only.
 function restoreDeleted(input: {
   queryClient: QueryClient;
   toast: Toast;
