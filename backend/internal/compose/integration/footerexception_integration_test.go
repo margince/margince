@@ -116,8 +116,8 @@ func TestAFooterOnlyExceptionReachesTheProvider(t *testing.T) {
 }
 
 var changingFooterCountry = sync.OnceValue(func() string {
-	messagingrules.Register(messagingrules.Rules{Jurisdiction: "zm", Version: 1, Disclosures: []messagingrules.Disclosure{{Kind: messagingrules.ObjectionRoute, MarketingOnly: true}, {Kind: messagingrules.AdvertiserContact, MarketingOnly: true}}})
-	return "zm"
+	messagingrules.Register(messagingrules.Rules{Jurisdiction: "xm", Version: 1, Disclosures: []messagingrules.Disclosure{{Kind: messagingrules.ObjectionRoute, MarketingOnly: true}, {Kind: messagingrules.AdvertiserContact, MarketingOnly: true}}})
+	return "xm"
 })
 
 func TestAChangedFooterRenewsTheReviewBeforeRecordingTheDecision(t *testing.T) {
