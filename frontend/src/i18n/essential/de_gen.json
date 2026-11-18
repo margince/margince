@@ -2879,7 +2879,7 @@
   "field.yes": "Ja",
   "field.no": "Nein",
   "common.duplicate.leadHolds": "Ein Lead hat diese E-Mail-Adresse oder dieses LinkedIn-Profil schon, daher wurde kein Kontakt angelegt.",
-  "common.duplicate.contactHolds": "Ein Kontakt hat diese E-Mail-Adresse oder dieses LinkedIn-Profil schon, und jemand ist entweder Lead oder Kontakt. Für ein neues Geschäft mit ihm lege beim Kontakt einen Deal an.",
+  "common.duplicate.contactHolds": "Ein Kontakt hat diese E-Mail-Adresse oder dieses LinkedIn-Profil schon. Für ein neues Geschäft mit ihm lege beim Kontakt einen Deal an.",
   "approval.preview.leadHoldsEmail": "Ein Lead hat diese E-Mail-Adresse oder dieses LinkedIn-Profil schon. Wandle den Lead um, statt einen Kontakt anzulegen.",
   "dedupe.viewExisting": "Vorhandenen Datensatz ansehen",
   "co.spine.andOthers": "{names} und {count} weitere",

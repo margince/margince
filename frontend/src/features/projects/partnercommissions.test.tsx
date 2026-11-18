@@ -126,12 +126,13 @@ describe("the commission panel", () => {
     // 20% of a €1,000 deal, read per cell: asserting the row as one string
     // would pass just as happily with the earned and basis figures swapped.
     // The deal leads, because an entry's first question is "on what?".
-    expect(cells[1]).toBe("01/08/2026");
-    expect(cells[2]).toBe("€200.00");
+    // The day it was written rides under the deal, not in a column of its own.
+    expect(cells[0]).toContain("01/08/2026");
+    expect(cells[1]).toBe("€200.00");
     // The rate is the tier a human agreed to, not the basis points stored.
-    expect(cells[3]).toBe("20%");
-    expect(cells[4]).toBe("€1,000.00");
-    expect(cells[5]).toContain("Accrued");
+    expect(cells[2]).toBe("20%");
+    expect(cells[3]).toBe("€1,000.00");
+    expect(cells[4]).toContain("Accrued");
   });
 
   // A ledger of bare figures cannot be reconciled against anything: the entry

@@ -3132,7 +3132,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "record.companyRoutingKey": "Zuordnungsschlüssel des Unternehmens",
   "record.companyRoutingKeyWhy": "Wofür der Zuordnungsschlüssel ist",
   "record.companyRoutingKeyHelp":
-    "Die Webdomain des Unternehmens, etwa example.com, oder ein kurzer Name dafür. Regeln zur Lead-Zuweisung können darauf prüfen, und eine Domain, die ein Unternehmen in Margince hat, schlägt dieses Unternehmen vor.",
+    "Die Webdomain des Unternehmens, etwa example.com, oder eine Kurzform des Namens, wenn keine Domain bekannt ist. Zuweisungsregeln können darauf prüfen, und Margince schlägt das Unternehmen vor, das diese Domain hat.",
   "record.finishFieldEdit":
     "Speichere oder verwirf die aktuelle Änderung, bevor du die Details schließt.",
   "record.save": "Speichern",
@@ -3286,7 +3286,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "commission.column.rate": "Satz",
   "commission.column.basis": "Deal-Wert",
   "commission.column.status": "Status",
-  "commission.column.date": "Datum",
   "commission.status.accrued": "Aufgelaufen",
   "commission.status.approved": "Freigegeben",
   "commission.status.paid": "Ausgezahlt",
@@ -7422,7 +7421,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "common.duplicate.leadHolds":
     "Ein Lead hat diese E-Mail-Adresse oder dieses LinkedIn-Profil schon, daher wurde kein Kontakt angelegt.",
   "common.duplicate.contactHolds":
-    "Ein Kontakt hat diese E-Mail-Adresse oder dieses LinkedIn-Profil schon, und jemand ist entweder Lead oder Kontakt. Für ein neues Geschäft mit ihm lege beim Kontakt einen Deal an.",
+    "Ein Kontakt hat diese E-Mail-Adresse oder dieses LinkedIn-Profil schon. Für ein neues Geschäft mit ihm lege beim Kontakt einen Deal an.",
   "contact.leadHeld.title": "Das ist schon ein Lead.",
   "contact.leadHeld.body":
     "Jemand ist ein Lead oder ein Kontakt, nie beides. Wandle den Lead in einen Kontakt um; der Verlauf des Leads geht mit.",
