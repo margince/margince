@@ -21872,6 +21872,16 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Khách hàng đã viết {count} ngày trước và đang chờ phản hồi.",
   "deal.verdict.yourMoveDays_other":
     "Khách hàng đã viết {count} ngày trước và đang chờ phản hồi.",
+  "deal.verdict.youReplied": "Bạn đã trả lời",
+  "deal.verdict.teamReplied": "Nhóm của bạn đã trả lời",
+  "deal.verdict.youRepliedOn":
+    "Bạn đã trả lời vào {date}. Yêu cầu vẫn đang mở.",
+  "deal.verdict.teamRepliedOn":
+    "Nhóm của bạn đã trả lời vào {date}. Yêu cầu vẫn đang mở.",
+  "deal.verdict.youRepliedAsked":
+    "Bạn đã trả lời vào {date}. Vẫn còn được hỏi: {ask}",
+  "deal.verdict.teamRepliedAsked":
+    "Nhóm của bạn đã trả lời vào {date}. Vẫn còn được hỏi: {ask}",
   "deal.verdict.goneQuiet": "Im lặng",
   "deal.verdict.goneQuietSince":
     "Không có hoạt động kể từ {date}, nên deal được coi là đình trệ.",

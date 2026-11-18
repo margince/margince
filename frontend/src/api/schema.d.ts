@@ -29923,6 +29923,12 @@ export interface components {
         EmailSummary: {
             /** @description An unfinished reminder covers this readable source request. This obligation fact names no private task, owner, or task content. Absent when the source is withheld. */
             request_has_reminder?: boolean;
+            /**
+             * @description Present on an open request with an unfinished reminder when our reply on its thread
+             *     is newer than it and is still the newest message there. The request stays open: a
+             *     reply settles nothing by itself. Absent when the source is withheld.
+             */
+            our_reply?: components["schemas"]["RequestReply"];
             /** Format: uuid */
             activity_id: string;
             /** @description Null when the message has none, and when the content is withheld. */
@@ -37964,11 +37970,18 @@ export interface components {
             /**
              * Format: uuid
              * @description A confirmed current inbound request on this deal, admitted by the
-             *     request owner's responsibility, settlement and currency rules.
-             *     Absent for historical or unconfirmed review. Its absence makes no
+             *     request owner's responsibility, settlement and currency rules, that
+             *     is still owed our reply. Absent for historical or unconfirmed
+             *     review, and while `our_reply` is present. Its absence makes no
              *     claim about whether an unrecorded reply exists.
              */
             reply_to?: string | null;
+            /**
+             * @description The current request on this deal that we replied to, while our reply is the newest
+             *     message on its thread. The card then says we replied instead of saying the buyer
+             *     waits, and offers to mark the reminder done.
+             */
+            our_reply?: components["schemas"]["RequestReply"];
             /** Format: date-time */
             generated_at: string;
             generated_by: components["schemas"]["WrittenBy"];
@@ -38079,6 +38092,35 @@ export interface components {
             last_success_at?: string;
             /** Format: date-time */
             evaluated_at: string;
+        };
+        /**
+         * @description We replied after a request, and our reply is still the newest message on its thread.
+         *     One rule decides it, so the deal card, its risk line and its next move agree on whose
+         *     move it is. The request itself stays open until its reminder is done or a settlement
+         *     verdict records it settled.
+         */
+        RequestReply: {
+            /**
+             * Format: uuid
+             * @description The request we replied to.
+             */
+            request_activity_id: string;
+            /** @description The reader sent the reply. False when a colleague did. */
+            by_reader: boolean;
+            /**
+             * Format: date-time
+             * @description When our newest reply on the thread happened.
+             */
+            replied_at: string;
+            replied_precision: components["schemas"]["OccurredPrecision"];
+            /** @description What the settlement pass found still asked, quoted from the request. Absent when no still_owed verdict quoted one. */
+            still_asked?: string;
+            /**
+             * Format: uuid
+             * @description The request's unfinished reminder, when this reader may change it. Marking it done settles the request. `reminder_version` comes with it, for that write.
+             */
+            reminder_id?: string;
+            reminder_version?: components["schemas"]["RowVersion"];
         };
         /**
          * @description A recommendation's scoped source and classification. Known request kinds

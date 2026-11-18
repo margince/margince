@@ -28501,6 +28501,12 @@ components:
         request_has_reminder:
           type: boolean
           description: An unfinished reminder covers this readable source request. This obligation fact names no private task, owner, or task content. Absent when the source is withheld.
+        our_reply:
+          allOf: [{$ref: '#/components/schemas/RequestReply'}]
+          description: |-
+            Present on an open request with an unfinished reminder when our reply on its thread
+            is newer than it and is still the newest message there. The request stays open: a
+            reply settles nothing by itself. Absent when the source is withheld.
         activity_id: {type: string, format: uuid}
         subject:
           type: [string, 'null']
@@ -35882,9 +35888,16 @@ components:
           format: uuid
           description: |-
             A confirmed current inbound request on this deal, admitted by the
-            request owner's responsibility, settlement and currency rules.
-            Absent for historical or unconfirmed review. Its absence makes no
+            request owner's responsibility, settlement and currency rules, that
+            is still owed our reply. Absent for historical or unconfirmed
+            review, and while `our_reply` is present. Its absence makes no
             claim about whether an unrecorded reply exists.
+        our_reply:
+          allOf: [{$ref: '#/components/schemas/RequestReply'}]
+          description: |-
+            The current request on this deal that we replied to, while our reply is the newest
+            message on its thread. The card then says we replied instead of saying the buyer
+            waits, and offers to mark the reminder done.
         generated_at: {type: string, format: date-time}
         generated_by: {$ref: '#/components/schemas/WrittenBy'}
       additionalProperties: false
@@ -35998,6 +36011,28 @@ components:
           format: date-time
           description: Oldest successful sync across every relevant mailbox; absent if any has never succeeded.
         evaluated_at: {type: string, format: date-time}
+    RequestReply:
+      type: object
+      description: |-
+        We replied after a request, and our reply is still the newest message on its thread.
+        One rule decides it, so the deal card, its risk line and its next move agree on whose
+        move it is. The request itself stays open until its reminder is done or a settlement
+        verdict records it settled.
+      required: [request_activity_id, replied_at, replied_precision, by_reader]
+      properties:
+        request_activity_id: {type: string, format: uuid, description: The request we replied to.}
+        by_reader: {type: boolean, description: The reader sent the reply. False when a colleague did.}
+        replied_at: {type: string, format: date-time, description: When our newest reply on the thread happened.}
+        replied_precision: {$ref: '#/components/schemas/OccurredPrecision'}
+        still_asked:
+          type: string
+          description: What the settlement pass found still asked, quoted from the request. Absent when no still_owed verdict quoted one.
+        reminder_id:
+          type: string
+          format: uuid
+          description: The request's unfinished reminder, when this reader may change it. Marking it done settles the request. `reminder_version` comes with it, for that write.
+        reminder_version: {$ref: '#/components/schemas/RowVersion'}
+      additionalProperties: false
     WorkEvidenceBasis:
       type: object
       description: |-
