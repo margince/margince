@@ -22,9 +22,9 @@ import (
 // matches its folded value. A refolded deal leaves the selection.
 func DataTask() datatask.Task {
 	return datatask.Task{
-		ID: "core/1795014819_private_mail_moves_the_deal_clock", Version: 1,
-		Title:    systemtext.Literal("datatask.title.core.1795014819_private_mail_moves_the_deal_clock"),
-		Requires: []string{"core/1795014819"},
+		ID: "core/1795030235_private_mail_moves_the_deal_clock", Version: 1,
+		Title:    systemtext.Literal("datatask.title.core.1795030235_private_mail_moves_the_deal_clock"),
+		Requires: []string{"core/1795030235"},
 		Steps: []datatask.Step{{
 			Name: "deals", Limit: 200, MinLimit: 10,
 			Audit: datatask.AuditPolicy{Reason: "the last-activity triggers move the same derived clock without an audit"},
