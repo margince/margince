@@ -178,7 +178,7 @@ const dispositionsSQL = `
 	  JOIN activity act ON act.id = a.entity_id
 	   -- Only a customer's inbound message is a disposition, whatever state
 	   -- rows or audit rows exist for other activities.
-	   AND act.kind IN ('` + kindEmail + `', '` + kindMessage + `')
+	   AND act.kind IN ('` + kindEmail + `', '` + KindMessage + `')
 	   AND act.direction = '` + directionInbound + `'
 	 WHERE a.entity_type = 'activity'
 	   AND a.action = 'update'

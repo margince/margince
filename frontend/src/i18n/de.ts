@@ -14712,7 +14712,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "pipeline.reason.from_sending_systems":
     "dieser Thread enthält nur E-Mails von Systemen, etwa Benachrichtigungen, und wird nicht gelesen",
   "pipeline.reason.transport_not_read":
-    "dieser Schritt liest nur E-Mails, und die Nachricht kam über einen anderen Kanal",
+    "dieser Schritt liest keine Nachrichten, die auf diesem Weg kamen",
   "pipeline.reason.sender_undecided":
     "die Nachricht wird zurückgehalten, da die Prüfung der Absendeadresse noch aussteht",
   "pipeline.reason.archived": "die Nachricht ist archiviert",
