@@ -162,12 +162,8 @@ func pdfLayoutString(layout map[string]any, key string) string {
 	return v
 }
 
-// pdfTranslator converts a UTF-8 Go string to the byte sequence the core
-// Helvetica font's built-in cp1252 encoding expects, so Cell/MultiCell
-// render diacritics correctly instead of the raw UTF-8 bytes' mojibake
-// (e.g. "ö" as two separate cp1252 code points, "Ã¶"). Every function in
-// this file threads it through and applies it to every string it hands
-// to Cell — labels included, since translating plain ASCII is a no-op.
+// pdfTranslator is applied to every string a writer draws, labels included. It
+// hands the string back unchanged and records what the font cannot print.
 type pdfTranslator func(string) string
 
 // writeOfferPDFHeader writes the title/revision/issuer block, the
@@ -186,10 +182,10 @@ func writeOfferPDFHeader(pdf *fpdf.Fpdf, tr pdfTranslator, o crmcontracts.Offer,
 		revision = *o.Revision
 	}
 
-	pdf.SetFont("Helvetica", "B", 18)
+	pdf.SetFont(offerFontFamily, "B", 18)
 	pdf.Cell(0, 8, tr(labels.title+" "+number))
 	pdf.Ln(10)
-	pdf.SetFont("Helvetica", "", 11)
+	pdf.SetFont(offerFontFamily, "", 11)
 	pdf.Cell(0, 6, tr(labels.revision+" "+strconv.Itoa(revision)))
 	pdf.Ln(7)
 	pdf.Cell(0, 6, tr(labels.issuer+": "+issuer.Name))
@@ -198,7 +194,7 @@ func writeOfferPDFHeader(pdf *fpdf.Fpdf, tr pdfTranslator, o crmcontracts.Offer,
 	pdf.Ln(3)
 
 	if headerText := pdfLayoutString(layout, offerLayoutHeader); headerText != "" {
-		pdf.SetFont("Helvetica", "", 10)
+		pdf.SetFont(offerFontFamily, "", 10)
 		pdf.MultiCell(0, 5, tr(headerText), "", "L", false)
 		pdf.Ln(4)
 	}
@@ -225,10 +221,10 @@ func writeOfferPDFHeader(pdf *fpdf.Fpdf, tr pdfTranslator, o crmcontracts.Offer,
 	if buyerBlock == nil || (displayName == "" && legalName == "") {
 		return
 	}
-	pdf.SetFont("Helvetica", "B", 12)
+	pdf.SetFont(offerFontFamily, "B", 12)
 	pdf.Cell(0, 6, tr(labels.buyer))
 	pdf.Ln(7)
-	pdf.SetFont("Helvetica", "", 11)
+	pdf.SetFont(offerFontFamily, "", 11)
 	if displayName != "" {
 		pdf.Cell(0, 6, tr(displayName))
 		pdf.Ln(6)
@@ -247,7 +243,7 @@ func writeOfferPDFIntro(pdf *fpdf.Fpdf, tr pdfTranslator, o crmcontracts.Offer) 
 	if text == "" {
 		return
 	}
-	pdf.SetFont("Helvetica", "", 10)
+	pdf.SetFont(offerFontFamily, "", 10)
 	pdf.MultiCell(0, 5, tr(text), "", "L", false)
 	pdf.Ln(4)
 }
@@ -256,10 +252,10 @@ func writeOfferPDFIntro(pdf *fpdf.Fpdf, tr pdfTranslator, o crmcontracts.Offer) 
 // displayed unit price is its own persisted snapshot (offer_lines.go);
 // this function shows it verbatim, deriving nothing.
 func writeOfferPDFLineItems(pdf *fpdf.Fpdf, tr pdfTranslator, lines []crmcontracts.OfferLineItem, currency string, labels pdfLabels) {
-	pdf.SetFont("Helvetica", "B", 12)
+	pdf.SetFont(offerFontFamily, "B", 12)
 	pdf.Cell(0, 6, tr(labels.lineItems))
 	pdf.Ln(7)
-	pdf.SetFont("Helvetica", "", 10)
+	pdf.SetFont(offerFontFamily, "", 10)
 	for _, li := range lines {
 		pdf.Cell(0, 5, tr(fmt.Sprintf("%d. %s", li.Position, li.Description)))
 		pdf.Ln(5)
@@ -335,10 +331,10 @@ func writeOfferPDFTotals(pdf *fpdf.Fpdf, tr pdfTranslator, o crmcontracts.Offer,
 	if o.GrossMinor != nil {
 		gross = *o.GrossMinor
 	}
-	pdf.SetFont("Helvetica", "B", 12)
+	pdf.SetFont(offerFontFamily, "B", 12)
 	pdf.Cell(0, 6, tr(labels.totals))
 	pdf.Ln(7)
-	pdf.SetFont("Helvetica", "", 11)
+	pdf.SetFont(offerFontFamily, "", 11)
 	pdf.Cell(0, 6, tr(labels.net+": "+pdfFormatMinor(net, o.Currency)))
 	pdf.Ln(6)
 	pdf.Cell(0, 6, tr(labels.tax+": "+pdfFormatMinor(tax, o.Currency)))
@@ -359,10 +355,10 @@ func writeOfferPDFTerms(pdf *fpdf.Fpdf, tr pdfTranslator, o crmcontracts.Offer, 
 		return
 	}
 	pdf.Ln(2)
-	pdf.SetFont("Helvetica", "B", 12)
+	pdf.SetFont(offerFontFamily, "B", 12)
 	pdf.Cell(0, 6, tr(labels.terms))
 	pdf.Ln(7)
-	pdf.SetFont("Helvetica", "", 10)
+	pdf.SetFont(offerFontFamily, "", 10)
 	pdf.MultiCell(0, 5, tr(text), "", "L", false)
 }
 
@@ -374,7 +370,7 @@ func writeOfferPDFFooter(pdf *fpdf.Fpdf, tr pdfTranslator, layout map[string]any
 		return
 	}
 	pdf.Ln(6)
-	pdf.SetFont("Helvetica", "I", 9)
+	pdf.SetFont(offerFontFamily, "", 9)
 	pdf.MultiCell(0, 5, tr(text), "", "L", false)
 }
 
@@ -399,19 +395,17 @@ func RenderOfferPDF(o crmcontracts.Offer, lines []crmcontracts.OfferLineItem, bu
 		number = *o.OfferNumber
 	}
 
+	check, err := newPDFTextCheck()
+	if err != nil {
+		return nil, err
+	}
+	tr := check.text
+
 	pdf := fpdf.New("P", "mm", "A4", "")
 	pdf.SetCompression(false)
 	pdf.SetMargins(16, 16, 16)
 	pdf.SetAutoPageBreak(true, 16)
-	// tr maps a UTF-8 string onto core Helvetica's built-in cp1252
-	// encoding — the launch DE/EN locale pair's Latin diacritics (ö, ü,
-	// ß, é, …) all round-trip through cp1252; a non-Latin locale (e.g.
-	// Cyrillic, CJK) would need an embedded TTF font instead, not
-	// attempted here since only DE/EN ship at launch.
-	tr := pdf.UnicodeTranslatorFromDescriptor("")
-	// The isUTF8=true argument (unlike Cell's cp1252 byte stream) tells
-	// fpdf to UTF-16BE-encode the metadata itself, so the document
-	// properties survive a non-ASCII issuer/title too.
+	registerOfferFont(pdf)
 	pdf.SetTitle(labels.title+" "+number, true)
 	pdf.SetCreator("margince", true)
 	pdf.SetAuthor(issuer.Name, true)
@@ -425,6 +419,9 @@ func RenderOfferPDF(o crmcontracts.Offer, lines []crmcontracts.OfferLineItem, bu
 	writeOfferPDFTotals(pdf, tr, o, labels)
 	writeOfferPDFTerms(pdf, tr, o, labels)
 	writeOfferPDFFooter(pdf, tr, layout)
+	if err := check.err(); err != nil {
+		return nil, err
+	}
 
 	var buf bytes.Buffer
 	if err := pdf.Output(&buf); err != nil {

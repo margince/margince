@@ -26,6 +26,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/installseam"
@@ -34,10 +35,24 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/pdftext"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
+
+// offerPDFReader reads rendered offers back as the text a buyer sees; the font
+// is embedded, so the drawn glyphs are not the text's own bytes.
+var offerPDFReader = pdftext.New()
+
+func offerPDFText(t *testing.T, pdf []byte) string {
+	t.Helper()
+	text, err := offerPDFReader.Read(t.Context(), pdf, 1_000_000)
+	if err != nil {
+		t.Fatalf("read the rendered offer's text: %v", err)
+	}
+	return text
+}
 
 // offerRenderDeskPerms is the deal-desk grant this suite drives the offer
 // render seam under; offer_template is needed only for the locale test's
@@ -295,9 +310,8 @@ func TestOfferRenderPrepareRender_TemplateLocaleAndLayoutResolveFromOfferTemplat
 }
 
 // TestOfferRenderPrintsWhatTheTemplateAndOfferFormsSaved drives the stored
-// rows through PrepareRender into the renderer: the header and footer a
-// template was saved with, and the intro and terms saved on the offer, all
-// reach the document. The PDF is uncompressed, so drawn text is in the bytes.
+// rows through PrepareRender into the renderer. The template's saved header
+// and footer reach the document, and so do the offer's intro and terms.
 func TestOfferRenderPrintsWhatTheTemplateAndOfferFormsSaved(t *testing.T) {
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)
@@ -325,8 +339,9 @@ func TestOfferRenderPrintsWhatTheTemplateAndOfferFormsSaved(t *testing.T) {
 	if err != nil {
 		t.Fatalf("render: %v", err)
 	}
+	text := offerPDFText(t, pdf)
 	for _, want := range []string{"Saved template header", "Saved template footer", intro, terms} {
-		if !bytes.Contains(pdf, []byte(want)) {
+		if !strings.Contains(text, want) {
 			t.Errorf("the rendered PDF must print %q", want)
 		}
 	}

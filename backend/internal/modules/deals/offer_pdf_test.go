@@ -5,15 +5,17 @@ package deals
 
 import (
 	"bytes"
+	"fmt"
 	"image"
 	"image/png"
+	"net/http"
 	"regexp"
-	"strconv"
+	"strings"
 	"testing"
 
-	"github.com/go-pdf/fpdf"
-
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/pdftext"
 )
 
 // testRenderOffer builds a minimal but complete offer for the PDF unit
@@ -39,56 +41,20 @@ func testRenderLines() []crmcontracts.OfferLineItem {
 	}
 }
 
-// pdfContentStream matches a stream object's declared length and the
-// keyword that opens its bytes, which is the only way to find where those
-// bytes END: a drawn string may itself contain "endstream" (a template's
-// terms text is arbitrary), and scanning for that keyword would cut the
-// document short there and then read the real terminator as the start of
-// another stream.
-var pdfContentStream = regexp.MustCompile(`/Length (\d+)\s*>>\s*stream\r?\n`)
+// pdfReader reads the offer PDFs back through the engine the product reads
+// uploaded PDFs with. One per package: each compiles a 5 MB WebAssembly module.
+var pdfReader = pdftext.New()
 
-// pdfDrawnText returns what the document DRAWS: every content stream in
-// the file, concatenated. It deliberately drops the container around them
-// — the xref byte offsets and the /CreationDate and /ModDate the renderer
-// stamps from the wall clock — because those are not text a reader of the
-// offer ever sees, and an assertion that matches them is asserting on the
-// clock without meaning to. This suite did exactly that: a PDF rendered at
-// 12:34:57 carries "/CreationDate (D:20260822123457)", so a whole-file
-// search for a short digit run found the timestamp and the layout test
-// failed for ten seconds of every day.
-//
-// RenderOfferPDF disables compression, so a content stream is readable
-// bytes. If that ever changes, this helper is where the inflate belongs
-// and every assertion below inherits it rather than being fixed one by
-// one.
+// pdfDrawnText returns the text a reader of the document sees, and never the
+// container around it. The /CreationDate stamp is not on the page, so no
+// assertion here reads the wall clock.
 func pdfDrawnText(t *testing.T, pdf []byte) []byte {
 	t.Helper()
-
-	var drawn []byte
-	for _, m := range pdfContentStream.FindAllSubmatchIndex(pdf, -1) {
-		length, err := strconv.Atoi(string(pdf[m[2]:m[3]]))
-		if err != nil || length < 0 {
-			t.Fatalf("stream object declares an unreadable /Length %q", pdf[m[2]:m[3]])
-		}
-		start := m[1]
-		if start+length > len(pdf) {
-			t.Fatalf("stream object declares /Length %d, which runs past the end of a %d-byte file", length, len(pdf))
-		}
-		body := pdf[start : start+length]
-		// The declared length is what this helper trusts, so prove it:
-		// the bytes it points past must be the terminator. A renderer
-		// that ever wrote a wrong /Length would otherwise hand back
-		// silently truncated text and every assertion below would be
-		// reading part of a document.
-		if !bytes.HasPrefix(bytes.TrimLeft(pdf[start+length:], "\r\n"), []byte("endstream")) {
-			t.Fatalf("a stream's declared /Length %d does not reach its terminator:\n%s", length, pdf)
-		}
-		drawn = append(drawn, body...)
+	text, err := pdfReader.Read(t.Context(), pdf, 1_000_000)
+	if err != nil {
+		t.Fatalf("read the offer PDF's text: %v", err)
 	}
-	if len(drawn) == 0 {
-		t.Fatalf("PDF carries no content stream at all:\n%s", pdf)
-	}
-	return drawn
+	return []byte(text)
 }
 
 func TestRenderOfferPDF_IncludesOfferDataAndStoredTotals(t *testing.T) {
@@ -171,47 +137,53 @@ func TestRenderOfferPDF_UsesStoredTotalsNeverRecomputes(t *testing.T) {
 	}
 }
 
-// TestRenderOfferPDF_GermanDiacriticsRenderCorrectlyNotAsMojibake is the
-// non-ASCII proof the DE label suite's ASCII needles can never catch: a
-// buyer legal name, a line description and the issuer name all carry
-// real German diacritics (ö/ü/ß). Core Helvetica has no native UTF-8
-// support, so a renderer that fed these strings to Cell unconverted
-// would leave their raw UTF-8 bytes in the content stream — which a
-// cp1252-expecting viewer displays as mojibake ("ö" -> "Ã¶"). This test
-// asserts the OPPOSITE of that: the correctly cp1252-transcoded bytes
-// are present, and the raw-UTF-8 (mojibake-precursor) bytes are absent.
-func TestRenderOfferPDF_GermanDiacriticsRenderCorrectlyNotAsMojibake(t *testing.T) {
+// Names and descriptions print as typed: German, Vietnamese and Central
+// European letters come back from the page, never a substitute.
+func TestRenderOfferPDF_PrintsLatinCyrillicAndGreekTextAsTyped(t *testing.T) {
 	o := testRenderOffer(100000, 19000, 119000)
+	intro := "Kính gửi Quý khách, Đề nghị của chúng tôi"
+	o.IntroText = &intro
 	lines := []crmcontracts.OfferLineItem{
-		{Position: 1, Description: "Prüfgebühr Größe", Quantity: 1, UnitPriceMinor: 100000},
+		{Position: 1, Description: "Dịch vụ tư vấn Łódź", Quantity: 1, UnitPriceMinor: 100000},
+		{Position: 2, Description: "Prüfgebühr Größe Москва Αθήνα", Quantity: 1, UnitPriceMinor: 100000},
 	}
-	buyerBlock := map[string]any{"display_name": "Müller GmbH", "legal_name": "Müller Größe & Prüfung GmbH"}
-	issuerName := "Straße Verträge GmbH"
+	buyerBlock := map[string]any{"display_name": "Nguyễn Thị Minh Khai", "legal_name": "Công ty TNHH Một Thành Viên Štěpánek"}
 
-	pdf, err := RenderOfferPDF(o, lines, buyerBlock, issuedBy(issuerName), "de-DE", nil)
+	pdf, err := RenderOfferPDF(o, lines, buyerBlock, issuedBy("Straße Verträge GmbH"), "de-DE", nil)
 	if err != nil {
 		t.Fatalf("RenderOfferPDF() error = %v", err)
 	}
-
-	// The SAME translator RenderOfferPDF uses (built the same way, over a
-	// throwaway document — UnicodeTranslatorFromDescriptor needs an
-	// *Fpdf receiver but no page/content of its own) gives the expected
-	// cp1252 byte form, so this test never hand-derives the encoding.
-	tr := fpdf.New("P", "mm", "A4", "").UnicodeTranslatorFromDescriptor("")
-	drawn := pdfDrawnText(t, pdf)
-	for _, want := range []string{"Prüfgebühr Größe", "Müller GmbH", "Müller Größe & Prüfung GmbH", "Straße Verträge GmbH"} {
-		if !bytes.Contains(drawn, []byte(tr(want))) {
-			t.Fatalf("PDF must contain the cp1252-transcoded form of %q", want)
+	drawn := string(pdfDrawnText(t, pdf))
+	for _, want := range []string{
+		"Dịch vụ tư vấn Łódź", "Prüfgebühr Größe Москва Αθήνα", "Nguyễn Thị Minh Khai",
+		"Công ty TNHH Một Thành Viên Štěpánek", "Straße Verträge GmbH", intro,
+	} {
+		if !strings.Contains(drawn, want) {
+			t.Errorf("the PDF must print %q as typed:\n%s", want, drawn)
 		}
 	}
+}
 
-	// The raw UTF-8 bytes of any diacritic (what an untranslated Cell
-	// call would have left behind, and what renders as "Ã¶"-style
-	// mojibake in a cp1252 viewer) must never appear.
-	for _, mojibakeSeed := range []string{"ö", "ü", "ß"} {
-		if bytes.Contains(drawn, []byte(mojibakeSeed)) {
-			t.Fatalf("PDF must not contain the raw UTF-8 bytes of %q — that is the un-transcoded mojibake source", mojibakeSeed)
+// A character the font cannot print refuses the render and is named. A
+// right-to-left letter counts as one, since fpdf would lay it out reversed.
+func TestRenderOfferPDF_RefusesTextItCannotPrint(t *testing.T) {
+	o := testRenderOffer(100000, 19000, 119000)
+	lines := []crmcontracts.OfferLineItem{
+		{Position: 1, Description: "Tư vấn 李 محمد 🚀", Quantity: 1, UnitPriceMinor: 100000},
+	}
+
+	_, err := RenderOfferPDF(o, lines, nil, issuedBy("Margince GmbH"), "de-DE", nil)
+	fault, ok := httperr.Classify(fmt.Errorf("render offer pdf: %w", err))
+	if !ok || fault.Status != http.StatusUnprocessableEntity || fault.Code != "offer_pdf_unprintable_text" {
+		t.Fatalf("an unprintable line must refuse with 422 offer_pdf_unprintable_text, got %+v (err %v)", fault, err)
+	}
+	for _, named := range []string{"李", "م", "🚀"} {
+		if !strings.Contains(fault.Detail, named) {
+			t.Errorf("the refusal must name %q: %s", named, fault.Detail)
 		}
+	}
+	if strings.Contains(fault.Detail, "ư") {
+		t.Errorf("a printable Vietnamese letter must not be named: %s", fault.Detail)
 	}
 }
 
@@ -501,7 +473,7 @@ func TestRenderOfferPDF_PrintsTheIssuerBlockAndEmbedsItsLogo(t *testing.T) {
 	drawn := pdfDrawnText(t, pdf)
 	for _, want := range []string{
 		"1010 Wien", "USt-IdNr.: ATU12345678", "Handelsregister: HG Wien FN 123456 a",
-		"Bankverbindung: Acme Wien GmbH \xb7 AT611904300234573201 \xb7 BKAUATWW",
+		"Bankverbindung: Acme Wien GmbH · AT611904300234573201 · BKAUATWW", "Kärntner Ring 12",
 	} {
 		if !bytes.Contains(drawn, []byte(want)) {
 			t.Errorf("the PDF does not print %q:\n%s", want, drawn)
