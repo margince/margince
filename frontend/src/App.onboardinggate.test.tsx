@@ -519,9 +519,9 @@ describe("onboarding gate", () => {
     },
   );
 
-  // Sign out lives on Settings > Account, so a reader stuck mid-journey can
-  // still leave; the rest of settings waits for the journey to finish.
-  it("lets a non-admin mid-journey reach Settings > Account and Sign out", async () => {
+  // Sign out stands in the onboarding band, so a reader stuck mid-journey can
+  // still leave, and an address that outlived a sign-out opens setup again.
+  it("sends a non-admin mid-journey from Settings > Account to setup, Sign out in reach", async () => {
     window.location.hash = "#/settings/account";
     stubCompany(
       403,
@@ -531,10 +531,12 @@ describe("onboarding gate", () => {
       },
     );
     mount();
+    await waitFor(() =>
+      expect(window.location.hash).toMatch(/^#\/onboarding\//),
+    );
     expect(
       await screen.findByRole("button", { name: "Sign out" }),
     ).toBeTruthy();
-    expect(window.location.hash).toBe("#/settings/account");
   });
 
   it("still sends a non-admin mid-journey away from any other settings page", async () => {

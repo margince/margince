@@ -113,6 +113,32 @@ function ShellWithDialog({
   );
 }
 
+// The shell's wiring while the reader's setup is unfinished.
+function ShellBeforeSetup() {
+  const palette = useCommandPalette(useRoute(), false);
+  useShortcutDispatcher();
+  return (
+    <CommandPalette
+      open={palette.open === true}
+      mode={palette.mode}
+      onClose={palette.hide}
+      commands={commands}
+    />
+  );
+}
+
+describe("the palette before setup is finished", () => {
+  it("opens on none of its keys", async () => {
+    render(<ShellBeforeSetup />);
+    const user = userEvent.setup();
+
+    await user.keyboard("{Meta>}k{/Meta}");
+    await user.keyboard("/");
+    await user.keyboard("c");
+    expect(screen.queryByRole("searchbox")).toBeNull();
+  });
+});
+
 // The palette is the app, and an open dialog makes the app unreachable.
 describe("the palette hotkey", () => {
   it("does nothing while a dialog is up, and Escape still closes the dialog", async () => {

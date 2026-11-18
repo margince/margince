@@ -50,15 +50,21 @@ export function usePaletteShortcuts(
   });
 }
 
-/** The palette's state with its keys bound. `open` is null until first asked,
- *  so the palette's code loads only then. */
-export function useCommandPalette(route: Route) {
+/** The palette's state with its keys bound; its code loads on first ask. While
+ *  `available` is false it stays shut: every place it lists leads back. */
+export function useCommandPalette(route: Route, available = true) {
   const [open, setOpen] = useState<boolean | null>(null);
   const [mode, setMode] = useState<PaletteMode>("all");
-  const show = useCallback((next: PaletteMode) => {
-    setMode(next);
-    setOpen(true);
-  }, []);
+  const show = useCallback(
+    (next: PaletteMode) => {
+      if (!available) {
+        return;
+      }
+      setMode(next);
+      setOpen(true);
+    },
+    [available],
+  );
   const hide = useCallback(() => setOpen(false), []);
   usePaletteShortcuts(open === true, show, hide, route);
   useClosesWithPage({ open: open === true, close: hide });

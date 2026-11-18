@@ -23,7 +23,7 @@ import { lockScreen, useProbeAnswer } from "./app/confinement";
 import { DateFormatsProvider } from "./app/dateformats";
 import { useFeatureLanding } from "./app/featurelanding";
 import { useHomePrefetch } from "./app/homeprefetch";
-import { passesOnboardingGate } from "./app/onboarding-gate";
+import { useOnboardingGate } from "./app/onboarding-gate";
 import { useCommandPalette } from "./app/palettehotkey";
 import { Shell, useRoute } from "./app/shell";
 import { SourceHost } from "./app/sourcehost";
@@ -58,7 +58,6 @@ import {
   writeStored,
 } from "./lib/storage";
 import { useTaskReminderNotifications } from "./lib/taskreminders";
-import { useAddressWriters } from "./lib/urlstate";
 import {
   renderableViewerZone,
   useBrowserZoneOnFirstSignIn,
@@ -272,35 +271,15 @@ function AuthedApp({
     [storedZone],
   );
 
-  // The route is a dependency so the gate holds on every navigation. Otherwise
-  // the palette or a typed hash walks past onboarding.
-  // passesOnboardingGate's screens are exempt, or this effect would fight its
+  // passesOnboardingGate's screens are exempt, or the gate would fight its
   // own destination (onboarding) or destroy a request that cannot survive the
   // rewrite (oauth-consent).
-  const { screen: gateScreen, id: gateId, id2: gateId2 } = route;
-  const { navigateReplacing } = useAddressWriters();
-  useEffect(() => {
-    if (
-      authed &&
-      described !== undefined &&
-      (!described || progress.unfinished) &&
-      !passesOnboardingGate({ screen: gateScreen, id: gateId, id2: gateId2 })
-    ) {
-      // Replacing, not pushing: this is a redirect, and the address it sends
-      // the reader away from answers by sending them here again. Pushed, Back
-      // lands on that address, the effect fires, and the reader is returned to
-      // onboarding by the one key that exists for getting out of things.
-      navigateReplacing({ screen: "onboarding", id: "company" });
-    }
-  }, [
+  const journeyGated = useOnboardingGate(
+    route,
     authed,
     described,
     progress.unfinished,
-    gateScreen,
-    gateId,
-    gateId2,
-    navigateReplacing,
-  ]);
+  );
 
   const { refusal, confinement } = useProbeAnswer(me);
   const sessionSeen = useSyncExternalStore(
@@ -308,7 +287,7 @@ function AuthedApp({
     sessionSeenNow,
     sessionSeenNow,
   );
-  const palette = useCommandPalette(route);
+  const palette = useCommandPalette(route, !journeyGated);
   const gatesPending =
     companyPending || companyZone.pending || progress.pending;
   const shellReady = authed && !gatesPending;

@@ -1,10 +1,12 @@
 /** @vitest-environment happy-dom */
-import { cleanup, screen } from "@testing-library/react";
+import { cleanup, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { en } from "../../../i18n/en";
 import {
   collectingState,
   render,
+  requestsTo,
   stubApi,
   VoiceHarness,
 } from "./voice-act.testkit";
@@ -40,5 +42,19 @@ describe("the onboarding band", () => {
 
     expect(await screen.findByText(en["ob.ai.ready"])).toBeTruthy();
     expect(screen.getByRole("button", { name: chipName })).toBeTruthy();
+  });
+
+  it("offers Sign out on every step of the journey", async () => {
+    const calls = stubApi();
+    render(
+      <VoiceHarness initial={{ ...collectingState(), memberPath: true }} />,
+    );
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: en["auth.signOut"] }),
+    );
+    await waitFor(() => {
+      expect(requestsTo(calls, "/auth/logout", "POST")).toHaveLength(1);
+    });
   });
 });

@@ -15,6 +15,7 @@ import { useCan } from "../../../lib/capability";
 import { labelFor } from "../../../lib/labelfor";
 import { throwProblem, unwrap } from "../../../lib/problem";
 import { loadWizardState } from "../onboarding-progress";
+import { OnboardingSignOut } from "../onboarding-signout";
 import type { ConversationState } from "./conversation-types";
 import { isDetour, railStops, stopState } from "./rail";
 
@@ -142,7 +143,7 @@ function shownStore(): ShownStore {
  * shell appears. The company act opens on the full-screen gate, so a flag set
  * at the scope's own mount would flip before the first workbench rendered.
  */
-// Outside a scope no earlier stage is known, so every shell is the first: a
+// Outside a scope no earlier stage is known, so every shell is the first. A
 // module-wide default store would carry one mount's history into the next.
 const WorkbenchShown = createContext<ShownStore | null>(null);
 
@@ -282,6 +283,7 @@ export function ConversationWorkbench({
             />
           )
         }
+        account={<OnboardingSignOut />}
         progress={stageProgress}
         where={bandWhere}
         eyebrow={eyebrow}
