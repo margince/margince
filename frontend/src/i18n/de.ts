@@ -17302,6 +17302,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Diese Adresse lässt sich nicht mehr zurückholen. Füge die Adresse stattdessen neu hinzu.",
   "ownerIdentities.restoreMovedOn":
     "Diese Adresse wurde seitdem erneut entfernt. Mache stattdessen das neuere Entfernen rückgängig.",
+  "ownerIdentities.restoreOnFile":
+    "Dieser Wert ist jetzt vorhanden. Füge ihn erneut hinzu, um ihn zu bestätigen.",
   "ownerIdentities.restoreDeclaredAgain":
     "Diese Adresse steht schon wieder in deiner Liste.",
   "ownerIdentities.addDescriptionEmpty":

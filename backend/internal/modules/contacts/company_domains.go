@@ -63,6 +63,13 @@ func (s *Store) refuseConsumerCompanyDomains(ctx context.Context, tx pgx.Tx, sel
 	if len(domains) == 0 || !typedWrite(ctx) {
 		return nil
 	}
+	// Taken before the matcher is read, like the consumer-list writer, so the
+	// two cannot each miss the other's row.
+	for _, domain := range slices.Sorted(slices.Values(domainsOf(domains))) {
+		if err := storekit.LockConsumerDomain(ctx, tx, domain); err != nil {
+			return err
+		}
+	}
 	consumer, err := s.consumerMailMatcher(ctx, tx)
 	if err != nil {
 		return err
@@ -80,6 +87,14 @@ func (s *Store) refuseConsumerCompanyDomains(ctx context.Context, tx pgx.Tx, sel
 		}
 	}
 	return nil
+}
+
+func domainsOf(inputs []CompanyDomainInput) []string {
+	out := make([]string, len(inputs))
+	for i, in := range inputs {
+		out[i] = in.Domain
+	}
+	return out
 }
 
 // claimedDomainOwner is the ONE reading of "somebody else already holds this

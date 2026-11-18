@@ -16858,6 +16858,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Không thể khôi phục địa chỉ này nữa. Thêm lại địa chỉ nếu cần.",
   "ownerIdentities.restoreMovedOn":
     "Không thể khôi phục vì địa chỉ này đã được gỡ thêm một lần nữa. Hoàn tác lần gỡ mới hơn.",
+  "ownerIdentities.restoreOnFile":
+    "Giá trị này hiện đã có trong hệ thống. Hãy thêm lại để xác nhận.",
   "ownerIdentities.restoreDeclaredAgain":
     "Địa chỉ này đã có lại trong danh sách.",
   "ownerIdentities.addDescriptionEmpty":

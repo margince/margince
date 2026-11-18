@@ -20868,7 +20868,7 @@ paths:
         A consumer-mail domain is refused with 422 `consumer_mail_domain` as a whole domain. A company's
         domain or a contact's address answers 409 `domain_needs_confirmation` (`details.role`,
         `details.company_name`); the same request with `confirm: true` stores it.
-      x-mcp-tool: { verb: add_owner_identity, router: change_capture, action: add_owner_identity, tier: auto_execute, scope: write, served_by: route }
+      x-mcp-tool: { verb: add_owner_identity, router: change_capture, action: add_owner_identity, tier: auto_execute, scope: write, served_by: route, ask_user_first: true }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       requestBody:
         required: true

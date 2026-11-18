@@ -197,3 +197,21 @@ func TestConsumerMailDomainIsRefusedWhereItNamesACompanyOrASeat(t *testing.T) {
 		t.Fatalf("identity refusal = %+v", identity)
 	}
 }
+
+// The agent door judges a company's domain by the same list the app does,
+// including a domain only this workspace added.
+func TestTheAgentDoorRefusesAWorkspaceAddedConsumerDomainOnACompany(t *testing.T) {
+	d := newTwoDoors(t, "agent-company-domain", "read", "write")
+	if status := d.e.Call(t, "POST", "/v1/capture/consumer-mail-domains", map[string]any{"domain": "overlay-mail.example", "kind": "extra"}, nil, nil); status != http.StatusCreated {
+		t.Fatalf("adding the overlay domain → %d, want 201", status)
+	}
+
+	d.mcp.CallRefused(t, "create_record", map[string]any{"record_type": "company", "fields": map[string]any{
+		"display_name": "Overlay GmbH", "source": "manual",
+		"domains": []map[string]any{{"domain": "overlay-mail.example", "is_primary": true}},
+	}})
+	d.mcp.CallOK(t, "create_record", map[string]any{"record_type": "company", "fields": map[string]any{
+		"display_name": "Plain GmbH", "source": "manual",
+		"domains": []map[string]any{{"domain": "plain-gmbh.example", "is_primary": true}},
+	}})
+}

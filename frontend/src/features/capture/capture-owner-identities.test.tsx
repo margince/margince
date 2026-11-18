@@ -236,6 +236,7 @@ it.each([
   [404, "not_found", "ownerIdentities.restoreGone"],
   [409, "removal_moved_on", "ownerIdentities.restoreMovedOn"],
   [409, "identity_declared_again", "ownerIdentities.restoreDeclaredAgain"],
+  [409, "domain_needs_confirmation", "ownerIdentities.restoreOnFile"],
 ] as const)(
   "words a %i %s refusal of the Undo for the reader",
   async (status, code, copy) => {
@@ -387,7 +388,7 @@ it("asks about a contact's address in its own words", async () => {
 
   expect(
     await screen.findByText(
-      "alice@demo.test is a contact's address. Mail with it will no longer be captured. Add anyway?",
+      "alice@demo.test is a contact’s address. Mail with it will no longer be captured. Add anyway?",
     ),
   ).toBeTruthy();
 });

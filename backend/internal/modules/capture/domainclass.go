@@ -5,13 +5,13 @@ package capture
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/freemail"
+	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -42,8 +42,7 @@ func (r DomainRole) IsConsumer() bool {
 // DomainClass is the answer to "what is this domain to us".
 type DomainClass struct {
 	Role DomainRole
-	// Company names the company for DomainRoleCompany. It is empty when the
-	// caller may not read that company, so the answer never discloses it.
+	// Company names the company for DomainRoleCompany.
 	Company string
 }
 
@@ -75,12 +74,14 @@ func ClassifyDomainTx(ctx context.Context, tx pgx.Tx, domain string) (DomainClas
 	return companyOfDomainTx(ctx, tx, domain)
 }
 
-// ClassifyAddressTx answers whether a full address is a contact's on file.
+// ClassifyAddressTx answers whether a full address is one the caller may see
+// on a contact. An address on a contact the caller cannot read classifies as
+// none, so the answer never confirms that the contact exists.
 func ClassifyAddressTx(ctx context.Context, tx pgx.Tx, address string) (DomainClass, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT e.contact_id FROM contact_email e
-		 WHERE lower(e.email) = $1 AND e.archived_at IS NULL LIMIT 20`,
-		strings.ToLower(strings.TrimSpace(address)))
+		 WHERE lower(e.email) = ANY($1) AND e.archived_at IS NULL LIMIT 20`,
+		mailidentity.AddressSpellings(address))
 	if err != nil {
 		return DomainClass{}, fmt.Errorf("capture: looking up a contact address: %w", err)
 	}
@@ -96,30 +97,39 @@ func ClassifyAddressTx(ctx context.Context, tx pgx.Tx, address string) (DomainCl
 	return DomainClass{}, nil
 }
 
+// companyOfDomainTx finds a company the caller may read whose domain equals the
+// value, sits above it or below it. A company the caller cannot read classifies
+// as none, so the answer never confirms that the company exists.
 func companyOfDomainTx(ctx context.Context, tx pgx.Tx, domain string) (DomainClass, error) {
-	var id ids.UUID
-	var name string
-	err := tx.QueryRow(ctx, `
-		SELECT c.id, c.display_name
-		  FROM company_domain d JOIN company c ON c.id = d.company_id
-		 WHERE d.domain = ANY($1) AND d.archived_at IS NULL AND c.archived_at IS NULL
-		 LIMIT 1`, owndomain.Spellings(domain)).Scan(&id, &name)
-	if errors.Is(err, pgx.ErrNoRows) {
+	if !auth.ReadGranted(ctx, "company") {
 		return DomainClass{}, nil
 	}
+	held := append(owndomain.Spellings(domain), freemail.Ancestors(domain)...)
+	rows, err := tx.Query(ctx, `
+		SELECT c.id, c.display_name
+		  FROM company_domain d JOIN company c ON c.id = d.company_id
+		 WHERE (d.domain = ANY($1) OR right(d.domain, length($2) + 1) = '.' || $2)
+		   AND d.archived_at IS NULL AND c.archived_at IS NULL
+		 ORDER BY (d.domain = ANY($1)) DESC, d.domain, c.id
+		 LIMIT 20`, held, owndomain.Fold(domain))
 	if err != nil {
 		return DomainClass{}, fmt.Errorf("capture: looking up a company domain: %w", err)
 	}
-	// A caller who may not read companies still gets the question, without the name.
-	if !auth.ReadGranted(ctx, "company") {
-		return DomainClass{Role: DomainRoleCompany}, nil
+	type match struct {
+		id   ids.UUID
+		name string
 	}
-	visible, err := auth.VisibleTo(ctx, tx, "company", id)
+	matches, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (match, error) {
+		var m match
+		return m, row.Scan(&m.id, &m.name)
+	})
 	if err != nil {
-		return DomainClass{}, err
+		return DomainClass{}, fmt.Errorf("capture: looking up a company domain: %w", err)
 	}
-	if !visible {
-		name = ""
+	for _, m := range matches {
+		if visible, err := auth.VisibleTo(ctx, tx, "company", m.id); err != nil || visible {
+			return DomainClass{Role: DomainRoleCompany, Company: m.name}, err
+		}
 	}
-	return DomainClass{Role: DomainRoleCompany, Company: name}, nil
+	return DomainClass{}, nil
 }

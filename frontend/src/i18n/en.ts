@@ -17164,6 +17164,8 @@ export const en = {
     "This address can no longer be put back. Add it again instead.",
   "ownerIdentities.restoreMovedOn":
     "This address was removed again since. Undo the newer removal instead.",
+  "ownerIdentities.restoreOnFile":
+    "This value is on file now. Add it again to confirm.",
   "ownerIdentities.restoreDeclaredAgain":
     "This address is already back in your list.",
   "ownerIdentities.addDescriptionEmpty":
@@ -17182,7 +17184,7 @@ export const en = {
   "captureValue.askCompanyDomain":
     "{value} is the domain of {company}. Mail with it will no longer be captured. Add anyway?",
   "captureValue.askContactAddress":
-    "{value} is a contact's address. Mail with it will no longer be captured. Add anyway?",
+    "{value} is a contact’s address. Mail with it will no longer be captured. Add anyway?",
   "captureValue.aCompany": "a company on file",
   "captureValue.addAnyway": "Add anyway",
   "captureExclusions.scope.user": "Your mailboxes",

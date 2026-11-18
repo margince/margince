@@ -273,16 +273,10 @@ func (s *FreemailDomainStore) Remove(ctx context.Context, id ids.UUID) error {
 	return nil
 }
 
-// lockFreemailDomain serializes decisions about ONE domain for the life of the
-// caller's transaction. Keyed on the domain alone since ADR-0091 §5 — one
-// installation, one company (ADR-0061) — so two admins editing different
-// domains never wait on each other.
+// lockFreemailDomain serializes this domain's decision against the company
+// domain writer, which takes the same lock.
 func lockFreemailDomain(ctx context.Context, tx pgx.Tx, domain string) error {
-	if _, err := tx.Exec(ctx,
-		`SELECT pg_advisory_xact_lock(hashtext('margince:consumer-mail:' || $1)::bigint)`, domain); err != nil {
-		return fmt.Errorf("capture: serializing the decision about %s: %w", domain, err)
-	}
-	return nil
+	return storekit.LockConsumerDomain(ctx, tx, domain)
 }
 
 // freemailEntryAuthor is the human an entry is attributed to, NULL for a system

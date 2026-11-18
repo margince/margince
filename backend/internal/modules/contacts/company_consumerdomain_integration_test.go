@@ -9,9 +9,13 @@ package contacts
 // company's domain list is refused, on create and on edit alike.
 
 import (
+	"context"
 	"errors"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -54,4 +58,72 @@ func TestCompanyDomainRefusesConsumerMail(t *testing.T) {
 	if live := liveDomainsOf(ctx, t, e, companyID); len(live) != 1 || !live["voltaq.test"] {
 		t.Fatalf("a refused edit changed the domains: %+v", live)
 	}
+}
+
+// Onboarding and the site-read confirmation save the company's website through
+// setCompanyDomain, so a consumer-mail website is refused there too.
+func TestSavingACompanyWebsiteOnConsumerMailIsRefused(t *testing.T) {
+	e := setupDedupe(t)
+	website := "https://www.gmail.com"
+	_, err := e.store.SaveCompany(e.asAdmin(), SaveCompanyInput{DisplayName: "Our House GmbH", Website: &website})
+	wantConsumerDomainRefusal(t, err)
+
+	fine := "https://our-house.test"
+	if _, err := e.store.SaveCompany(e.asAdmin(), SaveCompanyInput{DisplayName: "Our House GmbH", Website: &fine}); err != nil {
+		t.Fatalf("a real website: %v", err)
+	}
+}
+
+// A company-domain write queues behind a consumer-list write holding the same
+// domain, so one of them sees the other's row.
+func TestACompanyDomainWriteWaitsForTheConsumerListWriter(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	company := e.createNamedCompany(ctx, t, "Raceco", "raceco.test")
+	finished := make(chan struct{})
+	var updateErr error
+	waited := false
+	err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		if err := storekit.LockConsumerDomain(ctx, tx, "race-provider.example"); err != nil {
+			return err
+		}
+		go func() {
+			defer close(finished)
+			_, updateErr = e.store.UpdateCompany(ctx, company, UpdateCompanyInput{Domains: &[]CompanyDomainInput{
+				{Domain: "raceco.test", IsPrimary: true}, {Domain: "mail.race-provider.example"},
+			}})
+		}()
+		waited = waitsOnAnAdvisoryLock(ctx, t, tx, finished)
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	<-finished
+	if !waited {
+		t.Error("the company-domain write did not wait for the lock a consumer-list write holds")
+	}
+	if updateErr != nil {
+		t.Errorf("the queued write failed once released: %v", updateErr)
+	}
+}
+
+func waitsOnAnAdvisoryLock(ctx context.Context, t *testing.T, tx pgx.Tx, finished <-chan struct{}) bool {
+	t.Helper()
+	for range 20000 {
+		select {
+		case <-finished:
+			return false
+		default:
+		}
+		var waiting bool
+		if err := tx.QueryRow(ctx, `
+			SELECT EXISTS (SELECT 1 FROM pg_locks WHERE locktype = 'advisory' AND NOT granted)`).Scan(&waiting); err != nil {
+			t.Fatal(err)
+		}
+		if waiting {
+			return true
+		}
+	}
+	return false
 }

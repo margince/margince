@@ -98,6 +98,7 @@ const RESTORE_REFUSALS = new Map<string, MessageKey>([
   ["not_found", "ownerIdentities.restoreGone"],
   ["removal_moved_on", "ownerIdentities.restoreMovedOn"],
   ["identity_declared_again", "ownerIdentities.restoreDeclaredAgain"],
+  ["domain_needs_confirmation", "ownerIdentities.restoreOnFile"],
 ]);
 
 // On the hooks, not on `mutate`: an Undo runs after its row has unmounted.
