@@ -50,13 +50,14 @@ func (s *Store) WithdrawalTokenForEmail(
 		if err := bindWithdrawalSubject(ctx, tx, &in); err != nil {
 			return err
 		}
-		// A key no purpose carries falls back to all-marketing: the wider of
-		// the two, so the link never stops less than the recipient expects.
-		purposeID, found, err := cataloguedPurposeTx(ctx, tx, purposeKey)
+		// A key no link may name gets the all-marketing credential, and the
+		// link names no purpose. A correspondence send's unsubscribe stops
+		// marketing, never the correspondence.
+		purposeID, linkable, err := livePurposeTx(ctx, tx, purposeKey, true)
 		if err != nil {
 			return fmt.Errorf("consent: resolving the purpose for the unsubscribe link: %w", err)
 		}
-		if found {
+		if linkable {
 			in.Scope, in.PurposeID = WithdrawalScopeNamedPurpose, purposeID
 			purpose = normalizedPurposeKey(purposeKey)
 		}
@@ -70,18 +71,22 @@ func (s *Store) WithdrawalTokenForEmail(
 	return token, purpose, token != "", nil
 }
 
-// cataloguedPurposeTx answers the purpose a key names, archived or not, and
-// found=false for an empty key or one the catalog never carried.
+// livePurposeTx answers the live purpose a key names. With marketingOnly it
+// answers only a purpose a link may name: the marketing classes an
+// unsubscribe stops.
 //
-// The mint and the press both ask it, so a key the mint widened to
-// all-marketing is a key the press widens too.
-func cataloguedPurposeTx(ctx context.Context, tx pgx.Tx, key string) (ids.UUID, bool, error) {
+// The mint and the press both ask it. A key the mint widened to all marketing
+// is a key that credential's press widens too.
+func livePurposeTx(ctx context.Context, tx pgx.Tx, key string, marketingOnly bool) (ids.UUID, bool, error) {
 	key = normalizedPurposeKey(key)
 	if key == "" {
 		return ids.UUID{}, false, nil
 	}
 	var id ids.UUID
-	err := tx.QueryRow(ctx, `SELECT id FROM consent_purpose WHERE key = $1`, key).Scan(&id)
+	err := tx.QueryRow(ctx, `
+		SELECT id FROM consent_purpose
+		 WHERE key = $1 AND archived_at IS NULL
+		   AND (NOT $2 OR class IN ('marketing', 'phone_outreach'))`, key, marketingOnly).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ids.UUID{}, false, nil
 	}
@@ -89,17 +94,6 @@ func cataloguedPurposeTx(ctx context.Context, tx pgx.Tx, key string) (ids.UUID, 
 		return ids.UUID{}, false, err
 	}
 	return id, true, nil
-}
-
-// purposeCatalogued is cataloguedPurposeTx for a caller outside a transaction.
-func (s *Store) purposeCatalogued(ctx context.Context, key string) (bool, error) {
-	var found bool
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		var err error
-		_, found, err = cataloguedPurposeTx(ctx, tx, key)
-		return err
-	})
-	return found, err
 }
 
 // bindWithdrawalSubject attaches the record holding this address, when one

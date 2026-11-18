@@ -19,28 +19,22 @@ type preferenceLinkAdapter struct {
 	store *consent.Store
 }
 
-func (a preferenceLinkAdapter) UnsubscribeToken(
-	ctx context.Context, recipientEmail, purposeKey string,
-) (string, string, bool, error) {
+func (a preferenceLinkAdapter) UnsubscribeToken(ctx context.Context, email, purposeKey string) (string, string, bool, error) {
 	if consent.LockedPurpose(purposeKey) {
 		return "", "", false, nil
 	}
 	// THE WITHDRAWAL CREDENTIAL FIRST, because this token goes into a message
 	// that outlives it. A preference token slides 30 days and is revoked on the
-	// next send's rotation, so the header on an older message stops working and
-	// the recipient is told their unsubscribe link is invalid — which is the
-	// one thing RFC 8058 exists to prevent.
-	//
-	// It also reaches recipients the preference token cannot: that mint
-	// resolves contacts only, so a lead-only address carried NO header at all.
-	token, purpose, ok, err := a.store.WithdrawalTokenForEmail(ctx, recipientEmail, purposeKey)
+	// next send's rotation, so the header on an older message would stop working.
+	// It also reaches leads, which the preference token cannot.
+	token, purpose, ok, err := a.store.WithdrawalTokenForEmail(ctx, email, purposeKey)
 	if err != nil || ok {
 		return token, purpose, ok, err
 	}
 	// A live credential already covers this address, so its link is still in a
 	// message somewhere and still works. The preference token is the fallback
 	// that gives this message a header of its own, naming the same purpose.
-	token, ok, err = a.store.PreferenceTokenForEmail(ctx, recipientEmail)
+	token, ok, err = a.store.PreferenceTokenForEmail(ctx, email)
 	return token, purpose, ok, err
 }
 

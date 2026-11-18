@@ -267,7 +267,7 @@ Merging them into one would put an endpoint that takes only POST behind a link r
 `activities.unsubscribeLinksFor` builds all three. So the header, both visible links, and the copy on
 the timeline with the token removed cannot name different tokens, purposes or languages. The two
 visible links are routes after a `#`, which keeps the token out of web server access logs. A link names
-the purpose its credential stops, and none for all marketing; the press reads an unknown key as none.
+only a live marketing purpose. Any other key gets a link for all marketing, and its press stops that.
 
 The human page never revokes consent when it opens. Mail scanners and link checkers follow links in a
 mailbox with nobody there. That is the same reason RFC 8058 makes the machine endpoint take only POST.
