@@ -247,15 +247,21 @@ func TestTheLinksNameThePurposeTheCredentialStops(t *testing.T) {
 		oneClick     string
 		page         string
 	}{
-		{"named", "marketing_email", false,
+		{
+			"named", "marketing_email", false,
 			"https://crm.example.test/v1/public/preferences/wd_stop/unsubscribe?purpose=marketing_email",
-			"https://crm.example.test/#/unsubscribe/wd_stop/marketing_email?lang=en"},
-		{"unknown", "no_such_purpose", true,
+			"https://crm.example.test/#/unsubscribe/wd_stop/marketing_email?lang=en",
+		},
+		{
+			"unknown", "no_such_purpose", true,
 			"https://crm.example.test/v1/public/preferences/wd_stop/unsubscribe",
-			"https://crm.example.test/#/unsubscribe/wd_stop?lang=en"},
-		{"empty", "", true,
+			"https://crm.example.test/#/unsubscribe/wd_stop?lang=en",
+		},
+		{
+			"empty", "", true,
 			"https://crm.example.test/v1/public/preferences/wd_stop/unsubscribe",
-			"https://crm.example.test/#/unsubscribe/wd_stop?lang=en"},
+			"https://crm.example.test/#/unsubscribe/wd_stop?lang=en",
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			store := (&Store{}).WithPublicBaseURL("https://crm.example.test").WithUnsubscribe(
