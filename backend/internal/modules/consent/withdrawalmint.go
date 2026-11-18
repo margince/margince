@@ -34,40 +34,66 @@ import (
 // ok is false only when a credential already covers this address and scope, in
 // which case the previous link still works and there is nothing new to write
 // into the mail. The caller keeps the header it would otherwise have built.
+//
+// purpose is the key the links must name: the catalogued key for a named
+// credential, and empty for an all-marketing one. A link naming a key the
+// credential does not carry is a link whose page cannot find what it stops.
 func (s *Store) WithdrawalTokenForEmail(
 	ctx context.Context, recipientEmail, purposeKey string,
-) (token string, ok bool, err error) {
+) (token, purpose string, ok bool, err error) {
 	address := normalizeAddress(recipientEmail)
 	if address == "" {
-		return "", false, nil
+		return "", "", false, nil
 	}
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		in := WithdrawalMintInput{Address: address, Scope: WithdrawalScopeAllMarketing}
 		if err := bindWithdrawalSubject(ctx, tx, &in); err != nil {
 			return err
 		}
-		if purposeKey != "" {
-			var purposeID ids.UUID
-			switch scanErr := tx.QueryRow(ctx,
-				`SELECT id FROM consent_purpose WHERE key = $1`, purposeKey).Scan(&purposeID); {
-			case errors.Is(scanErr, pgx.ErrNoRows):
-				// A key no purpose carries: the all-marketing scope is the
-				// honest fallback, and it is the wider of the two, so the link
-				// never stops less than the recipient expects.
-			case scanErr != nil:
-				return fmt.Errorf("consent: resolving the purpose for the unsubscribe link: %w", scanErr)
-			default:
-				in.Scope, in.PurposeID = WithdrawalScopeNamedPurpose, purposeID
-			}
+		// A key no link may name gets the all-marketing credential, and the
+		// link names no purpose. A correspondence send's unsubscribe stops
+		// marketing, never the correspondence.
+		purposeID, linkable, err := livePurposeTx(ctx, tx, purposeKey, true)
+		if err != nil {
+			return fmt.Errorf("consent: resolving the purpose for the unsubscribe link: %w", err)
+		}
+		if linkable {
+			in.Scope, in.PurposeID = WithdrawalScopeNamedPurpose, purposeID
+			purpose = normalizedPurposeKey(purposeKey)
 		}
 		var mintErr error
 		token, mintErr = s.ensureWithdrawalCredentialForSendTx(ctx, tx, in)
 		return mintErr
 	})
 	if err != nil {
-		return "", false, err
+		return "", "", false, err
 	}
-	return token, token != "", nil
+	return token, purpose, token != "", nil
+}
+
+// livePurposeTx answers the live purpose a key names. With marketingOnly it
+// answers only a purpose a link may name: the marketing classes an
+// unsubscribe stops.
+//
+// The mint and the press both ask it. A key the mint widened to all marketing
+// is a key that credential's press widens too.
+func livePurposeTx(ctx context.Context, tx pgx.Tx, key string, marketingOnly bool) (ids.UUID, bool, error) {
+	key = normalizedPurposeKey(key)
+	if key == "" {
+		return ids.UUID{}, false, nil
+	}
+	var id ids.UUID
+	err := tx.QueryRow(ctx, `
+		SELECT id FROM consent_purpose
+		 WHERE key = $1 AND archived_at IS NULL
+		   AND (NOT $2 OR class IN ('marketing', 'phone_outreach'))`, key, marketingOnly).Scan(&id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ids.UUID{}, false, nil
+	}
+	if err != nil {
+		return ids.UUID{}, false, err
+	}
+	return id, true, nil
 }
 
 // bindWithdrawalSubject attaches the record holding this address, when one

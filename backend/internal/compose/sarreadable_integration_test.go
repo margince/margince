@@ -74,7 +74,7 @@ func TestTheSubjectAccessPackageIsReadable(t *testing.T) {
 	if found := byteArrayShaped.FindAllString(string(encoded), -1); len(found) > 0 {
 		t.Errorf("the package a data subject receives renders %d value(s) as byte arrays rather than as "+
 			"something a contact can read: %s\n\nA uuid column scans as [16]byte and encoding/json has one "+
-			"answer for that. Render it in privacy.readableValue, which every map-shaped section is built "+
+			"answer for that. Render it in rowvalue.Document, which every map-shaped section is built "+
 			"through", len(found), strings.Join(sample(found), ", "))
 	}
 }

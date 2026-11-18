@@ -357,7 +357,7 @@ func TestAVietnameseAdvertisingMailEndsWithTheAdvertiserThenTheRefusal(t *testin
 	if want := appendUnsubscribeFooter("", got.links, got.words); rest != want {
 		t.Errorf("after the refusal comes %q, want only the opt-out links %q", rest, want)
 	}
-	if !strings.Contains(rest, "/#/unsubscribe/tok/") || !strings.Contains(rest, "/#/preferences/tok") {
+	if !strings.Contains(rest, "/#/unsubscribe/tok?") || !strings.Contains(rest, "/#/preferences/tok") {
 		t.Errorf("the opt-out links %q do not carry the recipient's stop and preference links", rest)
 	}
 }

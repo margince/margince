@@ -33,8 +33,8 @@ type stubUnsubscribeLinker struct {
 	manage string
 }
 
-func (l stubUnsubscribeLinker) UnsubscribeToken(context.Context, string, string) (string, bool, error) {
-	return l.token, l.ok, l.err
+func (l stubUnsubscribeLinker) UnsubscribeToken(_ context.Context, _, purposeKey string) (string, string, bool, error) {
+	return l.token, purposeKey, l.ok, l.err
 }
 
 // ManageToken answers the same token unless the case sets its own. The stop

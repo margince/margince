@@ -180,14 +180,7 @@ func (s *Store) mergeContactCarryingTx(ctx context.Context, tx pgx.Tx, sourceID,
 	// reads the contact row. Locking the rows first and reaching for consent's
 	// lock later (inside carryStopsTx, below) inverts the order between the two
 	// transactions and deadlocks — see StopCarrier.LockStopsTx.
-	if err := lockStopsOrSkip(ctx, tx, s.stopCarrier,
-		commsauthz.ContactStopSubject(sourceID),
-		commsauthz.ContactStopSubject(targetID)); err != nil {
-		return crmcontracts.Contact{}, nil, err
-	}
-	// Also before LockPair: employer attach, the company roster and the seat
-	// repair take the employment lock and then the contact row.
-	if err := lockMergedEmployments(ctx, tx, []ids.UUID{sourceID.UUID, targetID.UUID}); err != nil {
+	if err := s.lockMergeSubjects(ctx, tx, []ids.UUID{sourceID.UUID, targetID.UUID}); err != nil {
 		return crmcontracts.Contact{}, nil, err
 	}
 	_, tgtLock, err := storekit.LockPair(ctx, tx, contactEntity, sourceID.UUID, targetID.UUID)
