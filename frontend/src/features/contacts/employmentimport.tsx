@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { DateRangeText } from "../../components/relationshiprows";
 import { Button, Field, Modal, TextInput } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
@@ -23,7 +24,7 @@ type Contact360 = components["schemas"]["Contact360"];
 
 // The bought episodes no linked employment answers yet. The panel's empty line
 // reads this too, so it cannot call the panel empty while episodes still show.
-export function useEmploymentImport(view: Contact360, enabled = true) {
+export function useEmploymentImport(view: Contact360, enabled: boolean) {
   const id = view.contact.id;
   const hasEvidence =
     view.provider_profiles?.some(
@@ -53,14 +54,21 @@ export function useEmploymentImport(view: Contact360, enabled = true) {
   return { hasEvidence, reading, outstanding };
 }
 
+export type EmploymentImport = ReturnType<typeof useEmploymentImport>;
+
 export function ImportedEmploymentHistory({
   view,
   canEdit,
-}: Readonly<{ view: Contact360; canEdit: boolean }>) {
+  imported,
+}: Readonly<{
+  view: Contact360;
+  canEdit: boolean;
+  imported: EmploymentImport;
+}>) {
   const t = useT();
   const client = useQueryClient();
   const id = view.contact.id;
-  const { hasEvidence, reading, outstanding } = useEmploymentImport(view);
+  const { hasEvidence, reading, outstanding } = imported;
   const [resolving, setResolving] = useState<Item | null>(null);
   const apply = useMutation({
     mutationFn: async ({
@@ -135,8 +143,11 @@ export function ImportedEmploymentHistory({
             <div key={item.key} className="form-stack">
               <span>{item.role || t("field.unset")}</span>
               <span className="t-caption">
-                {[item.started, item.ended].filter(Boolean).join(" – ")} ·{" "}
-                {t(`employment.status.${item.employment_status}`)} ·{" "}
+                <DateRangeText
+                  start={item.started ?? ""}
+                  end={item.ended ?? ""}
+                />{" "}
+                · {t(`employment.status.${item.employment_status}`)} ·{" "}
                 {item.provider}
               </span>
               {item.state !== "linked" && (

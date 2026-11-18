@@ -10,6 +10,7 @@ import {
   StoryProviders,
   stubWithSession,
 } from "../testing/story-utils";
+import { lineTops } from "../testing/textlines";
 import { RelationshipRows, RelationshipsTab } from "./relationshiprows";
 
 // The rows without their panel, the shape the deal's committee card mounts.
@@ -157,6 +158,20 @@ export const CompanyContactsWithDates: Story = {
                 started_at: "2024-06-01",
               },
               { ...employmentRel, id: "rel-3", started_at: null },
+              {
+                ...employmentRel,
+                id: "rel-4",
+                started_at: "2021-03-01",
+                employment_status: "unknown",
+                is_current_primary: false,
+              },
+              {
+                ...employmentRel,
+                id: "rel-5",
+                started_at: null,
+                ended_at: "2022-12-01",
+                is_current_primary: false,
+              },
             ],
             page: { next_cursor: null, has_more: false },
           }),
@@ -169,34 +184,46 @@ export const CompanyContactsWithDates: Story = {
       </StoryProviders>
     );
   },
-  tags: ["uat-wide"],
   play: async ({ canvasElement }) => {
     await datesStayWhole(canvasElement);
-    await expect(
-      within(canvasElement).getByRole("columnheader", { name: "Dates" }),
-    ).toBeVisible();
-    const row = canvasElement.querySelector("tbody > tr");
-    await expect(row && getComputedStyle(row).display).toBe("table-row");
+    await expectUnfolded(canvasElement);
   },
 };
 
-// One rect per text run, so the lines are the distinct tops, not the rects.
-function lineCount(boxes: DOMRectList): number {
-  return new Set([...boxes].map((box) => Math.round(box.top))).size;
+// Unfolded but squeezed below the width its cells ask for: the columns give
+// way, and only here does a date need holding whole.
+export const CompanyContactsWithDatesSqueezed: Story = {
+  ...CompanyContactsWithDates,
+  decorators: [
+    (Story) => (
+      <div style={{ inlineSize: 640 }}>
+        <Story />
+      </div>
+    ),
+  ],
+};
+
+async function expectUnfolded(canvasElement: HTMLElement) {
+  await expect(
+    within(canvasElement).getByRole("columnheader", { name: "Dates" }),
+  ).toBeVisible();
+  const row = canvasElement.querySelector("tbody > tr");
+  if (!row) throw new Error("the table drew no row");
+  await expect(getComputedStyle(row).display).toBe("table-row");
 }
 
 // A dated range breaks only between its dates, and the page never scrolls.
 async function datesStayWhole(canvasElement: HTMLElement) {
   await within(canvasElement).findByText("Maximiliane Oberhauser-Lindqvist");
   const dates = [...canvasElement.querySelectorAll(".relationshiprows-date")];
-  await expect(dates).toHaveLength(4);
+  await expect(dates).toHaveLength(7);
   for (const date of dates) {
-    await waitFor(() => expect(lineCount(date.getClientRects())).toBe(1));
+    await waitFor(() => expect(lineTops(date).size).toBe(1));
   }
-  for (const cell of new Set(dates.map((date) => date.closest("td")))) {
-    const text = document.createRange();
-    if (cell) text.selectNodeContents(cell);
-    await expect(lineCount(text.getClientRects())).toBeLessThanOrEqual(2);
+  for (const date of dates) {
+    const cell = date.closest("td");
+    if (!cell) throw new Error("a date sits outside a table cell");
+    await expect(lineTops(cell).size).toBeLessThanOrEqual(2);
   }
   const page = document.documentElement;
   await expect(page.scrollWidth).toBeLessThanOrEqual(page.clientWidth);

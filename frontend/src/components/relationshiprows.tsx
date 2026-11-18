@@ -44,6 +44,25 @@ import {
 } from "./relationships";
 import { dateRangeParts, RANGE_DASH } from "./relationships.edges";
 
+// Each date is held whole, since an ISO date breaks at its hyphens, so the
+// range breaks only after its dash.
+export function DateRangeText({
+  start,
+  end,
+}: Readonly<{ start: string; end: string }>) {
+  if (!start || !end) {
+    return start || end ? (
+      <span className="relationshiprows-date">{start || end}</span>
+    ) : null;
+  }
+  return (
+    <>
+      <span className="relationshiprows-date">{`${start} ${RANGE_DASH}`}</span>{" "}
+      <span className="relationshiprows-date">{end}</span>
+    </>
+  );
+}
+
 /**
  * RelationshipsTab is the edges of one record, as a panel that names itself.
  *
@@ -186,7 +205,9 @@ export function RelationshipRows({
   // ONE spelling of this edge's verbs, for both shapes of row: the table's
   // trailing cell and the stacked block's foot. Two copies would be two
   // versions of a hard DELETE the day either one is touched.
-  const verbsFor = (rel: Relationship) => (
+  const verbsFor = (rel: Relationship) =>
+    canUpdate || canDelete ? verbBar(rel) : null;
+  const verbBar = (rel: Relationship) => (
     <div
       className={
         stacked
@@ -291,17 +312,9 @@ export function RelationshipRows({
     {
       key: "dates",
       header: t("rel.dates"),
-      render: (rel: Relationship) => {
-        const { start, end } = dateRangeParts(rel, t);
-        if (!start || !end) return dateRange(rel, t);
-        // Each date stays whole; the range breaks only after its dash.
-        return (
-          <>
-            <span className="relationshiprows-date">{`${start} ${RANGE_DASH}`}</span>{" "}
-            <span className="relationshiprows-date">{end}</span>
-          </>
-        );
-      },
+      render: (rel: Relationship) => (
+        <DateRangeText {...dateRangeParts(rel, t)} />
+      ),
     },
     {
       key: "actions",

@@ -173,11 +173,15 @@ function json(body: unknown): Response {
 // modal's whole contract with the server is the shape of one request.
 const sent: Array<{ method: string; path: string; body: unknown }> = [];
 
+const PROVIDER_DOWN = "The provider did not answer.";
+
 function mount(
   view: Contact360,
   guard?: components["schemas"]["ContactConsentGuard"],
-  // `null` leaves the import read unanswered, as a slow provider would.
-  imported: components["schemas"]["EmploymentImportItem"][] | null = [],
+  imported:
+    | components["schemas"]["EmploymentImportItem"][]
+    | "unanswered"
+    | "failed" = [],
 ) {
   sent.length = 0;
   vi.stubGlobal(
@@ -223,7 +227,15 @@ function mount(
         });
       }
       if (url.pathname.endsWith("/employment-import")) {
-        if (imported === null) return new Promise<Response>(() => undefined);
+        if (imported === "unanswered") {
+          return new Promise<Response>(() => undefined);
+        }
+        if (imported === "failed") {
+          return Response.json(
+            { title: "Bad gateway", status: 502, detail: PROVIDER_DOWN },
+            { status: 502 },
+          );
+        }
         return json({ contact_id: view.contact.id, items: imported });
       }
       // The employer picker searches companies; without a candidate the
@@ -787,12 +799,22 @@ describe("bought work history that waits for a company match", () => {
     ).toBeTruthy();
   });
 
-  it("does not call it empty while the bought episodes are still loading", async () => {
-    mount(bought, undefined, null);
-    expect(
-      await screen.findByText(en["employment.importLoading"]),
-    ).toBeTruthy();
-    expect(screen.queryByText(en["contact.rail.noEmployment"])).toBeNull();
+  it("says it is loading the bought episodes, once, while they are unread", async () => {
+    mount(bought, undefined, "unanswered");
+    const panel = within(section(en["contact.rail.employmentTitle"]));
+    const busy = await panel.findByRole("status");
+    expect(busy.getAttribute("aria-busy")).toBe("true");
+    expect(panel.getAllByText(en["employment.importLoading"])).toHaveLength(1);
+    expect(panel.queryByText(en["contact.rail.noEmployment"])).toBeNull();
+  });
+
+  it("says the read failed, once, instead of calling the work history empty", async () => {
+    mount(bought, undefined, "failed");
+    const panel = within(section(en["contact.rail.employmentTitle"]));
+    expect(await panel.findByText(en["state.failed"])).toBeTruthy();
+    expect(panel.getByRole("button", { name: en["state.retry"] })).toBeTruthy();
+    expect(panel.queryByText(PROVIDER_DOWN)).toBeNull();
+    expect(panel.queryByText(en["contact.rail.noEmployment"])).toBeNull();
   });
 });
 

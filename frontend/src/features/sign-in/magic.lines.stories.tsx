@@ -7,6 +7,7 @@ import { Panel } from "../../design-system/panel";
 import { browserZone } from "../../format/timezone";
 import type { MagicLine } from "../../lib/magic.queries";
 import { StoryProviders } from "../../testing/story-utils";
+import { lineTops } from "../../testing/textlines";
 import { MagicLaneSection } from "./magic.lines";
 
 // The receipt's watching lane, where a connector that broke overnight names
@@ -159,15 +160,6 @@ export const FailingSinceDark: Story = {
   render: failingLane,
 };
 
-function textLines(el: Element): number {
-  const range = document.createRange();
-  range.selectNodeContents(el);
-  const tops = new Set(
-    Array.from(range.getClientRects(), (r) => Math.round(r.top)),
-  );
-  return tops.size;
-}
-
 export const FailingSincePhone: Story = {
   render: failingLane,
   parameters: { layout: "fullscreen" },
@@ -191,7 +183,7 @@ export const FailingSincePhone: Story = {
     if (!shortTime) {
       throw new Error("the line without a failing source drew no time");
     }
-    await expect(textLines(since)).toBeGreaterThan(1);
-    await expect(textLines(shortTime)).toBe(1);
+    await expect(lineTops(since).size).toBeGreaterThan(1);
+    await expect(lineTops(shortTime).size).toBe(1);
   },
 };

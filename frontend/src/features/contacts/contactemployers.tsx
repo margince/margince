@@ -29,6 +29,7 @@ import {
 } from "./employerproposal";
 import { EmploymentEdit } from "./employmentedit";
 import {
+  type EmploymentImport,
   ImportedEmploymentHistory,
   useEmploymentImport,
 } from "./employmentimport";
@@ -132,6 +133,16 @@ export function useCanEditEmployment(contact: Contact360["contact"]): boolean {
   return useCanWriteRecord("contact", contact) && !readOnlyReason;
 }
 
+// The panel's word while the bought episodes are unknown. A disabled read is
+// pending but idle forever; one paused offline is still in flight.
+function unreadImport(
+  reading: EmploymentImport["reading"],
+): "loading" | "failed" | undefined {
+  if (reading.isLoadingError) return "failed";
+  if (reading.isPending && reading.fetchStatus !== "idle") return "loading";
+  return undefined;
+}
+
 // A contact can hold more than one employment edge at once, so this is a
 // list rather than the single Details row it used to be. The current
 // employer leads and carries an explicit marker: `is_current_primary` is
@@ -198,6 +209,8 @@ export function Employers({ view }: Readonly<{ view: Contact360 }>) {
     employments: { data: employments, page: { has_more: false } },
   };
   const imported = useEmploymentImport(importView, !withheld);
+  const importState =
+    employments.length === 0 ? unreadImport(imported.reading) : undefined;
   return (
     <Panel
       title={t("contact.rail.employmentTitle")}
@@ -228,16 +241,19 @@ export function Employers({ view }: Readonly<{ view: Contact360 }>) {
       <PanelBody>
         <ErrorLine error={proposal.verdict.error} />
         <SurfaceState
-          loadingLabel={t("contact.rail.employmentTitle")}
+          loadingLabel={t(
+            importState
+              ? "employment.importLoading"
+              : "contact.rail.employmentTitle",
+          )}
           state={
-            // `isLoading`, not `isPending`: a disabled read is pending forever.
-            employments.length === 0 && imported.reading.isLoading
-              ? "loading"
-              : bodyState(
-                  withheld,
-                  employments.length + imported.outstanding.length,
-                )
+            importState ??
+            bodyState(
+              withheld,
+              employments.length + imported.outstanding.length,
+            )
           }
+          detail={{ onRetry: () => imported.reading.refetch() }}
           emptyLabel={t("contact.rail.noEmployment")}
         >
           {employments.map((employment, index) => (
@@ -296,11 +312,12 @@ export function Employers({ view }: Readonly<{ view: Contact360 }>) {
             {t("employment.more")}
           </Button>
         )}
-        {!withheld && (
+        {!withheld && !importState && (
           <ImportedEmploymentHistory
             key={contact.id}
             view={importView}
             canEdit={canEdit}
+            imported={imported}
           />
         )}
         {/* The guard falls only before the first row is ever edited: `editing`
