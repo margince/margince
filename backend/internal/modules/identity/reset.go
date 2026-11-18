@@ -156,7 +156,7 @@ func (h Handlers) ResetPassword(w http.ResponseWriter, r *http.Request) {
 		httperr.Write(w, r, httperr.Validation("token", "required", "the reset token is required"))
 		return
 	}
-	if err := passwordLengthError("new_password", req.NewPassword); err != nil {
+	if err := passwordRuleError("new_password", req.NewPassword); err != nil {
 		httperr.Write(w, r, err)
 		return
 	}
@@ -263,6 +263,9 @@ func (s *Service) RedeemPasswordReset(ctx context.Context, rawToken, newPassword
 		}
 		if lookupErr != nil {
 			return lookupErr
+		}
+		if err := s.rejectEmailPassword(ctx, tx, userID, "new_password", newPassword); err != nil {
+			return err
 		}
 		// The reset also clears the §27 lockout state: the account owner
 		// just proved control of the mailbox, which outranks a stale
@@ -385,7 +388,10 @@ func OperatorResetPassword(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID,
 	// hand here it counted BYTES while saying "characters", so a short
 	// multi-byte password cleared a floor it was under — and it had no ceiling
 	// at all, which the KDF does care about.
-	if err := passwordLengthError("new_password", newPassword); err != nil {
+	if err := passwordRuleError("new_password", newPassword); err != nil {
+		return fmt.Errorf("identity: %w", err)
+	}
+	if err := passwordEmailError("new_password", newPassword, email); err != nil {
 		return fmt.Errorf("identity: %w", err)
 	}
 	hash, err := password.Hash(newPassword)

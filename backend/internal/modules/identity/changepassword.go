@@ -62,7 +62,7 @@ func (s *Service) ChangePassword(ctx context.Context, current, next string) (str
 	if !ok {
 		return "", apperrors.ErrPermissionDenied
 	}
-	if err := passwordLengthError("new_password", next); err != nil {
+	if err := passwordRuleError("new_password", next); err != nil {
 		return "", err
 	}
 	wsID, ok := workspaceFrom(ctx)
@@ -88,6 +88,9 @@ func (s *Service) ChangePassword(ctx context.Context, current, next string) (str
 		// counter and the evidence row.
 		if current == next {
 			return ErrPasswordUnchanged
+		}
+		if err := s.rejectEmailPassword(ctx, tx, userID, "new_password", next); err != nil {
+			return err
 		}
 		// Hashed only now: the KDF is 19 MiB of work, and doing it before the
 		// current password is verified sells every unauthorized caller a full
@@ -357,4 +360,15 @@ func (h Handlers) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	// before: the outcome is the cookie, not a body.
 	setSessionCookie(w, token)
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// rejectEmailPassword refuses a password equal to the account's own address.
+// The address is read in the transaction, because the callers that hold only a
+// user id (change, reset redemption) cannot know it before.
+func (s *Service) rejectEmailPassword(ctx context.Context, tx pgx.Tx, userID ids.UserID, field, pw string) error {
+	var email string
+	if err := tx.QueryRow(ctx, `SELECT email FROM app_user WHERE id = $1`, userID).Scan(&email); err != nil {
+		return err
+	}
+	return passwordEmailError(field, pw, email)
 }

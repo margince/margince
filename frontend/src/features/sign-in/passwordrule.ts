@@ -26,9 +26,40 @@ export function passwordLength(password: string): number {
   return [...password].length;
 }
 
-/** Whether the password clears the floor. Empty is not "too short" — it is
- *  unanswered, and a form that scolds a field nobody has typed in yet is
- *  reporting on itself rather than on the reader. */
-export function isTooShort(password: string): boolean {
-  return password.length > 0 && passwordLength(password) < MIN_PASSWORD;
+/**
+ * The ceiling the server applies, in the same code-point count as the floor.
+ * The server rule is `passwordRuleError` in
+ * backend/internal/modules/identity/service.go; a gate holds both numbers and
+ * the refusals together.
+ */
+export const MAX_PASSWORD = 256;
+
+/** Why a password is refused before the server is asked, as the i18n key of the
+ *  refusal. Empty is unanswered, not refused: a form that scolds a field nobody
+ *  has typed in yet is reporting on itself rather than on the reader. The email
+ *  rule is the server's alone, because only it knows the account. */
+export type PasswordFault =
+  | "password.tooShort"
+  | "password.tooLong"
+  | "password.blank"
+  | "password.repeated";
+
+export function passwordFault(password: string): PasswordFault | null {
+  if (password.length === 0) {
+    return null;
+  }
+  const length = passwordLength(password);
+  if (length < MIN_PASSWORD) {
+    return "password.tooShort";
+  }
+  if (length > MAX_PASSWORD) {
+    return "password.tooLong";
+  }
+  if (password.trim() === "") {
+    return "password.blank";
+  }
+  if (new Set(password).size === 1) {
+    return "password.repeated";
+  }
+  return null;
 }

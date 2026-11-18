@@ -112,6 +112,26 @@ func TestChangePasswordHoldsTheLengthFloor(t *testing.T) {
 	}
 }
 
+func TestChangePasswordRefusesBlankRepeatedAndEmailPasswords(t *testing.T) {
+	e := setupRevocationEnv(t, "changepw-weak")
+	ctx := memberCtx(t, e)
+
+	for code, weak := range map[string]string{
+		"blank":    strings.Repeat(" ", 12),
+		"repeated": strings.Repeat("x", 12),
+		"email":    e.member.Email,
+	} {
+		var parseErr *values.ParseError
+		_, err := e.svc.ChangePassword(ctx, memberPassword, weak)
+		if !errors.As(err, &parseErr) || parseErr.Field != "new_password" || parseErr.Code != code {
+			t.Errorf("change to %q gave %v, want a new_password/%s refusal", weak, err, code)
+		}
+	}
+	if _, _, err := e.svc.Login(e.wsOnlyCtx(), e.member.Email, memberPassword, noDevice); err != nil {
+		t.Fatalf("the original password stopped working after refused changes: %v", err)
+	}
+}
+
 func TestChangePasswordEndsEveryPriorSessionAndIssuesAFreshOne(t *testing.T) {
 	e := setupRevocationEnv(t, "changepw-revoke")
 	wsCtx := e.wsOnlyCtx()

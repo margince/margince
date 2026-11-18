@@ -9,6 +9,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"strings"
 	"sync/atomic"
 	"time"
 	"unicode/utf8"
@@ -206,22 +207,51 @@ const (
 	maxPasswordLen = 256
 )
 
-// passwordLengthError is the ONE spelling of the 12–256 rule for every Go
-// caller that accepts a password. Counted in RUNES: a four-emoji password is
+// passwordRuleError is the ONE spelling of the password rule for every Go
+// caller that accepts a password: 12–256 runes, not blank after trimming, and
+// not one character repeated. Counted in RUNES: a four-emoji password is
 // sixteen bytes and would clear a byte floor of twelve while being a quarter of
 // the length the floor intends.
 //
 // It returns the field-shaped refusal the surfaces render, so a caller does not
-// restate the numbers in prose that can drift from the check.
-func passwordLengthError(field, pw string) error {
-	if n := utf8.RuneCountInString(pw); n < minPasswordLen || n > maxPasswordLen {
+// restate the numbers in prose that can drift from the check. The browser
+// states the same rule in frontend/src/features/sign-in/passwordrule.ts, and
+// TestThePasswordRuleMirrorsTheServer holds the two together.
+func passwordRuleError(field, pw string) error {
+	n := utf8.RuneCountInString(pw)
+	switch {
+	case n < minPasswordLen || n > maxPasswordLen:
 		return &values.ParseError{
 			Field:   field,
 			Code:    "length",
 			Message: fmt.Sprintf("the password must be %d–%d characters", minPasswordLen, maxPasswordLen),
 		}
+	case strings.TrimSpace(pw) == "":
+		return &values.ParseError{Field: field, Code: "blank", Message: "the password cannot be only spaces"}
+	case isOneRepeatedRune(pw):
+		return &values.ParseError{Field: field, Code: "repeated", Message: "the password cannot be one character repeated"}
 	}
 	return nil
+}
+
+// passwordEmailError refuses a password that is the account's own address, the
+// first guess anyone makes. The address is compared the way a login is, trimmed
+// and case-folded.
+func passwordEmailError(field, pw, email string) error {
+	if strings.EqualFold(strings.TrimSpace(pw), strings.TrimSpace(email)) {
+		return &values.ParseError{Field: field, Code: "email", Message: "the password cannot be your email address"}
+	}
+	return nil
+}
+
+func isOneRepeatedRune(pw string) bool {
+	first, _ := utf8.DecodeRuneInString(pw)
+	for _, r := range pw {
+		if r != first {
+			return false
+		}
+	}
+	return true
 }
 
 // normalize parse-don't-validates the tenant-root inputs in place. The timezone
@@ -248,7 +278,10 @@ func (in *BootstrapInput) normalize() error {
 	// route: without it, `"admin_password": ""` mints a loginable root account.
 	// Stated once at the point both provisioning paths converge rather than a
 	// third time at a call site.
-	return passwordLengthError("admin_password", in.AdminPassword)
+	if err := passwordRuleError("admin_password", in.AdminPassword); err != nil {
+		return err
+	}
+	return passwordEmailError("admin_password", in.AdminPassword, in.AdminEmail)
 }
 
 // SeedSystemRoles lays down the compiled-in role set, and assigns nothing.
