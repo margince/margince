@@ -14,6 +14,7 @@ import { useLocale, useT } from "../../i18n";
 import { useDisabledCoreFeatures } from "../../lib/corefeatures";
 import { navigate } from "../../lib/router";
 import { useViewerZone } from "../../lib/viewerzone";
+import { AutoKeptLine } from "./claimautokept";
 import { TakenOverLine, TakeOverPromiseButton } from "./claimtakeover";
 import { omitted } from "./contact360";
 import { ContactClaimsReview, claimsForReview } from "./contactclaimsreview";
@@ -87,13 +88,14 @@ export function ContactCommitmentsCard({
 // The line under a promise, and below it who took the promise over or the
 // verb that lets the reader take it.
 function loopSub(row: Row, contactId: string): ReactNode {
-  if (!row.takenBy && !row.takeable) {
+  if (!row.takenBy && !row.takeable && !row.autoKept) {
     return row.sub;
   }
   return (
     <>
       {row.sub}
       {row.takenBy && <TakenOverLine takenBy={row.takenBy} />}
+      {row.autoKept && <AutoKeptLine id={row.key} />}
       {row.takeable && (
         <TakeOverPromiseButton id={row.key} contactId={contactId} />
       )}

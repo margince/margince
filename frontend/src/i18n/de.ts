@@ -4587,6 +4587,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "commitment.takeOver": "Übernehme ich",
   "commitment.takenOver": "{name} hat das am {date} übernommen",
   "commitment.takenOverUnnamed": "Übernommen am {date}",
+  "commitment.autoKept": "Margince hat das als erledigt markiert.",
+  "commitment.undoKept": "Rückgängig",
   "commitment.quote": "„{quote}“",
   "co.brief.by.model": "Von Margince geschrieben",
   "co.brief.by.deterministic": "Aus CRM-Datensätzen zusammengestellt",
