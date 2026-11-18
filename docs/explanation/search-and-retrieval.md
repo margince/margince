@@ -319,8 +319,9 @@ move the marker of the run that replaced it. Three things follow:
   smaller claim than "every workspace is embedded again under it". A run lets go when no workspace
   has a result left to reach, and *used up its attempts* is one of those results. The `active` of
   `/readyz` takes on that smaller claim. The pending counts on the status endpoint are what tell an
-  operator what is missing. A run that a binding change stopped lets go without writing it, so the
-  marker keeps the model it named before. That run's target is a model no role serves any more.
+  operator what is missing.
+- **A run that a binding change stopped writes no model.** It lets go of the marker, and the marker
+  keeps the model it named before. That run's target is a model no role serves any more.
 - **A marker left held has a way back.** A workspace job that is dropped or canceled can leave the
   marker held with nothing running. (River starts again a job that runs too long only if the job
   declares a time limit, and a workspace job declares none.) A confirm with `force` set takes a
