@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // Package sendmetrics counts what a human's Send in the email composer came to,
-// how long the engine took to decide it, and what each Send anyway confirmation
-// came to. The pilot of the inline review reads its first-click success,
+// and how long the engine took to decide it. It also counts what each Send
+// anyway confirmation came to. The pilot of the inline review reads its first-click success,
 // decision latency and warning frequency from these families.
 //
 // Every label value is a constant in this file, chosen from a closed set. The
@@ -124,9 +124,9 @@ func Observer(inline func(context.Context) (bool, error)) activities.SendObserve
 	}
 }
 
-// observeSend counts one distinct first Send intent of a human. An agent's
-// send, a repeat press of a message already held, and a failure that is no
-// outcome, such as a blank subject, are not counted.
+// observeSend counts one distinct first Send intent of a human. It skips an
+// agent's send and a repeat press of a message already held. It also skips a
+// failure that is no outcome, such as a blank subject.
 func (c *collector) observeSend(ctx context.Context, inline func(context.Context) (bool, error), out activities.SendOutcome, err error) {
 	if !humanAtTheKeyboard(ctx) || activities.IsRepeatedSend(err) {
 		return

@@ -8,9 +8,9 @@ import (
 	"errors"
 )
 
-// SendObserver hears what one Send through the two email doors came to: the
-// outcome when it went or was scheduled, the error when it did not. Compose
-// counts it, because classifying a refusal needs the consent module's types.
+// SendObserver hears what one Send through the two email doors came to. It gets
+// the outcome when the message went or was scheduled, and the error otherwise.
+// Compose counts it, because classifying a refusal needs the consent module's types.
 type SendObserver func(ctx context.Context, out SendOutcome, err error)
 
 // WithSendObserver binds the observer both email doors report to. Nil reports

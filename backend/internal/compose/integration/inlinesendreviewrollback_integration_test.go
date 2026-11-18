@@ -75,8 +75,8 @@ func sendSeries(t *testing.T, c *consentEnv, series string) int {
 }
 
 // The pilot switch can be turned off with work in flight. A send refused under
-// the inline composer still resolves through the legacy Send anyway dialog,
-// what the rep left behind stays readable, and the message goes once.
+// the inline composer still resolves through the legacy Send anyway dialog.
+// What the rep left behind stays readable, and the message goes once.
 func TestTurningTheInlineReviewOffLeavesItsOpenReviewResolvable(t *testing.T) {
 	c := setupScrapedConsent(t)
 	c.useReviewableMarketingProfile(t)
