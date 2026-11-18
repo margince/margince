@@ -20,14 +20,12 @@ import { MoneyInput } from "../../design-system/moneyinput";
 import { Select } from "../../design-system/select";
 import { formatMoney } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
-import {
-  invalidateClosedLead,
-  leadPromotePreviewKey,
-} from "../../lib/leadkeys";
+import { leadPromotePreviewKey } from "../../lib/leadkeys";
 import { defaultPipelineOf, usePipelines } from "../../lib/pipelines.queries";
 import { unwrap } from "../../lib/problem";
 import { useInstallationSettings } from "../../lib/uploadlimit";
 import { useViewerZone } from "../../lib/viewerzone";
+import { invalidateClosedLead } from "./leadclose";
 import { useLeadCompanyNameReading } from "./leadcompany";
 import { leadIdentityName } from "./leadname";
 import {
