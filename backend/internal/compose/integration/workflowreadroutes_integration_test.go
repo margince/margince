@@ -26,7 +26,7 @@ func TestApprovalRoutesAnswerAsTheirTools(t *testing.T) {
 	d := newTwoDoors(t, "approval-read-doors", "read", "write", "enrich")
 	company := createdID(t, d.e, "/v1/companies", AnyMap{
 		"source": "manual", "display_name": "Approval Door GmbH",
-		"domains": []AnyMap{{"domain": "example.com", "is_primary": true}},
+		"domains": []AnyMap{{"domain": "example.test", "is_primary": true}},
 	})
 	if status := d.e.Call(t, "POST", "/v1/companies/"+company+"/enrich", AnyMap{}, d.bearer, nil); status != http.StatusForbidden {
 		t.Fatalf("a site read should stage an approval → %d", status)

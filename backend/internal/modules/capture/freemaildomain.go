@@ -182,10 +182,8 @@ func (s *FreemailDomainStore) AddConfirmed(ctx context.Context, domain, kind str
 		if err := lockFreemailDomain(ctx, tx, base); err != nil {
 			return err
 		}
-		var before *string
-		if err := tx.QueryRow(ctx,
-			`SELECT kind FROM capture_freemail_domain WHERE domain = $1`, base).Scan(&before); err != nil &&
-			!errors.Is(err, pgx.ErrNoRows) {
+		before, err := priorFreemailKind(ctx, tx, base)
+		if err != nil {
 			return err
 		}
 		// The specific demand, now that the write knows which half it is:
@@ -196,9 +194,7 @@ func (s *FreemailDomainStore) AddConfirmed(ctx context.Context, domain, kind str
 		// the contract promises an idempotent re-add answers the existing
 		// entry, so a create-only seat retrying a lost response must not 403.
 		// UpsertAction keeps this demand and the audit verb below one word.
-		rewriting := before != nil && *before != kind
-		freshCarveOut := before == nil && kind == FreemailKindNever
-		required := auth.UpsertAction(rewriting || freshCarveOut)
+		required := auth.UpsertAction(changesPriorDecision(before, kind))
 		if err := auth.Require(ctx, freemailDomainObject, required); err != nil {
 			return err
 		}
@@ -344,4 +340,20 @@ func readMatcherTx(ctx context.Context, tx pgx.Tx) (*freemail.Matcher, error) {
 		return nil, fmt.Errorf("capture: reading the workspace consumer-mail list: %w", err)
 	}
 	return freemail.New(extra, never), nil
+}
+
+// priorFreemailKind is the kind a domain already has on the list, nil for none.
+func priorFreemailKind(ctx context.Context, tx pgx.Tx, domain string) (*string, error) {
+	var kind *string
+	err := tx.QueryRow(ctx, `SELECT kind FROM capture_freemail_domain WHERE domain = $1`, domain).Scan(&kind)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return nil, err
+	}
+	return kind, nil
+}
+
+// changesPriorDecision is true for a fresh carve-out and for a kind flip, the
+// two writes that need the update grant.
+func changesPriorDecision(before *string, kind string) bool {
+	return (before != nil && *before != kind) || (before == nil && kind == FreemailKindNever)
 }

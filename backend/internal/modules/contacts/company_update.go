@@ -370,31 +370,8 @@ func (s *Store) stageCompanyReplaceSets(ctx context.Context, tx pgx.Tx, id ids.C
 		}
 		*in.ExtensionRelationshipTypes = deduped
 	}
-	if in.Domains != nil {
-		if err := parseCompanyDomains(*in.Domains); err != nil {
-			return "", err
-		}
-		// Collapse hosts that normalize to the same domain so the probe,
-		// reconcile, and audit-after all see one row per host.
-		*in.Domains = dedupeDomains(*in.Domains)
-		if err := ensureCompanyDomainsUnclaimedExcept(ctx, tx, id, *in.Domains); err != nil {
-			return "", err
-		}
-		if err := s.refuseConsumerCompanyDomains(ctx, tx, id, *in.Domains); err != nil {
-			return "", err
-		}
-		// And elect the primary HERE, for the same reason and on the same
-		// slice. The reconcile elects one either way, but on a copy — so an
-		// election left to it lands on the row while the audit after-image,
-		// built from this slice, still reports the domain as ordinary. The
-		// trail would then say a company has no primary domain while the row
-		// says it does, and is_primary is exactly what admits that company to
-		// the website read the trail exists to explain.
-		live, err := livePrimaryDomain(ctx, tx, id)
-		if err != nil {
-			return "", err
-		}
-		*in.Domains = electPrimary(*in.Domains, live)
+	if err := s.stageCompanyDomains(ctx, tx, id, in); err != nil {
+		return "", err
 	}
 	changed, err := companyReplaceSetsChanged(ctx, tx, id, in)
 	if err != nil {
@@ -407,6 +384,33 @@ func (s *Store) stageCompanyReplaceSets(ctx context.Context, tx pgx.Tx, id ids.C
 		p.Set("updated_at", current.UpdatedAt, time.Now().UTC())
 	}
 	return by, nil
+}
+
+// stageCompanyDomains parses, de-duplicates and vets a domain replace-set in place,
+// so the probe, the reconcile and the audit image all see the same slice.
+func (s *Store) stageCompanyDomains(ctx context.Context, tx pgx.Tx, id ids.CompanyID, in UpdateCompanyInput) error {
+	if in.Domains == nil {
+		return nil
+	}
+	if err := parseCompanyDomains(*in.Domains); err != nil {
+		return err
+	}
+	// One row per host for the probe, the reconcile and the audit image.
+	*in.Domains = dedupeDomains(*in.Domains)
+	if err := ensureCompanyDomainsUnclaimedExcept(ctx, tx, id, *in.Domains); err != nil {
+		return err
+	}
+	if err := s.refuseConsumerCompanyDomains(ctx, tx, id, *in.Domains); err != nil {
+		return err
+	}
+	// Elect the primary on this slice, so the audit after-image names the
+	// primary the reconcile writes.
+	live, err := livePrimaryDomain(ctx, tx, id)
+	if err != nil {
+		return err
+	}
+	*in.Domains = electPrimary(*in.Domains, live)
+	return nil
 }
 
 // reconcileCompanyReplaceSets lands the two replace-sets on the row the patch just
