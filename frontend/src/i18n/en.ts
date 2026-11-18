@@ -18105,7 +18105,7 @@ export const en = {
   "embedreindex.lastProgress": "Last progress {duration} ago",
   "embedreindex.entitiesPending": "{count} records pending",
   "embedreindex.modelMismatch":
-    "The index was built with {populated}. Search now uses {configured}.",
+    "The last reindex ran with {populated}. Search now uses {configured}.",
   "embedreindex.workspacePending": "{count} pending",
   "embedreindex.reviewCta": "Review and reindex",
   "embedreindex.rebuildCta": "Rebuild index",

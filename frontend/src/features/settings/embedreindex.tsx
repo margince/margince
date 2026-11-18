@@ -119,7 +119,7 @@ function StatusHeader({
           })}
         </span>
       )}
-      {/* The cause when the index was built with another model: the count
+      {/* The cause when the last reindex ran with another model: the count
           alone can read 0 while the badge still says a reindex is needed. */}
       {!isRunning &&
         data.populated_identity !== "" &&
