@@ -44,9 +44,9 @@ const maxCapSteps = 1 << 16
 // under c than under other.
 //
 // A cap of n per w lets n·⌈L/w⌉ through in a stretch of length L. c gains most
-// just after each multiple of its own window, so only those stretches are
-// compared: k·w + ε lets n_c·(k+1) through under c, and n_o·(⌊k·w_c/w_o⌋+1)
-// under other.
+// just after each multiple of its own window, so only those stretches count.
+// A stretch of k·w_c + ε lets n_c·(k+1) through under c. Under other it lets
+// n_o·(⌊k·w_c/w_o⌋+1) through.
 func allowsMore(c, other *FrequencyCap) bool {
 	nc, wc := big.NewInt(int64(c.Messages)), big.NewInt(int64(c.Window))
 	no, wo := big.NewInt(int64(other.Messages)), big.NewInt(int64(other.Window))

@@ -283,7 +283,7 @@ func TestADegenerateCapDoesNotWinByArgumentOrder(t *testing.T) {
 }
 
 // A cap is tighter only if it lets no more through in every stretch of time.
-// Two per 3h has the lower average and lets two out at once; one per hour lets
+// Two per 3h has the lower average and lets two out at once. One per hour lets
 // one out at once and more over a day. Neither holds the other, so the fold
 // answers a cap that holds both, whichever side each is on.
 func TestACapWithTheLowerRateAndTheBiggerBurstDoesNotWin(t *testing.T) {
