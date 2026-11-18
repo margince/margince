@@ -32,9 +32,6 @@ func NewTaskCensus() (*aitasks.Registry, error) {
 	multiTurn := func(task ai.Task, variant string, c aitasks.CaseFactory) {
 		register(ai.SiteKindMultiTurn, task, variant, c)
 	}
-	agentLoop := func(task ai.Task, variant string, c aitasks.CaseFactory) {
-		register(ai.SiteKindAgentLoop, task, variant, c)
-	}
 
 	oneShot(ai.TaskCaptureClassify, "classify", captureClassifyCases{})
 	oneShot(ai.TaskCaptureClassify, "deal_topic", dealTopicCases{})
@@ -97,7 +94,7 @@ func NewTaskCensus() (*aitasks.Registry, error) {
 	multiTurn(ai.TaskColdStart, "sitereadmessage", companyReadMessageCases{})
 	multiTurn(ai.TaskColdStart, "acts", onboardingActCases{})
 	for _, agent := range ai.AgentsFor(ai.TaskAgentLoop) {
-		agentLoop(ai.TaskAgentLoop, agent.Name, agentLoopCases{agent: agent.Name})
+		register(ai.SiteKindAgentLoop, ai.TaskAgentLoop, agent.Name, agentLoopCases{agent: agent.Name})
 	}
 
 	return r, r.Validate()

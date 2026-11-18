@@ -1,4 +1,3 @@
-<!-- prose:plain -->
 # Expose a core service to extensions
 
 Use this page when a unit needs something the core owns and holds a secret for or spends shared money on, such as the AI models or the object store. The unit asks for it by name, and the core makes the call. For why the design is this way, read [Why an extension declares what it uses from the core](../explanation/extension-capability-grants.md). To choose between this and the other doors into the core, read [The doors from a unit into the core](../explanation/extensions-at-a-glance.md#the-doors-from-a-unit-into-the-core).
@@ -36,7 +35,7 @@ The plumbing is small. The review is about these questions, and each answer is i
 | Which workspace? | The caller's principal, never an argument. |
 | What can one unit reach of another's? | Nothing. `objects` builds the key from the workspace and the unit's name, and a name has no separator. |
 | Can the call spend without a trace? | No. `models` writes an audit row naming the unit before the call. |
-| Does the data follow the rules about a person? | `models` needs `About` or `NoContactData`, and refuses a contact under a restriction of processing. |
+| Does the data follow the rules on personal data? | `models` needs `About` or `NoContactData`, and refuses a contact under a restriction of processing. |
 | What does a failure show the unit? | An error with no provider, host or path. The core logs the real error with the unit's name. |
 | What is the size or rate cap? | `objects` caps a body at `extension.MaxObjectBytes`. `models` has one shared budget and no cap for each unit. |
 | What happens when the unit is removed? | `objects` deletes the unit's prefix at the next boot. A capability that stores anything needs this too. |
