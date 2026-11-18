@@ -4,6 +4,7 @@
 package activities
 
 import (
+	"archive/zip"
 	"bytes"
 	"errors"
 	"strings"
@@ -130,7 +131,10 @@ func TestAnUploadWhoseBytesContradictItsNameIsRefused(t *testing.T) {
 		{"a program with no declared type", "disguised.pdf", "", program, true},
 		{"svg named png", "picture.png", "image/png", []byte(`<svg xmlns="http://www.w3.org/2000/svg"/>`), true},
 		{"a real pdf", "quote.pdf", "application/pdf", []byte("%PDF-1.7 x"), false},
-		{"a docx", "terms.docx", "", []byte("PK\x03\x04rest"), false},
+		{"a docx", "terms.docx", "", zipBytes(t, "[Content_Types].xml", "word/document.xml"), false},
+		{"a jar named docx", "terms.docx", "", zipBytes(t, "META-INF/MANIFEST.MF", "A.class"), true},
+		{"utf-16 csv with its charset", "export.csv", "text/csv; charset=utf-16le", []byte("n\x00,\x00c\x00\r\x00\n\x00"), false},
+		{"utf-16 csv with no charset", "export.csv", "text/csv", []byte("n\x00,\x00c\x00\r\x00\n\x00"), true},
 		{"a text note", "note.txt", "text/plain", []byte("Köln"), false},
 	} {
 		in := AttachmentInput{Filename: tc.filename, ContentType: tc.declared, Content: bytes.NewReader(tc.content)}
@@ -140,4 +144,19 @@ func TestAnUploadWhoseBytesContradictItsNameIsRefused(t *testing.T) {
 			t.Errorf("%s: acceptUploadedFile error = %v, refused = %v, want refused = %v", tc.name, err, isRefusal, tc.refused)
 		}
 	}
+}
+
+func zipBytes(t *testing.T, names ...string) []byte {
+	t.Helper()
+	var buf bytes.Buffer
+	zw := zip.NewWriter(&buf)
+	for _, name := range names {
+		if _, err := zw.Create(name); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := zw.Close(); err != nil {
+		t.Fatal(err)
+	}
+	return buf.Bytes()
 }

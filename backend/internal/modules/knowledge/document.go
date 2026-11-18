@@ -212,7 +212,7 @@ func (s *Store) readyUpload(ctx context.Context, in *NewDocument) (string, strin
 	if !ok {
 		return "", "", 0, &UnsupportedTypeError{Got: refusedTypeName(media, *in)}
 	}
-	if contradicted, err := filesniff.Contradicts(media, in.Content); err != nil {
+	if contradicted, err := filesniff.Contradicts(media, filesniff.DeclaredCharset(in.ContentType), in.Content); err != nil {
 		return "", "", 0, err
 	} else if contradicted {
 		return "", "", 0, &UnsupportedTypeError{Got: refusedTypeName(media, *in)}

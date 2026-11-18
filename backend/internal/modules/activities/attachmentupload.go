@@ -217,7 +217,7 @@ func acceptUploadedFile(in AttachmentInput) (AttachmentInput, error) {
 		return in, err
 	}
 	// Only the bytes catch a program renamed to .pdf.
-	contradicted, err := filesniff.Contradicts(mediaType, in.Content)
+	contradicted, err := filesniff.Contradicts(mediaType, filesniff.DeclaredCharset(in.ContentType), in.Content)
 	if err != nil {
 		return in, err
 	}

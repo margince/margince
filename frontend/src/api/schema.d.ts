@@ -23773,7 +23773,8 @@ export interface paths {
          *     (a hidden or cross-tenant entity answers 404, never leaks existence).
          *     The file must be an accepted kind (PDF, Office, OpenDocument, RTF, text, CSV,
          *     Markdown, HTML, PNG, JPEG, GIF, WebP, HEIC, HEIF, TIFF, zip, .eml or .msg); any other type
-         *     answers 422 `unsupported_file_type`.
+         *     answers 422 `unsupported_file_type`. So does a file whose content does not match its
+         *     name or declared type, such as a program renamed to `.pdf`.
          *
          *     An agent may file one no larger than the `attach_document` tool takes: what one MCP
          *     request carries inline, or the operator's attachment limit when that is smaller. A
@@ -26086,7 +26087,7 @@ export interface paths {
         put?: never;
         /**
          * Add a document to this corpus.
-         * @description Accepts only files whose bytes are their own text — text/plain, text/markdown, text/csv, application/json. Anything else is refused naming what is accepted; there is no parser in this product, and a PDF arriving as an empty corpus is worse than a PDF refused. Ingest is asynchronous: the document lands `queued` and its progress is read back from this path's GET. The set that ships with Margince takes no uploads: only Margince files pages in it.
+         * @description Accepts only files whose bytes are their own text — text/plain, text/markdown, text/csv, application/json. Anything else is refused naming what is accepted; there is no parser in this product, and a PDF arriving as an empty corpus is worse than a PDF refused. A file whose content is not text, such as a program renamed to `.md`, is refused the same way. Ingest is asynchronous: the document lands `queued` and its progress is read back from this path's GET. The set that ships with Margince takes no uploads: only Margince files pages in it.
          */
         post: operations["uploadCorpusDocument"];
         delete?: never;

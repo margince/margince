@@ -45,6 +45,15 @@ describe("filenameFromDisposition", () => {
     );
   });
 
+  it("unescapes a quote in the quoted name the way the server writes it", () => {
+    expect(
+      filenameFromDisposition(
+        'attachment; filename="a\\"b.txt"',
+        "fallback.csv",
+      ),
+    ).toBe('a"b.txt');
+  });
+
   it("prefers the extended name over its ASCII fallback", () => {
     expect(
       filenameFromDisposition(

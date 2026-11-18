@@ -70,8 +70,9 @@ export function filenameFromDisposition(
   fallback: string,
 ): string {
   const extended = /filename\*=UTF-8''([^;\s]+)/i.exec(disposition ?? "");
-  const quoted = /filename="([^"]+)"/.exec(disposition ?? "");
-  const name = (decodeExtended(extended?.[1]) ?? quoted?.[1])?.trim();
+  const quoted = /filename="((?:[^"\\]|\\.)+)"/.exec(disposition ?? "");
+  const unescaped = quoted?.[1]?.replace(/\\(.)/g, "$1");
+  const name = (decodeExtended(extended?.[1]) ?? unescaped)?.trim();
   if (!name) {
     return fallback;
   }

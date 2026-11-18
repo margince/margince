@@ -12,6 +12,8 @@ package integration
 // every dead credential reads alike, and a room session holds no CRM authority.
 
 import (
+	"archive/zip"
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -565,7 +567,7 @@ func TestTheConversationFlowsBothWaysAndADocumentIsNeverConfirmed(t *testing.T) 
 	// A thread follows its document out of the room. Removing the document is
 	// how a seller takes something back — and the conversation about it goes
 	// with it, rather than hanging in the buyer's list pointing at nothing.
-	withdrawn := uploadDealFile(t, e, dealID, "pricing_internal.xlsx", []byte("PK\x03\x04secret"))
+	withdrawn := uploadDealFile(t, e, dealID, "pricing_internal.xlsx", minimalXLSX(t))
 	var withdrawnDoc AnyMap
 	e.Call(t, "POST", "/v1/deal-rooms/"+room.roomID+"/documents", AnyMap{"attachment_id": withdrawn, "group_key": "commercial", "source": "manual"}, nil, &withdrawnDoc)
 	e.Call(t, "POST", "/v1/deal-rooms/"+room.roomID+"/threads", AnyMap{"document_id": withdrawnDoc["id"], "body": "note on pricing", "source": "manual"}, nil, nil)
@@ -629,4 +631,20 @@ func TestAThreadClosesToTheBuyerWhenItsDocumentLeavesTheRoom(t *testing.T) {
 		AnyMap{"body": "still there?"}, bearer(token), nil); status != http.StatusNotFound {
 		t.Fatalf("reply after the document left = %d, want 404", status)
 	}
+}
+
+// minimalXLSX is the smallest zip the upload check takes for a spreadsheet.
+func minimalXLSX(t *testing.T) []byte {
+	t.Helper()
+	var buf bytes.Buffer
+	zw := zip.NewWriter(&buf)
+	for _, name := range []string{"[Content_Types].xml", "xl/workbook.xml"} {
+		if _, err := zw.Create(name); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := zw.Close(); err != nil {
+		t.Fatal(err)
+	}
+	return buf.Bytes()
 }

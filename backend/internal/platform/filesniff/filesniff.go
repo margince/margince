@@ -1,35 +1,34 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Package filesniff compares an upload's first bytes with the media type its
-// name or Content-Type claims. Both claims come from the sender, so a program
-// renamed to .pdf passes a name check and fails here.
+// Package filesniff compares an upload's bytes with the media type its name or
+// Content-Type claims. Both claims come from the sender, so a program renamed
+// to .pdf passes a name check and fails here.
 package filesniff
 
 import (
 	"bytes"
-	"encoding/binary"
 	"io"
+	"mime"
 	"strings"
+	"unicode/utf16"
+	"unicode/utf8"
 
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
-// headLen covers the PDF rule (the marker may sit within the first 1024 bytes)
-// and the PE header offset check.
+// headLen is how much of the file the byte rules read.
 const headLen = 1024
 
 var (
-	zipMagic  = []byte("PK\x03\x04")
-	zipEmpty  = []byte("PK\x05\x06")
 	oleMagic  = []byte{0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1}
 	rtfMagic  = []byte(`{\rtf`)
 	pdfMagic  = []byte("%PDF-")
 	tiffLE    = []byte("II*\x00")
 	tiffBE    = []byte("MM\x00*")
 	elfMagic  = []byte("\x7fELF")
-	peMagic   = []byte("PE\x00\x00")
 	jpegMagic = []byte{0xFF, 0xD8, 0xFF}
+	utf8BOM   = []byte{0xEF, 0xBB, 0xBF}
 )
 
 // machO covers 32- and 64-bit images of both byte orders, plus the fat header
@@ -40,10 +39,19 @@ var machO = [][]byte{
 	{0xCA, 0xFE, 0xBA, 0xBE},
 }
 
-// Contradicts reports whether the content cannot be a file of mediaType. It
-// reads the head and rewinds, so the caller stores the same bytes it was given.
-// An empty file contradicts nothing; the upload's own empty-file refusal owns it.
-func Contradicts(mediaType string, content io.ReadSeeker) (bool, error) {
+// file is what a rule sees: the head for the cheap checks and the whole reader
+// for the archive rules.
+type file struct {
+	head    []byte
+	content io.ReadSeeker
+	charset string
+}
+
+// Contradicts reports whether the content cannot be a file of mediaType.
+// charset is the declared charset parameter ("" when none). It reads the file
+// and rewinds, so the caller stores the same bytes it was given. An empty file
+// contradicts nothing; the upload's own empty-file refusal owns it.
+func Contradicts(mediaType, charset string, content io.ReadSeeker) (bool, error) {
 	head := make([]byte, headLen)
 	n, err := io.ReadFull(content, head)
 	if err != nil && err != io.EOF && err != io.ErrUnexpectedEOF {
@@ -52,7 +60,31 @@ func Contradicts(mediaType string, content io.ReadSeeker) (bool, error) {
 	if _, err := content.Seek(0, io.SeekStart); err != nil {
 		return false, err
 	}
-	return headContradicts(mediaType, head[:n]), nil
+	f := file{head: head[:n], content: content, charset: strings.ToLower(charset)}
+	if len(f.head) == 0 {
+		return false, nil
+	}
+	if isExecutable(f.head) {
+		return true, nil
+	}
+	rule, ok := signatureRules[mediaType]
+	if !ok {
+		return false, nil
+	}
+	agrees := rule(f)
+	if _, err := content.Seek(0, io.SeekStart); err != nil {
+		return false, err
+	}
+	return !agrees, nil
+}
+
+// DeclaredCharset is the charset parameter of a declared Content-Type.
+func DeclaredCharset(declared string) string {
+	_, params, err := mime.ParseMediaType(declared)
+	if err != nil {
+		return ""
+	}
+	return params["charset"]
 }
 
 // Knows reports whether Contradicts has a rule for the media type. A type
@@ -62,19 +94,10 @@ func Knows(mediaType string) bool {
 	return ok
 }
 
-func headContradicts(mediaType string, head []byte) bool {
-	if len(head) == 0 {
-		return false
-	}
-	if isExecutable(head) {
-		return true
-	}
-	rule, ok := signatureRules[mediaType]
-	return ok && !rule(head)
-}
-
+// isExecutable refuses any file that opens with "MZ": a text file has no
+// reason to, and the PE header offset is the attacker's to place.
 func isExecutable(head []byte) bool {
-	if bytes.HasPrefix(head, elfMagic) {
+	if bytes.HasPrefix(head, []byte("MZ")) || bytes.HasPrefix(head, elfMagic) {
 		return true
 	}
 	for _, magic := range machO {
@@ -82,17 +105,13 @@ func isExecutable(head []byte) bool {
 			return true
 		}
 	}
-	if len(head) >= 0x40 && head[0] == 'M' && head[1] == 'Z' {
-		offset := int(binary.LittleEndian.Uint32(head[0x3C:]))
-		return offset >= 0 && offset+len(peMagic) <= len(head) && bytes.Equal(head[offset:offset+len(peMagic)], peMagic)
-	}
 	return false
 }
 
-func prefixed(magics ...[]byte) func([]byte) bool {
-	return func(head []byte) bool {
+func prefixed(magics ...[]byte) func(file) bool {
+	return func(f file) bool {
 		for _, magic := range magics {
-			if bytes.HasPrefix(head, magic) {
+			if bytes.HasPrefix(f.head, magic) {
 				return true
 			}
 		}
@@ -100,53 +119,124 @@ func prefixed(magics ...[]byte) func([]byte) bool {
 	}
 }
 
-func sniffed(mediaType string) func([]byte) bool {
-	return func(head []byte) bool { return extension.SniffContentType(head) == mediaType }
+func sniffed(mediaType string) func(file) bool {
+	return func(f file) bool { return extension.SniffContentType(f.head) == mediaType }
 }
 
-func isText(head []byte) bool {
-	return strings.HasPrefix(extension.SniffContentType(head), "text/")
+func isText(f file) bool {
+	if strings.HasPrefix(f.charset, "utf-16") {
+		return isUTF16Text(f.head)
+	}
+	return strings.HasPrefix(extension.SniffContentType(f.head), "text/")
 }
 
-func isPDF(head []byte) bool { return bytes.Contains(head, pdfMagic) }
-
-// isISOBMFF matches the "ftyp" box that HEIC and HEIF files open with.
-func isISOBMFF(head []byte) bool { return len(head) >= 12 && string(head[4:8]) == "ftyp" }
-
-// legacyOffice accepts an OLE file, a zip, RTF or text under an old extension.
-// Windows saves a CSV or an HTML table as .xls, and Word saves RTF as .doc.
-func legacyOffice(head []byte) bool {
-	return prefixed(oleMagic, zipMagic, zipEmpty, rtfMagic)(head) || isText(head)
+// isUTF16Text accepts a head that decodes as UTF-16 in either byte order
+// without control characters other than whitespace. A BOM is skipped.
+func isUTF16Text(head []byte) bool {
+	if len(head) >= 2 && (head[0] == 0xFF && head[1] == 0xFE || head[0] == 0xFE && head[1] == 0xFF) {
+		head = head[2:]
+	}
+	head = head[:len(head)&^1]
+	for _, bigEndian := range []bool{false, true} {
+		units := make([]uint16, len(head)/2)
+		for i := range units {
+			if bigEndian {
+				units[i] = uint16(head[2*i])<<8 | uint16(head[2*i+1])
+			} else {
+				units[i] = uint16(head[2*i+1])<<8 | uint16(head[2*i])
+			}
+		}
+		if plainRunes(utf16.Decode(units)) {
+			return true
+		}
+	}
+	return false
 }
 
-var zipBased = prefixed(zipMagic, zipEmpty)
+// plainRunes also wants a space, newline or delimiter. Random bytes often
+// decode to valid UTF-16 units, but never to a word break.
+func plainRunes(runes []rune) bool {
+	breaks := false
+	for _, r := range runes {
+		if r == utf8.RuneError || r < 0x20 && !strings.ContainsRune("\t\r\n\f", r) {
+			return false
+		}
+		breaks = breaks || strings.ContainsRune(" \t\r\n,;|", r)
+	}
+	return len(runes) > 0 && (breaks || len(runes) < 4)
+}
 
-// signatureRules holds, per stored media type, what its first bytes must look
-// like. Text types must sniff as text, which keeps any binary out of them.
-var signatureRules = map[string]func([]byte) bool{
-	"application/pdf":    isPDF,
-	"application/rtf":    prefixed(rtfMagic),
-	"application/msword": legacyOffice, "application/vnd.ms-excel": legacyOffice,
-	"application/vnd.ms-powerpoint":                                             legacyOffice,
-	"application/vnd.ms-outlook":                                                prefixed(oleMagic),
-	"application/vnd.openxmlformats-officedocument.wordprocessingml.document":   zipBased,
-	"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":         zipBased,
-	"application/vnd.openxmlformats-officedocument.presentationml.presentation": zipBased,
-	"application/vnd.oasis.opendocument.text":                                   zipBased,
-	"application/vnd.oasis.opendocument.spreadsheet":                            zipBased,
-	"application/vnd.oasis.opendocument.presentation":                           zipBased,
-	"application/zip":  zipBased,
-	"image/png":        sniffed("image/png"),
-	"image/jpeg":       prefixed(jpegMagic),
-	"image/gif":        sniffed("image/gif"),
-	"image/webp":       sniffed("image/webp"),
-	"image/tiff":       prefixed(tiffLE, tiffBE),
-	"image/heic":       isISOBMFF,
-	"image/heif":       isISOBMFF,
-	"text/plain":       isText,
-	"text/csv":         isText,
-	"text/markdown":    isText,
-	"text/html":        isText,
-	"message/rfc822":   isText,
-	"application/json": isText,
+// isPDF wants the marker at the start; a leading BOM or whitespace is allowed.
+func isPDF(f file) bool {
+	head := bytes.TrimPrefix(f.head, utf8BOM)
+	return bytes.HasPrefix(bytes.TrimLeft(head, " \t\r\n\x00"), pdfMagic)
+}
+
+// heifBrands are the brands that make an ISO base media file an image rather
+// than the mp4 or QuickTime video that shares its "ftyp" box.
+var heifBrands = map[string]bool{
+	"heic": true, "heix": true, "hevc": true, "heim": true, "heis": true,
+	"hevm": true, "hevs": true, "mif1": true, "msf1": true,
+}
+
+// isHEIF reads the major brand and the compatible brands of the ftyp box.
+func isHEIF(f file) bool {
+	head := f.head
+	if len(head) < 12 || string(head[4:8]) != "ftyp" {
+		return false
+	}
+	size := int(head[0])<<24 | int(head[1])<<16 | int(head[2])<<8 | int(head[3])
+	end := min(max(size, 12), len(head))
+	if heifBrands[string(head[8:12])] {
+		return true
+	}
+	for i := 16; i+4 <= end; i += 4 {
+		if heifBrands[string(head[i:i+4])] {
+			return true
+		}
+	}
+	return false
+}
+
+// isRTF or OLE only: a Word or PowerPoint file of today is a zip and carries
+// its own extension.
+var isOLEOrRTF = prefixed(oleMagic, rtfMagic)
+
+// isLegacySpreadsheet adds what Excel saves under .xls: a zip, HTML or CSV.
+func isLegacySpreadsheet(f file) bool {
+	return isOLEOrRTF(f) || isPlainZip(f) || isText(f)
+}
+
+// signatureRules holds, per stored media type, what the file must look like.
+// Text types must sniff as text, which keeps any binary out of them.
+var signatureRules = map[string]func(file) bool{
+	"application/pdf":               isPDF,
+	"application/rtf":               prefixed(rtfMagic),
+	"application/msword":            isOLEOrRTF,
+	"application/vnd.ms-powerpoint": isOLEOrRTF,
+	"application/vnd.ms-excel":      isLegacySpreadsheet,
+	"application/vnd.ms-outlook":    prefixed(oleMagic),
+	"application/zip":               isPlainZip,
+	"image/png":                     sniffed("image/png"),
+	"image/jpeg":                    prefixed(jpegMagic),
+	"image/gif":                     sniffed("image/gif"),
+	"image/webp":                    sniffed("image/webp"),
+	"image/tiff":                    prefixed(tiffLE, tiffBE),
+	"image/heic":                    isHEIF,
+	"image/heif":                    isHEIF,
+	"text/plain":                    isText,
+	"text/csv":                      isText,
+	"text/markdown":                 isText,
+	"text/html":                     isText,
+	"message/rfc822":                isText,
+	"application/json":              isText,
+}
+
+func init() {
+	for mediaType, part := range ooxmlMainParts {
+		signatureRules[mediaType] = ooxmlRule(part)
+	}
+	for mediaType := range odfTypes {
+		signatureRules[mediaType] = odfRule(mediaType)
+	}
 }
