@@ -6554,6 +6554,8 @@ export const en = {
     "Loaded deals only. Totals are unavailable with a stage filter.",
   "deals.totalsNoTeamFilter":
     "Loaded deals only. The stage totals cannot narrow by team or to unassigned deals, so none is shown.",
+  "deals.totalsNoLinkFilter":
+    "Loaded deals only. The stage totals cannot narrow by link type, so none is shown.",
   "deals.totalsNoRangeFilter":
     "Loaded deals only. The stage totals cannot narrow by close date, value, currency, country or a probability range other than a band, so none is shown.",
   "deals.filterCloseDate": "Close date",
@@ -8728,6 +8730,9 @@ export const en = {
   "analytics.field.host_user_id": "Meeting host",
   "analytics.field.kind": "Activity type",
   "analytics.field.last_activity_at": "Last activity",
+  "analytics.field.acquisition_source": "Acquisition source",
+  "analytics.field.commercial_motion": "Commercial motion",
+  "analytics.field.priority": "Priority",
   "analytics.field.link_type": "Linked as",
   "analytics.field.lost_reason": "Lost reason",
   "analytics.field.loss_reason": "Loss reason from the list",

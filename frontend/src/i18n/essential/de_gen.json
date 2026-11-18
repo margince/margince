@@ -2467,6 +2467,7 @@
   "deals.totalsNoArchived": "Nur geladene Deals. Keine Summen, solange archivierte Deals einbezogen werden.",
   "deals.totalsNoStageFilter": "Nur geladene Deals. Keine Summen, solange ein Phasenfilter aktiv ist.",
   "deals.totalsNoTeamFilter": "Nur geladene Deals. Es wird keine Summe angezeigt, da sich die Phasensummen nicht nach Team oder auf nicht zugewiesene Deals eingrenzen lassen.",
+  "deals.totalsNoLinkFilter": "Nur geladene Deals. Es wird keine Summe angezeigt, da sich die Phasensummen nicht nach Verknüpfungsart eingrenzen lassen.",
   "deals.totalsNoRangeFilter": "Nur geladene Deals. Es wird keine Summe angezeigt, da sich die Phasensummen nicht nach Abschlussdatum, Wert, Währung, Land oder einer Abschlusschance außerhalb der festen Stufen eingrenzen lassen.",
   "deals.statusOpen": "Offen",
   "deals.statusWon": "Gewonnen",

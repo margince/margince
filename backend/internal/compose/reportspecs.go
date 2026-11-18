@@ -39,6 +39,15 @@ func creditedSeatIsFilter() string {
 		" WHERE credit.id = %s))"
 }
 
+// withCommercialFilters adds the deal list's motion, priority and source
+// filters. filterPredicates matches each the way the list does.
+func withCommercialFilters(filters map[string]string) map[string]string {
+	for name := range deals.CommercialFilterPredicates("t") {
+		filters[name] = "t." + name
+	}
+	return filters
+}
+
 const (
 	fieldKind          = "kind"
 	fieldMeetingStatus = "meeting_status"
@@ -216,7 +225,7 @@ var prebuiltReports = map[string]reportSpec{
 		// partner_sourced and stalled are boolean-valued expressions, which
 		// the engine's generic `expr = $n` rendering already handles with no
 		// special-casing.
-		filters: map[string]string{
+		filters: withCommercialFilters(map[string]string{
 			fieldWinProbabilityBand: winProbabilityBandExpr,
 			fieldPipelineID:         colPipelineID,
 			fieldStatus:             colStatus,
@@ -232,8 +241,9 @@ var prebuiltReports = map[string]reportSpec{
 			fieldStalled:          deals.StalledSQL("t"),
 			fieldCurrency:         colCurrency,
 			fieldProjectID:        colProjectID,
-		},
-		filterScopes: projectFilterScope,
+		}),
+		filterPredicates: deals.CommercialFilterPredicates("t"),
+		filterScopes:     projectFilterScope,
 		// Both company references, which a normal deal read masks per row
 		// when the caller cannot open them. company_id is a FILTER here
 		// and not a dimension, and it needs the scope for that alone: a count

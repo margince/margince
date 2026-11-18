@@ -2467,6 +2467,7 @@
   "deals.totalsNoArchived": "Loaded deals only. Totals are unavailable while archived deals are included.",
   "deals.totalsNoStageFilter": "Loaded deals only. Totals are unavailable with a stage filter.",
   "deals.totalsNoTeamFilter": "Loaded deals only. The stage totals cannot narrow by team or to unassigned deals, so none is shown.",
+  "deals.totalsNoLinkFilter": "Loaded deals only. The stage totals cannot narrow by link type, so none is shown.",
   "deals.totalsNoRangeFilter": "Loaded deals only. The stage totals cannot narrow by close date, value, currency, country or a probability range other than a band, so none is shown.",
   "deals.statusOpen": "Open",
   "deals.statusWon": "Won",

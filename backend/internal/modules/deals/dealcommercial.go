@@ -41,30 +41,39 @@ func priorityOf(d crmcontracts.Deal) *string {
 	return &s
 }
 
-// appendCommercialFilters narrows a deal list by the three commercial-context
-// columns and by link type.
+// CommercialFilterPredicates are the three commercial-context filters, keyed by
+// wire name, each a template with one %[1]s for the bound value. The deal list
+// and the deals-by-stage report both render them, so the two count one set.
 //
 // Each also admits the sentinel "unset", which asks for the deals carrying no
 // value at all — a question no enum member can pose. Spelled as a sentinel
 // rather than an empty parameter because an empty string is what a cleared
 // form field sends, and "show me everything" is what THAT caller meant.
+func CommercialFilterPredicates(alias string) map[string]string {
+	out := make(map[string]string, len(commercialFilters))
+	for _, name := range commercialFilters {
+		out[name] = fmt.Sprintf("(%[1]s = %%[1]s OR (%[1]s IS NULL AND %%[1]s = '%[2]s'))",
+			columnPrefix(alias)+name, filterUnset)
+	}
+	return out
+}
+
+// commercialFilters are wire names that are also the deal's column names.
+var commercialFilters = []string{filterCommercialMotion, filterPriority, filterAcquisitionSource}
+
+// appendCommercialFilters narrows a deal list by the three commercial-context
+// columns and by link type.
 func appendCommercialFilters(where []string, in ListDealsInput, arg func(any) int) []string {
-	for _, f := range []struct {
-		column string
-		value  *string
-	}{
-		{filterCommercialMotion, in.CommercialMotion},
-		{filterPriority, in.Priority},
-		{filterAcquisitionSource, in.AcquisitionSource},
-	} {
-		if f.value == nil {
-			continue
+	predicates := CommercialFilterPredicates("")
+	values := map[string]*string{
+		filterCommercialMotion:  in.CommercialMotion,
+		filterPriority:          in.Priority,
+		filterAcquisitionSource: in.AcquisitionSource,
+	}
+	for _, name := range commercialFilters {
+		if value := values[name]; value != nil {
+			where = append(where, storekit.SQLf(predicates[name], storekit.SQLf("$%d", arg(*value))))
 		}
-		if *f.value == filterUnset {
-			where = append(where, storekit.SQLf("%s IS NULL", f.column))
-			continue
-		}
-		where = append(where, storekit.SQLf("%s = $%d", f.column, arg(*f.value)))
 	}
 	if in.LinkType != nil {
 		where = append(where, storekit.DealLinkFilter("deal.id", storekit.SQLf("$%d", arg(*in.LinkType))))
