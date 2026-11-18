@@ -8156,6 +8156,10 @@ export const en = {
     "This message names a purpose Margince does not know. Pick a contact reason from the list.",
   "sendPermission.reason.unknownPurposeFact":
     "This message names a purpose Margince does not know.",
+  "sendPermission.reason.noReason":
+    "This message gives no contact reason, and the thread does not show one. Pick a contact reason from the list.",
+  "sendPermission.reason.noReasonFact":
+    "This message gives no contact reason, and the thread does not show one.",
   "sendPermission.reason.claimContradicts":
     "The contact reason you picked does not match this thread. Pick another reason, or leave it empty so Margince reads it from the thread.",
   "sendPermission.reason.claimContradictsFact":

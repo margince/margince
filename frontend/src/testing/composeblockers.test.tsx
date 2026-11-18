@@ -18,6 +18,7 @@ import {
   newContactsOf,
   reasonTargetOf,
 } from "../features/mail/composeblockers";
+import { sendPermissionReasonKey } from "../format/sendpermissionreason";
 import { meFixture } from "./mefixture";
 import {
   allowedPreview,
@@ -536,6 +537,62 @@ describe("a message with no reason for contact yet", () => {
       await checks.findByText("Permission needed for this message"),
     ).toBeTruthy();
     expect(checks.getByText("No contact reason.")).toBeTruthy();
+  });
+});
+
+describe("a reply the thread gives no reason for", () => {
+  // Alice copied a colleague onto a customer's thread. The engine cannot place
+  // the reply, and nothing on the message names a purpose.
+  const UNPLACED = {
+    evidence_subject: { entity_type: "contact", entity_id: "c-1" },
+    reason_code: "unknown_purpose",
+    decided_by: "machine",
+    can_be_overruled: true,
+  } as const;
+
+  it("offers the reason list, states the gap once and lets the rep send with a reason", async () => {
+    const user = userEvent.setup();
+    requestBackend(UNPLACED);
+    render(
+      <ComposeModal
+        activityId="act-1"
+        entityType="contact"
+        entityId="c-1"
+        contactId="c-1"
+        open
+        onClose={vi.fn()}
+      />,
+      createQueryClient(),
+    );
+    await user.type(await screen.findByLabelText("To"), "anna@example.test");
+    await user.tab();
+
+    expect(
+      await screen.findByRole("combobox", { name: "Reason for contact" }),
+    ).toBeTruthy();
+    expect(
+      await screen.findByRole("button", { name: "Send with a reason…" }),
+    ).toBeEnabled();
+    expect(screen.getAllByText("No contact reason.")).toHaveLength(1);
+    expect(screen.queryByText(/gives no contact reason/)).toBeNull();
+    expect(
+      screen.queryByText(/names a purpose Margince does not know/),
+    ).toBeNull();
+  });
+
+  it("names the missing reason, not an unknown purpose, where no reason was given", () => {
+    expect(
+      sendPermissionReasonKey("unknown_purpose", { unclaimed: true }),
+    ).toBe("sendPermission.reason.noReasonFact");
+    expect(
+      sendPermissionReasonKey("unknown_purpose", {
+        unclaimed: true,
+        picksReason: true,
+      }),
+    ).toBe("sendPermission.reason.noReason");
+    expect(sendPermissionReasonKey("unknown_purpose")).toBe(
+      "sendPermission.reason.unknownPurposeFact",
+    );
   });
 });
 

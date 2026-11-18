@@ -7964,6 +7964,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Tin nhắn này nêu một mục đích mà Margince không nhận ra. Chọn lý do liên hệ trong danh sách.",
   "sendPermission.reason.unknownPurposeFact":
     "Tin nhắn này nêu một mục đích mà Margince không nhận ra.",
+  "sendPermission.reason.noReason":
+    "Tin nhắn này không nêu lý do liên hệ, và chuỗi thư cũng không cho thấy lý do nào. Chọn lý do liên hệ trong danh sách.",
+  "sendPermission.reason.noReasonFact":
+    "Tin nhắn này không nêu lý do liên hệ, và chuỗi thư cũng không cho thấy lý do nào.",
   "sendPermission.reason.claimContradicts":
     "Lý do liên hệ bạn chọn không khớp với chuỗi thư này. Chọn lý do khác, hoặc để trống để Margince tự xác định từ chuỗi thư.",
   "sendPermission.reason.claimContradictsFact":

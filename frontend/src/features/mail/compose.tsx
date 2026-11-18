@@ -426,7 +426,7 @@ export function ComposeWindow({
               anchorActivity={thread.anchorActivity}
               dealChoice={dealChoice}
               bodyKey={wording.body}
-              permission={(override, picksReason) => (
+              permission={(override, surface) => (
                 <SendPermission
                   {...send.permission}
                   refusal={
@@ -443,7 +443,8 @@ export function ComposeWindow({
                     }
                   }
                   override={override}
-                  picksReason={picksReason}
+                  picksReason={surface.picksReason}
+                  unclaimed={surface.unclaimed}
                   namesRecipients
                   onRecheck={send.permission.recheck}
                 />

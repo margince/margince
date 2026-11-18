@@ -1,9 +1,13 @@
+import type { MessageKey } from "../i18n/en";
+
 /** What the surface draws, so a sentence asks only for a control that is there. */
 export type RefusalSurface = Readonly<{
   /** A reason for contact can be recorded under the rep's name. */
   recordable?: boolean;
   /** The message's own reason for contact can be picked. */
   picksReason?: boolean;
+  /** The message was sent with no reason for contact of its own. */
+  unclaimed?: boolean;
 }>;
 
 /**
@@ -49,14 +53,66 @@ export function refusalKindOf(
   }
 }
 
+// A refusal the message's own reason can lift asks for that reason only where
+// the surface draws the pick; elsewhere it states the fact alone.
+type AskOrFact = Readonly<{ ask: MessageKey; fact: MessageKey }>;
+const PICKABLE: ReadonlyMap<string, AskOrFact> = new Map([
+  [
+    "no_marketing_consent",
+    {
+      ask: "sendPermission.reason.noMarketingConsent",
+      fact: "sendPermission.reason.noMarketingConsentFact",
+    },
+  ],
+  [
+    "legacy_transactional_unevidenced",
+    {
+      ask: "sendPermission.reason.legacyPurpose",
+      fact: "sendPermission.reason.legacyPurposeFact",
+    },
+  ],
+  [
+    "unknown_purpose",
+    {
+      ask: "sendPermission.reason.unknownPurpose",
+      fact: "sendPermission.reason.unknownPurposeFact",
+    },
+  ],
+  [
+    "claim_contradicts_resolution",
+    {
+      ask: "sendPermission.reason.claimContradicts",
+      fact: "sendPermission.reason.claimContradictsFact",
+    },
+  ],
+]);
+
+// With no reason given, the purpose the engine could not place is the missing
+// reason itself, not one the message named.
+const NO_REASON: AskOrFact = {
+  ask: "sendPermission.reason.noReason",
+  fact: "sendPermission.reason.noReasonFact",
+};
+
 // Unknown refusal codes retain the generic refusal instead of exposing a code.
 // A read-only surface gets the fact alone.
 export function sendPermissionReasonKey(
   reason: string | undefined,
-  { recordable = false, picksReason = false }: RefusalSurface = {},
+  {
+    recordable = false,
+    picksReason = false,
+    unclaimed = false,
+  }: RefusalSurface = {},
   category?: string,
 ) {
   const dealFollowup = category === DEAL_FOLLOWUP;
+  const pickable =
+    reason === "unknown_purpose" && unclaimed
+      ? NO_REASON
+      : PICKABLE.get(reason ?? "");
+  if (pickable) {
+    return picksReason ? pickable.ask : pickable.fact;
+  }
   switch (reason) {
     case "marketing_objection":
       return "sendPermission.reason.objected" as const;
@@ -92,22 +148,6 @@ export function sendPermissionReasonKey(
           : ("sendPermission.unprovenRefuses" as const);
     case "deal_not_requested":
       return "sendPermission.reason.dealNotRequested" as const;
-    case "no_marketing_consent":
-      return picksReason
-        ? ("sendPermission.reason.noMarketingConsent" as const)
-        : ("sendPermission.reason.noMarketingConsentFact" as const);
-    case "legacy_transactional_unevidenced":
-      return picksReason
-        ? ("sendPermission.reason.legacyPurpose" as const)
-        : ("sendPermission.reason.legacyPurposeFact" as const);
-    case "unknown_purpose":
-      return picksReason
-        ? ("sendPermission.reason.unknownPurpose" as const)
-        : ("sendPermission.reason.unknownPurposeFact" as const);
-    case "claim_contradicts_resolution":
-      return picksReason
-        ? ("sendPermission.reason.claimContradicts" as const)
-        : ("sendPermission.reason.claimContradictsFact" as const);
     default:
       return "sendPermission.reason.other" as const;
   }
