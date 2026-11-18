@@ -76,10 +76,12 @@ SELECT a.id, coalesce(delivery.status, ''), delivery.reason,
 		var id ids.UUID
 		var state EmailRowState
 		var reply ourReplyRow
-		if err := rows.Scan(append([]any{&id, &state.Delivery.Status, &state.Delivery.Reason, &state.Delivery.SentAt,
+		if err := rows.Scan(append([]any{
+			&id, &state.Delivery.Status, &state.Delivery.Reason, &state.Delivery.SentAt,
 			&state.Delivery.BouncedAt, &state.Delivery.BounceReason, &state.Delivery.Files,
 			&state.Delivery.Controller, &state.Delivery.FromAddress, &state.Move,
-			&state.RequestHasReminder}, reply.targets()...)...); err != nil {
+			&state.RequestHasReminder,
+		}, reply.targets()...)...); err != nil {
 			return nil, err
 		}
 		state.OurReply = reply.contract(openapi_types.UUID(id))

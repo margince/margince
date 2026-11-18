@@ -168,7 +168,7 @@ func TestCompletingTheNamedReminderSettlesTheRequest(t *testing.T) {
 
 // summaryAs is the request's email summary as reader reads it, the one
 // History draws its badge from.
-func summaryAs(t *testing.T, e *loadEnv, reader context.Context, request ids.UUID) crmcontracts.EmailSummary {
+func summaryAs(reader context.Context, t *testing.T, e *loadEnv, request ids.UUID) crmcontracts.EmailSummary {
 	t.Helper()
 	summaries, err := readingAtRequest(storeKnowing(e)).EmailSummariesByID(reader, []ids.UUID{request})
 	if err != nil {
@@ -187,11 +187,11 @@ func TestHistoryStopsSayingNeedsReplyOnceWeReplied(t *testing.T) {
 	e := setupLoad(t)
 	request := seedEmailRequest(t, e, "Badge after reply", "commitment", OwedVerdictAsksUs)
 	mintReminder(t, e, requestInstant.Add(time.Hour))
-	if move := summaryAs(t, e, e.as(), request).Move; move != crmcontracts.EmailSummaryMoveNeedsReply {
+	if move := summaryAs(e.as(), t, e, request).Move; move != crmcontracts.EmailSummaryMoveNeedsReply {
 		t.Fatalf("before our reply the badge reads %q", move)
 	}
 	replyTo(t, e, request, "On it.", requestInstant.Add(2*time.Hour))
-	summary := summaryAs(t, e, e.as(), request)
+	summary := summaryAs(e.as(), t, e, request)
 	if summary.OurReply == nil || summary.Move != crmcontracts.EmailSummaryMoveNone {
 		t.Fatalf("after our reply the badge reads %q (our reply %+v)", summary.Move, summary.OurReply)
 	}
@@ -215,13 +215,13 @@ func TestOurReplyNamesTheReminderOnlyToWhoMayChangeIt(t *testing.T) {
 	other.SeatType = principal.SeatFull
 	reader := principal.WithActor(e.as(), other)
 
-	if reply := summaryAs(t, e, asRepCompleting(t, e), request).OurReply; reply == nil || reply.ReminderId == nil {
+	if reply := summaryAs(asRepCompleting(t, e), t, e, request).OurReply; reply == nil || reply.ReminderId == nil {
 		t.Fatal("the reminder's holder is not offered it")
 	}
-	if reply := summaryAs(t, e, reader, request).OurReply; reply == nil || reply.ReminderId != nil {
+	if reply := summaryAs(reader, t, e, request).OurReply; reply == nil || reply.ReminderId != nil {
 		t.Fatalf("a colleague who may not change the reminder is offered it: %+v", reply)
 	}
-	if reply := summaryAs(t, e, e.as(), request).OurReply; reply == nil || reply.ReminderId != nil {
+	if reply := summaryAs(e.as(), t, e, request).OurReply; reply == nil || reply.ReminderId != nil {
 		t.Fatalf("a reader without the update grant is offered the reminder: %+v", reply)
 	}
 }
@@ -248,7 +248,7 @@ func TestAnUndeliveredReplyIsNotOurReply(t *testing.T) {
 				VALUES ($1, $2, $3, 'gmail', $4, '[]', 'Re: request', 'Here it is.', 'business_correspondence', 'user', `+delivery+`)`,
 				ids.NewV7(), reply, e.rep, ids.NewV7().String()+"@undelivered.test")
 
-			summary := summaryAs(t, e, e.as(), request)
+			summary := summaryAs(e.as(), t, e, request)
 			if summary.OurReply != nil || summary.Move != crmcontracts.EmailSummaryMoveNeedsReply {
 				t.Fatalf("an undelivered reply counts (badge %q, our reply %+v)", summary.Move, summary.OurReply)
 			}

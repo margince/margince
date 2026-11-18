@@ -19,6 +19,8 @@ const (
 	followUpMaxDays = 30
 	// settingsAuditVerb is the audit action every activities settings change records.
 	settingsAuditVerb = "update"
+	// settingsObject is the grant that guards every activities setting.
+	settingsObject = "installation_settings"
 )
 
 // FollowUpAfterDays is how long a message the reader sent may go unanswered
@@ -33,7 +35,7 @@ var FollowUpAfterDays = config.DefineStored(config.Spec[int]{
 	Max:     config.Some(followUpMaxDays),
 	Doc:     "Days a sent message may go without a reply before its sender is asked to follow up.",
 }, config.Store{
-	RBACObject: "installation_settings", AuditVerb: settingsAuditVerb,
+	RBACObject: settingsObject, AuditVerb: settingsAuditVerb,
 	MachineryApplied: true, // the worklist applies it to rows the reader is separately gated for
 })
 
@@ -48,7 +50,7 @@ var PrivateMailRequests = config.DefineStored(config.Spec[bool]{
 	Default: config.Some(true),
 	Doc:     "Let the AI check whether private mail asks its reader for something. Only mail private because of a setting is checked; mail held for any other reason never is.",
 }, config.Store{
-	RBACObject: "installation_settings", AuditVerb: settingsAuditVerb,
+	RBACObject: settingsObject, AuditVerb: settingsAuditVerb,
 	MachineryApplied: true, // the owed-reply pass reads it as the system, for every seat's mail
 })
 

@@ -57,8 +57,10 @@ func TestARepliedRequestOffersItsReminderInsteadOfSayingTheBuyerWaits(t *testing
 func TestARepliedRequestQuotesWhatIsStillAsked(t *testing.T) {
 	reminder := openapi_types.UUID(ids.NewV7())
 	asked := "send the signed order form"
-	f := facts{deal: openDeal(), now: testNow, loc: time.UTC,
-		currentRequests: []crmcontracts.Activity{repliedRequest(testNow.Add(-time.Hour), &reminder, &asked)}}
+	f := facts{
+		deal: openDeal(), now: testNow, loc: time.UTC,
+		currentRequests: []crmcontracts.Activity{repliedRequest(testNow.Add(-time.Hour), &reminder, &asked)},
+	}
 	if mv := decideMove(f); mv.Reason != "You replied today. Still asked: "+asked {
 		t.Fatalf("the move does not quote the remaining ask: %q", mv.Reason)
 	}
