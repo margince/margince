@@ -280,7 +280,7 @@ func (e *promoteConsentEnv) someHandoffReason(t *testing.T, appliesTo string) id
 	id := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(), `
 		INSERT INTO sdr_handoff_reason (id, label, applies_to) VALUES ($1, $2, $3)`,
-		id, t.Name()+" "+appliesTo+" reason", appliesTo); err != nil {
+		id, t.Name()+" "+id.String()+" "+appliesTo+" reason", appliesTo); err != nil {
 		t.Fatalf("seeding a %s reason: %v", appliesTo, err)
 	}
 	return id

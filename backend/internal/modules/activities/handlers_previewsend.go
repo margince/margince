@@ -32,6 +32,7 @@ func (h Handlers) PreviewSendAuthorization(w http.ResponseWriter, r *http.Reques
 		writeStoreErr(w, r, err)
 		return
 	}
+	in.Subject, in.Body = deref(req.Subject), deref(req.Body)
 	h.answerPreview(w, r, FromActivity(pathID[ids.ActivityKind](id)), in)
 }
 
@@ -55,6 +56,7 @@ func (h Handlers) PreviewAccountSendAuthorization(w http.ResponseWriter, r *http
 		writeStoreErr(w, r, err)
 		return
 	}
+	in.Subject, in.Body = deref(req.Subject), deref(req.Body)
 	h.answerPreview(w, r, FromAccount(links), in)
 }
 
@@ -102,14 +104,26 @@ func previewInputFrom(to []openapi_types.Email, category, marketing, purpose *st
 func previewResponse(preview SendPreview) crmcontracts.SendAuthorizationPreview {
 	set := preview.Decisions
 	out := crmcontracts.SendAuthorizationPreview{
-		Allowed:    set.Allowed(),
-		Recipients: make([]crmcontracts.SendAuthorizationPreviewRecipient, 0, len(set.Decisions)),
+		Allowed:         set.Allowed(),
+		Recipients:      make([]crmcontracts.SendAuthorizationPreviewRecipient, 0, len(set.Decisions)),
+		ContentFindings: wireContentFindings(preview.ContentFindings),
 	}
 	for _, d := range set.Decisions {
 		entry := crmcontracts.SendAuthorizationPreviewRecipient{
 			Address:    openapi_types.Email(d.Recipient.Email),
 			Verdict:    crmcontracts.SendAuthorizationPreviewRecipientVerdict(d.Verdict),
 			ReasonCode: d.ReasonCode,
+		}
+		if len(d.Evidence.FooterFindings) > 0 {
+			findings := make([]crmcontracts.FooterFinding, 0, len(d.Evidence.FooterFindings))
+			for _, finding := range d.Evidence.FooterFindings {
+				wireFinding := crmcontracts.FooterFinding(finding)
+				if wireFinding.MissingMeans == nil {
+					wireFinding.MissingMeans = []string{}
+				}
+				findings = append(findings, wireFinding)
+			}
+			entry.FooterFindings = &findings
 		}
 		if preview.readableSubjects[previewSubject{kind: d.SubjectKind, id: d.SubjectID}] {
 			entry.EvidenceSubject = &crmcontracts.CommunicationEvidenceSubject{
@@ -134,6 +148,14 @@ func previewResponse(preview SendPreview) crmcontracts.SendAuthorizationPreview 
 				alternatives = append(alternatives, crmcontracts.CommunicationContext(c))
 			}
 			entry.SupportedAlternatives = &alternatives
+		}
+		if d.LawfulBasisMissing {
+			missing := true
+			entry.LawfulBasisMissing = &missing
+		}
+		if !d.ConsentPurpose.IsZero() {
+			purpose := openapi_types.UUID(d.ConsentPurpose)
+			entry.ConsentPurposeId = &purpose
 		}
 		if preview.NewContacts[correspondence.Fold(d.Recipient.Email)] {
 			newContact := true
@@ -163,11 +185,34 @@ func previewResponse(preview SendPreview) crmcontracts.SendAuthorizationPreview 
 		// mail reaches a contact.
 		refuses := d.WouldRefuse(d.Mode)
 		entry.WouldRefuse = &refuses
-		// By category, because the reason a rep records names one category, and an
-		// unknown purpose resolved to none: the record would be refused.
-		overrulable := d.CanBeOverruledByCategory()
+		overrulable := d.OverrulableForOneMessage()
 		entry.CanBeOverruled = &overrulable
 		out.Recipients = append(out.Recipients, entry)
 	}
 	return out
+}
+
+// wireContentFindings renders the draft findings, empty rather than null.
+func wireContentFindings(findings []DraftContentFinding) *[]crmcontracts.DraftContentFinding {
+	out := make([]crmcontracts.DraftContentFinding, 0, len(findings))
+	for _, f := range findings {
+		wire := crmcontracts.DraftContentFinding{
+			Requirement: crmcontracts.DraftContentFindingRequirement(f.Requirement),
+			Detail:      f.Detail,
+		}
+		if len(f.Words) > 0 {
+			words := f.Words
+			wire.Words = &words
+		}
+		if f.Language != "" {
+			language := f.Language
+			wire.Language = &language
+		}
+		if f.Country != "" {
+			country := f.Country
+			wire.Country = &country
+		}
+		out = append(out, wire)
+	}
+	return &out
 }

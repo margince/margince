@@ -76,7 +76,7 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 	// write's read-back is a result like any other, and it is the one every
 	// write tool shares.
 	contact := createThroughTheToolSurface(ctx, t, registry,
-		`{"record_type":"contact","fields":{"full_name":"Schema Conformance"}}`)
+		`{"record_type":"contact","fields":{"linkedin_url":"https://www.linkedin.com/in/fixture-4dca51f4f3d93999","full_name":"Schema Conformance"}}`)
 	company := createThroughTheToolSurface(ctx, t, registry,
 		`{"record_type":"company","fields":{"display_name":"Conformance GmbH"}}`)
 	lead := createThroughTheToolSurface(ctx, t, registry,
@@ -92,11 +92,11 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 	promotable := createThroughTheToolSurface(ctx, t, registry,
 		`{"record_type":"lead","fields":{"email":"promote@conformance.example","full_name":"Promo Table"}}`)
 	spare := createThroughTheToolSurface(ctx, t, registry,
-		`{"record_type":"contact","fields":{"full_name":"To Be Archived"}}`)
+		`{"record_type":"contact","fields":{"linkedin_url":"https://www.linkedin.com/in/fixture-6c48be4cc6f5f3e1","full_name":"To Be Archived"}}`)
 	duplicate := createThroughTheToolSurface(ctx, t, registry,
-		`{"record_type":"contact","fields":{"full_name":"Schema Conformance (dup)"}}`)
+		`{"record_type":"contact","fields":{"linkedin_url":"https://www.linkedin.com/in/fixture-7358d61d493deb50","full_name":"Schema Conformance (dup)"}}`)
 	handable := createThroughTheToolSurface(ctx, t, registry,
-		`{"record_type":"contact","fields":{"full_name":"To Be Handed On"}}`)
+		`{"record_type":"contact","fields":{"linkedin_url":"https://www.linkedin.com/in/fixture-81ce80f117b841ef","full_name":"To Be Handed On"}}`)
 	handableItems := `[{"id":"` + handable.String() + `","version":` +
 		e.WsScalar(t, `SELECT version::text FROM contact WHERE id = $1`, handable) + `}]`
 	project := createThroughTheToolSurface(ctx, t, registry,
@@ -259,7 +259,7 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 		{"disqualify_lead", `{"lead_id":"` + lead.String() + `"}`},
 		{"log_activity", `{"kind":"note","body":"conformance","links":[{"entity_type":"deal","entity_id":"` +
 			deal.String() + `"}]}`},
-		{"create_task", `{"subject":"conformance","links":[{"entity_type":"deal","entity_id":"` +
+		{"create_task", `{"subject":"conformance","body":"Conformance Deal asked for a check.","links":[{"entity_type":"deal","entity_id":"` +
 			deal.String() + `"}]}`},
 		{"update_record", `{"record_type":"contact","id":"` + contact.String() +
 			`","fields":{"title":"Head of Conformance"}}`},

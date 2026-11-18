@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/integration/contactfixture"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
@@ -64,8 +65,9 @@ type companyDomain struct {
 }
 
 type contactCreate struct {
-	FullName string `json:"full_name"`
-	Source   string `json:"source"`
+	LinkedinURL string `json:"linkedin_url"`
+	FullName    string `json:"full_name"`
+	Source      string `json:"source"`
 }
 
 type employmentCreate struct {
@@ -96,7 +98,7 @@ func SeedScoutedNamed(t *testing.T, e *AppEnv, companyName, contactName string) 
 		t.Fatalf("create company = %d %v", status, company)
 	}
 	companyID = company.ID.String()
-	if status := e.Call(t, "POST", "/v1/contacts", contactCreate{FullName: contactName, Source: provenance.RecordSourceManual}, nil, &contact); status != http.StatusCreated {
+	if status := e.Call(t, "POST", "/v1/contacts", contactCreate{FullName: contactName, Source: provenance.RecordSourceManual, LinkedinURL: ContactProfile()}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("create contact = %d %v", status, contact)
 	}
 	contactID := contact.ID.String()
@@ -217,4 +219,9 @@ func LogoPNG(t *testing.T) []byte {
 		t.Fatalf("encoding the fixture: %v", err)
 	}
 	return out.Bytes()
+}
+
+// ContactProfile gives each fixture a distinct manual-create identity.
+func ContactProfile() string {
+	return contactfixture.Profile()
 }

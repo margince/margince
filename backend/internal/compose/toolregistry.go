@@ -32,7 +32,7 @@ func (s *Server) rebuildToolRegistry(pool *pgxpool.Pool) {
 	opts := []agents.RegistryOption{agents.WithVolumeCharger(s.volumeMeter), agents.WithCostShare(s.volumeMeter)}
 	opts = append(opts, s.registryForTest...)
 	if s.trial != nil {
-		opts = append(opts, agents.WithTrialLock(s.trial.Ended))
+		opts = append(opts, agents.WithInstallationLock(s.trial.Lock))
 	}
 	s.toolRegistry = registryWithGate(InstallationDB(pool),
 		auth.NewGate(IdentityService(pool), auth.WithVolumeMeter(s.volumeMeter)),

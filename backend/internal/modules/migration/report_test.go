@@ -120,3 +120,20 @@ func TestARowsProblemReachesItsSkipOrItsWarning(t *testing.T) {
 		t.Fatalf("warnings = %d, want a skipped row's problem kept out of the warnings", len(or.Warnings))
 	}
 }
+
+func TestIndependentRowWarningsRemainBesideTheLandingOutcome(t *testing.T) {
+	var report ObjectReport
+	report.record(Row{ExternalID: "row-1", Line: 2}, EnsureResult{
+		Created:  true,
+		Problem:  &SkippedRow{Kind: ProblemDroppedLink},
+		Warnings: []SkippedRow{{Code: ReasonContactChannelMissing, Kind: ProblemUnusableRow}},
+	})
+	if report.Created != 1 || len(report.Warnings) != 2 || report.Warnings[0].Code != ReasonContactChannelMissing || report.Warnings[1].Kind != ProblemDroppedLink {
+		t.Fatalf("one created contact must retain both warnings: %+v", report)
+	}
+	for _, warning := range report.Warnings {
+		if warning.ExternalID != "row-1" || warning.Line != 2 {
+			t.Fatalf("warning lost its row: %+v", warning)
+		}
+	}
+}

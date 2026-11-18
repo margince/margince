@@ -154,9 +154,9 @@ func TestCustomFieldVocabHTTP(t *testing.T) {
 	}
 	col := tier.ColumnName
 
-	createWithCF(t, e, "/v1/contacts", integration.AnyMap{"full_name": "Contact B", "source": "manual", col: "beta"})
-	createWithCF(t, e, "/v1/contacts", integration.AnyMap{"full_name": "Contact A", "source": "manual", col: "alpha"})
-	createWithCF(t, e, "/v1/contacts", integration.AnyMap{"full_name": "Contact N", "source": "manual"})
+	createWithCF(t, e, "/v1/contacts", integration.AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Contact B", "source": "manual", col: "beta"})
+	createWithCF(t, e, "/v1/contacts", integration.AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Contact A", "source": "manual", col: "alpha"})
+	createWithCF(t, e, "/v1/contacts", integration.AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Contact N", "source": "manual"})
 
 	t.Run("cf_ sort orders the page, NULL last", func(t *testing.T) {
 		got := listContactsNames(t, e, "?sort="+col)

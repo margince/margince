@@ -27,7 +27,7 @@ func TestAContactCreatedWithACompanyHasACurrentEmployment(t *testing.T) {
 	ctx := e.as()
 
 	in, err := ContactCreationInput(crmcontracts.CreateContactRequest{
-		FullName: "Nora Newhire", Source: "manual", CompanyName: new("Newhire Works GmbH"),
+		LinkedinUrl: new("https://www.linkedin.com/in/fixture-nora"), FullName: "Nora Newhire", Source: "manual", CompanyName: new("Newhire Works GmbH"),
 	})
 	if err != nil {
 		t.Fatalf("mapping the request: %v", err)
@@ -44,7 +44,7 @@ func TestAContactCreatedWithACompanyHasACurrentEmployment(t *testing.T) {
 
 	existing := e.createNamedCompany(ctx, t, "Picked Employer AG")
 	in, err = ContactCreationInput(crmcontracts.CreateContactRequest{
-		FullName: "Paul Picked", Source: "manual", CompanyId: new(openapiUUID(existing)),
+		LinkedinUrl: new("https://www.linkedin.com/in/fixture-paul"), FullName: "Paul Picked", Source: "manual", CompanyId: new(openapiUUID(existing)),
 	})
 	if err != nil {
 		t.Fatalf("mapping the request: %v", err)
@@ -71,7 +71,7 @@ func TestACreateWhoseCompanyCannotBeReadLeavesNoContact(t *testing.T) {
 			ctx := e.as()
 			fullName := "Refused " + name
 			in, err := ContactCreationInput(crmcontracts.CreateContactRequest{
-				FullName: fullName, Source: "manual", CompanyId: new(openapi_types.UUID(companyID)),
+				LinkedinUrl: new("https://www.linkedin.com/in/fixture-refused"), FullName: fullName, Source: "manual", CompanyId: new(openapi_types.UUID(companyID)),
 			})
 			if err != nil {
 				t.Fatalf("mapping the request: %v", err)

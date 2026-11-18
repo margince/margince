@@ -147,8 +147,9 @@ func seedBulkContacts(t *testing.T, e *apptest.AppEnv, n int) []bulkItemDTO {
 	for i := range n {
 		var created bulkItemDTO
 		if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
-			"source":    "manual",
-			"full_name": "Bulk Door Contact " + ids.NewV7().String(),
+			"linkedin_url": apptest.ContactProfile(),
+			"source":       "manual",
+			"full_name":    "Bulk Door Contact " + ids.NewV7().String(),
 		}, nil, &created); status != http.StatusCreated {
 			t.Fatalf("seeding contact %d → %d", i, status)
 		}

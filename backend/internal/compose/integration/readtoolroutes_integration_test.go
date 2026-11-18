@@ -153,7 +153,7 @@ func TestRecordReadAndListRoutesAnswerAsTheirTools(t *testing.T) {
 	d := newTwoDoors(t, "record-read-doors", "read")
 	stages := apptest.DiscoverSeededPipeline(t, d.e)
 	company := createdRecord(t, d.e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Door Works"})
-	contact := createdRecord(t, d.e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Doris Door"})
+	contact := createdRecord(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Doris Door"})
 	lead := createdRecord(t, d.e, "/v1/leads", AnyMap{"source": "manual", "full_name": "Lena Lead"})
 	deal := openDeal(t, d.e, stages, "Door renewal")
 	project := createdRecord(t, d.e, "/v1/projects", AnyMap{"name": "Door rollout", "company_id": company, "source": "manual"})
@@ -196,7 +196,7 @@ func TestRecordReadAndListRoutesAnswerAsTheirTools(t *testing.T) {
 func TestTagRoutesAnswerAsTheirTools(t *testing.T) {
 	t.Parallel()
 	d := newTwoDoors(t, "tag-read-doors", "read")
-	contact := createdRecord(t, d.e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Tamsin Tagged"})
+	contact := createdRecord(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Tamsin Tagged"})
 	tag := createdID(t, d.e, "/v1/tags", AnyMap{"name": "Door champion"})
 	other := createdID(t, d.e, "/v1/tags", AnyMap{"name": "Door other"})
 	if status := d.e.Call(t, "POST", "/v1/tags/"+tag+"/apply",
@@ -231,7 +231,7 @@ func TestProjectPageRouteAnswersAsTheTool(t *testing.T) {
 		"name": "Door rollout deal", "pipeline_id": stages.PipelineID, "stage_id": stages.Open,
 		"company_id": company, "project_id": project, "source": "manual",
 	})
-	contact := createdRecord(t, d.e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Pia Stakeholder"})
+	contact := createdRecord(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Pia Stakeholder"})
 	createdRecord(t, d.e, "/v1/relationships", AnyMap{
 		"kind": "project_stakeholder", "contact_id": contact, "project_id": project, "source": "manual",
 	})

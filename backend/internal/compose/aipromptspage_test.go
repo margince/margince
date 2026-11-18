@@ -48,6 +48,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/aicert"
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/compose/aitasks/testmodel"
+	"github.com/margince/margince/backend/internal/compose/modelcontract"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 )
@@ -63,60 +64,11 @@ var aiPromptsPage = filepath.Join("..", "..", "..", "docs", "reference", "ai-pro
 // walk, so a page cannot describe a payload it does not match.
 var aiPromptsDoc = filepath.Join("..", "..", "..", "docs", "reference", "ai-prompts.json")
 
-// promptDocument is the published JSON.
-type promptDocument struct {
-	// Sites lists the registered sites this build sends a prompt from.
-	Sites []promptEntry `json:"sites"`
-}
-
-// promptEntry is one site, structured.
-type promptEntry struct {
-	Task string `json:"task"`
-	Site string `json:"site"`
-	// Batch answers whether one prompt ever holds untrusted text from several
-	// DIFFERENT authors. See the isolation constants for what each means.
-	// Isolation is derived from the request, except for the two sites whose
-	// own code declares one item per call.
-	Isolation string `json:"isolation"`
-	// Systems holds the distinct instructions the case issued, boundary marker
-	// canonicalised.
-	Systems []string `json:"systems"`
-	// AnswerSchema is the shape the completion must conform to, where the site
-	// constrains it. Per-call record ids are replaced by a placeholder.
-	AnswerSchema json.RawMessage `json:"answer_schema,omitempty"`
-	// SpansInScenario is how many separately fenced regions the first request
-	// carried FOR THIS SCENARIO. Not the site's capacity.
-	SpansInScenario int `json:"spans_in_scenario"`
-	// Calls is how many requests the case issued for one scenario.
-	Calls int `json:"calls"`
-	// The instruction broken into the three parts prompt-shape.md names, in
-	// bytes, plus the ~4-bytes-per-token estimate the window bounds use.
-	//
-	// CacheablePercent is RulesBytes over SystemBytes: the share a provider
-	// reusing a byte-identical prefix could reuse between two runs. Anything
-	// after the boundary sentence is unreachable for that purpose, however
-	// identical it is — which is why AfterBoundaryBytes is published beside it
-	// rather than folded away.
-	SystemBytes        int `json:"system_bytes"`
-	SystemTokens       int `json:"system_tokens_estimate"`
-	RulesBytes         int `json:"rules_bytes"`
-	BoundaryBytes      int `json:"boundary_bytes"`
-	AfterBoundaryBytes int `json:"after_boundary_bytes"`
-	CacheablePercent   int `json:"cacheable_percent"`
-	// DecisionQuestions is the site's decision form, for a site whose task
-	// declares one: the questions a decision model is asked before the ladder.
-	// The state each one reads is per scenario and is not published.
-	DecisionQuestions []decisionQuestion `json:"decision_questions,omitempty"`
-}
-
-// decisionQuestion is one question of a site's decision form, as its adapter
-// builds it from the committed fixture.
-type decisionQuestion struct {
-	Name         string            `json:"name"`
-	Type         string            `json:"type"`
-	Instructions string            `json:"instructions"`
-	Criteria     map[string]string `json:"criteria"`
-}
+type (
+	promptDocument   = modelcontract.Document
+	promptEntry      = modelcontract.Entry
+	decisionQuestion = modelcontract.DecisionQuestion
+)
 
 // isolation is what the page publishes about a site's exposure to a hostile
 // item, and it is DERIVED wherever it can be.

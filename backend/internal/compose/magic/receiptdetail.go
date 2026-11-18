@@ -137,7 +137,7 @@ func receiptEntries(ctx context.Context, tx pgx.Tx, entityType string, wanted []
 	query := fmt.Sprintf(`
 		SELECT a.id, a.occurred_at, a.action, a.entity_type, a.entity_id,
 		       a.actor_type, a.actor_id, a.on_behalf_of, a.before, a.after,
-		       NULL::text, a.evidence, a.batch_id
+		       NULL::text, a.evidence, a.batch_id, NULL::text
 		  FROM audit_log a
 		  JOIN %s e ON e.id = a.entity_id
 		 WHERE %s

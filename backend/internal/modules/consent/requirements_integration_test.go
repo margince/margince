@@ -40,16 +40,11 @@ func composerCtx(e *channelConsentEnv) context.Context {
 	return principal.WithActor(e.ctx, actor)
 }
 
-// The code is minted, never written down. testJurisdiction (authorizecaplock)
-// hands out the qm-qz range. A literal here takes a code that helper hands to
-// another test, and Register then panics.
-//
-// The label is the decree's own, which is why it is a constant rather than a
-// parameter: a test that could choose it would be testing string comparison,
-// and what these tests are about is that the pack's label reaches the check.
 func labelledIn(t *testing.T, e *channelConsentEnv) *Store {
 	t.Helper()
-	code := testJurisdiction(t, messagingrules.Rules{Version: 1, SubjectPrefix: "[QC]"})
+	code := testMessagingRules(t, messagingrules.Rules{
+		Version: 1, SubjectPrefix: "[QC]",
+	})
 	e.judgedUnder = string(code)
 	return e.store
 }

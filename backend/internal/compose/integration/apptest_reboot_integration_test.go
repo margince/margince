@@ -20,7 +20,7 @@ func TestRebootServesTheSameDatabaseThroughAFreshPool(t *testing.T) {
 	var contact struct {
 		ID string `json:"id"`
 	}
-	if status := before.Call(t, "POST", "/v1/contacts", map[string]string{"full_name": "Survives Restart", "source": "manual"}, nil, &contact); status != http.StatusCreated {
+	if status := before.Call(t, "POST", "/v1/contacts", map[string]string{"linkedin_url": apptest.ContactProfile(), "full_name": "Survives Restart", "source": "manual"}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("creating contact → %d", status)
 	}
 

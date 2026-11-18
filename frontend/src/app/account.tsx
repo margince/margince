@@ -4,6 +4,7 @@ import { Avatar, Button } from "../design-system/atoms";
 import { CardBoundary } from "../design-system/cardboundary";
 import { useT } from "../i18n";
 import { lazy } from "../i18n/lazy";
+import { buildRelease } from "../lib/buildrelease";
 import { useMe } from "../lib/session";
 import { useShortcutHandler } from "../lib/shortcuts";
 import { identityOf } from "./accountidentity";
@@ -28,18 +29,27 @@ const ShortcutsDialog = lazy(
   CardBoundary,
 );
 
+const AboutMarginceDialog = lazy(
+  async () => ({
+    default: (await import("../components/aboutmargince")).AboutMarginceDialog,
+  }),
+  "complete",
+  CardBoundary,
+);
+
+type DialogState = "unopened" | "open" | "closed";
+
 /**
  * The account menu owns settings, appearance, the booking link, help and
- * feedback with the keyboard shortcuts, and sign-out. At phone width it also
- * carries the setup reminder.
+ * feedback with the keyboard shortcuts and About Margince, and sign-out. At
+ * phone width it also carries the setup reminder.
  */
 export function AccountMenu() {
   const t = useT();
   const me = useMe();
   const [open, setOpen] = useState(false);
-  const [shortcuts, setShortcuts] = useState<"unopened" | "open" | "closed">(
-    "unopened",
-  );
+  const [shortcuts, setShortcuts] = useState<DialogState>("unopened");
+  const [about, setAbout] = useState<DialogState>("unopened");
   // From Help, focus returns to the trigger; from `?`, to wherever the key was pressed.
   const [fromHelp, setFromHelp] = useState(false);
   useShortcutHandler("shortcuts", () => {
@@ -138,6 +148,10 @@ export function AccountMenu() {
               setFromHelp(true);
               setShortcuts("open");
             }}
+            onAbout={() => {
+              dismiss();
+              setAbout("open");
+            }}
           />
         </Suspense>
       )}
@@ -149,6 +163,16 @@ export function AccountMenu() {
             open={shortcuts === "open"}
             onClose={() => setShortcuts("closed")}
             returnFocusTo={() => (fromHelp ? trigger.current : null)}
+          />
+        </Suspense>
+      )}
+      {about !== "unopened" && (
+        <Suspense fallback={null}>
+          <AboutMarginceDialog
+            build={buildRelease()}
+            open={about === "open"}
+            onClose={() => setAbout("closed")}
+            returnFocusTo={() => trigger.current}
           />
         </Suspense>
       )}

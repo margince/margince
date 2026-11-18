@@ -75,11 +75,11 @@ func typeCell(s setting) string {
 	cell := codeSpan(s.TypeName())
 	switch lo, hi := s.shape.Min, s.shape.Max; {
 	case lo != "" && hi != "":
-		cell += fmt.Sprintf(", %s to %s", cellText(lo), cellText(hi))
+		cell += fmt.Sprintf(", %s to %s", codeSpan(lo), codeSpan(hi))
 	case lo != "":
-		cell += ", at least " + cellText(lo)
+		cell += ", at least " + codeSpan(lo)
 	case hi != "":
-		cell += ", at most " + cellText(hi)
+		cell += ", at most " + codeSpan(hi)
 	}
 	if s.Secret() {
 		cell += ", secret"

@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"slices"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
 // A list's text query narrows list_records as it narrows the record type's
@@ -17,8 +19,8 @@ import (
 func TestListRecordsTakesTheListRoutesTextQuery(t *testing.T) {
 	t.Parallel()
 	d := newTwoDoors(t, "list-q-doors", "read", "write")
-	wanted := createdRecord(t, d.e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Zelda Quorn"})
-	createdRecord(t, d.e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Otto Brandt"})
+	wanted := createdRecord(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Zelda Quorn"})
+	createdRecord(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Otto Brandt"})
 
 	sameDoorRecords(t, "contacts matching Quorn",
 		d.rest(t, "GET", "/v1/contacts?q=Quorn", nil),
@@ -37,7 +39,7 @@ type carriedTag struct {
 func TestReferenceListsTakeTheirRoutesWidenings(t *testing.T) {
 	t.Parallel()
 	d := newTwoDoors(t, "widen-doors", "read", "write")
-	contact := createdRecord(t, d.e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Ada Tagged"})
+	contact := createdRecord(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Ada Tagged"})
 	tag := createdRecord(t, d.e, "/v1/tags", AnyMap{"name": "Carried"})
 	d.tool(t, "apply_tag", map[string]any{"tag_id": tag, "record_type": "contact", "record_id": contact})
 

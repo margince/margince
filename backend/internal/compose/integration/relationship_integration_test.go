@@ -39,7 +39,7 @@ func setupRelationships(t *testing.T) *relEnv {
 	var contact, company struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Edge Contact"}, nil, &contact); status != http.StatusCreated {
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Edge Contact"}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("create contact → %d", status)
 	}
 	if status := e.Call(t, "POST", "/v1/companies", AnyMap{"source": "manual", "display_name": "Edge Company"}, nil, &company); status != http.StatusCreated {

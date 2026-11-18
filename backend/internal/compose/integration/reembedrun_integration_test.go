@@ -52,7 +52,7 @@ func TestAStragglerOfAFinishedRunCannotActOnTheRunThatReplacedIt(t *testing.T) {
 	if err := e.Store.ClaimAndEnqueueReembedding(ctx, finished, func(pgx.Tx) error { return nil }); err != nil {
 		t.Fatalf("claiming the first run: %v", err)
 	}
-	if err := e.Store.ReleaseReembedding(ctx, finished.Run); err != nil {
+	if err := e.Store.ReleaseReembedding(ctx, finished.Run, nil); err != nil {
 		t.Fatalf("finishing the first run: %v", err)
 	}
 
@@ -63,7 +63,7 @@ func TestAStragglerOfAFinishedRunCannotActOnTheRunThatReplacedIt(t *testing.T) {
 	}
 
 	// The first run's straggler finally returns.
-	if err := e.Store.ReleaseReembedding(ctx, finished.Run); err != nil {
+	if err := e.Store.ReleaseReembedding(ctx, finished.Run, nil); err != nil {
 		t.Fatalf("the straggler must be a no-op, got: %v", err)
 	}
 
@@ -86,7 +86,7 @@ func TestAStragglerOfAFinishedRunCannotActOnTheRunThatReplacedIt(t *testing.T) {
 		t.Fatalf("the marker is held by run %s, want the replacement run %s — a straggler moved a marker that was never its own", held, current.Run)
 	}
 	// And the replacement's own pass still hands it back when it reports.
-	if err := e.Store.ReleaseReembedding(ctx, current.Run); err != nil {
+	if err := e.Store.ReleaseReembedding(ctx, current.Run, nil); err != nil {
 		t.Fatalf("finishing the replacement run: %v", err)
 	}
 	if _, status, _, err = e.Store.PopulatedIdentity(ctx); err != nil {
@@ -321,7 +321,7 @@ func TestAForcedClaimTakesTheMarkerOffARunThatStoppedMoving(t *testing.T) {
 	// pending set is gone, so its own straggler's BOOKKEEPING moves nothing.
 	// It says nothing about that straggler's embedding work, which a steal does
 	// not stop (search.ReembedClaim.StealAfter).
-	if err := e.Store.ReleaseReembedding(ctx, stuck.Run); err != nil {
+	if err := e.Store.ReleaseReembedding(ctx, stuck.Run, nil); err != nil {
 		t.Fatalf("the dispossessed run's straggler must be a no-op, got: %v", err)
 	}
 	_, status, _, err := e.Store.PopulatedIdentity(ctx)

@@ -30,7 +30,7 @@ class ApiJudgeTest(unittest.TestCase):
             with unittest.mock.patch.dict(os.environ, env):
                 self.assertEqual(judge.verdict("crit", "ans"), (True, "it holds"))
         body = provider.requests[0][2]
-        self.assertEqual(body["model"], "claude-haiku-4-5-20251001")
+        self.assertEqual(body["model"], "claude-haiku-5-5")
         self.assertNotIn("tools", body)
         self.assertIn("crit", json.dumps(body["messages"][0]["content"]))
 
@@ -49,10 +49,10 @@ class ApiJudgeTest(unittest.TestCase):
                    "OPENAI_COMPATIBLE_API_KEY": "k", "OPENAI_COMPATIBLE_BASE_URL": provider.url}
             with unittest.mock.patch.dict(os.environ, env):
                 self.assertEqual(judge.verdict("crit", "ans"), (False, "it does not"))
-        self.assertEqual(provider.requests[0][2]["model"], "anthropic/claude-haiku-4.5")
+        self.assertEqual(provider.requests[0][2]["model"], "anthropic/claude-haiku-5.5")
         [recorded] = os.listdir(directory)
         with open(os.path.join(directory, recorded), encoding="utf-8") as handle:
-            self.assertEqual(json.load(handle)["model"], "claude-haiku-4-5-20251001")
+            self.assertEqual(json.load(handle)["model"], "claude-haiku-5-5")
 
     def test_a_refused_judge_is_unavailable_not_a_no(self):
         with FakeProvider([(401, {"error": "bad key"})]) as provider:

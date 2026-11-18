@@ -17,7 +17,7 @@ func TestDerivedSnapshotsKeepAuditStorageAndTopLevelTransactionIdentity(t *testi
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
 	headSchema(t, conn)
-	core, err := migrations.Core()
+	core, err := migrations.CoreHistory()
 	if err != nil {
 		t.Fatal(err)
 	}

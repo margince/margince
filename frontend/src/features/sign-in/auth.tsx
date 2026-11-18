@@ -16,8 +16,15 @@ import { providerBrandName } from "../../design-system/provider-mark";
 import { LOCALES, localeNameKey, useLocale, useT } from "../../i18n";
 import { useAuthCapabilities } from "../../lib/capabilities";
 import { useOutageRecovery } from "../../lib/connectivity";
-import { isOidcFailureLanding, takeReturnRoute } from "../../lib/returnroute";
+import { CONSENT_PATH, isConsentAddress } from "../../lib/recordaddress";
 import {
+  isOidcFailureLanding,
+  keepReturnRoute,
+  OIDC_FAILURE_HASH,
+  takeReturnRoute,
+} from "../../lib/returnroute";
+import {
+  announceAddressChanged,
   forgetHashCredential,
   takeHashCredential,
   watchAddress,
@@ -86,7 +93,21 @@ function clearOidcFailureMarker(): void {
   const { pathname, search } = globalThis.location;
   // The link the reader followed comes back, so a second attempt keeps it.
   const route = takeReturnRoute() ?? "";
-  globalThis.history?.replaceState?.(null, "", `${pathname}${search}${route}`);
+  if (pathname !== CONSENT_PATH || isConsentAddress(pathname, route)) {
+    rewriteAddress(`${pathname}${search}${route}`);
+    return;
+  }
+  // Any other screen on the consent path is reloaded at the root
+  // (lib/recordaddress.ts). The marker and the route wait for this screen there.
+  keepReturnRoute(route);
+  rewriteAddress(`${pathname}${search}${OIDC_FAILURE_HASH}`);
+}
+
+// The entry's state is kept, because its history depth rides in it, and the
+// router is told, because a replace fires no event.
+function rewriteAddress(address: string): void {
+  globalThis.history.replaceState(globalThis.history.state, "", address);
+  announceAddressChanged();
 }
 
 type View =
@@ -128,9 +149,7 @@ function clearResetHash(): void {
   }
   const hash = globalThis.location.hash.replace(/^#\/?/, "").split("?")[0];
   if (hash === RESET_ROUTE) {
-    globalThis.history?.replaceState?.(
-      null,
-      "",
+    rewriteAddress(
       `${globalThis.location.pathname}${globalThis.location.search}`,
     );
   }

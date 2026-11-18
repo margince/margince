@@ -27,17 +27,17 @@ func (e *resolveEnv) livesIn(t *testing.T, code string) {
 	}
 }
 
-// Marketing without consent to a recipient whose country requires prior
-// consent is refused with a reason nobody sends past, an admin included. A
-// recipient in a country that keeps the exception keeps the refusal it
-// answers. Codes no pack in the tree claims, so a real pack cannot collide.
+// Marketing without consent where the country requires prior consent is refused
+// with its own reason. A rep may still send one message past it with a reason.
+// A country that keeps the exception keeps the refusal it answers. The codes
+// are ones no pack in the tree claims, so a real pack cannot collide.
 //
 // Mutation: drop the requireConsentWhereNothingStandsIn call from the contact
 // arm of decideOneIn and the consent-only cases keep no_marketing_consent.
 func TestNoExceptionStandsInForMarketingConsentWhereTheCountryRequiresIt(t *testing.T) {
 	t.Parallel()
-	messagingrules.Register(messagingrules.Rules{Jurisdiction: "zq", Version: 1, ConsentOnly: true})
-	messagingrules.Register(messagingrules.Rules{Jurisdiction: "zr", Version: 1})
+	testMessagingRules(t, messagingrules.Rules{Jurisdiction: "zq", Version: 1, ConsentOnly: true})
+	testMessagingRules(t, messagingrules.Rules{Jurisdiction: "zr", Version: 1})
 
 	for _, tc := range []struct {
 		name, country string
@@ -63,9 +63,8 @@ func TestNoExceptionStandsInForMarketingConsentWhereTheCountryRequiresIt(t *test
 			if d.Verdict == commsauthz.VerdictAllow || d.ReasonCode != tc.want {
 				t.Fatalf("decision = %s %q, want a refusal for %q", d.Verdict, d.ReasonCode, tc.want)
 			}
-			byAdmin := (commsauthz.DecisionSet{Decisions: []commsauthz.Decision{d}}).ExceptionMayAnswer(true)
-			if wantException := tc.want != commsauthz.ReasonMarketingConsentRequired && tc.want != commsauthz.ReasonMarketingPermissionRequired; byAdmin != wantException {
-				t.Errorf("an admin's exception answers it = %v, want %v", byAdmin, wantException)
+			if !(commsauthz.DecisionSet{Decisions: []commsauthz.Decision{d}}).ExceptionMayAnswer(false) {
+				t.Error("a rep's exception does not answer it")
 			}
 		})
 	}
@@ -77,7 +76,7 @@ func TestNoExceptionStandsInForMarketingConsentWhereTheCountryRequiresIt(t *test
 // arm and the override allows the send.
 func TestAnOverrideDoesNotStandInForConsentWhereTheCountryRequiresIt(t *testing.T) {
 	t.Parallel()
-	messagingrules.Register(messagingrules.Rules{Jurisdiction: "zs", Version: 1, ConsentOnly: true})
+	testMessagingRules(t, messagingrules.Rules{Jurisdiction: "zs", Version: 1, ConsentOnly: true})
 	e := setupResolve(t)
 	e.seedPurpose(t, "newsletter", "marketing")
 	e.livesIn(t, "zs")
@@ -96,7 +95,7 @@ func TestAnOverrideDoesNotStandInForConsentWhereTheCountryRequiresIt(t *testing.
 // of decideOneIn and the lead keeps no_marketing_consent.
 func TestALeadIsHeldToConsentWhereTheCountryRequiresIt(t *testing.T) {
 	t.Parallel()
-	messagingrules.Register(messagingrules.Rules{Jurisdiction: "zt", Version: 1, ConsentOnly: true})
+	testMessagingRules(t, messagingrules.Rules{Jurisdiction: "zt", Version: 1, ConsentOnly: true})
 	e := setupLeadConsent(t)
 	company := ids.NewV7()
 	if _, err := e.owner.Exec(e.ctx, `INSERT INTO company (id, display_name, source, captured_by, address_country)

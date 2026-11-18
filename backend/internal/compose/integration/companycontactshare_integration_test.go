@@ -184,7 +184,7 @@ func TestSharingCompanyContactsThroughTheHTTPRoute(t *testing.T) {
 	e := setupRelationships(t)
 	contacts := []string{e.contactID}
 	for _, name := range []string{"Account engineer", "Account finance"} {
-		contacts = append(contacts, createAndID(t, e.AppEnv, "/v1/contacts", AnyMap{"source": "manual", "full_name": name}))
+		contacts = append(contacts, createAndID(t, e.AppEnv, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": name}))
 	}
 	for _, contact := range contacts {
 		if status := e.Call(t, "POST", "/v1/relationships", AnyMap{
@@ -205,7 +205,7 @@ func TestSharingCompanyContactsThroughTheHTTPRoute(t *testing.T) {
 	}, map[string]string{"Idempotency-Key": "share-current-roster"}, &result); status != http.StatusOK || result.Shared != 3 || result.Skipped != 0 {
 		t.Fatalf("share company contacts: status %d, result %+v", status, result)
 	}
-	later := createAndID(t, e.AppEnv, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Later colleague"})
+	later := createAndID(t, e.AppEnv, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Later colleague"})
 	if status := e.Call(t, "POST", "/v1/relationships", AnyMap{
 		"kind": "employment", "contact_id": later, "company_id": e.companyID,
 		"is_current_primary": true, "source": "manual",

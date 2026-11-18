@@ -12,7 +12,10 @@ import { ToastProvider } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { eyebrowKeyFor } from "../../lib/worklisteyebrow";
 import { meFixture } from "../../testing/mefixture";
-import { DomainQuestionAnswer } from "./worklist.domainquestion";
+import {
+  DomainQuestionAnswer,
+  DomainQuestionMenu,
+} from "./worklist.domainquestion";
 import type { WorklistItem } from "./worklist.queries";
 import { WorklistRow } from "./worklist.row";
 
@@ -112,13 +115,22 @@ afterEach(() => {
 });
 
 it("draws a redirected question's answers through the real row without keep", async () => {
+  const user = userEvent.setup();
   transport(() => response({ data: [], page: { has_more: false } }));
   mount(<WorklistRow item={row()} position={1} owner="" />);
   expect(
     await screen.findByRole("button", { name: "Choose another" }),
   ).toBeTruthy();
   expect(
-    screen.getByRole("button", { name: "Stop capturing in your mailboxes" }),
+    screen.queryByRole("button", { name: "Stop capturing in your mailboxes" }),
+  ).toBeNull();
+  await user.click(
+    screen.getByRole("button", { name: "More actions for alias.example" }),
+  );
+  expect(
+    await screen.findByRole("button", {
+      name: "Stop capturing in your mailboxes",
+    }),
   ).toBeTruthy();
   expect(screen.queryByRole("button", { name: "Create company" })).toBeNull();
   expect(
@@ -138,12 +150,13 @@ it("confirms the suggested company by sending its id", async () => {
     return response({}, 200);
   });
   mount(<DomainQuestionAnswer item={row()} />);
-  expect(
-    await screen.findByText(
-      /Confirming links alias.example to Example Company and gives 2 contacts that company\. Contacts already at another company keep theirs\./,
-    ),
-  ).toBeTruthy();
-  await user.click(screen.getByRole("button", { name: "Confirm company" }));
+  const confirm = await screen.findByRole("button", {
+    name: "Confirm Example Company",
+  });
+  expect(confirm.getAttribute("title")).toBe(
+    "Confirming links alias.example to Example Company and gives 2 contacts that company. Contacts already at another company keep theirs.",
+  );
+  await user.click(confirm);
   await waitFor(() => expect(writes).toHaveLength(1));
   expect(
     writes[0].path.endsWith("/capture/domain-questions/alias.example/keep"),
@@ -155,27 +168,29 @@ it("confirms the suggested company by sending its id", async () => {
 
 it("offers only choose and create when nothing is suggested", async () => {
   transport(() => response(null, 202));
+  const item = row({
+    actions: ["keep", "discard", "reopen"],
+    domain_reason_code: "unevidenced",
+    domain_context: {
+      contacts: [],
+      contact_count: 0,
+      hidden_senders: false,
+      linked_contact_count: 2,
+      site_read: "unread",
+    },
+  });
   mount(
-    <DomainQuestionAnswer
-      item={row({
-        actions: ["keep", "discard", "reopen"],
-        domain_reason_code: "unevidenced",
-        domain_context: {
-          contacts: [],
-          contact_count: 0,
-          hidden_senders: false,
-          linked_contact_count: 2,
-          site_read: "unread",
-        },
-      })}
-    />,
+    <>
+      <DomainQuestionAnswer item={item} />
+      <DomainQuestionMenu item={item} />
+    </>,
   );
   expect(
     await screen.findByRole("button", { name: "Choose company" }),
   ).toBeTruthy();
   expect(screen.getByRole("button", { name: "Create company" })).toBeTruthy();
   expect(screen.queryByText(/Suggested company/)).toBeNull();
-  expect(screen.queryByRole("button", { name: "Confirm company" })).toBeNull();
+  expect(screen.queryByRole("button", { name: /^Confirm/ })).toBeNull();
 });
 
 it("opens only its own question and keeps website details closed", async () => {
@@ -193,9 +208,7 @@ it("opens only its own question and keeps website details closed", async () => {
     await screen.findByRole("heading", { name: "Company question" }),
   ).toBeTruthy();
   expect(asked).toEqual(["alias.example"]);
-  expect(
-    screen.getAllByText(/Suggested company: Example Company\./),
-  ).toHaveLength(2);
+  expect(screen.getByText(/Suggested company: Example Company\./)).toBeTruthy();
   expect(screen.getByRole("link", { name: "Alex Example" })).toBeTruthy();
   const chain = screen.getByText(
     "https://alias.example/ → https://www.example-company.example/",

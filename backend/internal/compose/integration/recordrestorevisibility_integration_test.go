@@ -66,7 +66,7 @@ func createOwnedContact(t *testing.T, e *apptest.AppEnv) visibleContact {
 	}
 	var created visibleContact
 	if status := e.Call(t, "POST", "/v1/contacts",
-		AnyMap{"source": "manual", "full_name": "Vera Visible", "owner_id": me.User.ID}, nil, &created); status != 201 {
+		AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Vera Visible", "owner_id": me.User.ID}, nil, &created); status != 201 {
 		t.Fatalf("create contact → %d", status)
 	}
 	return created

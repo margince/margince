@@ -62,6 +62,9 @@ type entry struct {
 	// step's run id here (datatask.Execute), so two runs of one correction are
 	// told apart. Nil on rows no batch wrote.
 	BatchID *ids.UUID
+	// ActivityKind is what a placed activity is (email, meeting, ...), so a
+	// create says "saved an email" rather than "an email or a meeting".
+	ActivityKind *string
 }
 
 // recordLabels is the name column of each placed record, the expression the
@@ -113,7 +116,7 @@ const (
 )
 
 // doneSince reads the admitted machine actions in the window, for the records
-// this reader may see.
+// this reader may see and works on.
 //
 // TWO READS PER TYPE. Creates and archives are read apart from everything
 // else, each under its own readCap: a mailbox import writes one create per
@@ -232,6 +235,12 @@ func doneForType(
 	if err != nil {
 		return nil, err
 	}
+	// Done FOR YOU: a deal is readable by every seat, and what a machine did
+	// to another team's deal is not this reader's business.
+	worksOn, err := auth.WorksOnClause(ctx, table, "e", arg)
+	if err != nil {
+		return nil, err
+	}
 	// THE ERASURE BOUNDARY. audit_log is append-only, so a record erased under
 	// Art. 17 or anonymized by retention keeps every image written before the
 	// scrub — with the subject's real name, email and phone still in it. The
@@ -246,8 +255,8 @@ func doneForType(
 	unscrubbed := privacy.UnscrubbedImageSQL("a", fmt.Sprintf("$%d", arg(privacy.ScrubVerbs())))
 
 	where := fmt.Sprintf(
-		`a.occurred_at >= $%d AND a.actor_type = ANY($%d) AND a.action = ANY($%d) AND a.entity_type = $%d AND %s AND %s`,
-		sinceAt, actors, actionsAt, typeAt, unscrubbed, notRetention)
+		`a.occurred_at >= $%d AND a.actor_type = ANY($%d) AND a.action = ANY($%d) AND a.entity_type = $%d AND %s AND %s AND %s`,
+		sinceAt, actors, actionsAt, typeAt, unscrubbed, notRetention, worksOn)
 	where += completedCutoff(ctx, arg)
 	if scope != "" {
 		where += " AND " + scope
@@ -257,7 +266,7 @@ func doneForType(
 	query := fmt.Sprintf(`
 		SELECT a.id, a.occurred_at, a.action, a.entity_type, a.entity_id,
 		       a.actor_type, a.actor_id, a.on_behalf_of, %s,
-		       NULLIF(%s, ''), a.evidence, a.batch_id
+		       NULLIF(%s, ''), a.evidence, a.batch_id, NULL::text
 		  FROM audit_log a
 		  JOIN %s e ON e.id = a.entity_id
 		 WHERE %s
@@ -299,12 +308,18 @@ func doneForActivities(
 	if err != nil {
 		return nil, err
 	}
+	// A workspace-audience message is readable by every seat; done for you
+	// is only what the reader works on.
+	worksOn, err := auth.ActivityWorksOnClause(ctx, "e", arg)
+	if err != nil {
+		return nil, err
+	}
 	// The same boundary, for the same reason: an erased message's audit images
 	// hold what the erasure certified gone.
 	unscrubbed := privacy.UnscrubbedImageSQL("a", fmt.Sprintf("$%d", arg(privacy.ScrubVerbs())))
 	where := fmt.Sprintf(
-		`a.occurred_at >= $%d AND a.actor_type = ANY($%d) AND a.action = ANY($%d) AND a.entity_type = 'activity' AND %s AND %s`,
-		sinceAt, actors, actionsAt, unscrubbed, notRetention)
+		`a.occurred_at >= $%d AND a.actor_type = ANY($%d) AND a.action = ANY($%d) AND a.entity_type = 'activity' AND %s AND %s AND %s`,
+		sinceAt, actors, actionsAt, unscrubbed, notRetention, worksOn)
 	where += completedCutoff(ctx, arg)
 	if content != "" {
 		where += " AND " + content
@@ -312,7 +327,7 @@ func doneForActivities(
 	query := fmt.Sprintf(`
 		SELECT a.id, a.occurred_at, a.action, a.entity_type, a.entity_id,
 		       a.actor_type, a.actor_id, a.on_behalf_of, %s,
-		       NULLIF(%s, ''), a.evidence, a.batch_id
+		       NULLIF(%s, ''), a.evidence, a.batch_id, e.kind
 		  FROM audit_log a
 		  JOIN activity e ON e.id = a.entity_id
 		 WHERE %s
@@ -392,7 +407,7 @@ func scanEntries(ctx context.Context, tx pgx.Tx, query string, args []any) ([]en
 		if err := rows.Scan(
 			&e.ID, &e.OccurredAt, &e.Action, &e.EntityType, &e.EntityID,
 			&e.ActorType, &e.ActorID, &e.OnBehalfOf, &e.Before, &e.After,
-			&e.Label, &e.Evidence, &e.BatchID,
+			&e.Label, &e.Evidence, &e.BatchID, &e.ActivityKind,
 		); err != nil {
 			return nil, fmt.Errorf("read a machine action: %w", err)
 		}

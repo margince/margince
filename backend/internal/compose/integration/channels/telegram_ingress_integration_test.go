@@ -123,8 +123,9 @@ func TestAC_TG_3_UnknownSenderBecomesOwnerlessWorkspaceVisibleContact(t *testing
 		ID string `json:"id"`
 	}
 	if status := c.Call(t, "POST", "/v1/contacts", integration.AnyMap{
-		"source":    "manual",
-		"full_name": "Private To The Admin", "owner_id": c.admin,
+		"linkedin_url": apptest.ContactProfile(),
+		"source":       "manual",
+		"full_name":    "Private To The Admin", "owner_id": c.admin,
 	}, nil, &owned); status != 201 {
 		t.Fatalf("seeding the private control contact → %d", status)
 	}

@@ -15,6 +15,8 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
 type sharedTag struct {
@@ -133,8 +135,8 @@ func TestApplyAndRemoveTagLeaveTheSameOnEitherDoor(t *testing.T) {
 	d := newTwoDoors(t, "tagging-write-doors", "read", "write")
 	tagREST := createdID(t, d.e, "/v1/tags", AnyMap{"name": "Key account rest", "color": "amber"})
 	tagTool := createdID(t, d.e, "/v1/tags", AnyMap{"name": "Key account tool", "color": "amber"})
-	viaREST := createdID(t, d.e, "/v1/contacts", AnyMap{"full_name": "Rest Tagged", "source": "manual"})
-	viaTool := createdID(t, d.e, "/v1/contacts", AnyMap{"full_name": "Tool Tagged", "source": "manual"})
+	viaREST := createdID(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Rest Tagged", "source": "manual"})
+	viaTool := createdID(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Tool Tagged", "source": "manual"})
 
 	d.restStatus(t, "POST", "/v1/tags/"+tagREST+"/apply", AnyMap{"entity_type": "contact", "entity_id": viaREST}, http.StatusCreated)
 	d.tool(t, "apply_tag", map[string]any{"tag_id": tagTool, "record_type": "contact", "record_id": viaTool})

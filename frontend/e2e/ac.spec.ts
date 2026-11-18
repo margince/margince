@@ -15,6 +15,8 @@ import {
   taskFromCall,
   typedTask,
 } from "./mockapi/calls";
+import { brandt } from "./mockapi/fixtures";
+import { page as listPage } from "./mockapi/server";
 import { anna, mockApi, servePrincipal } from "./seed";
 import { listClipping, openedAt, pageOverflow, textsOf } from "./waits";
 
@@ -169,6 +171,16 @@ test.beforeEach(async ({ page }) => {
  * shorter census.
  */
 const SWEPT_SETTINGS_PAGES = SETTINGS_PAGES.map((page) => page.id);
+
+// The record lists whose rows fold to a phone row at 390px; the deals list as its table.
+const PHONE_ROW_LISTS = [
+  "contacts",
+  "companies",
+  "leads",
+  "projects",
+  "deals?view=table",
+  "partners",
+];
 
 const CORE_SCREENS = [
   "home",
@@ -525,6 +537,27 @@ test("help and feedback and the keyboard shortcuts meet AA", async ({
   await expect(dialog).toBeVisible();
   await settleAnimations(page);
   await expectNoAaViolations(page, "home — keyboard shortcuts");
+  await page.keyboard.press("Escape");
+  await expect(accountTrigger(page)).toBeFocused();
+});
+
+test("About Margince meets AA", async ({ page }) => {
+  await page.goto("/#/home");
+  await page.waitForLoadState("networkidle");
+  await accountTrigger(page).click();
+  await page
+    .locator(".topbar [role='menu']")
+    .first()
+    .getByRole("menuitem", { name: de["shell.helpMenu"] })
+    .press("ArrowRight");
+  await page
+    .getByRole("menu", { name: de["shell.helpMenu"] })
+    .getByRole("menuitem", { name: de["about.title"] })
+    .click();
+  const dialog = page.getByRole("dialog", { name: de["about.title"] });
+  await expect(dialog).toBeVisible();
+  await settleAnimations(page);
+  await expectNoAaViolations(page, "home — about margince");
   await page.keyboard.press("Escape");
   await expect(accountTrigger(page)).toBeFocused();
 });
@@ -1200,6 +1233,144 @@ test("AC-deal-6: a terminal-stage drop is a 🟡 confirm — nothing runs before
   await expect(page.getByText("Nach Won verschoben")).toBeVisible();
 });
 
+/** A board card's "…" trigger, reached from the card's own link with Tab. */
+async function tabToCardMenu(page: Page, dealId: string, name: string) {
+  const card = page.locator(`[data-deal="${dealId}"]`);
+  const trigger = card.getByRole("button", {
+    name: copy(de["record.moreActionsFor"], { subject: name }),
+  });
+  await card.locator(".deal-open").focus();
+  for (let presses = 0; presses < 12; presses++) {
+    if (await trigger.evaluate((el) => el === document.activeElement)) {
+      return trigger;
+    }
+    await page.keyboard.press("Tab");
+  }
+  throw new Error(`Tab never reached the "…" menu of ${name}`);
+}
+
+test("AC-deal-7: a card's menu moves a deal to the next stage with the keyboard alone", async ({
+  page,
+}) => {
+  await page.goto("/#/deals");
+  await expect(page.locator('[data-deal="d-fleet"]')).toBeVisible();
+  const trigger = await tabToCardMenu(page, "d-fleet", "Fleet retrofit");
+  await page.keyboard.press("Enter");
+  await expect(trigger).toHaveAttribute("aria-expanded", "true");
+  await page
+    .getByRole("button", {
+      name: de["deal.card.moveTo"].replace("{stage}", "Negotiation"),
+    })
+    .press("Enter");
+
+  await expect(page.getByText("Nach Negotiation verschoben")).toBeVisible();
+  const moved = page.locator('[data-stage="s3"] [data-deal="d-fleet"]');
+  await expect(moved).toBeVisible();
+  await expect(
+    page.locator('[data-stage="s2"] [data-deal="d-fleet"]'),
+  ).toHaveCount(0);
+  await expect(moved.locator(".deal-open")).toBeFocused();
+});
+
+test("AC-deal-7: a card's menu asks the terminal confirm for Mark won, and Cancel moves nothing", async ({
+  page,
+}) => {
+  await page.goto("/#/deals");
+  const trigger = await tabToCardMenu(page, "d-fleet", "Fleet retrofit");
+  await page.keyboard.press("Enter");
+  await page
+    .getByRole("button", { name: de["deal.card.markWon"], exact: true })
+    .click();
+  await expect(page.getByText("In die Phase Won verschieben?")).toBeVisible();
+  await expect(page.getByText("Wie wurde der Deal gewonnen?")).toBeVisible();
+  await expect(page.getByText("Nach Won verschoben")).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Abbrechen" }).click();
+  await expect(page.getByText("In die Phase Won verschieben?")).toHaveCount(0);
+  await expect(trigger).toHaveAttribute("aria-expanded", "false");
+  await expect(
+    page.locator('[data-stage="s2"] [data-deal="d-fleet"]'),
+  ).toBeVisible();
+  await expect(
+    page.locator('[data-stage="s4"] [data-deal="d-fleet"]'),
+  ).toHaveCount(0);
+});
+
+test("AC-deal-7: a card's menu picks any stage by searching the stage picker", async ({
+  page,
+}) => {
+  await page.goto("/#/deals");
+  const trigger = await tabToCardMenu(page, "d-fleet", "Fleet retrofit");
+  await page.keyboard.press("Enter");
+  await page
+    .getByRole("button", { name: de["deals.bulkStage"], exact: true })
+    .click();
+  await page
+    .getByRole("combobox", { name: de["deals.bulkStagePick"] })
+    .fill("Neg");
+  await page.getByRole("option", { name: "Negotiation" }).click();
+
+  await expect(page.getByText("Nach Negotiation verschoben")).toBeVisible();
+  await expect(
+    page.locator('[data-stage="s3"] [data-deal="d-fleet"]'),
+  ).toBeVisible();
+  await expect(
+    page.locator('[data-stage="s2"] [data-deal="d-fleet"]'),
+  ).toHaveCount(0);
+  await expect(trigger).toHaveAttribute("aria-expanded", "false");
+});
+
+test("AC-deal-7: Escape closes a card's menu and returns focus to its trigger", async ({
+  page,
+}) => {
+  await page.goto("/#/deals");
+  const trigger = await tabToCardMenu(page, "d-fleet", "Fleet retrofit");
+  await page.keyboard.press("Enter");
+  await expect(trigger).toHaveAttribute("aria-expanded", "true");
+  await page.keyboard.press("Escape");
+  await expect(trigger).toHaveAttribute("aria-expanded", "false");
+  await expect(trigger).toBeFocused();
+});
+
+test.describe("AC-deal-7: a card's menu, in light mode", () => {
+  test.use({ colorScheme: "light" });
+
+  test("meets WCAG 2.2 AA with the menu open", async ({ page }) => {
+    await page.goto("/#/deals");
+    const trigger = await tabToCardMenu(page, "d-fleet", "Fleet retrofit");
+    await page.keyboard.press("Enter");
+    await expect(trigger).toHaveAttribute("aria-expanded", "true");
+    await settleAnimations(page);
+    await expectNoAaViolations(page, "deals, card menu open");
+  });
+});
+
+test.describe("AC-deal-7: a card's menu at 390px", () => {
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true });
+
+  test("opens by tap and moves the deal to the next stage", async ({
+    page,
+  }) => {
+    await page.goto("/#/deals");
+    const card = page.locator('[data-deal="d-fleet"]');
+    await expect(card).toBeAttached();
+    await card
+      .getByRole("button", {
+        name: copy(de["record.moreActionsFor"], { subject: "Fleet retrofit" }),
+      })
+      .tap();
+    await page
+      .getByRole("button", {
+        name: de["deal.card.moveTo"].replace("{stage}", "Negotiation"),
+      })
+      .tap();
+    await expect(page.getByText("Nach Negotiation verschoben")).toBeVisible();
+    await expect(
+      page.locator('[data-stage="s3"] [data-deal="d-fleet"]'),
+    ).toBeAttached();
+  });
+});
+
 test("AC-inbox: the staged decision is in the Decisions view", async ({
   page,
 }) => {
@@ -1577,6 +1748,42 @@ test.describe("§3.8: 390px mobile", () => {
       // this that something is 169px too wide and nothing about what.
       expect(await pageOverflow(page)).toEqual([]);
       expect(await listClipping(page)).toEqual([]);
+    });
+  }
+
+  // A phone row draws an end badge and a muted caption line that no wide sweep reaches.
+  for (const list of PHONE_ROW_LISTS) {
+    test(`no AA violations on the phone rows of #/${list}`, async ({
+      page,
+    }) => {
+      // The mock API serves no partner, and an empty list draws no row.
+      if (list === "partners") {
+        await page.route(/\/v1\/partners(\?.*)?$/, (route) =>
+          route.fulfill({
+            json: listPage([
+              {
+                company_id: brandt.id,
+                partner_kinds: ["hosting", "referral"],
+                cert_status: "certified",
+                relationship_stage: "active",
+                stage_label: "Live",
+                stage_meaning: "active",
+                version: 1,
+                created_at: "2026-01-01T00:00:00Z",
+                updated_at: "2026-06-01T00:00:00Z",
+              },
+            ]),
+          }),
+        );
+      }
+      await page.goto(`/#/${list}`);
+      await page.waitForLoadState("networkidle");
+      await expectShellRendered(page);
+      await expect(
+        page.locator(".lt-table.lt-phonerows tbody tr").first(),
+      ).toBeVisible();
+      await settleAnimations(page);
+      await expectNoAaViolations(page, `${list} (390px)`);
     });
   }
 

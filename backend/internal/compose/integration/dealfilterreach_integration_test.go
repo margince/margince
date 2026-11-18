@@ -92,6 +92,14 @@ func maskDealField(t *testing.T, e *apptest.AppEnv, role, field, condition strin
 		role, field, condition); err != nil {
 		t.Fatalf("masking deal.%s: %v", field, err)
 	}
+	// field_mask outlives the per-test reset, and a public card reads every role's masks.
+	t.Cleanup(func() {
+		if _, err := e.Owner.Exec(context.Background(),
+			`DELETE FROM field_mask WHERE role_key = $1 AND object = 'deal' AND field = $2 AND condition = $3`,
+			role, field, condition); err != nil {
+			t.Errorf("removing the deal.%s mask: %v", field, err)
+		}
+	})
 }
 
 // refusedDealFilters is what /me tells the signed-in seat it may not narrow by.

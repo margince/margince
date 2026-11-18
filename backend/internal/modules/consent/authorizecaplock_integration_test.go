@@ -22,7 +22,7 @@ package consent
 
 import (
 	"context"
-	"encoding/json"
+	"reflect"
 	"sync"
 	"testing"
 	"time"
@@ -84,52 +84,86 @@ const capWindow = 24 * time.Hour
 
 // The ISO user-assigned QM–QZ and XA–XZ ranges keep these tests separate from sibling Z codes.
 var capJurisdictions = struct {
-	mu     sync.Mutex
-	next   int
-	byRule map[string]jurisdiction.Code
-}{byRule: map[string]jurisdiction.Code{}}
+	mu    sync.Mutex
+	codes []jurisdiction.Code
+}{}
 
 const (
 	reservedQSlots        = int('z' - 'm' + 1)
 	testJurisdictionSlots = reservedQSlots + int('z'-'a'+1)
 )
 
-// testJurisdiction registers rules under a minted code and answers it. The
-// registry is process-wide and refuses a code twice. So tests that ask for the
-// same rules share one code, and their own databases keep their rows apart.
-func testJurisdiction(t *testing.T, rules messagingrules.Rules) jurisdiction.Code {
+// Identical immutable rules share a jurisdiction across tests and repeated runs.
+func testMessagingRules(t *testing.T, rules messagingrules.Rules) jurisdiction.Code {
 	t.Helper()
-	key, err := json.Marshal(rules)
-	if err != nil {
-		t.Fatalf("keying the rules: %v", err)
-	}
 	capJurisdictions.mu.Lock()
 	defer capJurisdictions.mu.Unlock()
-	if code, ok := capJurisdictions.byRule[string(key)]; ok {
-		return code
+	if rules.Jurisdiction != "" {
+		registered, ok := messagingrules.For(rules.Jurisdiction)
+		if !ok {
+			messagingrules.Register(rules)
+		} else if !reflect.DeepEqual(registered, rules) {
+			t.Fatalf("test jurisdiction %q already has different rules", rules.Jurisdiction)
+		}
+		return rules.Jurisdiction
 	}
-	index := capJurisdictions.next
+	for _, code := range capJurisdictions.codes {
+		registered, ok := messagingrules.For(code)
+		if !ok {
+			t.Fatalf("test jurisdiction %q has no registered rules", code)
+		}
+		rules.Jurisdiction = code
+		if reflect.DeepEqual(registered, rules) {
+			return code
+		}
+	}
+	index := len(capJurisdictions.codes)
 	if index >= testJurisdictionSlots {
-		t.Fatalf("this package exhausted its %d distinct test jurisdictions", testJurisdictionSlots)
+		t.Fatalf("this package exhausted its %d distinct test rule sets", testJurisdictionSlots)
 	}
 	prefix, suffix := 'q', rune('m'+index)
 	if index >= reservedQSlots {
 		prefix, suffix = 'x', rune('a'+index-reservedQSlots)
 	}
-	capJurisdictions.next++
-	rules.Jurisdiction = jurisdiction.Code(string([]rune{prefix, suffix}))
+	code := jurisdiction.Code(string([]rune{prefix, suffix}))
+	rules.Jurisdiction = code
 	messagingrules.Register(rules)
-	capJurisdictions.byRule[string(key)] = rules.Jurisdiction
-	return rules.Jurisdiction
+	capJurisdictions.codes = append(capJurisdictions.codes, code)
+	return code
 }
 
-// cappedGate registers a ceiling under a test jurisdiction, puts the
+func TestIdenticalMessagingRulesShareAJurisdiction(t *testing.T) {
+	t.Parallel()
+	labelled := messagingrules.Rules{Version: 1, SubjectPrefix: "[QC]"}
+	unlabelled := messagingrules.Rules{Version: 1}
+	labelledCode := testMessagingRules(t, labelled)
+	unlabelledCode := testMessagingRules(t, unlabelled)
+	if labelledCode == unlabelledCode {
+		t.Fatal("different rules shared a jurisdiction")
+	}
+	named := labelled
+	named.Jurisdiction = labelledCode
+	for range 2 * testJurisdictionSlots {
+		if code := testMessagingRules(t, labelled); code != labelledCode {
+			t.Fatalf("identical rules moved from %q to %q", labelledCode, code)
+		}
+		if code := testMessagingRules(t, named); code != labelledCode {
+			t.Fatalf("named rules moved from %q to %q", labelledCode, code)
+		}
+		if code := testMessagingRules(t, unlabelled); code != unlabelledCode {
+			t.Fatalf("identical rules moved from %q to %q", unlabelledCode, code)
+		}
+	}
+}
+
+// cappedGate registers a ceiling under a matching jurisdiction, puts the
 // env's recipient in it, and returns a gate. grantMarketingTo places later
 // recipients there too.
 func (e *capEnv) cappedGate(t *testing.T, messages int) *Gate {
 	t.Helper()
-	code := testJurisdiction(t, messagingrules.Rules{
-		Version: 1, FrequencyCap: &messagingrules.FrequencyCap{Messages: messages, Window: capWindow},
+	code := testMessagingRules(t, messagingrules.Rules{
+		Version:      1,
+		FrequencyCap: &messagingrules.FrequencyCap{Messages: messages, Window: capWindow},
 	})
 	e.capCountry = string(code)
 	e.subjectLivesIn(t, e.capCountry)

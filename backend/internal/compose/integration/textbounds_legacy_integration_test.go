@@ -8,6 +8,7 @@ package integration
 import (
 	"context"
 	"net/http"
+	"os"
 	"strings"
 	"testing"
 
@@ -16,15 +17,10 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/dbmigrate"
+	"github.com/margince/margince/backend/internal/platform/database/textbounds"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
-	"github.com/margince/margince/backend/migrations"
 )
-
-// textGuardFunction is what every text-limit trigger executes, so a migration
-// that names it is one that creates, re-creates or removes a guard.
-const textGuardFunction = "public.refuse_oversized_text"
 
 func withoutTextGuards(ctx context.Context, t *testing.T) func() {
 	t.Helper()
@@ -60,31 +56,22 @@ func withoutTextGuards(ctx context.Context, t *testing.T) func() {
 	}
 }
 
-// textGuardMigrations returns every migration that touches a text guard, core
-// before the custom track that sits on it. Ups come in applied order and downs
-// in the reverse one, so the downs leave the schema as it was before any guard.
+// Generate guard DDL without reversing the schema changes beside shipped guards.
 func textGuardMigrations(t *testing.T) (ups, downs []string) {
 	t.Helper()
-	for _, namespace := range []func() (dbmigrate.Namespace, error){migrations.Core, migrations.Custom} {
-		migrationSet, err := namespace()
-		if err != nil {
-			t.Fatal(err)
-		}
-		for _, migration := range migrationSet.Migrations {
-			if !strings.Contains(migration.UpSQL, textGuardFunction) {
-				continue
-			}
-			if len(ups) == 0 && !strings.Contains(migration.UpSQL, "FUNCTION "+textGuardFunction+"()") {
-				t.Fatalf("the first text-guard migration %s does not define %s", migration.Version, textGuardFunction)
-			}
-			ups = append(ups, migration.UpSQL)
-			downs = append([]string{migration.DownSQL}, downs...)
-		}
+	catalog, err := os.Open("../../../migrations/testdata/head_catalog.txt")
+	if err != nil {
+		t.Fatal(err)
 	}
-	if len(ups) == 0 {
-		t.Fatalf("no migration names %s", textGuardFunction)
+	guards, err := textbounds.SQL(catalog, nil)
+	if closeErr := catalog.Close(); err == nil {
+		err = closeErr
 	}
-	return ups, downs
+	if err != nil {
+		t.Fatal(err)
+	}
+	return []string{guards.Functions.Up, guards.Tables.Up, guards.CustomFields.Up},
+		[]string{guards.CustomFields.Down, guards.Tables.Down, guards.Functions.Down}
 }
 
 func TestATranslationUpsertKeepsItsUnchangedEarlierLongName(t *testing.T) {
@@ -160,14 +147,14 @@ func TestATypedContactNamePastTheLabelLimitIsRefusedForEveryRole(t *testing.T) {
 	e.BootstrapWorkspace(t)
 	tooLong := strings.Repeat("界", values.TextLabelCharacters+1)
 	var refused problemWire
-	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": tooLong}, nil, &refused); status != http.StatusUnprocessableEntity {
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": tooLong}, nil, &refused); status != http.StatusUnprocessableEntity {
 		t.Fatalf("an admin's typed create with a %d-character name → %d, want 422", values.TextLabelCharacters+1, status)
 	}
 	assertTooLong(t, refused, "full_name")
 	var contact struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Typed Name"}, nil, &contact); status != http.StatusCreated {
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Typed Name"}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("create contact → %d", status)
 	}
 	refused = problemWire{}

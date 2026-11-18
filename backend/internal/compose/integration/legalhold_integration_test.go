@@ -45,7 +45,7 @@ func holdableRecords(t *testing.T, e *apptest.AppEnv) []struct{ entityType, tabl
 	company := createdID(t, e, "/v1/companies", AnyMap{"display_name": "Acme GmbH", "source": "manual"})
 	pipeline, stage, _ := companyRollupOpenStage(t, e)
 	return []struct{ entityType, table, id string }{
-		{"contact", "contact", createdID(t, e, "/v1/contacts", AnyMap{"full_name": "Dana Meyer", "source": "manual"})},
+		{"contact", "contact", createdID(t, e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Dana Meyer", "source": "manual"})},
 		{"company", "company", company},
 		{"deal", "deal", createdID(t, e, "/v1/deals", AnyMap{
 			"name": "Disputed renewal", "pipeline_id": pipeline, "stage_id": stage,
@@ -125,7 +125,7 @@ func TestAHoldWithNoStatedReasonIsRefused(t *testing.T) {
 	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	contact := createdID(t, e, "/v1/contacts", AnyMap{"full_name": "Dana Meyer", "source": "manual"})
+	contact := createdID(t, e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Dana Meyer", "source": "manual"})
 	if status := e.Call(t, "POST", "/v1/retention/legal-holds/contact/"+contact+"/place",
 		AnyMap{"reason": "   "}, nil, nil); status != http.StatusUnprocessableEntity {
 		t.Fatalf("placing a hold with a blank reason = %d, want 422", status)
@@ -141,8 +141,8 @@ func TestTheHoldListNamesWhatIsHeldAndNothingElse(t *testing.T) {
 	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	held := createdID(t, e, "/v1/contacts", AnyMap{"full_name": "Dana Meyer", "source": "manual"})
-	free := createdID(t, e, "/v1/contacts", AnyMap{"full_name": "Sam Okafor", "source": "manual"})
+	held := createdID(t, e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Dana Meyer", "source": "manual"})
+	free := createdID(t, e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Sam Okafor", "source": "manual"})
 	if status := placeHold(t, e, "contact", held, "Anwaltsschreiben 2026-14"); status != http.StatusNoContent {
 		t.Fatalf("placing the hold = %d, want 204", status)
 	}
@@ -181,7 +181,7 @@ func TestTheHoldListPagesWithoutRepeatingOrSkippingARecord(t *testing.T) {
 	e.BootstrapWorkspace(t)
 	held := map[string]bool{}
 	for _, name := range []string{"Dana Meyer", "Sam Okafor", "Mira Voss"} {
-		id := createdID(t, e, "/v1/contacts", AnyMap{"full_name": name, "source": "manual"})
+		id := createdID(t, e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": name, "source": "manual"})
 		if status := placeHold(t, e, "contact", id, "Anwaltsschreiben 2026-14"); status != http.StatusNoContent {
 			t.Fatalf("placing a hold on %s = %d, want 204", name, status)
 		}

@@ -47,7 +47,8 @@ func createContactWithTag(t *testing.T, e *apptest.AppEnv, name string, tagIDs .
 	t.Helper()
 	var contact integration.AnyMap
 	if status := e.Call(t, "POST", "/v1/contacts", integration.AnyMap{
-		"full_name": name, "source": "manual",
+		"linkedin_url": apptest.ContactProfile(),
+		"full_name":    name, "source": "manual",
 	}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("creating %q: status=%d body=%v", name, status, contact)
 	}

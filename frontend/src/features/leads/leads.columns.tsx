@@ -10,7 +10,7 @@ import {
   ownerColumn,
   tagsColumn,
 } from "../../components/recordlist";
-import { Badge } from "../../design-system/atoms";
+import { Avatar, Badge } from "../../design-system/atoms";
 import { CellStrip, type ListColumn } from "../../design-system/listtable";
 import { formatDateAbbrev, formatNumber } from "../../format/format";
 import type { useLocale, useT } from "../../i18n";
@@ -44,9 +44,12 @@ export function leadColumns(
       header: t("contacts.name"),
       cell: (lead: Lead) => {
         const terminal = terminalBadge(lead);
+        const shown = leadIdentityName(lead);
         return (
-          <span>
-            <strong>{leadIdentityName(lead) || t("lead.unnamed")}</strong>
+          <span className="avatar-row">
+            {/* Not the fallback words: they would draw letters for a lead with no name. */}
+            <Avatar identity={lead.id} name={shown} />
+            <strong>{shown || t("lead.unnamed")}</strong>
             {terminal && (
               <Badge tone={terminal.tone}>{t(terminal.label)}</Badge>
             )}
@@ -72,6 +75,8 @@ export function leadColumns(
         </span>
       ),
       sort: "company_name",
+      phone: "caption",
+      folded: (lead: Lead) => <LeadCompanyName lead={lead} asText />,
     },
     {
       key: "score",
@@ -95,6 +100,7 @@ export function leadColumns(
       key: "status",
       header: t("lead.status"),
       sort: "status",
+      phone: "end",
       cell: (lead: Lead) => (
         <span className="lead-status-cell">
           <StatusBadge status={lead.status} />
@@ -118,6 +124,18 @@ export function leadColumns(
             : ""}
         </span>
       ),
+      phone: "caption",
+      folded: (lead: Lead) => lead.next_task_subject ?? null,
+    },
+    {
+      key: "nextTaskDue",
+      header: t("log.dueAt"),
+      cell: (lead: Lead) =>
+        lead.next_task_subject && lead.next_task_due_at
+          ? formatDateAbbrev(lead.next_task_due_at, locale, recordZone)
+          : null,
+      phone: "caption",
+      phoneOnly: true,
     },
     // The shared column, now that this header can offer a sort.
     lastActivityColumn<Lead>(t, locale, recordZone),

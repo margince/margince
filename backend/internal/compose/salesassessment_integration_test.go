@@ -68,7 +68,7 @@ func TestTheSalesAssessmentKeepsGroundedSentencesAndServesThemAgain(t *testing.T
 	}
 	figure := strings.Fields(open)[0]
 	lane := &assessmentLane{reply: `{"sentences":[{"text":"The open pipeline stands at ` + figure + ` EUR.","kind":"observation","cells":["metric:open_pipeline"]},{"text":"That is 42 percent of the target.","kind":"hypothesis","cells":["metric:open_pipeline"]}],"next_decision":null,"confidence":"medium"}`}
-	written := newSalesAssessments(service, newSalesDecisions(InstallationDB(e.Pool)), InstallationDB(e.Pool)).withLane(lane, "routing-test")
+	written := newSalesAssessments(service, newSalesDecisions(InstallationDB(e.Pool)), InstallationDB(e.Pool)).withLane(lane, func() string { return "routing-test" })
 	out, err = written.Assess(ctx, selection, false)
 	if err != nil {
 		t.Fatalf("the written assessment: %v", err)
@@ -95,7 +95,7 @@ func TestAssessmentUsesTheDisplayedReceiptAndSeparatesRoleContext(t *testing.T) 
 		t.Fatal(err)
 	}
 	lane := &assessmentLane{reply: `{"paragraphs":[[{"text":"Review the open opportunities with their owners.","kind":"observation","cells":["metric:open_pipeline"]}]],"action_ids":[]}`}
-	written := newSalesAssessments(service, newSalesDecisions(InstallationDB(e.Pool)), InstallationDB(e.Pool)).withLane(lane, "roles")
+	written := newSalesAssessments(service, newSalesDecisions(InstallationDB(e.Pool)), InstallationDB(e.Pool)).withLane(lane, func() string { return "roles" })
 	receipt := reporting.EvidenceExpectation{Key: evaluation.EvaluationKey, At: evaluation.Context.EvaluatedAt, FrameworkRevision: evaluation.Context.FrameworkRevision}
 	for _, view := range []crmcontracts.SalesAssessmentView{"sales", "team"} {
 		out, err := written.AssessView(ctx, selection, false, &view, &receipt)
@@ -122,7 +122,7 @@ func TestAnEmptyAssessmentDoesNotAskForReassurance(t *testing.T) {
 	at := clocktest.Now(t)
 	service := newReportingService(e.Pool, func() time.Time { return at })
 	lane := &assessmentLane{reply: `{}`}
-	written := newSalesAssessments(service, newSalesDecisions(InstallationDB(e.Pool)), InstallationDB(e.Pool)).withLane(lane, "empty")
+	written := newSalesAssessments(service, newSalesDecisions(InstallationDB(e.Pool)), InstallationDB(e.Pool)).withLane(lane, func() string { return "empty" })
 	selection := crmcontracts.ReportingSelection{Scope: crmcontracts.ReportingScope{Kind: "owner", Id: ptrUUID(e.Rep1)}, Period: "this_quarter", TargetBasis: "fiscal_quarter", CloseWindow: "all_open", Metrics: []crmcontracts.ReportingMetricID{reportingOpenPipeline}}
 	out, err := written.Assess(initiativeManager(e), selection, false)
 	if err != nil || lane.calls != 0 || len(out.Sentences) != 0 || out.GeneratedBy != crmcontracts.WrittenByDeterministic {

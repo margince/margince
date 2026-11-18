@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
@@ -22,7 +23,7 @@ import (
 func TestACredentialOverwritesATypedValueAtOnceAndStagesNothing(t *testing.T) {
 	t.Parallel()
 	q := setupQueue(t)
-	contactID := createdID(t, q.AppEnv, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Selma Human"})
+	contactID := createdID(t, q.AppEnv, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Selma Human"})
 	invoke := q.invoker(t, q.mintPassport(t, "overwriting agent", "read", "write"))
 
 	out, err := invoke("update_record", fmt.Sprintf(

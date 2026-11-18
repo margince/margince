@@ -79,6 +79,7 @@ func TestATaskAnAgentFilesForARepReachesThatRepsWorklist(t *testing.T) {
 
 	filed := d.tool(t, "create_task", map[string]any{
 		"subject": "Follow up with Contact A",
+		"body":    "Contact A asked for the pricing sheet on the call.",
 		"due_at":  clocktest.Now(t).Add(-2 * time.Hour).UTC().Format(time.RFC3339),
 	})
 	task := anIDIn(t, filed)

@@ -83,3 +83,17 @@ func TestADuplicateWrittenThroughLinkedInURLIsFiledAsATwin(t *testing.T) {
 		t.Errorf("open LinkedIn pairs = %d, want the twin written through linkedin_url filed", n)
 	}
 }
+
+func TestANameOnlyContactRequestIsRefusedBeforeWriting(t *testing.T) {
+	t.Parallel()
+	e := setupDedupe(t)
+	response := e.createOverTheWire(t, `{"full_name":"Name Only","source":"manual"}`)
+	if response.Code != http.StatusUnprocessableEntity || !strings.Contains(response.Body.String(), "contact_channel_required") {
+		t.Fatalf("name-only create: %d %s", response.Code, response.Body.String())
+	}
+	for _, choice := range []string{"email", "phone", "LinkedIn"} {
+		if !strings.Contains(response.Body.String(), choice) {
+			t.Fatalf("refusal omits %s: %s", choice, response.Body.String())
+		}
+	}
+}

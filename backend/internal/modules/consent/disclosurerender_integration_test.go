@@ -18,6 +18,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -41,7 +42,7 @@ func inJurisdiction(
 	t *testing.T, e *channelConsentEnv, code string, ds ...messagingrules.Disclosure,
 ) *Store {
 	t.Helper()
-	messagingrules.Register(messagingrules.Rules{
+	testMessagingRules(t, messagingrules.Rules{
 		Jurisdiction: jurisdiction.Code(code), Version: 1, Disclosures: ds,
 	})
 	livesIn(t, e, code)
@@ -298,6 +299,9 @@ func TestTheParticularsRoundTrip(t *testing.T) {
 		PrivacyContact:    "datenschutz@beispiel.test",
 		ObjectionRoute:    "Reply with STOP.",
 		AdvertiserContact: "+49 30 123456",
+		Translations: []ParticularsTranslation{{
+			Language: "vi", ObjectionRoute: "Trả lời email này với từ STOP.",
+		}},
 	}
 
 	store := settingsStoreFor(t)
@@ -308,7 +312,7 @@ func TestTheParticularsRoundTrip(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading them back: %v", err)
 	}
-	if read != in {
+	if !reflect.DeepEqual(read, in) {
 		t.Errorf("the read answered %+v, want what was stored", read)
 	}
 }
@@ -403,7 +407,7 @@ func TestAWriterWithoutTheReadGrantChangesNothing(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading the particulars back: %v", err)
 	}
-	if after != stated {
+	if !reflect.DeepEqual(after, stated) {
 		t.Errorf("the refused request still changed the particulars to %+v: the read gate "+
 			"has to run BEFORE the write, or a 403 arrives after the mutation committed",
 			after)

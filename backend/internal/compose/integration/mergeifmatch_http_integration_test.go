@@ -27,7 +27,11 @@ func TestAMergeHonoursTheSourcesIfMatchVersion(t *testing.T) {
 	} {
 		t.Run(kind.path, func(t *testing.T) {
 			create := func(name string) string {
-				return createAndID(t, e, kind.path, AnyMap{kind.nameField: name, "source": kind.source})
+				body := AnyMap{kind.nameField: name, "source": kind.source}
+				if kind.path == "/v1/contacts" {
+					body["linkedin_url"] = apptest.ContactProfile()
+				}
+				return createAndID(t, e, kind.path, body)
 			}
 			version := func(id string) int64 {
 				var row struct {

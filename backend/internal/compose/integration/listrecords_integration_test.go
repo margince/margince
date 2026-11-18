@@ -68,9 +68,9 @@ func TestListRecordsNarrowsByOwner(t *testing.T) {
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, AdminPerms)
 
 	mine := createThroughTheToolSurface(ctx, t, registry,
-		`{"record_type":"contact","fields":{"full_name":"Owned By Rep One","owner_id":"`+e.Rep1.String()+`"}}`)
+		`{"record_type":"contact","fields":{"linkedin_url":"https://www.linkedin.com/in/fixture-a3997ea57d33b00e","full_name":"Owned By Rep One","owner_id":"`+e.Rep1.String()+`"}}`)
 	theirs := createThroughTheToolSurface(ctx, t, registry,
-		`{"record_type":"contact","fields":{"full_name":"Owned By Rep Two","owner_id":"`+e.Rep2.String()+`"}}`)
+		`{"record_type":"contact","fields":{"linkedin_url":"https://www.linkedin.com/in/fixture-ef7aadd5f7c1a1d2","full_name":"Owned By Rep Two","owner_id":"`+e.Rep2.String()+`"}}`)
 
 	out, err := registry.Invoke(ctx, "list_records", json.RawMessage(
 		`{"record_type":"contact","filters":{"owner_id":"`+e.Rep1.String()+`"}}`))

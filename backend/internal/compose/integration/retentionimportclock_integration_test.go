@@ -199,7 +199,8 @@ func TestTheDefaultPoliciesKeepAnOldContactAndAnOldTranscript(t *testing.T) {
 		ID string `json:"id"`
 	}
 	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
-		"source": "manual", "full_name": "Quiet Contact",
+		"linkedin_url": apptest.ContactProfile(),
+		"source":       "manual", "full_name": "Quiet Contact",
 	}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("creating the contact → %d", status)
 	}

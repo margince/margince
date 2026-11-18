@@ -18,7 +18,7 @@ import (
 // the receipt, the way the Vietnamese pack bounds it to 24 hours.
 func owingAcknowledgementWithin(t *testing.T, e *channelConsentEnv, within time.Duration) *recordingStager {
 	t.Helper()
-	code := testJurisdiction(t, messagingrules.Rules{
+	code := testMessagingRules(t, messagingrules.Rules{
 		Version: 1, OptOutAcknowledgement: true, OptOutAcknowledgementWithin: within,
 	})
 	if _, err := e.owner.Exec(context.Background(),

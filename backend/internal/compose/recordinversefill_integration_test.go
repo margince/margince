@@ -180,12 +180,12 @@ func TestTheReceiptFoldsCreatesAndArchivesAndOffersAnUndoPerRecord(t *testing.T)
 	e := integration.Setup(t)
 	since := time.Now().Add(-time.Hour)
 	for _, name := range []string{"Ida Import", "Jan Import", "Kai Import"} {
-		if _, err := e.Contacts.CreateContact(machineCtx(e), contacts.CreateContactInput{FullName: name, Source: "import"}); err != nil {
+		if _, err := e.Contacts.CreateContact(machineCtx(e), contacts.CreateContactInput{FullName: name, Source: "import", OwnerID: new(ids.From[ids.UserKind](e.AdminUser))}); err != nil {
 			t.Fatal(err)
 		}
 	}
 	for _, name := range []string{"Noise One GmbH", "Noise Two GmbH"} {
-		company := e.SeedCompany(t, name, nil)
+		company := e.SeedCompany(t, name, &e.AdminUser)
 		if _, err := NewProvider(e.Pool).Archive(machineCtx(e), datasource.EntityRef{Type: "company", ID: company}); err != nil {
 			t.Fatal(err)
 		}

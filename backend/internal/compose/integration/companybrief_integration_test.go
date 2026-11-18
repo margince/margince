@@ -81,7 +81,7 @@ func briefServiceAt(e *Env, lane companybrief.Completer, routingVersion string, 
 		func() time.Time { return now })
 	// The same store serves both halves of the brief: the 360 for how the
 	// account stands with us, its profile fields for what the company is.
-	return companybrief.NewService(e.Pool, view, store, lane, routingVersion,
+	return companybrief.NewService(e.Pool, view, store, lane, func() string { return routingVersion },
 		func() time.Time { return now })
 }
 

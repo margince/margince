@@ -1,16 +1,17 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { ExternalLink } from "lucide-react";
 import { type KeyboardEvent, type RefObject, useEffect } from "react";
-import { AppLink } from "../design-system/applink";
-import { OffsiteLink } from "../design-system/offsitelink";
+import { NewTabMark, OffsiteLink } from "../design-system/offsitelink";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { AccountRelease, buildRelease, reportedRelease } from "./accountfoot";
+import {
+  buildRelease,
+  RELEASE_NOTES_HREF,
+  REPOSITORY,
+  reportedRelease,
+} from "../lib/buildrelease";
 import { type RowSeat, useRovingSeats } from "./accountseats";
-
-const REPOSITORY = "https://github.com/margince/margince";
 
 /** The bug form, with its `commit` field filled in when the bundle knows its release. */
 export function reportProblemHref(): string {
@@ -25,14 +26,13 @@ export function reportProblemHref(): string {
 
 const REQUEST_FEATURE_HREF = `${REPOSITORY}/issues/new?template=capability_gap.yml`;
 const RESOURCES_HREF = "https://margince.com/resources/";
-const RELEASE_NOTES_HREF = `${REPOSITORY}/releases`;
 
 const REPORT_SEAT = 0;
 const REQUEST_SEAT = 1;
 const RESOURCES_SEAT = 2;
-const SHORTCUTS_SEAT = 3;
-const RELEASE_NOTES_SEAT = 4;
-const LICENCES_SEAT = 5;
+const RELEASE_NOTES_SEAT = 3;
+const SHORTCUTS_SEAT = 4;
+const ABOUT_SEAT = 5;
 const SEAT_COUNT = 6;
 
 // Help documents open in a new tab, named in text and by the external-link glyph.
@@ -48,30 +48,6 @@ function HelpLinkRow({
   onLeave: () => void;
 }>) {
   const t = useT();
-  const content = (
-    <>
-      <span className="acctrowlabel">
-        {t(labelKey)}
-        <span className="sr-only"> {t("common.opensNewTab")}</span>
-      </span>
-      <ExternalLink size={14} className="acctmore" aria-hidden />
-    </>
-  );
-  if (href.startsWith("/")) {
-    return (
-      <AppLink
-        className="acctrow"
-        href={href}
-        role="menuitem"
-        {...seat}
-        onClick={onLeave}
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        {content}
-      </AppLink>
-    );
-  }
   return (
     <OffsiteLink
       className="acctrow"
@@ -80,7 +56,8 @@ function HelpLinkRow({
       {...seat}
       onClick={onLeave}
     >
-      {content}
+      <span className="acctrowlabel">{t(labelKey)}</span>
+      <NewTabMark size={14} className="acctmore" />
     </OffsiteLink>
   );
 }
@@ -95,6 +72,7 @@ export function HelpSubmenu({
   onBack,
   onLeave,
   onShortcuts,
+  onAbout,
 }: Readonly<{
   id: string;
   panel: RefObject<HTMLDivElement | null>;
@@ -102,6 +80,7 @@ export function HelpSubmenu({
   /** Closes the whole menu, for a row that takes the reader elsewhere. */
   onLeave: () => void;
   onShortcuts: () => void;
+  onAbout: () => void;
 }>) {
   const t = useT();
   const { seat, walk, move } = useRovingSeats(SEAT_COUNT);
@@ -150,6 +129,12 @@ export function HelpSubmenu({
         seat={seat(RESOURCES_SEAT)}
         onLeave={onLeave}
       />
+      <HelpLinkRow
+        href={RELEASE_NOTES_HREF}
+        labelKey="shell.help.releaseNotes"
+        seat={seat(RELEASE_NOTES_SEAT)}
+        onLeave={onLeave}
+      />
       <button
         type="button"
         className="acctrow"
@@ -160,20 +145,16 @@ export function HelpSubmenu({
       >
         {t("shell.help.shortcuts")}
       </button>
-      <HelpLinkRow
-        href={RELEASE_NOTES_HREF}
-        labelKey="shell.help.releaseNotes"
-        seat={seat(RELEASE_NOTES_SEAT)}
-        onLeave={onLeave}
-      />
-      <HelpLinkRow
-        href="/licenses/THIRD-PARTY-NOTICES.txt"
-        labelKey="shell.help.licenses"
-        seat={seat(LICENCES_SEAT)}
-        onLeave={onLeave}
-      />
-      <hr />
-      <AccountRelease />
+      <button
+        type="button"
+        className="acctrow"
+        role="menuitem"
+        aria-haspopup="dialog"
+        {...seat(ABOUT_SEAT)}
+        onClick={onAbout}
+      >
+        {t("about.title")}
+      </button>
     </div>
   );
 }

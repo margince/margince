@@ -30,7 +30,7 @@ func newAttendeeWorld(t *testing.T) attendeeWorld {
 	e := integration.Setup(t)
 	e.GrantRole(t, e.Rep1, "rep")
 	w := attendeeWorld{e: e, calendar: newSchedulingCalendar(e.Pool, nil), host: ids.From[ids.UserKind](e.Rep1)}
-	purpose, err := consent.NewStore(InstallationDB(e.Pool)).CreatePurpose(e.Admin(), "transactional", "transactional", false)
+	purpose, err := consent.NewStore(InstallationDB(e.Pool)).CreatePurpose(e.Admin(), "transactional", "transactional", false, "")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -683,3 +683,17 @@ func TestACardsLinkedInProfileIsStoredNormalized(t *testing.T) {
 		t.Errorf("linkedin slot = %q, want %q", got, normalized)
 	}
 }
+
+func TestANameOnlyCardIsImportedWithAChannelWarning(t *testing.T) {
+	t.Parallel()
+	e := setupDedupe(t)
+	results := importCards(e.as(), t, e, "BEGIN:VCARD\nFN:Name Only\nEND:VCARD\n")
+	if len(results) != 1 || results[0].Outcome != VCardCreated || results[0].ContactID == nil {
+		t.Fatalf("name-only import was lost: %+v", results)
+	}
+	for _, choice := range []string{"email", "phone", "LinkedIn"} {
+		if !strings.Contains(results[0].Reason, choice) {
+			t.Fatalf("missing %s warning: %+v", choice, results[0])
+		}
+	}
+}

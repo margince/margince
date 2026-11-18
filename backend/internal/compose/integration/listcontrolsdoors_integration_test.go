@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
 // The list controls a passport sends REST it sends list_records too. The two
@@ -18,9 +19,9 @@ import (
 func TestListRecordsTakesTheControlsTheRoutesTake(t *testing.T) {
 	t.Parallel()
 	d := newTwoDoorsWith(t, "list-controls-doors", []compose.Option{compose.WithListsEnabled(true)}, "read")
-	kept := createdRecord(t, d.e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Ada Kept"})
-	gone := createdRecord(t, d.e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Bea Gone"})
-	other := createdRecord(t, d.e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Cy Other"})
+	kept := createdRecord(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Ada Kept"})
+	gone := createdRecord(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Bea Gone"})
+	other := createdRecord(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Cy Other"})
 	if status := d.e.Call(t, "DELETE", "/v1/contacts/"+gone, nil, nil, nil); status != http.StatusOK {
 		t.Fatalf("archiving a contact → %d", status)
 	}

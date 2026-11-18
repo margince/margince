@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
 func refusalNames(problem customFieldProblem, field, code string) bool {
@@ -46,7 +47,8 @@ func TestARecordWriteNeverDropsACustomFieldKey(t *testing.T) {
 	}
 
 	_, contact := createWithCF(t, e, "/v1/contacts", integration.AnyMap{
-		"full_name": "Ada Lovelace", "source": "manual", field.ColumnName: "Countess",
+		"linkedin_url": apptest.ContactProfile(),
+		"full_name":    "Ada Lovelace", "source": "manual", field.ColumnName: "Countess",
 	})
 
 	refused := []struct {
@@ -61,7 +63,8 @@ func TestARecordWriteNeverDropsACustomFieldKey(t *testing.T) {
 		t.Run("create "+tc.name, func(t *testing.T) {
 			var problem customFieldProblem
 			status := e.Call(t, "POST", "/v1/contacts", integration.AnyMap{
-				"full_name": "Refused", "source": "manual", tc.key: tc.value,
+				"linkedin_url": apptest.ContactProfile(),
+				"full_name":    "Refused", "source": "manual", tc.key: tc.value,
 			}, nil, &problem)
 			if status != http.StatusUnprocessableEntity || !refusalNames(problem, tc.key, tc.code) {
 				t.Fatalf("create → %d %+v, want 422 %s on %s", status, problem, tc.code, tc.key)

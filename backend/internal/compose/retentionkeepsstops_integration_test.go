@@ -102,7 +102,7 @@ func seedContactWith(t *testing.T, e *integration.Env, name string, addresses ..
 // withdrawal is recorded by.
 func withdrawMarketing(t *testing.T, e *integration.Env, store *consent.Store, contact ids.UUID) {
 	t.Helper()
-	purpose, err := store.CreatePurpose(e.Admin(), "retention_newsletter", "Newsletter", false)
+	purpose, err := store.CreatePurpose(e.Admin(), "retention_newsletter", "Newsletter", false, "")
 	if err != nil {
 		t.Fatalf("creating a marketing purpose: %v", err)
 	}

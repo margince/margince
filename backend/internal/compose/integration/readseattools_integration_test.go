@@ -23,7 +23,7 @@ func TestAPassportLentByAReadSeatRunsNoWrite(t *testing.T) {
 	e.DescribeCompany(t)
 	seeded := apptest.DiscoverSeededPipeline(t, e)
 	company := createdID(t, e, "/v1/companies", AnyMap{"display_name": "Seat Tools", "source": "manual"})
-	contact := createdID(t, e, "/v1/contacts", AnyMap{"full_name": "Seat Contact", "source": "manual"})
+	contact := createdID(t, e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Seat Contact", "source": "manual"})
 	lead := createdID(t, e, "/v1/leads", AnyMap{"full_name": "Seat Lead", "email": "seat-tools@lead.test", "source": "manual"})
 	project := createdID(t, e, "/v1/projects", AnyMap{"name": "Seat Project", "company_id": company, "source": "manual"})
 	records := []struct {

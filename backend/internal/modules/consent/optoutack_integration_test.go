@@ -30,7 +30,9 @@ import (
 // stage it on.
 func owingAcknowledgement(t *testing.T, e *channelConsentEnv, owes bool) *recordingStager {
 	t.Helper()
-	code := testJurisdiction(t, messagingrules.Rules{Version: 1, OptOutAcknowledgement: owes})
+	code := testMessagingRules(t, messagingrules.Rules{
+		Version: 1, OptOutAcknowledgement: owes,
+	})
 	// The receipt follows the stopping subject's country, not the
 	// installation's.
 	if _, err := e.owner.Exec(context.Background(),
@@ -273,7 +275,7 @@ func TestAReceiptThatCannotBeStagedLeavesTheRefusalsFloor(t *testing.T) {
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
 	stager := owingAcknowledgement(t, e, true)
-	code := testJurisdiction(t, messagingrules.Rules{
+	code := testMessagingRules(t, messagingrules.Rules{
 		Version: 1, OptOutAcknowledgement: true, OptOutRecordsKeep: 366 * 24 * time.Hour,
 	})
 	if _, err := e.owner.Exec(context.Background(),
@@ -473,7 +475,7 @@ func TestTheReceiptSpeaksTheLanguageOfTheLastLinkMailWeSent(t *testing.T) {
 		t.Fatalf("minting the Vietnamese link: %v", err)
 	}
 	seedLinkDelivery(t, e, stager.seen.LinkID)
-	if _, err := e.storeNoLane.IssueBookedConsentLink(e.ctx, e.contact, e.doiNews, ""); err != nil {
+	if _, err := e.storeNoLane.IssueBookedConsentLink(e.ctx, e.contact, e.doiNews, "", true); err != nil {
 		t.Fatalf("minting the English link with no mail: %v", err)
 	}
 

@@ -28,7 +28,7 @@ func assertMeetingNotesRollback(t *testing.T, version string) {
 	conn := connect(t, owner)
 	resetSchema(t, conn)
 	ctx := context.Background()
-	core, err := migrations.Core()
+	core, err := migrations.CoreHistory()
 	if err != nil {
 		t.Fatal(err)
 	}

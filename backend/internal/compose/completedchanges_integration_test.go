@@ -26,7 +26,7 @@ func TestHomeCompletedChangesRemainDiscoverableAcrossHistoryPages(t *testing.T) 
 		if i >= 60 {
 			actor = "system:grouped-fixture"
 		}
-		_, err := e.Contacts.CreateContact(principal.SystemActing(e.Admin(), actor), contacts.CreateContactInput{FullName: fmt.Sprintf("Automatic contact %d", i), Source: "manual"})
+		_, err := e.Contacts.CreateContact(principal.SystemActing(e.Admin(), actor), contacts.CreateContactInput{FullName: fmt.Sprintf("Automatic contact %d", i), Source: "manual", OwnerID: new(ids.From[ids.UserKind](e.AdminUser))})
 		if err != nil {
 			t.Fatal(err)
 		}

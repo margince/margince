@@ -59,7 +59,8 @@ func seatActions() []seatAction {
 			class: "mutate (create)", object: "contact", verb: "create",
 			call: func(t *testing.T, e *apptest.AppEnv, _ seatFixtures) (int, string) {
 				return callForCode(t, e, "POST", "/v1/contacts", AnyMap{
-					"full_name": "Matrix Probe", "source": "manual",
+					"linkedin_url": apptest.ContactProfile(),
+					"full_name":    "Matrix Probe", "source": "manual",
 				})
 			},
 		},
@@ -380,7 +381,8 @@ func seedSeatFixtures(t *testing.T, e *apptest.AppEnv) seatFixtures {
 		ID string `json:"id"`
 	}
 	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
-		"full_name": "Matrix Subject", "source": "manual",
+		"linkedin_url": apptest.ContactProfile(),
+		"full_name":    "Matrix Subject", "source": "manual",
 	}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("seed contact → %d", status)
 	}

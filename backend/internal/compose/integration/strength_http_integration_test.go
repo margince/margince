@@ -42,7 +42,8 @@ func seedStrengthContactWithActivities(t *testing.T, e *apptest.AppEnv) string {
 		ID string `json:"id"`
 	}
 	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
-		"full_name": "Strength Target", "source": "manual",
+		"linkedin_url": apptest.ContactProfile(),
+		"full_name":    "Strength Target", "source": "manual",
 	}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("create contact → %d", status)
 	}

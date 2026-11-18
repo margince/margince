@@ -203,7 +203,8 @@ func assertInjectionLabel(t *testing.T, e *apptest.AppEnv) {
 	// The contact table survives: an ordinary contact write still round-trips.
 	var contact integration.AnyMap
 	if status := e.Call(t, "POST", "/v1/contacts", integration.AnyMap{
-		"full_name": "Injection Survivor", "source": "manual",
+		"linkedin_url": apptest.ContactProfile(),
+		"full_name":    "Injection Survivor", "source": "manual",
 	}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("contact table did not survive the injection attempt: create status = %d %v", status, contact)
 	}

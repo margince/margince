@@ -145,3 +145,40 @@ func TestAnInquiryWithNoLiveAuthorizerCannotReadThroughTheSystemActor(t *testing
 		t.Fatalf("gone authorizer planned under system authority: %v", err)
 	}
 }
+
+func TestAnInquiryTaskQuotesWhoWroteAndWhatTheyAsked(t *testing.T) {
+	event, _, target := inquiryPlannerFixture(t)
+	policy, err := ParseInquiryPolicy(event.Params)
+	if err != nil {
+		t.Fatal(err)
+	}
+	message := "Can you quote 40 seats for March?"
+	for _, tc := range []struct {
+		name string
+		raw  map[string]any
+		want string
+	}{
+		{"named", map[string]any{"email": "anna@example.com", "full_name": "Anna Weber", "message": message}, "Anna Weber asked: “Can you quote 40 seats for March?”"},
+		{"address only", map[string]any{"email": "anna@example.com", "message": message}, "anna@example.com asked: “Can you quote 40 seats for March?”"},
+		{"no message", map[string]any{"email": "anna@example.com"}, ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			receipt := inquiryReceipt{Target: target, Key: "k"}
+			receipt.Activity.CreatedAt = time.Date(2026, 3, 28, 15, 0, 0, 0, time.UTC)
+			receipt.Activity.Raw = &tc.raw
+			effect, err := planInquiryTask(context.Background(), event, policy, receipt)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var fields struct {
+				Body string `json:"body"`
+			}
+			if err := json.Unmarshal(effect.Actions[0].Args, &fields); err != nil {
+				t.Fatal(err)
+			}
+			if fields.Body != tc.want {
+				t.Fatalf("body = %q, want %q", fields.Body, tc.want)
+			}
+		})
+	}
+}

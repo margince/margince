@@ -33,10 +33,11 @@ func approvedHeldWordingFor(t *testing.T, anotherDirector bool) (*consentEnv, st
 		t.Fatalf("initial send=%d", status)
 	}
 	review := liveReviewID(t, c)
-	if status := c.Call(t, "POST", "/v1/contacts/"+c.contactID+"/consent/suppress", AnyMap{
-		"kind": "marketing_objection", "reason": "A colleague recorded an objection.",
-	}, nil, nil); status != http.StatusNoContent {
-		t.Fatalf("recording a stop=%d", status)
+	if _, err := c.Owner.Exec(t.Context(), `CREATE FUNCTION reject_wording_staging() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'delivery staging interrupted by the test'; END $$`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := c.Owner.Exec(t.Context(), `CREATE TRIGGER reject_wording_staging BEFORE UPDATE ON communication_instruction FOR EACH ROW WHEN (NEW.status='consumed') EXECUTE FUNCTION reject_wording_staging()`); err != nil {
+		t.Fatal(err)
 	}
 	director := c.AppEnv
 	if anotherDirector {
@@ -53,18 +54,11 @@ func approvedHeldWordingFor(t *testing.T, anotherDirector bool) (*consentEnv, st
 		apptest.SetPasswordByLink(t, c.AppEnv, invited.ID, password)
 		director = c.AsSecondSeat(t, "separate-director@consent.test", password)
 	}
-	if status := director.Call(t, "POST", "/v1/communication-reviews/"+review+"/direct-send", directed(), nil, nil); status < 400 || status >= 500 {
-		t.Fatalf("stopped send=%d", status)
+	if status := director.Call(t, "POST", "/v1/communication-reviews/"+review+"/direct-send", directed(), nil, nil); status != http.StatusInternalServerError {
+		t.Fatalf("interrupted staging=%d", status)
 	}
-	var stop string
-	if err := c.Owner.QueryRow(t.Context(), `SELECT id FROM communication_suppression WHERE contact_id=@contact AND revoked_at IS NULL`,
-		pgx.StrictNamedArgs{"contact": c.contactID}).Scan(&stop); err != nil {
+	if _, err := c.Owner.Exec(t.Context(), `DROP FUNCTION reject_wording_staging() CASCADE`); err != nil {
 		t.Fatal(err)
-	}
-	if status := c.Call(t, "POST", "/v1/contacts/"+c.contactID+"/consent/suppress/"+stop+"/lift", AnyMap{
-		"reason": "The colleague recorded this objection by mistake.",
-	}, nil, nil); status != http.StatusNoContent {
-		t.Fatalf("correcting the mistaken stop=%d", status)
 	}
 	if anotherDirector {
 		c.AppEnv = director

@@ -370,3 +370,18 @@ func TestOnlyAnUpdateNeedsItsImagesToBeDescribedAndGrouped(t *testing.T) {
 		}
 	}
 }
+
+// A saved activity is named by its kind; an unknown kind keeps the general sentence.
+func TestACreatedActivityIsNamedByItsKind(t *testing.T) {
+	for kind, want := range map[string]string{
+		"email":   "magic.action.create_activity_email",
+		"meeting": "magic.action.create_activity_meeting",
+		"fax":     "magic.action.create_activity",
+	} {
+		row := auditRow("connector:gmail", "", "", "", whenStaged)
+		row.Action, row.EntityType, row.ActivityKind = actionCreate, typeActivity, &kind
+		if d, ok := describe(row); !ok || d.summary.Key != want {
+			t.Errorf("%s: summary = %q (described %v), want %q", kind, d.summary.Key, ok, want)
+		}
+	}
+}

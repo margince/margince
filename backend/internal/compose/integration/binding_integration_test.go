@@ -248,7 +248,7 @@ func TestReleaseReembeddingOnlyEverActsOnItsOwnRun(t *testing.T) {
 
 	// Releasing while no run holds the marker must be a no-op: nothing was
 	// claimed, so nothing should read populated under a never-run job's identity.
-	if err := e.Store.ReleaseReembedding(ctx, ids.NewV7()); err != nil {
+	if err := e.Store.ReleaseReembedding(ctx, ids.NewV7(), nil); err != nil {
 		t.Fatalf("ReleaseReembedding with no run in flight: %v", err)
 	}
 	populated, status, _, err := e.Store.PopulatedIdentity(ctx)
@@ -263,7 +263,7 @@ func TestReleaseReembeddingOnlyEverActsOnItsOwnRun(t *testing.T) {
 	if err := e.Store.ClaimAndEnqueueReembedding(ctx, search.ReembedClaim{Run: run, TargetIdentity: claimed}, func(tx pgx.Tx) error { return nil }); err != nil {
 		t.Fatalf("ClaimAndEnqueueReembedding: %v", err)
 	}
-	if err := e.Store.ReleaseReembedding(ctx, ids.NewV7()); err != nil {
+	if err := e.Store.ReleaseReembedding(ctx, ids.NewV7(), nil); err != nil {
 		t.Fatalf("ReleaseReembedding under a run that does not hold the marker: %v", err)
 	}
 	populated, status, _, err = e.Store.PopulatedIdentity(ctx)
@@ -274,7 +274,7 @@ func TestReleaseReembeddingOnlyEverActsOnItsOwnRun(t *testing.T) {
 		t.Fatalf("a run that does not hold the marker released it: populated=%q status=%q", populated, status)
 	}
 
-	if err := e.Store.ReleaseReembedding(ctx, run); err != nil {
+	if err := e.Store.ReleaseReembedding(ctx, run, nil); err != nil {
 		t.Fatalf("ReleaseReembedding from the claiming run: %v", err)
 	}
 	populated, status, _, err = e.Store.PopulatedIdentity(ctx)
@@ -286,6 +286,41 @@ func TestReleaseReembeddingOnlyEverActsOnItsOwnRun(t *testing.T) {
 	}
 	if status != "idle" {
 		t.Fatalf("status = %q, want idle after the run released", status)
+	}
+}
+
+// A run cut short because the admin moved the embed model back hands the
+// marker back without stamping its target. The index then still names the model
+// it was released under, and a configured model equal to it reads no reindex.
+func TestAnAbandonedRunLeavesThePopulatedModelAsItWas(t *testing.T) {
+	t.Parallel()
+	e := SetupSearch(t)
+	ctx := context.Background()
+	const original = "fake/orig@1024"
+	const target = "fake/target@1024"
+	if err := e.Store.SeedBinding(ctx, original); err != nil {
+		t.Fatalf("SeedBinding: %v", err)
+	}
+	run := ids.NewV7()
+	if err := e.Store.ClaimAndEnqueueReembedding(ctx, search.ReembedClaim{Run: run, TargetIdentity: target}, func(tx pgx.Tx) error { return nil }); err != nil {
+		t.Fatalf("ClaimAndEnqueueReembedding: %v", err)
+	}
+	if err := e.Store.ReleaseReembedding(ctx, run, search.ErrIdentityDrift); err != nil {
+		t.Fatalf("ReleaseReembedding: %v", err)
+	}
+	populated, status, _, err := e.Store.PopulatedIdentity(ctx)
+	if err != nil {
+		t.Fatalf("PopulatedIdentity: %v", err)
+	}
+	if populated != original || status != "idle" {
+		t.Fatalf("after the abandon populated=%q status=%q, want %q idle", populated, status, original)
+	}
+	needed, err := e.Store.ReindexNeeded(ctx, original)
+	if err != nil {
+		t.Fatalf("ReindexNeeded: %v", err)
+	}
+	if needed {
+		t.Error("a store back on its populated model with nothing pending reads a reindex as needed")
 	}
 }
 

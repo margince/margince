@@ -113,6 +113,12 @@ func TestAMaskNamingSomethingNothingWithholdsIsRefused(t *testing.T) {
 		"rep", "deal", "amount_minor", "outside_write_authority"); err != nil {
 		t.Fatalf("the mask the deal store applies was refused: %v", err)
 	}
+	// field_mask outlives the per-test reset, so the shipped rep role keeps this mask otherwise.
+	if _, err := e.Pool.Exec(ctx,
+		`DELETE FROM field_mask WHERE role_key = $1 AND object = $2 AND field = $3 AND condition = $4`,
+		"rep", "deal", "amount_minor", "outside_write_authority"); err != nil {
+		t.Fatalf("removing the admitted mask: %v", err)
+	}
 }
 
 func maskableFixtureLines(t *testing.T) []string {

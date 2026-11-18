@@ -10756,6 +10756,35 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: Export this edition's permitted frozen metrics, chart readings and kept question answers.
+  /search/data-answer:
+    post:
+      tags: [Search]
+      operationId: askSearchData
+      summary: Answer a question through the caller's reporting and record readers.
+      description: |-
+        Read-only. A model proposes a typed plan from the caller's vocabulary; the existing engines enforce permissions and masks. Unsupported questions fall back to the handbook. Nothing is saved.
+
+        Needs the passport permission Read records.
+
+        Runs at once.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [question]
+              properties:
+                question: {type: string, minLength: 1, maxLength: 2000}
+      responses:
+        '200':
+          description: An answer with its executed source, or no supported data plan.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/SearchDataAnswer'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /analytics/evaluate:
     get:
       tags:
@@ -17664,37 +17693,6 @@ paths:
               schema: {$ref: '#/components/schemas/CommunicationReview'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
-  /communication-reviews/{id}/direct-send:
-    parameters:
-      - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
-    post:
-      tags: [Communication]
-      operationId: directCommunicationSend
-      security: [{bearerAuth: []}]
-      summary: Send a refused message anyway, on a named human's recorded decision.
-      description: |-
-        The engine refused this message and the refusal stands. This records that a designated human
-        read it, was shown the compliance warning, acknowledged it, and decided in writing that the
-        message goes — and then sends the exact message the review was holding.
-
-        Needs the passport permission Send messages.
-
-        Runs at once.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: {$ref: '#/components/schemas/DirectCommunicationSendRequest'}
-      responses:
-        '201':
-          description: The activity the sent message produced.
-          content:
-            application/json:
-              schema: {$ref: '#/components/schemas/Activity'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
-        '409': {$ref: '#/components/responses/Conflict'}
-        '422': {$ref: '#/components/responses/ValidationError'}
   /data-subject-requests/{id}:
     parameters:
       - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
@@ -18830,9 +18828,11 @@ paths:
       summary: Mail the subject a single-use link that confirms one marketing purpose.
       description: |-
         Mints the double-opt-in link for `purpose_id` and stages it to the contact's own live
-        primary address. The purpose must be live and must itself require double
-        opt-in; anything else is a 422, because a mailed link asking about a purpose that needs no
-        confirmation asks a question the answer does not fit. The plaintext is never returned: this endpoint once handed it to the
+        primary address. The purpose must be live. A purpose of a marketing class must itself
+        require double opt-in, else this is a 422, because a mailed link asking about a
+        subscription that needs no confirmation asks a question the answer does not fit. A purpose
+        of another class may be asked about either way: it is how a contact with no lawful basis on
+        record is asked for consent to correspondence. The plaintext is never returned: this endpoint once handed it to the
         authenticated operator, who could paste it straight back into `recordConsent` — a round
         trip in which the subject's mailbox never participated, recorded as though it had. A double
         opt-in is evidence only because the data subject completed it from their own mailbox, so
@@ -18866,6 +18866,10 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/ControllerMailRefused'}
         '422':
+          description: |-
+            Also when
+            the contact's country asks that a consent mail for the purpose's class answer their own
+            request, and no such request is on record.
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
@@ -30564,11 +30568,11 @@ components:
         lead's `company_name` is text, not a link, so it never skips a lead.
     ImportProblemKind:
       type: string
-      enum: [broken_link, dropped_link, invalid_value, unknown_owner, new_tag, duplicate, permission, unusable_row]
+      enum: [broken_link, dropped_link, invalid_value, unknown_owner, new_tag, duplicate, permission, unusable_row, incomplete_identity]
       description: 'What kind of problem a report issue names, so a screen can group them. One closed list, the same one the server reports from.'
     ImportReasonCode:
       type: string
-      enum: [activity_empty, activity_held, address_erased, address_not_split, activity_link_ambiguous, activity_link_ambiguous_dropped, activity_type_unknown, activity_type_unnamed, activity_unlinked, amount_negative, author_too_long, cannot_create, cannot_create_tags, cannot_edit, cannot_edit_and_tag, cannot_link_stakeholders, cannot_read_pipelines, cannot_read_tags, cannot_write_type, close_date_future, close_date_past, company_duplicate_found, company_duplicate_skipped, company_link_on_meeting, company_name_empty, contact_duplicate_found, contact_duplicate_skipped, contact_email_held, contact_holds_lead, contact_not_found, contact_not_found_dropped, contact_unnamed, currency_not_a_code, currency_unset, deal_already_closed, deal_company_has_contracts, deal_legal_gate, deal_not_found, deal_not_found_dropped, deal_pipeline_fixed, description_too_long, direction_unknown, domain_held, duplicate_email, duration_not_valid_for_kind, email_names_no_contact, duration_out_of_range, employer_column_empty, employer_column_empty_dropped, employer_not_found, employer_not_found_dropped, employer_refused, employer_will_create, empty_payload, field_inactive, fx_rate_missing, id_not_a_company_id, id_not_visible, id_on_non_company, lead_not_found, lead_not_found_dropped, lead_status_not_importable, lead_status_unknown, link_ambiguous, link_ambiguous_dropped, link_contact_not_imported, link_edge_unsupported, link_malformed, link_not_attachable, link_not_found, link_not_found_dropped, link_row_not_imported, link_row_skipped, link_row_skipped_dropped, link_type_unknown, linkedin_held, lost_reason_missing, meeting_not_taken_place, meeting_status_not_valid_for_kind, meeting_status_unknown, message_not_importable, natural_key_taken, not_a_date, note_repeated, not_a_domain, not_a_number, not_an_amount, not_an_email, not_yes_no, occurred_at_future, occurred_at_unnamed, option_not_allowed, option_not_in_list, options_need_semicolons, owner_refused, owner_unknown, phone_needs_country, pipeline_no_open_stage, pipeline_unknown, pipeline_unnamed, record_archived, ref_taken_by_another_company, row_key_empty, row_key_repeated, run_in_flight, size_band_invalid, stage_unknown, stage_unnamed, tag_created, tag_name_invalid, tag_new, task_not_importable, timestamp_needs_zone, too_many_links, undo_edited, undo_failed, undo_grant_lost, undo_not_visible, undo_rule_protects, undo_still_referenced, value_refused, value_too_long, value_unreadable]
+      enum: [activity_empty, activity_held, address_erased, address_not_split, activity_link_ambiguous, activity_link_ambiguous_dropped, activity_type_unknown, activity_type_unnamed, activity_unlinked, amount_negative, author_too_long, cannot_create, cannot_create_tags, cannot_edit, cannot_edit_and_tag, cannot_link_stakeholders, cannot_read_pipelines, cannot_read_tags, cannot_write_type, close_date_future, close_date_past, company_duplicate_found, company_duplicate_skipped, company_link_on_meeting, company_name_empty, contact_duplicate_found, contact_duplicate_skipped, contact_email_held, contact_holds_lead, contact_not_found, contact_not_found_dropped, contact_channel_missing, contact_unnamed, currency_not_a_code, currency_unset, deal_already_closed, deal_company_has_contracts, deal_legal_gate, deal_not_found, deal_not_found_dropped, deal_pipeline_fixed, description_too_long, direction_unknown, domain_held, duplicate_email, duration_not_valid_for_kind, email_names_no_contact, duration_out_of_range, employer_column_empty, employer_column_empty_dropped, employer_not_found, employer_not_found_dropped, employer_refused, employer_will_create, empty_payload, field_inactive, fx_rate_missing, id_not_a_company_id, id_not_visible, id_on_non_company, lead_not_found, lead_not_found_dropped, lead_status_not_importable, lead_status_unknown, link_ambiguous, link_ambiguous_dropped, link_contact_not_imported, link_edge_unsupported, link_malformed, link_not_attachable, link_not_found, link_not_found_dropped, link_row_not_imported, link_row_skipped, link_row_skipped_dropped, link_type_unknown, linkedin_held, lost_reason_missing, meeting_not_taken_place, meeting_status_not_valid_for_kind, meeting_status_unknown, message_not_importable, natural_key_taken, not_a_date, note_repeated, not_a_domain, not_a_number, not_an_amount, not_an_email, not_yes_no, occurred_at_future, occurred_at_unnamed, option_not_allowed, option_not_in_list, options_need_semicolons, owner_refused, owner_unknown, phone_needs_country, pipeline_no_open_stage, pipeline_unknown, pipeline_unnamed, record_archived, ref_taken_by_another_company, row_key_empty, row_key_repeated, run_in_flight, size_band_invalid, stage_unknown, stage_unnamed, tag_created, tag_name_invalid, tag_new, task_not_importable, timestamp_needs_zone, too_many_links, undo_edited, undo_failed, undo_grant_lost, undo_not_visible, undo_rule_protects, undo_still_referenced, value_refused, value_too_long, value_unreadable]
       description: 'Why a row was skipped or warned about, so a screen can say it in the reader''s language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code. `run_in_flight` is the one refusal code: it answers a commit or undo on a run another attempt holds, and no row carries it.'
     CreateImportRunRequest:
       type: object
@@ -31918,7 +31922,7 @@ components:
             The same `getCompanyLogo` path `Company.logo_url` carries for this account. The key is ABSENT when the company wears no logo; a client draws the company's monogram then.
     CreateContactRequest:
       description: >-
-        Contact creation also resolves available employer evidence atomically. A business work email requires company:create for shared domain resolution, including when triage is pending. An explicit employer additionally requires the company and relationship authority used by linking. A refusal rolls back the contact instead of silently omitting employment.
+        Requires at least one nonblank email, phone or LinkedIn URL (including social.linkedin). Name-only requests return 422 contact_channel_required. CSV import retains and warns about name-only rows. Contact creation also resolves available employer evidence atomically. A business work email requires company:create for shared domain resolution, including when triage is pending. An explicit employer additionally requires the company and relationship authority used by linking. A refusal rolls back the contact instead of silently omitting employment.
       type: object
       required: [full_name, source]
       properties:
@@ -31968,7 +31972,18 @@ components:
         company_name:
           type: [string, 'null']
           description: The employer name to resolve or create. Not with `company_id`; blank leaves resolution to the work email domain.
+        acquisition_source:
+          description: 'Where the contact came from, as the user creating it states. The contact''s privacy page prints it. `other` needs `acquisition_note`.'
+          allOf: [{$ref: '#/components/schemas/ContactStatedSource'}]
+        acquisition_note:
+          type: [string, 'null']
+          maxLength: 500
+          description: 'Their own words about the source, printed on the contact''s privacy page beside it.'
       additionalProperties: true
+    ContactStatedSource:
+      type: string
+      enum: [met_in_person, business_card, referral, website, other]
+      description: Where a contact created by hand came from, as the user who created it stated.
     CompanyForAddress:
       type: object
       description: The company a contact at the asked address would work at.
@@ -32051,7 +32066,7 @@ components:
           description: The contact created or updated, or — for `needs_review` — the candidate the card resembles.
         reason:
           type: [string, 'null']
-          description: Why a card was skipped, in words a reader can act on.
+          description: Why a card was skipped, or a warning about an imported contact without a channel.
         lead_id:
           type: [string, 'null']
           format: uuid
@@ -36087,6 +36102,18 @@ components:
           minimum: 1
           maximum: 25
           description: How many citations, counterexamples and abstentions to return, each.
+    SearchDataAnswer:
+      type: object
+      additionalProperties: false
+      required: [outcome]
+      properties:
+        outcome: {type: string, enum: [answered, unsupported]}
+        source: {type: string, description: 'The typed selection or query requested, including its period and filters; evaluation.context names the resolved reporting period.'}
+        count: {type: boolean, description: 'For reporting, show the metric''s eligible record count rather than its value.'}
+        evaluation: {$ref: '#/components/schemas/ReportingEvaluation'}
+        records: {$ref: '#/components/schemas/WorkspaceQueryResult'}
+        analytics: {$ref: '#/components/schemas/AnalyticsAnswer'}
+        analytics_query: {$ref: '#/components/schemas/AnalyticsQuery'}
     WorkspaceQueryRequest:
       type: object
       description: What `query_workspace` takes.
@@ -41280,6 +41307,22 @@ components:
         voice_profile_version: {type: [integer, 'null'], readOnly: true, minimum: 1, description: 'The Voice DNA PROFILE version (not a model version) that styled this draft — the "built from your corpus · vN" provenance; null when no ready voice profile shaped it.'}
         draft_ref: {type: [string, 'null'], readOnly: true, description: 'Opaque reference identifying this served voice draft for learning feedback (rejectVoiceDraft); null when no voice profile styled it.'}
         voice_degraded: {type: boolean, readOnly: true, description: 'True when the sender''s voice could not even be looked up, so this draft may be missing a voice its sender built. A client should say so: the sender cannot detect a missing voice by reading the text. Absent reads as false.'}
+        communication_context:
+          allOf: [{$ref: '#/components/schemas/CommunicationContext'}]
+          readOnly: true
+          description: |-
+            What the drafting instruction says this message is, for the composer to send
+            with it. `requested_followup` when the instruction asks to move an appointment,
+            in English, German or Vietnamese. Absent when the instruction says nothing the
+            send check can use, which leaves the reason to the thread or the sender. The
+            send check still needs its own evidence, here an agreed appointment with the
+            recipient.
+        evidence:
+          allOf: [{$ref: '#/components/schemas/CommunicationEvidence'}]
+          readOnly: true
+          description: |-
+            The record the drafted reason rests on: the meeting itself, when the draft was
+            written from it. Absent otherwise.
         language:
           type: string
           enum: [en, de, vi]
@@ -41325,6 +41368,13 @@ components:
         A draft written from an account's records, and what it was written from. Never sent by drafting; send via `POST /emails`.
       required: [subject, body, reasoning, generated_by, ai_generated]
       properties:
+        communication_context:
+          allOf: [{$ref: '#/components/schemas/CommunicationContext'}]
+          readOnly: true
+          description: |-
+            What the drafting instruction says this message is, for the composer to send with it:
+            `requested_followup` when it asks to move an appointment. Absent otherwise. The send
+            check still needs an agreed appointment with the recipient.
         subject: {type: string}
         body:
           type: string
@@ -41829,9 +41879,10 @@ components:
       type: object
       required: [to]
       description: |-
-        What a composer is about to write, in the shape the engine judges. It carries no
-        `body` and no `subject`: neither reaches a consent decision, and sending an unwritten
-        draft to the server to be told whether it may exist would be the wrong way round.
+        What a composer is about to write, in the shape the engine judges. A `subject` and
+        `body` never reach a consent decision. When given, they are checked against the
+        advertising content rules of each recipient's jurisdiction pack and answered as
+        `content_findings`.
       properties:
         to:
           type: array
@@ -41862,6 +41913,14 @@ components:
         evidence:
           allOf: [{$ref: '#/components/schemas/CommunicationEvidence'}]
           description: Records the caller names in support of this message. Checked, never trusted.
+        subject:
+          type: string
+          maxLength: 998
+          description: The draft's subject, checked only for `content_findings`.
+        body:
+          type: string
+          maxLength: 200000
+          description: The draft's plain text, checked only for `content_findings`.
     PreviewAccountSendRequest:
       type: object
       required: [to, links]
@@ -41896,6 +41955,14 @@ components:
             Omit it and the answer is about the record alone.
         evidence:
           allOf: [{$ref: '#/components/schemas/CommunicationEvidence'}]
+        subject:
+          type: string
+          maxLength: 998
+          description: The draft's subject, checked only for `content_findings`.
+        body:
+          type: string
+          maxLength: 200000
+          description: The draft's plain text, checked only for `content_findings`.
     SendAuthorizationPreview:
       type: object
       required: [allowed, recipients]
@@ -41911,6 +41978,41 @@ components:
         recipients:
           type: array
           items: {$ref: '#/components/schemas/SendAuthorizationPreviewRecipient'}
+        content_findings:
+          type: array
+          description: |-
+            What the draft's `subject` and `body` do not meet among the advertising content rules
+            of the recipients' jurisdiction packs. Advisory: a finding never refuses the send.
+            Empty when no subject or body was given, or when the message is not advertising.
+          items: {$ref: '#/components/schemas/DraftContentFinding'}
+    DraftContentFinding:
+      type: object
+      required: [requirement, detail]
+      properties:
+        requirement:
+          type: string
+          enum: [claim_without_proof, advertising_language_first, foreign_advertiser]
+          description: |-
+            `claim_without_proof`: the draft makes a claim the pack allows only beside a stated
+            proof (the document's name, number and date), and states none.
+            `advertising_language_first`: the draft does not open in the pack's disclosure
+            language, which advertising leads with.
+            `foreign_advertiser`: the sending legal entity is not established in the recipient's
+            country, whose pack asks an advertiser from elsewhere to advertise there through a
+            local advertising service business. The customer answers for it.
+        detail:
+          type: string
+          description: What was found, for the composer to read.
+        words:
+          type: array
+          items: {type: string}
+          description: The claim words found, for `claim_without_proof`.
+        language:
+          type: string
+          description: The language the draft must lead with, for `advertising_language_first`.
+        country:
+          type: string
+          description: The recipient's country, lower-case ISO 3166-1 alpha-2, for `foreign_advertiser`.
     CommunicationEvidenceSubject:
       type: object
       description: An existing recipient record the caller can read.
@@ -41920,12 +42022,40 @@ components:
           type: string
           enum: [contact, lead]
         entity_id: {type: string, format: uuid}
+    FooterFinding:
+      type: object
+      required: [kind, language, missing_means]
+      properties:
+        kind: {type: string, description: 'Missing disclosure kind or unavailable private link. Unknown kinds remain visible as an unspecified footer omission.'}
+        language: {type: string, description: 'Required language, or empty when no language is missing.'}
+        missing_means: {type: array, items: {type: string}, description: 'Missing contact methods, such as email, phone or web.'}
     SendAuthorizationPreviewRecipient:
       type: object
       required: [address, verdict, reason_code]
       description: One recipient's answer. It describes the MESSAGE, never the contact's file.
       properties:
+        footer_findings:
+          type: array
+          items: {$ref: '#/components/schemas/FooterFinding'}
+          description: Server-derived missing footer disclosures or unavailable private links shown before the sender confirms this message. Contains no credentials.
         address: {type: string, format: email}
+        lawful_basis_missing:
+          type: boolean
+          description: |-
+            The recipient's country has no legitimate-interest basis, and the record holds neither
+            their consent nor an agreement with them. A privacy notice they were sent is neither.
+            Not a refusal: a surface shows a warning and records the sender's confirmation through
+            `POST /lawful-basis-confirmations` before the send. Absent or false otherwise.
+        consent_purpose_id:
+          type: string
+          format: uuid
+          description: |-
+            For a recipient marked `lawful_basis_missing`: the purpose a consent request would ask
+            about for this use: the oldest live purpose whose class covers it, that the contact has
+            not withdrawn, and that this door may ask about (a marketing one only if double opt-in). `POST /contacts/{id}/consent/double-opt-in` with it mails
+            the request. The recipient's pack says for which purpose classes the contact's own request
+            must be on record first. Absent when no such purpose exists, or when the recipient is a
+            lead.
         evidence_subject:
           allOf: [{$ref: '#/components/schemas/CommunicationEvidenceSubject'}]
           description: |-
@@ -41986,7 +42116,15 @@ components:
         can_be_overruled:
           type: boolean
           description: |-
-            Whether a contact may lift this refusal by recording why they are writing.
+            Whether the sender may send this one message past the refusal by recording a
+            reason. True for every policy refusal except the subject's own stops: the refusal
+            stays on the record, and the reason is kept with the message. False for a stop
+            (`decided_by` is `subject`), which nobody sends past, admin included. False for a
+            hard bounce, because no decision makes a dead address accept mail, and for a
+            recipient that resolves to nobody or to two contacts, whose stops were never read.
+            Only a user in their own session sends past it, never an agent, and only with the
+            `communication_exception` grant. The refused send's review offers `direct_send` only
+            to such a caller.
         decided_by:
           type: string
           enum: [machine, user, admin, subject]
@@ -41994,7 +42132,7 @@ components:
             Whose decision this answer is, which is what says whether anybody may overrule
             it. `machine` is the engine reading an incomplete record and a rep who knows
             better may say so. `subject` is the contact's own act — an objection or a
-            withdrawal — and nobody in the installation lifts it, admin included.
+            withdrawal. Nobody in the installation lifts it or sends past it, admin included.
     SendCompanyEmailRequest:
       type: object
       required: [subject, body, to, links]
@@ -51329,7 +51467,12 @@ components:
           type: string
           enum: [business_correspondence, transactional, marketing, phone_outreach]
           description: What kind of message the purpose is for. Only a `marketing` purpose can be named on a collection-notice declaration.
+        frequency: {$ref: '#/components/schemas/ConsentPurposeFrequency'}
         created_at: {type: string, format: date-time}
+    ConsentPurposeFrequency:
+      type: string
+      enum: [weekly, monthly, quarterly]
+      description: How often the purpose's mail goes out, roughly. The subscription question states it.
     RetentionScope:
       type: string
       description: |-
@@ -51691,6 +51834,14 @@ components:
         the rep is actually asking — and it is why an erasure clears this list.
       required: [address, reason_code]
       properties:
+        footer_preview:
+          type: array
+          items: {type: string}
+          description: Configured disclosure text included in this message. Contains no recipient credentials.
+        footer_findings:
+          type: array
+          items: {$ref: '#/components/schemas/FooterFinding'}
+          description: Server-derived missing footer disclosures or unavailable private links shown before the sender confirms this message. Contains no credentials.
         address: {type: string}
         subject_kind: {type: string, enum: [contact, lead]}
         subject_id: {type: string, format: uuid}
@@ -51707,6 +51858,9 @@ components:
         what the consent rows say today.
       required: [id, state, kind, reason_code, refusals]
       properties:
+        assessment_revision:
+          type: string
+          description: Revision of the displayed refusal and footer details, echoed when confirming.
         id: {type: string, format: uuid}
         state:
           type: string
@@ -51778,37 +51932,6 @@ components:
         explanation: {type: string}
         warning_version: {type: string}
       additionalProperties: false
-    DirectCommunicationSendRequest:
-      type: object
-      description: |-
-        A designated human's decision that one refused message goes out anyway. Every field is frozen
-        on the record once written.
-      required: [reason_code, explanation, warning_version, acknowledged]
-      properties:
-        reason_code:
-          type: string
-          enum: [customer_requested_outside_crm, contractual_necessity, legal_obligation, other]
-          description: |-
-            Why the installation has a basis the engine cannot see. A closed list, because an audit
-            of overrides needs to be countable — free text alone cannot answer "how often do we send
-            on a contract clause".
-        explanation:
-          type: string
-          minLength: 1
-          maxLength: 2000
-          description: |-
-            What this colleague says the reason is, in their own words. Required and must say something:
-            a blank explanation is an acknowledgement nobody can be held to.
-        warning_version:
-          type: string
-          description: |-
-            The compliance text they were shown. Recorded because a record naming no version cannot
-            say what they were told, and the text changes.
-        acknowledged:
-          type: boolean
-          description: |-
-            The tick. Refused when false — the acknowledgement is the act, and an instruction written
-            without one would record a decision nobody made.
     ConfirmSubmission:
       type: object
       description: |-
@@ -51945,6 +52068,17 @@ components:
           type: string
           maxLength: 500
           description: 'How to reach whoever answers about the data. Art. 13(1)(b), which asks for the data protection officer where one exists.'
+        privacy_page:
+          type: string
+          maxLength: 500
+          description: 'Where the installation publishes its own privacy information. A subscription question points its reader there, and falls back to `privacy_contact` while this is empty.'
+        archive_purpose:
+          type: string
+          maxLength: 500
+          description: |-
+            Why captured correspondence is kept in the archive after its retention window, as the
+            words that finish the privacy page's sentence about the archive. Empty prints the page's
+            default purpose in the reader's language.
         objection_route:
           type: string
           maxLength: 500
@@ -51959,6 +52093,50 @@ components:
             the postal address because the obligation is about reachability rather than about where
             somebody is registered, and answering it with a street address reports an unmet duty
             as met.
+        translations:
+          type: array
+          maxItems: 3
+          description: |-
+            The same particulars in other languages, one entry per language. A mail or page in one of
+            them prints the translated text where it is stated and the text above where it is not.
+            Where a jurisdiction pack in force names a disclosure language, an advertising mail to a
+            recipient under that pack is refused until its objection route and advertiser contact are
+            stated in that language.
+          items: {$ref: '#/components/schemas/ControllerParticularsTranslation'}
+        disclosure_languages:
+          type: array
+          readOnly: true
+          description: |-
+            The languages the jurisdiction packs in force ask the objection route and the advertiser
+            contact to be stated in. The packs in force are those of the installation's country and
+            of each legal entity's country.
+          items: {type: string, pattern: '^[a-z]{2}$'}
+        objection_route_means:
+          type: array
+          readOnly: true
+          description: |-
+            What every stated objection route must name under the packs in force. Saving a route that
+            lacks one answers 422 with the field and the missing part.
+          items: {$ref: '#/components/schemas/ContactMeans'}
+    ControllerParticularsTranslation:
+      type: object
+      required: [language]
+      description: The controller particulars in one more language. An empty field prints the default text.
+      properties:
+        language:
+          type: string
+          pattern: '^[a-z]{2}$'
+          description: The language, as a base language the installation can send mail in.
+        legal_name: {type: string, maxLength: 500}
+        postal_address: {type: string, maxLength: 500}
+        privacy_contact: {type: string, maxLength: 500}
+        objection_route: {type: string, maxLength: 500}
+        advertiser_contact: {type: string, maxLength: 500}
+        archive_purpose: {type: string, maxLength: 500}
+    ContactMeans:
+      type: string
+      description: A way of reaching someone that a stated particular must name.
+      enum: [web, email, phone]
     NoticeCaseState:
       type: string
       description: |-
@@ -54887,6 +55065,17 @@ components:
         contact_id: {type: string, format: uuid}
         display_name: {type: string}
         status: {type: string, enum: [open, done, dismissed]}
+    WorkGrounds:
+      type: object
+      additionalProperties: false
+      required: [text]
+      description: >-
+        Why a piece of work exists, written when the work was made: who did or said what, about which record, and when. A sender's words in it are quoted exactly.
+      properties:
+        text:
+          type: string
+          maxLength: 600
+          description: The reason, in the reader's language where Margince wrote it, else in its author's.
     AttentionPair:
       type: object
       description: |-
@@ -55963,6 +56152,10 @@ components:
           description: |-
             One supporting line, in PROSE — a bounce reason, a park reason, the mailbox that
             stopped, what an AI task was about.
+        why:
+          allOf: [{$ref: '#/components/schemas/WorkGrounds'}]
+          description: >-
+            Why this work exists, as whoever made it said it. A reader acts on this sentence instead of on the row's date. Absent when its maker gave none, never filled with a stock sentence.
         because:
           type: array
           items: {$ref: '#/components/schemas/WorklistReason'}

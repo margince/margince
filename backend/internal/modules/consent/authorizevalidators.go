@@ -80,7 +80,7 @@ func (g *Gate) validate(ctx context.Context, tx pgx.Tx, req commsauthz.Request, 
 func (g *Gate) validateCategory(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef, category commsauthz.Category, w packRules, unsupported resolution) (resolution, error) {
 	switch category {
 	case commsauthz.CategoryReplyToInbound, commsauthz.CategoryRequestedFollowup:
-		return g.validateRequestedFollowup(ctx, tx, subject, w, category)
+		return g.validateRequestedFollowup(ctx, tx, req, subject, w, category)
 	case commsauthz.CategoryActiveDealFollowup:
 		return validateDealFollowup(ctx, tx, req, subject)
 	case commsauthz.CategoryInvoiceOrPayment:
@@ -109,12 +109,18 @@ func (g *Gate) validateCategory(ctx context.Context, tx pgx.Tx, req commsauthz.R
 }
 
 // validateRequestedFollowup answers an unprompted follow-up through
-// subjectAskedUs. A request a rep logged once is not asked for again on every
-// later message.
-func (g *Gate) validateRequestedFollowup(ctx context.Context, tx pgx.Tx, subject subjectRef, w packRules, category commsauthz.Category) (resolution, error) {
+// subjectAskedUs, or through an appointment still to come with the subject,
+// which a message about moving it continues. A request a rep logged once is not
+// asked for again on every later message.
+func (g *Gate) validateRequestedFollowup(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef, w packRules, category commsauthz.Category) (resolution, error) {
 	found, err := subjectAskedUs(ctx, tx, subject, w)
 	if err != nil {
 		return resolution{}, err
+	}
+	if !found && subject.Kind == entityContact && category == commsauthz.CategoryRequestedFollowup {
+		if found, err = subjectHasAnAgreedAppointment(ctx, tx, req, subject); err != nil {
+			return resolution{}, err
+		}
 	}
 	if !found {
 		return resolution{
@@ -168,6 +174,20 @@ func repliedOrWasRecorded(ctx context.Context, tx pgx.Tx, subject subjectRef, as
 		return false, err
 	}
 	return source != sourceNone, nil
+}
+
+// subjectHasAnAgreedAppointment asks agreedAppointment for this subject, under
+// the sending company's evidence scope (evidenceEntity).
+func subjectHasAnAgreedAppointment(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef) (bool, error) {
+	entity, err := evidenceEntity(ctx, tx, subject.SendingEntity)
+	if err != nil {
+		return false, err
+	}
+	var named *ids.UUID
+	if !req.Evidence.ActivityID.IsZero() {
+		named = &req.Evidence.ActivityID
+	}
+	return agreedAppointment(ctx, tx, subject.ID, named, time.Now(), entity)
 }
 
 // validateDealFollowup answers a follow-up on a deal the sender picked. It reads
@@ -274,6 +294,23 @@ func documentRecipientSQL(company, deal string) string {
 // customer. A customer is a contact currently employed at a company with a
 // contract in force or a won deal. No inline fact is needed; the record carries the relationship.
 func validateCustomerNotice(ctx context.Context, tx pgx.Tx, subject subjectRef, category commsauthz.Category) (resolution, error) {
+	customer, err := isCustomerTx(ctx, tx, subject.ID)
+	if err != nil {
+		return resolution{}, err
+	}
+	if !customer {
+		return resolution{Category: category, Supported: false, Reason: commsauthz.ReasonNoEvidence}, nil
+	}
+	basis := commsauthz.BasisContract
+	if category == commsauthz.CategorySecurityNotice {
+		basis = commsauthz.BasisVitalOrSecurityInterest
+	}
+	return resolution{Category: category, Basis: basis, Supported: true}, nil
+}
+
+// isCustomerTx answers whether a contact is currently employed at a company
+// with a contract in force or a won deal.
+func isCustomerTx(ctx context.Context, tx pgx.Tx, contactID string) (bool, error) {
 	var customer bool
 	if err := tx.QueryRow(ctx, `
 		SELECT EXISTS (
@@ -286,17 +323,10 @@ func validateCustomerNotice(ctx context.Context, tx pgx.Tx, subject subjectRef, 
 			                   AND `+contractCarriesMailSQL("c")+`)
 			        OR EXISTS (SELECT 1 FROM deal d
 			                    WHERE d.company_id = r.company_id AND d.archived_at IS NULL
-			                      AND d.status = 'won')))`, subject.ID).Scan(&customer); err != nil {
-		return resolution{}, wrapEvidenceRead("whether the recipient works for a customer", err)
+			                      AND d.status = 'won')))`, contactID).Scan(&customer); err != nil {
+		return false, wrapEvidenceRead("whether the recipient works for a customer", err)
 	}
-	if !customer {
-		return resolution{Category: category, Supported: false, Reason: commsauthz.ReasonNoEvidence}, nil
-	}
-	basis := commsauthz.BasisContract
-	if category == commsauthz.CategorySecurityNotice {
-		basis = commsauthz.BasisVitalOrSecurityInterest
-	}
-	return resolution{Category: category, Basis: basis, Supported: true}, nil
+	return customer, nil
 }
 
 // validateQuote answers a requested quote or offer. Either a sent offer on the

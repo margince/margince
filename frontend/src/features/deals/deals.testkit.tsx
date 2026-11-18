@@ -39,6 +39,20 @@ export const render = (
   );
 };
 
+// Drops a deal on a stage column the way the board's drag does. The test DOM
+// carries no drag-and-drop, so the drop handler is dispatched directly.
+export function dropOnStage(stageId: string, dealId = "d1") {
+  const drop = new Event("drop", { bubbles: true });
+  Object.assign(drop, {
+    dataTransfer: { getData: () => dealId, setData: () => undefined },
+  });
+  const column = document.querySelector(`[data-stage="${stageId}"]`);
+  if (!column) {
+    throw new Error(`no column for stage ${stageId}`);
+  }
+  column.dispatchEvent(drop);
+}
+
 export type Stage = components["schemas"]["Stage"];
 
 export type Deal = components["schemas"]["Deal"];

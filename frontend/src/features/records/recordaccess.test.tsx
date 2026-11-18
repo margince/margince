@@ -676,6 +676,37 @@ describe("RecordAccess — what the owner's answer costs", () => {
     expect(client.getQueryData(["contact360", "p-1"])).toBeUndefined();
   });
 
+  it("leaves a reader who moved on during the write where they are", async () => {
+    const user = userEvent.setup();
+    window.location.hash = "#/contacts/p-1";
+    let release: () => void = () => undefined;
+    stub({
+      gone: true,
+      hold: new Promise((resolve) => {
+        release = resolve;
+      }),
+    });
+    const client = new QueryClient();
+    client.setQueryData(["contact360", "p-1"], { contact: base });
+    drawContact(
+      {
+        ...base,
+        visibility: "workspace",
+        writable: true,
+        owner_id: "u-owner",
+      },
+      client,
+    );
+    const panel = await open(user);
+    await choose(user, panel, "owner");
+    history.replaceState(null, "", "#/deals/d-1");
+    release();
+    expect(
+      await screen.findByText(en["recordAccess.contact.leftYourAccess"]),
+    ).toBeTruthy();
+    expect(window.location.hash).toBe("#/deals/d-1");
+  });
+
   it("calls a write that landed a success when the check after it fails", async () => {
     const user = userEvent.setup();
     window.location.hash = "#/contacts/p-1";

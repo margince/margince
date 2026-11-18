@@ -128,7 +128,7 @@ func TestRecordCardsNameNothingASeatIsDenied(t *testing.T) {
 	employer := createdID(t, e, "/v1/companies", AnyMap{"display_name": "Owner Only Employer", "source": "manual"})
 	stages := apptest.DiscoverSeededPipeline(t, e)
 	deal := createdID(t, e, "/v1/deals", AnyMap{"name": "Quiet renewal", "company_id": customer, "pipeline_id": stages.PipelineID, "stage_id": stages.Open, "source": "manual"})
-	contact := createdID(t, e, "/v1/contacts", AnyMap{"full_name": "Quiet Buyer", "company_id": employer, "title": "Buyer", "source": "manual"})
+	contact := createdID(t, e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Quiet Buyer", "company_id": employer, "title": "Buyer", "source": "manual"})
 
 	if status, body := recordCard(t, e, "deals", deal); status != http.StatusOK || !strings.Contains(body, "Masked Customer") {
 		t.Fatalf("unmasked deal card: %d %s — the company shows until a role masks it", status, body)

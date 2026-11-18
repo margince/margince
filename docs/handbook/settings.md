@@ -20,14 +20,14 @@ Margince Settings puts its pages in these groups:
 - **Data**: Mail capture, Integrations, Website forms, Knowledge, Data import, Automations.
 - **AI**: AI models, AI tool access, AI usage, AI call log.
 - **Compliance**: Privacy and retention, Jurisdiction, Audit log.
-- **System**: System health, [Configuration](configuration.md), Extensions, Reset data.
+- **System**: System health, [Configuration](configuration.md), Extensions, Reset data, About Margince.
 
 Some pages joined others as tabs. Search still finds them by their old names:
 - **Pipelines**, **Acquisition sources**, **Loss reasons** and **Outcome reviews** are tabs of **Deals**.
 - **Fields**, **Tags** and **Responsibility roles** are tabs of **Records and fields**.
 - **Capture activity** is the **Activity** tab of **Connections**.
 
-You see only the pages your permissions open. The Reset data page appears only where the installation turns it on.
+You see only the pages your permissions open. **About Margince** is open to everyone. The Reset data page appears only where the installation turns it on.
 
 ### Which settings page do I need for my own account?
 Your own things in Margince are under **You** in Settings.

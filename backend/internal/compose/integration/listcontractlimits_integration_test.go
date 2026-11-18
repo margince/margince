@@ -12,6 +12,8 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
 func TestAListWriteHoldsTheContractsLimits(t *testing.T) {
@@ -22,7 +24,7 @@ func TestAListWriteHoldsTheContractsLimits(t *testing.T) {
 		t.Fatalf("create list → %d", status)
 	}
 	var contact AnyMap
-	e.Call(t, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Noted Contact"}, nil, &contact)
+	e.Call(t, "POST", "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Noted Contact"}, nil, &contact)
 
 	members := "/v1/lists/" + list.ID + "/members"
 	change := func(note string) AnyMap {

@@ -31,7 +31,7 @@ func TestARecordWriteNamingNoFieldIsRefused(t *testing.T) {
 	e.BootstrapWorkspace(t)
 	stages := apptest.DiscoverSeededPipeline(t, e)
 
-	contact := createAndID(t, e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Typo Contact"})
+	contact := createAndID(t, e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Typo Contact"})
 	company := createAndID(t, e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Typo Co"})
 	lead := createAndID(t, e, "/v1/leads", AnyMap{"full_name": "Typo Lead", "source": "manual"})
 	deal := createAndID(t, e, "/v1/deals", AnyMap{
@@ -66,7 +66,7 @@ func TestARecordWriteNamingNoFieldIsRefused(t *testing.T) {
 		name, path string
 		body       AnyMap
 	}{
-		{"contact", "/v1/contacts", AnyMap{"source": "manual", "full_name": "x", "emial": "a@b.example"}},
+		{"contact", "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "x", "emial": "a@b.example"}},
 		{"company", "/v1/companies", AnyMap{"source": "manual", "display_name": "x", "websit": "x"}},
 		{"lead", "/v1/leads", AnyMap{"source": "manual", "full_name": "x", "emial": "a@b.example"}},
 		{"deal", "/v1/deals", AnyMap{

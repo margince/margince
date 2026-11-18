@@ -51,7 +51,7 @@ func TestTheTablesNameEachSettingOnceWithItsPrograms(t *testing.T) {
 		"| `license.token` | `MARGINCE_LICENSE` | — | `string`, secret | — | api, worker | Licence token. |\n" +
 		"\n### `uploads`\n\n" +
 		"| Key | Env | Flag | Type | Default | Programs | Doc |\n|---|---|---|---|---|---|---|\n" +
-		"| `uploads.attachment_mb` | `MARGINCE_UPLOADS_ATTACHMENT_MB` | `--attachment-mb` | `int`, 1 to 100 | `25` | api | Largest attachment, in decimal MB. |\n" +
+		"| `uploads.attachment_mb` | `MARGINCE_UPLOADS_ATTACHMENT_MB` | `--attachment-mb` | `int`, `1` to `100` | `25` | api | Largest attachment, in decimal MB. |\n" +
 		"\n"
 	if got := settingsTables(twoSettings(t)); got != want {
 		t.Errorf("tables:\n%s\nwant:\n%s", got, want)

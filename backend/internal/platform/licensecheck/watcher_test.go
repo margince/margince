@@ -60,17 +60,18 @@ func TestRecheckBoundsTheTokenRead(t *testing.T) {
 	}
 }
 
-func TestNewWatcherRefusesARejectedLicense(t *testing.T) {
+// A refused license starts the role on a rejected posture, which locks it, so a
+// seat sees why instead of finding no server at all.
+func TestNewWatcherStartsOnARejectedLicenseAndHoldsTheVerdict(t *testing.T) {
 	t.Parallel()
 	source := &tokens{token: "not-a-license"}
-	_, err := NewWatcher(context.Background(), source.source, fixedClock(checkedAt), slog.New(slog.DiscardHandler), runtimeenv.Production)
-	if err == nil {
-		t.Fatal("NewWatcher accepted a license the module refuses; the role would serve on a bad license")
+	w, err := NewWatcher(context.Background(), source.source, fixedClock(checkedAt), slog.New(slog.DiscardHandler), runtimeenv.Production)
+	if err != nil {
+		t.Fatalf("NewWatcher refused to start on a rejected license: %v", err)
 	}
-	// The refusal has to name the module that refused: a stale bundled module
-	// and a genuinely bad license look identical to an operator otherwise.
-	if !strings.Contains(err.Error(), ModuleVersion()) {
-		t.Errorf("boot refusal %q does not name the bundled module version %q", err, ModuleVersion())
+	got := w.Posture()
+	if got.State != StateRejected || got.Reason == "" {
+		t.Errorf("posture = %q with reason %q, want %q with the module's reason", got.State, got.Reason, StateRejected)
 	}
 }
 

@@ -28,7 +28,7 @@ import (
 // Vietnamese pack's terms, with stager as the lane.
 func owingVietnameseReceipt(t *testing.T, e *channelConsentEnv, stager ConfirmationSender) {
 	t.Helper()
-	code := testJurisdiction(t, messagingrules.Rules{
+	code := testMessagingRules(t, messagingrules.Rules{
 		Version: 1, OptOutAcknowledgement: true,
 		OptOutAcknowledgementWithin: time.Hour, OptOutAcknowledgementUTCOffset: 7 * time.Hour,
 	})

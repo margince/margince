@@ -58,8 +58,9 @@ func TestAPassportWithoutTheReadScopeIsRefusedOnTheRestDoor(t *testing.T) {
 	// test would pass just as happily against a passport that was revoked,
 	// malformed or never minted.
 	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
-		"source":    "manual",
-		"full_name": "Scope Probe",
+		"linkedin_url": apptest.ContactProfile(),
+		"source":       "manual",
+		"full_name":    "Scope Probe",
 	}, writer, nil); status != http.StatusCreated {
 		t.Fatalf("the write-only passport could not write → %d, want 201; the read refusal below would not be about the read scope", status)
 	}

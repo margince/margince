@@ -1,4 +1,5 @@
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   act,
@@ -18,6 +19,7 @@ import { stubClipboard } from "../../design-system/clipboard-testing";
 import { LocaleProvider } from "../../i18n";
 import { WriteToProvider } from "../../lib/writeto";
 import { meFixture } from "../../testing/mefixture";
+import { phoneRowOf, stubWindowWidth } from "../../testing/phonerow.testkit";
 import { ContactsScreen } from "./contacts";
 
 // B-EP09.10a acceptance: per-row provenance chips, row→360 navigation, and
@@ -637,5 +639,61 @@ describe("activityTimeline", () => {
       { ...base, kind: "note", subject: null, body: null } as never,
     ]);
     expect(entry.title).toBe("note");
+  });
+});
+
+describe("ContactsScreen — a row on a phone", () => {
+  function listContacts(rows: readonly Record<string, unknown>[]) {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({ data: rows, page: { next_cursor: null } }),
+      ),
+    );
+    render(<ContactsScreen />);
+  }
+
+  const employed = {
+    ...anna,
+    employer: { company_id: "o-1", company_name: "Brandt AG" },
+  };
+
+  it("moves the title off the name, onto line two before the company", async () => {
+    stubWindowWidth(390);
+    listContacts([employed]);
+    const row = await phoneRowOf("Anna Weber");
+    expect(row.identity).not.toHaveTextContent("Head of Procurement");
+    expect(row.end).toEqual([]);
+    expect(row.caption).toEqual(["Head of Procurement", "Brandt AG"]);
+  });
+
+  it("names only the company for a contact with no title", async () => {
+    stubWindowWidth(390);
+    listContacts([{ ...employed, title: null }]);
+    expect((await phoneRowOf("Anna Weber")).caption).toEqual(["Brandt AG"]);
+  });
+
+  it("draws no line two for a contact with neither title nor company", async () => {
+    stubWindowWidth(390);
+    listContacts([{ ...anna, title: null }]);
+    expect((await phoneRowOf("Anna Weber")).caption).toEqual([]);
+  });
+
+  it("keeps the title beside the name, and no title column, on a wide screen", async () => {
+    stubWindowWidth(1440);
+    listContacts([employed]);
+    const row = await phoneRowOf("Anna Weber");
+    expect(row.identity).toHaveTextContent("Anna Weber · Head of Procurement");
+    expect(screen.queryByRole("columnheader", { name: "Title" })).toBeNull();
+  });
+
+  it("draws the contact's monogram before the name at every width", async () => {
+    for (const width of [390, 1440]) {
+      stubWindowWidth(width);
+      listContacts([employed]);
+      const { identity } = await phoneRowOf("Anna Weber");
+      expect(identity.querySelector(".avatar")).toHaveTextContent("AW");
+      cleanup();
+    }
   });
 });

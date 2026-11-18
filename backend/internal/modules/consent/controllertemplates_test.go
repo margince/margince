@@ -29,9 +29,9 @@ var exampleRefusal = RefusalTimes{
 // the catalog reaches the receipt too.
 func renderAnyTemplate(key string, expiresAt time.Time, language, purpose string) (Rendered, commsauthz.Category, error) {
 	if controllerTemplates[key].refusalTimes {
-		return RenderOptOutAcknowledgement(language, exampleRefusal)
+		return renderReceipt(key, language, exampleRefusal)
 	}
-	return renderTemplateContext(key, expiresAt, language, purpose)
+	return renderTemplate(key, linkExpiry{at: expiresAt}, language, purpose)
 }
 
 // TestEveryControllerTemplateCarriesExactlyOnePlaceholder holds the rendered
@@ -200,21 +200,27 @@ func TestTheRenderedBodyNeverCarriesTheLink(t *testing.T) {
 //
 // gatekit:fixture the sha256 of each registered template's rendered wording
 var pinnedWording = map[string]string{
-	"record_confirmation@4@de":    "1b43a49c716496407f12328ebcc68f43ee586909b6b8edfcc92e45212f58fb9f",
-	"record_confirmation@4@en":    "5eea97facb021167689fd7d55a9f7eb111f6d5f3a97bce0d132c48a6146cffd7",
-	"record_confirmation@4@vi":    "281e83f35490981fc497269357c73c08836ac37b610fa2752a1552e8cdf28f92",
-	"consent_confirmation@6@de":   "945ebb0caa0cf98950c131cf04d704ccdfe12d5610e3e1436b09aaa4f1af2b12",
-	"consent_confirmation@6@en":   "eeed2e8f83ce4228bff3b3ab05afd3b7c8cc67373e73d5cc90d5201a189bd1fe",
-	"consent_confirmation@6@vi":   "52c3d3bc2d9e6b5a6a27518aae7a1598862b383a8178e6e7ca4ac3752a4a1fc0",
-	"privacy_notice@4@de":         "afd5793238fb2ed046bafb2e7b39c42fedba0ef885f9e966e3609adf0b7e06f9",
-	"privacy_notice@4@en":         "57940dbb8dbf58affde9b4f1fcf8026951c2112f2a64fd9fbab5f326534b1eec",
-	"privacy_notice@4@vi":         "a5049a2fe4c29bb62dcc3a44f729d827dd3fd17318d25d3485d937ecd9b1062e",
+	"record_check@1@de":           "a36d20c4968a63e2b0565807f522feb905049693328fa10010514eca8dde28d8",
+	"record_check@1@en":           "0f6fbb22fe4c05c1516769b1a9d5171a7900ac9fa82a1b7d82f54ac93a8e2702",
+	"record_check@1@vi":           "3f3e084561b8178ddabaa9676c65ba368c4797e24c0dcf2017975579b5a955f5",
+	"consent_confirmation@7@de":   "945ebb0caa0cf98950c131cf04d704ccdfe12d5610e3e1436b09aaa4f1af2b12",
+	"consent_confirmation@7@en":   "eeed2e8f83ce4228bff3b3ab05afd3b7c8cc67373e73d5cc90d5201a189bd1fe",
+	"consent_confirmation@7@vi":   "52c3d3bc2d9e6b5a6a27518aae7a1598862b383a8178e6e7ca4ac3752a4a1fc0",
+	"privacy_notice@5@de":         "afd5793238fb2ed046bafb2e7b39c42fedba0ef885f9e966e3609adf0b7e06f9",
+	"privacy_notice@5@en":         "57940dbb8dbf58affde9b4f1fcf8026951c2112f2a64fd9fbab5f326534b1eec",
+	"privacy_notice@5@vi":         "a5049a2fe4c29bb62dcc3a44f729d827dd3fd17318d25d3485d937ecd9b1062e",
+	"restriction_lift@3@de":       "34752802be82b4a703cb52a4ca5d02eece3595ea71d955bb6ecebf0436fd0e0d",
+	"restriction_lift@3@en":       "4e31b4aad01b43dce8700ef8abdbdbda4989e72138e7b9ad76a5bb3f3915e538",
+	"restriction_lift@3@vi":       "3903eb642861db8d8a8f30329aff02a23d64577e4146435ce26dca84868bc257",
+	"record_confirmation@5@de":    "1b43a49c716496407f12328ebcc68f43ee586909b6b8edfcc92e45212f58fb9f",
+	"record_confirmation@5@en":    "5eea97facb021167689fd7d55a9f7eb111f6d5f3a97bce0d132c48a6146cffd7",
+	"record_confirmation@5@vi":    "281e83f35490981fc497269357c73c08836ac37b610fa2752a1552e8cdf28f92",
 	"optout_acknowledgement@4@de": "18f7fde93aba9471ace152b00294ab4366e309ebe8648ea15b0ade9ab5db0a7d",
 	"optout_acknowledgement@4@en": "0e53dd1ec79223e43a8de554f0592f24e79970483a03adec516f9471404f7467",
 	"optout_acknowledgement@4@vi": "f923d73de53266ad7d29874c8ca4ec3eb1118778984e07a86c5fc2730d49a63f",
-	"restriction_lift@2@de":       "34752802be82b4a703cb52a4ca5d02eece3595ea71d955bb6ecebf0436fd0e0d",
-	"restriction_lift@2@en":       "4e31b4aad01b43dce8700ef8abdbdbda4989e72138e7b9ad76a5bb3f3915e538",
-	"restriction_lift@2@vi":       "3903eb642861db8d8a8f30329aff02a23d64577e4146435ce26dca84868bc257",
+	"request_receipt@1@de":        "b10035272f9adb8de0f9e23506722ff6e717dcaab8413b788bfcfc012b7caf7f",
+	"request_receipt@1@en":        "ae9acd80f560a7d1409348434665e2409c23c39b7b2787bbaa7b05ac9b9b5f45",
+	"request_receipt@1@vi":        "424c6d27ba1082a7a7057144b3e8699fdfe8da049d8b4c83b69feb97d908c154",
 }
 
 // TestEveryControllerTemplateIsPinnedToItsWording fails when a registered
@@ -383,7 +389,7 @@ func TestQueuedControllerVersionsRemainRecognized(t *testing.T) {
 
 func TestOnlyTheSubscriptionTemplateNamesASubscription(t *testing.T) {
 	for _, key := range []string{TemplateRecordConfirmation, TemplateConsentConfirmation, TemplatePrivacyNotice} {
-		rendered, _, err := renderTemplateContext(key, time.Date(2026, 11, 15, 12, 0, 0, 0, time.UTC), "de", "Produktneuigkeiten")
+		rendered, _, err := renderTemplate(key, linkExpiry{at: time.Date(2026, 11, 15, 12, 0, 0, 0, time.UTC)}, "de", "Produktneuigkeiten")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -426,10 +432,11 @@ func TestOnlyTheReceiptDropsThePoweredByLine(t *testing.T) {
 			}
 			markup := RenderControllerPresentation(rendered, "Example Company", "")
 			attributed := strings.Contains(markup, mailcopy.For(string(language)).PoweredBy)
-			if key == TemplateOptOutAcknowledgement && (attributed || strings.Contains(markup+rendered.Subject+rendered.Body, "Margince")) {
-				t.Errorf("the %s receipt names Margince:\n%s", language, markup)
+			receipt := controllerTemplates[key].unbranded
+			if receipt && (attributed || strings.Contains(markup+rendered.Subject+rendered.Body, "Margince")) {
+				t.Errorf("the %s %s names Margince:\n%s", language, key, markup)
 			}
-			if key != TemplateOptOutAcknowledgement && !attributed {
+			if !receipt && !attributed {
 				t.Errorf("%s in %s lost its attribution line", key, language)
 			}
 		}

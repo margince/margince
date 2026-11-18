@@ -108,7 +108,7 @@ func TestReviewedCustomerRuleKeepsAnExistingQuietTaskIdentity(t *testing.T) {
 		if h.Spec().Name == checkInCadenceName {
 			ev.Params = json.RawMessage(`{"customer_list_id":"00000000-0000-4000-8000-000000000001"}`)
 		}
-		effect, err := anchorReminderTaskEffect(context.Background(), Executors{}, ev, "Keep in touch", h)
+		effect, err := anchorReminderTaskEffect(context.Background(), Executors{}, ev, taskWords{subject: "Keep in touch"}, h)
 		if err != nil {
 			t.Fatal(err)
 		}

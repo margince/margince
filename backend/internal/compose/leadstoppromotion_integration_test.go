@@ -32,7 +32,7 @@ func TestALeadsStopHoldsForTheContactItBecomes(t *testing.T) {
 			ctx := e.As(e.AdminUser, nil, perms)
 			consents := consent.NewStore(e.DB())
 			store := e.Contacts.WithStopCarrier(consents).WithSatelliteCarriers(consents, nil)
-			newsletter, err := consents.CreatePurpose(ctx, "newsletter", "Newsletter", false)
+			newsletter, err := consents.CreatePurpose(ctx, "newsletter", "Newsletter", false, "")
 			if err != nil {
 				t.Fatal(err)
 			}

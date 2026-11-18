@@ -432,7 +432,7 @@ func TestThePaletteFindsTheStaffOfACompanyMadeThroughTheApp(t *testing.T) {
 	staff := map[string]bool{}
 	for _, name := range []string{"Anna Becker", "Ben Fischer", "Clara Wolf"} {
 		var contact contactRecord
-		if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"full_name": name, "source": "manual"}, nil, &contact); status != 201 {
+		if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": name, "source": "manual"}, nil, &contact); status != 201 {
 			t.Fatalf("create contact %s → %d", name, status)
 		}
 		linkEdge(t, e, AnyMap{"kind": "employment", "contact_id": contact.ID, "company_id": company.ID, "source": "manual"})

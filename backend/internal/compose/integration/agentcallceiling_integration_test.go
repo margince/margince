@@ -122,8 +122,9 @@ func TestARestReadSpendsOneCallWhateverItReturns(t *testing.T) {
 		ID ids.UUID `json:"id"`
 	}
 	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
-		"source":    "manual",
-		"full_name": "Single Read",
+		"linkedin_url": apptest.ContactProfile(),
+		"source":       "manual",
+		"full_name":    "Single Read",
 	}, nil, &created); status != http.StatusCreated {
 		t.Fatalf("seeding the contact → %d", status)
 	}
@@ -183,8 +184,9 @@ func TestEveryCounterTheRestDoorRefusesOnIsChargedOnIt(t *testing.T) {
 	})
 	onWrite := advance(func() {
 		if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
-			"source":    "manual",
-			"full_name": "Charged By The Gate",
+			"linkedin_url": apptest.ContactProfile(),
+			"source":       "manual",
+			"full_name":    "Charged By The Gate",
 		}, bearer, nil); status != http.StatusCreated {
 			t.Fatalf("the agent write → %d, want 201", status)
 		}
@@ -234,8 +236,9 @@ func TestRestCallsAloneCanSpendTheWindow(t *testing.T) {
 		t.Errorf("the fifth agent read → %d, want 429; reading over /v1 never spends the window it is refused on", status)
 	}
 	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
-		"source":    "manual",
-		"full_name": "Refused",
+		"linkedin_url": apptest.ContactProfile(),
+		"source":       "manual",
+		"full_name":    "Refused",
 	}, bearer, nil); status != http.StatusTooManyRequests {
 		t.Errorf("a write after the reads spent the ceiling → %d, want 429; the ceiling suspends every verb", status)
 	}
@@ -247,8 +250,9 @@ func seedContacts(t *testing.T, e *apptest.AppEnv, n int) {
 	t.Helper()
 	for i := range n {
 		if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
-			"source":    "manual",
-			"full_name": "Metered Contact " + string(rune('A'+i)),
+			"linkedin_url": apptest.ContactProfile(),
+			"source":       "manual",
+			"full_name":    "Metered Contact " + string(rune('A'+i)),
 		}, nil, nil); status != http.StatusCreated {
 			t.Fatalf("seeding contact %d → %d", i, status)
 		}

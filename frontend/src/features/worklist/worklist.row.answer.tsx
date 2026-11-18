@@ -26,7 +26,10 @@ import {
   type BriefAnswer,
   BriefSetAsides,
 } from "./worklist.briefverbs";
-import { DomainQuestionAnswer } from "./worklist.domainquestion";
+import {
+  DomainQuestionAnswer,
+  DomainQuestionMenu,
+} from "./worklist.domainquestion";
 import { PlanWorkActions } from "./worklist.plan";
 import {
   useNudgeDismissal,
@@ -34,7 +37,7 @@ import {
   worklistKey,
 } from "./worklist.queries";
 import { MeetingReadyVerb, needsReadiness } from "./worklist.ready";
-import { replyTarget, WaitingReply } from "./worklist.reply";
+import { repliedMessage, replyTarget, WaitingReply } from "./worklist.reply";
 import { answerBelow } from "./worklist.suggestion";
 
 /**
@@ -67,6 +70,8 @@ type RowPlacement = Readonly<{
   equals?: ReactNode;
   /** An answer carrying its own layout, under the row rather than in it. */
   below?: ReactNode;
+  /** The lane's rarer answers, as lines at the top of the row's menu. */
+  menu?: ReactNode;
 }>;
 
 // The answers the row itself is enough for, keyed by the source that carries
@@ -106,7 +111,10 @@ const ANSWER_BY_SOURCE: Partial<
   // reopen but never keep. The control asks the row again for each button.
   domain_question: {
     verbs: ["keep", "keep_as_vendor", "discard", "reopen"],
-    draw: (item) => ({ equals: <DomainQuestionAnswer item={item} /> }),
+    draw: (item) => ({
+      equals: <DomainQuestionAnswer item={item} />,
+      menu: <DomainQuestionMenu item={item} />,
+    }),
   },
   // Verbs of equal weight, so the row has no primary. Any answer is plausible
   // about a meeting the product knows nothing about. A filled verb would claim
@@ -133,18 +141,27 @@ const ANSWER_BY_SOURCE: Partial<
     verbs: ["complete"],
     draw: (item) => ({ primary: <PromiseKept id={item.id} /> }),
   },
+  // A task carrying the email it was promised in drafts the follow-up first,
+  // and completing it stays beside the draft.
   task: {
     verbs: ["complete"],
-    draw: (item, quiet) => ({
-      primary: (
+    draw: (item, quiet) => {
+      const complete = (
         <TaskComplete
           id={item.id}
           version={item.version}
           quiet={quiet}
           inquiry={item.kind === "website_inquiry"}
         />
-      ),
-    }),
+      );
+      const replyTo = repliedMessage(item) ? replyTarget(item) : undefined;
+      return replyTo
+        ? {
+            primary: <WaitingReply item={item} to={replyTo} />,
+            equals: complete,
+          }
+        : { primary: complete };
+    },
   },
   // The row's id is the contact's here, which is what the dismissal endpoint
   // takes, so this verb is offered on this lane alone. `dismiss` on brief_item

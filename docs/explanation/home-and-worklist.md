@@ -482,6 +482,8 @@ query kept. `WorklistRedirect` in `brief.queue.tsx` sends `#/worklist` and its o
 to Home with the queue open, its `queue_scope` dial set and its filters kept. The queue drawer has its own
 `queue_scope`, so changing it never changes the Morning or Weekly view behind it.
 
+`openQueue` opens the drawer on a new entry, so Back closes it. `closeQueue` goes back to the Home entry under it. When none is there, it replaces the entry of the drawer with Home, without the dials of the drawer.
+
 Quiet relationships use the same scoped read and row renderer in a separate optional
 list. They join the work queue and Focus only when the reader pins them. A pin
 keeps the routine meaning and names the reader's choice; it adds no deadline or

@@ -17,14 +17,11 @@ import (
 //
 // Held by: TestEveryRefusalExplanationFollowsTheRemedyTable (reviewexplain_test.go)
 var refusalFacts = map[string]string{
-	commsauthz.ReasonObjection: "this contact objected to marketing, so no marketing goes to them; " +
-		"a reply or a message they asked for still can",
-	commsauthz.ReasonSubjectRequest: "this contact asked us to stop; only security, privacy and " +
-		"opt-out notices still go to them",
-	commsauthz.ReasonRestricted: "this record is under a processing restriction; only security, " +
-		"privacy and opt-out notices still go to them",
-	commsauthz.ReasonConsentWithdrawn: "they took their consent back for this kind of message, and only " +
-		"they can give it again",
+	commsauthz.ReasonFooterIncomplete: "the company has not provided complete email footer details; this message can be sent with a recorded reason",
+	commsauthz.ReasonObjection:        "this contact objected to marketing; sending this email does not lift their objection",
+	commsauthz.ReasonSubjectRequest:   "this contact asked us to stop; sending this email does not change their request",
+	commsauthz.ReasonRestricted:       "this record is under a processing restriction; sending this email does not lift it",
+	commsauthz.ReasonConsentWithdrawn: "they withdrew consent for this kind of message; sending this email does not restore consent",
 	commsauthz.ReasonHardBounce: "this address does not accept mail, so the message would not arrive " +
 		"whatever the evidence says; correct the address",
 	commsauthz.ReasonNoMarketingConsent: "marketing needs their express consent, which no recollection " +
@@ -42,17 +39,19 @@ var refusalFacts = map[string]string{
 	commsauthz.ReasonClaimContradictsResolution: "this message says it is one kind of message and the " +
 		"record reads it as another; send it with the kind that fits",
 	commsauthz.ReasonNoEvidence: "nothing on record supports this message yet",
+	commsauthz.ReasonLawfulBasisUnconfirmed: "this contact's country has no legitimate-interest basis and " +
+		"no consent to this use is on record; the sender did not confirm the warning, so a colleague decides",
 	commsauthz.ReasonDealNotRequested: "nothing on record shows this contact asked for the negotiation " +
 		"on this deal; a deal we created is not their request",
 	commsauthz.ReasonOptedOutAfterRequest: "this contact opted out of marketing after asking for this " +
 		"quote; confirm with them that they still want it, and record their new request",
-	commsauthz.ReasonMarketingPermissionRequired: "this marketing message has neither recorded consent nor a supported statutory basis; staff cannot supply either",
+	commsauthz.ReasonMarketingPermissionRequired: "this marketing message has neither recorded consent nor a supported statutory basis",
 	commsauthz.ReasonMarketingConsentRequired: "marketing to this recipient needs their prior consent " +
-		"under the rules of their country, and nothing stands in for it",
+		"under the rules of their country",
 }
 
 // refusalNextMove says what may still be done about a refusal, read from
-// commsauthz.RemediesFor. A stop lists nothing, so nobody sends past it.
+// commsauthz.RemediesFor.
 func refusalNextMove(reason string) string {
 	switch {
 	case commsauthz.HasRemedy(reason, commsauthz.RemedyException):

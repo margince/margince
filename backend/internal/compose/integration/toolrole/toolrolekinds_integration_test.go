@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // The filler names a company wherever an enum argument picks the record a call
@@ -112,7 +113,9 @@ func (c toolRoleCall) withKind(args map[string]any, pool *recordPool) map[string
 //craft:ignore naked-any a field takes whichever JSON type its record's schema names
 var kindFields = map[string]map[string]func(*recordPool) map[string]any{
 	"create_record": {
-		"contact": func(*recordPool) map[string]any { return map[string]any{"full_name": "Role Sweep", "source": "manual"} },
+		"contact": func(*recordPool) map[string]any {
+			return map[string]any{"full_name": "Role Sweep", "source": "manual", "linkedin_url": "https://www.linkedin.com/in/" + ids.NewV7().String()}
+		},
 		"lead": func(*recordPool) map[string]any {
 			return map[string]any{"full_name": "Role Sweep", "email": uniqueEmail(), "source": "manual"}
 		},

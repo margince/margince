@@ -756,7 +756,7 @@ func TestAnArchivedTaskIsNotAdoptedAndTheNightMintsAfresh(t *testing.T) {
 // bundleSubjectIn is the task's subject as a reader of lang reads it.
 func bundleSubjectIn(t *testing.T, lang textlang.Lang, findings int) string {
 	t.Helper()
-	line, err := bundleTaskSubject(findings).Render(lang)
+	line, err := assurance.TaskSubject(findings).Render(lang)
 	if err != nil {
 		t.Fatal(err)
 	}

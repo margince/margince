@@ -111,7 +111,8 @@ func assertAcceptHTTPNonDeal422(t *testing.T, e *apptest.AppEnv) {
 	t.Helper()
 	var contact AnyMap
 	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
-		"full_name": "Attachment Holder", "source": "manual",
+		"linkedin_url": apptest.ContactProfile(),
+		"full_name":    "Attachment Holder", "source": "manual",
 	}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("create contact = %d %v", status, contact)
 	}

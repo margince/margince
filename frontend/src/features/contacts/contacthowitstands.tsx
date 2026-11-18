@@ -9,7 +9,7 @@ import { StatCard } from "../../design-system/statcard";
 import { StatStrip } from "../../design-system/statstrip";
 import { formatDayMonth } from "../../format/format.dates";
 import { useLocale, usePlural, useT } from "../../i18n";
-import { contactTabRoute } from "../../lib/contacttab";
+import type { ContactTab } from "../../lib/contacttab";
 import { navigate } from "../../lib/router";
 import { latestWord } from "../../lib/standinglatest";
 import { activityMarks } from "../../lib/standingmarks";
@@ -17,7 +17,6 @@ import { useViewerZone } from "../../lib/viewerzone";
 import { contactDims, contactVerdict } from "./contactstanding";
 import { type ContactPeeks, contactPeeks } from "./contactstanding.peeks";
 import {
-  type ContactFigure,
   contactFigures,
   contactGap,
   contactTimelineEvents,
@@ -34,7 +33,14 @@ type RelationshipChange = components["schemas"]["ContactRelationshipChange"];
  * readings, the dated timeline, and the four figures under it. Every number
  * is the server's or counted from rows on this read; nothing is a model's.
  */
-export function ContactHowItStands({ view }: Readonly<{ view: Contact360 }>) {
+export function ContactHowItStands({
+  view,
+  onOpenTab,
+}: Readonly<{
+  view: Contact360;
+  // The page's own tab move, which keeps the reader's way back.
+  onOpenTab: (tab: ContactTab) => void;
+}>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
@@ -45,8 +51,7 @@ export function ContactHowItStands({ view }: Readonly<{ view: Contact360 }>) {
     firstPage: view.activities,
     enabled: Boolean(view.activities),
   });
-  const openHistory = () =>
-    navigate(contactTabRoute(view.contact.id, "timeline"));
+  const openHistory = () => onOpenTab("timeline");
   const peeks = contactPeeks(view, { t, plural, locale, zone }, openHistory);
   const verdict = contactVerdict(view, t) ?? {
     word: t("record.notShown"),
@@ -111,21 +116,17 @@ export function ContactHowItStands({ view }: Readonly<{ view: Contact360 }>) {
               detail={figure.detail}
               tone={statTone(figure.tone)}
               peek={peeks[figure.key as keyof ContactPeeks]}
-              onOpen={() => openFigure(view.contact.id, figure)}
+              onOpen={() =>
+                "deal" in figure.opens
+                  ? navigate({ screen: "deals", id: figure.opens.deal })
+                  : onOpenTab(figure.opens.tab)
+              }
             />
           ))}
         </StatStrip>
       }
     />
   );
-}
-
-function openFigure(contactId: string, figure: ContactFigure) {
-  if ("deal" in figure.opens) {
-    navigate({ screen: "deals", id: figure.opens.deal });
-  } else {
-    navigate(contactTabRoute(contactId, figure.opens.tab));
-  }
 }
 
 // The caption is the change the verdict's sentence was read under, unless the

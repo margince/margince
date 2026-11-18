@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 )
 
@@ -27,7 +28,7 @@ func TestAReportedMeetingIsHeldOverBothDoors(t *testing.T) {
 	t.Parallel()
 	d := newTwoDoors(t, "meeting-held-doors", "read", "write")
 	contact := anIDIn(t, d.restStatus(t, "POST", "/v1/contacts",
-		AnyMap{"full_name": "Lunch Lior", "source": "manual"}, http.StatusCreated))
+		AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Lunch Lior", "source": "manual"}, http.StatusCreated))
 	yesterday := clocktest.Now(t).UTC().Add(-24 * time.Hour).Format(time.RFC3339)
 
 	for _, report := range []struct {

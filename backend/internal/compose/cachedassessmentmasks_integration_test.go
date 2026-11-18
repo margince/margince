@@ -56,7 +56,7 @@ func TestAnEarlierAssessmentWithholdsMoneyAfterAFieldMaskChanges(t *testing.T) {
 				permissions.FieldMasks = []principal.FieldMask{{Object: "deal", Field: "amount_minor", Condition: principal.MaskOutsideWriteAuthority}}
 			}
 			reader := e.As(e.Rep1, []ids.UUID{e.Team1}, permissions)
-			service := newDealStatusService(e.Pool, func() time.Time { return at }).WithLane(lane, "test")
+			service := newDealStatusService(e.Pool, func() time.Time { return at }).WithLane(lane, func() string { return "test" })
 			card, err := service.Get(reader, deal, true)
 			if err != nil || !sawAmount || card.GeneratedBy != crmcontracts.WrittenByModel || card.Verdict == nil {
 				t.Fatalf("unmasked actual model input missing: saw=%t card=%+v err=%v", sawAmount, card, err)

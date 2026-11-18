@@ -41,7 +41,7 @@ func TestAWriteNamingAMissingRecordIsA422NamingTheField(t *testing.T) {
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Missing Refs", "admin@missingrefs.test", "Admin")
 
-	contact := createAndID(t, e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Real Contact"})
+	contact := createAndID(t, e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Real Contact"})
 	company := createAndID(t, e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Real Co"})
 	pipelineID, stageID, dealID := "", "", ""
 	var pipelines struct {

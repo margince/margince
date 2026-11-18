@@ -9,9 +9,7 @@ import {
 } from "../../components/dealpartnerfields";
 import { useEntityName } from "../../components/entityref";
 import type { RailEdit } from "../../components/railfield";
-import { saveRecordEdit } from "../../components/recordedit";
 import type { FieldGroup } from "../../components/recordfieldtypes";
-import { rawRecord } from "../../components/recordfieldtypes";
 import { useOwnerPicker, useRecordOwners } from "../../components/recordowners";
 import { useLocale, useT } from "../../i18n";
 import { useAcquisitionSources } from "../../lib/acquisitionsources.queries";
@@ -28,7 +26,7 @@ import {
   dealEditFields,
   editProjectFields,
 } from "./deals.fields";
-import { dealEditRecord, mapDealUpdate, stringValues } from "./deals.write";
+import { openDealEdit, saveDealEdit, stringValues } from "./deals.write";
 
 // The masked money columns as the form's keys.
 function formKey(column: string): string {
@@ -147,7 +145,7 @@ export function useDealEdit(
         keys: ["partner_company_id", "partner_attribution"],
       },
     ],
-    record: { ...dealEditRecord(deal), original: deal },
+    record: openDealEdit(deal),
     onValuesChange: setFormValues,
     save: async (values, _rows, opened) => {
       const submitted = stringValues({ ...opened, ...values });
@@ -158,14 +156,10 @@ export function useDealEdit(
             t,
           )
         : submitted.project_id;
-      return saveRecordEdit(
-        "deal",
-        rawRecord(opened),
-        mapDealUpdate(
-          { ...opened, ...values, project_id: projectId ?? "" },
-          opened,
-          masked,
-        ),
+      return saveDealEdit(
+        opened,
+        { ...values, project_id: projectId ?? "" },
+        masked,
       );
     },
   };

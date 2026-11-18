@@ -4,6 +4,7 @@
 package messagingrules
 
 import (
+	"slices"
 	"testing"
 	"time"
 )
@@ -332,5 +333,72 @@ func TestAFoldNamesTheJurisdictionsItUsedBecauseTheVersionCannot(t *testing.T) {
 	// consolation prize for having lost the rules.
 	if got.ReplyWindow != 30*24*time.Hour {
 		t.Errorf("reply window = %s, want the shorter one", got.ReplyWindow)
+	}
+}
+
+// A fold keeps every advertising content rule either side declares: the
+// refusal layout, the foreign-advertiser notice and every restricted claim.
+func TestAdvertisingContentRulesSurviveTheFold(t *testing.T) {
+	a := Rules{Jurisdiction: "aa", Version: 1, ClaimsNeedProof: []string{"best"}}
+	b := Rules{
+		Jurisdiction: "bb", Version: 1, RefusalSectionLast: true, ForeignAdvertiserNeedsLocalAgency: true,
+		ClaimsNeedProof: []string{"best", "tốt nhất"},
+	}
+
+	got := stricter(a, b)
+	if !got.RefusalSectionLast {
+		t.Error("the fold dropped the refusal layout")
+	}
+	if !got.ForeignAdvertiserNeedsLocalAgency {
+		t.Error("the fold dropped the foreign-advertiser notice")
+	}
+	if !slices.Equal(got.ClaimsNeedProof, []string{"best", "tốt nhất"}) {
+		t.Errorf("claims %v, want each restricted word once", got.ClaimsNeedProof)
+	}
+	if !slices.Equal(a.ClaimsNeedProof, []string{"best"}) {
+		t.Errorf("the fold wrote into its input: %v", a.ClaimsNeedProof)
+	}
+}
+
+// A caller that edits the means it was handed must not edit the registered
+// rule for every later send.
+func TestTheRegistryHandsOutItsOwnCopyOfTheMeans(t *testing.T) {
+	r := Rules{Disclosures: []Disclosure{{Kind: ObjectionRoute, Means: []ContactMeans{MeansWeb}}}}
+	copied := clone(r)
+	copied.Disclosures[0].Means[0] = MeansPhone
+	if r.Disclosures[0].Means[0] != MeansWeb {
+		t.Error("the clone shares its means with the registered rule set")
+	}
+}
+
+// A data-protection law that follows the recipient, and one with no
+// legitimate-interest basis, bind a send whichever side declares them.
+func TestARecipientBoundLawSurvivesTheFold(t *testing.T) {
+	bound := Rules{
+		Jurisdiction: "aa", Version: 1, DataProtectionFollowsRecipient: true,
+		NoLegitimateInterests: true, DisclosureLanguage: "vi",
+	}
+	plain := Rules{Jurisdiction: "bb", Version: 1}
+	for _, folded := range []Rules{stricter(plain, bound), stricter(bound, plain)} {
+		if !folded.DataProtectionFollowsRecipient || !folded.NoLegitimateInterests || folded.DisclosureLanguage != "vi" {
+			t.Errorf("fold = %+v, want the recipient-bound law and its language kept", folded)
+		}
+	}
+}
+
+// The request rule of a fold covers each class either side covers, and every
+// class when one side covers every class.
+func TestTheRequestRuleSurvivesTheFold(t *testing.T) {
+	narrow := Rules{
+		Jurisdiction: "aa", Version: 1, ConsentConfirmationNeedsRequest: true,
+		ConsentRequestFirstFor: []PurposeClass{"marketing"},
+	}
+	none := Rules{Jurisdiction: "bb", Version: 1}
+	if got := stricter(none, narrow); !slices.Equal(got.ConsentRequestFirstFor, []PurposeClass{"marketing"}) {
+		t.Errorf("classes %v, want the one side's marketing", got.ConsentRequestFirstFor)
+	}
+	every := Rules{Jurisdiction: "cc", Version: 1, ConsentConfirmationNeedsRequest: true}
+	if got := stricter(narrow, every); len(got.ConsentRequestFirstFor) != 0 || !got.ConsentConfirmationNeedsRequest {
+		t.Errorf("classes %v, want every class: one side asks a request for each", got.ConsentRequestFirstFor)
 	}
 }

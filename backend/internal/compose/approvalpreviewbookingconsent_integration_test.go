@@ -30,7 +30,7 @@ func TestBookingConsentPreviewPreservesRecordedDecisions(t *testing.T) {
 			ctx := e.As(e.AdminUser, nil, perms)
 			contact := e.SeedContact(t, "Dana Buyer", &e.AdminUser)
 			store := consent.NewStore(e.DB())
-			purpose, err := store.CreatePurpose(ctx, "transactional", "Meeting correspondence", false)
+			purpose, err := store.CreatePurpose(ctx, "transactional", "Meeting correspondence", false, "")
 			if err != nil {
 				t.Fatal(err)
 			}

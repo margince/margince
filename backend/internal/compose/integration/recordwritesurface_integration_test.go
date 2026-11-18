@@ -72,7 +72,7 @@ func TestAPatchEchoingReadFieldsIsRefused(t *testing.T) {
 	t.Parallel()
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	contact := createAndID(t, e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Echo"})
+	contact := createAndID(t, e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Echo"})
 	for _, field := range []string{"id", "version", "captured_by", "created_at"} {
 		var problem problemBody
 		status := e.Call(t, "PATCH", "/v1/contacts/"+contact, AnyMap{"full_name": "Echo", field: "x"},
@@ -90,7 +90,7 @@ func TestAStaleOrMissingRecordIsAnsweredBeforeARefusedCustomField(t *testing.T) 
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	stages := apptest.DiscoverSeededPipeline(t, e)
-	contact := createAndID(t, e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Order"})
+	contact := createAndID(t, e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Order"})
 	company := createAndID(t, e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Order Co"})
 	lead := createAndID(t, e, "/v1/leads", AnyMap{"full_name": "Order Lead", "source": "manual"})
 	deal := createAndID(t, e, "/v1/deals", AnyMap{

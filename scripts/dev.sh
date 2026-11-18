@@ -57,7 +57,7 @@ source "$PWD/scripts/lib-diskspace.sh"
 # exercise the same comparison rather than a permanently-disabled one. Export it
 # before `make dev` to force a mismatch on purpose — a matching pair proves only
 # the quiet case, and the skew path is the one worth seeing work.
-export MARGINCE_BUILD_REVISION="${MARGINCE_BUILD_REVISION:-$(git rev-parse HEAD 2>/dev/null || echo dev)}"
+export MARGINCE_BUILD_REVISION="${MARGINCE_BUILD_REVISION:-$(bash scripts/build-revision.sh)}"
 repo_root="$PWD"
 
 # The compose stack's own roles, spelled once. Named because the --fresh
@@ -1554,6 +1554,7 @@ up)
     echo "  logs     make dev-logs${slug:+ DEV_SLUG=$slug}  — coloured per process (ROLE=/LEVEL=/ALL=1 to filter)"
     echo "           ${log}"
     echo "  stop     make dev-stop${slug:+ DEV_SLUG=$slug}"
+    echo "  mode     dev: no trial, fewer checks, for working on the code. As a customer runs it: make prod"
   else
     echo "FAIL: $label FE did not become ready in time — see ${log}" >&2
     # The api, vite and the worker all come down through the EXIT trap.

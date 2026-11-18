@@ -63,7 +63,7 @@ func TestEveryRecordKindAnImportWritesReadsAsImportedOnTheWire(t *testing.T) {
 		}
 	}
 
-	typed := createdID(t, e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Typed Tess"})
+	typed := createdID(t, e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Typed Tess"})
 	if got := importedFromOf(t, e, "/v1/contacts/"+typed); got != nil {
 		t.Errorf("a typed contact reads imported_from = %q, want null", *got)
 	}

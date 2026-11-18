@@ -47,9 +47,9 @@ type Handlers struct {
 	// no vault, which is why the routes answer 503 rather than panicking.
 	providerKeys *ProviderKeyStore
 	// publicProfile is the minimal anonymous login-presence view. NewHandlers
-	// starts honest-unconfigured; the API composition root replaces it from
-	// the same routing decision that builds the model path.
-	publicProfile PublicProfile
+	// starts unconfigured; the API composition root replaces it with a read of
+	// the binding the model path serves.
+	publicProfile func() PublicProfile
 	// priceSync is the engine behind the refresh route and /ai/price-sync. Nil on a
 	// role that composed none, which answers 501.
 	priceSync *PriceSync
@@ -73,7 +73,7 @@ func NewHandlers(db *database.DB, budget BudgetPolicy) Handlers {
 		calls: NewCallReadStore(db), rates: NewRateStore(db),
 		feedback:      NewFeedbackStore(db),
 		providers:     sharedProviderHealth,
-		publicProfile: NewPublicProfile("unconfigured", RoutingConfig{}),
+		publicProfile: func() PublicProfile { return NewPublicProfile("unconfigured", RoutingConfig{}) },
 	}
 }
 

@@ -14,6 +14,8 @@ package consent
 import (
 	"context"
 	"fmt"
+	"slices"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -23,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
 // recordAdmittedTx is the write itself, on input Record has already admitted —
@@ -106,7 +109,7 @@ func (s *Store) recordAdmittedTx(
 	}
 
 	capturedAt := s.now().UTC()
-	proofID, err := upsertConsentWithProof(ctx, tx, in, sub, doiConfirmedAt, capturedAt, actor.ID)
+	proofID, err := s.proveDecisionTx(ctx, tx, in, sub, purpose.class, doiConfirmedAt, capturedAt, actor.ID)
 	if err != nil {
 		return State{}, err
 	}
@@ -128,7 +131,7 @@ func (s *Store) recordAdmittedTx(
 	// Here rather than at each door, so no door that records a withdrawal can
 	// leave out the receipt a refusal of advertising owes.
 	if ConsentState(in.NewState) == StateWithdrawn && !reassertion {
-		if err := s.acknowledgeWithdrawalTx(ctx, tx, sub, purpose.class, capturedAt); err != nil {
+		if err := s.answerWithdrawalTx(ctx, tx, sub, purpose.class, capturedAt); err != nil {
 			return State{}, err
 		}
 	}
@@ -138,6 +141,40 @@ func (s *Store) recordAdmittedTx(
 		Changed: !reassertion, ProofEventID: proofID,
 	}
 	return out, nil
+}
+
+// answerWithdrawalTx stages the receipt a withdrawal owes and opens the task
+// its pack sets. One task per act: a press that withdrew four purposes is one
+// request.
+func (s *Store) answerWithdrawalTx(ctx context.Context, tx pgx.Tx, sub subject, purposeClass string, at time.Time) error {
+	if err := s.acknowledgeWithdrawalTx(ctx, tx, sub, purposeClass, at); err != nil {
+		return err
+	}
+	act, err := withdrawalActTx(ctx, tx)
+	if err != nil {
+		return err
+	}
+	key := withdrawalMessageID(sub.id, act)
+	if !slices.Contains(commsauthz.MarketingPurposeClasses(), purposeClass) {
+		// The opt-out receipt answers only advertising, so any other
+		// withdrawal gets the request receipt.
+		return s.answerRequestTx(ctx, tx, sub, RequestTaskWithdrawal, key, at)
+	}
+	who := ruleSubject{Kind: sub.entityType, ID: sub.id.String()}
+	return s.openRequestTaskTx(ctx, tx, who, RequestTaskWithdrawal, key, at)
+}
+
+// proveDecisionTx writes the state and its proof row, with the retention floor
+// a withdrawal of advertising carries from the moment it is written.
+func (s *Store) proveDecisionTx(
+	ctx context.Context, tx pgx.Tx, in RecordInput, sub subject, purposeClass string,
+	doiConfirmedAt *time.Time, capturedAt time.Time, actorID string,
+) (ids.UUID, error) {
+	keptUntil, err := s.withdrawalFloorTx(ctx, tx, sub, ConsentState(in.NewState), purposeClass, capturedAt)
+	if err != nil {
+		return ids.Nil, err
+	}
+	return upsertConsentWithProof(ctx, tx, in, sub, doiConfirmedAt, capturedAt, keptUntil, actorID)
 }
 
 // rowProbeFor answers which row probe a recorded state must clear.

@@ -49,7 +49,8 @@ func seedContactsWithTier(t *testing.T, e *apptest.AppEnv, gold, other int) stri
 		}
 		var contact integration.AnyMap
 		if status := e.Call(t, "POST", "/v1/contacts", integration.AnyMap{
-			"full_name": "Preview Subject", "source": "manual", column: tier,
+			"linkedin_url": apptest.ContactProfile(),
+			"full_name":    "Preview Subject", "source": "manual", column: tier,
 		}, nil, &contact); status != http.StatusCreated {
 			t.Fatalf("create contact %d: status=%d body=%v", i, status, contact)
 		}

@@ -155,6 +155,9 @@ var notAnEdge = map[string]string{
 	"contact_consent": "contact_id and lead_id are alternative OWNERS of one consent record, never both, " +
 		"so the pair is a polymorphic parent rather than an edge between the two",
 	"consent_event": "the append-only log behind contact_consent, and polymorphic in the same way",
+	"lawful_basis_confirmation": "contact_id and lead_id are alternative SUBJECTS of one user's " +
+		"confirmation, never both. It lasts 15 minutes and is spent once at staging, so it relates no " +
+		"two records a hop could follow.",
 	"communication_basis": "contact_id and lead_id are alternative SUBJECTS of one basis, never both, so " +
 		"the pair is polymorphic exactly as contact_consent is — and a basis says why a message to that " +
 		"subject was lawful, which relates a contact to a DECISION and not to another record",

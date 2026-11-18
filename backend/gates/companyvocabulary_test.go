@@ -109,6 +109,8 @@ var exempt = gatekit.Waive(map[string]string{
 	"sbom-schemas":                     "a vendored SPDX schema, not ours to rename",
 	"backend/internal/modules/capture/graphcal/data/README.md": "unicode-org is the GitHub owner of " +
 		"the copied zone files, named in their source links",
+	"backend/internal/platform/cldrzone/data/README.md": "unicode-org is the GitHub owner of " +
+		"the copied zone list, named in its source link",
 	"backend/internal/modules/webforms/fields.go": "the field names website forms send, where organization " +
 		"is a common spelling of the company field the module reads",
 	"frontend/src/features/settings/webformsnippet.ts": "autocomplete=\"organization\" is the HTML autofill " +

@@ -92,6 +92,10 @@ async function openQuickCapture() {
   );
   await user.click(screen.getByTestId("quick-capture"));
   await user.type(screen.getByLabelText("Full name *"), "Dana Buyer");
+  await user.type(
+    screen.getByLabelText("LinkedIn"),
+    "https://www.linkedin.com/in/dana-buyer",
+  );
   return user;
 }
 

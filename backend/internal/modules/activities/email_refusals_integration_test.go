@@ -94,58 +94,37 @@ func TestSendEmailDerivesNoUnsubscribeHeadersForATransactionalPurpose(t *testing
 	}
 }
 
-// A preference token is a bearer credential over ONE contact's consent record —
-// it reads their state, withdraws, and grants — and a single rendered message
-// carries a single token to every addressee. Sending that message to a second
-// contact hands them the first recipient's credential, so the send is refused
-// before anything is staged.
-func TestSendEmailRefusesAMultiAddresseeSendThatCarriesAnUnsubscribeToken(t *testing.T) {
+func TestMultiRecipientRenderingNeverSharesAnUnsubscribeCredential(t *testing.T) {
 	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
 	stager := &recordingStager{}
-	linker := stubUnsubscribeLinker{token: testUnsubscribeTok, ok: true}
-
-	// sendInput addresses buyer@ and cc's boss@ — two contacts, one token.
-	_, err := e.store(linker).SendEmail(
-		e.as(principal.RowScopeAll), FromActivity(anchor), sendInput("marketing_email"), stubConsentGate{}, stager,
-	)
-	var refusal *SharedUnsubscribeTokenError
-	if !errors.As(err, &refusal) {
-		t.Fatalf("multi-addressee marketing send → %v, want a SharedUnsubscribeTokenError", err)
+	_, err := e.store(stubUnsubscribeLinker{token: testUnsubscribeTok, ok: true}).SendEmail(
+		e.as(principal.RowScopeAll), FromActivity(anchor), sendInput("marketing_email"), stubConsentGate{}, stager)
+	if err != nil {
+		t.Fatal(err)
 	}
-	if !strings.Contains(refusal.Error(), "once per recipient") {
-		t.Fatalf("refusal %q does not tell the user what to do about it", refusal.Error())
-	}
-	if len(stager.staged) != 0 || e.outboundCount(t) != 0 {
-		t.Fatal("a refused send still staged a delivery or logged an activity")
+	staged := stager.only(t)
+	if staged.ListUnsubscribe != "" || strings.Contains(staged.Body, testUnsubscribeTok) {
+		t.Fatal("a recipient's private opt-out credential reached another recipient")
 	}
 }
 
-// A marketing send may not go out without a working, non-forgeable
-// List-Unsubscribe URL, so an installation that never configured its public
-// base URL fails LOUDLY here rather than deriving the base from the request.
-// That fallback is what the refusal exists to prevent: the link carries the
-// recipient's preference token, so an attacker who controls Host or
-// X-Forwarded-Proto at send time could point the tokenized link at their own
-// domain and harvest the credential from the recipient's click.
-func TestSendEmailRefusesAMarketingSendWithNoConfiguredPublicBaseURL(t *testing.T) {
+func TestMissingPublicURLTravelsAsAFooterFinding(t *testing.T) {
 	t.Parallel()
 	e := setupSend(t)
 	anchor := e.seedAnchor(t, "", "")
-	stager := &recordingStager{}
-	// The store as an installation that wired the linker but never set the
-	// base URL — deliberately NOT e.store(), which configures one.
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws))).WithUnsubscribe(stubUnsubscribeLinker{token: testUnsubscribeTok, ok: true})
-
-	_, err := store.SendEmail(
-		e.as(principal.RowScopeAll), FromActivity(anchor), soloSendInput("marketing_email"), stubConsentGate{}, stager,
-	)
-	if err == nil || !strings.Contains(err.Error(), "public base URL is not configured") {
-		t.Fatalf("marketing send with no public base URL → %v, want a refusal naming the missing configuration", err)
+	prepared, err := store.PrepareSend(e.as(principal.RowScopeAll), FromActivity(anchor), soloSendInput("marketing_email"), stubConsentGate{}, &recordingStager{})
+	if err != nil {
+		t.Fatal(err)
 	}
-	if len(stager.staged) != 0 || e.outboundCount(t) != 0 {
-		t.Fatal("a refused send still staged a delivery or logged an activity")
+	findings := prepared.Authorization().Evidence.FooterFindings
+	if len(findings) != 1 || findings[0].Kind != "public_opt_out_link" {
+		t.Fatalf("missing URL findings = %+v", findings)
+	}
+	if e.outboundCount(t) != 0 {
+		t.Fatal("preparation staged a delivery")
 	}
 }
 

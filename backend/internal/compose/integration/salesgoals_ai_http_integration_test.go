@@ -69,7 +69,7 @@ const progressSummaryReply = `{"paragraphs":[[{"text":"You've closed {{progress:
 func TestProgressIsSummedUpFromItsOwnFiguresAndKeptPerReader(t *testing.T) {
 	t.Parallel()
 	lane := &scriptedLane{reply: progressSummaryReply}
-	e := apptest.SetupAppWithOptions(t, compose.WithSalesAssessment(lane, "test-routing"))
+	e := apptest.SetupAppWithOptions(t, compose.WithSalesAssessment(lane, func() string { return "test-routing" }))
 	e.BootstrapWorkspace(t)
 	owner := signedInUser(t, e)
 	year := clocktest.Now(t).Year()
@@ -129,7 +129,7 @@ func TestProgressWithNoModelAnswersItsFiguresAndNoSentences(t *testing.T) {
 func TestASellerIsSummedUpOnlyWithinTheirOwnProgress(t *testing.T) {
 	t.Parallel()
 	lane := &scriptedLane{reply: progressSummaryReply}
-	e := apptest.SetupAppWithOptions(t, compose.WithSalesAssessment(lane, "test-routing"))
+	e := apptest.SetupAppWithOptions(t, compose.WithSalesAssessment(lane, func() string { return "test-routing" }))
 	e.BootstrapWorkspace(t)
 	e.DescribeCompany(t)
 	manager := signedInUser(t, e)

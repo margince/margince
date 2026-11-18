@@ -53,8 +53,8 @@ func TestEveryListRouteAnswersOverTheWire(t *testing.T) {
 	t.Parallel()
 	e, _ := listsApp(t, true)
 	var a, b, company AnyMap
-	mustCall(t, e, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Route Alpha"}, http.StatusCreated, &a)
-	mustCall(t, e, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Route Beta"}, http.StatusCreated, &b)
+	mustCall(t, e, "POST", "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Route Alpha"}, http.StatusCreated, &a)
+	mustCall(t, e, "POST", "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Route Beta"}, http.StatusCreated, &b)
 	mustCall(t, e, "POST", "/v1/companies", AnyMap{"display_name": "Route Account", "source": "manual"}, http.StatusCreated, &company)
 
 	var live, short listWire
@@ -223,7 +223,7 @@ func TestTheAgentsListModesAnswerAsTheRoutesDo(t *testing.T) {
 	t.Parallel()
 	e, agent := listsApp(t, true)
 	var contact AnyMap
-	mustCall(t, e, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Agent Pick"}, http.StatusCreated, &contact)
+	mustCall(t, e, "POST", "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Agent Pick"}, http.StatusCreated, &contact)
 	var created struct {
 		Result listWire `json:"result"`
 	}
@@ -277,7 +277,7 @@ func TestAnAgentPagesAFilterPreview(t *testing.T) {
 	t.Parallel()
 	e, agent := listsApp(t, true)
 	for i := range 3 {
-		mustCall(t, e, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": fmt.Sprintf("Preview Page %d", i)}, http.StatusCreated, nil)
+		mustCall(t, e, "POST", "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": fmt.Sprintf("Preview Page %d", i)}, http.StatusCreated, nil)
 	}
 	definition := map[string]any{"field": "name", "op": "contains", "value": "Preview Page"}
 	seen := map[string]bool{}

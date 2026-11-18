@@ -41,6 +41,10 @@ type (
 	ExceptionKind = pub.ExceptionKind
 	// DisclosureKind names something a first message must carry.
 	DisclosureKind = pub.DisclosureKind
+	// ContactMeans names one way of reaching someone a disclosure must name.
+	ContactMeans = pub.ContactMeans
+	// PurposeClass names a class of consent purpose.
+	PurposeClass = pub.PurposeClass
 )
 
 // The published constants, re-exported.
@@ -55,6 +59,12 @@ const (
 	ObjectionRoute = pub.ObjectionRoute
 	// AdvertiserContact is the advertiser's own reachability.
 	AdvertiserContact = pub.AdvertiserContact
+	// MeansWeb is a web page or a social-network link.
+	MeansWeb = pub.MeansWeb
+	// MeansEmail is an email address.
+	MeansEmail = pub.MeansEmail
+	// MeansPhone is a phone number.
+	MeansPhone = pub.MeansPhone
 )
 
 var (
@@ -92,7 +102,12 @@ func clone(r Rules) Rules {
 	out := r
 	out.MarketingExceptions = slices.Clone(r.MarketingExceptions)
 	out.Disclosures = slices.Clone(r.Disclosures)
+	for i := range out.Disclosures {
+		out.Disclosures[i].Means = slices.Clone(r.Disclosures[i].Means)
+	}
 	out.Instruments = slices.Clone(r.Instruments)
+	out.ClaimsNeedProof = slices.Clone(r.ClaimsNeedProof)
+	out.ConsentRequestFirstFor = slices.Clone(r.ConsentRequestFirstFor)
 
 	if r.FrequencyCap != nil {
 		copied := *r.FrequencyCap
@@ -207,10 +222,58 @@ func stricter(a, b Rules) Rules {
 	if out.OptOutAcknowledgementUTCOffset == 0 {
 		out.OptOutAcknowledgementUTCOffset = b.OptOutAcknowledgementUTCOffset
 	}
+	out.DataProtectionFollowsRecipient = a.DataProtectionFollowsRecipient || b.DataProtectionFollowsRecipient
+	out.NoLegitimateInterests = a.NoLegitimateInterests || b.NoLegitimateInterests
+	if out.DisclosureLanguage == "" {
+		out.DisclosureLanguage = b.DisclosureLanguage
+	}
+	out.RecordConfirmationWithoutNews = a.RecordConfirmationWithoutNews || b.RecordConfirmationWithoutNews
+	out.ConsentConfirmationNeedsRequest = a.ConsentConfirmationNeedsRequest || b.ConsentConfirmationNeedsRequest
+	out.ConsentRequestFirstFor = requestFirstFor(a, b)
 	// An exception only where BOTH grant it: a route to advertising without
 	// consent that one jurisdiction does not recognise is not available in a
 	// send both govern.
 	out.MarketingExceptions = commonExceptions(a.MarketingExceptions, b.MarketingExceptions)
+	foldAdvertisingContent(&out, b)
+	return out
+}
+
+// foldAdvertisingContent adds b's advertising content rules to out. A claim
+// either side restricts stays restricted.
+func foldAdvertisingContent(out *Rules, b Rules) {
+	out.RefusalSectionLast = out.RefusalSectionLast || b.RefusalSectionLast
+	out.ForeignAdvertiserNeedsLocalAgency = out.ForeignAdvertiserNeedsLocalAgency || b.ForeignAdvertiserNeedsLocalAgency
+	out.ClaimsNeedProof = unionOf(out.ClaimsNeedProof, b.ClaimsNeedProof)
+}
+
+// requestFirstFor is the classes either side's request rule covers. A side
+// whose rule covers every class makes the fold cover every class.
+func requestFirstFor(a, b Rules) []PurposeClass {
+	var out []PurposeClass
+	for _, side := range []Rules{a, b} {
+		if !side.ConsentConfirmationNeedsRequest {
+			continue
+		}
+		if len(side.ConsentRequestFirstFor) == 0 {
+			return nil
+		}
+		for _, class := range side.ConsentRequestFirstFor {
+			if !slices.Contains(out, class) {
+				out = append(out, class)
+			}
+		}
+	}
+	return out
+}
+
+// unionOf returns the words of a, then the words of b that a lacks, in a new slice.
+func unionOf(a, b []string) []string {
+	out := slices.Clone(a)
+	for _, word := range b {
+		if !slices.Contains(out, word) {
+			out = append(out, word)
+		}
+	}
 	return out
 }
 

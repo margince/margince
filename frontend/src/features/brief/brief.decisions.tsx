@@ -34,8 +34,8 @@ import type { MessageKey } from "../../i18n/en";
 import { summaryWords } from "../../lib/approvalpreviewfields";
 import { invalidateApprovalViews } from "../../lib/approvals.queries";
 import { approvalDotTier, useAgentTierMap } from "../../lib/autonomy";
+import { fromHere } from "../../lib/navigatefrom";
 import { isVersionSkewOf, problemMessageOf } from "../../lib/problem";
-import { navigate } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
 import {
@@ -217,7 +217,8 @@ export function DecisionsSection({
     // the last render left behind, which on this page is a queue that has just
     // been invalidated.
     mutationFn: commitTray,
-    onSuccess: (result) => {
+    onMutate: fromHere,
+    onSuccess: (result, _tray, from) => {
       setAlreadyDecided(result.alreadyDecided);
       if (result.alreadyDecided) {
         onAlreadyDecided();
@@ -235,7 +236,7 @@ export function DecisionsSection({
       // The full queue is where an edit's form lives, so a tray carrying one
       // takes the reader there rather than telling them the deck cannot do it.
       if (result.edits > 0) {
-        navigate({ screen: "worklist" });
+        from.navigate({ screen: "worklist" });
       }
     },
   });

@@ -256,7 +256,9 @@ below the transport, so REST and MCP act the same:
 
 - **🟢 `auto_execute`**: the default, for what the passport's holder could already do with no help.
   - A passport holds the granting human's own seat, grants and row scope. So to ask that same human to
-    confirm a second time would make the agent surface weaker than the human behind it, and no safer.
+    confirm a direct instruction a second time adds work. The send scope grants permission,
+    but does not approve messages with nobody there. The runner marks its context as having nobody there;
+    `auth.TierFor` makes every send wait for approval, including after a run resumes.
   - It is audited, with provenance that marks the agent. The same reason already settles who may
     *decide* an approval (below).
 - **🟡 `confirmation_required`**: kept for the calls where the holder of the credential did not choose

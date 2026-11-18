@@ -431,6 +431,7 @@
     "read_analytics": {
       "field": "step",
       "actions": {
+        "ask": "ask_search_data",
         "compose": "compose_analytics_report",
         "query": "run_analytics_query"
       }
@@ -797,7 +798,6 @@
         "deal_room_invite": "invite_deal_room_participant",
         "deal_room_resend": "resend_deal_room_invitation",
         "details_confirmation": "request_details_confirmation",
-        "direct_send": "direct_communication_send",
         "double_opt_in": "issue_double_opt_in",
         "email_new": "send_company_email",
         "email_reply": "send_email",

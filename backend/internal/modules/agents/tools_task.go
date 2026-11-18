@@ -56,8 +56,8 @@ func (t createTask) Spec() mcp.ToolSpec {
 		OpenAPIOp: "createTask",
 		// Terse on purpose: the listing rides every run under a token ceiling,
 		// and log_activity's schema already explains links and timestamps.
-		InputSchema: schema(`{"type":"object","required":["subject"],"properties":{
-			"subject":{"type":"string"},"body":{"type":"string"},
+		InputSchema: schema(`{"type":"object","required":["subject","body"],"properties":{
+			"subject":{"type":"string"},"body":{"type":"string","description":"Why the task exists, first: who said or did what, on which record, and when. The human reads it as the task's reason."},
 			"source_activity_id":{"type":"string","format":"uuid","description":` + followUpSourceDescription + `},
 			"due_at":{"type":"string","format":"date-time"` + timestampNote + `},
 			"due_has_time":{"type":"boolean","description":"True when due_at is an agreed time of day, such as a callback hour; the reminder is then set to it. Leave out for a day."},
@@ -72,6 +72,9 @@ func (t createTask) Spec() mcp.ToolSpec {
 }
 
 func (t createTask) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
+	if err := requireTaskReason(in); err != nil {
+		return nil, err
+	}
 	fields, err := TaskAsActivity(in)
 	if err != nil {
 		return nil, err
@@ -85,6 +88,21 @@ func (t createTask) Handle(ctx context.Context, in json.RawMessage) (json.RawMes
 		return nil, err
 	}
 	return readBack(ctx, t.p, ref)
+}
+
+// requireTaskReason refuses an agent's task that says no why. Its reader was
+// not there, so the reason is the part of it they need.
+func requireTaskReason(in json.RawMessage) error {
+	var args struct {
+		Body *string `json:"body"`
+	}
+	if err := json.Unmarshal(in, &args); err != nil {
+		return &BadArgsError{Cause: err}
+	}
+	if args.Body == nil || strings.TrimSpace(*args.Body) == "" {
+		return &BadArgsError{Cause: errors.New("body is required: say why the task exists, naming who said or did what and on which record")}
+	}
+	return nil
 }
 
 // TaskAsActivity is the fold: the verb's arguments as the activity body, with

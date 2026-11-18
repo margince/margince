@@ -95,7 +95,7 @@ func (s *scenario) logTheMeeting(t *testing.T) loggedMeeting {
 	var m loggedMeeting
 
 	m.company = s.createRecord(t, "company", map[string]any{"display_name": newCompanyName})
-	m.contact = s.createRecord(t, "contact", map[string]any{"full_name": newContactName})
+	m.contact = s.createRecord(t, "contact", map[string]any{"full_name": newContactName, "linkedin_url": apptest.ContactProfile()})
 	// The employment edge, so the contact is AT the company rather than merely
 	// mentioned in the same conversation.
 	s.MCP.CallOK(t, "create_record", map[string]any{

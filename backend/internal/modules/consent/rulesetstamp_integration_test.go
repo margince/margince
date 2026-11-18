@@ -32,7 +32,7 @@ import (
 // recipient in its country, the way the contacts writer stores one.
 func inCountry(t *testing.T, e *resolveEnv, code string, version int) {
 	t.Helper()
-	messagingrules.Register(messagingrules.Rules{
+	testMessagingRules(t, messagingrules.Rules{
 		Jurisdiction: jurisdiction.Code(code), Version: version,
 	})
 	if _, err := e.owner.Exec(context.Background(),
@@ -190,7 +190,7 @@ func TestTheRecordedRulesetIsRefusedWhenItNamesNoJurisdiction(t *testing.T) {
 func TestTheSendersCountryIsNotStampedOnARecipientWithNone(t *testing.T) {
 	t.Parallel()
 	e := setupResolve(t)
-	messagingrules.Register(messagingrules.Rules{
+	testMessagingRules(t, messagingrules.Rules{
 		Jurisdiction: jurisdiction.Code("rd"), Version: 5,
 	})
 	e.gate = e.gate.WithInstallationCountry(

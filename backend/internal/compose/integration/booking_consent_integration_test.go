@@ -16,11 +16,13 @@ import (
 	"context"
 	"maps"
 	"net/http"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
 )
 
 // bookingAt shapes one /v1/bookings body for a slot,
@@ -241,5 +243,67 @@ func TestARepsBookingSurvivesANewsletterTickForAWithdrawnContact(t *testing.T) {
 	}
 	if state != "withdrawn" {
 		t.Errorf("the marketing purpose reads %q after the booking, want withdrawn", state)
+	}
+}
+
+// requestFirstCountry is a code no pack claims, under the rule that a consent
+// mail answers the contact's own request.
+const requestFirstCountry = "xr"
+
+var registerRequestFirstCountry sync.Once
+
+// TestARepsBookingCannotAskForConsentNobodyRequested. A signed-in user's booking
+// is that user asking, so under that rule its newsletter tick mints no link. As
+// with every other refused question, the meeting is still booked.
+func TestARepsBookingCannotAskForConsentNobodyRequested(t *testing.T) {
+	t.Parallel()
+	registerRequestFirstCountry.Do(func() {
+		messagingrules.Register(messagingrules.Rules{
+			Jurisdiction: requestFirstCountry, Version: 1, ConsentConfirmationNeedsRequest: true,
+		})
+	})
+	e := apptest.SetupBookingApp(t)
+	transactional := seededTransactionalPurposeID(t, e)
+	marketing := seededMarketingPurposeID(t, e)
+	var contact struct {
+		ID string `json:"id"`
+	}
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
+		"source": "manual", "full_name": "Nina Never Asked",
+		"emails": []AnyMap{{"email": "nina@corp.example", "email_type": "work", "is_primary": true}},
+	}, nil, &contact); status != http.StatusCreated {
+		t.Fatalf("create contact → %d", status)
+	}
+	if _, err := e.Owner.Exec(context.Background(),
+		`UPDATE contact SET address_country = upper($2) WHERE id = $1`, contact.ID, requestFirstCountry); err != nil {
+		t.Fatalf("placing the contact: %v", err)
+	}
+
+	tuesday := apptest.NextBookableMorning(t)
+	if status := e.Call(t, "POST", "/v1/bookings", bookingAt(tuesday.Add(3*time.Hour), contact.ID, AnyMap{
+		"consent": AnyMap{
+			"purpose_id": transactional, "policy_version": "pp-2026-01",
+			"wording": "You agree we may contact you about this meeting.",
+			"marketing": AnyMap{
+				"purpose_id": marketing, "policy_version": "mk-2026-01",
+				"wording": "Send me your newsletter.",
+			},
+		},
+	}), nil, nil); status != http.StatusCreated {
+		t.Fatalf("a rep's booking with a tick for a contact who never asked → %d, want 201", status)
+	}
+	var meetings, tokens, outbound int
+	if err := e.Owner.QueryRow(context.Background(), `
+		SELECT (SELECT count(*) FROM activity WHERE kind = 'meeting'),
+		       (SELECT count(*) FROM confirm_token WHERE contact_id = $1 AND purpose_id = $2),
+		       (SELECT count(*) FROM comms_outbound WHERE sender_kind = 'controller')`,
+		contact.ID, marketing).Scan(&meetings, &tokens, &outbound); err != nil {
+		t.Fatal(err)
+	}
+	if meetings != 1 {
+		t.Errorf("%d meeting(s) booked, want 1: a refused question must not cost the meeting", meetings)
+	}
+	if tokens != 0 || outbound != 0 {
+		t.Errorf("%d token(s) and %d controller mail(s) for a contact who never asked, want none", tokens, outbound)
 	}
 }

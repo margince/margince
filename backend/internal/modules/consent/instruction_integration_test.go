@@ -18,6 +18,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -101,14 +103,15 @@ func seedOpenReview(ctx context.Context, t *testing.T, e *channelConsentEnv) ids
 }
 
 // seedOpenReviewFor opens a review refused for the given reason code.
-func seedOpenReviewFor(ctx context.Context, t *testing.T, e *channelConsentEnv, reason string) ids.UUID {
+func seedOpenReviewFor(ctx context.Context, t *testing.T, e *channelConsentEnv, reason string, more ...string) ids.UUID {
 	t.Helper()
 	var id ids.UUID
 	if err := e.owner.QueryRow(ctx, `
 		INSERT INTO communication_review (state, kind, reason_code, refusals)
-		VALUES ('needs_repair', 'single', $1,
-		        jsonb_build_array(jsonb_build_object('address', 'anna@example.test', 'reason_code', $1::text)))
-		RETURNING id`, reason).Scan(&id); err != nil {
+		SELECT 'needs_repair', 'single', $1,
+		       jsonb_agg(jsonb_build_object('address', 'anna@example.test', 'reason_code', r))
+		  FROM unnest($1::text || $2::text[]) AS r
+		RETURNING id`, reason, more).Scan(&id); err != nil {
 		t.Fatalf("seeding the refused send: %v", err)
 	}
 	return id
@@ -341,13 +344,7 @@ func TestAnErasureCanTombstoneTheWordsAndNothingElse(t *testing.T) {
 	}
 }
 
-// Every sender may take the exception past missing marketing consent. Nobody
-// directs past a contact's own stop: not a rep holding the grant, and not an
-// admin.
-//
-// Mutation: give the four stops their admin exception back in remedies and the
-// admin cases below are allowed.
-func TestASenderDirectsPastMissingConsentButNobodyPastAContactsStop(t *testing.T) {
+func TestASenderDirectsPastEveryPolicyRefusalWithoutChangingItsRecord(t *testing.T) {
 	t.Parallel()
 	e := setupChannelConsent(t)
 	ctx := context.Background()
@@ -358,32 +355,63 @@ func TestASenderDirectsPastMissingConsentButNobodyPastAContactsStop(t *testing.T
 		Acknowledged:   true,
 	}
 
-	for _, reason := range []string{"marketing_objection", "consent_withdrawn", "processing_restricted", "subject_request"} {
-		review := seedOpenReviewFor(ctx, t, e, reason)
-		if _, err := e.store.DirectSend(senderCtx(e.ws, e.user), review, input); !errors.Is(err, apperrors.ErrPermissionDenied) {
-			t.Errorf("a rep directing past %s: err = %v, want permission denied", reason, err)
+	for _, stop := range []string{"marketing_objection", "consent_withdrawn", "processing_restricted", "subject_request", "opted_out_after_request"} {
+		for _, reasons := range [][]string{{stop}, {"marketing_consent_required", stop}} {
+			for _, actor := range []context.Context{senderCtx(e.ws, e.user), directorCtx(e.ws, e.user)} {
+				reviewID := seedOpenReviewFor(ctx, t, e, reasons[0], reasons[1:]...)
+				review, err := e.store.ReviewForReader(actor, reviewID)
+				if err != nil {
+					t.Fatal(err)
+				}
+				in := input
+				in.ShownReasons = reasons
+				in.AssessmentRevision = review.AssessmentRevision()
+				if _, err := e.store.DirectSend(actor, reviewID, in); err != nil {
+					t.Errorf("directing past %v: %v", reasons, err)
+				}
+				var unchanged bool
+				if err := e.owner.QueryRow(ctx, `SELECT reason_code=@reason AND jsonb_array_length(refusals)=@count FROM communication_review WHERE id=@review`, pgx.StrictNamedArgs{"reason": reasons[0], "count": len(reasons), "review": reviewID}).Scan(&unchanged); err != nil {
+					t.Fatal(err)
+				}
+				if !unchanged {
+					t.Fatal("recording a decision rewrote its refusal")
+				}
+			}
 		}
-		if _, err := e.store.DirectSend(directorCtx(e.ws, e.user), review, input); !errors.Is(err, apperrors.ErrPermissionDenied) {
-			t.Errorf("an admin directing past %s: err = %v, want permission denied", reason, err)
+	}
+
+	for _, reason := range []string{
+		"no_marketing_consent", "marketing_consent_required", "marketing_permission_required",
+		"frequency_cap_reached", "unconfirmed_double_opt_in",
+	} {
+		repReview := seedOpenReviewFor(ctx, t, e, reason)
+		if _, err := e.store.DirectSend(senderCtx(e.ws, e.user), repReview, input); err != nil {
+			t.Errorf("a rep directing past %s: %v", reason, err)
+		} else if givenByAdmin(ctx, t, e, repReview) {
+			t.Errorf("a rep's direction past %s is recorded as an admin's", reason)
+		}
+		adminReview := seedOpenReviewFor(ctx, t, e, reason)
+		if _, err := e.store.DirectSend(directorCtx(e.ws, e.user), adminReview, input); err != nil {
+			t.Errorf("an admin directing past %s: %v", reason, err)
+		} else if !givenByAdmin(ctx, t, e, adminReview) {
+			t.Errorf("an admin's direction past %s is not recorded as an admin's", reason)
 		}
 	}
 
 	review := seedOpenReviewFor(ctx, t, e, "no_marketing_consent")
-	if _, err := e.store.DirectSend(senderCtx(e.ws, e.user), review, input); err != nil {
+	stale := input
+	stale.ShownReasons = []string{"marketing_consent_required"}
+	var staleErr *InstructionStaleError
+	if _, err := e.store.DirectSend(senderCtx(e.ws, e.user), review, stale); !errors.As(err, &staleErr) {
+		t.Errorf("a direction naming refusals the review no longer holds: err = %v, want it stale", err)
+	}
+	shown := input
+	shown.ShownReasons = []string{"no_marketing_consent"}
+	if _, err := e.store.DirectSend(senderCtx(e.ws, e.user), review, shown); err != nil {
 		t.Fatalf("a rep directing past missing marketing consent: %v", err)
 	}
-	if _, err := e.store.DirectSend(senderCtx(e.ws, e.user), review, input); !errors.Is(err, ErrDecisionAlreadyRecorded) {
+	if _, err := e.store.DirectSend(senderCtx(e.ws, e.user), review, shown); !errors.Is(err, ErrDecisionAlreadyRecorded) {
 		t.Errorf("a second direction on the same review: err = %v, want the recorded decision to stand", err)
-	}
-	if byAdmin := givenByAdmin(ctx, t, e, review); byAdmin {
-		t.Error("a rep's direction is recorded as an admin's, so it would answer refusals only an admin may")
-	}
-	adminReview := seedOpenReviewFor(ctx, t, e, "no_marketing_consent")
-	if _, err := e.store.DirectSend(directorCtx(e.ws, e.user), adminReview, input); err != nil {
-		t.Fatalf("an admin directing past missing marketing consent: %v", err)
-	}
-	if byAdmin := givenByAdmin(ctx, t, e, adminReview); !byAdmin {
-		t.Error("an admin's direction is not recorded as an admin's")
 	}
 }
 

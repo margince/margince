@@ -20,7 +20,7 @@ func TestAClaimIsRecordedOnlyAgainstWordsTheNoteHolds(t *testing.T) {
 	e.BootstrapWorkspace(t)
 
 	var contact, note AnyMap
-	e.Call(t, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Quoted Contact"}, nil, &contact)
+	e.Call(t, "POST", "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Quoted Contact"}, nil, &contact)
 	if status := e.Call(t, "POST", "/v1/activities", AnyMap{
 		"kind": "note", "source": "manual", "body": "We will send the revised quote on Friday.",
 		"links": []AnyMap{{"entity_type": "contact", "entity_id": contact["id"]}},

@@ -551,7 +551,7 @@ func TestTheSweepMayNotArchiveEvenWithAModelThatTriesTo(t *testing.T) {
 	var contact struct {
 		ID string `json:"id"`
 	}
-	if status := re.Call(t, "POST", "/v1/contacts", integration.AnyMap{"source": "manual", "full_name": "Stale Duplicate"}, nil, &contact); status != http.StatusCreated {
+	if status := re.Call(t, "POST", "/v1/contacts", integration.AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Stale Duplicate"}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("create contact → %d", status)
 	}
 

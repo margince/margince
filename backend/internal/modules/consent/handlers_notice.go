@@ -173,8 +173,27 @@ func (h Handlers) GetControllerParticulars(w http.ResponseWriter, r *http.Reques
 		writeConsentErr(w, r, err)
 		return
 	}
-	out := wireParticulars(current)
+	h.writeParticulars(w, r, current)
+}
+
+// writeParticulars answers the stored particulars with what the packs in force
+// ask of them.
+func (h Handlers) writeParticulars(w http.ResponseWriter, r *http.Request, p ControllerParticulars) {
+	languages, means, err := h.store.particularsAsked(r.Context())
+	if err != nil {
+		writeConsentErr(w, r, err)
+		return
+	}
+	if languages == nil {
+		languages = []string{}
+	}
+	out := wireParticulars(p)
 	out.Locks = h.settingLocks(r.Context(), ControllerIdentity)
+	wireMeans := make([]crmcontracts.ContactMeans, 0, len(means))
+	for _, m := range means {
+		wireMeans = append(wireMeans, crmcontracts.ContactMeans(m))
+	}
+	out.DisclosureLanguages, out.ObjectionRouteMeans = &languages, &wireMeans
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
@@ -194,6 +213,9 @@ func (h Handlers) SetControllerParticulars(w http.ResponseWriter, r *http.Reques
 		PrivacyContact:    valueOr(req.PrivacyContact),
 		ObjectionRoute:    valueOr(req.ObjectionRoute),
 		AdvertiserContact: valueOr(req.AdvertiserContact),
+		PrivacyPage:       valueOr(req.PrivacyPage),
+		ArchivePurpose:    valueOr(req.ArchivePurpose),
+		Translations:      particularsTranslationsFrom(req.Translations),
 	}
 	// THE READ GATE FIRST, before anything is written. The response echoes the
 	// stored value, which asks the read verb — and a principal holding update
@@ -201,6 +223,12 @@ func (h Handlers) SetControllerParticulars(w http.ResponseWriter, r *http.Reques
 	// about this company and then receive a 403 for the same request, with the
 	// mutation already committed and nothing telling them so.
 	if _, err := config.StoredVal(r.Context(), h.settings, ControllerIdentity); err != nil {
+		writeConsentErr(w, r, err)
+		return
+	}
+	// Which means a pack asks for depends on where the installation and its
+	// entities sit. The entry's own validator cannot read that.
+	if err := h.store.checkParticularsInForce(r.Context(), in); err != nil {
 		writeConsentErr(w, r, err)
 		return
 	}
@@ -218,9 +246,7 @@ func (h Handlers) SetControllerParticulars(w http.ResponseWriter, r *http.Reques
 		writeConsentErr(w, r, err)
 		return
 	}
-	out := wireParticulars(saved)
-	out.Locks = h.settingLocks(r.Context(), ControllerIdentity)
-	httperr.WriteJSON(w, http.StatusOK, out)
+	h.writeParticulars(w, r, saved)
 }
 
 // valueOr reads an optional wire string. An ABSENT field and an empty one are
@@ -247,7 +273,48 @@ func wireParticulars(p ControllerParticulars) crmcontracts.ControllerParticulars
 		PrivacyContact:    &p.PrivacyContact,
 		ObjectionRoute:    &p.ObjectionRoute,
 		AdvertiserContact: &p.AdvertiserContact,
+		PrivacyPage:       &p.PrivacyPage,
+		ArchivePurpose:    &p.ArchivePurpose,
+		Translations:      wireTranslations(p.Translations),
 	}
+}
+
+// particularsTranslationsFrom reads the wire translations. Absent is none.
+func particularsTranslationsFrom(wire *[]crmcontracts.ControllerParticularsTranslation) []ParticularsTranslation {
+	if wire == nil {
+		return nil
+	}
+	out := make([]ParticularsTranslation, 0, len(*wire))
+	for _, t := range *wire {
+		out = append(out, ParticularsTranslation{
+			Language:          t.Language,
+			LegalName:         valueOr(t.LegalName),
+			PostalAddress:     valueOr(t.PostalAddress),
+			PrivacyContact:    valueOr(t.PrivacyContact),
+			ObjectionRoute:    valueOr(t.ObjectionRoute),
+			AdvertiserContact: valueOr(t.AdvertiserContact),
+			ArchivePurpose:    valueOr(t.ArchivePurpose),
+		})
+	}
+	return out
+}
+
+// wireTranslations renders every field present, for the reason
+// wireParticulars does.
+func wireTranslations(translations []ParticularsTranslation) *[]crmcontracts.ControllerParticularsTranslation {
+	out := make([]crmcontracts.ControllerParticularsTranslation, 0, len(translations))
+	for _, t := range translations {
+		out = append(out, crmcontracts.ControllerParticularsTranslation{
+			Language:          t.Language,
+			LegalName:         &t.LegalName,
+			PostalAddress:     &t.PostalAddress,
+			PrivacyContact:    &t.PrivacyContact,
+			ObjectionRoute:    &t.ObjectionRoute,
+			AdvertiserContact: &t.AdvertiserContact,
+			ArchivePurpose:    &t.ArchivePurpose,
+		})
+	}
+	return &out
 }
 
 // WithLocks binds what reports the settings a boot source sets.

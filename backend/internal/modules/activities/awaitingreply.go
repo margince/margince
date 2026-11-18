@@ -378,9 +378,26 @@ var awaitingRepliesSQL = `
 	   -- record with an open deal or a lead being worked.
 	   AND EXISTS (SELECT 1 FROM activity_link sales WHERE sales.activity_id = a.id AND %[11]s)
 	   AND NOT ` + readerSetAsideSQL("$%[9]d", "%[10]s") + `
+	   AND NOT ` + promiseKeptSQL("$%[9]d") + `
 	 GROUP BY a.id, a.subject, a.occurred_at
 	 ORDER BY a.occurred_at DESC, a.id DESC
 	 LIMIT %[12]d`
+
+// promiseKeptSQL is true when the reader completed a task derived from the
+// mail on alias a and has none of them open. The task stood for the follow-up
+// on the worklist, so completing it completes the reminder too.
+func promiseKeptSQL(reader string) string {
+	derived := `SELECT 1 FROM activity promise
+	    WHERE promise.source_activity_id = a.id AND promise.kind = 'task' AND ` + readersPromiseSQL("promise", reader)
+	return `(EXISTS (` + derived + ` AND promise.is_done) AND NOT EXISTS (` + derived + ` AND NOT promise.is_done))`
+}
+
+// readersPromiseSQL is a live row the reader holds. A task matched to a mail
+// by its source_activity_id is then that mail's promise. The Worklist fold
+// (attention.ownPromise) takes a task by the same terms.
+func readersPromiseSQL(alias, reader string) string {
+	return alias + `.archived_at IS NULL AND ` + alias + `.assignee_id = ` + reader
+}
 
 // threadNeedSQL names each of candidates and the live rows on its thread. A
 // statement gates that set once when its later-message and snooze-lift tests

@@ -29,19 +29,21 @@ func newComplianceDoors(t *testing.T, slug string) complianceDoors {
 	d := newTwoDoors(t, slug, "read", "write", "send")
 	var purposes struct {
 		Data []struct {
-			ID                  string `json:"id"`
-			RequiresDoubleOptIn bool   `json:"requires_double_opt_in"`
+			ID  string `json:"id"`
+			Key string `json:"key"`
 		} `json:"data"`
 	}
-	if status := d.e.Call(t, "GET", "/v1/consent-purposes", nil, nil, &purposes); status != http.StatusOK || len(purposes.Data) == 0 {
-		t.Fatalf("reading the purposes → %d, %d purposes", status, len(purposes.Data))
+	if status := d.e.Call(t, "GET", "/v1/consent-purposes", nil, nil, &purposes); status != http.StatusOK {
+		t.Fatalf("reading the purposes → %d", status)
 	}
-	purpose := purposes.Data[0].ID
+	var purpose string
 	for _, p := range purposes.Data {
-		if !p.RequiresDoubleOptIn {
+		if p.Key == "business_correspondence" {
 			purpose = p.ID
-			break
 		}
+	}
+	if purpose == "" {
+		t.Fatalf("the catalog has no business_correspondence purpose: %+v", purposes.Data)
 	}
 	return complianceDoors{
 		twoDoors: d, purpose: purpose,
@@ -212,23 +214,20 @@ func TestAnAgentsQualifyingEventNamesTheAgent(t *testing.T) {
 }
 
 // Mail to a contact runs on send_outbound and spends send. This stack has no mail
-// relay and its purpose takes no double opt-in. So each call passes every check on
-// the agent and ends on the precondition named here.
+// relay, so each call passes every check on the agent and stops there. The
+// purpose is business correspondence, which a consent link may ask about.
 func TestAnAgentMailsTheComplianceMessages(t *testing.T) {
 	t.Parallel()
 	c := newComplianceDoors(t, "agent-compliance-mail")
 	const noRelay = "cannot send its own mail yet"
-	for _, call := range []struct {
-		args   map[string]any
-		reason string
-	}{
-		{map[string]any{"as": "privacy_notice", "id": c.contact}, noRelay},
-		{map[string]any{"as": "details_confirmation", "id": c.contact}, noRelay},
-		{map[string]any{"as": "double_opt_in", "id": c.contact, "request_body": AnyMap{"purpose_id": c.purpose}}, "not confirmed by double opt-in"},
+	for _, args := range []map[string]any{
+		{"as": "privacy_notice", "id": c.contact},
+		{"as": "details_confirmation", "id": c.contact},
+		{"as": "double_opt_in", "id": c.contact, "request_body": AnyMap{"purpose_id": c.purpose}},
 	} {
-		got := c.mcp.Call(t, "send_outbound", call.args)
-		if !got.IsError || !strings.Contains(got.Text, call.reason) {
-			t.Errorf("send_outbound %v answered %+v, want it to end on %q", call.args["as"], got, call.reason)
+		got := c.mcp.Call(t, "send_outbound", args)
+		if !got.IsError || !strings.Contains(got.Text, noRelay) {
+			t.Errorf("send_outbound %v answered %+v, want it to end on %q", args["as"], got, noRelay)
 		}
 	}
 	readOnly := newTwoDoors(t, "agent-compliance-noscope", "read", "write")

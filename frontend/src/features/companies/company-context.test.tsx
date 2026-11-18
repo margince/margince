@@ -936,3 +936,37 @@ describe("ManualCompanySetup save refusals", () => {
     expect(screen.queryByText(/at most 200|failed validation/)).toBeNull();
   });
 });
+
+describe("ManualCompanySetup once saved", () => {
+  it("puts Home in the spent form's place", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const request =
+          input instanceof Request ? input : new Request(String(input), init);
+        const path = new URL(request.url).pathname;
+        if (request.method === "PUT" && path === "/v1/company") {
+          return Response.json(COMPANY);
+        }
+        return Response.json(routeBody(path));
+      }),
+    );
+    globalThis.history.replaceState(null, "", "#/onboarding");
+    const entries = globalThis.history.length;
+    render(
+      <Providers>
+        <ManualCompanySetup />
+      </Providers>,
+    );
+    for (const box of screen.getAllByRole("textbox")) {
+      await user.type(box, "Acme");
+    }
+    await user.click(
+      screen.getByRole("button", { name: "Create company context" }),
+    );
+
+    await waitFor(() => expect(globalThis.location.hash).toBe("#/home"));
+    expect(globalThis.history.length).toBe(entries);
+  });
+});

@@ -244,7 +244,8 @@ func TestIdempotencyKeyReplay_logActivity(t *testing.T) {
 
 	var contact AnyMap
 	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
-		"full_name": "Idem Contact", "source": "manual",
+		"linkedin_url": apptest.ContactProfile(),
+		"full_name":    "Idem Contact", "source": "manual",
 	}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("create contact = %d %v", status, contact)
 	}
