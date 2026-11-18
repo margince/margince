@@ -11,6 +11,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
@@ -36,13 +37,23 @@ func withSendFacts(ctx context.Context, tx pgx.Tx, req commsauthz.Request) (comm
 }
 
 // anchorSubjectOf reads the subject of the message a send answers, empty
-// when it answers none.
+// when it answers none or the sender may not read it. Empty leaves the
+// subject read as the rep's own words.
 func anchorSubjectOf(ctx context.Context, tx pgx.Tx, anchor ids.UUID) (string, error) {
 	if anchor.IsZero() {
 		return "", nil
 	}
+	args := []any{anchor}
+	visible, err := auth.ActivityContentClause(ctx, "a", func(value any) int {
+		args = append(args, value)
+		return len(args)
+	})
+	if err != nil {
+		return "", err
+	}
 	var subject string
-	err := tx.QueryRow(ctx, `SELECT coalesce(subject, '') FROM activity WHERE id = $1`, anchor).Scan(&subject)
+	err = tx.QueryRow(ctx, `SELECT coalesce(a.subject, '') FROM activity a
+		 WHERE a.id = $1 AND a.archived_at IS NULL AND (`+visible+`)`, args...).Scan(&subject)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", nil
 	}

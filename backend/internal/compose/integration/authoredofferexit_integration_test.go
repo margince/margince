@@ -271,10 +271,9 @@ func (c *consentEnv) answerWith(t *testing.T, anchor, subject, body string) int 
 	}, nil, nil)
 }
 
-// A pitch the contact wrote stays theirs, in the body and in the subject the
-// reply carries over: a reschedule answering it queues on the first click. A
-// rep who quotes the pitch back, or writes an offer into the subject, has
-// written it, and the reply is decided as an offer.
+// A pitch the contact wrote stays theirs, in the body and in the carried-over
+// subject. A reschedule answering it queues on the first click. A rep who
+// quotes the pitch back, or puts an offer in the subject, has written an offer.
 func TestAQuotedPitchCountsOnlyWhenTheRepTypesItBack(t *testing.T) {
 	c := setupConsent(t)
 	c.useReviewableMarketingProfile(t)
@@ -297,9 +296,9 @@ func TestAQuotedPitchCountsOnlyWhenTheRepTypesItBack(t *testing.T) {
 	}
 }
 
-// A subject is quoted only when the contact wrote it. Carried over from the
-// rep's own pitch in a thread the contact wrote into, or from mail a rep logged
-// by hand, it is the rep's. Each anchor answers a plain subject on its own.
+// A subject is quoted only when the contact wrote it. A subject carried over
+// from the rep's own pitch, or from mail a rep logged by hand, is the rep's.
+// Each anchor first answers a plain subject, so the fixture shows the cause.
 func TestASubjectTheContactDidNotWriteIsTheReps(t *testing.T) {
 	for name, anchor := range map[string]func(c *consentEnv, subject string) string{
 		"the rep's own pitch in the contact's thread": func(c *consentEnv, subject string) string {

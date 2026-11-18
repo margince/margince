@@ -9,9 +9,9 @@ export function useIdempotencyKey(): { key: string; renew: () => void } {
   return { key, renew };
 }
 
-// One key per send intent. Asked again with the same request, as a retry is,
-// it answers the same key; any other request, such as one after an edit, gets
-// a fresh one. The server then never sees one key over two bodies.
+// One key per send intent. A retry asks with the same request and gets the
+// same key. Any other request, such as one after an edit, gets a fresh key, so
+// the server never sees one key over two bodies.
 export function intentKeys(): (intent: unknown) => string {
   let last: string | undefined;
   let key = "";

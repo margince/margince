@@ -53,8 +53,8 @@ export type DirectSendCommand = Readonly<{
   shownReasons: readonly string[];
 }>;
 
-// A decision retried after a lost answer reuses its key, so the server replays
-// the send it recorded rather than answering that the review is gone.
+// A decision retried after a lost answer reuses its key. The server then
+// replays the send it recorded instead of answering that the review is gone.
 const decisionKeys = intentKeys();
 
 export async function directSend(command: DirectSendCommand): Promise<string> {
