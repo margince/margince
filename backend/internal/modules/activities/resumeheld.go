@@ -14,7 +14,9 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/heldreason"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -53,6 +55,9 @@ func (s *Store) ResumeHeldSend(
 		// and saying which of those it was would disclose the row.
 		return crmcontracts.Activity{}, apperrors.ErrNotFound
 	}
+	if err := refuseAnotherSeatsFireHold(ctx, held); err != nil {
+		return crmcontracts.Activity{}, err
+	}
 	origin, in, err := held.replay()
 	if err != nil {
 		return crmcontracts.Activity{}, err
@@ -90,6 +95,11 @@ func (s *Store) ResumeHeldSend(
 			return err
 		}
 		if err := s.releaseHeldInTx(ctx, tx, id, ids.UUID(sent.Id)); err != nil {
+			return err
+		}
+		// A fire-time hold raised an inbox card; the message has gone, so the
+		// card has nothing left to ask.
+		if err := s.resolveHeld(ctx, tx, id, HeldResolvedBySending); err != nil {
 			return err
 		}
 		// AND THE REVIEW, because this message has now gone.
@@ -134,11 +144,9 @@ func (s *Store) readHeldForResume(ctx context.Context, id ids.UUID) (claimedSend
 // claimHeldForResume locks one held row, or reports that there is nothing to
 // resume.
 //
-// SCOPED TO send_refused, not to every hold. The other hold reasons stop a
-// message that was already a promise to send at a moment — one that missed its
-// window, or whose sender went inactive — and those resume through the
-// scheduled path by being re-armed, not by being fired now. A refusal hold is
-// the only one whose resolution is "send this, now, because somebody decided".
+// Scoped to the engine's refusals, not to every hold. A missed window or an
+// inactive sender resumes by being re-armed on the scheduled path. Only a
+// refusal hold resolves as "send this now, because somebody decided".
 func (s *Store) claimHeldForResume(ctx context.Context, tx pgx.Tx, id ids.UUID) (claimedSend, bool, error) {
 	return s.heldRow(ctx, tx, id, " FOR UPDATE")
 }
@@ -155,11 +163,11 @@ func (s *Store) heldRow(ctx context.Context, tx pgx.Tx, id ids.UUID, lock string
 	err := tx.QueryRow(ctx, `
 		SELECT `+scheduleInstantSQL+`, origin_kind, anchor_activity_id,
 		       origin_links, also_links, payload, payload_version, version,
-		       scheduled_by, nullif(payload->>'pending_draft_id', '')::uuid, created_at
+		       scheduled_by, nullif(payload->>'pending_draft_id', '')::uuid, created_at, held_reason
 		  FROM scheduled_send
-		 WHERE id = $1 AND status = 'held' AND held_reason = $2`+lock, id, HeldSendRefused).
+		 WHERE id = $1 AND status = 'held' AND held_reason = ANY($2)`+lock, id, heldreason.Reviewable()).
 		Scan(&c.ScheduledAt, &c.OriginKind, &c.Anchor,
-			&c.OriginLinks, &c.AlsoLinks, &c.Payload, &c.Version, &c.RowVersion, &c.ScheduledBy, &c.PendingDraftID, &c.CreatedAt)
+			&c.OriginLinks, &c.AlsoLinks, &c.Payload, &c.Version, &c.RowVersion, &c.ScheduledBy, &c.PendingDraftID, &c.CreatedAt, &c.HeldReason)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return claimedSend{}, false, nil
 	}
@@ -167,6 +175,41 @@ func (s *Store) heldRow(ctx context.Context, tx pgx.Tx, id ids.UUID, lock string
 		return claimedSend{}, false, fmt.Errorf("held send: claiming the message to resume: %w", err)
 	}
 	return c, true, nil
+}
+
+// refuseAnotherSeatsFireHold lets only its sender resume a message held at its
+// scheduled time. A resume sends as the caller, with their mailbox, name and
+// signature. Whether one seat may send another's scheduled message that way is
+// not decided. A message refused at the keyboard keeps its old rule.
+func refuseAnotherSeatsFireHold(ctx context.Context, held claimedSend) error {
+	if held.HeldReason != HeldConsentWithdrawn {
+		return nil
+	}
+	actor, err := storekit.Actor(ctx)
+	if err != nil {
+		return err
+	}
+	if actor.UserID != held.ScheduledBy {
+		return &HeldForSenderError{}
+	}
+	return nil
+}
+
+// HeldForSenderError refuses a colleague who confirms a message held at its
+// scheduled time. It answers 403 with a sentence naming who may confirm it.
+type HeldForSenderError struct{}
+
+func (*HeldForSenderError) Error() string {
+	return "held send: only the sender can confirm a message held at its scheduled time"
+}
+
+// Is keeps the refusal on the permission sentinel's 403 row.
+func (*HeldForSenderError) Is(target error) bool { return target == apperrors.ErrPermissionDenied }
+
+// MessageFault says who may confirm it.
+func (*HeldForSenderError) MessageFault() (code, message string) {
+	return "permission_denied", "Only the colleague who scheduled this message can confirm it, " +
+		"because it was held at its scheduled time."
 }
 
 // releaseHeldInTx records that the held message reached the delivery

@@ -41805,6 +41805,13 @@ components:
           description: |-
             The review this message's refusal opened, when one stands. Null on every message
             nobody refused, and on a held row whose review has since been answered.
+        review_actions:
+          type: array
+          items: {type: string}
+          description: |-
+            What this caller may do about the review in `review_id`, in the words a refusal's
+            `available_actions` uses. Absent or empty when they may only read it.
+            `direct_send` sends the held message now on a recorded reason.
         version: {type: integer, format: int64}
         created_at: {type: string, format: date-time}
         updated_at: {type: string, format: date-time}

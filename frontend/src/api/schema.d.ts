@@ -44519,6 +44519,12 @@ export interface components {
              *     this id still gets 404 if the review is not theirs to see.
              */
             review_id?: string | null;
+            /**
+             * @description What this caller may do about the review in `review_id`, in the words a refusal's
+             *     `available_actions` uses. Absent or empty when they may only read it.
+             *     `direct_send` sends the held message now on a recorded reason.
+             */
+            review_actions?: string[];
             /** Format: int64 */
             version: number;
             /** Format: date-time */

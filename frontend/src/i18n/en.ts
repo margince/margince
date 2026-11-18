@@ -19598,6 +19598,8 @@ export const en = {
     "A recipient stopped marketing after you scheduled this. It will not send to them.",
   "sched.held.recipientReplied":
     "New mail came in from a recipient after you scheduled this follow-up. Read it before you send this.",
+  "sched.held.confirmSendsNow":
+    "Confirming sends this message now, not at the time it was scheduled for.",
   "sched.held.sendRefused":
     "A check blocked this message when it was due. Nothing was sent.",
   "sched.inZone": "in {zone}",
