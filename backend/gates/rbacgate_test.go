@@ -58,9 +58,8 @@ import (
 // job carries, a predicate written in the SQL, an aggregate that returns no
 // row, or authentication itself.
 //
-// So an entry added here is a security decision, and the reason has to survive
-// being read on its own: "a sweep runs it" is not one, "no row leaves this
-// call" is.
+// So an entry here is a security decision, and its reason must stand alone:
+// "a sweep runs it" is not one, "no row leaves this call" is.
 var ungatedEntryPoints = gatekit.Waive(map[string]string{
 	"internal/modules/activities:DefaultMeetingSubject":   "reads only the installation language to render the built-in booking caption, which anonymous booking pages already publish; it reads and returns no activity or account data",
 	"internal/modules/identity:EffectiveAuthorityTx":      "The same current identity authority snapshot as EffectiveAuthority, inside a caller transaction. This supplies RBAC to an admission gate, so gating it on itself would recurse; the service method also serializes the live member with mutation.",
