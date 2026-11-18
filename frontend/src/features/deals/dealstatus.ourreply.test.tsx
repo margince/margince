@@ -77,7 +77,7 @@ function repliedCard(): DealStatusCard {
 
 function show(
   card: DealStatusCard,
-  grants: string[],
+  grants: readonly ("read" | "create" | "update" | "delete")[],
   onPatch = vi.fn((_body: unknown) =>
     jsonResponse({ id: reminder, version: 5 }),
   ),
