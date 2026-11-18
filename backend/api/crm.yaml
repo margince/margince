@@ -10705,7 +10705,7 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
-  /emails/recipient-countries:
+  /recipient-countries:
     post:
       tags: [Activities]
       operationId: resolveRecipientCountries

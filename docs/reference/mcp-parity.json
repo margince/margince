@@ -10642,18 +10642,6 @@
     },
     {
       "method": "POST",
-      "path": "/emails/recipient-countries",
-      "operation_id": "resolveRecipientCountries",
-      "tags": [
-        "Activities"
-      ],
-      "group": "business",
-      "area": "activities",
-      "state": "covered",
-      "web_app": "direct"
-    },
-    {
-      "method": "POST",
       "path": "/emails:preview",
       "operation_id": "previewAccountSendAuthorization",
       "tags": [
@@ -16064,6 +16052,18 @@
       "tier": "auto_execute",
       "scope": "read",
       "verb": "describe_views"
+    },
+    {
+      "method": "POST",
+      "path": "/recipient-countries",
+      "operation_id": "resolveRecipientCountries",
+      "tags": [
+        "Activities"
+      ],
+      "group": "business",
+      "area": "activities",
+      "state": "covered",
+      "web_app": "direct"
     },
     {
       "method": "GET",

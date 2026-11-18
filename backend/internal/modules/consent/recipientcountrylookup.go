@@ -76,7 +76,7 @@ func readableRecipientCountry(ctx context.Context, tx pgx.Tx, address string) (R
 	return recipientCountryTx(ctx, tx, who)
 }
 
-// ResolveRecipientCountries serves POST /emails/recipient-countries.
+// ResolveRecipientCountries serves POST /recipient-countries.
 func (h Handlers) ResolveRecipientCountries(w http.ResponseWriter, r *http.Request) {
 	var req crmcontracts.RecipientCountriesRequest
 	if !httperr.Decode(w, r, &req) {

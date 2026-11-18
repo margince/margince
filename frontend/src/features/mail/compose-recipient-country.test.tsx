@@ -36,7 +36,7 @@ const recordCountry = () =>
     ],
   });
 
-const LOOKUP = "POST /emails/recipient-countries";
+const LOOKUP = "POST /recipient-countries";
 const count = (sent: Sent[], key: string) =>
   sent.filter((entry) => entry.key === key).length;
 

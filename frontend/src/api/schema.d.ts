@@ -7302,7 +7302,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/emails/recipient-countries": {
+    "/recipient-countries": {
         parameters: {
             query?: never;
             header?: never;

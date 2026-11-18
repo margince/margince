@@ -83252,9 +83252,6 @@ type SaveEmailSignatureTemplateJSONRequestBody = EmailSignatureTemplate
 // SendCompanyEmailJSONRequestBody defines body for SendCompanyEmail for application/json ContentType.
 type SendCompanyEmailJSONRequestBody = SendCompanyEmailRequest
 
-// ResolveRecipientCountriesJSONRequestBody defines body for ResolveRecipientCountries for application/json ContentType.
-type ResolveRecipientCountriesJSONRequestBody = RecipientCountriesRequest
-
 // PreviewAccountSendAuthorizationJSONRequestBody defines body for PreviewAccountSendAuthorization for application/json ContentType.
 type PreviewAccountSendAuthorizationJSONRequestBody = PreviewAccountSendRequest
 
@@ -83689,6 +83686,9 @@ type OpenBuyerRoomThreadJSONRequestBody = OpenDealRoomThreadRequest
 
 // ReplyBuyerRoomThreadJSONRequestBody defines body for ReplyBuyerRoomThread for application/json ContentType.
 type ReplyBuyerRoomThreadJSONRequestBody = PostDealRoomCommentRequest
+
+// ResolveRecipientCountriesJSONRequestBody defines body for ResolveRecipientCountries for application/json ContentType.
+type ResolveRecipientCountriesJSONRequestBody = RecipientCountriesRequest
 
 // CreateRecordGrantJSONRequestBody defines body for CreateRecordGrant for application/json ContentType.
 type CreateRecordGrantJSONRequestBody = CreateRecordGrantRequest
@@ -99055,9 +99055,6 @@ type ServerInterface interface {
 	// Start a new email conversation from a record — runs directly, consent-gated.
 	// (POST /emails)
 	SendCompanyEmail(w http.ResponseWriter, r *http.Request, params SendCompanyEmailParams)
-	// The country the record states for each address, and where it was read.
-	// (POST /emails/recipient-countries)
-	ResolveRecipientCountries(w http.ResponseWriter, r *http.Request)
 	// Would a new message with no thread behind it be allowed, and on what ground.
 	// (POST /emails:preview)
 	PreviewAccountSendAuthorization(w http.ResponseWriter, r *http.Request)
@@ -100105,6 +100102,9 @@ type ServerInterface interface {
 	// The views the read_view agent tool reads, and the arguments each takes.
 	// (GET /read-views)
 	DescribeReadViews(w http.ResponseWriter, r *http.Request)
+	// The country the record states for each address, and where it was read.
+	// (POST /recipient-countries)
+	ResolveRecipientCountries(w http.ResponseWriter, r *http.Request)
 	// The fields a record create or update may write, for each record type.
 	// (GET /record-fields)
 	DescribeRecordFields(w http.ResponseWriter, r *http.Request)
@@ -104017,12 +104017,6 @@ func (_ Unimplemented) SendCompanyEmail(w http.ResponseWriter, r *http.Request, 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// The country the record states for each address, and where it was read.
-// (POST /emails/recipient-countries)
-func (_ Unimplemented) ResolveRecipientCountries(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
 // Would a new message with no thread behind it be allowed, and on what ground.
 // (POST /emails:preview)
 func (_ Unimplemented) PreviewAccountSendAuthorization(w http.ResponseWriter, r *http.Request) {
@@ -106114,6 +106108,12 @@ func (_ Unimplemented) DescribeQueryVocabulary(w http.ResponseWriter, r *http.Re
 // The views the read_view agent tool reads, and the arguments each takes.
 // (GET /read-views)
 func (_ Unimplemented) DescribeReadViews(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The country the record states for each address, and where it was read.
+// (POST /recipient-countries)
+func (_ Unimplemented) ResolveRecipientCountries(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -132984,26 +132984,6 @@ func (siw *ServerInterfaceWrapper) SendCompanyEmail(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
-// ResolveRecipientCountries operation middleware
-func (siw *ServerInterfaceWrapper) ResolveRecipientCountries(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ResolveRecipientCountries(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
 // PreviewAccountSendAuthorization operation middleware
 func (siw *ServerInterfaceWrapper) PreviewAccountSendAuthorization(w http.ResponseWriter, r *http.Request) {
 
@@ -146706,6 +146686,26 @@ func (siw *ServerInterfaceWrapper) DescribeReadViews(w http.ResponseWriter, r *h
 	handler.ServeHTTP(w, r)
 }
 
+// ResolveRecipientCountries operation middleware
+func (siw *ServerInterfaceWrapper) ResolveRecipientCountries(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ResolveRecipientCountries(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // DescribeRecordFields operation middleware
 func (siw *ServerInterfaceWrapper) DescribeRecordFields(w http.ResponseWriter, r *http.Request) {
 
@@ -158118,9 +158118,6 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/emails", wrapper.SendCompanyEmail)
 	})
 	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/emails/recipient-countries", wrapper.ResolveRecipientCountries)
-	})
-	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/emails:preview", wrapper.PreviewAccountSendAuthorization)
 	})
 	r.Group(func(r chi.Router) {
@@ -159166,6 +159163,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/read-views", wrapper.DescribeReadViews)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/recipient-countries", wrapper.ResolveRecipientCountries)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/record-fields", wrapper.DescribeRecordFields)

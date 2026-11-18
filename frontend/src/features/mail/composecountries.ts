@@ -84,7 +84,7 @@ export function useRecordCountry(address: string, open: boolean) {
     queryFn: open
       ? async () => {
           const answer = unwrap(
-            await api.POST("/emails/recipient-countries", {
+            await api.POST("/recipient-countries", {
               body: { addresses: [address] },
             }),
           );

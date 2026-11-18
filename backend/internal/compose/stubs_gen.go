@@ -2187,10 +2187,6 @@ func (stubs) SendCompanyEmail(w nethttp.ResponseWriter, r *nethttp.Request, para
 	httperr.NotImplemented(w, r, "SendCompanyEmail")
 }
 
-func (stubs) ResolveRecipientCountries(w nethttp.ResponseWriter, r *nethttp.Request) {
-	httperr.NotImplemented(w, r, "ResolveRecipientCountries")
-}
-
 func (stubs) PreviewAccountSendAuthorization(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "PreviewAccountSendAuthorization")
 }
@@ -3585,6 +3581,10 @@ func (stubs) DescribeQueryVocabulary(w nethttp.ResponseWriter, r *nethttp.Reques
 
 func (stubs) DescribeReadViews(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "DescribeReadViews")
+}
+
+func (stubs) ResolveRecipientCountries(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ResolveRecipientCountries")
 }
 
 func (stubs) DescribeRecordFields(w nethttp.ResponseWriter, r *nethttp.Request) {
