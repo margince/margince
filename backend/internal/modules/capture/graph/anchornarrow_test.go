@@ -24,10 +24,14 @@ const spreadPageSize = 1_000
 // spreadProvider is an inbox of n messages one minute apart, ending an hour
 // before the test starts. Unlike pagedProvider it honours the receivedDateTime
 // filter on both the delta and the tally, which is what narrowing bisects on.
+//
+// churn ids appear in a round from the oldest message on and are not in the
+// tally, as messages moved out while the round ran.
 type spreadProvider struct {
-	base time.Time
-	n    int
-	srv  *httptest.Server
+	base  time.Time
+	n     int
+	churn int
+	srv   *httptest.Server
 }
 
 func newSpreadProvider(t *testing.T, n int) *spreadProvider {
@@ -96,6 +100,11 @@ func (p *spreadProvider) servePage(w http.ResponseWriter, r *http.Request) {
 	from := first + page*spreadPageSize
 	to := min(from+spreadPageSize, p.n)
 	value := make([]map[string]any, 0, to-from)
+	if from == 0 {
+		for i := range p.churn {
+			value = append(value, map[string]any{"id": "churn" + strconv.Itoa(i), "receivedDateTime": p.base.Format(time.RFC3339)})
+		}
+	}
 	for i := from; i < to; i++ {
 		value = append(value, map[string]any{"id": "m" + strconv.Itoa(i), "receivedDateTime": p.received(i).Format(time.RFC3339)})
 	}
@@ -146,10 +155,35 @@ func (n *narrowRecorder) NarrowSyncAnchor(_ context.Context, from, to time.Time)
 	return nil
 }
 
-func TestAnAnchorPastTheCapAnswersWhereANarrowerOneFits(t *testing.T) {
+// A fresh window the tally already puts past the cap narrows before the walk,
+// so no page is read and no message fetched twice.
+func TestAFreshAnchorPastTheCapNarrowsBeforeWalking(t *testing.T) {
 	p := newSpreadProvider(t, anchorSeenCap+20_000)
+	pages := 0
 	_, err := NewAPI(p.srv.Client(), p.srv.URL).DeltaInit(context.Background(), "access", folderInbox, p.base, nil,
-		func(context.Context, DeltaPage) error { return nil })
+		func(context.Context, DeltaPage) error { pages++; return nil })
+	assertNarrowed(t, p, err)
+	if pages != 0 {
+		t.Errorf("the round walked %d page(s) before narrowing, want none", pages)
+	}
+}
+
+// A window that fits by the tally can still outgrow the census while it is
+// walked, as mail moves. That round narrows too.
+func TestAnAnchorThatOutgrowsTheCapWhileWalkedNarrows(t *testing.T) {
+	p := newSpreadProvider(t, anchorSeenCap-1_000)
+	p.churn = 2_000
+	pages := 0
+	_, err := NewAPI(p.srv.Client(), p.srv.URL).DeltaInit(context.Background(), "access", folderInbox, p.base, nil,
+		func(context.Context, DeltaPage) error { pages++; return nil })
+	assertNarrowed(t, p, err)
+	if pages == 0 {
+		t.Error("the round narrowed before walking, so this case never reached the census cap")
+	}
+}
+
+func assertNarrowed(t *testing.T, p *spreadProvider, err error) {
+	t.Helper()
 	tooLarge, ok := errors.AsType[*AnchorTooLargeError](err)
 	if !ok || !errors.Is(err, ErrAnchorTooLarge) {
 		t.Fatalf("a round past the cap answered %v, want an AnchorTooLargeError", err)
@@ -160,10 +194,17 @@ func TestAnAnchorPastTheCapAnswersWhereANarrowerOneFits(t *testing.T) {
 	p.assertFits(t, tooLarge.Fits)
 }
 
-// The folder anchors again from the bound that fits, in the same cycle, and
-// tells the engine which span it left for the history import.
-func TestAFolderPastTheCapReanchorsNarrowerAndRecordsTheSkippedSpan(t *testing.T) {
-	p := newSpreadProvider(t, anchorSeenCap+20_000)
+// narrowedFolder is what one pullFolder over p stored after a narrowing.
+type narrowedFolder struct {
+	recorder *narrowRecorder
+	api      *pagedAPI
+	fits     time.Time
+}
+
+// pullNarrowed pulls p's inbox, which must narrow once and then close, and
+// checks every message of the narrowed window was captured.
+func pullNarrowed(t *testing.T, p *spreadProvider) narrowedFolder {
+	t.Helper()
 	api := &pagedAPI{API: NewAPI(p.srv.Client(), p.srv.URL)}
 	conn := New(&fakeOAuth{access: "access-1"}, api)
 	recorder := &narrowRecorder{}
@@ -182,7 +223,6 @@ func TestAFolderPastTheCapReanchorsNarrowerAndRecordsTheSkippedSpan(t *testing.T
 	}
 	fits := recorder.spans[0][1]
 	p.assertFits(t, fits)
-
 	captured := map[string]bool{}
 	for _, rec := range sink.recs {
 		captured[rec.ProviderMessageID] = true
@@ -192,21 +232,39 @@ func TestAFolderPastTheCapReanchorsNarrowerAndRecordsTheSkippedSpan(t *testing.T
 			t.Fatalf("message m%d, received %s inside the narrowed window, was not captured", i, p.received(i))
 		}
 	}
-	// The oversized round is dropped, so an interrupted retry resumes the
-	// narrowed census rather than the one that tripped the cap.
-	if len(recorder.afterNarrow) == 0 {
+	return narrowedFolder{recorder: recorder, api: api, fits: fits}
+}
+
+// The folder anchors again from the bound that fits, in the same cycle, and
+// tells the engine which span it left for the history import. Counted first,
+// it fetches only the narrowed window.
+func TestAFolderPastTheCapReanchorsNarrowerAndRecordsTheSkippedSpan(t *testing.T) {
+	p := newSpreadProvider(t, anchorSeenCap+20_000)
+	got := pullNarrowed(t, p)
+	if inWindow := p.n - p.firstAtOrAfter(got.fits); got.api.fetches != inWindow {
+		t.Errorf("the folder fetched %d messages, want only the %d of the narrowed window", got.api.fetches, inWindow)
+	}
+}
+
+// A round that trips the cap mid-walk has checkpointed its oversized census. It
+// is dropped, so an interrupted retry resumes the narrowed one instead.
+func TestAFolderThatTripsTheCapMidWalkDropsTheOversizedRound(t *testing.T) {
+	p := newSpreadProvider(t, anchorSeenCap-1_000)
+	p.churn = 2_000
+	got := pullNarrowed(t, p)
+	if len(got.recorder.afterNarrow) == 0 {
 		t.Fatal("nothing was saved after the narrowing, so the oversized round is still the stored one")
 	}
-	if dropped, err := parseCursor(recorder.afterNarrow[0]); err != nil || dropped.Rounds[folderInbox] != nil {
+	if dropped, err := parseCursor(got.recorder.afterNarrow[0]); err != nil || dropped.Rounds[folderInbox] != nil {
 		t.Errorf("the first save after the narrowing still holds a round (%v), want the oversized one dropped", err)
 	}
-	for i, cursor := range recorder.afterNarrow {
+	for i, cursor := range got.recorder.afterNarrow {
 		state, err := parseCursor(cursor)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if round := state.Rounds[folderInbox]; round != nil && !round.Anchor.After.Equal(fits) {
-			t.Errorf("checkpoint %d after the narrowing resumes a census from %s, want %s", i, round.Anchor.After, fits)
+		if round := state.Rounds[folderInbox]; round != nil && !round.Anchor.After.Equal(got.fits) {
+			t.Errorf("checkpoint %d after the narrowing resumes a census from %s, want %s", i, round.Anchor.After, got.fits)
 		}
 	}
 }

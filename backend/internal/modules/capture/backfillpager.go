@@ -308,6 +308,9 @@ func (r *Registry) commitBackfillPage(ctx context.Context, backfillID ids.UUID, 
 		rowsAffected = tag.RowsAffected()
 		if rowsAffected > 0 {
 			if finishing {
+				if err := settleUnreadPeriodTx(ctx, tx, backfillID); err != nil {
+					return err
+				}
 				return reconcileBackfillCreationsTx(ctx, tx, backfillID)
 			}
 			return rescheduleBackfillTx(ctx, tx, backfillID, backfillPageDelay)

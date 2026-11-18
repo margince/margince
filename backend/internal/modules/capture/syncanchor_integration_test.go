@@ -32,8 +32,10 @@ type anchorRecorder struct {
 	attempts  int
 	told      []time.Time
 	// narrowBy, when set, has each failing attempt narrow its anchor this much
-	// later first, as a round past the census cap does.
-	narrowBy time.Duration
+	// later first, as a round past the census cap does. beforeNarrow runs just
+	// before it.
+	narrowBy     time.Duration
+	beforeNarrow func()
 }
 
 // anchorProvider is in the connection table's provider CHECK and is taken by
@@ -56,6 +58,9 @@ func (c *anchorRecorder) SyncFrom(
 	c.told = append(c.told, from)
 	if c.attempts <= c.failUntil {
 		if c.narrowBy > 0 {
+			if c.beforeNarrow != nil {
+				c.beforeNarrow()
+			}
 			if err := connector.NarrowSyncAnchor(ctx, from, from.Add(c.narrowBy)); err != nil {
 				return nil, err
 			}
@@ -167,6 +172,38 @@ func TestANarrowedAnchorRecordsTheSkippedSpanAndBindsTheRetry(t *testing.T) {
 	}
 	if !from.Equal(held) || !to.Equal(narrowed) {
 		t.Errorf("the recorded period is %s to %s, want the skipped span %s to %s", from, to, held, narrowed)
+	}
+}
+
+// A sync another write overtook cannot narrow: the anchor and the unread span
+// stay as the newer write left them.
+func TestASupersededSyncCannotNarrowTheAnchor(t *testing.T) {
+	ctx, reg, _, _ := newCaptureRegistryFixture(t)
+	owner, _ := setupCaptureDB(t)
+	reg.SetClock(func() time.Time { return time.Date(2026, 3, 1, 9, 0, 0, 0, time.UTC) })
+	rec := &anchorRecorder{window: 7 * 24 * time.Hour, failUntil: 1, narrowBy: 3 * 24 * time.Hour}
+	rec.beforeNarrow = func() {
+		if _, err := owner.Exec(ctx, `UPDATE capture_connection SET sync_revision = sync_revision + 1 WHERE provider = $1`, anchorProvider); err != nil {
+			t.Errorf("overtaking the sync: %v", err)
+		}
+	}
+	reg.Register(rec)
+
+	if err := syncOnceOf(ctx, t, reg, anchorProvider); err != nil {
+		t.Fatalf("a superseded sync answered %v, want it to stop quietly", err)
+	}
+	var held *time.Time
+	var unread *time.Time
+	if err := owner.QueryRow(ctx,
+		`SELECT sync_anchor, unread_from FROM capture_connection WHERE provider = $1`, anchorProvider).
+		Scan(&held, &unread); err != nil {
+		t.Fatalf("reading the row back: %v", err)
+	}
+	if held == nil || !held.Equal(rec.told[0]) {
+		t.Errorf("the anchor stands at %v, want the held point %s untouched", held, rec.told[0])
+	}
+	if unread != nil {
+		t.Errorf("a superseded sync recorded an unread span from %s", *unread)
 	}
 }
 

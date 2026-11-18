@@ -44609,6 +44609,12 @@ components:
         connected_by: { type: [string, 'null'], format: uuid, description: The admin who last connected it. }
         connected_at: { type: string, format: date-time }
         backup_owner_id: { type: [string, 'null'], format: uuid, description: 'The reader-team member who gets the follow-up work of mail whose sender no reader owns, and owns the contacts that mail creates. Null when none is named: mail whose sender no reader owns then creates no work and no contact.' }
+        unread_period:
+          allOf: [{ $ref: '#/components/schemas/CaptureUnreadPeriod' }]
+          description: >-
+            A period no sync read: a first sync failed for longer than its held point, or the
+            mailbox held more mail than one round can read. Importing the mailbox's history over
+            it clears it. Absent when there is none.
     SharedMailboxList:
       type: object
       required: [items]
@@ -69887,9 +69893,9 @@ components:
       additionalProperties: false
       required: [from, to]
       description: >-
-        The span between where a held first-sync anchor pointed and where the sync had to
-        start instead. Both ends or neither: a start with no end is a period nobody can ask
-        for again.
+        The span between where a first sync was to read from and where it had to start
+        instead. Both ends or neither: a start with no end is a period nobody can ask for
+        again.
       properties:
         from: { type: string, format: date-time, description: The first moment nobody read. }
         to: { type: string, format: date-time, description: The moment reading resumed. }
@@ -69928,8 +69934,9 @@ components:
           allOf: [{ $ref: '#/components/schemas/CaptureUnreadPeriod' }]
           nullable: true
           description: >-
-            A period no sync read, when a first sync failed for longer than the point it had
-            held. Absent when there is none, which is the ordinary case.
+            A period no sync read: a first sync failed for longer than the point it had held, or
+            the mailbox held more mail than one round can read. A finished history import over it
+            clears it. Absent when there is none, which is the ordinary case.
 
             It is reported because the alternative is a mailbox that looks synced and is
             missing a week. The backfill reaches this period, so the owner can ask for it

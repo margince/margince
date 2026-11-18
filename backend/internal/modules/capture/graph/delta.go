@@ -213,6 +213,17 @@ func (a *httpAPI) DeltaInit(ctx context.Context, accessToken, folder string, aft
 	if err != nil {
 		return "", err
 	}
+	// Counted before a fresh walk, so a window past the cap narrows before any
+	// message is fetched rather than after a hundred thousand.
+	if resume == nil {
+		held, err := a.countInFolder(ctx, accessToken, folder, receivedBetweenFilter(census.After, census.Opened))
+		if err != nil {
+			return "", err
+		}
+		if held > anchorSeenCap {
+			return "", a.narrowAnchor(ctx, accessToken, folder, census)
+		}
+	}
 	deltaLink, err := a.deltaWalk(ctx, accessToken, start, census, visit)
 	if errors.Is(err, ErrAnchorTooLarge) {
 		return "", a.narrowAnchor(ctx, accessToken, folder, census)
