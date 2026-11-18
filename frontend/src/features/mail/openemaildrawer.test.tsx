@@ -333,7 +333,7 @@ describe("the email drawer's verbs", () => {
 
   it("forwards the message as a new email carrying its words", async () => {
     const user = userEvent.setup();
-    drawer();
+    const { sent } = drawer();
 
     await user.click(await screen.findByRole("button", { name: "Forward" }));
 
@@ -343,6 +343,12 @@ describe("the email drawer's verbs", () => {
       expect(messageText("Body")).toContain("Forwarded message"),
     );
     expect(messageText("Body")).toContain("Können wir Dienstag kurz sprechen?");
+    // Its draft is kept on the message it carries, apart from the record's.
+    const read = new URLSearchParams(
+      sent.find((call) => call.key === "GET /mail-drafts")?.query,
+    );
+    expect(read.get("anchor_type")).toBe("forward");
+    expect(read.get("anchor_id")).toBe(MESSAGE);
   });
 });
 

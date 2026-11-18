@@ -180,6 +180,26 @@ test.describe("the pages a message links to", () => {
     );
   });
 
+  // A send that named no purpose links to the token alone, and its credential
+  // stops all marketing. The page offers that stop and presses with no purpose.
+  test("a link with no purpose offers to stop all marketing", async ({
+    page,
+  }) => {
+    const sent: Sent[] = [];
+    await mockPublicEdge(page, sent);
+
+    await page.goto(`/#/unsubscribe/${TOKEN}?lang=de`);
+    await page
+      .getByRole("button", { name: de["prefs.unsubscribeAll"] })
+      .click();
+
+    await expect(
+      page.getByRole("heading", { name: de["prefs.unsub.doneTitle"] }),
+    ).toBeVisible();
+    const post = sent.find((r) => r.method === "POST");
+    expect(post?.url).toBe(`/v1/public/preferences/${TOKEN}/unsubscribe`);
+  });
+
   // A locked purpose carries no control at all: one that always failed
   // would be worse than none.
   test("a purpose that cannot be switched off offers no control", async ({

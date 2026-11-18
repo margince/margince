@@ -10,7 +10,7 @@ import { formatNumber } from "../format/format";
 import {
   type RefusalKind,
   type RefusalSurface,
-  sendPermissionReasonKey,
+  refusalSentenceKey,
 } from "../format/sendpermissionreason";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -194,6 +194,8 @@ type SendPermissionProps = Readonly<{
   override?: ReactNode;
   /** The surface also draws the message's own reason-for-contact pick. */
   picksReason?: boolean;
+  /** The message was checked with no reason for contact of its own. */
+  unclaimed?: boolean;
   /** The viewer wrote every address, so the refused one may be named. */
   namesRecipients?: boolean;
   /**
@@ -224,6 +226,7 @@ function PermissionNotice({
   onOverride,
   override,
   picksReason = false,
+  unclaimed = false,
   namesRecipients = false,
   onRecheck,
 }: SendPermissionProps) {
@@ -248,7 +251,7 @@ function PermissionNotice({
         <Button onClick={onOverride}>{t("sendPermission.sayWhy")}</Button>
       ) : undefined))
     : undefined;
-  const surface = { recordable: Boolean(control), picksReason };
+  const surface = { recordable: Boolean(control), picksReason, unclaimed };
   const look = calloutLook(
     status.kind,
     status.deciding?.canBeOverruled === true,
@@ -317,7 +320,7 @@ function RefusalDetail({
   const t = useT();
   const hintFor = (refused: RefusedRecipient | undefined) =>
     t(
-      sendPermissionReasonKey(
+      refusalSentenceKey(
         refused?.reasonCode,
         surface,
         refused && remedyCategoryOf(refused),

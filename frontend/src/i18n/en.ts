@@ -7908,6 +7908,11 @@ export const en = {
   "compose.notAnAddress_other":
     "Not email addresses: {parts}. Correct them or remove them.",
   "compose.savedDraftLoad": "Load saved version",
+  "compose.savedDraftFoundTitle": "You have a saved draft here",
+  "compose.savedDraftFoundBody":
+    "It holds other words than the ones on screen. Open it to continue from it, or replace it with the text on screen.",
+  "compose.savedDraftLoadFound": "Open saved draft",
+  "compose.savedDraftReplace": "Replace it with this text",
   "compose.aiDisclosureTitle": "AI-assisted draft",
   "compose.aiDisclosureFallback":
     "This draft was written by AI. Review and edit it before sending.",
@@ -8156,6 +8161,10 @@ export const en = {
     "This message names a purpose Margince does not know. Pick a contact reason from the list.",
   "sendPermission.reason.unknownPurposeFact":
     "This message names a purpose Margince does not know.",
+  "sendPermission.reason.noReason":
+    "This message gives no contact reason, and the thread does not show one. Pick a contact reason from the list.",
+  "sendPermission.reason.noReasonFact":
+    "This message gives no contact reason, and the thread does not show one.",
   "sendPermission.reason.claimContradicts":
     "The contact reason you picked does not match this thread. Pick another reason, or leave it empty so Margince reads it from the thread.",
   "sendPermission.reason.claimContradictsFact":
@@ -12243,7 +12252,7 @@ export const en = {
   "connectors.disconnectBodyMicrosoftNote":
     "Microsoft may still list Margince among your account’s connected apps. Remove it there to revoke access fully.",
   "connectors.errRateLimited":
-    "The provider is throttling requests. Capture is slower than usual; nothing is lost.",
+    "The provider is limiting requests. Capture is slower than usual; nothing is lost.",
   "connectors.errUnreachable":
     "The provider could not be reached. Retrying automatically.",
   "connectors.errAuth":
@@ -21416,6 +21425,8 @@ export const en = {
   "captureConcern.stalled": "Sync has stopped",
   "captureConcern.silent": "No recent mail delivered",
   "captureConcern.roleCannotCapture": "Role cannot capture mail",
+  "captureConcern.nextTry": "Next try at {time}",
+  "captureConcern.tryingNow": "Trying again now",
   "captureConcern.title": "{mailbox}: {concern}",
   "captureConcern.since": "Since {since}",
   "captureConcern.more_one": "{count} more connection needs attention",
