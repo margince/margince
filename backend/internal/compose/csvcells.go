@@ -13,6 +13,7 @@ import (
 	"maps"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/compose/importtextbounds"
@@ -300,6 +301,9 @@ func unwritableReason(object string, fields map[string]string) *cellProblem {
 	if problem := emailCellProblem(object, fields); problem != nil {
 		return problem
 	}
+	if problem := contactNameCellProblem(object, fields); problem != nil {
+		return problem
+	}
 	if target, why, refused := importtextbounds.Refusal(object, fields); refused {
 		return problemOf(target, fields[target], why)
 	}
@@ -334,6 +338,20 @@ func countryCellProblem(fields map[string]string) *cellProblem {
 		return problemOf(fieldAddressCountry, raw, migration.Why(migration.ReasonValueRefused, "value", raw, "detail", err.Error()))
 	}
 	return nil
+}
+
+// contactNameCellProblem refuses a contact name cell the import writers bound.
+// The registry exempts these columns, so importtextbounds never sees them.
+func contactNameCellProblem(object string, fields map[string]string) *cellProblem {
+	if object != migration.ObjectContact {
+		return nil
+	}
+	column, length, over := contacts.OverlongImportedName(fields)
+	if !over {
+		return nil
+	}
+	return problemOf(column, fields[column], migration.Why(migration.ReasonValueTooLong,
+		"length", strconv.Itoa(length), "max", strconv.Itoa(contacts.ImportedNameLimit)))
 }
 
 // importableSizeBands is the closed size_band vocabulary, off the contract.

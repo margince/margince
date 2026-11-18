@@ -34198,8 +34198,8 @@ export interface components {
              *     stays in `superseded_value`, and a field a human corrected stands.
              *     `needs_review` — a resemblance, written nowhere; open the candidate and decide.
              *     `proposed` — a card read from a photo that nobody matched, waiting on an approval.
-             *     `skipped` — the card states no name, carries a sending system's address, or matches a
-             *     contact the caller may not write; `reason` says which.
+             *     `skipped` — the card states no name or one over 200 characters, carries a sending
+             *     system's address, or matches a contact the caller may not write; `reason` says which.
              * @enum {string}
              */
             outcome: "created" | "updated" | "needs_review" | "proposed" | "skipped";
@@ -34208,7 +34208,10 @@ export interface components {
              * @description The contact created or updated, or — for `needs_review` — the candidate the card resembles.
              */
             contact_id?: string | null;
-            /** @description Why a card was skipped, or a warning about an imported contact without a channel. */
+            /**
+             * @description Why a card was skipped. For a written card, a warning: the contact has no channel, or the
+             *     card's title was cut to the length the field holds.
+             */
             reason?: string | null;
             /**
              * Format: uuid

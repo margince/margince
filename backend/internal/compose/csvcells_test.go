@@ -148,6 +148,25 @@ func TestADescriptionOverTheColumnsLengthIsAProblemOfItsCell(t *testing.T) {
 	}
 }
 
+// A contact name part keeps the capture bound, counted in characters. One at
+// the bound lands; one past it is refused on its own cell with its length.
+func TestAContactNameCellPastTheImportBoundIsAProblemOfItsCell(t *testing.T) {
+	atCap := strings.Repeat("ü", contacts.ImportedNameLimit)
+	for _, target := range []string{fieldFullName, "first_name", "last_name"} {
+		fields := map[string]string{fieldFullName: "Anna Weber", target: atCap}
+		if _, problem := checkRow(migration.ObjectContact, fields, importCatalog{}); problem != nil {
+			t.Fatalf("%s problem = %+v, want none for a name at the bound", target, problem)
+		}
+		fields[target] = atCap + "x"
+		_, problem := checkRow(migration.ObjectContact, fields, importCatalog{})
+		want := "This value is " + strconv.Itoa(contacts.ImportedNameLimit+1) + " characters. The field holds at most " +
+			strconv.Itoa(contacts.ImportedNameLimit) + "."
+		if problem == nil || problem.Target != target || problem.Why.Code != migration.ReasonValueTooLong || problem.Message != want {
+			t.Fatalf("%s problem = %+v, want the cell refused as %q", target, problem, want)
+		}
+	}
+}
+
 // The contacts store refuses a sending system's address, so the dry run skips
 // the row with the same reason the commit gives. A lead may still hold one.
 func TestAContactRowWithASendingSystemsAddressIsSkipped(t *testing.T) {

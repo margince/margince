@@ -14,6 +14,7 @@ package contacts
 import (
 	"strings"
 	"unicode"
+	"unicode/utf8"
 )
 
 // maxNameInputRunes bounds what the parser will read. A display name is a
@@ -31,6 +32,22 @@ func tooLongToBeAName(s string) bool {
 		return true
 	}
 	return len([]rune(s)) > maxNameInputRunes
+}
+
+// ImportedNameLimit is the most characters an imported name part holds. A file
+// keeps more room than a typed name, but no more than capture reads.
+const ImportedNameLimit = maxNameInputRunes
+
+// OverlongImportedName answers the first of full_name, first_name and last_name
+// whose trimmed text is past ImportedNameLimit, and its length. The CSV cell
+// check and the vCard import both ask it, so a file and a card refuse alike.
+func OverlongImportedName(names map[string]string) (column string, length int, over bool) {
+	for _, column := range []string{contactNameColumn, columnFirstName, columnLastName} {
+		if length := utf8.RuneCountInString(strings.TrimSpace(names[column])); length > ImportedNameLimit {
+			return column, length, true
+		}
+	}
+	return "", 0, false
 }
 
 // stripBidiControls removes the Unicode directional overrides and isolates.

@@ -52,6 +52,7 @@ These skip the row:
 - an email address, domain or LinkedIn address that another live record already holds, when the row would create a second record under it;
 - a row whose record was archived since the earlier import;
 - a contact row whose email belongs to a sending system, such as `noreply@`, `notifications@` or `receipts@`;
+- a contact row whose full name, first name or last name is over 200 characters;
 - a record type you may not create, or a change to a record you may not edit.
 
 A contact row with **First name** and **Last name** filled takes its full name from those two. This holds even when the file also has a **Full name** column. A contact you add or edit in Margince keeps the full name you type. A name-only CSV contact is kept, with a warning to add an email, phone or LinkedIn profile link; the import summary counts that warning.
