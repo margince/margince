@@ -7482,7 +7482,7 @@ public.mail_draft.editor_state jsonb NOT NULL gen=- def='{}'::jsonb
 public.mail_draft.grounding jsonb NOT NULL gen=- def='[]'::jsonb
 public.mail_draft.html_body text gen=- def=-
 public.mail_draft.id uuid NOT NULL gen=- def=uuidv7()
-public.mail_draft.mail_draft_anchor_type CHECK ((anchor_type = ANY (ARRAY['activity'::text, 'contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'project'::text])))
+public.mail_draft.mail_draft_anchor_type CHECK ((anchor_type = ANY (ARRAY['activity'::text, 'forward'::text, 'contact'::text, 'company'::text, 'deal'::text, 'lead'::text, 'project'::text])))
 public.mail_draft.mail_draft_author_id_fkey FOREIGN KEY (author_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.mail_draft.mail_draft_author_id_retirement_guard CREATE TRIGGER mail_draft_author_id_retirement_guard BEFORE INSERT OR UPDATE ON public.mail_draft FOR EACH ROW WHEN (((new.author_id IS NOT NULL) AND true)) EXECUTE FUNCTION refuse_retired_member_work('author_id')
 public.mail_draft.mail_draft_communication_context CHECK (((communication_context IS NULL) OR (communication_context = ANY (ARRAY['reply_to_inbound'::text, 'requested_followup'::text, 'precontract_quote'::text, 'active_deal_followup'::text, 'customer_service'::text, 'account_notice'::text, 'contract_notice'::text, 'invoice_or_payment'::text, 'marketing'::text]))))

@@ -4171,7 +4171,7 @@
     },
     {
       "name": "read_details",
-      "tokens": 4437,
+      "tokens": 4440,
       "agents": [],
       "required_by_cases": [
         "case112_my_plan_and_the_dossier",

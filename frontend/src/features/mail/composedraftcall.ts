@@ -10,9 +10,9 @@ import type { Locale } from "../../i18n/locale";
 import type { CommunicationContext } from "../../lib/compose-context";
 import { throwProblem } from "../../lib/problem";
 import type { RewriteVerb } from "../../lib/rewrites";
-import { stripEveryKeyTag, withSubjectTag } from "../projects/projectrecord";
 import type { RelinkKind } from "./composerelink";
 import { rewriteAsDraft } from "./composerewrite";
+import { stripEveryKeyTag, withSubjectTag } from "./subjecttag";
 
 type EmailDraft = components["schemas"]["EmailDraft"];
 type DraftReason = components["schemas"]["AccountDraftReason"];

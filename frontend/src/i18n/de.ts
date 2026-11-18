@@ -7903,6 +7903,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.notAnAddress_other":
     "Keine E-Mail-Adressen: {parts}. Korrigiere oder entferne sie.",
   "compose.savedDraftLoad": "Gespeicherte Fassung laden",
+  "compose.savedDraftFoundTitle": "Hier liegt ein gespeicherter Entwurf",
+  "compose.savedDraftFoundBody":
+    "Er enthält anderen Text als den auf dem Bildschirm. Öffne ihn, um mit ihm weiterzuarbeiten, oder ersetze ihn durch den Text auf dem Bildschirm.",
+  "compose.savedDraftLoadFound": "Gespeicherten Entwurf öffnen",
+  "compose.savedDraftReplace": "Durch diesen Text ersetzen",
   "compose.aiDisclosureTitle": "KI-gestützter Entwurf",
   "compose.aiDisclosureFallback":
     "Diesen Entwurf hat eine KI geschrieben. Prüfe und bearbeite den Entwurf vor dem Senden.",
@@ -8159,6 +8164,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Diese Nachricht nennt einen Zweck, den Margince nicht kennt. Wähle einen Kontaktgrund aus der Liste.",
   "sendPermission.reason.unknownPurposeFact":
     "Diese Nachricht nennt einen Zweck, den Margince nicht kennt.",
+  "sendPermission.reason.noReason":
+    "Diese Nachricht nennt keinen Kontaktgrund, und der Verlauf zeigt keinen. Wähle einen Kontaktgrund aus der Liste.",
+  "sendPermission.reason.noReasonFact":
+    "Diese Nachricht nennt keinen Kontaktgrund, und der Verlauf zeigt keinen.",
   "sendPermission.reason.claimContradicts":
     "Der gewählte Kontaktgrund passt nicht zu diesem Thread. Wähle einen anderen Grund oder lass das Feld leer, damit Margince ihn aus dem Thread liest.",
   "sendPermission.reason.claimContradictsFact":

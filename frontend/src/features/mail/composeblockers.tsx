@@ -104,7 +104,10 @@ export function ComposeBlockers({
   bodyKey: MessageKey;
   /** The engine's answer, drawn by the surface that asks for it, with the
    *  reason pick this band offers where a reason may be recorded. */
-  permission: (override: ReactNode, picksReason: boolean) => ReactNode;
+  permission: (
+    override: ReactNode,
+    surface: Readonly<{ picksReason: boolean; unclaimed: boolean }>,
+  ) => ReactNode;
 }>) {
   const target = isChannelReply ? undefined : reasonTargetOf(send.permission);
   // A reason the record already carries comes before recording a new one.
@@ -114,7 +117,12 @@ export function ComposeBlockers({
   // Until the message says why it is written, the engine has judged no reason.
   // Its missing-reason refusal would then ask the same question twice.
   const chooseReason = pickReason(fields);
-  const whyMissing = asksWhy(anchorActivity) && fields.context === "";
+  // One answer to whether the strip asks why, so the band never asks again.
+  const needsReason =
+    fields.context !== "" ||
+    sendStatus(send.permission).kind === "missingContext";
+  const picksReason = asksWhy(anchorActivity, needsReason);
+  const whyMissing = picksReason && fields.context === "";
   const asksWhyAgain =
     whyMissing &&
     (decidingRecipient(send.permission.preview).state === "unproven" ||
@@ -123,10 +131,7 @@ export function ComposeBlockers({
     <div className="compose-blockers">
       <ComposeWhy
         anchorActivity={anchorActivity}
-        needsReason={
-          fields.context !== "" ||
-          sendStatus(send.permission).kind === "missingContext"
-        }
+        needsReason={needsReason}
         flagged={send.flagged}
         context={fields.context}
         onContextChange={chooseReason}
@@ -160,7 +165,7 @@ export function ComposeBlockers({
                 ) : (
                   opener
                 ),
-                asksWhy(anchorActivity),
+                { picksReason, unclaimed: fields.context === "" },
               )
             }
           />
