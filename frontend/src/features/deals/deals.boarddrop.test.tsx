@@ -45,12 +45,14 @@ const withLost = [
 async function boardWith(
   dealsOnBoard: Parameters<typeof stubBackend>[0],
   advances: unknown[],
+  opts: Parameters<typeof stubBackend>[1] = {},
 ) {
   vi.stubGlobal(
     "fetch",
     stubBackend(dealsOnBoard, {
       pipelines: withLost,
       onAdvance: (body) => advances.push(body),
+      ...opts,
     }),
   );
   render(<DealsScreen />);
@@ -137,10 +139,10 @@ describe("a drop on the board", () => {
     const user = userEvent.setup();
     const advances: unknown[] = [];
     const ifMatches: (string | null)[] = [];
-    vi.stubGlobal(
-      "fetch",
-      stubBackend([deal({ id: "d1", stage_id: "s1", version: 3 })], {
-        pipelines: withLost,
+    await boardWith(
+      [deal({ id: "d1", stage_id: "s1", version: 3 })],
+      advances,
+      {
         probabilitySet: {
           win_probability: 40,
           stage_name: "Proposal",
@@ -150,11 +152,7 @@ describe("a drop on the board", () => {
           advances.push(body);
           ifMatches.push(ifMatch);
         },
-      }),
-    );
-    render(<DealsScreen />);
-    await waitFor(() =>
-      expect(screen.getAllByText("Fleet retrofit")[0]).toBeTruthy(),
+      },
     );
 
     dropOnStage("s2", "d1");
