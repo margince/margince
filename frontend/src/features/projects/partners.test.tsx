@@ -2,6 +2,7 @@
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
   cleanup,
   render as rtlRender,
   screen,
@@ -12,11 +13,13 @@ import userEvent, { type UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { toggleOptions } from "../../design-system/select-testing";
+import { UTC_ZONE } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
 import { openFilterValues } from "../../testing/listquery.testkit";
 import { openView, openViewStep } from "../../testing/listview.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { phoneRowOf, stubWindowWidth } from "../../testing/phonerow.testkit";
+import { pretendReaderZone } from "../../testing/readerzone.testkit";
 import { PartnersScreen, PartnerTab } from "./partners";
 
 // The Partner tab on a company and the #/partners list. The tab reads a 404
@@ -26,6 +29,8 @@ import { PartnersScreen, PartnerTab } from "./partners";
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
   window.location.hash = "";
 });
@@ -401,6 +406,57 @@ describe("PartnerTab — existing partner", () => {
     expect(asked.searchParams.get("entity_type")).toBe("company");
     expect(asked.searchParams.get("entity_id")).toBe("o-1");
     expect(asked.searchParams.getAll("kind")).toEqual(["task"]);
+  });
+
+  it("turns a task late when its deadline passes with the tab open", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date("2026-11-19T12:00:00Z"));
+    pretendReaderZone(UTC_ZONE);
+    stubFetch(
+      async (url, method) => {
+        if (url.includes("/companies/o-1/partner") && method === "GET") {
+          return jsonResponse({
+            ...partner,
+            next_step: null,
+            next_step_due_at: null,
+          });
+        }
+        if (url.includes("/activities") && method === "GET") {
+          return jsonResponse({
+            data: [
+              {
+                id: "a-due",
+                kind: "task",
+                subject: "Book the partner review",
+                due_at: "2026-11-19T23:59:59Z",
+                is_done: false,
+                version: 1,
+                writable: true,
+                created_at: "2026-01-01T00:00:00Z",
+              },
+            ],
+            page: { has_more: false, next_cursor: null },
+          });
+        }
+        throw new Error(`unexpected request ${method} ${url}`);
+      },
+      meFixture({
+        allow: {
+          company: ["read", "update"],
+          partner: ["read", "update"],
+          activity: ["read", "create"],
+        },
+      }),
+    );
+    render(<PartnerTab companyId="o-1" />);
+    expect(await screen.findByText("Due today")).toBeTruthy();
+
+    vi.setSystemTime(new Date("2026-11-21T12:00:00Z"));
+    await act(async () => {
+      vi.advanceTimersByTime(60_000);
+    });
+
+    expect(screen.getByText("2 days late")).toBeTruthy();
   });
 
   it("offers the active stages in ladder order and the retired one the partner stands on", async () => {

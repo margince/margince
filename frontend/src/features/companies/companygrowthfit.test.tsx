@@ -537,6 +537,27 @@ describe("what the fit is judged on", () => {
     expect(screen.queryByRole("button", { name: "Add" })).toBeNull();
   });
 
+  // A site read's range ages out while the band does not, so an old read
+  // never stands in for the band the fit counts.
+  it("shows the size band over an old site-read employee range", async () => {
+    await showFor(
+      { ...company, industry: null, size_band: "11-50" },
+      [],
+      [
+        {
+          ...STATED_SIZE,
+          value: "201-500",
+          source: "site_read",
+          captured_by: "agent:site-read",
+          updated_at: "2025-01-01T09:00:00Z",
+        },
+      ],
+    );
+
+    expect(screen.getByText(/11–50 employees/)).toBeTruthy();
+    expect(screen.queryByText(/201-500/)).toBeNull();
+  });
+
   it("tells a reader who cannot edit the account why, once", async () => {
     await showFor({
       ...company,

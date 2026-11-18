@@ -8,11 +8,13 @@ import {
   within,
 } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { formatMoney } from "../../format/format";
+import { UTC_ZONE } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import { pretendReaderZone } from "../../testing/readerzone.testkit";
 
 type CommissionEntry = components["schemas"]["CommissionEntry"];
 
@@ -26,6 +28,9 @@ import {
 // The commission panel on a partner's company page: what the margin tier one
 // card up has actually produced. A tier shown without the money it earned is a
 // number nobody can check, which is the whole reason this panel exists.
+
+// The ledger prints days in the reader's zone, so the suite names it.
+beforeEach(() => pretendReaderZone(UTC_ZONE));
 
 afterEach(() => {
   cleanup();

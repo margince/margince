@@ -3228,7 +3228,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "merge.confirm":
     "{source} mit {target} zusammenführen? {source} wird dabei archiviert.",
   "merge.recordDetail": "{name} ({detail})",
-  "merge.done": "{source} wurde mit {target} zusammengeführt.",
+  "merge.done": "{source} wurde in {target} zusammengeführt.",
   "merge.targetReadOnly":
     "Du kannst diesen Datensatz nur lesen, deshalb kann er nicht bleiben.",
   "merge.submit": "Zusammenführen",
@@ -3425,7 +3425,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "rel.addConfirm.projectStakeholder":
     "Projekt-Stakeholder-Verknüpfung zu {target} hinzufügen.",
   "rel.addConfirm.partnerOf": "Partner-Verknüpfung zu {target} hinzufügen.",
-  "rel.addConfirm.referredBy": "Empfehlungsverknüpfung zu {target} hinzufügen.",
+  "rel.addConfirm.referredBy":
+    "Empfehlungsverknüpfung hinzufügen: {target} hat dieses Unternehmen empfohlen.",
   "rel.addConfirm.coSellWith": "Co-Selling-Verknüpfung zu {target} hinzufügen.",
   "rel.addConfirm.worksWith":
     "Zusammenarbeitsverknüpfung zu {target} hinzufügen.",
@@ -3433,8 +3434,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Rechnungskontakt-Verknüpfung zu {target} hinzufügen.",
   "rel.edit": "Beziehung bearbeiten",
   "rel.editStakeholder": "Stakeholder bearbeiten",
-  "rel.removeRelationship": "Beziehung entfernen",
-  "rel.removeStakeholder": "Stakeholder entfernen",
+  "rel.removeRelationship": "Beziehung entfernen?",
+  "rel.removeStakeholder": "Stakeholder entfernen?",
   "rel.kind.employment": "Anstellung",
   "rel.kind.dealStakeholder": "Deal-Stakeholder",
   "rel.kind.projectStakeholder": "Projekt-Stakeholder",

@@ -3328,15 +3328,16 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "rel.addConfirm.projectStakeholder":
     "Thêm liên kết bên liên quan dự án tới {target}.",
   "rel.addConfirm.partnerOf": "Thêm liên kết đối tác tới {target}.",
-  "rel.addConfirm.referredBy": "Thêm liên kết giới thiệu tới {target}.",
+  "rel.addConfirm.referredBy":
+    "Thêm liên kết giới thiệu: {target} đã giới thiệu công ty này.",
   "rel.addConfirm.coSellWith": "Thêm liên kết bán chung tới {target}.",
   "rel.addConfirm.worksWith": "Thêm liên kết đồng nghiệp tới {target}.",
   "rel.addConfirm.billingContact":
     "Thêm liên kết liên hệ thanh toán tới {target}.",
   "rel.edit": "Sửa quan hệ",
   "rel.editStakeholder": "Sửa bên liên quan",
-  "rel.removeRelationship": "Gỡ quan hệ",
-  "rel.removeStakeholder": "Gỡ bên liên quan",
+  "rel.removeRelationship": "Gỡ quan hệ?",
+  "rel.removeStakeholder": "Gỡ bên liên quan?",
   "rel.kind.employment": "Quan hệ công tác",
   "rel.kind.dealStakeholder": "Bên liên quan deal",
   "rel.kind.projectStakeholder": "Bên liên quan dự án",

@@ -3326,14 +3326,15 @@ export const en = {
   "rel.addConfirm.projectStakeholder":
     "Add a project stakeholder link to {target}.",
   "rel.addConfirm.partnerOf": "Add a partner link to {target}.",
-  "rel.addConfirm.referredBy": "Add a referral link to {target}.",
+  "rel.addConfirm.referredBy":
+    "Add a referral link: {target} referred this company.",
   "rel.addConfirm.coSellWith": "Add a co-selling link to {target}.",
   "rel.addConfirm.worksWith": "Add a colleague link to {target}.",
   "rel.addConfirm.billingContact": "Add a billing contact link to {target}.",
   "rel.edit": "Edit relationship",
   "rel.editStakeholder": "Edit stakeholder",
-  "rel.removeRelationship": "Remove relationship",
-  "rel.removeStakeholder": "Remove stakeholder",
+  "rel.removeRelationship": "Remove relationship?",
+  "rel.removeStakeholder": "Remove stakeholder?",
   "rel.kind.employment": "Employment",
   "rel.kind.dealStakeholder": "Deal stakeholder",
   "rel.kind.projectStakeholder": "Project stakeholder",

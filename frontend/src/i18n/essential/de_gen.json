@@ -1699,7 +1699,7 @@
   "share.access.write": "Schreibzugriff",
   "merge.confirm": "{source} mit {target} zusammenführen? {source} wird dabei archiviert.",
   "merge.recordDetail": "{name} ({detail})",
-  "merge.done": "{source} wurde mit {target} zusammengeführt.",
+  "merge.done": "{source} wurde in {target} zusammengeführt.",
   "merge.submit": "Zusammenführen",
   "nav.partners": "Partner",
   "partner.stage": "Beziehungsphase",

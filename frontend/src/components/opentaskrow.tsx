@@ -48,6 +48,7 @@ export function openTaskOf(
     subject: displayedSubject(task) ?? untitled,
     due_at: task.due_at,
     due_has_time: task.due_has_time,
+    due_intent: task.due_intent,
     overdue: task.due_at
       ? daysPast(Date.parse(task.due_at), Date.parse(asOf)).late
       : false,

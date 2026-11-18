@@ -179,13 +179,13 @@ function FactInputRow({ company, input, present, edit, reasonId }: RowProps) {
   const stated = facts
     .filter((fact) => fact.field === input && fact.value.trim())
     .map((fact) => fact.value);
-  // The fit counts the company's own size band when no fact states the size,
-  // so the row shows that band as the recorded value.
+  // The fit counts the company's own size band ahead of any stated range. So
+  // the row shows the band whenever the record has one.
   const band =
     input === "employee_range" && company.size_band
       ? formatSizeBand(t, company.size_band)
       : undefined;
-  const values = stated.length === 0 && band ? [band] : stated;
+  const values = band ? [band] : stated;
   const stateable = STATEABLE_FACTS[input];
   let action: ReactNode = null;
   if (stateable && adding) {

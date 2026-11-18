@@ -31,7 +31,7 @@ import { AppLink } from "../../design-system/applink";
 import { Button, Card } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { undoAction, useToast } from "../../design-system/toast";
-import { formatDate, formatNumber } from "../../format/format";
+import { formatDate, formatDateTime, formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import {
@@ -50,18 +50,37 @@ import "./worklist.pair.css";
 import type { WorklistItem } from "./worklist.queries";
 
 type PairSide = NonNullable<WorklistItem["pair"]>["left"];
+type Describe = (iso: string) => string;
 
-// What tells one side from the other: its own detail line, or, where two
-// same-name records carry none, when each was created.
-function sideDetail(
+// What tells two same-name records apart: the detail line or creation day,
+// then the creation minute, then the tail of the ID. Each step is taken only
+// while the two still read alike.
+function sideDetails(
   pair: NonNullable<WorklistItem["pair"]>,
-  side: PairSide,
-  created: (iso: string) => string,
-): string | undefined {
-  if (side.detail || pair.left.label !== pair.right.label) {
-    return side.detail;
+  created: Readonly<{ day: Describe; minute: Describe }>,
+): readonly [string | undefined, string | undefined] {
+  const { left, right } = pair;
+  if (left.label !== right.label) {
+    return [left.detail, right.detail];
   }
-  return side.created_at ? created(side.created_at) : undefined;
+  const steps: ((side: PairSide) => string | undefined)[] = [
+    (side) =>
+      side.detail ||
+      (side.created_at ? created.day(side.created_at) : undefined),
+    (side) => (side.created_at ? created.minute(side.created_at) : undefined),
+    (side) => side.id.slice(-6),
+  ];
+  let told: readonly [string | undefined, string | undefined] = [
+    undefined,
+    undefined,
+  ];
+  for (const step of steps) {
+    told = [step(left), step(right)];
+    if (told[0] !== told[1]) {
+      break;
+    }
+  }
+  return told;
 }
 
 // keepLabel is what the Keep button is CALLED, which is not always what it says.
@@ -118,9 +137,14 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
   const mayDismiss = item.actions?.includes("dismiss") ?? false;
   const created = (iso: string) =>
     t("worklist.pair.created", { date: formatDate(iso, locale, zone) });
+  const [leftDetail, rightDetail] = sideDetails(pair, {
+    day: created,
+    minute: (iso) =>
+      t("worklist.pair.created", { date: formatDateTime(iso, locale, zone) }),
+  });
   const named = (side: PairSide): MergeSide => ({
     name: side.label,
-    detail: sideDetail(pair, side, created),
+    detail: side.id === pair.left.id ? leftDetail : rightDetail,
   });
   // The kept side and the side a merge into it archives.
   const merging = (keptId: string) =>
@@ -295,7 +319,7 @@ function PairSideCard({
 }: Readonly<{
   side: PairSide;
   kind: string | undefined;
-  created: (iso: string) => string;
+  created: Describe;
   children: ReactNode;
 }>) {
   const t = useT();

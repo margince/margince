@@ -199,8 +199,8 @@ describe("editing an employment role from a company", () => {
 
 describe("the row dialogs", () => {
   it.each([
-    ["deal_stakeholder", "Edit stakeholder", "Remove stakeholder"],
-    ["employment", "Edit relationship", "Remove relationship"],
+    ["deal_stakeholder", "Edit stakeholder", "Remove stakeholder?"],
+    ["employment", "Edit relationship", "Remove relationship?"],
   ] as const)(
     "name what a %s row's edit and removal act on",
     async (kind, editTitle, removeTitle) => {

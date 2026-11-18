@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useState } from "react";
 import type { components } from "../../api/schema";
 import { LogActivityAction } from "../../components/logactivity.action";
 import { OpenTaskRow, openTaskOf } from "../../components/opentaskrow";
@@ -9,6 +8,7 @@ import { useTaskUpdate } from "../../components/taskactions";
 import { ErrorLine } from "../../design-system/errorline";
 import { OverviewList } from "../../design-system/overviewcard";
 import { formatDate } from "../../format/format";
+import { useNow } from "../../format/now";
 import { useLocale, useT } from "../../i18n";
 import { taskWriteKeys } from "../../lib/activitykeys";
 import { useCanWrite } from "../../lib/capability";
@@ -33,7 +33,8 @@ export function PartnerNextStep({
   const canFileTask = useCanWrite("activity", "create");
   const tasks = useOpenTasks("company", companyId);
   const taskUpdate = useTaskUpdate(taskWriteKeys("company", companyId));
-  const [asOf] = useState(() => new Date().toISOString());
+  // Live, so a task that passes its deadline while the page is open turns late.
+  const asOf = new Date(useNow(60_000)).toISOString();
   const due = partner.next_step_due_at;
   return (
     <div className="form-stack">

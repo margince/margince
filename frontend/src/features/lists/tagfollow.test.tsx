@@ -25,6 +25,7 @@ import {
   jsonResponse,
   meRoute,
   StoryProviders,
+  storyQueryClient,
 } from "../../testing/story-utils";
 
 // Applying a tag on a contact offers it to their company; applying one on a
@@ -197,6 +198,7 @@ describe("tagging a company offers the tag to its contacts", () => {
   function mountCompany(
     contactGrant: string[] = ["update"],
     roster: readonly (typeof contacts)[number][] = contacts,
+    client = storyQueryClient(),
   ) {
     const sent: { path: string; body: unknown }[] = [];
     const annaTagReads = { count: 0 };
@@ -245,7 +247,7 @@ describe("tagging a company offers the tag to its contacts", () => {
       },
     });
     render(
-      <StoryProviders>
+      <StoryProviders client={client}>
         <ToastProvider>
           <TagsPanel entityType="company" entityID={COMPANY} canEdit />
           {/* Anna's own panel, which the bulk change must refresh. */}
@@ -254,7 +256,7 @@ describe("tagging a company offers the tag to its contacts", () => {
         </ToastProvider>
       </StoryProviders>,
     );
-    return { sent, annaTagReads, rosterReads };
+    return { sent, annaTagReads, rosterReads, client };
   }
 
   // Eleven default waits in sequence, so it states its own ceiling.
@@ -343,10 +345,19 @@ describe("tagging a company offers the tag to its contacts", () => {
 
   it("offers nothing when no contact works at the company now", async () => {
     const user = userEvent.setup();
-    const { rosterReads } = mountCompany(["update"], []);
+    const { rosterReads, client } = mountCompany(["update"], []);
     await applyProductX(user);
 
-    await waitFor(() => expect(rosterReads.count).toBe(1));
+    // The one-row read has answered "nobody", so the offer can no longer draw.
+    await waitFor(() =>
+      expect(
+        client
+          .getQueryCache()
+          .findAll({ queryKey: ["contacts", "employed-at", COMPANY] })
+          .map((query) => query.state.data),
+      ).toEqual([false]),
+    );
+    expect(rosterReads.count).toBe(1);
     expect(
       screen.queryByText(
         en["tags.offerContactsTitle"].replace("{tag}", "Product X"),
