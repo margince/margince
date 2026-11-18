@@ -261,7 +261,7 @@ describe("the install hint on Home", () => {
 });
 
 describe("the install hint inside the installed app", () => {
-  let stopListening = () => undefined;
+  let stopListening: () => void = () => undefined;
 
   function runsAs(standalone: boolean): void {
     vi.stubGlobal("matchMedia", (query: string) => ({
