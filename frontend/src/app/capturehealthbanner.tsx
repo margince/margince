@@ -15,9 +15,11 @@ import { briefKey, magicKey, worklistKey } from "../lib/workkeys";
 
 type Connection = components["schemas"]["CaptureConnection"];
 
-/** The connections with a concern the banner states, most pressing first. */
-export function useCaptureConcerns(): Connection[] {
+/** The connections with a concern the banner states, most pressing first;
+ *  undefined until the first answer. */
+export function useCaptureConcerns(): Connection[] | undefined {
   const query = useConnectors({ refreshHealth: true });
+  if (query.isLoading) return undefined;
   if (query.isError) return [];
   const concerns = (query.data?.data ?? []).filter(
     (row) => row.concern && Object.hasOwn(CAPTURE_CONCERNS, row.concern),
@@ -37,7 +39,7 @@ export function CaptureHealthBanner() {
   const plural = usePlural();
   const { locale } = useLocale();
   const client = useQueryClient();
-  const concerns = useCaptureConcerns();
+  const concerns = useCaptureConcerns() ?? [];
   const dismiss = useMutation({
     mutationFn: async (connection: Connection) => {
       if (!connection.concern_since)

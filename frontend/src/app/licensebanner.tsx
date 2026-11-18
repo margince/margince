@@ -8,11 +8,14 @@ import { Callout } from "../design-system/callout";
 import { calendarDay } from "../format/calendarday";
 import { useNow } from "../format/now";
 import { useT } from "../i18n";
+import { useCan } from "../lib/capability";
 import {
+  type LicensePosture,
   type TrialStanding,
   useLicenseEntitlement,
   useLicensePosture,
   useTrialStanding,
+  useTrialStandingAt,
 } from "../lib/license-posture";
 import { routeHash } from "../lib/router";
 import { settingsHref } from "../lib/settingsrouting";
@@ -36,7 +39,7 @@ const COPY = {
 // last one.
 export function LicenseBanner() {
   const t = useT();
-  const notice = useLicenseNotice();
+  const notice = licenseNoticeOf(useTrialStanding(), useLicensePosture());
   const entitlement = useLicenseEntitlement(notice?.kind === "trial");
   const zone = useViewerZone();
   const today = calendarDay(new Date(useNow(60_000)), zone);
@@ -92,13 +95,24 @@ type LicenseNotice =
   | Readonly<{ kind: keyof typeof COPY }>;
 
 /** What the license asks the chrome to say, before a reader hides it for the day. */
-export function useLicenseNotice(): LicenseNotice | null {
-  const posture = useLicensePosture();
-  const trial = useTrialStanding();
+function licenseNoticeOf(
+  trial: TrialStanding | undefined,
+  posture: LicensePosture | undefined,
+): LicenseNotice | null {
   if (trial) {
     return trial.closing ? { kind: "trial", trial } : null;
   }
   return posture === "refused" || posture === "grace"
     ? { kind: posture }
     : null;
+}
+
+/** The license notice at `now`, with no timer of its own; undefined until the
+ *  entitlement first answers. */
+export function useLicenseNoticeAt(
+  now: number,
+): LicenseNotice | null | undefined {
+  const loading = useLicenseEntitlement(useCan("license", "read")).isLoading;
+  const notice = licenseNoticeOf(useTrialStandingAt(now), useLicensePosture());
+  return loading ? undefined : notice;
 }

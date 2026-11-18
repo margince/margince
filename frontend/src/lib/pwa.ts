@@ -58,9 +58,11 @@ function appleTouchDevice(): boolean {
   );
 }
 
-// An app's own webview leaves `Safari/` out of its agent and cannot add to the home screen.
+// An app's own browser cannot add to the home screen: most leave `Safari/` out
+// of the agent, and the Google app keeps it but names itself `GSA/`.
 function addsToHomeScreen(): boolean {
-  return /Safari\//.test(navigator.userAgent);
+  const agent = navigator.userAgent;
+  return /Safari\//.test(agent) && !/GSA\//.test(agent);
 }
 
 // Add to Dock needs macOS 14, which Safari 26 requires; Safari reports every macOS as 10.15.7.

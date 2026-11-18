@@ -14,6 +14,8 @@ const IPHONE_CHROME =
   "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) CriOS/131.0 Mobile/15E148 Safari/604.1";
 const IPHONE_WEBVIEW =
   "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Mobile/15E148 Instagram 350.0";
+const IPHONE_GOOGLE_APP =
+  "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) GSA/313.0.635574601 Mobile/15E148 Safari/604.1";
 const IPAD_WEBVIEW =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Mobile/15E148 [FBAN/FBIOS]";
 const MAC_SAFARI =
@@ -233,6 +235,9 @@ describe("the install state", () => {
     displayMode(false);
     expect((await page(IPHONE_WEBVIEW, 5)).state().kind).toBe("unavailable");
     expect((await page(IPAD_WEBVIEW, 5)).state().kind).toBe("unavailable");
+    expect((await page(IPHONE_GOOGLE_APP, 5)).state().kind).toBe(
+      "unavailable",
+    );
   });
 
   it("is added to the Dock by hand in Safari 26 on a Mac, and in no older Safari or other Mac browser", async () => {

@@ -32,7 +32,7 @@ const NEVER_SEEN: InstallHintRecord = {
   installed: false,
 };
 
-/** Field by field: one another build wrote in another shape reads as never set. */
+/** Field by field: a field another build wrote in another shape reads as unset. */
 export function parseInstallHint(value: unknown): InstallHintRecord {
   if (typeof value !== "object" || value === null) {
     return NEVER_SEEN;

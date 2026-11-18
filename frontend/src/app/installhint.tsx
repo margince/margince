@@ -2,14 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Share } from "lucide-react";
-import { type RefObject, useEffect, useRef } from "react";
+import { type RefObject, useEffect, useRef, useSyncExternalStore } from "react";
 import { InstallButton } from "../components/installbutton";
 import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { calendarDay } from "../format/calendarday";
 import { useNow } from "../format/now";
 import { useT } from "../i18n";
-import { useConnectivity } from "../lib/connectivity";
+import { connectivityNow, subscribeConnectivity } from "../lib/connectivity";
 import {
   installHintDue,
   noteHintDismissed,
@@ -24,7 +24,7 @@ import { useCoarsePointer } from "../lib/viewport";
 import { useCaptureConcerns } from "./capturehealthbanner";
 import { useEconomyBand } from "./economybanner";
 import { useReindexNeeded } from "./embedreindexbanner";
-import { useLicenseNotice } from "./licensebanner";
+import { useLicenseNoticeAt } from "./licensebanner";
 import "./installhint.css";
 
 export type HintedInstall = Extract<
@@ -32,15 +32,24 @@ export type HintedInstall = Extract<
   { kind: "available" | "manual-ios" }
 >;
 
-// Each banner's own condition, before any dismissal it keeps for the session:
-// a notice the reader put away for now still goes first.
-function useBannerAhead(): boolean {
-  const offline = useConnectivity() !== "online";
-  const capture = useCaptureConcerns().length > 0;
-  const economy = useEconomyBand().warns;
+// Each banner's condition, before any dismissal it keeps; a read not answered
+// yet counts too, so the hint never draws and then gives way under a thumb.
+function useBannerAhead(now: number): boolean {
+  const offline =
+    useSyncExternalStore(subscribeConnectivity, connectivityNow) !== "online";
+  const capture = useCaptureConcerns();
+  const economy = useEconomyBand();
   const reindex = useReindexNeeded();
-  const license = useLicenseNotice() !== null;
-  return offline || capture || economy || reindex || license;
+  const license = useLicenseNoticeAt(now);
+  return (
+    offline ||
+    capture === undefined ||
+    capture.length > 0 ||
+    !economy.known ||
+    economy.warns ||
+    reindex !== false ||
+    license !== null
+  );
 }
 
 /** The offer to install the app, on Home on a phone or tablet, once the
@@ -54,7 +63,7 @@ export function InstallHint({
   const now = useNow(60_000);
   const today = calendarDay(new Date(now), useViewerZone());
   const record = useInstallHintRecord();
-  const ahead = useBannerAhead();
+  const ahead = useBannerAhead(now);
   useEffect(() => noteShellDay(today), [today]);
   useEffect(() => {
     if (install.kind === "installed") noteInstalled();

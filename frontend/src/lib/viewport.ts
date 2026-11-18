@@ -36,7 +36,7 @@ export const COARSE_POINTER = "(pointer: coarse)";
  * Subscribed rather than measured once: a window is resized and a phone is
  * rotated while the app is open. Where `matchMedia` is absent the answer is no.
  */
-export function useMediaMatch(media: string): boolean {
+function useMediaMatch(media: string): boolean {
   const [matches, setMatches] = useState(
     () => globalThis.matchMedia?.(media).matches ?? false,
   );
@@ -56,7 +56,6 @@ export function useMediaMatch(media: string): boolean {
   return matches;
 }
 
-/** Whether the viewport is at or under `maxWidth`. */
 export function useViewportUnder(maxWidth: number): boolean {
   return useMediaMatch(widthMedia(maxWidth));
 }

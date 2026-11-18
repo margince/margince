@@ -9,7 +9,6 @@ import { unwrap } from "../lib/problem";
 import { routeHash } from "../lib/router";
 import { settingsHref } from "../lib/settingsrouting";
 
-/** The allowance band, and whether it is one the chrome warns about. */
 export function useEconomyBand() {
   const canRead = useCan("ai_budget", "read");
   const enabled = useCanWrite("ai_budget", "update") && canRead;
@@ -26,7 +25,7 @@ export function useEconomyBand() {
   const band = query.data?.band;
   // The banner is advisory; errors stay on the accountable Settings card.
   const warns = enabled && !query.isError && !!band && band !== "normal";
-  return { band, warns };
+  return { band, warns, known: !query.isLoading };
 }
 
 export function EconomyBanner() {

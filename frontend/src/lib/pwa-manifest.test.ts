@@ -4,10 +4,10 @@
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, isAbsolute, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
-import { inflateSync } from "node:zlib";
 import { parse } from "node-html-parser";
 import { describe, expect, it } from "vitest";
 import { normalize, themes } from "../design-system/tokens-testing";
+import { colourAt, decodePng, type Raster } from "../testing/png";
 import { parseHash, routeHash } from "./router";
 
 // What a browser reads before it offers to install the app. That every icon
@@ -202,93 +202,6 @@ describe("the install colours are the light tokens", () => {
   });
 });
 
-interface Raster {
-  width: number;
-  height: number;
-  channels: number;
-  samples: Buffer;
-}
-
-const CHANNELS_BY_COLOUR_TYPE = new Map([
-  [2, 3],
-  [6, 4],
-]);
-
-function paeth(left: number, up: number, upLeft: number): number {
-  const estimate = left + up - upLeft;
-  const toLeft = Math.abs(estimate - left);
-  const toUp = Math.abs(estimate - up);
-  const toUpLeft = Math.abs(estimate - upLeft);
-  if (toLeft <= toUp && toLeft <= toUpLeft) return left;
-  return toUp <= toUpLeft ? up : upLeft;
-}
-
-function predict(filter: number, left: number, up: number, upLeft: number) {
-  switch (filter) {
-    case 0:
-      return 0;
-    case 1:
-      return left;
-    case 2:
-      return up;
-    case 3:
-      return (left + up) >> 1;
-    case 4:
-      return paeth(left, up, upLeft);
-    default:
-      throw new Error(`unknown PNG row filter ${filter}`);
-  }
-}
-
-// Reads the 8-bit, non-interlaced RGB and RGBA that a browser screenshot writes.
-function decodePng(file: string): Raster {
-  const bytes = readFileSync(join(publicDir, file));
-  const compressed: Buffer[] = [];
-  let width = 0;
-  let height = 0;
-  let channels = 0;
-  for (let at = 8; at < bytes.length; at += 12 + bytes.readUInt32BE(at)) {
-    const type = bytes.toString("latin1", at + 4, at + 8);
-    const body = bytes.subarray(at + 8, at + 8 + bytes.readUInt32BE(at));
-    if (type === "IHDR") {
-      width = body.readUInt32BE(0);
-      height = body.readUInt32BE(4);
-      const interlaced = body[12] !== 0;
-      channels =
-        body[8] === 8 && !interlaced
-          ? (CHANNELS_BY_COLOUR_TYPE.get(body[9]) ?? 0)
-          : 0;
-    }
-    if (type === "IDAT") compressed.push(body);
-  }
-  if (channels === 0) {
-    throw new Error(`${file} is not an 8-bit, non-interlaced RGB or RGBA PNG`);
-  }
-  const filtered = inflateSync(Buffer.concat(compressed));
-  const stride = width * channels;
-  const samples = Buffer.alloc(height * stride);
-  for (let y = 0; y < height; y++) {
-    const filter = filtered[y * (stride + 1)];
-    for (let x = 0; x < stride; x++) {
-      const here = y * stride + x;
-      const left = x >= channels ? samples[here - channels] : 0;
-      const up = y > 0 ? samples[here - stride] : 0;
-      const upLeft =
-        x >= channels && y > 0 ? samples[here - stride - channels] : 0;
-      const raw = filtered[y * (stride + 1) + 1 + x];
-      samples[here] = (raw + predict(filter, left, up, upLeft)) & 0xff;
-    }
-  }
-  return { width, height, channels, samples };
-}
-
-function colourAt(raster: Raster, x: number, y: number) {
-  const at = (y * raster.width + x) * raster.channels;
-  const [red, green, blue] = raster.samples.subarray(at, at + 3);
-  const hex = `#${[red, green, blue].map((sample) => sample.toString(16).padStart(2, "0")).join("")}`;
-  return { hex, alpha: raster.channels === 4 ? raster.samples[at + 3] : 255 };
-}
-
 function corners(raster: Raster) {
   const right = raster.width - 1;
   const bottom = raster.height - 1;
@@ -315,7 +228,7 @@ describe("the install icon PNGs", () => {
     const icons = pngIcons("maskable");
     expect(icons.length).toBeGreaterThan(0);
     for (const icon of icons) {
-      const raster = decodePng(icon.src);
+      const raster = decodePng(join(publicDir, icon.src));
       const clearRadius = 0.9 * 0.4 * raster.width;
       const outside: string[] = [];
       for (let y = 0; y < raster.height; y++) {
@@ -345,7 +258,9 @@ describe("the install icon PNGs", () => {
     const icons = pngIcons("any");
     expect(icons.length).toBeGreaterThan(0);
     for (const icon of icons) {
-      const alphas = corners(decodePng(icon.src)).map(({ alpha }) => alpha);
+      const alphas = corners(decodePng(join(publicDir, icon.src))).map(
+        ({ alpha }) => alpha,
+      );
       expect(alphas, icon.src).toEqual([0, 0, 0, 0]);
     }
   });
