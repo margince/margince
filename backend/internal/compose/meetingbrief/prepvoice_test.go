@@ -6,7 +6,6 @@ package meetingbrief
 import (
 	"strings"
 	"testing"
-	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -108,14 +107,7 @@ func TestPrepDropsAnOpenPromiseThatIsNotCurrent(t *testing.T) {
 func TestAPromiseThatLooksKeptIsNotAnOpenDriverAndIsSaidOnce(t *testing.T) {
 	claim := claimOf(crmcontracts.ConversationClaimKindCommitmentOurs, crmcontracts.ConversationClaimStatusOpen, false)
 	claim.SourceActivityId = openapi_types.UUID(ids.NewV7())
-	claim.LooksKept = &struct {
-		GuestName string             `json:"guest_name"`
-		MeetingAt time.Time          `json:"meeting_at"`
-		MeetingId openapi_types.UUID `json:"meeting_id"`
-
-		// MeetingPrecision How to read `meeting_at`. `day` means only its date is known.
-		MeetingPrecision crmcontracts.OccurredPrecision `json:"meeting_precision"`
-	}{GuestName: "Riley Reed", MeetingAt: at(9), MeetingPrecision: "instant"}
+	claim.LooksKept = &crmcontracts.ConversationClaimLooksKept{GuestName: "Riley Reed", MeetingAt: at(9), MeetingPrecision: "instant"}
 	found := []crmcontracts.ConversationClaim{claim}
 
 	if open := foldClaims("Pat", found); len(open) != 0 {

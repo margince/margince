@@ -36901,6 +36901,16 @@ export interface components {
          * @enum {string}
          */
         ConversationClaimKind: "commitment_ours" | "commitment_theirs" | "open_question" | "decision" | "priority" | "objection" | "success_criterion" | "decision_process";
+        /** @description A read-only hint that this open promise to invite someone looks kept: a guest of that name at the same company accepted a later meeting this reader may open. Nothing is settled. The reader decides, through the settle verb. */
+        ConversationClaimLooksKept: {
+            /** Format: uuid */
+            meeting_id: string;
+            guest_name: string;
+            /** Format: date-time */
+            meeting_at: string;
+            /** @description How to read `meeting_at`. `day` means only its date is known. */
+            meeting_precision: components["schemas"]["OccurredPrecision"];
+        };
         /**
          * @description One thing said in a captured conversation, with the evidence it was read from.
          *
@@ -36939,16 +36949,7 @@ export interface components {
              * @description When a human typed over the machine. Set means the claim is theirs, not the extractor's.
              */
             corrected_at?: string | null;
-            /** @description A read-only hint that this open promise to invite someone looks kept: a guest of that name at the same company accepted a later meeting this reader may open. Nothing is settled. The reader decides, through the settle verb. */
-            looks_kept?: {
-                /** Format: uuid */
-                meeting_id: string;
-                guest_name: string;
-                /** Format: date-time */
-                meeting_at: string;
-                /** @description How to read `meeting_at`. `day` means only its date is known. */
-                meeting_precision: components["schemas"]["OccurredPrecision"];
-            };
+            looks_kept?: components["schemas"]["ConversationClaimLooksKept"];
             /**
              * Format: uuid
              * @description The task an extracted `commitment_ours` created, so completing either side completes both. Null for every other kind — a reminder about THEIR promise is a rep action, not an auto-task.

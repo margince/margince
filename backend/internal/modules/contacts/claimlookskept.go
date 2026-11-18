@@ -4,9 +4,8 @@
 package contacts
 
 // A promise to invite someone looks kept when that someone accepted a later
-// meeting. This is a hint on the claim and writes nothing: the reader settles
-// it through the settle verb, with the audit, task and offer effects a human
-// settle has.
+// meeting. This is a hint on the claim and writes nothing. The reader settles
+// it through the settle verb, which has the audit, task and offer effects.
 
 import (
 	"context"
@@ -24,16 +23,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
-// withLooksKept sets `looks_kept` on the open promises of ours in claims that a
-// meeting this reader may open shows kept. The claims were read under the
-// reader's scope already, so their sources are readable. The meeting and the
-// guest are read under the same scope.
+// withLooksKept sets `looks_kept` on the open promises of ours that a meeting
+// this reader may open shows kept. The claims were read under the reader's
+// scope, so their sources are readable. The meeting and guest use the same scope.
 //
 // The guest matches by full name on word boundaries, each part at least three
-// letters, and must work at the same company as the claim's contact. The
-// claim's own contact must be on the meeting. The meeting must start after the
-// promise, with the guest's answer accepted, and must be neither archived nor
-// called off.
+// letters, and works at the claim contact's company. The claim's own contact
+// is on the meeting. The meeting starts after the promise, the guest accepted,
+// and it is neither archived nor called off.
 func withLooksKept(ctx context.Context, tx pgx.Tx, claims []crmcontracts.ConversationClaim) error {
 	var open []ids.UUID
 	at := map[ids.UUID]int{}
@@ -98,14 +95,8 @@ func withLooksKept(ctx context.Context, tx pgx.Tx, claims []crmcontracts.Convers
 		return fmt.Errorf("find the promises that look kept: %w", err)
 	}
 	for _, hit := range hits {
-		claims[at[hit.Claim]].LooksKept = &struct {
-			GuestName string             `json:"guest_name"`
-			MeetingAt time.Time          `json:"meeting_at"`
-			MeetingId openapi_types.UUID `json:"meeting_id"`
-
-			// MeetingPrecision How to read `meeting_at`. `day` means only its date is known.
-			MeetingPrecision crmcontracts.OccurredPrecision `json:"meeting_precision"`
-		}{GuestName: hit.Guest, MeetingAt: hit.At, MeetingId: openapi_types.UUID(hit.Meeting), MeetingPrecision: hit.Precision}
+		claims[at[hit.Claim]].LooksKept = &crmcontracts.ConversationClaimLooksKept{
+			GuestName: hit.Guest, MeetingAt: hit.At, MeetingId: openapi_types.UUID(hit.Meeting), MeetingPrecision: hit.Precision}
 	}
 	return nil
 }

@@ -26,7 +26,7 @@ type looksKeptFixture struct {
 }
 
 // looksKeptPromise seeds a promise to invite "Riley Reed" on Contact C, both at
-// one company, and a later meeting that Riley accepted with C on it.
+// one company. It also seeds a later meeting that Riley accepted, with C on it.
 func looksKeptPromise(t *testing.T) looksKeptFixture {
 	t.Helper()
 	e := setupDedupe(t)
