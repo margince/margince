@@ -2993,6 +2993,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.staged": "Chờ duyệt",
   "deal.archived": "Trong kho lưu trữ",
   "deal.closes": "chốt {date}",
+  "deal.closed": "đã chốt {date}",
   "deal.undated": "chưa có ngày chốt",
   "deal.lastMail": "Email gần nhất",
   "deal.mail.title": "Email trước đó",

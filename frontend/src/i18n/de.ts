@@ -3085,6 +3085,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.singleThreaded": "Nur ein Kontakt",
   "deal.staged": "Vorgemerkt",
   "deal.closes": "Abschluss {date}",
+  "deal.closed": "Abgeschlossen {date}",
   "deal.undated": "kein Abschlussdatum",
   "deal.lastMail": "Letzte E-Mail",
   "deal.mail.title": "Bisherige E-Mails",

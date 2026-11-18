@@ -162,6 +162,50 @@ function DealCloses({
   );
 }
 
+// The card's close line: the caller's own words, the day a decided deal
+// closed, or the day an open one is expected to.
+function DealCardClose({
+  deal,
+  closed,
+  zone,
+}: Readonly<{ deal: BoardDeal; closed?: string | null; zone: string }>) {
+  const t = useT();
+  if (closed !== undefined) {
+    return <span className="deal-closes">{closed ?? t("deal.undated")}</span>;
+  }
+  if (deal.closedAt !== undefined) {
+    return <DealClosed at={deal.closedAt} zone={zone} />;
+  }
+  if (!deal.closeDate) {
+    return <span className="deal-closes">{t("deal.undated")}</span>;
+  }
+  return (
+    <DealCloses
+      day={deal.closeDate}
+      provisional={deal.closeDateProvisional ?? false}
+      zone={zone}
+    />
+  );
+}
+
+// When a won or lost deal closed: a fact, so it carries no warning tone.
+function DealClosed({
+  at,
+  zone,
+}: Readonly<{ at: string | null; zone: string }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  return (
+    <span className="deal-closes">
+      {at
+        ? t("deal.closed", {
+            date: formatDayMonthNearYear(at, locale, zone, new Date()),
+          })
+        : t("deal.undated")}
+    </span>
+  );
+}
+
 /**
  * When mail last moved on this deal: at the foot of the card, and in the deals
  * table's own column, which is why it is exported — one chip, one flyout, on
@@ -472,17 +516,7 @@ export function DealCard({
             />
           )}
         </span>
-        {closed !== undefined ? (
-          <span className="deal-closes">{closed ?? t("deal.undated")}</span>
-        ) : deal.closeDate ? (
-          <DealCloses
-            day={deal.closeDate}
-            provisional={deal.closeDateProvisional ?? false}
-            zone={zone}
-          />
-        ) : (
-          <span className="deal-closes">{t("deal.undated")}</span>
-        )}
+        <DealCardClose deal={deal} closed={closed} zone={zone} />
       </span>
       {standing != null && <span className="deal-standing">{standing}</span>}
       <DealCardFoot

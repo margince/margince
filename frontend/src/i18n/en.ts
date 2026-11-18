@@ -2995,6 +2995,7 @@ export const en = {
   "deal.staged": "Staged",
   "deal.archived": "Archived",
   "deal.closes": "closes {date}",
+  "deal.closed": "closed {date}",
   "deal.undated": "no close date",
   "deal.lastMail": "Last email",
   "deal.mail.title": "Previous emails",

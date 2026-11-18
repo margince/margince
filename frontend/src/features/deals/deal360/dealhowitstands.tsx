@@ -13,7 +13,11 @@ import {
   type StandingDim,
   StandingDims,
 } from "../../../design-system/standingdims";
-import { formatDayMonth, formatNumber } from "../../../format/format";
+import {
+  formatDayMonth,
+  formatDayMonthNearYear,
+  formatNumber,
+} from "../../../format/format";
 import {
   type Locale,
   type Translator,
@@ -152,7 +156,12 @@ export function closedVerdict(
   const lines = [
     deal.closed_at
       ? t("deal.standing.closedOn", {
-          date: formatDayMonth(deal.closed_at, locale, zone),
+          date: formatDayMonthNearYear(
+            deal.closed_at,
+            locale,
+            zone,
+            new Date(),
+          ),
         })
       : undefined,
     why.label,

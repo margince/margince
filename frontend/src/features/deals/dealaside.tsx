@@ -283,7 +283,8 @@ function aboutRows(facts: Facts, stages: readonly Stage[]): DetailRow[] {
     row("stage", "deals.stage", stageName),
     row(
       "close",
-      "deal.standing.close",
+      // An open deal's day is the forecast field the create form names.
+      closed ? "deal.standing.close" : "deals.close",
       day(closeDayOf(deal), facts),
       "expected_close_date",
       // A closed deal shows the day it closed, which is not the forecast field.

@@ -79,8 +79,9 @@ it("offers no change to a reader without the update grant", async () => {
 it("changes an open deal's forecast close day and leaves a won deal's close day alone", async () => {
   const open = { ...deal, expected_close_date: "2026-12-01" };
   mount(["read", "update"], open);
+  // Named as the create form and Edit details name the field it changes.
   expect(
-    await screen.findByRole("button", { name: /^Change Close/ }),
+    await screen.findByRole("button", { name: /^Change Expected close/ }),
   ).toBeTruthy();
   cleanup();
   mount(["read", "update"], {
@@ -89,7 +90,11 @@ it("changes an open deal's forecast close day and leaves a won deal's close day 
     closed_at: "2026-10-01T00:00:00Z",
   });
   await screen.findByRole("button", { name: /^Change Value/ });
-  expect(screen.queryByRole("button", { name: /^Change Close/ })).toBeNull();
+  expect(
+    screen.queryByRole("button", { name: /^Change (Expected )?Close/ }),
+  ).toBeNull();
+  // A decided deal's day is no forecast, so it is not called one.
+  expect(screen.getByText("Close")).toBeTruthy();
 });
 
 it("changes the amount of a deal whose ARR an offer set", async () => {

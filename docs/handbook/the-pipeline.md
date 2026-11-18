@@ -307,6 +307,8 @@ close date counts as **Likely**.
 
 An open deal's card on the board shows its probability beside its value, with
 a small round mark that fills to match it. A closed deal's card shows none.
+It shows the day the deal closed in place of its expected close, with the year
+when that is not this year.
 
 ## Close dates Margince sets
 
