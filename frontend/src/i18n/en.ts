@@ -3012,6 +3012,17 @@ export const en = {
   "record.edit": "Edit",
 
   "record.fieldRequired": "This field is required.",
+  "amount.refused.ambiguous": "Enter the amount as {whole} or {decimal}.",
+  "amount.refused.ambiguousWhole": "Enter the amount as {whole}.",
+  "amount.refused.grouping":
+    "Enter the amount without thousands separators, such as {example}.",
+  "amount.refused.notNumber": "Enter the amount in digits, such as {example}.",
+  "amount.refused.tooLarge": "This amount is too large to store.",
+  "amount.refused.negative": "Enter an amount of zero or more.",
+  "number.refused.ambiguous": "Enter the number as {whole} or {fraction}.",
+  "number.refused.grouping":
+    "Enter the number without thousands separators, such as {example}.",
+  "number.refused.notNumber": "Enter a number, such as {example}.",
   "record.amountTooPrecise":
     "This amount has more decimals than {currency} allows.",
   "record.registration": "Registration",
@@ -6001,7 +6012,6 @@ export const en = {
   "lead.qualify.amount": "Amount ({currency})",
   "lead.qualify.amountHint":
     "Optional. Whole units in the installation’s base currency.",
-  "lead.qualify.amountInvalid": "Enter a number, or leave it empty.",
   "lead.qualify.amountNoCurrency":
     "Base currency not loaded yet. Retry shortly, or leave the amount empty.",
   "lead.qualify.why": "Why",

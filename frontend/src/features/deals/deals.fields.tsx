@@ -1,6 +1,6 @@
 import { searchCompanyTargets } from "../../components/companyform";
 import type { CreateField } from "../../components/create";
-import { currencyField } from "../../components/currencyfield";
+import { amountField, currencyField } from "../../components/currencyfield";
 import { partnerFields } from "../../components/dealpartnerfields";
 import type { ProjectOwnerPicker } from "../../components/projectownerfield";
 import type { LeadingCurrencies } from "../../format/currencychoices";
@@ -135,19 +135,22 @@ export function dealEditFields(
     { value: opts.me, label: t("deal.ownerMe") },
     { value: "", label: t("deal.ownerUnassign") },
   ];
+  // An inline edit checks one field without the form, so the deal's own
+  // currency stands in for the form's.
+  const money = {
+    currency: (values: Record<string, string>) =>
+      values.currency || opts.currency,
+    locale: opts.locale,
+    t,
+  };
   return [
     { key: "name", label: "create.dealName", required: true },
-    { key: "amount", label: "create.amount", type: "number", step: "any" },
+    amountField({ key: "amount", label: "create.amount" }, money),
     // The recurring half of the price, annual, in the same currency as the
     // amount above. Beside it, not in a section of its own: the two are one
     // money value on the row. They share the currency field below, and the
     // server refuses either one stranded without it.
-    {
-      key: "expected_arr",
-      label: "deal.expectedArr",
-      type: "number",
-      step: "any",
-    },
+    amountField({ key: "expected_arr", label: "deal.expectedArr" }, money),
     {
       ...currencyField(opts.leadingCurrencies, opts.locale, opts.currency),
       required: false,

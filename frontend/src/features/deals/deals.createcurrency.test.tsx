@@ -133,14 +133,14 @@ function stubApi(posted: unknown[], withPartner = false) {
 
 // The app shows its splash until the installation settings have answered, so
 // no form opens before the base is known. The seeded query stands for that.
-function renderDeals() {
+function renderDeals(locale: "en" | "de" = "en") {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   client.setQueryData(INSTALLATION_SETTINGS_KEY, settings);
   render(
     <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">
+      <LocaleProvider initial={locale}>
         <DealsScreen startCreating />
       </LocaleProvider>
     </QueryClientProvider>,
@@ -238,5 +238,35 @@ describe("the New deal currency", () => {
     await user.click(dialog.getByRole("button", { name: "Create" }));
     await waitFor(() => expect(posted).toHaveLength(1));
     expect(posted[0]).toMatchObject({ currency: "NOK", amount_minor: 48_000 });
+  });
+});
+
+// German groups thousands with a dot, so "1.500" reads two ways and is refused
+// with the form the reader wants; one comma is the decimal sign.
+describe("a New deal amount typed in German", () => {
+  async function typeAmount(amount: string) {
+    const posted: unknown[] = [];
+    stubApi(posted);
+    renderDeals("de");
+    const user = userEvent.setup();
+    const dialog = within(await screen.findByRole("dialog"));
+    await user.type(await dialog.findByLabelText(/^Deal-Name/), "Fjord");
+    await user.type(dialog.getByRole("textbox", { name: /^Wert/ }), amount);
+    await user.click(dialog.getByRole("button", { name: "Erstellen" }));
+    return { posted, dialog };
+  }
+
+  it("sends 12,5 as 1250 minor units", async () => {
+    const { posted } = await typeAmount("12,5");
+    await waitFor(() => expect(posted).toHaveLength(1));
+    expect(posted[0]).toMatchObject({ amount_minor: 1250 });
+  });
+
+  it("refuses 1.500 by naming the wanted form, and sends nothing", async () => {
+    const { posted, dialog } = await typeAmount("1.500");
+    expect(
+      await dialog.findByText("Gib den Betrag als 1500 oder 1500,00 ein."),
+    ).toBeTruthy();
+    expect(posted).toEqual([]);
   });
 });

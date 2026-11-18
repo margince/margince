@@ -36,6 +36,8 @@ export function ForecastCallEditor({
     readings.current_call?.amount_minor ?? 0,
   );
   const [note, setNote] = useState("");
+  // The box keeps a refused text in view; the save waits until it reads.
+  const [amountRefused, setAmountRefused] = useState(false);
 
   const save = useMutation({
     // Amount and note travel as VARIABLES. A mutation closing over its inputs
@@ -83,7 +85,7 @@ export function ForecastCallEditor({
           <Button onClick={onClose}>{t("forecast.cancel")}</Button>
           <Button
             variant="primary"
-            disabled={save.isPending}
+            disabled={save.isPending || amountRefused}
             onClick={() => save.mutate({ amountMinor, note })}
           >
             {t("forecast.saveCall")}
@@ -103,6 +105,7 @@ export function ForecastCallEditor({
               valueMinor={amountMinor}
               currency={readings.base_currency}
               onChangeMinor={(next) => setAmountMinor(next ?? 0)}
+              onRefusedChange={setAmountRefused}
             />
           )}
         </Field>

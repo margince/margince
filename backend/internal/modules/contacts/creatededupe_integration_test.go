@@ -418,17 +418,14 @@ func TestANameNobodySharesLeavesTheQueueEmpty(t *testing.T) {
 	}
 }
 
-// THE INVARIANT THE NAME LANE RESTS ON: any pair normalizeName calls equal must
-// reach the equality test, which means the SQL candidate query has to admit it.
+// The name lane rests on this: any pair namematch.Fold calls equal must reach
+// the equality test. So the SQL candidate query has to admit it.
 //
-// Those are two different normalizations. SQL folds with lower + unaccent;
-// normalizeName does Unicode FULL case folding, strips combining marks, and
-// TRIMS. namesim.go says outright they need not agree rune for rune, and that
-// was fine while SQL only narrowed a candidate set for a score — a row it missed
-// was never going to win. It is not fine for a lane that decides on equality: a
-// prefilter that is merely approximate can hide a row that would have been
-// exactly equal, and the lane then misses the duplicate it exists to catch,
-// quietly, in the direction of doing nothing.
+// Those are two different normalizations. SQL folds with lower + unaccent.
+// namematch.Fold does Unicode full case folding, strips combining marks, and
+// trims. They may differ while SQL only narrows a candidate set for a score.
+// A lane that decides on equality cannot allow it. An approximate prefilter can
+// hide a row that is equal, and the lane then misses the duplicate.
 //
 // The untrimmed pair below is a real divergence and not a hypothetical one: Go
 // calls "  Ada Lindqvist  " and "Ada Lindqvist" equal, and a bare SQL comparison
