@@ -65789,6 +65789,9 @@ type SendAuthorizationPreviewRecipient struct {
 	// contact gets. Absent or false for an address a record already holds.
 	NewContact *bool `json:"new_contact,omitempty"`
 
+	// Provision The law the recipient's pack cites for `reason_code`, absent when none may be shown.
+	Provision *CitedProvision `json:"provision,omitempty"`
+
 	// ReasonCode Why, in the engine's own vocabulary — `allowed`, `no_compatible_evidence`,
 	// `marketing_objection`, `no_marketing_consent` and the rest. A composer maps it to
 	// the lawful next action it can offer; it is deliberately not a sentence about the

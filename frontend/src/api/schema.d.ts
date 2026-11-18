@@ -45078,6 +45078,8 @@ export interface components {
         };
         /** @description One recipient's answer. It describes the MESSAGE, never the contact's file. */
         SendAuthorizationPreviewRecipient: {
+            /** @description The law the recipient's pack cites for `reason_code`, absent when none may be shown. */
+            provision?: components["schemas"]["CitedProvision"];
             /** @description Server-derived missing footer disclosures or unavailable private links shown before the sender confirms this message. Contains no credentials. */
             footer_findings?: components["schemas"]["FooterFinding"][];
             /** Format: email */

@@ -62133,6 +62133,9 @@ components:
       required: [address, verdict, reason_code]
       description: One recipient's answer. It describes the MESSAGE, never the contact's file.
       properties:
+        provision:
+          allOf: [{ $ref: '#/components/schemas/CitedProvision' }]
+          description: The law the recipient's pack cites for `reason_code`, absent when none may be shown.
         footer_findings:
           type: array
           items: { $ref: '#/components/schemas/FooterFinding' }
