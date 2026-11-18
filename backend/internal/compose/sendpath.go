@@ -25,10 +25,10 @@ package compose
 import (
 	"context"
 	"fmt"
-	"github.com/margince/margince/backend/internal/compose/mailprobe"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/mailprobe"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/approvals"
