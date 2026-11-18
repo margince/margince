@@ -4,9 +4,12 @@
 package activities
 
 import (
+	"bytes"
 	"errors"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/platform/filesniff"
 )
 
 func TestAnUploadIsStoredUnderTheTypeTheTableNames(t *testing.T) {
@@ -99,6 +102,42 @@ func TestEveryAcceptedExtensionResolvesToItsOwnRow(t *testing.T) {
 			if got, err := resolveAttachmentType(declared, "file"+ext, "file"+ext); err != nil || got != want {
 				t.Errorf("a %s file declared %q resolves to (%q, %v), want %q", ext, declared, got, err, want)
 			}
+		}
+	}
+}
+
+func TestEveryAcceptedTypeHasAByteRule(t *testing.T) {
+	t.Parallel()
+	for _, kind := range attachmentTypes {
+		if !filesniff.Knows(kind.mediaType) {
+			t.Errorf("%s (%s) has no byte rule, so a renamed file would pass as it", kind.extension, kind.mediaType)
+		}
+	}
+}
+
+func TestAnUploadWhoseBytesContradictItsNameIsRefused(t *testing.T) {
+	t.Parallel()
+	program := make([]byte, 0x100)
+	copy(program, "MZ")
+	program[0x3C] = 0x80
+	copy(program[0x80:], "PE\x00\x00")
+	for _, tc := range []struct {
+		name, filename, declared string
+		content                  []byte
+		refused                  bool
+	}{
+		{"a program named pdf", "disguised.pdf", "application/pdf", program, true},
+		{"a program with no declared type", "disguised.pdf", "", program, true},
+		{"svg named png", "picture.png", "image/png", []byte(`<svg xmlns="http://www.w3.org/2000/svg"/>`), true},
+		{"a real pdf", "quote.pdf", "application/pdf", []byte("%PDF-1.7 x"), false},
+		{"a docx", "terms.docx", "", []byte("PK\x03\x04rest"), false},
+		{"a text note", "note.txt", "text/plain", []byte("Köln"), false},
+	} {
+		in := AttachmentInput{Filename: tc.filename, ContentType: tc.declared, Content: bytes.NewReader(tc.content)}
+		_, err := acceptUploadedFile(in)
+		_, isRefusal := errors.AsType[*UnsupportedFileTypeError](err)
+		if isRefusal != tc.refused || (!tc.refused && err != nil) {
+			t.Errorf("%s: acceptUploadedFile error = %v, refused = %v, want refused = %v", tc.name, err, isRefusal, tc.refused)
 		}
 	}
 }

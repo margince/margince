@@ -565,7 +565,7 @@ func TestTheConversationFlowsBothWaysAndADocumentIsNeverConfirmed(t *testing.T) 
 	// A thread follows its document out of the room. Removing the document is
 	// how a seller takes something back — and the conversation about it goes
 	// with it, rather than hanging in the buyer's list pointing at nothing.
-	withdrawn := uploadDealFile(t, e, dealID, "pricing_internal.xlsx", []byte("secret"))
+	withdrawn := uploadDealFile(t, e, dealID, "pricing_internal.xlsx", []byte("PK\x03\x04secret"))
 	var withdrawnDoc AnyMap
 	e.Call(t, "POST", "/v1/deal-rooms/"+room.roomID+"/documents", AnyMap{"attachment_id": withdrawn, "group_key": "commercial", "source": "manual"}, nil, &withdrawnDoc)
 	e.Call(t, "POST", "/v1/deal-rooms/"+room.roomID+"/threads", AnyMap{"document_id": withdrawnDoc["id"], "body": "note on pricing", "source": "manual"}, nil, nil)

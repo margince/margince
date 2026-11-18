@@ -75,3 +75,21 @@ func TestIfNoneMatchHit(t *testing.T) {
 		})
 	}
 }
+
+func TestDownloadHeadersCarryTheRealNameOfANonASCIIFile(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct{ name, filename, inline, want string }{
+		{"plain ascii is unchanged", "report.pdf", "", `attachment; filename="report.pdf"`},
+		{"a quote and a backslash are escaped", `a"b\c.txt`, "", `attachment; filename="a\"b\\c.txt"`},
+		{"an umlaut", "Müller.pdf", "", `attachment; filename="M_ller.pdf"; filename*=UTF-8''M%C3%BCller.pdf`},
+		{"accent, han and a space", "Zoë 李小龙.txt", "", `attachment; filename="Zo_ ___.txt"; filename*=UTF-8''Zo%C3%AB%20%E6%9D%8E%E5%B0%8F%E9%BE%99.txt`},
+		{"a control character is dropped", "a\x00b.txt", "", `attachment; filename="ab.txt"; filename*=UTF-8''a%00b.txt`},
+		{"inline", "Müller.pdf", "inline", `inline; filename="M_ller.pdf"; filename*=UTF-8''M%C3%BCller.pdf`},
+	} {
+		rec := httptest.NewRecorder()
+		Download{Filename: tc.filename, Inline: tc.inline == "inline"}.WriteHeaders(rec)
+		if got := rec.Header().Get("Content-Disposition"); got != tc.want {
+			t.Errorf("%s: Content-Disposition = %q, want %q", tc.name, got, tc.want)
+		}
+	}
+}
