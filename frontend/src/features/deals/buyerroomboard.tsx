@@ -74,7 +74,12 @@ type BuyerRoomDocument = components["schemas"]["BuyerRoomDocument"];
 function BuyerDocumentVerbs({
   token,
   doc,
-}: Readonly<{ token: string; doc: BuyerRoomDocument }>) {
+  onSessionLost,
+}: Readonly<{
+  token: string;
+  doc: BuyerRoomDocument;
+  onSessionLost: () => void;
+}>) {
   const t = useT();
   const download = useMutation({
     mutationKey: ["buyer-room-document-download"],
@@ -95,6 +100,9 @@ function BuyerDocumentVerbs({
           ...bearer(input.token),
         },
       );
+      if (response.status === 401) {
+        throw new SessionRefusedError();
+      }
       if (error || !data) {
         // A refusal this screen decided, with copy it already translated, so
         // it rides as a problem body — a plain Error is wording nobody wrote
@@ -106,6 +114,7 @@ function BuyerDocumentVerbs({
       // opens in nothing.
       downloadBytes(data, input.filename, data.type);
     },
+    onError: retireOnRefusal(onSessionLost),
   });
   return (
     <div className="buyer-doc-actions">
@@ -242,7 +251,13 @@ export function BuyerBoard({
       meta: doc.filename,
       byteSize: doc.byte_size,
       read,
-      actions: <BuyerDocumentVerbs token={token} doc={doc} />,
+      actions: (
+        <BuyerDocumentVerbs
+          token={token}
+          doc={doc}
+          onSessionLost={onSessionLost}
+        />
+      ),
     };
   });
   return (

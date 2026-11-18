@@ -418,6 +418,27 @@ describe("BuyerRoomScreen", () => {
       ),
     ).toBeTruthy();
   });
+
+  it("a download the session no longer admits ends the session", async () => {
+    stubRoom({
+      "GET /public/rooms/documents/d-1/file": () =>
+        jsonResponse({ status: 401, code: "unauthorized" }, 401),
+    });
+    globalThis.sessionStorage.setItem("margince.room.session", "mdrs_session");
+    const user = userEvent.setup();
+    render(<BuyerRoomScreen />);
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: /Download Data processing agreement/i,
+      }),
+    );
+
+    await screen.findByText("This link no longer works");
+    expect(globalThis.sessionStorage.getItem("margince.room.session")).toBe(
+      null,
+    );
+  });
 });
 
 // Whether the reader may write and why they may not are one decision. They
