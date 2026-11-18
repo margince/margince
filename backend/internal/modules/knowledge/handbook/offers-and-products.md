@@ -32,6 +32,7 @@ To create an offer in Margince, open the deal and click **New offer** in the **O
 4. Add lines under **Line items** (see the next question).
 If the deal has no currency yet, the button is turned off and says: "Set the deal value first. An offer uses the deal’s currency."
 The top of the offer shows its deal, buyer company, revision, **Valid until**, language, template, intro text and terms text, in every state.
+To drop a draft made by mistake, click **Discard draft** and confirm. The draft is archived and leaves the deal's **Offers** panel; an archived offer opened by its link reads **Archived** and cannot be changed.
 Also called: quote, quotation, proposal, estimate.
 
 ### How do I make an offer from the deal's products?

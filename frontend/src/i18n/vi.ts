@@ -6869,6 +6869,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "offer.acceptBody":
     "Giá trị và loại tiền của deal sẽ được cập nhật theo báo giá này.",
   "offer.reject": "Từ chối",
+  "offer.discard": "Bỏ bản nháp",
+  "offer.discardConfirm": "Bỏ bản nháp báo giá này?",
+  "offer.discardBody":
+    "Bản nháp được lưu trữ và không còn trong danh sách báo giá của deal.",
   "offer.rejectConfirm": "Đánh dấu báo giá này là đã từ chối?",
   "offer.rejectReason": "Lý do (không bắt buộc)",
   "offer.regenerate": "Tạo lại phiên bản",

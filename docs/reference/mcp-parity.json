@@ -11,8 +11,8 @@
       "covered": 41,
       "sign_in": 1,
       "no_signed_in_user": 0,
-      "web_app_calls": 941,
-      "web_app_calls_open": 767,
+      "web_app_calls": 942,
+      "web_app_calls_open": 768,
       "web_app_calls_ask_first": 108,
       "web_app_calls_pending": 0,
       "web_app_calls_security": 146,
@@ -20,7 +20,7 @@
       "parity_signed_in_percent": 81,
       "parity_web_app_percent": 81.5
     },
-    "open_with_no_web_app_call_found": 106,
+    "open_with_no_web_app_call_found": 105,
     "parity_web_app_counting_covered_percent": 84.3,
     "parity_web_app_once_pending_is_open_percent": 84.3
   },
@@ -41,8 +41,8 @@
       "covered": 28,
       "sign_in": 0,
       "no_signed_in_user": 0,
-      "web_app_calls": 513,
-      "web_app_calls_open": 466,
+      "web_app_calls": 514,
+      "web_app_calls_open": 467,
       "web_app_calls_ask_first": 37,
       "web_app_calls_pending": 0,
       "web_app_calls_security": 28,
@@ -261,8 +261,8 @@
           "covered": 0,
           "sign_in": 0,
           "no_signed_in_user": 0,
-          "web_app_calls": 14,
-          "web_app_calls_open": 14,
+          "web_app_calls": 15,
+          "web_app_calls_open": 15,
           "web_app_calls_ask_first": 2,
           "web_app_calls_pending": 0,
           "web_app_calls_security": 0,
@@ -14509,7 +14509,8 @@
       "state": "open",
       "tier": "auto_execute",
       "scope": "write",
-      "verb": "archive_record"
+      "verb": "archive_record",
+      "web_app": "direct"
     },
     {
       "method": "GET",

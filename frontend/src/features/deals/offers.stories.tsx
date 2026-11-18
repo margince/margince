@@ -76,6 +76,23 @@ export const Draft: Story = {
   },
 };
 
+/** A discarded draft: archived, with every control to change it gone. */
+export const Archived: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": meRoute({ deal: ["read", "update"] }),
+      "GET /offers/o-1": () =>
+        jsonResponse({ ...draftOffer, archived_at: "2026-06-02T08:00:00Z" }),
+      "GET /offer-templates": () => jsonResponse(emptyPage),
+    });
+    return (
+      <StoryProviders>
+        <OfferScreen id="o-1" />
+      </StoryProviders>
+    );
+  },
+};
+
 /** The draft's header form, open over the offer. */
 export const EditingTheHeader: Story = {
   ...Draft,

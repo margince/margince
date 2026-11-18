@@ -7049,6 +7049,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "offer.acceptBody":
     "Wert und Währung des Deals werden an dieses Angebot angepasst.",
   "offer.reject": "Ablehnen",
+  "offer.discard": "Entwurf verwerfen",
+  "offer.discardConfirm": "Diesen Angebotsentwurf verwerfen?",
+  "offer.discardBody":
+    "Der Entwurf wird archiviert und verschwindet aus den Angeboten des Deals.",
   "offer.rejectConfirm": "Dieses Angebot als abgelehnt markieren?",
   "offer.rejectReason": "Grund (optional)",
   "offer.regenerate": "Revision neu erzeugen",

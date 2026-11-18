@@ -3,7 +3,7 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import { Check, RefreshCw, Send, X } from "lucide-react";
+import { Check, RefreshCw, Send, Trash2, X } from "lucide-react";
 import { useState } from "react";
 import { api } from "../../api/client";
 import { ifMatch, requireVersion } from "../../api/version";
@@ -281,6 +281,58 @@ export function RegenerateOfferAction({ offer }: Readonly<{ offer: Offer }>) {
         <RefreshCw aria-hidden /> {t("offer.regenerate")}
       </Button>
       {errorMessage && <ErrorLine>{errorMessage}</ErrorLine>}
+    </>
+  );
+}
+
+// Only a live draft takes edits; an archived one is read like a sent one.
+export function isOpenDraft(offer: Offer): boolean {
+  return offer.status === "draft" && offer.archived_at == null;
+}
+
+// Discarding archives the draft: it leaves the deal's offers and the reader
+// goes back to the deal, since nothing on this page can change any more.
+export function DiscardOfferAction({ offer }: Readonly<{ offer: Offer }>) {
+  const t = useT();
+  const queryClient = useQueryClient();
+  const [open, setOpen] = useState(false);
+
+  const mutation = useMutation({
+    mutationFn: async (version: number) =>
+      unwrap(
+        await api.DELETE("/offers/{id}", {
+          params: { path: { id: offer.id }, ...ifMatch(version) },
+        }),
+      ),
+    onMutate: fromHere,
+    onSuccess: (data, _version, from) => {
+      queryClient.setQueryData(["offer", offer.id], data);
+      void queryClient.invalidateQueries({
+        queryKey: ["deal-offers", offer.deal_id],
+      });
+      setOpen(false);
+      from.closeOnto({ screen: "deals", id: offer.deal_id });
+    },
+    onError: () => rereadOffer(queryClient, offer.id),
+  });
+
+  return (
+    <>
+      <Button data-testid="discard-offer" onClick={() => setOpen(true)}>
+        <Trash2 aria-hidden /> {t("offer.discard")}
+      </Button>
+      <ConfirmModal
+        open={open}
+        onClose={() => setOpen(false)}
+        title={t("offer.discardConfirm")}
+        confirmLabel={t("offer.discard")}
+        confirmVariant="danger"
+        onConfirm={() => mutation.mutate(requireVersion(offer.version))}
+        pending={mutation.isPending}
+        error={mutation.isError ? problemMessageOf(mutation.error, t) : null}
+      >
+        <p className="t-body">{t("offer.discardBody")}</p>
+      </ConfirmModal>
     </>
   );
 }

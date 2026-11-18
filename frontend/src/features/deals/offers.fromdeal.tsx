@@ -12,6 +12,7 @@ import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import { useDealLines } from "./deal360/deallines";
 import type { Offer } from "./offers";
+import { isOpenDraft } from "./offers.actions";
 import { OfferLineEditor } from "./offers.lines";
 import { OfferLinesTable } from "./offers.summary";
 
@@ -23,7 +24,7 @@ import { OfferLinesTable } from "./offers.summary";
  */
 export function OfferLinesPanel({ offer }: Readonly<{ offer: Offer }>) {
   if (offer.source_commercial_revision == null) {
-    return offer.status === "draft" ? (
+    return isOpenDraft(offer) ? (
       <OfferLineEditor offer={offer} />
     ) : (
       <OfferLinesTable offer={offer} />
@@ -76,7 +77,7 @@ function DealSourcedLines({
           >
             {t("offer.fromDeal.editDeal")}
           </Button>
-          {stale && offer.status === "draft" && deal && (
+          {stale && isOpenDraft(offer) && deal && (
             <Button
               pending={refresh.isPending}
               onClick={() => refresh.mutate(deal.commercial_revision)}

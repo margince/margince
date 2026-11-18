@@ -7005,6 +7005,9 @@ export const en = {
   "offer.acceptBody":
     "The deal value and currency are updated to match this offer.",
   "offer.reject": "Reject",
+  "offer.discard": "Discard draft",
+  "offer.discardConfirm": "Discard this draft offer?",
+  "offer.discardBody": "The draft is archived and leaves the deal’s offers.",
   "offer.rejectConfirm": "Mark this offer as rejected?",
   "offer.rejectReason": "Reason (optional)",
   "offer.regenerate": "Regenerate revision",

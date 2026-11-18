@@ -17,6 +17,8 @@ import "./offers.css";
 import { RecordGone } from "../../components/recordgone";
 import {
   AcceptOfferAction,
+  DiscardOfferAction,
+  isOpenDraft,
   RegenerateOfferAction,
   RejectOfferAction,
   RenderOfferPdfAction,
@@ -184,7 +186,13 @@ export function OfferScreen({ id }: Readonly<{ id: string }>) {
                 change it, so they take the band rather than the head. */}
             <Panel
               title={offer.offer_number}
-              titleAction={<Badge>{offerStatusLabel(offer.status, t)}</Badge>}
+              titleAction={
+                <Badge>
+                  {offer.archived_at
+                    ? t("record.archived")
+                    : offerStatusLabel(offer.status, t)}
+                </Badge>
+              }
               actions={
                 <>
                   <Button
@@ -194,18 +202,19 @@ export function OfferScreen({ id }: Readonly<{ id: string }>) {
                   >
                     <ArrowLeft aria-hidden /> {t("offer.backToDeal")}
                   </Button>
-                  {offer.status === "draft" && (
-                    <Button
-                      data-testid="edit-offer-header"
-                      onClick={() => setEditing(true)}
-                    >
-                      <PenLine aria-hidden /> {t("offer.edit")}
-                    </Button>
+                  {isOpenDraft(offer) && (
+                    <>
+                      <Button
+                        data-testid="edit-offer-header"
+                        onClick={() => setEditing(true)}
+                      >
+                        <PenLine aria-hidden /> {t("offer.edit")}
+                      </Button>
+                      <SendOfferAction offer={offer} />
+                      <DiscardOfferAction offer={offer} />
+                    </>
                   )}
-                  {offer.status === "draft" && (
-                    <SendOfferAction offer={offer} />
-                  )}
-                  {offer.status === "sent" && (
+                  {offer.status === "sent" && !offer.archived_at && (
                     <>
                       <AcceptOfferAction offer={offer} />
                       <RejectOfferAction offer={offer} />
@@ -221,9 +230,9 @@ export function OfferScreen({ id }: Readonly<{ id: string }>) {
             </Panel>
             <AiDisclosureBanner offer={offer} />
             <OfferTotalsPanel offer={offer} />
-            <RenderOfferPdfAction offer={offer} />
+            {!offer.archived_at && <RenderOfferPdfAction offer={offer} />}
             <OfferLinesPanel offer={offer} />
-            {offer.status === "draft" && (
+            {isOpenDraft(offer) && (
               <EditOfferHeaderModal
                 open={editing}
                 onClose={() => setEditing(false)}
