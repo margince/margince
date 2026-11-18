@@ -16,6 +16,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -34,7 +35,7 @@ func TestWebsiteAddressWritersQueueThroughTheConfiguredProductionBinding(t *test
 	server.wireOnboardingSurface(e.Pool)
 	WithDeepRead(inserter, nil)(&server, e.Pool)
 	stores := map[string]*contacts.Store{
-		"approval":          newCounterpartyStoreAt(e.Pool, time.Now, server.queues),
+		"approval":          newCounterpartyStoreAt(e.Pool, func() time.Time { return clocktest.Now(t) }, server.queues),
 		"company form":      server.companyHandlers.store,
 		"site confirmation": server.siteReadHandlers.engine.contacts,
 	}

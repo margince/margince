@@ -82,7 +82,7 @@ func TestTheRetentionSweepDestroysTheClaimsQuotingTheMessage(t *testing.T) {
 
 	svc := compose.NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	SettleIntoInstall(t, e)
-	if err := svc.EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
+	if err := svc.EvaluateInstallation(RetentionPassCtx(context.Background(), e.WS)); err != nil {
 		t.Fatalf("running the retention sweep: %v", err)
 	}
 

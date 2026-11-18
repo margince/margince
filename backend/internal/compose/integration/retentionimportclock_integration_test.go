@@ -32,7 +32,7 @@ import (
 func runRetentionPass(t *testing.T, e *Env) {
 	t.Helper()
 	svc := compose.NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(os.Stderr, nil)))
-	if err := svc.EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
+	if err := svc.EvaluateInstallation(RetentionPassCtx(context.Background(), e.WS)); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -226,7 +226,7 @@ func TestTheDefaultPoliciesKeepAnOldContactAndAnOldTranscript(t *testing.T) {
 
 	ws := apptest.InstallationWorkspaceUUID(ctx, t, e.Pool)
 	svc := compose.NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(os.Stderr, nil)))
-	if err := svc.EvaluateInstallation(RetentionPassCtx(ws)); err != nil {
+	if err := svc.EvaluateInstallation(RetentionPassCtx(context.Background(), ws)); err != nil {
 		t.Fatal(err)
 	}
 

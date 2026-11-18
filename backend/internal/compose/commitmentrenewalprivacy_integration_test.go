@@ -475,7 +475,7 @@ func assertReleasedHoldFinishesErasure(t *testing.T, f renewalPrivacyFixture, be
 	service := privacy.NewRetentionService(f.e.DB(), blobstore.NewMemory(), slog.Default(), RawCapturePurgerFor(f.e.DB()))
 	run := func() {
 		t.Helper()
-		if err := service.EvaluateInstallation(integration.RetentionPassCtx(f.e.WS)); err != nil {
+		if err := service.EvaluateInstallation(integration.RetentionPassCtx(context.Background(), f.e.WS)); err != nil {
 			t.Fatal(err)
 		}
 	}

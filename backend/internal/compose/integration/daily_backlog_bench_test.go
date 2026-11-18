@@ -459,7 +459,7 @@ func seatContext(t *testing.T, e *apptest.AppEnv, user string) context.Context {
 			t.Errorf("closing the seat read: %v", err)
 		}
 	}()
-	actor, err := identity.SeatActor(ctx, tx, ids.MustParse(user))
+	actor, err := identity.SeatActor(ctx, tx, identity.RbacObjects{}, ids.MustParse(user))
 	if err != nil {
 		t.Fatalf("resolving seat %s: %v", user, err)
 	}

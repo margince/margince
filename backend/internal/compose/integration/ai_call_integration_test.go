@@ -260,7 +260,7 @@ func TestEmbedCallRetentionAgesOutOverAgeEmbeddingRows(t *testing.T) {
 	underAge := seedEmbedCall(t, e, 10)
 
 	svc := compose.NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(os.Stderr, nil)))
-	if err := svc.EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
+	if err := svc.EvaluateInstallation(RetentionPassCtx(context.Background(), e.WS)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -300,7 +300,7 @@ func TestAICallPayloadRetentionAgesOutContentKeepingMetadata(t *testing.T) {
 		VALUES ('ai_call_payload', 'content', 365, 'erase')`)
 
 	svc := compose.NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(os.Stderr, nil)))
-	if err := svc.EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
+	if err := svc.EvaluateInstallation(RetentionPassCtx(context.Background(), e.WS)); err != nil {
 		t.Fatal(err)
 	}
 

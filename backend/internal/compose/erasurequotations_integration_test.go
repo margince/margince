@@ -254,7 +254,7 @@ func TestRetentionErasingATranscriptEmptiesTheProposalQuotingIt(t *testing.T) {
 
 	svc := NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	integration.SettleIntoInstall(t, e)
-	if err := svc.EvaluateInstallation(integration.RetentionPassCtx(e.WS)); err != nil {
+	if err := svc.EvaluateInstallation(integration.RetentionPassCtx(context.Background(), e.WS)); err != nil {
 		t.Fatalf("EvaluateInstallation → %v", err)
 	}
 
@@ -293,7 +293,7 @@ func TestErasingAQuotedRecordSpendsTheTokenOfAnApprovedButUnredeemedProposal(t *
 
 	svc := NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	integration.SettleIntoInstall(t, e)
-	if err := svc.EvaluateInstallation(integration.RetentionPassCtx(e.WS)); err != nil {
+	if err := svc.EvaluateInstallation(integration.RetentionPassCtx(context.Background(), e.WS)); err != nil {
 		t.Fatalf("EvaluateInstallation → %v", err)
 	}
 

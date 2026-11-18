@@ -68,7 +68,7 @@ func TestPublishedEventsLeaveTheOutboxAfterTheirWindowUnlessSomethingStillNeedsT
 		t.Fatal(err)
 	}
 
-	if err := NewRetentionServiceFor(e.DB(), nil, slog.Default()).EvaluateInstallation(integration.RetentionPassCtx(e.WS)); err != nil {
+	if err := NewRetentionServiceFor(e.DB(), nil, slog.Default()).EvaluateInstallation(integration.RetentionPassCtx(context.Background(), e.WS)); err != nil {
 		t.Fatal(err)
 	}
 	if eventKept(t, e, ordinary) || eventKept(t, e, settled) {
@@ -144,7 +144,7 @@ func TestEndedWebhookBodiesAreClearedAfterTheirWindowAndWorkStillToSendKeepsItsB
 		"a body about a held contact":   seedDelivery(t, owner, sub, heldContact, "delivered", 8),
 	}
 
-	if err := NewRetentionServiceFor(e.DB(), nil, slog.Default()).EvaluateInstallation(integration.RetentionPassCtx(e.WS)); err != nil {
+	if err := NewRetentionServiceFor(e.DB(), nil, slog.Default()).EvaluateInstallation(integration.RetentionPassCtx(context.Background(), e.WS)); err != nil {
 		t.Fatal(err)
 	}
 	for name, delivery := range cleared {
@@ -208,7 +208,7 @@ func TestCopiesAboutAHeldCompanyOrProjectOutliveTheirWindow(t *testing.T) {
 		bodies[kind] = seedDeliveryAbout(t, owner, sub, kind, record, "delivered", 8)
 	}
 
-	if err := NewRetentionServiceFor(e.DB(), nil, slog.Default()).EvaluateInstallation(integration.RetentionPassCtx(e.WS)); err != nil {
+	if err := NewRetentionServiceFor(e.DB(), nil, slog.Default()).EvaluateInstallation(integration.RetentionPassCtx(context.Background(), e.WS)); err != nil {
 		t.Fatal(err)
 	}
 	for kind := range events {

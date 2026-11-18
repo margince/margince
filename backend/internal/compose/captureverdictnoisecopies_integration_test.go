@@ -131,7 +131,7 @@ func TestTheRetentionSweepClearsTheReplyVerdictOfAMessageItEmpties(t *testing.T)
 
 	svc := NewRetentionServiceFor(e.DB(), nil, slog.Default())
 	integration.SettleIntoInstall(t, e)
-	if err := svc.EvaluateInstallation(integration.RetentionPassCtx(e.WS)); err != nil {
+	if err := svc.EvaluateInstallation(integration.RetentionPassCtx(context.Background(), e.WS)); err != nil {
 		t.Fatalf("EvaluateInstallation → %v", err)
 	}
 	assertEmptiedWithoutVerdict(t, e, agedOut)

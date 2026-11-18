@@ -95,7 +95,7 @@ func (f keptFixture) policy(t *testing.T, action string) {
 func (f keptFixture) pass(t *testing.T) {
 	t.Helper()
 	service := compose.NewRetentionServiceFor(f.e.DB(), nil, slog.Default()).WithExtensions(f.registry)
-	if err := service.EvaluateInstallation(RetentionPassCtx(f.e.WS)); err != nil {
+	if err := service.EvaluateInstallation(RetentionPassCtx(context.Background(), f.e.WS)); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -282,7 +282,7 @@ func TestOneBusyExtensionTableLeavesTheNextItsShareOfAPass(t *testing.T) {
 	e.WsExec(t, `INSERT INTO retention_policy (object_type, category, retain_days, action) VALUES ('extension', NULL, 30, 'anonymize')`)
 
 	service := compose.NewRetentionServiceFor(e.DB(), nil, slog.Default()).WithExtensions(registry)
-	if err := service.EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
+	if err := service.EvaluateInstallation(RetentionPassCtx(context.Background(), e.WS)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -385,7 +385,7 @@ func TestARetentionPassWaitsForAHoldBeingPlacedOnALinkedRecord(t *testing.T) {
 			finished := make(chan error, 1)
 			go func() {
 				service := compose.NewRetentionServiceFor(f.e.DB(), nil, slog.Default()).WithExtensions(f.registry)
-				finished <- service.EvaluateInstallation(RetentionPassCtx(f.e.WS))
+				finished <- service.EvaluateInstallation(RetentionPassCtx(context.Background(), f.e.WS))
 			}()
 			waitUntilBlockedBy(t, placing)
 			if err := placing.Commit(t.Context()); err != nil {

@@ -156,7 +156,7 @@ func TestRetentionAnonymizeDropsTheChannelIdentityWithoutSuppressingIt(t *testin
 
 	svc := compose.NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	integration.SettleIntoInstall(t, e)
-	if err := svc.EvaluateInstallation(integration.RetentionPassCtx(e.WS)); err != nil {
+	if err := svc.EvaluateInstallation(integration.RetentionPassCtx(context.Background(), e.WS)); err != nil {
 		t.Fatalf("retention pass: %v", err)
 	}
 

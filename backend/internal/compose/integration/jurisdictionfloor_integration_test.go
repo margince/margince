@@ -100,7 +100,7 @@ func (f floorFixture) retentionPass(t *testing.T) {
 	t.Helper()
 	SettleIntoInstall(t, f.e)
 	svc := compose.NewRetentionServiceFor(f.e.DB(), nil, slog.New(slog.NewTextHandler(os.Stderr, nil)))
-	if err := svc.EvaluateInstallation(RetentionPassCtx(f.e.WS)); err != nil {
+	if err := svc.EvaluateInstallation(RetentionPassCtx(context.Background(), f.e.WS)); err != nil {
 		t.Fatal(err)
 	}
 }

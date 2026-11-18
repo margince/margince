@@ -5,8 +5,7 @@ package activities
 
 // The channel vocabulary: which kind names a messaging conversation. Which
 // transports this installation can reply on is the composition's, decided at
-// boot by what the binary composed. ADR-0107/A158 stopped one answer standing
-// in for the other.
+// boot by what the binary composed. One answer never stands in for the other.
 
 // KindMessage is the one interaction kind that names a channel conversation
 // (ADR-0107/A158). Which transport carried it is activity.channel_provider, a

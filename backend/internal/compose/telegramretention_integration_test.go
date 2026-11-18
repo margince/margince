@@ -114,7 +114,7 @@ func TestTheRawCaptureStageAgesOutAChannelMessagesOriginal(t *testing.T) {
 	}
 	svc := NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	integration.SettleIntoInstall(t, e)
-	if err := svc.EvaluateInstallation(integration.RetentionPassCtx(e.WS)); err != nil {
+	if err := svc.EvaluateInstallation(integration.RetentionPassCtx(context.Background(), e.WS)); err != nil {
 		t.Fatalf("running the retention sweep: %v", err)
 	}
 
@@ -222,7 +222,7 @@ func ageOutAndSweep(t *testing.T, e *integration.Env, activity ids.UUID) {
 	}
 	svc := NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	integration.SettleIntoInstall(t, e)
-	if err := svc.EvaluateInstallation(integration.RetentionPassCtx(e.WS)); err != nil {
+	if err := svc.EvaluateInstallation(integration.RetentionPassCtx(context.Background(), e.WS)); err != nil {
 		t.Fatalf("running the retention sweep: %v", err)
 	}
 }

@@ -133,7 +133,7 @@ func TestStatutoryFloorShieldsCorrespondenceFromDestruction(t *testing.T) {
 
 	svc := compose.NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(os.Stderr, nil)))
 	SettleIntoInstall(t, e)
-	if err := svc.EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
+	if err := svc.EvaluateInstallation(RetentionPassCtx(context.Background(), e.WS)); err != nil {
 		t.Fatal(err)
 	}
 

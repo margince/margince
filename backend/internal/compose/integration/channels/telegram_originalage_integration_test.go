@@ -91,7 +91,7 @@ func (c *telegramEnv) ageTheOriginalAndSweep(t *testing.T, u telegramUpdate, cla
 		t.Fatalf("ageing the original out: %v", err)
 	}
 	svc := compose.NewRetentionServiceFor(c.DB(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
-	if err := svc.EvaluateInstallation(integration.RetentionPassCtx(c.workspaceID(t))); err != nil {
+	if err := svc.EvaluateInstallation(integration.RetentionPassCtx(context.Background(), c.workspaceID(t))); err != nil {
 		t.Fatalf("running the retention pass: %v", err)
 	}
 }
