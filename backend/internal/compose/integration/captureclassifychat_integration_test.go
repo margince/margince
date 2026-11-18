@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
@@ -61,6 +62,15 @@ func TestAConnectorCapturedChatMessageIsLabelledAndTakesNoReplyVerdict(t *testin
 		        'connector:gmail')`,
 		mail, "mail-"+mail.String())
 
+	// A filed chat screenshot, as ChatCaptureFile writes it: a message on the
+	// chat's channel, captured by the attachment reader and not a connector.
+	screenshot := ids.NewV7()
+	e.WsExec(t, `
+		INSERT INTO activity (id, kind, channel_provider, body, occurred_at, source, source_system, source_id, captured_by)
+		VALUES ($1, 'message', 'whatsapp', 'Lena: are we still on for Thursday?', now(), $2, $2, $3,
+		        'agent:attachment-extractor')`,
+		screenshot, activities.ChatCaptureSourceSystem, screenshot.String())
+
 	brain := &refusingMeetingBrain{}
 	classifier := compose.NewCaptureClassifier(e.Pool, brain, slog.New(slog.DiscardHandler))
 	// The system principal the capture_classify job binds (capturejobs.go).
@@ -78,6 +88,9 @@ func TestAConnectorCapturedChatMessageIsLabelledAndTakesNoReplyVerdict(t *testin
 	if n := e.WsCount(t, `SELECT count(*) FROM activity
 		 WHERE id = $1 AND capture_label = 'meeting' AND reply_verdict IS NULL`, chat); n != 1 {
 		t.Error("the chat message is not labelled meeting with no reply verdict")
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE id = $1 AND capture_label IS NULL`, screenshot); n != 1 {
+		t.Error("a filed chat screenshot was labelled, but the pass reads only connector capture")
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE id = $1 AND reply_verdict = 'negative'`, mail); n != 1 {
 		t.Error("the inbound mail took no reply verdict, so this pass stores none at all")

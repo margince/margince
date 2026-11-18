@@ -29,6 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/capturelabel"
 	"github.com/margince/margince/backend/internal/compose/pipelinetrace"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -207,7 +208,8 @@ func TestAChatIsLabelledButNotReadForMaterialEvents(t *testing.T) {
 	chat := capturedChat("chat-msg", "telegram", "dispact")
 	chat.threadKey = "telegram:chat-msg"
 	msg := seedTracedMessage(t, e, e.Rep1, chat)
-	got, err := ladderAssembler(e, false).WithThreadReader(compose.NewThreadReadings(e.DB(), time.Now)).
+	now := func() time.Time { return clocktest.Now(t) }
+	got, err := ladderAssembler(e, false).WithThreadReader(compose.NewThreadReadings(e.DB(), now)).
 		ByActivityID(ctx, msg.activityID)
 	if err != nil {
 		t.Fatalf("reading the ladder: %v", err)

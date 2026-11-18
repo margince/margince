@@ -195,7 +195,7 @@ The 34 tables owned by `activities`, as the migrations build them. [Back to the 
 - `idx_activity_unfolded_counterparty`: `btree (activity_unfolded_counterparty(counterparty_email)) WHERE (activity_unfolded_counterparty(counterparty_email) IS NOT NULL)`
 - `idx_activity_unjudged`: `btree (occurred_at) WHERE ((owed_verdict IS NULL) AND (direction = 'inbound') AND (kind = ANY (ARRAY['email', 'message'])) AND (archived_at IS NULL) AND (audience = 'workspace') AND (restricted_at IS NULL))`
 - `idx_activity_unjudged_reply`: `btree (occurred_at) WHERE ((reply_verdict IS NULL) AND (direction = 'inbound') AND (kind = ANY (ARRAY['email', 'message'])) AND (archived_at IS NULL) AND (audience = 'workspace') AND (restricted_at IS NULL))`
-- `idx_activity_unlabeled`: `btree (occurred_at) WHERE ((capture_label IS NULL) AND (captured_by ~~ 'connector:%') AND (kind = 'email'))`
+- `idx_activity_unlabeled`: `btree (occurred_at) WHERE ((capture_label IS NULL) AND (captured_by ~~ 'connector:%') AND (kind = ANY (ARRAY['email', 'message'])))`
 - `uq_activity_domain_evidence_version`: `unique, btree (id, domain_evidence_version)`
 - `uq_activity_source`: `unique, btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL))`
 
