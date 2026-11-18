@@ -130,16 +130,22 @@ func readIndex(fsys fs.FS) ([]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("a policy folder has an %s: %w", IndexFile, err)
 	}
-	front, _, err := splitFrontMatter(IndexFile, raw)
+	front, body, err := splitFrontMatter(IndexFile, raw)
 	if err != nil {
 		return nil, err
+	}
+	if strings.TrimSpace(string(body)) == "" {
+		return nil, fmt.Errorf("%s: the body explains the layers to their reviewer, and it is empty", IndexFile)
 	}
 	var index indexFile
 	if err := decodeStrict(IndexFile, front, &index); err != nil {
 		return nil, err
 	}
 	countries, last := 0, fallbackLayer
-	for _, name := range index.Layers {
+	for i, name := range index.Layers {
+		if slices.Contains(index.Layers[:i], name) {
+			return nil, fmt.Errorf("%s lists %s twice", IndexFile, name)
+		}
 		class, err := classOf(name)
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", IndexFile, err)
@@ -156,7 +162,30 @@ func readIndex(fsys fs.FS) ([]string, error) {
 	if countries != 1 {
 		return nil, fmt.Errorf("%s lists %d country layers; a pack has exactly one", IndexFile, countries)
 	}
+	if err := unlisted(fsys, index.Layers); err != nil {
+		return nil, err
+	}
 	return index.Layers, nil
+}
+
+// unlisted refuses a policy file the index does not list. It would compile
+// into nothing and stay out of the digest, while a reader takes it for policy.
+// fixtures/ holds drafts and research/ holds notes the compiler never reads.
+func unlisted(fsys fs.FS, layers []string) error {
+	return fs.WalkDir(fsys, ".", func(name string, entry fs.DirEntry, err error) error {
+		switch {
+		case err != nil:
+			return err
+		case entry.IsDir() && (name == "fixtures" || name == "research"):
+			return fs.SkipDir
+		case entry.IsDir() || name == IndexFile || !strings.HasSuffix(name, ".md"):
+			return nil
+		case !slices.Contains(layers, name):
+			return fmt.Errorf("%s is in the policy folder and %s does not list it; list it or move it to research/",
+				name, IndexFile)
+		}
+		return nil
+	})
 }
 
 func readLayer(fsys fs.FS, name string) (layerFile, []byte, error) {

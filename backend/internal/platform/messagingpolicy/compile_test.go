@@ -117,6 +117,30 @@ func TestTheIndexListsOneCountryInOrder(t *testing.T) {
 	}
 }
 
+func TestTheIndexAccountsForEveryPolicyFile(t *testing.T) {
+	for name, change := range map[string]func(fstest.MapFS){
+		"a layer listed twice": func(fsys fstest.MapFS) {
+			fsys["regional/eu.md"] = fsys["aa.md"]
+			fsys["index.md"] = &fstest.MapFile{Data: []byte("---\nlayers: [regional/eu.md, regional/eu.md, aa.md]\n---\nThe layers.\n")}
+		},
+		"an unlisted layer": func(fsys fstest.MapFS) { fsys["regional/eu.md"] = fsys["aa.md"] },
+		"an empty index body": func(fsys fstest.MapFS) {
+			fsys["index.md"] = &fstest.MapFile{Data: []byte("---\nlayers: [aa.md]\n---\n")}
+		},
+	} {
+		fsys := policyFS(country)
+		change(fsys)
+		if _, err := Compile(fsys); err == nil {
+			t.Errorf("a policy folder with %s compiled", name)
+		}
+	}
+	fsys := policyFS(country)
+	fsys["research/bb.md"] = &fstest.MapFile{Data: []byte("Notes on another market.\n")}
+	if _, err := Compile(fsys); err != nil {
+		t.Errorf("a research note stopped the policy compiling: %v", err)
+	}
+}
+
 func TestAPairNeedsBothDrafts(t *testing.T) {
 	fsys := policyFS(country)
 	delete(fsys, "fixtures/b.md")
