@@ -1,13 +1,18 @@
 import type { components } from "../../api/schema";
+import { fieldRefusalSentence } from "../../components/create.refusals";
 import { Field } from "../../design-system/atoms";
 import { Button } from "../../design-system/button";
 import { type Choice, ChoiceList } from "../../design-system/choicelist";
 import { Select } from "../../design-system/select";
 import { formatMoney } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
+import { problemFieldErrorsOf, problemMessageOf } from "../../lib/problem";
 
 type Deal = components["schemas"]["Deal"];
 type Preview = components["schemas"]["PromoteLeadPreview"];
+type PromoteLeadRequest = components["schemas"]["PromoteLeadRequest"];
+type Pipeline = components["schemas"]["Pipeline"];
 export type QualificationDealChoice =
   | "new"
   | "none"
@@ -165,4 +170,58 @@ function qualificationConfirmLabel(
   if (existing) return "lead.qualify.confirmExisting";
   if (create) return "lead.qualify.confirmWithDeal";
   return "lead.qualify.confirm";
+}
+
+// dealBlock is the wire's deal request from the dialog's fields. The money
+// pair holds from birth: an amount only travels with the currency, and no
+// amount travels as no money at all.
+export function dealBlock(input: {
+  pipelineId: string | undefined;
+  stageId: string | undefined;
+  name: string;
+  amountMinor: number | null;
+  currency: string | undefined;
+}): NonNullable<PromoteLeadRequest["deal"]> {
+  const priced = input.amountMinor !== null && input.currency;
+  return {
+    pipeline_id: input.pipelineId ?? null,
+    stage_id: input.stageId ?? null,
+    name: input.name.trim() || null,
+    amount_minor: priced ? input.amountMinor : null,
+    currency: priced ? (input.currency ?? null) : null,
+  };
+}
+
+// amountState is what the amount does to the confirm. A negative one is
+// refused. One with no currency to carry it waits, because the server would
+// drop it on the way.
+export function amountState(
+  amountMinor: number | null,
+  currency: string | undefined,
+) {
+  return {
+    amountInvalid: amountMinor !== null && amountMinor < 0,
+    amountWaitsForCurrency: amountMinor !== null && !currency,
+  };
+}
+
+// qualifyRefusals splits a failed promotion: a refusal of the amount stands
+// under the field, and the foot of the dialog keeps everything else.
+export function qualifyRefusals(
+  error: unknown,
+  t: (key: MessageKey) => string,
+) {
+  const faults = problemFieldErrorsOf(error);
+  const amount = faults.find((fault) => fault.field === "amount_minor");
+  return {
+    amount: amount && fieldRefusalSentence(amount, t),
+    foot:
+      amount && faults.length === 1 ? undefined : problemMessageOf(error, t),
+  };
+}
+
+export function openStagesOf(pipeline: Pipeline | undefined) {
+  return [...(pipeline?.stages ?? [])]
+    .filter((stage) => stage.semantic === "open")
+    .sort((a, b) => a.position - b.position);
 }

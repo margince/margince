@@ -6,7 +6,7 @@ import { Field, Textarea } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
-import { leadWriteKeys } from "../../lib/leadkeys";
+import { invalidateClosedLead } from "../../lib/leadkeys";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useLeadDisqualifyReasons } from "./leadhandling";
 import { leadIdentityName } from "./leadname";
@@ -57,9 +57,7 @@ export function DisqualifyDialog({
       );
     },
     onSuccess: (closed, closure) => {
-      for (const key of leadWriteKeys(closure.leadId)) {
-        queryClient.invalidateQueries({ queryKey: key });
-      }
+      invalidateClosedLead(queryClient, closure.leadId);
       onDisqualified(closed);
     },
   });

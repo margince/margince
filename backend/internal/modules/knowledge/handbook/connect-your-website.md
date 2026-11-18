@@ -96,7 +96,7 @@ A post whose secret does not match is refused. If the secret is lost, choose **M
 Also called: Typeform webhook, Tally webhook, form builder.
 
 ### How do I send leads from my website's server?
-To send leads from your own server, choose **Website server** and choose **Create form**. Margince shows the form's secret once. Store it on the server as `MARGINCE_FORM_SECRET`, then use the **Code to paste**. It signs each post, so a copy of an old post is refused.
+To send leads from your own server, choose **Website server** and choose **Create form**. Margince shows the form's secret once. Store it on the server as `MARGINCE_FORM_SECRET`, then use the **Code to paste**. It signs each post, so a copy of an old post is refused. Posts that arrive together wait a few seconds for each other. If the form stays busy longer, the post is refused as busy and nothing is stored, and the **Code to paste** sends it twice more.
 
 This fits a site that handles its forms on the server, such as one built with Payload. **Make a new secret** in the row's **⋯** menu makes a new secret, and the old one stops working at once.
 Also called: server to server, API, signed post, backend form.
