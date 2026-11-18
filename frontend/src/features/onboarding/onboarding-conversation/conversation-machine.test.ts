@@ -395,6 +395,27 @@ describe("restore seeding through START", () => {
   });
 });
 
+describe("a member who may not train a voice", () => {
+  it("starts at connect, wherever the restore pointed", () => {
+    for (const target of [undefined, "vo.collecting", "vo.skipped"] as const) {
+      const state = run([
+        {
+          type: "START",
+          memberPath: true,
+          companyConfirmed: true,
+          voiceStep: false,
+        },
+        { type: "RESUME", target },
+      ]);
+      expect(state, String(target)).toMatchObject({
+        act: "connect",
+        phase: "cn.consent",
+        voiceStep: false,
+      });
+    }
+  });
+});
+
 describe("member path", () => {
   // A member's company was confirmed before they arrived: START opens in
   // co.confirmed and RESUME lands them on the first act that is theirs.

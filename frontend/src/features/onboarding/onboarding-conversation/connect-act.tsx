@@ -215,7 +215,7 @@ export function ConnectAct({
   };
 
   // Where the journey stands, in the rail's own counting.
-  const stops = railStops(state.memberPath);
+  const stops = railStops(state.memberPath, state.voiceStep);
   const eyebrow = t("ob.conv.scene.step", {
     n: ordinalNumber(stops.findIndex((stop) => stop.key === "connect") + 1),
     m: ordinalNumber(stops.length),

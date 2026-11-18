@@ -34,6 +34,10 @@ describe("the setup rail's stops", () => {
     ]);
   });
 
+  it("gives a member who may not train a voice the connect stop alone", () => {
+    expect(railStops(true, false).map((stop) => stop.key)).toEqual(["connect"]);
+  });
+
   it("never shows a member the installation's stops, settled before they arrived", () => {
     const keys = railStops(true).map((stop) => stop.key);
     expect(keys).not.toContain("read");

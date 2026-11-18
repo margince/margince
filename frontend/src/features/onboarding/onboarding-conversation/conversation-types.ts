@@ -137,6 +137,9 @@ export type ConversationState = {
   act: ConversationAct;
   phase: ConversationPhase;
   memberPath: boolean;
+  /** False for a member whose role may not create a voice profile: the voice
+   * act and its rail stop are left out, since every sample would be refused. */
+  voiceStep: boolean;
   pendingQuestion: ConversationQuestion | null;
   thread: ThreadEntry[];
   /** Monotonic entry-id sequence; see ThreadEntry. */
@@ -199,6 +202,8 @@ export type ConversationEvent =
   | {
       type: "START";
       memberPath: boolean;
+      /** Absent means the voice act is offered (see ConversationState). */
+      voiceStep?: boolean;
       /** Server-derived recap turns seeded on restore. Narration is never
        * persisted; these entries are recomputed from server state, so a
        * reload summarizes instead of replaying the original narration. */

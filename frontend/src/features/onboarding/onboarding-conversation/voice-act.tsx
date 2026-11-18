@@ -90,7 +90,7 @@ export function VoiceAct({ state, dispatch, initialSummary }: VoiceActProps) {
   const presence = presenceFor(state);
 
   // Where the journey stands, in the rail's own counting.
-  const stops = railStops(state.memberPath);
+  const stops = railStops(state.memberPath, state.voiceStep);
   const eyebrow = t("ob.conv.scene.step", {
     n: ordinalNumber(stops.findIndex((stop) => stop.key === "voice") + 1),
     m: ordinalNumber(stops.length),

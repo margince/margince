@@ -5,6 +5,8 @@ import { formatNumber } from "../../../format/format";
 import { useLocale } from "../../../i18n";
 import type { MessageKey } from "../../../i18n/en";
 import { problemMessage } from "../../../lib/problem";
+import { problemCode } from "../../../lib/problembody";
+import { PROBLEM_CODE_COPY } from "../../../lib/problemcodecopy";
 import { isAcceptedCorpusFile } from "../../../lib/voice-corpus-file";
 import type {
   IntakeOutcome,
@@ -105,6 +107,12 @@ function refusalEntry(
       id: `refuse:${ref}`,
       i18nKey: refusalKeys[reason],
     };
+  }
+  // A code the catalog words (a role refused the grant) is said in the
+  // reader's language, never as the server's English detail.
+  const codeKey = PROBLEM_CODE_COPY.get(problemCode(problem) ?? "");
+  if (codeKey !== undefined) {
+    return { kind: "narration", id: `refuse:${ref}`, i18nKey: codeKey };
   }
   return {
     kind: "narration",

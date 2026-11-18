@@ -6,13 +6,14 @@ import { api } from "../../../api/client";
 import type { components } from "../../../api/schema";
 import { Button } from "../../../design-system/atoms";
 import { useLocale, useT } from "../../../i18n";
-import { useHoldsAdminRole } from "../../../lib/capability";
+import { useCanWrite, useHoldsAdminRole } from "../../../lib/capability";
 import {
   type useCompany,
   useInstallationDescribed,
 } from "../../../lib/installationcompany";
 import { throwProblem } from "../../../lib/problem";
 import { useRoute } from "../../../lib/router";
+import { useMe } from "../../../lib/session";
 import { useAddressWriters } from "../../../lib/urlstate";
 import { EMPTY_DRAFT, pickBuiltVersion } from "../onboarding";
 import { BuildScene } from "../onboarding-build-scene";
@@ -192,6 +193,9 @@ function useRestore(
   const { navigateReplacing } = useAddressWriters();
   const { company: existing, described } = useInstallationDescribed(true);
   const mayDescribe = useHoldsAdminRole();
+  const mayTrainVoice = useCanWrite("voice_profile", "create");
+  // Both grants above read false until /me answers, so the restore waits on it.
+  const meAnswered = useMe().data !== undefined;
   // The restore's own snapshot, not the live entry the shell gates on: a
   // checkpoint landing mid-journey must not re-run the restore's reads.
   const wizard = useQuery({
@@ -238,6 +242,7 @@ function useRestore(
 
   const restored = useRef(false);
   const settled =
+    meAnswered &&
     described !== undefined &&
     wizard.isSuccess &&
     (!voiceNeeded || voice.isSuccess) &&
@@ -252,6 +257,7 @@ function useRestore(
       profile: existing.data ?? null,
       described: described === true,
       mayDescribe,
+      mayTrainVoice,
       voice: voice.data ?? null,
       read: persistedRead.data ?? null,
       routeConnect,
@@ -270,6 +276,7 @@ function useRestore(
     dispatch({
       type: "START",
       memberPath: plan.memberPath,
+      voiceStep: plan.voiceStep,
       companyConfirmed: plan.companyConfirmed,
       recap: plan.recap,
     });
@@ -288,6 +295,7 @@ function useRestore(
     existing.data,
     described,
     mayDescribe,
+    mayTrainVoice,
     voice.data,
     persistedRead.data,
     routeConnect,

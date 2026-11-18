@@ -508,7 +508,10 @@ describe("onboarding gate", () => {
     "walks a non-admin with %s through the member journey, unasked",
     async (_, journey) => {
       window.location.hash = "#/contacts";
-      stubCompany(403, journey, { roles: ["rep"] });
+      stubCompany(403, journey, {
+        roles: ["rep"],
+        allow: { voice_profile: ["create"] },
+      });
       mount();
       expect(await screen.findByText(/Train your writing voice/)).toBeTruthy();
       expect(window.location.hash).toBe("#/onboarding/company");
@@ -556,7 +559,10 @@ describe("onboarding gate", () => {
     stubCompany(
       403,
       { row: { code: "not_found" }, status: 404 },
-      { roles: ["ops"], allow: { automation: ["update"] } },
+      {
+        roles: ["ops"],
+        allow: { automation: ["update"], voice_profile: ["create"] },
+      },
     );
     mount();
     expect(await screen.findByText(/Train your writing voice/)).toBeTruthy();

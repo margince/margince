@@ -12,7 +12,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../../api/schema";
 import { LocaleProvider } from "../../../i18n";
-import { meFixture } from "../../../testing/mefixture";
+import { type GrantSpec, meFixture } from "../../../testing/mefixture";
 import { OnboardingScreen } from "../onboarding";
 
 // The restore matrix of the conversational shell: which act a reload lands
@@ -138,6 +138,8 @@ type StubOptions = {
   proposal?: Proposal;
   /** GET /me roles; an admin unless the case says otherwise. */
   roles?: string[];
+  /** Whether /me grants voice_profile create; granted unless a case says no. */
+  voiceGrant?: boolean;
 };
 
 function jsonResponse(body: unknown, status = 200) {
@@ -312,10 +314,12 @@ function stubApi(options: StubOptions = {}) {
       if (path.endsWith("/passports") && request.method === "GET") {
         return jsonResponse({ data: [] });
       }
-      // No grants, so the reporting basis stays unchangeable. The role is
-      // admin, meFixture's default, unless a case names another.
+      // Only the voice grant, so the reporting basis stays unchangeable. The
+      // role is admin, meFixture's default, unless a case names another.
       if (path.endsWith("/me") && request.method === "GET") {
-        return jsonResponse(meFixture({ allow: {}, roles: options.roles }));
+        const allow: GrantSpec =
+          options.voiceGrant === false ? {} : { voice_profile: ["create"] };
+        return jsonResponse(meFixture({ allow, roles: options.roles }));
       }
       throw new Error(`unstubbed request: ${request.method} ${request.url}`);
     }),
@@ -447,6 +451,22 @@ describe("restore into the conversational shell", () => {
     expect(await screen.findByText(/Train your writing voice/)).toBeTruthy();
     expect(screen.queryByLabelText(/Website address/)).toBeNull();
     expect(requestsTo(calls, "/voice-profiles", "GET").length).toBe(1);
+  });
+
+  it("a role that may not create a voice profile begins at connect, on a one-stop rail", async () => {
+    const calls = stubApi({
+      state: null,
+      roles: ["viewer"],
+      voiceGrant: false,
+    });
+    render(<OnboardingScreen />);
+
+    expect(
+      await screen.findByText("Connect your mail and calendar"),
+    ).toBeTruthy();
+    expect(screen.queryByText(/Train your writing voice/)).toBeNull();
+    expect(screen.getByText(/Step 1 of 1/)).toBeTruthy();
+    expect(requestsTo(calls, "/voice-profiles", "POST")).toHaveLength(0);
   });
 
   it("reopens the invite for a creator whose company is confirmed", async () => {

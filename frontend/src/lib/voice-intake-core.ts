@@ -1,5 +1,6 @@
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { ProblemError } from "./problem";
 import { problemCode, problemDetails } from "./problembody";
 import { readCorpusFile } from "./voice-corpus-file";
 import { ensureProfileId } from "./voice-profile";
@@ -312,6 +313,29 @@ function transcriptBody(
   };
 }
 
+// The first sample mints the profile, so a role that may not create one is
+// refused here. That is the server's answer and resolves as one; a body with
+// no problem code (a gateway's empty 502) is still a fault that rejects.
+async function profileOrRefusal(
+  ref: string,
+  label: string,
+): Promise<string | IntakeOutcome> {
+  try {
+    return await ensureProfileId();
+  } catch (err) {
+    if (err instanceof ProblemError && problemCode(err.problem) !== null) {
+      return {
+        kind: "refused",
+        ref,
+        label,
+        reason: refusalOf(err.problem),
+        problem: err.problem,
+      };
+    }
+    throw err;
+  }
+}
+
 // One ingest call: the profile is resolved through the shared ensureProfileId,
 // so a first sample from either surface mints the one profile rather than a
 // second beside it. A server refusal RESOLVES as a "refused" outcome; only a
@@ -322,7 +346,10 @@ async function ingest(
   transcript: boolean,
   onIssue?: () => void,
 ): Promise<IntakeOutcome> {
-  const profileId = await ensureProfileId();
+  const profileId = await profileOrRefusal(body.source_ref, label);
+  if (typeof profileId !== "string") {
+    return profileId;
+  }
   // Called at the moment this write is issued, so a caller ordering concurrent
   // ingests stamps them by when the SERVER was asked — not by when the reader
   // picked the file, which a slow read or preview would distort.
@@ -368,7 +395,10 @@ async function intakePreviewed(
   if (text.split(/\s+/).filter(Boolean).length === 0) {
     return { kind: "skipped", ref, label, reason: "empty" };
   }
-  const profileId = await ensureProfileId();
+  const profileId = await profileOrRefusal(ref, label);
+  if (typeof profileId !== "string") {
+    return profileId;
+  }
   const { data, error } = await api.POST(
     "/voice-profiles/{id}/sources/preview",
     {

@@ -41,6 +41,7 @@ export const initialConversationState: ConversationState = {
   act: "welcome",
   phase: "co.intro",
   memberPath: false,
+  voiceStep: true,
   pendingQuestion: null,
   thread: [],
   seq: 0,
@@ -205,6 +206,9 @@ function applyResume(
   if (state.memberPath && creatorOnlyResume.has(phase)) {
     phase = "vo.collecting";
   }
+  if (!state.voiceStep && resumeActs[phase] === "voice") {
+    phase = "cn.consent";
+  }
   return withEntries(state, { act: resumeActs[phase], phase });
 }
 
@@ -263,6 +267,7 @@ function applyEvent(
           act: "company",
           phase: event.companyConfirmed === true ? "co.confirmed" : "co.intro",
           memberPath: event.memberPath,
+          voiceStep: event.voiceStep ?? true,
         },
         event.recap ?? [],
       );

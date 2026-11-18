@@ -64,3 +64,46 @@ describe("useVoiceCorpus — unexpected client-side failures", () => {
     ).toBe(false);
   });
 });
+
+describe("useVoiceCorpus — a role that may not create a voice profile", () => {
+  it("says the refusal is a permission one and never suggests a retry", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        const path = new URL(request.url).pathname.replace(/^\/v1/, "");
+        if (path === "/voice-profiles" && request.method === "GET") {
+          return Response.json({
+            data: [],
+            page: { next_cursor: null, has_more: false },
+          });
+        }
+        return Response.json(
+          {
+            code: "permission_denied",
+            detail: "voice_profile.create: permission denied",
+          },
+          { status: 403 },
+        );
+      }),
+    );
+    const dispatch = vi.fn<(event: ConversationEvent) => void>();
+    const { result } = renderHook(() =>
+      useVoiceCorpus({ state: collectingState, dispatch }),
+    );
+
+    act(() => {
+      result.current.addPaste("A paragraph I actually wrote.", "Pasted text");
+    });
+
+    await waitFor(() => {
+      expect(result.current.failure?.i18nKey).toBe("common.permissionDenied");
+    });
+    expect(
+      dispatch.mock.calls.some(
+        ([event]) =>
+          event.type === "NARRATION" &&
+          event.entry.i18nKey === "ob.conv.voice.ingestUnexpected",
+      ),
+    ).toBe(false);
+  });
+});

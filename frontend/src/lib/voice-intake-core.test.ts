@@ -365,6 +365,33 @@ describe("the outcomes an intake can end as", () => {
   });
 });
 
+describe("a first sample from a role that may not create a profile", () => {
+  it("resolves the create refusal as an outcome and sends no source", async () => {
+    const sent: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        const path = new URL(request.url).pathname.replace(/^\/v1/, "");
+        sent.push(`${request.method} ${path}`);
+        if (request.method === "GET") {
+          return jsonResponse({
+            data: [],
+            page: { next_cursor: null, has_more: false },
+          });
+        }
+        return jsonResponse({ code: "permission_denied", detail: "no" }, 403);
+      }),
+    );
+    const outcome = await intakePaste("r", "Pasted text", "words I wrote");
+    expect(outcome).toMatchObject({
+      kind: "refused",
+      reason: null,
+      problem: { code: "permission_denied" },
+    });
+    expect(sent).toEqual(["GET /voice-profiles", "POST /voice-profiles"]);
+  });
+});
+
 // The server upserts on source_ref, so any two sources sharing a key become
 // ONE row and the later silently replaces the earlier. The key is the name and
 // the content together: either half alone loses real sources.

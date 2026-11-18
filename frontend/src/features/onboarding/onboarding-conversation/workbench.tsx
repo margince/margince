@@ -210,7 +210,7 @@ export function ConversationWorkbench({
   const first = useFirstWorkbench();
   // Built here rather than per act, so four acts cannot drift into four
   // different ideas of where the journey is.
-  const stops = railStops(railState.memberPath);
+  const stops = railStops(railState.memberPath, railState.voiceStep);
   const steps = stops.map((stop) => ({
     label: t(stop.labelKey),
     state: stopState(stop.key, railState),

@@ -37,6 +37,9 @@ export type RestoreInputs = Readonly<{
   /** Whether this seat holds the admin role, the only one that may save the
    * company: any other seat walks the member path, whatever its row says. */
   mayDescribe: boolean;
+  /** Whether this seat may create a voice profile, which the first sample
+   * mints: a member without it never reaches the voice act. */
+  mayTrainVoice: boolean;
   /** Voice server truth; null when the probe was not needed (member path,
    * or the journey has not reached the voice act). */
   voice: VoiceRestoreProbe | null;
@@ -57,6 +60,8 @@ export type RestorePlan =
   | {
       kind: "start";
       memberPath: boolean;
+      /** Whether the voice act is offered (ConversationState.voiceStep). */
+      voiceStep: boolean;
       companyConfirmed: boolean;
       /** Where RESUME lands; null means the company act is still open. */
       resumeTarget: ResumePoint | null;
@@ -217,14 +222,14 @@ function recapEntries(
 
 // A member's company was confirmed before they arrived, so their plan always
 // opens confirmed. A first visit has no row and nothing to recap: the journey
-// opens at voice. A returning member resumes where their row says, and the
+// opens at voice, or at connect for a role that may not train one. A returning member resumes where their row says, and the
 // OAuth return deep link reopens connect exactly as it does for a creator.
 function memberPlan(
   inputs: RestoreInputs,
   state: OnboardingState | null,
 ): RestorePlan {
   let target: ResumePoint = "vo.collecting";
-  if (inputs.routeConnect) {
+  if (inputs.routeConnect || !inputs.mayTrainVoice) {
     target = "cn.consent";
   } else if (state !== null) {
     target = resumeTarget(state);
@@ -232,6 +237,7 @@ function memberPlan(
   return {
     kind: "start",
     memberPath: true,
+    voiceStep: inputs.mayTrainVoice,
     companyConfirmed: true,
     resumeTarget: target,
     adoptRead: null,
@@ -271,6 +277,7 @@ export function restorePlan(inputs: RestoreInputs): RestorePlan {
     return {
       kind: "start",
       memberPath,
+      voiceStep: true,
       companyConfirmed: false,
       resumeTarget: null,
       adoptRead:
@@ -282,6 +289,7 @@ export function restorePlan(inputs: RestoreInputs): RestorePlan {
   return {
     kind: "start",
     memberPath: false,
+    voiceStep: true,
     companyConfirmed: true,
     resumeTarget: target,
     adoptRead: null,
