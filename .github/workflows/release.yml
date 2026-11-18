@@ -108,6 +108,13 @@ jobs:
       # produces; both are derived from the same commit, so they agree by
       # construction — the committed sboms/ may lag the tree and must not be
       # uploaded as release artifacts.
+      # make sbom scans a git archive export, where export-subst writes the
+      # commit into REVISION. create-patch reads git objects and keeps the
+      # placeholder. Dist refuses a patch and SBOMs that disagree on a file, so
+      # the export keeps the placeholder too, until create-patch diffs the
+      # export itself.
+      - name: Keep the REVISION placeholder in the SBOM export
+        run: echo '/REVISION -export-subst' >> .git/info/attributes
       - name: Generate the SBOMs at the release commit
         run: make sbom
       - name: Cut the patch and draft the release
