@@ -55,6 +55,15 @@ const open: Metric = {
   evidence: { metric: "open_pipeline", context_id: "state" },
 };
 
+// The share is the server's, here not the 50% the two actuals would give.
+it("states the share the server measured", () => {
+  const [, target] = writtenSummary(
+    withMetrics([{ ...won, attainment: 40 }]),
+    english,
+  );
+  expect(target).toMatch(/40% reached/);
+});
+
 it("states the period's sales and the target's own actual separately", () => {
   const [sales, target] = writtenSummary(withMetrics([won]), english);
   expect(sales).toMatch(/^Won in .+: €300\.$/);

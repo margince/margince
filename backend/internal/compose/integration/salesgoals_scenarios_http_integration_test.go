@@ -21,29 +21,8 @@ import (
 )
 
 func TestProgressScenariosAreTheMonthsForecastAndClosedIsItsWonMoney(t *testing.T) {
-	e := apptest.SetupApp(t)
-	e.BootstrapWorkspace(t)
-	owner := signedInUser(t, e)
+	e, owner, month := scenarioMonth(t)
 	now := clocktest.Now(t)
-	publishEvenGoals(t, e, owner, now.Year())
-	month := fmt.Sprintf("period=month&year=%d&month=%d&scope_kind=owner&scope_id=%s", now.Year(), int(now.Month()), owner)
-	zone, err := time.LoadLocation(readProgress(t, e, month).Timezone)
-	if err != nil {
-		t.Fatal(err)
-	}
-	today := now.In(zone).Format(time.DateOnly)
-
-	stages := apptest.DiscoverSeededPipeline(t, e)
-	won := createdID(t, e, "/v1/deals", AnyMap{
-		"name": "Won this month", "pipeline_id": stages.PipelineID, "stage_id": stages.Open,
-		"source": "manual", "amount_minor": 300_000, "currency": "EUR", "expected_close_date": today,
-	})
-	mustCall(t, e, "POST", "/v1/deals/"+won+"/advance",
-		AnyMap{"to_stage_id": stages.Won, "won_without_contract_reason": "verbal"}, http.StatusOK, nil)
-	createdID(t, e, "/v1/deals", AnyMap{
-		"name": "Open this month", "pipeline_id": stages.PipelineID, "stage_id": stages.Open,
-		"source": "manual", "amount_minor": 120_000, "currency": "EUR", "expected_close_date": today,
-	})
 
 	progress := readProgress(t, e, month)
 	var forecast crmcontracts.ForecastReadings
@@ -90,5 +69,61 @@ func publishEvenGoals(t *testing.T, e *apptest.AppEnv, owner string, year int) {
 	if status, _ := planWrite(t, e, "POST", plan+"/publish", saved.Version,
 		crmcontracts.SalesGoalPublishInput{Reason: "Agreed", ConfirmAgreed: true}); status != http.StatusOK {
 		t.Fatalf("publishing → %d", status)
+	}
+}
+
+// scenarioMonth is the signed-in seller's running month against a published
+// goal, with one deal won and one open in it. It answers the Progress query.
+func scenarioMonth(t *testing.T) (*apptest.AppEnv, string, string) {
+	t.Helper()
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	owner := signedInUser(t, e)
+	now := clocktest.Now(t)
+	publishEvenGoals(t, e, owner, now.Year())
+	month := fmt.Sprintf("period=month&year=%d&month=%d&scope_kind=owner&scope_id=%s", now.Year(), int(now.Month()), owner)
+	zone, err := time.LoadLocation(readProgress(t, e, month).Timezone)
+	if err != nil {
+		t.Fatal(err)
+	}
+	today := now.In(zone).Format(time.DateOnly)
+	stages := apptest.DiscoverSeededPipeline(t, e)
+	won := createdID(t, e, "/v1/deals", AnyMap{
+		"name": "Won this month", "pipeline_id": stages.PipelineID, "stage_id": stages.Open,
+		"source": "manual", "amount_minor": 300_000, "currency": "EUR", "expected_close_date": today,
+	})
+	mustCall(t, e, "POST", "/v1/deals/"+won+"/advance",
+		AnyMap{"to_stage_id": stages.Won, "won_without_contract_reason": "verbal"}, http.StatusOK, nil)
+	createdID(t, e, "/v1/deals", AnyMap{
+		"name": "Open this month", "pipeline_id": stages.PipelineID, "stage_id": stages.Open,
+		"source": "manual", "amount_minor": 120_000, "currency": "EUR", "expected_close_date": today,
+	})
+	return e, owner, month
+}
+
+// A seat that may not read deal amounts, or may not read the forecast, gets no
+// cases. Masked cases would read short, and a forecast door would answer 403.
+// The same month answers cases before the role narrows, so the absence is the
+// role's doing.
+func TestProgressStatesNoScenariosToASeatThatCannotReadTheirAmounts(t *testing.T) {
+	for name, narrow := range map[string]func(*testing.T, *apptest.AppEnv){
+		"an amount mask": func(t *testing.T, e *apptest.AppEnv) {
+			narrowSignedInRole(t, e, "scenario_amount_mask", `{}`)
+			maskDealField(t, e, "scenario_amount_mask", "amount_minor", "always")
+		},
+		"no forecast grant": func(t *testing.T, e *apptest.AppEnv) {
+			narrowSignedInRole(t, e, "scenario_no_forecast", `{"forecast": {"create": false, "read": false, "update": false, "delete": false}}`)
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			e, _, month := scenarioMonth(t)
+			if readProgress(t, e, month).Scenarios == nil {
+				t.Fatal("the month has no scenarios before the role narrows, so their absence after proves nothing")
+			}
+			narrow(t, e)
+			if progress := readProgress(t, e, month); progress.Scenarios != nil {
+				t.Errorf("a narrowed seat reads scenarios %+v beside closed revenue %+v", progress.Scenarios, progress.Closed)
+			}
+		})
 	}
 }

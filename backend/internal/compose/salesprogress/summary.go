@@ -37,6 +37,8 @@ var summaryWords = struct{ Goal, Closed, Missing, Over, Completion, Planned, Pro
 // with the key of the evaluation they came from. The page's own read answers
 // it, so the summary holds no figure the reader's page does not.
 func (h Reading) SummaryInput(ctx context.Context, params crmcontracts.GetSalesProgressParams) (salesassessment.Input, string, error) {
+	// The summary cites no scenario, so it reads no forecast.
+	h.Forecast = nil
 	var progress crmcontracts.SalesProgress
 	err := h.DB.TxIsolated(ctx, pgx.RepeatableRead, func(tx pgx.Tx) error {
 		var err error

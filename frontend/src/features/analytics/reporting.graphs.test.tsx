@@ -317,6 +317,38 @@ it.each([
   expect(screen.getByText(label, { exact: false })).toBeVisible();
 });
 
+// The progress line words what the server sent, which here is not what the
+// target and actual would give (6 and 85%). A zero target has a gap and no
+// share.
+it.each([
+  { delta: -10, attainment: 80, line: "Remaining: 10 · 80% of target" },
+  { delta: 34, attainment: undefined, line: "Remaining: 0" },
+])("words the server's figures as $line", ({ delta, attainment, line }) => {
+  const evaluation = {
+    ...sdrEvaluation,
+    metrics: sdrEvaluation.metrics.map((metric) =>
+      metric.id === "meetings_held"
+        ? {
+            ...metric,
+            target: attainment == null ? 0 : 40,
+            target_delta: delta,
+            attainment,
+          }
+        : metric,
+    ),
+  };
+  installFetchStub(reportingStoryRoutes(evaluation));
+  render(
+    <StoryProviders client={reportingCatalogClient()}>
+      <ReportingCharts evaluation={evaluation} onEvidence={() => {}} />
+    </StoryProviders>,
+  );
+  const lines = [...document.querySelectorAll("p.t-caption")].map(
+    (node) => node.textContent,
+  );
+  expect(lines).toContain(line);
+});
+
 it("omits unassigned target columns for SDR outcomes", async () => {
   const user = userEvent.setup({ delay: null });
   const evaluation = {
