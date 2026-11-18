@@ -53,8 +53,9 @@ export type DirectSendCommand = Readonly<{
   shownReasons: readonly string[];
 }>;
 
-// A decision retried after a lost answer reuses its key. The server then
-// replays the send it recorded instead of answering that the review is gone.
+// A decision retried after a lost answer reuses its key, whichever reviews
+// were decided in between. The server then replays the send it recorded
+// instead of answering that the review is gone.
 const decisionKeys = intentKeys();
 
 export async function directSend(command: DirectSendCommand): Promise<string> {
@@ -69,15 +70,16 @@ export async function directSend(command: DirectSendCommand): Promise<string> {
     // modal's confirm once ticked, or Send anyway beside its warning.
     acknowledged: true as const,
   };
-  const { data, error, response } = await api.POST(
-    "/communication-reviews/{id}/direct-send",
-    {
-      params: {
-        path: { id: command.reviewId },
-        header: { "Idempotency-Key": decisionKeys([command.reviewId, body]) },
-      },
-      body,
-    },
+  const { data, error, response } = await decisionKeys(
+    [command.reviewId, body],
+    (key) =>
+      api.POST("/communication-reviews/{id}/direct-send", {
+        params: {
+          path: { id: command.reviewId },
+          header: { "Idempotency-Key": key },
+        },
+        body,
+      }),
   );
   // Success is a real 2xx WITH a body: openapi-fetch reports a falsy error and
   // undefined data for a bodiless non-2xx, which would otherwise read as a

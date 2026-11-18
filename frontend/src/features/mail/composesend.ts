@@ -4,7 +4,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { api } from "../../api/client";
-import { intentKeys } from "../../api/idempotencykey";
+import { type IntentKeys, intentKeys } from "../../api/idempotencykey";
 import type { components } from "../../api/schema";
 import { useLawfulBasisGate } from "../../components/lawfulbasiswarning";
 import { useSettledValue } from "../../design-system/debouncedsearch";
@@ -39,10 +39,7 @@ type Activity = components["schemas"]["Activity"];
 // The one place the send's origin is chosen. An anchor sends a reply; no
 // anchor sends the account-started message with its links. A channel reply
 // is anchored by nature.
-async function sendFrom(
-  args: SendRequest,
-  keyFor: (intent: unknown) => string,
-) {
+async function sendFrom(args: SendRequest, keyed: IntentKeys) {
   if (args.isChannelReply) {
     if (!args.activityId) {
       // The mail arm would post a channel message as an email, so a channel
@@ -56,18 +53,22 @@ async function sendFrom(
       body: args.channelBody,
     });
   }
-  if (args.activityId) {
-    const header = { "Idempotency-Key": keyFor([args.activityId, args.mail]) };
-    return api.POST("/activities/{id}/send-email", {
-      params: { path: { id: args.activityId }, header },
-      body: args.mail,
-    });
+  const anchor = args.activityId;
+  if (anchor) {
+    return keyed([anchor, args.mail], (key) =>
+      api.POST("/activities/{id}/send-email", {
+        params: { path: { id: anchor }, header: { "Idempotency-Key": key } },
+        body: args.mail,
+      }),
+    );
   }
   const body = { ...args.mail, links: args.links };
-  return api.POST("/emails", {
-    params: { header: { "Idempotency-Key": keyFor(body) } },
-    body,
-  });
+  return keyed(body, (key) =>
+    api.POST("/emails", {
+      params: { header: { "Idempotency-Key": key } },
+      body,
+    }),
+  );
 }
 
 // What the send is waiting for, in reading order. A pressed Send names each
