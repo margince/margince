@@ -29,6 +29,9 @@ const (
 	DealBasisSoleOpenDeal DealBasis = "sole_open_deal"
 	DealBasisStakeholder  DealBasis = "stakeholder"
 	DealBasisAmbiguous    DealBasis = "ambiguous"
+	// DealBasisNamedStakeholder is a seat of a contact only a header names. It
+	// asks a colleague and never files by itself.
+	DealBasisNamedStakeholder DealBasis = "named_stakeholder"
 )
 
 // NeedsTopicCheck says which verdicts are suggestions

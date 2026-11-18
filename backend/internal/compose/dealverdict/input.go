@@ -47,14 +47,13 @@ type Input struct {
 	Prior        []PriorAction
 	Activities   []Activity
 	// PrivateMail is mail limited to its participants and filed on the deal.
-	// It shows the deal was worked, so only its direction and date reach the
-	// prompt, never a subject, body or address.
+	// It shows the deal was worked, so only its date reaches the prompt, never
+	// a direction, subject, body or address.
 	PrivateMail []PrivateMail
 }
 
-// PrivateMail is one email the deal's whole audience may not read.
+// PrivateMail is the date of one email the deal's whole audience may not read.
 type PrivateMail struct {
-	Direction  string
 	OccurredAt time.Time
 }
 

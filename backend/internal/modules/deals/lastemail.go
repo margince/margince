@@ -24,13 +24,11 @@ import (
 // a hundred times on a board that draws a hundred cards.
 //
 // An AGGREGATE about mail, so it asks the audience the way last_activity_at
-// does. A message limited to its participants counts when it is filed on the
-// deal, by date and direction only: the chip carries no subject. A mail no
-// human wrote, the installation's own included, is not the buyer engaging. The
-// clauses are the shared spellings, so a new system origin or audience reaches
-// this reader unedited.
+// does. A colleague who may not read a message must not see its date either. A mail no human wrote, the installation's own
+// included, is not the buyer engaging. The clauses are the shared spellings,
+// so a new system origin or audience reaches this reader unedited.
 
-// attachLastEmail puts each deal's newest email that counts on the wire
+// attachLastEmail puts each deal's newest workspace-visible email on the wire
 // shape, leaving it absent where nobody has mailed about the deal.
 func attachLastEmail(ctx context.Context, tx pgx.Tx, deals []crmcontracts.Deal) error {
 	if len(deals) == 0 {
@@ -48,7 +46,7 @@ func attachLastEmail(ctx context.Context, tx pgx.Tx, deals []crmcontracts.Deal) 
 		   AND a.kind = 'email'
 		   AND a.archived_at IS NULL AND `+relstrength.ExternalActivityCountsSQL("a", "now()")+`
 		   AND `+relstrength.WrittenByHumanSQL("a")+`
-		   `+auth.OriginIsEngagement("a")+auth.AudienceWorkspaceOrOnDeal("a", "l.deal_id")+`
+		   `+auth.OriginIsEngagement("a")+auth.AudienceWorkspaceOnly("a")+`
 		 ORDER BY l.deal_id, a.occurred_at DESC, a.id DESC`, dealIDs)
 	if err != nil {
 		return fmt.Errorf("deals: reading the newest email on a page of deals: %w", err)

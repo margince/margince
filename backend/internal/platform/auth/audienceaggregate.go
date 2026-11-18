@@ -5,7 +5,6 @@ package auth
 
 import (
 	"context"
-	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
@@ -42,21 +41,11 @@ func AudienceWorkspaceOnly(alias string) string {
 	return " AND " + WorkspaceAudienceSQL(alias) + " AND (" + alias + ".kind <> 'task' OR " + alias + ".source_activity_id IS NULL AND coalesce(" + alias + ".source_system, '') <> '" + provenance.LeadRepliedSource + "' OR EXISTS (SELECT 1 FROM activity follow_up_source WHERE follow_up_source.id = " + provenance.TaskSourceActivitySQL(alias) + " AND " + WorkspaceAudienceSQL("follow_up_source") + " AND follow_up_source.restricted_at IS NULL))"
 }
 
-// AudienceWorkspaceOrOnDeal is AudienceWorkspaceOnly for a reader about one
-// deal: it also admits a message limited to its participants when that message
-// is filed on the deal. Such a message shows the deal was worked, so its date
-// and direction count. Its content stays with its audience. deal is the SQL
-// expression naming the deal's id. Mail filed only on a contact is not admitted.
-func AudienceWorkspaceOrOnDeal(alias, deal string) string {
-	return " AND (" + strings.TrimPrefix(AudienceWorkspaceOnly(alias), " AND ") + " OR (" + PrivateAudienceSQL(alias) + " AND " + alias + ".kind <> 'task' AND EXISTS (" +
-		"SELECT 1 FROM activity_link private_on_deal WHERE private_on_deal.activity_id = " + alias +
-		".id AND private_on_deal.deal_id = " + deal + ")))"
-}
-
-// PrivateAudienceSQL admits an activity limited to its participants or to a
-// chosen set, the rows a workspace-wide reader may not read.
+// PrivateAudienceSQL admits an activity limited to its participants. Only the
+// deal's activity clock and the verdict's dated notice may count such a row.
+// They use its date alone. No reader shows its id, direction, subject or sender.
 func PrivateAudienceSQL(alias string) string {
-	return alias + ".audience IN ('participants', 'selected')"
+	return alias + ".audience = 'participants'"
 }
 
 // ReaderlessAudience narrows the system principal to the rows every member may

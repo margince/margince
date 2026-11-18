@@ -5,13 +5,13 @@
 
 package integration
 
-// Deal.last_email: the newest email filed on a deal, carried by the list the
-// board draws and by the single read the record page makes. A note newer than
-// every mail does not move it, because it is about MAIL.
-//
-// A mail limited to its participants moves it by date and direction. The card
-// carries no subject. Archiving the newest mail hands the reading to the next
-// one: it is computed from the live timeline, not kept as a high-water mark.
+// Deal.last_email: the newest email the whole workspace may see on a deal,
+// carried by the list the board draws and by the single read the record page
+// makes. A note newer than every mail does not move it, because it is about
+// MAIL; a mail limited to its participants does not move it, because a
+// colleague outside that audience must not read its date off a card; archiving
+// the newest mail hands the reading to the next one, because it is computed
+// from the live timeline rather than kept as a high-water mark.
 
 import (
 	"testing"
@@ -24,7 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func TestDealLastEmail_TheNewestMailThatCounts(t *testing.T) {
+func TestDealLastEmail_TheNewestWorkspaceMailAndOnlyThat(t *testing.T) {
 	e := Setup(t)
 	pipeline, open := pipelineFixtureFor(e.Admin(), t, e.Deals)
 	mailed, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
@@ -69,8 +69,8 @@ func TestDealLastEmail_TheNewestMailThatCounts(t *testing.T) {
 	// Newer than every mail, and not mail: the reading is about the exchange
 	// by email, and a note a colleague typed is not one.
 	log("note", "", noted)
-	// Newest of all, and held to its participants: it counts by date and
-	// direction, and the card carries nothing else of it.
+	// Newest of all, and held to its participants: an admin who is not on it
+	// must not learn its date from the card.
 	heldMail := log("email", "inbound", held)
 	if _, err := e.Activities.SetAudience(e.Admin(), ids.From[ids.ActivityKind](heldMail),
 		activities.SetAudienceInput{Audience: "participants"}); err != nil {
@@ -91,9 +91,9 @@ func TestDealLastEmail_TheNewestMailThatCounts(t *testing.T) {
 	}
 
 	// The list — what the board draws — and the single read agree, and both
-	// point at the private mail filed on the deal.
+	// point at the reply: the newest mail everybody may see.
 	listed := listDealsByID(t, e)
-	expectLast("list", listed[ids.UUID(mailed.Id)].LastEmail, held, crmcontracts.DealLastEmailDirectionInbound)
+	expectLast("list", listed[ids.UUID(mailed.Id)].LastEmail, replied, crmcontracts.DealLastEmailDirectionInbound)
 	if got := listed[ids.UUID(quiet.Id)].LastEmail; got != nil {
 		t.Errorf("a deal nobody mailed about carries last_email %+v, want null", got)
 	}
@@ -101,17 +101,7 @@ func TestDealLastEmail_TheNewestMailThatCounts(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expectLast("single read", single.LastEmail, held, crmcontracts.DealLastEmailDirectionInbound)
-
-	// Archiving the private mail hands the reading back to the reply.
-	if _, err := e.Activities.ArchiveActivity(e.Admin(), ids.From[ids.ActivityKind](heldMail), nil); err != nil {
-		t.Fatal(err)
-	}
-	single, err = e.Deals.GetDeal(e.Admin(), mailedID, storekit.LiveOnly)
-	if err != nil {
-		t.Fatal(err)
-	}
-	expectLast("after archiving the private mail", single.LastEmail, replied, crmcontracts.DealLastEmailDirectionInbound)
+	expectLast("single read", single.LastEmail, replied, crmcontracts.DealLastEmailDirectionInbound)
 
 	// Archiving the reply hands the reading to the mail before it, direction
 	// and all: a recompute from what is live, never a mark that outlives it.

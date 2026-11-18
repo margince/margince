@@ -108,13 +108,14 @@ func openDealsStaked(ctx context.Context, tx pgx.Tx, company *ids.UUID, contacts
 	if company != nil {
 		companyClause = fmt.Sprintf(" AND d.company_id = $%d", arg(*company))
 	}
+	limitPos := fmt.Sprintf("$%d", arg(limit))
 	return collectCandidates(ctx, tx, `SELECT d.id FROM deal d
 		 WHERE `+openDealSQL+companyClause+`
 		   AND EXISTS (SELECT 1 FROM relationship r
 		                WHERE r.deal_id = d.id AND r.kind = 'deal_stakeholder'
 		                  AND r.contact_id = ANY($1) AND r.archived_at IS NULL AND r.ended_at IS NULL
 		                  AND (`+edgeScope+`))
-		 ORDER BY d.id LIMIT `+fmt.Sprintf("$%d", arg(limit)), args...)
+		 ORDER BY d.id LIMIT `+limitPos, args...)
 }
 
 // maxOfferedDeals bounds the deals one deal question records as offered.

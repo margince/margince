@@ -44,7 +44,7 @@ func TestCaptureFilesAStakeholdersMailOnADealAtAnotherCompany(t *testing.T) {
 	w.stakeholder(t, carol, deal)
 
 	env.syncSent(t, map[string]bool{"cx-out@myco.example": true},
-		mailFrom("carol@consultancy.example", "cx-in@consultancy.example", "", "rollout plan"),
+		authenticated(mailFrom("carol@consultancy.example", "cx-in@consultancy.example", "", "rollout plan"), "consultancy.example"),
 		email(captureOwner, "", "carol@consultancy.example", "cx-out@myco.example", "cx-in@consultancy.example"),
 	)
 
@@ -66,9 +66,10 @@ func TestCaptureAsksWhenAStakeholderHoldsSeatsAtTwoCompanies(t *testing.T) {
 	w.stakeholder(t, carol, acme)
 	w.stakeholder(t, carol, beta)
 
-	env.sync(t, mailFrom("carol@consultancy.example", "cx2@consultancy.example", "", "rollout plan"))
+	env.syncSent(t, map[string]bool{"cx2@myco.example": true},
+		email(captureOwner, "", "carol@consultancy.example", "cx2@myco.example", ""))
 
-	wantDeals(t, e, "cx2@consultancy.example")
+	wantDeals(t, e, "cx2@myco.example")
 	if n, _ := whichDealQuestions(t, e); n != 1 {
 		t.Fatalf("%d deal questions for two seats, want exactly 1", n)
 	}
@@ -113,4 +114,27 @@ func TestCaptureKeepsTheMailsCompanyAheadOfASeatElsewhere(t *testing.T) {
 
 	env.sync(t, mailFrom("alice@acme.example", "cx5@acme.example", "", "status"))
 	wantDeals(t, e, "cx5@acme.example", own)
+}
+
+// A seat named only in a header is no proof. An unauthenticated mail from the
+// stakeholder, and an authenticated stranger's mail that copies them, file
+// nothing. Nobody is asked either, because an inbound mail names no colleague
+// the sender could not have typed.
+func TestCaptureFilesNothingOnAHeaderNamedSeat(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	w := newDealWorld(t, e)
+	carol := w.employee(t, "carol@consultancy.example", w.company(t, "Consultancy"))
+	deal := w.deal(t, "Acme rollout")
+	w.stakeholder(t, carol, deal)
+
+	env.sync(t, mailFrom("carol@consultancy.example", "cx6@consultancy.example", "", "rollout plan"))
+	env.sync(t, authenticated(mailFrom("eve@stranger.example", "cx7@stranger.example", "", "rollout plan",
+		"carol@consultancy.example"), "stranger.example"))
+
+	wantDeals(t, e, "cx6@consultancy.example")
+	wantDeals(t, e, "cx7@stranger.example")
+	if n, _ := whichDealQuestions(t, e); n != 0 {
+		t.Fatalf("%d deal questions for unproven mail, want none", n)
+	}
 }

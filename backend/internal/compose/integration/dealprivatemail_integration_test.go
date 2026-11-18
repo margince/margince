@@ -6,16 +6,16 @@
 package integration
 
 // A mail only its participants may read still shows its deal was worked. Filed
-// on the deal, it moves the deal's clock, its last-email chip and its
-// stakeholder's engagement by date and direction. It moves no contact or
-// company number, and a private mail filed only on a contact counts for no deal.
+// on the deal, it moves the deal's clock by its date alone. The last-email chip
+// and the stakeholder's engagement ignore it, and no contact or company date
+// moves. A private mail filed only on a contact counts for no deal.
 
 import (
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
@@ -86,7 +86,7 @@ func (w privateMailWorld) engaged(t *testing.T) []ids.UUID {
 	return out
 }
 
-func TestAPrivateMailOnTheDealCountsByDateAndDirection(t *testing.T) {
+func TestAPrivateMailOnTheDealMovesOnlyItsClock(t *testing.T) {
 	w := newPrivateMailWorld(t)
 	w.privateMail(t, "inbound", 1, true)
 	w.privateMail(t, "outbound", 3, true)
@@ -99,12 +99,11 @@ func TestAPrivateMailOnTheDealCountsByDateAndDirection(t *testing.T) {
 	if deal.LastActivityAt == nil || !deal.LastActivityAt.Equal(want) {
 		t.Errorf("last_activity_at = %v, want the private mail's date %v", deal.LastActivityAt, want)
 	}
-	if deal.LastEmail == nil || !deal.LastEmail.OccurredAt.Equal(want) ||
-		deal.LastEmail.Direction == nil || *deal.LastEmail.Direction != crmcontracts.DealLastEmailDirectionInbound {
-		t.Errorf("last_email = %+v, want the private inbound mail at %v", deal.LastEmail, want)
+	if deal.LastEmail != nil {
+		t.Errorf("last_email = %+v, want none: it would show a private mail's direction", deal.LastEmail)
 	}
-	if got := w.engaged(t); len(got) != 1 || got[0] != w.contact {
-		t.Errorf("engaged stakeholders = %v, want the contact who exchanged private mail on the deal", got)
+	if got := w.engaged(t); len(got) != 0 {
+		t.Errorf("engaged stakeholders = %v, want none: engagement would reveal private mail", got)
 	}
 	if n := w.e.WsCount(t, `SELECT count(*) FROM contact WHERE id = $1 AND last_activity_at IS NOT NULL`, w.contact); n != 0 {
 		t.Error("a private mail moved the contact's last_activity_at")

@@ -25,13 +25,16 @@ const sqlUnscoped = "true"
 // dealFacts is what the rule reads about one mail, all of it recorded on the
 // mail's own rows. outcome is set when the rule has nothing to decide.
 type dealFacts struct {
-	meeting   bool
-	outcome   DealOutcome
-	activity  ids.ActivityID
-	project   ids.UUID
-	contacts  []ids.UUID
-	companies []ids.UUID
-	thread    []ids.UUID
+	meeting  bool
+	outcome  DealOutcome
+	activity ids.ActivityID
+	project  ids.UUID
+	contacts []ids.UUID
+	// provenContacts are the contacts whose part in the mail no header can forge.
+	// They are the authenticated sender, and the recipients of mail we sent.
+	provenContacts []ids.UUID
+	companies      []ids.UUID
+	thread         []ids.UUID
 	// topicMemo is the digest of the topic question last answered for it.
 	topicMemo string
 }
@@ -66,6 +69,9 @@ func readDealFacts(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, re
 		return facts, nil
 	}
 	if facts.contacts, err = mailContacts(ctx, tx, activityID); err != nil {
+		return facts, err
+	}
+	if facts.provenContacts, err = provenMailContacts(ctx, tx, activityID); err != nil {
 		return facts, err
 	}
 	if facts.companies, err = mailCompanies(ctx, tx, activityID, facts.contacts); err != nil {
@@ -162,11 +168,25 @@ func decideByRule(ctx context.Context, tx pgx.Tx, facts dealFacts, candidates De
 	if err != nil || verdict.Outcome != DealNone || len(facts.contacts) == 0 {
 		return verdict, err
 	}
-	// Nothing at the mail's company decided. A seat on an open deal at another
-	// company still ties the mail to it, as for a consultant on a client's deal.
-	// Seats on two such deals are a question.
-	staked, err := candidates.OpenDealsOfStakeholders(ctx, tx, facts.contacts, 2)
-	return withBasis(oneDeal(staked, WhichDeal{StakeholderIDs: facts.contacts}), DealBasisStakeholder, DealBasisAmbiguous), err
+	return decideByStakeholderElsewhere(ctx, tx, facts, candidates)
+}
+
+// decideByStakeholderElsewhere ties the mail to an open deal at another company
+// through a seat, as for a consultant on a client's deal. A seat of a proven
+// participant files the mail. A seat of a contact only named in a header asks a
+// colleague instead, because a sender could name anyone there.
+func decideByStakeholderElsewhere(ctx context.Context, tx pgx.Tx, facts dealFacts, candidates DealCandidates) (DealVerdict, error) {
+	if len(facts.provenContacts) > 0 {
+		staked, err := candidates.OpenDealsOfStakeholders(ctx, tx, facts.provenContacts, 2)
+		if err != nil || len(staked) > 0 {
+			return withBasis(oneDeal(staked, WhichDeal{StakeholderIDs: facts.provenContacts}), DealBasisStakeholder, DealBasisAmbiguous), err
+		}
+	}
+	named, err := candidates.OpenDealsOfStakeholders(ctx, tx, facts.contacts, 1)
+	if err != nil || len(named) == 0 {
+		return DealVerdict{Outcome: DealNone}, err
+	}
+	return DealVerdict{Outcome: DealAmbiguous, Question: WhichDeal{StakeholderIDs: facts.contacts}, Basis: DealBasisNamedStakeholder}, nil
 }
 
 // decideByCompany is the rungs that start from the mail's company: its thread,
@@ -245,6 +265,32 @@ func mailContacts(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID) ([]
 	contacts, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
 	if err != nil {
 		return nil, fmt.Errorf("capture: reading the mail's participants: %w", err)
+	}
+	return contacts, nil
+}
+
+// provenMailContacts is the mail's contacts that a sender cannot add by typing
+// a header. They are the From of inbound mail with an authenticated sender, and
+// the To and Cc of mail a colleague sent. A Cc on a stranger's mail proves nothing.
+func provenMailContacts(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID) ([]ids.UUID, error) {
+	if !auth.ReadGranted(ctx, "contact") {
+		return nil, nil
+	}
+	rows, err := tx.Query(ctx, `
+		SELECT DISTINCT p.contact_id
+		  FROM activity a
+		  JOIN activity_participant p ON p.activity_id = a.id AND p.contact_id IS NOT NULL
+		  JOIN contact c ON c.id = p.contact_id AND c.archived_at IS NULL
+		 WHERE a.id = $1
+		   AND (`+correspondence.AuthenticatedInboundSQL("a")+` AND p.role = 'from'
+		        OR `+correspondence.OurOutboundSQL("a")+` AND p.role IN ('to', 'cc'))
+		 ORDER BY p.contact_id`, activityID)
+	if err != nil {
+		return nil, fmt.Errorf("capture: reading the mail's proven participants: %w", err)
+	}
+	contacts, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return nil, fmt.Errorf("capture: reading the mail's proven participants: %w", err)
 	}
 	return contacts, nil
 }

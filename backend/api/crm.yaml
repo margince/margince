@@ -56682,20 +56682,21 @@ components:
         close_date_provisional: { type: boolean, readOnly: true, description: 'True while the close date is a machine-computed replacement awaiting human confirmation; a provisional deal stays out of the Likely forecast. Cleared when a human sets the date.' }
         wait_until: { type: [string, 'null'], format: date, description: "'Customer asked us to wait until' date; suppresses the stalled flag but not the overdue close-date flag." }
         closed_at: { type: [string, 'null'], format: date-time }
-        last_activity_at: { type: [string, 'null'], format: date-time, description: 'The newest `occurred_at` at or before now of an activity filed under the deal, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. Drives the deterministic stalled flag. A message limited to its participants counts by its date alone, so a deal worked through private mail does not read as stalled; its content stays with its audience, and no contact or account date moves for it.' }
+        last_activity_at: { type: [string, 'null'], format: date-time, description: 'The newest `occurred_at` at or before now of an activity filed under the deal, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. Drives the deterministic stalled flag. A message limited to its participants counts by its date alone, so a deal worked through private mail does not read as stalled. Its content, direction and sender stay with its audience, a message limited to a chosen set of people does not count, and no contact or account date moves for it.' }
         stalled: { type: boolean, readOnly: true, description: 'Derived — no activity past the threshold (absolute duration). A booked workspace-audience meeting ahead keeps the deal off stalled until it starts or is called off.' }
         last_email:
           allOf: [{ $ref: '#/components/schemas/DealLastEmail' }]
           nullable: true
           readOnly: true
           description: >-
-            The newest email filed on this deal — what a board card states as "last mail,
-            N days ago" beside the deal, so a rep reads the silence without opening every
-            card. Null on a deal nobody has mailed about. Counts what `last_activity_at`
-            counts, narrowed to mail, and never the product's own system writing: a mail
-            the installation sent itself is not the buyer engaging. A message limited to
-            its participants counts by date and direction only, and the card carries no
-            subject or body of it.
+            The newest email on this deal that the whole workspace may see — what a board
+            card states as "last mail, N days ago" beside the deal, so a rep reads the
+            silence without opening every card. Null on a deal nobody has mailed about.
+            Counts what `last_activity_at` counts, narrowed to mail: workspace-audience rows
+            only, and never the product's own system writing — a message limited to its
+            participants must not move a date every colleague reads, and a mail the
+            installation sent itself is not the buyer engaging. The rows a reader may
+            discover through `GET /activities` can therefore be newer than this instant.
         source: { type: string }
         captured_by: { type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.' }
         created_by:

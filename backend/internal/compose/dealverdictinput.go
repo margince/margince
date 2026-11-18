@@ -171,11 +171,11 @@ func readVerdictActivities(ctx context.Context, tx pgx.Tx, deal ids.UUID, read *
 	return rows.Err()
 }
 
-// readVerdictPrivateMail reads the direction and date of the deal's mail that
+// readVerdictPrivateMail reads the date of the deal's mail that
 // only its participants may read. Nothing else leaves the row.
 func readVerdictPrivateMail(ctx context.Context, tx pgx.Tx, deal ids.UUID, read *dealVerdictRead) error {
 	rows, err := tx.Query(ctx, `
-		SELECT coalesce(a.direction, ''), a.occurred_at, greatest(a.created_at, l.created_at)
+		SELECT a.occurred_at, greatest(a.created_at, l.created_at)
 		  FROM activity_link l JOIN activity a ON a.id = l.activity_id
 		 WHERE l.deal_id = $1 AND a.archived_at IS NULL AND a.kind = 'email'
 		   AND `+auth.PrivateAudienceSQL("a")+` AND `+relstrength.OriginIsEngagementSQL("a")+`
@@ -187,7 +187,7 @@ func readVerdictPrivateMail(ctx context.Context, tx pgx.Tx, deal ids.UUID, read 
 	for rows.Next() {
 		var mail dealverdict.PrivateMail
 		var arrived time.Time
-		if err := rows.Scan(&mail.Direction, &mail.OccurredAt, &arrived); err != nil {
+		if err := rows.Scan(&mail.OccurredAt, &arrived); err != nil {
 			return err
 		}
 		read.in.PrivateMail = append(read.in.PrivateMail, mail)
