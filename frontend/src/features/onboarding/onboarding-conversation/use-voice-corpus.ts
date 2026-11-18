@@ -8,16 +8,14 @@ import { problemMessage } from "../../../lib/problem";
 import { problemCode } from "../../../lib/problembody";
 import { PROBLEM_CODE_COPY } from "../../../lib/problemcodecopy";
 import { isAcceptedCorpusFile } from "../../../lib/voice-corpus-file";
-import type {
-  IntakeOutcome,
-  RefusalReason,
-} from "../../../lib/voice-intake-core";
+import type { IntakeOutcome } from "../../../lib/voice-intake-core";
 import {
   intakeFile,
   intakePaste,
   intakeTranscript,
   sourceRef,
 } from "../../../lib/voice-intake-core";
+import type { RefusalReason } from "../../../lib/voice-refusal";
 import type {
   ConversationEvent,
   ConversationState,

@@ -5,10 +5,10 @@ import {
   intakePaste,
   intakeTranscript,
   intakeUpload,
-  refusalOf,
   routePreview,
   sourceRef,
 } from "./voice-intake-core";
+import { refusalOf } from "./voice-refusal";
 
 // The intake core is what both surfaces that collect writing samples run on.
 // What it decides — what a file honestly is, which body says so, and what the
