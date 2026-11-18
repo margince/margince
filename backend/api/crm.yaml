@@ -61225,11 +61225,11 @@ components:
 
     MailDraftAnchorType:
       type: string
-      enum: [activity, contact, company, deal, lead, project]
+      enum: [activity, forward, contact, company, deal, lead, project]
       x-extensible-enum: true
       description: |
-        What the composer opened against: `activity` for a reply to that message, or the
-        record a new conversation starts from.
+        What the composer opened against: `activity` for a reply to that message, `forward`
+        for that message sent on to someone new, or the record a new conversation starts from.
     MailDraftGround:
       description: >-
         One record the draft was written from. A saved agent draft keeps these

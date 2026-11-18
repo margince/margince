@@ -7716,6 +7716,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.notAnAddress_other":
     "Không phải địa chỉ email: {parts}. Sửa hoặc xóa.",
   "compose.savedDraftLoad": "Tải phiên bản đã lưu",
+  "compose.savedDraftFoundTitle": "Bạn có một bản nháp đã lưu ở đây",
+  "compose.savedDraftFoundBody":
+    "Bản nháp có nội dung khác với nội dung đang hiển thị. Mở bản nháp để tiếp tục, hoặc thay nó bằng nội dung đang hiển thị.",
+  "compose.savedDraftLoadFound": "Mở bản nháp đã lưu",
+  "compose.savedDraftReplace": "Thay bằng nội dung này",
   "compose.aiDisclosureTitle": "Bản nháp có AI hỗ trợ",
   "compose.aiDisclosureFallback":
     "Bản nháp này do AI viết. Xem lại và chỉnh sửa trước khi gửi.",
@@ -7964,6 +7969,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Tin nhắn này nêu một mục đích mà Margince không nhận ra. Chọn lý do liên hệ trong danh sách.",
   "sendPermission.reason.unknownPurposeFact":
     "Tin nhắn này nêu một mục đích mà Margince không nhận ra.",
+  "sendPermission.reason.noReason":
+    "Tin nhắn này không nêu lý do liên hệ, và chuỗi thư cũng không cho thấy lý do nào. Chọn lý do liên hệ trong danh sách.",
+  "sendPermission.reason.noReasonFact":
+    "Tin nhắn này không nêu lý do liên hệ, và chuỗi thư cũng không cho thấy lý do nào.",
   "sendPermission.reason.claimContradicts":
     "Lý do liên hệ bạn chọn không khớp với chuỗi thư này. Chọn lý do khác, hoặc để trống để Margince tự xác định từ chuỗi thư.",
   "sendPermission.reason.claimContradictsFact":

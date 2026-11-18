@@ -250,7 +250,7 @@ To read a whole thread in Margince, press an email on the **History** tab. The t
 2. Press the "to …" line under a sender to see the whole envelope and where it is filed.
 3. At the foot, **Reply** answers in the thread, and **Forward** starts a new email with the message in it. **More actions** holds **File under another record…**.
 
-**Reply** and **Forward** open the composer at the bottom of the page. The thread comes back when you close the composer, and after a reply it says "Sent and added to this thread." A forward does not carry the message's files.
+**Reply** and **Forward** open the composer at the bottom of the page. The thread comes back when you close the composer, and after a reply it says "Sent and added to this thread." A forward does not carry the message's files. A forward keeps its own saved draft, apart from a reply and from a new email to the same contact.
 Also called: open an email, read a conversation, forward an email.
 
 ### How do I move an email to the right contact or deal?

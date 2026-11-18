@@ -9,17 +9,16 @@ import {
 } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { components } from "../../api/schema";
+import { paragraphsFrom } from "../../design-system/richtext";
 import { type Toast, useOwnToast, useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import { problemCodeOf, problemMessageOf } from "../../lib/problem";
-import { stripEveryKeyTag } from "../projects/projectrecord";
 import type { ChosenFile } from "./composeattachments";
 import { type DraftKeeper, saveOutcome, writeKept } from "./composeautosave";
 import {
   deleteDraft,
   draftKey,
   groundedFiling,
-  type MailDraft,
   readDraft,
   type SavedDraftAnchor,
   type SavedDraftFields,
@@ -27,7 +26,13 @@ import {
   writeDraft,
 } from "./composesaveddraftcalls";
 import { fieldsOfDraft, sameFields } from "./composesaveddraftfields";
-import { replySubject } from "./replysubject";
+import {
+  closeStep,
+  composerDefaults,
+  savedDraftSettled,
+  unsavedWords,
+  wroteSomething,
+} from "./composesaveddraftrules";
 
 export { SavedDraftNotices } from "./composesaveddraftnotices";
 
@@ -86,71 +91,6 @@ export function useDraftRestore(input: {
   );
 }
 
-// Whether the reader put anything in the composer it did not put there itself.
-// The thread's counterparty in To and the reply subject are the composer's own
-// defaults, so a reply opened and closed untouched saves nothing. A file, a
-// reason or a send time is the reader's choice, and is kept like a word.
-function wroteSomething(
-  fields: SavedDraftFields,
-  defaults: Readonly<{ recipient?: string; subject: string; intent?: string }>,
-): boolean {
-  const subject = stripEveryKeyTag(fields.subject).trim();
-  return (
-    fields.body.trim() !== "" ||
-    (fields.editorState?.intent ?? "").trim() !==
-      (defaults.intent ?? "").trim() ||
-    fields.cc.length > 0 ||
-    fields.bcc.length > 0 ||
-    fields.to.some((address) => address !== defaults.recipient) ||
-    (subject !== "" && subject !== defaults.subject.trim()) ||
-    fields.files.length > 0 ||
-    fields.context !== "" ||
-    fields.sendAt !== ""
-  );
-}
-
-// A file the save left out stays on screen as the reader chose it, so this
-// composer's own save is measured against what it sent.
-function unsavedWords(
-  state: Readonly<{
-    fields: SavedDraftFields;
-    held: MailDraft | null;
-    save: Readonly<{
-      data: MailDraft | undefined;
-      variables: Readonly<{ fields: SavedDraftFields }> | undefined;
-    }>;
-    defaults: Parameters<typeof wroteSomething>[1];
-  }>,
-): boolean {
-  const { held, save } = state;
-  if (!held) return wroteSomething(state.fields, state.defaults);
-  const ownSave =
-    save.data?.id === held.id && save.data.version === held.version;
-  const sent = ownSave ? save.variables?.fields : undefined;
-  return !sameFields(state.fields, sent ?? fieldsOfDraft(held));
-}
-
-// What a close does: waits for a save out, discards only the very words a
-// refused close tried to keep, and keeps anything newer first.
-function closeStep(
-  state: Readonly<{
-    save: Readonly<{
-      isPending: boolean;
-      variables: Readonly<{ fields: SavedDraftFields }> | undefined;
-    }>;
-    refusedClose: boolean;
-    fields: SavedDraftFields;
-    unsaved: boolean;
-  }>,
-): "wait" | "discard" | "save" | "close" {
-  if (state.save.isPending) return "wait";
-  const asRefused =
-    JSON.stringify(state.save.variables?.fields) ===
-    JSON.stringify(state.fields);
-  if (state.refusedClose && asRefused) return "discard";
-  return state.unsaved ? "save" : "close";
-}
-
 // The toast's Delete outlives the composer it came from, so it is a plain call
 // on the client rather than a mutation owned by a component that may be gone.
 function deleteFromToast(input: {
@@ -178,47 +118,6 @@ function deleteFromToast(input: {
 
 export type SavedDraft = ReturnType<typeof useSavedDraft>;
 
-// The saved draft has had its chance: read, and back on screen when there was
-// one. Until then an empty body is not yet the reader's last word.
-function savedDraftSettled(
-  state: Readonly<{
-    anchored: boolean;
-    read: Readonly<{
-      isError: boolean;
-      isSuccess: boolean;
-      isFetching: boolean;
-    }>;
-    held: boolean;
-    restored: boolean;
-    // A read answering after the first keystroke restores nothing.
-    typed: boolean;
-  }>,
-): boolean {
-  const { read } = state;
-  // A failed read leaves open whether a draft is held, so it never settles.
-  if (!state.anchored) return true;
-  if (!read.isSuccess || read.isFetching) return false;
-  return !state.held || state.restored || state.typed;
-}
-
-// What the composer opens with: a draft is measured against it, and deleting
-// one puts it back.
-function composerDefaults(input: {
-  initialIntent?: string;
-  offeredRecipient: string | undefined;
-  replyTo: Activity | undefined;
-}) {
-  return {
-    intent: input.initialIntent ?? "",
-    recipient: input.offeredRecipient,
-    subject:
-      input.replyTo?.kind === "email" &&
-      input.replyTo.content_state !== "withheld"
-        ? replySubject(input.replyTo.subject ?? "")
-        : "",
-  };
-}
-
 export function useSavedDraft(input: {
   where: Parameters<typeof savedDraftAnchor>[0];
   open: boolean;
@@ -228,6 +127,8 @@ export function useSavedDraft(input: {
   /** The address the composer offered into To on its own. */
   offeredRecipient: string | undefined;
   initialIntent?: string;
+  /** The words a caller opened the composer with, such as a forward's quote. */
+  initialMessage?: Readonly<{ subject: string; body: string }>;
   /** Puts words in the composer: a saved draft's, or its opening defaults. */
   onRestore: (fields: SavedDraftFields) => void;
   onClose: () => void;
@@ -253,12 +154,15 @@ export function useSavedDraft(input: {
   });
   const held = anchor ? (read.data ?? null) : null;
   const [restoredKey, setRestoredKey] = useState<string | null>(null);
-  const [changedElsewhere, setChangedElsewhere] = useState(false);
+  // Which words win is open: a draft found under other words ("found"), or one
+  // another window moved after this composer read it ("moved").
+  const [conflict, setConflict] = useState<"found" | "moved" | null>(null);
+  const changedElsewhere = conflict !== null;
   const keyText = key.join(":");
   // Restored once per opening and per anchor, and never over words the reader
-  // has already started: a read answering after the first keystroke leaves the
-  // text alone and only holds the version, so the next save replaces it. A
-  // composer reopened still holding the saved words is a restored one too.
+  // has already started. A draft found under other words on screen asks which
+  // words win, so no save replaces words the reader never saw. A composer
+  // reopened still holding the saved words is a restored one too.
   const decided = useRef(new Set<string>());
   // Reopening the composer puts the draft back on screen with its own Delete,
   // so the "Draft saved" toast, if it is still up, has said its piece.
@@ -273,7 +177,7 @@ export function useSavedDraft(input: {
     if (!open) {
       decided.current.clear();
       setRestoredKey(null);
-      setChangedElsewhere(false);
+      setConflict(null);
       return;
     }
     if (!read.isSuccess || read.isFetching || decided.current.has(keyText))
@@ -283,6 +187,7 @@ export function useSavedDraft(input: {
     const saved = fieldsOfDraft(read.data);
     if (!typed) onRestore(saved);
     if (!typed || sameFields(fields, saved)) setRestoredKey(keyText);
+    else setConflict("found");
   }, [
     open,
     read.isSuccess,
@@ -300,8 +205,8 @@ export function useSavedDraft(input: {
       cc: [],
       bcc: [],
       subject: defaults.subject,
-      body: "",
-      html: "",
+      body: defaults.body,
+      html: defaults.body ? paragraphsFrom(defaults.body) : "",
       files: [],
       context: "",
       sendAt: "",
@@ -314,7 +219,7 @@ export function useSavedDraft(input: {
       // save's answer must not bring it back.
       if (ask.sends !== sends.current) return;
       queryClient.setQueryData(draftKey(ask.anchor), saved);
-      setChangedElsewhere(false);
+      setConflict(null);
       if (ask.quiet) return;
       savedToast.show(t("compose.savedDraftSaved"), {
         action: {
@@ -355,7 +260,7 @@ export function useSavedDraft(input: {
         if (!ask.quiet) onClose();
         return;
       }
-      setChangedElsewhere(true);
+      setConflict("moved");
     },
   });
   const remove = useMutation({
@@ -368,7 +273,7 @@ export function useSavedDraft(input: {
     onSuccess: (target) => {
       queryClient.setQueryData(draftKey(target.anchor), null);
       setRestoredKey(null);
-      setChangedElsewhere(false);
+      setConflict(null);
       onCleared();
       toast.show(t("compose.savedDraftDeleted"));
     },
@@ -399,6 +304,8 @@ export function useSavedDraft(input: {
   const write = (quiet: boolean) => writeKept(keeper, quiet);
   const closeAfterSave = useRef(false);
   const requestClose = () => {
+    // A found draft was never on screen: the notice asks before a close may save over it.
+    if (conflict === "found") return;
     const step = closeStep({
       save,
       refusedClose: saveFailed && !failedQuietly,
@@ -438,6 +345,9 @@ export function useSavedDraft(input: {
       typed,
     }),
     changedElsewhere,
+    conflict,
+    /** The held draft, only while its words are the ones on screen; a send names this one. */
+    onScreenId: changedElsewhere ? undefined : held?.id,
     saving: save.isPending,
     // A conflict is not a failure line: the notice above names it and offers
     // the way out.
@@ -458,10 +368,11 @@ export function useSavedDraft(input: {
     removing: remove.isPending,
     /** What is on screen is what the saved draft holds. */
     kept: held !== null && !dirty,
-    /** Throws the draft away and shuts the window: the saved one goes too. */
+    /** Throws the draft away and shuts the window: the saved one goes too,
+     *  unless it was never on screen. */
     discard: () => {
       if (save.isPending || remove.isPending) return;
-      if (anchor && held) {
+      if (anchor && held && !changedElsewhere) {
         remove.mutate({ anchor, id: held.id }, { onSuccess: onClose });
         return;
       }
@@ -471,8 +382,10 @@ export function useSavedDraft(input: {
     loadSaved: () => {
       if (!held) return;
       onRestore(fieldsOfDraft(held));
-      setChangedElsewhere(false);
+      setConflict(null);
     },
+    /** The reader's answer to a found draft: the words on screen replace it. */
+    keepScreen: () => write(true),
     // The send discarded it server-side in the same transaction.
     sent: () => {
       sends.current += 1;
