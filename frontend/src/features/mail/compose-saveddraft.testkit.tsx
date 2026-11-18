@@ -73,6 +73,7 @@ export function stubRoutes(overrides: Record<string, Route> = {}) {
   const sent: Sent[] = [];
   vi.stubGlobal(
     "fetch",
+    // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: a stub of every saved-draft read and write; its branches are the route table
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const request = input instanceof Request ? input : null;
       const url = new URL(
