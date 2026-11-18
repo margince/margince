@@ -689,37 +689,6 @@ describe("regenerate action (OP-11)", () => {
     );
   });
 
-  it("re-reads the offer when a lifecycle action is refused, so the page shows the server's status", async () => {
-    let status = "sent";
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-        const request = input instanceof Request ? input : null;
-        const url = String(request ? request.url : input);
-        const method = request ? request.method : (init?.method ?? "GET");
-        if (url.includes("/offers/o-1/accept") && method === "POST") {
-          status = "superseded";
-          return jsonResponse(
-            { title: "Unprocessable", detail: "the offer is superseded" },
-            422,
-          );
-        }
-        if (url.includes("/offers/")) {
-          return jsonResponse({ ...baseOffer, status });
-        }
-        return jsonResponse({ data: [], page: { has_more: false } });
-      }),
-    );
-    render(<OfferScreen id="o-1" />);
-    await screen.findByText("ANG-2026-0007");
-
-    await userEvent.click(screen.getByTestId("accept-offer"));
-    await userEvent.click(confirmInDialog("Accept"));
-
-    expect(await screen.findByText("Superseded")).toBeTruthy();
-    expect(screen.queryByTestId("accept-offer")).toBeNull();
-  });
-
   it("renders a 422 detail verbatim when regenerate is rejected (e.g. a stale sent offer)", async () => {
     const calls: { url: string }[] = [];
     stubOfferWithRegenerate(

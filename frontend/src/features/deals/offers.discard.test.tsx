@@ -5,13 +5,14 @@
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { renderWithQueryClient } from "../../testing/queryrender";
-import { jsonResponse } from "../../testing/story-utils";
-import type { Offer } from "./offers";
+import type { RbacAction } from "../../lib/capability";
+import { meFixture } from "../../testing/mefixture";
+import { installFetchStub } from "../../testing/story-utils";
+import { jsonResponse, type Offer, offer, render } from "./deals.testkit";
 import { OfferScreen } from "./offers";
 
-// A draft can be discarded, and a discarded (archived) offer reads as archived
-// with nothing left to change.
+// A draft can be discarded, and an archived offer leaves nothing to change.
+// A refused step re-reads what the server holds.
 
 afterEach(() => {
   cleanup();
@@ -21,44 +22,39 @@ afterEach(() => {
 
 const AT = "2026-10-01T09:00:00Z";
 
-const DRAFT: Offer = {
+const DRAFT = offer({
   id: "o-1",
   deal_id: "d-1",
   offer_number: "A-1001",
-  revision: 1,
-  status: "draft",
-  currency: "EUR",
-  net_minor: 0,
-  tax_minor: 0,
-  gross_minor: 0,
-  line_items: [],
-  source: "manual",
-  ai_generated: false,
-  captured_by: "human:u-1",
   version: 4,
-  created_at: AT,
-  updated_at: AT,
-};
+});
 
 type Archive = { ifMatch: string | null };
 
-function serve(offer: Offer, archives: Archive[] = []) {
+// Hand-rolled rather than installFetchStub, whose handlers never see the
+// If-Match header the archive case is about.
+function serve(
+  draft: Offer,
+  archives: Archive[] = [],
+  offerGrants: readonly RbacAction[] = ["read", "delete"],
+) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const request = input instanceof Request ? input : null;
-      const url = String(request ? request.url : input);
-      const method = request ? request.method : (init?.method ?? "GET");
-      const headers = request ? request.headers : new Headers(init?.headers);
-      if (url.endsWith("/offers/o-1") && method === "DELETE") {
-        archives.push({ ifMatch: headers.get("If-Match") });
-        return jsonResponse({ ...offer, archived_at: AT });
+      const request = new Request(input, init);
+      const path = new URL(request.url).pathname;
+      if (path === "/v1/me") {
+        return jsonResponse(meFixture({ allow: { offer: offerGrants } }));
       }
-      if (url.endsWith("/offers/o-1")) return jsonResponse(offer);
+      if (path.endsWith("/offers/o-1") && request.method === "DELETE") {
+        archives.push({ ifMatch: request.headers.get("If-Match") });
+        return jsonResponse({ ...draft, archived_at: AT });
+      }
+      if (path.endsWith("/offers/o-1")) return jsonResponse(draft);
       return jsonResponse({ data: [], page: { has_more: false } });
     }),
   );
-  renderWithQueryClient(<OfferScreen id="o-1" />);
+  render(<OfferScreen id="o-1" />);
 }
 
 describe("discarding a draft offer", () => {
@@ -74,6 +70,15 @@ describe("discarding a draft offer", () => {
     );
     await waitFor(() => expect(archives).toEqual([{ ifMatch: "4" }]));
     await waitFor(() => expect(globalThis.location.hash).toBe("#/deals/d-1"));
+  });
+
+  it("is disabled for a seat that may not archive offers", async () => {
+    serve(DRAFT, [], ["read", "update"]);
+    await waitFor(() =>
+      expect(
+        screen.getByTestId("archive-record").hasAttribute("disabled"),
+      ).toBe(true),
+    );
   });
 
   it("offers no discard once the offer is sent", async () => {
@@ -98,5 +103,29 @@ describe("an archived offer", () => {
       expect(screen.queryByTestId(control)).toBeNull();
     }
     expect(screen.getByRole("heading", { name: "Line items" })).toBeTruthy();
+  });
+});
+
+describe("a refused lifecycle step", () => {
+  it("re-reads the offer, so the page shows the server's status", async () => {
+    let status: Offer["status"] = "sent";
+    installFetchStub({
+      "POST /offers/o-1/accept": () => {
+        status = "superseded";
+        return jsonResponse({ detail: "the offer is superseded" }, 422);
+      },
+      "GET /offers/o-1": () => jsonResponse({ ...DRAFT, status }),
+      "GET /me": () => jsonResponse(meFixture({ allow: { offer: ["read"] } })),
+    });
+    render(<OfferScreen id="o-1" />);
+    const user = userEvent.setup();
+    await user.click(await screen.findByTestId("accept-offer"));
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Accept",
+      }),
+    );
+    expect(await screen.findByText("Superseded")).toBeTruthy();
+    expect(screen.queryByTestId("accept-offer")).toBeNull();
   });
 });

@@ -1,40 +1,22 @@
 /** @vitest-environment happy-dom */
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  cleanup,
-  render as rtlRender,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
-import { LocaleProvider } from "../../i18n";
-import { OfferScreen } from "./offers";
+import { installFetchStub, meRoute } from "../../testing/story-utils";
+import { jsonResponse, type Offer, offer, render } from "./deals.testkit";
+import { type OfferLineItem, OfferScreen } from "./offers";
 
 // The draft offer's line editor as a user drives it: what each row lets a
 // reader see and change, and what the page shows when the server says no.
 
-afterEach(() => {
-  cleanup();
-  vi.unstubAllGlobals();
-});
+afterEach(cleanup);
 
 function renderOffer() {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  rtlRender(
-    <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">
-        <OfferScreen id="o-1" />
-      </LocaleProvider>
-    </QueryClientProvider>,
-  );
+  render(<OfferScreen id="o-1" />);
 }
 
-const line1 = {
+const line1: OfferLineItem = {
   id: "li-1",
   position: 1,
   product_id: null,
@@ -59,61 +41,43 @@ const line1 = {
 
 const line2 = { ...line1, id: "li-2", position: 2, description: "Workshop" };
 
-function draft(lines: Record<string, unknown>[]) {
-  return {
+function draft(lines: OfferLineItem[]): Offer {
+  return offer({
     id: "o-1",
     deal_id: "d-1",
     offer_number: "ANG-2026-0007",
-    revision: 1,
-    status: "draft",
-    currency: "EUR",
-    buyer_company_id: null,
-    valid_until: "2026-08-01",
-    intro_text: null,
-    terms_text: null,
     net_minor: 2000,
     tax_minor: 380,
     gross_minor: 2380,
-    template_id: null,
     line_items: lines,
-    source: "manual",
-    captured_by: "human:u1",
     version: 3,
-    created_at: "2026-06-01T08:00:00Z",
-    updated_at: "2026-06-01T08:00:00Z",
-  };
+  });
 }
 
-type Call = { method: string; url: string; body: unknown };
+type Call = { url: string; body: unknown };
 type Answer = { status: number; body: unknown };
 
 // GETs read the offer; each line write is recorded and answered by `answer`.
-function serve(offer: unknown, answer: (call: Call) => Answer): Call[] {
+function serve(draftOffer: Offer, answer: (call: Call) => Answer): Call[] {
   const calls: Call[] = [];
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const request = input instanceof Request ? input : null;
-      const url = String(request ? request.url : input);
-      const method = request ? request.method : (init?.method ?? "GET");
-      const json = (body: unknown, status = 200) =>
-        new Response(JSON.stringify(body), {
-          status,
-          headers: { "Content-Type": "application/json" },
-        });
-      if (url.includes("/line-items") && method !== "GET") {
-        const text = request ? await request.text() : String(init?.body ?? "");
-        const call = { method, url, body: text ? JSON.parse(text) : null };
-        calls.push(call);
-        const { status, body } = answer(call);
-        return json(body, status);
-      }
-      if (url.includes("/offers/")) {
-        return json(offer);
-      }
-      return json({ data: [], page: { has_more: false } });
-    }),
+  const write = (body: unknown, url: URL) => {
+    const call = { url: url.pathname, body };
+    calls.push(call);
+    const reply = answer(call);
+    return jsonResponse(reply.body, reply.status);
+  };
+  const lineWrites = draftOffer.line_items.flatMap(
+    (line): [string, typeof write][] => [
+      [`PATCH /offers/o-1/line-items/${line.id}`, write],
+      [`DELETE /offers/o-1/line-items/${line.id}`, write],
+    ],
   );
+  installFetchStub({
+    "GET /me": meRoute({ offer: ["read", "create", "update", "delete"] }),
+    "GET /offers/o-1": () => jsonResponse(draftOffer),
+    "POST /offers/o-1/line-items": write,
+    ...Object.fromEntries(lineWrites),
+  });
   return calls;
 }
 
@@ -296,7 +260,7 @@ describe("a refused line edit", () => {
 
 describe("a line's billing", () => {
   it("lets a recurring line with no term take its periods in its row", async () => {
-    const quarterly = {
+    const quarterly: OfferLineItem = {
       ...line1,
       billing_model: "recurring",
       billing_interval_months: 3,
