@@ -11,7 +11,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -30,19 +29,19 @@ const RequestSettlementActor = "system:request_settlement"
 // The request sits inside the `IN` list: an `OR` beside it scans every row.
 //
 // Held by: TestSettlementEvidenceReadsEachActivityByItsID (backend/internal/modules/activities/requestsettlementevidenceplan_integration_test.go)
-func settlementEvidenceSQL() string {
+func settlementEvidenceSQL(private bool) string {
 	return `SELECT string_agg(seen.id::text || ':' || seen.version, ',' ORDER BY seen.id)
    FROM activity seen
-  WHERE seen.id IN (SELECT a.id UNION ALL SELECT answered.id FROM (` + settlementAnswersSQL() + `) answered
-    UNION ALL SELECT context.id FROM (` + settlementContextSQL() + `) context)`
+  WHERE seen.id IN (SELECT a.id UNION ALL SELECT answered.id FROM (` + settlementAnswersSQL(private) + `) answered
+    UNION ALL SELECT context.id FROM (` + settlementContextSQL(private) + `) context)`
 }
 
 // settlementContextSQL selects their mail on request a's thread at its stored instant, as SettlementThreadSQL feeds
 // it to the model. It is context, never an answer, so the binding and the verdict's locks add it beside the answers.
-func settlementContextSQL() string {
+func settlementContextSQL(private bool) string {
 	return `SELECT context.id, context.occurred_at FROM activity context
    WHERE ` + correspondentInThisThread("context", "a") + ` AND ` + tiedContextSQL("context", "a") + `
-     AND ` + auth.WorkspaceAudienceSQL("context") + ` AND context.restricted_at IS NULL
+     AND ` + judgeableAudienceSQL("context", private) + `
      AND ` + occurredday.BegunSQL("context", "$1") + ` AND context.id <> a.id`
 }
 
@@ -78,8 +77,12 @@ func (s *Store) judgedThroughNewest(ctx context.Context, tx pgx.Tx, request Repl
 	if now := s.now(); now.After(bound) {
 		bound = now
 	}
+	private, err := privateMailRequests(ctx, tx)
+	if err != nil {
+		return false, err
+	}
 	var newest *ids.UUID
-	if err := tx.QueryRow(ctx, `SELECT (`+newestAnswerSince+`) FROM activity a WHERE a.id = $2`,
+	if err := tx.QueryRow(ctx, `SELECT (`+newestAnswerSince(private)+`) FROM activity a WHERE a.id = $2`,
 		bound, request.RequestID).Scan(&newest); err != nil {
 		return false, fmt.Errorf("activities: re-reading the newest answer before settling: %w", err)
 	}
@@ -89,8 +92,12 @@ func (s *Store) judgedThroughNewest(ctx context.Context, tx pgx.Tx, request Repl
 // evidenceUnchanged is whether the request and its answers are the ones the
 // verdict read. It reads under holdSettlementEvidenceTx, so the value holds.
 func evidenceUnchanged(ctx context.Context, tx pgx.Tx, request RepliedRequest) (bool, error) {
+	private, err := privateMailRequests(ctx, tx)
+	if err != nil {
+		return false, err
+	}
 	var now *string
-	if err := tx.QueryRow(ctx, `SELECT (`+settlementEvidenceSQL()+`) FROM activity a WHERE a.id = $2`,
+	if err := tx.QueryRow(ctx, `SELECT (`+settlementEvidenceSQL(private)+`) FROM activity a WHERE a.id = $2`,
 		request.AsOf, request.RequestID).Scan(&now); err != nil {
 		return false, fmt.Errorf("activities: re-reading the evidence before settling: %w", err)
 	}

@@ -50880,6 +50880,14 @@ type FollowUpSettings struct {
 	// Locks The settings in this response that a boot source sets, each with its source. A client
 	// shows each as read-only. Empty when nothing is locked. A write ignores it.
 	Locks *SettingLocks `json:"locks,omitempty"`
+
+	// PrivateMailRequests Whether the AI checks private mail for a request its reader owes an answer to
+	// (`activities.private_mail_requests`, on by default). Only mail private by a
+	// routine setting is checked; mail held as confidential, by a counterparty or
+	// members-only hold, or by hand never is. A GET always carries it; a PATCH that
+	// leaves it out leaves the setting unchanged. Only a human may change it, because
+	// it decides which mail reaches a model.
+	PrivateMailRequests *bool `json:"private_mail_requests,omitempty"`
 }
 
 // FooterFinding defines model for FooterFinding.
@@ -51845,6 +51853,13 @@ type HiddenBacklog struct {
 	// unbounded scan would answer a different question at the cost of a full table
 	// read.
 	PastHorizon int `json:"past_horizon" minimum:"0"`
+
+	// PrivateUnchecked Threads `shown` counts whose mail no model will check for a request: mail held
+	// on purpose (marked confidential, a counterparty or members-only hold, or by
+	// hand), or any private mail while `activities.private_mail_requests` is off. Not
+	// hidden, so `clear` ignores it. The queue ranks such mail as a request only when
+	// the reader wrote on its conversation first.
+	PrivateUnchecked int `json:"private_unchecked" minimum:"0"`
 
 	// SetAside Work this reader has snoozed, marked `not_mine` or marked `handled`. THEIR OWN
 	// CHOICE, and the least alarming of the four: a snooze lifts on its own moment, so
@@ -96548,7 +96563,7 @@ type ServerInterface interface {
 	// How long a sent message may go unanswered before the worklist reminds its sender.
 	// (GET /activities/follow-up-settings)
 	GetFollowUpSettings(w http.ResponseWriter, r *http.Request)
-	// Change the follow-up window (admin/ops).
+	// Change the follow-up window or the private-mail request check (admin/ops).
 	// (PATCH /activities/follow-up-settings)
 	UpdateFollowUpSettings(w http.ResponseWriter, r *http.Request)
 	// What they sent on one record in the last 7 days that nobody has answered.
@@ -99899,7 +99914,7 @@ func (_ Unimplemented) GetFollowUpSettings(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Change the follow-up window (admin/ops).
+// Change the follow-up window or the private-mail request check (admin/ops).
 // (PATCH /activities/follow-up-settings)
 func (_ Unimplemented) UpdateFollowUpSettings(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)

@@ -20217,6 +20217,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.hidden.setAside.detail":
     "Đã tạm hoãn hoặc đánh dấu không phải việc của bạn. Việc tạm hoãn sẽ tự quay lại.",
   "worklist.hidden.shown": "Danh sách công việc đang hiển thị {count} việc.",
+  "worklist.hidden.privateUnchecked_one":
+    "{count} email riêng tư chưa được AI kiểm tra",
+  "worklist.hidden.privateUnchecked_other":
+    "{count} email riêng tư chưa được AI kiểm tra",
   "worklist.hidden.rows.loading": "Đang tải thư bị giữ lại…",
   "worklist.hidden.rows.outOfReach":
     "Không thể đọc thư nào ở quy mô này. Có thể vẫn còn thư bị giữ lại.",
@@ -21733,6 +21737,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Người chịu trách nhiệm deal có thể nhờ bộ phận pháp lý rà soát deal, và một giai đoạn có thể yêu cầu pháp lý duyệt. Tắt sẽ ẩn cả hai và giữ mọi lần rà soát đã ghi.",
   "legalReview.settingsReadOnly": "Quản trị viên thay đổi cài đặt này.",
   "legalReview.notSaved": "Chưa lưu được cài đặt.",
+  "privateMailRequests.title": "Yêu cầu trong email riêng tư",
+  "privateMailRequests.switch": "Kiểm tra yêu cầu trong email riêng tư",
+  "privateMailRequests.hint":
+    "AI đọc email riêng tư để tìm yêu cầu mà khách hàng gửi tới bạn. Email được đánh dấu bảo mật hoặc được giữ lại có chủ ý thì không bao giờ được đọc.",
+  "privateMailRequests.readOnly": "Quản trị viên thay đổi cài đặt này.",
+  "privateMailRequests.notSaved": "Chưa lưu được cài đặt.",
   "stage.criteria.kindLegalReviewed": "Pháp lý đã duyệt",
   "legalReview.docUnavailable":
     "Bạn không mở được tệp này. Hãy hỏi đồng nghiệp đã yêu cầu rà soát.",

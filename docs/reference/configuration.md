@@ -267,6 +267,7 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 | Key | Env | Flag | Type | Default | Programs | Doc |
 |---|---|---|---|---|---|---|
 | `activities.follow_up_after_days` | `MARGINCE_ACTIVITIES_FOLLOW_UP_AFTER_DAYS` | — | `int`, `1` to `30`, stored | `2` | api, worker | Days a sent message may go without a reply before its sender is asked to follow up. |
+| `activities.private_mail_requests` | `MARGINCE_ACTIVITIES_PRIVATE_MAIL_REQUESTS` | — | `bool`, stored | `true` | api, worker | Let the AI check whether private mail asks its reader for something. Mail held as confidential, by a counterparty or members-only hold, or by hand is never checked. |
 
 ### `ai`
 

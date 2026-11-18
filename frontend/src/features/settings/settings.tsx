@@ -50,7 +50,10 @@ import { AccountSettings } from "./account-settings";
 import { AcquisitionSourcesCard } from "./acquisitionsources";
 import { ControllerParticularsCard } from "./controllerparticulars";
 import { FinanceSourceCard } from "./financesource";
-import { FollowUpSettingsCard } from "./followupsettings";
+import {
+  FollowUpSettingsCard,
+  PrivateMailRequestsCard,
+} from "./followupsettings";
 import { InstallationConfigurationPage } from "./installation-configuration";
 import { InternalMailCaptureCard } from "./internalmailsettings";
 import { LegalEntitiesCard } from "./legalentities";
@@ -408,7 +411,12 @@ function modelsTab(tab: string): ReactNode {
     case "tiers":
       return <AiRoutingCard />;
     case "tasks":
-      return <AiTasksCard />;
+      return (
+        <>
+          <AiTasksCard />
+          <PrivateMailRequestsCard />
+        </>
+      );
     case "prices":
       return <ModelPricesCard />;
     default:

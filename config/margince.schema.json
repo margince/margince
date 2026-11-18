@@ -182,6 +182,14 @@
           "minimum": 1,
           "maximum": 30,
           "default": 2
+        },
+        "private_mail_requests": {
+          "description": "Let the AI check whether private mail asks its reader for something. Mail held as confidential, by a counterparty or members-only hold, or by hand is never checked.",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": true
         }
       }
     },

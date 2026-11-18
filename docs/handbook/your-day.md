@@ -247,8 +247,13 @@ It is due on a day the email names, such as "Deadline: 27 October", and has **No
   request back to review, with no new task.
 - A reply closes only its own conversation, and does not prove the promised thing was sent. The task
   stays until someone handles it.
-- Private mail is left out. When it is not clear whose task it is, Margince leaves the email for review.
-Also called: customer request, email nobody answered, email to-do.
+- Private mail is checked too, and its task is visible to you alone. Mail marked confidential, or
+  held because of who it is with, because only colleagues are on it, or by hand, is never sent to
+  the AI. Such mail ranks as a request only when you wrote on its conversation first.
+- An admin turns the check of private mail off under **Settings → AI models → Tasks**, with
+  **Check private mail for requests**. Private mail is then treated like held mail.
+- When it is not clear whose task it is, Margince leaves the email for review.
+Also called: customer request, email nobody answered, email to-do, private email request.
 
 ### How do I answer a calendar invitation?
 A meeting invitation shows **Accept**, **Maybe** and **Decline** in place of **Reply** on Home, in the Worklist and in a record's **History**. The email reader shows them beside **Reply**, which is for proposing another time.
@@ -384,6 +389,8 @@ Your brief and digest stay personal. **Team**, **All**, and teammate views show 
 - **Set aside by you**
 
 When nothing is held back, it says: "Nothing is hidden. Every waiting customer reaches a Worklist."
+Below that, a line such as "2 private emails not checked by AI" counts waiting mail the AI may not read.
+That mail is not hidden. It is ranked without knowing what it asks.
 
 You can also add a note to a teammate's Worklist with **Add note** ("A short note that appears in their Worklist.").
 

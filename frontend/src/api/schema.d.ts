@@ -8804,7 +8804,8 @@ export interface paths {
          * How long a sent message may go unanswered before the worklist reminds its sender.
          * @description The workspace's follow-up window: a message a seat sent to a customer that is still
          *     the last word after this many days comes back on the sender's worklist as a
-         *     follow-up. Read by every role; changed by admin/ops. Governed by the
+         *     follow-up. It also carries whether the AI checks private mail for requests owed an
+         *     answer. Read by every role; changed by admin/ops. Governed by the
          *     `installation_settings` RBAC object.
          */
         get: operations["getFollowUpSettings"];
@@ -8813,7 +8814,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Change the follow-up window (admin/ops). */
+        /** Change the follow-up window or the private-mail request check (admin/ops). */
         patch: operations["updateFollowUpSettings"];
         trace?: never;
     };
@@ -45926,6 +45927,15 @@ export interface components {
             readonly locks?: components["schemas"]["SettingLocks"];
             /** @description Days a sent message may stay unanswered before its sender is reminded to follow up. */
             follow_up_after_days: number;
+            /**
+             * @description Whether the AI checks private mail for a request its reader owes an answer to
+             *     (`activities.private_mail_requests`, on by default). Only mail private by a
+             *     routine setting is checked; mail held as confidential, by a counterparty or
+             *     members-only hold, or by hand never is. A GET always carries it; a PATCH that
+             *     leaves it out leaves the setting unchanged. Only a human may change it, because
+             *     it decides which mail reaches a model.
+             */
+            private_mail_requests?: boolean;
         };
         LeadSettings: {
             locks?: components["schemas"]["SettingLocks"];
@@ -60866,6 +60876,14 @@ export interface components {
              *     request a human accepted is never hidden by it, whatever the verdict.
              */
             informs_us: number;
+            /**
+             * @description Threads `shown` counts whose mail no model will check for a request: mail held
+             *     on purpose (marked confidential, a counterparty or members-only hold, or by
+             *     hand), or any private mail while `activities.private_mail_requests` is off. Not
+             *     hidden, so `clear` ignores it. The queue ranks such mail as a request only when
+             *     the reader wrote on its conversation first.
+             */
+            private_unchecked: number;
             /**
              * @description True when a read stopped at its own scan bound, which makes every figure above
              *     it a FLOOR rather than a count.

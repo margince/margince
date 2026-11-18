@@ -5147,6 +5147,8 @@
   "worklist.hidden.setAside": "Bạn đã gác lại",
   "worklist.hidden.setAside.detail": "Đã tạm hoãn hoặc đánh dấu không phải việc của bạn. Việc tạm hoãn sẽ tự quay lại.",
   "worklist.hidden.shown": "Danh sách công việc đang hiển thị {count} việc.",
+  "worklist.hidden.privateUnchecked_one": "{count} email riêng tư chưa được AI kiểm tra",
+  "worklist.hidden.privateUnchecked_other": "{count} email riêng tư chưa được AI kiểm tra",
   "worklist.hidden.rows.loading": "Đang tải thư bị giữ lại…",
   "worklist.hidden.rows.outOfReach": "Không thể đọc thư nào ở quy mô này. Có thể vẫn còn thư bị giữ lại.",
   "worklist.hidden.rows.empty": "Quy tắc này hiện không giữ lại thư nào.",
