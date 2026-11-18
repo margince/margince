@@ -62,10 +62,12 @@ type VCardEntry struct {
 	Unreadable []string `json:"unreadable,omitempty"`
 }
 
-// vcardStoredProperties are the properties whose value a contact keeps, so an
-// unreadable one is reported instead of dropped.
-var vcardStoredProperties = map[string]bool{
-	"FN": true, "N": true, "ORG": true, "TITLE": true, "EMAIL": true, "TEL": true, "URL": true, "ADR": true,
+// vcardStoredProperties are the properties whose value a contact keeps, with
+// the word a reader knows each by. An unreadable one is reported by that word
+// instead of dropped.
+var vcardStoredProperties = map[string]string{
+	"FN": "name", "N": "name", "ORG": "company", "TITLE": "job title", "EMAIL": "email address",
+	"TEL": "phone number", "URL": "web address", "ADR": "address",
 }
 
 // VCardChannel is one address or number with the kind the card gave it.
@@ -285,7 +287,7 @@ func indexUnquoted(s string, sep byte) int {
 
 func applyVCardProperty(entry *VCardEntry, name string, params []string, raw string) {
 	value, readable := readVCardValue(params, raw)
-	if !readable && vcardStoredProperties[name] {
+	if _, stored := vcardStoredProperties[name]; stored && !readable {
 		entry.Unreadable = append(entry.Unreadable, name)
 		return
 	}

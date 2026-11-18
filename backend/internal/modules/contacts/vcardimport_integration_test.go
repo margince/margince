@@ -84,8 +84,9 @@ func TestACardWithAnUnstorableValueIsReportedAndTheRestOfTheFileImports(t *testi
 			t.Errorf("card %d outcome = %v, want %v (%s)", i+1, results[i].Outcome, outcome, results[i].Reason)
 		}
 	}
-	if !strings.Contains(results[1].Reason, "not-an-email") || !strings.Contains(results[2].Reason, "0301234567") {
-		t.Errorf("reasons = %q / %q, want each to name its value", results[1].Reason, results[2].Reason)
+	if !strings.Contains(results[1].Reason, "email address") || !strings.Contains(results[2].Reason, "phone number") ||
+		strings.Contains(results[1].Reason+results[2].Reason, "not-an-email") {
+		t.Errorf("reasons = %q / %q, want each to name its kind", results[1].Reason, results[2].Reason)
 	}
 	if results[3].FullName != "Björn Fourth" {
 		t.Errorf("name = %q, want the Windows-1252 name read", results[3].FullName)
