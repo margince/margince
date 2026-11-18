@@ -142,9 +142,7 @@ describe("deciding a duplicate pair on the row", () => {
   // them would be the product deciding which of a customer's records is real.
   it("merges into the record the reader chose, once they confirm", async () => {
     const fetched = stubOk();
-    draw(
-      pairRow({ subject: { type: "company", id: LEFT, label: "Acme GmbH" } }),
-    );
+    draw(pairRow({ kind: "company" }));
 
     // BY NAME, not by position: this is the assertion that the button the
     // reader believes they pressed is the record that survives.
@@ -163,9 +161,7 @@ describe("deciding a duplicate pair on the row", () => {
 
   it("names the record the merge archives, and says when it is done", async () => {
     stubOk();
-    draw(
-      pairRow({ subject: { type: "company", id: LEFT, label: "Acme GmbH" } }),
-    );
+    draw(pairRow({ kind: "company" }));
 
     await userEvent.click(
       screen.getByRole("button", { name: "Keep ACME Gmbh" }),
@@ -188,9 +184,7 @@ describe("deciding a duplicate pair on the row", () => {
 
   it("merges nothing when the question is cancelled", async () => {
     const fetched = stubOk();
-    draw(
-      pairRow({ subject: { type: "company", id: LEFT, label: "Acme GmbH" } }),
-    );
+    draw(pairRow({ kind: "company" }));
 
     await userEvent.click(
       screen.getByRole("button", { name: "Keep ACME Gmbh" }),
@@ -206,9 +200,7 @@ describe("deciding a duplicate pair on the row", () => {
   });
 
   it("says why the two look alike and links each record", () => {
-    const row = pairRow({
-      subject: { type: "company", id: LEFT, label: "Acme GmbH" },
-    });
+    const row = pairRow({ kind: "company" });
     draw({
       ...row,
       pair: row.pair && {
@@ -236,10 +228,7 @@ describe("deciding a duplicate pair on the row", () => {
     for (const id of [LEFT, RIGHT]) {
       client.setQueryData(companyDocumentsKey(id), { data: [] });
     }
-    draw(
-      pairRow({ subject: { type: "company", id: LEFT, label: "Acme GmbH" } }),
-      client,
-    );
+    draw(pairRow({ kind: "company" }), client);
     await userEvent.click(
       screen.getByRole("button", { name: "Keep ACME Gmbh" }),
     );
@@ -579,7 +568,7 @@ describe("deciding a duplicate pair on the row", () => {
     const user = userEvent.setup();
     draw(
       pairRow({
-        subject: { type: "contact", id: ANA, label: "Mira Kovac" },
+        kind: "contact",
         pair: {
           left: { id: ANA, label: "Mira Kovac" },
           right: { id: BEN, label: "Mira Kovač" },

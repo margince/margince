@@ -114,7 +114,7 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
   const mayMerge = item.actions?.includes("merge") ?? false;
   // Two contacts merge only through the review, where the reader ticks both
   // and sees the preview. Keep opens it on the contact they chose to keep.
-  const reviewed = item.subject?.type === "contact";
+  const reviewed = item.kind === "contact";
   const mayDismiss = item.actions?.includes("dismiss") ?? false;
   const created = (iso: string) =>
     t("worklist.pair.created", { date: formatDate(iso, locale, zone) });
@@ -151,9 +151,7 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
         disposition,
         winnerId,
         companyIds:
-          item.subject?.type === "company"
-            ? [pair.left.id, pair.right.id]
-            : undefined,
+          item.kind === "company" ? [pair.left.id, pair.right.id] : undefined,
       })
       .then(settled, refused);
   const merge = (keptId: string) => {
@@ -234,7 +232,7 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
           <PairSideCard
             key={side.id}
             side={side}
-            kind={item.subject?.type}
+            kind={item.kind}
             created={created}
           >
             {/* At the card's own FOOT, on its trailing edge: the verb belongs
