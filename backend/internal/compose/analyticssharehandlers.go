@@ -355,7 +355,7 @@ func (h analyticsShareHandlers) ExportForecastShare(
 		return
 	}
 
-	body, err := shareRowsCSV(frozen, frame.SelfCorrecting)
+	body, err := shareRowsCSV(frozen, frame.SelfCorrecting, frame.BaseCurrency)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -390,6 +390,7 @@ var shareExportColumns = []string{
 	"weighted_minor", "typed_probability", "chance_in_use", "evidence_n", "risk_signals", "risk_effect",
 	"self_correcting", "risk_signal_facts", "range_low_minor", "range_high_minor",
 	"contributions_limited", "contributions_limited_reason",
+	"base_currency",
 }
 
 // shareRowsCSV renders the rows, neutralising formula leads through the same
@@ -397,7 +398,8 @@ var shareExportColumns = []string{
 // selfCorrecting is the snapshot's own, repeated on each row so a sheet filtered
 // to some rows still says which definition they were frozen under. The range and
 // the contributions_limited flag and its reason are the shared headline's, repeated the same way.
-func shareRowsCSV(frozen frozenForReader, selfCorrecting *bool) ([]byte, error) {
+// baseCurrency names the currency of the base, weighted and range columns.
+func shareRowsCSV(frozen frozenForReader, selfCorrecting *bool, baseCurrency string) ([]byte, error) {
 	var low, high *int64
 	if frozen.Range != nil {
 		low, high = &frozen.Range.LowMinor, &frozen.Range.HighMinor
@@ -418,13 +420,14 @@ func shareRowsCSV(frozen frozenForReader, selfCorrecting *bool) ([]byte, error) 
 			csvCellPtr(row.EvidenceN), rowvalue.CSVScalar(strings.Join(row.Signals, ";")), csvCellPtr(row.Effect),
 			csvCellPtr(selfCorrecting), csvCellPtr(row.SignalFacts), csvCellPtr(low), csvCellPtr(high),
 			rowvalue.CSVScalar(frozen.Limited), rowvalue.CSVScalar(frozen.Reason),
+			rowvalue.CSVScalar(baseCurrency),
 		}
 		if err := out.Write(record); err != nil {
 			return nil, fmt.Errorf("compose: writing an export row: %w", err)
 		}
 	}
 	if frozen.Limited && len(frozen.Rows) == 0 {
-		if err := out.Write(shareSummaryRecord(selfCorrecting, low, high, frozen.Reason)); err != nil {
+		if err := out.Write(shareSummaryRecord(selfCorrecting, low, high, frozen.Reason, baseCurrency)); err != nil {
 			return nil, fmt.Errorf("compose: writing the export's summary row: %w", err)
 		}
 	}
@@ -438,7 +441,7 @@ func shareRowsCSV(frozen frozenForReader, selfCorrecting *bool) ([]byte, error) 
 // shareSummaryRecord is the one row a file gets when every row was withheld
 // from its reader. A header alone would not say the headline counts deals.
 // Its deal cells are empty, and only the headline's own cells are filled.
-func shareSummaryRecord(selfCorrecting *bool, low, high *int64, limitedReason string) []string {
+func shareSummaryRecord(selfCorrecting *bool, low, high *int64, limitedReason, baseCurrency string) []string {
 	record := make([]string, len(shareExportColumns))
 	for index, column := range shareExportColumns {
 		switch column {
@@ -452,6 +455,8 @@ func shareSummaryRecord(selfCorrecting *bool, low, high *int64, limitedReason st
 			record[index] = rowvalue.CSVScalar(true)
 		case "contributions_limited_reason":
 			record[index] = rowvalue.CSVScalar(limitedReason)
+		case "base_currency":
+			record[index] = rowvalue.CSVScalar(baseCurrency)
 		}
 	}
 	return record

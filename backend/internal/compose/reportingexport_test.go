@@ -195,3 +195,22 @@ func TestReportingCSVFilenameNamesScopePeriodAndLocalDay(t *testing.T) {
 		t.Fatalf("filename %q, want %q", got, want)
 	}
 }
+
+// A time-in-stage reading with too few deals has no value; the file leaves it
+// empty and says why, as the screen shows a dash.
+func TestReportingCSVLeavesAnUnreadableStageAgeEmpty(t *testing.T) {
+	var definition crmcontracts.ReportingMetricDefinition
+	for _, spec := range reportingMetrics {
+		if spec.definition.Id == reportingStageAge {
+			definition = spec.definition
+		}
+	}
+	metric := projectReportingMetric(definition, crmcontracts.ReportingContext{}, nil, crmcontracts.ReportingCoverage{Status: "ok"})
+	var evaluation crmcontracts.ReportingEvaluation
+	evaluation.Metrics = []crmcontracts.ReportingMetric{metric}
+	rows := reportingCSVRows(evaluation)
+	value, coverage := slices.Index(rows[0], "value"), slices.Index(rows[0], "coverage")
+	if rows[1][value] != "" || rows[1][coverage] != reportingInsufficientSample {
+		t.Fatalf("stage age row %v", rows[1])
+	}
+}

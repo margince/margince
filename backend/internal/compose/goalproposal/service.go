@@ -123,6 +123,7 @@ func (h Handlers) gather(ctx context.Context, owner ids.UUID, year int, req crmc
 			}
 			in.Currency = closed.Currency
 			in.Closed = append(in.Closed, yearIn(closed))
+			in.EarnedMinor = in.EarnedMinor || earnedMinor(closed)
 		}
 		return nil
 	})
@@ -134,6 +135,15 @@ func (h Handlers) gather(ctx context.Context, owner ids.UUID, year int, req crmc
 		in.YearlyGoal = new(values.WholeMajorUnits(*req.YearlyTotalMinor, in.Currency))
 	}
 	return in, nil
+}
+
+func earnedMinor(closed salesprogress.ClosedYear) bool {
+	for _, month := range closed.Months {
+		if month != nil && *month > 0 {
+			return true
+		}
+	}
+	return false
 }
 
 // yearIn is a year as the model reads it: whole major units, the fraction

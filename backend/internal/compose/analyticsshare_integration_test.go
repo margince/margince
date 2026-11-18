@@ -519,7 +519,7 @@ func TestTheExportedRowsAreTheRowsTheHeadlineWasSummedFrom(t *testing.T) {
 
 func TestAnExportedCellCannotCarryAFormulaIntoASpreadsheet(t *testing.T) {
 	rows := []SharedContribution{{DealName: "=cmd|' /c calc'!A1", Currency: "EUR"}}
-	body, err := shareRowsCSV(frozenForReader{Rows: rows}, nil)
+	body, err := shareRowsCSV(frozenForReader{Rows: rows}, nil, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -533,13 +533,13 @@ func TestAnExportedCellCannotCarryAFormulaIntoASpreadsheet(t *testing.T) {
 func TestAShareExportSaysWhetherItsChancesCorrectedThemselves(t *testing.T) {
 	on := true
 	drawn := forecasting.Range{LowMinor: 1200, HighMinor: 3400, Runs: 8}
-	body, err := shareRowsCSV(frozenForReader{Rows: []SharedContribution{{DealName: "Frozen"}}, Range: &drawn}, &on)
+	body, err := shareRowsCSV(frozenForReader{Rows: []SharedContribution{{DealName: "Frozen"}}, Range: &drawn}, &on, "USD")
 	if err != nil {
 		t.Fatal(err)
 	}
 	lines := strings.Split(strings.TrimSpace(string(body)), "\n")
-	if len(lines) != 2 || !strings.HasSuffix(lines[0], ",self_correcting,risk_signal_facts,range_low_minor,range_high_minor,contributions_limited,contributions_limited_reason") ||
-		!strings.HasSuffix(lines[1], ",true,,1200,3400,false,") {
+	if len(lines) != 2 || !strings.HasSuffix(lines[0], ",self_correcting,risk_signal_facts,range_low_minor,range_high_minor,contributions_limited,contributions_limited_reason,base_currency") ||
+		!strings.HasSuffix(lines[1], ",true,,1200,3400,false,,USD") {
 		t.Errorf("the export does not carry the snapshot's self_correcting and the reader's range:\n%s", body)
 	}
 }
@@ -549,7 +549,7 @@ func TestAShareExportSaysWhetherItsChancesCorrectedThemselves(t *testing.T) {
 func TestAShareExportSaysWhyItsRowsAreTheReadersOwn(t *testing.T) {
 	reason := reportingCoverageWords.IndividualOff.En
 	for name, rows := range map[string][]SharedContribution{"own rows": {{DealName: "Mine"}}, "summary row": nil} {
-		body, err := shareRowsCSV(frozenForReader{Rows: rows, Limited: true, Reason: reason}, nil)
+		body, err := shareRowsCSV(frozenForReader{Rows: rows, Limited: true, Reason: reason}, nil, "")
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -566,7 +566,7 @@ func TestAShareExportSaysWhyItsRowsAreTheReadersOwn(t *testing.T) {
 
 func TestAnUnpricedDealExportsAnEmptyCellRatherThanAZero(t *testing.T) {
 	rows := []SharedContribution{{DealName: "Unpriced", ExclusionReason: "unpriced"}}
-	body, err := shareRowsCSV(frozenForReader{Rows: rows}, nil)
+	body, err := shareRowsCSV(frozenForReader{Rows: rows}, nil, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -958,5 +958,22 @@ func TestASharedSnapshotCountsPricingRatherThanConversion(t *testing.T) {
 	}
 	if narrow.EligibleCount != 2 {
 		t.Errorf("a team-scoped recipient counted %d eligible deals, want 2", narrow.EligibleCount)
+	}
+}
+
+func TestAShareExportNamesTheCurrencyOfItsBaseColumnsOnEveryRow(t *testing.T) {
+	for name, rows := range map[string][]SharedContribution{"deal row": {{DealName: "Frozen", Currency: "USD"}}, "summary row": nil} {
+		body, err := shareRowsCSV(frozenForReader{Rows: rows, Limited: true}, nil, "EUR")
+		if err != nil {
+			t.Fatal(err)
+		}
+		records, err := csv.NewReader(strings.NewReader(string(body))).ReadAll()
+		if err != nil {
+			t.Fatal(err)
+		}
+		column := slices.Index(records[0], "base_currency")
+		if len(records) != 2 || column < 0 || records[1][column] != "EUR" {
+			t.Errorf("%s: base_currency missing or wrong:\n%s", name, body)
+		}
 	}
 }
