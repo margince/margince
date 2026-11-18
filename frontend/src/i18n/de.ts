@@ -17319,12 +17319,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Eine Domain für private Mail wie gmail.com kann hier nicht verwendet werden.",
   "captureValue.askTitle": "Schon vorhanden",
   "captureValue.askConsumerList":
-    "{value} ist die Domain von {company}. Mail von dort legt dann keine Firma mehr an. Trotzdem hinzufügen?",
+    "{value} ist die Domain von {company}. Mail von dort legt dann kein Unternehmen mehr an. Trotzdem hinzufügen?",
   "captureValue.askCompanyDomain":
     "{value} ist die Domain von {company}. Mail damit wird dann nicht mehr erfasst. Trotzdem hinzufügen?",
   "captureValue.askContactAddress":
     "{value} ist die Adresse eines Kontakts. Mail damit wird dann nicht mehr erfasst. Trotzdem hinzufügen?",
-  "captureValue.aCompany": "einer Firma im System",
+  "captureValue.aCompany": "einem Unternehmen im System",
   "captureValue.addAnyway": "Trotzdem hinzufügen",
   "captureExclusions.scope.user": "Deine Postfächer",
   "captureExclusions.scope.workspace": "Gesamtes Unternehmen",
