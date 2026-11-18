@@ -156,7 +156,7 @@ func sdrPageDials(requested *int, cursor *string) (int, *storekit.Cursor, error)
 	if cursor == nil || *cursor == "" {
 		return limit, nil, nil
 	}
-	position, err := storekit.DecodeCursor(*cursor)
+	position, err := storekit.DecodeCursor("sdr_meetings", *cursor)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -193,7 +193,7 @@ func readUpcomingMeetingPage(ctx context.Context, tx pgx.Tx, requested Requested
 	}
 	out = out[:limit]
 	last := out[limit-1]
-	next, err := storekit.EncodeCursor(last.StartsAt, ids.UUID(last.Id))
+	next, err := storekit.EncodeCursor("sdr_meetings", last.StartsAt, ids.UUID(last.Id))
 	if err != nil {
 		return nil, nil, err
 	}

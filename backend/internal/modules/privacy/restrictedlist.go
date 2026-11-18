@@ -124,7 +124,7 @@ func ListRestrictedActivities(ctx context.Context, db *database.DB, cursor *stri
 	if len(page.Records) > size {
 		page.Records = page.Records[:size]
 		last := page.Records[len(page.Records)-1]
-		next, err := storekit.EncodeCursor(last.RestrictedAt, last.ActivityID)
+		next, err := storekit.EncodeCursor("restricted_activities", last.RestrictedAt, last.ActivityID)
 		if err != nil {
 			return RestrictedPage{}, err
 		}
@@ -142,7 +142,7 @@ func restrictedListWhere(cursor *string, size int) (string, []any, error) {
 	where := ""
 	args := []any{}
 	if cursor != nil && *cursor != "" {
-		c, err := storekit.DecodeCursor(*cursor)
+		c, err := storekit.DecodeCursor("restricted_activities", *cursor)
 		if err != nil {
 			return "", nil, err
 		}

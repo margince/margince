@@ -54,7 +54,7 @@ func (s *Service) ListRecordGrants(ctx context.Context, in ListGrantsInput) ([]g
 		if len(candidates) > limit {
 			candidates = candidates[:limit]
 			last := candidates[len(candidates)-1]
-			next, err := storekit.EncodeCursor(last.CreatedAt, last.ID)
+			next, err := storekit.EncodeCursor("grants", last.CreatedAt, last.ID)
 			if err != nil {
 				return err
 			}
@@ -89,7 +89,7 @@ func (s *Service) grantPage(ctx context.Context, tx pgx.Tx, in ListGrantsInput, 
 	}
 	where += whereSb74.String()
 	if in.Cursor != nil && *in.Cursor != "" {
-		cursor, err := storekit.DecodeCursor(*in.Cursor)
+		cursor, err := storekit.DecodeCursor("grants", *in.Cursor)
 		if err != nil {
 			return nil, err
 		}

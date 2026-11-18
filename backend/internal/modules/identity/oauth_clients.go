@@ -148,7 +148,7 @@ func decodeAgentClientCursor(token *string) (agentClientCursor, error) {
 	if token == nil || *token == "" {
 		return agentClientCursor{}, nil
 	}
-	c, err := storekit.DecodeCursor(*token)
+	c, err := storekit.DecodeCursor("oauth_clients", *token)
 	if err != nil {
 		return agentClientCursor{}, err
 	}

@@ -287,7 +287,7 @@ func readWaitingHandoffs(ctx context.Context, tx pgx.Tx, requested RequestedScop
 	}
 	out = out[:limit]
 	last := out[limit-1]
-	next, err := storekit.EncodeCursor(last.WaitingSince, ids.UUID(last.Id))
+	next, err := storekit.EncodeCursor("sdr_waiting_handoffs", last.WaitingSince, ids.UUID(last.Id))
 	if err != nil {
 		return nil, nil, err
 	}

@@ -84,7 +84,7 @@ func listContractsTx(ctx context.Context, tx pgx.Tx, in ListContractsInput, asOf
 		where = append(where, UnderContractSQL(asOfPos))
 	}
 	if in.Cursor != nil && *in.Cursor != "" {
-		cursor, err := storekit.DecodeCursor(*in.Cursor)
+		cursor, err := storekit.DecodeCursor("contracts", *in.Cursor)
 		if err != nil {
 			return crmcontracts.ContractListResponse{}, err
 		}

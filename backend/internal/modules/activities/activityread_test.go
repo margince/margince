@@ -32,7 +32,7 @@ import (
 func TestACursorFromTheRecencyOrderCannotResumeAnOpenAndDueRead(t *testing.T) {
 	until := time.Now()
 	minted, err := storekit.EncodeOpaque(storekit.Cursor{
-		CreatedAt: time.Now(), ID: ids.NewV7(), SortField: "occurred_at", SortDesc: true,
+		Scope: "activities", CreatedAt: time.Now(), ID: ids.NewV7(), SortField: "occurred_at", SortDesc: true,
 	})
 	if err != nil {
 		t.Fatalf("minting a recency cursor: %v", err)

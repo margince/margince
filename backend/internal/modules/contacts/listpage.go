@@ -157,7 +157,7 @@ func listPageTx[T any](ctx context.Context, tx pgx.Tx, sortSpec *string, limit i
 	if len(recs) > limit {
 		recs = recs[:limit]
 		createdAt, id := spec.cursorKey(recs[len(recs)-1])
-		next, err := sorted.EncodePageCursor(cursorKeys[limit-1], createdAt, id)
+		next, err := sorted.EncodePageCursor(spec.entity, cursorKeys[limit-1], createdAt, id)
 		if err != nil {
 			return nil, storekit.Page{}, err
 		}
@@ -395,7 +395,7 @@ func (f listFilters) clauses(ctx context.Context, active []fieldcatalog.Column, 
 	// "after the row the reader stopped on", which narrows the page on purpose
 	// and would make a total shrink with every page turned.
 	if f.Cursor != nil && *f.Cursor != "" && !countingSet(ctx) {
-		clause, err := sorted.KeysetClause(*f.Cursor, arg)
+		clause, err := sorted.KeysetClause(f.entity, *f.Cursor, arg)
 		if err != nil {
 			return nil, err
 		}

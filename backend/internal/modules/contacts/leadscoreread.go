@@ -102,7 +102,7 @@ func (s *Store) ExplainLeadScore(ctx context.Context, leadID ids.LeadID, in Expl
 		page := crmcontracts.PageInfo{HasMore: hasMore}
 		if hasMore {
 			last := rows[len(rows)-1]
-			next, err := storekit.EncodeCursor(last.ComputedAt, last.ID)
+			next, err := storekit.EncodeCursor("lead_scores", last.ComputedAt, last.ID)
 			if err != nil {
 				return err
 			}
@@ -128,7 +128,7 @@ func readLeadScoreHistory(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, in 
 	args := []any{leadID, limit + 1}
 	where := "lead_id = $1"
 	if in.History && in.Cursor != "" {
-		cursor, err := storekit.DecodeCursor(in.Cursor)
+		cursor, err := storekit.DecodeCursor("lead_scores", in.Cursor)
 		if err != nil {
 			return nil, false, err
 		}
