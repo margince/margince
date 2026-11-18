@@ -57,7 +57,7 @@ func TestFactsOnlyRefreshNeverCallsTheModelEvenWhenTheRequestChanges(t *testing.
 	at := time.Date(2026, 9, 13, 12, 0, 0, 0, time.UTC)
 	now := at.Add(time.Hour)
 	lane := &requestReviewModel{}
-	service := dealstatus.NewService(e.Pool, deals.NewStore(e.DB(), deals.Installation{}), store, dealrooms.NewStore(e.DB()), func() time.Time { return now }).WithLane(lane, "test")
+	service := dealstatus.NewService(e.Pool, deals.NewStore(e.DB(), deals.Installation{}), store, dealrooms.NewStore(e.DB()), func() time.Time { return now }).WithLane(lane, func() string { return "test" })
 	subject, direction := "Please send slots", "inbound"
 	source, _, err := store.LogActivity(ctx, activities.LogActivityInput{Kind: "email", Subject: &subject, Direction: &direction, ThreadKey: "facts-request", OccurredAt: &at, Source: "test", Links: []activities.ActivityLinkInput{{EntityType: "deal", EntityID: dealID}}})
 	if err != nil {

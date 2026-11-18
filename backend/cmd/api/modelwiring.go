@@ -40,9 +40,6 @@ import (
 // AI-unconfigured deployment is a legitimate, ready one (aistate.go);
 // coldStartOptions/offerDraftOptions/writeAIMetrics all treat nil as
 // "this role wires no AI surfaces" rather than panicking.
-// routingVersionOf names the model binding a resolved path came from, for
-// callers that cache model-written content keyed on it.
-func routingVersionOf(cfg ai.RoutingConfig) string { return cfg.RoutingVersion() }
 
 // modelPathSpec names the boot knobs resolveModelPath switches on, so a call
 // site labels each flag instead of passing anonymous booleans.
@@ -75,7 +72,7 @@ func modelPathSpecFrom(cfg apiConfig, bootstrap deployconfig.Bootstrap) modelPat
 	}
 }
 
-func resolveModelPath(ctx context.Context, spec modelPathSpec, pool *pgxpool.Pool, log *slog.Logger) (*compose.ModelPath, string, ai.PublicProfile, string, error) {
+func resolveModelPath(ctx context.Context, spec modelPathSpec, pool *pgxpool.Pool, log *slog.Logger) (*compose.ModelPath, string, func() ai.PublicProfile, error) {
 	// WHERE the binding comes from is a question about the installation, and
 	// answering it needs the database. Which surfaces that binding lights up is
 	// a question about this process. They are separated so the second stays
@@ -86,11 +83,11 @@ func resolveModelPath(ctx context.Context, spec modelPathSpec, pool *pgxpool.Poo
 	// installation that has one is untouched, and an admin's later change is
 	// never reverted by a file.
 	if err := compose.SeedRoutingIfUnset(ctx, pool, spec.seeds.AIRouting, log); err != nil {
-		return nil, "", ai.PublicProfile{}, "", err
+		return nil, "", nil, err
 	}
 	cfg, err := compose.ResolveRouting(ctx, pool, spec.routingPath, spec.keys, log)
 	if err != nil {
-		return nil, "", ai.PublicProfile{}, "", err
+		return nil, "", nil, err
 	}
 	return modelPathFor(ctx, cfg, spec, pool, log)
 }
@@ -98,7 +95,10 @@ func resolveModelPath(ctx context.Context, spec modelPathSpec, pool *pgxpool.Poo
 // modelPathFor wires the surfaces a resolved binding lights up: the declared
 // path for a bound installation, the offline fake behind an explicit dev flag,
 // or the honest-absent posture. Nothing is picked silently.
-func modelPathFor(ctx context.Context, cfg ai.RoutingConfig, spec modelPathSpec, pool *pgxpool.Pool, log *slog.Logger) (*compose.ModelPath, string, ai.PublicProfile, string, error) {
+//
+// The profile it returns is read per request: a bound path answers with the
+// binding it serves now, which a rebind moves without a restart.
+func modelPathFor(ctx context.Context, cfg ai.RoutingConfig, spec modelPathSpec, pool *pgxpool.Pool, log *slog.Logger) (*compose.ModelPath, string, func() ai.PublicProfile, error) {
 	if !cfg.Unconfigured() {
 		// A deployment may legitimately not run every workload, so a task
 		// with no bound tier is no boot error. It must still be loud, so the
@@ -145,7 +145,7 @@ func modelPathFor(ctx context.Context, cfg ai.RoutingConfig, spec modelPathSpec,
 			// missing credential.
 			var unservable *compose.UnservableBindingError
 			if i == len(candidates)-1 || !errors.As(err, &unservable) {
-				return nil, "", ai.PublicProfile{}, "", err
+				return nil, "", nil, err
 			}
 			// Loud: a bound installation quietly serving canned text would be
 			// the worse of the two failures.
@@ -153,21 +153,33 @@ func modelPathFor(ctx context.Context, cfg ai.RoutingConfig, spec modelPathSpec,
 				"error", err)
 			continue
 		}
-		return &modelPath, candidate.state,
-			ai.NewPublicProfile(candidate.state, candidate.cfg), routingVersionOf(candidate.cfg), nil
+		profile := fixedProfile(ai.NewPublicProfile(candidate.state, candidate.cfg))
+		if candidate.state == compose.AIStateConfigured {
+			profile = modelPath.ConfiguredProfile
+		}
+		return &modelPath, candidate.state, profile, nil
 	}
 	return nil, compose.AIStateUnconfigured,
-		ai.NewPublicProfile(compose.AIStateUnconfigured, ai.RoutingConfig{}), "", nil
+		fixedProfile(ai.NewPublicProfile(compose.AIStateUnconfigured, ai.RoutingConfig{})), nil
+}
+
+// fixedProfile answers one profile for the life of the process, for a path
+// that serves no stored binding a rebind could move.
+func fixedProfile(profile ai.PublicProfile) func() ai.PublicProfile {
+	return func() ai.PublicProfile { return profile }
 }
 
 // coldStartOptions wires the cold-start read-back's model surface over
 // an already-resolved model path: a real deployment or --ai-fake lights
 // it up, no path leaves the operation an explicit 501 (same posture as
 // the worker's runner lane).
-func coldStartOptions(modelPath *compose.ModelPath, routingVersion string) []compose.Option {
+func coldStartOptions(modelPath *compose.ModelPath) []compose.Option {
 	if modelPath == nil {
 		return nil
 	}
+	// Read per write: the cached writers fingerprint the binding they were
+	// written under, so a rebind rewrites them without a restart.
+	routingVersion := modelPath.RoutingVersion
 	// The read-back and per-company enrichment share the fetch + extraction
 	// seam, so both light up together on the one resolved model path;
 	// the Morning-Brief L2 re-order rides its own routed lane.

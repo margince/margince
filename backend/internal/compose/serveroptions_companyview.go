@@ -60,7 +60,7 @@ func WithAccountDraft(brain completer) Option {
 // tells the reader which of the two they have. routingVersion rides the
 // fingerprint so re-pointing this lane rewrites cached briefs instead of
 // leaving text attributed to a model that no longer writes it.
-func WithCompanyBrief(brain completer, routingVersion string) Option {
+func WithCompanyBrief(brain completer, routingVersion func() string) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		s.companyBriefSvc = companybrief.NewService(pool, s.company360Svc, s.contactsStore, brain, routingVersion, time.Now).
 			WithEmailSummaries(emailRows(pool))
@@ -81,7 +81,7 @@ func WithCompanyBrief(brain completer, routingVersion string) Option {
 // WithGrowthFit does — replacing that set while remembering only one service
 // would leave the other endpoint answering from a service the Server no longer
 // holds. Either option may run first.
-func WithCompanyDossier(brain completer, routingVersion string) Option {
+func WithCompanyDossier(brain completer, routingVersion func() string) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		s.companyDossierSvc = companydossier.NewService(pool, s.contactsStore, brain, routingVersion, time.Now).
 			WithEmailSummaries(emailRows(pool))
@@ -104,7 +104,7 @@ func WithCompanyDossier(brain completer, routingVersion string) Option {
 // two share one handler set: replacing that set while remembering only one
 // service would leave the other endpoint answering from a service the Server no
 // longer holds.
-func WithGrowthFit(brain completer, routingVersion string) Option {
+func WithGrowthFit(brain completer, routingVersion func() string) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		s.companyGrowthFitSvc = companydossier.NewGrowthFitService(
 			pool, s.contactsStore, offeringConfirmed(s.contactsStore), brain, routingVersion, time.Now).
@@ -142,7 +142,7 @@ func WithMeetingBriefWriter(brain completer) Option {
 // The routing version rides along because the card IS cached: a card written
 // under one routing configuration must not be served after the configuration
 // changes, so the version is part of the fingerprint.
-func WithDealStatusWriter(brain completer, routingVersion string) Option {
+func WithDealStatusWriter(brain completer, routingVersion func() string) Option {
 	return func(s *Server, _ *pgxpool.Pool) {
 		if s.dealStatusSvc == nil {
 			return

@@ -36,7 +36,7 @@ func discardLogger() *slog.Logger {
 // case: no declared routing file and no --ai-fake resolves to a nil
 // path and the unconfigured state, never a silent default provider.
 func TestResolveModelPathNeitherFlagIsUnconfigured(t *testing.T) {
-	modelPath, state, profile, _, err := modelPathFor(context.Background(), ai.RoutingConfig{}, modelPathSpec{}, nil, discardLogger())
+	modelPath, state, profile, err := modelPathFor(context.Background(), ai.RoutingConfig{}, modelPathSpec{}, nil, discardLogger())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -46,8 +46,8 @@ func TestResolveModelPathNeitherFlagIsUnconfigured(t *testing.T) {
 	if state != compose.AIStateUnconfigured {
 		t.Fatalf("state = %q, want %q", state, compose.AIStateUnconfigured)
 	}
-	if profile.State != "unconfigured" || profile.InferenceMode != "none" || len(profile.Providers) != 0 {
-		t.Fatalf("profile = %+v, want honest unconfigured posture", profile)
+	if profile().State != "unconfigured" || profile().InferenceMode != "none" || len(profile().Providers) != 0 {
+		t.Fatalf("profile = %+v, want honest unconfigured posture", profile())
 	}
 }
 
@@ -57,7 +57,7 @@ func TestResolveModelPathNeitherFlagIsUnconfigured(t *testing.T) {
 // uses) rather than bypassing the Router — every lane must be non-nil,
 // or a consumer wired against it would nil-panic on first use.
 func TestResolveModelPathFakeArmBindsEveryLane(t *testing.T) {
-	modelPath, state, profile, _, err := modelPathFor(context.Background(), ai.RoutingConfig{}, modelPathSpec{fakeBrain: true}, nil, discardLogger())
+	modelPath, state, profile, err := modelPathFor(context.Background(), ai.RoutingConfig{}, modelPathSpec{fakeBrain: true}, nil, discardLogger())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -67,8 +67,8 @@ func TestResolveModelPathFakeArmBindsEveryLane(t *testing.T) {
 	if state != compose.AIStateFake {
 		t.Fatalf("state = %q, want %q", state, compose.AIStateFake)
 	}
-	if profile.State != "development" || profile.InferenceMode != "development" || len(profile.Providers) != 0 {
-		t.Fatalf("profile = %+v, want development posture without a fake provider label", profile)
+	if profile().State != "development" || profile().InferenceMode != "development" || len(profile().Providers) != 0 {
+		t.Fatalf("profile = %+v, want development posture without a fake provider label", profile())
 	}
 	if modelPath.AgentLoop == nil {
 		t.Error("AgentLoop lane is nil")
@@ -122,14 +122,14 @@ embeddings: {provider: gemini, model: gemini-embedding-001, dimensions: 8}
 
 	// Without the flag: a boot error, and it must name the missing credential
 	// rather than starting on something the operator did not choose.
-	if _, _, _, _, err := modelPathFor(
+	if _, _, _, err := modelPathFor(
 		context.Background(), cfg, modelPathSpec{}, nil, discardLogger()); err == nil {
 		t.Fatal("a binding with no resolvable credential booted; a deployment must fail closed on it")
 	}
 
 	// With it: the fake serves, and the state SAYS fake so nothing downstream
 	// reports canned text as a configured installation.
-	path, state, profile, _, err := modelPathFor(
+	path, state, profile, err := modelPathFor(
 		context.Background(), cfg, modelPathSpec{fakeBrain: true}, nil, discardLogger())
 	if err != nil {
 		t.Fatalf("--ai-fake did not rescue an unbuildable binding: %v", err)
@@ -143,8 +143,8 @@ embeddings: {provider: gemini, model: gemini-embedding-001, dimensions: 8}
 	// The same development posture the plain fake arm reports, and no provider
 	// label: the profile a reader sees must not name the vendor whose binding
 	// could not be built.
-	if profile.State != "development" || profile.InferenceMode != "development" || len(profile.Providers) != 0 {
-		t.Errorf("profile = %+v, want the development posture without a provider label", profile)
+	if profile().State != "development" || profile().InferenceMode != "development" || len(profile().Providers) != 0 {
+		t.Errorf("profile = %+v, want the development posture without a provider label", profile())
 	}
 }
 
@@ -156,7 +156,7 @@ embeddings: {provider: gemini, model: gemini-embedding-001, dimensions: 8}
 // canned answers. The settings screen would then look broken while obeyed.
 func TestBoundRoutingOutranksTheFakeBrain(t *testing.T) {
 	cfg := fakeRouting(t)
-	_, state, profile, _, err := modelPathFor(
+	_, state, profile, err := modelPathFor(
 		context.Background(), cfg, modelPathSpec{fakeBrain: true}, nil, discardLogger())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -164,8 +164,8 @@ func TestBoundRoutingOutranksTheFakeBrain(t *testing.T) {
 	if state != compose.AIStateConfigured {
 		t.Fatalf("state = %q, want %q: --ai-fake must not displace a stored binding", state, compose.AIStateConfigured)
 	}
-	if profile.State != "configured" {
-		t.Fatalf("profile.State = %q, want configured", profile.State)
+	if profile().State != "configured" {
+		t.Fatalf("profile().State = %q, want configured", profile().State)
 	}
 }
 
@@ -174,7 +174,7 @@ func TestBoundRoutingOutranksTheFakeBrain(t *testing.T) {
 // no external credential and no network access.
 func TestResolveModelPathBoundArmBindsEveryLane(t *testing.T) {
 	cfg := fakeRouting(t)
-	modelPath, state, profile, _, err := modelPathFor(context.Background(), cfg, modelPathSpec{}, nil, discardLogger())
+	modelPath, state, profile, err := modelPathFor(context.Background(), cfg, modelPathSpec{}, nil, discardLogger())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -184,8 +184,8 @@ func TestResolveModelPathBoundArmBindsEveryLane(t *testing.T) {
 	if state != compose.AIStateConfigured {
 		t.Fatalf("state = %q, want %q", state, compose.AIStateConfigured)
 	}
-	if profile.State != "configured" || profile.InferenceMode != "development" || len(profile.Providers) != 0 {
-		t.Fatalf("profile = %+v, want configured fake-file posture without a provider label", profile)
+	if profile().State != "configured" || profile().InferenceMode != "development" || len(profile().Providers) != 0 {
+		t.Fatalf("profile = %+v, want configured fake-file posture without a provider label", profile())
 	}
 	// Every lane, because that is what the comment claims and what the fake arm
 	// checks — a bound installation that wires six of seven is the defect this
@@ -225,14 +225,14 @@ var coldStartSurfaces = []string{
 // consumer of the resolved path now: nil in, nil out (the 501 posture); a bound
 // path in, every surface coldStartSurfaces names out.
 func TestColdStartOptionsRespectsResolvedPath(t *testing.T) {
-	if got := coldStartOptions(nil, ""); got != nil {
+	if got := coldStartOptions(nil); got != nil {
 		t.Fatalf("coldStartOptions(nil) = %d options, want 0", len(got))
 	}
-	modelPath, _, _, _, err := modelPathFor(context.Background(), ai.RoutingConfig{}, modelPathSpec{fakeBrain: true}, nil, discardLogger())
+	modelPath, _, _, err := modelPathFor(context.Background(), ai.RoutingConfig{}, modelPathSpec{fakeBrain: true}, nil, discardLogger())
 	if err != nil {
 		t.Fatalf("resolveModelPath: %v", err)
 	}
-	if got := coldStartOptions(modelPath, ""); len(got) != len(coldStartSurfaces) {
+	if got := coldStartOptions(modelPath); len(got) != len(coldStartSurfaces) {
 		t.Fatalf("coldStartOptions(bound path) = %d options, want %d (%s)",
 			len(got), len(coldStartSurfaces), strings.Join(coldStartSurfaces, ", "))
 	}
@@ -244,7 +244,7 @@ func TestOfferDraftOptionsRespectsResolvedPath(t *testing.T) {
 	if got := offerDraftOptions(nil, nil); got != nil {
 		t.Fatalf("offerDraftOptions(nil) = %d options, want 0", len(got))
 	}
-	modelPath, _, _, _, err := modelPathFor(context.Background(), ai.RoutingConfig{}, modelPathSpec{fakeBrain: true}, nil, discardLogger())
+	modelPath, _, _, err := modelPathFor(context.Background(), ai.RoutingConfig{}, modelPathSpec{fakeBrain: true}, nil, discardLogger())
 	if err != nil {
 		t.Fatalf("resolveModelPath: %v", err)
 	}
@@ -439,5 +439,40 @@ func TestTheRewriteEndpointRidesTheRewriteLane(t *testing.T) {
 	}
 	if lead := ai.LeadingTier(ai.TaskRewrite); lead != ai.TierPremium {
 		t.Errorf("the rewrite ladder leads with %q, want premium", lead)
+	}
+}
+
+// Settings, AI models, saves a binding the watcher adopts within a minute. The
+// profile reads and the routing version the cached briefs fingerprint against
+// must follow it there, not wait for the api to restart.
+func TestABoundPathFollowsARebindWithoutARestart(t *testing.T) {
+	const bound = `profile: eu_hosted
+tiers:
+  local_small: {provider: ollama, model: first-small}
+  premium: {provider: ollama, model: first-large}
+embeddings: {provider: fake}
+`
+	parse := func(doc string) ai.RoutingConfig {
+		cfg, err := ai.ParseRouting([]byte(doc))
+		if err != nil {
+			t.Fatalf("ParseRouting: %v", err)
+		}
+		return cfg
+	}
+	modelPath, state, profile, err := modelPathFor(context.Background(), parse(bound), modelPathSpec{}, nil, discardLogger())
+	if err != nil || state != compose.AIStateConfigured {
+		t.Fatalf("modelPathFor = state %q err %v, want a configured path", state, err)
+	}
+	bootVersion := modelPath.RoutingVersion()
+	if err := modelPath.Router().Rebind(parse(strings.ReplaceAll(bound, "first-", "second-"))); err != nil {
+		t.Fatalf("Rebind: %v", err)
+	}
+	if modelPath.RoutingVersion() == bootVersion {
+		t.Error("the routing version the briefs fingerprint against kept its boot value")
+	}
+	for _, m := range profile().ConfiguredModels {
+		if strings.HasPrefix(m.Model, "first-") {
+			t.Errorf("profile still names the boot model %s on %s", m.Model, m.Tier)
+		}
 	}
 }
