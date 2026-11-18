@@ -86,6 +86,31 @@ describe("parseHash", () => {
   it("drops the segments under a screen this app does not answer", () => {
     expect(parseHash("#/dealz/01J9ZK/tab")).toEqual({ screen: "not-found" });
   });
+
+  // An all-marketing unsubscribe link carries a token and no purpose. Every
+  // spelling of it must leave the purpose absent, never an empty string.
+  it.each([
+    "#/unsubscribe/wd_tok?lang=de",
+    "#/unsubscribe/wd_tok/?lang=de",
+    "#/unsubscribe/wd_tok",
+    "#/unsubscribe/wd_tok/",
+  ])("reads %s as a token with no purpose", (hash) => {
+    expect(parseHash(hash)).toEqual({
+      screen: "unsubscribe",
+      id: "wd_tok",
+      id2: undefined,
+      id3: undefined,
+    });
+  });
+
+  it("reads a named unsubscribe link with its purpose and no query", () => {
+    expect(parseHash("#/unsubscribe/wd_tok/marketing_email?lang=vi")).toEqual({
+      screen: "unsubscribe",
+      id: "wd_tok",
+      id2: "marketing_email",
+      id3: undefined,
+    });
+  });
 });
 
 describe("routeHash", () => {

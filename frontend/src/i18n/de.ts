@@ -13453,6 +13453,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Links zu Ihren E-Mail-Einstellungen laufen ab und können widerrufen werden. Fordern Sie über eine aktuelle E-Mail einen neuen Link an.",
   "prefs.unsub.errorTitle": "Einstellungen konnten nicht geöffnet werden",
   "prefs.unsub.failedTitle": "E-Mails nicht abbestellt",
+  "prefs.unsub.allTitle": "Alle Marketing-E-Mails abbestellen?",
+  "prefs.unsub.allLead":
+    "Mit einem Klick stoppen Sie alle Marketing-E-Mails an Ihre Adresse.",
+  "prefs.unsub.allAfterBody":
+    "Antworten auf Ihre eigenen Nachrichten sowie Sicherheits- und Servicenachrichten erhalten Sie weiterhin.",
+  "prefs.unsub.allDoneBody":
+    "Von diesem Absender erhalten Sie keine Marketing-E-Mails mehr.",
+  "prefs.unsub.linkLead":
+    "Mit einem Klick stoppen Sie die E-Mails, mit denen dieser Link kam.",
   "prefs.purpose.business_correspondence": "Direkte Korrespondenz",
   "prefs.purpose.marketing_email": "Produktneuigkeiten",
   "prefs.purpose.transactional": "Sicherheits- und Servicenachrichten",

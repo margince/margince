@@ -13426,6 +13426,14 @@ export const en = {
     "Preference links expire and can be withdrawn. Request a new one from any recent email.",
   "prefs.unsub.errorTitle": "Preferences could not be opened",
   "prefs.unsub.failedTitle": "Emails not stopped",
+  "prefs.unsub.allTitle": "Stop all marketing emails?",
+  "prefs.unsub.allLead":
+    "One click stops every marketing email to your address.",
+  "prefs.unsub.allAfterBody":
+    "Replies to your own messages and security or service messages still arrive.",
+  "prefs.unsub.allDoneBody":
+    "You will not receive marketing emails from this sender again.",
+  "prefs.unsub.linkLead": "One click stops the emails this link was sent with.",
   "prefs.purpose.business_correspondence": "Direct correspondence",
   "prefs.purpose.marketing_email": "Product news",
   "prefs.purpose.transactional": "Security and service messages",

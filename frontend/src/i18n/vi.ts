@@ -13103,6 +13103,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Liên kết tùy chọn sẽ hết hạn và có thể bị thu hồi. Yêu cầu liên kết mới từ bất kỳ email gần đây nào.",
   "prefs.unsub.errorTitle": "Không thể mở tùy chọn",
   "prefs.unsub.failedTitle": "Không thể ngừng gửi email",
+  "prefs.unsub.allTitle": "Ngừng nhận mọi email tiếp thị?",
+  "prefs.unsub.allLead":
+    "Một lần nhấp sẽ ngừng mọi email tiếp thị gửi đến địa chỉ của quý khách.",
+  "prefs.unsub.allAfterBody":
+    "Thư trả lời tin nhắn của quý khách và thông báo bảo mật hoặc dịch vụ vẫn được gửi.",
+  "prefs.unsub.allDoneBody":
+    "Quý khách sẽ không nhận email tiếp thị từ bên gửi này nữa.",
+  "prefs.unsub.linkLead":
+    "Một lần nhấp sẽ ngừng các email đi kèm liên kết này.",
   "prefs.purpose.business_correspondence": "Thư từ trực tiếp",
   "prefs.purpose.marketing_email": "Tin tức sản phẩm",
   "prefs.purpose.transactional": "Thông báo về bảo mật và dịch vụ",

@@ -12,6 +12,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en } from "../../i18n/en";
 import { UnsubscribeScreen } from "./unsubscribe";
 
 // The page the VISIBLE unsubscribe link in a message opens. Like the
@@ -253,9 +254,61 @@ describe("UnsubscribeScreen", () => {
     expect(screen.getByText(/open your preferences/i)).toBeInTheDocument();
   });
 
-  it("early-returns honestly when the address carries no purpose", () => {
+  it("calls a link dead only when it carries no token", () => {
     stubEdge();
-    render(<UnsubscribeScreen token="tok-123" />);
+    render(<UnsubscribeScreen />);
     expect(screen.getByText(/no longer valid/i)).toBeInTheDocument();
+  });
+
+  // A link with no purpose is an all-marketing link. Opening it reads, and
+  // the press names no purpose, so the server stops what the token covers.
+  it("offers to stop all marketing when the link names no purpose", async () => {
+    const sent = stubEdge();
+    render(<UnsubscribeScreen token="tok-123" />);
+    const stopAll = await screen.findByRole("button", {
+      name: en["prefs.unsubscribeAll"],
+    });
+    expect(sent.every((r) => r.key.startsWith("GET "))).toBe(true);
+
+    await userEvent.click(stopAll);
+    expect(
+      await screen.findByText(en["prefs.unsub.allDoneBody"]),
+    ).toBeInTheDocument();
+    const post = sent.find((r) => r.key.startsWith("POST "));
+    expect(post?.url).toBe("/v1/public/preferences/tok-123/unsubscribe");
+  });
+
+  it("keeps a neutral stop button for a withdrawal credential with no purpose", async () => {
+    const sent = stubEdge({
+      "GET /public/preferences/tok-123": () =>
+        jsonResponse({ title: "not found" }, 404),
+    });
+    render(<UnsubscribeScreen token="tok-123" />);
+    await userEvent.click(
+      await screen.findByRole("button", { name: en["prefs.unsub.confirm"] }),
+    );
+    expect(
+      await screen.findByRole("heading", { name: /^unsubscribed$/i }),
+    ).toBeInTheDocument();
+    const post = sent.find((r) => r.key.startsWith("POST "));
+    expect(post?.url).toBe("/v1/public/preferences/tok-123/unsubscribe");
+  });
+
+  // The label lives behind the read this credential lacks, and a raw key is
+  // not copy a recipient should read.
+  it("never shows the raw purpose key on the read-less page", async () => {
+    stubEdge({
+      "GET /public/preferences/tok-123": () =>
+        jsonResponse({ title: "not found" }, 404),
+    });
+    render(
+      <UnsubscribeScreen token="tok-123" purpose="business_correspondence" />,
+    );
+    expect(
+      await screen.findByText(en["prefs.unsub.linkLead"]),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText(/business_correspondence/),
+    ).not.toBeInTheDocument();
   });
 });

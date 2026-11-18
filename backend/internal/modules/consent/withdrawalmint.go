@@ -31,17 +31,21 @@ import (
 // that address regardless, and an opt-out is about where the mail went; a
 // recipient we cannot name is exactly the one least able to ask a human.
 //
+// effectivePurpose is the key the credential is scoped to, or "" when it covers
+// all marketing. The links are built from it, so they name what the press stops.
+//
 // ok is false only when a credential already covers this address and scope, in
 // which case the previous link still works and there is nothing new to write
 // into the mail. The caller keeps the header it would otherwise have built.
 func (s *Store) WithdrawalTokenForEmail(
 	ctx context.Context, recipientEmail, purposeKey string,
-) (token string, ok bool, err error) {
+) (token, effectivePurpose string, ok bool, err error) {
 	address := normalizeAddress(recipientEmail)
 	if address == "" {
-		return "", false, nil
+		return "", "", false, nil
 	}
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		effectivePurpose = ""
 		in := WithdrawalMintInput{Address: address, Scope: WithdrawalScopeAllMarketing}
 		if err := bindWithdrawalSubject(ctx, tx, &in); err != nil {
 			return err
@@ -58,6 +62,7 @@ func (s *Store) WithdrawalTokenForEmail(
 				return fmt.Errorf("consent: resolving the purpose for the unsubscribe link: %w", scanErr)
 			default:
 				in.Scope, in.PurposeID = WithdrawalScopeNamedPurpose, purposeID
+				effectivePurpose = purposeKey
 			}
 		}
 		var mintErr error
@@ -65,9 +70,9 @@ func (s *Store) WithdrawalTokenForEmail(
 		return mintErr
 	})
 	if err != nil {
-		return "", false, err
+		return "", "", false, err
 	}
-	return token, token != "", nil
+	return token, effectivePurpose, token != "", nil
 }
 
 // bindWithdrawalSubject attaches the record holding this address, when one

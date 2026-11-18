@@ -31,10 +31,18 @@ type stubUnsubscribeLinker struct {
 	// manage overrides what the preference-centre link carries, for the cases
 	// that turn on the two credentials being different.
 	manage string
+	// allMarketing answers the all-marketing scope whatever key was asked, as
+	// the consent mint does for a key its catalog does not hold.
+	allMarketing bool
 }
 
-func (l stubUnsubscribeLinker) UnsubscribeToken(context.Context, string, string) (string, bool, error) {
-	return l.token, l.ok, l.err
+// UnsubscribeToken scopes the credential to the asked key, as the consent
+// mint does for a purpose its catalog holds.
+func (l stubUnsubscribeLinker) UnsubscribeToken(_ context.Context, _, purposeKey string) (string, string, bool, error) {
+	if l.allMarketing {
+		purposeKey = ""
+	}
+	return l.token, purposeKey, l.ok, l.err
 }
 
 // ManageToken answers the same token unless the case sets its own. The stop

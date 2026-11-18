@@ -19,9 +19,11 @@ type preferenceLinkAdapter struct {
 	store *consent.Store
 }
 
-func (a preferenceLinkAdapter) UnsubscribeToken(ctx context.Context, recipientEmail, purposeKey string) (string, bool, error) {
+func (a preferenceLinkAdapter) UnsubscribeToken(
+	ctx context.Context, recipientEmail, purposeKey string,
+) (token, effectivePurpose string, ok bool, err error) {
 	if consent.LockedPurpose(purposeKey) {
-		return "", false, nil
+		return "", "", false, nil
 	}
 	// THE WITHDRAWAL CREDENTIAL FIRST, because this token goes into a message
 	// that outlives it. A preference token slides 30 days and is revoked on the
@@ -31,14 +33,15 @@ func (a preferenceLinkAdapter) UnsubscribeToken(ctx context.Context, recipientEm
 	//
 	// It also reaches recipients the preference token cannot: that mint
 	// resolves contacts only, so a lead-only address carried NO header at all.
-	token, ok, err := a.store.WithdrawalTokenForEmail(ctx, recipientEmail, purposeKey)
+	token, effectivePurpose, ok, err = a.store.WithdrawalTokenForEmail(ctx, recipientEmail, purposeKey)
 	if err != nil || ok {
-		return token, ok, err
+		return token, effectivePurpose, ok, err
 	}
 	// A live credential already covers this address, so its link is still in a
-	// message somewhere and still works. The preference token is the fallback
-	// that gives THIS message a header of its own.
-	return a.store.PreferenceTokenForEmail(ctx, recipientEmail)
+	// message somewhere and still works. The preference token gives this
+	// message a header of its own, and the links keep the resolved purpose.
+	token, ok, err = a.store.PreferenceTokenForEmail(ctx, recipientEmail)
+	return token, effectivePurpose, ok, err
 }
 
 // ManageToken answers the preference token the preference centre resolves.

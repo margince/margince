@@ -148,7 +148,7 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
     // #/preferences/<token>: anonymous; the token in the path is the
     // whole capability (security: [] in the contract).
     preferences: ({ id }) => <PreferenceCenterScreen token={id} />,
-    // #/unsubscribe/<token>/<purpose>: the page the visible unsubscribe
+    // #/unsubscribe/<token>[/<purpose>]: the page the visible unsubscribe
     // link in a message opens. Anonymous, and it never withdraws on arrival:
     // a mail scanner following the link is not a contact pressing a button.
     unsubscribe: ({ id, id2 }) => (

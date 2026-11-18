@@ -94,9 +94,18 @@ export const LockedPurpose: Story = {
   ),
 };
 
-/** The link carried no purpose. A dead end is the page rather than a notice on
+/** The link carried no token. A dead end is the page rather than a notice on
  * it, so the answer is the heading. */
 export const DeadLink: Story = {
+  render: () => (
+    <Served>
+      <UnsubscribeScreen />
+    </Served>
+  ),
+};
+
+/** An all-marketing link: no purpose, so the press stops all marketing. */
+export const AllMarketing: Story = {
   render: () => (
     <Served>
       <UnsubscribeScreen token={TOKEN} />

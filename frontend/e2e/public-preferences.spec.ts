@@ -180,6 +180,51 @@ test.describe("the pages a message links to", () => {
     );
   });
 
+  // A link with no purpose is an all-marketing link, in every spelling a mail
+  // client may leave it in. The press names no purpose; the server stops what
+  // the token covers.
+  for (const address of [
+    `/#/unsubscribe/${TOKEN}?lang=de`,
+    `/#/unsubscribe/${TOKEN}/?lang=de`,
+  ]) {
+    test(`a link with no purpose stops all marketing (${address})`, async ({
+      page,
+    }) => {
+      const sent: Sent[] = [];
+      await mockPublicEdge(page, sent);
+
+      await page.goto(address);
+      const stopAll = page.getByRole("button", {
+        name: de["prefs.unsubscribeAll"],
+      });
+      await expect(stopAll).toBeVisible();
+      expect(sent.filter((r) => r.method !== "GET")).toEqual([]);
+
+      await stopAll.click();
+      await expect(page.getByText(de["prefs.unsub.allDoneBody"])).toBeVisible();
+      expect(sent.find((r) => r.method === "POST")?.url).toBe(
+        `/v1/public/preferences/${TOKEN}/unsubscribe`,
+      );
+    });
+  }
+
+  test("a withdraw-only link with no purpose keeps a neutral button", async ({
+    page,
+  }) => {
+    const sent: Sent[] = [];
+    await mockPublicEdge(page, sent);
+
+    await page.goto("/#/unsubscribe/wd_gone?lang=de");
+    await expect(page.getByText(de["prefs.unsub.linkLead"])).toBeVisible();
+    await page.getByRole("button", { name: de["prefs.unsub.confirm"] }).click();
+    await expect(
+      page.getByRole("heading", { name: de["prefs.unsub.doneTitle"] }),
+    ).toBeVisible();
+    expect(sent.find((r) => r.method === "POST")?.url).toBe(
+      "/v1/public/preferences/wd_gone/unsubscribe",
+    );
+  });
+
   // A locked purpose carries no control at all: one that always failed
   // would be worse than none.
   test("a purpose that cannot be switched off offers no control", async ({

@@ -11,7 +11,9 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
 // The header keeps the machine endpoint. A mailbox provider POSTs it
@@ -216,5 +218,63 @@ func TestAManagelessRecipientFallsBackToTheStopCredential(t *testing.T) {
 	if !strings.Contains(links.manage, "wd_stop") {
 		t.Errorf("the manage link is %q — a recipient with no preference token must still be "+
 			"offered a page that can stop their mail", links.manage)
+	}
+}
+
+// An all-marketing link names no purpose. The server reads a press without one
+// as "stop all marketing". An empty segment or query value would name a
+// purpose nobody holds.
+func TestAnAllMarketingLinkNamesNoPurpose(t *testing.T) {
+	links := unsubscribeLinksFor("https://crm.example.com",
+		unsubscribeTokens{stop: "wd_stop", manage: "pref_manage"}, "", textlang.German)
+
+	if want := "https://crm.example.com/v1/public/preferences/wd_stop/unsubscribe"; links.oneClick != want {
+		t.Errorf("oneClick = %q, want %q", links.oneClick, want)
+	}
+	if want := "https://crm.example.com/#/unsubscribe/wd_stop?lang=de"; links.unsubscribe != want {
+		t.Errorf("unsubscribe = %q, want %q", links.unsubscribe, want)
+	}
+}
+
+// The links name the credential's scope, not the key the send asked for. A key
+// the catalog lacks mints an all-marketing credential. A link repeating that
+// key would stop nothing while the page reported success.
+func TestTheLinksNameThePurposeTheCredentialStops(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		asked        string
+		allMarketing bool
+		oneClick     string
+		page         string
+	}{
+		{"named", "marketing_email", false,
+			"https://crm.example.test/v1/public/preferences/wd_stop/unsubscribe?purpose=marketing_email",
+			"https://crm.example.test/#/unsubscribe/wd_stop/marketing_email?lang=en"},
+		{"unknown", "no_such_purpose", true,
+			"https://crm.example.test/v1/public/preferences/wd_stop/unsubscribe",
+			"https://crm.example.test/#/unsubscribe/wd_stop?lang=en"},
+		{"empty", "", true,
+			"https://crm.example.test/v1/public/preferences/wd_stop/unsubscribe",
+			"https://crm.example.test/#/unsubscribe/wd_stop?lang=en"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			store := (&Store{}).WithPublicBaseURL("https://crm.example.test").WithUnsubscribe(
+				stubUnsubscribeLinker{token: "wd_stop", ok: true, allMarketing: tc.allMarketing})
+			surface := unsubscribeSurface{category: commsauthz.CategoryMarketing, purposeKey: tc.asked}
+			got, err := store.deliverability(context.Background(), "Body", "Subject",
+				[]string{"buyer@example.test"}, surface, ids.Nil, textlang.English)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got.links.oneClick != tc.oneClick {
+				t.Errorf("oneClick = %q, want %q", got.links.oneClick, tc.oneClick)
+			}
+			if got.links.unsubscribe != tc.page {
+				t.Errorf("unsubscribe = %q, want %q", got.links.unsubscribe, tc.page)
+			}
+			if !strings.Contains(got.transmitted, tc.page) {
+				t.Errorf("the footer does not carry the page link %q: %q", tc.page, got.transmitted)
+			}
+		})
 	}
 }

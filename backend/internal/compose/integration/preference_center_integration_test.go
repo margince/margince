@@ -97,7 +97,7 @@ func transmittedBody(t *testing.T, c *consentEnv) string {
 
 // unsubscribeLinkIn lifts the visible unsubscribe link out of the footer
 // the send appended, and tokenFromLink lifts the preference token out of
-// it: `https://base/#/unsubscribe/TOKEN/PURPOSE?lang=xx`. The visible link
+// it: `https://base/#/unsubscribe/TOKEN[/PURPOSE]?lang=xx`. The visible link
 // is a PAGE — the machine endpoint that used to be here is POST-only and
 // answers a human click with 405.
 func unsubscribeLinkIn(t *testing.T, body string) string {
@@ -153,7 +153,7 @@ func tokenFromLink(t *testing.T, link string) string {
 	// logs until the page deliberately calls the API with it.
 	route, _, _ := strings.Cut(u.Fragment, "?")
 	parts := strings.Split(strings.TrimPrefix(route, "/unsubscribe/"), "/")
-	if len(parts) < 2 || parts[0] == "" {
+	if parts[0] == "" || parts[0] == route {
 		t.Fatalf("unsubscribe link has no token: %q", u.Fragment)
 	}
 	return parts[0]

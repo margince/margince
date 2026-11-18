@@ -265,7 +265,7 @@ func TestTheSendPathMintsAWorkingLinkForALeadOnlyAddress(t *testing.T) {
 		t.Fatalf("seeding the lead: %v", err)
 	}
 
-	token, ok, err := e.store.WithdrawalTokenForEmail(e.ctx, "header-lead@example.test", "")
+	token, _, ok, err := e.store.WithdrawalTokenForEmail(e.ctx, "header-lead@example.test", "")
 	if err != nil {
 		t.Fatalf("minting for the send path: %v", err)
 	}
@@ -300,7 +300,7 @@ func TestAContactWinsOverALeadHoldingTheSameAddress(t *testing.T) {
 		t.Fatalf("seeding the lead: %v", err)
 	}
 
-	token, ok, err := e.store.WithdrawalTokenForEmail(e.ctx, shared, "")
+	token, _, ok, err := e.store.WithdrawalTokenForEmail(e.ctx, shared, "")
 	if err != nil {
 		t.Fatalf("minting: %v", err)
 	}

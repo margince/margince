@@ -31,7 +31,12 @@ import (
 type UnsubscribeLinker interface {
 	// UnsubscribeToken answers the credential the STOP links carry, and ok is
 	// false when this address has no unsubscribe surface at all.
-	UnsubscribeToken(ctx context.Context, recipientEmail, purposeKey string) (token string, ok bool, err error)
+	//
+	// effectivePurpose is the key the credential stops, or "" for all
+	// marketing. It differs from the asked key when the catalog holds no such
+	// purpose. The links name it, so a press stops what the credential covers.
+	UnsubscribeToken(ctx context.Context, recipientEmail, purposeKey string) (
+		token, effectivePurpose string, ok bool, err error)
 	// ManageToken answers the credential the preference centre resolves, which
 	// is a different capability and now a different kind of token.
 	//
@@ -153,6 +158,9 @@ type unsubscribeLinks struct {
 // surfaces that way, static hosting needs no server fallback for them, and
 // the token stays out of ordinary web-server access logs until the page
 // deliberately calls the API with it.
+//
+// An empty purpose is an all-marketing link, and both stop links omit it. The
+// server reads a press that names no purpose as "all marketing".
 func unsubscribeLinksFor(baseURL string, tokens unsubscribeTokens, purposeKey string, lang textlang.Lang) unsubscribeLinks {
 	purpose := strings.ToLower(strings.TrimSpace(purposeKey))
 	query := "?lang=" + url.QueryEscape(string(lang))
@@ -160,12 +168,16 @@ func unsubscribeLinksFor(baseURL string, tokens unsubscribeTokens, purposeKey st
 	if manageToken == "" {
 		manageToken = tokens.stop
 	}
+	oneClick := baseURL + "/v1/public/preferences/" + url.PathEscape(tokens.stop) + "/unsubscribe"
+	unsubscribe := baseURL + "/#/unsubscribe/" + url.PathEscape(tokens.stop)
+	if purpose != "" {
+		oneClick += "?purpose=" + url.QueryEscape(purpose)
+		unsubscribe += "/" + url.PathEscape(purpose)
+	}
 	return unsubscribeLinks{
-		oneClick: baseURL + "/v1/public/preferences/" + url.PathEscape(tokens.stop) +
-			"/unsubscribe?purpose=" + url.QueryEscape(purpose),
-		unsubscribe: baseURL + "/#/unsubscribe/" + url.PathEscape(tokens.stop) + "/" +
-			url.PathEscape(purpose) + query,
-		manage: baseURL + "/#/preferences/" + url.PathEscape(manageToken) + query,
+		oneClick:    oneClick,
+		unsubscribe: unsubscribe + query,
+		manage:      baseURL + "/#/preferences/" + url.PathEscape(manageToken) + query,
 	}
 }
 
@@ -318,7 +330,7 @@ func (s *Store) deliverability(
 	if !s.offersUnsubscribe(recipients, surface) {
 		return untokenized, nil
 	}
-	token, ok, err := s.unsubscribe.UnsubscribeToken(ctx, recipients[0], surface.purposeKey)
+	token, purposeKey, ok, err := s.unsubscribe.UnsubscribeToken(ctx, recipients[0], surface.purposeKey)
 	if err != nil {
 		return sendDeliverability{}, err
 	}
@@ -335,9 +347,9 @@ func (s *Store) deliverability(
 		return sendDeliverability{}, err
 	}
 	live := unsubscribeLinksFor(s.publicBaseURL,
-		unsubscribeTokens{stop: token, manage: manageToken}, surface.purposeKey, lang)
+		unsubscribeTokens{stop: token, manage: manageToken}, purposeKey, lang)
 	redacted := unsubscribeLinksFor(s.publicBaseURL,
-		unsubscribeTokens{stop: redactedToken, manage: redactedToken}, surface.purposeKey, lang)
+		unsubscribeTokens{stop: redactedToken, manage: redactedToken}, purposeKey, lang)
 	return sendDeliverability{
 		footerFindings:  untokenized.footerFindings,
 		listUnsubscribe: listUnsubscribeHeader(live.oneClick),
