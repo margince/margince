@@ -297,7 +297,8 @@ func TestAQuotedPitchCountsOnlyWhenTheRepTypesItBack(t *testing.T) {
 }
 
 // A subject is quoted only when the contact wrote it. A subject carried over
-// from the rep's own pitch, or from mail a rep logged by hand, is the rep's.
+// from the rep's own pitch, from mail logged by hand or from a sender that
+// failed authentication is the rep's.
 // Each anchor first answers a plain subject, so the fixture shows the cause.
 func TestASubjectTheContactDidNotWriteIsTheReps(t *testing.T) {
 	for name, anchor := range map[string]func(c *consentEnv, subject string) string{
@@ -305,6 +306,13 @@ func TestASubjectTheContactDidNotWriteIsTheReps(t *testing.T) {
 			return c.sentInto(t, c.capturedInbound(t, "Termin", exitReschedule), subject)
 		},
 		"a hand-logged inbound": func(c *consentEnv, subject string) string { return c.loggedBy(t, "inbound", subject) },
+		"an inbound whose sender failed authentication": func(c *consentEnv, subject string) string {
+			anchor := c.capturedInbound(t, subject, exitReschedule)
+			if _, err := c.Owner.Exec(t.Context(), `UPDATE activity SET inbound_sender_authenticated = false WHERE id = $1`, anchor); err != nil {
+				t.Fatal(err)
+			}
+			return anchor
+		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			c := setupConsent(t)

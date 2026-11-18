@@ -248,6 +248,9 @@ func (g *Gate) decideOneIn(ctx context.Context, tx pgx.Tx, r connector.Recipient
 	// Not an id, so carried past the EvidenceChecked gate: transmit must judge
 	// the same words staging judged, whichever arm resolved the message.
 	decision.Evidence.AuthoredOffer = req.Evidence.AuthoredOffer
+	// Checked at staging against the recipient's own authenticated mail, and
+	// asked again at transmit; never a record the sender named.
+	decision.Evidence.QuotedAnchorID = req.Evidence.QuotedAnchorID
 	// This recipient's own statement only: a row never names another
 	// recipient's address.
 	decision.Evidence.RecipientCountries = commsauthz.CountryOverridesFor(req.Evidence.RecipientCountries, r.Email)

@@ -15,6 +15,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/htmltext"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/mailsubject"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -80,9 +81,15 @@ func withAuthoredOffer(req commsauthz.Request, anchorSubject string) commsauthz.
 
 // quotedSubjectFor settles a carried-over subject for one recipient. It is
 // their own words only when they wrote the anchor; for anyone else it is an
-// offer the rep sends them.
+// offer the rep sends them. Staging asks about the anchor it was given and
+// keeps the anchor on the row; transmit asks that anchor again, so one
+// archived or no longer authenticated since makes the subject the rep's.
 func quotedSubjectFor(ctx context.Context, tx pgx.Tx, r connector.Recipient, req commsauthz.Request) (commsauthz.Request, error) {
-	if !req.Evidence.QuotedSubjectOffer {
+	anchor := req.Evidence.QuotedAnchorID
+	if req.Evidence.QuotedSubjectOffer {
+		anchor = req.AnchorActivityID
+	}
+	if anchor.IsZero() {
 		return req, nil
 	}
 	contactID, found, err := resolveContact(ctx, tx, r)
@@ -94,11 +101,15 @@ func quotedSubjectFor(ctx context.Context, tx pgx.Tx, r connector.Recipient, req
 	if found {
 		subject.Kind, subject.ID = entityContact, contactID
 	}
-	wrote, err := subjectWroteTheAnchor(ctx, tx, req.AnchorActivityID, subject)
+	wrote, err := subjectWroteTheAnchor(ctx, tx, anchor, subject)
 	if err != nil {
 		return commsauthz.Request{}, err
 	}
-	req.Evidence.AuthoredOffer = !wrote
+	req.Evidence.AuthoredOffer = req.Evidence.AuthoredOffer || !wrote
 	req.Evidence.QuotedSubjectOffer = false
+	req.Evidence.QuotedAnchorID = ids.UUID{}
+	if wrote {
+		req.Evidence.QuotedAnchorID = anchor
+	}
 	return req, nil
 }

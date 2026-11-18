@@ -87,7 +87,10 @@ func repliesToTheSubject(ctx context.Context, tx pgx.Tx, anchor ids.UUID, subjec
 }
 
 // subjectWroteTheAnchor is repliesToTheSubject asked of the anchor message
-// alone: whether the subject wrote the very mail a reply answers.
+// alone: whether the subject wrote the very mail a reply answers. Its sender
+// must be authenticated too, because a forged From: is all it would take to
+// put a pitch in the contact's mouth. The thread question keeps its own
+// reach: channel messages carry no sender authentication.
 func subjectWroteTheAnchor(ctx context.Context, tx pgx.Tx, anchor ids.UUID, subject subjectRef) (bool, error) {
 	if anchor.IsZero() {
 		return false, nil
@@ -120,7 +123,7 @@ func subjectWroteInto(ctx context.Context, tx pgx.Tx, anchor ids.UUID, subject s
 			  JOIN activity_participant p ON p.activity_id = a.id
 			 WHERE a.direction = 'inbound'
 			   AND a.archived_at IS NULL
-			   AND (NOT $7 OR a.id = $6)
+			   AND (NOT $7 OR (a.id = $6 AND `+correspondence.AuthenticatedInboundSQL("a")+`))
 			   -- Authorship, from the shared spelling: the subject WROTE into
 			   -- this thread, and a recipient who was merely copied has
 			   -- initiated nothing.

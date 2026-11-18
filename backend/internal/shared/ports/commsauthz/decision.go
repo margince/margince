@@ -106,6 +106,9 @@ type Evidence struct {
 	// the subject is quoted for the one who wrote the anchor, authored for
 	// everyone else. Never stored.
 	QuotedSubjectOffer bool
+	// QuotedAnchorID is the mail a quoted subject was carried over from, kept
+	// on the staged row so transmit asks again whether the recipient wrote it.
+	QuotedAnchorID ids.UUID
 	// RecipientCountries are the countries the sender stated for this
 	// message's recipients. On a decision it holds that recipient's entry
 	// alone, which is what staging stores and transmit reads back.
