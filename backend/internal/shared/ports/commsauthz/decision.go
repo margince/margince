@@ -97,6 +97,10 @@ type Evidence struct {
 	// the engine decides about that lead alone, at staging and at transmit, and
 	// refuses a recipient address the lead does not hold.
 	LeadID ids.UUID
+	// AuthoredOffer says the words the sender wrote make an offer. The engine
+	// sets it at staging from AuthoredSubject and AuthoredBody; transmit reads
+	// the staged value, because the delivery keeps no authored text.
+	AuthoredOffer bool
 }
 
 // Request is one message put to the engine.
@@ -132,6 +136,10 @@ type Request struct {
 	// Subject and Body are fingerprinted, never stored on the decision.
 	Subject string
 	Body    string
+	// AuthoredSubject and AuthoredBody are what the sender wrote, without the
+	// signature and footer a send adds. Empty for a notice no sender wrote.
+	AuthoredSubject string
+	AuthoredBody    string
 	// HTMLBody is the markup alternative, carried for the reason
 	// TransmitRequest carries it: the fingerprint stamped here is what the
 	// transmit phase compares against, so a field missing from one side is a

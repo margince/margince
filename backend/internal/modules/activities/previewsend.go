@@ -64,8 +64,9 @@ type SendPreview struct {
 
 // PreviewSendInput is a message a composer has not written yet.
 //
-// Subject and Body never reach a consent decision. When given, they are
-// checked against the advertising content rules alone.
+// Subject and Body reach the decision as the authored text staging reads for
+// an offer, so the preview answers what the send will. They are also checked
+// against the advertising content rules.
 type PreviewSendInput struct {
 	Subject    string
 	Body       string
@@ -123,6 +124,8 @@ func (s *Store) PreviewSend(ctx context.Context, origin SendOrigin, in PreviewSe
 		Evidence:         in.evidenceWithAnchor(origin),
 		AnchorActivityID: origin.anchor.UUID,
 		Links:            linkedRecordIDs(links),
+		AuthoredSubject:  in.Subject,
+		AuthoredBody:     in.Body,
 	}
 	var preview SendPreview
 	if origin.isReply() || s.recipientFiler == nil {

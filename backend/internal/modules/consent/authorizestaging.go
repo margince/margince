@@ -92,7 +92,7 @@ func (g *Gate) stageDecisions(ctx context.Context, tx pgx.Tx, deliveryID ids.UUI
 	if err != nil {
 		return commsauthz.DecisionSet{}, err
 	}
-	if req, err = withSendingEntity(ctx, tx, req); err != nil {
+	if req, err = withSendFacts(ctx, tx, req); err != nil {
 		return commsauthz.DecisionSet{}, err
 	}
 	// Each recipient's country, resolved once: the decision and its recorded

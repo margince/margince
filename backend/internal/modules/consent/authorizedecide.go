@@ -264,7 +264,26 @@ func (g *Gate) decideResolved(ctx context.Context, tx pgx.Tx, req commsauthz.Req
 	// TestAnUnsupportedClaimIsRecordedButNeverResolvedTo, which is what that
 	// test's own comment records.
 	d.Requested = res.Category
-	return g.legacyVerdictFor(ctx, tx, subject.ID, subject.Country, req.LegacyPurposeKey, req.Context, res, d, stops, req.SendingEntity, phase)
+	claimed, purposeKey, err := verdictQuestion(ctx, tx, req, res)
+	if err != nil {
+		return commsauthz.Decision{}, nil, err
+	}
+	return g.legacyVerdictFor(ctx, tx, subject.ID, subject.Country, purposeKey, claimed, res, d, stops, req.SendingEntity, phase)
+}
+
+// verdictQuestion is the claim and purpose key an unsupported resolution puts
+// to the consent verdict. An offer is asked as marketing, under its purpose only
+// when that purpose is a marketing one: a correspondence key would let the
+// verdict allow the offer on a recent exchange.
+func verdictQuestion(ctx context.Context, tx pgx.Tx, req commsauthz.Request, res resolution) (commsauthz.Category, string, error) {
+	if !res.ReadAsOffer {
+		return req.Context, req.LegacyPurposeKey, nil
+	}
+	purpose, defined, err := purposeRowFor(ctx, tx, req.LegacyPurposeKey)
+	if err != nil || !defined || purpose.Class != ClassMarketing {
+		return commsauthz.CategoryMarketing, "", err
+	}
+	return commsauthz.CategoryMarketing, req.LegacyPurposeKey, nil
 }
 
 // legacyVerdictFor answers on the old purpose model when the record supports no

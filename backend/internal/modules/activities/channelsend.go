@@ -493,6 +493,7 @@ func (m outboundChannelMessage) delivery(activityID ids.ActivityID) ChannelDeliv
 			AnchorActivityID: m.anchorID.UUID,
 			Links:            linkedRecordIDs(m.links),
 			Body:             m.in.Body,
+			AuthoredBody:     m.in.Body,
 		},
 	}
 }
