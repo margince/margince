@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // Package glyphcover answers which characters a typeface can print from left
-// to right, so a renderer can refuse text before it draws a blank or a box.
+// to right. A renderer asks first, so it can refuse text before it draws a box.
 package glyphcover
 
 import (

@@ -30,8 +30,8 @@ export type LineRefusals = ReturnType<typeof useLineRefusals>;
 
 /**
  * The server's last refusal per line, shown in that line's row until the line
- * next saves. A cell keeps what was typed in its own buffer, so each refused
- * cell takes a new key and mounts again on the value the server still holds.
+ * next saves. A cell keeps what was typed in its own buffer. Each refused
+ * cell takes a new key, to mount again on the value the server still holds.
  * The counts only grow, so a refusal elsewhere never remounts a cell in use.
  */
 export function useLineRefusals() {
