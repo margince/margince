@@ -126,7 +126,7 @@ func (e *loadEnv) ourSent(t *testing.T, thread string) ids.UUID {
 }
 
 // waitingAs is message's waiting row as reader sees it.
-func (e *loadEnv) waitingAs(t *testing.T, reader context.Context, message ids.UUID) WaitingReply {
+func (e *loadEnv) waitingAs(reader context.Context, t *testing.T, message ids.UUID) WaitingReply {
 	t.Helper()
 	rows, err := storeKnowing(e).WaitingReplies(reader, clocktest.Now(t))
 	if err != nil {
@@ -344,7 +344,7 @@ func TestTheFallbackReadsTheOwnerNotTheViewer(t *testing.T) {
 			case "owner, unreadable to the viewer":
 				e.privateTo(t, e.ourSent(t, threadKeyOf(t, e, waiting)), e.rep, ReasonConfidentialMarker)
 			}
-			row := e.waitingAs(t, e.asSeat(e.other), waiting)
+			row := e.waitingAs(e.asSeat(e.other), t, waiting)
 			if row.OwnerID != e.rep || row.OwnerWroteOnThread != wrote {
 				t.Fatalf("owner %v, ownerWrote = %v; want the rep and %v", row.OwnerID, row.OwnerWroteOnThread, wrote)
 			}
