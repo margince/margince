@@ -22,11 +22,7 @@ import { ComposeBlockers } from "./composeblockers";
 import { useDealChoice } from "./composedeal";
 import { useComposeFields } from "./composefields";
 import { useAccountRecipient, useComposeRecords } from "./composefiling";
-import {
-  useInlineReview,
-  useInlineSwitch,
-  useOverrideExplanation,
-} from "./composeinlinereview";
+import { useInlineFlow, useInlineReview } from "./composeinlinereview";
 import { groundingOf } from "./composelinks";
 import type { ComposeProps } from "./composeprops";
 import { useRecipientOffer } from "./composerecipientoffer";
@@ -93,8 +89,7 @@ export function ComposeWindow({
   const bodyId = useId();
   const dial = useTransportDial({ open, transports, initialTransportId, kind });
   const { isChannelReply } = dial;
-  const inline = useInlineSwitch(open, isChannelReply);
-  const reason = useOverrideExplanation(open);
+  const { inline, reason } = useInlineFlow(open, isChannelReply);
   const fields = useComposeFields({
     initialMessage,
     initialReason,

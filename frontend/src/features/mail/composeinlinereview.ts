@@ -173,15 +173,20 @@ export function useInlineReview(inline: boolean, send: ComposeSend) {
 
 export type InlineReview = ReturnType<typeof useInlineReview>;
 
+/** The switch that picks the flow, and the reason the inline flow keeps. */
+export function useInlineFlow(open: boolean, isChannelReply: boolean) {
+  return {
+    inline: useInlineSwitch(open, isChannelReply),
+    reason: useOverrideExplanation(open),
+  };
+}
+
 /**
  * The pilot switch, which picks the email flow: decided at Send, or checked
  * while writing. The app's sign-in gate holds /me before any screen opens, so
  * the switch is read from that cache. A channel reply keeps the checked flow.
  */
-export function useInlineSwitch(
-  open: boolean,
-  isChannelReply: boolean,
-): boolean {
+function useInlineSwitch(open: boolean, isChannelReply: boolean): boolean {
   const me = useMe(open);
   if (isChannelReply) return false;
   return me.data?.inline_send_review === true;
@@ -191,7 +196,7 @@ export function useInlineSwitch(
  * The reason typed for Send anyway, which the saved draft keeps. A composer
  * that closes drops it, so the next composition starts empty.
  */
-export function useOverrideExplanation(open: boolean) {
+function useOverrideExplanation(open: boolean) {
   const [text, setText] = useState("");
   const [wasOpen, setWasOpen] = useState(open);
   if (wasOpen !== open) {
