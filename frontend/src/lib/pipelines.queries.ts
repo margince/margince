@@ -22,6 +22,18 @@ export const pipelinesOptions = queryOptions({
     unwrap(await api.GET("/pipelines", { params: { query: {} }, signal })).data,
 });
 
+// Archived too, for a reader naming a stage a deal may still hold or once held.
+export const pipelinesWithArchivedOptions = queryOptions({
+  queryKey: ["pipelines", "with-archived"],
+  queryFn: async ({ signal }) =>
+    unwrap(
+      await api.GET("/pipelines", {
+        params: { query: { include_archived: true } },
+        signal,
+      }),
+    ).data,
+});
+
 /**
  * The pipelines with each stage named in the reader's UI language. Settings
  * reads the stored names through its own query, so it edits what is stored.
