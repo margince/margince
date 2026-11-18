@@ -4,8 +4,9 @@
 package contacts
 
 import (
-	"github.com/margince/margince/backend/internal/platform/namematch"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/platform/namematch"
 )
 
 // marketCompany is one real-shaped name from a prefix-form market, and the

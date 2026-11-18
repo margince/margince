@@ -187,13 +187,24 @@ func headerWords(fullName string) []string {
 
 // nicknames maps a common short form to the given names it stands for, where
 // the two share no prefix. A shared prefix ("Alex", "Kate") needs no entry.
-var nicknames = map[string][]string{
-	"bob": {"robert"}, "bobby": {"robert"}, "rob": {"robert"}, "bill": {"william"}, "billy": {"william"},
-	"will": {"william"}, "dick": {"richard"}, "rick": {"richard"}, "jim": {"james"}, "jimmy": {"james"},
-	"jack": {"john"}, "ted": {"edward", "theodore"}, "ned": {"edward"}, "peggy": {"margaret"},
-	"meg": {"margaret"}, "liz": {"elizabeth"}, "beth": {"elizabeth"}, "betty": {"elizabeth"},
-	"sasha": {"alexander", "alexandra"}, "hank": {"henry"}, "sally": {"sarah"}, "molly": {"mary"},
-	"polly": {"mary"}, "chuck": {"charles"}, "tony": {"anthony"},
+var nicknames = nicknameIndex(map[string][]string{
+	"robert": {"bob", "bobby", "rob"}, "william": {"bill", "billy", "will"},
+	"richard": {"dick", "rick"}, "james": {"jim", "jimmy"}, "john": {"jack"},
+	"edward": {"ted", "ned"}, "theodore": {"ted"}, "margaret": {"peggy", "meg"},
+	"elizabeth": {"liz", "beth", "betty"}, "alexander": {"sasha"}, "alexandra": {"sasha"},
+	"henry": {"hank"}, "sarah": {"sally"}, "mary": {"molly", "polly"},
+	"charles": {"chuck"}, "anthony": {"tony"},
+})
+
+// nicknameIndex turns a given name's short forms into a lookup by short form.
+func nicknameIndex(byGiven map[string][]string) map[string][]string {
+	index := map[string][]string{}
+	for given, shorts := range byGiven {
+		for _, short := range shorts {
+			index[short] = append(index[short], given)
+		}
+	}
+	return index
 }
 
 func nicknameOf(a, b string) bool {

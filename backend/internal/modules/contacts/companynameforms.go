@@ -25,10 +25,11 @@ package contacts
 // one is consulted only where two names are COMPARED.
 
 import (
-	"github.com/margince/margince/backend/internal/platform/namematch"
 	"slices"
 	"strings"
 	"unicode"
+
+	"github.com/margince/margince/backend/internal/platform/namematch"
 )
 
 // foldDStroke maps đ to d. U+0111 has no canonical decomposition, so

@@ -22,10 +22,11 @@ package contacts
 // rather than merging.
 
 import (
-	"github.com/margince/margince/backend/internal/platform/namematch"
 	"strings"
 
 	"golang.org/x/text/unicode/norm"
+
+	"github.com/margince/margince/backend/internal/platform/namematch"
 )
 
 // cjkLegalForms are the company-type strings, matched against the ends of a name

@@ -21,11 +21,11 @@ package contacts
 // and every draft that greets them repeats it.
 
 import (
-	"github.com/margince/margince/backend/internal/platform/namematch"
 	"strings"
 	"unicode"
 
 	"github.com/margince/margince/backend/internal/platform/mailrole"
+	"github.com/margince/margince/backend/internal/platform/namematch"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )

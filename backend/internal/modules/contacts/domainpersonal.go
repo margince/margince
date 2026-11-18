@@ -16,13 +16,13 @@ package contacts
 
 import (
 	"context"
-	"github.com/margince/margince/backend/internal/platform/namematch"
 	"strings"
 	"unicode"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/freemail"
+	"github.com/margince/margince/backend/internal/platform/namematch"
 )
 
 // DomainContact is one human the workspace already records on a domain: their

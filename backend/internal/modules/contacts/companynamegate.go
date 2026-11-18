@@ -17,8 +17,9 @@ package contacts
 // shared with contact and lead dedupe, where the character metric is right.
 
 import (
-	"github.com/margince/margince/backend/internal/platform/namematch"
 	"strings"
+
+	"github.com/margince/margince/backend/internal/platform/namematch"
 )
 
 // companyNameStopwords are the words a company name shares with its whole market:

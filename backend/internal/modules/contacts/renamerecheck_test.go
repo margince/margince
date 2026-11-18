@@ -4,12 +4,12 @@
 package contacts
 
 import (
-	"github.com/margince/margince/backend/internal/platform/namematch"
 	"strings"
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/namematch"
 )
 
 // The name shapes that put one company in a workspace twice, each pinned above

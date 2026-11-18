@@ -84,8 +84,10 @@ func TestSignatureEnrichReadsOnlyTheContactsOwnSignature(t *testing.T) {
 			}
 		})
 	}
-	colleague := ownRead{"a colleague's address beside their own", "Bob Contact", "bob@example.org",
-		"Bob Contact\nbob@example.org\nCc: carol@example.org", "Bob", "", "Contact", "given_first"}
+	colleague := ownRead{
+		"a colleague's address beside their own", "Bob Contact", "bob@example.org",
+		"Bob Contact\nbob@example.org\nCc: carol@example.org", "Bob", "", "Contact", "given_first",
+	}
 	for _, tc := range append(ownReads, colleague) {
 		t.Run(tc.name, func(t *testing.T) {
 			e := integration.Setup(t)
@@ -107,8 +109,10 @@ func TestTheRepairTakesBackAnotherParticipantsSignatureAndKeepsTheirOwn(t *testi
 			return f
 		}
 		if _, err := e.Contacts.ApplySignatureFields(principal.SystemActing(e.Admin(), "agent:enrich"), ids.From[ids.ContactKind](contact),
-			onlyMailOf(t, e, contact), []contacts.SignatureField{name(contacts.FieldFirstName, given), name(contacts.FieldLastName, family),
-				signatureField("title", "CTO"), phoneField("+49 30 5550100")}, true); err != nil {
+			onlyMailOf(t, e, contact), []contacts.SignatureField{
+				name(contacts.FieldFirstName, given), name(contacts.FieldLastName, family),
+				signatureField("title", "CTO"), phoneField("+49 30 5550100"),
+			}, true); err != nil {
 			t.Fatal(err)
 		}
 	}

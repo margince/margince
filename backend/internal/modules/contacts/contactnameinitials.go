@@ -4,9 +4,10 @@
 package contacts
 
 import (
-	"github.com/margince/margince/backend/internal/platform/namematch"
 	"strings"
 	"unicode"
+
+	"github.com/margince/margince/backend/internal/platform/namematch"
 )
 
 // addressGuessName is the display capture derived from an address alone: its

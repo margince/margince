@@ -10,13 +10,13 @@ package compose
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/margince/margince/backend/internal/platform/salutation"
 	"slices"
 	"sort"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/salutation"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 )

@@ -9,11 +9,11 @@ package contacts
 // those parts into the two columns. No caller decides by word position.
 
 import (
-	"github.com/margince/margince/backend/internal/platform/namematch"
 	"strings"
 	"unicode"
 
 	"github.com/margince/margince/backend/internal/platform/evidencefold"
+	"github.com/margince/margince/backend/internal/platform/namematch"
 )
 
 // The orders a signature reading may report.

@@ -4,10 +4,10 @@
 package contacts
 
 import (
-	"github.com/margince/margince/backend/internal/platform/namematch"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/namematch"
 )
 
 // legalSuffixes is PO-PARAM-1: the trailing tokens company-name
