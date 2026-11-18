@@ -68,6 +68,13 @@ type pdfLabels struct {
 	vatID    string
 	register string
 	bank     string
+	// A line's own figures, and the unit keys of unit.go by name.
+	discount   string
+	lineNet    string
+	lineTotal  string
+	units      map[string]string
+	validUntil string
+	dateLayout string
 }
 
 // resolvePDFLabels maps a locale to its label set. A German locale gets German
@@ -95,6 +102,14 @@ func resolvePDFLabels(locale string) pdfLabels {
 			vatID:     "USt-IdNr.",
 			register:  "Handelsregister",
 			bank:      "Bankverbindung",
+			discount:  "Rabatt",
+			lineNet:   "Netto",
+			lineTotal: "Gesamt",
+			units: map[string]string{
+				unitPiece: "Stk.", unitHour: "Std.", unitDay: "Tag(e)", unitMonth: "Monat(e)", unitFlatFee: "pauschal",
+			},
+			validUntil: "Gültig bis",
+			dateLayout: "02.01.2006",
 		}
 	}
 	return pdfLabels{
@@ -117,6 +132,14 @@ func resolvePDFLabels(locale string) pdfLabels {
 		vatID:     "VAT ID",
 		register:  "Register",
 		bank:      "Bank details",
+		discount:  "Discount",
+		lineNet:   "Net",
+		lineTotal: "Total",
+		units: map[string]string{
+			unitPiece: "pc.", unitHour: "h", unitDay: "day(s)", unitMonth: "month(s)", unitFlatFee: "flat fee",
+		},
+		validUntil: "Valid until",
+		dateLayout: "2 January 2006",
 	}
 }
 
@@ -187,6 +210,10 @@ func writeOfferPDFHeader(pdf *fpdf.Fpdf, tr pdfTranslator, o crmcontracts.Offer,
 	pdf.SetFont(offerFontFamily, "", 11)
 	pdf.Cell(0, 6, tr(labels.revision+" "+strconv.Itoa(revision)))
 	pdf.Ln(7)
+	if o.ValidUntil != nil {
+		pdf.Cell(0, 6, tr(labels.validUntil+": "+o.ValidUntil.Format(labels.dateLayout)))
+		pdf.Ln(7)
+	}
 	pdf.Cell(0, 6, tr(labels.issuer+": "+issuer.Name))
 	pdf.Ln(7)
 	writeOfferPDFIssuerBlock(pdf, tr, issuer.OfferIssuer, labels)
@@ -245,75 +272,6 @@ func writeOfferPDFIntro(pdf *fpdf.Fpdf, tr pdfTranslator, o crmcontracts.Offer) 
 	pdf.SetFont(offerFontFamily, "", 10)
 	pdf.MultiCell(0, 5, tr(text), "", "L", false)
 	pdf.Ln(4)
-}
-
-// writeOfferPDFLineItems writes the line-items section. Each line's
-// displayed unit price is its own persisted snapshot (offer_lines.go);
-// this function shows it verbatim, deriving nothing.
-func writeOfferPDFLineItems(pdf *fpdf.Fpdf, tr pdfTranslator, lines []crmcontracts.OfferLineItem, currency string, labels pdfLabels) {
-	pdf.SetFont(offerFontFamily, "B", 12)
-	pdf.Cell(0, 6, tr(labels.lineItems))
-	pdf.Ln(7)
-	pdf.SetFont(offerFontFamily, "", 10)
-	for _, li := range lines {
-		pdf.Cell(0, 5, tr(fmt.Sprintf("%d. %s", li.Position, li.Description)))
-		pdf.Ln(5)
-		price := fmt.Sprintf("%s x %s", pdfFormatQuantity(li.Quantity), pdfFormatMinor(li.UnitPriceMinor, currency))
-		if cadence := pdfLineCadence(li, labels); cadence != "" {
-			price += " " + cadence
-		}
-		pdf.Cell(0, 5, tr(price))
-		pdf.Ln(5)
-		if commitment := pdfLineCommitment(li, currency, labels); commitment != "" {
-			pdf.Cell(0, 5, tr(commitment))
-			pdf.Ln(5)
-		}
-	}
-	pdf.Ln(2)
-}
-
-// pdfLineCadence is how often a recurring line's price repeats, "" for a line
-// that does not repeat or has not been classified.
-//
-// A nil billing model is not one_time. Nobody has said what the price does, so
-// printing a cadence would answer a question the offer leaves open.
-//
-// An interval outside the four the schema admits prints nothing, for that
-// reason.
-func pdfLineCadence(li crmcontracts.OfferLineItem, labels pdfLabels) string {
-	if li.BillingModel == nil || *li.BillingModel != crmcontracts.OfferLineItemBillingModelRecurring {
-		return ""
-	}
-	if li.BillingIntervalMonths == nil {
-		return ""
-	}
-	return labels.cadence[int(*li.BillingIntervalMonths)]
-}
-
-// pdfLineCommitment is the term a recurring line is committed for and what it
-// is worth across that term, "" where either is unsettled.
-//
-// A recurring line with no interval_count has no committed total yet, the same
-// answer NetTcvMinor gives it: nothing is committed until somebody says how
-// long.
-//
-// The multiplication is CommittedNetMinor's, which is where the offer's own
-// total gets it, so this figure comes from one spelling of that arithmetic.
-//
-// A figure that cannot be computed prints the term alone. An offer handed to a
-// buyer with one line missing its total reads worse than one showing the term
-// by itself.
-func pdfLineCommitment(li crmcontracts.OfferLineItem, currency string, labels pdfLabels) string {
-	if pdfLineCadence(li, labels) == "" || li.IntervalCount == nil || li.LineNetMinor == nil {
-		return ""
-	}
-	term := fmt.Sprintf("%s: %d x %d %s", labels.periods, *li.IntervalCount,
-		int(*li.BillingIntervalMonths), labels.months)
-	committed, err := CommittedNetMinor(*li.LineNetMinor, *li.IntervalCount)
-	if err != nil {
-		return term
-	}
-	return term + " | " + labels.committed + ": " + pdfFormatMinor(committed, currency)
 }
 
 // writeOfferPDFTotals writes the money summary straight off o's already-
