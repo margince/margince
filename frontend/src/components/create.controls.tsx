@@ -157,7 +157,8 @@ export function fieldControl(
   return (
     <TextInput
       {...control}
-      type={field.type ?? "text"}
+      type={field.type === "decimal" ? "text" : (field.type ?? "text")}
+      inputMode={field.type === "decimal" ? "decimal" : undefined}
       // A bare number input steps by 1, so the browser refuses 14.60 before
       // any handler sees it. A money field has to say it takes cents.
       step={field.step}

@@ -3100,6 +3100,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "record.edit": "Bearbeiten",
 
   "record.fieldRequired": "Dieses Feld ist erforderlich.",
+  "amount.refused.ambiguous": "Gib den Betrag als {whole} oder {decimal} ein.",
+  "amount.refused.ambiguousWhole": "Gib den Betrag als {whole} ein.",
+  "amount.refused.grouping":
+    "Gib den Betrag ohne Tausendertrennzeichen ein, etwa {example}.",
+  "amount.refused.notNumber": "Gib den Betrag in Ziffern ein, etwa {example}.",
+  "amount.refused.tooLarge": "Dieser Betrag ist zu groß zum Speichern.",
+  "amount.refused.negative": "Gib einen Betrag von null oder mehr ein.",
+  "number.refused.ambiguous": "Gib die Zahl als {whole} oder {fraction} ein.",
+  "number.refused.grouping":
+    "Gib die Zahl ohne Tausendertrennzeichen ein, etwa {example}.",
+  "number.refused.notNumber": "Gib eine Zahl ein, etwa {example}.",
   "record.amountTooPrecise":
     "Dieser Betrag hat mehr Nachkommastellen, als {currency} zulässt.",
   "record.registration": "Registrierung",
@@ -6073,7 +6084,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.qualify.amount": "Betrag ({currency})",
   "lead.qualify.amountHint":
     "Optional. Ganze Einheiten in der Basiswährung der Installation.",
-  "lead.qualify.amountInvalid": "Gib eine Zahl ein oder lass das Feld leer.",
   "lead.qualify.amountNoCurrency":
     "Die Basiswährung ist noch nicht geladen. Versuche es gleich erneut oder lass den Betrag leer.",
   "lead.qualify.why": "Warum",

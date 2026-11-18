@@ -37,6 +37,9 @@ export type CreateField = {
     | "text"
     | "email"
     | "number"
+    // A number typed as text (an amount, a rate), read by parseTypedDecimal.
+    // Never type="number", whose decimal sign is the browser's.
+    | "decimal"
     | "date"
     | "select"
     | "multiselect"
@@ -164,6 +167,21 @@ export function keepUnsubmitted(
     }
   }
   return next;
+}
+
+/** The kind of box an inline editor draws for a field. */
+export function inlineTextKind(
+  field: CreateField,
+): "text" | "email" | "number" | "date" | "decimal" {
+  switch (field.type) {
+    case "number":
+    case "date":
+    case "email":
+    case "decimal":
+      return field.type;
+    default:
+      return "text";
+  }
 }
 
 // The label a top-level field shows: the literal labelText wins; otherwise the

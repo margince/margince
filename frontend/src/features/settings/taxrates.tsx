@@ -22,6 +22,7 @@ import { Select } from "../../design-system/select";
 import { useToast } from "../../design-system/toast";
 import { countryOptions } from "../../format/assignedcountries";
 import { todayIn } from "../../format/calendarday";
+import { typedDecimalText, typedNumberFault } from "../../format/decimalinput";
 import { formatNumber } from "../../format/format";
 import { jurisdictionName } from "../../format/jurisdiction";
 import { useLocale, usePlural, useT } from "../../i18n";
@@ -143,7 +144,7 @@ function TaxRateModal({ onClose }: Readonly<{ onClose: () => void }>) {
           body: {
             country: input.country,
             category: input.category,
-            rate: input.rate.trim().replace(",", "."),
+            rate: typedDecimalText(input.rate, locale) ?? input.rate,
             valid_from: input.validFrom,
           },
         }),
@@ -159,7 +160,9 @@ function TaxRateModal({ onClose }: Readonly<{ onClose: () => void }>) {
       onClose();
     },
   });
-  const ready = draft.country !== "" && draft.rate.trim() !== "";
+  const rateFault = typedNumberFault(draft.rate, locale, t);
+  const ready =
+    draft.country !== "" && draft.rate.trim() !== "" && rateFault === undefined;
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!ready || save.isPending || refuseUnreadableField(event.currentTarget))
@@ -205,7 +208,11 @@ function TaxRateModal({ onClose }: Readonly<{ onClose: () => void }>) {
             />
           )}
         </Field>
-        <Field label={t("taxRates.colRate")} hint={t("taxRates.rateHint")}>
+        <Field
+          label={t("taxRates.colRate")}
+          hint={t("taxRates.rateHint")}
+          error={rateFault}
+        >
           {(control) => (
             <TextInput
               {...control}

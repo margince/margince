@@ -79,7 +79,7 @@ describe("a money clause", () => {
     fireEvent.change(box, { target: { value: "" } });
     expect(seen.at(-1)).toBe("");
     fireEvent.blur(box);
-    expect(box).toHaveValue(null);
+    expect(box).toHaveValue("");
   });
 
   it("shows the currency it is typed in", () => {
