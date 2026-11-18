@@ -208,7 +208,7 @@ as a value still to come. Today the shipped name of the agent tint is `--aiLight
 | Token | Value | Role |
 |---|---|---|
 | `--bgPage` | `#eff6f3` | The paper the page is read on: one flat colour, with no light painted into it. |
-| `--pane` / `--paneEdge` | `#fcfffe` / `#d8e2de` | A zone on the page, the details panel, a control at rest. The sidebar is the same pane, painted solid. The top bar is the same pane, with `blur(20px)` behind it. |
+| `--pane` / `--paneEdge` | `#fcfffe` / `#d8e2de` | A zone on the page, the details panel, a control at rest. The sidebar and the top bar paint `--chrome`, the same pane solid, above the phone layout. At phone width the top bar is the pane with `blur(20px)` behind it. |
 | `--ladder1` … `--ladder4` | [`tokens.css`](frontend/src/design-system/tokens.css) | The ground of a pane by depth: on the page, in a pane, two deep, then three deep or more. `surfaces.css` paints them. |
 | `--ladder1Edge` … `--ladder4Edge` | [`tokens.css`](frontend/src/design-system/tokens.css) | The hairline of a pane and of its head, by the same depth. A pane reads its own as `--groundEdge`. |
 | `--bgHover` / `--bgStrip` | `#d7ede5` / `#e3f1ec` | A pointer resting on a row; a toolbar or footer band on the ground. |
@@ -237,7 +237,7 @@ then `[data-theme="dark"]`.
 
 ### How colour is spent
 
-- **The ground is the chrome**. The sidebar and the top bar are panes over the flat ground. The
+- **The ground is the chrome**. The sidebar and the top bar are one `--chrome` surface around the page card. The
   sidebar is never a green column, and there is no coloured bar on any screen.
 - **At most one filled control in view**, in the accent: the move the page names. Every other button is
   a pane with an outline.
@@ -388,25 +388,36 @@ and `min-width: 0`. A page never scrolls to the side; the thing that is too wide
 └────────┴───────────────────────────────────────────────────────────────┘
 ```
 
-- **The sidebar is light, never green**. It is the `--pane`, painted solid over the flat ground,
-  one `--paneEdge` hairline on its right, no shadow and no corner. It is the same colour open and
-  folded, and in dark it is the same pane with the lights down. No screen or mock paints its ground
+- **The sidebar is light, never green**. Above the phone layout (wider than 700px) it paints the
+  `--chrome` token, the same solid surface as the top bar, with no border, no shadow and no corner.
+  The page is a rounded card against it (see Top bar). It is the same colour open and
+  folded, and in dark it is the same surface with the lights down. No screen or mock paints its ground
   dark green or in the accent. The dark green `--bgInkField` is only for what passes over the page,
   such as a tooltip. The only accent in the column is the current row and the workspace mark of a
   company that has no logo of its own.
 - **Its parts**: 256px open, 56px folded, and open is the default (the reader's last choice is kept).
-  At the top is the workspace head: the company's mark in a 40px square and its name. While open,
+  At the top is the workspace head: the company's mark in a 32px square and its name. The head has the
+  top bar's height, so the mark and the bar's controls share one centre line. While open,
   it is one card with an edge. Then come the rows, 32px each with an 18px icon. Their order is the
   one `frontend/src/app/nav.ts` holds, under the group labels Records, Work and Insights.
 - **Its states**: the group labels are quiet sentence case. The current row is an accent tint with
-  accent text, in medium weight. The agent's orb is pinned to the foot.
+  accent text, in medium weight. The agent's orb is pinned to the foot, in a block with no chevron. Under it sits the control that
+  folds the sidebar: a row with the label **Collapse sidebar** while open, an icon with a tooltip
+  while folded. `⌘B` does the same, and a phone has neither.
+- **Folding**: the column, the icons and the labels move as one. A label keeps one line and is cut at
+  the edge, with its full text in the row's tooltip. A group label is hidden and takes no height
+  while folded. On a window 701 to 1024px wide with no stored choice, the sidebar starts folded; a
+  stored choice wins both ways.
 - The sidebar has no badges. The approval and task lists are lanes of the Worklist, which reports
   its counts on the page. Settings is not a row; it opens from the account menu.
 - While a settings route is open, the sidebar shows the settings second level: Overview, then the
   subject groups. It has its own width and its own head. It is the same column showing a
   different list. The level names itself with the heading over its first group, and the way out of
   it reads "Back to app". The agent's orb stays at the foot.
-- **Top bar**: 50px, glass, with a hairline under it. The breadcrumb is on the left, the command
+- **Top bar**: 50px. Above the phone layout it paints `--chrome` with no hairline and no blur.
+  The page below it is a card (`--bgPage`, a `--groundEdge` hairline, `--r-lg` corners) flush against the
+  sidebar and the bar, inset `--space-2` on the right and bottom. At phone width the page scrolls
+  under the bar, which is translucent and blurred, with a hairline. The breadcrumb is on the left, the command
   field in the middle (`⌘K`), and the reader's monogram on the right. It is the app's one bar, and
   every screen has it. Nothing of a record sits in it: the record's head and details are in
   the page.

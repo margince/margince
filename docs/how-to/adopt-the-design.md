@@ -140,18 +140,19 @@ Stories: update every changed story. The catalog test needs no new rows unless a
 ### Step 4: The shell (`shell.css`, `shell.tsx`, `topbar.css`, `agentrail.css`, `agent-edge.css`, `navlevel.tsx`)
 
 1. **The ground.** `.app` draws `--bgPage`, one flat colour.
-2. **Rail.** `glass` (`--pane` and `blur`) over the ground, a hairline on the right, no dark ground.
+2. **Rail.** `--chrome` above the phone layout, with no border and no dark ground.
    Closed, it is **56px**; open, 256px (`--railW` in `shell.css`). The tooltip rule in `shell.css`
    depends on the closed width.
 
    Rows are 34px, group labels are `.t-eyebrow` with only the first letter capital, and the orb sits
    last. `rail.test.tsx` and `ac.spec.ts` pin the 10 rows and their order, and those do not change.
-3. **Top bar.** It stays 50px, `glass`, with a hairline under it.
+3. **Top bar.** It is 50px and paints `--chrome` with no hairline above the phone layout. The page is a
+   card beside it. At phone width it is `glass` with a hairline under it.
    The breadcrumb sits left, the account menu right, and the `⌘K` field between them.
    **Nothing from a record sits in it.**
 4. **Settings second level.** On a settings route, the sidebar itself becomes the 210px column that carries the
    level (`SettingsRail`/`navlevel.tsx`).
-   It uses the same `glass`.
+   It uses the same surface.
 
    It still shows one level at a time. The rail's places step aside for the section's entries, with Back above
    them. `rail.test.tsx` and `ac.spec.ts` hold one level in the sidebar. The two columns side by side in the mock
