@@ -190,15 +190,8 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
     expect(navGroupNames()).toEqual(["Records", "Work", "Insights"]);
   });
 
-  // Collapsed, a group label has no word to show — 56px carries a glyph and not
-  // a label — so it folds away hidden, and the break between two groups is what
-  // says where one ends. It stays in the DOCUMENT either way: the group is still
-  // named by it.
-  //
-  // Asserted as a COMPARISON of the two states rather than as one absolute, for
-  // the reason the brand head's own pair gives: two independent expectations
-  // would both pass against a label that had quietly stopped being drawn in
-  // either state.
+  // Collapsed, a group label folds away hidden; it stays in the document to
+  // name its group. The two states are compared, so neither can pass alone.
   it("draws the group labels expanded and not collapsed", () => {
     shellStyles = mountShellStyles();
     const expanded = render(<WorkspaceRail route={{ screen: "home" }} />);

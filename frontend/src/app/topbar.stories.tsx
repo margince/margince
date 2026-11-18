@@ -35,18 +35,11 @@ import { TopBar } from "./topbar";
  * A bar rendered at a hand-set width pictures geometry the product does not
  * use. What it would get wrong is the thing worth looking at.
  *
- * The strip's height is one token, `--topbarH`, and the sidebar's head is
- * exactly that band, so the brand chip and the bar's controls share one centre
- * line and the two read as one chrome over the content card. That alignment is
- * a claim about TWO components, so it can only be read with the panel beside
- * the strip — which is the other reason these frames render the whole L rather
- * than the bar alone.
+ * The sidebar's head is the strip's `--topbarH` band, so the two share one
+ * centre line. Only a frame with both can show it.
  *
- * The sidebar control at the panel's foot is live in every frame, so either
- * state can be moved to the other. What that shows is the search MOVING: it is centred on the column,
- * the column's left edge travels 200px, and the field travels half of that. A
- * field that stayed put under the toggle would be centred on the window, which
- * is the arrangement this bar was changed away from.
+ * The toggle at the rail's foot is live in every frame. Toggled, the column's
+ * edge moves 200px and the centred search moves half of that.
  *
  * TWO things these frames cannot promise on their own, both because `fe-uat`
  * captures every untagged story at 1024px:
@@ -271,10 +264,9 @@ export const ListRoute: Story = {
 /**
  * The same route with the sidebar at 56px.
  *
- * This is the frame the centring claim is made against: the content column's
- * left edge has moved 200px and the search has moved with it, staying at the
- * middle of the column it belongs to. `--railW` is a registered length, so the
- * bar's grid glides rather than snapping to the new width.
+ * The centring claim is made against this frame. The column's left edge has
+ * moved 200px, and the search stays at the middle of the column. `--railW` is a
+ * registered length, so the bar's grid glides rather than snapping.
  */
 export const ListRouteCollapsed: Story = {
   name: "a list route — sidebar collapsed",
@@ -504,9 +496,8 @@ export const Narrow: Story = {
  * The strip gives up CONTROLS here and no geometry: `--topbarH` and
  * `--pageGutter` are one number at every width, so the bar is the same height on
  * a phone as on a desktop and stands on the same gutter as the content column
- * under it. What goes is the bell, because the bottom bar carries Decisions at
- * this width and the same count twice on a 390px row reads as two queues. What stays is exactly what a phone reader cannot get
- * any other way: where they are, how to search, and who they are.
+ * under it. The bell goes, because the bottom bar carries Decisions at this
+ * width. What stays is where they are, how to search, and who they are.
  *
  * The panel is the other half of the frame. It is five glyphs — four
  * destinations and More — with NO captions under them: five words at 9.5px are

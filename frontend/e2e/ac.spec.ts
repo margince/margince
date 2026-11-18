@@ -562,8 +562,8 @@ test("About Margince meets AA", async ({ page }) => {
   await expect(accountTrigger(page)).toBeFocused();
 });
 
-// The sidebar's own control, at the foot of the rail, swept in both states:
-// expanded it is a labelled row, collapsed a glyph whose tip is up when swept.
+// The sidebar's toggle at the rail's foot, swept in both states.
+// Collapsed, its tip is open while axe reads the page.
 test("the sidebar toggle at the rail's foot meets AA in both states", async ({
   page,
 }) => {

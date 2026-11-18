@@ -802,8 +802,8 @@ describe("Shell", () => {
     expect(screen.queryByRole("button", { name: "Expand sidebar" })).toBeNull();
   });
 
-  // Up to a tablet's width a sidebar this browser never set starts folded; a
-  // choice it stored wins both ways, and the default writes nothing back.
+  // With no stored choice, a tablet starts folded and nothing is stored.
+  // A stored choice wins both ways.
   it.each([
     ["a tablet", 1024, null, "Expand sidebar"],
     ["a laptop", 1280, null, "Collapse sidebar"],

@@ -62,11 +62,8 @@ export { PageTitle } from "./shelltitle";
 // prop stays because a deeper level declaring `badgeIds` needs this door.
 export type ShellCounts = NavCounts;
 
-// WCAG 2.4.1, Bypass Blocks. Every page in the product puts the same block ahead
-// of its content — up to twelve navigation rows, the agent and the collapse
-// control in the sidebar, then the strip's trail, search, system-of-record
-// chip, approvals bell and account menu — and without this a keyboard reader
-// walked all of it again on every page they opened.
+// WCAG 2.4.1, Bypass Blocks. Every page puts the sidebar and the top bar ahead
+// of its content, and without this a keyboard reader walks them on every page.
 //
 // The destination is the SCROLLER, not the content column: the strip is the first
 // row of that column, so a skip that landed on `.main` put the reader in front of

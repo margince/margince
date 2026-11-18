@@ -45,10 +45,8 @@ const SetupReminder = lazy(
 // the page under it — where you are (the trail), how you reach anything (the
 // search), what is waiting for you (the bell), and who you are signed in as.
 //
-// It stands on the sidebar's own ground, so the chrome
-// reads as one L-shaped frame around the content rather than as two panels that
-// happen to touch. The page's own name is NOT here: it belongs to the document,
-// scrolls with it, and stands in the content column above the content it names.
+// It stands on the sidebar's own ground, so the chrome reads as one frame.
+// The page's own name is not here: it scrolls with the document it names.
 //
 // Three tracks, the outer two equal, so the search sits at the middle of the
 // CONTENT column — the reference this follows centres there too, and a field

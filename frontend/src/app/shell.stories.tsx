@@ -223,18 +223,9 @@ export const CompanyWordmark: Story = {
 };
 
 /**
- * One sidebar state, in the frame it really sits in.
- *
- * The `.app` grid is what gives the sidebar its width (56px collapsed, 256px
- * labeled) and the content column its edge, so the example renders the grid
- * rather than a hand-set width — otherwise the story would be showing geometry
- * the product does not use. The content card is present and empty on purpose:
- * its edge is the only line between the content and the chrome, and that reads
- * only against something beside it.
- *
- * The collapse control at the rail's foot is live, so each panel can be moved
- * to the other state — the two are one component, and a story where the control
- * does nothing hides the transition it exists for.
+ * One sidebar state, in the `.app` grid that gives it its width.
+ * The empty content card shows the edge between content and chrome.
+ * The toggle at the rail's foot is live, so the transition can be watched.
  */
 function SidebarExample({
   initiallyCollapsed,
@@ -258,15 +249,8 @@ function SidebarExample({
   );
 }
 
-// Both sidebar states, side by side. Expanded is 256px of 32px rows; collapsed
-// is the canonical 56px geometry, where a row IS its 32px square and the group
-// headings fold away. The head is the top bar's band in both: the card with the
-// name expanded, the mark alone collapsed. The control that folds the panel is
-// the last row, under the agent.
-//
-// Neither panel holds the search or the account block. Both live in the strip
-// above (app/topbar.tsx), which is why these frames render that strip rather
-// than the sidebar alone.
+// Both sidebar states, side by side, under the top bar that holds the search
+// and the account block. Collapsed, each row is a 32px square.
 export const SidebarStates: Story = {
   name: "sidebar — expanded and collapsed",
   render: () => {
@@ -390,10 +374,6 @@ function stubEntitlement(entitlement: LicenseEntitlement) {
  * licence or a seat without `license:read` draws this same picture, so none
  * exists. What each would show is said where the behaviour is, in
  * lib/license-posture.ts.
- *
- * Both panels scroll, so on a short window the foot is reached by scrolling
- * the panel; the collapsed panel's tooltips are fixed to the window and are
- * not clipped by it.
  */
 export const RailFoot: Story = {
   name: "the foot — collapsed and expanded",
@@ -417,12 +397,11 @@ export const RailFoot: Story = {
 };
 
 /**
- * The control that folds the panel, at its foot in both states: the open
- * panel's row reads "Collapse sidebar"; the folded one is the glyph alone,
- * named "Expand sidebar", and its tip carries the name and the keys.
+ * The toggle row in both states. Folded, it is a glyph named "Expand sidebar",
+ * and its tip carries the name and the keys.
  */
 export const RailToggle: Story = {
-  name: "the toggle row — expanded and collapsed",
+  name: "the toggle row, expanded and collapsed",
   render: RailFoot.render,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
@@ -536,9 +515,7 @@ const SETTINGS_SECTION: NavSection = {
 // where the story put it. Each depth below is therefore a story of its own,
 // which is also how a reviewer sees them side by side.
 //
-// A level takes the brand's words for its rows and nothing else. The search
-// belongs to the top bar above, so the story renders that bar too — a panel
-// shown without it would be a picture of half the chrome.
+// The story renders the top bar too, since the search lives there.
 function LevelExample({
   initiallyCollapsed,
   tab = "general",
@@ -595,11 +572,9 @@ export const SectionLevel: Story = {
 };
 
 // German: the privacy entry is wider than the rail, so its label is cut on one
-// line and the row keeps the height of the rows around it; its tip carries the
-// whole label. One line, because a label that wrapped would re-wrap on every
-// frame of the collapse.
+// line. The row keeps its height, and its tip carries the whole label.
 export const SectionLevelGerman: Story = {
-  name: "second level — a German entry cut to one line",
+  name: "second level, a German entry cut to one line",
   render: () => (
     <LevelStory locale="de">
       <LevelExample initiallyCollapsed={false} tab="account" />
