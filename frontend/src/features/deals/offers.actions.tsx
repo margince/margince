@@ -1,4 +1,8 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  type QueryClient,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { Check, RefreshCw, Send, X } from "lucide-react";
 import { useState } from "react";
 import { api } from "../../api/client";
@@ -20,6 +24,12 @@ import type { Offer } from "./offers";
 // Send is the confirm-first (🟡) action: a human's own click on this REST path
 // is the approval. So no ApprovalToken or Idempotency-Key is sent here; that
 // plumbing belongs to the agent/passport path.
+// A refused lifecycle step most often means the offer moved on elsewhere (a
+// newer revision, another tab, an agent), so the page re-reads its status.
+function rereadOffer(queryClient: QueryClient, id: string) {
+  return queryClient.invalidateQueries({ queryKey: ["offer", id] });
+}
+
 export function SendOfferAction({ offer }: Readonly<{ offer: Offer }>) {
   const t = useT();
   const queryClient = useQueryClient();
@@ -40,6 +50,7 @@ export function SendOfferAction({ offer }: Readonly<{ offer: Offer }>) {
       queryClient.setQueryData(["offer", offer.id], data);
       setOpen(false);
     },
+    onError: () => rereadOffer(queryClient, offer.id),
   });
 
   const errorMessage = mutation.isError
@@ -109,6 +120,7 @@ export function AcceptOfferAction({ offer }: Readonly<{ offer: Offer }>) {
       void reloadReportingFigures(queryClient);
       setOpen(false);
     },
+    onError: () => rereadOffer(queryClient, offer.id),
   });
 
   const errorMessage = mutation.isError
@@ -176,6 +188,7 @@ export function RejectOfferAction({ offer }: Readonly<{ offer: Offer }>) {
       setOpen(false);
       setReason("");
     },
+    onError: () => rereadOffer(queryClient, offer.id),
   });
 
   const errorMessage = mutation.isError
@@ -223,7 +236,7 @@ export function RejectOfferAction({ offer }: Readonly<{ offer: Offer }>) {
 // only place the AI provenance notice and diff summary appear. Every later
 // read of that offer returns them null. So the new draft's cache entry is
 // seeded from this response before navigating, and OfferScreen's query skips
-// its refetch on mount (`refetchOnMount: false` in offers.tsx). The sent offer
+// its refetch on mount for an AI-generated draft (offers.tsx). The sent offer
 // stays sent or superseded on the server, never deleted. So unlike Send,
 // regenerate needs no confirm modal.
 export function RegenerateOfferAction({ offer }: Readonly<{ offer: Offer }>) {
@@ -241,6 +254,8 @@ export function RegenerateOfferAction({ offer }: Readonly<{ offer: Offer }>) {
     onMutate: fromHere,
     onSuccess: (newDraft, _vars, from) => {
       queryClient.setQueryData(["offer", newDraft.id], newDraft);
+      // The server has just superseded this offer; going back must not find it sent.
+      void rereadOffer(queryClient, offer.id);
       // The new draft revision is a new offer row on the same deal. The deal's
       // offers panel (deals.overview.tsx) must see it too, as AcceptOfferAction
       // invalidates after its own change.
@@ -249,6 +264,7 @@ export function RegenerateOfferAction({ offer }: Readonly<{ offer: Offer }>) {
       });
       from.navigate({ screen: "offers", id: newDraft.id });
     },
+    onError: () => rereadOffer(queryClient, offer.id),
   });
 
   const errorMessage = mutation.isError

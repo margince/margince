@@ -164,12 +164,11 @@ export function OfferScreen({ id }: Readonly<{ id: string }>) {
         }),
       );
     },
-    // RegenerateOfferAction seeds this exact key with its 201 response — the
-    // only place ai_disclosure/diff_from_previous are ever populated — right
-    // before navigating here, and the default refetchOnMount would re-GET and
-    // wipe both the instant this screen mounts. A genuinely fresh navigation
-    // is unaffected: refetchOnMount only skips when the key is already cached.
-    refetchOnMount: false,
+    // RegenerateOfferAction seeds this exact key with its 201 response right
+    // before navigating here. Only that response carries ai_disclosure and
+    // diff_from_previous, and a re-GET on mount would wipe both. Every
+    // other cached offer is re-read, since its status may have moved on.
+    refetchOnMount: (query) => query.state.data?.ai_generated !== true,
   });
 
   return (
