@@ -9297,6 +9297,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agent.fact.offline": "ngoại tuyến",
   "agent.fact.sourceOnProvider": "{account} ({provider})",
   "agent.fact.searchIndex": "Chỉ mục tìm kiếm: {model}",
+  "agent.fact.noAnswers": "Không có câu trả lời từ {model}",
   "agent.fact.noCalls": "Chưa có lượt gọi mô hình",
   "agent.fact.hidden": "Bị ẩn với vai trò hiện tại",
   "agent.fact.noModel": "Chưa cấu hình mô hình",
@@ -16441,6 +16442,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Tác vụ được nhóm theo cấp chạy chúng; chọn tên để xem tác vụ làm gì, hoặc mở dòng để thiết lập mức suy nghĩ và thời gian chờ.",
   "aiTasks.whatItDoes": "{task}: tác vụ này làm gì",
   "aiTasks.decisionFirst": "Mô hình quyết định trước",
+  "aiTasks.mode.interactive": "Trong lúc chờ trả lời",
+  "aiTasks.mode.background": "Chạy nền",
+  "aiTasks.mode.embedding": "Lập chỉ mục tìm kiếm",
   "aiTasks.viewCalls": "Xem lượt gọi",
   "aiTasks.deferral.nowEmbedding":
     "Đang bị từ chối: lập chỉ mục tìm kiếm sẽ tự thử lại theo lịch riêng.",
@@ -20730,6 +20734,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiProviders.state.active": "Đang hoạt động",
   "aiProviders.state.ready": "Sẵn sàng",
   "aiProviders.state.needsKey": "Cần khóa",
+  "aiProviders.state.needsService": "Cần chọn dịch vụ",
   "aiProviders.state.inactive": "Không hoạt động",
   "aiProviders.colUsedBy": "Dùng cho",
   "aiProviders.colStatus": "Trạng thái",
@@ -21537,7 +21542,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiTaskSheet.fixed": "Cố định theo hợp đồng",
   "aiTaskSheet.tiersTried": "Cấp đã thử",
   "aiTaskSheet.runs": "Lượt chạy",
-  "aiTaskSheet.fixed.help": "Đổi các mục này trong ai-tasks.yaml.",
+  "aiTaskSheet.fixed.help":
+    "Nhà phát triển đổi các mục này trong định nghĩa của tác vụ, và chúng có hiệu lực từ bản phát hành kế tiếp.",
   "aiTaskSheet.addTask": "Thêm hoặc sửa tác vụ AI ↗",
   "aiTaskSheet.conflict": "Ai đó đã lưu các cài đặt này trong lúc đang sửa",
   "aiTaskSheet.conflict.help":
@@ -21567,7 +21573,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiOutcome.role.decision": "mô hình quyết định",
   "aiOutcome.role.tier": "mô hình theo cấp",
   "aiOutcome.role.fallback": "dự phòng",
-  "aiOutcome.answered": "{answered} trên {attempts} đã trả lời",
+  "aiOutcome.answered_one": "{answered} đã trả lời trong {attempts} lần thử",
+  "aiOutcome.answered_other": "{answered} đã trả lời trong {attempts} lần thử",
+  "aiOutcome.triesNote":
+    "Một lần thử bị lỗi hoặc hết giờ có thể được thử lại ở cùng bước, nên một bước có thể đếm nhiều lần thử hơn số lượt gọi.",
   "aiOutcome.usually": "thường trong {latency}",
   "aiOutcome.notNeeded": "Không cần trong khoảng này",
   "aiOutcome.gaveUp.on_one": "{count} {reason} → chuyển tiếp",

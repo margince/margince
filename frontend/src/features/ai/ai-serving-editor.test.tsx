@@ -150,7 +150,9 @@ describe("ServingSection", () => {
       />,
     );
     expect(screen.queryByRole("textbox", { name: "Serving JSON" })).toBeNull();
-    expect(screen.getByText(/gemini serves this model itself/)).toBeTruthy();
+    expect(
+      screen.getByText(/Google Gemini serves this model itself/),
+    ).toBeTruthy();
   });
 
   it("lists each problem the server names, on its line, and holds the save", async () => {
