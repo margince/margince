@@ -50,6 +50,9 @@ func newLead(t *testing.T, e *promoteConsentEnv, in CreateLeadInput) crmcontract
 	if in.Source == "" {
 		in.Source = "manual"
 	}
+	if !hasLeadIdentity(in) {
+		in.FullName = new("Lead " + ids.NewV7().String())
+	}
 	lead, _, err := e.store.CreateLead(e.ctx, in)
 	if err != nil {
 		t.Fatalf("create lead: %v", err)
@@ -149,7 +152,7 @@ func TestAnOriginMustBeAnActiveCatalogKey(t *testing.T) {
 	keepOriginCatalogAsSeeded(t, e)
 	unknown, partner := "no_such_origin", "partner"
 	var unknownErr *UnknownLeadOriginError
-	if _, _, err := e.store.CreateLead(e.ctx, CreateLeadInput{Source: "manual", Origin: &unknown}); !errors.As(err, &unknownErr) {
+	if _, _, err := e.store.CreateLead(e.ctx, CreateLeadInput{FullName: new("Origin Probe"), Source: "manual", Origin: &unknown}); !errors.As(err, &unknownErr) {
 		t.Fatalf("create with an unknown origin err = %v, want UnknownLeadOriginError", err)
 	}
 	held := newLead(t, e, CreateLeadInput{Origin: &partner})
@@ -169,7 +172,7 @@ func TestAnOriginMustBeAnActiveCatalogKey(t *testing.T) {
 		t.Fatal(err)
 	}
 	var inactiveErr *InactiveLeadOriginError
-	if _, _, err := e.store.CreateLead(e.ctx, CreateLeadInput{Source: "manual", Origin: &partner}); !errors.As(err, &inactiveErr) {
+	if _, _, err := e.store.CreateLead(e.ctx, CreateLeadInput{FullName: new("Origin Probe"), Source: "manual", Origin: &partner}); !errors.As(err, &inactiveErr) {
 		t.Errorf("create with a retired origin err = %v, want InactiveLeadOriginError", err)
 	}
 	// A lead already holding the retired key keeps it, and keeps its score.

@@ -1761,6 +1761,7 @@
   "common.loading": "Wird geladen…",
   "ref.nameLoadFailed": "Name wurde nicht geladen",
   "ref.memberLeft": "{name} (ausgeschieden)",
+  "ref.leadUnnamed": "Lead ohne Namen",
   "roster.failedUsers": "Die Teammitglieder konnten nicht geladen werden.",
   "roster.failedTeams": "Die Teams konnten nicht geladen werden.",
   "owner.rosterFailed": "Die Teammitglieder konnten nicht geladen werden. Lade die Seite neu, um eines zu wählen.",

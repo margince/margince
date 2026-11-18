@@ -8747,6 +8747,8 @@ export interface paths {
          *     An `email` on the erasure list answers 422 naming `email` with code `address_erased`.
          *     A lead for somebody who is already a contact is refused with 409 `contact_holds_email`:
          *     open a deal on the contact instead.
+         *     A body with none of `full_name`, `email`, `phone`, `linkedin_url` or `company_name`
+         *     answers 422 `lead_identity_required`.
          */
         post: operations["createLead"];
         delete?: never;
