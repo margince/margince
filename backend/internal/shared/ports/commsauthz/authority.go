@@ -3,17 +3,8 @@
 
 package commsauthz
 
-// Who decided that we may or may not write to somebody, and who may overrule it.
-//
-// One rule with no special cases: YOU MAY OVERRULE A DECISION MADE BELOW YOUR
-// LEVEL, NEVER AT OR ABOVE IT. The tiers order how much authority a decision
-// carries, not how senior the contact is, which is why the subject outranks the
-// admin administering the installation they are recorded in.
-//
-// The engine is weakest, being a reading of a record that is often incomplete. A
-// rep who knows the customer phoned can say so, and an admin can overrule the
-// rep. Nobody overrules the contact: an Art. 21 objection to direct marketing is
-// absolute in law, so a button to lift one could not lawfully be pressed.
+// Standing authority governs changes to recorded decisions. A one-message
+// instruction has separate scope and leaves the recipient's choice intact.
 
 // AuthorityLevel is the tier of the party a decision came from.
 type AuthorityLevel string
@@ -114,9 +105,9 @@ func (l AuthorityLevel) CanRevoke(decided AuthorityLevel) bool {
 // which fails when a new absolute reason is added without an arm here.
 func LevelForReason(reasonCode string) AuthorityLevel {
 	switch reasonCode {
-	// The subject's own act: an objection, a withdrawal, a restriction, a
-	// request to stop, an opt-out after a request. Nobody lifts or sends past
-	// these, an admin included (RemediesFor). Other refusals a rep may pass once.
+	case ReasonFooterIncomplete:
+		return LevelMachine
+	// A one-message instruction leaves the subject's recorded choice intact.
 	case ReasonObjection, ReasonRestricted, ReasonSubjectRequest, ReasonConsentWithdrawn,
 		ReasonOptedOutAfterRequest:
 		return LevelSubject

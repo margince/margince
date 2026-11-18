@@ -42022,11 +42022,22 @@ components:
           type: string
           enum: [contact, lead]
         entity_id: {type: string, format: uuid}
+    FooterFinding:
+      type: object
+      required: [kind, language, missing_means]
+      properties:
+        kind: {type: string, description: 'Missing disclosure kind or unavailable private link. Unknown kinds remain visible as an unspecified footer omission.'}
+        language: {type: string, description: 'Required language, or empty when no language is missing.'}
+        missing_means: {type: array, items: {type: string}, description: 'Missing contact methods, such as email, phone or web.'}
     SendAuthorizationPreviewRecipient:
       type: object
       required: [address, verdict, reason_code]
       description: One recipient's answer. It describes the MESSAGE, never the contact's file.
       properties:
+        footer_findings:
+          type: array
+          items: {$ref: '#/components/schemas/FooterFinding'}
+          description: Server-derived missing footer disclosures or unavailable private links shown before the sender confirms this message. Contains no credentials.
         address: {type: string, format: email}
         lawful_basis_missing:
           type: boolean
@@ -51823,6 +51834,14 @@ components:
         the rep is actually asking — and it is why an erasure clears this list.
       required: [address, reason_code]
       properties:
+        footer_preview:
+          type: array
+          items: {type: string}
+          description: Configured disclosure text included in this message. Contains no recipient credentials.
+        footer_findings:
+          type: array
+          items: {$ref: '#/components/schemas/FooterFinding'}
+          description: Server-derived missing footer disclosures or unavailable private links shown before the sender confirms this message. Contains no credentials.
         address: {type: string}
         subject_kind: {type: string, enum: [contact, lead]}
         subject_id: {type: string, format: uuid}
@@ -51839,6 +51858,9 @@ components:
         what the consent rows say today.
       required: [id, state, kind, reason_code, refusals]
       properties:
+        assessment_revision:
+          type: string
+          description: Revision of the displayed refusal and footer details, echoed when confirming.
         id: {type: string, format: uuid}
         state:
           type: string

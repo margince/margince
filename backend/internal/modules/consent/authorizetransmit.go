@@ -267,6 +267,17 @@ func (g *Gate) decideOne(ctx context.Context, tx pgx.Tx, r connector.Recipient, 
 // decideOneIn is decideOne under a country the caller already resolved for
 // this recipient, which every step of one decision then shares.
 func (g *Gate) decideOneIn(ctx context.Context, tx pgx.Tx, r connector.Recipient, req commsauthz.Request, phase commsauthz.Phase, country RecipientCountry) (commsauthz.Decision, error) {
+	decision, err := g.decideRecipientIn(ctx, tx, r, req, phase, country)
+	decision = decision.WithFooterFindings(req.Evidence.FooterFindings)
+	decision.Evidence.FooterPreview = req.Evidence.FooterPreview
+	decision.Evidence.FooterDigest = req.Evidence.FooterDigest
+	if err != nil {
+		return decision, err
+	}
+	return snapshotPolicyFacts(ctx, tx, decision)
+}
+
+func (g *Gate) decideRecipientIn(ctx context.Context, tx pgx.Tx, r connector.Recipient, req commsauthz.Request, phase commsauthz.Phase, country RecipientCountry) (commsauthz.Decision, error) {
 	req, agree := req.CanonicalPurpose()
 	d := commsauthz.Decision{
 		Recipient: r, Requested: req.Context, Resolved: commsauthz.CategoryMarketing,

@@ -86,18 +86,16 @@ func TestARefusalOffersOnlyWhatThisCallerCanDo(t *testing.T) {
 			review: held, want: []string{"direct_send"},
 		},
 		{
-			// No grant reaches a contact's own stop, an admin's included.
 			name: "a rep holding the grant, refused for an objection", actor: holdsTheGrant("rep"),
-			review: objected,
+			review: objected, want: []string{"direct_send"},
 		},
 		{
 			name: "an admin, refused for an objection", actor: holdsTheGrant("admin"),
-			review: objected,
+			review: objected, want: []string{"direct_send"},
 		},
 		{
-			// The stop wins over a refusal the grant could pass.
 			name: "an admin, refused for an objection beside a passable refusal", actor: holdsTheGrant("admin"),
-			review: objectedBeside,
+			review: objectedBeside, want: []string{"direct_send"},
 		},
 		{
 			// A bounce is a fact about the address, whoever holds the grant.

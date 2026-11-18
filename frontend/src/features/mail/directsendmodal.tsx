@@ -22,13 +22,14 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Button, Checkbox, Field, Textarea } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
-import { ErrorLine } from "../../design-system/errorline";
 import { Select } from "../../design-system/select";
+import { footerFindingsText } from "../../format/footerfindings";
 import { sendingCompanyScope } from "../../format/sendingcompany";
 import { sendPermissionReasonKey } from "../../format/sendpermissionreason";
-import { useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
 import { communicationContextLabel } from "../../lib/compose-context";
 import { throwProblem } from "../../lib/problem";
+import { sendReviewOf } from "./sendreview";
 import { WordingCorrectionModal } from "./wordingcorrectionmodal";
 
 // The review as this modal needs it: which message, and the caution the server
@@ -45,6 +46,7 @@ type DirectSendCommand = Readonly<{
   reasonCode: string;
   explanation: string;
   warningVersion: string;
+  assessmentRevision?: string;
   // The refusals the director read. A review rewritten since then is stale.
   shownReasons: readonly string[];
 }>;
@@ -58,6 +60,7 @@ async function directSend(command: DirectSendCommand): Promise<string> {
         reason_code: command.reasonCode as "other",
         explanation: command.explanation,
         warning_version: command.warningVersion,
+        assessment_revision: command.assessmentRevision,
         shown_reasons: [...command.shownReasons],
         // The tick IS the acknowledgement, and the server refuses a decision
         // without one. It is sent as true because this function is only
@@ -92,15 +95,18 @@ type ReasonCode = (typeof REASON_CODES)[number];
 export function DirectSendModal({
   open,
   onClose,
-  review,
+  review: initialReview,
   onSent,
+  onReviewRefreshed,
 }: Readonly<{
   open: boolean;
   onClose: () => void;
   review: CommunicationReview;
   onSent?: (activityId: string) => void;
+  onReviewRefreshed?: (review: CommunicationReview) => void;
 }>) {
   const t = useT();
+  const [review, setReview] = useState(initialReview);
   const correction = review.wording_correction;
   const prior = correction ?? {
     reason_code: "other",
@@ -114,20 +120,54 @@ export function DirectSendModal({
   const [acknowledged, setAcknowledged] = useState(false);
   const [reasonCode, setReasonCode] = useState<ReasonCode>(recordedReason);
   const [explanation, setExplanation] = useState(prior.explanation);
+  const sourceKey = reviewKey(initialReview);
+  const [source, setSource] = useState({
+    message: initialReview.delivery_intent_id ?? initialReview.id,
+    key: sourceKey,
+  });
+  const [refreshFailed, setRefreshFailed] = useState(false);
+  const [assessmentChanged, setAssessmentChanged] = useState(false);
+  if (source.key !== sourceKey) {
+    const message = initialReview.delivery_intent_id ?? initialReview.id;
+    setSource({ message, key: sourceKey });
+    setReview(initialReview);
+    if (source.message !== message)
+      setExplanation(initialReview.wording_correction?.explanation ?? "");
+    setAcknowledged(false);
+  }
 
   // A different review or warning needs a fresh acknowledgement.
-  const acknowledgementKey = `${review.id}:${review.warning?.version ?? ""}:${prior.version}`;
+  const acknowledgementKey = `${reviewKey(review)}:${prior.version}`;
   const [seen, setSeen] = useState(acknowledgementKey);
   if (seen !== acknowledgementKey) {
     setSeen(acknowledgementKey);
     setAcknowledged(false);
     setEditingWording(undefined);
-    setReasonCode(recordedReason);
-    setExplanation(prior.explanation);
   }
 
   const send = useMutation({
     mutationFn: directSend,
+    onMutate: () => setAssessmentChanged(false),
+    onError: async (error) => {
+      const refreshed = sendReviewOf(error);
+      if (!refreshed?.reviewId || refreshed.reviewId === review.id) return;
+      try {
+        const response = await api.GET("/communication-reviews/{id}", {
+          params: { path: { id: refreshed.reviewId } },
+        });
+        if (response.data) {
+          setReview(response.data);
+          onReviewRefreshed?.(response.data);
+          setAcknowledged(false);
+          setRefreshFailed(false);
+          setAssessmentChanged(true);
+        } else {
+          setRefreshFailed(true);
+        }
+      } catch {
+        setRefreshFailed(true);
+      }
+    },
     onSuccess: (activityId) => {
       onSent?.(activityId);
       onClose();
@@ -142,13 +182,12 @@ export function DirectSendModal({
   // and submitting an empty version would be refused by the server with an
   // error about a field the director never saw. Saying so here is the honest
   // answer: there is nothing to read, so there is nothing to acknowledge.
-  const missing = !review.warning
-    ? t("directSend.noWarningServed")
-    : !acknowledged
-      ? t("directSend.needsAcknowledgement")
-      : said === ""
-        ? t("directSend.needsReason")
-        : undefined;
+  const missing = confirmationMissing(
+    Boolean(review.warning),
+    acknowledged,
+    said,
+    t,
+  );
 
   if (editingWording) {
     return (
@@ -172,13 +211,19 @@ export function DirectSendModal({
       confirmDisabled={Boolean(missing)}
       confirmReason={missing}
       pending={send.isPending}
-      error={send.isError ? t("directSend.failed") : undefined}
+      error={confirmationError(
+        assessmentChanged,
+        refreshFailed,
+        send.isError,
+        t,
+      )}
       onConfirm={() =>
         send.mutate({
           reviewId: review.id,
           reasonCode,
           explanation: said,
           warningVersion: review.warning?.version ?? "",
+          assessmentRevision: review.assessment_revision,
           shownReasons: (review.refusals ?? []).map(
             (refusal) => refusal.reason_code,
           ),
@@ -188,7 +233,7 @@ export function DirectSendModal({
       {/* THE SERVER'S OWN WORDS, verbatim. Paraphrasing here would record the
           director as having read the server's caution while showing them
           ours. */}
-      {review.warning && <ErrorLine>{review.warning.text}</ErrorLine>}
+      {review.warning && <p className="t-body">{review.warning.text}</p>}
       {correction && (
         <>
           <p className="t-body">{t("directSend.existingApproval")}</p>
@@ -202,6 +247,7 @@ export function DirectSendModal({
           key={`${refusal.address}-${refusal.subject_id ?? ""}-${refusal.category ?? ""}`}
         >
           <p>{refusal.address}</p>
+          <ConfirmationFooter refusal={refusal} />
           <p className="t-caption">
             {t(
               sendPermissionReasonKey(
@@ -267,4 +313,55 @@ export function DirectSendModal({
       />
     </ConfirmModal>
   );
+}
+
+function ConfirmationFooter({
+  refusal,
+}: Readonly<{ refusal: CommunicationReview["refusals"][number] }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  return (
+    <>
+      {refusal.footer_preview?.length ? (
+        <div>
+          <p>{t("sendPermission.footer.preview")}</p>
+          {refusal.footer_preview.map((text) => (
+            <p key={text} className="t-caption">
+              {text}
+            </p>
+          ))}
+        </div>
+      ) : null}
+      {refusal.footer_findings?.length ? (
+        <p>{footerFindingsText(refusal.footer_findings, t, locale)}</p>
+      ) : null}
+    </>
+  );
+}
+
+function confirmationError(
+  changed: boolean,
+  refreshFailed: boolean,
+  failed: boolean,
+  t: ReturnType<typeof useT>,
+) {
+  if (changed) return t("directSend.changed");
+  if (refreshFailed) return t("directSend.couldNotOpen");
+  return failed ? t("directSend.failed") : undefined;
+}
+
+function reviewKey(review: CommunicationReview): string {
+  return `${review.id}:${review.warning?.version ?? ""}:${JSON.stringify(review.refusals)}`;
+}
+
+function confirmationMissing(
+  hasWarning: boolean,
+  acknowledged: boolean,
+  explanation: string,
+  t: ReturnType<typeof useT>,
+) {
+  if (!hasWarning) return t("directSend.noWarningServed");
+  if (!acknowledged) return t("directSend.needsAcknowledgement");
+  if (!explanation) return t("directSend.needsReason");
+  return undefined;
 }

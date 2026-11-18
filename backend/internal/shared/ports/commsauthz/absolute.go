@@ -7,6 +7,7 @@ package commsauthz
 // label or show an operator: none of them names a contact, an address or a
 // message.
 const (
+	ReasonFooterIncomplete = "footer_incomplete"
 	// ReasonObjection is Art. 21 — the subject objected to direct marketing.
 	ReasonObjection = "marketing_objection"
 	// ReasonRestricted is a STATUTORY processing restriction (Art. 18).
@@ -101,11 +102,12 @@ const (
 // confirmed. Those four are decided by law or by the subject, not by how far
 // along a rollout is, so they deny from the first day the engine runs.
 var absoluteDenials = map[string]bool{
-	ReasonObjection:      true,
-	ReasonRestricted:     true,
-	ReasonSubjectRequest: true,
-	ReasonHardBounce:     true,
-	ReasonUnconfirmedDOI: true,
+	ReasonFooterIncomplete: true,
+	ReasonObjection:        true,
+	ReasonRestricted:       true,
+	ReasonSubjectRequest:   true,
+	ReasonHardBounce:       true,
+	ReasonUnconfirmedDOI:   true,
 	// A recipient the engine cannot resolve to exactly one subject is the
 	// fifth, and it belongs here for a different reason than the other four:
 	// they are refusals ABOUT somebody, this one is the admission that nobody
@@ -145,12 +147,16 @@ var absoluteDenials = map[string]bool{
 // Absolute reports whether this reason denies regardless of Mode.
 func Absolute(reasonCode string) bool { return absoluteDenials[reasonCode] }
 
-// HasAbsoluteDenial reports whether any recipient was refused for a reason the
+func (d Decision) absoluteDenial() bool {
+	return d.Verdict != VerdictAllow && (Absolute(d.ReasonCode) || len(d.Evidence.FooterFindings) > 0)
+}
+
+// HasAbsoluteDenial reports whether any recipient was refused for a finding the
 // rollout mode may not soften. A caller in observe mode still refuses the send
 // when this is true.
 func (s DecisionSet) HasAbsoluteDenial() bool {
 	for _, d := range s.Decisions {
-		if d.Verdict != VerdictAllow && Absolute(d.ReasonCode) {
+		if d.absoluteDenial() {
 			return true
 		}
 	}
@@ -213,46 +219,25 @@ func (s DecisionSet) Effective(modeFor func(Category) Mode, legacyAllowed bool) 
 	return legacyAllowed
 }
 
-// WouldRefuse reports whether one recipient's answer actually stops the message.
-//
-// The verdict alone does not say: under a mode short of enforce a deny is
-// recorded and the send still goes, which is what makes observe usable at all.
-// An absolute reason overrides that, because those are refusals no rollout
-// position may soften.
-//
-// It is the per-recipient twin of Effective, which answers for a whole set at
-// transmit. Both are spelled here so a caller asking "would this stop" never
-// recombines verdict, mode and absoluteness for itself — three inputs and one
-// rule, and a second copy of it decides whether mail reaches a contact.
-//
-// Held by: TestWouldRefuseFollowsTheModeExceptWhereNothingMay (absolute_test.go)
+// WouldRefuse uses the same absolute finding check as transmit.
+// Rollout modes cannot hide footer omissions that need the sender's confirmation.
 func (d Decision) WouldRefuse(mode Mode) bool {
 	if d.Verdict == VerdictAllow {
 		return false
 	}
-	if Absolute(d.ReasonCode) {
+	if d.absoluteDenial() {
 		return true
 	}
 	return mode == ModeEnforce
 }
 
-// CanBeOverruled reports whether a standing, recorded reason may lift this
-// refusal for later messages too. The one-message exception is a different
-// answer (OverrulableForOneMessage).
-//
-// Both axes have to agree. LevelForReason says whose decision it is, and four
-// reasons are the engine's own reading AND absolute — a dead mailbox, a rolling
-// cap, an unresolvable recipient, an unconfirmed opt-in. Each is a fact to
-// correct rather than a decision to respect. No standing reason lifts an
-// absolute denial, so offering one there is a control that cannot do what it
-// says.
-//
-// Held by: TestOnlyANonAbsoluteMachineReadingCanBeOverruled (absolute_test.go)
+// CanBeOverruled reports whether a standing decision may lift this refusal.
+// Absolute findings and footer omissions need correction or a decision for the exact message.
 func (d Decision) CanBeOverruled() bool {
 	if d.Verdict == VerdictAllow {
 		return false
 	}
-	return LevelForReason(d.ReasonCode) == LevelMachine && !Absolute(d.ReasonCode)
+	return LevelForReason(d.ReasonCode) == LevelMachine && !d.absoluteDenial()
 }
 
 // OverrulableForOneMessage reports whether a human sender may send this one
