@@ -70,7 +70,7 @@ the first.
 
 ## What Germany does not require
 
-No subject prefix, no frequency cap and no receipt for an opt-out. The keys are absent on purpose.
+No subject prefix, no frequency cap and no receipt for an opt-out, so those keys are absent.
 A reader who compares this layer with another pack can see which duties Germany does not impose.
 
 ## The details check

@@ -19,7 +19,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/margince/margince/backend/internal/shared/messagingpolicy"
+	"github.com/margince/margince/backend/internal/platform/messagingpolicy"
 )
 
 func main() {

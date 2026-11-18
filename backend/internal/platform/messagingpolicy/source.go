@@ -55,6 +55,8 @@ type indexFile struct {
 // layerFile is the closed key set of one policy layer. Each obligation key
 // spells one messaging.Rules field in lower-case words joined by hyphens, and
 // an absent key leaves the layer below in force.
+//
+//nolint:tagliatelle // policy files spell their keys in kebab case
 type layerFile struct {
 	Jurisdiction  *string           `yaml:"jurisdiction"`
 	Version       *int              `yaml:"version"`
@@ -99,6 +101,7 @@ type fixturePair struct {
 	Clears   string `yaml:"clears"`
 }
 
+//nolint:tagliatelle // policy files spell their keys in kebab case
 type instrumentEntry struct {
 	Name      string    `yaml:"name"`
 	Effective time.Time `yaml:"effective"`
@@ -110,6 +113,8 @@ type instrumentEntry struct {
 // citationEntry names the law behind one engine code. territorial-test is
 // required and must be one of the Territory values: a test written as prose
 // is one the engine cannot decide, so it can never select a citation.
+//
+//nolint:tagliatelle // policy files spell their keys in kebab case
 type citationEntry struct {
 	Code            string  `yaml:"code"`
 	TerritorialTest *string `yaml:"territorial-test"`
@@ -118,6 +123,7 @@ type citationEntry struct {
 	SourceURL       string  `yaml:"source-url"`
 }
 
+//nolint:tagliatelle // policy files spell their keys in kebab case
 type exceptionEntry struct {
 	Kind                         string `yaml:"kind"`
 	RequiresSaleEvidence         bool   `yaml:"requires-sale-evidence"`
@@ -126,6 +132,7 @@ type exceptionEntry struct {
 	RequiresNoObjection          bool   `yaml:"requires-no-objection"`
 }
 
+//nolint:tagliatelle // policy files spell their keys in kebab case
 type disclosureEntry struct {
 	Kind          string   `yaml:"kind"`
 	MarketingOnly bool     `yaml:"marketing-only"`
@@ -139,6 +146,8 @@ type frequencyCapEntry struct {
 
 // fixtureFile is the closed key set of one fixture: the send the draft below
 // it is part of. The body is the draft's text.
+//
+//nolint:tagliatelle // policy files spell their keys in kebab case
 type fixtureFile struct {
 	Subject      string        `yaml:"subject"`
 	Advertising  bool          `yaml:"advertising"`
@@ -151,6 +160,8 @@ type fixtureFile struct {
 
 // Particulars are the controller particulars a fixture's installation states.
 // Language is set only on a translation.
+//
+//nolint:tagliatelle // policy files spell their keys in kebab case
 type Particulars struct {
 	Language          string `yaml:"language"`
 	LegalName         string `yaml:"legal-name"`

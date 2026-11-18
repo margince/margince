@@ -100,7 +100,7 @@ refusal means, ends advertising with the refusal section, and flags claims that 
 ## No marketing exception
 
 Decree 91/2020/ND-CP Art. 10 allows advertising email only with the recipient's prior consent. It
-grants no route that a sale opens, so `marketing-exceptions` is empty on purpose. Evidence of a
+grants no route that a sale opens, so `marketing-exceptions` is stated and empty. Evidence of a
 German sale authorizes nothing here. `consent-only` adds that no exception a sender or an admin
 records takes the place of consent.
 

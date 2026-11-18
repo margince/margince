@@ -35,6 +35,6 @@ func messagingRules() messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.September, 4, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "e688a68414209e63d689767c2024efd8e31de4cbc2245ac609995a04fc0b2618",
+		Digest: "b1174889801b3bcabfbc31dc5536ddc1169f783e9045a08a6c0ec73f87b84ff7",
 	}
 }
