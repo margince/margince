@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 274.6 KB |
+| Tool catalog | 274.7 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 71715 |
+| Approx. wire tokens | 71739 |
 | Largest tool | `read_details` (17.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,9 +34,9 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 51.6 KB | 18% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 53.7 KB | 19% | Yes, every step |
-| Input schemas | 157.5 KB | 57% | Yes, every step |
+| Input schemas | 157.6 KB | 57% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 4% | Partly |
-| **Description + input schema** | **211.2 KB** | **76%** | **the recurring cost** |
+| **Description + input schema** | **211.3 KB** | **76%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -102,7 +102,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_project`](#read_project) | Read a project or its handover | yes |  | 318 |
 | [`read_record`](#read_record) | Read a record | yes |  | 284 |
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
-| [`read_reports`](#read_reports) | Read sales reports | yes |  | 2784 |
+| [`read_reports`](#read_reports) | Read sales reports | yes |  | 2808 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 358 |
 | [`read_view`](#read_view) | Read a view | yes |  | 1889 |
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2779 |
@@ -10954,6 +10954,7 @@ number is. Keep a run's id to search its evidence, and quote coverage with each 
         "analytics_schema",
         "company_coverage",
         "evidence",
+        "forecast_focus",
         "question_card_answer",
         "question_card_records",
         "report_revisions",
@@ -11338,6 +11339,11 @@ number is. Keep a run's id to search its evidence, and quote coverage with each 
         "live",
         "open"
       ],
+      "type": "string"
+    },
+    "team": {
+      "description": "forecast_focus only",
+      "format": "uuid",
       "type": "string"
     },
     "view": {
