@@ -20571,6 +20571,39 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.manager.kind.review_backlog": "Offene Prüfungen",
   "worklist.manager.kind.general": "Sonstiges",
   "worklist.board.title": "Teamarbeit mit Handlungsbedarf",
+  "worklist.gap.rankedOn": "Gereiht am {date}.",
+  "worklist.gap.masked_one":
+    "{count} Deal fehlt, weil du seinen Betrag nicht sehen darfst.",
+  "worklist.gap.masked_other":
+    "{count} Deals fehlen, weil du ihre Beträge nicht sehen darfst.",
+  "worklist.gap.withheld":
+    "Die Einzelleistung ist ausgeschaltet, daher werden keine Listen gezeigt, die Deals eines anderen Mitglieds nennen würden.",
+  "worklist.gap.tabs": "Teamansicht",
+  "worklist.gap.exceptionsTab": "Ausnahmen",
+  "worklist.gap.tab": "Lücke schließen",
+  "worklist.gap.title": "Lücke schließen",
+  "worklist.gap.loading": "Gereihte Deals werden geladen…",
+  "worklist.gap.empty":
+    "Noch kein Team hat eine gereihte Liste. Margince reiht die Deals jedes erfassten Teams einmal am Tag.",
+  "worklist.gap.behind":
+    "Das Team liegt hinter seinem Quartalsziel. Bearbeite diese Deals zuerst.",
+  "worklist.gap.onTarget":
+    "Das Team erreicht sein Quartalsziel. Diese Deals könnten aus dem Quartal rutschen.",
+  "worklist.gap.nothingAtRisk":
+    "Das Team erreicht sein Ziel, und kein offener Deal hat ein gefährdetes Abschlussdatum.",
+  "worklist.gap.noGoal":
+    "Dieses Team hat nicht für jeden Monat des Quartals ein Ziel, deshalb sind keine Deals gereiht.",
+  "worklist.gap.rank": "Rang",
+  "worklist.gap.deal": "Deal",
+  "worklist.gap.owner": "Verantwortlich",
+  "worklist.gap.weighted": "Gewichtet",
+  "worklist.gap.why": "Warum",
+  "worklist.gap.closesToday": "Abschluss heute",
+  "worklist.gap.closesIn_one": "Abschluss in {count} Tag",
+  "worklist.gap.closesIn_other": "Abschluss in {count} Tagen",
+  "worklist.gap.closedAgo_one": "Abschlussdatum vor {count} Tag",
+  "worklist.gap.closedAgo_other": "Abschlussdatum vor {count} Tagen",
+  "worklist.gap.provisional": "Abschlussdatum nicht bestätigt",
   "worklist.exceptions.title": "Team-Ausnahmen",
   "worklist.handled.title": "Änderungsverlauf",
   "worklist.walk.arrived":

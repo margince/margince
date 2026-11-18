@@ -81,9 +81,9 @@ func (t forecastReadings) Handle(ctx context.Context, in json.RawMessage) (json.
 // ForecastReadings, restated here because the tool surface declares its own
 // output schema.
 //
-// The counts are not decoration. EligibleCount against PricedCount is what a
-// money total does NOT cover, and a model quoting the total without the gap is
-// reporting a partial pipeline as a complete one.
+// EligibleCount against PricedCount is what the open pipeline total does not
+// cover. A model that quotes it without the gap reports a partial pipeline as
+// complete. All four counts describe only open deals due in the period.
 type ForecastReadingsResult struct {
 	PeriodStart string  `json:"period_start"`
 	PeriodEnd   string  `json:"period_end"`

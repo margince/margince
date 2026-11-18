@@ -17,6 +17,7 @@ import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import { ReportingEvidenceDrawer } from "./analytics.drawers";
 import { ReportingComparison } from "./reporting.comparison";
+import { useCreateReport } from "./reporting.create";
 import { ReportingExecutions } from "./reporting.executions";
 import { ReportingExportButton } from "./reporting.export";
 import {
@@ -95,20 +96,17 @@ export function ReportingReportDetail({
   );
   const previewDraft = previewRevision !== undefined;
   const draftEditing = useDraftEditing(reportId, report.data, canEdit);
+  const createReport = useCreateReport();
   const write = useMutation({
     mutationFn: async (action: ReportAction) => {
       switch (action.kind) {
         case "duplicate": {
-          const data = unwrap(
-            await api.POST("/analytics/reports", {
-              body: {
-                name: (action.name ?? action.report.name).slice(0, 160),
-                description: action.report.description,
-                audience: "private",
-                selection: action.report.selection,
-              },
-            }),
-          );
+          const data = await createReport({
+            name: (action.name ?? action.report.name).slice(0, 160),
+            description: action.report.description,
+            audience: "private",
+            selection: action.report.selection,
+          });
           return { reportId: data.id };
         }
         case "archive": {

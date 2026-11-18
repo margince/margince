@@ -79,3 +79,5 @@ A proposal saves nothing. You can change every month before you save, and the dr
 ## Where else do published goals show?
 
 Analytics holds sales won against the published goals when no target was typed for that team member or team and that period. A quarter adds up its three months, and a team adds up its members. A quarter with a month that has no goal gets no goal. **Insights → Analytics → Setup → Targets** lists each published plan as one row that opens it here. It shows the plans of this year and the next; pick a month to see the plans of that month's year.
+
+A team lead sees the quarter goal at work in **Home → Team → Close the gap**. It ranks the deals that close the team's gap; see [Your day](your-day.md#for-a-team-lead).

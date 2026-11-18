@@ -343,6 +343,7 @@ var Declared = map[string][]string{
 	"GET /v1/forecast/assurance/exceptions":                                    {"country", "industry", "product_id", "scope_id", "scope_kind"},
 	"GET /v1/forecast/assurance/preview":                                       {},
 	"GET /v1/forecast/calls":                                                   {"as_of", "period", "scope_id", "scope_kind"},
+	"GET /v1/forecast/focus":                                                   {"team"},
 	"GET /v1/forecast/movement":                                                {"from", "reading", "to"},
 	"GET /v1/forecast/shared/{token}":                                          {},
 	"GET /v1/forecast/shared/{token}/export.csv":                               {},

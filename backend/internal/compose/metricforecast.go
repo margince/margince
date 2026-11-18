@@ -185,7 +185,7 @@ func reportingForecastChart(out *reporting.Evaluation, chart crmcontracts.Report
 
 func reportingForecastCoverage(frame crmcontracts.ReportingContext, readings forecasting.Readings, landing forecasting.Landing, withheld bool) crmcontracts.ReportingCoverage {
 	coverage := crmcontracts.ReportingCoverage{Status: "ok", Withheld: withheld}
-	if readings.PricedCount < readings.EligibleCount || readings.FxMissingCount > 0 || landing.Caveat != "" {
+	if readings.PricedCount < readings.EligibleCount || readings.FxMissingCount > 0 || readings.WonFxMissingCount() > 0 || landing.Caveat != "" {
 		coverage.Status = reportingPartial
 		reason := reportingForecastReason(frame, landing.Caveat)
 		coverage.Reason = &reason
@@ -270,7 +270,7 @@ func forecastOperands(period forecasting.Period, readings forecasting.Readings, 
 		Quarter: crmcontracts.ReportingWindow{StartAt: period.Start, EndAt: period.End},
 		Measure: crmcontracts.ReportingTargetComparisonBasis(landing.Measure), LandingMinor: landing.AmountMinor,
 		WonMinor: readings.WonMinor, OpenMinor: readings.OpenMinor,
-		FxMissing: readings.FxMissingCount > 0, CallOverPipeline: callOverPipeline,
+		FxMissingWon: readings.WonFxMissingCount() > 0, FxMissingOpen: readings.FxMissingCount > 0, CallOverPipeline: callOverPipeline,
 		CallBelowWon: landing.Caveat == forecasting.CaveatCallBelowActual,
 		Operands:     crmcontracts.ReportingComparisonOperands{Won: ref(forecastWonContext), Landing: ref(reportingForecastLanding), OpenPipeline: ref(forecastOpenContext)},
 	}

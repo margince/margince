@@ -13615,6 +13615,27 @@ func (e ForecastContributionProbabilitySource) Valid() bool {
 	}
 }
 
+// Defines values for ForecastFocusTeamStatus.
+const (
+	ForecastFocusTeamStatusBehind   ForecastFocusTeamStatus = "behind"
+	ForecastFocusTeamStatusNoGoal   ForecastFocusTeamStatus = "no_goal"
+	ForecastFocusTeamStatusOnTarget ForecastFocusTeamStatus = "on_target"
+)
+
+// Valid indicates whether the value is a known member of the ForecastFocusTeamStatus enum.
+func (e ForecastFocusTeamStatus) Valid() bool {
+	switch e {
+	case ForecastFocusTeamStatusBehind:
+		return true
+	case ForecastFocusTeamStatusNoGoal:
+		return true
+	case ForecastFocusTeamStatusOnTarget:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ForecastLandingCaveat.
 const (
 	ForecastLandingCaveatLandingCaveatCallAbsent      ForecastLandingCaveat = "call_absent"
@@ -51181,6 +51202,60 @@ type ForecastEnforcementPreview struct {
 	UnknownCount int `json:"unknown_count"`
 }
 
+// ForecastFocus defines model for ForecastFocus.
+type ForecastFocus struct {
+	PeriodEnd   openapi_types.Date `json:"period_end"`
+	PeriodStart openapi_types.Date `json:"period_start"`
+
+	// Teams One entry per team with a daily freeze this quarter, ordered by team id.
+	Teams []ForecastFocusTeam `json:"teams"`
+
+	// Withheld True when a team's list is left out because the installation shows no individual performance and the team is too small to show without naming a colleague.
+	Withheld bool `json:"withheld"`
+}
+
+// ForecastFocusDeal defines model for ForecastFocusDeal.
+type ForecastFocusDeal struct {
+	DealId             openapi_types.UUID  `json:"deal_id"`
+	DealName           string              `json:"deal_name"`
+	EffectiveCloseDate *openapi_types.Date `json:"effective_close_date,omitempty"`
+	OwnerId            *openapi_types.UUID `json:"owner_id,omitempty"`
+	Rank               int                 `json:"rank" maximum:"20" minimum:"1"`
+
+	// Reason The stored facts behind a rank. The score is never stored.
+	Reason ForecastFocusReason `json:"reason"`
+
+	// WeightedMinor The deal's weighted amount in the base currency, as frozen. Absent when the amount is masked from the caller.
+	WeightedMinor *int64 `json:"weighted_minor,omitempty"`
+}
+
+// ForecastFocusReason The stored facts behind a rank. The score is never stored.
+type ForecastFocusReason struct {
+	CloseProvisional bool `json:"close_provisional"`
+
+	// ClosesInDays Days from the caller's day to the expected close date, negative once that date passed.
+	ClosesInDays *int                 `json:"closes_in_days,omitempty"`
+	Signals      []ForecastRiskSignal `json:"signals"`
+}
+
+// ForecastFocusTeam defines model for ForecastFocusTeam.
+type ForecastFocusTeam struct {
+	BaseCurrency string              `json:"base_currency"`
+	Deals        []ForecastFocusDeal `json:"deals"`
+
+	// MaskedCount Ranked deals left out because their amount is masked from the caller. The rest are numbered from 1 again, since a masked deal's place in the order would tell its size.
+	MaskedCount int                `json:"masked_count" minimum:"0"`
+	SnapshotId  openapi_types.UUID `json:"snapshot_id"`
+
+	// Status `behind`: the expected landing was under the team goal. `on_target`: it met the goal. `no_goal`: a month of the quarter had no published goal for a member, so nothing was ranked, or the caller may not read the team's goal, so neither standing nor list is shown.
+	Status  ForecastFocusTeamStatus `json:"status"`
+	TakenAt time.Time               `json:"taken_at"`
+	TeamId  openapi_types.UUID      `json:"team_id"`
+}
+
+// ForecastFocusTeamStatus `behind`: the expected landing was under the team goal. `on_target`: it met the goal. `no_goal`: a month of the quarter had no published goal for a member, so nothing was ranked, or the caller may not read the team's goal, so neither standing nor list is shown.
+type ForecastFocusTeamStatus string
+
 // ForecastLanding Where the period finishes if nothing changes, and what that answer rests on.
 // The four money readings say what is IN the pipeline; none of them answers "what will we land on?", and a reader left to add two of them together picks the wrong two. This is that sum, made once and labelled with the measure it used.
 type ForecastLanding struct {
@@ -51279,7 +51354,7 @@ type ForecastReadings struct {
 	ContributionsLimitedReason *string       `json:"contributions_limited_reason,omitempty"`
 	CurrentCall                *ForecastCall `json:"current_call,omitempty"`
 
-	// EligibleCount Deals considered, priced or not.
+	// EligibleCount Open deals due in the period, priced or not. Like the other counts, it says nothing about the won total.
 	EligibleCount int `json:"eligible_count"`
 
 	// EvidenceMinor Likely: open deals at `likely_threshold` percent or more whose close date somebody confirmed, counted in full. A provisional date is a guess, so it is excluded here and included in open_minor.
@@ -62698,7 +62773,9 @@ type ReportingForecastBasis struct {
 	// CallMinor The standing manager call for the quarter and scope, whatever measure the landing used. It stands beside the landing and is never added to it. Absent when nobody has made a call, and when one pipeline is selected, because a call covers every pipeline.
 	CallMinor *int64 `json:"call_minor,omitempty"`
 
-	// EligibleCount Deals the forecast considered, priced or not.
+	// EligibleCount Open deals due in the period, priced or not. The four counts (`eligible_count`,
+	// `priced_count`, `confirmed_date_count`, `fx_missing_count`) describe only those
+	// open deals; they do not say whether `won_minor` is complete.
 	EligibleCount int64 `json:"eligible_count" minimum:"0"`
 
 	// FxMissingCount Priced deals with no exchange rate to the base currency, left out of every total.
@@ -63179,7 +63256,8 @@ type ReportingTargetComparison struct {
 	// pipeline and quarter, or the reader may not read targets; a missing
 	// target is never zero. `fx_missing` means a deal amount has no
 	// exchange rate to the base currency, so the totals are incomplete
-	// and no gap or coverage is given. `partial_visibility` means the
+	// and no gap or coverage is given. When only an open deal lacks the rate,
+	// `target` and `won` are still given. `partial_visibility` means the
 	// reader cannot see every deal of the population asked for, or a
 	// deal's amount, so its figures cannot stand against the scope's
 	// whole target.
@@ -63220,7 +63298,8 @@ type ReportingTargetComparisonIncompatibility string
 // pipeline and quarter, or the reader may not read targets; a missing
 // target is never zero. `fx_missing` means a deal amount has no
 // exchange rate to the base currency, so the totals are incomplete
-// and no gap or coverage is given. `partial_visibility` means the
+// and no gap or coverage is given. When only an open deal lacks the rate,
+// `target` and `won` are still given. `partial_visibility` means the
 // reader cannot see every deal of the population asked for, or a
 // deal's amount, so its figures cannot stand against the scope's
 // whole target.
@@ -74654,6 +74733,30 @@ type ListReportingReportsParams struct {
 	Scheduled *bool `form:"scheduled,omitempty" json:"scheduled,omitempty"`
 }
 
+// CreateReportingReportParams defines parameters for CreateReportingReport.
+type CreateReportingReportParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
 // UpdateReportingReportParams defines parameters for UpdateReportingReport.
 type UpdateReportingReportParams struct {
 	IfMatch string `json:"If-Match"`
@@ -78232,6 +78335,36 @@ type ListForecastCallsParamsPeriod string
 
 // ListForecastCallsParamsScopeKind defines parameters for ListForecastCalls.
 type ListForecastCallsParamsScopeKind string
+
+// RecordForecastCallParams defines parameters for RecordForecastCall.
+type RecordForecastCallParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// GetForecastFocusParams defines parameters for GetForecastFocus.
+type GetForecastFocusParams struct {
+	// Team One team. Omitted, every team whose list the caller may read.
+	Team *openapi_types.UUID `form:"team,omitempty" json:"team,omitempty"`
+}
 
 // GetForecastMovementParams defines parameters for GetForecastMovement.
 type GetForecastMovementParams struct {
@@ -97461,7 +97594,7 @@ type ServerInterface interface {
 	ListReportingReports(w http.ResponseWriter, r *http.Request, params ListReportingReportsParams)
 	// Create reporting report
 	// (POST /analytics/reports)
-	CreateReportingReport(w http.ResponseWriter, r *http.Request)
+	CreateReportingReport(w http.ResponseWriter, r *http.Request, params CreateReportingReportParams)
 	// The block grammar a report document is written in.
 	// (GET /analytics/reports/blocks)
 	DescribeReportBlocks(w http.ResponseWriter, r *http.Request)
@@ -98844,7 +98977,10 @@ type ServerInterface interface {
 	ListForecastCalls(w http.ResponseWriter, r *http.Request, params ListForecastCallsParams)
 	// Record what somebody believes will close.
 	// (POST /forecast/calls)
-	RecordForecastCall(w http.ResponseWriter, r *http.Request)
+	RecordForecastCall(w http.ResponseWriter, r *http.Request, params RecordForecastCallParams)
+	// The deals each team should work to meet its goal this quarter.
+	// (GET /forecast/focus)
+	GetForecastFocus(w http.ResponseWriter, r *http.Request, params GetForecastFocusParams)
 	// What moved the forecast between two snapshots, and which deals moved it.
 	// (GET /forecast/movement)
 	GetForecastMovement(w http.ResponseWriter, r *http.Request, params GetForecastMovementParams)
@@ -101166,7 +101302,7 @@ func (_ Unimplemented) ListReportingReports(w http.ResponseWriter, r *http.Reque
 
 // Create reporting report
 // (POST /analytics/reports)
-func (_ Unimplemented) CreateReportingReport(w http.ResponseWriter, r *http.Request) {
+func (_ Unimplemented) CreateReportingReport(w http.ResponseWriter, r *http.Request, params CreateReportingReportParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -103932,7 +104068,13 @@ func (_ Unimplemented) ListForecastCalls(w http.ResponseWriter, r *http.Request,
 
 // Record what somebody believes will close.
 // (POST /forecast/calls)
-func (_ Unimplemented) RecordForecastCall(w http.ResponseWriter, r *http.Request) {
+func (_ Unimplemented) RecordForecastCall(w http.ResponseWriter, r *http.Request, params RecordForecastCallParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The deals each team should work to meet its goal this quarter.
+// (GET /forecast/focus)
+func (_ Unimplemented) GetForecastFocus(w http.ResponseWriter, r *http.Request, params GetForecastFocusParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -113106,6 +113248,9 @@ func (siw *ServerInterfaceWrapper) ListReportingReports(w http.ResponseWriter, r
 // CreateReportingReport operation middleware
 func (siw *ServerInterfaceWrapper) CreateReportingReport(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -113114,8 +113259,32 @@ func (siw *ServerInterfaceWrapper) CreateReportingReport(w http.ResponseWriter, 
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params CreateReportingReportParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.CreateReportingReport(w, r)
+		siw.Handler.CreateReportingReport(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -134102,6 +134271,9 @@ func (siw *ServerInterfaceWrapper) ListForecastCalls(w http.ResponseWriter, r *h
 // RecordForecastCall operation middleware
 func (siw *ServerInterfaceWrapper) RecordForecastCall(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -134110,8 +134282,73 @@ func (siw *ServerInterfaceWrapper) RecordForecastCall(w http.ResponseWriter, r *
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RecordForecastCallParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.RecordForecastCall(w, r)
+		siw.Handler.RecordForecastCall(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetForecastFocus operation middleware
+func (siw *ServerInterfaceWrapper) GetForecastFocus(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetForecastFocusParams
+
+	// ------------- Optional query parameter "team" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "team", r.URL.Query(), &params.Team, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "team"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "team", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetForecastFocus(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -157773,6 +158010,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/forecast/calls", wrapper.RecordForecastCall)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/forecast/focus", wrapper.GetForecastFocus)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/forecast/movement", wrapper.GetForecastMovement)

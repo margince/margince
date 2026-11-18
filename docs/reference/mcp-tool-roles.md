@@ -39,7 +39,7 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 
 | Group | Calls | admin | management | manager | ops | read_only | rep |
 |---|---:|---|---|---|---|---|---|
-| [Business operations](#business-operations) | 383 | 382✓ 1✗ | 356✓ 27✗ | 357✓ 26✗ | 356✓ 27✗ | 179✓ 204✗ | 327✓ 56✗ |
+| [Business operations](#business-operations) | 384 | 383✓ 1✗ | 357✓ 27✗ | 358✓ 26✗ | 357✓ 27✗ | 180✓ 204✗ | 328✓ 56✗ |
 | [Compliance and privacy](#compliance-and-privacy) | 47 | 47✓ 0✗ | 27✓ 20✗ | 27✓ 20✗ | 32✓ 15✗ | 11✓ 36✗ | 26✓ 21✗ |
 | [Capture and connectors](#capture-and-connectors) | 44 | 44✓ 0✗ | 38✓ 6✗ | 38✓ 6✗ | 44✓ 0✗ | 28✓ 16✗ | 37✓ 7✗ |
 | [Workspace settings a non-admin can reach](#workspace-settings-a-non-admin-can-reach) | 39 | 39✓ 0✗ | 39✓ 0✗ | 39✓ 0✗ | 39✓ 0✗ | 34✓ 5✗ | 39✓ 0✗ |
@@ -360,6 +360,7 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 | `read_forecast.input_summary` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `read_forecast.movement` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `read_forecast.readings` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `read_reports.forecast_focus` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 
 ### Commissions
 
@@ -1319,6 +1320,7 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Forecast | `read_forecast.input_summary` | `forecast_input_checks` | `forecast.read` |
 | Forecast | `read_forecast.movement` | `forecast_movement` | `forecast.read` |
 | Forecast | `read_forecast.readings` | `forecast_readings` | `forecast.read` `installation_settings.read` |
+| Forecast | `read_reports.forecast_focus` | `get_forecast_focus` | `forecast.read` `installation_settings.read` |
 | Commissions | `change_state.decide_commission` | `decide_commission_entry` | `commission.update` `deal.read` |
 | Lists and saved views | `change_attention.visit_list` | `visit_list` | `list.read` |
 | Lists and saved views | `change_settings.archive_saved_view` | `archive_saved_view` | `saved_view.delete` |

@@ -16,7 +16,6 @@ import {
 import { TeamBoard } from "./worklist.board";
 import { useWorklistPicks, WorklistBulkBar } from "./worklist.bulkdone";
 import { clearSentence, offersDecisions } from "./worklist.clear";
-import { TeamExceptionsPanel } from "./worklist.exceptions";
 import { HandledForYouPanel } from "./worklist.handled";
 import { WorklistHeader } from "./worklist.header";
 import { LinkSuggestionsPanel } from "./worklist.linksuggestions";
@@ -50,6 +49,12 @@ import { WalkNotice } from "./worklist.walknotice";
 // so Home's first load does not carry it.
 const HiddenBacklogPanel = lazy(async () => ({
   default: (await import("./worklist.hidden")).HiddenBacklogPanel,
+}));
+
+// Only a lead sees the team oversight, below the day, so Home's first paint
+// does not carry it.
+const TeamOversight = lazy(async () => ({
+  default: (await import("./worklist.gap")).TeamOversight,
 }));
 
 export function WorklistBody({
@@ -420,7 +425,11 @@ function ScopePanels({
   const wide = scope !== "mine" && scope !== "unassigned" && leads;
   return (
     <>
-      {wide && <TeamExceptionsPanel enabled={leads} onOwner={onOwnerDay} />}
+      {wide && (
+        <Suspense fallback={null}>
+          <TeamOversight scope={scope} enabled={leads} onOwner={onOwnerDay} />
+        </Suspense>
+      )}
       {wide && <TeamMarginceChangesPanel enabled={leads} />}
       {wide && <TeamBoard onOwner={onOwnerDay} onUnassigned={onUnassigned} />}
       {scope === "all" && (

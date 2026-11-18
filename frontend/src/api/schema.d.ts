@@ -22775,6 +22775,37 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/forecast/focus": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The deals each team should work to meet its goal this quarter.
+         * @description Read from the latest daily freeze of each team in the current quarter. The freeze ranks a
+         *     team's open priced deals when the team has a published goal for every month of the quarter.
+         *
+         *     Behind the goal, the list ranks deals by weighted amount, raised for each close-date risk.
+         *     On target, it lists only deals with a close-date risk, most risks first. A close-date risk
+         *     is a close date that passed, a provisional date, a date that kept moving, or a close within
+         *     a week with no next step. At most 20 deals, and the rank stays as frozen.
+         *
+         *     Each team needs the right to assert about its forecast, so a seat outside a team gets 404
+         *     for it. A deal the caller may not read is left out. A masked amount is left out of its row.
+         *     With individual performance off, a list shows only the reader's own deals and names no
+         *     owner. A team too small for that is refused when named and left out otherwise.
+         */
+        get: operations["getForecastFocus"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/forecast/calls": {
         parameters: {
             query?: never;
@@ -48256,7 +48287,8 @@ export interface components {
              *     pipeline and quarter, or the reader may not read targets; a missing
              *     target is never zero. `fx_missing` means a deal amount has no
              *     exchange rate to the base currency, so the totals are incomplete
-             *     and no gap or coverage is given. `partial_visibility` means the
+             *     and no gap or coverage is given. When only an open deal lacks the rate,
+             *     `target` and `won` are still given. `partial_visibility` means the
              *     reader cannot see every deal of the population asked for, or a
              *     deal's amount, so its figures cannot stand against the scope's
              *     whole target.
@@ -48347,7 +48379,9 @@ export interface components {
             call_minor?: number;
             /**
              * Format: int64
-             * @description Deals the forecast considered, priced or not.
+             * @description Open deals due in the period, priced or not. The four counts (`eligible_count`,
+             *     `priced_count`, `confirmed_date_count`, `fx_missing_count`) describe only those
+             *     open deals; they do not say whether `won_minor` is complete.
              */
             eligible_count: number;
             /**
@@ -49555,7 +49589,7 @@ export interface components {
              * @description Each open deal at its stage probability, rounded PER DEAL and then summed. Not the sum rounded once — the two differ by up to one minor unit per deal.
              */
             weighted_minor: number;
-            /** @description Deals considered, priced or not. */
+            /** @description Open deals due in the period, priced or not. Like the other counts, it says nothing about the won total. */
             eligible_count: number;
             /** @description How many carried an amount. The gap to eligible_count is what the money readings do not cover: an unpriced deal is real pipeline contributing zero. */
             priced_count: number;
@@ -49667,6 +49701,56 @@ export interface components {
             stage_id?: string;
             close_passed?: boolean;
             closes_in_days?: number;
+        };
+        ForecastFocus: {
+            /** Format: date */
+            period_start: string;
+            /** Format: date */
+            period_end: string;
+            /** @description True when a team's list is left out because the installation shows no individual performance and the team is too small to show without naming a colleague. */
+            withheld: boolean;
+            /** @description One entry per team with a daily freeze this quarter, ordered by team id. */
+            teams: components["schemas"]["ForecastFocusTeam"][];
+        };
+        ForecastFocusTeam: {
+            /** @description Ranked deals left out because their amount is masked from the caller. The rest are numbered from 1 again, since a masked deal's place in the order would tell its size. */
+            masked_count: number;
+            /** Format: uuid */
+            team_id: string;
+            /** Format: uuid */
+            snapshot_id: string;
+            /** Format: date-time */
+            taken_at: string;
+            base_currency: string;
+            /**
+             * @description `behind`: the expected landing was under the team goal. `on_target`: it met the goal. `no_goal`: a month of the quarter had no published goal for a member, so nothing was ranked, or the caller may not read the team's goal, so neither standing nor list is shown.
+             * @enum {string}
+             */
+            status: "behind" | "on_target" | "no_goal";
+            deals: components["schemas"]["ForecastFocusDeal"][];
+        };
+        ForecastFocusDeal: {
+            rank: number;
+            /** Format: uuid */
+            deal_id: string;
+            deal_name: string;
+            /** Format: uuid */
+            owner_id?: string;
+            /**
+             * Format: int64
+             * @description The deal's weighted amount in the base currency, as frozen. Absent when the amount is masked from the caller.
+             */
+            weighted_minor?: number;
+            /** Format: date */
+            effective_close_date?: string;
+            reason: components["schemas"]["ForecastFocusReason"];
+        };
+        /** @description The stored facts behind a rank. The score is never stored. */
+        ForecastFocusReason: {
+            /** @description Days from the caller's day to the expected close date, negative once that date passed. */
+            closes_in_days?: number;
+            close_provisional: boolean;
+            signals: components["schemas"]["ForecastRiskSignal"][];
         };
         ForecastStageChances: {
             /** @description The installation setting `forecast_self_correcting`. False means every chance in use is the typed one. */
@@ -80313,7 +80397,30 @@ export interface operations {
     createReportingReport: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -98477,6 +98584,33 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    getForecastFocus: {
+        parameters: {
+            query?: {
+                /** @description One team. Omitted, every team whose list the caller may read. */
+                team?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One list per team. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ForecastFocus"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     listForecastCalls: {
         parameters: {
             query?: {
@@ -98514,7 +98648,30 @@ export interface operations {
     recordForecastCall: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
             path?: never;
             cookie?: never;
         };

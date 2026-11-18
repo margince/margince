@@ -4,9 +4,9 @@
 // A risk signal as one sentence with its numbers. The numbers come from the
 // server's assessment; this file only words them.
 
-import type { components } from "../../api/schema";
-import type { PluralTranslator, Translator } from "../../i18n";
-import { UNKNOWN_VALUE_LABEL } from "../../lib/labelfor";
+import type { components } from "../api/schema";
+import type { PluralTranslator, Translator } from "../i18n";
+import { UNKNOWN_VALUE_LABEL } from "./labelfor";
 
 export type RiskSignal = components["schemas"]["ForecastRiskSignal"];
 

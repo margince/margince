@@ -519,7 +519,7 @@ func (stubs) ListReportingReports(w nethttp.ResponseWriter, r *nethttp.Request, 
 	httperr.NotImplemented(w, r, "ListReportingReports")
 }
 
-func (stubs) CreateReportingReport(w nethttp.ResponseWriter, r *nethttp.Request) {
+func (stubs) CreateReportingReport(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.CreateReportingReportParams) {
 	httperr.NotImplemented(w, r, "CreateReportingReport")
 }
 
@@ -2363,8 +2363,12 @@ func (stubs) ListForecastCalls(w nethttp.ResponseWriter, r *nethttp.Request, par
 	httperr.NotImplemented(w, r, "ListForecastCalls")
 }
 
-func (stubs) RecordForecastCall(w nethttp.ResponseWriter, r *nethttp.Request) {
+func (stubs) RecordForecastCall(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.RecordForecastCallParams) {
 	httperr.NotImplemented(w, r, "RecordForecastCall")
+}
+
+func (stubs) GetForecastFocus(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetForecastFocusParams) {
+	httperr.NotImplemented(w, r, "GetForecastFocus")
 }
 
 func (stubs) GetForecastMovement(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetForecastMovementParams) {

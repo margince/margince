@@ -32,6 +32,38 @@ func CaptureKey(scope Scope, pipeline *ids.UUID) string {
 	return scope.Kind + ":" + owner + ":" + pipe
 }
 
+// CaptureScope is the scope a reporting capture context freezes.
+func CaptureScope(capture crmcontracts.ReportingCaptureContext) Scope {
+	return Scope{Kind: string(capture.Scope.Kind), ID: (*ids.UUID)(capture.Scope.Id)}
+}
+
+// CaptureContextKey is the CaptureKey of a reporting capture context.
+func CaptureContextKey(capture crmcontracts.ReportingCaptureContext) string {
+	return CaptureKey(CaptureScope(capture), (*ids.UUID)(capture.PipelineId))
+}
+
+// CaptureAttempts is when each context was last attempted, by its key. A
+// context never attempted is absent, so it sorts first.
+func (s *Store) CaptureAttempts(ctx context.Context, contexts []crmcontracts.ReportingCaptureContext) (map[string]time.Time, error) {
+	attempts := map[string]time.Time{}
+	err := s.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
+		for _, capture := range contexts {
+			status, err := s.CaptureStatusTx(ctx, tx, CaptureScope(capture), (*ids.UUID)(capture.PipelineId))
+			if err != nil {
+				return err
+			}
+			if status != nil {
+				attempts[CaptureContextKey(capture)] = status.LastAttemptAt
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return attempts, nil
+}
+
 // CaptureStatusTx reads capture availability within the caller’s transaction.
 func (s *Store) CaptureStatusTx(ctx context.Context, tx pgx.Tx, scope Scope, pipeline *ids.UUID) (*crmcontracts.ReportingCaptureStatus, error) {
 	if err := auth.Require(ctx, "forecast", principal.ActionRead); err != nil {
