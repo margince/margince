@@ -13,8 +13,8 @@ With a base, the subjects on stdin go through scripts/release_notes.py: the same
 sections as the GitHub release, under one "Changes" heading, and a compare line
 that names the base by its dist version and links its git revision. A release
 with no subject a user notices gets only the compare line. A base with no
-subject since it is refused: the patch would be empty. The first release on a
-line has no base, reads no stdin and writes one fixed sentence. The dist page
+subject since it is refused: the patch would be empty. The first release has
+no base, reads no stdin and writes one fixed sentence. The dist page
 shows the version above the file, so the file names no version.
 
 Git does not check the bytes of a subject, and history is not rewritten, so an
@@ -60,7 +60,7 @@ def changelog(args, stdin):
     if not version or not repo or not revision:
         raise Refused("the version, owner/repo and revision must not be empty.")
     if len(args) == 3:
-        return "The first release on this line: the patch is the whole tree."
+        return "The first release: the patch is the whole tree."
     base_version, base_revision = args[3:]
     if not base_version or not base_revision:
         raise Refused("the base version and base revision must not be empty.")

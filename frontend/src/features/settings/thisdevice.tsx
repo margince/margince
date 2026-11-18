@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useEffect, useRef, useState } from "react";
-import { Button } from "../../design-system/atoms";
+import { useEffect, useRef } from "react";
+import { InstallButton } from "../../components/installbutton";
 import { SettingRow } from "../../design-system/settingrow";
 import { useT } from "../../i18n";
-import { logUnexpectedError } from "../../lib/problem";
-import type { InstallOutcome, InstallState } from "../../lib/pwa";
+import type { InstallState } from "../../lib/pwa";
 
 /** The install row, absent where the browser cannot install: a capability
  *  this device lacks, not a refusal. */
@@ -66,6 +65,14 @@ function InstallRow({
           control={null}
         />
       );
+    case "manual-macos":
+      return (
+        <SettingRow
+          label={label}
+          description={t("settings.installAppManualMac")}
+          control={null}
+        />
+      );
     case "installed":
       return (
         <SettingRow
@@ -79,27 +86,4 @@ function InstallRow({
         />
       );
   }
-}
-
-function InstallButton({
-  prompt,
-}: Readonly<{ prompt: () => Promise<InstallOutcome> }>) {
-  const t = useT();
-  const [asking, setAsking] = useState(false);
-  // Called inside the click: the browser opens its dialog only for a user gesture.
-  const ask = () => {
-    setAsking(true);
-    prompt().then(
-      () => setAsking(false),
-      (reason: unknown) => {
-        setAsking(false);
-        logUnexpectedError(reason);
-      },
-    );
-  };
-  return (
-    <Button pending={asking} onClick={ask}>
-      {t("settings.installAppAction")}
-    </Button>
-  );
 }

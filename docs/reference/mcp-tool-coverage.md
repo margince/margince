@@ -705,13 +705,16 @@ Scored against **human-authored fixtures** under `e2e/llm/testdata/<case>/`, lab
 
 | Judge | Accuracy | Scored | Passed | Its own errors |
 |---|---:|---:|---:|---:|
+| `claude-haiku-5-5` | 98.7% | 154 | 152 | 2 |
 | `claude-opus-5` | 98.2% | 113 | 111 | 2 |
-| `claude-haiku-4-5-20251001` | 95.6% | 113 | 108 | 5 |
+| `claude-haiku-4-5-20251001` | 98.1% | 154 | 151 | 3 |
 | `claude-sonnet-5` | 94.7% | 113 | 107 | 6 |
+
+> `claude-haiku-5-5` misread: case22/claims-everything-is-synced, case23/lists-slots-and-says-nothing-about-her
 
 > `claude-opus-5` misread: case22/claims-everything-is-synced, case30/announces-the-coinage-as-a-list
 
-> `claude-haiku-4-5-20251001` misread: case22/claims-the-feeds-were-checked, case32/folds-the-wrong-word-away, case6/disagrees-about-something-else, case6/implies-an-october-recurrence, case6/invents-a-second-october-event
+> `claude-haiku-4-5-20251001` misread: case22/claims-everything-is-synced, case50/reports-the-two-causes, case6/implies-an-october-recurrence
 
 > `claude-sonnet-5` misread: case22/claims-everything-is-synced, case31/reports-the-record-as-clean, case6/adopts-october, case6/implies-an-october-recurrence, case6/invents-a-second-october-event, case6/invents-october-as-a-possessive
 

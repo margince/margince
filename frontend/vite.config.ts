@@ -117,6 +117,9 @@ const testExclude = ["**/node_modules/**", "e2e/**", "census/**"];
 
 export default defineConfig({
   build: {
+    // nginx.conf's font-src 'self' refuses a font inlined as a data: URL.
+    assetsInlineLimit: (file) =>
+      /\.(?:woff2?|ttf|otf)$/.test(file) ? false : undefined,
     rolldownOptions: {
       output: {
         strictExecutionOrder: true,
