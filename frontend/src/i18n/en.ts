@@ -7310,7 +7310,7 @@ export const en = {
   "vcardImport.working": "Reading cards…",
   "vcardImport.back": "Back to contacts",
   "vcardImport.noCards": "The file contains no cards.",
-  "vcardImport.failed": "The cards were not imported. Retry.",
+  "vcardImport.failed": "The cards were not imported.",
   "vcardImport.outcome.created": "Added",
   "vcardImport.outcome.updated": "Updated",
   "vcardImport.outcome.needsReview": "Possible duplicate",
@@ -10397,7 +10397,7 @@ export const en = {
   "import.reason.row_key_empty":
     "The “{column}” column is empty, so this row cannot be identified for re-import or undo.",
   "import.reason.row_key_repeated":
-    "The “{column}” value “{value}” is already used by line {line}. Each row needs its own, because it is what a re-import matches on and what an undo finds this row by.",
+    "The “{column}” value “{value}” is already used by row {line}. Each row needs its own, because it is what a re-import matches on and what an undo finds this row by.",
   "import.reason.size_band_invalid":
     "Employees “{value}” is not one of {allowed}.",
   "import.reason.tag_created":
