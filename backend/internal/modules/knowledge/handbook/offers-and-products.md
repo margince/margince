@@ -28,7 +28,7 @@ Also called: deal products for reporting, product split, which product a deal is
 To create an offer in Margince, open the deal and click **New offer** in the **Offers** panel on its **Overview** tab.
 1. Open **Deals** in the sidebar and open the deal.
 2. Click **New offer**. Margince creates a draft offer in the deal's currency and opens it.
-3. Click **Edit header** to set **Valid until**, **Template**, **Buyer company**, **Intro text** and **Terms text**.
+3. Click **Edit header** to set **Valid until**, **Template**, **Buyer company**, **Intro text** and **Terms text**. **Valid until** takes today or a later day.
 4. Add lines under **Line items** (see the next question).
 If the deal has no currency yet, the button is turned off and says: "Set the deal value first. An offer uses the deal’s currency."
 The top of the offer shows its deal, buyer company, revision, **Valid until**, language, template, intro text and terms text, in every state.

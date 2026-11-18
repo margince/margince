@@ -8,7 +8,13 @@ import { useEffect, useId, useRef, useState } from "react";
 import { api } from "../../api/client";
 import { ifMatch, requireVersion } from "../../api/version";
 import { dayOutOfRange } from "../../components/create";
-import { Button, Field, Modal, TextInput } from "../../design-system/atoms";
+import {
+  Button,
+  Field,
+  Modal,
+  Textarea,
+  TextInput,
+} from "../../design-system/atoms";
 import { DateInput, isoOrBlank } from "../../design-system/dateinput";
 import { ErrorLine } from "../../design-system/errorline";
 import { refuseUnreadableField } from "../../design-system/formvalidity";
@@ -19,7 +25,9 @@ import {
 } from "../../design-system/recordpicker";
 import { useFieldFaults } from "../../design-system/savepage";
 import { Select } from "../../design-system/select";
+import { todayIn } from "../../format/calendarday";
 import { useLocale, useT } from "../../i18n";
+import { useCompanyZone } from "../../lib/companyzone";
 import { useHealthScope } from "../../lib/healthscope";
 import { useLegalEntities } from "../../lib/legalentities.queries";
 import { refusalSentences, unwrap } from "../../lib/problem";
@@ -108,6 +116,8 @@ export function EditOfferHeaderModal({
   const headingId = useId();
   const queryClient = useQueryClient();
   const templatesQuery = useOfferTemplates();
+  // Send refuses a day before the installation's today, so entry does too.
+  const today = isoOrBlank(todayIn(useCompanyZone())) || undefined;
   const [values, setValues] = useState<HeaderEditValues>({
     currency: offer.currency,
     buyer_company_id: offer.buyer_company_id ?? null,
@@ -227,6 +237,8 @@ export function EditOfferHeaderModal({
           {(control) => (
             <DateInput
               {...control}
+              min={today}
+              today={today}
               value={isoOrBlank(values.valid_until)}
               onChange={(event) => change({ valid_until: event.target.value })}
             />
@@ -291,8 +303,9 @@ export function EditOfferHeaderModal({
         </Field>
         <Field label={labels.intro_text} error={faults.of("intro_text")}>
           {(control) => (
-            <TextInput
+            <Textarea
               {...control}
+              grow
               value={values.intro_text}
               onChange={(event) => change({ intro_text: event.target.value })}
             />
@@ -300,8 +313,9 @@ export function EditOfferHeaderModal({
         </Field>
         <Field label={labels.terms_text} error={faults.of("terms_text")}>
           {(control) => (
-            <TextInput
+            <Textarea
               {...control}
+              grow
               value={values.terms_text}
               onChange={(event) => change({ terms_text: event.target.value })}
             />
