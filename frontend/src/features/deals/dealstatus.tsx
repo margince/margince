@@ -4,7 +4,6 @@ import type { ReactNode } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { RecordNextBar } from "../../components/latestinbound";
-import { useTaskDone } from "../../components/taskactions";
 import { Badge, Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { HowItStands } from "../../design-system/howitstands";
@@ -13,14 +12,9 @@ import { Panel, PanelBody } from "../../design-system/panel";
 import { formatDayMonth } from "../../format/format";
 import { type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
-import {
-  activityIdOf,
-  hasMoveControl,
-  MoveButton,
-} from "../records/movebutton";
+import { hasMoveControl, MoveButton } from "../records/movebutton";
 import {
   Citations,
   openCitation,
@@ -31,7 +25,7 @@ import {
 } from "../records/record360";
 import type { DealStandingHead } from "./deal360/dealhowitstands";
 import { dealVerdictTone, verdictSourceCount } from "./deal360/dealstanding";
-import { replyReminder } from "./deal360/dealwaiting";
+import { ReminderDone, reminderToComplete } from "./dealmoveverb";
 import { useDealSignals } from "./dealsignals";
 import "./dealstatus.css";
 
@@ -424,7 +418,7 @@ function DealNextBar({
             </Button>
           ) : undefined
         }
-        action={dealMoveVerb(dealId, move, reminderToComplete(card, move))}
+        action={dealMoveVerb(dealId, card, move)}
         snooze={
           snooze
             ? { onSnooze: snooze.onDefer, pending: snooze.pending }
@@ -437,58 +431,25 @@ function DealNextBar({
   );
 }
 
-// Once we replied, the move opens the request's reminder. The bar marks it
-// done in place, because what is left is to say nothing more is owed.
-function reminderToComplete(
-  card: DealStatusCard,
-  move: NonNullable<DealStatusCard["next"]>,
-): Readonly<{ id: string; version: number }> | null {
-  const reminder = replyReminder(card);
-  return reminder &&
-    move.action === "open_task" &&
-    activityIdOf(move) === reminder.id
-    ? reminder
-    : null;
-}
-
+/** The verb the deal's Next bar draws, or none when the move has no control. */
 function dealMoveVerb(
   dealId: string,
+  card: DealStatusCard,
   move: NonNullable<DealStatusCard["next"]>,
-  reminder: Readonly<{ id: string; version: number }> | null,
 ): ReactNode | undefined {
+  const reminder = reminderToComplete(card, move);
   if (reminder) {
-    return <ReminderDone dealId={dealId} move={move} reminder={reminder} />;
+    return (
+      <ReminderDone
+        dealId={dealId}
+        reminder={reminder}
+        fallback={<MoveButton dealId={dealId} move={move} />}
+      />
+    );
   }
   return hasMoveControl(move) ? (
     <MoveButton dealId={dealId} move={move} />
   ) : undefined;
-}
-
-// A reader who may not write the reminder can still open it.
-function ReminderDone({
-  dealId,
-  move,
-  reminder,
-}: Readonly<{
-  dealId: string;
-  move: NonNullable<DealStatusCard["next"]>;
-  reminder: Readonly<{ id: string; version: number }>;
-}>) {
-  const t = useT();
-  const canUpdateTask = useCanWrite("activity", "update");
-  // History draws the request's badge from the same rule, so it refreshes too.
-  const done = useTaskDone(reminder.id, reminder.version, [
-    ["deal-status", dealId],
-    ["activities"],
-  ]);
-  if (!canUpdateTask) {
-    return <MoveButton dealId={dealId} move={move} />;
-  }
-  return (
-    <Button variant="primary" pending={done.pending} onClick={done.complete}>
-      {t("tasks.complete")}
-    </Button>
-  );
 }
 
 // The deal card's "Not now": set aside for this reader until the card names a
