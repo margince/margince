@@ -57,7 +57,7 @@ func (s *Service) cardAndTimeline(
 	if err != nil {
 		return crmcontracts.DealStatusCard{}, nil, err
 	}
-	verdict := s.decideFromCache(ctx, userID, dealID, fingerprint, policy.refresh, f.now)
+	verdict := s.decideFromCache(ctx, userID, dealID, fingerprint, policy, f.now)
 	if verdict.serve {
 		card := verdict.card
 		card.MailCoverage = f.mailCoverage
@@ -77,9 +77,9 @@ func (s *Service) cardAndTimeline(
 	if !mayWriteTheCard(ctx) {
 		return presentMove(ctx, f, card), factActivities(f), nil
 	}
-	if laneFailed || (policy.factsOnly && verdict.askModel) {
-		// Caching a fallback would preserve a transient model failure, or a
-		// facts-only read's skipped model call, until the facts change.
+	if laneFailed {
+		// Caching a fallback would preserve a transient model failure
+		// until the facts change.
 		return presentMove(ctx, f, card), factActivities(f), nil
 	}
 	if err := s.save(ctx, userID, dealID, stored{
@@ -88,6 +88,7 @@ func (s *Service) cardAndTimeline(
 		GeneratedAt: card.GeneratedAt,
 		GeneratedBy: card.GeneratedBy,
 		Card:        card,
+		FactsOnly:   policy.factsOnly && verdict.askModel,
 	}); err != nil {
 		return crmcontracts.DealStatusCard{}, nil, err
 	}
