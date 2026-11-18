@@ -19930,6 +19930,30 @@ func (e QualifyingEventRecordKind) Valid() bool {
 	}
 }
 
+// Defines values for RbacAction.
+const (
+	RbacActionCreate RbacAction = "create"
+	RbacActionDelete RbacAction = "delete"
+	RbacActionRead   RbacAction = "read"
+	RbacActionUpdate RbacAction = "update"
+)
+
+// Valid indicates whether the value is a known member of the RbacAction enum.
+func (e RbacAction) Valid() bool {
+	switch e {
+	case RbacActionCreate:
+		return true
+	case RbacActionDelete:
+		return true
+	case RbacActionRead:
+		return true
+	case RbacActionUpdate:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ReaderCalendar.
 const (
 	ReaderCalendarConnected    ReaderCalendar = "connected"
@@ -60742,6 +60766,9 @@ type RaiseNoticeRequest struct {
 	RecipientUserId openapi_types.UUID `json:"recipient_user_id"`
 }
 
+// RbacAction The four object-level verbs a grant carries (data-model §2.4). These are RBAC actions, not HTTP methods: the seat ceiling is clamped on the method independently, and the two diverge in both directions — a read-seat GET that the object grants, and a mutating route whose RBAC action is `read`.
+type RbacAction string
+
 // RbacObjectGrant One object's effective CRUD grant, already merged across every role the principal holds (any role allowing an action allows it).
 type RbacObjectGrant struct {
 	Create bool `json:"create"`
@@ -63664,6 +63691,9 @@ type RoleRowScope string
 // RoleDirectory Every role this workspace defines. Not paginated and deliberately not: the set is bounded by what an operator created (six seeded, plus a handful at most), the editor needs all of it to render, and a cursor over it would be ceremony over a complete answer.
 type RoleDirectory struct {
 	Roles []Role `json:"roles"`
+
+	// Verbs The verbs a role may hold on each object this installation can grant, core objects and enabled extension objects alike, Read first. An object that offers no Read has none in its list. An object absent here is one the installation cannot name, and a client draws it with all four.
+	Verbs map[string][]RbacAction `json:"verbs"`
 }
 
 // RouterActions The actions of one MCP router whose actions run REST routes.
@@ -80738,6 +80768,16 @@ type UpdateRoleParams struct {
 
 // SetRoleObjectGrantParams defines parameters for SetRoleObjectGrant.
 type SetRoleObjectGrantParams struct {
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
+// RestoreRoleGrantsParams defines parameters for RestoreRoleGrants.
+type RestoreRoleGrantsParams struct {
 	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
 	// the last-seen entity `version`. If the row's current `version` differs, the write is
 	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
@@ -99674,6 +99714,9 @@ type ServerInterface interface {
 	// Restore an archived role. Human-only.
 	// (POST /roles/{key}/restore)
 	RestoreRole(w http.ResponseWriter, r *http.Request, key string)
+	// Put a shipped role's grants back to the ones the product ships. Human-only.
+	// (POST /roles/{key}/restore-grants)
+	RestoreRoleGrants(w http.ResponseWriter, r *http.Request, key string, params RestoreRoleGrantsParams)
 	// What each action of one MCP router takes, as its own route defines it.
 	// (GET /router-actions)
 	DescribeRouterActions(w http.ResponseWriter, r *http.Request, params DescribeRouterActionsParams)
@@ -105830,6 +105873,12 @@ func (_ Unimplemented) SetRoleObjectGrant(w http.ResponseWriter, r *http.Request
 // Restore an archived role. Human-only.
 // (POST /roles/{key}/restore)
 func (_ Unimplemented) RestoreRole(w http.ResponseWriter, r *http.Request, key string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Put a shipped role's grants back to the ones the product ships. Human-only.
+// (POST /roles/{key}/restore-grants)
+func (_ Unimplemented) RestoreRoleGrants(w http.ResponseWriter, r *http.Request, key string, params RestoreRoleGrantsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -148488,6 +148537,62 @@ func (siw *ServerInterfaceWrapper) RestoreRole(w http.ResponseWriter, r *http.Re
 	handler.ServeHTTP(w, r)
 }
 
+// RestoreRoleGrants operation middleware
+func (siw *ServerInterfaceWrapper) RestoreRoleGrants(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "key" -------------
+	var key string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "key", chi.URLParam(r, "key"), &key, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "key", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RestoreRoleGrantsParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RestoreRoleGrants(w, r, key, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // DescribeRouterActions operation middleware
 func (siw *ServerInterfaceWrapper) DescribeRouterActions(w http.ResponseWriter, r *http.Request) {
 
@@ -158373,6 +158478,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/roles/{key}/restore", wrapper.RestoreRole)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/roles/{key}/restore-grants", wrapper.RestoreRoleGrants)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/router-actions", wrapper.DescribeRouterActions)

@@ -49,7 +49,18 @@ var errUnknownObject = fmt.Errorf("%w: no RBAC object with this name is defined"
 var (
 	errWideningRequiresAdmin = fmt.Errorf("%w: only an admin may widen what a role grants", apperrors.ErrPermissionDenied)
 	errAdminRoleFloor        = fmt.Errorf("%w: the admin role keeps its administration grants", apperrors.ErrConflict)
+	errWriteNeedsRead        = fmt.Errorf("%w: Create, Update and Delete need Read on the same object", apperrors.ErrInvalidArgument)
 )
+
+// refuseWriteWithoutRead is the one rule for a stored grant: a verb that
+// changes a record needs Read, since every write shows the record it wrote.
+// An object that offers no Read at all, such as the installation reset, is exempt.
+func refuseWriteWithoutRead(object string, g storedGrant) error {
+	if (g.Create || g.Update || g.Delete) && !g.Read && policy.RequiresRead(object) {
+		return errWriteNeedsRead
+	}
+	return nil
+}
 
 // storedGrant is one object's CRUD as `role.permissions` SPELLS it — lower-case
 // json keys, all four verbs always present.
@@ -153,6 +164,9 @@ func (s *Service) SetRoleObjectGrant(ctx context.Context, actor Identity, roleKe
 	}
 	if !policy.IsGrantableObject(object) {
 		return roleRow{}, errUnknownObject
+	}
+	if err := refuseWriteWithoutRead(object, grant); err != nil {
+		return roleRow{}, err
 	}
 	var updated roleRow
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
