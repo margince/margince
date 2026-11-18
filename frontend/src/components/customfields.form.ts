@@ -11,7 +11,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { formatDateAbbrev, formatMoneyOrAbsent } from "../format/format";
-import { toMajorUnits, toMinorUnits } from "../format/minorunits";
+import { amountFault, toMajorUnits, toMinorUnits } from "../format/minorunits";
 import { browserZone } from "../format/timezone";
 import { webUrl } from "../format/weburl";
 import { type Locale, useLocale, useT } from "../i18n";
@@ -57,10 +57,7 @@ export function customFieldToFormField(
         toInput: (raw) => customFieldFormValue(field, raw),
         validate: (value) => {
           const code = field.currency ?? "";
-          return value.trim() !== "" &&
-            Number.isNaN(toMinorUnits(Number(value), code))
-            ? tooPrecise(code)
-            : undefined;
+          return amountFault(value, code) ? tooPrecise(code) : undefined;
         },
       };
     case "multiselect":

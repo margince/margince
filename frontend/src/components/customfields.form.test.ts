@@ -213,11 +213,11 @@ describe("customFieldToFormField", () => {
       BOOL_LABELS,
       TOO_PRECISE,
     );
-    expect(euro.validate?.("12.34")).toBeUndefined();
-    expect(euro.validate?.("")).toBeUndefined();
-    expect(euro.validate?.("12.345")).toBe("Finer than EUR");
-    expect(yen.validate?.("12")).toBeUndefined();
-    expect(yen.validate?.("12.5")).toBe("Finer than JPY");
+    expect(euro.validate?.("12.34", {})).toBeUndefined();
+    expect(euro.validate?.("", {})).toBeUndefined();
+    expect(euro.validate?.("12.345", {})).toBe("Finer than EUR");
+    expect(yen.validate?.("12", {})).toBeUndefined();
+    expect(yen.validate?.("12.5", {})).toBe("Finer than JPY");
   });
 });
 

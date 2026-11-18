@@ -3121,6 +3121,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "record.fieldRequired": "Dieses Feld ist erforderlich.",
   "record.amountTooPrecise":
     "Dieser Betrag hat mehr Nachkommastellen, als {currency} zulässt.",
+  "record.amountTooLarge": "Dieser Betrag ist zu groß zum Speichern.",
   "record.registration": "Registrierung",
   "record.leadProfileReadOnly":
     "LinkedIn kann bei einem Lead nicht geändert werden.",

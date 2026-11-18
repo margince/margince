@@ -3033,6 +3033,7 @@ export const en = {
   "record.fieldRequired": "This field is required.",
   "record.amountTooPrecise":
     "This amount has more decimals than {currency} allows.",
+  "record.amountTooLarge": "This amount is too large to save.",
   "record.registration": "Registration",
   "record.leadProfileReadOnly": "LinkedIn cannot be changed on a lead.",
   "record.openProfile": "Open profile",

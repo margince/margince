@@ -12,6 +12,7 @@ import {
   listFetchLimit,
   useListQuery,
 } from "../../components/listquery";
+import { amountRefusal } from "../../components/moneyamountfield";
 import { Button, OverflowMenu } from "../../design-system/atoms";
 import { KeyedName } from "../../design-system/keyedname";
 import type { ListColumn } from "../../design-system/listtable";
@@ -118,6 +119,8 @@ function productFields(
       label: "product.unitPrice",
       type: "number",
       required: true,
+      validate: (value, values) =>
+        amountRefusal(t, value, values.currency || leadingCurrencies[0]),
     },
     {
       key: "currency",

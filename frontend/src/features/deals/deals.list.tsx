@@ -17,6 +17,7 @@ import {
   ListTable,
   useTagChips,
 } from "../../components/listquery";
+import { moneyAmountField } from "../../components/moneyamountfield";
 import { useOwnerChips } from "../../components/ownerdials";
 import { mineEmptyNote, standardViews } from "../../components/recordlist";
 import { useOwnerPicker } from "../../components/recordowners";
@@ -152,14 +153,12 @@ function DealCreateAction({
       onValuesChange={(values) => setFormCompany(values.company_id ?? "")}
       fields={[
         { key: "name", label: "create.dealName", required: true },
-        {
+        moneyAmountField(t, {
           key: "amount",
           label: "create.amount",
-          type: "number",
-          step: "any",
-          min: "0",
           wireField: "amount_minor",
-        },
+          currency: leading[0],
+        }),
         currencyField(leading, locale),
         {
           key: "stage_id",

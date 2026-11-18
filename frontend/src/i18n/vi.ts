@@ -3028,6 +3028,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "record.fieldRequired": "Trường này bắt buộc.",
   "record.amountTooPrecise":
     "Số tiền này có nhiều chữ số thập phân hơn mức {currency} cho phép.",
+  "record.amountTooLarge": "Số tiền này quá lớn để lưu.",
   "record.registration": "Thông tin đăng ký",
   "record.leadProfileReadOnly": "Không thể thay đổi LinkedIn của lead.",
   "record.openProfile": "Mở hồ sơ",

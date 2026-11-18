@@ -2,6 +2,7 @@ import { searchCompanyTargets } from "../../components/companyform";
 import type { CreateField } from "../../components/create";
 import { currencyField } from "../../components/currencyfield";
 import { partnerFields } from "../../components/dealpartnerfields";
+import { moneyAmountField } from "../../components/moneyamountfield";
 import type { ProjectOwnerPicker } from "../../components/projectownerfield";
 import type { LeadingCurrencies } from "../../format/currencychoices";
 import type { Locale } from "../../i18n";
@@ -100,7 +101,7 @@ export const dealCloseDateField = {
 } satisfies CreateField;
 
 export function dealEditFields(
-  t: (k: MessageKey) => string,
+  t: (k: MessageKey, params?: Record<string, string>) => string,
   opts: {
     partnerOptions: { value: string; label: string }[];
     // The partner this deal already names, when it names one. Keeps the field
@@ -137,17 +138,22 @@ export function dealEditFields(
   ];
   return [
     { key: "name", label: "create.dealName", required: true },
-    { key: "amount", label: "create.amount", type: "number", step: "any" },
+    moneyAmountField(t, {
+      key: "amount",
+      label: "create.amount",
+      wireField: "amount_minor",
+      currency: opts.currency,
+    }),
     // The recurring half of the price, annual, in the same currency as the
     // amount above. Beside it, not in a section of its own: the two are one
     // money value on the row. They share the currency field below, and the
     // server refuses either one stranded without it.
-    {
+    moneyAmountField(t, {
       key: "expected_arr",
       label: "deal.expectedArr",
-      type: "number",
-      step: "any",
-    },
+      wireField: "expected_arr_minor",
+      currency: opts.currency,
+    }),
     {
       ...currencyField(opts.leadingCurrencies, opts.locale, opts.currency),
       required: false,
