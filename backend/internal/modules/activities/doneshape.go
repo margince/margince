@@ -65,7 +65,7 @@ func ensureOwnMessage(ctx context.Context, tx pgx.Tx, id ids.ActivityID) error {
 // ownMessageShape refuses an activity that is not an email or channel message
 // we sent.
 func ownMessageShape(kind string, direction *string) error {
-	if (kind != kindEmail && kind != kindMessage) || direction == nil || *direction != directionOutbound {
+	if (kind != kindEmail && kind != KindMessage) || direction == nil || *direction != directionOutbound {
 		return &values.ParseError{
 			Field: fieldRowID, Code: "not_an_outbound_message",
 			Message: "a follow-up row names a message we sent",
