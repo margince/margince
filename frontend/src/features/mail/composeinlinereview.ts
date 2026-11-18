@@ -7,7 +7,8 @@ import type { components } from "../../api/schema";
 import { problemFieldErrorsOf } from "../../lib/problem";
 import { useMe } from "../../lib/session";
 import { refusalOf } from "./composerefusal";
-import { type ComposeSend, refusalIsCurrent } from "./composesend";
+import type { ComposeSend } from "./composesend";
+import { refusalIsCurrent } from "./composesendrequest";
 import { fetchReview } from "./directsendaction";
 import { type DirectSendCommand, directSend } from "./directsendmodal";
 import {
