@@ -313,7 +313,7 @@ export function EditOfferHeaderModal({
         <Button onClick={close}>{t("deals.cancel")}</Button>
         <Button
           variant="primary"
-          disabled={mutation.isPending}
+          pending={mutation.isPending}
           onClick={(event) => {
             if (refuseUnreadableField(event.currentTarget)) return;
             if (validUntilFault) {

@@ -1,5 +1,12 @@
 /** @vitest-environment happy-dom */
-import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
@@ -33,7 +40,7 @@ afterEach(() => {
 function stubDealBackend(
   onRecord: Deal,
   offers: Offer[],
-  onCreateOffer?: (body: unknown) => void,
+  onCreateOffer?: (body: unknown, headers: Headers) => unknown,
 ) {
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const request = input instanceof Request ? input : null;
@@ -57,7 +64,10 @@ function stubDealBackend(
       const body = request
         ? await request.json()
         : JSON.parse(String(init?.body));
-      onCreateOffer?.(body);
+      await onCreateOffer?.(
+        body,
+        new Headers(request ? request.headers : init?.headers),
+      );
       return jsonResponse(
         offer({ id: "new-offer", currency: body.currency }),
         201,
@@ -905,6 +915,36 @@ describe("DealScreen offers panel", () => {
     await waitFor(() =>
       expect(window.location.hash).toBe("#/offers/new-offer"),
     );
+  });
+
+  // A double click lands its second press before the first create is drawn
+  // pending. It must not make a second draft and spend a second offer number.
+  it("a double click on New offer posts one draft, under an idempotency key", async () => {
+    const keys: (string | null)[] = [];
+    let answer = () => {};
+    const answered = new Promise<void>((resolve) => {
+      answer = resolve;
+    });
+    vi.stubGlobal(
+      "fetch",
+      stubDealBackend(deal({ currency: "EUR" }), [], (_body, headers) => {
+        keys.push(headers.get("Idempotency-Key"));
+        return answered;
+      }),
+    );
+    render(<DealScreen id="d1" />);
+    const newOffer = await screen.findByRole("button", { name: "New offer" });
+    fireEvent.click(newOffer);
+    await act(async () => {
+      await Promise.resolve();
+    });
+    fireEvent.click(newOffer);
+    answer();
+    await waitFor(() =>
+      expect(window.location.hash).toBe("#/offers/new-offer"),
+    );
+    expect(keys).toHaveLength(1);
+    expect(keys[0]).toMatch(/^[0-9a-f-]{36}$/);
   });
 });
 

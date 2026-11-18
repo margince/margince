@@ -76,10 +76,10 @@ export function OffersPanel({
         onCreate && (
           <Button
             variant="link"
-            // A refused control points at its reason. Passing `disabled` beside
-            // it would cancel the refusal, so only the in-flight case uses it.
+            // A refused control points at its reason, which outranks `pending`.
+            // `pending` holds a second press until the first create is drawn.
             // An empty code is as absent as a null one: Intl throws on it.
-            disabled={!needsCurrency && creating}
+            pending={creating}
             reasonId={
               refusedReasonId ?? (needsCurrency ? currencyReasonId : undefined)
             }

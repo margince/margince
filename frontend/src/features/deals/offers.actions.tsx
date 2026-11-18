@@ -6,6 +6,7 @@ import {
 import { Check, RefreshCw, Send, Trash2, X } from "lucide-react";
 import { useState } from "react";
 import { api } from "../../api/client";
+import { useIdempotencyKey } from "../../api/idempotencykey";
 import { ifMatch, requireVersion } from "../../api/version";
 import { Button, Field, TextInput } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
@@ -243,16 +244,21 @@ export function RegenerateOfferAction({ offer }: Readonly<{ offer: Offer }>) {
   const t = useT();
   const queryClient = useQueryClient();
 
+  const { key, renew } = useIdempotencyKey();
   const mutation = useMutation({
     mutationFn: async () => {
       return unwrap(
         await api.POST("/offers/{id}/regenerate", {
-          params: { path: { id: offer.id } },
+          params: {
+            path: { id: offer.id },
+            header: { "Idempotency-Key": key },
+          },
         }),
       );
     },
     onMutate: fromHere,
     onSuccess: (newDraft, _vars, from) => {
+      renew();
       queryClient.setQueryData(["offer", newDraft.id], newDraft);
       // The server has just superseded this offer; going back must not find it sent.
       void rereadOffer(queryClient, offer.id);
@@ -275,7 +281,7 @@ export function RegenerateOfferAction({ offer }: Readonly<{ offer: Offer }>) {
     <>
       <Button
         data-testid="regenerate-offer"
-        disabled={mutation.isPending}
+        pending={mutation.isPending}
         onClick={() => mutation.mutate()}
       >
         <RefreshCw aria-hidden /> {t("offer.regenerate")}
@@ -379,7 +385,7 @@ export function RenderOfferPdfAction({ offer }: Readonly<{ offer: Offer }>) {
         <>
           <Button
             data-testid="render-pdf"
-            disabled={mutation.isPending}
+            pending={mutation.isPending}
             onClick={() => mutation.mutate()}
           >
             {t("offer.renderPdf")}

@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useId, useState } from "react";
 import { api } from "../../api/client";
+import { useIdempotencyKey } from "../../api/idempotencykey";
 import { DealStatusBadge } from "../../components/dealstatusbadge";
 import {
   LatestInboundLine,
@@ -231,11 +232,12 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
       );
     },
   });
+  const { key: offerKey, renew: renewOfferKey } = useIdempotencyKey();
   const createOffer = useMutation({
     mutationFn: async (input: { currency: string; fromRevision?: number }) => {
       return unwrap(
         await api.POST("/deals/{id}/offers", {
-          params: { path: { id } },
+          params: { path: { id }, header: { "Idempotency-Key": offerKey } },
           body: {
             currency: input.currency,
             source: "manual",
@@ -246,6 +248,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
     },
     onMutate: fromHere,
     onSuccess: (offer: Offer, _input, from) => {
+      renewOfferKey();
       from.navigate({ screen: "offers", id: offer.id });
     },
   });

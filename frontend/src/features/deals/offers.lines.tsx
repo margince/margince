@@ -288,7 +288,7 @@ export function OfferLineEditor({ offer }: Readonly<{ offer: Offer }>) {
           <Button
             variant="primary"
             data-testid="add-line"
-            disabled={addMutation.isPending}
+            pending={addMutation.isPending}
             className="offers-add-line"
             onClick={() => {
               if (refusesAdd()) {
