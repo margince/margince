@@ -49,8 +49,8 @@ func TestAnExtensionKindsVocabularyIsItsDeclaredFields(t *testing.T) {
 	for _, field := range fields {
 		names = append(names, field.Name)
 	}
-	if strings.Join(names, ",") != "code,site" {
-		t.Errorf("fields = %v, want code and site", names)
+	if strings.Join(names, ",") != "code,id,site" {
+		t.Errorf("fields = %v, want code, the id a picker resolves by, and site", names)
 	}
 	if _, ok, _ := store.FilterVocabulary(e.As(e.Rep1, nil, listingPerms(false)), historyDemoKind); ok {
 		t.Error("a caller without the kind's read right was served its vocabulary")
