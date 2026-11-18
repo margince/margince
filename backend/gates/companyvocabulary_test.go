@@ -117,8 +117,6 @@ var exempt = gatekit.Waive(map[string]string{
 		"token for a company name, spelled as the HTML standard spells it",
 	".github/workflows/cla.yml": "a GitHub organisation — its members are the staff the CLA " +
 		"does not cover, not this record type",
-	".github/workflows/release.yml": "a GitHub organisation — the account a repository belongs " +
-		"to, not this record type",
 	"sonar-project.properties": "`sonar.organization` is the scanner's own mandatory property, " +
 		"naming the SonarCloud organisation this project is filed under. Renaming it does not " +
 		"fail the scan's quality gate — it stops the scan running at all, which is a different " +

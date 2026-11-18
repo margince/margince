@@ -11,7 +11,9 @@ import { api } from "../api/client";
 import { ifMatch, requireVersion } from "../api/version";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
+import { noteHomeTaskDone } from "../lib/installhint";
 import { problemCodeOf, unwrap } from "../lib/problem";
+import { useRoute } from "../lib/router";
 import { worklistKey } from "../lib/workkeys";
 import { useCompleteTask } from "./taskcomplete";
 import {
@@ -77,6 +79,7 @@ export function useTaskUpdate(invalidateKeys: readonly QueryKey[]) {
 export function useTaskDone(id: string, version: number | undefined) {
   const t = useT();
   const toast = useToast();
+  const onHome = useRoute().screen === "home";
   const update = useTaskUpdate([worklistKey]);
   // A rejected PATCH otherwise leaves the control idle with nothing on screen
   // to say so, and the reader has no reason to try again.
@@ -92,7 +95,12 @@ export function useTaskDone(id: string, version: number | undefined) {
     }) > 0;
   return {
     pending: writing,
-    complete: () => (writing ? Promise.resolve() : complete(id, version)),
+    complete: async () => {
+      if (writing) return false;
+      const completed = await complete(id, version);
+      if (completed && onHome) noteHomeTaskDone();
+      return completed;
+    },
   };
 }
 
