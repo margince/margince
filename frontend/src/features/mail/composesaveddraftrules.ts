@@ -37,6 +37,7 @@ export function wroteSomething(
     (subject !== "" && subject !== defaults.subject.trim()) ||
     fields.files.length > 0 ||
     fields.context !== "" ||
+    (fields.overrideExplanation ?? "").trim() !== "" ||
     fields.sendAt !== ""
   );
 }

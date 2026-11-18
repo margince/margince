@@ -20,8 +20,10 @@ export function savedFieldsOf(
   fields: ComposeFields,
   files: readonly ChosenFile[],
   filing: Partial<Grounding> | null,
+  overrideExplanation = "",
 ): SavedDraftFields {
   return {
+    overrideExplanation,
     to: fields.to,
     cc: fields.cc,
     bcc: fields.bcc,
@@ -63,6 +65,7 @@ export function fieldsOfDraft(draft: MailDraft): SavedDraftFields {
       byteSize: file.byte_size,
     })),
     context: draft.communication_context ?? "",
+    overrideExplanation: draft.override_explanation ?? "",
     sendAt:
       draft.scheduled_intent?.wall_clock ??
       (draft.scheduled_at && draft.scheduled_tz
@@ -126,6 +129,7 @@ export function sameFields(a: SavedDraftFields, b: SavedDraftFields): boolean {
     a.html === b.html &&
     sameList(idsOf(a.files), idsOf(b.files)) &&
     a.context === b.context &&
+    (a.overrideExplanation ?? "") === (b.overrideExplanation ?? "") &&
     a.sendAt === b.sendAt &&
     sameScheduleSource(a.sendSchedule, b.sendSchedule) &&
     sameList(filingKeys(a), filingKeys(b)) &&

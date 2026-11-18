@@ -61,8 +61,10 @@ export function useDraftRestore(input: {
     setDealId: (id: string) => void;
     setProjectId: (id: string) => void;
   };
+  setOverrideExplanation?: (text: string) => void;
 }): (saved: SavedDraftFields) => void {
   const { settle, restoreSaved, adoptSavedSubject, setFiles } = input;
+  const { setOverrideExplanation } = input;
   const { setDealId, setProjectId } = input.account;
   return useCallback(
     (saved: SavedDraftFields) => {
@@ -79,8 +81,10 @@ export function useDraftRestore(input: {
       restoreSaved(saved);
       setFiles(() => saved.files);
       adoptSavedSubject(saved.subject);
+      setOverrideExplanation?.(saved.overrideExplanation ?? "");
     },
     [
+      setOverrideExplanation,
       settle,
       restoreSaved,
       adoptSavedSubject,
