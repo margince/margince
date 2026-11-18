@@ -136,6 +136,10 @@
   outline: var(--focus-ring);
   outline-offset: 2px;
 }
+/* The ring's own 2px, inside the box, where the collapsed rail does not clip it. */
+.rail.collapsed .artoggle:focus-visible {
+  outline-offset: -2px;
+}
 
 /* No line, and no frame either.
  *
