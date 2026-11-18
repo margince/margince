@@ -246,3 +246,75 @@ describe("a refused line edit", () => {
     ).toBeNull();
   });
 });
+
+describe("a line's billing", () => {
+  it("lets a recurring line with no term take its periods in its row", async () => {
+    const quarterly = {
+      ...line1,
+      billing_model: "recurring",
+      billing_interval_months: 3,
+      interval_count: null,
+    };
+    const calls = serve(draft([quarterly]), () => ({
+      status: 200,
+      body: draft([quarterly]),
+    }));
+    const user = userEvent.setup();
+    renderOffer();
+    await screen.findByText("ANG-2026-0007");
+
+    const billing = screen.getByRole("combobox", { name: "Billing, line 1" });
+    expect(billing.textContent).toBe("Recurring");
+    expect(
+      screen.getByRole("combobox", { name: "Billing period, line 1" })
+        .textContent,
+    ).toBe("Quarterly");
+    await user.type(
+      screen.getByRole("spinbutton", { name: "Periods, line 1" }),
+      "4",
+    );
+    await user.tab();
+    await waitFor(() => expect(calls).toHaveLength(1));
+    expect(calls[0].body).toEqual({
+      billing_model: "recurring",
+      billing_interval_months: 3,
+      interval_count: 4,
+    });
+
+    await pickOption(user, billing, "One-time");
+    await waitFor(() => expect(calls).toHaveLength(2));
+    expect(calls[1].body).toEqual({
+      billing_model: "one_time",
+      billing_interval_months: null,
+      interval_count: null,
+    });
+  });
+
+  it("saves a line made recurring only once it has a period", async () => {
+    const calls = serve(draft([line1]), () => ({
+      status: 200,
+      body: draft([line1]),
+    }));
+    const user = userEvent.setup();
+    renderOffer();
+    await screen.findByText("ANG-2026-0007");
+
+    await pickOption(
+      user,
+      screen.getByRole("combobox", { name: "Billing, line 1" }),
+      "Recurring",
+    );
+    expect(calls).toHaveLength(0);
+    await pickOption(
+      user,
+      screen.getByRole("combobox", { name: "Billing period, line 1" }),
+      "Monthly",
+    );
+    await waitFor(() => expect(calls).toHaveLength(1));
+    expect(calls[0].body).toEqual({
+      billing_model: "recurring",
+      billing_interval_months: 1,
+      interval_count: null,
+    });
+  });
+});

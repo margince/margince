@@ -1,16 +1,18 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useState } from "react";
 import { Field } from "../../design-system/atoms";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
+import type { OfferLineItem, UpdateOfferLineItemRequest } from "./offers";
 import "./offers.css";
 
 /**
  * The three controls that say whether an offer line's price repeats.
  *
  * In its own file because offers.tsx sits at its length cap, and because the
- * add-line form and a later line editor need the same three together.
+ * add-line form and each line's row need the same three together.
  *
  * The committed-periods control is the one that matters operationally: sending
  * an offer is refused while a recurring line has no settled term, so a form
@@ -29,6 +31,34 @@ export const EMPTY_LINE_BILLING: LineBilling = {
   intervalCount: "",
 };
 
+type Translate = ReturnType<typeof useT>;
+
+function billingModelOptions(t: Translate) {
+  return [
+    { value: "", label: t("product.billingUnclassified") },
+    { value: "one_time", label: t("product.billingOneTime") },
+    { value: "recurring", label: t("product.billingRecurring") },
+  ];
+}
+
+function billingIntervalOptions(t: Translate) {
+  return [
+    { value: "", label: t("product.billingNoInterval") },
+    { value: "1", label: t("product.billingMonthly") },
+    { value: "3", label: t("product.billingQuarterly") },
+    { value: "6", label: t("product.billingHalfYearly") },
+    { value: "12", label: t("product.billingYearly") },
+  ];
+}
+
+// Leaving "recurring" takes the cadence and the term with it: a one-off price
+// has neither, and the server refuses a line that still carries them.
+function withBillingModel(value: LineBilling, picked: string): LineBilling {
+  return picked === "recurring"
+    ? { ...value, billingModel: "recurring" }
+    : { billingModel: picked, billingIntervalMonths: "", intervalCount: "" };
+}
+
 export function OfferLineBillingFields({
   value,
   onChange,
@@ -45,25 +75,8 @@ export function OfferLineBillingFields({
           <Select
             {...control}
             value={value.billingModel}
-            onChange={(picked) =>
-              // Leaving "recurring" takes the cadence and the term with it: a
-              // one-off price has neither, and the server refuses a line that
-              // still carries them.
-              onChange(
-                picked === "recurring"
-                  ? { ...value, billingModel: "recurring" }
-                  : {
-                      billingModel: picked,
-                      billingIntervalMonths: "",
-                      intervalCount: "",
-                    },
-              )
-            }
-            options={[
-              { value: "", label: t("product.billingUnclassified") },
-              { value: "one_time", label: t("product.billingOneTime") },
-              { value: "recurring", label: t("product.billingRecurring") },
-            ]}
+            onChange={(picked) => onChange(withBillingModel(value, picked))}
+            options={billingModelOptions(t)}
           />
         )}
       </Field>
@@ -79,13 +92,7 @@ export function OfferLineBillingFields({
               onChange={(picked) =>
                 onChange({ ...value, billingIntervalMonths: picked })
               }
-              options={[
-                { value: "", label: t("product.billingNoInterval") },
-                { value: "1", label: t("product.billingMonthly") },
-                { value: "3", label: t("product.billingQuarterly") },
-                { value: "6", label: t("product.billingHalfYearly") },
-                { value: "12", label: t("product.billingYearly") },
-              ]}
+              options={billingIntervalOptions(t)}
             />
           )}
         </Field>
@@ -142,4 +149,111 @@ export function lineBillingBody(value: LineBilling): {
         : undefined,
     interval_count: Number.isInteger(count) && count > 0 ? count : undefined,
   };
+}
+
+type LineBillingPatch = Required<
+  Pick<
+    UpdateOfferLineItemRequest,
+    "billing_model" | "billing_interval_months" | "interval_count"
+  >
+>;
+
+/**
+ * The three controls as the wire takes them, for an offer-line update, or
+ * null while a recurring line has no period yet, which the server refuses.
+ *
+ * Unlike a create, every field is named: the server judges the line as the
+ * patch leaves it, so a field left out keeps a cadence or term the line no
+ * longer means. A typed term goes as typed, so a bad one comes back refused
+ * with the reason instead of being cleared.
+ */
+export function lineBillingPatch(value: LineBilling): LineBillingPatch | null {
+  if (value.billingModel !== "recurring") {
+    return {
+      billing_model: value.billingModel === "one_time" ? "one_time" : null,
+      billing_interval_months: null,
+      interval_count: null,
+    };
+  }
+  const months = lineBillingBody(value).billing_interval_months;
+  if (months === undefined) {
+    return null;
+  }
+  const count = value.intervalCount.trim();
+  return {
+    billing_model: "recurring",
+    billing_interval_months: months,
+    interval_count: count === "" ? null : Number(count),
+  };
+}
+
+function lineBillingOf(line: OfferLineItem): LineBilling {
+  return {
+    billingModel: line.billing_model ?? "",
+    billingIntervalMonths: String(line.billing_interval_months ?? ""),
+    intervalCount: String(line.interval_count ?? ""),
+  };
+}
+
+// The three controls in a line's row: a pick saves at once, the term on blur.
+export function BillingCell({
+  line,
+  label,
+  onSave,
+}: Readonly<{
+  line: OfferLineItem;
+  label: (column: string) => string;
+  onSave: (patch: UpdateOfferLineItemRequest) => void;
+}>) {
+  const t = useT();
+  const [value, setValue] = useState(() => lineBillingOf(line));
+  const commit = (next: LineBilling) => {
+    setValue(next);
+    const patch = lineBillingPatch(next);
+    if (patch) {
+      onSave(patch);
+    }
+  };
+  const recurring = value.billingModel === "recurring";
+  return (
+    <div className="offers-line-billing">
+      <Select
+        aria-label={label(t("product.billingModel"))}
+        testId={`line-billing-${line.id}`}
+        value={value.billingModel}
+        onChange={(picked) => commit(withBillingModel(value, picked))}
+        options={billingModelOptions(t)}
+      />
+      {recurring && (
+        <Select
+          aria-label={label(t("product.billingInterval"))}
+          testId={`line-billing-interval-${line.id}`}
+          value={value.billingIntervalMonths}
+          onChange={(picked) =>
+            commit({ ...value, billingIntervalMonths: picked })
+          }
+          options={billingIntervalOptions(t)}
+        />
+      )}
+      {recurring && (
+        <input
+          aria-label={label(t("offer.committedPeriods"))}
+          data-testid={`line-interval-count-${line.id}`}
+          type="number"
+          min="1"
+          step="1"
+          className="input offers-line-periods"
+          value={value.intervalCount}
+          onChange={(event) =>
+            setValue({ ...value, intervalCount: event.target.value })
+          }
+          onBlur={() => {
+            if (value.intervalCount !== String(line.interval_count ?? "")) {
+              commit(value);
+            }
+          }}
+        />
+      )}
+    </div>
+  );
 }

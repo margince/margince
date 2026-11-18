@@ -6993,7 +6993,6 @@ export const en = {
   "offer.committedPeriods": "Periods",
   "offer.lineTotal": "Line total",
   "offer.unpriced": "unpriced, excluded from total",
-  "offer.removeLine": "Remove",
   "offer.lineCell": "{column}, line {position}",
   "offer.removeLineNamed": "Remove line {position}",
   "offer.pickProduct": "Pick product",

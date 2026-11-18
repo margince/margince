@@ -6857,7 +6857,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "offer.committedPeriods": "Số kỳ",
   "offer.lineTotal": "Thành tiền",
   "offer.unpriced": "chưa có giá, không tính vào tổng",
-  "offer.removeLine": "Gỡ",
   "offer.lineCell": "{column}, dòng {position}",
   "offer.removeLineNamed": "Gỡ dòng {position}",
   "offer.pickProduct": "Chọn sản phẩm",

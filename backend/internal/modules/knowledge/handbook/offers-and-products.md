@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/deals/offers.tsx frontend/src/features/deals/offers.lines.tsx frontend/src/features/deals/offertemplates.tsx frontend/src/features/deals/products.tsx backend/internal/modules/deals/offer_lifecycle.go backend/internal/modules/deals/offer_totals.go backend/internal/modules/deals/offer_linesnapshot.go backend/internal/modules/deals/offer_recurring.go backend/internal/modules/deals/offer_issuer.go backend/internal/modules/deals/offer_pdfissuer.go backend/internal/modules/deals/producttranslation.go backend/internal/modules/deals/taxrate.go backend/internal/modules/deals/offer_linetax.go frontend/src/features/settings/taxrates.tsx frontend/src/features/deals/deal360/deallines.tsx frontend/src/features/deals/offers.fromdeal.tsx frontend/src/features/deals/offers.summary.tsx backend/internal/modules/deals/deallines.go backend/internal/modules/deals/deallinefigures.go backend/internal/modules/deals/offerfromdeal.go -->
+<!-- describes: frontend/src/features/deals/offers.tsx frontend/src/features/deals/offers.lines.tsx frontend/src/features/deals/offers.linetable.tsx frontend/src/features/deals/offertemplates.tsx frontend/src/features/deals/products.tsx backend/internal/modules/deals/offer_lifecycle.go backend/internal/modules/deals/offer_totals.go backend/internal/modules/deals/offer_linesnapshot.go backend/internal/modules/deals/offer_recurring.go backend/internal/modules/deals/offer_issuer.go backend/internal/modules/deals/offer_pdfissuer.go backend/internal/modules/deals/producttranslation.go backend/internal/modules/deals/taxrate.go backend/internal/modules/deals/offer_linetax.go frontend/src/features/settings/taxrates.tsx frontend/src/features/deals/deal360/deallines.tsx frontend/src/features/deals/offers.fromdeal.tsx frontend/src/features/deals/offers.summary.tsx backend/internal/modules/deals/deallines.go backend/internal/modules/deals/deallinefigures.go backend/internal/modules/deals/offerfromdeal.go -->
 # Offers and the rate card
 
 An **offer** in Margince is the document with prices that you give a buyer. It belongs to a deal. Once it has been sent, you do not edit it; you make a new version of it instead.
@@ -48,7 +48,9 @@ To add a line to an offer in Margince, open the draft offer and fill the **Add l
 1. Choose **Pick product** to copy a product from your rate card, or type the line yourself.
 2. Fill **Description**, **Unit**, **Quantity** and **Unit price**; set **Discount %** and **Tax %** on the added line.
 3. For a line that repeats, set **Billing** to **Recurring**, a **Billing period**, and **Periods** agreed.
-4. Click **Add line**. **Remove** takes a line out again.
+4. Click **Add line**. To take a line out again, choose **Remove line** on its row.
+
+Each added line keeps its **Billing**, **Billing period** and **Periods** in its row, and you can change them there while the offer is a draft. A line made **Recurring** saves once it has a **Billing period**. A change the offer refuses goes back to the saved value, and the reason shows in that line's row.
 You can add or remove lines only while the offer is a draft. After that, and on an offer made from the deal's products, **Line items** lists the lines without controls.
 Also called: line item, position, add an item to a quote.
 

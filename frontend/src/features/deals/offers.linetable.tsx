@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { Trash2 } from "lucide-react";
 import { useState } from "react";
-import { Button } from "../../design-system/atoms";
 import { DataTable } from "../../design-system/datatable";
 import { ErrorLine } from "../../design-system/errorline";
+import { IconAction } from "../../design-system/iconaction";
 import { formatMoney, ordinalNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { labelFor } from "../../lib/labelfor";
+import { BillingCell } from "./offerlinebilling";
 import { discountFault, taxRateFault } from "./offerlinerates";
 import type {
   Offer,
@@ -225,20 +227,31 @@ export function EditableLineTable({
         ),
     },
     {
+      key: "billing",
+      header: t("product.billingModel"),
+      render: (line: OfferLineItem) => (
+        <BillingCell
+          key={refusals.cellKey(line.id, "billing_model")}
+          line={line}
+          label={(column) => cellLabel(column, line)}
+          onSave={save(line)}
+        />
+      ),
+    },
+    {
       key: "remove",
       header: "",
       render: (line: OfferLineItem) => (
         <>
-          <Button
-            data-testid={`remove-line-${line.id}`}
-            aria-label={t("offer.removeLineNamed", {
+          <IconAction
+            icon={<Trash2 />}
+            testId={`remove-line-${line.id}`}
+            label={t("offer.removeLineNamed", {
               position: ordinalNumber(line.position),
             })}
             disabled={removing}
             onClick={() => onRemove(line.id)}
-          >
-            {t("offer.removeLine")}
-          </Button>
+          />
           {refusals.errorOf(line.id) && (
             <ErrorLine inline>{refusals.errorOf(line.id)}</ErrorLine>
           )}

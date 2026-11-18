@@ -7036,7 +7036,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "offer.committedPeriods": "Perioden",
   "offer.lineTotal": "Positionssumme",
   "offer.unpriced": "ohne Preis, nicht in der Summe enthalten",
-  "offer.removeLine": "Entfernen",
   "offer.lineCell": "{column}, Position {position}",
   "offer.removeLineNamed": "Position {position} entfernen",
   "offer.pickProduct": "Produkt auswählen",
