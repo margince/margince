@@ -566,3 +566,30 @@ func TestTheSourceTotalsAddUpToTheOpenAndWeightedReadings(t *testing.T) {
 		t.Errorf("by source adds to open %d weighted %d, want %d and %d", open, weighted, got.OpenMinor, got.WeightedMinor)
 	}
 }
+
+func TestCoverageCountsOpenDealsOnlyAndWonDealsStayOutOfThem(t *testing.T) {
+	t.Parallel()
+	period := testPeriod(t)
+
+	open := healthyDeal(t)
+	unpricedOpen := healthyDeal(t)
+	unpricedOpen.ID, unpricedOpen.AmountMinor, unpricedOpen.BaseMinor = "d2", nil, nil
+	noRateOpen := healthyDeal(t)
+	noRateOpen.ID, noRateOpen.BaseMinor = "d3", nil
+	won := healthyDeal(t)
+	won.ID, won.Won, won.ClosedAt = "d4", true, day(t, time.May, 2)
+	wonNoRate := healthyDeal(t)
+	wonNoRate.ID, wonNoRate.Won, wonNoRate.ClosedAt, wonNoRate.BaseMinor = "d5", true, day(t, time.May, 3), nil
+
+	got, err := Compute(period, []Deal{open, unpricedOpen, noRateOpen, won, wonNoRate}, testRules)
+	if err != nil {
+		t.Fatalf("computing: %v", err)
+	}
+	if got.EligibleCount != 3 || got.PricedCount != 2 || got.FxMissingCount != 1 {
+		t.Errorf("counts = eligible %d priced %d fx-missing %d, want 3, 2, 1 over the three open deals",
+			got.EligibleCount, got.PricedCount, got.FxMissingCount)
+	}
+	if got.WonFxMissingCount() != 1 {
+		t.Errorf("won fx-missing count = %d, want 1", got.WonFxMissingCount())
+	}
+}
