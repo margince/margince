@@ -40,15 +40,15 @@ func setupScrapedConsent(t *testing.T) *consentEnv {
 	return seedConsentSubject(t, e)
 }
 
-// sendSeries reads one series off the served /metrics.
-func sendSeries(t *testing.T, c *consentEnv, series string) int {
+// scrapeSendMetrics reads the served /metrics.
+func scrapeSendMetrics(t *testing.T, e *apptest.AppEnv) string {
 	t.Helper()
-	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, c.TS.URL+"/metrics", nil)
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, e.TS.URL+"/metrics", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	req.Header.Set("Authorization", "Bearer "+sendMetricsToken)
-	resp, err := c.TS.Client().Do(req)
+	resp, err := e.TS.Client().Do(req)
 	if err != nil {
 		t.Fatalf("scraping /metrics: %v", err)
 	}
@@ -61,17 +61,34 @@ func sendSeries(t *testing.T, c *consentEnv, series string) int {
 	if err != nil || resp.StatusCode != http.StatusOK {
 		t.Fatalf("scraping /metrics answered %d: %v", resp.StatusCode, err)
 	}
-	for line := range strings.SplitSeq(string(body), "\n") {
-		if value, ok := strings.CutPrefix(line, series+" "); ok {
-			n, err := strconv.Atoi(value)
-			if err != nil {
-				t.Fatalf("%s reads %q", series, value)
-			}
-			return n
+	return string(body)
+}
+
+// sendSeriesSum adds up every series whose name and labels start with prefix.
+func sendSeriesSum(t *testing.T, e *apptest.AppEnv, prefix string) int {
+	t.Helper()
+	sum, found := 0, false
+	for line := range strings.SplitSeq(scrapeSendMetrics(t, e), "\n") {
+		if !strings.HasPrefix(line, prefix) {
+			continue
 		}
+		fields := strings.Fields(line)
+		n, err := strconv.Atoi(fields[len(fields)-1])
+		if err != nil {
+			t.Fatalf("%q does not end in a count", line)
+		}
+		sum, found = sum+n, true
 	}
-	t.Fatalf("/metrics serves no series %s", series)
-	return 0
+	if !found {
+		t.Fatalf("/metrics serves no series %s", prefix)
+	}
+	return sum
+}
+
+// sendSeries reads one series off the served /metrics.
+func sendSeries(t *testing.T, c *consentEnv, series string) int {
+	t.Helper()
+	return sendSeriesSum(t, c.AppEnv, series+" ")
 }
 
 // The pilot switch can be turned off with work in flight. A send refused under

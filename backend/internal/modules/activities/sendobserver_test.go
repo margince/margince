@@ -27,3 +27,26 @@ func TestARepeatedSendKeepsTheRefusalItWraps(t *testing.T) {
 		t.Fatalf("the mark changed the refusal: %v", repeated)
 	}
 }
+
+// referencedRefusal stands in for the consent module's refusal, which this
+// module may not import: a refusal that carries the review it opened.
+type referencedRefusal struct{ cause error }
+
+func (r *referencedRefusal) Error() string                  { return r.cause.Error() }
+func (r *referencedRefusal) Unwrap() error                  { return r.cause }
+func (r *referencedRefusal) Unreferenced() error            { return r.cause }
+func (r *referencedRefusal) FaultReference() map[string]any { return map[string]any{"review_id": "r"} }
+
+// The 409 renderer finds the refusal's review through the mark, by its type
+// and by the referenced-fault interface it asks for.
+func TestARepeatedSendStillCarriesTheReviewItsRefusalOpened(t *testing.T) {
+	refusal := &referencedRefusal{cause: apperrors.ErrConsentNotGranted}
+	repeated := error(&repeatedSendError{refusal: refusal})
+
+	if found, ok := errors.AsType[*referencedRefusal](repeated); !ok || found != refusal {
+		t.Fatal("the refusal's own type is lost behind the repeat mark")
+	}
+	if found, ok := errors.AsType[apperrors.ReferencedFault](repeated); !ok || found.FaultReference()["review_id"] != "r" {
+		t.Fatal("the review reference is lost behind the repeat mark")
+	}
+}
