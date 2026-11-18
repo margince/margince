@@ -110,7 +110,7 @@ Margince follows one law for the whole installation. An admin chooses it at firs
 
 The sales-mail rules follow the law where each recipient is, not where you are. Margince reads it from the contact's address, then from the address of the company they work for. For a lead, it reads the address of the lead's company. If it is wrong, fix the address. With no address on record, sales mail they did not ask for needs their consent. Every such mail offers a way to unsubscribe.
 
-To correct it for one message, click the globe on the recipient in the composer. It shows the country Margince read and where it read it. You can pick another country or clear it for this message only; the contact's record does not change. A cleared country means no country's sales-mail rules apply, but consent is still needed and an objection still stops the mail. Your company's own duties at the foot of the mail stay. The decision record and the audit log name the country you set. Only you can set it: an agent cannot.
+To fix the law for one message, press the recipient's chip in the composer. It names the law Margince read and where it read it. You can pick another one or clear it for this message only, and the contact's record does not change. With it cleared, mail they did not ask for still needs their consent, a stop they asked for still holds, and your company's own lines at the foot stay. The audit log names your choice, and an agent cannot make it.
 
 Some laws change what the mails to a contact about their own data may ask:
 

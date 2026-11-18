@@ -13,6 +13,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
@@ -55,7 +56,7 @@ func TestTheLegacyVerdictFollowsTheStatedCountry(t *testing.T) {
 			e := setupResolve(t)
 			e.livesIn(t, string(short))
 			e.seedPurpose(t, "business_correspondence", "business_correspondence")
-			e.inboundFrom(t, "older-thread", e.address, time.Now().Add(-30*24*time.Hour))
+			e.inboundFrom(t, "older-thread", e.address, clocktest.Now(t).Add(-30*24*time.Hour))
 			e.observeEveryCategory(t)
 			delivery := e.plantDelivery(t)
 			recipients := []connector.Recipient{{Email: e.address}}

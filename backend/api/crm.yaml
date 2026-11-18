@@ -61975,7 +61975,6 @@ components:
         entity_type:
           type: string
           enum: [contact, lead]
-          x-extensible-enum: true
         entity_id: { type: string, format: uuid }
         stated_country:
           allOf: [{ $ref: '#/components/schemas/StatedCountry' }]
