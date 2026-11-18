@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -76,13 +77,31 @@ func (s *Store) KeptByAcceptedGuest(ctx context.Context, meetingID ids.UUID) ([]
 }
 
 // SettleKeptByEvidence marks one open promise done on the evidence of an
-// activity. Only the system settles this way: a person or their agent
-// settles through SettleConversationClaim.
-func (s *Store) SettleKeptByEvidence(ctx context.Context, claimID, evidence ids.UUID) error {
+// activity. Only the system settles this way: a person or their agent settles
+// through SettleConversationClaim.
+//
+// `seat` is the context of the internal seat that made the evidence. Its write
+// access to the claim's current contact is checked under the claim's row lock,
+// in the transaction that moves the status, so access removed since the event
+// stops the settlement.
+func (s *Store) SettleKeptByEvidence(ctx, seat context.Context, claimID, evidence ids.UUID) error {
 	if actor, ok := principal.Actor(ctx); !ok || actor.Type != principal.PrincipalSystem {
 		return apperrors.ErrPermissionDenied
 	}
+	if err := auth.Require(seat, "contact", principal.ActionUpdate); err != nil {
+		return err
+	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
+		if _, err := storekit.LockRow(ctx, tx, "conversation_claim", claimID, storekit.LiveOnly); err != nil {
+			return err
+		}
+		var contactID ids.UUID
+		if err := tx.QueryRow(ctx, `SELECT contact_id FROM conversation_claim WHERE id = $1`, claimID).Scan(&contactID); err != nil {
+			return fmt.Errorf("read the claim's contact: %w", err)
+		}
+		if err := auth.EnsureWritableLive(seat, tx, "contact", contactID); err != nil {
+			return err
+		}
 		return moveClaimStatus(ctx, tx, claimID, claimStatusOpen, claimStatusDone, map[string]any{
 			claimSettledByKey:    claimSettledAuto,
 			claimSettleReasonKey: keptByInvitationReason,
@@ -139,19 +158,4 @@ func (s *Store) MeetingSeat(ctx context.Context, meetingID ids.UUID) (ids.UUID, 
 		return ids.UUID{}, false, nil
 	}
 	return *seat, true, nil
-}
-
-// EnsureClaimWritable answers whether the caller may write the contact a claim
-// is about, the gate a person's settle holds.
-func (s *Store) EnsureClaimWritable(ctx context.Context, claimID ids.UUID) error {
-	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {
-		return err
-	}
-	return s.tx(ctx, func(tx pgx.Tx) error {
-		var contactID ids.UUID
-		if err := tx.QueryRow(ctx, `SELECT contact_id FROM conversation_claim WHERE id = $1`, claimID).Scan(&contactID); err != nil {
-			return fmt.Errorf("read the claim's contact: %w", err)
-		}
-		return auth.EnsureWritableLive(ctx, tx, "contact", contactID)
-	})
 }

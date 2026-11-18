@@ -82,7 +82,7 @@ func TestAnAcceptedInviteToTheNamedPersonClosesThePromiseAndItCanBeUndone(t *tes
 	if len(found) != 1 || found[0] != f.claim {
 		t.Fatalf("kept promises = %v, want the invite promise", found)
 	}
-	if err := f.e.store.SettleKeptByEvidence(f.system, f.claim, f.meeting); err != nil {
+	if err := f.e.store.SettleKeptByEvidence(f.system, f.human, f.claim, f.meeting); err != nil {
 		t.Fatalf("settling on evidence: %v", err)
 	}
 	if got := f.status(t); got != "done" {
@@ -125,7 +125,7 @@ func TestAnInviteToSomeoneElseOrNotAcceptedClosesNothing(t *testing.T) {
 
 func TestOnlyTheSystemSettlesOnEvidenceAndOnlyAutomaticSettlementsUndo(t *testing.T) {
 	f := keptPromise(t, "Riley Reed", "accepted")
-	if err := f.e.store.SettleKeptByEvidence(f.human, f.claim, f.meeting); err == nil {
+	if err := f.e.store.SettleKeptByEvidence(f.human, f.human, f.claim, f.meeting); err == nil {
 		t.Error("a human settled through the evidence path")
 	}
 	if err := f.e.store.SettleConversationClaim(f.human, f.claim, "done"); err != nil {
@@ -155,7 +155,21 @@ func TestOnlyAnInternalSeatsMeetingCanSettle(t *testing.T) {
 	if err != nil || !internal || seat != f.e.rep {
 		t.Fatalf("seat = %v %v %v, want the organizing colleague", seat, internal, err)
 	}
-	if err := f.e.store.EnsureClaimWritable(f.human, f.claim); err != nil {
-		t.Errorf("the organizing seat may write the claim's contact: %v", err)
+}
+
+func TestASeatWithoutWriteAccessToTheClaimsContactSettlesNothing(t *testing.T) {
+	f := keptPromise(t, "Riley Reed", "accepted")
+	readOnly := principal.WithActor(f.human, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + f.e.rep.String(), UserID: f.e.rep,
+		Permissions: principal.Permissions{
+			RoleKeys: []string{"viewer"},
+			Objects:  map[string]principal.ObjectGrant{"contact": {Read: true}},
+		},
+	})
+	if err := f.e.store.SettleKeptByEvidence(f.system, readOnly, f.claim, f.meeting); err == nil {
+		t.Fatal("a seat that may not update contacts settled the promise")
+	}
+	if got := f.status(t); got != "open" {
+		t.Errorf("status = %q, want open", got)
 	}
 }

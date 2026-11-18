@@ -118,13 +118,7 @@ func (t *CommitmentSettleTrigger) settleKeptByMeeting(ctx context.Context, activ
 		return err
 	}
 	for _, claim := range kept {
-		if err := t.claims.EnsureClaimWritable(asSeat, claim); err != nil {
-			if refused(err) {
-				continue
-			}
-			return err
-		}
-		if err := t.claims.SettleKeptByEvidence(asSystem, claim, activityID); err != nil {
+		if err := t.claims.SettleKeptByEvidence(asSystem, asSeat, claim, activityID); err != nil {
 			if refused(err) {
 				t.log.WarnContext(ctx, "kept promise settlement refused", "claim", claim, "err", err)
 				continue
