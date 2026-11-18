@@ -58,13 +58,16 @@ type Delivery struct {
 	PayloadExpiresAt *time.Time
 	DueAt            *time.Time
 	// LinkID is the confirm_token this message carries, when it carries one.
-	LinkID     ids.UUID
-	Provider   string
-	MessageID  string
-	Recipients []string
-	Cc         []string
-	Subject    string
-	Body       string
+	LinkID   ids.UUID
+	Provider string
+	// ConnectionID is the mailbox the message goes out from; nil on a row
+	// staged before deliveries named one, which goes out from the default.
+	ConnectionID *ids.UUID
+	MessageID    string
+	Recipients   []string
+	Cc           []string
+	Subject      string
+	Body         string
 	// Bcc receives the message and appears in no header.
 	Bcc []string
 	// HTMLBody is the markup alternative, empty for a plain-text send.

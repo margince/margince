@@ -386,7 +386,7 @@ Ports are claimed the same way, from 8081–8179 (api at +10000). A claim also s
 | `sbom-validate` | Validate each document against its own format: CycloneDX via `cyclonedx validate`, SPDX 2.2.1 via a hash-pinned `pyspdxtools`, SPDX 3.0.1 via the schema kept in `sbom-schemas/`. The parity check proves the three agree; this proves each is well-formed |
 | `sbom-sign` | Keyless cosign signature per SBOM (`*.cosign.bundle`); needs an OIDC token, so in practice the CI isolated `sign` job. Depends on `sbom-parity`, never on `sbom`, because a signature must cover normalized bytes that already agree |
 | `release-sign` | Keyless cosign signature over a release's `SHA256SUMS` (`SHA256SUMS.cosign.bundle`) and on each image `images.txt` names; needs an OIDC token, so in practice the `sign` job of `release-tag.yml` |
-| `third-party-files` | Check copied third-party files against `third-party-files.txt`, their licence texts and the allowed licences in `.grant.yaml`. Runs in the root gates |
+| `third-party-files` | Check copied third-party files against `third-party-files.txt`, their licence texts and the allowed licences in `.grant.yaml` and find a copy not on that list by its bytes or a third-party licence or owner line. Runs in the root gates |
 | `test-third-party-files` | Test missing provenance, missing text, refused licences and copied-file licence drift across the three SBOM formats |
 
 ## Variables

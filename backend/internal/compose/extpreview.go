@@ -37,7 +37,8 @@ func previewProjection(ctx context.Context, tx pgx.Tx, engine storekit.Query, ma
 func extensionPreviewRows(ctx context.Context, tx pgx.Tx, engine storekit.Query, matched []ids.UUID) ([]string, [][]any, error) {
 	columns := []string{"id"}
 	for name, field := range engine.Fields {
-		if !field.Withheld {
+		// `id` leads the columns already.
+		if !field.Withheld && name != "id" {
 			columns = append(columns, name)
 		}
 	}

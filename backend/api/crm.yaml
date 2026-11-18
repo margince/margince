@@ -21113,6 +21113,7 @@ paths:
   /connectors/{provider}/disconnect:
     parameters:
       - $ref: '#/components/parameters/CaptureProvider'
+      - $ref: '#/components/parameters/CaptureConnectionId'
     post:
       tags: [Connectors]
       operationId: disconnectConnector
@@ -21131,6 +21132,7 @@ paths:
         '204': { description: Disconnected (or already disconnected). }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /shared-mailboxes:
     get:
@@ -21301,6 +21303,7 @@ paths:
   /connectors/{provider}/signature-enrichment:
     parameters:
       - $ref: '#/components/parameters/CaptureProvider'
+      - $ref: '#/components/parameters/CaptureConnectionId'
     put:
       tags: [Connectors]
       operationId: setConnectorSignatureEnrichment
@@ -21329,6 +21332,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /connectors/{provider}/containers:
     parameters:
@@ -21340,7 +21344,10 @@ paths:
         - name: connection_id
           in: query
           required: false
-          description: Administrator-only connection selection for internal operational mail enrollment. Omit to list the caller's own mailbox.
+          description: >-
+            The caller's own mailbox of this provider, the `id` of a `CaptureConnection`; omit it
+            while they hold one. An administrator may also name a connection enrolled for internal
+            operational mail.
           schema: { type: string, format: uuid }
 
       summary: The folders or labels this mailbox has, to pick one to keep out of capture.
@@ -21390,6 +21397,7 @@ paths:
   /connectors/{provider}/silence/dismiss:
     parameters:
       - $ref: '#/components/parameters/CaptureProvider'
+      - $ref: '#/components/parameters/CaptureConnectionId'
     post:
       tags: [Connectors]
       operationId: dismissConnectorSilence
@@ -21421,6 +21429,7 @@ paths:
   /connectors/{provider}/mail-posture:
     parameters:
       - $ref: '#/components/parameters/CaptureProvider'
+      - $ref: '#/components/parameters/CaptureConnectionId'
     put:
       tags: [Connectors]
       operationId: setConnectorMailPosture
@@ -21461,6 +21470,7 @@ paths:
   /connectors/{provider}/history-baseline:
     parameters:
       - $ref: '#/components/parameters/CaptureProvider'
+      - $ref: '#/components/parameters/CaptureConnectionId'
     put:
       tags: [Connectors]
       operationId: setConnectorHistoryBaseline
@@ -21503,6 +21513,7 @@ paths:
   /connectors/{provider}/context-tag:
     parameters:
       - $ref: '#/components/parameters/CaptureProvider'
+      - $ref: '#/components/parameters/CaptureConnectionId'
     put:
       tags: [Connectors]
       operationId: setConnectorContextTag
@@ -21545,6 +21556,7 @@ paths:
   /connectors/{provider}/backfill/preview:
     parameters:
       - $ref: '#/components/parameters/CaptureProvider'
+      - $ref: '#/components/parameters/CaptureConnectionId'
     post:
       tags: [Capture]
       operationId: previewConnectorBackfill
@@ -21575,6 +21587,7 @@ paths:
         '403': { $ref: '#/components/responses/RoleCannotCapture' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
         '502':
           description: 'Provider unreachable — the estimate needs the provider (`code: provider_unreachable`).'
           content:
@@ -21584,6 +21597,7 @@ paths:
   /connectors/{provider}/backfill:
     parameters:
       - $ref: '#/components/parameters/CaptureProvider'
+      - $ref: '#/components/parameters/CaptureConnectionId'
     post:
       tags: [Capture]
       operationId: startConnectorBackfill
@@ -21610,6 +21624,7 @@ paths:
         '403': { $ref: '#/components/responses/RoleCannotCapture' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     get:
       tags: [Capture]
       operationId: getConnectorBackfillStatus
@@ -21630,6 +21645,7 @@ paths:
               schema: { $ref: '#/components/schemas/BackfillStatus' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     delete:
       tags: [Capture]
       operationId: cancelConnectorBackfill
@@ -21648,6 +21664,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /attention:
     get:
@@ -30081,6 +30098,59 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
 
+  /roles/{key}/restore-grants:
+    parameters:
+      - name: key
+        in: path
+        required: true
+        schema: { type: string, minLength: 1, maxLength: 64 }
+        description: The role key of a role the product ships.
+    post:
+      tags: [Identity]
+      operationId: restoreRoleGrants
+      security: [ { cookieAuth: [] } ]   # human session only — see listRoles
+      x-agent-access: human-only
+      x-human-only-reason: security
+      parameters:
+        - name: If-Match
+          in: header
+          required: true
+          schema: { type: string }
+          description: The `version` of the role you read. A restore replaces every grant, so the write never goes out without it.
+      summary: Put a shipped role's grants back to the ones the product ships. Human-only.
+      description: |
+        Replaces the whole `objects` map of a system role (`is_system: true`) with the grants a
+        new installation seeds for it, extension defaults included. Grants on objects the
+        installation cannot name are dropped with the rest. Name, row scope and field masks are
+        left as they are. A custom role has nothing shipped to return to (409 `custom_role`).
+
+        Gated on `role_admin.update`. A restore that turns any verb on is admin only (403
+        `widening_requires_admin`), like any other widening. `If-Match` is required: a missing
+        or malformed one is refused 422 and a stale one 409 `version_skew`.
+
+        The audit row names the role and the before and after grant of each object that moved.
+        No public event is emitted, for the reason `setRoleObjectGrant` gives. Live sessions are
+        not revoked.
+      responses:
+        '200':
+          description: The role with its shipped grants.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Role' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: '`unknown_role` — no live role has this key.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '409':
+          description: '`version_skew`, or `custom_role` — only a role the product ships has shipped grants.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /roles/{key}/objects/{object}:
     parameters:
       - name: key
@@ -30126,6 +30196,10 @@ paths:
         because refusing stored data costs a member their session; on this WRITE path the
         opposite is true — refusing input an admin just typed costs them a correction, and
         storing a typo would create a grant nobody can ever satisfy and no screen can explain.
+
+        A grant with Create, Update or Delete on and Read off is refused 422 `write_needs_read`,
+        unless the object offers no Read (`verbs` on `listRoles`). Every write shows the record it
+        wrote, so a write without Read could act on rows its holder is never shown.
 
         Gated on `role_admin.update`. Turning a verb OFF is open to every holder of the grant.
         Turning one ON is admin only (403 `widening_requires_admin`), which is also how a newly
@@ -38880,6 +38954,16 @@ components:
       description: >-
         The provider of an OAuth app a composed extension unit declares. Never `google` or
         `microsoft`: the boot refuses a unit that claims a core vendor's name.
+    CaptureConnectionId:
+      name: connection_id
+      in: query
+      required: false
+      schema: { type: string, format: uuid }
+      description: |
+        Which of the caller's mailboxes of this provider the call is about: the `id` of a
+        `CaptureConnection`. A member may connect several accounts of one provider. Omit it while
+        the caller holds one mailbox of the provider; with several, a call without it answers 422
+        and names this parameter.
     CaptureProvider:
       name: provider
       in: path
@@ -43019,6 +43103,12 @@ components:
             `POST /connectors/{provider}/backfill` and its estimate refuse with `422
             connector_unsupported`, so a client offers no import rather than one that fails.
         account_label: { type: [string, 'null'], description: 'Display-only name of the connected account (e.g. the mailbox address). Null when the connector does not report one.' }
+        default_sender:
+          type: boolean
+          description: |
+            True on the mailbox the member marked for new mail
+            (`PUT /connectors/{provider}/mail-posture` with `default_sender`). Without a mark, new
+            mail goes out from the first connected mailbox that can send.
         status: { type: string, enum: [connected, disconnected, error, reauth_required], x-extensible-enum: true, description: 'Connection state; `reauth_required` when the stored token expired/was revoked upstream.' }
         sync_cursor: { type: [string, 'null'], description: 'Opaque provider watermark (Gmail historyId / IMAP UID / Graph delta) for incremental capture; read-only.' }
         watch_expires_at: { type: [string, 'null'], format: date-time, description: 'Push/delta subscription renewal deadline (Gmail Pub/Sub / Graph change-notification), or null.' }
@@ -43157,9 +43247,17 @@ components:
     SetMailPostureRequest:
       type: object
       additionalProperties: false
-      required: [posture]
-      description: What one mailbox asks of the mail it brings in.
+      description: |
+        What one mailbox asks of the mail it brings in, and whether new mail goes out from it.
+        Send `posture`, `default_sender`, or both; a body with neither is refused with 422.
       properties:
+        default_sender:
+          type: boolean
+          description: |
+            `true` makes this mailbox the one the caller's new mail goes out from, and unmarks the
+            one that was. A reply still goes out from the mailbox the conversation arrived in.
+            `false` is ignored: a member always has a default, the first connected when none is
+            marked.
         posture:
           type: string
           enum: [shared, classified, held]
@@ -44282,6 +44380,10 @@ components:
           description: >-
             The folded address or domain, or a provider-qualified container (`gmail:Label_12`,
             `graph:<folderId>`, `imap:INBOX/Family`) kept as the provider spells it.
+        connection_id:
+          type: [string, 'null']
+          format: uuid
+          description: The mailbox a container rule matches in. Null for every other rule.
         created_at: { type: string, format: date-time }
         created_by_name:
           type: [string, 'null']
@@ -44323,6 +44425,14 @@ components:
         scope: { $ref: '#/components/schemas/CaptureExclusionScope' }
         kind: { $ref: '#/components/schemas/CaptureExclusionKind' }
         value: { type: string, maxLength: 320, description: 'An email address, or a bare domain.' }
+        connection_id:
+          type: string
+          format: uuid
+          description: |
+            For a `container` rule, the caller's mailbox the folder was picked from, the `id` of a
+            `CaptureConnection`. A label or folder id means another folder in another mailbox, so
+            the rule matches only there. Omit it while the caller holds one mailbox of the
+            provider; with several it is required. Ignored for other kinds.
     CaptureOwnerIdentityKind:
       type: string
       enum: [address, domain]
@@ -44552,6 +44662,14 @@ components:
             ON by default, admin-switchable) rather than a per-connect acknowledgment; this field
             remains only so a client that still sends it keeps working.
         redirect_uri: { type: string, format: uri, description: 'App page to return to after OAuth consent (OAuth providers).' }
+        connection_id:
+          type: string
+          format: uuid
+          description: |
+            The caller's mailbox this consent repairs (Reconnect). The consent must name the same
+            account: a different one is refused, because it is another mailbox. Absent adds the
+            account the consent names as another mailbox, or repairs the one that account already
+            has. Ignored by credential providers.
         return_to:
           type: string
           enum: [onboarding, settings, meetings]
@@ -60957,6 +61075,15 @@ components:
       type: object
       required: [subject, body, to]
       properties:
+        from_connection_id:
+          type: [string, 'null']
+          format: uuid
+          description: |
+            The sender's own mailbox the message goes out from, the `id` of one of their
+            `CaptureConnection`s that can send. Omitted, a reply goes out from the mailbox the
+            conversation arrived in, and a new message from the sender's default mailbox. A mailbox
+            that is not the sender's, or cannot send, is refused with 422
+            `mailbox_not_send_capable`.
         subject: { type: string, description: The subject line. Blank or only white space is refused with 422 `required`. }
         body: { type: string, description: The (possibly edited) final body that is sent. Blank or only white space is refused with 422 `required`. }
         html_body:
@@ -61811,6 +61938,12 @@ components:
         One account-started send. It is SendEmailRequest plus the `links` an anchor would
         otherwise have supplied — the records this new conversation belongs to.
       properties:
+        from_connection_id:
+          type: [string, 'null']
+          format: uuid
+          description: |
+            The sender's own mailbox the message goes out from, as on `SendEmailRequest`.
+            Omitted, it goes out from the sender's default mailbox.
         subject: { type: string, description: The subject line. Blank or only white space is refused with 422 `required`. }
         body: { type: string, description: The (possibly edited) final body that is sent. Blank or only white space is refused with 422 `required`. }
         html_body:
@@ -69741,7 +69874,7 @@ components:
     RoleDirectory:
       type: object
       additionalProperties: false
-      required: [roles]
+      required: [roles, verbs]
       description: >-
         Every role this workspace defines. Not paginated and deliberately not: the set is
         bounded by what an operator created (six seeded, plus a handful at most), the editor
@@ -69750,6 +69883,16 @@ components:
         roles:
           type: array
           items: { $ref: '#/components/schemas/Role' }
+        verbs:
+          type: object
+          description: >-
+            The verbs a role may hold on each object this installation can grant, core objects
+            and enabled extension objects alike, Read first. An object that offers no Read has
+            none in its list. An object absent here is one the installation cannot name, and a
+            client draws it with all four.
+          additionalProperties:
+            type: array
+            items: { type: string, enum: [create, read, update, delete], x-extensible-enum: true }
 
     AssignableRoleDirectory:
       type: object

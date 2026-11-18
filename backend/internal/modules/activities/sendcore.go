@@ -127,7 +127,7 @@ func (s *Store) prepareRenderedSend(ctx context.Context, origin SendOrigin, in S
 			return PreparedSend{}, err
 		}
 	}
-	provider, err := s.refuseUnsendable(ctx, in, gate, checkDelivery)
+	provider, connection, err := s.refuseUnsendable(ctx, in, origin.anchor, gate, checkDelivery)
 	if err != nil {
 		return PreparedSend{}, err
 	}
@@ -219,6 +219,7 @@ func (s *Store) prepareRenderedSend(ctx context.Context, origin SendOrigin, in S
 			to:              ToRecipients(in.Recipients, in.Cc, in.Bcc),
 			links:           links,
 			provider:        provider,
+			connection:      connection,
 		},
 	}, nil
 }

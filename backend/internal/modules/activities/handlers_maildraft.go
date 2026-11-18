@@ -169,8 +169,9 @@ func valueOr[T any](field *T) T {
 	return *field
 }
 
-// mailDraftIDOf is the draft a send names, zero when it names none.
-func mailDraftIDOf(id *openapi_types.UUID) ids.UUID {
+// optionalID is the record an optional request field names, zero when it
+// names none.
+func optionalID(id *openapi_types.UUID) ids.UUID {
 	if id == nil {
 		return ids.UUID{}
 	}

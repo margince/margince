@@ -56,12 +56,12 @@ func TestAStartAfterAFailedRunContinuesItFromWhereItStopped(t *testing.T) {
 	grantCtx := humanWithScopes(e, e.Rep1, []principal.Scope{principal.ScopeRead})
 	rep := ids.From[ids.UserKind](e.Rep1)
 
-	status, err := registry.BackfillStatus(grantCtx, "gmail", rep)
+	status, err := registry.BackfillStatus(grantCtx, capturemod.ProviderMailbox("gmail"), rep)
 	if err != nil || status == nil || !status.Resumable {
 		t.Fatalf("status = %+v, %v; a run that stopped on an error with its cursor must say it can be continued", status, err)
 	}
 
-	run, err := registry.StartBackfill(grantCtx, "gmail", rep, 6, connector.BackfillEstimate{Messages: 25}, enqueueNothing)
+	run, err := registry.StartBackfill(grantCtx, capturemod.ProviderMailbox("gmail"), rep, 6, connector.BackfillEstimate{Messages: 25}, enqueueNothing)
 	if err != nil {
 		t.Fatalf("StartBackfill: %v", err)
 	}
@@ -84,7 +84,7 @@ func TestStartingOverReadsTheWindowAgainInANewRun(t *testing.T) {
 	registry, failed := failRunAfterOnePage(t, e)
 	grantCtx := humanWithScopes(e, e.Rep1, []principal.Scope{principal.ScopeRead})
 
-	run, err := registry.StartBackfillOver(grantCtx, "gmail", ids.From[ids.UserKind](e.Rep1), 6, connector.BackfillEstimate{Messages: 25}, enqueueNothing)
+	run, err := registry.StartBackfillOver(grantCtx, capturemod.ProviderMailbox("gmail"), ids.From[ids.UserKind](e.Rep1), 6, connector.BackfillEstimate{Messages: 25}, enqueueNothing)
 	if err != nil {
 		t.Fatalf("StartBackfillOver: %v", err)
 	}
@@ -169,7 +169,7 @@ func TestARunCountsTheMessagesItCouldNotCapture(t *testing.T) {
 		t.Fatalf("Connect: %v", err)
 	}
 	rep := ids.From[ids.UserKind](e.Rep1)
-	run, err := registry.StartBackfill(grantCtx, "gmail", rep, 6, connector.BackfillEstimate{Messages: 25}, enqueueNothing)
+	run, err := registry.StartBackfill(grantCtx, capturemod.ProviderMailbox("gmail"), rep, 6, connector.BackfillEstimate{Messages: 25}, enqueueNothing)
 	if err != nil {
 		t.Fatalf("StartBackfill: %v", err)
 	}
@@ -183,7 +183,7 @@ func TestARunCountsTheMessagesItCouldNotCapture(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	status, err := registry.BackfillStatus(grantCtx, "gmail", rep)
+	status, err := registry.BackfillStatus(grantCtx, capturemod.ProviderMailbox("gmail"), rep)
 	if err != nil {
 		t.Fatal(err)
 	}

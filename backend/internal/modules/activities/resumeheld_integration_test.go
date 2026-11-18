@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -21,11 +22,11 @@ type changingHeldMailAuthority struct {
 	change func(context.Context) error
 }
 
-func (a changingHeldMailAuthority) SendableMailProvider(ctx context.Context) (string, error) {
+func (a changingHeldMailAuthority) SendableMailbox(ctx context.Context, _ ids.UUID, _ ids.ActivityID) (string, ids.UUID, error) {
 	if err := a.change(ctx); err != nil {
-		return "", err
+		return "", ids.Nil, err
 	}
-	return DefaultSendProvider, nil
+	return DefaultSendProvider, ids.Nil, nil
 }
 
 func TestAResumeCannotSendWordingFromBeforeAConcurrentEdit(t *testing.T) {

@@ -105,7 +105,8 @@ func forwardEligibleTx(
 }
 
 // sentToConnectedMailboxTx reports mail whose every open recipient is the
-// address the acting seat's connected mailbox was granted for.
+// address of the mailbox that captured it (seatMailboxTx). Another of the
+// seat's mailboxes is not this one, and a run that names none answers no.
 func sentToConnectedMailboxTx(ctx context.Context, tx pgx.Tx, fields ActivityFields) (bool, error) {
 	if fields.Envelope == nil || len(fields.Envelope.OpenRecipients) == 0 {
 		return false, nil
@@ -115,15 +116,19 @@ func sentToConnectedMailboxTx(ctx context.Context, tx pgx.Tx, fields ActivityFie
 	if !ok || actor.UserID == ids.Nil || provider == actor.ID {
 		return false, nil
 	}
-	match := seatConnection(actor.UserID, provider)
+	connection, found, err := seatMailboxTx(ctx, tx, actor.UserID, provider)
+	if err != nil || !found {
+		return false, err
+	}
+	match := memberConnection(actor.UserID, connection)
 	var label string
-	err := tx.QueryRow(ctx, `SELECT coalesce(account_label, '') FROM capture_connection WHERE `+match.where+` AND archived_at IS NULL`,
+	err = tx.QueryRow(ctx, `SELECT coalesce(account_label, '') FROM capture_connection WHERE `+match.where+` AND archived_at IS NULL`,
 		match.args...).Scan(&label)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
 	}
 	if err != nil {
-		return false, fmt.Errorf("capture: reading the connected mailbox's address: %w", err)
+		return false, fmt.Errorf("capture: reading the capturing mailbox's address: %w", err)
 	}
 	mailbox := foldAddress(bareAddress(label))
 	return mailbox != "" && !slices.ContainsFunc(fields.Envelope.OpenRecipients, func(recipient string) bool {

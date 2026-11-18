@@ -7944,6 +7944,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.relatedToNone": "Nichts Bestimmtes",
   "compose.relatedDeal": "Deal: {name}",
   "compose.aboutDeal": "Deal, um den es geht",
+  "compose.from.label": "Von",
+  "compose.from.automatic":
+    "Postfach, in dem das Gespräch ankam, sonst dein Standard",
   "compose.aboutDealNone": "Kein Deal",
   "compose.aboutDealUnavailable":
     "Die Deals des Kontakts konnten nicht geladen werden. Schreib stattdessen von der Seite des Deals.",
@@ -12362,7 +12365,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "connectors.oauthNotConnected": "Nichts verbunden",
 
   // Der Button in der Kopfzeile der Karte, der den Verbindungsdialog öffnet.
-  "connectors.addOpen": "Konto hinzufügen",
+  "connectors.addOpen": "Weiteres Postfach hinzufügen",
+  "connectors.menu.useForNewMail": "Neue Mails von diesem Postfach senden",
+  "connectors.defaultSender": "Sendet neue Mails",
+  "connectors.oauthOtherAccount":
+    "Du hast dich mit einem anderen Konto als diesem Postfach angemeldet, daher wurde nichts geändert. Um dieses Konto auch zu verbinden, wähle Weiteres Postfach hinzufügen.",
   "connectors.providerNotConfigured":
     "{provider} ist in dieser Installation nicht konfiguriert.",
 
@@ -15269,6 +15276,18 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Admin-Rolle behält ihre Rechte, Nutzende, Rollen und Teams zu verwalten, damit das Unternehmen immer verwaltet werden kann.",
   "roles.refusal.nameTaken":
     "Eine andere Rolle hat bereits diesen Namen. Wähle einen anderen.",
+  "roles.refusal.writeNeedsRead":
+    "Erstellen, Ändern und Löschen brauchen Lesen. Schalte zuerst Lesen ein.",
+  "roles.refusal.customRole":
+    "Nur eingebaute Rollen haben mitgelieferte Rechte.",
+  "roles.restoreGrants": "Mitgelieferte Rechte wiederherstellen",
+  "roles.restoreGrantsTitle":
+    "Mitgelieferte Rechte für {name} wiederherstellen?",
+  "roles.restoreGrantsBody":
+    "Jeder Schalter geht auf den mitgelieferten Stand zurück. Deine Änderungen an den Rechten dieser Rolle gehen verloren.",
+  "roles.restoredGrantsToast":
+    "Mitgelieferte Rechte für {name} wiederhergestellt",
+  "cf.recordKindHint": "Die Arten stammen aus installierten Erweiterungen.",
   "extAccess.title": "Erweiterungen und Zugriff",
   "extAccess.adminOnly":
     "Diese Seite erfordert die Berechtigung, Erweiterungen und Rollen der Installation zu lesen. Deiner Rolle fehlt eine davon oder beide.",

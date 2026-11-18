@@ -217,7 +217,7 @@ var ErrProviderNotConfigured = errors.New("comms: no integration for this provid
 // database timeout here is a failure to get an answer, and parking on one would
 // permanently destroy a legitimate send that nothing is wrong with.
 type ConnectionResolver interface {
-	Resolve(ctx context.Context, userID ids.UserID, provider string) (connector.EmailSender, connector.Auth, []string, error)
+	Resolve(ctx context.Context, userID ids.UserID, provider string, connection *ids.UUID) (connector.EmailSender, connector.Auth, []string, error)
 
 	// ResolveChannel resolves the transmitting channel binding for provider, AS
 	// userID. A workspace-wide core connector ignores userID — the binding is the

@@ -390,3 +390,20 @@ func TestAFileOfMailNobodyHereWasAddressedOnSaysWhy(t *testing.T) {
 		t.Errorf("withheld %v for %v, want withheld because nobody here was addressed", file.BytesWithheld, file.WithheldReason)
 	}
 }
+
+// A seat with two mailboxes forwards from one to the other. Only the copy
+// the receiving mailbox captured was sent to the mailbox that captured it.
+func TestAForwardIsFiledOnlyByTheMailboxItWasSentTo(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	second := secondSentMailbox(t, e, e.Rep1)
+	forward := forwardTo(captureOwner, secondSeatAddress, "fwd-between@myco.example",
+		customerOriginal(forwardedCustomer, "original-m@prospect.example"))
+
+	env.syncSent(t, map[string]bool{"fwd-between@myco.example": true}, forward)
+	if n := adminCount(t, e, `SELECT count(*) FROM activity WHERE source_id = 'fwd-between@myco.example'`); n != 0 {
+		t.Fatalf("the sending mailbox filed the forward, want it skipped: it was sent to the other mailbox")
+	}
+	second(t, map[string]bool{"fwd-between@myco.example": true}, nil, forward)
+	forwardOf(t, e, "fwd-between@myco.example")
+}

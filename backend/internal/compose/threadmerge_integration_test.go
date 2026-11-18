@@ -86,7 +86,7 @@ func seatAddress(t *testing.T, e *integration.Env, seat ids.UUID) string {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO capture_connection (user_id, provider, status, credential_ref, account_label)
 			VALUES ($1, 'gmail', 'connected', 'vault:test', $2)
-			ON CONFLICT (user_id, provider) DO UPDATE SET account_label = $2, archived_at = NULL`, seat, addr)
+			ON CONFLICT (user_id, provider, lower(account_label)) WHERE user_id IS NOT NULL DO UPDATE SET account_label = $2, archived_at = NULL`, seat, addr)
 		return err
 	}); err != nil {
 		t.Fatalf("connecting the seat's mailbox: %v", err)

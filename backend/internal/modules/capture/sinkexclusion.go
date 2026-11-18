@@ -177,9 +177,10 @@ func excludedForTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecor
 	// A domain rule covers its subdomains: an exclusion of acme.com keeps out
 	// mail.acme.com, the way the own-domain matcher reads a domain.
 	//
-	// The container arm compares EXACTLY, where the two address arms fold: a
-	// container value is the provider's own token, and folding it would merge
-	// two Graph folders whose base64url ids differ only in case.
+	// The container arm compares the token as stored, where the address arms fold. A
+	// container value is the provider's own token; folding would merge two
+	// Graph folders whose ids differ only in case. A member's rule matches only
+	// in the mailbox it was picked from.
 	var kind string
 	err := tx.QueryRow(ctx, `
 		SELECT kind FROM capture_exclusion e
@@ -188,9 +189,10 @@ func excludedForTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecor
 		     OR (e.kind = 'domain' AND EXISTS (
 		           SELECT 1 FROM unnest($2::text[]) d
 		            WHERE d = e.value OR d LIKE '%.' || `+storekit.EscapeLikeSQL("e.value")+`))
-		     OR (e.kind = 'container' AND e.value = ANY($4::text[])))
+		     OR (e.kind = 'container' AND e.value = ANY($4::text[])
+		         AND (e.connection_id IS NULL OR e.connection_id = $5::uuid)))
 		 ORDER BY e.kind LIMIT 1`,
-		addresses, domains, nilToNull(owner), rec.Containers).Scan(&kind)
+		addresses, domains, nilToNull(owner), rec.Containers, runConnection(ctx)).Scan(&kind)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return "", nil

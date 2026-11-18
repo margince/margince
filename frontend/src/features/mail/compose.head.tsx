@@ -8,6 +8,7 @@ import { useLocale, usePlural, useT } from "../../i18n";
 import { useThreadProject } from "../../lib/activityfiling";
 import type { Transport } from "../../lib/contacttransports";
 import { useProjectRecord } from "../projects/projectrecord";
+import { FromMailboxRow } from "./compose.from";
 import { StaleThreadNotice } from "./compose.notices";
 import { colleagueMailboxesOf } from "./composeanchor";
 import { RelatedFiling } from "./composedraftcontext";
@@ -315,6 +316,12 @@ export function ComposeHead({
       {/* Mail chooses where it files in the head. A channel send carries no
           filing field, so it is told what the conversation inherits. */}
       {dial.isChannelReply && <ChannelReplyFiling activityId={activityId} />}
+      {!dial.isChannelReply && (
+        <FromMailboxRow
+          value={fields.from.connectionId}
+          onChange={fields.from.setConnectionId}
+        />
+      )}
       {!dial.isChannelReply && (
         <MailOnlyFields
           flagged={flagged}

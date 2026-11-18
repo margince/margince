@@ -82,6 +82,7 @@ func (s commsStager) StageTx(ctx context.Context, tx pgx.Tx, in activities.Deliv
 	id, err := s.store.StageTx(ctx, tx, comms.StageInput{
 		ActivityID:      in.ActivityID,
 		Provider:        in.Provider,
+		ConnectionID:    in.ConnectionID,
 		MessageID:       in.MessageID,
 		Recipients:      in.Recipients,
 		Cc:              in.Cc,

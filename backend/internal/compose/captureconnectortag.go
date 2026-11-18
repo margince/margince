@@ -11,9 +11,6 @@ package compose
 // under it. Capture's equivalent is the CONNECTOR's word — the operator chose
 // it once, on a thing that exists, rather than a machine minting one per sync
 // window into a shared human-curated vocabulary.
-//
-// The other half of the question the ticket asked — "in this period" — is the
-// record's own created_at and needs no word at all.
 
 import (
 	"context"
@@ -24,7 +21,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/collections"
-	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -78,9 +75,9 @@ func (f *connectorTagFiler) fileUnderConnectorTag(
 // activity files under, and the zero id for none.
 //
 // The connection is found from the activity's own provenance, not from a ledger
-// column. `captured_by` carries `connector:<name>:<seat>`, and a connection is
-// one seat's mailbox for one provider, so the pair names one row. A bare
-// `connector:<name>` names no mailbox and files nothing. Resolving it here, not
+// column (storekit.CapturingMailboxSQL). A seat may hold two mailboxes of one
+// provider that both delivered the mail; the first connected one with a word
+// decides. A bare `connector:<name>` names no mailbox and files nothing. Resolving it here, not
 // at capture time, lets an operator's choice reach the records a still-open
 // question is about to create.
 //
@@ -97,10 +94,8 @@ func connectorContextTag(ctx context.Context, tx pgx.Tx, activityID, ownerID ids
 		  FROM capture_connection c
 		  JOIN tag t ON t.id = c.context_tag_id AND t.archived_at IS NULL
 		  JOIN activity a ON a.id = $1
-		 WHERE c.user_id = $2
-		   AND c.archived_at IS NULL
-		   AND c.provider = split_part(a.captured_by, ':', 2)
-		   AND c.user_id::text = `+auth.ConnectorSeatSQL("a"),
+		 WHERE c.user_id = $2 AND `+storekit.CapturingMailboxSQL("c", "a")+`
+		 ORDER BY c.created_at, c.id LIMIT 1`,
 		activityID, ownerID).Scan(&tagID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// No connection, no word, or a word since archived — all three mean this

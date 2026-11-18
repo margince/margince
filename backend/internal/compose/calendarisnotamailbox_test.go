@@ -47,16 +47,16 @@ func TestEveryBackfillOpRefusesACalendarConnection(t *testing.T) {
 	} {
 		ops := map[string]func(http.ResponseWriter, *http.Request){
 			"preview": func(w http.ResponseWriter, r *http.Request) {
-				h.PreviewConnectorBackfill(w, r, calendar)
+				h.PreviewConnectorBackfill(w, r, calendar, crmcontracts.PreviewConnectorBackfillParams{})
 			},
 			"start": func(w http.ResponseWriter, r *http.Request) {
-				h.StartConnectorBackfill(w, r, calendar)
+				h.StartConnectorBackfill(w, r, calendar, crmcontracts.StartConnectorBackfillParams{})
 			},
 			"status": func(w http.ResponseWriter, r *http.Request) {
-				h.GetConnectorBackfillStatus(w, r, calendar)
+				h.GetConnectorBackfillStatus(w, r, calendar, crmcontracts.GetConnectorBackfillStatusParams{})
 			},
 			"cancel": func(w http.ResponseWriter, r *http.Request) {
-				h.CancelConnectorBackfill(w, r, calendar)
+				h.CancelConnectorBackfill(w, r, calendar, crmcontracts.CancelConnectorBackfillParams{})
 			},
 		}
 		for op, invoke := range ops {
@@ -93,7 +93,7 @@ func TestABackfillOpOnAMailboxPassesTheKindCheck(t *testing.T) {
 		strings.NewReader("not json")).WithContext(humanCtx())
 	req.Header.Set("Content-Type", "application/json")
 
-	h.PreviewConnectorBackfill(rec, req, crmcontracts.CaptureProviderImap)
+	h.PreviewConnectorBackfill(rec, req, crmcontracts.CaptureProviderImap, crmcontracts.PreviewConnectorBackfillParams{})
 
 	if got := refusalCode(t, rec); got != "window_required" {
 		t.Errorf("imap preview refused with %q, want window_required — imap is the self-hostable "+
@@ -108,7 +108,7 @@ func TestSettingAMailPostureRefusesACalendarConnection(t *testing.T) {
 		strings.NewReader(`{"posture":"classified"}`)).WithContext(humanCtx())
 	req.Header.Set("Content-Type", "application/json")
 
-	h.SetConnectorMailPosture(rec, req, crmcontracts.CaptureProviderGcal)
+	h.SetConnectorMailPosture(rec, req, crmcontracts.CaptureProviderGcal, crmcontracts.SetConnectorMailPostureParams{})
 
 	if rec.Code != http.StatusUnprocessableEntity {
 		t.Fatalf("status = %d, want 422 — a calendar brings in no mail to take a posture towards", rec.Code)

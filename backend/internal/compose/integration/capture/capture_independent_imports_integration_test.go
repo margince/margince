@@ -190,11 +190,11 @@ func independentImports(t *testing.T, scenario concurrentImportCase) {
 		t.Fatal(err)
 	}
 	user := ids.From[ids.UserKind](env.e.Rep1)
-	a, err := first.StartBackfill(actor, "gmail", user, 6, connector.BackfillEstimate{Messages: 1}, enqueueNothing)
+	a, err := first.StartBackfill(actor, capturemod.ProviderMailbox("gmail"), user, 6, connector.BackfillEstimate{Messages: 1}, enqueueNothing)
 	if err != nil {
 		t.Fatal(err)
 	}
-	b, err := second.StartBackfill(actor, "graph", user, 6, connector.BackfillEstimate{Messages: 1}, enqueueNothing)
+	b, err := second.StartBackfill(actor, capturemod.ProviderMailbox("graph"), user, 6, connector.BackfillEstimate{Messages: 1}, enqueueNothing)
 	if err != nil {
 		t.Fatal(err)
 	}

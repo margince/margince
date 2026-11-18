@@ -75,6 +75,7 @@ export function usePastEmail({
   // import must not spend a provider round trip on every page load.
   const importRun = useBackfillRun({
     provider: mail.provider,
+    connectionId: mail.id,
     initial: mail.backfill,
     previewHeld: heldWindow === null,
     initialWindow: heldWindow ?? undefined,
