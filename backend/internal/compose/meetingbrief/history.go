@@ -151,9 +151,9 @@ func (s *Service) readHistory(
 // the mailbox-copy grouping and the exchange predicate in one place.
 func (s *Service) readHistoryOf(
 	ctx context.Context, tx pgx.Tx, room meeting, project *ids.ProjectID, now time.Time,
-	people []ids.UUID, limit int,
+	contactIDs []ids.UUID, limit int,
 ) ([]HistoryIn, error) {
-	if len(people) == 0 {
+	if len(contactIDs) == 0 {
 		return nil, nil
 	}
 	var args []any
@@ -189,7 +189,7 @@ func (s *Service) readHistoryOf(
 		reach = room.Opens
 	}
 	floor := fmt.Sprintf("$%d", arg(reach.AddDate(0, -historyMonths, 0)))
-	attendeePos := arg(people)
+	attendeePos := arg(contactIDs)
 	within := projectWithinPredicate("a", "hw", project, arg)
 	otherDeal, err := scopeFor(ctx, "deal", "fd", arg)
 	if err != nil {

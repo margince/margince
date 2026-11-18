@@ -73,7 +73,7 @@ func (s *Store) SettleConversationClaim(ctx context.Context, claimID ids.UUID, o
 // status is a conflict rather than an overwrite.
 //
 // `evidence` is extra audit detail for the new state: who settled it and why,
-// when it was not a person's say-so.
+// when it was not a human's say-so.
 //
 //craft:ignore naked-any the audit evidence seam is jsonb; its members are each writer's own shape
 func moveClaimStatus(ctx context.Context, tx pgx.Tx, claimID ids.UUID, from, to string, evidence map[string]any) error {

@@ -100,7 +100,7 @@ func TestMeetingBriefTellsWhatTheCompanyAlreadyReceivedFromOtherContacts(t *test
 	}
 }
 
-// A quoted line is credited to the person who wrote it. A note the reader
+// A quoted line is credited to the writer who wrote it. A note the reader
 // logged names the reader as its author, whatever the contact it sits on.
 func TestVoicesByIDNameTheReaderAsTheAuthorOfTheirOwnNote(t *testing.T) {
 	e := Setup(t)

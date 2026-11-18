@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relationshipmark"
 )
 
@@ -59,6 +60,9 @@ type CompanyTopicIn struct {
 func (s *Service) readColleagues(ctx context.Context, tx pgx.Tx, room meeting) ([]colleague, error) {
 	if len(room.Room) == 0 {
 		return nil, nil
+	}
+	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
+		return nil, err
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
@@ -106,11 +110,11 @@ func (s *Service) readCompanyHistory(
 	if err != nil || len(colleagues) == 0 {
 		return nil, nil, err
 	}
-	people := make([]ids.UUID, 0, len(colleagues))
+	contactIDs := make([]ids.UUID, 0, len(colleagues))
 	for _, c := range colleagues {
-		people = append(people, c.ID)
+		contactIDs = append(contactIDs, c.ID)
 	}
-	rows, err := s.readHistoryOf(ctx, tx, room, project, now, people, companyHistoryReadCap)
+	rows, err := s.readHistoryOf(ctx, tx, room, project, now, contactIDs, companyHistoryReadCap)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -136,9 +140,9 @@ func (s *Service) companyHistory(
 	if err != nil || len(rows) == 0 {
 		return nil, 0, err
 	}
-	people := make([]ids.UUID, 0, len(colleagues))
+	contactIDs := make([]ids.UUID, 0, len(colleagues))
 	for _, c := range colleagues {
-		people = append(people, c.ID)
+		contactIDs = append(contactIDs, c.ID)
 	}
 	var readable []ids.UUID
 	for _, row := range rows {
@@ -151,7 +155,7 @@ func (s *Service) companyHistory(
 		}
 		readable = append(readable, id)
 	}
-	whose, err := contactOfActivity(ctx, tx, readable, people)
+	whose, err := contactOfActivity(ctx, tx, readable, contactIDs)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -162,7 +166,7 @@ func (s *Service) companyHistory(
 // participant or link that put it on their record. The first by name wins, so
 // the answer does not vary between reads.
 func contactOfActivity(
-	ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID, people []ids.UUID,
+	ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID, contactIDs []ids.UUID,
 ) (map[string]ids.UUID, error) {
 	out := map[string]ids.UUID{}
 	if len(activityIDs) == 0 {
@@ -175,7 +179,7 @@ func contactOfActivity(
 		        UNION ALL
 		        SELECT activity_id, contact_id FROM activity_link
 		         WHERE activity_id = ANY($1) AND contact_id = ANY($2)) reach
-		 ORDER BY reach.activity_id, array_position($2::uuid[], reach.contact_id)`, activityIDs, people)
+		 ORDER BY reach.activity_id, array_position($2::uuid[], reach.contact_id)`, activityIDs, contactIDs)
 	if err != nil {
 		return nil, fmt.Errorf("read who the company conversations were with: %w", err)
 	}

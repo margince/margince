@@ -17,6 +17,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/promisekept"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -69,18 +70,15 @@ func (t *CommitmentSettleTrigger) HandleEvent(ctx context.Context, env events.En
 	ctx = principal.WithCorrelationID(principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalSystem, ID: commitmentSettleActor,
 	}), env.Trace.CorrelationID)
-	switch env.Type {
-	case eventActivityCaptured:
-		return t.settleKeptByMeeting(ctx, env.Entity.ID)
-	case eventActivityUpdated:
-		var payload crmcontracts.PublicEventActivityUpdated
-		if !readSettlePayload(ctx, t.log, env, &payload) {
-			return nil
-		}
-		if err := t.settleKeptByMeeting(ctx, env.Entity.ID); err != nil {
+	if env.Type == eventActivityCaptured || env.Type == eventActivityUpdated {
+		if err := promisekept.Settle(ctx, t.claims, t.actingAs, t.log, env.Entity.ID); err != nil {
 			return err
 		}
-		if payload.ChangedFields.IsDone == nil || !*payload.ChangedFields.IsDone {
+	}
+	switch env.Type {
+	case eventActivityUpdated:
+		var payload crmcontracts.PublicEventActivityUpdated
+		if !readSettlePayload(ctx, t.log, env, &payload) || payload.ChangedFields.IsDone == nil || !*payload.ChangedFields.IsDone {
 			return nil
 		}
 		return t.settleClaimsOf(ctx, env.Actor, env.Entity.ID)
@@ -90,41 +88,6 @@ func (t *CommitmentSettleTrigger) HandleEvent(ctx context.Context, env events.En
 			return nil
 		}
 		return t.applyClaimSettlement(ctx, env.Actor, ids.UUID(payload.ClaimId), env.Trace.AuditLogID)
-	}
-	return nil
-}
-
-// settleKeptByMeeting closes the promises an accepted guest of this meeting
-// kept. It acts only for a meeting an internal seat made, and only on contacts
-// that seat may write. The system writes it, so the audit row says it was
-// automatic and names the meeting.
-func (t *CommitmentSettleTrigger) settleKeptByMeeting(ctx context.Context, activityID ids.UUID) error {
-	asSystem, ok, err := t.actingAs(ctx, events.Actor{Type: string(principal.PrincipalSystem)})
-	if err != nil || !ok {
-		return err
-	}
-	seat, internal, err := t.claims.MeetingSeat(asSystem, activityID)
-	if err != nil || !internal {
-		return err
-	}
-	asSeat, ok, err := t.actingAs(ctx, events.Actor{
-		Type: string(principal.PrincipalHuman), ID: principal.HumanIDPrefix + seat.String(),
-	})
-	if err != nil || !ok {
-		return err
-	}
-	kept, err := t.claims.KeptByAcceptedGuest(asSystem, activityID)
-	if err != nil {
-		return err
-	}
-	for _, claim := range kept {
-		if err := t.claims.SettleKeptByEvidence(asSystem, asSeat, claim, activityID); err != nil {
-			if refused(err) {
-				t.log.WarnContext(ctx, "kept promise settlement refused", "claim", claim, "err", err)
-				continue
-			}
-			return err
-		}
 	}
 	return nil
 }

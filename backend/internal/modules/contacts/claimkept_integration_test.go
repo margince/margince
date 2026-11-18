@@ -76,7 +76,7 @@ func (f keptFixture) kept(t *testing.T) []ids.UUID {
 	return found
 }
 
-func TestAnAcceptedInviteToTheNamedPersonClosesThePromiseAndItCanBeUndone(t *testing.T) {
+func TestAnAcceptedInviteToTheNamedContactClosesThePromiseAndItCanBeUndone(t *testing.T) {
 	f := keptPromise(t, "Riley Reed", "accepted")
 	found := f.kept(t)
 	if len(found) != 1 || found[0] != f.claim {
@@ -103,13 +103,13 @@ func TestAnAcceptedInviteToTheNamedPersonClosesThePromiseAndItCanBeUndone(t *tes
 		t.Errorf("status after undo = %q, want open", got)
 	}
 	if again := f.kept(t); len(again) != 0 {
-		t.Errorf("a promise a person reopened is found kept again: %v", again)
+		t.Errorf("a promise a human reopened is found kept again: %v", again)
 	}
 }
 
 func TestAnInviteToSomeoneElseOrNotAcceptedClosesNothing(t *testing.T) {
 	for name, tc := range map[string]struct{ guest, answer string }{
-		"another person":  {"Jordan Other", "accepted"},
+		"another contact": {"Jordan Other", "accepted"},
 		"first name only": {"Riley", "accepted"},
 		"declined":        {"Riley Reed", "declined"},
 		"no answer yet":   {"Riley Reed", "needs_action"},
@@ -129,10 +129,10 @@ func TestOnlyTheSystemSettlesOnEvidenceAndOnlyAutomaticSettlementsUndo(t *testin
 		t.Error("a human settled through the evidence path")
 	}
 	if err := f.e.store.SettleConversationClaim(f.human, f.claim, "done"); err != nil {
-		t.Fatalf("a person's settle: %v", err)
+		t.Fatalf("a human's settle: %v", err)
 	}
 	if err := f.e.store.ReopenAutoSettledClaim(f.human, f.claim); err == nil {
-		t.Error("the undo opened a promise a person settled")
+		t.Error("the undo opened a promise a human settled")
 	}
 }
 
