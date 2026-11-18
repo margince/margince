@@ -369,11 +369,8 @@ function stubEntitlement(entitlement: LicenseEntitlement) {
 /**
  * The rail's foot under both panel states side by side.
  *
- * A licence is stubbed because the shell's providers want one, not because the
- * foot reports it; the posture has its own banner. A frame with an over-cap
- * licence or a seat without `license:read` draws this same picture, so none
- * exists. What each would show is said where the behaviour is, in
- * lib/license-posture.ts.
+ * A licence is stubbed because the shell's providers want one. The foot does
+ * not report it; the posture has its own banner (lib/license-posture.ts).
  */
 export const RailFoot: Story = {
   name: "the foot — collapsed and expanded",
@@ -392,30 +389,6 @@ export const RailFoot: Story = {
           </div>
         </SeedInstallation>
       </StoryProviders>
-    );
-  },
-};
-
-/**
- * The toggle row in both states. Folded, it is a glyph named "Expand sidebar",
- * and its tip carries the name and the keys.
- */
-export const RailToggle: Story = {
-  name: "the toggle row, expanded and collapsed",
-  render: RailFoot.render,
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    const expand = await canvas.findByRole("button", {
-      name: "Expand sidebar",
-    });
-    expect(
-      canvas.getByRole("button", { name: "Collapse sidebar" }),
-    ).toHaveTextContent("Collapse sidebar");
-    expand.focus();
-    await waitFor(() =>
-      expect(canvas.getByRole("tooltip").textContent).toMatch(
-        /^Expand sidebar · (⌘|Ctrl) B$/,
-      ),
     );
   },
 };

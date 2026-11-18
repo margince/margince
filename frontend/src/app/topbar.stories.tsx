@@ -493,11 +493,9 @@ export const Narrow: Story = {
 /**
  * Phone width, where the sidebar is the bottom bar.
  *
- * The strip gives up CONTROLS here and no geometry: `--topbarH` and
- * `--pageGutter` are one number at every width, so the bar is the same height on
- * a phone as on a desktop and stands on the same gutter as the content column
- * under it. The bell goes, because the bottom bar carries Decisions at this
- * width. What stays is where they are, how to search, and who they are.
+ * The strip gives up controls here, not geometry: its height and gutter are
+ * the desktop's. The bell goes, because the bottom bar carries Decisions at
+ * this width. What stays is where they are, how to search, and who they are.
  *
  * The panel is the other half of the frame. It is five glyphs — four
  * destinations and More — with NO captions under them: five words at 9.5px are
