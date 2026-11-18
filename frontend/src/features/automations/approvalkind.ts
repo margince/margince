@@ -114,6 +114,8 @@ export const EDITABLE_FIELDS: Readonly<
   // rest names who gives and who receives, which the server will not let an
   // edit change.
   ownership_transfer: [],
+  // A share request is answered yes or no; its fields name the records.
+  contact_share: [],
   held_draft: [
     { field: "subject", as: "text", label: "decision.draftSubject" },
     { field: "body", as: "textarea", label: "decision.draftBody" },

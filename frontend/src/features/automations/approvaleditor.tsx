@@ -28,6 +28,7 @@ import {
   type EditableField,
   humanizeKind,
 } from "./approvalkind";
+import { isUuid } from "../../lib/uuid";
 import "./approvalrow.css";
 import "../../design-system/querystates.css";
 
@@ -66,8 +67,12 @@ export function editableStrings(
     // retargeted edit.
     return declared.filter((entry) => typeof change[entry.field] === "string");
   }
+  // A record id is never prose, and the server refuses an edit that moves one.
   return Object.entries(change)
-    .filter((entry): entry is [string, string] => typeof entry[1] === "string")
+    .filter(
+      (entry): entry is [string, string] =>
+        typeof entry[1] === "string" && !isUuid(entry[1]),
+    )
     .map(([field]) => ({ field, as: "text" }) as const);
 }
 
