@@ -308,9 +308,12 @@ func (s *Store) RescheduleInTx(ctx context.Context, tx pgx.Tx, id ids.UUID, sche
 		if err := s.resolveHeld(ctx, tx, id, HeldResolvedByRep); err != nil {
 			return err
 		}
-		// The review stays live, because the decision is still outstanding.
-		// At the new moment the fire spends a decision recorded on it, or closes
-		// it when the engine allows, or refreshes it when refused again.
+		// A review whose decision is already recorded stays, and the fire at
+		// the new moment spends it. One nobody decided closes with the card;
+		// a refusal at the new moment opens a fresh one.
+		if err := s.closeReview(ctx, tx, id, ReviewOutcomeMoved); err != nil {
+			return err
+		}
 		return timer.ScheduleTx(ctx, tx, id, keptAt)
 	}
 }

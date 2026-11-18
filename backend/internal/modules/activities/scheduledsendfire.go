@@ -255,6 +255,8 @@ type claimedSend struct {
 	// the claim saw it. A caller that acts on this row LATER, outside the claim's
 	// transaction, binds to this so it cannot act on a newer intention.
 	RowVersion int64
+	// HeldReason is set only by the held-row read a resume makes.
+	HeldReason string
 }
 
 // replay rebuilds the origin and the message this row froze.

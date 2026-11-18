@@ -216,6 +216,7 @@ internal/compose/integration/reviewcontext_integration_test.go 7
 internal/compose/integration/scheduledreviewlink_integration_test.go 2
 internal/compose/integration/scheduledsend_integration_test.go 19
 internal/compose/integration/scheduledsendagent_integration_test.go 3
+internal/compose/integration/scheduledsendfire_refusal_integration_test.go 9
 internal/compose/integration/scheduledsendorigin_integration_test.go 1
 internal/compose/integration/scheduledsendpreview_integration_test.go 2
 internal/compose/integration/scheduledsendprivacy_integration_test.go 3

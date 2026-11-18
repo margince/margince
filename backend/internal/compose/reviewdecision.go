@@ -53,6 +53,8 @@ func reviewClosureFor(outcome activities.ReviewOutcome) (consent.ReviewClosure, 
 		return consent.ClosedByCancellation(), true
 	case activities.ReviewOutcomeSent:
 		return consent.ClosedBySending(), true
+	case activities.ReviewOutcomeMoved:
+		return consent.ClosedByMoving(), true
 	}
 	return consent.ReviewClosure{}, false
 }

@@ -189,23 +189,10 @@ func (e *pendingReviewError) Error() string { return e.cause.Error() }
 // same 409 it always did rather than an unrecognised error.
 func (e *pendingReviewError) Unwrap() error { return e.cause }
 
-// RecordPendingReview turns a carried refusal into a durable review, AFTER the
-// transaction that refused has finished unwinding.
-//
-// Called on the way out rather than at the point of refusal, because the
-// staging call runs inside the caller's transaction and writing there would
-// either be rolled back with it or hold a second pool connection while the
-// first is still checked out.
-//
-// A FAILURE TO RECORD DOES NOT REPLACE THE REFUSAL. The send is refused either
-// way, and answering a storage fault instead would tell the rep their message
-// was fine and the database was not. The original refusal is what they need to
-// see; the missing review is an operator's problem, not theirs.
-// intentID names the held scheduled_send the sender froze this message into, so
-// the review binds to something a human can resume. It is zero when nothing was
-// held — a channel reply, or a hold that failed — and the review is then opened
-// without an intent, which is every review this module wrote before the holder
-// existed.
+// RecordPendingReview turns a carried refusal into a durable review after the
+// refusing transaction unwound (see activities.RefusalRecorder for why then).
+// A failure to record answers the refusal, never a storage fault. intentID is
+// the held message the review binds to, or zero when nothing was held.
 func (s commsStager) RecordPendingReview(ctx context.Context, err error, intentID ids.UUID) error {
 	var pending *pendingReviewError
 	if !errors.As(err, &pending) {
@@ -277,27 +264,10 @@ func (s commsStager) StageChannelTx(ctx context.Context, tx pgx.Tx, in activitie
 	}, sendInsertOpts())
 }
 
-// refuseAtStaging stops a send while the rep is still at the keyboard, for the
-// two refusals that will not change between now and dispatch.
-//
-// The FIRST is an absolute denial — an Art. 21 objection, a processing
-// restriction, a hard bounce, marketing whose round trip never completed — which
-// no rollout mode may soften.
-//
-// The SECOND is a refusal under a category this installation ENFORCES. That arm
-// exists because the engine now decides those: the transmit phase would refuse
-// the same send anyway, so letting it stage buys nothing and costs two things.
-// The rep learns minutes or days later, from a parked row in an operator lane
-// rather than at the moment they pressed send. And the activity commits first,
-// carrying the outbound attestation that makes an address
-// correspondence-positive — so a message to somebody who may not receive it
-// would mint evidence of correspondence that never happened.
-//
-// A category still OBSERVING is let through, and that is not an oversight: the
-// engine's answer carries no authority there, the old gate decides, and blocking
-// on a difference nobody has reviewed would refuse legitimate mail. The mode
-// travels on each decision, so this asks the row rather than re-reading the
-// setting the engine has already applied.
+// refuseAtStaging stops a send at the keyboard for an absolute denial, which no
+// rollout mode softens, or a refusal under an enforced category. Transmit would
+// refuse that one anyway; staging it would commit an attestation for unsent mail.
+// A category still observing passes.
 func refuseAtStaging(set commsauthz.DecisionSet) error {
 	denied := set.Denied()
 	if len(denied) == 0 {

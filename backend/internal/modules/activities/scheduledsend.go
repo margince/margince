@@ -99,11 +99,11 @@ const (
 	// ReviewOutcomeCancelled is a message nobody will send.
 	ReviewOutcomeCancelled ReviewOutcome = "cancelled"
 	// ReviewOutcomeSent is a held message resumed and allowed by the engine.
-	//
-	// It consumes no instruction, so it never reached the directed path's own
-	// closer — the message went and the review stayed live. This is the one
-	// outcome of the four that records a delivery.
+	// It consumes no instruction, so the directed path's closer never ran.
 	ReviewOutcomeSent ReviewOutcome = "sent"
+	// ReviewOutcomeMoved is a message moved to a new moment. It closes only a
+	// review nobody has decided yet.
+	ReviewOutcomeMoved ReviewOutcome = "moved"
 )
 
 // HeldNotifier puts a stopped message in front of the human who scheduled it.

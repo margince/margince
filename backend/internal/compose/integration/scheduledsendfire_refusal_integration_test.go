@@ -64,14 +64,20 @@ func heldByAnObjectionAtFire(t *testing.T) (*preflightEnv, ids.UUID) {
 // reads the review first and sends back the revision and reasons it showed.
 func (p *preflightEnv) confirmReview(t *testing.T, review string) int {
 	t.Helper()
+	return confirmReviewAs(t, p.AppEnv, review)
+}
+
+// confirmReviewAs is confirmReview from a given seat.
+func confirmReviewAs(t *testing.T, seat *apptest.AppEnv, review string) int {
+	t.Helper()
 	var served struct {
 		AssessmentRevision string `json:"assessment_revision"`
 		ReasonCode         string `json:"reason_code"`
 	}
-	if status := p.Call(t, "GET", "/v1/communication-reviews/"+review, nil, nil, &served); status != http.StatusOK {
+	if status := seat.Call(t, "GET", "/v1/communication-reviews/"+review, nil, nil, &served); status != http.StatusOK {
 		t.Fatalf("opening the review → %d", status)
 	}
-	return p.Call(t, "POST", "/v1/communication-reviews/"+review+"/direct-send", AnyMap{
+	return seat.Call(t, "POST", "/v1/communication-reviews/"+review+"/direct-send", AnyMap{
 		"reason_code":         "other",
 		"explanation":         "The buyer asked for this confirmation on the phone this morning.",
 		"warning_version":     consent.OverrideWarningVersion,
@@ -114,6 +120,18 @@ func TestARefusalAtFireOpensAReviewTheRepCanConfirm(t *testing.T) {
 	if len(row.ReviewActions) != 1 || row.ReviewActions[0] != "direct_send" {
 		t.Fatalf("the held row offers %v, want [direct_send] for a rep who may direct it", row.ReviewActions)
 	}
+	var listed []struct {
+		ID            string   `json:"id"`
+		ReviewID      *string  `json:"review_id"`
+		ReviewActions []string `json:"review_actions"`
+	}
+	if code := p.Call(t, "GET", "/v1/scheduled-sends", nil, nil, &listed); code != http.StatusOK {
+		t.Fatalf("listing scheduled messages → %d", code)
+	}
+	if len(listed) != 1 || listed[0].ID != id.String() || listed[0].ReviewID == nil || *listed[0].ReviewID != review ||
+		len(listed[0].ReviewActions) != 1 || listed[0].ReviewActions[0] != "direct_send" {
+		t.Fatalf("the list shows %+v, want the held row naming review %s and [direct_send]", listed, review)
+	}
 
 	card, found := p.heldCardFor(t, id)
 	if !found {
@@ -153,22 +171,86 @@ func TestARefusalAtFireOpensAReviewTheRepCanConfirm(t *testing.T) {
 	}
 }
 
-// A retried alarm, and a message re-armed and refused again, keep one review.
+// A retried alarm keeps one review: the row is already held, so nothing fires.
 func TestARefusalFiredAgainKeepsOneReview(t *testing.T) {
 	p, id := heldByAnObjectionAtFire(t)
-	p.fire(t, id)
-
-	// The rep re-arms it without fixing anything; the next fire refuses again.
-	p.rescheduleTo(t, id, time.Now().Add(time.Hour))
-	p.makeDue(t, id)
 	p.fire(t, id)
 	p.fire(t, id)
 
 	if status, _ := p.scheduledStatus(t, id); status != activities.ScheduledStatusHeld {
-		t.Fatalf("the re-refused message reads %q, want held", status)
+		t.Fatalf("the refused message reads %q, want held", status)
 	}
 	if all, live := p.reviewsFor(t, id); all != 1 || live != 1 {
 		t.Fatalf("%d review(s), %d live, after three fires; want one review throughout", all, live)
+	}
+}
+
+// Moving a message nobody decided closes its review with its card, so no
+// surface offers work it cannot reach. Refused again at the new moment, it
+// opens one fresh review.
+func TestAMovedUndecidedMessageOpensAFreshReviewWhenRefusedAgain(t *testing.T) {
+	p, id := heldByAnObjectionAtFire(t)
+	p.rescheduleTo(t, id, time.Now().Add(time.Hour))
+	if all, live := p.reviewsFor(t, id); all != 1 || live != 0 {
+		t.Fatalf("%d review(s), %d live, after the undecided message moved; want the one closed", all, live)
+	}
+	p.makeDue(t, id)
+	p.fire(t, id)
+	if status, _ := p.scheduledStatus(t, id); status != activities.ScheduledStatusHeld {
+		t.Fatalf("the re-refused message reads %q, want held", status)
+	}
+	if all, live := p.reviewsFor(t, id); all != 2 || live != 1 {
+		t.Fatalf("%d review(s), %d live, after the new refusal; want one closed and one fresh", all, live)
+	}
+}
+
+// interruptConfirmation records a director's decision whose send fails at
+// staging, so the decision stays recorded and unspent on a held row.
+func (p *preflightEnv) interruptConfirmation(t *testing.T, review string) {
+	t.Helper()
+	if _, err := p.Owner.Exec(t.Context(), `CREATE FUNCTION reject_fire_wording_staging() RETURNS trigger LANGUAGE plpgsql
+		AS $$ BEGIN RAISE EXCEPTION 'delivery staging interrupted by the test'; END $$`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := p.Owner.Exec(t.Context(), `CREATE TRIGGER reject_fire_wording_staging BEFORE UPDATE ON communication_instruction
+		FOR EACH ROW WHEN (NEW.status='consumed') EXECUTE FUNCTION reject_fire_wording_staging()`); err != nil {
+		t.Fatal(err)
+	}
+	if code := p.confirmReview(t, review); code != http.StatusInternalServerError {
+		t.Fatalf("the interrupted confirmation → %d, want 500", code)
+	}
+	if _, err := p.Owner.Exec(t.Context(), `DROP FUNCTION reject_fire_wording_staging() CASCADE`); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// A decision recorded before a move is kept, and the fire at the new moment
+// spends it: the message goes once, under that decision.
+func TestAMovedMessageSpendsTheDecisionAlreadyRecorded(t *testing.T) {
+	p, id := heldByAnObjectionAtFire(t)
+	review := p.liveReviewFor(t, id)
+	p.interruptConfirmation(t, review)
+	p.rescheduleTo(t, id, time.Now().Add(time.Hour))
+	if _, live := p.reviewsFor(t, id); live != 1 {
+		t.Fatalf("%d live review(s) after moving a decided message; want its review kept", live)
+	}
+	p.makeDue(t, id)
+	p.fire(t, id)
+	if !p.sent(t, id) {
+		status, reason := p.scheduledStatus(t, id)
+		t.Fatalf("the decided message reads %q/%q at its new moment, want released", status, reason)
+	}
+	var deliveries int
+	var authority string
+	if err := p.Owner.QueryRow(context.Background(),
+		`SELECT count(*), coalesce(min(execution_authority), '') FROM comms_outbound`).Scan(&deliveries, &authority); err != nil {
+		t.Fatal(err)
+	}
+	if deliveries != 1 || authority != "instruction" {
+		t.Fatalf("%d deliveries under %q, want 1 under instruction", deliveries, authority)
+	}
+	if _, live := p.reviewsFor(t, id); live != 0 {
+		t.Errorf("%d live review(s) after the decided message went", live)
 	}
 }
 
@@ -282,20 +364,7 @@ func TestHoldsThatAreNotRefusalsOpenNoReview(t *testing.T) {
 func TestARowHeldAtFireTakesAWordingCorrection(t *testing.T) {
 	p, id := heldByAnObjectionAtFire(t)
 	review := p.liveReviewFor(t, id)
-	if _, err := p.Owner.Exec(t.Context(), `CREATE FUNCTION reject_fire_wording_staging() RETURNS trigger LANGUAGE plpgsql
-		AS $$ BEGIN RAISE EXCEPTION 'delivery staging interrupted by the test'; END $$`); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := p.Owner.Exec(t.Context(), `CREATE TRIGGER reject_fire_wording_staging BEFORE UPDATE ON communication_instruction
-		FOR EACH ROW WHEN (NEW.status='consumed') EXECUTE FUNCTION reject_fire_wording_staging()`); err != nil {
-		t.Fatal(err)
-	}
-	if code := p.confirmReview(t, review); code != http.StatusInternalServerError {
-		t.Fatalf("the interrupted confirmation → %d, want 500", code)
-	}
-	if _, err := p.Owner.Exec(t.Context(), `DROP FUNCTION reject_fire_wording_staging() CASCADE`); err != nil {
-		t.Fatal(err)
-	}
+	p.interruptConfirmation(t, review)
 	var current crmcontracts.CommunicationReview
 	if code := p.Call(t, "GET", "/v1/communication-reviews/"+review, nil, nil, &current); code != http.StatusOK {
 		t.Fatalf("reading the review → %d", code)
@@ -313,5 +382,44 @@ func TestARowHeldAtFireTakesAWordingCorrection(t *testing.T) {
 	}
 	if result.Version != current.WordingCorrection.Version+1 {
 		t.Errorf("the correction answered version %d, want %d", result.Version, current.WordingCorrection.Version+1)
+	}
+}
+
+// Only the sender confirms a message held at its scheduled time, because a
+// resume sends as the caller. A second seat holding the exception grant is
+// refused and sends nothing; the sender's own confirmation still sends once.
+//
+// Mutation: drop refuseAnotherSeatsFireHold from ResumeHeldSend and the second
+// seat sends the message.
+func TestOnlyTheSenderConfirmsAMessageHeldAtItsScheduledTime(t *testing.T) {
+	p, id := heldByAnObjectionAtFire(t)
+	review := p.liveReviewFor(t, id)
+	p.DescribeCompany(t)
+	var invited struct {
+		ID string `json:"id"`
+	}
+	if code := p.Call(t, "POST", "/v1/users", AnyMap{
+		"email": "colleague-director@preflight.test", "display_name": "Colleague director", "role": "admin",
+	}, nil, &invited); code != http.StatusCreated {
+		t.Fatalf("creating the colleague → %d", code)
+	}
+	const password = "Test-colleague-director-password-23!"
+	apptest.SetPasswordByLink(t, p.AppEnv, invited.ID, password)
+	colleague := p.AsSecondSeat(t, "colleague-director@preflight.test", password)
+
+	if code := confirmReviewAs(t, colleague, review); code != http.StatusForbidden {
+		t.Fatalf("a colleague confirming the sender's held message → %d, want 403", code)
+	}
+	if got := p.countDeliveries(t); got != 0 {
+		t.Fatalf("%d deliveries after a refused colleague confirmation, want 0", got)
+	}
+	if status, _ := p.scheduledStatus(t, id); status != activities.ScheduledStatusHeld {
+		t.Fatalf("the message reads %q after the refused confirmation, want still held", status)
+	}
+	if code := p.confirmReview(t, review); code != http.StatusCreated {
+		t.Fatalf("the sender confirming → %d, want 201", code)
+	}
+	if got := p.countDeliveries(t); got != 1 {
+		t.Fatalf("%d deliveries after the sender confirmed, want 1", got)
 	}
 }

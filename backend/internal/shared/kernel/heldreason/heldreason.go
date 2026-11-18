@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // Package heldreason names the hold reasons a communication review can stand
-// over. activities holds the message and consent decides about it. Both read
-// this one list, so they cannot disagree about which held rows a review covers.
+// over. activities holds the message and consent decides about it, and both
+// read this list.
 package heldreason
 
 const (
