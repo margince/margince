@@ -1,5 +1,5 @@
 /** @vitest-environment happy-dom */
-import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
@@ -15,10 +15,8 @@ import {
   jsonResponse,
   type MailDraft,
   problem,
-  type Route,
   render,
   SAVED,
-  type Sent,
   stubRoutes,
 } from "./compose-saveddraft.testkit";
 import { ComposeWindow } from "./composewindow";
