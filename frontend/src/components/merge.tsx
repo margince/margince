@@ -12,7 +12,8 @@ import {
 } from "../design-system/recordpicker";
 import { useT } from "../i18n";
 import { type RequiredGrant, useGrantRefused } from "../lib/capability";
-import { navigate, type Route } from "../lib/router";
+import { fromHere } from "../lib/navigatefrom";
+import type { Route } from "../lib/router";
 import "../design-system/querystates.css";
 
 // The shared "Merge into…" affordance (P-2): a human direct call that folds
@@ -72,12 +73,14 @@ export function MergeAction<Survivor extends { id: string }>({
 
   const mutation = useMutation({
     mutationFn: (targetId: string) => merge(targetId),
-    onSuccess: (survivor) => {
+    onMutate: fromHere,
+    // Closed onto the survivor: Back must not open the record merged away.
+    onSuccess: (survivor, _targetId, from) => {
       queryClient.invalidateQueries({ queryKey: [invalidate] });
       queryClient.invalidateQueries({ queryKey: [recordKey, sourceId] });
       queryClient.invalidateQueries({ queryKey: [recordKey, survivor.id] });
       setOpen(false);
-      navigate(survivorRoute(survivor.id));
+      from.closeOnto(survivorRoute(survivor.id));
     },
   });
 

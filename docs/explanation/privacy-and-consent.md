@@ -191,30 +191,30 @@ consent's settings. The two are different authorities. Consent's settings decide
 rules. This decides who may act against the answer those rules gave about one contact. An
 installation that handed over the first has not handed over the second with it.
 
-The check is `requireAUserOrTheirAgent` plus the grant, so a connector cannot make one. A user's agent
-carries out the user's own decision on `send_outbound`, with the `send` scope, and asks first.
-`directed_by` names the user who took it on and `directed_by_agent` names the agent.
+The check is `requireAHumanAtTheKeyboard` plus the grant, so only the user takes the decision, in a
+session. The route is human-only, and no agent or connector records one. `directed_by` names the user.
+`directed_by_agent` is never written; older rows may carry it.
 
 Every role that sends mail holds the grant: `rep`, `manager`, `management` and `admin`. The grant
 alone does not say which refusals a seat may send past. Each refusal reason declares what can
 resolve it in `commsauthz.RemediesFor`.
 
-- A reason that lists the plain exception can be sent past by any holder of the grant. Missing
-  evidence is one such reason. It does not replace a required marketing basis.
-- A hard bounce, an opt-in not yet confirmed or an unknown recipient needs a fix. A rep exception cannot answer them.
-- An unknown purpose or a claim that conflicts with the record needs a corrected request.
 - A contact's own stop lists nothing, so nobody sends past it, an admin included. That covers an
   objection, a withdrawal, a limit on processing and a request to stop. It also covers a quote that
   rests on a request alone when the contact opted out of marketing after that request
   (`opted_out_after_request`). A request recorded after the opt-out carries the quote again.
-- Some packs list nothing either. A pack that sets `ConsentOnly` (Vietnam does)
-  turns marketing without consent into `marketing_consent_required`. No exception and no standing
-  override answers it. Nobody sends past a pack's limit on advertising mail
-  (`frequency_cap_reached`); it clears with time.
+- Every other policy refusal lists the plain exception, so any holder of the grant can send one
+  message past it with a recorded reason. That includes a missing marketing basis,
+  `marketing_consent_required`, `frequency_cap_reached` and an opt-in not yet confirmed. The consent
+  rows and the engine's verdict stay as they were.
+- A hard bounce and a recipient that resolves to no single contact list nothing. No decision makes
+  a dead address accept mail, and an unresolved recipient was never checked for its stops.
+- A decision sends the reasons its user was shown (`shown_reasons`); a changed review is stale.
 
 `Review.DirectableBy` is the check both `DirectSend` and a refusal's actions ask.
-Staging and the transmit check ask `DecisionSet.ExceptionMayAnswer` again.
-A new stop leaves the direction not used. A new grant lets the held message go
+Staging and the transmit check ask `DecisionSet.ExceptionMayAnswer` and
+`instructionStillAnswers` again. A refusal the review did not show, or a stop or withdrawal
+recorded after the decision, leaves the direction not used. A new grant lets the held message go
 on that basis and records no exception instruction.
 
 A contact can be written to about a thread when three things hold:

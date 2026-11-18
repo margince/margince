@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/langcopy/langcopytest"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
+	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
 var (
@@ -126,6 +127,23 @@ func TestTheModelReplyKeepsOnlyGroundedSentences(t *testing.T) {
 	want := []string{"Tomas is blocked on the liability cap.", "Answer the cap first."}
 	if !reflect.DeepEqual(texts, want) {
 		t.Errorf("kept %q, want %q (an unknown record, a wrong kind, an unsupplied date, a move to an address and a second recommendation are dropped)", texts, want)
+	}
+}
+
+func TestTheBriefRequestHoldsTheModelToTheShapeParseBriefReads(t *testing.T) {
+	req := BriefRequest(room(), "en")
+	if len(req.ResponseSchema) == 0 {
+		t.Fatal("the room brief request sends no response schema")
+	}
+	reply := cited(room(), `{"sentences":[{"text":"Tomas is blocked on the liability cap.","nature":"fact","evidence":[{"entity_type":"thread","entity_id":"`+capID+`"}]}]}`)
+	if got, err := ParseBrief(reply, room()); err != nil || len(got) != 1 {
+		t.Fatalf("ParseBrief kept %d sentences (%v), want the one grounded sentence", len(got), err)
+	}
+	if err := schema.ValidateJSON(req.ResponseSchema, reply); err != nil {
+		t.Errorf("the schema refuses a reply ParseBrief keeps: %v", err)
+	}
+	if err := schema.ValidateJSON(req.ResponseSchema, strings.Replace(reply, `"fact"`, `"rumour"`, 1)); err == nil {
+		t.Error("the schema accepts a nature the brief does not know")
 	}
 }
 

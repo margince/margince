@@ -130,7 +130,7 @@ func TestACreateOffersAWordOnlyAsItExistsAndNeverAppliesIt(t *testing.T) {
 	}](t, mustInvoke(t, invoke, "create_tag", `{"name":"K5 Conference 2026"}`))
 
 	created := answered[createdWithFollowups](t, mustInvoke(t, invoke, "create_record",
-		`{"record_type":"contact","offer_tag":"k5 conference 2026","fields":{"full_name":"Ines Falk"}}`))
+		`{"record_type":"contact","offer_tag":"k5 conference 2026","fields":{"linkedin_url":"https://www.linkedin.com/in/fixture-783a668995761b8a","full_name":"Ines Falk"}}`))
 	if created.TagOffer == nil || !created.TagOffer.Exists || created.TagOffer.TagID == nil || *created.TagOffer.TagID != word.TagID {
 		t.Fatalf("offer = %+v, want the existing tag %s, matched case-insensitively", created.TagOffer, word.TagID)
 	}
@@ -146,13 +146,13 @@ func TestACreateOffersAWordOnlyAsItExistsAndNeverAppliesIt(t *testing.T) {
 	}
 
 	unknown := answered[createdWithFollowups](t, mustInvoke(t, invoke, "create_record",
-		`{"record_type":"contact","offer_tag":"A Word Nobody Coined","fields":{"full_name":"Jonas Wirth"}}`))
+		`{"record_type":"contact","offer_tag":"A Word Nobody Coined","fields":{"linkedin_url":"https://www.linkedin.com/in/fixture-ff3592bec3a7688c","full_name":"Jonas Wirth"}}`))
 	if unknown.TagOffer == nil || unknown.TagOffer.Exists || unknown.TagOffer.TagID != nil {
 		t.Fatalf("offer = %+v, want a word the workspace does not have", unknown.TagOffer)
 	}
 
 	none := answered[createdWithFollowups](t, mustInvoke(t, invoke, "create_record",
-		`{"record_type":"contact","fields":{"full_name":"Karla Roth"}}`))
+		`{"record_type":"contact","fields":{"linkedin_url":"https://www.linkedin.com/in/fixture-dff33b3d1d1f9354","full_name":"Karla Roth"}}`))
 	if none.TagOffer != nil {
 		t.Fatalf("a create with no offer_tag answered an offer: %+v", none.TagOffer)
 	}

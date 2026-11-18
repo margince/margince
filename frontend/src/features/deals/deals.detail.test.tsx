@@ -705,46 +705,66 @@ describe("DealScreen — an archived deal keeps its verbs, refused", () => {
 });
 
 // `writable` is what the server's write gate would answer on a mutation. A
-// rep holding deal.update on the object is not offered Edit on a colleague's
-// deal. Otherwise the 403 arrives only after the form is filled in.
-// The upload, the offer and the stage move are refused the same way.
+// reader it refuses is offered none of the deal's changes: each would only
+// fail. What every seat may do on any deal it reads, logging and tasks, stays.
 describe("DealScreen — a live deal that is not the viewer's to change", () => {
   beforeEach(() => localStorage.setItem("margince.workspaceSlug", "acme"));
 
-  it("refuses Edit, Archive, Share and New offer from the one sentence the page prints", async () => {
+  const sentence =
+    "You can log activity and add tasks. Changing this deal needs its owner to share it.";
+
+  it("says what the reader may do, and draws no control the server would refuse", async () => {
     const notMine = deal({
       id: "x",
       owner_id: "u-someone-else",
       writable: false,
     });
-    vi.stubGlobal("fetch", stubDealBackend(notMine, []));
+    vi.stubGlobal("fetch", stubBackend([notMine], { single: notMine }));
+    const user = userEvent.setup();
     render(<DealScreen id="x" />);
 
-    const sentence =
-      "You cannot change this deal. Ask its owner to share it, or an administrator for edit rights.";
     expect(await screen.findByText(sentence)).toBeTruthy();
+    // The ladder still reads where the deal stands, as names only.
+    expect(await screen.findByText("Proposal")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Proposal" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Won" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Move to/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: "New offer" })).toBeNull();
 
-    // The offer is hung off the deal through the deal's own write gate. So it
-    // is refused by the same fact and points at the same sentence.
-    const newOffer = await screen.findByRole("button", { name: "New offer" });
-    expect(newOffer.hasAttribute("disabled")).toBe(true);
+    expect(screen.getByRole("button", { name: "Log activity" })).toBeTruthy();
+    await openHeaderMenu(user);
     expect(
-      document.getElementById(newOffer.getAttribute("aria-describedby") ?? "")
-        ?.textContent,
-    ).toBe(sentence);
-
-    // Every verb in the menu describes itself by an id minted in the page's
-    // band on the first render. One minted inside the menu would name no
-    // element until the menu had been opened.
-    await openHeaderMenu();
+      await screen.findByRole("button", { name: "Add task" }),
+    ).toBeTruthy();
     for (const testId of ["archive-record", "share-record"]) {
-      const control = await screen.findByTestId(testId);
-      expect(control.hasAttribute("disabled")).toBe(true);
-      expect(
-        document.getElementById(control.getAttribute("aria-describedby") ?? "")
-          ?.textContent,
-      ).toBe(sentence);
+      expect(screen.queryByTestId(testId)).toBeNull();
     }
+    expect(
+      screen.queryByRole("button", {
+        name: translate("en", "deal.editDetails"),
+      }),
+    ).toBeNull();
+  });
+
+  it("draws every one of those controls on a deal the reader may change", async () => {
+    const mine = deal({ id: "x", writable: true });
+    vi.stubGlobal("fetch", stubBackend([mine], { single: mine }));
+    const user = userEvent.setup();
+    render(<DealScreen id="x" />);
+
+    expect(
+      await screen.findByRole("button", { name: "Proposal" }),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Won" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "New offer" })).toBeTruthy();
+    expect(screen.queryByText(sentence)).toBeNull();
+    await openHeaderMenu(user);
+    for (const testId of ["archive-record", "share-record"]) {
+      expect(await screen.findByTestId(testId)).toBeTruthy();
+    }
+    expect(
+      screen.getByRole("button", { name: translate("en", "deal.editDetails") }),
+    ).toBeTruthy();
   });
 
   // Absent is not "unknown", it is "no". A server too old to send the field
@@ -755,7 +775,7 @@ describe("DealScreen — a live deal that is not the viewer's to change", () => 
     vi.stubGlobal("fetch", stubDealBackend(withoutWritable, []));
     render(<DealScreen id="x" />);
 
-    expect(await screen.findByText(/You cannot change this deal/)).toBeTruthy();
+    expect(await screen.findByText(sentence)).toBeTruthy();
     await openHeaderMenu();
     expect(
       screen.queryByRole("button", { name: /^Change Deal name/ }),

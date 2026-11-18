@@ -105,7 +105,7 @@ func (s *Store) waitingQueueSlots(
 		reader,
 		seats.responsibilitySQL(identities, arg, fmt.Sprintf("$%d", instant), fmt.Sprint(horizon)),
 		neverRelaxed, neverRelaxed,
-		neverRelaxed, ownDomainSenderSQL("a", arg(ownDomains)),
+		neverRelaxed, fmt.Sprintf("$%d", arg(ownDomains)),
 		messageSnoozeLiftedSQL(fmt.Sprintf("$%d", instant), backContent),
 		readerAddresses,
 		neverRelaxed,

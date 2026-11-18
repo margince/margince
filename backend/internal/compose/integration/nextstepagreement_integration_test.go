@@ -37,7 +37,8 @@ func TestBothPagesAgreeTheNextStepIsAMeeting(t *testing.T) {
 
 	var contact AnyMap
 	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
-		"full_name": "Annabelle Malherbe", "source": "manual",
+		"linkedin_url": apptest.ContactProfile(),
+		"full_name":    "Annabelle Malherbe", "source": "manual",
 	}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("create contact = %d %v", status, contact)
 	}
@@ -127,7 +128,8 @@ func TestAPageOfRemindersDoesNotBuryTheNextStep(t *testing.T) {
 
 	var contact AnyMap
 	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
-		"full_name": "Annabelle Malherbe", "source": "manual",
+		"linkedin_url": apptest.ContactProfile(),
+		"full_name":    "Annabelle Malherbe", "source": "manual",
 	}, nil, &contact); status != http.StatusCreated {
 		t.Fatalf("create contact = %d %v", status, contact)
 	}

@@ -77,6 +77,7 @@ export function DealProductsCard({
   currency,
   typedAmount,
   refusedReasonId,
+  canWrite,
 }: Readonly<{
   dealId: string;
   // Amounts are written in the deal's currency. A deal nobody priced takes
@@ -86,6 +87,8 @@ export function DealProductsCard({
   typedAmount: string | null;
   // The page's sentence about why the deal takes no changes, when it does not.
   refusedReasonId?: string;
+  // Whether this reader may write the deal. One who may not is offered no edit.
+  canWrite: boolean;
 }>) {
   const t = useT();
   const [editing, setEditing] = useState<"split" | "lines" | null>(null);
@@ -114,11 +117,13 @@ export function DealProductsCard({
       <OverviewCard
         title={title}
         action={
-          <DealProductsActions
-            state={state}
-            refusedReasonId={refusedReasonId}
-            onEdit={setEditing}
-          />
+          canWrite && (
+            <DealProductsActions
+              state={state}
+              refusedReasonId={refusedReasonId}
+              onEdit={setEditing}
+            />
+          )
         }
         empty={linesMode ? t("deal.lines.empty") : t("deal.products.empty")}
         foot={state && linesMode ? <DealLinesTotal state={state} /> : undefined}

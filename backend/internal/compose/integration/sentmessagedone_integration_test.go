@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 )
 
@@ -31,7 +32,7 @@ func TestDoneOnASentMessageIsTheSameOnEitherDoor(t *testing.T) {
 	}
 	contact := func(name string) string {
 		t.Helper()
-		return createdID(t, d.e, "/v1/contacts", AnyMap{"full_name": name, "source": "manual"})
+		return createdID(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": name, "source": "manual"})
 	}
 	viaREST := func(message string, want int) {
 		t.Helper()

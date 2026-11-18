@@ -12,6 +12,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -42,6 +43,12 @@ type TaskBacklog interface {
 	// TasksOnDeals reads every task of the window filed under any of these
 	// deals, drawn as the lane draws them.
 	TasksOnDeals(ctx context.Context, window TaskWindow, deals []ids.UUID) ([]Task, error)
+	// FollowUpPromises names the reader's own open tasks derived from any of
+	// these emails, with their due dates.
+	FollowUpPromises(ctx context.Context, emails []ids.UUID) ([]activities.FollowUpPromise, error)
+	// TasksIn reads these tasks of the window, drawn as the lane draws them. A
+	// task the lane would not draw is not answered.
+	TasksIn(ctx context.Context, window TaskWindow, tasks []ids.UUID) ([]Task, error)
 }
 
 // Positioned is one row a backlog read returned, with the position that
@@ -97,9 +104,12 @@ type backlogState struct {
 	waiting   WaitingBacklog
 	risk      RiskBacklog
 	approvals ApprovalBacklog
-	// approvalsFrom is where the approval tail starts: after the last
-	// approval the ranked rows hold.
-	approvalsFrom string
+	// The suggestion continuations, one per producer.
+	dealSuggestions DealSuggestionBacklog
+	tagSuggestions  TagSuggestionBacklog
+	// resumeAt is where each decision source's tail starts: after the last
+	// row of it the ranked rows hold. A source absent starts at its beginning.
+	resumeAt map[crmcontracts.WorklistItemSource]string
 	// exact is each source's whole count per category, for this request only.
 	exact map[totalKey]int
 	// whole names the windows read short of their cap, whose rows on the page
@@ -126,7 +136,7 @@ func (s *Service) readingBacklog(ctx context.Context, day crmcontracts.Attention
 	reading := *s
 	reading.backlog.exact, reading.backlog.whole = map[totalKey]int{}, map[totalKey]bool{}
 	reading.backlog.until, reading.backlog.zone = beside.until, beside.zone
-	reading.backlog.approvalsFrom = beside.approvalsFrom
+	reading.backlog.resumeAt = beside.resumeAt
 	if !first || s.marked.probe != nil || s.backlog.tasks == nil {
 		return &reading
 	}

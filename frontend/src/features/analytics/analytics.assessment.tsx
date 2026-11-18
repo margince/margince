@@ -193,8 +193,12 @@ export function AssessmentPanel({
   if (
     upcoming &&
     work?.upcoming_meetings != null &&
-    Number(upcoming.value.replace(/\s+count$/, "").replace(/[,.]/g, "")) !==
-      work.upcoming_meetings
+    Number(
+      upcoming.value
+        .replace(/count$/, "")
+        .trimEnd()
+        .replace(/[,.]/g, ""),
+    ) !== work.upcoming_meetings
   )
     return (
       <>

@@ -72,32 +72,9 @@ func recordInitialActivity(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in
 	return storekit.EmitEvent(ctx, tx, auditID, id.UUID, payload)
 }
 
-// inheritAudienceTx gives id the audience of from: the same audience and
-// reason, the same selected members, and every party from lists. Each reader
-// of from then reads id under the same arms of the audience test.
+// inheritAudienceTx gives a new transcript the readers of the meeting it
+// records. A transcript that already exists follows later changes through
+// followRecordedMeetingTx.
 func inheritAudienceTx(ctx context.Context, tx pgx.Tx, id, from ids.ActivityID) error {
-	if _, err := tx.Exec(ctx, `
-		UPDATE activity t SET audience = f.audience, audience_reason = f.audience_reason
-		  FROM activity f WHERE t.id = $1 AND t.archived_at IS NULL AND f.id = $2`, id, from); err != nil {
-		return fmt.Errorf("activities: copying a meeting's audience: %w", err)
-	}
-	rows, err := tx.Query(ctx,
-		`SELECT subject_type, subject_id FROM activity_audience_member WHERE activity_id = $1`, from)
-	if err != nil {
-		return fmt.Errorf("activities: reading a meeting's audience members: %w", err)
-	}
-	members, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (AudienceMember, error) {
-		var member AudienceMember
-		return member, row.Scan(&member.SubjectType, &member.SubjectID)
-	})
-	if err != nil {
-		return fmt.Errorf("activities: reading a meeting's audience members: %w", err)
-	}
-	if len(members) > 0 {
-		if err := replaceAudienceMembers(ctx, tx, id, members); err != nil {
-			return err
-		}
-	}
-	_, err = carryMissingParticipantsTx(ctx, tx, from, id)
-	return err
+	return copyMeetingReadersTx(ctx, tx, id, from)
 }

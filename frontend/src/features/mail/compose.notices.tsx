@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import type { components } from "../../api/schema";
 import { Callout } from "../../design-system/callout";
-import { useT } from "../../i18n";
+import { jurisdictionName } from "../../format/jurisdiction";
+import { languageName } from "../../format/languagename";
+import { useLocale, useT } from "../../i18n";
 
 // Two things the composer says about the draft in front of the reader, rather
 // than about the message they are writing.
@@ -73,5 +76,56 @@ export function ChannelDraftNotice({
       kind="outcome"
       title={t("compose.channelDraftUnavailable")}
     />
+  );
+}
+
+type DraftContentFinding = components["schemas"]["DraftContentFinding"];
+
+/**
+ * What the advertising draft does not meet among the content rules of its
+ * recipients' laws. Advice: the send still goes.
+ */
+export function DraftContentNotice({
+  findings,
+}: Readonly<{ findings?: readonly DraftContentFinding[] }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const lines = (findings ?? []).flatMap((finding) => {
+    if (finding.requirement === "claim_without_proof") {
+      return [
+        t("compose.contentFinding.claim", {
+          words: (finding.words ?? []).join(", "),
+        }),
+      ];
+    }
+    if (finding.requirement === "advertising_language_first") {
+      return [
+        t("compose.contentFinding.language", {
+          language: languageName(finding.language ?? "", locale),
+        }),
+      ];
+    }
+    if (finding.requirement === "foreign_advertiser") {
+      return [
+        t("compose.contentFinding.foreignAdvertiser", {
+          country: jurisdictionName(finding.country ?? "", locale),
+        }),
+      ];
+    }
+    return [finding.detail];
+  });
+  if (lines.length === 0) {
+    return null;
+  }
+  return (
+    <Callout
+      tone="warning"
+      kind="event"
+      title={t("compose.contentFinding.title")}
+    >
+      {lines.map((line) => (
+        <p key={line}>{line}</p>
+      ))}
+    </Callout>
   );
 }

@@ -16,6 +16,7 @@ import {
   fillSendableForm,
   jsonResponse,
   pickWhy,
+  pressSend,
   problemResponse,
   render,
   stubRoutes,
@@ -111,7 +112,7 @@ describe("a refused send and the check after it", () => {
       await screen.findByRole("button", { name: /recipients checked/i }),
     ).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent(/objected to marketing/i);
     expect(alert).toHaveTextContent("This applies to a@x.com.");
@@ -157,7 +158,7 @@ describe("a refused send and the check after it", () => {
     await fillSendableForm();
     await screen.findByRole("button", { name: /recipients checked/i });
 
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
     const alert = await screen.findByRole("alert");
     // A missing deal is a missing detail, never a consent refusal.
     expect(alert).toHaveTextContent("Choose the deal for this follow-up.");
@@ -186,7 +187,7 @@ describe("a refused send and the check after it", () => {
     openComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
     await fillSendableForm();
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
 
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent("Message cannot be sent");
@@ -237,7 +238,7 @@ describe("an edited message is a different message", () => {
     openComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
     await fillSendableForm();
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent("Permission needed for this message");
 
@@ -321,7 +322,7 @@ describe("several recipients", () => {
     openComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
     await fillSendableForm();
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
 
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent(
@@ -410,6 +411,12 @@ describe("whether a refusal is about the message on screen", () => {
     expect(refusalIsCurrent(sent, now, answerAtSend)).toBe(false);
   });
 
+  it("retains the reason form through a background preview refresh", () => {
+    expect(
+      refusalIsCurrent(sent, sent, allowedPreview(["a@x.com"]), true),
+    ).toBe(true);
+  });
+
   it("is not, once the check answers anew", () => {
     expect(refusalIsCurrent(sent, sent, allowedPreview(["a@x.com"]))).toBe(
       false,
@@ -435,7 +442,7 @@ it("carries the selected deal in both the permission check and the queued messag
       sent.filter((call) => call.key === "POST /emails:preview").at(-1)?.body,
     ).toMatchObject({ evidence: { deal_id: "deal-one" } }),
   );
-  await userEvent.click(screen.getByRole("button", { name: "Send" }));
+  await pressSend();
   await waitFor(() =>
     expect(
       sent.find((call) => call.key === "POST /emails")?.body,

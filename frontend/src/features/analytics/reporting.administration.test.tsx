@@ -76,6 +76,7 @@ it("creates a monetary commitment in minor units and refuses an incomplete targe
         period_start: "2026-10-01",
         reason: "Agreed October commitment",
       }),
+      expect.any(URL),
     ),
   );
   await waitFor(() =>
@@ -119,6 +120,7 @@ it("revises a count target without rescaling it or changing its identity", async
         metric: "meetings_held",
         period_start: "2026-09-01",
       }),
+      expect.any(URL),
     ),
   );
   const request = fetch.mock.calls
@@ -207,6 +209,7 @@ it("publishes stage qualification and capture contexts with a reason and version
           expect.objectContaining({ pipeline_id: "sales" }),
         ]),
       }),
+      expect.any(URL),
     ),
   );
 });
@@ -260,13 +263,16 @@ it("creates a month-end schedule pinned to the selected report revision", async 
   await user.tab();
   await user.click(screen.getByRole("button", { name: "Activate schedule" }));
   await waitFor(() =>
-    expect(write).toHaveBeenCalledWith({
-      report_revision: reportingStoryReport.revision,
-      frequency: "monthly",
-      day: 31,
-      local_time: "17:30",
-      enabled: true,
-    }),
+    expect(write).toHaveBeenCalledWith(
+      {
+        report_revision: reportingStoryReport.revision,
+        frequency: "monthly",
+        day: 31,
+        local_time: "17:30",
+        enabled: true,
+      },
+      expect.any(URL),
+    ),
   );
   expect(close).toHaveBeenCalledOnce();
 });
@@ -299,13 +305,16 @@ it("resets an edited schedule's day when its cadence changes and can resume it",
   );
   await user.click(screen.getByRole("button", { name: "Activate schedule" }));
   await waitFor(() =>
-    expect(write).toHaveBeenCalledWith({
-      report_revision: 3,
-      frequency: "weekly",
-      day: 1,
-      local_time: "09:00",
-      enabled: true,
-    }),
+    expect(write).toHaveBeenCalledWith(
+      {
+        report_revision: 3,
+        frequency: "weekly",
+        day: 1,
+        local_time: "09:00",
+        enabled: true,
+      },
+      expect.any(URL),
+    ),
   );
   expect(close).toHaveBeenCalledOnce();
 });
@@ -336,6 +345,7 @@ it("lets an author pause an enabled schedule after retention becomes unavailable
   await waitFor(() =>
     expect(write).toHaveBeenCalledWith(
       expect.objectContaining({ enabled: false }),
+      expect.any(URL),
     ),
   );
 });
@@ -422,6 +432,7 @@ it("offers only fiscal-quarter start months and submits the selected boundary", 
         period_start: "2026-11-01",
         value: 120000,
       }),
+      expect.any(URL),
     ),
   );
 });
@@ -483,6 +494,7 @@ it("saves a new schedule paused without claiming it will run", async () => {
   await waitFor(() =>
     expect(write).toHaveBeenCalledWith(
       expect.objectContaining({ enabled: false }),
+      expect.any(URL),
     ),
   );
 });

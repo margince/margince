@@ -9,7 +9,7 @@ import type { components } from "../../api/schema";
 import { en } from "../../i18n/en";
 import type { TaskType } from "../../lib/tasktype";
 import { type WriteTo, WriteToProvider } from "../../lib/writeto";
-import { taskRow } from "../../testing/brief.fixtures";
+import { taskRow, waitingEmailRow } from "../../testing/brief.fixtures";
 import {
   installFetchStub,
   jsonResponse,
@@ -295,4 +295,30 @@ it("Next task opens the following card, wraps past the last, and is absent alone
   expect(
     screen.queryByRole("button", { name: en["brief.focus.next"] }),
   ).toBeNull();
+});
+
+// A promise carrying the email it was read out of is still a task. It is named
+// once, by the promise, and the card does not call it an email.
+it("a promise carrying its email is named once and drawn as a task", async () => {
+  const mail = waitingEmailRow().email_summary;
+  if (!mail) throw new Error("the fixture carries its message");
+  const promise: WorklistItem = {
+    ...LEAD,
+    band: "now",
+    due_at: "2026-09-15T10:00:00Z",
+    actions: ["complete", "reply"],
+    subject: { type: "contact", id: "c-1", label: "Alice Brandt" },
+    move: { action: "draft_reply", activity_id: mail.activity_id },
+    email_summary: { ...mail, direction: "outbound", move: "waiting_for_them" },
+  };
+  showLead(promise, "do");
+
+  const article = await screen.findByRole("article");
+  const card = within(article);
+  expect(card.getAllByText(LEAD.title ?? "")).toHaveLength(1);
+  expect(card.queryByRole("heading", { name: LEAD.title })).toBeNull();
+  // The email is drawn under the promise; the card's own meta names a task.
+  const meta = article.querySelector(".brief-triage-lead-head");
+  expect(meta?.textContent).not.toContain(en["timeline.kind.email"]);
+  expect(article.querySelector(".brief-task-status")).toBeNull();
 });

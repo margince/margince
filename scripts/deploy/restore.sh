@@ -10,7 +10,7 @@ set -euo pipefail
 
 src="${1:?usage: restore.sh <backup folder>}"
 : "${SPARE_OWNER_DSN:?}" "${SPARE_BLOBSTORE_PATH:?}" "${BACKUP_DIR:?}" "${LIVE_BLOBSTORE_PATH:?}"
-[ -f "$src/DONE" ] || { echo "refusing: $src has no DONE marker (unfinished backup)" >&2; exit 1; }
+[[ -f "$src/DONE" ]] || { echo "refusing: $src has no DONE marker (unfinished backup)" >&2; exit 1; }
 
 started=$(date +%s)
 pg_restore --clean --if-exists --no-owner --dbname="$SPARE_OWNER_DSN" "$src/db.dump"

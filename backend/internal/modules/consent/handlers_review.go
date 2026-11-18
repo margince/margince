@@ -47,6 +47,20 @@ func wireReview(review Review) crmcontracts.CommunicationReview {
 			Address:    refusal.Address,
 			ReasonCode: refusal.ReasonCode,
 		}
+		if len(refusal.FooterPreview) > 0 {
+			wire.FooterPreview = &refusal.FooterPreview
+		}
+		if len(refusal.FooterFindings) > 0 {
+			findings := make([]crmcontracts.FooterFinding, 0, len(refusal.FooterFindings))
+			for _, finding := range refusal.FooterFindings {
+				wireFinding := crmcontracts.FooterFinding(finding)
+				if wireFinding.MissingMeans == nil {
+					wireFinding.MissingMeans = []string{}
+				}
+				findings = append(findings, wireFinding)
+			}
+			wire.FooterFindings = &findings
+		}
 		if refusal.SendingEntity != nil {
 			id := openapi_types.UUID(*refusal.SendingEntity)
 			wire.SendingEntityId = &id
@@ -73,12 +87,14 @@ func wireReview(review Review) crmcontracts.CommunicationReview {
 		}
 		refusals = append(refusals, wire)
 	}
+	revision := review.AssessmentRevision()
 	out := crmcontracts.CommunicationReview{
-		Id:         openapi_types.UUID(review.ID),
-		State:      crmcontracts.CommunicationReviewState(review.State),
-		Kind:       crmcontracts.CommunicationReviewKind(review.Kind),
-		ReasonCode: review.ReasonCode,
-		Refusals:   refusals,
+		AssessmentRevision: &revision,
+		Id:                 openapi_types.UUID(review.ID),
+		State:              crmcontracts.CommunicationReviewState(review.State),
+		Kind:               crmcontracts.CommunicationReviewKind(review.Kind),
+		ReasonCode:         review.ReasonCode,
+		Refusals:           refusals,
 	}
 	// Null rather than a zero uuid when nothing was held. A caller reading
 	// 00000000-… would have an id it could take to a lookup that answers not

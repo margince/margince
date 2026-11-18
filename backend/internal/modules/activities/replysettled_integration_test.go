@@ -32,8 +32,8 @@ func (e *loadEnv) owedAt(t *testing.T, messages []ids.UUID, instants []time.Time
 	owed := map[ids.UUID][]bool{}
 	for _, at := range instants {
 		rows, err := e.owner.Query(context.Background(), `SELECT a.id, coalesce(`+
-			owedSQL("$1::timestamptz", neverRelaxed, neverRelaxed, neverRelaxed)+`, false)
-			FROM activity a WHERE a.id = ANY($2)`, at, messages)
+			owedSQL("$1::timestamptz", "$3", neverRelaxed, neverRelaxed, neverRelaxed)+`, false)
+			FROM activity a WHERE a.id = ANY($2)`, at, messages, []string{})
 		if err != nil {
 			t.Fatalf("asking what is owed: %v", err)
 		}
@@ -138,5 +138,33 @@ func TestTheSettledStampNeverChangesWhatIsOwed(t *testing.T) {
 	e.exec(t, `DELETE FROM activity WHERE id = $1`, second)
 	if stamp, _ := e.stampOf(t, first); stamp != nil {
 		t.Errorf("deleting the follow-up left the first message settled at %v", stamp)
+	}
+}
+
+// A sync writes many messages in one statement. Each thread is cleared from the
+// earliest message written on it, and a thread whose messages all came later
+// keeps its stamp.
+func TestOneStatementClearsEachThreadFromItsOwnEarliestMessage(t *testing.T) {
+	e := setupLoad(t)
+	buyer := "buyer-" + ids.NewV7().String() + "@customer.test"
+	now := clocktest.Now(t)
+	reopened, kept := "thread-"+ids.NewV7().String(), "thread-"+ids.NewV7().String()
+	reopenedAsk := e.mailAt(t, reopened, "inbound", buyer, now.Add(-5*time.Hour))
+	e.mailAt(t, reopened, "outbound", buyer, now.Add(-3*time.Hour))
+	keptAsk := e.mailAt(t, kept, "inbound", buyer, now.Add(-5*time.Hour))
+	e.mailAt(t, kept, "outbound", buyer, now.Add(-3*time.Hour))
+	e.stampSettled(t)
+
+	e.exec(t, `INSERT INTO activity (id, kind, direction, subject, occurred_at, thread_key, counterparty_email, source, captured_by)
+		VALUES ($1, 'email', 'outbound', 'the order', $4, $6, $7, 'manual', 'system'),
+		       ($2, 'email', 'inbound', 'the order', $5, $6, $7, 'manual', 'system'),
+		       ($3, 'email', 'outbound', 'the order', $4, $8, $7, 'manual', 'system')`,
+		ids.NewV7(), ids.NewV7(), ids.NewV7(), now.Add(-time.Hour), now.Add(-4*time.Hour), reopened, buyer, kept)
+
+	if stamp, _ := e.stampOf(t, reopenedAsk); stamp != nil {
+		t.Errorf("a message written before the thread's settling reply left the stamp at %v", stamp)
+	}
+	if stamp, _ := e.stampOf(t, keptAsk); stamp == nil {
+		t.Error("a message written after the settling reply cleared the stamp of a thread it cannot unsettle")
 	}
 }

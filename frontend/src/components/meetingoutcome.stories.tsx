@@ -128,7 +128,43 @@ export const NotesDialogDirect: Story = {
           id={MEETING_ID}
           title="Discovery call with Turbinenbau"
           invalidateKeys={[]}
-          outcomeOnly={false}
+          mode="edit"
+          onClose={() => undefined}
+        />
+      </StoryProviders>
+    );
+  },
+};
+
+/** "It happened": the notes above the next step, seeded from the meeting. */
+export const HeldDialog: Story = {
+  render: () => {
+    stubRoutes();
+    return (
+      <StoryProviders>
+        <MeetingOutcomeDialog
+          id={MEETING_ID}
+          title="Discovery call with Turbinenbau"
+          invalidateKeys={[]}
+          mode="held"
+          onClose={() => undefined}
+        />
+      </StoryProviders>
+    );
+  },
+};
+
+/** "Edit notes" on a meeting already held: the notes alone. */
+export const HeldNotesDialog: Story = {
+  render: () => {
+    stubRoutes({ ...CAPTURED_MEETING, meeting_status: "held" });
+    return (
+      <StoryProviders>
+        <MeetingOutcomeDialog
+          id={MEETING_ID}
+          title="Discovery call with Turbinenbau"
+          invalidateKeys={[]}
+          mode="notes"
           onClose={() => undefined}
         />
       </StoryProviders>

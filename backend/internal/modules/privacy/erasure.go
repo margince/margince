@@ -49,9 +49,9 @@ const evidenceKeyRetentionAction = "retention_action"
 // once so the tombstones a supervisory authority reads use one vocabulary.
 const (
 	evidenceKeyCause = "cause"
-	// The four causes a collateral tombstone can carry. An Art. 17 erasure of
-	// a subject; a retention sweep clearing a record on its own schedule; a
-	// controller ending a restriction; hidden noise mail destroyed.
+	// The causes a collateral tombstone can carry: an Art. 17 erasure, a
+	// retention sweep on its own schedule, a controller ending a restriction,
+	// hidden noise mail destroyed, and a controller's archive review.
 	causeContactErasure = "contact_erasure"
 	causeRetention      = "retention"
 	// causeControllerRelease is the third: a restriction a controller ended by
@@ -61,9 +61,12 @@ const (
 	causeControllerRelease = "controller_release"
 	// causeNoiseDisposition is the capture sweep destroying hidden noise mail.
 	causeNoiseDisposition = "noise_disposition"
-	evidenceKeyClass      = "class"
-	evidenceKeyBasis      = "basis"
-	evidenceKeyReason     = "reason"
+	// causeArchiveReview is a controller deleting archived records that no
+	// longer serve the archive's purpose.
+	causeArchiveReview = "archive_review"
+	evidenceKeyClass   = "class"
+	evidenceKeyBasis   = "basis"
+	evidenceKeyReason  = "reason"
 )
 
 // EraseContact removes the subject's PII in ONE transaction: contact row
@@ -89,9 +92,15 @@ func (e *Eraser) EraseContact(ctx context.Context, contactID ids.UUID, reason st
 // A replay of "dsr:<id>" runs the cascade again, which is idempotent and
 // erases what was written since. It certifies once: the first tombstone stays
 // the only one, and its account is the answer.
+func (e *Eraser) EraseContactCounted(ctx context.Context, contactID ids.UUID, reason string) (erasureaccount.Account, error) {
+	return e.runContactErasure(ctx, contactID, reason, nil)
+}
+
+// runContactErasure runs the cascade. keep, when set, can refuse it before
+// anything is destroyed.
 //
 //nolint:gocognit,cyclop // the rename added no branch: this body is what it was under the old noun.
-func (e *Eraser) EraseContactCounted(ctx context.Context, contactID ids.UUID, reason string) (erased erasureaccount.Account, err error) {
+func (e *Eraser) runContactErasure(ctx context.Context, contactID ids.UUID, reason string, keep erasureKeep) (erased erasureaccount.Account, err error) {
 	ctx = originalstore.Bind(corefeatures.RetainedDataContext(ctx), e.db, e.blob)
 	if err := auth.Require(ctx, "contact", principal.ActionDelete); err != nil {
 		return erasureaccount.Account{}, err
@@ -99,7 +108,7 @@ func (e *Eraser) EraseContactCounted(ctx context.Context, contactID ids.UUID, re
 	subject := ids.From[ids.ContactKind](contactID)
 	err = e.withPreparedOriginalErasure(ctx, subject, func(raw pgx.Tx, prepared originalMatches) error {
 		tx := newTallyTx(raw)
-		floor, err := e.erasableUnderFloor(ctx, tx, subject)
+		floor, err := e.admitErasure(ctx, tx, subject, keep)
 		if err != nil {
 			return err
 		}

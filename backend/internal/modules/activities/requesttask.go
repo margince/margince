@@ -42,8 +42,14 @@ func (s *Store) takeEmailRequest(ctx context.Context, tx pgx.Tx, in LogActivityI
 	idPos := len(args)
 	args = append(args, s.now())
 	instant := fmt.Sprintf("$%d", len(args))
+	domains, err := s.ownDomainList(ctx, tx)
+	if err != nil {
+		return crmcontracts.Activity{}, false, err
+	}
+	args = append(args, domains)
+	ownDomains := fmt.Sprintf("$%d", len(args))
 	var pending bool
-	if err := tx.QueryRow(ctx, fmt.Sprintf(`SELECT coalesce((%s) AND %s, false) FROM activity a WHERE a.id = $%d`, reviewableRequestSQL(instant), occurredday.BegunSQL("a", instant), idPos), args...).Scan(&pending); err != nil {
+	if err := tx.QueryRow(ctx, fmt.Sprintf(`SELECT coalesce((%s) AND %s, false) FROM activity a WHERE a.id = $%d`, reviewableRequestSQL(instant, ownDomains), occurredday.BegunSQL("a", instant), idPos), args...).Scan(&pending); err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
 	source, err := readActivityContent(ctx, tx, ids.From[ids.ActivityKind](id), storekit.LiveOnly)

@@ -59,9 +59,15 @@ const RECORDS = {
   page: { has_more: false, total: 2 },
 };
 
+const FIELDS_CHANGED = {
+  key: "magic.action.fields_changed",
+  values: { fields: "industry" },
+};
+
 function stubOpenedLine(
   records: unknown = RECORDS,
   handled: () => Response = () => jsonResponse({ data: [] }),
+  summary: { key: string; values?: Record<string, string> } = FIELDS_CHANGED,
 ) {
   vi.stubGlobal(
     "fetch",
@@ -82,10 +88,7 @@ function stubOpenedLine(
           receipt({
             done: [
               line({
-                summary: {
-                  key: "magic.action.fields_changed",
-                  values: { fields: "industry" },
-                },
+                summary,
                 entity: {
                   type: "company",
                   id: "00000000-0000-7000-8000-0000000000c1",
@@ -139,6 +142,36 @@ describe("a done line standing for many records", () => {
         .find((url) => url.includes(`/magic/lines/${LINE}/records`));
       expect(opened).toContain("since=");
     });
+  });
+
+  it("says what a create did, and nothing about a write the reader may not make", async () => {
+    const saved = (n: number) => ({
+      audit_id: `00000000-0000-7000-8000-0000000000b${n}`,
+      occurred_at: "2026-09-13T07:30:00Z",
+      entity: {
+        type: "activity",
+        id: `00000000-0000-7000-8000-0000000000d${n}`,
+        label: `Offer ${n}`,
+      },
+      changes: [],
+      undo: { undoable: false, reason: "not_writable_by_caller" },
+    });
+    stubOpenedLine(
+      { data: [saved(1), saved(2)], page: { has_more: false, total: 2 } },
+      undefined,
+      { key: "magic.action.create_activity_email" },
+    );
+    renderMagic();
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "View 2 changes" }),
+    );
+
+    const dialog = await screen.findByRole("dialog");
+    expect(await within(dialog).findByText("Offer 1")).toBeTruthy();
+    expect(within(dialog).getAllByText("Saved an email")).toHaveLength(2);
+    expect(within(dialog).queryByRole("button", { name: "Undo" })).toBeNull();
+    expect(within(dialog).queryByText(/permission/)).toBeNull();
   });
 
   it("never opens a decision line through the audit records read", async () => {

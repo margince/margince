@@ -11,8 +11,10 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -29,6 +31,8 @@ func (s *Store) SetLegalHold(ctx context.Context, id ids.UUID, held bool, reason
 		if err := auth.EnsureWritable(ctx, tx, dealTable, id); err != nil {
 			return err
 		}
-		return storekit.SetLegalHold(ctx, tx, dealTable, id, held, reason)
+		return storekit.SetLegalHold(ctx, tx, dealTable, id, held, reason, func(changed map[string]any) events.Payload {
+			return crmcontracts.PublicEventDealUpdated{ChangedFields: changed}
+		})
 	})
 }

@@ -652,6 +652,7 @@ const (
 	ApprovalRequested                     SubscribableEventType = "approval.requested"
 	AttachmentArchived                    SubscribableEventType = "attachment.archived"
 	AttachmentCreated                     SubscribableEventType = "attachment.created"
+	AttachmentRestored                    SubscribableEventType = "attachment.restored"
 	AttachmentUpdated                     SubscribableEventType = "attachment.updated"
 	AuditAppended                         SubscribableEventType = "audit.appended"
 	ColdstartAccepted                     SubscribableEventType = "coldstart.accepted"
@@ -820,6 +821,8 @@ func (e SubscribableEventType) Valid() bool {
 	case AttachmentArchived:
 		return true
 	case AttachmentCreated:
+		return true
+	case AttachmentRestored:
 		return true
 	case AttachmentUpdated:
 		return true
@@ -1447,6 +1450,15 @@ type PublicEventAttachmentCreated struct {
 	ParentId openapi_types.UUID `json:"parent_id"`
 
 	// ParentType The kind of record the file hangs off. That record is also where the authority to change the file comes from (activity | contact | company | deal | lead | contract).
+	ParentType string `json:"parent_type"`
+}
+
+// PublicEventAttachmentRestored Payload for attachment.restored. An archived file is back in the record's listings, because the source that listed it lists it again. It is the undo of attachment.archived for the same file, not a new file, so a subscriber that counts uploads does not count it twice. It carries the same shape as the other three, with the same omissions.
+type PublicEventAttachmentRestored struct {
+	// ParentId The record the file hangs off.
+	ParentId openapi_types.UUID `json:"parent_id"`
+
+	// ParentType The kind of record the file hangs off.
 	ParentType string `json:"parent_type"`
 }
 
@@ -2289,6 +2301,9 @@ type PublicEventLeadSlaBreached struct {
 
 	// EscalationTarget The seat the scan chose for the escalation: the lead's owner while that owner can be handed work, else the intake seat. Delivery asks again, so the task and notice can go to the intake seat instead, or to nobody. Absent when no seat was chosen, so it can differ from `owner_id`.
 	EscalationTarget *openapi_types.UUID `json:"escalation_target,omitempty"`
+
+	// LeadName The lead's name at breach time. The escalation names the lead it is about without reading it back.
+	LeadName *string `json:"lead_name,omitempty"`
 
 	// OwnerId The lead's owner at breach time (absent when unrouted).
 	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
@@ -3162,6 +3177,10 @@ func (PublicEventAttachmentCreated) EventType() string { return "attachment.crea
 
 func (PublicEventAttachmentCreated) EntityType() string { return "attachment" }
 
+func (PublicEventAttachmentRestored) EventType() string { return "attachment.restored" }
+
+func (PublicEventAttachmentRestored) EntityType() string { return "attachment" }
+
 func (PublicEventAttachmentUpdated) EventType() string { return "attachment.updated" }
 
 func (PublicEventAttachmentUpdated) EntityType() string { return "attachment" }
@@ -3736,6 +3755,7 @@ var PublicEventVersions = map[string]int{
 	"approval.requested":                        1,
 	"attachment.archived":                       1,
 	"attachment.created":                        1,
+	"attachment.restored":                       1,
 	"attachment.updated":                        1,
 	"audit.appended":                            1,
 	"coldstart.accepted":                        1,
@@ -3891,6 +3911,7 @@ var PublicEventSamples = map[string]string{
 	"approval.requested":                        "{\"expires_at\":\"2026-10-14T09:12:00Z\",\"kind\":\"Sample kind\",\"summary\":\"Sample summary\",\"target_entity_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"target_entity_type\":\"Sample target entity type\"}",
 	"attachment.archived":                       "{\"byte_size\":1,\"content_type\":\"Sample content type\",\"parent_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"parent_type\":\"Sample parent type\"}",
 	"attachment.created":                        "{\"byte_size\":1,\"content_type\":\"Sample content type\",\"parent_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"parent_type\":\"Sample parent type\"}",
+	"attachment.restored":                       "{\"parent_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"parent_type\":\"Sample parent type\"}",
 	"attachment.updated":                        "{\"byte_size\":1,\"content_type\":\"Sample content type\",\"parent_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"parent_type\":\"Sample parent type\"}",
 	"audit.appended":                            "{}",
 	"coldstart.accepted":                        "{\"approval_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"decided_by\":\"0190a7f2-0000-7000-8000-000000000010\"}",
@@ -3960,7 +3981,7 @@ var PublicEventSamples = map[string]string{
 	"lead.disqualified":                         "{}",
 	"lead.merged":                               "{\"merged_from_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"merged_into_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"lead.promoted":                             "{\"carried_activity_ids\":[\"0190a7f2-0000-7000-8000-000000000010\"],\"dedupe_outcome\":\"Sample dedupe outcome\",\"evidence_ref\":\"0190a7f2-0000-7000-8000-000000000010\",\"promoted_contact_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"trigger\":\"Sample trigger\"}",
-	"lead.sla_breached":                         "{\"deadline\":\"2026-10-14T09:12:00Z\",\"escalation_target\":\"0190a7f2-0000-7000-8000-000000000010\",\"owner_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
+	"lead.sla_breached":                         "{\"deadline\":\"2026-10-14T09:12:00Z\",\"escalation_target\":\"0190a7f2-0000-7000-8000-000000000010\",\"lead_name\":\"Sample lead name\",\"owner_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"lead.updated":                              "{\"changed_fields\":{}}",
 	"lead_disqualify_reason.changed":            "{\"change\":\"created\",\"label\":\"Sample label\",\"reason_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"lead_source.changed":                       "{\"change\":\"created\",\"key\":\"Sample key\",\"source_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",

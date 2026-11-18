@@ -10,14 +10,20 @@ import { namesAnAppAddress } from "./recordaddress";
  * the app under one. A literal would call every story unknown.
  */
 export function addressedAPathWeDoNotServe(): boolean {
-  const base = import.meta.env.BASE_URL || "/";
-  const { pathname } = globalThis.location;
+  const { href, pathname } = globalThis.location;
+  // Resolved, since a static Storybook build is relative (`./`).
+  const base = new URL(import.meta.env.BASE_URL || "/", href).pathname;
   // A record, booking or consent address is served: the web tier answers it
   // with the shell, and recordaddress writes or restores it.
   return (
     !namesAnAppAddress(pathname) &&
     pathname !== base &&
     `${pathname}/` !== base &&
-    pathname !== `${base}index.html`
+    pathname !== `${base}index.html` &&
+    !(isStorybook() && pathname === `${base}iframe.html`)
   );
 }
+
+// Storybook draws every story in its own frame document. Outside it no such
+// document exists, and the web tier answers that path like any other.
+const isStorybook = (): boolean => import.meta.env.STORYBOOK === "true";

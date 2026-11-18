@@ -66,12 +66,26 @@ type anthropicToolWire struct {
 // changes. Sent only when the request carries a schema, and only in the form
 // the decoder can hold (anthropicschema.go).
 type anthropicOutputConfig struct {
+	Effort string                   `json:"effort,omitempty"`
 	Format *anthropicResponseFormat `json:"format,omitempty"`
 }
 
 type anthropicResponseFormat struct {
 	Type   string          `json:"type"`
 	Schema json.RawMessage `json:"schema"`
+}
+
+// anthropicOutputConfigFor is the output_config to send, nil when it would be
+// empty: one object carries both the effort and the format.
+func anthropicOutputConfigFor(effort string, schema json.RawMessage) *anthropicOutputConfig {
+	if effort == "" && len(schema) == 0 {
+		return nil
+	}
+	cfg := &anthropicOutputConfig{Effort: effort}
+	if len(schema) > 0 {
+		cfg.Format = &anthropicResponseFormat{Type: jsonSchemaFormatType, Schema: schema}
+	}
+	return cfg
 }
 
 // streamedCompleteThreshold is the MaxTokens above which Complete rides
@@ -320,11 +334,7 @@ func (c *anthropicClient) send(ctx context.Context, req model.Request, schema js
 			Name: tool.Name, Description: tool.Description, InputSchema: tool.InputSchema,
 		})
 	}
-	if len(schema) > 0 {
-		wire.OutputConfig = &anthropicOutputConfig{
-			Format: &anthropicResponseFormat{Type: jsonSchemaFormatType, Schema: schema},
-		}
-	}
+	wire.OutputConfig = anthropicOutputConfigFor(anthropicEffortFor(wire.Model, req.ThinkingLevel), schema)
 	payload, _, err := SendablePayload(ctx, wire, req.SecretStripper)
 	if err != nil {
 		return nil, err

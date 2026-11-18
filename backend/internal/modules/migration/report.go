@@ -41,21 +41,22 @@ func (s SkippedRow) Why() Reason { return Reason{Code: s.Code, Params: s.Params}
 // The kinds of problem a report names. The contract's ImportProblemKind enum
 // is this same list, and a test holds the two equal.
 const (
-	ProblemBrokenLink   = "broken_link"
-	ProblemDroppedLink  = "dropped_link"
-	ProblemInvalidValue = "invalid_value"
-	ProblemUnknownOwner = "unknown_owner"
-	ProblemNewTag       = "new_tag"
-	ProblemDuplicate    = "duplicate"
-	ProblemPermission   = "permission"
-	ProblemUnusableRow  = "unusable_row"
+	ProblemBrokenLink         = "broken_link"
+	ProblemDroppedLink        = "dropped_link"
+	ProblemInvalidValue       = "invalid_value"
+	ProblemUnknownOwner       = "unknown_owner"
+	ProblemNewTag             = "new_tag"
+	ProblemDuplicate          = "duplicate"
+	ProblemPermission         = "permission"
+	ProblemUnusableRow        = "unusable_row"
+	ProblemIncompleteIdentity = "incomplete_identity"
 )
 
 // ProblemKinds answers every problem kind, in a new slice the caller may sort.
 func ProblemKinds() []string {
 	return []string{
 		ProblemBrokenLink, ProblemDroppedLink, ProblemInvalidValue, ProblemUnknownOwner,
-		ProblemNewTag, ProblemDuplicate, ProblemPermission, ProblemUnusableRow,
+		ProblemNewTag, ProblemDuplicate, ProblemPermission, ProblemUnusableRow, ProblemIncompleteIdentity,
 	}
 }
 
@@ -178,6 +179,12 @@ func (or *ObjectReport) record(row Row, res EnsureResult) {
 	}
 	if res.Disclosure != "" {
 		or.Disclosures = append(or.Disclosures, res.Disclosure)
+	}
+	if !res.Skipped {
+		for _, warning := range res.Warnings {
+			warning.ExternalID, warning.Line = row.ExternalID, row.Line
+			or.Warnings = append(or.Warnings, warning)
+		}
 	}
 	if res.Problem != nil && !res.Skipped {
 		warning := *res.Problem

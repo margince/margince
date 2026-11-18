@@ -11,6 +11,7 @@ import {
   useRef,
   useSyncExternalStore,
 } from "react";
+import { watchSize } from "./watchsize";
 
 /**
  * The tabs that do not fit, in their own order. The open tab always stays on
@@ -91,7 +92,8 @@ function foldKey<Option extends string>(
     const { paddingInlineStart, paddingInlineEnd } = getComputedStyle(tab);
     const missing = Math.max(
       0,
-      parseFloat(paddingInlineEnd) - parseFloat(paddingInlineStart) || 0,
+      Number.parseFloat(paddingInlineEnd) -
+        Number.parseFloat(paddingInlineStart) || 0,
     );
     inset = Math.max(inset, missing);
     widths.set(tab.dataset.tab ?? "", tab.offsetWidth + missing);
@@ -106,27 +108,6 @@ function foldKey<Option extends string>(
   });
   const least = options.length > 0 ? widthOf(open) + more : 0;
   return [least, ...folded].join(SEPARATOR);
-}
-
-function watchSize(strip: RefObject<HTMLElement | null>) {
-  return (changed: () => void) => {
-    const element = strip.current;
-    if (!element || typeof ResizeObserver === "undefined") {
-      return () => undefined;
-    }
-    const observer = new ResizeObserver(changed);
-    observer.observe(element);
-    // A late web font widens the tabs without resizing the strip.
-    let live = true;
-    const settled = () => {
-      if (live) changed();
-    };
-    document.fonts?.ready.then(settled, settled);
-    return () => {
-      live = false;
-      observer.disconnect();
-    };
-  };
 }
 
 /**

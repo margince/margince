@@ -148,9 +148,9 @@ func pinStop(ctx context.Context, tx pgx.Tx, column stopSubjectColumn, stop ids.
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO communication_suppression
 		    (address, address_hash, address_key_id, kind, source, captured_by, decided_by_level, purpose_id,
-		     recorded_at, carried_from, recorded_through)
+		     recorded_at, received_at, carried_from, recorded_through)
 		SELECT CASE WHEN s.kind = $4 THEN u.address END, u.hash, $5, s.kind, s.source, s.captured_by,
-		       s.decided_by_level, s.purpose_id, s.recorded_at, s.id, s.recorded_through
+		       s.decided_by_level, s.purpose_id, s.recorded_at, s.received_at, s.id, s.recorded_through
 		  FROM communication_suppression s
 		 CROSS JOIN unnest($2::text[], $3::text[]) AS u(address, hash)
 		 WHERE s.id = $1

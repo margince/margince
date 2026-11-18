@@ -10,8 +10,8 @@ import { PendingBody } from "../../design-system/atoms";
 import { useT } from "../../i18n";
 import { fallbackTitleOf, filtersAddressOf } from "../../lib/filtersaddress";
 import { useRecordKindDirectory } from "../../lib/recordkinds";
-import { navigateReplacing } from "../../lib/router";
 import { useMe } from "../../lib/session";
+import { useAddressWriters } from "../../lib/urlstate";
 import { FocusedPending } from "./filterhead";
 import { ListFilterPage } from "./filterlistedit";
 import { FilterPage } from "./filterpage";
@@ -27,13 +27,14 @@ export function FiltersScreen({
   const t = useT();
   const me = useMe();
   const directory = useRecordKindDirectory().data?.data ?? [];
+  const { navigateReplacing } = useAddressWriters();
   // `#/lists` names no list, and every list a reader can find is in the
   // library. A redirect, so Back never lands here again.
   useEffect(() => {
     if (list === "") {
       navigateReplacing({ screen: "filters", id: "lists" });
     }
-  }, [list]);
+  }, [list, navigateReplacing]);
   if (list === "") {
     return null;
   }

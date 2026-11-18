@@ -3,6 +3,7 @@ import { suggestion } from "../testing/dealsuggestion.fixture";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../testing/story-utils";
 import { DealSuggestionAnswerDialog } from "./dealsuggestion.answer";
@@ -18,6 +19,7 @@ export const LinkExisting: Story = {
   args: { suggestion, action: "link", onClose: () => {} },
   render: (args) => {
     installFetchStub({
+      "GET /me": meRoute({ deal: ["read", "update"] }),
       "GET /deals": () =>
         jsonResponse({
           data: [{ id: "deal-support", name: "Support renewal" }],
@@ -43,6 +45,7 @@ export const NoExistingDeals: Story = {
   ...LinkExisting,
   render: (args) => {
     installFetchStub({
+      "GET /me": meRoute({ deal: ["read", "update"] }),
       "GET /deals": () => jsonResponse({ data: [], page: { has_more: false } }),
     });
     return (

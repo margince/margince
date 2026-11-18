@@ -188,6 +188,8 @@ type Service struct {
 	// organizers is OPTIONAL in the same way: nil means a meeting row names
 	// whose calendar it came off as its host.
 	organizers MeetingOrganizers
+	// rooms is OPTIONAL in the same way: nil means a meeting row names no room.
+	rooms MeetingRooms
 	// dealMoves is OPTIONAL in the same way: nil means a deal row names its
 	// problem and no step, which is what every deal row did before this seam.
 	dealMoves        DealMoves
@@ -348,7 +350,7 @@ func (s *Service) assembleDay(ctx context.Context) (crmcontracts.Attention, besi
 		out.Counts.DealSuggestionsOpen = count.suggestions
 		out.Counts.TagSuggestionsOpen = count.tagSuggestions
 	})
-	beside := besideDay{failed: count.failed, until: until, zone: loc, approvalsFrom: count.approvalsFrom}
+	beside := besideDay{failed: count.failed, until: until, zone: loc, resumeAt: count.resumeAt}
 	if err != nil {
 		return crmcontracts.Attention{}, besideDay{}, err
 	}
@@ -400,7 +402,8 @@ type laneCount struct {
 	// when the read failed — and then failed names it.
 	suggestions, tagSuggestions *int
 	failed                      []*crmcontracts.WorklistSourceUnavailable
-	approvalsFrom               string // the inbox position after the last approval kept
+	// resumeAt is each decision source's store position after the last row the lane kept.
+	resumeAt map[crmcontracts.WorklistItemSource]string
 }
 
 // decisions is the needs_you lane: staged approvals, open duplicate pairs and
@@ -480,6 +483,6 @@ func (s *Service) decisionsToDepth(ctx context.Context, depth int) ([]crmcontrac
 	suggestions, tagged := s.suggestionLanes(ctx, depth, &count)
 	// Cases lead each round, so a reader's own case is never behind a pile of other pairs.
 	lane := interleave(depth, cases, duplicates, approvals, suggestions, tagged)
-	count.approvalsFrom, err = approvalTailStart(lane, staged)
+	count.resumeAt, err = decisionTailStarts(lane, staged)
 	return lane, count, err
 }

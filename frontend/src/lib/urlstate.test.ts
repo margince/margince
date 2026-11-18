@@ -1,5 +1,8 @@
 /** @vitest-environment happy-dom */
+import { renderHook } from "@testing-library/react";
+import { createElement, type ReactNode } from "react";
 import { describe, expect, it } from "vitest";
+import { ScreenAddress } from "./screenaddress";
 import {
   ASK_PARAM,
   ASK_QUESTION_PARAM,
@@ -11,6 +14,7 @@ import {
   openAsk as openAskDialog,
   parseParams,
   replaceDial,
+  useAddressWriters,
 } from "./urlstate";
 
 const dials = (entries: Record<string, string>) =>
@@ -164,5 +168,42 @@ describe("replaceDial — one dial over the address as it stands", () => {
     expect(window.location.hash).toBe("#/filters?ask=1");
     replaceDial("ask", "");
     expect(window.location.hash).toBe("#/filters");
+  });
+});
+
+describe("useAddressWriters — the writers a screen's effects use", () => {
+  const drawnFor =
+    (address: string) =>
+    ({ children }: Readonly<{ children: ReactNode }>) =>
+      createElement(ScreenAddress.Provider, { value: address }, children);
+
+  it("writes while the bar is on the page the screen was drawn for", () => {
+    window.location.hash = "#/contacts?page=2";
+    const writers = renderHook(useAddressWriters, {
+      wrapper: drawnFor("#/contacts?page=1"),
+    }).result.current;
+
+    writers.replaceDial("page", "3");
+    expect(window.location.hash).toBe("#/contacts?page=3");
+    writers.navigateReplacing({ screen: "contacts", id: "new" });
+    expect(window.location.hash).toBe("#/contacts/new");
+  });
+
+  it("drops every write once the bar has left that page", () => {
+    window.location.hash = "#/home?focus=r1";
+    const writers = renderHook(useAddressWriters, {
+      wrapper: drawnFor("#/contacts?page=1"),
+    }).result.current;
+
+    writers.replaceDial("page", "3");
+    writers.replaceParams(new Map([["page", "3"]]));
+    writers.navigateReplacing({ screen: "contacts", id: "new" });
+    expect(window.location.hash).toBe("#/home?focus=r1");
+  });
+
+  it("writes unguarded outside a routed screen", () => {
+    window.location.hash = "#/home";
+    renderHook(useAddressWriters).result.current.replaceDial("ask", "1");
+    expect(window.location.hash).toBe("#/home?ask=1");
   });
 });

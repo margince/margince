@@ -378,6 +378,8 @@
      "Fields filled in",
     "first_name":
      "First name",
+    "footer_warning":
+     "Email footer warning",
     "format":
      "format",
     "from":
@@ -5137,6 +5139,26 @@
     "first_name/lifecycle/unknown":
      "Unknown",
     "first_name/boolean/true":
+     "Yes",
+    "footer_warning/lifecycle/customer":
+     "Customer",
+    "footer_warning/lifecycle/disqualified":
+     "Disqualified",
+    "footer_warning/lifecycle/former_customer":
+     "Former customer",
+    "footer_warning/lifecycle/live":
+     "Live",
+    "footer_warning/lifecycle/onboarding":
+     "Onboarding",
+    "footer_warning/lifecycle/opportunity":
+     "Opportunity",
+    "footer_warning/lifecycle/prospect":
+     "Prospect",
+    "footer_warning/lifecycle/target":
+     "Target",
+    "footer_warning/lifecycle/unknown":
+     "Unknown",
+    "footer_warning/boolean/true":
      "Yes",
     "format/lifecycle/customer":
      "Customer",
@@ -12087,33 +12109,37 @@
     "promotion_restriction/text/claim_contradicts_resolution":
      "The contact reason given does not match this thread.",
     "promotion_restriction/text/consent_withdrawn":
-     "The recipient withdrew consent for this kind of message, so it cannot go to them.",
+     "The recipient withdrew consent for this kind of message. Sending this email does not restore consent.",
     "promotion_restriction/text/deal_not_requested":
      "A deal alone does not show the recipient asked for this negotiation. Their request, for example on a call or in a meeting, needs to be on record.",
+    "promotion_restriction/text/footer_incomplete":
+     "Read the footer details below. You can send this email with a recorded reason.",
     "promotion_restriction/text/frequency_cap_reached":
      "The recipient has reached the marketing message limit for now. This clears automatically.",
     "promotion_restriction/text/hard_bounce":
      "This address does not accept mail. Correct the address; an override does not apply.",
+    "promotion_restriction/text/lawful_basis_unconfirmed":
+     "No lawful basis is recorded for this contact, and the warning was not confirmed before sending.",
     "promotion_restriction/text/legacy_transactional_unevidenced":
      "This message uses an old purpose that nothing on record supports.",
     "promotion_restriction/text/marketing_consent_required":
-     "Marketing to a recipient in this country needs their prior consent. No exception can replace it.",
+     "Marketing to a recipient in this country needs their prior consent.",
     "promotion_restriction/text/marketing_objection":
-     "The recipient objected to marketing, so no marketing goes to them. A reply or a message they asked for can still go.",
+     "The recipient objected to marketing. Sending this email does not lift their objection.",
     "promotion_restriction/text/marketing_permission_required":
-     "This marketing message has no recorded permission under the applicable rules. A staff exception cannot replace consent or the required evidence.",
+     "This marketing message has no recorded permission under the applicable rules. Record consent or the required evidence.",
     "promotion_restriction/text/no_compatible_evidence":
      "Sending is refused until a reason is recorded.",
     "promotion_restriction/text/no_marketing_consent":
      "Marketing needs the recipient’s consent, and none is on record.",
     "promotion_restriction/text/opted_out_after_request":
-     "The recipient opted out of marketing after asking for this quote. Confirm with them that they still want it, then record their new request.",
+     "The recipient opted out of marketing after requesting this quote. Sending this email does not change their choice.",
     "promotion_restriction/text/processing_restricted":
-     "The recipient’s data is under a processing restriction. Only security, privacy and opt-out notices can still go to them.",
+     "The recipient’s data is under a processing restriction. Sending this email does not lift the restriction.",
     "promotion_restriction/text/recipient_resolves_to_no_single_subject":
      "This address is on several records, or on none you can write to, so the recipient is unknown. Check the address, or merge the records that share it.",
     "promotion_restriction/text/subject_request":
-     "The recipient asked not to be contacted. Only security, privacy and opt-out notices can still go to them.",
+     "The recipient asked not to be contacted. Sending this email does not change their request.",
     "promotion_restriction/text/unconfirmed_double_opt_in":
      "The recipient has not confirmed they want to receive messages. Only the recipient can confirm.",
     "promotion_restriction/text/unknown_purpose":
@@ -12121,33 +12147,37 @@
     "promotion_restriction/lifecycle/claim_contradicts_resolution":
      "The contact reason given does not match this thread.",
     "promotion_restriction/lifecycle/consent_withdrawn":
-     "The recipient withdrew consent for this kind of message, so it cannot go to them.",
+     "The recipient withdrew consent for this kind of message. Sending this email does not restore consent.",
     "promotion_restriction/lifecycle/deal_not_requested":
      "A deal alone does not show the recipient asked for this negotiation. Their request, for example on a call or in a meeting, needs to be on record.",
+    "promotion_restriction/lifecycle/footer_incomplete":
+     "Read the footer details below. You can send this email with a recorded reason.",
     "promotion_restriction/lifecycle/frequency_cap_reached":
      "The recipient has reached the marketing message limit for now. This clears automatically.",
     "promotion_restriction/lifecycle/hard_bounce":
      "This address does not accept mail. Correct the address; an override does not apply.",
+    "promotion_restriction/lifecycle/lawful_basis_unconfirmed":
+     "No lawful basis is recorded for this contact, and the warning was not confirmed before sending.",
     "promotion_restriction/lifecycle/legacy_transactional_unevidenced":
      "This message uses an old purpose that nothing on record supports.",
     "promotion_restriction/lifecycle/marketing_consent_required":
-     "Marketing to a recipient in this country needs their prior consent. No exception can replace it.",
+     "Marketing to a recipient in this country needs their prior consent.",
     "promotion_restriction/lifecycle/marketing_objection":
-     "The recipient objected to marketing, so no marketing goes to them. A reply or a message they asked for can still go.",
+     "The recipient objected to marketing. Sending this email does not lift their objection.",
     "promotion_restriction/lifecycle/marketing_permission_required":
-     "This marketing message has no recorded permission under the applicable rules. A staff exception cannot replace consent or the required evidence.",
+     "This marketing message has no recorded permission under the applicable rules. Record consent or the required evidence.",
     "promotion_restriction/lifecycle/no_compatible_evidence":
      "Sending is refused until a reason is recorded.",
     "promotion_restriction/lifecycle/no_marketing_consent":
      "Marketing needs the recipient’s consent, and none is on record.",
     "promotion_restriction/lifecycle/opted_out_after_request":
-     "The recipient opted out of marketing after asking for this quote. Confirm with them that they still want it, then record their new request.",
+     "The recipient opted out of marketing after requesting this quote. Sending this email does not change their choice.",
     "promotion_restriction/lifecycle/processing_restricted":
-     "The recipient’s data is under a processing restriction. Only security, privacy and opt-out notices can still go to them.",
+     "The recipient’s data is under a processing restriction. Sending this email does not lift the restriction.",
     "promotion_restriction/lifecycle/recipient_resolves_to_no_single_subject":
      "This address is on several records, or on none you can write to, so the recipient is unknown. Check the address, or merge the records that share it.",
     "promotion_restriction/lifecycle/subject_request":
-     "The recipient asked not to be contacted. Only security, privacy and opt-out notices can still go to them.",
+     "The recipient asked not to be contacted. Sending this email does not change their request.",
     "promotion_restriction/lifecycle/unconfirmed_double_opt_in":
      "The recipient has not confirmed they want to receive messages. Only the recipient can confirm.",
     "promotion_restriction/lifecycle/unknown_purpose":
@@ -16942,6 +16972,12 @@
      "Not set",
     "first_name/execution":
      "Set when applied",
+    "footer_warning/boolean":
+     "No",
+    "footer_warning/empty":
+     "Not set",
+    "footer_warning/execution":
+     "Set when applied",
     "format/boolean":
      "No",
     "format/empty":
@@ -20244,6 +20280,8 @@
      "Ergänzte Felder",
     "first_name":
      "Vorname",
+    "footer_warning":
+     "Hinweis zur E-Mail-Fußzeile",
     "format":
      "format",
     "from":
@@ -20389,17 +20427,17 @@
     "marketing_wording":
      "Eingereichter Marketingtext",
     "meeting_documents_added":
-     "Besprechungsnotizen aus dem Kalender verknüpft",
+     "Terminnotizen aus dem Kalender verknüpft",
     "meeting_end":
      "Ende (mit UTC-Abweichung)",
     "meeting_guests_removed":
-     "Gäste an ihre eigene Besprechung zurückgegeben",
+     "Gäste an ihren eigenen Termin zurückgegeben",
     "meeting_host":
      "Organisiert von",
     "meeting_intent":
      "Terminbeginn (Ortszeit)",
     "meeting_location":
-     "Ort oder Besprechungslink",
+     "Ort oder Terminlink",
     "meeting_start":
      "Beginn (mit UTC-Abweichung)",
     "meeting_status":
@@ -25004,6 +25042,26 @@
      "Unbekannt",
     "first_name/boolean/true":
      "Ja",
+    "footer_warning/lifecycle/customer":
+     "Kunde",
+    "footer_warning/lifecycle/disqualified":
+     "Disqualifiziert",
+    "footer_warning/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "footer_warning/lifecycle/live":
+     "Live",
+    "footer_warning/lifecycle/onboarding":
+     "Onboarding",
+    "footer_warning/lifecycle/opportunity":
+     "Chance",
+    "footer_warning/lifecycle/prospect":
+     "Interessent",
+    "footer_warning/lifecycle/target":
+     "Zielunternehmen",
+    "footer_warning/lifecycle/unknown":
+     "Unbekannt",
+    "footer_warning/boolean/true":
+     "Ja",
     "format/lifecycle/customer":
      "Kunde",
     "format/lifecycle/disqualified":
@@ -29047,9 +29105,9 @@
     "merge_profile_field/text/lost_reason":
      "Verlustgrund",
     "merge_profile_field/text/meeting_documents_added":
-     "Besprechungsnotizen aus dem Kalender verknüpft",
+     "Terminnotizen aus dem Kalender verknüpft",
     "merge_profile_field/text/meeting_guests_removed":
-     "Gäste an ihre eigene Besprechung zurückgegeben",
+     "Gäste an ihren eigenen Termin zurückgegeben",
     "merge_profile_field/text/meeting_intent":
      "Terminbeginn (Ortszeit)",
     "merge_profile_field/text/meeting_status":
@@ -29347,9 +29405,9 @@
     "merge_profile_field/lifecycle/lost_reason":
      "Verlustgrund",
     "merge_profile_field/lifecycle/meeting_documents_added":
-     "Besprechungsnotizen aus dem Kalender verknüpft",
+     "Terminnotizen aus dem Kalender verknüpft",
     "merge_profile_field/lifecycle/meeting_guests_removed":
-     "Gäste an ihre eigene Besprechung zurückgegeben",
+     "Gäste an ihren eigenen Termin zurückgegeben",
     "merge_profile_field/lifecycle/meeting_intent":
      "Terminbeginn (Ortszeit)",
     "merge_profile_field/lifecycle/meeting_status":
@@ -31953,33 +32011,37 @@
     "promotion_restriction/text/claim_contradicts_resolution":
      "Der angegebene Kontaktgrund passt nicht zu diesem Thread.",
     "promotion_restriction/text/consent_withdrawn":
-     "Die empfangende Person hat ihre Einwilligung für diese Art von Nachricht widerrufen, daher kann sie nicht an sie gesendet werden.",
+     "Der Kontakt hat seine Einwilligung für diese Art von Nachricht widerrufen. Der Versand dieser E-Mail stellt sie nicht wieder her.",
     "promotion_restriction/text/deal_not_requested":
      "Ein Deal allein zeigt nicht, dass die empfangende Person diese Verhandlung angefragt hat. Erfasst sein muss eine Anfrage der Person, zum Beispiel aus einem Anruf oder Termin.",
+    "promotion_restriction/text/footer_incomplete":
+     "Lies die Hinweise zur Fußzeile. Du kannst diese E-Mail mit einer dokumentierten Begründung senden.",
     "promotion_restriction/text/frequency_cap_reached":
      "Die empfangende Person hat das Limit für Marketingnachrichten vorerst erreicht. Das Limit wird automatisch zurückgesetzt.",
     "promotion_restriction/text/hard_bounce":
      "Diese Adresse nimmt keine E-Mails an. Korrigiere die Adresse. Eine Ausnahme ist hier nicht möglich.",
+    "promotion_restriction/text/lawful_basis_unconfirmed":
+     "Für diesen Kontakt ist keine Rechtsgrundlage erfasst, und die Warnung wurde vor dem Senden nicht bestätigt.",
     "promotion_restriction/text/legacy_transactional_unevidenced":
      "Diese Nachricht nutzt einen alten Zweck, den nichts im Datensatz belegt.",
     "promotion_restriction/text/marketing_consent_required":
-     "Marketing an eine empfangende Person in diesem Land braucht ihre vorherige Einwilligung. Keine Ausnahme kann sie ersetzen.",
+     "Marketing an eine empfangende Person in diesem Land braucht ihre vorherige Einwilligung.",
     "promotion_restriction/text/marketing_objection":
-     "Die empfangende Person hat dem Marketing widersprochen, daher geht kein Marketing an sie. Eine Antwort oder eine Nachricht, um die sie gebeten hat, kann weiterhin gesendet werden.",
+     "Der Kontakt hat Werbung widersprochen. Der Versand dieser E-Mail hebt seinen Widerspruch nicht auf.",
     "promotion_restriction/text/marketing_permission_required":
-     "Für diese Marketingnachricht ist nach den geltenden Regeln keine Erlaubnis belegt. Eine Ausnahme durch Mitarbeitende ersetzt weder die Einwilligung noch die erforderlichen Nachweise.",
+     "Für diese Marketingnachricht ist nach den geltenden Regeln keine Erlaubnis belegt. Erfasse die Einwilligung oder die erforderlichen Nachweise.",
     "promotion_restriction/text/no_compatible_evidence":
      "Der Versand wird abgelehnt, bis ein Grund erfasst ist.",
     "promotion_restriction/text/no_marketing_consent":
      "Marketing braucht die Einwilligung der empfangenden Person, und keine ist erfasst.",
     "promotion_restriction/text/opted_out_after_request":
-     "Die empfangende Person hat sich nach ihrer Anfrage vom Marketing abgemeldet. Kläre mit ihr, ob sie das Angebot noch möchte, und erfasse dann ihre neue Anfrage.",
+     "Der Kontakt hat nach der Angebotsanfrage Werbung abgelehnt. Der Versand dieser E-Mail ändert seine Entscheidung nicht.",
     "promotion_restriction/text/processing_restricted":
-     "Für die Daten der empfangenden Person gilt eine Einschränkung der Verarbeitung. Nur Sicherheits-, Datenschutz- und Abmeldehinweise können noch an sie gesendet werden.",
+     "Die Verarbeitung der Daten dieses Kontakts ist eingeschränkt. Der Versand dieser E-Mail hebt die Einschränkung nicht auf.",
     "promotion_restriction/text/recipient_resolves_to_no_single_subject":
      "Diese Adresse steht in mehreren Datensätzen oder in keinem, an den du schreiben darfst. Daher ist unklar, wer die Nachricht erhält. Prüfe die Adresse oder führe die Datensätze zusammen, die sie teilen.",
     "promotion_restriction/text/subject_request":
-     "Die empfangende Person hat darum gebeten, nicht kontaktiert zu werden. Nur Sicherheits-, Datenschutz- und Abmeldehinweise können noch an sie gesendet werden.",
+     "Der Kontakt möchte nicht mehr kontaktiert werden. Der Versand dieser E-Mail ändert seinen Wunsch nicht.",
     "promotion_restriction/text/unconfirmed_double_opt_in":
      "Die empfangende Person hat nicht bestätigt, dass sie Nachrichten erhalten möchte. Nur die empfangende Person selbst kann das bestätigen.",
     "promotion_restriction/text/unknown_purpose":
@@ -31987,33 +32049,37 @@
     "promotion_restriction/lifecycle/claim_contradicts_resolution":
      "Der angegebene Kontaktgrund passt nicht zu diesem Thread.",
     "promotion_restriction/lifecycle/consent_withdrawn":
-     "Die empfangende Person hat ihre Einwilligung für diese Art von Nachricht widerrufen, daher kann sie nicht an sie gesendet werden.",
+     "Der Kontakt hat seine Einwilligung für diese Art von Nachricht widerrufen. Der Versand dieser E-Mail stellt sie nicht wieder her.",
     "promotion_restriction/lifecycle/deal_not_requested":
      "Ein Deal allein zeigt nicht, dass die empfangende Person diese Verhandlung angefragt hat. Erfasst sein muss eine Anfrage der Person, zum Beispiel aus einem Anruf oder Termin.",
+    "promotion_restriction/lifecycle/footer_incomplete":
+     "Lies die Hinweise zur Fußzeile. Du kannst diese E-Mail mit einer dokumentierten Begründung senden.",
     "promotion_restriction/lifecycle/frequency_cap_reached":
      "Die empfangende Person hat das Limit für Marketingnachrichten vorerst erreicht. Das Limit wird automatisch zurückgesetzt.",
     "promotion_restriction/lifecycle/hard_bounce":
      "Diese Adresse nimmt keine E-Mails an. Korrigiere die Adresse. Eine Ausnahme ist hier nicht möglich.",
+    "promotion_restriction/lifecycle/lawful_basis_unconfirmed":
+     "Für diesen Kontakt ist keine Rechtsgrundlage erfasst, und die Warnung wurde vor dem Senden nicht bestätigt.",
     "promotion_restriction/lifecycle/legacy_transactional_unevidenced":
      "Diese Nachricht nutzt einen alten Zweck, den nichts im Datensatz belegt.",
     "promotion_restriction/lifecycle/marketing_consent_required":
-     "Marketing an eine empfangende Person in diesem Land braucht ihre vorherige Einwilligung. Keine Ausnahme kann sie ersetzen.",
+     "Marketing an eine empfangende Person in diesem Land braucht ihre vorherige Einwilligung.",
     "promotion_restriction/lifecycle/marketing_objection":
-     "Die empfangende Person hat dem Marketing widersprochen, daher geht kein Marketing an sie. Eine Antwort oder eine Nachricht, um die sie gebeten hat, kann weiterhin gesendet werden.",
+     "Der Kontakt hat Werbung widersprochen. Der Versand dieser E-Mail hebt seinen Widerspruch nicht auf.",
     "promotion_restriction/lifecycle/marketing_permission_required":
-     "Für diese Marketingnachricht ist nach den geltenden Regeln keine Erlaubnis belegt. Eine Ausnahme durch Mitarbeitende ersetzt weder die Einwilligung noch die erforderlichen Nachweise.",
+     "Für diese Marketingnachricht ist nach den geltenden Regeln keine Erlaubnis belegt. Erfasse die Einwilligung oder die erforderlichen Nachweise.",
     "promotion_restriction/lifecycle/no_compatible_evidence":
      "Der Versand wird abgelehnt, bis ein Grund erfasst ist.",
     "promotion_restriction/lifecycle/no_marketing_consent":
      "Marketing braucht die Einwilligung der empfangenden Person, und keine ist erfasst.",
     "promotion_restriction/lifecycle/opted_out_after_request":
-     "Die empfangende Person hat sich nach ihrer Anfrage vom Marketing abgemeldet. Kläre mit ihr, ob sie das Angebot noch möchte, und erfasse dann ihre neue Anfrage.",
+     "Der Kontakt hat nach der Angebotsanfrage Werbung abgelehnt. Der Versand dieser E-Mail ändert seine Entscheidung nicht.",
     "promotion_restriction/lifecycle/processing_restricted":
-     "Für die Daten der empfangenden Person gilt eine Einschränkung der Verarbeitung. Nur Sicherheits-, Datenschutz- und Abmeldehinweise können noch an sie gesendet werden.",
+     "Die Verarbeitung der Daten dieses Kontakts ist eingeschränkt. Der Versand dieser E-Mail hebt die Einschränkung nicht auf.",
     "promotion_restriction/lifecycle/recipient_resolves_to_no_single_subject":
      "Diese Adresse steht in mehreren Datensätzen oder in keinem, an den du schreiben darfst. Daher ist unklar, wer die Nachricht erhält. Prüfe die Adresse oder führe die Datensätze zusammen, die sie teilen.",
     "promotion_restriction/lifecycle/subject_request":
-     "Die empfangende Person hat darum gebeten, nicht kontaktiert zu werden. Nur Sicherheits-, Datenschutz- und Abmeldehinweise können noch an sie gesendet werden.",
+     "Der Kontakt möchte nicht mehr kontaktiert werden. Der Versand dieser E-Mail ändert seinen Wunsch nicht.",
     "promotion_restriction/lifecycle/unconfirmed_double_opt_in":
      "Die empfangende Person hat nicht bestätigt, dass sie Nachrichten erhalten möchte. Nur die empfangende Person selbst kann das bestätigen.",
     "promotion_restriction/lifecycle/unknown_purpose":
@@ -36808,6 +36874,12 @@
      "Nicht gesetzt",
     "first_name/execution":
      "Wird beim Anwenden festgelegt",
+    "footer_warning/boolean":
+     "Nein",
+    "footer_warning/empty":
+     "Nicht gesetzt",
+    "footer_warning/execution":
+     "Wird beim Anwenden festgelegt",
     "format/boolean":
      "Nein",
     "format/empty":
@@ -40110,6 +40182,8 @@
      "Các trường được điền thêm",
     "first_name":
      "Tên",
+    "footer_warning":
+     "Lưu ý về chân trang email",
     "format":
      "format",
     "from":
@@ -44869,6 +44943,26 @@
     "first_name/lifecycle/unknown":
      "Chưa rõ",
     "first_name/boolean/true":
+     "Có",
+    "footer_warning/lifecycle/customer":
+     "Khách hàng",
+    "footer_warning/lifecycle/disqualified":
+     "Đã loại",
+    "footer_warning/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "footer_warning/lifecycle/live":
+     "Đang vận hành",
+    "footer_warning/lifecycle/onboarding":
+     "Đang triển khai",
+    "footer_warning/lifecycle/opportunity":
+     "Cơ hội",
+    "footer_warning/lifecycle/prospect":
+     "Tiềm năng",
+    "footer_warning/lifecycle/target":
+     "Mục tiêu",
+    "footer_warning/lifecycle/unknown":
+     "Chưa rõ",
+    "footer_warning/boolean/true":
      "Có",
     "format/lifecycle/customer":
      "Khách hàng",
@@ -51819,33 +51913,37 @@
     "promotion_restriction/text/claim_contradicts_resolution":
      "Lý do liên hệ đã chọn không khớp với chuỗi thư này.",
     "promotion_restriction/text/consent_withdrawn":
-     "Người nhận đã rút lại sự đồng ý cho loại thư này, nên không thể gửi thư này cho họ.",
+     "Người nhận đã rút lại sự đồng ý cho loại thư này. Gửi email này không khôi phục sự đồng ý.",
     "promotion_restriction/text/deal_not_requested":
      "Chỉ một giao dịch thì chưa cho thấy người nhận đã yêu cầu cuộc thương lượng này. Yêu cầu của họ, ví dụ qua cuộc gọi hoặc cuộc họp, cần được ghi nhận.",
+    "promotion_restriction/text/footer_incomplete":
+     "Đọc thông tin chân trang bên dưới. Bạn có thể gửi email này kèm lý do được ghi lại.",
     "promotion_restriction/text/frequency_cap_reached":
      "Người nhận đã chạm giới hạn tin tiếp thị trong thời gian này. Hạn chế này sẽ tự hết.",
     "promotion_restriction/text/hard_bounce":
      "Địa chỉ này không nhận thư. Sửa lại địa chỉ; trường hợp này không thể bỏ qua.",
+    "promotion_restriction/text/lawful_basis_unconfirmed":
+     "Chưa có căn cứ xử lý được ghi nhận cho liên hệ này và cảnh báo chưa được xác nhận trước khi gửi.",
     "promotion_restriction/text/legacy_transactional_unevidenced":
      "Tin nhắn này dùng một mục đích kiểu cũ mà không dữ liệu nào xác nhận.",
     "promotion_restriction/text/marketing_consent_required":
-     "Tin tiếp thị gửi người nhận ở quốc gia này cần sự đồng ý trước của họ. Không có ngoại lệ nào thay thế được.",
+     "Tin tiếp thị gửi người nhận ở quốc gia này cần sự đồng ý trước của họ.",
     "promotion_restriction/text/marketing_objection":
-     "Người nhận đã phản đối tin tiếp thị, nên không gửi tin tiếp thị cho họ. Thư trả lời hoặc thư họ đã yêu cầu vẫn có thể gửi.",
+     "Người nhận đã phản đối quảng cáo. Gửi email này không hủy bỏ sự phản đối của họ.",
     "promotion_restriction/text/marketing_permission_required":
-     "Chưa có căn cứ cho phép gửi tin tiếp thị này theo quy tắc áp dụng. Ngoại lệ của nhân viên không thay thế sự đồng ý hoặc bằng chứng bắt buộc.",
+     "Chưa có căn cứ cho phép gửi tin tiếp thị này theo quy tắc áp dụng. Hãy ghi nhận sự đồng ý hoặc bằng chứng bắt buộc.",
     "promotion_restriction/text/no_compatible_evidence":
      "Không thể gửi cho đến khi ghi nhận lý do.",
     "promotion_restriction/text/no_marketing_consent":
      "Tin tiếp thị cần sự đồng ý của người nhận, nhưng chưa có sự đồng ý nào được ghi nhận.",
     "promotion_restriction/text/opted_out_after_request":
-     "Người nhận đã từ chối tin tiếp thị sau khi yêu cầu báo giá này. Hãy xác nhận lại với họ rằng họ vẫn muốn nhận, rồi ghi nhận yêu cầu mới của họ.",
+     "Người nhận đã từ chối quảng cáo sau khi yêu cầu báo giá. Gửi email này không thay đổi lựa chọn của họ.",
     "promotion_restriction/text/processing_restricted":
-     "Dữ liệu của người nhận đang bị hạn chế xử lý. Chỉ thông báo bảo mật, quyền riêng tư và xác nhận hủy đăng ký mới có thể gửi cho họ.",
+     "Dữ liệu của người nhận đang bị hạn chế xử lý. Gửi email này không gỡ bỏ hạn chế đó.",
     "promotion_restriction/text/recipient_resolves_to_no_single_subject":
      "Địa chỉ này nằm trên nhiều hồ sơ, hoặc không nằm trên hồ sơ nào bạn được gửi tới, nên chưa xác định được người nhận. Kiểm tra lại địa chỉ, hoặc gộp các hồ sơ dùng chung địa chỉ này.",
     "promotion_restriction/text/subject_request":
-     "Người nhận đã yêu cầu không được liên hệ. Chỉ thông báo bảo mật, quyền riêng tư và xác nhận hủy đăng ký mới có thể gửi cho họ.",
+     "Người nhận đã yêu cầu không liên hệ nữa. Gửi email này không thay đổi yêu cầu của họ.",
     "promotion_restriction/text/unconfirmed_double_opt_in":
      "Người nhận chưa xác nhận muốn nhận tin nhắn. Chỉ người nhận mới có thể xác nhận.",
     "promotion_restriction/text/unknown_purpose":
@@ -51853,33 +51951,37 @@
     "promotion_restriction/lifecycle/claim_contradicts_resolution":
      "Lý do liên hệ đã chọn không khớp với chuỗi thư này.",
     "promotion_restriction/lifecycle/consent_withdrawn":
-     "Người nhận đã rút lại sự đồng ý cho loại thư này, nên không thể gửi thư này cho họ.",
+     "Người nhận đã rút lại sự đồng ý cho loại thư này. Gửi email này không khôi phục sự đồng ý.",
     "promotion_restriction/lifecycle/deal_not_requested":
      "Chỉ một giao dịch thì chưa cho thấy người nhận đã yêu cầu cuộc thương lượng này. Yêu cầu của họ, ví dụ qua cuộc gọi hoặc cuộc họp, cần được ghi nhận.",
+    "promotion_restriction/lifecycle/footer_incomplete":
+     "Đọc thông tin chân trang bên dưới. Bạn có thể gửi email này kèm lý do được ghi lại.",
     "promotion_restriction/lifecycle/frequency_cap_reached":
      "Người nhận đã chạm giới hạn tin tiếp thị trong thời gian này. Hạn chế này sẽ tự hết.",
     "promotion_restriction/lifecycle/hard_bounce":
      "Địa chỉ này không nhận thư. Sửa lại địa chỉ; trường hợp này không thể bỏ qua.",
+    "promotion_restriction/lifecycle/lawful_basis_unconfirmed":
+     "Chưa có căn cứ xử lý được ghi nhận cho liên hệ này và cảnh báo chưa được xác nhận trước khi gửi.",
     "promotion_restriction/lifecycle/legacy_transactional_unevidenced":
      "Tin nhắn này dùng một mục đích kiểu cũ mà không dữ liệu nào xác nhận.",
     "promotion_restriction/lifecycle/marketing_consent_required":
-     "Tin tiếp thị gửi người nhận ở quốc gia này cần sự đồng ý trước của họ. Không có ngoại lệ nào thay thế được.",
+     "Tin tiếp thị gửi người nhận ở quốc gia này cần sự đồng ý trước của họ.",
     "promotion_restriction/lifecycle/marketing_objection":
-     "Người nhận đã phản đối tin tiếp thị, nên không gửi tin tiếp thị cho họ. Thư trả lời hoặc thư họ đã yêu cầu vẫn có thể gửi.",
+     "Người nhận đã phản đối quảng cáo. Gửi email này không hủy bỏ sự phản đối của họ.",
     "promotion_restriction/lifecycle/marketing_permission_required":
-     "Chưa có căn cứ cho phép gửi tin tiếp thị này theo quy tắc áp dụng. Ngoại lệ của nhân viên không thay thế sự đồng ý hoặc bằng chứng bắt buộc.",
+     "Chưa có căn cứ cho phép gửi tin tiếp thị này theo quy tắc áp dụng. Hãy ghi nhận sự đồng ý hoặc bằng chứng bắt buộc.",
     "promotion_restriction/lifecycle/no_compatible_evidence":
      "Không thể gửi cho đến khi ghi nhận lý do.",
     "promotion_restriction/lifecycle/no_marketing_consent":
      "Tin tiếp thị cần sự đồng ý của người nhận, nhưng chưa có sự đồng ý nào được ghi nhận.",
     "promotion_restriction/lifecycle/opted_out_after_request":
-     "Người nhận đã từ chối tin tiếp thị sau khi yêu cầu báo giá này. Hãy xác nhận lại với họ rằng họ vẫn muốn nhận, rồi ghi nhận yêu cầu mới của họ.",
+     "Người nhận đã từ chối quảng cáo sau khi yêu cầu báo giá. Gửi email này không thay đổi lựa chọn của họ.",
     "promotion_restriction/lifecycle/processing_restricted":
-     "Dữ liệu của người nhận đang bị hạn chế xử lý. Chỉ thông báo bảo mật, quyền riêng tư và xác nhận hủy đăng ký mới có thể gửi cho họ.",
+     "Dữ liệu của người nhận đang bị hạn chế xử lý. Gửi email này không gỡ bỏ hạn chế đó.",
     "promotion_restriction/lifecycle/recipient_resolves_to_no_single_subject":
      "Địa chỉ này nằm trên nhiều hồ sơ, hoặc không nằm trên hồ sơ nào bạn được gửi tới, nên chưa xác định được người nhận. Kiểm tra lại địa chỉ, hoặc gộp các hồ sơ dùng chung địa chỉ này.",
     "promotion_restriction/lifecycle/subject_request":
-     "Người nhận đã yêu cầu không được liên hệ. Chỉ thông báo bảo mật, quyền riêng tư và xác nhận hủy đăng ký mới có thể gửi cho họ.",
+     "Người nhận đã yêu cầu không liên hệ nữa. Gửi email này không thay đổi yêu cầu của họ.",
     "promotion_restriction/lifecycle/unconfirmed_double_opt_in":
      "Người nhận chưa xác nhận muốn nhận tin nhắn. Chỉ người nhận mới có thể xác nhận.",
     "promotion_restriction/lifecycle/unknown_purpose":
@@ -56673,6 +56775,12 @@
     "first_name/empty":
      "Chưa đặt",
     "first_name/execution":
+     "Được xác định khi áp dụng",
+    "footer_warning/boolean":
+     "Không",
+    "footer_warning/empty":
+     "Chưa đặt",
+    "footer_warning/execution":
      "Được xác định khi áp dụng",
     "format/boolean":
      "Không",

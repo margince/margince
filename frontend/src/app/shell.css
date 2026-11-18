@@ -146,6 +146,10 @@
    lane is in the phone block below. */
 .app.railless .scroll {
   --scrollPadTop: 0px;
+  /* A frameless page paints its own ground to the viewport edge, which a
+     reserved gutter would leave bare beside a short page under classic
+     scrollbars. */
+  scrollbar-gutter: auto;
 }
 
 .main {
@@ -1803,6 +1807,9 @@
   overflow-y: auto;
   padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--borderSubtle);
+}
+.palette-answer > :is(p, .disclosure) {
+  margin: 0;
 }
 .palette-answer-sections {
   margin: 0;

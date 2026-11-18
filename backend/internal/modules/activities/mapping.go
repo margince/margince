@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -83,12 +84,10 @@ func (e *ReservedMailIdentityError) FieldFault() (field, code, message string) {
 // fieldKind).
 const fieldBody = "body"
 
-// transcriptSourceSystem is the ADR-0058 marker: a `logActivity` call
-// carrying it identifies its body as pasted/uploaded transcript text rather
-// than ordinary meeting notes, which is what routes it through
-// normalizeTranscript and what the activity/transcript retention selector
-// (privacy/retentionselectors.go) keys its sweep on.
-const transcriptSourceSystem = "transcript"
+// transcriptSourceSystem marks a body as pasted or uploaded transcript text
+// rather than meeting notes. It routes the body through normalizeTranscript,
+// and the activity/transcript retention selector keys its sweep on it.
+const transcriptSourceSystem = meetingoutcome.TranscriptSourceSystem
 
 // faultInvalid is the RFC 7807 code every field refusal in this module carries:
 // the value is well-formed enough to have reached us and is still not one this

@@ -19,6 +19,7 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -166,6 +167,7 @@ func New(tools Invoker, brain Brain) *Runner {
 // Run executes a fresh job until terminal answer, suspension, or a
 // budget guarantee fires.
 func (r *Runner) Run(ctx context.Context, job Job) (Result, error) {
+	ctx = principal.WithUnattended(ctx)
 	if len(job.Tools) == 0 {
 		return r.degrade(Result{}, unscopedJobReason), nil
 	}
@@ -192,6 +194,7 @@ type Decision struct {
 // silently changed under an approved diff). Rejected: the refusal is
 // observed and the model re-plans without that action.
 func (r *Runner) Resume(ctx context.Context, job Job, dec Decision) (Result, error) {
+	ctx = principal.WithUnattended(ctx)
 	if len(job.Tools) == 0 {
 		return r.degrade(Result{StepsUsed: dec.Pending.StepsUsed, OutputTokens: dec.Pending.OutputTokens},
 			unscopedJobReason), nil

@@ -124,7 +124,7 @@ func readEmailPartiesOf(ctx context.Context, tx pgx.Tx, messages []ids.UUID) (ma
 		contactaddress.ReachableOrder+` LIMIT 1) own_pe ON p.id IS NOT NULL
 		 WHERE ap.activity_id = ANY($1)
 		   AND ap.role IN ('from', 'to', 'cc', 'bcc', 'organizer', 'attendee')
-		   AND NOT `+unstatedContactSQL("ap")+`
+		   AND NOT `+auth.ParticipantUnstatedSQL("ap")+`
 		   -- A seat row the legacy backfill guessed for bare mail is no party.
 		   AND `+auth.ParticipantStandsSQL("ap", "act")+`
 		UNION ALL
@@ -163,7 +163,7 @@ func receivedFromSQL() string {
 		 WHERE a.id = ANY($1) AND a.archived_at IS NULL AND a.direction = 'inbound'
 		   AND coalesce(a.counterparty_email, '') <> ''
 		   AND NOT EXISTS (SELECT 1 FROM activity_participant ap
-		         WHERE ap.activity_id = a.id AND ap.role = 'from' AND NOT ` + unstatedContactSQL("ap") + `)`
+		         WHERE ap.activity_id = a.id AND ap.role = 'from' AND NOT ` + auth.ParticipantUnstatedSQL("ap") + `)`
 }
 
 // rowCounterparty is whom a message row was with: the far side of the

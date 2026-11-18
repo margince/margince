@@ -93,13 +93,16 @@ it.each(recordKinds)(
       within(dialog).getByRole("button", { name: "Take inquiry" }),
     );
     await waitFor(() =>
-      expect(write).toHaveBeenCalledWith({
-        mode: "take",
-        recipient_id: me.user.id,
-        record_type: kind,
-        record_id: "selected-record",
-        record_version: 11,
-      }),
+      expect(write).toHaveBeenCalledWith(
+        {
+          mode: "take",
+          recipient_id: me.user.id,
+          record_type: kind,
+          record_id: "selected-record",
+          record_version: 11,
+        },
+        expect.any(URL),
+      ),
     );
     const requests = fetch.mock.calls
       .map(([input]) => input)
@@ -162,13 +165,16 @@ it("requires a fresh review after a stale assignment is refused", async () => {
     within(dialog).getByRole("button", { name: "Take inquiry" }),
   );
   await waitFor(() =>
-    expect(write).toHaveBeenLastCalledWith({
-      mode: "take",
-      recipient_id: me.user.id,
-      record_type: "lead",
-      record_id: "selected-record",
-      record_version: 12,
-    }),
+    expect(write).toHaveBeenLastCalledWith(
+      {
+        mode: "take",
+        recipient_id: me.user.id,
+        record_type: "lead",
+        record_id: "selected-record",
+        record_version: 12,
+      },
+      expect.any(URL),
+    ),
   );
   const requests = fetch.mock.calls
     .map(([input]) => input)
@@ -218,22 +224,28 @@ it("reviews the selected colleague before handing over the lead and its inquiry 
   await screen.findByText(
     "The lead and this inquiry task go to this colleague.",
   );
-  expect(preview).toHaveBeenCalledWith({
-    mode: "assign_and_follow_up",
-    recipient_id: INQUIRY_COORDINATOR,
-  });
+  expect(preview).toHaveBeenCalledWith(
+    {
+      mode: "assign_and_follow_up",
+      recipient_id: INQUIRY_COORDINATOR,
+    },
+    expect.any(URL),
+  );
   expect(write).not.toHaveBeenCalled();
   await user.click(
     screen.getByRole("button", { name: "Assign and follow up" }),
   );
   await waitFor(() =>
-    expect(write).toHaveBeenCalledWith({
-      mode: "assign_and_follow_up",
-      recipient_id: INQUIRY_COORDINATOR,
-      record_type: "lead",
-      record_id: "selected-record",
-      record_version: 11,
-    }),
+    expect(write).toHaveBeenCalledWith(
+      {
+        mode: "assign_and_follow_up",
+        recipient_id: INQUIRY_COORDINATOR,
+        record_type: "lead",
+        record_id: "selected-record",
+        record_version: 11,
+      },
+      expect.any(URL),
+    ),
   );
   await waitFor(() => expect(close).toHaveBeenCalled());
 });

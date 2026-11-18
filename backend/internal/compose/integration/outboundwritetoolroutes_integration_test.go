@@ -13,6 +13,8 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
 // A company enrichment is staged, not run, on either door. Only the staging is
@@ -42,7 +44,7 @@ func TestEnrichStagesTheSameApprovalOnEitherDoor(t *testing.T) {
 func TestInviteMeetingOnAColleaguesPassportIsStagedOnNeitherDoor(t *testing.T) {
 	d := newTwoDoors(t, "invite-write-doors", "read", "write", "send")
 	contact := func(name string) string {
-		return createdID(t, d.e, "/v1/contacts", AnyMap{"full_name": name, "source": "manual"})
+		return createdID(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": name, "source": "manual"})
 	}
 	viaREST, viaTool := contact("Invite Rest"), contact("Invite Tool")
 	invitation := func(contactID string) map[string]any {

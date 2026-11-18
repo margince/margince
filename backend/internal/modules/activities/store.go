@@ -69,6 +69,9 @@ type Store struct {
 	// carry. Nil means none are appended, which is what every send did before
 	// the seam existed (WithDisclosures).
 	disclosures DisclosureResolver
+	// draftContent checks an advertising draft against its recipients'
+	// content rules. Nil checks nothing (WithDraftContent).
+	draftContent DraftContentChecker
 	// publicBaseURL is the canonical scheme+host the tokenized unsubscribe
 	// link resolves to — configured at boot, never taken from the request
 	// (WithPublicBaseURL wires it).

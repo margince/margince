@@ -55,7 +55,7 @@ func TestEveryReaderOfAnOwedVerdictAsksWhetherItStands(t *testing.T) {
 	for name, sql := range map[string]string{
 		"AutomaticRequestIntentClause": storekit.AutomaticRequestIntentClause("a"),
 		"capturedReplyAdmissionSQL":    capturedReplyAdmissionSQL("false", "false", acceptedRequestSQL),
-		"reviewableRequestSQL":         reviewableRequestSQL("$1"),
+		"reviewableRequestSQL":         reviewableRequestSQL("$1", "$2"),
 		"confirmedRequestSQL":          confirmedRequestSQL,
 	} {
 		if !strings.Contains(sql, stands) {

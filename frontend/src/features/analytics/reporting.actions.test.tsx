@@ -108,6 +108,7 @@ it("captures the saved revision with an idempotency key and exposes report editi
       jsonResponse({ data: reportingEditions }),
   });
   const fetch = vi.spyOn(globalThis, "fetch");
+  window.location.hash = "#/analytics/reports/report/edition-2";
   render(
     <StoryProviders>
       <ReportingReportDetail reportId="report" />
@@ -157,7 +158,34 @@ it("captures the saved revision with an idempotency key and exposes report editi
   expect(
     screen.getByRole("combobox", { name: "Saved snapshots" }),
   ).toHaveTextContent("Live report");
-  expect(window.location.hash).toContain("report");
+  expect(window.location.hash).toBe("#/analytics/reports/report/edition-2");
+});
+
+it("puts the reports list in an archived report's place", async () => {
+  const user = userEvent.setup({ delay: null });
+  installFetchStub({
+    ...reportingStoryRoutes(),
+    "DELETE /analytics/reports/report": () =>
+      new Response(null, { status: 204 }),
+  });
+  window.history.replaceState(null, "", "#/analytics/reports/report");
+  const entries = window.history.length;
+  render(
+    <StoryProviders>
+      <ReportingReportDetail reportId="report" />
+    </StoryProviders>,
+  );
+  await user.click(
+    await screen.findByRole("button", { name: "Report actions" }),
+  );
+  await user.click(screen.getByRole("button", { name: "Archive report" }));
+  await user.click(
+    within(await screen.findByRole("dialog")).getByRole("button", {
+      name: "Archive report",
+    }),
+  );
+  await waitFor(() => expect(window.location.hash).toBe("#/analytics/reports"));
+  expect(window.history.length).toBe(entries);
 });
 
 it("creates a fiscal-quarter count target on every pipeline and pages the target list", async () => {
@@ -223,10 +251,12 @@ it("creates a fiscal-quarter count target on every pipeline and pages the target
         value: 120,
         period_kind: "fiscal_quarter",
       }),
+      expect.any(URL),
     ),
   );
   expect(write).not.toHaveBeenCalledWith(
     expect.objectContaining({ pipeline_id: expect.anything() }),
+    expect.any(URL),
   );
 });
 
@@ -260,6 +290,7 @@ it("removes a capture context without leaving an enabled phantom capture", async
   await waitFor(() =>
     expect(publish).toHaveBeenCalledWith(
       expect.objectContaining({ capture_contexts: [] }),
+      expect.any(URL),
     ),
   );
 });

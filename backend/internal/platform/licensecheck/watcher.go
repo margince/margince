@@ -60,13 +60,10 @@ type recheckRun struct {
 	err  error
 }
 
-// NewWatcher resolves the posture once and refuses a rejected one, so the
-// caller's boot fails before the role serves.
-//
-// An absent license is a posture here, not a refusal. Whether an installation
-// may RUN unlicensed depends on the deployment posture rather than on the
-// license, so that decision is the composition root's (compose.EnsureLicense)
-// and this package reports what it found.
+// NewWatcher resolves the posture once. A rejected license is a posture here,
+// as an absent one is. The role starts locked rather than not at all, so every
+// seat sees why and an admin can correct the token without a shell. What a
+// posture locks is the composition root's to decide (installtrial).
 func NewWatcher(ctx context.Context, source TokenSource, now func() time.Time, log *slog.Logger, env runtimeenv.Environment) (*Watcher, error) {
 	token, err := source(ctx)
 	if err != nil {
@@ -78,13 +75,6 @@ func NewWatcher(ctx context.Context, source TokenSource, now func() time.Time, l
 	resolved, err := Resolve(ctx, token, now(), env)
 	if err != nil {
 		return nil, err
-	}
-	if resolved.State == StateRejected {
-		// Where the token CAME from is not named here: this package is handed a
-		// token, not a configuration file, and the caller that resolved it is the
-		// one that can tell the operator which setting to correct.
-		return nil, fmt.Errorf("licensecheck: the license was refused by the bundled validation module (%s): %s",
-			ModuleVersion(), resolved.Reason)
 	}
 	w := &Watcher{source: source, now: now, log: log, env: env}
 	w.posture.Store(&resolved)

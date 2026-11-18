@@ -14,6 +14,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -62,8 +63,8 @@ func TestPolishedWordsReadAIAssistedAndThePatchNeverLiftsTheMark(t *testing.T) {
 // logged on: Polish wording asked about that record's restriction.
 func TestOnlyAHumanMarksWordsAIAssistedOnTheRecordTheyArePolishedOn(t *testing.T) {
 	d := newTwoDoors(t, "ai-assisted-mark", "read", "write")
-	anna := AnyMap{"entity_type": "contact", "entity_id": createdRecord(t, d.e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Anna Berg"})}
-	other := AnyMap{"entity_type": "contact", "entity_id": createdRecord(t, d.e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Ben Roth"})}
+	anna := AnyMap{"entity_type": "contact", "entity_id": createdRecord(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Anna Berg"})}
+	other := AnyMap{"entity_type": "contact", "entity_id": createdRecord(t, d.e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "source": "manual", "full_name": "Ben Roth"})}
 	note := func(on AnyMap) AnyMap {
 		return AnyMap{"kind": "note", "subject": "Call Anna about pricing", "ai_assisted": true, "ai_assisted_on": on, "links": []AnyMap{anna}}
 	}

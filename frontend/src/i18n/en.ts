@@ -4,6 +4,9 @@
 // Every value is written to docs/reference/ui-copy-style.md.
 export const en = {
   "systemJob.import_identity_links": "Attaching imported mail links",
+  "systemJob.transcript_audience": "Giving meeting notes the meeting’s readers",
+  "systemJob.meeting_profile":
+    "Removing company values whose meeting lost its readers",
   "systemJob.optout_receipt": "Raising missed opt-out receipts",
   "systemJob.task_completion": "Completing tasks after email",
   "homeRepair.reason.taskChanged":
@@ -717,6 +720,7 @@ export const en = {
   "approval.preview.contextOptout": "Opt-out confirmation",
   "approval.preview.unsubscribeFooter":
     "Sending adds a recipient-specific unsubscribe link when the recipient has an applicable preference record. The private link is created at execution, not during review.",
+  "approval.preview.footerWarning": "Email footer warning",
   "approval.preview.disclosureText": "Disclosure appended when sent",
   "approval.preview.demoteArchive":
     "Restores the lead as Engaged and removes its qualification links. Archives the contact, its email addresses, phone numbers, channel identities and relationships; removes its tags and list memberships. Activities stay where they are.",
@@ -2083,15 +2087,13 @@ export const en = {
   "brief.schedule.more":
     "Load more agenda items to see the remaining meetings.",
   "brief.schedule.notConnected":
-    "No calendar is connected, so today’s meetings cannot be shown.",
+    "No calendar connected. Showing meetings booked, logged or imported in Margince.",
   "brief.schedule.unreadable":
     "Your calendar is not syncing, so today’s meetings cannot be shown.",
   "brief.schedule.connect": "Connect a calendar",
   "brief.schedule.reconnect": "Reconnect your calendar",
   "brief.schedule.nextAt": "Next meeting at {time}",
-  "brief.schedule.now": "Now",
-  "brief.schedule.freeUntil": "Free until {time}",
-  "brief.schedule.clearRest": "Nothing else booked today",
+  "brief.schedule.clearRest": "No more external meetings today",
   "brief.readings.riskPartial": "Known value only · not all checked",
   "brief.readings.unpricedCount_one": "{count} deal not priced · excluded",
   "brief.readings.unpricedCount_other": "{count} deals not priced · excluded",
@@ -2290,6 +2292,7 @@ export const en = {
   "systemJob.brief_overnight": "Overnight summary",
   "systemJob.captured_deal_refile": "Captured conversation filing",
   "systemJob.capture": "Mail capture",
+  "systemJob.privacy_request_task": "Data request tasks",
   "systemJob.capture_auto_enrich": "Company enrichment from mail",
   "systemJob.capture_classify": "Mail sorting",
   "systemJob.capture_credential_backfill": "Mail connection update",
@@ -2774,6 +2777,7 @@ export const en = {
   "shell.help.releaseNotes": "Release notes",
   "shell.help.licenses": "Web app licenses",
   "shell.help.devBuild": "Development build",
+  "shell.help.devBuildRevision": "Development build · {revision}",
   "shell.shortcuts.anywhere": "Anywhere",
   "shell.shortcuts.search": "Open search",
   "shell.shortcuts.sidebar": "Show or hide sidebar",
@@ -2892,7 +2896,26 @@ export const en = {
   "palette.searching": "Searching records…",
   "palette.searchFailedTitle": "Search failed",
   "palette.searchFailed": "The commands above still work.",
-  "palette.askRow": "Ask Margince: “{query}”",
+  "palette.askDataRow": "Ask CRM data: “{query}”",
+  "palette.openAnalytics": "Open in Analytics",
+  "palette.dataUnsupportedOnly":
+    "This question could not be answered from CRM data.",
+  "palette.dataUnsupported":
+    "This question could not be answered from CRM data. Here is what the handbook covers.",
+  "palette.dataSource": "Source: {source}",
+  "palette.dataPlan": "Query used",
+  "create.contactChannelRequired":
+    "Add at least one email, phone or LinkedIn URL.",
+  "import.reason.contact_channel_missing":
+    "Contact has no email, phone or LinkedIn URL; add one to reach them.",
+  "palette.recordsCoverage": "Coverage: {coverage}. Up to {limit} records.",
+  "palette.noDataRecords": "No records match this question.",
+  "palette.dataUnavailable": "CRM data could not be read",
+  "palette.coverageExact": "Exact matches",
+  "palette.coveragePartial": "Limited matches",
+  "palette.crmRecords": "CRM records",
+  "palette.recordName": "Record",
+  "palette.askRow": "Ask the handbook: “{query}”",
   "palette.asking": "Asking Margince…",
   "palette.answerAria": "Answer from Margince",
   "palette.answerFrom": "From {name}",
@@ -2960,6 +2983,17 @@ export const en = {
   "deal.card.summary": "Deal summary: {name}",
   "deal.card.email": "Write email: {name}",
   "deal.card.addTask": "Add task: {name}",
+  "deal.card.summaryItem": "Deal summary",
+  "deal.card.moveTo": "Move to {stage}",
+  "deal.card.markWon": "Mark won",
+  "deal.card.markLost": "Mark lost",
+  "deal.card.changeCloseDate": "Change close date",
+  "deal.card.closedReopen":
+    "This deal is closed. Reopen it on its page to move it.",
+  "deal.card.copyLink": "Copy link",
+  "deal.card.linkCopied": "Link copied",
+  "deal.card.copyFailed":
+    "Could not copy the link. Open the deal and copy the address from the browser’s address bar.",
   "deal.mail.sent": "Sent {ago}",
   "deal.mail.received": "Received {ago}",
   "deal.mail.sentOn": "Sent on {date}",
@@ -3345,12 +3379,16 @@ export const en = {
   "roster.failedUsers": "Colleagues did not load.",
   "roster.failedTeams": "Teams did not load.",
   "owner.rosterFailed": "Colleagues did not load. Reload the page to pick one.",
+  "ownerPick.change": "Change owner",
+  "ownerPick.search": "Search colleagues",
+  "ownerPick.done": "Assigned to {name}",
   "ref.notInRoster": "Currently assigned (no longer in the user list)",
 
   // A record search that ANSWERED and found nothing. Distinct from a search
   // that has not run: both drew the same empty space before, and a reader
   // could not tell "nobody here" from a field still thinking.
   "picker.noMatch": "No match",
+  "select.filter": "Filter the list",
   "picker.results_one": "{count} result",
   "picker.results_other": "{count} results",
 
@@ -3593,6 +3631,7 @@ export const en = {
   "consent.stopLiftBody": "Mail this stop held back can be sent again.",
   "consent.stopReason": "Why (kept in the record history)",
   "consent.manage": "Manage consent and proof history",
+  "consent.optOutRecords": "Download opt-out records",
   "contact.consent": "Consent",
   "consent.grant": "Record consent",
   // Submitted as the proof row's wording when an operator records a grant
@@ -4177,6 +4216,7 @@ export const en = {
     "Some sections could not be loaded, so this page may be incomplete.",
   "evidence.explain": "Where “{value}” came from",
   "evidence.explainBeside": "{label}: where “{value}” came from",
+  "evidence.fromMeeting": "From a meeting on {date}",
   "evidence.fullHistory": "Full history",
   "co.section.unavailable":
     "Some data did not load, so this section may be incomplete.",
@@ -5914,8 +5954,6 @@ export const en = {
   "lead.terminalDisqualified": "Disqualified. This lead is read-only.",
   "lead.marker": "Lead",
   "lead.assignToMe": "Assign to me",
-  "lead.assignChoose": "Choose a colleague",
-  "lead.assignNobodyElse": "No other user to assign this lead to.",
   "lead.saveOverride": "Save override",
   "lead.overrideScoreValue": "Score",
   "lead.trigger.inboundReply": "Inbound reply",
@@ -6466,7 +6504,7 @@ export const en = {
     "Archiving removes this deal from open deals. You can bring it back from its history.",
   "deal.archivedReadOnly": "This deal is archived and takes no changes.",
   "deal.notYoursToChange":
-    "You cannot change this deal. Ask its owner to share it, or an administrator for edit rights.",
+    "You can log activity and add tasks. Changing this deal needs its owner to share it.",
   "deal.closedTakesNoStage":
     "This deal is closed. Reopen it to move it to another stage.",
   "deal.reopen": "Reopen",
@@ -7053,7 +7091,7 @@ export const en = {
   // what its rows are. "Promises & tasks" named a thing the product does not
   // have and stood over a standing line of apology for it.
   "brief.rail.quietSchedule": "Nothing booked",
-  "brief.panel.schedule": "Your day",
+  "brief.panel.schedule": "External meetings",
   "brief.readings.label": "Today’s figures",
   // Why a figure on this plate wears a `+`. It rides the whole cell, because a
   // mark that explains itself only to a pointer resting on three characters is
@@ -7083,9 +7121,8 @@ export const en = {
   "brief.readings.needsPrep_other": "{count} need prep",
   "brief.readings.prepUnknown": "Prep not checked",
   "brief.readings.prepared": "All prepared",
-  "brief.readings.calendarNotConnected": "Not connected",
   "brief.readings.calendarNotConnectedWhy":
-    "Connect your calendar to count meetings.",
+    "Connect your calendar to count its meetings too.",
   "brief.readings.calendarUnreadable": "Not syncing",
   "brief.readings.calendarUnreadableWhy":
     "Reconnect your calendar to count meetings.",
@@ -7281,6 +7318,15 @@ export const en = {
   "create.firstName": "First name",
   "create.lastName": "Last name",
   "create.contactTitle": "Title",
+  "create.acquisitionSource": "Where this contact came from",
+  "create.acquisitionSourceHint":
+    "The contact sees this on their privacy page.",
+  "create.acquisitionNote": "Source details",
+  "create.source.metInPerson": "Met face to face",
+  "create.source.businessCard": "Business card",
+  "create.source.referral": "Referral",
+  "create.source.website": "Website",
+  "create.source.other": "Other",
   "create.email": "Email",
   "create.phone": "Phone",
   "create.linkedin": "LinkedIn",
@@ -8001,6 +8047,7 @@ export const en = {
   "compose.why.contract": "Their contract",
   "compose.why.account": "Their customer relationship",
   "compose.why.marketing": "Marketing",
+  "sendPermission.stopWithReason": "Sending needs your reason",
   "sendPermission.refused": "Message cannot be sent",
   "sendPermission.sayWhy": "Record reason for contact",
   "sendPermission.unproven": "No recorded reason to contact this recipient",
@@ -8011,6 +8058,25 @@ export const en = {
   "sendPermission.missingContext": "This message needs one more detail",
   "sendPermission.missingPermission": "Permission needed for this message",
   "sendPermission.reason.chooseDeal": "Choose the deal for this follow-up.",
+  "sendPermission.reason.footerIncomplete":
+    "Read the footer details below. You can send this email with a recorded reason.",
+  "sendPermission.footer.language": "{detail} in {language}",
+  "sendPermission.footer.means": "{detail} with {methods}",
+  "sendPermission.footer.email": "an email address",
+  "sendPermission.footer.phone": "a phone number",
+  "sendPermission.footer.web": "a website or social link",
+  "sendPermission.footer.privacy": "privacy contact information",
+  "sendPermission.footer.advertiser": "advertiser contact information",
+  "sendPermission.footer.identity": "the company name and address",
+  "sendPermission.footer.unknown": "some company footer text",
+  "sendPermission.footer.title": "Email footer needs attention",
+  "sendPermission.footer.preview": "Company details included in this email",
+  "sendPermission.footer.omits": "This message will omit: {items}.",
+  "sendPermission.footer.objection": "opt-out instructions",
+  "sendPermission.footer.privateLink": "a private opt-out link",
+  "sendPermission.footer.publicLink": "a working opt-out link",
+  "sendPermission.reason.lawfulBasisUnconfirmed":
+    "No lawful basis is recorded for this contact, and the warning was not confirmed before sending.",
   "sendPermission.appliesTo": "This applies to {address}.",
   "sendPermission.recipientLine": "{address}: {reason}",
   "sendPermission.unansweredHeld":
@@ -8019,6 +8085,8 @@ export const en = {
   "compose.sendWithReason": "Send with a reason…",
   "compose.scheduleWithReason": "Schedule with a reason…",
   "compose.holdForCheck": "Send waits for the send check.",
+  "compose.legacyFooter":
+    "This server cannot send with a reason when company email details are missing. Your draft is kept. Ask an administrator to update Margince, then try again.",
   "compose.holdRefused":
     "Send is off. Fix what the check above names, or remove that recipient.",
   "compose.holdWithReason":
@@ -8030,24 +8098,44 @@ export const en = {
   "sendPermission.ready": "Recipients checked",
   "sendPermission.markName": "Communication status for this message",
   "sendPermission.checking": "Checking whether this message can be sent…",
+  "lawfulBasis.title": "No valid basis recorded",
+  "lawfulBasis.body":
+    "No valid basis under Vietnamese law is recorded for this contact: neither their consent nor a case where the law allows processing without it. Sending is at your own risk.",
+  "lawfulBasis.confirm": "Send anyway",
+  "lawfulBasis.askConsent": "Ask for consent",
+  "lawfulBasis.askFailed": "The consent request was not sent. Try again.",
+  "lawfulBasis.asked":
+    "Consent request sent to {address}. Your message was not sent.",
+  "lawfulBasis.askPartial":
+    "Consent request sent to {asked}. It was not sent to {failed}. Try again to ask only them.",
+  "lawfulBasis.failed": "Your confirmation was not recorded. Try again.",
+  "privacynotice.purposeLine": "{purpose}: {basis}",
+  "privacynotice.basisOn.consent": "your consent of {date}",
+  "privacynotice.basisOn.agreement":
+    "to carry out the agreement between you and {controller}",
+  "privacynotice.basisOn.us": "us",
+  "privacynotice.basis.none": "No basis is recorded for this use.",
+  "privacynotice.basisOn.none": "no basis recorded",
+  "confirm.done.bodyNamed":
+    "Your answer is recorded. Staff at {controller} will handle your request and give you the reason if they need more time. This link is now used up.",
   "sendPermission.unanswered":
     "The send check did not complete. Sending runs the check again.",
   "sendPermission.reason.objected":
-    "The recipient objected to marketing, so no marketing goes to them. A reply or a message they asked for can still go.",
+    "The recipient objected to marketing. Sending this email does not lift their objection.",
   "sendPermission.reason.withdrawn":
-    "The recipient withdrew consent for this kind of message, so it cannot go to them.",
+    "The recipient withdrew consent for this kind of message. Sending this email does not restore consent.",
   "sendPermission.reason.restricted":
-    "The recipient’s data is under a processing restriction. Only security, privacy and opt-out notices can still go to them.",
+    "The recipient’s data is under a processing restriction. Sending this email does not lift the restriction.",
   "sendPermission.reason.askedUsToStop":
-    "The recipient asked not to be contacted. Only security, privacy and opt-out notices can still go to them.",
+    "The recipient asked not to be contacted. Sending this email does not change their request.",
   "sendPermission.reason.bounced":
     "This address does not accept mail. Correct the address; an override does not apply.",
   "sendPermission.reason.optedOutAfterRequest":
-    "The recipient opted out of marketing after asking for this quote. Confirm with them that they still want it, then record their new request.",
+    "The recipient opted out of marketing after requesting this quote. Sending this email does not change their choice.",
   "sendPermission.reason.permissionRequired":
-    "This marketing message has no recorded permission under the applicable rules. A staff exception cannot replace consent or the required evidence.",
+    "This marketing message has no recorded permission under the applicable rules. Record consent or the required evidence.",
   "sendPermission.reason.consentRequired":
-    "Marketing to a recipient in this country needs their prior consent. No exception can replace it.",
+    "Marketing to a recipient in this country needs their prior consent.",
   "sendPermission.reason.dealNotRequested":
     "A deal alone does not show the recipient asked for this negotiation. Their request, for example on a call or in a meeting, needs to be on record.",
   "sendPermission.reason.tooMany":
@@ -8128,8 +8216,10 @@ export const en = {
   "directSend.alreadySettled":
     "This has already been decided. Open the review for the outcome.",
   "directSend.couldNotOpen": "The review could not be opened. Retry.",
-  "directSend.title": "Send on your own authority",
-  "directSend.confirm": "Record the exception and send",
+  "directSend.title": "Send email with reason?",
+  "directSend.confirm": "Send email",
+  "directSend.changed":
+    "The email checks changed. Read the updated details and confirm again. Your reason is kept.",
   "directSend.failed":
     "The message was not sent. Your decision may already be recorded; open the review before deciding again.",
   "directSend.noWarningServed":
@@ -8159,8 +8249,6 @@ export const en = {
     "A message with an unsubscribe link goes to one recipient at a time, because the link is that recipient’s consent record. Send it once per recipient, with no Cc.",
   "compose.newContact":
     "{address} is on no record yet. Sending adds it as your contact.",
-  "compose.multiRecipientWarning":
-    "This purpose adds an unsubscribe link, so a send to more than one recipient is refused. Send it once per recipient, with no Cc.",
   "compose.relinkTitle": "Relink this activity",
   "compose.relinkTarget":
     "Search contacts, companies, deals, leads or projects",
@@ -8214,6 +8302,8 @@ export const en = {
     "Created because this lead wrote in or booked a meeting. A reply converts nobody: qualify the lead when they are ready.",
   "tasks.origin.assurance":
     "Created by the nightly forecast check: inputs on this deal need attention. The deal page lists them.",
+  "tasks.origin.privacy_request":
+    "Created when the contact asked to correct, erase or stop the use of their data. Their country’s law sets the dates on this task.",
   "tasks.origin.analytics_decision":
     "Recorded from a sales review: a decision with an owner and a review date. Record the outcome under Decisions from the last review.",
   "tasks.origin.overnight_reconcile":
@@ -9884,7 +9974,7 @@ export const en = {
   "settings.tierRead":
     "Read, summarize, draft: runs immediately and is fully logged.",
   "settings.tierSend":
-    "Send email, book meetings, update a contact or deal: runs immediately if the agent has that permission. Granting the permission is the approval.",
+    "Routine updates run automatically and can be undone. Clients must get approval or a direct instruction to send. Unattended sends wait for approval.",
   "settings.tierWait": "Enrichment from the web: waits in Approvals.",
   "settings.tierAdvance":
     "Advance or close a deal, or file activities under a project: runs immediately if the agent has that permission.",
@@ -10406,6 +10496,7 @@ export const en = {
   "import.problem.new_tag": "New tag",
   "import.problem.duplicate": "Duplicate",
   "import.problem.permission": "No permission",
+  "import.problem.incomplete_identity": "Missing contact channel",
   "import.problem.unusable_row": "Unusable row",
   "settings.dangerZone": "Danger zone",
   "settings.resetDataDesc":
@@ -10513,6 +10604,8 @@ export const en = {
   "jobs.kind.import_commit": "Import commit",
   "jobs.kind.import_undo": "Import undo",
   "jobs.kind.import_validate": "Import test run",
+  "jobs.kind.transcript_audience_sweep": "Meeting notes readers",
+  "jobs.kind.meeting_profile_retract_sweep": "Company fields from meetings",
   "jobs.kind.initiative_enrolment_sweep": "Initiative membership dates",
   "jobs.kind.intro_expiry": "Introduction expiry",
   "jobs.kind.knowledge_ingest": "Document indexing",
@@ -10853,6 +10946,10 @@ export const en = {
   "privacy.purposeKey": "Key",
   "privacy.purposeLabel": "Label",
   "privacy.purposeDoi": "Requires double opt-in",
+  "privacy.purposeFrequency": "How often",
+  "privacy.purposeFrequency.weekly": "About once a week",
+  "privacy.purposeFrequency.monthly": "About once a month",
+  "privacy.purposeFrequency.quarterly": "About once a quarter",
   "privacy.purposeCreate": "Create purpose",
   "privacy.purposeAppendOnly":
     "A purpose cannot be renamed or removed once created; the catalog is append-only. Choose the key carefully.",
@@ -11061,7 +11158,13 @@ export const en = {
   "privacynotice.source.purchasedOrImported":
     "Your details came from a list that was bought or imported.",
   "privacynotice.source.unknown": "We cannot say how your details reached us.",
-  "privacynotice.purposes.title": "What we use it for",
+  "privacynotice.source.stated.metInPerson": "We met you face to face.",
+  "privacynotice.source.stated.businessCard": "You gave us your business card.",
+  "privacynotice.source.stated.referral": "Someone recommended you to us.",
+  "privacynotice.source.stated.website": "We found your details on a website.",
+  "privacynotice.source.stated.other": "Another source, described below.",
+  "privacynotice.source.statedNote": "In our words: {note}",
+  "privacynotice.purposes.title": "What we use it for, and on what basis",
   "privacynotice.rights.title": "Your rights over this",
   "privacynotice.rights.how":
     "To use any of these, reply to the message that brought you here, or contact us through the address on our website.",
@@ -11114,6 +11217,10 @@ export const en = {
   "privacynotice.retention.keptByLaw":
     "By law, mail about an order or a contract is kept for at least {period}, even where this says sooner.",
   "privacynotice.recipients.title": "Who sees it",
+  "privacynotice.transfers.title":
+    "AI services, transfers and automated decisions",
+  "privacynotice.transfers.body":
+    "We use AI services to sort, summarize and draft text about our correspondence with you. Which provider receives that text, and where it processes it, is set by us: it can be a model we run ourselves, or a provider such as Anthropic, OpenAI, Google (Gemini, Vertex AI), Mistral or OpenRouter. Where we choose an EU location or OpenRouter’s EU service, processing stays in the EU; otherwise it can take place outside the EU, including in the United States, under the provider’s contract with us. No decision that has legal effects for you, or affects you similarly, is made by automated means alone: the AI suggests, and whether we may write to you is decided by fixed rules about your consent and your requests.",
   "privacynotice.recipient.colleagues": "Staff who work with our CRM.",
   "privacynotice.recipient.serviceProviders":
     "Companies that run our CRM and deliver its email for us. A contract binds them to use your data only as we instruct.",
@@ -11123,11 +11230,13 @@ export const en = {
   "privacynotice.retention.afterDays_other": "{count} days",
   "privacynotice.retention.title": "How long we keep it",
   "privacynotice.retention.archive":
-    "{scope}: taken out of daily use after {days}.",
+    "{scope}: kept for {days} from when they were recorded, then moved to an archive with restricted access to {purpose}. They are deleted when they are no longer needed for this purpose, when you ask, or when your record is deleted.",
+  "privacynotice.retention.archivePurpose":
+    "answer legal claims and keep business records",
   "privacynotice.retention.anonymize": "{scope}: made anonymous after {days}.",
   "privacynotice.retention.erase": "{scope}: deleted after {days}.",
   "privacynotice.retention.rest":
-    "We keep everything else while we use it for the purposes above. If you ask us to delete it, we delete what the law lets us delete.",
+    "We keep everything else while we use it for the purposes under “What we use it for, and on what basis”. If you ask us to delete it, we delete what the law lets us delete.",
   "privacynotice.retention.scope.activity":
     "Emails, meetings and calls with you",
   "privacynotice.retention.scope.activityTranscript":
@@ -11264,6 +11373,49 @@ export const en = {
   "privacy.legalHold":
     "This contact is inside a statutory retention window, so erasure does not take precedence here (Art. 17(3)(b)). The block applies to every role, including administrators, with no override. The attempt was audited.",
 
+  "archivePurpose.title": "Archive purpose",
+  "archivePurpose.intro":
+    "After its retention period, captured mail, meetings and calls move to an archive with restricted access. The privacy page says why the archive keeps them, and you delete what no longer serves that purpose.",
+  "archivePurpose.label": "Purpose of the archive",
+  "archivePurpose.translationLabel": "Purpose of the archive in {language}",
+  "archivePurpose.hint":
+    "Finishes the sentence “moved to an archive with restricted access to …”. Empty, the page says “{purpose}”.",
+  "archiveReview.title": "Archive review",
+  "archiveReview.intro":
+    "Archived mail, meetings and calls, oldest first. Delete what no longer serves the archive’s purpose. Margince deletes nothing here by itself.",
+  "archiveReview.filters": "Archive filters",
+  "archiveReview.before": "Occurred before",
+  "archiveReview.contact": "Contact",
+  "archiveReview.company": "Company",
+  "archiveReview.record": "Record",
+  "archiveReview.with": "With",
+  "archiveReview.withNobody": "No contact or company",
+  "archiveReview.status": "Deletion",
+  "archiveReview.deletable": "Can be deleted",
+  "archiveReview.kept.legalHold": "Kept: legal hold",
+  "archiveReview.kept.optOutRecord": "Kept: opt-out record",
+  "archiveReview.kept.byLaw": "Kept by law",
+  "archiveReview.kept.notArchived": "No longer in the archive",
+  "archiveReview.kept.notFound": "Not found",
+  "archiveReview.empty": "Nothing archived matches these filters.",
+  "archiveReview.deleteShown_one": "Delete {count} shown record",
+  "archiveReview.deleteShown_other": "Delete {count} shown records",
+  "archiveReview.confirmTitle": "Delete archived records?",
+  "archiveReview.confirmBody_one":
+    "The content of {count} archived record is erased for good. Who it was with and when stays. Records under a legal hold, opt-out records and records kept by law stay as they are.",
+  "archiveReview.confirmBody_other":
+    "The content of {count} archived records is erased for good. Who they were with and when stays. Records under a legal hold, opt-out records and records kept by law stay as they are.",
+  "archiveReview.confirm": "Delete",
+  "archiveReview.doneTitle": "Deletion finished",
+  "archiveReview.partialTitle": "Done before the deletion stopped",
+  "archiveReview.deleted_one": "{count} record deleted.",
+  "archiveReview.deleted_other": "{count} records deleted.",
+  "archiveReview.keptCount_one": "{reason}: {count} record",
+  "archiveReview.keptCount_other": "{reason}: {count} records",
+  "archiveReview.failed_one":
+    "{count} record could not be deleted and stays as it was.",
+  "archiveReview.failed_other":
+    "{count} records could not be deleted and stay as they were.",
   "restricted.title": "Restricted records",
   "restricted.sub":
     "Records a statutory retention obligation holds after an erasure: which record, why and until when. The correspondence itself is hidden so that it is not read.",
@@ -12378,6 +12530,13 @@ export const en = {
     "A sender already works there.",
   "worklist.domainQuestion.suggested": "Suggested company: {name}.",
   "worklist.domainQuestion.confirm": "Confirm company",
+  "worklist.domainQuestion.confirmNamed": "Confirm {name}",
+  "worklist.domainReview.anotherLabel": "Another company",
+  "worklist.domainReview.newLabel": "A new company",
+  "worklist.domainReview.siteLabel": "Their website",
+  "worklist.domainReview.vendorLabel": "A mail or hosting vendor",
+  "worklist.domainReview.laterLabel": "Later",
+  "worklist.domainReview.mailboxesLabel": "Your mailboxes",
   "worklist.domainQuestion.confirmEffectNone":
     "Confirming links {domain} to {company}. Contacts already at another company keep theirs.",
   "worklist.domainQuestion.confirmEffect_one":
@@ -12460,7 +12619,7 @@ export const en = {
     "Mail becomes contacts, companies and activities automatically.",
   "ob.s4.scope2Lead": "Sending is included.",
   "ob.s4.scope2Rest":
-    "Margince can send from this mailbox when you send, and when you give an agent a passport that allows sending. Giving that passport is the approval. You can withdraw it at any time.",
+    "Margince can send from this mailbox when you send or instruct your assistant to send. Send permission alone does not approve a message. Unattended sends wait for approval. Access can be withdrawn at any time.",
   "ob.s4.scope3Lead": "Data stays in your company.",
   "ob.s4.scope3Rest": "Export or delete everything at any time.",
   "ob.s4.scope4Lead": "Disconnect in one click.",
@@ -13435,9 +13594,13 @@ export const en = {
     "This choice is optional. You can correct your details without subscribing.",
   "confirm.marketing.title": "Receive occasional news?",
   "confirm.marketing.ask":
-    "News from time to time, roughly once a month. Your choice is respected.",
+    "{controller} will use your name and email address to send you news about its products and services by email, roughly once a month. You can withdraw your consent at any time with the unsubscribe link in each email.",
   "confirm.marketing.yes": "Subscribe to news",
   "confirm.marketing.no": "Do not send news",
+  "confirm.controllerFallback": "the sender",
+  "confirm.frequency.weekly": "once a week",
+  "confirm.frequency.monthly": "once a month",
+  "confirm.frequency.quarterly": "once a quarter",
   "confirm.provenance.title": "Sources of your details",
   "confirm.provenance.empty": "No source is recorded for these details.",
   "confirm.provenance.line": "{field}: from {source}, recorded {date}",
@@ -13446,7 +13609,8 @@ export const en = {
     "Removal requested. Confirm below to send the request.",
   "confirm.submit": "Confirm",
   "confirm.subscription.title": "Confirm your subscription",
-  "confirm.subscription.ask": "Confirm that you want to receive {purpose}.",
+  "confirm.subscription.ask":
+    "Confirm that you agree that {controller} may use your name and email address to send you {purpose} by email, roughly {frequency}. You can withdraw your consent at any time with the unsubscribe link in each email. Information about your rights: {privacy_page}.",
   "confirm.subscription.confirm": "Confirm subscription",
   "confirm.subscription.alreadyTitle": "You are subscribed",
   "confirm.subscription.alreadyBody":
@@ -13458,7 +13622,7 @@ export const en = {
   "confirm.receipt.rectify": "Correction requested",
   "confirm.receipt.erasure": "Removal requested",
   "confirm.done.body":
-    "Your answer is recorded. Any changes go to a person here to apply, and this link is now used up.",
+    "Your answer is recorded. Staff here will handle your request and give you the reason if they need more time. This link is now used up.",
   "confirm.invalidLink":
     "This link is no longer valid. It may have been used or may have expired. If you still need something, reply to the email that brought you here.",
   "confirm.questionChanged":
@@ -14473,9 +14637,7 @@ export const en = {
     "Everything keeps working and nothing is capped. Configure a license token for this installation to count seats against a grant.",
   "license.refused.title": "This installation’s license was refused",
   "license.refused.body":
-    "The license token configured for this installation was presented and rejected. Full seats in use keep working, and no full seat is added beyond what the last valid license granted, until it is replaced. Check the token and the installation’s clock.",
-  "license.refused.bodyUncapped":
-    "The license token configured for this installation was presented and rejected. Everything keeps working, uncapped, until it is replaced. Check the token and the installation’s clock.",
+    "The license token configured for this installation was presented and rejected, so Margince is locked until a check accepts it. Check the token and the installation’s clock, then check again.",
   "license.seats.capacityOnly": "Your role cannot see the license entitlement.",
   "license.seats.title": "Seats",
   "license.seats.inUse": "Full seats in use",
@@ -14495,7 +14657,7 @@ export const en = {
   "license.holder.id": "License ID",
   "license.grace.title": "This license expired",
   "license.grace.body":
-    "The license expired on {expiry}. It still works for a limited period. Renew it to keep the installation in service.",
+    "The license expired on {expiry}, so Margince is locked until a valid license is set up.",
   "license.renewal.title": "License needs renewal",
   "license.renewal.body":
     "The license expires on {expiry}. Nothing changes before that date.",
@@ -15503,11 +15665,17 @@ export const en = {
   "trial.locked.member":
     "Your admin can get a license from the Margince team. You can also write to them yourself.",
   "common.trialEnded":
-    "This installation’s trial has ended, so this change waits for a license. Your data stays as it is.",
+    "This installation’s trial has ended, so this change was not saved. Make it again once there is a license. Your data stays as it is.",
+  "license.locked.pageTitle": "License not valid",
+  "license.locked.title": "Your Margince license is no longer valid",
+  "license.locked.body":
+    "The license has expired or was refused, so Margince is locked and background work is paused until it has a valid license. Your data stays as it is, and nothing is deleted.",
+  "common.licenseLapsed":
+    "This installation’s license has expired or was refused, so this change was not saved. Make it again once there is a valid license. Your data stays as it is.",
   "licensebanner.link": "Open {tab}",
   "licensebanner.grace.title": "License expired",
   "licensebanner.grace.body":
-    "This installation’s license expired and is in its grace period. Margince keeps running, but it does not start again after the grace period ends. Renew the license before then.",
+    "This installation’s license has expired, so Margince is locked until a valid license is set up.",
 
   "aicalls.title": "AI call trace",
   "aicalls.withheld":
@@ -17613,6 +17781,9 @@ export const en = {
     "A file’s category, title, state, pinning or the file it replaces changes.",
   "webhooks.event.attachment.archived.label": "File archived",
   "webhooks.event.attachment.archived.when": "A file is archived off a record.",
+  "webhooks.event.attachment.restored.label": "File restored",
+  "webhooks.event.attachment.restored.when":
+    "An archived file is back on a record.",
   "webhooks.eventGroup.projects": "Projects",
   "webhooks.event.project.created.label": "Project created",
   "webhooks.event.project.created.when": "A project is opened on a company.",
@@ -17942,11 +18113,13 @@ export const en = {
   "consent.redirectsTo": "Margince will send the authorization back to {host}.",
   "consent.redirectsToLoopback":
     "That is an address on this computer, and this connection cannot prove which program is listening on it.",
-  "consent.scopeNote.read": "sees what you can see",
-  "consent.scopeNote.draft": "prepares messages for your review",
-  "consent.scopeNote.write": "creates, edits and archives records as you",
-  "consent.scopeNote.send": "sends messages as you, without asking first",
-  "consent.scopeNote.enrich": "runs AI work and buys contact data",
+  "consent.scopeNote.read": "Sees what you can see",
+  "consent.scopeNote.draft": "Prepares messages for your review",
+  "consent.scopeNote.write": "Creates, edits and archives records as you",
+  "consent.scopeNote.send":
+    "Allows sending; the client must get approval or a direct instruction first. Permission alone is not approval",
+  "consent.scopeNote.enrich": "Runs AI work and buys contact data",
+  "consent.scopesLegend": "What it may do",
   "consent.ceiling":
     "Never more than your own permissions. You can disconnect at any time in Settings under AI assistants.",
   "consent.preset.label": "Assistant permissions",
@@ -19194,6 +19367,15 @@ export const en = {
   "lists.saveFilterConflict":
     "Someone changed this list after you opened it. Open the list again to see their change, then edit the filter.",
   "lists.history.someone": "Someone",
+  "lists.history.created": "Made the list",
+  "lists.history.renamed": "Renamed it from {before} to {after}",
+  "lists.history.repurposed": "Changed what it is for",
+  "lists.history.reshared": "Changed who can find it",
+  "lists.history.handedOver": "Gave it a new steward",
+  "lists.history.refiltered": "Changed the filter",
+  "lists.history.filterBefore": "Before: {sentence}",
+  "lists.history.filterAfter": "After: {sentence}",
+  "lists.history.noFilter": "no conditions",
   "lists.changes.since": "Since your visit on {when}:",
   "lists.changes.joined_one": "{count} joined",
   "lists.changes.joined_other": "{count} joined",
@@ -19474,9 +19656,6 @@ export const en = {
   "project.owner": "Owner",
   "project.ownerMe": "Me",
   "project.assignOwner": "Assign to a colleague",
-  "project.assignOwnerTitle": "Assign to a colleague",
-  "project.assignOwnerSearch": "Search colleagues",
-  "project.assignOwnerDone": "Assigned to {name}",
   "project.description": "Description",
   "project.targetEnd": "Target end date",
   "project.new": "New project",
@@ -20491,7 +20670,9 @@ export const en = {
     "Commitment was not marked as kept. Retry.",
   // Updating opens the composer; cancellation is recorded directly by the card.
   "worklist.verb.meetingSkipNextStep": "Skip next step",
-  "worklist.verb.meetingNextStep": "What is the next step?",
+  "worklist.verb.meetingNotes": "Notes",
+  "worklist.verb.meetingEditNotes": "Edit notes",
+  "worklist.verb.meetingNotesSaved": "Notes saved",
   "worklist.verb.meetingHowDidItGo": "How did it go?",
   "worklist.verb.meetingAddNotes": "Add notes",
   "worklist.verb.meetingUpdateTitle": "Meeting",
@@ -20507,6 +20688,7 @@ export const en = {
   "worklist.verb.meetingDayMissing":
     "That date does not exist in the company’s time zone. Pick another date.",
   "worklist.verb.meetingAddNotesFor": "Add notes to {subject}",
+  "worklist.verb.meetingEditNotesFor": "Edit notes on {subject}",
   "worklist.verb.meetingHeldFor": "It happened: {subject}",
   "worklist.verb.meetingCanceledFor": "Did not happen: {subject}",
   "worklist.verb.meetingCancelInCalendar":
@@ -20862,6 +21044,7 @@ export const en = {
   "aiProviders.name.geminiVertex": "Gemini on Vertex AI",
   "aiProviders.name.jev": "TypeSafe Jev",
   "aiProviders.name.jevCompatible": "Jev-compatible",
+  "aiProviders.name.geminiDecision": "Gemini Decisions API",
   "aiProviders.name.ollama": "Ollama",
   "aiProviders.name.vllm": "vLLM",
   "aiProviders.name.fake": "Built-in test provider",
@@ -20900,8 +21083,7 @@ export const en = {
   "firstRun.ignite.cannot": "Cannot",
   "firstRun.ignite.read": "read the company website and report what it found",
   "firstRun.ignite.draft": "draft in the voice you trained",
-  "firstRun.ignite.act":
-    "send anything or change a record without your approval",
+  "firstRun.ignite.act": "send without a direct instruction or approval",
   "firstRun.ignite.carryOn": "Continue",
   "firstRun.ignite.leaving": "Checking setup…",
   "firstRun.ai.foot":
@@ -21102,12 +21284,24 @@ export const en = {
   "magic.action.create_lead": "Created lead",
   "magic.action.create_project": "Created project",
   "magic.action.create_activity": "Saved email or meeting",
+  "magic.action.create_activity_email": "Saved an email",
+  "magic.action.create_activity_meeting": "Saved a meeting",
+  "magic.action.create_activity_call": "Logged a call",
+  "magic.action.create_activity_note": "Saved a note",
+  "magic.action.create_activity_task": "Created a task",
+  "magic.action.create_activity_message": "Saved a message",
   "magic.action.archive_contact": "Archived contact",
   "magic.action.archive_company": "Archived company",
   "magic.action.archive_deal": "Archived deal",
   "magic.action.archive_lead": "Archived lead",
   "magic.action.archive_project": "Archived project",
   "magic.action.archive_activity": "Archived email or meeting",
+  "magic.action.archive_activity_email": "Archived an email",
+  "magic.action.archive_activity_meeting": "Archived a meeting",
+  "magic.action.archive_activity_call": "Archived a call",
+  "magic.action.archive_activity_note": "Archived a note",
+  "magic.action.archive_activity_task": "Archived a task",
+  "magic.action.archive_activity_message": "Archived a message",
   "magic.why.mail_filed": "The sender’s address belongs to this contact.",
   "magic.why.data_correction": "An update corrected older records.",
   "magic.why.public_records":
@@ -21525,6 +21719,8 @@ export const en = {
   "aiServing.guide": "Routing guide ↗",
   "aiServing.blocked.decisions":
     "The decision model answers through OpenRouter’s decisions endpoint, which takes no routing block. Its timeout is set per task under AI tasks.",
+  "aiServing.blocked.decisionsDirect":
+    "{provider} serves the decision model itself, so host routing does not apply. Its timeout is set per task under AI tasks.",
   "aiServing.blocked.provider":
     "Host routing applies only to OpenRouter. {provider} serves this model itself. Thinking level and timeout are still set per task under AI tasks.",
   "aiServing.blocked.host":
@@ -22255,6 +22451,8 @@ export const en = {
     "Normal CRM work can continue. During an outage, restoring service may take longer or lose more recent data than the recovery targets allow.",
   "health.effect.automatic":
     "Automatic work may reach the wrong colleague, leaving follow-ups with the wrong owner until routing is corrected.",
+  "health.effect.receipts":
+    "The refusals stand and advertising to these contacts stays stopped. The contacts were not told, which the rules of their country require at once.",
   "health.effect.readFailed":
     "This check cannot show the current state. A failed check does not establish that the underlying feature has stopped.",
   "health.reportCopyFailed": "Could not copy the technical report",
@@ -22347,6 +22545,7 @@ export const en = {
   "health.source.updates": "Data updates",
   "health.source.recovery": "Recovery evidence",
   "health.source.automatic": "Automatic work quality",
+  "health.source.receipts": "Opt-out receipts",
   "health.scope": "Affected scope",
   "health.window": "Reporting window",
   "health.observed": "Latest observation",
@@ -22373,6 +22572,8 @@ export const en = {
     "Record a successful restore drill within the recovery and data-loss targets.",
   "health.recovery.automatic":
     "Review routing outcomes over a sufficiently large sample.",
+  "health.recovery.receipts":
+    "Each refusal in the last 30 days must have a sent receipt, or its alert must be settled.",
   "health.ownerHandoff":
     "Mailbox owners accept or decline proposed contacts in Worklist → Decisions. Held conversations are reviewed in Connections, on the Activity tab.",
   "health.operatorHandoff":
@@ -22444,6 +22645,9 @@ export const en = {
   "health.code.automatic_checked":
     "No routing-review threshold exceeded in the checked sample",
   "health.code.automatic_routing": "Automatic work routing needs review",
+  "health.code.receipts_sent":
+    "No opt-out receipt missed or overdue in the last 30 days",
+  "health.code.receipts_missed": "Some opt-out receipts were not sent",
   "health.code.capture_thread_processing":
     "Thread classification is processing",
   "health.code.capture_thread_uncertain": "Review private conversations",
@@ -22467,6 +22671,8 @@ export const en = {
     "The restore test did not meet its targets. Ask your system operator to fix the problem and run another test.",
   "health.impact.automatic":
     "Work may be assigned to the wrong colleague. Review routing and correct the owner.",
+  "health.impact.receipts":
+    "Contacts who refused advertising did not get the receipt the law requires. Open the notifications about missed receipts and fix the address or the mail setup.",
   "analytics.outlook.calledAt": "Called {at}",
   "analytics.prospect.weeksByQualification":
     "Each lead counts in the week it was first qualified.",
@@ -22697,6 +22903,27 @@ export const en = {
   "goals.withdrawTitle": "Withdraw the goals of {name} for {year}?",
   "goals.withdrawBody":
     "All twelve months stop counting as goals. The history keeps them.",
+  "particulars.title": "Company details in mail",
+  "particulars.intro":
+    "Mail you send ends with the details the law asks for. Each field holds up to 500 characters.",
+  "particulars.legalName": "Legal name",
+  "particulars.postalAddress": "Postal address",
+  "particulars.privacyContact": "Data protection contact",
+  "particulars.objectionRoute": "How to refuse advertising",
+  "particulars.advertiserContact": "Advertiser contact",
+  "particulars.objectionMeans":
+    "Name a web page or social network link, an email address and a phone number. A reply word such as STOP can be added.",
+  "particulars.translationTitle": "In {language}",
+  "particulars.translationIntro":
+    "Mail and pages in {language} show this text where you fill it in. Advertising that must be in {language} is sent only once the refusal and the advertiser contact are filled in here.",
+  "particulars.objectionExample": "Example: {example}",
+  "compose.contentFinding.title": "Advertising rules for this mail",
+  "compose.contentFinding.claim":
+    "“{words}” is a claim you may make only with a proof. Add the name, number and date of the proving document to the mail.",
+  "compose.contentFinding.language":
+    "Write this mail in {language} first. Text in another language goes below it, no larger than the {language} text.",
+  "compose.contentFinding.foreignAdvertiser":
+    "Your company is not set up in {country}. A foreign company that does not operate in {country} must advertise there through an advertising business from {country}. Your company is responsible for this.",
 } as const;
 
 export type MessageKey = keyof typeof en;

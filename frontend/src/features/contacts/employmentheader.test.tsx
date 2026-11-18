@@ -37,7 +37,13 @@ it("does not label a former or unknown company as the contact's current employer
 it("keeps unknown roles and additional current jobs on the Employers panel", async () => {
   const { render, within } = await import("@testing-library/react");
   const { Employers } = await import("./contactemployers");
-  const { StoryProviders } = await import("../../testing/story-utils");
+  const { StoryProviders, installFetchStub, meRoute } = await import(
+    "../../testing/story-utils"
+  );
+  // Its own session, so the panel does not read the routes an earlier case left.
+  installFetchStub({
+    "GET /me": meRoute({ contact: ["read", "update"] }, { seat: "full" }),
+  });
   render(
     <StoryProviders>
       <Employers

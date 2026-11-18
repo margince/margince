@@ -224,6 +224,8 @@ var retired = gatekit.Waive(map[string]string{
 		"chose, and a licence is not restyled by a vocabulary rule",
 	"backend/internal/modules/capture/graphcal/data/LICENSE-cldr.txt": "the copied Unicode " +
 		"licence grants rights to any person, a legal term that ships verbatim with the data",
+	"backend/internal/platform/cldrzone/data/LICENSE-cldr.txt": "the same Unicode licence, " +
+		"shipped beside the zone list this package reads",
 	"CODE_OF_CONDUCT.md": "the adopted Contributor Covenant, held verbatim by " +
 		"docscodeofconduct_test.go; its people are human beings, never this record",
 	"LICENSING.md": "counsel's explanation of the CLA, kept verbatim beside it",
@@ -305,6 +307,7 @@ var retired = gatekit.Waive(map[string]string{
 		"record-noun.test.ts holds, which it cannot do without the German word for a human being",
 
 	"backend/gates/contactvocabulary_test.go": "this file names the word in order to refuse it",
+	"backend/gates/uiautonomyclaims_test.go":  "this gate quotes the retired slogan to forbid it",
 
 	// Surfe serves POST /v2/people/enrich and reads its subjects from a
 	// `people` array. That is the VENDOR's noun for its own API, and this

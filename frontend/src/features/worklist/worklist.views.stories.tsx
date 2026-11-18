@@ -51,7 +51,10 @@ const counted = [
 // The name a screen reader announces, such as "Today, 12". The jsdom name
 // computation puts a space before the comma the browser joins to the label.
 const named = (expected: string) => (name: string) =>
-  name.replace(/\s+,/g, ",") === expected;
+  name
+    .split(",")
+    .map((part) => part.trimEnd())
+    .join(",") === expected;
 
 const meta: Meta<typeof WorklistViewPicker> = {
   title: "Records/Worklist/Views",

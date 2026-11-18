@@ -622,6 +622,37 @@ it("draws no mark when no option carries one", () => {
   expect(container.querySelectorAll(".segmented-mark").length).toBe(0);
 });
 
+// The mark lets a wrapped strip's segments fill each row; a strip on one row
+// keeps its segments at their own widths.
+it.each([
+  [30, true],
+  [0, false],
+])(
+  "marks the strip as wrapped when its last option sits %ipx lower",
+  (lastTop, wrapped) => {
+    const tops = vi
+      .spyOn(HTMLElement.prototype, "offsetTop", "get")
+      .mockImplementation(function (this: HTMLElement) {
+        return this.textContent === "Data and tools" ? lastTop : 0;
+      });
+    try {
+      const { container } = render(
+        <SegmentedControl
+          options={TABS}
+          value="overview"
+          onChange={() => undefined}
+          labels={TAB_LABELS}
+        />,
+      );
+      expect(
+        container.querySelector(".segmented")?.hasAttribute("data-wrapped"),
+      ).toBe(wrapped);
+    } finally {
+      tops.mockRestore();
+    }
+  },
+);
+
 // `delayMs` is for a surface that re-reads as a reader types. Without it a
 // placeholder flashes on every keystroke, reporting work that was already done
 // — and it flashes in the accessibility tree too, which is why the spoken line

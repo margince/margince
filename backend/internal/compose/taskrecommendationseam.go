@@ -39,6 +39,9 @@ func taskRecommendationFrom(service *dealstatus.Service) activities.TaskRecommen
 		if err := json.Unmarshal(encoded, &request); err != nil {
 			return activities.LogActivityInput{}, fmt.Errorf("decode the current suggested task: %w", err)
 		}
+		if move.Reason != "" {
+			request.Body = &move.Reason // the suggestion's reason stays the task's
+		}
 		return activities.TaskInputFrom(request)
 	}
 }

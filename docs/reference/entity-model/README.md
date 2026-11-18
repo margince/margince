@@ -30,9 +30,9 @@ module to put a change in, read [modules.md](../modules.md).
 
 | | |
 |---|--:|
-| Tables | 367 |
-| Columns | 4508 |
-| Foreign keys | 624 |
+| Tables | 368 |
+| Columns | 4527 |
+| Foreign keys | 631 |
 | Owning areas | 40 |
 
 ## The 12 records everything else hangs off
@@ -41,18 +41,18 @@ Ranked by how many foreign keys point at them.
 
 | Record | Lives in | Columns | Foreign keys pointing at it |
 |---|---|--:|--:|
-| [`app_user`](identity.md#app_user) | [identity](identity.md) | 39 | 158 |
+| [`app_user`](identity.md#app_user) | [identity](identity.md) | 39 | 159 |
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 47 | 51 |
-| [`contact`](contacts.md#contact) | [contacts](contacts.md) | 38 | 49 |
-| [`activity`](activities.md#activity) | [activities](activities.md) | 88 | 47 |
+| [`contact`](contacts.md#contact) | [contacts](contacts.md) | 38 | 50 |
+| [`activity`](activities.md#activity) | [activities](activities.md) | 89 | 48 |
 | [`deal`](deals.md#deal) | [deals](deals.md) | 49 | 31 |
-| [`lead`](contacts.md#lead) | [contacts](contacts.md) | 48 | 19 |
+| [`lead`](contacts.md#lead) | [contacts](contacts.md) | 48 | 20 |
 | [`project`](projects.md#project) | [projects](projects.md) | 24 | 13 |
 | [`team`](identity.md#team) | [identity](identity.md) | 6 | 10 |
 | [`legal_entity`](contacts.md#legal_entity) | [contacts](contacts.md) | 29 | 9 |
 | [`passport`](identity.md#passport) | [identity](identity.md) | 14 | 9 |
 | [`stage`](deals.md#stage) | [deals](deals.md) | 11 | 9 |
-| [`consent_purpose`](consent.md#consent_purpose) | [consent](consent.md) | 7 | 8 |
+| [`consent_purpose`](consent.md#consent_purpose) | [consent](consent.md) | 8 | 8 |
 
 ```mermaid
 erDiagram
@@ -108,7 +108,7 @@ erDiagram
 | [commissions](commissions.md) | 1 |
 | [comms](comms.md) | 1 |
 | [compose](compose.md) | 48 |
-| [consent](consent.md) | 22 |
+| [consent](consent.md) | 23 |
 | [contacts](contacts.md) | 50 |
 | [continuity](continuity.md) | 1 |
 | [contracts](contracts.md) | 1 |
@@ -139,7 +139,7 @@ erDiagram
 
 | Table | Area | Columns | Referenced by |
 |---|---|--:|--:|
-| [`activity`](activities.md#activity) | activities | 88 | 47 |
+| [`activity`](activities.md#activity) | activities | 89 | 48 |
 | [`activity_audience_member`](activities.md#activity_audience_member) | activities | 5 | 0 |
 | [`activity_calendar_method_backfill`](activities.md#activity_calendar_method_backfill) | activities | 5 | 0 |
 | [`activity_clock_refold_mark`](activities.md#activity_clock_refold_mark) | activities | 3 | 0 |
@@ -176,7 +176,7 @@ erDiagram
 | [`ai_task_run`](aiactivity.md#ai_task_run) | aiactivity | 25 | 0 |
 | [`ai_usage`](ai.md#ai_usage) | ai | 10 | 0 |
 | [`analytics_share`](compose.md#analytics_share) | compose | 16 | 0 |
-| [`app_user`](identity.md#app_user) | identity | 39 | 158 |
+| [`app_user`](identity.md#app_user) | identity | 39 | 159 |
 | [`approval`](approvals.md#approval) | approvals | 38 | 4 |
 | [`approval_autonomy_policy`](approvals.md#approval_autonomy_policy) | approvals | 12 | 0 |
 | [`approval_preference`](approvals.md#approval_preference) | approvals | 3 | 0 |
@@ -233,13 +233,13 @@ erDiagram
 | [`close_date_run`](deals.md#close_date_run) | deals | 15 | 2 |
 | [`close_date_run_member`](deals.md#close_date_run_member) | deals | 5 | 0 |
 | [`commission_entry`](commissions.md#commission_entry) | commissions | 18 | 1 |
-| [`comms_outbound`](comms.md#comms_outbound) | comms | 44 | 4 |
+| [`comms_outbound`](comms.md#comms_outbound) | comms | 45 | 5 |
 | [`communication_basis`](consent.md#communication_basis) | consent | 12 | 0 |
 | [`communication_decision`](consent.md#communication_decision) | consent | 30 | 0 |
 | [`communication_instruction`](consent.md#communication_instruction) | consent | 21 | 2 |
 | [`communication_override`](consent.md#communication_override) | consent | 12 | 1 |
 | [`communication_review`](consent.md#communication_review) | consent | 10 | 2 |
-| [`communication_suppression`](consent.md#communication_suppression) | consent | 16 | 1 |
+| [`communication_suppression`](consent.md#communication_suppression) | consent | 18 | 1 |
 | [`company`](contacts.md#company) | contacts | 47 | 51 |
 | [`company_address_country`](contacts.md#company_address_country) | contacts | 3 | 0 |
 | [`company_brief`](compose.md#company_brief) | compose | 7 | 0 |
@@ -252,19 +252,19 @@ erDiagram
 | [`company_geocode_state`](contacts.md#company_geocode_state) | contacts | 11 | 0 |
 | [`company_growth_fit`](compose.md#company_growth_fit) | compose | 6 | 0 |
 | [`company_offered_value`](contacts.md#company_offered_value) | contacts | 5 | 0 |
-| [`company_profile_field`](contacts.md#company_profile_field) | contacts | 15 | 0 |
+| [`company_profile_field`](contacts.md#company_profile_field) | contacts | 16 | 0 |
 | [`company_relationship_type`](contacts.md#company_relationship_type) | contacts | 9 | 0 |
 | [`company_scan`](compose.md#company_scan) | compose | 16 | 0 |
 | [`company_technical_state`](contacts.md#company_technical_state) | contacts | 7 | 0 |
 | [`company_vat_check`](contacts.md#company_vat_check) | contacts | 11 | 0 |
-| [`confirm_token`](consent.md#confirm_token) | consent | 16 | 2 |
+| [`confirm_token`](consent.md#confirm_token) | consent | 18 | 2 |
 | [`consent_doi_token`](consent.md#consent_doi_token) | consent | 7 | 0 |
-| [`consent_event`](consent.md#consent_event) | consent | 16 | 0 |
-| [`consent_purpose`](consent.md#consent_purpose) | consent | 7 | 8 |
-| [`consent_qualifying_event`](consent.md#consent_qualifying_event) | consent | 17 | 0 |
+| [`consent_event`](consent.md#consent_event) | consent | 18 | 0 |
+| [`consent_purpose`](consent.md#consent_purpose) | consent | 8 | 8 |
+| [`consent_qualifying_event`](consent.md#consent_qualifying_event) | consent | 17 | 2 |
 | [`consent_text_version`](consent.md#consent_text_version) | consent | 14 | 1 |
-| [`contact`](contacts.md#contact) | contacts | 38 | 49 |
-| [`contact_acquisition_evidence`](contacts.md#contact_acquisition_evidence) | contacts | 14 | 1 |
+| [`contact`](contacts.md#contact) | contacts | 38 | 50 |
+| [`contact_acquisition_evidence`](contacts.md#contact_acquisition_evidence) | contacts | 15 | 1 |
 | [`contact_address_country`](contacts.md#contact_address_country) | contacts | 3 | 0 |
 | [`contact_brief`](compose.md#contact_brief) | compose | 6 | 0 |
 | [`contact_channel_identity`](contacts.md#contact_channel_identity) | contacts | 14 | 0 |
@@ -350,7 +350,8 @@ erDiagram
 | [`knowledge_chunk`](knowledge.md#knowledge_chunk) | knowledge | 11 | 0 |
 | [`knowledge_corpus`](knowledge.md#knowledge_corpus) | knowledge | 12 | 1 |
 | [`knowledge_document`](knowledge.md#knowledge_document) | knowledge | 16 | 1 |
-| [`lead`](contacts.md#lead) | contacts | 48 | 19 |
+| [`lawful_basis_confirmation`](consent.md#lawful_basis_confirmation) | consent | 8 | 0 |
+| [`lead`](contacts.md#lead) | contacts | 48 | 20 |
 | [`lead_disqualify_reason`](contacts.md#lead_disqualify_reason) | contacts | 11 | 1 |
 | [`lead_manual_signal`](contacts.md#lead_manual_signal) | contacts | 12 | 0 |
 | [`lead_origin`](contacts.md#lead_origin) | contacts | 13 | 2 |

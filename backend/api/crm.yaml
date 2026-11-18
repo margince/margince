@@ -10703,6 +10703,41 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /lawful-basis-confirmations:
+    post:
+      tags: [Communication]
+      operationId: confirmSendWithoutLawfulBasis
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security   # a user's own answer to a legal warning; an agent's would record a confirmation nobody gave
+      summary: Record that a user read the no-lawful-basis warning and chose to send anyway.
+      description: |
+        A send preview marks a recipient `lawful_basis_missing` when their country's pack has no
+        legitimate-interest basis and the record holds no basis that pack accepts for the use. This
+        records, in the audit log, that the signed-in user read the warning and chose to send, and
+        leaves one confirmation per record. Staging spends it on the first send by this user, or by
+        an agent acting for them, to that record within 15 minutes. A send with none is refused as
+        `lawful_basis_unconfirmed`, which a recorded human decision may still direct.
+
+        It needs the authority to send (`activity` at `create`) and read access to each record. A
+        record the warning does not apply to is left out of `confirmed`. A retry while a
+        confirmation is open records nothing new.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LawfulBasisConfirmationRequest' }
+      responses:
+        '200':
+          description: The addresses whose warning this user confirmed.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LawfulBasisConfirmation' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /emails:sign-off:
     post:
       tags: [Activities]
@@ -15457,6 +15492,32 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
+  /search/data-answer:
+    post:
+      tags: [Search]
+      operationId: askSearchData
+      x-mcp-tool: { verb: ask_search_data, router: read_analytics, action: ask, tier: auto_execute, scope: read, served_by: route }
+      summary: Answer a question through the caller's reporting and record readers.
+      description: Read-only. A model proposes a typed plan from the caller's vocabulary; the existing engines enforce permissions and masks. Unsupported questions fall back to the handbook. Nothing is saved.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [question]
+              properties:
+                question: { type: string, minLength: 1, maxLength: 2000 }
+      responses:
+        '200':
+          description: An answer with its executed source, or no supported data plan.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SearchDataAnswer' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /analytics/evaluate:
     get:
       tags:
@@ -24692,6 +24753,9 @@ paths:
         - A chat vendor (anthropic, openai, gemini, openai_compatible, ollama, vllm) is asked its
           model list, and `model_count` is its length.
         - `jev` is asked TypeSafe's model list, `/v1/models` beside its decision endpoint.
+        - `gemini_decision` is asked Google's model list, `/v1beta/models` on its endpoint's host:
+          Google answers a bad key with 400, so the decision request cannot tell it from a bad
+          body. It passes with no `model_count`.
         - A decision endpoint on OpenRouter is asked `/api/v1/key`: the broker's catalogue is
           public, so listing it would pass any key. It passes with no `model_count`.
         - Any other decision endpoint is sent the decision request with an empty body. 401 or
@@ -26100,8 +26164,9 @@ paths:
     post:
       tags: [Communication]
       operationId: directCommunicationSend
-      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
-      x-mcp-tool: { verb: direct_communication_send, router: send_outbound, action: direct_send, tier: auto_execute, scope: send, served_by: route, ask_user_first: true }
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security   # the user's own decision past a refusal; an agent may not record it
       summary: Send a refused message anyway, on a named human's recorded decision.
       description: |
         The engine refused this message and the refusal stands. This records that a designated human
@@ -26117,9 +26182,13 @@ paths:
         instruction rather than under the engine's permission. A subject asking later why they
         received it is shown the refusal AND the decision, never a grant nobody made.
 
-        THE DECISION IS THE USER'S. A user's agent may carry it out, and asks that user first. The
-        row names that user as the one who took it on, and names the agent that acted for them. A
-        connector may not. It also needs the `communication_exception` object at `create`: directing
+        A SUBJECT'S OWN STOP IS NEVER PASSED. A review that holds an objection, a withdrawal, a
+        restriction or a request to stop is refused with 403, admin included, even beside a refusal
+        a decision could pass.
+
+        THE DECISION IS THE USER'S, taken in their own session. The row names them as the one who
+        took it on. An agent or a connector is refused: it may read the review and send its user
+        there. It also needs the `communication_exception` object at `create`: directing
         a send is its own authority, and a seat that may edit a contact has not thereby been given
         the right to act against the engine's answer about them.
 
@@ -27322,6 +27391,73 @@ paths:
         '409':
           description: The record is already restricted. Pinning is not a way to extend a window already running.
         '422': { $ref: '#/components/responses/ValidationError' }
+  /retention/archive:
+    get:
+      tags: [Compliance]
+      operationId: listArchivedActivities
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      x-human-only-reason: security
+      # The archive is the restricted-access phase of captured correspondence.
+      # Its review is the controller's: an agent reading it would widen the
+      # access the archive restricts. Requires the retention-policy authority
+      # (read).
+      summary: List archived activity, oldest first, for the controller to review against the archive's purpose.
+      parameters:
+        - name: before
+          in: query
+          required: false
+          description: Only activity that occurred before this instant.
+          schema: { type: string, format: date-time }
+        - { name: contact_id, in: query, required: false, schema: { type: string, format: uuid }, description: Only activity linked to this contact. }
+        - { name: company_id, in: query, required: false, schema: { type: string, format: uuid }, description: Only activity linked to this company. }
+        - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: A page of archived activity, oldest first.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, page]
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/ArchivedActivity' }
+                  page: { $ref: '#/components/schemas/PageInfo' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /retention/archive/delete:
+    post:
+      tags: [Compliance]
+      operationId: deleteArchivedActivities
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      x-human-only-reason: security
+      # Deleting erases the content of each archived record, as the retention
+      # erase action does, and records the controller's decision. A legal hold,
+      # an opt-out receipt inside its floor and the statutory floor each keep a
+      # record; the answer names each one kept and why. Requires the
+      # retention-policy authority (delete).
+      summary: Delete archived activity that no longer serves the archive's purpose. Audited; held records are kept.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ArchiveDeletionRequest' }
+      responses:
+        '200':
+          description: What was deleted, what was kept and why, and what failed.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ArchiveDeletionResult' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
   /retention/legal-holds:
     get:
       tags: [Compliance]
@@ -27653,6 +27789,14 @@ paths:
                   description: |
                     What the contact was told, in their words. Stored because a suppression somebody
                     later asks to lift is only reviewable if the record says why it was made.
+                received_at:
+                  type: string
+                  format: date-time
+                  description: |
+                    When the refusal reached you: the arrival time of the mail that said so, or the
+                    time of the call. Never the time you record it. Left out, it is the time of
+                    recording. A Vietnamese opt-out receipt prints it (Decree 91/2020/ND-CP Art. 20),
+                    so a later time than now is refused.
       responses:
         '204': { description: Recorded. }
         '401': { $ref: '#/components/responses/Unauthorized' }
@@ -27880,6 +28024,35 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /contacts/{id}/consent/optout-records:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Compliance]
+      operationId: exportContactOptOutRecords
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      x-mcp-tool: { verb: export_contact_optout_records, router: read_details, action: contact_optout_records, tier: auto_execute, scope: read, served_by: route }
+      summary: Export this contact's registrations, refusals and opt-out receipts for an inspection.
+      description: |
+        The records Decree 91/2020/ND-CP Art. 11 asks a sender of advertising email to keep for at
+        least one year and to show an inspector: every consent the contact gave or withdrew, every
+        stop recorded on them with the time the refusal arrived and the time sending stopped, and
+        every opt-out receipt sent or queued to them. Retention keeps a refusal and its receipt
+        until the floor the contact's rules set ends, a year under Decree 91. After that a
+        retention policy may act on them as on any other record.
+
+        An archived contact is answered too. Times are UTC.
+      responses:
+        '200':
+          description: The records, newest first in each list.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/OptOutRecords' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /contacts/{id}/consent/allow:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -27981,9 +28154,11 @@ paths:
       summary: Mail the subject a single-use link that confirms one marketing purpose.
       description: |
         Mints the double-opt-in link for `purpose_id` and stages it to the contact's own live
-        primary address. The purpose must be live and must itself require double
-        opt-in; anything else is a 422, because a mailed link asking about a purpose that needs no
-        confirmation asks a question the answer does not fit. The plaintext is never returned: this endpoint once handed it to the
+        primary address. The purpose must be live. A purpose of a marketing class must itself
+        require double opt-in, else this is a 422, because a mailed link asking about a
+        subscription that needs no confirmation asks a question the answer does not fit. A purpose
+        of another class may be asked about either way: it is how a contact with no lawful basis on
+        record is asked for consent to correspondence. The plaintext is never returned: this endpoint once handed it to the
         authenticated operator, who could paste it straight back into `recordConsent` — a round
         trip in which the subject's mailbox never participated, recorded as though it had. A double
         opt-in is evidence only because the data subject completed it from their own mailbox, so
@@ -28025,7 +28200,9 @@ paths:
         '422':
           description: |
             The request named no purpose, named one no `consent_purpose` row holds, or the contact
-            carries no live email address — so there is no mailbox a link could reach.
+            carries no live email address — so there is no mailbox a link could reach. Also when
+            the contact's country asks that a consent mail for the purpose's class answer their own
+            request, and no such request is on record.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -40960,7 +41137,8 @@ components:
         license is configured, every agent tool call is refused with `trial_ended`, and so is
         every HTTP change except these: the license routes, `POST /v1/exports`, the data-subject
         request routes, and a seat's own credential routes. Background jobs wait instead of
-        running; they do not fail.
+        running; they do not fail. A license that was refused, or is past its expiry, locks the
+        installation the same way with `license_lapsed`, also with no grace period.
       required: [started_at, ends_at, ended]
       properties:
         started_at:
@@ -41958,6 +42136,13 @@ components:
             not list: `gemini` for `gemini_vertex`, which serves the same models. A price written
             for this provider overrides it. Absent for a provider whose unpriced models stay
             unpriced.
+        sent_by:
+          type: array
+          items: { type: string }
+          description: >-
+            The other providers whose calls send this same key, such as `gemini_decision` on
+            `gemini`. They have no row of their own, so each needs this key held. Absent when no
+            other provider sends it.
     AiProviderKeyTestResult:
       type: object
       additionalProperties: false
@@ -42281,8 +42466,9 @@ components:
           description: >-
             jev (TypeSafe's own API, keyed by TYPESAFE_API_KEY) | jev_compatible (any server on
             the Jev wire: a broker such as OpenRouter, or a self-hosted server; JEV_COMPATIBLE_API_KEY
-            is sent when held and never required).
-        model: { type: string, description: 'The decision model id, e.g. jev-1.13.0 on jev or typesafe/jev-1.13 on OpenRouter.' }
+            is sent when held and never required) | gemini_decision (Google's Decisions API on the
+            Gemini Developer API, keyed by the gemini provider's GEMINI_API_KEY; no EU hosting).
+        model: { type: string, description: 'The decision model id, e.g. jev-1.13.0 on jev, typesafe/jev-1.13 on OpenRouter, or gemini-decision-1 on gemini_decision.' }
         base_url:
           type: string
           deprecated: true
@@ -46251,13 +46437,13 @@ components:
 
     ImportProblemKind:
       type: string
-      enum: [broken_link, dropped_link, invalid_value, unknown_owner, new_tag, duplicate, permission, unusable_row]
+      enum: [broken_link, dropped_link, invalid_value, unknown_owner, new_tag, duplicate, permission, unusable_row, incomplete_identity]
       x-extensible-enum: true
       description: 'What kind of problem a report issue names, so a screen can group them. One closed list, the same one the server reports from.'
 
     ImportReasonCode:
       type: string
-      enum: [activity_empty, activity_held, address_erased, address_not_split, activity_link_ambiguous, activity_link_ambiguous_dropped, activity_type_unknown, activity_type_unnamed, activity_unlinked, amount_negative, author_too_long, cannot_create, cannot_create_tags, cannot_edit, cannot_edit_and_tag, cannot_link_stakeholders, cannot_read_pipelines, cannot_read_tags, cannot_write_type, close_date_future, close_date_past, company_duplicate_found, company_duplicate_skipped, company_link_on_meeting, company_name_empty, contact_duplicate_found, contact_duplicate_skipped, contact_email_held, contact_holds_lead, contact_not_found, contact_not_found_dropped, contact_unnamed, currency_not_a_code, currency_unset, deal_already_closed, deal_company_has_contracts, deal_legal_gate, deal_not_found, deal_not_found_dropped, deal_pipeline_fixed, description_too_long, direction_unknown, domain_held, duplicate_email, duration_not_valid_for_kind, email_names_no_contact, duration_out_of_range, employer_column_empty, employer_column_empty_dropped, employer_not_found, employer_not_found_dropped, employer_refused, employer_will_create, empty_payload, field_inactive, fx_rate_missing, id_not_a_company_id, id_not_visible, id_on_non_company, lead_not_found, lead_not_found_dropped, lead_status_not_importable, lead_status_unknown, link_ambiguous, link_ambiguous_dropped, link_contact_not_imported, link_edge_unsupported, link_malformed, link_not_attachable, link_not_found, link_not_found_dropped, link_row_not_imported, link_row_skipped, link_row_skipped_dropped, link_type_unknown, linkedin_held, lost_reason_missing, meeting_not_taken_place, meeting_status_not_valid_for_kind, meeting_status_unknown, message_not_importable, natural_key_taken, not_a_date, note_repeated, not_a_domain, not_a_number, not_an_amount, not_an_email, not_yes_no, occurred_at_future, occurred_at_unnamed, option_not_allowed, option_not_in_list, options_need_semicolons, owner_refused, owner_unknown, phone_needs_country, pipeline_no_open_stage, pipeline_unknown, pipeline_unnamed, record_archived, ref_taken_by_another_company, row_key_empty, row_key_repeated, run_in_flight, size_band_invalid, stage_unknown, stage_unnamed, tag_created, tag_name_invalid, tag_new, task_not_importable, timestamp_needs_zone, too_many_links, undo_edited, undo_failed, undo_grant_lost, undo_not_visible, undo_rule_protects, undo_still_referenced, value_refused, value_too_long, value_unreadable]
+      enum: [activity_empty, activity_held, address_erased, address_not_split, activity_link_ambiguous, activity_link_ambiguous_dropped, activity_type_unknown, activity_type_unnamed, activity_unlinked, amount_negative, author_too_long, cannot_create, cannot_create_tags, cannot_edit, cannot_edit_and_tag, cannot_link_stakeholders, cannot_read_pipelines, cannot_read_tags, cannot_write_type, close_date_future, close_date_past, company_duplicate_found, company_duplicate_skipped, company_link_on_meeting, company_name_empty, contact_duplicate_found, contact_duplicate_skipped, contact_email_held, contact_holds_lead, contact_not_found, contact_not_found_dropped, contact_channel_missing, contact_unnamed, currency_not_a_code, currency_unset, deal_already_closed, deal_company_has_contracts, deal_legal_gate, deal_not_found, deal_not_found_dropped, deal_pipeline_fixed, description_too_long, direction_unknown, domain_held, duplicate_email, duration_not_valid_for_kind, email_names_no_contact, duration_out_of_range, employer_column_empty, employer_column_empty_dropped, employer_not_found, employer_not_found_dropped, employer_refused, employer_will_create, empty_payload, field_inactive, fx_rate_missing, id_not_a_company_id, id_not_visible, id_on_non_company, lead_not_found, lead_not_found_dropped, lead_status_not_importable, lead_status_unknown, link_ambiguous, link_ambiguous_dropped, link_contact_not_imported, link_edge_unsupported, link_malformed, link_not_attachable, link_not_found, link_not_found_dropped, link_row_not_imported, link_row_skipped, link_row_skipped_dropped, link_type_unknown, linkedin_held, lost_reason_missing, meeting_not_taken_place, meeting_status_not_valid_for_kind, meeting_status_unknown, message_not_importable, natural_key_taken, not_a_date, note_repeated, not_a_domain, not_a_number, not_an_amount, not_an_email, not_yes_no, occurred_at_future, occurred_at_unnamed, option_not_allowed, option_not_in_list, options_need_semicolons, owner_refused, owner_unknown, phone_needs_country, pipeline_no_open_stage, pipeline_unknown, pipeline_unnamed, record_archived, ref_taken_by_another_company, row_key_empty, row_key_repeated, run_in_flight, size_band_invalid, stage_unknown, stage_unnamed, tag_created, tag_name_invalid, tag_new, task_not_importable, timestamp_needs_zone, too_many_links, undo_edited, undo_failed, undo_grant_lost, undo_not_visible, undo_rule_protects, undo_still_referenced, value_refused, value_too_long, value_unreadable]
       x-extensible-enum: true
       description: 'Why a row was skipped or warned about, so a screen can say it in the reader''s language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code. `run_in_flight` is the one refusal code: it answers a commit or undo on a run another attempt holds, and no row carries it.'
 
@@ -48099,6 +48285,8 @@ components:
 
     CreateContactRequest:
       description: >
+        Requires at least one nonblank email, phone or LinkedIn URL (including social.linkedin).
+        Name-only requests return 422 contact_channel_required. CSV import retains and warns about name-only rows.
         Contact creation also resolves available employer evidence atomically. A business work email
         requires company:create for shared domain resolution, including when triage is pending.
         An explicit employer additionally requires the company and relationship authority used by linking.
@@ -48155,8 +48343,21 @@ components:
         company_name:
           type: [string, 'null']
           description: The employer name to resolve or create. Not with `company_id`; blank leaves resolution to the work email domain.
+        acquisition_source:
+          description: 'Where the contact came from, as the user creating it states. The contact''s privacy page prints it. `other` needs `acquisition_note`.'
+          allOf: [{ $ref: '#/components/schemas/ContactStatedSource' }]
+        acquisition_note:
+          type: [string, 'null']
+          maxLength: 500
+          description: 'Their own words about the source, printed on the contact''s privacy page beside it.'
       additionalProperties: true
       x-extension: true
+
+    ContactStatedSource:
+      type: string
+      enum: [met_in_person, business_card, referral, website, other]
+      x-extensible-enum: true
+      description: Where a contact created by hand came from, as the user who created it stated.
 
     QuickCaptureContactRequest:
       type: object
@@ -48345,7 +48546,7 @@ components:
           description: The contact created or updated, or — for `needs_review` — the candidate the card resembles.
         reason:
           type: [string, 'null']
-          description: Why a card was skipped, in words a reader can act on.
+          description: Why a card was skipped, or a warning about an imported contact without a channel.
         lead_id:
           type: [string, 'null']
           format: uuid
@@ -53678,6 +53879,19 @@ components:
           minimum: 1
           maximum: 25
           description: How many citations, counterexamples and abstentions to return, each.
+    SearchDataAnswer:
+      type: object
+      additionalProperties: false
+      required: [outcome]
+      properties:
+        outcome: { type: string, enum: [answered, unsupported], x-extensible-enum: true }
+        source: { type: string, description: 'The typed selection or query requested, including its period and filters; evaluation.context names the resolved reporting period.' }
+        count: { type: boolean, description: 'For reporting, show the metric''s eligible record count rather than its value.' }
+        evaluation: { $ref: '#/components/schemas/ReportingEvaluation' }
+        records: { $ref: '#/components/schemas/WorkspaceQueryResult' }
+        analytics: { $ref: '#/components/schemas/AnalyticsAnswer' }
+        analytics_query: { $ref: '#/components/schemas/AnalyticsQuery' }
+
     WorkspaceQueryRequest:
       type: object
       description: What `query_workspace` takes.
@@ -60396,6 +60610,22 @@ components:
         voice_profile_version: { type: [integer, 'null'], readOnly: true, minimum: 1, description: 'The Voice DNA PROFILE version (not a model version) that styled this draft — the "built from your corpus · vN" provenance; null when no ready voice profile shaped it.' }
         draft_ref: { type: [string, 'null'], readOnly: true, description: 'Opaque reference identifying this served voice draft for learning feedback (rejectVoiceDraft); null when no voice profile styled it.' }
         voice_degraded: { type: boolean, readOnly: true, description: 'True when the sender''s voice could not even be looked up, so this draft may be missing a voice its sender built. Distinct from voice_profile_version being null, which also covers the ordinary no-profile case. A client should say so: the sender cannot detect a missing voice by reading the text. Absent reads as false.' }
+        communication_context:
+          allOf: [{ $ref: '#/components/schemas/CommunicationContext' }]
+          readOnly: true
+          description: |
+            What the drafting instruction says this message is, for the composer to send
+            with it. `requested_followup` when the instruction asks to move an appointment,
+            in English, German or Vietnamese. Absent when the instruction says nothing the
+            send check can use, which leaves the reason to the thread or the sender. The
+            send check still needs its own evidence, here an agreed appointment with the
+            recipient.
+        evidence:
+          allOf: [{ $ref: '#/components/schemas/CommunicationEvidence' }]
+          readOnly: true
+          description: |
+            The record the drafted reason rests on: the meeting itself, when the draft was
+            written from it. Absent otherwise.
         language:
           type: string
           enum: [en, de, vi]
@@ -60503,6 +60733,13 @@ components:
         deterministic floor is a real outcome here rather than an error.
       required: [subject, body, reasoning, generated_by, ai_generated]
       properties:
+        communication_context:
+          allOf: [{ $ref: '#/components/schemas/CommunicationContext' }]
+          readOnly: true
+          description: |
+            What the drafting instruction says this message is, for the composer to send with it:
+            `requested_followup` when it asks to move an appointment. Absent otherwise. The send
+            check still needs an agreed appointment with the recipient.
         subject: { type: string }
         body:
           type: string
@@ -60718,11 +60955,9 @@ components:
             they were addressed — and they are absent from the headers the recipients
             see, which is the whole of what "blind" means.
 
-            A message with a tokenized unsubscribe link may still have only ONE
-            addressee in total: that token is a bearer credential over one contact's
-            consent record, so a bcc'd copy of a marketing send is refused 422
-            `shared_unsubscribe_token` rather than handing a stranger somebody else's
-            preference link.
+            Private unsubscribe links are omitted for multiple recipients, preserving
+            To, Cc and Bcc visibility. The sender must confirm that omission with
+            a recorded one-message reason before delivery.
         draft_ref:
           type: [string, 'null']
           description: |
@@ -61181,9 +61416,10 @@ components:
       type: object
       required: [to]
       description: |
-        What a composer is about to write, in the shape the engine judges. It carries no
-        `body` and no `subject`: neither reaches a consent decision, and sending an unwritten
-        draft to the server to be told whether it may exist would be the wrong way round.
+        What a composer is about to write, in the shape the engine judges. A `subject` and
+        `body` never reach a consent decision. When given, they are checked against the
+        advertising content rules of each recipient's jurisdiction pack and answered as
+        `content_findings`.
       properties:
         to:
           type: array
@@ -61214,6 +61450,14 @@ components:
         evidence:
           allOf: [{ $ref: '#/components/schemas/CommunicationEvidence' }]
           description: Records the caller names in support of this message. Checked, never trusted.
+        subject:
+          type: string
+          maxLength: 998
+          description: The draft's subject, checked only for `content_findings`.
+        body:
+          type: string
+          maxLength: 200000
+          description: The draft's plain text, checked only for `content_findings`.
 
     PreviewAccountSendRequest:
       type: object
@@ -61249,6 +61493,39 @@ components:
             Omit it and the answer is about the record alone.
         evidence:
           allOf: [{ $ref: '#/components/schemas/CommunicationEvidence' }]
+        subject:
+          type: string
+          maxLength: 998
+          description: The draft's subject, checked only for `content_findings`.
+        body:
+          type: string
+          maxLength: 200000
+          description: The draft's plain text, checked only for `content_findings`.
+
+    LawfulBasisConfirmationRequest:
+      type: object
+      required: [subjects]
+      additionalProperties: false
+      properties:
+        subjects:
+          type: array
+          minItems: 1
+          maxItems: 100
+          description: |
+            The records the preview marked `lawful_basis_missing`, as its `evidence_subject` names
+            them. A pinned lead is named as the lead, never as a contact sharing its address.
+          items: { $ref: '#/components/schemas/CommunicationEvidenceSubject' }
+
+    LawfulBasisConfirmation:
+      type: object
+      required: [confirmed]
+      properties:
+        confirmed:
+          type: array
+          description: |
+            The records whose warning was confirmed by the signed-in user. Each confirmation waits
+            15 minutes for its send and is spent by the first send to that record.
+          items: { $ref: '#/components/schemas/CommunicationEvidenceSubject' }
 
     SendAuthorizationPreview:
       type: object
@@ -61269,6 +61546,43 @@ components:
         recipients:
           type: array
           items: { $ref: '#/components/schemas/SendAuthorizationPreviewRecipient' }
+        content_findings:
+          type: array
+          description: |
+            What the draft's `subject` and `body` do not meet among the advertising content rules
+            of the recipients' jurisdiction packs. Advisory: a finding never refuses the send.
+            Empty when no subject or body was given, or when the message is not advertising.
+          items: { $ref: '#/components/schemas/DraftContentFinding' }
+
+    DraftContentFinding:
+      type: object
+      required: [requirement, detail]
+      properties:
+        requirement:
+          type: string
+          enum: [claim_without_proof, advertising_language_first, foreign_advertiser]
+          x-extensible-enum: true
+          description: |
+            `claim_without_proof`: the draft makes a claim the pack allows only beside a stated
+            proof (the document's name, number and date), and states none.
+            `advertising_language_first`: the draft does not open in the pack's disclosure
+            language, which advertising leads with.
+            `foreign_advertiser`: the sending legal entity is not established in the recipient's
+            country, whose pack asks an advertiser from elsewhere to advertise there through a
+            local advertising service business. The customer answers for it.
+        detail:
+          type: string
+          description: What was found, for the composer to read.
+        words:
+          type: array
+          items: { type: string }
+          description: The claim words found, for `claim_without_proof`.
+        language:
+          type: string
+          description: The language the draft must lead with, for `advertising_language_first`.
+        country:
+          type: string
+          description: The recipient's country, lower-case ISO 3166-1 alpha-2, for `foreign_advertiser`.
 
     CommunicationEvidenceSubject:
       type: object
@@ -61281,12 +61595,41 @@ components:
           x-extensible-enum: true
         entity_id: { type: string, format: uuid }
 
+    FooterFinding:
+      type: object
+      required: [kind, language, missing_means]
+      properties:
+        kind: { type: string, description: 'Missing disclosure kind or unavailable private link. Unknown kinds remain visible as an unspecified footer omission.' }
+        language: { type: string, description: 'Required language, or empty when no language is missing.' }
+        missing_means: { type: array, items: { type: string }, description: 'Missing contact methods, such as email, phone or web.' }
+
     SendAuthorizationPreviewRecipient:
       type: object
       required: [address, verdict, reason_code]
       description: One recipient's answer. It describes the MESSAGE, never the contact's file.
       properties:
+        footer_findings:
+          type: array
+          items: { $ref: '#/components/schemas/FooterFinding' }
+          description: Server-derived missing footer disclosures or unavailable private links shown before the sender confirms this message. Contains no credentials.
         address: { type: string, format: email }
+        lawful_basis_missing:
+          type: boolean
+          description: |
+            The recipient's country has no legitimate-interest basis, and the record holds neither
+            their consent nor an agreement with them. A privacy notice they were sent is neither.
+            Not a refusal: a surface shows a warning and records the sender's confirmation through
+            `POST /lawful-basis-confirmations` before the send. Absent or false otherwise.
+        consent_purpose_id:
+          type: string
+          format: uuid
+          description: |
+            For a recipient marked `lawful_basis_missing`: the purpose a consent request would ask
+            about for this use: the oldest live purpose whose class covers it, that the contact has
+            not withdrawn, and that this door may ask about (a marketing one only if double opt-in). `POST /contacts/{id}/consent/double-opt-in` with it mails
+            the request. The recipient's pack says for which purpose classes the contact's own request
+            must be on record first. Absent when no such purpose exists, or when the recipient is a
+            lead.
         evidence_subject:
           allOf: [{ $ref: '#/components/schemas/CommunicationEvidenceSubject' }]
           description: |
@@ -61355,17 +61698,15 @@ components:
         can_be_overruled:
           type: boolean
           description: |
-            Whether a contact may lift this refusal by recording why they are writing.
-
-            It needs BOTH halves of a question the engine keeps on two axes, which is why it
-            is answered here rather than derived. `decided_by` says whose decision it is, and
-            an absolute reason says no rollout mode softens it — and the two disagree: a hard
-            bounce, a rolling frequency cap, an unresolvable recipient and an unconfirmed
-            opt-in are all the engine's own reading (`machine`) AND absolute. A surface that
-            offered an override on those would render a button that cannot achieve what it
-            promises, and the rep would type a justification the staging gate then ignores.
-            A recorded reason lifts one category, so a refusal that resolved to no single
-            category, such as `unknown_purpose`, answers false.
+            Whether the sender may send this one message past the refusal by recording a
+            reason. True for every policy refusal except the subject's own stops: the refusal
+            stays on the record, and the reason is kept with the message. False for a stop
+            (`decided_by` is `subject`), which nobody sends past, admin included. False for a
+            hard bounce, because no decision makes a dead address accept mail, and for a
+            recipient that resolves to nobody or to two contacts, whose stops were never read.
+            Only a user in their own session sends past it, never an agent, and only with the
+            `communication_exception` grant. The refused send's review offers `direct_send` only
+            to such a caller.
         decided_by:
           type: string
           enum: [machine, user, admin, subject]
@@ -61374,7 +61715,7 @@ components:
             Whose decision this answer is, which is what says whether anybody may overrule
             it. `machine` is the engine reading an incomplete record and a rep who knows
             better may say so. `subject` is the contact's own act — an objection or a
-            withdrawal — and nobody in the installation lifts it, admin included.
+            withdrawal. Nobody in the installation lifts it or sends past it, admin included.
 
             It is sent rather than derived because the rule lives in Go
             (`commsauthz.LevelForReason`), and a surface that mapped reason codes to
@@ -61442,11 +61783,9 @@ components:
             they were addressed — and they are absent from the headers the recipients
             see, which is the whole of what "blind" means.
 
-            A message with a tokenized unsubscribe link may still have only ONE
-            addressee in total: that token is a bearer credential over one contact's
-            consent record, so a bcc'd copy of a marketing send is refused 422
-            `shared_unsubscribe_token` rather than handing a stranger somebody else's
-            preference link.
+            Private unsubscribe links are omitted for multiple recipients, preserving
+            To, Cc and Bcc visibility. The sender must confirm that omission with
+            a recorded one-message reason before delivery.
         draft_ref:
           type: [string, 'null']
           description: |
@@ -63558,15 +63897,36 @@ components:
             For an observed change, the list version whose filter it was seen under.
         reason: { type: [string, 'null'], enum: [chosen, bulk, record_archived, record_restored, evaluated, filter_changed, automation, null], x-extensible-enum: true, description: '`filter_changed` marks the first check after the filter changed; `automation` a record an automation rule added.' }
         occurred_at: { type: string, format: date-time }
-        actor: { type: string }
-        actor_name: { type: [string, 'null'] }
+        actor:
+          type: string
+          description: >-
+            The principal behind the change (`human:<uuid>`, `agent:<id>`, `connector:<name>` or
+            `system:<job>`), so a machine write is named as the machine it was.
+        actor_name: { type: [string, 'null'], description: 'Display name of a human actor; null for any other.' }
         entity_type: { type: [string, 'null'] }
         entity_id: { type: [string, 'null'], format: uuid }
+        entity_name:
+          type: [string, 'null']
+          description: >-
+            What the record that joined or left is called now. Null on a revision and for a record
+            type with no name. A change about a record the reader cannot see is not in the history.
         note: { type: [string, 'null'] }
         version: { type: [integer, 'null'], format: int64 }
         name: { type: [string, 'null'] }
         definition: { type: [object, 'null'], additionalProperties: true }
         sharing: { type: [string, 'null'] }
+        changes:
+          type: [array, 'null']
+          items: { type: string, enum: [name, purpose, filter, sharing, steward], x-extensible-enum: true }
+          description: >-
+            What a revision changed against the version before it; empty when it changed none of
+            these. Null on a membership change and when no earlier version is kept, which on
+            version 1 means the list was made.
+        previous_name: { type: [string, 'null'], description: The name before a revision. }
+        previous_definition:
+          type: [object, 'null']
+          additionalProperties: true
+          description: The filter before a revision, so a reader sees it beside `definition`.
 
     RecordListsResponse:
       type: object
@@ -66961,6 +67321,13 @@ components:
             seat gets it, not only those who may read the license, because every seat is locked
             until a license is configured. `LicenseTrial` lists what the lock refuses. Absent
             while the installation is licensed or still on its trial.
+        license_lapsed:
+          type: boolean
+          description: >
+            True when this installation's license was refused or is past its expiry. There is no
+            grace period. The installation is locked as `trial_ended` describes, and refused
+            changes answer `license_lapsed`, until a valid license is configured. Every seat gets
+            it. Absent while the license is valid or the installation runs on its trial.
         reader_rendering_available:
           type: boolean
           description: Whether this human caller may use the configured activity reader-rendering lane. Absent or false keeps generated text original until an explicit request.
@@ -69963,7 +70330,7 @@ components:
         assessment: {type: string, enum: [attention, checked, incomplete], x-extensible-enum: true}
         sources:
           type: array
-          maxItems: 8
+          maxItems: 9
           items: {$ref: '#/components/schemas/HealthSource'}
         findings:
           type: array
@@ -71929,8 +72296,25 @@ components:
           description: The human who confirmed the claim. Server-stamped, never accepted from a request body.
         field: { type: string, enum: [display_name, offer_summary, icp, value_proposition, usp, customer_pains, desired_outcomes, buying_center, buying_intents, common_objections, sales_motion, legal_name, registered_address, register_vat, industry, history, legal_form, register_court, register_number], x-extensible-enum: true }
         value: { type: string }
-        source: { type: string, enum: [human, agent, site_read, connector, migration, technical_lookup], x-extensible-enum: true }
+        source: { type: string, enum: [human, agent, site_read, connector, migration, technical_lookup, meeting], x-extensible-enum: true }
         captured_by: { type: string, readOnly: true }
+        source_activity_id:
+          type: [string, 'null']
+          format: uuid
+          readOnly: true
+          description: >-
+            With `source` `meeting`: the transcript or meeting notes the value was read from, when
+            you may read them. Null for a reader the meeting's audience leaves out; they still see
+            `source_occurred_at`. A meeting value stores no quote, so `evidence_snippet` is empty.
+        source_occurred_at:
+          type: [string, 'null']
+          format: date-time
+          readOnly: true
+          description: With `source` `meeting`, when the meeting took place. Shown to every reader of the field.
+        source_occurred_precision:
+          readOnly: true
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          description: How precisely `source_occurred_at` is known; `day` for an all-day meeting.
         evidence_snippet: { type: [string, 'null'] }
         source_url: { type: [string, 'null'], format: uri }
         confidence: { type: [number, 'null'], minimum: 0, maximum: 1 }
@@ -72054,7 +72438,7 @@ components:
       properties:
         key: { type: string }
         value: { type: string }
-        source: { type: string, enum: [human, agent, site_read, connector, migration], x-extensible-enum: true }
+        source: { type: string, enum: [human, agent, site_read, connector, migration, meeting], x-extensible-enum: true }
         captured_by: { type: string, readOnly: true }
         source_url: { type: [string, 'null'], format: uri }
         confidence: { type: [number, 'null'], minimum: 0, maximum: 1 }
@@ -72124,7 +72508,7 @@ components:
         value_kind: { type: string, enum: [profile_field, fact], x-extensible-enum: true }
         classification: { type: string, enum: [new, machine_change, human_conflict, unchanged], x-extensible-enum: true }
         current_value: { type: [string, 'null'] }
-        current_source: { type: [string, 'null'], enum: [human, agent, site_read, connector, migration, technical_lookup, null], x-extensible-enum: true }
+        current_source: { type: [string, 'null'], enum: [human, agent, site_read, connector, migration, technical_lookup, meeting, null], x-extensible-enum: true }
         proposed_value: { type: string }
 
     CompanySiteReadResolution:
@@ -73590,7 +73974,14 @@ components:
           enum: [business_correspondence, transactional, marketing, phone_outreach]
           x-extensible-enum: true
           description: What kind of message the purpose is for. Only a `marketing` purpose can be named on a collection-notice declaration.
+        frequency: { $ref: '#/components/schemas/ConsentPurposeFrequency' }
         created_at: { type: string, format: date-time }
+
+    ConsentPurposeFrequency:
+      type: string
+      enum: [weekly, monthly, quarterly]
+      x-extensible-enum: true
+      description: How often the purpose's mail goes out, roughly. The subscription question states it.
 
     CreateConsentPurposeRequest:
       type: object
@@ -73599,6 +73990,9 @@ components:
         key: { type: string }
         label: { type: string }
         requires_double_opt_in: { type: boolean, default: false }
+        frequency:
+          allOf: [{ $ref: '#/components/schemas/ConsentPurposeFrequency' }]
+          description: Absent means monthly.
 
     ExistingCustomerNotice:
       type: object
@@ -73815,6 +74209,82 @@ components:
         label:
           type: string
           description: The record's own name, so a controller can recognise it without a second read.
+    ArchivedActivity:
+      type: object
+      description: |
+        One archived activity, as the controller reviews it. `kept` says why a deletion would keep
+        it; absent means a deletion would erase it.
+      required: [activity_id, kind, occurred_at, occurred_precision, archived_at, contacts, companies]
+      properties:
+        activity_id: { type: string, format: uuid }
+        kind: { type: string }
+        subject: { type: string, description: 'The subject line. Absent when the activity has none, or when the reader may not read its content.' }
+        occurred_at: { type: string, format: date-time }
+        occurred_precision: { $ref: '#/components/schemas/OccurredPrecision' }
+        archived_at: { type: string, format: date-time }
+        contacts:
+          type: array
+          items: { $ref: '#/components/schemas/ArchivedActivityParty' }
+        companies:
+          type: array
+          items: { $ref: '#/components/schemas/ArchivedActivityParty' }
+        kept: { $ref: '#/components/schemas/ArchiveKeptReason' }
+
+    ArchivedActivityParty:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+
+    ArchiveKeptReason:
+      type: string
+      description: |
+        Why an archived activity is kept. `legal_hold`: a hold on a record it is linked to.
+        `opt_out_record`: it is the receipt of a refusal, inside the period the law keeps it.
+        `kept_by_law`: business correspondence inside its statutory retention period.
+        `not_archived`: it is not in the archive, or was already deleted. `not_found`: no such activity.
+      enum: [legal_hold, opt_out_record, kept_by_law, not_archived, not_found]
+      x-extensible-enum: true
+
+    ArchiveDeletionRequest:
+      type: object
+      required: [activity_ids]
+      properties:
+        activity_ids:
+          type: array
+          minItems: 1
+          maxItems: 100
+          uniqueItems: true
+          description: The archived activity to delete, at most 100 per request.
+          items: { type: string, format: uuid }
+
+    ArchiveDeletionResult:
+      type: object
+      required: [deleted, kept, failed]
+      properties:
+        deleted:
+          type: array
+          description: The activity whose content was erased.
+          items: { type: string, format: uuid }
+        kept:
+          type: array
+          description: The activity left as it was, each with the reason.
+          items: { $ref: '#/components/schemas/ArchiveKeptActivity' }
+        failed:
+          type: array
+          description: >-
+            The activity whose deletion failed and is left as it was. The other
+            records in the request still ran, so a retry names only these.
+          items: { type: string, format: uuid }
+
+    ArchiveKeptActivity:
+      type: object
+      required: [activity_id, reason]
+      properties:
+        activity_id: { type: string, format: uuid }
+        reason: { $ref: '#/components/schemas/ArchiveKeptReason' }
+
     RestrictedRecord:
       type: object
       # ADR-0114. What a statutory obligation is holding, stated without
@@ -74316,6 +74786,14 @@ components:
         the rep is actually asking — and it is why an erasure clears this list.
       required: [address, reason_code]
       properties:
+        footer_preview:
+          type: array
+          items: { type: string }
+          description: Configured disclosure text included in this message. Contains no recipient credentials.
+        footer_findings:
+          type: array
+          items: { $ref: '#/components/schemas/FooterFinding' }
+          description: Server-derived missing footer disclosures or unavailable private links shown before the sender confirms this message. Contains no credentials.
         address: { type: string }
         subject_kind: { type: string, enum: [contact, lead], x-extensible-enum: true }
         subject_id: { type: string, format: uuid }
@@ -74333,6 +74811,9 @@ components:
         what the consent rows say today.
       required: [id, state, kind, reason_code, refusals]
       properties:
+        assessment_revision:
+          type: string
+          description: Revision of the displayed refusal and footer details, echoed when confirming.
         id: { type: string, format: uuid }
         state:
           type: string
@@ -74463,6 +74944,18 @@ components:
           description: |
             The tick. Refused when false — the acknowledgement is the act, and an instruction written
             without one would record a decision nobody made.
+        assessment_revision:
+          type: string
+          description: The review revision the sender read. Required when footer findings apply or a refusal is the recipient's own choice, such as an objection.
+        shown_reasons:
+          type: array
+          maxItems: 100
+          items: { type: string, maxLength: 100 }
+          description: |
+            The refusal reason codes the director was shown, from the review's `refusals`. When the
+            review's refusals changed since then, the decision is refused with `instruction_stale`
+            and the director opens the review again. A refusal the subject made themselves (an
+            objection, a withdrawal, a restriction or a request to stop) is never passed.
 
     ConfirmSubmission:
       type: object
@@ -74609,6 +75102,17 @@ components:
           type: string
           maxLength: 500
           description: 'How to reach whoever answers about the data. Art. 13(1)(b), which asks for the data protection officer where one exists.'
+        privacy_page:
+          type: string
+          maxLength: 500
+          description: 'Where the installation publishes its own privacy information. A subscription question points its reader there, and falls back to `privacy_contact` while this is empty.'
+        archive_purpose:
+          type: string
+          maxLength: 500
+          description: |
+            Why captured correspondence is kept in the archive after its retention window, as the
+            words that finish the privacy page's sentence about the archive. Empty prints the page's
+            default purpose in the reader's language.
         objection_route:
           type: string
           maxLength: 500
@@ -74624,6 +75128,53 @@ components:
             the postal address because the obligation is about reachability rather than about where
             somebody is registered, and answering it with a street address reports an unmet duty
             as met.
+        translations:
+          type: array
+          maxItems: 3
+          description: |
+            The same particulars in other languages, one entry per language. A mail or page in one of
+            them prints the translated text where it is stated and the text above where it is not.
+            Where a jurisdiction pack in force names a disclosure language, an advertising mail to a
+            recipient under that pack is refused until its objection route and advertiser contact are
+            stated in that language.
+          items: { $ref: '#/components/schemas/ControllerParticularsTranslation' }
+        disclosure_languages:
+          type: array
+          readOnly: true
+          description: |
+            The languages the jurisdiction packs in force ask the objection route and the advertiser
+            contact to be stated in. The packs in force are those of the installation's country and
+            of each legal entity's country.
+          items: { type: string, pattern: '^[a-z]{2}$' }
+        objection_route_means:
+          type: array
+          readOnly: true
+          description: |
+            What every stated objection route must name under the packs in force. Saving a route that
+            lacks one answers 422 with the field and the missing part.
+          items: { $ref: '#/components/schemas/ContactMeans' }
+
+    ControllerParticularsTranslation:
+      type: object
+      required: [language]
+      description: The controller particulars in one more language. An empty field prints the default text.
+      properties:
+        language:
+          type: string
+          pattern: '^[a-z]{2}$'
+          description: The language, as a base language the installation can send mail in.
+        legal_name: { type: string, maxLength: 500 }
+        postal_address: { type: string, maxLength: 500 }
+        privacy_contact: { type: string, maxLength: 500 }
+        objection_route: { type: string, maxLength: 500 }
+        advertiser_contact: { type: string, maxLength: 500 }
+        archive_purpose: { type: string, maxLength: 500 }
+
+    ContactMeans:
+      type: string
+      description: A way of reaching someone that a stated particular must name.
+      enum: [web, email, phone]
+      x-extensible-enum: true
 
     NoticeCaseState:
       type: string
@@ -75288,10 +75839,12 @@ components:
           type: array
           description: |
             The basis on record for each entry in `purposes`, at the same index: `consent` for a
-            purpose the reader agreed to, else the kind of a live communication basis.
+            purpose the reader agreed to, else the kind of a live communication basis. `none` says
+            no basis is recorded, for a reader whose country has no legitimate-interest basis and
+            whose record holds neither their consent nor an agreement with them.
           items:
             type: string
-            enum: [consent, contract, precontract_request, subject_initiated_correspondence, legitimate_interests, legal_obligation, vital_or_security_interest, existing_customer_exception, vn_subject_agreement]
+            enum: [consent, contract, precontract_request, subject_initiated_correspondence, legitimate_interests, legal_obligation, vital_or_security_interest, existing_customer_exception, vn_subject_agreement, none]
             x-extensible-enum: true
         data_categories:
           type: array
@@ -75326,6 +75879,10 @@ components:
           type: [string, 'null']
           format: date-time
           description: 'When the acquisition happened, absent where the door could not say.'
+        stated_source:
+          allOf: [{ $ref: '#/components/schemas/ContactStatedSource' }]
+          description: 'Where the contact came from, as the user who created it by hand stated. Absent when nothing was given.'
+        stated_source_note: { type: string, description: 'Their own words beside `stated_source`. Absent when none were given.' }
         purposes:
           type: array
           description: 'What the installation uses this contact''s data for, by published name.'
@@ -75337,6 +75894,14 @@ components:
             product seeds in its reader's language by its key, and shows the published name of any
             other.
           items: { type: string }
+        purpose_since:
+          type: array
+          description: |
+            When the reader gave the consent each entry in `purposes` rests on, at the same index.
+            Null for an entry whose basis is not consent.
+          items:
+            type: [string, 'null']
+            format: date-time
         rights:
           type: array
           description: |
@@ -75360,6 +75925,8 @@ components:
         identity: { type: string, description: 'The legal name and postal address, as lines. Absent unless both are stated.' }
         privacy_contact: { type: string, description: 'How to reach whoever answers questions about the data.' }
         objection_route: { type: string, description: 'How to object, where the installation states a way of its own.' }
+        privacy_page: { type: string, description: 'Where the installation publishes its own privacy information. Absent when not stated.' }
+        archive_purpose: { type: string, description: 'Why archived correspondence is kept, in the language of the link. Absent when not stated, and the page then prints its default purpose.' }
 
     PrivacyInformationRetention:
       type: object
@@ -75393,6 +75960,7 @@ components:
           x-extensible-enum: true
         purpose_key:   { type: string, description: 'The subscription this link is about.' }
         purpose_label: { type: string, description: 'Its published name, for the page to show.' }
+        frequency: { $ref: '#/components/schemas/ConsentPurposeFrequency' }
         state:
           type: string
           enum: [unknown, granted, withdrawn]
@@ -75435,6 +76003,11 @@ components:
           description: The language the link's mail was written in, which the page asks in too. Absent when the link records no language.
         controller: { $ref: '#/components/schemas/PrivacyInformationController' }
         question: { $ref: '#/components/schemas/ConfirmQuestion' }
+        asks_news:
+          type: boolean
+          description: |
+            False when the recipient's country bars asking about news in a details check. The page
+            then shows no news question, and a submit carrying a marketing answer is a 422.
 
     ConfirmQuestion:
       type: object
@@ -77151,6 +77724,48 @@ components:
           format: date-time
           description: When the earliest of them happened. Null when nobody recorded the time.
 
+    OptOutRecords:
+      type: object
+      description: One contact's registrations, refusals and opt-out receipts, as kept for an inspection.
+      required: [contact_id, generated_at, consent_events, stops, receipts]
+      properties:
+        contact_id: { type: string, format: uuid }
+        generated_at: { type: string, format: date-time }
+        consent_events:
+          type: array
+          description: Every consent the contact gave or withdrew. A withdrawal arrived and stopped sending at `occurred_at`.
+          items: { $ref: '#/components/schemas/ConsentEvent' }
+        stops:
+          type: array
+          description: Every stop recorded on the contact, lifted ones included.
+          items: { $ref: '#/components/schemas/OptOutRecordStop' }
+        receipts:
+          type: array
+          description: Every opt-out receipt filed under the contact.
+          items: { $ref: '#/components/schemas/OptOutReceiptRecord' }
+    OptOutRecordStop:
+      type: object
+      required: [id, kind, received_at, stopped_at]
+      properties:
+        id: { type: string, format: uuid }
+        kind:
+          type: string
+          description: '`subject_request`, `marketing_objection`, `processing_restriction` or `hard_bounce`.'
+        purpose_key: { type: [string, 'null'], description: The one purpose a narrow stop binds. }
+        received_at: { type: string, format: date-time, description: When the refusal reached the controller. }
+        stopped_at: { type: string, format: date-time, description: When sending stopped. }
+        revoked_at: { type: [string, 'null'], format: date-time, description: When the stop was lifted. Null while it stands. }
+    OptOutReceiptRecord:
+      type: object
+      required: [message_id, status, template_version, queued_at]
+      properties:
+        message_id: { type: string, description: 'The receipt''s Message-ID. One refusal has one.' }
+        status: { type: string, description: 'The delivery''s state, such as `queued`, `sent` or `parked`.' }
+        template_version: { type: integer, description: The version of the receipt wording it carries. }
+        queued_at: { type: string, format: date-time }
+        sent_at: { type: [string, 'null'], format: date-time }
+        subject: { type: [string, 'null'], description: Null once an erasure removed it. }
+        body: { type: [string, 'null'], description: The plain-text body. Null once an erasure removed it. }
     ContactStop:
       type: object
       description: One live stop on a contact, and whether the caller may take it back.
@@ -79353,6 +79968,18 @@ components:
         display_name: { type: string }
         status: { type: string, enum: [open, done, dismissed], x-extensible-enum: true }
 
+    WorkGrounds:
+      type: object
+      additionalProperties: false
+      required: [text]
+      description: >-
+        Why a piece of work exists, written when the work was made: who did or said what, about
+        which record, and when. A sender's words in it are quoted exactly.
+      properties:
+        text:
+          type: string
+          maxLength: 600
+          description: The reason, in the reader's language where Margince wrote it, else in its author's.
     AttentionItem:
       type: object
       description: |
@@ -79435,6 +80062,12 @@ components:
 
             Both now travel typed — `quiet_days` and `staged` below — and the client writes
             the sentence in the reader's own language.
+        why:
+          allOf: [{ $ref: '#/components/schemas/WorkGrounds' }]
+          description: >-
+            Why this work exists, as whoever made it said it. A
+            reader acts on this sentence instead of on the row's date. Absent when its maker
+            gave none, never filled with a stock sentence.
         summary_parts:
           allOf: [{ $ref: '#/components/schemas/ApprovalSummaryParts' }]
           description: >-
@@ -81330,6 +81963,12 @@ components:
             Not a channel for anything else. A value the queue itself reads travels typed
             beside this field, never inside it: a figure parsed back out of a sentence reads
             as zero the day somebody rewords the sentence.
+        why:
+          allOf: [{ $ref: '#/components/schemas/WorkGrounds' }]
+          description: >-
+            Why this work exists, as whoever made it said it. A
+            reader acts on this sentence instead of on the row's date. Absent when its maker
+            gave none, never filled with a stock sentence.
         because:
           type: array
           items: { $ref: '#/components/schemas/WorklistReason' }
@@ -81400,6 +82039,12 @@ components:
             A client MUST NOT draw a way into the brief without it. Absent means there is
             no page to read this brief on, which an internal meeting and a meeting whose
             attendees are all withheld both produce, and both mean the same thing here.
+        room:
+          allOf: [{ $ref: '#/components/schemas/WorklistMeetingRoom' }]
+          description: |
+            Who is in a `meeting` row's room, as this reader may see them: the same room
+            `next_meeting` names. Sent on `source: meeting` rows only, and absent where the
+            reader may not read the meeting.
         contact:
           $ref: '#/components/schemas/WorklistContactFacts'
         recipients:
@@ -82579,6 +83224,33 @@ components:
             A client then names the group by its kind alone and NEVER falls back to
             `cause`, because an identity on screen is worse than a vaguer sentence: the
             reader cannot act on it and cannot tell it from a bug.
+
+    WorklistMeetingRoom:
+      type: object
+      description: |
+        Who is in one meeting's room, read the way `Contact360NextMeeting` reads it, so a
+        meeting today and the next one name their attendees by one rule.
+      required: [participants]
+      properties:
+        participants:
+          type: array
+          description: The attendees who are contacts this reader may see, named first.
+          maxItems: 8
+          items:
+            type: object
+            required: [contact_id, full_name]
+            properties:
+              contact_id: { type: string, format: uuid }
+              full_name: { type: string }
+        other_participants:
+          type: array
+          description: The attendees who are not contacts, named after the contacts within the same eight.
+          maxItems: 8
+          items: { $ref: '#/components/schemas/MeetingOtherParticipant' }
+        participants_more:
+          type: integer
+          minimum: 1
+          description: How many more attendees this reader may see than the eight named. Absent when every attendee is named.
 
     WorklistContactFacts:
       type: object

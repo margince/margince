@@ -5,7 +5,7 @@
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, within } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { steppedClock } from "../testing/steppedclock";
@@ -169,10 +169,18 @@ function answerPanel() {
   return screen.findByRole("region", { name: "Answer from Margince" });
 }
 
+// The answer's lazy chunks load here, on the real clock. Under a case's fake clock
+// the import can stay unsettled after the case, and every later case waits on it.
+beforeAll(async () => {
+  await import("../features/voice-knowledge/corpusanswer");
+  await import("../features/voice-knowledge/citeddocument");
+});
+
 afterEach(() => {
   cleanup();
   window.location.hash = "";
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 describe("asking the handbook from the search box", () => {
@@ -185,7 +193,7 @@ describe("asking the handbook from the search box", () => {
     renderPalette();
     await user.type(screen.getByRole("searchbox"), QUESTION);
     await screen.findByRole("button", {
-      name: /^Ask Margince: “How do I change my time zone\?”/,
+      name: /^Ask the handbook: “How do I change my time zone\?”/,
     });
     await user.keyboard("{Enter}");
     const panel = await answerPanel();
@@ -213,7 +221,7 @@ describe("asking the handbook from the search box", () => {
     renderPalette();
     await user.type(screen.getByRole("searchbox"), QUESTION);
     await screen.findByRole("button", {
-      name: /^Ask Margince: “How do I change my time zone\?”/,
+      name: /^Ask the handbook: “How do I change my time zone\?”/,
     });
     await user.keyboard("{Enter}");
     arrive();
@@ -280,7 +288,7 @@ describe("asking the handbook from the search box", () => {
     });
     renderPalette();
     await user.type(screen.getByRole("searchbox"), QUESTION);
-    await screen.findByRole("button", { name: /^Ask Margince:/ });
+    await screen.findByRole("button", { name: /^Ask the handbook:/ });
     await user.keyboard("{Enter}");
     arrive();
     expect(await screen.findByText("No document sets")).toBeVisible();
@@ -424,7 +432,9 @@ describe("asking the handbook from the search box", () => {
     await screen.findByRole("button", {
       name: /^See all results for “How do I change my time zone\?”/,
     });
-    expect(screen.queryByRole("button", { name: /^Ask Margince:/ })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /^Ask the handbook:/ }),
+    ).toBeNull();
   });
 
   it("still goes to the results on Enter for a name", async () => {
@@ -451,4 +461,19 @@ describe("asking the handbook from the search box", () => {
     );
     expect(await within(panel).findByText("Your own settings")).toBeVisible();
   });
+});
+
+it("offers Analytics for a data question the handbook does not cover", async () => {
+  backend({
+    sets: [HANDBOOK],
+    replies: { [HANDBOOK_ID]: notCovered(HANDBOOK, "Not covered by this set") },
+  });
+  renderPalette();
+  const clock = steppedClock();
+  await clock.type(screen.getByRole("searchbox"), "How many deals did I win?");
+  await clock.keyboard("{Enter}");
+  expect(
+    await screen.findByRole("button", { name: "Open in Analytics" }),
+  ).toBeVisible();
+  expect(screen.queryByText(/Ask an administrator or a colleague/)).toBeNull();
 });

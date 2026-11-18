@@ -156,6 +156,9 @@ func (s *Store) SetAudience(ctx context.Context, id ids.ActivityID, in SetAudien
 		}); err != nil {
 			return err
 		}
+		if err := followRecordedMeetingTx(ctx, tx, id); err != nil {
+			return err
+		}
 		out, err = readActivityAt(ctx, tx, id, storekit.LiveOnly, s.now())
 		return err
 	})

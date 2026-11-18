@@ -206,7 +206,7 @@ export function stubFetchWithMe(
   // The reader's own mail connections, which the shell reads for every page.
   // They decide whether the lead's address is the composer's or their mail
   // client's. None, unless a suite about writing to the lead says so.
-  connectors: unknown = { data: [] },
+  connectors: unknown = NO_CONNECTORS,
   // The settings surfaces this installation offers, for a suite about a card
   // that draws only where one is on (the lists card).
   settingsAvailability: Partial<
@@ -288,3 +288,5 @@ export function stubFetchWithMe(
   );
   return { urls };
 }
+
+const NO_CONNECTORS = { data: [] };

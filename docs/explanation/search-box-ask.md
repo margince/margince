@@ -1,5 +1,5 @@
-<!-- describes: backend/internal/modules/knowledge/ask.go backend/internal/modules/knowledge/groundingfloor.go backend/internal/modules/knowledge/handbook/section.go backend/internal/compose/corpusaskhandbook.go frontend/src/app/paletteanswer.tsx frontend/src/lib/question.ts -->
-# The search box asks the handbook
+<!-- describes: backend/internal/modules/knowledge/ask.go backend/internal/modules/knowledge/groundingfloor.go backend/internal/modules/knowledge/handbook/section.go backend/internal/compose/corpusaskhandbook.go frontend/src/app/paletteanswer.tsx frontend/src/lib/question.ts backend/internal/compose/searchdata.go backend/internal/compose/searchplan/plan.go frontend/src/app/palettedata.tsx -->
+# The search box answers questions
 
 What a user sees is in the handbook page [What Margince is](../handbook/what-margince-is.md), under
 "Where is the handbook, and how do I ask it a question?". Below: how the box tells a question from
@@ -12,9 +12,12 @@ a lookup, which document set answers, and how a handbook answer names its sectio
         |
         +--> looks like a question?  --no-->  box works as a lookup only
                  | yes, and no screen or setting row matched,
-                 | and the reader may read a document set
+                 | and the reader may use the relevant reader
                  v
-        row "Ask Margince: ..."   --Enter-->   ask
+        data question with CRM read access? --yes--> typed CRM reader
+                 | no, or unsupported with handbook access
+                 v
+        row "Ask the handbook: ..."   --Enter-->   ask
                                              |
                        +---------------------+
                        v
@@ -26,6 +29,23 @@ a lookup, which document set answers, and how a handbook answer names its sectio
                        v
              "Margince answers from its handbook and your documents. ..."
 ```
+
+## Questions about CRM data
+
+A data question offers **Ask CRM data**. Enter sends the words to `POST /search/data-answer`.
+The natural-language search lane reads the caller's query vocabulary, metric catalog, scope and
+calendar context. It proposes a typed read plan and receives no record values.
+
+Compose executes the plan through the same reporting evaluator, analytics query engine or
+record-query tool that serves the other surfaces. Those readers enforce row scope and field
+masks. The planner can select only these readers, and cannot save a query or choose a write tool.
+A won-deal count is the eligible record count of the Sales won metric for the selected period.
+The answer shows its source and period, with links to Analytics or the returned records.
+
+An unsupported question falls back to the handbook path below. A failed data read also leaves the
+handbook available and shows the data failure. Without handbook access, the box reports that
+CRM data could not answer the question. A data question the handbook does not cover offers
+**Open in Analytics**. No model is called while typing.
 
 ## Typing never calls a model
 

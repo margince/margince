@@ -4,10 +4,12 @@
 package vn
 
 import (
+	"slices"
 	"testing"
 	"time"
 
 	"github.com/margince/margince/backend/pkg/extension/messaging"
+	"github.com/margince/margince/backend/pkg/extension/subjectrights"
 )
 
 // TestNewDeclaresTheJurisdictionAndNoRetentionClass pins the two structural
@@ -54,11 +56,11 @@ func TestAdvertisingNeedsPriorConsent(t *testing.T) {
 // decree requires, and nothing else in the tree would notice.
 func TestTheAdvertisingLabelIsTheDecreesOwn(t *testing.T) {
 	if got := messagingRules().SubjectPrefix; got != "[QC]" {
-		t.Fatalf("SubjectPrefix = %q, want the Art. 12 advertising label [QC]", got)
+		t.Fatalf("SubjectPrefix = %q, want the Art. 18 advertising label [QC]", got)
 	}
 }
 
-// TestTheDailyCeilingIsThreePerAddress pins Art. 22(2).
+// TestTheDailyCeilingIsThreePerAddress pins Art. 13.5.
 func TestTheDailyCeilingIsThreePerAddress(t *testing.T) {
 	ceiling := messagingRules().FrequencyCap
 	if ceiling == nil {
@@ -72,17 +74,23 @@ func TestTheDailyCeilingIsThreePerAddress(t *testing.T) {
 	}
 }
 
-// TestAnOptOutIsAcknowledged pins Art. 16.
+// TestAnOptOutIsAcknowledged pins Art. 20.
 func TestAnOptOutIsAcknowledged(t *testing.T) {
 	if !messagingRules().OptOutAcknowledgement {
-		t.Fatal("the pack owes no opt-out acknowledgement, want one — Art. 16 requires a confirmation within 24 hours")
+		t.Fatal("the pack owes no opt-out acknowledgement, want one — Art. 20 requires a receipt at once")
 	}
-	if within := messagingRules().OptOutAcknowledgementWithin; within != 24*time.Hour {
-		t.Errorf("the acknowledgement is due within %s, want 24h", within)
+	if within := messagingRules().OptOutAcknowledgementWithin; within != time.Hour {
+		t.Errorf("an unsent receipt raises its alarm after %s, want 1h: Art. 20.3 owes it at once", within)
+	}
+	if keep := messagingRules().OptOutRecordsKeep; keep < 366*24*time.Hour {
+		t.Errorf("opt-out records are kept %s, want at least a year in every year: Art. 11.7", keep)
+	}
+	if offset := messagingRules().OptOutAcknowledgementUTCOffset; offset != 7*time.Hour {
+		t.Errorf("the receipt prints its times at UTC%+v, want UTC+7: Art. 20.4(a) times are read in Vietnam", offset)
 	}
 }
 
-// TestAnAdvertisingMessageNamesItsAdvertiser holds Art. 13 alongside the
+// TestAnAdvertisingMessageNamesItsAdvertiser holds Art. 19 alongside the
 // controller disclosures. Advertiser contact binds ADVERTISING only: an
 // operational message carries who is processing the data, not who is selling.
 func TestAnAdvertisingMessageNamesItsAdvertiser(t *testing.T) {
@@ -158,8 +166,103 @@ func TestThePackStatesTheInstrumentsItsRulesRestOn(t *testing.T) {
 // TestTheVersionMovedWithTheInstruments. The number exists to tell two records
 // apart, so it is meaningless if it stays put when the law it names changes.
 func TestTheVersionMovedWithTheInstruments(t *testing.T) {
-	if got := messagingRules().Version; got != 2 {
-		t.Errorf("ruleset version = %d, want 2 — the pack now states the 2025 "+
-			"instruments and a decision must be able to say which set judged it", got)
+	if got := messagingRules().Version; got != 5 {
+		t.Errorf("ruleset version = %d, want 5 — the refusal means, the refusal "+
+			"section and the claims needing proof changed what a decision was judged under", got)
+	}
+}
+
+func TestDataProtectionFollowsAVietnameseRecipient(t *testing.T) {
+	rules := messagingRules()
+	if !rules.DataProtectionFollowsRecipient {
+		t.Error("the pack does not follow the recipient; Law 91/2025 Art. 1.2(c) reaches a foreign controller")
+	}
+	if rules.DisclosureLanguage != "vi" {
+		t.Errorf("disclosure language = %q, want vi", rules.DisclosureLanguage)
+	}
+	if !rules.NoLegitimateInterests {
+		t.Error("the pack allows legitimate interests; Vietnamese law has no such basis")
+	}
+}
+
+func TestRequestsAreCarriedOutWithinTheDecreesDays(t *testing.T) {
+	rules := subjectRights()
+	if err := rules.Validate(); err != nil {
+		t.Fatalf("the declared deadlines do not validate: %v", err)
+	}
+	for kind, days := range map[subjectrights.RequestKind]int{
+		subjectrights.Rectify: 10, subjectrights.Erasure: 20, subjectrights.Restriction: 15,
+	} {
+		if got := rules.Deadlines[kind].Period.Days; got != days {
+			t.Errorf("%s is due in %d days, want %d", kind, got, days)
+		}
+	}
+	if rules.UTCOffset != 7*time.Hour {
+		t.Errorf("working days are counted at offset %s, want Vietnam time, UTC+07:00", rules.UTCOffset)
+	}
+	if rules.ReplyWithinWorkingDays != 2 {
+		t.Errorf("a first answer is owed in %d working days, want 2", rules.ReplyWithinWorkingDays)
+	}
+	if _, declared := rules.Deadlines[subjectrights.Access]; declared {
+		t.Error("the pack declares an access deadline the decree does not set")
+	}
+}
+
+// TestRefusalIsPossibleByWebEmailAndPhone pins Decree 91/2020/ND-CP Art. 20.2.
+func TestRefusalIsPossibleByWebEmailAndPhone(t *testing.T) {
+	for _, d := range messagingRules().Disclosures {
+		if d.Kind != messaging.ObjectionRoute {
+			continue
+		}
+		want := []messaging.ContactMeans{messaging.MeansWeb, messaging.MeansEmail, messaging.MeansPhone}
+		if !slices.Equal(d.Means, want) {
+			t.Errorf("the objection route asks for %v, want %v", d.Means, want)
+		}
+		return
+	}
+	t.Fatal("the pack declares no objection route")
+}
+
+// TestAdvertisingIsVietnameseFirstAndEndsWithTheRefusal pins the Law on
+// Advertising Art. 18 and Decree 91/2020/ND-CP Art. 19 and 20.1.
+func TestAdvertisingIsVietnameseFirstAndEndsWithTheRefusal(t *testing.T) {
+	r := messagingRules()
+	if r.DisclosureLanguage != "vi" {
+		t.Errorf("disclosure language = %q, want vi: advertising leads with it", r.DisclosureLanguage)
+	}
+	if !r.RefusalSectionLast {
+		t.Error("advertising does not end with the refusal section")
+	}
+}
+
+// TestSuperlativesNeedAProof pins Law on Advertising Art. 8.11 and Circular
+// 12/2026/TT-BVHTTDL Art. 3.1, which reaches a claim in any language.
+func TestSuperlativesNeedAProof(t *testing.T) {
+	for _, word := range []string{
+		"nhất", "duy nhất", "tốt nhất", "số một", "hàng đầu",
+		"best", "no. 1", "number one", "leading", "the only", "unique",
+	} {
+		if !slices.Contains(messagingRules().ClaimsNeedProof, word) {
+			t.Errorf("%q is not among the claims that need a proof", word)
+		}
+	}
+}
+
+// TestAForeignAdvertiserIsToldToUseAVietnameseAgency pins Law on Advertising
+// Art. 39.2.
+func TestAForeignAdvertiserIsToldToUseAVietnameseAgency(t *testing.T) {
+	if !messagingRules().ForeignAdvertiserNeedsLocalAgency {
+		t.Error("an advertiser outside Vietnam is not told to advertise through a Vietnamese agency")
+	}
+}
+
+// TestOnlyAdvertisingConsentNeedsTheRequestFirst pins Decree 91/2020/ND-CP
+// Art. 11.2, which governs advertising by mail and by phone: a consent request
+// for correspondence needs no request of the contact's own.
+func TestOnlyAdvertisingConsentNeedsTheRequestFirst(t *testing.T) {
+	r := messagingRules()
+	want := []messaging.PurposeClass{messaging.PurposeClassMarketing, messaging.PurposeClassPhoneOutreach}
+	if !r.ConsentConfirmationNeedsRequest || !slices.Equal(r.ConsentRequestFirstFor, want) {
+		t.Errorf("the request rule covers %v, want the advertising classes %v", r.ConsentRequestFirstFor, want)
 	}
 }

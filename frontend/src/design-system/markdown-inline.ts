@@ -12,10 +12,7 @@ import type { Inline } from "./markdown-parse";
 // and a tenant member can put a file in a corpus. takeCode scans for the close
 // instead, which is linear.
 const CODE_OPEN = /^`+/;
-// A destination may carry one level of balanced parentheses, as CommonMark
-// allows. `alert(1)` is a plausible payload, and the refusal test should see the
-// real shape of one.
-const LINK = /^\[([^\][]*)\]\([ \t]*((?:[^()\s]|\([^()\s]*\))*)[ \t]*\)/;
+const LINK_LABEL = /^\[([^\][]*)\]\(/;
 const STRONG = /^(\*\*)([\s\S]+?)\1/;
 const EM = /^(\*)([^\s*_][\s\S]*?)\1/;
 // A letter or digit in any script. An underscore inside a word is literal, never
@@ -169,21 +166,60 @@ function takeWrapped(
   };
 }
 
-function takeLink(rest: string): { node: Inline; length: number } | null {
-  const match = LINK.exec(rest);
+// A destination may carry one level of balanced parentheses, as CommonMark
+// allows. `alert(1)` is a plausible payload, and the refusal test should see the
+// real shape of one.
+function linkDestinationEnd(rest: string, from: number): number | null {
+  let at = from;
+  let nested = false;
+  while (at < rest.length) {
+    const char = rest[at];
+    if (char === ")" && !nested) break;
+    if (/\s/.test(char ?? "")) break;
+    if (char === "(") {
+      if (nested) return null;
+      nested = true;
+    } else if (char === ")") {
+      nested = false;
+    }
+    at++;
+  }
+  return nested ? null : at;
+}
+
+function linkParts(
+  rest: string,
+): { label: string; destination: string; length: number } | null {
+  const match = LINK_LABEL.exec(rest);
   if (match === null) return null;
-  const href = safeHref(match[2] ?? "");
-  const children = parseInline(match[1] ?? "");
+  let at = match[0].length;
+  while (rest[at] === " " || rest[at] === "\t") at++;
+  const from = at;
+  const end = linkDestinationEnd(rest, at);
+  if (end === null) return null;
+  at = end;
+  const destination = rest.slice(from, at);
+  while (rest[at] === " " || rest[at] === "\t") at++;
+  if (rest[at] !== ")") return null;
+  return { label: match[1] ?? "", destination, length: at + 1 };
+}
+
+function takeLink(rest: string): { node: Inline; length: number } | null {
+  const parts = linkParts(rest);
+  if (parts === null) return null;
+  const href = safeHref(parts.destination);
+  const children = parseInline(parts.label);
+  const { length } = parts;
   // A refused href leaves the label standing, and nothing else. A reader does not
   // want the target of a `javascript:` link beside the words it was hidden behind.
   // Printing it would put the payload back on the page as visible, copyable text,
   // the one form that still invites a paste.
   if (href === null) {
-    return { node: { kind: "em", children }, length: match[0].length };
+    return { node: { kind: "em", children }, length };
   }
   return {
     node: { kind: "link", href, children },
-    length: match[0].length,
+    length,
   };
 }
 

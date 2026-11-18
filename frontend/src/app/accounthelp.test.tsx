@@ -24,7 +24,7 @@ import { AccountMenu } from "./account";
 
 // The bundle's releases are compiled in, and every local build leaves them
 // empty. Getters over a hoisted value let each case set the releases it needs.
-const bundle = vi.hoisted(() => ({ release: "", core: "" }));
+const bundle = vi.hoisted(() => ({ release: "", core: "", revision: "" }));
 vi.mock("../lib/release", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../lib/release")>();
   return {
@@ -34,6 +34,9 @@ vi.mock("../lib/release", async (importOriginal) => {
     },
     get CORE_RELEASE() {
       return bundle.core;
+    },
+    get BUILD_REVISION() {
+      return bundle.revision;
     },
   };
 });
@@ -51,6 +54,7 @@ afterEach(() => {
   document.removeEventListener("click", stayHere, { capture: true });
   bundle.release = "";
   bundle.core = "";
+  bundle.revision = "";
 });
 
 function renderMenu() {
@@ -148,6 +152,7 @@ describe("Help and feedback", () => {
     const user = userEvent.setup();
     renderMenu();
     await user.click(trigger());
+    await screen.findByRole("menu", { name: "Account" });
     expect(row("Help and feedback")).toHaveAttribute("aria-haspopup", "menu");
     expect(row("Theme")).not.toHaveAttribute("aria-haspopup");
   });
@@ -202,6 +207,23 @@ describe("Help and feedback", () => {
       expect(helpItem(/^Report a problem/)).toHaveAttribute(
         "href",
         `https://github.com/margince/margince/issues/new?template=bug_report.yml&commit=${commit}`,
+      );
+    },
+  );
+
+  it.each([
+    ["0123456789abcdef", "&commit=0123456"],
+    ["dev", ""],
+  ])(
+    "names the revision of an unstamped build only when known (%j)",
+    async (revision, query) => {
+      bundle.revision = revision;
+      const user = userEvent.setup();
+      renderMenu();
+      await openHelp(user);
+      expect(helpItem(/^Report a problem/)).toHaveAttribute(
+        "href",
+        `https://github.com/margince/margince/issues/new?template=bug_report.yml${query}`,
       );
     },
   );
@@ -268,6 +290,34 @@ describe("the build at the foot of Help and feedback", () => {
       expect(screen.queryByText(/^Version/)).toBeNull();
     },
   );
+
+  it("names the short revision of an unstamped build", async () => {
+    bundle.revision = "0123456789abcdef0123456789abcdef01234567";
+    const user = userEvent.setup();
+    renderMenu();
+    await openHelp(user);
+    expect(
+      within(helpMenu()).getByText("Development build · 0123456"),
+    ).toBeVisible();
+  });
+
+  it("keeps Development build when the revision is unknown", async () => {
+    bundle.revision = "dev";
+    const user = userEvent.setup();
+    renderMenu();
+    await openHelp(user);
+    expect(within(helpMenu()).getByText("Development build")).toBeVisible();
+  });
+
+  it("shows only the release lines of a stamped build, revision or not", async () => {
+    bundle.release = "v1.4.0";
+    bundle.revision = "0123456789abcdef";
+    const user = userEvent.setup();
+    renderMenu();
+    await openHelp(user);
+    expect(within(helpMenu()).getByText("Version v1.4.0")).toBeVisible();
+    expect(screen.queryByText(/0123456/)).toBeNull();
+  });
 
   // A statement, not a row. The keyboard walk ends on the last link above it.
   it("names a stamped release, outside the menu's items", async () => {
@@ -337,6 +387,7 @@ describe("the build at the foot of Help and feedback", () => {
     const user = userEvent.setup();
     renderMenu();
     await user.click(trigger());
+    await screen.findByRole("menu", { name: "Account" });
     expect(screen.queryByText("Version v1.4.0")).toBeNull();
   });
   it("offers web app licenses without a settings grant", async () => {

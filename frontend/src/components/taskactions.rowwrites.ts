@@ -121,6 +121,30 @@ export async function writeMeetingOutcome(
   );
 }
 
+/**
+ * The notes of a meeting whose outcome already stands. No `meeting_status`
+ * goes with them, so writing the notes the next day never answers it again.
+ */
+export async function writeMeetingNotes(
+  input: Readonly<{
+    id: string;
+    version: number | undefined;
+    body: string | null;
+  }>,
+  t: ReturnType<typeof useT>,
+): Promise<components["schemas"]["Activity"]> {
+  return unwrap(
+    await api.PATCH("/activities/{id}", {
+      params: {
+        path: { id: input.id },
+        ...ifMatch(requireVersion(input.version)),
+      },
+      body: { body: input.body },
+    }),
+    t,
+  );
+}
+
 export function useMeetingOutcome(invalidateKeys: readonly QueryKey[]) {
   const t = useT();
   const queryClient = useQueryClient();

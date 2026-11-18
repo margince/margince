@@ -7,6 +7,7 @@ import type { LeafValue } from "../../lib/segmentpredicate";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
 import { ChosenRecords, SearchedRecordValue } from "./filtervalue.records";
@@ -36,6 +37,11 @@ function Searching({
 function searchStory(many: boolean, start: LeafValue) {
   return () => {
     installFetchStub({
+      "GET /me": meRoute({
+        contact: ["read"],
+        company: ["read"],
+        deal: ["read"],
+      }),
       "GET /companies": () =>
         jsonResponse({
           data: [{ id: "c-1", display_name: "Brandt Maschinenbau" }],

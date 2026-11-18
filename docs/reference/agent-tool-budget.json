@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 48,
     "system_frame_tokens": 672,
-    "tokens": 51129,
+    "tokens": 51187,
     "median_tool_tokens": 797,
-    "mean_tool_tokens": 1064
+    "mean_tool_tokens": 1065
   },
   "agents": [
     {
@@ -85,7 +85,7 @@
   "tool_cost": [
     {
       "name": "read_details",
-      "tokens": 4397
+      "tokens": 4437
     },
     {
       "name": "change_settings",
@@ -101,7 +101,7 @@
     },
     {
       "name": "read_workspace",
-      "tokens": 2775
+      "tokens": 2779
     },
     {
       "name": "change_state",
@@ -125,7 +125,7 @@
     },
     {
       "name": "send_outbound",
-      "tokens": 1722
+      "tokens": 1678
     },
     {
       "name": "change_reports",
@@ -149,7 +149,7 @@
     },
     {
       "name": "read_analytics",
-      "tokens": 1020
+      "tokens": 1067
     },
     {
       "name": "change_record_parts",
@@ -201,11 +201,11 @@
     },
     {
       "name": "draft_outbound",
-      "tokens": 517
+      "tokens": 524
     },
     {
       "name": "schedule_meeting",
-      "tokens": 484
+      "tokens": 487
     },
     {
       "name": "list_approvals",

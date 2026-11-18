@@ -102,6 +102,35 @@ describe("the tag page names what carries the word", () => {
 
   // A group the word is not on draws nothing. Three cards, two of them
   // reporting zero, is what made the page read as an inventory of absences.
+  it("links a full group to its whole list, narrowed to the tag", async () => {
+    installFetchStub({
+      "GET /me": meRoute({
+        contact: ["read"],
+        company: ["read"],
+        deal: ["read"],
+        lead: ["read"],
+      }),
+      [`GET /tags/${TAG}`]: tagRead({ contacts: 7, companies: 0, deals: 0 }),
+      "GET /contacts": () =>
+        jsonResponse({
+          data: Array.from({ length: 5 }, (_, n) => ({
+            id: `p-${n}`,
+            full_name: `Contact ${n}`,
+          })),
+        }),
+    });
+    render(
+      <StoryProviders>
+        <TagResultScreen tagID={TAG} />
+      </StoryProviders>,
+    );
+
+    const all = await screen.findByRole("link", { name: /^View all 7/ });
+    expect(all).toHaveAttribute("href", `/#/contacts?tag_id=${TAG}`);
+    await userEvent.setup().click(all);
+    expect(window.location.hash).toBe(`#/contacts?tag_id=${TAG}`);
+  });
+
   it("lists and opens the leads that carry the word", async () => {
     installFetchStub({
       "GET /me": meRoute({

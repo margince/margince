@@ -22,7 +22,10 @@ func TestAMailThreadSetCarriesOneContentGate(t *testing.T) {
 	if got := auth.ContentGateCopies(readable); got != 1 {
 		t.Fatalf("the thread set carries %d content gates, want 1", got)
 	}
-	move := MailMoveColumnSQL(teamScopedCtx(), arg, clocktest.Now(t), "readable_set")
+	move, err := MailMoveColumnSQL(teamScopedCtx(), nil, arg, clocktest.Now(t), "readable_set")
+	if err != nil {
+		t.Fatalf("rendering the move column: %v", err)
+	}
 	if got := auth.ContentGateCopies(move); got != 0 {
 		t.Fatalf("the move column carries %d content gates of its own, want 0", got)
 	}

@@ -11,6 +11,7 @@ import { ComposeModal } from "./compose";
 import {
   fillSendableForm,
   jsonResponse,
+  pressSend,
   problemResponse,
   render,
   stubRoutes,
@@ -40,7 +41,14 @@ afterEach(() => {
 });
 
 describe("sending with a recorded exception", () => {
-  it("closes the composer once the exception has sent the message", async () => {
+  it.each([
+    "no_compatible_evidence",
+    "subject_request",
+    "marketing_objection",
+    "processing_restricted",
+    "consent_withdrawn",
+    "opted_out_after_request",
+  ])("sends one message with an acknowledged reason for %s", async (reason) => {
     const saved = {
       id: "md-1",
       anchor_type: "contact",
@@ -72,7 +80,19 @@ describe("sending with a recorded exception", () => {
           },
           409,
         ),
-      "GET /communication-reviews/r-1": () => jsonResponse(REVIEW),
+      "GET /communication-reviews/r-1": () =>
+        jsonResponse({
+          ...REVIEW,
+          reason_code: reason,
+          assessment_revision: "current-warnings",
+          refusals: [
+            {
+              address: "anna@example.test",
+              reason_code: reason,
+              can_be_overruled: true,
+            },
+          ],
+        }),
       "POST /communication-reviews/r-1/direct-send": () =>
         jsonResponse({ id: "act-9" }),
     });
@@ -104,7 +124,7 @@ describe("sending with a recorded exception", () => {
     for (const key of timelineKeys) queryClient.setQueryData(key, []);
     await screen.findByText("Saved draft restored");
     await fillSendableForm();
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
 
     await userEvent.click(
       await screen.findByRole("button", {
@@ -116,9 +136,7 @@ describe("sending with a recorded exception", () => {
       screen.getByLabelText("Explanation"),
       "They asked for it on the phone.",
     );
-    await userEvent.click(
-      screen.getByRole("button", { name: "Record the exception and send" }),
-    );
+    await userEvent.click(screen.getByRole("button", { name: "Send email" }));
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());
     expect(screen.queryByRole("dialog")).toBeNull();
@@ -135,6 +153,15 @@ describe("sending with a recorded exception", () => {
       mail_draft_id: saved.id,
     });
     expect(sent.filter((s) => s.key === "POST /emails")).toHaveLength(1);
+    expect(
+      sent.find((s) => s.key === "POST /communication-reviews/r-1/direct-send")
+        ?.body,
+    ).toMatchObject({
+      assessment_revision: "current-warnings",
+      acknowledged: true,
+      explanation: "They asked for it on the phone.",
+      shown_reasons: [reason],
+    });
     expect(
       sent.filter(
         (s) => s.key === "POST /communication-reviews/r-1/direct-send",

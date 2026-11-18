@@ -19,6 +19,7 @@ func (c Copy) Preview(subject string) string {
 		{c.ConfirmRecordSubject, c.ConfirmRecordPreview},
 		{c.ConfirmConsentSubject, c.ConfirmConsentPreview},
 		{c.OptOutAckSubject, c.OptOutAckPreview},
+		{c.RequestAckSubject, c.RequestAckPreview},
 		{c.RestrictionLiftSubject, c.RestrictionLiftPreview},
 	} {
 		if strings.HasPrefix(subject, item.subject) {

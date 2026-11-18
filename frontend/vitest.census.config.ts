@@ -18,5 +18,7 @@ export default defineConfig({
     pool: "threads",
     testTimeout: TEST_TIMEOUT_MS,
     hookTimeout: TEST_TIMEOUT_MS,
+    // No TEST_SHUFFLE_SEED here: the rules run in a fixed order, and that order
+    // is part of their time budget (census/census.test.ts).
   },
 });

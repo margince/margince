@@ -8,6 +8,7 @@ import { newGroup, newLeaf } from "../../lib/segmentpredicate";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   type RouteMap,
   StoryProviders,
 } from "../../testing/story-utils";
@@ -61,6 +62,11 @@ function routes(
 ): void {
   let asked = 0;
   installFetchStub({
+    "GET /me": meRoute({
+      contact: ["read"],
+      company: ["read"],
+      deal: ["read"],
+    }),
     ...extra,
     "POST /filters/preview": (body) => {
       asked += 1;

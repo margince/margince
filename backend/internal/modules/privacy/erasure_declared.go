@@ -57,7 +57,7 @@ func redactDeclaredTables(ctx context.Context, tx pgx.Tx, contactID ids.ContactI
 		return fmt.Errorf("privacy: redacting the declared tables naming the subject: %w", err)
 	}
 	for _, c := range cleared {
-		if err := tombstoneCollateralScrubs(ctx, tx, c.Table, c.Rows, subjectRedactionReason, subjectRedactionCause); err != nil {
+		if err := tombstoneCollateralScrubs(ctx, tx, c.Entity, c.Rows, subjectRedactionReason, subjectRedactionCause); err != nil {
 			return err
 		}
 	}

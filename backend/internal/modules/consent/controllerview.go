@@ -19,7 +19,9 @@ import (
 // controllerView completes the installation's own mail to one recipient. The
 // installation sends it, so the default legal entity is the sender.
 func (s *Store) controllerView(ctx context.Context, tx pgx.Tx, rendered Rendered, category commsauthz.Category, recipient string) (Rendered, error) {
-	lines, err := s.DisclosuresFor(ctx, tx, DisclosureQuery{Category: category, Recipients: []string{recipient}})
+	lines, err := s.DisclosuresFor(ctx, tx, DisclosureQuery{
+		Category: category, Recipients: []string{recipient}, Language: rendered.Language,
+	})
 	if err != nil {
 		return Rendered{}, err
 	}
@@ -61,7 +63,7 @@ func labelledDisclosure(line DisclosureLine, words mailcopy.Copy) string {
 
 func controllerAction(key string, words mailcopy.Copy) string {
 	switch key {
-	case TemplateRecordConfirmation:
+	case TemplateRecordConfirmation, TemplateRecordCheck:
 		return words.ConfirmRecordAction
 	case TemplateConsentConfirmation:
 		return words.ConfirmConsentAction

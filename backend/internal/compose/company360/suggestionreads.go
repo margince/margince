@@ -111,7 +111,10 @@ func newestMessage(
 	contentReadable := activities.InGatedSetSQL(newestMessageReadable, "a")
 	// A mail's own History badge says whose move it is, so the strip and the
 	// no-reply advice read the same rule as the message's row.
-	move := activities.MailMoveColumnSQL(ctx, arg, now, newestMessageReadable)
+	move, err := activities.MailMoveColumnSQL(ctx, tx, arg, now, newestMessageReadable)
+	if err != nil {
+		return lastMessage{}, false, err
+	}
 	reached := fmt.Sprintf(`%[3]s AND a.archived_at IS NULL AND %[1]s AND %[2]s`, activityScope,
 		activities.CompanyLinkedActivityExists(companyPos),
 		relstrength.InteractionCountsAtSQL("a", fmt.Sprintf("$%d::timestamptz", nowPos))) + opts.projectScope(arg)

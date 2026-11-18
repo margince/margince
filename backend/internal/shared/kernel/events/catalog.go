@@ -233,6 +233,7 @@ var catalog = map[string]struct {
 	"attachment.created":  {activityStreamEntity, 1},
 	"attachment.updated":  {activityStreamEntity, 1},
 	"attachment.archived": {activityStreamEntity, 1},
+	"attachment.restored": {activityStreamEntity, 1},
 	// Somebody decided what to do about a waiting message and the Worklist
 	// stopped offering it. `disposition_recorded` rather than `disposition_set`
 	// because the catalog's verbs are past tense, and a compound one puts the

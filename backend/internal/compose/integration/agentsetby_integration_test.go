@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
 // A rule says which passport it stops with, while one stands behind it. A user
@@ -83,7 +85,7 @@ func TestAnAgentsBodyOverTheLimitNamesIt(t *testing.T) {
 		Code   string `json:"code"`
 		Detail string `json:"detail"`
 	}
-	status := d.e.Call(t, "POST", "/v1/contacts", AnyMap{"full_name": strings.Repeat("x", 2<<20), "source": "manual"}, d.bearer, &problem)
+	status := d.e.Call(t, "POST", "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": strings.Repeat("x", 2<<20), "source": "manual"}, d.bearer, &problem)
 	if status != http.StatusRequestEntityTooLarge || problem.Code != "body_too_large" || !strings.Contains(problem.Detail, "MB") {
 		t.Errorf("a body over the limit answered %d %+v", status, problem)
 	}

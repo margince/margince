@@ -18,7 +18,8 @@ type PriceSources struct {
 	// Broker is OpenRouter's full list, which prices the broker-carried models.
 	Broker    AvailableModels
 	ModelsDev ModelsDevPrices
-	// Usable is ProviderKeyStatus.Usable by provider; a vendor absent is out of scope.
+	// Usable is ProviderKeyStatus.Usable by provider, a borrowed key's under the
+	// borrower too; a vendor absent is out of scope.
 	Usable map[string]bool
 	// Listed is what each usable vendor's key lists; absent when the listing failed.
 	Listed map[string][]model.Info
@@ -169,7 +170,7 @@ func vendorTargets(src PriceSources, provider, key string, sheet []ModelRateRow)
 		if _, onSheet := byID[info.ID]; onSheet || !priced {
 			continue
 		}
-		if lane, ok := syncLane(info, entry); ok {
+		if lane, ok := syncLane(provider, info, entry); ok {
 			byID[info.ID] = catalogueTarget{provider: provider, modelID: info.ID, lane: lane}
 		}
 	}
@@ -180,7 +181,7 @@ func vendorTargets(src PriceSources, provider, key string, sheet []ModelRateRow)
 		// One the catalogue does not price stays laneless and is reported unlisted.
 		target := catalogueTarget{provider: provider, modelID: id}
 		if entry, priced := src.ModelsDev.entry(key, id); priced {
-			lane, ok := entry.lane()
+			lane, ok := catalogueLane(provider, entry)
 			if !ok {
 				continue
 			}
@@ -195,10 +196,20 @@ func vendorTargets(src PriceSources, provider, key string, sheet []ModelRateRow)
 
 // syncLane is the lane a listed model is added under: the catalogue's, which a
 // lane the vendor states must agree with.
-func syncLane(info model.Info, entry modelsDevModel) (Lane, bool) {
-	lane, ok := entry.lane()
+func syncLane(provider string, info model.Info, entry modelsDevModel) (Lane, bool) {
+	lane, ok := catalogueLane(provider, entry)
 	if !ok || (info.Lane != "" && Lane(info.Lane) != lane) {
 		return "", false
 	}
 	return lane, true
+}
+
+// catalogueLane is the lane the sync files a catalogue entry under. A decision
+// adapter answers on no other lane, so its own lane wins over the catalogue's
+// label, which knows chat and embeddings only.
+func catalogueLane(provider string, entry modelsDevModel) (Lane, bool) {
+	if isDecisionProvider(provider) {
+		return LaneDecisions, true
+	}
+	return entry.lane()
 }
