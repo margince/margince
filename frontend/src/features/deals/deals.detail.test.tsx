@@ -728,6 +728,7 @@ describe("DealScreen — a live deal that is not the viewer's to change", () => 
     expect(screen.queryByRole("button", { name: "Won" })).toBeNull();
     expect(screen.queryByRole("button", { name: /^Move to/ })).toBeNull();
     expect(screen.queryByRole("button", { name: "New offer" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Write brief" })).toBeNull();
 
     expect(screen.getByRole("button", { name: "Log activity" })).toBeTruthy();
     await openHeaderMenu(user);
@@ -755,6 +756,10 @@ describe("DealScreen — a live deal that is not the viewer's to change", () => 
     ).toBeTruthy();
     expect(screen.getByRole("button", { name: "Won" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "New offer" })).toBeTruthy();
+    // The brief writes through the page's one deal edit.
+    expect(
+      await screen.findByRole("button", { name: "Write brief" }),
+    ).toBeTruthy();
     expect(screen.queryByText(sentence)).toBeNull();
     await openHeaderMenu(user);
     for (const testId of ["archive-record", "share-record"]) {

@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { useContext, useId } from "react";
 import type { components } from "../../api/schema";
 import { ChannelPanel } from "../../components/channelpanel";
 import { Badge, Button } from "../../design-system/atoms";
@@ -11,7 +11,6 @@ import { formatMoney } from "../../format/format";
 import { type Locale, usePlural, useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
 import { navigate } from "../../lib/router";
-import { useViewerId } from "../../lib/session";
 import { tasksPeek } from "../../lib/standingpeeks";
 import { useViewerZone } from "../../lib/viewerzone";
 import { dealRoleLabel } from "../records/record360";
@@ -27,7 +26,7 @@ import { offerRow, otherOpenTaskRows } from "./deal360/dealoverviewrows";
 import { DealProductsCard } from "./deal360/dealproducts";
 import { DealRoomCard } from "./deal360/dealroomcard";
 import type { DealStandingInputs } from "./deal360/dealstanding";
-import { useDealEdit } from "./dealedit";
+import { DealEditContext } from "./dealedit";
 import type { Deal, Offer } from "./deals";
 import { DealStatusCardPanel, unreadHead } from "./dealstatus";
 import "./deal360/deal360.css";
@@ -296,13 +295,13 @@ export function DealOverviewPane({
   );
 }
 
-// The brief writes through the deal's own field edit. `readOnly` is the
+// The brief writes through the page's own deal edit. `readOnly` is the
 // record's write refusal, not the advance verb's.
 function DealBriefCard({
   deal,
   readOnly,
 }: Readonly<{ deal: Deal; readOnly: boolean }>) {
-  const edit = useDealEdit(deal, useViewerId() ?? "");
+  const edit = useContext(DealEditContext);
   return (
     <DealBrief brief={deal.description} edit={readOnly ? undefined : edit} />
   );

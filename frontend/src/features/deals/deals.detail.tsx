@@ -54,7 +54,7 @@ import { currentReplyTarget } from "./deal360/dealwaiting";
 import { useDealCoverage } from "./deal360/usedealcoverage";
 import { useAdvanceDeal } from "./dealadvance";
 import { DealAside } from "./dealaside";
-import { useDealEdit } from "./dealedit";
+import { DealEditContext, useDealEdit } from "./dealedit";
 import { DealFiles } from "./dealfiles";
 import { DealReferralLine } from "./dealpartner";
 import { DealProjectLine } from "./dealproject";
@@ -448,5 +448,9 @@ function DealRecordView({
   const t = useT();
   const edit = useDealEdit(deal, useViewerId() ?? "");
   const rename = useRailRename(edit, "name", t("create.dealName"));
-  return <RecordView {...view} rename={rename} />;
+  return (
+    <DealEditContext.Provider value={edit}>
+      <RecordView {...view} rename={rename} />
+    </DealEditContext.Provider>
+  );
 }
