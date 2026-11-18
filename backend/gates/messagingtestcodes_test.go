@@ -12,12 +12,14 @@ package gates
 // test writes with a literal code and fails a code one package uses twice.
 
 import (
+	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
 	"io/fs"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -47,20 +49,119 @@ func TestNoTestPackageRegistersOneMessagingCodeTwice(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	total := 0
+	codes, tables := 0, 0
 	for dir, files := range byPackage {
-		codes := registeredCodes(files)
-		total += len(codes)
-		for _, clash := range clashes(codes) {
-			t.Errorf("%s: test code %q is registered at %s and at %s; one test binary panics on the second. "+
-				"Pick a code no other test in the package registers",
-				dir, clash[0].code, gatekit.SourceFileSet().Position(clash[0].where), gatekit.SourceFileSet().Position(clash[1].where))
+		codes += len(registeredCodes(files))
+		if len(handedOut(files)) > 0 {
+			tables++
+		}
+		for _, finding := range codeFindings(dir, files) {
+			t.Error(finding)
 		}
 	}
 	// The consent and compose test packages register 21 codes this way.
-	if total < 20 {
-		t.Fatalf("the census read %d registered codes; the registrations moved or changed shape", total)
+	if codes < 20 {
+		t.Fatalf("the census read %d registered codes; the registrations moved or changed shape", codes)
 	}
+	if tables == 0 {
+		t.Fatalf("no test package declares %s; the consent allocator moved, and the codes it hands out are unchecked",
+			handedOutTable)
+	}
+}
+
+// codeFindings names each code two registrations in one package share, and
+// each literal code inside a range the package's allocator hands out.
+func codeFindings(dir string, files []*ast.File) []string {
+	positions := gatekit.SourceFileSet()
+	codes := registeredCodes(files)
+	var out []string
+	for _, clash := range clashes(codes) {
+		out = append(out, fmt.Sprintf("%s: test code %q is registered at %s and at %s; one test binary panics on the "+
+			"second. Pick a code no other test in the package registers",
+			dir, clash[0].code, positions.Position(clash[0].where), positions.Position(clash[1].where)))
+	}
+	ranges := handedOut(files)
+	for _, c := range codes {
+		if slices.ContainsFunc(ranges, func(r codeRange) bool { return r.holds(c.code) }) {
+			out = append(out, fmt.Sprintf("%s: test code %q at %s is one %s hands out; pick a code outside it",
+				dir, c.code, positions.Position(c.where), handedOutTable))
+		}
+	}
+	return out
+}
+
+// handedOutTable is the declaration that states which codes a package's
+// run-time allocator hands out, as prefix, first and last rune.
+const handedOutTable = "testCodeRanges"
+
+// codeRange is one prefix and the second letters handed out under it.
+type codeRange struct {
+	prefix, first, last rune
+	// any marks an entry the gate could not read, which holds every code.
+	any bool
+}
+
+func (r codeRange) holds(code string) bool {
+	if r.any {
+		return true
+	}
+	runes := []rune(code)
+	return len(runes) == 2 && runes[0] == r.prefix && runes[1] >= r.first && runes[1] <= r.last
+}
+
+// handedOut reads the ranges the files declare in handedOutTable.
+func handedOut(files []*ast.File) []codeRange {
+	var out []codeRange
+	for _, file := range files {
+		ast.Inspect(file, func(n ast.Node) bool {
+			spec, isSpec := n.(*ast.ValueSpec)
+			if !isSpec || len(spec.Names) != 1 || spec.Names[0].Name != handedOutTable || len(spec.Values) != 1 {
+				return true
+			}
+			if table, isTable := spec.Values[0].(*ast.CompositeLit); isTable {
+				for _, elt := range table.Elts {
+					if entry, isEntry := elt.(*ast.CompositeLit); isEntry {
+						out = append(out, rangeOf(entry))
+					}
+				}
+			}
+			return false
+		})
+	}
+	return out
+}
+
+// rangeOf reads one table entry. An entry it cannot read whole is answered
+// as covering every code, so it fails loudly rather than checking nothing.
+func rangeOf(entry *ast.CompositeLit) codeRange {
+	var r codeRange
+	for _, elt := range entry.Elts {
+		kv, isKV := elt.(*ast.KeyValueExpr)
+		if !isKV {
+			continue
+		}
+		key, isIdent := kv.Key.(*ast.Ident)
+		lit, isLit := kv.Value.(*ast.BasicLit)
+		if !isIdent || !isLit || lit.Kind != token.CHAR {
+			continue
+		}
+		value, _, _, err := strconv.UnquoteChar(strings.Trim(lit.Value, "'"), '\'')
+		if err != nil {
+			continue
+		}
+		switch key.Name {
+		case "prefix":
+			r.prefix = value
+		case "first":
+			r.first = value
+		case "last":
+			r.last = value
+		}
+	}
+	if r.prefix == 0 || r.first == 0 || r.last == 0 {
+		return codeRange{any: true}
+	}
+	return r
 }
 
 func TestATestCodeRegisteredTwiceIsFound(t *testing.T) {
@@ -274,4 +375,22 @@ func clashes(codes []registeredCode) [][2]registeredCode {
 		first[c.code] = c
 	}
 	return out
+}
+
+// A literal inside the allocator's range is found, and one outside it is not.
+func TestATestCodeTheAllocatorHandsOutIsFound(t *testing.T) {
+	t.Parallel()
+	file, err := parser.ParseFile(gatekit.SourceFileSet(), "probe_test.go", `package probe
+var testCodeRanges = [...]testCodeRange{{prefix: 'q', first: 'm', last: 'z'}, {prefix: 'x', first: 'a', last: 'z'}}
+func TestOne(t *testing.T) { messagingrules.Register(messagingrules.Rules{Jurisdiction: "qv"}) }
+func TestTwo(t *testing.T) { messagingrules.Register(messagingrules.Rules{Jurisdiction: "qa"}) }
+func TestThree(t *testing.T) { messagingrules.Register(messagingrules.Rules{Jurisdiction: "pv"}) }`,
+		parser.SkipObjectResolution)
+	if err != nil {
+		t.Fatal(err)
+	}
+	findings := codeFindings("probe", []*ast.File{file})
+	if len(findings) != 1 || !strings.Contains(findings[0], `"qv"`) {
+		t.Errorf("want one finding, on \"qv\": %q", findings)
+	}
 }
