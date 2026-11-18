@@ -38,6 +38,16 @@ func TestAnOfferCountsWhereverTheSenderWroteIt(t *testing.T) {
 		{"a count of orders in Vietnamese", "Re: lịch hẹn", "Chúng tôi đã nhận 2 đơn hàng.", nil, false},
 		{"a price in dollars", "Re: call", "It comes to $ 900 per seat.", nil, true},
 		{"a time and a date", "Re: call", "See you on 14.11.2026 at 10:30.", nil, false},
+		{"a price with the currency code first", "Re: call", "We can offer annual support for EUR 900.", nil, true},
+		{"a price in dollars, code first", "Re: call", "Support is USD 1,200 a year.", nil, true},
+		{"a price in dong, code first", "Re: lịch hẹn", "Phí là VND 5.000.000.", nil, true},
+		{"a reply that offers a service", "Re: call", "We offer onsite training as well.", nil, true},
+		{"a German reply that offers a service", "Re: Termin", "Wir bieten Ihnen eine Schulung vor Ort an.", nil, true},
+		{"a Vietnamese reply that offers a service", "Re: lịch hẹn", "Chúng tôi cung cấp đào tạo tại chỗ.", nil, true},
+		{"a request to quote a section", "Re: contract", "Please quote section 4 in your answer.", nil, false},
+		{"a price quote", "Re: call", "Attached is the price quote you asked for.", nil, true},
+		{"a fee named in passing", "Re: filing", "The filing fee was €20.", nil, true},
+		{"a currency code without an amount", "Re: call", "We invoice in EUR as agreed.", nil, false},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			if got := authoredOffer(c.subject, c.body, c.files); got != c.want {

@@ -18,19 +18,21 @@ import (
 // stays narrow because a word here turns an ordinary reply into a marketing review.
 var offerWords = []string{
 	"discount", "special offer", "limited offer", "exclusive offer", "promo code", "promotion",
-	"free trial", "price list", "pricing", "our offer", "quote", "quotation",
-	"kostenlos testen", "Kostenvoranschlag",
-	"khuyến mãi", "giảm giá", "ưu đãi", "báo giá", "miễn phí", "chiết khấu",
+	"free trial", "price list", "pricing", "our offer", "price quote", "quotation",
+	"we can offer", "we offer", "offer you",
+	"kostenlos testen", "Kostenvoranschlag", "wir bieten Ihnen",
+	"khuyến mãi", "giảm giá", "ưu đãi", "báo giá", "miễn phí", "chiết khấu", "chúng tôi cung cấp",
 }
 
 // offerStems are German offer words matched inside any word, because German
 // builds compounds on them ("Sonderrabatt", "Angebotspreis").
 var offerStems = []string{"angebot", "rabatt", "gutschein", "preisliste"}
 
-// offerAmount is a price or a percentage off. A currency sign ends a word on
-// its own, so the edge after it is spelled out rather than taken from \b.
+// offerAmount is a price, with the currency before or after the number, or a
+// percentage off. A currency sign ends a word on its own, so word edges are
+// spelled out rather than taken from \b.
 var offerAmount = regexp.MustCompile(
-	`€\s?\d|\$\s?\d|\d[\d.,]*\s?(€|eur|usd|vnd|đ|\$)([^\p{L}\p{N}]|$)|\d+\s?%\s?(off|rabatt|giảm)([^\p{L}\p{N}]|$)`)
+	`€\s?\d|\$\s?\d|(^|[^\p{L}\p{N}])(eur|usd|vnd)\s?\d|\d[\d.,]*\s?(€|eur|usd|vnd|đ|\$)([^\p{L}\p{N}]|$)|\d+\s?%\s?(off|rabatt|giảm)([^\p{L}\p{N}]|$)`)
 
 // invisible drops the characters that render as nothing, so "Ange\u00adbot"
 // still reads as the word a recipient sees.
