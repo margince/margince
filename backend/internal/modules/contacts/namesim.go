@@ -195,6 +195,15 @@ func exactNameKeySQL(expr string) string {
 		`btrim(regexp_replace(replace(f_fold_apostrophes(lower(%s)), 'ς', 'σ'), '\s+', ' ', 'g'))`, expr)
 }
 
+// familyNameKeySQL is the last token of the folded name, or of the part before a
+// comma ("Doe, Jon" is Jon Doe). idx_contact_family_name_key holds the same
+// expression. The employer arm of the candidate query reads colleagues by that
+// index and never scans all of an employer's contacts.
+func familyNameKeySQL(expr string) string {
+	return storekit.SQLf(`substring(%s from '[^ ]+$')`,
+		exactNameKeySQL(storekit.SQLf(`CASE WHEN %[1]s LIKE '%%,%%' THEN split_part(%[1]s, ',', 1) ELSE %[1]s END`, expr)))
+}
+
 // exactDigraphNameKeySQL is exactNameKeySQL over the name with its umlauts
 // written as digraphs: the SQL side of digraphNameKey. It is its own arm of the
 // contact candidate query, so a "Björn"/"Bjoern" pair reaches the name lane
