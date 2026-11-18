@@ -56,10 +56,10 @@ func TestARepReadsTheInstallationsNameAndMarksAndNothingElse(t *testing.T) {
 	serve := contacts.NewHandlers(e.DB()).WithBlobstore(blob)
 	id := crmcontracts.Id(company.CompanyID.UUID)
 	streamedMark(rep, t, func(recorder *httptest.ResponseRecorder, request *http.Request) {
-		serve.GetCompanyLogo(recorder, request, id, crmcontracts.GetCompanyLogoParams{})
+		serve.GetCompanyLogo(recorder, request, id)
 	}, *brand.LogoUrl)
 	streamedMark(rep, t, func(recorder *httptest.ResponseRecorder, request *http.Request) {
-		serve.GetCompanyLogoIcon(recorder, request, id, crmcontracts.GetCompanyLogoIconParams{})
+		serve.GetCompanyLogoIcon(recorder, request, id)
 	}, *brand.LogoIconUrl)
 
 	raw, err := json.Marshal(brand)

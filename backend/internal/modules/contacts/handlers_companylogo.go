@@ -55,14 +55,14 @@ const logoWriteBackTimeout = 5 * time.Second
 
 // GetCompanyLogo streams the company's wide mark — the lockup a
 // record page and an expanded sidebar draw.
-func (h Handlers) GetCompanyLogo(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.GetCompanyLogoParams) {
+func (h Handlers) GetCompanyLogo(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	h.streamLogo(w, r, id, LogoWide, "GetCompanyLogo")
 }
 
 // GetCompanyLogoIcon streams the square badge a collapsed sidebar draws.
 // Only the installation's own company wears one today; every other record
 // answers the same 404 it answers for a mark it does not have.
-func (h Handlers) GetCompanyLogoIcon(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.GetCompanyLogoIconParams) {
+func (h Handlers) GetCompanyLogoIcon(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	h.streamLogo(w, r, id, LogoIcon, "GetCompanyLogoIcon")
 }
 

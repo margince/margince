@@ -160,39 +160,10 @@ func TestTheTableHoldsEveryEnumQueryParameterTheContractDeclares(t *testing.T) {
 	}
 }
 
-// contractEnumQueryParameters returns "METHOD /v1/path ?name" for each query
-// parameter whose schema, or array items, is an enum of strings.
-func contractEnumQueryParameters(t *testing.T) map[string]bool {
-	t.Helper()
-	return contractQueryParameters(t, nil, func(resolve func(any) map[string]any, schema map[string]any) bool {
-		return isStringEnum(resolve, schema)
-	})
-}
-
-func isStringEnum(resolve func(any) map[string]any, schema map[string]any) bool {
-	if schema == nil {
-		return false
-	}
-	if items := resolve(schema["items"]); items != nil {
-		schema = items
-	}
-	values, ok := schema["enum"].([]any)
-	if !ok || len(values) == 0 {
-		return false
-	}
-	for _, v := range values {
-		if _, ok := v.(string); !ok {
-			return false
-		}
-	}
-	return true
-}
-
-// contractQueryParameters walks crm.yaml as plain YAML and resolves local
+// contractEnumQueryParameters walks crm.yaml as plain YAML and resolves local
 // $refs by hand. It returns "METHOD /v1/path ?name" for each query parameter
-// whose schema keep accepts, a second reading beside the generator's own.
-// An operation skip names is left out.
-func contractQueryParameters(t *testing.T, skip func(operation map[string]any) bool, keep func(resolve func(any) map[string]any, schema map[string]any) bool) map[string]bool {
+// whose schema, or array items, is an enum of strings.
+func contractEnumQueryParameters(t *testing.T) map[string]bool {
 	t.Helper()
 	raw, err := os.ReadFile(contractFile)
 	if err != nil {
@@ -223,6 +194,24 @@ func contractQueryParameters(t *testing.T, skip func(operation map[string]any) b
 		}
 		return nil
 	}
+	isStringEnum := func(schema map[string]any) bool {
+		if schema == nil {
+			return false
+		}
+		if items := resolve(schema["items"]); items != nil {
+			schema = items
+		}
+		values, ok := schema["enum"].([]any)
+		if !ok || len(values) == 0 {
+			return false
+		}
+		for _, v := range values {
+			if _, ok := v.(string); !ok {
+				return false
+			}
+		}
+		return true
+	}
 	found := map[string]bool{}
 	paths, _ := doc["paths"].(map[string]any)
 	for path, item := range paths {
@@ -230,7 +219,7 @@ func contractQueryParameters(t *testing.T, skip func(operation map[string]any) b
 		inherited, _ := entry["parameters"].([]any)
 		for method, op := range entry {
 			operation, ok := op.(map[string]any)
-			if !ok || !isHTTPMethod(method) || (skip != nil && skip(operation)) {
+			if !ok || !isHTTPMethod(method) {
 				continue
 			}
 			own, _ := operation["parameters"].([]any)
@@ -240,7 +229,7 @@ func contractQueryParameters(t *testing.T, skip func(operation map[string]any) b
 					continue
 				}
 				name, _ := param["name"].(string)
-				if keep(resolve, resolve(param["schema"])) {
+				if isStringEnum(resolve(param["schema"])) {
 					found[strings.ToUpper(method)+" /v1"+path+" ?"+name] = true
 				}
 			}

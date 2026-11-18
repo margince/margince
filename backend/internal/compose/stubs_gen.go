@@ -1323,11 +1323,11 @@ func (stubs) GetCompanyLinkedInReach(w nethttp.ResponseWriter, r *nethttp.Reques
 	httperr.NotImplemented(w, r, "GetCompanyLinkedInReach")
 }
 
-func (stubs) GetCompanyLogo(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.GetCompanyLogoParams) {
+func (stubs) GetCompanyLogo(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "GetCompanyLogo")
 }
 
-func (stubs) GetCompanyLogoIcon(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.GetCompanyLogoIconParams) {
+func (stubs) GetCompanyLogoIcon(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "GetCompanyLogoIcon")
 }
 
@@ -2795,7 +2795,7 @@ func (stubs) UploadLegalEntityLogo(w nethttp.ResponseWriter, r *nethttp.Request,
 	httperr.NotImplemented(w, r, "UploadLegalEntityLogo")
 }
 
-func (stubs) GetLegalEntityLogo(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.GetLegalEntityLogoParams) {
+func (stubs) GetLegalEntityLogo(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "GetLegalEntityLogo")
 }
 

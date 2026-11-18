@@ -35,8 +35,8 @@ func RejectUnsafeSingleLine(decoded any) *FieldShapeError {
 
 func hasUnsafeSingleLineRune(text string) bool {
 	for _, r := range text {
-		if unicode.IsControl(r) || r == ' ' || r == ' ' ||
-			(r >= '‪' && r <= '‮') || (r >= '⁦' && r <= '⁩') {
+		if unicode.IsControl(r) || r == '\u2028' || r == '\u2029' ||
+			(r >= '\u202a' && r <= '\u202e') || (r >= '\u2066' && r <= '\u2069') {
 			return true
 		}
 	}

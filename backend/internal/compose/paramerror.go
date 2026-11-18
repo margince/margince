@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/margince/margince/backend/internal/compose/queryguard"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
@@ -22,7 +23,7 @@ import (
 func contractRouter(srv crmcontracts.ServerInterface, outer ...crmcontracts.MiddlewareFunc) *chi.Mux {
 	router := chi.NewRouter()
 	router.Use(compressAPIJSON)
-	middlewares := append([]crmcontracts.MiddlewareFunc{refuseUndeclaredQueryParameter, refuseUnknownQueryEnum, refuseQueryBelowMinimum}, outer...)
+	middlewares := append([]crmcontracts.MiddlewareFunc{queryguard.Refuse(chiRoutePattern), refuseUnknownQueryEnum, refuseQueryBelowMinimum}, outer...)
 	crmcontracts.HandlerWithOptions(srv, crmcontracts.ChiServerOptions{
 		BaseURL:     httpserver.BaseURL,
 		BaseRouter:  router,

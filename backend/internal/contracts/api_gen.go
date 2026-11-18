@@ -75839,18 +75839,6 @@ type LinkCompanyContactsParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
-// GetCompanyLogoParams defines parameters for GetCompanyLogo.
-type GetCompanyLogoParams struct {
-	// V The revision token the picture's URL carries. Only a token naming the current picture makes the answer cacheable for a day.
-	V *AssetRevision `form:"v,omitempty" json:"v,omitempty"`
-}
-
-// GetCompanyLogoIconParams defines parameters for GetCompanyLogoIcon.
-type GetCompanyLogoIconParams struct {
-	// V The revision token the picture's URL carries. Only a token naming the current picture makes the answer cacheable for a day.
-	V *AssetRevision `form:"v,omitempty" json:"v,omitempty"`
-}
-
 // MergeCompanyJSONBody defines parameters for MergeCompany.
 type MergeCompanyJSONBody struct {
 	// TargetId The surviving company (B). This row (A) is archived.
@@ -78596,12 +78584,6 @@ type UploadLegalEntityLogoParams struct {
 	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
 	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
 	IfMatch *IfMatch `json:"If-Match,omitempty"`
-}
-
-// GetLegalEntityLogoParams defines parameters for GetLegalEntityLogo.
-type GetLegalEntityLogoParams struct {
-	// V The revision token the picture's URL carries. Only a token naming the current picture makes the answer cacheable for a day.
-	V *AssetRevision `form:"v,omitempty" json:"v,omitempty"`
 }
 
 // ListLegalReviewsParams defines parameters for ListLegalReviews.
@@ -97589,10 +97571,10 @@ type ServerInterface interface {
 	GetCompanyLinkedInReach(w http.ResponseWriter, r *http.Request, id Id)
 	// Stream a company's logo image.
 	// (GET /companies/{id}/logo)
-	GetCompanyLogo(w http.ResponseWriter, r *http.Request, id Id, params GetCompanyLogoParams)
+	GetCompanyLogo(w http.ResponseWriter, r *http.Request, id Id)
 	// Stream a company's square logo icon.
 	// (GET /companies/{id}/logo/icon)
-	GetCompanyLogoIcon(w http.ResponseWriter, r *http.Request, id Id, params GetCompanyLogoIconParams)
+	GetCompanyLogoIcon(w http.ResponseWriter, r *http.Request, id Id)
 	// Merge this company into a target (non-lossy).
 	// (POST /companies/{id}/merge)
 	MergeCompany(w http.ResponseWriter, r *http.Request, id Id, params MergeCompanyParams)
@@ -98693,7 +98675,7 @@ type ServerInterface interface {
 	UploadLegalEntityLogo(w http.ResponseWriter, r *http.Request, id Id, params UploadLegalEntityLogoParams)
 	// Stream a legal entity's logo image.
 	// (GET /legal-entities/{id}/logo/image)
-	GetLegalEntityLogo(w http.ResponseWriter, r *http.Request, id Id, params GetLegalEntityLogoParams)
+	GetLegalEntityLogo(w http.ResponseWriter, r *http.Request, id Id)
 	// The users assigned to this legal entity.
 	// (GET /legal-entities/{id}/members)
 	ListLegalEntityMembers(w http.ResponseWriter, r *http.Request, id Id)
@@ -101894,13 +101876,13 @@ func (_ Unimplemented) GetCompanyLinkedInReach(w http.ResponseWriter, r *http.Re
 
 // Stream a company's logo image.
 // (GET /companies/{id}/logo)
-func (_ Unimplemented) GetCompanyLogo(w http.ResponseWriter, r *http.Request, id Id, params GetCompanyLogoParams) {
+func (_ Unimplemented) GetCompanyLogo(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Stream a company's square logo icon.
 // (GET /companies/{id}/logo/icon)
-func (_ Unimplemented) GetCompanyLogoIcon(w http.ResponseWriter, r *http.Request, id Id, params GetCompanyLogoIconParams) {
+func (_ Unimplemented) GetCompanyLogoIcon(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -104102,7 +104084,7 @@ func (_ Unimplemented) UploadLegalEntityLogo(w http.ResponseWriter, r *http.Requ
 
 // Stream a legal entity's logo image.
 // (GET /legal-entities/{id}/logo/image)
-func (_ Unimplemented) GetLegalEntityLogo(w http.ResponseWriter, r *http.Request, id Id, params GetLegalEntityLogoParams) {
+func (_ Unimplemented) GetLegalEntityLogo(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -121784,24 +121766,8 @@ func (siw *ServerInterfaceWrapper) GetCompanyLogo(w http.ResponseWriter, r *http
 
 	r = r.WithContext(ctx)
 
-	// Parameter object where we will unmarshal all parameters from the context
-	var params GetCompanyLogoParams
-
-	// ------------- Optional query parameter "v" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "v", r.URL.Query(), &params.V, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "v"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "v", Err: err})
-		}
-		return
-	}
-
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetCompanyLogo(w, r, id, params)
+		siw.Handler.GetCompanyLogo(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -121834,24 +121800,8 @@ func (siw *ServerInterfaceWrapper) GetCompanyLogoIcon(w http.ResponseWriter, r *
 
 	r = r.WithContext(ctx)
 
-	// Parameter object where we will unmarshal all parameters from the context
-	var params GetCompanyLogoIconParams
-
-	// ------------- Optional query parameter "v" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "v", r.URL.Query(), &params.V, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "v"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "v", Err: err})
-		}
-		return
-	}
-
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetCompanyLogoIcon(w, r, id, params)
+		siw.Handler.GetCompanyLogoIcon(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -137654,24 +137604,8 @@ func (siw *ServerInterfaceWrapper) GetLegalEntityLogo(w http.ResponseWriter, r *
 
 	r = r.WithContext(ctx)
 
-	// Parameter object where we will unmarshal all parameters from the context
-	var params GetLegalEntityLogoParams
-
-	// ------------- Optional query parameter "v" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "v", r.URL.Query(), &params.V, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "v"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "v", Err: err})
-		}
-		return
-	}
-
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetLegalEntityLogo(w, r, id, params)
+		siw.Handler.GetLegalEntityLogo(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {

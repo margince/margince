@@ -2283,8 +2283,6 @@ paths:
         404 when the company has no resolved logo, is invisible to the caller, or does
         not exist — a client renders the deterministic monogram for all three alike. 501 when
         the deployment has no object store configured.
-      parameters:
-        - $ref: '#/components/parameters/AssetRevision'
       responses:
         '200':
           description: The normalized logo bytes.
@@ -2312,8 +2310,6 @@ paths:
         The bytes behind `CompanyProfile.logo_icon_url`: the square badge a collapsed
         sidebar draws, normalized once at store time to PNG on exactly the terms
         `getCompanyLogo` describes for the wide mark.
-      parameters:
-        - $ref: '#/components/parameters/AssetRevision'
       responses:
         '200':
           description: The normalized icon bytes.
@@ -14277,8 +14273,6 @@ paths:
         apart from the upload, so a conditional upload takes its version from the entity. 404
         when the entity has no logo. The default entity's logo is the company's, served by
         `GET /companies/{id}/logo`.
-      parameters:
-        - $ref: '#/components/parameters/AssetRevision'
       responses:
         '200':
           description: The normalized logo bytes.
@@ -26456,12 +26450,6 @@ components:
       required: true
       schema: {type: string, format: uuid}
       description: Opaque resource id (UUID; ordering semantics are not exposed).
-    AssetRevision:
-      name: v
-      in: query
-      required: false
-      description: The revision token the picture's URL carries. Only a token naming the current picture makes the answer cacheable for a day.
-      schema: {type: string, maxLength: 64}
     BundleId:
       name: bundle_id
       in: path

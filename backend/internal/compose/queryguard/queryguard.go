@@ -1,7 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+// Package queryguard refuses a request whose query string names a key the
+// operation does not declare. Without it a mistyped filter reads as no filter,
+// and the caller gets the unfiltered list as if it had been narrowed.
+package queryguard
 
 import (
 	"net/http"
@@ -10,32 +13,32 @@ import (
 	"sort"
 	"strings"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
-// refuseUndeclaredQueryParameter answers 422 invalid_parameter for a query key
-// the operation does not declare. Without it a mistyped filter reads as "no
-// filter" and the caller gets the unfiltered list back as if it had been
-// narrowed. The table is generated from the contract, so a new parameter is
-// admitted by being declared.
-func refuseUndeclaredQueryParameter(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if err := undeclaredQueryParameter(r.Method+" "+chiRoutePattern(r), r.URL.RawQuery); err != nil {
-			httperr.Write(w, r, err)
-			return
-		}
-		next.ServeHTTP(w, r)
-	})
+// Refuse answers 422 invalid_parameter for a query key the operation does not
+// declare. routePattern names the "METHOD /v1/path" template the router matched.
+// The table is generated from the contract, so a new parameter is admitted by
+// being declared.
+func Refuse(routePattern func(*http.Request) string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if err := Undeclared(r.Method+" "+routePattern(r), r.URL.RawQuery); err != nil {
+				httperr.Write(w, r, err)
+				return
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
 }
 
-// undeclaredQueryParameter names every key of rawQuery that route does not
-// declare, in one refusal. A route the contract does not know is left alone.
-// A cf_ key is admitted everywhere: custom columns are per workspace, so the
-// contract cannot declare them, and the store judges each against the catalog.
-func undeclaredQueryParameter(route, rawQuery string) *httperr.DetailedError {
-	declared, known := queryParamTable[route]
+// Undeclared names every key of rawQuery that route does not declare, in one
+// refusal. A route the contract does not list is left alone. A cf_ key is
+// admitted everywhere: custom columns are per workspace, so the contract cannot
+// declare them, and the store judges each against the catalog.
+func Undeclared(route, rawQuery string) *httperr.DetailedError {
+	declared, known := Declared[route]
 	if !known || rawQuery == "" {
 		return nil
 	}
@@ -64,5 +67,3 @@ func undeclaredQueryParameter(route, rawQuery string) *httperr.DetailedError {
 		Detail: "this operation takes no query parameter named " + strings.Join(unknown, ", "),
 	}
 }
-
-var _ crmcontracts.MiddlewareFunc = refuseUndeclaredQueryParameter

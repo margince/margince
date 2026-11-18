@@ -87,7 +87,7 @@ func TestCompanyLogoLogsRatherThanFailsWhenTheFlushErrors(t *testing.T) {
 
 	rec := &failingFlushWriter{ResponseRecorder: httptest.NewRecorder()}
 	req := httptest.NewRequest(http.MethodGet, "/v1/companies/"+companyID.String()+"/logo", nil).WithContext(ctx)
-	handlers.GetCompanyLogo(rec, req, crmcontracts.Id(companyID.UUID), crmcontracts.GetCompanyLogoParams{})
+	handlers.GetCompanyLogo(rec, req, crmcontracts.Id(companyID.UUID))
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("GET logo = %d, want 200: %s", rec.Code, rec.Body.String())
@@ -133,7 +133,7 @@ func TestCompanyLogoStreamsTheStoredMarkUnderNonExecutableHeaders(t *testing.T) 
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/v1/companies/"+companyID.String()+"/logo", nil).WithContext(ctx)
-	handlers.GetCompanyLogo(rec, req, crmcontracts.Id(companyID.UUID), crmcontracts.GetCompanyLogoParams{})
+	handlers.GetCompanyLogo(rec, req, crmcontracts.Id(companyID.UUID))
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("GET logo = %d, want 200: %s", rec.Code, rec.Body.String())
@@ -187,7 +187,7 @@ func TestTheLogoIconEndpointStreamsTheIconSlotAndNotTheWideOne(t *testing.T) {
 	empty := httptest.NewRecorder()
 	handlers.GetCompanyLogoIcon(empty,
 		httptest.NewRequest(http.MethodGet, "/v1/companies/"+companyID.String()+"/logo/icon", nil).WithContext(ctx),
-		crmcontracts.Id(companyID.UUID), crmcontracts.GetCompanyLogoIconParams{})
+		crmcontracts.Id(companyID.UUID))
 	if empty.Code != http.StatusNotFound {
 		t.Fatalf("GET icon on a record wearing only a wide mark = %d, want 404: %s",
 			empty.Code, empty.Body.String())
@@ -212,7 +212,7 @@ func TestCompanyLogoRemovesLegacyTransparentCanvasAtTheDisplayBoundary(t *testin
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/v1/companies/"+companyID.String()+"/logo", nil).WithContext(ctx)
-	contacts.NewHandlers(e.DB()).WithBlobstore(blob).GetCompanyLogo(rec, req, crmcontracts.Id(companyID.UUID), crmcontracts.GetCompanyLogoParams{})
+	contacts.NewHandlers(e.DB()).WithBlobstore(blob).GetCompanyLogo(rec, req, crmcontracts.Id(companyID.UUID))
 	if rec.Code != http.StatusOK {
 		t.Fatalf("GET logo = %d, want 200: %s", rec.Code, rec.Body.String())
 	}
@@ -253,7 +253,7 @@ func TestCompanyLogoWritesBackATrimmedLegacyLogoSoTheNextReadNeedsNoCrop(t *test
 	url := "/v1/companies/" + companyID.String() + "/logo"
 
 	first := httptest.NewRecorder()
-	handlers.GetCompanyLogo(first, httptest.NewRequest(http.MethodGet, url, nil).WithContext(ctx), crmcontracts.Id(companyID.UUID), crmcontracts.GetCompanyLogoParams{})
+	handlers.GetCompanyLogo(first, httptest.NewRequest(http.MethodGet, url, nil).WithContext(ctx), crmcontracts.Id(companyID.UUID))
 	if first.Code != http.StatusOK {
 		t.Fatalf("first GET = %d, want 200: %s", first.Code, first.Body.String())
 	}
@@ -286,7 +286,7 @@ func TestCompanyLogoWritesBackATrimmedLegacyLogoSoTheNextReadNeedsNoCrop(t *test
 	}
 
 	second := httptest.NewRecorder()
-	handlers.GetCompanyLogo(second, httptest.NewRequest(http.MethodGet, url, nil).WithContext(ctx), crmcontracts.Id(companyID.UUID), crmcontracts.GetCompanyLogoParams{})
+	handlers.GetCompanyLogo(second, httptest.NewRequest(http.MethodGet, url, nil).WithContext(ctx), crmcontracts.Id(companyID.UUID))
 	if second.Code != http.StatusOK {
 		t.Fatalf("second GET = %d, want 200: %s", second.Code, second.Body.String())
 	}
@@ -311,7 +311,7 @@ func TestCompanyLogoAnswers304WithoutTouchingBlobStorageWhenTheClientAlreadyHasI
 	url := "/v1/companies/" + companyID.String() + "/logo"
 
 	first := httptest.NewRecorder()
-	handlers.GetCompanyLogo(first, httptest.NewRequest(http.MethodGet, url, nil).WithContext(ctx), crmcontracts.Id(companyID.UUID), crmcontracts.GetCompanyLogoParams{})
+	handlers.GetCompanyLogo(first, httptest.NewRequest(http.MethodGet, url, nil).WithContext(ctx), crmcontracts.Id(companyID.UUID))
 	if first.Code != http.StatusOK {
 		t.Fatalf("first GET = %d, want 200: %s", first.Code, first.Body.String())
 	}
@@ -339,7 +339,7 @@ func TestCompanyLogoAnswers304WithoutTouchingBlobStorageWhenTheClientAlreadyHasI
 	matching := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, url, nil).WithContext(ctx)
 	req.Header.Set("If-None-Match", etag)
-	handlers.GetCompanyLogo(matching, req, crmcontracts.Id(companyID.UUID), crmcontracts.GetCompanyLogoParams{})
+	handlers.GetCompanyLogo(matching, req, crmcontracts.Id(companyID.UUID))
 	if matching.Code != http.StatusNotModified {
 		t.Fatalf("GET with a matching If-None-Match = %d, want 304: %s", matching.Code, matching.Body.String())
 	}
@@ -356,7 +356,7 @@ func TestCompanyLogoAnswers304WithoutTouchingBlobStorageWhenTheClientAlreadyHasI
 	weak := httptest.NewRecorder()
 	req = httptest.NewRequest(http.MethodGet, url, nil).WithContext(ctx)
 	req.Header.Set("If-None-Match", "W/"+etag)
-	handlers.GetCompanyLogo(weak, req, crmcontracts.Id(companyID.UUID), crmcontracts.GetCompanyLogoParams{})
+	handlers.GetCompanyLogo(weak, req, crmcontracts.Id(companyID.UUID))
 	if weak.Code != http.StatusNotModified {
 		t.Fatalf("GET with a weak (W/-prefixed) matching If-None-Match = %d, want 304: %s", weak.Code, weak.Body.String())
 	}
@@ -367,7 +367,7 @@ func TestCompanyLogoAnswers304WithoutTouchingBlobStorageWhenTheClientAlreadyHasI
 	stale := httptest.NewRecorder()
 	req = httptest.NewRequest(http.MethodGet, url, nil).WithContext(ctx)
 	req.Header.Set("If-None-Match", `"stale-revision"`)
-	handlers.GetCompanyLogo(stale, req, crmcontracts.Id(companyID.UUID), crmcontracts.GetCompanyLogoParams{})
+	handlers.GetCompanyLogo(stale, req, crmcontracts.Id(companyID.UUID))
 	if stale.Code != http.StatusOK {
 		t.Fatalf("GET with a stale If-None-Match = %d, want 200: %s", stale.Code, stale.Body.String())
 	}
@@ -549,7 +549,7 @@ func TestCompanyLogoWriteBackCoalescesConcurrentReadersOfTheSameUntrimmedKey(t *
 			rec := httptest.NewRecorder()
 			handlers.GetCompanyLogo(rec,
 				httptest.NewRequest(http.MethodGet, url, nil).WithContext(ctx),
-				crmcontracts.Id(companyID.UUID), crmcontracts.GetCompanyLogoParams{})
+				crmcontracts.Id(companyID.UUID))
 		})
 	}
 	wg.Wait()
@@ -619,7 +619,7 @@ func TestCompanyLogoWriteBackCollectsItsOwnObjectWhenAReplaceRacesTheWrite(t *te
 
 	blob.hold(staleKey)
 	rec := httptest.NewRecorder()
-	handlers.GetCompanyLogo(rec, httptest.NewRequest(http.MethodGet, url, nil).WithContext(ctx), crmcontracts.Id(companyID.UUID), crmcontracts.GetCompanyLogoParams{})
+	handlers.GetCompanyLogo(rec, httptest.NewRequest(http.MethodGet, url, nil).WithContext(ctx), crmcontracts.Id(companyID.UUID))
 	if rec.Code != http.StatusOK {
 		t.Fatalf("GET logo = %d, want 200: %s", rec.Code, rec.Body.String())
 	}
@@ -687,7 +687,7 @@ func TestCompanyLogoWriteBackLogsRatherThanFailsWhenThePutErrors(t *testing.T) {
 	drainAttempted(blob)
 	blob.failPut(key)
 	rec := httptest.NewRecorder()
-	handlers.GetCompanyLogo(rec, httptest.NewRequest(http.MethodGet, url, nil).WithContext(ctx), crmcontracts.Id(companyID.UUID), crmcontracts.GetCompanyLogoParams{})
+	handlers.GetCompanyLogo(rec, httptest.NewRequest(http.MethodGet, url, nil).WithContext(ctx), crmcontracts.Id(companyID.UUID))
 	if rec.Code != http.StatusOK {
 		t.Fatalf("GET logo = %d, want 200: %s", rec.Code, rec.Body.String())
 	}
@@ -768,7 +768,7 @@ func TestCompanyLogoWriteBackLogsRatherThanFailsWhenTheCollectingDeleteErrors(t 
 	blob.hold(staleKey)
 	blob.failDelete(staleKey)
 	rec := httptest.NewRecorder()
-	handlers.GetCompanyLogo(rec, httptest.NewRequest(http.MethodGet, url, nil).WithContext(ctx), crmcontracts.Id(companyID.UUID), crmcontracts.GetCompanyLogoParams{})
+	handlers.GetCompanyLogo(rec, httptest.NewRequest(http.MethodGet, url, nil).WithContext(ctx), crmcontracts.Id(companyID.UUID))
 	if rec.Code != http.StatusOK {
 		t.Fatalf("GET logo = %d, want 200: %s", rec.Code, rec.Body.String())
 	}
@@ -821,7 +821,7 @@ func TestCompanyLogoIs404WithoutOneAnd501WithoutAnObjectStore(t *testing.T) {
 	// No logo on file: a 404 the client renders as a monogram.
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/v1/companies/"+bareID.String()+"/logo", nil).WithContext(ctx)
-	contacts.NewHandlers(e.DB()).WithBlobstore(blob).GetCompanyLogo(rec, req, crmcontracts.Id(bareID.UUID), crmcontracts.GetCompanyLogoParams{})
+	contacts.NewHandlers(e.DB()).WithBlobstore(blob).GetCompanyLogo(rec, req, crmcontracts.Id(bareID.UUID))
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("GET logo of a logo-less company = %d, want 404", rec.Code)
 	}
@@ -831,7 +831,7 @@ func TestCompanyLogoIs404WithoutOneAnd501WithoutAnObjectStore(t *testing.T) {
 	rec = httptest.NewRecorder()
 	missing := ids.NewV7()
 	req = httptest.NewRequest(http.MethodGet, "/v1/companies/"+missing.String()+"/logo", nil).WithContext(ctx)
-	contacts.NewHandlers(e.DB()).WithBlobstore(blob).GetCompanyLogo(rec, req, crmcontracts.Id(missing), crmcontracts.GetCompanyLogoParams{})
+	contacts.NewHandlers(e.DB()).WithBlobstore(blob).GetCompanyLogo(rec, req, crmcontracts.Id(missing))
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("GET logo of an unknown company = %d, want 404", rec.Code)
 	}
@@ -841,7 +841,7 @@ func TestCompanyLogoIs404WithoutOneAnd501WithoutAnObjectStore(t *testing.T) {
 	companyID := seedLoggedCompany(ctx, t, e, blob, apptest.LogoPNG(t))
 	rec = httptest.NewRecorder()
 	req = httptest.NewRequest(http.MethodGet, "/v1/companies/"+companyID.String()+"/logo", nil).WithContext(ctx)
-	contacts.NewHandlers(e.DB()).GetCompanyLogo(rec, req, crmcontracts.Id(companyID.UUID), crmcontracts.GetCompanyLogoParams{})
+	contacts.NewHandlers(e.DB()).GetCompanyLogo(rec, req, crmcontracts.Id(companyID.UUID))
 	if rec.Code != http.StatusNotImplemented {
 		t.Fatalf("GET logo with no object store = %d, want 501", rec.Code)
 	}
@@ -911,14 +911,14 @@ func TestALogoResponseSaysItsBytesWillNeverChange(t *testing.T) {
 	url := "/v1/companies/" + companyID.String() + "/logo"
 
 	fresh := httptest.NewRecorder()
-	handlers.GetCompanyLogo(fresh, httptest.NewRequest(http.MethodGet, url, nil).WithContext(ctx), crmcontracts.Id(companyID.UUID), crmcontracts.GetCompanyLogoParams{})
+	handlers.GetCompanyLogo(fresh, httptest.NewRequest(http.MethodGet, url, nil).WithContext(ctx), crmcontracts.Id(companyID.UUID))
 	if fresh.Code != http.StatusOK {
 		t.Fatalf("GET logo = %d, want 200: %s", fresh.Code, fresh.Body.String())
 	}
 	revalidated := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, url, nil).WithContext(ctx)
 	req.Header.Set("If-None-Match", fresh.Header().Get("ETag"))
-	handlers.GetCompanyLogo(revalidated, req, crmcontracts.Id(companyID.UUID), crmcontracts.GetCompanyLogoParams{})
+	handlers.GetCompanyLogo(revalidated, req, crmcontracts.Id(companyID.UUID))
 	if revalidated.Code != http.StatusNotModified {
 		t.Fatalf("GET with a matching If-None-Match = %d, want 304", revalidated.Code)
 	}

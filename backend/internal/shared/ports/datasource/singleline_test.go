@@ -22,9 +22,9 @@ func TestSingleLineFieldsRefuseControlsBreaksAndOverrides(t *testing.T) {
 		"NUL":              "a\x00b",
 		"DEL":              "a\x7fb",
 		"C1 control":       "a\u0085b",
-		"line separator":   "a b",
-		"right-to-left":    "evil‮txt",
-		"isolate override": "a⁦b",
+		"line separator":   "a\u2028b",
+		"right-to-left":    "evil\u202etxt",
+		"isolate override": "a\u2066b",
 	} {
 		refused := RejectUnsafeSingleLine(&nameBody{Name: text})
 		if refused == nil || refused.Field != "name" {
@@ -39,7 +39,7 @@ func TestSingleLineFieldsRefuseControlsBreaksAndOverrides(t *testing.T) {
 
 func TestSingleLineFieldsKeepOrdinaryNamesAndMultilineFieldsKeepBreaks(t *testing.T) {
 	notes := "first\nsecond\ttabbed"
-	for _, name := range []string{"Müller & Söhne GmbH", "李雷", "Zoë 😀", "O'Reilly — Dept. 5", "a‍b"} {
+	for _, name := range []string{"Müller & Söhne GmbH", "李雷", "Zoë 😀", "O'Reilly — Dept. 5", "a\u200db"} {
 		if refused := RejectUnsafeSingleLine(&nameBody{Name: name, Notes: &notes}); refused != nil {
 			t.Errorf("%q refused: %v", name, refused)
 		}

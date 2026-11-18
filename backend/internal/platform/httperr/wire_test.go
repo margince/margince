@@ -147,7 +147,7 @@ func TestDecodeRefusesALineBreakInASingleLineField(t *testing.T) {
 	}
 	for raw, wantOK := range map[string]bool{
 		`{"name":"a\nb"}`:                 false,
-		`{"name":"a‮b"}`:                  false,
+		`{"name":"a\u202eb"}`:             false,
 		`{"name":"ok","notes":"a\nb\tc"}`: true,
 	} {
 		w := httptest.NewRecorder()
