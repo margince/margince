@@ -13414,7 +13414,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Nichts zu tun. Mache weiter. Der Aufbau wird automatisch abgeschlossen.",
   "ob.conv.voice.composer": "Füge hier einen Text ein, den du geschrieben hast",
   "ob.conv.voice.dropHint":
-    "Du kannst Dateien auch an jeder Stelle in diesem Gespräch ablegen: .txt, .md, .pdf, .docx oder ein Transkript als .vtt, .srt oder .json.",
+    "Du kannst Dateien auch an jeder Stelle in diesem Gespräch ablegen: .txt, .md, .pdf, .docx oder ein Transkript als .vtt, .srt oder .json, mit je bis zu {limit} Text.",
   "ob.conv.voice.fileSkipped":
     "Ich kann {name} nicht lesen. Unterstützte Formate: .txt, .md, .pdf, .docx, .vtt, .srt, .json.",
   "ob.conv.voice.fileUnreadable":
@@ -13431,6 +13431,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Ich konnte diesen Namen im Transkript nicht finden. Es wurde nichts gezählt.",
   "ob.conv.voice.refusalUnsupported":
     "Ich konnte diese Datei weder als Text noch als Transkript lesen. Es wurde nichts gezählt.",
+  "ob.conv.voice.refusalTooLarge":
+    "{name} ist zu groß: Eine Datei darf bis zu {limit} Text enthalten. Teile sie in kleinere Dateien auf.",
   "ob.conv.voice.ingestFailed":
     "Die Quelle konnte nicht hinzugefügt werden: {detail}",
   "ob.conv.voice.ingestUnexpected":
@@ -16062,7 +16064,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.voice.addSource": "Schreibproben hinzufügen",
   "settings.voice.addFirstLabel": "Erste Schreibprobe",
   "settings.voice.dropHint":
-    "Dateien ablegen oder auswählen (.txt, .md, .pdf, .docx, .vtt, .srt oder .json), auch mehrere auf einmal.",
+    "Dateien ablegen oder auswählen (.txt, .md, .pdf, .docx, .vtt, .srt oder .json), auch mehrere auf einmal, mit je bis zu {limit} Text.",
   "settings.voice.dropLabel": "Dateien hochladen",
   "settings.voice.dropEmpty": "Dateien hier ablegen oder zum Auswählen klicken",
   "settings.voice.pasteLabel": "Text einfügen",
@@ -16112,6 +16114,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Es wurde nichts hinzugefügt, da diese Person in {name} nicht vorkommt.",
   "settings.voice.refusalUnsupported":
     "{name} liegt in einem nicht unterstützten Format vor.",
+  "settings.voice.refusalTooLarge":
+    "{name} ist zu groß: Eine Datei darf bis zu {limit} Text enthalten. Teile sie in kleinere Dateien auf.",
   "settings.voice.buildsTitle": "Aufbau des Stilprofils",
   "settings.voice.buildRowLabel": "Aus Proben aufbauen",
   "settings.voice.building": "Wird aufgebaut…",

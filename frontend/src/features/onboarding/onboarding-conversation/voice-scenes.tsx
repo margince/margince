@@ -9,10 +9,11 @@ import { useConnectAiGate } from "../../../design-system/connectai";
 import { ErrorLine } from "../../../design-system/errorline";
 import { Eyebrow } from "../../../design-system/eyebrow";
 import { Meter } from "../../../design-system/readings";
-import { formatNumber } from "../../../format/format";
+import { formatBytes, formatNumber } from "../../../format/format";
 import { useLocale, useT } from "../../../i18n";
 import { ACCEPTED_CORPUS_ATTR } from "../../../lib/voice-corpus-file";
 import { VOICE_MIN_WORDS } from "../../../lib/voice-intake-core";
+import { VOICE_SOURCE_MAX_BYTES } from "../../../lib/voice-refusal";
 import type { ConversationQuestion } from "./conversation-machine";
 import type {
   CorpusManifestEntry,
@@ -231,7 +232,9 @@ export function VoiceCollectScene({
             <IntakeRefusals failures={failures} />
             {!pasteOpen && (
               <p className="ob-voice-drop-sub t-sub">
-                {t("ob.conv.voice.dropHint")}
+                {t("ob.conv.voice.dropHint", {
+                  limit: formatBytes(VOICE_SOURCE_MAX_BYTES, locale),
+                })}
               </p>
             )}
             {pasteOpen && (

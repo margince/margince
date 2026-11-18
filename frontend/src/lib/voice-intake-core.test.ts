@@ -214,6 +214,7 @@ describe("which refusal the server named", () => {
     expect(refusalOf({ code: "unattributed_transcript" })).toBe("unattributed");
     expect(refusalOf({ code: "speaker_not_found" })).toBe("speaker");
     expect(refusalOf({ code: "unsupported_format" })).toBe("unsupported");
+    expect(refusalOf({ code: "body_too_large" })).toBe("tooLarge");
   });
 
   it("reads a per-field code out of details.errors", () => {

@@ -1,7 +1,8 @@
 import type { Dispatch } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { components } from "../../../api/schema";
-import { formatNumber } from "../../../format/format";
+import { formatBytes, formatNumber } from "../../../format/format";
+import type { Locale } from "../../../i18n";
 import { useLocale } from "../../../i18n";
 import type { MessageKey } from "../../../i18n/en";
 import { problemMessage } from "../../../lib/problem";
@@ -15,7 +16,10 @@ import {
   intakeTranscript,
   sourceRef,
 } from "../../../lib/voice-intake-core";
-import type { RefusalReason } from "../../../lib/voice-refusal";
+import {
+  type RefusalReason,
+  VOICE_SOURCE_MAX_BYTES,
+} from "../../../lib/voice-refusal";
 import type {
   ConversationEvent,
   ConversationState,
@@ -78,6 +82,7 @@ const refusalKeys: Record<RefusalReason, MessageKey> = {
   unattributed: "ob.conv.voice.refusalUnattributed",
   speaker: "ob.conv.voice.refusalSpeaker",
   unsupported: "ob.conv.voice.refusalUnsupported",
+  tooLarge: "ob.conv.voice.refusalTooLarge",
 };
 
 // Why a file went nowhere, in the room's own words. `type` is decided by name
@@ -94,15 +99,19 @@ const skipKeys: Record<
 // The refusal category the core read off the 422 picks the honest line; a
 // refusal it did not recognize falls back to the server's own safe detail.
 function refusalEntry(
-  ref: string,
-  reason: RefusalReason | null,
-  problem: unknown,
+  outcome: Extract<IntakeOutcome, { kind: "refused" }>,
+  locale: Locale,
 ): Extract<ConversationEvent, { type: "NARRATION" }>["entry"] {
+  const { ref, reason, problem } = outcome;
   if (reason !== null) {
     return {
       kind: "narration",
       id: `refuse:${ref}`,
       i18nKey: refusalKeys[reason],
+      params: {
+        name: outcome.label,
+        limit: formatBytes(VOICE_SOURCE_MAX_BYTES, locale),
+      },
     };
   }
   // A code the catalog words (a role refused the grant) is said in the
@@ -245,11 +254,7 @@ export function useVoiceCorpus({
         return;
       }
       if (outcome.kind === "refused") {
-        const entry = refusalEntry(
-          outcome.ref,
-          outcome.reason,
-          outcome.problem,
-        );
+        const entry = refusalEntry(outcome, locale);
         dispatch({ type: "NARRATION", entry });
         noteFailure({
           id: entry.id,
@@ -287,7 +292,7 @@ export function useVoiceCorpus({
         reactionKey,
       );
     },
-    [dispatch, noteFailure, recordIngest, skip],
+    [dispatch, locale, noteFailure, recordIngest, skip],
   );
 
   // Each intake is stamped when its INGEST is issued, and only the

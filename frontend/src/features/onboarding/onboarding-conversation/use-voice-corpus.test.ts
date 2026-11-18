@@ -165,3 +165,43 @@ describe("useVoiceCorpus — several files refused in one pick", () => {
     ]);
   });
 });
+
+describe("useVoiceCorpus — a file too large to send", () => {
+  it("names the file and the limit instead of the server's cap phrase", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        const path = new URL(request.url).pathname.replace(/^\/v1/, "");
+        if (path === "/voice-profiles" && request.method === "GET") {
+          return Response.json({
+            data: [{ id: "vp-1" }],
+            page: { next_cursor: null, has_more: false },
+          });
+        }
+        return Response.json(
+          {
+            code: "body_too_large",
+            detail: "request body exceeds the 1 MiB cap",
+          },
+          { status: 413 },
+        );
+      }),
+    );
+    const dispatch = vi.fn<(event: ConversationEvent) => void>();
+    const { result } = renderHook(() =>
+      useVoiceCorpus({ state: collectingState, dispatch }),
+    );
+
+    act(() => {
+      result.current.addFiles([new File(["many words"], "big.txt")]);
+    });
+
+    await waitFor(() => {
+      expect(result.current.failures).toHaveLength(1);
+    });
+    expect(result.current.failures[0]).toMatchObject({
+      i18nKey: "ob.conv.voice.refusalTooLarge",
+      params: { name: "big.txt", limit: "1 MB" },
+    });
+  });
+});

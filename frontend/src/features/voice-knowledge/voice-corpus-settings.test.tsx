@@ -426,6 +426,27 @@ describe("handing a file to the Settings voice card", () => {
     expect(bodies).toHaveLength(0);
   });
 
+  it("names a file too large to send and the limit, never the server's cap phrase", async () => {
+    stubApi({
+      status: 413,
+      body: {
+        code: "body_too_large",
+        title: "Request Entity Too Large",
+        detail: "request body exceeds the 1 MiB cap",
+      },
+    });
+    render(<Intake profileId="vp-1" onChanged={() => {}} />);
+
+    await userEvent.upload(fileInput(), fileOf("big.txt", "many words"));
+
+    expect(
+      await screen.findByText(
+        "big.txt is too large to add: a file can hold up to 1 MB of text. Split it into smaller files.",
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText(/MiB cap/)).toBeNull();
+  });
+
   it("quotes the server when it refuses for a reason the client does not know", async () => {
     stubApi({
       status: 422,
