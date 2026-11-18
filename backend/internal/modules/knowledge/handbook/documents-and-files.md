@@ -66,7 +66,7 @@ Margince takes these kinds of file as a document on a record, or as a file on an
 - Text files: `.txt`, `.csv`, `.md`, `.html`, `.htm`
 - Images: `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, `.heic`, `.heif`, `.tif`, `.tiff`
 - Archives and saved emails: `.zip`, `.eml`, `.msg`
-Any other kind is refused, and the message names the kinds Margince takes. An `.svg` image and a program such as an `.exe` are refused.
+Any other kind is refused, and the message names the kinds Margince takes. An `.svg` image and a program such as an `.exe` are refused. The file's content must also match its kind, so a program renamed to `.pdf` is refused too.
 Files that arrive with a captured email are kept even when they are of another kind.
 A document set takes fewer kinds; see [Which files can a document set take?](#which-files-can-a-document-set-take).
 Also called: supported file types, file formats, can I upload an archive.
