@@ -20,7 +20,7 @@ import { type Translator, useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { ComposeOutcome } from "./compose.parts";
 import type { InlineReview } from "./composeinlinereview";
-import type { ComposeSend } from "./composesend";
+import type { Refusal } from "./composerefusal";
 import "./compose.css";
 
 type RefusedRecipient =
@@ -76,12 +76,12 @@ export function markedRecipients(
  * with, and nothing asked while the rep writes.
  */
 export function InlineBlockers({
-  send,
+  refusal,
   sendUnavailable,
   bodyKey,
   ...rows
 }: Readonly<{
-  send: ComposeSend;
+  refusal: Refusal;
   sendUnavailable: boolean;
   bodyKey: MessageKey;
   state: InlineReview;
@@ -94,7 +94,7 @@ export function InlineBlockers({
         isChannelReply={false}
         bodyKey={bodyKey}
         sendUnavailable={sendUnavailable}
-        send={send}
+        refusal={refusal}
       />
       <SendAnywayRows {...rows} />
     </div>

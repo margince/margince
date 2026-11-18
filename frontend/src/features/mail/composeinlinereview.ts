@@ -151,6 +151,8 @@ export function useInlineReview(inline: boolean, send: ComposeSend) {
     });
   };
   return {
+    /** The send's own refusal outside the review, such as a mailbox fault. */
+    refusal: send.refusal,
     shown,
     review,
     /** A refusal that opened no review this build can read. */

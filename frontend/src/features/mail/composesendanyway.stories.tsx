@@ -33,6 +33,7 @@ const REVIEW: CommunicationReview = {
 
 function stateOf(overrides: Partial<InlineReview> = {}): InlineReview {
   return {
+    refusal: null,
     shown: true,
     review: REVIEW,
     unreviewed: false,

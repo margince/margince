@@ -398,7 +398,7 @@ export function ComposeWindow({
             />
             {inline ? (
               <InlineBlockers
-                send={send}
+                refusal={inlineReview.refusal}
                 sendUnavailable={fields.sendUnavailable}
                 bodyKey={wording.body}
                 state={inlineReview}

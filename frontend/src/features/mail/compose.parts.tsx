@@ -27,6 +27,7 @@ import { AiDraftBand } from "./composeaiband";
 import { CarriageNotice } from "./composeattachments";
 import type { ComposeFields } from "./composefields";
 import { FieldNeed } from "./composehead";
+import type { Refusal } from "./composerefusal";
 import type { useSavedDraft } from "./composesaveddraft";
 import { SavedDraftFailure } from "./composesaveddraftnotices";
 import { ScheduleMenu, scheduledSendLabel } from "./composeschedule";
@@ -263,19 +264,19 @@ export function ComposeOutcome({
   isChannelReply,
   bodyKey,
   sendUnavailable,
-  send,
+  refusal,
 }: Readonly<{
   isChannelReply: boolean;
   bodyKey: MessageKey;
   sendUnavailable: boolean;
-  send: ComposeSend;
+  refusal: Refusal;
 }>) {
   const t = useT();
   return (
     <>
       {isChannelReply && <p>{t(bodyKey)}</p>}
       {sendUnavailable && <p>{t("compose.sendUnavailable")}</p>}
-      <SendRefusal refusal={send.refusal} />
+      <SendRefusal refusal={refusal} />
     </>
   );
 }
