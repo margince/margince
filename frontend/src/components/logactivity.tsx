@@ -13,6 +13,7 @@ import { refuseUnreadableField } from "../design-system/formvalidity";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useSinglePress } from "../design-system/presslatch";
 import { useToast } from "../design-system/toast";
+import { dueDayBounds } from "../format/calendarday";
 import { useT } from "../i18n";
 import {
   type ActivityDraft,
@@ -71,6 +72,13 @@ import { useTaskUpdate } from "./taskwrite";
 import { useUnsavedGuard } from "./unsaved";
 
 export type OpeningKind = "note" | "task" | "call";
+
+function dueBoundsOf(
+  kind: ActivityDraft["kind"],
+  recordZone: string,
+): { min?: ISODate; max?: ISODate } {
+  return kind === "task" ? dueDayBounds(recordZone) : {};
+}
 
 function latestDayOf(
   kind: ActivityDraft["kind"],
@@ -315,6 +323,7 @@ export function LogActivityForm({
               value={isoOrBlank(draft.day)}
               // Match occurredFields so the picker and submission accept the same days.
               max={latestDayOf(draft.kind, recordZone)}
+              {...dueBoundsOf(draft.kind, recordZone)}
               today={isoOrBlank(todayDay(draft.kind, recordZone)) || undefined}
               onChange={(event) => setField({ day: event.target.value })}
             />

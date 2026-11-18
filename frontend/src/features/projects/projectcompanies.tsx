@@ -51,8 +51,11 @@ export function ProjectCompanies({
   const settled = () => {
     // The key the project page actually reads under (project360.tsx), not a
     // guess: a mismatch leaves the section showing the state before the write.
-    queryClient.invalidateQueries({ queryKey: project360Key(projectId) });
-    queryClient.invalidateQueries({ queryKey: ["company360"] });
+    // Returned, so the mutation stays pending until the page is read again.
+    return Promise.all([
+      queryClient.invalidateQueries({ queryKey: project360Key(projectId) }),
+      queryClient.invalidateQueries({ queryKey: ["company360"] }),
+    ]);
   };
 
   const attach = useMutation({
