@@ -3885,7 +3885,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.overview.otherOpen": "Weitere offene Aufgaben",
   "record.allTasks": "Alle Aufgaben",
   "co.overview.latest": "Zuletzt",
-  "co.overview.nothingOpen": "Sonst ist nichts offen",
   "co.overview.for": "für {name}",
   "co.overview.noDate": "Kein Datum",
   "co.overview.allDeals": "Alle Deals",
@@ -18428,35 +18427,22 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Einige Kontakte dieses Unternehmens werden nicht angezeigt.",
   "contact.intro.askFirstName": "{name} um eine Vorstellung bitten",
   "contact.intro.heroDirect": "kennt den Kontakt direkt",
-  "contact.intro.heroIndirect": "erreicht den Kontakt über {through}",
   "contact.intro.heroYou": "Du",
   "contact.intro.heroDirectYou": "kennst den Kontakt direkt",
-  "contact.intro.heroIndirectYou": "erreichst den Kontakt über {through}",
   "contact.intro.factReciprocal": "Wechselseitig",
   "contact.intro.factOneSided": "Einseitig",
   "contact.intro.factDirect": "Direkte Beziehung",
   "contact.intro.factIndirect": "Über ein Teammitglied",
   "contact.intro.factReceipts_one": "{count} sichtbarer Beleg",
   "contact.intro.factReceipts_other": "{count} sichtbare Belege",
-  "contact.intro.verdictDirect":
-    "Frage {name}. Das Teammitglied steht bereits im Austausch mit diesem Kontakt.",
-  "contact.intro.verdictOneSided":
-    "Frage {name}. Das Teammitglied hat diesem Kontakt geschrieben. Eine Antwort ist nicht erfasst.",
-  "contact.intro.verdictVia":
-    "Frage {name}. Das Teammitglied erreicht diesen Kontakt über {through}.",
-  "contact.intro.verdictDirectYou":
-    "Du stehst bereits im Austausch mit diesem Kontakt.",
-  "contact.intro.verdictOneSidedYou":
-    "Du hast diesem Kontakt geschrieben. Eine Antwort ist nicht erfasst.",
-  "contact.intro.verdictViaYou": "Du erreichst den Kontakt über {through}.",
   "contact.intro.ownRouteNoAsk":
     "Es gibt niemanden, den du fragen kannst. Schreibe diesem Kontakt direkt.",
-  "contact.intro.evidenceEyebrow": "Belege",
-  "contact.intro.evidenceExchanges": "Austausch",
-  "contact.intro.evidenceWindow": "in 90 Tagen",
   "contact.intro.evidenceFrom": "{count} von {name}",
   "contact.intro.evidenceFromYou": "{count} von dir",
   "contact.intro.evidenceLastContact": "Letzter Kontakt",
+  "contact.intro.bestWayIn": "Bester Weg",
+  "contact.intro.sameTeam": "gleiches Team",
+  "contact.intro.exchangesWindow": "Austausch in 90 Tagen",
   "contact.intro.lastToday": "Heute",
   "contact.intro.lastYesterday": "Gestern",
   "contact.intro.lastDays": "Vor {days} Tagen",
@@ -18464,9 +18450,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.intro.stripWhoMix":
     "{direct} direkt · {indirect} über einen Kontakt",
   "contact.intro.stripWhoOwn": "Inklusive deiner eigenen Beziehung",
-  "contact.intro.otherRoutesTitle": "Weitere Wege",
-  "contact.intro.otherRoutesSub":
-    "Sortiert nach wechselseitiger Korrespondenz.",
   "contact.intro.relayDue": "fällig {date}",
   "contact.intro.stripDirect": "Direkte Beziehung",
   "contact.intro.stripNoPath": "Niemand steht im Austausch mit diesem Kontakt",
@@ -18485,7 +18468,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.intro.handoffOwner": "Als Nächstes: {name}",
   "contact.intro.ownerColleague": "ein Teammitglied",
   "contact.intro.ownerNobody": "niemand",
-  "contact.intro.relayTitle": "Status der Vorstellung",
   "contact.chapter.jump": "Auf diesem Tab",
   "contact.chapter.wayIn": "Zugang",
   "contact.chapter.whoAnswer":
@@ -18654,9 +18636,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.intro.alreadyRequested": "Bereits angefragt",
   "contact.intro.declined": "Früher abgelehnt",
   "contact.intro.unavailable": "Nicht verfügbar",
-  "contact.network.momentsTitle": "Was sich geändert hat",
-  "contact.network.momentsSub":
-    "Veränderungen aus den Nachrichten und frühere Vorstellungen.",
   "contact.network.noMoments": "Keine neuen Veränderungen in dieser Beziehung.",
   "contact.change.repliedAfterGap":
     "Der Kontakt hat nach {days} ruhigen Tagen geantwortet.",
@@ -21358,7 +21337,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.card.dealTitle": "Deal von {name}",
   "contact.card.deals": "Deals",
   "contact.card.openTasks": "Offene Aufgaben",
-  "contact.card.noOpenTasks": "Keine offenen Aufgaben",
   "contact.moment.doneToast":
     "Als erledigt markiert. Es kommt wieder, sobald eine Seite erneut schreibt.",
   "contact.card.understandingTitle": "{name} verstehen",
@@ -22380,6 +22358,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.handles.more_one": "+{count} weitere",
   "contact.handles.more_other": "+{count} weitere",
   "contact.handles.fewer": "Weniger anzeigen",
+  "record.reach.label": "E-Mail und Telefon",
   "record.details.hideEmpty": "Leere Felder ausblenden",
   "record.verb.email": "E-Mail",
   "record.verb.call": "Anruf",

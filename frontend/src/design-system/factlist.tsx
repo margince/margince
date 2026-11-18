@@ -27,6 +27,9 @@ export type Fact = Readonly<{
   /** Draws the term over the value instead of beside it, for a value that is
    *  a card rather than a line. Only `flat` lists take it. */
   block?: boolean;
+  /** The value names itself (a card of glyph-led lines), so the term is
+   *  read out but not drawn. */
+  termHidden?: boolean;
 }>;
 
 /**
@@ -69,7 +72,13 @@ export function FactList({
           }
           key={fact.key}
         >
-          <dt className="factlist-term">{fact.term}</dt>
+          <dt
+            className={
+              fact.termHidden ? "factlist-term sr-only" : "factlist-term"
+            }
+          >
+            {fact.term}
+          </dt>
           <dd className="factlist-value">
             {fact.value}
             {fact.note !== undefined && (
