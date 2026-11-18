@@ -3192,7 +3192,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "commission.column.rate": "Tỷ lệ",
   "commission.column.basis": "Giá trị deal",
   "commission.column.status": "Trạng thái",
-  "commission.column.date": "Ngày",
   "commission.status.accrued": "Đã ghi nhận",
   "commission.status.approved": "Đã duyệt",
   "commission.status.paid": "Đã thanh toán",

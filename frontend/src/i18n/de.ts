@@ -3286,7 +3286,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "commission.column.rate": "Satz",
   "commission.column.basis": "Deal-Wert",
   "commission.column.status": "Status",
-  "commission.column.date": "Datum",
   "commission.status.accrued": "Aufgelaufen",
   "commission.status.approved": "Freigegeben",
   "commission.status.paid": "Ausgezahlt",

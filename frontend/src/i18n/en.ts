@@ -3191,7 +3191,6 @@ export const en = {
   "commission.column.rate": "Rate",
   "commission.column.basis": "Deal value",
   "commission.column.status": "Status",
-  "commission.column.date": "Date",
   "commission.status.accrued": "Accrued",
   "commission.status.approved": "Approved",
   "commission.status.paid": "Paid",
