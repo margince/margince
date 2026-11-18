@@ -17,6 +17,7 @@ import { useSourceOpener } from "../../lib/opensource";
 import { tasksPeek } from "../../lib/standingpeeks";
 import { displayedSubject } from "../../lib/systemdisplay";
 import { taskDetail } from "../../lib/taskdetail";
+import { momentVerbWrites } from "../../lib/writeverbs";
 import { MoveButton } from "../records/movebutton";
 import { basisAddsARecord } from "../records/record360";
 import {
@@ -410,8 +411,9 @@ function ActionVerb({
   const drafts = momentDrafts(action);
   // A sent mail files under this contact as a log or booking does.
   const files = attaches || drafts;
-  // Not drawn: the press files an activity the server refuses this seat.
-  if (files && gate.refusalKey === permissionRefusal) {
+  // Not drawn: the press writes an activity, by the server's classification
+  // of its kind, and this seat may not.
+  if (momentVerbWrites(action.kind) && gate.refusalKey === permissionRefusal) {
     return null;
   }
   const variant = verbVariant(drafts, primary === true);

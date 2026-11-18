@@ -14324,7 +14324,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "pipeline.reason.from_sending_systems":
     "chuỗi thư này chỉ có thư từ hệ thống gửi, như thông báo, nên không được đọc",
   "pipeline.reason.transport_not_read":
-    "bước này chỉ đọc email, còn tin nhắn đến qua kênh khác",
+    "bước này không đọc tin nhắn đến theo cách này",
   "pipeline.reason.sender_undecided":
     "lần kiểm tra người gửi vẫn chưa có kết quả, nên tin nhắn bị giữ lại",
   "pipeline.reason.archived": "tin nhắn đang trong kho lưu trữ",

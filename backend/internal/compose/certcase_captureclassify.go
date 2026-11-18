@@ -28,6 +28,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -53,6 +54,20 @@ type captureClassifyMessage struct {
 	// fixture that does not say is treated as our own outbound mail and asked no
 	// reply question, rather than certified as a customer's answer by silence.
 	Inbound bool `json:"inbound"`
+	// Channel names the chat service of a chat message, and is empty on mail.
+	Channel string `json:"channel,omitempty"`
+}
+
+// backlogRow is the message as the backlog read returns it.
+func (m captureClassifyMessage) backlogRow() unlabeledMessage {
+	row := unlabeledMessage{
+		ID: ids.NewV7(), Kind: string(crmcontracts.ActivityKindEmail),
+		Subject: m.Subject, Body: m.Body, Inbound: m.Inbound,
+	}
+	if m.Channel != "" {
+		row.Kind, row.ChannelProvider = activities.KindMessage, m.Channel
+	}
+	return row
 }
 
 // captureClassifyCases serves the one site that labels captured mail for
@@ -103,7 +118,7 @@ func (captureClassifyCases) Prepare(fixture, expected json.RawMessage) (aitasks.
 	}
 	batch := make([]unlabeledMessage, len(messages))
 	for i, m := range messages {
-		batch[i] = unlabeledMessage{ID: ids.NewV7(), Subject: m.Subject, Body: m.Body, Inbound: m.Inbound}
+		batch[i] = m.backlogRow()
 	}
 	return &captureClassifyCase{batch: batch, expected: want}, nil
 }

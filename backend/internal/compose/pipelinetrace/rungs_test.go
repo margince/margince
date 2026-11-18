@@ -264,7 +264,7 @@ func TestMaterialEventsRungAnswersEachArmOfTheOffer(t *testing.T) {
 		edit(&out)
 		return &out
 	}
-	emailOnAThread := &activities.PipelineFacts{ThreadKey: "thread-1"}
+	emailOnAThread := &activities.PipelineFacts{Kind: "email", ThreadKey: "thread-1"}
 
 	for _, c := range []struct {
 		name    string
@@ -276,6 +276,11 @@ func TestMaterialEventsRungAnswersEachArmOfTheOffer(t *testing.T) {
 		{
 			name:   "a transport with no thread has no unit of work",
 			facts:  &activities.PipelineFacts{},
+			status: trace.StatusSkipped, reason: trace.ReasonTransportNotRead,
+		},
+		{
+			name:  "a chat thread is not read even with a thread key",
+			facts: &activities.PipelineFacts{Kind: "message", ThreadKey: "openchannel:ref:t1"}, reading: &offered,
 			status: trace.StatusSkipped, reason: trace.ReasonTransportNotRead,
 		},
 		{
@@ -362,7 +367,7 @@ func TestMaterialEventsRungAnswersEachArmOfTheOffer(t *testing.T) {
 func TestMaterialEventsSaysNothingAboutAConversationTheReaderCannotOpen(t *testing.T) {
 	got := (&Assembler{}).rung(reg(t, trace.StageMaterialEvents),
 		view{stored: ladderWith(), activityHidden: true},
-		&activities.PipelineFacts{ThreadKey: "thread-1"},
+		&activities.PipelineFacts{Kind: "email", ThreadKey: "thread-1"},
 		&ThreadReading{Known: true, ReachesOneAccount: false})
 	if got.Reason == trace.ReasonNoSingleAccount {
 		t.Errorf("the rung named an arm of a conversation the reader may not open: %q", got.Reason)
