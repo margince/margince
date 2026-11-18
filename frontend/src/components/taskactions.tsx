@@ -142,9 +142,8 @@ export function TaskQuickActions({
 }>) {
   const t = useT();
   const readerZone = useViewerZone();
-  // Any task write through this `update` holds every verb: the page still
-  // draws the old next task until the write's reads land, and a press then
-  // would act on a row about to be replaced.
+  // Any task write through this `update` holds every verb. The page draws the
+  // old next task until the reads land; a press then acts on a stale row.
   const pending = update.isPending;
   const complete = useCompleteTask(update);
   return (
@@ -460,8 +459,8 @@ function TaskDetailActions({
   );
 }
 
-// Drawn outside the verbs: a task that changed elsewhere is refetched as done
-// or gone, which removes the verbs and would take the refusal with them.
+// Drawn outside the verbs. A task changed elsewhere is refetched as done or
+// gone, and its verbs vanish; the refusal must outlive them.
 function TaskWriteFailure({
   taskId,
   update,

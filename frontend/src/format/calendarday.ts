@@ -132,9 +132,9 @@ export function todayIn(zone: string): string {
   return calendarDay(new Date(), zone);
 }
 
-// The days a task's due date may fall on. One day inside the server's window
-// (a year back, ten years ahead, counted from now) so a day the box accepts is
-// never one the server refuses at that day's clock time.
+// The days a task's due date may fall on: one day inside the server's window
+// of a year back and ten years ahead. A day the box accepts is then never one
+// the server refuses at that day's clock time.
 export const DUE_YEARS_BACK = 1;
 export const DUE_YEARS_AHEAD = 10;
 

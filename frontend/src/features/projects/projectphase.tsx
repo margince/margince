@@ -96,9 +96,8 @@ export function useAdvanceProject(onDone: () => void) {
         }),
       );
     },
-    // Returned, so the dialog stays pending with Move disabled until the page
-    // has been read again; the answer is written to the page first, so the
-    // phase bar is right the moment the dialog closes.
+    // The dialog stays pending, Move disabled, until the page is read again.
+    // The answer goes into the page first, so the phase bar is right at once.
     onSuccess: async (project, move) => {
       queryClient.setQueryData(project360Key(move.projectId), (view) =>
         view ? { ...view, project } : view,

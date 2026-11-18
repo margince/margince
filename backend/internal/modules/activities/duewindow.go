@@ -6,6 +6,8 @@ package activities
 import (
 	"fmt"
 	"time"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
 // A task's due date lives between these years around now. A task far outside
@@ -37,4 +39,13 @@ func checkDueWindow(due *time.Time, now time.Time) error {
 		return &DueOutOfRangeError{}
 	}
 	return nil
+}
+
+// admitPatchDueWindow checks only a due date the patch moves, so a task already
+// overdue past the window can still be edited, completed or snoozed.
+func (in *UpdateActivityInput) admitPatchDueWindow(current crmcontracts.Activity) error {
+	if !movesDueDate(current.DueAt, in) {
+		return nil
+	}
+	return checkDueWindow(in.DueAt, orWallClock(in.recordedAt))
 }

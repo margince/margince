@@ -11,6 +11,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -72,7 +73,7 @@ func TestAnImplausibleDueDateIsRefusedOnCreateAndOnMoveButAnUnmovedOldOneStays(t
 	if _, err := store.UpdateActivity(ctx, id, UpdateActivityInput{DueAt: &ancient}); !isDueRefusal(err) {
 		t.Fatalf("UpdateActivity to a 1900 due date answered %v, want a due_at refusal", err)
 	}
-	soon := time.Now().Add(48 * time.Hour)
+	soon := clocktest.Now(t).Add(48 * time.Hour)
 	if _, err := store.UpdateActivity(ctx, id, UpdateActivityInput{DueAt: &soon}); err != nil {
 		t.Fatalf("UpdateActivity to a near date: %v", err)
 	}
