@@ -146,10 +146,10 @@ answers one of:
 | `manual-macos` | Safari 26 or later on a Mac, where File › Add to Dock is a step by hand |
 | `unavailable` | nothing this page can offer, including an app's own browser on iOS |
 
-Some iOS apps open a link in their own browser, as Facebook, Instagram, LinkedIn and the Google app
-do. That browser leaves
-`Safari/` out of its agent, and its share sheet cannot add to the home screen. So that agent reads
-as `unavailable`, and no row or notice offers steps that cannot work there.
+Some iOS apps open a link in their own browser: LinkedIn, the Google app, and the apps whose agent
+carries `FBAN` or `Instagram`. That browser leaves `Safari/` out of its agent, and its share sheet
+cannot add to the home screen. So that agent reads as `unavailable`, and no row or notice offers
+steps that cannot work there.
 
 Add to Dock needs macOS 14. Safari reports every macOS as 10.15.7, so the agent cannot name the
 system. Safari 26 ships for macOS 14 and later only, so the first number after `Version/` stands in.
@@ -229,9 +229,9 @@ standing notice is not read out at rest.
   days (`INSTALL_HINT_SNOOZE_MS`).
 - The second dismissal hides it on this device for good.
 - Once the app is installed, the record says so and the notice never shows again. iOS is the
-  exception. Safari's tab and the app on the home screen keep their own storage, and Safari cannot
-  tell a page that the app is installed. So a Safari tab can still show the notice until the reader
-  turns it down twice.
+  exception. A tab in Safari and the app on the home screen keep their own storage. Safari also
+  cannot tell a page that the app is installed. So a Safari tab can still show the notice until the
+  reader turns it down twice.
 
 A stored value in another shape reads as never seen. When the notice goes, focus inside it moves to
 the page content, never to `<body>`.
