@@ -125,7 +125,7 @@ Two kinds of release live here, and they carry different versions:
 |---|---|---|
 | Trigger | a `v*` tag | the same plain `vX.Y.Z` tag, or started by hand with that tag |
 | Version | `v1.0.0` (semver) | `1.0.0`: the tag without its `v` |
-| Publishes to | the GitHub release page | `dist.test.margince.com` on a tag; `dist.margince.com` only when started by hand |
+| Publishes to | the GitHub release page | `dist.test.margince.com` on a tag, or by hand with the default `target=test`; `dist.margince.com` only by hand with `target=production` |
 | Carries | the notes, the images on `ghcr.io`, a server bundle for each Linux platform, SBOMs, a signed `SHA256SUMS` | the patch of changes, SBOMs, a changelog, role images, an archive of the programs for each Linux platform |
 
 One tag cuts both releases. The dist service accepts no `v` prefix, so the tag `v1.0.0` makes the dist
@@ -141,9 +141,10 @@ gh workflow run release.yml --ref main -f tag=v1.0.0 -f target=production
 ```
 
 If the run of a tag failed before its draft, start it again with `-f target=test`. Each target has its own
-publisher tokens: `MARGINCE_DIST_PUBLISHER_TOKEN` and `MARGINCE_AUTH_PUBLISHER_TOKEN` for test, and
-`MARGINCE_PRODUCTION_DIST_PUBLISHER_TOKEN` and `MARGINCE_PRODUCTION_AUTH_PUBLISHER_TOKEN` for production. A run
-whose tokens are missing stops before it drafts, and never uses the tokens of the other target.
+publisher tokens. Test uses the repository secrets `MARGINCE_DIST_PUBLISHER_TOKEN` and
+`MARGINCE_AUTH_PUBLISHER_TOKEN`. Production uses `MARGINCE_PRODUCTION_DIST_PUBLISHER_TOKEN` and
+`MARGINCE_PRODUCTION_AUTH_PUBLISHER_TOKEN`, set only in the `dist-production` environment, so no test run gets
+them. A run whose tokens are missing stops before it drafts, and never uses the tokens of the other target.
 
 The run builds the commit the tag names, never the tip of `main`, so the dist release describes the
 same source as the GitHub release. `--ref main` only picks the copy of the workflow that runs.

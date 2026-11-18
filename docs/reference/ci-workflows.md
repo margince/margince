@@ -348,7 +348,8 @@ What a run does:
    `registry.margince.com`, with the target's registry publisher token. The same builder bakes `bundle`. For each
    Linux platform, `build-archive` packs the bundle tree of `scripts/release-bundle.sh` with three SBOMs. One `add-artifacts --release <version>` call adds images and archives.
 4. The release is published with `publish-release --release <version>`. The dist uploads use the target's dist
-   publisher token (`MARGINCE_DIST_PUBLISHER_TOKEN`, or `MARGINCE_PRODUCTION_DIST_PUBLISHER_TOKEN`).
+   publisher token. Each job runs in the target's environment, `dist-test` or `dist-production`, and only
+   `dist-production` holds the production tokens.
 
 Where the patch starts, and why: [cut-a-release.md](../how-to/cut-a-release.md#where-the-patch-of-changes-starts).
 
