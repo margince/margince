@@ -140,8 +140,8 @@ func TestADatabaseAtTheReleaseRecordsTheBaselineWithoutRunningIt(t *testing.T) {
 }
 
 // A database part-way through the replaced versions must not get the baseline
-// over a partial schema. Up stops before writing anything, and names the
-// release to upgrade with first. One ledger row still sits under its version
+// over a partial schema. Up stops before writing anything, and says what to
+// do instead. One ledger row still sits under its version
 // from before a renumber. A refusal that came after the renumber was written
 // would show as a moved row.
 func TestADatabasePartWayThroughTheHistoryIsRefused(t *testing.T) {
@@ -166,8 +166,9 @@ func TestADatabasePartWayThroughTheHistoryIsRefused(t *testing.T) {
 	before := coreLedger(t, conn)
 
 	_, err = dbmigrate.Up(ctx, conn, core)
-	if err == nil || !strings.Contains(err.Error(), "Upgrade it with release "+core.Baseline.Release+" first") {
-		t.Fatalf("err = %v, want a refusal naming release %s", err, core.Baseline.Release)
+	refusal := "migrations the baseline " + core.Baseline.Migration.Version + "_" + core.Baseline.Migration.Name + " replaces"
+	if err == nil || !strings.Contains(err.Error(), refusal) {
+		t.Fatalf("err = %v, want the refusal of a partial history", err)
 	}
 	after := coreLedger(t, conn)
 	if !maps.EqualFunc(before, after, func(a, b dbmigrate.LedgerRow) bool {

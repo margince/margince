@@ -19,12 +19,17 @@ import (
 )
 
 // Baseline is the file that stands for Replaces, and the release a database
-// part-way through them must reach first.
+// part-way through them must reach first. NoEarlierRelease names none.
 type Baseline struct {
 	Migration Migration
 	Release   string
 	Replaces  []LedgerEntry
 }
+
+// NoEarlierRelease is the release line of a baseline that the first release
+// ships. A database part-way through its history was built from a commit, not
+// a release, so the only way forward is to build it again.
+const NoEarlierRelease = "none"
 
 // LedgerEntry is one ledger row as an install writes it. For a version a
 // baseline replaces, it is the old file's own name and Digest, so the ledger
@@ -136,10 +141,7 @@ func planBaseline(ns Namespace, done map[string]LedgerRow) (baselinePlan, error)
 	case len(done) == 0:
 		return baselinePlan{apply: true, rows: append([]LedgerEntry{own}, b.Replaces...)}, nil
 	case present < len(b.Replaces):
-		return baselinePlan{}, fmt.Errorf(
-			"pgmigrate: %s: this database applied %d of the %d migrations the baseline %s_%s replaces. "+
-				"Upgrade it with release %s first, then run this release again",
-			ns.Name, present, len(b.Replaces), b.Migration.Version, b.Migration.Name, b.Release)
+		return baselinePlan{}, partialHistoryRefusal(ns.Name, b, present)
 	}
 	return baselinePlan{rows: []LedgerEntry{own}}, nil
 }
@@ -163,6 +165,17 @@ func assertReplacedRowsMatch(ns Namespace, done map[string]LedgerRow) error {
 			ns.Name, r.Version, row.Name, ns.Baseline.Migration.Version, r.Name)
 	}
 	return nil
+}
+
+// partialHistoryRefusal says what to do with a database part-way through the
+// versions b replaces.
+func partialHistoryRefusal(namespace string, b *Baseline, present int) error {
+	next := fmt.Sprintf("Upgrade it with release %s first, then run this release again", b.Release)
+	if b.Release == NoEarlierRelease {
+		next = "No release ships them without the baseline, so build this database again (make dev-fresh)"
+	}
+	return fmt.Errorf("pgmigrate: %s: this database applied %d of the %d migrations the baseline %s_%s replaces. %s",
+		namespace, present, len(b.Replaces), b.Migration.Version, b.Migration.Name, next)
 }
 
 // settleBaseline writes what planBaseline decided, in one transaction, and

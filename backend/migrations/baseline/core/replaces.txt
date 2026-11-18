@@ -1,7 +1,8 @@
 # The versions the baseline beside this file stands for, as
-# `version name digest`, and the release that ships the last of them.
+# `version name digest`, and the release a database part-way through them
+# must reach first (`none` when the first release ships this baseline).
 # Written by scripts/migration-baseline.sh generate.
-release v1.0.0-beta.6
+release none
 0001 baseline 7946a8864565f7ac98de5ca0d1ff470eb8aa6eabe1036bcc995916a6042f1fb0
 1787320004 ledgers_drop_the_tenant_column dd61e880711066e4973b7ecafbb490773de6fd2e6e93824ffb52735aa055394d
 1787324555 deal_room_foundations 057452f6edf22490a76996d8c3b0ff0614521ea494d34587798e7d833245124a

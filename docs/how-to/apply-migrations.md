@@ -174,15 +174,17 @@ history, byte for byte. Without both, never edit a shipped migration.
 ## A new installation starts from a baseline
 
 `backend/migrations/baseline/core/` holds one file that builds what core's migrations through a release
-build. Its `replaces.txt` names that release and each version the file stands for, with the version's name
-and checksum. `migrate up` reads the core ledger before it applies anything:
+build. Its `replaces.txt` names each version the file stands for, with the version's name and checksum. It
+also names the release a database part-way through those versions must reach first. `migrate up` reads the core ledger before it applies anything:
 
 - **The ledger is empty.** It runs the baseline. In the same transaction it records the baseline and
   every replaced version, each under its own file's name and checksum. Data tasks that require an old
   version, and repairs that read its `applied_at`, find the row they look for.
 - **The ledger holds every replaced version.** It records the baseline and does not run it.
 - **The ledger holds only some.** It stops before it changes anything and names the release to upgrade
-  with first. Run that release's `migrate up`, then this one.
+  with first. Run that release's `migrate up`, then this one. The first release ships the first
+  baseline, so its `replaces.txt` says `release none`: no release has part of that history, and a
+  database built from a commit between releases is built again (`make dev-fresh`).
 
 In the first two cases, migrations after the baseline then apply one by one. The replaced files stay in
 `backend/migrations/core/`, so an installation that applied them upgrades as it always did. `migrate down`
@@ -211,7 +213,7 @@ for byte. Run it on a change to the baseline, to `replaces.txt` or to the baseli
 ### Write a new baseline
 
 ```sh
-RELEASE=<tag> THROUGH=<last version in the tag> VERSION=<new version> NAME=<name> \
+RELEASE=<tag or none> THROUGH=<last version in the tag> VERSION=<new version> NAME=<name> \
   scripts/migration-baseline.sh generate
 scripts/migration-baseline.sh verify
 ```

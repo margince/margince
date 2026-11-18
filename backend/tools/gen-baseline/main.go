@@ -60,7 +60,7 @@ func parseFlags(args []string) (options, error) {
 	flags.StringVar(&o.through, "through", "", "the last core version the baseline replaces")
 	flags.StringVar(&o.version, "version", "", "the baseline's own version")
 	flags.StringVar(&o.name, "name", "", "the baseline's name")
-	flags.StringVar(&o.release, "release", "", "the release a database part-way through the history must reach first")
+	flags.StringVar(&o.release, "release", "", "the release a database part-way through the history must reach first, or none before the first release")
 	flags.StringVar(&o.outDir, "out", "", "the directory to write the baseline into")
 	if err := flags.Parse(args); err != nil {
 		return o, err
@@ -163,7 +163,8 @@ SET LOCAL check_function_bodies = false;
 func manifest(release string, replaced []dbmigrate.Migration) string {
 	var b strings.Builder
 	b.WriteString("# The versions the baseline beside this file stands for, as\n")
-	b.WriteString("# `version name digest`, and the release that ships the last of them.\n")
+	b.WriteString("# `version name digest`, and the release a database part-way through them\n")
+	b.WriteString("# must reach first (`none` when the first release ships this baseline).\n")
 	b.WriteString("# Written by scripts/migration-baseline.sh generate.\n")
 	fmt.Fprintf(&b, "release %s\n", release)
 	for _, m := range replaced {

@@ -183,3 +183,19 @@ func TestPlanBaselineRefusesAReplacedRowThatDisagreesWithTheManifest(t *testing.
 		t.Errorf("a matching ledger at the release: plan %+v, err %v; want the baseline's row alone", plan, err)
 	}
 }
+
+// A partial history is told which release to reach first. Before the first
+// release there is none, so it is told to build the database again.
+func TestPlanBaselineTellsAPartialHistoryWhatToDo(t *testing.T) {
+	for release, expects := range map[string]string{
+		"v1":             "Upgrade it with release v1 first",
+		NoEarlierRelease: "build this database again",
+	} {
+		ns := baselineNamespace()
+		ns.Baseline.Release = release
+		_, err := planBaseline(ns, ledgerOf(ns.Baseline.Replaces[0]))
+		if err == nil || !strings.Contains(err.Error(), expects) {
+			t.Errorf("release %q: err = %v, want one containing %q", release, err, expects)
+		}
+	}
+}
