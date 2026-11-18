@@ -28,6 +28,7 @@ import {
 import { Badge, Button, OverflowMenu } from "../../design-system/atoms";
 import { QueryGate } from "../../design-system/querystates";
 import { RecordView } from "../../design-system/recordview";
+import { omitted } from "../../design-system/surfacestate";
 import { useT } from "../../i18n";
 import { taskWriteKeys } from "../../lib/activitykeys";
 import { useCan } from "../../lib/capability";
@@ -216,14 +217,20 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
           // re-checking, so `EnsureAttachable` proves the authority at the
           // moment of attaching.
           !readOnly &&
-          project.company_id && (
+          (project.company_id ? (
             <NewDealAction
               companyId={project.company_id}
               companyName={view.company?.name ?? project.name}
               projectId={project.id}
               link
             />
-          )
+          ) : (
+            !omitted(view, "company") && (
+              <span data-testid="project-new-deal-needs-company">
+                {t("project.newDealNeedsCustomer")}
+              </span>
+            )
+          ))
         }
         tick={
           canUpdateTask

@@ -19513,6 +19513,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "project.assignOwner": "Giao cho một đồng nghiệp",
   "project.description": "Mô tả",
   "project.targetEnd": "Ngày kết thúc dự kiến",
+  "project.startDate": "Ngày bắt đầu",
+  "project.endDate": "Ngày kết thúc",
+  "project.noCustomer": "Chưa có công ty khách hàng",
+  "project.noCustomerSet":
+    "Chưa có công ty khách hàng. Đặt một công ty trong Thêm, Công ty và liên hệ.",
+  "project.newDealNeedsCustomer": "Deal mới cần có công ty khách hàng.",
   "project.new": "Dự án mới",
   "project.edit": "Sửa dự án",
   "project.archive": "Chuyển dự án vào kho lưu trữ",

@@ -294,6 +294,7 @@ describe("ProjectsScreen", () => {
       company_id: FAR_COMPANY.id,
       owner_id: null,
       description: null,
+      started_at: null,
       target_end_date: null,
       key: "crm",
       phase: "pursuing",

@@ -19837,6 +19837,12 @@ export const en = {
   "project.assignOwner": "Assign to a colleague",
   "project.description": "Description",
   "project.targetEnd": "Target end date",
+  "project.startDate": "Start date",
+  "project.endDate": "End date",
+  "project.noCustomer": "No customer company",
+  "project.noCustomerSet":
+    "No customer company. Set one under Companies and contacts.",
+  "project.newDealNeedsCustomer": "New deal needs a customer company.",
   "project.new": "New project",
   "project.edit": "Edit project",
   "project.archive": "Archive project",
