@@ -96,7 +96,9 @@ func withLooksKept(ctx context.Context, tx pgx.Tx, claims []crmcontracts.Convers
 	}
 	for _, hit := range hits {
 		claims[at[hit.Claim]].LooksKept = &crmcontracts.ConversationClaimLooksKept{
-			GuestName: hit.Guest, MeetingAt: hit.At, MeetingId: openapi_types.UUID(hit.Meeting), MeetingPrecision: hit.Precision}
+			GuestName: hit.Guest, MeetingAt: hit.At, MeetingId: openapi_types.UUID(hit.Meeting),
+			MeetingPrecision: hit.Precision,
+		}
 	}
 	return nil
 }
