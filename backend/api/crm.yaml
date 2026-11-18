@@ -62944,7 +62944,7 @@ components:
     UpdateLeadOriginRequest:
       type: object
       properties:
-        label: { type: string, minLength: 1 }
+        label: { x-single-line: true, type: string, minLength: 1 }
         intent: { $ref: '#/components/schemas/LeadSourceIntent' }
         sort_order: { type: integer }
         active: { type: boolean }
@@ -62994,7 +62994,7 @@ components:
     UpdateLeadSourceRequest:
       type: object
       properties:
-        label: { type: string, minLength: 1 }
+        label: { x-single-line: true, type: string, minLength: 1 }
         intent: { $ref: '#/components/schemas/LeadSourceIntent' }
         sort_order: { type: integer }
         active: { type: boolean }

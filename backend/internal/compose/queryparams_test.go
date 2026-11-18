@@ -105,3 +105,13 @@ func TestTheTableHoldsEveryQueryParameterTheContractDeclares(t *testing.T) {
 		}
 	}
 }
+
+func TestAMalformedQueryStringIsRefusedNotReadAsNoFilter(t *testing.T) {
+	h := undeclaredRouter()
+	for _, query := range []string{"st%ZZatus=open", "status=%ZZ", "limit=5&%=1", "a=1;b=2"} {
+		rec := call(h, "GET /v1/deals", query)
+		if rec.Code != http.StatusUnprocessableEntity || !strings.Contains(rec.Body.String(), "invalid_parameter") {
+			t.Errorf("?%s answered %d %s, want 422 invalid_parameter", query, rec.Code, rec.Body.String())
+		}
+	}
+}

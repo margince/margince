@@ -39,9 +39,12 @@ func undeclaredQueryParameter(route, rawQuery string) *httperr.DetailedError {
 	if !known || rawQuery == "" {
 		return nil
 	}
-	// Parsed leniently: a malformed pair is the binding's to refuse, and its
-	// well-formed siblings are still checked here.
-	query, _ := url.ParseQuery(rawQuery)
+	// A key with a bad escape would be dropped by the parser, and the request
+	// would then run unfiltered, so a malformed query is refused whole.
+	query, err := url.ParseQuery(rawQuery)
+	if err != nil {
+		return httperr.Validation("query", "invalid_parameter", "the query string is malformed; check its percent-escapes")
+	}
 	var unknown []string
 	for key := range query {
 		if !slices.Contains(declared, key) && !datasource.IsCustomFieldKey(key) {
