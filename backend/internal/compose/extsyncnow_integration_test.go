@@ -32,8 +32,8 @@ import (
 // there rather than answering.
 const syncNowUnit, syncNowJob = "notes", "heartbeat"
 
-//testdb:serial registers into a process-wide unit registry
 func TestSyncNowQueuesTheUnitsOwnTickForTheCallersWorkspace(t *testing.T) {
+	t.Parallel()
 	db := testdb.New(t)
 	ctx := context.Background()
 	owner, err := pgx.Connect(ctx, db.OwnerDSN)
