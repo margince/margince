@@ -133,7 +133,9 @@ that, and nothing in the contract claims it.
 
 **It steps down; it does not fail.** Take a case with no model lane set up, the workspace's AI
 budget spent, or a reply the validator refuses. Then the brief falls back to a fixed, structured summary
-over the same inputs (`companybrief/deterministic.go`).
+over the same inputs (`companybrief/deterministic.go`). A floor written because the lane failed is
+served but not cached, so the next read asks the model again. A forced rewrite that fails keeps the
+model's brief for the same facts.
 
 - It covers identity, pipeline, each stalled deal on its own line, the last touch, open tasks. Then it
   covers what the company *is*, from its picked profile fields.

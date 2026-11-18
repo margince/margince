@@ -77,9 +77,9 @@ func (s *Service) cardAndTimeline(
 	if !mayWriteTheCard(ctx) {
 		return presentMove(ctx, f, card), factActivities(f), nil
 	}
-	if laneFailed {
-		// Caching a fallback would preserve a transient model failure
-		// until the facts change.
+	if laneFailed || (policy.factsOnly && verdict.askModel) {
+		// Caching a fallback would preserve a transient model failure, or a
+		// facts-only read's skipped model call, until the facts change.
 		return presentMove(ctx, f, card), factActivities(f), nil
 	}
 	if err := s.save(ctx, userID, dealID, stored{
