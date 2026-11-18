@@ -15,6 +15,7 @@ import { Select } from "../../../design-system/select";
 import { useT } from "../../../i18n";
 import { useCanWriteRecord } from "../../../lib/capability";
 import { recordRoute } from "../../../lib/entity";
+import { labelFor } from "../../../lib/labelfor";
 import { useRecordTargets } from "../../../lib/recordtargets";
 import { routeHash } from "../../../lib/router";
 import { SEARCH_HIT_KIND_KEY } from "../../../lib/searchkinds";
@@ -138,7 +139,7 @@ function LinkRow({
       title={target}
       sub={
         isLinkEnd(other.type)
-          ? `${t(SEARCH_HIT_KIND_KEY[other.type])} · ${direction}`
+          ? `${t(labelFor(SEARCH_HIT_KIND_KEY, other.type))} · ${direction}`
           : direction
       }
       right={
