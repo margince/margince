@@ -222,6 +222,48 @@ describe("VoiceCollectScene", () => {
   });
 });
 
+describe("the collect scene's copy", () => {
+  it("answers an early Build with the words still missing, not the floor sentence again", async () => {
+    collectScene({ summary: summaryOf(799) });
+
+    await userEvent.click(
+      screen.getByRole("button", { name: /Build my voice profile/ }),
+    );
+
+    expect(screen.getByRole("alert").textContent).toBe(
+      "Add 1 more word to build.",
+    );
+    expect(
+      screen.getAllByText(/800 words minimum/, { exact: false }),
+    ).toHaveLength(1);
+  });
+
+  it("counts a one-word sample as one word", () => {
+    collectScene({
+      manifest: [
+        {
+          ref: "p1",
+          id: "p1",
+          version: 1,
+          label: "Pasted text – extra",
+          keptWords: 1,
+          inputWords: 1,
+          transcript: false,
+          lines: [],
+        },
+      ],
+    });
+
+    expect(screen.getByText("1 word")).toBeTruthy();
+  });
+
+  it("offers the skip as a short button with no period", () => {
+    collectScene({});
+
+    expect(screen.getByRole("button", { name: "Skip for now" })).toBeTruthy();
+  });
+});
+
 describe("the collect scene's distilling panel", () => {
   it("reads the reader's own lines back beside the intake, with the server's readings between them", () => {
     collectScene({
@@ -274,17 +316,16 @@ describe("the collect scene's corpus floor meter", () => {
   });
 
   it("shows the same floor the Build action gates on, below and at it", async () => {
-    // Below the floor: Build presses, and the press names the floor the
-    // scene's own canBuild (computed from the same VOICE_MIN_WORDS) is read
-    // against, while the meter still reads "not yet".
+    // Below the floor: Build presses and names how far the corpus is from
+    // VOICE_MIN_WORDS. The meter reads the same floor and still says "not yet".
     const onBuild = vi.fn();
     collectScene({ summary: summaryOf(200), canBuild: false, onBuild });
     await userEvent.click(
       screen.getByRole("button", { name: "Build my voice profile" }),
     );
     expect(onBuild).not.toHaveBeenCalled();
-    expect((await screen.findByRole("alert")).textContent).toContain(
-      `${VOICE_MIN_WORDS}`,
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      `Add ${VOICE_MIN_WORDS - 200} more words to build.`,
     );
     expect(
       document.querySelector(".ob-voice-meter-line")?.textContent,

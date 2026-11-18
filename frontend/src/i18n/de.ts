@@ -13399,7 +13399,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "ob.conv.company.confirmed":
     "Unternehmensprofil bestätigt. Jeder gespeicherte Wert hält seine Quelle fest.",
   "ob.conv.manual.chosen": "Ich gebe es manuell ein.",
-  "ob.conv.voice.skipped": "Schreibstil vorerst überspringen.",
+  "ob.conv.voice.skipped": "Vorerst überspringen",
   "ob.conv.voice.uploadAdded": "{name} hinzugefügt.",
   "ob.conv.voice.speakerQuestion":
     "„{name}“ enthält mehrere Sprechende. Wer davon bist du? Nur deine eigenen Worte zählen.",
@@ -13457,8 +13457,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Noch nichts gesammelt. Hänge ein Transkript oder einen selbst geschriebenen Text an.",
   "ob.conv.voice.meterWords": "Eigene Wörter: {words} von {target}",
   "ob.conv.voice.meterBand": "Qualität: {band}",
-  "ob.conv.voice.manifestKept": "{kept} von {total} Wörtern behalten",
-  "ob.conv.voice.manifestWords": "Wörter: {words}",
+  "ob.conv.voice.manifestKept_one": "{kept} von {total} Wort behalten",
+  "ob.conv.voice.manifestKept_other": "{kept} von {total} Wörtern behalten",
+  "ob.conv.voice.manifestWords_one": "{words} Wort",
+  "ob.conv.voice.manifestWords_other": "{words} Wörter",
+  "ob.conv.voice.floorShort_one": "Noch {words} Wort bis zum Aufbau.",
+  "ob.conv.voice.floorShort_other": "Noch {words} Wörter bis zum Aufbau.",
+  "ob.conv.voice.waitForSamples":
+    "Warte, bis deine Schreibproben hinzugefügt sind.",
   "ob.conv.voice.registerMix": "Register: {mix}",
   "ob.conv.voice.stageTitle": "Fortschritt des Aufbaus",
   "ob.conv.corpus.words": "Eigene Wörter jetzt in deinem Korpus: {words}.",

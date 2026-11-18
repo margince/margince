@@ -10,14 +10,15 @@ import { ErrorLine } from "../../../design-system/errorline";
 import { Eyebrow } from "../../../design-system/eyebrow";
 import { Meter } from "../../../design-system/readings";
 import { formatBytes, formatNumber } from "../../../format/format";
-import { useLocale, useT } from "../../../i18n";
+import { useLocale, usePlural, useT } from "../../../i18n";
 import { ACCEPTED_CORPUS_ATTR } from "../../../lib/voice-corpus-file";
 import { VOICE_MIN_WORDS } from "../../../lib/voice-intake-core";
 import { VOICE_SOURCE_MAX_BYTES } from "../../../lib/voice-refusal";
 import type { ConversationQuestion } from "./conversation-machine";
-import type {
-  CorpusManifestEntry,
-  VoiceIngestFailure,
+import {
+  type CorpusManifestEntry,
+  manifestCount,
+  type VoiceIngestFailure,
 } from "./use-voice-corpus";
 import { VoiceDistillPanel } from "./voice-distill";
 import { VoiceScene } from "./voice-scenes.result";
@@ -196,6 +197,7 @@ export function VoiceCollectScene({
   startError: ReactNode;
 }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const words = summary?.total_words ?? 0;
   // The floor alone — never `canBuild`, which also folds in a request in
@@ -203,6 +205,14 @@ export function VoiceCollectScene({
   // would tell the reader they lost ground they never lost.
   const floorCleared = words >= VOICE_MIN_WORDS;
   const aiGate = useConnectAiGate("voice-collect-ai");
+  // An early press names what is still missing; the foot already states the
+  // floor, and saying it twice side by side reads as a glitch.
+  const shortBy = VOICE_MIN_WORDS - words;
+  const buildBlocker = floorCleared
+    ? t("ob.conv.voice.waitForSamples")
+    : plural("ob.conv.voice.floorShort", shortBy, {
+        words: formatNumber(shortBy, locale),
+      });
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteText, setPasteText] = useState("");
   return (
@@ -289,14 +299,7 @@ export function VoiceCollectScene({
                     <span className="ob-voice-source-body">
                       <b>{entry.label}</b>
                       <small className="t-caption">
-                        {entry.transcript
-                          ? t("ob.conv.voice.manifestKept", {
-                              kept: formatNumber(entry.keptWords, locale),
-                              total: formatNumber(entry.inputWords, locale),
-                            })
-                          : t("ob.conv.voice.manifestWords", {
-                              words: formatNumber(entry.keptWords, locale),
-                            })}
+                        {manifestCount(entry, plural, locale)}
                       </small>
                     </span>
                     <Check className="ob-voice-source-check" aria-hidden />
@@ -338,13 +341,7 @@ export function VoiceCollectScene({
         label={t("ob.conv.voice.buildChip")}
         pending={startPending}
         blockers={[
-          ...(canBuild
-            ? []
-            : [
-                t("ob.conv.voice.footFloor", {
-                  min: formatNumber(VOICE_MIN_WORDS, locale),
-                }),
-              ]),
+          ...(canBuild ? [] : [buildBlocker]),
           ...(aiGate.reasonId === undefined ? [] : [t("connectAi.first")]),
         ]}
         stillNeeded={(why) => why.join(" ")}

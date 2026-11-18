@@ -6,10 +6,6 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { useReducer } from "react";
 import { expect, vi } from "vitest";
-import {
-  ASYNC_UTIL_TIMEOUT_MS,
-  SLOWEST_MEASURED_TEST_MS,
-} from "../../../../vitest.budget";
 import type { components } from "../../../api/schema";
 import { LocaleProvider } from "../../../i18n";
 import type { ConversationState } from "./conversation-machine";
@@ -32,13 +28,9 @@ export type IngestStats = components["schemas"]["VoiceIngestStats"];
 // which is derived for tests that wait at the default. So these tests state
 // their own ceiling from the same measured allowance the suite uses.
 export const POLL_WAITER_MS = 4000;
-// The count a dropped file produces renders at the end of a round trip: read
-// the file, POST /sources, take the summary back, re-render. The default
-// async-util timeout covers a render only. Under the sharded suite that chain
-// outran 1000ms, so the waiter gets the poll's allowance.
+// A dropped file's count renders after a full round trip. That outran the
+// 1000ms default under the sharded suite, so it waits as long as a poll.
 export const INGEST_WAITER_MS = POLL_WAITER_MS;
-export const BUILD_TEST_MS =
-  POLL_WAITER_MS * 2 + ASYNC_UTIL_TIMEOUT_MS * 4 + SLOWEST_MEASURED_TEST_MS;
 
 export const PROFILE_ID = "018f3a1b-0000-7000-8000-0000000000d1";
 export const BUILD_IDS = [

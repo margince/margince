@@ -13047,7 +13047,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "ob.conv.company.confirmed":
     "Đã xác nhận hồ sơ công ty. Mỗi giá trị đã lưu đều ghi lại nguồn.",
   "ob.conv.manual.chosen": "Tôi sẽ tự nhập.",
-  "ob.conv.voice.skipped": "Tạm bỏ qua giọng văn.",
+  "ob.conv.voice.skipped": "Tạm bỏ qua",
   "ob.conv.voice.uploadAdded": "Đã thêm {name}.",
   "ob.conv.voice.speakerQuestion":
     "“{name}” có nhiều người nói. Bạn là người nào? Chỉ lời của chính bạn được tính.",
@@ -13104,8 +13104,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chưa thu thập được gì. Đính kèm một bản chép lời hoặc văn bản bạn đã viết.",
   "ob.conv.voice.meterWords": "Số từ của bạn: {words} trên {target}",
   "ob.conv.voice.meterBand": "Chất lượng: {band}",
-  "ob.conv.voice.manifestKept": "Đã giữ {kept} trên {total} từ",
-  "ob.conv.voice.manifestWords": "{words} từ",
+  "ob.conv.voice.manifestKept_one": "Đã giữ {kept} trên {total} từ",
+  "ob.conv.voice.manifestKept_other": "Đã giữ {kept} trên {total} từ",
+  "ob.conv.voice.manifestWords_one": "{words} từ",
+  "ob.conv.voice.manifestWords_other": "{words} từ",
+  "ob.conv.voice.floorShort_one": "Thêm {words} từ nữa để dựng.",
+  "ob.conv.voice.floorShort_other": "Thêm {words} từ nữa để dựng.",
+  "ob.conv.voice.waitForSamples": "Hãy đợi văn mẫu được thêm xong.",
   "ob.conv.voice.registerMix": "Văn phong: {mix}",
   "ob.conv.voice.stageTitle": "Tiến độ dựng",
   "ob.conv.corpus.words":

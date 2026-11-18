@@ -3,7 +3,7 @@ import type { Dispatch } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { components } from "../../../api/schema";
 import { formatBytes, formatNumber } from "../../../format/format";
-import type { Locale } from "../../../i18n";
+import type { Locale, PluralTranslator } from "../../../i18n";
 import { useLocale, useT } from "../../../i18n";
 import type { MessageKey } from "../../../i18n/en";
 import { problemMessage, problemMessageOf } from "../../../lib/problem";
@@ -61,6 +61,24 @@ export type CorpusManifestEntry = Readonly<{
    * which words are the reader's is decided on the server, not here. */
   lines: readonly string[];
 }>;
+
+/** The count a Sources row shows; kept-of-total only for a filtered transcript. */
+export function manifestCount(
+  entry: CorpusManifestEntry,
+  plural: PluralTranslator,
+  locale: Locale,
+): string {
+  const kept = formatNumber(entry.keptWords, locale);
+  if (entry.transcript) {
+    return plural("ob.conv.voice.manifestKept", entry.inputWords, {
+      kept,
+      total: formatNumber(entry.inputWords, locale),
+    });
+  }
+  return plural("ob.conv.voice.manifestWords", entry.keptWords, {
+    words: kept,
+  });
+}
 
 type SpeakerAsk = Readonly<{
   ref: string;

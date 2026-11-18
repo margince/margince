@@ -4,6 +4,10 @@ import { join } from "node:path";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  ASYNC_UTIL_TIMEOUT_MS,
+  SLOWEST_MEASURED_TEST_MS,
+} from "../../../../vitest.budget";
 import { en } from "../../../i18n/en";
 import {
   conversationReducer,
@@ -13,13 +17,13 @@ import { run } from "./test-fixtures";
 import { VoiceAct } from "./voice-act";
 import {
   BUILD_IDS,
-  BUILD_TEST_MS,
   collectingState,
   conversationalPreview,
   documentPreview,
   documentStats,
   dropOnWindow,
   INGEST_WAITER_MS,
+  POLL_WAITER_MS,
   render,
   requestsTo,
   richVersion,
@@ -32,6 +36,10 @@ import {
   uploadFile,
   VoiceHarness,
 } from "./voice-act.testkit";
+
+// Stated here, not in the testkit: the budget reader follows one import hop.
+const BUILD_TEST_MS =
+  POLL_WAITER_MS * 2 + ASYNC_UTIL_TIMEOUT_MS * 4 + SLOWEST_MEASURED_TEST_MS;
 
 beforeEach(() => {
   vi.stubGlobal("scrollTo", vi.fn());
@@ -339,12 +347,14 @@ describe("the conversational voice act", () => {
         { timeout: INGEST_WAITER_MS },
       ),
     ).toBeTruthy();
-    // Below the floor the button still presses: the press names the floor
-    // on the rail and starts nothing.
+    // Below the floor the button still presses: the press names the words
+    // still missing and starts nothing.
     await userEvent.click(
       screen.getByRole("button", { name: /Build my voice profile/ }),
     );
-    expect((await screen.findByRole("alert")).textContent).toContain("800");
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "Add 300 more words to build.",
+    );
 
     await uploadFile("two.md", "Second document.");
     // At the floor the reason is gone with the block it named.
