@@ -27,7 +27,7 @@ import { ListPopover } from "../../../design-system/listpopover";
 import { useToast } from "../../../design-system/toast";
 import { useLocale, useT } from "../../../i18n";
 import { dealStageMoveKeys } from "../../../lib/activitykeys";
-import { useCanWriteRecord } from "../../../lib/capability";
+import { useCanWrite, useCanWriteRecord } from "../../../lib/capability";
 import { unwrap } from "../../../lib/problem";
 import { navigate } from "../../../lib/router";
 import { useShortcut } from "../../../lib/shortcuts";
@@ -172,15 +172,11 @@ function ReopenAction({
   );
 }
 
-// An archived deal offers the way back where the archive was.
 function DealArchiveAction({
   deal,
   refusedReasonId,
 }: Readonly<{ deal: Deal; refusedReasonId?: string }>) {
   const t = useT();
-  if (deal.archived_at) {
-    return <RestoreDealAction deal={deal} />;
-  }
   return (
     <ArchiveAction
       requires={{ object: "deal", action: "delete" }}
@@ -216,6 +212,9 @@ export function DealActions({
 }>) {
   const t = useT();
   const canWrite = useCanWriteRecord("deal", deal);
+  // The server marks an archived deal not writable, so the way back rests on
+  // the archive grant alone.
+  const canRestore = useCanWrite("deal", "delete");
   const refusedByArchive = deal.archived_at ? refusedReasonId : undefined;
   // The log/task drawer's own state: one drawer with two doors, the same
   // shape companyheaderactions.tsx and leads.tsx keep for the identical pair.
@@ -347,9 +346,10 @@ export function DealActions({
             />
           </>
         )}
-        {canWrite && (
+        {canWrite && !deal.archived_at && (
           <DealArchiveAction deal={deal} refusedReasonId={refusedReasonId} />
         )}
+        {canRestore && deal.archived_at && <RestoreDealAction deal={deal} />}
       </OverflowMenu>
     </>
   );
