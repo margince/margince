@@ -129,7 +129,7 @@ The PDF prints Latin letters, Vietnamese and Central European ones included, and
 
 Every offer PDF prints who issues it. That is the name, address, VAT ID, register entry, **Bank details** and logo of the company on the offer's **Issued by** line. A new offer is issued by the company its writer works for, set on the **Legal entities** card. While the offer is a draft you can choose another under **Edit**; once sent, it stays. The send keeps what it printed, so a later change to that company does not change a sent offer. If your template's footer already lists your address or account, the PDF prints them twice until you take them out of the footer.
 
-Each offer has a **Language**. A new offer takes the language of the company that issues it, and else the language of its template. A line you add from the rate card takes the product's name in that language when the product has one, and else its own name. To give a product a name in another language, open the menu on its row and choose **Translations**. A line keeps the name it was added with, so a later change to the product leaves it as it is. The fixed words a template prints, such as its headings, follow the template's own language.
+Each offer has a **Language**. A new offer takes the language of the company that issues it, and else the language of its template. A line you add from the rate card takes the product's name in that language when the product has one, and else its own name. To give a product a name in another language, open the menu on its row and choose **Translations**. A line keeps the name it was added with, so a later change to the product leaves it as it is. The fixed words the PDF prints, such as its headings, follow the template's own language. An offer with no template prints with the default template of its language. With no default for that language, the PDF has no header or footer, and its headings are German for a German offer and English for any other.
 
 ## What an offer refuses
 
@@ -209,6 +209,6 @@ To create an offer template in Margince, open **Settings → Products and offers
 Then pick the template on an offer with **Edit header** → **Template**.
 Also called: quote template, proposal layout, letterhead.
 
-**Limits of offer templates.** An offer whose template no longer exists does not use your language default in its place; it is made from an empty layout. An archived template still works for its offers. Logos are not fetched, so put your letterhead in **Header text**.
+**Limits of offer templates.** An offer whose template no longer exists prints with the default template of its language, as an offer with no template does. A new offer does not pick the default itself, so **Edit header** shows no template; the PDF still uses the default. An archived template still works for its offers. Logos are not fetched, so put your letterhead in **Header text**.
 
 An offer template has no terms field: terms belong to each offer, set under **Edit header** → **Terms text**.

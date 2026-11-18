@@ -347,6 +347,68 @@ func TestOfferRenderPrintsWhatTheTemplateAndOfferFormsSaved(t *testing.T) {
 	}
 }
 
+// An offer with no template prints with the default template of its own
+// language: its layout, and headings in that language.
+func TestOfferRenderNoTemplateTakesTheDefaultOfItsLanguage(t *testing.T) {
+	e := Setup(t)
+	pipeline, open, _ := DealFixture(t, e)
+	dealID := e.SeedDeal(t, "Render default template deal", pipeline, open, &e.Rep1)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerRenderDeskPerms)
+
+	for _, tmpl := range []deals.CreateOfferTemplateInput{
+		{Name: "English default", Locale: "en-US", IsDefault: true, Layout: map[string]any{"footer": "English default footer"}},
+		{Name: "German default", Locale: "de-DE", IsDefault: true, Layout: map[string]any{"footer": "Deutsche Fusszeile"}},
+	} {
+		if _, err := e.Deals.CreateOfferTemplate(ctx, tmpl); err != nil {
+			t.Fatalf("create offer template %q: %v", tmpl.Name, err)
+		}
+	}
+	english := "en"
+	created := renderOneLineOffer(ctx, t, e, dealID, deals.CreateOfferInput{Language: &english})
+
+	ing, err := e.Deals.PrepareRender(ctx, ids.From[ids.OfferKind](ids.UUID(created.Id)))
+	if err != nil {
+		t.Fatalf("prepare render: %v", err)
+	}
+	if ing.Locale != "en-US" || ing.Layout["footer"] != "English default footer" {
+		t.Fatalf("an English offer with no template must take the en-US default, got locale %q layout %+v", ing.Locale, ing.Layout)
+	}
+	pdf, err := deals.RenderOfferPDF(ing.Offer, ing.LineItems, ing.BuyerBlock, deals.PDFIssuer{OfferIssuer: ing.Issuer}, ing.Locale, ing.Layout)
+	if err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	text := offerPDFText(t, pdf)
+	for _, want := range []string{"Line items", "English default footer"} {
+		if !strings.Contains(text, want) {
+			t.Errorf("the PDF must print %q:\n%s", want, text)
+		}
+	}
+	for _, unwanted := range []string{"Positionen", "Deutsche Fusszeile"} {
+		if strings.Contains(text, unwanted) {
+			t.Errorf("an English offer must not print %q:\n%s", unwanted, text)
+		}
+	}
+}
+
+// With no default for its language, an offer still prints headings in that
+// language, over an empty layout.
+func TestOfferRenderNoTemplateNoDefaultUsesTheOffersLanguage(t *testing.T) {
+	e := Setup(t)
+	pipeline, open, _ := DealFixture(t, e)
+	dealID := e.SeedDeal(t, "Render no default deal", pipeline, open, &e.Rep1)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerRenderDeskPerms)
+
+	english := "en"
+	created := renderOneLineOffer(ctx, t, e, dealID, deals.CreateOfferInput{Language: &english})
+	ing, err := e.Deals.PrepareRender(ctx, ids.From[ids.OfferKind](ids.UUID(created.Id)))
+	if err != nil {
+		t.Fatalf("prepare render: %v", err)
+	}
+	if ing.Locale != "en" || len(ing.Layout) != 0 {
+		t.Fatalf("an English offer with no default template must render as en over an empty layout, got %q %+v", ing.Locale, ing.Layout)
+	}
+}
+
 func TestOfferRenderSetPdfAssetRef_PersistsAndAuditsExactlyOnce(t *testing.T) {
 	e := Setup(t)
 	pipeline, open, _ := DealFixture(t, e)

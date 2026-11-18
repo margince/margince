@@ -70,12 +70,11 @@ type pdfLabels struct {
 	bank     string
 }
 
-// resolvePDFLabels maps a locale to its label set: de-DE (and the empty
-// string, matching offer_template's own defaultOfferTemplateLocale) get
-// German labels; everything else gets English — the DE/EN launch pair
-// (WP7/OP-T02), not a general i18n catalog.
+// resolvePDFLabels maps a locale to its label set. A German locale gets German
+// labels, and so does "", which languageOfLocale reads as German. Every other
+// language gets English.
 func resolvePDFLabels(locale string) pdfLabels {
-	if locale == defaultOfferTemplateLocale || locale == "" {
+	if languageOfLocale(locale) == languageOfLocale(defaultOfferTemplateLocale) {
 		return pdfLabels{
 			title:     "Angebot",
 			issuer:    "Aussteller",
