@@ -53,6 +53,9 @@ fixtures:
   - finding: claim_without_proof
     triggers: fixtures/claim-without-proof.md
     clears: fixtures/claim-with-proof.md
+  - finding: claim_without_proof
+    triggers: fixtures/number-one-without-proof.md
+    clears: fixtures/number-one-with-proof.md
   - finding: advertising_language_first
     triggers: fixtures/english-first.md
     clears: fixtures/claim-with-proof.md
