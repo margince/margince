@@ -15,6 +15,7 @@ import { describedByIds } from "../../design-system/describedby";
 import { Disclosure } from "../../design-system/disclosure";
 import { ErrorLine } from "../../design-system/errorline";
 import { footerFindingsText } from "../../format/footerfindings";
+import { formatNumber } from "../../format/format";
 import { type Translator, useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { ComposeOutcome } from "./compose.parts";
@@ -149,7 +150,7 @@ export function SendAnywayRows({
   const { review } = state;
   const lead = review.refusals[0];
   return (
-    <div className="compose-sendanyway">
+    <>
       <Callout
         tone="warning"
         live="status"
@@ -180,7 +181,7 @@ export function SendAnywayRows({
         />
       )}
       {state.failed && <ErrorLine>{t("compose.sendAnyway.failed")}</ErrorLine>}
-    </div>
+    </>
   );
 }
 
@@ -198,7 +199,9 @@ function EveryFinding({
     <Disclosure
       summary={
         more > 0
-          ? plural("compose.sendAnyway.more", more, { count: String(more) })
+          ? plural("compose.sendAnyway.more", more, {
+              count: formatNumber(more, locale),
+            })
           : t("compose.sendAnyway.details")
       }
     >
