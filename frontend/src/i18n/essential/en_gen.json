@@ -2875,7 +2875,7 @@
   "field.yes": "Yes",
   "field.no": "No",
   "common.duplicate.leadHolds": "A lead already has this email address or LinkedIn profile, so no contact was created.",
-  "common.duplicate.contactHolds": "A contact already has this email address or LinkedIn profile, and someone is either a lead or a contact. For new business with them, open a deal on the contact.",
+  "common.duplicate.contactHolds": "A contact already has this email address or LinkedIn profile. For new business with them, open a deal on the contact.",
   "approval.preview.leadHoldsEmail": "A lead already has this email address or LinkedIn profile. Convert the lead instead of creating a contact.",
   "dedupe.viewExisting": "View existing record",
   "co.spine.andOthers": "{names} and {count} others",
