@@ -17,9 +17,9 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/commsauthzwire"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
 // GetCommunicationReview serves GET /communication-reviews/{id}.
@@ -113,9 +113,9 @@ func wireRefusal(refusal RefusedRecipient) crmcontracts.RefusedRecipient {
 		wire.FooterPreview = &refusal.FooterPreview
 	}
 	if len(refusal.FooterFindings) > 0 {
-		wire.FooterFindings = wireFooterFindings(refusal.FooterFindings)
+		wire.FooterFindings = commsauthzwire.FooterFindings(refusal.FooterFindings)
 	}
-	wire.Provision = wireProvision(refusal.Provision)
+	wire.Provision = commsauthzwire.Provision(refusal.Provision)
 	if refusal.SendingEntity != nil {
 		id := openapi_types.UUID(*refusal.SendingEntity)
 		wire.SendingEntityId = &id
@@ -179,28 +179,4 @@ func (h Handlers) RecordCommunicationContext(
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, wireReview(review))
-}
-
-// wireFooterFindings renders footer findings with their provisions. Missing
-// means are an empty list rather than null.
-func wireFooterFindings(findings []commsauthz.FooterFinding) *[]crmcontracts.FooterFinding {
-	out := make([]crmcontracts.FooterFinding, 0, len(findings))
-	for _, f := range findings {
-		means := f.MissingMeans
-		if means == nil {
-			means = []string{}
-		}
-		out = append(out, crmcontracts.FooterFinding{
-			Kind: f.Kind, Language: f.Language, MissingMeans: means, Provision: wireProvision(f.Provision),
-		})
-	}
-	return &out
-}
-
-// wireProvision renders a citation, or nil when none is shown.
-func wireProvision(p commsauthz.Provision) *crmcontracts.CitedProvision {
-	if !p.Cited() {
-		return nil
-	}
-	return &crmcontracts.CitedProvision{Instrument: p.Instrument, Provision: p.Provision, SourceUrl: p.SourceURL}
 }
