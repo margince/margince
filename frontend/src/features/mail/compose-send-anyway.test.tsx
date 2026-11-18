@@ -345,6 +345,61 @@ describe("the email composer with the switch on", () => {
     ).toMatchObject({ explanation: "Line one\nline two." });
   });
 
+  it("sends the same key on a retried send and a new one after an edit", async () => {
+    const user = userEvent.setup();
+    const sent = stubRoutes({
+      "GET /me": inlineMe,
+      "POST /emails": () =>
+        problemResponse({ code: "internal", title: "Down" }, 500),
+    });
+    await openInline(sent);
+    await fillInline(user);
+    await pressSend(user);
+    await waitFor(() => expect(count(sent, "POST /emails")).toBe(1));
+    await pressSend(user);
+    await waitFor(() => expect(count(sent, "POST /emails")).toBe(2));
+    writeMessage("Body", "The prices you asked for, corrected.");
+    await pressSend(user);
+    await waitFor(() => expect(count(sent, "POST /emails")).toBe(3));
+    const keys = sent
+      .filter((entry) => entry.key === "POST /emails")
+      .map((entry) => entry.headers.get("Idempotency-Key"));
+    expect(keys[0]).toBeTruthy();
+    expect(keys[1]).toBe(keys[0]);
+    expect(keys[2]).not.toBe(keys[0]);
+  });
+
+  it("sends the same key on a retried Send anyway and a new one after the reason changes", async () => {
+    const user = userEvent.setup();
+    const sent = stubRoutes({
+      "GET /me": inlineMe,
+      "POST /emails": refused,
+      "POST /communication-reviews/r-1/direct-send": () =>
+        problemResponse({ code: "internal", title: "Down" }, 500),
+    });
+    await openInline(sent);
+    await fillInline(user);
+    await pressSend(user);
+    await user.type(await reasonField(), "Asked by phone.");
+    const decisions = () =>
+      sent.filter(
+        (entry) => entry.key === "POST /communication-reviews/r-1/direct-send",
+      );
+    await user.click(await sendAnyway());
+    await waitFor(() => expect(decisions()).toHaveLength(1));
+    await user.click(await sendAnyway());
+    await waitFor(() => expect(decisions()).toHaveLength(2));
+    await user.type(await reasonField(), " Twice.");
+    await user.click(await sendAnyway());
+    await waitFor(() => expect(decisions()).toHaveLength(3));
+    const keys = decisions().map((entry) =>
+      entry.headers.get("Idempotency-Key"),
+    );
+    expect(keys[0]).toBeTruthy();
+    expect(keys[1]).toBe(keys[0]);
+    expect(keys[2]).not.toBe(keys[0]);
+  });
+
   it("sends one decision for a double press while it is in flight", async () => {
     const user = userEvent.setup();
     let answer: (response: Response) => void = () => {};

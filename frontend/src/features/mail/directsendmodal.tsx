@@ -19,6 +19,7 @@
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
+import { intentKeys } from "../../api/idempotencykey";
 import type { components } from "../../api/schema";
 import { Button, Checkbox, Field, Textarea } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
@@ -52,22 +53,30 @@ export type DirectSendCommand = Readonly<{
   shownReasons: readonly string[];
 }>;
 
+// A decision retried after a lost answer reuses its key, so the server replays
+// the send it recorded rather than answering that the review is gone.
+const decisionKeys = intentKeys();
+
 export async function directSend(command: DirectSendCommand): Promise<string> {
+  const body = {
+    reason_code: command.reasonCode as "other",
+    explanation: command.explanation,
+    warning_version: command.warningVersion,
+    assessment_revision: command.assessmentRevision,
+    shown_reasons: [...command.shownReasons],
+    // The server refuses a decision without an acknowledgement. Each
+    // caller reaches this only from the press that is one. That is the
+    // modal's confirm once ticked, or Send anyway beside its warning.
+    acknowledged: true as const,
+  };
   const { data, error, response } = await api.POST(
     "/communication-reviews/{id}/direct-send",
     {
-      params: { path: { id: command.reviewId } },
-      body: {
-        reason_code: command.reasonCode as "other",
-        explanation: command.explanation,
-        warning_version: command.warningVersion,
-        assessment_revision: command.assessmentRevision,
-        shown_reasons: [...command.shownReasons],
-        // The server refuses a decision without an acknowledgement. Each
-        // caller reaches this only from the press that is one. That is the
-        // modal's confirm once ticked, or Send anyway beside its warning.
-        acknowledged: true,
+      params: {
+        path: { id: command.reviewId },
+        header: { "Idempotency-Key": decisionKeys([command.reviewId, body]) },
       },
+      body,
     },
   );
   // Success is a real 2xx WITH a body: openapi-fetch reports a falsy error and
