@@ -4,6 +4,7 @@
 package activities
 
 import (
+	"context"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -85,5 +86,32 @@ func TestThePreviewCarriesTheSupportedAlternatives(t *testing.T) {
 	}
 	if none := out.Recipients[1].SupportedAlternatives; none != nil {
 		t.Errorf("supported_alternatives = %v, want absent", *none)
+	}
+}
+
+// The preview tells the approver a send cannot work, from the same check the
+// send runs.
+func TestThePreviewCarriesWhetherAMailboxCanSend(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	store := &Store{}
+	cases := []struct {
+		name        string
+		store       *Store
+		unavailable bool
+	}{
+		{"no authority wired", store, false},
+		{"a mailbox can transmit", store.WithSendAuthority(&stubSendAuthority{capable: true, mailProvider: "graph"}), false},
+		{"none can transmit", store.WithSendAuthority(&stubSendAuthority{capable: false}), true},
+	}
+	for _, tc := range cases {
+		unavailable, err := tc.store.mailboxUnavailable(ctx)
+		if err != nil || unavailable != tc.unavailable {
+			t.Fatalf("%s: mailboxUnavailable = (%v, %v), want %v", tc.name, unavailable, err, tc.unavailable)
+		}
+		out := previewResponse(SendPreview{MailboxUnavailable: unavailable})
+		if tc.unavailable != (out.MailboxSendCapable != nil && !*out.MailboxSendCapable) {
+			t.Errorf("%s: mailbox_send_capable = %v", tc.name, out.MailboxSendCapable)
+		}
 	}
 }

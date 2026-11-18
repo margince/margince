@@ -103,16 +103,26 @@ func TestAShareRequestTakesNoEditAndNoAddedMember(t *testing.T) {
 	}
 }
 
-func TestAHeldDraftEditMayNotBlankItsSubjectOrBody(t *testing.T) {
+func TestAStagedMailEditMayNotBlankItsSubjectOrBody(t *testing.T) {
+	rest := func(body string) string {
+		return `{"operation":"sendEmail","path":"/activities/a1/send-email","body":` + body + `}`
+	}
 	cases := []struct {
 		name   string
 		kind   string
 		edited string
 		ok     bool
 	}{
-		{"both written", kindHeldDraft, `{"subject":"Hi","body":"Text"}`, true},
-		{"subject blank", kindHeldDraft, `{"subject":"  ","body":"Text"}`, false},
-		{"body empty", kindHeldDraft, `{"subject":"Hi","body":""}`, false},
+		{"held draft written", kindHeldDraft, `{"subject":"Hi","body":"Text"}`, true},
+		{"held draft subject blank", kindHeldDraft, `{"subject":"  ","body":"Text"}`, false},
+		{"held draft body empty", kindHeldDraft, `{"subject":"Hi","body":""}`, false},
+		{"send_email written", "send_email", rest(`{"subject":"Hi","body":"Text"}`), true},
+		{"send_email subject blank", "send_email", rest(`{"subject":"","body":"Text"}`), false},
+		{"send_email body blank", "send_email", rest(`{"subject":"Hi","body":" "}`), false},
+		{"send_company_email written", "send_company_email", rest(`{"subject":"Hi","body":"Text"}`), true},
+		{"send_company_email subject blank", "send_company_email", rest(`{"subject":" ","body":"Text"}`), false},
+		{"send_company_email body blank", "send_company_email", rest(`{"subject":"Hi","body":""}`), false},
+		{"tool-staged send_email blank", "send_email", `{"subject":"","body":"Text"}`, false},
 		{"other kind keeps its own rule", kindLinkedInMatch, `{"subject":""}`, true},
 	}
 	for _, tc := range cases {

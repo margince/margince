@@ -36,6 +36,7 @@ import {
 } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
+import { useUnsavedGuard } from "../../lib/unsavedclaims";
 import { useSendPermission } from "../../lib/usesendpermission";
 import { ApprovalDetailModal } from "./approvaldetail";
 import {
@@ -50,6 +51,7 @@ import {
   approvalExpiryLabel,
   approvalLabel,
   decisionSkewKey,
+  type EditableField,
   editableStrings,
   requiredMailFields,
 } from "./approvalkind";
@@ -155,6 +157,21 @@ function announceApproval(
       onAct: () => navigate(undoTarget),
     },
   });
+}
+
+function editedAwayFromProposal(
+  editing: boolean,
+  fields: readonly EditableField[],
+  change: Readonly<Record<string, unknown>>,
+  draft: Readonly<Record<string, string>>,
+): boolean {
+  return (
+    editing &&
+    fields.some(
+      (entry) =>
+        draft[entry.field] !== editableSeed(entry, change[entry.field]),
+    )
+  );
 }
 
 function mailboxCannotSend(
@@ -345,6 +362,12 @@ export function ApprovalRow({
 
   // The editor closes only once the server took the decision, so a refusal
   // leaves the typed text where it was.
+  // Typed text the decision panel's Escape, X and backdrop must ask about.
+  useUnsavedGuard(
+    editedAwayFromProposal(editing, strings, change, draft),
+    `approval-edit:${approval.id}`,
+  );
+
   const approveEdited = () => {
     if (!acceptable) return;
     lawfulBasis.gate(() => {

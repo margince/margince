@@ -142,13 +142,20 @@ func (s *Store) PreviewSend(ctx context.Context, origin SendOrigin, in PreviewSe
 	if preview.ContentFindings, err = s.draftContentFindings(ctx, in, preview.Decisions); err != nil {
 		return SendPreview{}, err
 	}
-	if _, err := s.sendableMailProvider(ctx); err != nil {
-		if _, none := errors.AsType[*MailboxNotSendCapableError](err); !none {
-			return SendPreview{}, err
-		}
-		preview.MailboxUnavailable = true
+	if preview.MailboxUnavailable, err = s.mailboxUnavailable(ctx); err != nil {
+		return SendPreview{}, err
 	}
 	return s.withReadablePreviewSubjects(ctx, preview)
+}
+
+// mailboxUnavailable asks the question the send asks. Only the refusal that
+// names a missing mailbox is an answer. Any other error is a failed question.
+func (s *Store) mailboxUnavailable(ctx context.Context) (bool, error) {
+	_, err := s.sendableMailProvider(ctx)
+	if _, none := errors.AsType[*MailboxNotSendCapableError](err); none {
+		return true, nil
+	}
+	return false, err
 }
 
 // errPreviewFiled unwinds the preview's transaction once it has its answer:
