@@ -23,7 +23,7 @@ To move many deals at once, tick them on the **Deals** list and use **Move to st
 1. On **Deals**, tick the box of each deal.
 2. Choose **Move to stage**, then **Pick a stage**, then **Move**.
 
-This offers open stages only, and skips deals already on that stage. You cannot win or lose many deals at once: close each one on its own page. Only open deals that are not archived have a box to tick. Also called: bulk edit, mass update deal stage.
+This offers open stages only, and skips deals already on that stage. A note then says how many moved and how many were already there. When every ticked deal is already there, nothing moves and the ticks stay. You cannot win or lose many deals at once: close each one on its own page. Only open deals that are not archived have a box to tick. Also called: bulk edit, mass update deal stage.
 
 ### How do I mark a deal as won?
 To mark a deal as won in Margince, move it to a stage whose **Stage type** is **Won**. In the pipeline you start with, that is the stage called Won. On the board, **Mark won** in the card's **…** menu does the same.
