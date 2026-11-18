@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
@@ -47,9 +48,18 @@ func (r Review) AssessmentRevision() string {
 	var parts []string
 	for _, refusal := range r.Refusals {
 		parts = append(parts, refusal.Address, refusal.SubjectKind, refusal.SubjectID, refusal.ReasonCode, string(refusal.claim()), refusal.FooterDigest, refusal.PolicyRevision)
+		// The scope sameInstructionScope compares, by value: a pointer prints as an address.
+		parts = append(parts, optionalIDText(refusal.SendingEntity), optionalIDText(refusal.PurposeID), optionalIDText(refusal.DealID))
 		parts = append(parts, fmt.Sprintf("%q", refusal.FooterFindings), fmt.Sprintf("%q", refusal.FooterPreview))
 	}
 	return fmt.Sprintf("%x", sha256.Sum256([]byte(fmt.Sprintf("%q", parts))))
+}
+
+func optionalIDText(id *ids.UUID) string {
+	if id == nil {
+		return ""
+	}
+	return id.String()
 }
 
 func (r Review) checkAcknowledgement(revision string) error {

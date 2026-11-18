@@ -8014,7 +8014,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "directSend.alreadySettled":
     "Đã có quyết định cho mục này. Mở phần xem lại để xem kết quả.",
   "directSend.couldNotOpen": "Không thể mở phần xem lại. Thử lại.",
-  "directSend.title": "Gửi kèm lý do",
+  "directSend.title": "Gửi email kèm lý do?",
   "directSend.confirm": "Gửi email",
   "directSend.changed":
     "Kết quả kiểm tra email đã thay đổi. Đọc thông tin mới và xác nhận lại. Lý do của bạn vẫn được giữ.",

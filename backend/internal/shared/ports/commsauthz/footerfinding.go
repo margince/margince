@@ -12,6 +12,8 @@ type FooterFinding struct {
 	MissingMeans []string `json:"missing_means"`
 }
 
+// SameFooterFindings reports whether two lists name the same missing
+// disclosures, which is how a stored review is told apart from a changed one.
 func SameFooterFindings(a, b []FooterFinding) bool {
 	return slices.EqualFunc(a, b, func(x, y FooterFinding) bool {
 		return x.Kind == y.Kind && x.Language == y.Language && slices.Equal(x.MissingMeans, y.MissingMeans)

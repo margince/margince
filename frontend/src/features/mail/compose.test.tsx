@@ -14,6 +14,7 @@ import {
   fillSendableForm,
   jsonResponse,
   PROVISIONAL_VOICE_PROFILE,
+  pressSend,
   problemResponse,
   render,
   stubRoutes,
@@ -615,7 +616,7 @@ describe("ComposeModal", () => {
     );
     await screen.findByRole("combobox", { name: WHY_ASK });
     await fillSendableForm();
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());
     const req = sent.find((r) => r.key === "POST /activities/act-1/send-email");
@@ -662,7 +663,7 @@ describe("ComposeModal", () => {
     );
     await screen.findByRole("combobox", { name: WHY_ASK });
     await fillSendableForm();
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
 
     // The refusal named no reason, so it names no cause, consent included.
     expect(
@@ -689,7 +690,7 @@ describe("ComposeModal", () => {
     );
     await screen.findByRole("combobox", { name: WHY_ASK });
     await fillSendableForm();
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
 
     expect(await screen.findByText(/Sending is unavailable/i)).toBeTruthy();
     expect(onClose).not.toHaveBeenCalled();
@@ -714,7 +715,7 @@ describe("ComposeModal", () => {
     );
     await screen.findByRole("combobox", { name: WHY_ASK });
     await fillSendableForm();
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
 
     expect(await screen.findByText(/The request failed/i)).toBeTruthy();
     expect(onClose).not.toHaveBeenCalled();

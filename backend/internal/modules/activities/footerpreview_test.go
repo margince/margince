@@ -102,3 +102,17 @@ func TestTheFooterPreviewShowsTheCategoryTheSendUses(t *testing.T) {
 		t.Errorf("the preview asked the footer for entities %v, want %s", disclosures.entities, entity)
 	}
 }
+
+// A store with no linker sends no unsubscribe link, so its preview offers none.
+func TestMailFooterPreviewOffersNoUnsubscribeWithoutALinker(t *testing.T) {
+	ctx := principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalHuman, ID: "human:fixture", Permissions: principal.Permissions{Objects: map[string]principal.ObjectGrant{"activity": {Create: true}}}})
+	store := (&Store{}).WithDisclosures(&stubDisclosures{}).WithPublicBaseURL("https://crm.example.test")
+	input := SendEmailInput{Context: commsauthz.CategoryMarketing, ConsentPurpose: "newsletter", Recipients: []string{"buyer@example.test"}}
+	preview, err := store.PreviewMailFooter(ctx, SendOrigin{}, nil, input, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if preview.OffersUnsubscribe {
+		t.Fatal("the preview offers an unsubscribe link the send cannot add")
+	}
+}

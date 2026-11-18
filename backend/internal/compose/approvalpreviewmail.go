@@ -6,7 +6,6 @@ package compose
 import (
 	"context"
 	"fmt"
-	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"strings"
 	"time"
 
@@ -14,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
 const (

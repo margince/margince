@@ -11,6 +11,7 @@ import { ComposeModal } from "./compose";
 import {
   fillSendableForm,
   jsonResponse,
+  pressSend,
   problemResponse,
   render,
   stubRoutes,
@@ -123,7 +124,7 @@ describe("sending with a recorded exception", () => {
     for (const key of timelineKeys) queryClient.setQueryData(key, []);
     await screen.findByText("Saved draft restored");
     await fillSendableForm();
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
 
     await userEvent.click(
       await screen.findByRole("button", {

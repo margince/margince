@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
@@ -28,7 +29,7 @@ func snapshotPolicyFacts(ctx context.Context, tx pgx.Tx, decision commsauthz.Dec
 	}
 	var withdrawals string
 	err = tx.QueryRow(ctx, `SELECT coalesce(string_agg(id::text, ',' ORDER BY id),'') FROM consent_event
- WHERE new_state='withdrawn' AND (contact_id=@subject OR lead_id=@subject)`, pgx.StrictNamedArgs{"subject": decision.SubjectID}).Scan(&withdrawals)
+ WHERE new_state='withdrawn' AND (contact_id=@subject OR lead_id=@subject)`, pgx.StrictNamedArgs{fieldSubject: decision.SubjectID}).Scan(&withdrawals)
 	if err != nil {
 		return commsauthz.Decision{}, fmt.Errorf("consent: reading the facts behind the message warning: %w", err)
 	}

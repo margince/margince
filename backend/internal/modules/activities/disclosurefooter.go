@@ -19,10 +19,10 @@ package activities
 
 import (
 	"context"
-	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
 // DisclosureLine is one obligation and the words that meet it. Mirrors

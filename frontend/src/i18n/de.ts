@@ -8217,7 +8217,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Darüber wurde bereits entschieden. Öffne die Prüfung, um das Ergebnis zu sehen.",
   "directSend.couldNotOpen":
     "Die Prüfung konnte nicht geöffnet werden. Bitte versuche es erneut.",
-  "directSend.title": "Mit Begründung senden",
+  "directSend.title": "E-Mail mit Begründung senden?",
   "directSend.confirm": "E-Mail senden",
   "directSend.changed":
     "Die E-Mail-Prüfung hat sich geändert. Lies die aktualisierten Hinweise und bestätige erneut. Deine Begründung bleibt erhalten.",

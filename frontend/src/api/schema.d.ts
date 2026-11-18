@@ -54656,7 +54656,7 @@ export interface components {
              *     without one would record a decision nobody made.
              */
             acknowledged: boolean;
-            /** @description The review revision the sender read. Required when footer findings apply. */
+            /** @description The review revision the sender read. Required when footer findings apply or a refusal is the recipient's own choice, such as an objection. */
             assessment_revision?: string;
             /**
              * @description The refusal reason codes the director was shown, from the review's `refusals`. When the

@@ -8216,7 +8216,7 @@ export const en = {
   "directSend.alreadySettled":
     "This has already been decided. Open the review for the outcome.",
   "directSend.couldNotOpen": "The review could not be opened. Retry.",
-  "directSend.title": "Send with a reason",
+  "directSend.title": "Send email with reason?",
   "directSend.confirm": "Send email",
   "directSend.changed":
     "The email checks changed. Read the updated details and confirm again. Your reason is kept.",

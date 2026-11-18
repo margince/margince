@@ -18,6 +18,7 @@ import {
   fillSendableForm,
   jsonResponse,
   pickWhy,
+  pressSend,
   problemResponse,
   render,
   stubRoutes,
@@ -352,5 +353,31 @@ describe("a refusal a reason may lift", () => {
       screen.queryByRole("button", { name: "Send with a recorded exception" }),
     ).toBeNull();
     expect(posted(sent)).toHaveLength(0);
+  });
+});
+
+describe("an older server's footer refusal", () => {
+  it("holds Send for the refused message and frees it once the message changes", async () => {
+    let presses = 0;
+    const sent = stubEngine((addresses) => allowedPreview(addresses), {
+      "POST /emails": () => {
+        presses += 1;
+        return presses === 1
+          ? problemResponse(
+              { code: "public_origin_unusable", title: "Unprocessable" },
+              422,
+            )
+          : jsonResponse({}, 202);
+      },
+    });
+    openComposer();
+    await fillSendableForm();
+    await pressSend();
+    await screen.findByText(/ask an administrator to update Margince/i);
+    expect(sendButton()).toBeDisabled();
+
+    await userEvent.type(screen.getByLabelText("Subject"), " again");
+    await pressSend();
+    await waitFor(() => expect(posted(sent)).toHaveLength(2));
   });
 });

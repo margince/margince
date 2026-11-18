@@ -16,19 +16,13 @@ import {
   type CommunicationContext,
   contextFor,
 } from "../../lib/compose-context";
-import {
-  isConsentNotGranted,
-  ProblemError,
-  problemCodeOf,
-  problemFieldErrorsOf,
-  problemMessageOf,
-  throwProblem,
-} from "../../lib/problem";
+import { problemMessageOf, throwProblem } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import { useSendPermission } from "../../lib/usesendpermission";
 import type { ChosenFile } from "./composeattachments";
 import type { ComposeFields } from "./composefields";
 import { composedLinks, type Link, type SendGrounding } from "./composelinks";
+import { type Refusal, refusalOf } from "./composerefusal";
 import type { RelinkKind } from "./composerelink";
 import type { useSavedDraft } from "./composesaveddraft";
 import { scheduleFields } from "./composeschedule";
@@ -39,38 +33,6 @@ import { sendReviewOf } from "./sendreview";
 
 type Activity = components["schemas"]["Activity"];
 type Preview = components["schemas"]["SendAuthorizationPreview"];
-
-// The refusals a rep can act on, as opposed to failures. Anything else keeps
-// the server's own message, so this surface invents no copy for it.
-export type Refusal =
-  | "consent"
-  | "mailbox"
-  | "sharedUnsubscribe"
-  | "legacyFooter"
-  | null;
-
-// Consent is a 409 naming itself, a mailbox that cannot send a 422 naming no
-// field, and a shared unsubscribe link a 422 field fault on the recipients.
-export function refusalOf(error: unknown): Refusal {
-  if (error instanceof ProblemError && isConsentNotGranted(error.problem)) {
-    return "consent";
-  }
-  if (problemCodeOf(error) === "mailbox_not_send_capable") {
-    return "mailbox";
-  }
-  if (
-    problemCodeOf(error) === "public_origin_unusable" ||
-    problemFieldErrorsOf(error).some(
-      ({ code }) => code === "undisclosable_obligation",
-    )
-  )
-    return "legacyFooter";
-  const shared = problemFieldErrorsOf(error).some(
-    ({ field, code }) =>
-      field === "recipients" && code === "shared_unsubscribe_token",
-  );
-  return shared ? "sharedUnsubscribe" : null;
-}
 
 type SendRequest = {
   activityId?: string;
@@ -232,6 +194,19 @@ export function refusalIsCurrent(
     (directing || sent.answerAtSend === preview) &&
     messageOf(sent) === messageOf(now)
   );
+}
+
+// An older server's footer refusal holds only the message it refused, so a
+// changed message or a new check can be sent again.
+function refusalStillShown(
+  refusal: Refusal,
+  sent: SendRequest | undefined,
+  now: SendRequest,
+  preview: Preview | undefined,
+): Refusal {
+  return refusal === "legacyFooter" && !refusalIsCurrent(sent, now, preview)
+    ? null
+    : refusal;
 }
 
 // The message a request sends, without the bookkeeping that names drafts. A
@@ -424,8 +399,14 @@ export function useComposeSend({
     ...answer,
     refusal: refusedNow ? { refusals: sendReview?.refusals ?? [] } : null,
   };
+  const shownRefusal = refusalStillShown(
+    refusal,
+    send.variables,
+    request,
+    answer.preview,
+  );
   const hold: ReturnType<typeof sendHoldOf> =
-    refusal === "legacyFooter"
+    shownRefusal === "legacyFooter"
       ? { blocks: true, withReason: false }
       : sendHoldOf(permission, refusedNow ? sendReview : null);
   const [attempted, setAttempted] = useState(false);
@@ -485,11 +466,11 @@ export function useComposeSend({
     fields.sendUnavailable ||
     refusal === "mailbox" ||
     refusal === "sharedUnsubscribe" ||
-    refusal === "legacyFooter";
+    shownRefusal === "legacyFooter";
   return {
     send,
     blocked,
-    refusal,
+    refusal: shownRefusal,
     sendReview,
     sendError,
     claimedContext,

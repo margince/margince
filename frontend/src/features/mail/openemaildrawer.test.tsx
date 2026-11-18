@@ -18,6 +18,7 @@ import { meFixture } from "../../testing/mefixture";
 import {
   activity202,
   jsonResponse,
+  pressSend,
   render,
   stubRoutes,
 } from "./compose.testkit";
@@ -294,7 +295,7 @@ describe("the email drawer's verbs", () => {
       await user.type(screen.getByLabelText("To"), "buyer@example.test");
       await user.tab();
       writeMessage("Body", "Let us pick this up next week.");
-      await user.click(screen.getByRole("button", { name: "Send" }));
+      await pressSend(user);
       const repliedTo = target === "older" ? MESSAGE : LATEST;
       await waitFor(() =>
         expect(
