@@ -178,15 +178,22 @@ func run(ctx context.Context, module []byte, issuer, product string, generation 
 	if err == nil {
 		return stdout.Bytes(), nil
 	}
-	// wazero reports a stop on context end as an ExitError too. A stopped run
-	// said nothing about the license, so it must not read as a refusal.
-	if stopped := ctx.Err(); stopped != nil {
-		return nil, fmt.Errorf("run module: stopped before the module answered: %w", stopped)
-	}
-	if _, ok := errors.AsType[*sys.ExitError](err); ok {
+	if exit, ok := errors.AsType[*sys.ExitError](err); ok {
+		if stoppedByContext(ctx, exit) {
+			return nil, fmt.Errorf("run module: stopped before the module answered: %w", exit)
+		}
 		return nil, fmt.Errorf("%w: %s", ErrVerdict, strings.TrimSpace(stderr.String()))
 	}
 	return nil, fmt.Errorf("run module: %w", err)
+}
+
+// stoppedByContext reports wazero's own stop on context end, which arrives as an
+// ExitError too. It said nothing about the license, so it must not read as a
+// refusal. A module that exited by itself keeps its verdict, even past the
+// deadline, and the context check stops a module from forging the stop code.
+func stoppedByContext(ctx context.Context, exit *sys.ExitError) bool {
+	code := exit.ExitCode()
+	return ctx.Err() != nil && (code == sys.ExitCodeDeadlineExceeded || code == sys.ExitCodeContextCanceled)
 }
 
 // decodeResult parses the module's JSON output.

@@ -212,6 +212,11 @@ func (p Posture) Seats() (int, bool) {
 // env decides which authorities are honored (see issuers). A production
 // installation makes exactly one call, as it always has.
 func Resolve(ctx context.Context, token string, now time.Time, env runtimeenv.Environment) (Posture, error) {
+	return resolve(ctx, bundledModule, token, now, env)
+}
+
+// resolve is Resolve against a given module, so a test can run one that hangs.
+func resolve(ctx context.Context, module []byte, token string, now time.Time, env runtimeenv.Environment) (Posture, error) {
 	if strings.TrimSpace(token) == "" {
 		return Posture{State: StateAbsent, CheckedAt: now}, nil
 	}
@@ -220,7 +225,7 @@ func Resolve(ctx context.Context, token string, now time.Time, env runtimeenv.En
 	// "invalid issuer", which sends the operator after the wrong problem.
 	var first Posture
 	for _, authority := range issuers(env) {
-		result, err := check(ctx, bundledModule, authority, product, generation, token)
+		result, err := check(ctx, module, authority, product, generation, token)
 		switch {
 		case errors.Is(err, ErrVerdict):
 			if first.State == "" {
