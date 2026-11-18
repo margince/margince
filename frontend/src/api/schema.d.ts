@@ -62731,6 +62731,8 @@ export interface components {
         CaptureProvider: "gmail" | "gcal" | "gdocs" | "graph" | "graphcal" | "imap" | "test_mailbox";
         /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
         Id: string;
+        /** @description The revision token the picture's URL carries. Only a token naming the current picture makes the answer cacheable for a day. */
+        AssetRevision: string;
         /**
          * @description The act that staged a set of proposals together (`Approval.bundle_id`). It names a
          *     grouping over approval rows, not a resource of its own — there is nothing to GET, and a
@@ -66679,7 +66681,10 @@ export interface operations {
     };
     getCompanyLogo: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description The revision token the picture's URL carries. Only a token naming the current picture makes the answer cacheable for a day. */
+                v?: components["parameters"]["AssetRevision"];
+            };
             header?: never;
             path: {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
@@ -66715,7 +66720,10 @@ export interface operations {
     };
     getCompanyLogoIcon: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description The revision token the picture's URL carries. Only a token naming the current picture makes the answer cacheable for a day. */
+                v?: components["parameters"]["AssetRevision"];
+            };
             header?: never;
             path: {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
@@ -84319,7 +84327,10 @@ export interface operations {
     };
     getLegalEntityLogo: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description The revision token the picture's URL carries. Only a token naming the current picture makes the answer cacheable for a day. */
+                v?: components["parameters"]["AssetRevision"];
+            };
             header?: never;
             path: {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
@@ -93282,8 +93293,8 @@ export interface operations {
     getUserAvatar: {
         parameters: {
             query?: {
-                /** @description The revision token `avatar_url` carries. Only a token naming the current picture makes the answer cacheable for a day. */
-                v?: string;
+                /** @description The revision token the picture's URL carries. Only a token naming the current picture makes the answer cacheable for a day. */
+                v?: components["parameters"]["AssetRevision"];
             };
             header?: never;
             path: {

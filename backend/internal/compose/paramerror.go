@@ -22,7 +22,7 @@ import (
 func contractRouter(srv crmcontracts.ServerInterface, outer ...crmcontracts.MiddlewareFunc) *chi.Mux {
 	router := chi.NewRouter()
 	router.Use(compressAPIJSON)
-	middlewares := append([]crmcontracts.MiddlewareFunc{refuseUnknownQueryEnum, refuseQueryBelowMinimum}, outer...)
+	middlewares := append([]crmcontracts.MiddlewareFunc{refuseUndeclaredQueryParameter, refuseUnknownQueryEnum, refuseQueryBelowMinimum}, outer...)
 	crmcontracts.HandlerWithOptions(srv, crmcontracts.ChiServerOptions{
 		BaseURL:     httpserver.BaseURL,
 		BaseRouter:  router,

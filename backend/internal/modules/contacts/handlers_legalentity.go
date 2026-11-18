@@ -102,7 +102,7 @@ func (h Handlers) ArchiveLegalEntity(w http.ResponseWriter, r *http.Request, id 
 }
 
 // GetLegalEntityLogo implements GET /legal-entities/{id}/logo.
-func (h Handlers) GetLegalEntityLogo(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+func (h Handlers) GetLegalEntityLogo(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.GetLegalEntityLogoParams) {
 	key, err := h.store.LegalEntityLogoKey(r.Context(), pathID[ids.LegalEntityKind](id))
 	if err != nil {
 		writeStoreErr(w, r, err)

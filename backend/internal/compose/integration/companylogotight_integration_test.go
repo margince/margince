@@ -56,7 +56,7 @@ func getLogo(ctx context.Context, t *testing.T, handlers contacts.Handlers, comp
 	t.Helper()
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/v1/companies/"+companyID.String()+"/logo", nil).WithContext(ctx)
-	handlers.GetCompanyLogo(rec, req, crmcontracts.Id(companyID.UUID))
+	handlers.GetCompanyLogo(rec, req, crmcontracts.Id(companyID.UUID), crmcontracts.GetCompanyLogoParams{})
 	if rec.Code != http.StatusOK {
 		t.Fatalf("GET logo = %d, want 200: %s", rec.Code, rec.Body.String())
 	}

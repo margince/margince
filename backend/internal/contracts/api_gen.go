@@ -73366,6 +73366,9 @@ type AnchorRecordType string
 // ApprovalToken defines model for ApprovalToken.
 type ApprovalToken = string
 
+// AssetRevision defines model for AssetRevision.
+type AssetRevision = string
+
 // BriefProjectId defines model for BriefProjectId.
 type BriefProjectId = openapi_types.UUID
 
@@ -75834,6 +75837,18 @@ type LinkCompanyContactsParams struct {
 	// than half-honouring it, so read this contract, not the client, to know which calls are safe
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// GetCompanyLogoParams defines parameters for GetCompanyLogo.
+type GetCompanyLogoParams struct {
+	// V The revision token the picture's URL carries. Only a token naming the current picture makes the answer cacheable for a day.
+	V *AssetRevision `form:"v,omitempty" json:"v,omitempty"`
+}
+
+// GetCompanyLogoIconParams defines parameters for GetCompanyLogoIcon.
+type GetCompanyLogoIconParams struct {
+	// V The revision token the picture's URL carries. Only a token naming the current picture makes the answer cacheable for a day.
+	V *AssetRevision `form:"v,omitempty" json:"v,omitempty"`
 }
 
 // MergeCompanyJSONBody defines parameters for MergeCompany.
@@ -78583,6 +78598,12 @@ type UploadLegalEntityLogoParams struct {
 	IfMatch *IfMatch `json:"If-Match,omitempty"`
 }
 
+// GetLegalEntityLogoParams defines parameters for GetLegalEntityLogo.
+type GetLegalEntityLogoParams struct {
+	// V The revision token the picture's URL carries. Only a token naming the current picture makes the answer cacheable for a day.
+	V *AssetRevision `form:"v,omitempty" json:"v,omitempty"`
+}
+
 // ListLegalReviewsParams defines parameters for ListLegalReviews.
 type ListLegalReviewsParams struct {
 	Status *ListLegalReviewsParamsStatus `form:"status,omitempty" json:"status,omitempty"`
@@ -81096,8 +81117,8 @@ type NameSeatsParams struct {
 
 // GetUserAvatarParams defines parameters for GetUserAvatar.
 type GetUserAvatarParams struct {
-	// V The revision token `avatar_url` carries. Only a token naming the current picture makes the answer cacheable for a day.
-	V *string `form:"v,omitempty" json:"v,omitempty"`
+	// V The revision token the picture's URL carries. Only a token naming the current picture makes the answer cacheable for a day.
+	V *AssetRevision `form:"v,omitempty" json:"v,omitempty"`
 }
 
 // HandOverUserWorkParams defines parameters for HandOverUserWork.
@@ -97568,10 +97589,10 @@ type ServerInterface interface {
 	GetCompanyLinkedInReach(w http.ResponseWriter, r *http.Request, id Id)
 	// Stream a company's logo image.
 	// (GET /companies/{id}/logo)
-	GetCompanyLogo(w http.ResponseWriter, r *http.Request, id Id)
+	GetCompanyLogo(w http.ResponseWriter, r *http.Request, id Id, params GetCompanyLogoParams)
 	// Stream a company's square logo icon.
 	// (GET /companies/{id}/logo/icon)
-	GetCompanyLogoIcon(w http.ResponseWriter, r *http.Request, id Id)
+	GetCompanyLogoIcon(w http.ResponseWriter, r *http.Request, id Id, params GetCompanyLogoIconParams)
 	// Merge this company into a target (non-lossy).
 	// (POST /companies/{id}/merge)
 	MergeCompany(w http.ResponseWriter, r *http.Request, id Id, params MergeCompanyParams)
@@ -98672,7 +98693,7 @@ type ServerInterface interface {
 	UploadLegalEntityLogo(w http.ResponseWriter, r *http.Request, id Id, params UploadLegalEntityLogoParams)
 	// Stream a legal entity's logo image.
 	// (GET /legal-entities/{id}/logo/image)
-	GetLegalEntityLogo(w http.ResponseWriter, r *http.Request, id Id)
+	GetLegalEntityLogo(w http.ResponseWriter, r *http.Request, id Id, params GetLegalEntityLogoParams)
 	// The users assigned to this legal entity.
 	// (GET /legal-entities/{id}/members)
 	ListLegalEntityMembers(w http.ResponseWriter, r *http.Request, id Id)
@@ -101873,13 +101894,13 @@ func (_ Unimplemented) GetCompanyLinkedInReach(w http.ResponseWriter, r *http.Re
 
 // Stream a company's logo image.
 // (GET /companies/{id}/logo)
-func (_ Unimplemented) GetCompanyLogo(w http.ResponseWriter, r *http.Request, id Id) {
+func (_ Unimplemented) GetCompanyLogo(w http.ResponseWriter, r *http.Request, id Id, params GetCompanyLogoParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // Stream a company's square logo icon.
 // (GET /companies/{id}/logo/icon)
-func (_ Unimplemented) GetCompanyLogoIcon(w http.ResponseWriter, r *http.Request, id Id) {
+func (_ Unimplemented) GetCompanyLogoIcon(w http.ResponseWriter, r *http.Request, id Id, params GetCompanyLogoIconParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -104081,7 +104102,7 @@ func (_ Unimplemented) UploadLegalEntityLogo(w http.ResponseWriter, r *http.Requ
 
 // Stream a legal entity's logo image.
 // (GET /legal-entities/{id}/logo/image)
-func (_ Unimplemented) GetLegalEntityLogo(w http.ResponseWriter, r *http.Request, id Id) {
+func (_ Unimplemented) GetLegalEntityLogo(w http.ResponseWriter, r *http.Request, id Id, params GetLegalEntityLogoParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -121763,8 +121784,24 @@ func (siw *ServerInterfaceWrapper) GetCompanyLogo(w http.ResponseWriter, r *http
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetCompanyLogoParams
+
+	// ------------- Optional query parameter "v" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "v", r.URL.Query(), &params.V, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "v"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "v", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetCompanyLogo(w, r, id)
+		siw.Handler.GetCompanyLogo(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -121797,8 +121834,24 @@ func (siw *ServerInterfaceWrapper) GetCompanyLogoIcon(w http.ResponseWriter, r *
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetCompanyLogoIconParams
+
+	// ------------- Optional query parameter "v" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "v", r.URL.Query(), &params.V, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "v"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "v", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetCompanyLogoIcon(w, r, id)
+		siw.Handler.GetCompanyLogoIcon(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -137601,8 +137654,24 @@ func (siw *ServerInterfaceWrapper) GetLegalEntityLogo(w http.ResponseWriter, r *
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetLegalEntityLogoParams
+
+	// ------------- Optional query parameter "v" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "v", r.URL.Query(), &params.V, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "v"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "v", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetLegalEntityLogo(w, r, id)
+		siw.Handler.GetLegalEntityLogo(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {

@@ -41,6 +41,9 @@ type queryMinimum struct {
 type routeQuery struct {
 	enums    []queryEnum
 	minimums []queryMinimum
+	// declared is every query parameter name the operation lists, so the server
+	// can name a key the operation does not. Nil leaves the operation unchecked.
+	declared []string
 }
 
 func main() {
@@ -81,19 +84,46 @@ func deriveTable(doc *openapi3.T) (map[string]routeQuery, error) {
 		for method, op := range item.Operations() {
 			byName := queryParams(item.Parameters, op.Parameters)
 			enums, err := enumsOf(byName)
+			var minimums []queryMinimum
 			if err == nil {
-				var minimums []queryMinimum
 				minimums, err = minimumsOf(byName)
-				if len(enums)+len(minimums) > 0 {
-					table[method+" "+httpserver.BaseURL+path] = routeQuery{enums: enums, minimums: minimums}
-				}
 			}
 			if err != nil {
 				return nil, fmt.Errorf("%s %s: %w", method, path, err)
 			}
+			declared := make([]string, 0, len(byName))
+			if !checksUndeclaredKeys(op) {
+				declared = nil
+			}
+			for name, param := range byName {
+				if param.Schema != nil && param.Schema.Value != nil && param.Schema.Value.Type.Is(openapi3.TypeObject) {
+					return nil, fmt.Errorf("%s %s: query parameter %q is an object, whose keys the unknown-parameter check cannot name", method, path, name)
+				}
+				if declared != nil {
+					declared = append(declared, name)
+				}
+			}
+			sort.Strings(declared)
+			table[method+" "+httpserver.BaseURL+path] = routeQuery{enums: enums, minimums: minimums, declared: declared}
 		}
 	}
 	return table, nil
+}
+
+// openQueryExtension marks an operation whose handler reads query keys the
+// contract cannot list, such as a report derivation's field predicates.
+const openQueryExtension = "x-open-query"
+
+// checksUndeclaredKeys says whether the server refuses a query key the
+// operation does not declare. An anonymous operation (`security: []`) is
+// reached by mail links, provider redirects and vendor webhooks that add keys
+// of their own, so it is left alone, as is one marked open.
+func checksUndeclaredKeys(op *openapi3.Operation) bool {
+	if op.Security != nil && len(*op.Security) == 0 {
+		return false
+	}
+	open, _ := op.Extensions[openQueryExtension].(bool)
+	return !open
 }
 
 func queryParams(pathLevel, opLevel openapi3.Parameters) map[string]*openapi3.Parameter {
@@ -249,6 +279,21 @@ func render(table map[string]routeQuery) string {
 			fmt.Fprintf(&b, "\t\t{Name: %q, Minimum: %d},\n", m.Name, m.Minimum)
 		}
 		b.WriteString("\t},\n")
+	}
+	b.WriteString("}\n\n")
+	b.WriteString("// queryParamTable maps \"METHOD /v1/path\" to every query parameter the\n")
+	b.WriteString("// operation declares. An operation with none maps to an empty list; one the\n")
+	b.WriteString("// server leaves unchecked (anonymous or open-query) is absent.\n")
+	b.WriteString("var queryParamTable = map[string][]string{\n")
+	for _, route := range routes {
+		if table[route].declared == nil {
+			continue
+		}
+		quoted := make([]string, len(table[route].declared))
+		for i, name := range table[route].declared {
+			quoted[i] = fmt.Sprintf("%q", name)
+		}
+		fmt.Fprintf(&b, "\t%q: {%s},\n", route, strings.Join(quoted, ", "))
 	}
 	b.WriteString("}\n")
 	return b.String()

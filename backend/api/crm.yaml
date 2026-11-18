@@ -3964,6 +3964,8 @@ paths:
         404 when the company has no resolved logo, is invisible to the caller, or does
         not exist — a client renders the deterministic monogram for all three alike. 501 when
         the deployment has no object store configured.
+      parameters:
+        - $ref: '#/components/parameters/AssetRevision'
       responses:
         '200':
           description: The normalized logo bytes.
@@ -4001,6 +4003,8 @@ paths:
         invisible to the caller or does not exist; a client falls back to the wide mark,
         or to the deterministic monogram, for all of them alike. 501 when the deployment
         has no object store configured.
+      parameters:
+        - $ref: '#/components/parameters/AssetRevision'
       responses:
         '200':
           description: The normalized icon bytes.
@@ -18623,6 +18627,7 @@ paths:
     get:
       tags: [Reports]
       operationId: explainReport
+      x-open-query: true
       x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
       summary: '"Explain This Number" — resolve a derivation handle to its definition + source rows.'
       description: |
@@ -19956,6 +19961,8 @@ paths:
         apart from the upload, so a conditional upload takes its version from the entity. 404
         when the entity has no logo. The default entity's logo is the company's, served by
         `GET /companies/{id}/logo`.
+      parameters:
+        - $ref: '#/components/parameters/AssetRevision'
       responses:
         '200':
           description: The normalized logo bytes.
@@ -29458,11 +29465,7 @@ paths:
         `no-cache`, so a stale URL never pins the new bytes. `If-None-Match` with the
         `ETag` answers 304.
       parameters:
-        - name: v
-          in: query
-          required: false
-          description: The revision token `avatar_url` carries. Only a token naming the current picture makes the answer cacheable for a day.
-          schema: { type: string, maxLength: 64 }
+        - $ref: '#/components/parameters/AssetRevision'
       responses:
         '200':
           description: The picture's bytes.
@@ -38928,6 +38931,12 @@ components:
       required: true
       schema: { type: string, format: uuid }
       description: Opaque resource id (UUID; ordering semantics are not exposed).
+    AssetRevision:
+      name: v
+      in: query
+      required: false
+      description: The revision token the picture's URL carries. Only a token naming the current picture makes the answer cacheable for a day.
+      schema: { type: string, maxLength: 64 }
     BundleId:
       name: bundle_id
       in: path

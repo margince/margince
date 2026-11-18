@@ -102,10 +102,10 @@ func TestTheSquareBadgeIsStoredWithoutDisturbingTheWideMark(t *testing.T) {
 	// compared against each other rather than merely inspected.
 	serve := contacts.NewHandlers(e.DB()).WithBlobstore(blob)
 	badge := streamedMark(ctx, t, func(recorder *httptest.ResponseRecorder, request *http.Request) {
-		serve.GetCompanyLogoIcon(recorder, request, crmcontracts.Id(company.CompanyID.UUID))
+		serve.GetCompanyLogoIcon(recorder, request, crmcontracts.Id(company.CompanyID.UUID), crmcontracts.GetCompanyLogoIconParams{})
 	}, "/v1/companies/"+company.CompanyID.String()+"/logo/icon")
 	wordmark := streamedMark(ctx, t, func(recorder *httptest.ResponseRecorder, request *http.Request) {
-		serve.GetCompanyLogo(recorder, request, crmcontracts.Id(company.CompanyID.UUID))
+		serve.GetCompanyLogo(recorder, request, crmcontracts.Id(company.CompanyID.UUID), crmcontracts.GetCompanyLogoParams{})
 	}, "/v1/companies/"+company.CompanyID.String()+"/logo")
 	if bytes.Equal(badge, wordmark) {
 		t.Fatal("the two endpoints stream identical bytes — one of them is reading the other's column")
