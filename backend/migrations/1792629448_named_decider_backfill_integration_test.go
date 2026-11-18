@@ -22,7 +22,7 @@ func TestTheDeciderBackfillPutsAPromiseOnlyToItsPromiser(t *testing.T) {
 	resetSchema(t, conn)
 	ctx := context.Background()
 
-	core, err := migrations.Core()
+	core, err := migrations.CoreHistory()
 	if err != nil {
 		t.Fatalf("loading core: %v", err)
 	}
