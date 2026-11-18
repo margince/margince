@@ -7715,6 +7715,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.savedDraftDelete": "Xóa",
   "compose.savedDraftDeleted": "Đã xóa bản nháp đã lưu",
   "compose.savedDraftRestored": "Đã khôi phục bản nháp đã lưu",
+  "compose.savedDraftUndoSent": "Thư đã được gửi nên bản nháp vẫn bị xóa.",
   "compose.savedDraftRemove": "Xóa bản nháp đã lưu",
   "compose.savedDraftByAgent":
     "Đã khôi phục bản nháp của trợ lý AI. Đọc trước khi gửi.",
@@ -20579,6 +20580,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.meetingNoShow": "Vắng mặt",
   "worklist.verb.meetingCanceled": "Không diễn ra",
   "worklist.verb.meetingOutcomeRecorded": "Đã ghi nhận kết quả cuộc họp",
+  "worklist.verb.meetingCanceledRecorded":
+    "Đã đánh dấu là không diễn ra (đã hủy).",
   "worklist.verb.meetingOutcomeFailed": "Không thể ghi nhận kết quả. Thử lại.",
   "worklist.verb.meetingDayMissing":
     "Ngày này không có trong múi giờ của công ty. Chọn ngày khác.",
