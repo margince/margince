@@ -239,19 +239,12 @@ Also called: action items, follow-ups from a meeting, commitments in an email.
 ### What happens to a request in an email?
 When a customer email asks you for something and nobody answered, Margince files a task for you.
 It is due on a day the email names, such as "Deadline: 27 October", and has **No due date** if it names none.
-- It needs a clear request. A note that only tells you something, or one Margince cannot judge,
-  stays in review and does not claim to be urgent.
-- The task takes the place of the email in your Worklist, and its source opens the email. If you can
-  no longer open the email, you cannot read the task either.
-- Completing the task closes the request for every reader. Archiving it before it is done sends the
-  request back to review, with no new task.
-- A reply closes only its own conversation, and does not prove the promised thing was sent. The task
-  stays until someone handles it.
-- Private mail is checked too, and its task is visible to you alone. Mail marked confidential, or
-  held because of who it is with, because only colleagues are on it, or by hand, is never sent to
-  the AI. Such mail ranks as a request only when you wrote on its conversation first.
-- An admin turns the check of private mail off under **Settings → AI models → Tasks**, with
-  **Check private mail for requests**. Private mail is then treated like held mail.
+- It needs a clear request. A note that only tells you something, or one Margince cannot judge, stays in review and does not claim to be urgent.
+- The task takes the place of the email in your Worklist, and its source opens the email. If you can no longer open the email, you cannot read the task either.
+- Completing the task closes the request for every reader. Archiving it before it is done sends the request back to review, with no new task.
+- A reply closes only its own conversation, and does not prove the promised thing was sent. The task stays until someone handles it.
+- Private mail is checked too, and its task is visible to you alone. The AI never reads mail marked confidential or held by hand. It also skips mail held because of who it is with, or because only colleagues are on it. Such mail counts as a request only when you wrote on its conversation first.
+- An admin turns this off under **Settings → AI models → Tasks**, with **Check private mail for requests**. Then the AI reads no private mail.
 - When it is not clear whose task it is, Margince leaves the email for review.
 Also called: customer request, email nobody answered, email to-do, private email request.
 
@@ -388,9 +381,7 @@ Your brief and digest stay personal. **Team**, **All**, and teammate views show 
 - **Marked not sales work**
 - **Set aside by you**
 
-When nothing is held back, it says: "Nothing is hidden. Every waiting customer reaches a Worklist."
-Below that, a line such as "2 private emails not checked by AI" counts waiting mail the AI may not read.
-That mail is not hidden. It is ranked without knowing what it asks.
+When nothing is held back, it says: "Nothing is hidden. Every waiting customer reaches a Worklist." A line such as "2 private emails not checked by AI" counts waiting mail the AI may not read. That mail stays in the Worklist, ranked without the AI reading it.
 
 You can also add a note to a teammate's Worklist with **Add note** ("A short note that appears in their Worklist.").
 

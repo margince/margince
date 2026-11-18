@@ -184,7 +184,7 @@
           "default": 2
         },
         "private_mail_requests": {
-          "description": "Let the AI check whether private mail asks its reader for something. Mail held as confidential, by a counterparty or members-only hold, or by hand is never checked.",
+          "description": "Let the AI check whether private mail asks its reader for something. Only mail private because of a setting is checked; mail held for any other reason never is.",
           "type": [
             "boolean",
             "null"

@@ -20,6 +20,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/config/configtest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -127,7 +128,7 @@ func (e *loadEnv) ourSent(t *testing.T, thread string) ids.UUID {
 // waitingAs is message's waiting row as reader sees it.
 func (e *loadEnv) waitingAs(t *testing.T, reader context.Context, message ids.UUID) WaitingReply {
 	t.Helper()
-	rows, err := storeKnowing(e).WaitingReplies(reader, time.Now())
+	rows, err := storeKnowing(e).WaitingReplies(reader, clocktest.Now(t))
 	if err != nil {
 		t.Fatalf("reading who is waiting: %v", err)
 	}
@@ -143,7 +144,7 @@ func (e *loadEnv) waitingAs(t *testing.T, reader context.Context, message ids.UU
 // hiddenFor reads the hidden-backlog figures as the rep.
 func (e *loadEnv) hiddenFor(t *testing.T) HiddenBacklog {
 	t.Helper()
-	got, err := storeKnowing(e).HiddenWaiting(e.as(), time.Now())
+	got, err := storeKnowing(e).HiddenWaiting(e.as(), clocktest.Now(t))
 	if err != nil {
 		t.Fatalf("reading the hidden backlog: %v", err)
 	}
@@ -184,7 +185,7 @@ func TestRoutinePrivateMailIsJudgedAndFilesAPrivateTask(t *testing.T) {
 
 	// A colleague who was not on the mail reads neither the mail nor its task.
 	colleague := e.asSeat(e.other)
-	if e.waitingAt(colleague, t, time.Now())[waiting] {
+	if e.waitingAt(colleague, t, clocktest.Now(t))[waiting] {
 		t.Error("a colleague not on the private mail sees it waiting")
 	}
 	theirs, err := store.GetActivity(colleague, ids.From[ids.ActivityKind](task), storekit.LiveOnly)
@@ -441,7 +442,7 @@ func TestNoReminderForASeatThatMayNotReadThePrivateMail(t *testing.T) {
 			if err != nil {
 				return err
 			}
-			_, err = emailRequestTask(system, tx, mail, holder, time.Now())
+			_, err = emailRequestTask(system, tx, mail, holder, clocktest.Now(t))
 			if may && err != nil {
 				t.Errorf("the mail's own seat may not hold its reminder: %v", err)
 			}

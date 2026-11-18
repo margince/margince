@@ -46,7 +46,7 @@ var PrivateMailRequests = config.DefineStored(config.Spec[bool]{
 	Env:     "MARGINCE_ACTIVITIES_PRIVATE_MAIL_REQUESTS",
 	Type:    config.Bool,
 	Default: config.Some(true),
-	Doc:     "Let the AI check whether private mail asks its reader for something. Mail held as confidential, by a counterparty or members-only hold, or by hand is never checked.",
+	Doc:     "Let the AI check whether private mail asks its reader for something. Only mail private because of a setting is checked; mail held for any other reason never is.",
 }, config.Store{
 	RBACObject: "installation_settings", AuditVerb: settingsAuditVerb,
 	MachineryApplied: true, // the owed-reply pass reads it as the system, for every seat's mail

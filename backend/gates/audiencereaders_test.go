@@ -76,6 +76,9 @@ var audienceScopeMarkers = []string{
 	// unrelated frames away, which is the file-scope looseness both censuses
 	// were tightened away from.
 	"visibleParentClause",
+	// The owed-reply and settlement passes' audience test (activities/owedaudience.go):
+	// WorkspaceAudienceSQL, or participants mail private for a routine reason.
+	"judgeableAudienceSQL", "JudgeableAudienceTx",
 }
 
 // audienceLiteralMarkers are the inline spellings that COMPARE the column, not
