@@ -1811,6 +1811,7 @@
   "common.heldByColleague.asked": "Ein anderes Mitglied hat diesen Kontakt schon. Margince hat es gebeten, ihn mit dir zu teilen.",
   "common.duplicate.domain": "Die Domain wurde hier nicht gespeichert, da ein anderes Unternehmen sie schon hat.",
   "common.duplicate.linkedinUrl": "Das LinkedIn-Profil wurde hier nicht gespeichert, da ein anderer Lead es schon hat.",
+  "common.linkedinProfileInvalid": "Gib eine LinkedIn-Profiladresse ein, etwa https://www.linkedin.com/in/dein-name.",
   "common.duplicate.slotTaken": "Dieser Zeitpunkt ist nicht mehr verfügbar. Wähle einen anderen Zeitpunkt.",
   "common.retry": "Erneut versuchen",
   "reporting.sharedForecastGone": "Dieser Link funktioniert nicht mehr. Wer ihn dir geschickt hat, kann dir einen neuen schicken.",

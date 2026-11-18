@@ -3618,6 +3618,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Domain wurde hier nicht gespeichert, da ein anderes Unternehmen sie schon hat.",
   "common.duplicate.linkedinUrl":
     "Das LinkedIn-Profil wurde hier nicht gespeichert, da ein anderer Lead es schon hat.",
+  "common.linkedinProfileInvalid":
+    "Gib eine LinkedIn-Profiladresse ein, etwa https://www.linkedin.com/in/dein-name.",
   "common.duplicate.slotTaken":
     "Dieser Zeitpunkt ist nicht mehr verfügbar. Wähle einen anderen Zeitpunkt.",
   "common.retry": "Erneut versuchen",

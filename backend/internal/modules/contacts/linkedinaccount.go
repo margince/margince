@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/url"
 	"strings"
 	"time"
 
@@ -29,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // LinkedInAccount is what one member's LinkedIn connection amounts to.
@@ -142,12 +142,13 @@ func (s *Store) SaveMyLinkedInAccount(ctx context.Context, in SaveMyLinkedInAcco
 	}
 	// Validated only when the save carries one. A save that says nothing about
 	// the URL is not a claim about its shape.
-	var trimmed string
+	var profileURL string
 	if in.ProfileURL != nil {
-		trimmed = strings.TrimSpace(*in.ProfileURL)
-		if err := validateLinkedInProfileURL(trimmed); err != nil {
+		normalized, err := normalizeMyLinkedInProfileURL(strings.TrimSpace(*in.ProfileURL))
+		if err != nil {
 			return LinkedInAccount{}, err
 		}
+		profileURL = normalized
 	}
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		before, err := readLinkedInAccountTx(ctx, tx, actor.UserID)
@@ -165,7 +166,7 @@ func (s *Store) SaveMyLinkedInAccount(ctx context.Context, in SaveMyLinkedInAcco
 			      WHEN $3 THEN coalesce(linkedin_account.connected_at, now())
 			      ELSE linkedin_account.connected_at END,
 			    reach_visible_to_team = coalesce($4, linkedin_account.reach_visible_to_team),
-			    updated_at = now()`, actor.UserID, trimmed, in.Connected, in.ReachVisibleToTeam, in.ProfileURL != nil)
+			    updated_at = now()`, actor.UserID, profileURL, in.Connected, in.ReachVisibleToTeam, in.ProfileURL != nil)
 		if err != nil {
 			return err
 		}
@@ -197,23 +198,34 @@ func (s *Store) SaveMyLinkedInAccount(ctx context.Context, in SaveMyLinkedInAcco
 	return s.GetMyLinkedInAccount(ctx)
 }
 
-// validateLinkedInProfileURL accepts an empty value (the clear) and otherwise
-// insists on an absolute http(s) URL. A member who pastes their headline
-// instead of their address should be told so, not have it stored and rendered
-// as a broken link.
-func validateLinkedInProfileURL(s string) error {
+// maxLinkedInProfileURLLength bounds the stored address: a profile URL is a
+// host and one name, and a longer value is a paste of something else.
+const maxLinkedInProfileURLLength = 300
+
+// linkedInProfileURLInvalid is the field code of a value that is not a
+// LinkedIn profile; the client words it in the reader's language.
+const linkedInProfileURLInvalid = "linkedin_profile_url_invalid"
+
+// normalizeMyLinkedInProfileURL takes the empty clear or a LinkedIn profile in
+// the contact slot's spelling, since the address is drawn as the member's own.
+func normalizeMyLinkedInProfileURL(s string) (string, error) {
 	if s == "" {
-		return nil
+		return "", nil
 	}
-	parsed, err := url.Parse(s)
-	if err != nil || parsed.Host == "" ||
-		(parsed.Scheme != "http" && parsed.Scheme != "https") {
-		return &DedupeInputError{
-			Field: profileURLRequestField,
-			Msg:   "a LinkedIn profile URL looks like https://www.linkedin.com/in/your-name",
+	if len(s) > maxLinkedInProfileURLLength {
+		return "", &values.ParseError{
+			Field: profileURLRequestField, Code: "too_long",
+			Message: "the profile URL is too long", Max: maxLinkedInProfileURLLength,
 		}
 	}
-	return nil
+	normalized, err := NormalizeContactLinkedInURL(s)
+	if err != nil {
+		return "", &values.ParseError{
+			Field: profileURLRequestField, Code: linkedInProfileURLInvalid,
+			Message: "Enter a LinkedIn profile address such as https://www.linkedin.com/in/your-name.",
+		}
+	}
+	return normalized, nil
 }
 
 // readLinkedInAccountTx reads one member's row inside an open transaction, for
