@@ -39,13 +39,11 @@ type stubGrants struct {
 	channelCalls int
 }
 
-// ChooseSendingMailbox offers one mailbox per provider holding GrantedScopesFor's scopes.
 func (s *stubGrants) ChooseSendingMailbox(ctx context.Context, user ids.UserID, _ ids.UUID, _ ids.ActivityID, providers []string, canSend func(capture.SendingMailbox) (bool, error)) (capture.SendingMailbox, error) {
 	for _, provider := range providers {
 		scopes, err := s.GrantedScopesFor(ctx, user, provider)
-		mailbox := capture.SendingMailbox{Provider: provider, ProviderScopes: scopes}
-		if can, canErr := canSend(mailbox); err != nil || canErr != nil || can {
-			return mailbox, errors.Join(err, canErr)
+		if can, canErr := canSend(capture.SendingMailbox{Provider: provider, ProviderScopes: scopes}); err != nil || canErr != nil || can {
+			return capture.SendingMailbox{Provider: provider, ProviderScopes: scopes}, errors.Join(err, canErr)
 		}
 	}
 	return capture.SendingMailbox{}, nil

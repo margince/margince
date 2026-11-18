@@ -404,9 +404,7 @@ func driveBackfillToTerminal(t *testing.T, b *backfillWireEnv, w *captureBackfil
 	t.Fatal("backfill did not terminate within 100 executions")
 }
 
-// previewBackfill, startBackfill, backfillStatus and cancelBackfill each bind
-// one backfill op to this env's wired handler set, so a caller invokes the op
-// under test without re-reaching into the handler set for it.
+// previewBackfill, startBackfill, backfillStatus and cancelBackfill bind one op to the wired handlers.
 func (b *backfillWireEnv) previewBackfill(p crmcontracts.CaptureProvider) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		b.handlers.PreviewConnectorBackfill(w, r, p, crmcontracts.PreviewConnectorBackfillParams{})
