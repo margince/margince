@@ -355,7 +355,7 @@ func newCrawlRun(c *siteCrawler, pacer crawlPacer, seedURL string, seedPage webr
 		crawl: siteCrawl{
 			Pages:        []crawlPage{pageFrom(seedURL, crmcontracts.SiteReadPageKindHome, seedPage)},
 			SeedAssets:   declaredAssets{ogImage: seedPage.OGImage, icons: seedPage.Icons, logos: seedPage.Logos},
-			SeedSiteName: seedPage.SiteName,
+			SeedSiteName: seedPage.SiteNameOrTitle,
 			SeedURL:      seedURL,
 		},
 		visited:       visited,

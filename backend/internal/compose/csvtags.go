@@ -100,7 +100,7 @@ func (r *tagResolver) createMissing(ctx context.Context) error {
 				return fmt.Errorf("import: finding the tag %q: %w", name, err)
 			}
 			if !live {
-				return fmt.Errorf("import: the tag %q was created and retired meanwhile: %w", name, apperrors.ErrConflict)
+				return fmt.Errorf("the tag %q was created and retired meanwhile: %w", name, apperrors.ErrConflict)
 			}
 			r.byName[tagKey(name)] = ids.TagID{UUID: id}
 			continue

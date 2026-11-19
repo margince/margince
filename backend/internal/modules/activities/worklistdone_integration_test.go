@@ -16,6 +16,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -174,6 +175,21 @@ func TestDoneRefusesAnUnknownLaneAndAnAgent(t *testing.T) {
 	row := []WorklistRowRef{{Source: "deal_at_risk", RowID: ids.NewV7().String()}}
 	if err := s.MarkWorklistRowsDone(agent, row); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("Done from an agent answered %v, want a refusal", err)
+	}
+}
+
+// A row with no id names no row the queue drew. Nor does a follow-up row whose
+// id is not an activity id. Both are refused as malformed.
+func TestDoneRefusesARowIdNoRowCouldCarry(t *testing.T) {
+	e := setupLoad(t)
+	s := handledStore(e)
+	for name, row := range map[string]WorklistRowRef{
+		"an empty id":           {Source: "deal_at_risk", RowID: ""},
+		"a follow-up not by id": {Source: string(crmcontracts.WorklistItemSourceAwaitingReply), RowID: "not-an-id"},
+	} {
+		if err := s.MarkWorklistRowsDone(e.followUpReader(), []WorklistRowRef{row}); !errors.Is(err, apperrors.ErrInvalidArgument) {
+			t.Errorf("Done on %s answered %v, want an invalid argument", name, err)
+		}
 	}
 }
 

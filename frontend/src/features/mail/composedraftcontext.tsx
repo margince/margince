@@ -47,6 +47,10 @@ export function RelatedFiling({
     onDealChange(kind === "deal" ? id : "");
     onProjectChange(kind === "project" ? id : "");
   };
+  // "Nothing specific" alone is no choice to offer.
+  if (projects.length + deals.length === 0) {
+    return null;
+  }
   return (
     <Field label={t("compose.relatedTo")} labelHidden>
       {(control) => (
@@ -65,7 +69,6 @@ export function RelatedFiling({
           ]}
           value={relatedValue(dealId, projectId)}
           onChange={choose}
-          disabled={projects.length + deals.length === 0}
         />
       )}
     </Field>

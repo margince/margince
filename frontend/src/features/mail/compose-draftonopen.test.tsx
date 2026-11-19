@@ -85,6 +85,7 @@ describe("ComposeWindow draftOnOpen", () => {
   });
 
   it("redrafts once under the purpose the rep corrects", async () => {
+    const user = userEvent.setup();
     let call = 0;
     const sent = stubRoutes({
       "GET /voice-profiles": () => jsonResponse(PROVISIONAL_VOICE_PROFILE),
@@ -102,9 +103,9 @@ describe("ComposeWindow draftOnOpen", () => {
       expect(messageText("Body")).toBe("Tuesday works for us."),
     );
 
-    await userEvent.clear(purposeField());
-    await userEvent.type(purposeField(), "send the offer");
-    await userEvent.click(screen.getByRole("button", { name: "Redraft" }));
+    await user.clear(purposeField());
+    await user.type(purposeField(), "send the offer");
+    await user.click(screen.getByRole("button", { name: "Redraft" }));
 
     await waitFor(() => expect(messageText("Body")).toBe("Here is the offer."));
     const asks = sent.filter((r) => r.key === DRAFT);

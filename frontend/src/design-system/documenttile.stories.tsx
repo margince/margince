@@ -34,7 +34,7 @@ export const StoredFile: Story = {
       download: "Retrofit-proposal-v2.pdf",
     },
     mark: <Badge>Current</Badge>,
-    meta: "Proposal/Offer · 6 Nov 2026",
+    meta: ["Proposal/Offer", "6 Nov 2026"],
   },
 };
 
@@ -44,7 +44,7 @@ export const OpensDialog: Story = {
     filename: "MSA-draft.docx",
     title: "Master agreement, draft",
     open: () => undefined,
-    meta: "Shared · 84 KB",
+    meta: ["Shared", "84 KB"],
   },
 };
 
@@ -58,7 +58,22 @@ export const WebLink: Story = {
       target: "_blank",
       rel: "noopener noreferrer",
     },
-    meta: "Links sent · 6 Nov 2026",
+    meta: ["Links sent", "6 Nov 2026"],
+  },
+};
+
+// A link to a Google file: no extension to read, so the caller names the kind.
+export const GoogleFile: Story = {
+  args: {
+    filename: "docs.google.com",
+    kind: "Sheets",
+    title: "Rollout budget 2027",
+    anchor: {
+      href: "https://docs.google.com/spreadsheets/d/abc/edit",
+      target: "_blank",
+      rel: "noopener noreferrer",
+    },
+    meta: ["docs.google.com", "Offer", "19 Nov 2026"],
   },
 };
 
@@ -87,6 +102,6 @@ export const Row: Story = {
     },
     layout: "row",
     mark: <Badge>Current</Badge>,
-    meta: "Offer · 12 Oct",
+    meta: ["Offer", "12 Oct"],
   },
 };

@@ -165,6 +165,40 @@ export const WithOtherRoutes: Story = {
   ]),
 };
 
+/** Long subjects: each receipt keeps to one line under the figures, its
+ *  subject truncating and its date always on screen. */
+export const LongReceipts: Story = {
+  render: draw(
+    route({
+      receipts: [
+        {
+          activity_id: "018f3a1b-0000-7000-8000-0000000000e2",
+          subject:
+            "Durchlauf / Abnahme Einsatzplanungsmodul für die Standorte Nord und Süd",
+          occurred_at: "2026-08-28T09:00:00Z",
+          occurred_precision: "instant",
+          kind: "meeting",
+        },
+        {
+          activity_id: "018f3a1b-0000-7000-8000-0000000000e3",
+          subject:
+            "Durchlauf / Abnahme Einsatzplanungsmodul für die Standorte Nord und Süd",
+          occurred_at: "2026-08-27T09:00:00Z",
+          occurred_precision: "instant",
+          kind: "email",
+        },
+        {
+          activity_id: "018f3a1b-0000-7000-8000-0000000000e4",
+          subject: "Re: Hinweis + Frage",
+          occurred_at: "2026-08-21T09:00:00Z",
+          occurred_precision: "instant",
+          kind: "email",
+        },
+      ],
+    }),
+  ),
+};
+
 export const StrongDirectDark: Story = {
   globals: { theme: "dark" },
   render: draw(route()),

@@ -379,11 +379,11 @@ func validateSchedulingLimits(p crmcontracts.SchedulingProfile) error {
 		}
 	}
 	if !values.HasVisibleText(p.Title) {
-		return &SchedulingArgumentError{Field: "title", Code: "required", Message: "Give the meeting a title guests can read"}
+		return &SchedulingArgumentError{Field: fieldTitle, Code: "required", Message: "Give the meeting a title guests can read"}
 	}
 	if utf8.RuneCountInString(p.Title) > maxSchedulingTitle {
 		return &SchedulingArgumentError{
-			Field: "title", Code: codeTooLong, Max: maxSchedulingTitle,
+			Field: fieldTitle, Code: codeTooLong, Max: maxSchedulingTitle,
 			Message: fmt.Sprintf("The title may be at most %d characters", maxSchedulingTitle),
 		}
 	}

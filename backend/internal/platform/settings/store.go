@@ -348,7 +348,7 @@ func RequireWrite(ctx context.Context, def Definition) error {
 func (s *Store) lookup(key string) (Definition, error) { //nolint:ireturn // returns the type-erased Definition by design — the registry holds entries of many value types, and the concrete Entry[T] cannot be named without the type parameter the caller is looking up
 	def, ok := s.reg.byKey[key]
 	if !ok {
-		return nil, fmt.Errorf("settings: %s is not a registered setting: %w", key, apperrors.ErrNotFound)
+		return nil, fmt.Errorf("%s is not a registered setting: %w", key, apperrors.ErrNotFound)
 	}
 	return def, nil
 }

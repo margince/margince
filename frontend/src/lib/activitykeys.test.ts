@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   dealRecordKeys,
+  dealStageMoveKeys,
   dealWinKeys,
   derivedRecordKeys,
   entityTimelineKeys,
@@ -95,6 +96,19 @@ describe("which reads a write to the record itself invalidates", () => {
       ["deals", "d1", "outcome-reviews"],
       ["deal-status", "d1"],
       ["lists", "record", "deal", "d1"],
+    ]);
+  });
+
+  it("reaches the stage moves only from a write that can move the stage", () => {
+    // Days in stage counts from the stage moves. A name or amount edit moves
+    // no stage, so it leaves that read alone.
+    expect(dealStageMoveKeys("d1")).toEqual([
+      ...dealRecordKeys("d1"),
+      ["deal-stage-history", "d1"],
+    ]);
+    expect(dealRecordKeys("d1")).not.toContainEqual([
+      "deal-stage-history",
+      "d1",
     ]);
   });
 

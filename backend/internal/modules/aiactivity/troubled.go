@@ -116,7 +116,7 @@ func (s *Store) Troubled(ctx context.Context, since time.Time, limit int) ([]Tro
 func personalReader(ctx context.Context) (ids.UserID, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.UserID.IsZero() {
-		return ids.UserID{}, fmt.Errorf("aiactivity: a personal read needs an authenticated contact: %w", apperrors.ErrPermissionDenied)
+		return ids.UserID{}, fmt.Errorf("a personal read needs an authenticated contact: %w", apperrors.ErrPermissionDenied)
 	}
 	return ids.From[ids.UserKind](actor.UserID), nil
 }

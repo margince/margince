@@ -12,11 +12,17 @@ import { formatBytes } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import {
   ACCEPTED_ATTACHMENT_ATTR,
+  ACCEPTED_ATTACHMENT_EXTENSIONS,
+  ACCEPTED_ATTACHMENT_MEDIA_TYPES,
   uploadAttachment,
 } from "../lib/attachmentupload";
 import { useCanWrite } from "../lib/capability";
-import { ProblemError, problemMessageOf, unwrap } from "../lib/problem";
-import { formatUploadLimit, useMaxUploadBytes } from "../lib/uploadlimit";
+import { problemMessageOf, refusedForGood, unwrap } from "../lib/problem";
+import {
+  formatUploadLimit,
+  useMaxUploadBytes,
+  usePickRefusal,
+} from "../lib/uploadlimit";
 
 // The file fields of the Log activity form. A transcript is read into the body.
 // Attached files wait in the form until the server has created the activity,
@@ -43,16 +49,6 @@ function picked(file: File): PickedFile {
 
 // Only a 4xx answer proves nothing was stored. Any other failure may have
 // come after the server committed the file.
-function refusedByServer(error: unknown): boolean {
-  if (!(error instanceof ProblemError)) return false;
-  const { problem } = error;
-  const status =
-    typeof problem === "object" && problem !== null && "status" in problem
-      ? problem.status
-      : undefined;
-  return typeof status === "number" && status >= 400 && status < 500;
-}
-
 async function sha256Hex(file: File): Promise<string> {
   const digest = await crypto.subtle.digest(
     "SHA-256",
@@ -122,7 +118,7 @@ export async function attachLoggedFiles(
       );
       completed?.add(file);
     } catch (error) {
-      if (refusedByServer(error)) {
+      if (refusedForGood(error)) {
         refused.push({ filename: file.name, error, uncertain: false });
       } else {
         unanswered.push({ file, error });
@@ -219,21 +215,43 @@ export function LogActivityFilesField(props: FieldProps) {
   return permitted ? <FilesPicker {...props} /> : null;
 }
 
+const ATTACHMENT_KINDS = {
+  extensions: ACCEPTED_ATTACHMENT_EXTENSIONS,
+  mediaTypes: ACCEPTED_ATTACHMENT_MEDIA_TYPES,
+};
+
 function FilesPicker({ files, onChange, disabled }: FieldProps) {
   const t = useT();
   const { locale } = useLocale();
   const maxBytes = useMaxUploadBytes();
   const limitLabel = maxBytes ? formatUploadLimit(maxBytes, locale) : "";
-  const [refused, setRefused] = useState<string | null>(null);
+  const refusalOf = usePickRefusal({
+    maxBytes,
+    kinds: ATTACHMENT_KINDS,
+  });
+  // One line per file, because a drop of several can refuse several. Refused
+  // here, before the activity exists, so none of them waits for Log.
+  // Keyed by name, so a later pick of that name replaces its line or clears it.
+  const [refused, setRefused] = useState<ReadonlyMap<string, string>>(
+    new Map(),
+  );
   const pick = (file: File) => {
-    // Refused here, before the activity exists, with the limit the
-    // add-document dialog states.
-    if (maxBytes !== undefined && file.size > maxBytes) {
-      setRefused(t("docs.add.errTooLarge", { size: limitLabel }));
-      return;
+    const reason = refusalOf(file);
+    setRefused((shown) => {
+      const next = new Map(shown);
+      if (reason === null) {
+        next.delete(file.name);
+      } else {
+        next.set(
+          file.name,
+          t("log.fileNotAdded", { filename: file.name, reason }),
+        );
+      }
+      return next;
+    });
+    if (reason === null) {
+      onChange((current) => [...current, picked(file)]);
     }
-    setRefused(null);
-    onChange((current) => [...current, picked(file)]);
   };
   return (
     <div className="form-stack">
@@ -264,7 +282,9 @@ function FilesPicker({ files, onChange, disabled }: FieldProps) {
           }
         />
       )}
-      {refused && <ErrorLine>{refused}</ErrorLine>}
+      {[...refused].map(([filename, line]) => (
+        <ErrorLine key={filename}>{line}</ErrorLine>
+      ))}
     </div>
   );
 }

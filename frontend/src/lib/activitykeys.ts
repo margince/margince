@@ -128,6 +128,12 @@ export const dealOutcomeReviewsKey = (dealId: string): QueryKey => [
   "outcome-reviews",
 ];
 
+// The deal's stage moves, which the ladder and Days in stage count from.
+export const dealStageHistoryKey = (dealId: string): QueryKey => [
+  "deal-stage-history",
+  dealId,
+];
+
 // Which cached reads a write to the DEAL RECORD itself invalidates — a stage
 // advance, an amount, a close date. Spelled once here so a new writer picks up
 // the derived reads by using the helper rather than by remembering them.
@@ -137,6 +143,12 @@ export function dealRecordKeys(dealId: string): QueryKey[] {
     dealOutcomeReviewsKey(dealId),
     ...derivedRecordKeys("deal", dealId),
   ];
+}
+
+// The reads a write that can move the deal's stage invalidates: the record's,
+// and its stage moves. An edit that moves no stage leaves those unread.
+export function dealStageMoveKeys(dealId: string): QueryKey[] {
+  return [...dealRecordKeys(dealId), dealStageHistoryKey(dealId)];
 }
 
 // The reads written FROM a record, by the key its own page reads it under.

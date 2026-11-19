@@ -11,6 +11,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/compose/importguide"
@@ -91,6 +92,7 @@ func formatFrom(cats map[string]importCatalog, spoken langcopy.Spoken, capMB int
 		f.Order = append(f.Order, crmcontracts.ImportObject(object))
 		f.Files = append(f.Files, crmcontracts.ImportFormatFile{
 			File: migration.FileNameFor(object), Object: crmcontracts.ImportObject(object), Columns: columns,
+			KeyColumns: new(rowKeyTargets(object)),
 		})
 	}
 	return f, nil
@@ -113,13 +115,13 @@ func formatColumns(object string, cat importCatalog, spoken langcopy.Spoken) ([]
 			}
 			continue
 		}
-		guide, ok := guideFor(object, target)
+		guide, ok := importguide.For(object, target)
 		if !ok {
 			return nil, fmt.Errorf("import format: %s.%s has no guide", object, target)
 		}
 		column := crmcontracts.ImportFormatColumn{
 			Name: target, Description: spoken.Say(guide.Description), Example: spoken.Say(guide.Example),
-			RequiredOnNewRow: guide.RequiredOnNew,
+			RequiredOnNewRow: guide.RequiredOnNew || slices.Equal(rowKeyTargets(object), []string{target}),
 		}
 		fieldLabel := spoken.Say(guide.Label)
 		column.FieldLabel = &fieldLabel
@@ -148,16 +150,6 @@ func customFormatColumn(col fieldcatalog.Column, cat importCatalog, spoken langc
 		out.Example = optionExample(col)
 	}
 	return out
-}
-
-// guideFor is the guide of one object's column: the object's own entry
-// ("company.display_name") before the shared one.
-func guideFor(object, target string) (importguide.Column, bool) {
-	if c, ok := importguide.Columns[object+"."+target]; ok {
-		return c, true
-	}
-	c, ok := importguide.Columns[target]
-	return c, ok
 }
 
 // optionExample is a value the field takes: its first option, or its first

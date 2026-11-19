@@ -594,7 +594,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "sendPermission.reason.dealNotRequested",
     "sendPermission.reason.unconfirmed",
     "sendPermission.reason.withdrawn",
-    "buyer.contact",
     "buyer.contactEyebrow",
     "buyer.deadAskContact",
     "buyer.docs.downloadFailed",

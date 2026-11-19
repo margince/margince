@@ -16,6 +16,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../../api/schema";
+import { armHoverIntent } from "../../../design-system/hoverintent-testing";
 import { LocaleProvider } from "../../../i18n";
 import { en } from "../../../i18n/en";
 import { useShortcutDispatcher } from "../../../lib/shortcuts";
@@ -70,6 +71,36 @@ describe("the deal header's Email verb", () => {
     ).toBe("You do not have permission to log activities on this record.");
   });
 
+  it("names the refusal in its tooltip, described once by the header's sentence", async () => {
+    const user = userEvent.setup();
+    armHoverIntent();
+    mount({ deal: ["read"] });
+    const why = en["record.logActivityRefused"];
+
+    const email = screen.getByRole("button", { name: "Email" });
+    const sentence = await screen.findByText(why);
+    await expect.poll(() => email.hasAttribute("disabled")).toBe(true);
+    expect(email.getAttribute("aria-describedby")).toBe(sentence.id);
+    expect(screen.getAllByText(why)).toHaveLength(1);
+
+    const host = email.closest(".icon-action");
+    if (!(host instanceof HTMLElement)) {
+      throw new Error("the Email verb lost its tooltip host");
+    }
+    await user.hover(host);
+    expect((await screen.findByRole("tooltip")).textContent).toBe(
+      `Email. ${why}`,
+    );
+    for (const [name, label] of [
+      ["Log activity", en["log.title"]],
+      [en["log.kindCall"], en["log.kindCall"]],
+    ]) {
+      expect(screen.getByRole("button", { name }).getAttribute("title")).toBe(
+        `${label}. ${why}`,
+      );
+    }
+  });
+
   it("is live with the activity grant", async () => {
     mount({ deal: ["read"], activity: ["create"] });
 
@@ -94,6 +125,10 @@ describe("the deal header's Meet verb", () => {
       expect(meet()).toHaveAccessibleDescription(en["deal.meetNeedsCompany"]),
     );
     expect(meet()).toBeDisabled();
+    expect(meet()).toHaveAttribute(
+      "title",
+      `${en["scheduling.bookContact"]}. ${en["deal.meetNeedsCompany"]}`,
+    );
   });
 
   it("offers Meet with no refusal on a deal with a company", async () => {
@@ -155,5 +190,55 @@ describe("the deal's record keys", () => {
 
     await user.keyboard("ntm");
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+});
+
+// The server marks an archived deal not writable, so the way back must not
+// wait on the write gate that the archive already closed.
+describe("an archived deal's way back", () => {
+  const archived: Partial<Deal> = {
+    archived_at: "2026-11-01T09:00:00Z",
+    writable: false,
+  };
+
+  async function openMore() {
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: en["record.moreActions"] }),
+    );
+    await screen.findByRole("button", { name: en["log.addTask"] });
+  }
+
+  it("offers Restore deal to a reader who may archive deals", async () => {
+    mount({ deal: ["read", "update", "delete"] }, archived);
+    await openMore();
+
+    expect(
+      await screen.findByRole("button", { name: en["deal.restore"] }),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: en["deal.archive"] }),
+    ).toBeNull();
+  });
+
+  it("offers no Restore deal to a reader who may not archive deals", async () => {
+    mount({ deal: ["read", "update"] }, archived);
+    await openMore();
+
+    expect(
+      screen.queryByRole("button", { name: en["deal.restore"] }),
+    ).toBeNull();
+  });
+
+  it("offers Archive deal, not Restore deal, on a live deal", async () => {
+    mount({ deal: ["read", "update", "delete"] }, { writable: true });
+    await openMore();
+
+    expect(
+      await screen.findByRole("button", { name: en["deal.archive"] }),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: en["deal.restore"] }),
+    ).toBeNull();
   });
 });

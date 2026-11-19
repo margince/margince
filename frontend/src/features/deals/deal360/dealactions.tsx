@@ -16,33 +16,36 @@ import { useCallback, useState } from "react";
 import { api } from "../../../api/client";
 import type { components } from "../../../api/schema";
 import { ifMatch, requireVersion } from "../../../api/version";
-import { useActivityGate } from "../../../components/activitygate";
+import {
+  type ActivityGate,
+  useActivityGate,
+} from "../../../components/activitygate";
 import { ArchiveAction } from "../../../components/archive";
 import { ExtensionEntries } from "../../../components/extensionentries";
 import { LogActivityAction } from "../../../components/logactivity.action";
 import { searchCompanyContacts } from "../../../components/meetingattendees";
 import { Button, OverflowMenu } from "../../../design-system/atoms";
-import { ConfirmModal } from "../../../design-system/confirmmodal";
-import { ErrorLine } from "../../../design-system/errorline";
-import { VerbWord } from "../../../design-system/iconaction";
+import { tipText, VerbWord } from "../../../design-system/iconaction";
 import { ListPopover } from "../../../design-system/listpopover";
 import { useToast } from "../../../design-system/toast";
 import { useLocale, useT } from "../../../i18n";
-import { dealRecordKeys } from "../../../lib/activitykeys";
-import { useCanWriteRecord } from "../../../lib/capability";
+import { dealStageMoveKeys } from "../../../lib/activitykeys";
+import { useCanWrite, useCanWriteRecord } from "../../../lib/capability";
 import { unwrap } from "../../../lib/problem";
 import { navigate } from "../../../lib/router";
 import { useShortcut } from "../../../lib/shortcuts";
 import { RecordEmailVerb } from "../../records/recordemail";
 import { ShareAction } from "../../records/share";
-import { probabilitySetNote } from "../dealprobability";
+import { advanceNote } from "../dealprobability";
 import { archiveDeal } from "../deals.write";
 import { CorrectCloseDayAction } from "./correctcloseday";
+import { RestoreDealAction } from "./dealrestore";
 import { useDealCoverage } from "./usedealcoverage";
 import { useDealRecipientAddress } from "./usedealrecipient";
 import "./deal360.css";
 import { AddToShortlistAction } from "../../../components/addtoshortlist";
 import { RequestLegalReviewAction } from "./deallegaltab";
+import { ReopenModal } from "./reopenmodal";
 
 type Deal = components["schemas"]["Deal"];
 type Stage = components["schemas"]["Stage"];
@@ -51,6 +54,7 @@ type Stage = components["schemas"]["Stage"];
 function DealEmailVerb({
   deal,
   disabledReasonId,
+  reasonTip,
   disabled,
   keyShortcuts,
   open,
@@ -58,6 +62,7 @@ function DealEmailVerb({
 }: Readonly<{
   deal: Deal;
   disabledReasonId?: string;
+  reasonTip?: string;
   disabled?: boolean;
   keyShortcuts?: string;
   open: boolean;
@@ -77,12 +82,25 @@ function DealEmailVerb({
       // over what the reader typed.
       recordAddress={recordAddress}
       disabledReasonId={disabledReasonId}
+      reasonTip={reasonTip}
       disabled={disabled}
       keyShortcuts={keyShortcuts}
       open={open}
       onOpenChange={onOpenChange}
     />
   );
+}
+
+// The sentence the header states when the seat may not log. An archive is
+// the page's sentence, so only its id reaches here.
+function activityRefusal(
+  t: ReturnType<typeof useT>,
+  refusedByArchive: string | undefined,
+  activity: ActivityGate,
+): string | undefined {
+  return !refusedByArchive && activity.refusalKey
+    ? t(activity.refusalKey)
+    : undefined;
 }
 
 // Reopens a won/lost deal back to an open-semantic stage — the same advance
@@ -115,7 +133,6 @@ function ReopenAction({
   const toast = useToast();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [stageId, setStageId] = useState<string | null>(null);
   const reopen = useMutation({
     mutationKey: ["deal-edit", dealId],
     // Stage and version both ride the variables: a version read out of the
@@ -123,7 +140,7 @@ function ReopenAction({
     // reopen that pins the wrong version either fails for no reason the reader
     // can see or lands on a deal somebody else has since moved.
     mutationFn: async (input: {
-      toStageId: string;
+      toStage: Stage;
       version: number | undefined;
     }) => {
       return unwrap(
@@ -132,18 +149,22 @@ function ReopenAction({
             path: { id: dealId },
             ...ifMatch(requireVersion(input.version)),
           },
-          body: { to_stage_id: input.toStageId, status: "open" },
+          body: { to_stage_id: input.toStage.id, status: "open" },
         }),
         t,
       );
     },
-    onSuccess: (advanced) => {
+    onSuccess: (advanced, input) => {
       setOpen(false);
-      const note = probabilitySetNote(advanced, t, locale);
-      if (note) {
-        toast.show(note);
-      }
-      for (const queryKey of dealRecordKeys(dealId)) {
+      toast.show(
+        advanceNote(
+          advanced,
+          { toStage: input.toStage, reopens: true },
+          t,
+          locale,
+        ),
+      );
+      for (const queryKey of dealStageMoveKeys(dealId)) {
         queryClient.invalidateQueries({ queryKey });
       }
       queryClient.invalidateQueries({ queryKey: ["deals"] });
@@ -161,34 +182,39 @@ function ReopenAction({
       >
         {t("deal.reopen")}
       </Button>
-      <ConfirmModal
+      <ReopenModal
         open={open}
         onClose={() => setOpen(false)}
-        title={t("deal.reopenPick")}
-        confirmLabel={t("deal.reopenConfirm")}
-        confirmDisabled={!stageId}
+        openStages={openStages}
         pending={reopen.isPending}
-        onConfirm={() => {
-          if (stageId) {
-            reopen.mutate({ toStageId: stageId, version: dealVersion });
-          }
-        }}
-      >
-        <div className="d360-reopen-stages">
-          {openStages.map((s) => (
-            <Button
-              key={s.id}
-              aria-pressed={stageId === s.id}
-              data-testid={`reopen-stage-${s.id}`}
-              onClick={() => setStageId(s.id)}
-            >
-              {s.name}
-            </Button>
-          ))}
-        </div>
-        <ErrorLine error={reopen.error} />
-      </ConfirmModal>
+        error={reopen.error}
+        onConfirm={(toStage) =>
+          reopen.mutate({ toStage, version: dealVersion })
+        }
+      />
     </>
+  );
+}
+
+function DealArchiveAction({
+  deal,
+  refusedReasonId,
+}: Readonly<{ deal: Deal; refusedReasonId?: string }>) {
+  const t = useT();
+  return (
+    <ArchiveAction
+      requires={{ object: "deal", action: "delete" }}
+      archivable={deal.archivable ?? false}
+      refusedReason={t("deal.archiveRefused")}
+      disabledReasonId={refusedReasonId}
+      label={t("deal.archive")}
+      confirmText={t("deal.archiveConfirm")}
+      archivedMessage={t("record.archiveDone", { name: deal.name })}
+      archive={() => archiveDeal(deal)}
+      invalidate="deals"
+      recordKey="deal"
+      onArchived={(from) => from.closeOnto({ screen: "deals" })}
+    />
   );
 }
 
@@ -212,12 +238,16 @@ export function DealActions({
 }>) {
   const t = useT();
   const canWrite = useCanWriteRecord("deal", deal);
+  // The server marks an archived deal not writable, so the way back rests on
+  // the archive grant alone.
+  const canRestore = useCanWrite("deal", "delete");
   const refusedByArchive = deal.archived_at ? refusedReasonId : undefined;
   // The log/task drawer's own state: one drawer with two doors, the same
   // shape companyheaderactions.tsx and leads.tsx keep for the identical pair.
   const [drawer, setDrawer] = useState<"log" | "task" | "call" | null>(null);
   const activity = useActivityGate();
   const logRefused = refusedByArchive ?? activity.refusedId;
+  const logRefusal = activityRefusal(t, refusedByArchive, activity);
   const logPending = !refusedByArchive && activity.pending;
   const [writing, setWriting] = useState(false);
   const logOpen = !logPending && !logRefused;
@@ -238,9 +268,7 @@ export function DealActions({
   );
   return (
     <>
-      {!refusedByArchive && activity.refusedId && (
-        <p id={activity.sentenceId}>{t("record.logActivityRefused")}</p>
-      )}
+      {logRefusal && <p id={activity.sentenceId}>{logRefusal}</p>}
       {/* Mail first, then the hairline, then what the reader records about
           this deal: the same two groups, in the same order, that the contact,
           company and lead headers draw. A rep moving between records must not
@@ -248,6 +276,7 @@ export function DealActions({
       <DealEmailVerb
         deal={deal}
         disabledReasonId={logRefused}
+        reasonTip={logRefusal}
         disabled={logPending}
         open={writing}
         onOpenChange={setWriting}
@@ -256,7 +285,7 @@ export function DealActions({
       <Button
         disabled={logPending}
         reasonId={logRefused}
-        title={t("log.kindCall")}
+        title={tipText(t("log.kindCall"), logRefusal)}
         onClick={() => setDrawer("call")}
       >
         <Phone aria-hidden="true" />
@@ -268,11 +297,12 @@ export function DealActions({
         allowed={!logPending && !logRefused}
         pending={logPending}
         reasonId={logRefused}
+        reasonTip={logRefusal}
       />
       <Button
         disabled={logPending}
         reasonId={logRefused}
-        title={t("log.title")}
+        title={tipText(t("log.title"), logRefusal)}
         onClick={() => setDrawer("log")}
         aria-keyshortcuts={logKeys}
       >
@@ -344,21 +374,10 @@ export function DealActions({
             />
           </>
         )}
-        {canWrite && (
-          <ArchiveAction
-            requires={{ object: "deal", action: "delete" }}
-            archivable={deal.archivable ?? false}
-            refusedReason={t("deal.archiveRefused")}
-            disabledReasonId={refusedReasonId}
-            label={t("deal.archive")}
-            confirmText={t("deal.archiveConfirm")}
-            archivedMessage={t("record.archiveDone", { name: deal.name })}
-            archive={() => archiveDeal(deal)}
-            invalidate="deals"
-            recordKey="deal"
-            onArchived={(from) => from.closeOnto({ screen: "deals" })}
-          />
+        {canWrite && !deal.archived_at && (
+          <DealArchiveAction deal={deal} refusedReasonId={refusedReasonId} />
         )}
+        {canRestore && deal.archived_at && <RestoreDealAction deal={deal} />}
       </OverflowMenu>
     </>
   );
@@ -372,12 +391,15 @@ function DealBookMeeting({
   allowed,
   pending,
   reasonId,
+  reasonTip,
 }: Readonly<{
   dealId: string;
   companyId?: string;
   allowed: boolean;
   pending: boolean;
   reasonId?: string;
+  /** The sentence `reasonId` names, for the verb's tooltip. */
+  reasonTip?: string;
 }>) {
   const t = useT();
   // Held across renders, because a new search function drops the answer the
@@ -399,12 +421,13 @@ function DealBookMeeting({
     // A refusal the page already states wins; otherwise the missing company
     // is the one thing standing between the reader and a booking.
     const noCompany = !reasonId && !companyId;
+    const why = noCompany ? t("deal.meetNeedsCompany") : undefined;
     return (
       <Button
         disabled={pending || !companyId}
         reasonId={reasonId}
-        reason={noCompany ? t("deal.meetNeedsCompany") : undefined}
-        title={t("scheduling.bookContact")}
+        reason={why}
+        title={tipText(t("scheduling.bookContact"), reasonId ? reasonTip : why)}
       >
         {face}
       </Button>

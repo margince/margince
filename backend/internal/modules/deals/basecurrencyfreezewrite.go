@@ -71,7 +71,8 @@ type frozenConversion struct {
 	Amount *int64
 }
 
-// Frozen columns are internal; audit pre-images cannot come from the public deal.
+// The deal carries the rate and its day but never amount_minor_base, so an
+// audit pre-image of all three comes from the row.
 func frozenBefore(ctx context.Context, tx pgx.Tx, id openapi_types.UUID) (frozenConversion, error) {
 	var before frozenConversion
 	args := []any{id}

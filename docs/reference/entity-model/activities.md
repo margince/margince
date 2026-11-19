@@ -978,7 +978,7 @@ The 34 tables owned by `activities`, as the migrations build them. [Back to the 
 | `storage_key` | `text` | yes |  |
 | `supersedes_id` | `uuid` |  | The document this one replaces. |
 | `title` | `text` |  | A display name distinct from the filename, showing what a reader looks for rather than what arrived. |
-| `url` | `text` |  | The address of a `link` row, and null for every other category. |
+| `url` | `text` |  | The address of a document that lives elsewhere: a `link` row a mail carried, or a link a user added. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `captured_by` | `text` | yes | Server-stamped from the authenticated principal; never client-supplied. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
@@ -999,7 +999,7 @@ The 34 tables owned by `activities`, as the migrations build them. [Back to the 
 - `attachment_doc_state_check`: `CHECK ((doc_state = ANY (ARRAY['draft', 'current', 'final', 'superseded'])))`
 - `attachment_entity_type_check`: `CHECK (((entity_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'activity', 'project', 'relationship', 'partner', 'product', 'offer_template', 'offer', 'commission', 'deal_room', 'deal_room_thread', 'deal_room_comment', 'deal_room_document', 'deal_room_participant'])) OR (entity_type ~ '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$')))`
 - `attachment_external_identity_complete`: `CHECK (((external_source_id IS NULL) = (external_part_id IS NULL)))`
-- `attachment_link_shape`: `CHECK ((((category = 'link') = (url IS NOT NULL)) AND ((category <> 'link') OR ((storage_key = '') AND bytes_withheld AND (url ~ '^https?://') AND (length(url) <= 2048)))))`
+- `attachment_link_shape`: `CHECK ((((category <> 'link') OR (url IS NOT NULL)) AND ((url IS NULL) OR ((storage_key = '') AND bytes_withheld AND (url ~ '^https?://') AND (length(url) <= 2048)))))`
 - `attachment_supersedes_not_self`: `CHECK (((supersedes_id IS NULL) OR (supersedes_id <> id)))`
 
 **Indexes**

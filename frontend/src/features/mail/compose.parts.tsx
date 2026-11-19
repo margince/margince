@@ -1,5 +1,5 @@
 import { Ellipsis, Trash2 } from "lucide-react";
-import { type ReactNode, useId, useState } from "react";
+import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { EntityRef } from "../../components/entityref";
 import { SendMark } from "../../components/sendpermission";
 import { Button } from "../../design-system/atoms";
@@ -26,7 +26,7 @@ import type { Activity, VoiceProfile } from "./compose";
 import { AiDraftBand } from "./composeaiband";
 import { CarriageNotice } from "./composeattachments";
 import type { ComposeFields } from "./composefields";
-import { FieldNeed } from "./composehead";
+import { FieldNeed, toBox } from "./composehead";
 import type { Refusal } from "./composerefusal";
 import type { useSavedDraft } from "./composesaveddraft";
 import { SavedDraftFailure } from "./composesaveddraftnotices";
@@ -113,6 +113,7 @@ export function ComposeFrame({
   onClose,
   closeDisabled,
   bodyId,
+  recipientFirst,
   openedFrom,
   children,
 }: Readonly<{
@@ -124,9 +125,12 @@ export function ComposeFrame({
   openedFrom?: HTMLElement;
   /** The words' field, where focus lands as the window opens. */
   bodyId: string;
+  /** To opens empty and no address is coming, so focus lands in To instead. */
+  recipientFirst: boolean;
   children: ReactNode;
 }>) {
   const [state, setState] = useState<DockState>("open");
+  useToWhenNothingCame(recipientFirst, bodyId);
   return (
     <DockedWindow
       title={title}
@@ -135,12 +139,33 @@ export function ComposeFrame({
       onStateChange={setState}
       onClose={onClose}
       closeDisabled={closeDisabled}
-      initialFocusTo={() => document.getElementById(bodyId)}
+      initialFocusTo={() => {
+        const body = document.getElementById(bodyId);
+        return (
+          (recipientFirst ? toBox(body?.closest(".compose-window")) : null) ??
+          body
+        );
+      }}
       openedFrom={openedFrom}
     >
       {children}
     </DockedWindow>
   );
+}
+
+// The window opens with focus in the body while an address may still come. When
+// none came, focus moves to To, once, unless the reader has moved or typed.
+function useToWhenNothingCame(recipientFirst: boolean, bodyId: string) {
+  const [openedInTo] = useState(recipientFirst);
+  const moved = useRef(openedInTo);
+  useEffect(() => {
+    if (!recipientFirst || moved.current) return;
+    moved.current = true;
+    const body = document.getElementById(bodyId);
+    if (!body?.contains(document.activeElement)) return;
+    if (body.textContent?.trim()) return;
+    toBox(body.closest(".compose-window"))?.focus();
+  }, [recipientFirst, bodyId]);
 }
 
 // The footer: files and draft state on the left, the send at the end where the hand is.

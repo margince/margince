@@ -79,7 +79,7 @@ func resolveCoTargetVersion(ctx context.Context, tx pgx.Tx, in StageInput) (vers
 	}
 	if !TargetVersionCheckable(in.CoTargetType) {
 		return 0, false, fmt.Errorf(
-			"approvals: %q cannot carry a version pin, so it cannot be a co-target: %w",
+			"%q cannot carry a version pin, so it cannot be a co-target: %w",
 			in.CoTargetType, apperrors.ErrInvalidArgument)
 	}
 	current, err := targetVersion(ctx, tx, in.CoTargetType, in.CoTargetID)

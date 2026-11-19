@@ -14,7 +14,7 @@ import (
 // A repeat press is marked without changing what the refusal says or is: the
 // 409 mapping and every errors.Is on the refusal read through the mark.
 func TestARepeatedSendKeepsTheRefusalItWraps(t *testing.T) {
-	refusal := fmt.Errorf("consent: 1 of 1 recipients may not be written to: %w", apperrors.ErrConsentNotGranted)
+	refusal := fmt.Errorf("1 of 1 recipients may not be written to: %w", apperrors.ErrConsentNotGranted)
 	repeated := error(&repeatedSendError{refusal: refusal})
 
 	if !IsRepeatedSend(repeated) || !IsRepeatedSend(fmt.Errorf("send: %w", repeated)) {
