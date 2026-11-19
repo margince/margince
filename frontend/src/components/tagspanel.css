@@ -4,7 +4,7 @@
 .tagspanel-set {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-1) var(--space-2);
+  gap: var(--space-2);
   align-items: center;
 }
 
@@ -27,15 +27,16 @@
 
 /* The cross that removes the tag: hidden until the pill is hovered or holds
    focus, so a row of tags is a row of words and not a row of verbs. A coarse
-   pointer has no hover, so there it stays on. It is the 24px target WCAG
-   2.5.8 asks, so a wrapped strip of tags stays a compact list. */
+   pointer has no hover, so there it stays on. It is a control-height target
+   that overhangs the chip line, so wrapped tags stay a compact list. */
 .tagspanel-remove {
   position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-inline-size: var(--space-6);
-  min-block-size: var(--space-6);
+  min-inline-size: var(--controlHeight);
+  min-block-size: var(--controlHeight);
+  margin-block: calc((var(--space-6) - var(--controlHeight)) / 2);
   margin-inline-start: var(--space-1);
   padding: 0;
   border: 0;
