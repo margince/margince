@@ -27,6 +27,11 @@ func unfileDealProject(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, deal
 	if err != nil || !derived {
 		return err
 	}
+	// An inherited link that stamped nothing has no retention to judge.
+	if dropped, err := dropOrphanedInheritedProject(ctx, tx, mail, ids.Nil); err != nil || dropped {
+		out.ProjectUnfiled = dropped
+		return err
+	}
 	actor, err := admitDeclineUndoDecider(ctx)
 	if errors.Is(err, apperrors.ErrPermissionDenied) {
 		out.ProjectKept = true
@@ -66,13 +71,13 @@ func admitDeclineUndoDecider(ctx context.Context) (principal.Principal, error) {
 }
 
 // projectCameFromDeal answers whether the message's project link is the
-// deal's own project, written by capture's deal rung, and never filed by a
-// colleague. A link with no rung on record is kept, since nothing proves it
+// deal's own project, inherited with a deal by any writer, and never filed by
+// a colleague. A link with no rung on record is kept, since nothing proves it
 // came from the deal.
 func projectCameFromDeal(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, deal ids.UUID) (bool, error) {
 	var args []any
 	arg := func(v any) string { args = append(args, v); return fmt.Sprintf("$%d", len(args)) }
-	mailArg, dealArg, rungArg := arg(mail), arg(deal), arg(provenance.ProjectRungDeal)
+	mailArg, dealArg := arg(mail), arg(deal)
 	var derived bool
 	err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM activity_link l JOIN deal d ON d.project_id = l.project_id
 		 WHERE l.activity_id = `+mailArg+` AND l.entity_type = 'project' AND d.id = `+dealArg+`
@@ -80,8 +85,7 @@ func projectCameFromDeal(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, de
 		   AND EXISTS (SELECT 1 FROM audit_log p
 		     WHERE p.entity_type = 'activity' AND p.entity_id = l.activity_id AND p.action = 'activity_relink'
 		       AND p.after->>'entity_type' = 'project' AND p.after->>'entity_id' = l.project_id::text
-		       AND p.actor_type IN ('connector', 'system')
-		       AND p.evidence->>'`+provenance.ProjectRungKey+`' = `+rungArg+`))`, args...).Scan(&derived)
+		       AND `+provenance.InheritedProjectRowSQL("p")+`))`, args...).Scan(&derived)
 	if err != nil {
 		return false, fmt.Errorf("activities: reading whether the project came from the deal: %w", err)
 	}

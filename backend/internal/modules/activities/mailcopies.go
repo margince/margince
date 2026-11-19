@@ -165,16 +165,16 @@ func carryMailCopyTx(ctx context.Context, tx pgx.Tx, duplicate, kept ids.Activit
 	if err != nil {
 		return err
 	}
-	links, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (RelinkActivityInput, error) {
-		var one RelinkActivityInput
+	links, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (ActivityLinkInput, error) {
+		var one ActivityLinkInput
 		err := row.Scan(&one.EntityType, &one.EntityID)
 		return one, err
 	})
 	if err != nil {
 		return err
 	}
-	for _, link := range links {
-		if _, err := RelinkActivityInTx(ctx, tx, kept, link); err != nil {
+	for _, link := range projectLinksFirst(links) {
+		if _, err := RelinkActivityInTx(ctx, tx, kept, RelinkActivityInput{EntityType: link.EntityType, EntityID: link.EntityID}); err != nil {
 			return err
 		}
 	}

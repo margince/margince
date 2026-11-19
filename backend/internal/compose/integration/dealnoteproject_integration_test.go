@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 type dealNoteFixture struct {
@@ -71,8 +72,16 @@ func projectsOf(t *testing.T, e *Env, activity ids.UUID) int {
 	return e.WsCount(t, `SELECT count(*) FROM activity_link WHERE activity_id = $1 AND entity_type = 'project'`, activity)
 }
 
-// The note lands on the deal's project with the stamp any filing earns, and
-// the project's own timeline lists it.
+// inheritedMarks counts the marked audit rows that filed activity under project.
+func inheritedMarks(t *testing.T, e *Env, activity, project ids.UUID) int {
+	t.Helper()
+	return e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_id = $1 AND action = 'activity_relink'
+		AND evidence->>'project_rung' = 'deal' AND after->>'entity_id' = $2`, activity, project.String())
+}
+
+// The note lands on the deal's project with the inherited mark, and the
+// project's own timeline lists it. The link stamps no retention: while the
+// deal is unqualified the note stays erasable.
 func TestANoteLoggedOnADealIsFiledUnderTheDealsProject(t *testing.T) {
 	e := Setup(t)
 	f := seedDealNoteFixture(t, e)
@@ -82,8 +91,11 @@ func TestANoteLoggedOnADealIsFiledUnderTheDealsProject(t *testing.T) {
 	if projectLinks(t, e, note, f.erp) != 1 || projectsOf(t, e, note) != 1 {
 		t.Fatalf("the note is on %d projects, want exactly the deal's own", projectsOf(t, e, note))
 	}
-	if stamp := readProjectStamp(t, e, note); stamp.evidence != 1 {
-		t.Errorf("the inherited filing left %d project evidence rows, want 1", stamp.evidence)
+	if n := inheritedMarks(t, e, note, f.erp); n != 1 {
+		t.Errorf("%d marked audit rows record the inherited link, want 1", n)
+	}
+	if stamp := readProjectStamp(t, e, note); stamp.class != nil || stamp.evidence != 0 {
+		t.Errorf("the inherited link stamped retention: class=%v evidence=%d, want neither", stamp.class, stamp.evidence)
 	}
 	page, _, err := e.Activities.ListActivities(e.Admin(), activities.ListActivitiesInput{EntityType: new("project"), EntityID: &f.erp})
 	if err != nil {
@@ -113,16 +125,46 @@ func TestADealsProjectIsInheritedOnlyWhenItIsTheOneAnswer(t *testing.T) {
 	}
 }
 
-// An agent files no project unattended, so its note on the deal lands on the
-// deal alone rather than being refused.
-func TestAnAgentsNoteOnADealStaysOffTheProject(t *testing.T) {
+// Only a member's own write inherits. An agent's note and a system note land
+// on the deal alone rather than being refused.
+func TestOnlyAMembersNoteOnADealTakesTheProject(t *testing.T) {
 	e := Setup(t)
 	f := seedDealNoteFixture(t, e)
 
-	note := logDealNote(t, e, e.AgentFor(t, e.AdminUser, nil, AdminPerms), onDeal(f.erpDeal))
+	for name, ctx := range map[string]context.Context{
+		"agent":  e.AgentFor(t, e.AdminUser, nil, AdminPerms),
+		"system": principal.SystemActing(e.Admin(), "system:deal-room"),
+	} {
+		if n := projectsOf(t, e, logDealNote(t, e, ctx, onDeal(f.erpDeal))); n != 0 {
+			t.Errorf("the %s note is on %d projects, want none", name, n)
+		}
+	}
+}
+
+// A member who may create notes but not change them files the deal alone:
+// the refused project link does not refuse the note.
+func TestAMemberWithoutUpdateFilesTheDealAlone(t *testing.T) {
+	e := Setup(t)
+	f := seedDealNoteFixture(t, e)
+	perms := dealNotePerms(principal.ObjectGrant{Create: true, Read: true})
+
+	note := logDealNote(t, e, e.As(e.Rep1, []ids.UUID{e.Team1}, perms), onDeal(f.erpDeal))
 
 	if n := projectsOf(t, e, note); n != 0 {
-		t.Errorf("the agent's note is on %d projects, want none", n)
+		t.Errorf("a note by a member without activity.update is on %d projects, want none", n)
+	}
+}
+
+// dealNotePerms is a team-scoped member reading deals and projects, with the
+// given activity grant.
+func dealNotePerms(activity principal.ObjectGrant) principal.Permissions {
+	return principal.Permissions{
+		RoleKeys: []string{roleRep},
+		Objects: map[string]principal.ObjectGrant{
+			objActivity: activity, objDeal: {Read: true, Update: true},
+			"project": {Read: true}, objCompany: {Read: true},
+		},
+		RowScope: principal.RowScopeTeam,
 	}
 }
 
@@ -141,9 +183,11 @@ func TestRelinkingOntoADealFilesTheDealsProjectAndKeepsIt(t *testing.T) {
 	if projectLinks(t, e, note, f.erp) != 1 {
 		t.Fatal("the relinked note is not on the deal's project")
 	}
-	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_id = $1 AND action = 'activity_relink'
-		AND evidence->>'project_rung' = 'deal' AND evidence->>'deal_id' = $2`, note, f.erpDeal.String()); n != 1 {
-		t.Errorf("%d audit rows name the deal the project came from, want 1", n)
+	if n := inheritedMarks(t, e, note, f.erp); n != 1 {
+		t.Errorf("%d marked audit rows record the inherited link, want 1", n)
+	}
+	if stamp := readProjectStamp(t, e, note); stamp.evidence != 0 {
+		t.Errorf("the relinked inherited link left %d project evidence rows, want none", stamp.evidence)
 	}
 
 	if _, err := e.Deals.UpdateDeal(e.Admin(), ids.From[ids.DealKind](f.erpDeal), deals.UpdateDealInput{
@@ -156,17 +200,24 @@ func TestRelinkingOntoADealFilesTheDealsProjectAndKeepsIt(t *testing.T) {
 	}
 }
 
-// The bulk relink door files each row it moves onto the deal's project too.
-func TestBulkRelinkingOntoADealFilesTheDealsProject(t *testing.T) {
+// The bulk and thread relink doors file each row they move onto the deal's
+// project too.
+func TestBatchRelinkingOntoADealFilesTheDealsProject(t *testing.T) {
 	e := Setup(t)
 	f := seedDealNoteFixture(t, e)
-	note := logDealNote(t, e, e.Admin(), activities.ActivityLinkInput{EntityType: "company", EntityID: f.company})
+	onCompany := activities.ActivityLinkInput{EntityType: "company", EntityID: f.company}
+	toDeal := activities.RelinkActivityInput{EntityType: "deal", EntityID: f.erpDeal}
+	bulk, thread := logDealNote(t, e, e.Admin(), onCompany), logDealNote(t, e, e.Admin(), onCompany)
 
-	if _, err := e.Activities.RelinkActivities(e.Admin(), []ids.UUID{note},
-		activities.RelinkActivityInput{EntityType: "deal", EntityID: f.erpDeal}); err != nil {
-		t.Fatalf("relinking onto the deal: %v", err)
+	if _, err := e.Activities.RelinkActivities(e.Admin(), []ids.UUID{bulk}, toDeal); err != nil {
+		t.Fatalf("bulk relinking onto the deal: %v", err)
 	}
-	if projectLinks(t, e, note, f.erp) != 1 {
-		t.Error("the bulk-relinked note is not on the deal's project")
+	if _, err := e.Activities.RelinkThread(e.Admin(), ids.From[ids.ActivityKind](thread), toDeal); err != nil {
+		t.Fatalf("thread relinking onto the deal: %v", err)
+	}
+	for name, note := range map[string]ids.UUID{"bulk": bulk, "thread": thread} {
+		if projectLinks(t, e, note, f.erp) != 1 {
+			t.Errorf("the %s-relinked note is not on the deal's project", name)
+		}
 	}
 }

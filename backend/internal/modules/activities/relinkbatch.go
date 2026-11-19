@@ -201,10 +201,8 @@ func relinkActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in Rel
 			return false, held, err
 		}
 	}
-	if in.EntityType == linkEntityContact && in.ReplaceExistingOfType && len(displaced) > 0 {
-		if err := repointDisplacedParticipants(ctx, tx, id, in.EntityID, displaced); err != nil {
-			return false, held, err
-		}
+	if err := settleDisplaced(ctx, tx, id, in, displaced); err != nil {
+		return false, held, err
 	}
 	tag, err := tx.Exec(ctx, storekit.SQLf(`
 		INSERT INTO activity_link (activity_id, entity_type, %s)
@@ -239,7 +237,7 @@ func finalizeRelinkedActivity(ctx context.Context, tx pgx.Tx, id ids.ActivityID,
 	}
 	// Filing under a project is what qualifies the correspondence (D5), so
 	// the stamp commits with the link that earned it.
-	if in.EntityType == linkEntityProject {
+	if in.EntityType == linkEntityProject && !inheritedRelink(in) {
 		if err := StampCorrespondenceForProject(ctx, tx, id, in.EntityID); err != nil {
 			return err
 		}
@@ -378,6 +376,10 @@ func (s *Store) RelinkThread(ctx context.Context, anchor ids.ActivityID, in Reli
 	}
 	var out RelinkBatchResult
 	err = s.tx(ctx, func(tx pgx.Tx) error {
+		project, err := lockDealRelink(ctx, tx, in)
+		if err != nil {
+			return err
+		}
 		// ATTACH, as the single-row relink is: every activity this moves lands
 		// on the target record, which its readers then see.
 		if err := auth.EnsureAttachTarget(ctx, tx, in.EntityType, in.EntityID); err != nil {
@@ -403,7 +405,7 @@ func (s *Store) RelinkThread(ctx context.Context, anchor ids.ActivityID, in Reli
 				return err
 			case written:
 				out.Relinked++
-				if err := s.answerOnDealFiling(ctx, tx, id, in); err != nil {
+				if err := s.answerOnDealFiling(ctx, tx, id, in, project); err != nil {
 					return err
 				}
 			}
@@ -449,6 +451,10 @@ func (s *Store) RelinkActivities(ctx context.Context, activityIDs []ids.UUID, in
 	}
 	var out RelinkBatchResult
 	err = s.tx(ctx, func(tx pgx.Tx) error {
+		project, err := lockDealRelink(ctx, tx, in)
+		if err != nil {
+			return err
+		}
 		// ATTACH, as the single-row relink is: every activity this moves lands
 		// on the target record, which its readers then see.
 		if err := auth.EnsureAttachTarget(ctx, tx, in.EntityType, in.EntityID); err != nil {
@@ -467,7 +473,7 @@ func (s *Store) RelinkActivities(ctx context.Context, activityIDs []ids.UUID, in
 			}
 			if written {
 				out.Relinked++
-				if err := s.answerOnDealFiling(ctx, tx, ids.From[ids.ActivityKind](raw), in); err != nil {
+				if err := s.answerOnDealFiling(ctx, tx, ids.From[ids.ActivityKind](raw), in, project); err != nil {
 					return err
 				}
 			}
@@ -475,19 +481,6 @@ func (s *Store) RelinkActivities(ctx context.Context, activityIDs []ids.UUID, in
 		return nil
 	})
 	return out, err
-}
-
-// answerOnDealFiling files each row a batch door moves onto a deal under the
-// deal's project, and answers its conversation's question. The single door
-// does both too. The first of a conversation's rows settles its question.
-func (s *Store) answerOnDealFiling(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in RelinkActivityInput) error {
-	if in.EntityType != linkEntityDeal {
-		return nil
-	}
-	if err := fileRelinkedDealProject(ctx, tx, id, in.EntityID); err != nil {
-		return err
-	}
-	return s.answerWhichDealTx(ctx, tx, id, in.EntityID)
 }
 
 func validateRelinkCount(count int) error {

@@ -28,14 +28,18 @@ import (
 func relinkAdmittedRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in RelinkActivityInput, column string) (wrote, held bool, err error) {
 	// The relink target is a client-supplied reference (H1), and moving an
 	// activity onto it is an ATTACH: the record it lands on gains the activity.
+	project, err := lockDealRelink(ctx, tx, in)
+	if err != nil {
+		return false, false, err
+	}
 	if err := auth.EnsureAttachTarget(ctx, tx, in.EntityType, in.EntityID); err != nil {
 		return false, false, err
 	}
 	wrote, held, err = relinkActivityRow(ctx, tx, id, in, column)
-	if err != nil || !wrote || in.EntityType != linkEntityDeal {
+	if err != nil || !wrote {
 		return wrote, held, err
 	}
-	return wrote, held, fileRelinkedDealProject(ctx, tx, id, in.EntityID)
+	return wrote, held, fileRelinkedDealProject(ctx, tx, id, project)
 }
 
 // deleteVisibleLinksOfType drops the activity's links of one entity type and
