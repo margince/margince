@@ -14,7 +14,6 @@ import {
 } from "../../../format/activitywhen";
 import { calendarDaysUntil } from "../../../format/daysuntil";
 import { calendarDaysBetween } from "../../../format/format";
-import { messageFromOutside } from "../../../lib/messagevoice";
 import { ghostCount } from "./dealcommittee";
 
 type Deal = components["schemas"]["Deal"];
@@ -43,6 +42,9 @@ export type DealStandingInputs = Readonly<{
   // The instant the page was read at: where today stands on the axis.
   asOf: string;
   activities: readonly Activity[];
+  // The newest message the other side wrote, read by the server over every
+  // row rather than off the loaded page.
+  lastInbound?: Activity;
   // The list `activities` came from, which pages older rows in for the line.
   history?: TimelineHistory;
   offers: readonly Offer[] | undefined;
@@ -360,27 +362,4 @@ function soonest(
     }
   }
   return best;
-}
-
-/**
- * The newest message the other side wrote, from the loaded page of the
- * timeline. Read from the recorded author, not the direction: a colleague's
- * mail arrives inbound too. A row no human wrote (automatic_kind) is no word.
- */
-export function lastInbound(
-  activities: readonly Activity[],
-): Activity | undefined {
-  let latest: Activity | undefined;
-  for (const row of activities) {
-    if (row.automatic_kind || !messageFromOutside(row)) {
-      continue;
-    }
-    if (
-      !latest ||
-      Date.parse(row.occurred_at) > Date.parse(latest.occurred_at)
-    ) {
-      latest = row;
-    }
-  }
-  return latest;
 }

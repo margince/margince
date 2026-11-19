@@ -39,7 +39,7 @@ const askCap = 5
 // fact about the record, and "the model did not mention it" is a fact about the
 // model. Only the first belongs in front of a reader.
 func unknownsFor(in Input, typ MeetingType, arc []ArcMoment) []Unknown {
-	said := briefCopyFor(in.Language)
+	said := in.words()
 	var out []Unknown
 	add := func(kind crmcontracts.MeetingPlanUnknownKind, question string) {
 		out = append(out, Unknown{Kind: kind, Question: question})
@@ -90,7 +90,7 @@ func hasClaimKind(in Input, kind string) bool {
 // asked, a promise we made them. A hypothesis with no record behind it is a
 // guess, and a guess printed beside cited facts borrows their credibility.
 func likelyAsksFor(in Input, ranked *rankedClaims) []Ask {
-	said := briefCopyFor(in.Language)
+	said := in.words()
 	var out []Ask
 	for _, claim := range ranked.all(openOfKind(kindOpenQuestion, kindCommitmentOurs, kindObjection)) {
 		if len(out) == askCap {
@@ -147,7 +147,7 @@ func (said briefCopy) askBasis(claim ClaimIn) string {
 // file. An unknown with nothing to anchor on stays in `unknowns`, where it
 // reads as the gap it is, instead of being dressed up as preparation.
 func questionsFor(in Input, unknowns []Unknown, ranked *rankedClaims) []Question {
-	said := briefCopyFor(in.Language)
+	said := in.words()
 	var out []Question
 	for _, claim := range ranked.all(func(claim ClaimIn) bool {
 		return ofKind(kindPriority, kindSuccessCriterion)(claim) || openOfKind(kindOpenQuestion)(claim)

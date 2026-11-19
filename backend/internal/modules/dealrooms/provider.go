@@ -216,8 +216,8 @@ func (p *Provider) Create(ctx context.Context, in datasource.CreateInput) (datas
 		return datasource.EntityRef{}, err
 	}
 	fields := map[string]json.RawMessage{}
-	if err := json.Unmarshal(raw, &fields); err != nil {
-		return datasource.EntityRef{}, httperr.Validation("fields", "malformed_json", err.Error())
+	if err := httperr.UnmarshalOrRefusal(ctx, "fields", raw, &fields); err != nil {
+		return datasource.EntityRef{}, err
 	}
 	if fields["source"], err = json.Marshal(in.Source); err != nil {
 		return datasource.EntityRef{}, err

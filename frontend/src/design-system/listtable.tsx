@@ -15,7 +15,7 @@ import {
   useFrozenEdge,
 } from "./listtable.layout";
 import { orderedColumns, useColumnOrder } from "./listtable.order";
-import { fitsOnePage, usePaging } from "./listtable.paging";
+import { fitsOnePage, holdsCount, usePaging } from "./listtable.paging";
 import {
   applyView,
   clearAll,
@@ -61,15 +61,6 @@ export { CellStrip } from "./listgrid";
 
 const EMPTY_FILTERS: Readonly<Record<string, string>> = {};
 
-// A narrowed list with no rows may get its count back with the next answer.
-function holdsCount(
-  pending: boolean,
-  narrowed: boolean,
-  rows: number,
-): boolean {
-  return pending || (narrowed && rows === 0);
-}
-
 export function ListTable<Row>({
   title,
   bodyCount,
@@ -80,6 +71,7 @@ export function ListTable<Row>({
   onRowClick,
   rowHref,
   unit,
+  unitOne,
   emptyNote,
   search,
   sort,
@@ -166,6 +158,8 @@ export function ListTable<Row>({
   title?: ReactNode;
   /** Plural noun for the count and the empty state — "contacts", "leads". */
   unit: string;
+  /** Singular noun for a count of one ("contact", "lead"). Defaults to `unit`. */
+  unitOne?: string;
   /**
    * A likelier cause than "there is nothing here", for a caller that knows one.
    *
@@ -405,6 +399,7 @@ export function ListTable<Row>({
           ? bodyCount
           : rangeLine(pending, {
               unit,
+              unitOne,
               first: paging.from + 1,
               last: paging.from + paging.pageRows.length,
               total: serverTotal ?? rows.length,

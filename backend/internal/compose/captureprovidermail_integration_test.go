@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -220,7 +221,7 @@ func TestMailboxDeletionPreservesMailWrittenByTheCRM(t *testing.T) {
 	if ref.ID != sent.ActivityID {
 		t.Fatal("provider echo did not map the CRM send")
 	}
-	if count := e.WsCount(t, `SELECT count(*) FROM capture_import i JOIN capture_connection c ON c.user_id=i.user_id WHERE i.activity_id=$1 AND c.provider='gmail' AND i.provider_message_ids @> ARRAY[c.provider || ':' || c.generation || ':crm-sent-provider-id']`, sent.ActivityID); count != 1 {
+	if count := e.WsCount(t, `SELECT count(*) FROM capture_import i JOIN capture_connection c ON c.user_id=i.user_id WHERE i.activity_id=$1 AND c.provider='gmail' AND i.provider_message_ids @> ARRAY[`+storekit.MailboxMarkSQL("c")+` || ':crm-sent-provider-id']`, sent.ActivityID); count != 1 {
 		t.Fatal("provider echo did not record its mailbox mapping")
 	}
 

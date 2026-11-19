@@ -110,8 +110,8 @@ describe("ProjectScreen", () => {
     ).toBeTruthy();
     expect(screen.queryByTestId("project-coverage")).toBeNull();
 
-    // The four cards: a linked deal row, the phase history with its visit,
-    // and empty states for contracts and tasks.
+    // The cards: a linked deal row, the phase history with its visit, an
+    // empty contracts card, and no tasks card while none is open.
     expect(
       screen.getByRole("button", { name: "Phase one licence" }),
     ).toBeTruthy();
@@ -120,8 +120,8 @@ describe("ProjectScreen", () => {
       screen.getByText(/No contract is filed under this project/),
     ).toBeTruthy();
     expect(
-      screen.getByText(/No open task is filed under this project/),
-    ).toBeTruthy();
+      screen.queryByText(en["project.openTasks"], { selector: "h2, h3" }),
+    ).toBeNull();
 
     // Nothing else: the stakeholders, the files, the health log and the
     // chronology open from the menus, not from the Overview.

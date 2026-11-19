@@ -18,6 +18,7 @@ import {
 import { formatNumber, identifierNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { providerName } from "../../lib/ai-provider-names";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { OPENROUTER_ROUTING_DOCS } from "./ai-openrouter-settings";
 import { isOpenRouter } from "./ai-provider-links";
@@ -207,7 +208,7 @@ export function ServingSection({
       ) : (
         <p className="t-caption ai-serving-note">
           {t(BLOCKED_NOTE[blocked ?? "provider"], {
-            provider: value.binding?.provider ?? "",
+            provider: providerName(value.binding?.provider ?? "", t),
           })}
         </p>
       )}

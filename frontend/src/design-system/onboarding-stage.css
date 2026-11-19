@@ -474,17 +474,6 @@
      paragraph set large rather than as a title. */
   max-width: 20ch;
 }
-/* Focusable only so a step can hand the reader here. After a click the ring
-   would mark a control that is not one; after a key press it is the only sign
-   of where focus went, so the house ring stays. */
-.ob-stage-title:focus:not(:focus-visible) {
-  outline: none;
-}
-.ob-stage-title:focus-visible {
-  outline: var(--focus-ring);
-  outline-offset: 2px;
-  border-radius: var(--r-sm);
-}
 
 .ob-stage-sub {
   margin: 0;

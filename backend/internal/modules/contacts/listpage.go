@@ -376,8 +376,8 @@ func (f listFilters) clauses(ctx context.Context, active []fieldcatalog.Column, 
 	if ai := aiWrittenClause(f.AiWritten, f.entity, arg); ai != "" {
 		where = append(where, ai)
 	}
-	if f.Query != nil && *f.Query != "" {
-		where = append(where, storekit.QuickFindClauseWith(arg(quickFindTerm(*f.Query, f.entity)), f.nameColumn, f.identifier))
+	if q, ok := storekit.QuickFindQuery(f.Query); ok {
+		where = append(where, storekit.QuickFindClauseWith(arg(quickFindTerm(q, f.entity)), f.nameColumn, f.identifier))
 	}
 	if f.Membership != nil {
 		member, err := f.Membership(f.entity+".id", arg)

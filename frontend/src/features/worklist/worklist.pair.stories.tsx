@@ -57,27 +57,37 @@ function pairRow(over: Partial<WorklistItem> = {}): WorklistItem {
     consequence: "data_drifts",
     because: [],
     actions: ["merge", "dismiss"],
+    kind: "company",
     pair: {
       left: {
         id: "01a05500-0000-7000-8000-0000000000a1",
         label: "Acme GmbH",
         detail: "acme.de",
+        created_at: "2024-02-12T09:00:00Z",
         related_count: 12,
       },
       right: {
         id: "01a05500-0000-7000-8000-0000000000a2",
         label: "ACME Gmbh",
         detail: "acme.de",
+        created_at: "2026-10-03T09:00:00Z",
         related_count: 1,
       },
-      evidence: [],
+      evidence: [
+        {
+          field: "domain",
+          signal: "collide",
+          left_value: "acme.de",
+          right_value: "acme.de",
+        },
+      ],
     },
     ...over,
   };
 }
 
-// Two companies that read alike. The link counts are the whole of the
-// evidence, and each verb names the record it would keep.
+// Two companies that read alike: why they match, when each was made, and the
+// link counts, with each verb naming the record it would keep.
 //
 // THE REVIEW AS A READER MEETS IT: the question, the two candidates side by
 // side, and the trailing line under them. What to look for is that the two Keep
@@ -124,6 +134,7 @@ export const TheReviewInDark: Story = {
 export const WithoutCounts: Story = {
   args: {
     item: pairRow({
+      kind: "contact",
       pair: {
         left: {
           id: "01a05500-0000-7000-8000-0000000000b1",

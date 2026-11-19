@@ -215,6 +215,11 @@ test("names the missing critical role", async () => {
   expect(await screen.findByText("No champion")).not.toBeNull();
   // And the gap is shown WHERE it is: in the column that would hold them.
   expect(screen.getByTestId("gap-champion")).not.toBeNull();
+  // Each column is headed like any other label and counts the contacts in it.
+  expect(screen.getByText("Champion")).not.toBeNull();
+  expect(screen.getByText("Economic buyer")).not.toBeNull();
+  expect(screen.getByText("1 contact")).not.toBeNull();
+  expect(screen.queryByText(/^\d+ deals?$/)).toBeNull();
 });
 
 // A committee the reader may not read is a third state, not an empty one. A
@@ -453,8 +458,11 @@ test("offers the board and the map, and switches between them", async () => {
     await screen.findByRole("button", { name: /Sofia Meier/ }),
   ).not.toBeNull();
   expect(
-    screen.getByRole("button", { name: /champion missing/i }),
+    screen.getByRole("button", {
+      name: /No champion yet.*No one holds this role/,
+    }),
   ).not.toBeNull();
+  expect(screen.queryByText(/owns this deal/)).toBeNull();
 });
 
 // A seat the product read out of messages carries the AI mark; one a colleague

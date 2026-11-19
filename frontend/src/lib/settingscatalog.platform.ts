@@ -5,6 +5,7 @@
 import {
   acts,
   allOf,
+  always,
   anyOf,
   composedUnits,
   destroys,
@@ -334,5 +335,12 @@ export const PLATFORM_PAGES = [
       { kind: "grant", object: "system_reset", action: "delete" },
       flagged("data_reset_available"),
     ),
+  },
+  {
+    id: "about",
+    group: "system",
+    scope: "installation",
+    requires: always,
+    changes: readingIsTheAct,
   },
 ] as const satisfies readonly SettingsPageRow[];

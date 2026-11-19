@@ -7,12 +7,7 @@ package weekly
 // reporting catalog both count from it, so a move cannot count in one and not
 // the other.
 
-import (
-	"fmt"
-	"strings"
-
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-)
+import "github.com/margince/margince/backend/internal/modules/contacts"
 
 // The kinds of move LeadMovesSQL names. A move of none of them, such as a step
 // back down the ladder, carries a NULL move and counts nowhere.
@@ -41,29 +36,12 @@ func LeadMovesSQL(leads, start, end string) string {
 	     AND a.before->>'status' IS DISTINCT FROM a.after->>'status'`
 }
 
-// ladderRungSQL ranks an open lead status by its place on the ladder, so a move
-// has a direction. The order is this list, since the contract's enum is
-// alphabetical. A terminal or unknown status ranks -1 and never climbs:
-// promoted and disqualified leave the ladder and have counts of their own.
-func ladderRungSQL(column string) string {
-	ladder := []crmcontracts.LeadStatus{
-		crmcontracts.LeadStatusNew,
-		crmcontracts.LeadStatusContacted,
-		crmcontracts.LeadStatusEngaged,
-	}
-	var b strings.Builder
-	b.WriteString("CASE " + column)
-	for rung, status := range ladder {
-		fmt.Fprintf(&b, " WHEN '%s' THEN %d", status, rung)
-	}
-	b.WriteString(" ELSE -1 END")
-	return b.String()
-}
-
 // climbedTheLadderSQL is the predicate for a step up: both ends on the ladder,
 // and the destination above the origin. contacts.LeadStatus.Advances is the Go
 // spelling of the same rule.
 func climbedTheLadderSQL(fromColumn, toColumn string) string {
-	from, to := ladderRungSQL(fromColumn), ladderRungSQL(toColumn)
-	return "(" + from + ") >= 0 AND (" + to + ") > (" + from + ")"
+	// A terminal status ranks -1 and never climbs: promoted and disqualified
+	// leave the ladder and have counts of their own.
+	from, to := contacts.LeadStatusRungSQL(fromColumn, false), contacts.LeadStatusRungSQL(toColumn, false)
+	return from + " >= 0 AND " + to + " > " + from
 }

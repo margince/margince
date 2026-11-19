@@ -7,10 +7,13 @@ import "github.com/margince/margince/backend/internal/shared/kernel/provenance"
 
 // LiveLeadInquiryClause excludes imported history and requires an incoming
 // message before automatic intake work can claim a first-response obligation.
+// An inbound email and the note a website form writes are both the lead
+// writing in. Only the website lander can spell that note's source system.
 func LiveLeadInquiryClause(alias string) string {
 	return "NOT starts_with(COALESCE(" + alias + ".source_system, ''), '" + provenance.ReservedSourceSystemPrefix + "') AND EXISTS (SELECT 1 FROM activity_link incoming" +
 		" JOIN activity request ON request.id = incoming.activity_id WHERE incoming.lead_id = " + alias + ".id" +
-		" AND request.kind = 'email' AND request.direction = 'inbound'" +
+		" AND ((request.kind = 'email' AND request.direction = 'inbound')" +
+		" OR (request.kind = 'note' AND request.source_system = '" + provenance.WebFormSource + "'))" +
 		" AND request.archived_at IS NULL AND request.restricted_at IS NULL" +
 		" AND NOT starts_with(COALESCE(request.source_system, ''), '" + provenance.ReservedSourceSystemPrefix + "'))"
 }

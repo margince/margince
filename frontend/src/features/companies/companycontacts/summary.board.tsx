@@ -5,8 +5,9 @@ import { PipelineBoard } from "../../../design-system/pipelineboard";
 import { RelationshipMap } from "../../../design-system/relationshipmap";
 import { ProvenanceTag } from "../../../design-system/trust";
 import { formatNumber } from "../../../format/format";
-import { type Locale, useLocale, useT } from "../../../i18n";
+import { type Locale, useLocale, usePlural, useT } from "../../../i18n";
 import { labelFor } from "../../../lib/labelfor";
+import { dealRoleLabel } from "../../../lib/recordlabels";
 import { useViewerId } from "../../../lib/session";
 import { useUrlParams } from "../../../lib/urlstate";
 import { ENGAGEMENT_LABELS, ENGAGEMENT_TONES } from "./contacts";
@@ -30,6 +31,7 @@ export function CommitteeBoard({
 }: Readonly<{ coverage: Coverage; accountName: string; companyId: string }>) {
   const t = useT();
   const { locale } = useLocale();
+  const plural = usePlural();
   const [view, setView] = useState<"board" | "map">("board");
   // The selection lives in the address, so the two views agree about who is
   // chosen and a reload or a pasted link restores it. Local state would die on
@@ -77,7 +79,7 @@ export function CommitteeBoard({
   const columns = [
     ...ROLES.map((role) => ({
       stage: role,
-      label: t(ROLE_LABELS[role]),
+      label: dealRoleLabel(role, t),
       deals: committee.seats
         .filter((seat) => seat.role === role)
         .map((seat) => ({ id: seat.contact_id, name: seat.full_name, seat })),
@@ -170,6 +172,11 @@ export function CommitteeBoard({
       <PipelineBoard
         variant="plain"
         columns={columns}
+        countLabel={(count) =>
+          plural("co.contacts.board.count", count, {
+            count: formatNumber(count, locale),
+          })
+        }
         renderCard={(record) => renderSeat(record.seat)}
         columnExtras={(column) =>
           // A critical role nobody holds says so in the column that would hold
@@ -222,15 +229,16 @@ function mapCopy(t: ReturnType<typeof useT>) {
     ourSide: t("co.contacts.map.ourSide"),
     account: t("co.contacts.map.account"),
     roles: {
-      champion: t("co.role.champion"),
-      economic_buyer: t("co.role.economic_buyer"),
-      influencer: t("co.role.influencer"),
-      blocker: t("co.role.blocker"),
-      user: t("co.role.user"),
+      champion: dealRoleLabel("champion", t),
+      economic_buyer: dealRoleLabel("economic_buyer", t),
+      influencer: dealRoleLabel("influencer", t),
+      blocker: dealRoleLabel("blocker", t),
+      user: dealRoleLabel("user", t),
     },
     otherRoles: t("co.contacts.board.otherRoles"),
-    missing: (role: string) => t("co.contacts.map.missing", { role }),
-    assign: t("co.contacts.map.assignHint"),
+    missing: (role: (typeof ROLES)[number]) =>
+      t("co.contacts.map.missing", { role: t(ROLE_LABELS[role]) }),
+    unheld: t("co.contacts.board.nobodyHolds"),
     engagement: {
       waiting: t("co.reach.waiting"),
       answered: t("co.reach.answered"),

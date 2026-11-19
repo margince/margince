@@ -71,6 +71,9 @@ type RunMapping struct {
 	// the file needs no links column. Both the test and the commit read them
 	// from here.
 	PresetLinks []PresetLink `json:"preset_links,omitempty"`
+	// ObjectChosenBy is how the upload typed a file that named no type. A save
+	// that names the object is the reader's choice, and clears it.
+	ObjectChosenBy string `json:"object_chosen_by,omitempty"`
 }
 
 // PresetLink names one record a run files every activity under.

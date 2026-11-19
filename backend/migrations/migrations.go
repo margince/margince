@@ -23,6 +23,11 @@
 // name, and dbmigrate stops there rather than skip a migration as done. That
 // stop is the intended outcome — rebuild the database (make dev-fresh).
 //
+// baseline/core/ holds a second baseline, for installations that must be kept.
+// One file builds what core's versions through a release built. replaces.txt
+// names that release and the versions the file stands for. The replaced files
+// stay in core/, so a database that applied them upgrades as it always did.
+//
 // What the baseline BUILDS is committed too, in testdata/head_catalog.txt,
 // and TestMigrationsBuildTheCommittedSchema compares the two. So a migration
 // added here shows its schema effect as a diff a reviewer can read, and the
@@ -32,12 +37,21 @@ package migrations
 
 import (
 	"embed"
+	"fmt"
+	"io/fs"
+	"strings"
 
 	"github.com/margince/margince/backend/internal/platform/dbmigrate"
 )
 
 //go:embed core custom
 var files embed.FS
+
+// baselines is kept apart from files because it holds no namespace: each
+// directory is the baseline OF one, and the gates walk files as namespaces.
+//
+//go:embed baseline
+var baselines embed.FS
 
 // renumbered declares the migrations that moved to a new version with
 // identical bytes. Up moves a database's ledger row along such a pair instead
@@ -46,8 +60,27 @@ var files embed.FS
 //go:embed renumbered.txt
 var renumbered string
 
-// Core returns the upstream-owned namespace.
+// Core returns the upstream-owned namespace, as an installation applies it:
+// an empty database takes the baseline instead of the versions it replaces.
 func Core() (dbmigrate.Namespace, error) {
+	ns, err := CoreHistory()
+	if err != nil {
+		return dbmigrate.Namespace{}, err
+	}
+	if ns.Baseline, err = baseline("core"); err != nil {
+		return dbmigrate.Namespace{}, err
+	}
+	if err := ns.CheckBaseline(); err != nil {
+		return dbmigrate.Namespace{}, err
+	}
+	return ns, nil
+}
+
+// CoreHistory returns the upstream-owned namespace without its baseline, so
+// even an empty database replays every version. The tests that migrate to a
+// version part-way through the history, and scripts/migration-baseline.sh,
+// take this route.
+func CoreHistory() (dbmigrate.Namespace, error) {
 	return namespace("core")
 }
 
@@ -75,4 +108,35 @@ func namespace(name string) (dbmigrate.Namespace, error) {
 // starting with # is a comment.
 func Renumbered() (map[string][]dbmigrate.Renumber, error) {
 	return dbmigrate.ParseRenumbers(renumbered)
+}
+
+// baseline reads baseline/<name>/: one up file and the replaces.txt manifest.
+// It has no down file, because Down reverts the replaced versions instead.
+func baseline(name string) (*dbmigrate.Baseline, error) {
+	dir := "baseline/" + name
+	ups, err := fs.Glob(baselines, dir+"/*.up.sql")
+	if err != nil || len(ups) != 1 {
+		return nil, fmt.Errorf("migrations: %s: want exactly one baseline .up.sql, found %d (%v)", dir, len(ups), err)
+	}
+	up, err := fs.ReadFile(baselines, ups[0])
+	if err != nil {
+		return nil, err
+	}
+	manifest, err := fs.ReadFile(baselines, dir+"/replaces.txt")
+	if err != nil {
+		return nil, err
+	}
+	release, replaces, err := dbmigrate.ParseBaselineManifest(string(manifest))
+	if err != nil {
+		return nil, fmt.Errorf("migrations: %s: %w", dir, err)
+	}
+	version, title, ok := strings.Cut(strings.TrimSuffix(strings.TrimPrefix(ups[0], dir+"/"), ".up.sql"), "_")
+	if !ok {
+		return nil, fmt.Errorf("migrations: %s: want <version>_<name>.up.sql", ups[0])
+	}
+	return &dbmigrate.Baseline{
+		Migration: dbmigrate.Migration{Version: version, Name: title, UpSQL: string(up)},
+		Release:   release,
+		Replaces:  replaces,
+	}, nil
 }

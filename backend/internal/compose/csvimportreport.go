@@ -88,7 +88,9 @@ func withPredictedLinks(ctx context.Context, source *migration.CSVSource, writer
 			report.Associations++
 			continue
 		}
-		report.AssociationsSkipped = append(report.AssociationsSkipped, skippedAssocFor(edge, why))
+		skipped := skippedAssocFor(edge, why)
+		skipped.RowSkipped = willNotLand[edge.FromID]
+		report.AssociationsSkipped = append(report.AssociationsSkipped, skipped)
 	}
 	return report, nil
 }

@@ -208,11 +208,14 @@ func linksOf(rep *migration.Report, committed bool) *crmcontracts.ImportRunLinks
 	if committed {
 		links.Applied = rep.Associations
 	}
-	// Offered is the whole ask either way: what landed, plus what named a company
-	// the run could not find.
-	links.Offered = rep.Associations + len(rep.AssociationsSkipped)
+	links.Offered = rep.Associations
 	unresolved := make([]crmcontracts.ImportUnresolvedLink, 0, len(rep.AssociationsSkipped))
 	for _, s := range rep.AssociationsSkipped {
+		// The link of a row that did not land is that row's skip, already
+		// reported as one, and no link was there to make.
+		if !s.RowSkipped && !linkOfAnUnlandedRow[s.Code] {
+			links.Offered++
+		}
 		unresolved = append(unresolved, crmcontracts.ImportUnresolvedLink{
 			From: s.From, To: s.To, Reason: s.Reason,
 			ReasonCode: reasonCodeOrAbsent(s.Code), Params: paramsOrAbsent(s.Params),
@@ -220,6 +223,12 @@ func linksOf(rep *migration.Report, committed bool) *crmcontracts.ImportRunLinks
 	}
 	links.Unresolved = &unresolved
 	return &links
+}
+
+// linkOfAnUnlandedRow are the reasons a link names when its own row is not
+// imported: before the commit and after it.
+var linkOfAnUnlandedRow = map[migration.ReasonCode]bool{
+	migration.ReasonLinkRowNotImported: true, migration.ReasonLinkContactNotImported: true,
 }
 
 // lineOf is the file line a skip names, from the row itself.

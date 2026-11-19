@@ -2,6 +2,7 @@
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
   cleanup,
   render as rtlRender,
   screen,
@@ -12,11 +13,13 @@ import userEvent, { type UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { toggleOptions } from "../../design-system/select-testing";
+import { UTC_ZONE } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
 import { openFilterValues } from "../../testing/listquery.testkit";
 import { openView, openViewStep } from "../../testing/listview.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { phoneRowOf, stubWindowWidth } from "../../testing/phonerow.testkit";
+import { pretendReaderZone } from "../../testing/readerzone.testkit";
 import { PartnersScreen, PartnerTab } from "./partners";
 
 // The Partner tab on a company and the #/partners list. The tab reads a 404
@@ -26,6 +29,8 @@ import { PartnersScreen, PartnerTab } from "./partners";
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
   window.location.hash = "";
 });
@@ -339,6 +344,119 @@ describe("PartnerTab — existing partner", () => {
     expect(
       await screen.findByRole("button", { name: "Add task" }),
     ).toBeTruthy();
+  });
+
+  it("lists the company's open tasks under Next step, soonest due first", async () => {
+    const task = (id: string, subject: string, due: string | null) => ({
+      id,
+      kind: "task",
+      subject,
+      due_at: due,
+      is_done: false,
+      version: 1,
+      writable: true,
+      created_at: "2026-01-01T00:00:00Z",
+    });
+    const { urls } = stubFetch(
+      async (url, method) => {
+        if (url.includes("/companies/o-1/partner") && method === "GET") {
+          return jsonResponse({
+            ...partner,
+            next_step: null,
+            next_step_due_at: null,
+          });
+        }
+        if (url.includes("/activities") && method === "GET") {
+          return jsonResponse({
+            data: [
+              task("a-later", "Send the reseller pack", "2026-12-20T23:59:59Z"),
+              task("a-undated", "Ask about a second region", null),
+              {
+                ...task("a-done", "Already done", "2026-11-01T23:59:59Z"),
+                is_done: true,
+              },
+              task("a-soon", "Book the partner review", "2026-11-20T23:59:59Z"),
+            ],
+            page: { has_more: false, next_cursor: null },
+          });
+        }
+        throw new Error(`unexpected request ${method} ${url}`);
+      },
+      meFixture({
+        allow: {
+          company: ["read", "update"],
+          partner: ["read", "update"],
+          activity: ["read", "create"],
+        },
+      }),
+    );
+    render(<PartnerTab companyId="o-1" />);
+
+    const soon = await screen.findByText("Book the partner review");
+    const later = screen.getByText("Send the reseller pack");
+    const undated = screen.getByText("Ask about a second region");
+    expect(
+      soon.compareDocumentPosition(later) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      later.compareDocumentPosition(undated) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(screen.queryByText("Already done")).toBeNull();
+    const asked = new URL(urls.find((u) => u.includes("/activities")) ?? "");
+    expect(asked.searchParams.get("entity_type")).toBe("company");
+    expect(asked.searchParams.get("entity_id")).toBe("o-1");
+    expect(asked.searchParams.getAll("kind")).toEqual(["task"]);
+  });
+
+  it("turns a task late when its deadline passes with the tab open", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date("2026-11-19T12:00:00Z"));
+    pretendReaderZone(UTC_ZONE);
+    stubFetch(
+      async (url, method) => {
+        if (url.includes("/companies/o-1/partner") && method === "GET") {
+          return jsonResponse({
+            ...partner,
+            next_step: null,
+            next_step_due_at: null,
+          });
+        }
+        if (url.includes("/activities") && method === "GET") {
+          return jsonResponse({
+            data: [
+              {
+                id: "a-due",
+                kind: "task",
+                subject: "Book the partner review",
+                due_at: "2026-11-19T23:59:59Z",
+                is_done: false,
+                version: 1,
+                writable: true,
+                created_at: "2026-01-01T00:00:00Z",
+              },
+            ],
+            page: { has_more: false, next_cursor: null },
+          });
+        }
+        throw new Error(`unexpected request ${method} ${url}`);
+      },
+      meFixture({
+        allow: {
+          company: ["read", "update"],
+          partner: ["read", "update"],
+          activity: ["read", "create"],
+        },
+      }),
+    );
+    render(<PartnerTab companyId="o-1" />);
+    expect(await screen.findByText("Due today")).toBeTruthy();
+
+    vi.setSystemTime(new Date("2026-11-21T12:00:00Z"));
+    await act(async () => {
+      vi.advanceTimersByTime(60_000);
+    });
+
+    expect(screen.getByText("2 days late")).toBeTruthy();
   });
 
   it("offers the active stages in ladder order and the retired one the partner stands on", async () => {

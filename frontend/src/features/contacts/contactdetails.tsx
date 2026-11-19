@@ -13,6 +13,7 @@ import { TagsPanel } from "../../components/tagspanel";
 import { Badge } from "../../design-system/atoms";
 import { ContactLink } from "../../design-system/contactlink";
 import { FieldRow } from "../../design-system/fieldgrid";
+import { reachRow } from "../../design-system/reachcard";
 import { RecordCard } from "../../design-system/recordcard";
 import type {
   DetailRow,
@@ -38,7 +39,7 @@ import { BoughtMark, boughtFields } from "./boughtmarks";
 import { BoughtAttributes } from "./contactboughtattributes";
 import { useContactEdit } from "./contactedit";
 import { ContactSource } from "./contactfacts";
-import { EmailHandles, PhoneHandles } from "./contacthandles";
+import { ContactReach } from "./contacthandles";
 import { EmployerValue } from "./employerchange";
 import { type ProfileField, proposedEmployer } from "./employerproposal";
 import { ProposedEmployerRow } from "./employerproposalrow";
@@ -98,6 +99,45 @@ export function useContactAboutSections(view: Contact360): DetailSection[] {
       empty: !present,
     };
   };
+  // Every address and number shares one card. A kind with none folds as its
+  // own empty row, so "Show empty fields" still offers to add it.
+  const reachKeys = [email && "emails", phone && "phones"].filter(
+    (key): key is string => Boolean(key),
+  );
+  const reachLabel = t("record.reach.label");
+  const reachRows: DetailRow[] = [
+    ...(reachKeys.length > 0
+      ? [
+          reachRow(
+            reachLabel,
+            <RailField
+              edit={edit}
+              keys={reachKeys}
+              label={reachLabel}
+              link
+              block
+              reading={<ContactReach contact={contact} bought={bought} />}
+            />,
+          ),
+        ]
+      : []),
+    ...(email
+      ? []
+      : [
+          field("email", t("create.email"), false, {
+            keys: ["emails"],
+            reading: notSet,
+          }),
+        ]),
+    ...(phone
+      ? []
+      : [
+          field("phone", t("create.phone"), false, {
+            keys: ["phones"],
+            reading: notSet,
+          }),
+        ]),
+  ];
   return [
     {
       key: "about",
@@ -110,24 +150,7 @@ export function useContactAboutSections(view: Contact360): DetailSection[] {
           empty: !employer && !proposed,
           block: Boolean(employer ?? proposed),
         },
-        stacked(
-          field("email", t("create.email"), Boolean(email), {
-            keys: ["emails"],
-            link: Boolean(email),
-            reading: email && (
-              <EmailHandles contact={contact} bought={bought} />
-            ),
-          }),
-        ),
-        stacked(
-          field("phone", t("create.phone"), Boolean(phone), {
-            keys: ["phones"],
-            link: Boolean(phone),
-            reading: phone && (
-              <PhoneHandles contact={contact} bought={bought} />
-            ),
-          }),
-        ),
+        ...reachRows,
         field("linkedin", t("contact.page.linkedin"), linkedin !== "", {
           keys: ["social.linkedin"],
           // The label claims the destination is LinkedIn, and a crawl or a
@@ -181,12 +204,6 @@ export function useContactAboutSections(view: Contact360): DetailSection[] {
       ],
     },
   ];
-}
-
-// A row whose lines take the column's width under its label, as the
-// employer card does, so an address never breaks to fit beside it.
-function stacked(row: DetailRow): DetailRow {
-  return row.empty ? row : { ...row, block: true };
 }
 
 function employerValue(

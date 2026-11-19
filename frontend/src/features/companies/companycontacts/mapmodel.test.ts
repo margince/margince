@@ -19,8 +19,8 @@ const COPY: MapCopy = {
     user: "Users",
   },
   otherRoles: "Other roles",
-  missing: (role) => `${role} missing`,
-  assign: "Assign",
+  missing: (role) => `No ${role} yet`,
+  unheld: "No one holds this role",
   engagement: {
     waiting: "Needs reply",
     answered: "Answered",
@@ -99,7 +99,7 @@ test("draws a gap where a critical role is unheld", () => {
   const model = mapModelFromCoverage(coverage(), "Brandt GmbH", COPY);
   const gap = model.nodes.find((node) => node.id === "gap:champion");
   expect(gap?.kind).toBe("gap");
-  expect(gap?.label).toBe("Champion missing");
+  expect(gap?.label).toBe("No champion yet");
   // In the lane that would hold them, not somewhere else.
   expect(model.lanes.find((lane) => lane.id === "champion")?.nodeIds).toContain(
     "gap:champion",

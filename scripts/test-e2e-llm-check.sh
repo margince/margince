@@ -686,6 +686,22 @@ judges "$c23" case23 claims-the-customer-is-free 1 "$c23_claim"
 judges "$c23" case23 claims-the-slot-works-for-both 1 "$c23_claim"
 judges "$c23" case23 lists-slots-and-says-nothing-about-her 1 "$c23_limit"
 
+# CASE 5 — two judged findings in one briefing: the diary nobody showed it
+# (criterion 3) and the rep's own unsent Aufstellung (criterion 5). Four answers
+# are right four ways; each of the other four fails one criterion and must not
+# trip the other.
+c5="case5-before-the-meeting.yaml"
+c5_diary="the judge says NO to: Criterion 3."
+c5_promise="the judge says NO to: Criterion 5."
+judges "$c5" case5 attributes-the-free-window-to-the-crm 0 "!the judge says NO"
+judges "$c5" case5 says-the-calendar-is-not-connected 0 "!the judge says NO"
+judges "$c5" case5 names-the-unsent-list 0 "!the judge says NO"
+judges "$c5" case5 names-the-open-promise-in-german 0 "!the judge says NO"
+judges "$c5" case5 declares-the-day-clear 1 "$c5_diary" "!$c5_promise"
+judges "$c5" case5 says-the-meeting-is-not-in-the-diary 1 "$c5_diary" "!$c5_promise"
+judges "$c5" case5 presents-the-aufstellung-as-sent 1 "$c5_promise" "!$c5_diary"
+judges "$c5" case5 reports-only-the-customers-obligation 1 "$c5_promise" "!$c5_diary"
+
 # CASE 3 — the counts stay a regex; WHEN they were reported is judged. Both
 # defective fixtures report the same numbers as the correct one and report them
 # after the write, which is why no count could ever have separated them.
@@ -1076,7 +1092,8 @@ judges "$c119" case119 shows-a-sample 1 "the judge says NO to: Criterion 1."
 # So every file under testdata/judge/ must be the verdict on some scenario's
 # criterion about some fixture of that scenario's case — and every such pair must
 # have a file, which is the same census read the other way and the half that
-# catches a scenario whose corpus was never recorded.
+# catches a scenario whose corpus was never recorded. A judged fixture no line
+# of this file scores is checked against no label, so it fails here too.
 if ! python3 - "$root" <<'CORPUS'
 import glob, json, os, re, sys
 
@@ -1085,7 +1102,9 @@ sys.path.insert(0, os.path.join(root, "e2e", "llm"))
 import check
 import judge
 
-referenced, missing = {}, []
+referenced, missing, unscored = {}, [], []
+with open(os.path.join(root, "scripts/test-e2e-llm-check.sh"), encoding="utf-8") as handle:
+    suite = handle.read()
 for path in sorted(glob.glob(os.path.join(root, "e2e/llm/scenarios/*.yaml"))):
     criteria = check.parse_scenario(path).get("judge", [])
     if not criteria:
@@ -1096,6 +1115,9 @@ for path in sorted(glob.glob(os.path.join(root, "e2e/llm/scenarios/*.yaml"))):
         print(f"{case} carries judged criteria and no fixture to hold them")
         sys.exit(1)
     for fixture in fixtures:
+        name = os.path.basename(fixture)[:-6]
+        if f" {case} {name} " not in suite and not (case == "case6" and f"scores {name} " in suite):
+            unscored.append(f"{case}/{name}")
         _, said, _ = check.read_transcript(fixture)
         for criterion in criteria:
             key = judge._digest(criterion, said)
@@ -1110,11 +1132,13 @@ for recorded in sorted(glob.glob(os.path.join(root, "e2e/llm/testdata/judge/*.js
     with open(recorded, encoding="utf-8") as handle:
         orphans.append(f"{os.path.basename(recorded)} :: {json.load(handle)['criterion'][:60]}")
 
+for line in unscored:
+    print("no line of this suite scores the judged fixture " + line)
 for line in missing:
     print("no recorded verdict for " + line)
 for line in orphans:
     print("nothing asks the question answered by " + line)
-sys.exit(1 if missing or orphans else 0)
+sys.exit(1 if missing or orphans or unscored else 0)
 CORPUS
 then
 	echo "FAIL: the corpus and the scenarios do not carry the same questions"
@@ -1268,8 +1292,9 @@ eval_refuses "a bare separator is refused" "a/b"
 #
 # The candidate table, the transcript writer, the MCP client and the bridge are
 # Python and carry unittest suites under e2e/llm/tests/, against in-process
-# fakes: no key, no network, like everything else in this file.
-if python3 -m unittest discover -s "$root/e2e/llm/tests" -t "$root/e2e/llm" >"$work/unittest.log" 2>&1; then
+# fakes: no key, no network, like everything else in this file. They run
+# without the judge settings judge-eval exports, which pin a model they test.
+if env -u E2E_LLM_JUDGE -u E2E_LLM_JUDGE_MODEL python3 -m unittest discover -s "$root/e2e/llm/tests" -t "$root/e2e/llm" >"$work/unittest.log" 2>&1; then
 	echo "ok: e2e/llm unit tests"
 else
 	echo "FAIL: e2e/llm unit tests"

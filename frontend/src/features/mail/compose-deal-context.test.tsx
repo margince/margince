@@ -3,10 +3,11 @@
 /** @vitest-environment happy-dom */
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { writeMessage } from "../../design-system/richtext-testing";
 import { pickOption } from "../../design-system/select-testing";
 import {
+  installComposeClock,
   jsonResponse,
   pickWhy,
   pressSend,
@@ -92,6 +93,8 @@ async function writeToAnna() {
   await userEvent.type(screen.getByLabelText("Subject"), "Next steps");
   writeMessage("Body", "As agreed, the next steps.");
 }
+
+beforeEach(installComposeClock);
 
 afterEach(() => {
   cleanup();

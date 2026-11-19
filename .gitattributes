@@ -21,3 +21,7 @@ frontend/src/composition/extensions.gen.ts  -text
 frontend/src/composition/extscreens.gen.ts  -text
 frontend/src/composition/extlocales.gen.ts  -text
 frontend/src/composition/extinstruments.gen.ts  -text
+
+# git archive, and so GitHub's source downloads, writes the commit hash into
+# REVISION. A checkout keeps the placeholder; scripts/build-revision.sh reads it.
+/REVISION export-subst

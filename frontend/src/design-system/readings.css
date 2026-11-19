@@ -115,6 +115,25 @@
   inline-size: 20px;
   block-size: 20px;
 }
+/* wrap: a name read whole breaks inside its container, at `.badge-wrap`'s box
+   radius so a second line keeps its end letters clear of the curve. */
+.chip-wrap {
+  border-radius: var(--r-sm);
+}
+/* The label alone: a monogram in the mark never breaks. */
+.chip-wrap > .chip-label {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+/* The mark stays with the first line, not centred on two. An icon's box is one
+   line tall, so its glyph sits mid-line as it does in an unwrapped chip. */
+.chip-wrap .chip-mark > *,
+.chip-wrap > svg {
+  align-self: flex-start;
+}
+.chip-wrap > svg {
+  block-size: 1lh;
+}
 .chip-link {
   text-decoration: none;
 }

@@ -258,13 +258,9 @@ func TestAssembleContextFixedDepthWalk(t *testing.T) {
 	}
 }
 
-// A value the caller spelled wrong is the CALLER's mistake, and the report
-// engine binds one straight onto a typed column.
-//
-// `owner_id` is a uuid, so `"not-a-uuid"` reaches Postgres as text it cannot
-// read: SQLSTATE 22P02, which the classification net did not know, so the
-// caller got an opaque 500 whose advice was to retry a plan that fails the same
-// way forever. Nothing about a client typo is a server fault.
+// A value the caller spelled wrong is the CALLER's mistake. `owner_id` is a
+// uuid column, so the engine refuses text that is no id before a statement
+// binds it. Postgres would refuse it as a database fault, logged as an ERROR.
 func TestAWrongTypedFilterIsTheCallersMistakeNotAServerFault(t *testing.T) {
 	e := SetupSearch(t)
 	provider := compose.NewProvider(e.Pool)
@@ -286,17 +282,14 @@ func TestAWrongTypedFilterIsTheCallersMistakeNotAServerFault(t *testing.T) {
 	if fault.Status != http.StatusUnprocessableEntity {
 		t.Errorf("status = %d, want 422 — retrying the same spelling can never work", fault.Status)
 	}
-	if fault.Code != "value_wrong_type" {
-		t.Errorf("code = %q, want %q", fault.Code, "value_wrong_type")
+	if fault.Code != "report_field_not_allowed" {
+		t.Errorf("code = %q, want report_field_not_allowed, the report's declared 422", fault.Code)
 	}
-	// Postgres names the type and quotes the value back; the caller gets the
-	// sentence, the operator gets the cause.
-	for _, leak := range []string{"22P02", "uuid", "not-a-uuid"} {
-		if strings.Contains(fault.Detail, leak) {
-			t.Errorf("the refusal leaks %q: %q", leak, fault.Detail)
-		}
+	if strings.Contains(fault.Detail, "22P02") || !strings.Contains(fault.Detail, `"owner_id"`) {
+		t.Errorf("the refusal should name the filter and no database error: %q", fault.Detail)
 	}
-	if fault.InfraCause == nil {
-		t.Error("the cause reaches no log — withholding a message is not the same as losing it")
+	if fault.InfraCause != nil {
+		t.Errorf("the refusal carries a database cause, so the statement ran and the log reads an ERROR: %v",
+			fault.InfraCause)
 	}
 }

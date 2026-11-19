@@ -381,9 +381,9 @@ export const BoughtPhone: Story = {
     const canvas = within(canvasElement);
     await canvas.findByRole("button", { name: "Open a chat" });
     const number = canvas.getByRole("link", { name: "+493012345678" });
-    const handle = number.closest(".fieldgrid-handle");
+    const handle = number.closest(".reachline");
     const mark = handle?.querySelector(":scope > .evmark");
-    const chats = handle?.querySelector(":scope > .callaction-chats");
+    const chats = handle?.querySelector(".callaction-chats");
     if (!mark || !chats) {
       throw new Error("the phone row lost its bought mark or its chat glyph");
     }
@@ -407,8 +407,8 @@ export const BoughtPhonePhone: Story = {
 const LONG_ADDRESS =
   "sebastian.sachsinger.procurement@straight-logistics-holding.de";
 
-// An address wider than the column breaks at its `@`: the domain drops under
-// the mailbox name, and neither half is cut.
+// An address wider than the card keeps to one line, ends in "…" and stays
+// inside the card.
 export const LongAddress: Story = {
   name: "Long address, phone",
   render: () =>
@@ -427,19 +427,14 @@ export const LongAddress: Story = {
     const link = await within(canvasElement).findByRole("link", {
       name: LONG_ADDRESS,
     });
-    const local = link.querySelector<HTMLElement>(".contactlink-email-local");
-    const domain = link.querySelector<HTMLElement>(".contactlink-email-domain");
-    const column = link.closest(".factlist-value");
-    if (!local || !domain || !column) {
-      throw new Error("the address lost a half");
+    const face = link.querySelector<HTMLElement>(".contactlink-email");
+    const card = link.closest(".reachcard");
+    if (!face || !card) {
+      throw new Error("the address left its card");
     }
-    await expect(local.scrollWidth).toBeLessThanOrEqual(local.clientWidth);
-    await expect(domain.scrollWidth).toBeLessThanOrEqual(domain.clientWidth);
-    await expect(domain.getBoundingClientRect().top).toBeGreaterThanOrEqual(
-      local.getBoundingClientRect().bottom - 0.5,
-    );
-    await expect(domain.getBoundingClientRect().right).toBeLessThanOrEqual(
-      column.getBoundingClientRect().right,
+    await expect(face.scrollWidth).toBeGreaterThan(face.clientWidth);
+    await expect(face.getBoundingClientRect().right).toBeLessThanOrEqual(
+      card.getBoundingClientRect().right,
     );
   },
 };

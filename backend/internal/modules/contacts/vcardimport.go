@@ -151,15 +151,6 @@ func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry,
 		result.Outcome, result.Reason = VCardSkipped, reason
 		return result, nil
 	}
-	if result.FullName == "" {
-		result.Outcome = VCardSkipped
-		result.Reason = "the card states no name"
-		return result, nil
-	}
-	if cardNamesASendingSystem(entry) {
-		result.Outcome, result.Reason = VCardSkipped, vcardMachineAddress
-		return result, nil
-	}
 
 	// The ladder's report about THIS card, raised after the transaction below.
 	var split *LaneConflict

@@ -111,7 +111,7 @@ func DeterministicPlan(in Input, ranked *rankedClaims) Plan {
 		Objective: objectiveFor(in, typ, ranked),
 		Opening:   openingFor(in, typ),
 		TopRisk:   topRiskFor(in, ranked),
-		Arc:       briefCopyFor(in.Language).arcSentences(arc),
+		Arc:       in.words().arcSentences(arc),
 		Advance:   advanceFor(in, typ),
 		Scenarios: scenariosFor(in, typ),
 		Unknowns:  unknowns,

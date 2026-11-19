@@ -7,8 +7,12 @@ import (
 	"context"
 	"errors"
 
+	"github.com/jackc/pgx/v5"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/shared/kernel/datenotation"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // DateFormat changes date notation without changing stored dates or timezone boundaries.
@@ -24,7 +28,7 @@ var DateFormat = config.DefineStored(config.Spec[string]{
 		return nil
 	},
 	Doc: "How dates are written: locale, dmy, mdy or ymd.",
-}, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, SurvivesDataReset: true})
+}, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, SurvivesDataReset: true, MachineryApplied: true})
 
 // TimeFormat selects the displayed clock convention without changing stored instants.
 var TimeFormat = config.DefineStored(config.Spec[string]{
@@ -39,7 +43,22 @@ var TimeFormat = config.DefineStored(config.Spec[string]{
 		return nil
 	},
 	Doc: "How times of day are written: locale, 24h or 12h.",
-}, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, SurvivesDataReset: true})
+}, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, SurvivesDataReset: true, MachineryApplied: true})
+
+// DateNotationTx reads how the installation writes dates, for server-written
+// text shown beside the app's own. It takes no read gate, for the timezone's
+// reason: every date the app shows discloses the notation anyway.
+func DateNotationTx(ctx context.Context, tx pgx.Tx, lang textlang.Lang) (datenotation.Notation, error) {
+	dateFormat, timeFormat, err := config.StoredApplyPairTx(ctx, tx, config.Bound(), DateFormat, TimeFormat)
+	if err != nil {
+		return datenotation.Notation{}, err
+	}
+	zone, err := ZoneAppliedTx(ctx, tx)
+	if err != nil {
+		return datenotation.Notation{}, err
+	}
+	return datenotation.Notation{Lang: lang, Date: dateFormat, Time: timeFormat, Zone: zone}, nil
+}
 
 func (s *InstallationSettingsStore) regionalFormats(ctx context.Context) (string, string, error) {
 	dateFormat, err := config.StoredVal(ctx, s.config, DateFormat)
