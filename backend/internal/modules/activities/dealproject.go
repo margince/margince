@@ -114,7 +114,7 @@ func insertInheritedProject(ctx context.Context, tx pgx.Tx, id ids.ActivityID, p
 		return err
 	}
 	_, err := storekit.AuditWithEvidence(ctx, tx, "activity_relink", "activity", id.UUID, nil,
-		map[string]any{"entity_type": linkEntityProject, fieldEntityID: project}, inheritedProjectEvidence())
+		map[string]any{fieldEntityType: linkEntityProject, fieldEntityID: project}, inheritedProjectEvidence())
 	return err
 }
 
@@ -187,7 +187,7 @@ func dropOrphanedInheritedProject(ctx context.Context, tx pgx.Tx, id ids.Activit
 		return false, err
 	}
 	auditID, err := storekit.AuditWithEvidence(ctx, tx, "activity_relink", "activity", id.UUID,
-		relinkBefore(linkEntityProject, removed), map[string]any{"entity_type": linkEntityProject}, inheritedProjectEvidence())
+		relinkBefore(linkEntityProject, removed), map[string]any{fieldEntityType: linkEntityProject}, inheritedProjectEvidence())
 	if err != nil {
 		return false, err
 	}

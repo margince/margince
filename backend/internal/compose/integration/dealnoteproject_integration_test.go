@@ -52,7 +52,7 @@ func seedDealNoteFixture(t *testing.T, e *Env) dealNoteFixture {
 	return f
 }
 
-func logDealNote(t *testing.T, e *Env, ctx context.Context, links ...activities.ActivityLinkInput) ids.UUID {
+func logDealNote(ctx context.Context, t *testing.T, e *Env, links ...activities.ActivityLinkInput) ids.UUID {
 	t.Helper()
 	logged, _, err := e.Activities.LogActivity(ctx, activities.LogActivityInput{
 		Kind: "note", Body: new("Budget confirmed for phase two"), Links: links,
@@ -86,7 +86,7 @@ func TestANoteLoggedOnADealIsFiledUnderTheDealsProject(t *testing.T) {
 	e := Setup(t)
 	f := seedDealNoteFixture(t, e)
 
-	note := logDealNote(t, e, e.Admin(), onDeal(f.erpDeal))
+	note := logDealNote(e.Admin(), t, e, onDeal(f.erpDeal))
 
 	if projectLinks(t, e, note, f.erp) != 1 || projectsOf(t, e, note) != 1 {
 		t.Fatalf("the note is on %d projects, want exactly the deal's own", projectsOf(t, e, note))
@@ -112,15 +112,15 @@ func TestADealsProjectIsInheritedOnlyWhenItIsTheOneAnswer(t *testing.T) {
 	e := Setup(t)
 	f := seedDealNoteFixture(t, e)
 
-	named := logDealNote(t, e, e.Admin(), onDeal(f.erpDeal),
+	named := logDealNote(e.Admin(), t, e, onDeal(f.erpDeal),
 		activities.ActivityLinkInput{EntityType: "project", EntityID: f.migration})
 	if projectLinks(t, e, named, f.migration) != 1 || projectsOf(t, e, named) != 1 {
 		t.Errorf("a named project was overridden: the note is on %d projects", projectsOf(t, e, named))
 	}
-	if n := projectsOf(t, e, logDealNote(t, e, e.Admin(), onDeal(f.looseDeal))); n != 0 {
+	if n := projectsOf(t, e, logDealNote(e.Admin(), t, e, onDeal(f.looseDeal))); n != 0 {
 		t.Errorf("a note on a deal with no project is on %d projects, want none", n)
 	}
-	if n := projectsOf(t, e, logDealNote(t, e, e.Admin(), onDeal(f.erpDeal), onDeal(f.migrationDeal))); n != 0 {
+	if n := projectsOf(t, e, logDealNote(e.Admin(), t, e, onDeal(f.erpDeal), onDeal(f.migrationDeal))); n != 0 {
 		t.Errorf("a note on deals of two projects is on %d projects, want none", n)
 	}
 }
@@ -174,7 +174,7 @@ func dealNotePerms(activity principal.ObjectGrant) principal.Permissions {
 func TestRelinkingOntoADealFilesTheDealsProjectAndKeepsIt(t *testing.T) {
 	e := Setup(t)
 	f := seedDealNoteFixture(t, e)
-	note := logDealNote(t, e, e.Admin(), activities.ActivityLinkInput{EntityType: "company", EntityID: f.company})
+	note := logDealNote(e.Admin(), t, e, activities.ActivityLinkInput{EntityType: "company", EntityID: f.company})
 
 	if _, err := e.Activities.RelinkActivity(e.Admin(), ids.From[ids.ActivityKind](note),
 		activities.RelinkActivityInput{EntityType: "deal", EntityID: f.erpDeal}); err != nil {
@@ -207,7 +207,7 @@ func TestBatchRelinkingOntoADealFilesTheDealsProject(t *testing.T) {
 	f := seedDealNoteFixture(t, e)
 	onCompany := activities.ActivityLinkInput{EntityType: "company", EntityID: f.company}
 	toDeal := activities.RelinkActivityInput{EntityType: "deal", EntityID: f.erpDeal}
-	bulk, thread := logDealNote(t, e, e.Admin(), onCompany), logDealNote(t, e, e.Admin(), onCompany)
+	bulk, thread := logDealNote(e.Admin(), t, e, onCompany), logDealNote(e.Admin(), t, e, onCompany)
 
 	if _, err := e.Activities.RelinkActivities(e.Admin(), []ids.UUID{bulk}, toDeal); err != nil {
 		t.Fatalf("bulk relinking onto the deal: %v", err)

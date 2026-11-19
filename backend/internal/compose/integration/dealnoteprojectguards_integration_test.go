@@ -32,8 +32,8 @@ import (
 func TestDecliningTheDealTakesOnlyTheProjectItBrought(t *testing.T) {
 	e := Setup(t)
 	f := seedDealNoteFixture(t, e)
-	inherited := logDealNote(t, e, e.Admin(), onDeal(f.erpDeal))
-	named := logDealNote(t, e, e.Admin(), onDeal(f.erpDeal), activities.ActivityLinkInput{EntityType: "project", EntityID: f.erp})
+	inherited := logDealNote(e.Admin(), t, e, onDeal(f.erpDeal))
+	named := logDealNote(e.Admin(), t, e, onDeal(f.erpDeal), activities.ActivityLinkInput{EntityType: "project", EntityID: f.erp})
 
 	for _, note := range []ids.UUID{inherited, named} {
 		if _, err := e.Activities.DeclineDeal(e.Admin(), ids.From[ids.ActivityKind](note), &f.erpDeal); err != nil {
@@ -52,7 +52,7 @@ func TestDecliningTheDealTakesOnlyTheProjectItBrought(t *testing.T) {
 func TestReplacingTheDealMovesTheInheritedProject(t *testing.T) {
 	e := Setup(t)
 	f := seedDealNoteFixture(t, e)
-	note := logDealNote(t, e, e.Admin(), onDeal(f.erpDeal))
+	note := logDealNote(e.Admin(), t, e, onDeal(f.erpDeal))
 
 	if _, err := e.Activities.RelinkActivity(e.Admin(), ids.From[ids.ActivityKind](note), activities.RelinkActivityInput{
 		EntityType: "deal", EntityID: f.migrationDeal, ReplaceExistingOfType: true,
@@ -85,7 +85,7 @@ func TestAnInheritedProjectGivesItsOwnerNoSayOverTheNote(t *testing.T) {
 		t.Fatalf("creating the deal: %v", err)
 	}
 	member := dealNotePerms(principal.ObjectGrant{Create: true, Read: true, Update: true})
-	note := logDealNote(t, e, e.As(e.Rep1, []ids.UUID{e.Team1}, member), onDeal(ids.UUID(deal.Id)))
+	note := logDealNote(e.As(e.Rep1, []ids.UUID{e.Team1}, member), t, e, onDeal(ids.UUID(deal.Id)))
 	if projectLinks(t, e, note, ids.UUID(project.Id)) != 1 {
 		t.Fatal("the note did not inherit the project, so nothing here is tested")
 	}

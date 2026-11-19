@@ -25,18 +25,18 @@ func DealsProject(ctx context.Context, tx pgx.Tx, deals []ids.UUID) (ids.UUID, e
 	if len(deals) == 0 {
 		return ids.Nil, nil
 	}
-	return dealsProject(ctx, tx, "d.id = ANY($1)", deals)
+	return projectOfDeals(ctx, tx, "d.id = ANY($1)", deals)
 }
 
 // ActivityDealsProject is DealsProject over the deals the activity is filed on.
 func ActivityDealsProject(ctx context.Context, tx pgx.Tx, activity ids.ActivityID) (ids.UUID, error) {
-	return dealsProject(ctx, tx, `d.id IN (SELECT l.deal_id FROM activity_link l
+	return projectOfDeals(ctx, tx, `d.id IN (SELECT l.deal_id FROM activity_link l
 		 WHERE l.activity_id = $1 AND l.entity_type = 'deal')`, activity)
 }
 
-// dealsProject reads the one project of the deals dealsWhere selects; $1 is
+// projectOfDeals reads the one project of the deals dealsWhere selects; $1 is
 // bound to subject.
-func dealsProject[S []ids.UUID | ids.ActivityID](ctx context.Context, tx pgx.Tx, dealsWhere string, subject S) (ids.UUID, error) {
+func projectOfDeals[S []ids.UUID | ids.ActivityID](ctx context.Context, tx pgx.Tx, dealsWhere string, subject S) (ids.UUID, error) {
 	if err := auth.Require(ctx, "project", principal.ActionRead); err != nil {
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
 			return ids.Nil, nil
