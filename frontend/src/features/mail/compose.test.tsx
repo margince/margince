@@ -2,7 +2,7 @@
 import { QueryClient } from "@tanstack/react-query";
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { messageText } from "../../design-system/richtext-testing";
 import { draftButton } from "../../testing/composedraft.testkit";
 import { contactDocuments } from "../../testing/contactdocuments";
@@ -12,6 +12,7 @@ import {
   DISCLOSURE,
   emptyResponse,
   fillSendableForm,
+  installComposeClock,
   jsonResponse,
   PROVISIONAL_VOICE_PROFILE,
   pressSend,
@@ -20,6 +21,8 @@ import {
   stubRoutes,
   WHY_ASK,
 } from "./compose.testkit";
+
+beforeEach(installComposeClock);
 
 afterEach(() => {
   cleanup();

@@ -8,7 +8,7 @@ import {
 } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { vi } from "vitest";
+import { onTestFinished, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { SEARCH_DEBOUNCE_MS } from "../../design-system/debouncedsearch";
 import { writeMessage } from "../../design-system/richtext-testing";
@@ -277,12 +277,25 @@ export function rewrittenBody(body: string, language = "en") {
 
 // The check asks about the subject and body only once typing has paused. A
 // press straight after typing meets the answer for the text before it. The
-// answer for the new text lands after the press. Waiting out that pause
-// inside act lets the newer check start, and the wait then ends on its answer.
+// answer for the new text lands after the press. Stepping the clock over that
+// pause inside act lets the newer check start, and the wait then ends on its
+// answer. It needs installComposeClock, and throws without it.
 export async function settleSendCheck() {
-  await act(
-    () => new Promise((resolve) => setTimeout(resolve, SEARCH_DEBOUNCE_MS)),
-  );
+  await act(() => vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS));
+}
+
+// Every suite that reaches settleSendCheck calls this in a beforeEach. The
+// clock still runs with real time, 1 ms per 1 ms, so user-event's zero-delay
+// pauses and the timers no helper steps fire as they would without it.
+export function installComposeClock() {
+  vi.useFakeTimers({
+    shouldAdvanceTime: true,
+    advanceTimeDelta: 1,
+    toFake: ["setTimeout", "clearTimeout"],
+  });
+  onTestFinished(() => {
+    vi.useRealTimers();
+  });
 }
 
 // The foot's own button of this name, once the check for the message on screen
