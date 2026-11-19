@@ -12719,7 +12719,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.domainQuestion.reason.forwarded":
     "Die Website leitet auf eine andere Website weiter. Deshalb konnte Margince das Unternehmen nicht sicher zuordnen.",
   "worklist.domainQuestion.reason.foreignSite":
-    "Die Website nennt ein anderes Unternehmen als diese Domain. Die Domain hat vielleicht den Besitzer gewechselt.",
+    "Die Website nennt ein anderes Unternehmen als diese Domain. Die Domain gehört vielleicht inzwischen jemand anderem.",
   "worklist.domainQuestion.reason.vendor":
     "Die Website wirkt wie ein Mail- oder Hosting-Anbieter, der Adressen für viele Unternehmen bereitstellen kann.",
   "worklist.domainQuestion.reason.nearDuplicate":
