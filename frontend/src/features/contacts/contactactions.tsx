@@ -87,6 +87,9 @@ export function ContactActions({
   // says so for every verb here.
   const archived = view.contact.archived_at ? refusedReasonId : undefined;
   const logRefused = archived ?? gate.refusedId;
+  // The archived page's sentence is the host's, so only its id reaches here.
+  const logRefusal =
+    archived || !gate.refusalKey ? undefined : t(gate.refusalKey);
   const logPending = !archived && gate.pending;
   // Read here so the button NAMES what pressing it does, from the same
   // reachability the composer resolves.
@@ -110,6 +113,7 @@ export function ContactActions({
         disabled={logPending}
         reason={logRefused || writeRefusalId ? undefined : refusal}
         reasonId={logRefused ?? (refusal ? writeRefusalId : undefined)}
+        reasonTip={logRefused ? logRefusal : refusal}
         onClick={onWrite}
         word={t("record.verb.email")}
         keyShortcuts={writeKeys}
@@ -128,7 +132,7 @@ export function ContactActions({
         disabled={logPending}
         reasonId={logRefused}
         onClick={onLogActivity}
-        title={t("log.title")}
+        title={logRefusal ? `${t("log.title")}. ${logRefusal}` : t("log.title")}
         aria-keyshortcuts={logKeys}
       >
         <FileText aria-hidden="true" />

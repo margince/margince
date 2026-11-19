@@ -99,6 +99,7 @@ export function EmailVerb({
   disabled,
   reason,
   reasonId,
+  reasonTip,
   word,
   keyShortcuts,
 }: Readonly<{
@@ -111,6 +112,7 @@ export function EmailVerb({
   disabled?: boolean;
   reason?: string;
   reasonId?: string;
+  reasonTip?: string;
   keyShortcuts?: string;
 }>) {
   const t = useT();
@@ -122,6 +124,7 @@ export function EmailVerb({
       disabled={disabled}
       reason={reason}
       reasonId={reasonId}
+      reasonTip={reasonTip}
       keyShortcuts={keyShortcuts}
       onClick={onClick}
     />

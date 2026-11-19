@@ -85,6 +85,24 @@ export const Refused: Story = {
   },
 };
 
+// Refused by a sentence the page states. The tip shows it; the description
+// points at the page's copy.
+export const RefusedByThePage: Story = {
+  render: () => (
+    <>
+      <IconAction
+        label="Write"
+        icon={<Mail size={15} aria-hidden="true" />}
+        reasonId="refused-by-page"
+        reasonTip="No address and no thread to reply to."
+      />
+      <p id="refused-by-page" className="t-caption">
+        No address and no thread to reply to.
+      </p>
+    </>
+  ),
+};
+
 // A verb a key also presses: the key is named to a screen reader and draws nothing.
 export const WithKeyShortcut: Story = {
   args: {

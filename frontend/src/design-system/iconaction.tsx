@@ -47,6 +47,11 @@ type IconActionPress = {
    */
   reasonId?: string;
   /**
+   * The sentence `reasonId` names, shown in the tip beside the glyph. The
+   * description keeps pointing at the page's copy, so it is heard once.
+   */
+  reasonTip?: string;
+  /**
    * A precondition this verb is waiting on, with no sentence to go with it —
    * the third refusal `Button` already draws and the one a glyph most often
    * needs: a row's quiet verbs held while the write its primary started is out.
@@ -96,8 +101,10 @@ export function IconAction(
 ) {
   const { label, hint, icon, inline, word } = props;
   const hintId = useId();
+  const why = props.reasonId === undefined ? undefined : props.reasonTip;
+  const second = why ?? hint;
   const { ref, trigger, tip } = useTooltip<HTMLSpanElement>(
-    hint === undefined ? label : `${label}. ${hint}`,
+    second === undefined ? label : `${label}. ${second}`,
   );
   const face = (
     <>
