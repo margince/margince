@@ -69,10 +69,9 @@ type Service struct {
 	facts Facts
 	lane  Completer
 	now   func() time.Time
-	// routingVersion identifies the model binding in the fingerprint, so a
-	// re-pointed lane invalidates rather than serving assemblies written
-	// against a model that is no longer wired.
-	routingVersion string
+	// routingVersion names the model binding in the fingerprint. It is read per
+	// request, so a rebind invalidates the assemblies an unwired model wrote.
+	routingVersion func() string
 	// emailRows opens the messages the dossier cites. Held rather than read
 	// inline because the dossier is CACHED: a summary is assembled out of one
 	// reader's own grants, so it is attached to the wire value on the way out
@@ -104,10 +103,13 @@ func (s *Service) enrich(ctx context.Context, out crmcontracts.CompanyDossier) (
 // A nil lane is the no-model deployment, which serves the deterministic floor
 // and says so.
 func NewService(pool *pgxpool.Pool, facts Facts, lane Completer,
-	routingVersion string, now func() time.Time,
+	routingVersion func() string, now func() time.Time,
 ) *Service {
 	if now == nil {
 		now = time.Now
+	}
+	if routingVersion == nil {
+		routingVersion = func() string { return "" }
 	}
 	return &Service{pool: pool, facts: facts, lane: lane, now: now, routingVersion: routingVersion}
 }
@@ -181,7 +183,7 @@ func (s *Service) Get(ctx context.Context, companyID ids.CompanyID, force bool) 
 		return zero, err
 	}
 	lang := identity.BaseLanguageForPrompt(ctx, s.pool)
-	fingerprint, err := Fingerprint(in, s.routingVersion, lang)
+	fingerprint, err := Fingerprint(in, s.routingVersion(), lang)
 	if err != nil {
 		return zero, err
 	}

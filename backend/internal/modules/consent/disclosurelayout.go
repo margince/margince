@@ -41,10 +41,18 @@ func layoutDisclosures(owed []messagingrules.Disclosure, p ControllerParticulars
 			continue
 		}
 		text := particularFor(d.Kind, l.particularsFor(d.Kind, p))
-		if len(meansMissing(text, d.Means)) > 0 {
-			text = ""
+		line := DisclosureLine{Kind: string(d.Kind), Text: text}
+		missing := meansMissing(text, d.Means)
+		if text != "" && len(missing) > 0 {
+			for _, method := range missing {
+				line.MissingMeans = append(line.MissingMeans, string(method))
+			}
+			line.Text = ""
 		}
-		out = append(out, DisclosureLine{Kind: string(d.Kind), Text: text})
+		if text == "" && l.marketing && l.packLanguage != "" && l.baseLanguage != l.packLanguage && !dataProtectionDisclosure(d.Kind) {
+			line.MissingLanguage = l.packLanguage
+		}
+		out = append(out, line)
 	}
 	if !l.marketing || !l.refusalLast {
 		return out

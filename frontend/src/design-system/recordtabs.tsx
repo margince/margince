@@ -41,6 +41,8 @@ type RecordTabsCommon<Option extends string> = Readonly<{
   // reader announces "Contacts 10" rather than leaving it to a sighted reader
   // alone.
   counts?: Partial<Record<Option, number>>;
+  // What a tab's count counts, where the tab's name does not say it.
+  countLabels?: Partial<Record<Option, string>>;
   // Something waits behind this tab that nobody has taken up — a lookup never
   // run, an answer never read. A dot rather than a figure, because the thing
   // waiting has no count: it is a state, and the surface behind the tab says it
@@ -101,6 +103,7 @@ export function RecordTabs<Option extends string>({
   onChange,
   labels,
   counts,
+  countLabels,
   marks,
   label,
   trailing,
@@ -151,7 +154,9 @@ export function RecordTabs<Option extends string>({
     return (
       <>
         {labels[option]}
-        {count !== undefined && <OptionCount count={count} />}
+        {count !== undefined && (
+          <OptionCount count={count} label={countLabels?.[option]} />
+        )}
         {marks?.[option] && (
           <span className="recordtabs-mark" aria-hidden="true" />
         )}

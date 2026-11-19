@@ -18,9 +18,18 @@ import { invalidateRecord } from "../../lib/recordwritekeys";
 
 type Contact = components["schemas"]["Contact"];
 
-// Merge-target search (P-2) over the list read. The detail line tells two
-// contacts of one name apart. A field the reader may not see arrives empty,
-// and it is left out with its separator.
+// The detail line that tells two contacts of one name apart, for the picked
+// target and the contact merged away alike. A field the reader may not see
+// arrives empty, and it is left out with its separator.
+export function contactMergeDetail(contact: Contact): string | undefined {
+  return (
+    [contact.employer?.company_name, contact.title, contact.primary_email]
+      .filter(Boolean)
+      .join(" · ") || undefined
+  );
+}
+
+// Merge-target search (P-2) over the list read.
 export async function searchContactsTargets(
   q: string,
 ): Promise<RecordPickerCandidate[]> {
@@ -33,14 +42,7 @@ export async function searchContactsTargets(
     id: candidate.id,
     name: candidate.full_name,
     writable: candidate.writable,
-    detail:
-      [
-        candidate.employer?.company_name,
-        candidate.title,
-        candidate.primary_email,
-      ]
-        .filter(Boolean)
-        .join(" · ") || undefined,
+    detail: contactMergeDetail(candidate),
   }));
 }
 
@@ -76,6 +78,7 @@ export function ContactRecordActions({
         label={t("merge.contact")}
         sourceId={contact.id}
         sourceName={contact.full_name}
+        sourceDetail={contactMergeDetail(contact)}
         searchTargets={searchContactsTargets}
         merge={async (targetId) => {
           const data = unwrap(

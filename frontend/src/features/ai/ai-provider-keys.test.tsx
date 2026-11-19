@@ -196,6 +196,16 @@ describe("AiProviderKeysCard", () => {
     expect(within(row).getByRole("button", { name: /^add$/i })).toBeTruthy();
   });
 
+  it("names the credential a row takes, with its variable only as the hint", async () => {
+    vi.stubGlobal("fetch", backendFor(KEY_EDITOR).fetchMock);
+    render(<AiProviderKeysCard />);
+
+    const row = await openSheet(userEvent.setup(), "gemini");
+    const who = row.querySelector(".ai-provider-who");
+    expect(who?.firstElementChild).toHaveTextContent(/^API key$/);
+    expect(within(row).getByText("GEMINI_API_KEY")).toHaveClass("t-caption");
+  });
+
   it("never renders the key, and offers no field that could hold one read back", async () => {
     vi.stubGlobal("fetch", backendFor(KEY_EDITOR).fetchMock);
     render(<AiProviderKeysCard />);

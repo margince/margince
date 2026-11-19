@@ -13,6 +13,7 @@ import { TagsPanel } from "../../components/tagspanel";
 import { Badge } from "../../design-system/atoms";
 import { ContactLink } from "../../design-system/contactlink";
 import { FieldRow } from "../../design-system/fieldgrid";
+import { reachRow } from "../../design-system/reachcard";
 import { RecordCard } from "../../design-system/recordcard";
 import type {
   DetailRow,
@@ -38,7 +39,7 @@ import { BoughtMark, boughtFields } from "./boughtmarks";
 import { BoughtAttributes } from "./contactboughtattributes";
 import { useContactEdit } from "./contactedit";
 import { ContactSource } from "./contactfacts";
-import { EmailHandles, PhoneHandles } from "./contacthandles";
+import { ContactReach } from "./contacthandles";
 import { useEmployerChange } from "./employerchange";
 import { type ProfileField, proposedEmployer } from "./employerproposal";
 import { ProposedEmployerRow } from "./employerproposalrow";
@@ -73,6 +74,22 @@ export function useContactAboutSections(
     reading: ReactNode,
     shape: RowShape = {},
   ): DetailRow => readingRow(key, term, reading, notSet, shape);
+  // Every address and number shares one card. A kind with none folds as its
+  // own empty row, so "Show empty fields" still offers to add it.
+  const email = contact.primary_email;
+  const phone = primaryPhone(contact.phones);
+  const reachRows: DetailRow[] = [
+    ...(email || phone
+      ? [
+          reachRow(
+            t("record.reach.label"),
+            <ContactReach contact={contact} bought={bought} />,
+          ),
+        ]
+      : []),
+    ...(email ? [] : [field("email", t("create.email"), undefined)]),
+    ...(phone ? [] : [field("phone", t("create.phone"), undefined)]),
+  ];
   const sections: DetailSection[] = [
     {
       key: "about",
@@ -86,26 +103,7 @@ export function useContactAboutSections(
           empty: !employer && !proposed,
           block: Boolean(employer ?? proposed),
         },
-        stacked(
-          field(
-            "email",
-            t("create.email"),
-            contact.primary_email && (
-              <EmailHandles contact={contact} bought={bought} />
-            ),
-            { handle: true },
-          ),
-        ),
-        stacked(
-          field(
-            "phone",
-            t("create.phone"),
-            primaryPhone(contact.phones) && (
-              <PhoneHandles contact={contact} bought={bought} />
-            ),
-            { handle: true },
-          ),
-        ),
+        ...reachRows,
         field(
           "linkedin",
           t("contact.page.linkedin"),
@@ -245,12 +243,6 @@ function employerReading(
 ): ReactNode {
   if (proposed) return <ProposedEmployerRow view={view} fact={proposed} />;
   return employer ? <EmployerCard employment={employer} /> : notSet;
-}
-
-// A row whose lines take the column's width under its label, as the
-// employer card does, so an address never breaks to fit beside it.
-function stacked(row: DetailRow): DetailRow {
-  return row.empty ? row : { ...row, block: true };
 }
 
 /**

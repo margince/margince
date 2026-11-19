@@ -208,7 +208,7 @@ func saveABriefWaitingAtMost(t *testing.T, e *integration.Env, contact ids.UUID,
 func TestTheBriefWriterItselfDeclinesToCacheAnErasedSubject(t *testing.T) {
 	e := integration.Setup(t)
 	subject := e.SeedContact(t, "Briefed Subject", &e.AdminUser)
-	svc := contactbrief.NewService(e.Pool, briefPageOf(subject), nil, "test-routing", time.Now)
+	svc := contactbrief.NewService(e.Pool, briefPageOf(subject), nil, func() string { return "test-routing" }, time.Now)
 
 	if _, err := svc.Get(e.Admin(), ids.From[ids.ContactKind](subject), false); err != nil {
 		t.Fatalf("writing the brief of a live contact: %v", err)

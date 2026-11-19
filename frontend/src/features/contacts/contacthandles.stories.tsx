@@ -50,9 +50,9 @@ function About() {
   );
 }
 
-// An address wider than the About column breaks at the @. The mailbox name and
-// the domain each read whole on a line of their own, and neither is cut.
-export const LongAddressBreaksAtTheAt: Story = {
+// An address wider than the card keeps to one line and ends in "…". Focus on
+// it shows the whole address in a tip.
+export const LongAddressEndsInATip: Story = {
   render: () => {
     installFetchStub({
       "GET /me": meRoute({ contact: ["read"] }, { seat: "full" }),
@@ -68,18 +68,21 @@ export const LongAddressBreaksAtTheAt: Story = {
   play: async ({ canvasElement }) => {
     await document.fonts.ready;
     const link = await within(canvasElement).findByRole("link", { name: LONG });
+    const face = link.querySelector<HTMLElement>(".contactlink-email");
     const local = link.querySelector<HTMLElement>(".contactlink-email-local");
     const domain = link.querySelector<HTMLElement>(".contactlink-email-domain");
-    if (!local || !domain)
+    if (!face || !local || !domain)
       throw new Error("the address is not drawn in two halves");
-    await expect(domain.offsetTop).toBeGreaterThan(local.offsetTop);
-    for (const half of [local, domain]) {
-      await expect(half.scrollWidth).toBeLessThanOrEqual(half.clientWidth);
-    }
+    await expect(domain.offsetTop).toBe(local.offsetTop);
+    await expect(face.scrollWidth).toBeGreaterThan(face.clientWidth);
+    link.focus();
+    await expect(
+      await within(document.body).findByRole("tooltip"),
+    ).toHaveTextContent(LONG);
   },
 };
 
-export const LongAddressBreaksAtTheAtPhone: Story = {
-  ...LongAddressBreaksAtTheAt,
+export const LongAddressEndsInATipPhone: Story = {
+  ...LongAddressEndsInATip,
   tags: ["uat-phone"],
 };

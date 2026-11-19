@@ -11,11 +11,8 @@ import { type SectionLock, useSectionEdit } from "../../components/sectionedit";
 import { LeadStops } from "../../components/stops";
 import { TagsPanel } from "../../components/tagspanel";
 import { Badge, PendingBody } from "../../design-system/atoms";
-import {
-  ContactLink,
-  CopyEmail,
-  EmailFace,
-} from "../../design-system/contactlink";
+import { ContactLink } from "../../design-system/contactlink";
+import { InfoTip } from "../../design-system/infotip";
 import {
   type DetailRow,
   type DetailSection,
@@ -44,38 +41,15 @@ import {
   useLeadPartnerRow,
 } from "./leadpartner";
 import { LeadProductName } from "./leadproduct";
+import { EmailValue, isBlank, reachRows } from "./leadreach";
 import type { Lead, LeadWriter } from "./leads";
 
 type TextKey =
   | "full_name"
-  | "phone"
   | "title"
   | "company_name"
   | "candidate_company_key"
   | "origin_detail";
-
-function isBlank(value: string | null | undefined): boolean {
-  return !value?.trim();
-}
-
-// The address as the door to writing to the lead.
-function EmailValue({ lead }: Readonly<{ lead: Lead }>) {
-  return (
-    <span className="lead-row-email">
-      <ContactLink
-        kind="email"
-        value={lead.email ?? ""}
-        record={{ entityType: "lead", entityId: lead.id }}
-        readOnly={Boolean(lead.archived_at)}
-        className="link-button lead-row-link"
-        textClassName="lead-row-link"
-      >
-        <EmailFace address={lead.email ?? ""} />
-      </ContactLink>
-      <CopyEmail address={lead.email ?? ""} />
-    </span>
-  );
-}
 
 // A linked lead's name is the company's own, so it is changed there, not here.
 function useLinkedCompanyRow(lead: Lead): DetailRow | null {
@@ -139,17 +113,19 @@ function useAboutRows(lead: Lead, mayChange: boolean): DetailRow[] {
               : t("field.unset"),
           },
         ]),
-    {
-      key: "email",
-      term: t("create.email"),
-      empty: isBlank(lead.email),
-      value: isBlank(lead.email) ? (
-        t("field.unset")
-      ) : (
-        <EmailValue lead={lead} />
+    ...reachRows(lead, t, {
+      email: <EmailValue lead={lead} />,
+      // The number dials, as on a contact.
+      phone: lead.phone && (
+        <ContactLink
+          kind="phone"
+          value={lead.phone}
+          record={{ entityType: "lead", entityId: lead.id }}
+          className="link-button lead-row-link"
+          textClassName="lead-row-link"
+        />
       ),
-    },
-    text("phone", "create.phone"),
+    }),
     {
       key: "origin",
       term: t("lead.origin"),
@@ -182,7 +158,19 @@ function useAboutRows(lead: Lead, mayChange: boolean): DetailRow[] {
         <span title={t("record.leadProfileReadOnly")}>{t("field.unset")}</span>
       ),
     },
-    text("candidate_company_key", "record.companyRoutingKey"),
+    {
+      ...text("candidate_company_key", "record.companyRoutingKey"),
+      term: (
+        <>
+          {t("record.companyRoutingKey")}
+          <InfoTip
+            label={t("record.companyRoutingKeyWhy")}
+            text={t("record.companyRoutingKeyHelp")}
+            mark="help"
+          />
+        </>
+      ),
+    },
     {
       key: "project_id",
       term: t("lead.project"),
@@ -217,6 +205,14 @@ function useAboutRows(lead: Lead, mayChange: boolean): DetailRow[] {
       ),
     },
   ];
+}
+
+// The reach card holds the address and the number, so it offers both.
+function aboutKeys(rows: readonly DetailRow[]): string[] {
+  const keys = rows.flatMap((row) =>
+    row.key === "reach" ? ["email", "phone"] : [row.key],
+  );
+  return [...new Set(keys)];
 }
 
 /** What the About dialog shows of a field without offering it, and why. */
@@ -308,7 +304,7 @@ function LeadDetailsBody({
   const aboutLabel = t("record.details.about");
   const aboutEdit = useSectionEdit(edit, {
     label: aboutLabel,
-    keys: about.map((row) => row.key),
+    keys: aboutKeys(about),
     flows: aboutFlows.flows,
     readOnly: locks,
   });

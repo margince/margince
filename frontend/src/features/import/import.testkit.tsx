@@ -104,7 +104,7 @@ export { formatFixture };
 
 export type Sent = { method: string; path: string; body?: unknown };
 
-type Routes = Record<string, () => Response>;
+type Routes = Record<string, (url: URL) => Response>;
 
 // The answers every import screen reads before a test says otherwise, each for
 // only the request it names.
@@ -119,6 +119,7 @@ const EXACT_DEFAULTS: Routes = {
   "GET /imports/format": () => jsonResponse(formatFixture),
   "GET /imports": () => jsonResponse({ data: [], page: { has_more: false } }),
   "GET /users/names": () => jsonResponse({ data: [] }),
+  "GET /records/references": () => jsonResponse({ data: [] }),
   "POST /imports/sources": () => jsonResponse(profile),
   "POST /imports": () => jsonResponse({ ...run, status: "validating" }, 202),
 };
@@ -171,19 +172,24 @@ function runDefault(key: string, server: Server): Response | undefined {
 // its id. Last, a test route that is a prefix. So a stub "GET /imports" does
 // not answer "GET /imports/format". Nor does "GET /imports/r1" answer
 // "GET /imports/r1/report".
-function answer(routes: Routes, key: string, server: Server): Response {
+function answer(
+  routes: Routes,
+  key: string,
+  url: URL,
+  server: Server,
+): Response {
   const read = RUN_PATH.exec(key);
   const draft = draftRun(server);
   if (read && draft && read[1] === draft.id) return jsonResponse(draft);
   const exact = routes[key] ?? EXACT_DEFAULTS[key];
-  if (exact) return exact();
+  if (exact) return exact(url);
   const byRun = runDefault(key, server);
   if (byRun) return byRun;
   const prefix = Object.keys(routes).find((candidate) =>
     key.startsWith(candidate),
   );
   const byPrefix = prefix === undefined ? undefined : routes[prefix];
-  return byPrefix ? byPrefix() : jsonResponse({});
+  return byPrefix ? byPrefix(url) : jsonResponse({});
 }
 
 // What the server does with `?view=`: the one list, cut to drafts or to the
@@ -216,7 +222,7 @@ export function stubRoutes(routes: Routes = {}): Sent[] {
       const method = request?.method ?? init?.method ?? "GET";
       const key = `${method} ${url.pathname.replace(/^\/v1/, "")}`;
       sent.push({ method, path: key, body: await bodyOf(request, init) });
-      const response = answer(routes, key, server);
+      const response = answer(routes, key, url, server);
       const view = url.searchParams.get("view");
       if (key === "GET /imports" && view) {
         return viewOf(response, view);

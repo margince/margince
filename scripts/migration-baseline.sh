@@ -1,29 +1,22 @@
 #!/usr/bin/env bash
-# The schema a migration namespace BUILDS, as a comparable artifact.
+# Core's baseline: write it, and prove it builds what the history builds.
 #
-# WHY THIS EXISTS. `backend/migrations/core/` is a baseline plus whatever has
-# landed since, and the tracking table records a version, not a checksum — so
-# nothing in the tree says what schema the namespace is supposed to produce.
-# That gap is what let a consolidation be unreviewable: a squashed baseline is
-# only trustworthy if "the baseline builds the same schema the history built" is
-# a statement somebody can run, and it is the same statement as "this migration
-# changed the schema in exactly this way".
+#   generate  build a database from core's history through the version named in
+#             backend/migrations/baseline/core/replaces.txt (or THROUGH=...),
+#             dump it, and write the baseline and its manifest from the dump.
+#   verify    build one database by the baseline route and one by the full
+#             history, through the real migrator both times, and diff their
+#             schemas, reference rows and ledgers. Empty is the only pass.
 #
-#   verify REF build one database from REF's migrations and one from this
-#              tree's, and diff the two schemas. Empty is the only pass. This is
-#              what makes a baseline consolidation reviewable; it is also how
-#              the NEXT consolidation gets checked.
-#
-# For the everyday question — did the migration I just wrote change head, and
-# how — the gate is TestMigrationsBuildTheCommittedSchema against
-# backend/migrations/testdata/head_catalog.txt, which needs only a database
-# connection. This script is the heavier tool, for comparing two migration
-# HISTORIES rather than a history against a committed expectation.
+# Both databases come from backend/tools/migrate-route, which calls
+# dbmigrate.Up: a replay in psql would run the `-- pgmigrate:no-transaction`
+# files inside a transaction, which Postgres refuses, and would skip the ledger
+# rows that some migrations read.
 #
 # pg_dump runs INSIDE the Postgres container, never on the host. A host pg_dump
-# is whatever the developer's package manager installed — 18.2 against a 16.14
-# server here — and a newer pg_dump emits SQL shaped for the newer server, so
-# the artifact would differ per machine while describing one schema.
+# is whatever the developer's package manager installed, and a newer pg_dump
+# emits SQL shaped for the newer server, so the artifact would differ per
+# machine while describing one schema.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -31,20 +24,22 @@ cd "$ROOT"
 
 CONTAINER="${MARGINCE_PG_CONTAINER:-margince-postgres-1}"
 OWNER="${MARGINCE_PG_OWNER:-margince_owner}"
+# The host's way into the same server, for the migrator.
+DSN_BASE="${MARGINCE_PG_DSN_BASE:-postgres://margince_owner:dev@localhost:15432}"
+BASELINE_DIR=backend/migrations/baseline/core
+# Every scratch file lives under one directory, removed however the run ends.
+SCRATCH="$(mktemp -d)"
+trap 'rm -rf "$SCRATCH"' EXIT
+TOOLS_BIN="$SCRATCH/bin"
 
-# Tracking tables are excluded from every dump: they record which migrations ran,
-# which is the one thing two namespaces that build the same schema must be
-# allowed to disagree about — a baseline has 26 rows where a history has 341.
+# Tracking tables are compared on their own (dump_ledger): the baseline route
+# records one row the history does not.
 EXCLUDE=(--exclude-table='schema_migrations_*' --exclude-table-data='schema_migrations_*')
 
-# NO --schema RESTRICTION, deliberately. `--schema=public` looks like the right
-# narrowing and silently drops three things core builds: the four
-# CREATE EXTENSION statements, the `ext` schema every extension unit's tables
-# live in, and that schema's GRANT and COMMENT. pg_dump documents this — with -n
-# it makes no attempt to dump objects the selected schema depends upon — and the
-# failure is invisible, because a dump that omits an extension still restores
-# fine against a database that already has it. The database holds only `public`
-# and `ext`; pg_dump never emits system schemas, so there is nothing to narrow.
+# NO --schema RESTRICTION. `--schema=public` drops the CREATE EXTENSION
+# statements, the `ext` schema and that schema's GRANT and COMMENT, and the
+# loss is invisible: a dump that omits an extension still restores fine against
+# a database that already has it.
 
 die() { echo "migration-baseline: $*" >&2; exit 1; }
 
@@ -56,153 +51,162 @@ require_container() {
 psql_owner() { docker exec -i "$CONTAINER" psql -U "$OWNER" -v ON_ERROR_STOP=1 -q "$@"; }
 
 recreate_db() {
-  local db="$1"
-  psql_owner -d postgres -c "DROP DATABASE IF EXISTS $db" >/dev/null
-  psql_owner -d postgres -c "CREATE DATABASE $db" >/dev/null
+  psql_owner -d postgres -c "DROP DATABASE IF EXISTS $1" >/dev/null
+  psql_owner -d postgres -c "CREATE DATABASE $1" >/dev/null
 }
 
-# apply_namespaces DB MIGRATIONS_DIR NS... — replay a namespace the way
-# dbmigrate.Up does: one transaction per migration carrying the migration SQL
-# and its tracking row together, ordered by the version prefix as a STRING.
-#
-# The tracking row is not bookkeeping. core's employment-notice-period migration
-# reads schema_migrations_core.applied_at, so a replay that skips the ledger is
-# not a replay of the same migrations.
-apply_namespaces() {
-  local db="$1" dir="$2"; shift 2
-  docker exec "$CONTAINER" rm -rf /tmp/margince-mig
-  docker cp "$dir" "$CONTAINER":/tmp/margince-mig >/dev/null
+drop_db() { psql_owner -d postgres -c "DROP DATABASE IF EXISTS $1" >/dev/null; }
 
-  local ns
-  for ns in "$@"; do
-    docker exec -e NS="$ns" -e DB="$db" -e OWNER="$OWNER" "$CONTAINER" bash -c '
-      set -euo pipefail
-      cd "/tmp/margince-mig/$NS"
-      table="schema_migrations_${NS}"
-      psql -U "$OWNER" -d "$DB" -v ON_ERROR_STOP=1 -q -c "
-        CREATE TABLE IF NOT EXISTS ${table} (
-          version    text PRIMARY KEY,
-          name       text NOT NULL,
-          applied_at timestamptz NOT NULL DEFAULT now()
-        )"
-      for f in $(LC_ALL=C ls *.up.sql | LC_ALL=C sort); do
-        key="${f%.up.sql}"
-        { cat "$f"
-          printf "\nINSERT INTO %s (version, name) VALUES (%s, %s);\n" \
-            "$table" "'"'"'${key%%_*}'"'"'" "'"'"'${key#*_}'"'"'"
-        } | psql -U "$OWNER" -d "$DB" -v ON_ERROR_STOP=1 --single-transaction -q >/dev/null ||
-          { echo "migration-baseline: $NS/$f failed to apply" >&2; exit 1; }
-      done
-    ' || die "replaying $ns into $db failed"
-  done
+# A data-only dump warns about every table in a foreign-key cycle. Those
+# warnings are expected here; anything else pg_dump says is kept.
+quiet_cycle_warnings() {
+  grep -vE '^pg_dump: (warning: there are circular foreign-key constraints|detail: |hint: )' >&2 || true
 }
 
-# strip_preamble — the text pg_dump varies for reasons a migration never chose.
-#
-# `--` comment lines carry the server version and each object's owner. The
-# SET/set_config preamble is session state. `\restrict`/`\unrestrict` wrap the
-# dump in a psql guard whose token is REGENERATED AT RANDOM on every run, so a
-# dump that keeps it never equals itself — this is the one entry here that is not
-# merely noise but an outright correctness bug if left in.
+build_tools() {
+  mkdir -p "$TOOLS_BIN"
+  (cd backend/tools && go build -o "$TOOLS_BIN" ./migrate-route ./gen-baseline) ||
+    die "building backend/tools/migrate-route and gen-baseline failed"
+}
+
+# migrate DB ARGS... — run the real migrator against DB along one route.
+migrate() {
+  local db="$1"; shift
+  MARGINCE_OWNER_DSN="$DSN_BASE/$db" "$TOOLS_BIN/migrate-route" "$@" ||
+    die "migrating $db ($*) failed"
+}
+
+# The text pg_dump writes about the dump rather than the schema: its object
+# headers, the session SETs, and the \restrict guard whose token is random on
+# every run. The SETs are the settings gen-baseline's pgDumpSettings lists, so
+# a SET line inside a function body is still compared.
+PG_DUMP_SETTINGS='statement_timeout|lock_timeout|idle_in_transaction_session_timeout|transaction_timeout|client_encoding|standard_conforming_strings|check_function_bodies|xmloption|client_min_messages|row_security|default_tablespace|default_table_access_method'
 strip_preamble() {
-  sed -E '/^--/d; /^SET /d; /^SELECT pg_catalog\.set_config/d; /^\\(un)?restrict /d'
+  sed -E "/^-- (Name|Data for Name): .*; Type: /d; /^-- (PostgreSQL database dump|Dumped (from|by) )/d; /^--\$/d;
+          /^SET ($PG_DUMP_SETTINGS) = /d; /^SELECT pg_catalog\\.set_config/d; /^\\\\(un)?restrict /d"
 }
 
-# dump_schema DB — the schema, normalized to what two databases built by
-# equivalent migrations must agree on.
-#
-# Beyond strip_preamble, nothing is touched: column order, defaults, constraint
-# and index names, trigger bodies and grants are all things a migration decides,
-# so all of them are compared exactly.
 dump_schema() {
-  local db="$1"
-  docker exec "$CONTAINER" pg_dump -U "$OWNER" -d "$db" \
-      --schema-only "${EXCLUDE[@]}" |
-    strip_preamble |
-    cat -s
+  docker exec "$CONTAINER" pg_dump -U "$OWNER" -d "$1" --schema-only "${EXCLUDE[@]}" |
+    strip_preamble | cat -s
 }
 
-# dump_data DB — the reference rows the migrations insert.
+# dump_data DB — the reference rows the migrations insert, from every table.
 #
-# Every table, not a hand-kept list of the five that currently hold rows at head.
-# A list would go stale the first time somebody seeds a sixth, and silently: the
-# row would simply stop being compared. On a migrated-but-unbootstrapped database
-# the only rows present ARE the ones migrations wrote.
-#
-# TWO VALUE KINDS ARE MASKED, and only these two: a `uuidv7()` primary key and a
-# `now()` timestamp are generated per run, so comparing them literally compares
-# the clock and the random source rather than the migrations. Everything that
-# carries meaning — every key, label, sort order, flag and enum value — is
-# compared exactly. Nothing is lost by masking the uuids here because no
-# reference row references another BY uuid; they link on text keys
-# (`field_mask.role_key = 'rep'`). A future reference row with a uuid foreign key
-# would need that link compared some other way, and this comment is where to
-# start.
+# TWO VALUE KINDS ARE MASKED, and only these two: a `uuidv7()` key and a
+# `now()` timestamp are generated per run. Every key, label, sort order, flag
+# and enum value is compared exactly. gen-baseline refuses a uuid that links
+# two rows, so masking uuids hides no link.
 dump_data() {
-  local db="$1"
-  docker exec "$CONTAINER" pg_dump -U "$OWNER" -d "$db" \
-      --data-only --column-inserts "${EXCLUDE[@]}" |
+  docker exec "$CONTAINER" pg_dump -U "$OWNER" -d "$1" \
+      --data-only --column-inserts "${EXCLUDE[@]}" 2> >(quiet_cycle_warnings) |
     strip_preamble |
     sed -E "s/'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'/'<uuid>'/g;
-            s/'[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]+)?\+[0-9]{2}'/'<timestamp>'/g" |
-    LC_ALL=C sort |
-    cat -s
+            s/'[0-9]{4}-[0-9]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2}(\.[0-9]+)?[+-][0-9]{2}'/'<timestamp>'/g" |
+    LC_ALL=C sort | cat -s
 }
 
-# capture DB OUT — schema then data, as one artifact.
-#
-# Data is sorted, schema is not: pg_dump emits objects in dependency order,
-# which is information, while its row order is whatever the heap gave it and
-# differs between two databases that hold identical rows.
+# dump_ledger DB BASELINE_VERSION — every ledger row but the baseline's own,
+# without applied_at.
+dump_ledger() {
+  psql_owner -d "$1" -At -c "
+    SELECT 'core ' || version || ' ' || name || ' ' || coalesce(content_digest, 'NULL')
+      FROM schema_migrations_core WHERE version <> '$2'
+    UNION ALL
+    SELECT 'custom ' || version || ' ' || name || ' ' || coalesce(content_digest, 'NULL')
+      FROM schema_migrations_custom
+    ORDER BY 1"
+}
+
 capture() {
-  local db="$1" out="$2"
-  { echo "-- schema"; dump_schema "$db"; echo "-- data"; dump_data "$db"; } > "$out"
+  { echo "-- schema"; dump_schema "$1"; echo "-- data"; dump_data "$1"; echo "-- ledger"; dump_ledger "$1" "$2"; } > "$3"
+}
+
+manifest_field() {
+  [[ -f "$BASELINE_DIR/replaces.txt" ]] || die "$BASELINE_DIR/replaces.txt is missing"
+  case "$1" in
+    release) awk '$1 == "release" { print $2 }' "$BASELINE_DIR/replaces.txt" ;;
+    through) awk 'NF == 3 && $1 !~ /^#/ { v = $1 } END { print v }' "$BASELINE_DIR/replaces.txt" ;;
+  esac
+}
+
+baseline_file() {
+  local files=("$BASELINE_DIR"/*.up.sql)
+  [[ ${#files[@]} -eq 1 && -f "${files[0]}" ]] || die "want exactly one .up.sql in $BASELINE_DIR"
+  basename "${files[0]}" .up.sql
+}
+
+# generate — RELEASE, THROUGH, VERSION and NAME default to the baseline already
+# in the tree, so a bare run rewrites it in place.
+cmd_generate() {
+  require_container
+  local release="${RELEASE:-$(manifest_field release)}"
+  local through="${THROUGH:-$(manifest_field through)}"
+  local current; current="$(baseline_file)"
+  local version="${VERSION:-${current%%_*}}" name="${NAME:-${current#*_}}"
+  local roles=(backend/migrations/core/*_a_unit_sql_runs_as_the_ext_runtime_role.up.sql)
+  [[ ${#roles[@]} -eq 1 && -f "${roles[0]}" ]] || die "want exactly one migration that makes the ext_runtime role"
+  build_tools
+
+  local db=margince_baseline_generate work="$SCRATCH/generate"
+  mkdir -p "$work/out"
+  echo "migration-baseline: building core's history through $through"
+  recreate_db "$db"
+  migrate "$db" -route history -through "$through"
+  local since until
+  since="$(psql_owner -d "$db" -At -c "SELECT min(applied_at) FROM schema_migrations_core")"
+  until="$(psql_owner -d "$db" -At -c "SELECT max(applied_at) FROM schema_migrations_core")"
+  for section in pre-data post-data; do
+    docker exec "$CONTAINER" pg_dump -U "$OWNER" -d "$db" --schema-only --no-owner \
+      --section="$section" "${EXCLUDE[@]}" > "$work/$section.sql"
+  done
+  docker exec "$CONTAINER" pg_dump -U "$OWNER" -d "$db" --data-only --column-inserts \
+    --rows-per-insert=1 "${EXCLUDE[@]}" > "$work/data.sql" 2> >(quiet_cycle_warnings)
+  drop_db "$db"
+
+  # Written aside and moved in only on success, so a refusal leaves the
+  # committed baseline in place.
+  "$TOOLS_BIN/gen-baseline" -pre "$work/pre-data.sql" -data "$work/data.sql" -post "$work/post-data.sql" \
+    -roles "${roles[0]}" -since "$since" -until "$until" -through "$through" -version "$version" \
+    -name "$name" -release "$release" -out "$work/out" || die "gen-baseline refused; the baseline is unchanged"
+  rm -f "$BASELINE_DIR"/*.up.sql
+  mv "$work/out"/* "$BASELINE_DIR"/
+  echo "migration-baseline: wrote $BASELINE_DIR/${version}_${name}.up.sql and replaces.txt; run verify next"
 }
 
 cmd_verify() {
-  local ref="${1:-}"
-  [[ -n "$ref" ]] || die "usage: migration-baseline.sh verify <base-ref>"
   require_container
-  git rev-parse --verify -q "$ref" >/dev/null || die "base ref '$ref' not found — fetch it first"
+  build_tools
+  local version; version="$(baseline_file)"; version="${version%%_*}"
+  local history="$SCRATCH/history.txt" baseline="$SCRATCH/baseline.txt"
 
-  # The base ref's migrations have to come from a checkout of the base ref, and
-  # this session's worktree is not free to switch branches underneath the run.
-  local wt; wt="$(mktemp -d)"
-  git worktree add --detach "$wt" "$ref" >/dev/null 2>&1 || die "could not check out $ref"
-  # shellcheck disable=SC2064
-  trap "git worktree remove --force '$wt' >/dev/null 2>&1 || true" EXIT
+  echo "migration-baseline: building every core and custom migration by the history route"
+  recreate_db margince_baseline_history
+  migrate margince_baseline_history -route history
+  capture margince_baseline_history "$version" "$history"
 
-  local before after
-  before="$(mktemp)"; after="$(mktemp)"
+  echo "migration-baseline: building the same by the baseline route"
+  recreate_db margince_baseline_route
+  migrate margince_baseline_route -route baseline
+  capture margince_baseline_route "$version" "$baseline"
 
-  echo "migration-baseline: building the schema $ref's migrations produce"
-  recreate_db margince_baseline_before
-  apply_namespaces margince_baseline_before "$wt/backend/migrations" core custom
-  capture margince_baseline_before "$before"
+  drop_db margince_baseline_history
+  drop_db margince_baseline_route
 
-  echo "migration-baseline: building the schema this tree's migrations produce"
-  recreate_db margince_baseline_after
-  apply_namespaces margince_baseline_after backend/migrations core custom
-  capture margince_baseline_after "$after"
-
-  psql_owner -d postgres -c "DROP DATABASE IF EXISTS margince_baseline_before" >/dev/null
-  psql_owner -d postgres -c "DROP DATABASE IF EXISTS margince_baseline_after" >/dev/null
-
-  if diff -u "$before" "$after" > /tmp/margince-baseline.diff; then
-    local n_before n_after
-    n_before="$(git ls-tree --name-only -r "$ref" backend/migrations/core backend/migrations/custom | grep -c '\.up\.sql$')"
-    n_after="$(find backend/migrations/core backend/migrations/custom -name '*.up.sql' | wc -l | tr -d ' ')"
-    echo "OK: $n_after migration(s) build the schema $ref's $n_before build — byte-identical"
+  local diff_out="${TMPDIR:-/tmp}/margince-baseline.diff"
+  if diff -u "$history" "$baseline" > "$diff_out"; then
+    echo "OK: the baseline route builds the schema, reference rows and ledger the history builds"
     return 0
   fi
-  echo "FAIL: this tree's migrations build a DIFFERENT schema than $ref's" >&2
-  echo "      '-' is $ref, '+' is this tree:" >&2
-  sed -n '1,200p' /tmp/margince-baseline.diff >&2
-  echo "      (full diff: /tmp/margince-baseline.diff)" >&2
+  echo "FAIL: the baseline route builds something the history does not" >&2
+  echo "      '-' is the history, '+' is the baseline route:" >&2
+  sed -n '1,200p' "$diff_out" >&2
+  echo "      (full diff: $diff_out)" >&2
   return 1
 }
 
 case "${1:-}" in
-  verify) shift; cmd_verify "$@" ;;
-  *) die "usage: migration-baseline.sh verify <base-ref>" ;;
+  generate) cmd_generate ;;
+  verify) cmd_verify ;;
+  *) die "usage: migration-baseline.sh generate|verify" ;;
 esac

@@ -141,6 +141,7 @@ var precisionlessTimes = gatekit.Waive(map[string]string{
 	"api/crm.yaml Contact.last_activity_at":                          storedClock,
 	"api/crm.yaml Deal.last_activity_at":                             storedClock,
 	"api/crm.yaml Project.last_activity_at":                          storedClock,
+	"api/crm.yaml SearchHitStanding.last_activity_at":                storedClock,
 	"api/crm.yaml Project360Rollups.last_activity_at":                storedClock,
 	"api/crm.yaml Company360Project.last_activity_at":                storedClock,
 	"api/crm.yaml TeamWeeklyStaleDeal.last_activity_at":              storedClock,

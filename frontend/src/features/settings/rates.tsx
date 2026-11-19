@@ -292,7 +292,9 @@ function FxRateModal({ onClose }: Readonly<{ onClose: () => void }>) {
  * The prices in force, one fold per provider, inside the model prices panel
  * on AI models. The caller holds the read grant and the verbs that write.
  */
-export function ModelPriceSheet() {
+export function ModelPriceSheet({
+  shown,
+}: Readonly<{ shown: (provider: string) => boolean }>) {
   const t = useT();
   const query = useQuery({
     queryKey: ["ai-model-rates"],
@@ -305,7 +307,9 @@ export function ModelPriceSheet() {
       return data.data;
     },
   });
-  const priced = query.data?.filter((row) => isPricedProvider(row.provider));
+  const priced = query.data?.filter(
+    (row) => isPricedProvider(row.provider) && shown(row.provider),
+  );
   return (
     <PanelBody>
       {query.data === undefined && (

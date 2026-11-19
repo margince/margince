@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useQueryClient } from "@tanstack/react-query";
+import { type QueryClient, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { ProblemError, unwrap } from "../../lib/problem";
+import { ProblemError, problemCodeOf, unwrap } from "../../lib/problem";
 import { isRecord } from "../../lib/problembody";
 import { mappedOnly, type WizardFile } from "./importflow";
 import { IMPORTS_KEY } from "./importrun";
@@ -172,6 +172,14 @@ export function editsPatch(
   return Object.keys(patch).length > 0 ? patch : null;
 }
 
+// Mirrors RunStateCode in backend/internal/modules/migration/runrefusal.go.
+// A save gets it once a test or a cancel, from any tab, ended the draft.
+export const RUN_STATE = "import_run_state";
+
+export function noLongerDraft(error: unknown): boolean {
+  return problemCodeOf(error) === RUN_STATE;
+}
+
 function isConflict(error: unknown): boolean {
   return (
     error instanceof ProblemError &&
@@ -181,12 +189,27 @@ function isConflict(error: unknown): boolean {
 }
 
 /**
+ * Lays a run a write answered over the one the cache holds. A write's answer
+ * carries no profile, so the cached one is kept.
+ */
+export function holdRun(queryClient: QueryClient, run: ImportRun): void {
+  queryClient.setQueryData<ImportRun>([IMPORTS_KEY, "run", run.id], (old) => ({
+    ...old,
+    ...run,
+    profile: run.profile ?? old?.profile,
+  }));
+}
+
+/**
  * The one line every save of a draft goes through.
  * Saves run one at a time, and each carries the version the previous answer gave.
  * So two quick edits never race each other into a conflict.
- * A conflict can only come from another tab.
+ * A version conflict can only come from another tab.
  */
-export function useDraftWrites(onConflict?: () => void) {
+export function useDraftWrites(
+  onConflict?: () => void,
+  onReadAgain?: () => void,
+) {
   const queryClient = useQueryClient();
   const tail = useRef<Promise<unknown>>(Promise.resolve());
   const carried = useRef<{ id: string; version: number } | null>(null);
@@ -205,11 +228,7 @@ export function useDraftWrites(onConflict?: () => void) {
       }),
     );
     carried.current = { id, version: saved.version };
-    queryClient.setQueryData<ImportRun>(key, (old) => ({
-      ...old,
-      ...saved,
-      profile: saved.profile ?? old?.profile,
-    }));
+    holdRun(queryClient, saved);
     return saved;
   };
 
@@ -222,7 +241,11 @@ export function useDraftWrites(onConflict?: () => void) {
       () => undefined,
     );
     return run.catch((error: unknown) => {
-      if (isConflict(error)) {
+      if (noLongerDraft(error)) {
+        queryClient
+          .invalidateQueries({ queryKey: [IMPORTS_KEY] })
+          .then(onReadAgain);
+      } else if (isConflict(error)) {
         setConflict(true);
         onConflict?.();
         queryClient.invalidateQueries({ queryKey: [IMPORTS_KEY] });
@@ -233,10 +256,15 @@ export function useDraftWrites(onConflict?: () => void) {
 
   return {
     patch,
-    /** An edit saved in the background; a refusal waits in `failure`. */
+    /**
+     * An edit saved in the background; a refusal waits in `failure`. A run no
+     * longer a draft is read again instead, and the page shows what it is now.
+     */
     save: (id: string, body: DraftPatch) => {
       setFailure(null);
-      patch(id, body).catch(setFailure);
+      patch(id, body).catch((error: unknown) => {
+        if (!noLongerDraft(error)) setFailure(error);
+      });
     },
     failure,
     conflict,

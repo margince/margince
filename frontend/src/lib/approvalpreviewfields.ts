@@ -202,6 +202,8 @@ export function previewFieldLabel(field: string, t: Translator): string {
       return t("approval.preview.evidenceInvoice");
     case "deal_id":
       return t("approval.preview.evidenceDeal");
+    case "footer_warning":
+      return t("approval.preview.footerWarning");
     case "disclosure_text":
       return t("approval.preview.disclosureText");
     case "signature_text":

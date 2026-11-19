@@ -281,6 +281,20 @@ describe("LeadScreen — arriving to log a call", () => {
     );
   });
 
+  // Call and Meet record what happened, so each opens the drawer on its kind.
+  it("opens the drawer on a meeting from the header's Meet verb", async () => {
+    stubFetch(async () => jsonResponse(lead));
+    window.location.hash = "#/leads/l-1";
+    render(<LeadScreen id="l-1" />);
+
+    const meet = await screen.findByRole("button", { name: "Meet" });
+    await waitFor(() => expect(meet).toBeEnabled());
+    await userEvent.click(meet);
+    await waitFor(() =>
+      expect(screen.getByLabelText("Type").textContent).toContain("Meeting"),
+    );
+  });
+
   // A link pressed on the record the reader is already on changes the address
   // and nothing else, with no remount. So the drawer opens on the kind the
   // address now names rather than staying shut.

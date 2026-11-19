@@ -118,7 +118,7 @@ RUN --mount=type=cache,id=margince-gobuild,target=/root/.cache/go-build \
 # is always the composed one — an installation's image must serve the units
 # that installation enabled — which is what the gobase stage's gen-composition
 # run provides.
-FROM --platform=$BUILDPLATFORM node:24-alpine@sha256:50c8e8ca1d27439048670df5883f32d57cf81cff6233222c893fd0d9884cbd81 AS web-build
+FROM --platform=$BUILDPLATFORM node:24-alpine@sha256:116b800c3754b440ee0aa3ed2f20f5bf3d99a554bfd9adeea09ea8017f6e85f5 AS web-build
 
 # The composed OpenAPI graph exceeds V8's default heap in this build image.
 ENV NODE_OPTIONS=--max-old-space-size=4096

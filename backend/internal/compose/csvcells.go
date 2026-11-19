@@ -300,8 +300,8 @@ func unwritableReason(object string, fields map[string]string) *cellProblem {
 	if problem := emailCellProblem(object, fields); problem != nil {
 		return problem
 	}
-	if target, why, refused := importtextbounds.Refusal(object, fields); refused {
-		return problemOf(target, fields[target], why)
+	if target, value, why, refused := importtextbounds.Refusal(object, fields); refused {
+		return problemOf(target, value, why)
 	}
 	if object == migration.ObjectContact || object == migration.ObjectLead {
 		return nil

@@ -31,7 +31,8 @@
     "e2e": "pnpm build:bundle && playwright test",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build -o storybook-static",
-    "gen:essential-copy": "node scripts/gen-essential-copy.mjs"
+    "gen:essential-copy": "node scripts/gen-essential-copy.mjs",
+    "gen:pwa-icons": "node scripts/pwa-icons.mjs"
   },
   "dependencies": {
     "@fontsource/geist": "5.3.0",

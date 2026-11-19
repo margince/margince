@@ -39,7 +39,7 @@ func TestObjectiveLanguageKeepsRecommendationsAndEvidence(t *testing.T) {
 		in.PriorMeetings = []PriorMeetingIn{{ID: activityID, Subject: "Original meeting", StartsAt: instantOn(3)}}
 		in.Commitments = append(in.Commitments, ClaimIn{Kind: kindObjection, Body: "Original objection", Status: statusOpen, SourceID: activityID})
 		floor := DeterministicPlanFor(in)
-		if !strings.Contains(floor.Objective.Sentence.Text, "send the security pack") || !strings.Contains(floor.Objective.Sentence.Text, "2026-08-08") || !strings.Contains(floor.Opening.Text, "Original meeting") || !strings.Contains(floor.Opening.Text, "2026-08-03") || !strings.Contains(floor.TopRisk.Response.Say, "Original objection") {
+		if !strings.Contains(floor.Objective.Sentence.Text, "send the security pack") || !strings.Contains(floor.Objective.Sentence.Text, augustDay(language, 8)) || !strings.Contains(floor.Opening.Text, "Original meeting") || !strings.Contains(floor.Opening.Text, augustDay(language, 3)) || !strings.Contains(floor.TopRisk.Response.Say, "Original objection") {
 			t.Fatalf("%s lost recorded facts", language)
 		}
 		noModel, by := WritePlan(context.Background(), nil, in, floor, language)

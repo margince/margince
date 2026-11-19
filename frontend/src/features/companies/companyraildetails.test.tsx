@@ -13,6 +13,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
 import { type OpenSource, OpenSourceProvider } from "../../lib/opensource";
 import { meFixture } from "../../testing/mefixture";
@@ -501,5 +502,32 @@ describe("the grouped postal address", () => {
     expect(within(address).getByDisplayValue("Berlin")).toBeVisible();
     for (const label of PART_LABELS)
       expect(within(address).getByLabelText(new RegExp(label))).toBeVisible();
+  });
+});
+
+// A wrong industry or size band can be removed, not only replaced. The dialog
+// offers "Not set" as the New company form does, and the write clears it.
+describe("a choice that may be cleared", () => {
+  it.each([
+    ["Industry", "industry"],
+    ["Employees", "size_band"],
+  ])("clears %s to null", async (label, key) => {
+    const user = userEvent.setup();
+    const calls = await renderSettledGrid({ ...COMPANY, size_band: "11-50" });
+
+    await user.click(screen.getByRole("button", { name: "Edit About" }));
+    await pickOption(
+      user,
+      await screen.findByRole("combobox", { name: label }),
+      "Not set",
+    );
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    const written = await waitFor(() => {
+      const call = calls.find((one) => one.method === "PATCH");
+      expect(call).toBeDefined();
+      return call;
+    });
+    expect(JSON.parse(written?.body ?? "{}")).toMatchObject({ [key]: null });
   });
 });

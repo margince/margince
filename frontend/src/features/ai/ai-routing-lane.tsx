@@ -13,18 +13,14 @@ import { formatDateTime, formatNumber } from "../../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import type { ModelCatalogue, ModelLane } from "../../lib/ai-models";
 import { providerName } from "../../lib/ai-provider-names";
+import { DECIDE_RUNG, tierLabel } from "../../lib/ai-tier-label";
 import { useViewerZone } from "../../lib/viewerzone";
 import {
   TierCallsLine,
   TierSwitchedBadge,
   TierSwitchedLine,
 } from "./ai-call-figures";
-import {
-  callCodeName,
-  DECIDE_RUNG,
-  gaveUpLabel,
-  tierLabel,
-} from "./ai-decision-labels";
+import { callCodeName, gaveUpLabel } from "./ai-decision-labels";
 import { laneGloss, priceLabel, servingSort } from "./ai-routing-lane-text";
 import { TermChip } from "./ai-terms";
 

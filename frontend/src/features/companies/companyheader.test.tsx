@@ -14,6 +14,7 @@ import "@testing-library/jest-dom/vitest";
 import type { components } from "../../api/schema";
 import { useActivityGate } from "../../components/activitygate";
 import { pickOption } from "../../design-system/select-testing";
+import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { companyDocumentsKey } from "../../lib/attachmentkeys";
@@ -411,30 +412,35 @@ describe("an archived account's verbs", () => {
   });
 });
 
-describe("merging an account into another", () => {
-  it("refreshes both companies' document libraries, and no other", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (request: Request) => {
-        const { pathname } = new URL(request.url);
-        if (pathname.endsWith("/me")) {
-          return Response.json({ user: { id: "u-reader" }, ...READER });
-        }
-        if (pathname.endsWith("/merge")) {
-          return Response.json({ ...COMPANY, id: "o-kept" });
-        }
-        if (pathname === "/v1/companies") {
-          return Response.json({
-            data: [{ ...COMPANY, id: "o-kept", display_name: "Brandt AG" }],
-            page: { has_more: false, next_cursor: null },
-          });
-        }
+// The reader, the merge's answer, and one search result: the company kept.
+function stubMergeInto(kept: Company) {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (request: Request) => {
+      const { pathname } = new URL(request.url);
+      if (pathname.endsWith("/me")) {
+        return Response.json({ user: { id: "u-reader" }, ...READER });
+      }
+      if (pathname.endsWith("/merge")) {
+        return Response.json(kept);
+      }
+      if (pathname === "/v1/companies") {
         return Response.json({
-          data: [],
+          data: [kept],
           page: { has_more: false, next_cursor: null },
         });
-      }),
-    );
+      }
+      return Response.json({
+        data: [],
+        page: { has_more: false, next_cursor: null },
+      });
+    }),
+  );
+}
+
+describe("merging an account into another", () => {
+  it("refreshes both companies' document libraries, and no other", async () => {
+    stubMergeInto({ ...COMPANY, id: "o-kept", display_name: "Brandt AG" });
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -458,6 +464,55 @@ describe("merging an account into another", () => {
       expect([stale("o-1"), stale("o-kept")]).toEqual([true, true]),
     );
     expect(stale("o-other")).toBe(false);
+  });
+
+  // Two companies of one name are the usual duplicate, so the question names
+  // each side by its domain, and the answer says which one survived.
+  it("tells two same-name companies apart before and after the merge", async () => {
+    const domain = (name: string) => [
+      {
+        id: `d-${name}`,
+        domain: name,
+        is_primary: true,
+        source: "manual",
+        captured_by: "human:u-author",
+      },
+    ];
+    stubMergeInto({
+      ...COMPANY,
+      id: "o-kept",
+      domains: domain("brandt.example"),
+    });
+    const user = userEvent.setup();
+    renderInApp(
+      <ToastProvider>
+        <MenuHost
+          company={{ ...COMPANY, domains: domain("brandt-dup.example") }}
+        />
+        <ToastRegion />
+      </ToastProvider>,
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: "More actions" }),
+    );
+    await user.click(await screen.findByTestId("merge-record"));
+    await user.type(screen.getByRole("searchbox"), "Brandt");
+    await user.click(
+      await screen.findByRole("button", { name: /brandt\.example/ }),
+    );
+
+    expect(
+      screen.getByText(
+        "Merge Brandt Automotive GmbH (brandt-dup.example) into Brandt Automotive GmbH (brandt.example)? This archives Brandt Automotive GmbH (brandt-dup.example).",
+      ),
+    ).toBeTruthy();
+    await user.click(screen.getByTestId("merge-confirm"));
+    expect(
+      await screen.findByText(
+        "Brandt Automotive GmbH (brandt-dup.example) was merged into Brandt Automotive GmbH (brandt.example).",
+      ),
+    ).toBeTruthy();
   });
 });
 

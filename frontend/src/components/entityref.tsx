@@ -224,7 +224,7 @@ function resolvedOrFallback(
   if (resolved == null) {
     return <UnnamedRef id={id} reading={reading} />;
   }
-  return <span title={id}>{resolved}</span>;
+  return <span>{resolved}</span>;
 }
 
 function UserRef({ id, name }: Readonly<{ id: string; name?: string | null }>) {
@@ -289,7 +289,7 @@ function RecordRef({
     return <UnnamedRef id={id} reading={readingOf(query)} />;
   }
   if (asText) {
-    return <span title={id}>{resolved}</span>;
+    return <span>{resolved}</span>;
   }
   // Native destinations support copying and new tabs; ordinary clicks use the router.
   return (
@@ -297,7 +297,6 @@ function RecordRef({
       className="entity-link"
       href={routeHash(ENTITY[kind].route(id))}
       onClick={(event) => event.stopPropagation()}
-      title={id}
       {...(newTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}
     >
       {resolved}

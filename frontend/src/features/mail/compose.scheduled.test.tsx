@@ -23,6 +23,7 @@ import {
   previewedAddresses,
 } from "../../testing/sendpermission.testkit";
 import { ComposeModal } from "./compose";
+import { pressSend } from "./compose.testkit";
 
 // The composer's "why are you writing?" dial, named rather than reached for
 // by role alone: the To, Cc and Bcc lines are comboboxes of their own now
@@ -132,7 +133,7 @@ async function composeAndSend() {
     WHY_LABEL,
   );
   await screen.findByRole("button", { name: /recipients checked/i });
-  await userEvent.click(screen.getByRole("button", { name: "Send" }));
+  await pressSend();
   return onClose;
 }
 

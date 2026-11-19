@@ -394,7 +394,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
       [...container.querySelectorAll(".palette-group")].map(
         (heading) => heading.textContent,
       ),
-    ).toEqual(["Companies"]);
+    ).toEqual(["Companies", "Ask Margince"]);
     // The heading says it once; the row repeats neither the kind nor "Record".
     expect(row.querySelector(".label")?.textContent).toBe("Brandt GmbH");
     expect(row.querySelector(".sub")).toBeNull();
@@ -438,7 +438,7 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
       [...container.querySelectorAll(".palette-group")].map(
         (heading) => heading.textContent,
       ),
-    ).toEqual(["Companies", "Emails"]);
+    ).toEqual(["Companies", "Emails", "Ask Margince"]);
     const rows = destinationRows().map((row) => row.textContent ?? "");
     expect(rows.findIndex((text) => text.includes("Acme GmbH"))).toBeLessThan(
       rows.findIndex((text) => text.includes("Acme renewal")),

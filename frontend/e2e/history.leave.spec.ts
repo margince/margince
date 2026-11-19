@@ -231,7 +231,9 @@ test("Stay after Back returns to the form and keeps the way Forward", async ({
   const field = await openRetentionForm(page);
   const address = page.url();
   await page.goto("/#/companies");
-  await expect(page.getByRole("main")).toBeVisible();
+  // The list spells its opening sort into its own entry once it mounts.
+  await expect(page).toHaveURL(/#\/companies\?sort=-created_at$/);
+  const list = page.url();
   await page.goBack();
   await expect(page).toHaveURL(address);
   await field.fill("7200");
@@ -245,7 +247,7 @@ test("Stay after Back returns to the form and keeps the way Forward", async ({
   await expect(field).toHaveValue("7200");
 
   await page.goForward();
-  await expect(page).toHaveURL(/#\/companies$/);
+  await expect(page).toHaveURL(list);
   await page
     .getByRole("dialog")
     .getByRole("button", { name: de["saveBar.discard"], exact: true })

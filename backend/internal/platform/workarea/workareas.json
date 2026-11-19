@@ -225,7 +225,6 @@
     "describeReportBlocks": "business",
     "describeReportVocabulary": "business",
     "describeRouterActions": "business",
-    "directCommunicationSend": "compliance",
     "discardDomainQuestion": "capture",
     "discardMailDraft": "business",
     "discardReportingReportDraft": "business",
@@ -2485,9 +2484,6 @@
     "describe_views": [
       "search"
     ],
-    "direct_communication_send": [
-      "consent"
-    ],
     "discard_domain_question": [
       "capture_triage"
     ],
@@ -4597,9 +4593,6 @@
     ],
     "describe_views": [
       "business"
-    ],
-    "direct_communication_send": [
-      "compliance"
     ],
     "discard_domain_question": [
       "capture"

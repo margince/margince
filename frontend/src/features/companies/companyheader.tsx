@@ -8,6 +8,7 @@ import { AddToShortlistAction } from "../../components/addtoshortlist";
 import { ArchiveAction } from "../../components/archive";
 import { useRecordOwnerOptions } from "../../components/assigneepicker";
 import {
+  companyMergeDetail,
   patchCompanyField,
   searchCompanyTargets,
 } from "../../components/companyform";
@@ -341,6 +342,7 @@ export function CompanyActionBadges({
           label={t("merge.company")}
           sourceId={company.id}
           sourceName={company.display_name}
+          sourceDetail={companyMergeDetail(company)}
           searchTargets={searchCompanyTargets}
           merge={async (targetId) => {
             const merged = unwrap(

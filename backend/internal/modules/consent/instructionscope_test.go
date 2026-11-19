@@ -20,6 +20,7 @@ func TestAnInstructionKeepsItsRecipientCompanyAndPurpose(t *testing.T) {
 		SubjectKind: entityContact, SubjectID: ids.NewV7(), SendingEntity: ids.NewV7(),
 		Requested: commsauthz.CategoryRequestedFollowup, Resolved: commsauthz.CategoryRequestedFollowup,
 		Verdict: commsauthz.VerdictReview, PurposeID: &purpose,
+		Evidence: commsauthz.Evidence{PolicyRevision: "first-stop"},
 	}
 	recorded := []RefusedRecipient{refusedRecipientOf(original)}
 	for _, tc := range []struct {
@@ -27,6 +28,7 @@ func TestAnInstructionKeepsItsRecipientCompanyAndPurpose(t *testing.T) {
 		change func(*commsauthz.Decision)
 		stale  bool
 	}{
+		{"new recipient preference", func(d *commsauthz.Decision) { d.Evidence.PolicyRevision = "second-stop" }, true},
 		{"same scope", func(*commsauthz.Decision) {}, false},
 		{"address", func(d *commsauthz.Decision) { d.Recipient.Email = "other@example.test" }, true},
 		{"record", func(d *commsauthz.Decision) { d.SubjectID = ids.NewV7() }, true},

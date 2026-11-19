@@ -37,7 +37,7 @@ import (
 // It rebuilds the service over the SAME composite read wireContact360 built, so
 // the brief's scope stays the caller's own gated read rather than a second one
 // assembled here.
-func WithContactBrief(brain completer, routingVersion string) Option {
+func WithContactBrief(brain completer, routingVersion func() string) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		if s.contact360Svc == nil {
 			return

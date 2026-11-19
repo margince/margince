@@ -7,8 +7,25 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { InstallOutcome, InstallState } from "./pwa";
 
 const DESKTOP = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/131.0";
-const IPHONE = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Safari";
+const IPHONE =
+  "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Version/18.0 Mobile/15E148 Safari/604.1";
 const IPAD = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1.15";
+const IPHONE_CHROME =
+  "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) CriOS/131.0 Mobile/15E148 Safari/604.1";
+const IPHONE_WEBVIEW =
+  "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Mobile/15E148 Instagram 350.0";
+const IPHONE_GOOGLE_APP =
+  "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) GSA/313.0.635574601 Mobile/15E148 Safari/604.1";
+const IPAD_WEBVIEW =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Mobile/15E148 [FBAN/FBIOS]";
+const MAC_SAFARI =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Version/26.0 Safari/605.1.15";
+const MAC_SAFARI_18 =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Version/18.6 Safari/605.1.15";
+const MAC_CHROME =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Chrome/131.0 Safari/537.36";
+const MAC_FIREFOX =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:132.0) Firefox/132.0";
 
 const shadowed: string[] = [];
 const listening: (() => void)[] = [];
@@ -179,6 +196,16 @@ describe("the install state", () => {
     expect(state().kind).toBe("unavailable");
   });
 
+  it("still offers to install in a browser tab gone fullscreen", async () => {
+    vi.stubGlobal("matchMedia", (query: string) => ({
+      matches: query === "(display-mode: fullscreen)",
+      media: query,
+    }));
+    const { state } = await page();
+    offer("accepted");
+    expect(state().kind).toBe("available");
+  });
+
   it("is installed when the app runs standalone", async () => {
     displayMode(true);
     const { state } = await page();
@@ -198,6 +225,26 @@ describe("the install state", () => {
     expect((await page(IPAD, 5)).state().kind).toBe("manual-ios");
     expect((await page(IPAD, 0)).state().kind).toBe("unavailable");
   });
+
+  it("is added by hand from Chrome on an iPhone, which shares through Safari", async () => {
+    displayMode(false);
+    expect((await page(IPHONE_CHROME, 5)).state().kind).toBe("manual-ios");
+  });
+
+  it("offers nothing inside an app's own browser, which cannot add to the home screen", async () => {
+    displayMode(false);
+    expect((await page(IPHONE_WEBVIEW, 5)).state().kind).toBe("unavailable");
+    expect((await page(IPAD_WEBVIEW, 5)).state().kind).toBe("unavailable");
+    expect((await page(IPHONE_GOOGLE_APP, 5)).state().kind).toBe("unavailable");
+  });
+
+  it("is added to the Dock by hand in Safari 26 on a Mac, and in no older Safari or other Mac browser", async () => {
+    displayMode(false);
+    expect((await page(MAC_SAFARI, 0)).state().kind).toBe("manual-macos");
+    expect((await page(MAC_SAFARI_18, 0)).state().kind).toBe("unavailable");
+    expect((await page(MAC_CHROME, 0)).state().kind).toBe("unavailable");
+    expect((await page(MAC_FIREFOX, 0)).state().kind).toBe("unavailable");
+  });
 });
 
 describe("registering the service worker", () => {
@@ -207,7 +254,12 @@ describe("registering the service worker", () => {
     return spy;
   }
 
+  function pageState(state: DocumentReadyState) {
+    vi.spyOn(document, "readyState", "get").mockReturnValue(state);
+  }
+
   async function registerThenLoad() {
+    pageState("loading");
     vi.resetModules();
     const { registerServiceWorker } = await import("./pwa");
     registerServiceWorker();
@@ -217,6 +269,7 @@ describe("registering the service worker", () => {
   it("registers the root worker once the page has loaded, bypassing the HTTP cache", async () => {
     vi.stubEnv("PROD", true);
     const register = workerSupport(async () => ({}));
+    pageState("loading");
     vi.resetModules();
     const { registerServiceWorker } = await import("./pwa");
     registerServiceWorker();
@@ -226,6 +279,21 @@ describe("registering the service worker", () => {
       scope: "/",
       updateViaCache: "none",
     });
+  });
+
+  it("registers at once when the page loaded before the app's code ran", async () => {
+    vi.stubEnv("PROD", true);
+    const register = workerSupport(async () => ({}));
+    pageState("complete");
+    vi.resetModules();
+    const { registerServiceWorker } = await import("./pwa");
+    registerServiceWorker();
+    expect(register).toHaveBeenCalledExactlyOnceWith("/sw.js", {
+      scope: "/",
+      updateViaCache: "none",
+    });
+    window.dispatchEvent(new Event("load"));
+    expect(register).toHaveBeenCalledOnce();
   });
 
   it("registers nothing in a development build", async () => {

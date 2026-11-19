@@ -5,7 +5,7 @@ import type { components } from "../../api/schema";
 import { Badge } from "../../design-system/atoms";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
-import { DECIDE_RUNG } from "./ai-decision-labels";
+import { DECIDE_RUNG } from "../../lib/ai-tier-label";
 
 type Health = components["schemas"]["AiHealth"];
 

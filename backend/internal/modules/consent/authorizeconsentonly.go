@@ -5,8 +5,8 @@ package consent
 
 import "github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 
-// A staff exception supplies neither consent nor a missing statutory ground.
-// Supported statutory routes have already returned an allow before this check.
+// Names the missing consent or statutory ground as its own refusal, which no
+// recorded fact supplies. Supported statutory routes have already allowed.
 func requireConsentWhereNothingStandsIn(d commsauthz.Decision, country RecipientCountry) commsauthz.Decision {
 	if d.Verdict == commsauthz.VerdictAllow || !lacksMarketingConsent(d) {
 		return d

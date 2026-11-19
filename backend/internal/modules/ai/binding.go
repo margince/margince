@@ -58,6 +58,8 @@ type binding struct {
 	// decisions is the bound decisions lane, nil when the config binds none —
 	// the state in which Decide is exactly CompleteStructured.
 	decisions *decisionLane
+	// public is the anonymous profile of this binding's models and providers.
+	public PublicProfile
 	// generation identifies THIS binding among the ones this Router has
 	// served, and it is what the result cache scopes its entries to. It is
 	// deliberately not derived from the config: rebinding to an identical
@@ -105,6 +107,7 @@ func (b binding) withConfig(cfg RoutingConfig, decisions *decisionLane) binding 
 	b.configHash = b.configSnapshot.Hash
 	b.tierRouting, b.sent = brokerRouting(cfg), &sentSnapshots{}
 	b.credentialVersion = cfg.credentialVersion
+	b.public = NewPublicProfile("configured", cfg)
 	return b
 }
 
@@ -168,6 +171,10 @@ func (r *Router) install(next binding) {
 // Empty on a Router assembled without one, which is every unit fixture and an
 // installation whose keys come from the environment alone.
 func (r *Router) CredentialVersion() string { return r.binding().credentialVersion }
+
+// ConfiguredProfile is the public profile of the binding served now, so the
+// profile reads follow a rebind the way the lanes do.
+func (r *Router) ConfiguredProfile() PublicProfile { return r.binding().public }
 
 // RoutingVersion is the digest of the ROUTING CONFIG this Router is serving —
 // the value a caller compares against the stored one to decide whether it has

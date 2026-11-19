@@ -140,4 +140,27 @@ describe("latestWord", () => {
   it("is nothing on a page with no timeline", () => {
     expect(latestWord(undefined, words)).toBeUndefined();
   });
+
+  it("reads a note as the words it renders, not its markdown", () => {
+    const quoted = row({
+      id: "form",
+      kind: "note",
+      occurred_at: "2026-08-10T08:00:00Z",
+      body: "> Hello, we need **ten** seats.\n> Call me back.",
+    });
+    expect(latestWord([quoted], words)?.text).toBe(
+      "Hello, we need ten seats.\nCall me back.",
+    );
+  });
+
+  it("keeps a transcript as it was spoken", () => {
+    const transcript = row({
+      id: "call",
+      kind: "call",
+      occurred_at: "2026-08-10T08:00:00Z",
+      source_system: "transcript",
+      body: "> said as it was",
+    });
+    expect(latestWord([transcript], words)?.text).toBe("> said as it was");
+  });
 });

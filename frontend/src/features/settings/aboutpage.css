@@ -1,0 +1,4 @@
+/* One step past the panel's own inset above the mark. */
+.aboutpage {
+  padding-block-start: var(--space-1);
+}

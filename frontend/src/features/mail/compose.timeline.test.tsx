@@ -14,6 +14,7 @@ import {
   activity202,
   jsonResponse,
   pickWhy,
+  pressSend,
   problemResponse,
   render,
   stubRoutes,
@@ -62,7 +63,7 @@ describe("ComposeModal — channel reply", () => {
     await screen.findByRole("combobox", { name: WHY_ASK });
     writeMessage("Body", "On my way.");
     await pickWhy(WHY_LABEL.requestedFollowup);
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());
     const req = sent.find(
@@ -174,7 +175,7 @@ describe("ComposeModal — channel reply", () => {
     await screen.findByRole("combobox", { name: WHY_ASK });
     writeMessage("Body", "Call me back please.");
     await pickWhy(WHY_LABEL.requestedFollowup);
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
 
     expect(
       await screen.findByText("This message cannot be sent as it stands."),

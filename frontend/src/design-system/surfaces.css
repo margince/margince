@@ -44,7 +44,6 @@
   .co-facts-add,
   .co-strip-withheld,
   .meetingrows-lead,
-  .pn-hero,
   .roomtab-band,
   .board-doc,
   .board-doc-stage,
@@ -89,6 +88,9 @@
   .compose-reasons-card,
   .page-pane,
   .analytics-sheet,
+  .reachcard,
+  .palette-tile,
+  .palette-foot,
   .recorddetails-group
 ) {
   --ground: var(--ladder1Solid);
@@ -141,7 +143,6 @@
     .co-facts-add,
     .co-strip-withheld,
     .meetingrows-lead,
-    .pn-hero,
     .roomtab-band,
     .board-doc,
     .board-doc-stage,
@@ -186,6 +187,9 @@
     .compose-reasons-card,
     .page-pane,
     .analytics-sheet,
+    .reachcard,
+    .palette-tile,
+    .palette-foot,
     .recorddetails-group
   )
   :where(
@@ -223,7 +227,6 @@
     .co-facts-add,
     .co-strip-withheld,
     .meetingrows-lead,
-    .pn-hero,
     .roomtab-band,
     .board-doc,
     .board-doc-stage,
@@ -268,6 +271,9 @@
     .compose-reasons-card,
     .page-pane,
     .analytics-sheet,
+    .reachcard,
+    .palette-tile,
+    .palette-foot,
     .recorddetails-group
   ) {
   --ground: var(--ladder2);
@@ -320,7 +326,6 @@
     .co-facts-add,
     .co-strip-withheld,
     .meetingrows-lead,
-    .pn-hero,
     .roomtab-band,
     .board-doc,
     .board-doc-stage,
@@ -365,6 +370,9 @@
     .compose-reasons-card,
     .page-pane,
     .analytics-sheet,
+    .reachcard,
+    .palette-tile,
+    .palette-foot,
     .recorddetails-group
   )
   :where(
@@ -402,7 +410,6 @@
     .co-facts-add,
     .co-strip-withheld,
     .meetingrows-lead,
-    .pn-hero,
     .roomtab-band,
     .board-doc,
     .board-doc-stage,
@@ -447,6 +454,9 @@
     .compose-reasons-card,
     .page-pane,
     .analytics-sheet,
+    .reachcard,
+    .palette-tile,
+    .palette-foot,
     .recorddetails-group
   )
   :where(
@@ -484,7 +494,6 @@
     .co-facts-add,
     .co-strip-withheld,
     .meetingrows-lead,
-    .pn-hero,
     .roomtab-band,
     .board-doc,
     .board-doc-stage,
@@ -529,6 +538,9 @@
     .compose-reasons-card,
     .page-pane,
     .analytics-sheet,
+    .reachcard,
+    .palette-tile,
+    .palette-foot,
     .recorddetails-group
   ) {
   --ground: var(--ladder3);
@@ -581,7 +593,6 @@
     .co-facts-add,
     .co-strip-withheld,
     .meetingrows-lead,
-    .pn-hero,
     .roomtab-band,
     .board-doc,
     .board-doc-stage,
@@ -626,6 +637,9 @@
     .compose-reasons-card,
     .page-pane,
     .analytics-sheet,
+    .reachcard,
+    .palette-tile,
+    .palette-foot,
     .recorddetails-group
   )
   :where(
@@ -663,7 +677,6 @@
     .co-facts-add,
     .co-strip-withheld,
     .meetingrows-lead,
-    .pn-hero,
     .roomtab-band,
     .board-doc,
     .board-doc-stage,
@@ -708,6 +721,9 @@
     .compose-reasons-card,
     .page-pane,
     .analytics-sheet,
+    .reachcard,
+    .palette-tile,
+    .palette-foot,
     .recorddetails-group
   )
   :where(
@@ -745,7 +761,6 @@
     .co-facts-add,
     .co-strip-withheld,
     .meetingrows-lead,
-    .pn-hero,
     .roomtab-band,
     .board-doc,
     .board-doc-stage,
@@ -790,6 +805,9 @@
     .compose-reasons-card,
     .page-pane,
     .analytics-sheet,
+    .reachcard,
+    .palette-tile,
+    .palette-foot,
     .recorddetails-group
   )
   :where(
@@ -827,7 +845,6 @@
     .co-facts-add,
     .co-strip-withheld,
     .meetingrows-lead,
-    .pn-hero,
     .roomtab-band,
     .board-doc,
     .board-doc-stage,
@@ -872,6 +889,9 @@
     .compose-reasons-card,
     .page-pane,
     .analytics-sheet,
+    .reachcard,
+    .palette-tile,
+    .palette-foot,
     .recorddetails-group
   ) {
   --ground: var(--ladder4);
@@ -981,7 +1001,6 @@
     .co-facts-add,
     .co-strip-withheld,
     .meetingrows-lead,
-    .pn-hero,
     .roomtab-band,
     .board-doc,
     .board-doc-stage,
@@ -1026,6 +1045,9 @@
     .compose-reasons-card,
     .page-pane,
     .analytics-sheet,
+    .reachcard,
+    .palette-tile,
+    .palette-foot,
     .recorddetails-group
   ) {
   --ground: var(--ladder2);
@@ -1099,7 +1121,6 @@
     .co-facts-add,
     .co-strip-withheld,
     .meetingrows-lead,
-    .pn-hero,
     .roomtab-band,
     .board-doc,
     .board-doc-stage,
@@ -1144,6 +1165,9 @@
     .compose-reasons-card,
     .page-pane,
     .analytics-sheet,
+    .reachcard,
+    .palette-tile,
+    .palette-foot,
     .recorddetails-group
   )
   :where(
@@ -1181,7 +1205,6 @@
     .co-facts-add,
     .co-strip-withheld,
     .meetingrows-lead,
-    .pn-hero,
     .roomtab-band,
     .board-doc,
     .board-doc-stage,
@@ -1226,6 +1249,9 @@
     .compose-reasons-card,
     .page-pane,
     .analytics-sheet,
+    .reachcard,
+    .palette-tile,
+    .palette-foot,
     .recorddetails-group
   ) {
   --ground: var(--ladder3);
@@ -1299,7 +1325,6 @@
     .co-facts-add,
     .co-strip-withheld,
     .meetingrows-lead,
-    .pn-hero,
     .roomtab-band,
     .board-doc,
     .board-doc-stage,
@@ -1344,6 +1369,9 @@
     .compose-reasons-card,
     .page-pane,
     .analytics-sheet,
+    .reachcard,
+    .palette-tile,
+    .palette-foot,
     .recorddetails-group
   )
   :where(
@@ -1381,7 +1409,6 @@
     .co-facts-add,
     .co-strip-withheld,
     .meetingrows-lead,
-    .pn-hero,
     .roomtab-band,
     .board-doc,
     .board-doc-stage,
@@ -1426,6 +1453,9 @@
     .compose-reasons-card,
     .page-pane,
     .analytics-sheet,
+    .reachcard,
+    .palette-tile,
+    .palette-foot,
     .recorddetails-group
   )
   :where(
@@ -1463,7 +1493,6 @@
     .co-facts-add,
     .co-strip-withheld,
     .meetingrows-lead,
-    .pn-hero,
     .roomtab-band,
     .board-doc,
     .board-doc-stage,
@@ -1508,6 +1537,9 @@
     .compose-reasons-card,
     .page-pane,
     .analytics-sheet,
+    .reachcard,
+    .palette-tile,
+    .palette-foot,
     .recorddetails-group
   ) {
   --ground: var(--ladder4);
@@ -1608,7 +1640,6 @@
     .co-facts-add,
     .co-strip-withheld,
     .meetingrows-lead,
-    .pn-hero,
     .roomtab-band,
     .board-doc,
     .board-doc-stage,
@@ -1653,6 +1684,9 @@
     .compose-reasons-card,
     .page-pane,
     .analytics-sheet,
+    .reachcard,
+    .palette-tile,
+    .palette-foot,
     .recorddetails-group
   ) {
   background-color: var(--ground);

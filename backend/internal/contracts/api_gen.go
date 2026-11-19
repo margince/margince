@@ -15256,6 +15256,24 @@ func (e ImportRunStatus) Valid() bool {
 	}
 }
 
+// Defines values for ImportSourceProfileObjectChosenBy.
+const (
+	ImportSourceProfileObjectChosenByColumns ImportSourceProfileObjectChosenBy = "columns"
+	ImportSourceProfileObjectChosenByNone    ImportSourceProfileObjectChosenBy = "none"
+)
+
+// Valid indicates whether the value is a known member of the ImportSourceProfileObjectChosenBy enum.
+func (e ImportSourceProfileObjectChosenBy) Valid() bool {
+	switch e {
+	case ImportSourceProfileObjectChosenByColumns:
+		return true
+	case ImportSourceProfileObjectChosenByNone:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for IngestVoiceCorpusSourceRequestFormat.
 const (
 	IngestVoiceCorpusSourceRequestFormatText       IngestVoiceCorpusSourceRequestFormat = "text"
@@ -40335,6 +40353,9 @@ type CommunicationEvidenceSubjectEntityType string
 // given — a reader asking why a message was refused on Tuesday needs Tuesday's answer, not
 // what the consent rows say today.
 type CommunicationReview struct {
+	// AssessmentRevision Revision of the displayed refusal and footer details, echoed when confirming.
+	AssessmentRevision *string `json:"assessment_revision,omitempty"`
+
 	// DeliveryIntentId The held message this review can resume. A refused send freezes the message into a held
 	// `scheduled_send` — subject, body, recipients, attachments and the claimed purpose — so
 	// resolving the review fires what the rep wrote rather than something retyped from memory.
@@ -41859,6 +41880,11 @@ type CompanyEmailDraft struct {
 
 	// Body Plain text, end to end. There is no rich-text storage format, no paste sanitiser and no HTML+text send pair, so a formatted draft would be a wire change rather than a toolbar.
 	Body string `json:"body"`
+
+	// CommunicationContext What the drafting instruction says this message is, for the composer to send with it:
+	// `requested_followup` when it asks to move an appointment. Absent otherwise. The send
+	// check still needs an agreed appointment with the recipient.
+	CommunicationContext *CommunicationContext `json:"communication_context,omitempty"`
 
 	// DraftRef Opaque reference identifying this served draft. Null here: recording a draft for voice learning is a WRITE, and this operation performs none.
 	DraftRef *string `json:"draft_ref,omitempty"`
@@ -49052,6 +49078,9 @@ type DirectCommunicationSendRequest struct {
 	// without one would record a decision nobody made.
 	Acknowledged bool `json:"acknowledged"`
 
+	// AssessmentRevision The review revision the sender read. Required when footer findings apply or a refusal is the recipient's own choice, such as an objection.
+	AssessmentRevision *string `json:"assessment_revision,omitempty"`
+
 	// Explanation What this colleague says the reason is, in their own words. Required and must say something:
 	// a blank explanation is an acknowledgement nobody can be held to.
 	Explanation string `json:"explanation"`
@@ -49060,6 +49089,12 @@ type DirectCommunicationSendRequest struct {
 	// of overrides needs to be countable — free text alone cannot answer "how often do we send
 	// on a contract clause".
 	ReasonCode DirectCommunicationSendRequestReasonCode `json:"reason_code"`
+
+	// ShownReasons The refusal reason codes the director was shown, from the review's `refusals`. When the
+	// review's refusals changed since then, the decision is refused with `instruction_stale`
+	// and the director opens the review again. A refusal the subject made themselves (an
+	// objection, a withdrawal, a restriction or a request to stop) is never passed.
+	ShownReasons *[]string `json:"shown_reasons,omitempty"`
 
 	// WarningVersion The compliance text they were shown. Recorded because a record naming no version cannot
 	// say what they were told, and the text changes.
@@ -49603,9 +49638,21 @@ type EmailDraft struct {
 	AiGenerated *bool  `json:"ai_generated,omitempty"`
 	Body        string `json:"body"`
 
+	// CommunicationContext What the drafting instruction says this message is, for the composer to send
+	// with it. `requested_followup` when the instruction asks to move an appointment,
+	// in English, German or Vietnamese. Absent when the instruction says nothing the
+	// send check can use, which leaves the reason to the thread or the sender. The
+	// send check still needs its own evidence, here an agreed appointment with the
+	// recipient.
+	CommunicationContext *CommunicationContext `json:"communication_context,omitempty"`
+
 	// DraftRef Opaque reference identifying this served voice draft for learning feedback (rejectVoiceDraft); null when no voice profile styled it.
-	DraftRef            *string             `json:"draft_ref,omitempty"`
-	InReplyToActivityId *openapi_types.UUID `json:"in_reply_to_activity_id,omitempty"`
+	DraftRef *string `json:"draft_ref,omitempty"`
+
+	// Evidence The record the drafted reason rests on: the meeting itself, when the draft was
+	// written from it. Absent otherwise.
+	Evidence            *CommunicationEvidence `json:"evidence,omitempty"`
+	InReplyToActivityId *openapi_types.UUID    `json:"in_reply_to_activity_id,omitempty"`
 
 	// Language The language this draft is written in: the `language` the request named, else the one the server resolved from the correspondence. The model draft and the deterministic fallback report it alike. A client shows it as the composer's current choice and names it again on a rewrite that must keep it.
 	Language *EmailDraftLanguage    `json:"language,omitempty"`
@@ -50848,6 +50895,18 @@ type FollowUpSettings struct {
 	// Locks The settings in this response that a boot source sets, each with its source. A client
 	// shows each as read-only. Empty when nothing is locked. A write ignores it.
 	Locks *SettingLocks `json:"locks,omitempty"`
+}
+
+// FooterFinding defines model for FooterFinding.
+type FooterFinding struct {
+	// Kind Missing disclosure kind or unavailable private link. Unknown kinds remain visible as an unspecified footer omission.
+	Kind string `json:"kind"`
+
+	// Language Required language, or empty when no language is missing.
+	Language string `json:"language"`
+
+	// MissingMeans Missing contact methods, such as email, phone or web.
+	MissingMeans []string `json:"missing_means"`
 }
 
 // ForecastAssurance What the most recent nightly input check found, and how much of the pipeline it was able to reach.
@@ -52559,9 +52618,12 @@ type ImportRunLinks struct {
 	// Applied Links actually written. Zero on a dry run, which writes nothing.
 	Applied int `json:"applied" minimum:"0"`
 
-	// Offered Links the file asks for. A dry run reports this and nothing else,
-	// because resolving an endpoint is a read the dry run has not done —
-	// it says how many rows named an employer, not how many will find one.
+	// Offered Links the file asks for on the rows the run lands. A link whose own
+	// row is skipped is not counted, because that row is reported as a
+	// skip; `unresolved` still lists it. A dry run reports this and nothing
+	// else, because resolving an endpoint is a read the dry run has not
+	// done — it says how many landing rows named an employer, not how many
+	// will find one.
 	Offered int `json:"offered" minimum:"0"`
 
 	// Unresolved The links that named something the run could not act on, each with
@@ -52761,6 +52823,16 @@ type ImportSourceProfile struct {
 	// merge.
 	Object *ImportObject `json:"object,omitempty"`
 
+	// ObjectChosenBy How `object` was chosen for a CSV uploaded without one. The header is
+	// matched as `suggested_mapping` matches it, once for each type, and
+	// only a column that exactly one type's suggestion maps counts.
+	// `columns`: one type's suggestion maps more such columns than any
+	// other's. `none`: no type maps strictly the most, so `object` is
+	// `lead` and a screen asks the reader to choose. Absent when the upload
+	// named its type, and for a ZIP. The run's `profile` keeps it until a
+	// draft save names `object`, which is the reader's own choice.
+	ObjectChosenBy *ImportSourceProfileObjectChosenBy `json:"object_chosen_by,omitempty"`
+
 	// Parts One profile per importable file of a ZIP, in import order. Absent for a single CSV, whose profile is the top level.
 	Parts *[]ImportPartProfile `json:"parts,omitempty"`
 
@@ -52792,6 +52864,16 @@ type ImportSourceProfile struct {
 	// against the field's type and picklist options.
 	Targets []string `json:"targets"`
 }
+
+// ImportSourceProfileObjectChosenBy How `object` was chosen for a CSV uploaded without one. The header is
+// matched as `suggested_mapping` matches it, once for each type, and
+// only a column that exactly one type's suggestion maps counts.
+// `columns`: one type's suggestion maps more such columns than any
+// other's. `none`: no type maps strictly the most, so `object` is
+// `lead` and a screen asks the reader to choose. Absent when the upload
+// named its type, and for a ZIP. The run's `profile` keeps it until a
+// draft save names `object`, which is the reader's own choice.
+type ImportSourceProfileObjectChosenBy string
 
 // ImportUndoReport The result of undoing a committed import run (IEM-WIRE-9; A93). Every
 // import-created row lands in exactly one of three buckets: reversed,
@@ -59411,8 +59493,12 @@ type Problem struct {
 	Detail *string `json:"detail,omitempty"`
 
 	// Details Structured machine context — e.g. `existing_id` on 409 duplicate, or an
-	// `errors` array of `{ field, code, message }` on 422 validation. A `too_long`
-	// entry also carries `max`, the limit in characters.
+	// `errors` array of `{ field, code, message }` on 422 validation. An entry that
+	// refuses at a limit also carries `max`: the limit in characters for `too_long`,
+	// in rows for `too_many_rows`, in characters for `source_name`. An entry whose
+	// code names other values carries them in `params`, an object of text values by
+	// name, so a screen can word the code in the reader's language; `message` stays
+	// the English sentence.
 	//
 	// A 429 that an agent's limit answers carries `limit`: `kind` names it (`calls`,
 	// `writes` or `egress` for a window allowance, `pacing` for the per-minute limit),
@@ -61374,8 +61460,14 @@ type RefreshAcceptedStatus string
 // reason code without one says a message was refused and not who for, which is the question
 // the rep is actually asking — and it is why an erasure clears this list.
 type RefusedRecipient struct {
-	Address           string                       `json:"address"`
-	Category          *string                      `json:"category,omitempty"`
+	Address  string  `json:"address"`
+	Category *string `json:"category,omitempty"`
+
+	// FooterFindings Server-derived missing footer disclosures or unavailable private links shown before the sender confirms this message. Contains no credentials.
+	FooterFindings *[]FooterFinding `json:"footer_findings,omitempty"`
+
+	// FooterPreview Configured disclosure text included in this message. Contains no recipient credentials.
+	FooterPreview     *[]string                    `json:"footer_preview,omitempty"`
 	ReasonCode        string                       `json:"reason_code"`
 	RequestedCategory *string                      `json:"requested_category,omitempty"`
 	SendingEntityId   *openapi_types.UUID          `json:"sending_entity_id,omitempty"`
@@ -64938,6 +65030,33 @@ type SearchHitEmployer struct {
 	CompanyName string             `json:"company_name"`
 }
 
+// SearchHitStanding What a result list shows beside a record hit. A field that does not apply to the hit's type, or that the record does not hold, is null.
+type SearchHitStanding struct {
+	// AmountMinor A deal's amount in minor units of `currency`. Null when the deal is unpriced, and null when a field mask withholds it, which `masked_fields` then names.
+	AmountMinor *int64 `json:"amount_minor,omitempty"`
+
+	// Currency The ISO 4217 code of `amount_minor`; null with it.
+	Currency *string `json:"currency,omitempty"`
+
+	// DueOn A deal's expected close date or a project's target end date.
+	DueOn *openapi_types.Date `json:"due_on,omitempty"`
+
+	// JobTitle A contact's job title. Null on every other type.
+	JobTitle *string `json:"job_title,omitempty"`
+
+	// LastActivityAt When the record was last in touch: its newest logged call, mail, meeting or note. Set on a contact, a company and a deal.
+	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
+
+	// MaskedFields The fields above a field mask withheld from this caller, by their wire names.
+	MaskedFields *[]string `json:"masked_fields,omitempty"`
+
+	// Stage A deal's stage, named in the reader's language. Null on every other type.
+	Stage *string `json:"stage,omitempty"`
+
+	// State A deal's status (open, won, lost), a lead's status (new, contacted, engaged, promoted, disqualified) or a project's phase (initiative, pursuing, delivering, closed). Null on a contact and a company.
+	State *string `json:"state,omitempty"`
+}
+
 // SearchNearMatch defines model for SearchNearMatch.
 type SearchNearMatch struct {
 	Id openapi_types.UUID `json:"id"`
@@ -64984,6 +65103,9 @@ type SearchResult struct {
 	// Score Relevance score.
 	Score   *float32 `json:"score,omitempty"`
 	Snippet *string  `json:"snippet,omitempty"`
+
+	// Standing Where a contact, company, deal, lead or project hit stands, read with the page under THIS caller's grants and field masks, so a result list can say it without opening each record. Absent on every other hit type.
+	Standing *SearchHitStanding `json:"standing,omitempty"`
 
 	// Title Display label (name/subject).
 	Title *string `json:"title,omitempty"`
@@ -65077,17 +65199,15 @@ type SendAuthorizationPreviewRecipient struct {
 	// Basis The lawful ground an allow would rest on.
 	Basis *string `json:"basis,omitempty"`
 
-	// CanBeOverruled Whether a contact may lift this refusal by recording why they are writing.
-	//
-	// It needs BOTH halves of a question the engine keeps on two axes, which is why it
-	// is answered here rather than derived. `decided_by` says whose decision it is, and
-	// an absolute reason says no rollout mode softens it — and the two disagree: a hard
-	// bounce, a rolling frequency cap, an unresolvable recipient and an unconfirmed
-	// opt-in are all the engine's own reading (`machine`) AND absolute. A surface that
-	// offered an override on those would render a button that cannot achieve what it
-	// promises, and the rep would type a justification the staging gate then ignores.
-	// A recorded reason lifts one category, so a refusal that resolved to no single
-	// category, such as `unknown_purpose`, answers false.
+	// CanBeOverruled Whether the sender may send this one message past the refusal by recording a
+	// reason. True for every policy refusal except the subject's own stops: the refusal
+	// stays on the record, and the reason is kept with the message. False for a stop
+	// (`decided_by` is `subject`), which nobody sends past, admin included. False for a
+	// hard bounce, because no decision makes a dead address accept mail, and for a
+	// recipient that resolves to nobody or to two contacts, whose stops were never read.
+	// Only a user in their own session sends past it, never an agent, and only with the
+	// `communication_exception` grant. The refused send's review offers `direct_send` only
+	// to such a caller.
 	CanBeOverruled *bool `json:"can_be_overruled,omitempty"`
 
 	// ConsentPurposeId For a recipient marked `lawful_basis_missing`: the purpose a consent request would ask
@@ -65101,7 +65221,7 @@ type SendAuthorizationPreviewRecipient struct {
 	// DecidedBy Whose decision this answer is, which is what says whether anybody may overrule
 	// it. `machine` is the engine reading an incomplete record and a rep who knows
 	// better may say so. `subject` is the contact's own act — an objection or a
-	// withdrawal — and nobody in the installation lifts it, admin included.
+	// withdrawal. Nobody in the installation lifts it or sends past it, admin included.
 	//
 	// It is sent rather than derived because the rule lives in Go
 	// (`commsauthz.LevelForReason`), and a surface that mapped reason codes to
@@ -65113,6 +65233,9 @@ type SendAuthorizationPreviewRecipient struct {
 	// can read it. Absent for newly filed addresses and records unavailable to the
 	// caller. Recording an exchange still requires permission to update that record.
 	EvidenceSubject *CommunicationEvidenceSubject `json:"evidence_subject,omitempty"`
+
+	// FooterFindings Server-derived missing footer disclosures or unavailable private links shown before the sender confirms this message. Contains no credentials.
+	FooterFindings *[]FooterFinding `json:"footer_findings,omitempty"`
 
 	// LawfulBasisMissing The recipient's country has no legitimate-interest basis, and the record holds neither
 	// their consent nor an agreement with them. A privacy notice they were sent is neither.
@@ -65168,7 +65291,7 @@ type SendAuthorizationPreviewRecipient struct {
 // SendAuthorizationPreviewRecipientDecidedBy Whose decision this answer is, which is what says whether anybody may overrule
 // it. `machine` is the engine reading an incomplete record and a rep who knows
 // better may say so. `subject` is the contact's own act — an objection or a
-// withdrawal — and nobody in the installation lifts it, admin included.
+// withdrawal. Nobody in the installation lifts it or sends past it, admin included.
 //
 // It is sent rather than derived because the rule lives in Go
 // (`commsauthz.LevelForReason`), and a surface that mapped reason codes to
@@ -65217,11 +65340,9 @@ type SendCompanyEmailRequest struct {
 	// they were addressed — and they are absent from the headers the recipients
 	// see, which is the whole of what "blind" means.
 	//
-	// A message with a tokenized unsubscribe link may still have only ONE
-	// addressee in total: that token is a bearer credential over one contact's
-	// consent record, so a bcc'd copy of a marketing send is refused 422
-	// `shared_unsubscribe_token` rather than handing a stranger somebody else's
-	// preference link.
+	// Private unsubscribe links are omitted for multiple recipients, preserving
+	// To, Cc and Bcc visibility. The sender must confirm that omission with
+	// a recorded one-message reason before delivery.
 	Bcc *[]openapi_types.Email `json:"bcc,omitempty"`
 
 	// Body The (possibly edited) final body that is sent. Blank or only white space is refused with 422 `required`.
@@ -65405,11 +65526,9 @@ type SendEmailRequest struct {
 	// they were addressed — and they are absent from the headers the recipients
 	// see, which is the whole of what "blind" means.
 	//
-	// A message with a tokenized unsubscribe link may still have only ONE
-	// addressee in total: that token is a bearer credential over one contact's
-	// consent record, so a bcc'd copy of a marketing send is refused 422
-	// `shared_unsubscribe_token` rather than handing a stranger somebody else's
-	// preference link.
+	// Private unsubscribe links are omitted for multiple recipients, preserving
+	// To, Cc and Bcc visibility. The sender must confirm that omission with
+	// a recorded one-message reason before delivery.
 	Bcc *[]openapi_types.Email `json:"bcc,omitempty"`
 
 	// Body The (possibly edited) final body that is sent. Blank or only white space is refused with 422 `required`.
@@ -69724,11 +69843,12 @@ type VCardImportResult struct {
 	// stays in `superseded_value`, and a field a human corrected stands.
 	// `needs_review` — a resemblance, written nowhere; open the candidate and decide.
 	// `proposed` — a card read from a photo that nobody matched, waiting on an approval.
-	// `skipped` — the card states no name, carries a sending system's address, or matches a
-	// contact the caller may not write; `reason` says which.
+	// `skipped` — the card states no name or one over 120 characters, carries a sending
+	// system's address, or matches a contact the caller may not write; `reason` says which.
 	Outcome VCardImportResultOutcome `json:"outcome"`
 
-	// Reason Why a card was skipped, or a warning about an imported contact without a channel.
+	// Reason Why a card was skipped. For a written card, a warning: the contact has no channel, or the
+	// card's title was cut to the length the field holds.
 	Reason *string `json:"reason,omitempty"`
 }
 
@@ -69737,8 +69857,8 @@ type VCardImportResult struct {
 // stays in `superseded_value`, and a field a human corrected stands.
 // `needs_review` — a resemblance, written nowhere; open the candidate and decide.
 // `proposed` — a card read from a photo that nobody matched, waiting on an approval.
-// `skipped` — the card states no name, carries a sending system's address, or matches a
-// contact the caller may not write; `reason` says which.
+// `skipped` — the card states no name or one over 120 characters, carries a sending
+// system's address, or matches a contact the caller may not write; `reason` says which.
 type VCardImportResultOutcome string
 
 // VoiceBuild defines model for VoiceBuild.
@@ -77796,7 +77916,7 @@ type GetImportFormatParamsLang string
 
 // UploadImportSourceMultipartBody defines parameters for UploadImportSource.
 type UploadImportSourceMultipartBody struct {
-	// File The delimited file to import, or a ZIP of them named by type (`companies.csv`, `contacts.csv`, `leads.csv`, `deals.csv`, `activities.csv`). UTF-8; the first row is the header. `object` is required for a CSV and ignored for a ZIP, whose file names say each part's type. A ZIP is known by its content, not its name.
+	// File The delimited file to import, or a ZIP of them named by type (`companies.csv`, `contacts.csv`, `leads.csv`, `deals.csv`, `activities.csv`). UTF-8; the first row is the header. `object` is ignored for a ZIP, whose file names say each part's type. A CSV sent without `object` is typed by its header, and the profile's `object_chosen_by` says how. A ZIP is known by its content, not its name.
 	File openapi_types.File `json:"file"`
 
 	// Object What the file's rows are, and therefore what the run creates.
@@ -119304,8 +119424,6 @@ func (siw *ServerInterfaceWrapper) DirectCommunicationSend(w http.ResponseWriter
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 

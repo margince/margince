@@ -75,6 +75,10 @@ operation a bad value for each parameter and checks.
 
 ## Changes that wait for a human
 
+A client must get human approval before sending; a direct instruction to send counts.
+Standing send permission alone is not approval of an unattended message. The API cannot
+verify the conversation outside Margince.
+
 A passport's change runs at once or waits for a human, per the operation's tier
 ([explanation/authorization.md](../explanation/authorization.md#autonomy-tiers--how-agent-actions-are-governed---)).
 

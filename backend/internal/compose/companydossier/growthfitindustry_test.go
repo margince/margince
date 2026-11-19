@@ -58,6 +58,33 @@ func TestAnIndustryTheCompanyShowsIsNeverListedAsMissing(t *testing.T) {
 	}
 }
 
+// A size band the company shows counts as its employees, as its industry
+// column counts as its industry. A site-read range still counts without one.
+func TestASizeBandTheCompanyShowsIsNeverListedAsMissing(t *testing.T) {
+	fresh := assessedAt.Add(-24 * time.Hour)
+	stale := assessedAt.Add(-90 * 24 * time.Hour)
+	cases := map[string]struct {
+		band        string
+		facts       []crmcontracts.CompanyFact
+		wantMissing bool
+	}{
+		"band only":               {band: "51-200"},
+		"fact fresh only":         {facts: []crmcontracts.CompanyFact{machineFact("employee_range", "51-200", fresh)}},
+		"fact stale only":         {facts: []crmcontracts.CompanyFact{machineFact("employee_range", "51-200", stale)}, wantMissing: true},
+		"band set and fact stale": {band: "11-50", facts: []crmcontracts.CompanyFact{machineFact("employee_range", "x", stale)}},
+		"neither":                 {wantMissing: true},
+	}
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			counted, _ := completenessAt(Input{SizeBand: tc.band, Facts: tc.facts}, assessedAt)
+			missing := slices.Contains(*counted.Missing, crmcontracts.GrowthFitInputEmployeeRange)
+			if missing != tc.wantMissing {
+				t.Errorf("employees missing = %v, want %v (missing: %v)", missing, tc.wantMissing, *counted.Missing)
+			}
+		})
+	}
+}
+
 // The wire carries the seven codes in table order.
 // A code the client has no wording for is then a contract change, not a drift.
 func TestAMissingInputIsSentAsItsCodeAndNotAsEnglish(t *testing.T) {
@@ -170,12 +197,22 @@ func TestAStoredAssessmentOfTheEnglishSentenceShapeIsNotUsable(t *testing.T) {
 }
 
 func TestBuildInputCarriesTheCompanyColumnIndustry(t *testing.T) {
-	facts := stubFacts{in: Input{Name: "Acme", Industry: " healthcare "}}
+	facts := stubFacts{in: Input{Name: "Acme", Industry: " healthcare ", SizeBand: "51-200"}}
 	in, err := BuildInput(context.Background(), facts, ids.New[ids.CompanyKind]())
 	if err != nil {
 		t.Fatalf("BuildInput: %v", err)
 	}
 	if in.Industry != "healthcare" {
 		t.Errorf("industry = %q, want the trimmed column value", in.Industry)
+	}
+	if in.SizeBand != "51-200" {
+		t.Errorf("size band = %q, want the column value", in.SizeBand)
+	}
+	var sent modelInput
+	if err := json.Unmarshal([]byte(encodeInput(in, "en")), &sent); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if sent.SizeBand != "51-200" {
+		t.Errorf("the model read size band %q, want the column value", sent.SizeBand)
 	}
 }

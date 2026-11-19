@@ -127,10 +127,12 @@ function useTipFrame(
 
 // A tip is worth showing only for a string the row could not fit. A name the
 // reader can already read in full needs no tip. A string drawn in parts (an
-// address's mailbox and domain) is cut when any part is.
+// address's mailbox and domain) is cut when any part is. Text drawn for a
+// screen reader alone (`sr-only`) is never on screen, so it is never cut.
 function clipped(element: Element | null): boolean {
   return (
     element !== null &&
+    !element.classList.contains("sr-only") &&
     (element.scrollWidth > element.clientWidth ||
       Array.from(element.children).some(clipped))
   );
@@ -181,6 +183,16 @@ export function useTruncationTooltip<T extends HTMLElement = HTMLElement>(
   text: string,
 ): Tooltip<T> {
   return useTip<T>(text, clipped, true);
+}
+
+/**
+ * `useTruncationTooltip` for an anchor that wraps its own control, such as a
+ * link. Focus on that control raises the tip, so the anchor takes no tab stop.
+ */
+export function useTruncationTooltipAround<T extends HTMLElement = HTMLElement>(
+  text: string,
+): Tooltip<T> {
+  return useTip<T>(text, clipped, false);
 }
 
 /**

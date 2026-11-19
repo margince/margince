@@ -17,6 +17,7 @@ import {
   usePlural,
   useT,
 } from "../../i18n";
+import { tierLabel } from "../../lib/ai-tier-label";
 import { useCan } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { callsHrefFor } from "./aicalls";
@@ -281,6 +282,7 @@ export function ProviderRecentCalls({
         rows={stats.data?.rows}
         failed={stats.isError}
         keyHeader={labels[by]}
+        nameOf={by === "tier" ? (key) => tierLabel(key, t) : undefined}
         hrefFor={(row) =>
           callsHrefFor({
             provider,
@@ -349,11 +351,14 @@ function FiguresTable({
   rows,
   failed,
   keyHeader,
+  nameOf = (key) => key,
   hrefFor,
 }: Readonly<{
   rows: StatsRow[] | undefined;
   failed: boolean;
   keyHeader: string;
+  // A host or model is read as its key; a tier has a name of its own.
+  nameOf?: (key: string) => string;
   hrefFor: (row: StatsRow) => string;
 }>) {
   const t = useT();
@@ -377,7 +382,7 @@ function FiguresTable({
           // is a lane, embeddings among them, whose broker names no host.
           render: (row) =>
             row.key ? (
-              <AppLink href={hrefFor(row)}>{row.key}</AppLink>
+              <AppLink href={hrefFor(row)}>{nameOf(row.key)}</AppLink>
             ) : row.failed === row.calls ? (
               t("aiFigures.noHost")
             ) : (

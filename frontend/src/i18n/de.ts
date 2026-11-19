@@ -756,6 +756,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.preview.contextOptout": "Bestätigung der Abmeldung",
   "approval.preview.unsubscribeFooter":
     "Beim Versand wird ein empfängerbezogener Abmeldelink ergänzt, wenn ein entsprechender Präferenzdatensatz besteht. Der private Link wird erst bei der Ausführung erstellt, nicht bei der Prüfung.",
+  "approval.preview.footerWarning": "Hinweis zur E-Mail-Fußzeile",
   "approval.preview.disclosureText": "Beim Versand ergänzte Pflichtangabe",
   "approval.preview.demoteArchive":
     "Stellt den Lead als Engagiert wieder her und entfernt seine Qualifizierungsverknüpfungen. Archiviert den Kontakt, seine E-Mail-Adressen, Telefonnummern, Kanalidentitäten und Beziehungen; entfernt seine Tags und Listenzugehörigkeiten. Aktivitäten bleiben unverändert zugeordnet.",
@@ -2870,9 +2871,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "shell.license.refused": "Lizenz abgelehnt",
   "shell.signOutAria": "Abmelden",
   "shell.signOutErr": "Abmeldung fehlgeschlagen",
-  "shell.version": "Version {version}",
-  "shell.instanceVersion": "Installation {version}",
-  "shell.coreVersion": "Core {version}",
   "shell.collapse": "Seitenleiste einklappen",
   "shell.expand": "Seitenleiste ausklappen",
   "shell.accountAria": "Nutzerkonto",
@@ -2884,9 +2882,25 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "shell.help.resources": "Hilfe und Ressourcen",
   "shell.help.shortcuts": "Tastenkürzel",
   "shell.help.releaseNotes": "Versionshinweise",
-  "shell.help.licenses": "Lizenzen der Web-App",
-  "shell.help.devBuild": "Entwicklungs-Build",
-  "shell.help.devBuildRevision": "Entwicklungs-Build · {revision}",
+  "about.title": "Über Margince",
+  "about.version": "Version",
+  "about.devBuild": "Entwicklungs-Build",
+  "about.instanceBuild": "Installations-Build",
+  "about.coreRelease": "Core {version}",
+  "about.copyHint": "(In die Zwischenablage kopieren)",
+  "about.copiedVersion": "Version in die Zwischenablage kopiert",
+  "about.viewCommit": "Commit auf GitHub ansehen",
+  "about.copyrightTerm": "Copyright",
+  "about.links": "Links",
+  "about.copyRemedy": "Markiere die Version unten und kopiere sie von Hand.",
+  "about.license": "Lizenz",
+  "about.licenseName": "Business Source License 1.1",
+  "about.licenseConversion":
+    "Jede Version steht spätestens zwei Jahre nach ihrer Veröffentlichung unter der Apache License 2.0.",
+  "about.copyright": "© 2026 Gradion",
+  "about.website": "Website",
+  "about.source": "Quellcode",
+  "about.thirdParty": "Lizenzen von Drittanbietern",
   "shell.shortcuts.anywhere": "Überall",
   "shell.shortcuts.search": "Suche öffnen",
   "shell.shortcuts.sidebar": "Seitenleiste ein- oder ausblenden",
@@ -2979,6 +2993,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "palette.empty": "Keine Treffer.",
   "palette.recent": "Zuletzt verwendet",
   "palette.clearRecent": "Leeren",
+  "palette.filter": "Nur zeigen",
+  "palette.filterAll": "Alle",
+  "palette.askGroup": "Margince fragen",
+  "palette.ask": "Fragen",
+  "palette.keyMove": "zum Wechseln",
+  "palette.keyOpen": "zum Öffnen",
+  "palette.keyClose": "zum Schließen",
+  "palette.lastContact": "Letzter Kontakt {when}",
+  "palette.due": "fällig {date}",
   "palette.typeScreen": "Ansicht",
   "palette.typeSetting": "Einstellung",
   "palette.typeAction": "Aktion",
@@ -3020,6 +3043,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "action.booking": "Buchungsseite",
 
   "common.fieldInvalid": "Prüfe diesen Wert und versuche es erneut.",
+  "common.phone.needsCountryCode":
+    "Beginne die Nummer mit der Ländervorwahl, etwa +49 oder 0049.",
+  "common.phone.malformed":
+    "Das ist keine Telefonnummer. Schreibe die Ländervorwahl und 8 bis 15 Ziffern, etwa +49 30 1234567, ohne Durchwahl-Zusatz.",
+  "common.phone.empty": "Gib eine Telefonnummer ein.",
   "common.fieldTooLongMax": "{field}: höchstens {max} Zeichen.",
   "common.valueTooLongMax": "Dieser Wert darf höchstens {max} Zeichen haben.",
   "common.valueTooLong": "Dieser Wert ist zu lang.",
@@ -3111,6 +3139,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "record.fieldsRetry": "Erneut versuchen",
 
   "record.companyRoutingKey": "Zuordnungsschlüssel des Unternehmens",
+  "record.companyRoutingKeyWhy": "Wofür der Zuordnungsschlüssel ist",
+  "record.companyRoutingKeyHelp":
+    "Die Webdomain des Unternehmens, etwa example.com, oder ein kurzer Name dafür. Regeln zur Lead-Zuweisung können darauf prüfen, und eine Domain, die ein Unternehmen in Margince hat, schlägt dieses Unternehmen vor.",
   "record.finishFieldEdit":
     "Speichere oder verwirf die aktuelle Änderung, bevor du die Details schließt.",
   "record.save": "Speichern",
@@ -3213,8 +3244,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "merge.pickTarget": "Datensatz auswählen, der bleibt",
   "merge.confirm":
     "{source} mit {target} zusammenführen? {source} wird dabei archiviert.",
-  "merge.confirmDetail":
-    "{source} mit {target} ({detail}) zusammenführen? {source} wird dabei archiviert.",
+  "merge.recordDetail": "{name} ({detail})",
+  "merge.done": "{source} wurde in {target} zusammengeführt.",
   "merge.targetReadOnly":
     "Du kannst diesen Datensatz nur lesen, deshalb kann er nicht bleiben.",
   "merge.submit": "Zusammenführen",
@@ -3264,10 +3295,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "commission.column.rate": "Satz",
   "commission.column.basis": "Deal-Wert",
   "commission.column.status": "Status",
+  "commission.column.date": "Datum",
   "commission.status.accrued": "Aufgelaufen",
   "commission.status.approved": "Freigegeben",
   "commission.status.paid": "Ausgezahlt",
   "commission.status.void": "Storniert",
+  "commission.status.reversal": "Gegenposten",
   "commission.outstanding": "Offen",
   "commission.outstandingDetail_one":
     "1 Eintrag · aufgelaufen oder freigegeben",
@@ -3403,7 +3436,23 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "rel.empty": "Noch keine Beziehungen",
   "rel.counterparty": "Verknüpft mit",
   "rel.dates": "Zeitraum",
-  "rel.addConfirm": "Verknüpfung „{kind}“ zu {target} hinzufügen.",
+  "rel.addConfirm.employment": "Anstellungsverknüpfung zu {target} hinzufügen.",
+  "rel.addConfirm.dealStakeholder":
+    "Stakeholder-Verknüpfung zu {target} hinzufügen.",
+  "rel.addConfirm.projectStakeholder":
+    "Projekt-Stakeholder-Verknüpfung zu {target} hinzufügen.",
+  "rel.addConfirm.partnerOf": "Partner-Verknüpfung zu {target} hinzufügen.",
+  "rel.addConfirm.referredBy":
+    "Empfehlungsverknüpfung hinzufügen: {target} hat dieses Unternehmen empfohlen.",
+  "rel.addConfirm.coSellWith": "Co-Selling-Verknüpfung zu {target} hinzufügen.",
+  "rel.addConfirm.worksWith":
+    "Zusammenarbeitsverknüpfung zu {target} hinzufügen.",
+  "rel.addConfirm.billingContact":
+    "Rechnungskontakt-Verknüpfung zu {target} hinzufügen.",
+  "rel.edit": "Beziehung bearbeiten",
+  "rel.editStakeholder": "Stakeholder bearbeiten",
+  "rel.removeRelationship": "Beziehung entfernen?",
+  "rel.removeStakeholder": "Stakeholder entfernen?",
   "rel.kind.employment": "Anstellung",
   "rel.kind.dealStakeholder": "Deal-Stakeholder",
   "rel.kind.projectStakeholder": "Projekt-Stakeholder",
@@ -3572,6 +3621,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "unit.companies": "Unternehmen",
   "unit.deals": "Deals",
   "unit.leads": "Leads",
+  "unit.contact": "Kontakt",
+  "unit.company": "Unternehmen",
+  "unit.lead": "Lead",
   "unit.worklistItems": "Aufgaben und Zusagen",
   "unit.partners": "Partner",
   "unit.products": "Produkte",
@@ -3825,6 +3877,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "company.relType.portfolio_company": "Portfoliounternehmen",
   "company.relType.competitor": "Wettbewerber",
   "company.relType.other": "Sonstiges",
+  "co.archived.overview":
+    "Dieses Unternehmen ist archiviert. Verlauf, Dokumente und Profil stehen weiter auf den anderen Tabs.",
   // Warum ein Fakt seinem eigenen Feld widerspricht. Der Fakt bleibt mit
   // seinem Beleg sichtbar — ein Mensch erkennt es, Ausblenden wäre schlechter.
   "co.factSuspect.phoneShapedLocation": "Sieht wie eine Telefonnummer aus",
@@ -3871,7 +3925,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.overview.otherOpen": "Weitere offene Aufgaben",
   "record.allTasks": "Alle Aufgaben",
   "co.overview.latest": "Zuletzt",
-  "co.overview.nothingOpen": "Sonst ist nichts offen",
   "co.overview.for": "für {name}",
   "co.overview.noDate": "Kein Datum",
   "co.overview.allDeals": "Alle Deals",
@@ -4953,6 +5006,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filter.label": "Filter",
   "chronology.all": "Alles",
   "chronology.conversations": "Threads",
+  "chronology.filteredEmpty": "Keine Aktivität passt zu diesen Filtern.",
   "chronology.conversationsEmpty": "Noch keine Threads.",
   "chronology.changesEmpty":
     "Seit dem Erstellen dieses Datensatzes wurde kein Feld geändert.",
@@ -5363,6 +5417,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.contacts.band.untried":
     "Nicht kontaktiert: {count} · Wartet auf deine Antwort: {waiting}",
   "co.contacts.board.nobodyHolds": "Niemand hat diese Rolle",
+  "co.contacts.board.count_one": "Kontakt: {count}",
+  "co.contacts.board.count_other": "Kontakte: {count}",
   "co.contacts.band.noOpenDeal": "Kein offener Deal",
   "co.contacts.band.noOpenDealWhy": "Rollen werden pro Deal vergeben",
   "co.contacts.band.committeePartial": "Teilweise ausgeblendet",
@@ -5394,7 +5450,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.contacts.map.onDeal": "am Deal beteiligt",
   "co.contacts.map.routesWithheld":
     "Zugänge zu diesem Kontakt sind für dich ausgeblendet",
-  "co.contacts.map.assignHint": "Für diesen Deal ist niemand verantwortlich",
   "co.contacts.map.scope":
     "{count} im Buying Center · nur der ausgewählte Deal.",
   "co.contacts.map.scopePartial":
@@ -5816,7 +5871,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "leadHandling.readOnly": "Deine Rolle darf diese Einstellung nicht ändern.",
   "leadHandling.firstResponse": "Zielzeit für die erste Antwort",
   "leadHandling.firstResponseHint":
-    "Standardmäßig deaktiviert. Ist die Zielzeit aktiviert, erhält jeder offene Lead eine Antwortfrist, die Liste bekommt die Ansicht „Überfällig“, und überfällige Leads stehen oben.",
+    "Standardmäßig deaktiviert. Ist die Zielzeit aktiviert, erhält jeder offene Lead, der dir per E-Mail oder über ein Website-Formular geschrieben hat, eine Antwortfrist, die Liste bekommt die Ansicht „Überfällig“, und überfällige Leads stehen oben.",
   "leadHandling.targetMinutes": "Zielzeit (Minuten)",
   "leadHandling.targetOutOfRange":
     "Gib eine ganze Zahl an Minuten von 15 bis 10.080 (7 Tage) ein.",
@@ -5842,6 +5897,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.bulkDisqualifyTitle_other": "{count} Leads disqualifizieren?",
   "lead.bulkDisqualifyBody":
     "Geschlossen mit dem Grund „{reason}“. Jeder Lead behält seinen Datensatz, und die Leads lassen sich nicht in einem Schritt wieder öffnen.",
+  "lead.bulkAssignedDone_one": "{count} Lead an {owner} zugewiesen.",
+  "lead.bulkAssignedDone_other": "{count} Leads an {owner} zugewiesen.",
+  "lead.bulkDisqualifiedDone_one": "{count} Lead disqualifiziert.",
+  "lead.bulkDisqualifiedDone_other": "{count} Leads disqualifiziert.",
   "lead.bulkFailed": "{count} nicht übernommen:",
   "lead.bulkFailedRow": "nicht gespeichert",
   "lead.bulkOutcomeConflict": "inzwischen von jemand anderem geändert",
@@ -5923,6 +5982,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.demoteReason": "Grund (wird im Audit-Log erfasst)",
   "lead.demoteReasonRequired": "Gib zuerst einen Grund ein.",
   "lead.demoteConfirm": "Zurücknehmen",
+  "lead.demoteContactHasDeal":
+    "Der Kontakt ist an einem Deal beteiligt, daher lässt sich diese Qualifizierung nicht zurücknehmen. Entferne ihn zuerst aus dem Buying Center des Deals, oder behalte den Kontakt.",
   "lead.reopen": "Wieder öffnen",
   "lead.writeRefused": "Änderung nicht gespeichert",
   "lead.reopenDialog": "Lead wieder öffnen?",
@@ -6032,7 +6093,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.evidenceNote": "Notiz zum Beleg (optional)",
   "lead.segregationTitle": "Leads bleiben von Kontakten getrennt",
   "lead.segregation":
-    "Qualifizierst du einen Lead, wird er zum Kontakt. Um einen vorhandenen Kontakt als Lead zu bearbeiten, öffne den Kontakt und wähle „Als Lead bearbeiten“.",
+    "Qualifizierst du einen Lead, wird er zum Kontakt. Hat ein Kontakt ein neues Geschäft, lege einen Deal an.",
   "lead.segregationDismiss": "Hinweis ausblenden",
   "list.emptyMine": "Keine {unit}, für die du verantwortlich bist.",
   "list.showAll": "Alle anzeigen",
@@ -6042,7 +6103,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.viewNew": "Neu",
   "lead.viewNewUnassigned": "Neu und nicht zugewiesen",
   "lead.viewUnassigned": "Nicht zugewiesen",
-  "lead.viewNeedsFollowUp": "Follow-up nötig",
+  "lead.viewContacted": "Kontaktiert",
   "lead.viewEngaged": "Im Gespräch",
   "lead.ladder": "Lead-Status",
   "lead.ladder.automatic": "{label} · automatisch",
@@ -6069,11 +6130,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.qualify.stage": "Phase",
   "lead.qualify.dealName": "Deal-Name",
   "lead.qualify.amount": "Betrag ({currency})",
-  "lead.qualify.amountHint":
-    "Optional. Ganze Einheiten in der Basiswährung der Installation.",
-  "lead.qualify.amountInvalid": "Gib eine Zahl ein oder lass das Feld leer.",
+  "lead.qualify.amountHint": "Optional. In der Basiswährung der Installation.",
   "lead.qualify.amountNoCurrency":
-    "Die Basiswährung ist noch nicht geladen. Versuche es gleich erneut oder lass den Betrag leer.",
+    "Eingabe möglich, sobald die Basiswährung der Installation geladen ist.",
   "lead.qualify.why": "Warum",
   "lead.qualify.reasonReplied": "Grund: Der Lead hat am {at} geantwortet.",
   "lead.qualify.reasonMeetingBooked":
@@ -6149,7 +6208,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.ownerMe": "Mir zuweisen",
   "deal.ownerUnassign": "Zuweisung aufheben",
   "deal.partnerCompany": "Vermittelndes Partnerunternehmen",
-  "deal.partnerNoneYet": "Noch keine Partner. Ein Admin kann einen anlegen.",
+  "deal.partnerNoneYet":
+    "Noch keine Partner. Richte einen in einem Unternehmen unter „Weitere Aktionen“ ein.",
   "deal.referredBy": "Partner",
   "deal.supportedBy": "Partner",
   "deal.referral.sourced": "(vermittelt)",
@@ -6230,7 +6290,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "field.unset": "Nicht festgelegt",
   "deal.standing.figure.offer": "Angebot {number} · Version {revision}",
   "deal.standing.figure.next": "Nächster Schritt",
-  "standing.noneYet": "Noch keiner",
+  "standing.noneYet": "Noch nichts",
   "deal.standing.figure.daysInStage": "Tage in der Phase",
   "deal.standing.figure.daysToClose": "Tage bis Abschluss",
   "deal.standing.figure.openedOn": "eröffnet am {date}",
@@ -7320,9 +7380,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "create.region": "Bundesland oder Region",
   "create.postalCode": "Postleitzahl",
   "create.country": "Ländercode (ISO 3166)",
-  "lead.fillFromContact": "Aus einem Kontakt übernehmen",
-  "lead.fillFromContactSearch": "Kontakte nach Name oder E-Mail suchen",
-  "lead.create.fromContact": "Aus diesem Kontakt übernommen.",
   "create.companyName": "Unternehmen",
   "create.companyPicked":
     "Ordnet den Kontakt diesem bestehenden Unternehmen zu.",
@@ -7373,7 +7430,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "common.duplicate.leadHolds":
     "Ein Lead hat diese E-Mail-Adresse oder dieses LinkedIn-Profil schon, daher wurde kein Kontakt angelegt.",
   "common.duplicate.contactHolds":
-    "Ein Kontakt hat diese E-Mail-Adresse oder dieses LinkedIn-Profil schon, daher wurde kein Lead angelegt. Für ein neues Geschäft mit ihm lege beim Kontakt einen Deal an.",
+    "Ein Kontakt hat diese E-Mail-Adresse oder dieses LinkedIn-Profil schon, und jemand ist entweder Lead oder Kontakt. Für ein neues Geschäft mit ihm lege beim Kontakt einen Deal an.",
   "contact.leadHeld.title": "Das ist schon ein Lead.",
   "contact.leadHeld.body":
     "Jemand ist ein Lead oder ein Kontakt, nie beides. Wandle den Lead in einen Kontakt um; der Verlauf des Leads geht mit.",
@@ -8042,6 +8099,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.why.contract": "Vertrag der Gegenseite",
   "compose.why.account": "Kundenbeziehung der Gegenseite",
   "compose.why.marketing": "Marketing",
+  "sendPermission.stopWithReason": "Senden braucht deine Begründung",
   "sendPermission.refused": "Nachricht kann nicht gesendet werden",
   "sendPermission.sayWhy": "Kontaktgrund erfassen",
   "sendPermission.unproven":
@@ -8053,6 +8111,24 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "sendPermission.missingContext": "Für diese Nachricht fehlt eine Angabe",
   "sendPermission.missingPermission": "Für diese Nachricht fehlt die Erlaubnis",
   "sendPermission.reason.chooseDeal": "Wähle den Deal für dieses Follow-up.",
+  "sendPermission.reason.footerIncomplete":
+    "Lies die Hinweise zur Fußzeile. Du kannst diese E-Mail mit einer dokumentierten Begründung senden.",
+  "sendPermission.footer.language": "{detail} auf {language}",
+  "sendPermission.footer.means": "{detail} mit {methods}",
+  "sendPermission.footer.email": "einer E-Mail-Adresse",
+  "sendPermission.footer.phone": "einer Telefonnummer",
+  "sendPermission.footer.web": "einer Website oder einem Social-Media-Link",
+  "sendPermission.footer.privacy": "Datenschutz-Kontaktangaben",
+  "sendPermission.footer.advertiser":
+    "Kontaktangaben des werbenden Unternehmens",
+  "sendPermission.footer.identity": "Name und Anschrift des Unternehmens",
+  "sendPermission.footer.unknown": "ein Teil der Unternehmensangaben",
+  "sendPermission.footer.title": "E-Mail-Fußzeile prüfen",
+  "sendPermission.footer.preview": "Unternehmensangaben in dieser E-Mail",
+  "sendPermission.footer.omits": "In dieser Nachricht fehlt: {items}.",
+  "sendPermission.footer.objection": "Abmeldehinweise",
+  "sendPermission.footer.privateLink": "ein persönlicher Abmeldelink",
+  "sendPermission.footer.publicLink": "ein funktionierender Abmeldelink",
   "sendPermission.reason.lawfulBasisUnconfirmed":
     "Für diesen Kontakt ist keine Rechtsgrundlage erfasst, und die Warnung wurde vor dem Senden nicht bestätigt.",
   "sendPermission.appliesTo": "Das betrifft {address}.",
@@ -8063,6 +8139,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.sendWithReason": "Mit Begründung senden…",
   "compose.scheduleWithReason": "Mit Begründung planen…",
   "compose.holdForCheck": "Senden wartet auf die Versandprüfung.",
+  "compose.legacyFooter":
+    "Diese Version von Margince kann E-Mails mit fehlenden Angaben zum Unternehmen noch nicht mit einer Begründung senden. Dein Entwurf bleibt erhalten. Frag einen Admin nach einem Update von Margince. Versuche es danach erneut.",
   "compose.holdRefused":
     "Senden ist gesperrt. Behebe, was die Prüfung oben nennt, oder entferne diese Empfangsadresse.",
   "compose.holdWithReason":
@@ -8101,21 +8179,21 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "sendPermission.unanswered":
     "Die Versandprüfung konnte nicht abgeschlossen werden. Beim Senden wird die Prüfung erneut ausgeführt.",
   "sendPermission.reason.objected":
-    "Die empfangende Person hat dem Marketing widersprochen, daher geht kein Marketing an sie. Eine Antwort oder eine Nachricht, um die sie gebeten hat, kann weiterhin gesendet werden.",
+    "Der Kontakt hat Werbung widersprochen. Der Versand dieser E-Mail hebt seinen Widerspruch nicht auf.",
   "sendPermission.reason.withdrawn":
-    "Die empfangende Person hat ihre Einwilligung für diese Art von Nachricht widerrufen, daher kann sie nicht an sie gesendet werden.",
+    "Der Kontakt hat seine Einwilligung für diese Art von Nachricht widerrufen. Der Versand dieser E-Mail stellt sie nicht wieder her.",
   "sendPermission.reason.restricted":
-    "Für die Daten der empfangenden Person gilt eine Einschränkung der Verarbeitung. Nur Sicherheits-, Datenschutz- und Abmeldehinweise können noch an sie gesendet werden.",
+    "Die Verarbeitung der Daten dieses Kontakts ist eingeschränkt. Der Versand dieser E-Mail hebt die Einschränkung nicht auf.",
   "sendPermission.reason.askedUsToStop":
-    "Die empfangende Person hat darum gebeten, nicht kontaktiert zu werden. Nur Sicherheits-, Datenschutz- und Abmeldehinweise können noch an sie gesendet werden.",
+    "Der Kontakt möchte nicht mehr kontaktiert werden. Der Versand dieser E-Mail ändert seinen Wunsch nicht.",
   "sendPermission.reason.bounced":
     "Diese Adresse nimmt keine E-Mails an. Korrigiere die Adresse. Eine Ausnahme ist hier nicht möglich.",
   "sendPermission.reason.optedOutAfterRequest":
-    "Die empfangende Person hat sich nach ihrer Anfrage vom Marketing abgemeldet. Kläre mit ihr, ob sie das Angebot noch möchte, und erfasse dann ihre neue Anfrage.",
+    "Der Kontakt hat nach der Angebotsanfrage Werbung abgelehnt. Der Versand dieser E-Mail ändert seine Entscheidung nicht.",
   "sendPermission.reason.permissionRequired":
-    "Für diese Marketingnachricht ist nach den geltenden Regeln keine Erlaubnis belegt. Eine Ausnahme durch Mitarbeitende ersetzt weder die Einwilligung noch die erforderlichen Nachweise.",
+    "Für diese Marketingnachricht ist nach den geltenden Regeln keine Erlaubnis belegt. Erfasse die Einwilligung oder die erforderlichen Nachweise.",
   "sendPermission.reason.consentRequired":
-    "Marketing an eine empfangende Person in diesem Land braucht ihre vorherige Einwilligung. Keine Ausnahme kann sie ersetzen.",
+    "Marketing an eine empfangende Person in diesem Land braucht ihre vorherige Einwilligung.",
   "sendPermission.reason.dealNotRequested":
     "Ein Deal allein zeigt nicht, dass die empfangende Person diese Verhandlung angefragt hat. Erfasst sein muss eine Anfrage der Person, zum Beispiel aus einem Anruf oder Termin.",
   "sendPermission.reason.tooMany":
@@ -8194,8 +8272,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Darüber wurde bereits entschieden. Öffne die Prüfung, um das Ergebnis zu sehen.",
   "directSend.couldNotOpen":
     "Die Prüfung konnte nicht geöffnet werden. Bitte versuche es erneut.",
-  "directSend.title": "Auf eigene Verantwortung senden",
-  "directSend.confirm": "Ausnahme erfassen und senden",
+  "directSend.title": "E-Mail mit Begründung senden?",
+  "directSend.confirm": "E-Mail senden",
+  "directSend.changed":
+    "Die E-Mail-Prüfung hat sich geändert. Lies die aktualisierten Hinweise und bestätige erneut. Deine Begründung bleibt erhalten.",
   "directSend.failed":
     "Die Nachricht konnte nicht gesendet werden. Deine Entscheidung ist möglicherweise schon erfasst. Öffne die Prüfung, bevor du erneut entscheidest.",
   "directSend.noWarningServed":
@@ -8226,8 +8306,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Eine Nachricht mit Abmeldelink geht immer nur an eine Adresse, da der Link der Einwilligungsnachweis genau dieser Adresse ist. Sende die Nachricht einzeln an jede Adresse, ohne Cc.",
   "compose.newContact":
     "{address} steht noch in keinem Datensatz. Beim Senden wird die Adresse als dein Kontakt angelegt.",
-  "compose.multiRecipientWarning":
-    "Ein Versand an mehr als eine Adresse wird abgelehnt, da dieser Zweck einen Abmeldelink hinzufügt. Sende die Nachricht einzeln an jede Adresse, ohne Cc.",
   "compose.relinkTitle": "Diese Aktivität neu verknüpfen",
   "compose.relinkTarget":
     "Kontakte, Unternehmen, Deals, Leads oder Projekte suchen",
@@ -9253,6 +9331,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.installAppDismissed":
     "Installiere Margince später über das Menü des Browsers oder das Symbol zum Installieren in der Adressleiste.",
   "settings.installAppAction": "Installieren",
+  "settings.installAppManualMac":
+    "Zum Installieren wähle „Ablage“ und dann „Zum Dock hinzufügen“.",
+  "installHint.title": "Margince als App installieren",
+  "installHint.value":
+    "Öffnet sich mit einem Tipp auf dem Home-Bildschirm im eigenen Fenster. Kein App Store, nichts herunterzuladen.",
+  "installHint.manual":
+    "Tippe auf {share} „Teilen“ und dann auf „Zum Home-Bildschirm“.",
+  "installHint.notNow": "Nicht jetzt",
   "role.admin": "Admin",
   "role.management": "Geschäftsleitung",
   "role.manager": "Teamleitung",
@@ -9497,6 +9583,26 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "agent.activity.offerDraft.failed": "Angebotsentwurf fehlgeschlagen",
   "agent.activity.offerDraft.stalled":
     "Der Angebotsentwurf dauert ungewöhnlich lange.",
+  "agent.activity.draftReplyNamed.queued": "Antwortentwurf zu „{name}“ geplant",
+  "agent.activity.draftReplyNamed.running":
+    "Die Antwort auf „{name}“ wird entworfen…",
+  "agent.activity.draftReplyNamed.done": "Antwortentwurf zu „{name}“ bereit",
+  "agent.activity.draftReplyNamed.degraded":
+    "Der Antwortentwurf zu „{name}“ wurde vorzeitig abgebrochen.",
+  "agent.activity.draftReplyNamed.failed":
+    "Antwortentwurf zu „{name}“ fehlgeschlagen",
+  "agent.activity.draftReplyNamed.stalled":
+    "Der Antwortentwurf zu „{name}“ dauert ungewöhnlich lange.",
+  "agent.activity.offerDraftNamed.queued": "Angebotsentwurf für {name} geplant",
+  "agent.activity.offerDraftNamed.running":
+    "Das Angebot für {name} wird entworfen…",
+  "agent.activity.offerDraftNamed.done": "Angebotsentwurf für {name} bereit",
+  "agent.activity.offerDraftNamed.degraded":
+    "Der Angebotsentwurf für {name} wurde vorzeitig abgebrochen.",
+  "agent.activity.offerDraftNamed.failed":
+    "Angebotsentwurf für {name} fehlgeschlagen",
+  "agent.activity.offerDraftNamed.stalled":
+    "Der Angebotsentwurf für {name} dauert ungewöhnlich lange.",
   "agent.rail.region": "Margince-Agent",
   "agent.panel.label": "Agentenbereich",
   "agent.rail.open": "Agentenbereich öffnen",
@@ -9523,6 +9629,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "agent.fact.offline": "offline",
   "agent.fact.sourceOnProvider": "{account} ({provider})",
   "agent.fact.searchIndex": "Suchindex: {model}",
+  "agent.fact.noAnswers": "Keine Antworten von {model}",
   "agent.fact.noCalls": "Noch keine Modellaufrufe",
   "agent.fact.hidden": "Für deine Rolle ausgeblendet",
   "agent.fact.noModel": "Kein Modell konfiguriert",
@@ -9950,7 +10057,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.tierRead":
     "Lesen, zusammenfassen, entwerfen: läuft sofort und wird vollständig protokolliert.",
   "settings.tierSend":
-    "E-Mails senden, Termine buchen, einen Kontakt oder Deal ändern: läuft sofort, wenn der Agent diese Berechtigung hat. Mit der Berechtigung ist die Freigabe bereits erteilt.",
+    "Laufende Änderungen laufen automatisch und lassen sich rückgängig machen. Vor dem Versand braucht der Assistent deine Freigabe oder einen direkten Auftrag. Unbeaufsichtigter Versand wartet.",
   "settings.tierWait": "Anreicherung aus dem Web: wartet in Freigaben.",
   "settings.tierAdvance":
     "Deal-Phase ändern oder Deal abschließen, Aktivitäten einem Projekt zuordnen: läuft sofort, wenn der Agent die Berechtigung hat.",
@@ -9977,17 +10084,20 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "import.withheld": "Nur Admins und Operations können Dateien importieren.",
   "import.title": "Datei importieren",
   "import.back": "Zurück zum Datenimport",
-  "import.object.lead": "Interessenten",
+  "import.object.lead": "Leads",
   "import.object.company": "Unternehmen",
   "import.object.contact": "Kontakte",
   "import.object.deal": "Deals",
   "import.object.activity": "Aktivitäten",
-  "import.profiled": "Ausgewertete Zeilen ab Dateianfang: {rows}.",
+  "import.profiled_one":
+    "„Ausgefüllt“ und „Werte“ stammen aus der ersten Zeile der Datei.",
+  "import.profiled_other":
+    "„Ausgefüllt“ und „Werte“ stammen aus den ersten {count} Zeilen der Datei.",
   "import.mappingTable": "Spaltenzuordnung",
   "import.col.column": "Spalte",
   "import.col.filled": "Ausgefüllt",
   "import.col.filledHint":
-    "Anteil der Zeilen in dieser Datei, die in der Spalte einen Wert haben",
+    "Anteil der gelesenen Zeilen, die in der Spalte einen Wert haben",
   "import.col.samples": "Werte",
   "import.col.destination": "Feld",
   "import.dontImport": "Nicht importieren",
@@ -10021,6 +10131,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "import.hub.uploadLabel": "Daten hochladen",
   "import.hub.uploadHint":
     "Ein ZIP mit CSV-Dateien oder eine CSV. Bis {mb} MB.",
+  "import.hub.uploadHintCsv": "Eine CSV-Datei. Bis {mb} MB.",
   "import.hub.uploadEmpty": "Datei auswählen oder hier ablegen",
   "import.hub.csvOnly":
     "Hier kann nur eine CSV-Datei importiert werden. Wähle eine .csv-Datei.",
@@ -10050,6 +10161,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "import.closed.stopped":
     "Dieser Import wurde angehalten, bevor etwas importiert wurde.",
   "import.closed.upload": "Datei hochladen",
+  "import.missing.title": "Import nicht gefunden",
+  "import.missing.body": "Diesen Import gibt es nicht, oder er wurde entfernt.",
   "import.cancelFailed": "Der Import wurde nicht abgebrochen",
   "import.conflictDismiss": "Verstanden",
   "import.conflictOtherTab":
@@ -10066,12 +10179,81 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "import.upload.tooManyRowsTitle": "Die Datei ist zu lang für einen Testlauf",
   "import.upload.tooManyRows":
     "Diese Datei hat mehr Zeilen, als ein Testlauf lesen kann. Teile die Datei in kleinere Dateien auf und importiere jede einzeln.",
+  "import.refusal.inFile": "In „{file}“: {sentence}",
+  "import.refusal.notUtf8":
+    "Die Datei ist nicht als UTF-8 gespeichert. Speichere sie als CSV UTF-8 und lade sie erneut hoch.",
+  "import.refusal.unreadable":
+    "Die Datei konnte nicht gelesen werden. Lade sie erneut hoch.",
+  "import.refusal.unreadable.line":
+    "Zeile {line} konnte nicht gelesen werden. Korrigiere diese Zeile und lade die Datei erneut hoch.",
+  "import.refusal.unreadable.fieldCount":
+    "Zeile {line} hat mehr oder weniger Felder als die Kopfzeile. Korrigiere diese Zeile und lade die Datei erneut hoch.",
+  "import.refusal.unreadable.quote":
+    "Zeile {line} hat ein Anführungszeichen an falscher Stelle. Korrigiere diese Zeile und lade die Datei erneut hoch.",
+  "import.refusal.header":
+    "Die Kopfzeile ist nicht verwendbar. Gib jeder Spalte einen eigenen Namen und lade die Datei erneut hoch.",
+  "import.refusal.header.repeatedName":
+    "Die Kopfzeile nennt „{name}“ zweimal. Gib jeder Spalte einen eigenen Namen und lade die Datei erneut hoch.",
+  "import.refusal.header.blankName":
+    "Spalte {position} der Kopfzeile hat keinen Namen. Benenne jede Spalte und lade die Datei erneut hoch.",
+  "import.refusal.header.noHeader":
+    "Die Datei hat keine Kopfzeile. Schreibe die Spaltennamen in die erste Zeile und lade sie erneut hoch.",
+  "import.refusal.bundle":
+    "Die ZIP-Datei lässt sich nicht importieren. Prüfe die Dateien darin und lade sie erneut hoch.",
+  "import.refusal.bundle.twoFilesOneType":
+    "„{other_file}“ und „{file}“ sind beide {object}. Behalte eine davon und lade die ZIP-Datei erneut hoch.",
+  "import.refusal.bundle.tooManyFiles":
+    "Die ZIP-Datei enthält {files} Dateien, ein Import liest höchstens {max_files}. Entferne die Dateien, die du nicht importierst, und lade sie erneut hoch.",
+  "import.refusal.bundle.empty":
+    "Die ZIP-Datei ist leer. Lege eine CSV-Datei pro Datensatztyp hinein und lade sie erneut hoch.",
+  "import.refusal.bundle.notAZip":
+    "Die ZIP-Datei ließ sich nicht öffnen. Erstelle die ZIP-Datei neu und lade sie hoch.",
+  "import.refusal.bundle.filesTooLarge":
+    "Die Dateien in der ZIP-Datei sind zusammen größer als {max_mb} MB. Verteile sie auf kleinere ZIP-Dateien und importiere jede einzeln.",
+  "import.refusal.bundle.zipTooLarge":
+    "Die ZIP-Datei ist größer als {max_mb} MB, das Maximum für einen Upload. Teile sie in kleinere ZIP-Dateien auf.",
+  "import.refusal.bundle.passwordProtected":
+    "„{file}“ ist passwortgeschützt. Entferne das Passwort und lade die ZIP-Datei erneut hoch.",
+  "import.refusal.bundle.fileDamaged":
+    "„{file}“ in der ZIP-Datei ist beschädigt. Erstelle die ZIP-Datei neu und lade sie hoch.",
+  "import.refusal.bundle.fileMissing":
+    "„{file}“ fehlt in der ZIP-Datei. Lade die ZIP-Datei erneut hoch.",
+  "import.refusal.bundle.typeNotImportable":
+    "„{object}“ ist kein Datensatztyp, den ein Import übernimmt. Entferne diese Datei und lade die ZIP-Datei erneut hoch.",
+  "import.refusal.tooManyRows":
+    "Diese Datei hat {rows} Zeilen, ein Testlauf liest höchstens {max}. Teile sie in kleinere Dateien auf und importiere jede einzeln.",
+  "import.refusal.unsupported":
+    "Ein Import übernimmt Unternehmen, Kontakte, Leads, Deals oder Aktivitäten. Wähle den Typ, den die Datei enthält.",
+  "import.refusal.duplicateTarget":
+    "Zwei Spalten sind demselben Feld zugeordnet. Ordne jedem Feld eine Spalte zu.",
+  "import.refusal.duplicateTarget.named":
+    "Die Spalten „{other_column}“ und „{column}“ sind beide „{target}“ zugeordnet. Ordne jedem Feld eine Spalte zu.",
+  "import.refusal.unmappable":
+    "Keine Spalte kennzeichnet die einzelnen Zeilen. Ordne eine Spalte dem Feld zu, das die Zeilen unterscheidet.",
+  "import.refusal.unmappable.target":
+    "Keine Spalte kennzeichnet die einzelnen Zeilen. Ordne eine Spalte „{target}“ zu.",
+  "import.refusal.unmappable.targetOrRef":
+    "Keine Spalte kennzeichnet die einzelnen Zeilen. Ordne eine Spalte „{target}“ oder „{ref_target}“ zu.",
+  "import.refusal.fileEmpty":
+    "Die Datei ist leer. Wähle eine Datei mit Kopfzeile und lade sie erneut hoch.",
+  "import.refusal.objectMismatch":
+    "Die Datei enthält nicht den Datensatztyp, der für sie gewählt ist. Prüfe „Importieren als“ und starte den Test erneut.",
+  "import.refusal.mappingEmpty":
+    "Keine Spalte ist einem Feld zugeordnet. Ordne mindestens eine Spalte zu und starte den Test erneut.",
+  "import.refusal.unknownColumn":
+    "Die Zuordnung nennt eine Spalte, die die Datei nicht hat. Lade die Datei erneut hoch und ordne ihre Spalten zu.",
+  "import.refusal.unknownTarget":
+    "Eine Spalte ist einem Feld zugeordnet, das dieser Datensatztyp nicht hat. Wähle ein anderes Feld dafür.",
+  "import.refusal.unmappedColumn":
+    "Die Spalte, die jede Zeile kennzeichnet, ist nicht zugeordnet. Ordne sie einem Feld zu und starte den Test erneut.",
+  "import.refusal.sourceName":
+    "Dieser Quellname ist nicht zulässig. Verwende bis zu {max} Zeichen: Buchstaben A bis Z, Ziffern, Leerzeichen, Punkte, Unterstriche und Bindestriche.",
   "import.undoConfirm.title": "Diesen Import rückgängig machen?",
   "import.undoConfirm.confirm": "Import rückgängig machen",
   "import.undoConfirm.order":
     "Rückgängig gemacht wird in umgekehrter Reihenfolge: {order}.",
   "import.undoConfirm.archived":
-    "Von diesem Import erstellte Datensätze werden archiviert, und Interessenten werden disqualifiziert.",
+    "Von diesem Import erstellte Datensätze werden archiviert, und Leads werden disqualifiziert.",
   "import.undoConfirm.kept":
     "Seit dem Import bearbeitete Datensätze bleiben erhalten und werden aufgelistet.",
   "import.undoConfirm.updated":
@@ -10113,7 +10295,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "import.wizard.cancel": "Abbrechen",
   "import.files.table": "Dateien im Upload",
   "import.files.col.file": "Datei",
-  "import.files.col.rows": "Geprüfte Zeilen",
+  "import.files.col.rows": "Zeilen",
   "import.files.col.type": "Importieren als",
   "import.files.columns_one": "1 Spalte",
   "import.files.columns_other": "{count} Spalten",
@@ -10129,6 +10311,18 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "import.files.sourceName": "Quellname",
   "import.files.sourceNameHint":
     "Mit demselben Namen aktualisiert ein späterer Upload diese Datensätze, statt sie erneut hinzuzufügen.",
+  "import.files.sourceNameRule":
+    "Bis zu {max} Zeichen: Buchstaben A bis Z, Ziffern, Leerzeichen, Punkte, Unterstriche und Bindestriche.",
+  "import.files.sourceNameInvalid":
+    "Der Quellname enthält ein unzulässiges Zeichen. Verwende Buchstaben A bis Z, Ziffern, Leerzeichen, Punkte, Unterstriche oder Bindestriche.",
+  "import.files.guessed": "Datensatztyp aus den Spalten bestimmt",
+  "import.files.guessedCheck":
+    "Der Dateiname nennt keinen Datensatztyp. Prüfe „Importieren als“, bevor du weitermachst.",
+  "import.files.unguessed": "Kein Datensatztyp erkannt",
+  "import.files.unguessedChoose":
+    "Weder der Dateiname noch die Spalten nennen einen. Wähle ihn unter „Importieren als“.",
+  "import.files.retireFailed":
+    "Der frühere Entwurf dieser Datei wurde nicht abgebrochen",
   "import.files.noneTyped":
     "Wähle für mindestens eine Datei einen Datensatztyp aus.",
   "import.files.clash":
@@ -10136,6 +10330,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "import.files.next_one": "Weiter: 1 Datei zuordnen",
   "import.files.next_other": "Weiter: {count} Dateien zuordnen",
   "import.map.tabs": "Zuzuordnende Dateien",
+  "import.map.leftOut_one": "1 Spalte nicht importiert",
+  "import.map.leftOut_other": "{count} Spalten nicht importiert",
   "import.map.lead":
     "{file} als {type}. Eine Spalte auf „Nicht importieren“ wird ausgelassen.",
   "import.map.link": "Verknüpfung",
@@ -10217,11 +10413,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "import.test.nothing.skipped":
     "Lade problems.csv herunter, bevor du auf Fertig klickst: Die Datei nennt die übersprungenen Zeilen und warum.",
   "import.test.nothing.done": "Fertig",
+  "import.test.nothing.empty": "Die Datei hat eine Kopfzeile und keine Zeilen.",
   "import.test.reupload": "Korrigieren und neu hochladen",
   "import.test.issuesUnit": "Probleme",
   "import.test.import_one": "1 Zeile importieren",
   "import.test.import_other": "{count} Zeilen importieren",
-  "import.test.importAnyway": "Trotzdem importieren",
+  "import.test.importAnyway_one": "1 Zeile trotzdem importieren",
+  "import.test.importAnyway_other": "{count} Zeilen trotzdem importieren",
   "import.test.counts": "Zeilen je Datensatztyp",
   "import.test.testing": "Deine Datei wird getestet…",
   "import.test.stop": "Test anhalten",
@@ -12646,7 +12844,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "E-Mails werden automatisch zu Kontakten, Unternehmen und Aktivitäten.",
   "ob.s4.scope2Lead": "Senden ist enthalten.",
   "ob.s4.scope2Rest":
-    "Margince kann aus diesem Postfach senden, wenn du sendest und wenn du einem Agenten einen Passport gibst, der das Senden erlaubt. Mit diesem Passport ist die Freigabe bereits erteilt. Du kannst den Passport jederzeit entziehen.",
+    "Margince kann aus diesem Postfach senden, wenn du sendest oder deinen Assistenten direkt damit beauftragst. Die Sendeberechtigung allein gibt keine Nachricht frei. Unbeaufsichtigter Versand wartet auf Freigabe. Du kannst den Zugriff jederzeit entziehen.",
   "ob.s4.scope3Lead": "Die Daten bleiben in deinem Unternehmen.",
   "ob.s4.scope3Rest": "Alles jederzeit exportieren oder löschen.",
   "ob.s4.scope4Lead": "Trennen mit einem Klick.",
@@ -14069,6 +14267,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Erweiterungen in diesem Build und welche Rollen darauf zugreifen können.",
   "settings.page.reset.sub":
     "Daten dieser Installation löschen. Das kann nicht rückgängig gemacht werden.",
+  "settings.page.about.sub": "Version, Commit und Lizenz dieses Builds.",
   "settings.scope.self": "Nur du",
   "settings.scope.mixed": "Gemischt",
   "settings.scope.workspace": "Unternehmen",
@@ -14142,6 +14341,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "configuration.scope.changed": "Nicht Standard",
   "configuration.scope.outside": "Außerhalb der App gesetzt",
   "settings.tab.reset": "Daten zurücksetzen",
+  "settings.tab.about": "Über Margince",
   "settings.group.me": "Du",
   "settings.group.compliance": "Compliance",
   "settings.group.system": "System",
@@ -16834,6 +17034,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Aufgaben, gruppiert nach der Stufe, die sie ausführt. Wähle den Namen einer Aufgabe, um zu sehen, was sie tut, oder öffne eine Zeile, um Denkstufe und Zeitlimits festzulegen.",
   "aiTasks.whatItDoes": "{task}: was die Aufgabe tut",
   "aiTasks.decisionFirst": "Zuerst Entscheidungsmodell",
+  "aiTasks.mode.interactive": "Im Vordergrund",
+  "aiTasks.mode.background": "Im Hintergrund",
+  "aiTasks.mode.embedding": "Suchindex",
   "aiTasks.viewCalls": "Aufrufe ansehen",
   "aiTasks.deferral.nowEmbedding":
     "Gerade abgelehnt: Die Suchindexierung versucht es nach eigenem Zeitplan erneut.",
@@ -18256,6 +18459,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "embedreindex.statusReembedding": "Wird neu indexiert…",
   "embedreindex.lastProgress": "Letzter Fortschritt vor {duration}",
   "embedreindex.entitiesPending": "Ausstehende Datensätze: {count}",
+  "embedreindex.modelMismatch":
+    "Die letzte Neuindexierung lief mit {populated}. Die Suche nutzt jetzt {configured}.",
   "embedreindex.workspacePending": "Ausstehend: {count}",
   "embedreindex.reviewCta": "Prüfen und neu indexieren",
   "embedreindex.rebuildCta": "Index neu aufbauen",
@@ -18286,7 +18491,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "consent.scopeNote.write":
     "Erstellt, bearbeitet und archiviert Datensätze in deinem Namen",
   "consent.scopeNote.send":
-    "Sendet Nachrichten in deinem Namen, ohne vorher zu fragen",
+    "Erlaubt den Versand; der Assistent muss vorher deine Freigabe oder einen direkten Auftrag erhalten. Die Berechtigung allein ist keine Freigabe",
   "consent.scopeNote.enrich": "Führt KI-Arbeit aus und kauft Kontaktdaten",
   "consent.scopesLegend": "Was das Tool tun darf",
   "consent.ceiling":
@@ -18388,35 +18593,22 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Einige Kontakte dieses Unternehmens werden nicht angezeigt.",
   "contact.intro.askFirstName": "{name} um eine Vorstellung bitten",
   "contact.intro.heroDirect": "kennt den Kontakt direkt",
-  "contact.intro.heroIndirect": "erreicht den Kontakt über {through}",
   "contact.intro.heroYou": "Du",
   "contact.intro.heroDirectYou": "kennst den Kontakt direkt",
-  "contact.intro.heroIndirectYou": "erreichst den Kontakt über {through}",
   "contact.intro.factReciprocal": "Wechselseitig",
   "contact.intro.factOneSided": "Einseitig",
   "contact.intro.factDirect": "Direkte Beziehung",
   "contact.intro.factIndirect": "Über ein Teammitglied",
   "contact.intro.factReceipts_one": "{count} sichtbarer Beleg",
   "contact.intro.factReceipts_other": "{count} sichtbare Belege",
-  "contact.intro.verdictDirect":
-    "Frage {name}. Das Teammitglied steht bereits im Austausch mit diesem Kontakt.",
-  "contact.intro.verdictOneSided":
-    "Frage {name}. Das Teammitglied hat diesem Kontakt geschrieben. Eine Antwort ist nicht erfasst.",
-  "contact.intro.verdictVia":
-    "Frage {name}. Das Teammitglied erreicht diesen Kontakt über {through}.",
-  "contact.intro.verdictDirectYou":
-    "Du stehst bereits im Austausch mit diesem Kontakt.",
-  "contact.intro.verdictOneSidedYou":
-    "Du hast diesem Kontakt geschrieben. Eine Antwort ist nicht erfasst.",
-  "contact.intro.verdictViaYou": "Du erreichst den Kontakt über {through}.",
   "contact.intro.ownRouteNoAsk":
     "Es gibt niemanden, den du fragen kannst. Schreibe diesem Kontakt direkt.",
-  "contact.intro.evidenceEyebrow": "Belege",
-  "contact.intro.evidenceExchanges": "Austausch",
-  "contact.intro.evidenceWindow": "in 90 Tagen",
   "contact.intro.evidenceFrom": "{count} von {name}",
   "contact.intro.evidenceFromYou": "{count} von dir",
   "contact.intro.evidenceLastContact": "Letzter Kontakt",
+  "contact.intro.bestWayIn": "Bester Weg",
+  "contact.intro.sameTeam": "gleiches Team",
+  "contact.intro.exchangesWindow": "Austausch in 90 Tagen",
   "contact.intro.lastToday": "Heute",
   "contact.intro.lastYesterday": "Gestern",
   "contact.intro.lastDays": "Vor {days} Tagen",
@@ -18424,9 +18616,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.intro.stripWhoMix":
     "{direct} direkt · {indirect} über einen Kontakt",
   "contact.intro.stripWhoOwn": "Inklusive deiner eigenen Beziehung",
-  "contact.intro.otherRoutesTitle": "Weitere Wege",
-  "contact.intro.otherRoutesSub":
-    "Sortiert nach wechselseitiger Korrespondenz.",
   "contact.intro.relayDue": "fällig {date}",
   "contact.intro.stripDirect": "Direkte Beziehung",
   "contact.intro.stripNoPath": "Niemand steht im Austausch mit diesem Kontakt",
@@ -18445,7 +18634,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.intro.handoffOwner": "Als Nächstes: {name}",
   "contact.intro.ownerColleague": "ein Teammitglied",
   "contact.intro.ownerNobody": "niemand",
-  "contact.intro.relayTitle": "Status der Vorstellung",
   "contact.chapter.jump": "Auf diesem Tab",
   "contact.chapter.wayIn": "Zugang",
   "contact.chapter.whoAnswer":
@@ -18614,9 +18802,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.intro.alreadyRequested": "Bereits angefragt",
   "contact.intro.declined": "Früher abgelehnt",
   "contact.intro.unavailable": "Nicht verfügbar",
-  "contact.network.momentsTitle": "Was sich geändert hat",
-  "contact.network.momentsSub":
-    "Veränderungen aus den Nachrichten und frühere Vorstellungen.",
   "contact.network.noMoments": "Keine neuen Veränderungen in dieser Beziehung.",
   "contact.change.repliedAfterGap":
     "Der Kontakt hat nach {days} ruhigen Tagen geantwortet.",
@@ -20035,6 +20220,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.pair.notDuplicate": "Keine Duplikate",
   "worklist.pair.mergeBlocked":
     "Diese Datensätze können nicht zusammengeführt werden, da beide laufende Projekte haben und nicht erkennbar ist, welche Arbeit wohin gehört. Du kannst trotzdem festhalten, dass es keine Duplikate sind.",
+  "worklist.pair.created": "Erstellt am {date}",
+  "worklist.pair.dismissed": "Als keine Duplikate markiert.",
   "worklist.pair.related": "{count} verknüpft",
   "worklist.pair.failed":
     "Das Paar konnte nicht geklärt werden. Bitte versuche es erneut.",
@@ -21141,8 +21328,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "die Website des Unternehmens analysieren und über die Befunde berichten",
   "firstRun.ignite.draft":
     "Entwürfe in dem Schreibstil schreiben, den du trainiert hast",
-  "firstRun.ignite.act":
-    "ohne deine Freigabe etwas senden oder einen Datensatz ändern",
+  "firstRun.ignite.act": "ohne direkten Auftrag oder Freigabe senden",
   "firstRun.ignite.carryOn": "Weiter",
   "firstRun.ignite.leaving": "Einrichtung wird geprüft…",
   "firstRun.step.model": "Modell",
@@ -21240,6 +21426,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiProviders.state.active": "Aktiv",
   "aiProviders.state.ready": "Bereit",
   "aiProviders.state.needsKey": "Schlüssel fehlt",
+  "aiProviders.state.needsService": "Dienst fehlt",
   "aiProviders.state.inactive": "Nicht aktiv",
   "aiProviders.colUsedBy": "Verwendet von",
   "aiProviders.colStatus": "Status",
@@ -21319,7 +21506,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.card.dealTitle": "Deal von {name}",
   "contact.card.deals": "Deals",
   "contact.card.openTasks": "Offene Aufgaben",
-  "contact.card.noOpenTasks": "Keine offenen Aufgaben",
   "contact.moment.doneToast":
     "Als erledigt markiert. Es kommt wieder, sobald eine Seite erneut schreibt.",
   "contact.card.understandingTitle": "{name} verstehen",
@@ -22082,7 +22268,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiTaskSheet.fixed": "Durch Vertrag festgelegt",
   "aiTaskSheet.tiersTried": "Versuchte Stufen",
   "aiTaskSheet.runs": "Ausführung",
-  "aiTaskSheet.fixed.help": "Ändere diese Werte in ai-tasks.yaml.",
+  "aiTaskSheet.fixed.help":
+    "Diese Werte ändert ein Entwickler in der Definition der Aufgabe; sie gelten ab dem nächsten Release.",
   "aiTaskSheet.addTask": "KI-Aufgabe hinzufügen oder ändern ↗",
   "aiTaskSheet.conflict":
     "Jemand hat diese Einstellungen während deiner Bearbeitung gespeichert",
@@ -22114,7 +22301,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiOutcome.role.decision": "Entscheidungsmodell",
   "aiOutcome.role.tier": "Modell der Stufe",
   "aiOutcome.role.fallback": "Fallback-Modell",
-  "aiOutcome.answered": "{answered} von {attempts} beantwortet",
+  "aiOutcome.answered_one": "{answered} beantwortet in {attempts} Versuch",
+  "aiOutcome.answered_other": "{answered} beantwortet in {attempts} Versuchen",
+  "aiOutcome.triesNote":
+    "Ein fehlgeschlagener oder abgelaufener Versuch kann auf derselben Stufe wiederholt werden. Deshalb zählt eine Stufe mehr Versuche als Aufrufe.",
   "aiOutcome.usually": "meist in {latency}",
   "aiOutcome.notNeeded": "In diesem Zeitraum nicht gebraucht",
   "aiOutcome.gaveUp.on_one": "{count} {reason} → weitergegeben",
@@ -22341,6 +22531,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.handles.more_one": "+{count} weitere",
   "contact.handles.more_other": "+{count} weitere",
   "contact.handles.fewer": "Weniger anzeigen",
+  "record.reach.label": "E-Mail und Telefon",
   "record.details.hideEmpty": "Leere Felder ausblenden",
   "record.details.editSection": "{section} bearbeiten",
   "record.verb.email": "E-Mail",
