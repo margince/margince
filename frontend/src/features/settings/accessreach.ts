@@ -27,10 +27,11 @@ export function readableKinds(objects: Grants): EntityKind[] {
 }
 
 /**
- * Whose records these grants let a seat change. A read seat changes nothing
- * whatever its role grants, and `seat` is absent where no seat exists yet (a
- * role previewed before an invite). A scope this client does not know narrows
- * to `own`, as the contract tells a client to read a newer server.
+ * Whose records these grants let a seat change. Only update and delete change
+ * a record that exists, so a create-only grant changes none. A read seat
+ * changes nothing whatever its role grants; `seat` is absent where no seat
+ * exists yet (a role previewed before an invite). A scope this client does not
+ * know narrows to `own`, as the contract tells a client to read a newer server.
  */
 export function changeReach(
   objects: Grants,
@@ -42,7 +43,7 @@ export function changeReach(
   }
   const writes = ENTITY_KINDS.some((kind) => {
     const grant = objects?.[kind];
-    return grant?.create || grant?.update || grant?.delete;
+    return grant?.update || grant?.delete;
   });
   if (!writes) {
     return "none";

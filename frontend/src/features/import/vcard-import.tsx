@@ -8,7 +8,7 @@ import { IMPORT_ID } from "../../app/nav";
 import { useUnsavedGuard } from "../../components/unsaved";
 import { AppLink } from "../../design-system/applink";
 import { useArrivalFocus } from "../../design-system/arrivalfocus";
-import { Badge, Button } from "../../design-system/atoms";
+import { Badge, Button, EmptyState } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { FileDropzone } from "../../design-system/filedropzone";
 import { Heading } from "../../design-system/heading";
@@ -17,12 +17,12 @@ import { RecordBack } from "../../design-system/recordview";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import type { ACCEPTED_ATTACHMENT_EXTENSIONS } from "../../lib/attachmentupload";
-import { useGrantRefused } from "../../lib/capability";
 import { valueFor } from "../../lib/labelfor";
 import { ACTION_PARAM, QUALIFY_ACTION } from "../../lib/leads.address";
 import { postMultipart } from "../../lib/multipart";
 import { problemMessageOf } from "../../lib/problem";
 import { navigate, routeHash } from "../../lib/router";
+import { useActionRefusal } from "../../lib/writerefusal";
 import "./vcard-import.css";
 
 type VCardReport = components["schemas"]["VCardImportReport"];
@@ -147,14 +147,14 @@ function useImportVCards() {
 }
 
 /**
- * Whether this seat is refused the vCard import. The import writes a new
- * contact or updates the one a card matches, so it asks both grants
- * (contacts/vcardimport.go).
+ * Why this seat is refused the vCard import, or undefined when it is not. The
+ * import writes a new contact or updates the one a card matches, so it asks
+ * both grants (contacts/vcardimport.go).
  */
-export function useVCardImportRefused(): boolean {
-  const create = useGrantRefused({ object: "contact", action: "create" });
-  const update = useGrantRefused({ object: "contact", action: "update" });
-  return create || update;
+export function useVCardImportRefusal(): string | undefined {
+  const create = useActionRefusal({ object: "contact", action: "create" });
+  const update = useActionRefusal({ object: "contact", action: "update" });
+  return create ?? update;
 }
 
 /**
@@ -193,6 +193,7 @@ export function VCardImportAction({
  * each card. Leaving discards the file and the report. */
 export function VCardImportPage() {
   const t = useT();
+  const refusal = useVCardImportRefusal();
   const importer = useImportVCards();
   const [picked, setPicked] = useState<File | undefined>(undefined);
   const title = useArrivalFocus<HTMLHeadingElement>();
@@ -222,50 +223,55 @@ export function VCardImportPage() {
       >
         {t("vcardImport.title")}
       </Heading>
-      <Panel>
-        <PanelBody className="form-stack">
-          <div data-testid="vcard-import-file" ref={fileField}>
-            {/* Withdrawn while an import is running. A second file chosen mid-
+      {/* Reached by its address, a refused import shows why and no file field. */}
+      {refusal !== undefined ? (
+        <EmptyState>{refusal}</EmptyState>
+      ) : (
+        <Panel>
+          <PanelBody className="form-stack">
+            <div data-testid="vcard-import-file" ref={fileField}>
+              {/* Withdrawn while an import is running. A second file chosen mid-
                 flight would start a second write, and this page holds ONE
                 report — so one set of contact changes would land with nothing
                 on screen saying what happened to it. */}
-            {importer.isPending ? (
-              <p className="t-sub">{t("vcardImport.working")}</p>
-            ) : (
-              <FileDropzone
-                label={t("vcardImport.fileLabel")}
-                hint={t("vcardImport.whichFile")}
-                emptyLabel={t("vcardImport.choose")}
-                accept={ACCEPT_ATTR}
-                file={picked}
-                onPick={(file) => {
-                  setPicked(file);
-                  importer.mutate(file);
-                }}
-              />
+              {importer.isPending ? (
+                <p className="t-sub">{t("vcardImport.working")}</p>
+              ) : (
+                <FileDropzone
+                  label={t("vcardImport.fileLabel")}
+                  hint={t("vcardImport.whichFile")}
+                  emptyLabel={t("vcardImport.choose")}
+                  accept={ACCEPT_ATTR}
+                  file={picked}
+                  onPick={(file) => {
+                    setPicked(file);
+                    importer.mutate(file);
+                  }}
+                />
+              )}
+            </div>
+            {importer.isError && (
+              <div data-testid="vcard-import-error">
+                <Callout
+                  tone="danger"
+                  kind="outcome"
+                  title={t("vcardImport.failed")}
+                >
+                  {problemMessageOf(importer.error, t)}
+                </Callout>
+              </div>
             )}
-          </div>
-          {importer.isError && (
-            <div data-testid="vcard-import-error">
-              <Callout
-                tone="danger"
-                kind="outcome"
-                title={t("vcardImport.failed")}
-              >
-                {problemMessageOf(importer.error, t)}
-              </Callout>
-            </div>
-          )}
-          {importer.isSuccess && <ImportReport report={importer.data} />}
-          {(importer.isSuccess || importer.isError) && (
-            <div>
-              <Button data-testid="vcard-import-next" onClick={startNext}>
-                {t("vcardImport.next")}
-              </Button>
-            </div>
-          )}
-        </PanelBody>
-      </Panel>
+            {importer.isSuccess && <ImportReport report={importer.data} />}
+            {(importer.isSuccess || importer.isError) && (
+              <div>
+                <Button data-testid="vcard-import-next" onClick={startNext}>
+                  {t("vcardImport.next")}
+                </Button>
+              </div>
+            )}
+          </PanelBody>
+        </Panel>
+      )}
     </div>
   );
 }

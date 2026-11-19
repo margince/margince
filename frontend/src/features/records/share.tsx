@@ -112,6 +112,13 @@ function ShareScreenGate({
       </div>
     );
   }
+  if (standing.state === "refused") {
+    return (
+      <div className="wrap">
+        <EmptyState>{standing.refusal}</EmptyState>
+      </div>
+    );
+  }
   if (standing.state === "pending") {
     return (
       <div className="wrap">
@@ -125,6 +132,7 @@ function ShareScreenGate({
       recordId={recordId}
       contactsOnly={contactsOnly}
       refusal={standing.refusal}
+      mayRetract={standing.mayRetract}
     />
   );
 }

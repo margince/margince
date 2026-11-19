@@ -13,7 +13,9 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { UnsavedGuard, useHasUnsavedChanges } from "../../components/unsaved";
 import { LocaleProvider } from "../../i18n";
+import { en } from "../../i18n/en";
 import { ACCEPTED_ATTACHMENT_EXTENSIONS } from "../../lib/attachmentupload";
+import { meFixture } from "../../testing/mefixture";
 import {
   CARD_PHOTO_EXTENSIONS,
   isCardPhoto,
@@ -60,6 +62,17 @@ async function upload(user: ReturnType<typeof userEvent.setup>) {
     throw new Error("the page rendered no file input");
   }
   await user.upload(input, vcardFile());
+}
+
+// The page reads /me first; the call that matters is the import's.
+function importCall(spy: ReturnType<typeof vi.fn>): [string, RequestInit] {
+  const call = spy.mock.calls.find(
+    ([url]) => typeof url === "string" && url.startsWith("/v1/contacts/"),
+  );
+  if (!call) {
+    throw new Error("the page sent no import");
+  }
+  return [call[0], call[1]];
 }
 
 function UnsavedProbe() {
@@ -320,6 +333,21 @@ describe("VCardImport", () => {
     expect(field.querySelector("input[type=file]")).toHaveFocus();
   });
 
+  // Reached by its address, a seat that may not add contacts sees why and no
+  // file field. The import would be refused after the file was chosen.
+  it("shows a refused seat why, and no file field", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse(meFixture({ allow: { contact: ["read"] } })),
+      ),
+    );
+    render(<VCardImportPage />);
+
+    expect(await screen.findByText(en["record.actionRefused"])).toBeVisible();
+    expect(screen.queryByTestId("vcard-import-file")).toBeNull();
+  });
+
   it("sends the file as the part the endpoint takes", async () => {
     const user = userEvent.setup();
     const fetchSpy = vi.fn(
@@ -334,7 +362,7 @@ describe("VCardImport", () => {
     expect(
       await screen.findByText("The file contains no cards."),
     ).toBeVisible();
-    const [url, init] = fetchSpy.mock.calls[0];
+    const [url, init] = importCall(fetchSpy);
     expect(url).toBe("/v1/contacts/vcard-import");
     expect(init.method).toBe("POST");
     // The endpoint takes a multipart part named `file`; a JSON body or a
@@ -414,7 +442,7 @@ describe("VCardImport", () => {
     );
 
     expect(await screen.findByText("Waiting for approval")).toBeVisible();
-    expect(fetchSpy.mock.calls[0][0]).toBe("/v1/contacts/card-photos");
+    expect(importCall(fetchSpy)[0]).toBe("/v1/contacts/card-photos");
   });
 
   it("accepts vCards and photos in the picker", () => {

@@ -41,6 +41,7 @@ import {
 } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { throwProblem } from "../../lib/problem";
+import { invalidateRecord } from "../../lib/recordwritekeys";
 import { useViewerId } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
 import { isAccessKind, WhoCanSeePanel } from "./recordaccesspanel";
@@ -56,6 +57,7 @@ export function ShareScreenBody({
   recordId,
   contactsOnly = false,
   refusal,
+  mayRetract = refusal === undefined,
 }: Readonly<{
   recordType: RecordType;
   recordId: string;
@@ -63,6 +65,9 @@ export function ShareScreenBody({
   // Why this reader may not share the record; the screen then only shows who
   // can see it.
   refusal?: string;
+  // Whether the reader may take a share away, which holds on an archived
+  // record where sharing does not.
+  mayRetract?: boolean;
 }>) {
   const t = useT();
   const plural = usePlural();
@@ -171,6 +176,8 @@ export function ShareScreenBody({
         });
       }
       queryClient.invalidateQueries({ queryKey: grantsKey });
+      // A reader who lowered their own share may no longer change the record.
+      void invalidateRecord(queryClient, recordType, recordId);
       setUnchanged(
         draft.change === "unchanged"
           ? { name: draft.subject.name, access: draft.access }
@@ -446,7 +453,7 @@ export function ShareScreenBody({
                       </div>
                       {/* The one share a reader who may not share can take
                           away is one made to themselves (grants.go mayRevoke). */}
-                      {(!refusal ||
+                      {(mayRetract ||
                         (g.subject_type === "user" &&
                           g.subject_id === viewerId)) && (
                         <Button

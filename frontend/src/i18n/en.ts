@@ -14342,7 +14342,8 @@ export const en = {
   "settings.home.reach.team": "Yours and your team\u2019s",
   "settings.home.reach.all": "All in the company",
   "settings.home.readLabel": "Records you can read",
-  "settings.home.read.some": "All {kinds}, except private ones",
+  "settings.home.read.some":
+    "All {kinds}, except colleagues\u2019 private ones not shared with you",
   "settings.home.read.none": "None",
   "settings.home.access": "Your access",
   "settings.home.accessLoading": "Loading your access…",

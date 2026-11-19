@@ -14408,7 +14408,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.home.reach.team": "Deine und die deines Teams",
   "settings.home.reach.all": "Alle im Unternehmen",
   "settings.home.readLabel": "Datensätze, die du lesen darfst",
-  "settings.home.read.some": "Alle {kinds}, außer privaten",
+  "settings.home.read.some":
+    "Alle {kinds}, außer privaten anderer, die nicht mit dir geteilt sind",
   "settings.home.read.none": "Keine",
   "settings.home.access": "Dein Zugriff",
   "settings.home.accessLoading": "Dein Zugriff wird geladen…",

@@ -17,7 +17,6 @@ import {
   type RecordViewProps,
 } from "../../design-system/recordview";
 import { useT } from "../../i18n";
-import { useRecordWriteRefusal } from "../../lib/capability";
 import {
   archivedContactRow,
   contactPageState,
@@ -28,6 +27,7 @@ import { BRIEF_PARAM } from "../../lib/contactpage.address";
 import type { ContactTab } from "../../lib/contacttab";
 import { useOpenEmail } from "../../lib/openemail";
 import { useUrlParams } from "../../lib/urlstate";
+import { useKindWriteRefusal } from "../../lib/writerefusal";
 import { BriefQueue } from "../brief/brief.queue";
 import { ContactMeetingBrief } from "../brief/meetingbrief";
 import { useWaitingDraftBand } from "../mail/composewaitingdraft";
@@ -178,10 +178,7 @@ export function ContactPageV2({
   const readOnlyReasonId = useId();
   // A 360 cached from before the archive would not say the row is archived.
   const shownRow = record.data?.archived_at ? record.data : view.data?.contact;
-  const readOnlyReason = useRecordWriteRefusal("contact", shownRow, {
-    archived: t("contact.rail.archivedReadOnly"),
-    notYours: t("contact.notYoursToChange"),
-  });
+  const readOnlyReason = useKindWriteRefusal("contact", shownRow);
   const refusedReasonId = readOnlyReason ? readOnlyReasonId : undefined;
   // A live contact states its read-only sentence in the left card's
   // footnote; the archived page has no such card, so its band states it.

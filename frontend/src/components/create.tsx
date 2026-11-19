@@ -5,11 +5,11 @@ export {
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { useIdempotencyKey } from "../api/idempotencykey";
 import { Button } from "../design-system/atoms";
 import { useT } from "../i18n";
-import { type RequiredGrant, useGrantRefused } from "../lib/capability";
+import type { RequiredGrant } from "../lib/capability";
 import { binding, shortcutTip } from "../lib/keymap";
 import { leaveCreateForm } from "../lib/listreturn";
 import { fromHere } from "../lib/navigatefrom";
@@ -21,6 +21,7 @@ import {
 import { navigate, type Route, type Screen } from "../lib/router";
 import { useShortcutAria } from "../lib/shortcuts";
 import { useAddressWriters } from "../lib/urlstate";
+import { useActionRefusal, useMeSettled } from "../lib/writerefusal";
 import { catalogOfScreen, useSettledOpen } from "./create.dialog";
 import "./create.css";
 import "../design-system/querystates.css";
@@ -158,7 +159,8 @@ export function CreateAction<Created extends { id: string }>({
   // verb stays visible, because a hidden create reads as "there is nothing to
   // add".
   requires: RequiredGrant;
-  // What a refused reader is told, where the role sentence is wrong.
+  // A refusal the caller knows beside the grant, with its own sentence; it
+  // refuses the verb whatever the grant says.
   refusedReason?: string;
   // The id of a sentence already on the page saying why, for a header where
   // several verbs are refused by one fact.
@@ -202,17 +204,29 @@ export function CreateAction<Created extends { id: string }>({
   resolveExisting?: (code: string, id: string) => Route;
 }>) {
   const t = useT();
-  const refused = useGrantRefused(requires);
-  const reason =
-    refused && refusalId === undefined
-      ? (refusedReason ?? t("record.actionRefused"))
-      : undefined;
+  const grantRefusal = useActionRefusal(requires);
+  const refusal = refusedReason ?? grantRefusal;
+  const refused = refusal !== undefined;
+  const reason = refusalId === undefined ? refusal : undefined;
+  // No form opens before /me has settled: what it says decides the refusal.
+  const settled = useMeSettled();
   const [creating, setCreating] = useState(listCreate?.open ?? false);
+  if (creating && refused) {
+    setCreating(false);
+  }
+  const writers = useAddressWriters();
+  // A refused create at its list's own address leaves it, as Cancel would,
+  // so the address does not keep promising a form.
+  const refusedAtAddress = refused && listCreate?.open === true;
+  useEffect(() => {
+    if (refusedAtAddress) {
+      leaveCreateForm(screen, writers);
+    }
+  }, [refusedAtAddress, screen, writers]);
   const shown = useSettledOpen(creating, catalogOfScreen(screen));
   // Counts this session's saves, which empties the form between them. Not a
   // boolean: two saves in a row must read as two distinct clears.
   const [saved, setSaved] = useState(0);
-  const writers = useAddressWriters();
   const { key: idempotencyKey, renew } = useIdempotencyKey();
   const mutation = useCreateRecord({
     create,
@@ -269,7 +283,7 @@ export function CreateAction<Created extends { id: string }>({
       <CreateRecordModal
         // A refusal that lands while the dialog is open closes it. A verb the
         // reader may no longer take must not stay one press from the server.
-        open={shown && !refused}
+        open={shown && settled && !refused}
         onClose={close}
         title={label}
         fields={fields}

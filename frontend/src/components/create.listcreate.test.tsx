@@ -13,9 +13,11 @@ import {
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { forgetListAddresses, rememberListAddress } from "../lib/listreturn";
 import { ScreenAddress } from "../lib/screenaddress";
 import { setSingleKeyShortcutsOn } from "../lib/shortcuts";
+import { meFixture } from "../testing/mefixture";
 import { CreateAction, type CreateField } from "./create";
 
 afterEach(() => {
@@ -35,10 +37,11 @@ function mount(
     listCreate?: { open: boolean };
     create?: () => Promise<{ id: string }>;
     drawnFor?: string;
+    client?: QueryClient;
   }>,
 ) {
   return render(
-    <QueryClientProvider client={new QueryClient()}>
+    <QueryClientProvider client={props.client ?? new QueryClient()}>
       <LocaleProvider initial="en">
         <ScreenAddress.Provider value={props.drawnFor ?? null}>
           <CreateAction
@@ -170,5 +173,49 @@ describe("the list's create button", () => {
     const button = screen.getByRole("button", { name: "New contact" });
     expect(button.getAttribute("aria-keyshortcuts")).toBeNull();
     expect(button.getAttribute("title")).toBeNull();
+  });
+});
+
+describe("a list's create the seat may not take", () => {
+  it("leaves its own address and opens no form", async () => {
+    window.location.hash = "#/contacts/new";
+    const client = new QueryClient();
+    client.setQueryData(["me"], meFixture({ allow: { contact: ["read"] } }));
+    mount({ listCreate: { open: true }, client });
+
+    await waitFor(() => expect(window.location.hash).toBe("#/contacts"));
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("opens no form before /me answers, then leaves when it refuses", async () => {
+    window.location.hash = "#/contacts/new";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => new Promise<Response>(() => undefined)),
+    );
+    const client = new QueryClient();
+    mount({ listCreate: { open: true }, client });
+
+    await screen.findByRole("button", { name: /New contact/ });
+    expect(screen.queryByRole("dialog")).toBeNull();
+    act(() => {
+      client.setQueryData(["me"], meFixture({ allow: { contact: ["read"] } }));
+    });
+    await waitFor(() => expect(window.location.hash).toBe("#/contacts"));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    vi.unstubAllGlobals();
+  });
+
+  it("says a read seat needs a full seat, though its role may create", async () => {
+    const client = new QueryClient();
+    client.setQueryData(
+      ["me"],
+      meFixture({ seat: "read", allow: { contact: ["read", "create"] } }),
+    );
+    mount({ client });
+
+    const verb = await screen.findByRole("button", { name: /New contact/ });
+    expect(verb.hasAttribute("disabled")).toBe(true);
+    expect(screen.getByText(en["settings.seatRefused"])).toBeTruthy();
   });
 });

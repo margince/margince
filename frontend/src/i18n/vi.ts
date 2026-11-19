@@ -3080,7 +3080,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "record.notYoursToChange":
     "Bạn không có quyền sửa công ty này. Đề nghị người chịu trách nhiệm chuyển giao hoặc chia sẻ, hoặc liên hệ quản trị viên.",
   "record.actionRefused":
-    "Bạn không có quyền dùng mục này. Liên hệ quản trị viên để được cấp thêm quyền.",
+    "Vai trò của bạn không bao gồm thao tác này. Liên hệ quản trị viên để được cấp thêm quyền.",
   "contact.attachRefused":
     "Bạn chỉ có quyền xem liên hệ này. Hãy nhờ chủ sở hữu cấp quyền ghi.",
   "record.logActivityRefused":
@@ -14015,7 +14015,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.home.reach.team": "Của bạn và nhóm bạn",
   "settings.home.reach.all": "Mọi hồ sơ trong công ty",
   "settings.home.readLabel": "Hồ sơ bạn được đọc",
-  "settings.home.read.some": "Mọi {kinds}, trừ hồ sơ riêng tư",
+  "settings.home.read.some":
+    "Mọi {kinds}, trừ hồ sơ riêng tư của người khác chưa chia sẻ với bạn",
   "settings.home.read.none": "Không có",
   "settings.home.access": "Quy\u1ec1n truy c\u1eadp c\u1ee7a b\u1ea1n",
   "settings.home.accessLoading": "Đang tải quyền truy cập…",

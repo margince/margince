@@ -19,11 +19,11 @@ import { Badge } from "../../design-system/atoms";
 import { Avatar } from "../../design-system/avatar";
 import { ContactLink, CopyEmail } from "../../design-system/contactlink";
 import { useLocale, useT } from "../../i18n";
-import { useGrantRefused } from "../../lib/capability";
 import { useViewerId } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
+import { useActionRefusal } from "../../lib/writerefusal";
 import {
-  useVCardImportRefused,
+  useVCardImportRefusal,
   VCardImportAction,
   VCardImportPage,
 } from "../import/vcard-import";
@@ -86,23 +86,25 @@ export function ContactsScreen({
 function ContactListActions({
   startCreating,
 }: Readonly<{ startCreating: boolean }>) {
-  const t = useT();
   const refusalId = useId();
-  const createRefused = useGrantRefused({
+  const createRefusal = useActionRefusal({
     object: "contact",
     action: "create",
   });
-  const importRefused = useVCardImportRefused();
+  const importRefusal = useVCardImportRefusal();
+  const refusal = createRefusal ?? importRefusal;
   return (
     <>
       <ContactCreateActions
         startCreating={startCreating}
         refusalId={refusalId}
       />
-      <VCardImportAction refusalId={importRefused ? refusalId : undefined} />
-      {(createRefused || importRefused) && (
+      <VCardImportAction
+        refusalId={importRefusal === undefined ? undefined : refusalId}
+      />
+      {refusal !== undefined && (
         <span className="t-caption" id={refusalId}>
-          {t("record.actionRefused")}
+          {refusal}
         </span>
       )}
     </>

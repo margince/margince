@@ -722,6 +722,37 @@ describe("ShareScreen for a reader who may not share", () => {
     );
   });
 
+  // Revoking asks the record's write authority on a row that need not be live
+  // (grants.go mayRevoke). An archived record keeps its Revoke for a seat with
+  // the update grant, while sharing anew stays refused.
+  it("keeps Revoke on an archived record for a seat that may change it", async () => {
+    installBaseFetch({
+      "/v1/deals/d-1": () =>
+        jsonResponse({
+          id: "d-1",
+          writable: false,
+          archived_at: "2026-01-02T00:00:00Z",
+        }),
+    });
+    render(<ShareScreen recordType="deal" recordId="d-1" />);
+
+    expect(await screen.findByText(en["deal.archivedReadOnly"])).toBeTruthy();
+    expect(screen.queryByTestId("share-grant-submit")).toBeNull();
+    expect(await screen.findByTestId("revoke-grant")).toBeTruthy();
+  });
+
+  // A /me that failed leaves every grant denied: the screen shows that rather
+  // than waiting, and the server decides any write.
+  it("does not wait forever when /me fails", async () => {
+    installBaseFetch({
+      "/v1/me": () => jsonResponse({ title: "Forbidden", status: 403 }, 403),
+    });
+    render(<ShareScreen recordType="deal" recordId="d-1" />);
+
+    expect(await screen.findByText(en["deal.notYoursToChange"])).toBeTruthy();
+    expect(await screen.findByTestId("share-acl-list")).toBeTruthy();
+  });
+
   it("says a record the reader cannot see is not there, and offers nothing", async () => {
     installBaseFetch({
       "/v1/contacts/c-9": () =>
