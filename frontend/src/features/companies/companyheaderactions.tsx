@@ -9,7 +9,7 @@ import { ExtensionEntries } from "../../components/extensionentries";
 import { LogActivityAction } from "../../components/logactivity.action";
 import { searchCompanyContacts } from "../../components/meetingattendees";
 import { Button } from "../../design-system/atoms";
-import { VerbWord } from "../../design-system/iconaction";
+import { tipText, VerbWord } from "../../design-system/iconaction";
 import {
   ListPopover,
   type ListPopoverOption,
@@ -38,6 +38,33 @@ type Company360 = components["schemas"]["Company360"];
 // because the daily brief's leading card opens the same drawer. So a rep who
 // logs from the card and one who logs from the header meet one drawer.
 export type ActivityDrawer = "log" | "task" | null;
+
+// The sentences the strip states itself. An archive the page states is the
+// page's sentence, so only its id reaches here.
+function stripRefusals(
+  t: ReturnType<typeof useT>,
+  state: Readonly<{
+    archived: boolean;
+    pageStatesArchive: boolean;
+    activityRefused: boolean;
+  }>,
+): Readonly<{
+  ownArchived?: string;
+  activityRefusal?: string;
+  bookRefusal?: string;
+}> {
+  if (state.archived) {
+    return state.pageStatesArchive
+      ? {}
+      : { ownArchived: t("record.archivedReadOnly") };
+  }
+  return state.activityRefused
+    ? {
+        activityRefusal: t("record.logActivityRefused"),
+        bookRefusal: t("scheduling.bookRefused"),
+      }
+    : {};
+}
 
 export function CompanyHeaderActions({
   company,
@@ -78,6 +105,12 @@ export function CompanyHeaderActions({
   // refused for this reason, not that one.
   const bookRefusedId = useId();
   const logRefused = archived ?? activity.refusedId;
+  const { ownArchived, activityRefusal, bookRefusal } = stripRefusals(t, {
+    archived: archived !== undefined,
+    pageStatesArchive: archivedReasonId !== undefined,
+    activityRefused: activity.refusedId !== undefined,
+  });
+  const logRefusal = ownArchived ?? activityRefusal;
   const logPending = !archived && activity.pending;
   const logOpen = !logPending && !logRefused;
   const logKeys = useShortcut(
@@ -92,14 +125,14 @@ export function CompanyHeaderActions({
   );
   return (
     <>
-      {archived && !archivedReasonId && (
+      {ownArchived && (
         <p className="t-caption" id={ownReasonId}>
-          {t("record.archivedReadOnly")}
+          {ownArchived}
         </p>
       )}
-      {!archived && activity.refusedId && (
+      {activityRefusal && (
         <p className="t-caption" id={activity.sentenceId}>
-          {t("record.logActivityRefused")}
+          {activityRefusal}
         </p>
       )}
       <CompanyWriteEmail
@@ -107,6 +140,7 @@ export function CompanyHeaderActions({
         open={composerOpen}
         onOpen={onComposerOpen}
         disabledReasonId={logRefused}
+        reasonTip={logRefusal}
         disabled={logPending}
         keyShortcuts={writeKeys}
       />
@@ -116,16 +150,17 @@ export function CompanyHeaderActions({
         allowed={!logPending && !logRefused}
         pending={logPending}
         reasonId={archived ?? (activity.pending ? undefined : bookRefusedId)}
+        reasonTip={ownArchived ?? bookRefusal}
       />
-      {!archived && activity.refusedId && (
+      {bookRefusal && (
         <p className="t-caption" id={bookRefusedId}>
-          {t("scheduling.bookRefused")}
+          {bookRefusal}
         </p>
       )}
       <Button
         disabled={logPending}
         reasonId={logRefused}
-        title={t("log.title")}
+        title={tipText(t("log.title"), logRefusal)}
         onClick={() => onDrawer("log")}
         aria-keyshortcuts={logKeys}
       >
@@ -185,12 +220,15 @@ function CompanyBookMeeting({
   allowed,
   pending,
   reasonId,
+  reasonTip,
 }: Readonly<{
   companyId: string;
   view?: Company360;
   allowed: boolean;
   pending: boolean;
   reasonId?: string;
+  /** The sentence `reasonId` names, for the verb's tooltip. */
+  reasonTip?: string;
 }>) {
   const t = useT();
   const opening = useMemo(() => openingContacts(view), [view]);
@@ -218,7 +256,7 @@ function CompanyBookMeeting({
         variant="ghost"
         disabled={pending}
         reasonId={reasonId}
-        title={t("scheduling.bookContact")}
+        title={tipText(t("scheduling.bookContact"), reasonId && reasonTip)}
       >
         {face}
       </Button>
@@ -248,6 +286,7 @@ function CompanyWriteEmail({
   open,
   onOpen,
   disabledReasonId,
+  reasonTip,
   disabled,
   keyShortcuts,
 }: Readonly<{
@@ -255,6 +294,7 @@ function CompanyWriteEmail({
   open: boolean;
   onOpen: (open: boolean) => void;
   disabledReasonId?: string;
+  reasonTip?: string;
   disabled?: boolean;
   keyShortcuts?: string;
 }>) {
@@ -271,6 +311,7 @@ function CompanyWriteEmail({
       <EmailVerb
         disabled={disabled}
         reasonId={disabledReasonId}
+        reasonTip={reasonTip}
         keyShortcuts={keyShortcuts}
         onClick={() => onOpen(true)}
       />

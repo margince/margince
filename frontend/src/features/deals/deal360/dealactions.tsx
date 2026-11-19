@@ -24,7 +24,7 @@ import { searchCompanyContacts } from "../../../components/meetingattendees";
 import { Button, OverflowMenu } from "../../../design-system/atoms";
 import { ConfirmModal } from "../../../design-system/confirmmodal";
 import { ErrorLine } from "../../../design-system/errorline";
-import { VerbWord } from "../../../design-system/iconaction";
+import { tipText, VerbWord } from "../../../design-system/iconaction";
 import { ListPopover } from "../../../design-system/listpopover";
 import { useToast } from "../../../design-system/toast";
 import { useLocale, useT } from "../../../i18n";
@@ -51,6 +51,7 @@ type Stage = components["schemas"]["Stage"];
 function DealEmailVerb({
   deal,
   disabledReasonId,
+  reasonTip,
   disabled,
   keyShortcuts,
   open,
@@ -58,6 +59,7 @@ function DealEmailVerb({
 }: Readonly<{
   deal: Deal;
   disabledReasonId?: string;
+  reasonTip?: string;
   disabled?: boolean;
   keyShortcuts?: string;
   open: boolean;
@@ -77,12 +79,25 @@ function DealEmailVerb({
       // over what the reader typed.
       recordAddress={recordAddress}
       disabledReasonId={disabledReasonId}
+      reasonTip={reasonTip}
       disabled={disabled}
       keyShortcuts={keyShortcuts}
       open={open}
       onOpenChange={onOpenChange}
     />
   );
+}
+
+// The sentence the header states when the seat may not log. An archive is
+// the page's sentence, so only its id reaches here.
+function activityRefusal(
+  t: ReturnType<typeof useT>,
+  refusedByArchive: string | undefined,
+  refusedId: string | undefined,
+): string | undefined {
+  return !refusedByArchive && refusedId
+    ? t("record.logActivityRefused")
+    : undefined;
 }
 
 // Reopens a won/lost deal back to an open-semantic stage — the same advance
@@ -210,6 +225,7 @@ export function DealActions({
   const [drawer, setDrawer] = useState<"log" | "task" | "call" | null>(null);
   const activity = useActivityGate();
   const logRefused = refusedByArchive ?? activity.refusedId;
+  const logRefusal = activityRefusal(t, refusedByArchive, activity.refusedId);
   const logPending = !refusedByArchive && activity.pending;
   const [writing, setWriting] = useState(false);
   const logOpen = !logPending && !logRefused;
@@ -230,9 +246,7 @@ export function DealActions({
   );
   return (
     <>
-      {!refusedByArchive && activity.refusedId && (
-        <p id={activity.sentenceId}>{t("record.logActivityRefused")}</p>
-      )}
+      {logRefusal && <p id={activity.sentenceId}>{logRefusal}</p>}
       {/* Mail first, then the hairline, then what the reader records about
           this deal: the same two groups, in the same order, that the contact,
           company and lead headers draw. A rep moving between records must not
@@ -240,6 +254,7 @@ export function DealActions({
       <DealEmailVerb
         deal={deal}
         disabledReasonId={logRefused}
+        reasonTip={logRefusal}
         disabled={logPending}
         open={writing}
         onOpenChange={setWriting}
@@ -248,7 +263,7 @@ export function DealActions({
       <Button
         disabled={logPending}
         reasonId={logRefused}
-        title={t("log.kindCall")}
+        title={tipText(t("log.kindCall"), logRefusal)}
         onClick={() => setDrawer("call")}
       >
         <Phone aria-hidden="true" />
@@ -260,11 +275,12 @@ export function DealActions({
         allowed={!logPending && !logRefused}
         pending={logPending}
         reasonId={logRefused}
+        reasonTip={logRefusal}
       />
       <Button
         disabled={logPending}
         reasonId={logRefused}
-        title={t("log.title")}
+        title={tipText(t("log.title"), logRefusal)}
         onClick={() => setDrawer("log")}
         aria-keyshortcuts={logKeys}
       >
@@ -363,12 +379,15 @@ function DealBookMeeting({
   allowed,
   pending,
   reasonId,
+  reasonTip,
 }: Readonly<{
   dealId: string;
   companyId?: string;
   allowed: boolean;
   pending: boolean;
   reasonId?: string;
+  /** The sentence `reasonId` names, for the verb's tooltip. */
+  reasonTip?: string;
 }>) {
   const t = useT();
   // Held across renders, because a new search function drops the answer the
@@ -395,7 +414,10 @@ function DealBookMeeting({
         disabled={pending || !companyId}
         reasonId={reasonId}
         reason={noCompany ? t("deal.meetNeedsCompany") : undefined}
-        title={t("scheduling.bookContact")}
+        title={tipText(
+          t("scheduling.bookContact"),
+          reasonId ? reasonTip : undefined,
+        )}
       >
         {face}
       </Button>

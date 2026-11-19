@@ -16,6 +16,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../../api/schema";
+import { armHoverIntent } from "../../../design-system/hoverintent-testing";
 import { LocaleProvider } from "../../../i18n";
 import { en } from "../../../i18n/en";
 import { useShortcutDispatcher } from "../../../lib/shortcuts";
@@ -68,6 +69,36 @@ describe("the deal header's Email verb", () => {
       document.getElementById(email.getAttribute("aria-describedby") ?? "")
         ?.textContent,
     ).toBe("You do not have permission to log activities on this record.");
+  });
+
+  it("names the refusal in its tooltip, described once by the header's sentence", async () => {
+    const user = userEvent.setup();
+    armHoverIntent();
+    mount({ deal: ["read"] });
+    const why = en["record.logActivityRefused"];
+
+    const email = screen.getByRole("button", { name: "Email" });
+    const sentence = await screen.findByText(why);
+    await expect.poll(() => email.hasAttribute("disabled")).toBe(true);
+    expect(email.getAttribute("aria-describedby")).toBe(sentence.id);
+    expect(screen.getAllByText(why)).toHaveLength(1);
+
+    const host = email.closest(".icon-action");
+    if (!(host instanceof HTMLElement)) {
+      throw new Error("the Email verb lost its tooltip host");
+    }
+    await user.hover(host);
+    expect((await screen.findByRole("tooltip")).textContent).toBe(
+      `Email. ${why}`,
+    );
+    for (const [name, label] of [
+      ["Log activity", en["log.title"]],
+      [en["log.kindCall"], en["log.kindCall"]],
+    ]) {
+      expect(screen.getByRole("button", { name }).getAttribute("title")).toBe(
+        `${label}. ${why}`,
+      );
+    }
   });
 
   it("is live with the activity grant", async () => {

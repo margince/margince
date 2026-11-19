@@ -10,7 +10,7 @@ import {
 import { AddToShortlistAction } from "../../components/addtoshortlist";
 import { ExtensionEntries } from "../../components/extensionentries";
 import { Button, OverflowMenu } from "../../design-system/atoms";
-import { IconAction, VerbWord } from "../../design-system/iconaction";
+import { IconAction, tipText, VerbWord } from "../../design-system/iconaction";
 import { useT } from "../../i18n";
 import type { Transport, TransportSource } from "../../lib/contacttransports";
 import {
@@ -132,7 +132,7 @@ export function ContactActions({
         disabled={logPending}
         reasonId={logRefused}
         onClick={onLogActivity}
-        title={logRefusal ? `${t("log.title")}. ${logRefusal}` : t("log.title")}
+        title={tipText(t("log.title"), logRefusal)}
         aria-keyshortcuts={logKeys}
       >
         <FileText aria-hidden="true" />

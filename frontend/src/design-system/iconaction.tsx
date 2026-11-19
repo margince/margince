@@ -102,9 +102,8 @@ export function IconAction(
   const { label, hint, icon, inline, word } = props;
   const hintId = useId();
   const why = props.reasonId === undefined ? undefined : props.reasonTip;
-  const second = why ?? hint;
   const { ref, trigger, tip } = useTooltip<HTMLSpanElement>(
-    second === undefined ? label : `${label}. ${second}`,
+    tipText(label, why ?? hint),
   );
   const face = (
     <>
@@ -166,6 +165,14 @@ export function IconAction(
       )}
     </span>
   );
+}
+
+/**
+ * What a verb's hover shows: its name, then the one sentence beside it. A
+ * worded verb whose hover is its `title` uses it for the same text.
+ */
+export function tipText(label: string, sentence?: string): string {
+  return sentence ? `${label}. ${sentence}` : label;
 }
 
 /**
