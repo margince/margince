@@ -66,14 +66,11 @@ func TestErasureDuringProviderDeliveryCancelsTheLateReceiptAndSuppressesItsEcho(
 		t.Fatal(err)
 	}
 	now = now.Add(2 * time.Minute)
-	if err := store.DeliverInvitations(ctx); err != nil {
+	if err := errors.Join(store.DeliverInvitations(ctx), store.DestroyErasedLinks(ctx)); err != nil {
 		t.Fatal(err)
 	}
 	if calendar.canceled != ids.UUID(meeting.Id).String() {
 		t.Fatalf("late provider event was not canceled: %q", calendar.canceled)
-	}
-	if err := store.DestroyErasedLinks(ctx); err != nil {
-		t.Fatal(err)
 	}
 	if got := e.WsCount(t, `SELECT count(*) FROM meeting_invitation WHERE status='erased' AND cleanup_complete AND management_ref='' AND NOT appointment ? 'Attendees' AND NOT receipt ? 'url'`); got != 1 {
 		t.Fatalf("erasure retained personal delivery material or missed cleanup: %d", got)
