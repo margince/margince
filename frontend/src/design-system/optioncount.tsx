@@ -28,12 +28,22 @@ import { useLocale } from "../i18n";
 export function OptionCount({
   count,
   floor = false,
-}: Readonly<{ count: number; floor?: boolean }>) {
+  label,
+}: Readonly<{
+  count: number;
+  floor?: boolean;
+  // Read in place of the bare figure, and shown on hover.
+  label?: string;
+}>) {
   const { locale } = useLocale();
   return (
     <>
-      <span className="sr-only">, </span>
-      <span className="optioncount t-num">
+      <span className="sr-only">, {label}</span>
+      <span
+        className="optioncount t-num"
+        title={label}
+        aria-hidden={label === undefined ? undefined : true}
+      >
         {floorFigure(formatNumber(count, locale), floor, count)}
       </span>
     </>

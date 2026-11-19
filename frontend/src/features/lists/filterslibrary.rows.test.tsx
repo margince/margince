@@ -380,7 +380,7 @@ describe("a saved view's ⋯", () => {
     expect(window.location.hash).toBe("");
     const firstRun = screen.getByText(en["filters.library.viewsEmptyTitle"]);
     await vi.waitFor(() =>
-      expect(firstRun.closest(".library-anchor")).toHaveFocus(),
+      expect(firstRun.closest('[data-testid="library-anchor"]')).toHaveFocus(),
     );
   });
 

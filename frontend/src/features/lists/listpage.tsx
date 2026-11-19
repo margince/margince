@@ -128,7 +128,12 @@ function ListHead({
     <header className="lists-head">
       <div className="lists-head-row">
         <div className="lists-head-title">
-          <Heading size="xlarge" ref={name} tabIndex={-1}>
+          <Heading
+            size="xlarge"
+            ref={name}
+            tabIndex={-1}
+            className="arrival-focus"
+          >
             {list.name}
           </Heading>
           <ListKindBadge list={list} />

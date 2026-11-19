@@ -215,6 +215,7 @@ export function Chip({
   appHref,
   label,
   dense,
+  wrap,
 }: Readonly<
   {
     children: ReactNode;
@@ -230,13 +231,21 @@ export function Chip({
     // It is a size on the primitive, like `Meter`'s dense rung, so one author
     // owns the geometry.
     dense?: boolean;
+    // A name the reader must read whole, such as a contact's: it breaks across
+    // lines inside its container instead of running past it.
+    wrap?: boolean;
   } & (
     | { icon: LucideIcon; lead?: never }
     // A mark in the icon's place: a record's Avatar, or a company's logo.
     | { icon?: never; lead: ReactNode }
   )
 >) {
-  const shape = ["chip", dense ? "chip-dense" : "", Icon ? "" : "chip-lead"]
+  const shape = [
+    "chip",
+    dense ? "chip-dense" : "",
+    Icon ? "" : "chip-lead",
+    wrap ? "chip-wrap" : "",
+  ]
     .filter(Boolean)
     .join(" ");
   const body = (
@@ -248,7 +257,7 @@ export function Chip({
           {lead}
         </span>
       )}
-      <span>{children}</span>
+      <span className="chip-label">{children}</span>
     </>
   );
   if (appHref) {

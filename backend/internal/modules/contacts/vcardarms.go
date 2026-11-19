@@ -88,6 +88,7 @@ func (s *Store) updateMatchedByCard(
 		return err
 	}
 	result.Fields = updatedReport(entry, st, held, address)
+	result.Reason = withTitleNote(result.Reason, entry, result.Fields)
 	return nil
 }
 
@@ -138,6 +139,7 @@ func (s *Store) createFromCard(
 		return err
 	}
 	result.Fields = createdReport(contact, entry, url)
+	result.Reason = withTitleNote(result.Reason, entry, result.Fields)
 	return nil
 }
 

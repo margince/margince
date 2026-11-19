@@ -692,7 +692,7 @@ describe("a group's own address", () => {
     render(<FiltersScreen id="lists" />, { wrapper });
     const plate = await screen.findByText(en["filters.library.firstRunTitle"]);
     await vi.waitFor(() =>
-      expect(plate.closest(".library-anchor")).toHaveFocus(),
+      expect(plate.closest('[data-testid="library-anchor"]')).toHaveFocus(),
     );
   });
 
