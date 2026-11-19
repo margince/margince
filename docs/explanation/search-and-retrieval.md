@@ -122,9 +122,9 @@ for a **grouped** page instead (`groupedShape`).
 
 Each branch that passes the gate is capped at `N + 1` rows before the `UNION`. The last row is
 dropped and reported in `types_with_more`, and the page takes no cursor or limit. To page through
-the rest, narrow to one type with `types`. The `⌘K` menu (`per_type=3`, or `per_type=8` with one
-type picked in its strip) and the full results screen with no type set (`per_type=5`) both ask for
-it. They show an activity that carries an
+the rest, narrow to one type with `types`. The `⌘K` menu asks for it with `per_type=3`, and with
+`per_type=8` once one type is picked in its bar. The full results screen with no type set asks with
+`per_type=5`. They show an activity that carries an
 `email_summary` under `Emails`, separate from the calls and notes beside it.
 
 **`with_employees=true` finds contacts through their company.** The `search_tsv` of
@@ -167,10 +167,11 @@ A company hit also carries `logo_url`. The own reader of the contacts module rea
 companies on the page (`contacts.CompanyLogoURLsBatch`, passed in by compose). So the URL comes from
 the place that owns the company record.
 
-A contact, company, deal, lead or project hit also carries `standing`: its status, stage, amount,
-close or due date, job title and last activity, as that type has them. `attachStandings` reads them
-for the page in one statement, each type's leg under the caller's read grant and row scope. A deal's
-amount goes through the caller's field mask, and `masked_fields` names what it held back.
+A contact, company, deal, lead or project hit also carries `standing`. It holds what that type has
+of status, stage, money value, close or due date, job title and last activity. `attachStandings`
+reads them for the page in one statement, each type's part under the caller's read grant and row
+scope. A deal's money value goes through the caller's field mask, and `masked_fields` names what it
+held back.
 
 The **merged** path (`Store.HybridSearch`) is reached through the `shared/ports/retrieval` seam
 (`search.Retriever`), which is what the AI layers build their answers on. `cmd/api` connects it to the

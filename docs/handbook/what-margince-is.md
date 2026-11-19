@@ -130,8 +130,8 @@ Also called: last message, most recent note, last update, last contact.
 
 ### How do I search for something?
 To search Margince, click the search field **Search or ask Margince** in the top bar, or press ⌘K (Ctrl+K), and start typing.
-1. Type a name, company, deal or any other word. Matches appear as you type, a few of each kind, under headings such as **Companies**, **Contacts** and **Emails**. A deal shows its amount, close date and stage, a lead or project its status, and a contact when you were last in touch.
-   To see more of one kind, choose it in the **Show only** strip under the box. Each kind there shows how many matches it found.
+1. Type a name, company, deal or any other word. Matches appear as you type, a few of each kind, under headings such as **Companies**, **Contacts** and **Emails**. A deal shows its amount, close date and stage. A lead or project shows its status, and a contact shows when you were last in touch.
+   To see more of one kind, choose it in the **Show only** bar under the box. Each kind there shows how many matches it found.
 2. Choose a result to open it, or choose **See all results for “…”** to open the full **Search results** page.
 3. On that page, **Show all** beside a kind, or **Show only**, lists every match of that kind.
 
