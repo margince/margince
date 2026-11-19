@@ -1,0 +1,34 @@
+# The browsers Margince supports. vite.config.ts lowers the bundle to the
+# oldest version of each engine this list resolves to (scripts/browser-targets.ts).
+# `pnpm exec browserslist` in frontend/ prints the versions it means today.
+# The rules for using a web feature: docs/reference/browser-support.md.
+
+# Primary: Chromium, on phones and computers.
+last 2 Chrome versions
+last 2 ChromeAndroid versions
+last 2 Edge versions
+last 2 Samsung versions
+
+# Secondary: Safari on iPhone, iPad and Mac. A device keeps the system release it
+# can run, so this counts the last two major releases, not the last two updates.
+last 2 Safari major versions
+last 2 iOS major versions
+
+# Secondary: Firefox on computers. Firms and public offices in the
+# German-speaking market often run the extended support release.
+last 2 Firefox versions
+Firefox ESR
+
+# Any other version above 1% of use in a market Margince sells to.
+> 1% in DE
+> 1% in AT
+> 1% in CH
+> 1% in VN
+
+# Never: Internet Explorer and the old Edge (both dead), Opera Mini's proxy
+# mode, which runs no app, KaiOS phones, and Firefox on Android.
+not dead
+not ie > 0
+not op_mini all
+not kaios > 0
+not and_ff > 0

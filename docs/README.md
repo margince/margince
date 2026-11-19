@@ -259,6 +259,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [glossary.md](reference/glossary.md): what each technical name in the plain pages means.
 - [record-vocabulary.md](reference/record-vocabulary.md): one name for each kind of record, in the app
   and in the code.
+- [browser-support.md](reference/browser-support.md): which browsers the app supports, and when code may use
+  a web feature.
 - [ui-copy-style.md](reference/ui-copy-style.md): how to write English text in the app.
 - [docs-prose-style.md](reference/docs-prose-style.md): how to write a doc page.
 - [ui-copy-style-de.md](reference/ui-copy-style-de.md): what German text in the app adds.

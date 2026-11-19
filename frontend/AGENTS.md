@@ -151,6 +151,16 @@ When you write or touch a screen test:
   it: a file already over the limit keeps its fixed count in `scripts/fe-file-length-waivers.txt`,
   and that count may only go down.
 
+## Build for the browsers in `.browserslistrc`
+
+`.browserslistrc` is the one list of supported browsers. The build lowers the bundle to it, and
+`pnpm exec browserslist` prints its versions.
+
+Use a web feature freely only when every browser on that list has it. Otherwise put it behind
+`@supports` or a feature test, with a working page for the browsers without it. The TypeScript `lib`
+holds the same line for built-ins. `scripts/browser-targets.test.ts` holds the list and the build
+target; nothing checks the features you use. The rules: [browser-support.md](../docs/reference/browser-support.md).
+
 ## Storybook is documentation, and it goes out of date without a sign
 
 Stories are next to their component as `<name>.stories.tsx`. `frontend/scripts/fe-uat.mjs` finds them
