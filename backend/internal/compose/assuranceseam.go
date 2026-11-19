@@ -272,12 +272,18 @@ func customerProgressSQL(alias, asOf string) string {
 // customerProgressAnyAudienceSQL is customerProgressSQL over every message,
 // those only their participants may read included. Only its date may be used.
 func customerProgressAnyAudienceSQL(alias, asOf string) string {
-	return "(" + relstrength.DirectionClockSQL(alias, asOf) +
+	return "(" + relstrength.DealEvidenceSQL(alias) + " AND " + relstrength.DirectionClockSQL(alias, asOf) +
 		" AND ((" + customerWroteSQL(alias) + " AND " +
 		alias + ".reply_verdict IS DISTINCT FROM '" + activities.ReplyVerdictNegative + "' AND " +
 		occurredday.BegunSQL(alias, asOf) + ") OR (" + alias + ".kind IN ('meeting', 'call') AND " +
 		relstrength.HadContactSQL(alias, asOf) + " AND " +
 		activities.CustomerMeetingSQL(alias) + " AND " + occurredday.MeetingTookPlaceSQL(alias, asOf) + ")))"
+}
+
+// dealMeetingAheadSQL is a meeting still to come that may defer or carry the
+// deal. A personal meeting is neither.
+func dealMeetingAheadSQL(alias, asOf string) string {
+	return "(" + relstrength.MeetingAheadSQL(alias, asOf) + " AND " + relstrength.DealEvidenceSQL(alias) + ")"
 }
 
 // customerRefusalSQL admits a message a contact on the deal wrote that was
@@ -288,7 +294,7 @@ func customerRefusalSQL(alias, asOf string) string {
 
 // customerRefusalAnyAudienceSQL is customerRefusalSQL over every message.
 func customerRefusalAnyAudienceSQL(alias, asOf string) string {
-	return "(" + relstrength.DirectionClockSQL(alias, asOf) + " AND " + customerWroteSQL(alias) + " AND " +
+	return "(" + relstrength.DealEvidenceSQL(alias) + " AND " + relstrength.DirectionClockSQL(alias, asOf) + " AND " + customerWroteSQL(alias) + " AND " +
 		alias + ".reply_verdict = '" + activities.ReplyVerdictNegative + "' AND " + occurredday.BegunSQL(alias, asOf) + ")"
 }
 
@@ -323,7 +329,7 @@ func assuranceSubjectsQuery(now time.Time, identities string, only []ids.UUID, a
 	humanTask := activities.CurrentTaskClauseToLineOnly("a", now, identities, arg) +
 		" AND a.origin <> '" + activities.OriginSystemRemediation + "'"
 	return fmt.Sprintf(assuranceSubjectsSQL, humanTask,
-		customerProgressSQL("a", "$2"), relstrength.MeetingAheadSQL("a", "$2"),
+		customerProgressSQL("a", "$2"), dealMeetingAheadSQL("a", "$2"),
 		viabilityFingerprintSQL("d"), deals.SettlingEvidenceSQL("c", "e"), customerRefusalSQL("a", "$2"), visibleToAllSQL("a"),
 		earlierAnswerSQL("d", "$2", arg), onlyDealSQL(only, arg),
 		// A date an import moved is the source system's history, not a push.
