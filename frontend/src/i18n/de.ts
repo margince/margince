@@ -7464,7 +7464,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "create.emailNamesNoOne":
     "Diese Adresse gehört zu einem Versandsystem, an dem niemand antwortet. Gib die eigene Adresse des Kontakts ein.",
   "create.addressErased":
-    "Dieser Wert wurde nach einem Löschantrag entfernt und kann nicht wieder gespeichert werden.",
+    "Dieser Wert wurde auf Wunsch der betroffenen Person gelöscht und kann nicht wieder gespeichert werden.",
   "create.linkedinMalformed":
     "Das ist kein Link. Füge die Adresse der LinkedIn-Seite ein.",
   "create.linkedinNotLinkedin":
