@@ -119,7 +119,7 @@ Leads disqualified in bulk have no one-step undo: reopen them one at a time. Reo
 Also called: restore a lead, undo a disqualification.
 
 ### How do I edit a lead?
-To edit a lead in Margince, open it from **Leads** and press the value to change in its **Details** panel. **More actions** → **Edit details** opens every field in one place. A value you may change shows a box and an edit mark when the pointer is over it. On a touch screen the mark always shows.
+To edit a lead in Margince, open it from **Leads** and press the value to change in its **Details** panel. There is no Edit button. A value you may change shows a box and an edit mark when the pointer is over it. On a touch screen the mark always shows.
 1. Press a value or the name at the top, change it in the dialog, and press **Save**. Nothing is stored until **Save**; **Cancel** or Esc closes without saving. Pressing the **Email** address starts a message; press the box around it or its mark to change it.
 2. Fields: **Full name**, **Email**, **Phone**, **Title**, **Company**, **Industry**. The owner has its own control; see [How do I change a lead's owner?](#how-do-i-change-a-leads-owner). More fields: **Company routing key**, **Project**, **Origin**, **Origin note**, **Referred by partner**, custom fields. **Added via** shows how the row came into Margince, and Margince writes it.
 

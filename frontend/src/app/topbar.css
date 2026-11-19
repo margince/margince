@@ -13,11 +13,13 @@
  * and pads its content clear of it (app/shell.css) — so the strip is
  * translucent with a blur behind it and shows what is sliding past. */
 /* The search is centred on the content column while the end controls fit
-   their half. They never give way: a long trail ellipses in the room they leave. */
+   their half. Past it they take the lead's room, and a long trail ellipses. */
 .topbar {
   --topbarSearchW: min(420px, 34vw);
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(max-content, 1fr);
+  /* The query container `.topbar-trail` measures its cap against. */
+  container-type: inline-size;
   align-items: center;
   gap: var(--space-3);
   /* The gap between the bar's glyphs, which a thumb's targets split (below). */
@@ -54,6 +56,16 @@
   justify-content: flex-end;
   gap: var(--topbarGlyphGap);
   min-width: 0;
+  /* The end track is as wide as this box's content, so the cap is what keeps
+     it in the bar, beside the search and the sidebar control: the reminder's
+     words give way first. */
+  max-width: calc(
+    100cqw -
+    var(--topbarSearchW) -
+    2 *
+    var(--space-3) -
+    var(--controlHeight)
+  );
 }
 
 /* The sidebar control lives HERE rather than in the sidebar, so the affordance
@@ -194,6 +206,7 @@
   }
   .topbar-trail {
     flex: none;
+    max-width: none;
   }
   /* A bare glyph, exactly like the bell beside it. The field's border and ground
      are what say "type here"; with no room for the label they said nothing and

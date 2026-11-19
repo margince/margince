@@ -53,7 +53,7 @@ func TestSingleThreadedIsTheReportingRuleVerbatim(t *testing.T) {
 	}
 
 	// Two engaged clears it, exactly at the floor.
-	two := DealCoverage{DealID: ids.NewV7(), Stakeholders: []deals.DealStakeholder{
+	two := DealCoverage{DealID: ids.NewV7(), EverTouched: true, Stakeholders: []deals.DealStakeholder{
 		seat(true, roleChampion), seat(true, "user"),
 	}}
 	if kinds(foldRisks(two, testEnglish))[RiskSingleThreadedTheirs] {
