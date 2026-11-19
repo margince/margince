@@ -409,6 +409,9 @@ var provenanceCategories = map[string]struct{}{
 	"message_attachment": {},
 }
 
+// codeCategoryNotAssertable refuses a category that only the system may set.
+const codeCategoryNotAssertable = "category_not_assertable"
+
 // refuseAssertedProvenance stops a human from claiming a file arrived somewhere
 // it did not.
 //
@@ -421,26 +424,32 @@ var provenanceCategories = map[string]struct{}{
 // GATED ON THE ROW, NOT THE VOCABULARY. The enum still admits both values
 // because a CAPTURED file may legitimately be re-pointed between them — a
 // mislabeled row is exactly what a correction is for. What is refused is a
-// caller asserting arrival on a file that never arrived: `source` is the writer
-// that made the row, and `upload` is the one that means a human handed it over.
+// caller asserting arrival on a file that never arrived. `source` names the
+// writer of the row, and `upload` and `link` mean a human handed it over.
 func refuseAssertedProvenance(before crmcontracts.Attachment, in DocumentMetadata) error {
 	if in.Category == nil {
 		return nil
 	}
 	if before.Category != nil && *before.Category == categoryLink {
 		return &values.ParseError{
-			Field: fieldCategory, Code: "category_not_assertable",
+			Field: fieldCategory, Code: codeCategoryNotAssertable,
 			Message: "a document link stays a link; archive it if it should not be listed",
 		}
 	}
-	if before.Source != attachmentSource {
+	if *in.Category == categoryLink {
+		return &values.ParseError{
+			Field: fieldCategory, Code: codeCategoryNotAssertable,
+			Message: "only a link a mail carried is filed as sent; choose contract, offer, legal or other",
+		}
+	}
+	if before.Source != attachmentSource && before.Source != linkSource {
 		return nil
 	}
 	if _, provenance := provenanceCategories[*in.Category]; !provenance {
 		return nil
 	}
 	return &values.ParseError{
-		Field: fieldCategory, Code: "category_not_assertable",
+		Field: fieldCategory, Code: codeCategoryNotAssertable,
 		Message: "that category records how a file arrived and is derived from the message " +
 			"that carried it; an uploaded file has no arrival to claim — file it by what it is",
 	}
@@ -456,7 +465,7 @@ func documentMetadataPatch(before crmcontracts.Attachment, in DocumentMetadata) 
 		p.Set(fieldCategory, before.Category, *in.Category)
 	}
 	if in.Title != nil || in.ClearTitle {
-		p.Set("title", before.Title, in.Title)
+		p.Set(fieldTitle, before.Title, in.Title)
 	}
 	if in.DocState != nil {
 		p.Set("doc_state", before.DocState, *in.DocState)

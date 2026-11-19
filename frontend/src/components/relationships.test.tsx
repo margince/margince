@@ -364,6 +364,17 @@ describe("adding a relationship", () => {
     const posted = await seatMaiAsChampion("Người ủng hộ nội bộ");
     expect(posted[0]).toMatchObject({ role: "Người ủng hộ nội bộ" });
   });
+
+  it("names the search by the kind it picks and marks it required", async () => {
+    stubWithSession({}, { relationship: ["read", "create"] });
+    const user = userEvent.setup();
+    renderWithQueryClient(<AddRelationshipAction scope={dealScope} />);
+    await user.click(screen.getByTestId("add-relationship"));
+    const search = within(screen.getByRole("dialog")).getByRole("searchbox", {
+      name: /^Contact/,
+    });
+    expect(search.getAttribute("aria-required")).toBe("true");
+  });
 });
 
 it("uses the shared current-role rule on the company list", () => {

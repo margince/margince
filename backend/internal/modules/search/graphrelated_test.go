@@ -4,9 +4,12 @@
 package search
 
 import (
+	"context"
+	"errors"
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -50,6 +53,17 @@ func TestASectionIsNamedForItsRecordTypesPlural(t *testing.T) {
 	} {
 		if got := pluralRelationName(entity); got != want {
 			t.Errorf("pluralRelationName(%q) = %q, want %q", entity, got, want)
+		}
+	}
+}
+
+// Links do not hang off a tag or an activity, so neither anchors a record
+// graph. The walk answers not found before it reads a row.
+func TestATagOrAnActivityAnchorsNoRecordGraph(t *testing.T) {
+	for _, anchor := range []string{"tag", "activity"} {
+		_, err := (&Store{}).assembleRecordWithin(context.Background(), nil, anchor, ids.NewV7(), 10, projectScope{})
+		if !errors.Is(err, apperrors.ErrNotFound) {
+			t.Errorf("a %s anchor answered %v, want ErrNotFound", anchor, err)
 		}
 	}
 }

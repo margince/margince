@@ -6,7 +6,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import userEvent, { type UserEvent } from "@testing-library/user-event";
+import type { UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { onTestFinished, vi } from "vitest";
 import type { components } from "../../api/schema";
@@ -20,6 +20,7 @@ import {
   isPreviewDoor,
   previewedAddresses,
 } from "../../testing/sendpermission.testkit";
+import { ComposeWindow } from "./composewindow";
 
 // The composer's "why are you writing?" dial is found by name, not by role
 // alone. To, Cc and Bcc are comboboxes too, so a bare role query matches four
@@ -66,6 +67,21 @@ export function render(
     ),
     queryClient: client,
   };
+}
+
+// A reply to act-1 on contact p-1, the composer the draft and refusal suites
+// open.
+export function renderComposer(onClose = vi.fn()) {
+  render(
+    <ComposeWindow
+      activityId="act-1"
+      entityType="contact"
+      entityId="p-1"
+      open
+      onClose={onClose}
+    />,
+  );
+  return onClose;
 }
 
 // Two purposes, because the send rules differ by purpose: transactional is the
@@ -220,11 +236,9 @@ export const WHY_LABEL = {
 } as const;
 
 // The reason dropdown is found by its name, so a pick needs only the label.
-// `pickOption` takes a userEvent session, which the bare direct API is not.
-// So it gets a fresh one, as every bare `userEvent.*` call here does inside.
-export function pickWhy(label: string) {
+export function pickWhy(user: UserEvent, label: string) {
   return pickOption(
-    userEvent.setup(),
+    user,
     screen.getByRole("combobox", { name: WHY_ASK }),
     label,
   );
@@ -236,12 +250,12 @@ export function pickWhy(label: string) {
 // message. No anchor read is stubbed, so the composer has nothing to derive
 // from and asks. A suite whose subject is a reply stubs the anchor instead, and
 // the question never appears. Asking there is the defect fillReplyForm catches.
-export async function fillSendableForm() {
-  await userEvent.type(screen.getByLabelText("To"), "a@x.com");
-  await userEvent.tab();
-  await userEvent.type(screen.getByLabelText("Subject"), "Hi there");
+export async function fillSendableForm(user: UserEvent) {
+  await user.type(screen.getByLabelText("To"), "a@x.com");
+  await user.tab();
+  await user.type(screen.getByLabelText("Subject"), "Hi there");
   writeMessage("Body", "Body content");
-  await pickWhy(WHY_LABEL.requestedFollowup);
+  await pickWhy(user, WHY_LABEL.requestedFollowup);
   await settleSendCheck();
   await waitFor(() => {
     if (screen.queryByText("Checking whether this message can be sent…"))
@@ -251,12 +265,12 @@ export async function fillSendableForm() {
 
 // The threads the composer offers sit in a menu behind the bar above the
 // fields. Finds one by name, opening the menu first when it is shut.
-export async function findThreadChoice(name: string | RegExp) {
+export async function findThreadChoice(user: UserEvent, name: string | RegExp) {
   const shown = screen.queryByRole("button", { name });
   if (shown) {
     return shown;
   }
-  await userEvent.click(
+  await user.click(
     await screen.findByRole("button", { name: /(Continue a thread|Change)$/ }),
   );
   return screen.findByRole("button", { name });
@@ -284,9 +298,11 @@ export async function settleSendCheck() {
   await act(() => vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS));
 }
 
-// Every suite that reaches settleSendCheck calls this in a beforeEach. The
-// clock still moves with real time, 1 ms per 1 ms. So user-event's zero-delay
-// pauses, and the timers no helper steps, fire as they would without it.
+// Every suite that reaches settleSendCheck calls this in a beforeEach, and
+// drives its session with `advanceTimers: vi.advanceTimersByTime`. The clock
+// still moves 1 ms per real 1 ms. Testing Library drains each wait on a
+// setTimeout(0) it steps only through a `jest` global. Nothing else steps the
+// composer's autosave or sign-off timers.
 export function installComposeClock() {
   vi.useFakeTimers({
     shouldAdvanceTime: true,
@@ -335,10 +351,7 @@ export async function waitForSendReady() {
 }
 
 // Presses Send as a reader does, who sees the button free before pressing it.
-export async function pressSend(
-  user: UserEvent = userEvent.setup(),
-  name = "Send",
-) {
+export async function pressSend(user: UserEvent, name = "Send") {
   await user.click(await footSendButton(name));
 }
 

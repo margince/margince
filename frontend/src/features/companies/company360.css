@@ -37,7 +37,12 @@
   /* The mock's rhythm between the readings, the 360 and the columns: one
      rung wider than inside a column, so the three bands read as bands. */
   gap: var(--space-6);
-  margin-bottom: var(--space-6);
+}
+/* A phone shows one band at a time, so the bands keep the sheet's card gap. */
+@media (max-width: 700px) {
+  .co-overview-stack {
+    gap: var(--gapCards);
+  }
 }
 
 /* The Overview's cards under How it stands: as many columns of at least

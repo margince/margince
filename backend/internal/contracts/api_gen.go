@@ -874,6 +874,60 @@ func (e ActivityVoiceContactRole) Valid() bool {
 	}
 }
 
+// Defines values for AddAttachmentLinkRequestCategory.
+const (
+	AddAttachmentLinkRequestCategoryContract AddAttachmentLinkRequestCategory = "contract"
+	AddAttachmentLinkRequestCategoryLegal    AddAttachmentLinkRequestCategory = "legal"
+	AddAttachmentLinkRequestCategoryOffer    AddAttachmentLinkRequestCategory = "offer"
+	AddAttachmentLinkRequestCategoryOther    AddAttachmentLinkRequestCategory = "other"
+)
+
+// Valid indicates whether the value is a known member of the AddAttachmentLinkRequestCategory enum.
+func (e AddAttachmentLinkRequestCategory) Valid() bool {
+	switch e {
+	case AddAttachmentLinkRequestCategoryContract:
+		return true
+	case AddAttachmentLinkRequestCategoryLegal:
+		return true
+	case AddAttachmentLinkRequestCategoryOffer:
+		return true
+	case AddAttachmentLinkRequestCategoryOther:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AddAttachmentLinkRequestEntityType.
+const (
+	AddAttachmentLinkRequestEntityTypeActivity AddAttachmentLinkRequestEntityType = "activity"
+	AddAttachmentLinkRequestEntityTypeCompany  AddAttachmentLinkRequestEntityType = "company"
+	AddAttachmentLinkRequestEntityTypeContact  AddAttachmentLinkRequestEntityType = "contact"
+	AddAttachmentLinkRequestEntityTypeDeal     AddAttachmentLinkRequestEntityType = "deal"
+	AddAttachmentLinkRequestEntityTypeLead     AddAttachmentLinkRequestEntityType = "lead"
+	AddAttachmentLinkRequestEntityTypeProject  AddAttachmentLinkRequestEntityType = "project"
+)
+
+// Valid indicates whether the value is a known member of the AddAttachmentLinkRequestEntityType enum.
+func (e AddAttachmentLinkRequestEntityType) Valid() bool {
+	switch e {
+	case AddAttachmentLinkRequestEntityTypeActivity:
+		return true
+	case AddAttachmentLinkRequestEntityTypeCompany:
+		return true
+	case AddAttachmentLinkRequestEntityTypeContact:
+		return true
+	case AddAttachmentLinkRequestEntityTypeDeal:
+		return true
+	case AddAttachmentLinkRequestEntityTypeLead:
+		return true
+	case AddAttachmentLinkRequestEntityTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AddConsumerMailDomainRequestKind.
 const (
 	AddConsumerMailDomainRequestKindExtra AddConsumerMailDomainRequestKind = "extra"
@@ -33354,6 +33408,29 @@ type ActivityVoice struct {
 // ActivityVoiceContactRole Present only on a row read for one contact (the contact 360). The part that contact had: `author` when they wrote it, `addressee` when it was written To them, `cc` when they were copied, `organizer` or `attendee` on a meeting, and `other` when no visible participant row names them (the row is only filed under them). Absent too on a row that records no participant at all, where nothing says which part they had.
 type ActivityVoiceContactRole string
 
+// AddAttachmentLinkRequest defines model for AddAttachmentLinkRequest.
+type AddAttachmentLinkRequest struct {
+	// Category What the document is. Absent leaves it uncategorised, as an upload is.
+	Category *AddAttachmentLinkRequestCategory `json:"category,omitempty"`
+
+	// ContractId The agreement this document is about, as on the upload.
+	ContractId *openapi_types.UUID                `json:"contract_id,omitempty"`
+	EntityId   openapi_types.UUID                 `json:"entity_id"`
+	EntityType AddAttachmentLinkRequestEntityType `json:"entity_type"`
+
+	// Title What a reader looks for. Absent or blank lists the link under its host.
+	Title *string `json:"title,omitempty"`
+
+	// Url An http or https address, without user info.
+	Url string `json:"url"`
+}
+
+// AddAttachmentLinkRequestCategory What the document is. Absent leaves it uncategorised, as an upload is.
+type AddAttachmentLinkRequestCategory string
+
+// AddAttachmentLinkRequestEntityType defines model for AddAttachmentLinkRequest.EntityType.
+type AddAttachmentLinkRequestEntityType string
+
 // AddConsumerMailDomainRequest defines model for AddConsumerMailDomainRequest.
 type AddConsumerMailDomainRequest struct {
 	// Confirm Set after the user answered the 409 `domain_needs_confirmation` question with yes. Without it the same request is refused again.
@@ -36474,7 +36551,7 @@ type AtRiskRelationships struct {
 type Attachment struct {
 	ByteSize *int64 `json:"byte_size,omitempty"`
 
-	// BytesWithheld True for a file a private message carried that was recorded by name, size and type only: no bytes were kept, so there is nothing to download (404) or read. Also true for a `link` row, which is a pointer and has no bytes.
+	// BytesWithheld True for a file a private message carried that was recorded by name, size and type only: no bytes were kept, so there is nothing to download (404) or read. Also true for any row with a `url`, which is a pointer and has no bytes.
 	BytesWithheld *bool `json:"bytes_withheld,omitempty"`
 
 	// CapturedBy Server-stamped from the authenticated principal; never client-supplied.
@@ -36485,7 +36562,9 @@ type Attachment struct {
 	//
 	// `link` is a document link a mail carried (a Google Docs, Sheets, Slides, Forms or
 	// Drive share). It has no bytes: `url` holds the address, `bytes_withheld` is true,
-	// and the category cannot be set or changed through a metadata patch.
+	// and the category cannot be set or changed through a metadata patch. A link a user
+	// added (`POST /attachments/links`) holds an address the same way under the category
+	// they chose, never `link`; its `source` is `link`.
 	//
 	// `email_attachment` and `message_attachment` record PROVENANCE rather than
 	// content: capture derives them from the transport the file arrived on, so a
@@ -36528,7 +36607,7 @@ type Attachment struct {
 	// Title A display name distinct from the filename, showing what a reader looks for rather than what arrived.
 	Title *string `json:"title,omitempty"`
 
-	// Url The address of a `link` row, and null for every other category. It is an http or https address on a known document host. The reader renders it as an outbound link to open in a new tab, never as a download.
+	// Url The address of a document that lives elsewhere: a `link` row a mail carried, or a link a user added. Null for a stored file. It is an http or https address. The reader renders it as an outbound link to open in a new tab, never as a download.
 	Url *string `json:"url,omitempty"`
 }
 
@@ -36537,7 +36616,9 @@ type Attachment struct {
 //
 // `link` is a document link a mail carried (a Google Docs, Sheets, Slides, Forms or
 // Drive share). It has no bytes: `url` holds the address, `bytes_withheld` is true,
-// and the category cannot be set or changed through a metadata patch.
+// and the category cannot be set or changed through a metadata patch. A link a user
+// added (`POST /attachments/links`) holds an address the same way under the category
+// they chose, never `link`; its `source` is `link`.
 //
 // `email_attachment` and `message_attachment` record PROVENANCE rather than
 // content: capture derives them from the transport the file arrived on, so a
@@ -36605,6 +36686,24 @@ type AttachmentExtractionStatus string
 type AttachmentExtractionAcceptResponse struct {
 	Accepted []AcceptedExtractionField `json:"accepted"`
 	DealId   openapi_types.UUID        `json:"deal_id"`
+}
+
+// AttachmentLinkPreview defines model for AttachmentLinkPreview.
+type AttachmentLinkPreview struct {
+	// Host The lowercased host the address names.
+	Host string `json:"host"`
+
+	// Read False when the page was not fetched or did not answer.
+	Read bool `json:"read"`
+
+	// SiteName The page's Open Graph site name. Absent when it gave none.
+	SiteName *string `json:"site_name,omitempty"`
+
+	// Title The page's Open Graph title, else its <title>. Absent when it gave none.
+	Title *string `json:"title,omitempty"`
+
+	// Url The address as it will be stored.
+	Url string `json:"url"`
 }
 
 // AttachmentListResponse defines model for AttachmentListResponse.
@@ -41553,9 +41652,10 @@ type CompanyAnswer struct {
 	GeneratedAt time.Time          `json:"generated_at"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 
 	// Question The prepared questions. Fixed, because each one names the records its answer is
@@ -41593,9 +41693,10 @@ type CompanyBrief struct {
 	GeneratedAt time.Time          `json:"generated_at"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 
 	// Scope What a read narrowed to one project reports about the narrowing, so a surface can
@@ -42039,9 +42140,10 @@ type CompanyDossier struct {
 	GeneratedAt time.Time          `json:"generated_at"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 
 	// NeedsRefresh The newest contributing source was retrieved more than thirty days ago
@@ -42111,9 +42213,10 @@ type CompanyEmailDraft struct {
 	DraftRef *string `json:"draft_ref,omitempty"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 
 	// Language The language this draft is written in: the `language` the request named, else the one the server resolved from the record's correspondence. The model draft and the deterministic floor report it alike. Absent on an introduction request or note, which reads its language on its own and says so through `language_undetermined`.
@@ -42553,9 +42656,10 @@ type CompanyGrowthFit struct {
 	GeneratedAt      time.Time        `json:"generated_at"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 
 	// NegativeFactors What argues against it.
@@ -44424,9 +44528,10 @@ type ContactBrief struct {
 	GeneratedAt time.Time          `json:"generated_at"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 
 	// Sentences Two to five sentences: who this contact is in the current commercial context, what they have explicitly cared about, what recently changed, and the unresolved decision or risk. A sentence whose citations cannot be resolved is dropped whole rather than shown uncited.
@@ -45980,9 +46085,10 @@ type ConversationMemoryEntry struct {
 	FirstActivityId *openapi_types.UUID `json:"first_activity_id,omitempty"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy *WrittenBy `json:"generated_by,omitempty"`
 
 	// Key The thread key, or the activity id for a meeting or a standalone message that has none.
@@ -48452,9 +48558,10 @@ type DealRevisionRequest struct {
 // DealRoleProposalResult defines model for DealRoleProposalResult.
 type DealRoleProposalResult struct {
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 
 	// Skipped How many of the model's proposals the gate refused — a wrong quote, a contact
@@ -48565,9 +48672,10 @@ type DealRoomBrief struct {
 	GeneratedAt time.Time `json:"generated_at"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy               `json:"generated_by"`
 	RoomId      openapi_types.UUID      `json:"room_id"`
 	Sentences   []DealRoomBriefSentence `json:"sentences"`
@@ -48907,9 +49015,10 @@ type DealStatusCard struct {
 	GeneratedAt time.Time              `json:"generated_at"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 
 	// MailCoverage The calling reader's mail capture for the requested interval. This does
@@ -52533,6 +52642,12 @@ type ImportFormatFile struct {
 	// File The file name a ZIP entry needs for this object to be detected.
 	File string `json:"file"`
 
+	// KeyColumns The columns that tell this file's rows apart. A file needs at
+	// least one of them mapped, or the test run does not start, unless
+	// the request names its own `source_key` column. Absent from a
+	// server older than this field.
+	KeyColumns *[]string `json:"key_columns,omitempty"`
+
 	// Object What the file's rows are, and therefore what the run creates.
 	//
 	// `company` creates companies.
@@ -53745,6 +53860,12 @@ type InstallationSettings struct {
 	// shows each as read-only. Empty when nothing is locked. A write ignores it.
 	Locks *SettingLocks `json:"locks,omitempty"`
 
+	// MaxKnowledgeDocumentBytes The largest document `uploadCorpusDocument` accepts, in bytes. Set by whoever operates
+	// the installation, on the same terms as `max_upload_bytes`, and lower than it by
+	// default because a corpus document becomes passages every ask scans. Absent from a
+	// server older than this field; a client then leaves the refusal to the server.
+	MaxKnowledgeDocumentBytes *int64 `json:"max_knowledge_document_bytes,omitempty"`
+
 	// MaxUploadBytes The largest upload request this installation accepts, in bytes — set by whoever
 	// operates it, not compiled into the build (OPS-CFG-12, DOC-PARAM-11). Read-only:
 	// it is a deployment fact, so PATCH does not carry it.
@@ -54484,9 +54605,10 @@ type KnowledgeAnswer struct {
 	Coverage KnowledgeCoverage     `json:"coverage"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 
 	// Outcome The five are not interchangeable. not_covered is a statement about the QUESTION; not_ready is a statement about the corpus; retrieval_unavailable says no embed lane is bound, so nothing was searched at all; unreviewed says the corpus WAS searched and the nearest passages are attached, but no writer read them, so nothing has judged whether they answer the question — the claims are what the search found, not an answer. Collapsing them is the failure this endpoint exists to avoid.
@@ -57154,9 +57276,10 @@ type MeetingBrief struct {
 	GeneratedAt time.Time `json:"generated_at"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 
 	// Omitted What this reader's own grants kept OUT of the brief, named so a silence is never mistaken for an absence. A brief that cannot see the Deal Room reads exactly like a brief about a deal with no room, and a rep would walk in believing the buyer had done nothing. Empty when the reader could see everything the brief looks at.
@@ -57387,9 +57510,10 @@ type MeetingPlan struct {
 	CompanyArc []MeetingPlanArcMoment `json:"company_arc"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 
 	// LikelyAsks What the other side is likely to ask, each an assessment with the record behind it.
@@ -62706,9 +62830,10 @@ type ReportSetupProposal struct {
 	Clarifications []string `json:"clarifications"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 	ModelUsed   *string   `json:"model_used,omitempty"`
 
@@ -64321,9 +64446,10 @@ type SalesAssessment struct {
 	GeneratedAt   time.Time `json:"generated_at"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy  WrittenBy                `json:"generated_by"`
 	ModelUsed    *string                  `json:"model_used,omitempty"`
 	NextDecision *SalesAssessmentDecision `json:"next_decision,omitempty"`
@@ -64493,9 +64619,10 @@ type SalesGoalPlanState string
 // SalesGoalProposal defines model for SalesGoalProposal.
 type SalesGoalProposal struct {
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 	ModelUsed   *string   `json:"model_used,omitempty"`
 
@@ -74125,9 +74252,10 @@ type WorkspaceQueryResult struct {
 }
 
 // WrittenBy Which writer produced a piece of generated prose. `model` — the configured model
-// lane. `deterministic` — the structured fallback, used when no lane is configured
-// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-// reader deciding how much to trust a sentence needs to know which wrote it.
+// lane. `deterministic` — the structured fallback, used when no lane is configured,
+// the workspace's AI budget is exhausted, the model call fails, or the checks the
+// surface runs refuse the model's answer. Never silently interchangeable: a reader
+// deciding how much to trust a sentence needs to know which wrote it.
 type WrittenBy string
 
 // AiWritten defines model for AiWritten.
@@ -75640,6 +75768,11 @@ type UploadAttachmentMultipartBody struct {
 
 // UploadAttachmentMultipartBodyEntityType defines parameters for UploadAttachment.
 type UploadAttachmentMultipartBodyEntityType string
+
+// PreviewAttachmentLinkJSONBody defines parameters for PreviewAttachmentLink.
+type PreviewAttachmentLinkJSONBody struct {
+	Url string `json:"url"`
+}
 
 // GetAttachmentExtractionParams defines parameters for GetAttachmentExtraction.
 type GetAttachmentExtractionParams struct {
@@ -83435,6 +83568,12 @@ type UpdateRecordAssignmentJSONRequestBody = UpdateRecordAssignmentRequest
 
 // UploadAttachmentMultipartRequestBody defines body for UploadAttachment for multipart/form-data ContentType.
 type UploadAttachmentMultipartRequestBody UploadAttachmentMultipartBody
+
+// AddAttachmentLinkJSONRequestBody defines body for AddAttachmentLink for application/json ContentType.
+type AddAttachmentLinkJSONRequestBody = AddAttachmentLinkRequest
+
+// PreviewAttachmentLinkJSONRequestBody defines body for PreviewAttachmentLink for application/json ContentType.
+type PreviewAttachmentLinkJSONRequestBody PreviewAttachmentLinkJSONBody
 
 // ReadAttachmentForFieldsJSONRequestBody defines body for ReadAttachmentForFields for application/json ContentType.
 type ReadAttachmentForFieldsJSONRequestBody = AttachmentReadRequest
@@ -98636,6 +98775,12 @@ type ServerInterface interface {
 	// Upload a file and attach it to an entity.
 	// (POST /attachments)
 	UploadAttachment(w http.ResponseWriter, r *http.Request)
+	// Add a web link to a record's documents.
+	// (POST /attachments/links)
+	AddAttachmentLink(w http.ResponseWriter, r *http.Request)
+	// Read the title a web page gives itself, before the link is added.
+	// (POST /attachments/links/preview)
+	PreviewAttachmentLink(w http.ResponseWriter, r *http.Request)
 	// Archive an attachment (soft delete).
 	// (DELETE /attachments/{id})
 	DeleteAttachment(w http.ResponseWriter, r *http.Request, id Id)
@@ -102515,6 +102660,18 @@ func (_ Unimplemented) ListAttachments(w http.ResponseWriter, r *http.Request, p
 // Upload a file and attach it to an entity.
 // (POST /attachments)
 func (_ Unimplemented) UploadAttachment(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Add a web link to a record's documents.
+// (POST /attachments/links)
+func (_ Unimplemented) AddAttachmentLink(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Read the title a web page gives itself, before the link is added.
+// (POST /attachments/links/preview)
+func (_ Unimplemented) PreviewAttachmentLink(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -117033,6 +117190,48 @@ func (siw *ServerInterfaceWrapper) UploadAttachment(w http.ResponseWriter, r *ht
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UploadAttachment(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AddAttachmentLink operation middleware
+func (siw *ServerInterfaceWrapper) AddAttachmentLink(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AddAttachmentLink(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PreviewAttachmentLink operation middleware
+func (siw *ServerInterfaceWrapper) PreviewAttachmentLink(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewAttachmentLink(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -157721,6 +157920,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/attachments", wrapper.UploadAttachment)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/attachments/links", wrapper.AddAttachmentLink)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/attachments/links/preview", wrapper.PreviewAttachmentLink)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/attachments/{id}", wrapper.DeleteAttachment)

@@ -184,9 +184,9 @@ test.describe("company record — the glance's page shape", () => {
   });
 
   // The details stand in the left card under the account's head, always open:
-  // flat groups with a small label each, no titled cards. The work stands to
+  // group panes with a small label each, no titled cards. The work stands to
   // their right. The German copy inside is not pinned.
-  test("the details stand beside the work as flat groups, on the left", async ({
+  test("the details stand beside the work as group panes, on the left", async ({
     page,
   }) => {
     await openCompany(page, POPULATED_COMPANY as string);

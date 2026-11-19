@@ -4,10 +4,16 @@
 package compose
 
 import (
+	"context"
+	"errors"
 	"go/ast"
 	"go/parser"
 	"go/token"
 	"testing"
+	"time"
+
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // agent_run.degrade_reason is served to the human the run acted for
@@ -61,5 +67,14 @@ func TestEveryRunCloseHereNamesAReasonFromTheVocabulary(t *testing.T) {
 	if found == 0 {
 		t.Fatalf("%s closes no run through MarkFailed or FailStuckRuns — this gate is reading the "+
 			"wrong file, which is worse than not having it", file)
+	}
+}
+
+// A scheduled pass runs on the installation's own authority. Handed a member, it
+// refuses rather than running as the system in their name.
+func TestAScheduledPassHandedAMemberIsRefused(t *testing.T) {
+	member := principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalHuman, ID: "human:test"})
+	if err := (&RunnerService{}).Tick(member, time.Time{}); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("a pass handed a member = %v, want ErrPermissionDenied", err)
 	}
 }

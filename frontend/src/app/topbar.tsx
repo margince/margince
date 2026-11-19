@@ -1,5 +1,12 @@
 import { ArrowLeft, PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
-import { type RefObject, Suspense, useEffect, useId, useRef } from "react";
+import {
+  type RefObject,
+  Suspense,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+} from "react";
 import { AppLink } from "../design-system/applink";
 import { Kbd } from "../design-system/atoms";
 import { Breadcrumb, type Crumb } from "../design-system/breadcrumb";
@@ -201,6 +208,32 @@ function TopBarHome() {
   );
 }
 
+/**
+ * Hands the end controls' drawn width to the bar as `--topbarTrailW`. The lead's
+ * cap in topbar.css subtracts it, and CSS cannot read a sibling's width.
+ */
+function useTrailWidth(
+  bar: RefObject<HTMLElement | null>,
+  trail: RefObject<HTMLDivElement | null>,
+) {
+  useLayoutEffect(() => {
+    const barNode = bar.current;
+    const trailNode = trail.current;
+    if (!barNode || !trailNode) return;
+    const measure = () =>
+      barNode.style.setProperty(
+        "--topbarTrailW",
+        `${trailNode.getBoundingClientRect().width}px`,
+      );
+    measure();
+    // A DOM with no observer, as in a unit test, keeps the first measure.
+    if (typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(measure);
+    observer.observe(trailNode);
+    return () => observer.disconnect();
+  }, [bar, trail]);
+}
+
 export function TopBar({
   route,
   section,
@@ -225,8 +258,11 @@ export function TopBar({
   // menu carries the setup reminder at this width.
   const phone = usePhoneViewport();
   const sideReadsMayStart = useFirstScreenSettled();
+  const barRef = useRef<HTMLElement>(null);
+  const trailRef = useRef<HTMLDivElement>(null);
+  useTrailWidth(barRef, trailRef);
   return (
-    <header className="topbar">
+    <header className="topbar" ref={barRef}>
       <div className="topbar-lead">
         {onToggle && (
           <button
@@ -267,7 +303,7 @@ export function TopBar({
         )}
       </div>
       <TopBarSearch onOpenSearch={onOpenSearch} buttonRef={searchRef} />
-      <div className="topbar-trail">
+      <div className="topbar-trail" ref={trailRef}>
         {/* Before the account chip, which is the strip's last word: the bell is
             something waiting FOR the reader, and the chip is who the reader is.
             Reading right to left, identity is the anchor and everything that

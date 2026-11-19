@@ -3081,7 +3081,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "board.ratesOn": "Kurse vom {date}",
   "board.unpriced_one": "{count} ohne Preis",
   "board.unpriced_other": "{count} ohne Preis",
-  "board.totalsTip": "{total} offen, {weighted} gewichtet mit {probability}.",
+  "board.totalsTip":
+    "{total} offen, {weighted} gewichtet mit der Abschlusschance jedes Deals.",
   "board.unpricedTip_one":
     "{count} Deal hat keinen Preis und zählt in keiner der beiden Summen.",
   "board.unpricedTip_other":
@@ -3097,6 +3098,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.singleThreaded": "Nur ein Kontakt",
   "deal.staged": "Vorgemerkt",
   "deal.closes": "Abschluss {date}",
+  "deal.closed": "Abgeschlossen {date}",
   "deal.undated": "kein Abschlussdatum",
   "deal.lastMail": "Letzte E-Mail",
   "deal.mail.title": "Bisherige E-Mails",
@@ -3162,6 +3164,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "record.save": "Speichern",
   "record.saveDone": "„{name}“ gespeichert",
   "record.archiveDone": "„{name}“ archiviert",
+  "record.restoreDone": "„{name}“ wiederhergestellt",
   "record.archive": "Archivieren",
   "record.disqualify": "Disqualifizieren",
   "record.archiveConfirm":
@@ -5609,6 +5612,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.facts.addIncomplete":
     "Wähle den Typ des Fakts aus und gib einen Wert ein.",
   "co.facts.remove": "{value} entfernen",
+  "tokenInput.remove": "{value} entfernen",
   "co.facts.removeTitle": "Diesen Fakt entfernen?",
   "co.facts.removeConfirm": "Entfernen",
   "co.facts.removeAsk":
@@ -6226,6 +6230,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deals.confirm": "Bestätigen",
   "deals.cancel": "Abbrechen",
   "deals.advanced": "Nach {stage} verschoben",
+  "deals.advancedProbability":
+    "Nach {stage} verschoben · Abschlusschance jetzt {percent}",
+  "deals.closedWon": "Als gewonnen abgeschlossen",
+  "deals.closedWonProbability":
+    "Als gewonnen abgeschlossen · Abschlusschance {percent}",
+  "deals.closedLost": "Als verloren abgeschlossen",
+  "deals.closedLostProbability":
+    "Als verloren abgeschlossen · Abschlusschance {percent}",
+  "deals.reopened": "In {stage} wieder geöffnet",
+  "deals.reopenedProbability":
+    "In {stage} wieder geöffnet · Abschlusschance {percent}",
 
   "deal.ownerKeep": "Aktuelle Verantwortung behalten",
   "deal.ownerMe": "Mir zuweisen",
@@ -6303,8 +6318,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Leere das Feld, um wieder der Phase zu folgen.",
   "deal.winProbability.reason.stageNamed": "die Phase {name}",
   "deal.winProbability.reason.stageUnnamed": "die Phase des Deals",
-  "deal.winProbability.setByStage":
-    "Abschlusschance durch die Phase {stage} auf {percent} gesetzt",
   "deal.winProbability.band.90_plus": "90 % oder mehr",
   "deal.winProbability.band.60_89": "60 bis 89 %",
   "deal.winProbability.band.30_59": "30 bis 59 %",
@@ -6612,7 +6625,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.acquisitionUnset": "Nicht festgelegt",
   "deal.acquisitionRetired": "(stillgelegt)",
   "deal.waitUntil": "Warten bis",
-  "deal.fxBase": "Basis {value} · Kurs {rate} vom {date}",
+  "deal.fxBase": "{value} · Kurs {rate} vom {date}",
   "deal.archiveRefused":
     "Nur der Verantwortliche des Deals oder eine Führungskraft kann diesen Deal archivieren.",
   "contact.archiveRefused":
@@ -6620,6 +6633,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "company.archiveRefused":
     "Nur der Verantwortliche des Unternehmens oder eine Führungskraft kann dieses Unternehmen archivieren.",
   "deal.archive": "Deal archivieren",
+  "deal.restore": "Deal wiederherstellen",
   "deal.archiveConfirm":
     "Das Archivieren entfernt diesen Deal aus den offenen Deals. Über den Verlauf kannst du den Deal zurückholen.",
   "deal.archivedReadOnly":
@@ -6703,6 +6717,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deals.bulkStage": "In Phase verschieben",
   "deals.bulkStagePick": "Phase wählen",
   "deals.bulkMove": "Verschieben",
+  "deals.bulkMoved_one": "{count} Deal nach {stage} verschoben.",
+  "deals.bulkMoved_other": "{count} Deals nach {stage} verschoben.",
+  "deals.bulkAlreadyThere_one": "{count} war schon in {stage}.",
+  "deals.bulkAlreadyThere_other": "{count} waren schon in {stage}.",
+  "deals.bulkNothingToMove_one": "Der ausgewählte Deal ist schon in {stage}.",
+  "deals.bulkNothingToMove_other":
+    "Alle {count} ausgewählten Deals sind schon in {stage}.",
   "deals.bulkFailed": "{count} nicht übernommen:",
   "deals.bulkFailedRow": "konnte nicht gespeichert werden",
   "bulk.selected_one": "{count} ausgewählt",
@@ -7026,8 +7047,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.feed.changedBadge_one": "1 geändert",
   "brief.feed.changedBadge_other": "{count} geändert",
   "brief.feed.loading": "Morgenbericht wird geladen…",
-  "brief.feed.clear":
-    "Keine unmittelbaren Prioritäten. Die vollständige Worklist ist verfügbar.",
+  "brief.feed.caughtUp": "Alles im Blick",
+  "brief.feed.caughtUpDetail":
+    "Als Margince um {time} nachsah, wartete niemand auf dich.",
   "teamweekly.pickTeam": "Team auswählen",
 
   "plan.loading": "Plan wird geladen…",
@@ -7647,6 +7669,34 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "docs.add.partialTitle": "Hochgeladen, aber nicht eingeordnet",
   "docs.add.partial":
     "Die Datei ist gespeichert und steht unter „Sonstiges“ in der Liste unten, da Kategorie und Titel nicht gespeichert werden konnten.",
+  "docs.add.source": "Was hinzufügen",
+  "docs.add.sourceFile": "Datei",
+  "docs.add.sourceLink": "Link",
+  "docs.add.url": "Adresse",
+  "docs.add.urlPlaceholder": "https://",
+  "docs.add.urlHint":
+    "Füge den Link zu einer Seite oder einer geteilten Datei ein, etwa einem Google-Dokument.",
+  "docs.add.linkReading": "Seite wird gelesen…",
+  "docs.add.linkTitled":
+    "Titel von der Seite übernommen. Du kannst ihn ändern.",
+  "docs.add.linkGoogle":
+    "Margince liest keine Google-Dateien, gib also einen Titel ein.",
+  "docs.add.linkUnread":
+    "Die Seite konnte nicht gelesen werden. Gib einen Titel ein oder lass das Feld leer, dann steht dort die Website.",
+  "docs.add.linkNameHint":
+    "Optional. Ohne Titel steht dort die Adresse der Website.",
+  "docs.add.submitLink": "Link hinzufügen",
+  "docs.add.adding": "Wird hinzugefügt…",
+  "docs.add.errNoUrl": "Füge eine Adresse ein, die mit https:// beginnt.",
+  "docs.add.linkFailedTitle": "Link nicht hinzugefügt",
+  "docs.add.linkFailed":
+    "Es wurde nichts hinzugefügt. Prüfe die Adresse und versuche es erneut.",
+  "docs.kind.docs": "Docs",
+  "docs.kind.sheets": "Sheets",
+  "docs.kind.slides": "Slides",
+  "docs.kind.forms": "Forms",
+  "docs.kind.drive": "Drive",
+  "docs.kind.web": "Web",
 
   // Das Panel für die abgelegte Dokumentenlesung (RD-AC-N-2/-3). Drei Zustände,
   // die auch in den Worten getrennt bleiben müssen: noch keine Antwort, gelesen
@@ -7711,6 +7761,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "files.hide": "An diesem Deal ausblenden",
   "files.unhide": "Wieder an diesem Deal anzeigen",
   "files.delete": "Löschen",
+  "files.pick.empty":
+    "Die Datei ist leer, es gibt also nichts hinzuzufügen. Wähle eine Datei mit Inhalt.",
+  "files.pick.unsupported":
+    "Diese Art von Datei kann nicht angehängt werden. Wähle ein Dokument, ein Bild, ein ZIP-Archiv oder eine gespeicherte E-Mail.",
   "files.deleteTitle": "{name} löschen?",
   "files.deleteBody":
     "Die Datei wird aus diesem Deal entfernt, und die Käuferseite sieht sie in keinem Deal Room mehr. Der Eintrag im Raum bleibt, bis du ihn entfernst.",
@@ -7772,6 +7826,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "log.filesEmpty": "Dateien hier ablegen oder zum Auswählen klicken",
   "log.fileUnattached":
     "Die Aktivität ist erfasst, aber {filename} wurde nicht angehängt. {reason}",
+  "log.fileNotAdded": "{filename} wurde nicht hinzugefügt. {reason}",
   "log.fileUncertain":
     "Die Aktivität ist erfasst, aber der Upload von {filename} wurde nicht abgeschlossen. Prüfe die Dateien der Aktivität, bevor du die Datei erneut hinzufügst.",
   "log.attendee": "Teilnehmende",
@@ -8017,6 +8072,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Dieser Entwurf nutzt deinen Schreibstil nicht, da dein Stilprofil nicht geladen werden konnte. Erstelle den Entwurf neu oder bearbeite ihn vor dem Senden.",
   "compose.voiceDegradedTitle":
     "Dieser Entwurf entspricht nicht deinem Schreibstil",
+  "compose.templateDraftTitle": "Die KI konnte diesen Entwurf nicht schreiben",
+  "compose.templateDraft":
+    "Stattdessen wurde eine einfache Vorlage verwendet. Der angegebene Zweck wurde nicht berücksichtigt.",
   "compose.provisional": "Vorläufiger Schreibstil",
   "compose.provisionalHint":
     "Deine Voice DNA wird noch aufgebaut und prägt diesen Entwurf genauso wie eine fertige.",
@@ -8062,6 +8120,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.recipientHint": "Name oder Adresse",
   "compose.bodyPlaceholder": "Nachrichtentext",
   "compose.bcc": "Bcc",
+  "compose.bccHint": "Andere Empfangende sehen diese Adressen nicht.",
+  "compose.alreadyIn": "Steht schon in „{field}“.",
+  "compose.colleagues": "Teammitglieder",
+  "compose.replyTitle": "Antwort",
   "compose.threadGone":
     "Stattdessen wurde eine neue E-Mail geöffnet, da dieser Thread nicht mehr beantwortet werden kann. Prüfe die Empfangsadresse vor dem Senden.",
   "compose.colleagueMailbox_one":
@@ -8141,6 +8203,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.scheduleDate": "Datum",
   "compose.scheduleTime": "Uhrzeit",
   "compose.scheduleGoesOut": "Versand: {when}",
+  "compose.schedulePast": "Wähle einen Zeitpunkt in der Zukunft.",
+  "compose.scheduleHoursPast":
+    "Vergangene Uhrzeiten können nicht gewählt werden.",
   "compose.willGoOut": "Versand: {when}",
   "compose.scheduleAfternoon": "Morgen Nachmittag",
   "compose.draftLanguage": "Sprache des Entwurfs",
@@ -8259,6 +8324,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Der Kontakt möchte nicht mehr kontaktiert werden. Der Versand dieser E-Mail ändert seinen Wunsch nicht.",
   "sendPermission.reason.bounced":
     "Diese Adresse nimmt keine E-Mails an. Korrigiere die Adresse. Eine Ausnahme ist hier nicht möglich.",
+  "sendPermission.reason.subjectLabelMissing":
+    "Marketing an eine empfangende Person in diesem Land muss den Betreff mit der Kennzeichnung beginnen, die ihr Recht vorschreibt. Ergänze sie im Betreff.",
+  "sendPermission.reason.subjectLabelsConflict":
+    "Die Länder dieser empfangenden Personen schreiben für Marketing verschiedene Kennzeichnungen im Betreff vor, und ein Betreff beginnt mit einer. Sende eine Nachricht je Kennzeichnung.",
   "sendPermission.reason.optedOutAfterRequest":
     "Der Kontakt hat nach der Angebotsanfrage Werbung abgelehnt. Der Versand dieser E-Mail ändert seine Entscheidung nicht.",
   "sendPermission.reason.permissionRequired":
@@ -10339,6 +10408,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die ZIP-Datei enthält {files} Dateien, ein Import liest höchstens {max_files}. Entferne die Dateien, die du nicht importierst, und lade sie erneut hoch.",
   "import.refusal.bundle.empty":
     "Die ZIP-Datei ist leer. Lege eine CSV-Datei pro Datensatztyp hinein und lade sie erneut hoch.",
+  "import.refusal.bundle.spreadsheet":
+    "Das ist eine Excel-Arbeitsmappe. Speichere das Blatt als CSV UTF-8 und lade diese Datei hoch.",
+  "import.refusal.bundle.noImportableFile":
+    "Die ZIP-Datei enthält keine Datei, die der Import liest. Benenne jede Datei nach ihrem Datensatztyp: {file_names}.",
   "import.refusal.bundle.notAZip":
     "Die ZIP-Datei ließ sich nicht öffnen. Erstelle die ZIP-Datei neu und lade sie hoch.",
   "import.refusal.bundle.filesTooLarge":
@@ -10405,6 +10478,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "import.template.files": "Dateien der Vorlage",
   "import.template.col.file": "Datei",
   "import.template.col.columns": "Spalten",
+  "import.template.keyColumns": "Braucht eine davon: {columns}",
   "import.template.legend":
     "Zeige auf eine Spalte oder tippe sie an, um zu sehen, was hineingehört. ● markiert eine Spalte, die eine neue Zeile braucht.",
   "import.template.rules": "So werden Zeilen zugeordnet",
@@ -12313,7 +12387,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "extUnits.workspace.sub":
     "Erweiterungen, die diese Installation mit gemeinsamen Zugangsdaten betreibt. Einstellungen hier gelten für alle Nutzenden.",
 
-  "connectors.title": "Mail und Kalender",
+  "connectors.title": "E-Mail und Kalender",
   // Die dauerhafte Nacht-Vollmacht der Nutzerin — eine Frage, gestellt beim
   // Postfach-Verbinden im Onboarding und noch einmal in den Einstellungen.
   "overnightGrant.title": "Vorbereitung über Nacht",
@@ -13808,9 +13882,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "{steward} hat diesen Raum pausiert. Ihr Link bleibt gültig, und Sie können weitermachen, sobald der Zugang fortgesetzt wird.",
   "buyer.expiredTitle": "Zugang beendet",
   "buyer.expiredBody":
-    "Der Zugang zu diesem Raum ist abgelaufen. Wenden Sie sich an {steward}, oder fordern Sie unten einen neuen Link an.",
+    "Der Zugang zu diesem Raum ist abgelaufen. Wenden Sie sich an {steward}, wenn Sie ihn wieder brauchen.",
   "buyer.eyebrow": "Deal Room",
-  "buyer.contact": "Ihre Ansprechperson: {steward}.",
   "buyer.closed":
     "Dieser Raum ist geschlossen. Die Inhalte bleiben als Aufzeichnung erhalten.",
   "buyer.previewBannerTitle": "Du siehst eine Vorschau dieses Raums",
@@ -16621,14 +16694,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "connectors.vendorGoogle": "Google",
   "connectors.vendorMicrosoft": "Microsoft 365",
   "connectors.oauthConnectedTitle": "{provider} verbunden",
-  "connectors.oauthBoth": "Mail und Kalender werden synchronisiert.",
-  "connectors.oauthMailOnly": "Mail wird synchronisiert.",
+  "connectors.oauthBoth": "E-Mail und Kalender werden synchronisiert.",
+  "connectors.oauthMailOnly": "E-Mail wird synchronisiert.",
   "connectors.oauthCalendarOnly": "Kalender wird synchronisiert.",
   "connectors.oauthImportRuns":
     "Du kannst diese Seite verlassen: Der Import älterer E-Mails läuft von selbst weiter.",
   "connectors.oauthCalendarDeclined":
-    "Mail ist verbunden. Der Kalender nicht, weil der Zugriff darauf nicht erlaubt wurde.",
-  "connectors.oauthCalendarFailed": "Mail ist verbunden. Der Kalender nicht.",
+    "E-Mail ist verbunden. Der Kalender nicht, weil der Zugriff darauf nicht erlaubt wurde.",
+  "connectors.oauthCalendarFailed": "E-Mail ist verbunden. Der Kalender nicht.",
   "connectors.connectCalendar": "Kalender verbinden",
   "connectors.health.connected": "Verbunden",
   "connectors.health.syncing": "Wird synchronisiert",
@@ -16636,7 +16709,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "connectors.health.reconnect": "Neuverbindung nötig",
   "connectors.health.attention": "Handlungsbedarf",
   "connectors.health.notConnected": "Nicht verbunden",
-  "connectFlow.title": "Mail und Kalender verbinden",
+  "connectFlow.title": "E-Mail und Kalender verbinden",
   "connectFlow.progress": "Schritte",
   "connectFlow.stepAccount": "Konto",
   "connectFlow.stepBringIn": "Was übernommen wird",
@@ -16648,12 +16721,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Outlook-Mail und -Kalender mit einem Geschäftskonto",
   "connectFlow.otherHost": "Anderer Mail-Anbieter",
   "connectFlow.otherHostDesc":
-    "IMAP mit einem App-Passwort. Nur Mail, kein Kalender. Senden ist optional.",
+    "IMAP mit einem App-Passwort. Nur E-Mail, kein Kalender. Senden ist optional.",
   "connectFlow.alreadyConnected": "Bereits verbunden.",
   "connectFlow.pickAccount": "Wähle zuerst ein Konto.",
   "connectFlow.titleVendor": "{vendor} verbinden",
   "connectFlow.titleImap": "Anderen Mail-Anbieter verbinden",
-  "connectFlow.mail": "Mail",
+  "connectFlow.mail": "E-Mail",
   "connectFlow.calendar": "Kalender",
   "connectFlow.mailHelp":
     "E-Mails, die du sendest und empfängst, werden den richtigen Kontakten und Deals zugeordnet. Du kannst auch aus Margince senden.",
@@ -16662,7 +16735,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "connectFlow.calendarHelp":
     "Termine erscheinen bei Kontakten und Deals, und dein Buchungslink bietet nur deine freien Zeiten an.",
   "connectFlow.calendarImap": "Über IMAP nicht verfügbar.",
-  "connectFlow.pickService": "Wähle Mail, Kalender oder beides.",
+  "connectFlow.pickService": "Wähle E-Mail, Kalender oder beides.",
   "connectFlow.importLabel": "Ältere E-Mails importieren",
   "connectFlow.importNone": "Keine",
   "connectFlow.importAfter":
@@ -16671,11 +16744,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "connectFlow.handoff":
     "{vendor} öffnet sich in diesem Tab. Melde dich mit dem Konto an, mit dem du arbeitest, und erlaube jede Berechtigung, die {vendor} anzeigt:",
   "connectFlow.permMail": "E-Mails lesen und senden",
-  "connectFlow.permMailFor": "Für Mail",
+  "connectFlow.permMailFor": "Für E-Mail",
   "connectFlow.permCalendar": "Kalendertermine sehen und bearbeiten",
   "connectFlow.permCalendarFor": "Für den Kalender und deinen Buchungslink",
   "connectFlow.asksTwice":
-    "{vendor} fragt zweimal: einmal für Mail, dann einmal für deinen Kalender.",
+    "{vendor} fragt zweimal: einmal für E-Mail, dann einmal für deinen Kalender.",
   "connectFlow.afterBoth":
     "Danach bist du wieder bei Verbindungen. Neue E-Mails und Termine kommen von selbst an.",
   "connectFlow.afterMail":
@@ -16685,11 +16758,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "connectFlow.back": "Zurück",
   "connectFlow.next": "Weiter",
   "connectFlow.continueTo": "Weiter zu {vendor}",
-  "connectors.bringsMail": "Mail",
+  "connectors.bringsMail": "E-Mail",
   "connectors.bringsCalendar": "Kalender",
   "connectors.bringsSend": "Sendet aus Margince",
-  "connectors.servicesBoth": "Mail und Kalender",
-  "connectors.connectMail": "Mail verbinden",
+  "connectors.servicesBoth": "E-Mail und Kalender",
+  "connectors.connectMail": "E-Mail verbinden",
   "connectors.account.connectedOn": "Verbunden {date}",
   "connectors.account.menu": "Weitere Aktionen für {account}",
   "connectors.menu.bringsIn": "Ändern, was es einbringt",
@@ -16744,7 +16817,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "connectors.connectVendor": "{vendor} verbinden",
   "connectors.strip.label": "So läuft das Verbinden",
   "connectors.strip.pick": "Konto wählen",
-  "connectors.strip.tick": "Mail und Kalender ankreuzen",
+  "connectors.strip.tick": "E-Mail und Kalender ankreuzen",
   "connectors.strip.signIn": "Anmelden",
   "connectors.strip.syncs": "Die Synchronisierung startet von selbst",
   "mailSharing.plate.scope": "Ganzes Unternehmen",
@@ -16860,7 +16933,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Richte die {vendor}-App des Unternehmens ein, um es freizuschalten.",
   "connectors.tile.openPage": "{page} öffnen",
   "connectors.imapRow.note":
-    "Nur Mail, kein Kalender. Anmeldung mit einem App-Passwort.",
+    "Nur E-Mail, kein Kalender. Anmeldung mit einem App-Passwort.",
   "connectors.imapRow.connect": "Mit IMAP verbinden",
   // end polish: connections-tiles
   "setup.step.writingVoice": "Schreibstil trainieren",
@@ -21614,7 +21687,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "oauthApp.steps.google.pasteBody":
     "Google zeigt beides in einem Dialog, nachdem du „Erstellen“ gewählt hast. Hast du ihn geschlossen, öffne den Client unter „Anmeldedaten“: Oben steht die Client-ID, und „Secret hinzufügen“ erzeugt einen neuen Clientschlüssel.",
   "oauthApp.steps.microsoft.permissionsTitle":
-    "Zugriff auf Mail und Kalender erlauben",
+    "Zugriff auf E-Mail und Kalender erlauben",
   "oauthApp.steps.microsoft.permissionsBody":
     "Öffne „API-Berechtigungen“, wähle „Berechtigung hinzufügen“, dann „Microsoft Graph“, dann „Delegierte Berechtigungen“. Füge openid, email, profile, offline_access, User.Read, Mail.Read, Mail.Send und Calendars.ReadWrite hinzu. Wähle dann „Administratorzustimmung erteilen“, damit niemand in deinem Unternehmen sie einzeln bestätigen muss.",
   "oauthApp.steps.microsoft.secretTitle": "Clientschlüssel erstellen",

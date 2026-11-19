@@ -747,6 +747,14 @@ func (stubs) UploadAttachment(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "UploadAttachment")
 }
 
+func (stubs) AddAttachmentLink(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "AddAttachmentLink")
+}
+
+func (stubs) PreviewAttachmentLink(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "PreviewAttachmentLink")
+}
+
 func (stubs) DeleteAttachment(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "DeleteAttachment")
 }

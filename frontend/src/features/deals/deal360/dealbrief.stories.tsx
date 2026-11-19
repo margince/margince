@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { RailEdit } from "../../../components/railfield";
 import { StoryProviders } from "../../../testing/story-utils";
 import { DealBrief } from "./dealbrief";
 
@@ -31,11 +32,17 @@ export default meta;
 
 type Story = StoryObj<typeof DealBrief>;
 
-const edit = () => undefined;
+const edit: RailEdit = {
+  kind: "deal",
+  record: { id: "d1", version: 1 },
+  fields: [{ key: "description", label: "deal.brief", type: "textarea" }],
+  canEdit: true,
+  save: async () => undefined,
+};
 
 export const Short: Story = {
   args: {
-    onEdit: edit,
+    edit,
     brief:
       "They run payroll for about 400 seasonal staff and close the month by hand. They want the close down to two days.",
   },
@@ -43,7 +50,7 @@ export const Short: Story = {
 
 export const Long: Story = {
   args: {
-    onEdit: edit,
+    edit,
     brief: [
       "They run payroll for about 400 seasonal staff across six sites.",
       "Month-end close is manual and takes nine working days.",
@@ -61,10 +68,10 @@ export const Long: Story = {
 // reader cannot see a form they have not opened, so every unbriefed deal
 // looked like a product with no such field. It now names what it holds and
 // offers to fill it.
-export const Absent: Story = { args: { brief: null, onEdit: edit } };
+export const Absent: Story = { args: { brief: null, edit } };
 
 // The same, for a stored empty string: whitespace is not a brief.
-export const Blank: Story = { args: { brief: "   ", onEdit: edit } };
+export const Blank: Story = { args: { brief: "   ", edit } };
 
 // A deal this reader may not write: archived, somebody else's, or a mirror.
 // The card still says what the deal is; only the link goes.

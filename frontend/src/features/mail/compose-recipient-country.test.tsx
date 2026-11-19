@@ -86,7 +86,7 @@ afterEach(() => {
 
 describe("a recipient's country on the chip", () => {
   it("reads the record only when the chip is opened, and names its source", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({
       "GET /me": inlineMe,
       [LOOKUP]: recordCountry,
@@ -104,7 +104,7 @@ describe("a recipient's country on the chip", () => {
   });
 
   it("sends a country the rep set, and a cleared one as null", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({
       "GET /me": inlineMe,
       [LOOKUP]: recordCountry,
@@ -134,7 +134,7 @@ describe("a recipient's country on the chip", () => {
   });
 
   it("sends no countries when the rep goes back to the record's", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({
       "GET /me": inlineMe,
       [LOOKUP]: recordCountry,
@@ -160,7 +160,7 @@ describe("a recipient's country on the chip", () => {
 
 describe("a recipient's country in the saved draft", () => {
   it("restores a cleared country as cleared and saves it back as null", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const saved = {
       id: "md-1",
       anchor_type: "contact",

@@ -157,7 +157,7 @@ func recordHumanDomainAdmissionTx(
 		if stored.Admission == admission {
 			return stored, nil
 		}
-		return BlockedDomain{}, fmt.Errorf("contacts: a user already decided about %s, so the user changes it: %w", domain, apperrors.ErrConflict)
+		return BlockedDomain{}, fmt.Errorf("a user already decided about %s, so the user changes it: %w", domain, apperrors.ErrConflict)
 	}
 	if admission == DomainAdmitted {
 		// Unblocking has to RE-ASK, not merely clear a flag. The domain was

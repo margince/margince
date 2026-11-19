@@ -15,6 +15,7 @@ export const formatFixture: ImportFormat = {
     {
       file: "companies.csv",
       object: "company",
+      key_columns: ["display_name", "ref"],
       columns: [
         {
           name: "ref",
@@ -52,6 +53,7 @@ export const formatFixture: ImportFormat = {
     {
       file: "contacts.csv",
       object: "contact",
+      key_columns: ["email", "ref"],
       columns: [
         {
           name: "ref",
@@ -79,6 +81,7 @@ export const formatFixture: ImportFormat = {
     {
       file: "leads.csv",
       object: "lead",
+      key_columns: ["email", "ref"],
       columns: [
         {
           name: "full_name",

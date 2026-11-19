@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { Panel } from "../../design-system/panel";
 import {
@@ -88,6 +88,8 @@ function story(
       }),
       [`GET /knowledge/corpora/${SET_ID}/documents`]: () =>
         jsonResponse({ items }),
+      "GET /installation/settings": () =>
+        jsonResponse({ max_knowledge_document_bytes: 5_000_000 }),
     });
     return (
       <StoryProviders>
@@ -154,5 +156,21 @@ export const DeleteConfirm: Story = {
     const page = within(canvasElement.ownerDocument.body);
     await userEvent.click(page.getByRole("button", { name: "Delete" }));
     await page.findByRole("dialog");
+  },
+};
+
+// A file the server would refuse is named as it is dropped, and never held.
+export const RefusedAsDropped: Story = {
+  render: story(DOCUMENTS, true),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.upload(await canvas.findByLabelText("Add document"), [
+      new File([], "empty.md", { type: "text/markdown" }),
+    ]);
+    await expect(
+      await canvas.findByText(
+        "empty.md: The file is empty, so there is nothing to add. Choose a file that has content.",
+      ),
+    ).toBeVisible();
   },
 };

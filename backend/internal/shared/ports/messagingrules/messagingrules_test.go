@@ -8,6 +8,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 )
 
 // registerForTest registers r for one test and removes it after, so the
@@ -465,5 +467,31 @@ func TestTheRequestRuleSurvivesTheFold(t *testing.T) {
 	every := Rules{Jurisdiction: "cc", Version: 1, ConsentConfirmationNeedsRequest: true}
 	if got := stricter(narrow, every); len(got.ConsentRequestFirstFor) != 0 || !got.ConsentConfirmationNeedsRequest {
 		t.Errorf("classes %v, want every class: one side asks a request for each", got.ConsentRequestFirstFor)
+	}
+}
+
+// One subject begins with one label, so Rules.SubjectPrefix holds the first.
+// Every distinct label stays owed in Applied.SubjectPrefixes.
+func TestTheFoldKeepsEveryDistinctSubjectLabel(t *testing.T) {
+	Register(Rules{Jurisdiction: "pa", Version: 1, SubjectPrefix: "(광고)"})
+	Register(Rules{Jurisdiction: "pb", Version: 1, SubjectPrefix: "<ADV>"})
+	Register(Rules{Jurisdiction: "pc", Version: 1, SubjectPrefix: "<adv>"})
+	Register(Rules{Jurisdiction: "pd", Version: 1})
+	for _, tc := range []struct {
+		codes []jurisdiction.Code
+		first string
+		want  []string
+	}{
+		{[]jurisdiction.Code{"pa"}, "(광고)", []string{"(광고)"}},
+		{[]jurisdiction.Code{"pd", "pa"}, "(광고)", []string{"(광고)"}},
+		{[]jurisdiction.Code{"pb", "pc"}, "<ADV>", []string{"<ADV>"}},
+		{[]jurisdiction.Code{"pa", "pd", "pb"}, "(광고)", []string{"(광고)", "<ADV>"}},
+		{[]jurisdiction.Code{"pd"}, "", nil},
+	} {
+		rules, applied, _ := Strictest(tc.codes...)
+		if rules.SubjectPrefix != tc.first || !slices.Equal(applied.SubjectPrefixes, tc.want) {
+			t.Errorf("%v: prefix %q and labels %q, want %q and %q",
+				tc.codes, rules.SubjectPrefix, applied.SubjectPrefixes, tc.first, tc.want)
+		}
 	}
 }

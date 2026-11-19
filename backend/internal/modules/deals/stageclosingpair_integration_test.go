@@ -102,7 +102,7 @@ func TestANewPipelineIsBornWithAWonAndALostStage(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			e := setupConfigEnv(t)
-			pipeline, err := e.store.CreatePipeline(e.as(), CreatePipelineInput{Name: "P " + name, Stages: tc.stages})
+			pipeline, err := e.store.CreatePipeline(e.as(), CreatePipelineInput{Name: "P " + ids.NewV7().String(), Stages: tc.stages})
 			if err != nil {
 				t.Fatalf("creating the pipeline: %v", err)
 			}

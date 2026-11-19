@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useId, useState } from "react";
-import { Button, Modal } from "../design-system/atoms";
+import { type ReactNode, Suspense, useEffect, useId, useState } from "react";
+import { Button, Modal, PendingBody } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import {
   DrawerBody,
@@ -12,8 +12,8 @@ import {
 import { Heading } from "../design-system/heading";
 import { SurfaceState } from "../design-system/surfacestate";
 import { useT } from "../i18n";
+import { lazy } from "../i18n/lazy";
 import { problemStatus } from "../lib/problem";
-import { CaseForm } from "./contactcase.form";
 import {
   type ContactCase,
   type ContactCaseOutcome,
@@ -21,6 +21,31 @@ import {
 } from "./contactcase.queries";
 import { EntityRef } from "./entityref";
 import "./contactcase.css";
+
+// Home draws the rows that open this review, and the form is most of its code.
+// So the form loads when the review opens, alongside the case it waits for.
+const loadCaseForm = () => import("./contactcase.form");
+
+function FormPending({ children }: Readonly<{ children: ReactNode }>) {
+  const t = useT();
+  return (
+    <Suspense
+      fallback={
+        <DrawerBody>
+          <PendingBody label={t("contactCase.loading")} />
+        </DrawerBody>
+      }
+    >
+      {children}
+    </Suspense>
+  );
+}
+
+const CaseForm = lazy(
+  async () => ({ default: (await loadCaseForm()).CaseForm }),
+  "complete",
+  FormPending,
+);
 
 /**
  * The one review of a contact duplicate case, opened from the Worklist row and
@@ -73,6 +98,11 @@ function CaseReviewBody({
   const [seenOpen, setSeenOpen] = useState(false);
   const [mergedPair, setMergedPair] = useState(false);
   const contactCase = query.data;
+  useEffect(() => {
+    loadCaseForm().catch((error: unknown) =>
+      console.warn("The duplicate review could not fetch its form", error),
+    );
+  }, []);
   if (contactCase && !seenOpen) setSeenOpen(true);
   if (merged) {
     return <MergedBody outcome={merged} onClose={onClose} />;

@@ -83,7 +83,7 @@ func (r *Registry) SetMailPosture(
 ) (ConnectionView, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || !actor.HumanOrItsAgent() {
-		return ConnectionView{}, fmt.Errorf("capture: only a user or their agent sets a mailbox's posture: %w", apperrors.ErrPermissionDenied)
+		return ConnectionView{}, fmt.Errorf("only a user or their agent sets a mailbox's posture: %w", apperrors.ErrPermissionDenied)
 	}
 	if !validPosture(posture) {
 		return ConnectionView{}, &InvalidPostureError{Posture: posture}
@@ -226,7 +226,7 @@ type MailboxSettings struct {
 func (r *Registry) SetMailboxSettings(ctx context.Context, mb Mailbox, asked MailboxSettings) (ConnectionView, error) {
 	posture, applyToHistory, defaultSender := asked.Posture, asked.ApplyToHistory, asked.DefaultSender
 	if posture == nil && !defaultSender {
-		return ConnectionView{}, fmt.Errorf("capture: send a posture, default_sender, or both: %w", apperrors.ErrInvalidArgument)
+		return ConnectionView{}, fmt.Errorf("send a posture, default_sender, or both: %w", apperrors.ErrInvalidArgument)
 	}
 	var view ConnectionView
 	if posture != nil {

@@ -24,7 +24,10 @@ func TestThePreviewOffersAReasonForEveryPolicyRefusal(t *testing.T) {
 		if got == nil {
 			t.Fatalf("%s: can_be_overruled is absent", code)
 		}
-		want := code != commsauthz.ReasonHardBounce && code != commsauthz.ReasonNoSubject
+		want := !slices.Contains([]string{
+			commsauthz.ReasonHardBounce, commsauthz.ReasonNoSubject,
+			commsauthz.ReasonSubjectLabelMissing, commsauthz.ReasonSubjectLabelsConflict,
+		}, code)
 		if *got != want {
 			t.Errorf("%s: can_be_overruled = %v, want %v", code, *got, want)
 		}

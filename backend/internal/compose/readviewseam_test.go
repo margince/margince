@@ -100,6 +100,7 @@ func TestAViewRefusalKeepsItsKind(t *testing.T) {
 		http.StatusUnauthorized: apperrors.ErrPermissionDenied, http.StatusForbidden: apperrors.ErrPermissionDenied,
 		http.StatusNotFound: apperrors.ErrNotFound, http.StatusConflict: apperrors.ErrConflict,
 		http.StatusPreconditionFailed: apperrors.ErrVersionSkew, http.StatusTooManyRequests: apperrors.ErrBudgetExceeded,
+		http.StatusBadRequest: apperrors.ErrInvalidArgument,
 	} {
 		door := &viewDoor{api: http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(status) })}
 		_, err := readViewThrough(door)(context.Background(), agents.ReadView{Pattern: "/v1/x"}, nil, nil)
@@ -125,6 +126,9 @@ func TestAViewTheInstallationDoesNotOfferIsNotOfferedHere(t *testing.T) {
 	var detailed *httperr.DetailedError
 	if !errors.As(err, &detailed) || detailed.Status != http.StatusNotImplemented || detailed.Detail != http.StatusText(http.StatusNotImplemented) {
 		t.Errorf("a bare 501 surfaced as %v, want not offered here", err)
+	}
+	if _, err := readViewThrough(nil)(context.Background(), agents.ReadView{Pattern: "/v1/x"}, nil, nil); !errors.Is(err, apperrors.ErrUnsupportedBySoR) {
+		t.Errorf("a view read outside the API process surfaced as %v, want not offered here", err)
 	}
 }
 

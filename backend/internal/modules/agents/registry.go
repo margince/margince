@@ -360,7 +360,7 @@ func (r *Registry) redeemPresented(ctx context.Context, spec mcp.ToolSpec, res r
 		return ctx, nil
 	}
 	if r.approvals == nil {
-		return ctx, fmt.Errorf("crmagents: approval_id presented but this surface has no approvals engine: %w", apperrors.ErrApprovalTokenInvalid)
+		return ctx, fmt.Errorf("this call presents an approval_id, but this surface has no approvals to redeem it against: %w", apperrors.ErrApprovalTokenInvalid)
 	}
 	marked, _, _, err := RedeemAndMark(ctx, r.approvals, res.ApprovalID, spec.Name, res.DiffHash)
 	if err != nil {
