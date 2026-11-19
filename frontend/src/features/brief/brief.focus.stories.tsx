@@ -19,6 +19,7 @@ import {
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
+import { expectTextFits } from "../../testing/unbrokentext";
 import type { WorklistItem } from "../worklist/worklist.queries";
 import { Triage } from "./brief.focus";
 
@@ -515,6 +516,29 @@ export const LongTaskTitlePhoneDark: Story = {
   ...LongTaskTitlePhone,
   tags: ["uat-phone"],
   globals: { theme: "dark" },
+};
+
+const LONG_CONTACT = "Maximilian Konstantinopoulou-Wertheimer";
+
+/** A contact's long name breaks inside its chip and stays on the card. */
+export const LongContactNamePhone: Story = {
+  tags: ["uat-phone"],
+  globals: { viewport: { value: "phone" } },
+  render: panel([
+    {
+      ...taskRow("call-max", "Call back about the renewal"),
+      contact: { id: "c-max", label: LONG_CONTACT },
+    },
+  ]),
+  play: async ({ canvasElement }) => {
+    const card = canvasElement.querySelector(".brief-triage-frame > article");
+    const chip = within(canvasElement)
+      .getAllByText(LONG_CONTACT)
+      .map((name) => name.closest(".chip"))
+      .find((found) => found !== null);
+    if (!card || !chip) throw new Error("the contact has no chip on the card");
+    await expectTextFits(chip, card.getBoundingClientRect());
+  },
 };
 
 /**

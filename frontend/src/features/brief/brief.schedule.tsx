@@ -3,11 +3,10 @@
 
 import type { components } from "../../api/schema";
 import { MeetingOthers } from "../../components/meetingothers";
+import { RecordMarkChip } from "../../components/recordlinks";
 import { AppLink } from "../../design-system/applink";
 import { Badge, Button } from "../../design-system/atoms";
-import { Avatar } from "../../design-system/avatar";
 import { Panel, PanelRow } from "../../design-system/panel";
-import { Chip } from "../../design-system/readings";
 import {
   type SectionState,
   SurfaceState,
@@ -355,7 +354,7 @@ function MeetingWho({
       {company && (
         <RecordMarkChip
           id={company.company_id}
-          label={company.company_name}
+          name={company.company_name}
           href={routeHash(ENTITY.company.route(company.company_id))}
         />
       )}
@@ -363,7 +362,7 @@ function MeetingWho({
         <RecordMarkChip
           key={contact.contact_id}
           id={contact.contact_id}
-          label={contact.full_name}
+          name={contact.full_name}
           href={routeHash(ENTITY.contact.route(contact.contact_id))}
         />
       ))}
@@ -373,19 +372,6 @@ function MeetingWho({
         </span>
       )}
     </span>
-  );
-}
-
-/** One record as the task card's chip: its avatar and name, linked to its page. */
-function RecordMarkChip({
-  id,
-  label,
-  href,
-}: Readonly<{ id: string; label: string; href: string }>) {
-  return (
-    <Chip dense appHref={href} lead={<Avatar name={label} identity={id} />}>
-      {label}
-    </Chip>
   );
 }
 
