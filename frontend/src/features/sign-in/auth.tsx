@@ -338,6 +338,7 @@ export function AuthScreen({
           token={view.token}
           onDone={() => setView({ kind: "reset-done" })}
           onRestart={() => setView({ kind: "forgot" })}
+          onBack={setLoginView}
           selfServiceAvailable={resetAvailable}
         />
       )}

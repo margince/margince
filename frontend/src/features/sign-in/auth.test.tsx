@@ -730,6 +730,27 @@ describe("AuthScreen reset deep link", () => {
     expect(screen.getByText("Request a new link")).toBeTruthy();
   });
 
+  it("leads back to sign-in from a refused link", async () => {
+    stubApi({ password: true, password_reset: false }, () =>
+      ok(401, { title: "unauthorized", detail: "invalid, used, or expired" }),
+    );
+    // The real address: leaving the form rewrites it, which a stub cannot hold.
+    globalThis.location.hash = "#/reset-password?token=spent-token";
+    render(<AuthScreen onAuthed={vi.fn()} />);
+
+    await userEvent.type(
+      await screen.findByLabelText("New password"),
+      "an entirely new password{enter}",
+    );
+    await screen.findByText(t("auth.askAdminForNewLink"));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Back to sign in" }),
+    );
+
+    expect(await screen.findByLabelText("Email")).toBeTruthy();
+    expect(screen.queryByLabelText("New password")).toBeNull();
+  });
+
   // These three cases exist because one string used to serve every failure, and
   // the remedy it offered — "Request a new link" — SUPERSEDES the token the user
   // is still holding. So for anything that is not a token verdict, the old copy
