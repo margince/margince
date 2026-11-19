@@ -9237,7 +9237,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Ngày gửi Tổng kết tuần. Nếu bạn không làm việc vào ngày đó, bản tổng kết đến vào ngày làm việc kế tiếp.",
   "delivery.quietLabel": "Buổi sáng ít việc",
   "delivery.quietHelp":
-    "Buổi sáng không có việc cần làm sẽ không gửi email, trừ khi bạn chọn bản tóm tắt trạng thái.",
+    "Buổi sáng không có gì cần xử lý sẽ không gửi email, trừ khi bạn chọn bản tóm tắt trạng thái.",
   "delivery.onlyUseful": "Chỉ khi có nội dung hữu ích",
   "delivery.quietAlso": "Cũng gửi bản tóm tắt trạng thái vào buổi sáng ít việc",
   "delivery.combineLabel": "Gộp email định kỳ",

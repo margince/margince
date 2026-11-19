@@ -9496,7 +9496,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Der Tag, an dem der Wochenrückblick gesendet wird. Arbeitest du an dem Tag nicht, kommt er an deinem nächsten Arbeitstag.",
   "delivery.quietLabel": "Ruhige Morgen",
   "delivery.quietHelp":
-    "Ein Morgen ohne offene Aufgaben schickt keine E-Mail, außer du wählst eine Statusübersicht.",
+    "An einem Morgen, an dem nichts zu erledigen ist, kommt keine E-Mail, außer du wählst eine Statusübersicht.",
   "delivery.onlyUseful": "Nur mit nützlichem Inhalt",
   "delivery.quietAlso": "Auch eine Statusübersicht an ruhigen Morgen",
   "delivery.combineLabel": "Routine-E-Mails zusammenfassen",
