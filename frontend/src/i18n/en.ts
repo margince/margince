@@ -9427,13 +9427,15 @@ export const en = {
   "delivery.none": "Not by email",
   "delivery.hourLabel": "Routine email time",
   "delivery.scheduleHelp":
-    "Choose a personal time to use your working days and timezone, with a three-hour delivery window. Your previous schedule stays until you change it.",
-  "delivery.legacyTime": "Previous morning schedule (reporting timezone):",
+    "When routine emails such as the Morning brief are sent: within three hours of this time, on your working days and in your time zone. A schedule set earlier stays until you choose a time here.",
+  "delivery.legacyTime": "Previous morning schedule (reporting time zone):",
   "delivery.workingStart": "Start of my working hours",
   "delivery.weekdayLabel": "Weekly review day",
   "delivery.weekdayHelp":
-    "Uses the next working day if your chosen day is off. The reporting week stays fixed; later working days allow catch-up.",
+    "The day the Weekly review is sent. On a day you do not work, it comes on your next working day.",
   "delivery.quietLabel": "Quiet mornings",
+  "delivery.quietHelp":
+    "A morning with nothing to act on sends no email, unless you choose a status summary.",
   "delivery.onlyUseful": "Only when there is useful content",
   "delivery.quietAlso": "Also send a status summary on quiet mornings",
   "delivery.combineLabel": "Combine routine emails",
@@ -9442,6 +9444,8 @@ export const en = {
   "delivery.separate": "Separate routine emails",
   "delivery.combined": "Combine available content",
   "delivery.scopeLabel": "Routine email scope",
+  "delivery.scopeHelp":
+    "Whose work routine emails cover: your own, a team you review, or both.",
   "delivery.scope.personal": "My work",
   "delivery.scope.team": "Selected team",
   "delivery.scope.combined": "My work and selected team",

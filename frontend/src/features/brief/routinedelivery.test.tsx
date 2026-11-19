@@ -144,3 +144,23 @@ it("says the team list failed instead of offering an empty choice", async () => 
   expect(await within(row).findByRole("alert")).toBeTruthy();
   expect(within(row).queryByRole("combobox")).toBeNull();
 });
+
+it("gives every summaries control one width and a description of its own", async () => {
+  stubApi({
+    "GET /me": () =>
+      jsonResponse({ ...meFixture(), team_week: "every_team", teams: [] }),
+    "GET /teams": () =>
+      jsonResponse({ data: [ledTeam], page: { has_more: false } }),
+    "GET /me/brief-delivery": () =>
+      jsonResponse({ routine_mail_scope: "team" }),
+  });
+  render(<Page />);
+  const team = await screen.findByTestId("delivery-team");
+  await within(team).findByRole("combobox");
+  const controls = screen.getAllByRole("combobox");
+  expect(controls).toHaveLength(8);
+  for (const control of controls) {
+    expect(control.className).toContain("settingrow-measure");
+    expect(control.getAttribute("aria-describedby")).toBeTruthy();
+  }
+});

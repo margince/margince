@@ -9228,13 +9228,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "delivery.none": "Không qua email",
   "delivery.hourLabel": "Giờ gửi email định kỳ",
   "delivery.scheduleHelp":
-    "Chọn giờ cá nhân để dùng ngày làm việc và múi giờ của bạn, trong cửa sổ gửi ba giờ. Lịch trước đây giữ nguyên cho đến khi bạn đổi.",
+    "Thời điểm gửi các email định kỳ như Bản tin sáng: trong vòng ba giờ kể từ giờ này, vào ngày làm việc và theo múi giờ của bạn. Lịch đã đặt trước đó giữ nguyên cho đến khi bạn chọn giờ ở đây.",
   "delivery.legacyTime": "Lịch buổi sáng trước đây (múi giờ báo cáo):",
   "delivery.workingStart": "Bắt đầu giờ làm việc",
   "delivery.weekdayLabel": "Ngày tổng kết tuần",
   "delivery.weekdayHelp":
-    "Nếu ngày đã chọn là ngày nghỉ, dùng ngày làm việc kế tiếp. Tuần báo cáo giữ nguyên; có thể gửi bù vào ngày làm việc sau.",
+    "Ngày gửi Tổng kết tuần. Nếu bạn không làm việc vào ngày đó, bản tổng kết đến vào ngày làm việc kế tiếp.",
   "delivery.quietLabel": "Buổi sáng ít việc",
+  "delivery.quietHelp":
+    "Buổi sáng không có việc cần làm sẽ không gửi email, trừ khi bạn chọn bản tóm tắt trạng thái.",
   "delivery.onlyUseful": "Chỉ khi có nội dung hữu ích",
   "delivery.quietAlso": "Cũng gửi bản tóm tắt trạng thái vào buổi sáng ít việc",
   "delivery.combineLabel": "Gộp email định kỳ",
@@ -9243,6 +9245,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "delivery.separate": "Email định kỳ riêng biệt",
   "delivery.combined": "Gộp nội dung có sẵn",
   "delivery.scopeLabel": "Phạm vi email định kỳ",
+  "delivery.scopeHelp":
+    "Email định kỳ bao gồm công việc của ai: của bạn, của một nhóm bạn xem xét, hoặc cả hai.",
   "delivery.scope.personal": "Việc của tôi",
   "delivery.scope.team": "Nhóm đã chọn",
   "delivery.scope.combined": "Việc của tôi và nhóm đã chọn",

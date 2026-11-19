@@ -9487,13 +9487,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "delivery.none": "Nicht per E-Mail",
   "delivery.hourLabel": "Uhrzeit für Zusammenfassungen",
   "delivery.scheduleHelp":
-    "Eine persönliche Uhrzeit nutzt deine Arbeitstage und Zeitzone mit einem Versandfenster von drei Stunden. Der bisherige Plan bleibt bis zu deiner Änderung.",
+    "Wann Zusammenfassungen wie der Morgenbericht gesendet werden: innerhalb von drei Stunden nach dieser Uhrzeit, an deinen Arbeitstagen und in deiner Zeitzone. Ein früher festgelegter Plan bleibt, bis du hier eine Uhrzeit wählst.",
   "delivery.legacyTime": "Bisheriger Morgenplan (Berichtszeitzone):",
   "delivery.workingStart": "Beginn meiner Arbeitszeit",
   "delivery.weekdayLabel": "Tag des Wochenrückblicks",
   "delivery.weekdayHelp":
-    "Ein freier Tag wird auf den nächsten Arbeitstag verschoben. Die Berichtswoche bleibt fest; spätere Arbeitstage erlauben eine Nachholung.",
+    "Der Tag, an dem der Wochenrückblick gesendet wird. Arbeitest du an dem Tag nicht, kommt er an deinem nächsten Arbeitstag.",
   "delivery.quietLabel": "Ruhige Morgen",
+  "delivery.quietHelp":
+    "Ein Morgen ohne offene Aufgaben schickt keine E-Mail, außer du wählst eine Statusübersicht.",
   "delivery.onlyUseful": "Nur mit nützlichem Inhalt",
   "delivery.quietAlso": "Auch eine Statusübersicht an ruhigen Morgen",
   "delivery.combineLabel": "Routine-E-Mails zusammenfassen",
@@ -9502,6 +9504,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "delivery.separate": "Separate Routine-E-Mails",
   "delivery.combined": "Verfügbare Inhalte zusammenfassen",
   "delivery.scopeLabel": "Umfang der Zusammenfassungen",
+  "delivery.scopeHelp":
+    "Wessen Arbeit die Zusammenfassungen zeigen: deine eigene, die eines Teams, das du prüfst, oder beides.",
   "delivery.scope.personal": "Meine Arbeit",
   "delivery.scope.team": "Gewähltes Team",
   "delivery.scope.combined": "Meine Arbeit und gewähltes Team",
