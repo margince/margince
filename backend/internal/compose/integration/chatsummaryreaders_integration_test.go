@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package compose
+package integration
 
 // A chat summary note is readable only by seats holding read on its deal or
 // project, on every read path and even when it is also linked to a company.
@@ -15,7 +15,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -26,7 +26,7 @@ import (
 const chatSummaryWord = "Zebrafish"
 
 func TestAChatSummaryNoteNeedsReadOnItsDealOnEveryReadPath(t *testing.T) {
-	e := integration.Setup(t)
+	e := Setup(t)
 	pipeline, stage, deal, note := ids.NewV7(), ids.NewV7(), ids.NewV7(), ids.NewV7()
 	company := e.SeedCompany(t, "Brandt Automotive", nil)
 	e.WsExec(t, `INSERT INTO pipeline (id, name) VALUES ($1, 'Chat')`, pipeline)
@@ -38,9 +38,9 @@ func TestAChatSummaryNoteNeedsReadOnItsDealOnEveryReadPath(t *testing.T) {
 	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, deal_id) VALUES ($1, 'deal', $2)`, note, deal)
 	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, company_id) VALUES ($1, 'company', $2)`, note, company)
 
-	registry := NewRegistry(e.Pool, SendPath{})
+	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
 	e.GrantRole(t, e.AdminUser, "admin")
-	passport := e.SeedPassportFor(t, integration.OwnerConn(t), "chat note agent", e.AdminUser)
+	passport := e.SeedPassportFor(t, OwnerConn(t), "chat note agent", e.AdminUser)
 	check := func(name string, perms principal.Permissions, seen bool) {
 		agent := e.AgentOnPassport(t, e.AdminUser, nil, perms, ids.From[ids.PassportKind](passport))
 		read, readErr := registry.Invoke(agent, "read_record", json.RawMessage(fmt.Sprintf(`{"record_type":"activity","id":%q}`, note)))
@@ -69,10 +69,10 @@ func TestAChatSummaryNoteNeedsReadOnItsDealOnEveryReadPath(t *testing.T) {
 			}
 		}
 	}
-	check("a deal reader", integration.AdminPerms, true)
+	check("a deal reader", AdminPerms, true)
 
 	e.WsExec(t, `UPDATE role SET permissions = jsonb_set(permissions, '{objects,deal,read}', 'false') WHERE key = 'admin'`)
-	check("without deal read", withoutRead(integration.AdminPerms, "deal"), false)
+	check("without deal read", withoutRead(AdminPerms, "deal"), false)
 }
 
 func withoutRead(perms principal.Permissions, object string) principal.Permissions {
