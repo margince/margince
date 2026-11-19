@@ -8,9 +8,6 @@ import (
 	"fmt"
 	"slices"
 	"strings"
-
-	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
-	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // What this product will read, and what it says when it will not.
@@ -19,21 +16,11 @@ import (
 // decision that changes on its own schedule — a new reader lands here and
 // nowhere else — while the upload around it is a write shape that does not.
 
-// acceptedContentTypes is the whole list, and every type on it is one whose
-// bytes ARE its text. Nothing here parses a file: accepting a PDF on these terms
-// would ingest its binary envelope as prose — a corpus that answers nothing
-// while reporting a successful upload.
+// acceptedContentTypes lists the types whose bytes are their text. A PDF taken
+// on these terms would file its binary envelope as prose and answer nothing.
 //
-// A PDF text reader DOES exist in this tree now (platform/pdftext), and this
-// route deliberately does not use it. The document lane reads ONE file a human
-// is about to check field by field, so a thin or mis-ordered extraction is
-// visible and correctable; a corpus is retrieved from silently for months, and
-// an answer grounded in a bad extraction cites a passage the source does not
-// contain. Adopting it here is a product decision about retrieval quality, not
-// the missing-parser problem it used to be.
-//
-// The refusal names this list, because "unsupported" alone leaves the uploader
-// with nothing to do.
+// platform/pdftext is not used here: a corpus is retrieved from unchecked, so a
+// bad extraction becomes a cited passage the source does not hold.
 var acceptedContentTypes = []string{
 	"text/plain",
 	"text/markdown",
@@ -44,23 +31,84 @@ var acceptedContentTypes = []string{
 // UnsupportedTypeError is a file whose bytes are not its own text. It carries
 // no field name: the refusal is about the file, and the transport maps it to
 // 415 rather than to a validation error on a form field.
+//
+// Kind is the file's kind as its owner would say it ("Word"), or empty when
+// nothing names one. A media type is not a name an uploader recognises.
 type UnsupportedTypeError struct {
-	Got string
+	Kind string
 }
 
 func (e *UnsupportedTypeError) Error() string {
-	return fmt.Sprintf("%s cannot be read as text; the accepted types are %s",
-		clampEchoedType(e.Got), strings.Join(acceptedContentTypes, ", "))
+	kind := "Files of this kind are"
+	if e.Kind != "" {
+		kind = e.Kind + " files are"
+	}
+	return kind + " not supported. Save it as " + acceptedKindsInWords + " first."
 }
 
-// maxEchoedType bounds what of the caller's own Content-Type is quoted back.
-// A media type is a short token; anything longer is not one, and echoing an
-// unbounded caller-chosen string into a problem body and the operator log is a
-// gift to whoever sends a megabyte of it.
-const maxEchoedType = 64
+// acceptedKindsInWords is acceptedContentTypes as an uploader names them.
+const acceptedKindsInWords = "plain text, Markdown, CSV or JSON"
 
-func clampEchoedType(got string) string {
-	return textcut.RunesMarked(got, maxEchoedType, "…")
+// The kinds an uploader names an office file by.
+const (
+	kindWord       = "Word"
+	kindExcel      = "Excel"
+	kindPowerPoint = "PowerPoint"
+)
+
+// officeKinds name the files whose kind is not their own letters: nobody calls a
+// .docx a "DOCX file". Keyed by ending and by media type, so either one names it.
+var officeKinds = map[string]string{
+	"doc":                kindWord,
+	"docx":               kindWord,
+	"xls":                kindExcel,
+	"xlsx":               kindExcel,
+	"ppt":                kindPowerPoint,
+	"pptx":               kindPowerPoint,
+	"application/msword": kindWord,
+	"application/vnd.openxmlformats-officedocument.wordprocessingml.document": kindWord,
+	"application/vnd.ms-excel": kindExcel,
+	"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":         kindExcel,
+	"application/vnd.ms-powerpoint":                                             kindPowerPoint,
+	"application/vnd.openxmlformats-officedocument.presentationml.presentation": kindPowerPoint,
+}
+
+// maxKindEnding bounds the ending quoted back as a kind. A longer one is not a
+// file type anyone would recognise, and the name is the caller's own text.
+const maxKindEnding = 5
+
+// refusedKind names a refused file's kind from its ending, then its derived
+// media type. The caller's raw Content-Type is never quoted back.
+func refusedKind(media, filename string) string {
+	_, ending, _ := strings.CutLast(strings.ToLower(filename), ".")
+	if kind, ok := officeKinds[ending]; ok {
+		return kind
+	}
+	if kind, ok := officeKinds[media]; ok {
+		return kind
+	}
+	if ending == "" || len(ending) > maxKindEnding || strings.ContainsFunc(ending, notAlphanumeric) {
+		return ""
+	}
+	return strings.ToUpper(ending)
+}
+
+func notAlphanumeric(r rune) bool {
+	return (r < 'a' || r > 'z') && (r < '0' || r > '9')
+}
+
+// EmptyDocumentError is an upload carrying no bytes. Filed, it would read to
+// its uploader like success while answering nothing. It maps to 422 on the file.
+// activities.EmptyUploadError is its twin; a module never imports a sibling.
+type EmptyDocumentError struct{}
+
+func (e *EmptyDocumentError) Error() string {
+	return "The file is empty, so there is nothing to add. Choose a file that has content."
+}
+
+// FieldFault names the part of the upload the caller must correct.
+func (e *EmptyDocumentError) FieldFault() (field, code, message string) {
+	return "file", "empty_file", e.Error()
 }
 
 // AlreadyFiledError is a file whose bytes are already in this corpus.
@@ -87,28 +135,15 @@ func (e *AlreadyFiledError) Error() string {
 // answering it as a validation failure would send them off to fix their file.
 var ErrBlobstoreUnconfigured = errors.New("knowledge: object storage is not configured; a document cannot be stored")
 
-// acceptedType decides the media type an upload is filed under.
-//
-// It normalises a browser's Content-Type (which carries parameters —
-// `text/markdown; charset=utf-8`) down to the media type the list names, and
-// falls back to the FILENAME's extension when the client sent none.
-//
-// The fallback is not a nicety. A platform with no registry entry for `.md`
-// makes the browser report an EMPTY type, and this route's flagship file would
-// then be refused with "` ` cannot be read as text" — a refusal naming nothing,
-// for exactly the file the route wants. A curl caller that omits the part
-// header hits the same wall. It runs HERE rather than in the browser so every
-// client gets it, and only when the client said NOTHING: a stated type is the
-// client's claim and stands, wrong extension or not.
-//
-// An extension is still only a name, which is why it decides nothing else. It
-// picks a label from a closed list; the bytes are never parsed on the strength
-// of it, because there is no parser here at all.
+// acceptedType decides the media type an upload is filed under. An ending this
+// route reads wins over the stated type, as an attachment's does: a browser
+// sends `.csv` as an Excel type and `.md` as `text/x-markdown` or nothing. The
+// bytes are still sniffed against the type, so a renamed binary is refused.
 func acceptedType(contentType, filename string) (string, bool) {
-	media := strings.ToLower(strings.TrimSpace(strings.SplitN(contentType, ";", 2)[0]))
-	if media == "" || media == "application/octet-stream" {
-		media = typeByExtension(filename)
+	if named := typeByExtension(filename); named != "" {
+		return named, true
 	}
+	media := strings.ToLower(strings.TrimSpace(strings.SplitN(contentType, ";", 2)[0]))
 	return media, slices.Contains(acceptedContentTypes, media)
 }
 
@@ -131,24 +166,4 @@ func typeByExtension(filename string) string {
 	default:
 		return ""
 	}
-}
-
-// refusedTypeName is what a 415 calls the file: the DERIVED media type when
-// there is one, and the caller's own words when there is not.
-//
-// An extension this route does not read resolves to an empty media type, and a
-// refusal reading "` ` cannot be read as text" names nothing at all — worse
-// than useless to whoever sent a .docx.
-// in.Filename has already been through SafeFilename by the time this is
-// reached. in.ContentType has NOT — it is a header the caller controls and this
-// is the only place it is echoed back — so it goes through the same normaliser
-// here rather than being quoted raw.
-func refusedTypeName(media string, in NewDocument) string {
-	if media != "" {
-		return media
-	}
-	if stated := extension.SafeFilename(strings.TrimSpace(in.ContentType), 0); stated != "" {
-		return stated
-	}
-	return in.Filename
 }

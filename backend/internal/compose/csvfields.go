@@ -147,6 +147,20 @@ var csvSourceKeyDefault = map[string]string{
 	migration.ObjectActivity: csvTargetRef,
 }
 
+// rowKeyTargets are the targets partMappingFrom tells an object's rows apart
+// by, and a file must map one of them. They are its natural key, the id a
+// corrections export carries, and the source's own ref.
+func rowKeyTargets(object string) []string {
+	keys := []string{csvSourceKeyDefault[object]}
+	if selectsByID(object) {
+		keys = append(keys, csvTargetID)
+	}
+	if !slices.Contains(keys, csvTargetRef) {
+		keys = append(keys, csvTargetRef)
+	}
+	return keys
+}
+
 // importTargets is the closed set a mapping may name for one object: its core
 // fields, then each active custom field by key, in column order.
 func importTargets(object string, cat importCatalog) ([]string, error) {

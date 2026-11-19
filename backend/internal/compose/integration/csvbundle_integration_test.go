@@ -167,3 +167,26 @@ func TestAZipSentWithAnObjectIsProfiledByItsFileNames(t *testing.T) {
 		t.Fatalf("parts = %+v, want the one companies.csv part as company, not lead", profile.Parts)
 	}
 }
+
+// A workbook, or a ZIP of files no type takes, opens no draft. The upload is
+// refused before anything is stored, and says what to send instead.
+func TestAZipWithNoImportableFileIsRefusedAndLeavesNoDraft(t *testing.T) {
+	e := setupImportApp(t)
+	for name, c := range map[string]struct {
+		files  map[string]string
+		reason string
+	}{
+		"Pipeline.csv": {map[string]string{"[Content_Types].xml": "<Types/>", "xl/workbook.xml": "<workbook/>"}, "spreadsheet"},
+		"other.zip":    {map[string]string{"products.csv": "Product\nWidget\n"}, "no_importable_file"},
+	} {
+		raw, status := postZipFile(t, e, name, zipBytes(t, c.files))
+		errs := fieldRefusalsOf(t, raw)
+		if status != http.StatusUnprocessableEntity || len(errs) != 1 || errs[0].Code != "bundle_refused" ||
+			errs[0].Params["reason"] != c.reason {
+			t.Errorf("%s: status %d body %s, want 422 bundle_refused for %s", name, status, raw, c.reason)
+		}
+	}
+	if runs := importRuns(t, e); len(runs) != 0 {
+		t.Fatalf("runs = %+v, want no draft left by a refused upload", runs)
+	}
+}

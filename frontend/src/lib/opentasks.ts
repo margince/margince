@@ -26,36 +26,47 @@ function isOpenTask(row: Activity): boolean {
  * The open tasks filed on one record. Under the record's timeline key, so a
  * task written anywhere on it refreshes the list.
  */
+export function openTasksQuery(recordType: TaskRecordType, recordId: string) {
+  return {
+    queryKey: ["activities", recordType, recordId, "open-tasks"],
+    queryFn: () => readOpenTasks(recordType, recordId),
+  };
+}
+
+async function readOpenTasks(
+  recordType: TaskRecordType,
+  recordId: string,
+): Promise<Activity[]> {
+  const open: Activity[] = [];
+  let cursor: string | undefined;
+  do {
+    const page = unwrap(
+      await api.GET("/activities", {
+        params: {
+          query: {
+            entity_type: recordType,
+            entity_id: recordId,
+            kind: ["task"],
+            limit: TASK_PAGE,
+            cursor,
+          },
+        },
+      }),
+    );
+    open.push(...page.data.filter(isOpenTask));
+    cursor = page.page.has_more
+      ? (page.page.next_cursor ?? undefined)
+      : undefined;
+  } while (cursor);
+  return open;
+}
+
 export function useOpenTasks(
   recordType: TaskRecordType,
   recordId: string | null,
 ) {
   return useQuery({
-    queryKey: ["activities", recordType, recordId, "open-tasks"],
+    ...openTasksQuery(recordType, recordId ?? ""),
     enabled: recordId !== null,
-    queryFn: async () => {
-      const open: Activity[] = [];
-      let cursor: string | undefined;
-      do {
-        const page = unwrap(
-          await api.GET("/activities", {
-            params: {
-              query: {
-                entity_type: recordType,
-                entity_id: recordId ?? "",
-                kind: ["task"],
-                limit: TASK_PAGE,
-                cursor,
-              },
-            },
-          }),
-        );
-        open.push(...page.data.filter(isOpenTask));
-        cursor = page.page.has_more
-          ? (page.page.next_cursor ?? undefined)
-          : undefined;
-      } while (cursor);
-      return open;
-    },
   });
 }

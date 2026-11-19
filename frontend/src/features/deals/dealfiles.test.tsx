@@ -321,6 +321,30 @@ it("offers Delete on an upload and no Hide", async () => {
   ).not.toBeInTheDocument();
 });
 
+it("names a titled file by the title its tile shows, in its menu and its delete", async () => {
+  const titled = upload();
+  stubApi([
+    {
+      ...titled,
+      attachment: {
+        ...titled.attachment,
+        filename: "image.png",
+        title: "Site photo",
+      },
+    },
+  ]);
+  const user = userEvent.setup();
+  render(<DealFiles deal={dealOf()} />);
+
+  await user.click(
+    await screen.findByRole("button", { name: "Actions for Site photo" }),
+  );
+  await user.click(screen.getByRole("button", { name: en["files.delete"] }));
+  expect(
+    await screen.findByRole("dialog", { name: "Delete Site photo?" }),
+  ).toBeInTheDocument();
+});
+
 it("hands focus to the list a deleted row left, not to the page", async () => {
   stubApi([upload()]);
   const user = userEvent.setup();
