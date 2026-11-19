@@ -308,7 +308,7 @@ func TestEvidenceTheSenderCannotReadIsNotCarriedPastStaging(t *testing.T) {
 		 WHERE delivery_id = $1 AND phase = 'staging'`, delivery).Scan(&raw); err != nil {
 		t.Fatalf("reading the decision row: %v", err)
 	}
-	if carried := evidenceFrom(raw); carried.InvoiceID != (ids.UUID{}) {
+	if carried := evidenceFrom(raw, ""); carried.InvoiceID != (ids.UUID{}) {
 		t.Fatalf("the decision row carries invoice %v, which nobody checked this sender may read: "+
 			"the transmit phase runs as the system principal and would allow on it", carried.InvoiceID)
 	}

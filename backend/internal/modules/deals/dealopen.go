@@ -14,6 +14,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -49,11 +50,12 @@ type OpenSuggestedDealInput struct {
 	// EvidenceHolds locks every cited item and asks whether the whole workspace
 	// may still read it. The visibility rule is Deal Scout's, not this module's.
 	EvidenceHolds func(ctx context.Context, tx pgx.Tx, evidence []SuggestionEvidence) (bool, error)
-	// Amount answers the amount a cited document states in its own words, read
-	// at write time, or nil to open the deal with none.
-	Amount func(ctx context.Context, tx pgx.Tx, evidence []SuggestionEvidence) (*int64, *string, error)
-	// Record writes the entry on the deal's timeline, in the same transaction.
-	Record func(ctx context.Context, tx pgx.Tx, deal, correction ids.UUID) error
+	// Prefill answers what the evidence states for the deal, read at write
+	// time under the opening's locks. The zero value opens a bare deal.
+	Prefill func(ctx context.Context, tx pgx.Tx, evidence []SuggestionEvidence) (DealPrefill, error)
+	// Record writes the entry on the deal's timeline, in the same transaction,
+	// knowing what the prefill carried.
+	Record func(ctx context.Context, tx pgx.Tx, deal, correction ids.UUID, fill DealPrefill) error
 	// AsOwner binds the owner's agent as of the opening's transaction, so a
 	// role change or suspension that committed before it stops the opening.
 	AsOwner OwnerAuthorityTx
@@ -83,17 +85,21 @@ func (s *Store) OpenSuggestedDeal(ctx context.Context, in OpenSuggestedDealInput
 		}
 		owner := in.Owner
 		pick := AcceptSuggestionInput{OwnerID: &owner, NoAmount: true}
-		amount, currency, err := in.Amount(ctx, tx, citedEvidence(current))
+		fill, err := in.Prefill(ctx, tx, citedEvidence(current))
 		if err != nil {
 			return err
 		}
-		if amount != nil && currency != nil {
-			pick.NoAmount, pick.AmountMinor, pick.Currency = false, amount, currency
+		if fill.AmountMinor != nil && fill.Currency != nil {
+			pick.NoAmount, pick.AmountMinor, pick.Currency = false, fill.AmountMinor, fill.Currency
 		}
 		birth, err := s.acceptedDealInput(ctx, tx, current, pick)
 		if err != nil {
 			return err
 		}
+		// The suggestion's own close date was read from evidence the opening
+		// may not show, so only the prefill's counts.
+		birth.ExpectedClose, birth.CloseDateProvisional = fill.CloseDate, fill.CloseDate != nil
+		birth.Description = fill.Description
 		birth.auditEvidence = map[string]any{
 			basisKey: in.Basis, basisOwnerKey: in.Owner.String(), CorrectionKindEvidenceKey: DealOpenCorrection,
 		}
@@ -102,6 +108,9 @@ func (s *Store) OpenSuggestedDeal(ctx context.Context, in OpenSuggestedDealInput
 			return err
 		}
 		dealID := ids.UUID(deal.Id)
+		if err := stampModelWritten(ctx, tx, dealID, fill.ModelWritten); err != nil {
+			return err
+		}
 		if _, _, err := s.applyAcceptEffects(ctx, tx, current, dealID); err != nil {
 			return err
 		}
@@ -113,9 +122,34 @@ func (s *Store) OpenSuggestedDeal(ctx context.Context, in OpenSuggestedDealInput
 			return err
 		}
 		opened = dealID
-		return in.Record(ctx, tx, dealID, correction)
+		return in.Record(ctx, tx, dealID, correction, fill)
 	})
 	return opened, err
+}
+
+// DealPrefill is what the evidence behind an opened deal states for it.
+type DealPrefill struct {
+	AmountMinor *int64
+	Currency    *string
+	// CloseDate is a model's reading, so the deal opens with it provisional.
+	CloseDate   *time.Time
+	Description *string
+	// ModelWritten names the deal columns a model wrote, each with its
+	// confidence. A rep sees them marked until a human edits them.
+	ModelWritten []storekit.FieldStamp
+	// Withheld says some cited evidence may not reach the deal, so the
+	// timeline names the evidence by kind alone.
+	Withheld bool
+}
+
+// stampModelWritten records the agent opening the deal as the author of each
+// column a model wrote (storekit.AgentWrittenFieldsSQL reads it back).
+func stampModelWritten(ctx context.Context, tx pgx.Tx, deal ids.UUID, stamps []storekit.FieldStamp) error {
+	by, err := storekit.CapturedBy(ctx)
+	if err != nil {
+		return err
+	}
+	return storekit.StampFields(ctx, tx, dealTable, deal, dealScoutSource, by, stamps)
 }
 
 // openableSuggestion locks the suggestion and its company and asks again what

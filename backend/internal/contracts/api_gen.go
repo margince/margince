@@ -16132,6 +16132,24 @@ func (e LatestInboundKind) Valid() bool {
 	}
 }
 
+// Defines values for LawfulBasisConfirmationSubjectEntityType.
+const (
+	LawfulBasisConfirmationSubjectEntityTypeContact LawfulBasisConfirmationSubjectEntityType = "contact"
+	LawfulBasisConfirmationSubjectEntityTypeLead    LawfulBasisConfirmationSubjectEntityType = "lead"
+)
+
+// Valid indicates whether the value is a known member of the LawfulBasisConfirmationSubjectEntityType enum.
+func (e LawfulBasisConfirmationSubjectEntityType) Valid() bool {
+	switch e {
+	case LawfulBasisConfirmationSubjectEntityTypeContact:
+		return true
+	case LawfulBasisConfirmationSubjectEntityTypeLead:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for LeadIndustry.
 const (
 	LeadIndustryAerospaceDefense          LeadIndustry = "aerospace_defense"
@@ -20074,6 +20092,27 @@ func (e ReceiptActorType) Valid() bool {
 	}
 }
 
+// Defines values for RecipientCountryReadingSource.
+const (
+	RecipientCountryReadingSourceContactAddress     RecipientCountryReadingSource = "contact_address"
+	RecipientCountryReadingSourceEmployerAddress    RecipientCountryReadingSource = "employer_address"
+	RecipientCountryReadingSourceLeadCompanyAddress RecipientCountryReadingSource = "lead_company_address"
+)
+
+// Valid indicates whether the value is a known member of the RecipientCountryReadingSource enum.
+func (e RecipientCountryReadingSource) Valid() bool {
+	switch e {
+	case RecipientCountryReadingSourceContactAddress:
+		return true
+	case RecipientCountryReadingSourceEmployerAddress:
+		return true
+	case RecipientCountryReadingSourceLeadCompanyAddress:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for RecordAccessVisibility.
 const (
 	RecordAccessVisibilityOwner     RecordAccessVisibility = "owner"
@@ -20488,6 +20527,33 @@ const (
 func (e RefreshAcceptedStatus) Valid() bool {
 	switch e {
 	case RefreshAcceptedStatusEnqueued:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RefusedRecipientCountrySource.
+const (
+	RefusedRecipientCountrySourceContactAddress     RefusedRecipientCountrySource = "contact_address"
+	RefusedRecipientCountrySourceEmployerAddress    RefusedRecipientCountrySource = "employer_address"
+	RefusedRecipientCountrySourceLeadCompanyAddress RefusedRecipientCountrySource = "lead_company_address"
+	RefusedRecipientCountrySourceSenderCleared      RefusedRecipientCountrySource = "sender_cleared"
+	RefusedRecipientCountrySourceSenderOverride     RefusedRecipientCountrySource = "sender_override"
+)
+
+// Valid indicates whether the value is a known member of the RefusedRecipientCountrySource enum.
+func (e RefusedRecipientCountrySource) Valid() bool {
+	switch e {
+	case RefusedRecipientCountrySourceContactAddress:
+		return true
+	case RefusedRecipientCountrySourceEmployerAddress:
+		return true
+	case RefusedRecipientCountrySourceLeadCompanyAddress:
+		return true
+	case RefusedRecipientCountrySourceSenderCleared:
+		return true
+	case RefusedRecipientCountrySourceSenderOverride:
 		return true
 	default:
 		return false
@@ -47510,7 +47576,10 @@ type DeactivateUserRequest struct {
 type Deal struct {
 	// AcquisitionSource The business channel this opportunity came from, as an administered key from `/acquisition-sources` (referral, inbound, partner, event...). Deliberately NOT the technical `source` field beside it: `source` records how the RECORD reached Margince (a connector, an import, a crawl), while this records how the OPPORTUNITY reached the business. A deal typed in by hand can be a referral; an imported one can be outbound. Null means unclassified, which is different from the explicit `other` key.
 	AcquisitionSource *string `json:"acquisition_source,omitempty"`
-	AmountMinor       *int64  `json:"amount_minor,omitempty"`
+
+	// AiWrittenFields The fields of this deal that a model wrote and nobody has edited since, such as `description` or `amount_minor`. `currency` is named when the amount's words named no currency and the base currency was assumed. A client marks each as written by Margince. Any edit of a field removes it from the list. A field withheld from the reader (`masked_fields`) is never named. Filled only by `GET /deals/{id}`; every other read leaves it absent. Absent or empty means none.
+	AiWrittenFields *[]string `json:"ai_written_fields,omitempty"`
+	AmountMinor     *int64    `json:"amount_minor,omitempty"`
 
 	// Archivable Whether THIS caller may archive THIS deal: the row write gate `writable` asks, plus the `deal:delete` grant or being the deal's owner with `deal:update`. An owner who named themselves owner (an edit or a claim) needs the delete grant. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable.
 	Archivable *bool      `json:"archivable,omitempty"`
@@ -47675,7 +47744,10 @@ type DealWonWithoutContractReason string
 type DealAdvanced struct {
 	// AcquisitionSource The business channel this opportunity came from, as an administered key from `/acquisition-sources` (referral, inbound, partner, event...). Deliberately NOT the technical `source` field beside it: `source` records how the RECORD reached Margince (a connector, an import, a crawl), while this records how the OPPORTUNITY reached the business. A deal typed in by hand can be a referral; an imported one can be outbound. Null means unclassified, which is different from the explicit `other` key.
 	AcquisitionSource *string `json:"acquisition_source,omitempty"`
-	AmountMinor       *int64  `json:"amount_minor,omitempty"`
+
+	// AiWrittenFields The fields of this deal that a model wrote and nobody has edited since, such as `description` or `amount_minor`. `currency` is named when the amount's words named no currency and the base currency was assumed. A client marks each as written by Margince. Any edit of a field removes it from the list. A field withheld from the reader (`masked_fields`) is never named. Filled only by `GET /deals/{id}`; every other read leaves it absent. Absent or empty means none.
+	AiWrittenFields *[]string `json:"ai_written_fields,omitempty"`
+	AmountMinor     *int64    `json:"amount_minor,omitempty"`
 
 	// Archivable Whether THIS caller may archive THIS deal: the row write gate `writable` asks, plus the `deal:delete` grant or being the deal's owner with `deal:update`. An owner who named themselves owner (an edit or a claim) needs the delete grant. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable.
 	Archivable *bool      `json:"archivable,omitempty"`
@@ -51039,13 +51111,22 @@ type FollowUpSettings struct {
 	// shows each as read-only. Empty when nothing is locked. A write ignores it.
 	Locks *SettingLocks `json:"locks,omitempty"`
 
-	// PrivateMailRequests Whether the AI checks private mail for a request its reader owes an answer to
-	// (`activities.private_mail_requests`, on by default). Only mail private by a
-	// routine setting is checked; mail held as confidential, by a counterparty or
-	// members-only hold, or by hand never is. A GET always carries it; a PATCH that
-	// leaves it out leaves the setting unchanged. Only a human may change it, because
-	// it decides which mail reaches a model.
+	// PrivateMailRequests Whether the AI reads private mail for requests (`activities.private_mail_requests`,
+	// on by default): a request its reader owes an answer to, and a request for a
+	// quotation. Only mail private by a mailbox setting is read; mail held as
+	// confidential, by a counterparty or members-only hold, or by hand never is. It
+	// says what a model reads, not what is shared. A GET always carries it; a PATCH
+	// that leaves it out leaves the setting unchanged. Only a human may change it,
+	// because it decides which mail reaches a model.
 	PrivateMailRequests *bool `json:"private_mail_requests,omitempty"`
+
+	// SharePrivateQuoteRequests Whether a request for a quotation found in private mail is shared with the whole
+	// workspace (`activities.share_private_quote_requests`, on by default). When on, what
+	// the customer asked for becomes visible on the deal it opens. It needs
+	// `private_mail_requests` on as well. Only mail private by a mailbox setting is
+	// shared; mail held for any other reason never is. A GET always carries it; a PATCH
+	// that leaves it out leaves it unchanged. Only a human may change it.
+	SharePrivateQuoteRequests *bool `json:"share_private_quote_requests,omitempty"`
 }
 
 // FooterFinding defines model for FooterFinding.
@@ -54558,8 +54639,24 @@ type LawfulBasisConfirmation struct {
 type LawfulBasisConfirmationRequest struct {
 	// Subjects The records the preview marked `lawful_basis_missing`, as its `evidence_subject` names
 	// them. A pinned lead is named as the lead, never as a contact sharing its address.
-	Subjects []CommunicationEvidenceSubject `json:"subjects"`
+	Subjects []LawfulBasisConfirmationSubject `json:"subjects"`
 }
+
+// LawfulBasisConfirmationSubject One record to confirm, with the country the sender stated for it on the message, when
+// they stated one. The confirmation is recorded under the country the preview applied, and
+// staging spends it only for a send judged under that same country.
+type LawfulBasisConfirmationSubject struct {
+	EntityId   openapi_types.UUID                       `json:"entity_id"`
+	EntityType LawfulBasisConfirmationSubjectEntityType `json:"entity_type"`
+
+	// StatedCountry The country the sender stated for this recipient in `recipient_countries`. Omit it when
+	// they stated none; the record's country then applies. Only the user writing the message
+	// may send it.
+	StatedCountry *StatedCountry `json:"stated_country,omitempty"`
+}
+
+// LawfulBasisConfirmationSubjectEntityType defines model for LawfulBasisConfirmationSubject.EntityType.
+type LawfulBasisConfirmationSubjectEntityType string
 
 // Lead A thin, segregated prospect. Mirrors the `lead` table.
 type Lead struct {
@@ -56603,6 +56700,10 @@ type MailDraft struct {
 	// OverrideExplanation The reason the author typed for sending past a refusal. Absent when none was.
 	OverrideExplanation *string `json:"override_explanation,omitempty"`
 
+	// RecipientCountries The countries the author stated for recipients, with `country: null` for one they cleared.
+	// Absent when none was stated.
+	RecipientCountries *[]RecipientCountry `json:"recipient_countries,omitempty"`
+
 	// ScheduledAt The moment the author picked to send at, as saved. It may have passed since; the
 	// draft schedules nothing. Absent when none was picked.
 	ScheduledAt *time.Time `json:"scheduled_at,omitempty"`
@@ -56688,6 +56789,12 @@ type MailDraftInput struct {
 	// composer still holds it. It grants nothing: the send still needs its own decision. Omit
 	// it for none.
 	OverrideExplanation *string `json:"override_explanation,omitempty"`
+
+	// RecipientCountries The countries the rep stated for recipients of this message, kept so a reopened composer
+	// still holds them. `country: null` is a country the rep cleared, which is not the same as no
+	// entry. An entry whose address is not on `to`, `cc` or `bcc` is not kept. Each address may
+	// appear once; a second entry is refused with 422 `invalid`.
+	RecipientCountries *[]RecipientCountry `json:"recipient_countries,omitempty"`
 
 	// ScheduledAt The moment the rep picked to send at, checked as the send checks it: with
 	// `scheduled_tz`, at most 90 days ahead. Saving schedules nothing. Omit both for none.
@@ -59514,6 +59621,12 @@ type PreviewAccountSendRequest struct {
 	Links            []ActivityLinkInput `json:"links"`
 	MarketingPurpose *string             `json:"marketing_purpose,omitempty"`
 
+	// RecipientCountries The countries the sender states for this message's recipients, read as the send reads them:
+	// `country: null` clears a recipient's country, and a recipient with no entry keeps the record's.
+	// An agent's or an integration's preview carrying this field is refused with 422 `invalid`.
+	// Each address may appear once; a second entry is refused with 422 `invalid`.
+	RecipientCountries *[]RecipientCountry `json:"recipient_countries,omitempty"`
+
 	// Subject The draft's subject, read for an offer as the send reads it and checked for `content_findings`.
 	Subject *string               `json:"subject,omitempty"`
 	To      []openapi_types.Email `json:"to"`
@@ -59553,6 +59666,12 @@ type PreviewSendRequest struct {
 
 	// MarketingPurpose Which marketing purpose, when the context is `marketing`.
 	MarketingPurpose *string `json:"marketing_purpose,omitempty"`
+
+	// RecipientCountries The countries the sender states for this message's recipients, read as the send reads them:
+	// `country: null` clears a recipient's country, and a recipient with no entry keeps the record's.
+	// An agent's or an integration's preview carrying this field is refused with 422 `invalid`.
+	// Each address may appear once; a second entry is refused with 422 `invalid`.
+	RecipientCountries *[]RecipientCountry `json:"recipient_countries,omitempty"`
 
 	// Subject The draft's subject, read for an offer as the send reads it and checked for `content_findings`.
 	Subject *string `json:"subject,omitempty"`
@@ -61100,6 +61219,47 @@ type ReceiptActor struct {
 // ReceiptActorType defines model for ReceiptActor.Type.
 type ReceiptActorType string
 
+// RecipientCountries defines model for RecipientCountries.
+type RecipientCountries struct {
+	Recipients []RecipientCountryReading `json:"recipients"`
+}
+
+// RecipientCountriesRequest defines model for RecipientCountriesRequest.
+type RecipientCountriesRequest struct {
+	// Addresses The addresses on the message, as they are on `to`, `cc` or `bcc`.
+	Addresses []string `json:"addresses"`
+}
+
+// RecipientCountry A country a sender states for one recipient of one message. It is never written to the
+// contact.
+type RecipientCountry struct {
+	// Address The recipient's address, as it is on `to`, `cc` or `bcc`.
+	Address string `json:"address"`
+
+	// Country An ISO 3166-1 alpha-2 code, or null for a country the sender cleared. A cleared
+	// recipient is judged under the baseline even when the record states a country.
+	Country *string `json:"country"`
+}
+
+// RecipientCountryReading defines model for RecipientCountryReading.
+type RecipientCountryReading struct {
+	// Address The address as it was asked.
+	Address string `json:"address"`
+
+	// Country The ISO 3166-1 alpha-2 code in lower case, or null when the record states none.
+	Country *string `json:"country"`
+
+	// Source The record the country was read from: the contact's own address, the address of
+	// their current primary employer, or the company a lead is filed under. Null with a
+	// null `country`.
+	Source *RecipientCountryReadingSource `json:"source"`
+}
+
+// RecipientCountryReadingSource The record the country was read from: the contact's own address, the address of
+// their current primary employer, or the company a lead is filed under. Null with a
+// null `country`.
+type RecipientCountryReadingSource string
+
 // RecommendationReceipt The rule and current facts behind a suggested action. The server checks these facts again when accepting the suggestion; the receipt grants no authority. Replaying the same accepted observation returns its original task.
 type RecommendationReceipt struct {
 	BasisFingerprint string `json:"basis_fingerprint"`
@@ -61697,6 +61857,16 @@ type RefusedRecipient struct {
 	Address  string  `json:"address"`
 	Category *string `json:"category,omitempty"`
 
+	// Country The ISO 3166-1 alpha-2 code, in lower case, of the recipient's country whose sales-mail
+	// rules judged this refusal. Absent when none applied: no country on record, or one the
+	// sender cleared.
+	Country *string `json:"country,omitempty"`
+
+	// CountrySource Where `country` came from: the contact's address, their employer's, the lead's company,
+	// or the sender, who stated it (`sender_override`) or cleared it (`sender_cleared`) for this
+	// message. Absent when no record or sender gave a country.
+	CountrySource *RefusedRecipientCountrySource `json:"country_source,omitempty"`
+
 	// FooterFindings Server-derived missing footer disclosures or unavailable private links shown before the sender confirms this message. Contains no credentials.
 	FooterFindings *[]FooterFinding `json:"footer_findings,omitempty"`
 
@@ -61709,6 +61879,11 @@ type RefusedRecipient struct {
 	SubjectId         *openapi_types.UUID          `json:"subject_id,omitempty"`
 	SubjectKind       *RefusedRecipientSubjectKind `json:"subject_kind,omitempty"`
 }
+
+// RefusedRecipientCountrySource Where `country` came from: the contact's address, their employer's, the lead's company,
+// or the sender, who stated it (`sender_override`) or cleared it (`sender_cleared`) for this
+// message. Absent when no record or sender gave a country.
+type RefusedRecipientCountrySource string
 
 // RefusedRecipientSubjectKind defines model for RefusedRecipient.SubjectKind.
 type RefusedRecipientSubjectKind string
@@ -64883,6 +65058,10 @@ type ScheduledSend struct {
 	// sender reads this row.
 	OperatorReason *string `json:"operator_reason,omitempty"`
 
+	// RecipientCountries The countries the sender stated for recipients, frozen with the message. Absent when none
+	// was stated.
+	RecipientCountries *[]RecipientCountry `json:"recipient_countries,omitempty"`
+
 	// ReviewActions What this caller may do about the review in `review_id`, in the words a refusal's
 	// `available_actions` uses. Absent or empty when they may only read it.
 	// `direct_send` sends the held message now on a recorded reason.
@@ -65729,6 +65908,16 @@ type SendCompanyEmailRequest struct {
 	// an allow.
 	OperatorReason *string `json:"operator_reason,omitempty"`
 
+	// RecipientCountries The country the sender states for a recipient of this message, which the marketing rules
+	// then follow in place of the one the record states. An entry with `country: null` clears it,
+	// and that recipient is judged under the baseline. A recipient with no entry keeps the country
+	// the record states. An entry whose address is not on `to`, `cc` or `bcc` is ignored. Nothing
+	// is written to the contact. Only the user writing the message may state one: an agent's or an
+	// integration's request carrying this field is refused with 422 `invalid`. Each address may
+	// appear once, compared without case or surrounding space; a second entry is refused with 422
+	// `invalid`.
+	RecipientCountries *[]RecipientCountry `json:"recipient_countries,omitempty"`
+
 	// ScheduledAt Legacy instant-based schedule. When `scheduled_intent` is present, its
 	// local time and current timezone rules govern the send; this field is a
 	// compatibility cache. Without it, the supplied instant remains authoritative.
@@ -65919,6 +66108,16 @@ type SendEmailRequest struct {
 	// reader can see what the sender believed, not so the engine can be talked into
 	// an allow.
 	OperatorReason *string `json:"operator_reason,omitempty"`
+
+	// RecipientCountries The country the sender states for a recipient of this message, which the marketing rules
+	// then follow in place of the one the record states. An entry with `country: null` clears it,
+	// and that recipient is judged under the baseline. A recipient with no entry keeps the country
+	// the record states. An entry whose address is not on `to`, `cc` or `bcc` is ignored. Nothing
+	// is written to the contact. Only the user writing the message may state one: an agent's or an
+	// integration's request carrying this field is refused with 422 `invalid`. Each address may
+	// appear once, compared without case or surrounding space; a second entry is refused with 422
+	// `invalid`.
+	RecipientCountries *[]RecipientCountry `json:"recipient_countries,omitempty"`
 
 	// ScheduledAt Legacy instant-based schedule. When `scheduled_intent` is present, its
 	// local time and current timezone rules govern the send; this field is a
@@ -67338,6 +67537,12 @@ type StatedAmount struct {
 	Currency    string `json:"currency"`
 }
 
+// StatedCountry defines model for StatedCountry.
+type StatedCountry struct {
+	// Country An ISO 3166-1 alpha-2 code, or null for a country the sender cleared.
+	Country *string `json:"country"`
+}
+
 // SubscriptionConfirmationPage The answer for a consent link: one named subscription and the contact's current answer to it.
 //
 // Deliberately carries NOTHING about the record. The mail said "confirm this subscription", and
@@ -68539,10 +68744,10 @@ type UpdateActivityRequest struct {
 	// moment a human actually knows the answer — the meeting is over — was the one
 	// moment the API could not be told.
 	//
-	// An omitted field is unchanged, like every other field on this patch. Sending
-	// an explicit `null` is also unchanged rather than a clear, unlike `due_at`,
-	// `remind_at` and `assignee_id`, where `null` removes the value. Recording the
-	// wrong outcome is fixed by sending the right one.
+	// An omitted field is unchanged, like every other field on this patch. An explicit
+	// `null` removes the status, so the meeting is unanswered again; that is how a
+	// recorded outcome is taken back. A meeting held by a live calendar invitation
+	// refuses it like any status other than `held` or `no_show`.
 	MeetingStatus *UpdateActivityRequestMeetingStatus `json:"meeting_status,omitempty"`
 	OccurredAt    *time.Time                          `json:"occurred_at,omitempty"`
 
@@ -68573,10 +68778,10 @@ type UpdateActivityRequestCallOutcome string
 // moment a human actually knows the answer — the meeting is over — was the one
 // moment the API could not be told.
 //
-// An omitted field is unchanged, like every other field on this patch. Sending
-// an explicit `null` is also unchanged rather than a clear, unlike `due_at`,
-// `remind_at` and `assignee_id`, where `null` removes the value. Recording the
-// wrong outcome is fixed by sending the right one.
+// An omitted field is unchanged, like every other field on this patch. An explicit
+// `null` removes the status, so the meeting is unanswered again; that is how a
+// recorded outcome is taken back. A meeting held by a live calendar invitation
+// refuses it like any status other than `held` or `no_show`.
 type UpdateActivityRequestMeetingStatus string
 
 // UpdateActivityReviewTemplateRequest defines model for UpdateActivityReviewTemplateRequest.
@@ -83506,6 +83711,9 @@ type OpenBuyerRoomThreadJSONRequestBody = OpenDealRoomThreadRequest
 // ReplyBuyerRoomThreadJSONRequestBody defines body for ReplyBuyerRoomThread for application/json ContentType.
 type ReplyBuyerRoomThreadJSONRequestBody = PostDealRoomCommentRequest
 
+// ResolveRecipientCountriesJSONRequestBody defines body for ResolveRecipientCountries for application/json ContentType.
+type ResolveRecipientCountriesJSONRequestBody = RecipientCountriesRequest
+
 // CreateRecordGrantJSONRequestBody defines body for CreateRecordGrant for application/json ContentType.
 type CreateRecordGrantJSONRequestBody = CreateRecordGrantRequest
 
@@ -89523,6 +89731,14 @@ func (a *Deal) UnmarshalJSON(b []byte) error {
 		delete(object, "acquisition_source")
 	}
 
+	if raw, found := object["ai_written_fields"]; found {
+		err = json.Unmarshal(raw, &a.AiWrittenFields)
+		if err != nil {
+			return fmt.Errorf("error reading 'ai_written_fields': %w", err)
+		}
+		delete(object, "ai_written_fields")
+	}
+
 	if raw, found := object["amount_minor"]; found {
 		err = json.Unmarshal(raw, &a.AmountMinor)
 		if err != nil {
@@ -89965,6 +90181,13 @@ func (a Deal) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.AiWrittenFields != nil {
+		object["ai_written_fields"], err = json.Marshal(a.AiWrittenFields)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'ai_written_fields': %w", err)
+		}
+	}
+
 	if a.AmountMinor != nil {
 		object["amount_minor"], err = json.Marshal(a.AmountMinor)
 		if err != nil {
@@ -90351,6 +90574,14 @@ func (a *DealAdvanced) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'acquisition_source': %w", err)
 		}
 		delete(object, "acquisition_source")
+	}
+
+	if raw, found := object["ai_written_fields"]; found {
+		err = json.Unmarshal(raw, &a.AiWrittenFields)
+		if err != nil {
+			return fmt.Errorf("error reading 'ai_written_fields': %w", err)
+		}
+		delete(object, "ai_written_fields")
 	}
 
 	if raw, found := object["amount_minor"]; found {
@@ -90800,6 +91031,13 @@ func (a DealAdvanced) MarshalJSON() ([]byte, error) {
 		object["acquisition_source"], err = json.Marshal(a.AcquisitionSource)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'acquisition_source': %w", err)
+		}
+	}
+
+	if a.AiWrittenFields != nil {
+		object["ai_written_fields"], err = json.Marshal(a.AiWrittenFields)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'ai_written_fields': %w", err)
 		}
 	}
 
@@ -99918,6 +100156,9 @@ type ServerInterface interface {
 	// The views the read_view agent tool reads, and the arguments each takes.
 	// (GET /read-views)
 	DescribeReadViews(w http.ResponseWriter, r *http.Request)
+	// The country the record states for each address, and where it was read.
+	// (POST /recipient-countries)
+	ResolveRecipientCountries(w http.ResponseWriter, r *http.Request)
 	// The fields a record create or update may write, for each record type.
 	// (GET /record-fields)
 	DescribeRecordFields(w http.ResponseWriter, r *http.Request)
@@ -105921,6 +106162,12 @@ func (_ Unimplemented) DescribeQueryVocabulary(w http.ResponseWriter, r *http.Re
 // The views the read_view agent tool reads, and the arguments each takes.
 // (GET /read-views)
 func (_ Unimplemented) DescribeReadViews(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The country the record states for each address, and where it was read.
+// (POST /recipient-countries)
+func (_ Unimplemented) ResolveRecipientCountries(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -146493,6 +146740,26 @@ func (siw *ServerInterfaceWrapper) DescribeReadViews(w http.ResponseWriter, r *h
 	handler.ServeHTTP(w, r)
 }
 
+// ResolveRecipientCountries operation middleware
+func (siw *ServerInterfaceWrapper) ResolveRecipientCountries(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ResolveRecipientCountries(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // DescribeRecordFields operation middleware
 func (siw *ServerInterfaceWrapper) DescribeRecordFields(w http.ResponseWriter, r *http.Request) {
 
@@ -158950,6 +159217,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/read-views", wrapper.DescribeReadViews)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/recipient-countries", wrapper.ResolveRecipientCountries)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/record-fields", wrapper.DescribeRecordFields)

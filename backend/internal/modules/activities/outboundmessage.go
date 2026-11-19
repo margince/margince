@@ -93,6 +93,7 @@ func (m outboundMessage) activity(chain threading) LogActivityInput {
 	}
 	return SentRecord(LogActivityInput{
 		correspondenceEntity: m.in.SendingEntity,
+		statedCountries:      m.statedCountries(),
 		SystemText:           outboundMessageText(m.recordedBody, m.htmlBody != ""),
 		Kind:                 "email",
 		Subject:              &m.in.Subject,
@@ -220,6 +221,16 @@ func (m outboundMessage) evidence(origin SendOrigin) commsauthz.Evidence {
 		e.ActivityID = origin.anchor.UUID
 	}
 	return e
+}
+
+// statedCountries keeps the sender's statements about addresses this message
+// carries; an entry about any other address decides nothing and is not named.
+func (m outboundMessage) statedCountries() []commsauthz.CountryOverride {
+	var out []commsauthz.CountryOverride
+	for _, addr := range m.in.Recipients {
+		out = append(out, commsauthz.CountryOverridesFor(m.in.Evidence.RecipientCountries, addr)...)
+	}
+	return out
 }
 
 // linkedRecordIDs names the records this message is filed under, which is where

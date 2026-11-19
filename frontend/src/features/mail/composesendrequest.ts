@@ -4,6 +4,7 @@
 import type { components } from "../../api/schema";
 import type { CommunicationContext } from "../../lib/compose-context";
 import type { ChosenFile } from "./composeattachments";
+import { countriesOnMessage } from "./composecountries";
 import type { ComposeFields } from "./composefields";
 import type { Link } from "./composelinks";
 import type { Refusal } from "./composerefusal";
@@ -34,6 +35,7 @@ export type SendRequest = {
     // contradicting claim is recorded as unsupported.
     communication_context?: CommunicationContext;
     evidence?: components["schemas"]["CommunicationEvidence"];
+    recipient_countries?: components["schemas"]["RecipientCountry"][];
     scheduled_at?: string;
     scheduled_tz?: string;
     scheduled_intent?: components["schemas"]["IntentTime"];
@@ -84,6 +86,11 @@ export function sendRequest(
       mail_draft_id: where.heldDraftId,
       communication_context: where.context,
       evidence: where.evidence,
+      recipient_countries: countriesOnMessage(fields.countries.stated, [
+        ...to,
+        ...cc,
+        ...bcc,
+      ]),
       ...scheduleFields(fields.sendAt, fields.sendSchedule),
     },
     channelBody: {

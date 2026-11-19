@@ -38339,6 +38339,12 @@ components:
           items: {type: string}
           description: >-
             The fields of THIS row withheld from the caller (a field mask — e.g. `amount_minor` for a rep on a deal they may read but not change), or pointing at a record they may not open. A named field is null because it is withheld, not because it is empty; absent or empty means nothing is withheld. Every withheld field is named, including one withheld only because another was: masking either money figure withholds both and the currency with them, and a withheld partner takes its attribution along. Sorting or filtering the list by any of them is refused (422).
+        ai_written_fields:
+          type: array
+          readOnly: true
+          items: {type: string}
+          description: >-
+            The fields of this deal that a model wrote and nobody has edited since, such as `description` or `amount_minor`. `currency` is named when the amount's words named no currency and the base currency was assumed. A client marks each as written by Margince. Any edit of a field removes it from the list. A field withheld from the reader (`masked_fields`) is never named. Filled only by `GET /deals/{id}`; every other read leaves it absent. Absent or empty means none.
         fx_rate_to_base: {type: [string, 'null'], description: 'Native→base, frozen at close (null while open). Decimal-as-string to avoid float rounding of the 10-dp rate.'}
         fx_rate_date: {type: [string, 'null'], format: date}
         pipeline_id: {type: [string, 'null'], format: uuid, description: 'The deal''s pipeline. A zero/placeholder UUID here is forbidden (dangling FK).'}
@@ -41577,6 +41583,24 @@ components:
           description: The reason in the reader's words, short enough to render as a chip.
         evidence_ref:
           $ref: '#/components/schemas/CompanyBriefEvidence'
+    RecipientCountry:
+      type: object
+      additionalProperties: false
+      required: [address, country]
+      description: |-
+        A country a sender states for one recipient of one message. It is never written to the
+        contact.
+      properties:
+        address:
+          type: string
+          maxLength: 320
+          description: The recipient's address, as it is on `to`, `cc` or `bcc`.
+        country:
+          type: [string, 'null']
+          pattern: '^[A-Za-z]{2}$'
+          description: |-
+            An ISO 3166-1 alpha-2 code, or null for a country the sender cleared. A cleared
+            recipient is judged under the baseline even when the record states a country.
     CommunicationEvidence:
       type: object
       description: |-
@@ -41709,6 +41733,19 @@ components:
         evidence:
           allOf: [{$ref: '#/components/schemas/CommunicationEvidence'}]
           description: Records the caller names in support of this send. Checked, never trusted.
+        recipient_countries:
+          type: array
+          maxItems: 300
+          items: {$ref: '#/components/schemas/RecipientCountry'}
+          description: |-
+            The country the sender states for a recipient of this message, which the marketing rules
+            then follow in place of the one the record states. An entry with `country: null` clears it,
+            and that recipient is judged under the baseline. A recipient with no entry keeps the country
+            the record states. An entry whose address is not on `to`, `cc` or `bcc` is ignored. Nothing
+            is written to the contact. Only the user writing the message may state one: an agent's or an
+            integration's request carrying this field is refused with 422 `invalid`. Each address may
+            appear once, compared without case or surrounding space; a second entry is refused with 422
+            `invalid`.
         consent_purpose:
           type: string
           description: |-
@@ -41836,6 +41873,13 @@ components:
             The records the sender named in support of the message, frozen with it. Absent
             when none were named. Evidence is what makes a claimed category supported, so a
             preview asked without it would answer "unproven" about a message the fire allows.
+        recipient_countries:
+          type: array
+          maxItems: 300
+          items: {$ref: '#/components/schemas/RecipientCountry'}
+          description: |-
+            The countries the sender stated for recipients, frozen with the message. Absent when none
+            was stated.
         activity_id:
           type: [string, 'null']
           format: uuid
@@ -41955,6 +41999,15 @@ components:
             The reason the rep typed for sending this message past a refusal, kept so a reopened
             composer still holds it. It grants nothing: the send still needs its own decision. Omit
             it for none.
+        recipient_countries:
+          type: array
+          maxItems: 300
+          items: {$ref: '#/components/schemas/RecipientCountry'}
+          description: |-
+            The countries the rep stated for recipients of this message, kept so a reopened composer
+            still holds them. `country: null` is a country the rep cleared, which is not the same as no
+            entry. An entry whose address is not on `to`, `cc` or `bcc` is not kept. Each address may
+            appear once; a second entry is refused with 422 `invalid`.
     MailDraft:
       type: object
       required: [id, anchor_type, anchor_id, to, cc, bcc, subject, body, version, agent_drafted, created_at, updated_at]
@@ -42013,6 +42066,13 @@ components:
           type: string
           maxLength: 1000
           description: The reason the author typed for sending past a refusal. Absent when none was.
+        recipient_countries:
+          type: array
+          maxItems: 300
+          items: {$ref: '#/components/schemas/RecipientCountry'}
+          description: |-
+            The countries the author stated for recipients, with `country: null` for one they cleared.
+            Absent when none was stated.
         created_at: {type: string, format: date-time}
         updated_at: {type: string, format: date-time}
     RescheduleSendRequest:
@@ -42070,6 +42130,15 @@ components:
         evidence:
           allOf: [{$ref: '#/components/schemas/CommunicationEvidence'}]
           description: Records the caller names in support of this message. Checked, never trusted.
+        recipient_countries:
+          type: array
+          maxItems: 300
+          items: {$ref: '#/components/schemas/RecipientCountry'}
+          description: |-
+            The countries the sender states for this message's recipients, read as the send reads them:
+            `country: null` clears a recipient's country, and a recipient with no entry keeps the record's.
+            An agent's or an integration's preview carrying this field is refused with 422 `invalid`.
+            Each address may appear once; a second entry is refused with 422 `invalid`.
         subject:
           type: string
           maxLength: 998
@@ -42122,6 +42191,15 @@ components:
             Omit it and the answer is about the record alone.
         evidence:
           allOf: [{$ref: '#/components/schemas/CommunicationEvidence'}]
+        recipient_countries:
+          type: array
+          maxItems: 300
+          items: {$ref: '#/components/schemas/RecipientCountry'}
+          description: |-
+            The countries the sender states for this message's recipients, read as the send reads them:
+            `country: null` clears a recipient's country, and a recipient with no entry keeps the record's.
+            An agent's or an integration's preview carrying this field is refused with 422 `invalid`.
+            Each address may appear once; a second entry is refused with 422 `invalid`.
         subject:
           type: string
           maxLength: 998
@@ -42394,6 +42472,19 @@ components:
         evidence:
           allOf: [{$ref: '#/components/schemas/CommunicationEvidence'}]
           description: Records the caller names in support of this send. Checked, never trusted.
+        recipient_countries:
+          type: array
+          maxItems: 300
+          items: {$ref: '#/components/schemas/RecipientCountry'}
+          description: |-
+            The country the sender states for a recipient of this message, which the marketing rules
+            then follow in place of the one the record states. An entry with `country: null` clears it,
+            and that recipient is judged under the baseline. A recipient with no entry keeps the country
+            the record states. An entry whose address is not on `to`, `cc` or `bcc` is ignored. Nothing
+            is written to the contact. Only the user writing the message may state one: an agent's or an
+            integration's request carrying this field is refused with 422 `invalid`. Each address may
+            appear once, compared without case or surrounding space; a second entry is refused with 422
+            `invalid`.
         consent_purpose:
           type: string
           description: |-
@@ -43353,12 +43444,22 @@ components:
         private_mail_requests:
           type: boolean
           description: |-
-            Whether the AI checks private mail for a request its reader owes an answer to
-            (`activities.private_mail_requests`, on by default). Only mail private by a
-            routine setting is checked; mail held as confidential, by a counterparty or
-            members-only hold, or by hand never is. A GET always carries it; a PATCH that
-            leaves it out leaves the setting unchanged. Only a human may change it, because
-            it decides which mail reaches a model.
+            Whether the AI reads private mail for requests (`activities.private_mail_requests`,
+            on by default): a request its reader owes an answer to, and a request for a
+            quotation. Only mail private by a mailbox setting is read; mail held as
+            confidential, by a counterparty or members-only hold, or by hand never is. It
+            says what a model reads, not what is shared. A GET always carries it; a PATCH
+            that leaves it out leaves the setting unchanged. Only a human may change it,
+            because it decides which mail reaches a model.
+        share_private_quote_requests:
+          type: boolean
+          description: |-
+            Whether a request for a quotation found in private mail is shared with the whole
+            workspace (`activities.share_private_quote_requests`, on by default). When on, what
+            the customer asked for becomes visible on the deal it opens. It needs
+            `private_mail_requests` on as well. Only mail private by a mailbox setting is
+            shared; mail held for any other reason never is. A GET always carries it; a PATCH
+            that leaves it out leaves it unchanged. Only a human may change it.
     LeadSettings:
       type: object
       required: [first_response_enabled, first_response_target_minutes]
@@ -52201,6 +52302,19 @@ components:
         sending_entity_id: {type: string, format: uuid}
         sending_entity_name: {type: string}
         requested_category: {type: string}
+        country:
+          type: string
+          description: |-
+            The ISO 3166-1 alpha-2 code, in lower case, of the recipient's country whose sales-mail
+            rules judged this refusal. Absent when none applied: no country on record, or one the
+            sender cleared.
+        country_source:
+          type: string
+          enum: [contact_address, employer_address, lead_company_address, sender_override, sender_cleared]
+          description: |-
+            Where `country` came from: the contact's address, their employer's, the lead's company,
+            or the sender, who stated it (`sender_override`) or cleared it (`sender_cleared`) for this
+            message. Absent when no record or sender gave a country.
     CommunicationReview:
       type: object
       description: |-

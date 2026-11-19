@@ -61,6 +61,9 @@ type DisclosureQuery struct {
 	// Recipients are the addresses the one body goes to. Each one's country
 	// adds the marketing obligations of their own pack.
 	Recipients []string
+	// Countries are the ones the sender stated for this message's
+	// recipients, which come before the record's.
+	Countries []commsauthz.CountryOverride
 	// Entity is the legal entity the message goes out for; zero is the
 	// installation's default entity.
 	Entity ids.UUID
@@ -80,20 +83,16 @@ type DisclosureQuery struct {
 // A scheduled fire DOES hold one while it prepares, so this opens a second. What
 // it reads is committed record and settings state and an in-process pack
 // registry, none of which the outer transaction writes.
-func (s *Store) Disclosures(
-	ctx context.Context, category commsauthz.Category, recipients []string, entity ids.UUID, language string,
-) ([]DisclosureLine, error) {
+func (s *Store) Disclosures(ctx context.Context, q DisclosureQuery) ([]DisclosureLine, error) {
 	var out []DisclosureLine
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		if entity.IsZero() {
-			if entity, err = sendingEntityOf(ctx, tx); err != nil {
+		if q.Entity.IsZero() {
+			if q.Entity, err = sendingEntityOf(ctx, tx); err != nil {
 				return err
 			}
 		}
-		out, err = s.DisclosuresFor(ctx, tx, DisclosureQuery{
-			Category: category, Recipients: recipients, Entity: entity, Language: language,
-		})
+		out, err = s.DisclosuresFor(ctx, tx, q)
 		return err
 	})
 	return out, err
@@ -123,7 +122,7 @@ func (s *Store) DisclosuresFor(
 	}
 	countries := make([]jurisdiction.Code, 0, len(q.Recipients))
 	for _, address := range q.Recipients {
-		country, err := recipientCountryOf(ctx, tx, connector.Recipient{Email: address})
+		country, err := recipientCountryStated(ctx, tx, connector.Recipient{Email: address}, q.Countries)
 		if err != nil {
 			return nil, err
 		}

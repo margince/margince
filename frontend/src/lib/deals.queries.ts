@@ -6,6 +6,7 @@ import { dayInZone } from "../format/timezone";
 import { useLocale } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useCompanyZone } from "./companyzone";
+import { motionFilter, priorityFilter } from "./dealcommercialvalues";
 import {
   CLOSE_DAY_DIAL,
   closeDayRange,
@@ -98,6 +99,7 @@ export function dealsQueryParams(f: DealFilters) {
     partner_company_id: filters.partner_company_id || undefined,
     stalled: filters.stalled === "true" ? true : undefined,
     partner_sourced: filters.partner_sourced === "true" ? true : undefined,
+    ...commercialDialParams(filters),
     link_type: filters.link_type || undefined,
     // Several ids and their mode, out of the one comma-joined string the
     // address carries them in. Spelled by the shared encoder rather than here,
@@ -107,6 +109,16 @@ export function dealsQueryParams(f: DealFilters) {
       parseTagMode(filters.tag_mode),
     ),
     ...rangeQueryParams(filters, f.closeDay),
+  };
+}
+
+// The commercial dials, sent to the deal list and the stage totals alike, so a
+// column's total counts the cards it draws.
+function commercialDialParams(filters: Record<string, string>) {
+  return {
+    commercial_motion: motionFilter(filters.commercial_motion),
+    priority: priorityFilter(filters.priority),
+    acquisition_source: filters.acquisition_source || undefined,
   };
 }
 
@@ -164,9 +176,14 @@ export function useDeals(f: DealFilters, enabled = true, limit = 100) {
 // deals-by-stage report's filter shape. They are the same dials dealsQueryParams
 // sends to /deals, so a stage total and its cards agree on which deals are in
 // scope. Unsupported population dials withhold totals before this runs.
-function dealsByStageReportFilters(f: DealFilters): Record<string, unknown> {
+export function dealsByStageReportFilters(
+  f: DealFilters,
+): Record<string, unknown> {
   const { filters } = f;
   const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(commercialDialParams(filters))) {
+    if (value) out[key] = value;
+  }
   if (f.pipelineId) out.pipeline_id = f.pipelineId;
   if (filters.owner_id) out.owner_id = filters.owner_id;
   if (filters.company_id) out.company_id = filters.company_id;
@@ -204,6 +221,9 @@ export function totalsWithheldBecause(f: DealFilters): MessageKey | undefined {
   if (f.filters.owner_team_id || f.filters.unassigned === "true") {
     return "deals.totalsNoTeamFilter";
   }
+  // The report's link_type matches a deal's whole set of link types. The list
+  // matches any one of them, so the two would count different deals.
+  if (f.filters.link_type) return "deals.totalsNoLinkFilter";
   if (narrowsByRange(f.filters)) return "deals.totalsNoRangeFilter";
   // The report narrows by band only, so a range no band matches has no total.
   const probability = f.filters[WIN_PROBABILITY_DIAL];

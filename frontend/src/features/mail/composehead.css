@@ -91,3 +91,26 @@
   box-shadow: none;
   font-weight: var(--fontWeightMedium);
 }
+
+/* The country a recipient's chip carries: a glyph and the code, as small as
+   the remove cross beside it, with the same 24px floor for the press. */
+.compose-country-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-inline-size: var(--space-6);
+  min-block-size: var(--space-6);
+  font: var(--fontBodySmall);
+  color: var(--textSecondary);
+}
+
+.compose-country-panel {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.compose-country-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gapActions);
+}
