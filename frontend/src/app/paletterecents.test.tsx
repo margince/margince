@@ -316,7 +316,7 @@ it("updates an open palette when another tab clears storage", () => {
 });
 
 it.each(["contact", "company", "lead", "deal", "project"] as const)(
-  "remembers an executed %s hit with its query",
+  "remembers an executed %s hit as the record alone",
   async (kind) => {
     const user = steppedClock();
     const view = mount();
@@ -335,7 +335,6 @@ it.each(["contact", "company", "lead", "deal", "project"] as const)(
     await user.click(await screen.findByText("Chosen record"));
     expect(readRecents(me.user.id).entries).toEqual([
       { kind: "record", entity_type: kind, id, label: "Chosen record" },
-      query,
     ]);
     expect(view.close).toHaveBeenCalledOnce();
   },

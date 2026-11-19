@@ -135,7 +135,7 @@ To search Margince, click the search field **Search or ask Margince** in the top
 2. Choose a result to open it, or choose **See all results for “…”** to open the full **Search results** page.
 3. On that page, **Show all** beside a kind, or **Show only**, lists every match of that kind.
 
-With the search box empty, **Recent** lists up to eight searches you ran and records you opened from the box, newest first. Choose a search to put its words back in the box, or choose a record to open it. The list stays in this browser until you sign out. **Clear** erases it. A record appears only while you can still read it, under its current name.
+With the search box empty, **Recent** lists up to eight searches you ran and records you opened from the box, newest first. A record you opened from a search is saved as the record alone. Choose a search to put its words back in the box, or choose a record to open it. The list stays in this browser until you sign out. **Clear** erases it. A record appears only while you can still read it, under its current name.
 
 With an empty box, Enter opens the newest recent item once the list has been checked.
 
