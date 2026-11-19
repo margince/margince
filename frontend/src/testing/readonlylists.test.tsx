@@ -16,10 +16,10 @@ import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { meFixture } from "./mefixture";
 
-// The seeded Read-only role on each record list: every create the list offers
+// The seeded Read-only role on each record list. Every create the list offers
 // is refused before a form opens, with the sentence that names the role. The
-// server refuses each of these writes, so a form that opened would be filled
-// in for nothing.
+// server refuses each of these writes, so an open form is filled in for
+// nothing.
 
 const READ_ONLY = meFixture({
   roles: ["read_only"],

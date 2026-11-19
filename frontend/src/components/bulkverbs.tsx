@@ -191,9 +191,9 @@ type BulkRefusals = Readonly<{
 }>;
 
 // The grant each verb's server admission asks up front (compose/
-// bulkrecordverbs.go admitVerb): a new owner and a tag ask the record's
-// update, a task the activity create. Archive is admitted on update or delete
-// (the owner's own archive), so only a seat holding neither is refused here.
+// bulkrecordverbs.go admitVerb). A new owner and a tag ask the record's
+// update; a task asks the activity create. Archive is admitted on update or
+// delete, so only a seat holding neither is refused here.
 function useBulkRefusals(recordType: BulkRecordType): BulkRefusals {
   const update = useGrantRefused({ object: recordType, action: "update" });
   const remove = useGrantRefused({ object: recordType, action: "delete" });

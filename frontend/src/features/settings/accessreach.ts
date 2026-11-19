@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { ENTITY_KINDS, type EntityKind } from "./entity";
+import { ENTITY_KINDS, type EntityKind } from "../../lib/entity";
 
 // What a seat may read and change among the record kinds, from the server's own
 // answer: the object grants and the row scope. Row scope says whose records a
-// write reaches, never whether the role holds a write, so a role with scope
+// write reaches, never whether the role holds a write. So a role with scope
 // `all` and no write grant (Read-only) changes nothing. Every summary of a
 // seat's access asks these two functions, so none can word a scope as a write.
 

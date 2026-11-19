@@ -20,12 +20,12 @@ import { stable } from "../../format/collate";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { changeReach, readableKinds } from "../../lib/accessreach";
 import { ANALYTICS_CONTEXT_KEY } from "../../lib/analyticskeys";
 import { useCan, useCanWrite, useHoldsAdminRole } from "../../lib/capability";
 import { ENTITY_KINDS } from "../../lib/entity";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
+import { changeReach, readableKinds } from "./accessreach";
 import { useKindList } from "./accesswords";
 import {
   membersOf,

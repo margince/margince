@@ -147,8 +147,8 @@ function useImportVCards() {
 }
 
 /**
- * Whether this seat is refused the vCard import, which writes a new contact
- * or updates the one a card matches, so it asks both grants
+ * Whether this seat is refused the vCard import. The import writes a new
+ * contact or updates the one a card matches, so it asks both grants
  * (contacts/vcardimport.go).
  */
 export function useVCardImportRefused(): boolean {

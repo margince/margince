@@ -80,9 +80,9 @@ export function ContactsScreen({
   );
 }
 
-// The ways a contact comes to exist, the vCard import last: it is the one a
-// reader reaches for with a stack of cards already in hand. A seat refused
-// them reads why once, and each refused verb points at that sentence.
+// The ways a contact comes to exist. The vCard import is last: a reader
+// reaches for it with a stack of cards in hand. A seat refused them reads why
+// once, and each refused verb points at that sentence.
 function ContactListActions({
   startCreating,
 }: Readonly<{ startCreating: boolean }>) {

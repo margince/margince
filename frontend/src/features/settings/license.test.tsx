@@ -160,9 +160,9 @@ describe("LicenseCard", () => {
   });
 
   // The seat reading is ONE row, and what counts as a seat is that row's
-  // DESCRIPTION rather than a note under the figures. Which order it is in
-  // matters: the rule excludes read-only seats and agents, so a reader who
-  // meets it after the numbers has already taken them for something else.
+  // DESCRIPTION rather than a note under the figures. Its order matters: the
+  // rule excludes read-only seats and agents. A reader who meets it after the
+  // numbers has already taken them for something else.
   it("puts what counts as a seat above the figures it qualifies", async () => {
     vi.stubGlobal(
       "fetch",

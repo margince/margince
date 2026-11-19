@@ -369,8 +369,8 @@ export function useVisibleSettingsTabs(
 }
 
 // A tab can ask whether the company-context card draws. That is a query, not a
-// fact of the build, so only the tab hooks carry it, and every tab hook reads
-// this one: a tab judged visible and read-only on two contexts says both.
+// fact of the build, so only the tab hooks carry it. Every tab hook reads this
+// one: a tab judged on two contexts can be visible and read-only at once.
 function useTabContext(): CatalogContext {
   return {
     ...catalogContext(),

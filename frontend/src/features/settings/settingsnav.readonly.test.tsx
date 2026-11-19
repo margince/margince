@@ -12,9 +12,9 @@ import { meFixture } from "../../testing/mefixture";
 import { usePageReadOnly, useVisibleSettingsTabs } from "./settingsnav";
 
 // A settings tab is visible and read-only on one context. The company
-// profile's tab opens on whether the company-context card draws, which is a
-// query rather than a fact of the build; a read-only check that left it out
-// called the tab read-only for the Admin it is written for.
+// profile's tab opens on whether the company-context card draws, a query
+// rather than a fact of the build. A read-only check without it called the tab
+// read-only for the Admin it is written for.
 
 const COMPANY_PAGE = SETTINGS_PAGES.find((page) => page.id === "company");
 

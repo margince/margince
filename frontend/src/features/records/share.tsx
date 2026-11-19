@@ -91,9 +91,9 @@ export function ShareScreen({
   );
 }
 
-// The record is read before anything is offered: one the reader cannot see is
-// not offered for sharing, and one they may not share shows who can see it and
-// why they cannot change that.
+// The record is read before anything is offered. One the reader cannot see is
+// not offered for sharing. One they may not share shows who can see it, and why
+// they cannot change that.
 function ShareScreenGate({
   recordType,
   recordId,

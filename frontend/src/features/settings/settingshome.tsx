@@ -12,7 +12,6 @@ import { QueryGate } from "../../design-system/querystates";
 import { RoleBadge } from "../../design-system/rbac";
 import { useTooltip } from "../../design-system/tooltip";
 import { useT } from "../../i18n";
-import { changeReach, readableKinds } from "../../lib/accessreach";
 import { opensElsewhere } from "../../lib/linkclick";
 import { navigate } from "../../lib/router";
 import { useMe } from "../../lib/session";
@@ -28,6 +27,7 @@ import {
 import { settingsHref } from "../../lib/settingsrouting";
 import { useSetupChecklist } from "../../lib/setup-checklist";
 import { usePhoneViewport } from "../../lib/viewport";
+import { changeReach, readableKinds } from "./accessreach";
 import { useKindList } from "./accesswords";
 import { PAGE_ICONS } from "./settingsnavicons";
 import { SettingsSearchBox } from "./settingssearchbox";
