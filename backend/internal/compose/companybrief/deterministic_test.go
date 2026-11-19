@@ -112,10 +112,10 @@ func TestDeterministicPipelineCitesTheLeadingOpenDeal(t *testing.T) {
 	if pipeline == nil {
 		t.Fatalf("no pipeline sentence: %q", briefLines(sentences))
 	}
-	if !strings.Contains(pipeline.Text, "5000.00 EUR") {
+	if !strings.Contains(pipeline.Text, "5,000.00 EUR") {
 		t.Errorf("the pipeline total is wrong: %q", pipeline.Text)
 	}
-	if !strings.Contains(pipeline.Text, "12000.00 EUR won") {
+	if !strings.Contains(pipeline.Text, "12,000.00 EUR won") {
 		t.Errorf("the lifetime won figure is missing: %q", pipeline.Text)
 	}
 	if len(pipeline.Evidence) != 1 || pipeline.Evidence[0].EntityID != "d-1" {
@@ -212,7 +212,7 @@ func TestDeterministicTotalsPastAnAmountlessDeal(t *testing.T) {
 			{ID: "d-2", Name: "Not priced yet"},
 		},
 	}, "en"))
-	if !strings.Contains(text, "4000.00 EUR") {
+	if !strings.Contains(text, "4,000.00 EUR") {
 		t.Errorf("the priced deal's total is missing: %q", text)
 	}
 }
@@ -246,10 +246,10 @@ func TestDeterministicLabelsTheWonTotalWithItsOwnCurrency(t *testing.T) {
 		WonLifetime: 1_200_000,
 		WonCurrency: "EUR",
 	}, "en"))
-	if !strings.Contains(text, "12000.00 EUR won") {
+	if !strings.Contains(text, "12,000.00 EUR won") {
 		t.Errorf("the won total is not in its own currency: %q", text)
 	}
-	if strings.Contains(text, "12000.00 USD") {
+	if strings.Contains(text, "12,000.00 USD") {
 		t.Errorf("the won total was labelled with the open deals' currency: %q", text)
 	}
 }

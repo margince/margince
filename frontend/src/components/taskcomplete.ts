@@ -8,7 +8,7 @@ import type { useTaskUpdate } from "./taskactions";
 // A failed write goes to `onFailure`; a caller that passes none draws it from
 // the mutation's own error. The toast is raised from this promise, not from
 // per-call callbacks: the refetch after the write removes the row and the
-// observer they hang off.
+// observer they hang off. The promise answers whether the task was completed.
 export function useCompleteTask(
   update: ReturnType<typeof useTaskUpdate>,
   onFailure?: (error: unknown) => void,
@@ -18,7 +18,7 @@ export function useCompleteTask(
   return (id: string, version: number | undefined) =>
     update
       .mutateAsync({ id, version, body: { is_done: true } })
-      .then((completedAt) =>
+      .then((completedAt) => {
         toast.show(t("worklist.verb.completed"), {
           action: {
             kind: "undo",
@@ -40,7 +40,11 @@ export function useCompleteTask(
                 );
             },
           },
-        }),
-      )
-      .catch((error) => onFailure?.(error));
+        });
+        return true;
+      })
+      .catch((error) => {
+        onFailure?.(error);
+        return false;
+      });
 }

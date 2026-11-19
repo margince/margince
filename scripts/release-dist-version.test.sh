@@ -1,79 +1,53 @@
 #!/usr/bin/env bash
-# The dist version rule's own test. It plants dated tags in a scratch
-# repository and states, for each tag, the dist version the rule must give.
+# The dist version rule's own test: the tags it accepts, and the ones it must
+# refuse with nothing on stdout.
 #
 # Usage: bash scripts/release-dist-version.test.sh
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 RULE="$SCRIPT_DIR/release-dist-version.sh"
-# shellcheck source=scripts/lib-git-fixture.sh
-source "$SCRIPT_DIR/lib-git-fixture.sh"
 FAILURES=0
 
-repo="$(mktemp -d)"
-trap 'rm -rf "$repo"' EXIT
-git -C "$repo" init -q
-git -C "$repo" -c user.email=t@t -c user.name=t commit -q --allow-empty -m root
-
-# tag_on <tag> <ISO date>: an annotated tag dated as the release was cut.
-tag_on() {
-	GIT_COMMITTER_DATE="$2" git -C "$repo" -c user.email=t@t -c user.name=t tag -a "$1" -m "$1"
-}
-
-# maps <tag> <want> <reason>
-maps() {
-	local out
-	if ! out="$(cd "$repo" && bash "$RULE" "$1" 2>&1)"; then
-		printf 'FAIL: %s was refused, and %s\n' "$1" "$3"
+# accepts <tag> <want version>
+accepts() {
+	local got
+	if ! got="$(bash "$RULE" "$1" 2>/dev/null)" || [[ "$got" != "version=$2" ]]; then
+		printf 'FAIL: %q gave %q, want version=%s\n' "$1" "${got-}" "$2"
 		FAILURES=$((FAILURES + 1))
-	elif [[ "$out" != *"version=$2"* || "$out" != *"dist=true"* ]]; then
-		printf 'FAIL: %s gave [%s], want %s, because %s\n' "$1" "$(echo "$out" | tr '\n' ' ')" "$2" "$3"
-		FAILURES=$((FAILURES + 1))
+		return
 	fi
+	printf 'ok    %s is %s\n' "$1" "$2"
 }
 
 # refuses <tag> <reason>
 refuses() {
-	if (cd "$repo" && bash "$RULE" "$1") > /dev/null 2>&1; then
-		printf 'FAIL: %s was given a dist version, and %s\n' "$1" "$2"
+	local got status=0
+	got="$(bash "$RULE" "$1" 2>/dev/null)" || status=$?
+	if [[ "$status" -ne 1 || -n "$got" ]]; then
+		printf 'FAIL: %q gave exit %d and %q, want a refusal, because %s\n' "$1" "$status" "$got" "$2"
 		FAILURES=$((FAILURES + 1))
+		return
 	fi
+	printf 'ok    refuses %q\n' "$1"
 }
 
-tag_on v1.0.0 2026-03-01T10:00:00Z
-tag_on v1.0.1 2026-03-09T10:00:00Z
-# Tagged before v1.1.0 in the same year: the edition follows the version.
-tag_on v1.2.0 2026-05-01T10:00:00Z
-tag_on v1.1.0 2026-06-01T10:00:00Z
-tag_on v1.9.0 2026-07-01T10:00:00Z
-tag_on v1.10.0 2026-08-01T10:00:00Z
-# Tagged 05:30 on New Year's Day in a +07 zone, which is 22:30 UTC on New
-# Year's Eve: the year is the UTC one.
-tag_on v1.11.0 2027-01-01T05:30:00+07:00
-tag_on v2.0.0 2027-01-04T10:00:00Z
-# A patch of an older minor, cut in a later year.
-tag_on v1.1.3 2027-02-01T10:00:00Z
+accepts v1.0.0 1.0.0
+accepts v0.0.0 0.0.0
+accepts v10.20.300 10.20.300
 
-maps v1.0.0 2026.1.0 "the first minor of a year is its first edition"
-maps v1.0.1 2026.1.1 "a patch keeps its minor's edition and carries its own number"
-maps v1.1.0 2026.2.0 "editions follow version order, not the order the tags were pushed"
-maps v1.2.0 2026.3.0 "v1.2.0 comes after v1.1.0 even though it was tagged first"
-maps v1.10.0 2026.5.0 "minor 10 sorts after minor 9 as a number"
-maps v1.11.0 2026.6.0 "the year is read in UTC"
-maps v2.0.0 2027.1.0 "a new year starts its editions again"
-maps v1.1.3 2026.2.3 "a patch keeps its minor's year, whenever it was cut"
+refuses v1.0.0-rc.1 "a pre-release tag has no dist version"
+refuses 1.0.0 "a release tag carries its v"
+refuses v1.0 "a tag names three parts"
+refuses v01.0.0 "a part never has a leading zero"
+refuses v1.0.0+build.5 "a tag carries no build metadata"
+refuses refs/tags/v1.0.0 "the tag is its short name, not the full ref"
+# shellcheck disable=SC2016 # the shell text is the input under test, never expanded
+refuses 'v1.0.0$(id)' "a tag never carries shell"
+refuses "" "a run always names a tag"
 
-if out="$(cd "$repo" && bash "$RULE" v2.0.0-rc.1)" && [[ "$out" == "dist=false" ]]; then :; else
-	printf 'FAIL: a pre-release did not answer dist=false: [%s]\n' "${out:-}"
-	FAILURES=$((FAILURES + 1))
-fi
-refuses v3.0.1 "its minor v3.0.0 was never tagged, so no year or edition exists"
-refuses v1.0 "it is no release version"
-refuses "" "no tag was passed"
-
-if [[ "$FAILURES" -gt 0 ]]; then
-	echo "release-dist-version.test: $FAILURES failure(s)"
+if [[ "$FAILURES" -ne 0 ]]; then
+	printf '\nrelease-dist-version: %d case(s) failed\n' "$FAILURES" >&2
 	exit 1
 fi
-echo "OK: release-dist-version — each tag maps to its year, edition and patch, a pre-release drafts nothing"
+echo "OK: release-dist-version — a plain tag loses its v, every other input is refused"

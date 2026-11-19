@@ -3,7 +3,6 @@ import { useState } from "react";
 import { api } from "../../api/client";
 import { ifMatch, requireVersion } from "../../api/version";
 import { SUBMIT_COPY, type SubmitIntent } from "../../components/create";
-import { LogActivityAction } from "../../components/logactivity.action";
 import {
   Button,
   EmptyState,
@@ -16,7 +15,6 @@ import { refuseUnreadableField } from "../../design-system/formvalidity";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { MultiSelect, Select } from "../../design-system/select";
-import { formatDate } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import {
   useCanWrite,
@@ -40,6 +38,7 @@ import { useViewerZone } from "../../lib/viewerzone";
 import { PartnerCommissions } from "./partnercommissions";
 import { PartnerDeals } from "./partnerdeals";
 import { ActivationNote, MarginTierRow } from "./partners.detailrows";
+import { PartnerNextStep } from "./partners.nextstep";
 import {
   CERT_LABELS,
   CERT_STATUSES,
@@ -347,8 +346,8 @@ function PartnerDetail({
             {partnerStageLabel(partner, t)}
             <ActivationNote partner={partner} locale={locale} zone={zone} />
           </dd>
-          <dt>{t("partner.nextStep")}</dt>
-          <dd>
+          <dt className="detail-grid-wide">{t("partner.nextStep")}</dt>
+          <dd className="detail-grid-wide">
             <PartnerNextStep companyId={companyId} partner={partner} />
           </dd>
           {partner.served_segments && partner.served_segments.length > 0 && (
@@ -441,41 +440,5 @@ export function PartnerTab({ companyId }: Readonly<{ companyId: string }>) {
         )
       }
     </QueryGate>
-  );
-}
-
-/**
- * The partner's next step is a task on its company, with a colleague who does
- * it and a due date. So it reaches that colleague's Home and Worklist. Text
- * written before that stays readable here until someone turns it into a task.
- */
-function PartnerNextStep({
-  companyId,
-  partner,
-}: Readonly<{ companyId: string; partner: Partner }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const zone = useViewerZone();
-  const canFileTask = useCanWrite("activity", "create");
-  const due = partner.next_step_due_at;
-  return (
-    <div className="form-stack">
-      {(partner.next_step || due) && (
-        <p>
-          {partner.next_step && <span>{partner.next_step}</span>}
-          {partner.next_step && due && " · "}
-          {due && <span>{formatDate(due, locale, zone)}</span>}
-          <br />
-          <span className="t-caption">{t("partner.nextStepOld")}</span>
-        </p>
-      )}
-      {canFileTask && (
-        <LogActivityAction
-          entityType="company"
-          entityId={companyId}
-          askedKind="task"
-        />
-      )}
-    </div>
   );
 }

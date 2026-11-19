@@ -1,15 +1,18 @@
 import type { components } from "../../api/schema";
+import { fieldRefusalSentence } from "../../components/create.refusals";
 import { Field } from "../../design-system/atoms";
 import { Button } from "../../design-system/button";
 import { type Choice, ChoiceList } from "../../design-system/choicelist";
 import { Select } from "../../design-system/select";
 import { formatMoney } from "../../format/format";
-import { typedAmountFault, typedMinorUnits } from "../../format/minorunits";
-import { type Locale, type Translator, useLocale, useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
+import { problemFieldErrorsOf, problemMessageOf } from "../../lib/problem";
 
 type Deal = components["schemas"]["Deal"];
 type Preview = components["schemas"]["PromoteLeadPreview"];
 type PromoteLeadRequest = components["schemas"]["PromoteLeadRequest"];
+type Pipeline = components["schemas"]["Pipeline"];
 export type QualificationDealChoice =
   | "new"
   | "none"
@@ -139,7 +142,7 @@ export function ExistingQualificationDeal({
 export function qualificationConfirmState(
   deal: ReturnType<typeof qualificationDealState>,
   preview: { isPending: boolean; isFetching: boolean },
-  amount: { amountInvalid: boolean; amountWaitsForCurrency: boolean },
+  amount: { amountInvalid: boolean },
   // nameSettling: the deal would be named after a company name still being read.
   name: { nameSettling: boolean },
 ) {
@@ -149,10 +152,7 @@ export function qualificationConfirmState(
       preview.isPending ||
       preview.isFetching ||
       deal.invalidSelection ||
-      (deal.withDeal &&
-        (amount.amountInvalid ||
-          amount.amountWaitsForCurrency ||
-          name.nameSettling)) ||
+      (deal.withDeal && (amount.amountInvalid || name.nameSettling)) ||
       (Boolean(deal.selectedDeal) && preview.isFetching),
   };
 }
@@ -170,48 +170,58 @@ function qualificationConfirmLabel(
 }
 
 // dealBlock is the wire's deal request from the dialog's fields. The money
-// pair holds from birth: an amount only travels with the currency, and an
-// empty or unreadable amount travels as no money at all.
+// pair holds from birth: an amount only travels with the currency, and no
+// amount travels as no money at all.
 export function dealBlock(input: {
   pipelineId: string | undefined;
   stageId: string | undefined;
   name: string;
-  amount: string;
+  amountMinor: number | null;
   currency: string | undefined;
-  locale: Locale;
 }): NonNullable<PromoteLeadRequest["deal"]> {
-  const typed =
-    input.amount.trim() !== "" && input.currency
-      ? typedMinorUnits(input.amount, input.currency, input.locale)
-      : null;
-  // priced is false without a currency, so the code below is always the real
-  // one. A lead promoted at a dong price is stored as dong.
-  const priced = typed !== null && "minor" in typed;
+  const priced = input.amountMinor !== null && input.currency;
   return {
     pipeline_id: input.pipelineId ?? null,
     stage_id: input.stageId ?? null,
     name: input.name.trim() || null,
-    amount_minor: priced ? typed.minor : null,
+    amount_minor: priced ? input.amountMinor : null,
     currency: priced ? (input.currency ?? null) : null,
   };
 }
 
-// amountState is what the typed amount does to the confirm. A refused amount
-// names why under the field. A number with no currency to carry it waits,
-// because sent as-is it would be dropped on the way to the server.
-export function amountState(
-  amount: string,
-  currency: string | undefined,
-  locale: Locale,
-  t: Translator,
+// qualifyRefusals splits a failed promotion: a refusal of the amount stands
+// under the field, and the foot of the dialog keeps everything else.
+export function qualifyRefusals(
+  error: unknown,
+  t: (key: MessageKey) => string,
 ) {
-  const typed = amount.trim() !== "";
-  const amountFault = currency
-    ? typedAmountFault(amount, currency, locale, t)
-    : undefined;
+  const faults = problemFieldErrorsOf(error);
+  const amount = faults.find((fault) => fault.field === "amount_minor");
   return {
-    amountFault,
-    amountInvalid: amountFault !== undefined,
-    amountWaitsForCurrency: typed && !currency,
+    amount: amount && fieldRefusalSentence(amount, t),
+    foot:
+      amount && faults.length === 1 ? undefined : problemMessageOf(error, t),
   };
+}
+
+// The sentence under the amount, and whether the box's own state holds the
+// confirm back. Text the box refuses names its reason under the box itself.
+export function amountRefusal(
+  amount: { amountMinor: number | null; refused: boolean },
+  server: string | undefined,
+  t: ReturnType<typeof useT>,
+) {
+  if (amount.refused) {
+    return { local: true, sentence: undefined };
+  }
+  if (amount.amountMinor !== null && amount.amountMinor < 0) {
+    return { local: true, sentence: t("create.amountNegative") };
+  }
+  return { local: false, sentence: server };
+}
+
+export function openStagesOf(pipeline: Pipeline | undefined) {
+  return [...(pipeline?.stages ?? [])]
+    .filter((stage) => stage.semantic === "open")
+    .sort((a, b) => a.position - b.position);
 }

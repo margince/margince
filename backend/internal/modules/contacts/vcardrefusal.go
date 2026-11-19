@@ -6,18 +6,29 @@ package contacts
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
-// cardRefusal is the reason a card cannot be imported because of what it
-// states, or "" when nothing in it is refused. A refused card is reported by
-// name and the rest of the file still imports.
+// cardRefusal is the reason a card is skipped before any lookup, or "" when
+// the import goes on with it. A refused card is reported by name and the rest
+// of the file still imports. An unreadable name comes first, so it is not
+// reported as a card that states none.
 func cardRefusal(entry VCardEntry) string {
 	if len(entry.Unreadable) > 0 {
 		return fmt.Sprintf("the %s on this card is not readable text; save the file as UTF-8 and import it again",
 			vcardStoredProperties[entry.Unreadable[0]])
+	}
+	if strings.TrimSpace(entry.FullName) == "" {
+		return "the card states no name"
+	}
+	if cardNamesASendingSystem(entry) {
+		return vcardMachineAddress
+	}
+	if _, _, length, over := OverlongContactName(map[string]string{contactNameColumn: entry.FullName}); over {
+		return fmt.Sprintf("The name is %d characters. A contact name holds at most %d.", length, ContactNameLimit)
 	}
 	for _, email := range entry.Emails {
 		if _, err := values.ParseEmail(email.Value); err != nil {

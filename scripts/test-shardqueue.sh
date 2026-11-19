@@ -7,7 +7,8 @@
 # the claim protocol with real concurrent shells against the `dir:` store, so a
 # protocol bug fails here in seconds:
 #   1. groups hold every part once, in order, and a heavy part stands alone;
-#   2. shards that race for one queue claim every group exactly once;
+#   2. shards that race for one queue claim every group exactly once, even
+#      where mkdir reports a lost race as a win;
 #   3. a fast shard claims more than its share, and a shard that never starts
 #      loses none of its groups;
 #   4. a later attempt skips the groups green shards reported, and refuses an
@@ -90,6 +91,18 @@ for round in 1 2 3 4 5 6; do
   expect_whole "race round $round" 61
 done
 
+# The uutils mkdir of Ubuntu 26.04 exits 0 after losing the race to create a
+# directory. This one does so every time, so a claim that trusts mkdir fails here.
+# A program on PATH, as the real one is: a shell function named mkdir stops the
+# shards under the bash 3.2 that macOS ships.
+mkdir -p "$work/bin"
+printf '#!/usr/bin/env bash\n/bin/mkdir "$@" 2> /dev/null || [[ -d "${!#}" ]]\n' > "$work/bin/mkdir"
+chmod +x "$work/bin/mkdir"
+rm -rf "$work"/claimed-* "$work/q"
+for k in 1 2 3 4 5 6 7 8; do (PATH="$work/bin:$PATH" shard "dir:$work/q" "$k" 8 61 0.01) & done
+start_race
+expect_whole "under a mkdir that exits 0 for a directory already there" 61
+
 rm -rf "$work"/claimed-* "$work/q"
 shard "dir:$work/q" 1 4 40 0 &
 for k in 2 3 4; do shard "dir:$work/q" "$k" 4 40 0.1 & done
@@ -126,15 +139,15 @@ if queue_done_groups "$work/earlier" 3 OTHER > /dev/null 2>&1; then
   fail "an artifact cut from other parts must not be read as done"
 fi
 
-# 5. The dispatcher. Each part takes its slot as a directory, so two parts on
-# one slot at once fail to take it.
+# 5. The dispatcher. Each part claims its slot, so two parts on one slot at
+# once fail to take it.
 printf 'backend|./p%s\n' 1 2 3 4 5 6 7 > "$work/work"
 printf '1\n2 3\n4 5 6\n7\n' > "$work/dgroups"
 run_one() { # line part outdir slot
-  if ! mkdir "$3/slot-$4" 2>/dev/null; then echo "slot $4 shared by part $2" >> "$3/errors"; fi
+  if ! claim "$3/slot-$4"; then echo "slot $4 shared by part $2" >> "$3/errors"; fi
   echo "$2 $1" >> "$3/ran"
   sleep 0.0$(( $2 % 3 ))
-  rmdir "$3/slot-$4" 2>/dev/null || :
+  rm -f "$3/slot-$4"
 }
 mkdir -p "$work/out"
 : > "$work/claimed"

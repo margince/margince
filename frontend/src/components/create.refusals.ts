@@ -1,5 +1,9 @@
 import type { MessageKey } from "../i18n/en";
-import { faultSentenceFor, problemFieldErrorsOf } from "../lib/problem";
+import {
+  type FieldProblem,
+  faultSentenceFor,
+  problemFieldErrorsOf,
+} from "../lib/problem";
 import type { CreateField } from "./create.fields";
 
 // The server's field codes that have catalog copy here. Any other code reads
@@ -8,6 +12,15 @@ const FIELD_CODE_COPY = new Map<string, MessageKey>([
   ["amount_negative", "create.amountNegative"],
   ["reference_not_found", "create.referenceNotFound"],
 ]);
+
+// The sentence a form shows beside the field one refusal names.
+export function fieldRefusalSentence(
+  problem: FieldProblem,
+  t: (key: MessageKey) => string,
+): string {
+  const copy = FIELD_CODE_COPY.get(problem.code);
+  return copy ? t(copy) : faultSentenceFor(problem, t);
+}
 
 export type FieldRefusals = Readonly<{
   // The sentence for each form field the server refused, keyed by field key.
@@ -34,8 +47,7 @@ export function fieldRefusals(
         candidate.offers?.pickedKey === problem.field,
     );
     if (!field) continue;
-    const copy = FIELD_CODE_COPY.get(problem.code);
-    byField.set(field.key, copy ? t(copy) : faultSentenceFor(problem, t));
+    byField.set(field.key, fieldRefusalSentence(problem, t));
   }
   return {
     byField,

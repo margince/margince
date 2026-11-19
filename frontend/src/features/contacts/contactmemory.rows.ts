@@ -1,5 +1,6 @@
 import type { useInteractionLabel } from "../../components/interactionchrome";
 import { activityTimeline } from "../../design-system/activitytimeline";
+import { markdownLines } from "../../design-system/markdown-text";
 import type { ReadingTone } from "../../design-system/readingtone";
 import { groupChronology } from "../../design-system/timelinegroups";
 import {
@@ -100,7 +101,9 @@ export function memoryRows(
     source: row.source,
     context:
       row.kind === "note" && row.row?.content_state === "available"
-        ? row.row.body?.trim().slice(0, 280)
+        ? markdownLines(row.row.body ?? "")
+            .join(" ")
+            .slice(0, 280) || undefined
         : undefined,
   }));
 }

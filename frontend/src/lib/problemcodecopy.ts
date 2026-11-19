@@ -35,6 +35,10 @@ export const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
   ["individual_performance_off", "common.individualPerformanceOff"],
   // The server's skew detail is English, worded for API and agent readers.
   ["version_skew", "common.versionSkew"],
+  // The detail names a stage or a kind of stage in English.
+  ["stage_not_in_pipeline", "deal.stageOtherPipeline"],
+  ["pipeline_retired", "deal.pipelineRetired"],
+  ["last_closing_stage", "stage.lastClosing"],
   // Every code httperr.Duplicate sends: its detail is one fixed API sentence
   // for all of them. backend/gates/frontendproblemcodecopy_test.go holds the set.
   ["duplicate_email", "common.duplicate.email"],
@@ -66,6 +70,12 @@ export const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
   ["invalid_bic", "legalEntities.invalidBic"],
   ["invalid_country", "legalEntities.invalidCountry"],
   ["invalid_language", "legalEntities.invalidLanguage"],
+  // The phone parser's details are English and speak of E.164.
+  ["phone_empty", "common.phone.empty"],
+  ["phone_needs_country_code", "common.phone.needsCountryCode"],
+  ["phone_malformed", "common.phone.malformed"],
+  // The detail speaks of a promotion; the screen calls it a qualification.
+  ["contact_has_deal", "lead.demoteContactHasDeal"],
 ]);
 
 // The held refusal names no record; its words depend only on whether the

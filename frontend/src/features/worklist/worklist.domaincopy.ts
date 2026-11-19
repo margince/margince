@@ -42,6 +42,7 @@ export function domainQuestionHeading(
 const REASONS: Partial<Record<string, MessageKey>> = {
   forwarded_identity: "worklist.domainQuestion.reason.forwarded",
   vendor_verdict: "worklist.domainQuestion.reason.vendor",
+  foreign_site: "worklist.domainQuestion.reason.foreignSite",
   near_duplicate: "worklist.domainQuestion.reason.nearDuplicate",
   stale_evidence: "worklist.domainQuestion.reason.stale",
 };

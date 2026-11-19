@@ -191,6 +191,68 @@ describe("ModelPricesCard", () => {
     ).toHaveLength(1);
   });
 
+  // A provider the Providers tab does not list has nothing to price there, so
+  // neither its sync line nor its price fold is drawn.
+  it("shows only the providers the Providers tab lists", async () => {
+    const rate = (provider: string, model_id: string) => ({
+      provider,
+      model_id,
+      lane: "chat",
+      input_per_mtok: "1",
+      output_per_mtok: "2",
+      cache_read_per_mtok: "0",
+      cache_write_per_mtok: "0",
+      effective_date: "2026-07-23",
+      source: "catalogue",
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input instanceof Request ? input.url : input);
+        if (url.endsWith("/v1/me"))
+          return jsonResponse(
+            meFixture({ allow: { ...READER, ai_routing: ["read"] } }),
+          );
+        if (url.endsWith("/ai/provider-keys"))
+          return jsonResponse({
+            providers: [
+              { provider: "anthropic", configured: true },
+              { provider: "gemini", configured: true },
+            ],
+          });
+        if (url.endsWith("/ai/price-sync"))
+          return jsonResponse({
+            auto_sync: true,
+            last_run: {
+              ran_at: "2026-10-02T10:00:00Z",
+              trigger: "scheduled",
+              report: {
+                providers: [
+                  line("gemini", "updated", { added: 2 }),
+                  line("vllm", "updated", { added: 4 }),
+                ],
+              },
+            },
+          });
+        if (url.endsWith("/v1/ai-model-rates"))
+          return jsonResponse({
+            data: [
+              rate("anthropic", "claude-opus-4-8"),
+              rate("ollama", "llama3"),
+            ],
+          });
+        return jsonResponse({ title: "Not found" }, 404);
+      }),
+    );
+    mount();
+    expect(await screen.findByText("Anthropic")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.queryByText("Ollama")).not.toBeInTheDocument(),
+    );
+    expect(screen.getByText("2 models added")).toBeInTheDocument();
+    expect(screen.queryByText("4 models added")).not.toBeInTheDocument();
+  });
+
   it("withholds the card from a seat without the price sheet", async () => {
     backend({}, { auto_sync: true });
     mount();

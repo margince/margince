@@ -114,6 +114,7 @@ func briefSystemFor(fence promptfence.Fence, lang string) string {
 // is fenced with a nonce that writer has never seen, so no subject line or
 // quoted sentence can close the span and be read as instruction.
 func BriefRequest(in Input, lang string) model.Request {
+	in = in.inLanguage(lang)
 	fence := promptfence.New()
 	return model.Request{
 		System:         briefSystemFor(fence, lang),
@@ -186,12 +187,15 @@ func shownRefs(in Input) claims.Refs {
 // Write produces the brief. lane may be nil, which is not an error state: it is
 // the deployment saying this role runs no model, and the deterministic floor is
 // the answer.
+//
+// The third return says the lane failed rather than being absent, so the caller
+// does not cache a floor that only a transient outage wrote.
 func Write(
 	ctx context.Context, lane Completer, contactID string, in Input, lang string,
-) ([]Sentence, crmcontracts.WrittenBy, error) {
+) ([]Sentence, crmcontracts.WrittenBy, bool) {
 	floor := Deterministic(contactID, in, lang)
 	if lane == nil {
-		return floor, crmcontracts.WrittenByDeterministic, nil
+		return floor, crmcontracts.WrittenByDeterministic, false
 	}
 	written, err := writeWithModel(ctx, lane, contactID, in, lang)
 	if err != nil {
@@ -199,10 +203,9 @@ func Write(
 		// unavailable, over budget, or answering unparseable JSON must not take
 		// the card down with it: the reader gets the floor, and generated_by
 		// tells them which of the two they are reading.
-		//nolint:nilerr // on_budget_exhausted: degrade — the fallback IS the answer, and generated_by reports it
-		return floor, crmcontracts.WrittenByDeterministic, nil
+		return floor, crmcontracts.WrittenByDeterministic, true
 	}
-	return written, crmcontracts.WrittenByModel, nil
+	return written, crmcontracts.WrittenByModel, false
 }
 
 func writeWithModel(

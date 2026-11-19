@@ -300,7 +300,6 @@ connector
 consent
 consolidation
 constant
-constellation
 construction
 consume
 contact
@@ -1072,7 +1071,6 @@ plant
 platform
 plural
 plus
-poc
 pod
 point
 policy

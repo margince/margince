@@ -25,6 +25,7 @@ import (
 	"io"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -49,6 +50,9 @@ type VCardEntry struct {
 	// addressRank is how strongly the card prefers the ADR read so far; zero
 	// until one is read.
 	addressRank int
+	// titleRunes is the length of the title the card stated, before Title was
+	// cut to the column, so the import can report the cut.
+	titleRunes int
 	// Revised is what the card's REV property states: when this card was last
 	// changed. Nil where it states none, and the import then dates the card
 	// from its own clock.
@@ -254,7 +258,7 @@ func applyVCardProperty(entry *VCardEntry, name string, params []string, raw str
 		// and "Acme; Holdings" would arrive as "Acme".
 		entry.Company = strings.TrimSpace(decodeVCardValue(params, firstComponent(raw)))
 	case "TITLE":
-		entry.Title = MachineTitle(value)
+		entry.Title, entry.titleRunes = MachineTitle(value), utf8.RuneCountInString(strings.TrimSpace(value))
 	case "EMAIL":
 		if v := strings.TrimSpace(value); v != "" {
 			entry.Emails = append(entry.Emails, VCardChannel{Value: v, Kind: emailKindFrom(params)})

@@ -192,7 +192,7 @@ export function VCardImportPage() {
       />
       <Heading
         size="xlarge"
-        className="t-display vcard-import-title"
+        className="t-display vcard-import-title arrival-focus"
         ref={title}
         tabIndex={-1}
       >

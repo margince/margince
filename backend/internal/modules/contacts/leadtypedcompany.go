@@ -36,6 +36,9 @@ func (s *Store) promotionEmployer(ctx context.Context, tx pgx.Tx, lead crmcontra
 	if choice.CompanyID != nil || !choice.named() {
 		return choice, "", facts, nil
 	}
+	if lead.Industry != nil {
+		choice.Industry = new(string(*lead.Industry))
+	}
 	// The writer takes these domains as they are, so it decides on the facts
 	// the approval's digest was compared against.
 	if facts.Domain != nil {

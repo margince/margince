@@ -17,15 +17,29 @@
 #
 # WHAT IT READS: its arguments and the files above. No git, no network.
 #
+# --local writes the same folder unpacked, naming the images `make prod`
+# built from a checkout (margince-local/<role>:<tag>) instead of a release's digests.
+#
 # Usage: bash scripts/release-compose.sh v1.0.0 dist/release/images.txt dist/release
+#        bash scripts/release-compose.sh --local local-1a2b3c4 .tmp/production/stack
 set -euo pipefail
 
-version="${1:-}"
-images="${2:-}"
-out="${3:-}"
-if [[ -z "$version" || -z "$images" || -z "$out" ]]; then
-	echo "release-compose: pass the version, images.txt and the output folder." >&2
-	exit 1
+local_tag=""
+if [[ "${1:-}" == "--local" ]]; then
+	local_tag="${2:-}"
+	dest="${3:-}"
+	if [[ -z "$local_tag" || -z "$dest" ]]; then
+		echo "release-compose: --local takes the image tag and the folder to write." >&2
+		exit 1
+	fi
+else
+	version="${1:-}"
+	images="${2:-}"
+	out="${3:-}"
+	if [[ -z "$version" || -z "$images" || -z "$out" ]]; then
+		echo "release-compose: pass the version, images.txt and the output folder." >&2
+		exit 1
+	fi
 fi
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
@@ -45,19 +59,36 @@ replace_once() {
 	FROM="$from" TO="$to" perl -0pi -e 's/^\Q$ENV{FROM}\E$/$ENV{TO}/m' "$file"
 }
 
-name="margince-$version-compose"
-work="$(mktemp -d)"
-trap 'rm -rf "$work"' EXIT
-dir="$work/$name"
-mkdir -p "$dir" "$out"
-
-cp "$compose_dir/compose.yaml" "$dir/compose.yaml"
-for role in api web worker; do
+# image_ref <role>: the image the folder runs for that role.
+image_ref() {
+	local role="$1" ref
+	if [[ -n "$local_tag" ]]; then
+		echo "margince-local/$role:$local_tag"
+		return
+	fi
 	ref="$(grep -E "^ghcr\.io/margince/$role:[^@]+@sha256:[0-9a-f]{64}$" "$images" || true)"
 	if [[ -z "$ref" || "$(printf '%s\n' "$ref" | wc -l)" -ne 1 ]]; then
 		echo "release-compose: $images names no single digest for the $role image." >&2
 		exit 1
 	fi
+	echo "$ref"
+}
+
+if [[ -n "$local_tag" ]]; then
+	dir="$dest"
+	rm -rf "$dir"
+	mkdir -p "$dir"
+else
+	name="margince-$version-compose"
+	work="$(mktemp -d)"
+	trap 'rm -rf "$work"' EXIT
+	dir="$work/$name"
+	mkdir -p "$dir" "$out"
+fi
+
+cp "$compose_dir/compose.yaml" "$dir/compose.yaml"
+for role in api web worker; do
+	ref="$(image_ref "$role")"
 	replace_once "$dir/compose.yaml" "    image: ghcr.io/margince/$role:RELEASE" "    image: $ref"
 done
 
@@ -76,5 +107,9 @@ replace_once "$dir/front.conf" "    server_name margince.example.com;" "    serv
 cp "$root/config/margince.example.yaml" "$dir/margince.yaml"
 replace_once "$dir/margince.yaml" "  password_file: config/margince-admin-password" "  password_file: secrets/admin-password"
 
+if [[ -n "$local_tag" ]]; then
+	echo "release-compose: wrote $dir"
+	exit 0
+fi
 tar -czf "$out/$name.tar.gz" -C "$work" "$name"
 echo "release-compose: packed $out/$name.tar.gz"

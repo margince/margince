@@ -41,7 +41,7 @@ import { useViewerZone } from "../../../lib/viewerzone";
 import { probabilityWords } from "../dealprobability";
 import { useStageTimes } from "./dealstagehistory";
 import type { DealStandingInputs } from "./dealstanding";
-import { lastInbound, nextStepOf, standingOffer } from "./dealstanding";
+import { nextStepOf, standingOffer } from "./dealstanding";
 import { daysWaiting, waitingSince } from "./dealwaiting";
 
 type Activity = components["schemas"]["Activity"];
@@ -295,7 +295,7 @@ function timelineGap(
  * out.
  */
 export function timelineEvents(
-  { deal, activities, asOf }: DealStandingInputs,
+  { deal, activities, asOf, lastInbound }: DealStandingInputs,
   { t, locale, zone }: Words,
 ): TimelineEvent[] {
   const now = Date.parse(asOf);
@@ -361,7 +361,7 @@ export function timelineEvents(
   );
   return [
     ...held,
-    ...lastWord(activities, dayOf, t),
+    ...lastWord(lastInbound, dayOf, t),
     ...ahead,
     ...tasks,
     ...closeEvent(deal, day, t),
@@ -382,11 +382,10 @@ function isConversation(row: Activity): boolean {
 }
 
 function lastWord(
-  activities: readonly Activity[],
+  row: Activity | undefined,
   dayOf: (row: Activity) => string,
   t: Translator,
 ): TimelineEvent[] {
-  const row = lastInbound(activities);
   if (!row) {
     return [];
   }

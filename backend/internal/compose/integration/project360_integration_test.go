@@ -98,13 +98,17 @@ func seedProject360(t *testing.T, e *Env) project360Fixture {
 		t.Fatalf("seat the stakeholder: %v", err)
 	}
 
-	log := func(kind, subject string, due *time.Time, links ...activities.ActivityLinkInput) {
+	logAs := func(ctx context.Context, kind, subject string, due *time.Time, links ...activities.ActivityLinkInput) {
 		t.Helper()
-		if _, _, err := e.Activities.LogActivity(admin, activities.LogActivityInput{
+		if _, _, err := e.Activities.LogActivity(ctx, activities.LogActivityInput{
 			Kind: kind, Subject: &subject, DueAt: due, Links: links,
 		}); err != nil {
 			t.Fatalf("log %q: %v", subject, err)
 		}
+	}
+	log := func(kind, subject string, due *time.Time, links ...activities.ActivityLinkInput) {
+		t.Helper()
+		logAs(admin, kind, subject, due, links...)
 	}
 	onProject := activities.ActivityLinkInput{EntityType: "project", EntityID: project.UUID}
 	for i := range 26 {
@@ -112,7 +116,10 @@ func seedProject360(t *testing.T, e *Env) project360Fixture {
 	}
 	yesterday := time.Now().UTC().Add(-24 * time.Hour)
 	log("task", "Send the revised SOW", &yesterday, onProject)
-	log("note", "Pricing call", nil, activities.ActivityLinkInput{EntityType: "deal", EntityID: ids.UUID(deal.Id)})
+	// An agent files no project unattended, so its note on the deal stays off
+	// the project that a member's note would inherit.
+	logAs(e.AgentFor(t, e.AdminUser, nil, AdminPerms), "note", "Pricing call", nil,
+		activities.ActivityLinkInput{EntityType: "deal", EntityID: ids.UUID(deal.Id)})
 	log("email", "Invoice question", nil, activities.ActivityLinkInput{EntityType: "contact", EntityID: contact})
 	log("email", "Rack decommissioning", nil,
 		activities.ActivityLinkInput{EntityType: "contact", EntityID: contact},

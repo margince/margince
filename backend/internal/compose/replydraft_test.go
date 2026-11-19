@@ -117,10 +117,12 @@ type sequencedBrainStub struct {
 	// which is the only way to reach a path that runs between two successes.
 	errs     []error
 	requests []model.Request
+	subject  ai.Subject
 }
 
-func (b *sequencedBrainStub) Complete(_ context.Context, req model.Request) (model.Response, error) {
+func (b *sequencedBrainStub) Complete(ctx context.Context, req model.Request) (model.Response, error) {
 	b.requests = append(b.requests, req)
+	b.subject, _ = ai.SubjectOf(ctx)
 	index := len(b.requests) - 1
 	if index >= len(b.responses) {
 		index = len(b.responses) - 1
@@ -258,8 +260,8 @@ func TestVoicedDraftWithoutAProfileIsThePlainPath(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if version != nil {
-		t.Fatal("no profile must mean no voice version stamp")
+	if version != nil || brain.subject.Label != "plan" {
+		t.Fatalf("version %v, rail label %q; want no stamp, named by the subject line", version, brain.subject.Label)
 	}
 	if strings.Contains(brain.requests[0].Messages[0].Content, "<voice_profile>") {
 		t.Fatal("no profile must mean no voice block")

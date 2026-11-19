@@ -1,4 +1,5 @@
 import { EntityRef } from "../../components/entityref";
+import { useLatestInboundRead } from "../../components/latestinbound";
 import { HowItStands } from "../../design-system/howitstands";
 import { statTone } from "../../design-system/readingtone";
 import type { RecordTimeline } from "../../design-system/recordtimeline";
@@ -87,9 +88,14 @@ export function LeadHowItStands({
       ? (explain.data.current?.factors ?? [])
       : undefined;
   const score = leadScoreReading(lead, factors, ctx);
+  const lastMessages = useLatestInboundRead("lead", lead.id).data;
   const timeline = leadTimeline(
     lead,
     thread.activities,
+    {
+      inbound: lastMessages?.last_inbound,
+      outbound: lastMessages?.last_outbound,
+    },
     addedViaFor(lead, t),
     ctx,
   );
@@ -108,6 +114,7 @@ export function LeadHowItStands({
         ) : (
           verdict.sentence
         ),
+        note: verdict.note,
         tone: verdict.tone,
       }}
       latest={latestWord(thread.activities, {
@@ -144,8 +151,11 @@ export function LeadHowItStands({
           peek={score.peek}
         />
       }
+      // A closed lead keeps its figure; the breakdown is not read for it.
       dims={
-        <StandingDims label={t("lead.score")} dims={leadDims(factors, ctx)} />
+        lead.archived_at ? undefined : (
+          <StandingDims label={t("lead.score")} dims={leadDims(factors, ctx)} />
+        )
       }
       timeline={
         <StandingTimeline

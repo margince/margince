@@ -47,10 +47,13 @@ import (
 // questions about how the duplicate got in.
 const companyRenameRecheckSource = "company_rename_recheck"
 
-// recheckCompanyNameForDuplicates files the pairs a renamed company now makes.
+// recheckCompanyNameForDuplicates files the pairs a renamed company now makes
+// and closes the ones its new name no longer makes.
 func recheckCompanyNameForDuplicates(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, by string) error {
-	_, err := recheckCompanyForDuplicates(ctx, tx, companyID, companyRenameRecheckSource, by)
-	return err
+	if _, err := recheckCompanyForDuplicates(ctx, tx, companyID, companyRenameRecheckSource, by); err != nil {
+		return err
+	}
+	return closeRenamedCompanyPairs(ctx, tx, companyID)
 }
 
 // recheckCompanyForDuplicates scores an existing company, with its names and
