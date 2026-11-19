@@ -67,3 +67,21 @@ func TestSearchWonDealYearsIncludeBothWholeYearsInTheInstallationZone(t *testing
 		t.Fatalf("unsupported phrases must prevent a partial answer: %+v, %v", got, err)
 	}
 }
+
+func TestAVietnameseWonCountInEitherWordOrderUsesSalesWon(t *testing.T) {
+	const vocabulary = `{"context":{"timezone":"Asia/Ho_Chi_Minh","base_currency":"VND"}}`
+	for _, question := range []string{
+		"tháng này tôi thắng bao nhiêu deal",
+		"thang nay toi thắng bao nhieu deal",
+		"bao nhiêu deal tôi thắng tháng này",
+		"tháng này tôi thắng mấy deal",
+	} {
+		if _, err := Admit(Plan{Engine: "records", Arguments: `{"plan":{"version":"v1","target":"deal"}}`}, question, vocabulary); err == nil {
+			t.Errorf("%q: a record list was accepted as a won-deal count", question)
+		}
+		won := Plan{Engine: "reporting", Count: true, Arguments: `{"scope":{"kind":"workspace"},"period":"month","metrics":["bookings_won"]}`}
+		if _, err := Admit(won, question, vocabulary); err != nil {
+			t.Errorf("%q: the Sales won count was refused: %v", question, err)
+		}
+	}
+}

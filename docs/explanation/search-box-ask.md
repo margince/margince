@@ -1,4 +1,4 @@
-<!-- describes: backend/internal/modules/knowledge/ask.go backend/internal/modules/knowledge/groundingfloor.go backend/internal/modules/knowledge/handbook/section.go backend/internal/compose/corpusaskhandbook.go frontend/src/app/paletteanswer.tsx frontend/src/lib/question.ts backend/internal/compose/searchdata.go backend/internal/compose/searchplan/plan.go frontend/src/app/palettedata.tsx -->
+<!-- describes: backend/internal/modules/knowledge/ask.go backend/internal/modules/knowledge/groundingfloor.go backend/internal/modules/knowledge/handbook/section.go backend/internal/compose/corpusaskhandbook.go frontend/src/app/paletteanswer.tsx frontend/src/lib/question.ts backend/internal/compose/searchdata.go backend/internal/compose/searchplan/plan.go backend/internal/compose/searchplan/admission.go frontend/src/app/palettedata.tsx -->
 # The search box answers questions
 
 What a user sees is in the handbook page [What Margince is](../handbook/what-margince-is.md), under
@@ -40,6 +40,7 @@ Compose executes the plan through the same reporting evaluator, analytics query 
 record-query tool that serves the other surfaces. Those readers enforce row scope and field
 masks. The planner can select only these readers, and cannot save a query or choose a write tool.
 A won-deal count is the eligible record count of the Sales won metric for the selected period.
+Admission holds this in either word order, because Vietnamese puts the verb first.
 The answer shows its source and period, with links to Analytics or the returned records.
 
 An unsupported question falls back to the handbook path below. A failed data read also leaves the
@@ -56,9 +57,14 @@ until a user presses Enter on the ask row. A model call per keystroke would bill
 The rule wants at least three words, so a name such as "Wo Holdings" stays a lookup. It then wants
 a closing question mark, an opening question word ("how", "wie"), or an auxiliary with a subject
 after it ("can I", "kann man"). The subject test keeps "Can Do Logistics" a company name.
-Vietnamese is matched by two-word phrases at the start or end ("làm sao", "thế nào"), because the
-single words are also given names. The word lists are read whatever the screen's language, since a
-reader asks in the language they think in.
+Vietnamese puts its question words anywhere, so a Vietnamese phrase counts wherever it stands
+("tôi thắng bao nhiêu deal"). A closing "không" or "chưa" counts too. A plain phrase has two words,
+because single words such as "bao" or "ai" are also names. A word written with its marks, such as
+"mấy", matches only with those marks, so "máy" stays a lookup.
+
+Each language declares its words in one table in `question.ts`, keyed by the supported locales. The
+same table holds the words that make a question a data question. All lists are read whatever the
+screen's language, since a reader asks in the language they think in.
 
 The ask row shows only when no screen or setting row matched. A question that also matches a
 screen keeps the Enter it had before, and can still be asked from **Ask your documents**.

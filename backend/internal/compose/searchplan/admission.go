@@ -23,8 +23,10 @@ type searchFilterOperand struct {
 }
 
 var (
-	wonCountQuestion = regexp.MustCompile(`(?i)(how many|count|wie viele|bao nhiêu).*(won|win|gewonnen|gewinn|thắng)`)
-	searchYearRange  = regexp.MustCompile(`(?i)\b(?:from|von|từ)\s+(\d{4})\s+(?:to|bis|đến)\s+(\d{4})\b`)
+	// Both, in either order: Vietnamese puts the verb first ("thắng bao nhiêu deal").
+	countQuestion   = regexp.MustCompile(`(?i)how many|count|wie viele|bao nhiêu|bao nhieu|mấy`)
+	wonQuestion     = regexp.MustCompile(`(?i)won|win|gewonnen|gewinn|thắng`)
+	searchYearRange = regexp.MustCompile(`(?i)\b(?:from|von|từ)\s+(\d{4})\s+(?:to|bis|đến)\s+(\d{4})\b`)
 )
 
 // Admit rejects incomplete interpretations before any reader executes them.
@@ -52,7 +54,7 @@ func Admit(plan Plan, question, vocabulary string) (Plan, error) {
 }
 
 func admitWonCount(plan Plan, question, vocabulary string) error {
-	if !wonCountQuestion.MatchString(question) {
+	if !countQuestion.MatchString(question) || !wonQuestion.MatchString(question) {
 		return nil
 	}
 	if plan.Engine != EngineReporting || !plan.Count {
