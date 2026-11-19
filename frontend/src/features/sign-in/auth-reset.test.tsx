@@ -21,6 +21,7 @@ afterEach(() => {
 
 describe("AuthScreen reset deep link", () => {
   it("redeems the emailed token and lands back at sign-in", async () => {
+    const user = userEvent.setup();
     const calls = stubApi({ password: true, password_reset: true }, () =>
       ok(204),
     );
@@ -32,7 +33,7 @@ describe("AuthScreen reset deep link", () => {
     });
     render(<AuthScreen onAuthed={vi.fn()} />);
 
-    await userEvent.type(
+    await user.type(
       await screen.findByLabelText("New password"),
       "an entirely new password{enter}",
     );
@@ -61,6 +62,7 @@ describe("AuthScreen reset deep link", () => {
   });
 
   it("offers a fresh link on a spent token — one neutral refusal", async () => {
+    const user = userEvent.setup();
     stubApi({ password: true, password_reset: true }, () =>
       ok(401, { title: "unauthorized", detail: "invalid, used, or expired" }),
     );
@@ -72,7 +74,7 @@ describe("AuthScreen reset deep link", () => {
     });
     render(<AuthScreen onAuthed={vi.fn()} />);
 
-    await userEvent.type(
+    await user.type(
       await screen.findByLabelText("New password"),
       "an entirely new password{enter}",
     );
@@ -86,6 +88,7 @@ describe("AuthScreen reset deep link", () => {
   });
 
   it("leads back to sign-in from a refused link", async () => {
+    const user = userEvent.setup();
     stubApi({ password: true, password_reset: false }, () =>
       ok(401, { title: "unauthorized", detail: "invalid, used, or expired" }),
     );
@@ -93,14 +96,12 @@ describe("AuthScreen reset deep link", () => {
     globalThis.location.hash = "#/reset-password?token=spent-token";
     render(<AuthScreen onAuthed={vi.fn()} />);
 
-    await userEvent.type(
+    await user.type(
       await screen.findByLabelText("New password"),
       "an entirely new password{enter}",
     );
     await screen.findByText(t("auth.askAdminForNewLink"));
-    await userEvent.click(
-      screen.getByRole("button", { name: "Back to sign in" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Back to sign in" }));
 
     expect(await screen.findByLabelText("Email")).toBeTruthy();
     expect(screen.queryByLabelText("New password")).toBeNull();
@@ -109,6 +110,7 @@ describe("AuthScreen reset deep link", () => {
   // "Request a new link" supersedes the token the user still holds. A failure
   // that is not a token verdict must not offer it, hence the absence assertions.
   it("names the action the user was actually taking when refused for rate", async () => {
+    const user = userEvent.setup();
     // auth.errRateLimited speaks of sign-in attempts, and this form sets a password.
     // The 429 here keeps its own key, so the copy names the action being taken.
     stubApi({ password: true, password_reset: true }, () =>
@@ -122,7 +124,7 @@ describe("AuthScreen reset deep link", () => {
     });
     render(<AuthScreen onAuthed={vi.fn()} />);
 
-    await userEvent.type(
+    await user.type(
       await screen.findByLabelText("New password"),
       "an entirely new password{enter}",
     );
@@ -137,6 +139,7 @@ describe("AuthScreen reset deep link", () => {
   });
 
   it("blames the password, not the link, when the server refuses the password", async () => {
+    const user = userEvent.setup();
     stubApi({ password: true, password_reset: true }, () =>
       ok(422, { title: "validation_error", detail: "password too weak" }),
     );
@@ -148,7 +151,7 @@ describe("AuthScreen reset deep link", () => {
     });
     render(<AuthScreen onAuthed={vi.fn()} />);
 
-    await userEvent.type(
+    await user.type(
       await screen.findByLabelText("New password"),
       "an entirely new password{enter}",
     );
@@ -163,6 +166,7 @@ describe("AuthScreen reset deep link", () => {
   });
 
   it("keeps a good link alive when the request never reaches the server", async () => {
+    const user = userEvent.setup();
     stubApi({ password: true, password_reset: true }, () => {
       throw new TypeError("Failed to fetch");
     });
@@ -174,7 +178,7 @@ describe("AuthScreen reset deep link", () => {
     });
     render(<AuthScreen onAuthed={vi.fn()} />);
 
-    await userEvent.type(
+    await user.type(
       await screen.findByLabelText("New password"),
       "an entirely new password{enter}",
     );
@@ -188,6 +192,7 @@ describe("AuthScreen reset deep link", () => {
   });
 
   it("announces a reset failure to assistive tech", async () => {
+    const user = userEvent.setup();
     // Without a role, a screen-reader user who submits an expired token hears nothing.
     stubApi({ password: true, password_reset: true }, () =>
       ok(401, { title: "unauthorized", detail: "invalid, used, or expired" }),
@@ -200,7 +205,7 @@ describe("AuthScreen reset deep link", () => {
     });
     render(<AuthScreen onAuthed={vi.fn()} />);
 
-    await userEvent.type(
+    await user.type(
       await screen.findByLabelText("New password"),
       "an entirely new password{enter}",
     );

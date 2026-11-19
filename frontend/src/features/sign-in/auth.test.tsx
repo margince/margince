@@ -125,25 +125,21 @@ describe("AuthScreen login", () => {
   // The page's own words, in the page's language: a browser's bubble speaks the
   // browser's language, whatever the reader chose at the foot of the form.
   it("names an empty or malformed field in the page's language, not the browser's", async () => {
+    const user = userEvent.setup();
     const calls = stubApi({ password: true, password_reset: false }, () =>
       ok(200, { user: {}, roles: [], teams: [] }),
     );
     render(<AuthScreen onAuthed={vi.fn()} />);
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Deutsch" }),
-    );
+    await user.click(await screen.findByRole("button", { name: "Deutsch" }));
 
-    await userEvent.click(screen.getByRole("button", { name: "Anmelden" }));
+    await user.click(screen.getByRole("button", { name: "Anmelden" }));
     expect(screen.getByText(translate("de", "auth.emailMissing"))).toBeTruthy();
     expect(
       screen.getByText(translate("de", "auth.passwordMissing")),
     ).toBeTruthy();
 
-    await userEvent.type(screen.getByLabelText("E-Mail"), "not-an-email");
-    await userEvent.type(
-      screen.getByLabelText("Passwort"),
-      "a-password{enter}",
-    );
+    await user.type(screen.getByLabelText("E-Mail"), "not-an-email");
+    await user.type(screen.getByLabelText("Passwort"), "a-password{enter}");
     expect(
       screen.getByText(translate("de", "auth.emailMalformed")),
     ).toBeTruthy();

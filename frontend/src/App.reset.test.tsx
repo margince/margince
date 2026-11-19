@@ -125,6 +125,7 @@ describe("password-reset deep link", () => {
   });
 
   it("reaches the Brief on the sign-in that follows a completed reset", async () => {
+    const user = userEvent.setup();
     // No session at the start, the ordinary case for a reset. Once the login
     // below succeeds, /v1/me answers. The sign-in must then leave the reset
     // route rather than stay on it.
@@ -174,18 +175,18 @@ describe("password-reset deep link", () => {
     window.location.hash = "#/reset-password?token=completed-reset-token";
     mount();
 
-    await userEvent.type(
+    await user.type(
       await screen.findByLabelText("New password"),
       "an entirely new password{enter}",
     );
-    await userEvent.click(
+    await user.click(
       await screen.findByRole("button", { name: "Back to sign in" }),
     );
     await waitFor(() =>
       expect(window.location.hash).not.toContain("reset-password"),
     );
-    await userEvent.type(await screen.findByLabelText("Email"), "a@b.com");
-    await userEvent.type(
+    await user.type(await screen.findByLabelText("Email"), "a@b.com");
+    await user.type(
       screen.getByLabelText("Password"),
       "an entirely new password{enter}",
     );
@@ -197,6 +198,7 @@ describe("password-reset deep link", () => {
   });
 
   it("reaches the Brief on a sign-in from a bare reset link that never carried a token", async () => {
+    const user = userEvent.setup();
     // A stale or typed "#/reset-password" with no token has nothing to reset.
     // It mounts the ordinary login form, never ResetForm. The hash stays
     // "#/reset-password" through the whole sign-in.
@@ -243,8 +245,8 @@ describe("password-reset deep link", () => {
     window.location.hash = "#/reset-password";
     mount();
 
-    await userEvent.type(await screen.findByLabelText("Email"), "a@b.com");
-    await userEvent.type(
+    await user.type(await screen.findByLabelText("Email"), "a@b.com");
+    await user.type(
       screen.getByLabelText("Password"),
       "an entirely new password{enter}",
     );
