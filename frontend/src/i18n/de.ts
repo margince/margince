@@ -3444,6 +3444,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Der KI-Anbieter antwortet gerade nicht. Bitte versuche es später erneut oder wende dich an die Systemadministration.",
   "common.gatewayUnavailable":
     "Der Server hat die Anfrage nicht rechtzeitig abgeschlossen und verarbeitet sie möglicherweise noch. Warte, bevor du es erneut versuchst, sonst kann die Arbeit zweimal laufen.",
+  "common.requestTimedOut":
+    "Der Server hat zu lange gebraucht und die Anfrage abgebrochen. Versuche es gleich noch einmal.",
   "common.individualPerformanceOff":
     "Ein Admin hat die Einzelleistung ausgeschaltet. Du siehst deine eigenen Zahlen. Eine Zahl wird zurückgehalten, wenn weniger als zwei andere Mitglieder zu ihr beitragen oder wenn nach Abzug der Summe eines anderen Teams weniger als zwei übrig blieben. Eine Prognose wird ganz zurückgehalten, wenn eine ihrer Teilgruppen die Zahlen eines einzelnen Mitglieds zeigen würde.",
   "common.permissionDenied":

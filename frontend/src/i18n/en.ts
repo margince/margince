@@ -3347,6 +3347,8 @@ export const en = {
     "The AI provider is not answering right now. Try again later or contact your system administrator.",
   "common.gatewayUnavailable":
     "The server did not finish the request in time and may still be processing it. Wait before retrying, or the work can run twice.",
+  "common.requestTimedOut":
+    "The server took too long and stopped this request. Try again in a moment.",
   // Every 403 the server codes `permission_denied`, which is two refusals with
   // one name: a role that does not admit the action on this kind of record, and
   // a record the reader holds read-only through a share. Nothing on the wire
