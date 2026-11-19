@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { TokenReading } from "../../design-system/tokeninput";
+import { addressKey } from "../../lib/addresskey";
 
 // Loose mirror of values.ParseEmail (backend/internal/shared/kernel/values/email.go),
 // a bare addr-spec: one @, a dotted domain, nothing that ends or quotes an address.
@@ -15,11 +16,6 @@ const HARD_BREAK = new Set([";", "\n"]);
 function recipient(text: string): string | null {
   const trimmed = text.trim();
   return RECIPIENT.test(trimmed) ? trimmed : null;
-}
-
-/** Two addresses are one mailbox when they match case-blind, as the server stores them. */
-export function addressKey(address: string): string {
-  return address.trim().toLowerCase();
 }
 
 export type AddressLines = Readonly<{

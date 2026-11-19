@@ -78,7 +78,7 @@ describe("an address already on the message", () => {
     await user.type(line("To"), "BUYER1@BRANDT.EXAMPLE{Enter}");
     expect(held()).toBe("to=buyer1@brandt.example cc=");
     expect(line("To").value).toBe("BUYER1@BRANDT.EXAMPLE");
-    expect(screen.getByText("Already in To")).toBeTruthy();
+    expect(screen.getByText("Already in To.")).toBeTruthy();
   });
 
   it("is refused in another line, naming the line that holds it", async () => {
@@ -87,17 +87,17 @@ describe("an address already on the message", () => {
     await user.type(line("Cc"), "Buyer1@Brandt.example{Enter}");
     expect(held()).toBe("to=buyer1@brandt.example cc=");
     expect(line("Cc").value).toBe("Buyer1@Brandt.example");
-    expect(screen.getByText("Already in To")).toBeTruthy();
+    expect(screen.getByText("Already in To.")).toBeTruthy();
   });
 
   it("leaves no refusal once the typed text is cleared", async () => {
     const user = userEvent.setup();
     render(<Head start={["buyer1@brandt.example"]} openCopies />);
     await user.type(line("Cc"), "BUYER1@BRANDT.EXAMPLE{Enter}");
-    expect(screen.getByText("Already in To")).toBeTruthy();
+    expect(screen.getByText("Already in To.")).toBeTruthy();
     await user.keyboard("{Control>}a{/Control}{Backspace}");
     expect(line("Cc").value).toBe("");
-    expect(screen.queryByText("Already in To")).toBeNull();
+    expect(screen.queryByText("Already in To.")).toBeNull();
   });
 
   it("leaves no refusal once the typed text is deleted key by key", async () => {
@@ -106,11 +106,20 @@ describe("an address already on the message", () => {
     await user.type(line("To"), "BUYER1@BRANDT.EXAMPLE{Enter}");
     await user.keyboard("{Backspace>21/}");
     expect(line("To").value).toBe("");
-    expect(screen.queryByText("Already in To")).toBeNull();
+    expect(screen.queryByText("Already in To.")).toBeNull();
     expect(held()).toBe("to=buyer1@brandt.example cc=");
   });
 
-  it("is no longer offered in any line", async () => {
+  it("is refused at once when pasted, naming the line that holds it", async () => {
+    const user = userEvent.setup();
+    render(<Head start={["buyer1@brandt.example"]} openCopies />);
+    await user.click(line("Bcc"));
+    await user.paste("BUYER1@brandt.example");
+    expect(line("Bcc").value).toBe("BUYER1@brandt.example");
+    expect(screen.getByText("Already in To.")).toBeTruthy();
+  });
+
+  it("is offered in no line", async () => {
     const user = userEvent.setup();
     render(<Head start={["buyer1@brandt.example"]} openCopies />);
     await user.click(line("Bcc"));
@@ -146,6 +155,26 @@ describe("the offered recipients", () => {
     await user.click(line("To"));
     await user.keyboard("{ArrowDown}{Enter}");
     expect(held()).toBe("to=buyer1@brandt.example cc=");
+    expect(screen.queryByRole("listbox")).toBeNull();
+  });
+
+  it("close once a typed address is committed with Enter", async () => {
+    const user = userEvent.setup();
+    render(<Head />);
+    await user.type(line("To"), "buyer9@brandt.example");
+    expect(screen.getByRole("listbox")).toBeTruthy();
+    await user.keyboard("{Enter}");
+    expect(held()).toBe("to=buyer9@brandt.example cc=");
+    expect(screen.queryByRole("listbox")).toBeNull();
+  });
+
+  it("close once a pasted address is committed", async () => {
+    const user = userEvent.setup();
+    render(<Head />);
+    await user.click(line("To"));
+    expect(screen.getByRole("listbox")).toBeTruthy();
+    await user.paste("stranger@example.com");
+    expect(held()).toBe("to=stranger@example.com cc=");
     expect(screen.queryByRole("listbox")).toBeNull();
   });
 

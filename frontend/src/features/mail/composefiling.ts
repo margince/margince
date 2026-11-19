@@ -12,6 +12,7 @@ import {
   useSoleProjectDefault,
 } from "../../design-system/projectpicker";
 import { useThreadProject } from "../../lib/activityfiling";
+import { addressKey } from "../../lib/addresskey";
 import { relatedContactsQuery } from "../../lib/contact.queries";
 import { useHealthScope } from "../../lib/healthscope";
 import { unwrap } from "../../lib/problem";
@@ -24,7 +25,6 @@ import {
   useProjectRecord,
   withSubjectTag,
 } from "../projects/projectrecord";
-import { addressKey } from "./composeaddresslist";
 import { recipientSuggestions } from "./composehead";
 import { deadRecipientsAmong } from "./composereachability";
 import type { RelinkKind } from "./composerelink";

@@ -538,21 +538,27 @@ const ADDRESS_LIKE = {
 function CaseBlind({
   start = [],
   offerFor,
+  refuses,
 }: Readonly<{
   start?: readonly string[];
   offerFor?: (typed: string) => readonly TokenSuggestion[];
+  refuses?: (value: string) => boolean;
 }>) {
   const [values, setValues] = useState<readonly string[]>(start);
+  const [refused, setRefused] = useState<readonly string[]>([]);
   return (
-    <TokenInput
-      values={values}
-      onChange={setValues}
-      removeLabel={removeLabel}
-      parse={ADDRESS_LIKE}
-      suggestions={CONTACTS}
-      offerFor={offerFor}
-      aria-label="To"
-    />
+    <>
+      <TokenInput
+        values={values}
+        onChange={setValues}
+        removeLabel={removeLabel}
+        parse={{ ...ADDRESS_LIKE, refuses, onRefuse: setRefused }}
+        suggestions={CONTACTS}
+        offerFor={offerFor}
+        aria-label="To"
+      />
+      <output>{refused.join("|")}</output>
+    </>
   );
 }
 
@@ -614,5 +620,61 @@ describe("offering by what is typed", () => {
     await user.keyboard("{ArrowDown}{Enter}");
     expect(screen.queryByRole("listbox")).toBeNull();
     expect(toBox().getAttribute("aria-expanded")).toBe("false");
+  });
+});
+
+describe("a commit that adds a value", () => {
+  it("closes the list when a typed value is committed with Enter", async () => {
+    const user = userEvent.setup();
+    render(<CaseBlind />);
+    await user.type(toBox(), "dana@nordwand.example");
+    expect(screen.getByRole("listbox")).toBeTruthy();
+    await user.keyboard("{Enter}");
+    expect(
+      screen.getByRole("button", { name: "Remove dana@nordwand.example" }),
+    ).toBeTruthy();
+    expect(screen.queryByRole("listbox")).toBeNull();
+  });
+
+  it("closes the list when a paste commits", async () => {
+    const user = userEvent.setup();
+    render(<CaseBlind />);
+    await user.click(toBox());
+    expect(screen.getByRole("listbox")).toBeTruthy();
+    await user.paste("milo@nordwand.example,");
+    expect(
+      screen.getByRole("button", { name: "Remove milo@nordwand.example" }),
+    ).toBeTruthy();
+    expect(screen.queryByRole("listbox")).toBeNull();
+  });
+});
+
+describe("a value the host refuses", () => {
+  const taken = (value: string) =>
+    value.toLowerCase() === "dana@nordwand.example";
+
+  it("stays typed and is reported when typed", async () => {
+    const user = userEvent.setup();
+    render(<CaseBlind refuses={taken} />);
+    await user.type(toBox(), "Dana@Nordwand.example{Enter}");
+    expect(screen.queryByRole("button", { name: /^Remove / })).toBeNull();
+    expect(toBox().value).toBe("Dana@Nordwand.example");
+    expect(screen.getByRole("status").textContent).toBe(
+      "Dana@Nordwand.example",
+    );
+  });
+
+  it("is reported at once when pasted", async () => {
+    const user = userEvent.setup();
+    render(<CaseBlind refuses={taken} />);
+    await user.click(toBox());
+    await user.paste("dana@nordwand.example,milo@nordwand.example");
+    expect(
+      screen.getByRole("button", { name: "Remove milo@nordwand.example" }),
+    ).toBeTruthy();
+    expect(toBox().value).toBe("dana@nordwand.example");
+    expect(screen.getByRole("status").textContent).toBe(
+      "dana@nordwand.example",
+    );
   });
 });

@@ -44,6 +44,9 @@ export type TokenParse = Readonly<{
   /** What two values compare by, such as an address folded to lower case.
    *  Omitted, two values are one when their text is. */
   key?: (value: string) => string;
+  /** A well-formed value the host turns away, such as an address already on
+   *  the message. It stays typed and goes to `onRefuse` like a part that is none. */
+  refuses?: (value: string) => boolean;
   onRefuse: (refused: readonly string[]) => void;
 }>;
 
@@ -70,7 +73,8 @@ export type TokenParse = Readonly<{
  *    to itself (`DE, DE`). `in` is a set — admitting `DE` twice would change
  *    nothing about what matches, so refusing it with a message would be noise
  *    about a distinction the engine does not make. `parse.key` says what
- *    counts as the same value.
+ *    counts as the same value. A value `parse.refuses` names is refused
+ *    instead, and stays typed.
  *  - **Blank is dropped.** Enter on an empty box does nothing rather than adding
  *    an empty token, which would compile to a predicate matching the empty
  *    string.
@@ -161,9 +165,17 @@ export function TokenInput({
     const reading = (parse ?? BY_COMMA).read(raw);
     const seen = new Set(values.map(keyOf));
     const fresh: string[] = [];
+    const turnedAway: string[] = [];
     for (const part of reading.values) {
       const value = part.trim();
-      if (value === "" || seen.has(keyOf(value))) {
+      if (value === "") {
+        continue;
+      }
+      if (parse?.refuses?.(value)) {
+        turnedAway.push(value);
+        continue;
+      }
+      if (seen.has(keyOf(value))) {
         continue;
       }
       seen.add(keyOf(value));
@@ -171,8 +183,10 @@ export function TokenInput({
     }
     if (fresh.length > 0) {
       onChange([...values, ...fresh]);
+      // The reader has what they typed; a list left open would cover the next field.
+      list.close();
     }
-    const refused = [...new Set(reading.refused)];
+    const refused = [...new Set([...reading.refused, ...turnedAway])];
     setTyped(refused.join(", "));
     parse?.onRefuse(refused);
   };

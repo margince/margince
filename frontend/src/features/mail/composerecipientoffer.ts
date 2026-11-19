@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useCallback, useEffect, useRef } from "react";
+import { addressKey } from "../../lib/addresskey";
 import { useReplyRecipient } from "./composereplyrecipient";
 
 // Where the recipient offer stands, parked with a conversation on a switch.
@@ -12,7 +13,7 @@ export type OfferSnapshot = Readonly<{
 
 // The field with the offered address in it. A drafted or committed recipient
 // outranks the offer, unless the field holds values beside a vacated slot.
-function withOffer(
+export function withOffer(
   current: string[],
   address: string,
   fillsVacancy: boolean,
@@ -20,7 +21,16 @@ function withOffer(
   if (current.length > 0 && !fillsVacancy) {
     return current;
   }
-  return current.includes(address) ? current : [...current, address];
+  const key = addressKey(address);
+  return current.some((held) => addressKey(held) === key)
+    ? current
+    : [...current, address];
+}
+
+// The field with a withdrawn offer taken out, in whatever case it stands.
+export function withoutOffer(current: string[], previous: string): string[] {
+  const key = addressKey(previous);
+  return current.filter((address) => addressKey(address) !== key);
 }
 
 // The address the composer offers into To: the thread's counterparty, or the
@@ -80,7 +90,7 @@ export function useRecipientOffer({
     }
     offeredAddress.current = undefined;
     vacated.current = true;
-    setTo((current) => current.filter((address) => address !== previous));
+    setTo((current) => withoutOffer(current, previous));
   }, [answering]);
   // biome-ignore lint/correctness/useExhaustiveDependencies: the anchor is a key here. Two conversations with one counterparty share an address, and the vacated slot still needs filling.
   useEffect(() => {

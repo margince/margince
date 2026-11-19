@@ -7822,7 +7822,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.bodyPlaceholder": "Nội dung tin nhắn",
   "compose.bcc": "Bcc",
   "compose.bccHint": "Những ai cùng nhận thư không thấy các địa chỉ này.",
-  "compose.alreadyIn": "Đã có trong ô {field}",
+  "compose.alreadyIn": "Đã có trong ô {field}.",
   "compose.colleagues": "Đồng nghiệp",
   "compose.replyTitle": "Trả lời",
   "compose.threadGone":

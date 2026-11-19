@@ -22,10 +22,11 @@ import {
 } from "../../design-system/tokeninput";
 import { INTL_LOCALE } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
+import { addressKey } from "../../lib/addresskey";
 import type { Transport } from "../../lib/contacttransports";
 import { ENTITY } from "../../lib/entity";
 import { routeHash } from "../../lib/router";
-import { addressKey, readAddressList } from "./composeaddresslist";
+import { readAddressList } from "./composeaddresslist";
 import "./composehead.css";
 
 type Contact = components["schemas"]["Contact"];
@@ -100,7 +101,14 @@ export function recipientSuggestions({
   /** The sender, who is never a recipient of their own mail. */
   viewerId?: string;
 }>): RecipientOffers {
-  const seen = new Set<string>();
+  // The sender's own address stays out even where a contact holds it.
+  const seen = new Set(
+    colleagues.flatMap((member) =>
+      member.id === viewerId && "email" in member
+        ? [addressKey(member.email)]
+        : [],
+    ),
+  );
   const contacts: TokenSuggestion[] = [];
   const members: TokenSuggestion[] = [];
   const offerInto =
@@ -153,7 +161,6 @@ export function recipientSuggestions({
     if (
       !("email" in member) ||
       member.is_agent ||
-      member.id === viewerId ||
       !MAILABLE_STATUS.has(member.status)
     ) {
       continue;
@@ -284,13 +291,8 @@ export function AddressBlock({
   const parse = (line: AddressLine): TokenParse => ({
     keys: ADDRESS_KEYS,
     key: addressKey,
-    read: (raw) => {
-      const reading = readAddressList(raw);
-      return {
-        values: reading.values.filter((value) => !isHeld(value)),
-        refused: [...reading.refused, ...reading.values.filter(isHeld)],
-      };
-    },
+    read: readAddressList,
+    refuses: isHeld,
     onRefuse: (parts) => {
       setRepeats((prev) => ({ ...prev, [line]: parts.filter(isHeld) }));
       onRefuse(
@@ -320,7 +322,7 @@ export function AddressBlock({
     const holders = [
       ...new Set(repeats[line].flatMap((part) => holder(part) ?? [])),
     ];
-    const lines = [
+    const sentences = [
       refused[line].length === 0
         ? undefined
         : plural("compose.notAnAddress", refused[line].length, {
@@ -334,7 +336,7 @@ export function AddressBlock({
             }).format(holders.map((held) => label[held])),
           }),
     ].filter((sentence) => sentence !== undefined);
-    return lines.length === 0 ? undefined : lines.join(" ");
+    return sentences.length === 0 ? undefined : sentences.join(" ");
   };
   const commit = (next: readonly string[]) => [...next];
   const copies = copiesOpen || cc.length > 0 || bcc.length > 0;

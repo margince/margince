@@ -8014,7 +8014,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.bodyPlaceholder": "Nachrichtentext",
   "compose.bcc": "Bcc",
   "compose.bccHint": "Andere Empfangende sehen diese Adressen nicht.",
-  "compose.alreadyIn": "Steht schon in „{field}“",
+  "compose.alreadyIn": "Steht schon in „{field}“.",
   "compose.colleagues": "Teammitglieder",
   "compose.replyTitle": "Antwort",
   "compose.threadGone":
@@ -16368,13 +16368,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "connectors.vendorMicrosoft": "Microsoft 365",
   "connectors.oauthConnectedTitle": "{provider} verbunden",
   "connectors.oauthBoth": "E-Mail und Kalender werden synchronisiert.",
-  "connectors.oauthMailOnly": "Mail wird synchronisiert.",
+  "connectors.oauthMailOnly": "E-Mail wird synchronisiert.",
   "connectors.oauthCalendarOnly": "Kalender wird synchronisiert.",
   "connectors.oauthImportRuns":
     "Du kannst diese Seite verlassen: Der Import älterer E-Mails läuft von selbst weiter.",
   "connectors.oauthCalendarDeclined":
-    "Mail ist verbunden. Der Kalender nicht, weil der Zugriff darauf nicht erlaubt wurde.",
-  "connectors.oauthCalendarFailed": "Mail ist verbunden. Der Kalender nicht.",
+    "E-Mail ist verbunden. Der Kalender nicht, weil der Zugriff darauf nicht erlaubt wurde.",
+  "connectors.oauthCalendarFailed": "E-Mail ist verbunden. Der Kalender nicht.",
   "connectors.connectCalendar": "Kalender verbinden",
   "connectors.health.connected": "Verbunden",
   "connectors.health.syncing": "Wird synchronisiert",
@@ -16394,12 +16394,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Outlook-Mail und -Kalender mit einem Geschäftskonto",
   "connectFlow.otherHost": "Anderer Mail-Anbieter",
   "connectFlow.otherHostDesc":
-    "IMAP mit einem App-Passwort. Nur Mail, kein Kalender, kein Senden.",
+    "IMAP mit einem App-Passwort. Nur E-Mail, kein Kalender, kein Senden.",
   "connectFlow.alreadyConnected": "Bereits verbunden.",
   "connectFlow.pickAccount": "Wähle zuerst ein Konto.",
   "connectFlow.titleVendor": "{vendor} verbinden",
   "connectFlow.titleImap": "Anderen Mail-Anbieter verbinden",
-  "connectFlow.mail": "Mail",
+  "connectFlow.mail": "E-Mail",
   "connectFlow.calendar": "Kalender",
   "connectFlow.mailHelp":
     "E-Mails, die du sendest und empfängst, werden den richtigen Kontakten und Deals zugeordnet. Du kannst auch aus Margince senden.",
@@ -16408,7 +16408,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "connectFlow.calendarHelp":
     "Termine erscheinen bei Kontakten und Deals, und dein Buchungslink bietet nur deine freien Zeiten an.",
   "connectFlow.calendarImap": "Über IMAP nicht verfügbar.",
-  "connectFlow.pickService": "Wähle Mail, Kalender oder beides.",
+  "connectFlow.pickService": "Wähle E-Mail, Kalender oder beides.",
   "connectFlow.importLabel": "Ältere E-Mails importieren",
   "connectFlow.importNone": "Keine",
   "connectFlow.importAfter":
@@ -16417,11 +16417,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "connectFlow.handoff":
     "{vendor} öffnet sich in diesem Tab. Melde dich mit dem Konto an, mit dem du arbeitest, und erlaube jede Berechtigung, die {vendor} anzeigt:",
   "connectFlow.permMail": "E-Mails lesen und senden",
-  "connectFlow.permMailFor": "Für Mail",
+  "connectFlow.permMailFor": "Für E-Mail",
   "connectFlow.permCalendar": "Kalendertermine sehen und bearbeiten",
   "connectFlow.permCalendarFor": "Für den Kalender und deinen Buchungslink",
   "connectFlow.asksTwice":
-    "{vendor} fragt zweimal: einmal für Mail, dann einmal für deinen Kalender.",
+    "{vendor} fragt zweimal: einmal für E-Mail, dann einmal für deinen Kalender.",
   "connectFlow.afterBoth":
     "Danach bist du wieder bei Verbindungen. Neue E-Mails und Termine kommen von selbst an.",
   "connectFlow.afterMail":
@@ -16431,11 +16431,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "connectFlow.back": "Zurück",
   "connectFlow.next": "Weiter",
   "connectFlow.continueTo": "Weiter zu {vendor}",
-  "connectors.bringsMail": "Mail",
+  "connectors.bringsMail": "E-Mail",
   "connectors.bringsCalendar": "Kalender",
   "connectors.bringsSend": "Sendet aus Margince",
   "connectors.servicesBoth": "E-Mail und Kalender",
-  "connectors.connectMail": "Mail verbinden",
+  "connectors.connectMail": "E-Mail verbinden",
   "connectors.account.connectedOn": "Verbunden {date}",
   "connectors.account.menu": "Weitere Aktionen für {account}",
   "connectors.menu.bringsIn": "Ändern, was es einbringt",
@@ -16606,7 +16606,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Richte die {vendor}-App des Unternehmens ein, um es freizuschalten.",
   "connectors.tile.openPage": "{page} öffnen",
   "connectors.imapRow.note":
-    "Nur Mail, kein Kalender. Anmeldung mit einem App-Passwort.",
+    "Nur E-Mail, kein Kalender. Anmeldung mit einem App-Passwort.",
   "connectors.imapRow.connect": "Mit IMAP verbinden",
   // end polish: connections-tiles
   "setup.step.writingVoice": "Schreibstil trainieren",

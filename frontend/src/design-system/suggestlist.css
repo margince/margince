@@ -20,6 +20,11 @@
      the room anchoredpopup.ts measured — both arrive as inline styles. */
   padding: var(--controlGap);
 }
+/* On the rows rather than the popup: `ListPopover` draws the same rows. */
+.suggest-option,
+.suggest-group-label {
+  --suggestInlineInset: 9px; /* ds:ignore the option row's own optics, shared with Select's list */
+}
 .suggest-list {
   display: flex;
   flex-direction: column;
@@ -35,7 +40,7 @@
   column-gap: var(--space-2);
   /* The anatomy's row: --controlGap above and below a --fontBody line is the
      32px every option row in the product stands at. */
-  padding: var(--controlGap) 9px; /* ds:ignore the inline inset is the option row's own optics, shared with Select's list */
+  padding: var(--controlGap) var(--suggestInlineInset);
   border-radius: var(--r-sm);
   font-family: var(--fontFamilyBody);
   color: var(--textPrimary);
@@ -70,9 +75,8 @@
   background: none;
   color: var(--textSecondary);
 }
-/* A heading names its rows and is not one of them, so the arrows walk past it. */
 .suggest-group-label {
-  padding: var(--space-2) 9px var(--space-1); /* ds:ignore the inline inset lines the heading up with the option rows' text */
+  padding: var(--space-2) var(--suggestInlineInset) var(--space-1);
   color: var(--textSecondary);
 }
 .suggest-group {

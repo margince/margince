@@ -63,7 +63,17 @@ describe("recipientSuggestions", () => {
     ]);
   });
 
-  it("offers the contacts around the contact between it and the members", () => {
+  it("never offers the sender's own address, even on a contact", () => {
+    const offered = recipientSuggestions({
+      contact: view,
+      colleagues: [member({ email: "DANA@brandt.example" })],
+      viewerId: "u-1",
+    });
+    expect(offered.contacts).toEqual([]);
+    expect(offered.colleagues).toEqual([]);
+  });
+
+  it("offers the contacts around the contact after the contact itself", () => {
     const offered = recipientSuggestions({
       contact: view,
       related: [

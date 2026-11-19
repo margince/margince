@@ -5,6 +5,7 @@ import { paragraphsFrom } from "../../design-system/richtext";
 import { localDateTimeValue } from "../../format/calendarday";
 import type { CommunicationContext } from "../../lib/compose-context";
 import { RELINK_KINDS, type RelinkKind } from "../../lib/recordtargets";
+import { distinctAddressLines } from "./composeaddresslist";
 import type { ChosenFile } from "./composeattachments";
 import { type ScheduleFields, scheduleSourceOf } from "./composeschedule";
 import type { ScheduledSend } from "./scheduledqueue";
@@ -92,9 +93,11 @@ export function editSeedOf(
   return {
     anchor: { type: anchor.entity_type, id: anchor.entity_id },
     replyTo: send.anchor_activity_id ?? "",
-    to: send.to,
-    cc: send.cc ?? [],
-    bcc: send.bcc ?? [],
+    ...distinctAddressLines({
+      to: send.to,
+      cc: send.cc ?? [],
+      bcc: send.bcc ?? [],
+    }),
     subject: send.subject,
     body: send.body ?? "",
     html: send.html_body ?? paragraphsFrom(send.body ?? ""),

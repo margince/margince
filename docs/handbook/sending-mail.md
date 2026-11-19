@@ -84,7 +84,7 @@ To is on the form. **Cc and Bcc** is a link until you press it. Under **Bcc** th
 
 Click in **To**, **Cc** or **Bcc** to see up to eight contacts of the record. When you write to a contact, the list offers that contact first. The contacts around them come next: colleagues at the company they work at now, and the contacts on the same deals. From a company, deal or project, the company's contacts are offered. Type a name or an address to find more. Once you type two letters, your own colleagues in Margince show under **Colleagues**.
 
-You are never offered as a recipient, and you only see contacts you can open in Margince. The list closes when you pick a recipient. An address is on a message only once. Type one that is already there, in capital letters or not, and the composer keeps your text and names its field: "Already in To". When **To** is empty, you start in **To**; else you start in the message.
+Your own address is never offered, and you only see contacts you can open in Margince. The list closes once a recipient is added. An address is on a message only once. Type or paste one already on it, even in capital letters, and the composer keeps your text and names its field: "Already in To." When **To** is empty as the composer opens, you start in **To**; else you start in the message.
 
 A channel reply, such as Telegram, drops the subject and Cc, because the channel
 has neither.

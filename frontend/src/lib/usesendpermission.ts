@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { addressKey } from "./addresskey";
 import { throwProblem } from "./problem";
 
 // Asking the engine whether a message would be allowed, before anybody presses
@@ -185,13 +186,13 @@ function answersEveryone(
     ) {
       return false;
     }
-    const normal = normalAddress(address);
+    const normal = addressKey(address);
     if (answered.has(normal)) return false;
     answered.add(normal);
   }
   return (
     answered.size === asked.length &&
-    asked.every((address) => answered.has(normalAddress(address)))
+    asked.every((address) => answered.has(addressKey(address)))
   );
 }
 
@@ -201,16 +202,10 @@ function distinctAddresses(addresses: readonly string[]): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
   for (const address of addresses) {
-    const normal = normalAddress(address);
+    const normal = addressKey(address);
     if (normal === "" || seen.has(normal)) continue;
     seen.add(normal);
     out.push(address);
   }
   return out;
-}
-
-// The server stores an address trimmed and lowercased, so it may answer for
-// one in that form.
-function normalAddress(address: string): string {
-  return address.trim().toLowerCase();
 }

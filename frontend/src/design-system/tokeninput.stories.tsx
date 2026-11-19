@@ -34,7 +34,7 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
-// The caller words the remove button; a screen translates it.
+// English, as a story has no catalog; a screen passes `tokenInput.remove`.
 const removeLabel = (value: string) => `Remove ${value}`;
 
 const column: CSSProperties = {
