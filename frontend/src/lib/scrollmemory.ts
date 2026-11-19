@@ -93,11 +93,123 @@ export function historyEntryId(): string {
  */
 export function forgetScrollMemory(): void {
   offsets.clear();
+  placeKept = false;
   stamped = 0;
   loadToken = newLoadToken();
 }
 
 const offsets = new Map<string, number>();
+
+function arrivalOffset(place: string, sameView: boolean): number | null {
+  const remembered = offsets.get(place);
+  if (remembered !== undefined) {
+    return remembered;
+  }
+  return sameView ? null : 0;
+}
+
+let placeKept = false;
+
+/**
+ * Keep the page's place across the next move to another view of the same
+ * record. A record's tab strip calls it on a press; any other move opens the
+ * new view at its top.
+ */
+export function keepPlaceOnNextMove(): void {
+  placeKept = true;
+}
+
+/** Cancel `keepPlaceOnNextMove`, for a press that moved no address. */
+export function dropKeptPlace(): void {
+  placeKept = false;
+}
+
+function takeKeptPlace(): boolean {
+  const kept = placeKept;
+  dropKeptPlace();
+  return kept;
+}
+
+/** What a reader does to take a scroll position into their own hands. */
+export const READER_GESTURES = [
+  "wheel",
+  "touchstart",
+  "keydown",
+  "pointerdown",
+] as const;
+
+/** The offset each element is being sought to, while a seek is live. */
+const sought = new Map<HTMLElement, number>();
+
+/**
+ * Puts `element` at `top`, and again as its content grows, until the offset
+ * lands or the reader takes over. Returns what stops it sooner.
+ */
+// A body still arriving is too short for `top`, and the clamp outlasts its
+// growth. Gestures mark the reader, since a retry fires scroll events too.
+export function seekScrollTop(
+  element: HTMLElement,
+  top: number,
+  {
+    onLanded,
+    stillOurs = () => true,
+  }: Readonly<{ onLanded?: () => void; stillOurs?: () => boolean }> = {},
+): () => void {
+  let growth: MutationObserver | null = null;
+  let resize: ResizeObserver | null = null;
+  let seeking = true;
+  const stop = () => {
+    seeking = false;
+    if (sought.get(element) === top) sought.delete(element);
+    growth?.disconnect();
+    resize?.disconnect();
+    for (const gesture of READER_GESTURES) {
+      element.removeEventListener(gesture, stop);
+    }
+  };
+  const attempt = () => {
+    if (!seeking) return;
+    if (!stillOurs()) {
+      stop();
+      return;
+    }
+    element.scrollTop = top;
+    // Within a pixel: an offset is fractional where the device pixel ratio is
+    // not whole, and an exact test never lands.
+    if (Math.abs(element.scrollTop - top) < 1) {
+      stop();
+      onLanded?.();
+    }
+  };
+  attempt();
+  if (!seeking) return stop;
+  sought.set(element, top);
+  for (const gesture of READER_GESTURES) {
+    element.addEventListener(gesture, stop, { passive: true });
+  }
+  // The pane's own box does not grow with its content, so its children are
+  // watched too. One grows when an image inside it loads, and no node moves.
+  if (typeof ResizeObserver === "function") {
+    const observer = new ResizeObserver(attempt);
+    observer.observe(element);
+    for (const child of element.children) observer.observe(child);
+    resize = observer;
+  }
+  if (typeof MutationObserver === "function") {
+    growth = new MutationObserver((changes) => {
+      for (const change of changes) {
+        for (const added of change.addedNodes) {
+          if (added instanceof Element && added.parentElement === element) {
+            resize?.observe(added);
+          }
+        }
+      }
+      attempt();
+    });
+    growth.observe(element, { childList: true, subtree: true });
+  }
+  return stop;
+}
 
 /**
  * Keep `column` at the offset this history entry was left at.
@@ -105,8 +217,9 @@ const offsets = new Map<string, number>();
  * `address` is the trigger: it changes on every move, including the ones the
  * browser makes for Back and Forward. On the way OUT the current offset is
  * recorded against the entry being left; on the way IN a recorded one is
- * restored and anything else opens at the top, because a page nobody has
- * visited has no place to return to.
+ * restored. A new entry with the same `view` as the one left keeps the offset
+ * it arrives with, when `keepPlaceOnNextMove` asked for it. Anything else
+ * opens at the top: a page nobody has visited has no place to return to.
  *
  * The restore is RETRIED while the column grows. A list restores its rows a
  * moment after the address arrives, so the first attempt lands against a column
@@ -119,23 +232,28 @@ const offsets = new Map<string, number>();
  * `span: "load"` keys the lane by name alone, for a surface the reader returns
  * to through a NEW entry — the Worklist drawer reopened by a record's way back.
  */
-// The element in state is a DOM node, not a React value: scrolling it is a
-// write to the page, which React state never holds.
-function scrollElementTo(element: HTMLElement, top: number): void {
-  element.scrollTop = top;
-}
-
 export function useScrollMemory(
   column: React.RefObject<HTMLElement | null>,
   address: string,
-  lane = "page",
-  span: "entry" | "load" = "entry",
+  {
+    lane = "page",
+    span = "entry",
+    view,
+  }: Readonly<{
+    lane?: string;
+    span?: "entry" | "load";
+    view?: string;
+  }> = {},
 ): void {
   // Recomputed per address rather than read in the effect, so the id belongs to
   // the entry being LEFT when the cleanup runs — by then `history.state` is
   // already the next entry's.
-  const [entry, setEntry] = useState(historyEntryId);
-  const wanted = useRef<number | null>(null);
+  const [entry, setEntry] = useState(() => ({
+    id: historyEntryId(),
+    sameView: false,
+  }));
+  const viewLeft = useRef(view);
+  const seeking = useRef(false);
   // `address` is the TRIGGER and not a value the body reads: a move is what
   // makes the entry worth asking about again, and `history.state` is where the
   // answer lives. Reading the address instead would key the memory on the URL,
@@ -143,8 +261,12 @@ export function useScrollMemory(
   // is not leaving the page.
   // biome-ignore lint/correctness/useExhaustiveDependencies: trigger-only dep
   useEffect(() => {
-    setEntry(historyEntryId());
-  }, [address]);
+    const id = historyEntryId();
+    const kept = view !== undefined && takeKeptPlace();
+    const sameView = kept && view === viewLeft.current;
+    viewLeft.current = view;
+    setEntry((shown) => (shown.id === id ? shown : { id, sameView }));
+  }, [address, view]);
 
   // The element this lane scrolls, as a value the effect below can depend on.
   //
@@ -170,56 +292,40 @@ export function useScrollMemory(
     if (!scroller) {
       return;
     }
-    const place = span === "load" ? `load:${lane}` : `${entry}:${lane}`;
-    const target = offsets.get(place) ?? 0;
-    wanted.current = target;
-    const seek = () => {
-      if (wanted.current === null) {
-        return;
-      }
-      // Nor ours to WRITE once the reader has moved on: the element may now
-      // belong to the surface that replaced this one, and scrolling it would
-      // move a page the reader is currently reading.
-      if (historyEntryId() !== entry) {
-        wanted.current = null;
-        return;
-      }
-      scrollElementTo(scroller, wanted.current);
-      // Within a pixel, not exactly: a scroll offset is fractional on a display
-      // whose device pixel ratio is not a whole number, and an equality test
-      // against the number asked for is then never satisfied. The restore never
-      // declared itself finished, so the reader's own scrolling went unrecorded
-      // and Back returned them to whatever the first clamp had been.
-      if (Math.abs(scroller.scrollTop - wanted.current) < 1) {
+    const place = span === "load" ? `load:${lane}` : `${entry.id}:${lane}`;
+    const target = arrivalOffset(place, entry.sameView);
+    let stopSeeking = () => {};
+    if (target === null) {
+      offsets.set(place, sought.get(scroller) ?? scroller.scrollTop);
+    } else {
+      seeking.current = true;
+      stopSeeking = seekScrollTop(scroller, target, {
         // Landed, so the restore is over. From here the element belongs to the
         // reader again and what it holds is worth remembering.
-        wanted.current = null;
-        offsets.set(place, scroller.scrollTop);
-      }
-    };
-    seek();
+        onLanded: () => {
+          seeking.current = false;
+          offsets.set(place, scroller.scrollTop);
+        },
+        // Not ours to write to once the reader has moved on: the element may
+        // now belong to the surface that replaced this one.
+        stillOurs: () => {
+          const ours = historyEntryId() === entry.id;
+          seeking.current &&= ours;
+          return ours;
+        },
+      });
+    }
 
-    // A reader who takes hold of the list has said where they want to be, so
-    // stop trying to put them somewhere else.
-    //
-    // Read from GESTURES and not from scroll events, because a scroll event
-    // cannot say who caused it: the retries below scroll this element too, and
-    // every clamp along the way arrives as one. Telling the two apart by the
-    // offset they report is a race the retries lose — a growth-triggered retry
-    // can update the expected value between the browser scrolling and the event
-    // for it being dispatched, and the restore then switches itself off partway.
-    // A wheel, a touch or a key cannot be produced by an assignment to
-    // `scrollTop`, so as a signal it has no such gap.
     const takeOver = () => {
       // The reader owns the position now, so stop aiming at the old one. What
       // they are looking at IS the answer from here, so it is written down at
       // once rather than waiting for a scroll event to carry it: a gesture that
       // only relinquished left a window with nothing remembered at all, and a
       // list torn down inside that window came back at its first row.
-      wanted.current = null;
+      seeking.current = false;
       offsets.set(place, scroller.scrollTop);
     };
-    for (const gesture of ["wheel", "touchstart", "keydown"] as const) {
+    for (const gesture of READER_GESTURES) {
       scroller.addEventListener(gesture, takeOver, { passive: true });
     }
 
@@ -230,7 +336,7 @@ export function useScrollMemory(
     const remember = () => {
       // A restore still in flight: what the element holds is a clamp on the way
       // to the offset already remembered, not a place anyone chose.
-      if (wanted.current !== null) {
+      if (seeking.current) {
         return;
       }
       // And only while the reader is still ON this entry. A surface that goes
@@ -241,13 +347,20 @@ export function useScrollMemory(
       // as every table does, and that zero was filed under the list's entry —
       // a reader who had scrolled a long way down came back to the first row.
       // The element is no longer ours to read, whatever it still reports.
-      if (historyEntryId() !== entry) {
+      if (historyEntryId() !== entry.id) {
         return;
       }
       // Gone from the document, where every measurement answers zero. React
       // detaches the DOM before a passive cleanup runs when the subtree
       // unmounts, which is exactly what opening a record does to a list.
       if (!scroller.isConnected) {
+        return;
+      }
+      // A seek still under way, such as a tab strip holding its place, is where
+      // the reader is headed. The clamp on the way there is not their choice.
+      const headed = sought.get(scroller);
+      if (headed !== undefined) {
+        offsets.set(place, headed);
         return;
       }
       const bottom = scroller.scrollHeight - scroller.clientHeight;
@@ -272,33 +385,11 @@ export function useScrollMemory(
     };
     scroller.addEventListener("scroll", remember, { passive: true });
 
-    // The CONTENT grows as rows arrive, and the content is what has to be
-    // watched — not the scroller, whose own box is the same size whether it
-    // holds ten rows or a thousand. A ResizeObserver on the scroller therefore
-    // reports nothing at all while the very growth this retry exists for is
-    // happening, and observing the children it has at THIS moment is no better:
-    // a table rendered as a placeholder and then replaced by the real one takes
-    // the observed element with it.
-    //
-    // So watch the subtree for the rows arriving, and the boxes for a height
-    // that settles without any node changing (a row that grows when its logo
-    // loads). Either one is another chance at an offset the browser had to clamp.
-    const growth =
-      target > 0 && typeof MutationObserver === "function"
-        ? new MutationObserver(seek)
-        : null;
-    growth?.observe(scroller, { childList: true, subtree: true });
-    const resize =
-      target > 0 && typeof ResizeObserver === "function"
-        ? new ResizeObserver(seek)
-        : null;
-    resize?.observe(scroller);
-
     return () => {
-      growth?.disconnect();
-      resize?.disconnect();
+      stopSeeking();
+      seeking.current = false;
       scroller.removeEventListener("scroll", remember);
-      for (const gesture of ["wheel", "touchstart", "keydown"] as const) {
+      for (const gesture of READER_GESTURES) {
         scroller.removeEventListener(gesture, takeOver);
       }
       // For the case this hook moves to another ENTRY while the element stays:

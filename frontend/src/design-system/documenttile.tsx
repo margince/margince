@@ -21,6 +21,7 @@ export type DocumentAnchor = Readonly<{
  */
 export function DocumentTile({
   filename,
+  kind: namedKind,
   title,
   open,
   anchor,
@@ -32,6 +33,8 @@ export function DocumentTile({
   children,
 }: Readonly<{
   filename: string;
+  /** The stage's kind when the filename has none to give, as a link's host. */
+  kind?: string;
   title: string;
   /** Opens the document in a dialog over the page. */
   open?: () => void;
@@ -49,7 +52,7 @@ export function DocumentTile({
   /** Under the body, each section behind its own hairline. */
   children?: ReactNode;
 }>) {
-  const kind = fileKind(filename);
+  const kind = namedKind ?? fileKind(filename);
   return (
     <article
       className={[

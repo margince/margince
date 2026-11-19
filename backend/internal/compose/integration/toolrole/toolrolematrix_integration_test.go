@@ -142,13 +142,14 @@ type toolRoleRoute struct {
 }
 
 // toolRoleCall is one call the sweep makes: a verb, and the published row it is.
-// A kind variant names kindArg's further kind, and whether the sweep seeds one.
+// A kind variant names kindArg's further kind, whether the sweep seeds one,
+// and whether kindArg sits in a route verb's request body.
 type toolRoleCall struct {
 	row, tool, action, verb string
 	input                   json.RawMessage
 	route                   toolRoleRoute
 	kindArg, kind           string
-	kindSeeded              bool
+	kindSeeded, kindInBody  bool
 }
 
 // routeShapes is each route verb's body schema and path by verb.

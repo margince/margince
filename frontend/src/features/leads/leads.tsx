@@ -15,7 +15,6 @@ import { useT } from "../../i18n";
 import { ACTION_PARAM, QUALIFY_ACTION } from "../../lib/leads.address";
 import { useOpenEmail } from "../../lib/openemail";
 import { unwrap } from "../../lib/problem";
-import { scrollPageToTop } from "../../lib/reveal";
 import { useAddressWriters, useUrlParams } from "../../lib/urlstate";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
 import { leadBand } from "./leadband";
@@ -220,10 +219,8 @@ function LeadRecord({ lead, id }: Readonly<{ lead: Lead; id: string }>) {
         <RecordTabs
           options={LEAD_TABS}
           value={tab}
-          onChange={(next) => {
-            setTab(next);
-            scrollPageToTop();
-          }}
+          onChange={setTab}
+          keepPlace
           labels={{
             overview: t("tab.overview"),
             deals: t("tab.deals"),

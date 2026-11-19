@@ -90,7 +90,8 @@
   .analytics-sheet,
   .reachcard,
   .palette-tile,
-  .palette-foot
+  .palette-foot,
+  .recorddetails-group
 ) {
   --ground: var(--ladder1Solid);
   --groundEdge: var(--ladder1Edge);
@@ -188,7 +189,8 @@
     .analytics-sheet,
     .reachcard,
     .palette-tile,
-    .palette-foot
+    .palette-foot,
+    .recorddetails-group
   )
   :where(
     .panel,
@@ -271,7 +273,8 @@
     .analytics-sheet,
     .reachcard,
     .palette-tile,
-    .palette-foot
+    .palette-foot,
+    .recorddetails-group
   ) {
   --ground: var(--ladder2);
   --groundEdge: var(--ladder2Edge);
@@ -369,7 +372,8 @@
     .analytics-sheet,
     .reachcard,
     .palette-tile,
-    .palette-foot
+    .palette-foot,
+    .recorddetails-group
   )
   :where(
     .panel,
@@ -452,7 +456,8 @@
     .analytics-sheet,
     .reachcard,
     .palette-tile,
-    .palette-foot
+    .palette-foot,
+    .recorddetails-group
   )
   :where(
     .panel,
@@ -535,7 +540,8 @@
     .analytics-sheet,
     .reachcard,
     .palette-tile,
-    .palette-foot
+    .palette-foot,
+    .recorddetails-group
   ) {
   --ground: var(--ladder3);
   --groundEdge: var(--ladder3Edge);
@@ -633,7 +639,8 @@
     .analytics-sheet,
     .reachcard,
     .palette-tile,
-    .palette-foot
+    .palette-foot,
+    .recorddetails-group
   )
   :where(
     .panel,
@@ -716,7 +723,8 @@
     .analytics-sheet,
     .reachcard,
     .palette-tile,
-    .palette-foot
+    .palette-foot,
+    .recorddetails-group
   )
   :where(
     .panel,
@@ -799,7 +807,8 @@
     .analytics-sheet,
     .reachcard,
     .palette-tile,
-    .palette-foot
+    .palette-foot,
+    .recorddetails-group
   )
   :where(
     .panel,
@@ -882,7 +891,8 @@
     .analytics-sheet,
     .reachcard,
     .palette-tile,
-    .palette-foot
+    .palette-foot,
+    .recorddetails-group
   ) {
   --ground: var(--ladder4);
   --groundEdge: var(--ladder4Edge);
@@ -1037,7 +1047,8 @@
     .analytics-sheet,
     .reachcard,
     .palette-tile,
-    .palette-foot
+    .palette-foot,
+    .recorddetails-group
   ) {
   --ground: var(--ladder2);
   --groundEdge: var(--ladder2Edge);
@@ -1156,7 +1167,8 @@
     .analytics-sheet,
     .reachcard,
     .palette-tile,
-    .palette-foot
+    .palette-foot,
+    .recorddetails-group
   )
   :where(
     .panel,
@@ -1239,7 +1251,8 @@
     .analytics-sheet,
     .reachcard,
     .palette-tile,
-    .palette-foot
+    .palette-foot,
+    .recorddetails-group
   ) {
   --ground: var(--ladder3);
   --groundEdge: var(--ladder3Edge);
@@ -1358,7 +1371,8 @@
     .analytics-sheet,
     .reachcard,
     .palette-tile,
-    .palette-foot
+    .palette-foot,
+    .recorddetails-group
   )
   :where(
     .panel,
@@ -1441,7 +1455,8 @@
     .analytics-sheet,
     .reachcard,
     .palette-tile,
-    .palette-foot
+    .palette-foot,
+    .recorddetails-group
   )
   :where(
     .panel,
@@ -1524,7 +1539,8 @@
     .analytics-sheet,
     .reachcard,
     .palette-tile,
-    .palette-foot
+    .palette-foot,
+    .recorddetails-group
   ) {
   --ground: var(--ladder4);
   --groundEdge: var(--ladder4Edge);
@@ -1670,7 +1686,8 @@
     .analytics-sheet,
     .reachcard,
     .palette-tile,
-    .palette-foot
+    .palette-foot,
+    .recorddetails-group
   ) {
   background-color: var(--ground);
 }

@@ -448,6 +448,7 @@ export function LogActivityForm({
     >
       {logged ? <p>{t("tasks.log.loggedOnly")}</p> : draftFields()}
       <LogActivityFilesField
+        key={idempotencyKey}
         files={files}
         onChange={setFiles}
         disabled={log.isPending}

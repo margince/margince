@@ -10,6 +10,7 @@ import { useFieldFaults } from "../../design-system/savepage";
 import { Select } from "../../design-system/select";
 import { type Translator, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { attachmentTitle } from "../../lib/attachmentlink";
 import {
   type FieldLabels,
   problemCodeOf,
@@ -97,7 +98,7 @@ export function AddDocument({
   const refused = addRefusal(add.error, labels, t);
   const options = (files.data?.data ?? []).map((doc) => ({
     value: doc.attachment.id,
-    label: doc.attachment.title || doc.attachment.filename,
+    label: attachmentTitle(doc.attachment),
   }));
   return (
     <>

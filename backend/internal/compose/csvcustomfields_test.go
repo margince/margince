@@ -5,6 +5,7 @@ package compose
 
 import (
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/migration"
@@ -26,7 +27,7 @@ func TestACustomFieldIsSuggestedByItsLabelOrItsKey(t *testing.T) {
 	}
 	for header, want := range map[string]string{"TIER": "cf_tier", " tier ": "cf_tier", "cf_tier ": "cf_tier"} {
 		p := migration.Profile{Columns: []migration.Column{{Header: header}, {Header: "Name"}}}
-		if got := suggestImportMapping(p, targets, cat); got[header] != want {
+		if got := suggestImportMapping(p, migration.ObjectCompany, targets, cat); got[header] != want {
 			t.Errorf("suggestion for %q = %v, want %s", header, got, want)
 		}
 	}
@@ -41,7 +42,7 @@ func TestALabelAndAKeyHeaderForOneFieldSuggestNeither(t *testing.T) {
 		t.Fatalf("importTargets: %v", err)
 	}
 	p := migration.Profile{Columns: []migration.Column{{Header: "Tier"}, {Header: "cf_tier"}}}
-	if got := suggestImportMapping(p, targets, cat); len(got) != 0 {
+	if got := suggestImportMapping(p, migration.ObjectCompany, targets, cat); len(got) != 0 {
 		t.Fatalf("suggestion = %v, want none for an ambiguous field", got)
 	}
 }
@@ -58,7 +59,7 @@ func TestACoreFieldKeepsItsHeaderOverACustomLabel(t *testing.T) {
 		t.Fatalf("importTargets: %v", err)
 	}
 	p := migration.Profile{Columns: []migration.Column{{Header: "Email"}}}
-	if got := suggestImportMapping(p, targets, cat); got["Email"] != fieldEmail {
+	if got := suggestImportMapping(p, migration.ObjectLead, targets, cat); got["Email"] != fieldEmail {
 		t.Fatalf("suggestion = %v, want Email onto the core email", got)
 	}
 }
@@ -98,31 +99,6 @@ func TestOnlyCheckedCustomFieldsReachCustomFields(t *testing.T) {
 	}
 }
 
-// The header most exports give the record's own name, and the one they give a
-// contact's company, are suggested onto those fields for every type.
-func TestTheCommonHeadersForANameAndACompanyAreSuggested(t *testing.T) {
-	for object, want := range map[string]map[string]string{
-		migration.ObjectCompany: {"Name": fieldDisplayName},
-		migration.ObjectContact: {"Name": fieldFullName, "Company": companyNameField},
-		migration.ObjectLead:    {"name": fieldFullName, "company": companyNameField},
-	} {
-		targets, err := importTargets(object, importCatalog{})
-		if err != nil {
-			t.Fatalf("importTargets(%s): %v", object, err)
-		}
-		var p migration.Profile
-		for header := range want {
-			p.Columns = append(p.Columns, migration.Column{Header: header})
-		}
-		got := suggestImportMapping(p, targets, importCatalog{})
-		for header, target := range want {
-			if got[header] != target {
-				t.Errorf("%s: %q → %q, want %s", object, header, got[header], target)
-			}
-		}
-	}
-}
-
 // A file carrying both the common header and the field's own name gives the
 // field two columns, so neither is suggested.
 func TestANameHeaderBesideTheFieldsOwnNameSuggestsNeither(t *testing.T) {
@@ -131,7 +107,33 @@ func TestANameHeaderBesideTheFieldsOwnNameSuggestsNeither(t *testing.T) {
 		t.Fatalf("importTargets: %v", err)
 	}
 	p := migration.Profile{Columns: []migration.Column{{Header: "name"}, {Header: "display_name"}}}
-	if got := suggestImportMapping(p, targets, importCatalog{}); len(got) != 0 {
+	if got := suggestImportMapping(p, migration.ObjectCompany, targets, importCatalog{}); len(got) != 0 {
 		t.Fatalf("suggestion = %v, want none for a field two columns claim", got)
+	}
+}
+
+// Another system's export, as a companies file: its fields by label, language or
+// common name, and its own "ID", which is no Margince ID.
+func TestAnotherSystemsHeadersAreSuggestedByLabelOrCommonName(t *testing.T) {
+	targets, err := importTargets(migration.ObjectCompany, importCatalog{})
+	for _, c := range []struct{ header, samples, want string }{
+		{"Company Name", "Acme", fieldDisplayName},
+		{"Website", "acme.com", fieldDomain},
+		{"Telefon", "+49", fieldPhone},
+		{"Adresse", "Kai 1", "address.line1"},
+		{"E-Mail", "a@acme.com", fieldEmail},
+		{"Owner", "anna", ""},
+		// A guarded field is suggested only for values it takes: version-7 IDs, and bands.
+		{"ID", "H-1 H-2", ""},
+		{"ID", "0190a3c2-6b1e-7c3d-8e4f-5a6b7c8d9e0f", csvTargetID},
+		{"ID", "3f2504e0-4f89-41d3-9a0c-0305e82c3301", ""},
+		{"ID", "", ""},
+		{"Employees", "11-50 51-200", fieldSizeBand},
+		{"Number of employees", "40 120", ""},
+	} {
+		p := migration.Profile{Columns: []migration.Column{{Header: c.header, Samples: strings.Fields(c.samples)}}}
+		if got := suggestImportMapping(p, migration.ObjectCompany, targets, importCatalog{}); err != nil || got[c.header] != c.want {
+			t.Errorf("%s of %q → %q (err %v), want %q", c.header, c.samples, got[c.header], err, c.want)
+		}
 	}
 }

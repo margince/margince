@@ -7497,6 +7497,30 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "docs.add.partialTitle": "Đã tải lên nhưng chưa xếp loại",
   "docs.add.partial":
     "Tệp đã lưu và có trong danh sách bên dưới, nhưng loại và tiêu đề không được lưu, nên tệp được xếp vào mục Khác.",
+  "docs.add.source": "Thêm gì",
+  "docs.add.sourceFile": "Tệp",
+  "docs.add.sourceLink": "Liên kết",
+  "docs.add.url": "Địa chỉ",
+  "docs.add.urlPlaceholder": "https://",
+  "docs.add.urlHint":
+    "Dán liên kết tới một trang hoặc một tệp được chia sẻ, chẳng hạn Google Docs.",
+  "docs.add.linkReading": "Đang đọc trang…",
+  "docs.add.linkTitled": "Tiêu đề lấy từ trang. Bạn có thể sửa.",
+  "docs.add.linkGoogle": "Margince không đọc tệp Google, nên hãy nhập tiêu đề.",
+  "docs.add.linkUnread":
+    "Không đọc được trang. Hãy nhập tiêu đề, hoặc để trống để hiện tên trang web.",
+  "docs.add.linkNameHint": "Không bắt buộc. Mặc định là địa chỉ trang web.",
+  "docs.add.submitLink": "Thêm liên kết",
+  "docs.add.adding": "Đang thêm…",
+  "docs.add.errNoUrl": "Dán một địa chỉ bắt đầu bằng https://.",
+  "docs.add.linkFailedTitle": "Chưa thêm liên kết",
+  "docs.add.linkFailed": "Chưa thêm gì. Hãy kiểm tra địa chỉ rồi thử lại.",
+  "docs.kind.docs": "Docs",
+  "docs.kind.sheets": "Sheets",
+  "docs.kind.slides": "Slides",
+  "docs.kind.forms": "Forms",
+  "docs.kind.drive": "Drive",
+  "docs.kind.web": "Web",
 
   // Bảng đọc tài liệu đã lưu (RD-AC-N-2/-3). Ba trạng thái phải tách bạch cả
   // trong câu chữ: chưa trả lời, đã đọc và không nêu trường nào, và không đọc
@@ -7557,6 +7581,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "files.hide": "Ẩn khỏi deal này",
   "files.unhide": "Hiển thị lại trên deal này",
   "files.delete": "Xóa",
+  "files.pick.empty":
+    "Tệp trống nên không có gì để thêm. Hãy chọn một tệp có nội dung.",
+  "files.pick.unsupported":
+    "Không thể đính kèm loại tệp này. Hãy chọn tài liệu, hình ảnh, tệp nén zip hoặc email đã lưu.",
   "files.deleteTitle": "Xóa {name}?",
   "files.deleteBody":
     "Tệp sẽ bị gỡ khỏi deal này và bên mua sẽ không còn thấy tệp trong bất kỳ Deal Room nào. Mục trong Deal Room vẫn còn cho đến khi bạn gỡ nó.",
@@ -7616,6 +7644,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "log.filesEmpty": "Thả tệp vào đây, hoặc bấm để chọn tệp",
   "log.fileUnattached":
     "Đã ghi hoạt động, nhưng chưa đính kèm được {filename}. {reason}",
+  "log.fileNotAdded": "Chưa thêm được {filename}. {reason}",
   "log.fileUncertain":
     "Đã ghi hoạt động, nhưng việc tải lên {filename} chưa hoàn tất. Hãy kiểm tra tệp của hoạt động trước khi thêm lại.",
   "log.attendee": "Người tham dự",
@@ -10088,6 +10117,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Tệp ZIP có {files} tệp, mỗi lần nhập đọc tối đa {max_files} tệp. Bỏ các tệp không cần nhập rồi tải lên lại.",
   "import.refusal.bundle.empty":
     "Tệp ZIP trống. Thêm một tệp CSV cho mỗi loại hồ sơ rồi tải lên lại.",
+  "import.refusal.bundle.spreadsheet":
+    "Đây là sổ làm việc Excel. Lưu trang tính dưới dạng CSV UTF-8 rồi tải tệp đó lên.",
+  "import.refusal.bundle.noImportableFile":
+    "Tệp ZIP không có tệp nào mà lần nhập đọc được. Đặt tên mỗi tệp theo loại hồ sơ: {file_names}.",
   "import.refusal.bundle.notAZip":
     "Không mở được tệp ZIP. Tạo lại tệp ZIP rồi tải lên.",
   "import.refusal.bundle.filesTooLarge":
@@ -10152,6 +10185,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "import.template.files": "Tệp trong mẫu",
   "import.template.col.file": "Tệp",
   "import.template.col.columns": "Cột",
+  "import.template.keyColumns": "Cần một trong các cột: {columns}",
   "import.template.legend":
     "Di chuột hoặc chạm vào một cột để xem nội dung cần điền. ● đánh dấu cột mà dòng mới cần có.",
   "import.template.rules": "Cách khớp dòng",
