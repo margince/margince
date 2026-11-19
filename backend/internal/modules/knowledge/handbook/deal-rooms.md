@@ -168,14 +168,16 @@ needs an invitation of their own.
 A buyer who loses their link can ask for a new one from the room's sign-in
 page, with **Request new link**. The answer is always the same: "If that
 address was invited, a new link is on its way." The request always reaches you.
+
 But a new link is only mailed where the installation can send mail. If not,
 the Access panel shows "Asked for a new link {when}. Issue one and send it
-yourself."
+yourself." The note goes away once you issue a new link, or once the buyer
+is back in the room.
 
 ### What a buyer sees, and what they never see
 A buyer in a Deal Room sees the room's title and welcome, its documents and its
-threads. They see the steward's name ("Your contact: {steward}.") and **their
-own** participant record.
+threads. They see the steward's name under **Your contact**, and **their own**
+participant record.
 
 A buyer never sees the deal, the company, the amount, any other participant, or
 anything else in your CRM.
