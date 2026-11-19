@@ -44,7 +44,13 @@ const (
 	// a short figure shown as a total is worse than none: the reader has no way
 	// to see what is missing from it, and the number sits on the page looking
 	// like the whole pipeline.
-	partialPipelineReason  = "partial_pipeline"
+	partialPipelineReason = "partial_pipeline"
+	// amountMaskedReason floors open_pipeline when the caller's role masks
+	// deal.amount_minor. The total is a sum of that column, so returning it would
+	// rebuild a withheld amount. On a one-deal account that is the deal's value;
+	// on others, a value found by subtracting the deals the caller may read. The
+	// sibling deal aggregates narrow the same column behind the same mask.
+	amountMaskedReason     = "amount_masked"
 	openPipelineFormulaSQL = "company_open_pipeline_rollup: SUM over deal WHERE status = 'open' AND company_id = <this company> AND archived_at IS NULL, each amount converted to the installation base currency at the latest fx_rate on or before today"
 )
 
@@ -137,7 +143,12 @@ func openPipelineRollup(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID,
 //     could be priced. It floors to computable:false, reason:"awaiting_fx",
 //     with no value_minor on the wire. formula_sql stays populated either way:
 //     the formula exists, only a rate for these currencies does not.
-func companyComputedFields(open openPipeline) []crmcontracts.ComputedField {
+//
+// moneyMasked is set when the caller's role masks deal.amount_minor. The total
+// is a sum of that column, so it floors to computable:false ahead of the value
+// branches. A masked reader gets neither the figure nor the pricing state that
+// would narrow it.
+func companyComputedFields(open openPipeline, moneyMasked bool) []crmcontracts.ComputedField {
 	weightedReason := servedByHierarchyRollupReason
 	customerAgeReason := notYetBuiltReason
 	nrrReason := notYetBuiltReason
@@ -151,6 +162,10 @@ func companyComputedFields(open openPipeline) []crmcontracts.ComputedField {
 		Dependencies: openPipelineDependencies,
 	}
 	switch {
+	case moneyMasked:
+		reason := amountMaskedReason
+		openPipelineRow.Computable = false
+		openPipelineRow.Reason = &reason
 	case open.dealCount == 0:
 		zero := int64(0)
 		openPipelineRow.Computable = true

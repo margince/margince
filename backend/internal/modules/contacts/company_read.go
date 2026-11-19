@@ -99,7 +99,14 @@ func getCompanyInTx(ctx context.Context, tx pgx.Tx, id ids.CompanyID,
 			return crmcontracts.Company{}, fmt.Errorf("read open pipeline rollup: %w", err)
 		}
 		out.OpenDealCount = &open.dealCount
-		rows := companyComputedFields(open)
+		// open_pipeline sums deal.amount_minor. A caller who reads that column
+		// masked on any row must not receive the sum, which would reconstruct a
+		// withheld value. The open-deal count stays, because it is not that money.
+		moneyMasked, err := auth.MasksAnyRowOf(ctx, "deal", "amount_minor")
+		if err != nil {
+			return crmcontracts.Company{}, fmt.Errorf("resolve deal amount mask for open pipeline: %w", err)
+		}
+		rows := companyComputedFields(open, moneyMasked)
 		out.ComputedFields = &rows
 	}
 	return out, nil

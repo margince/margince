@@ -16,7 +16,7 @@ import (
 // not_yet_built.
 func TestCompanyComputedFields_FiveRowsExactShape(t *testing.T) {
 	minor := int64(125000)
-	rows := companyComputedFields(openPipeline{minorBase: &minor, dealCount: 1, pricedCount: 1})
+	rows := companyComputedFields(openPipeline{minorBase: &minor, dealCount: 1, pricedCount: 1}, false)
 	if len(rows) != 5 {
 		t.Fatalf("want exactly 5 display rows, got %d", len(rows))
 	}
@@ -70,7 +70,7 @@ func TestCompanyComputedFields_FiveRowsExactShape(t *testing.T) {
 // poc-1-tested behaviour: a record-page tile has no way to render
 // "unknown", so 0 is the honest lower bound of what CAN be priced.
 func TestCompanyComputedFields_NoOpenDeals_FloorsToZero(t *testing.T) {
-	rows := companyComputedFields(openPipeline{})
+	rows := companyComputedFields(openPipeline{}, false)
 	if rows[0].ValueMinor == nil || *rows[0].ValueMinor != 0 {
 		t.Fatalf("open_pipeline.value_minor = %v, want 0", rows[0].ValueMinor)
 	}
@@ -88,7 +88,7 @@ func TestCompanyComputedFields_NoOpenDeals_FloorsToZero(t *testing.T) {
 // so it floors to computable:false, reason:"awaiting_fx", with no value_minor
 // on the wire.
 func TestCompanyComputedFields_NothingCouldBePriced_AwaitingFX(t *testing.T) {
-	rows := companyComputedFields(openPipeline{dealCount: 2})
+	rows := companyComputedFields(openPipeline{dealCount: 2}, false)
 	open := rows[0]
 	if open.Computable {
 		t.Fatalf("open_pipeline must be computable=false when the aggregate is NULL but open deals exist, got %+v", open)
@@ -113,7 +113,7 @@ func TestCompanyComputedFields_NothingCouldBePriced_AwaitingFX(t *testing.T) {
 // than the "not computable" this replaces, so it floors instead.
 func TestCompanyComputedFields_SomeDealsPriced_RefusesTheShortTotal(t *testing.T) {
 	sum := int64(10_000)
-	rows := companyComputedFields(openPipeline{minorBase: &sum, dealCount: 2, pricedCount: 1})
+	rows := companyComputedFields(openPipeline{minorBase: &sum, dealCount: 2, pricedCount: 1}, false)
 	open := rows[0]
 	if open.Computable {
 		t.Fatalf("a total covering 1 of 2 open deals was reported as computable: %+v", open)
@@ -130,12 +130,38 @@ func TestCompanyComputedFields_SomeDealsPriced_RefusesTheShortTotal(t *testing.T
 // total, so the number IS the pipeline.
 func TestCompanyComputedFields_EveryDealPriced_ReportsTheTotal(t *testing.T) {
 	sum := int64(28_000)
-	rows := companyComputedFields(openPipeline{minorBase: &sum, dealCount: 2, pricedCount: 2})
+	rows := companyComputedFields(openPipeline{minorBase: &sum, dealCount: 2, pricedCount: 2}, false)
 	open := rows[0]
 	if !open.Computable {
 		t.Fatalf("a total covering every open deal is not computable: %+v", open)
 	}
 	if open.ValueMinor == nil || *open.ValueMinor != sum {
 		t.Fatalf("open_pipeline.value_minor = %v, want %d", open.ValueMinor, sum)
+	}
+}
+
+// A caller whose role masks deal.amount_minor must not receive the open-pipeline
+// sum. The total is that column, so on a one-open-deal account it is the masked
+// deal's value. It floors to computable:false with reason "amount_masked" and no
+// value. The positive control proves the same input still reports when no mask
+// applies, so a wrongly suppressed figure would fail the control, not pass here.
+func TestCompanyComputedFields_DealAmountMasked_WithholdsTheTotal(t *testing.T) {
+	sum := int64(4_850_000)
+	fullyPriced := openPipeline{minorBase: &sum, dealCount: 1, pricedCount: 1}
+
+	masked := companyComputedFields(fullyPriced, true)[0]
+	if masked.Computable {
+		t.Fatalf("open_pipeline was computable for a reader who masks deal.amount_minor: %+v", masked)
+	}
+	if masked.Reason == nil || *masked.Reason != amountMaskedReason {
+		t.Fatalf("open_pipeline.reason = %v, want %q", masked.Reason, amountMaskedReason)
+	}
+	if masked.ValueMinor != nil {
+		t.Fatalf("open_pipeline.value_minor = %v, want nil — the masked money must not reach the wire", masked.ValueMinor)
+	}
+
+	unmasked := companyComputedFields(fullyPriced, false)[0]
+	if !unmasked.Computable || unmasked.ValueMinor == nil || *unmasked.ValueMinor != sum {
+		t.Fatalf("positive control: the same input unmasked must report %d, got %+v", sum, unmasked)
 	}
 }
