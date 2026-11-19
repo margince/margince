@@ -403,20 +403,11 @@ func metInPersonTx(
 		     AND `+relstrength.MeetingInTouchSQL("a", "now()")+`
 		     AND (
 		          -- The BARE invitation address, bounded by the address's own
-		          -- tenure. An activity_participant row records what the
-		          -- invitation said, and archiving a contact_email never
-		          -- rewrites it — so once an address changes hands, a meeting
-		          -- its FORMER holder attended would go on standing as evidence
-		          -- about the new one, and mint a contact for a stranger.
-		          -- Archiving the old holder's address is the only mark the
-		          -- hand-over leaves, so it is the boundary: meetings after it
-		          -- are the new holder's, meetings before it are not anybody's
-		          -- to inherit. An address that never changed hands has no such
-		          -- row and is unaffected.
-		          (lower(p.address) = $1 AND a.occurred_at > COALESCE( -- occurred_at raw: after the address changed hands
-		             (SELECT max(pe.archived_at) FROM contact_email pe
-		               WHERE lower(pe.email) = $1 AND pe.archived_at IS NOT NULL),
-		             '-infinity'::timestamptz))
+		          -- tenure (addressReleasedSQL). An activity_participant row
+		          -- records what the invitation said, and archiving a
+		          -- contact_email never rewrites it.
+		          (lower(p.address) = $1 AND a.occurred_at > -- occurred_at raw: after the address left its last contact
+		             `+addressReleasedSQL("$1")+`)
 		          OR EXISTS (
 		            SELECT 1 FROM contact_email pe
 		             WHERE pe.contact_id = p.contact_id
@@ -427,4 +418,16 @@ func metInPersonTx(
 		return false, false, fmt.Errorf("capture: reading whether this workspace is meeting the sender: %w", err)
 	}
 	return met, elsewhere, nil
+}
+
+// addressReleasedSQL is when the address last left a contact: the newest
+// archive of a contact_email holding it, or -infinity if none ever did.
+//
+// Evidence dated before it is about the earlier holder, or about a contact its
+// owner removed. Counting it would mint that contact again on the next message,
+// so only what happened after the release may create a record.
+func addressReleasedSQL(address string) string {
+	return `COALESCE((SELECT max(released.archived_at) FROM contact_email released
+	          WHERE lower(released.email) = ` + address + ` AND released.archived_at IS NOT NULL),
+	        '-infinity'::timestamptz)`
 }

@@ -52,7 +52,8 @@ func recipientRowSQL(activity string) string {
      AND lower(p.address) = $1::text AND p.role IN ('to','cc','bcc'))`
 }
 
-// partyWasWrittenToTx reports whether the workspace provably wrote to email.
+// partyWasWrittenToTx reports whether the workspace provably wrote to email
+// since the address last left a contact (addressReleasedSQL).
 // Any two proven sends decide, and so does a lone one, so the read stops at the
 // first two distinct ones. Reading every candidate first cost a busy
 // correspondent's whole history on each message.
@@ -72,6 +73,8 @@ func partyWasWrittenToTx(ctx context.Context, tx pgx.Tx, email string) (bool, er
 	query := `SELECT a.id, a.occurred_at, coalesce(a.subject,''), coalesce(a.body,'')
  FROM (` + proofCandidatesSQL + `) candidate(id, arm) JOIN activity a ON a.id = candidate.id
  WHERE a.counterparty_outbound_attested AND a.archived_at IS NULL AND ` + visible + `
+   AND a.occurred_at > -- occurred_at raw: a send before the address left a contact
+   ` + addressReleasedSQL("$1::text") + `
    AND (candidate.arm = 1 OR a.counterparty_email IS DISTINCT FROM $1::text)
    AND ` + partySendProofSQL("a", "$1::text") + fmt.Sprintf(`
    AND a.id <> ALL(coalesce($%d::uuid[], '{}')) LIMIT $%d`, len(base)+1, len(base)+2)
