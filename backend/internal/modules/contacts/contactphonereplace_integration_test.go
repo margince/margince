@@ -184,8 +184,7 @@ func TestTwoPrimaryPhonesAreRefusedWhateverTheirTypes(t *testing.T) {
 		},
 		Source: "test",
 	})
-	var conflict *PrimaryConflictError
-	if !errors.As(err, &conflict) {
+	if _, ok := errors.AsType[*PrimaryConflictError](err); !ok {
 		t.Fatalf("a work and a mobile primary → %v, want PrimaryConflictError", err)
 	}
 }
