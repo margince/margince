@@ -520,6 +520,31 @@ describe("the marks on at the caret", () => {
     expect(mark("Nummerierte Liste")).toHaveAttribute("aria-pressed", "false");
   });
 
+  it("reads a heading whose command throws as no heading", () => {
+    const on = withCaretMarks("h2");
+    Object.defineProperty(document, "queryCommandValue", {
+      value: () => {
+        throw new Error("unsupported");
+      },
+      configurable: true,
+    });
+    render(
+      <RichText
+        format="markdown"
+        value="## Summary"
+        onChange={() => {}}
+        label="Details"
+        labels={{ ...LABELS, heading: "Überschrift" }}
+      />,
+    );
+
+    on.add("bold");
+    moveCaretInto(screen.getByRole("heading", { name: "Summary" }).firstChild);
+
+    expect(mark("Überschrift")).toHaveAttribute("aria-pressed", "false");
+    expect(mark("Fett")).toHaveAttribute("aria-pressed", "true");
+  });
+
   it("shows no mark pressed while the editor is disabled", async () => {
     const on = withCaretMarks();
     const { rerender } = surface();

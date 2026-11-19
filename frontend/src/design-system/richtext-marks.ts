@@ -27,17 +27,20 @@ export const MARK_COMMANDS = {
   numberList: "insertOrderedList",
 } as const;
 
-export const headingAtCaret = () =>
-  document.queryCommandValue("formatBlock") === "h2";
-
 // Some engines throw for a command they cannot answer at this caret.
-function commandOn(command: string): boolean {
+function engineSays(read: () => boolean): boolean {
   try {
-    return document.queryCommandState(command);
+    return read();
   } catch {
     return false;
   }
 }
+
+const commandOn = (command: string) =>
+  engineSays(() => document.queryCommandState(command));
+
+export const headingAtCaret = () =>
+  engineSays(() => document.queryCommandValue("formatBlock") === "h2");
 
 function marksAtCaret(): Marks {
   // A host without editing commands shows no mark on.
