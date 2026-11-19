@@ -11,6 +11,7 @@ package capture
 
 import (
 	"context"
+	"slices"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -59,6 +60,41 @@ func TestACapturedMailLeavesTheHomeFenceWhereItWas(t *testing.T) {
 	archiveNewestMail(t, e)
 	if moved := captureHomeFence(t, e) - before; moved != 1 {
 		t.Errorf("archiving a captured mail moved the Home fence by %d, want 1: it narrows reach", moved)
+	}
+}
+
+// The sender ensure files mail from a deferred or a suppressed sender under
+// nobody. Its project and deal links are then its first, and capture writes
+// them before it commits too.
+func TestAnUnfiledSendersMailNamingAProjectLeavesTheHomeFenceWhereItWas(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	seed := newProjectSeeder(t, e)
+	erp := seed.project(t, "ERP replacement")
+	phase := seed.dealOnProject(t, "Phase two", erp.ID)
+	for _, mail := range []struct{ sender, msgID string }{
+		{"deferred", "fence-pk1@acme.example"},
+		{"suppressed", "fence-pk2@em.vendor.example"},
+	} {
+		raw := emailAbout(mail.msgID, "", "["+erp.Key+"] weekly status")
+		if mail.sender == "suppressed" {
+			raw = mailFrom("no-reply@em.vendor.example", mail.msgID, "", "["+erp.Key+"] weekly status")
+		}
+		before := captureHomeFence(t, e)
+		env.sync(t, raw)
+		if moved := captureHomeFence(t, e) - before; moved != 0 {
+			t.Errorf("mail from a %s sender moved the Home fence by %d, want 0: every member's cached Home ended", mail.sender, moved)
+		}
+		if n := countRows(t, e, `SELECT count(*) FROM activity_link l JOIN activity a ON a.id = l.activity_id
+			WHERE a.source_id = '`+mail.msgID+`' AND l.entity_type IN ('contact', 'lead')`); n != 0 {
+			t.Fatalf("mail from a %s sender is filed under %d contacts or leads, want none: its project link is not its first", mail.sender, n)
+		}
+		if got := linkedProject(t, e, mail.msgID); got != erp.ID {
+			t.Fatalf("mail from a %s sender is filed under project %s, want %s", mail.sender, got, erp.ID)
+		}
+		if got := dealsOf(t, e, mail.msgID); !slices.Equal(got, []ids.UUID{phase}) {
+			t.Fatalf("mail from a %s sender is filed under deals %v, want the project's one deal %s", mail.sender, got, phase)
+		}
 	}
 }
 
