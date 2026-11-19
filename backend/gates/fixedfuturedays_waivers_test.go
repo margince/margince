@@ -26,12 +26,6 @@ const (
 // after fixedDateHorizon, keyed by file and day.
 var fixedFutureDayWaivers = gatekit.Waive(map[string]string{
 	"internal/compose/analyticsmcpquestions_forecast_integration_test.go 2038-02-01": dayUnderPinnedClock,
-	"internal/compose/approvalcount_integration_test.go 2026-12-01":                  dayIsOpaquePayload,
-	"internal/compose/approvalexpired_integration_test.go 2026-12-01":                dayIsOpaquePayload,
-	"internal/compose/approvalmailburst_integration_test.go 2026-12-01":              dayIsOpaquePayload,
-	"internal/compose/approvalnoticeterminals_integration_test.go 2027-01-01":        dayIsOpaquePayload,
-	"internal/compose/approvalnotify_integration_test.go 2026-12-01":                 dayIsOpaquePayload,
-	"internal/compose/approvalpreferences_integration_test.go 2026-12-01":            dayIsOpaquePayload,
 	"internal/compose/approvalpreviewbooking_integration_test.go 2027-01-12":         dayIsOpaquePayload,
 	"internal/compose/approvalpreviewbookingconsent_integration_test.go 2027-01-12":  dayIsOpaquePayload,
 	"internal/compose/approvalpreviewinvitation_integration_test.go 2027-01-12":      dayIsOpaquePayload,
@@ -39,7 +33,6 @@ var fixedFutureDayWaivers = gatekit.Waive(map[string]string{
 	"internal/compose/approvalpreviewprojectcreate_integration_test.go 2030-01-02":   dayIsOpaquePayload,
 	"internal/compose/approvalpreviewprojectcreate_integration_test.go 2030-06-30":   dayIsOpaquePayload,
 	"internal/compose/approvalstageconsent_integration_test.go 2027-01-12":           dayIsOpaquePayload,
-	"internal/compose/capturedigestreview_integration_test.go 2026-12-01":            dayIsOpaquePayload,
 	"internal/compose/commitmentadmission_integration_test.go 2027-01-01":            dayUnderPinnedClock,
 	"internal/compose/companyrollupperiod_integration_test.go 2026-12-20":            dayUnderPinnedClock,
 	"internal/compose/historyputback_integration_test.go 2026-12-01":                 dayStoredEitherSide,

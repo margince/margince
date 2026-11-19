@@ -27,13 +27,15 @@ package gates
 //     compared with the day the test injects.
 //   - A year held in a named constant, or a date built from parts the parser
 //     cannot read as literals.
-//   - A day written in another shape, such as 01/02/2030 or 20300102.
+//   - A day in a shape other than 2030-01-02, 2 Jan 2030 or 20300102T100000,
+//     such as 01/02/2030 or a bare 20300102.
 //   - Whether a waived day still flows only where its reason says. A reason is
 //     checked for being stated, not for being true.
 
 import (
 	"fmt"
 	"go/ast"
+	"go/build/constraint"
 	"go/parser"
 	"go/token"
 	"io/fs"
@@ -55,12 +57,18 @@ var fixedDateHorizon = time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC)
 // that still runs then has rewritten these tests many times over.
 const neverYear = 2090
 
-// The census floors sit below the real counts. They catch a walk or a parser
-// that stopped seeing, not a tree that changed.
-const (
-	integrationFileFloor = 1000
-	fixedDateFloor       = 1000
-)
+// rootCount is what the census read under one root of the tree.
+type rootCount struct{ files, days int }
+
+// censusFloors sit a little below the counts measured under each root. A floor
+// per root catches a walk that lost one subtree while the total still clears.
+var censusFloors = []struct {
+	root  string
+	floor rootCount
+}{
+	{"internal/compose", rootCount{files: 2600, days: 1500}},
+	{"internal/modules", rootCount{files: 900, days: 330}},
+}
 
 // fixedDate is one calendar day spelled as a literal in a test file.
 type fixedDate struct {
@@ -68,22 +76,32 @@ type fixedDate struct {
 	line int
 }
 
-// isoDay finds a calendar day inside a string literal: a bare date, an RFC
-// 3339 instant, or a value in a JSON payload.
-var isoDay = regexp.MustCompile(`[0-9]{4}-[0-9]{2}-[0-9]{2}`)
+// dayShapes are the spellings of a day a string literal can carry. They are a
+// date or RFC 3339 instant, a mail Date header, and an iCal basic instant.
+var dayShapes = []struct {
+	pattern *regexp.Regexp
+	layouts []string
+}{
+	{regexp.MustCompile(`[0-9]{4}-[0-9]{2}-[0-9]{2}`), []string{time.DateOnly}},
+	{
+		regexp.MustCompile(`[0-9]{1,2} (?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec) [0-9]{4}`),
+		[]string{"2 Jan 2006", "02 Jan 2006"},
+	},
+	{regexp.MustCompile(`[0-9]{8}T[0-9]{6}`), []string{"20060102T150405"}},
+}
 
 func TestNoIntegrationTestSendsAFixedFutureDay(t *testing.T) {
 	t.Parallel()
 	defer fixedFutureDayWaivers.AssertAllMatched(t)
 
-	files, dates := 0, 0
+	counted := map[string]rootCount{}
 	var findings []string
 	// TestMain has left the working directory at the module root.
 	err := gatekit.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") {
 			return err
 		}
-		testOnly, err := builtOnlyForIntegration(path)
+		testOnly, err := builtOnlyForAnIntegrationLane(path)
 		if err != nil {
 			t.Errorf("reading %s's build constraint: %v", filepath.ToSlash(path), err)
 			return nil
@@ -96,10 +114,10 @@ func TestNoIntegrationTestSendsAFixedFutureDay(t *testing.T) {
 			t.Errorf("parsing %s: %v", filepath.ToSlash(path), err)
 			return nil
 		}
-		files++
 		spelled := fixedDates(gatekit.SourceFileSet(), file)
-		dates += len(spelled)
 		rel := filepath.ToSlash(path)
+		root := censusRoot(rel)
+		counted[root] = rootCount{files: counted[root].files + 1, days: counted[root].days + len(spelled)}
 		for _, date := range futureDays(spelled, fixedDateHorizon) {
 			if !fixedFutureDayWaivers.Waived(t, fixedDayWaiverKey(rel, date.day)) {
 				findings = append(findings, fmt.Sprintf("%s:%d: %s", rel, date.line, date.day.Format(time.DateOnly)))
@@ -110,17 +128,17 @@ func TestNoIntegrationTestSendsAFixedFutureDay(t *testing.T) {
 	if err != nil {
 		t.Fatalf("walking the module: %v", err)
 	}
-	if files < integrationFileFloor || dates < fixedDateFloor {
-		t.Fatalf("read %d integration-only file(s) holding %d fixed day(s), below the floors of %d and %d. "+
-			"The walk or the parser stopped seeing; a smaller census would report PASS.",
-			files, dates, integrationFileFloor, fixedDateFloor)
+	if short := censusShortfalls(counted); len(short) > 0 {
+		t.Fatalf("the census went short, and a smaller census would report PASS: %s",
+			strings.Join(short, "; "))
 	}
 	sort.Strings(findings)
 	for _, finding := range findings {
 		t.Errorf("%s is a fixed day on or after %s in an integration test. Once it passes, a writer "+
 			"that compares it with today refuses it. Date it from clocktest.Now(t); if the test pins "+
 			"the product's clock or no writer compares the day, waive %q in fixedFutureDayWaivers and "+
-			"say why.", finding, fixedDateHorizon.Format(time.DateOnly), fixedDayWaiverKeyOf(finding))
+			"say why. If the day is already past, move fixedDateHorizon forward instead of waiving it.",
+			finding, fixedDateHorizon.Format(time.DateOnly), fixedDayWaiverKeyOf(finding))
 	}
 }
 
@@ -145,6 +163,10 @@ func TestEveryShapeOfAFixedFutureDayIsSeen(t *testing.T) {
 		{"a never day", `_ = time.Date(2099, 12, 31, 0, 0, 0, 0, time.UTC)`, nil},
 		{"a day dated from the clock", "_ = clocktest.Now(t).AddDate(0, 0, 30)", nil},
 		{"a longer number", `_ = "12030-03-045"`, nil},
+		{"a mail Date header", `_ = "Date: Tue, 10 Nov 2026 09:00:00 +0000"`, nil},
+		{"a future mail Date header", `_ = "Date: Fri, 5 Mar 2027 09:00:00 +0000"`, []string{"2027-03-05"}},
+		{"an iCal basic instant", `_ = "DTSTART:20261202T100000Z"`, []string{"2026-12-02"}},
+		{"a bare eight-digit day", `_ = "20261202"`, nil},
 	}
 	for _, planted := range cases {
 		src := "package x\n\nimport \"time\"\n\nfunc f() {\n" + planted.body + "\n}\n"
@@ -152,9 +174,62 @@ func TestEveryShapeOfAFixedFutureDayIsSeen(t *testing.T) {
 			t.Errorf("%s: want %q, got %q", planted.name, planted.want, got)
 		}
 	}
-	aliased := "package x\n\nimport walltime \"time\"\n\nvar d = walltime.Date(2030, walltime.March, 4, 0, 0, 0, 0, walltime.UTC)\n"
-	if got := plantedFutureDays(t, aliased); !equalStrings(got, []string{"2030-03-04"}) {
-		t.Errorf("an aliased time import: want [2030-03-04], got %q", got)
+	for name, src := range map[string]string{
+		"an aliased time import": "package x\n\nimport walltime \"time\"\n\nvar d = walltime.Date(2030, walltime.March, 4, 0, 0, 0, 0, walltime.UTC)\n",
+		"a dot-imported time":    "package x\n\nimport . \"time\"\n\nvar d = Date(2030, March, 4, 0, 0, 0, 0, UTC)\n",
+	} {
+		if got := plantedFutureDays(t, src); !equalStrings(got, []string{"2030-03-04"}) {
+			t.Errorf("%s: want [2030-03-04], got %q", name, got)
+		}
+	}
+}
+
+// TestACensusThatLostARootFails drops each root in turn. A floor on the total
+// alone would pass a walk that no longer reaches internal/modules.
+func TestACensusThatLostARootFails(t *testing.T) {
+	t.Parallel()
+
+	full := map[string]rootCount{}
+	for _, root := range censusFloors {
+		full[root.root] = root.floor
+	}
+	if short := censusShortfalls(full); len(short) != 0 {
+		t.Fatalf("a census at every floor: want no shortfall, got %q", short)
+	}
+	for _, dropped := range censusFloors {
+		partial := map[string]rootCount{"elsewhere": {files: 10_000, days: 10_000}}
+		for _, root := range censusFloors {
+			if root.root != dropped.root {
+				partial[root.root] = root.floor
+			}
+		}
+		if short := censusShortfalls(partial); len(short) != 1 || !strings.Contains(short[0], dropped.root) {
+			t.Errorf("a census without %s: want one shortfall naming it, got %q", dropped.root, short)
+		}
+	}
+}
+
+// Every lane that builds only with the integration tag is in the corpus, the
+// bench and rolesweep lanes too. A file any untagged build links is not.
+func TestEveryIntegrationLaneIsInTheCorpus(t *testing.T) {
+	t.Parallel()
+
+	for line, want := range map[string]bool{
+		"//go:build integration":              true,
+		"//go:build integration && bench":     true,
+		"//go:build integration && rolesweep": true,
+		"//go:build integration && !race":     true,
+		"//go:build !integration":             false,
+		"//go:build integration || !windows":  false,
+		"//go:build livesmoke":                false,
+	} {
+		expr, err := constraint.Parse(line)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := integrationLaneOnly(expr); got != want {
+			t.Errorf("%q: in the corpus = %v, want %v", line, got, want)
+		}
 	}
 }
 
@@ -184,6 +259,73 @@ func futureDays(dates []fixedDate, horizon time.Time) []fixedDate {
 	return future
 }
 
+// censusRoot is the root a file counts under: internal/compose and
+// internal/modules each by name, and every other path together.
+func censusRoot(path string) string {
+	for _, root := range censusFloors {
+		if strings.HasPrefix(path, root.root+"/") {
+			return root.root
+		}
+	}
+	return "elsewhere"
+}
+
+// censusShortfalls names each root read below its floor.
+func censusShortfalls(counted map[string]rootCount) []string {
+	var short []string
+	for _, root := range censusFloors {
+		got := counted[root.root]
+		if got.files < root.floor.files || got.days < root.floor.days {
+			short = append(short, fmt.Sprintf("%s read %d file(s) and %d day(s), under its floors of %d and %d",
+				root.root, got.files, got.days, root.floor.files, root.floor.days))
+		}
+	}
+	return short
+}
+
+// builtOnlyForAnIntegrationLane reports whether only an integration lane builds
+// the file: plain integration, or integration with a lane tag such as bench.
+func builtOnlyForAnIntegrationLane(path string) (bool, error) {
+	src, err := gatekit.ReadFile(path)
+	if err != nil {
+		return false, err
+	}
+	expr, err := buildConstraint(string(src))
+	if expr == nil || err != nil {
+		return false, err
+	}
+	return integrationLaneOnly(expr), nil
+}
+
+// integrationLaneOnly evaluates the constraint with every tag it asks for set.
+// It admits the file when that build includes it, integration is among those
+// tags, and a build with no tags leaves it out.
+func integrationLaneOnly(expr constraint.Expr) bool {
+	asked := map[string]bool{}
+	askedTags(expr, true, asked)
+	return asked["integration"] && expr.Eval(func(tag string) bool { return asked[tag] }) &&
+		!expr.Eval(func(string) bool { return false })
+}
+
+// askedTags collects the tags the constraint wants set, those under an even
+// number of negations.
+func askedTags(expr constraint.Expr, wanted bool, into map[string]bool) {
+	switch node := expr.(type) {
+	case *constraint.TagExpr:
+		if wanted {
+			into[node.Tag] = true
+		}
+	case *constraint.NotExpr:
+		askedTags(node.X, !wanted, into)
+	case *constraint.AndExpr:
+		askedTags(node.X, wanted, into)
+		askedTags(node.Y, wanted, into)
+	case *constraint.OrExpr:
+		askedTags(node.X, wanted, into)
+		askedTags(node.Y, wanted, into)
+	}
+}
+
 // fixedDayWaiverKey names one day in one file. A file-wide waiver would hide the next
 // day added to it.
 func fixedDayWaiverKey(path string, day time.Time) string {
@@ -200,12 +342,23 @@ func fixedDayWaiverKeyOf(finding string) string {
 // fixedDates returns every calendar day the file spells out: each time.Date
 // with a literal year, and each YYYY-MM-DD inside a string literal.
 func fixedDates(fset *token.FileSet, file *ast.File) []fixedDate {
-	names, _ := timePackageNames(file)
+	names, dotted := timePackageNames(file)
+	timeName := func(expr ast.Expr, name string) bool {
+		if ident, ok := expr.(*ast.Ident); ok {
+			return dotted && ident.Name == name
+		}
+		selector, ok := expr.(*ast.SelectorExpr)
+		if !ok || selector.Sel.Name != name {
+			return false
+		}
+		pkg, ok := selector.X.(*ast.Ident)
+		return ok && names[pkg.Name]
+	}
 	var found []fixedDate
 	ast.Inspect(file, func(n ast.Node) bool {
 		switch node := n.(type) {
 		case *ast.CallExpr:
-			if day, ok := timeDateLiteral(node, names); ok {
+			if day, ok := timeDateLiteral(node, timeName); ok {
 				found = append(found, fixedDate{day: day, line: fset.Position(node.Pos()).Line})
 			}
 		case *ast.BasicLit:
@@ -220,16 +373,21 @@ func fixedDates(fset *token.FileSet, file *ast.File) []fixedDate {
 	return found
 }
 
-// daysInString reads each YYYY-MM-DD not run into by a further digit, so
-// 12030-03-045 is no day while 2030-03-04/2030-03-05 is two.
+// daysInString reads each day in a dayShapes spelling that no further digit
+// runs into, so 12030-03-045 is no day while 2030-03-04/2030-03-05 is two.
 func daysInString(text string) []time.Time {
 	var days []time.Time
-	for _, span := range isoDay.FindAllStringIndex(text, -1) {
-		if span[0] > 0 && isDigit(text[span[0]-1]) || span[1] < len(text) && isDigit(text[span[1]]) {
-			continue
-		}
-		if day, err := time.Parse(time.DateOnly, text[span[0]:span[1]]); err == nil {
-			days = append(days, day)
+	for _, shape := range dayShapes {
+		for _, span := range shape.pattern.FindAllStringIndex(text, -1) {
+			if span[0] > 0 && isDigit(text[span[0]-1]) || span[1] < len(text) && isDigit(text[span[1]]) {
+				continue
+			}
+			for _, layout := range shape.layouts {
+				if at, err := time.Parse(layout, text[span[0]:span[1]]); err == nil {
+					days = append(days, time.Date(at.Year(), at.Month(), at.Day(), 0, 0, 0, 0, time.UTC))
+					break
+				}
+			}
 		}
 	}
 	return days
@@ -238,19 +396,15 @@ func daysInString(text string) []time.Time {
 // timeDateLiteral reads time.Date(year, month, day, ...) with a literal year.
 // A month or day it cannot read is taken as the last one. An unreadable part
 // then makes the day later and never hides it.
-func timeDateLiteral(call *ast.CallExpr, names map[string]bool) (time.Time, bool) {
-	selector, ok := call.Fun.(*ast.SelectorExpr)
-	if !ok || selector.Sel.Name != "Date" || len(call.Args) < 3 {
-		return time.Time{}, false
-	}
-	if pkg, ok := selector.X.(*ast.Ident); !ok || !names[pkg.Name] {
+func timeDateLiteral(call *ast.CallExpr, timeName func(ast.Expr, string) bool) (time.Time, bool) {
+	if len(call.Args) < 3 || !timeName(call.Fun, "Date") {
 		return time.Time{}, false
 	}
 	year, ok := intLiteral(call.Args[0])
 	if !ok {
 		return time.Time{}, false
 	}
-	month, ok := monthLiteral(call.Args[1], names)
+	month, ok := monthLiteral(call.Args[1], timeName)
 	if !ok {
 		return time.Date(year, time.December, 31, 0, 0, 0, 0, time.UTC), true
 	}
@@ -272,19 +426,12 @@ func intLiteral(expr ast.Expr) (int, bool) {
 }
 
 // monthLiteral reads time.March or a literal 3.
-func monthLiteral(expr ast.Expr, names map[string]bool) (time.Month, bool) {
+func monthLiteral(expr ast.Expr, timeName func(ast.Expr, string) bool) (time.Month, bool) {
 	if n, ok := intLiteral(expr); ok {
 		return time.Month(n), n >= 1 && n <= 12
 	}
-	selector, ok := expr.(*ast.SelectorExpr)
-	if !ok {
-		return 0, false
-	}
-	if pkg, ok := selector.X.(*ast.Ident); !ok || !names[pkg.Name] {
-		return 0, false
-	}
 	for month := time.January; month <= time.December; month++ {
-		if month.String() == selector.Sel.Name {
+		if timeName(expr, month.String()) {
 			return month, true
 		}
 	}

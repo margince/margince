@@ -23,8 +23,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-// falseCancelTask runs the repair on the day before the fixture week, so a
-// meeting 40 days before the first start is outside its window.
+// falseCancelTask runs the repair six days before the first start, so a
+// meeting 40 days before that start is outside its window.
 func falseCancelTask(first time.Time) datatask.Task {
 	today := first.Truncate(24*time.Hour).AddDate(0, 0, -6)
 	return falseMeetingCancelsDataTask(func() time.Time { return today })

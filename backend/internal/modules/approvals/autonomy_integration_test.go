@@ -73,6 +73,8 @@ type dealSeeder struct {
 	env      *stagingEnv
 	pipeline ids.UUID
 	stage    ids.UUID
+	// closes is the close date every proposal stages, read once per suite.
+	closes string
 }
 
 // newDealSeeder creates the pipeline and stage every deal below shares. One
@@ -81,7 +83,7 @@ type dealSeeder struct {
 func newDealSeeder(t *testing.T, e *stagingEnv) *dealSeeder {
 	t.Helper()
 	ctx := context.Background()
-	s := &dealSeeder{env: e, pipeline: ids.NewV7(), stage: ids.NewV7()}
+	s := &dealSeeder{env: e, pipeline: ids.NewV7(), stage: ids.NewV7(), closes: countedCloseDate(t, 1)}
 	// The name carries the id because pipeline names are unique installation-wide
 	// and this package's suites share one database.
 	if _, err := e.owner.Exec(ctx,
@@ -122,7 +124,7 @@ func (s *dealSeeder) stageCounted(ctx context.Context, t *testing.T) ids.Approva
 	target := s.deal(t)
 	id, err := s.env.svc.Stage(ctx, StageInput{
 		Kind:           countedKind,
-		ProposedChange: []byte(`{"deal_id":"` + target.String() + `","expected_close_date":"` + countedCloseDate(t, 1) + `"}`),
+		ProposedChange: []byte(`{"deal_id":"` + target.String() + `","expected_close_date":"` + s.closes + `"}`),
 		DiffHash:       target.String(),
 		TargetType:     tableDeal,
 		TargetID:       target,
@@ -214,7 +216,7 @@ func TestAnEditedApprovalIsNotACleanOne(t *testing.T) {
 	// The same deal, a different date: an edit may correct the proposal but
 	// never re-aim it, so the deal_id has to survive verbatim.
 	edited := bytes.Replace(staged.ProposedChange,
-		[]byte(`"`+countedCloseDate(t, 1)+`"`), []byte(`"`+countedCloseDate(t, 4)+`"`), 1)
+		[]byte(`"`+seed.closes+`"`), []byte(`"`+countedCloseDate(t, 4)+`"`), 1)
 	if bytes.Equal(edited, staged.ProposedChange) {
 		t.Fatal("the edit changed nothing, so this proves nothing about editing")
 	}

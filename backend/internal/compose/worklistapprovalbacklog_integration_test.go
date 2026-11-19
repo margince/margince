@@ -16,7 +16,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -36,7 +35,7 @@ func stageCloseDates(
 	staged := map[string]bool{}
 	for range count {
 		deal := e.SeedDeal(t, "Review the date", pipeline, open, &seat)
-		proposal, err := json.Marshal(deals.CloseDateCorrection{DealID: ids.From[ids.DealKind](deal), ExpectedCloseDate: clocktest.Now(t).AddDate(0, 1, 0).Format(time.DateOnly), Basis: "Review the date"})
+		proposal, err := json.Marshal(deals.CloseDateCorrection{DealID: ids.From[ids.DealKind](deal), ExpectedCloseDate: closeDateAhead(t), Basis: "Review the date"})
 		if err != nil {
 			t.Fatal(err)
 		}
