@@ -38,7 +38,7 @@ func approvalsHandlersWithEffects(
 	pool *pgxpool.Pool, volume approvals.VolumeReleaser, log *slog.Logger,
 ) (approvals.Handlers, *siteLeadNoticeLane) {
 	notices := newSiteLeadNoticeLane()
-	return approvals.NewHandlers(approvalsServiceTelling(pool, notices).WithVolumeReleaser(volume).WithLogger(log)), notices
+	return approvals.NewHandlers(approvalsServiceTelling(pool, notices).WithVolumeReleaser(volume).WithLogger(log)).WithSettings(StoredConfig(pool)).WithLocks(loadedLocks), notices
 }
 
 // NewApprovalsServiceWithEffects wires the decision effects used by automatic

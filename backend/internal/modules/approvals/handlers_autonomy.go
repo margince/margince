@@ -13,6 +13,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
@@ -30,7 +31,63 @@ func (h Handlers) GetAutonomy(w http.ResponseWriter, r *http.Request) {
 		httperr.Write(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, autonomyWire(settings))
+	h.writeAutonomy(w, r, settings)
+}
+
+// writeAutonomy answers with the rep's rows and the installation switch above them.
+func (h Handlers) writeAutonomy(w http.ResponseWriter, r *http.Request, settings []KindAutonomy) {
+	on, err := h.svc.autoApplyInstallationOn(r.Context())
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	wire := autonomyWire(settings)
+	wire.AutoApplyEnabled = on
+	wire.Locks = h.installationLocks()
+	httperr.WriteJSON(w, http.StatusOK, wire)
+}
+
+// UpdateAutoApplyInstallation switches automatic application for everyone. The
+// admin check and the audit row belong to SetAutoApplyEnabled.
+func (h Handlers) UpdateAutoApplyInstallation(w http.ResponseWriter, r *http.Request) {
+	if h.settings == nil {
+		httperr.NotImplemented(w, r, "UpdateAutoApplyInstallation")
+		return
+	}
+	if err := auth.RequireHuman(r.Context()); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	var req crmcontracts.AutoApplyInstallation
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	if err := SetAutoApplyEnabled(r.Context(), h.settings, req.Enabled); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	req.Locks = h.installationLocks()
+	httperr.WriteJSON(w, http.StatusOK, req)
+}
+
+// installationLocks names the boot source that sets the switch, if one does.
+func (h Handlers) installationLocks() *[]crmcontracts.SettingLock {
+	if h.locks == nil {
+		return nil
+	}
+	return h.locks([]config.Any{AutoApplyEnabled})
+}
+
+// WithSettings binds the stored configuration the installation switch lives in.
+func (h Handlers) WithSettings(cfg *config.Config) Handlers {
+	h.settings = cfg
+	return h
+}
+
+// WithLocks binds what reports the settings a boot source sets.
+func (h Handlers) WithLocks(locks func(surface []config.Any) *[]crmcontracts.SettingLock) Handlers {
+	h.locks = locks
+	return h
 }
 
 // UpdateAutonomy turns one kind on or off for the reader, then answers with the
@@ -75,7 +132,7 @@ func (h Handlers) UpdateAutonomy(w http.ResponseWriter, r *http.Request) {
 		httperr.Write(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, autonomyWire(settings))
+	h.writeAutonomy(w, r, settings)
 }
 
 // autonomyWire renders the service's rows onto the contract's shape.
