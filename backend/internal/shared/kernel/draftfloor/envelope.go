@@ -36,6 +36,9 @@ type Envelope struct {
 	// differently each time, and two consecutive drafts to one contact in two
 	// registers read as a machine that does not know who it is writing to.
 	Register string `json:"register,omitempty"`
+	// GreetingRegister is formal or familiar when a rep set it on the
+	// addressee, empty otherwise. Unlike Register it holds in every language.
+	GreetingRegister string `json:"greeting_register,omitempty"`
 	// SilenceDays is whole days since the last message either way, empty at
 	// band none where there is no last message to count from.
 	SilenceDays string `json:"silence_days,omitempty"`

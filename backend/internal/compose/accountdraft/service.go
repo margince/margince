@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
+	"github.com/margince/margince/backend/internal/shared/kernel/greetingregister"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -169,9 +170,14 @@ func (s *Service) envelopeFor(ctx context.Context, view crmcontracts.Company360,
 	if err != nil {
 		return draftfloor.Envelope{}, err
 	}
+	// An unreadable roster leaves no register, and the draft reads the thread.
+	var stored greetingregister.Register
+	if addressee, err := findContact(view, req.ContactID); err == nil {
+		stored = greetingregister.Of(addressee.GreetingRegister)
+	}
 	return s.envelope.Resolve(ctx,
 		draftfloor.Written{
-			Chosen: req.Language, Thread: languageEvidence(view, s.envelope.Now(), zone),
+			Chosen: req.Language, Greeting: stored, Thread: languageEvidence(view, s.envelope.Now(), zone),
 			Rewrite: req.RewriteOf, Purpose: req.Intent, DraftSubject: req.Subject,
 		},
 		ConversationState(view, s.envelope.Now(), zone, logged...)).InZone(zone), nil

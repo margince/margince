@@ -163,3 +163,40 @@ describe("a stored social key outside the list", () => {
     expect(body.social).toEqual({ linkedin: "" });
   });
 });
+
+describe("saving the greeting register", () => {
+  async function savedRegister(
+    stored: Contact["greeting_register"],
+    chosen: string,
+  ) {
+    let body: Record<string, unknown> = {};
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const request = input instanceof Request ? input : new Request(input);
+        if (request.method === "PATCH") {
+          body = await request.json();
+        }
+        return jsonResponse({ ...contact, version: 5 });
+      }),
+    );
+    const opened: Contact = { ...contact, greeting_register: stored };
+    const { result } = renderHook(() => useContactEdit(opened), { wrapper });
+    await act(async () => {
+      await result.current.save({ greeting_register: chosen }, {}, opened);
+    });
+    return body;
+  }
+
+  it("sends the register the rep picked", async () => {
+    expect(await savedRegister(null, "formal")).toMatchObject({
+      greeting_register: "formal",
+    });
+  });
+
+  it("sends null when the rep hands the choice back to Margince", async () => {
+    expect(await savedRegister("formal", "")).toMatchObject({
+      greeting_register: null,
+    });
+  });
+});

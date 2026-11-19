@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/draftreason"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
+	"github.com/margince/margince/backend/internal/shared/kernel/greetingregister"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -161,7 +162,8 @@ func (s *Service) Draft(
 	}
 	req.Envelope = s.envelope.Resolve(ctx,
 		draftfloor.Written{
-			Chosen: req.Language, Thread: languageEvidence(view, s.envelope.Now(), zone),
+			Chosen: req.Language, Greeting: greetingregister.Of(view.Contact.GreetingRegister),
+			Thread:  languageEvidence(view, s.envelope.Now(), zone),
 			Rewrite: req.RewriteOf, Purpose: req.Intent, DraftSubject: req.Subject,
 		},
 		ConversationState(view, s.envelope.Now(), zone, logged...)).InZone(zone)

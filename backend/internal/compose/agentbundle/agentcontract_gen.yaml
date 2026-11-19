@@ -32003,6 +32003,11 @@ components:
           readOnly: true
           description: >-
             The note, mail or quick capture this contact was read out of, where one was named at creation. Absent on a contact a member typed, and absent to a reader who may not open that record, so the contact still reads rather than being refused.
+        greeting_register:
+          type: [string, 'null']
+          enum: [formal, familiar, null]
+          description: >-
+            How a message to this contact opens: `formal` takes the surname, `familiar` the first name. A rep sets it once and every draft to the contact uses it ahead of what the thread suggests. Null means nobody set it, and a draft reads the register from the correspondence.
         relationship_mark:
           type: [string, 'null']
           enum: [vendor_marketing, null]
@@ -32384,6 +32389,11 @@ components:
       type: object
       description: Partial update. Omitted fields are unchanged.
       properties:
+        greeting_register:
+          type: [string, 'null']
+          enum: [formal, familiar, null]
+          description: >-
+            Sets how a message to the contact opens (`formal` or `familiar`), or clears it (null) so drafts read the register from the correspondence again.
         relationship_mark:
           type: [string, 'null']
           enum: [vendor_marketing, null]
@@ -33765,6 +33775,10 @@ components:
           description: >-
             Whether this caller may file an activity under this contact. Computed with the same row-scope and write-share predicate the attach gate uses, so a mail started from the company links only the recipients this is true for. A read-only share grants no attach right. The server rechecks every write.
         title: {type: [string, 'null']}
+        greeting_register:
+          type: [string, 'null']
+          enum: [formal, familiar, null]
+          description: The register a rep set for opening a message to this contact; null when none is set.
         provider_title:
           type: [string, 'null']
           description: >-
