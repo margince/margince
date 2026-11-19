@@ -188,6 +188,8 @@ function FrameworkEditor({ framework }: Readonly<{ framework: Framework }>) {
   return (
     <form
       className="reporting-dialog"
+      // The press names a missing reason itself; a native bubble would pre-empt it.
+      noValidate
       onSubmit={(event) => {
         event.preventDefault();
         if (write.isPending) return;

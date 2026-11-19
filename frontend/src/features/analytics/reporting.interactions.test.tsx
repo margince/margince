@@ -55,7 +55,6 @@ it("names a blank report name on the save press and sends nothing", async () => 
     </StoryProviders>,
   );
   const name = await screen.findByRole("textbox", { name: "Report name" });
-  await user.type(name, "   ");
   const save = screen.getByRole("button", { name: "Save report" });
   expect(save).toBeEnabled();
   await user.click(save);

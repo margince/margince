@@ -138,6 +138,8 @@ export function SaveReportingDialog({
       <form
         id={formId}
         className="form-stack"
+        // The press names a missing name itself; a native bubble would pre-empt it.
+        noValidate
         onSubmit={(event) => {
           event.preventDefault();
           submit(draftOpen);

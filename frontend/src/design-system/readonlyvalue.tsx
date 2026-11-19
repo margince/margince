@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { type ReactNode, useId } from "react";
+import "./readonlyvalue.css";
 import { useDetailTooltip } from "./tooltip";
 
 /**
@@ -43,7 +44,7 @@ export function ReadOnlyValue({
     <>
       <span
         ref={ref}
-        className={className}
+        className={className ? `readonly-value ${className}` : "readonly-value"}
         data-testid={testId}
         {...trigger}
         aria-describedby={describedBy ?? reasonId}
