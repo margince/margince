@@ -259,7 +259,7 @@ func (s *Store) SendPreparedTx(ctx context.Context, tx pgx.Tx, origin SendOrigin
 	if err := s.resolveRecipients(ctx, tx, origin, p.in.Recipients); err != nil {
 		return crmcontracts.Activity{}, err
 	}
-	chain, err := origin.threading(ctx, tx, p.messageID)
+	chain, err := origin.threading(ctx, tx, p.messageID, *maskedText(&p.in.Subject))
 	if err != nil {
 		return crmcontracts.Activity{}, err
 	}
