@@ -143,6 +143,8 @@ The `deal_at_risk` source is read on below the ranked rows to its end, in every 
 - Step B on the ranked rows asks the same read (`dealsWaitingPastTheScan` in `attention/backlogrisk.go`). It runs
   only when the waiting lane's scan was cut. It asks only for the lane's at-risk deals that no scanned card names.
   A deal whose customer's card lies past the scan is then not shown at risk, and its card comes in the tail.
+  On `make bench-worklist-backlog` at 10,000 per seat, a seat's first page took 775 ms at p50 against 774 ms
+  without this check. A team's first page took 690 ms against 712 ms.
 - Step E: a tail row carries no brief item. A deal that a brief row or a waiting card above already names is left
   out of the tail (`dealsReported` in `attention/backlogrisk.go`).
 - Step B for tasks: `TasksOnDeals` (`compose/attentiontaskseam.go`) reads the open tasks filed under the batch's
