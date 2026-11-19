@@ -80941,7 +80941,7 @@ components:
         overdue: { type: boolean, description: "Past due at the read instant, resolved server-side so every surface agrees." }
         due_group:
           type: string
-          enum: [overdue, today, tomorrow, this_week, later]
+          enum: [overdue, today, tomorrow, this_week, later, none]
           x-extensible-enum: true
           description: >-
             Which run of the page this dated row belongs to, so a client can head
@@ -80950,7 +80950,8 @@ components:
             Resolved server-side for the reason every other boundary here is: the day's
             end depends on the installation's zone, and a browser computing it from its
             own clock would group a task differently from the counts above it. Present
-            only on rows carrying `due_at`.
+            on rows carrying `due_at`, and `none` on an undated task of the backlog,
+            which sits at the end of the upcoming work.
         version:
           allOf: [{ $ref: '#/components/schemas/RowVersion' }]
           description: |
@@ -82836,9 +82837,9 @@ components:
         overdue: { type: boolean, description: 'Past due at the read instant, resolved server-side so every surface agrees.' }
         due_group:
           type: string
-          enum: [overdue, today, tomorrow, this_week, later]
+          enum: [overdue, today, tomorrow, this_week, later, none]
           x-extensible-enum: true
-          x-enum-varnames: [WorklistDueGroupOverdue, WorklistDueGroupToday, WorklistDueGroupTomorrow, WorklistDueGroupThisWeek, WorklistDueGroupLater]
+          x-enum-varnames: [WorklistDueGroupOverdue, WorklistDueGroupToday, WorklistDueGroupTomorrow, WorklistDueGroupThisWeek, WorklistDueGroupLater, WorklistDueGroupNone]
           description: >-
             Which run of the page this dated row belongs to, so a client can head
             "Due tomorrow" without deciding the boundary itself.
@@ -82846,7 +82847,8 @@ components:
             Resolved server-side for the reason every other boundary here is: the day's
             end depends on the installation's zone, and a browser computing it from its
             own clock would group a task differently from the counts above it. Present
-            only on rows carrying `due_at`.
+            on rows carrying `due_at`, and `none` on an undated task of the backlog,
+            which sits at the end of the upcoming work.
         version:
           allOf: [{ $ref: '#/components/schemas/RowVersion' }]
           description: |

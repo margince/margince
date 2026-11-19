@@ -20052,6 +20052,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.dueGroup.tomorrow": "Đến hạn ngày mai",
   "worklist.dueGroup.this_week": "Đến hạn tuần này",
   "worklist.dueGroup.later": "Về sau",
+  "worklist.dueGroup.none": "Chưa có hạn",
   "worklist.band.build_pipeline": "Tìm khách hàng mới",
   "worklist.band.keep_momentum": "Giữ đà",
   "worklist.band.review": "Xem lại",

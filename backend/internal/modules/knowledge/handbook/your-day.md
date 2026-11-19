@@ -98,7 +98,7 @@ Also called: follow-up reminder, remind me to call back, schedule a follow-up, c
 
 ### How do I see all my tasks?
 To see all your open tasks in Margince, open **Home**, press **Show Worklist**, and choose the **Tasks** button under **Work type**.
-Tasks are in groups by when they are due. Late ones and today's come first, then **Due tomorrow**, **Due this week** and **Later**. There is no separate "Due today" heading.
+Tasks are in groups by when they are due. Late ones and today's come first, then **Due tomorrow**, **Due this week** and **Later**. There is no separate "Due today" heading. A task you wrote without a due date is last, under **No due date** in **Upcoming and backlog**.
 
 A task more than 30 days late leaves the Worklist and its counts. A pin keeps it there while the pin is one of your 50 newest, and so does a reminder of yours that is due. The task stays open, keeps its due date, and still shows on its record. A company also has a **Tasks** tab with its own tasks; a contact has no Tasks tab. Also called: my to-dos, tasks due today, open tasks, task list.
 
@@ -350,7 +350,7 @@ Each count is exact, or Margince says it is not:
 ### Where are tasks due later?
 **Upcoming and backlog**, at the end of **Today**, holds tasks due in the 14 days after today. A task due later than that shows on its record until it comes within 14 days. Press it to open it. Its rows load as you move down, until it says "All upcoming work is loaded." With nothing planned it says "Nothing planned after today." Its count is not part of Today's count.
 
-A task that is late, or whose reminder is due, stays in Today. Also called: later tasks, planned work, future tasks.
+A task you or a colleague wrote without a due date waits at the end, under **No due date**, and counts here. A task Margince made without a date, such as a reply to a request, stays in Today. So does a task that is late, or whose reminder is due. Also called: later tasks, planned work, future tasks, tasks with no date.
 
 ### Change history
 

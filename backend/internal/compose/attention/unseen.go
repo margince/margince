@@ -276,7 +276,8 @@ func isUpcoming(group *crmcontracts.AttentionItemDueGroup) bool {
 	switch *group {
 	case crmcontracts.AttentionItemDueGroupTomorrow,
 		crmcontracts.AttentionItemDueGroupThisWeek,
-		crmcontracts.AttentionItemDueGroupLater:
+		crmcontracts.AttentionItemDueGroupLater,
+		crmcontracts.AttentionItemDueGroupNone:
 		return true
 	default:
 		return false
