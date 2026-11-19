@@ -78,7 +78,7 @@ func newBundleWriters(
 	seen := map[string]bool{}
 	for _, part := range parts {
 		if seen[part.Object] {
-			return nil, fmt.Errorf("import: two files of this run are both %q: %w", part.Object, apperrors.ErrConflict)
+			return nil, fmt.Errorf("two files of this run are both %q: %w", part.Object, apperrors.ErrConflict)
 		}
 		seen[part.Object] = true
 	}
@@ -206,7 +206,7 @@ func (b *bundleWriters) part(object string) (*csvWriters, error) {
 	if w, ok := b.parts[object]; ok {
 		return w, nil
 	}
-	return nil, fmt.Errorf("import: this run carries no %q file: %w", object, apperrors.ErrConflict)
+	return nil, fmt.Errorf("this run carries no %q file: %w", object, apperrors.ErrConflict)
 }
 
 // Exists asks the writer of the row's type.

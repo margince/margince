@@ -77,7 +77,7 @@ func transmittable(req commsauthz.TransmitRequest) error {
 	if len(req.Recipients) == 0 {
 		// A caller fault, not an answer about anybody: reported as the defect
 		// it is rather than dressed up as a suppression.
-		return fmt.Errorf("consent: a transmit decision needs at least one recipient: %w",
+		return fmt.Errorf("a transmit decision needs at least one recipient: %w",
 			apperrors.ErrInvalidArgument)
 	}
 	return nil

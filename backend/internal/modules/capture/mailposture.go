@@ -83,7 +83,7 @@ func (r *Registry) SetMailPosture(
 ) (ConnectionView, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || !actor.HumanOrItsAgent() {
-		return ConnectionView{}, fmt.Errorf("capture: only a user or their agent sets a mailbox's posture: %w", apperrors.ErrPermissionDenied)
+		return ConnectionView{}, fmt.Errorf("only a user or their agent sets a mailbox's posture: %w", apperrors.ErrPermissionDenied)
 	}
 	if !validPosture(posture) {
 		return ConnectionView{}, &InvalidPostureError{Posture: posture}

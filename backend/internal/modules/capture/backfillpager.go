@@ -49,7 +49,7 @@ func (r *Registry) executeBackfillPage(ctx context.Context, backfillID ids.UUID)
 			Scan(&connID, &after, &cursor, &status, &name, &grantedBy, &credentialRef, &authBytes, &generation, &sameAccount)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		return true, false, 0, fmt.Errorf("capture: backfill %s: %w", backfillID, apperrors.ErrNotFound)
+		return true, false, 0, fmt.Errorf("this history import no longer exists: %w", apperrors.ErrNotFound)
 	}
 	if err != nil {
 		return false, false, 0, err

@@ -69,7 +69,7 @@ func (g *Gate) AuthorizeStagingWithDecisionTx(
 // first, so this fires only when the record changed in between. Composing
 // again adds the objection route and the unsubscribe link.
 var errAdvertisingDutiesMissing = fmt.Errorf(
-	"consent: a recipient of this message is now read as advertising, and the message was composed without "+
+	"a recipient of this message is now read as advertising, and the message was composed without "+
 		"the advertising disclosures and unsubscribe link; send it again so they are added: %w", apperrors.ErrConflict)
 
 func (g *Gate) stageDecisions(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID, req commsauthz.Request, directed *directedExecution) (commsauthz.DecisionSet, error) {
@@ -81,7 +81,7 @@ func (g *Gate) stageDecisions(ctx context.Context, tx pgx.Tx, deliveryID ids.UUI
 	}
 	if len(req.Recipients) == 0 {
 		return commsauthz.DecisionSet{}, fmt.Errorf(
-			"consent: a staging decision needs at least one recipient: %w", apperrors.ErrInvalidArgument)
+			"a staging decision needs at least one recipient: %w", apperrors.ErrInvalidArgument)
 	}
 	req.DeliveryID = deliveryID
 

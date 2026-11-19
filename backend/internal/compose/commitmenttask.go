@@ -259,7 +259,7 @@ func privateWorkHeldNow(ctx context.Context, tx pgx.Tx, proposal CommitmentTaskP
 		return nil, err
 	}
 	if !may {
-		return nil, fmt.Errorf("compose: a commitment read out of private mail is for a colleague who may open that mail: %w",
+		return nil, fmt.Errorf("a commitment read out of private mail is for a colleague who may open that mail: %w",
 			apperrors.ErrPermissionDenied)
 	}
 	return privateTo, nil
@@ -285,7 +285,7 @@ func sourcePrivateToNow(ctx context.Context, tx pgx.Tx, source ids.UUID, staged 
 		SELECT kind, thread_key, archived_at IS NOT NULL OR restricted_at IS NOT NULL
 		  FROM activity WHERE id = $1`, source).Scan(&kind, &key, &gone)
 	if errors.Is(err, pgx.ErrNoRows) || (err == nil && gone) {
-		return nil, fmt.Errorf("compose: the conversation this commitment was read from is gone: %w",
+		return nil, fmt.Errorf("the conversation this commitment was read from is gone: %w",
 			apperrors.ErrNotFound)
 	}
 	if err != nil {
@@ -299,7 +299,7 @@ func sourcePrivateToNow(ctx context.Context, tx pgx.Tx, source ids.UUID, staged 
 		return nil, err
 	}
 	if !offered {
-		return nil, fmt.Errorf("compose: the conversation this commitment was read from changed since, "+
+		return nil, fmt.Errorf("the conversation this commitment was read from changed since, "+
 			"and who may read it is no longer known — review conversation access before retrying: %w",
 			apperrors.ErrConflict)
 	}
@@ -319,7 +319,7 @@ func commitmentDecider(ctx context.Context, proposal json.RawMessage) (ids.UUID,
 	}
 	asked, named := approvalsubject.CommitmentAskedOf(proposal)
 	if !named || asked != decider.UserID {
-		return ids.Nil, fmt.Errorf("compose: only the colleague who made this promise may accept it: %w",
+		return ids.Nil, fmt.Errorf("only the colleague who made this promise may accept it: %w",
 			apperrors.ErrConflict)
 	}
 	return asked, nil

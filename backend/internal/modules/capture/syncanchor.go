@@ -179,7 +179,7 @@ func releaseSyncAnchor(
 	// decline means the row changed under an open transaction.
 	if tag.RowsAffected() != 1 {
 		return fmt.Errorf(
-			"capture: the watermark was stored and its anchor was not released: %w",
+			"the watermark was stored and its anchor was not released: %w",
 			apperrors.ErrConflict)
 	}
 	return nil

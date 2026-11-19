@@ -296,7 +296,7 @@ func refuseAtStaging(set commsauthz.DecisionSet) error {
 	if !set.HasAbsoluteDenial() && !anyEnforcedDenial(denied) {
 		return nil
 	}
-	return fmt.Errorf("consent: %d of %d recipients may not be written to (%s): %w",
+	return fmt.Errorf("%d of %d recipients may not be written to (%s): %w",
 		len(denied), len(set.Decisions), denied[0].ReasonCode, apperrors.ErrConsentNotGranted)
 }
 

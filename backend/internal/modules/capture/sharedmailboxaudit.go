@@ -68,7 +68,7 @@ func sharedMailboxImage(v SharedMailboxView) map[string]any {
 func RequireSharedMailboxAdmin(ctx context.Context) (principal.Principal, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalHuman {
-		return principal.Principal{}, fmt.Errorf("capture: only a signed-in admin manages a shared mailbox: %w", apperrors.ErrPermissionDenied)
+		return principal.Principal{}, fmt.Errorf("only a signed-in admin manages a shared mailbox: %w", apperrors.ErrPermissionDenied)
 	}
 	if err := auth.RequireAdmin(ctx); err != nil {
 		return principal.Principal{}, fmt.Errorf("capture: only an admin manages a shared mailbox: %w", err)

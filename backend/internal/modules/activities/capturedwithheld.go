@@ -22,7 +22,7 @@ import (
 // ErrBytesWithheld is a file recorded by name only: capture kept no bytes for
 // it (RecordWithheldFiles), so there is nothing to serve or read. It answers as
 // not-found, the contract's only refusal for a file that cannot be had.
-var ErrBytesWithheld = fmt.Errorf("activities: the file's bytes were not kept: %w", apperrors.ErrNotFound)
+var ErrBytesWithheld = fmt.Errorf("the file's bytes were not kept: %w", apperrors.ErrNotFound)
 
 // fieldBytesWithheld is the column, and the audit images' key, that marks a
 // file recorded by name only.

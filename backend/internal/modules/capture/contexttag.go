@@ -86,7 +86,7 @@ func contextTagOf(id *ids.UUID, name *string, archived *bool) *ContextTag {
 func (r *Registry) SetContextTag(ctx context.Context, name string, tagID *ids.UUID) (ConnectionView, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || !actor.HumanOrItsAgent() {
-		return ConnectionView{}, fmt.Errorf("capture: only a user or their agent files a mailbox under a word: %w", apperrors.ErrPermissionDenied)
+		return ConnectionView{}, fmt.Errorf("only a user or their agent files a mailbox under a word: %w", apperrors.ErrPermissionDenied)
 	}
 	if _, ok := r.connectors[name]; !ok {
 		return ConnectionView{}, ErrNoConnection

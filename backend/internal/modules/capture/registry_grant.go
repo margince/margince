@@ -47,7 +47,7 @@ func (r *Registry) Connect(ctx context.Context, name string, auth connector.Auth
 	}
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalHuman {
-		return ids.Nil, fmt.Errorf("capture: only a human grants a connector: %w", apperrors.ErrPermissionDenied)
+		return ids.Nil, fmt.Errorf("only a human grants a connector: %w", apperrors.ErrPermissionDenied)
 	}
 	scopes, err := grantedScopes(c, actor, name)
 	if err != nil {
@@ -179,7 +179,7 @@ func grantedScopes(c connector.Connector, actor principal.Principal, name string
 	out := make([]string, 0, len(declared))
 	for _, scope := range declared {
 		if !actor.Scopes.Has(scope) {
-			return nil, fmt.Errorf("capture: connector %s needs scope %q the granting human does not hold: %w",
+			return nil, fmt.Errorf("the connector %s needs the scope %q, which the granting human does not hold: %w",
 				name, scope, apperrors.ErrScopeExceeded)
 		}
 		out = append(out, string(scope))

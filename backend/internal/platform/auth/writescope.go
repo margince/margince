@@ -185,7 +185,7 @@ func LockSubjectLive(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) 
 	// table outside this set has no archived_at and would reach the caller as a
 	// raw SQL error where a sentinel is owed.
 	if !ownerScopedTables[table] {
-		return fmt.Errorf("auth: %q is not a row-scoped subject table: %w", table, apperrors.ErrNotFound)
+		return fmt.Errorf("%q is not a kind of record that has an owner: %w", table, apperrors.ErrNotFound)
 	}
 	q := fmt.Sprintf(
 		`SELECT 1 FROM %s WHERE id = $1 AND archived_at IS NULL FOR NO KEY UPDATE`,

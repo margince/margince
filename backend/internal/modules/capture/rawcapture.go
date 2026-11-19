@@ -93,7 +93,7 @@ func GetRawCapturePayloadTx(ctx context.Context, tx pgx.Tx, id ids.UUID) ([]byte
 	var payload []byte
 	err := tx.QueryRow(ctx, `SELECT `+originalstore.SQL("r")+` FROM raw_capture r WHERE id = $1`, id).Scan(&payload)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, fmt.Errorf("capture: raw capture %s: %w", id, apperrors.ErrNotFound)
+		return nil, fmt.Errorf("the captured message this work names is no longer kept: %w", apperrors.ErrNotFound)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("capture: reading raw capture payload: %w", err)

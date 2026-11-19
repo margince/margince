@@ -184,7 +184,7 @@ func consumeInstructionTx(
 		// supposed to prevent. Refusing is the safe direction: a send that
 		// cannot record its own authority must not go.
 		return fmt.Errorf(
-			"consent: the decision was no longer live when the message was staged: %w",
+			"the decision was no longer live when the message was staged: %w",
 			apperrors.ErrConflict)
 	}
 	// THE REVIEW IS FINISHED, because the message it was about has gone.

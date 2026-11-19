@@ -102,7 +102,7 @@ func seatItself(ctx context.Context) (principal.Principal, error) {
 	}
 	if !actor.HumanOrItsAgent() || actor.UserID == ids.Nil {
 		return principal.Principal{}, fmt.Errorf(
-			"capture: an owner identity is a user's own claim about themselves: %w", apperrors.ErrPermissionDenied)
+			"an owner identity is a user's own claim about themselves: %w", apperrors.ErrPermissionDenied)
 	}
 	return actor, nil
 }

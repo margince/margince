@@ -82,7 +82,7 @@ func (s *Store) Record(ctx context.Context, in NewRecorded) (ids.UUID, error) {
 		if err != nil {
 			if storekit.IsUniqueViolation(err) {
 				return fmt.Errorf(
-					"introductions: this introduction is already recorded for this contact: %w",
+					"this introduction is already recorded for this contact: %w",
 					apperrors.ErrConflict)
 			}
 			return fmt.Errorf("introductions: recording the introduction: %w", err)

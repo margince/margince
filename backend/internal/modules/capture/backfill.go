@@ -372,7 +372,7 @@ func (r *Registry) CancelBackfill(ctx context.Context, provider string, userID i
 			return err
 		}
 		if tag.RowsAffected() == 0 {
-			return fmt.Errorf("capture: no running backfill to cancel: %w", apperrors.ErrConflict)
+			return fmt.Errorf("there is no running history import to cancel: %w", apperrors.ErrConflict)
 		}
 		return nil
 	})

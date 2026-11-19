@@ -97,7 +97,7 @@ func (CapabilitiesResource) Resources(context.Context) []mcp.Resource {
 // ErrNotFound, matching every other read on this surface.
 func (c CapabilitiesResource) ReadResource(ctx context.Context, uri string) (mcp.ResourceContents, error) {
 	if uri != CapabilitiesURI {
-		return mcp.ResourceContents{}, fmt.Errorf("agents: resource %q: %w", uri, apperrors.ErrNotFound)
+		return mcp.ResourceContents{}, fmt.Errorf("no resource is published at %q: %w", uri, apperrors.ErrNotFound)
 	}
 	body, err := json.Marshal(c.document(ctx))
 	if err != nil {

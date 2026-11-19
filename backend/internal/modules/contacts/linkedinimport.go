@@ -100,7 +100,7 @@ func (s *Store) ImportLinkedInConnections(ctx context.Context, r io.Reader) (Lin
 	}
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.UserID == ids.Nil {
-		return LinkedInImportResult{}, fmt.Errorf("contacts: a LinkedIn import belongs to a contact: %w", apperrors.ErrPermissionDenied)
+		return LinkedInImportResult{}, fmt.Errorf("a LinkedIn import belongs to a contact: %w", apperrors.ErrPermissionDenied)
 	}
 	rows, err := parseLinkedInCSV(r)
 	if err != nil {

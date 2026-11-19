@@ -79,7 +79,7 @@ func sharedMailboxTx(ctx context.Context, tx pgx.Tx, id ids.UUID, lock string) (
 	v, err := scanSharedMailbox(tx.QueryRow(ctx, `SELECT `+sharedMailboxColumns+` FROM capture_connection
 	  WHERE id = $1 AND user_id IS NULL AND archived_at IS NULL `+lock, id))
 	if errors.Is(err, pgx.ErrNoRows) {
-		return v, fmt.Errorf("capture: no shared mailbox %s: %w", id, apperrors.ErrNotFound)
+		return v, fmt.Errorf("no shared mailbox has that id: %w", apperrors.ErrNotFound)
 	}
 	return v, err
 }
@@ -183,7 +183,7 @@ func moveSharedReadersTx(ctx context.Context, tx pgx.Tx, prior SharedMailboxView
 		return prior, fmt.Errorf("capture: moving the shared mailbox to other readers: %w", err)
 	}
 	if tag.RowsAffected() != 1 {
-		return prior, fmt.Errorf("capture: the shared mailbox's readers changed under this move: %w", apperrors.ErrConflict)
+		return prior, fmt.Errorf("the shared mailbox's readers changed under this move: %w", apperrors.ErrConflict)
 	}
 	next := prior
 	next.ReaderTeam = team
@@ -256,7 +256,7 @@ func (r *Registry) StartSharedBackfill(ctx context.Context, id ids.UUID, windowM
 		err := tx.QueryRow(ctx, `SELECT status IN ('connected','error') FROM capture_connection
 		  WHERE id = $1 AND user_id IS NULL AND archived_at IS NULL`, id).Scan(&live)
 		if errors.Is(err, pgx.ErrNoRows) || (err == nil && !live) {
-			return fmt.Errorf("capture: no connected shared mailbox %s: %w", id, apperrors.ErrNotFound)
+			return fmt.Errorf("no connected shared mailbox has that id: %w", apperrors.ErrNotFound)
 		}
 		if err != nil {
 			return err

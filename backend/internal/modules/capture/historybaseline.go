@@ -45,7 +45,7 @@ func (b HistoryBaseline) Excludes(at time.Time) (bool, error) {
 func (r *Registry) SetHistoryBaseline(ctx context.Context, name string, date *time.Time, timezone string) (ConnectionView, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || !actor.HumanOrItsAgent() {
-		return ConnectionView{}, fmt.Errorf("capture: only a user or their agent sets a mailbox's history baseline: %w", apperrors.ErrPermissionDenied)
+		return ConnectionView{}, fmt.Errorf("only a user or their agent sets a mailbox's history baseline: %w", apperrors.ErrPermissionDenied)
 	}
 	if _, ok := r.connectors[name]; !ok {
 		return ConnectionView{}, ErrNoConnection

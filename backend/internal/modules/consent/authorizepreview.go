@@ -83,7 +83,7 @@ func previewable(req commsauthz.Request) error {
 		}
 	}
 	if len(req.Recipients) == 0 {
-		return fmt.Errorf("consent: a preview needs at least one recipient: %w", apperrors.ErrInvalidArgument)
+		return fmt.Errorf("a preview needs at least one recipient: %w", apperrors.ErrInvalidArgument)
 	}
 	return nil
 }

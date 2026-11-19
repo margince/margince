@@ -409,11 +409,11 @@ func selectSiteReadFacts(proposed []DeepReadFact, selected []string) ([]DeepRead
 	seen := make(map[string]bool, len(selected))
 	for _, key := range selected {
 		if seen[key] {
-			return nil, fmt.Errorf("contacts: selected fact key %q appears more than once", key)
+			return nil, fmt.Errorf("the selected fact key %q appears more than once", key)
 		}
 		fact, ok := byKey[key]
 		if !ok {
-			return nil, fmt.Errorf("contacts: selected fact key %q is not in the inspected website draft: %w", key, apperrors.ErrVersionSkew)
+			return nil, fmt.Errorf("the selected fact key %q is not in the inspected website draft: %w", key, apperrors.ErrVersionSkew)
 		}
 		seen[key] = true
 		out = append(out, fact)
