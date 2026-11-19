@@ -310,6 +310,23 @@ describe("the details' Way in row", () => {
 });
 
 describe("the company's tags in the left column", () => {
+  it("gives an archived company no Tags row, folded or shown", async () => {
+    stub();
+    const archived = view();
+    renderRail({
+      view: view({
+        company: { ...archived.company, archived_at: "2026-05-01T00:00:00Z" },
+        tags: [{ id: "t-1", name: "Champion", color: "teal" }],
+      }),
+    });
+    const unfold = screen.queryByRole("button", { name: /empty field/i });
+    if (unfold) await userEvent.setup().click(unfold);
+    const about = screen.getByRole("region", {
+      name: en["record.details.about"],
+    });
+    expect(within(about).queryByText(en["tags.panelTitle"])).toBeNull();
+  });
+
   it("folds an untagged company's Tags row and asks for no tags", () => {
     stub();
     renderRail();

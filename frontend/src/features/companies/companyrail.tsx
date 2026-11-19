@@ -376,15 +376,24 @@ function useAboutRows(
           },
         ]
       : []),
-    {
-      key: "tags",
-      term: t("tags.panelTitle"),
-      block: true,
-      empty: Boolean(company.archived_at) || !tagged,
-      value: (
-        <CompanyTagsSection company={company} companyId={company.id} bare />
-      ),
-    },
+    // An archived company takes no tags, so it has no Tags row to fold.
+    ...(company.archived_at
+      ? []
+      : [
+          {
+            key: "tags",
+            term: t("tags.panelTitle"),
+            block: true,
+            empty: !tagged,
+            value: (
+              <CompanyTagsSection
+                company={company}
+                companyId={company.id}
+                bare
+              />
+            ),
+          },
+        ]),
   ];
 }
 
