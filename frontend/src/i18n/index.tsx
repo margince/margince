@@ -8,7 +8,6 @@ import {
   useContext,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
 import { pluralCategory } from "../format/plural";
@@ -222,9 +221,9 @@ type LocaleContextValue = {
    * Separate from `setLocale` because it is not a choice being MADE: it is one
    * already on record arriving late, so it must not be written back as a fresh
    * pick. The caller is whoever holds `/me` — the provider sits above it and
-   * cannot ask.
+   * cannot ask. Returns whether it changed the adopted language.
    */
-  adoptLocale: (locale: Locale) => void;
+  adoptLocale: (locale: Locale) => boolean;
 };
 
 const LocaleContext = createContext<
@@ -233,7 +232,7 @@ const LocaleContext = createContext<
   locale: DEFAULT_LOCALE,
   formats: dateTimePreferences(),
   setLocale: () => {},
-  adoptLocale: () => {},
+  adoptLocale: () => false,
 });
 
 export function LocaleProvider({
@@ -296,12 +295,13 @@ export function LocaleProvider({
       // chose.
       const usable = isLocale(next) ? next : preferredLocale();
       if (usable === adopted) {
-        return;
+        return false;
       }
       if (usable !== locale) setLevel("complete");
       setAdopted(usable);
       setEffectiveLocale(usable);
       setLocaleState(usable);
+      return true;
     },
     [adopted, locale],
   );
@@ -357,14 +357,10 @@ export function useLocale(): LocaleContextValue {
  */
 export function useAccountLocale(chosen: Locale | undefined): void {
   const { adoptLocale } = useLocale();
-  // A later pick on this page re-runs the effect. Only a new account language
-  // overwrites the stored choice, so the pick is what the next mount reads.
-  const stored = useRef<Locale | undefined>(undefined);
+  // Stored only when the provider adopts it anew. The provider outlives the
+  // signed-in screens, so a later pick stays stored through a remount.
   useEffect(() => {
-    if (!chosen) return;
-    adoptLocale(chosen);
-    if (isLocale(chosen) && stored.current !== chosen) {
-      stored.current = chosen;
+    if (chosen && adoptLocale(chosen) && isLocale(chosen)) {
       rememberLocale(chosen);
     }
   }, [chosen, adoptLocale]);
