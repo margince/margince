@@ -9,8 +9,10 @@ relay that you set up below.
 
 Mail a user writes goes out through **the connected mailbox of that user**. The
 composer, replies and planned sends all send as the rep, through
-the Gmail, Microsoft 365 or IMAP connection they made under Settings →
-Integrations. To set that up, see [connect-a-mailbox.md](connect-a-mailbox.md).
+the Gmail or Microsoft 365 connection they made under Settings → Connections. An IMAP
+connection sends only when its owner ticked **Send from this mailbox** at connect, and
+then goes out through the SMTP server named there. To set that up, see
+[connect-a-mailbox.md](connect-a-mailbox.md).
 
 Mail the installation writes by itself goes out through **the SMTP relay** in
 the `email:` block of the deployment file. It never uses the connected mailbox of a user,

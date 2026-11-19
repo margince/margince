@@ -84,7 +84,7 @@ describe("the empty Mail and calendar card", () => {
     expect(within(panel).getByText("Not connected")).toBeInTheDocument();
     // Adding is what the tiles are for, so the header verb waits for an account.
     expect(
-      within(panel).queryByRole("button", { name: "Add account" }),
+      within(panel).queryByRole("button", { name: "Add another mailbox" }),
     ).toBeNull();
     for (const vendor of ["Google", "Microsoft 365"]) {
       expect(
@@ -133,7 +133,7 @@ describe("the empty Mail and calendar card", () => {
         within(panel).queryByRole("button", { name: /^Connect/ }),
       ).toBeNull();
       expect(
-        within(panel).queryByRole("button", { name: "Add account" }),
+        within(panel).queryByRole("button", { name: "Add another mailbox" }),
       ).toBeNull();
       expect(screen.queryByTestId("connect-tile-google")).toBeNull();
     },

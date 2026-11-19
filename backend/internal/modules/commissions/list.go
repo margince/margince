@@ -80,7 +80,7 @@ func listTx(ctx context.Context, tx pgx.Tx, in ListInput) (crmcontracts.Commissi
 	if len(entries) > limit {
 		entries = entries[:limit]
 		last := entries[len(entries)-1]
-		next, err := storekit.EncodeCursor(last.CreatedAt, ids.UUID(last.Id))
+		next, err := storekit.EncodeCursor("commissions", last.CreatedAt, ids.UUID(last.Id))
 		if err != nil {
 			return crmcontracts.CommissionEntryListResponse{}, err
 		}
@@ -120,7 +120,7 @@ func listPredicates(ctx context.Context, in ListInput, arg func(any) int) ([]str
 		where = append(where, storekit.SQLf("status = $%d", arg(*in.Status)))
 	}
 	if in.Cursor != nil && *in.Cursor != "" {
-		cursor, err := storekit.DecodeCursor(*in.Cursor)
+		cursor, err := storekit.DecodeCursor("commissions", *in.Cursor)
 		if err != nil {
 			return nil, err
 		}

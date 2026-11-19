@@ -11,7 +11,6 @@ import {
   previewedAddresses,
   refusedPreview,
 } from "../../testing/sendpermission.testkit";
-import { ComposeModal } from "./compose";
 import {
   fillSendableForm,
   installComposeClock,
@@ -24,7 +23,8 @@ import {
   WHY_ASK,
   WHY_LABEL,
 } from "./compose.testkit";
-import { refusalIsCurrent } from "./composesend";
+import { refusalIsCurrent } from "./composesendrequest";
+import { ComposeWindow } from "./composewindow";
 
 // The composer shows one status for the message. It is the engine's preview
 // while the rep writes. After a refused Send it is that refusal, until the
@@ -80,7 +80,7 @@ function refusedSend(refusals: unknown[]) {
 
 function openComposer() {
   return render(
-    <ComposeModal
+    <ComposeWindow
       activityId="act-1"
       entityType="contact"
       entityId="p-1"
@@ -430,7 +430,7 @@ describe("whether a refusal is about the message on screen", () => {
 it("carries the selected deal in both the permission check and the queued message", async () => {
   const sent = stubRoutes({ "POST /emails": () => jsonResponse({}, 201) });
   render(
-    <ComposeModal
+    <ComposeWindow
       entityType="contact"
       entityId="p-1"
       initialDealId="deal-one"

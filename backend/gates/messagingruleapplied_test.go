@@ -37,7 +37,11 @@ package gates
 // a failing test until somebody either wires it or records why not.
 
 import (
+	"fmt"
 	"go/ast"
+	"go/parser"
+	"go/token"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -90,14 +94,8 @@ var rulesIdentityFields = []string{"Jurisdiction", "Instruments"}
 // AssertAllMatched sees both a field that has since gained a reader and one the
 // struct no longer declares, because the arm below asks Waived only about a
 // field it has already found unapplied.
-// IT IS EMPTY, and that is the point rather than an oversight. Every obligation
-// the shipped packs declare now has an engine reader reachable from a send:
-// the disclosures, the subject prefix, the ruleset version, the frequency cap,
-// the windows and — last to land — the opt-out acknowledgement.
-//
-// An empty register is not a claim that no gap can exist. It says none is
-// RECORDED, and the test below fails the moment a pack declares something the
-// engine does not read, which is what puts the next entry here.
+// Every obligation the shipped packs declare has an engine reader reachable
+// from a send, so the register is empty.
 var unappliedRules = gatekit.Waive(map[string]string{})
 
 func TestEveryDeclaredMessagingObligationIsAppliedOrRecorded(t *testing.T) {
@@ -501,4 +499,272 @@ func callsRulesLookup(call *ast.CallExpr) bool {
 		return fun.Sel.Name == rulesLookup
 	}
 	return false
+}
+
+// citationVocabulary is where the codes a citation may explain are declared:
+// each package and the prefix its finding and refusal constants carry. The
+// prefixes keep a column name or a phase out of the vocabulary.
+//
+// consent's own Reason constants are left out. They name the reason a human
+// gives for a direct send (instruction.go) and the guard's verdicts. Neither is
+// a refusal or finding the engine reports.
+var citationVocabulary = map[string][]string{
+	"internal/shared/ports/commsauthz": {"Reason"},
+	"internal/modules/consent":         {"Block", "Draft", "Requirement"},
+}
+
+// citationNotFindings are prefixed constants the vocabulary must skip, each
+// with why. An allow code explains a send that went out, so no law is cited.
+//
+// gatekit:fixture the reason codes that are allows, not refusals
+var citationNotFindings = map[string]string{
+	"ReasonAllowed":           "the allow path's own code, never a refusal",
+	"ReasonAllowedByOverride": "an allow a seat ordered, never a refusal",
+}
+
+// footerFindingSources build commsauthz.FooterFinding values whose Kind is a
+// literal rather than a constant, so the vocabulary scan above cannot see them.
+var footerFindingSources = []string{"internal/modules/activities/footerassessment.go"}
+
+// TestEveryCitationExplainsACodeTheEngineEmits fails a citation whose code the
+// engine never reports. Such a citation is shown beside nothing, and it reads
+// as though the pack's law were applied.
+func TestEveryCitationExplainsACodeTheEngineEmits(t *testing.T) {
+	t.Parallel()
+	emitted := emittedFindingCodes(t)
+	declared := map[string]string{}
+	read := map[string]bool{}
+	for _, root := range []string{"../extensions", "../fixtures/extensions"} {
+		if _, err := os.Stat(root); err != nil {
+			continue
+		}
+		files := parseTreeUnder(t, gatekit.SourceFileSet(), root)
+		for _, file := range files {
+			read[filepath.Clean(gatekit.SourceFileSet().Position(file.Package).Filename)] = true
+		}
+		maps.Copy(declared, declaredCitationCodes(t, gatekit.SourceFileSet(), files))
+	}
+	for _, compiled := range compiledRulesFiles(t) {
+		if !read[compiled] {
+			t.Errorf("%s holds a pack's compiled citations and the scan did not read it", compiled)
+		}
+	}
+	for _, finding := range uncitableCodes(declared, emitted) {
+		t.Error(finding)
+	}
+}
+
+// compiledRulesFiles are the files gen-messaging-rules writes, one beside each
+// policy folder. Their citations are Go literals like a hand-written pack's.
+func compiledRulesFiles(t *testing.T) []string {
+	t.Helper()
+	indexes, err := filepath.Glob("../extensions/*/policy/index.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(indexes) == 0 {
+		t.Fatal("no pack has a policy folder; the packs moved, and their compiled citations are unread")
+	}
+	out := make([]string, 0, len(indexes))
+	for _, index := range indexes {
+		out = append(out, filepath.Join(filepath.Dir(filepath.Dir(index)), "messagingrules_gen.go"))
+	}
+	return out
+}
+
+// TestACitationOfAnUnemittedCodeIsFound is the positive control. The shipped
+// packs cite nothing yet, so the test above passes on an empty corpus too.
+func TestACitationOfAnUnemittedCodeIsFound(t *testing.T) {
+	t.Parallel()
+	const src = `package probe
+var cited = []messaging.Citation{{Code: "frequency_cap_reached"}, {Code: "a_code_nobody_reports"}}
+var single = messaging.Citation{Code: "no_marketing_consent"}
+var reason = messaging.Citation{Code: "customer_requested_outside_crm"}
+var allowed = messaging.Citation{Code: "allowed"}`
+	fset := gatekit.SourceFileSet()
+	file, err := parser.ParseFile(fset, "probe.go", src, parser.SkipObjectResolution)
+	if err != nil {
+		t.Fatal(err)
+	}
+	declared := declaredCitationCodes(t, fset, []*ast.File{file})
+	if len(declared) != 5 {
+		t.Fatalf("the scan read %d citation codes from the probe, want 5: %v", len(declared), declared)
+	}
+	// A human's direct-send reason and an allow code are codes in the tree,
+	// and neither is a refusal or finding a citation could explain.
+	findings := strings.Join(uncitableCodes(declared, emittedFindingCodes(t)), "\n")
+	for _, code := range []string{"a_code_nobody_reports", "customer_requested_outside_crm", `"allowed"`} {
+		if !strings.Contains(findings, code) {
+			t.Errorf("a citation of %s passed the gate; findings: %s", code, findings)
+		}
+	}
+	for _, code := range []string{"frequency_cap_reached", "no_marketing_consent"} {
+		if strings.Contains(findings, code) {
+			t.Errorf("a citation of the emitted code %s was refused: %s", code, findings)
+		}
+	}
+}
+
+// uncitableCodes names each declared code the engine does not emit.
+func uncitableCodes(declared map[string]string, emitted map[string]bool) []string {
+	var out []string
+	for code, where := range declared {
+		if !emitted[code] {
+			out = append(out, fmt.Sprintf("%s cites code %q, which the engine never reports. Cite one of "+
+				"the codes the engine declares, or remove the citation", where, code))
+		}
+	}
+	slices.Sort(out)
+	return out
+}
+
+// emittedFindingCodes collects the finding and refusal codes the engine
+// declares. They are the prefixed constants of citationVocabulary, the
+// disclosure kinds, and the footer kinds written as literals.
+func emittedFindingCodes(t *testing.T) map[string]bool {
+	t.Helper()
+	codes := map[string]bool{}
+	skipped := map[string]bool{}
+	for dir, prefixes := range citationVocabulary {
+		found := 0
+		for _, file := range parseTreeUnder(t, gatekit.SourceFileSet(), dir) {
+			found += collectStringConsts(file, func(name, _ string) bool {
+				if _, skip := citationNotFindings[name]; skip {
+					skipped[name] = true
+					return false
+				}
+				return slices.ContainsFunc(prefixes, func(p string) bool { return strings.HasPrefix(name, p) })
+			}, codes)
+		}
+		if found == 0 {
+			t.Fatalf("%s declares no string constant named %v — the vocabulary moved, and every citation "+
+				"would read as explaining nothing", dir, prefixes)
+		}
+	}
+	for name := range citationNotFindings {
+		if !skipped[name] {
+			t.Fatalf("citationNotFindings names %s, which the vocabulary no longer declares — remove the entry", name)
+		}
+	}
+	if collectStringConsts(parseGo(t, rulesSurfaceFile), func(_, typ string) bool { return typ == "DisclosureKind" }, codes) == 0 {
+		t.Fatalf("%s declares no DisclosureKind constant, so no footer finding kind is known", rulesSurfaceFile)
+	}
+	for _, path := range footerFindingSources {
+		if collectFooterKinds(parseGo(t, path), codes) == 0 {
+			t.Fatalf("%s builds no FooterFinding with a literal Kind — the entry is stale", path)
+		}
+	}
+	return codes
+}
+
+// collectStringConsts adds the string-literal constants keep accepts, by name
+// and declared type, and returns how many it added.
+func collectStringConsts(file *ast.File, keep func(name, typ string) bool, into map[string]bool) int {
+	added := 0
+	ast.Inspect(file, func(n ast.Node) bool {
+		spec, isSpec := n.(*ast.ValueSpec)
+		if !isSpec {
+			return true
+		}
+		typ := ""
+		if ident, isIdent := spec.Type.(*ast.Ident); isIdent {
+			typ = ident.Name
+		}
+		for i, name := range spec.Names {
+			if i >= len(spec.Values) || !keep(name.Name, typ) {
+				continue
+			}
+			if value, isString := gatekit.LiteralText(spec.Values[i]); isString {
+				into[value] = true
+				added++
+			}
+		}
+		return true
+	})
+	return added
+}
+
+// collectFooterKinds adds the literal Kind of each FooterFinding built in file.
+func collectFooterKinds(file *ast.File, into map[string]bool) int {
+	added := 0
+	ast.Inspect(file, func(n ast.Node) bool {
+		lit, isLit := n.(*ast.CompositeLit)
+		if !isLit || !isTypeNamed(lit.Type, "FooterFinding") {
+			return true
+		}
+		if value, isString := keyedString(lit, "Kind"); isString {
+			into[value] = true
+			added++
+		}
+		return true
+	})
+	return added
+}
+
+// declaredCitationCodes maps each code a messaging.Citation literal names to
+// where it is written. A Code that is not a string literal fails, because a
+// code the scan cannot read is a citation it cannot judge.
+func declaredCitationCodes(t *testing.T, fset *token.FileSet, files []*ast.File) map[string]string {
+	t.Helper()
+	declared := map[string]string{}
+	for _, file := range files {
+		ast.Inspect(file, func(n ast.Node) bool {
+			lit, isLit := n.(*ast.CompositeLit)
+			if !isLit {
+				return true
+			}
+			for _, citation := range citationLiterals(lit) {
+				where := fset.Position(citation.Pos()).String()
+				code, isString := keyedString(citation, "Code")
+				if !isString {
+					t.Errorf("%s declares a messaging.Citation whose Code is not a string literal; "+
+						"write the code out so this gate can judge it", where)
+					continue
+				}
+				declared[code] = where
+			}
+			return true
+		})
+	}
+	return declared
+}
+
+// citationLiterals returns lit itself when it is a messaging.Citation, or its
+// elements when it is a slice of them written with the type elided.
+func citationLiterals(lit *ast.CompositeLit) []*ast.CompositeLit {
+	if isTypeNamed(lit.Type, "Citation") {
+		return []*ast.CompositeLit{lit}
+	}
+	array, isArray := lit.Type.(*ast.ArrayType)
+	if !isArray || !isTypeNamed(array.Elt, "Citation") {
+		return nil
+	}
+	var out []*ast.CompositeLit
+	for _, elt := range lit.Elts {
+		if inner, isInner := elt.(*ast.CompositeLit); isInner && inner.Type == nil {
+			out = append(out, inner)
+		}
+	}
+	return out
+}
+
+// isTypeNamed reports whether expr is a qualified type named name, as
+// messaging.Citation or commsauthz.FooterFinding.
+func isTypeNamed(expr ast.Expr, name string) bool {
+	sel, isSel := expr.(*ast.SelectorExpr)
+	return isSel && sel.Sel.Name == name
+}
+
+// keyedString returns the string literal a keyed composite literal sets on key.
+func keyedString(lit *ast.CompositeLit, key string) (string, bool) {
+	for _, elt := range lit.Elts {
+		kv, isKV := elt.(*ast.KeyValueExpr)
+		if !isKV {
+			continue
+		}
+		if ident, isIdent := kv.Key.(*ast.Ident); isIdent && ident.Name == key {
+			return gatekit.LiteralText(kv.Value)
+		}
+	}
+	return "", false
 }

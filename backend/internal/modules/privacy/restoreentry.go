@@ -95,7 +95,7 @@ func queryRestoreOf(ctx context.Context, tx pgx.Tx, entityType string, entityID,
 	// Registered and rendered before the call that spreads args — see the same
 	// sequencing in queryRecordHistoryWindow.
 	fetchPos := arg(1)
-	window := recordHistoryWindowSQL(typePos, idPos, fetchPos, conds, edgeCTE)
+	window := recordHistoryWindowSQL(typePos, idPos, fetchPos, conds, edgeCTE, "")
 	err = scanEdgeAuditRow(tx.QueryRow(ctx, window, args...), &row)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return recordAuditRow{}, apperrors.ErrNotFound

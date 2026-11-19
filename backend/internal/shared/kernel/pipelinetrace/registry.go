@@ -114,7 +114,7 @@ var registrations = []Registration{{
 	SubjectKind: SubjectMessage,
 	Sources:     []Source{SourceStored},
 	Funnel:      true,
-	Reasons:     []Reason{ReasonInternalOnly, ReasonRecordNotAvailable},
+	Reasons:     []Reason{ReasonInternalOnly, ReasonOwnAddressesOnly, ReasonRecordNotAvailable},
 }, {
 	Stage:       StageActivityWrite,
 	Order:       50,
@@ -166,6 +166,8 @@ var registrations = []Registration{{
 		ReasonTriageUnevidenced, ReasonTriageStale, ReasonTriageNearDupe,
 	},
 }, {
+	// Derived from the classifier's own backlog predicate. It reads mail and
+	// connector-captured chat; every other kind answers transport_not_read.
 	Stage:       StageAttentionLabel,
 	Order:       100,
 	SubjectKind: SubjectMessage,
@@ -176,12 +178,10 @@ var registrations = []Registration{{
 		ReasonLabelled, ReasonRecordNotAvailable,
 	},
 }, {
-	// Derived from the extractor's own rule: the arms it applies to decide
-	// whether a conversation is read, asked of this message's thread. Its chat
-	// answer is transport_not_read and that is a real answer rather than a gap
-	// report — material events do not widen to chat until the grouping question
-	// is settled (#1433), so a transport with no thread key has no unit of work
-	// for this stage to have run over.
+	// Derived from the extractor's own rule, asked of this message's thread. It
+	// reads mail only. For chat, with or without a thread key, it answers
+	// transport_not_read. That is a real answer, not a gap report: material
+	// events do not widen to chat until chat has a unit of work.
 	Stage:       StageMaterialEvents,
 	Order:       110,
 	SubjectKind: SubjectThread,

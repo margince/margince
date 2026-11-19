@@ -80,22 +80,20 @@ func TestAChangedBindingIsAdopted(t *testing.T) {
 	}
 }
 
-// The binding was deleted out from under a running role. Keep serving: an
-// operator removing one is choosing what the NEXT boot does, and an
-// installation whose AI stopped answering with nothing written anywhere is the
-// worst way to learn that.
-func TestAVanishedBindingLeavesTheRunningOneServing(t *testing.T) {
-	w, router := watcherServing(t, routingFixture(t, "still-serving"))
-	before := router.RoutingVersion()
-
-	if w.applyIfChanged(context.Background(), ai.RoutingConfig{}) {
-		t.Error("unbound the running lanes because the stored binding vanished")
+// The stored binding was removed. The role stops calling the provider it named
+// and refuses calls, so every surface reads the one state.
+func TestAVanishedBindingUnbindsTheRunningLanes(t *testing.T) {
+	cfg, err := ai.ParseRouting([]byte("profile: eu_hosted\ntiers:\n  premium: {provider: ollama, model: m}\nembeddings: {provider: fake}\n"))
+	if err != nil {
+		t.Fatal(err)
 	}
-	if router.RoutingVersion() != before {
-		t.Errorf("version moved to %q, want the running %q", router.RoutingVersion(), before)
+	w, router := watcherServing(t, cfg)
+	if !w.applyIfChanged(context.Background(), ai.RoutingConfig{}) || router.Bound() {
+		t.Fatal("the stored binding vanished and the lanes kept serving it")
 	}
-	if _, ok := router.CurrentModelForTier(ai.TierPremium); !ok {
-		t.Error("premium came unbound; the running binding must survive a vanished stored one")
+	fake, fakeRouter := watcherServing(t, routingFixture(t, "dev"))
+	if fake.applyIfChanged(context.Background(), ai.RoutingConfig{}) || !fakeRouter.Bound() {
+		t.Error("the offline fake was unbound though no stored binding backs it")
 	}
 }
 

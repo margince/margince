@@ -108,10 +108,10 @@ func momentOf(row crmcontracts.Activity) occurredday.Moment {
 // answersThemSQL keeps a row under alias a that answers them at now. That is
 // anything we sent, or a call or meeting that kept us in touch
 // (relstrength.HadContactSQL), so a meeting still to come answers nobody yet.
-// A note answers nobody.
+// A note answers nobody, and neither does a forward to self.
 func answersThemSQL(now string) string {
-	return `((a.kind IN ('email', 'message') AND a.direction = 'outbound') OR (a.kind IN ('call', 'meeting') AND ` +
-		relstrength.HadContactSQL("a", now) + `))`
+	return `((a.kind IN ('email', 'message') AND a.direction = 'outbound' AND NOT ` + relstrength.ForwardToSelfSQL("a") +
+		`) OR (a.kind IN ('call', 'meeting') AND ` + relstrength.HadContactSQL("a", now) + `))`
 }
 
 // markLatestInboundTasks drops an item a task already stands for, which

@@ -17,7 +17,9 @@ package gates
 // same message.
 //
 // So every frontend file that names a send door either renders SendPermission
-// or is ratified here with what its silence costs.
+// or is ratified here with what its silence costs. The composer with the inline
+// review switch on asks the engine with the send itself. It counts when it draws
+// the review the refused send carries.
 //
 // The doors are DERIVED from the contract rather than listed: a send door is an
 // operation whose request body carries `operator_reason`, the field through
@@ -50,6 +52,9 @@ const (
 	sendPermissionContract  = "api/crm.yaml"
 	sendPermissionFrontend  = "../frontend/src"
 	sendPermissionComponent = "../frontend/src/components/sendpermission.tsx"
+	// sendReviewComponent draws the engine's answer where the send itself is
+	// the question: the review a refused send carries.
+	sendReviewComponent = "../frontend/src/features/mail/composesendanyway.tsx"
 	// composerSurface is the file this walk must always see. A count would follow
 	// how many composers the app has. A name fails when the walk goes blind, and
 	// it says which file to look for. The composer's send hook names the door,
@@ -228,10 +233,19 @@ var rendersSendPermission = regexp.MustCompile(`<SendPermission[\s/>]`)
 // reaches it through a longer path, and both are the one component.
 var importsSendPermission = regexp.MustCompile(`from "[^"]*/sendpermission"`)
 
-// asksTheEngine reports whether source renders the shared component.
+// rendersSendReview and importsSendReview match the component that draws the
+// review a refused send carries. That is the answer of a surface that asks the
+// engine with the send itself.
+var (
+	rendersSendReview = regexp.MustCompile(`<(InlineBlockers|SendAnywayRows)[\s/>]`)
+	importsSendReview = regexp.MustCompile(`from "[^"]*/composesendanyway"`)
+)
+
+// asksTheEngine reports whether source shows the engine's answer: the preview
+// through the shared component, or the review the send itself came back with.
 func asksTheEngine(source string) bool {
-	return importsSendPermission.MatchString(source) &&
-		rendersSendPermission.MatchString(source)
+	return importsSendPermission.MatchString(source) && rendersSendPermission.MatchString(source) ||
+		importsSendReview.MatchString(source) && rendersSendReview.MatchString(source)
 }
 
 // importStatement matches one import statement, across lines, with whether it
@@ -252,17 +266,23 @@ func importsValueFrom(source, base string) bool {
 // hookAsksTheEngine reports whether a module that renders nothing is used only
 // by surfaces that ask the engine. A hook names the door, and the component
 // that calls it is what a rep sees, so that component must render the answer.
+// A hook calling the hook is judged by its own callers in turn.
 func hookAsksTheEngine(rel string, sources map[string]string) bool {
-	if !strings.HasSuffix(rel, ".ts") {
+	return hookAsksTheEngineFrom(rel, sources, map[string]bool{})
+}
+
+func hookAsksTheEngineFrom(rel string, sources map[string]string, judging map[string]bool) bool {
+	if !strings.HasSuffix(rel, ".ts") || judging[rel] {
 		return false
 	}
+	judging[rel] = true
 	base := strings.TrimSuffix(path.Base(rel), ".ts")
 	importers := 0
 	for other, source := range sources {
 		if other == rel || !importsValueFrom(source, base) {
 			continue
 		}
-		if !asksTheEngine(source) {
+		if !asksTheEngine(source) && !hookAsksTheEngineFrom(other, sources, judging) {
 			return false
 		}
 		importers++
@@ -335,6 +355,16 @@ func TestEverySurfaceThatSendsAsksTheEngineFirst(t *testing.T) {
 		t.Fatal("sendpermission.tsx no longer exports SendPermission: every surface that satisfies " +
 			"this gate by naming it now renders something else, or nothing")
 	}
+	review, err := gatekit.ReadFile(sendReviewComponent)
+	if err != nil {
+		t.Fatalf("reading the send review component: %v", err)
+	}
+	for _, export := range []string{"export function InlineBlockers(", "export function SendAnywayRows("} {
+		if !strings.Contains(string(review), export) {
+			t.Fatalf("composesendanyway.tsx no longer has %q: a surface that satisfies this gate by "+
+				"naming it now renders something else, or nothing", export)
+		}
+	}
 
 	sources := sendSurfaceSources(t)
 	var seen, posting []string
@@ -384,6 +414,21 @@ export const A = () => <SendPermission />;`
 export const B = () => null;`
 	typeOnly := `import type { Refusal } from "./composesend";
 export const C = () => null;`
+	viaHook := `import { useSend } from "./composesend";
+export const useReview = () => useSend();`
+	cycled := `import { useSend } from "./composesend";
+import { useReview } from "./review";
+export const useOther = () => useReview();`
+	cycling := `
+import { useOther } from "./other";`
+	asksThroughHook := `import { SendPermission } from "./sendpermission";
+import { useReview } from "./review";
+export const A = () => <SendPermission />;`
+	silentThroughHook := `import { useReview } from "./review";
+export const B = () => null;`
+	showsReview := `import { InlineBlockers } from "./composesendanyway";
+import { useSend } from "./composesend";
+export const D = () => <InlineBlockers />;`
 	cases := []struct {
 		name    string
 		rel     string
@@ -403,6 +448,26 @@ export const C = () => null;`
 		},
 		{"no caller proves nothing", "screens/composesend.ts", map[string]string{"screens/c.tsx": typeOnly}, false},
 		{"a component is judged on its own", "screens/composesend.tsx", map[string]string{"screens/a.tsx": asks}, false},
+		{
+			"a hook calling the hook is judged by its callers", "screens/composesend.ts",
+			map[string]string{"screens/a.tsx": asksThroughHook, "screens/review.ts": viaHook},
+			true,
+		},
+		{
+			"a hook calling the hook from a silent caller", "screens/composesend.ts",
+			map[string]string{"screens/b.tsx": silentThroughHook, "screens/review.ts": viaHook},
+			false,
+		},
+		{
+			"a caller showing the review the send came back with asks", "screens/composesend.ts",
+			map[string]string{"screens/a.tsx": showsReview},
+			true,
+		},
+		{
+			"two hooks calling each other prove nothing", "screens/composesend.ts",
+			map[string]string{"screens/review.ts": viaHook + cycling, "screens/other.ts": cycled},
+			false,
+		},
 	}
 	for _, c := range cases {
 		if got := hookAsksTheEngine(c.rel, c.sources); got != c.want {

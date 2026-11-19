@@ -18,7 +18,7 @@ import { Fragment, type ReactNode } from "react";
 import type { components } from "../api/schema";
 import { Avatar } from "../design-system/avatar";
 import { Chip } from "../design-system/readings";
-import { recordEnabled, useDisabledCoreFeatures } from "../lib/corefeatures";
+import { recordEnabled, useHiddenCoreFeatures } from "../lib/corefeatures";
 import { ENTITY } from "../lib/entity";
 import { valueFor } from "../lib/labelfor";
 import { routeHash } from "../lib/router";
@@ -64,7 +64,7 @@ export function RecordLinks({
   links,
   newTab = false,
 }: Readonly<{ links: readonly ActivityLink[]; newTab?: boolean }>) {
-  const disabled = useDisabledCoreFeatures();
+  const disabled = useHiddenCoreFeatures();
   const available = links.filter((link) =>
     recordEnabled(link.entity_type, disabled),
   );
@@ -106,7 +106,7 @@ export const RECORD_CHIP_ICONS: Partial<
 export function RecordLinkChips({
   links,
 }: Readonly<{ links: readonly ActivityLink[] }>) {
-  const disabled = useDisabledCoreFeatures();
+  const disabled = useHiddenCoreFeatures();
   return links
     .filter((link) => recordEnabled(link.entity_type, disabled))
     .map((link) => (

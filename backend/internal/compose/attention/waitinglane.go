@@ -124,6 +124,9 @@ type HiddenWork struct {
 	Unlinked    int
 	Colleagues  int
 	InformsUs   int
+	// PrivateUnchecked is shown mail no model will check for a request. It is
+	// not held back, so Clear ignores it.
+	PrivateUnchecked int
 	// Truncated says a read stopped at its own scan bound, which makes every
 	// figure a floor. The module states why it is fatal to Clear rather than
 	// merely noted beside it.
@@ -197,6 +200,12 @@ type WaitingCustomer struct {
 	ConfirmedRequest bool
 	// ActionUnconfirmed keeps unclassified or conflicting evidence out of Focus.
 	ActionUnconfirmed bool
+	// JudgeWithheld says no model will ever judge this message, and
+	// OwnerWroteOnThread that the seat owing the reply wrote on its
+	// conversation first.
+	// Together they stand in for the verdict that will not come (unconfirmed).
+	JudgeWithheld      bool
+	OwnerWroteOnThread bool
 	// Ownership is resolved only from records this reader may see.
 	DirectRecipients []ids.UUID
 	OwnerID          ids.UUID
@@ -323,15 +332,16 @@ func (s *Service) HiddenBacklog(ctx context.Context) (crmcontracts.HiddenBacklog
 		return crmcontracts.HiddenBacklog{}, err
 	}
 	return crmcontracts.HiddenBacklog{
-		AsOf:        asOf,
-		Shown:       work.Shown,
-		SetAside:    work.SetAside,
-		NotSales:    work.NotSales,
-		PastHorizon: work.PastHorizon,
-		Unlinked:    work.Unlinked,
-		Colleagues:  work.Colleagues,
-		InformsUs:   work.InformsUs,
-		Truncated:   work.Truncated,
+		AsOf:             asOf,
+		Shown:            work.Shown,
+		SetAside:         work.SetAside,
+		NotSales:         work.NotSales,
+		PastHorizon:      work.PastHorizon,
+		Unlinked:         work.Unlinked,
+		Colleagues:       work.Colleagues,
+		InformsUs:        work.InformsUs,
+		PrivateUnchecked: work.PrivateUnchecked,
+		Truncated:        work.Truncated,
 		// Derived from the same struct the figures came from, so the flag and
 		// the numbers cannot disagree — a client reading `clear` over four
 		// non-zero counts is the one lie this endpoint must not tell.

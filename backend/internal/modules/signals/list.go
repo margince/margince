@@ -93,7 +93,7 @@ func ListSignalsTx(ctx context.Context, tx pgx.Tx, in ListSignalsInput, words Su
 	if len(signals) > limit {
 		signals = signals[:limit]
 		last := signals[len(signals)-1]
-		next, err := storekit.EncodeCursor(last.CreatedAt, ids.UUID(last.Id))
+		next, err := storekit.EncodeCursor("signals", last.CreatedAt, ids.UUID(last.Id))
 		if err != nil {
 			return nil, storekit.Page{}, err
 		}
@@ -179,7 +179,7 @@ func signalListFilters(ctx context.Context, in ListSignalsInput) ([]string, []an
 		where = append(where, scope)
 	}
 	if in.Cursor != nil && *in.Cursor != "" {
-		c, err := storekit.DecodeCursor(*in.Cursor)
+		c, err := storekit.DecodeCursor("signals", *in.Cursor)
 		if err != nil {
 			return nil, nil, err
 		}

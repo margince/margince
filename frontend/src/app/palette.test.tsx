@@ -13,7 +13,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { COMPANY_CONTEXT_ON } from "../features/settings/settingspages.fixtures";
 import { LocaleProvider } from "../i18n";
-import { type GrantSpec, meFixture } from "../testing/mefixture";
+import { type GrantSpec, meFixture, READS_RECORDS } from "../testing/mefixture";
 import { steppedClock } from "../testing/steppedclock";
 import { CREATE_ID, CREATE_SCREENS } from "./nav";
 import {
@@ -98,7 +98,7 @@ function destinationRows(): HTMLElement[] {
 
 // Record search waits for the session to name its reader.
 const renderSignedIn = (ui: ReactNode) =>
-  render(ui, meFixture({ rowScope: "all" }));
+  render(ui, meFixture({ rowScope: "all", allow: READS_RECORDS }));
 
 describe("CommandPalette (AC-shell-3/4/5/6)", () => {
   it("shows the default command list with type tags, focuses the input", () => {
@@ -752,7 +752,9 @@ describe("useBuiltinCommands", () => {
   function renderProbe(probe: ReactNode = <Probe />) {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => jsonResponse(meFixture({ roles: [], allow: {} }))),
+      vi.fn(async () =>
+        jsonResponse(meFixture({ roles: [], allow: READS_RECORDS })),
+      ),
     );
     return render(probe);
   }

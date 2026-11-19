@@ -184,6 +184,7 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 - `finance_invoice_dunning_level_range`: `CHECK (((dunning_level >= 0) AND (dunning_level <= 99)))`
 - `finance_invoice_fx_pair`: `CHECK (((fx_rate_to_base IS NULL) = (fx_rate_date IS NULL)))`
 - `finance_invoice_gross_minor_js_safe`: `CHECK (((gross_minor >= '-9007199254740991'::bigint) AND (gross_minor <= '9007199254740991'::bigint)))`
+- `finance_invoice_names_its_customer_link`: `CHECK ((customer_link_id IS NOT NULL)) NOT VALID`
 - `finance_invoice_net_minor_js_safe`: `CHECK (((net_minor >= '-9007199254740991'::bigint) AND (net_minor <= '9007199254740991'::bigint)))`
 - `finance_invoice_open_minor_js_safe`: `CHECK (((open_minor >= '-9007199254740991'::bigint) AND (open_minor <= '9007199254740991'::bigint)))`
 - `finance_invoice_owner_key`: `UNIQUE (id, connection_id, company_id)`
@@ -248,6 +249,7 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 
 - `finance_payment_amount_minor_js_safe`: `CHECK (((amount_minor >= '-9007199254740991'::bigint) AND (amount_minor <= '9007199254740991'::bigint)))`
 - `finance_payment_connection_id_external_id_key`: `UNIQUE (connection_id, external_id)`
+- `finance_payment_names_its_customer_link`: `CHECK ((customer_link_id IS NOT NULL)) NOT VALID`
 - `finance_payment_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**

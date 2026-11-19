@@ -77,7 +77,7 @@ func composedExtensionInventory(exts []extension.Extension, verbs []extension.Ve
 			Name:        string(e.Name),
 			Version:     string(e.Version),
 			Description: string(e.Description),
-			RbacObjects: unitRbacObjects(e.Name, verbs),
+			RbacObjects: unitRbacObjects(e, verbs),
 			Routes:      unitRoutes(e.Name, verbs),
 			Jobs:        unitJobs(e.Name, jobs),
 		})
@@ -97,15 +97,26 @@ func composedExtensionInventory(exts []extension.Extension, verbs []extension.Ve
 // underscores, so `crm-demo`/`widget` and `crm`/`demo_widget` derive one name
 // (see extrbac.go). Splitting the prefix back apart would attribute an object to
 // the wrong unit; the verb carries its declaring unit as data and cannot.
-func unitRbacObjects(unit extension.Name, verbs []extension.Verb) []string {
+//
+// A record kind the unit declares adds its own object, read off the declaration
+// for the same reason. Without it the role editor cannot place the object under
+// its unit.
+func unitRbacObjects(unit extension.Extension, verbs []extension.Verb) []string {
 	seen := map[string]bool{}
 	out := []string{}
 	for _, v := range verbs {
-		if v.Unit != unit || v.RbacObject == "" || seen[v.RbacObject] {
+		if v.Unit != unit.Name || v.RbacObject == "" || seen[v.RbacObject] {
 			continue
 		}
 		seen[v.RbacObject] = true
 		out = append(out, v.RbacObject)
+	}
+	for _, k := range unit.RecordKinds {
+		object := extension.RecordKindObject(unit.Name, k.Kind)
+		if !seen[object] {
+			seen[object] = true
+			out = append(out, object)
+		}
 	}
 	slices.Sort(out)
 	return out

@@ -10,7 +10,7 @@ import {
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
-import { ComposeModal } from "./compose";
+import { ComposeWindow } from "./composewindow";
 
 const MESSAGES: components["schemas"]["Activity"][] = [
   "Delivery window",
@@ -68,7 +68,7 @@ export function selectedReplyRoutes() {
 function SelectedReplyComposer() {
   return (
     <StoryProviders>
-      <ComposeModal
+      <ComposeWindow
         activityId="message-0"
         entityType="contact"
         entityId="ada"

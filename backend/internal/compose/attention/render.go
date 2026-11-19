@@ -361,11 +361,12 @@ func taskItem(task Task, asOf, until time.Time, loc *time.Location) crmcontracts
 		item.DueIntent = task.DueIntent
 		past := taskLateAt(task.DueAt, asOf, task.MayBeDone)
 		item.Overdue = &past
-		// Which run of the page it heads. Only dated rows carry one, which is
-		// what the contract says and what lets a client group without having to
+		// Which run of the page it heads, so a client groups without having to
 		// decide the day's end for itself.
 		group := crmcontracts.AttentionItemDueGroup(dueGroup(due, asOf, until, loc))
 		item.DueGroup = &group
+	} else if task.later {
+		item.DueGroup = new(crmcontracts.AttentionItemDueGroupNone)
 	}
 	// Who holds it. Absent means nobody has taken it, which the unassigned
 	// scope exists to surface and which the row could not say before.

@@ -30,6 +30,7 @@ const (
 	actorTypeConnector = "connector"
 	actionArchive      = "archive"
 	actionCreate       = "create"
+	actionDelete       = "delete"
 	actionUpdate       = "update"
 )
 
@@ -133,6 +134,9 @@ type recordAuditRow struct {
 	// edge is the LINK this row changed, with the other end named — nil on every
 	// row that changed a field of the record itself.
 	edge *edgeSubject
+	// sideField is the company field a profile-field or fact row was about, set
+	// only on the rows the sidecar arm served.
+	sideField *string
 }
 
 // recordHistoryEntry renders one audit row as a history entry: mask both
@@ -146,6 +150,11 @@ func recordHistoryEntry(row recordAuditRow, mask entityFieldMask) RecordHistoryE
 	display := row.actorID
 	if row.actorDisplayName != nil && *row.actorDisplayName != "" {
 		display = *row.actorDisplayName
+	}
+	if row.sideField != nil {
+		row.before, row.after = sidecarImages(*row.sideField, row.action, row.before, row.after)
+		// Whatever the sidecar row did, the company was updated.
+		row.action = actionUpdate
 	}
 	before, after := applyFieldMask(row.before, mask), applyFieldMask(row.after, mask)
 	summary := composeRecordSummary(row.actorType, display, row.onBehalfOfName,
@@ -218,7 +227,7 @@ func ListRecordHistory(ctx context.Context, db *database.DB, f RecordHistoryFilt
 	var cursor storekit.Cursor
 	useCursor := false
 	if f.Cursor != nil && *f.Cursor != "" {
-		c, err := storekit.DecodeCursor(*f.Cursor)
+		c, err := storekit.DecodeCursor("record_history", *f.Cursor)
 		if err != nil {
 			return RecordHistoryPage{}, err
 		}
@@ -252,7 +261,7 @@ func ListRecordHistory(ctx context.Context, db *database.DB, f RecordHistoryFilt
 		}
 		if len(rows) > limit {
 			rows = rows[:limit]
-			next, err := storekit.EncodeCursor(rows[limit-1].occurredAt, rows[limit-1].id)
+			next, err := storekit.EncodeCursor("record_history", rows[limit-1].occurredAt, rows[limit-1].id)
 			if err != nil {
 				return err
 			}
@@ -301,7 +310,7 @@ func queryRecordHistoryWindow(ctx context.Context, tx pgx.Tx, f RecordHistoryFil
 		args = append(args, boundary.occurredAt, boundary.id)
 	}
 	if f.Action != nil {
-		conds = append(conds, fmt.Sprintf("a.action = $%d", len(args)+1))
+		conds = append(conds, fmt.Sprintf(actionCondPrefix+"$%d", len(args)+1))
 		args = append(args, *f.Action)
 	}
 	if useCursor {
@@ -326,7 +335,7 @@ func queryRecordHistoryWindow(ctx context.Context, tx pgx.Tx, f RecordHistoryFil
 	// call as `args...` may run after the slice is read — leaving the statement
 	// naming one more placeholder than the driver binds.
 	fetchPos := arg(fetch)
-	window := recordHistoryWindowSQL(typePos, idPos, fetchPos, conds, edgeCTE)
+	window := recordHistoryWindowSQL(typePos, idPos, fetchPos, conds, edgeCTE, sidecarSubjectCTE(f.EntityType, idPos, f.Action))
 	rows, err := tx.Query(ctx, window, args...)
 	if err != nil {
 		return nil, err

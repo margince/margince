@@ -7,11 +7,13 @@ import (
 	"context"
 	"encoding/hex"
 	"errors"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/heldreason"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -43,7 +45,7 @@ func wordingCorrectionForReviewTx(ctx context.Context, tx pgx.Tx, review ids.UUI
 	if err != nil {
 		return absent, false, err
 	}
-	if message.Status != "held" || message.HeldReason != "send_refused" || message.ScheduledBy != initiatingSeat(ctx) || !message.matchesApproval(inst) {
+	if message.Status != "held" || !slices.Contains(heldreason.Reviewable(), message.HeldReason) || message.ScheduledBy != initiatingSeat(ctx) || !message.matchesApproval(inst) {
 		return absent, false, nil
 	}
 	return WordingCorrectionContext{

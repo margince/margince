@@ -86,4 +86,30 @@ describe("captureValueMessage", () => {
       problemMessageOf(err, t),
     );
   });
+
+  it("names the typed value when the shipped list already holds it", () => {
+    const err = refusal(
+      "domain",
+      "already_on_shipped_list",
+      "gmail.com is already on the shipped list",
+    );
+    expect(
+      captureValueMessage(
+        err,
+        "domain",
+        (key, params) => en[key].replace("{value}", params?.value ?? ""),
+        "gmail.com",
+      ),
+    ).toBe("gmail.com is already on the shipped list.");
+  });
+
+  // A company's domain list reads this through problemMessageOf, with no value.
+  it("answers a consumer mail domain with the catalog's sentence", () => {
+    const err = refusal(
+      "domains",
+      "consumer_mail_domain",
+      "gmail.com is a consumer mail domain and cannot be a company's domain",
+    );
+    expect(problemMessageOf(err, t)).toBe(en["captureValue.consumerMail"]);
+  });
 });

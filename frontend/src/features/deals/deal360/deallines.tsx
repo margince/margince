@@ -15,8 +15,13 @@ import {
   RecordPicker,
   type RecordPickerCandidate,
 } from "../../../design-system/recordpicker";
+import {
+  typedNumberFault,
+  typedNumberOrNaN,
+  writtenDecimal,
+} from "../../../format/decimalinput";
 import { formatMoneyOrAbsent, formatNumber } from "../../../format/format";
-import { useLocale, useT } from "../../../i18n";
+import { type Locale, useLocale, useT } from "../../../i18n";
 import type { MessageKey } from "../../../i18n/en";
 import { labelFor } from "../../../lib/labelfor";
 import { problemMessageOf, unwrap } from "../../../lib/problem";
@@ -73,25 +78,28 @@ function billingOfLine(line: DealLine): LineBilling {
   };
 }
 
-function draftOf(line: DealLine): DraftLine {
+function draftOf(line: DealLine, locale: Locale): DraftLine {
   return {
     key: line.id,
     id: line.id,
     productId: line.product_id ?? undefined,
     description: line.description,
-    quantity: line.quantity == null ? "" : String(line.quantity),
+    quantity:
+      line.quantity == null
+        ? ""
+        : writtenDecimal(String(line.quantity), locale),
     priceMinor: line.unit_price_minor ?? null,
     billing: billingOfLine(line),
   };
 }
 
-function quantityOf(text: string): number | null {
-  const value = Number(text);
-  return text.trim() === "" || !Number.isFinite(value) ? null : value;
+function quantityOf(text: string, locale: Locale): number | null {
+  const value = typedNumberOrNaN(text, locale);
+  return Number.isNaN(value) ? null : value;
 }
 
 /** The fields of a saved line that the draft changed, as a PATCH body. */
-function changedFields(saved: DealLine, draft: DraftLine) {
+function changedFields(saved: DealLine, draft: DraftLine, locale: Locale) {
   const body: Omit<
     components["schemas"]["UpdateDealLineRequest"],
     "expected_revision"
@@ -99,7 +107,7 @@ function changedFields(saved: DealLine, draft: DraftLine) {
   if (draft.description.trim() !== saved.description) {
     body.description = draft.description.trim();
   }
-  const quantity = quantityOf(draft.quantity);
+  const quantity = quantityOf(draft.quantity, locale);
   if (quantity !== (saved.quantity ?? null)) {
     body.quantity = quantity;
   }
@@ -126,7 +134,12 @@ type SaveOutcome = {
 
 type SaveStep = (state: DealCommercial) => Promise<DealCommercial>;
 
-function newLineBody(row: DraftLine, state: DealCommercial, replace: boolean) {
+function newLineBody(
+  row: DraftLine,
+  state: DealCommercial,
+  replace: boolean,
+  locale: Locale,
+) {
   // A product line sends only what the seller changed from the catalogue.
   const renamed = row.productId && row.description.trim() !== row.catalogName;
   return {
@@ -135,7 +148,7 @@ function newLineBody(row: DraftLine, state: DealCommercial, replace: boolean) {
     currency: state.currency ?? undefined,
     product_id: row.productId,
     description: !row.productId || renamed ? row.description.trim() : undefined,
-    quantity: quantityOf(row.quantity),
+    quantity: quantityOf(row.quantity, locale),
     unit_price_minor:
       row.priceMinor === null && row.productId ? undefined : row.priceMinor,
     ...lineBillingBody(row.billing),
@@ -148,6 +161,7 @@ function saveSteps(
   draft: readonly DraftLine[],
   replaceEstimate: boolean,
   t: (key: MessageKey) => string,
+  locale: Locale,
 ): SaveStep[] {
   const kept = new Set(draft.flatMap((row) => (row.id ? [row.id] : [])));
   const steps: SaveStep[] = start.lines
@@ -166,7 +180,7 @@ function saveSteps(
     );
   for (const row of draft) {
     const saved = start.lines.find((line) => line.id === row.id);
-    const body = saved ? changedFields(saved, row) : null;
+    const body = saved ? changedFields(saved, row, locale) : null;
     if (saved && body) {
       steps.push(async (state) =>
         unwrap(
@@ -183,7 +197,7 @@ function saveSteps(
         unwrap(
           await api.POST("/deals/{id}/lines", {
             params: { path: { id: dealId } },
-            body: newLineBody(row, state, replaceEstimate),
+            body: newLineBody(row, state, replaceEstimate, locale),
           }),
           t,
         ),
@@ -267,6 +281,7 @@ function DraftLineRow({
   onRemove: () => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   return (
     <li className="deal-lines-edit-row">
       <Field label={t("deal.lines.description")}>
@@ -280,13 +295,13 @@ function DraftLineRow({
           />
         )}
       </Field>
-      <Field label={t("deal.lines.quantity")}>
+      <Field
+        label={t("deal.lines.quantity")}
+        error={typedNumberFault(row.quantity, locale, t)}
+      >
         {(control) => (
           <TextInput
             {...control}
-            type="number"
-            min="0"
-            step="any"
             inputMode="decimal"
             value={row.quantity}
             onChange={(event) =>
@@ -343,7 +358,7 @@ export function DealLinesEditor({
   const { locale } = useLocale();
   const client = useQueryClient();
   const [draft, setDraft] = useState<DraftLine[]>(() =>
-    state.lines.map(draftOf),
+    state.lines.map((line) => draftOf(line, locale)),
   );
   const [custom, setCustom] = useState("");
   const [currency, setCurrency] = useState(state.currency ?? "");
@@ -355,7 +370,10 @@ export function DealLinesEditor({
         ...state,
         currency: state.currency ?? (currency || null),
       };
-      return saveDraft(saveSteps(dealId, start, draft, replaces, t), start);
+      return saveDraft(
+        saveSteps(dealId, start, draft, replaces, t, locale),
+        start,
+      );
     },
     onSuccess: (outcome) => {
       client.setQueryData(dealLinesKey(dealId), outcome.state);
@@ -367,7 +385,7 @@ export function DealLinesEditor({
         return;
       }
       // What did save stays saved; the editor starts again from it.
-      setDraft(outcome.state.lines.map(draftOf));
+      setDraft(outcome.state.lines.map((line) => draftOf(line, locale)));
       setPartial(
         t("deal.lines.partlySaved", {
           saved: formatNumber(outcome.saved, locale),
@@ -418,6 +436,10 @@ export function DealLinesEditor({
       title={t("deal.lines.editTitle")}
       confirmLabel={t("deal.lines.save")}
       pending={save.isPending}
+      // A refused quantity would travel as no quantity, so the save waits.
+      confirmDisabled={draft.some(
+        (row) => typedNumberFault(row.quantity, locale, t) !== undefined,
+      )}
       error={save.error ? problemMessageOf(save.error, t) : partial}
       onConfirm={() => save.mutate()}
     >

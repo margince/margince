@@ -83,6 +83,9 @@ func (g *Gate) stageDecisions(ctx context.Context, tx pgx.Tx, deliveryID ids.UUI
 		return commsauthz.DecisionSet{}, fmt.Errorf(
 			"consent: a staging decision needs at least one recipient: %w", apperrors.ErrInvalidArgument)
 	}
+	if err := refuseAMachineStatedCountry(ctx, req); err != nil {
+		return commsauthz.DecisionSet{}, err
+	}
 	req.DeliveryID = deliveryID
 
 	// The posture, read on the caller's transaction — the same one the
@@ -92,7 +95,7 @@ func (g *Gate) stageDecisions(ctx context.Context, tx pgx.Tx, deliveryID ids.UUI
 	if err != nil {
 		return commsauthz.DecisionSet{}, err
 	}
-	if req, err = withSendingEntity(ctx, tx, req); err != nil {
+	if req, err = withSendFacts(ctx, tx, req); err != nil {
 		return commsauthz.DecisionSet{}, err
 	}
 	// Each recipient's country, resolved once: the decision and its recorded
@@ -239,17 +242,18 @@ func (g *Gate) recordStagingDecisions(ctx context.Context, tx pgx.Tx, deliveryID
 			string(d.Resolved), string(d.Verdict), d.ReasonCode,
 			nullableBasis(d.Basis), nullableText(d.Suppression),
 			sum[:], string(d.Mode), by, evidence, authority, instructionID,
-			ruleset.Version, ruleset.Codes, zeroAsNull(d.SendingEntity), nullableText(d.PurposeKey),
+			ruleset.Version, ruleset.Codes, ruleset.Digest, zeroAsNull(d.SendingEntity), nullableText(d.PurposeKey),
 			groundNotice(d), groundOffer(d), groundSoldAt(d), dataProtectionStampFor(countries[i], protection),
+			nullableText(string(countries[i].Source)),
 		}
 		_, err = tx.Exec(ctx, `
 			INSERT INTO communication_decision
 			  (delivery_id, attempt, decision_set_id, recipient_address, subject_kind, subject_id,
 			   phase, requested_category, resolved_category, verdict, reason_code, basis, suppression,
 			   content_fingerprint, mode, actor, evidence, execution_authority, instruction_id,
-			   ruleset_version, ruleset_codes, legal_entity_id, purpose_key,
+			   ruleset_version, ruleset_codes, ruleset_digest, legal_entity_id, purpose_key,
 			   existing_customer_notice_id, existing_customer_offer_id, existing_customer_sold_at,
-			   data_protection_country)
+			   data_protection_country, country_source)
 			VALUES (`+storekit.Placeholders(values)+`)
 			ON CONFLICT (decision_set_id, recipient_address, phase) DO NOTHING`, values...)
 		if err != nil {

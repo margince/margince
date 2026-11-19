@@ -83,7 +83,7 @@ func startReportingBackfill(t *testing.T, e *integration.SearchEnv, prov *report
 	if _, err := registry.Connect(grantCtx, "gmail", connector.Auth("refresh")); err != nil {
 		t.Fatalf("Connect: %v", err)
 	}
-	run, err := registry.StartBackfill(grantCtx, "gmail", ids.From[ids.UserKind](e.Rep1), 6, connector.BackfillEstimate{Messages: 20}, enqueueNothing)
+	run, err := registry.StartBackfill(grantCtx, capturemod.ProviderMailbox("gmail"), ids.From[ids.UserKind](e.Rep1), 6, connector.BackfillEstimate{Messages: 20}, enqueueNothing)
 	if err != nil {
 		t.Fatalf("StartBackfill: %v", err)
 	}
@@ -100,7 +100,7 @@ func TestBackfillProgressIsVisibleWhileThePageRuns(t *testing.T) {
 	// speak about what a watching browser would actually have seen.
 	var seen []capturemod.BackfillRun
 	prov.perMessage = func(int, int) {
-		run, err := registry.BackfillStatus(grantCtx, "gmail", rep)
+		run, err := registry.BackfillStatus(grantCtx, capturemod.ProviderMailbox("gmail"), rep)
 		switch {
 		case err != nil:
 			t.Fatalf("mid-page status read: %v", err)
@@ -139,7 +139,7 @@ func TestBackfillProgressIsVisibleWhileThePageRuns(t *testing.T) {
 	if scanned, captured := readInflight(t, e, runID); scanned != 0 || captured != 0 {
 		t.Fatalf("after the commit inflight = %d/%d, want it cleared", scanned, captured)
 	}
-	after, err := registry.BackfillStatus(grantCtx, "gmail", rep)
+	after, err := registry.BackfillStatus(grantCtx, capturemod.ProviderMailbox("gmail"), rep)
 	if err != nil {
 		t.Fatalf("status after page 1: %v", err)
 	}
@@ -172,7 +172,7 @@ func TestBackfillProgressIsPacedRatherThanWrittenPerMessage(t *testing.T) {
 	if highWater != 1 {
 		t.Fatalf("the paced page wrote its tally up to %d, want only the first report — the rest were inside the pacing window", highWater)
 	}
-	after, err := registry.BackfillStatus(grantCtx, "gmail", rep)
+	after, err := registry.BackfillStatus(grantCtx, capturemod.ProviderMailbox("gmail"), rep)
 	if err != nil {
 		t.Fatalf("status after page 1: %v", err)
 	}
@@ -200,7 +200,7 @@ func TestBackfillProgressDiesWithTheFailedPage(t *testing.T) {
 	if scanned, captured := readInflight(t, e, runID); scanned != 0 || captured != 0 {
 		t.Fatalf("after the failed page inflight = %d/%d, want it cleared so the retry cannot double-count", scanned, captured)
 	}
-	run, err := registry.BackfillStatus(grantCtx, "gmail", ids.From[ids.UserKind](e.Rep1))
+	run, err := registry.BackfillStatus(grantCtx, capturemod.ProviderMailbox("gmail"), ids.From[ids.UserKind](e.Rep1))
 	if err != nil {
 		t.Fatalf("status after the fault: %v", err)
 	}
@@ -226,7 +226,7 @@ func TestBackfillProgressIsFencedByTheConnectionGeneration(t *testing.T) {
 	prov.perMessage = func(scanned, _ int) {
 		switch {
 		case scanned == 3:
-			if err := registry.Disconnect(grantCtx, "gmail"); err != nil {
+			if err := registry.Disconnect(grantCtx, capturemod.ProviderMailbox("gmail")); err != nil {
 				t.Errorf("mid-page disconnect: %v", err)
 				return
 			}
@@ -265,7 +265,7 @@ func TestCancelClearsTheLiveTallyAndTheRunningPageCannotWriteItBack(t *testing.T
 		if scanned != 5 {
 			return
 		}
-		if _, err := registry.CancelBackfill(grantCtx, "gmail", rep); err != nil {
+		if _, err := registry.CancelBackfill(grantCtx, capturemod.ProviderMailbox("gmail"), rep); err != nil {
 			t.Errorf("CancelBackfill mid-page: %v", err)
 			return
 		}
@@ -285,7 +285,7 @@ func TestCancelClearsTheLiveTallyAndTheRunningPageCannotWriteItBack(t *testing.T
 	if scanned, captured := readInflight(t, e, runID); scanned != 0 || captured != 0 {
 		t.Fatalf("the rest of the page wrote inflight = %d/%d onto a cancelled run", scanned, captured)
 	}
-	run, err := registry.BackfillStatus(grantCtx, "gmail", rep)
+	run, err := registry.BackfillStatus(grantCtx, capturemod.ProviderMailbox("gmail"), rep)
 	if err != nil {
 		t.Fatalf("status after cancel: %v", err)
 	}

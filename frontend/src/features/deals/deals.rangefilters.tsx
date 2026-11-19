@@ -172,6 +172,9 @@ function ValueRangeEditor({
   const typed = parseMinorRange(value);
   const [min, setMin] = useState(typed?.min);
   const [max, setMax] = useState(typed?.max);
+  // A bound whose text is refused keeps its last amount; Apply waits for it.
+  const [minRefused, setMinRefused] = useState(false);
+  const [maxRefused, setMaxRefused] = useState(false);
   const draft = encodeRange(
     min === undefined ? "" : String(min),
     max === undefined ? "" : String(max),
@@ -180,6 +183,7 @@ function ValueRangeEditor({
     label: string,
     minor: number | undefined,
     set: (next: number | undefined) => void,
+    setRefused: (refused: boolean) => void,
   ) => (
     <MoneyInput
       aria-label={label}
@@ -188,18 +192,30 @@ function ValueRangeEditor({
       blankWhenZero={minor === undefined}
       onChangeMinor={(next) => set(Number.isNaN(next) ? undefined : next)}
       onClear={() => set(undefined)}
-      inputMode="decimal"
+      onRefusedChange={setRefused}
     />
   );
   return (
     <>
       <AnyValue group={group} value={value} label={anyLabel} onPick={onPick} />
       <div className="lt-frange">
-        {bound(t("deals.valueAtLeast", { currency }), min, setMin)}
-        {bound(t("deals.valueAtMost", { currency }), max, setMax)}
+        {bound(
+          t("deals.valueAtLeast", { currency }),
+          min,
+          setMin,
+          setMinRefused,
+        )}
+        {bound(
+          t("deals.valueAtMost", { currency }),
+          max,
+          setMax,
+          setMaxRefused,
+        )}
         <ApplyRange
           draft={draft}
-          admitted={parseMinorRange(draft) !== undefined}
+          admitted={
+            parseMinorRange(draft) !== undefined && !minRefused && !maxRefused
+          }
           name={() => valueName(draft, currency, words) ?? draft}
           onPick={onPick}
           t={t}

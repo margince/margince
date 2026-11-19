@@ -21,6 +21,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/heldreason"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -102,16 +103,17 @@ func seedOpenReview(ctx context.Context, t *testing.T, e *channelConsentEnv) ids
 	return seedOpenReviewFor(ctx, t, e, "no_marketing_consent")
 }
 
-// seedOpenReviewFor opens a review refused for the given reason code.
+// seedOpenReviewFor opens a review the env's user started, refused for the
+// given reason code.
 func seedOpenReviewFor(ctx context.Context, t *testing.T, e *channelConsentEnv, reason string, more ...string) ids.UUID {
 	t.Helper()
 	var id ids.UUID
 	if err := e.owner.QueryRow(ctx, `
-		INSERT INTO communication_review (state, kind, reason_code, refusals)
+		INSERT INTO communication_review (state, kind, reason_code, refusals, initiated_by)
 		SELECT 'needs_repair', 'single', $1,
-		       jsonb_agg(jsonb_build_object('address', 'anna@example.test', 'reason_code', r))
+		       jsonb_agg(jsonb_build_object('address', 'anna@example.test', 'reason_code', r)), $3
 		  FROM unnest($1::text || $2::text[]) AS r
-		RETURNING id`, reason, more).Scan(&id); err != nil {
+		RETURNING id`, reason, more, e.user).Scan(&id); err != nil {
 		t.Fatalf("seeding the refused send: %v", err)
 	}
 	return id
@@ -158,6 +160,13 @@ func TestOnlyAUserHoldingTheGrantDirectsASend(t *testing.T) {
 	unticked.Acknowledged = false
 	if _, err := e.store.DirectSend(directorCtx(ws, user), review, unticked); err == nil {
 		t.Error("an instruction was written with no acknowledgement behind it")
+	}
+
+	// An admin who did not write the message may not, because the release
+	// sends from the caller's mailbox.
+	var anotherSeat *heldreason.AuthorOnlyError
+	if _, err := e.store.DirectSend(directorCtx(ws, ids.NewV7()), review, valid); !errors.As(err, &anotherSeat) {
+		t.Errorf("an admin directed another seat's message: err = %v, want the author-only refusal", err)
 	}
 
 	// And the director does.

@@ -56,10 +56,9 @@ func (h connectorHandlers) ListConnectorContainers(w http.ResponseWriter, r *htt
 	var containers []connector.NamedContainer
 	var truncated bool
 	var err error
-	if params.ConnectionId != nil {
+	containers, truncated, err = h.registry.ListContainers(r.Context(), capture.MailboxNamed(string(provider), params.ConnectionId), ids.From[ids.UserKind](actor.UserID))
+	if errors.Is(err, apperrors.ErrNotFound) && params.ConnectionId != nil {
 		containers, truncated, err = h.registry.InternalMailSourceContainers(r.Context(), ids.UUID(*params.ConnectionId), string(provider))
-	} else {
-		containers, truncated, err = h.registry.ListContainers(r.Context(), string(provider), ids.From[ids.UserKind](actor.UserID))
 	}
 	switch {
 	case errors.Is(err, capture.ErrContainersUnsupported):

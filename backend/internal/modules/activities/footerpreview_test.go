@@ -18,9 +18,9 @@ import (
 
 type previewUnsubscribeLinker struct{ calls, manageCalls int }
 
-func (l *previewUnsubscribeLinker) UnsubscribeToken(context.Context, string, string) (string, bool, error) {
+func (l *previewUnsubscribeLinker) UnsubscribeToken(_ context.Context, _, purposeKey string) (string, string, bool, error) {
 	l.calls++
-	return "fixture-token", true, nil
+	return "fixture-token", purposeKey, true, nil
 }
 
 func (l *previewUnsubscribeLinker) ManageToken(context.Context, string) (string, bool, error) {
@@ -55,7 +55,7 @@ func TestMailFooterPreviewMatchesDeliveryWithoutCreatingLinks(t *testing.T) {
 			if preview.OffersUnsubscribe != tc.unsubscribe || len(preview.Disclosures) != 1 {
 				t.Fatalf("footer preview: %+v", preview)
 			}
-			delivered, err := store.deliverability(ctx, "Message", "Subject", []string{"buyer@example.test"}, surfaceFor(input.Context, input.MarketingPurpose, input.ConsentPurpose), ids.Nil, "")
+			delivered, err := store.deliverability(ctx, "Message", "Subject", []string{"buyer@example.test"}, nil, surfaceFor(input.Context, input.MarketingPurpose, input.ConsentPurpose), ids.Nil, "")
 			if err != nil {
 				t.Fatal(err)
 			}

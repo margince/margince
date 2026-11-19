@@ -45,6 +45,7 @@ import { lastInbound, nextStepOf, standingOffer } from "./dealstanding";
 import { daysWaiting, waitingSince } from "./dealwaiting";
 
 type Activity = components["schemas"]["Activity"];
+type Deal = components["schemas"]["Deal"];
 
 type Words = Readonly<{
   t: Translator;
@@ -110,10 +111,28 @@ function ValueFigure({ inputs, words }: FigureProps) {
               number: offer.offer_number,
               revision: identifierNumber(offer.revision),
             })
-          : undefined
+          : modelWrittenAmount(deal, t)
       }
     />
   );
+}
+
+// An amount Margince read from the customer's mail says so until a rep edits
+// it. A currency the mail did not name is a guess, and says that instead.
+function modelWrittenAmount(
+  deal: Pick<Deal, "ai_written_fields" | "amount_minor">,
+  t: Words["t"],
+): string | undefined {
+  if (deal.amount_minor == null) {
+    return undefined;
+  }
+  if (deal.ai_written_fields?.includes("currency")) {
+    return t("deal.standing.figure.currencyGuessed");
+  }
+  if (deal.ai_written_fields?.includes("amount_minor")) {
+    return t("deal.standing.figure.amountByModel");
+  }
+  return undefined;
 }
 
 // The deal's own probability where somebody set one, else its stage's. A closed

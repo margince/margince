@@ -196,8 +196,8 @@ function QualificationForm({
   const [stageId, setStageId] = useState("");
   const [dealName, setDealName] = useState("");
   const [amountMinor, setAmountMinor] = useState<number | null>(null);
-  // The box holds a figure finer than the currency, so amountMinor is not what it says.
-  const [amountTooPrecise, setAmountTooPrecise] = useState(false);
+  // The box holds text it refuses and names why itself, so amountMinor is not what it says.
+  const [amountRefused, setAmountRefused] = useState(false);
   const [note, setNote] = useState("");
   const typedCompany = preview.data?.typed_company;
 
@@ -268,7 +268,7 @@ function QualificationForm({
 
   const refused = qualifyRefusals(qualify.error, t);
   const amountError = amountRefusal(
-    { amountMinor, tooPrecise: amountTooPrecise, currency },
+    { amountMinor, refused: amountRefused },
     refused.amount,
     t,
   );
@@ -318,7 +318,7 @@ function QualificationForm({
         choose={(next) => {
           // A new choice unmounts the amount editor or remounts it on the
           // committed amount. The refused figure is gone, so its refusal goes.
-          setAmountTooPrecise(false);
+          setAmountRefused(false);
           setDealChoice(next);
         }}
       />
@@ -382,22 +382,14 @@ function QualificationForm({
                 valueMinor={amountMinor ?? 0}
                 blankWhenZero={amountMinor === null}
                 currency={currency ?? ""}
-                min={0}
-                inputMode="decimal"
                 display={
                   currency
                     ? (minor) => formatMoney(minor, currency, locale)
                     : undefined
                 }
-                onChangeMinor={(minor) => {
-                  setAmountTooPrecise(false);
-                  setAmountMinor(Number.isNaN(minor) ? null : minor);
-                }}
-                onClear={() => {
-                  setAmountTooPrecise(false);
-                  setAmountMinor(null);
-                }}
-                onTooPrecise={() => setAmountTooPrecise(true)}
+                onChangeMinor={setAmountMinor}
+                onClear={() => setAmountMinor(null)}
+                onRefusedChange={setAmountRefused}
               />
             )}
           </Field>

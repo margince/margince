@@ -22,7 +22,13 @@ import { EmailEntry } from "../../design-system/emailentry";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { SurfaceState } from "../../design-system/surfacestate";
 import { formatDateTime, formatNumber } from "../../format/format";
-import { type Locale, type Translator, useLocale, useT } from "../../i18n";
+import {
+  type Locale,
+  type Translator,
+  useLocale,
+  usePlural,
+  useT,
+} from "../../i18n";
 import { useViewerZone } from "../../lib/viewerzone";
 import {
   type HiddenBacklog,
@@ -54,6 +60,7 @@ export function HiddenBacklogPanel({
   onOpenEmail: (activityId: string) => void;
 }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const hidden = useHiddenBacklog(enabled);
   if (!enabled) {
@@ -108,6 +115,17 @@ export function HiddenBacklogPanel({
             <HiddenFigures backlog={hidden.data} onOpenEmail={onOpenEmail} />
           )}
         </SurfaceState>
+        {/* Shown mail, so `clear` leaves it out; only over a read that
+            answered, for the footer's reason. */}
+        {hidden.isSuccess && hidden.data.private_unchecked > 0 && (
+          <p className="t-caption">
+            {plural(
+              "worklist.hidden.privateUnchecked",
+              hidden.data.private_unchecked,
+              { count: formatNumber(hidden.data.private_unchecked, locale) },
+            )}
+          </p>
+        )}
       </PanelBody>
     </Panel>
   );

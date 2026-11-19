@@ -25,6 +25,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -35,17 +36,22 @@ import (
 // other read and write on this table uses: capture is per-user (RC-8), so a
 // connection belonging to somebody else is not this caller's to change and does
 // not exist as far as this statement is concerned.
-func (r *Registry) SetSignatureEnrichment(ctx context.Context, name string, enabled *bool) (ConnectionView, error) {
+func (r *Registry) SetSignatureEnrichment(ctx context.Context, mb Mailbox, enabled *bool) (ConnectionView, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || !actor.HumanOrItsAgent() {
 		return ConnectionView{}, fmt.Errorf("capture: only a user or their agent sets a mailbox's signature-enrichment answer: %w", apperrors.ErrPermissionDenied)
 	}
+	name := mb.Provider
 	if _, ok := r.connectors[name]; !ok {
 		return ConnectionView{}, ErrNoConnection
 	}
+	match, err := r.resolveMemberMailbox(ctx, actor.UserID, mb)
+	if err != nil {
+		return ConnectionView{}, err
+	}
 
 	var before *bool
-	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
+	err = r.db.Tx(ctx, func(tx pgx.Tx) error {
 		// The prior answer comes out of the same statement that replaces it, so
 		// the audit row's before-image is the row as it actually stood rather
 		// than a value read in a separate query something else could have moved
@@ -53,10 +59,10 @@ func (r *Registry) SetSignatureEnrichment(ctx context.Context, name string, enab
 		row := tx.QueryRow(ctx, `
 			UPDATE capture_connection
 			   SET signature_enrich_enabled = $3
-			 WHERE user_id = $1 AND provider = $2 AND archived_at IS NULL
+			 WHERE `+match.where+` AND archived_at IS NULL
 			RETURNING (SELECT c.signature_enrich_enabled
 			             FROM capture_connection c WHERE c.id = capture_connection.id)`,
-			actor.UserID, name, enabled)
+			match.id, actor.UserID, enabled)
 		if err := row.Scan(&before); err != nil {
 			return err
 		}
@@ -73,19 +79,19 @@ func (r *Registry) SetSignatureEnrichment(ctx context.Context, name string, enab
 	if err != nil {
 		return ConnectionView{}, fmt.Errorf("capture: setting the mailbox's signature-enrichment answer: %w", err)
 	}
-	return r.connectionFor(ctx, name)
+	return r.connectionFor(ctx, match.id)
 }
 
 // connectionFor reads back one of the caller's own connections, so the write
 // above answers with the same shape the list surface serves rather than a
 // second, thinner one a client would have to tell apart.
-func (r *Registry) connectionFor(ctx context.Context, name string) (ConnectionView, error) {
+func (r *Registry) connectionFor(ctx context.Context, connection ids.UUID) (ConnectionView, error) {
 	views, err := r.Connections(ctx)
 	if err != nil {
 		return ConnectionView{}, err
 	}
 	for _, v := range views {
-		if v.Provider == name {
+		if v.ID == connection {
 			return v, nil
 		}
 	}

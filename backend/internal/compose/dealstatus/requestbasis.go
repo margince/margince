@@ -14,7 +14,7 @@ const (
 )
 
 func requestForMove(f facts) (crmcontracts.Activity, bool, bool) {
-	if current, ok := unansweredInbound(f); ok {
+	if current, ok := currentRequest(f); ok {
 		return current, true, true
 	}
 	row, found := readableRequest(f.requests)
@@ -69,7 +69,7 @@ func requestStates(f facts) map[string]string {
 		}
 	}
 	for _, row := range f.currentRequests {
-		if !withheld(row) {
+		if !withheld(row) && ourReplyOn(row) == nil {
 			states[row.Id.String()] = basisCurrentRequest
 		}
 	}

@@ -37,7 +37,9 @@ function Form({ save }: { save: (body: unknown) => void }) {
         error={null}
         intent="save"
         onClose={() => {}}
-        onSubmit={(submitted) => save(mapDealUpdate(submitted, seeded))}
+        onSubmit={(submitted) =>
+          save(mapDealUpdate(submitted, seeded, [], "en"))
+        }
       />
     </LocaleProvider>
   );
@@ -58,7 +60,7 @@ it.each(["Value", "Expected ARR"])(
   "requires currency for %s, including zero, until the figure is cleared",
   (label) => {
     render(<Form save={vi.fn()} />);
-    const input = screen.getByRole("spinbutton", { name: label });
+    const input = screen.getByRole("textbox", { name: label });
     fireEvent.change(input, { target: { value: "0" } });
     expect(screen.getByRole("button", { name: "Save" })).toBeDisabled();
     fireEvent.change(input, { target: { value: "" } });

@@ -28,13 +28,17 @@ type SharedMailboxView struct {
 	ConnectedAt time.Time
 	// BackupOwner holds the work of mail whose sender no reader owns.
 	BackupOwner *ids.UUID
+	// UnreadFrom..UnreadTo is a span no sync read, which a history import
+	// recovers. Both nil when there is none.
+	UnreadFrom, UnreadTo *time.Time
 }
 
-const sharedMailboxColumns = `id, provider, account_label, reader_team_id, mail_posture, status, connected_by, connected_at, backup_owner_id`
+const sharedMailboxColumns = `id, provider, account_label, reader_team_id, mail_posture, status, connected_by, connected_at, backup_owner_id, unread_from, unread_to`
 
 func scanSharedMailbox(row pgx.Row) (SharedMailboxView, error) {
 	var v SharedMailboxView
-	err := row.Scan(&v.ID, &v.Provider, &v.Address, &v.ReaderTeam, &v.Posture, &v.Status, &v.ConnectedBy, &v.ConnectedAt, &v.BackupOwner)
+	err := row.Scan(&v.ID, &v.Provider, &v.Address, &v.ReaderTeam, &v.Posture, &v.Status, &v.ConnectedBy, &v.ConnectedAt, &v.BackupOwner,
+		&v.UnreadFrom, &v.UnreadTo)
 	return v, err
 }
 

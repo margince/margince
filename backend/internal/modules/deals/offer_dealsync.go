@@ -13,6 +13,7 @@ package deals
 import (
 	"context"
 	"fmt"
+	"maps"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -22,6 +23,11 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
+
+// dealWrite is the deal columns an accept wrote, as they stood before and after.
+type dealWrite struct {
+	before, after map[string]any
+}
 
 // syncDealAmountFromOffer writes the accepted gross onto the deal. A
 // still-open deal takes the amount as-is; a deal that already closed carries the
@@ -38,27 +44,27 @@ import (
 // that prices the deal at what it was already priced at moved no forecast, and a
 // history row saying otherwise is a move a reconstruction would have to explain.
 //
-// It returns the deal columns the sync actually wrote — nothing when it wrote
-// nothing — so the caller's paired deal.updated reports the complete delta: on a
-// closed deal that includes the re-frozen fx_rate_to_base/fx_rate_date, not just
-// amount_minor/currency.
+// It returns the deal columns the sync wrote, with what each held before, and
+// nothing when it wrote nothing. The caller audits the deal's own change from
+// that, and its paired deal.updated reports the complete delta. On a closed deal
+// that includes the re-frozen fx_rate_to_base and fx_rate_date.
 func (s *Store) syncDealAmountFromOffer(ctx context.Context, tx pgx.Tx,
 	dealID ids.DealID, offer crmcontracts.Offer,
-) (map[string]any, error) {
+) (dealWrite, error) {
 	if offer.GrossMinor == nil {
 		// The totals engine derives a gross for every line and send refuses an
 		// offer with none, so a sent offer always carries one. Refusing rather
 		// than writing NULL keeps that reasoning falsifiable: a null amount
 		// beside the currency below would trip deal_amount_currency_pair, and
 		// the row would fail with nothing naming the offer that did it.
-		return nil, fmt.Errorf("accepted offer %s carries no gross to price deal %s with", offer.Id, dealID)
+		return dealWrite{}, fmt.Errorf("accepted offer %s carries no gross to price deal %s with", offer.Id, dealID)
 	}
 	// The row lock makes the status read and the amount write below one
 	// race-free unit. IncludeArchived preserves the read below, which
 	// follows the deal row regardless of archived state.
 	lock, err := storekit.LockRow(ctx, tx, dealTable, dealID.UUID, storekit.IncludeArchived)
 	if err != nil {
-		return nil, fmt.Errorf("lock deal for amount sync: %w", err)
+		return dealWrite{}, fmt.Errorf("lock deal for amount sync: %w", err)
 	}
 	var status string
 	var closedAt *time.Time
@@ -70,12 +76,12 @@ func (s *Store) syncDealAmountFromOffer(ctx context.Context, tx pgx.Tx,
 		`SELECT status, closed_at, amount_minor, expected_arr_minor, currency, commercial_mode
 		   FROM deal WHERE id = $1`,
 		dealID).Scan(&status, &closedAt, &amountBefore, &arrBefore, &currencyBefore, &mode); err != nil {
-		return nil, fmt.Errorf("read deal for amount sync: %w", err)
+		return dealWrite{}, fmt.Errorf("read deal for amount sync: %w", err)
 	}
 	if mode == modeLines {
 		// The deal's lines state its value; accepting an offer records the
 		// acceptance and leaves the deal's figures to its lines.
-		return map[string]any{}, nil
+		return dealWrite{after: map[string]any{}}, nil
 	}
 
 	// What the offer says about recurring value, if anything.
@@ -94,10 +100,10 @@ func (s *Store) syncDealAmountFromOffer(ctx context.Context, tx pgx.Tx,
 	// re-denominate it.
 	offeredARR, offersARR, err := acceptedOfferARR(ctx, tx, ids.From[ids.OfferKind](ids.UUID(offer.Id)))
 	if err != nil {
-		return nil, err
+		return dealWrite{}, err
 	}
 	if !offersARR && arrBefore != nil && currencyBefore != nil && *currencyBefore != offer.Currency {
-		return nil, &ArrCurrencyConflictError{From: *currencyBefore, To: offer.Currency}
+		return dealWrite{}, &ArrCurrencyConflictError{From: *currencyBefore, To: offer.Currency}
 	}
 
 	// The columns are nullable and the offer's figures are not, so each half is
@@ -107,7 +113,7 @@ func (s *Store) syncDealAmountFromOffer(ctx context.Context, tx pgx.Tx,
 	// An offer's lines are non-negative, so its gross is too. Asked anyway, so
 	// this writer shares the sign rule with the others.
 	if err := amountSetError(offer.GrossMinor); err != nil {
-		return nil, err
+		return dealWrite{}, err
 	}
 	p := storekit.NewPatch()
 	if amountBefore == nil || *amountBefore != *offer.GrossMinor {
@@ -129,19 +135,19 @@ func (s *Store) syncDealAmountFromOffer(ctx context.Context, tx pgx.Tx,
 	if p.Empty() {
 		// The deal already holds this offer's figures: no write, so no history
 		// row, and an empty delta for the caller's paired event to find nothing in.
-		return p.After(), nil
+		return dealWrite{before: p.Before(), after: p.After()}, nil
 	}
 	if DealStatus(status) != DealOpen {
 		// deal_closed_at guarantees closedAt on a non-open row.
 		if err := s.freezeBaseRate(ctx, tx, p, openapi_types.UUID(dealID.UUID), offer.Currency,
 			*offer.GrossMinor, *closedAt); err != nil {
-			return nil, fmt.Errorf("re-freeze fx for closed deal on accept: %w", err)
+			return dealWrite{}, fmt.Errorf("re-freeze fx for closed deal on accept: %w", err)
 		}
 	}
 	if err := applyDealPatchLocked(ctx, tx, p, lock); err != nil {
-		return nil, fmt.Errorf("sync deal amount from offer: %w", err)
+		return dealWrite{}, fmt.Errorf("sync deal amount from offer: %w", err)
 	}
-	return p.After(), nil
+	return dealWrite{before: p.Before(), after: p.After()}, nil
 }
 
 // arrSourceField names the column recording which accepted offer stated a
@@ -202,4 +208,39 @@ func acceptedOfferARR(ctx context.Context, tx pgx.Tx, offerID ids.OfferID) (int6
 		return 0, false, err
 	}
 	return figures.ArrMinor, true, nil
+}
+
+// auditDealRepricing records the deal's own change, so its History reads the old
+// and the new value as it does for a manual edit. It announces deal.updated under
+// that row, with every deal column and product the accept wrote, so a subscriber
+// never retains stale state. The offer it came from rides the evidence, which
+// keeps the images to the deal's columns. An accept that changed nothing on the
+// deal writes and announces nothing.
+func auditDealRepricing(ctx context.Context, tx pgx.Tx, dealID ids.DealID, offerID ids.OfferID,
+	before, changed map[string]any,
+) error {
+	if len(changed) == 0 {
+		return nil
+	}
+	auditID, err := storekit.AuditWithEvidence(ctx, tx, "update", "deal", dealID.UUID, before, changed,
+		map[string]any{"offer_id": offerID.UUID})
+	if err != nil {
+		return fmt.Errorf("audit deal repricing from accepted offer: %w", err)
+	}
+	if err := storekit.EmitEvent(ctx, tx, auditID, dealID.UUID, crmcontracts.PublicEventDealUpdated{
+		ChangedFields: changed,
+	}); err != nil {
+		return fmt.Errorf("emit paired deal.updated: %w", err)
+	}
+	return nil
+}
+
+// withProducts adds the products a deal held to its before-image.
+func withProducts(before map[string]any, products []crmcontracts.DealProduct) map[string]any {
+	image := maps.Clone(before)
+	if image == nil {
+		image = map[string]any{}
+	}
+	image[productsField] = allocationImage(products)
+	return image
 }

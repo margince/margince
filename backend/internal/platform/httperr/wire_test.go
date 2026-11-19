@@ -75,3 +75,87 @@ func TestIfNoneMatchHit(t *testing.T) {
 		})
 	}
 }
+
+func TestDownloadHeadersCarryTheRealNameOfANonASCIIFile(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct{ name, filename, inline, want string }{
+		{"plain ascii is unchanged", "report.pdf", "", `attachment; filename="report.pdf"`},
+		{"a quote and a backslash are escaped", `a"b\c.txt`, "", `attachment; filename="a\"b\\c.txt"`},
+		{"an umlaut", "Müller.pdf", "", `attachment; filename="M_ller.pdf"; filename*=UTF-8''M%C3%BCller.pdf`},
+		{"accent, han and a space", "Zoë 李小龙.txt", "", `attachment; filename="Zo_ ___.txt"; filename*=UTF-8''Zo%C3%AB%20%E6%9D%8E%E5%B0%8F%E9%BE%99.txt`},
+		{"a control character is dropped", "a\x00b.txt", "", `attachment; filename="ab.txt"; filename*=UTF-8''a%00b.txt`},
+		{"inline", "Müller.pdf", "inline", `inline; filename="M_ller.pdf"; filename*=UTF-8''M%C3%BCller.pdf`},
+	} {
+		rec := httptest.NewRecorder()
+		Download{Filename: tc.filename, Inline: tc.inline == "inline"}.WriteHeaders(rec)
+		if got := rec.Header().Get("Content-Disposition"); got != tc.want {
+			t.Errorf("%s: Content-Disposition = %q, want %q", tc.name, got, tc.want)
+		}
+	}
+}
+
+func TestIfMatchVersionRefusesAPresentButEmptyHeader(t *testing.T) {
+	cases := []struct {
+		name   string
+		header []string
+		ok     bool
+		status int
+	}{
+		{"absent", nil, true, 200},
+		{"integer", []string{"7"}, true, 200},
+		{"empty", []string{""}, false, 422},
+		{"second line empty", []string{"7", ""}, false, 422},
+		{"zero", []string{"0"}, false, 422},
+		{"quoted", []string{`"7"`}, false, 422},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			r := httptest.NewRequest("PATCH", "/v1/things/1", nil)
+			for _, v := range tc.header {
+				r.Header.Add("If-Match", v)
+			}
+			_, ok := IfMatchVersion(w, r)
+			if ok != tc.ok || (!ok && w.Code != tc.status) {
+				t.Fatalf("ok=%v status=%d, want ok=%v status=%d", ok, w.Code, tc.ok, tc.status)
+			}
+		})
+	}
+}
+
+func TestDecodeRefusesBodiesThatAreNotValidUTF8OrSpellALoneSurrogate(t *testing.T) {
+	for name, body := range map[string]string{
+		"invalid bytes":    "{\"name\":\"bad \xff\xfe\xc3(\"}",
+		"lone high":        `{"name":"\ud800"}`,
+		"lone low":         `{"name":"x\udc00"}`,
+		"broken pair":      `{"name":"\ud83dx"}`,
+		"in a nested name": `{"a":{"name":"\ud800"}}`,
+	} {
+		if ok, status := decodeInto(t, body); ok || status != 422 {
+			t.Errorf("%s: ok=%v status=%d, want refusal 422", name, ok, status)
+		}
+	}
+	if ok, _ := decodeInto(t, `{"name":"Zoë 😀"}`); !ok {
+		t.Error("a valid pair and valid UTF-8 were refused")
+	}
+}
+
+func TestDecodeRefusesALineBreakInASingleLineField(t *testing.T) {
+	type body struct {
+		Name  string `json:"name" singleline:"true"`
+		Notes string `json:"notes"`
+	}
+	for raw, wantOK := range map[string]bool{
+		`{"name":"a\nb"}`:                 false,
+		`{"name":"a\u202eb"}`:             false,
+		`{"name":"ok","notes":"a\nb\tc"}`: true,
+	} {
+		w := httptest.NewRecorder()
+		r := httptest.NewRequest("POST", "/v1/things", strings.NewReader(raw))
+		var into body
+		ok := Decode(w, r, &into)
+		if ok != wantOK || (!ok && (w.Code != 422 || !strings.Contains(w.Body.String(), `"name"`))) {
+			t.Errorf("%s: ok=%v status=%d body=%s", raw, ok, w.Code, w.Body.String())
+		}
+	}
+}

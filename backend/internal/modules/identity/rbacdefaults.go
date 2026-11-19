@@ -69,7 +69,7 @@ func (d RbacDefault) grant() (storedGrant, error) {
 }
 
 // ValidateRbacDefaults checks each default for an extension object name, a
-// system role key and the four verbs only. It is pure, so the boot runs it
+// system role key, the four verbs only, and Read beside any write. It is pure, so the boot runs it
 // before applying anything.
 func ValidateRbacDefaults(defaults ...RbacDefault) error {
 	type pair struct{ object, role string }
@@ -81,8 +81,12 @@ func ValidateRbacDefaults(defaults ...RbacDefault) error {
 		if !isSystemRoleKey(d.Role) {
 			return fmt.Errorf("identity: default grant on %q names role %q, which is not a system role (a custom role starts with no grant)", d.Object, d.Role)
 		}
-		if _, err := d.grant(); err != nil {
+		g, err := d.grant()
+		if err != nil {
 			return err
+		}
+		if err := refuseWriteWithoutRead(string(d.Object), g); err != nil {
+			return fmt.Errorf("identity: default grant for role %q on %q: %w", d.Role, d.Object, err)
 		}
 		k := pair{string(d.Object), d.Role}
 		if seen[k] {

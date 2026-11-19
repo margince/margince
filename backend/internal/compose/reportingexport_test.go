@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/reportingcsv"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -26,7 +27,7 @@ func TestReportingCSVNamesACurrencyOnlyForMoney(t *testing.T) {
 	rows := reportingCSVRows(evaluation)
 	header := rows[0]
 	unit, currency := slices.Index(header, "unit"), slices.Index(header, reportingCurrency)
-	if rows[1][unit] != reportingMinorUnits || rows[1][currency] != "EUR" {
+	if rows[1][unit] != reportingMoney || rows[1][currency] != "EUR" {
 		t.Fatalf("money row: %v", rows[1])
 	}
 	if rows[2][unit] != reportingCountUnit || rows[2][currency] != "" {
@@ -91,13 +92,13 @@ func TestReportingCSVCarriesTheLandingsBasisAndRange(t *testing.T) {
 	got := map[string][2]string{}
 	for _, row := range rows[1:] {
 		if row[block] == reportingForecastBasisBlock {
-			got[row[label]] = [2]string{row[value], row[context]}
+			got[reportingcsv.IDOf(row[label])] = [2]string{row[value], row[context]}
 		}
 	}
 	want := map[string][2]string{
-		"measure": {"", "manager_call"}, "won": {"10000", reportingForecastBasisBlock}, "remaining": {"0", reportingForecastBasisBlock},
-		"records_projection": {"14000", reportingForecastBasisBlock}, "manager_call": {"19000", reportingForecastBasisBlock},
-		"caveat": {"", "call_below_actual"}, "range_low": {"15000", reportingForecastBasisBlock}, "range_high": {"33500", reportingForecastBasisBlock},
+		"measure": {"", "manager_call"}, "won": {"100.00", reportingForecastBasisBlock}, "remaining": {"0.00", reportingForecastBasisBlock},
+		"records_projection": {"140.00", reportingForecastBasisBlock}, "manager_call": {"190.00", reportingForecastBasisBlock},
+		"caveat": {"", "call_below_actual"}, "range_low": {"150.00", reportingForecastBasisBlock}, "range_high": {"335.00", reportingForecastBasisBlock},
 	}
 	if len(got) != len(want) {
 		t.Fatalf("basis rows %v, want %v", got, want)
@@ -110,7 +111,7 @@ func TestReportingCSVCarriesTheLandingsBasisAndRange(t *testing.T) {
 	metric.ForecastBasis = nil
 	evaluation.Metrics = []crmcontracts.ReportingMetric{metric}
 	for _, row := range reportingCSVRows(evaluation)[1:] {
-		if row[label] == "measure" {
+		if reportingcsv.IDOf(row[label]) == "measure" {
 			t.Fatalf("a reading without a basis wrote a measure row: %v", row)
 		}
 	}

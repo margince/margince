@@ -390,6 +390,74 @@ BEGIN
   RAISE NOTICE 'seed-dev.sql: a customer is waiting on the Worklist';
 END $$;
 
+-- 5. A thread a reply can rest on: Alice asked for the renewal terms, and we
+-- answered. The consent check counts a thread only through its thread_key and
+-- the contact's own `from` row, which the create endpoint cannot write.
+--
+-- Our answer is the newest message, so the thread waits on nobody and the
+-- customer waiting above stays the only one.
+DO $$
+DECLARE
+  contact_row uuid;
+  admin_row uuid;
+  inbound_row uuid;
+  outbound_row uuid;
+  capturer text;
+  counterparty constant text := 'alice@demo.test';
+BEGIN
+  SELECT id INTO contact_row FROM contact
+   WHERE full_name = 'Alice Müller' AND archived_at IS NULL
+   ORDER BY created_at LIMIT 1;
+  SELECT id INTO admin_row FROM app_user WHERE email = 'admin@demo.test' LIMIT 1;
+  IF contact_row IS NULL OR admin_row IS NULL THEN
+    RAISE NOTICE 'seed-dev.sql: no Alice Müller or admin yet — run the API seed first; skipping the renewal thread';
+    RETURN;
+  END IF;
+  IF EXISTS (SELECT 1 FROM activity WHERE thread_key = 'seed-renewal-terms') THEN
+    RAISE NOTICE 'seed-dev.sql: the renewal thread is already seeded';
+    RETURN;
+  END IF;
+  -- Older seeds logged this pair through the API with no thread. Keep one copy.
+  UPDATE activity SET archived_at = now(), updated_at = now(), version = version + 1
+   WHERE source_system = 'seed' AND archived_at IS NULL
+     AND source_id IN ('conversation:renewal-terms-outbound', 'conversation:renewal-terms-inbound');
+  capturer := 'human:' || admin_row;
+
+  inbound_row := uuidv7();
+  INSERT INTO activity (id, kind, direction, subject, body, occurred_at, is_done,
+                        source, captured_by, version, created_at, updated_at,
+                        counterparty_email, counterparty_outbound_attested,
+                        thread_key, audience)
+  VALUES (inbound_row, 'email', 'inbound',
+          'Renewal terms for Demo GmbH',
+          'Our contract renews in March. Could you send the terms for next year?',
+          now() - interval '12 days', false, 'system', capturer, 1, now(), now(),
+          counterparty, false, 'seed-renewal-terms', 'workspace');
+  INSERT INTO activity_link (activity_id, entity_type, contact_id)
+  VALUES (inbound_row, 'contact', contact_row);
+  INSERT INTO activity_participant (activity_id, role, address, contact_id)
+  VALUES (inbound_row, 'from', counterparty, contact_row);
+
+  outbound_row := uuidv7();
+  INSERT INTO activity (id, kind, direction, subject, body, occurred_at, is_done,
+                        source, captured_by, version, created_at, updated_at,
+                        counterparty_email, counterparty_outbound_attested,
+                        thread_key, audience)
+  VALUES (outbound_row, 'email', 'outbound',
+          'Re: Renewal terms for Demo GmbH',
+          'Here are the terms for next year. The price stays as agreed.',
+          now() - interval '9 days', false, 'system', capturer, 1, now(), now(),
+          counterparty, false, 'seed-renewal-terms', 'workspace');
+  INSERT INTO activity_link (activity_id, entity_type, contact_id)
+  VALUES (outbound_row, 'contact', contact_row);
+  INSERT INTO activity_participant (activity_id, role, user_id)
+  VALUES (outbound_row, 'from', admin_row);
+  INSERT INTO activity_participant (activity_id, role, address, contact_id)
+  VALUES (outbound_row, 'to', counterparty, contact_row);
+
+  RAISE NOTICE 'seed-dev.sql: the renewal thread with Alice is seeded';
+END $$;
+
 
 -- One shared mailbox, so every demo runs with one present: sales@demo.test,
 -- owned by no seat, read by DACH Sales, and held. The admin connect accepts

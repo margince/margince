@@ -44,7 +44,7 @@ func connectAs(t *testing.T, e *integration.Env, seat ids.UUID, provider, addres
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO capture_connection (provider, user_id, scopes, credential_ref, status, account_label)
 			VALUES ($1, $2, '{}', 'test-credential', 'connected', $3)
-			ON CONFLICT (user_id, provider)
+			ON CONFLICT (user_id, provider, lower(account_label)) WHERE user_id IS NOT NULL
 			DO UPDATE SET account_label = EXCLUDED.account_label, status = 'connected', archived_at = NULL`,
 			provider, seat, address)
 		return err

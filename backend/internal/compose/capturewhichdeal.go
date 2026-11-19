@@ -49,7 +49,7 @@ type whichDealAsker struct {
 
 // offeredDeals reads the open deals a question offers, from the deals module.
 type offeredDeals interface {
-	OfferedDeals(ctx context.Context, tx pgx.Tx, projectID, companyID ids.UUID) ([]ids.UUID, error)
+	OfferedDeals(ctx context.Context, tx pgx.Tx, projectID, companyID ids.UUID, stakeholders []ids.UUID) ([]ids.UUID, error)
 }
 
 // Ask raises the question at most once per thread. The task is keyed on the
@@ -101,7 +101,7 @@ func (a whichDealAsker) Ask(ctx context.Context, tx pgx.Tx, q capture.WhichDeal)
 			in.Links = append(in.Links, activities.ActivityLinkInput{EntityType: string(record.kind), EntityID: record.id})
 		}
 	}
-	offered, err := a.deals.OfferedDeals(ctx, tx, q.ProjectID, q.CompanyID)
+	offered, err := a.deals.OfferedDeals(ctx, tx, q.ProjectID, q.CompanyID, q.StakeholderIDs)
 	if err != nil {
 		return err
 	}
