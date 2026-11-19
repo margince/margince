@@ -47,6 +47,16 @@ func (e *dedupeEnv) assertHeldForAHuman(ctx context.Context, t *testing.T, domai
 	}
 }
 
+// A lapsed domain now serving another business names no company: the site
+// accounts for neither the domain nor a company here, so a human answers.
+func TestASiteNamingAnotherBusinessOnTheDomainIsHeldForAHuman(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	e.openTriageFirst(ctx, t, "anna.weber@example-analytics.example", "Anna Weber", "example-analytics.example")
+	e.assertHeldForAHuman(ctx, t, "example-analytics.example",
+		e.resolveStatedName(ctx, t, "example-analytics.example", "Lucky Spin Casino Ltd"))
+}
+
 // A personal page that names its owner's employer reads like a founder's brand.
 // Neither files the domain on the company, and a later mail maps to none.
 func TestASiteNamingTheSendersEmployerIsHeldForAHuman(t *testing.T) {

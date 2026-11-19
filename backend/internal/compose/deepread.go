@@ -324,29 +324,14 @@ func (w *siteDeepReadWorker) run(ctx context.Context, args SiteDeepReadArgs) err
 	if crawl.SeedURL != "" {
 		claim.SeedURL = crawl.SeedURL
 	}
-	// The logo lands as soon as the CRAWL succeeded, before anything the model
-	// lane produced is judged: it is a 🟢 display asset (A55) that no human has
-	// to approve, and it is read off the seed page's own markup, so a company
-	// gets its face even on a read whose extraction later comes back empty or
-	// dies outright.
-	w.resolveLogo(ctx, args, claim, crawl)
-	// Beside the logo and for the same reasons: a side fetch on the same
-	// guarded egress, under its own deadline, whose failure is never the
-	// read's. A company that publishes no newsroom is the ordinary case.
-	w.readNewsroom(ctx, claim, crawl)
-	// What the pages this crawl already fetched DECLARE about the software
-	// serving them — read from the response headers, cookies, scripts and
-	// markup each one arrived with, so no page is asked for twice
-	// (sitetechnology.go).
-	w.readSiteTechnology(ctx, claim, crawl)
-	// The last side lane, and the only one that queues rather than fetches:
-	// what the company publicly runs according to sources the company never
-	// wrote — its DNS and its certificate history. Both are paced on their own
-	// single-threaded queue, so a deep-read worker hands the question over
-	// instead of waiting on it (technicalonsiteread.go).
-	w.askWhatTheCompanyRuns(ctx, claim)
-
-	return w.reportRead(ctx, args, claim, crawl, extraction)
+	speaks, err := w.siteSpeaksForCompany(ctx, claim, extraction)
+	if err != nil {
+		return w.fail(ctx, args.SiteReadID, fmt.Errorf("site deep read %s: %w", args.SiteReadID, err))
+	}
+	if speaks {
+		w.readSideLanes(ctx, args, claim, crawl)
+	}
+	return w.reportRead(ctx, args, claim, crawl, extraction, speaks)
 }
 
 // routeClaimedRead dispatches a claimed read to the lane that owns it, before

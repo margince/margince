@@ -5,15 +5,10 @@
 
 package compose
 
-// The deep read end-to-end: the worker crawls the site, runs the
-// page-parallel fact lane and the profile lane through the citation
-// gates, and stages ONE "deepread" proposal a human can accept. Acceptance lands both halves in one transaction:
-// profile fields fill-empty, category facts into company_fact under
-// the human-precedence guard. The dossier records the honest outcome —
-// done with findings, done with zero findings and NO proposal, partial
-// when the model lane dies midway, failed when the crawl itself does.
-// Retries ride BeginSiteRead's CAS: a second attempt after any terminal
-// outcome no-ops.
+// The deep read end-to-end. The worker crawls the site, runs the page fact lane
+// and the profile lane through the citation gates, and applies what survives.
+// The dossier records the outcome: done, empty, partial when the model lane
+// dies midway, failed when the crawl does. A retry no-ops.
 
 import (
 	"bytes"
@@ -25,6 +20,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -133,6 +129,16 @@ func startDeepRead(t *testing.T, e *integration.Env, company ids.UUID) (contacts
 // companyIDOf types a harness-seeded untyped company id for the contacts store.
 func companyIDOf(u ids.UUID) ids.CompanyID { return ids.From[ids.CompanyKind](u) }
 
+// readDossier reads one dossier back as its requester.
+func readDossier(t *testing.T, e *integration.Env, company, read ids.UUID) contacts.SiteRead {
+	t.Helper()
+	dossier, err := e.Contacts.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), read)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return dossier
+}
+
 // deepReadApprovals counts staged "deepread" rows (workspace-scoped).
 func deepReadApprovals(t *testing.T, e *integration.Env) int {
 	t.Helper()
@@ -149,10 +155,7 @@ func TestDeepReadCrawlsExtractsAppliesWhatItEvidencedAndFinishesDone(t *testing.
 		t.Fatalf("run: %v", err)
 	}
 
-	done, err := e.Contacts.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), read.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
+	done := readDossier(t, e, company, read.ID)
 	if done.Status != "done" || done.FinishedAt == nil || done.StoppedReason != nil {
 		t.Fatalf("dossier = %+v, want done with no stop reason (discovery exhausted)", done)
 	}
@@ -188,7 +191,7 @@ func TestDeepReadCrawlsExtractsAppliesWhatItEvidencedAndFinishesDone(t *testing.
 	var capturedBy, legalName, factCapturedBy string
 	var phoneValue, signalValue string
 	var phoneSiteRead ids.UUID
-	err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if err := tx.QueryRow(ctx,
 			`SELECT count(*), max(captured_by) FROM company_profile_field WHERE company_id = $1`,
@@ -296,10 +299,7 @@ func TestDeepReadWithNothingEvidencedIsAnHonestEmptyDoneWithNoProposal(t *testin
 		t.Fatalf("run: %v", err)
 	}
 
-	done, err := e.Contacts.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), read.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
+	done := readDossier(t, e, company, read.ID)
 	if done.Status != "done" || done.FactCount != 0 {
 		t.Fatalf("dossier = %+v, want done with fact_count 0 — an empty read is not an error", done)
 	}
@@ -321,10 +321,7 @@ func TestDeepReadCrawlFailureFinishesFailedAndARetryNoOps(t *testing.T) {
 	if err := worker.run(context.Background(), args); err == nil {
 		t.Fatal("a failed crawl returned nil — River would record success")
 	}
-	failed, err := e.Contacts.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), read.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
+	failed := readDossier(t, e, company, read.ID)
 	if failed.Status != "failed" || failed.FinishedAt == nil {
 		t.Fatalf("dossier = %+v, want failed with finished_at stamped", failed)
 	}
@@ -334,10 +331,7 @@ func TestDeepReadCrawlFailureFinishesFailedAndARetryNoOps(t *testing.T) {
 	if err := worker.run(context.Background(), args); err != nil {
 		t.Fatalf("retry after failed: %v", err)
 	}
-	after, err := e.Contacts.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), read.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
+	after := readDossier(t, e, company, read.ID)
 	if after.Status != "failed" || !after.FinishedAt.Equal(*failed.FinishedAt) {
 		t.Fatalf("retry touched the failed dossier: %+v", after)
 	}
@@ -356,10 +350,7 @@ func TestDeepReadOnABrainlessWorkerFailsTheReadActionably(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "--ai-routing") {
 		t.Fatalf("run on a brainless worker → %v, want the actionable no-model-path error", err)
 	}
-	failed, gerr := e.Contacts.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), read.ID)
-	if gerr != nil {
-		t.Fatal(gerr)
-	}
+	failed := readDossier(t, e, company, read.ID)
 	if failed.Status != "failed" {
 		t.Fatalf("dossier = %+v, want failed — never queued forever behind a worker that cannot extract", failed)
 	}
@@ -379,10 +370,7 @@ func TestDeepReadBudgetDeferralSnoozesTheDurableJob(t *testing.T) {
 	if !errors.As(err, &snooze) || snooze.Duration != next.Sub(now) {
 		t.Fatalf("Work error = %v, want snooze for %s", err, next.Sub(now))
 	}
-	deferred, getErr := e.Contacts.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), read.ID)
-	if getErr != nil {
-		t.Fatal(getErr)
-	}
+	deferred := readDossier(t, e, company, read.ID)
 	if deferred.Status != "deferred" || deferred.StatusCode == nil || *deferred.StatusCode != "budget_deferred" ||
 		deferred.NextAttemptAt == nil || !deferred.NextAttemptAt.Equal(next) || deferred.FinishedAt != nil {
 		t.Fatalf("dossier after budget deferral = %+v", deferred)
@@ -404,10 +392,7 @@ func TestDeepReadProviderOutageSnoozesUntilTheProbe(t *testing.T) {
 	if !errors.As(err, &snooze) || snooze.Duration != probe.Sub(now) {
 		t.Fatalf("Work error = %v, want snooze for %s, not a failed attempt", err, probe.Sub(now))
 	}
-	deferred, getErr := e.Contacts.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), read.ID)
-	if getErr != nil {
-		t.Fatal(getErr)
-	}
+	deferred := readDossier(t, e, company, read.ID)
 	if deferred.Status != "deferred" || deferred.NextAttemptAt == nil || !deferred.NextAttemptAt.Equal(probe) {
 		t.Fatalf("dossier after an outage = %+v, want deferred until the probe", deferred)
 	}
@@ -431,10 +416,7 @@ func TestDeepReadModelFailureMidwayKeepsWhatWasReadAsPartial(t *testing.T) {
 		t.Fatalf("run: %v", err)
 	}
 
-	partial, err := e.Contacts.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), read.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
+	partial := readDossier(t, e, company, read.ID)
 	if partial.Status != "partial" {
 		t.Fatalf("dossier status = %q, want partial — evidence in hand is kept, not discarded", partial.Status)
 	}
@@ -490,10 +472,7 @@ func runServicesDeepRead(t *testing.T, e *integration.Env, company ids.UUID) (co
 	if err := worker.run(context.Background(), args); err != nil {
 		t.Fatalf("run: %v", err)
 	}
-	done, err := e.Contacts.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), read.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
+	done := readDossier(t, e, company, read.ID)
 	if done.FactCount != 2 || len(done.ProposalIDs) != 0 {
 		t.Fatalf("dossier = %+v, want the 2 deduped offerings landed and nothing staged", done)
 	}
@@ -712,10 +691,7 @@ func TestDeepReadFinishSurvivesACancelledWorkContext(t *testing.T) {
 		t.Fatalf("finish under a cancelled work context: %v", err)
 	}
 
-	got, err := e.Contacts.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), read.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
+	got := readDossier(t, e, company, read.ID)
 	if got.Status != "partial" {
 		t.Fatalf("dossier status = %q, want partial — the terminal write was starved by the dead work context", got.Status)
 	}
@@ -754,10 +730,7 @@ func TestDeepReadCancelsAnAutoEnrichJobWhenTheSettingWentOff(t *testing.T) {
 	if n := len(site.pageCalls); n != 0 {
 		t.Errorf("the crawler fetched %d pages — cancelling after the crawl saves nothing", n)
 	}
-	done, err := e.Contacts.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), read.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
+	done := readDossier(t, e, company, read.ID)
 	if done.Status != "cancelled" {
 		t.Errorf("status = %q, want cancelled — the read did not fail, it was withdrawn", done.Status)
 	}
@@ -815,11 +788,29 @@ func TestDeepReadHonoursThePageLimitAnAdminSetBeforeItStarted(t *testing.T) {
 		t.Fatalf("run: %v", err)
 	}
 
-	done, err := e.Contacts.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), read.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
+	done := readDossier(t, e, company, read.ID)
 	if len(done.Pages) != 1 {
 		t.Fatalf("the read kept %d pages, want the 1 the admin's limit allows", len(done.Pages))
+	}
+}
+
+// A taken-over domain: acme.example now serves a casino. Nothing the casino
+// says lands on Acme, and the dossier says why.
+func TestADeepReadOfAnotherBusinessOnTheDomainAppliesNothing(t *testing.T) {
+	e := integration.Setup(t)
+	company := insertCompany(t, e, e.Rep1, "acme.example", "")
+	site := &fakeSite{pages: map[string]fakeSitePage{seedURL: {text: readable("Lucky Spin Casino.") + " Play slots online tonight."}}}
+	worker, _ := newDeepReadTestWorker(e, site, laneFake{profileReply: `{"fields":[
+		{"f":"display_name","v":"Lucky Spin Casino","e":"s0","c":0.9},
+		{"f":"value_proposition","v":"Online slots","e":"s0","c":0.9}]}`})
+	read, args := startDeepRead(t, e, company)
+	if err := worker.run(context.Background(), args); err != nil {
+		t.Fatalf("run: %v", err)
+	}
+	if done := readDossier(t, e, company, read.ID); !slices.Contains(done.Warnings, siteAnotherBusinessWarning) {
+		t.Fatalf("dossier warnings = %v, want the another-business caveat", done.Warnings)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM company_profile_field WHERE company_id = $1`, company); n != 0 {
+		t.Fatalf("%d profile fields landed from another business's site, want 0", n)
 	}
 }

@@ -18,7 +18,7 @@ import (
 // reportRead records the outcome of a crawl that succeeded. A read whose lanes
 // all died before evidencing anything has nothing honest to report but the
 // failure; everything else — down to zero surviving findings — is a read.
-func (w *siteDeepReadWorker) reportRead(ctx context.Context, args SiteDeepReadArgs, claim contacts.SiteReadClaim, crawl siteCrawl, extraction siteExtraction) error {
+func (w *siteDeepReadWorker) reportRead(ctx context.Context, args SiteDeepReadArgs, claim contacts.SiteReadClaim, crawl siteCrawl, extraction siteExtraction, speaks bool) error {
 	if deferred, deferErr := w.deferForBudget(ctx, args.SiteReadID, extraction.err); deferred {
 		return deferErr
 	}
@@ -33,11 +33,17 @@ func (w *siteDeepReadWorker) reportRead(ctx context.Context, args SiteDeepReadAr
 	readPages := crawl.Pages
 	status := w.dossierStatus(ctx, args.SiteReadID, crawl, extraction.err)
 
-	proposalIDs, err := w.landFindings(ctx, args, claim, mergedFields, extraction.merged)
-	if err != nil {
-		return w.fail(ctx, args.SiteReadID, fmt.Errorf("site deep read %s: %w", args.SiteReadID, err))
-	}
+	var proposalIDs []ids.UUID
 	warnings := readWarnings(legalWarning, extraction.err, seedIsJSShell(readPages))
+	if speaks {
+		var err error
+		if proposalIDs, err = w.landFindings(ctx, args, claim, mergedFields, extraction.merged); err != nil {
+			return w.fail(ctx, args.SiteReadID, fmt.Errorf("site deep read %s: %w", args.SiteReadID, err))
+		}
+	} else {
+		w.closeForeignRead(ctx, claim)
+		warnings = append(warnings, siteAnotherBusinessWarning)
+	}
 	draftFields := deepReadFields(mergedFields)
 	draftContacts := siteReadContacts(extraction.merged.contacts)
 	draftEntities := siteReadLegalEntities(extraction.merged.entities)

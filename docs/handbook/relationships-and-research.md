@@ -318,9 +318,9 @@ When a read fails, it names the cause in plain words. For example: the site aske
 
 A read that started on its own has a harder limit than one you ask for: 12 pages, not 60.
 
-### Nothing is written until you accept
+### What a read writes
 
-Every result of company research comes as a **staged proposal** in your approvals, one for the company's facts.
+A read fills the company's facts and empty fields, and never replaces a value you set or the company's name. A domain can change hands, so the site's own name must match the company's name or a domain. If it does not, nothing is applied. The read then says "This site names a different business than this company, so nothing it says was applied." A domain with no company yet waits for a colleague to answer instead.
 
 Nobody named on the company's website is added. Someone found that way may only become a record once Margince can tell them it has their details. It must also record that it told them (the notice that GDPR Article 14 asks for). Until that exists, a read suggests no one, and such a proposal left from an earlier read cannot be accepted. You can still decline it to clear it.
 
