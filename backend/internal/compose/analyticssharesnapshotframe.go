@@ -71,11 +71,9 @@ func snapshotFrame(ctx context.Context, tx pgx.Tx, id ids.UUID) (shareFrame, err
 
 // frozenShareLanding is a snapshot's landing over the rows this reader may
 // read. It takes the frozen measure, and the frozen call only where the reader
-// may see it. A reader who may not falls back as GET /forecast does. The
-// caller passes only a frame that kept its landing.
-func frozenShareLanding(
-	ctx context.Context, tx pgx.Tx, scope forecasting.Scope, shared SharedSnapshot, frame shareFrame,
-) (crmcontracts.ForecastLanding, error) {
+// may see it (mayAssert). A reader who may not falls back as GET /forecast
+// does. The caller passes only a frame that kept its landing.
+func frozenShareLanding(mayAssert bool, shared SharedSnapshot, frame shareFrame) (crmcontracts.ForecastLanding, error) {
 	stored := frame.LandingMeasure
 	if frame.ForwardMeasure != nil {
 		stored = frame.ForwardMeasure
@@ -91,14 +89,8 @@ func frozenShareLanding(
 		readings.WeightedMinor = shared.Supported.WeightedMinor
 	}
 	var call *int64
-	if frame.LandingCallMinor != nil {
-		mayAssert, err := forecasting.MayAssertAbout(ctx, tx, ForecastWritableScope, scope)
-		if err != nil {
-			return crmcontracts.ForecastLanding{}, err
-		}
-		if mayAssert {
-			call = frame.LandingCallMinor
-		}
+	if mayAssert {
+		call = frame.LandingCallMinor
 	}
 	landing, err := forecasting.ProjectLanding(readings, measure, call)
 	if err != nil {

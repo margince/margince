@@ -9110,6 +9110,7 @@ export const en = {
     "Manager forecast: {call}. Won plus Likely deals: {evidence}.",
   "forecast.answerNoCall":
     "Won plus Likely deals: {evidence}. No manager forecast submitted.",
+  "forecast.answerCallWithheld": "Won plus Likely deals: {evidence}.",
   "forecast.partialTitle": "Not every deal is priced",
   "forecast.partial":
     "{priced} of {eligible} deals are priced. Unpriced deals add nothing to the totals above.",
@@ -9144,6 +9145,7 @@ export const en = {
   "forecast.supportingNote": "Supporting note",
   "forecast.cancel": "Cancel",
   "forecast.saveCall": "Save forecast",
+  "forecast.callAmountNeeded": "Type the expected total first.",
   "analytics.scopeLabel": "Record scope",
   "analytics.scopeFixed": "These numbers cover {scope}.",
   "forecast.period": "Period",

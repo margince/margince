@@ -51360,8 +51360,11 @@ type ForecastReadings struct {
 	BaseCurrency string    `json:"base_currency"`
 
 	// BySource The open and weighted readings split by where each deal's probability comes from. The three raw figures add up to `open_minor` and the three weighted ones to `weighted_minor`.
-	BySource           ForecastBySource `json:"by_source"`
-	ConfirmedDateCount int              `json:"confirmed_date_count"`
+	BySource ForecastBySource `json:"by_source"`
+
+	// CallWithheld True when this answer leaves out a standing call that may exist: the reader may not see calls about this population, or a frozen share kept no call record. A client then says nothing about a manager forecast. Absent with no current_call means nobody has made one.
+	CallWithheld       *bool `json:"call_withheld,omitempty"`
+	ConfirmedDateCount int   `json:"confirmed_date_count"`
 
 	// Contributions Present only when asked for with `contributions=true`: the deals behind the won and open readings, ordered by deal id, limited to those the caller may read.
 	Contributions *[]ForecastContribution `json:"contributions,omitempty"`

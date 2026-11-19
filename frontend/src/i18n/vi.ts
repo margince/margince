@@ -8909,6 +8909,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Nhận định của quản lý: {call}. Deal đã chốt và deal khả năng cao: {evidence}.",
   "forecast.answerNoCall":
     "Deal đã chốt và deal khả năng cao: {evidence}. Quản lý chưa gửi nhận định.",
+  "forecast.answerCallWithheld":
+    "Deal đã chốt và deal khả năng cao: {evidence}.",
   "forecast.partialTitle": "Không phải deal nào cũng có giá",
   "forecast.partial":
     "{priced} trên {eligible} deal có giá. Deal chưa có giá không cộng thêm gì vào các tổng ở trên.",
@@ -8946,6 +8948,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "forecast.supportingNote": "Ghi chú kèm theo",
   "forecast.cancel": "Hủy",
   "forecast.saveCall": "Lưu dự báo",
+  "forecast.callAmountNeeded": "Hãy nhập tổng dự kiến trước.",
   "analytics.scopeLabel": "Phạm vi hồ sơ",
   "analytics.scopeFixed": "Các số liệu này bao gồm {scope}.",
   "forecast.period": "Kỳ",

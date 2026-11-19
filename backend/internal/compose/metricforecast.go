@@ -88,14 +88,9 @@ func readReportingForecast(ctx context.Context, tx pgx.Tx, frame crmcontracts.Re
 	return facts, reportingForecastCoverage(frame, readings, landing, withheld), nil
 }
 
-// forecastCallSeen is the call GET /forecast shows this seat, by the same
+// forecastCallRecord is the call GET /forecast shows this seat, by the same
 // rule. A call covers every pipeline, so a reading of one pipeline has none.
-// The reporting landing and a live share both read the call through it.
-func forecastCallSeen(ctx context.Context, tx pgx.Tx, store *forecasting.Store, period forecasting.Period, scope forecasting.Scope, onePipeline bool) (int64, bool, error) {
-	call, seen, err := forecastCallRecord(ctx, tx, store, period, scope, onePipeline)
-	return call.AmountMinor, seen, err
-}
-
+// The reporting landing and Progress both read the call through it.
 func forecastCallRecord(ctx context.Context, tx pgx.Tx, store *forecasting.Store, period forecasting.Period, scope forecasting.Scope, onePipeline bool) (forecasting.Call, bool, error) {
 	if onePipeline {
 		return forecasting.Call{}, false, nil

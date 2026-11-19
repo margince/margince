@@ -9145,6 +9145,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Einschätzung: {call}. Gewonnene plus wahrscheinliche Deals: {evidence}.",
   "forecast.answerNoCall":
     "Gewonnene plus wahrscheinliche Deals: {evidence}. Keine Einschätzung abgegeben.",
+  "forecast.answerCallWithheld":
+    "Gewonnene plus wahrscheinliche Deals: {evidence}.",
   "forecast.partialTitle": "Nicht jeder Deal ist bepreist",
   "forecast.partial":
     "{priced} von {eligible} Deals sind bepreist. Deals ohne Preis tragen nichts zu den Summen oben bei.",
@@ -9183,6 +9185,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forecast.supportingNote": "Begründung",
   "forecast.cancel": "Abbrechen",
   "forecast.saveCall": "Einschätzung speichern",
+  "forecast.callAmountNeeded": "Gib zuerst die erwartete Summe ein.",
   "analytics.scopeLabel": "Auswahl der Datensätze",
   "analytics.scopeFixed": "Diese Zahlen umfassen {scope}.",
   "forecast.period": "Zeitraum",

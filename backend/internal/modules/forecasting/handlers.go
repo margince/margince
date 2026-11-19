@@ -186,15 +186,9 @@ func (h Handlers) GetForecast(
 		if scope.Kind == ScopeManagedTeams {
 			return nil
 		}
-		var called *int64
-		call, seen, err := CallSeen(ctx, tx, h.store, mayAssert, period, scope)
+		called, err := StateCall(ctx, tx, h.store, mayAssert, period, scope, &out)
 		if err != nil {
 			return err
-		}
-		if seen {
-			wire := callToWire(call)
-			out.CurrentCall = &wire
-			called = &call.AmountMinor
 		}
 		return h.project(ctx, tx, &out, period, scope, readings, called, at, baseCurrency)
 	})
@@ -337,6 +331,10 @@ func sufficiencyToWire(in Sufficiency) crmcontracts.ForecastSufficiency {
 func (h Handlers) RecordForecastCall(w http.ResponseWriter, r *http.Request, _ crmcontracts.RecordForecastCallParams) {
 	var body crmcontracts.NewForecastCall
 	if !httperr.Decode(w, r, &body) {
+		return
+	}
+	if err := requireCalledAmount(r); err != nil {
+		httperr.Write(w, r, err)
 		return
 	}
 	scope, err := callScopeFromBody(body)

@@ -143,6 +143,17 @@ function forecastStub(opts: StubOpts = {}) {
   });
 }
 
+// Opens the call editor and types an amount, since Save waits for one.
+async function openCallEditor(
+  user: ReturnType<typeof userEvent.setup>,
+  amount = "2500",
+) {
+  await user.click(
+    await screen.findByRole("button", { name: /Update forecast/i }),
+  );
+  await user.type(await screen.findByLabelText(/Expected total/i), amount);
+}
+
 describe("ForecastView", () => {
   // The same two facts the Overview's caption states: the whole period, and
   // the instant its actuals run through.
@@ -377,9 +388,7 @@ describe("ForecastView", () => {
 
     const user = userEvent.setup();
     await user.click(await screen.findByRole("button", { name: /^Week$/i }));
-    await user.click(
-      await screen.findByRole("button", { name: /Update forecast/i }),
-    );
+    await openCallEditor(user);
     await user.click(screen.getByRole("button", { name: /Save forecast/i }));
 
     await waitFor(() => expect(posted).toHaveLength(1));
@@ -409,9 +418,7 @@ describe("ForecastView", () => {
     render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
 
     const user = userEvent.setup();
-    await user.click(
-      await screen.findByRole("button", { name: /Update forecast/i }),
-    );
+    await openCallEditor(user);
     await user.type(
       await screen.findByLabelText(/Supporting note/i),
       "Two renewals slipped",
@@ -432,9 +439,7 @@ describe("ForecastView", () => {
     render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
 
     const user = userEvent.setup();
-    await user.click(
-      await screen.findByRole("button", { name: /Update forecast/i }),
-    );
+    await openCallEditor(user);
     const save = screen.getByRole("button", { name: /Save forecast/i });
     act(() => {
       fireEvent.click(save);
@@ -450,7 +455,41 @@ describe("ForecastView", () => {
     expect(posted[0].key).toBeTruthy();
   });
 
-  // An empty note is NO note. Sent as "", it claims the author wrote something
+  // An untouched editor holds no amount. Saving it would record a call of
+  // zero that nobody typed, so Save waits, and a typed 0 is still a call.
+  it("keeps Save forecast closed until an amount is typed", async () => {
+    const posted: Record<string, unknown>[] = [];
+    vi.stubGlobal("fetch", forecastStub({ onCall: (b) => posted.push(b) }));
+    render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
+    const amount = () =>
+      screen.getByLabelText(/Expected total/i) as HTMLInputElement;
+    const refusesSave = () => {
+      const save = screen.getByRole("button", { name: /Save forecast/i });
+      expect((save as HTMLButtonElement).disabled).toBe(true);
+      expect(screen.getByText(en["forecast.callAmountNeeded"])).toBeTruthy();
+      fireEvent.click(save);
+      expect(posted).toHaveLength(0);
+    };
+
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: /Update forecast/i }),
+    );
+    expect(amount().value).toBe("");
+    refusesSave();
+
+    await user.type(amount(), "5");
+    await user.clear(amount());
+    expect(amount().value).toBe("");
+    refusesSave();
+
+    await user.type(amount(), "0");
+    await user.click(screen.getByRole("button", { name: /Save forecast/i }));
+    await waitFor(() => expect(posted).toHaveLength(1));
+    expect(posted[0].amount_minor).toBe(0);
+  });
+
+  // An empty note is no note. Sent as "", it claims the author wrote something
   // blank, and a reader cannot tell that from a note they cannot see.
   it("sends no note at all when the author wrote none", async () => {
     const posted: Record<string, unknown>[] = [];
@@ -458,9 +497,7 @@ describe("ForecastView", () => {
     render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
 
     const user = userEvent.setup();
-    await user.click(
-      await screen.findByRole("button", { name: /Update forecast/i }),
-    );
+    await openCallEditor(user);
     await user.click(screen.getByRole("button", { name: /Save forecast/i }));
 
     await waitFor(() => expect(posted).toHaveLength(1));
@@ -592,6 +629,33 @@ describe("SharedForecastView", () => {
     expect(model?.textContent).toContain(
       `${formatAnalyticsMoney(90_000, "EUR", "en")} to ${formatAnalyticsMoney(210_000, "EUR", "en")}`,
     );
+  });
+
+  it("states the manager forecast a live share carries", async () => {
+    share("live", {
+      current_call: {
+        id: "c1",
+        period_start: "2026-04-01",
+        period_end: "2026-06-30",
+        scope_kind: "workspace",
+        amount_minor: 3_000_000,
+        currency: "EUR",
+        author_id: "u1",
+        created_at: "2026-05-01T09:00:00Z",
+      },
+    });
+    expect(await screen.findByText(/^Manager forecast: .*30,000/)).toBeTruthy();
+    expect(screen.queryByText(/No manager forecast submitted/)).toBeNull();
+  });
+
+  // A reader who may not see calls is told nothing about one: "none
+  // submitted" would be a claim about a call they were not shown.
+  it("says nothing about a manager forecast it withholds", async () => {
+    share("live", { call_withheld: true });
+    expect(
+      await screen.findByText(/^Won plus Likely deals: .*\.$/),
+    ).toBeTruthy();
+    expect(screen.queryByText(/manager forecast/i)).toBeNull();
   });
 
   it("keeps the modelled finish on a live share that carries a range alone", async () => {

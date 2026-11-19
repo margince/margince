@@ -67944,6 +67944,13 @@ components:
           description: The zone the period's days were cut in, as an IANA name.
         base_currency: { type: string }
         current_call: { $ref: '#/components/schemas/ForecastCall' }
+        call_withheld:
+          type: boolean
+          description: >-
+            True when this answer leaves out a standing call that may exist: the reader may
+            not see calls about this population, or a frozen share kept no call record. A
+            client then says nothing about a manager forecast. Absent with no current_call
+            means nobody has made one.
         scope_limited:
           type: boolean
           description: >-

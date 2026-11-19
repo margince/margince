@@ -120,8 +120,12 @@ func addForecastAssertions(
 	resolved forecasting.Scope, baseCurrency string, out *agents.ForecastReadingsResult,
 ) (called *int64, err error) {
 	mayAssert, err := forecasting.MayAssertAbout(ctx, tx, ForecastWritableScope, resolved)
-	if err != nil || !mayAssert {
+	if err != nil {
 		return nil, err
+	}
+	if !mayAssert {
+		out.CallWithheld = true
+		return nil, nil
 	}
 	refs, err := store.SnapshotRefsTx(ctx, tx, period, resolved, baseCurrency)
 	if err != nil {

@@ -83,9 +83,9 @@ func progressForecast(store *forecasting.Store) salesprogress.ForecastReader {
 		if err != nil {
 			return salesprogress.Forecast{}, err
 		}
-		call, seen, err := forecastCallSeen(ctx, tx, store, period, assembly.Scope, false)
+		call, seen, err := forecastCallRecord(ctx, tx, store, period, assembly.Scope, false)
 		return salesprogress.Forecast{
-			Readings: assembly.Readings, Measure: measure, Call: seenCall(call, seen), Limited: assembly.Limited,
+			Readings: assembly.Readings, Measure: measure, Call: seenCall(call.AmountMinor, seen), Limited: assembly.Limited,
 		}, err
 	}
 }

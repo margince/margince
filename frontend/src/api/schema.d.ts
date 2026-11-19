@@ -49626,6 +49626,8 @@ export interface components {
             timezone: string;
             base_currency: string;
             current_call?: components["schemas"]["ForecastCall"];
+            /** @description True when this answer leaves out a standing call that may exist: the reader may not see calls about this population, or a frozen share kept no call record. A client then says nothing about a manager forecast. Absent with no current_call means nobody has made one. */
+            call_withheld?: boolean;
             /** @description True when deals the caller cannot read were left out. A BOOLEAN and never a count: a count of what somebody may not read is itself a statement about how much of it there is, so the reader is told the figure is partial and not by how much. */
             scope_limited?: boolean;
             landing?: components["schemas"]["ForecastLanding"];
