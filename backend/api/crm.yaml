@@ -47586,7 +47586,7 @@ components:
         contact_id: { type: string, format: uuid }
         email: { type: string, format: email, description: Stored lowercased. }
         email_type: { type: string, enum: [work, personal, other], x-extensible-enum: true, default: work }
-        is_primary: { type: boolean, default: false, description: At most one primary per type (DB-enforced). }
+        is_primary: { type: boolean, default: false, description: 'At most one primary address per contact, whatever its type (DB-enforced). primary_email follows it. A second primary in one request is refused with 409 multiple_primary.' }
         position: { type: integer, default: 0, description: Explicit ordering. }
         source: { type: string }
         captured_by: { type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.' }
@@ -47602,7 +47602,7 @@ components:
         contact_id: { type: string, format: uuid }
         phone: { type: string, description: E.164 normalized. }
         phone_type: { type: string, enum: [work, mobile, home, other], x-extensible-enum: true, default: work }
-        is_primary: { type: boolean, default: false }
+        is_primary: { type: boolean, default: false, description: 'At most one primary number per contact, whatever its type (DB-enforced).' }
         position: { type: integer, default: 0 }
         source: { type: string }
         captured_by: { type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.' }
@@ -48883,7 +48883,7 @@ components:
           format: email
           description: 'An address whose local part names a sending system (noreply@, notifications@, receipts@ and the like) is refused with 422 `email_names_no_one`: nobody answers there, so it names no contact.'
         email_type: { type: string, enum: [work, personal, other], default: work }
-        is_primary: { type: boolean, default: false }
+        is_primary: { type: boolean, default: false, description: 'The one primary address of the contact, whatever its type. More than one row marked primary is refused with 409 `multiple_primary`. A new contact whose rows name none gets its first row as primary.' }
         position: { type: integer, default: 0 }
 
     ContactPhoneInput:
@@ -48895,7 +48895,7 @@ components:
       properties:
         phone: { type: string }
         phone_type: { type: string, enum: [work, mobile, home, other], default: work }
-        is_primary: { type: boolean, default: false }
+        is_primary: { type: boolean, default: false, description: 'The one primary number of the contact, whatever its type. More than one row marked primary is refused with 409 `multiple_primary`.' }
         position: { type: integer, default: 0 }
 
     UpdateContactRequest:
@@ -62600,6 +62600,14 @@ components:
         promoted_at: { type: [string, 'null'], format: date-time }
         routed_at: { type: [string, 'null'], format: date-time, readOnly: true, description: 'When routing assigned an owner. Starts the §18 first-response clock; null means the clock starts at created_at.' }
         first_response_at: { type: [string, 'null'], format: date-time, readOnly: true, description: 'First real response to this lead: an outbound activity, a human status change off `new`, or an explicit disposition. A cold-outbound auto-touch does NOT satisfy it.' }
+        first_response_marked_by:
+          type: [string, 'null']
+          format: uuid
+          readOnly: true
+          description: >-
+            The user whose status move off `new` wrote `first_response_at`, with no activity behind it.
+            Null when an activity or a disposition wrote the stamp, or when none is set. Moving the lead back
+            to `new` before any activity is logged clears both.
         sla_deadline_at: { type: [string, 'null'], format: date-time, readOnly: true, description: 'Derived, not stored: COALESCE(routed_at, created_at) + first_response_target_minutes (formulas §18.1). Null on a terminal lead, which owes no first response.' }
         sla_state:
           type: [string, 'null']
@@ -68163,6 +68171,13 @@ components:
           description: The zone the period's days were cut in, as an IANA name.
         base_currency: { type: string }
         current_call: { $ref: '#/components/schemas/ForecastCall' }
+        call_withheld:
+          type: boolean
+          description: >-
+            True when this answer leaves out a standing call that may exist: the reader may
+            not see calls about this population, the reading covers several populations
+            (`managed_teams`), or a frozen share cannot tell. A client then says nothing
+            about a manager forecast. Absent with no current_call means nobody has made one.
         scope_limited:
           type: boolean
           description: >-
@@ -68497,12 +68512,14 @@ components:
             amount_minor already is the records' projection.
         caveat:
           type: string
-          enum: [call_absent, call_below_actual]
+          enum: [call_absent, call_withheld, call_below_actual]
           x-extensible-enum: true
-          x-enum-varnames: [LandingCaveatCallAbsent, LandingCaveatCallBelowActual]
+          x-enum-varnames: [LandingCaveatCallAbsent, LandingCaveatCallWithheld, LandingCaveatCallBelowActual]
           description: >-
             Why this answer is not the plain one, absent when it is. `call_absent` is a
-            manager-call installation with no current call. `call_below_actual` is an
+            manager-call installation with no current call. `call_withheld` is a
+            manager-call installation whose call this answer does not show, so it lands on
+            Likely without saying whether a call exists. `call_below_actual` is an
             authored call less than the money already won — reported and never corrected,
             because the call is somebody's stated belief and the server does not overrule
             it.
@@ -68521,14 +68538,15 @@ components:
       properties:
         absent:
           type: string
-          enum: [insufficient_basis, insufficient_history]
+          enum: [insufficient_basis, call_withheld, insufficient_history]
           x-extensible-enum: true
-          x-enum-varnames: [SufficiencyAbsenceInsufficientBasis, SufficiencyAbsenceInsufficientHistory]
+          x-enum-varnames: [SufficiencyAbsenceInsufficientBasis, SufficiencyAbsenceCallWithheld, SufficiencyAbsenceInsufficientHistory]
           description: >-
             Why there is no answer, when there is none. Every other field is then absent
             and the surface says this rather than drawing a figure. `insufficient_basis` is
-            neither a manager call nor four completed comparable periods;
-            `insufficient_history` is too few closed deals for a conversion rate to be a
+            neither a manager call nor four completed comparable periods; `call_withheld` is
+            fewer than four completed periods and a call this reader may not see, without
+            saying whether one exists; `insufficient_history` is too few closed deals for a conversion rate to be a
             rate rather than an anecdote.
         basis:
           type: string
@@ -80935,7 +80953,7 @@ components:
         overdue: { type: boolean, description: "Past due at the read instant, resolved server-side so every surface agrees." }
         due_group:
           type: string
-          enum: [overdue, today, tomorrow, this_week, later]
+          enum: [overdue, today, tomorrow, this_week, later, none]
           x-extensible-enum: true
           description: >-
             Which run of the page this dated row belongs to, so a client can head
@@ -80944,7 +80962,8 @@ components:
             Resolved server-side for the reason every other boundary here is: the day's
             end depends on the installation's zone, and a browser computing it from its
             own clock would group a task differently from the counts above it. Present
-            only on rows carrying `due_at`.
+            on rows carrying `due_at`, and `none` on an undated task of the backlog,
+            which sits at the end of the upcoming work.
         version:
           allOf: [{ $ref: '#/components/schemas/RowVersion' }]
           description: |
@@ -82830,9 +82849,9 @@ components:
         overdue: { type: boolean, description: 'Past due at the read instant, resolved server-side so every surface agrees.' }
         due_group:
           type: string
-          enum: [overdue, today, tomorrow, this_week, later]
+          enum: [overdue, today, tomorrow, this_week, later, none]
           x-extensible-enum: true
-          x-enum-varnames: [WorklistDueGroupOverdue, WorklistDueGroupToday, WorklistDueGroupTomorrow, WorklistDueGroupThisWeek, WorklistDueGroupLater]
+          x-enum-varnames: [WorklistDueGroupOverdue, WorklistDueGroupToday, WorklistDueGroupTomorrow, WorklistDueGroupThisWeek, WorklistDueGroupLater, WorklistDueGroupNone]
           description: >-
             Which run of the page this dated row belongs to, so a client can head
             "Due tomorrow" without deciding the boundary itself.
@@ -82840,7 +82859,8 @@ components:
             Resolved server-side for the reason every other boundary here is: the day's
             end depends on the installation's zone, and a browser computing it from its
             own clock would group a task differently from the counts above it. Present
-            only on rows carrying `due_at`.
+            on rows carrying `due_at`, and `none` on an undated task of the backlog,
+            which sits at the end of the upcoming work.
         version:
           allOf: [{ $ref: '#/components/schemas/RowVersion' }]
           description: |

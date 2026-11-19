@@ -199,12 +199,15 @@ describe("ChangePasswordCard", () => {
     // And exactly twelve characters clears it.
     await user.clear(screen.getByLabelText(/^new password/i));
     await user.clear(screen.getByLabelText(/confirm new password/i));
-    await user.type(screen.getByLabelText(/^new password/i), "🔑".repeat(12));
-    await user.type(
-      screen.getByLabelText(/confirm new password/i),
-      "🔑".repeat(12),
-    );
+    const twelve = "🔑🗝".repeat(6);
+    await user.type(screen.getByLabelText(/^new password/i), twelve);
+    await user.type(screen.getByLabelText(/confirm new password/i), twelve);
     expect(submitButton()).toBeEnabled();
+
+    // One character repeated is refused with the reason, however long.
+    await user.clear(screen.getByLabelText(/^new password/i));
+    await user.type(screen.getByLabelText(/^new password/i), "🔑".repeat(12));
+    expect(screen.getByText(/one character repeated/i)).toBeInTheDocument();
   });
 
   it("sends both passwords under the keys the server reads", async () => {

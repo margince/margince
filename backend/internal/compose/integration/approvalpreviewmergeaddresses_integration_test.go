@@ -25,8 +25,8 @@ func TestContactMergePreviewShowsPrimaryAddressDemotions(t *testing.T) {
 			ctx := e.As(e.AdminUser, nil, integration.AdminPerms)
 			source, err := e.Contacts.CreateContact(ctx, contacts.CreateContactInput{
 				FullName: "Source contact", Source: "manual",
-				Emails: []contacts.ContactEmailInput{{Email: "source-work@example.test", EmailType: "work", IsPrimary: true}, {Email: "source-personal@example.test", EmailType: "personal", IsPrimary: true}},
-				Phones: []contacts.ContactPhoneInput{{Phone: "+49301234001", PhoneType: "work", IsPrimary: true}, {Phone: "+49301234002", PhoneType: "home", IsPrimary: true}},
+				Emails: []contacts.ContactEmailInput{{Email: "source-work@example.test", EmailType: "work", IsPrimary: true}, {Email: "source-personal@example.test", EmailType: "personal"}},
+				Phones: []contacts.ContactPhoneInput{{Phone: "+49301234001", PhoneType: "work", IsPrimary: true}, {Phone: "+49301234002", PhoneType: "home"}},
 			})
 			if err != nil {
 				t.Fatal(err)
@@ -49,9 +49,10 @@ func TestContactMergePreviewShowsPrimaryAddressDemotions(t *testing.T) {
 				t.Fatalf("addresses=%+v", preview.Addresses)
 			}
 			for _, address := range preview.Addresses {
-				primary := !occupied || address.Usage != "work"
-				if !address.WasPrimary || address.WillBePrimary != primary {
-					t.Errorf("address=%+v want primary=%t", address, primary)
+				wasPrimary := address.Usage == "work"
+				willBePrimary := wasPrimary && !occupied
+				if address.WasPrimary != wasPrimary || address.WillBePrimary != willBePrimary {
+					t.Errorf("address=%+v want was=%t will=%t", address, wasPrimary, willBePrimary)
 				}
 			}
 			checkMergeAddressMasks(t, e, "contact", sourceID, targetID, []string{"email", "emails", "phone", "phones"})

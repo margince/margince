@@ -33599,7 +33599,7 @@ export interface components {
              */
             email_type: "work" | "personal" | "other";
             /**
-             * @description At most one primary per type (DB-enforced).
+             * @description At most one primary address per contact, whatever its type (DB-enforced). primary_email follows it. A second primary in one request is refused with 409 multiple_primary.
              * @default false
              */
             is_primary: boolean;
@@ -33630,7 +33630,10 @@ export interface components {
              * @enum {string}
              */
             phone_type: "work" | "mobile" | "home" | "other";
-            /** @default false */
+            /**
+             * @description At most one primary number per contact, whatever its type (DB-enforced).
+             * @default false
+             */
             is_primary: boolean;
             /** @default 0 */
             position: number;
@@ -34514,7 +34517,10 @@ export interface components {
              * @enum {string}
              */
             email_type: "work" | "personal" | "other";
-            /** @default false */
+            /**
+             * @description The one primary address of the contact, whatever its type. More than one row marked primary is refused with 409 `multiple_primary`. A new contact whose rows name none gets its first row as primary.
+             * @default false
+             */
             is_primary: boolean;
             /** @default 0 */
             position: number;
@@ -34530,7 +34536,10 @@ export interface components {
              * @enum {string}
              */
             phone_type: "work" | "mobile" | "home" | "other";
-            /** @default false */
+            /**
+             * @description The one primary number of the contact, whatever its type. More than one row marked primary is refused with 409 `multiple_primary`.
+             * @default false
+             */
             is_primary: boolean;
             /** @default 0 */
             position: number;
@@ -45521,6 +45530,11 @@ export interface components {
              */
             readonly first_response_at?: string | null;
             /**
+             * Format: uuid
+             * @description The user whose status move off `new` wrote `first_response_at`, with no activity behind it. Null when an activity or a disposition wrote the stamp, or when none is set. Moving the lead back to `new` before any activity is logged clears both.
+             */
+            readonly first_response_marked_by?: string | null;
+            /**
              * Format: date-time
              * @description Derived, not stored: COALESCE(routed_at, created_at) + first_response_target_minutes (formulas §18.1). Null on a terminal lead, which owes no first response.
              */
@@ -49780,6 +49794,8 @@ export interface components {
             timezone: string;
             base_currency: string;
             current_call?: components["schemas"]["ForecastCall"];
+            /** @description True when this answer leaves out a standing call that may exist: the reader may not see calls about this population, the reading covers several populations (`managed_teams`), or a frozen share cannot tell. A client then says nothing about a manager forecast. Absent with no current_call means nobody has made one. */
+            call_withheld?: boolean;
             /** @description True when deals the caller cannot read were left out. A BOOLEAN and never a count: a count of what somebody may not read is itself a statement about how much of it there is, so the reader is told the figure is partial and not by how much. */
             scope_limited?: boolean;
             landing?: components["schemas"]["ForecastLanding"];
@@ -49995,10 +50011,10 @@ export interface components {
              */
             system_minor?: number;
             /**
-             * @description Why this answer is not the plain one, absent when it is. `call_absent` is a manager-call installation with no current call. `call_below_actual` is an authored call less than the money already won — reported and never corrected, because the call is somebody's stated belief and the server does not overrule it.
+             * @description Why this answer is not the plain one, absent when it is. `call_absent` is a manager-call installation with no current call. `call_withheld` is a manager-call installation whose call this answer does not show, so it lands on Likely without saying whether a call exists. `call_below_actual` is an authored call less than the money already won — reported and never corrected, because the call is somebody's stated belief and the server does not overrule it.
              * @enum {string}
              */
-            caveat?: "call_absent" | "call_below_actual";
+            caveat?: "call_absent" | "call_withheld" | "call_below_actual";
         };
         /**
          * @description Whether the open pipeline supports the reference landing, and what the reference is.
@@ -50006,10 +50022,10 @@ export interface components {
          */
         ForecastSufficiency: {
             /**
-             * @description Why there is no answer, when there is none. Every other field is then absent and the surface says this rather than drawing a figure. `insufficient_basis` is neither a manager call nor four completed comparable periods; `insufficient_history` is too few closed deals for a conversion rate to be a rate rather than an anecdote.
+             * @description Why there is no answer, when there is none. Every other field is then absent and the surface says this rather than drawing a figure. `insufficient_basis` is neither a manager call nor four completed comparable periods; `call_withheld` is fewer than four completed periods and a call this reader may not see, without saying whether one exists; `insufficient_history` is too few closed deals for a conversion rate to be a rate rather than an anecdote.
              * @enum {string}
              */
-            absent?: "insufficient_basis" | "insufficient_history";
+            absent?: "insufficient_basis" | "call_withheld" | "insufficient_history";
             /**
              * @description Where the reference came from. A current authored call outranks history: a manager who wrote a number down has said what this period is for, and the median of the last four completed comparable periods is the fallback for when nobody has.
              * @enum {string}
@@ -60147,10 +60163,10 @@ export interface components {
             overdue?: boolean;
             /**
              * @description Which run of the page this dated row belongs to, so a client can head "Due tomorrow" without deciding the boundary itself.
-             *     Resolved server-side for the reason every other boundary here is: the day's end depends on the installation's zone, and a browser computing it from its own clock would group a task differently from the counts above it. Present only on rows carrying `due_at`.
+             *     Resolved server-side for the reason every other boundary here is: the day's end depends on the installation's zone, and a browser computing it from its own clock would group a task differently from the counts above it. Present on rows carrying `due_at`, and `none` on an undated task of the backlog, which sits at the end of the upcoming work.
              * @enum {string}
              */
-            due_group?: "overdue" | "today" | "tomorrow" | "this_week" | "later";
+            due_group?: "overdue" | "today" | "tomorrow" | "this_week" | "later" | "none";
             /**
              * @description The version of the row this item's own verbs write to, present where it names one — a
              *     task or a promise today. Carried for the reason `email_summary` carries one: a lane that offers
@@ -61872,10 +61888,10 @@ export interface components {
             overdue?: boolean;
             /**
              * @description Which run of the page this dated row belongs to, so a client can head "Due tomorrow" without deciding the boundary itself.
-             *     Resolved server-side for the reason every other boundary here is: the day's end depends on the installation's zone, and a browser computing it from its own clock would group a task differently from the counts above it. Present only on rows carrying `due_at`.
+             *     Resolved server-side for the reason every other boundary here is: the day's end depends on the installation's zone, and a browser computing it from its own clock would group a task differently from the counts above it. Present on rows carrying `due_at`, and `none` on an undated task of the backlog, which sits at the end of the upcoming work.
              * @enum {string}
              */
-            due_group?: "overdue" | "today" | "tomorrow" | "this_week" | "later";
+            due_group?: "overdue" | "today" | "tomorrow" | "this_week" | "later" | "none";
             /**
              * @description The version of the row this item's own verbs write to, present where it names one — a
              *     task today. Carried for the reason `email_summary` carries one: a lane that offers

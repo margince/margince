@@ -67,7 +67,7 @@ export type CreateField = {
     rows?: FormRows,
   ) => string | undefined;
   // repeatable-only: each row's subfields, the add label, the primary flag's
-  // key and (if set) the kind's key, which scopes primaryKey to one kind.
+  // key and (if set) the kind's key.
   rowFields?: SubField[];
   addLabel?: MessageKey;
   // The verb that opens the list's editor, naming the list: "Change Email"
@@ -75,8 +75,8 @@ export type CreateField = {
   editLabel?: MessageKey;
   primaryKey?: string;
   typeKey?: string;
-  // typeKey's value when unanswered. It must match the request mapper's own
-  // fallback, or an unset row groups differently here than once submitted.
+  // The kind a new row starts with. It must match the request mapper's own
+  // fallback, or an unset row reads differently here than once submitted.
   typeDefault?: string;
   // A heading that holds no value, setting custom fields apart from core ones.
   divider?: boolean;

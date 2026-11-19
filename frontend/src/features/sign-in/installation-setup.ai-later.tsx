@@ -41,6 +41,7 @@ export function AiSetupPanel() {
             ["installation-setup"],
             ["ai-routing"],
             ["ai-profile"],
+            ["assistant-profile"],
             ["ai-status"],
           ].map((queryKey) => queryClient.invalidateQueries({ queryKey })),
         );

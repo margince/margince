@@ -17,7 +17,7 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | Resources | 14 |
 | Tool catalog | 274.8 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 71744 |
+| Approx. wire tokens | 71753 |
 | Largest tool | `read_details` (17.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -32,7 +32,7 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 51.6 KB | 18% | **No**: a result's shape, never listed to a model |
+| Output schemas | 51.7 KB | 18% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 53.7 KB | 19% | Yes, every step |
 | Input schemas | 157.6 KB | 57% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 4% | Partly |
@@ -9603,6 +9603,9 @@ Renders its result in [`ui://margince/forecast.html`](#forecast_view), visible t
             "type": "object"
           },
           "type": "array"
+        },
+        "call_withheld": {
+          "type": "boolean"
         },
         "closing_minor": {
           "type": "integer"

@@ -422,7 +422,6 @@ internal/modules/identity/passport.go#var passportScopeVocabulary
 internal/modules/identity/passwordlink.go#func passwordLink
 internal/modules/identity/rbacobjects.go#func RegisterRbacObjects
 internal/modules/identity/seatusage.go#const fullSeatsInUseQuery
-internal/modules/identity/service.go#func passwordLengthError
 internal/modules/identity/settingsentry.go#func BaseCurrencyOf
 internal/modules/identity/tokenlockorder_test.go#func locksRow
 internal/modules/integrations/poll.go#func pollFrom

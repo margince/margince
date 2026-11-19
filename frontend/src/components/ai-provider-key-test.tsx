@@ -2,14 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "../../api/client";
-import type { components } from "../../api/schema";
-import { Badge, Button } from "../../design-system/atoms";
-import { formatNumber } from "../../format/format";
-import { useLocale, usePlural, useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
-import { invalidateProviderHealth } from "../../lib/ai-provider-health";
-import { problemMessageOf, unwrap } from "../../lib/problem";
+import { api } from "../api/client";
+import type { components } from "../api/schema";
+import { Badge, Button } from "../design-system/atoms";
+import { formatNumber } from "../format/format";
+import { useLocale, usePlural, useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
+import { invalidateProviderHealth } from "../lib/ai-provider-health";
+import { problemMessageOf, unwrap } from "../lib/problem";
 
 // Whether a stored key works, asked of the vendor that issued it.
 //

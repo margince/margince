@@ -18,3 +18,15 @@ describe("admittedDealFilters over the range dials", () => {
     expect(admittedDealFilters(sound)).toBe(sound);
   });
 });
+
+// A motion or priority the wire does not name would fail the whole list, so a
+// stale one is dropped. `unset` asks for the deals with none recorded.
+describe("admittedDealFilters over the commercial dials", () => {
+  it("drops a motion or priority the wire would refuse", () => {
+    expect(
+      admittedDealFilters({ commercial_motion: "churn", priority: "urgent" }),
+    ).toEqual({});
+    const sound = { commercial_motion: "unset", priority: "high" };
+    expect(admittedDealFilters(sound)).toBe(sound);
+  });
+});
