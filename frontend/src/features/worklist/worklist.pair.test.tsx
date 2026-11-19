@@ -5,7 +5,7 @@
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
@@ -95,8 +95,17 @@ async function bodyOf(fetched: ReturnType<typeof stubOk>) {
   return JSON.parse(String(init?.body));
 }
 
+async function confirmMerge(user: UserEvent) {
+  await user.click(
+    within(await screen.findByRole("dialog")).getByRole("button", {
+      name: "Merge",
+    }),
+  );
+}
+
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 
@@ -132,7 +141,8 @@ describe("deciding a duplicate pair on the row", () => {
   // THE case this component exists for. Merging KEEPS one record and archives
   // the other, so the winner must be the one the reader pressed — picking for
   // them would be the product deciding which of a customer's records is real.
-  it("merges into the record the reader chose", async () => {
+  it("merges into the record the reader chose, once they confirm", async () => {
+    const user = userEvent.setup();
     const fetched = stubOk();
     draw(
       pairRow({ subject: { type: "company", id: LEFT, label: "Acme GmbH" } }),
@@ -140,9 +150,10 @@ describe("deciding a duplicate pair on the row", () => {
 
     // BY NAME, not by position: this is the assertion that the button the
     // reader believes they pressed is the record that survives.
-    await userEvent.click(
-      screen.getByRole("button", { name: "Keep ACME Gmbh" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Keep ACME Gmbh" }));
+    // A merge cannot be taken back, so the press only asks.
+    expect(fetched).not.toHaveBeenCalled();
+    await confirmMerge(user);
 
     await vi.waitFor(() => expect(fetched).toHaveBeenCalled());
     const body = await bodyOf(fetched);
@@ -150,7 +161,75 @@ describe("deciding a duplicate pair on the row", () => {
     expect(body.winner_id).toBe(RIGHT);
   });
 
+  it("names the record the merge archives, and says when it is done", async () => {
+    const user = userEvent.setup();
+    stubOk();
+    draw(
+      pairRow({ subject: { type: "company", id: LEFT, label: "Acme GmbH" } }),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Keep ACME Gmbh" }));
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      within(dialog).getByText(
+        "Merge Acme GmbH (acme.de) into ACME Gmbh (acme.de)? This archives Acme GmbH (acme.de).",
+      ),
+    ).toBeTruthy();
+    await confirmMerge(user);
+
+    expect(
+      await screen.findByText(
+        "Acme GmbH (acme.de) was merged into ACME Gmbh (acme.de).",
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("merges nothing when the question is cancelled", async () => {
+    const user = userEvent.setup();
+    const fetched = stubOk();
+    draw(
+      pairRow({ subject: { type: "company", id: LEFT, label: "Acme GmbH" } }),
+    );
+
+    await user.click(screen.getByRole("button", { name: "Keep ACME Gmbh" }));
+    await user.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: "Cancel",
+      }),
+    );
+
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(fetched).not.toHaveBeenCalled();
+  });
+
+  it("says why the two look alike and links each record", () => {
+    const row = pairRow({
+      subject: { type: "company", id: LEFT, label: "Acme GmbH" },
+    });
+    draw({
+      ...row,
+      pair: row.pair && {
+        ...row.pair,
+        evidence: [
+          {
+            field: "domain",
+            signal: "collide",
+            left_value: "acme.de",
+            right_value: "acme.de",
+          },
+        ],
+      },
+    });
+
+    expect(screen.getByText("Domain: acme.de · acme.de")).toBeTruthy();
+    expect(
+      screen.getByRole("link", { name: "ACME Gmbh" }).getAttribute("href"),
+    ).toMatch(new RegExp(`#/companies/${RIGHT}$`));
+  });
+
   it("refreshes both companies' document libraries once the merge lands", async () => {
+    const user = userEvent.setup();
     stubOk();
     const client = new QueryClient();
     for (const id of [LEFT, RIGHT]) {
@@ -160,9 +239,8 @@ describe("deciding a duplicate pair on the row", () => {
       pairRow({ subject: { type: "company", id: LEFT, label: "Acme GmbH" } }),
       client,
     );
-    await userEvent.click(
-      screen.getByRole("button", { name: "Keep ACME Gmbh" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Keep ACME Gmbh" }));
+    await confirmMerge(user);
     await vi.waitFor(() =>
       expect(
         [LEFT, RIGHT].map(
@@ -176,12 +254,11 @@ describe("deciding a duplicate pair on the row", () => {
   // server refuses `winner_id` here, so sending one would 422 a decision the
   // reader made correctly.
   it("sends no winner when the records are not the same", async () => {
+    const user = userEvent.setup();
     const fetched = stubOk();
     draw(pairRow());
 
-    await userEvent.click(
-      screen.getByRole("button", { name: "Not duplicates" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Not duplicates" }));
 
     await vi.waitFor(() => expect(fetched).toHaveBeenCalled());
     const body = await bodyOf(fetched);
@@ -194,6 +271,27 @@ describe("deciding a duplicate pair on the row", () => {
     // And the caller is the half that can actually get this wrong: it must not
     // name a survivor for an answer that keeps both records.
     expect(body.winner_id).toBeUndefined();
+  });
+
+  // Saying they differ changes neither record, so it is answered at once and
+  // offers the one clean way back.
+  it("confirms the dismissal and takes it back on Undo", async () => {
+    // The Undo toast withdraws itself on a timer; shouldAdvanceTime keeps
+    // react-query's own timers running under the fake clock.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    const fetched = stubOk();
+    draw(pairRow());
+
+    await user.click(screen.getByRole("button", { name: "Not duplicates" }));
+    expect(await screen.findByText("Marked as not duplicates.")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Undo" }));
+
+    await vi.waitFor(() => expect(fetched).toHaveBeenCalledTimes(2));
+    const [undone] = fetched.mock.calls[1];
+    expect(undone instanceof Request && new URL(undone.url).pathname).toMatch(
+      /\/dedupe\/candidates\/.+\/undo$/,
+    );
   });
 
   // A row whose reader may not see both sides arrives without the payload, and
@@ -212,6 +310,7 @@ describe("deciding a duplicate pair on the row", () => {
   // the pair is gone: a merge the server refuses REOPENS the candidate, so
   // "already settled" would be false exactly when the reader needs the truth.
   it("says the decision did not land when the server answers conflict", async () => {
+    const user = userEvent.setup();
     vi.stubGlobal(
       "fetch",
       vi.fn(
@@ -224,9 +323,7 @@ describe("deciding a duplicate pair on the row", () => {
     );
     draw(pairRow());
 
-    await userEvent.click(
-      screen.getByRole("button", { name: "Not duplicates" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Not duplicates" }));
 
     expect(
       await screen.findByText(/someone may have decided first/),
@@ -239,6 +336,7 @@ describe("deciding a duplicate pair on the row", () => {
   // the one instruction that must not appear. This is the toast a rep met on
   // every pair spanning two owners.
   it("names the steward when the decision is refused, and never says try again", async () => {
+    const user = userEvent.setup();
     vi.stubGlobal(
       "fetch",
       vi.fn(
@@ -251,9 +349,7 @@ describe("deciding a duplicate pair on the row", () => {
     );
     draw(pairRow());
 
-    await userEvent.click(
-      screen.getByRole("button", { name: "Not duplicates" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Not duplicates" }));
 
     expect(await screen.findByText(/cannot resolve this pair/)).toBeTruthy();
     expect(screen.queryByText(/Retry\./)).toBeNull();
@@ -277,6 +373,7 @@ describe("deciding a duplicate pair on the row", () => {
   ])(
     "keeps $what on screen until it is dismissed",
     async ({ code, status }) => {
+      const user = userEvent.setup();
       vi.stubGlobal(
         "fetch",
         vi.fn(
@@ -289,9 +386,7 @@ describe("deciding a duplicate pair on the row", () => {
       );
       draw(pairRow());
 
-      await userEvent.click(
-        screen.getByRole("button", { name: "Not duplicates" }),
-      );
+      await user.click(screen.getByRole("button", { name: "Not duplicates" }));
 
       expect(await screen.findByRole("button", { name: "Close" })).toBeTruthy();
     },
@@ -301,6 +396,7 @@ describe("deciding a duplicate pair on the row", () => {
   // the case above passes against a toast that never leaves, which would be a
   // different defect wearing the fix's clothes.
   it("lets an unexplained failure withdraw itself", async () => {
+    const user = userEvent.setup();
     vi.stubGlobal(
       "fetch",
       vi.fn(
@@ -313,9 +409,7 @@ describe("deciding a duplicate pair on the row", () => {
     );
     draw(pairRow());
 
-    await userEvent.click(
-      screen.getByRole("button", { name: "Not duplicates" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Not duplicates" }));
 
     expect(await screen.findByText(/Retry\./)).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Close" })).toBeNull();
@@ -345,6 +439,111 @@ describe("deciding a duplicate pair on the row", () => {
       screen.getByRole("button", { name: "Keep Acme GmbH — acme-group.de" }),
     ).toBeTruthy();
   });
+
+  // A company with no domain has no detail line, and two of them with one name
+  // are told apart by when each was created.
+  it("tells two same-name sides without a detail apart by their age", () => {
+    draw(
+      pairRow({
+        pair: {
+          left: {
+            id: LEFT,
+            label: "Acme GmbH",
+            created_at: "2026-03-02T10:00:00Z",
+          },
+          right: {
+            id: RIGHT,
+            label: "Acme GmbH",
+            created_at: "2026-09-14T10:00:00Z",
+          },
+          evidence: [],
+        },
+      }),
+    );
+
+    const names = screen
+      .getAllByRole("button", { name: /^Keep Acme GmbH — Created / })
+      .map((button) => button.getAttribute("aria-label"));
+    expect(names).toHaveLength(2);
+    expect(new Set(names).size).toBe(2);
+  });
+
+  // Two same-name records from one import share a creation day, and often a
+  // creation minute too. The names reach further only while they still collide.
+  it.each([
+    {
+      when: "on one day",
+      left: "2026-11-02T10:00:00Z",
+      right: "2026-11-02T11:00:00Z",
+    },
+    {
+      when: "at one instant",
+      left: "2026-11-02T10:00:00Z",
+      right: "2026-11-02T10:00:00Z",
+    },
+  ])("tells two same-name sides created $when apart", ({ left, right }) => {
+    draw(
+      pairRow({
+        pair: {
+          left: { id: LEFT, label: "Acme GmbH", created_at: left },
+          right: { id: RIGHT, label: "Acme GmbH", created_at: right },
+          evidence: [],
+        },
+      }),
+    );
+
+    const names = screen
+      .getAllByRole("button", { name: /^Keep Acme GmbH — / })
+      .map((button) => button.getAttribute("aria-label"));
+    expect(names).toHaveLength(2);
+    expect(new Set(names).size).toBe(2);
+  });
+
+  // The cards a sighted reader compares must differ where the button names do.
+  // The creation minute replaces the day, and the ID joins it at one instant.
+  it.each([
+    {
+      when: "on one day",
+      at: ["2026-11-02T10:00:00Z", "2026-11-02T11:00:00Z"],
+      ids: [LEFT, RIGHT],
+    },
+    {
+      when: "at one instant",
+      at: ["2026-11-02T10:00:00Z", "2026-11-02T10:00:00Z"],
+      ids: [LEFT, RIGHT],
+    },
+    {
+      when: "at one instant with IDs ending alike",
+      at: ["2026-11-02T10:00:00Z", "2026-11-02T10:00:00Z"],
+      ids: [
+        "01a05500-0000-7000-8000-1000000000a1",
+        "01a05500-0000-7000-8000-2000000000a1",
+      ],
+    },
+  ])(
+    "shows what tells two same-name cards created $when apart",
+    ({ at, ids }) => {
+      draw(
+        pairRow({
+          pair: {
+            left: { id: ids[0], label: "Acme GmbH", created_at: at[0] },
+            right: { id: ids[1], label: "Acme GmbH", created_at: at[1] },
+            evidence: [],
+          },
+        }),
+      );
+
+      const cards = screen
+        .getAllByRole("listitem")
+        .filter((card) => card.classList.contains("worklist-pair-card"));
+      expect(cards).toHaveLength(2);
+      expect(cards[0].textContent).not.toBe(cards[1].textContent);
+      const names = screen
+        .getAllByRole("button", { name: /^Keep Acme GmbH — / })
+        .map((button) => button.getAttribute("aria-label"));
+      expect(new Set(names).size).toBe(2);
+    },
+  );
 
   // The ordinary pair keeps the short name: the detail is a disambiguator, not
   // decoration, and appending it always would make every button longer to say
@@ -420,12 +619,11 @@ describe("deciding a duplicate pair on the row", () => {
   // and applies no project rule, which is the whole reason the verb is offered
   // here. A control that drew and posted nothing would pass the case above.
   it("settles an unmergeable pair as not a duplicate", async () => {
+    const user = userEvent.setup();
     const fetched = stubOk();
     draw(pairRow({ actions: ["dismiss"] }));
 
-    await userEvent.click(
-      screen.getByRole("button", { name: "Not duplicates" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Not duplicates" }));
 
     await vi.waitFor(() => expect(fetched).toHaveBeenCalled());
     const body = await bodyOf(fetched);
@@ -434,8 +632,7 @@ describe("deciding a duplicate pair on the row", () => {
   });
 
   // Two contacts merge only through the case review, where the reader ticks
-  // both and sees the preview. Keep opens it on the record they chose; the
-  // company path above still posts the merge straight from the row.
+  // both and sees the preview. Keep opens it on the record they chose.
   it("opens the review on the kept contact and posts nothing", async () => {
     const requests: string[] = [];
     vi.stubGlobal(

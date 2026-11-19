@@ -93,6 +93,8 @@ func valueAdvice(shape ColumnShape) string {
 		return "send the number unquoted, or quote it as text"
 	case ShapeBoolean:
 		return "send true or false"
+	case ShapeID:
+		return IDValueAdvice
 	default:
 		return QuoteAsTextAdvice
 	}

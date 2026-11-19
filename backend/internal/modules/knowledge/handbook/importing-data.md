@@ -196,7 +196,8 @@ No. Two contacts that share only a first name are not filed, even at one company
 Also called: duplicate queue too long after import, same name flagged.
 
 ### Why did a pair leave the duplicate list without anyone deciding it?
-Margince checks the open duplicate list every night, and each time it starts. It closes a pair that today's rules would no longer suggest, for example two contacts who share only a first name. It also closes two companies with close names that share no address, phone number or contact.
+Margince checks the open duplicate list every night, and each time it starts. It closes a pair that today's rules would no longer suggest, for example two contacts who share only a first name. It also closes two companies with close names that share no address, phone number or contact. A company renamed so that its name no longer matches the other one's leaves the list. The pair stays if one domain sits under the other, or if it was filed on a shared identity, such as a domain. A pair someone is deciding at that moment is left for a later check.
+
 A pair someone has dismissed or reopened is never closed this way. A closed pair keeps its history, and it comes back by itself if the two records start to match again.
 Also called: duplicate gone, shorter duplicate list, fewer duplicates.
 

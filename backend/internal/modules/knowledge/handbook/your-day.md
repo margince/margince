@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/worklist frontend/src/features/brief backend/internal/compose/attention backend/internal/compose/briefs backend/internal/compose/worklistsnap backend/internal/compose/morningmailview.go -->
+<!-- describes: frontend/src/features/worklist frontend/src/features/brief frontend/src/app/installhint.tsx frontend/src/lib/installhint.ts backend/internal/compose/attention backend/internal/compose/briefs backend/internal/compose/worklistsnap backend/internal/compose/morningmailview.go -->
 # Your day
 
 **Home** is where a day starts in Margince. It has two views, **Today** and **Weekly**. The week, its review and its plan are in [Your week](your-week.md). For overdue invoices on Home, see [Customer payments](customer-payments.md).
@@ -136,8 +136,7 @@ A task filed on no record has no one to write to and offers none. **Draft email*
 **Call** and **Book a meeting** go to the first contact the task is filed on, and an archived contact gets neither. **Call** dials. If you may log activity, it also opens **Log activity** on **Call** under the task, which does not complete the task. A done or read-only task offers the same steps. On the open card under **Needs you** on **Home**, the step is the colour button and **Done** is a plain one. A **Do** task, or one whose step has nothing to act on, keeps **Done** as the colour button.
 
 ### How do I plan my week?
-To plan your week in Margince, open **Home**, switch the view to **Weekly** and add items under
-**This week’s commitments**.
+To plan your week in Margince, open **Home**, switch the view to **Weekly** and add items under **This week’s commitments**.
 1. Click **Home**, then **Weekly**.
 2. Under **This week’s commitments**, press **Add commitment** and fill in **Commitment**.
 3. If you like, add a **Due date** and a linked deal, lead, contact, company or project, then press **Add**.
@@ -160,10 +159,8 @@ Each item names its record and shows the facts that call for action. A badge say
   A dated task also shows its due day. The round mark marks a task done; a press opens the card where it stands.
 - Proposals, commitments due today and meetings in the next 24 hours sit there too. A task due later shows once its reminder is due. A quiet day says "No immediate priorities. The full Worklist is available."
 - **Review N deal suggestions** opens the saved brief. Its deals stay separate from the work that needs action now. A brief with no deals shows no opener.
-- **Show Worklist**, under the list: the whole list, with its own filters and pages, and work that
-  is not due yet. Stage change notices stay in the notification center.
-- **Since your last brief**: what Margince did since your last brief, what waits on you, what it
-  could not finish and what needs restoring.
+- **Show Worklist**, under the list: the whole list, with its own filters and pages, and work that is not due yet. Stage change notices stay in the notification center.
+- **Since your last brief**: what Margince did since your last brief, what waits on you, what it could not finish and what needs restoring.
 - **Done for you**, the deals Margince changed, to keep or undo, and the other work it finished; beside them **External meetings** and **Numbers**.
 - **External meetings** lists today's meetings with someone from outside your company, by start time. A meeting among colleagues is not on it. Each row names the account and the contacts you meet, each a link to their record. The next meeting says how soon it starts and offers **Prepare for meeting**. Margince then writes the brief for that meeting and opens it on Home. With no calendar connected, the panel says so and shows the meetings booked, logged or imported in Margince.
 
@@ -212,8 +209,7 @@ At the foot of that list, **Undo changes on 6 deals** takes back the ticked deal
 A deal that changed again reads "Replaced by a later change". To make Margince ask first, see [Approvals](approvals.md). Also called: automatic changes, review changes, accept a change, check applied changes.
 
 ### What happens to a promise from a call or an email?
-A promise Margince reads in a call or meeting transcript or an email becomes something to watch or a task,
-by who made it.
+A promise Margince reads in a call or meeting transcript or an email becomes something to watch or a task, by who made it.
 - A promise the customer made goes on their contact to watch, and never becomes a task. The deal's
   **Overview** lists open ones under **Customer commitments**, with **Open message**. **Dismiss**
   removes a wrong reading, if you may change the contact. Past its due day a promise asks **Overdue:
@@ -239,10 +235,8 @@ Also called: action items, follow-ups from a meeting, commitments in an email.
 ### What happens to a request in an email?
 When a customer email asks you for something and nobody answered, Margince files a task for you.
 It is due on a day the email names, such as "Deadline: 27 October", and has **No due date** if it names none.
-- It needs a clear request. A note that only tells you something, or one Margince cannot judge,
-  stays in review and does not claim to be urgent.
-- The task takes the place of the email in your Worklist, and its source opens the email. If you can
-  no longer open the email, you cannot read the task either.
+- It needs a clear request. A note that only tells you something, or one Margince cannot judge, stays in review and does not claim to be urgent.
+- The task takes the place of the email in your Worklist, and its source opens the email. If you can no longer open the email, you cannot read the task either.
 - Completing the task closes the request for every reader. Archiving it before it is done sends the
   request back to review, with no new task.
 - A reply closes only its own conversation, and does not prove the promised thing was sent. The task
@@ -257,6 +251,12 @@ A meeting invitation shows **Accept**, **Maybe** and **Decline** in place of **R
 - You can change your answer later: your current answer shows pressed.
 - A later email that moves or calls off the meeting shows the meeting and what changed, such as **Was 13 Nov, 13:00–14:00** or **Added Ben Ito**. Its tag says what happened, such as **Meeting changed** or **Canceled**. An update with nothing to answer you mark done. Without the earlier invitation in your mailbox, Margince shows the meeting as it stands now.
 Also called: meeting invite, accept an invite, decline a meeting, rescheduled meeting, canceled meeting.
+
+### Why does Home offer Margince as an app?
+On a phone, or another device you use by touch, Home can show **Install Margince as an app** at the top of the page. It waits until the day after you first use Margince on that device, unless you complete a task on Home first. While another notice stands at the top of the page, it waits.
+- **Install** opens your browser's own window to add Margince to the device. Once Margince is added, it opens as its own app and the notice does not come back.
+- On an iPhone the notice has no **Install**. It says to press **Share**, then **Add to Home Screen**. In another app's own browser the notice does not show, because that browser cannot add Margince.
+- **Not now**, or closing the browser's window, hides the notice for 30 days. After the second time, it does not show again on that device. The **Margince app** row in [your own settings](your-own-settings.md#account) stays either way.
 
 ## The Worklist
 

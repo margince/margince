@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { en } from "../../i18n/en";
 import { view as liveView } from "../../testing/contactpage.testkit";
+import { recordNamesRoutes } from "../../testing/recordnames.testkit";
 import {
   installFetchStub,
   jsonResponse,
@@ -67,6 +68,19 @@ describe("the contact page on an archived row", () => {
     expect(screen.queryByText(en["record.logActivityRefused"])).toBeNull();
     expect(screen.queryByText(en["contact.page.notOpened"])).toBeNull();
     expect(asked).toEqual([]);
+  });
+
+  it("links the contact it was merged into", async () => {
+    mount({
+      ...archivedContactRoutes(),
+      "GET /contacts/p-1": () =>
+        jsonResponse({ ...archivedContact, merged_into_id: "p-2" }),
+      ...recordNamesRoutes({ contact: { "p-2": "Kept Contact" } }),
+    });
+
+    const link = await screen.findByRole("link", { name: "Kept Contact" });
+    expect(link.getAttribute("href")).toMatch(/#\/contacts\/p-2$/);
+    expect(screen.getByText(en["history.field.merged_into_id"])).toBeTruthy();
   });
 
   it("refuses the write verbs in the header and in the menu", async () => {
