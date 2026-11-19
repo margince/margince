@@ -4,7 +4,7 @@
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { useState } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   ASYNC_UTIL_TIMEOUT_MS,
   SLOWEST_MEASURED_TEST_MS,
@@ -16,6 +16,7 @@ import { isPreviewDoor } from "../../testing/sendpermission.testkit";
 import {
   activity202,
   fillSendableForm,
+  installComposeClock,
   jsonResponse,
   pressSend,
   problemResponse,
@@ -131,6 +132,8 @@ const leadFinding = async () =>
   )[0] as HTMLElement;
 const reasonField = () => screen.findByLabelText(/Reason for sending/);
 const sendAnyway = () => screen.findByRole("button", { name: "Send anyway" });
+
+beforeEach(installComposeClock);
 
 afterEach(() => {
   cleanup();

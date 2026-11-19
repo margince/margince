@@ -2,13 +2,14 @@
 import "@testing-library/jest-dom/vitest";
 import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createQueryClient } from "../app/queryclient";
 import { writeMessage } from "../design-system/richtext-testing";
 import { pickOption } from "../design-system/select-testing";
 import { MailSendNotices } from "../features/mail/compose.parts";
 import {
   activity202,
+  installComposeClock,
   jsonResponse,
   permissionBandButton,
   render,
@@ -26,6 +27,8 @@ import {
   isPreviewDoor,
   refusedPreview,
 } from "./sendpermission.testkit";
+
+beforeEach(installComposeClock);
 
 afterEach(() => {
   cleanup();

@@ -1,7 +1,7 @@
 /** @vitest-environment happy-dom */
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   messageBox,
   messageText,
@@ -12,6 +12,7 @@ import { ChannelReplyAction } from "./compose.reply";
 import {
   type Activity,
   activity202,
+  installComposeClock,
   jsonResponse,
   pickWhy,
   pressSend,
@@ -22,6 +23,8 @@ import {
   WHY_LABEL,
 } from "./compose.testkit";
 import { ComposeWindow } from "./composewindow";
+
+beforeEach(installComposeClock);
 
 afterEach(() => {
   cleanup();
