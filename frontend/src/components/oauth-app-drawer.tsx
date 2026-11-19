@@ -98,6 +98,7 @@ export function OAuthAppDrawer({
     <Modal
       open={open}
       onClose={dismiss}
+      closeDisabled={save.isPending}
       closeReason={save.isPending ? t("common.saving") : undefined}
       labelledBy={titleId}
       intent="drawer-reading"
@@ -157,10 +158,10 @@ function SetupForm({
     id.trim() !== "" &&
     clientSecret.trim() !== "";
   const locked = !canManage || save.isPending || lockReason !== undefined;
-  // While the PUT is out the drawer refuses to close at all, so nothing asks.
+  // Held while the PUT is out too: a reload then still warns, and a refused
+  // save keeps the draft claimed. The drawer itself will not close meanwhile.
   const dirty =
-    !save.isPending &&
-    (clientId !== undefined || tenant !== undefined || clientSecret !== "");
+    clientId !== undefined || tenant !== undefined || clientSecret !== "";
   useUnsavedGuard(dirty);
   // Cancel asks as Escape and the X do. A save closes without asking.
   const [asking, setAsking] = useState(false);
