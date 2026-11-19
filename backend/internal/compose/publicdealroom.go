@@ -32,7 +32,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-const publicDealRoomPrefix = dealrooms.PublicPathPrefix
+// A literal, not dealrooms.PublicPathPrefix: the credential-path gate reads
+// it from here. The kept-cookie integration tests fail if the two drift.
+const publicDealRoomPrefix = "/v1/public/rooms/"
 
 // The three operations that carry no session. Everything else under the prefix
 // presents a Bearer or the session cookie.

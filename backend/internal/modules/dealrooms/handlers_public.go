@@ -85,7 +85,7 @@ func (h Handlers) ExchangeDealRoomCredential(w http.ResponseWriter, r *http.Requ
 		httperr.Write(w, r, err)
 		return
 	}
-	setSessionCookie(w, issued.Token, issued.ExpiresAt)
+	setSessionCookie(w, issued.Token, issued.ExpiresAt, time.Now())
 	w.Header().Set("Cache-Control", "no-store")
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.DealRoomSessionIssued{
 		SessionToken: issued.Token,

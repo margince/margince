@@ -24,10 +24,10 @@ const NoSessionDetail = "this link no longer admits you: ask for a new one"
 // cross-site request carries it (SameSite=Strict), until the session's own
 // expiry. The server still resolves it on every request, so a revocation binds
 // at once whatever the cookie says.
-func setSessionCookie(w http.ResponseWriter, token string, expiresAt time.Time) {
+func setSessionCookie(w http.ResponseWriter, token string, expiresAt, now time.Time) {
 	http.SetCookie(w, &http.Cookie{
 		Name: SessionCookieName, Value: token,
-		Path: PublicPathPrefix, Expires: expiresAt, MaxAge: int(time.Until(expiresAt) / time.Second),
+		Path: PublicPathPrefix, Expires: expiresAt, MaxAge: int(expiresAt.Sub(now) / time.Second),
 		HttpOnly: true, Secure: true, SameSite: http.SameSiteStrictMode,
 	})
 }

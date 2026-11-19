@@ -10,13 +10,16 @@ import (
 	"net/url"
 	"testing"
 	"time"
+
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 )
 
 // A browser sends the buyer cookie to the buyer edge and to no other route.
 // So the token never reaches the seller's API.
 func TestTheBuyerCookieReachesOnlyTheBuyerEdge(t *testing.T) {
 	recorder := httptest.NewRecorder()
-	setSessionCookie(recorder, "mdrs_token", time.Now().Add(sessionTTL))
+	now := clocktest.Now(t)
+	setSessionCookie(recorder, "mdrs_token", now.Add(sessionTTL), now)
 	jar, err := cookiejar.New(nil)
 	if err != nil {
 		t.Fatal(err)
@@ -44,8 +47,8 @@ func TestTheBuyerCookieReachesOnlyTheBuyerEdge(t *testing.T) {
 
 func TestTheBuyerCookieIsHiddenFromScriptsAndCrossSiteRequests(t *testing.T) {
 	recorder := httptest.NewRecorder()
-	expiresAt := time.Now().Add(sessionTTL)
-	setSessionCookie(recorder, "mdrs_token", expiresAt)
+	now := clocktest.Now(t)
+	setSessionCookie(recorder, "mdrs_token", now.Add(sessionTTL), now)
 	cookies := recorder.Result().Cookies()
 	if len(cookies) != 1 {
 		t.Fatalf("set %d cookies, want 1", len(cookies))
@@ -54,7 +57,7 @@ func TestTheBuyerCookieIsHiddenFromScriptsAndCrossSiteRequests(t *testing.T) {
 	if !cookie.HttpOnly || !cookie.Secure || cookie.SameSite != http.SameSiteStrictMode {
 		t.Fatalf("cookie = %+v, want HttpOnly, Secure and SameSite=Strict", cookie)
 	}
-	if cookie.MaxAge <= 0 || time.Duration(cookie.MaxAge)*time.Second > sessionTTL {
+	if time.Duration(cookie.MaxAge)*time.Second != sessionTTL {
 		t.Fatalf("Max-Age %ds, want within the session's %v", cookie.MaxAge, sessionTTL)
 	}
 }
