@@ -60,7 +60,7 @@ func TestAContactNamePartPastTheLimitIsRefusedOnItsCell(t *testing.T) {
 }
 
 // Parts that fit alone but join past the limit are refused on the last-name
-// column, the one a file maps, with the joined name as the value.
+// column, which a file maps. The joined name is the value shown.
 func TestNamePartsJoiningPastTheLimitAreRefusedOnTheLastName(t *testing.T) {
 	limit := contacts.ContactNameLimit
 	fits := map[string]string{"first_name": strings.Repeat("a", limit/2), "last_name": strings.Repeat("b", limit-limit/2-1)}
