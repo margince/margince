@@ -1,6 +1,6 @@
 /** @vitest-environment happy-dom */
 import { cleanup, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   messageBox,
@@ -46,6 +46,7 @@ describe("ComposeWindow — channel reply", () => {
   };
 
   it("posts to send-message for a channel activity", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const onClose = vi.fn();
     const sent = stubRoutes({
       "POST /activities/act-1/send-message": () =>
@@ -66,8 +67,8 @@ describe("ComposeWindow — channel reply", () => {
     );
     await screen.findByRole("combobox", { name: WHY_ASK });
     writeMessage("Body", "On my way.");
-    await pickWhy(WHY_LABEL.requestedFollowup);
-    await pressSend();
+    await pickWhy(user, WHY_LABEL.requestedFollowup);
+    await pressSend(user);
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());
     const req = sent.find(
@@ -154,6 +155,7 @@ describe("ComposeWindow — channel reply", () => {
   });
 
   it("keeps the drafted text when consent is refused", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     stubRoutes({
       "POST /activities/act-1/send-message": () =>
         problemResponse(
@@ -178,8 +180,8 @@ describe("ComposeWindow — channel reply", () => {
     );
     await screen.findByRole("combobox", { name: WHY_ASK });
     writeMessage("Body", "Call me back please.");
-    await pickWhy(WHY_LABEL.requestedFollowup);
-    await pressSend();
+    await pickWhy(user, WHY_LABEL.requestedFollowup);
+    await pressSend(user);
 
     expect(
       await screen.findByText("This message cannot be sent as it stands."),
@@ -193,8 +195,8 @@ describe("ComposeWindow — channel reply", () => {
 
 // Files, Relink, Remove from project and Change visibility sit in the row's
 // "More actions" menu, which mounts them on its first open.
-async function openRowMenu() {
-  await userEvent.click(
+async function openRowMenu(user: UserEvent) {
+  await user.click(
     screen.getByRole("button", { name: /^More actions( for |$)/ }),
   );
 }
@@ -225,6 +227,7 @@ describe("TimelineActions", () => {
   };
 
   it("withholds Relink and the audience control on an activity the server says is not the reader's to change", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     stubRoutes();
     render(
       <TimelineActions
@@ -233,7 +236,7 @@ describe("TimelineActions", () => {
         entityId="d1"
       />,
     );
-    await openRowMenu();
+    await openRowMenu(user);
     await waitFor(() =>
       expect(
         screen.getByRole("button", { name: "Relink" }).hasAttribute("disabled"),
@@ -245,23 +248,25 @@ describe("TimelineActions", () => {
   });
 
   it("offers Reply on an email row and Relink alongside it", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     stubRoutes();
     render(
       <TimelineActions activity={email} entityType="deal" entityId="d1" />,
     );
-    await openRowMenu();
+    await openRowMenu(user);
     expect(screen.getByRole("button", { name: "Reply" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Relink" })).toBeTruthy();
   });
 
   it("offers Write email on a non-email row too, as the send path allows", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     // A send anchored to a note carries no RFC822 identity and starts a
     // conversation, which the backend handles. Gating this on kind === "email"
     // is what made "log a note → compose → send" unreachable in a workspace
     // whose timeline holds nothing captured from mail.
     stubRoutes();
     render(<TimelineActions activity={note} entityType="deal" entityId="d1" />);
-    await openRowMenu();
+    await openRowMenu(user);
     expect(
       await screen.findByRole("button", { name: "Write email" }),
     ).toBeTruthy();
@@ -271,9 +276,10 @@ describe("TimelineActions", () => {
   });
 
   it("opens the composer anchored to a note row", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     stubRoutes();
     render(<TimelineActions activity={note} entityType="deal" entityId="d1" />);
-    await userEvent.click(
+    await user.click(
       await screen.findByRole("button", { name: "Write email" }),
     );
     expect(await screen.findByRole("dialog")).toBeTruthy();
@@ -314,16 +320,18 @@ describe("TimelineActions", () => {
   });
 
   it("opens the composer when Reply is clicked", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     stubRoutes();
     render(
       <TimelineActions activity={email} entityType="deal" entityId="d1" />,
     );
-    await userEvent.click(screen.getByRole("button", { name: "Reply" }));
+    await user.click(screen.getByRole("button", { name: "Reply" }));
     // The composer mounts only once Reply opens it, headed as a reply.
     expect(await screen.findByRole("dialog", { name: /^Re: / })).toBeTruthy();
   });
 
   it("offers no reply when the contact is unreachable", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     // With a blocked or never-established Telegram identity, a reply box here
     // would fail only after the rep has written the message. That is worse
     // than never offering it.
@@ -358,7 +366,7 @@ describe("TimelineActions", () => {
         contactId="p-1"
       />,
     );
-    await openRowMenu();
+    await openRowMenu(user);
 
     // Relink renders at once, since it never waits on reachability. That
     // proves the component mounted, and that the missing Reply button is the
@@ -382,6 +390,7 @@ describe("TimelineActions", () => {
   // fields when it is not a channel reply. So a mode that showed them and still
   // posted to send-message could not pass this.
   it("opens a sendable email composer when the channel message is withheld", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     // Reachable, or the action renders nothing and the case would pass over an
     // empty tree. An absent button is a different answer.
     stubRoutes({
@@ -413,7 +422,7 @@ describe("TimelineActions", () => {
       />,
     );
 
-    await userEvent.click(
+    await user.click(
       await screen.findByRole("button", { name: "Write email" }),
     );
 
@@ -430,6 +439,7 @@ describe("TimelineActions", () => {
   // A captured row and a hand-typed one get the same answer: no audience
   // control on the row at all.
   it("offers no audience control on an email row, whoever captured it", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     stubRoutes();
     const captured: Activity = {
       ...activity202,
@@ -440,7 +450,7 @@ describe("TimelineActions", () => {
     const { unmount } = render(
       <TimelineActions activity={captured} entityType="deal" entityId="d1" />,
     );
-    await openRowMenu();
+    await openRowMenu(user);
     expect(screen.queryByRole("button", { name: "Share thread" })).toBeNull();
     await relinkSettled();
     expect(
@@ -460,7 +470,7 @@ describe("TimelineActions", () => {
     render(
       <TimelineActions activity={handTyped} entityType="deal" entityId="d1" />,
     );
-    await openRowMenu();
+    await openRowMenu(user);
     expect(
       screen.queryByRole("button", { name: "Change visibility" }),
     ).toBeNull();
@@ -473,6 +483,7 @@ describe("TimelineActions", () => {
   // names a thread-level control the page does not have. A control that cannot
   // work is worse than none: someone keeping a conversation private presses it.
   it("offers no audience control on a captured message whose audience is derived", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     stubRoutes();
     render(
       <TimelineActions
@@ -488,7 +499,7 @@ describe("TimelineActions", () => {
         entityId="d1"
       />,
     );
-    await openRowMenu();
+    await openRowMenu(user);
     await relinkSettled();
     expect(
       screen.queryByRole("button", { name: "Change visibility" }),
@@ -505,6 +516,7 @@ describe("TimelineActions", () => {
   // misses this row: Visibility opens, takes an answer, and the write is
   // refused with no working control on the page (margince#4152).
   it("offers no audience control on a captured message with no audience_reason at all", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     stubRoutes();
     render(
       <TimelineActions
@@ -520,7 +532,7 @@ describe("TimelineActions", () => {
         entityId="d1"
       />,
     );
-    await openRowMenu();
+    await openRowMenu(user);
     expect(screen.queryByRole("button", { name: "Visibility" })).toBeNull();
     expect(screen.getByRole("button", { name: "Relink" })).toBeTruthy();
   });
@@ -529,6 +541,7 @@ describe("TimelineActions", () => {
   // change. Without this the fix above would read as "any reason at all hides
   // the control", which withholds it from every row somebody has already set.
   it("keeps the audience control on a row a human set the audience of", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     stubRoutes();
     render(
       <TimelineActions
@@ -542,7 +555,7 @@ describe("TimelineActions", () => {
         entityId="d1"
       />,
     );
-    await openRowMenu();
+    await openRowMenu(user);
     expect(
       await screen.findByRole("button", { name: "Change visibility" }),
     ).toBeTruthy();
@@ -551,6 +564,7 @@ describe("TimelineActions", () => {
   // A note, a call or a meeting derives no audience, so the row keeps the
   // control for every kind but email.
   it("keeps the audience control on a row that is not an email", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     stubRoutes();
     render(
       <TimelineActions
@@ -559,7 +573,7 @@ describe("TimelineActions", () => {
         entityId="d1"
       />,
     );
-    await openRowMenu();
+    await openRowMenu(user);
     expect(
       await screen.findByRole("button", { name: "Change visibility" }),
     ).toBeTruthy();
@@ -569,6 +583,7 @@ describe("TimelineActions", () => {
   // anybody is a choice the reader cannot complete. These claims pin that the
   // dialog offers it with that way.
   it("names the contacts a message is limited to and submits them as one set", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const roster = {
       "GET /users": () =>
         jsonResponse({
@@ -613,22 +628,20 @@ describe("TimelineActions", () => {
         entityId="d1"
       />,
     );
-    await openRowMenu();
+    await openRowMenu(user);
 
-    await userEvent.click(
+    await user.click(
       await screen.findByRole("button", { name: "Change visibility" }),
     );
-    await userEvent.click(screen.getByLabelText(/Named people/));
+    await user.click(screen.getByLabelText(/Named people/));
 
     // An agent seat is not on offer.
     expect(await screen.findByLabelText(/Lena Fischer/)).toBeTruthy();
     expect(screen.queryByLabelText(/Margince/)).toBeNull();
 
-    await userEvent.click(screen.getByLabelText(/Lena Fischer/));
-    await userEvent.click(screen.getByLabelText(/Vertrieb/));
-    await userEvent.click(
-      screen.getByRole("button", { name: "Save visibility" }),
-    );
+    await user.click(screen.getByLabelText(/Lena Fischer/));
+    await user.click(screen.getByLabelText(/Vertrieb/));
+    await user.click(screen.getByRole("button", { name: "Save visibility" }));
 
     const write = sent.find(
       (each) => each.key === "PATCH /activities/a6/audience",
@@ -654,6 +667,7 @@ describe("TimelineActions", () => {
   // lock the author out of their own correspondence. The confirm refuses it
   // rather than the server having to.
   it("refuses to save a named audience with nobody named", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     stubRoutes({
       "GET /users": () =>
         jsonResponse({
@@ -687,12 +701,12 @@ describe("TimelineActions", () => {
         entityId="d1"
       />,
     );
-    await openRowMenu();
+    await openRowMenu(user);
 
-    await userEvent.click(
+    await user.click(
       await screen.findByRole("button", { name: "Change visibility" }),
     );
-    await userEvent.click(screen.getByLabelText(/Named people/));
+    await user.click(screen.getByLabelText(/Named people/));
     await screen.findByLabelText(/Lena Fischer/);
 
     expect(
@@ -706,6 +720,7 @@ describe("TimelineActions", () => {
   // standing to change who else is in it. The kind that still draws the
   // control is the one that has to prove this.
   it("offers no audience control on a withheld row", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     stubRoutes();
     render(
       <TimelineActions
@@ -719,7 +734,7 @@ describe("TimelineActions", () => {
         entityId="d1"
       />,
     );
-    await openRowMenu();
+    await openRowMenu(user);
     await relinkSettled();
     expect(
       screen.queryByRole("button", { name: "Change visibility" }),
