@@ -16,6 +16,7 @@ import { SystemHealthPage } from "./settings.systemhealth";
 import {
   attentionReport,
   healthReport,
+  informationReport,
   overdueFinding,
 } from "./systemhealth.fixtures";
 
@@ -298,36 +299,30 @@ it("shows what a successful refusal check established about connector activity",
   expect(screen.queryByText("Working normally")).toBeNull();
 });
 
-it("lists the changes Home leaves out under a passing check, with no action", async () => {
+it("files the changes Home leaves out under For information, never Passing", async () => {
   const user = userEvent.setup();
-  stub({
-    ...healthReport,
-    sources: [
-      {
-        id: "unplaced",
-        permission: "ai_diagnostics:read",
-        scope: "installation",
-        availability: "available",
-        condition: "clear",
-        code: "unplaced_counted",
-        observed_at: healthReport.generated_at,
-        count: 3,
-        unit: "items",
-        unplaced_changes: [
-          { entity_type: "product", action: "update", count: 2 },
-          { entity_type: "list", action: "added", count: 1 },
-        ],
-      },
-    ],
-  });
+  stub(informationReport);
   render(<SystemHealthPage />);
-  await user.click(await screen.findByText("All checks"));
+  const group = await screen.findByRole("list", { name: "For information" });
+  expect(within(group).getByText("Changes Home leaves out")).toBeVisible();
+  expect(
+    within(group).getByText("Information").closest(".badge"),
+  ).not.toHaveClass("badge-success");
+  const passing = screen.getByRole("list", { name: "Passing" });
+  expect(within(passing).queryByText("Changes Home leaves out")).toBeNull();
+  expect(screen.queryByText(/Problems? needing action/)).toBeNull();
+  expect(screen.getByText("5 passing")).toBeVisible();
+
+  await user.click(screen.getByText("All checks"));
   const value = (term: string) =>
     screen.getByText(term, { selector: "dt" }).nextElementSibling;
-  expect(value("product · update")).toHaveTextContent("2");
+  expect(value("product · update")).toHaveTextContent("3");
   expect(value("list · added")).toHaveTextContent("1");
-  expect(screen.getByText("Passing", { selector: "h2, h3" })).toBeVisible();
-  expect(screen.queryByText(/Problems? needing action/)).toBeNull();
+  const chip = screen
+    .getByText(/Changes Home leaves out/, { selector: ".disclosure-label" })
+    .querySelector(".badge");
+  expect(chip).toHaveClass("badge");
+  expect(chip).not.toHaveClass("badge-success");
 });
 
 it("does not assume rejected imports are still missing after a possible later success", async () => {

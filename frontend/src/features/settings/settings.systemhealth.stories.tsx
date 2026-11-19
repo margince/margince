@@ -20,6 +20,7 @@ import { SystemHealthPage } from "./settings.systemhealth";
 import {
   attentionReport,
   healthReport,
+  informationReport,
   overdueFinding,
   stoppedMailReport,
 } from "./systemhealth.fixtures";
@@ -67,28 +68,19 @@ export const Narrow: Story = {
   tags: ["uat-phone"],
 };
 export const UnplacedChanges: Story = {
-  render: story({
-    ...healthReport,
-    sources: [
-      ...healthReport.sources,
-      {
-        id: "unplaced",
-        permission: "ai_diagnostics:read",
-        scope: "installation",
-        availability: "available",
-        condition: "clear",
-        code: "unplaced_counted",
-        observed_at: healthReport.generated_at,
-        count: 5,
-        unit: "items",
-        unplaced_changes: [
-          { entity_type: "product", action: "update", count: 3 },
-          { entity_type: "list", action: "added", count: 1 },
-          { entity_type: "tag", action: "applied", count: 1 },
-        ],
-      },
-    ],
-  }),
+  render: story(informationReport),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const group = await canvas.findByRole("list", { name: "For information" });
+    await expect(
+      within(group).getByText("Changes Home leaves out"),
+    ).toBeVisible();
+    await expect(
+      within(canvas.getByRole("list", { name: "Passing" })).queryByText(
+        "Changes Home leaves out",
+      ),
+    ).toBeNull();
+  },
 };
 export const SourceFailed: Story = {
   render: story({

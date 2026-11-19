@@ -98,6 +98,7 @@ export const healthConditions: Record<Source["condition"], MessageKey> = {
   technical: "health.condition.technical",
   unverified: "health.condition.unverified",
   recovered: "health.condition.recovered",
+  information: "health.condition.information",
   unknown: "health.unknown",
 };
 export const healthResponsible: Record<Finding["responsible"], MessageKey> = {

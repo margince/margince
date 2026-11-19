@@ -51697,8 +51697,11 @@ export interface components {
             id: string;
             /** @enum {string} */
             availability: "available" | "unknown" | "stale" | "failed" | "withheld" | "not_configured" | "not_monitored";
-            /** @enum {string} */
-            condition: "clear" | "processing" | "retrying" | "waiting_human" | "technical" | "unverified" | "recovered" | "unknown";
+            /**
+             * @description `information` is a fact an operator may want, never a fault: it needs no action, raises no finding and leaves the assessment and completeness as they are.
+             * @enum {string}
+             */
+            condition: "clear" | "processing" | "retrying" | "waiting_human" | "technical" | "unverified" | "recovered" | "unknown" | "information";
             /** @description Safe presentation code, never raw failure text. */
             code: string;
             permission: string;

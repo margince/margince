@@ -139,7 +139,7 @@ const unplacedWindow = 7 * 24 * time.Hour
 const maxUnplacedKinds = 50
 
 // unplacedSummary reports the machine changes Home's receipt cannot place. It
-// is a coverage fact rather than a fault, so it reads clear whatever the count.
+// is a coverage fact rather than a fault, so it is information whatever the count.
 func (s Server) unplacedSummary(ctx context.Context) (crmcontracts.HealthSource, []crmcontracts.HealthFinding, error) {
 	source := healthSource(healthUnplacedID, "ai_diagnostics")
 	source.Scope = healthInstallation
@@ -157,7 +157,7 @@ func (s Server) unplacedSummary(ctx context.Context) (crmcontracts.HealthSource,
 	unit := crmcontracts.HealthSourceUnit("items")
 	source.ObservedAt, source.WindowStart, source.WindowEnd = &now, &from, &now
 	source.Count, source.Unit, source.UnplacedChanges = &total, &unit, &breakdown
-	source.Condition, source.Code = healthClear, "unplaced_none"
+	source.Condition, source.Code = healthInformation, "unplaced_none"
 	if total > 0 {
 		source.Code = "unplaced_counted"
 	}

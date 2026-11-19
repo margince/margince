@@ -407,7 +407,7 @@ func TestSystemHealthBreaksDownTheChangesHomeCannotPlace(t *testing.T) {
 
 	source := unplacedSource(t, e)
 	want := []crmcontracts.HealthUnplacedChange{{EntityType: "product", Action: "update", Count: 2}}
-	if source.Availability != "available" || source.Condition != "clear" || source.Code != "unplaced_counted" ||
+	if source.Availability != "available" || source.Condition != "information" || source.Code != "unplaced_counted" ||
 		source.Count == nil || *source.Count != 2 || source.UnplacedChanges == nil || !slices.Equal(*source.UnplacedChanges, want) {
 		t.Fatalf("unplaced changes misreported: %+v", source)
 	}

@@ -78,6 +78,19 @@ func TestHealthCompositionCannotTurnAnUnknownSourceIntoAllClear(t *testing.T) {
 	}
 }
 
+func TestHealthCompositionLeavesAnInformationSourceOutOfTheVerdict(t *testing.T) {
+	ctx := healthTestContext(map[string]principal.ObjectGrant{"ai_diagnostics": {Read: true}})
+	reads := []healthRead{{"unplaced", "ai_diagnostics", func(context.Context) (crmcontracts.HealthSource, []crmcontracts.HealthFinding, error) {
+		s := healthSource("unplaced", "ai_diagnostics")
+		s.Condition = healthInformation
+		return s, nil, nil
+	}}}
+	report := composeHealth(ctx, reads, func() time.Time { return time.Time{} })
+	if report.Assessment != "checked" || !report.Complete || report.ActionCount != 0 || len(report.Findings) != 0 {
+		t.Fatalf("an information source changed the verdict: %+v", report)
+	}
+}
+
 func TestSystemHealthRequiresAHumanAndAnExistingPageGrant(t *testing.T) {
 	for _, actor := range []principal.Principal{
 		{Type: principal.PrincipalHuman},
@@ -156,7 +169,7 @@ func TestIntakeWindowUsesTheUTCReportingDay(t *testing.T) {
 
 func TestHealthActionsExcludeAutomaticProcessing(t *testing.T) {
 	source := healthSource("jobs", "job_health")
-	for _, condition := range []crmcontracts.HealthSourceCondition{"clear", "processing", "retrying", "unknown", "recovered"} {
+	for _, condition := range []crmcontracts.HealthSourceCondition{"clear", "processing", "retrying", "unknown", "recovered", "information"} {
 		if healthFinding(source, "queue_checked", condition, 1, "runs").RequiresAction {
 			t.Fatalf("%s unexpectedly requires human action", condition)
 		}

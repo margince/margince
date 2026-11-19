@@ -14383,6 +14383,7 @@ func (e HealthSourceAvailability) Valid() bool {
 // Defines values for HealthSourceCondition.
 const (
 	HealthSourceConditionClear        HealthSourceCondition = "clear"
+	HealthSourceConditionInformation  HealthSourceCondition = "information"
 	HealthSourceConditionProcessing   HealthSourceCondition = "processing"
 	HealthSourceConditionRecovered    HealthSourceCondition = "recovered"
 	HealthSourceConditionRetrying     HealthSourceCondition = "retrying"
@@ -14396,6 +14397,8 @@ const (
 func (e HealthSourceCondition) Valid() bool {
 	switch e {
 	case HealthSourceConditionClear:
+		return true
+	case HealthSourceConditionInformation:
 		return true
 	case HealthSourceConditionProcessing:
 		return true
@@ -52026,7 +52029,9 @@ type HealthSource struct {
 	Availability  HealthSourceAvailability `json:"availability"`
 
 	// Code Safe presentation code, never raw failure text.
-	Code               string                `json:"code"`
+	Code string `json:"code"`
+
+	// Condition `information` is a fact an operator may want, never a fault: it needs no action, raises no finding and leaves the assessment and completeness as they are.
 	Condition          HealthSourceCondition `json:"condition"`
 	Count              *int                  `json:"count,omitempty" minimum:"0"`
 	ExpectationSeconds *int                  `json:"expectation_seconds,omitempty" minimum:"0"`
@@ -52046,7 +52051,7 @@ type HealthSource struct {
 // HealthSourceAvailability defines model for HealthSource.Availability.
 type HealthSourceAvailability string
 
-// HealthSourceCondition defines model for HealthSource.Condition.
+// HealthSourceCondition `information` is a fact an operator may want, never a fault: it needs no action, raises no finding and leaves the assessment and completeness as they are.
 type HealthSourceCondition string
 
 // HealthSourceScope defines model for HealthSource.Scope.

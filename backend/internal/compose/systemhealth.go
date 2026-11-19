@@ -36,6 +36,7 @@ const (
 	healthProcessing    = crmcontracts.HealthSourceConditionProcessing
 	healthRetrying      = crmcontracts.HealthSourceConditionRetrying
 	healthClear         = crmcontracts.HealthSourceConditionClear
+	healthInformation   = crmcontracts.HealthSourceConditionInformation
 	healthUnknown       = crmcontracts.HealthSourceConditionUnknown
 	healthWorkspace     = crmcontracts.HealthSourceScopeWorkspace
 	healthInstallation  = crmcontracts.HealthSourceScopeInstallation

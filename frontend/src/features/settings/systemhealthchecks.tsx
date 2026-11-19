@@ -103,6 +103,7 @@ export type HealthGroups = Readonly<{
   setup: readonly Source[];
   waiting: readonly Source[];
   passing: readonly Source[];
+  information: readonly Source[];
 }>;
 
 /**
@@ -118,9 +119,13 @@ export function healthGroups(
       .filter((finding) => finding.requires_action)
       .map((finding) => finding.source),
   );
-  const open = sources.filter(
+  const readable = sources.filter(
     (source) => source.availability !== "withheld" && !explained.has(source.id),
   );
+  const information = readable.filter(
+    (source) => source.condition === "information",
+  );
+  const open = readable.filter((source) => !information.includes(source));
   const passing = open.filter((source) => healthTone(source) === "success");
   const setup = open.filter(
     (source) => !passing.includes(source) && guideFor(source) !== undefined,
@@ -131,10 +136,11 @@ export function healthGroups(
       (source) => !passing.includes(source) && !setup.includes(source),
     ),
     passing,
+    information,
   };
 }
 
-/** The three groups below the findings: not set up, waiting, passing. */
+/** The groups below the findings: not set up, waiting, passing, information. */
 export function HealthChecks({ groups }: Readonly<{ groups: HealthGroups }>) {
   const t = useT();
   return (
@@ -155,6 +161,12 @@ export function HealthChecks({ groups }: Readonly<{ groups: HealthGroups }>) {
       )}
       {groups.passing.length > 0 && (
         <CheckList title={t("health.group.passing")} sources={groups.passing} />
+      )}
+      {groups.information.length > 0 && (
+        <CheckList
+          title={t("health.group.information")}
+          sources={groups.information}
+        />
       )}
     </>
   );
@@ -222,6 +234,11 @@ function CheckList({
 }
 
 function checkStatus(source: Source, t: (key: MessageKey) => string) {
+  if (source.condition === "information")
+    return {
+      tone: "default",
+      label: t("health.condition.information"),
+    } as const;
   const tone = healthTone(source);
   if (tone === "success")
     return { tone, label: t("health.checkPassing") } as const;
