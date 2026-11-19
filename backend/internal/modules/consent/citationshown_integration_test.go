@@ -264,7 +264,7 @@ func TestADraftFindingCitesTheRecipientsOwnMarket(t *testing.T) {
 	e.liveIn(t, e.address, german)
 	e.liveIn(t, kaiAddress, vietnamese)
 
-	found, err := e.store.CheckAdvertisingDraft(withActivityCreate(e.ctx), []string{e.address, kaiAddress}, "Offer", "Dear customer,\n\nOur offer.")
+	found, err := e.store.CheckAdvertisingDraft(withActivityCreate(e.ctx), []string{e.address, kaiAddress}, nil, "Offer", "Dear customer,\n\nOur offer.")
 	if err != nil {
 		t.Fatalf("checking the draft: %v", err)
 	}
