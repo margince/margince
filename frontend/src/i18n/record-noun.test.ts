@@ -413,6 +413,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "contactCase.preview.noShares",
     "worklist.contactCase.owners",
     "sharedMergeReviews.switch",
+    "common.duplicate.contactHolds",
     "linkedinReach.sub",
     // A colleague's LinkedIn acquaintances (người quen) are people, counted.
     "companyReach.sub",

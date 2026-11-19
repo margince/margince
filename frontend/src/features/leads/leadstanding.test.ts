@@ -183,6 +183,23 @@ describe("leadStanding", () => {
     expect(closed.sentence).toBe(
       'lead.standing.closedFor:{"reason":"No budget this year"}',
     );
+    expect(closed.note).toBeUndefined();
+  });
+
+  // The note typed when closing the lead is read with the reason it explains.
+  it("carries the disqualify note under the closed sentence, and no blank one", () => {
+    const closedWith = (note: string | null) =>
+      leadStanding(
+        lead({ status: "disqualified", disqualify_note: note }),
+        t,
+        "en",
+        zone,
+        zone,
+        [],
+      ).note;
+    expect(closedWith("Call back in Q4")).toBe("Call back in Q4");
+    expect(closedWith("   ")).toBeUndefined();
+    expect(closedWith(null)).toBeUndefined();
   });
 
   // The server's `disqualify_reason` is the stored English label, so the

@@ -232,6 +232,8 @@ function ShareLinkReveal({
       open
       onClose={onClose}
       title={t("analytics.share.linkTitle")}
+      unsaved={!copy.copied}
+      unsavedBody={t("analytics.share.leaveWarning")}
       confirmLabel={copy.label}
       onConfirm={copy.copy}
       error={revoke.error ? problemMessageOf(revoke.error, t) : undefined}

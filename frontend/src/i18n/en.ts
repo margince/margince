@@ -2941,6 +2941,11 @@ export const en = {
   "action.booking": "Booking page",
 
   "common.fieldInvalid": "Check this value and try again.",
+  "common.phone.needsCountryCode":
+    "Start the number with its country code, such as +49 or 0049.",
+  "common.phone.malformed":
+    "This is not a phone number. Write the country code and 8 to 15 digits, such as +49 30 1234567, with no extension.",
+  "common.phone.empty": "Enter a phone number.",
   "common.fieldTooLongMax": "{field}: at most {max} characters.",
   "common.valueTooLongMax": "This value is at most {max} characters.",
   "common.valueTooLong": "This value is too long.",
@@ -3036,6 +3041,9 @@ export const en = {
   "record.fieldsRetry": "Retry",
 
   "record.companyRoutingKey": "Company routing key",
+  "record.companyRoutingKeyWhy": "What the company routing key is",
+  "record.companyRoutingKeyHelp":
+    "The company’s web domain, such as example.com, or a short name for it. Lead routing rules can match it, and a domain a company in Margince holds suggests that company.",
   "record.finishFieldEdit":
     "Save or cancel the current edit before closing details.",
   "record.save": "Save",
@@ -3537,6 +3545,9 @@ export const en = {
   "unit.companies": "companies",
   "unit.deals": "deals",
   "unit.leads": "leads",
+  "unit.contact": "contact",
+  "unit.company": "company",
+  "unit.lead": "lead",
   "unit.worklistItems": "tasks and commitments",
   "unit.partners": "partners",
   "unit.products": "products",
@@ -5784,7 +5795,7 @@ export const en = {
   "leadHandling.readOnly": "Your role cannot change this setting.",
   "leadHandling.firstResponse": "First-response target",
   "leadHandling.firstResponseHint":
-    "Off by default. When on, every open lead gets a reply deadline, the list gains an Overdue view, and overdue leads sort first.",
+    "Off by default. When on, every open lead that wrote to you by email or through a website form gets a reply deadline, the list gains an Overdue view, and overdue leads sort first.",
   "leadHandling.targetMinutes": "Target (minutes)",
   "leadHandling.targetOutOfRange":
     "Enter a whole number of minutes from 15 to 10,080 (7 days).",
@@ -5809,6 +5820,10 @@ export const en = {
   "lead.bulkDisqualifyTitle_other": "Disqualify {count} leads?",
   "lead.bulkDisqualifyBody":
     "Closed with the reason “{reason}”. Each lead keeps its record, and they cannot be reopened in one step.",
+  "lead.bulkAssignedDone_one": "{count} lead assigned to {owner}.",
+  "lead.bulkAssignedDone_other": "{count} leads assigned to {owner}.",
+  "lead.bulkDisqualifiedDone_one": "{count} lead disqualified.",
+  "lead.bulkDisqualifiedDone_other": "{count} leads disqualified.",
   "lead.bulkFailed": "{count} not applied:",
   "lead.bulkFailedRow": "not saved",
   "lead.bulkOutcomeConflict": "changed by someone else in the meantime",
@@ -5883,6 +5898,8 @@ export const en = {
   "lead.demoteReason": "Reason (recorded in the audit trail)",
   "lead.demoteReasonRequired": "Enter a reason first.",
   "lead.demoteConfirm": "Reverse",
+  "lead.demoteContactHasDeal":
+    "The contact is on a deal, so this qualification cannot be reversed. Remove them from the deal’s buying committee first, or keep the contact.",
   "lead.reopen": "Reopen",
   "lead.writeRefused": "Change was not saved",
   "lead.reopenDialog": "Reopen this lead?",
@@ -6003,7 +6020,7 @@ export const en = {
   "lead.viewNew": "New",
   "lead.viewNewUnassigned": "New and unassigned",
   "lead.viewUnassigned": "Unassigned",
-  "lead.viewNeedsFollowUp": "Needs follow-up",
+  "lead.viewContacted": "Contacted",
   "lead.viewEngaged": "Engaged",
   "lead.ladder": "Lead status",
   "lead.ladder.automatic": "{label} · set automatically",
@@ -6030,11 +6047,9 @@ export const en = {
   "lead.qualify.stage": "Stage",
   "lead.qualify.dealName": "Deal name",
   "lead.qualify.amount": "Amount ({currency})",
-  "lead.qualify.amountHint":
-    "Optional. Whole units in the installation’s base currency.",
-  "lead.qualify.amountInvalid": "Enter a number, or leave it empty.",
+  "lead.qualify.amountHint": "Optional. In the installation’s base currency.",
   "lead.qualify.amountNoCurrency":
-    "Base currency not loaded yet. Retry shortly, or leave the amount empty.",
+    "Opens once the installation’s base currency has loaded.",
   "lead.qualify.why": "Why",
   "lead.qualify.reasonReplied": "Reason: the lead replied on {at}.",
   "lead.qualify.reasonMeetingBooked": "Reason: a meeting was booked for {at}.",
@@ -7376,9 +7391,6 @@ export const en = {
   "create.region": "State or region",
   "create.postalCode": "Postal code",
   "create.country": "Country code (ISO 3166)",
-  "lead.fillFromContact": "Fill from a contact",
-  "lead.fillFromContactSearch": "Search contacts by name or email",
-  "lead.create.fromContact": "Filled in from this contact.",
   "create.companyName": "Company",
   "create.companyPicked": "Adds the contact to this existing company.",
   "create.companyNew":
@@ -7428,7 +7440,7 @@ export const en = {
   "common.duplicate.leadHolds":
     "A lead already has this email address or LinkedIn profile, so no contact was created.",
   "common.duplicate.contactHolds":
-    "A contact already has this email address or LinkedIn profile, so no lead was created. For new business with them, open a deal on the contact.",
+    "A contact already has this email address or LinkedIn profile, and someone is either a lead or a contact. For new business with them, open a deal on the contact.",
   "contact.leadHeld.title": "This is already a lead.",
   "contact.leadHeld.body":
     "Somebody is a lead or a contact, never both. Convert the lead to make them a contact; the lead’s history moves with them.",
