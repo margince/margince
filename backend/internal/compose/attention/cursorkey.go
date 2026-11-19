@@ -4,8 +4,7 @@
 package attention
 
 import (
-	"crypto/rand"
-	"sync"
+	"crypto/sha256"
 
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
@@ -14,19 +13,20 @@ import (
 // cursorKeyLabel derives the key worklist cursors are signed with.
 const cursorKeyLabel = "margince worklist cursor v1"
 
-// processCursorKey stands in where no root key is configured. A cursor then
-// resumes only on the process that minted it. Any other process refuses it.
-var processCursorKey = sync.OnceValue(func() []byte {
-	key := make([]byte, 32)
-	if _, err := rand.Read(key); err != nil {
-		panic("attention: reading random bytes for the cursor key: " + err.Error())
-	}
-	return key
-})
+// unkeyedCursorKey stands in where the installation sets no root key. It is
+// the same on every replica and across restarts, so a cursor resumes anywhere.
+// It is public, so there a cursor only detects accidental edits. A root key
+// makes it authenticate, as it does for preference links.
+var unkeyedCursorKey = sha256.Sum256([]byte(cursorKeyLabel + " unkeyed"))
 
 func cursorKey() []byte {
-	if key := keyvault.DerivedKey(config.Bound(), cursorKeyLabel); key != nil {
-		return key
+	return cursorKeyFrom(keyvault.DerivedKey(config.Bound(), cursorKeyLabel))
+}
+
+// cursorKeyFrom is the derived key, or the shared fallback when none is set.
+func cursorKeyFrom(derived []byte) []byte {
+	if derived != nil {
+		return derived
 	}
-	return processCursorKey()
+	return unkeyedCursorKey[:]
 }

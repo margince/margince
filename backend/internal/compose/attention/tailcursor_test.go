@@ -229,3 +229,24 @@ func TestAnEditedTailIsRefusedAndAnUntouchedOneResumes(t *testing.T) {
 		t.Errorf("an unsigned cursor answered %v, want the invalid-cursor refusal", err)
 	}
 }
+
+// Two replicas, or one process before and after a restart, derive the cursor
+// key independently. Each must accept the other's cursors.
+func TestCursorsResumeOnAnotherReplicaAndAfterARestart(t *testing.T) {
+	rootKey := []byte("0123456789abcdef0123456789abcdef")
+	for name, derive := range map[string]func() []byte{
+		"no root key": func() []byte { return cursorKeyFrom(nil) },
+		"a root key":  func() []byte { return cursorKeyFrom(append([]byte(nil), rootKey...)) },
+	} {
+		minted, err := storekit.EncodeSigned(worklistCursor{At: 3, Params: fingerprint(scopeMine, "", ids.Nil)}, derive())
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := storekit.DecodeSigned[worklistCursor](minted, derive()); err != nil {
+			t.Errorf("%s: an independently derived key refused the cursor: %v", name, err)
+		}
+	}
+	if string(cursorKeyFrom(nil)) == string(cursorKeyFrom(append([]byte(nil), rootKey...))) {
+		t.Error("a configured root key must sign under its own key, not the shared fallback")
+	}
+}
