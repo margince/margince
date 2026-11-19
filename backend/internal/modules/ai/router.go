@@ -137,6 +137,16 @@ func NewRouter(cfg RoutingConfig, meter *Meter, budget BudgetPolicy, calls callS
 	return router, nil
 }
 
+// NewUnboundRouter builds a Router that serves no tier yet. A role that boots
+// before anyone has bound a model holds this one, so the routing watcher can
+// bind it later. Every call on it is refused like a task with no bound tier.
+func NewUnboundRouter(meter *Meter, budget BudgetPolicy, calls callStore, capturePayloads bool, log *slog.Logger) *Router {
+	router := assembleRouter(nil, nil, "", meter, budget, calls, nil, capturePayloads, log)
+	router.restrictionsRequired = true
+	router.install(binding{public: NewPublicProfile("unconfigured", RoutingConfig{})})
+	return router
+}
+
 // assembleRouter is the seam unit tests inject fakes through.
 func assembleRouter(clients map[Tier]model.Client, embedder model.Client, profile Profile, meter usageStore, budget BudgetPolicy, calls callStore, meta map[Tier]routeMeta, capturePayloads bool, log *slog.Logger) *Router {
 	if log == nil {
@@ -166,6 +176,9 @@ func assembleRouter(clients map[Tier]model.Client, embedder model.Client, profil
 // the resolved tier's binding supplies it. It is exactly one logical
 // call — mint, attempt, flush.
 func (r *Router) Complete(ctx context.Context, task Task, req model.Request) (model.Response, RouteInfo, error) {
+	if err := r.refuseUnbound(); err != nil {
+		return model.Response{}, RouteInfo{}, err
+	}
 	ladder, ok := taskLadders[task]
 	if !ok {
 		return model.Response{}, RouteInfo{}, fmt.Errorf("ai: unknown task %q", task)
@@ -189,14 +202,10 @@ func (r *Router) serveCompletion(ctx context.Context, task Task, ladder []Tier, 
 	// survivable when it began announcing a start, because the start is
 	// committed durable state that only this flush closes.
 	//
-	// The binding is loaded HERE and not carried out of serveAttempt, so a
-	// rebind during the call files the trace under the configuration current at
-	// flush rather than the one that served it. That is pre-existing and
-	// unchanged by this defer — serveAttempt owns its own `b` and does not
-	// publish it — but the comment that used to sit here claimed the opposite,
-	// and a false claim about which configuration a trace names is worse than
-	// the gap it hid.
-	defer func() { r.flushDetached(ctx, r.binding(), lc) }()
+	// The binding is read here, at the start, as CompleteStructured does. A
+	// rebind during the call then files the trace under the binding the call
+	// started on, not the one current at flush.
+	defer r.flushDetached(ctx, r.binding(), lc)
 	return r.serveAttempt(ctx, lc, task, ladder, req, "")
 }
 

@@ -9855,6 +9855,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "setup.step.aiDone": "{name} đã được kết nối.",
   "setup.step.aiDoneUnnamed": "Một công cụ AI đã được kết nối.",
   "firstRun.ai.skip": "Để sau",
+  "firstRun.ai.connectAnyway": "Vẫn kết nối",
   "ob.gate.noModelSub":
     "Chưa thiết lập nhà cung cấp AI nên Margince chưa đọc được trang web của bạn. Hãy tự nhập thông tin công ty, hoặc thêm khóa ngay.",
   "ob.gate.addModel": "Thêm khóa AI",

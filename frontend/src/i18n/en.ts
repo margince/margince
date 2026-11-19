@@ -10119,6 +10119,7 @@ export const en = {
   "setup.step.aiDone": "{name} is connected.",
   "setup.step.aiDoneUnnamed": "An AI tool is connected.",
   "firstRun.ai.skip": "Not now",
+  "firstRun.ai.connectAnyway": "Connect anyway",
   "ob.gate.noModelSub":
     "No AI provider is set up yet, so Margince cannot read your website. Enter your company details yourself, or add a key now.",
   "ob.gate.addModel": "Add an AI key",
