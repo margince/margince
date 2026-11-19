@@ -143,6 +143,9 @@ export const Open: Story = {
     if (!pop) {
       throw new Error("the panel is missing");
     }
+    await Promise.all(
+      pop.getAnimations({ subtree: true }).map((a) => a.finished),
+    );
     const root = getComputedStyle(document.documentElement);
     const cardInset = Number.parseFloat(root.getPropertyValue("--space-2"));
     const rect = pop.getBoundingClientRect();
