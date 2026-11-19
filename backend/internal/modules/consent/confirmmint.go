@@ -25,6 +25,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // mintRequest is what the mint needs, and it deliberately holds no plaintext.
@@ -72,11 +73,6 @@ type mintedLink struct {
 	alreadyPending bool
 }
 
-// automaticResendWindow is how long a live link for one contact and purpose
-// answers a repeat automatic request. An anonymous form can name any address,
-// so a repeat inside the window must not mail its owner again.
-const automaticResendWindow = 24 * time.Hour
-
 // issueLinkTx is the mint itself, on a transaction the caller owns.
 //
 // SPLIT OUT so the preference centre can start a resubscribe inside the save
@@ -119,12 +115,10 @@ func (s *Store) issueLinkTx(
 			return err
 		}
 		issued := s.now().UTC()
-		if req.lane == mintWithoutMailLane {
-			pending, err := recentLinkLiveTx(ctx, tx, req, issued)
-			if err != nil || pending {
-				out = mintedLink{deliveredTo: deliveredTo, alreadyPending: pending}
-				return err
-			}
+		held, err := s.automaticAnswerTx(ctx, tx, req, admitted, issued)
+		if err != nil || held.stop {
+			out = mintedLink{deliveredTo: deliveredTo, alreadyPending: held.pending}
+			return err
 		}
 		expires := issued.Add(confirmTokenTTL)
 		// Per KIND, and per purpose within a kind. A fresh record-confirmation
@@ -160,12 +154,7 @@ func (s *Store) issueLinkTx(
 		// The address is audited because it is the evidence: a later reader
 		// asking why a grant counted needs to see which mailbox was reached.
 		// The plaintext token never lands in audit or outbox payloads.
-		if _, err := storekit.Audit(ctx, tx, "create", "confirm_token", tokenRowID, nil, map[string]any{
-			contactIDKey:   contactID,
-			"delivered_to": deliveredTo,
-			"expires_at":   expires,
-			auditKeyKind:   kind,
-		}); err != nil {
+		if err := auditLinkTx(ctx, tx, tokenRowID, contactID, deliveredTo, kind, expires); err != nil {
 			return err
 		}
 		out = mintedLink{expiresAt: expires, deliveredTo: deliveredTo}
@@ -255,15 +244,87 @@ func insertContactLinkTx(ctx context.Context, tx pgx.Tx, link contactLink) (ids.
 	return id, err
 }
 
-// recentLinkLiveTx reports whether this contact already holds an unspent link
-// of the requested kind and purpose that was issued inside the resend window.
-func recentLinkLiveTx(ctx context.Context, tx pgx.Tx, req mintRequest, now time.Time) (bool, error) {
-	var pending bool
-	err := tx.QueryRow(ctx, `
-		SELECT EXISTS (
-		  SELECT 1 FROM confirm_token
-		   WHERE contact_id = $1 AND kind = $2 AND purpose_id IS NOT DISTINCT FROM $3
-		     AND consumed_at IS NULL AND expires_at > $4 AND issued_at > $5)`,
-		req.contactID, req.kind, nullablePurpose(req.purposeID), now, now.Add(-automaticResendWindow)).Scan(&pending)
-	return pending, err
+// Anonymous forms can name any address, so an automatic confirmation is
+// budgeted per address from the staged link rows themselves.
+const (
+	automaticShortWindow = 7 * 24 * time.Hour
+	automaticLongWindow  = 90 * 24 * time.Hour
+	automaticLongMax     = 3
+)
+
+// stagedLinkSQL says the mail for token ct was actually staged. A token with
+// no delivery is a link nobody was sent.
+const stagedLinkSQL = `EXISTS (SELECT 1 FROM comms_outbound o WHERE o.link_id = ct.id)`
+
+// pendingLinkSQL is the single definition of a pending confirmation: unspent,
+// unexpired at the given instant, and staged. The dedupe, the API marker and
+// the consent panel all read it. nowArg is a placeholder or SQL expression.
+func pendingLinkSQL(nowArg string) string {
+	return `ct.consumed_at IS NULL AND ct.expires_at > ` + nowArg + ` AND ` + stagedLinkSQL
+}
+
+// automaticStop says an automatic request mints and mails nothing.
+type automaticStop struct {
+	stop    bool
+	pending bool
+}
+
+// automaticAnswerTx decides whether an automatic request may mail. It stops
+// when no mail lane exists, the grant is already held, or the address spent its
+// budget. A stop reports pending only while the link already sent is still live.
+func (s *Store) automaticAnswerTx(ctx context.Context, tx pgx.Tx, req mintRequest, admitted admittedLink, now time.Time) (automaticStop, error) {
+	if req.lane != mintWithoutMailLane {
+		return automaticStop{}, nil
+	}
+	if !s.canSendConfirm() {
+		return automaticStop{stop: true}, nil
+	}
+	held, err := subjectGrantedTx(ctx, tx, "contact_id", req.contactID.String(), req.purposeID.String(), admitted.purpose.requiresDOI)
+	if err != nil || held {
+		return automaticStop{stop: err == nil}, err
+	}
+	if stopped, err := stopBindsConfirmationTx(ctx, tx, req, admitted); err != nil || stopped {
+		return automaticStop{stop: err == nil}, err
+	}
+	var pending, spent bool
+	err = tx.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM confirm_token ct
+		                WHERE ct.contact_id = $1 AND ct.kind = $2 AND ct.purpose_id IS NOT DISTINCT FROM $3
+		                  AND `+pendingLinkSQL("$4")+`),
+		       EXISTS (SELECT 1 FROM confirm_token ct
+		                WHERE lower(ct.delivered_to) = lower($5) AND ct.kind = $2
+		                  AND ct.issued_at > $6 AND `+stagedLinkSQL+`)
+		    OR (SELECT count(*) FROM confirm_token ct
+		         WHERE lower(ct.delivered_to) = lower($5) AND ct.kind = $2
+		           AND ct.issued_at > $7 AND `+stagedLinkSQL+`) >= $8`,
+		req.contactID, req.kind, nullablePurpose(req.purposeID), now, admitted.deliveredTo,
+		now.Add(-automaticShortWindow), now.Add(-automaticLongWindow), automaticLongMax).Scan(&pending, &spent)
+	return automaticStop{stop: spent, pending: pending && spent}, err
+}
+
+// stopBindsConfirmationTx reports whether a live suppression binds this purpose
+// for the address, the same reading the send gate applies. A marketing
+// objection is not refused at staging, so it must stop the question here.
+func stopBindsConfirmationTx(ctx context.Context, tx pgx.Tx, req mintRequest, admitted admittedLink) (bool, error) {
+	var class Class
+	if err := tx.QueryRow(ctx, `SELECT class FROM consent_purpose WHERE id = $1`, req.purposeID).Scan(&class); err != nil {
+		return false, err
+	}
+	stops, err := liveSuppression(ctx, tx, req.contactID.String(), connector.Recipient{Email: admitted.deliveredTo})
+	if err != nil {
+		return false, err
+	}
+	_, bound, err := stopBindingPurpose(stops, PurposeRow{ID: req.purposeID.String(), Class: class})
+	return bound, err
+}
+
+// auditLinkTx records the minted link. The plaintext token never enters the payload.
+func auditLinkTx(ctx context.Context, tx pgx.Tx, tokenRowID ids.UUID, contactID ids.ContactID, deliveredTo, kind string, expires time.Time) error {
+	_, err := storekit.Audit(ctx, tx, "create", "confirm_token", tokenRowID, nil, map[string]any{
+		contactIDKey:   contactID,
+		"delivered_to": deliveredTo,
+		"expires_at":   expires,
+		auditKeyKind:   kind,
+	})
+	return err
 }

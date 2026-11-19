@@ -218,9 +218,8 @@ func (a bookingConsentAdapter) askMarketing(ctx context.Context, contactID ids.U
 	issued, err := a.store.IssueBookedConsentLink(ctx,
 		ids.From[ids.ContactKind](contactID), ids.From[ids.PurposeKind](m.PurposeID), m.TickedFrom, m.AskedBySubject)
 	if err == nil {
-		// A nil error says the token row exists, not that anybody will get the
-		// mail: an installation with no relay mints a link and stages nothing.
-		// Only a staged or already-pending question is reported as asked.
+		// Staged or already-pending means the question is on its way. The mint
+		// answers neither for an installation with no relay, which is not_asked.
 		if !issued.Staged && !issued.AlreadyPending {
 			return activities.MarketingNotAsked, nil
 		}

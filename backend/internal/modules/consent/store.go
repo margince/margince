@@ -456,10 +456,10 @@ func markPendingConfirmations(ctx context.Context, tx pgx.Tx, sub subject, state
 		return nil
 	}
 	rows, err := tx.Query(ctx, `
-		SELECT purpose_id, max(expires_at) FROM confirm_token
-		 WHERE contact_id = $1 AND kind = $2 AND consumed_at IS NULL
-		   AND expires_at > now() AND purpose_id IS NOT NULL
-		 GROUP BY purpose_id`, sub.id, LinkConsentConfirmation)
+		SELECT ct.purpose_id, max(ct.expires_at) FROM confirm_token ct
+		 WHERE ct.contact_id = $1 AND ct.kind = $2 AND ct.purpose_id IS NOT NULL
+		   AND `+pendingLinkSQL("now()")+`
+		 GROUP BY ct.purpose_id`, sub.id, LinkConsentConfirmation)
 	if err != nil {
 		return err
 	}
