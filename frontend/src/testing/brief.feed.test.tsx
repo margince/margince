@@ -6,8 +6,9 @@ import { ToastProvider } from "../design-system/toast";
 import { BriefFeed } from "../features/brief/brief.feed";
 import { BriefGlance } from "../features/brief/brief.glance";
 import { WorklistRow } from "../features/worklist/worklist.row";
+import { formatTimeOfDay } from "../format/format.dates";
+import { browserZone } from "../format/timezone";
 import { en } from "../i18n/en";
-import { ViewerZoneProvider } from "../lib/viewerzone";
 import {
   failedApprovalRow,
   legacyStalledRow,
@@ -140,15 +141,15 @@ it("shows dates and does not repeat the ranking comparator", () => {
 
 it("says the reader is caught up, and when Margince last looked, on a complete clear read", () => {
   stubApi({});
-  render(
-    <ViewerZoneProvider zone="Europe/Berlin">
-      <BriefFeed day={readingsDay({}, [])} state="ready" />
-    </ViewerZoneProvider>,
-  );
+  const day = readingsDay({}, []);
+  render(<BriefFeed day={day} state="ready" />);
   expect(
     screen.getByRole("heading", { name: en["brief.feed.caughtUp"] }),
   ).toBeTruthy();
-  expect(screen.getByText(/Margince checked at 08:42/)).toBeTruthy();
+  const time = formatTimeOfDay(day.as_of, "en", browserZone());
+  expect(
+    screen.getByText(new RegExp(`Margince checked at ${time}`)),
+  ).toBeTruthy();
 });
 
 it("does not claim an empty agenda when a source failed", () => {
