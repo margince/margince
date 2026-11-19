@@ -129,7 +129,7 @@ func ParsePlan(reply string, in Input, floor Plan) (Plan, error) {
 	written := Plan{Type: floor.Type, Unknowns: floor.Unknowns}
 
 	if sentence, ok := keptPlanSentence(parsed.Objective, "objective", known); ok {
-		written.Objective = &Objective{Sentence: sentence, Caveat: briefCopyFor(in.Language).caveatFor(floor.Type)}
+		written.Objective = &Objective{Sentence: sentence, Caveat: in.words().caveatFor(floor.Type)}
 	}
 	if sentence, ok := keptPlanSentence(parsed.Opening, "opening", known); ok {
 		written.Opening = &sentence

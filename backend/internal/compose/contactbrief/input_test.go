@@ -36,12 +36,12 @@ func TestTheDealAmountReachesTheModelAsAMajorUnitFigure(t *testing.T) {
 		want     string
 		reject   string
 	}{
-		{"a two-decimal currency", 18_000_000, "EUR", `"amount":"180000.00"`, "18000000"},
+		{"a two-decimal currency", 18_000_000, "EUR", `"amount":"180,000.00"`, "18000000"},
 		// The other direction, and the one `/100` gets wrong: yen has no minor
 		// unit, so the integer IS the figure and dividing would understate it a
 		// hundredfold.
-		{"a zero-decimal currency", 18_000_000, "JPY", `"amount":"18000000"`, "180000.00"},
-		{"a three-decimal currency", 18_000_000, "KWD", `"amount":"18000.000"`, "180000.00"},
+		{"a zero-decimal currency", 18_000_000, "JPY", `"amount":"18,000,000"`, "180,000.00"},
+		{"a three-decimal currency", 18_000_000, "KWD", `"amount":"18,000.000"`, "180,000.00"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
@@ -339,5 +339,18 @@ func TestAMachineThatIsThePageContactIsStillAMachine(t *testing.T) {
 	voice.Author.Address = &address
 	if got := SpeakerFor(voice); got == nil || got.Kind != "machine" {
 		t.Errorf("speaker = %+v, want machine", got)
+	}
+}
+
+// The model copies the figure it reads, so a German brief reads German digit marks.
+func TestAGermanBriefRequestCarriesTheAmountInGermanDigitMarks(t *testing.T) {
+	t.Parallel()
+	in := Input{ID: "c-1", Name: "Ada", OpenDeal: &DealIn{ID: briefDealID, Name: "Acme renewal 2027", AmountMinor: 1_234_500, Currency: "EUR"}}
+	body := BriefRequest(in, "de").Messages[0].Content
+	if !strings.Contains(body, `"amount":"12.345,00"`) {
+		t.Errorf("the German request carries %s, want \"amount\":\"12.345,00\"", body)
+	}
+	if english := BriefRequest(in, "en").Messages[0].Content; !strings.Contains(english, `"amount":"12,345.00"`) {
+		t.Errorf("wording the German request changed the caller's deal: %s", english)
 	}
 }

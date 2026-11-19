@@ -33,7 +33,7 @@ func advanceFor(in Input, typ MeetingType) Advance {
 }
 
 func advanceLines(typ MeetingType, in Input) (string, string, string) {
-	said := briefCopyFor(in.Language)
+	said := in.words()
 	who := said.Say(advanceWords.Them)
 	if len(in.Attendees) > 0 {
 		who = in.Attendees[0].FullName
@@ -77,7 +77,7 @@ func advanceLines(typ MeetingType, in Input) (string, string, string) {
 // nine branches handles none of them.
 func scenariosFor(in Input, typ MeetingType) []Scenario {
 	cite := []Evidence{{EntityType: citeActivity, EntityID: in.ActivityID}}
-	branches := briefCopyFor(in.Language).scenarioLines(typ)
+	branches := in.words().scenarioLines(typ)
 	out := make([]Scenario, 0, len(branches))
 	for _, branch := range branches {
 		out = append(out, Scenario{Label: branch[0], Play: branch[1], Evidence: cite})

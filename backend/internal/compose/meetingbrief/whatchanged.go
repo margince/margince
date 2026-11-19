@@ -97,7 +97,7 @@ func (s *Service) readLastSpoke(ctx context.Context, tx pgx.Tx, room meeting, pr
 // from the ranked set it takes from, and the conversations captured since.
 // The first line names the baseline, so the reader knows what "since" means.
 func whatChangedSection(in Input, ranked *rankedClaims) []Sentence {
-	said := briefCopyFor(in.Language)
+	said := in.words()
 	if in.LastSpokeAt == nil {
 		return []Sentence{{
 			Text:     said.Say(changedWords.First),

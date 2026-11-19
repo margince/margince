@@ -25,6 +25,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"regexp"
+	"strings"
+	"time"
 
 	"github.com/margince/margince/backend/internal/compose/claims"
 	"github.com/margince/margince/backend/internal/compose/promptlang"
@@ -365,7 +368,28 @@ func knownRecords(in Input) map[Evidence]string {
 	for _, kept := range in.LooksKept {
 		known[Evidence{EntityType: citeActivity, EntityID: kept.SourceID}] += claims.Source(kept)
 	}
+	for evidence, source := range known {
+		known[evidence] = source + localDays(source, in.Zone)
+	}
 	return known
+}
+
+// storedInstant matches an instant as a record's source spells it.
+var storedInstant = regexp.MustCompile(`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})`)
+
+// localDays names the day each stored instant falls on in the installation
+// zone. A line may then state the day the reader sees, not only the UTC one.
+func localDays(source string, zone *time.Location) string {
+	if zone == nil {
+		return ""
+	}
+	var days strings.Builder
+	for _, written := range storedInstant.FindAllString(source, -1) {
+		if at, err := time.Parse(time.RFC3339Nano, written); err == nil {
+			days.WriteString("\n" + at.In(zone).Format(time.DateOnly))
+		}
+	}
+	return days.String()
 }
 
 // meetingItself is the meeting's OWN facts: the input with its lists emptied.
