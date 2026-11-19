@@ -409,3 +409,198 @@ func TestANoteUnderAMessageKeyThatTheChatDidNotWriteIsRefused(t *testing.T) {
 		t.Fatalf("filing over a planted note = %v, want a conflict", err)
 	}
 }
+
+// recordingSummary keeps every request it is sent and answers each episode
+// with a note that leaves a question open.
+type recordingSummary struct{ prompts []string }
+
+func (s *recordingSummary) Complete(_ context.Context, req model.Request) (model.Response, error) {
+	s.prompts = append(s.prompts, req.Messages[0].Content)
+	return model.Response{Text: `{"relevant":true,"reason":"a price","title":"Two-year discount asked",` +
+		`"summary":"Acme asked what discount a two-year deal earns.","decisions":[],"open_questions":["Which discount for two years?"]}`}, nil
+}
+
+// partyEnv is a pull whose deal has an owner who writes nothing in the
+// channel, a company, and stakeholders of every standing. Every member holds
+// the management role, so each one may read the names.
+type partyEnv struct {
+	*pullEnv
+	rec   *recordingSummary
+	owner ids.UUID
+}
+
+func setupParties(t *testing.T) *partyEnv {
+	t.Helper()
+	e := &partyEnv{pullEnv: setupPull(t), rec: &recordingSummary{}, owner: ids.NewV7()}
+	e.puller.Lane = e.rec
+	e.exec(t, `INSERT INTO app_user (id, email, display_name) VALUES ($1, 'owen@chat.test', 'Owen Owner')`, e.owner)
+	e.exec(t, `UPDATE deal SET owner_id = $2, amount_minor = 123456700, currency = 'EUR' WHERE id = $1`, e.deal, e.owner)
+	reader := ids.NewV7()
+	e.exec(t, `INSERT INTO app_user (id, email, display_name) VALUES ($1, 'rex@chat.test', 'Rex Reader')`, reader)
+	e.seedRoles(t, map[ids.UUID]string{reader: "management", e.owner: "management", e.rep: "management"})
+	company := ids.NewV7()
+	e.exec(t, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'Acme GmbH', 'seed', 'system')`, company)
+	e.exec(t, `UPDATE deal SET company_id = $2 WHERE id = $1`, e.deal, company)
+	e.stakeholder(t, e.deal, "Clara Buyer", "workspace", false)
+	e.stakeholder(t, e.deal, "Pia Private", "owner", false)
+	e.stakeholder(t, e.deal, "Eddie Ended", "workspace", true)
+	foreign := ids.NewV7()
+	e.exec(t, `INSERT INTO deal (id, name, status, pipeline_id, stage_id, source, captured_by)
+		SELECT $2, 'Other deal', 'open', pipeline_id, stage_id, 'seed', 'system' FROM deal WHERE id = $1`, e.deal, foreign)
+	e.stakeholder(t, foreign, "Olga Other", "workspace", false)
+	return e
+}
+
+func (e *partyEnv) stakeholder(t *testing.T, deal ids.UUID, name, visibility string, ended bool) {
+	t.Helper()
+	contact := ids.NewV7()
+	e.exec(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, $2, 'seed', 'system')`, contact, name)
+	if visibility == "owner" {
+		e.exec(t, `UPDATE contact SET visibility = 'owner', owner_id = $2 WHERE id = $1`, contact, e.rep)
+	}
+	e.exec(t, `INSERT INTO relationship (kind, deal_id, contact_id, source, captured_by, ended_at)
+		VALUES ('deal_stakeholder', $1, $2, 'seed', 'system', CASE WHEN $3 THEN DATE '2026-01-01' END)`, deal, contact, ended)
+}
+
+// secondRequest runs a day of talk and a second one a day later, and returns
+// the request the second one sent.
+func (e *partyEnv) secondRequest(t *testing.T) string {
+	t.Helper()
+	e.say("acme", 1, 60, "What discount can we offer for a two-year deal?")
+	e.say("acme", 2, 24*60+60, "agreed: option B, 7 percent")
+	e.say("acme", 3, e.minutesAgo(5), "still talking")
+	e.pull(t)
+	if len(e.rec.prompts) != 2 {
+		t.Fatalf("model requests = %d, want one per closed episode", len(e.rec.prompts))
+	}
+	if strings.Contains(e.rec.prompts[0], "Earlier note") {
+		t.Errorf("the first episode has no earlier note, got %q", e.rec.prompts[0])
+	}
+	return e.rec.prompts[1]
+}
+
+func requireIn(t *testing.T, prompt string, want ...string) {
+	t.Helper()
+	for _, w := range want {
+		if !strings.Contains(prompt, w) {
+			t.Errorf("request lacks %q: %q", w, prompt)
+		}
+	}
+}
+
+func requireNotIn(t *testing.T, prompt string, banned ...string) {
+	t.Helper()
+	for _, b := range banned {
+		if strings.Contains(prompt, b) {
+			t.Errorf("request carries %q: %q", b, prompt)
+		}
+	}
+}
+
+func TestALaterEpisodeIsSentTheEarlierNoteAndOnlyWhatEveryReaderMayRead(t *testing.T) {
+	e := setupParties(t)
+	second := e.secondRequest(t)
+	requireIn(t, second, "Which discount for two years?", "Acme GmbH", "Clara Buyer", "Owen Owner", "agreed: option B")
+	requireNotIn(t, second, "1234567", "Pia Private", "Olga Other", "Eddie Ended")
+}
+
+func TestAReaderWithoutTheCompanyOrContactOrEdgeReadLeavesThatNameOut(t *testing.T) {
+	for _, tc := range []struct {
+		name, object      string
+		present, withheld string
+	}{
+		{"company", "company", "Clara Buyer", "Acme GmbH"},
+		{"contact", "contact", "Acme GmbH", "Clara Buyer"},
+		{"edge", "relationship", "Acme GmbH", "Clara Buyer"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			e := setupParties(t)
+			e.exec(t, `UPDATE role SET permissions = jsonb_set(permissions, ARRAY['objects', $1, 'read'], 'false') WHERE key = 'management'`, tc.object)
+			second := e.secondRequest(t)
+			requireIn(t, second, tc.present, "Owen Owner")
+			requireNotIn(t, second, tc.withheld)
+		})
+	}
+}
+
+// A member who may not open the deal still reads the note, so a missing
+// contact read on that member alone withholds the name.
+func TestAMemberWhoCannotOpenTheDealStillBoundsTheNames(t *testing.T) {
+	e := setupParties(t)
+	outsider := ids.NewV7()
+	e.exec(t, `INSERT INTO app_user (id, email, display_name) VALUES ($1, 'otto@chat.test', 'Otto Outsider')`, outsider)
+	e.exec(t, `INSERT INTO role_assignment (role_id, user_id) SELECT id, $1 FROM role WHERE key = 'rep' AND is_system`, outsider)
+	e.exec(t, `UPDATE role SET permissions = jsonb_set(permissions, '{objects,contact,read}', 'false') WHERE key = 'rep'`)
+	second := e.secondRequest(t)
+	requireIn(t, second, "Acme GmbH")
+	requireNotIn(t, second, "Clara Buyer")
+}
+
+func TestADepartedOwnerIsNotNamed(t *testing.T) {
+	e := setupParties(t)
+	e.exec(t, `UPDATE app_user SET status = 'deactivated' WHERE id = $1`, e.owner)
+	second := e.secondRequest(t)
+	requireNotIn(t, second, "Owen Owner", "Owner:")
+	requireIn(t, second, "Acme GmbH")
+}
+
+func TestANoteLimitedToItsParticipantsIsNotSent(t *testing.T) {
+	e := setupParties(t)
+	e.secondRequest(t)
+	e.exec(t, `UPDATE activity SET audience = 'participants' WHERE source_system = 'dispact'`)
+	e.exec(t, `DELETE FROM activity WHERE source_id = 'acme:2'`)
+	e.exec(t, `UPDATE chat_link SET history_cursor = 1 WHERE id = $1`, e.link)
+	e.pull(t)
+	requireNotIn(t, e.rec.prompts[len(e.rec.prompts)-1], "Which discount for two years?")
+}
+
+// note files a summary note as the engine does. Its talk runs from occurred to
+// ended, and its key names the first message.
+func (e *pullEnv) note(t *testing.T, key, body string, occurred, ended time.Time) {
+	t.Helper()
+	id := ids.NewV7()
+	e.exec(t, `INSERT INTO activity (id, kind, subject, body, occurred_at, source_system, source_id, raw, audience, source, captured_by)
+		VALUES ($1, 'note', $2, $2, $3, 'dispact', $4, jsonb_build_object('ended_at', $5::text), 'workspace', 'chat_links', 'system')`,
+		id, body, occurred, key, ended.UTC().Format(time.RFC3339))
+	e.exec(t, `INSERT INTO activity_link (activity_id, entity_type, deal_id) VALUES ($1, 'deal', $2)`, id, e.deal)
+}
+
+func (e *pullEnv) previous(t *testing.T, before time.Time) string {
+	t.Helper()
+	link := chatlinks.Link{DealID: &e.deal, ChannelSlug: "acme"}
+	var got string
+	err := database.WithWorkspaceTx(principal.WithWorkspaceID(context.Background(), e.ws), e.pool, func(tx pgx.Tx) error {
+		var err error
+		got, err = previousNote(context.Background(), tx, link, before)
+		return err
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return got
+}
+
+func TestThePreviousNoteIsChosenByWhenItsTalkEndedThenByChannelSequence(t *testing.T) {
+	e := setupPull(t)
+	at := func(minutes int) time.Time { return linkedAt.Add(time.Duration(minutes) * time.Minute) }
+	// A thread chosen later, rooted before the episode, whose replies run past it.
+	e.note(t, "acme:5:thread", "overlapping thread", at(10), at(300))
+	// Two notes whose talk ended together: the higher sequence is the later one.
+	e.note(t, "acme:3", "ended together, seq 3", at(60), at(90))
+	e.note(t, "acme:10", "ended together, seq 10", at(20), at(90))
+	// Filed in the reverse order of the talk, with an earlier end.
+	e.note(t, "acme:1", "ended before", at(80), at(85))
+
+	if got := e.previous(t, at(120)); !strings.HasPrefix(got, "ended together, seq 10") {
+		t.Errorf("previous note = %q, want the one that ended last, higher sequence first", got)
+	}
+	if got := e.previous(t, at(88)); !strings.HasPrefix(got, "ended before") {
+		t.Errorf("previous note = %q, want the note that ended strictly before the episode", got)
+	}
+	if got := e.previous(t, at(90)); !strings.HasPrefix(got, "ended before") {
+		t.Errorf("previous note = %q, want a note ending exactly at the start left out", got)
+	}
+	if got := e.previous(t, at(5)); got != "" {
+		t.Errorf("previous note = %q, want none", got)
+	}
+}

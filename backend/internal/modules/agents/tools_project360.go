@@ -31,16 +31,23 @@ import (
 // gates. Compose binds it to the page's own service.
 type Project360Reader func(ctx context.Context, projectID ids.UUID) (crmcontracts.Project360, error)
 
+// ActivityWriterSide says which side wrote a timeline row, as "outbound" for
+// ours, "inbound" for theirs, or empty. Compose binds it to activities.WriterSide.
+type ActivityWriterSide func(crmcontracts.Activity) string
+
 // RegisterProject360Tool joins read_project_360 to the surface once a reader
 // exists — the conditional registration the other injected-engine tools take.
-func RegisterProject360Tool(r *Registry, read Project360Reader) {
+func RegisterProject360Tool(r *Registry, read Project360Reader, writerSide ActivityWriterSide) {
 	if read == nil {
 		return
 	}
-	r.Register(readProject360{read: read})
+	r.Register(readProject360{read: read, writerSide: writerSide})
 }
 
-type readProject360 struct{ read Project360Reader }
+type readProject360 struct {
+	read       Project360Reader
+	writerSide ActivityWriterSide
+}
 
 func (t readProject360) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
@@ -67,7 +74,7 @@ func (t readProject360) Handle(ctx context.Context, in json.RawMessage) (json.Ra
 	if err != nil {
 		return nil, err
 	}
-	result := project360Result(page)
+	result := project360Result(page, t.writerSide)
 	// The page carries names, subjects and reasons read off rows this call
 	// does not hand over whole, so the answer is tainted with their content;
 	// and every record it NAMES is charged, at the point it is handed over.

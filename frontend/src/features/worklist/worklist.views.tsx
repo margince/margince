@@ -10,7 +10,12 @@ import { formatNumber } from "../../format/format";
 import { type Locale, translatePlural, useT } from "../../i18n";
 import { outstandingCounts, pillFigure } from "../../lib/worklistcounts";
 import { WORKLIST_VIEWS, type WorklistView } from "../../lib/worklistviews";
-import type { Worklist, WorklistFilter } from "./worklist.queries";
+import { loadedFigure } from "./worklist.completeness";
+import type {
+  Worklist,
+  WorklistFilter,
+  WorklistItem,
+} from "./worklist.queries";
 
 /**
  * The category buttons each view draws. Decisions and System each hold one
@@ -49,11 +54,15 @@ export function viewHeadline(
   day: Worklist,
   view: WorklistView,
   locale: Locale,
+  loaded: readonly WorklistItem[] = [],
 ): string {
   // A view no category was counted for has only the summary to go on. The
   // figure is the tab's own, so the heading and the tab never disagree.
   const figure = outstandingCounts(day, view).length
-    ? (viewCount(day, view) ?? { count: day.summary.total, floor: true })
+    ? (loadedFigure(day, "all", loaded, view) ?? {
+        count: day.summary.total,
+        floor: true,
+      })
     : { count: day.summary.total, floor: false };
   return translatePlural(locale, `worklist.view.total.${view}`, figure.count, {
     count: floorFigure(

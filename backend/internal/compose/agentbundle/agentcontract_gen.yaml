@@ -55896,8 +55896,9 @@ components:
     WorklistPlanCoverage:
       type: object
       description: |-
-        Whose weekly plans this read looked at, present only when `scope` is `team` and the
-        due commitments were read across the team roster. Absent under every other scope.
+        Whose weekly plans this read looked at, present only when `scope` is `team` or `all`.
+        Both read the due commitments across the reader's team roster, the reader included.
+        Absent under every other scope.
       required: [members, truncated]
       properties:
         members:
