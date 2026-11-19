@@ -6,6 +6,8 @@ The nightly check asks one more thing of every open deal: has the customer said
 anything lately? It counts the days since the customer last wrote to you, or
 since your last meeting with them took place. Mail you sent, a field you changed
 and a task do not count. A reply that turns the deal down does not count either.
+Mail on a thread Margince holds as personal does not count either, and does
+not keep the deal open. A meeting marked private in your calendar still counts.
 
 Margince asks nobody to review such a deal. It closes the deal itself, as
 below, and you can undo that.
