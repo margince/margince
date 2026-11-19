@@ -126,14 +126,15 @@ func crmFieldEnums(t *testing.T) map[string][]string {
 
 var (
 	pageSchemaUse     = regexp.MustCompile(`components\["schemas"\]\["(\w+)"\]`)
-	pageRowAlias      = regexp.MustCompile(`type (\w+) = components\["schemas"\]\["(\w+)"\];`)
-	pageKeyAlias      = regexp.MustCompile(`type (\w+) = (?:components\["schemas"\]\["(\w+)"\]|(\w+))\["field"\];`)
-	pageParamKeyAlias = regexp.MustCompile(`type (\w+) = components\["parameters"\]\["ProfileFieldKey"\];`)
-	pagePropsDecl     = regexp.MustCompile(`(?s)(?:type|interface) (\w+)\s*=?\s*(?:Readonly<)?\{(.*?)\n\}`)
-	pageComponentDecl = regexp.MustCompile(`function (\w+)\(([^)]*)\)`)
+	pageRowAlias      = regexp.MustCompile(`\btype (\w+) = components\["schemas"\]\["(\w+)"\];`)
+	pageKeyAlias      = regexp.MustCompile(`\btype (\w+) = (?:components\["schemas"\]\["(\w+)"\]|(\w+))\["field"\];`)
+	pageParamKeyAlias = regexp.MustCompile(`\btype (\w+) = components\["parameters"\]\["ProfileFieldKey"\];`)
+	pagePropsDecl     = regexp.MustCompile(`(?s)\b(?:type|interface) (\w+)\s*=?\s*(?:Readonly<)?\{(.*?)\n\}`)
+	pageComponentDecl = regexp.MustCompile(`\bfunction (\w+)\s*\(|\bconst (\w+)\s*=\s*(?:async\s*)?\(`)
+	pageArrowTail     = regexp.MustCompile(`^\s*(?::[^=;{]*)?=>`)
 	pageConstDecl     = regexp.MustCompile(`const (\w+)(?::([^=]+))?\s*=\s*([\[{])`)
 	pageQuotedKey     = regexp.MustCompile(`"([a-z][a-z0-9_]*)"`)
-	pageTypeAlias     = regexp.MustCompile(`(?s)type (\w+)\s*=\s*(.*?);`)
+	pageTypeAlias     = regexp.MustCompile(`\btype (\w+)\s*=\s*`)
 	pageFieldProp     = regexp.MustCompile(`\bfield="([a-z][a-z0-9_]*)"`)
 	pageFieldArg      = regexp.MustCompile(`\bfield:\s*"([a-z][a-z0-9_]*)"`)
 )
@@ -221,20 +222,35 @@ func pageKeyedComponents(src string, keyTypes map[string]string) map[string]stri
 			}
 		}
 	}
-	derived := map[string]string{}
-	for _, m := range pageTypeAlias.FindAllStringSubmatch(src, -1) {
-		for name, schema := range props {
-			if m[1] != name && regexp.MustCompile(`\b`+name+`\b`).MatchString(m[2]) {
-				derived[m[1]] = schema
+	var aliases [][2]string
+	for _, m := range pageTypeAlias.FindAllStringSubmatchIndex(src, -1) {
+		aliases = append(aliases, [2]string{src[m[2]:m[3]], src[m[1]:pageEndOf(src, m[1], ";")]})
+	}
+	// An alias may build on another alias, so derive until a pass adds nothing.
+	for grew := true; grew; {
+		grew = false
+		for _, alias := range aliases {
+			for name, schema := range props {
+				if _, known := props[alias[0]]; !known && regexp.MustCompile(`\b`+name+`\b`).MatchString(alias[1]) {
+					props[alias[0]], grew = schema, true
+				}
 			}
 		}
 	}
-	maps.Copy(props, derived)
 	out := map[string]string{}
-	for _, m := range pageComponentDecl.FindAllStringSubmatch(src, -1) {
-		for name, schema := range props {
-			if regexp.MustCompile(`\b` + name + `\b`).MatchString(m[2]) {
-				out[m[1]] = schema
+	for _, m := range pageComponentDecl.FindAllStringSubmatchIndex(src, -1) {
+		open := m[1] - 1
+		end := pageClosingBracket(src, open)
+		if end < 0 || (m[4] >= 0 && !pageArrowTail.MatchString(src[end+1:])) {
+			continue
+		}
+		name := m[2:4]
+		if m[4] >= 0 {
+			name = m[4:6]
+		}
+		for prop, schema := range props {
+			if regexp.MustCompile(`\b` + prop + `\b`).MatchString(src[open:end]) {
+				out[src[name[0]:name[1]]] = schema
 			}
 		}
 	}
@@ -271,7 +287,7 @@ func pageTypedLists(src string, keyTypes map[string]string) []pageTypedKey {
 }
 
 // componentFieldLiterals reads `field="…"` on the components keyed by a schema,
-// and `field: "…"` in the argument of a call to a hook keyed by one.
+// and each `field: "…"` in the argument of a call to a hook keyed by one.
 func pageComponentFields(src string, components map[string]string) []pageTypedKey {
 	var out []pageTypedKey
 	for name, schema := range components {
@@ -289,7 +305,7 @@ func pageComponentFields(src string, components map[string]string) []pageTypedKe
 			if end < 0 {
 				continue
 			}
-			if m := pageFieldArg.FindStringSubmatch(src[at[1]:end]); m != nil {
+			for _, m := range pageFieldArg.FindAllStringSubmatch(pageOutsideCallbacks(src[at[1]:end]), -1) {
 				out = append(out, pageTypedKey{schema, m[1]})
 			}
 		}
@@ -312,6 +328,51 @@ func pageClosingBracket(src string, open int) int {
 		}
 	}
 	return -1
+}
+
+// pageOutsideCallbacks blanks the function bodies inside a hook's argument: a
+// `field:` there belongs to what that body calls, not to the hook.
+func pageOutsideCallbacks(arg string) string {
+	out := []byte(arg)
+	for i := 0; i < len(arg); i++ {
+		arrow := strings.HasPrefix(arg[i:], "=>")
+		if !arrow && arg[i] != ')' {
+			continue
+		}
+		from := i + 1
+		if arrow {
+			from++
+		}
+		from += len(arg[from:]) - len(strings.TrimLeft(arg[from:], " \t\n"))
+		end := -1
+		switch {
+		case from < len(arg) && (arg[from] == '{' || arrow && strings.IndexByte("[(", arg[from]) >= 0):
+			end = pageClosingBracket(arg, from) + 1
+		case arrow:
+			end = pageEndOf(arg, from, ",)]}")
+		}
+		if end > from {
+			copy(out[from:end], strings.Repeat(" ", end-from))
+			i = end - 1
+		}
+	}
+	return string(out)
+}
+
+// pageEndOf answers the index of the first stop byte at or after from that no
+// bracket opened after from encloses, or len(src).
+func pageEndOf(src string, from int, stops string) int {
+	for i := from; i < len(src); i++ {
+		if strings.IndexByte(stops, src[i]) >= 0 {
+			return i
+		}
+		if strings.IndexByte("[{(", src[i]) >= 0 {
+			if i = pageClosingBracket(src, i); i < 0 {
+				return len(src)
+			}
+		}
+	}
+	return len(src)
 }
 
 // recordPageSources reads the production page sources, keyed by path.
@@ -444,5 +505,72 @@ func TestEverySidecarFieldTheRecordPagesRenderIsOneAnAgentCanRead(t *testing.T) 
 				t.Errorf("the pages render %s rows and record_fields does not list the key %q", kind.schema, key)
 			}
 		}
+	}
+}
+
+func TestRecordPageCensusReadsTheFieldOfEveryKeyedShape(t *testing.T) {
+	t.Parallel()
+	kinds := []sidecarKind{{schema: "CompanyProfileField", pageDir: "page/",
+		vocabulary: []string{"icp", "register_vat", "registered_address"}}}
+	const head = `type Key = components["parameters"]["ProfileFieldKey"];
+type RowProps = Readonly<{
+  label: string;
+  field: Key;
+}>;
+`
+	cases := []struct {
+		name, page string
+		want       []string
+	}{
+		{"a field prop on a keyed component", `export function Row(props: RowProps) { return props.label; }
+const vat = <Row label="VAT" field="register_vat" />;
+`, []string{"register_vat"}},
+		{"a field key in a keyed hook's argument", `export function useRow(target: RowProps) { return target; }
+const vat = useRow({ label: "VAT", field: "register_vat" });
+`, []string{"register_vat"}},
+		{"a hook typed by a Pick of keyed props", `type Target = Pick<RowProps, "field">;
+export function useTarget(target: Target) { return target; }
+const icp = useTarget({ field: "icp" });
+`, []string{"icp"}},
+		{"a hook typed by an alias of an alias", `type Loose = Partial<Target>;
+type Target = Pick<RowProps, "field">;
+export function useLoose(target: Loose) { return target; }
+const icp = useLoose({ field: "icp" });
+`, []string{"icp"}},
+		{"an alias whose braces hold a semicolon", `type Wrapped = Readonly<{ label: string; row: RowProps }>;
+export function useWrapped(target: Wrapped) { return target; }
+const address = useWrapped({ label: "Address", row: { field: "registered_address" } });
+`, []string{"registered_address"}},
+		{"a hook declared as an arrow", `export const useArrow = (target: RowProps) => target;
+const icp = useArrow({ field: "icp" });
+`, []string{"icp"}},
+		{"several field keys in one argument", `export function useRows(targets: readonly RowProps[]) { return targets; }
+const rows = useRows([{ field: "icp" }, { field: "register_vat" }]);
+`, []string{"icp", "register_vat"}},
+		{"a field key inside a callback the argument holds", `export function useRow(target: RowProps) { return target; }
+const icp = useRow({
+  render: (row) => note({ field: "register_vat" }),
+  describe() {
+    return note({ field: "registered_address" });
+  },
+  field: "icp",
+});
+`, []string{"icp"}},
+		{"type at the end of a longer word", `type Plain = Readonly<{
+  label: string;
+}>;
+// An archetype Plain = RowProps; is prose, not a declaration.
+export function usePlain(target: Plain) { return target; }
+const vat = usePlain({ field: "register_vat" });
+`, nil},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			census := takeRecordPageCensus(kinds, map[string]string{"page/fixture.tsx": head + c.page})
+			if got := slices.Sorted(maps.Keys(census.keys["CompanyProfileField"])); !slices.Equal(got, c.want) {
+				t.Errorf("the census read the keys %v from this page, want %v", got, c.want)
+			}
+		})
 	}
 }
