@@ -75,11 +75,11 @@ func threadConnectorCtx(e *integration.Env, owner ids.UUID) context.Context {
 	})
 }
 
-// seatAddress connects a Gmail mailbox for the seat and answers its address. A
-// capture records a seat as holding a message only when the seat's own
-// connected mailbox is on it (mailboxWasARecipientTx), so the mail is
-// addressed to it. A Gmail row the seat already connected without an address
-// takes this one, so the seat keeps a single Gmail mailbox.
+// seatAddress connects a Gmail mailbox for the seat and answers its address.
+// A capture records a seat as holding a message only when the seat's own
+// connected mailbox is on it (mailboxWasARecipientTx). So the mail is
+// addressed to that mailbox. A Gmail row the seat already connected without an
+// address takes this one, so the seat keeps a single Gmail mailbox.
 func seatAddress(t *testing.T, e *integration.Env, seat ids.UUID) string {
 	t.Helper()
 	addr := "seat-" + seat.String() + "@ws.example"

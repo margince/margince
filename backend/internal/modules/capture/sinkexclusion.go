@@ -213,10 +213,10 @@ func excludedForTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecor
 	return reasonExcludedDomain, nil
 }
 
-// containerMailboxesTx answers the mailboxes rec's containers were filed in,
-// as seatMailboxTx names the capturing mailbox: the run's own, else the
-// owner's only mailbox of each provider a container names. So a check made
-// outside a mailbox run still meets the member's container rule.
+// containerMailboxesTx answers the mailboxes rec's containers were filed in.
+// It names them as seatMailboxTx names the capturing mailbox: the run's own,
+// else the owner's only mailbox of each provider a container names. So a check
+// made outside a mailbox run still meets the member's container rule.
 func containerMailboxesTx(ctx context.Context, tx pgx.Tx, owner ids.UUID, containers []string) ([]ids.UUID, error) {
 	var mailboxes []ids.UUID
 	asked := map[string]bool{}
