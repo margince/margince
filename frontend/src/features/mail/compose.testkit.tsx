@@ -20,6 +20,7 @@ import {
   isPreviewDoor,
   previewedAddresses,
 } from "../../testing/sendpermission.testkit";
+import { ComposeModal } from "./compose";
 
 // The composer's "why are you writing?" dial is found by name, not by role
 // alone. To, Cc and Bcc are comboboxes too, so a bare role query matches four
@@ -66,6 +67,21 @@ export function render(
     ),
     queryClient: client,
   };
+}
+
+// A reply to act-1 on contact p-1, the composer the draft and refusal suites
+// open.
+export function renderComposer(onClose = vi.fn()) {
+  render(
+    <ComposeModal
+      activityId="act-1"
+      entityType="contact"
+      entityId="p-1"
+      open
+      onClose={onClose}
+    />,
+  );
+  return onClose;
 }
 
 // Two purposes, because the send rules differ by purpose: transactional is the

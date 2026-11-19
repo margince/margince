@@ -13,13 +13,10 @@ import {
   purposeField,
   redraft,
 } from "../../testing/composedraft.testkit";
-import { ComposeModal } from "./compose";
 import {
   activity202,
   DISCLOSURE,
   emptyResponse,
-  fillSendableForm,
-  footScheduleConfirm,
   installComposeClock,
   jsonResponse,
   PROVISIONAL_VOICE_PROFILE,
@@ -27,7 +24,7 @@ import {
   pressSend,
   problemResponse,
   REWRITE_ROUTE,
-  render,
+  renderComposer,
   rewrittenBody,
   stubRoutes,
   WHY_ASK,
@@ -42,19 +39,6 @@ afterEach(() => {
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
-
-// The 422 body httperr.Validation emits. Every validation problem carries the
-// same top-level `code`. The rule that fired is named only in details.errors[],
-// beside the field it was asserted about. A stub that hoisted the specific code
-// to the top level would prove the screen reads a shape the server never sends.
-function validationProblem(field: string, code: string, message: string) {
-  return {
-    code: "validation_error",
-    title: "Unprocessable Entity",
-    detail: message,
-    details: { errors: [{ field, code, message }] },
-  };
-}
 
 // rejectVoiceDraft answers the owner's updated learning aggregate; the composer
 // only needs the call to have succeeded.
@@ -116,19 +100,6 @@ function draftsOnCue() {
       pending[call]?.(jsonResponse(drafted));
     },
   };
-}
-
-function renderComposer(onClose = vi.fn()) {
-  render(
-    <ComposeModal
-      activityId="act-1"
-      entityType="contact"
-      entityId="p-1"
-      open
-      onClose={onClose}
-    />,
-  );
-  return onClose;
 }
 
 // The send-time binding to the voice draft: `draft_ref` is what makes the
@@ -832,177 +803,5 @@ describe("ComposeModal draft provenance", () => {
 
     await screen.findByRole("heading", { name: "AI-assisted draft" });
     expect(screen.queryByText("Provisional voice")).toBeNull();
-  });
-});
-
-// The 422 the send answers for a mailbox that cannot send: a message fault
-// with its code at the top level and no field named.
-const MAILBOX_NOT_SEND_CAPABLE = {
-  type: "https://errors.gradion.com/mailbox_not_send_capable",
-  title: "Unprocessable Entity",
-  status: 422,
-  code: "mailbox_not_send_capable",
-  detail: "reconnect your mailbox to enable sending",
-};
-
-// Each refusal is a product state with a fix, so each reads as its own copy.
-// None may fall into the generic line.
-describe("ComposeModal send refusals", () => {
-  async function expectReconnect(onClose: () => void) {
-    expect(await screen.findByText(/without permission to send/i)).toBeTruthy();
-    expect(
-      screen
-        .getByRole("link", { name: "Reconnect your mailbox" })
-        .getAttribute("href"),
-    ).toBe("/#/settings/connections");
-    expect(screen.queryByText(MAILBOX_NOT_SEND_CAPABLE.detail)).toBeNull();
-    expect(onClose).not.toHaveBeenCalled();
-  }
-
-  it("tells the rep to reconnect a mailbox that cannot send, and where", async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    const onClose = vi.fn();
-    stubRoutes({
-      "POST /activities/act-1/send-email": () =>
-        problemResponse(MAILBOX_NOT_SEND_CAPABLE, 422),
-    });
-    renderComposer(onClose);
-    await screen.findByRole("combobox", { name: WHY_ASK });
-    await fillSendableForm(user);
-    await pressSend(user);
-
-    await expectReconnect(onClose);
-  });
-
-  it("explains an older server's footer refusal without promising an unusable override", async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    const onClose = vi.fn();
-    stubRoutes({
-      "POST /activities/act-1/send-email": () =>
-        problemResponse(
-          validationProblem(
-            "body",
-            "undisclosable_obligation",
-            "this message owes a disclosure (objection_route)",
-          ),
-          422,
-        ),
-    });
-    renderComposer(onClose);
-    await screen.findByRole("combobox", { name: WHY_ASK });
-    await fillSendableForm(user);
-    await pressSend(user);
-    expect(
-      await screen.findByText(/ask an administrator to update Margince/i),
-    ).toBeTruthy();
-    expect(screen.queryByText(/objection_route/)).toBeNull();
-    expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
-    expect(screen.queryByRole("button", { name: /with a reason/i })).toBeNull();
-    expect(onClose).not.toHaveBeenCalled();
-    expect(screen.getByLabelText("Subject")).toHaveValue("Hi there");
-  });
-
-  it("states the one-send-per-recipient rule on a shared unsubscribe token", async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    stubRoutes({
-      "POST /activities/act-1/send-email": () =>
-        problemResponse(
-          validationProblem(
-            "recipients",
-            "shared_unsubscribe_token",
-            "opaque server wording",
-          ),
-          422,
-        ),
-    });
-    renderComposer();
-    await screen.findByRole("combobox", { name: WHY_ASK });
-    await fillSendableForm(user);
-    await pressSend(user);
-
-    expect(
-      await screen.findByText(/goes to one recipient at a time/i),
-    ).toBeTruthy();
-    expect(screen.queryByText("opaque server wording")).toBeNull();
-  });
-
-  it("keeps the generic line for a refusal it has no copy for", async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    stubRoutes({
-      "POST /activities/act-1/send-email": () =>
-        problemResponse(
-          validationProblem(
-            "subject",
-            "some_future_refusal",
-            "opaque server wording",
-          ),
-          422,
-        ),
-    });
-    renderComposer();
-    await screen.findByRole("combobox", { name: WHY_ASK });
-    await fillSendableForm(user);
-    await pressSend(user);
-
-    expect(await screen.findByText(/opaque server wording/i)).toBeTruthy();
-  });
-
-  it("tells the rep to reconnect when a scheduled send meets the same refusal", async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    const onClose = vi.fn();
-    const sent = stubRoutes({
-      "POST /activities/act-1/send-email": () =>
-        problemResponse(MAILBOX_NOT_SEND_CAPABLE, 422),
-    });
-    renderComposer(onClose);
-    await screen.findByRole("combobox", { name: WHY_ASK });
-    await fillSendableForm(user);
-    await user.click(
-      screen.getByRole("button", { name: "Other ways to send" }),
-    );
-    await user.click(
-      await screen.findByRole("button", { name: "Schedule send" }),
-    );
-    await user.click(
-      await screen.findByRole("button", { name: /Tomorrow morning/ }),
-    );
-    await user.click(await footScheduleConfirm());
-
-    await expectReconnect(onClose);
-    const scheduled = sent.find(
-      (r) => r.key === "POST /activities/act-1/send-email",
-    );
-    expect(JSON.stringify(scheduled?.body)).toContain("scheduled_at");
-  });
-
-  it("uses the server assessment without an extra multi-recipient warning", async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    const sent = stubRoutes();
-    renderComposer();
-    await screen.findByRole("combobox", { name: WHY_ASK });
-    await fillSendableForm(user);
-    await user.click(screen.getByRole("button", { name: "Cc and Bcc" }));
-    await user.type(screen.getByLabelText("Cc"), "second@x.com");
-    await user.tab();
-
-    expect(screen.queryByText(/more than one recipient/i)).toBeNull();
-    await pickWhy(user, WHY_LABEL.marketing);
-
-    await screen.findByRole("button", { name: /recipients checked/i });
-    expect(screen.queryByText(/more than one recipient/i)).toBeNull();
-    expect(
-      sent.some((r) => r.key === "POST /activities/act-1/send-email"),
-    ).toBe(false);
-  });
-
-  it("does not warn about a lone addressee under the same purpose", async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    stubRoutes();
-    renderComposer();
-    await screen.findByRole("combobox", { name: WHY_ASK });
-    await fillSendableForm(user);
-    await pickWhy(user, WHY_LABEL.marketing);
-
-    expect(screen.queryByText(/more than one recipient/i)).toBeNull();
   });
 });
