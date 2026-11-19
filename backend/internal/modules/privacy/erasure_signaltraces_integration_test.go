@@ -5,10 +5,10 @@
 
 package privacy
 
-// What an erasure and a retention anonymize leave behind on signals and link
-// suggestions: the dedupe key, the free-text reason and the audit images of a
-// corrected signal. Each is asked of both acts, because they share one scrub
-// and a second arm that stopped calling it would fail nothing else.
+// What an erasure and a retention anonymize leave on signals and link
+// suggestions: the dedupe key, the free-text reason and the audit images.
+// Each is asked of both acts. They share one scrub. An arm that stopped
+// calling it would fail nothing else.
 
 import (
 	"context"

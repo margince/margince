@@ -24,9 +24,9 @@ func tombstoneLeadsAndSignals(ctx context.Context, tx pgx.Tx, subject ids.Contac
 	return scrubSubjectSignals(ctx, tx, subject, reason, causeContactErasure)
 }
 
-// scrubSubjectSignals is what an erasure and a retention anonymize both owe the
-// signals and link suggestions about a contact: the audit images, the personal
-// evidence and the dedupe key, and the suggestion reasons.
+// scrubSubjectSignals is the scrub an erasure and a retention anonymize share.
+// It covers the audit images, the personal evidence and dedupe key of signals
+// about a contact, and the reasons of link suggestions.
 func scrubSubjectSignals(ctx context.Context, tx pgx.Tx, subject ids.ContactID, reason, cause string) error {
 	if err := tombstoneSubjectSignals(ctx, tx, subject, reason, cause); err != nil {
 		return err
@@ -57,8 +57,8 @@ const erasedText = "[erased]"
 // redactSubjectExtensionSignals removes what an erasure or anonymize of a
 // contact must reach from the extension signals about them. The summary and
 // each claim's snippet are free text a unit wrote, so they always go. The
-// fingerprint goes too: a unit builds it from the event's own key, which can be
-// an address or a name, and the row id keeps the unique index satisfied. A layout
+// fingerprint goes too. A unit builds it from the event's key, which can be an
+// address or a name, and the row id keeps the unique index satisfied. A layout
 // member goes when its declaration marks it personal. Every member goes when no
 // declaration is registered for the kind, because nothing says what is safe.
 // Provenance names a unit and a seat, never the subject, and stays.

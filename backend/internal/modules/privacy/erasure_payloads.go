@@ -4,16 +4,14 @@
 package privacy
 
 // The one-time link material behind a controller delivery and a meeting
-// invitation: a live capability sitting in the key vault, referenced by a row
-// Art. 17 is about to scrub.
+// invitation sits in the key vault, and a row Art. 17 scrubs references it.
 //
-// Erasure never touches the vault. The transaction owns the rows, and a
-// rollback would bring back rows naming a secret that was already destroyed.
-// So the rows keep their reference and carry the mark each owner's retrying
-// pass already reads: a delivery's payload is due now, an invitation is erased
-// and an erased proposal's token is the tombstone. The destroying pass deletes
-// the secret after this transaction commits, and clears the reference only once
-// the vault has answered, so a refusing vault is retried.
+// Erasure never touches the vault. A rollback would bring the rows back naming
+// a secret already destroyed. So the rows keep their reference and carry the
+// mark each owner's retrying pass already reads. A delivery's payload is due
+// now, an invitation is erased, and an erased proposal's token is a tombstone.
+// The pass that destroys the secret runs after this transaction commits. It
+// clears the reference only once the vault has answered, so a refusal is retried.
 
 import (
 	"context"
