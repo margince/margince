@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-
 	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
