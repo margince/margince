@@ -98,8 +98,8 @@ const (
 	numberShape  = "a number"
 )
 
-// namedType spells a type whose Go form is not its wire shape (a UUID is a byte
-// array, a date a struct): its sentence phrase, its sketch word, its refusal code.
+// namedType spells a type whose Go form is not its wire shape, such as a UUID.
+// It holds the type's sentence phrase, sketch word and refusal code.
 type namedType struct{ phrase, leaf, code string }
 
 var namedTypes = map[string]namedType{
