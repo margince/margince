@@ -16,6 +16,7 @@ import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { DealBulkBar } from "./dealbulk";
+import { render as renderWithToasts } from "./deals.testkit";
 
 // Where the roster caveat sits in the bulk bar, and why it is not a free choice.
 //
@@ -225,6 +226,89 @@ describe("the bulk bar's stage move", () => {
       "/v1/deals/d-1/advance",
     );
     expect(sent[0].headers.get("If-Match")).toBe(String(DEAL.version));
+  });
+});
+
+describe("the bulk bar's stage move result", () => {
+  const SECOND: Deal = { ...DEAL, id: "d-2", name: "Ott expansion" };
+  const THIRD: Deal = { ...DEAL, id: "d-3", name: "Kern pilot" };
+
+  function stubAdvances() {
+    const advanced: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: Request) => {
+        const path = new URL(input.url, "https://test.local").pathname;
+        if (input.method === "POST") {
+          advanced.push(path);
+          return json(DEAL);
+        }
+        return json({ data: [], page: { has_more: false } });
+      }),
+    );
+    return advanced;
+  }
+
+  async function moveTo(
+    user: ReturnType<typeof userEvent.setup>,
+    stage: Stage,
+  ) {
+    await user.click(
+      screen.getByRole("combobox", { name: en["deals.bulkStage"] }),
+    );
+    await user.click(
+      within(screen.getByRole("listbox")).getByRole("option", {
+        name: stage.name,
+      }),
+    );
+    await user.click(
+      screen.getByRole("button", { name: en["deals.bulkMove"] }),
+    );
+  }
+
+  it("says how many moved and how many were already there", async () => {
+    const advanced = stubAdvances();
+    const user = userEvent.setup();
+    renderWithToasts(
+      <DealBulkBar
+        deals={[DEAL, SECOND, { ...THIRD, stage_id: OTHER_STAGE.id }]}
+        stages={[STAGE, OTHER_STAGE]}
+        onDone={() => {}}
+      />,
+    );
+
+    await moveTo(user, OTHER_STAGE);
+
+    expect(
+      await screen.findByText(
+        "2 deals moved to Proposal. 1 was already in Proposal.",
+      ),
+    ).toBeTruthy();
+    expect(advanced).toEqual([
+      "/v1/deals/d-1/advance",
+      "/v1/deals/d-2/advance",
+    ]);
+  });
+
+  it("sends nothing and keeps the selection when every deal is already there", async () => {
+    const advanced = stubAdvances();
+    const onDone = vi.fn();
+    const user = userEvent.setup();
+    renderWithToasts(
+      <DealBulkBar
+        deals={[DEAL, SECOND, THIRD]}
+        stages={[STAGE, OTHER_STAGE]}
+        onDone={onDone}
+      />,
+    );
+
+    await moveTo(user, STAGE);
+
+    expect(
+      await screen.findByText("All 3 selected deals are already in Qualified."),
+    ).toBeTruthy();
+    expect(advanced).toEqual([]);
+    expect(onDone).not.toHaveBeenCalled();
   });
 });
 

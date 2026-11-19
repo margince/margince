@@ -657,6 +657,22 @@ const pinnedZones: { file: string; why: string }[] = [
     file: "components/meetingsheld.stories.tsx",
     why: "A day entry's noon UTC is the next date in UTC+14; only that zone shows the table dates a held meeting by the date it names.",
   },
+  {
+    file: "components/relationships.edges.test.ts",
+    why: "Pins the record zone so a relationship's start and end days print the same on every runner.",
+  },
+  {
+    file: "components/relationships.test.tsx",
+    why: "Pins the record zone so the company list's role dates print the same on every runner.",
+  },
+  {
+    file: "components/relationships.stories.tsx",
+    why: "Pins the record zone so the story's current and former role dates read the same in every browser.",
+  },
+  {
+    file: "design-system/dealcard.test.tsx",
+    why: "Pins the record zone so the day a closed card names is the same on every runner.",
+  },
 ];
 
 // The modules allowed to import the fallback: the one that decides when it

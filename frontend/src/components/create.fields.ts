@@ -52,9 +52,10 @@ export type CreateField = {
   hint?: ReactNode;
   // A validation refusal blocks Save and is announced through Field.error.
   // The server remains authoritative for uniqueness and cross-record rules.
+  // `values` is the whole form, for a check that reads a field beside it.
   validate?: (
     value: string,
-    values?: Record<string, string>,
+    values: Readonly<Record<string, string>>,
     rows?: FormRows,
   ) => string | undefined;
   // repeatable-only: each row's subfields, the add label, the primary flag's

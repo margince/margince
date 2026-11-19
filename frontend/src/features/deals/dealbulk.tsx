@@ -7,10 +7,11 @@ import { BulkVerbs } from "../../components/bulkverbs";
 import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Select } from "../../design-system/select";
+import { useToast } from "../../design-system/toast";
 import { stable } from "../../format/collate";
 import { formatNumber } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
-import { dealRecordKeys } from "../../lib/activitykeys";
+import { useLocale, usePlural, useT } from "../../i18n";
+import { dealStageMoveKeys } from "../../lib/activitykeys";
 import { ProblemError, problemMessageOf, unwrap } from "../../lib/problem";
 
 type Deal = components["schemas"]["Deal"];
@@ -47,6 +48,8 @@ export function DealBulkBar({
   onDone: (outcomes: readonly DealBulkOutcome[]) => void;
 }>) {
   const t = useT();
+  const plural = usePlural();
+  const toast = useToast();
   const { locale } = useLocale();
   const queryClient = useQueryClient();
   const [stageId, setStageId] = useState("");
@@ -85,6 +88,8 @@ export function DealBulkBar({
     }: {
       rows: readonly Deal[];
       toStageId: string;
+      toStageName: string;
+      alreadyThere: number;
     }): Promise<DealBulkOutcome[]> =>
       // Sequential, not Promise.all: a burst of concurrent writes against one
       // reader's own deals buys nothing but contention.
@@ -115,7 +120,7 @@ export function DealBulkBar({
         }
         return done;
       }, Promise.resolve([])),
-    onSuccess: async (result) => {
+    onSuccess: async (result, { toStageName, alreadyThere }) => {
       // Awaited: the rows that refused keep their selection so they can be
       // retried, and a retry that fired before the refetch landed would
       // resend the very version that just conflicted.
@@ -126,25 +131,64 @@ export function DealBulkBar({
         if (outcome.error !== undefined) {
           continue;
         }
-        for (const queryKey of dealRecordKeys(outcome.id)) {
+        for (const queryKey of dealStageMoveKeys(outcome.id)) {
           queryClient.invalidateQueries({ queryKey });
         }
       }
       setOutcomes(result);
       onDone(result);
+      const moved = result.filter((outcome) => !outcome.error).length;
+      if (moved > 0) {
+        toast.show(movedNote(moved, alreadyThere, toStageName));
+      }
     },
   });
 
-  const moveStage = () =>
+  const count = (n: number, stage: string) => ({
+    count: formatNumber(n, locale),
+    stage,
+  });
+  const movedNote = (moved: number, alreadyThere: number, stage: string) =>
+    [
+      plural("deals.bulkMoved", moved, count(moved, stage)),
+      alreadyThere > 0 &&
+        plural(
+          "deals.bulkAlreadyThere",
+          alreadyThere,
+          count(alreadyThere, stage),
+        ),
+    ]
+      .filter(Boolean)
+      .join(" ");
+
+  const moveStage = () => {
+    // A deal already in the target stage is left alone. The server treats
+    // every advance as a transition: it writes a stage-history row and emits
+    // deal.stage_changed without asking whether anything moved. One sent for
+    // a row already there would record a move that never happened, in the
+    // table the velocity reports read.
+    const rows = deals.filter((deal) => deal.stage_id !== stageId);
+    const toStageName =
+      openStages.find((stage) => stage.id === stageId)?.name ?? "";
+    if (rows.length === 0) {
+      // Nothing ran, so the selection stays for another stage.
+      toast.show(
+        plural(
+          "deals.bulkNothingToMove",
+          deals.length,
+          count(deals.length, toStageName),
+        ),
+        { tone: "info" },
+      );
+      return;
+    }
     move.mutate({
-      // A deal already in the target stage is left alone. The server treats
-      // every advance as a transition — it writes a stage-history row and
-      // emits deal.stage_changed without asking whether anything moved — so
-      // sending one for a row already there would record a move that never
-      // happened, in the table the velocity reports read.
-      rows: deals.filter((deal) => deal.stage_id !== stageId),
+      rows,
       toStageId: stageId,
+      toStageName,
+      alreadyThere: deals.length - rows.length,
     });
+  };
 
   return (
     <>

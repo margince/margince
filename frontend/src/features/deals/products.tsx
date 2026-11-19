@@ -2,6 +2,7 @@ import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
+import { amountRefusal } from "../../components/amountrefusal";
 import { ArchiveAction } from "../../components/archive";
 import { CreateAction, type CreateField } from "../../components/create";
 import { EditAction } from "../../components/edit";
@@ -118,6 +119,8 @@ function productFields(
       label: "product.unitPrice",
       type: "number",
       required: true,
+      validate: (value, values) =>
+        amountRefusal(t, value, values.currency || leadingCurrencies[0]),
     },
     {
       key: "currency",
