@@ -99,13 +99,21 @@ function DocumentFacts({
   if (shown.length === 0) {
     return null;
   }
-  const last = shown.at(-1);
+  // A fact may repeat (a category named like the file), so a key counts it.
+  const seen = new Map<string, number>();
+  const keyed = shown.map((fact) => {
+    const occurrence = (seen.get(fact) ?? 0) + 1;
+    seen.set(fact, occurrence);
+    return { fact, key: `${fact}#${occurrence}` };
+  });
+  const lastKey = keyed.at(-1)?.key;
   return (
     <p className="t-caption board-doc-meta">
-      {shown.slice(0, -1).map((fact) => (
-        <span key={fact} className="board-doc-fact">{`${fact} · `}</span>
+      {keyed.map(({ fact, key }) => (
+        <span key={key} className="board-doc-fact">
+          {key === lastKey ? fact : `${fact} · `}
+        </span>
       ))}
-      <span className="board-doc-fact">{last}</span>
     </p>
   );
 }
