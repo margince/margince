@@ -72426,8 +72426,9 @@ type Worklist struct {
 	// OptionalRelationshipsMoreAvailable More optional contacts exist beyond the existing relationship read bound.
 	OptionalRelationshipsMoreAvailable *bool `json:"optional_relationships_more_available,omitempty"`
 
-	// PlanCoverage Whose weekly plans this read looked at, present only when `scope` is `team` and the
-	// due commitments were read across the team roster. Absent under every other scope.
+	// PlanCoverage Whose weekly plans this read looked at, present only when `scope` is `team` or `all`.
+	// Both read the due commitments across the reader's team roster, the reader included.
+	// Absent under every other scope.
 	//
 	// It exists because "nothing due" and "not looked at" differ. A teammate whose plan
 	// could not be read contributes no rows, and without this a lead would read their
@@ -73682,8 +73683,9 @@ type WorklistPinRequest struct {
 	Source string `json:"source"`
 }
 
-// WorklistPlanCoverage Whose weekly plans this read looked at, present only when `scope` is `team` and the
-// due commitments were read across the team roster. Absent under every other scope.
+// WorklistPlanCoverage Whose weekly plans this read looked at, present only when `scope` is `team` or `all`.
+// Both read the due commitments across the reader's team roster, the reader included.
+// Absent under every other scope.
 //
 // It exists because "nothing due" and "not looked at" differ. A teammate whose plan
 // could not be read contributes no rows, and without this a lead would read their

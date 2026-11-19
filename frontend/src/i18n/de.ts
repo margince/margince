@@ -20825,6 +20825,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Aktion konnte nicht rückgängig gemacht werden. Die Nachricht bleibt von deiner Liste entfernt.",
   "worklist.disposition.failed":
     "Der Eintrag konnte nicht entfernt werden. Bitte versuche es erneut.",
+  "worklist.disposition.gone":
+    "Dieser Eintrag steht nicht mehr auf deiner Liste. Die Liste ist jetzt aktuell.",
   "worklist.scope.label": "Wessen Arbeit",
   "worklist.scope.mine": "Meine",
   "worklist.sourceUnavailable":

@@ -4740,6 +4740,7 @@
   "worklist.disposition.undo": "Hoàn tác",
   "worklist.disposition.undoFailed": "Không thể hoàn tác. Tin nhắn vẫn nằm ngoài danh sách.",
   "worklist.disposition.failed": "Không thể gỡ việc này. Thử lại.",
+  "worklist.disposition.gone": "Việc này không còn trong danh sách của bạn. Danh sách đã được cập nhật.",
   "worklist.scope.label": "Việc của ai",
   "worklist.scope.mine": "Của tôi",
   "worklist.sourceUnavailable": "Nguồn không khả dụng hoặc chưa được chia sẻ với bạn",
