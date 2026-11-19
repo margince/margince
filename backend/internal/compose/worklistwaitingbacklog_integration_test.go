@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"strings"
 	"testing"
 	"time"
 
@@ -245,12 +246,16 @@ func walkWorklist(
 }
 
 // frozenTop reads the ranked rows a first page froze, from the walk its
-// cursor names.
+// cursor names. The token is signed: its body comes before the dot.
 func frozenTop(t *testing.T, e *integration.Env, token string) map[string]bool {
 	t.Helper()
+	body, _, signed := strings.Cut(token, ".")
+	if !signed {
+		t.Fatalf("the first page's cursor %q carries no signature", token)
+	}
 	cursor, err := storekit.DecodeOpaque[struct {
 		Snapshot ids.UUID `json:"s"`
-	}](token)
+	}](body)
 	if err != nil {
 		t.Fatal(err)
 	}

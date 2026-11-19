@@ -379,12 +379,17 @@ func stagedRequestFor(req commsauthz.TransmitRequest, r connector.Recipient, cla
 // silently starved every channel reply of thread evidence at transmit — the
 // exact "stages clean, parks at send" shape closing the purpose-key escape
 // hatch was supposed to fix, just moved one phase later.
+//
+// A reply on a new topic is filed under its own key, and its delivery names the
+// message it answers. That message's current key is the conversation staging
+// asked about, so transmit asks it too, after any merge.
 func deliveryThreadKey(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (string, error) {
 	var key *string
 	err := tx.QueryRow(ctx, `
-		SELECT a.thread_key
+		SELECT coalesce(answered.thread_key, a.thread_key)
 		  FROM comms_outbound o
 		  JOIN activity a ON a.id = o.activity_id
+		  LEFT JOIN activity answered ON answered.id = o.answers_activity_id
 		 WHERE o.id = $1 AND `+auth.ActivityExternalEvidenceClause("a"), deliveryID).Scan(&key)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// The delivery (or its activity) is gone, or the activity is held under

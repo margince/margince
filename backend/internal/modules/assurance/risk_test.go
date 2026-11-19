@@ -49,6 +49,11 @@ func TestEachRiskSignalCarriesTheFactsBehindIt(t *testing.T) {
 			[]RiskSignal{{Code: SignalNoNextStep}},
 		},
 		{
+			"a wait the customer asked for is the next step",
+			Subject{Viability: &SubjectViability{Outcome: viability.OutcomeWaiting, Reasons: []viability.Reason{viability.ReasonCustomerWait}}},
+			[]RiskSignal{},
+		},
+		{
 			"a quiet customer",
 			Subject{HasNextStep: true, Viability: &SubjectViability{Reasons: []viability.Reason{viability.ReasonCustomerSilent}, SilentDays: 34}},
 			[]RiskSignal{{Code: SignalQuiet, Days: new(34)}},

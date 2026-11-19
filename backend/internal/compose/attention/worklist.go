@@ -118,7 +118,8 @@ func (s *Service) worklistIn(
 	// Read beside the assembled day rather than inside it: /attention has its
 	// own fourteen-lane promise and this source is not one of its lanes. A
 	// refused read is named, never folded into an empty answer.
-	waiting, waitingErr := reader.waitingCustomers(ctx, day.AsOf)
+	// The whole day, because step B asks which of its at-risk deals wait past a cut scan.
+	waiting, waitingErr := reader.waitingCustomers(ctx, day)
 	// The NARROWED service, not the shared one. The narrowing happens twice on
 	// this path — once when the lanes are read, once when the assembled rows are
 	// kept — and both halves read the same taskOwner. Projecting through `s`
@@ -207,7 +208,7 @@ func (s *Service) worklistFrom(
 	rows = stampOpportunity(rows, s.briefScores)
 	// One job is one row: a deal with a waiting customer or a near task does
 	// not also appear as drifting.
-	rows = dropDealsAlreadyInHand(rows, day.AsOf)
+	rows = dropDealsAlreadyInHand(rows, day.AsOf, waiting.dealsPastScan)
 	// Whose queue this is, applied to the rows the same way the lane applied it
 	// to the query. A row belonging to somebody else is not part of this
 	// contact's day, and leaving it in would make a manager's answer to "show me
