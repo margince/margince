@@ -128,6 +128,17 @@ describe("where a seat stands", () => {
   });
 });
 
+describe("a buyer's ask for a new link", () => {
+  it("stops asking the seller once the buyer is back in", async () => {
+    drawWithDownloads(0, {
+      link_requested_at: "2026-08-25T08:00:00Z",
+      last_seen_at: "2026-08-25T09:00:00Z",
+    });
+    expect(await screen.findByText("Signed in")).toBeTruthy();
+    expect(screen.queryByText(/Asked for a new link/)).toBeNull();
+  });
+});
+
 describe("what became of the invitation mail", () => {
   it("tells the seller a failed mail is theirs to send", async () => {
     drawWithDownloads(0, { has_signed_in: false, delivery_state: "failed" });

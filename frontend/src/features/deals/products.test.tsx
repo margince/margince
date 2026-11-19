@@ -325,6 +325,31 @@ describe("ProductsAdmin", () => {
     ).toBeTruthy();
   });
 
+  // Converted, a price finer than its currency is NaN, which the request would
+  // send as a null price.
+  it("refuses a price finer than its currency before it creates", async () => {
+    const posted = vi.fn(() => jsonResponse({}, 201));
+    vi.stubGlobal(
+      "fetch",
+      productsStub({ allow: PRODUCT_MANAGER, onPost: posted }),
+    );
+    render(<ProductsAdmin />);
+    await userEvent.click(await screen.findByTestId("new-record"));
+    await userEvent.type(
+      await screen.findByRole("textbox", { name: /Name/ }),
+      "Consulting Day",
+    );
+    await userEvent.type(
+      screen.getByRole("textbox", { name: /Unit price/ }),
+      "15.999",
+    );
+    expect(
+      await screen.findByText("This amount has more decimals than EUR allows."),
+    ).toBeTruthy();
+    await userEvent.click(screen.getByText("Create"));
+    expect(posted).not.toHaveBeenCalled();
+  });
+
   it("gives a read-only seat the rows, the posture line and no write affordance", async () => {
     vi.stubGlobal("fetch", productsStub({ allow: PRODUCT_READER }));
     render(<ProductsAdmin />);

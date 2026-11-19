@@ -71,6 +71,22 @@ describe("ConfirmModal", () => {
     expect(document.querySelector(".dot-confirm")).toBeTruthy();
   });
 
+  it("names the dialog by its title alone, not by the dot before it", () => {
+    rtlRender(
+      <ConfirmModal
+        open
+        onClose={vi.fn()}
+        title="Move to Lost?"
+        tier="confirm"
+        confirmLabel="Confirm"
+        onConfirm={vi.fn()}
+      >
+        <p>Moving this deal to a terminal stage.</p>
+      </ConfirmModal>,
+    );
+    expect(screen.getByRole("dialog", { name: "Move to Lost?" })).toBeTruthy();
+  });
+
   it("draws the tier it is given, an automatic one included", () => {
     rtlRender(
       <ConfirmModal

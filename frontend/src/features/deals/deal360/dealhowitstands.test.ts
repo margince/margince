@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../../api/schema";
 import { UTC_ZONE } from "../../../format/timezone";
 import { translate, translatePlural } from "../../../i18n";
@@ -74,6 +74,23 @@ function lossReason(key: string, label: string) {
 // Won and lost are final: the card heads with the outcome, not a reading of a
 // deal still being decided.
 describe("a closed deal's verdict", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(AS_OF));
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("names the year of a close in another year", () => {
+    expect(
+      closedVerdict(
+        deal({ status: "won", closed_at: "2020-01-01T12:00:00Z" }),
+        words,
+      )?.sentence,
+    ).toBe(t("deal.standing.closedOn", { date: "1 Jan 2020" }));
+  });
+
   it("heads a won deal with the win and the day it closed", () => {
     expect(
       closedVerdict(
@@ -135,6 +152,39 @@ describe("a closed deal's verdict", () => {
         reasons,
       )?.sentence,
     ).toBe(`${t("deal.standing.closedOn", { date: "13 May" })} · Price`);
+  });
+
+  it("names how a deal won without a contract was won", () => {
+    expect(
+      closedVerdict(
+        deal({
+          status: "won",
+          closed_at: "2026-05-13T12:00:00Z",
+          won_without_contract_reason: "purchase_order",
+        }),
+        words,
+      ),
+    ).toEqual({
+      word: t("deals.statusWon"),
+      sentence: `${t("deal.standing.closedOn", { date: "13 May" })} · ${t("deals.winReasonPurchaseOrder")}`,
+      tone: "success",
+    });
+  });
+
+  it("sets an Other win's details under the headline", () => {
+    const verdict = closedVerdict(
+      deal({
+        status: "won",
+        closed_at: "2026-05-13T12:00:00Z",
+        won_without_contract_reason: "other",
+        won_without_contract_detail: "  Handshake at the fair  ",
+      }),
+      words,
+    );
+    expect(verdict?.sentence).toBe(
+      `${t("deal.standing.closedOn", { date: "13 May" })} · ${t("deals.winReasonOther")}`,
+    );
+    expect(verdict?.note).toBe("Handshake at the fair");
   });
 
   it("claims no day an imported close does not carry", () => {

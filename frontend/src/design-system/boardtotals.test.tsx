@@ -92,7 +92,12 @@ describe("the stage totals at the head of a board column", () => {
     expect(total.tabIndex).toBe(0);
     fireEvent.focus(total);
     const tip = screen.getByRole("tooltip").textContent ?? "";
-    expect(tip).toContain("€1,062,548.00 open, €106,254.80 weighted at 10%.");
+    // The server weighs each deal by its own probability, so the tip names no
+    // single percentage for the stage.
+    expect(tip).toContain(
+      "€1,062,548.00 open, €106,254.80 weighted by each deal’s probability.",
+    );
+    expect(tip).not.toContain("10%");
     expect(tip).toContain(
       "6 deals have no price and are left out of both totals.",
     );
