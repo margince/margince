@@ -34,13 +34,19 @@ func TestAGateRefusalIsASentenceThatNamesTheMissingGrant(t *testing.T) {
 		detail     string
 		wantsGrant string
 	}{
-		{"Require", auth.Require(rep, "data_task", principal.ActionUpdate),
-			"your role does not grant update on data task", "data_task.update"},
+		{
+			"Require", auth.Require(rep, "data_task", principal.ActionUpdate),
+			"your role does not grant update on data task", "data_task.update",
+		},
 		{"RequireAdmin", auth.RequireAdmin(rep), "only an admin may do this", "admin"},
-		{"RequireRowScope", auth.RequireRowScope(rep, principal.RowScopeTeam),
-			"this needs a role that sees team records or more, and yours sees fewer", "scope:team"},
-		{"RequireOneOf", auth.RequireOneOf(rep, oneOf.OneOf...),
-			"your role grants none of what this needs: delete on deal, or admin", "deal.delete,admin"},
+		{
+			"RequireRowScope", auth.RequireRowScope(rep, principal.RowScopeTeam),
+			"this needs a role that sees team records or more, and yours sees fewer", "scope:team",
+		},
+		{
+			"RequireOneOf", auth.RequireOneOf(rep, oneOf.OneOf...),
+			"your role grants none of what this needs: delete on deal, or admin", "deal.delete,admin",
+		},
 	} {
 		t.Run(tc.gate, func(t *testing.T) {
 			if !errors.Is(tc.refusal, apperrors.ErrPermissionDenied) {
