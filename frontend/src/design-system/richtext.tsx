@@ -219,7 +219,7 @@ export function RichText({
     href: string;
     range: Range;
   } | null>(null);
-  const [marks, refreshMarks] = useMarksAtCaret(editor);
+  const [marks, refreshMarks] = useMarksAtCaret(editor, disabled);
 
   useEffect(() => {
     const node = editor.current;

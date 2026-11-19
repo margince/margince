@@ -411,8 +411,8 @@ describe("the marks on at the caret", () => {
     }
   });
 
-  function surface() {
-    render(
+  function editor(disabled = false) {
+    return (
       <LocaleProvider initial="en">
         <p>Outside</p>
         <RichText
@@ -420,10 +420,13 @@ describe("the marks on at the caret", () => {
           onChange={() => {}}
           label="Nachricht"
           labels={LABELS}
+          disabled={disabled}
         />
-      </LocaleProvider>,
+      </LocaleProvider>
     );
   }
+
+  const surface = () => render(editor());
 
   function moveCaretInto(node: Node | null | undefined) {
     if (!node) throw new Error("no text to put the caret in");
@@ -497,6 +500,35 @@ describe("the marks on at the caret", () => {
     moveCaretInto(screen.getByRole("heading", { name: "Summary" }).firstChild);
 
     expect(mark("Überschrift")).toHaveAttribute("aria-pressed", "true");
+    expect(mark("Fett")).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("reads a mark whose command throws as off, and keeps the others", async () => {
+    withCaretMarks();
+    Object.defineProperty(document, "queryCommandState", {
+      value: (command: string) => {
+        if (command === "insertOrderedList") throw new Error("unsupported");
+        return command === "bold";
+      },
+      configurable: true,
+    });
+    surface();
+
+    moveCaretInto((await screen.findByText("Words")).firstChild);
+
+    expect(mark("Fett")).toHaveAttribute("aria-pressed", "true");
+    expect(mark("Nummerierte Liste")).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("shows no mark pressed while the editor is disabled", async () => {
+    const on = withCaretMarks();
+    const { rerender } = surface();
+    on.add("bold");
+    moveCaretInto((await screen.findByText("Words")).firstChild);
+    expect(mark("Fett")).toHaveAttribute("aria-pressed", "true");
+
+    rerender(editor(true));
+
     expect(mark("Fett")).toHaveAttribute("aria-pressed", "false");
   });
 

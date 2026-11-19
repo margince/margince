@@ -30,16 +30,25 @@ export const MARK_COMMANDS = {
 export const headingAtCaret = () =>
   document.queryCommandValue("formatBlock") === "h2";
 
+// Some engines throw for a command they cannot answer at this caret.
+function commandOn(command: string): boolean {
+  try {
+    return document.queryCommandState(command);
+  } catch {
+    return false;
+  }
+}
+
 function marksAtCaret(): Marks {
-  // happy-dom and jsdom carry no editing commands; there no mark is ever on.
+  // A host without editing commands shows no mark on.
   if (typeof document.queryCommandState !== "function") {
     return NO_MARKS;
   }
   return {
-    bold: document.queryCommandState(MARK_COMMANDS.bold),
-    italic: document.queryCommandState(MARK_COMMANDS.italic),
-    bulletList: document.queryCommandState(MARK_COMMANDS.bulletList),
-    numberList: document.queryCommandState(MARK_COMMANDS.numberList),
+    bold: commandOn(MARK_COMMANDS.bold),
+    italic: commandOn(MARK_COMMANDS.italic),
+    bulletList: commandOn(MARK_COMMANDS.bulletList),
+    numberList: commandOn(MARK_COMMANDS.numberList),
     heading: headingAtCaret(),
   };
 }
@@ -49,10 +58,11 @@ function sameOrNext(shown: Marks, next: Marks): Marks {
   return MARKS.every((mark) => shown[mark] === next[mark]) ? shown : next;
 }
 
-/** The marks on at the caret in `editor`, read while the selection is in it.
- * `refresh` follows a command, which on a bare caret moves no selection. */
+/** The marks on at the caret in `editor`, none while `disabled`. `refresh`
+ * follows a command, since one on a bare caret moves no selection. */
 export function useMarksAtCaret(
   editor: RefObject<HTMLElement | null>,
+  disabled: boolean,
 ): readonly [Marks, () => void] {
   const [marks, showMarks] = useReducer(sameOrNext, NO_MARKS);
   useEffect(() => {
@@ -65,5 +75,5 @@ export function useMarksAtCaret(
     document.addEventListener("selectionchange", follow);
     return () => document.removeEventListener("selectionchange", follow);
   }, [editor]);
-  return [marks, () => showMarks(marksAtCaret())];
+  return [disabled ? NO_MARKS : marks, () => showMarks(marksAtCaret())];
 }
