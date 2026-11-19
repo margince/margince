@@ -285,8 +285,8 @@ export async function settleSendCheck() {
 }
 
 // Every suite that reaches settleSendCheck calls this in a beforeEach. The
-// clock still runs with real time, 1 ms per 1 ms, so user-event's zero-delay
-// pauses and the timers no helper steps fire as they would without it.
+// clock still moves with real time, 1 ms per 1 ms. So user-event's zero-delay
+// pauses, and the timers no helper steps, fire as they would without it.
 export function installComposeClock() {
   vi.useFakeTimers({
     shouldAdvanceTime: true,
