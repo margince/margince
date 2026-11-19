@@ -32,22 +32,28 @@ const (
 	SystemReadDeals SystemRead = "deals"
 	// SystemReadAuthority admits Authority().CanRead and Authority().CanWrite.
 	SystemReadAuthority SystemRead = "authority"
-	// SystemReadDirectory admits Directory().Emails.
+	// SystemReadDirectory admits Directory().Emails and Directory().ByRole.
 	SystemReadDirectory SystemRead = "directory"
 	// SystemReadActivities admits Activities().Mail.
 	SystemReadActivities SystemRead = "activities"
 	// SystemReadSetAside admits SetAside().Contact and SetAside().Contacts.
 	SystemReadSetAside SystemRead = "set_aside"
+	// SystemReadCompanies admits Companies().Get and Companies().List.
+	SystemReadCompanies SystemRead = "companies"
+	// SystemReadMailContent admits MailContent().Get.
+	SystemReadMailContent SystemRead = "mail_content"
 )
 
 // Validate refuses a value that names no group of system reads.
 func (r SystemRead) Validate() error {
 	switch r {
-	case SystemReadDeals, SystemReadAuthority, SystemReadDirectory, SystemReadActivities, SystemReadSetAside:
+	case SystemReadDeals, SystemReadAuthority, SystemReadDirectory, SystemReadActivities, SystemReadSetAside,
+		SystemReadCompanies, SystemReadMailContent:
 		return nil
 	}
-	return fmt.Errorf("extension: %q is not a system read; declare %q, %q, %q, %q or %q",
-		string(r), SystemReadDeals, SystemReadAuthority, SystemReadDirectory, SystemReadActivities, SystemReadSetAside)
+	return fmt.Errorf("extension: %q is not a system read; declare %q, %q, %q, %q, %q, %q or %q",
+		string(r), SystemReadDeals, SystemReadAuthority, SystemReadDirectory, SystemReadActivities, SystemReadSetAside,
+		SystemReadCompanies, SystemReadMailContent)
 }
 
 // MaxResponsible bounds what Deals().Responsible answers and how many users one
@@ -132,6 +138,12 @@ type Directory interface {
 	// MaxResponsible users, or an id that is not a canonical UUID, answers
 	// ErrInvalid.
 	Emails(ctx context.Context, users []UserID) (map[UserID]string, error)
+
+	// ByRole answers the active human members who hold at least one of roles,
+	// named by role key. Agent seats and members who cannot sign in are left
+	// out. The ids come in id order and stop at MaxResponsible. More than
+	// MaxResponsible roles, or a key that names no role, answers ErrInvalid.
+	ByRole(ctx context.Context, roles []string) ([]UserID, error)
 }
 
 // MailSummary is one email on a deal as a background reader sees it.
@@ -212,4 +224,85 @@ type SetAside interface {
 	// the answer, keyed by the id as given. More than MaxResponsible answers
 	// ErrInvalid.
 	Contacts(ctx context.Context, user UserID, contacts []string) (map[string]SetAsideState, error)
+}
+
+// CompanySummary is one company as a background reader sees it, archived or
+// not. Like DealSummary it is not the contract's Company, which answers per
+// caller. It holds the facts a unit needs to push or match a company, and no
+// contact, note or custom field.
+type CompanySummary struct {
+	ID           string
+	Name         string
+	LegalName    string
+	Lifecycle    string
+	OwnerID      UserID
+	SourceSystem string
+	SourceID     string
+	UpdatedAt    time.Time
+	Archived     bool
+}
+
+// CompanyPageQuery pages the companies of the installation by id.
+type CompanyPageQuery struct {
+	ReadPage
+	// IncludeArchived adds the companies that were archived.
+	IncludeArchived bool
+}
+
+// Companies reads the installation's companies for a job tick or a bus
+// delivery. A company only some colleagues may see is left out.
+type Companies interface {
+	// Get reads one company. A company that does not exist, was erased or is
+	// not visible to the whole workspace answers ErrNotFound. An id that is not
+	// a canonical UUID answers ErrInvalid.
+	Get(ctx context.Context, companyID string) (CompanySummary, error)
+
+	// List answers a page of companies in id order. A page holds at most
+	// MaxReadPage companies.
+	List(ctx context.Context, q CompanyPageQuery) (Page[CompanySummary], error)
+}
+
+// MailContentState says whether the words of a mail are in a MailContent.
+type MailContentState string
+
+const (
+	// MailContentAvailable is: the subject and body are given.
+	MailContentAvailable MailContentState = "available"
+	// MailContentWithheld is: a redaction removed the subject or body, and
+	// neither is given.
+	MailContentWithheld MailContentState = "withheld"
+)
+
+// MailContent is one email as a background reader sees it, with its words.
+// Mail's MailSummary has none; this does, for the units that must read what a
+// mail says.
+type MailContent struct {
+	ID      string
+	Subject string
+	Body    string
+	// Audience is workspace. A mail kept to its participants or to a chosen few
+	// is never read here.
+	Audience     string
+	ContentState MailContentState
+	// CaptureLabel is commitment, meeting or noise; empty when none was set.
+	CaptureLabel string
+	// BulkMail is true when the mail was attested as bulk mail.
+	BulkMail bool
+	// SourceID is the id the mail has in the system it came from; empty when it
+	// has none.
+	SourceID   string
+	OccurredAt time.Time
+}
+
+// MailContents reads one email's words for a job tick or a bus delivery. No
+// caller's grants narrow it, so it answers only mail the whole workspace may
+// read. A unit that keeps what it read asks Authority().CanRead first. It does
+// that before it shows the mail to a colleague.
+type MailContents interface {
+	// Get reads one mail by id. No such mail answers ErrNotFound. So do a mail
+	// that is not an email, one private to its participants or a chosen few, an
+	// archived one, and one held back. An id cannot be used to probe. An id that
+	// is not a canonical UUID answers ErrInvalid. A mail whose subject or
+	// body was redacted answers ContentState withheld with neither.
+	Get(ctx context.Context, mailID string) (MailContent, error)
 }

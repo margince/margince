@@ -2,6 +2,7 @@ import { Badge } from "../design-system/atoms";
 import { Heading } from "../design-system/heading";
 import { useSettingsSection } from "../features/settings/settingsnav";
 import { useLocale, useT } from "../i18n";
+import { useOpenableApp } from "../lib/extensionapps";
 import { EXTENSION_SCREEN, findExtension } from "../lib/extensions";
 import { useReadsTeamProgress } from "../lib/progressreader";
 import type { Route } from "../lib/router";
@@ -111,8 +112,10 @@ export function PageTitle({
   // installation did not compose is an unknown page, and its screen says so in
   // words. That case keeps the heading rather than yielding to a surface that
   // will not name itself either.
+  const openableApp = useOpenableApp(route);
   const unitNamesPage =
-    route.screen === EXTENSION_SCREEN && findExtension(route.id) !== null;
+    (route.screen === EXTENSION_SCREEN && findExtension(route.id) !== null) ||
+    openableApp !== null;
   // A page that heads itself. Brief greets the reader by name in its own h1.
   // The shell printing the nav label above it named the page twice at heading
   // level: an outline with two top-level headings. The branches above exist to

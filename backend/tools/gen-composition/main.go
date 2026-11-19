@@ -407,12 +407,12 @@ var vanillaStubs = []struct {
 	},
 	{
 		rel:   frontendScreensVanillaStub,
-		emit:  func() []byte { return extScreensGen(nil, nil) },
+		emit:  func() []byte { return extScreensGen(nil, nil, nil) },
 		align: "align the committed stub with tools/gen-composition (emit.go's extScreensGenHeader)",
 	},
 	{
 		rel:   frontendLocalesVanillaStub,
-		emit:  func() []byte { return extLocalesGen(nil) },
+		emit:  func() []byte { return extLocalesGen(nil, nil) },
 		align: "align the committed stub with tools/gen-composition (emit.go's extLocalesGenHeader)",
 	},
 	{

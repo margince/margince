@@ -19,8 +19,10 @@ import {
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { lazy } from "../i18n/lazy";
+import { isExtensionEntityKind } from "../lib/entity";
 import { useFirstScreenSettled } from "../lib/journeymarks";
 import { problemMessageOf } from "../lib/problem";
+import { useRecordKindDirectory } from "../lib/recordkinds";
 import { worklistKey } from "../lib/workkeys";
 import { usePopoverDismiss } from "./popover";
 import "./notificationbell.css";
@@ -176,6 +178,11 @@ function NotificationCentre({
 }>) {
   const t = useT();
   const rows = query.data?.pages.flatMap((page) => page.items) ?? [];
+  // Read once for the panel, and only when a row is about a unit's own record,
+  // the one target whose page the unit names.
+  const kindViews = useRecordKindDirectory(
+    rows.some((row) => isExtensionEntityKind(row.target?.type ?? "")),
+  ).data?.data;
   return (
     <Panel
       title={t("notifications.centre")}
@@ -243,6 +250,7 @@ function NotificationCentre({
                       notice={notice}
                       onSettle={settle.mutate}
                       onActivate={onActivate}
+                      kindViews={kindViews}
                       settling={
                         settle.isPending && settle.variables === notice.id
                       }

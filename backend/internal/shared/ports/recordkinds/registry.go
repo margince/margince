@@ -37,6 +37,9 @@ type Declared struct {
 	DeletePolicy extension.DeletePolicy
 	// Timeline is nil for a kind whose rows do not enter a History.
 	Timeline *extension.RecordKindTimeline
+	// View is the path segment under the unit's screen that shows one record,
+	// or empty for the screen itself.
+	View string
 }
 
 var (
@@ -59,7 +62,7 @@ func Register(unit extension.Name, kinds []extension.RecordKindDeclaration) {
 		byName[name] = Declared{
 			Name: name, Unit: unit, Kind: k.Kind, DisplayName: k.DisplayName, Table: k.Table,
 			Object: extension.RecordKindObject(unit, k.Kind), Fields: k.Fields,
-			NaturalKey: k.NaturalKey, DeletePolicy: policy, Timeline: k.Timeline,
+			NaturalKey: k.NaturalKey, DeletePolicy: policy, Timeline: k.Timeline, View: k.View,
 		}
 	}
 }
@@ -76,6 +79,13 @@ func Lookup(name string) (Declared, bool) {
 	defer mu.RUnlock()
 	d, ok := byName[name]
 	return d, ok
+}
+
+// DeclaredBy reports whether the unit declared the kind. A kind another unit
+// declared, or none did, answers false.
+func DeclaredBy(unit string, name string) bool {
+	declared, ok := Lookup(name)
+	return ok && string(declared.Unit) == unit
 }
 
 // All lists every registered kind, ordered by name.
