@@ -3694,6 +3694,7 @@
   "notice.excuseExempt": "Duty does not apply",
   "notice.excuseGround": "Reason, in your own words",
   "notice.excuseConfirm": "Record reason",
+  "pipeline.defaultTaken": "Another pipeline is the default. Create this one as Not default, then use Make default on it.",
   "pipeline.nameTaken": "A pipeline with this name already exists.",
   "ob.field.display_name": "Company name",
   "ob.field.offer_summary": "Products and services",

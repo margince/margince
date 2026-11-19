@@ -15,7 +15,7 @@ function refusal(field: string, code: string, extra: object = {}) {
     code: "validation_error",
     detail: "the request failed validation",
     details: {
-      errors: [{ field, code, message: "at most 200 characters", ...extra }],
+      errors: [{ field, code, message: "at most 120 characters", ...extra }],
     },
   });
 }
@@ -25,11 +25,11 @@ describe("companyRefusal", () => {
     "puts a too-long %s on the name with the limit it names",
     (field) => {
       const { byField, rest } = companyRefusal(
-        refusal(field, "too_long", { max: 200 }),
+        refusal(field, "too_long", { max: 120 }),
         t,
       );
       expect(byField.get("display_name")).toBe(
-        "Company name: at most 200 characters.",
+        "Company name: at most 120 characters.",
       );
       expect(rest).toBeNull();
     },
@@ -49,10 +49,10 @@ describe("companySaveMessage", () => {
   it("names the name's limit where no field can carry it", () => {
     expect(
       companySaveMessage(
-        refusal("profile.display_name", "too_long", { max: 200 }),
+        refusal("profile.display_name", "too_long", { max: 120 }),
         t,
       ),
-    ).toBe("Company name: at most 200 characters.");
+    ).toBe("Company name: at most 120 characters.");
   });
 
   it("keeps the shared words for a refusal no field names", () => {

@@ -187,16 +187,33 @@ func (e *PipelineNameTakenError) MessageFault() (code, message string) {
 
 var errPipelineNameTaken = &PipelineNameTakenError{}
 
+// PipelineDefaultTakenError refuses a second default pipeline. It unwraps to
+// ErrConflict, so it answers 409.
+type PipelineDefaultTakenError struct{}
+
+func (*PipelineDefaultTakenError) Error() string {
+	return "another pipeline is the default; create this one as not default, then make it the default"
+}
+
+func (*PipelineDefaultTakenError) Unwrap() error { return apperrors.ErrConflict }
+
+// MessageFault names the clash, so a screen can say how the default moves.
+func (e *PipelineDefaultTakenError) MessageFault() (code, message string) {
+	return "pipeline_default_taken", e.Error()
+}
+
 // pipelineUniqueRefusal answers a unique violation on a pipeline write, or nil.
-// The name index is a taken name; the default index is a plain conflict.
 func pipelineUniqueRefusal(err error) error {
-	if nameTakenMeanwhile(err) {
+	constraint, isUnique := storekit.UniqueViolation(err)
+	switch {
+	case !isUnique:
+		return nil
+	case constraint == pipelineNameIndex:
 		return errPipelineNameTaken
+	case constraint == "uq_pipeline_default":
+		return &PipelineDefaultTakenError{}
 	}
-	if storekit.IsUniqueViolation(err) {
-		return apperrors.ErrConflict
-	}
-	return nil
+	return apperrors.ErrConflict
 }
 
 // nameStillFree answers whether this pipeline's name is free for it to hold again.
@@ -234,5 +251,8 @@ func nameStillFree(ctx context.Context, tx pgx.Tx, id ids.PipelineID) error {
 // never the problem.
 func nameTakenMeanwhile(err error) bool {
 	constraint, isUnique := storekit.UniqueViolation(err)
-	return isUnique && constraint == "pipeline_name_unique"
+	return isUnique && constraint == pipelineNameIndex
 }
+
+// pipelineNameIndex is the unique index on a live pipeline's name.
+const pipelineNameIndex = "pipeline_name_unique"

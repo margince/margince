@@ -254,8 +254,7 @@ func refuseTakenColumn(ctx context.Context, tx pgx.Tx, object, column string) er
 		return fmt.Errorf("customfields: probing catalog claim: %w", err)
 	}
 	if claimed {
-		return fmt.Errorf("a custom field with column %q already exists on %s: %w",
-			column, object, apperrors.ErrConflict)
+		return &LabelTakenError{message: fmt.Sprintf("a custom field with column %q already exists on %s", column, object)}
 	}
 	return &ColumnTakenError{Column: column}
 }
@@ -302,8 +301,11 @@ func (e *LabelTakenError) Unwrap() error { return apperrors.ErrConflict }
 // MessageFault names the clash, so a screen can tell it from a busy table or a
 // retired field.
 func (e *LabelTakenError) MessageFault() (code, message string) {
-	return "custom_field_label_taken", e.message
+	return codeLabelTaken, e.message
 }
+
+// codeLabelTaken is the code of every clash a different label resolves.
+const codeLabelTaken = "custom_field_label_taken"
 
 // optionsJSON renders a picklist's option set for the jsonb catalog
 // column; non-picklist fields store NULL (a nil []byte binds as SQL

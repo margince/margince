@@ -272,9 +272,27 @@ describe("a field fault worded from the screen's label and limit", () => {
   }
 
   it("keeps the server's sentence for an English reader of an unlabelled field", () => {
+    expect(
+      faultSentence(
+        {
+          ...fault("not_integer"),
+          message: "The probability is a whole number",
+        },
+        "en",
+      ),
+    ).toBe("The probability is a whole number.");
+  });
+
+  it("words an unlabelled field in the catalog when the server's sentence opens on its key", () => {
     expect(faultSentence(fault("not_integer"), "en")).toBe(
-      "`win_probability` must be an integer, not a number.",
+      "Enter a whole number.",
     );
+    expect(
+      faultSentence(
+        { ...fault("not_integer"), message: "win_probability must be whole" },
+        "en",
+      ),
+    ).toBe("Enter a whole number.");
   });
 
   it("gives an English reader the words, not the API sentence", () => {

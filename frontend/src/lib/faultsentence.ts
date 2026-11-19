@@ -103,16 +103,26 @@ const RANGE_WORDING = {
 const OUT_OF_RANGE = "out_of_range";
 const TOO_LONG = "too_long";
 
-// Whether an English reader gets catalog words for the fault. A field the
-// screen does not label keeps the server's sentence, which names it.
+// Whether an English reader gets catalog words for the fault. A field the screen
+// does not label keeps the server's sentence, unless it opens on the wire key.
 export function wordsFaultInEnglish(
   fault: FieldProblem,
   labels?: FieldLabels,
 ): boolean {
   if (PROBLEM_CODE_COPY.has(fault.code) || fault.code === TOO_LONG) return true;
+  if (opensOnWireKey(fault)) return true;
   const worded =
     FIELD_CODE_WORDING.has(fault.code) || fault.code === OUT_OF_RANGE;
   return worded && labels?.[fault.field] !== undefined;
+}
+
+// A server sentence that opens on the wire key, backticked or bare, would show
+// the reader a name from the code.
+function opensOnWireKey(fault: FieldProblem): boolean {
+  const message = fault.message.trimStart();
+  if (message.startsWith("`")) return true;
+  const firstWord = message.split(/\s/, 1)[0]?.replace(/[:,;.]$/, "");
+  return firstWord !== undefined && firstWord === fault.field;
 }
 
 // A field fault in the reader's words, for the callout and for the line under

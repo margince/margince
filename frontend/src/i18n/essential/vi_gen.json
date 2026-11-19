@@ -3694,6 +3694,7 @@
   "notice.excuseExempt": "Nghĩa vụ không áp dụng",
   "notice.excuseGround": "Lý do, theo lời của bạn",
   "notice.excuseConfirm": "Ghi nhận lý do",
+  "pipeline.defaultTaken": "Một pipeline khác đang là mặc định. Tạo pipeline này với “Không mặc định”, rồi dùng “Đặt làm mặc định” cho nó.",
   "pipeline.nameTaken": "Đã có pipeline mang tên này.",
   "ob.field.display_name": "Tên công ty",
   "ob.field.offer_summary": "Sản phẩm và dịch vụ",

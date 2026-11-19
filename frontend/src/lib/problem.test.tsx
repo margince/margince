@@ -640,7 +640,7 @@ describe("a field refusal read in the reader's language", () => {
 
 describe("refusalSentences", () => {
   const english = Object.assign(t, { locale: "en" as const });
-  const refused = (...faults: Record<string, unknown>[]) =>
+  const fieldRefusal = (...faults: Record<string, unknown>[]) =>
     new ProblemError({
       status: 422,
       code: "validation_error",
@@ -650,7 +650,7 @@ describe("refusalSentences", () => {
 
   it("puts each fault the form shows on its field and leaves the foot empty", () => {
     const { byField, rest } = refusalSentences(
-      refused({ field: "name", code: "required", message: "x" }),
+      fieldRefusal({ field: "name", code: "required", message: "x" }),
       english,
       { name: "Name" },
     );
@@ -660,7 +660,7 @@ describe("refusalSentences", () => {
 
   it("keeps a fault on a field the form does not show for the foot", () => {
     const { byField, rest } = refusalSentences(
-      refused(
+      fieldRefusal(
         { field: "name", code: "required", message: "x" },
         {
           field: "pipeline_id",
@@ -672,8 +672,23 @@ describe("refusalSentences", () => {
       { name: "Name" },
     );
     expect(byField.get("name")).toBe("Name is required.");
-    // English keeps the server's sentence for a field the screen does not label.
-    expect(rest).toBe("Pipeline_id must be a UUID.");
+    expect(rest).toBe("Check this value and try again.");
+  });
+
+  it("keeps the server's sentence at the foot when it names no wire key", () => {
+    const { rest } = refusalSentences(
+      fieldRefusal(
+        { field: "name", code: "required", message: "x" },
+        {
+          field: "pipeline_id",
+          code: "stage_not_in_pipeline",
+          message: "The stage belongs to another pipeline.",
+        },
+      ),
+      english,
+      { name: "Name" },
+    );
+    expect(rest).toBe("The stage belongs to another pipeline.");
   });
 
   it("words that foot fault in German, where no server sentence is shown", () => {
@@ -682,7 +697,7 @@ describe("refusalSentences", () => {
       { locale: "de" as const },
     );
     const { rest } = refusalSentences(
-      refused(
+      fieldRefusal(
         { field: "name", code: "required", message: "x" },
         { field: "pipeline_id", code: "invalid_uuid", message: "x" },
       ),
@@ -740,7 +755,7 @@ describe("refusalSentences", () => {
     expect(rest).toBe(t("common.permissionDenied"));
   });
 
-  it("says nothing before a write is refused", () => {
+  it("says nothing before a write is fieldRefusal", () => {
     expect(refusalSentences(null, english, {})).toEqual({
       byField: new Map(),
       rest: null,
@@ -749,7 +764,7 @@ describe("refusalSentences", () => {
 });
 
 describe("the refusals a screen words itself", () => {
-  const refused = (code: string) =>
+  const codeRefusal = (code: string) =>
     new ProblemError({ status: 409, code, detail: "an API sentence" });
   for (const [code, key] of [
     ["email_taken", "users.emailTaken"],
@@ -762,7 +777,7 @@ describe("the refusals a screen words itself", () => {
           (k: Parameters<typeof translate>[1]) => translate(locale, k),
           { locale },
         );
-        expect(problemMessageOf(refused(code), reader)).toBe(
+        expect(problemMessageOf(codeRefusal(code), reader)).toBe(
           translate(locale, key),
         );
       });

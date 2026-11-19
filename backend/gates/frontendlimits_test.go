@@ -5,9 +5,8 @@
 
 package gates
 
-// A screen that checks a value before it sends holds a copy of the server's
-// limit. Each copy is read here beside its owner, the contract or the decoder,
-// and a copy that is gone, doubled or different fails.
+// The limits a screen's own pre-send check states in a refusal sentence equal
+// the server's. Only those copies are listed; a copy gone, doubled or changed fails.
 
 import (
 	"regexp"

@@ -11946,6 +11946,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "pipeline.new": "Neue Pipeline",
   "pipeline.createRefused":
     "Deine Rolle darf keine Pipelines anlegen. Frage einen Admin.",
+  "pipeline.defaultTaken":
+    "Eine andere Pipeline ist schon der Standard. Lege diese mit „Kein Standard“ an und nutze danach „Zum Standard machen“.",
   "pipeline.nameTaken": "Eine Pipeline mit diesem Namen gibt es schon.",
   "pipeline.name": "Name",
   "pipeline.default": "Standard",

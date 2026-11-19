@@ -11884,6 +11884,8 @@ export const en = {
   "retention.scopeExtension": "Records kept by extensions",
   "pipeline.new": "New pipeline",
   "pipeline.createRefused": "Your role cannot create pipelines. Ask an admin.",
+  "pipeline.defaultTaken":
+    "Another pipeline is the default. Create this one as Not default, then use Make default on it.",
   "pipeline.nameTaken": "A pipeline with this name already exists.",
   "pipeline.name": "Name",
   "pipeline.default": "Default",

@@ -3694,6 +3694,7 @@
   "notice.excuseExempt": "Pflicht gilt nicht",
   "notice.excuseGround": "Grund in eigenen Worten",
   "notice.excuseConfirm": "Grund erfassen",
+  "pipeline.defaultTaken": "Eine andere Pipeline ist schon der Standard. Lege diese mit „Kein Standard“ an und nutze danach „Zum Standard machen“.",
   "pipeline.nameTaken": "Eine Pipeline mit diesem Namen gibt es schon.",
   "ob.field.display_name": "Unternehmensname",
   "ob.field.offer_summary": "Produkte und Leistungen",
