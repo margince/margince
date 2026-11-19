@@ -12729,6 +12729,8 @@ export const en = {
     "No chat bot is connected. An administrator connects one in Settings.",
   "channelLink.refused.channelNotFound":
     "The bot is in no channel with this name. Add the bot to the channel in the chat, then try again.",
+  "channelLink.refused.nameRefused":
+    "The chat refused this channel name. Rename the record, or link an existing channel.",
   "channelLink.refused.channelNotPrivate":
     "This channel is public. Link a private channel instead.",
   "channelLink.refused.botNotMember":

@@ -3742,6 +3742,7 @@
   "connectors.roleCannotCapture.seat": "Du hast einen Leseplatz, darum kann Margince deine E-Mails nicht erfassen. Wende dich an einen Admin, um einen vollen Platz zu bekommen.",
   "channelLink.refused.botNotConnected": "Es ist kein Chat-Bot verbunden. Ein Admin verbindet ihn in den Einstellungen.",
   "channelLink.refused.channelNotFound": "Der Bot ist in keinem Kanal mit diesem Namen. Füge den Bot im Chat zum Kanal hinzu und versuche es dann erneut.",
+  "channelLink.refused.nameRefused": "Der Chat lehnt diesen Kanalnamen ab. Benenne den Datensatz um oder verknüpfe einen bestehenden Kanal.",
   "channelLink.refused.channelNotPrivate": "Dieser Kanal ist öffentlich. Verknüpfe stattdessen einen privaten Kanal.",
   "channelLink.refused.botNotMember": "Der Bot ist kein Mitglied dieses Kanals. Füge ihn dem Kanal hinzu und versuche es dann noch einmal.",
   "channelLink.refused.channelAlreadyLinked": "Dieser Kanal gehört schon zu einem anderen Deal oder Projekt.",

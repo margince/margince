@@ -39,28 +39,36 @@ type chatRecord struct {
 	ownerEmail string
 }
 
+// linkRecord is the record a channel speaks for: the deal, or the project
+// when the link carries no deal.
+func linkRecord(link chatlinks.Link) ids.Ref {
+	switch {
+	case link.DealID != nil:
+		return ids.Ref{Type: chatlinks.RecordDeal, ID: *link.DealID}
+	case link.ProjectID != nil:
+		return ids.Ref{Type: chatlinks.RecordProject, ID: *link.ProjectID}
+	}
+	return ids.Ref{Type: chatlinks.RecordProject}
+}
+
 // readRecord reads what a channel shows of its record: the deal, or the
 // project when the link carries no deal.
 func readRecord(ctx context.Context, pool *pgxpool.Pool, link chatlinks.Link) (chatRecord, error) {
-	record := chatRecord{kind: chatlinks.RecordProject}
-	args := []any{nil}
+	ref := linkRecord(link)
+	record := chatRecord{kind: ref.Type, id: ref.ID}
+	args := []any{record.id}
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	query := `SELECT p.name, p.phase, '', p.target_end_date::timestamptz,
 		coalesce(u.display_name, ''), coalesce(u.email, '')
 		FROM project p LEFT JOIN app_user u ON u.id = p.owner_id WHERE p.id = $1`
-	switch {
-	case link.DealID != nil:
-		record.kind, record.id = chatlinks.RecordDeal, *link.DealID
+	if record.kind == chatlinks.RecordDeal {
 		// The channel is written in English, so the stage reads in English.
 		stage := labeltranslation.SQLIn(channelLanguage, "s.name", "s.name_translations", arg)
 		query = `SELECT d.name, coalesce(` + stage + `, ''), d.status, d.expected_close_date::timestamptz,
 			coalesce(u.display_name, ''), coalesce(u.email, '')
 			FROM deal d LEFT JOIN stage s ON s.id = d.stage_id LEFT JOIN app_user u ON u.id = d.owner_id
 			WHERE d.id = $1`
-	case link.ProjectID != nil:
-		record.id = *link.ProjectID
 	}
-	args[0] = record.id
 	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, query, args...).Scan(&record.name, &record.stage, &record.status, &record.due,
 			&record.ownerName, &record.ownerEmail)

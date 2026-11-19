@@ -82740,7 +82740,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description The channel is public (`code: channel_not_private`), the bot is not in it (`code: channel_bot_not_member`), or the request is malformed. */
+            /** @description The channel is public (`code: channel_not_private`), the bot is not in it (`code: channel_bot_not_member`), the chat refused the channel name even in the form derived from the record (`code: channel_name_refused`), or the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;

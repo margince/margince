@@ -303,16 +303,13 @@ func linkActor(ctx context.Context) (ids.UUID, error) {
 // must exist, be private, and have the bot in it.
 func resolveChannel(ctx context.Context, chat Chat, kind string, id ids.UUID, name string, req LinkRequest) (dispact.Channel, error) {
 	if req.Mode == ModeCreate {
-		ch, err := chat.CreateChannel(ctx, externalKey(kind, id), channelNameOf(name))
-		return ch, ChatFailure(err)
+		return createChannel(ctx, chat, kind, id, name)
 	}
-	ch, err := chat.Channel(ctx, req.Channel)
+	ch, err := LiveChannel(ctx, chat, req.Channel)
 	if err != nil {
 		return dispact.Channel{}, ChatFailure(err)
 	}
 	switch {
-	case ch.IsArchived:
-		return dispact.Channel{}, ErrChannelNotFound
 	case !ch.IsPrivate:
 		return dispact.Channel{}, ErrChannelNotPrivate
 	case !ch.BotIsMember:
@@ -321,19 +318,53 @@ func resolveChannel(ctx context.Context, chat Chat, kind string, id ids.UUID, na
 	return ch, nil
 }
 
+// LiveChannel reads a channel and answers an archived one as gone. The chat
+// still serves an archived channel's history and takes the bot's posts.
+func LiveChannel(ctx context.Context, chat Chat, slug string) (dispact.Channel, error) {
+	ch, err := chat.Channel(ctx, slug)
+	if err == nil && ch.IsArchived {
+		err = fmt.Errorf("chatlinks: channel %s is archived: %w", slug, dispact.ErrChannelGone)
+	}
+	return ch, err
+}
+
+// createChannel makes the record's channel under the record's name. Deals
+// often share a name, so a name the chat refuses is asked once more in a form
+// derived from the record.
+func createChannel(ctx context.Context, chat Chat, kind string, id ids.UUID, name string) (dispact.Channel, error) {
+	ch, err := chat.CreateChannel(ctx, externalKey(kind, id), channelNameOf(name))
+	if errors.Is(err, dispact.ErrNameRefused) {
+		ch, err = chat.CreateChannel(ctx, externalKey(kind, id), fallbackName(kind, id, name, err))
+	}
+	return ch, ChatFailure(err)
+}
+
+// fallbackName tells a taken name apart by the end of the record's id. A name
+// the chat's rules refuse is replaced by the record's kind and that id.
+func fallbackName(kind string, id ids.UUID, name string, refusal error) string {
+	full := id.String()
+	suffix := full[len(full)-6:]
+	var coded *dispact.CodeError
+	if errors.As(refusal, &coded) && coded.Code == dispact.CodeNameTaken {
+		runes := []rune(channelNameOf(name))
+		return strings.TrimSpace(string(runes[:min(len(runes), channelNameLimit-len(suffix)-1)])) + " " + suffix
+	}
+	return kind + "-" + suffix
+}
+
 // externalKey names the channel Margince made for a record, so a retried
 // create finds it instead of making a second one.
 func externalKey(kind string, id ids.UUID) string {
 	return "margince:" + kind + ":" + id.String()
 }
 
-// channelNameOf keeps a record's name within the chat's 80-character limit.
+// channelNameLimit is the longest channel name the chat takes, in characters.
+const channelNameLimit = 80
+
+// channelNameOf keeps a record's name within the chat's limit.
 func channelNameOf(name string) string {
 	runes := []rune(strings.TrimSpace(name))
-	if len(runes) > 80 {
-		runes = runes[:80]
-	}
-	return string(runes)
+	return string(runes[:min(len(runes), channelNameLimit)])
 }
 
 // ChatFailure turns the chat client's errors into this package's refusals.
@@ -345,6 +376,8 @@ func ChatFailure(err error) error {
 		return fmt.Errorf("%w: %w", ErrChannelNotFound, err)
 	case errors.Is(err, dispact.ErrNotMember):
 		return fmt.Errorf("%w: %w", ErrBotNotMember, err)
+	case errors.Is(err, dispact.ErrNameRefused):
+		return fmt.Errorf("%w: %w", ErrChannelNameRefused, err)
 	}
 	return fmt.Errorf("%w: %w", ErrChatUnreachable, err)
 }

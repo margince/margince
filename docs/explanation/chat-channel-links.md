@@ -76,7 +76,8 @@ notice that comes while the pull runs finds the job still running and adds nothi
 when it ends whether a notice came after it started, and runs once more if one did.
 
 `channel.archived` pauses the channel's link through `MarkChannelGone`, the same write a `404` from the
-chat makes. A notice is matched only to the links of the connected bot, and its `workspace_id` must be
+chat makes. A notice can be lost, and the chat still serves an archived channel's history and takes the
+bot's posts. So each pull also reads every linked channel and pauses the link of an archived one. A notice is matched only to the links of the connected bot, and its `workspace_id` must be
 that bot's team, so a notice for another team cannot reach this installation's links.
 
 ### The cadence switch
@@ -110,8 +111,9 @@ Each closed episode is judged in order by the `chat_summary` task's `episode` si
 (`compose/chatsummary`). The messages are read again from the chat for this and are held only in
 memory. When the model says the talk matters, the title and summary are filed as one note on the
 link's deal and project, under the system actor `system:chat_links`. The note's
-`(source_system, source_id)` is `dispact` and `<channel slug>:<first seq>`, which the activity table
-holds unique, so a replay or a second link to the same channel files nothing twice. No other writer
+`(source_system, source_id)` is `dispact` and `<channel slug>:<first seq>:<record type>:<record id>`, which
+the activity table holds unique. A replay, or the same record linked to the channel again, files nothing
+twice. A record that takes the channel over files its own note. No other writer
 may stamp `source_system = dispact`, so no one can claim a summary's key before it is written. The note
 is filed in one transaction that first checks the link is still live and still names the same deal and
 project, so an unlink during the model call files nothing.
@@ -131,7 +133,9 @@ back, so nothing is filed again.
 ## The talk so far
 
 Linking an existing channel asks `summarize_history`. When it is true, the link has
-`backfill_requested`, and its first pull reads the talk from before the link instead. It judges only the
+`backfill_requested`, and its first pull reads the talk from before the link instead. The link queues
+that pull in its own transaction, so it does not wait for the sweep. A pull that was already running
+folds the new one into itself, so it runs once more when it finds a link it did not read. It judges only the
 five latest closed episodes, skips the older talk, moves the cursor to where the link began, and clears
 the request. A long history is read 50 pages a tick. A channel Margince created never asks.
 

@@ -140,8 +140,9 @@ type filing struct {
 	link  chatlinks.Link
 }
 
-// fileNote files the summary as one note on the link's records, keyed on the
-// talk so a replay returns the note already there. ctx carries the actor: the
+// fileNote files the summary as one note on the link's records. It is keyed
+// on the talk and the record, so a replay returns the note already there. A
+// record that takes the channel over files its own note. ctx carries the actor: the
 // chat engine for a pull, the member for a message they chose. The link is
 // checked live in the same transaction, so a note never lands after an unlink.
 func fileNote(ctx context.Context, f filing, said talk, reply chatsummary.Reply) (crmcontracts.Activity, error) {
@@ -159,6 +160,8 @@ func fileNote(ctx context.Context, f filing, said talk, reply chatsummary.Reply)
 	if link.ProjectID != nil {
 		links = append(links, activities.ActivityLinkInput{EntityType: chatlinks.RecordProject, EntityID: *link.ProjectID})
 	}
+	record := linkRecord(link)
+	key := said.key + ":" + record.Type + ":" + record.ID.String()
 	body := noteBody(reply)
 	// Both the title and the summary are the model's words, in the talk's language.
 	written := textlang.Detect(reply.Summary)
@@ -172,7 +175,7 @@ func fileNote(ctx context.Context, f filing, said talk, reply chatsummary.Reply)
 		Body:         &body,
 		OccurredAt:   &said.started,
 		SourceSystem: &system,
-		SourceID:     &said.key,
+		SourceID:     &key,
 		Raw:          &raw,
 		Links:        links,
 		Source:       summarySource,
@@ -192,7 +195,7 @@ func fileNote(ctx context.Context, f filing, said talk, reply chatsummary.Reply)
 		return err
 	})
 	if err != nil {
-		return crmcontracts.Activity{}, fmt.Errorf("chat summary: filing the note for %s: %w", said.key, err)
+		return crmcontracts.Activity{}, fmt.Errorf("chat summary: filing the note for %s: %w", key, err)
 	}
 	return note, nil
 }
