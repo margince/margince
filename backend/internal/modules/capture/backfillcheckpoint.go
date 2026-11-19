@@ -34,7 +34,7 @@ func (c *pageProgress) Checkpoint(ctx context.Context, cursor string, res connec
 	defer c.mu.Unlock()
 	delta := subtractCheckpoint(res, c.checkpoint)
 	if delta.Scanned < 0 || delta.Captured < 0 || delta.Skipped < 0 || delta.Failed < 0 || delta.Scanned != delta.Captured+delta.Skipped+delta.Failed {
-		return fmt.Errorf("capture: invalid history checkpoint counts: %w", apperrors.ErrInvalidArgument)
+		return fmt.Errorf("the history import reported counts that cannot be right: %w", apperrors.ErrInvalidArgument)
 	}
 	encoded, err := json.Marshal(struct {
 		PageToken string `json:"page_token"`

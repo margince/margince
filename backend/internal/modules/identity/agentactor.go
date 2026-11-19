@@ -41,7 +41,7 @@ func (h Handlers) actingFor(w http.ResponseWriter, r *http.Request) (Identity, b
 func (s *Service) agentsUser(ctx context.Context) (Identity, error) {
 	p, ok := principal.Actor(ctx)
 	if !ok || !p.ActsAsItsUser() {
-		return Identity{}, fmt.Errorf("identity: no signed-in member or agent acting for one: %w", apperrors.ErrPermissionDenied)
+		return Identity{}, fmt.Errorf("no signed-in member or agent acting for one: %w", apperrors.ErrPermissionDenied)
 	}
 	wsID, err := s.InstallationWorkspace(ctx)
 	if err != nil {
@@ -53,7 +53,7 @@ func (s *Service) agentsUser(ctx context.Context) (Identity, error) {
 		return err
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		return Identity{}, fmt.Errorf("identity: the passport's member is no longer live: %w", apperrors.ErrPermissionDenied)
+		return Identity{}, fmt.Errorf("the passport's member is no longer live: %w", apperrors.ErrPermissionDenied)
 	}
 	return id, err
 }

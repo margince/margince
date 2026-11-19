@@ -210,11 +210,11 @@ func distinctRows(rows []WorklistRowRef) []WorklistRowRef {
 // could carry, the same two checks a pin makes.
 func validRowRef(row WorklistRowRef) error {
 	if !crmcontracts.WorklistItemSource(row.Source).Valid() {
-		return fmt.Errorf("activities: %q is not a lane this queue produces: %w",
+		return fmt.Errorf("%q is not a lane this queue produces: %w",
 			row.Source, apperrors.ErrInvalidArgument)
 	}
 	if row.RowID == "" || len(row.RowID) > maxPinnedRowIDLen {
-		return fmt.Errorf("activities: a row's id is 1 to %d characters: %w",
+		return fmt.Errorf("a row's id is 1 to %d characters: %w",
 			maxPinnedRowIDLen, apperrors.ErrInvalidArgument)
 	}
 	return nil
@@ -224,7 +224,7 @@ func validRowRef(row WorklistRowRef) error {
 func activityRow(row WorklistRowRef) (ids.ActivityID, error) {
 	parsed, err := ids.Parse(row.RowID)
 	if err != nil {
-		return ids.ActivityID{}, fmt.Errorf("activities: a %s row is named by its activity id: %w",
+		return ids.ActivityID{}, fmt.Errorf("a %s row is named by its activity id: %w",
 			row.Source, apperrors.ErrInvalidArgument)
 	}
 	return ids.From[ids.ActivityKind](parsed), nil

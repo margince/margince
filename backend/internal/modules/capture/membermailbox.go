@@ -27,7 +27,7 @@ func ProviderMailbox(provider string) Mailbox { return Mailbox{Provider: provide
 
 // ErrMailboxAmbiguous refuses a provider-only address when the member holds
 // more than one mailbox of that provider. The remedy is the connection id.
-var ErrMailboxAmbiguous = fmt.Errorf("capture: you have more than one mailbox of this provider; name the one you mean by connection_id: %w",
+var ErrMailboxAmbiguous = fmt.Errorf("you have more than one mailbox of this provider; name the one you mean by connection_id: %w",
 	apperrors.ErrInvalidArgument)
 
 // memberMailboxTx resolves mb to one of user's connection rows, withdrawn rows

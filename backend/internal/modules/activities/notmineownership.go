@@ -266,12 +266,12 @@ func (s *Store) ClearNotMineOnHandOff(
 func onlyTheOwnershipReconcile(ctx context.Context) error {
 	p, ok := principal.Actor(ctx)
 	if !ok {
-		return fmt.Errorf("activities: the ownership reconcile ran with no bound actor: %w",
+		return fmt.Errorf("the ownership reconcile ran with no bound actor: %w",
 			apperrors.ErrPermissionDenied)
 	}
 	if p.Type != principal.PrincipalSystem {
-		return fmt.Errorf("activities: %s may not re-arm a colleague's set-aside messages — "+
-			"the hand-off reconcile runs as the system: %w", p.ID, apperrors.ErrPermissionDenied)
+		return fmt.Errorf("only the system may re-arm a colleague's set-aside messages, because "+
+			"the hand-off reconcile runs as the system: %w", apperrors.ErrPermissionDenied)
 	}
 	return nil
 }

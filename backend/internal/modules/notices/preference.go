@@ -319,7 +319,7 @@ func preferenceIdentity(human ids.UUID) string {
 func actingSeat(ctx context.Context, act string) (ids.UUID, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || !actor.HumanOrItsAgent() || actor.UserID.IsZero() {
-		return ids.Nil, fmt.Errorf("notices: %s needs an authenticated contact: %w", act, apperrors.ErrPermissionDenied)
+		return ids.Nil, fmt.Errorf("%s needs an authenticated contact: %w", act, apperrors.ErrPermissionDenied)
 	}
 	return actor.UserID, nil
 }
@@ -330,7 +330,7 @@ func actingSeat(ctx context.Context, act string) (ids.UUID, error) {
 func deliverySeat(ctx context.Context, act string) (ids.UUID, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID.IsZero() {
-		return ids.Nil, fmt.Errorf("notices: %s needs an authenticated contact: %w", act, apperrors.ErrPermissionDenied)
+		return ids.Nil, fmt.Errorf("%s needs an authenticated contact: %w", act, apperrors.ErrPermissionDenied)
 	}
 	return actor.UserID, nil
 }

@@ -10,6 +10,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -55,5 +56,20 @@ func TestAnUndoneRunsBoundRefDoesNotResolve(t *testing.T) {
 	}
 	if _, found, err := w.lookup(context.Background(), migration.ObjectCompany, "c1"); err != nil || found {
 		t.Fatalf("lookup = found %v, err %v; want the key free", found, err)
+	}
+}
+
+// A run asked about a type it carries no file for answers a conflict, wherever
+// it picks that type's writer or source.
+func TestAnImportRefusesATypeItCarriesNoFileFor(t *testing.T) {
+	ctx := context.Background()
+	for name, pick := range map[string]func() error{
+		"archived read": func() error { _, err := (&csvWriters{}).isArchived(ctx, "note", ids.NewV7()); return err },
+		"writer":        func() error { _, err := (&bundleWriters{}).part(migration.ObjectDeal); return err },
+		"source":        func() error { _, err := partSourceOf(nil, migration.ObjectDeal); return err },
+	} {
+		if err := pick(); !errors.Is(err, apperrors.ErrConflict) {
+			t.Errorf("%s: %v, want ErrConflict", name, err)
+		}
 	}
 }

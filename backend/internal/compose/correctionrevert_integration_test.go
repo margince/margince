@@ -232,6 +232,14 @@ func TestConfirmingACardAfterAnUndoDoesNotReapplyIt(t *testing.T) {
 	if _, err := e.Deals.RevertCorrection(e.Admin(), e.correctionFor(t, deal), nil, nil); err != nil {
 		t.Fatal(err)
 	}
+	// The memory check on its own, past the version pin that refuses first,
+	// asked the very question the taken-back correction answered.
+	staged := e.WsScalar(t, `SELECT json_build_object('deal_id', deal_id, 'expected_close_date', standing_close_date,
+		'remaining_open_stages', remaining_open_stages, 'asking', asking)::text
+		FROM deal_correction WHERE deal_id = $1 AND reversed_at IS NOT NULL`, deal)
+	if err := closeDateConfirmEffect(e.svc, e.Deals)(e.Admin(), approvalID, []byte(staged), ""); !errors.Is(err, apperrors.ErrConflict) {
+		t.Errorf("confirming a taken-back correction past the pin = %v, want ErrConflict", err)
+	}
 
 	// Now the card is decided — the state an auto-apply worker reaches.
 	_, err := e.svc.Decide(e.Admin(), approvalID, true, nil)

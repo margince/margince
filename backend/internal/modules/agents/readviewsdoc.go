@@ -58,7 +58,7 @@ func (ReadViewsResource) Resources(context.Context) []mcp.Resource {
 // matching every other read on this surface.
 func (r ReadViewsResource) ReadResource(_ context.Context, uri string) (mcp.ResourceContents, error) {
 	if uri != ReadViewsURI {
-		return mcp.ResourceContents{}, fmt.Errorf("agents: resource %q: %w", uri, apperrors.ErrNotFound)
+		return mcp.ResourceContents{}, fmt.Errorf("no resource is published at %q: %w", uri, apperrors.ErrNotFound)
 	}
 	body, err := json.Marshal(readViewsDocument(r.views))
 	if err != nil {

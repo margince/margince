@@ -245,7 +245,7 @@ func refusedContactCreate(ctx context.Context, tx pgx.Tx, match ContactResolutio
 	// Other lanes name no record: the message says which key collided, never
 	// whose row it was.
 	return fmt.Errorf(
-		"contacts: an exact %q collision already claims this identity: %w",
+		"an exact %q collision already claims this identity: %w",
 		match.MatchedLane, apperrors.ErrConflict)
 }
 
@@ -298,7 +298,7 @@ type CompanySpec struct {
 func refusedCompanyCreate(ctx context.Context, tx pgx.Tx, match CompanyMatch, spec CompanySpec) error {
 	if len(spec.Domains) == 0 {
 		return fmt.Errorf(
-			"contacts: an exact domain collision already claims this identity: %w",
+			"an exact domain collision already claims this identity: %w",
 			apperrors.ErrConflict)
 	}
 	dup := &DuplicateDomainError{Domain: spec.Domains[0].Domain}
