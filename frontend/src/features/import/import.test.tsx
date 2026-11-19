@@ -375,10 +375,13 @@ describe("a run named by the address", () => {
     renderAtImport("r1");
 
     expect(await screen.findByText("1 row reversed.")).toBeVisible();
-    expect(screen.getByText("Prospects: l-1")).toBeVisible();
-    expect(
-      screen.getByText(/c-1: A contact still references this company\./),
-    ).toBeVisible();
+    // Neither record comes back with a name, so each keeps its id.
+    expect((await screen.findByTitle("l-1")).closest("li")).toHaveTextContent(
+      "Leads: l-1",
+    );
+    expect((await screen.findByTitle("c-1")).closest("li")).toHaveTextContent(
+      "Companies — c-1: A contact still references this company.",
+    );
     expect(
       screen.queryByRole("button", { name: "Undo this import" }),
     ).toBeNull();
@@ -429,7 +432,7 @@ describe("a run named by the address", () => {
     ).toBeVisible();
   });
 
-  it("says so when the server will not answer for the run", async () => {
+  it("says the import is not there when the server knows no such run", async () => {
     stubRoutes({
       "GET /imports/r9": () =>
         jsonResponse(
@@ -439,7 +442,10 @@ describe("a run named by the address", () => {
     });
     renderAtImport("r9");
 
-    expect(await screen.findByText("No such import run.")).toBeVisible();
+    expect(
+      await screen.findByText("This import does not exist or was removed."),
+    ).toBeVisible();
+    expect(screen.queryByText("No such import run.")).toBeNull();
   });
 
   it("is opened from the hub's list of recent imports", async () => {

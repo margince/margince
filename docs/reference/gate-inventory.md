@@ -94,7 +94,9 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendfilterfieldlabels_test.go` | H3 | Every core filter field the engine can name has a word on the builder screen. |
 | `frontendfiscalyear_test.go` | H1 | A fiscal year's label is spelled twice. |
 | `frontendidlebase_test.go` | H3 | The deal board and the server must measure silence from the same timestamp, or a card ages differently from the list that filed the deal stalled. |
+| `frontendimportmirrors_test.go` | H2 | The import screen checks a source name before the server does, and knows a draft has ended by the run-state code. |
 | `frontendimportnamespace_test.go` | H3 | The browser parses the CSV importer's source stamp to say a record was imported, and from which upload. |
+| `frontendimportrefusals_test.go` | H2 | The browser words an import refusal from its reason and params. |
 | `frontendjobkinds_test.go` | H3 | System health names every declared job kind in words, with the kind under it. |
 | `frontendjoblabels_test.go` | H3 | History names the system pass behind a change by its words, never by its key. |
 | `frontendlaneparity_test.go` | H3 | The frontend gate is spelled once as `make check-fe` and run by CI as three parallel jobs. |

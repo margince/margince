@@ -245,6 +245,10 @@ func redraft(ctx context.Context, tx pgx.Tx, id RunID, mapping RunMapping, chang
 func (p DraftPatch) applyTo(mapping RunMapping, before, after map[string]any) RunMapping {
 	patchField("parts", p.Parts, &mapping.Parts, before, after)
 	patchField("object", p.Object, &mapping.Object, before, after)
+	if p.Object != nil && mapping.ObjectChosenBy != "" {
+		before["object_chosen_by"], after["object_chosen_by"] = mapping.ObjectChosenBy, ""
+		mapping.ObjectChosenBy = ""
+	}
 	patchField("mapping", p.Fields, &mapping.Fields, before, after)
 	patchField("source_key", p.SourceKey, &mapping.SourceKey, before, after)
 	patchField("source_name", p.SourceName, &mapping.SourceName, before, after)

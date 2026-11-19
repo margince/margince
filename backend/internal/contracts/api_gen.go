@@ -15322,6 +15322,24 @@ func (e ImportRunStatus) Valid() bool {
 	}
 }
 
+// Defines values for ImportSourceProfileObjectChosenBy.
+const (
+	ImportSourceProfileObjectChosenByColumns ImportSourceProfileObjectChosenBy = "columns"
+	ImportSourceProfileObjectChosenByNone    ImportSourceProfileObjectChosenBy = "none"
+)
+
+// Valid indicates whether the value is a known member of the ImportSourceProfileObjectChosenBy enum.
+func (e ImportSourceProfileObjectChosenBy) Valid() bool {
+	switch e {
+	case ImportSourceProfileObjectChosenByColumns:
+		return true
+	case ImportSourceProfileObjectChosenByNone:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for IngestVoiceCorpusSourceRequestFormat.
 const (
 	IngestVoiceCorpusSourceRequestFormatText       IngestVoiceCorpusSourceRequestFormat = "text"
@@ -52943,9 +52961,12 @@ type ImportRunLinks struct {
 	// Applied Links actually written. Zero on a dry run, which writes nothing.
 	Applied int `json:"applied" minimum:"0"`
 
-	// Offered Links the file asks for. A dry run reports this and nothing else,
-	// because resolving an endpoint is a read the dry run has not done —
-	// it says how many rows named an employer, not how many will find one.
+	// Offered Links the file asks for on the rows the run lands. A link whose own
+	// row is skipped is not counted, because that row is reported as a
+	// skip; `unresolved` still lists it. A dry run reports this and nothing
+	// else, because resolving an endpoint is a read the dry run has not
+	// done — it says how many landing rows named an employer, not how many
+	// will find one.
 	Offered int `json:"offered" minimum:"0"`
 
 	// Unresolved The links that named something the run could not act on, each with
@@ -53145,6 +53166,16 @@ type ImportSourceProfile struct {
 	// merge.
 	Object *ImportObject `json:"object,omitempty"`
 
+	// ObjectChosenBy How `object` was chosen for a CSV uploaded without one. The header is
+	// matched as `suggested_mapping` matches it, once for each type, and
+	// only a column that exactly one type's suggestion maps counts.
+	// `columns`: one type's suggestion maps more such columns than any
+	// other's. `none`: no type maps strictly the most, so `object` is
+	// `lead` and a screen asks the reader to choose. Absent when the upload
+	// named its type, and for a ZIP. The run's `profile` keeps it until a
+	// draft save names `object`, which is the reader's own choice.
+	ObjectChosenBy *ImportSourceProfileObjectChosenBy `json:"object_chosen_by,omitempty"`
+
 	// Parts One profile per importable file of a ZIP, in import order. Absent for a single CSV, whose profile is the top level.
 	Parts *[]ImportPartProfile `json:"parts,omitempty"`
 
@@ -53176,6 +53207,16 @@ type ImportSourceProfile struct {
 	// against the field's type and picklist options.
 	Targets []string `json:"targets"`
 }
+
+// ImportSourceProfileObjectChosenBy How `object` was chosen for a CSV uploaded without one. The header is
+// matched as `suggested_mapping` matches it, once for each type, and
+// only a column that exactly one type's suggestion maps counts.
+// `columns`: one type's suggestion maps more such columns than any
+// other's. `none`: no type maps strictly the most, so `object` is
+// `lead` and a screen asks the reader to choose. Absent when the upload
+// named its type, and for a ZIP. The run's `profile` keeps it until a
+// draft save names `object`, which is the reader's own choice.
+type ImportSourceProfileObjectChosenBy string
 
 // ImportUndoReport The result of undoing a committed import run (IEM-WIRE-9; A93). Every
 // import-created row lands in exactly one of three buckets: reversed,
@@ -59864,8 +59905,12 @@ type Problem struct {
 	Detail *string `json:"detail,omitempty"`
 
 	// Details Structured machine context — e.g. `existing_id` on 409 duplicate, or an
-	// `errors` array of `{ field, code, message }` on 422 validation. A `too_long`
-	// entry also carries `max`, the limit in characters.
+	// `errors` array of `{ field, code, message }` on 422 validation. An entry that
+	// refuses at a limit also carries `max`: the limit in characters for `too_long`,
+	// in rows for `too_many_rows`, in characters for `source_name`. An entry whose
+	// code names other values carries them in `params`, an object of text values by
+	// name, so a screen can word the code in the reader's language; `message` stays
+	// the English sentence.
 	//
 	// A 429 that an agent's limit answers carries `limit`: `kind` names it (`calls`,
 	// `writes` or `egress` for a window allowance, `pacing` for the per-minute limit),
@@ -78721,7 +78766,7 @@ type GetImportFormatParamsLang string
 
 // UploadImportSourceMultipartBody defines parameters for UploadImportSource.
 type UploadImportSourceMultipartBody struct {
-	// File The delimited file to import, or a ZIP of them named by type (`companies.csv`, `contacts.csv`, `leads.csv`, `deals.csv`, `activities.csv`). UTF-8; the first row is the header. `object` is required for a CSV and ignored for a ZIP, whose file names say each part's type. A ZIP is known by its content, not its name.
+	// File The delimited file to import, or a ZIP of them named by type (`companies.csv`, `contacts.csv`, `leads.csv`, `deals.csv`, `activities.csv`). UTF-8; the first row is the header. `object` is ignored for a ZIP, whose file names say each part's type. A CSV sent without `object` is typed by its header, and the profile's `object_chosen_by` says how. A ZIP is known by its content, not its name.
 	File openapi_types.File `json:"file"`
 
 	// Object What the file's rows are, and therefore what the run creates.

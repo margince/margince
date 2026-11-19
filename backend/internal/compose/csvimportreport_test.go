@@ -24,3 +24,20 @@ func TestADealThatLandsClosedIsCountedWonOrLostAndAnOpenOneIsNot(t *testing.T) {
 		t.Fatalf("won %d lost %d, want 2 won and 1 lost: only a created deal counts, on a closed stage", p.closedWon, p.closedLost)
 	}
 }
+
+func TestOnlyTheLinksOfLandedRowsAreOffered(t *testing.T) {
+	rep := &migration.Report{Associations: 1, AssociationsSkipped: []migration.SkippedAssoc{
+		{From: "contact/a", To: "company/Gone", Code: migration.ReasonLinkContactNotImported},
+		{From: "contact/b", To: "company/Gone", Code: migration.ReasonLinkRowNotImported},
+		{From: "contact/c", To: "company/Nowhere", Code: migration.ReasonLinkNotFound},
+		{From: "contact/d", To: "company/Shared", Code: migration.ReasonLinkAmbiguous, RowSkipped: true},
+	}}
+	links := linksOf(rep, true)
+	if links.Offered != 2 || links.Applied != 1 {
+		t.Errorf("offered %d applied %d, want 2 offered (the written link and the unfound one) and 1 applied",
+			links.Offered, links.Applied)
+	}
+	if links.Unresolved == nil || len(*links.Unresolved) != 4 {
+		t.Errorf("unresolved = %v, want every link the run did not write listed with its reason", links.Unresolved)
+	}
+}

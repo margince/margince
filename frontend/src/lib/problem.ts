@@ -316,6 +316,19 @@ export function isConsentNotGranted(problem: unknown): boolean {
   return problemCode(problem) === "consent_not_granted";
 }
 
+// A read whose surface shows some refusals as its own state, such as a not
+// found page, names their statuses under this query `meta` key. The query
+// failure sink then leaves them out of the console.
+export const SHOWN_REFUSALS = "shownRefusals";
+
+export function refusalShown(
+  meta: Readonly<Record<string, unknown>> | undefined,
+  error: unknown,
+): boolean {
+  const statuses = meta?.[SHOWN_REFUSALS];
+  return Array.isArray(statuses) && statuses.includes(problemStatus(error));
+}
+
 // The HTTP status out of a thrown RFC-7807 body, or 0 when the failure carried
 // none (a dropped connection throws no problem document at all).
 export function problemStatus(err: unknown): number {

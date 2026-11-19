@@ -9,8 +9,9 @@ import {
 } from "../../design-system/segmentbar";
 import { formatNumber, formatPercent } from "../../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
+import { tierLabel } from "../../lib/ai-tier-label";
 import { formatSeconds, switchedSentence } from "./ai-call-figures";
-import { gaveUpLabel, tierLabel } from "./ai-decision-labels";
+import { gaveUpLabel } from "./ai-decision-labels";
 import "./ai-settings.css";
 
 // What one task's calls did over a window: how many got an answer, from which

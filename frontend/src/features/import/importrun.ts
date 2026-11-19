@@ -10,7 +10,7 @@ import {
 import { useEffect, useRef } from "react";
 import { api } from "../../api/client";
 import type { Locale } from "../../i18n";
-import { problemCodeOf, unwrap } from "../../lib/problem";
+import { problemCodeOf, SHOWN_REFUSALS, unwrap } from "../../lib/problem";
 import type { ImportRun } from "./importtypes";
 
 // Every read of the import surface sits under this key. One invalidation after
@@ -69,6 +69,9 @@ export function useRecentImports(view?: "history" | "drafts") {
   });
 }
 
+/** The statuses a run read answers for an address that names no run. */
+export const NO_SUCH_RUN = [404, 422];
+
 // One run, read again every IMPORT_POLL_MS while it is moving.
 // It is also read again when the reader returns to the tab, because a run they
 // left has most likely moved.
@@ -85,6 +88,8 @@ export function useImportRun(id: string | null) {
     refetchInterval: (query) =>
       moving(query.state.data?.status) ? IMPORT_POLL_MS : false,
     refetchOnWindowFocus: "always",
+    // The run page shows such an address as an import not found.
+    meta: { [SHOWN_REFUSALS]: NO_SUCH_RUN },
   });
 }
 
@@ -140,7 +145,8 @@ export function useStopImportTest() {
 
 // One run's report: the test run's prediction, then what the run did. Keyed by
 // the run's status and version, so a retest never shows the report it replaced.
-// A draft and a test still being read have no report to ask for.
+// A draft and a test still being read have no report. A cancelled run's page
+// shows none, and one cancelled untested has none.
 export function useImportReport(
   id: string | null,
   status: ImportRun["status"] | undefined,
@@ -152,7 +158,7 @@ export function useImportReport(
       id === null ||
       status === undefined ||
       status === "validating" ||
-      status === "pending"
+      wroteNothing(status)
         ? skipToken
         : async () =>
             unwrap(

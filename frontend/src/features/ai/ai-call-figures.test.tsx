@@ -191,6 +191,25 @@ describe("ProviderRecentCalls", () => {
     );
   });
 
+  it("names each tier by its display name and links its calls by key", async () => {
+    statsServer((url) =>
+      url.searchParams.get("group") === "tier"
+        ? [row("cheap_cloud"), row("decide")]
+        : [row("gemini-3.1-flash-lite")],
+    );
+    const user = userEvent.setup();
+    render(<ProviderRecentCalls provider="gemini" broker={false} />);
+
+    await user.click(await screen.findByRole("button", { name: "By tier" }));
+
+    const tier = await screen.findByRole("link", { name: "Everyday cloud" });
+    expect(tier.getAttribute("href")).toBe(
+      "/#/settings/model-calls?provider=gemini&tier=cheap_cloud",
+    );
+    expect(screen.getByRole("link", { name: "Decision model" })).toBeTruthy();
+    expect(screen.queryByText(/cheap_cloud|\bdecide\b/)).toBeNull();
+  });
+
   it("offers no host grouping off a broker, and says when a window is empty", async () => {
     statsServer(() => []);
     render(<ProviderRecentCalls provider="gemini" broker={false} />);
