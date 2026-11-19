@@ -5,6 +5,7 @@ package capture
 
 import (
 	"context"
+	"slices"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -181,8 +182,12 @@ func excludedForTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecor
 	// container value is the provider's own token; folding would merge two
 	// Graph folders whose ids differ only in case. A member's rule matches only
 	// in the mailbox it was picked from.
+	mailboxes, err := containerMailboxesTx(ctx, tx, owner, rec.Containers)
+	if err != nil {
+		return "", err
+	}
 	var kind string
-	err := tx.QueryRow(ctx, `
+	err = tx.QueryRow(ctx, `
 		SELECT kind FROM capture_exclusion e
 		 WHERE (e.scope = 'workspace' OR e.user_id = $3)
 		   AND ((e.kind = 'address' AND e.value = ANY($1::text[]))
@@ -190,9 +195,9 @@ func excludedForTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecor
 		           SELECT 1 FROM unnest($2::text[]) d
 		            WHERE d = e.value OR d LIKE '%.' || `+storekit.EscapeLikeSQL("e.value")+`))
 		     OR (e.kind = 'container' AND e.value = ANY($4::text[])
-		         AND (e.connection_id IS NULL OR e.connection_id = $5::uuid)))
+		         AND (e.connection_id IS NULL OR e.connection_id = ANY($5::uuid[]))))
 		 ORDER BY e.kind LIMIT 1`,
-		addresses, domains, nilToNull(owner), rec.Containers, runConnection(ctx)).Scan(&kind)
+		addresses, domains, nilToNull(owner), rec.Containers, mailboxes).Scan(&kind)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return "", nil
@@ -206,6 +211,30 @@ func excludedForTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecor
 		return reasonExcludedContainer, nil
 	}
 	return reasonExcludedDomain, nil
+}
+
+// containerMailboxesTx answers the mailboxes rec's containers were filed in,
+// as seatMailboxTx names the capturing mailbox: the run's own, else the
+// owner's only mailbox of each provider a container names. So a check made
+// outside a mailbox run still meets the member's container rule.
+func containerMailboxesTx(ctx context.Context, tx pgx.Tx, owner ids.UUID, containers []string) ([]ids.UUID, error) {
+	var mailboxes []ids.UUID
+	asked := map[string]bool{}
+	for _, container := range containers {
+		provider, _, _ := strings.Cut(container, ":")
+		if asked[provider] {
+			continue
+		}
+		asked[provider] = true
+		id, found, err := seatMailboxTx(ctx, tx, owner, provider)
+		if err != nil {
+			return nil, err
+		}
+		if found && !slices.Contains(mailboxes, id) {
+			mailboxes = append(mailboxes, id)
+		}
+	}
+	return mailboxes, nil
 }
 
 // nilToNull hands a zero user id to SQL as NULL, so a connection with no

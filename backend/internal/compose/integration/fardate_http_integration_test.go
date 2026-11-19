@@ -36,6 +36,7 @@ func (f fieldRefusal) names(field string) bool {
 // A date-time that some zone renders as year 10000 cannot be encoded, so a
 // writer that stored one would blank every list holding its row. The bound
 // refuses it at the door, and the last instant inside the bound still lists.
+// A task's due_at has the tighter due window (values.DueInWindow) instead.
 func TestADateTimeNoZoneCanRenderIsRefusedAndTheListsStayReadable(t *testing.T) {
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Far Dates", "admin@fardates.test", "Admin")
@@ -44,10 +45,6 @@ func TestADateTimeNoZoneCanRenderIsRefusedAndTheListsStayReadable(t *testing.T) 
 		name, path, field, list string
 		body                    func(at string) AnyMap
 	}{
-		{
-			name: "task due_at", path: "/v1/tasks", field: "due_at", list: "/v1/activities?kind=task",
-			body: func(at string) AnyMap { return AnyMap{"subject": "far task", "due_at": at} },
-		},
 		{
 			name: "signal detected_at", path: "/v1/signals", field: "detected_at", list: "/v1/signals",
 			body: func(at string) AnyMap {
