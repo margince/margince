@@ -31340,7 +31340,7 @@ components:
         contact_id: {type: string, format: uuid}
         email: {type: string, format: email, description: Stored lowercased.}
         email_type: {type: string, enum: [work, personal, other], default: work}
-        is_primary: {type: boolean, default: false, description: At most one primary per type (DB-enforced).}
+        is_primary: {type: boolean, default: false, description: 'At most one primary address per contact, whatever its type (DB-enforced). primary_email follows it. A second primary in one request is refused with 409 multiple_primary.'}
         position: {type: integer, default: 0, description: Explicit ordering.}
         source: {type: string}
         captured_by: {type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.'}
@@ -31355,7 +31355,7 @@ components:
         contact_id: {type: string, format: uuid}
         phone: {type: string, description: E.164 normalized.}
         phone_type: {type: string, enum: [work, mobile, home, other], default: work}
-        is_primary: {type: boolean, default: false}
+        is_primary: {type: boolean, default: false, description: 'At most one primary number per contact, whatever its type (DB-enforced).'}
         position: {type: integer, default: 0}
         source: {type: string}
         captured_by: {type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.'}
@@ -32207,7 +32207,7 @@ components:
           format: email
           description: 'An address whose local part names a sending system (noreply@, notifications@, receipts@ and the like) is refused with 422 `email_names_no_one`: nobody answers there, so it names no contact.'
         email_type: {type: string, enum: [work, personal, other], default: work}
-        is_primary: {type: boolean, default: false}
+        is_primary: {type: boolean, default: false, description: 'The one primary address of the contact, whatever its type. More than one row marked primary is refused with 409 `multiple_primary`. A new contact whose rows name none gets its first row as primary.'}
         position: {type: integer, default: 0}
     ContactPhoneInput:
       type: object
@@ -32218,7 +32218,7 @@ components:
       properties:
         phone: {type: string}
         phone_type: {type: string, enum: [work, mobile, home, other], default: work}
-        is_primary: {type: boolean, default: false}
+        is_primary: {type: boolean, default: false, description: 'The one primary number of the contact, whatever its type. More than one row marked primary is refused with 409 `multiple_primary`.'}
         position: {type: integer, default: 0}
     UpdateContactRequest:
       type: object
@@ -42640,6 +42640,12 @@ components:
         promoted_at: {type: [string, 'null'], format: date-time}
         routed_at: {type: [string, 'null'], format: date-time, readOnly: true, description: 'When routing assigned an owner.'}
         first_response_at: {type: [string, 'null'], format: date-time, readOnly: true, description: 'First real response to this lead: an outbound activity, a human status change off `new`, or an explicit disposition. A cold-outbound auto-touch does NOT satisfy it.'}
+        first_response_marked_by:
+          type: [string, 'null']
+          format: uuid
+          readOnly: true
+          description: >-
+            The user whose status move off `new` wrote `first_response_at`, with no activity behind it. Null when an activity or a disposition wrote the stamp, or when none is set. Moving the lead back to `new` before any activity is logged clears both.
         sla_deadline_at: {type: [string, 'null'], format: date-time, readOnly: true, description: 'Derived, not stored: COALESCE(routed_at, created_at) + first_response_target_minutes. Null on a terminal lead, which owes no first response.'}
         sla_state:
           type: [string, 'null']
