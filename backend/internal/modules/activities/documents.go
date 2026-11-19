@@ -421,8 +421,8 @@ var provenanceCategories = map[string]struct{}{
 // GATED ON THE ROW, NOT THE VOCABULARY. The enum still admits both values
 // because a CAPTURED file may legitimately be re-pointed between them — a
 // mislabeled row is exactly what a correction is for. What is refused is a
-// caller asserting arrival on a file that never arrived: `source` is the writer
-// that made the row; `upload` and `link` are the ones that mean a human handed it over.
+// caller asserting arrival on a file that never arrived. `source` names the
+// writer of the row, and `upload` and `link` mean a human handed it over.
 func refuseAssertedProvenance(before crmcontracts.Attachment, in DocumentMetadata) error {
 	if in.Category == nil {
 		return nil

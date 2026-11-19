@@ -1,0 +1,9 @@
+{
+  "verb": "attach_link",
+  "checks": [
+    "company.update"
+  ],
+  "takes": [
+    "company"
+  ]
+}

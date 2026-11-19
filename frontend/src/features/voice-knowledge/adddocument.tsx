@@ -24,7 +24,6 @@ import { Select } from "../../design-system/select";
 import { searchWords } from "../../format/collate";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
 import { fileListKeys } from "../../lib/attachmentkeys";
 import {
   ACCEPTED_ATTACHMENT_ATTR,
@@ -36,6 +35,14 @@ import { useHealthScope } from "../../lib/healthscope";
 import { labelFor } from "../../lib/labelfor";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { formatUploadLimit, useMaxUploadBytes } from "../../lib/uploadlimit";
+import {
+  CATEGORY_KEYS,
+  type Choosable,
+  SOURCE_WORDS,
+  SOURCES,
+  type Source,
+  UPLOADABLE_CATEGORIES,
+} from "./adddocument.choices";
 import {
   DEAL_MATCH_LIMIT,
   DEAL_PAGE_FRESH_MS,
@@ -68,46 +75,8 @@ import { uploadRefusal } from "./adddocument.upload";
 // Why the question is only asked on an account: deals hang off a company, so an
 // account can offer its own deals as filing targets. A contact sits on deals at
 // companies they may not work for, so its library files against the contact.
-//
-// A link is the same question without bytes: one request carries the address,
-// parent, category and title, so it has no partial success.
-
-type Attachment = components["schemas"]["Attachment"];
-
-// A document link arrives with a mail and is never filed from this dialog.
-type Category = Exclude<NonNullable<Attachment["category"]>, "link">;
 
 type DealPage = components["schemas"]["DealListResponse"];
-
-const CATEGORY_KEYS: Record<Category, MessageKey> = {
-  contract: "docs.category.contract",
-  offer: "docs.category.offer",
-  legal: "docs.category.legal",
-  email_attachment: "docs.category.email",
-  message_attachment: "docs.category.message",
-  other: "docs.category.other",
-};
-
-// WHAT A HUMAN MAY CHOOSE, which is not the whole vocabulary. The two
-// `*_attachment` values record PROVENANCE — capture derives them from the
-// transport a file arrived on — and a file being uploaded from this dialog
-// arrived on none. Offering them would let the picker mint a claim about where a
-// file came from that is false the moment it is chosen, and the document library
-// reads that column as an answer to exactly that question.
-//
-// Derived by subtraction from CATEGORY_KEYS rather than listed, so a value added
-// to the contract lands in the picker by default and only a deliberate edit here
-// keeps it out. Not a second hand-kept list: the two drift apart.
-const CAPTURED_ONLY: readonly Category[] = [
-  "email_attachment",
-  "message_attachment",
-];
-
-type Choosable = Exclude<Category, "email_attachment" | "message_attachment">;
-
-const UPLOADABLE_CATEGORIES = (Object.keys(CATEGORY_KEYS) as Category[]).filter(
-  (key): key is Choosable => !CAPTURED_ONLY.includes(key),
-);
 
 /**
  * The record whose document library this dialog was opened from.
@@ -128,26 +97,6 @@ export type DocumentAnchor = Readonly<{
 // value beside a list of deal ids — filing against the account is a different
 // KIND of decision from picking one deal of hundreds.
 type Filing = "anchor" | "deal";
-
-// What is being added: bytes, or the address of a document kept elsewhere.
-type Source = "file" | "link";
-const SOURCES: readonly Source[] = ["file", "link"];
-
-const SOURCE_WORDS: Record<
-  Source,
-  Readonly<{ nameHint: MessageKey; busy: MessageKey; submit: MessageKey }>
-> = {
-  file: {
-    nameHint: "docs.add.nameHint",
-    busy: "docs.add.uploading",
-    submit: "docs.add.submit",
-  },
-  link: {
-    nameHint: "docs.add.linkNameHint",
-    busy: "docs.add.adding",
-    submit: "docs.add.submitLink",
-  },
-};
 
 /**
  * The parent the bytes are filed against, or null when the reader has chosen
@@ -176,7 +125,7 @@ type Submission = {
 // itself, and would put this dialog's assumptions into a record it never read.
 function metadataFor(submitted: Submission) {
   const title = submitted.title.trim();
-  const patch: { category?: Category; title?: string } = {};
+  const patch: { category?: Choosable; title?: string } = {};
   if (submitted.category !== "other") {
     patch.category = submitted.category;
   }

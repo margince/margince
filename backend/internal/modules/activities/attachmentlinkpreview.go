@@ -3,8 +3,8 @@
 
 package activities
 
-// What a web page calls itself, read before a user adds it to a record's
-// documents, so the title they would otherwise type is already there.
+// What a web page calls itself, read before a user adds it to a record.
+// The title they would otherwise type is then already there.
 
 import (
 	"context"

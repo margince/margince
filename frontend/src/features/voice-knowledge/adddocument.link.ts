@@ -8,6 +8,7 @@ import { useSettledValue } from "../../design-system/debouncedsearch";
 import type { MessageKey } from "../../i18n/en";
 import type { AttachmentParent } from "../../lib/attachmentupload";
 import { unwrap } from "../../lib/problem";
+import type { Choosable } from "./adddocument.choices";
 
 type LinkPreview = components["schemas"]["AttachmentLinkPreview"];
 
@@ -79,7 +80,7 @@ export type LinkSubmission = Readonly<{
   parent: AttachmentParent;
   url: string;
   title: string;
-  category: "contract" | "offer" | "legal" | "other";
+  category: Choosable;
 }>;
 
 /** Lists the link on its parent and answers the row the server wrote. */

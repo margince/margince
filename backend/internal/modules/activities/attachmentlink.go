@@ -55,8 +55,8 @@ type LinkInput struct {
 }
 
 // LinkAddress is the address a link row stores: trimmed, http or https, with a
-// host and no user info, which can make the visible host differ from where the
-// address leads. The preview and the write both read an address through it.
+// host. User info is refused: it can hide where the address really leads.
+// The preview and the write both read an address through it.
 func LinkAddress(raw string) (string, error) {
 	address := strings.TrimSpace(raw)
 	parsed, err := url.Parse(address)

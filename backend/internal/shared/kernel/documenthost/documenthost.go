@@ -3,8 +3,8 @@
 
 // Package documenthost names the hosts that serve shared documents: Google
 // Docs, Sheets, Slides, Forms and Drive. Capture reads a mail's links to them
-// as documents sent; the link preview leaves them unfetched, because they
-// answer a sign-in page to a reader who is not signed in.
+// as documents sent. The link preview leaves them unfetched: they answer a
+// sign-in page to a reader who is not signed in.
 package documenthost
 
 import "strings"

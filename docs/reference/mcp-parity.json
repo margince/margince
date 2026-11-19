@@ -11,18 +11,18 @@
       "covered": 39,
       "sign_in": 1,
       "no_signed_in_user": 0,
-      "web_app_calls": 924,
-      "web_app_calls_open": 758,
+      "web_app_calls": 926,
+      "web_app_calls_open": 759,
       "web_app_calls_ask_first": 106,
       "web_app_calls_pending": 0,
-      "web_app_calls_security": 140,
+      "web_app_calls_security": 141,
       "web_app_calls_covered": 25,
       "parity_signed_in_percent": 81.3,
-      "parity_web_app_percent": 82
+      "parity_web_app_percent": 81.9
     },
-    "open_with_no_web_app_call_found": 109,
-    "parity_web_app_counting_covered_percent": 84.7,
-    "parity_web_app_once_pending_is_open_percent": 84.7
+    "open_with_no_web_app_call_found": 108,
+    "parity_web_app_counting_covered_percent": 84.6,
+    "parity_web_app_once_pending_is_open_percent": 84.6
   },
   "web_app_scan": {
     "computed_calls_no_path_was_found_for": []
@@ -41,14 +41,14 @@
       "covered": 26,
       "sign_in": 0,
       "no_signed_in_user": 0,
-      "web_app_calls": 504,
-      "web_app_calls_open": 461,
+      "web_app_calls": 506,
+      "web_app_calls_open": 462,
       "web_app_calls_ask_first": 37,
       "web_app_calls_pending": 0,
-      "web_app_calls_security": 26,
+      "web_app_calls_security": 27,
       "web_app_calls_covered": 17,
       "parity_signed_in_percent": 90.6,
-      "parity_web_app_percent": 91.4,
+      "parity_web_app_percent": 91.3,
       "areas": [
         {
           "key": "contacts",
@@ -501,14 +501,14 @@
           "covered": 2,
           "sign_in": 0,
           "no_signed_in_user": 0,
-          "web_app_calls": 14,
-          "web_app_calls_open": 12,
+          "web_app_calls": 16,
+          "web_app_calls_open": 13,
           "web_app_calls_ask_first": 1,
           "web_app_calls_pending": 0,
-          "web_app_calls_security": 0,
+          "web_app_calls_security": 1,
           "web_app_calls_covered": 2,
           "parity_signed_in_percent": 82.3,
-          "parity_web_app_percent": 85.7
+          "parity_web_app_percent": 81.2
         },
         {
           "key": "imports",
@@ -4811,7 +4811,8 @@
       "scope": "write",
       "verb": "attach_link",
       "router": "change_activities",
-      "action": "attach_link"
+      "action": "attach_link",
+      "web_app": "direct"
     },
     {
       "method": "POST",
@@ -4822,7 +4823,8 @@
       ],
       "group": "business",
       "area": "documents",
-      "state": "security"
+      "state": "security",
+      "web_app": "direct"
     },
     {
       "method": "DELETE",

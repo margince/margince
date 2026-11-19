@@ -20,11 +20,13 @@ Without write access the button is not shown. The contract record itself is adde
 Also called: attach a file, add an attachment, add a PDF, upload a contract document.
 
 ### How do I add a link, such as a Google Doc?
-To add a link to a document kept elsewhere, such as a Google Doc, Sheet or a web page, open the company, contact or deal. Choose its **Documents** tab and click **Add document**.
-1. Choose **Link** at the top of the form and paste the address into **Address**. It must start with `https://` or `http://`.
-2. Margince reads the page and fills **Title** with the name the page gives. A Google file shows its contents only after sign-in, so type a title for it. Without a title the link shows the site's address.
+To add a link to a Google Doc, a Google Sheet or a web page, open the company, contact or deal. Choose its **Documents** tab and click **Add document**.
+1. Choose **Link** at the top of the form and paste the address into **Address**.
+2. Margince reads the page and fills **Title** with the name the page gives.
 3. Choose a **Category** and, on a company, **About**, as for a file. Click **Add link**.
-The link shows on the **Documents** tab with **Docs**, **Sheets**, **Slides**, **Forms**, **Drive** or **Web** on its tile, and opens in a new tab. Margince stores only the address, never the document. Whoever opens it needs access to it where it lives. The same address can be listed only once on a record.
+A Google file shows its name only after sign-in, so type a title for it. Without a title, the link shows the site's address.
+
+The link opens in a new tab. Its tile says **Docs**, **Sheets**, **Slides**, **Forms**, **Drive** or **Web**. Margince keeps only the address, so whoever opens it needs access to the file itself. One address can be added to a record only once.
 Also called: link a Google Drive file, add a URL, add a web link to a company.
 
 ### How do I attach a file to a contact?
