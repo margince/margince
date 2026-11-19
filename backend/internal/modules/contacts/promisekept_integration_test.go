@@ -8,6 +8,7 @@ package contacts
 import (
 	"context"
 	"errors"
+	"runtime"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -18,26 +19,49 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// ownedPromise is the looks-kept promise, recorded by the rep who reads it.
+// ownedPromise is the looks-kept promise. The tests here stand in for the rule
+// that names an owner; the sweep's own tests drive the real one.
 func ownedPromise(t *testing.T) looksKeptFixture {
 	t.Helper()
-	f := looksKeptPromise(t)
-	f.e.execAs(f.ctx, t, `UPDATE conversation_claim SET captured_by = $2 WHERE id = $1`, f.claim, "human:"+f.e.rep.String())
-	return f
+	return looksKeptPromise(t)
 }
 
-// sweep runs one pass the way the job does: the system writes, the owner reads.
+// ownerIs names the rep as the owner of every promise and lets them read as
+// the fixture's own context.
+type ownerIs struct{ f looksKeptFixture }
+
+func (o ownerIs) Owner(context.Context, pgx.Tx, ids.UUID, *ids.UUID) (ids.UUID, error) {
+	return o.f.e.rep, nil
+}
+
+func (o ownerIs) Reader(context.Context, pgx.Tx, ids.UUID) (context.Context, error) {
+	return o.f.ctx, nil
+}
+
+// sweep runs one pass the way the job does, one transaction per promise: the
+// system writes, the owner reads.
 func (f looksKeptFixture) sweep(t *testing.T) {
 	t.Helper()
+	f.sweepWith(t, ownerIs{f})
+}
+
+func (f looksKeptFixture) sweepWith(t *testing.T, seats KeptSeats) {
+	t.Helper()
 	writer := principal.SystemActing(principal.WithWorkspaceID(context.Background(), f.e.ws), PromiseKeptActor)
+	var claims []ids.UUID
 	if err := f.e.store.tx(writer, func(tx pgx.Tx) error {
-		candidates, err := f.e.store.KeptPromiseCandidatesTx(writer, tx)
-		if err != nil {
-			return err
-		}
-		return f.e.store.ReconcileKeptPromisesTx(writer, f.ctx, tx, candidates)
+		var err error
+		claims, err = f.e.store.KeptPromiseCandidatesTx(writer, tx)
+		return err
 	}); err != nil {
-		t.Fatalf("sweep: %v", err)
+		t.Fatalf("list candidates: %v", err)
+	}
+	for _, claim := range claims {
+		if err := f.e.store.tx(writer, func(tx pgx.Tx) error {
+			return f.e.store.ReconcileKeptPromiseTx(writer, tx, claim, seats)
+		}); err != nil {
+			t.Fatalf("reconcile %s: %v", claim, err)
+		}
 	}
 }
 
@@ -107,9 +131,15 @@ func TestTheAuditRowOfAnAutomaticCloseNamesNoMeetingOrGuest(t *testing.T) {
 	}
 }
 
+type nobodyOwns struct{ ownerIs }
+
+func (nobodyOwns) Owner(context.Context, pgx.Tx, ids.UUID, *ids.UUID) (ids.UUID, error) {
+	return ids.UUID{}, nil
+}
+
 func TestAPromiseNobodyIsResponsibleForIsOnlyHinted(t *testing.T) {
 	f := looksKeptPromise(t)
-	f.sweep(t)
+	f.sweepWith(t, nobodyOwns{ownerIs{f}})
 	if got := f.status(t); got != "open" {
 		t.Errorf("status = %q, want open", got)
 	}
@@ -238,5 +268,140 @@ func TestUndoRefusesAHumansCloseAndHidesAClaimOutsideTheReadersScope(t *testing.
 	}
 	if err := g.e.store.ReopenAutoKeptClaim(g.ctx, g.claim); !errors.Is(err, apperrors.ErrConflict) {
 		t.Errorf("undoing a human's close = %v, want conflict", err)
+	}
+}
+
+// colleagueAtTheGuestsCompany adds one more contact of that name to the guest's company.
+func (f looksKeptFixture) colleagueAtTheGuestsCompany(t *testing.T, name string) ids.UUID {
+	t.Helper()
+	id := ids.NewV7()
+	f.e.execAs(f.ctx, t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, $2, 'manual', 'human:test')`, id, name)
+	f.e.execAs(f.ctx, t, `INSERT INTO relationship (contact_id, company_id, kind, is_current_primary, source, captured_by)
+		SELECT $1, company_id, 'employment', true, 'manual', 'human:test' FROM relationship WHERE contact_id = $2 AND kind = 'employment'`, id, f.guest)
+	return id
+}
+
+func TestTwoContactsOfTheGuestsNameAtTheCompanyNameNobody(t *testing.T) {
+	f := ownedPromise(t)
+	f.colleagueAtTheGuestsCompany(t, "Riley Reed")
+	if got := f.hint(t); got != nil {
+		t.Errorf("an ambiguous name suggested %q", *got)
+	}
+	f.sweep(t)
+	if got := f.status(t); got != "open" {
+		t.Errorf("an ambiguous name closed the promise: %q", got)
+	}
+}
+
+func TestEveryInviteeTheClaimNamesMustHaveAcceptedTheSameMeeting(t *testing.T) {
+	f := ownedPromise(t)
+	f.e.execAs(f.ctx, t, `UPDATE conversation_claim SET body = 'I will invite Riley Reed and Sam Lee to the demo' WHERE id = $1`, f.claim)
+	sam := f.colleagueAtTheGuestsCompany(t, "Sam Lee")
+	f.sweep(t)
+	if got := f.status(t); got != "open" {
+		t.Fatalf("one of two invitees accepting closed the promise: %q", got)
+	}
+	f.e.execAs(f.ctx, t, `INSERT INTO activity_participant (activity_id, contact_id, role, response) VALUES ($1, $2, 'attendee', 'accepted')`, f.meeting, sam)
+	f.sweep(t)
+	if got := f.status(t); got != "done" {
+		t.Errorf("both invitees accepting left the promise %q", got)
+	}
+}
+
+func TestAnotherLaterMeetingWithTheSameGuestLeavesTheEarliestAsEvidence(t *testing.T) {
+	f := ownedPromise(t)
+	later := ids.NewV7()
+	f.e.execAs(f.ctx, t, `INSERT INTO activity (id, kind, subject, source, captured_by, occurred_at, meeting_status)
+		VALUES ($1, 'meeting', 'Follow-up', 'manual', 'human:test', now() + interval '9 days', 'booked')`, later)
+	f.e.execAs(f.ctx, t, `INSERT INTO activity_participant (activity_id, contact_id, role, response) VALUES ($1, $2, 'attendee', 'accepted'), ($1, $3, 'attendee', NULL)`,
+		later, f.guest, f.holder)
+	f.sweep(t)
+	claim := f.claimRead(t)
+	if claim.AutoKept == nil || claim.AutoKept.Evidence == nil || ids.UUID(claim.AutoKept.Evidence.MeetingId) != f.meeting {
+		t.Fatalf("auto_kept = %+v, want the earliest meeting %s", claim.AutoKept, f.meeting)
+	}
+	if got := f.e.countAs(f.ctx, t, `SELECT count(*) FROM audit_log WHERE after->>'claim_id' = $1 AND after ? 'auto_kept'`, f.claim.String()); got != 1 {
+		t.Errorf("close audit rows = %d, want 1", got)
+	}
+}
+
+func TestATaskLinkedAfterTheCloseDoesNotHideWhoClosedIt(t *testing.T) {
+	f := ownedPromise(t)
+	f.sweep(t)
+	task := ids.NewV7()
+	f.e.execAs(f.ctx, t, `INSERT INTO activity (id, kind, subject, source, captured_by, occurred_at, is_done, done_at)
+		VALUES ($1, 'task', 'Invite Riley', 'manual', 'human:test', now(), true, now())`, task)
+	if err := f.e.store.tx(f.ctx, func(tx pgx.Tx) error { return f.e.store.SetClaimTaskTx(f.ctx, tx, f.claim, task) }); err != nil {
+		t.Fatalf("link the task: %v", err)
+	}
+	if f.claimRead(t).AutoKept == nil {
+		t.Fatal("a task link after the close hid that Margince closed it")
+	}
+	f.e.execAs(f.ctx, t, `UPDATE activity_participant SET response = 'declined' WHERE activity_id = $1 AND response IS NOT NULL`, f.meeting)
+	f.sweep(t)
+	if got := f.status(t); got != "open" {
+		t.Errorf("the recheck skipped a close with a task link behind it: %q", got)
+	}
+}
+
+func TestAMergedContactKeepsWhoClosedItsPromise(t *testing.T) {
+	f := ownedPromise(t)
+	f.sweep(t)
+	survivor := ids.NewV7()
+	f.e.execAs(f.ctx, t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Casey C. Customer', 'manual', 'human:test')`, survivor)
+	if _, err := f.e.store.MergeContact(f.ctx, ids.From[ids.ContactKind](f.holder), ids.From[ids.ContactKind](survivor), nil); err != nil {
+		t.Fatalf("merge: %v", err)
+	}
+	var claims []crmcontracts.ConversationClaim
+	if err := f.e.store.tx(f.ctx, func(tx pgx.Tx) error {
+		var err error
+		claims, err = f.e.store.ClaimsForContact(f.ctx, tx, ids.From[ids.ContactKind](survivor), nil, 10)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if len(claims) != 1 || claims[0].AutoKept == nil {
+		t.Fatalf("the survivor's claims = %+v, want the promise still marked as closed by Margince", claims)
+	}
+}
+
+// A decline still uncommitted when the sweep reads the evidence holds the
+// guests' rows. The close waits for it and sees the answer it left.
+func TestADeclineCommittingDuringTheCloseIsSeen(t *testing.T) {
+	f := ownedPromise(t)
+	declined, release := make(chan struct{}), make(chan struct{})
+	done := make(chan error, 1)
+	go func() {
+		done <- f.e.store.tx(f.ctx, func(tx pgx.Tx) error {
+			if _, err := tx.Exec(f.ctx, `UPDATE activity_participant SET response = 'declined' WHERE activity_id = $1 AND response IS NOT NULL`, f.meeting); err != nil {
+				return err
+			}
+			close(declined)
+			<-release
+			return nil
+		})
+	}()
+	<-declined
+	swept := make(chan struct{})
+	go func() {
+		defer close(swept)
+		f.sweep(t)
+	}()
+waiting:
+	for f.e.countAs(f.ctx, t, `SELECT count(*) FROM pg_stat_activity WHERE wait_event_type = 'Lock' AND datname = current_database()`) == 0 {
+		select {
+		case <-swept:
+			break waiting
+		default:
+			runtime.Gosched()
+		}
+	}
+	close(release)
+	if err := <-done; err != nil {
+		t.Fatal(err)
+	}
+	<-swept
+	if got := f.status(t); got != "open" {
+		t.Errorf("a decline that committed during the close left the promise %q", got)
 	}
 }

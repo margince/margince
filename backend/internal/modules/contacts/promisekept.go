@@ -13,7 +13,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -38,37 +37,37 @@ const autoKeptKey = "auto_kept"
 // the record history for a reader who may not open the meeting.
 const recheckWindow = 90 * 24 * time.Hour
 
-// latestClaimImage is the audit image of the claim's newest change.
+// latestClaimImage is the audit image of the claim's newest status change. It
+// is found by claim id. A task link written afterwards, or a merge that moved
+// the claim to another contact, does not hide who closed it.
 const latestClaimImage = `(SELECT a.after FROM audit_log a WHERE a.entity_type = 'contact'
-	AND a.entity_id = c.contact_id AND a.after->>'claim_id' = c.id::text
+	AND a.after->>'claim_id' = c.id::text AND a.after ? 'claim_status'
 	ORDER BY a.occurred_at DESC, a.id DESC LIMIT 1)`
 
 // reopenedByAHuman holds a claim someone took out of done. A human saying a
 // promise is not kept outranks what the meeting shows.
 var reopenedByAHuman = `EXISTS (SELECT 1 FROM audit_log h WHERE h.entity_type = 'contact'
-	AND h.entity_id = c.contact_id AND h.after->>'claim_id' = c.id::text
+	AND h.after->>'claim_id' = c.id::text AND h.after ? 'claim_status'
 	AND h.before->>'claim_status' = 'done' AND h.after->>'claim_status' = 'open' AND ` + storekit.AuditForAUser("h") + `)`
 
-// KeptCandidate is a promise whose evidence the sweep checks, and the seat
-// whose reading decides it.
-type KeptCandidate struct {
-	Claim  ids.UUID
-	Owner  ids.UUID
-	Closed bool
+// KeptSeats answers who is responsible for a promise and what that seat may read.
+type KeptSeats interface {
+	// Owner is the seat the promise belongs to, or the zero id. named is the
+	// seat the claim itself names (its task's assignee or who took it over).
+	Owner(ctx context.Context, tx pgx.Tx, source ids.UUID, named *ids.UUID) (ids.UUID, error)
+	// Reader is ctx bound to the owner's authority as of this transaction.
+	Reader(ctx context.Context, tx pgx.Tx, owner ids.UUID) (context.Context, error)
 }
 
 // KeptPromiseCandidatesTx lists the open promises to invite someone and the
-// automatic closes still inside their recheck window. Each has a responsible
-// seat: the task's assignee, else who took it over, else the user who
-// recorded it. A promise with none is left to its hint.
-func (s *Store) KeptPromiseCandidatesTx(ctx context.Context, tx pgx.Tx) ([]KeptCandidate, error) {
+// automatic closes still inside their recheck window. Each is decided on its
+// own by ReconcileKeptPromiseTx.
+func (s *Store) KeptPromiseCandidatesTx(ctx context.Context, tx pgx.Tx) ([]ids.UUID, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return nil, err
 	}
 	rows, err := tx.Query(ctx, `
-		SELECT c.id, c.status = 'done', t.assignee_id, c.taken_by_user_id, c.captured_by
-		  FROM conversation_claim c
-		  LEFT JOIN activity t ON t.id = c.task_activity_id AND t.archived_at IS NULL
+		SELECT c.id FROM conversation_claim c
 		 WHERE c.kind = 'commitment_ours' AND c.archived_at IS NULL AND NOT c.needs_review
 		   AND c.body ~* '\yinvit'
 		   AND ((c.status = 'open' AND NOT `+reopenedByAHuman+`)
@@ -77,99 +76,113 @@ func (s *Store) KeptPromiseCandidatesTx(ctx context.Context, tx pgx.Tx) ([]KeptC
 	if err != nil {
 		return nil, fmt.Errorf("read the promises to check against meetings: %w", err)
 	}
-	defer rows.Close()
-	var out []KeptCandidate
-	for rows.Next() {
-		var candidate KeptCandidate
-		var assignee, taker *ids.UUID
-		var capturedBy string
-		if err := rows.Scan(&candidate.Claim, &candidate.Closed, &assignee, &taker, &capturedBy); err != nil {
-			return nil, fmt.Errorf("scan a promise to check against meetings: %w", err)
-		}
-		if owner, ok := responsibleSeat(assignee, taker, capturedBy); ok {
-			candidate.Owner = owner
-			out = append(out, candidate)
-		}
-	}
-	return out, rows.Err()
+	return pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
 }
 
-func responsibleSeat(assignee, taker *ids.UUID, capturedBy string) (ids.UUID, bool) {
-	for _, seat := range []*ids.UUID{assignee, taker} {
-		if seat != nil {
-			return *seat, true
-		}
-	}
-	if rest, ok := strings.CutPrefix(capturedBy, principal.HumanIDPrefix); ok {
-		if seat, err := ids.Parse(rest); err == nil {
-			return seat, true
-		}
-	}
-	return ids.UUID{}, false
+// keptPromiseRow is what a decision about one promise reads from it.
+type keptPromiseRow struct {
+	status          string
+	contact, source ids.UUID
+	assignee, taker *ids.UUID
+	auto, reopened  bool
 }
 
-// ReconcileKeptPromisesTx brings the named promises in line with the meetings
-// the owner may read. ctx is the system writer; reader carries the owner's
-// scope and decides what counts as evidence. An automatic close whose evidence
-// is gone is reopened first, so a promise that lost one meeting can close on
-// another in the same pass.
-func (s *Store) ReconcileKeptPromisesTx(ctx, reader context.Context, tx pgx.Tx, candidates []KeptCandidate) error {
+// lockKeptPromise locks the claim and reads it. It answers false for a claim
+// that is gone or is not a live promise to invite someone.
+func lockKeptPromise(ctx context.Context, tx pgx.Tx, claim ids.UUID) (keptPromiseRow, bool, error) {
+	var row keptPromiseRow
+	if _, err := storekit.LockRow(ctx, tx, "conversation_claim", claim, storekit.LiveOnly); err != nil {
+		if errors.Is(err, apperrors.ErrNotFound) {
+			return row, false, nil
+		}
+		return row, false, err
+	}
+	err := tx.QueryRow(ctx, `
+		SELECT c.status, c.contact_id, c.source_activity_id, t.assignee_id, c.taken_by_user_id,
+		       coalesce(`+latestClaimImage+` ? '`+autoKeptKey+`', false), `+reopenedByAHuman+`
+		  FROM conversation_claim c
+		  LEFT JOIN activity t ON t.id = c.task_activity_id AND t.archived_at IS NULL
+		 WHERE c.id = $1 AND c.kind = 'commitment_ours' AND c.archived_at IS NULL AND NOT c.needs_review
+		   AND c.body ~* '\yinvit'`, claim).Scan(&row.status, &row.contact, &row.source, &row.assignee, &row.taker, &row.auto, &row.reopened)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return row, false, nil
+	}
+	if err != nil {
+		return row, false, fmt.Errorf("read the promise to check against meetings: %w", err)
+	}
+	return row, true, nil
+}
+
+// ReconcileKeptPromiseTx decides one promise in one transaction. It locks the
+// claim, reads the owner, their authority and the evidence under that lock, and
+// writes the status. An automatic close whose evidence is gone is reopened. An
+// open promise the owner's meetings show kept is closed.
+func (s *Store) ReconcileKeptPromiseTx(ctx context.Context, tx pgx.Tx, claim ids.UUID, seats KeptSeats) error {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return err
 	}
-	var named []ids.UUID
-	for _, candidate := range candidates {
-		named = append(named, candidate.Claim)
+	row, found, err := lockKeptPromise(ctx, tx, claim)
+	if err != nil || !found {
+		return err
 	}
-	visible, err := VisibleClaims(reader, tx, named)
+	closing := row.status == claimStatusOpen && !row.reopened
+	if !closing && (row.status != claimStatusDone || !row.auto) {
+		return nil
+	}
+	named := row.assignee
+	if named == nil {
+		named = row.taker
+	}
+	owner, err := seats.Owner(ctx, tx, row.source, named)
 	if err != nil {
 		return err
 	}
-	var readable []ids.UUID
-	for _, claim := range named {
-		if visible[claim] {
-			readable = append(readable, claim)
-		}
-	}
-	found, err := FindKeptEvidence(reader, tx, readable)
+	hit, shown, err := s.evidenceForOwner(ctx, tx, claim, owner, seats)
 	if err != nil {
 		return err
 	}
-	for _, candidate := range candidates {
-		_, shown := found[candidate.Claim]
-		switch {
-		case candidate.Closed && !shown:
-			err = autoMove(ctx, tx, candidate.Claim, claimStatusDone, claimStatusOpen, map[string]any{"auto_reopened": true})
-		case !candidate.Closed && shown:
-			err = autoMove(ctx, tx, candidate.Claim, claimStatusOpen, claimStatusDone, map[string]any{autoKeptKey: true})
-		}
-		if err != nil {
-			return err
-		}
+	switch {
+	case !closing && !shown:
+		return writeClaimStatus(ctx, tx, claim, row.contact, claimStatusDone, claimStatusOpen, map[string]any{"auto_reopened": true})
+	case closing && shown:
+		return s.keepWhenEvidenceHolds(ctx, tx, claim, row.contact, owner, hit.Meeting, seats)
 	}
 	return nil
 }
 
-// autoMove moves one claim as the system, and only when it still stands where
-// the pass read it. A human who settled or reopened it meanwhile wins.
-func autoMove(ctx context.Context, tx pgx.Tx, claimID ids.UUID, from, to string, extra map[string]any) error {
-	if _, err := storekit.LockRow(ctx, tx, "conversation_claim", claimID, storekit.LiveOnly); err != nil {
-		if errors.Is(err, apperrors.ErrNotFound) {
-			return nil
-		}
+// evidenceForOwner finds the meeting that shows the claim kept among the ones
+// the owner may open. Nobody owning the promise means no evidence.
+func (s *Store) evidenceForOwner(ctx context.Context, tx pgx.Tx, claim, owner ids.UUID, seats KeptSeats) (KeptEvidence, bool, error) {
+	if owner.IsZero() {
+		return KeptEvidence{}, false, nil
+	}
+	reader, err := seats.Reader(ctx, tx, owner)
+	if err != nil {
+		return KeptEvidence{}, false, err
+	}
+	visible, err := VisibleClaims(reader, tx, []ids.UUID{claim})
+	if err != nil || !visible[claim] {
+		return KeptEvidence{}, false, err
+	}
+	found, err := FindKeptEvidence(reader, tx, []ids.UUID{claim})
+	hit, ok := found[claim]
+	return hit, ok, err
+}
+
+// keepWhenEvidenceHolds closes the claim after share-locking the meeting and
+// its guests and reading the evidence again. A decline committed since the
+// first read is seen, and an uncommitted one makes the lock wait.
+func (s *Store) keepWhenEvidenceHolds(ctx context.Context, tx pgx.Tx, claim, contactID, owner, meeting ids.UUID, seats KeptSeats) error {
+	if _, err := tx.Exec(ctx, `SELECT 1 FROM activity m WHERE m.id = $1 FOR SHARE`, meeting); err != nil {
+		return fmt.Errorf("lock the meeting that shows the promise kept: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `SELECT 1 FROM activity_participant ap WHERE ap.activity_id = $1 FOR SHARE`, meeting); err != nil {
+		return fmt.Errorf("lock the guests of the meeting that shows the promise kept: %w", err)
+	}
+	if _, still, err := s.evidenceForOwner(ctx, tx, claim, owner, seats); err != nil || !still {
 		return err
 	}
-	var contactID ids.UUID
-	var current string
-	var reopened bool
-	if err := tx.QueryRow(ctx, `SELECT c.contact_id, c.status, `+reopenedByAHuman+` FROM conversation_claim c WHERE c.id = $1`,
-		claimID).Scan(&contactID, &current, &reopened); err != nil {
-		return fmt.Errorf("read the claim to move: %w", err)
-	}
-	if current != from || (to == claimStatusDone && reopened) {
-		return nil
-	}
-	return writeClaimStatus(ctx, tx, claimID, contactID, from, to, extra)
+	return writeClaimStatus(ctx, tx, claim, contactID, claimStatusOpen, claimStatusDone, map[string]any{autoKeptKey: true})
 }
 
 // withAutoKept marks the done claims Margince closed. The evidence is read

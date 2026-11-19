@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
@@ -20,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/corefeatures"
 	"github.com/margince/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // addDatabaseOnlySweepJobs registers every periodic pass that needs nothing but
@@ -55,7 +57,7 @@ func addDatabaseOnlySweepJobs(
 	addDeclaredWorker[CapturedDealRefileSweepArgs](reg, &capturedDealRefileSweepWorker{pool: pool, now: time.Now})
 	addDeclaredWorker[MeetingProfileRetractSweepArgs](reg, meetingProfileRetractWorker{meetingprofile.Sweep{Pool: pool}})
 	addDeclaredWorker[TranscriptAudienceSweepArgs](reg, transcriptAudienceWorker{transcriptaudience.Sweep{Pool: pool}})
-	addDeclaredWorker[PromiseKeptSweepArgs](reg, promiseKeptWorker{promisekept.Sweep{Pool: pool, Store: contacts.NewStore(InstallationDB(pool))}})
+	addDeclaredWorker[PromiseKeptSweepArgs](reg, promiseKeptWorker{NewPromiseKeptSweep(pool)})
 	addDeclaredWorker[InitiativeEnrolmentSweepArgs](reg, initiativeEnrolmentSweepWorker{initiativeenrolment.Sweep{Store: NewInitiativeStore(pool), Pool: pool}})
 	addDeclaredWorker[ReportScheduleSweepArgs](reg, &reportScheduleSweepWorker{pool: pool, now: time.Now, features: corefeatures.New(disabled)})
 	addDeclaredWorker[CloseDateSweepArgs](reg, &closeDateSweepWorker{
@@ -121,6 +123,15 @@ func (PromiseKeptSweepArgs) Kind() string { return "promise_kept_sweep" }
 func (PromiseKeptSweepArgs) FleetWide() {}
 
 type promiseKeptWorker struct{ promisekept.Sweep }
+
+// NewPromiseKeptSweep wires the sweep to the one rule that names a promise's owner.
+func NewPromiseKeptSweep(pool *pgxpool.Pool) promisekept.Sweep {
+	askedOf := func(ctx context.Context, tx pgx.Tx, source ids.UUID, seat *ids.UUID) (ids.UUID, error) {
+		asked, _, err := commitmentAskedOf(ctx, tx, Commitment{SourceActivityID: source, Seat: seat})
+		return asked, err
+	}
+	return promisekept.Sweep{Pool: pool, Store: contacts.NewStore(InstallationDB(pool)), AskedOf: askedOf}
+}
 
 func (w promiseKeptWorker) Work(ctx context.Context, _ *river.Job[PromiseKeptSweepArgs]) error {
 	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.Pool, w.Workspace))
