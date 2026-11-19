@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"io"
 	"path"
+	"strconv"
 	"strings"
 )
 
@@ -32,6 +33,9 @@ const declaredSizeFactor = 10
 const IgnoredUnknownName = "unknown_name"
 
 var zipSignature = []byte("PK\x03\x04")
+
+// emptyZipSignature starts a ZIP with no entries, whose end record comes first.
+var emptyZipSignature = []byte("PK\x05\x06")
 
 // bundleFileObjects maps a file's base name, lower-cased and without ".csv", to
 // the object it imports. Both the plural the template writes and the singular
@@ -73,9 +77,9 @@ type Bundle struct {
 	limit   uint64
 }
 
-// IsZip tells a ZIP from a CSV by the local-file signature, not the name.
+// IsZip tells a ZIP from a CSV by its signature, not the name.
 func IsZip(body []byte) bool {
-	return bytes.HasPrefix(body, zipSignature)
+	return bytes.HasPrefix(body, zipSignature) || bytes.HasPrefix(body, emptyZipSignature)
 }
 
 // DetectObject is the type a file name imports, or empty when none does.
@@ -109,7 +113,12 @@ func silentlySkipped(f *zip.File) bool {
 func OpenBundle(body []byte, uploadCap int64) (Bundle, error) {
 	zr, err := zip.NewReader(bytes.NewReader(body), int64(len(body)))
 	if err != nil {
-		return Bundle{}, fmt.Errorf("%w: not a readable ZIP: %v", ErrBundleRefused, err)
+		fault := refuseFile(BundleNotAZip, "The ZIP could not be opened. Make the ZIP again and upload it.", nil)
+		fault.cause = err
+		return Bundle{}, fault
+	}
+	if len(zr.File) == 0 {
+		return Bundle{}, refuseFile(BundleEmpty, "The ZIP is empty. Add one CSV file per type and upload it again.", nil)
 	}
 	limit := uint64(declaredSizeFactor) * uint64(max(uploadCap, 0))
 	var entries []*zip.File
@@ -122,26 +131,32 @@ func OpenBundle(body []byte, uploadCap int64) (Bundle, error) {
 		// The sizes come from the ZIP's own headers. Comparing before adding
 		// keeps two huge sizes from wrapping the sum back under the limit.
 		if f.UncompressedSize64 > limit-declared {
-			return Bundle{}, fmt.Errorf("%w: the files add up to more than %d MB, the most that is read",
-				ErrBundleRefused, limit>>20)
+			return Bundle{}, refuseFile(BundleFilesTooLarge,
+				fmt.Sprintf("The files in the ZIP add up to more than %d MB. Split them over smaller ZIPs and import each one.", limit>>20),
+				map[RefusalParam]string{ParamMaxMB: strconv.FormatUint(limit>>20, 10)})
 		}
 		declared += f.UncompressedSize64
 	}
 	if len(entries) > MaxBundleEntries {
-		return Bundle{}, fmt.Errorf("%w: %d files, at most %d are read", ErrBundleRefused, len(entries), MaxBundleEntries)
+		return Bundle{}, refuseFile(BundleTooManyFiles,
+			fmt.Sprintf("The ZIP holds %d files, and at most %d are read. Remove the files you do not import and upload it again.",
+				len(entries), MaxBundleEntries),
+			map[RefusalParam]string{ParamFiles: strconv.Itoa(len(entries)), ParamMaxFiles: strconv.Itoa(MaxBundleEntries)})
 	}
 	b := Bundle{zr: zr, limit: limit}
 	byObject := map[string]string{}
 	for _, f := range entries {
 		if f.Flags&0x1 != 0 {
-			return Bundle{}, fmt.Errorf("%w: %s is password-protected", ErrBundleRefused, f.Name)
+			return Bundle{}, refuseFile(BundlePasswordProtected,
+				fmt.Sprintf("“%s” is password-protected. Remove the password and upload the ZIP again.", f.Name),
+				map[RefusalParam]string{ParamFile: f.Name})
 		}
 		stem := stemOf(f.Name)
 		object := bundleFileObjects[stem]
 		switch {
 		case object != "":
 			if first, dup := byObject[object]; dup {
-				return Bundle{}, fmt.Errorf("%w: %s and %s both hold %s; keep one", ErrBundleRefused, first, f.Name, object)
+				return Bundle{}, twoFilesOneType(first, f.Name, object)
 			}
 			byObject[object] = f.Name
 			b.Parts = append(b.Parts, BundlePart{Entry: f.Name, Object: object, Size: f.UncompressedSize64})
@@ -161,11 +176,14 @@ func (b Bundle) Open(entry string) (io.ReadCloser, error) {
 		}
 		rc, err := f.Open()
 		if err != nil {
-			return nil, fmt.Errorf("%w: %s: %v", ErrBundleRefused, entry, err)
+			fault := fileDamaged(entry)
+			fault.cause = err
+			return nil, fault
 		}
 		return &sizeGuard{rc: rc, entry: entry, left: min(f.UncompressedSize64, b.limit)}, nil
 	}
-	return nil, fmt.Errorf("%w: %s is not in the bundle", ErrBundleRefused, entry)
+	return nil, refuseFile(BundleFileMissing, fmt.Sprintf("“%s” is not in the ZIP. Upload the ZIP again.", entry),
+		map[RefusalParam]string{ParamFile: entry})
 }
 
 // sizeGuard refuses an entry that yields more bytes than its header declared,
@@ -184,13 +202,24 @@ func (g *sizeGuard) Read(p []byte) (int, error) {
 	}
 	if read > g.left {
 		g.left = 0
-		return 0, fmt.Errorf("%w: %s is larger than it says", ErrBundleRefused, g.entry)
+		return 0, fileDamaged(g.entry)
 	}
 	g.left -= read
 	if errors.Is(err, zip.ErrFormat) || errors.Is(err, zip.ErrChecksum) {
-		return n, fmt.Errorf("%w: %s is damaged", ErrBundleRefused, g.entry)
+		return n, fileDamaged(g.entry)
 	}
 	return n, err
 }
 
 func (g *sizeGuard) Close() error { return g.rc.Close() }
+
+func fileDamaged(entry string) *FileFault {
+	return refuseFile(BundleFileDamaged, fmt.Sprintf("“%s” in the ZIP is damaged. Make the ZIP again and upload it.", entry),
+		map[RefusalParam]string{ParamFile: entry})
+}
+
+func twoFilesOneType(first, second, object string) *FileFault {
+	return refuseFile(BundleTwoFilesOneType,
+		fmt.Sprintf("“%s” and “%s” both hold %s rows. Keep one of them and upload the ZIP again.", first, second, object),
+		map[RefusalParam]string{ParamOtherFile: first, ParamFile: second, ParamObject: object})
+}

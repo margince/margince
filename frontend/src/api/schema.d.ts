@@ -25269,7 +25269,19 @@ export interface paths {
          *
          *     The file's rows are counted first. A file with more rows than one test
          *     run reads is refused 422 `too_many_rows`, and no run and no stored file
-         *     are left behind.
+         *     are left behind. Its `max` is the limit and `params.rows` the file's count.
+         *
+         *     A file that cannot be read is refused 422 on `file`, with `params` naming
+         *     why. `not_utf8` names nothing. `unreadable` names the `line` when the
+         *     reader knows it, with `reason` `field_count` or `quote`.
+         *     `header_unusable` has `reason` `no_header`, `blank_name` (with
+         *     `position`) or `repeated_name` (with `name`). `bundle_refused` has
+         *     `reason` `not_a_zip`, `empty`, `files_too_large` or `zip_too_large`
+         *     (with `max_mb`), `too_many_files` (with `files` and `max_files`),
+         *     `password_protected`, `file_damaged` or `file_missing` (with `file`),
+         *     `two_files_one_type` (with `file`, `other_file` and `object`) or
+         *     `type_not_importable` (with `object`). A refusal of one file of a ZIP
+         *     also names it in `file`.
          *
          *     A cell an export quoted against formula evaluation (a quote before `=`,
          *     `+`, `-`, `@`, a tab or a carriage return) is read without that one
@@ -25315,6 +25327,13 @@ export interface paths {
          *     and moves the run to `awaiting_approval` carrying the report
          *     `getImportRunReport` reads, or back to `pending` with the reason in
          *     `error` when the test stopped on the file or ran past its time.
+         *
+         *     A mapping the object cannot satisfy is refused 422 with `params`:
+         *     `duplicate_target` on `mapping` names the `target` and the two columns
+         *     (`column`, `other_column`); `unmappable` on `source_key` names the
+         *     `object` and its key `target`, and `ref_target` when a column mapped to
+         *     `ref` would also identify each row. `invalid` on `source_name` carries
+         *     `max`. A file refusal reads as it does on `uploadImportSource`.
          *
          *     An upload has one run. This call writes the mapping onto the draft the
          *     upload opened and tests it, so a second call on one `source_ref`
@@ -32461,6 +32480,18 @@ export interface components {
             /** @description Rows the upload holds: the file's for a single CSV, the sum of `parts[].row_count` for a ZIP. */
             row_count: number;
             object?: components["schemas"]["ImportObject"];
+            /**
+             * @description How `object` was chosen for a CSV uploaded without one. The header is
+             *     matched as `suggested_mapping` matches it, once for each type, and
+             *     only a column that exactly one type's suggestion maps counts.
+             *     `columns`: one type's suggestion maps more such columns than any
+             *     other's. `none`: no type maps strictly the most, so `object` is
+             *     `lead` and a screen asks the reader to choose. Absent when the upload
+             *     named its type, and for a ZIP. The run's `profile` keeps it until a
+             *     draft save names `object`, which is the reader's own choice.
+             * @enum {string}
+             */
+            object_chosen_by?: "columns" | "none";
             /** @description The uploaded file's name, for display. The client echoes it to `createImportRun`. */
             file_name?: string;
             /**
@@ -32697,9 +32728,12 @@ export interface components {
          */
         ImportRunLinks: {
             /**
-             * @description Links the file asks for. A dry run reports this and nothing else,
-             *     because resolving an endpoint is a read the dry run has not done —
-             *     it says how many rows named an employer, not how many will find one.
+             * @description Links the file asks for on the rows the run lands. A link whose own
+             *     row is skipped is not counted, because that row is reported as a
+             *     skip; `unresolved` still lists it. A dry run reports this and nothing
+             *     else, because resolving an endpoint is a read the dry run has not
+             *     done — it says how many landing rows named an employer, not how many
+             *     will find one.
              */
             offered: number;
             /** @description Links actually written. Zero on a dry run, which writes nothing. */
@@ -33264,8 +33298,12 @@ export interface components {
             instance?: string;
             /**
              * @description Structured machine context — e.g. `existing_id` on 409 duplicate, or an
-             *     `errors` array of `{ field, code, message }` on 422 validation. A `too_long`
-             *     entry also carries `max`, the limit in characters.
+             *     `errors` array of `{ field, code, message }` on 422 validation. An entry that
+             *     refuses at a limit also carries `max`: the limit in characters for `too_long`,
+             *     in rows for `too_many_rows`, in characters for `source_name`. An entry whose
+             *     code names other values carries them in `params`, an object of text values by
+             *     name, so a screen can word the code in the reader's language; `message` stays
+             *     the English sentence.
              *
              *     A 429 that an agent's limit answers carries `limit`: `kind` names it (`calls`,
              *     `writes` or `egress` for a window allowance, `pacing` for the per-minute limit),
@@ -34198,8 +34236,8 @@ export interface components {
              *     stays in `superseded_value`, and a field a human corrected stands.
              *     `needs_review` — a resemblance, written nowhere; open the candidate and decide.
              *     `proposed` — a card read from a photo that nobody matched, waiting on an approval.
-             *     `skipped` — the card states no name, carries a sending system's address, or matches a
-             *     contact the caller may not write; `reason` says which.
+             *     `skipped` — the card states no name or one over 120 characters, carries a sending
+             *     system's address, or matches a contact the caller may not write; `reason` says which.
              * @enum {string}
              */
             outcome: "created" | "updated" | "needs_review" | "proposed" | "skipped";
@@ -34208,7 +34246,10 @@ export interface components {
              * @description The contact created or updated, or — for `needs_review` — the candidate the card resembles.
              */
             contact_id?: string | null;
-            /** @description Why a card was skipped, or a warning about an imported contact without a channel. */
+            /**
+             * @description Why a card was skipped. For a written card, a warning: the contact has no channel, or the
+             *     card's title was cut to the length the field holds.
+             */
             reason?: string | null;
             /**
              * Format: uuid
@@ -101097,7 +101138,7 @@ export interface operations {
                 "multipart/form-data": {
                     /**
                      * Format: binary
-                     * @description The delimited file to import, or a ZIP of them named by type (`companies.csv`, `contacts.csv`, `leads.csv`, `deals.csv`, `activities.csv`). UTF-8; the first row is the header. `object` is required for a CSV and ignored for a ZIP, whose file names say each part's type. A ZIP is known by its content, not its name.
+                     * @description The delimited file to import, or a ZIP of them named by type (`companies.csv`, `contacts.csv`, `leads.csv`, `deals.csv`, `activities.csv`). UTF-8; the first row is the header. `object` is ignored for a ZIP, whose file names say each part's type. A CSV sent without `object` is typed by its header, and the profile's `object_chosen_by` says how. A ZIP is known by its content, not its name.
                      */
                     file: string;
                     object?: components["schemas"]["ImportObject"];

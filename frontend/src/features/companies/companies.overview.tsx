@@ -1,4 +1,4 @@
-import { MergedIntoLine } from "../../components/historymergedref";
+import { MergedIntoSentence } from "../../components/historymergedref";
 import { Callout } from "../../design-system/callout";
 import { useT } from "../../i18n";
 import { type CompanyOverviewProps, CompanyReading } from "./companyreading";
@@ -17,7 +17,7 @@ export function CompanyOverviewStack(props: CompanyOverviewProps) {
         // link lands on says why it is bare and, after a merge, where to go.
         <Callout kind="standing" title={t("co.archived.overview")}>
           {merged_into_id && (
-            <MergedIntoLine kind="company" id={merged_into_id} />
+            <MergedIntoSentence kind="company" id={merged_into_id} />
           )}
         </Callout>
       ) : (

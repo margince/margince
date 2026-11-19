@@ -152,8 +152,8 @@ func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry,
 		result.Reason = "the card states no name"
 		return result, nil
 	}
-	if cardNamesASendingSystem(entry) {
-		result.Outcome, result.Reason = VCardSkipped, vcardMachineAddress
+	if reason := cardRefusal(entry); reason != "" {
+		result.Outcome, result.Reason = VCardSkipped, reason
 		return result, nil
 	}
 

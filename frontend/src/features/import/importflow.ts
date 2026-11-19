@@ -7,7 +7,7 @@ import type {
   ImportProfile,
   ImportRun,
 } from "./importtypes";
-import { DONT_IMPORT, UNNAMED_IMPORT_OBJECT } from "./importtypes";
+import { DONT_IMPORT } from "./importtypes";
 
 // The file the hub's drop zone took, held for the run page to start with. A
 // File cannot ride an address, and the two are separate routes.
@@ -51,6 +51,8 @@ type Mapping = Readonly<Record<string, string>>;
 /** One file of an upload, as the Files and Map steps work on it. */
 export type WizardFile = Readonly<{
   file: string;
+  rowCount: number;
+  /** The rows read from the start of the file to profile its columns. */
   rowsProfiled: number;
   columns: ImportProfile["columns"];
   /** The type the server detected, null where it detected none. */
@@ -65,6 +67,7 @@ export function filesOf(profile: ImportProfile): WizardFile[] {
   if (profile.parts) {
     return profile.parts.map((part) => ({
       file: part.file,
+      rowCount: part.row_count,
       rowsProfiled: part.rows_profiled,
       columns: part.columns,
       detected: part.object ?? null,
@@ -74,6 +77,7 @@ export function filesOf(profile: ImportProfile): WizardFile[] {
   return [
     {
       file: profile.file_name ?? "",
+      rowCount: profile.row_count,
       rowsProfiled: profile.rows_profiled,
       columns: profile.columns,
       detected: profile.object ?? null,
@@ -86,9 +90,9 @@ export function filesOf(profile: ImportProfile): WizardFile[] {
 
 const ZIP_NAME = /\.zip$/i;
 
-// The type a single CSV is uploaded as: the format's file name for a type when
-// the file carries one, else the flow's default. A ZIP names its types itself.
-// A preset type, from a contact's page, wins over the name.
+// The type a single CSV is uploaded as: the format's type for its file name,
+// else none, and the server types it by its header. A ZIP names its types
+// itself. A preset type, from a contact's page, wins over the name.
 export function uploadObjectFor(
   name: string,
   format: ImportFormat | undefined,
@@ -97,10 +101,18 @@ export function uploadObjectFor(
   if (ZIP_NAME.test(name)) return undefined;
   if (preset) return preset;
   const lower = name.toLowerCase();
-  return (
-    format?.files.find((file) => file.file === lower)?.object ??
-    UNNAMED_IMPORT_OBJECT
-  );
+  return format?.files.find((file) => file.file === lower)?.object;
+}
+
+// Mirrors SourceNamePattern and SourceNameMax in
+// backend/internal/compose/importwire/sourcename.go.
+export const SOURCE_NAME = /^[A-Za-z0-9 ._-]*$/;
+export const SOURCE_NAME_MAX = 80;
+
+/** Whether the server takes a source name, which it trims first. */
+export function sourceNameFits(name: string): boolean {
+  const trimmed = name.trim();
+  return trimmed.length <= SOURCE_NAME_MAX && SOURCE_NAME.test(trimmed);
 }
 
 // A ZIP starts with the source name the last ZIP run was filed under, else the

@@ -5,8 +5,8 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { StoryProviders } from "../../testing/story-utils";
 import { TaskName } from "./ai-task-name";
 
-// A task's name in the AI tasks and usage tables. Click it to read what the
-// task does; a task with nothing to say is plain text.
+// A task's name wherever a screen names an AI task. Click it to read what the
+// task does and the key it runs under; a bare key is plain text.
 const meta: Meta<typeof TaskName> = {
   title: "Settings/AI/AI models/Task name",
   component: TaskName,
@@ -22,13 +22,15 @@ type Story = StoryObj<typeof TaskName>;
 export const WithSummary: Story = {
   args: {
     name: "Thread confidentiality check",
+    task: "capture_confidentiality_verdict",
+    mode: "In the background",
     summary:
       "Decides whether an email thread in a restricted mailbox is ordinary enough to open to the team.",
   },
 };
 
 export const WithoutSummary: Story = {
-  args: { name: "embeddings", summary: undefined },
+  args: { name: "Unknown task", task: "nightly_batch", summary: undefined },
 };
 
 export const WithSummaryDark: Story = {
