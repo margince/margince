@@ -15,7 +15,7 @@ import {
 import { calendarDaysUntil } from "../../../format/daysuntil";
 import { calendarDaysBetween } from "../../../format/format";
 import { messageFromOutside } from "../../../lib/messagevoice";
-import { ghostCount } from "./dealcommittee";
+import { committeeContacts, ghostCount } from "./dealcommittee";
 
 type Deal = components["schemas"]["Deal"];
 type Stage = components["schemas"]["Stage"];
@@ -158,10 +158,11 @@ export function committeeOf(
   if (!coverage?.stakeholders || withheld) {
     return { state: "unknown" };
   }
+  const contacts = committeeContacts(coverage.stakeholders);
   return {
     state: "read",
-    named: coverage.stakeholders.length,
-    engaged: coverage.stakeholders.filter((seat) => seat.engaged).length,
+    named: contacts.length,
+    engaged: contacts.filter((contact) => contact.engaged).length,
     gaps: ghostCount(coverage.risks ?? []),
   };
 }
@@ -202,13 +203,14 @@ export function closeTone(
 /**
  * When the deal entered each stage, from the advance rows of its field
  * history. A stage visited twice keeps its latest entry, because the time
- * spent there now runs from the last arrival. When the history is whole but
- * has no creation row (an import), the stage the first advance left is dated
- * by the deal's creation. A cut history dates nothing it cannot see.
+ * spent there now runs from the last arrival. A history may be whole but have
+ * no creation row (an import). Then the deal's creation dates the stage the
+ * first advance left, as it dates the stage of a deal that never moved. A cut
+ * history dates nothing it cannot see.
  */
 export function stageEntries(
   history: readonly FieldHistoryEntry[],
-  deal: Pick<Deal, "created_at">,
+  deal: Pick<Deal, "created_at" | "stage_id">,
   complete: boolean,
 ): ReadonlyMap<string, string> {
   const entries = new Map<string, string>();
@@ -216,8 +218,9 @@ export function stageEntries(
     .filter((row) => row.field === "stage_id" && row.new_value)
     .sort((a, b) => Date.parse(a.changed_at) - Date.parse(b.changed_at));
   const first = rows[0];
-  if (complete && first?.old_value) {
-    entries.set(first.old_value, deal.created_at);
+  const startedIn = first ? first.old_value : deal.stage_id;
+  if (complete && startedIn) {
+    entries.set(startedIn, deal.created_at);
   }
   for (const row of rows) {
     if (row.new_value) {

@@ -14,7 +14,6 @@ import { FieldGuard } from "../../../design-system/rbac";
 import { ProvenanceTag } from "../../../design-system/trust";
 import { calendarDaysUntil } from "../../../format/daysuntil";
 import {
-  formatDate,
   formatDateAbbrev,
   formatDayMonth,
   formatMoneyOrAbsent,
@@ -296,13 +295,10 @@ export function FxLine({
   // A deal carrying a rate but no amount converts to nothing, not to zero.
   const baseMinor =
     amountMinor == null ? null : Math.round(amountMinor * Number(fxRateToBase));
-  return (
-    <p className="t-caption">
-      {t("deal.fxBase", {
-        value: formatMoneyOrAbsent(baseMinor, baseCurrency, locale),
-        rate: fxRateToBase,
-        date: fxRateDate ? formatDate(fxRateDate, locale, readerZone) : "—",
-      })}
-    </p>
-  );
+  // The stored rate carries ten decimals; four are as many as a reader checks.
+  return t("deal.fxBase", {
+    value: formatMoneyOrAbsent(baseMinor, baseCurrency, locale),
+    rate: formatNumber(Number(fxRateToBase), locale, 4),
+    date: fxRateDate ? formatDateAbbrev(fxRateDate, locale, readerZone) : "—",
+  });
 }
