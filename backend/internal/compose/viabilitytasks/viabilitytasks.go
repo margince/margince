@@ -19,16 +19,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
-// ID names the task in the catalog and its title.
-const ID = "core/1795066312_viability_answered_tasks_completed"
-
 // DataTask completes each open task whose findings the viability decision now
 // answers. It completes through the tick a user gives, so each task keeps its
 // audit row; it never deletes one. The estimate counts tasks already done too,
 // because whether a task is open is not the assurance module's fact.
 func DataTask(tasks *activities.Store) datatask.Task {
 	return datatask.Task{
-		ID: ID, Version: 1,
+		ID: "core/1795066312_viability_answered_tasks_completed", Version: 1,
 		Title: systemtext.Literal("datatask.title.core.1795066312_viability_answered_tasks_completed"), Requires: []string{"core/1794600201"},
 		Steps: []datatask.Step{{
 			Name: "complete_viability_answered_tasks", Limit: 50, MinLimit: 5,
