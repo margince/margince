@@ -15,7 +15,6 @@ import {
 } from "../../format/format";
 import { useNow } from "../../format/now";
 import {
-  browserZone,
   instantAtWallClock,
   startOfDayInZone,
   wallClockTime,
@@ -32,7 +31,7 @@ const SCHEDULE_HOURS = [8, 9, 13, 17] as const;
 // A moment as `datetime-local` spells it: the wall clock, no offset. Built
 // field by field rather than sliced out of an ISO string, because
 // `toISOString` is UTC and would move every preset by the reader's own offset.
-function localMoment(at: Date, zone = browserZone()): string {
+function localMoment(at: Date, zone: string): string {
   return localDateTimeValue(at.toISOString(), zone);
 }
 

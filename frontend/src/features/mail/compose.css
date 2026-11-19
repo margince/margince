@@ -14,6 +14,7 @@
 }
 /* The files give way first, down to a row: the band says why the send is held. */
 .compose-window > .compose-files {
+  position: relative;
   flex: 0 8 auto;
   min-block-size: min(calc(var(--controlHeight) + var(--space-5)), 10%);
   overflow-y: auto;

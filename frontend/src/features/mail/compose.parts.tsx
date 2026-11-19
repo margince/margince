@@ -1,11 +1,5 @@
 import { Ellipsis, Trash2 } from "lucide-react";
-import {
-  type ComponentProps,
-  type ReactNode,
-  Suspense,
-  useId,
-  useState,
-} from "react";
+import { type ReactNode, useId, useState } from "react";
 import { EntityRef } from "../../components/entityref";
 import { SendMark } from "../../components/sendpermission";
 import { Button } from "../../design-system/atoms";
@@ -18,7 +12,6 @@ import { RichText } from "../../design-system/richtext";
 import { formatActivityWhen } from "../../format/activitywhen";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { lazy } from "../../i18n/lazy";
 import type { CommunicationContext } from "../../lib/compose-context";
 import {
   authorName,
@@ -41,28 +34,7 @@ import { ScheduleMenu, scheduledSendLabel } from "./composeschedule";
 import type { ComposeSend } from "./composesend";
 import { SignOffPreview } from "./composesignoff";
 import type { VoiceDraft } from "./composevoicedraft";
-import type { SendRefusalRemedies } from "./sendrefusal";
-
-// A refused send is rare, and the direct-send dialogs behind it are large: they
-// load when a refusal first shows.
-const LazySendRefusal = lazy(async () => ({
-  default: (await import("./sendrefusal")).SendRefusal,
-}));
-const LazyRemedies = lazy(async () => ({
-  default: (await import("./sendrefusal")).SendRefusalRemedies,
-}));
-
-/** The remedies a refused send offers, loaded once there is a review to act on. */
-export function RefusalRemedies(
-  props: Readonly<ComponentProps<typeof SendRefusalRemedies>>,
-) {
-  if (!props.review) return null;
-  return (
-    <Suspense fallback={null}>
-      <LazyRemedies {...props} />
-    </Suspense>
-  );
-}
+import { SendRefusal } from "./sendrefusal";
 
 // The mail-only send-time notice: a shared-unsubscribe-token risk. A channel
 // reply has no addressee list to warn about, so this renders nothing there.
@@ -313,11 +285,7 @@ export function ComposeOutcome({
     <>
       {isChannelReply && <p>{t(bodyKey)}</p>}
       {sendUnavailable && <p>{t("compose.sendUnavailable")}</p>}
-      {refusal !== null && (
-        <Suspense fallback={null}>
-          <LazySendRefusal refusal={refusal} />
-        </Suspense>
-      )}
+      <SendRefusal refusal={refusal} />
     </>
   );
 }

@@ -100,6 +100,10 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Pins the zones a scheduled send was chosen in, so a reopened send proves it keeps the chosen clock and zone, not the runner's.",
   },
   {
+    file: "features/mail/composeschedule.test.tsx",
+    why: "Pins the zone the dialog schedules in, so which hours are past and the day the picker opens on read the same on every runner.",
+  },
+  {
     file: "format/dueintent.test.ts",
     why: "Pins a chosen deadline zone against a different reader zone, so the printed clock is the chosen one and the zone suffix shows only when they differ.",
   },

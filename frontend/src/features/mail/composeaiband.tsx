@@ -10,7 +10,7 @@ import { useT } from "../../i18n";
 import { isLocale, LOCALES, type Locale } from "../../i18n/locale";
 import { REWRITE_MAX_CHARACTERS } from "../../lib/rewrites";
 import { DraftBand, RewriteRow } from "./composedraftband";
-import { isTemplateDraft, rewriteBlock } from "./composedraftcall";
+import { isTemplateDraft, modelWrote, rewriteBlock } from "./composedraftcall";
 import { DraftOffer } from "./composedraftcontext";
 import type { ComposeFields } from "./composefields";
 import type { VoiceDraft } from "./composevoicedraft";
@@ -36,7 +36,7 @@ export function AiDraftBand({
   const t = useT();
   const { provenance, account } = fields;
   const control = voice.control;
-  const drafted = provenance?.ai_generated === true;
+  const drafted = modelWrote(provenance);
   const undo = voice.undoRewrite;
   const rewrites = fields.body.trim() !== "" && (
     <>

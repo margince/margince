@@ -12,7 +12,11 @@ import { REWRITES, type RewriteVerb } from "../../lib/rewrites";
 import { useViewerZone } from "../../lib/viewerzone";
 import { openCitation } from "../records/record360";
 import { VoiceDegradedNotice } from "./compose.notices";
-import { type DraftProvenance, isTemplateDraft } from "./composedraftcall";
+import {
+  type DraftProvenance,
+  isTemplateDraft,
+  modelWrote,
+} from "./composedraftcall";
 import { DraftReasons } from "./composedraftcontext";
 import { OpenEmailDrawer } from "./openemaildrawer";
 
@@ -58,7 +62,7 @@ export function DraftBand({
       />
     </>
   );
-  if (!provenance.ai_generated) {
+  if (!modelWrote(provenance)) {
     return isTemplateDraft(provenance) ? (
       <div className="compose-band-body">
         <Callout

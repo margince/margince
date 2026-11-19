@@ -18,15 +18,24 @@ export function withOffer(
   current: string[],
   address: string,
   fillsVacancy: boolean,
-  copies: readonly string[] = [],
+  copies: readonly string[],
 ): string[] {
+  return offerLands(current, address, fillsVacancy, copies)
+    ? [...current, address]
+    : current;
+}
+
+function offerLands(
+  current: readonly string[],
+  address: string,
+  fillsVacancy: boolean,
+  copies: readonly string[],
+): boolean {
   if (current.length > 0 && !fillsVacancy) {
-    return current;
+    return false;
   }
   const key = addressKey(address);
-  return [...current, ...copies].some((held) => addressKey(held) === key)
-    ? current
-    : [...current, address];
+  return ![...current, ...copies].some((held) => addressKey(held) === key);
 }
 
 // The field with a withdrawn offer taken out, in whatever case it stands.
@@ -43,6 +52,7 @@ export function useRecipientOffer({
   isChannelReply,
   answering,
   recordAddress,
+  to,
   setTo,
   copies,
 }: Readonly<{
@@ -50,6 +60,8 @@ export function useRecipientOffer({
   isChannelReply: boolean;
   answering: string | undefined;
   recordAddress: string | undefined;
+  /** The To on screen. */
+  to: readonly string[];
   setTo: (update: (current: string[]) => string[]) => void;
   /** The Cc and Bcc on screen. */
   copies: readonly string[];
@@ -72,9 +84,9 @@ export function useRecipientOffer({
   const restoringRecipient = useRef(false);
   // Which address was offered, so a change of conversation replaces it alone.
   const offeredAddress = useRef<string | undefined>(undefined);
-  // A change of conversation emptied the offer's slot, so the next anchor's
-  // address fills it even beside recipients the reader typed.
-  const vacated = useRef(false);
+  // The address a change of conversation took out of the offer's slot. The next
+  // anchor's address fills that slot even beside recipients the reader typed.
+  const vacated = useRef<string | undefined>(undefined);
   // The reader has taken the field over. The first keystroke is the signal,
   // because committed values stay empty until Enter.
   const settle = useCallback(() => {
@@ -94,7 +106,7 @@ export function useRecipientOffer({
       return;
     }
     offeredAddress.current = undefined;
-    vacated.current = true;
+    vacated.current = previous;
     setTo((current) => withoutOffer(current, previous));
   }, [answering]);
   // biome-ignore lint/correctness/useExhaustiveDependencies: the anchor is a key here. Two conversations with one counterparty share an address, and the vacated slot still needs filling.
@@ -103,10 +115,17 @@ export function useRecipientOffer({
       return;
     }
     offered.current = true;
-    offeredAddress.current = threadRecipient;
     // The refs settle before the updater, which StrictMode may run twice.
-    const fillsVacancy = vacated.current;
-    vacated.current = false;
+    const vacatedBy = vacated.current;
+    vacated.current = undefined;
+    const fillsVacancy = vacatedBy !== undefined;
+    // Only an offer that lands is the offer's to withdraw on the next switch.
+    const before =
+      vacatedBy === undefined ? to : withoutOffer([...to], vacatedBy);
+    if (!offerLands(before, threadRecipient, fillsVacancy, copies)) {
+      return;
+    }
+    offeredAddress.current = threadRecipient;
     setTo((current) =>
       withOffer(current, threadRecipient, fillsVacancy, copies),
     );
@@ -127,7 +146,7 @@ export function useRecipientOffer({
       offeredAddress.current = next.offeredAddress;
       offered.current = next.offered;
       restoringRecipient.current = restoring;
-      vacated.current = false;
+      vacated.current = undefined;
     },
   };
 }

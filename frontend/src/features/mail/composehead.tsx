@@ -58,13 +58,13 @@ const MAILABLE_STATUS: ReadonlySet<User["status"]> = new Set([
   "invited",
 ]);
 
-const TO_FIELD = "compose-to-field";
-
-/** The To line's text box inside a composer. */
+/** The To line's text box inside a composer: the head draws To first. */
 export function toBox(
   composer: Element | null | undefined,
 ): HTMLElement | null {
-  return composer?.querySelector<HTMLElement>(`.${TO_FIELD} input`) ?? null;
+  return (
+    composer?.querySelector<HTMLElement>(".compose-address-field input") ?? null
+  );
 }
 
 /** What a pressed Send is still waiting for, under the field it waits on. */
@@ -94,22 +94,18 @@ export function recipientSuggestions({
   related = [],
   company,
   colleagues = [],
-  viewerId,
+  senderAddress,
 }: Readonly<{
   contact?: Contact360;
   related?: readonly Contact[];
   company?: Company360;
   colleagues?: readonly (User | Team)[];
-  /** The sender, who is never a recipient of their own mail. */
-  viewerId?: string;
+  /** The signed-in sender's address, never a recipient of their own mail. */
+  senderAddress?: string;
 }>): RecipientOffers {
   // The sender's own address stays out even where a contact holds it.
   const seen = new Set(
-    colleagues.flatMap((member) =>
-      member.id === viewerId && "email" in member
-        ? [addressKey(member.email)]
-        : [],
-    ),
+    senderAddress === undefined ? [] : [addressKey(senderAddress)],
   );
   const contacts: TokenSuggestion[] = [];
   const members: TokenSuggestion[] = [];
@@ -368,7 +364,7 @@ export function AddressBlock({
   return (
     <>
       <Field
-        className={`compose-address-field ${TO_FIELD}`}
+        className="compose-address-field"
         label={label.to}
         error={refusal("to") ?? (invalidTo ? needTo : undefined)}
         trailing={

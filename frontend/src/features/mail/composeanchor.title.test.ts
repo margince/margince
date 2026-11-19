@@ -15,22 +15,19 @@ const t: Translator = Object.assign(
   { locale: english },
 );
 
-const reply = (
-  anchor: { subject?: string | null } | undefined,
-  anchorFailed = false,
-) =>
+const reply = (anchor: { subject?: string | null } | undefined) =>
   windowTitle({
     isChannelReply: false,
     wordingTitle: "Send",
     replying: true,
-    anchorRead: { activity: anchor, failed: anchorFailed },
+    anchor,
     subject: "",
     recordName: "Demo GmbH",
     t,
   });
 
 describe("a reply's window title", () => {
-  it("reads Reply while the answered message is still loading", () => {
+  it("reads Reply while the answered message loads or cannot be read", () => {
     expect(reply(undefined)).toBe("Reply");
   });
 
@@ -40,9 +37,5 @@ describe("a reply's window title", () => {
 
   it("says the known message has no subject", () => {
     expect(reply({})).toBe("Re: No subject");
-  });
-
-  it("settles on Re: No subject once the answered message cannot be read", () => {
-    expect(reply(undefined, true)).toBe("Re: No subject");
   });
 });

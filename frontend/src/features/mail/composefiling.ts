@@ -16,7 +16,7 @@ import { addressKey } from "../../lib/addresskey";
 import { relatedContactsQuery } from "../../lib/contact.queries";
 import { useHealthScope } from "../../lib/healthscope";
 import { unwrap } from "../../lib/problem";
-import { useViewerId } from "../../lib/session";
+import { useMe } from "../../lib/session";
 import { useCompany360 } from "../companies/company360";
 import { useContact360 } from "../contacts/contact360";
 import { useProjectRecord } from "../projects/projectrecord";
@@ -417,7 +417,7 @@ export function useComposeRecords({
   // roster-failure: suggestions only; the To field still takes any address.
   const mailing = open && !isChannelReply;
   const colleagues = useRoster("user", mailing);
-  const viewerId = useViewerId(mailing);
+  const senderAddress = useMe(mailing).data?.user.email;
   const anchorProject = useAnchorProject(entityType, entityId);
   // A project page's message is about that project, read as a record so the
   // picker names it the way the page does.
@@ -463,7 +463,7 @@ export function useComposeRecords({
       related: related.data,
       company: anchorCompany.data,
       colleagues: colleagues.data,
-      viewerId,
+      senderAddress,
     }),
   };
 }

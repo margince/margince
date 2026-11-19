@@ -178,7 +178,7 @@ function draftAnswer(
     draft: data,
     reasoning: data.reasoning,
     scope: data.scope,
-    revised: rewriteOf.trim() !== "" && data.ai_generated === true,
+    revised: rewriteOf.trim() !== "" && modelWrote(data),
   };
 }
 

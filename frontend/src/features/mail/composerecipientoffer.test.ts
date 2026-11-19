@@ -14,20 +14,20 @@ import {
 
 describe("the offered recipient", () => {
   it("fills an empty To", () => {
-    expect(withOffer([], "dana@brandt.example", false)).toEqual([
+    expect(withOffer([], "dana@brandt.example", false, [])).toEqual([
       "dana@brandt.example",
     ]);
   });
 
   it("leaves a To the reader filled alone", () => {
     expect(
-      withOffer(["cole@nordwand.example"], "dana@brandt.example", false),
+      withOffer(["cole@nordwand.example"], "dana@brandt.example", false, []),
     ).toEqual(["cole@nordwand.example"]);
   });
 
   it("is not added beside itself in other capitals", () => {
     expect(
-      withOffer(["Dana@Brandt.example"], "dana@brandt.example", true),
+      withOffer(["Dana@Brandt.example"], "dana@brandt.example", true, []),
     ).toEqual(["Dana@Brandt.example"]);
   });
 
@@ -44,7 +44,7 @@ describe("the offered recipient", () => {
 
   it("fills a vacated slot beside what the reader typed", () => {
     expect(
-      withOffer(["cole@nordwand.example"], "dana@brandt.example", true),
+      withOffer(["cole@nordwand.example"], "dana@brandt.example", true, []),
     ).toEqual(["cole@nordwand.example", "dana@brandt.example"]);
   });
 
@@ -71,6 +71,7 @@ describe("offering the record's address on a first message", () => {
           isChannelReply: false,
           answering: undefined,
           recordAddress: "dana@brandt.example",
+          to,
           setTo: (update) => {
             to = update(to);
           },
@@ -87,5 +88,43 @@ describe("offering the record's address on a first message", () => {
 
   it("leaves it where the reader already copied it", () => {
     expect(offerInto(["Dana@Brandt.example"])).toEqual([]);
+  });
+});
+
+describe("offering the counterparty of a reply", () => {
+  it("leaves an address the reader typed when the conversation changes", () => {
+    const client = new QueryClient();
+    for (const [anchor, address] of [
+      ["a-1", "dana@brandt.example"],
+      ["a-2", "cole@nordwand.example"],
+    ]) {
+      client.setQueryData(["compose-reply-recipient", anchor], { address });
+    }
+    const wrapper = ({ children }: { children: ReactNode }) =>
+      createElement(QueryClientProvider, { client }, children);
+    let to: string[] = [];
+    const copies = ["dana@brandt.example"];
+    const { rerender } = renderHook(
+      ({ answering }: { answering: string }) =>
+        useRecipientOffer({
+          open: true,
+          isChannelReply: false,
+          answering,
+          recordAddress: undefined,
+          to,
+          setTo: (update) => {
+            to = update(to);
+          },
+          copies,
+        }),
+      { wrapper, initialProps: { answering: "a-1" } },
+    );
+    // Dana is already in Cc, so the offer does not land.
+    expect(to).toEqual([]);
+
+    to = ["Dana@Brandt.example"];
+    rerender({ answering: "a-2" });
+
+    expect(to).toEqual(["Dana@Brandt.example"]);
   });
 });

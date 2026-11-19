@@ -56,7 +56,7 @@ describe("recipientSuggestions", () => {
         member({}),
         member({ id: "u-2", email: "tom@gradion.test" }),
       ],
-      viewerId: "u-1",
+      senderAddress: "sofia@gradion.test",
     });
     expect(offered.colleagues.map((row) => row.value)).toEqual([
       "tom@gradion.test",
@@ -67,10 +67,18 @@ describe("recipientSuggestions", () => {
     const offered = recipientSuggestions({
       contact: view,
       colleagues: [member({ email: "DANA@brandt.example" })],
-      viewerId: "u-1",
+      senderAddress: "Dana@Brandt.example",
     });
     expect(offered.contacts).toEqual([]);
     expect(offered.colleagues).toEqual([]);
+  });
+
+  it("knows the sender without the roster, which can fail or come back partial", () => {
+    const offered = recipientSuggestions({
+      contact: view,
+      senderAddress: "dana@brandt.example",
+    });
+    expect(offered.contacts).toEqual([]);
   });
 
   it("offers the contacts around the contact after the contact itself", () => {

@@ -40,6 +40,7 @@ import {
 } from "./composetarget";
 import { ThreadBar } from "./composethreadbar";
 import { useDraftOnOpen, useVoiceDraft } from "./composevoicedraft";
+import { SendRefusalRemedies } from "./sendrefusal";
 import "./compose.css";
 import { ComposeHead } from "./compose.head";
 import {
@@ -47,7 +48,6 @@ import {
   ComposeBody,
   ComposeFoot,
   ComposeFrame,
-  RefusalRemedies,
   ReplyQuote,
 } from "./compose.parts";
 
@@ -127,6 +127,7 @@ export function ComposeWindow({
     isChannelReply,
     answering,
     recordAddress: account.offeredAddress,
+    to: fields.to,
     setTo: fields.setTo,
     copies: [...fields.cc, ...fields.bcc],
   });
@@ -299,7 +300,7 @@ export function ComposeWindow({
     isChannelReply,
     wordingTitle: t(wording.title),
     replying: thread.replying,
-    anchorRead: thread.anchorRead,
+    anchor: thread.anchorActivity,
     subject: fields.subject,
     recordName: records.recordName,
     t,
@@ -477,7 +478,7 @@ function legacyPermission(send: ComposeSend) {
         send.permission.refusal && {
           ...send.permission.refusal,
           remedies: (
-            <RefusalRemedies
+            <SendRefusalRemedies
               review={send.sendReview}
               onDirectSent={send.directSent}
               directOpen={send.directOpen}
