@@ -120,6 +120,10 @@ Jurisdiction settings page lists and serves them when the installation is set to
 
 ## Changing any of this
 
+The steps to change a rule or add a country are in
+[Update a messaging policy pack](../../docs/how-to/update-a-messaging-policy-pack.md). Which part of
+the product reads each rule is in [Where a pack's rules are read](../../docs/explanation/messaging-policy-packs.md).
+
 `de_test.go` checks every claim about Germany above, and `eu_test.go` checks that every member state
 has one pack. A changed span, condition, disclosure or window is a change
 to legal content. Edit the test in the same commit, and say in the PR body which statute moved.

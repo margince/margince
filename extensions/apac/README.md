@@ -290,6 +290,10 @@ declares none.
 
 ## Changing any of this
 
+The steps to change a rule or add a country are in
+[Update a messaging policy pack](../../docs/how-to/update-a-messaging-policy-pack.md). Which part of
+the product reads each rule is in [Where a pack's rules are read](../../docs/explanation/messaging-policy-packs.md).
+
 `apac_test.go` checks that every country has one pack and what each one asks for. `vn_test.go`
 checks every claim about Vietnam above. A changed label, limit, disclosure or window is a change to
 legal content. Edit the test in the same commit, and say in the PR body which article moved.
