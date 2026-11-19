@@ -57,4 +57,13 @@ describe("the template preview", () => {
     await user.click(screen.getByText("How rows are matched"));
     expect(screen.getByText(formatFixture.key_rules[0] ?? "")).toBeVisible();
   });
+
+  it("says which columns a file needs one of, by the names the chips show", async () => {
+    stubRoutes({ "GET /imports/format": () => jsonResponse(formatFixture) });
+    render(<ImportCard subpage="template" />);
+    await screen.findByText("companies.csv");
+    expect(
+      screen.getByText("Needs one of: display_name, ref"),
+    ).toBeVisible();
+  });
 });

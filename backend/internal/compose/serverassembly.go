@@ -315,9 +315,10 @@ func (s *Server) wireCaptureSettingsSurface(pool *pgxpool.Pool, log *slog.Logger
 	// name, reporting zone, base currency — the last of which locks once a
 	// deal has converted against it (ADR-0085 §7).
 	s.installationSettingsHandlers = installationSettingsHandlers{
-		store:          NewInstallationSettingsFor(pool),
-		pool:           pool,
-		maxUploadBytes: s.uploadLimits.Attachment,
+		store:                     NewInstallationSettingsFor(pool),
+		pool:                      pool,
+		maxUploadBytes:            s.uploadLimits.Attachment,
+		maxKnowledgeDocumentBytes: s.uploadLimits.KnowledgeDocument,
 	}
 	// The workspace's own consumer-mail list (CAP-PARAM-5): the surviving
 	// domain control, and the only way an operator corrects a shipped

@@ -48,7 +48,9 @@ Also called: attach a proposal to a deal, add a file to an opportunity.
 To attach a file to a meeting, call or note in Margince, add it while you log the activity.
 1. In the **Log activity** form, drop the files on **Attach files**, or click it to choose them.
 2. Choose **Log**. The files are uploaded once the activity is logged.
-If a file is refused, a message names it and says why. The others are still attached.
+An empty file, a file over the limit, or a kind Margince does not keep is not added.
+A line under **Attach files** names it and says why, before you log.
+If the server still refuses a file, a message names it and says why. The others are still attached.
 
 If an upload does not finish, Margince checks the activity's files first, so no message asks you to add a file that is already there. To add a file later, press **Files** on the activity in the record's History, then **Add document**. The activity panel that opens from search or the worklist lists the same files under **Files**. The size limit and the file kinds are the same as for any document. Whoever may read the activity may open its files.
 Also called: attach a document to a meeting, add a file to a call, meeting attachments.
@@ -189,7 +191,7 @@ sender is unknown, it says "an unknown sender".
 ### How do I remove a file from a deal?
 To remove a file from a deal in Margince, open the deal's **Documents** tab. Open the file's **⋯** menu on its tile or row in the **Files** panel, and choose **Hide from this deal** or **Delete**. The panel's **Grid** and **List** switch shows files as tiles or as rows, and your device keeps the choice.
 - **Hide from this deal**: the deal stops listing the file at once. The message and its attachment stay on the activity and in the company library. The toast "Hidden from this deal" offers **Undo**. Later, bring it back with **Show hidden files** and **Show on this deal again**.
-- **Delete**: asks first, "The file is removed from this deal, and from any Deal Room sharing it."
+- **Delete**: asks first, and names the file as its tile does. "The file is removed from this deal, and buyers no longer see it in any Deal Room. The room entry stays until you remove it from the room."
 Use hide when the file does not matter here; use delete when it should not be on the deal at all.
 Also called: delete an attachment, remove a document.
 
@@ -215,8 +217,11 @@ Also called: knowledge base, FAQ, handbook, document library, corpus.
 
 ### Which files can a document set take?
 A document set in Margince takes **plain text, Markdown, CSV or JSON** only: "PDF and Word files are not supported and are refused."
-Each refused file is named: `{filename}: {message}`. To use a PDF or Word document, save it as plain text or Markdown first.
+Each refused file is named: `{filename}: {message}`, for example "contract.docx: Word files are not supported. Save it as plain text, Markdown, CSV or JSON first."
 The size limit for one document in a set is **5 MB by default**; see [What is the maximum file size for an upload?](#what-is-the-maximum-file-size-for-an-upload).
+
+An empty file, or one over the limit, is named as soon as you drop it and is not added.
+Once you click **Add document**, every file it sent leaves the drop zone; the ones refused are named below it.
 Also called: can I upload a PDF to the knowledge base, supported formats.
 
 ### How do I ask my documents a question?

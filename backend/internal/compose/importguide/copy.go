@@ -174,9 +174,9 @@ var Columns = withLabels(withActivityColumns(map[string]Column{
 		Vi: "Ghi chú ngắn bên cạnh nguồn gốc, ví dụ sự kiện hoặc ai đã giới thiệu lead. Lead đã có ghi chú thì giữ nguyên.",
 	}, Example: same("Berlin summit")},
 	"contact.company_name": {Description: langcopy.Phrase{
-		En: "The company this contact works for, by its exact name. Exactly one company must carry the name, or no link is made and the import preview says why.",
-		De: "Das Unternehmen, für das dieser Kontakt arbeitet, mit seinem genauen Namen. Genau ein Unternehmen muss diesen Namen tragen, sonst wird keine Verknüpfung angelegt, und die Importvorschau nennt den Grund.",
-		Vi: "Công ty nơi liên hệ này làm việc, theo đúng tên. Phải có đúng một công ty mang tên này, nếu không sẽ không tạo liên kết và bản xem trước lần nhập nêu lý do.",
+		En: "The company this contact works for, by its name. The import links the company with that name, or creates one if none matches, and the import preview says when it will create one.",
+		De: "Das Unternehmen, für das dieser Kontakt arbeitet, mit seinem Namen. Der Import verknüpft das Unternehmen mit diesem Namen oder legt eines an, wenn keines passt, und die Importvorschau sagt, wann sie eines anlegt.",
+		Vi: "Công ty nơi liên hệ này làm việc, theo tên. Lần nhập liên kết công ty có tên này, hoặc tạo công ty mới nếu không có công ty nào khớp, và bản xem trước lần nhập cho biết khi nào sẽ tạo.",
 	}, Example: same("Acme GmbH")},
 	"company_ref": {Description: langcopy.Phrase{
 		En: "The company this contact works for: the company's ref in this upload or an earlier one, its domain, its exact name, or its Margince ID. If none matches, the import preview reports a broken link.",
@@ -187,7 +187,7 @@ var Columns = withLabels(withActivityColumns(map[string]Column{
 		En: "Your own key for this deal, such as the deal's ID in your old CRM. Every deal row needs one, because two deals may share a name. Upload again with the same ref and source name, and Margince updates the deal.",
 		De: "Dein eigener Schlüssel für diesen Deal, etwa die ID des Deals in deinem alten CRM. Jede Deal-Zeile braucht einen, denn zwei Deals können denselben Namen tragen. Lädst du mit derselben Ref und demselben Quellnamen erneut hoch, aktualisiert Margince den Deal.",
 		Vi: "Khóa riêng của bạn cho deal này, chẳng hạn ID của deal trong CRM cũ. Mỗi dòng deal đều cần khóa này, vì hai deal có thể trùng tên. Tải lên lại với cùng ref và tên nguồn, Margince sẽ cập nhật deal.",
-	}, Example: same("D-1001"), RequiredOnNew: true},
+	}, Example: same("D-1001")},
 	"deal.name": {Description: langcopy.Phrase{
 		En: "The deal's name.",
 		De: "Der Name des Deals.",
@@ -202,7 +202,7 @@ var Columns = withLabels(withActivityColumns(map[string]Column{
 		En: "The stage's name in that pipeline; case does not matter. A won or lost stage imports the deal as closed.",
 		De: "Der Name der Phase in dieser Pipeline; Groß- und Kleinschreibung zählt nicht. Mit einer gewonnenen oder verlorenen Phase wird der Deal als abgeschlossen importiert.",
 		Vi: "Tên giai đoạn trong pipeline đó; không phân biệt chữ hoa, chữ thường. Giai đoạn thắng hoặc thua sẽ nhập deal ở trạng thái đã đóng.",
-	}, Example: same("Qualified")},
+	}, Example: same("Qualified"), RequiredOnNew: true},
 	"amount": {Description: langcopy.Phrase{
 		En: "The deal's value as a plain number with a dot for decimals, with no currency sign and no thousands separator. Needs a currency.",
 		De: "Der Wert des Deals als einfache Zahl mit Punkt als Dezimaltrennzeichen, ohne Währungszeichen und ohne Tausendertrennzeichen. Braucht eine Währung.",
@@ -317,7 +317,7 @@ func same(text string) langcopy.Phrase {
 
 // Template is the README's own text, beside the column guides.
 var Template = struct {
-	Title, Optional, Order, Keys, Allowed, Pipelines, SizeLimit, Formulas, Example, Required langcopy.Phrase
+	Title, Optional, Order, Keys, Allowed, Pipelines, SizeLimit, Formulas, Example, Required, KeyColumns langcopy.Phrase
 }{
 	Title: langcopy.Phrase{
 		En: "Margince import template (%s)",
@@ -349,4 +349,9 @@ var Template = struct {
 	},
 	Example:  langcopy.Phrase{En: "Example: %s", De: "Beispiel: %s", Vi: "Ví dụ: %s"},
 	Required: langcopy.Phrase{En: "needed on a new row", De: "beim Anlegen nötig", Vi: "bắt buộc khi tạo mới"},
+	KeyColumns: langcopy.Phrase{
+		En: "The file needs one of these columns, to tell its rows apart: %s",
+		De: "Die Datei braucht eine dieser Spalten, um ihre Zeilen zu unterscheiden: %s",
+		Vi: "Tệp cần một trong các cột này để phân biệt các dòng: %s",
+	},
 }

@@ -26,7 +26,7 @@ func TestACustomFieldIsSuggestedByItsLabelOrItsKey(t *testing.T) {
 	}
 	for header, want := range map[string]string{"TIER": "cf_tier", " tier ": "cf_tier", "cf_tier ": "cf_tier"} {
 		p := migration.Profile{Columns: []migration.Column{{Header: header}, {Header: "Name"}}}
-		if got := suggestImportMapping(p, targets, cat); got[header] != want {
+		if got := suggestImportMapping(p, migration.ObjectCompany, targets, cat); got[header] != want {
 			t.Errorf("suggestion for %q = %v, want %s", header, got, want)
 		}
 	}
@@ -41,7 +41,7 @@ func TestALabelAndAKeyHeaderForOneFieldSuggestNeither(t *testing.T) {
 		t.Fatalf("importTargets: %v", err)
 	}
 	p := migration.Profile{Columns: []migration.Column{{Header: "Tier"}, {Header: "cf_tier"}}}
-	if got := suggestImportMapping(p, targets, cat); len(got) != 0 {
+	if got := suggestImportMapping(p, migration.ObjectCompany, targets, cat); len(got) != 0 {
 		t.Fatalf("suggestion = %v, want none for an ambiguous field", got)
 	}
 }
@@ -58,7 +58,7 @@ func TestACoreFieldKeepsItsHeaderOverACustomLabel(t *testing.T) {
 		t.Fatalf("importTargets: %v", err)
 	}
 	p := migration.Profile{Columns: []migration.Column{{Header: "Email"}}}
-	if got := suggestImportMapping(p, targets, cat); got["Email"] != fieldEmail {
+	if got := suggestImportMapping(p, migration.ObjectLead, targets, cat); got["Email"] != fieldEmail {
 		t.Fatalf("suggestion = %v, want Email onto the core email", got)
 	}
 }
@@ -114,7 +114,7 @@ func TestTheCommonHeadersForANameAndACompanyAreSuggested(t *testing.T) {
 		for header := range want {
 			p.Columns = append(p.Columns, migration.Column{Header: header})
 		}
-		got := suggestImportMapping(p, targets, importCatalog{})
+		got := suggestImportMapping(p, object, targets, importCatalog{})
 		for header, target := range want {
 			if got[header] != target {
 				t.Errorf("%s: %q → %q, want %s", object, header, got[header], target)
@@ -131,7 +131,40 @@ func TestANameHeaderBesideTheFieldsOwnNameSuggestsNeither(t *testing.T) {
 		t.Fatalf("importTargets: %v", err)
 	}
 	p := migration.Profile{Columns: []migration.Column{{Header: "name"}, {Header: "display_name"}}}
-	if got := suggestImportMapping(p, targets, importCatalog{}); len(got) != 0 {
+	if got := suggestImportMapping(p, migration.ObjectCompany, targets, importCatalog{}); len(got) != 0 {
 		t.Fatalf("suggestion = %v, want none for a field two columns claim", got)
+	}
+}
+
+// Another system's export names a field by the label the mapping step shows, in
+// any language, or by a common other name. Its own "ID" is no Margince ID.
+func TestAnotherSystemsHeadersAreSuggestedByLabelOrCommonName(t *testing.T) {
+	for object, want := range map[string]map[string]string{
+		migration.ObjectCompany: {"ID": "", "Company Name": fieldDisplayName, "Website": fieldDomain, "Telefon": fieldPhone,
+			"Adresse": "address.line1", "Employees": fieldSizeBand, "Owner": "", "E-Mail": fieldEmail, "Industry": fieldIndustry},
+		migration.ObjectContact: {"E-Mail Address": fieldEmail, "Phone Number": fieldPhone, "Job Title": fieldTitle},
+	} {
+		targets, err := importTargets(object, importCatalog{})
+		if err != nil {
+			t.Fatalf("importTargets(%s): %v", object, err)
+		}
+		var p migration.Profile
+		for header := range want {
+			p.Columns = append(p.Columns, migration.Column{Header: header, Samples: []string{"H-1", "H-2"}})
+		}
+		got := suggestImportMapping(p, object, targets, importCatalog{})
+		for header, target := range want {
+			if got[header] != target {
+				t.Errorf("%s: %q → %q, want %q", object, header, got[header], target)
+			}
+		}
+	}
+	idColumn := migration.Column{Header: "ID", Samples: []string{"0190a3c2-6b1e-7c3d-8e4f-5a6b7c8d9e0f"}}
+	targets, err := importTargets(migration.ObjectCompany, importCatalog{})
+	if err != nil {
+		t.Fatalf("importTargets: %v", err)
+	}
+	if got := suggestImportMapping(migration.Profile{Columns: []migration.Column{idColumn}}, migration.ObjectCompany, targets, importCatalog{}); got["ID"] != csvTargetID {
+		t.Errorf("an ID column of Margince IDs → %q, want %s", got["ID"], csvTargetID)
 	}
 }

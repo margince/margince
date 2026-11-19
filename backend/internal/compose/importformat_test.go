@@ -23,7 +23,7 @@ func TestEveryImportTargetHasAGuide(t *testing.T) {
 			t.Fatal(err)
 		}
 		for _, target := range targets {
-			if _, ok := guideFor(object, target); !ok {
+			if _, ok := importguide.For(object, target); !ok {
 				t.Errorf("%s.%s has no guide; the screen would show an empty popover", object, target)
 			}
 		}
@@ -175,5 +175,32 @@ func TestNoCoreColumnShowsItsInternalNameToTheCaller(t *testing.T) {
 	}
 	if seen == 0 {
 		t.Fatal("the format listed no columns, so this check compared nothing")
+	}
+}
+
+// The marks are the rules the test run applies. A deal needs its stage, and a
+// deal or activity row its ref. Every file needs one column to tell rows apart.
+func TestTheFormatMarksWhatTheTestRunNeeds(t *testing.T) {
+	f, err := formatFrom(map[string]importCatalog{}, langcopy.For("en"), 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, needed := range []struct{ object, target string }{{"deal", dealTargetStage}, {"deal", csvTargetRef}, {"activity", csvTargetRef}} {
+		if col := columnOf(t, f, crmcontracts.ImportObject(needed.object), needed.target); !col.RequiredOnNewRow {
+			t.Errorf("%s.%s is not marked needed on a new row", needed.object, needed.target)
+		}
+	}
+	for _, file := range f.Files {
+		if len(file.KeyColumns) == 0 {
+			t.Errorf("%s names no key column", file.File)
+		}
+		for _, key := range file.KeyColumns {
+			if _, err := partMappingFrom(string(file.Object), map[string]string{"key": key}, nil, importCatalog{}); err != nil {
+				t.Errorf("%s: a file with only %s is refused: %v", file.File, key, err)
+			}
+		}
+		if _, err := partMappingFrom(string(file.Object), map[string]string{"x": csvTargetAuthor}, nil, importCatalog{}); err == nil {
+			t.Errorf("%s: a file with none of %v is not refused", file.File, file.KeyColumns)
+		}
 	}
 }

@@ -52122,6 +52122,10 @@ type ImportFormatFile struct {
 	// File The file name a ZIP entry needs for this object to be detected.
 	File string `json:"file"`
 
+	// KeyColumns The columns that tell this file's rows apart. A file needs at
+	// least one of them mapped, or the test run does not start.
+	KeyColumns []string `json:"key_columns"`
+
 	// Object What the file's rows are, and therefore what the run creates.
 	//
 	// `company` creates companies.
@@ -53333,6 +53337,12 @@ type InstallationSettings struct {
 	// Locks The settings in this response that a boot source sets, each with its source. A client
 	// shows each as read-only. Empty when nothing is locked. A write ignores it.
 	Locks *SettingLocks `json:"locks,omitempty"`
+
+	// MaxKnowledgeDocumentBytes The largest document `uploadCorpusDocument` accepts, in bytes. Set by whoever operates
+	// the installation, on the same terms as `max_upload_bytes`, and lower than it by
+	// default because a corpus document becomes passages every ask scans. Absent from a
+	// server older than this field; a client then leaves the refusal to the server.
+	MaxKnowledgeDocumentBytes *int64 `json:"max_knowledge_document_bytes,omitempty"`
 
 	// MaxUploadBytes The largest upload request this installation accepts, in bytes — set by whoever
 	// operates it, not compiled into the build (OPS-CFG-12, DOC-PARAM-11). Read-only:

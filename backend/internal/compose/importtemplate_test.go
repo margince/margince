@@ -23,7 +23,7 @@ func TestTheTemplateHeaderShowsALabelAndTheReadmeListsTheOptions(t *testing.T) {
 		Version: crmcontracts.ImportFormatVersionMarginceImport1, SizeLimitMb: 10,
 		Order: []crmcontracts.ImportObject{crmcontracts.ImportObjectCompany},
 		Files: []crmcontracts.ImportFormatFile{
-			{File: "companies.csv", Object: crmcontracts.ImportObjectCompany, Columns: []crmcontracts.ImportFormatColumn{
+			{File: "companies.csv", Object: crmcontracts.ImportObjectCompany, KeyColumns: []string{"display_name", "ref"}, Columns: []crmcontracts.ImportFormatColumn{
 				{Name: "ref", Description: "Your key", Example: "CO-1"},
 				{Name: "cf_tier", Label: new("Tier"), Custom: true, Type: new("picklist"), Options: &[]string{"A", "B"}, Description: "x", Example: "A"},
 				{Name: "cf_note", Label: new("Note, internal"), Custom: true, Description: "y", Example: "z"},
@@ -43,7 +43,7 @@ func TestTheTemplateHeaderShowsALabelAndTheReadmeListsTheOptions(t *testing.T) {
 	if header != "ref,Tier,\"Note, internal\"\n" {
 		t.Errorf("header %q, want the labels as CSV cells", header)
 	}
-	for _, want := range []string{"Tier: A, B", "10 MB", "Your key", "CO-1", "companies.csv"} {
+	for _, want := range []string{"Tier: A, B", "10 MB", "Your key", "CO-1", "companies.csv", "one of these columns, to tell its rows apart: display_name, ref"} {
 		if !strings.Contains(readme, want) {
 			t.Errorf("readme lacks %q:\n%s", want, readme)
 		}

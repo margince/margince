@@ -138,6 +138,8 @@ function sets(
   return {
     "GET /me": session,
     "GET /knowledge/corpora": () => jsonResponse({ items }),
+    "GET /installation/settings": () =>
+      jsonResponse({ max_knowledge_document_bytes: 5_000_000 }),
     ...extra,
   };
 }

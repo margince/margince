@@ -237,10 +237,8 @@ func TestAPDFIsRefusedNamingTheAcceptedTypes(t *testing.T) {
 	if !errors.As(err, &unsupported) {
 		t.Fatalf("upload of a PDF = %v, want UnsupportedTypeError", err)
 	}
-	for _, accepted := range []string{"text/plain", "text/markdown", "text/csv", "application/json"} {
-		if !strings.Contains(unsupported.Error(), accepted) {
-			t.Fatalf("the refusal does not name %s: %q", accepted, unsupported.Error())
-		}
+	if !strings.Contains(unsupported.Error(), "plain text, Markdown, CSV or JSON") {
+		t.Fatalf("the refusal does not name the accepted kinds: %q", unsupported.Error())
 	}
 	// Refused before anything was written: a rejected file leaves no row for a
 	// screen to list and no object for a sweep to find.
@@ -297,9 +295,9 @@ func TestADocumentArchivedMidIngestLeavesNoLiveChunk(t *testing.T) {
 	}
 }
 
-// An empty file is not a failure: it is a document with nothing in it, and
-// saying so is more useful than a refusal the uploader cannot act on.
-func TestAnEmptyDocumentIngestsToNoPassagesAndSucceeds(t *testing.T) {
+// A file of only blank lines is a document with nothing in it, not a failure.
+// Saying so helps more than a refusal the uploader cannot act on.
+func TestABlankDocumentIngestsToNoPassagesAndSucceeds(t *testing.T) {
 	ie := newIngestEnv(t)
 	docID := ie.upload(t, "empty.md", "text/markdown", "   \n\n  ")
 
@@ -312,6 +310,25 @@ func TestAnEmptyDocumentIngestsToNoPassagesAndSucceeds(t *testing.T) {
 	}
 	if docs[0].IngestStatus != "done" {
 		t.Fatalf("ingest_status = %q, want done", docs[0].IngestStatus)
+	}
+}
+
+// A file of no bytes is refused before anything is stored: filed, it would read
+// like success and answer nothing.
+func TestAZeroByteFileIsRefusedBeforeAnythingIsStored(t *testing.T) {
+	ie := newIngestEnv(t)
+	_, err := ie.store.UploadDocument(ie.ctx, knowledge.NewDocument{
+		CorpusID:    ie.corpus,
+		Filename:    "empty.md",
+		ContentType: "text/markdown",
+		Content:     strings.NewReader(""),
+	}, ie.queue)
+
+	if _, ok := errors.AsType[*knowledge.EmptyDocumentError](err); !ok {
+		t.Fatalf("a zero-byte upload = %v, want EmptyDocumentError", err)
+	}
+	if n := liveDocumentCount(t, ie.env, ie.corpus); n != 0 || len(ie.queued) != 0 {
+		t.Fatalf("a refused upload left %d row(s) and queued %v", n, ie.queued)
 	}
 }
 
@@ -648,10 +665,8 @@ func TestASweepLeavesAnIngestThatIsMerelySlowAlone(t *testing.T) {
 
 // A client that sent no type at all is read by its filename.
 //
-// A platform with no registry entry for `.md` makes the browser report an EMPTY
-// content type, and this route's flagship file would otherwise be refused with
-// "` ` cannot be read as text" — a refusal naming nothing, for exactly the file
-// the route wants. A curl caller omitting the part header hits the same wall.
+// A platform with no registry entry for `.md` sends an EMPTY content type. The
+// route's flagship file would then be refused, and so would a curl upload with no part header.
 func TestAnUploadWithNoContentTypeIsReadByItsFilename(t *testing.T) {
 	ie := newIngestEnv(t)
 	for _, c := range []struct{ filename, want string }{

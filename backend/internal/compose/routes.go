@@ -422,6 +422,7 @@ func WithUploadLimits(limits UploadLimits) Option {
 		s.knowledgeHandlers = knowledgeWithUploadLimit(s.knowledgeHandlers, limits.KnowledgeDocument)
 		s.uploadLimit = limits.CSVImport
 		s.maxUploadBytes = limits.Attachment
+		s.maxKnowledgeDocumentBytes = limits.KnowledgeDocument
 	}
 }
 

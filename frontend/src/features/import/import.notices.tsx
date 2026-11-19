@@ -203,6 +203,12 @@ const REFUSALS: Readonly<Record<string, Refusal>> = {
         needs: ["files", "max_files"],
       },
       { key: "import.refusal.bundle.empty", reason: "empty" },
+      { key: "import.refusal.bundle.spreadsheet", reason: "spreadsheet" },
+      {
+        key: "import.refusal.bundle.noImportableFile",
+        reason: "no_importable_file",
+        needs: ["file_names"],
+      },
       { key: "import.refusal.bundle.notAZip", reason: "not_a_zip" },
       {
         key: "import.refusal.bundle.filesTooLarge",

@@ -143,6 +143,9 @@ func templateReadme(f crmcontracts.ImportFormat, spoken langcopy.Spoken, stages 
 	for _, file := range f.Files {
 		line(0, "")
 		line(0, file.File)
+		if len(file.KeyColumns) > 1 {
+			line(1, fmt.Sprintf(spoken.Say(importguide.Template.KeyColumns), strings.Join(file.KeyColumns, ", ")))
+		}
 		for _, col := range file.Columns {
 			name := columnHeading(col)
 			if col.RequiredOnNewRow {

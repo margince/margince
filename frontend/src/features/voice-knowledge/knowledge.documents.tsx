@@ -39,6 +39,7 @@ import {
   throwProblem,
   unwrap,
 } from "../../lib/problem";
+import { useInstallationSettings, usePickRefusal } from "../../lib/uploadlimit";
 import { useViewerZone } from "../../lib/viewerzone";
 import { type UploadRefusal, UploadRefusals } from "./knowledge.notices";
 
@@ -434,18 +435,35 @@ function UploadDocument({ corpusId }: Readonly<{ corpusId: string }>) {
   const [refusals, setRefusals] = useState<readonly UploadRefusal[]>([]);
   const [sending, setSending] = useState(false);
   const upload = useDocumentWrite(corpusId, uploadDocument);
+  const refusalOf = usePickRefusal({
+    maxBytes: useInstallationSettings().data?.max_knowledge_document_bytes,
+  });
+
+  // A file the server would refuse never waits in the zone: it is named in the
+  // refusals as it is dropped.
+  const pick = (file: File) => {
+    const message = refusalOf(file);
+    if (message === null) {
+      setFiles((held) => [...held, file]);
+      return;
+    }
+    const id = fileIdentity(file);
+    setRefusals((shown) => [
+      ...shown.filter((refusal) => refusal.id !== id),
+      { id, filename: file.name, message },
+    ]);
+  };
 
   // One at a time: each upload locks the same corpus row, and the refusals
   // keep the order the reader dropped the files in.
   const send = async () => {
     setSending(true);
     setRefusals([]);
+    const sent = files;
     const refused: UploadRefusal[] = [];
-    const accepted: File[] = [];
-    for (const file of files) {
+    for (const file of sent) {
       try {
         await upload.mutateAsync({ corpusId, file });
-        accepted.push(file);
       } catch (err) {
         // One bad file does not abandon the rest of the drop.
         refused.push({
@@ -455,8 +473,9 @@ function UploadDocument({ corpusId }: Readonly<{ corpusId: string }>) {
         });
       }
     }
-    // From the latest held list: a file added mid-send must not be dropped.
-    setFiles((held) => held.filter((one) => !accepted.includes(one)));
+    // A refused file is named below, so it leaves the zone with the rest. One
+    // added mid-send was not sent and stays.
+    setFiles((held) => held.filter((one) => !sent.includes(one)));
     setRefusals(refused);
     setSending(false);
   };
@@ -471,7 +490,7 @@ function UploadDocument({ corpusId }: Readonly<{ corpusId: string }>) {
         files={files}
         // A second drop adds every file, names included: the server refuses a
         // duplicate by checksum and names the document holding those bytes.
-        onPick={(picked) => setFiles((held) => [...held, picked])}
+        onPick={pick}
       />
       <div className="form-actions">
         <Button disabled={files.length === 0 || sending} onClick={send}>

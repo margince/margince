@@ -25279,9 +25279,12 @@ export interface paths {
          *     `reason` `not_a_zip`, `empty`, `files_too_large` or `zip_too_large`
          *     (with `max_mb`), `too_many_files` (with `files` and `max_files`),
          *     `password_protected`, `file_damaged` or `file_missing` (with `file`),
-         *     `two_files_one_type` (with `file`, `other_file` and `object`) or
-         *     `type_not_importable` (with `object`). A refusal of one file of a ZIP
-         *     also names it in `file`.
+         *     `two_files_one_type` (with `file`, `other_file` and `object`),
+         *     `type_not_importable` (with `object`), `spreadsheet` (an Excel
+         *     workbook, which holds no CSV) or `no_importable_file` (with
+         *     `file_names`, the names the import reads). A ZIP with no file the
+         *     import reads opens no run. A refusal of one file of a ZIP also names
+         *     it in `file`.
          *
          *     A cell an export quoted against formula evaluation (a quote before `=`,
          *     `+`, `-`, `@`, a tab or a carriage return) is read without that one
@@ -27631,6 +27634,14 @@ export interface components {
              *     little room rather than compare a file against it exactly.
              */
             max_upload_bytes: number;
+            /**
+             * Format: int64
+             * @description The largest document `uploadCorpusDocument` accepts, in bytes. Set by whoever operates
+             *     the installation, on the same terms as `max_upload_bytes`, and lower than it by
+             *     default because a corpus document becomes passages every ask scans. Absent from a
+             *     server older than this field; a client then leaves the refusal to the server.
+             */
+            max_knowledge_document_bytes?: number;
             /**
              * @description How long the access token an MCP connector's OAuth handshake mints lives, in minutes —
              *     for the code exchange and every refresh rotation alike. 30 days by default, at most
@@ -32798,6 +32809,11 @@ export interface components {
             /** @description The file name a ZIP entry needs for this object to be detected. */
             file: string;
             object: components["schemas"]["ImportObject"];
+            /**
+             * @description The columns that tell this file's rows apart. A file needs at
+             *     least one of them mapped, or the test run does not start.
+             */
+            key_columns: string[];
             columns: components["schemas"]["ImportFormatColumn"][];
         };
         /**

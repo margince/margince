@@ -164,7 +164,32 @@ func OpenBundle(body []byte, uploadCap int64) (Bundle, error) {
 			b.Ignored = append(b.Ignored, IgnoredEntry{Entry: f.Name, Reason: IgnoredUnknownName})
 		}
 	}
+	if len(b.Parts) == 0 {
+		return Bundle{}, noImportableFile(zr)
+	}
 	return b, nil
+}
+
+// workbookPart is the entry every Excel workbook holds, whatever it was named.
+const workbookPart = "xl/workbook.xml"
+
+// noImportableFile refuses a ZIP no type takes a file of. A workbook is told to
+// become a CSV; any other ZIP is told the file names the import reads.
+func noImportableFile(zr *zip.Reader) error {
+	for _, f := range zr.File {
+		if f.Name == workbookPart {
+			return refuseFile(BundleSpreadsheet,
+				"This is an Excel workbook. Save the sheet as CSV UTF-8 and upload that.", nil)
+		}
+	}
+	names := make([]string, 0, len(ImportOrder))
+	for _, object := range ImportOrder {
+		names = append(names, FileNameFor(object))
+	}
+	list := strings.Join(names, ", ")
+	return refuseFile(BundleNoImportableFile,
+		fmt.Sprintf("The ZIP holds no file the import reads. Name each file after its record type: %s.", list),
+		map[RefusalParam]string{ParamFileNames: list})
 }
 
 // Open reads one entry, stopping at the size it declared or the bundle's limit,

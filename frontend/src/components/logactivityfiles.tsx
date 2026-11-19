@@ -12,11 +12,16 @@ import { formatBytes } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import {
   ACCEPTED_ATTACHMENT_ATTR,
+  ACCEPTED_ATTACHMENT_EXTENSIONS,
   uploadAttachment,
 } from "../lib/attachmentupload";
 import { useCanWrite } from "../lib/capability";
 import { ProblemError, problemMessageOf, unwrap } from "../lib/problem";
-import { formatUploadLimit, useMaxUploadBytes } from "../lib/uploadlimit";
+import {
+  formatUploadLimit,
+  useMaxUploadBytes,
+  usePickRefusal,
+} from "../lib/uploadlimit";
 
 // The file fields of the Log activity form. A transcript is read into the body.
 // Attached files wait in the form until the server has created the activity,
@@ -224,16 +229,21 @@ function FilesPicker({ files, onChange, disabled }: FieldProps) {
   const { locale } = useLocale();
   const maxBytes = useMaxUploadBytes();
   const limitLabel = maxBytes ? formatUploadLimit(maxBytes, locale) : "";
-  const [refused, setRefused] = useState<string | null>(null);
+  const refusalOf = usePickRefusal({
+    maxBytes,
+    extensions: ACCEPTED_ATTACHMENT_EXTENSIONS,
+  });
+  // One line per file, because a drop of several can refuse several. Refused
+  // here, before the activity exists, so none of them waits for Log.
+  const [refused, setRefused] = useState<readonly string[]>([]);
   const pick = (file: File) => {
-    // Refused here, before the activity exists, with the limit the
-    // add-document dialog states.
-    if (maxBytes !== undefined && file.size > maxBytes) {
-      setRefused(t("docs.add.errTooLarge", { size: limitLabel }));
+    const reason = refusalOf(file);
+    if (reason === null) {
+      onChange((current) => [...current, picked(file)]);
       return;
     }
-    setRefused(null);
-    onChange((current) => [...current, picked(file)]);
+    const line = t("log.fileNotAdded", { filename: file.name, reason });
+    setRefused((shown) => (shown.includes(line) ? shown : [...shown, line]));
   };
   return (
     <div className="form-stack">
@@ -264,7 +274,9 @@ function FilesPicker({ files, onChange, disabled }: FieldProps) {
           }
         />
       )}
-      {refused && <ErrorLine>{refused}</ErrorLine>}
+      {refused.map((line) => (
+        <ErrorLine key={line}>{line}</ErrorLine>
+      ))}
     </div>
   );
 }

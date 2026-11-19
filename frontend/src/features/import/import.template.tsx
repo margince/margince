@@ -63,16 +63,19 @@ function TemplateBody({ format }: Readonly<{ format: ImportFormat }>) {
             header: t("import.template.col.columns"),
             grow: true,
             render: (file) => (
-              <div className="import-template__chips">
-                {file.columns.map((column) => (
-                  <ColumnGuide
-                    key={column.name}
-                    column={column}
-                    file={file.file}
-                    label={<ColumnChip column={column} />}
-                  />
-                ))}
-              </div>
+              <>
+                <div className="import-template__chips">
+                  {file.columns.map((column) => (
+                    <ColumnGuide
+                      key={column.name}
+                      column={column}
+                      file={file.file}
+                      label={<ColumnChip column={column} />}
+                    />
+                  ))}
+                </div>
+                <KeyColumns file={file} />
+              </>
             ),
           },
         ]}
@@ -86,6 +89,22 @@ function TemplateBody({ format }: Readonly<{ format: ImportFormat }>) {
         </ul>
       </Disclosure>
     </div>
+  );
+}
+
+// One key column alone wears the dot; a choice of several is said in words.
+function KeyColumns({ file }: Readonly<{ file: FormatFile }>) {
+  const t = useT();
+  if (file.key_columns.length < 2) {
+    return null;
+  }
+  const names = file.key_columns.map(
+    (key) => file.columns.find((column) => column.name === key)?.label ?? key,
+  );
+  return (
+    <p className="import__hint t-caption">
+      {t("import.template.keyColumns", { columns: names.join(", ") })}
+    </p>
   );
 }
 

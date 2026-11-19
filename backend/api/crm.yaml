@@ -37033,9 +37033,12 @@ paths:
         `reason` `not_a_zip`, `empty`, `files_too_large` or `zip_too_large`
         (with `max_mb`), `too_many_files` (with `files` and `max_files`),
         `password_protected`, `file_damaged` or `file_missing` (with `file`),
-        `two_files_one_type` (with `file`, `other_file` and `object`) or
-        `type_not_importable` (with `object`). A refusal of one file of a ZIP
-        also names it in `file`.
+        `two_files_one_type` (with `file`, `other_file` and `object`),
+        `type_not_importable` (with `object`), `spreadsheet` (an Excel
+        workbook, which holds no CSV) or `no_importable_file` (with
+        `file_names`, the names the import reads). A ZIP with no file the
+        import reads opens no run. A refusal of one file of a ZIP also names
+        it in `file`.
 
         A cell an export quoted against formula evaluation (a quote before `=`,
         `+`, `-`, `@`, a tab or a carriage return) is read without that one
@@ -40687,6 +40690,14 @@ components:
             a file too large is refused before it is sent instead of after. The ceiling bounds
             the whole request, part framing included, which is why a client should leave a
             little room rather than compare a file against it exactly.
+        max_knowledge_document_bytes:
+          type: integer
+          format: int64
+          description: |
+            The largest document `uploadCorpusDocument` accepts, in bytes. Set by whoever operates
+            the installation, on the same terms as `max_upload_bytes`, and lower than it by
+            default because a corpus document becomes passages every ask scans. Absent from a
+            server older than this field; a client then leaves the refusal to the server.
         oauth_access_token_ttl_minutes:
           type: integer
           minimum: 5
@@ -46716,10 +46727,16 @@ components:
     ImportFormatFile:
       type: object
       description: One file of the import and its columns.
-      required: [file, object, columns]
+      required: [file, object, columns, key_columns]
       properties:
         file:    { type: string, description: 'The file name a ZIP entry needs for this object to be detected.' }
         object:  { $ref: '#/components/schemas/ImportObject' }
+        key_columns:
+          type: array
+          description: |
+            The columns that tell this file's rows apart. A file needs at
+            least one of them mapped, or the test run does not start.
+          items: { type: string }
         columns:
           type: array
           items: { $ref: '#/components/schemas/ImportFormatColumn' }
