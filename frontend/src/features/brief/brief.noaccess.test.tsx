@@ -2,6 +2,7 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { en } from "../../i18n/en";
 import { jsonResponse, render, stubApi } from "../../testing/brief.testkit";
 import { meFixture, READS_RECORDS } from "../../testing/mefixture";
 import { BriefScreen } from "./brief";
@@ -42,6 +43,7 @@ it("never asks for what needs deal read, and draws no failed section, for a role
   for (const path of DEAL_READS)
     expect(calls.some((call) => call.path.endsWith(path))).toBe(false);
   expect(screen.queryByText("This section did not load.")).toBeNull();
+  expect(screen.queryByText(en["magic.failed"])).toBeNull();
   expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
 });
 

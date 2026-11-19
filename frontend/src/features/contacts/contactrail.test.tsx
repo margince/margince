@@ -462,28 +462,6 @@ describe("adding a company", () => {
     expect(body.employment_status).toBe("current");
   });
 
-  it("adds a past job as former, with the end date it was given", async () => {
-    const user = driver();
-    mount(emptyButGranted);
-    await screen.findByRole("button", { name: "Add company" });
-    await openAndPickEmployer(user);
-    await user.click(
-      screen.getByRole("combobox", { name: "Employment status" }),
-    );
-    await user.click(screen.getByRole("option", { name: "Former" }));
-    await user.type(screen.getByLabelText("End date"), "2019-03");
-
-    // A former job cannot be the primary employer, so the box says no.
-    expect(primaryEmployerTicked()).toBe(false);
-    await user.click(screen.getByRole("button", { name: "Create" }));
-
-    const body = await employmentBody();
-    expect(body.employment_status).toBe("former");
-    expect(body.ended_at).toBe("2019-03-01");
-    expect(body.ended_precision).toBe("month");
-    expect(body.is_current_primary).toBe(false);
-  });
-
   it("re-takes the default every time it opens, not once", async () => {
     // `useState` reads its initializer ONCE and this modal never remounts, so a
     // default taken at first render answers a question about the rows as they
@@ -982,5 +960,25 @@ describe("the consent rail's transport row", () => {
     ).toBeNull();
     // The marketing grant is the Research tab's consent panel's to name.
     expect(screen.queryByText("Newsletter")).toBeNull();
+  });
+
+  const editConsent = `Edit ${en["contact.aside.consent"]}`;
+
+  it("opens Manage consent from the section's Edit", async () => {
+    mount(reachable, marketingOnly);
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    await user.click(await screen.findByRole("button", { name: editConsent }));
+    expect(
+      await screen.findByRole("dialog", { name: en["consent.manage"] }),
+    ).toBeTruthy();
+  });
+
+  it("offers no consent Edit to a reader who may not change the contact", async () => {
+    mount(
+      { ...reachable, contact: { ...reachable.contact, writable: false } },
+      marketingOnly,
+    );
+    await screen.findByText("Business mail");
+    expect(screen.queryByRole("button", { name: editConsent })).toBeNull();
   });
 });

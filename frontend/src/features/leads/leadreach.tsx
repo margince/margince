@@ -7,56 +7,31 @@ import {
   CopyEmail,
   EmailFace,
 } from "../../design-system/contactlink";
-import { InlineText } from "../../design-system/inlinetext";
 import { ReachCard, ReachLine, reachRow } from "../../design-system/reachcard";
 import type { DetailRow } from "../../design-system/recorddetails";
-import { useT } from "../../i18n";
+import type { useT } from "../../i18n";
 import type { Lead } from "./leads";
 
 export function isBlank(value: string | null | undefined): boolean {
   return !value?.trim();
 }
 
-// The address as the door to writing to the lead; its pill opens the edit.
-export function EmailValue({
-  lead,
-  canEdit,
-  readOnlyReason,
-  onSave,
-}: Readonly<{
-  lead: Lead;
-  canEdit: boolean;
-  readOnlyReason?: string;
-  onSave: (next: string) => Promise<void>;
-}>) {
-  const t = useT();
+// The address as the door to writing to the lead.
+export function EmailValue({ lead }: Readonly<{ lead: Lead }>) {
   return (
-    <InlineText
-      label={t("create.email")}
-      value={lead.email ?? ""}
-      type="email"
-      link={
-        lead.email && (
-          <span className="lead-row-email">
-            <ContactLink
-              kind="email"
-              value={lead.email}
-              record={{ entityType: "lead", entityId: lead.id }}
-              readOnly={Boolean(lead.archived_at)}
-              className="link-button lead-row-link"
-              textClassName="lead-row-link"
-            >
-              <EmailFace address={lead.email} />
-            </ContactLink>
-            <CopyEmail address={lead.email} />
-          </span>
-        )
-      }
-      placeholder={t("field.unset")}
-      canEdit={canEdit}
-      readOnlyReason={readOnlyReason}
-      onSave={onSave}
-    />
+    <span className="lead-row-email">
+      <ContactLink
+        kind="email"
+        value={lead.email ?? ""}
+        record={{ entityType: "lead", entityId: lead.id }}
+        readOnly={Boolean(lead.archived_at)}
+        className="link-button lead-row-link"
+        textClassName="lead-row-link"
+      >
+        <EmailFace address={lead.email ?? ""} />
+      </ContactLink>
+      <CopyEmail address={lead.email ?? ""} />
+    </span>
   );
 }
 
@@ -69,11 +44,11 @@ export function reachRows(
 ): DetailRow[] {
   const hasEmail = !isBlank(lead.email);
   const hasPhone = !isBlank(lead.phone);
-  const empty = (key: "email" | "phone", value: ReactNode): DetailRow => ({
+  const empty = (key: "email" | "phone"): DetailRow => ({
     key,
     term: t(key === "email" ? "create.email" : "create.phone"),
     empty: true,
-    value,
+    value: t("field.unset"),
   });
   return [
     ...(hasEmail || hasPhone
@@ -95,7 +70,7 @@ export function reachRows(
           ),
         ]
       : []),
-    ...(hasEmail ? [] : [empty("email", values.email)]),
-    ...(hasPhone ? [] : [empty("phone", values.phone)]),
+    ...(hasEmail ? [] : [empty("email")]),
+    ...(hasPhone ? [] : [empty("phone")]),
   ];
 }

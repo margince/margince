@@ -240,7 +240,7 @@ it("adds the first phone from Details without changing email", async () => {
 
 describe("the address in the About group", () => {
   function About({ page }: Readonly<{ page: typeof view }>) {
-    return <RecordDetails sections={useContactAboutSections(page)} />;
+    return <RecordDetails sections={useContactAboutSections(page).sections} />;
   }
   const address = (
     id: string,
@@ -301,7 +301,7 @@ describe("the address in the About group", () => {
 
 describe("a postal address whose country does not fit", () => {
   function About({ page }: Readonly<{ page: typeof view }>) {
-    return <RecordDetails sections={useContactAboutSections(page)} />;
+    return <RecordDetails sections={useContactAboutSections(page).sections} />;
   }
   const berlin = { postal_code: "10115", city: "Berlin", country: "AT" };
 
@@ -326,6 +326,20 @@ describe("a postal address whose country does not fit", () => {
       await screen.findByText("Postal code and city are in Germany"),
     ).toBeInTheDocument();
     expect(screen.getByText("10115 Berlin AT")).toBeInTheDocument();
+  });
+
+  it("keeps the flag on an address row that reads empty", async () => {
+    show({
+      ...view.contact,
+      address: {},
+      address_country_mismatch: { resolved_country: "DE" },
+    });
+    await userEvent.click(
+      await screen.findByRole("button", { name: /^Show \d+ empty field/ }),
+    );
+    expect(
+      await screen.findByText("Postal code and city are in Germany"),
+    ).toBeInTheDocument();
   });
 
   it("shows no flag when the server reports no mismatch", async () => {
@@ -374,45 +388,157 @@ it("converts the lead that holds an edited address by saving again", async () =>
   });
 });
 
-describe("the name parts in the About group", () => {
-  function About({ page }: Readonly<{ page: typeof view }>) {
-    return <RecordDetails sections={useContactAboutSections(page)} />;
+describe("the left column's sections", () => {
+  function Column({ page }: Readonly<{ page: typeof view }>) {
+    const about = useContactAboutSections(page);
+    return (
+      <>
+        <RecordDetails sections={about.sections} />
+        {about.element}
+      </>
+    );
+  }
+  const placed = {
+    ...contact,
+    owner_id: "u-1",
+    address: { city: "Berlin", country: "DE" },
+  };
+
+  function showColumn(
+    allow: Parameters<typeof meRoute>[0],
+    patch: (body: unknown) => Response = () => jsonResponse(placed),
+  ) {
+    installFetchStub({
+      "GET /me": meRoute(allow, { seat: "full" }),
+      "PATCH /contacts/p-1": patch,
+    });
+    render(
+      <StoryProviders>
+        <Column page={{ ...view, contact: placed }} />
+      </StoryProviders>,
+    );
   }
 
-  it("corrects the first name a greeting reads, and sends only it", async () => {
+  it("offers one Edit per section, and rests every value as a reading", async () => {
+    showColumn({ contact: ["read", "update"] });
+    for (const name of ["Edit About", "Edit Address", "Edit Ownership"]) {
+      expect(await screen.findByRole("button", { name })).toHaveTextContent(
+        en["record.edit"],
+      );
+    }
+    expect(screen.queryByRole("button", { name: /^Change / })).toBeNull();
+    expect(
+      screen.getByRole("link", { name: "dana@brandt.example" }),
+    ).toHaveAttribute("href", "mailto:dana@brandt.example");
+  });
+
+  it("offers no Edit to a reader who may not change the contact", async () => {
+    showColumn({ contact: ["read"] });
+    await screen.findByText("Director");
+    expect(screen.queryByRole("button", { name: /^Edit / })).toBeNull();
+  });
+
+  it("changes About's fields in one dialog and sends the changed title alone", async () => {
     const user = userEvent.setup();
     const sent: unknown[] = [];
+    showColumn({ contact: ["read", "update"] }, (body) => {
+      sent.push(body);
+      return jsonResponse({ ...placed, title: "CEO", version: 4 });
+    });
+    await user.click(await screen.findByRole("button", { name: "Edit About" }));
+    const dialog = within(await screen.findByRole("dialog", { name: "About" }));
+    expect(dialog.queryByRole("textbox", { name: "City" })).toBeNull();
+    expect(
+      dialog.getByRole("button", { name: "Change Employer" }),
+    ).toBeTruthy();
+    const title = dialog.getByRole("textbox", { name: "Title" });
+    await user.clear(title);
+    await user.type(title, "CEO");
+    await user.click(dialog.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(sent).toEqual([{ title: "CEO" }]));
+  });
+
+  it("changes the address in a dialog of its own", async () => {
+    const user = userEvent.setup();
+    const sent: unknown[] = [];
+    showColumn({ contact: ["read", "update"] }, (body) => {
+      sent.push(body);
+      return jsonResponse(placed);
+    });
+    await user.click(
+      await screen.findByRole("button", { name: "Edit Address" }),
+    );
+    const dialog = within(
+      await screen.findByRole("dialog", { name: "Address" }),
+    );
+    expect(dialog.queryByRole("textbox", { name: "Title" })).toBeNull();
+    const city = dialog.getByRole("textbox", { name: "City" });
+    await user.clear(city);
+    await user.type(city, "Hamburg");
+    await user.click(dialog.getByRole("button", { name: "Save" }));
+    await waitFor(() =>
+      expect(sent).toEqual([
+        { address: expect.objectContaining({ city: "Hamburg" }) },
+      ]),
+    );
+  });
+});
+
+describe("the name parts in About", () => {
+  function Column({ page }: Readonly<{ page: typeof view }>) {
+    const about = useContactAboutSections(page);
+    return (
+      <>
+        <RecordDetails sections={about.sections} />
+        {about.element}
+      </>
+    );
+  }
+
+  it("corrects the first name a greeting reads in About's dialog, and sends only it", async () => {
+    const user = userEvent.setup();
+    const sent: unknown[] = [];
+    const named = { ...contact, first_name: "Dana", last_name: "Buyer" };
     installFetchStub({
       "GET /me": meRoute({ contact: ["read", "update"] }, { seat: "full" }),
       "PATCH /contacts/p-1": (body) => {
         sent.push(body);
-        return jsonResponse({ ...contact, first_name: "Daniela" });
+        return jsonResponse({ ...named, first_name: "Daniela" });
       },
     });
     render(
       <StoryProviders>
-        <About
-          page={{ ...view, contact: { ...contact, first_name: "Dana" } }}
-        />
+        <Column page={{ ...view, contact: named }} />
       </StoryProviders>,
     );
-    await user.click(
-      await screen.findByRole("button", {
-        name: new RegExp(`^Change ${en["create.firstName"]}`),
-      }),
-    );
-    const input = screen.getByRole("textbox", {
-      name: en["create.firstName"],
+    const about = await screen.findByRole("region", {
+      name: en["record.details.about"],
     });
+    expect(within(about).getByText("Dana")).toBeTruthy();
+    expect(within(about).getByText("Buyer")).toBeTruthy();
+    await user.click(await screen.findByRole("button", { name: "Edit About" }));
+    const dialog = within(await screen.findByRole("dialog", { name: "About" }));
+    const input = dialog.getByRole("textbox", { name: en["create.firstName"] });
     await user.clear(input);
-    await user.type(input, "Daniela{Enter}");
-    await waitFor(() => expect(sent).toEqual([{ first_name: "Daniela" }]));
+    await user.type(input, "Daniela");
+    await user.click(dialog.getByRole("button", { name: "Save" }));
+    // The name parts are one group, so the unchanged last name rides along;
+    // the server reads a restated part as no change.
+    await waitFor(() =>
+      expect(sent).toEqual([{ first_name: "Daniela", last_name: "Buyer" }]),
+    );
   });
 });
 
 describe("the tags in the About group", () => {
   function About({ page }: Readonly<{ page: typeof view }>) {
-    return <RecordDetails sections={useContactAboutSections(page)} />;
+    const about = useContactAboutSections(page);
+    return (
+      <>
+        <RecordDetails sections={about.sections} />
+        {about.element}
+      </>
+    );
   }
 
   it("folds an untagged contact's Tags row and asks for no tags", async () => {

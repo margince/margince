@@ -49511,7 +49511,7 @@ components:
         assessment: {type: string, enum: [attention, checked, incomplete]}
         sources:
           type: array
-          maxItems: 9
+          maxItems: 10
           items: {$ref: '#/components/schemas/HealthSource'}
         findings:
           type: array
@@ -49526,7 +49526,11 @@ components:
       properties:
         id: {type: string}
         availability: {type: string, enum: [available, unknown, stale, failed, withheld, not_configured, not_monitored]}
-        condition: {type: string, enum: [clear, processing, retrying, waiting_human, technical, unverified, recovered, unknown]}
+        condition:
+          type: string
+          enum: [clear, processing, retrying, waiting_human, technical, unverified, recovered, unknown, information]
+          description: >-
+            `information` is a fact an operator may want, never a fault: it needs no action, raises no finding and leaves the assessment and completeness as they are.
         code: {type: string, description: "Safe presentation code, never raw failure text."}
         permission: {type: string}
         scope: {type: string, enum: [workspace, installation, shared]}
@@ -49539,6 +49543,23 @@ components:
         unit: {type: string, enum: [runs, mailboxes, records, updates, items, threads]}
         window_start: {type: string, format: date-time}
         window_end: {type: string, format: date-time}
+        unplaced_changes:
+          type: array
+          maxItems: 50
+          description: >-
+            The `unplaced` source's breakdown of the machine changes in its window that the `/magic` receipt cannot place, most first. `count` is the whole total, and exceeds the sum of these entries when more kinds occurred than are listed.
+          items: {$ref: '#/components/schemas/HealthUnplacedChange'}
+    HealthUnplacedChange:
+      type: object
+      additionalProperties: false
+      required: [entity_type, action, count]
+      properties:
+        entity_type: {type: string}
+        action:
+          type: string
+          description: >-
+            The audit action, or for a list membership or a tagging the link it filed: `added`, `removed` or `applied`.
+        count: {type: integer, minimum: 1}
     HealthFinding:
       type: object
       additionalProperties: false

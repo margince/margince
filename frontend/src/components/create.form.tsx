@@ -1,5 +1,6 @@
 import {
   type FormEvent,
+  Fragment,
   type ReactNode,
   useEffect,
   useId,
@@ -15,6 +16,7 @@ import type { MessageKey } from "../i18n/en";
 import { navigate, type Route } from "../lib/router";
 import { fieldControl, MultiselectField } from "./create.controls";
 import {
+  answerless,
   type CreateField,
   type FormRow,
   type FormRows,
@@ -30,6 +32,7 @@ import {
 } from "./create.offered";
 import { repeatedRowValue } from "./createrows";
 import { RepeatableRowsField } from "./repeatablerowsfield";
+import "./create.css";
 
 // A submit button's resting and busy labels travel as one pair, so an edit
 // can never announce "Creating…" while it saves.
@@ -68,6 +71,8 @@ export function RecordFormBody({
   onClose,
   intent,
   dialog,
+  answerlessRow,
+  unsaved,
 }: Readonly<{
   fields: CreateField[];
   values: Record<string, string>;
@@ -89,6 +94,10 @@ export function RecordFormBody({
   onClose: () => void;
   intent: SubmitIntent;
   dialog?: { open: boolean; title: string };
+  // A read-only or flow field's row. Only an edit has them, so a create form never loads them.
+  answerlessRow?: (field: CreateField) => ReactNode;
+  // Whether a close asks first. Left out, any keystroke since the opening counts.
+  unsaved?: boolean;
 }>) {
   const t = useT();
   const formId = useId();
@@ -114,6 +123,7 @@ export function RecordFormBody({
     setValues(submittedValues(fields, next));
   };
   const requiredMissing = shown.some((field) => {
+    if (answerless(field)) return false;
     if (field.type === "repeatable") {
       return !rowsRequirementMet(field, rows[field.key] ?? []);
     }
@@ -121,6 +131,7 @@ export function RecordFormBody({
   });
   const refusals = new Map(
     shown.flatMap((field) => {
+      if (answerless(field)) return [];
       const refusal =
         (field.rowsUnique
           ? repeatedRowRefusal(field, rows[field.key] ?? [], t)
@@ -166,6 +177,9 @@ export function RecordFormBody({
               {fieldLabel(field, t)}
             </p>
           );
+        }
+        if (answerless(field)) {
+          return <Fragment key={field.key}>{answerlessRow?.(field)}</Fragment>;
         }
         if (field.type === "repeatable") {
           return (
@@ -286,7 +300,7 @@ export function RecordFormBody({
       title={dialog.title}
       onClose={onClose}
       fieldCount={fields.filter((field) => !field.divider).length}
-      unsaved={edited}
+      unsaved={unsaved ?? edited}
       closeDisabled={pending}
       form={
         <form id={formId} className="form-stack" onSubmit={submit}>
