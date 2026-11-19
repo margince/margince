@@ -1148,7 +1148,7 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Deals | `change_offers.use_deal_estimate` | `use_deal_estimate` | `deal.update` |
 | Deals | `change_state.correct_close_day` | `correct_deal_close_day` | `company.read` `deal.update` `installation_settings.read` `project.read` |
 | Deals | `change_state.move_deal` | `progress_deal` | `company.read` `deal.read` `deal.update` `installation_settings.read` `project.read` |
-| Deals | `change_state.move_deal_pipeline` | `move_deal_pipeline` | `company.read` `deal.read` `deal.update` `installation_settings.read` `project.read` |
+| Deals | `change_state.move_deal_pipeline` | `move_deal_pipeline` | `company.read` `deal.update` `installation_settings.read` `project.read` |
 | Deals | `change_state.review_outcome` | `create_deal_outcome_review` | `activity.create` `activity.read` `deal.read` |
 | Deals | `draft_outbound.slipping_deals` | `draft_follow_ups_for` | `company.read` `deal.read` `installation_settings.read` `project.read` |
 | Deals | `read_attention.at_risk` | `at_risk_relationships` | `company.read` `contact.read` `deal.read` `project.read` `relationship.read` |
@@ -1180,10 +1180,10 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Deal rooms | `send_outbound.update_room` | `update_deal_room` | `deal_room.update` |
 | Deal rooms | `send_outbound.update_room_document` | `update_deal_room_document` | `deal_room.update` |
 | Legal reviews | `change_state.decide_legal_review` | `decide_legal_review` | `legal_review.read` `legal_review.update` |
-| Legal reviews | `change_state.request_legal_review` | `request_legal_review` | `activity.read` `company.read` `contact.read` `deal.read` `deal.update` `installation_settings.read` `offer.read` `project.read` |
+| Legal reviews | `change_state.request_legal_review` | `request_legal_review` | `activity.read` `company.read` `contact.read` `contract.read` `deal.read` `deal.update` `installation_settings.read` `offer.read` `project.read` |
 | Legal reviews | `change_state.withdraw_legal_review` | `withdraw_legal_review` | `deal.update` |
 | Legal reviews | `read_details.deal_legal_reviews` | `list_deal_legal_reviews` | `deal.read` |
-| Legal reviews | `read_details.legal_review` | `get_legal_review` | `company.read` `deal.read` `legal_review.read` |
+| Legal reviews | `read_details.legal_review` | `get_legal_review` | `company.read` `contract.read` `deal.read` `legal_review.read` `project.read` |
 | Legal reviews | `read_details.legal_reviews` | `list_legal_reviews` | `company.read` `deal.read` `legal_review.read` |
 | Leads | `change_relationships.reassign_handoff` | `reassign_handoff` | `lead.read` `lead.update` |
 | Leads | `change_state.accept_partner_lead` | `accept_partner_lead` | `company.read` `lead.update` `partner.update` |
@@ -1332,7 +1332,7 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Lists and saved views | `read_details.filter_preview` | `preview_filter` | `contact.read` `lead.read` `relationship.read` |
 | Lists and saved views | `read_workspace.saved_view` | `get_saved_view` | `saved_view.read` |
 | Lists and saved views | `read_workspace.saved_views` | `list_saved_views` | `saved_view.read` |
-| Lists and saved views | `run_research.propose_filter` | `propose_filter` | `company.read` `contact.read` `custom_field.read` `list.read` `relationship.read` |
+| Lists and saved views | `run_research.propose_filter` | `propose_filter` | `company.read` `custom_field.read` `list.read` |
 | Tags | `change_attention.accept_tag_suggestion` | `accept_tag_suggestion` | `contact.update` `tag.read` |
 | Tags | `change_attention.dismiss_tag_suggestion` | `dismiss_tag_suggestion` | `contact.update` `tag.read` |
 | Tags | `change_tags.apply` | `apply_tag` | `company.update,contact.update,deal.update,lead.update,project.update` `tag.read` |
@@ -1536,7 +1536,7 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Capture review | `read_workspace.held_threads` | `list_held_threads` |  |
 | Capture review | `read_workspace.my_capture_activity` | `list_my_capture_activity` |  |
 | Capture review | `read_workspace.workspace_capture_activity` | `list_workspace_capture_activity` | `capture_trace.read` |
-| Connectors and provider connections | `change_activities.file_channel_message` | `file_channel_message` | `activity.create` `activity.read` |
+| Connectors and provider connections | `change_activities.file_channel_message` | `file_channel_message` | `activity.create` `activity.read` `company.read` `contact.read` |
 | Connectors and provider connections | `change_capture.cancel_backfill` | `cancel_connector_backfill` |  |
 | Connectors and provider connections | `change_capture.disconnect_channel` | `disconnect_channel` | `channel_connection.delete` |
 | Connectors and provider connections | `change_capture.disconnect_mailbox` | `disconnect_connector` |  |
