@@ -40,7 +40,10 @@ type PacketTouch struct {
 	ActivityID ids.UUID  `json:"activity_id"`
 	Kind       string    `json:"kind"`
 	OccurredAt time.Time `json:"occurred_at"`
-	Subject    *string   `json:"-"`
+	// OccurredPrecision is "day" for an entry that knows only its date. A pack
+	// frozen before it was stored reads as an instant.
+	OccurredPrecision string  `json:"occurred_precision,omitempty"`
+	Subject           *string `json:"-"`
 }
 
 // PacketTask is a task that was open on the deal at the request. Subject is
@@ -177,7 +180,8 @@ func recordsWire(p reviewPacket, sight recordSight, out *crmcontracts.LegalRevie
 	for _, t := range p.Touches {
 		if subject, ok := sight.activity[t.ActivityID]; ok {
 			touches = append(touches, crmcontracts.LegalReviewPacketTouch{
-				ActivityId: openapiUUID(t.ActivityID), Kind: crmcontracts.LegalReviewPacketTouchKind(t.Kind), OccurredAt: t.OccurredAt, Subject: subject,
+				ActivityId: openapiUUID(t.ActivityID), Kind: crmcontracts.LegalReviewPacketTouchKind(t.Kind), OccurredAt: t.OccurredAt,
+				OccurredPrecision: touchPrecision(t.OccurredPrecision), Subject: subject,
 			})
 		}
 	}
@@ -190,4 +194,11 @@ func recordsWire(p reviewPacket, sight recordSight, out *crmcontracts.LegalRevie
 		}
 	}
 	out.Contracts, out.Touches, out.Tasks = &contracts, &touches, &tasks
+}
+
+func touchPrecision(stored string) crmcontracts.OccurredPrecision {
+	if stored == string(crmcontracts.OccurredPrecisionOccurredPrecisionDay) {
+		return crmcontracts.OccurredPrecisionOccurredPrecisionDay
+	}
+	return crmcontracts.OccurredPrecisionOccurredPrecisionInstant
 }

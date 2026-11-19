@@ -31641,6 +31641,8 @@ export interface components {
             kind: "call" | "email" | "meeting" | "message" | "note";
             /** Format: date-time */
             occurred_at: string;
+            /** @description How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time. */
+            occurred_precision: components["schemas"]["OccurredPrecision"];
             subject?: string | null;
         };
         /** @description One task that was open at the request. Its subject is read now. */

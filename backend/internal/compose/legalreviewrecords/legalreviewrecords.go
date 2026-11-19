@@ -34,7 +34,7 @@ const (
 	taskLimit  = 10
 )
 
-// touchKinds are the kinds a person does with the buyer. A task is listed
+// touchKinds are the kinds a colleague does with the buyer. A task is listed
 // apart.
 var touchKinds = []string{
 	string(crmcontracts.ActivityKindCall), string(crmcontracts.ActivityKindEmail),
@@ -105,7 +105,7 @@ func (r Reader) ReviewActivity(ctx context.Context, dealID ids.UUID) ([]deals.Pa
 	}
 	touches := make([]deals.PacketTouch, 0, len(rows))
 	for _, a := range rows {
-		touches = append(touches, deals.PacketTouch{ActivityID: ids.UUID(a.Id), Kind: string(a.Kind), OccurredAt: a.OccurredAt})
+		touches = append(touches, deals.PacketTouch{ActivityID: ids.UUID(a.Id), Kind: string(a.Kind), OccurredAt: a.OccurredAt, OccurredPrecision: string(a.OccurredPrecision)})
 	}
 	open, _, err := r.activities.ListOpenTasks(ctx, activities.ListOpenTasksInput{
 		EntityType: &entity, EntityID: &dealID, ExcludeSystemMinted: true, Limit: taskLimit,

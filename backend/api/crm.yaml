@@ -45528,11 +45528,14 @@ components:
     LegalReviewPacketTouch:
       type: object
       description: One recent activity on the deal. Its subject is read now, and absent when this reader may not see the content.
-      required: [activity_id, kind, occurred_at]
+      required: [activity_id, kind, occurred_at, occurred_precision]
       properties:
         activity_id: { type: string, format: uuid }
         kind: { type: string, enum: [call, email, meeting, message, note], x-extensible-enum: true }
         occurred_at: { type: string, format: date-time }
+        occurred_precision:
+          allOf: [{ $ref: '#/components/schemas/OccurredPrecision' }]
+          description: How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
         subject: { type: [string, 'null'] }
 
     LegalReviewPacketTask:

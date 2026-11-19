@@ -10,6 +10,7 @@ import { EmptyState } from "../../design-system/atoms";
 import { FieldGrid, FieldRow } from "../../design-system/fieldgrid";
 import { FileChip } from "../../design-system/filechip";
 import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
+import { formatActivityWhen } from "../../format/activitywhen";
 import { middayInstant } from "../../format/calendarday";
 import {
   formatBytes,
@@ -424,7 +425,12 @@ function PackTouches({ packet }: Readonly<{ packet: Packet }>) {
           <span className="meta-row-line t-caption">
             {t("legalReview.touchLine", {
               kind: t(labelFor(TOUCH_LABEL, touch.kind)),
-              date: formatDateTime(touch.occurred_at, locale, zone),
+              date: formatActivityWhen(
+                touch.occurred_at,
+                touch.occurred_precision,
+                locale,
+                zone,
+              ),
             })}
           </span>
           {touch.subject && (

@@ -99,6 +99,12 @@ describe("one review", () => {
       screen.getByText(en["legalReview.contractAutoRenews"]),
     ).toBeInTheDocument();
     expect(screen.getByText("Liability cap call")).toBeInTheDocument();
+    // An entry that knows only its day is drawn as a date, never as noon UTC.
+    expect(
+      screen.getByText(
+        (text) => text.startsWith("Note, ") && !text.includes(":"),
+      ),
+    ).toBeInTheDocument();
     expect(
       screen.getByText("Send the data processing terms"),
     ).toBeInTheDocument();

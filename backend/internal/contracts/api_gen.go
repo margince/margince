@@ -55869,7 +55869,10 @@ type LegalReviewPacketTouch struct {
 	ActivityId openapi_types.UUID         `json:"activity_id"`
 	Kind       LegalReviewPacketTouchKind `json:"kind"`
 	OccurredAt time.Time                  `json:"occurred_at"`
-	Subject    *string                    `json:"subject,omitempty"`
+
+	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
+	Subject           *string           `json:"subject,omitempty"`
 }
 
 // LegalReviewPacketTouchKind defines model for LegalReviewPacketTouch.Kind.

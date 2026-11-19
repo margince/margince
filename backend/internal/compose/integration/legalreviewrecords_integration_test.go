@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -154,7 +155,7 @@ func TestTheLatestTouchesSkipAutomaticMailBeforeCounting(t *testing.T) {
 	reader := legalreviewrecords.New(e.Contracts, e.Activities)
 	deal := packDeal(t, e)
 	log := func(kind, subject string, ago time.Duration) ids.UUID {
-		at := time.Now().Add(-ago)
+		at := clocktest.Now(t).Add(-ago)
 		logged, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
 			Kind: kind, Subject: &subject, OccurredAt: &at, Source: "manual",
 			Links: []activities.ActivityLinkInput{{EntityType: "deal", EntityID: deal}},

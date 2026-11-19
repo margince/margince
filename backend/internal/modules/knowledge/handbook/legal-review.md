@@ -20,13 +20,14 @@ shown while a request is open.
 Also called: legal sign-off, contract review, send to legal.
 
 ### What does legal see?
-Legal sees the deal as it was when you asked. The **Review pack** shows the company, value, stage,
-close date, current offer with a link to its PDF, stage history, and the contract, legal and offer
-documents. For each offer line it shows how often the buyer pays and for how many periods.
+Legal sees the deal as it was when you asked. The **Review pack** shows the company, value, stage and
+close date. It also shows the current offer with a link to its PDF, the stage history, and the
+contract, legal and offer documents.
+For each offer line it shows how often the buyer pays and for how many periods.
 It also lists any other offer the buyer was sent or accepted.
 
-The pack names the deal's contracts with their status, dates and notice terms, its latest calls,
-meetings, messages and notes, and the tasks that were open. A reviewer sees only what their own
+It names the deal's contracts with their status, dates and notice terms. It lists the five newest
+calls, meetings, messages and notes, and the tasks that were open. A reviewer sees only what their own
 access allows: an email outside their audience is left out.
 
 It keeps those facts, so a later edit to the deal does not change what legal answered on.
