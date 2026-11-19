@@ -95,14 +95,8 @@ var rulesIdentityFields = []string{"Jurisdiction", "Instruments"}
 // struct no longer declares, because the arm below asks Waived only about a
 // field it has already found unapplied.
 // Every obligation the shipped packs declare has an engine reader reachable
-// from a send. The two entries are the citation contract, which no shipped pack
-// fills yet: consent.citationFor reads both and no finding carries its answer.
-var unappliedRules = gatekit.Waive(map[string]string{
-	"Citations": "consent.citationFor resolves a citation and no refusal or finding shown to a rep " +
-		"calls it yet, so a declared citation is shown nowhere",
-	"Provenance": "only consent.citationFor reads the review dates, to withhold citations, and " +
-		"nothing calls it yet",
-})
+// from a send, so the register is empty.
+var unappliedRules = gatekit.Waive(map[string]string{})
 
 func TestEveryDeclaredMessagingObligationIsAppliedOrRecorded(t *testing.T) {
 	t.Parallel()
@@ -142,7 +136,7 @@ func TestEveryDeclaredMessagingObligationIsAppliedOrRecorded(t *testing.T) {
 //
 // An entry leaves this map when a send path calls the reader, which is the same
 // moment its register line goes.
-var unreachedReaders = map[string]bool{"Citations": true, "Provenance": true}
+var unreachedReaders = map[string]bool{}
 
 // ruleReaderCallers maps a rules FIELD to the file where the seam is crossed.
 //

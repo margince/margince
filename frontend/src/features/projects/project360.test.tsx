@@ -319,6 +319,51 @@ describe("ProjectScreen", () => {
     expect(screen.queryByText("Brandt Automotive")).toBeNull();
   });
 
+  it("says a project with no customer has none, never hidden, and explains the missing New deal", async () => {
+    projectsBackend({
+      view: project360({
+        project: project({ company_id: undefined, writable: true }),
+        company: undefined,
+        sections_omitted: [],
+      }),
+    });
+    render(<ProjectScreen id="pr-1" />);
+    await screen.findByRole("heading", { name: "CRM rollout" });
+    expect(screen.queryByText("Hidden for your role")).toBeNull();
+    expect(screen.queryByTestId("project-company-withheld")).toBeNull();
+    expect(screen.getByTestId("project-company-none").textContent).toBe(
+      "No customer company",
+    );
+    expect(
+      await screen.findByTestId("project-new-deal-needs-company"),
+    ).toBeTruthy();
+  });
+
+  it("offers neither New deal nor its customer hint to a reader who may not create deals", async () => {
+    projectsBackend({
+      view: project360({
+        project: project({ company_id: undefined, writable: true }),
+        company: undefined,
+      }),
+      respond: async (url) =>
+        url.endsWith("/v1/me")
+          ? jsonResponse(
+              meFixture({
+                allow: {
+                  project: ["read", "update"],
+                  deal: ["read"],
+                  activity: ["read", "create", "update"],
+                },
+              }),
+            )
+          : null,
+    });
+    render(<ProjectScreen id="pr-1" />);
+    await screen.findByRole("heading", { name: "CRM rollout" });
+    expect(screen.queryByTestId("project-new-deal-needs-company")).toBeNull();
+    expect(screen.queryByRole("button", { name: "New deal" })).toBeNull();
+  });
+
   it("closing asks for a reason, holds Confirm until it is given, and posts the move", async () => {
     const user = userEvent.setup();
     let posted: { body: unknown; ifMatch: string | null } | null = null;

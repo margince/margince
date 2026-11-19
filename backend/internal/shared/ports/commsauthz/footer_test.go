@@ -47,3 +47,22 @@ func TestFooterOmissionsRequireAReasonInEveryMode(t *testing.T) {
 		})
 	}
 }
+
+// One footer goes to every recipient, and each recipient's finding names the
+// law of their own pack, or none.
+func TestEachRecipientsFooterFindingCarriesTheirOwnProvision(t *testing.T) {
+	german := Provision{Instrument: "UWG", Provision: "§ 7(3)", SourceURL: "https://example.org/uwg"}
+	shared := []FooterFinding{{Kind: "objection_route"}, {Kind: "recipient_private_link"}}
+	cited := Decision{Verdict: VerdictAllow, Citations: map[string]Provision{"objection_route": german}}.WithFooterFindings(shared)
+	uncited := Decision{Verdict: VerdictAllow}.WithFooterFindings(shared)
+
+	if got := cited.Evidence.FooterFindings; got[0].Provision != german || got[1].Provision.Cited() {
+		t.Errorf("the cited recipient's findings are %+v, want the law on the objection route only", got)
+	}
+	if got := uncited.Evidence.FooterFindings; got[0].Provision.Cited() {
+		t.Errorf("a recipient whose pack cites nothing reads %+v; another recipient's law leaked onto it", got[0].Provision)
+	}
+	if shared[0].Provision.Cited() {
+		t.Error("the shared footer list was written to, so one recipient's law reaches the next")
+	}
+}

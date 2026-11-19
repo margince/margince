@@ -232,20 +232,6 @@ func (s *Store) ReviewForReader(ctx context.Context, id ids.UUID) (Review, error
 	return out, err
 }
 
-// refusedRecipientsOf lifts the denied half of a decision set into what the row
-// stores, ranked, so the first refusal is the one the summary names.
-func refusedRecipientsOf(set commsauthz.DecisionSet) []RefusedRecipient {
-	denied := set.Denied()
-	if len(denied) == 0 {
-		return nil
-	}
-	out := make([]RefusedRecipient, 0, len(denied))
-	for _, d := range denied {
-		out = append(out, refusedRecipientOf(d))
-	}
-	return rankRefusals(out)
-}
-
 // stateFor decides which kind of work this refusal is.
 //
 // The question is whether MORE EVIDENCE could change the answer. A message

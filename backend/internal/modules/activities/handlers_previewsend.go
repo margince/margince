@@ -15,6 +15,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/commsauthzwire"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -120,17 +121,10 @@ func previewResponse(preview SendPreview) crmcontracts.SendAuthorizationPreview 
 			Address:    openapi_types.Email(d.Recipient.Email),
 			Verdict:    crmcontracts.SendAuthorizationPreviewRecipientVerdict(d.Verdict),
 			ReasonCode: d.ReasonCode,
+			Provision:  commsauthzwire.Provision(d.ProvisionFor(d.ReasonCode)),
 		}
 		if len(d.Evidence.FooterFindings) > 0 {
-			findings := make([]crmcontracts.FooterFinding, 0, len(d.Evidence.FooterFindings))
-			for _, finding := range d.Evidence.FooterFindings {
-				wireFinding := crmcontracts.FooterFinding(finding)
-				if wireFinding.MissingMeans == nil {
-					wireFinding.MissingMeans = []string{}
-				}
-				findings = append(findings, wireFinding)
-			}
-			entry.FooterFindings = &findings
+			entry.FooterFindings = commsauthzwire.FooterFindings(d.Evidence.FooterFindings)
 		}
 		if preview.readableSubjects[previewSubject{kind: d.SubjectKind, id: d.SubjectID}] {
 			entry.EvidenceSubject = &crmcontracts.CommunicationEvidenceSubject{
@@ -219,6 +213,7 @@ func wireContentFindings(findings []DraftContentFinding) *[]crmcontracts.DraftCo
 			country := f.Country
 			wire.Country = &country
 		}
+		wire.Provision = commsauthzwire.Provision(f.Provision)
 		out = append(out, wire)
 	}
 	return &out

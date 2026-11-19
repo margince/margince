@@ -8177,6 +8177,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Không thể gửi tin nhắn này tới {address} ở dạng hiện tại.",
   "compose.sendAnyway.finding.none":
     "Không thể gửi tin nhắn này ở dạng hiện tại.",
+  "compose.sendAnyway.cited": "Lưu ý: gửi tới {address} có thể vi phạm",
+  "compose.citation.law": "Quy định:",
   "compose.sendAnyway.warning":
     "Lần kiểm tra trước khi gửi vẫn chặn tin nhắn này. Vẫn gửi chỉ gửi tin nhắn này và không cho phép các tin nhắn sau. Tên, lý do của bạn và tin nhắn được lưu trong một bản ghi không thể chỉnh sửa.",
   "compose.sendAnyway.editOnly": "Sửa tin nhắn hoặc bỏ địa chỉ này để gửi.",
@@ -10298,6 +10300,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Bạn không có quyền đọc thẻ nên cột thẻ không được nhập.",
   "import.reason.cannot_write_type":
     "Không thể ghi “{value}” vào trường kiểu {type}.",
+  "import.reason.company_domain_matched":
+    "Công ty đã sở hữu tên miền {value} nhận hàng này, nên không tạo công ty thứ hai.",
   "import.reason.company_duplicate_found":
     "Đã có công ty cùng tên trong CRM. Nhập hàng này sẽ tạo công ty thứ hai và đưa cặp này vào hàng đợi xem xét.",
   "import.reason.company_duplicate_skipped":
@@ -10391,6 +10395,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Giá trị “{value}” của cột “{column}” đã được dùng ở dòng {line}. Mỗi hàng cần một giá trị riêng vì nhập lại và hoàn tác nhận ra hàng theo giá trị đó.",
   "import.reason.size_band_invalid":
     "Số nhân viên “{value}” không thuộc: {allowed}.",
+  "import.reason.stored_values_kept":
+    "Hàng này không tạo bản ghi này và không nêu nó theo ID, nên giữ nguyên {column} của nó. Hàng chỉ điền các trường còn trống.",
   "import.reason.tag_created":
     "Không có thẻ nào mang tên này nên quá trình nhập đã tạo thẻ.",
   "import.reason.tag_name_invalid":
@@ -19674,6 +19680,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "project.assignOwner": "Giao cho một đồng nghiệp",
   "project.description": "Mô tả",
   "project.targetEnd": "Ngày kết thúc dự kiến",
+  "project.startDate": "Ngày bắt đầu",
+  "project.endDate": "Ngày kết thúc",
+  "project.noCustomer": "Chưa có công ty khách hàng",
+  "project.noCustomerSet":
+    "Chưa có công ty khách hàng. Đặt một công ty trong Thêm, Công ty và liên hệ.",
+  "project.newDealNeedsCustomer": "Deal mới cần có công ty khách hàng.",
   "project.new": "Dự án mới",
   "project.edit": "Sửa dự án",
   "project.archive": "Chuyển dự án vào kho lưu trữ",

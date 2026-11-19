@@ -287,10 +287,10 @@ reach features/projects/partners.tsx app/pagemeta.ts
 reach features/projects/project360.chronology.tsx features/mail/openemaildrawer.tsx
 reach features/projects/project360.chronology.tsx features/records/recordchronology.tsx
 reach features/projects/project360.chronology.tsx features/records/timelineactions.tsx
-reach features/projects/project360.tsx features/companies/companyactions.tsx
 reach features/projects/project360.tsx features/records/share.tsx
 reach features/projects/project360.tsx features/worklist/taskdetailmodal.tsx
 reach features/projects/projectcompanies.tsx features/companies/companyprojects.tsx
+reach features/projects/projectnewdeal.tsx features/companies/companyactions.tsx
 reach features/projects/projects.tsx app/pagemeta.ts
 reach features/projects/projects.tsx features/lists/savedviews.tsx
 reach features/projects/projectsections.tsx features/records/record360/index.ts

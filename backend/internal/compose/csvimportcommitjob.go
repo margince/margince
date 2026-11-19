@@ -71,6 +71,9 @@ func (w *importCommitWorker) commit(ctx context.Context, slice importSlice) (boo
 	if err := writers.bindReviewPlan(run.Report); err != nil {
 		return false, err
 	}
+	if err := writers.claimLandedPrefix(ctx, source, run.Checkpoint); err != nil {
+		return false, err
+	}
 	if err := writers.validateReviewSource(ctx, source); err != nil {
 		return false, err
 	}
