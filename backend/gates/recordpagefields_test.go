@@ -129,9 +129,9 @@ var (
 	pageRowAlias      = regexp.MustCompile(`\btype (\w+) = components\["schemas"\]\["(\w+)"\];`)
 	pageKeyAlias      = regexp.MustCompile(`\btype (\w+) = (?:components\["schemas"\]\["(\w+)"\]|(\w+))\["field"\];`)
 	pageParamKeyAlias = regexp.MustCompile(`\btype (\w+) = components\["parameters"\]\["ProfileFieldKey"\];`)
-	pagePropsDecl     = regexp.MustCompile(`(?s)\b(?:type|interface) (\w+)(?:\s+extends\s[^{]*)?\s*=?\s*(?:Readonly<)?\{(.*?)\n\}`)
-	pageInterfaceBase = regexp.MustCompile(`\binterface (\w+)\s+extends\s([^{]*)\{`)
-	pageComponentDecl = regexp.MustCompile(`\bfunction (\w+)\s*(?:<[^>]*>)?\s*\(|\bconst (\w+)\s*=\s*(?:async\s*)?(?:<[^>]*>)?\s*\(`)
+	pagePropsDecl     = regexp.MustCompile(`(?s)\btype (\w+)\s*=\s*(?:Readonly<)?\{(.*?)\n\}`)
+	pageInterfaceDecl = regexp.MustCompile(`\binterface (\w+)\s*`)
+	pageComponentDecl = regexp.MustCompile(`\bfunction (\w+)\s*|\bconst (\w+)\s*=\s*(?:async\s*)?`)
 	pageArrowTail     = regexp.MustCompile(`^\s*(?::[^=;{]*)?=>`)
 	pageConstDecl     = regexp.MustCompile(`const (\w+)(?::([^=]+))?\s*=\s*([\[{])`)
 	pageQuotedKey     = regexp.MustCompile(`"([a-z][a-z0-9_]*)"`)
@@ -225,8 +225,16 @@ func pageKeyedComponents(src string, keyTypes map[string]string) map[string]stri
 	for _, m := range pageTypeAlias.FindAllStringSubmatchIndex(src, -1) {
 		aliases = append(aliases, [2]string{src[m[2]:m[3]], src[m[1]:pageEndOf(src, m[1], ";")]})
 	}
-	for _, m := range pageInterfaceBase.FindAllStringSubmatch(src, -1) {
-		aliases = append(aliases, [2]string{m[1], m[2]})
+	for _, m := range pageInterfaceDecl.FindAllStringSubmatchIndex(src, -1) {
+		open := pageInterfaceBody(src, m[1])
+		end := pageClosingBracket(src, max(open, 0))
+		if open < 0 || end < 0 {
+			continue
+		}
+		if schema := pageDeclaredKey(src[open:end], keyTypes); schema != "" {
+			props[src[m[2]:m[3]]] = schema
+		}
+		aliases = append(aliases, [2]string{src[m[2]:m[3]], src[m[1]:open]})
 	}
 	// An alias may build on another alias, so derive until a pass adds nothing.
 	for grew := true; grew; {
@@ -241,7 +249,10 @@ func pageKeyedComponents(src string, keyTypes map[string]string) map[string]stri
 	}
 	out := map[string]string{}
 	for _, m := range pageComponentDecl.FindAllStringSubmatchIndex(src, -1) {
-		open := m[1] - 1
+		open := pageSkipSpace(src, pageAfterTypeArgs(src, m[1]))
+		if open >= len(src) || src[open] != '(' {
+			continue
+		}
 		end := pageClosingBracket(src, open)
 		if end < 0 || (m[4] >= 0 && !pageArrowTail.MatchString(src[end+1:])) {
 			continue
@@ -316,17 +327,65 @@ func pageComponentFields(src string, components map[string]string) []pageTypedKe
 				out = append(out, pageTypedKey{schema, m[1]})
 			}
 		}
-		for _, at := range regexp.MustCompile(`\b`+name+`\(`).FindAllStringIndex(src, -1) {
-			end := pageClosingBracket(src, at[1]-1)
+		for _, at := range regexp.MustCompile(`\b`+name+`\b`).FindAllStringIndex(src, -1) {
+			open := pageSkipSpace(src, pageAfterTypeArgs(src, at[1]))
+			if open >= len(src) || src[open] != '(' {
+				continue
+			}
+			end := pageClosingBracket(src, open)
 			if end < 0 {
 				continue
 			}
-			for _, m := range pageFieldArg.FindAllStringSubmatch(pageOutsideCallbacks(src[at[1]:end]), -1) {
+			for _, m := range pageFieldArg.FindAllStringSubmatch(pageOutsideCallbacks(src[open+1:end]), -1) {
 				out = append(out, pageTypedKey{schema, m[1]})
 			}
 		}
 	}
 	return out
+}
+
+// pageAfterTypeArgs answers the index after the type arguments that open at
+// at, or at when none do. The `>` of a `=>` closes nothing.
+func pageAfterTypeArgs(src string, at int) int {
+	if at >= len(src) || src[at] != '<' {
+		return at
+	}
+	depth := 0
+	for i := at; i < len(src); i++ {
+		switch {
+		case src[i] == '<':
+			depth++
+		case src[i] == '>' && src[i-1] != '=':
+			if depth--; depth == 0 {
+				return i + 1
+			}
+		case strings.IndexByte("[{(", src[i]) >= 0:
+			if i = pageClosingBracket(src, i); i < 0 {
+				return len(src)
+			}
+		}
+	}
+	return len(src)
+}
+
+// pageInterfaceBody answers the index of the brace opening an interface's body,
+// past type arguments and an extends clause, or -1.
+func pageInterfaceBody(src string, from int) int {
+	for i := from; i < len(src); i++ {
+		switch src[i] {
+		case '<':
+			i = pageAfterTypeArgs(src, i) - 1
+		case '{':
+			return i
+		case ';', '=':
+			return -1
+		}
+	}
+	return -1
+}
+
+func pageSkipSpace(src string, at int) int {
+	return at + len(src[at:]) - len(strings.TrimLeft(src[at:], " \t\n"))
 }
 
 // pageClosingBracket answers the index of the bracket closing the one at open.
@@ -359,7 +418,7 @@ func pageOutsideCallbacks(arg string) string {
 		if arrow {
 			from++
 		}
-		from += len(arg[from:]) - len(strings.TrimLeft(arg[from:], " \t\n"))
+		from = pageSkipSpace(arg, from)
 		end := -1
 		switch {
 		case from < len(arg) && (arg[from] == '{' || arrow && strings.IndexByte("[(", arg[from]) >= 0):
@@ -583,6 +642,18 @@ const vat = useExtended({ field: "register_vat" });
 export function useOwn(target: Own) { return target; }
 const icp = useOwn({ field: "icp" });
 `, []string{"icp"}},
+		{"a generic hook whose type parameter nests one", `export function useNested<T extends Array<number>>(target: RowProps, extra: T) { return target; }
+const icp = useNested({ field: "icp" }, [1]);
+`, []string{"icp"}},
+		{"an extends clause holding braces before the keyed base", `interface Wide extends Readonly<{ note: string }>, RowProps {
+  extra: string;
+}
+export function useWide(target: Wide) { return target; }
+const vat = useWide({ field: "register_vat" });
+`, []string{"register_vat"}},
+		{"a call with explicit type arguments", `export function useTyped<T>(target: RowProps, extra: T) { return target; }
+const address = useTyped<number>({ field: "registered_address" }, 1);
+`, []string{"registered_address"}},
 		{"several field keys in one argument", `export function useRows(targets: readonly RowProps[]) { return targets; }
 const rows = useRows([{ field: "icp" }, { field: "register_vat" }]);
 `, []string{"icp", "register_vat"}},
