@@ -7,8 +7,8 @@ import { useT } from "../../i18n";
 
 /**
  * A task's name, opening what the task does and the key it runs under. Every
- * screen that names an AI task names it this way, so the key a log or a config
- * file uses is one press away and never stands in for the name.
+ * screen that names an AI task names it this way. The key a log uses is then
+ * one press away, and never stands in for the name.
  */
 export function TaskName({
   name,
@@ -26,8 +26,8 @@ export function TaskName({
   summary: string | undefined;
   // What else the reader may want behind the name, below what the task does.
   details?: ReactNode;
-  // Names a dialog by this task: the id sits on the name alone, so the dialog
-  // is not named by the trigger's "what it does" phrasing.
+  // Names a dialog by this task. The id sits on the name alone, so the
+  // trigger's "what it does" phrasing never names the dialog.
   nameId?: string;
 }>) {
   const t = useT();

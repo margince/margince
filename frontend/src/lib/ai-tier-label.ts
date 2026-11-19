@@ -6,9 +6,9 @@ import type { Translator } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { labelFor } from "./labelfor";
 
-// The rung the decision lane stamps on its calls (decidetrace.go). Not a tier
-// of the ladder: the task contract never declares it, so it is spelled here
-// once and every screen that meets it in a health or usage row imports it.
+// The rung the decision lane stamps on its calls (decidetrace.go). It is not a
+// tier of the ladder, and the task contract never declares it. So it is spelled
+// here once, for every screen that meets it in a health or usage row.
 export const DECIDE_RUNG = "decide";
 
 // Cheapest first. Typed by the task contract's enum, so a tier it grows
