@@ -7248,7 +7248,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "create.lastName": "Họ",
   "create.contactTitle": "Chức danh",
   "create.greetingRegister": "Cách chào",
-  "create.greetingRegisterHint": "Bản nháp gửi liên hệ này mở đầu theo cách này.",
+  "create.greetingRegisterHint":
+    "Bản nháp gửi liên hệ này mở đầu theo cách này.",
   "create.greetingRegister.unset": "Để Margince quyết định",
   "create.greetingRegister.formal": "Trang trọng, gọi bằng họ",
   "create.greetingRegister.familiar": "Thân mật, gọi bằng tên",
