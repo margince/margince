@@ -18,6 +18,7 @@ import {
   type WorklistItem,
   worklistKey,
 } from "../worklist/worklist.queries";
+import { CaughtUp } from "./brief.caughtup";
 import { Triage } from "./brief.focus";
 import { identity } from "./brief.focuslink";
 import { HomeListReturnScope } from "./brief.queue";
@@ -65,6 +66,12 @@ export function BriefFeed({
   const partial = Boolean(
     !day?.focus || day.readings?.more_available || laneUnread(day),
   );
+  const shown =
+    state !== "ready"
+      ? state
+      : rows.length > 0 || partial
+        ? "ready"
+        : "empty";
   return (
     <section
       id="brief-today"
@@ -108,16 +115,12 @@ export function BriefFeed({
         <Card as="div" className="brief-triage-lead brief-triage-pending">
           <PendingBody label={t("brief.feed.loading")} lines={6} />
         </Card>
+      ) : shown === "empty" && day ? (
+        <CaughtUp asOf={day.as_of} />
       ) : (
         <SurfaceState
-          state={
-            state !== "ready"
-              ? state
-              : rows.length > 0 || partial
-                ? "ready"
-                : "empty"
-          }
-          emptyLabel={t("brief.feed.clear")}
+          state={shown}
+          emptyLabel={t("brief.feed.caughtUp")}
           loadingLabel={t("brief.feed.loading")}
           detail={{ onRetry }}
         >

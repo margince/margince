@@ -6,6 +6,7 @@ import { ToastProvider } from "../design-system/toast";
 import { BriefFeed } from "../features/brief/brief.feed";
 import { BriefGlance } from "../features/brief/brief.glance";
 import { WorklistRow } from "../features/worklist/worklist.row";
+import { ViewerZoneProvider } from "../lib/viewerzone";
 import { en } from "../i18n/en";
 import {
   failedApprovalRow,
@@ -137,6 +138,19 @@ it("shows dates and does not repeat the ranking comparator", () => {
   expect(screen.queryByText(/Above the next/)).toBeNull();
 });
 
+it("says the reader is caught up, and when Margince last looked, on a complete clear read", () => {
+  stubApi({});
+  render(
+    <ViewerZoneProvider zone="Europe/Berlin">
+      <BriefFeed day={readingsDay({}, [])} state="ready" />
+    </ViewerZoneProvider>,
+  );
+  expect(
+    screen.getByRole("heading", { name: en["brief.feed.caughtUp"] }),
+  ).toBeTruthy();
+  expect(screen.getByText(/Margince checked at 08:42/)).toBeTruthy();
+});
+
 it("does not claim an empty agenda when a source failed", () => {
   stubApi({});
   const day = readingsDay({}, []);
@@ -144,7 +158,7 @@ it("does not claim an empty agenda when a source failed", () => {
     { source: "task", reason: "failed", category: "tasks" },
   ];
   render(<BriefFeed day={day} state="ready" />);
-  expect(screen.queryByText(en["brief.feed.clear"])).toBeNull();
+  expect(screen.queryByText(en["brief.feed.caughtUp"])).toBeNull();
   // The sentence stands in the section.
   expect(
     screen.getByText(en["brief.feed.incomplete"]).closest("#brief-today"),
