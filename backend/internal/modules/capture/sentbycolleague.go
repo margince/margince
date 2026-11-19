@@ -43,24 +43,21 @@ func (s *Sink) asSentByColleagueTx(
 	if fields.Kind != kindEmail {
 		return rec, fields, nil
 	}
-	colleague, err := colleagueSenderTx(ctx, tx, rec)
-	if err != nil || colleague.IsZero() {
-		return rec, fields, err
-	}
+	_, seat := capturePrincipal(ctx)
 	// An invitation a colleague organised stays received mail: whom they
 	// invited is not whom they wrote to, so no stand-in counterparty is picked.
-	// A colleague forwarding someone else's invitation is not its sender, so
-	// a stated organizer must be them.
 	if fields.HasCalendarPart {
-		organised, err := organisedByTx(ctx, tx, statedOrganizer(fields), colleague)
-		if err != nil {
+		sender, err := colleagueInvitationTx(ctx, tx, rec, fields, seat)
+		if err != nil || sender.IsZero() {
 			return rec, fields, err
 		}
-		if organised {
-			fields.InvitationFromSeat = colleague
-		}
+		fields.InvitationFromSeat = sender
 		rec.Fields = fields
 		return rec, fields, nil
+	}
+	colleague, err := colleagueSenderTx(ctx, tx, rec, seat)
+	if err != nil || colleague.IsZero() {
+		return rec, fields, err
 	}
 	from := foldAddress(cp.Email)
 	recipients := rec
@@ -90,34 +87,61 @@ func (s *Sink) asSentByColleagueTx(
 	return rec, fields, nil
 }
 
+// InvitationSenderTx is the seat capture names as the sender of a received
+// invitation (asSentByColleagueTx), for a record parsed again from its stored
+// original. importer is the seat whose mailbox captured it.
+func InvitationSenderTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, importer ids.UUID) (ids.UUID, error) {
+	fields, ok := rec.Fields.(ActivityFields)
+	if !ok || fields.Kind != kindEmail || !fields.HasCalendarPart {
+		return ids.Nil, nil
+	}
+	return colleagueInvitationTx(ctx, tx, rec, fields, importer)
+}
+
+// colleagueInvitationTx is the colleague who sent an invitation, or zero. A
+// colleague forwarding someone else's invitation is not its sender, so a stated
+// organizer must be them.
+func colleagueInvitationTx(
+	ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, fields ActivityFields, importer ids.UUID,
+) (ids.UUID, error) {
+	colleague, err := colleagueSenderTx(ctx, tx, rec, importer)
+	if err != nil || colleague.IsZero() {
+		return ids.Nil, err
+	}
+	organised, err := organisedByTx(ctx, tx, statedOrganizer(fields), colleague, importer)
+	if err != nil || !organised {
+		return ids.Nil, err
+	}
+	return colleague, nil
+}
+
 // colleagueSenderTx is the seat that sent a received message, or zero. Its
 // From must be that seat's exact login at an own trusted domain (colleagueTx),
 // and the receiving server must have authenticated it (fromAuthenticated).
-func colleagueSenderTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) (ids.UUID, error) {
+func colleagueSenderTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, importer ids.UUID) (ids.UUID, error) {
 	cp := rec.Counterparty
 	if cp.Direction != connector.DirectionInbound || !SenderAuthenticated(rec, cp.Email) {
 		return ids.Nil, nil
 	}
-	return colleagueTx(ctx, tx, cp.Email)
+	return colleagueTx(ctx, tx, cp.Email, importer)
 }
 
-// colleagueTx is the seat, other than the acting one, whose login address is
+// colleagueTx is the seat, other than the importer, whose login address is
 // address; zero when there is none. Invited and deactivated seats count. Most
 // colleagues are invited and never sign in. Retired and archived seats do not count.
 //
 // The address must be at one of the workspace's own trusted domains. A seat can
 // be invited at any address, and the stamp lets that seat open the copy. A seat
 // at a customer's domain must never be read as the sender of its mail.
-func colleagueTx(ctx context.Context, tx pgx.Tx, address string) (ids.UUID, error) {
+func colleagueTx(ctx context.Context, tx pgx.Tx, address string, importer ids.UUID) (ids.UUID, error) {
 	own, err := TrustedOwnDomainsTx(ctx, tx)
 	if err != nil || !own.Covers(address) {
 		return ids.Nil, err
 	}
-	_, seat := capturePrincipal(ctx)
 	var colleague ids.UUID
 	err = tx.QueryRow(ctx, `SELECT u.id FROM app_user u
 		 WHERE `+storekit.SeatLoginIsSQL("u", "$1", "$3")+` AND u.id <> $2 AND `+workforce.CaptureSeatSQL("u"),
-		foldAddress(address), seat, owndomain.OfAddress(address)).Scan(&colleague)
+		foldAddress(address), importer, owndomain.OfAddress(address)).Scan(&colleague)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ids.Nil, nil
 	}
@@ -249,11 +273,11 @@ func recipientColleagueTx(ctx context.Context, tx pgx.Tx, address string, owner 
 // organisedByTx reports whether the seat organised the invitation. The part
 // names no organizer, or names the seat's login or a mailbox proved theirs
 // (calendarSeatMatch's rule). A declared alias never counts.
-func organisedByTx(ctx context.Context, tx pgx.Tx, organizer string, seat ids.UUID) (bool, error) {
+func organisedByTx(ctx context.Context, tx pgx.Tx, organizer string, seat, importer ids.UUID) (bool, error) {
 	if organizer == "" {
 		return true, nil
 	}
-	login, err := colleagueTx(ctx, tx, organizer)
+	login, err := colleagueTx(ctx, tx, organizer, importer)
 	if err != nil || login == seat {
 		return login == seat, err
 	}
