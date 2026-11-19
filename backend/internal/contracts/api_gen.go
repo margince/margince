@@ -69798,11 +69798,12 @@ type VCardImportResult struct {
 	// stays in `superseded_value`, and a field a human corrected stands.
 	// `needs_review` — a resemblance, written nowhere; open the candidate and decide.
 	// `proposed` — a card read from a photo that nobody matched, waiting on an approval.
-	// `skipped` — the card states no name, carries a sending system's address, or matches a
-	// contact the caller may not write; `reason` says which.
+	// `skipped` — the card states no name or one over 120 characters, carries a sending
+	// system's address, or matches a contact the caller may not write; `reason` says which.
 	Outcome VCardImportResultOutcome `json:"outcome"`
 
-	// Reason Why a card was skipped, or a warning about an imported contact without a channel.
+	// Reason Why a card was skipped. For a written card, a warning: the contact has no channel, or the
+	// card's title was cut to the length the field holds.
 	Reason *string `json:"reason,omitempty"`
 }
 
@@ -69811,8 +69812,8 @@ type VCardImportResult struct {
 // stays in `superseded_value`, and a field a human corrected stands.
 // `needs_review` — a resemblance, written nowhere; open the candidate and decide.
 // `proposed` — a card read from a photo that nobody matched, waiting on an approval.
-// `skipped` — the card states no name, carries a sending system's address, or matches a
-// contact the caller may not write; `reason` says which.
+// `skipped` — the card states no name or one over 120 characters, carries a sending
+// system's address, or matches a contact the caller may not write; `reason` says which.
 type VCardImportResultOutcome string
 
 // VoiceBuild defines model for VoiceBuild.
