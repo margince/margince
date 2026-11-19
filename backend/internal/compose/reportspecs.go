@@ -40,7 +40,7 @@ func creditedSeatIsFilter() string {
 }
 
 // withCommercialFilters adds the deal list's motion, priority and source
-// filters. filterPredicates matches each the way the list does.
+// filters. listPredicates matches each the way the list does.
 func withCommercialFilters(filters map[string]string) map[string]string {
 	for name := range deals.CommercialFilterPredicates("t") {
 		filters[name] = "t." + name
@@ -242,8 +242,8 @@ var prebuiltReports = map[string]reportSpec{
 			fieldCurrency:         colCurrency,
 			fieldProjectID:        colProjectID,
 		}),
-		filterPredicates: deals.CommercialFilterPredicates("t"),
-		filterScopes:     projectFilterScope,
+		listPredicates: deals.CommercialFilterPredicates("t"),
+		filterScopes:   projectFilterScope,
 		// Both company references, which a normal deal read masks per row
 		// when the caller cannot open them. company_id is a FILTER here
 		// and not a dimension, and it needs the scope for that alone: a count

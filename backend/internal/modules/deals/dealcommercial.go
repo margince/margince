@@ -50,29 +50,40 @@ func priorityOf(d crmcontracts.Deal) *string {
 // rather than an empty parameter because an empty string is what a cleared
 // form field sends, and "show me everything" is what THAT caller meant.
 func CommercialFilterPredicates(alias string) map[string]string {
-	out := make(map[string]string, len(commercialFilters))
-	for _, name := range commercialFilters {
-		out[name] = fmt.Sprintf("(%[1]s = %%[1]s OR (%[1]s IS NULL AND %%[1]s = '%[2]s'))",
-			columnPrefix(alias)+name, filterUnset)
+	filters := commercialFilters(ListDealsInput{})
+	out := make(map[string]string, len(filters))
+	for _, f := range filters {
+		out[f.name] = commercialPredicate(alias, f.name)
 	}
 	return out
 }
 
-// commercialFilters are wire names that are also the deal's column names.
-var commercialFilters = []string{filterCommercialMotion, filterPriority, filterAcquisitionSource}
+func commercialPredicate(alias, name string) string {
+	return fmt.Sprintf("(%[1]s = %%[1]s OR (%[1]s IS NULL AND %%[1]s = '%[2]s'))",
+		columnPrefix(alias)+name, filterUnset)
+}
+
+type commercialFilter struct {
+	name  string
+	value *string
+}
+
+// commercialFilters pairs each of the three with the value a list input asks
+// for. Each wire name is also the deal's column name.
+func commercialFilters(in ListDealsInput) []commercialFilter {
+	return []commercialFilter{
+		{filterCommercialMotion, in.CommercialMotion},
+		{filterPriority, in.Priority},
+		{filterAcquisitionSource, in.AcquisitionSource},
+	}
+}
 
 // appendCommercialFilters narrows a deal list by the three commercial-context
 // columns and by link type.
 func appendCommercialFilters(where []string, in ListDealsInput, arg func(any) int) []string {
-	predicates := CommercialFilterPredicates("")
-	values := map[string]*string{
-		filterCommercialMotion:  in.CommercialMotion,
-		filterPriority:          in.Priority,
-		filterAcquisitionSource: in.AcquisitionSource,
-	}
-	for _, name := range commercialFilters {
-		if value := values[name]; value != nil {
-			where = append(where, storekit.SQLf(predicates[name], storekit.SQLf("$%d", arg(*value))))
+	for _, f := range commercialFilters(in) {
+		if f.value != nil {
+			where = append(where, storekit.SQLf(commercialPredicate("", f.name), storekit.SQLf("$%d", arg(*f.value))))
 		}
 	}
 	if in.LinkType != nil {

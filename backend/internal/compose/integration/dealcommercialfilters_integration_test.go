@@ -12,6 +12,8 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/deals"
 )
 
@@ -41,8 +43,13 @@ func TestTheDealListAndTheStageTotalsCountOneSetPerCommercialFilter(t *testing.T
 		"priority":           {"high": 1, "low": 0, "unset": 2},
 		"acquisition_source": {"outbound": 1, "referral": 1, "unset": 1},
 	}
-	// Derived from the owner, so a filter added there without a case here fails.
-	for _, name := range slices.Sorted(maps.Keys(deals.CommercialFilterPredicates(""))) {
+	// Derived from the owner, so a filter added there without a case here fails,
+	// and so does one the owner stops answering.
+	names := slices.Sorted(maps.Keys(deals.CommercialFilterPredicates("")))
+	if !slices.Equal(names, slices.Sorted(maps.Keys(want))) {
+		t.Errorf("the commercial filters are %v, want %v", names, slices.Sorted(maps.Keys(want)))
+	}
+	for _, name := range names {
 		set, cases := setters[name], want[name]
 		if set == nil || cases == nil {
 			t.Errorf("%s is a commercial filter with no case here", name)
@@ -69,6 +76,45 @@ func TestTheDealListAndTheStageTotalsCountOneSetPerCommercialFilter(t *testing.T
 				t.Errorf("%s=%s: the list has %d deals and the stage totals count %d, want %d in both",
 					name, value, len(listed), counted, count)
 			}
+		}
+	}
+}
+
+// An analytics question compares the commercial columns as plain values. The
+// list's "unset" word belongs to the report plan, and here is_null asks it.
+func TestAnAnalyticsQuestionComparesTheCommercialColumnsAsValues(t *testing.T) {
+	d := newTwoDoors(t, "deal-commercial-analytics", "read")
+	stages := apptest.DiscoverSeededPipeline(t, d.e)
+	// Five of each, so no filter separates out fewer than the privacy floor.
+	for range analyticsquery.DefaultFloor {
+		for _, deal := range []AnyMap{
+			{"name": "Renewal", "commercial_motion": "renewal", "priority": "high"},
+			{"name": "New business", "commercial_motion": "new_business"},
+			{"name": "Nothing recorded"},
+		} {
+			deal["pipeline_id"], deal["stage_id"], deal["source"] = stages.PipelineID, stages.Open, "manual"
+			createdID(t, d.e, "/v1/deals", deal)
+		}
+	}
+	for _, tc := range []struct {
+		field, op string
+		value     any
+		want      string
+	}{
+		{"priority", "is_null", nil, "10"},
+		{"commercial_motion", "ne", "renewal", "5"},
+	} {
+		filter := map[string]any{"field": tc.field, "op": tc.op}
+		if tc.value != nil {
+			filter["value"] = tc.value
+		}
+		answer := askMoney(t, d, map[string]any{
+			"entity": "deals-by-stage", "scope_kind": "workspace",
+			"measures": []any{map[string]any{"fn": "count", "as": "deals"}},
+			"filters":  []any{filter},
+		})
+		if len(answer.Rows) != 1 || fmt.Sprint(answer.Rows[0]["deals"]) != tc.want {
+			t.Errorf("%s %s %v counted %+v, want %s deals", tc.field, tc.op, tc.value, answer.Rows, tc.want)
 		}
 	}
 }

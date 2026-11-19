@@ -4,6 +4,7 @@ import type { MessageKey } from "../../i18n/en";
 import {
   CLOSE_DAY_DIAL,
   closeDayRange,
+  dialOfParameter,
   VALUE_DIAL,
 } from "../../lib/dealranges";
 import {
@@ -97,12 +98,20 @@ describe("every deals filter", () => {
     );
   });
 
-  it.each(CASES)("%s=%s changes the /deals request", (key, value) => {
+  // Sent under its own name, or as the bounds a range dial names.
+  it.each(CASES)("%s=%s goes out in the /deals request", (key, value) => {
     expect(value, `${key} has no option and no typed value`).not.toBe("");
-    const narrowed = filtersOf({ [key]: value });
-    expect(dealsQueryParams(narrowed)).not.toEqual(
-      dealsQueryParams(filtersOf({})),
+    const sent: Record<string, unknown> = dealsQueryParams(
+      filtersOf({ [key]: value }),
     );
+    const unfiltered: Record<string, unknown> = dealsQueryParams(filtersOf({}));
+    const changed = Object.keys(sent).filter(
+      (parameter) => sent[parameter] !== unfiltered[parameter],
+    );
+    expect(changed.length).toBeGreaterThan(0);
+    expect(changed.map(dialOfParameter)).toEqual(changed.map(() => key));
+    // A flag goes out as a boolean, so compare the words.
+    if (changed.includes(key)) expect(String(sent[key])).toBe(value);
   });
 
   // A stage total the report counts over a wider set than the cards would
