@@ -4,6 +4,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../../api/client";
+import { useExitAsking } from "../../components/unsaved";
 import {
   Avatar,
   Badge,
@@ -120,6 +121,7 @@ function SignInPanel() {
   const t = useT();
   const me = useMe();
   const logout = useLogout();
+  const askFirst = useExitAsking();
   const email = me.data?.user.email;
   return (
     <Panel title={t("account.signInCard")}>
@@ -135,7 +137,7 @@ function SignInPanel() {
             <Button
               variant="ghost"
               disabled={logout.isPending}
-              onClick={() => logout.mutate()}
+              onClick={() => askFirst(() => logout.mutate())}
             >
               {t("auth.signOut")}
             </Button>

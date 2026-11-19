@@ -1,8 +1,12 @@
 import {
+  createContext,
   type ReactNode,
+  type RefObject,
   useCallback,
+  useContext,
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
   useState,
 } from "react";
@@ -124,6 +128,35 @@ export function useBeforeUnload(dirty: boolean): void {
   }, [dirty]);
 }
 
+type AskThen = (exit: () => void) => void;
+
+// The guard's way to ask, for controls outside it: the account menu sits beside
+// the routed screen, not inside it. A ref, so a claim re-renders no shell.
+const ExitContext = createContext<RefObject<AskThen | null> | null>(null);
+
+/** Wraps the `UnsavedGuard` and the controls beside it that `useExitAsking` serves. */
+export function UnsavedExits({ children }: Readonly<{ children: ReactNode }>) {
+  const ask = useRef<AskThen | null>(null);
+  return <ExitContext.Provider value={ask}>{children}</ExitContext.Provider>;
+}
+
+/**
+ * Runs an exit that does not move the address, such as Sign out, once the
+ * page's drafts are settled. It runs at once when nothing is unsaved, and
+ * otherwise after the question a move off the page asks.
+ */
+export function useExitAsking(): AskThen {
+  const askRef = useContext(ExitContext);
+  return useCallback(
+    (exit: () => void) => {
+      const guard = askRef?.current;
+      if (guard) guard(exit);
+      else exit();
+    },
+    [askRef],
+  );
+}
+
 /**
  * Holds `children` on their address while a draft is unsaved, and asks before
  * leaving. Stay hands `onKeep` the depth stamp of the entry that address was on.
@@ -160,14 +193,37 @@ export function UnsavedGuard<Address extends string>({
 
   const asking = address !== shown.address && dirty;
 
+  const exitsRef = useContext(ExitContext);
+  const [exit, setExit] = useState<(() => void) | null>(null);
+  useLayoutEffect(() => {
+    if (!exitsRef) return;
+    const ask: AskThen = (then) => {
+      if (dirty) setExit(() => then);
+      else then();
+    };
+    exitsRef.current = ask;
+    return () => {
+      if (exitsRef.current === ask) exitsRef.current = null;
+    };
+  }, [exitsRef, dirty]);
+
   return (
     <UnsavedContext.Provider value={registry}>
       {children(shown.address)}
       <LeaveQuestion
-        open={asking}
+        open={asking || exit !== null}
         savers={registry.savers}
-        onStay={() => onKeep(shown.address, shown.depth)}
-        onLeave={() => setShown({ address, depth: entryDepth() })}
+        onStay={
+          exit ? () => setExit(null) : () => onKeep(shown.address, shown.depth)
+        }
+        onLeave={
+          exit
+            ? () => {
+                setExit(null);
+                exit();
+              }
+            : () => setShown({ address, depth: entryDepth() })
+        }
       />
     </UnsavedContext.Provider>
   );

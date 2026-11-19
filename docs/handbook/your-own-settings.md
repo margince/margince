@@ -23,7 +23,7 @@ The writing voice step names what is next for your voice: **Add samples**, **Bui
 ### How do I save a change on a settings page?
 To save a change on a settings page in Margince, change a field, then choose **Save** in the bar at the foot of the page.
 **Discard** in that bar puts every field back as it was. If a field has a mistake, the bar says "Fix the marked fields to save."
-Switches work at once and need no save. If you leave with changes not saved, Margince asks "Save your changes?" and offers **Save**, **Discard changes** or **Stay**.
+Switches work at once and need no save. If you leave or sign out with changes not saved, Margince asks "Save your changes?" and offers **Save**, **Discard** or **Stay**.
 Also called: save settings, changes not saved, undo changes.
 
 ### How do I change my notifications?

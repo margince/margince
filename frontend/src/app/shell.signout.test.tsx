@@ -4,8 +4,14 @@
 
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { App } from "../App";
+import {
+  UnsavedExits,
+  UnsavedGuard,
+  useUnsavedGuard,
+} from "../components/unsaved";
 import { memoryStorage } from "../testing/appharness";
 import { ignoreSearch, newClient, renderWith } from "../testing/shellharness";
 import { Shell } from "./shell";
@@ -57,6 +63,38 @@ describe("Sign-out (AS-1)", () => {
     // calling resetToSignedOut (lib/session.ts).
     await waitFor(() => expect(loggedOut).toBe(true));
     await waitFor(() => expect(client.getQueryData(["me"])).toBeUndefined());
+  });
+
+  it("asks before it ends a session with an unsaved edit on the page", async () => {
+    const user = userEvent.setup();
+    let loggedOut = false;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input instanceof Request ? input.url : input);
+        loggedOut ||= url.endsWith("/v1/auth/logout");
+        return new Response(null, { status: 404 });
+      }),
+    );
+    const client = newClient();
+    client.setQueryData(["me"], { user: { id: "u1", email: "ada@acme.test" } });
+    window.location.hash = "#/settings/account";
+    renderWith(
+      client,
+      <UnsavedExits>
+        <Shell onOpenSearch={ignoreSearch}>
+          <UnsavedGuard address="account" onKeep={() => undefined}>
+            {() => <GreetingDraft />}
+          </UnsavedGuard>
+        </Shell>
+      </UnsavedExits>,
+    );
+    await user.type(screen.getByRole("textbox", { name: "Greeting" }), "Ada");
+    await user.click(screen.getByRole("button", { name: /account$/i }));
+    await user.click(await screen.findByRole("menuitem", { name: "Sign out" }));
+
+    await screen.findByRole("dialog", { name: "Discard unsaved changes?" });
+    expect(loggedOut).toBe(false);
   });
 
   // queryClient.clear() alone empties the cache but does NOT force a mounted
@@ -120,3 +158,15 @@ describe("Sign-out (AS-1)", () => {
     expect(meCalls).toBeGreaterThan(probesBeforeSignOut);
   });
 });
+
+function GreetingDraft() {
+  const [typed, setTyped] = useState("");
+  useUnsavedGuard(typed !== "");
+  return (
+    <input
+      aria-label="Greeting"
+      value={typed}
+      onChange={(event) => setTyped(event.target.value)}
+    />
+  );
+}

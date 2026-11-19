@@ -16,8 +16,10 @@ import { Modal } from "../design-system/modal";
 import { LocaleProvider } from "../i18n";
 import { navigate, useHash } from "../lib/router";
 import {
+  UnsavedExits,
   UnsavedGuard,
   useBeforeUnload,
+  useExitAsking,
   useGuardedLeave,
   useUnsavedGuard,
 } from "./unsaved";
@@ -418,6 +420,91 @@ describe("useGuardedLeave", () => {
     await user.click(screen.getByRole("button", { name: "keep it" }));
 
     await waitFor(() => expect(window.location.hash).toBe("#/lists/L1"));
+  });
+});
+
+// Sign out sits in the account menu, beside the guarded page rather than in it.
+function SignOutBeside({
+  signOut,
+  save,
+}: Readonly<{ signOut: () => void; save?: () => Promise<boolean> }>) {
+  return (
+    <LocaleProvider>
+      <UnsavedExits>
+        <SignOutButton signOut={signOut} />
+        <UnsavedGuard address="first" onKeep={() => undefined}>
+          {() => (save ? <SaveableCard save={save} /> : <DraftCard />)}
+        </UnsavedGuard>
+      </UnsavedExits>
+    </LocaleProvider>
+  );
+}
+
+function SignOutButton({ signOut }: Readonly<{ signOut: () => void }>) {
+  const askFirst = useExitAsking();
+  return (
+    <button type="button" onClick={() => askFirst(signOut)}>
+      sign out
+    </button>
+  );
+}
+
+describe("useExitAsking", () => {
+  it("signs out at once when nothing is unsaved", async () => {
+    const user = userEvent.setup();
+    const signOut = vi.fn();
+    render(<SignOutBeside signOut={signOut} />);
+    await user.click(screen.getByRole("button", { name: "sign out" }));
+
+    expect(signOut).toHaveBeenCalledTimes(1);
+    expect(dialog()).toBeNull();
+  });
+
+  it("asks first over a draft, and Stay keeps both the draft and the session", async () => {
+    const user = userEvent.setup();
+    const signOut = vi.fn();
+    render(<SignOutBeside signOut={signOut} />);
+    await user.type(screen.getByRole("textbox", { name: /Signature/ }), "Jane");
+    await user.click(screen.getByRole("button", { name: "sign out" }));
+
+    expect(dialog()).not.toBeNull();
+    await user.keyboard("{Escape}");
+    expect(signOut).not.toHaveBeenCalled();
+    expect(dialog()).toBeNull();
+    expect(screen.getByRole("textbox", { name: /Signature/ })).toHaveValue(
+      "Jane",
+    );
+  });
+
+  it("signs out once the reader discards", async () => {
+    const user = userEvent.setup();
+    const signOut = vi.fn();
+    render(<SignOutBeside signOut={signOut} />);
+    await user.type(screen.getByRole("textbox", { name: /Signature/ }), "Jane");
+    await user.click(screen.getByRole("button", { name: "sign out" }));
+    await user.click(screen.getByRole("button", { name: "Discard changes" }));
+
+    expect(signOut).toHaveBeenCalledTimes(1);
+  });
+
+  it("signs out only after Save has written", async () => {
+    const user = userEvent.setup();
+    const signOut = vi.fn();
+    const save = vi.fn(async () => true);
+    render(<SignOutBeside signOut={signOut} save={save} />);
+    await user.type(screen.getByRole("textbox", { name: /Name/ }), "Jane");
+    await user.click(screen.getByRole("button", { name: "sign out" }));
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(signOut).toHaveBeenCalledTimes(1));
+    expect(save).toHaveBeenCalledTimes(1);
+  });
+
+  it("runs the exit at once where no guard is installed", async () => {
+    const signOut = vi.fn();
+    renderHook(() => useExitAsking()).result.current(signOut);
+
+    expect(signOut).toHaveBeenCalledTimes(1);
   });
 });
 

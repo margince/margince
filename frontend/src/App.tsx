@@ -33,6 +33,7 @@ import { useCommandPalette } from "./app/palettehotkey";
 import { Shell, useRoute } from "./app/shell";
 import { SourceHost } from "./app/sourcehost";
 import { CallLogHost } from "./components/calllog.host";
+import { UnsavedExits } from "./components/unsaved";
 import { useJourneyProgress } from "./features/onboarding/onboarding-journey";
 import { WriteToHost } from "./features/settings/writetohost";
 import type { AuthNotice } from "./features/sign-in/auth";
@@ -463,13 +464,16 @@ function AuthedApp({
             <CallLogHost>
               <SourceHost>
                 <ApprovalHost>
-                  <AuthedShell onOpenSearch={() => palette.show("all")}>
-                    <ScreenView
-                      screen={route.screen}
-                      id={route.id}
-                      id2={route.id2}
-                    />
-                  </AuthedShell>
+                  {/* Sign out in the shell's account menu asks the page's guard. */}
+                  <UnsavedExits>
+                    <AuthedShell onOpenSearch={() => palette.show("all")}>
+                      <ScreenView
+                        screen={route.screen}
+                        id={route.id}
+                        id2={route.id2}
+                      />
+                    </AuthedShell>
+                  </UnsavedExits>
                 </ApprovalHost>
               </SourceHost>
             </CallLogHost>
