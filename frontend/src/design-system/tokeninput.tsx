@@ -11,8 +11,9 @@ import {
 } from "react";
 import { isImeCommit } from "../lib/imecommit";
 import { Avatar } from "./avatar";
-import { type PeekContent, usePeek } from "./peek";
+import { usePeek } from "./peek";
 import { type Suggestion, SuggestPopup, useSuggestList } from "./suggestlist";
+import { tokenCard } from "./tokencard";
 import "./tokeninput.css";
 
 /**
@@ -42,6 +43,12 @@ export type TokenParse = Readonly<{
   /** Keys that commit what is typed, beside Enter. */
   keys: readonly string[];
   read: (raw: string) => TokenReading;
+  /** What two values compare by, such as an address folded to lower case.
+   *  Omitted, two values are one when their text is. */
+  key?: (value: string) => string;
+  /** A well-formed value the host turns away, such as an address already on
+   *  the message. It stays typed and goes to `onRefuse` like a part that is none. */
+  refuses?: (value: string) => boolean;
   onRefuse: (refused: readonly string[]) => void;
 }>;
 
@@ -67,7 +74,9 @@ export type TokenParse = Readonly<{
  *  - **A duplicate is dropped silently**, including one a single commit repeats
  *    to itself (`DE, DE`). `in` is a set — admitting `DE` twice would change
  *    nothing about what matches, so refusing it with a message would be noise
- *    about a distinction the engine does not make.
+ *    about a distinction the engine does not make. `parse.key` says what
+ *    counts as the same value. A value `parse.refuses` names is refused
+ *    instead, and stays typed.
  *  - **Blank is dropped.** Enter on an empty box does nothing rather than adding
  *    an empty token, which would compile to a predicate matching the empty
  *    string.
@@ -92,6 +101,12 @@ export type TokenInputProps = Readonly<{
   /** What this field could hold, offered as the reader types. Omit it and the
    *  control is the plain text-and-tokens box it has always been. */
   suggestions?: readonly TokenSuggestion[];
+  /** The rows the list offers for the text typed. Omit it and every suggestion
+   *  is offered; `suggestions` still names the committed values. */
+  offerFor?: (typed: string) => readonly TokenSuggestion[];
+  /** Names each token's remove button, so a reader moving by control hears
+   *  which one; the caller translates it. */
+  removeLabel: (value: string) => string;
   /**
    * The reader has started typing, before anything is committed.
    *
@@ -127,6 +142,8 @@ export function TokenInput({
   values,
   onChange,
   suggestions,
+  offerFor,
+  removeLabel,
   onEditing,
   parse,
   placeholder,
@@ -142,6 +159,8 @@ export function TokenInput({
   // popup two inches wide in the middle of the row.
   const fieldRef = useRef<HTMLSpanElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
+  const keyOf = parse?.key ?? sameText;
+  const held = new Set(values.map(keyOf));
 
   const commit = (raw: string) => {
     // One paste can carry several values; one keystroke carries one. Splitting
@@ -154,20 +173,30 @@ export function TokenInput({
     // render two tokens under one React key, and give the reader a remove
     // control that takes away a token it does not name.
     const reading = (parse ?? BY_COMMA).read(raw);
-    const seen = new Set(values);
+    const seen = new Set(values.map(keyOf));
     const fresh: string[] = [];
+    const turnedAway: string[] = [];
     for (const part of reading.values) {
       const value = part.trim();
-      if (value === "" || seen.has(value)) {
+      if (value === "") {
         continue;
       }
-      seen.add(value);
+      if (parse?.refuses?.(value)) {
+        turnedAway.push(value);
+        continue;
+      }
+      if (seen.has(keyOf(value))) {
+        continue;
+      }
+      seen.add(keyOf(value));
       fresh.push(value);
     }
     if (fresh.length > 0) {
       onChange([...values, ...fresh]);
+      // The reader has what they typed; a list left open would cover the next field.
+      list.close();
     }
-    const refused = [...new Set(reading.refused)];
+    const refused = [...new Set([...reading.refused, ...turnedAway])];
     setTyped(refused.join(", "));
     parse?.onRefuse(refused);
   };
@@ -193,19 +222,19 @@ export function TokenInput({
   // A committed value an offer named reads as that name; what it stands for
   // waits on the token's card.
   const offers = new Map(
-    (suggestions ?? EMPTY).map((row) => [row.value, row] as const),
+    (suggestions ?? EMPTY).map((row) => [keyOf(row.value), row] as const),
   );
 
   const list = useSuggestList({
     anchorRef: fieldRef,
     popupRef,
-    suggestions: suggestions ?? EMPTY,
+    suggestions: offerFor ? offerFor(typed) : (suggestions ?? EMPTY),
     typed,
     disabled,
     // A value already on the field is not on offer: the set is what it is, and
     // offering a reader the token standing in front of them is help that
     // isn't.
-    taken: new Set(values),
+    taken: (value) => held.has(keyOf(value)),
     // A picked row is a commit like any other — it goes through `commit` so the
     // duplicate rule, the blank rule and the clearing of the box are decided in
     // one place whether a value was typed or chosen.
@@ -249,7 +278,8 @@ export function TokenInput({
         <TokenChip
           key={value}
           value={value}
-          offer={offers.get(value)}
+          offer={offers.get(keyOf(value))}
+          removeLabel={removeLabel(value)}
           disabled={disabled}
           mark={marked?.values.has(value) ? marked.label : undefined}
           aside={aside?.(value)}
@@ -265,7 +295,7 @@ export function TokenInput({
         // the PROP rather than on whether it currently has rows, so a field does
         // not change what it is while its suggestions load or while the reader
         // types past the last match.
-        {...(suggestions ? list.fieldAria : {})}
+        {...(suggestions || offerFor ? list.fieldAria : {})}
         ref={inputRef}
         className="token-box"
         autoComplete="off"
@@ -304,6 +334,7 @@ export function TokenInput({
 function TokenChip({
   value,
   offer,
+  removeLabel,
   disabled,
   mark,
   aside,
@@ -311,6 +342,7 @@ function TokenChip({
 }: Readonly<{
   value: string;
   offer: TokenSuggestion | undefined;
+  removeLabel: string;
   disabled: boolean | undefined;
   mark: string | undefined;
   aside: ReactNode;
@@ -355,7 +387,7 @@ function TokenChip({
           type="button"
           className="token-remove"
           disabled={disabled}
-          aria-label={`Remove ${value}`}
+          aria-label={removeLabel}
           onClick={onRemove}
         >
           <X size={12} aria-hidden />
@@ -366,38 +398,12 @@ function TokenChip({
   );
 }
 
-function tokenCard(
-  value: string,
-  label: string,
-  card: TokenCard | undefined,
-): PeekContent {
-  return {
-    head: label,
-    headHidden: true,
-    items: [
-      {
-        key: value,
-        lead: card && (
-          <Avatar
-            name={label}
-            identity={card.identity}
-            photo={card.photo}
-            size="md"
-          />
-        ),
-        title: label,
-        sub: value,
-        href: card?.href,
-      },
-    ],
-    foot: card?.about || undefined,
-  };
-}
-
 // One frozen empty list rather than a fresh `[]` per render: the suggestion
 // hook filters on identity-stable input, and a new array each time would remake
 // the matches on every keystroke of a field that was given nothing to offer.
 const EMPTY: readonly TokenSuggestion[] = [];
+
+const sameText = (value: string) => value;
 
 const BY_COMMA: Omit<TokenParse, "onRefuse"> = {
   keys: [","],

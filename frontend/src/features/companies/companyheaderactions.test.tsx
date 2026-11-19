@@ -16,6 +16,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { useActivityGate } from "../../components/activitygate";
 import { SEARCH_DEBOUNCE_MS } from "../../design-system/debouncedsearch";
+import { armHoverIntent } from "../../design-system/hoverintent-testing";
 import { UTC_ZONE } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
@@ -219,6 +220,40 @@ describe("Log activity and Add task, gated on the create grant", () => {
     expect(email.hasAttribute("disabled")).toBe(true);
     expect(email.getAttribute("aria-describedby")).toBe(
       log.getAttribute("aria-describedby"),
+    );
+  });
+
+  it("names each refusal in its verb's tooltip or title, outside its description", async () => {
+    stubGrants({});
+    const user = userEvent.setup();
+    armHoverIntent();
+    renderActions();
+    const why = en["record.logActivityRefused"];
+
+    const log = await screen.findByRole("button", { name: "Log activity" });
+    const email = screen.getByRole("button", {
+      name: en["contact.action.email"],
+    });
+    await waitFor(() =>
+      expect(log.getAttribute("title")).toBe(`${en["log.title"]}. ${why}`),
+    );
+    expect(email.getAttribute("aria-describedby")).toBe(
+      log.getAttribute("aria-describedby"),
+    );
+    const book = screen.getByRole("button", {
+      name: en["scheduling.bookContact"],
+    });
+    expect(book.getAttribute("title")).toBe(
+      `${en["scheduling.bookContact"]}. ${en["scheduling.bookRefused"]}`,
+    );
+
+    const host = email.closest(".icon-action");
+    if (!(host instanceof HTMLElement)) {
+      throw new Error("the Email verb lost its tooltip host");
+    }
+    await user.hover(host);
+    expect((await screen.findByRole("tooltip")).textContent).toBe(
+      `${en["contact.action.email"]}. ${why}`,
     );
   });
 

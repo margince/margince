@@ -170,7 +170,7 @@ func attachImportedIdentityLinks(ctx context.Context, tx pgx.Tx, bound crmcontra
 	}
 	// Ownership was proved before binding; each destination still needs the importer's attach authority.
 	binding := principal.SystemActing(ctx, "system:import-identity-links")
-	for _, link := range missing {
+	for _, link := range projectLinksFirst(missing) {
 		if _, err := RelinkActivityInTx(binding, tx, ids.From[ids.ActivityKind](ids.UUID(bound.Id)), RelinkActivityInput{EntityType: link.EntityType, EntityID: link.EntityID}); err != nil {
 			return err
 		}

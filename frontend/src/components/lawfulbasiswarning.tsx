@@ -10,6 +10,7 @@ import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
+import { addressKey } from "../lib/addresskey";
 import { problemMessageOf, throwProblem } from "../lib/problem";
 
 // The warning before a send to a recipient whose country has no
@@ -48,7 +49,7 @@ function confirmableSubjects(
     ) {
       return [];
     }
-    const address = recipient.address.trim().toLowerCase();
+    const address = addressKey(recipient.address);
     const statement = stated.find((entry) => entry.address === address);
     return [
       statement

@@ -12,7 +12,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { writeMessage } from "../../design-system/richtext-testing";
+import { messageBox, writeMessage } from "../../design-system/richtext-testing";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
 import { contactDocuments } from "../../testing/contactdocuments";
@@ -270,6 +270,73 @@ describe("the recipient lines", () => {
     // Beside the record's own address, which the drawer offered into the empty
     // field — what the reader typed is added, never substituted.
     expect(sentMail(sent)?.to).toContain("stranger@example.com");
+  });
+});
+
+describe("where the cursor starts", () => {
+  it("starts in the message when To is offered the record's address", async () => {
+    stubRoutes();
+    render(drawer());
+    await screen.findByRole("button", { name: "Remove dana@brandt.example" });
+    expect(document.activeElement).toBe(messageBox("Body"));
+  });
+
+  it("starts in To when no address is coming into it", async () => {
+    stubRoutes();
+    render(
+      <ComposeWindow
+        entityType="contact"
+        entityId="p-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+    const to = await screen.findByLabelText("To");
+    await waitFor(() => expect(document.activeElement).toBe(to));
+  });
+});
+
+describe("where the cursor goes once the account is read", () => {
+  it("moves to To when the contact it started from has no address", async () => {
+    let answer: (response: Response) => void = () => {};
+    stubRoutes({
+      "GET /companies/co-1/360": () =>
+        new Promise<Response>((resolve) => {
+          answer = resolve;
+        }),
+    });
+    render(
+      <ComposeWindow
+        entityType="company"
+        entityId="co-1"
+        contactId="p-9"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+    const to = await screen.findByLabelText("To");
+    await waitFor(() =>
+      expect(document.activeElement).toBe(messageBox("Body")),
+    );
+
+    answer(
+      jsonResponse({
+        company: { id: "co-1", display_name: "Nordwand" },
+        contacts: {
+          data: [
+            {
+              contact_id: "p-9",
+              full_name: "Ines Ohnemail",
+              primary_email: null,
+              attachable: true,
+            },
+          ],
+        },
+        sections_omitted: [],
+      }),
+    );
+
+    await waitFor(() => expect(document.activeElement).toBe(to));
   });
 });
 

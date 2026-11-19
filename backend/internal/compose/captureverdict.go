@@ -38,7 +38,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/customfields"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
-	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/schema"
@@ -110,7 +109,7 @@ func NewCounterpartyVerdictEngine(
 		contacts:   newCounterpartyStore(pool),
 		activities: activities.NewStore(InstallationDB(pool)).WithFieldCatalog(customfields.NewService(pool, nil)),
 		approvals:  NewApprovalsService(InstallationDB(pool)),
-		eraser:     ComposedEraser(pool, nil, nil),
+		eraser:     ComposedEraser(pool, nil),
 		brain:      brain,
 		triage:     newDomainTriageTrigger(pool, log, lists.SkipReservedDomainProposals),
 		tagFiler:   newConnectorTagFiler(pool),
@@ -123,11 +122,11 @@ func NewCounterpartyVerdictEngine(
 	}
 }
 
-// WithObjectStores returns an engine whose redaction stage also purges the
-// attachment bytes and the one-time link material behind the mail it destroys.
-func (e *CounterpartyVerdictEngine) WithObjectStores(blob blobstore.Store, vault keyvault.Vault) *CounterpartyVerdictEngine {
+// WithBlobstore returns an engine whose redaction stage also purges the
+// attachment bytes behind the mail it destroys.
+func (e *CounterpartyVerdictEngine) WithBlobstore(blob blobstore.Store) *CounterpartyVerdictEngine {
 	out := *e
-	out.eraser = e.eraser.WithBlobstore(blob).WithPayloadVault(privacyPayloads(vault))
+	out.eraser = e.eraser.WithBlobstore(blob)
 	return &out
 }
 

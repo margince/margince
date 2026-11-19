@@ -39,13 +39,18 @@ type IconActionFace = {
 
 type IconActionPress = {
   href?: undefined;
-  /** Why this verb is unavailable; refuses the press, as on `Button`. */
+  /** Why this verb is unavailable; refuses the press, as on `Button`, and is the tip. */
   reason?: string;
   /**
    * The id of a sentence ALREADY on the page saying why — for a surface where
    * one fact refuses several verbs, as `Button.reasonId` is for.
    */
   reasonId?: string;
+  /**
+   * The sentence `reasonId` names, shown in the tip beside the glyph. The
+   * description keeps pointing at the page's copy, so it is heard once.
+   */
+  reasonTip?: string;
   /**
    * A precondition this verb is waiting on, with no sentence to go with it —
    * the third refusal `Button` already draws and the one a glyph most often
@@ -96,8 +101,9 @@ export function IconAction(
 ) {
   const { label, hint, icon, inline, word } = props;
   const hintId = useId();
+  const why = props.reasonId === undefined ? props.reason : props.reasonTip;
   const { ref, trigger, tip } = useTooltip<HTMLSpanElement>(
-    hint === undefined ? label : `${label}. ${hint}`,
+    tipText(label, why ?? hint),
   );
   const face = (
     <>
@@ -159,6 +165,14 @@ export function IconAction(
       )}
     </span>
   );
+}
+
+/**
+ * What a verb's hover shows: its name, then the one sentence beside it. A
+ * worded verb whose hover is its `title` uses it for the same text.
+ */
+export function tipText(label: string, sentence?: string): string {
+  return sentence ? `${label}. ${sentence}` : label;
 }
 
 /**

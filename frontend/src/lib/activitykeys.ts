@@ -71,6 +71,7 @@ export function entityTimelineKeys(
       DEAL_COVERAGE_KEY,
       ["company-coverage"],
       ...EVERY_COMPANY_TIMELINE,
+      ...EVERY_PROJECT_TIMELINE,
     );
   }
   return keys;
@@ -206,6 +207,14 @@ export function loggedActivityKeys(
 const EVERY_COMPANY_TIMELINE: QueryKey[] = [
   ["activities", "company"],
   ["company360"],
+];
+
+// An activity filed on a deal is filed on the deal's project too, and the
+// writer knows the deal, not the project. The 360 key leads with the project
+// id, so only the ["project"] prefix reaches it.
+const EVERY_PROJECT_TIMELINE: QueryKey[] = [
+  ["activities", "project"],
+  ["project"],
 ];
 
 export const TASK_QUEUE_KEY: QueryKey = ["tasks"];

@@ -118,6 +118,16 @@ export const LoggingRefused: Story = {
       ),
     );
     await expect(email).toBeDisabled();
+    const host = email.closest(".icon-action");
+    await expect(host).not.toBeNull();
+    if (host) {
+      await userEvent.hover(host);
+    }
+    await waitFor(() =>
+      expect(screen.getByRole("tooltip")).toHaveTextContent(
+        "Email. You do not have permission to log activities on this record.",
+      ),
+    );
   },
 };
 

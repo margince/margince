@@ -12,6 +12,7 @@ import {
   StoryProviders,
 } from "../../testing/story-utils";
 import { DraftBand, RewriteRow } from "./composedraftband";
+import type { DraftProvenance } from "./composedraftcall";
 // The drawer's own sheet: `.compose-band-body` and `.compose-rewrite` are
 // reached BY CLASS, and a story's module graph stops short of compose.tsx,
 // which loads it.
@@ -19,14 +20,10 @@ import "./compose.css";
 
 // Provenance stays visible above the controls that request another draft.
 
-type EmailDraft = components["schemas"]["EmailDraft"];
 type DraftReason = components["schemas"]["AccountDraftReason"];
 type Maturity = components["schemas"]["VoiceProfile"]["maturity"];
 
-type Provenance = Pick<
-  EmailDraft,
-  "ai_generated" | "ai_disclosure" | "voice_profile_version" | "voice_degraded"
->;
+type Provenance = DraftProvenance;
 
 const WROTE_IT: Provenance = {
   ai_generated: true,
@@ -112,6 +109,41 @@ export const DisclosureLineMissing: Story = {
 export const MachineWroteItDark: Story = {
   globals: { theme: "dark" },
   render: band(WROTE_IT, "building"),
+};
+
+const TEMPLATE: Provenance = {
+  ai_generated: false,
+  ai_disclosure: null,
+  voice_profile_version: null,
+  voice_degraded: false,
+  generated_by: "deterministic",
+};
+
+/** No model wrote these words: the server's template did, without the
+ *  purpose. The band says so in place of the disclosure, and offers no rewrites. */
+export const TemplateDraft: Story = {
+  render: () => {
+    viewerRoutes();
+    return (
+      <StoryProviders>
+        <DraftBand
+          provenance={TEMPLATE}
+          maturity={undefined}
+          reasons={[...REASONS]}
+        />
+      </StoryProviders>
+    );
+  },
+  play: async () => {
+    await expect(
+      await screen.findByText("AI could not write this draft"),
+    ).toBeVisible();
+  },
+};
+
+export const TemplateDraftDark: Story = {
+  ...TemplateDraft,
+  globals: { theme: "dark" },
 };
 
 // The rewrites sit beside the disclosure, and stand over any body on screen,

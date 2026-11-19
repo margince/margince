@@ -68,7 +68,7 @@ func TestCapturedPartyEvidenceIsExportedAndErasedWithoutAProviderOriginal(t *tes
 	if !strings.Contains(string(payload), "bob@buyer.test") || strings.Contains(string(payload), "alice@buyer.test") {
 		t.Fatalf("subject evidence export=%s", payload)
 	}
-	if err := ComposedEraser(e.Pool, nil, nil).EraseContact(e.Admin(), ids.UUID(bob.Id), "Subject requested erasure"); err != nil {
+	if err := ComposedEraser(e.Pool, nil).EraseContact(e.Admin(), ids.UUID(bob.Id), "Subject requested erasure"); err != nil {
 		t.Fatal(err)
 	}
 	if e.WsCount(t, `SELECT count(*) FROM capture_party_source WHERE activity_id=$1 AND (recipients @> ARRAY['bob@buyer.test'] OR policy_addresses @> ARRAY['bob@buyer.test'])`, ref.ID) != 0 {

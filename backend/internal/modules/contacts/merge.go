@@ -67,6 +67,8 @@ const (
 	auditKeyRelinkedPhones        = "relinked_phones"
 	auditKeyRelinkedRelationships = "relinked_relationships"
 	auditKeyRelinkedActivityLinks = "relinked_activity_links"
+	// The single slots the merged-away contact won by a reviewer's preference.
+	auditKeyPreferred = "preferred_slots"
 )
 
 // filledColumns names the columns a merge filled on the survivor, for the
@@ -169,13 +171,16 @@ func (s *Store) MergeContact(ctx context.Context, sourceID, targetID ids.Contact
 // concurrent merge(target→elsewhere) could archive the survivor
 // mid-merge, leaving relinked children pointing at a dead record.
 func (s *Store) mergeContactTx(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID, ifVersion *int64, active []fieldcatalog.Column) (crmcontracts.Contact, error) {
-	out, _, err := s.mergeContactCarryingTx(ctx, tx, sourceID, targetID, ifVersion, active)
+	out, _, err := s.mergeContactCarryingTx(ctx, tx, sourceID, targetID, ifVersion, active, nil)
 	return out, err
 }
 
 // mergeContactCarryingTx is mergeContactTx answering what it did about the
-// merged-away contact's owner, for a caller that reports it.
-func (s *Store) mergeContactCarryingTx(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID, ifVersion *int64, active []fieldcatalog.Column) (crmcontracts.Contact, *authz.OwnerAccessCarry, error) {
+// merged-away contact's owner, for a caller that reports it. prefer names the
+// member that wins each single slot (mergeprecedence.go).
+func (s *Store) mergeContactCarryingTx(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID, ifVersion *int64,
+	active []fieldcatalog.Column, prefer MergePreference,
+) (crmcontracts.Contact, *authz.OwnerAccessCarry, error) {
 	// BEFORE LockPair, because recording a stop takes consent's lock and then
 	// reads the contact row. Locking the rows first and reaching for consent's
 	// lock later (inside carryStopsTx, below) inverts the order between the two
@@ -200,6 +205,9 @@ func (s *Store) mergeContactCarryingTx(ctx context.Context, tx pgx.Tx, sourceID,
 	if err := s.bindRequestsToTheirAddressesTx(ctx, tx, sourceID, targetID); err != nil {
 		return crmcontracts.Contact{}, nil, err
 	}
+	if err := yieldPreferredSlots(ctx, tx, sourceID, targetID, prefer); err != nil {
+		return crmcontracts.Contact{}, nil, err
+	}
 	counts, err := relinkContactReferences(ctx, tx, sourceID, targetID)
 	if err != nil {
 		return crmcontracts.Contact{}, nil, err
@@ -216,16 +224,8 @@ func (s *Store) mergeContactCarryingTx(ctx context.Context, tx pgx.Tx, sourceID,
 	if err := moveDedupeCandidates(ctx, tx, entityContact, sourceID.UUID, targetID.UUID); err != nil {
 		return crmcontracts.Contact{}, nil, err
 	}
-	p := buildSurvivorshipPatch(tgt, src)
-	if !p.Empty() {
-		if err := p.ApplyLocked(ctx, tx, tgtLock); err != nil {
-			return crmcontracts.Contact{}, nil, fmt.Errorf("apply survivorship fill: %w", err)
-		}
-	}
-	if err := archiveMergedAway(ctx, tx, contactEntity, sourceID.UUID, targetID.UUID); err != nil {
-		return crmcontracts.Contact{}, nil, fmt.Errorf("retire merged-away contact: %w", err)
-	}
-	if err := auditContactMerge(ctx, tx, sourceID, targetID, counts, p); err != nil {
+	if err := settleContactMerge(ctx, tx, tgtLock, buildSurvivorshipPatch(tgt, src, sourceID, prefer),
+		sourceID, targetID, counts, prefer.wonBy(sourceID)); err != nil {
 		return crmcontracts.Contact{}, nil, err
 	}
 	out, err := readContact(ctx, tx, targetID, storekit.LiveOnly, active)
@@ -235,8 +235,24 @@ func (s *Store) mergeContactCarryingTx(ctx context.Context, tx pgx.Tx, sourceID,
 	return out, carry, nil
 }
 
+// settleContactMerge applies the survivorship patch, retires the merged-away
+// contact and audits the merge.
+func settleContactMerge(ctx context.Context, tx pgx.Tx, tgtLock storekit.RowLock, p *storekit.Patch,
+	sourceID, targetID ids.ContactID, counts relinkCounts, won []string,
+) error {
+	if !p.Empty() {
+		if err := p.ApplyLocked(ctx, tx, tgtLock); err != nil {
+			return fmt.Errorf("apply survivorship fill: %w", err)
+		}
+	}
+	if err := archiveMergedAway(ctx, tx, contactEntity, sourceID.UUID, targetID.UUID); err != nil {
+		return fmt.Errorf("retire merged-away contact: %w", err)
+	}
+	return auditContactMerge(ctx, tx, sourceID, targetID, counts, p, won)
+}
+
 // auditContactMerge records the merge on both rows and emits contact.merged.
-func auditContactMerge(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID, counts relinkCounts, p *storekit.Patch) error {
+func auditContactMerge(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID, counts relinkCounts, p *storekit.Patch, won []string) error {
 	auditID, err := storekit.Audit(ctx, tx, "merge", contactEntity, sourceID.UUID,
 		map[string]any{auditKeyMergedInto: nil},
 		map[string]any{
@@ -258,6 +274,9 @@ func auditContactMerge(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.Co
 	after := map[string]any{
 		auditKeyMergedFrom: sourceID.UUID, auditKeyRelinkedEmails: counts.Emails, auditKeyRelinkedPhones: counts.Phones,
 		auditKeyRelinkedRelationships: counts.Relationships, auditKeyRelinkedActivityLinks: counts.ActivityLinks,
+	}
+	if len(won) > 0 {
+		after[auditKeyPreferred] = won
 	}
 	maps.Copy(before, p.Before())
 	maps.Copy(after, p.After())
@@ -310,20 +329,6 @@ func contactMergedPayload(sourceID, targetID ids.ContactID, counts relinkCounts)
 			ActivityLinks: counts.ActivityLinks,
 		},
 	}
-}
-
-// buildSurvivorshipPatch folds A's values onto B fill-only: B never loses
-// what it already holds; only its empty fields take A's non-empty values.
-func buildSurvivorshipPatch(target, source crmcontracts.Contact) *storekit.Patch {
-	p := storekit.NewPatch()
-	fillString(p, columnFirstName, target.FirstName, source.FirstName)
-	fillString(p, columnLastName, target.LastName, source.LastName)
-	fillString(p, "title", target.Title, source.Title)
-	if target.ConvertedFromLeadId == nil && source.ConvertedFromLeadId != nil {
-		p.Set("converted_from_lead_id", nil, ids.UUID(*source.ConvertedFromLeadId))
-	}
-	fillMergeAddress(p, target.Address, source.Address)
-	return p
 }
 
 func relinkContactEdges(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID) (int64, error) {

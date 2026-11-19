@@ -33,7 +33,8 @@ export const pipelinesOptions = queryOptions({
     unwrap(await api.GET("/pipelines", { params: { query: {} }, signal })).data,
 });
 
-// Archived too, for a reader naming a stage a deal may still hold or once held.
+// Retired pipelines too: a deal on one is drawn on its own stages, and a reader
+// names a stage a deal once held. Pickers offer the active catalog above.
 export const pipelinesWithArchivedOptions = queryOptions({
   queryKey: ["pipelines", "with-archived"],
   queryFn: async ({ signal }) =>

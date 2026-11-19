@@ -63,8 +63,9 @@ it("shares raw pipelines across list and selected observers and refreshes both",
     ]),
   );
   rerender({ id: "missing" });
-  expect(result.current.selected.data?.id).toBe("default");
-  expect(fetchMock).toHaveBeenCalledTimes(1);
+  await waitFor(() => expect(result.current.selected.isError).toBe(true));
+  expect(result.current.selected.data).toBeUndefined();
+  expect(fetchMock).toHaveBeenCalledTimes(2);
   rerender({ id: "other" });
   pipelineName = "Changed";
   await client.invalidateQueries({ queryKey: ["pipelines"] });
@@ -75,6 +76,37 @@ it("shares raw pipelines across list and selected observers and refreshes both",
     expect(result.current.selected.data?.name).toBe("Changed"),
   );
   expect(result.current.selected.data?.stages?.[0]?.name).toBe("Translated");
+  expect(fetchMock).toHaveBeenCalledTimes(3);
+});
+
+it("draws a deal's own retired pipeline, never the default one", async () => {
+  const fetchMock = vi
+    .spyOn(globalThis, "fetch")
+    .mockImplementation(async (input) => {
+      const url = input instanceof Request ? input.url : String(input);
+      const retired = url.includes("include_archived=true");
+      return Response.json({
+        data: [
+          { id: "default", name: "Sales", is_default: true, stages: [] },
+          ...(retired
+            ? [
+                {
+                  id: "gone",
+                  name: "Partner sales",
+                  archived_at: "2026-07-01T00:00:00Z",
+                  stages: [{ id: "intro", name: "Intro" }],
+                },
+              ]
+            : []),
+        ],
+      });
+    });
+  const { result } = renderHook(() => usePipeline("gone"), { wrapper });
+  await waitFor(() => expect(result.current.data?.id).toBe("gone"));
+  expect(result.current.data?.stages?.map((stage) => stage.name)).toEqual([
+    "Intro",
+  ]);
+  expect(result.current.isError).toBe(false);
   expect(fetchMock).toHaveBeenCalledTimes(2);
 });
 

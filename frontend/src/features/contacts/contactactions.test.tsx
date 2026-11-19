@@ -12,6 +12,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { armHoverIntent } from "../../design-system/hoverintent-testing";
 import { en } from "../../i18n/en";
 import { useShortcutDispatcher } from "../../lib/shortcuts";
 import { view } from "../../testing/contactpage.testkit";
@@ -56,7 +57,11 @@ const noVerbs: Verbs = {
   onAddTask: () => undefined,
 };
 
-function mountHeader(contact = reachable.contact, verbs = noVerbs) {
+function mountHeader(
+  contact = reachable.contact,
+  verbs = noVerbs,
+  writeRefusalId?: string,
+) {
   installFetchStub({
     "GET /me": meRoute(
       { contact: ["read", "update"], activity: ["create"] },
@@ -70,8 +75,12 @@ function mountHeader(contact = reachable.contact, verbs = noVerbs) {
         view={{ ...reachable, contact }}
         contactId={reachable.contact.id}
         onResearch={() => undefined}
+        writeRefusalId={writeRefusalId}
         {...verbs}
       />
+      {writeRefusalId && (
+        <p id={writeRefusalId}>{en["contact.action.noTransport"]}</p>
+      )}
     </StoryProviders>,
   );
 }
@@ -195,5 +204,42 @@ describe("the record keys", () => {
     await user.keyboard("mn");
     expect(verbs.onWrite).not.toHaveBeenCalled();
     expect(verbs.onLogActivity).toHaveBeenCalledOnce();
+  });
+});
+
+describe("a refused verb on a contact with nowhere to write to", () => {
+  const WHY = en["contact.action.noTransport"];
+  const noAddress = { ...reachable.contact, emails: [], primary_email: null };
+
+  it("says why on hover and is described once, by the page's sentence", async () => {
+    const user = userEvent.setup();
+    armHoverIntent();
+    mountHeader(noAddress, noVerbs, "write-refused");
+    const write = screen.getByRole("button", {
+      name: en["contact.action.write"],
+    });
+    expect(write).toHaveProperty("disabled", true);
+    expect(write.getAttribute("aria-describedby")).toBe("write-refused");
+    expect(screen.getAllByText(WHY)).toHaveLength(1);
+
+    const host = write.closest(".icon-action");
+    if (!(host instanceof HTMLElement)) {
+      throw new Error("the Email verb lost its tooltip host");
+    }
+    await user.hover(host);
+    expect((await screen.findByRole("tooltip")).textContent).toBe(
+      `${en["contact.action.write"]}. ${WHY}`,
+    );
+    expect(write.getAttribute("aria-describedby")).toBe("write-refused");
+  });
+
+  it("names the log refusal in Log's tip, outside its description", async () => {
+    mountHeader({ ...reachable.contact, attachable: false });
+    const reason = await screen.findByText(en["contact.attachRefused"]);
+    const log = screen.getByRole("button", { name: en["log.title"] });
+    expect(log.getAttribute("title")).toBe(
+      `${en["log.title"]}. ${en["contact.attachRefused"]}`,
+    );
+    expect(log.getAttribute("aria-describedby")).toBe(reason.id);
   });
 });

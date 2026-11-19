@@ -34,7 +34,7 @@ func TestErasingTheRecipientEmptiesTheVoiceSampleOfAHeldMail(t *testing.T) {
 		t.Fatalf("filing the sample: %v", err)
 	}
 
-	if err := compose.ComposedEraser(e.Pool, nil, nil).EraseContact(e.Admin(), f.contact, "test"); err != nil {
+	if err := compose.ComposedEraser(e.Pool, nil).EraseContact(e.Admin(), f.contact, "test"); err != nil {
 		t.Fatalf("erasing the subject: %v", err)
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE id = $1 AND restricted_at IS NOT NULL AND body IS NOT NULL`, f.email); n != 1 {

@@ -275,6 +275,12 @@ describe("what the axis marks", () => {
   it("marks what happened, the buyer's last word, what is ahead and the close", () => {
     expect(
       marks({
+        lastInbound: row({
+          id: "mail",
+          kind: "email",
+          direction: "inbound",
+          occurred_at: "2026-05-20T09:00:00Z",
+        }),
         activities: [
           row({
             id: "held",
@@ -285,19 +291,6 @@ describe("what the axis marks", () => {
             id: "gone",
             meeting_status: "canceled",
             occurred_at: "2026-05-03T09:00:00Z",
-          }),
-          row({
-            id: "mail",
-            kind: "email",
-            direction: "inbound",
-            voice: {
-              author: {
-                kind: "contact_record",
-                display_name: "Buyer",
-                is_reader: false,
-              },
-            },
-            occurred_at: "2026-05-20T09:00:00Z",
           }),
           row({
             id: "booked",
@@ -316,6 +309,19 @@ describe("what the axis marks", () => {
       ["due", "ahead"],
       ["close", "end"],
     ]);
+  });
+
+  it("marks the buyer's last word the server dated, though no loaded row holds it", () => {
+    expect(
+      marks({
+        lastInbound: row({
+          id: "old",
+          kind: "email",
+          direction: "inbound",
+          occurred_at: "2026-01-02T09:00:00Z",
+        }),
+      }),
+    ).toContainEqual(["last-old", "last"]);
   });
 
   it("keeps the five newest conversations held", () => {

@@ -78,7 +78,7 @@ func TestALinkLiftsOneErasureOnce(t *testing.T) {
 // One address is held by one live contact at a time, so the two run in turn.
 func TestAReplayErasesWhatCameBackAndKeepsTheSignup(t *testing.T) {
 	e := Setup(t)
-	eraser := compose.ComposedEraser(e.Pool, nil, nil)
+	eraser := compose.ComposedEraser(e.Pool, nil)
 	armForLift(t)
 	restored := contactHolding(t, e, "Vor der Loeschung")
 	liftAddress(t, e)
@@ -92,7 +92,7 @@ func TestAReplayErasesWhatCameBackAndKeepsTheSignup(t *testing.T) {
 // A contact from before the lift is erased again.
 func TestTheJournalErasesWhatCameFromBeforeTheLift(t *testing.T) {
 	e := Setup(t)
-	eraser := compose.ComposedEraser(e.Pool, blobstore.NewMemory(), nil)
+	eraser := compose.ComposedEraser(e.Pool, blobstore.NewMemory())
 	armForLift(t)
 	restored := contactHolding(t, e, "Vor der Loeschung")
 	liftAddress(t, e)
@@ -103,7 +103,7 @@ func TestTheJournalErasesWhatCameFromBeforeTheLift(t *testing.T) {
 
 func TestTheJournalKeepsWhatCameAfterTheLift(t *testing.T) {
 	e := Setup(t)
-	eraser := compose.ComposedEraser(e.Pool, blobstore.NewMemory(), nil)
+	eraser := compose.ComposedEraser(e.Pool, blobstore.NewMemory())
 	armForLift(t)
 	liftAddress(t, e)
 	signup := contactHolding(t, e, "Nach der Rueckkehr")
@@ -115,7 +115,7 @@ func TestTheJournalKeepsWhatCameAfterTheLift(t *testing.T) {
 // A journal exported before the lift is older than the list, and the list wins.
 func TestAJournalOlderThanTheLiftDoesNotEraseTheSignup(t *testing.T) {
 	e := Setup(t)
-	eraser := compose.ComposedEraser(e.Pool, blobstore.NewMemory(), nil)
+	eraser := compose.ComposedEraser(e.Pool, blobstore.NewMemory())
 	armForLift(t)
 	if _, err := eraser.ExportSuppressions(e.Admin()); err != nil {
 		t.Fatalf("ExportSuppressions: %v", err)
@@ -130,7 +130,7 @@ func TestAJournalOlderThanTheLiftDoesNotEraseTheSignup(t *testing.T) {
 // rolled back, and the replay applies it.
 func TestAJournalNewerThanARestoredLiftErasesAgain(t *testing.T) {
 	e := Setup(t)
-	eraser := compose.ComposedEraser(e.Pool, blobstore.NewMemory(), nil)
+	eraser := compose.ComposedEraser(e.Pool, blobstore.NewMemory())
 	armForLift(t)
 	liftAddress(t, e)
 	owner := OwnerConn(t)
@@ -207,7 +207,7 @@ func contactHolding(t *testing.T, e *Env, name string) ids.UUID {
 
 func eraseForLift(t *testing.T, e *Env, contact ids.UUID) {
 	t.Helper()
-	if err := compose.ComposedEraser(e.Pool, nil, nil).EraseContact(e.Admin(), contact, "subject request"); err != nil {
+	if err := compose.ComposedEraser(e.Pool, nil).EraseContact(e.Admin(), contact, "subject request"); err != nil {
 		t.Fatalf("EraseContact: %v", err)
 	}
 }

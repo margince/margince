@@ -43,6 +43,8 @@ describe("which reads a timeline write has to invalidate", () => {
       ["company-coverage"],
       ["activities", "company"],
       ["company360"],
+      ["activities", "project"],
+      ["project"],
     ]);
   });
 

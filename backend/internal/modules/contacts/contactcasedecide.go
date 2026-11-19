@@ -32,6 +32,7 @@ type ContactCaseDecision struct {
 	MemberIDs  []ids.UUID
 	SurvivorID ids.UUID
 	OwnerID    ids.UUID
+	Prefer     MergePreference
 }
 
 // CaseSelectionError refuses a selection the case cannot take: 422 with the
@@ -139,7 +140,7 @@ func caseSelection(d ContactCaseDecision) ([]ids.UUID, error) {
 	case !slices.Contains(selected, d.SurvivorID):
 		return nil, &DedupeInputError{Field: "survivor_id", Msg: "must be one of member_ids"}
 	}
-	return selected, nil
+	return selected, checkMergePreference(d.Prefer, selected)
 }
 
 // decideContactCaseTx locks every selected member, then reads and checks the
@@ -178,7 +179,7 @@ func (s *Store) decideContactCaseTx(ctx context.Context, tx pgx.Tx, contactID id
 		return crmcontracts.ContactCaseOutcome{}, err
 	}
 	return s.executeCaseMerge(ctx, tx, caseMergePlan{
-		c: c, selected: selected, survivor: survivor, owner: d.OwnerID, mode: mode, policy: policy,
+		c: c, selected: selected, survivor: survivor, owner: d.OwnerID, mode: mode, policy: policy, prefer: d.Prefer,
 	}, active)
 }
 
@@ -320,6 +321,7 @@ type caseMergePlan struct {
 	owner    ids.UUID
 	mode     crmcontracts.ContactCaseOutcomeMode
 	policy   bool
+	prefer   MergePreference
 }
 
 func (p caseMergePlan) survivorID() ids.ContactID { return ids.From[ids.ContactKind](p.survivor.ID) }

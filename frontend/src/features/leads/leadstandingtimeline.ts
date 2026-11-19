@@ -1,6 +1,7 @@
 // The lead's time on one axis, as events for `StandingTimeline`: when it
 // arrived, our first answer, their newest message, and a meeting booked
-// ahead. Read from the lead's own fields and its activity page.
+// ahead. Read from the lead's own fields, the newest messages the server
+// dated over every row, and the activity page for the meeting.
 
 import type { components } from "../../api/schema";
 import type {
@@ -11,7 +12,6 @@ import {
   type ActivityMoment,
   activityDay,
   activityDaysAway,
-  activityHasHappened,
 } from "../../format/activitywhen";
 import {
   formatDayMonth,
@@ -25,46 +25,24 @@ import { nextBookedMeeting } from "./leadstandingparts";
 type Lead = components["schemas"]["Lead"];
 type Activity = components["schemas"]["Activity"];
 
-const EXCHANGE_KINDS = new Set<Activity["kind"]>([
-  "email",
-  "call",
-  "meeting",
-  "message",
-]);
-
-// The newest row that went one way and had happened by `asOf`. A called-off
-// meeting did not take place, so it is no contact.
-function newestExchange(
-  activities: readonly Activity[],
-  direction: "inbound" | "outbound",
-  asOf: number,
-  record: string,
-): Activity | undefined {
-  return activities
-    .filter(
-      (row) =>
-        row.direction === direction &&
-        EXCHANGE_KINDS.has(row.kind) &&
-        row.meeting_status !== "canceled" &&
-        row.meeting_status !== "no_show" &&
-        activityHasHappened(row, asOf, record),
-    )
-    .sort((a, b) => Date.parse(b.occurred_at) - Date.parse(a.occurred_at))[0];
-}
-
 export type LeadTimeline = Readonly<{
   events: TimelineEvent[];
   gap?: TimelineGap;
 }>;
 
+export type LastMessages = Readonly<{
+  inbound?: Activity;
+  outbound?: Activity;
+}>;
+
 export function leadTimeline(
   lead: Lead,
   activities: readonly Activity[],
+  last: LastMessages,
   source: string,
   ctx: ReadingContext,
 ): LeadTimeline {
   const { t, locale, zone } = ctx;
-  const asOf = Date.parse(ctx.asOf);
   const day = (at: string) => formatDayMonth(at, locale, zone);
   const name = leadIdentityName(lead) || t("lead.unnamed");
   const dayOf = (row: Activity) =>
@@ -75,8 +53,8 @@ export function leadTimeline(
       zone,
       formatDayMonth,
     );
-  const theirs = newestExchange(activities, "inbound", asOf, ctx.record);
-  const ours = newestExchange(activities, "outbound", asOf, ctx.record);
+  const theirs = last.inbound;
+  const ours = last.outbound;
   const events: TimelineEvent[] = [
     {
       key: "received",
