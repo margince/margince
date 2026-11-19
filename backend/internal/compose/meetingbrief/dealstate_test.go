@@ -13,6 +13,8 @@ import (
 func TestAMeetingWithNoDealHasNoDealStateSection(t *testing.T) {
 	in := fullInput()
 	in.Deal = nil
+	// A closed decision is deal-state material too, and must not reopen the section.
+	in.Commitments = append(in.Commitments, ClaimIn{ContactName: "Ana Roth", Kind: kindDecision, Body: "pilot on two sites first", Status: "done", SourceID: activityID})
 	for _, section := range Deterministic(in) {
 		if section.Kind == crmcontracts.MeetingBriefSectionKindDealState && len(section.Sentences) > 0 {
 			t.Fatalf("a meeting on no deal says where the deal stands: %+v", section.Sentences)

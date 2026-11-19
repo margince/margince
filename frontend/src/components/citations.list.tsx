@@ -258,7 +258,10 @@ export function SentenceList({
     />
   );
   const lines = lead ? rest : sentences;
-  const shown = sourcesNotAbove(lines);
+  // Read in display order, so the lead's sources count as the line above.
+  const [leadShown, ...shown] = sourcesNotAbove(
+    lead ? [lead, ...rest] : [undefined, ...sentences],
+  );
   const list = (
     <ul className="co-brief-lines">
       {lines.map((sentence, index) => (
@@ -284,7 +287,7 @@ export function SentenceList({
         {/* No nature word: being set apart is the lead's mark; the lines
             under it need theirs to tell a suggestion from a fact. */}
         {lead.text}
-        {citations === "per-sentence" && citationsFor(lead.evidence)}
+        {citations === "per-sentence" && citationsFor(leadShown ?? [])}
       </p>
       {list}
     </div>
@@ -292,15 +295,18 @@ export function SentenceList({
 }
 
 /**
- * Each line's sources, less the ones the line directly above already shows.
- * Header lines written from one meeting all cite it, and the same chip under
- * each of them reads as three sources where there is one.
+ * Each line's sources, less the ones the line directly above also cites. A
+ * source is drawn once, at the top of the run of lines resting on it. Header
+ * lines written from one meeting all cite it. One chip under each would read as
+ * three sources where there is one.
  */
-function sourcesNotAbove(sentences: readonly BriefSentence[]): Cited[][] {
+function sourcesNotAbove(
+  sentences: readonly (BriefSentence | undefined)[],
+): Cited[][] {
   const key = (cited: Cited) => `${cited.entity_type}:${cited.entity_id}`;
   return sentences.map((sentence, index) => {
     const above = new Set((sentences[index - 1]?.evidence ?? []).map(key));
-    return sentence.evidence.filter((cited) => !above.has(key(cited)));
+    return (sentence?.evidence ?? []).filter((cited) => !above.has(key(cited)));
   });
 }
 

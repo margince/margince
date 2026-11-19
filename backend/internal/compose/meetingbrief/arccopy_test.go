@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/langcopy/langcopytest"
 )
@@ -61,4 +62,19 @@ func augustDay(language string, day int) string {
 		return fmt.Sprintf("%02d.08.2026", day)
 	}
 	return fmt.Sprintf("%02d/08/2026", day)
+}
+
+// A day entry is stored at noon UTC. East of +12 that instant is the next day,
+// and the arc must still name the day it was logged.
+func TestAnArcEndpointLoggedAsADayKeepsItsDateEastOfTwelve(t *testing.T) {
+	kiritimati, err := time.LoadLocation("Pacific/Kiritimati")
+	if err != nil {
+		t.Fatalf("zone: %v", err)
+	}
+	said := briefCopyFor("en")
+	said.dates.Zone = kiritimati
+	logged := Occurred{At: time.Date(2026, time.August, 9, 12, 0, 0, 0, time.UTC), DateOnly: true}
+	if line := said.arcSummary(ArcMoment{From: logged, To: logged}, 1); !strings.Contains(line, augustDay("en", 9)) {
+		t.Fatalf("arc line %q, want the logged day %s", line, augustDay("en", 9))
+	}
 }

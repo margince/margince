@@ -227,10 +227,19 @@ func readableIDs(moment ArcMoment) []string {
 	return ids
 }
 
+// occurredDay writes a day entry's own date, and an instant's day in the
+// notation zone. A day entry is stored at noon UTC, which is tomorrow east of +12.
+func (said briefCopy) occurredDay(o Occurred) string {
+	if o.DateOnly {
+		return said.dates.CalendarDay(o.At.UTC())
+	}
+	return said.dates.Day(o.At)
+}
+
 // arcSummary is the moment's one line: how much happened, over what stretch.
 func (said briefCopy) arcSummary(moment ArcMoment, conversations int) string {
-	span := said.dates.Day(moment.From.At)
-	if end := said.dates.Day(moment.To.At); end != span {
+	span := said.occurredDay(moment.From)
+	if end := said.occurredDay(moment.To); end != span {
 		span += "–" + end
 	}
 	if moment.Title == "" {

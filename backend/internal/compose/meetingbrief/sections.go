@@ -341,8 +341,11 @@ func lastConversation(in Input) (ActIn, bool) {
 // dealStateSection (M) is where the deal stands: what was last said, what was
 // objected to, and what nobody has decided.
 func dealStateSection(in Input, ranked *rankedClaims) []Sentence {
+	if in.Deal == nil {
+		return nil
+	}
 	out := make([]Sentence, 0, dealStateCap)
-	if last, ok := lastConversation(in); ok && in.Deal != nil {
+	if last, ok := lastConversation(in); ok {
 		out = append(out, Sentence{
 			Text:     in.words().lastConversationLine(last),
 			Evidence: []Evidence{{EntityType: citeActivity, EntityID: last.ID}},

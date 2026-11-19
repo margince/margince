@@ -371,6 +371,46 @@ describe("SentenceList sources", () => {
     );
     expect(chipsUnder("They asked for a demo.")).toHaveLength(1);
   });
+
+  it("keeps a source hidden through an unbroken run of lines citing it", () => {
+    render(
+      <LocaleProvider initial="en">
+        <SentenceList
+          sentences={[
+            line("Kickoff in 1 hour.", [meeting]),
+            line("Fleet is in Qualified.", [meeting, deal]),
+            line("They asked for a demo.", [meeting]),
+          ]}
+        />
+      </LocaleProvider>,
+    );
+    // Every line rests on the meeting, so it is drawn once, at the top.
+    expect(chipsUnder("Fleet is in Qualified.")).toHaveLength(1);
+    expect(chipsUnder("They asked for a demo.")).toHaveLength(0);
+  });
+
+  it("counts the lead's sources as the line above the first", () => {
+    render(
+      <LocaleProvider initial="en">
+        <SentenceList
+          leadWithJudgement
+          sentences={[
+            {
+              text: "The account is drifting.",
+              nature: "assessment",
+              evidence: [meeting],
+            },
+            line("Kickoff in 1 hour.", [meeting]),
+          ]}
+        />
+      </LocaleProvider>,
+    );
+    expect(chipsUnder("Kickoff in 1 hour.")).toHaveLength(0);
+    const lead = screen.getByText(/The account is drifting/);
+    expect(
+      lead.querySelectorAll(".co-brief-cite, .co-brief-cite-flat"),
+    ).toHaveLength(1);
+  });
 });
 
 // A chip is the reader's receipt, and a receipt that only repeats the chip's
