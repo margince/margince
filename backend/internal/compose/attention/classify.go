@@ -20,6 +20,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
@@ -217,14 +218,18 @@ func classifyIntroduction(item crmcontracts.AttentionItem, asOf time.Time) ranke
 
 // dropDealsAlreadyInHand removes the at-risk row for a deal somebody is
 // already waiting on, or that has a task about it due within nearTaskDays.
+// waitingPastScan names deals whose waiting card the lane's scan did not reach.
 //
 // One job must not become two rows. The waiting row names the message to reply
 // to, and the near task names the step already planned, so either one wins.
 // The drifting row's ground rides along as a reason rather than as a second
 // obligation. A task due later, or undated, leaves the deal at risk, so a deal
 // cannot hide behind a step nobody means to take soon.
-func dropDealsAlreadyInHand(rows []ranked, asOf time.Time) []ranked {
+func dropDealsAlreadyInHand(rows []ranked, asOf time.Time, waitingPastScan map[ids.UUID]bool) []ranked {
 	inHand := map[string]bool{}
+	for deal := range waitingPastScan {
+		inHand[deal.String()] = true
+	}
 	for _, row := range rows {
 		if absorbsRisk(row, asOf) {
 			inHand[row.item.Subject.Id.String()] = true

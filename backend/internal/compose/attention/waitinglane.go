@@ -226,8 +226,9 @@ type WaitingCustomer struct {
 // nothing because one source stumbled is less useful than a page that says
 // which part it could not read.
 func (s *Service) waitingCustomers(
-	ctx context.Context, asOf time.Time,
+	ctx context.Context, day crmcontracts.Attention,
 ) (waitingRead, *crmcontracts.WorklistSourceUnavailable) {
+	asOf := day.AsOf
 	defer timeStage(ctx, "waiting_customers")()
 	if s.waiting == nil {
 		return waitingRead{}, nil
@@ -254,7 +255,9 @@ func (s *Service) waitingCustomers(
 			Source: sourceWaiting, Reason: crmcontracts.WorklistSourceUnavailableReasonFailed,
 		}
 	default:
-		return waitingRead{rows: rows, read: true, cut: cut}, nil
+		read := waitingRead{rows: rows, read: true, cut: cut}
+		read.dealsPastScan = s.dealsWaitingPastTheScan(ctx, day, read)
+		return read, nil
 	}
 }
 
@@ -303,6 +306,9 @@ type waitingRead struct {
 	rows []WaitingCustomer
 	read bool
 	cut  bool
+	// dealsPastScan are the at-risk deals whose waiting card lies past a cut
+	// scan (dealsWaitingPastTheScan).
+	dealsPastScan map[ids.UUID]bool
 }
 
 // HiddenBacklog answers what the queue is not showing this reader.

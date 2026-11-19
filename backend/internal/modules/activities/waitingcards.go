@@ -104,12 +104,15 @@ func (s *Store) WaitingCardsAfter(
 // WaitingCardsOnDeals answers the cards whose messages are filed under any of
 // these deals, judged as WaitingCardsAfter judges them. A card names the deal
 // its own row carries, which may be none of these.
+//
+// The messages are found from the deals' links first, so the cost follows the
+// mail filed under these deals rather than the whole waiting horizon.
 func (s *Store) WaitingCardsOnDeals(
 	ctx context.Context, asOf time.Time, narrow WaitingNarrow, deals []ids.UUID,
 ) ([]WaitingReply, error) {
 	return s.waitingCardsWhere(ctx, asOf, narrow, deals, func(arg func(any) int) string {
-		return fmt.Sprintf(" AND EXISTS (SELECT 1 FROM activity_link on_deal WHERE on_deal.activity_id = a.id"+
-			" AND on_deal.deal_id = ANY ($%d::uuid[]))", arg(deals))
+		return fmt.Sprintf(" AND a.id = ANY (ARRAY(SELECT on_deal.activity_id FROM activity_link on_deal"+
+			" WHERE on_deal.deal_id = ANY ($%d::uuid[])))", arg(deals))
 	})
 }
 
