@@ -45643,6 +45643,19 @@ components:
           items: { type: string, format: uuid }
         survivor_id: { type: string, format: uuid, description: 'The record that remains. Its values win where two members disagree.' }
         owner_id: { type: string, format: uuid, description: 'Who owns the remaining contact: the live owner of one of the selected members.' }
+        prefer: { $ref: '#/components/schemas/ContactCasePreference' }
+    ContactCasePreference:
+      type: object
+      additionalProperties: false
+      description: |
+        Where the selected members disagree, the member whose value the remaining contact takes.
+        Each one must be in `member_ids`. A field left out keeps the survivor's value, and an empty one takes another member's.
+        No value is lost: every address, number and employment of every member stays on the remaining contact.
+      properties:
+        name: { type: string, format: uuid, description: 'The member whose first and last name the remaining contact takes.' }
+        title: { type: string, format: uuid, description: 'The member whose title the remaining contact takes.' }
+        email: { type: string, format: uuid, description: "The member whose primary email address becomes the remaining contact's primary one." }
+        employment: { type: string, format: uuid, description: "The member whose current employer becomes the remaining contact's current one." }
     ContactCaseOutcome:
       type: object
       description: What the merge did, or for a preview what it would do. Every selected member's owner other than the chosen one keeps access through a record grant.

@@ -64,6 +64,42 @@ func TestContactMergePreviewShowsPrimaryAddressDemotions(t *testing.T) {
 	}
 }
 
+// A number both contacts hold shows as held in the preview, and the merge then
+// keeps the survivor's row of it alone.
+func TestContactMergePreviewShowsANumberTheSurvivorHolds(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.As(e.AdminUser, nil, integration.AdminPerms)
+	source, err := e.Contacts.CreateContact(ctx, contacts.CreateContactInput{
+		FullName: "Held source", Source: "manual",
+		Phones: []contacts.ContactPhoneInput{{Phone: "+49301235001", PhoneType: "mobile", IsPrimary: true}, {Phone: "+49301235002", PhoneType: "work", Position: 1}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	target, err := e.Contacts.CreateContact(ctx, contacts.CreateContactInput{
+		FullName: "Held survivor", Source: "manual",
+		Phones: []contacts.ContactPhoneInput{{Phone: "+49301235001", PhoneType: "mobile"}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	sourceID, targetID := ids.UUID(source.Id), ids.UUID(target.Id)
+	preview, err := e.Contacts.PreviewMergeSurvivorship(ctx, "contact", sourceID, targetID, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, address := range preview.Addresses {
+		held := address.Value == "+49301235001"
+		if address.AlreadyHeld != held || (held && address.WillBePrimary) {
+			t.Errorf("address=%+v want held=%t and a held number never primary", address, held)
+		}
+	}
+	if _, err := e.Contacts.MergeContact(ctx, ids.From[ids.ContactKind](sourceID), ids.From[ids.ContactKind](targetID), &preview.SourceVersion); err != nil {
+		t.Fatal(err)
+	}
+	checkMergedAddresses(ctx, t, e, targetID, preview.Addresses)
+}
+
 func TestCompanyMergePreviewShowsDomainDemotions(t *testing.T) {
 	for _, occupied := range []bool{false, true} {
 		t.Run(fmt.Sprintf("occupied=%t", occupied), func(t *testing.T) {
@@ -125,20 +161,20 @@ func checkMergedAddresses(ctx context.Context, t *testing.T, e *integration.Env,
 			var query string
 			switch address.Kind {
 			case "email":
-				query = `SELECT email, is_primary FROM contact_email WHERE id=@id AND contact_id=@target AND archived_at IS NULL`
+				query = `SELECT email, is_primary, archived_at IS NOT NULL FROM contact_email WHERE id=@id AND contact_id=@target`
 			case "phone":
-				query = `SELECT phone, is_primary FROM contact_phone WHERE id=@id AND contact_id=@target AND archived_at IS NULL`
+				query = `SELECT phone, is_primary, archived_at IS NOT NULL FROM contact_phone WHERE id=@id AND contact_id=@target`
 			case "domain":
-				query = `SELECT domain, is_primary FROM company_domain WHERE id=@id AND company_id=@target AND archived_at IS NULL`
+				query = `SELECT domain, is_primary, archived_at IS NOT NULL FROM company_domain WHERE id=@id AND company_id=@target`
 			default:
 				return fmt.Errorf("unexpected address kind %s", address.Kind)
 			}
 			var value string
-			var primary bool
-			if err := tx.QueryRow(ctx, query, pgx.StrictNamedArgs{"id": address.ID, "target": target}).Scan(&value, &primary); err != nil {
+			var primary, archived bool
+			if err := tx.QueryRow(ctx, query, pgx.StrictNamedArgs{"id": address.ID, "target": target}).Scan(&value, &primary, &archived); err != nil {
 				return err
 			}
-			if value != address.Value || primary != address.WillBePrimary {
+			if value != address.Value || primary != address.WillBePrimary || archived != address.AlreadyHeld {
 				t.Errorf("%s value=%q primary=%t preview=%+v", address.Kind, value, primary, address)
 			}
 		}
