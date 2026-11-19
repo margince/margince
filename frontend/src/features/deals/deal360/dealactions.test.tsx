@@ -125,6 +125,10 @@ describe("the deal header's Meet verb", () => {
       expect(meet()).toHaveAccessibleDescription(en["deal.meetNeedsCompany"]),
     );
     expect(meet()).toBeDisabled();
+    expect(meet()).toHaveAttribute(
+      "title",
+      `${en["scheduling.bookContact"]}. ${en["deal.meetNeedsCompany"]}`,
+    );
   });
 
   it("offers Meet with no refusal on a deal with a company", async () => {

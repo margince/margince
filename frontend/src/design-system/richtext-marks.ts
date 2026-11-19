@@ -74,9 +74,8 @@ export function useMarksAtCaret(
   useEffect(() => {
     const follow = () => {
       const node = editor.current;
-      if (node && selectionIn(node)) {
-        showMarks(marksAtCaret());
-      }
+      // With no caret in the editor, no mark is on in it.
+      showMarks(node && selectionIn(node) ? marksAtCaret() : NO_MARKS);
     };
     // Ctrl or Cmd with B or I on a bare caret changes the pending mark and moves
     // no selection. Read on keyup: on keydown the engine has not applied it yet.

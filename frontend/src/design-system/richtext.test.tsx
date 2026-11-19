@@ -492,11 +492,13 @@ describe("the marks on at the caret", () => {
     expect(mark("Kursiv")).toHaveAttribute("aria-pressed", "true");
   });
 
-  it("ignores a selection elsewhere on the page", () => {
+  it("shows no mark once the selection leaves the editor", async () => {
     const on = withCaretMarks();
     surface();
-
     on.add("bold");
+    moveCaretInto((await screen.findByText("Words")).firstChild);
+    expect(mark("Fett")).toHaveAttribute("aria-pressed", "true");
+
     moveCaretInto(screen.getByText("Outside").firstChild);
 
     expect(mark("Fett")).toHaveAttribute("aria-pressed", "false");

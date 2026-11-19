@@ -44,6 +44,7 @@ export function ScheduleDialog({
   timezone,
   onChoose,
   now,
+  sampledAt,
 }: Readonly<{
   open: boolean;
   onClose: () => void;
@@ -53,6 +54,8 @@ export function ScheduleDialog({
   // The clock, passed in: a component that read it itself could not be tested
   // against a fixed set of presets.
   now: Date;
+  /** The clock's reading when `now` was taken; absent, the dialog's first mount. */
+  sampledAt?: number;
 }>) {
   const viewerZone = useViewerZone();
   const headingId = useId();
@@ -65,6 +68,7 @@ export function ScheduleDialog({
         zone={timezone ?? viewerZone}
         onChoose={onChoose}
         now={now}
+        sampledAt={sampledAt}
       />
     </Modal>
   );
@@ -79,6 +83,7 @@ function ScheduleSteps({
   zone,
   onChoose,
   now,
+  sampledAt,
 }: Readonly<{
   headingId: string;
   onClose: () => void;
@@ -86,10 +91,11 @@ function ScheduleSteps({
   zone: string;
   onChoose: (next: string) => void;
   now: Date;
+  sampledAt: number | undefined;
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const { current, latest } = useOpenClock(now);
+  const { current, latest } = useOpenClock(now, sampledAt);
   const [picking, setPicking] = useState(false);
   return (
     <>
@@ -152,15 +158,20 @@ function ScheduleSteps({
 // The parent's `now`, moved on by the minutes the dialog stays open: an hour can
 // pass before Schedule send is pressed.
 // `latest` reads the clock at the press itself, between two ticks.
-function useOpenClock(now: Date): Readonly<{
+function useOpenClock(
+  now: Date,
+  sampledAt: number | undefined,
+): Readonly<{
   current: Date;
   latest: () => Date;
 }> {
   const tick = useNow(60_000);
-  const [opened] = useState({ at: now.getTime(), tick });
+  // Elapsed time runs from the sample, so a dialog whose code loads late counts
+  // the wait too.
+  const [opened] = useState({ at: now.getTime(), from: sampledAt ?? tick });
   // The later of the two: a parent that re-renders passes a `now` already ahead.
   const at = (clock: number) =>
-    new Date(Math.max(now.getTime(), opened.at + clock - opened.tick));
+    new Date(Math.max(now.getTime(), opened.at + clock - opened.from));
   return { current: at(tick), latest: () => at(Date.now()) };
 }
 

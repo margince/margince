@@ -21,11 +21,13 @@ function Dialog({
   now,
   sendAt = "",
   zone = ZONE,
+  sampledAt,
   onChoose = () => {},
 }: Readonly<{
   now: Date;
   sendAt?: string;
   zone?: string;
+  sampledAt?: number;
   onChoose?: (next: string) => void;
 }>) {
   const [chosen, setChosen] = useState(sendAt);
@@ -41,6 +43,7 @@ function Dialog({
           onChoose(next);
         }}
         now={now}
+        sampledAt={sampledAt}
       />
     </LocaleProvider>
   );
@@ -197,6 +200,31 @@ describe("choosing a date and time to send", () => {
     expect(onChoose).not.toHaveBeenCalled();
     expect(screen.getByText("Choose a time in the future.")).toBeTruthy();
     expect(screen.getByRole("dialog")).toBeTruthy();
+  });
+
+  it("counts the time its code took to load after `now` was sampled", async () => {
+    // Sampled at 16:59:40 in Berlin; the dialog mounts 40 seconds later.
+    const sampled = new Date("2026-09-14T14:59:40Z");
+    vi.useFakeTimers({
+      now: sampled,
+      toFake: ["Date", "setInterval", "clearInterval"],
+    });
+    const user = userEvent.setup();
+    act(() => {
+      vi.advanceTimersByTime(40_000);
+    });
+    render(<Dialog now={sampled} sampledAt={sampled.getTime()} />);
+    await user.click(
+      screen.getByRole("button", { name: "Select date and time" }),
+    );
+
+    // 17:00 has passed, so today is refused and the picker opens tomorrow.
+    expect(screen.getByText(/^Sends 15\/09\/2026, 08:00/)).toBeTruthy();
+    expect(
+      screen
+        .getByRole("button", { name: /^Monday, 14 September 2026, / })
+        .getAttribute("aria-disabled"),
+    ).toBe("true");
   });
 
   it("refuses a saved time that is already past", async () => {

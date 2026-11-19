@@ -446,13 +446,15 @@ function MomentDialog({
   picker: ReturnType<typeof useMomentPicker>;
   fields: ComposeFields;
 }>) {
+  const now = new Date();
   return (
     <ScheduleDialogOnDemand
       open={picker.open}
       onClose={picker.close}
       {...fields.scheduleControl}
       onChoose={fields.setSendAt}
-      now={new Date()}
+      now={now}
+      sampledAt={now.getTime()}
     />
   );
 }

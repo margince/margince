@@ -412,15 +412,13 @@ function DealBookMeeting({
     // A refusal the page already states wins; otherwise the missing company
     // is the one thing standing between the reader and a booking.
     const noCompany = !reasonId && !companyId;
+    const why = noCompany ? t("deal.meetNeedsCompany") : undefined;
     return (
       <Button
         disabled={pending || !companyId}
         reasonId={reasonId}
-        reason={noCompany ? t("deal.meetNeedsCompany") : undefined}
-        title={tipText(
-          t("scheduling.bookContact"),
-          reasonId ? reasonTip : undefined,
-        )}
+        reason={why}
+        title={tipText(t("scheduling.bookContact"), reasonId ? reasonTip : why)}
       >
         {face}
       </Button>
