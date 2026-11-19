@@ -60,3 +60,16 @@ func checkChangedContactNames(current crmcontracts.Contact, in UpdateContactInpu
 	}
 	return nil
 }
+
+// checkImportedFullName refuses an imported update whose full name is past the
+// import bound once the store joins the row's part to the stored one. The row
+// check cannot see the stored part, so the store asks the same rule here.
+func checkImportedFullName(current crmcontracts.Contact, in UpdateContactInput) error {
+	if in.FullName == nil || *in.FullName == current.FullName {
+		return nil
+	}
+	if column, length, over := OverlongImportedName(map[string]string{contactNameColumn: *in.FullName}); over {
+		return httperr.TooLong(column, ImportedNameLimit, length)
+	}
+	return nil
+}

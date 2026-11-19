@@ -257,14 +257,18 @@ func movesANamePart(in UpdateContactInput) bool {
 		slices.Contains(in.Clear, columnFirstName) || slices.Contains(in.Clear, columnLastName)
 }
 
-// contactEditPatch reads the edit as written, refuses a typed name past the label
-// limit, and builds the column patch.
+// contactEditPatch reads the edit as written and builds the column patch. It
+// refuses a typed name past the label limit, and an imported full name past the import bound.
 func contactEditPatch(
 	ctx context.Context, current crmcontracts.Contact, in UpdateContactInput, active []fieldcatalog.Column,
 ) (UpdateContactInput, *storekit.Patch, error) {
 	in = updateAsWritten(current, in, active)
 	if typedWrite(ctx) {
 		if err := checkChangedContactNames(current, in); err != nil {
+			return in, nil, err
+		}
+	} else if storekit.ImportRunOf(ctx) != nil {
+		if err := checkImportedFullName(current, in); err != nil {
 			return in, nil, err
 		}
 	}

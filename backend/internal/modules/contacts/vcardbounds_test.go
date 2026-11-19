@@ -4,11 +4,14 @@
 package contacts
 
 import (
+	"errors"
 	"strconv"
 	"strings"
 	"testing"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/textbounds"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
 func parseOneCard(t *testing.T, file string) VCardEntry {
@@ -44,6 +47,35 @@ func TestOverlongImportedNameNamesThePartPastTheBound(t *testing.T) {
 	}
 	if _, _, refused := OverlongImportedName(map[string]string{contactNameColumn: "  " + over[1:] + "  "}); refused {
 		t.Errorf("a name at the bound with surrounding spaces was refused; the bound counts the trimmed name")
+	}
+}
+
+// The full name a join stores obeys the bound its parts do: 100 and 99 join to
+// the bound, 150 and 150 join past it and answer full_name.
+func TestOverlongImportedNameRefusesPartsThatJoinPastTheBound(t *testing.T) {
+	fits := map[string]string{columnFirstName: strings.Repeat("a", 100), columnLastName: strings.Repeat("b", 99)}
+	if column, length, refused := OverlongImportedName(fits); refused {
+		t.Errorf("got %q, %d refused; want a %d-character join admitted", column, length, ImportedNameLimit)
+	}
+	over := map[string]string{columnFirstName: strings.Repeat("a", 150), columnLastName: strings.Repeat("b", 150)}
+	if column, length, refused := OverlongImportedName(over); !refused || column != contactNameColumn || length != 301 {
+		t.Errorf("got %q, %d, %v; want full_name refused at 301", column, length, refused)
+	}
+}
+
+// An imported update whose part joins to a stored part past the bound is
+// refused on full_name; one the store leaves unchanged is not asked.
+func TestAnImportedUpdateJoiningPastTheBoundIsRefused(t *testing.T) {
+	last := strings.Repeat("b", 150)
+	current := crmcontracts.Contact{FullName: "Ada " + last, FirstName: new("Ada"), LastName: &last}
+	in := updateAsWritten(current, UpdateContactInput{FirstName: new(strings.Repeat("a", 150))}, nil)
+	err := checkImportedFullName(current, in)
+	want := "full_name holds at most " + strconv.Itoa(ImportedNameLimit) + " characters; this one has 301"
+	if _, ok := errors.AsType[*httperr.DetailedError](err); !ok || !strings.Contains(err.Error(), want) {
+		t.Fatalf("err = %v, want %q", err, want)
+	}
+	if err := checkImportedFullName(current, UpdateContactInput{FullName: &current.FullName}); err != nil {
+		t.Errorf("err = %v, want an unchanged full name admitted", err)
 	}
 }
 

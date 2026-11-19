@@ -34,18 +34,24 @@ func tooLongToBeAName(s string) bool {
 	return len([]rune(s)) > maxNameInputRunes
 }
 
-// ImportedNameLimit is the most characters an imported name part holds. A file
-// keeps more room than a typed name, but no more than capture reads.
+// ImportedNameLimit is the most characters an imported name holds, each part and
+// the full name they join to. A file keeps more room than a typed name, but no
+// more than capture reads.
 const ImportedNameLimit = maxNameInputRunes
 
 // OverlongImportedName answers the first of full_name, first_name and last_name
-// whose trimmed text is past ImportedNameLimit, and its length. The CSV cell
-// check and the vCard import both ask it, so a file and a card refuse alike.
+// whose trimmed text is past ImportedNameLimit, and its length. Two parts that
+// fit alone but join past the limit answer full_name, the column the join fills.
+// The CSV cell check, the vCard import and an imported update all ask it.
 func OverlongImportedName(names map[string]string) (column string, length int, over bool) {
 	for _, column := range []string{contactNameColumn, columnFirstName, columnLastName} {
 		if length := utf8.RuneCountInString(strings.TrimSpace(names[column])); length > ImportedNameLimit {
 			return column, length, true
 		}
+	}
+	joined := JoinNameParts(names[columnFirstName], names[columnLastName])
+	if length := utf8.RuneCountInString(joined); length > ImportedNameLimit {
+		return contactNameColumn, length, true
 	}
 	return "", 0, false
 }

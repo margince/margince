@@ -167,6 +167,21 @@ func TestAContactNameCellPastTheImportBoundIsAProblemOfItsCell(t *testing.T) {
 	}
 }
 
+// Two name parts that fit alone but join past the bound are refused as the full
+// name the join would store. A join at the bound lands.
+func TestContactNamePartsJoiningPastTheImportBoundAreAProblemOfTheFullName(t *testing.T) {
+	fits := map[string]string{"first_name": strings.Repeat("a", 100), "last_name": strings.Repeat("b", 99)}
+	if _, problem := checkRow(migration.ObjectContact, fits, importCatalog{}); problem != nil {
+		t.Fatalf("problem = %+v, want none for parts joining to %d characters", problem, contacts.ImportedNameLimit)
+	}
+	over := map[string]string{"first_name": strings.Repeat("a", 150), "last_name": strings.Repeat("b", 150)}
+	_, problem := checkRow(migration.ObjectContact, over, importCatalog{})
+	want := "This value is 301 characters. The field holds at most " + strconv.Itoa(contacts.ImportedNameLimit) + "."
+	if problem == nil || problem.Target != fieldFullName || problem.Why.Code != migration.ReasonValueTooLong || problem.Message != want {
+		t.Fatalf("problem = %+v, want the joined full name refused as %q", problem, want)
+	}
+}
+
 // The contacts store refuses a sending system's address, so the dry run skips
 // the row with the same reason the commit gives. A lead may still hold one.
 func TestAContactRowWithASendingSystemsAddressIsSkipped(t *testing.T) {
