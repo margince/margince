@@ -366,17 +366,26 @@ describe("the deal's committee card", () => {
     stubFetch();
     draw(
       coverage({
-        our_side: [
+        stakeholders: [
           {
-            user_id: OWNER,
-            display_name: "Lena Fischer",
-            strength_bucket: "strong",
-            interactions_90d: 3,
+            contact_id: "c-1",
+            contact_name: "Mai Trần",
+            role: "champion",
+            engaged: true,
+            reach: "reached",
+          },
+          {
+            contact_id: "c-2",
+            contact_name: "Bảo Nguyễn",
+            role: "economic_buyer",
+            engaged: false,
+            reach: "not_reached",
           },
         ],
         lines: [
           {
             user_id: OWNER,
+            colleague_name: "Lena Fischer",
             contact_id: "c-1",
             last_inbound_at: "2026-11-04T09:00:00Z",
           },
@@ -407,7 +416,7 @@ describe("the deal's committee card", () => {
       screen.queryByText(translate("en", "deal.committee.lines.title")),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByText(/No one on our team has reached/),
+      screen.queryByText(/No current colleague has reached/),
     ).not.toBeInTheDocument();
   });
 });

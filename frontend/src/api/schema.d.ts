@@ -38389,6 +38389,15 @@ export interface components {
             /** @description The contact's display name. Null when the caller may not read that contact — the seat still counts toward coverage, because how many contacts carry a deal is not a fact this reader is being told they cannot know; only who they are. `our_side` has carried a display name from the start, and a buyer-side seat that carries only an id is the same list rendered half-anonymous. */
             contact_name?: string | null;
             role: string;
+            /**
+             * @description Whether a current colleague has exchanged mail with or met this seat, as the caller
+             *     can prove it. `not_reached` only when no activity links the seat to a colleague at
+             *     all. Anything withheld from the caller, or an exchange only with a colleague who has
+             *     left, is `unknown`. Absent for a seat the caller cannot read, and without the
+             *     `activity` grant.
+             * @enum {string}
+             */
+            reach?: "reached" | "not_reached" | "unknown";
             /** @description A two-way exchange in the window — both directions, not just our sends. */
             engaged: boolean;
             /**
@@ -38405,21 +38414,28 @@ export interface components {
             user_id: string;
             /** Format: uuid */
             contact_id: string;
+            colleague_name: string;
             /**
              * Format: date-time
              * @description When the contact last wrote to this colleague.
              */
             last_inbound_at?: string | null;
+            /** @description How to read `last_inbound_at`. */
+            last_inbound_precision?: components["schemas"]["OccurredPrecision"];
             /**
              * Format: date-time
              * @description When this colleague last wrote to the contact, or was copied on our mail to them.
              */
             last_outbound_at?: string | null;
+            /** @description How to read `last_outbound_at`. */
+            last_outbound_precision?: components["schemas"]["OccurredPrecision"];
             /**
              * Format: date-time
              * @description The newest meeting or call of the pair that neither declined.
              */
             last_met_at?: string | null;
+            /** @description How to read `last_met_at`. */
+            last_met_precision?: components["schemas"]["OccurredPrecision"];
         };
         /**
          * @description One finding, with the records behind it. `kind` names the rule so a surface can
@@ -39329,10 +39345,10 @@ export interface components {
              */
             our_side: components["schemas"]["ContactNetworkColleague"][];
             /**
-             * @description One entry per colleague and seat who have exchanged mail or met, read from the same
-             *     per-pair edges as `our_side`. A pair with no exchange has no entry. Absent, not empty,
-             *     when the caller has no `activity` grant: an absent list says nothing about who has
-             *     talked, and a seat must not be called unreached from it.
+             * @description One entry per current colleague and readable seat who have exchanged mail or met,
+             *     from the activities the caller may open, at the time of the read. A seat the caller
+             *     cannot read has none. Absent, not empty, when the caller has no `activity` grant or
+             *     the edge sections are withheld: absence says nothing about who has talked.
              */
             lines?: components["schemas"]["DealCoverageLine"][];
             risks: components["schemas"]["DealCoverageRisk"][];

@@ -30,12 +30,14 @@ const coverage = (over: Partial<DealCoverage> = {}): DealCoverage => ({
       contact_name: "Mai Tran",
       role: "champion",
       engaged: true,
+      reach: "reached",
     },
     {
       contact_id: "c-2",
       contact_name: "Bao Nguyen",
       role: "user",
       engaged: false,
+      reach: "not_reached",
     },
   ],
   our_side: [
@@ -70,6 +72,7 @@ describe("committeeLines", () => {
         lines: [
           {
             user_id: "u-1",
+            colleague_name: "Lena Fischer",
             contact_id: "c-1",
             last_outbound_at: "2026-11-02T09:00:00Z",
             last_inbound_at: "2026-11-04T09:00:00Z",
@@ -90,11 +93,13 @@ describe("committeeLines", () => {
         lines: [
           {
             user_id: "u-1",
+            colleague_name: "Lena Fischer",
             contact_id: "c-1",
             last_outbound_at: "2026-11-02T09:00:00Z",
           },
           {
             user_id: "u-2",
+            colleague_name: "Jonas Weber",
             contact_id: "c-1",
             last_met_at: "2026-11-06T09:00:00Z",
           },
@@ -115,6 +120,7 @@ describe("committeeLines", () => {
         lines: [
           {
             user_id: "u-1",
+            colleague_name: "Lena Fischer",
             contact_id: "c-1",
             last_inbound_at: "2026-11-04T09:00:00Z",
           },
@@ -133,6 +139,7 @@ describe("committeeLines", () => {
         lines: [
           {
             user_id: "u-1",
+            colleague_name: "Lena Fischer",
             contact_id: "c-1",
             last_inbound_at: "2026-11-04T09:00:00Z",
           },
@@ -142,8 +149,22 @@ describe("committeeLines", () => {
       when,
     );
     expect(drawn?.unreached.map((gap) => gap.text)).toEqual([
-      "No one on our team has reached Bao Nguyen",
+      "No current colleague has reached Bao Nguyen",
     ]);
+  });
+
+  it("names no gap for a seat the server could not prove unreached", () => {
+    const seats = coverage().stakeholders.map((seat) => ({
+      ...seat,
+      reach: "unknown" as const,
+    }));
+    const noState = coverage().stakeholders.map(({ reach, ...seat }) => seat);
+    expect(
+      committeeLines(coverage({ stakeholders: seats }), t, when)?.unreached,
+    ).toEqual([]);
+    expect(
+      committeeLines(coverage({ stakeholders: noState }), t, when)?.unreached,
+    ).toEqual([]);
   });
 
   it("claims nothing when the read carries no lines", () => {
@@ -166,6 +187,7 @@ describe("CommitteeLines", () => {
         lines: [
           {
             user_id: "u-1",
+            colleague_name: "Lena Fischer",
             contact_id: "c-1",
             last_met_at: "2026-11-06T09:00:00Z",
           },
@@ -187,7 +209,7 @@ describe("CommitteeLines", () => {
     const items = within(list).getAllByRole("listitem");
     expect(items.map((item) => item.textContent)).toEqual([
       "Lena Fischer with Mai Tran: Met 2026-11-06",
-      "No one on our team has reached Bao Nguyen",
+      "No current colleague has reached Bao Nguyen",
     ]);
     await userEvent.setup().tab();
     expect(

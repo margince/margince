@@ -20451,7 +20451,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.committee.lines.met": "Am {date} getroffen",
   "deal.committee.lines.pair": "{colleague} mit {contact}: {how}",
   "deal.committee.lines.unreached":
-    "Niemand in deinem Team hat {contact} erreicht",
+    "Niemand aus deinem aktuellen Team hat {contact} erreicht",
   "deal.committee.missing.champion": "Es fehlt: ein Champion im Austausch",
   "deal.committee.missing.firstContact":
     "Es fehlt: ein Kontakt auf Kundenseite",

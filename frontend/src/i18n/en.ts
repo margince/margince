@@ -6193,7 +6193,8 @@ export const en = {
   "deal.committee.lines.replied": "They wrote {date}",
   "deal.committee.lines.met": "Met {date}",
   "deal.committee.lines.pair": "{colleague} with {contact}: {how}",
-  "deal.committee.lines.unreached": "No one on our team has reached {contact}",
+  "deal.committee.lines.unreached":
+    "No current colleague has reached {contact}",
   "deal.committee.missing.champion": "Missing: an engaged champion",
   "deal.committee.missing.firstContact": "Missing: a contact on their side",
   "deal.committee.missing.secondContact": "Only one contact. Add a second one.",

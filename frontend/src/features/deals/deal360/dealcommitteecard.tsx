@@ -73,8 +73,8 @@ export function DealCommitteeCard({
     t,
     locale,
   });
-  const drawn = committeeLines(coverage, t, (at) =>
-    activityDay(at, "instant", locale, zone),
+  const drawn = committeeLines(coverage, t, (at, precision) =>
+    activityDay(at, precision, locale, zone),
   );
   const foot = committeeFoot(coverage, withheld, t, locale);
   const addSeat: AddSeat | undefined = canCreate
