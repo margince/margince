@@ -6,7 +6,7 @@
 package privacy
 
 // A chat summary note is readable only by seats holding read on its deal. The
-// audit trail keeps the row, actor and time for everyone and withholds the
+// audit trail keeps the row, actor and time for everyone. It withholds the
 // image, as it does for any activity the reader may not read.
 
 import (

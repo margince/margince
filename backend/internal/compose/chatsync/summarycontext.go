@@ -5,10 +5,10 @@ package chatsync
 
 // What a summary request carries besides the talk. It holds the note filed for
 // the channel's previous stretch and the parties on the record. It also holds
-// the seat addresses and own domains that tell a colleague. The note and the
-// parties are judged against the members who may read the summary note, which
-// the activity gate limits to holders of read on the link's deal or project.
-// The deal's amount is never among them.
+// the seat addresses and own domains that tell a colleague. Names are judged
+// against the members who may read the summary note. The activity gate limits
+// that note to holders of read on the link's deal or project. The deal's amount
+// is never among them.
 
 import (
 	"context"
@@ -94,8 +94,8 @@ func liveOwner(ctx context.Context, tx pgx.Tx, record chatRecord) (string, error
 	return name, err
 }
 
-// noteReaders lists the live human members who may read the summary note: those
-// holding read on the link's deal or project, as the activity gate requires.
+// noteReaders lists the live human members who may read the summary note. The
+// activity gate admits those holding read on the link's deal or project.
 func noteReaders(ctx context.Context, tx pgx.Tx, link chatlinks.Link) ([]principal.Principal, error) {
 	rows, err := tx.Query(ctx, `SELECT u.id FROM app_user u WHERE `+workforce.LiveHumanSQL("u")+` ORDER BY u.id`)
 	if err != nil {

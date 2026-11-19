@@ -6,7 +6,7 @@
 package integration
 
 // A chat summary note is readable only by seats holding read on its deal or
-// project, on every read path and even when it is also linked to a company.
+// project. That holds on every read path, and when a company is linked too.
 
 import (
 	"encoding/json"
