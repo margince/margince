@@ -218,7 +218,7 @@ func TestAGroupRelayedInvitationNamesNoColleague(t *testing.T) {
 }
 
 // projectRows is what read_project_360 tells one reader about each timeline row.
-func projectRows(t *testing.T, e *integration.SearchEnv, reader context.Context, project ids.ProjectID) map[ids.UUID]string {
+func projectRows(reader context.Context, t *testing.T, e *integration.SearchEnv, project ids.ProjectID) map[ids.UUID]string {
 	t.Helper()
 	out, err := compose.NewRegistry(e.Pool, compose.SendPath{}).
 		Invoke(reader, "read_project_360", fmt.Appendf(nil, `{"project_id":%q}`, project.String()))
@@ -256,7 +256,7 @@ func TestTheProjectToolNamesTheSideThatWroteARow(t *testing.T) {
 	invitation := activityIDOf(t, e, "project-invite@search.test")
 	project := fileUnderProject(t, e)
 
-	side, listed := projectRows(t, e, seatWriter(e), project)[invitation]
+	side, listed := projectRows(seatWriter(e), t, e, project)[invitation]
 	if !listed {
 		t.Fatal("read_project_360 does not carry the invitation")
 	}
@@ -267,7 +267,7 @@ func TestTheProjectToolNamesTheSideThatWroteARow(t *testing.T) {
 	if readsContent(t, e, e.Rep3, invitation) {
 		t.Fatal("the second seat may open the invitation, so the withheld case below proves nothing")
 	}
-	side, listed = projectRows(t, e, projectReader(e, e.Rep3), project)[invitation]
+	side, listed = projectRows(projectReader(e, e.Rep3), t, e, project)[invitation]
 	if !listed {
 		t.Fatal("read_project_360 does not list the withheld invitation to the second seat")
 	}
