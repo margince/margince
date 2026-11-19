@@ -318,7 +318,7 @@ describe("AiRoutingCard", () => {
     await pickOption(
       user,
       within(tier).getByRole("combobox", { name: "Provider" }),
-      "openai_compatible",
+      "OpenAI-compatible",
     );
     // Emptied, and focused, so the list of what the new vendor serves opens.
     const modelBox = within(tier).getByRole("combobox", { name: "Model" });
@@ -331,7 +331,7 @@ describe("AiRoutingCard", () => {
     );
     expect(within(tier).queryByLabelText("Host")).toBeNull();
     expect(
-      within(tier).getByText(/openai_compatible has no host yet/),
+      within(tier).getByText(/OpenAI-compatible has no host yet/),
     ).toBeInTheDocument();
     await saveEditor(user, backend);
     const sent = backend.getCapturedPut();
@@ -363,7 +363,7 @@ describe("AiRoutingCard", () => {
     await pickOption(
       user,
       within(tier).getByRole("combobox", { name: "Provider" }),
-      "gemini",
+      "Google Gemini",
     );
     // A provider change empties the model; the reader picks one.
     await user.type(
@@ -391,7 +391,7 @@ describe("AiRoutingCard", () => {
     await pickOption(
       user,
       within(lane).getByRole("combobox", { name: "Provider" }),
-      "openai_compatible",
+      "OpenAI-compatible",
     );
     // A provider change empties the model; the reader picks one.
     await user.type(
@@ -530,15 +530,15 @@ describe("AiRoutingCard", () => {
       .getAllByRole("option")
       .map((o) => o.textContent);
     // Keyed or keyless, never a vendor whose key is missing.
-    expect(offered).toContain("gemini");
-    expect(offered).toContain("ollama");
-    expect(offered).toContain("openai_compatible");
-    expect(offered).not.toContain("anthropic");
-    expect(offered).not.toContain("openai");
+    expect(offered).toContain("Google Gemini");
+    expect(offered).toContain("Ollama");
+    expect(offered).toContain("OpenAI-compatible");
+    expect(offered).not.toContain("Anthropic");
+    expect(offered).not.toContain("OpenAI");
     // Keyless adapters are offered on the probe's word: ollama answered, vllm
     // did not, and nothing binds fake.
-    expect(offered).not.toContain("vllm");
-    expect(offered).not.toContain("fake");
+    expect(offered).not.toContain("vLLM");
+    expect(offered).not.toContain("Built-in test provider");
     await user.keyboard("{Escape}");
     await user.click(within(tier).getByRole("button", { name: /cancel/i }));
 
@@ -548,7 +548,7 @@ describe("AiRoutingCard", () => {
       within(screen.getByRole("listbox"))
         .getAllByRole("option")
         .map((o) => o.textContent),
-    ).toContain("anthropic");
+    ).toContain("Anthropic");
   });
 
   it("offers fake only where a lane is already bound to it, and keeps a lane's own unreachable adapter", async () => {
@@ -580,9 +580,9 @@ describe("AiRoutingCard", () => {
     const offered = within(screen.getByRole("listbox"))
       .getAllByRole("option")
       .map((o) => o.textContent);
-    expect(offered).toContain("fake");
-    expect(offered).toContain("ollama");
-    expect(offered).not.toContain("vllm");
+    expect(offered).toContain("Built-in test provider");
+    expect(offered).toContain("Ollama");
+    expect(offered).not.toContain("vLLM");
     await user.keyboard("{Escape}");
     await user.click(within(tier).getByRole("button", { name: /cancel/i }));
 
@@ -592,7 +592,7 @@ describe("AiRoutingCard", () => {
       within(screen.getByRole("listbox"))
         .getAllByRole("option")
         .map((o) => o.textContent),
-    ).toContain("vllm");
+    ).toContain("vLLM");
   });
 
   // A lane on a vendor with no key cannot be saved there: it would fail closed

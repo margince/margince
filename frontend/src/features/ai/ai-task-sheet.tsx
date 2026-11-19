@@ -37,7 +37,7 @@ import {
   WINDOWS,
   type Window,
 } from "./ai-call-figures";
-import { tierLabel } from "./ai-decision-labels";
+import { executionModeLabel, tierLabel } from "./ai-decision-labels";
 import { LatencyAgainstTimeout, TaskOutcome } from "./ai-task-outcome";
 import { ReadProblem, SaveProblem, TimeoutField } from "./ai-task-sheet-fields";
 import { CALL_TASK_PARAM, callsHrefFor } from "./aicalls";
@@ -183,9 +183,8 @@ export function TaskSheet({
         </Heading>
         <p className="t-caption">
           {[
-            route.task,
             decides ? t("aiTaskSheet.decision") : null,
-            route.execution_mode,
+            executionModeLabel(route.execution_mode, t),
           ]
             .filter(Boolean)
             .join(" · ")}
@@ -400,7 +399,7 @@ function ContractFacts({ route }: Readonly<{ route: Feature }>) {
             .join(" → ") || "—"}
         </dd>
         <dt>{t("aiTaskSheet.runs")}</dt>
-        <dd>{route.execution_mode}</dd>
+        <dd>{executionModeLabel(route.execution_mode, t)}</dd>
       </dl>
       <p className="t-caption">
         {t("aiTaskSheet.fixed.help")}{" "}

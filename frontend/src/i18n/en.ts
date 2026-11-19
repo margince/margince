@@ -9627,6 +9627,22 @@ export const en = {
   "agent.activity.offerDraft.degraded": "Offer draft stopped partway",
   "agent.activity.offerDraft.failed": "Offer draft failed",
   "agent.activity.offerDraft.stalled": "Offer draft is taking unusually long",
+  "agent.activity.draftReplyNamed.queued": "Reply draft for “{name}” queued",
+  "agent.activity.draftReplyNamed.running": "Drafting a reply to “{name}”…",
+  "agent.activity.draftReplyNamed.done": "Draft reply to “{name}” ready",
+  "agent.activity.draftReplyNamed.degraded":
+    "Reply draft for “{name}” stopped partway",
+  "agent.activity.draftReplyNamed.failed": "Reply draft for “{name}” failed",
+  "agent.activity.draftReplyNamed.stalled":
+    "Reply draft for “{name}” is taking unusually long",
+  "agent.activity.offerDraftNamed.queued": "Offer draft for {name} queued",
+  "agent.activity.offerDraftNamed.running": "Drafting an offer for {name}…",
+  "agent.activity.offerDraftNamed.done": "Draft offer for {name} ready",
+  "agent.activity.offerDraftNamed.degraded":
+    "Offer draft for {name} stopped partway",
+  "agent.activity.offerDraftNamed.failed": "Offer draft for {name} failed",
+  "agent.activity.offerDraftNamed.stalled":
+    "Offer draft for {name} is taking unusually long",
   // ── THE AGENT SURFACE'S OWN WORDS ──────────────────────────────────────────
   //
   // The rail's one line and the panel it opens, in one place. They were split
@@ -9690,8 +9706,9 @@ export const en = {
   "agent.fact.sources": "Sources",
   "agent.fact.offline": "offline",
   "agent.fact.sourceOnProvider": "{account} ({provider})",
-  // The two reasons there is no model to name, in the value's own slot.
+  // Why no answering model is named, in the value's own slot.
   "agent.fact.searchIndex": "Search index: {model}",
+  "agent.fact.noAnswers": "No answers from {model}",
   "agent.fact.noCalls": "No model calls yet",
   "agent.fact.hidden": "Hidden for your role",
   // The fault a badge carries, above the facts it invalidates.
@@ -16900,6 +16917,9 @@ export const en = {
     "Tasks grouped by the tier that runs them; select a name for what a task does, or open a row to set its thinking level and timeouts.",
   "aiTasks.whatItDoes": "{task}: what it does",
   "aiTasks.decisionFirst": "Decision model first",
+  "aiTasks.mode.interactive": "While the user waits",
+  "aiTasks.mode.background": "In the background",
+  "aiTasks.mode.embedding": "Search indexing",
   "aiTasks.viewCalls": "View calls",
   "aiTasks.deferral.nowEmbedding":
     "Refused now: search indexing tries again on its own schedule.",
@@ -21214,6 +21234,7 @@ export const en = {
   "aiProviders.state.active": "Active",
   "aiProviders.state.ready": "Ready",
   "aiProviders.state.needsKey": "Needs key",
+  "aiProviders.state.needsService": "Needs service",
   "aiProviders.state.inactive": "Not active",
   "aiProviders.colUsedBy": "Used by",
   "aiProviders.colStatus": "Status",
@@ -22037,7 +22058,8 @@ export const en = {
   "aiTaskSheet.fixed": "Fixed by contract",
   "aiTaskSheet.tiersTried": "Tiers tried",
   "aiTaskSheet.runs": "Runs",
-  "aiTaskSheet.fixed.help": "Change these in ai-tasks.yaml.",
+  "aiTaskSheet.fixed.help":
+    "A developer changes these in the task’s definition, and they take effect with the next release.",
   "aiTaskSheet.addTask": "Add or change an AI task ↗",
   "aiTaskSheet.conflict": "Someone saved these settings while you were editing",
   "aiTaskSheet.conflict.help":
@@ -22065,7 +22087,10 @@ export const en = {
   "aiOutcome.role.decision": "decision model",
   "aiOutcome.role.tier": "tier model",
   "aiOutcome.role.fallback": "fallback",
-  "aiOutcome.answered": "{answered} of {attempts} answered",
+  "aiOutcome.answered_one": "{answered} answered in {attempts} try",
+  "aiOutcome.answered_other": "{answered} answered in {attempts} tries",
+  "aiOutcome.triesNote":
+    "A failed or timed-out try can be retried at the same step, so a step can count more tries than there are calls.",
   "aiOutcome.usually": "usually in {latency}",
   "aiOutcome.notNeeded": "Not needed in this window",
   "aiOutcome.gaveUp.on_one": "{count} {reason} → passed on",

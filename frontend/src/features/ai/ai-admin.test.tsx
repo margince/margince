@@ -241,7 +241,7 @@ it("reads a task's resolved chain with no edit control", async () => {
   );
   const user = userEvent.setup({ delay: null });
   expect(await openTaskDetails(user, feature.display_name)).toHaveTextContent(
-    `${feature.task} · ${feature.execution_mode}`,
+    `${feature.task} · While the user waits`,
   );
   await user.click(screen.getByRole("button", { name: /example-model/ }));
   expect(
