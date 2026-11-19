@@ -68,13 +68,15 @@ func TestSearchWonDealYearsIncludeBothWholeYearsInTheInstallationZone(t *testing
 	}
 }
 
-func TestAVietnameseWonCountInEitherWordOrderUsesSalesWon(t *testing.T) {
+func TestAWonCountInEitherWordOrderUsesSalesWon(t *testing.T) {
 	const vocabulary = `{"context":{"timezone":"Asia/Ho_Chi_Minh","base_currency":"VND"}}`
 	for _, question := range []string{
 		"tháng này tôi thắng bao nhiêu deal",
-		"thang nay toi thắng bao nhieu deal",
+		"thang nay toi thang bao nhieu deal",
 		"bao nhiêu deal tôi thắng tháng này",
 		"tháng này tôi thắng mấy deal",
+		"thang nay toi thang may deal bao nhieu",
+		"How many deals did we win?",
 	} {
 		if _, err := Admit(Plan{Engine: "records", Arguments: `{"plan":{"version":"v1","target":"deal"}}`}, question, vocabulary); err == nil {
 			t.Errorf("%q: a record list was accepted as a won-deal count", question)
@@ -82,6 +84,23 @@ func TestAVietnameseWonCountInEitherWordOrderUsesSalesWon(t *testing.T) {
 		won := Plan{Engine: "reporting", Count: true, Arguments: `{"scope":{"kind":"workspace"},"period":"month","metrics":["bookings_won"]}`}
 		if _, err := Admit(won, question, vocabulary); err != nil {
 			t.Errorf("%q: the Sales won count was refused: %v", question, err)
+		}
+	}
+}
+
+func TestAListThatOnlyResemblesAWonCountStaysAList(t *testing.T) {
+	const vocabulary = `{"context":{"timezone":"UTC","base_currency":"EUR"}}`
+	for _, question := range []string{
+		"list the deals won with a discount",
+		"show deals won by key accounts",
+		"which deals did we win in each country",
+		"how many deals are in the Winterhalter window",
+		"danh sách deal thắng của khách hàng mấy tháng gần đây",
+		"bao nhieu deal mo trong thang nay",
+		"bao nhieu deal mo thang truoc",
+	} {
+		if _, err := Admit(Plan{Engine: "records", Arguments: `{"plan":{"version":"v1","target":"deal"}}`}, question, vocabulary); err != nil {
+			t.Errorf("%q: a record list was refused as a won count: %v", question, err)
 		}
 	}
 }

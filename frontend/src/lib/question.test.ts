@@ -23,8 +23,8 @@ describe("looksLikeQuestion", () => {
     "deal lớn nhất là của ai",
     "ai đã thắng deal Acme",
     "deal Acme đóng khi nào",
-    "công ty nào có nhiều deal nhất",
-    "đây là gì vậy",
+    "deal Acme là gì",
+    "Mấy deal tôi thắng tháng này",
     "who owns the Acme deal",
     "wer betreut den Acme Deal",
   ])("reads %j as a question", (query) => {
@@ -46,6 +46,19 @@ describe("looksLikeQuestion", () => {
     "Công ty Máy Việt",
     "Ai Holdings Vietnam",
     "Bao Nhi Minh",
+    "Nguyễn Văn Mấy",
+    "Trần Thị Nào",
+    "Công ty TNHH Mấy",
+    "Khách sạn La Gi Resort",
+    "khách sạn la gi resort",
+    "Cho Ai Market",
+    "Bao Gio Nguyen",
+    "Khi Nao Pham",
+    "Cty Nào Đó",
+    "cty nào đó Hà Nội",
+    "Who Gives A Crap",
+    "Wer Bau GmbH",
+    "danh sách deal thắng của khách hàng mấy tháng gần đây",
     "  ",
   ])("reads %j as a lookup", (query) => {
     expect(looksLikeQuestion(query)).toBe(false);
@@ -61,6 +74,8 @@ describe("looksLikeDataQuestion", () => {
     "Cuối tháng có đạt mục tiêu không?",
     "tháng này tôi thắng mấy deal",
     "tổng doanh thu quý này",
+    "did we reach the target this month",
+    "haben wir das Ziel erreicht",
   ])("sends %j to the data reader", (question) => {
     expect(looksLikeDataQuestion(question)).toBe(true);
   });
@@ -71,6 +86,13 @@ describe("looksLikeDataQuestion", () => {
     "Tống Văn Minh là ai",
     "máy in ở đâu",
     "wonderful onboarding steps?",
+    "how do I set a sales target",
+    "where is the quota setting",
+    "wie lege ich ein Ziel fest",
+    "wie ändere ich den Umsatz Bericht",
+    "anh Thắng làm ở công ty nào",
+    "làm sao để đặt mục tiêu bán hàng",
+    "danh sách khách hàng mấy tháng gần đây",
   ])("sends %j to the handbook", (question) => {
     expect(looksLikeDataQuestion(question)).toBe(false);
   });
