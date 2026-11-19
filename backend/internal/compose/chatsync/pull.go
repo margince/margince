@@ -149,7 +149,7 @@ func (p *Puller) judge(ctx context.Context, session chatlinks.Session, link chat
 	if err != nil {
 		return err
 	}
-	reply, err := summarise(ctx, p.Lane, link, record, ep.messages, false)
+	reply, err := summariser{lane: p.Lane, pool: p.Pool}.summarise(ctx, link, record, ep.messages, false)
 	switch {
 	case errors.Is(err, errNoModel):
 		p.Log.InfoContext(ctx, "chat episode passed over", "link", link.ID.String(), "first_seq", ep.firstSeq(), "reason", "no_model")

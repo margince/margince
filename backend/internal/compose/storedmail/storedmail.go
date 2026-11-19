@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+// Package storedmail pages captured mail whose stored original survives, for
+// the data tasks that correct a row from its original.
+package storedmail
 
 import (
 	"context"
@@ -15,7 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// pageStoredMail reads one page of stored mail and applies fix to every row it
+// Page reads one page of stored mail and applies fix to every row it
 // reads, locking each against a concurrent write.
 //
 // One function for every step that corrects stored mail from its original.
@@ -23,7 +25,7 @@ import (
 //
 // Each also advances over rows that needed nothing, because whether a row needs
 // its step is decided per row, against the re-parse.
-func pageStoredMail[T any](
+func Page[T any](
 	ctx context.Context, tx pgx.Tx, in datatask.BatchIn, columns, scope string,
 	originalOf func(*T) (ids.UUID, *[]byte),
 	fix func(context.Context, pgx.Tx, T) (bool, error),
@@ -65,9 +67,9 @@ func pageStoredMail[T any](
 	return datatask.AdvanceUUID(in, scanned, changed)
 }
 
-// countStoredMail counts the rows a scope holds, up to one past the cap it is
+// Count counts the rows a scope holds, up to one past the cap it is
 // given, so a caller can say whether more are waiting.
-func countStoredMail(ctx context.Context, q datatask.Querier, scope string, maximum int64) (int64, bool, error) {
+func Count(ctx context.Context, q datatask.Querier, scope string, maximum int64) (int64, bool, error) {
 	if err := auth.Require(ctx, "data_task", principal.ActionRead); err != nil {
 		return 0, false, err
 	}

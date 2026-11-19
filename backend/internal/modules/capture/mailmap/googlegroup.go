@@ -8,6 +8,8 @@ import (
 	"strings"
 
 	"github.com/emersion/go-message/mail"
+
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // googleGroupSender answers who wrote a message a Google Group delivered, and
@@ -36,6 +38,13 @@ func googleGroupSender(header mail.Header) ([]*mail.Address, bool) {
 		return nil, false
 	}
 	return original, true
+}
+
+// groupRelayed marks a verdict on a message a group relayed. The verdict is
+// about the group's own From, not the original sender the record names.
+func groupRelayed(verdict connector.SenderAuthentication, viaGroup bool) connector.SenderAuthentication {
+	verdict.GroupRelayed = viaGroup
+	return verdict
 }
 
 // groupListUnsubscribe reports whether a group-delivered message carries a
