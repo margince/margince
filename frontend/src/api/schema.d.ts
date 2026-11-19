@@ -14732,9 +14732,10 @@ export interface paths {
          *     on a deal at risk.
          *
          *     Each row must be one the caller's Worklist draws now, under a scope they hold, with
-         *     every lane's own grant and row scope. Any other row answers 404, the same as one
-         *     that does not exist, and nothing in the batch is written. A source whose rows never
-         *     offer Done answers 422. A row named twice is written once.
+         *     every lane's own grant and row scope, or one the caller already marked done. A row
+         *     already done answers 204 and is not written again. Any other row answers 404, the
+         *     same as one that does not exist, and nothing in the batch is written. A source whose
+         *     rows never offer Done answers 422. A row named twice is written once.
          */
         put: operations["markWorklistRowsDone"];
         post?: never;
@@ -29495,13 +29496,13 @@ export interface components {
              *       as a company.
              *     - `bulk_sender`: mail from the domain was judged bulk or automated, so it is not a
              *       company this business works with. `sender_kind` says which, when it is known.
-             *     - `unevidenced`, `stale_evidence`, `near_duplicate`, `vendor_verdict`: the undecided
+             *     - `unevidenced`, `stale_evidence`, `near_duplicate`, `vendor_verdict`, `foreign_site`: the undecided
              *       domain's open question, as `source` describes each one.
              *     - `unknown`: the row records a reason this server has no word for. `reason` still
              *       carries its stored sentence.
              * @enum {string}
              */
-            reason_code: "stated" | "company_created" | "kept_as_company" | "bulk_sender" | "unevidenced" | "stale_evidence" | "near_duplicate" | "forwarded_identity" | "vendor_verdict" | "reserved_domain" | "unknown";
+            reason_code: "stated" | "company_created" | "kept_as_company" | "bulk_sender" | "unevidenced" | "stale_evidence" | "near_duplicate" | "forwarded_identity" | "vendor_verdict" | "reserved_domain" | "foreign_site" | "unknown";
             /** @description The reason as its author wrote it, in their words. Sent only with `reason_code` `stated`. */
             note?: string;
             /**
@@ -29522,10 +29523,12 @@ export interface components {
              *     old to mint one from today's site; `near_duplicate` means more than one company
              *     here already carries the name it resolved to, and which of them this domain belongs
              *     to is a human's call rather than the machine's; `vendor_verdict` means the site reads
-             *     as a mail or hosting vendor, and a colleague decides whether its staff get a company.
+             *     as a mail or hosting vendor, and a colleague decides whether its staff get a company;
+             *     `foreign_site` means the site names a different business than the domain, which may
+             *     have changed hands.
              * @enum {string}
              */
-            source: "verdict" | "heuristic" | "human" | "agent" | "unevidenced" | "stale_evidence" | "near_duplicate" | "forwarded_identity" | "vendor_verdict" | "reserved_domain";
+            source: "verdict" | "heuristic" | "human" | "agent" | "unevidenced" | "stale_evidence" | "near_duplicate" | "forwarded_identity" | "vendor_verdict" | "reserved_domain" | "foreign_site";
             /**
              * Format: date-time
              * @description When the decision was recorded. For an `undecided` domain, when the row last moved.
@@ -60888,8 +60891,9 @@ export interface components {
             next_meeting?: components["schemas"]["Contact360NextMeeting"];
         };
         /**
-         * @description Whose weekly plans this read looked at, present only when `scope` is `team` and the
-         *     due commitments were read across the team roster. Absent under every other scope.
+         * @description Whose weekly plans this read looked at, present only when `scope` is `team` or `all`.
+         *     Both read the due commitments across the reader's team roster, the reader included.
+         *     Absent under every other scope.
          *
          *     It exists because "nothing due" and "not looked at" differ. A teammate whose plan
          *     could not be read contributes no rows, and without this a lead would read their

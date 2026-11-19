@@ -258,7 +258,7 @@ func TestADomainNamedLikeTheOwnCompanyDoesNotJoinIt(t *testing.T) {
 	if err != nil {
 		t.Fatalf("seeding the own company: %v", err)
 	}
-	res := e.resolveSiteVerdict(ctx, t, "eve@lookalike.test", "lookalike.test", "Our House GmbH")
+	res := e.resolveSiteVerdict(ctx, t, "eve@ourhouse.example", "ourhouse.example", "Our House GmbH")
 
 	if !res.CompanyCreated || res.CompanyID == nil || *res.CompanyID == anchor.CompanyID {
 		t.Fatalf("the verdict = %+v, want a record of its own beside the own company", res)

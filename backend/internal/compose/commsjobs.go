@@ -332,7 +332,7 @@ func newSendWorker(pool *pgxpool.Pool, registry *capture.Registry, blob blobstor
 // Capture owns the echo that can supply an identity the read-back could not.
 // Consent owns the restriction a sent lift notice releases.
 func NewMailDeliveryStore(pool *pgxpool.Pool, admitParties func(context.Context, ids.ActivityID) error) *comms.Store {
-	return comms.NewStore(InstallationDB(pool), time.Now, activities.NewStore(InstallationDB(pool)),
+	return comms.NewStore(InstallationDB(pool), time.Now, sentIdentity(InstallationDB(pool)),
 		comms.WithPartyAdmission(admitParties), comms.WithEchoIdentity(capture.EchoIdentityTx),
 		comms.WithSentEffect(consent.NewStore(InstallationDB(pool)).LiftNoticedRestriction))
 }

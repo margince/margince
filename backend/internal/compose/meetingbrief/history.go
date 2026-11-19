@@ -90,7 +90,7 @@ type FiledDeal struct {
 // historyColumns reads one conversation of historyCandidates, through the
 // mailbox-copy grouping: a mail several colleagues captured is one conversation.
 var historyColumns = `
-	SELECT a.id, a.kind, COALESCE(a.subject, ''), COALESCE(a.direction, ''),
+	SELECT a.id, a.kind, COALESCE(a.subject, ''), COALESCE(` + activities.WriterSideSQL("a", "copies.copy_readable") + `, ''),
 	       a.occurred_at, a.occurred_precision = 'day', COALESCE(a.thread_key, ''),
 	       -- Filing is read over every copy the row stands for, each one the
 	       -- reader may open: each colleague files their own copy.

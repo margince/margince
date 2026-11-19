@@ -114,7 +114,7 @@ func (w walked) contributions() Contributions {
 //
 // A rule whose sources were not read tonight is not asked. Its finding would be
 // a claim about what nobody looked at: an unread mailbox shows silence on every
-// deal.
+// deal. Nor is a rule the deal's viability decision answered otherwise.
 func askEveryRule(now time.Time, subjects []Subject, cfg Config, coverage []SourceCoverage) walked {
 	var out walked
 	askable := sourcesRead(coverage)
@@ -123,7 +123,7 @@ func askEveryRule(now time.Time, subjects []Subject, cfg Config, coverage []Sour
 		out.owners = append(out.owners, subject.Owner)
 		out.eligible++
 		for _, rule := range Rules() {
-			if !askable(rule) {
+			if !askable(rule) || answeredOtherwise(rule, subject) {
 				continue
 			}
 			found := rule.Ask(now, subject, cfg)

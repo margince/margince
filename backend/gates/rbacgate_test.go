@@ -22,11 +22,8 @@ package gates
 //
 // Exceptions are explicit, keyed by "package-dir:FuncName", each with
 // the rationale that ratified it; a reasonless or stale waiver fails. The
-// key stays coarser than the resolution above — it names the FUNCTION, not
-// the receiver — so if two receivers in one package ever hold the same
-// ungated name, one waiver ratifies both. No pair does today, and the
-// stale-waiver check would not notice if one appeared, so a receiver-keyed
-// waiver is the change to make when one does.
+// key names the function, not the receiver. Two receivers with one ungated
+// name would share a waiver. None do; if one does, key it by receiver.
 //
 // The tree the gate reads is itself proven rather than assumed:
 // storeEntryPointScope sweeps the whole module for the same entry-point
@@ -71,6 +68,7 @@ var ungatedEntryPoints = gatekit.Waive(map[string]string{
 	"internal/modules/activities:ClaimOrganizerHostTx":    "names a synced meeting's organizer as its host when the organizer is a colleague whose own calendar holds it. It refuses any principal but a system job or a calendar sync, and moves the host only on a row a sync created and the app did not book. No human grant can cover it, because the meeting may be a colleague's row. It returns whether the host moved, not a record",
 	"internal/modules/activities:RetireMeetingCopyTx":     "archives one meeting row onto another live row holding the same meeting. It refuses any principal but a system job or a calendar sync, and both callers prove first that the copy's own seat stored it and that its calendar binds the event to the survivor. No human grant can cover it, because the copy may be a colleague's row. It returns no record",
 	"internal/modules/activities:DoneRows":                "answers which of the named Worklist rows the CALLER marked done, read by the caller's own user id and refused to any principal without a human behind it. It takes no object grant because it reads the reader's own choices and no record: a privacy officer without activity read still has a Worklist, and their Done must still hide their rows",
+	"internal/modules/activities:WorklistRowsAlreadyDone": "answers which of the named Worklist rows the CALLER already put down, in worklist_done or as handled on the reader's own activity_reader_state, read by the caller's own user id. Like DoneRows it reads the reader's own choices and no record, so it takes no object grant",
 	"internal/compose/attention:ReopenRows":               "the undo behind Done. It removes only the caller's own Done rows, keyed by their user id, and the store refuses a caller with no human behind it. A row on an activity keeps the activity grant and content gate in the store. Nothing it reaches is a record the caller could not already see",
 	"internal/modules/contacts:RecordLogoIntent":          "declares a mark's key provisional before its bytes are put. It writes one row naming a key the caller already holds, reads nothing, and discloses nothing — and what may then be DELETED is decided by the sweep's reference check against the mark columns, never by this row. Gating it on the company write grant would refuse the site-read worker, which calls it and is itself ungated for the reason RecordSiteReadLogo gives: the worker is not a human principal and the human's authority was checked when the read was started",
 	"internal/modules/deals:RecordOfferPdfIntent":         "the same declaration for a rendered offer PDF: one row naming the key the handler is about to put, written immediately before it. The handler's own grant governs the render, and the sweep's reference check against offer.pdf_asset_ref governs deletion — this row only asks that the key be looked at",

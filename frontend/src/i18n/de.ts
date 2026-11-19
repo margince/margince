@@ -8324,6 +8324,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Der Kontakt möchte nicht mehr kontaktiert werden. Der Versand dieser E-Mail ändert seinen Wunsch nicht.",
   "sendPermission.reason.bounced":
     "Diese Adresse nimmt keine E-Mails an. Korrigiere die Adresse. Eine Ausnahme ist hier nicht möglich.",
+  "sendPermission.reason.subjectLabelMissing":
+    "Marketing an eine empfangende Person in diesem Land muss den Betreff mit der Kennzeichnung beginnen, die ihr Recht vorschreibt. Ergänze sie im Betreff.",
+  "sendPermission.reason.subjectLabelsConflict":
+    "Die Länder dieser empfangenden Personen schreiben für Marketing verschiedene Kennzeichnungen im Betreff vor, und ein Betreff beginnt mit einer. Sende eine Nachricht je Kennzeichnung.",
   "sendPermission.reason.optedOutAfterRequest":
     "Der Kontakt hat nach der Angebotsanfrage Werbung abgelehnt. Der Versand dieser E-Mail ändert seine Entscheidung nicht.",
   "sendPermission.reason.permissionRequired":
@@ -12964,6 +12968,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Website wurde gelesen, nennt aber kein Unternehmen.",
   "worklist.domainQuestion.reason.forwarded":
     "Die Website leitet auf eine andere Website weiter. Deshalb konnte Margince das Unternehmen nicht sicher zuordnen.",
+  "worklist.domainQuestion.reason.foreignSite":
+    "Die Website nennt ein anderes Unternehmen als diese Domain. Die Domain gehört vielleicht inzwischen jemand anderem.",
   "worklist.domainQuestion.reason.vendor":
     "Die Website wirkt wie ein Mail- oder Hosting-Anbieter, der Adressen für viele Unternehmen bereitstellen kann.",
   "worklist.domainQuestion.reason.nearDuplicate":
@@ -13034,6 +13040,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Kein Unternehmen über die Website gefunden",
   "blockedDomains.source.staleEvidence": "Belegende E-Mails zu alt",
   "blockedDomains.source.nearDuplicate": "Unternehmensname existiert bereits",
+  "blockedDomains.source.foreignSite": "Nennt ein anderes Unternehmen",
   "blockedDomains.source.vendorVerdict":
     "Wirkt wie ein Mail- oder Hosting-Anbieter",
   "blockedDomains.rowAdmit": "Zulassen",
@@ -20891,6 +20898,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Aktion konnte nicht rückgängig gemacht werden. Die Nachricht bleibt von deiner Liste entfernt.",
   "worklist.disposition.failed":
     "Der Eintrag konnte nicht entfernt werden. Bitte versuche es erneut.",
+  "worklist.disposition.gone":
+    "Dieser Eintrag steht nicht mehr auf deiner Liste. Die Liste ist jetzt aktuell.",
   "worklist.scope.label": "Wessen Arbeit",
   "worklist.scope.mine": "Meine",
   "worklist.sourceUnavailable":

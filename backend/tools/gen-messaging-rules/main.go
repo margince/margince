@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 
 	"github.com/margince/margince/backend/internal/platform/messagingpolicy"
+	"github.com/margince/margince/backend/pkg/extension/messaging"
 )
 
 func main() {
@@ -57,12 +58,7 @@ func generate(unit string, check bool) error {
 	if !generatesRules(files) {
 		return fmt.Errorf("no hand-written file carries a //go:generate line running %s; add gen.go", generatorName)
 	}
-	policy, err := messagingpolicy.Compile(os.DirFS(filepath.Join(unit, "policy")))
-	if err != nil {
-		return err
-	}
-	pkg := files[0].Name.Name
-	src, err := messagingpolicy.Render(pkg, policy.Rules)
+	src, err := compileAndRender(unit, files[0].Name.Name)
 	if err != nil {
 		return err
 	}
@@ -75,4 +71,21 @@ func generate(unit string, check bool) error {
 		return fmt.Errorf("%s does not match policy/; run `make -C backend gen` or `go generate` in the unit", target)
 	}
 	return nil
+}
+
+// compileAndRender compiles the unit's policy folder in whichever layout it
+// has and answers the generated source for package pkg.
+func compileAndRender(unit, pkg string) ([]byte, error) {
+	compiled, err := messagingpolicy.CompileUnit(os.DirFS(filepath.Join(unit, "policy")))
+	if err != nil {
+		return nil, err
+	}
+	if !compiled.PerCountry {
+		return messagingpolicy.Render(pkg, compiled.Policies[0].Rules)
+	}
+	rules := make([]messaging.Rules, 0, len(compiled.Policies))
+	for _, policy := range compiled.Policies {
+		rules = append(rules, policy.Rules)
+	}
+	return messagingpolicy.RenderSet(pkg, rules)
 }

@@ -73,6 +73,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `enumsync_test.go` | H3 | Where domain logic branches on a typed Go enum, its constant set equals the schema's CHECK set for the column it mirrors. |
 | `exportedreferences_test.go` | H2 | Every reference an exported row carries to a row-scoped record is one the export withholds from a reader who could not open it. |
 | `extensionrefusalvocabulary_test.go` | H3 | The refusal vocabulary is spelled on both sides of the wire, so it is held as one item. |
+| `fetchedunitsindexmirror_test.go` | H3 | gen-composition writes the index of downloaded extension units, and the frontend notice plugin and the backend notice script each read it. |
 | `figuremaximaparity_test.go` | H2 | The deals module refuses a minor-unit price above values.MaxExactInteger. |
 | `filtervocabularyparity_test.go` | H3 | Two surfaces answer a filtered question: the list/segment compiler in `platform/database/storekit`, and the query compiler in `modules/search`. |
 | `forecastperiodparity_test.go` | H3 | Every period the contract offers must be a window the server can resolve. |
@@ -105,7 +106,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendmagickeys_test.go` | H2 | Every sentence the receipt emits has a word for it, in the client that draws it and in the catalog that translates it. |
 | `frontendmailproviders_test.go` | H3 | Which capture providers are a mailbox is answered on both sides of the wire, and the two answers must be the same three names. |
 | `frontendmaskedfields_test.go` | H3 | A field the server can withhold is drawn as withheld, or the screen states something false. |
-| `frontendmessagevoice_test.go` | H3 | _(no doc comment)_ |
+| `frontendmessagevoice_test.go` | H3 | messageVoiceCases lists the contract's directions and authors for one kind, with the side the activity engine reads. |
 | `frontendminorunits_test.go` | H3 | The browser and the server must scale money by the same table, or the integer they exchange means two different amounts. |
 | `frontendnoevidencemarker_test.go` | H3 | The server stores one sentence for a manual signal whose evidence was taken away. |
 | `frontendoauthoutcomes_test.go` | H3 | The OAuth landing outcome is one vocabulary spelled on both sides of a redirect: the api puts it in the URL the provider sends a human back to, and the SPA turns it into the sentence that human reads. |
@@ -304,6 +305,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `currencycolumndomain_test.go` | H2 | Every currency column carries the `currency\_code` domain. |
 | `datataskregistry_test.go` | H2 | Removing a released registration must fail even when its ID constant remains. |
 | `datecolumncalendars_test.go` | H2 | Every `date` column states whose calendar it is a day in. |
+| `dealevidencereaders_test.go` | H2 | A Go reader that judges whether a deal is alive asks relstrength.DealEvidenceSQL, so a personal thread keeps no deal warm. |
 | `deallinewriters_test.go` | H2 | A lines-priced deal has one value writer; every other writer must refuse line-owned columns and preserve its product projection. |
 | `dealreaders_test.go` | H2 | `deal` is an RBAC object, and until this gate nothing held the object half of that anywhere outside the module that owns it. |
 | `dealtargettype_test.go` | H2 | Every deal-scoped staging names its target type through one constant. |
@@ -594,6 +596,7 @@ The eight shapes, what each is for, and how each one silently passes:
 
 | Gate | Hardness | What it holds |
 |---|---|---|
+| `activitydirectionreaders_test.go` | H2 | Direction names the transport, never the writer: a colleague's mail can arrive inbound and a contact's can leave from here. |
 | `agentgateinstalled_test.go` | H1 | `x-agent-access: human-only` is enforced by one line, and this holds it there. |
 | `agentskillprose_test.go` | H2 | The skill bundle's guides are Markdown pages a user reads, so they meet the house prose bar and cite nothing private. |
 | `aiprovenancenotice_test.go` | H1 | The AI provenance notice has one spelling, and it is draftfloor.AIProvenanceNotice. |

@@ -168,3 +168,7 @@
 1795101202_a_contact_has_one_primary_address_and_one_primary_number.up.sql | contact_email, contact_phone | only the extra live primaries of a contact holding more than one are demoted, so the set is the contacts with a primary of two types, a fraction of the contacts; each statement is one indexed pass that takes row locks only, and the index builds that follow are concurrent
 1795101202_a_contact_has_one_primary_address_and_one_primary_number.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1795101206_the_link_shape_follows_the_address.down.sql | attachment | runs only on a rollback and touches only links users added by hand, each typed into a dialog one at a time, so the set is small
+1795101300_a_foreign_site_waits_for_a_colleague.down.sql | company_domain_disposition | only the open foreign-site questions are moved back to unevidenced, one row per domain whose site named another business, a handful of rows
+1795101301_a_foreign_site_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795101700_a_personal_meeting_moves_no_deal_clock.up.sql | * | the procedural bodies are clock trigger functions that move a derived column; the migration replaces two functions and one trigger, adds one trigger, and changes no existing row
+1795101700_a_personal_meeting_moves_no_deal_clock.down.sql | * | the procedural bodies are clock trigger functions; the down migration drops one trigger and restores two functions and changes no existing row

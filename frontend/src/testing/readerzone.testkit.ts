@@ -12,8 +12,19 @@ import { vi } from "vitest";
  */
 export function pretendReaderZone(zone: string): void {
   const real = Intl.DateTimeFormat().resolvedOptions();
-  vi.spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions").mockReturnValue({
+  vi.spyOn(nativeFormatterPrototype(), "resolvedOptions").mockReturnValue({
     ...real,
     timeZone: zone,
   });
+}
+
+// Fake timers swap in an `Intl.DateTimeFormat` whose formatters bind the
+// native prototype's methods, and whose own prototype only inherits them. A
+// spy must sit where `resolvedOptions` is defined, whichever is installed.
+function nativeFormatterPrototype(): Intl.DateTimeFormat {
+  let proto: Intl.DateTimeFormat = Intl.DateTimeFormat.prototype;
+  while (!Object.hasOwn(proto, "resolvedOptions")) {
+    proto = Object.getPrototypeOf(proto);
+  }
+  return proto;
 }

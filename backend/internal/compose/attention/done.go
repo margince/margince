@@ -13,6 +13,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -29,6 +31,9 @@ type DoneStore interface {
 	// DoneRows answers when this reader marked each of these rows done, and
 	// every group row they marked.
 	DoneRows(ctx context.Context, among []RowRef) (map[RowRef]time.Time, error)
+	// AlreadyDone names which of these rows this reader has put down, wherever
+	// the Done is kept. A row kept on its activity is in no DoneRows answer.
+	AlreadyDone(ctx context.Context, rows []RowRef) (map[RowRef]bool, error)
 	MarkDone(ctx context.Context, rows []RowRef) error
 	ReopenDone(ctx context.Context, rows []RowRef) error
 }
@@ -61,9 +66,9 @@ func dispositionsFor(row ranked, reader ids.UUID) []crmcontracts.WorklistItemDis
 }
 
 // MarkRowsDone takes rows off this reader's own Worklist. Each row must offer
-// Done and be one the reader is shown now. That is judged by assembling their
-// day with every lane's own grant and row scope. A row on no scope the reader holds is
-// not found.
+// Done and be one the reader is shown now, or one they already put down. That
+// is judged by assembling their day with every lane's own grant and row scope.
+// Any other row is not found.
 func (s *Service) MarkRowsDone(ctx context.Context, rows []RowRef) error {
 	if actor, ok := principal.Actor(ctx); !ok || !actor.HumanOrItsAgent() {
 		return apperrors.ErrPermissionDenied
@@ -103,7 +108,26 @@ func (s *Service) MarkRowsDone(ctx context.Context, rows []RowRef) error {
 			return s.marked.store.MarkDone(ctx, rows)
 		}
 	}
-	return apperrors.ErrNotFound
+	return s.markUnlessDone(ctx, rows, missing)
+}
+
+// markUnlessDone answers a second Done on a row its lane now hides. The row is
+// already off the reader's list, so it succeeds and is not written again.
+func (s *Service) markUnlessDone(ctx context.Context, rows []RowRef, missing map[RowRef]bool) error {
+	already, err := s.marked.store.AlreadyDone(ctx, slices.Collect(maps.Keys(missing)))
+	if err != nil {
+		return err
+	}
+	for row := range missing {
+		if !already[row] {
+			return apperrors.ErrNotFound
+		}
+	}
+	fresh := slices.DeleteFunc(slices.Clone(rows), func(row RowRef) bool { return already[row] })
+	if len(fresh) == 0 {
+		return nil
+	}
+	return s.marked.store.MarkDone(ctx, fresh)
 }
 
 // ReopenRows puts rows back on this reader's own Worklist. It only removes the
