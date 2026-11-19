@@ -185,7 +185,7 @@ func (s *Store) CreateStage(ctx context.Context, in CreateStageInput) (crmcontra
 			return err
 		}
 		auditID, err := storekit.Audit(ctx, tx, "create", "stage", stageID.UUID, nil, map[string]any{
-			"pipeline_id": in.PipelineID, "name": in.Name, stageSemanticField: in.Semantic,
+			"pipeline_id": in.PipelineID, stageNameField: in.Name, stageSemanticField: in.Semantic,
 			stageNameTranslationsField: translations,
 		})
 		if err != nil {
@@ -257,6 +257,9 @@ func (s *Store) ListStages(ctx context.Context, pipelineID *ids.PipelineID, arch
 // stageNameTranslationsField is the column and the request field the
 // translated stage names travel in.
 const stageNameTranslationsField = "name_translations"
+
+// stageNameField is the key a stage's name travels under in an audit image.
+const stageNameField = "name"
 
 type UpdateStageInput struct {
 	// NameTranslations replaces the stored map when set.

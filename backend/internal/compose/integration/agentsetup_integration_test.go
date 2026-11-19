@@ -105,12 +105,8 @@ func TestAnAgentSetsUpAPipelineButNeverWhatClosesADeal(t *testing.T) {
 	if status := d.e.Call(t, "PATCH", "/v1/stages/"+stageNamed("Signed"), AnyMap{"semantic": "open"}, d.bearer, nil); status != http.StatusForbidden {
 		t.Errorf("the same relabel over the passport's REST door → %d, want 403", status)
 	}
-	if status := d.e.Call(t, "PATCH", "/v1/stages/"+stageNamed("Signed"), AnyMap{"semantic": "open"}, nil, nil); status != http.StatusUnprocessableEntity {
-		t.Errorf("the user relabelling the pipeline's only won stage → %d, want 422", status)
-	}
-	if status := d.e.Call(t, "POST", "/v1/stages", AnyMap{"pipeline_id": pipeline, "name": "Signed too", "position": 4, "semantic": "won"}, nil, nil); status != http.StatusCreated {
-		t.Fatalf("the user adding a second won stage → %d", status)
-	}
+	// The pipeline was born with its own Won stage, so the user's second won
+	// stage is not the pipeline's last and may be relabelled.
 	if status := d.e.Call(t, "PATCH", "/v1/stages/"+stageNamed("Signed"), AnyMap{"semantic": "open"}, nil, nil); status != http.StatusOK {
 		t.Errorf("the user relabelling their stage → %d, want 200", status)
 	}

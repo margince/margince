@@ -313,6 +313,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                 <DealActions
                   deal={deal}
                   openStages={openStages}
+                  pipelineRetired={pipelineRetired}
                   refusedReasonId={refusedReasonId}
                   onEditDetails={() => setEditingDetails(true)}
                 />

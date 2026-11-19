@@ -2462,6 +2462,7 @@
   "recordRoles.builtin.technical_contact": "Liên hệ kỹ thuật",
   "recordRoles.builtin.executive_sponsor": "Bảo trợ cấp lãnh đạo",
   "recordRoles.builtin.support_team": "Nhóm hỗ trợ",
+  "deal.pipelineRetired": "Pipeline của deal này đã ngừng dùng nên các giai đoạn chỉ để xem. Khôi phục pipeline trong Cài đặt để chuyển deal.",
   "deal.stageOtherPipeline": "Giai đoạn đó thuộc pipeline khác. Hãy chọn một giai đoạn của pipeline của deal này.",
   "deals.pipeline": "Pipeline",
   "deals.totalsOwnerNotMeasurable": "Chỉ hiển thị deal đã tải. Chỉ quản trị viên cấp được quyền xem tổng của người chịu trách nhiệm này.",

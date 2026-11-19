@@ -189,11 +189,14 @@ function ReopenAction({
 export function DealActions({
   deal,
   openStages,
+  pipelineRetired,
   refusedReasonId,
   onEditDetails,
 }: Readonly<{
   deal: Deal;
   openStages: Stage[];
+  // A retired pipeline takes no stage, so a closed deal on it cannot reopen.
+  pipelineRetired?: boolean;
   // Opens the drawer that holds every field of the deal and its editors.
   onEditDetails: () => void;
   // The id of the page's one sentence about why this deal takes no changes —
@@ -327,12 +330,14 @@ export function DealActions({
               deal={deal}
               disabledReasonId={refusedReasonId}
             />
-            <ReopenAction
-              dealId={deal.id}
-              dealVersion={deal.version}
-              openStages={openStages}
-              disabledReasonId={refusedReasonId}
-            />
+            {!pipelineRetired && (
+              <ReopenAction
+                dealId={deal.id}
+                dealVersion={deal.version}
+                openStages={openStages}
+                disabledReasonId={refusedReasonId}
+              />
+            )}
           </>
         )}
         {canWrite && (

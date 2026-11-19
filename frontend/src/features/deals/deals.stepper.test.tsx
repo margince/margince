@@ -192,7 +192,7 @@ it("draws a deal on a retired pipeline with its own stages and no move", async (
   const pilot = await screen.findByRole("button", { name: "Pilot" });
   expect(pilot.hasAttribute("disabled")).toBe(true);
   expect(reasonOf(pilot)).toBe(
-    "This deal's pipeline is retired, so its stages are read-only. Restore the pipeline in Settings to move the deal.",
+    "This deal’s pipeline is retired, so its stages are read-only. Restore the pipeline in Settings to move the deal.",
   );
   expect(screen.queryByText("Proposal")).toBeNull();
 });

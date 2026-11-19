@@ -2462,6 +2462,7 @@
   "recordRoles.builtin.technical_contact": "Technical contact",
   "recordRoles.builtin.executive_sponsor": "Executive sponsor",
   "recordRoles.builtin.support_team": "Support team",
+  "deal.pipelineRetired": "This deal’s pipeline is retired, so its stages are read-only. Restore the pipeline in Settings to move the deal.",
   "deal.stageOtherPipeline": "That stage belongs to another pipeline. Pick a stage of the pipeline the deal is in.",
   "deals.pipeline": "Pipeline",
   "deals.totalsOwnerNotMeasurable": "Loaded deals only. Only an administrator can let you measure this owner’s totals.",

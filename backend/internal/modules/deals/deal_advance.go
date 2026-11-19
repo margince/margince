@@ -70,31 +70,6 @@ type AdvanceDealInput struct {
 // human decided.
 const StageApprovalEvidenceKey = "stage_approval_id"
 
-// StagePipelineMismatchError maps to 422: the target stage exists but
-// belongs to another pipeline.
-type StagePipelineMismatchError struct {
-	StageID ids.StageID
-	// Field is the request field that named the stage; empty means the advance
-	// route's to_stage_id.
-	Field string
-}
-
-func (e *StagePipelineMismatchError) Error() string {
-	return "stage " + e.StageID.String() + " does not belong to the deal's pipeline"
-}
-
-// stagePipelineMismatchMessage is what a client shows; the stage id stays in
-// Error(), which only logs read.
-const stagePipelineMismatchMessage = "That stage belongs to another pipeline. Pick a stage of the pipeline the deal is in."
-
-// FieldFault refuses a target stage that belongs to another pipeline.
-func (e *StagePipelineMismatchError) FieldFault() (field, code, message string) {
-	if e.Field != "" {
-		return e.Field, "stage_not_in_pipeline", stagePipelineMismatchMessage
-	}
-	return "to_stage_id", "stage_not_in_pipeline", stagePipelineMismatchMessage
-}
-
 // LostReasonRequiredError maps to 422 on advancing to a lost stage
 // without a reason (deal_lost_reason CHECK, features/01 §3.1).
 type LostReasonRequiredError struct{}
@@ -197,7 +172,7 @@ func (s *Store) advanceOnTx(
 		semantic, winProbability, err := resolveAdvanceTarget(ctx, tx, in.ToStageID, current)
 		if err != nil {
 			if in.ReferencesFromRequest {
-				err = auth.NameMissingReference("to_stage_id", err)
+				err = auth.NameMissingReference(advanceTargetField, err)
 			}
 			return err
 		}

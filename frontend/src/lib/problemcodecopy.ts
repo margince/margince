@@ -37,6 +37,7 @@ export const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
   ["version_skew", "common.versionSkew"],
   // The detail names a stage or a kind of stage in English.
   ["stage_not_in_pipeline", "deal.stageOtherPipeline"],
+  ["pipeline_retired", "deal.pipelineRetired"],
   ["last_closing_stage", "stage.lastClosing"],
   // Every code httperr.Duplicate sends: its detail is one fixed API sentence
   // for all of them. backend/gates/frontendproblemcodecopy_test.go holds the set.
