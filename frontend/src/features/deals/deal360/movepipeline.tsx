@@ -16,39 +16,18 @@ import { problemMessageOf, unwrap } from "../../../lib/problem";
 
 type Deal = components["schemas"]["Deal"];
 
-type Place = Readonly<{
+type Target = Readonly<{
+  version: number | undefined;
   pipelineId: string;
   pipelineName: string;
-  /** Names the stage to land on; absent, the pipeline's first open stage. */
-  stageId?: string;
+  /** The pipeline the deal leaves, named in the Undo's confirmation. */
+  fromName?: string;
 }>;
-
-type Move = Place &
-  Readonly<{
-    version: number | undefined;
-    /** Where the deal stood before the move, which an Undo returns it to. */
-    undo?: Place;
-  }>;
-
-// The pipeline and stage the deal stands on now, named so a move can return.
-function placeOf(
-  deal: Deal,
-  pipelines: readonly components["schemas"]["Pipeline"][],
-): Place | undefined {
-  const name = pipelines.find((each) => each.id === deal.pipeline_id)?.name;
-  return deal.pipeline_id && deal.stage_id && name
-    ? {
-        pipelineId: deal.pipeline_id,
-        pipelineName: name,
-        stageId: deal.stage_id,
-      }
-    : undefined;
-}
 
 /**
  * Moves an open deal to another live pipeline, onto that pipeline's first open
- * stage. The confirmation offers Undo, which puts the deal back on the pipeline
- * and the stage it left.
+ * stage. The confirmation offers Undo, which asks the server to put the deal
+ * back where that move took it from.
  */
 export function MovePipelineAction({
   deal,
@@ -60,33 +39,59 @@ export function MovePipelineAction({
   const closeMenu = useCloseOverflowMenu();
   const canWrite = useCanWriteRecord("deal", deal);
   const pipelines = usePipelines().data ?? [];
+  const settle = () => {
+    for (const queryKey of dealStageMoveKeys(deal.id)) {
+      queryClient.invalidateQueries({ queryKey });
+    }
+    queryClient.invalidateQueries({ queryKey: ["deals"] });
+  };
+  const refuse = (error: unknown) => {
+    toast.show(problemMessageOf(error, t), { tone: "danger" });
+    queryClient.invalidateQueries({ queryKey: ["pipelines"] });
+  };
+  const undo = useMutation({
+    mutationKey: ["deal-edit", deal.id],
+    mutationFn: async (input: Target) =>
+      unwrap(
+        await api.POST("/deals/{id}/move-pipeline/undo", {
+          params: {
+            path: { id: deal.id },
+            ...ifMatch(requireVersion(input.version)),
+          },
+        }),
+        t,
+      ),
+    onError: refuse,
+    onSuccess: (_moved, input) => {
+      settle();
+      toast.show(t("deal.movePipelineDone", { pipeline: input.pipelineName }));
+    },
+  });
   const move = useMutation({
     mutationKey: ["deal-edit", deal.id],
-    mutationFn: async (input: Move) =>
+    mutationFn: async (input: Target) =>
       unwrap(
         await api.POST("/deals/{id}/move-pipeline", {
           params: {
             path: { id: deal.id },
             ...ifMatch(requireVersion(input.version)),
           },
-          body: { pipeline_id: input.pipelineId, stage_id: input.stageId },
+          body: { pipeline_id: input.pipelineId },
         }),
         t,
       ),
-    onError: (error) => {
-      toast.show(problemMessageOf(error, t), { tone: "danger" });
-      queryClient.invalidateQueries({ queryKey: ["pipelines"] });
-    },
+    onError: refuse,
     onSuccess: (moved, input) => {
-      for (const queryKey of dealStageMoveKeys(deal.id)) {
-        queryClient.invalidateQueries({ queryKey });
-      }
-      queryClient.invalidateQueries({ queryKey: ["deals"] });
-      const back = input.undo;
+      settle();
+      const back = input.fromName;
       toast.show(t("deal.movePipelineDone", { pipeline: input.pipelineName }), {
         action: back
           ? undoAction(t("common.undo"), () =>
-              move.mutate({ ...back, version: moved.version }),
+              undo.mutate({
+                version: moved.version,
+                pipelineId: deal.pipeline_id ?? "",
+                pipelineName: back,
+              }),
             )
           : undefined,
       });
@@ -96,6 +101,7 @@ export function MovePipelineAction({
   if (!canWrite || deal.status !== "open" || deal.archived_at) {
     return null;
   }
+  const fromName = pipelines.find((each) => each.id === deal.pipeline_id)?.name;
   const others = pipelines.filter((each) => each.id !== deal.pipeline_id);
   return (
     <ListPopover
@@ -111,7 +117,7 @@ export function MovePipelineAction({
           version: deal.version,
           pipelineId: option.id,
           pipelineName: option.name,
-          undo: placeOf(deal, pipelines),
+          fromName,
         });
       }}
     />

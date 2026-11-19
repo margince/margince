@@ -232,6 +232,26 @@ func (h Handlers) MoveDealPipeline(w http.ResponseWriter, r *http.Request, id cr
 	httperr.WriteJSON(w, http.StatusOK, wire)
 }
 
+// UndoDealPipelineMove puts a deal back where its latest move to another
+// pipeline took it from.
+func (h Handlers) UndoDealPipelineMove(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.UndoDealPipelineMoveParams) {
+	ifVersion, ok := httperr.IfMatchVersion(w, r)
+	if !ok {
+		return
+	}
+	undone, err := h.store.UndoDealPipelineMove(r.Context(), pathID[ids.DealKind](id), ifVersion)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	wire, err := undone.Wire()
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, wire)
+}
+
 // CorrectDealCloseDay moves a closed deal's close day. The store refuses an
 // agent; the contract's human-only mark refuses it at the gate first.
 func (h Handlers) CorrectDealCloseDay(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.CorrectDealCloseDayParams) {

@@ -64,6 +64,9 @@ type AdvanceDealInput struct {
 	// toPipeline marks a move to another pipeline. ToStageID then names an open
 	// stage of it, or is zero for that pipeline's first open stage.
 	toPipeline *ids.PipelineID
+	// undoPipelineMove asks the move to derive its target from the deal's latest
+	// history row and to record itself as the reversal of that row.
+	undoPipelineMove bool
 	// auditEvidence rides into the move's audit row. Margince's own close sets
 	// it, so the Home receipt can say why the deal was closed.
 	auditEvidence map[string]any

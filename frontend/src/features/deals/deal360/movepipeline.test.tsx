@@ -20,7 +20,6 @@ import { DealActions } from "./dealactions";
 type Deal = components["schemas"]["Deal"];
 
 const HERE = "018f3a1b-0000-7000-8000-00000000p001";
-const STAGE = "018f3a1b-0000-7000-8000-000000000s02";
 
 const pipeline = (id: string, name: string, position: number) => ({
   id,
@@ -50,6 +49,13 @@ function mount(
             pipeline("pl-partner", "Partner", 2),
           ],
         }),
+      "POST /deals/d-1/move-pipeline/undo": () => {
+        moves.push("undo");
+        return jsonResponse({
+          ...deal("d-1", "Fleet telematics rollout"),
+          version: 3,
+        });
+      },
       "POST /deals/d-1/move-pipeline": (body) => {
         moves.push(body);
         return jsonResponse({
@@ -88,7 +94,7 @@ async function openMore() {
 }
 
 describe("Move to pipeline in the deal's menu", () => {
-  it("lists the live pipelines other than the deal's own, moves, and undoes onto the stage it left", async () => {
+  it("lists the live pipelines other than the deal's own, moves, and undoes through the server", async () => {
     const moves: unknown[] = [];
     mount({ deal: ["read", "update"] }, { writable: true }, moves);
     const user = await openMore();
@@ -107,7 +113,7 @@ describe("Move to pipeline in the deal's menu", () => {
       await screen.findByRole("button", { name: en["common.undo"] }),
     );
     await screen.findByText("Moved to Sales.");
-    expect(moves[1]).toEqual({ pipeline_id: HERE, stage_id: STAGE });
+    expect(moves[1]).toBe("undo");
   });
 
   it("is absent on a closed deal", async () => {

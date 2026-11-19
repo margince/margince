@@ -96,15 +96,7 @@ func moveDealPipelineInput(req crmcontracts.MoveDealPipelineRequest, ifVersion *
 	if err := requireBodyID(movePipelineField, req.PipelineId); err != nil {
 		return MoveDealPipelineInput{}, err
 	}
-	in := MoveDealPipelineInput{PipelineID: pathID[ids.PipelineKind](req.PipelineId), IfVersion: ifVersion}
-	if req.StageId != nil {
-		if err := requireBodyID("stage_id", *req.StageId); err != nil {
-			return MoveDealPipelineInput{}, err
-		}
-		stage := pathID[ids.StageKind](*req.StageId)
-		in.StageID = &stage
-	}
-	return in, nil
+	return MoveDealPipelineInput{PipelineID: pathID[ids.PipelineKind](req.PipelineId), IfVersion: ifVersion}, nil
 }
 
 // stageCreateInput maps the create-stage body onto the store input. A stage

@@ -1940,6 +1940,7 @@
     "transferProjectOwnership": "projects",
     "undoActivityProjectFiling": "activities",
     "undoBulkChange": "bulk",
+    "undoDealPipelineMove": "deals",
     "undoDedupeDisposition": "duplicates",
     "undoImportRun": "imports",
     "undoMarginceChanges": "deals",

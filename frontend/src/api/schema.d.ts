@@ -4607,21 +4607,49 @@ export interface paths {
         put?: never;
         /**
          * Move an open deal to another pipeline, onto its first open stage.
-         * @description Puts the deal on the first open stage of a live pipeline other than its own, or on
-         *     `stage_id` when one is named (an Undo names the stage the deal left). It is a stage advance
-         *     in every other way: it writes one `deal_stage_history` row and one `advance_stage` audit row,
-         *     emits `deal.stage_changed`, sets the probability from the new stage, and the legal review
-         *     gate and the object and row permissions of an advance hold. The stage the deal leaves
-         *     keeps its exit criteria; only a required legal review blocks a move, and the first open
-         *     stage has no gated stage before it. The history row keeps no stage positions, because the
-         *     positions of two pipelines do not compare.
+         * @description Puts the deal on the first open stage of a live pipeline other than its own. A caller
+         *     cannot choose the stage. It is a stage advance in every other way: it writes one
+         *     `deal_stage_history` row and one `advance_stage` audit row, emits `deal.stage_changed`,
+         *     sets the probability from the new stage, and the legal review gate and the object and row
+         *     permissions of an advance hold. The stage the deal leaves keeps its exit criteria; only a
+         *     required legal review blocks a move, and the first open stage has no gated stage before
+         *     it. The history row keeps no stage positions, because the positions of two pipelines do
+         *     not compare. The pipeline row is locked shared, so a retirement or a reorder waits for
+         *     the move.
          *
-         *     A won or lost deal answers 422 `deal_closed`, the pipeline the deal is in answers 422
-         *     `same_pipeline`, a retired pipeline answers 422 `pipeline_retired`, a pipeline with no open
-         *     stage answers 422 `pipeline_has_no_open_stage`, and a named stage that is not an open stage
-         *     of the pipeline answers 422 `stage_not_in_pipeline` or `stage_not_open`.
+         *     A stale `If-Match` answers 409. A won or lost deal answers 422 `deal_closed`, the
+         *     pipeline the deal is in answers 422 `same_pipeline`, a retired pipeline answers 422
+         *     `pipeline_retired`, and a pipeline with no open stage answers 422
+         *     `pipeline_has_no_open_stage`.
          */
         post: operations["moveDealPipeline"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/deals/{id}/move-pipeline/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Put a deal back on the pipeline and stage its last move left.
+         * @description Undoes the deal's latest stage move when it was a move to another pipeline. The source
+         *     pipeline and stage come from that move's `deal_stage_history` row, and the undo writes its
+         *     own row with `reversal_of` naming it. Anything that moved the deal since, an earlier undo
+         *     included, answers 422 `move_not_undoable`. A source pipeline retired since answers 422
+         *     `pipeline_retired`. A stale `If-Match` answers 409.
+         */
+        post: operations["undoDealPipelineMove"];
         delete?: never;
         options?: never;
         head?: never;
@@ -41294,11 +41322,6 @@ export interface components {
              * @description The live pipeline to move the deal to. It must differ from the deal's own.
              */
             pipeline_id: string;
-            /**
-             * Format: uuid
-             * @description An open stage of that pipeline. Omit it for the pipeline's first open stage.
-             */
-            stage_id?: string;
         };
         AdvanceDealRequest: {
             /**
@@ -70955,6 +70978,43 @@ export interface operations {
         };
         responses: {
             /** @description The deal on its new stage, and the probability the move set. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealAdvanced"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    undoDealPipelineMove: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The deal back on its earlier stage. */
             200: {
                 headers: {
                     [name: string]: unknown;

@@ -4697,11 +4697,12 @@ paths:
       security: [{bearerAuth: []}]
       summary: Move an open deal to another pipeline, onto its first open stage.
       description: |-
-        Puts the deal on the first open stage of a live pipeline other than its own, or on
-        `stage_id` when one is named (an Undo names the stage the deal left). The stage the deal leaves
-        keeps its exit criteria; only a required legal review blocks a move, and the first open
-        stage has no gated stage before it. The history row keeps no stage positions, because the
-        positions of two pipelines do not compare.
+        Puts the deal on the first open stage of a live pipeline other than its own. A caller
+        cannot choose the stage. The stage the deal leaves keeps its exit criteria; only a
+        required legal review blocks a move, and the first open stage has no gated stage before
+        it. The history row keeps no stage positions, because the positions of two pipelines do
+        not compare. The pipeline row is locked shared, so a retirement or a reorder waits for
+        the move.
 
         Needs the passport permission Change records.
 
@@ -38847,7 +38848,6 @@ components:
       required: [pipeline_id]
       properties:
         pipeline_id: {type: string, format: uuid, description: The live pipeline to move the deal to. It must differ from the deal's own.}
-        stage_id: {type: string, format: uuid, description: An open stage of that pipeline. Omit it for the pipeline's first open stage.}
     AdvanceDealRequest:
       type: object
       required: [to_stage_id]
