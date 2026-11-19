@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
-import { meFixture } from "../../testing/mefixture";
+import { meFixture, READS_RECORDS } from "../../testing/mefixture";
 import { RecordShell } from "../../testing/recordshell.testkit";
 import { CompanyScreen } from "./companies";
 import { ProposedNextSteps, type SuggestionAction } from "./company360";
@@ -171,7 +171,11 @@ export function stub(
       if (pathname.endsWith("/v1/me")) {
         return jsonResponse(
           meFixture({
-            allow: { company: ["read", "update"], partner: ["read"] },
+            allow: {
+              ...READS_RECORDS,
+              company: ["read", "update"],
+              partner: ["read"],
+            },
           }),
         );
       }

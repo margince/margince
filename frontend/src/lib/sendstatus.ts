@@ -22,6 +22,8 @@ export type RefusedRecipient = Readonly<{
   /** The server's answer to whether a recorded reason may lift it. */
   canBeOverruled: boolean;
   footerFindings?: readonly components["schemas"]["FooterFinding"][];
+  /** The law the recipient's pack cites for the reason, when one may be shown. */
+  provision?: components["schemas"]["CitedProvision"];
 }>;
 
 export type SendStatusKind =
@@ -63,6 +65,7 @@ export function refusalOf(recipient: PreviewRecipient): RefusedRecipient {
     category: recipient.resolved_category,
     requestedCategory: recipient.requested_category,
     canBeOverruled: recipient.can_be_overruled === true,
+    provision: recipient.provision,
   };
 }
 

@@ -2825,6 +2825,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "shell.shortcuts.singleKeyOffHint": "Bật lại trong Cài đặt, mục Tài khoản.",
   "shell.more": "Thêm",
   "shell.unknownPage": "Không tìm thấy",
+  "shell.unavailableForRole": "Không khả dụng cho vai trò của bạn.",
   "shell.closeMenu": "Đóng",
   "shell.agent.scope": "Margince chỉ đọc những gì bạn xem được.",
   "shell.capture.importing": "Đang nhập lịch sử hộp thư",
@@ -3346,6 +3347,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "AI hiện không phản hồi. Thử lại sau hoặc liên hệ quản trị viên.",
   "common.gatewayUnavailable":
     "Máy chủ không kịp xử lý xong yêu cầu và có thể vẫn đang xử lý. Chờ một lúc rồi hãy thử lại, nếu không thao tác có thể chạy hai lần.",
+  "common.requestTimedOut":
+    "Máy chủ xử lý quá lâu nên đã dừng yêu cầu này. Hãy thử lại sau giây lát.",
   "common.individualPerformanceOff":
     "Quản trị viên đã tắt hiệu suất của từng thành viên. Bạn vẫn xem được số liệu của bạn. Một số liệu bị ẩn khi có ít hơn hai thành viên khác đóng góp, hoặc khi trừ đi tổng của một nhóm khác sẽ còn ít hơn hai thành viên. Toàn bộ dự báo bị ẩn nếu một nhóm trong đó có thể cho thấy số liệu của riêng một đồng nghiệp.",
   "common.permissionDenied":
@@ -8121,6 +8124,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Không thể gửi tin nhắn này tới {address} ở dạng hiện tại.",
   "compose.sendAnyway.finding.none":
     "Không thể gửi tin nhắn này ở dạng hiện tại.",
+  "compose.sendAnyway.cited": "Lưu ý: gửi tới {address} có thể vi phạm",
+  "compose.citation.law": "Quy định:",
   "compose.sendAnyway.warning":
     "Lần kiểm tra trước khi gửi vẫn chặn tin nhắn này. Vẫn gửi chỉ gửi tin nhắn này và không cho phép các tin nhắn sau. Tên, lý do của bạn và tin nhắn được lưu trong một bản ghi không thể chỉnh sửa.",
   "compose.sendAnyway.editOnly": "Sửa tin nhắn hoặc bỏ địa chỉ này để gửi.",
@@ -10123,6 +10128,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Bạn không có quyền đọc thẻ nên cột thẻ không được nhập.",
   "import.reason.cannot_write_type":
     "Không thể ghi “{value}” vào trường kiểu {type}.",
+  "import.reason.company_domain_matched":
+    "Công ty đã sở hữu tên miền {value} nhận hàng này, nên không tạo công ty thứ hai.",
   "import.reason.company_duplicate_found":
     "Đã có công ty cùng tên trong CRM. Nhập hàng này sẽ tạo công ty thứ hai và đưa cặp này vào hàng đợi xem xét.",
   "import.reason.company_duplicate_skipped":
@@ -10216,6 +10223,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Giá trị “{value}” của cột “{column}” đã được dùng ở dòng {line}. Mỗi hàng cần một giá trị riêng vì nhập lại và hoàn tác nhận ra hàng theo giá trị đó.",
   "import.reason.size_band_invalid":
     "Số nhân viên “{value}” không thuộc: {allowed}.",
+  "import.reason.stored_values_kept":
+    "Hàng này không tạo bản ghi này và không nêu nó theo ID, nên giữ nguyên {column} của nó. Hàng chỉ điền các trường còn trống.",
   "import.reason.tag_created":
     "Không có thẻ nào mang tên này nên quá trình nhập đã tạo thẻ.",
   "import.reason.tag_name_invalid":
@@ -12971,7 +12980,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   // claims the installation's own configuration can contradict, on the screen a
   // CISO reads on the way in.
   "auth.legalProtected": "Quyền truy cập vào công ty này bị giới hạn.",
-  "auth.legalTerms": "Điều khoản",
   "auth.legalPrivacy": "Quyền riêng tư",
   "auth.signingIn": "Đang đăng nhập…",
   "auth.signIn": "Đăng nhập",
@@ -13243,6 +13251,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Liên kết đã được sử dụng, đã hết hạn hoặc đã bị thay bằng liên kết mới hơn. Vui lòng yêu cầu liên kết mới bên dưới.",
   "buyer.noLink":
     "Mở trang này từ liên kết quý khách đã nhận. Nếu không còn liên kết, vui lòng yêu cầu liên kết mới bên dưới.",
+  "buyer.roomReplacedTitle": "Thẻ này đang hiển thị một phòng cũ",
+  "buyer.roomReplaced":
+    "Trình duyệt này đã mở một Deal Room khác. Vui lòng tải lại trang để xem phòng đó.",
   "buyer.emailLabel": "Địa chỉ email",
   "buyer.emailHint": "Địa chỉ đã nhận lời mời.",
   "buyer.requestLink": "Yêu cầu liên kết mới",
@@ -16294,6 +16305,20 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Các thiết bị khác đã được đăng xuất và các ứng dụng đã kết nối cần được kết nối lại.",
   "account.signOutHelp":
     "Kết thúc phiên của bạn trên trình duyệt này. Các thiết bị khác vẫn đăng nhập.",
+  "account.devicesCard": "Thiết bị đã đăng nhập",
+  "account.devicesBrowserOn": "{browser} trên {system}",
+  "account.devicesUnknown": "Thiết bị không rõ",
+  "account.devicesWhen":
+    "Đăng nhập {signedIn}. Hoạt động gần nhất {lastActive}.",
+  "account.devicesThisOne": "Thiết bị này",
+  "account.devicesSignOut": "Đăng xuất",
+  "account.devicesSignOutNamed": "Đăng xuất {device}",
+  "account.devicesOthers": "Các thiết bị khác",
+  "account.devicesOthersHelp": "Kết thúc mọi phiên trừ phiên này.",
+  "account.devicesSignOutOthers": "Đăng xuất tất cả thiết bị khác",
+  "account.devicesFailed_one": "{count} thiết bị chưa được đăng xuất. Thử lại.",
+  "account.devicesFailed_other":
+    "{count} thiết bị chưa được đăng xuất. Thử lại.",
   "account.languageHelp":
     "Ngôn ngữ của menu, trang và tin nhắn từ Margince. Được lưu vào tài khoản của bạn, nên áp dụng trên mọi thiết bị bạn đăng nhập.",
   "account.appearanceHelp":
@@ -19493,6 +19518,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "project.assignOwner": "Giao cho một đồng nghiệp",
   "project.description": "Mô tả",
   "project.targetEnd": "Ngày kết thúc dự kiến",
+  "project.startDate": "Ngày bắt đầu",
+  "project.endDate": "Ngày kết thúc",
+  "project.noCustomer": "Chưa có công ty khách hàng",
+  "project.noCustomerSet":
+    "Chưa có công ty khách hàng. Đặt một công ty trong Thêm, Công ty và liên hệ.",
+  "project.newDealNeedsCustomer": "Deal mới cần có công ty khách hàng.",
   "project.new": "Dự án mới",
   "project.edit": "Sửa dự án",
   "project.archive": "Chuyển dự án vào kho lưu trữ",
@@ -20053,6 +20084,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.dueGroup.tomorrow": "Đến hạn ngày mai",
   "worklist.dueGroup.this_week": "Đến hạn tuần này",
   "worklist.dueGroup.later": "Về sau",
+  "worklist.dueGroup.none": "Chưa có hạn",
   "worklist.band.build_pipeline": "Tìm khách hàng mới",
   "worklist.band.keep_momentum": "Giữ đà",
   "worklist.band.review": "Xem lại",

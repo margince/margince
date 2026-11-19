@@ -16,15 +16,18 @@ import {
   StoryProviders,
 } from "../../testing/story-utils";
 import { ProjectDetails } from "./projectdetails";
+import type { Project } from "./projects.form";
 
 // The project's left column changes its fields through the edit dialog's own
 // fields and mapping.
 
 afterEach(cleanup);
 
-function mount(grant: ("read" | "update")[]) {
+function mount(
+  grant: ("read" | "update")[],
+  current: Project = project({ description: "Old words" }),
+) {
   const sent: unknown[] = [];
-  const current = project({ description: "Old words" });
   installFetchStub({
     "GET /me": meRoute({ project: grant }, { seat: "full" }),
     "GET /users": () => jsonResponse({ data: [], page: { has_more: false } }),
@@ -67,3 +70,36 @@ it("offers no change to a reader without the update grant", async () => {
   expect(screen.queryByRole("button", { name: /^Change / })).toBeNull();
   expect(document.querySelector(".editable-value")).toBeNull();
 });
+
+it("saves a start date from the Started row as that field alone", async () => {
+  const user = userEvent.setup();
+  const sent = mount(["read", "update"]);
+  await user.click(
+    await screen.findByRole("button", { name: /Show \d+ empty fields?/ }),
+  );
+  await user.click(
+    await screen.findByRole("button", { name: "Change Started Not set" }),
+  );
+  const dialog = await screen.findByRole("dialog", { name: "Started" });
+  await user.type(within(dialog).getByRole("textbox"), "2026-10-20{Enter}");
+  await waitFor(() => expect(sent).toEqual([{ started_at: "2026-10-20" }]));
+});
+
+it("offers the end date once the project is closed", async () => {
+  mount(
+    ["read", "update"],
+    project({ phase: "closed", closed_reason: "Done" }),
+  );
+  await openEmptyFields();
+  expect(
+    await screen.findByRole("button", { name: "Change Ended Not set" }),
+  ).toBeTruthy();
+});
+
+async function openEmptyFields() {
+  await userEvent
+    .setup()
+    .click(
+      await screen.findByRole("button", { name: /Show \d+ empty fields?/ }),
+    );
+}

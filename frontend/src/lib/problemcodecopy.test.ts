@@ -53,3 +53,16 @@ it.each([en, de, vi])("localizes the contract merge refusal", (catalog) => {
     ),
   ).toBe(catalog["companies.contractMergeBlocked"]);
 });
+
+// The server's timeout detail is English; every reader is told in their own words.
+it.each([en, de, vi])(
+  "localizes a request the server stopped for time",
+  (catalog) => {
+    expect(
+      problemMessage(
+        { code: "request_timed_out", detail: "English server detail" },
+        (key) => catalog[key],
+      ),
+    ).toBe(catalog["common.requestTimedOut"]);
+  },
+);

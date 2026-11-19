@@ -101,6 +101,14 @@ type Evidence struct {
 	// sets it at staging from the Authored* request fields; transmit reads
 	// the staged value, because the delivery keeps no authored text.
 	AuthoredOffer bool
+	// QuotedSubjectOffer says only the subject reads as an offer, and it
+	// carries the anchor's subject over. Staging settles it per recipient:
+	// the subject is quoted for the one who wrote the anchor, authored for
+	// everyone else. Never stored.
+	QuotedSubjectOffer bool
+	// QuotedAnchorID is the mail a quoted subject was carried over from, kept
+	// on the staged row so transmit asks again whether the recipient wrote it.
+	QuotedAnchorID ids.UUID
 	// RecipientCountries are the countries the sender stated for this
 	// message's recipients. On a decision it holds that recipient's entry
 	// alone, which is what staging stores and transmit reads back.
@@ -247,6 +255,11 @@ type Decision struct {
 	// ConsentPurpose is the purpose a consent request to a LawfulBasisMissing
 	// recipient would ask about, zero when none can be asked.
 	ConsentPurpose ids.UUID
+
+	// Citations are the provisions this recipient's pack shows, by code, for
+	// the sending entity, resolved when the decision was taken. A review
+	// stores the one it shows, so a later pack never rewrites it.
+	Citations map[string]Provision
 }
 
 // DecisionSet holds the per-recipient answers for one delivery and phase.

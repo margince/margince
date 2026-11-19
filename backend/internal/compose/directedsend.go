@@ -41,8 +41,10 @@ func (s directedSendService) DirectAndSend(
 	if err != nil {
 		return crmcontracts.Activity{}, err
 	}
-	// Every check DirectSend runs comes first. Only a caller who may direct the
-	// message may release it, even when a new grant would now allow it.
+	// Every check DirectSend runs comes first, the author check included, so a
+	// colleague is refused before anything is tried, recorded or sent. Only a
+	// caller who may direct the message may release it, even when a new grant
+	// would now allow it.
 	if in, err = s.consent.CheckDirection(ctx, reviewID, in); err != nil {
 		return crmcontracts.Activity{}, err
 	}

@@ -1171,7 +1171,7 @@ func (stubs) CorrectCommunicationWording(w nethttp.ResponseWriter, r *nethttp.Re
 	httperr.NotImplemented(w, r, "CorrectCommunicationWording")
 }
 
-func (stubs) DirectCommunicationSend(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
+func (stubs) DirectCommunicationSend(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID, params crmcontracts.DirectCommunicationSendParams) {
 	httperr.NotImplemented(w, r, "DirectCommunicationSend")
 }
 

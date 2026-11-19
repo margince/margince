@@ -57,7 +57,7 @@ func (h directedSendHandlers) CorrectCommunicationWording(w http.ResponseWriter,
 // DirectCommunicationSend records the decision and sends the message it was
 // about.
 func (h directedSendHandlers) DirectCommunicationSend(
-	w http.ResponseWriter, r *http.Request, id crmcontracts.Id,
+	w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.DirectCommunicationSendParams,
 ) {
 	if h.directed == nil {
 		httperr.NotImplemented(w, r, "DirectCommunicationSend")

@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, expect, test, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
-import { meFixture } from "../testing/mefixture";
+import { meFixture, READS_RECORDS } from "../testing/mefixture";
 import { mostSpecificFirst, RecordLinks } from "./recordlinks";
 
 test("the most specific record leads, as the Worklist names it", () => {
@@ -56,7 +56,7 @@ test("activity links resolve through one bounded request per populated kind", as
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, staleTime: Infinity } },
   });
-  client.setQueryData(["me"], meFixture({}));
+  client.setQueryData(["me"], meFixture({ allow: READS_RECORDS }));
   const view = render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">

@@ -213,7 +213,7 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 				publicPreferences(consent.NewStore(InstallationDB(pool)).
 					WithRequestTasks(requesttask.Writer{Tasks: activities.NewStore(InstallationDB(pool))}), newPublicPreferenceLimiters())(
 					publicBooking(activities.NewStore(InstallationDB(pool)), identity.NewService(pool), newPublicBookingLimiters(), srv)(
-						publicDealRoom(dealrooms.NewStore(InstallationDB(pool)), newPublicDealRoomLimiters())(
+						publicDealRoom(dealrooms.NewStore(InstallationDB(pool)), newPublicDealRoomLimiters(), httpserver.ConfiguredOrigin(srv.send.PublicBaseURL))(
 							extensionEdge(srv, log)(api),
 						),
 					),
