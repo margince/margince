@@ -25,6 +25,8 @@ describe("tierLabel", () => {
 
   it("reads a tier nobody named as its own key", () => {
     expect(tierLabel("nightly_batch", t)).toBe("nightly_batch");
+    expect(tierLabel("toString", t)).toBe("toString");
+    expect(tierLabel("constructor", t)).toBe("constructor");
   });
 });
 

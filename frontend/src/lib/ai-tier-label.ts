@@ -25,12 +25,16 @@ const TIER_NAMES = {
 
 // The lanes bound beside the ladder, under their routing keys and the rungs
 // their calls are stamped with (embedlane.go, decidetrace.go).
-const LANE_NAMES: Readonly<Record<string, MessageKey>> = {
+const LANE_NAMES = {
   embeddings: "aiTier.embeddings",
   embed: "aiTier.embeddings",
   decisions: "aiTier.decide",
   [DECIDE_RUNG]: "aiTier.decide",
-};
+} as const satisfies Record<string, MessageKey>;
+
+function isLane(key: string): key is keyof typeof LANE_NAMES {
+  return Object.hasOwn(LANE_NAMES, key);
+}
 
 function isTier(key: string): key is Tier {
   return Object.hasOwn(TIER_NAMES, key);
@@ -42,8 +46,7 @@ export const TIER_ORDER: readonly Tier[] =
 /** A tier or lane by its display name; one this build cannot name shows as sent. */
 export function tierLabel(tier: string, t: Translator): string {
   if (isTier(tier)) return t(labelFor(TIER_NAMES, tier));
-  const lane = LANE_NAMES[tier];
-  return lane ? t(lane) : tier;
+  return isLane(tier) ? t(LANE_NAMES[tier]) : tier;
 }
 
 export function tierRank(tier: string): number {
