@@ -235,14 +235,14 @@ func linkedInURLFolded(in UpdateContactInput) (UpdateContactInput, error) {
 	return in, nil
 }
 
-// readContactToEdit reads the row the edit decides on. An edit that moves a name
-// part decides full_name from the stored parts. A rename decides which parts it
-// drops. So both read them under the row lock, which comes first in the lock
-// order (lockorder.go).
+// readContactToEdit reads the row the edit decides on. A name edit decides from
+// the stored parts, and a set edit records the stored rows as its before image.
+// So both read under the row lock, which comes first in the lock order
+// (lockorder.go).
 func readContactToEdit(
 	ctx context.Context, tx pgx.Tx, id ids.ContactID, in UpdateContactInput, active []fieldcatalog.Column,
 ) (crmcontracts.Contact, error) {
-	if movesANamePart(in) || in.FullName != nil {
+	if movesANamePart(in) || in.FullName != nil || in.Emails != nil || in.Phones != nil {
 		if _, err := storekit.LockRow(ctx, tx, "contact", id.UUID, storekit.LiveOnly); err != nil {
 			return crmcontracts.Contact{}, err
 		}

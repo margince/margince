@@ -65,12 +65,21 @@ func replaceContactSetsAndCompare(
 		return replaceSetsChange{}, fmt.Errorf("read the contact after its replace-sets: %w", err)
 	}
 	_, differs := storekit.ChangedColumns(contactSetsImage(current), contactSetsImage(after))
-	_, emails := differs["emails"]
-	_, phones := differs["phones"]
+	emails, phones := setsThisEditRecords(differs, in)
 	return replaceSetsChange{
 		any: len(differs) > 0, emails: emails, phones: phones,
 		social: after.Social, emailRows: after.Emails, phoneRows: after.Phones,
 	}, nil
+}
+
+// setsThisEditRecords keeps a differing set only where the update supplied it,
+// so a row another writer changed is never recorded, or undone, as this edit's.
+//
+//craft:ignore naked-any differs is storekit.ChangedColumns' schemaless column map
+func setsThisEditRecords(differs map[string]any, in UpdateContactInput) (emails, phones bool) {
+	_, emails = differs["emails"]
+	_, phones = differs["phones"]
+	return emails && in.Emails != nil, phones && in.Phones != nil
 }
 
 // replaceContactSets writes each set the update carries. It takes the write
