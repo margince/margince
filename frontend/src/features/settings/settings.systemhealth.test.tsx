@@ -162,7 +162,6 @@ it("copies safe evidence without sending a message", async () => {
 });
 
 it("withholds source conditions and counts without permission", async () => {
-  const user = userEvent.setup();
   stub({
     ...healthReport,
     sources: [
@@ -180,7 +179,9 @@ it("withholds source conditions and counts without permission", async () => {
   await screen.findByRole("heading", {
     name: "Some checks have no result",
   });
-  await user.click(screen.getByText("All checks"));
+  expect(
+    await screen.findByRole("heading", { name: "All checks" }),
+  ).toBeVisible();
   expect(screen.queryByText(/Permission required/)).toBeNull();
   expect(screen.queryByText(/Background jobs/)).toBeNull();
 });
@@ -243,16 +244,16 @@ it("explains the installation effect of stopped mail sorting without claiming ma
   ).toBeVisible();
 });
 it("names the missing check instead of a vague evidence status", async () => {
-  const user = userEvent.setup();
   stub();
   render(<SystemHealthPage />);
-  await user.click(await screen.findByText("All checks"));
+  expect(
+    await screen.findByRole("heading", { name: "All checks" }),
+  ).toBeVisible();
   expect(screen.getAllByText("No restore test recorded")[0]).toBeVisible();
   expect(screen.queryByText("Not enough evidence")).toBeNull();
 });
 
 it("limits a partial capture check to the categories it actually read", async () => {
-  const user = userEvent.setup();
   stub({
     ...healthReport,
     sources: [
@@ -268,7 +269,9 @@ it("limits a partial capture check to the categories it actually read", async ()
     ],
   });
   render(<SystemHealthPage />);
-  await user.click(await screen.findByText("All checks"));
+  expect(
+    await screen.findByRole("heading", { name: "All checks" }),
+  ).toBeVisible();
   expect(
     screen.getByText(/Mail capture/, { selector: ".disclosure-label" }),
   ).toHaveTextContent("No capture action needed in checked categories");
@@ -276,7 +279,6 @@ it("limits a partial capture check to the categories it actually read", async ()
 });
 
 it("shows what a successful refusal check established about connector activity", async () => {
-  const user = userEvent.setup();
   stub({
     ...healthReport,
     sources: [
@@ -292,7 +294,9 @@ it("shows what a successful refusal check established about connector activity",
     ],
   });
   render(<SystemHealthPage />);
-  await user.click(await screen.findByText("All checks"));
+  expect(
+    await screen.findByRole("heading", { name: "All checks" }),
+  ).toBeVisible();
   expect(
     screen.getByText(/Connector intake/, { selector: ".disclosure-label" }),
   ).toHaveTextContent("activity is not verified");
@@ -300,7 +304,6 @@ it("shows what a successful refusal check established about connector activity",
 });
 
 it("files the changes Home leaves out under For information, never Passing", async () => {
-  const user = userEvent.setup();
   stub(informationReport);
   render(<SystemHealthPage />);
   const group = await screen.findByRole("list", { name: "For information" });
@@ -313,7 +316,9 @@ it("files the changes Home leaves out under For information, never Passing", asy
   expect(screen.queryByText(/Problems? needing action/)).toBeNull();
   expect(screen.getByText("5 passing")).toBeVisible();
 
-  await user.click(screen.getByText("All checks"));
+  expect(
+    await screen.findByRole("heading", { name: "All checks" }),
+  ).toBeVisible();
   const value = (term: string) =>
     screen.getByText(term, { selector: "dt" }).nextElementSibling;
   expect(value("product · update")).toHaveTextContent("3");
@@ -433,13 +438,14 @@ it("makes a focused diagnostics filter visible and removable", async () => {
 });
 
 it("keeps the outgoing-link check discoverable under All checks", async () => {
-  const user = userEvent.setup();
   stub({
     ...healthReport,
     public_origin: { origin: "https://crm.example.test", reachable: true },
   });
   render(<SystemHealthPage />);
-  await user.click(await screen.findByText("All checks"));
+  expect(
+    await screen.findByRole("heading", { name: "All checks" }),
+  ).toBeVisible();
   expect(
     screen.getByText("Reachable from this server").closest(".badge"),
   ).not.toHaveClass("badge-success");

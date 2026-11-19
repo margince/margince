@@ -163,18 +163,16 @@ function Overview({
       </p>
       <OverviewFindings findings={shown} />
       <HealthChecks groups={groups} />
-      <Panel>
+      <Panel title={t("health.capabilities")}>
         <PanelBody>
-          <Disclosure summary={t("health.capabilities")}>
-            {report.sources
-              .filter((source) => source.availability !== "withheld")
-              .map((source) => (
-                <SourceReading key={source.id} source={source} />
-              ))}
-            <PublicOriginCard status={report.public_origin} />
-          </Disclosure>
+          {report.sources
+            .filter((source) => source.availability !== "withheld")
+            .map((source) => (
+              <SourceReading key={source.id} source={source} />
+            ))}
         </PanelBody>
       </Panel>
+      <PublicOriginCard status={report.public_origin} />
     </>
   );
 }

@@ -141,7 +141,7 @@ export const PartialCapture: Story = {
   }),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(await canvas.findByText("All checks"));
+    await canvas.findByRole("heading", { name: "All checks" });
     await expect(
       canvas.getByText(/Mail capture/, { selector: ".disclosure-label" }),
     ).toHaveTextContent("No capture action needed in checked categories");
