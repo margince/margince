@@ -21,20 +21,29 @@ While steps are open, **Finish setup** at the top of the screen shows how many a
 The writing voice step names what is next for your voice: **Add samples**, **Build voice** or **View progress**. After a failed build it shows the reason and **Try again**. When a build needs your review it shows **Review voice**, which opens the review on **Writing voice**. Your first version is never used on its own. The step is done once you choose **Use this version**. After **Discard this version**, add more samples and build again.
 
 ### How do I save a change on a settings page?
-To save a change on a settings page in Margince, change a field, then choose **Save** in the bar at the foot of the page.
+To save a change on a settings page in Margince, change a field, then choose **Save** in the bar at the foot of the page. Margince then says **Saved**.
+
 **Discard** in that bar puts every field back as it was. If a field has a mistake, the bar says "Fix the marked fields to save."
-Switches work at once and need no save. If you leave with changes not saved, Margince asks "Save your changes?" and offers **Save**, **Discard changes** or **Stay**.
+Switches work at once and need no save. If you leave or sign out with changes not saved, Margince asks "Save your changes?" and offers **Save**, **Discard** or **Stay**.
 Also called: save settings, changes not saved, undo changes.
 
 ### How do I change my notifications?
 <!-- opens: settings/notifications -->
 To change your notifications in Margince, open Settings → **Notifications**.
 1. Under **Delivery by kind**, pick how each kind reaches you: **Off**, **In the app**, **Email** or **Daily digest**. Not every kind offers every choice.
-2. Under **Email summaries**, set **Morning brief** and **Weekly review** to **By email** or **Not by email**.
-3. Under **Browser notifications**, press **Allow**, then allow it in the browser's own question.
+2. In the **Browser notifications** row at the top of **Delivery by kind**, press **Allow**. Then allow it in the browser's own question.
    The browser then shows a due reminder on one of your tasks while Margince is open in a tab.
    To turn it off, block notifications for this site in your browser settings. If the browser
    blocks them, the row says so and offers no **Allow**.
+3. Under **Email summaries**, set **Morning brief** and **Weekly review** to **By email** or **Not by email**.
+4. Choose **Save** in the bar at the foot of the page.
+
+The other rows under **Email summaries** decide how those emails come:
+- **Routine email time**: the hour they are sent, or **Start of my working hours**. They arrive within three hours of it, on your working days and in your time zone.
+- **Weekly review day**: the day the Weekly review is sent. On a day you do not work, it comes on your next working day.
+- **Quiet mornings**: a morning with nothing to act on sends no email, unless you choose a status summary.
+- **Combine routine emails**: one routine email per reporting day instead of several. Approvals still come on their own.
+- **Routine email scope** and **Choose a team**: whose work the emails cover, yours, a team you review, or both. These rows show only if you review a team.
 
 Every notice also stays in the notification center under the bell, whatever you pick. **Nudges from colleagues** cannot be turned off. The brief and the review always appear on **Home**, and what you still need to do waits on your Worklist there.
 
@@ -80,7 +89,7 @@ To turn on two-step sign-in in Margince, open Settings → **Account** and choos
 
 Margince shows the backup codes once, and never again. The row then reads "On · 10 recovery codes left". When two or fewer are left, the row warns you. Turning it on signs you out on all your other computers and phones. Also called: MFA, second sign-in step, sign-in code, code app.
 
-A setup you started and did not finish shows **Not finished**. **Discard setup** removes it, with no code needed.
+A setup you started and did not finish shows **Not finished**. Choose **Remove** in that row, then **Discard setup**, with no code needed.
 
 ### What if Margince asks me to set up two-step sign-in before I can continue?
 Your installation requires two-step sign-in for password sessions, and you have not set it up yet. After your password, Margince shows **Set up two-step sign-in**. Google and Microsoft manage their own MFA; provider sessions do not require Margince setup.
@@ -112,12 +121,13 @@ Keep your backup codes where you can find them without your phone. If you lose b
 <!-- opens: settings/account -->
 To change your display name in Margince, open Settings → **Account**, edit the **Display name** field, and choose **Save** or press Enter. **Save** shows once you change the name.
 Your display name is what colleagues see on records you edit, in pickers and in the audit log.
-It cannot be empty, and it can be up to 255 characters long. Your email address shows under it, and you do not change it here.
+
+It cannot be empty, and it can be up to 120 characters long. Margince keeps it on one line: a new line or a tab turns into a blank, and characters that show nothing are removed. Your email address shows under it, and you do not change it here.
 Also called: my name, profile name, rename myself.
 
 ### How do I change my profile picture?
 <!-- opens: settings/account -->
-To change your profile picture in Margince, open Settings → **Account** and choose **Upload picture** in the **Profile picture** row. Pick a PNG, JPEG or WebP file of up to 5 MB. Margince cuts the middle square out of it, and colleagues see it next to your name.
+To change your profile picture in Margince, open Settings → **Account**, choose **Edit** in the **Profile picture** row, then **Upload picture**. Pick a PNG, JPEG or WebP file of up to 5 MB. Margince cuts the middle square out of it, and colleagues see it next to your name. A photo from a phone works too: your browser makes it smaller before it sends it.
 Also called: photo, avatar, profile photo.
 
 Colleagues see a picture you uploaded first. Without one, they see the picture of the Google account you sign in with. It updates at each sign-in, and each time you connect that same account for mail or calendar. Without either, they see the first letters of your name. **Remove picture** takes the picture off for good, even after a later sign-in with Google. Only a new upload brings a picture back.
@@ -133,15 +143,16 @@ Also called: email footer, sign-off, signature block.
 
 ### How do I change the language?
 <!-- opens: settings/account -->
-To change the language Margince uses with you, open Settings → **Account**. Pick one in the **Language** row: **English**, **Deutsch** or **Tiếng Việt**.
-The screen changes at once. The choice is saved to your account, so your next sign-in uses it too, and it changes nothing for anyone else.
-The sign-in page has its own language switch at the foot of the page.
+To change the language Margince uses with you, open Settings → **Account**. Pick one in the **Language** row: **English**, **Deutsch** or **Tiếng Việt**, then choose **Save**.
+The screen changes once the choice is saved. It is saved to your account, so your next sign-in uses it too, and it changes nothing for anyone else.
+
+The sign-in page has its own language switch at the foot of the page. It starts in the language of the last account that signed in on this browser.
 Also called: change to German, switch to Vietnamese, locale, translation.
 
 ### How do I change the theme?
 <!-- opens: settings/account -->
 To change the theme in Margince, open Settings → **Account** and pick a choice in the **Appearance** row: **Light**, **Dark** or **System**.
-You can do the same from the account menu at the top right, under **Theme**. Both change the same setting.
+You can do the same from the account menu at the top right, under **Theme**. Both change the same setting, and the screen changes at once.
 **System** follows the light or dark setting of your computer or phone, and keeps following it.
 Also called: dark mode, light mode, appearance, colour scheme.
 
@@ -185,6 +196,7 @@ Opening meeting settings from a booking draft opens another tab; coming back loa
 ### How do I change my time zone?
 <!-- opens: settings/account -->
 To change your own time zone in Margince, open Settings → **Account**, pick a place in the **Time zone** list and choose **Save**.
+To find a place, type its name, an old name such as "Saigon", or a zone name such as "Europe/Berlin".
 On your first sign-in, Margince uses your browser's time zone, and a zone you pick stays on every browser.
 Every time Margince shows you is in your zone, and so is your booking and mail timing. The company's time zone is separate; see the next question.
 Also called: change time zone, my time zone, local time.
