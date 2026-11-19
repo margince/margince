@@ -373,6 +373,42 @@ describe("the rate sheets", () => {
     );
   });
 
+  // A rate is read by the shared parser and sent as decimal text. A comma is
+  // the decimal sign, and the digits are kept as written.
+  it("sends a currency rate typed with a comma as a plain decimal", async () => {
+    const backend = ratesBackend(RATE_SETTER, "full", []);
+    const posted: unknown[] = [];
+    vi.stubGlobal("fetch", async (input: Request) => {
+      if (input.method === "POST") posted.push(await input.clone().json());
+      return backend(input);
+    });
+    const user = userEvent.setup();
+    render(<RateSheets />);
+    await waitFor(() => expect(screen.getByText("USD")).toBeTruthy());
+    await user.click(
+      within(rateCard("Currency rates")).getByRole("button", {
+        name: "Set rate",
+      }),
+    );
+    const dialog = within(await screen.findByRole("dialog"));
+    await user.type(dialog.getByLabelText("From"), "GBP");
+    const rate = dialog.getByLabelText("Rate (to base currency)");
+    await user.type(rate, "1.170,5");
+    expect(
+      dialog.getByText(
+        "Enter the number without thousands separators, such as 1234.5.",
+      ),
+    ).toBeTruthy();
+    await user.clear(rate);
+    await user.type(rate, "0,00000012");
+    await user.click(dialog.getByRole("button", { name: "Save" }));
+    await waitFor(() =>
+      expect(posted).toMatchObject([
+        { from_currency: "GBP", rate: "0.00000012" },
+      ]),
+    );
+  });
+
   it("refuses a model price effective before the reader's today", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-07-20T12:00:00Z"));

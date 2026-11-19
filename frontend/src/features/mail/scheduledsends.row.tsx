@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { useId } from "react";
 import { SendPermission } from "../../components/sendpermission";
 import { Badge, Button, Card } from "../../design-system/atoms";
@@ -14,9 +15,11 @@ import type { MessageKey } from "../../i18n/en";
 import { labelFor, valueFor } from "../../lib/labelfor";
 import { logUnexpectedError } from "../../lib/problem";
 import { useSendPermission } from "../../lib/usesendpermission";
+import { DirectSendAction } from "./directsendaction";
 import { dropsOperatorReason, isEditable } from "./schedulededit";
 import type { ScheduledSend, Status } from "./scheduledqueue";
 import { type Move, RescheduleMenu } from "./scheduledsends.reschedule";
+import { heldSendReview } from "./sendreview";
 
 // What each status says, in the five-state vocabulary. `scheduled` is work
 // still in flight, `sent` is the favourable outcome, `held` needs a human
@@ -202,6 +205,34 @@ function EditVerb({
   );
 }
 
+/**
+ * The review a held message's refusal opened, for a reader the server lets
+ * confirm it. The message is already due, so the row says that confirming
+ * sends it now rather than at the time it was scheduled for.
+ */
+function HeldReview({ send }: Readonly<{ send: ScheduledSend }>) {
+  const t = useT();
+  const queryClient = useQueryClient();
+  const review =
+    send.status === "held"
+      ? heldSendReview(send.review_id, send.review_actions)
+      : null;
+  if (!review?.actions.includes("direct_send")) {
+    return null;
+  }
+  return (
+    <>
+      <p className="t-caption">{t("sched.held.confirmSendsNow")}</p>
+      <DirectSendAction
+        review={review}
+        onSent={() =>
+          void queryClient.invalidateQueries({ queryKey: ["scheduled-sends"] })
+        }
+      />
+    </>
+  );
+}
+
 /** The first line of a message, for a row that says what the message is. */
 function previewOf(body: string | undefined): string | null {
   const line = body
@@ -253,6 +284,12 @@ export function SendRow({
     marketingPurpose: send.marketing_purpose,
     consentPurpose: send.consent_purpose,
     evidence: send.evidence,
+    draft: {
+      subject: send.subject,
+      body: send.body,
+      htmlBody: send.html_body,
+      attachmentIds: send.attachments?.map((file) => file.id),
+    },
     enabled: actionable,
   });
   return (
@@ -281,6 +318,7 @@ export function SendRow({
         {heldReasonKey && (
           <p className="scheduledsends-held">{t(heldReasonKey)}</p>
         )}
+        <HeldReview send={send} />
         {actionable && <EditRefusalLine send={send} id={refusalId} />}
         {/* The held reason above says a gate stopped it; this says WHOSE decision
             that was and whether anybody may change it, in the same words the

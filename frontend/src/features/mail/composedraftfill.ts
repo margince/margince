@@ -4,13 +4,13 @@
 import type { ProjectScope } from "../../design-system/projectpicker";
 import { addressKey } from "../../lib/addresskey";
 import type { CommunicationContext } from "../../lib/compose-context";
-import { stripEveryKeyTag, withSubjectTag } from "../projects/projectrecord";
 import { distinctAddressLines } from "./composeaddresslist";
 import type {
   DraftProvenance,
   DraftReason,
   DraftResult,
 } from "./composedraftcall";
+import { stripEveryKeyTag, withSubjectTag } from "./subjecttag";
 
 /**
  * The reason a drafting instruction names. It fills an empty reason and

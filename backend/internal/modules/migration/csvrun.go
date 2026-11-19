@@ -71,6 +71,9 @@ type RunMapping struct {
 	// the file needs no links column. Both the test and the commit read them
 	// from here.
 	PresetLinks []PresetLink `json:"preset_links,omitempty"`
+	// ObjectChosenBy is how the upload typed a file that named no type. A save
+	// that names the object is the reader's choice, and clears it.
+	ObjectChosenBy string `json:"object_chosen_by,omitempty"`
 }
 
 // PresetLink names one record a run files every activity under.
@@ -245,7 +248,7 @@ func (s *RunStore) ListStaged(ctx context.Context, cursor string, limit int, vie
 		where += storekit.SQLf(` AND status = $%d`, arg(StatusPending))
 	}
 	if cursor != "" {
-		after, err := storekit.DecodeCursor(cursor)
+		after, err := storekit.DecodeCursor("csv_import_rows", cursor)
 		if err != nil {
 			return nil, storekit.Page{}, err
 		}
@@ -277,7 +280,7 @@ func (s *RunStore) ListStaged(ctx context.Context, cursor string, limit int, vie
 	}
 	runs = runs[:limit]
 	last := runs[limit-1]
-	next, err := storekit.EncodeCursor(last.CreatedAt, last.ID)
+	next, err := storekit.EncodeCursor("csv_import_rows", last.CreatedAt, last.ID)
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}

@@ -80,7 +80,7 @@ func newReadingFixture(t *testing.T) *readingFixture {
 	handlers := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling).WithBlobstore(blobstore.NewMemory())
 	pipeline, open, _ := DealFixture(t, e)
 	deal := e.SeedDeal(t, "Reading Fixture Deal", pipeline, open, &e.Rep1)
-	att := uploadDealAttachment(ctx, t, handlers, deal, "quote.pdf", []byte("quote bytes"))
+	att := uploadDealAttachment(ctx, t, handlers, deal, "quote.pdf", []byte("%PDF-1.4 quote bytes"))
 
 	store := activities.NewStore(e.DB())
 	read, _, err := store.StartExtractionReadQueued(ctx, ids.UUID(att.Id), "human:"+e.AdminUser.String(), nil)

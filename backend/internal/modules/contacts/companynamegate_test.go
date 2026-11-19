@@ -202,8 +202,8 @@ func TestCompoundingDoesNotDecideIdentity(t *testing.T) {
 // maxLength in the contract, so one create can hand it a megabyte; unbounded,
 // that would pin every company-name writer in the workspace behind it.
 //
-// The 256-rune cap in jaroWinkler does not help: it bounds each call, and this
-// is about the number of calls.
+// The 256-rune cap in namematch.JaroWinkler bounds each call. This is about
+// the number of calls.
 func TestTheTokenLoopIsBounded(t *testing.T) {
 	huge := strings.Repeat("acme ", 20000)
 	if got := len(distinctiveCompanyTokens(huge)); got > companyGateTokenBudget {

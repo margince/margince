@@ -172,7 +172,7 @@ func runPurge(t *testing.T, e *integration.Env, user, rule ids.UUID, preview boo
 func seedOwnExclusion(t *testing.T, e *integration.Env, user ids.UUID, kind, value string) ids.UUID {
 	t.Helper()
 	store := capture.NewExclusionStore(InstallationDB(e.Pool))
-	rule, err := store.Add(purgeCtx(e, user), capture.ExclusionScopeUser, kind, value)
+	rule, err := store.Add(purgeCtx(e, user), capture.ExclusionScopeUser, kind, value, ids.Nil)
 	if err != nil {
 		t.Fatalf("adding the exclusion rule: %v", err)
 	}

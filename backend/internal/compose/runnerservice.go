@@ -160,7 +160,7 @@ func (s *RunnerService) Tick(ctx context.Context, now time.Time) error {
 	// refuse them. The pass runs on the installation's own authority, and the
 	// only caller entitled to start it is one carrying nobody.
 	if actor, ok := principal.Actor(ctx); ok && actor.Type != principal.PrincipalSystem {
-		return fmt.Errorf("runner: a scheduled pass runs as the system, not as %s: %w",
+		return fmt.Errorf("a scheduled pass runs as the system, not as a %s: %w",
 			actor.Type, apperrors.ErrPermissionDenied)
 	}
 	ctx = schedulerContext(ctx)

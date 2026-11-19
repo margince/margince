@@ -9,9 +9,9 @@ import {
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
-import { ComposeModal } from "./compose";
 import { AiDraftBand } from "./composeaiband";
 import { SelectedReply, selectedReplyRoutes } from "./composethread.stories";
+import { ComposeWindow } from "./composewindow";
 
 const meta: Meta = {
   title: "Patterns/Compose mail/AI line",
@@ -59,7 +59,7 @@ function draftedIn(modelled: boolean) {
     });
     return (
       <StoryProviders>
-        <ComposeModal
+        <ComposeWindow
           activityId="message-0"
           entityType="contact"
           entityId="ada"
@@ -135,7 +135,7 @@ function templateDraft() {
   });
   return (
     <StoryProviders>
-      <ComposeModal
+      <ComposeWindow
         intent="Ask whether they want a demo of the fleet module next Tuesday"
         entityType="contact"
         entityId="ada"

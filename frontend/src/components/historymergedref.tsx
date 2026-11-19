@@ -33,16 +33,17 @@ export function MergedRecordName({
   );
 }
 
-// Where a merged-away record went, for the page an old link still lands on.
-export function MergedIntoLine({
+// Where a merged-away record went, as a sentence that follows the one saying
+// it is archived, for the page an old link still lands on.
+export function MergedIntoSentence({
   kind,
   id,
 }: Readonly<{ kind: EntityKind; id: string }>) {
   const t = useT();
   return (
-    <p>
-      <span>{t("history.field.merged_into_id")}</span>{" "}
-      <MergedRecordName kind={kind} id={id} />
-    </p>
+    <span>
+      {t("history.field.merged_into_id")}{" "}
+      <MergedRecordName kind={kind} id={id} />.
+    </span>
   );
 }

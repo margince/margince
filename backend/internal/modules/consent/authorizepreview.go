@@ -42,6 +42,9 @@ func (g *Gate) Preview(ctx context.Context, req commsauthz.Request) (commsauthz.
 	if err := previewable(req); err != nil {
 		return commsauthz.DecisionSet{}, err
 	}
+	if err := refuseAMachineStatedCountry(ctx, req); err != nil {
+		return commsauthz.DecisionSet{}, err
+	}
 	var set commsauthz.DecisionSet
 	err := g.store.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
@@ -65,6 +68,9 @@ func (g *Gate) PreviewTx(ctx context.Context, tx pgx.Tx, req commsauthz.Request)
 	if err := previewable(req); err != nil {
 		return commsauthz.DecisionSet{}, err
 	}
+	if err := refuseAMachineStatedCountry(ctx, req); err != nil {
+		return commsauthz.DecisionSet{}, err
+	}
 	savepoint, err := tx.Begin(ctx)
 	if err != nil {
 		return commsauthz.DecisionSet{}, err
@@ -83,7 +89,7 @@ func previewable(req commsauthz.Request) error {
 		}
 	}
 	if len(req.Recipients) == 0 {
-		return fmt.Errorf("consent: a preview needs at least one recipient: %w", apperrors.ErrInvalidArgument)
+		return fmt.Errorf("a preview needs at least one recipient: %w", apperrors.ErrInvalidArgument)
 	}
 	return nil
 }
@@ -94,7 +100,7 @@ func (g *Gate) decidePreviewTx(ctx context.Context, tx pgx.Tx, req commsauthz.Re
 	if err != nil {
 		return set, err
 	}
-	if req, err = withSendingEntity(ctx, tx, req); err != nil {
+	if req, err = withSendFacts(ctx, tx, req); err != nil {
 		return set, err
 	}
 	for _, r := range req.Recipients {

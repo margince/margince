@@ -198,7 +198,7 @@ func assembleRecordAccess(
 	out.Page = crmcontracts.PageInfo{HasMore: end < len(judged), Total: &total}
 	if out.Page.HasMore {
 		last := judged[end-1].member
-		next, err := storekit.EncodeCursor(last.CreatedAt, last.ID)
+		next, err := storekit.EncodeCursor("record_access_reasons", last.CreatedAt, last.ID)
 		if err != nil {
 			return crmcontracts.RecordAccess{}, err
 		}
@@ -212,7 +212,7 @@ func pageStart(judged []judgedMember, cursor *string) (int, error) {
 	if cursor == nil || *cursor == "" {
 		return 0, nil
 	}
-	c, err := storekit.DecodeCursor(*cursor)
+	c, err := storekit.DecodeCursor("record_access_reasons", *cursor)
 	if err != nil {
 		return 0, err
 	}

@@ -57,9 +57,10 @@ type importLinksDTO struct {
 	Offered    int `json:"offered"`
 	Applied    int `json:"applied"`
 	Unresolved []struct {
-		From   string `json:"from"`
-		To     string `json:"to"`
-		Reason string `json:"reason"`
+		From       string `json:"from"`
+		To         string `json:"to"`
+		Reason     string `json:"reason"`
+		ReasonCode string `json:"reason_code"`
 	} `json:"unresolved"`
 }
 

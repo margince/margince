@@ -1,11 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useId } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { describedByIds } from "../../design-system/describedby";
 import { ErrorLine } from "../../design-system/errorline";
 import { NumberSettingRow } from "../../design-system/numbersetting";
-import { Panel, PanelBody } from "../../design-system/panel";
+import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
+import { PanelNotices } from "../../design-system/panelnotices";
 import { QueryGate } from "../../design-system/querystates";
-import { SettingList } from "../../design-system/settingrow";
+import { SettingList, SettingRow } from "../../design-system/settingrow";
+import { Switch } from "../../design-system/switch";
 import { lockReasonOr } from "../../format/settinglocks";
 import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
@@ -93,6 +97,99 @@ export function FollowUpSettingsCard() {
         </QueryGate>
         <ErrorLine error={update.isError ? update.error : undefined} />
       </PanelBody>
+    </Panel>
+  );
+}
+
+// Whether the AI reads private mail for requests, and whether a quotation
+// request found there is shared with the workspace. Both ride the follow-up
+// settings because they are the activities module's; the PATCH carries the
+// window unchanged beside them.
+export function PrivateMailRequestsCard() {
+  const t = useT();
+  const canEdit = useCanWrite("installation_settings", "update");
+  const query = useFollowUpSettings();
+  const update = useUpdateFollowUpSettings();
+  const refusalId = useId();
+  return (
+    <Panel title={t("privateMailRequests.title")}>
+      <PanelBody>
+        <PanelIntro>{t("privateMailRequests.hint")}</PanelIntro>
+      </PanelBody>
+      <QueryGate query={query} pendingLabel={t("privateMailRequests.title")}>
+        {(settings) => (
+          <SettingList bleed="settings">
+            <SettingRow
+              label={t("privateMailRequests.switch")}
+              control={(control) => (
+                <Switch
+                  describedBy={describedByIds(
+                    control["aria-describedby"],
+                    update.isError && refusalId,
+                  )}
+                  label={t("privateMailRequests.switch")}
+                  labelHidden
+                  checked={settings.private_mail_requests ?? true}
+                  pending={update.isPending}
+                  reason={lockReasonOr(
+                    settings.locks,
+                    "activities.private_mail_requests",
+                    t,
+                    canEdit ? undefined : t("privateMailRequests.readOnly"),
+                  )}
+                  testId="private-mail-requests-switch"
+                  onChange={(next) =>
+                    update.mutate({
+                      follow_up_after_days: settings.follow_up_after_days,
+                      private_mail_requests: next,
+                    })
+                  }
+                />
+              )}
+            />
+            <SettingRow
+              label={t("privateMailRequests.share")}
+              description={t("privateMailRequests.shareHint")}
+              control={(control) => (
+                <Switch
+                  describedBy={describedByIds(
+                    control["aria-describedby"],
+                    update.isError && refusalId,
+                  )}
+                  label={t("privateMailRequests.share")}
+                  labelHidden
+                  checked={settings.share_private_quote_requests ?? true}
+                  pending={update.isPending}
+                  reason={lockReasonOr(
+                    settings.locks,
+                    "activities.share_private_quote_requests",
+                    t,
+                    canEdit ? undefined : t("privateMailRequests.readOnly"),
+                  )}
+                  testId="share-private-quote-requests-switch"
+                  onChange={(next) =>
+                    update.mutate({
+                      follow_up_after_days: settings.follow_up_after_days,
+                      share_private_quote_requests: next,
+                    })
+                  }
+                />
+              )}
+            />
+          </SettingList>
+        )}
+      </QueryGate>
+      <PanelNotices
+        refused={
+          update.isError
+            ? {
+                title: t("privateMailRequests.notSaved"),
+                error: update.error,
+                id: refusalId,
+              }
+            : undefined
+        }
+      />
     </Panel>
   );
 }

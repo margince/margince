@@ -484,15 +484,17 @@ func (m outboundChannelMessage) delivery(activityID ids.ActivityID) ChannelDeliv
 		// The recipient the conversation resolved to, which a caller never
 		// named and cannot substitute.
 		Authorization: commsauthz.Request{
-			Recipients:       []connector.Recipient{{Channel: &m.conversation.recipient}},
-			Context:          m.in.Context,
-			LegacyPurposeKey: m.in.ConsentPurpose,
-			MarketingPurpose: m.in.MarketingPurpose,
-			OperatorReason:   m.in.OperatorReason,
-			Evidence:         m.evidence(),
-			AnchorActivityID: m.anchorID.UUID,
-			Links:            linkedRecordIDs(m.links),
-			Body:             m.in.Body,
+			Recipients:        []connector.Recipient{{Channel: &m.conversation.recipient}},
+			Context:           m.in.Context,
+			LegacyPurposeKey:  m.in.ConsentPurpose,
+			MarketingPurpose:  m.in.MarketingPurpose,
+			OperatorReason:    m.in.OperatorReason,
+			Evidence:          m.evidence(),
+			AnchorActivityID:  m.anchorID.UUID,
+			Links:             linkedRecordIDs(m.links),
+			Body:              m.in.Body,
+			AuthoredBody:      m.in.Body,
+			AuthoredFileNames: fileNames(m.files),
 		},
 	}
 }

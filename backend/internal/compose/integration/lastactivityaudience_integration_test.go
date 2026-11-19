@@ -5,7 +5,7 @@
 
 package integration
 
-// last_activity_at stops counting mail nobody can read.
+// last_activity_at stops counting mail nobody can read, except on the deal it is filed on.
 //
 // Its sibling next door (lastactivity_integration_test.go) proves the clock
 // moves correctly — the newest wins, a back-dated capture never moves it
@@ -37,7 +37,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-func TestLastActivityAudience_NarrowingTheNewestMessageMovesTheClockBack(t *testing.T) {
+func TestLastActivityAudience_NarrowingTheNewestMessageMovesEveryClockButTheDeals(t *testing.T) {
 	e := Setup(t)
 	company := e.SeedCompany(t, "Held Clock Company", nil)
 	contact := e.SeedContact(t, "Held Clock Contact", nil)
@@ -86,9 +86,13 @@ func TestLastActivityAudience_NarrowingTheNewestMessageMovesTheClockBack(t *test
 	}
 
 	for name, got := range e.everyClock(t, contactID, companyID, ids.From[ids.DealKind](ids.UUID(deal.Id)), project) {
-		if got == nil || !got.Equal(older) {
-			t.Errorf("%s clock = %v after narrowing the newest message, want %v: a colleague "+
-				"who cannot read that message is still told it happened", name, got, older)
+		want := older
+		if name == "deal" {
+			want = newest
+		}
+		if got == nil || !got.Equal(want) {
+			t.Errorf("%s clock = %v after narrowing the newest message, want %v: only the deal "+
+				"it is filed on counts a private message", name, got, want)
 		}
 	}
 }

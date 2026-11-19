@@ -9,9 +9,9 @@ import type { useT } from "../../i18n";
 import type { Locale } from "../../i18n/locale";
 import { throwProblem } from "../../lib/problem";
 import type { RewriteVerb } from "../../lib/rewrites";
-import { stripEveryKeyTag } from "../projects/projectrecord";
 import type { RelinkKind } from "./composerelink";
 import { rewriteAsDraft } from "./composerewrite";
+import { stripEveryKeyTag } from "./subjecttag";
 
 type EmailDraft = components["schemas"]["EmailDraft"];
 type RecordDraft = components["schemas"]["CompanyEmailDraft"];

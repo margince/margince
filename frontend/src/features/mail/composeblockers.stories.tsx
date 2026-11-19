@@ -10,8 +10,8 @@ import {
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
-import { ComposeModal } from "./compose";
 import { ComposeBlockers } from "./composeblockers";
+import { ComposeWindow } from "./composewindow";
 import { editSeedOf } from "./schedulededit";
 
 const meta: Meta = {
@@ -97,7 +97,7 @@ function NewMessage({ preview }: Readonly<{ preview: object }>) {
   });
   return (
     <StoryProviders>
-      <ComposeModal
+      <ComposeWindow
         entityType="contact"
         entityId="c-1"
         contactId="c-1"
@@ -127,7 +127,7 @@ function Composer() {
   });
   return (
     <StoryProviders>
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="c-1"
@@ -279,7 +279,7 @@ export const CrowdedKeepsTheMessage: StoryObj = {
     });
     return (
       <StoryProviders>
-        <ComposeModal
+        <ComposeWindow
           edit={CROWDED}
           entityType="contact"
           entityId="c-1"

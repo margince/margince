@@ -12,6 +12,7 @@ package datasource
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"reflect"
 	"slices"
 	"strconv"
@@ -120,6 +121,9 @@ func RawFields(v any) (json.RawMessage, error) {
 //
 //craft:ignore naked-any the deserialization seam: the decode target is whichever provider request struct the caller owns
 func StrictDecode(raw json.RawMessage, into any) error {
+	if HasMalformedText(raw) {
+		return &FieldDecodeError{Cause: errors.New("the payload must be valid UTF-8 without unpaired surrogate escapes")}
+	}
 	if HasCustomFieldMap(into) {
 		return StrictCustomFieldDecode(raw, into)
 	}
@@ -153,7 +157,7 @@ type DecodedValueError struct {
 }
 
 // RefuseDecodedValue names the first decoded value outside its date-time range,
-// its number bounds or its no-repeats rule. owned names the paths whose number
+// its number bounds, its no-repeats rule or its single-line rule. owned names the paths whose number
 // bounds a later layer judges.
 //
 //craft:ignore naked-any mirror of StrictDecode's seam target
@@ -166,6 +170,9 @@ func RefuseDecodedValue(decoded any, raw json.RawMessage, owned func(path string
 	}
 	if repeated := RejectRepeatedItems(decoded); repeated != nil {
 		return &DecodedValueError{FieldShapeError: repeated, Code: "duplicate"}
+	}
+	if unsafe := RejectUnsafeSingleLine(decoded); unsafe != nil {
+		return &DecodedValueError{FieldShapeError: unsafe, Code: "invalid_characters"}
 	}
 	return nil
 }

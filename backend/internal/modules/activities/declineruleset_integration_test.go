@@ -37,7 +37,7 @@ func TestADeclineUnderAnotherPromptIsOfferedToThisOne(t *testing.T) {
 		{rulesetOld, false, pipelinetrace.ReasonModelsDeclined, "the prompt that was declined does not ask again"},
 		{rulesetNew, true, pipelinetrace.ReasonAwaitingBatch, "a reworded prompt is offered what the old one was refused"},
 	} {
-		backlog, err := e.store.UnlabeledCaptureEmails(ctx, tc.ruleset, 50, 200)
+		backlog, err := e.store.UnlabeledCaptureMessages(ctx, tc.ruleset, 50, 200)
 		if err != nil {
 			t.Fatalf("reading the backlog under %s: %v", tc.ruleset, err)
 		}
@@ -77,7 +77,7 @@ func TestADeclineIsRestampedOncePerPrompt(t *testing.T) {
 			t.Errorf("stamping under %s recorded=%v, want %v: %s", step.ruleset, recorded, step.want, step.why)
 		}
 	}
-	backlog, err := e.store.UnlabeledCaptureEmails(ctx, rulesetNew, 50, 200)
+	backlog, err := e.store.UnlabeledCaptureMessages(ctx, rulesetNew, 50, 200)
 	if err != nil {
 		t.Fatalf("reading the backlog: %v", err)
 	}
@@ -96,7 +96,7 @@ func TestALegacyDeclineIsOfferedOnceAndRestamped(t *testing.T) {
 	id := e.seed(t, capturedRow{kind: "email"})
 	e.exec(t, `UPDATE activity SET capture_label_declined_at = now() WHERE id = $1`, id)
 
-	backlog, err := e.store.UnlabeledCaptureEmails(ctx, rulesetNew, 50, 200)
+	backlog, err := e.store.UnlabeledCaptureMessages(ctx, rulesetNew, 50, 200)
 	if err != nil {
 		t.Fatalf("reading the backlog: %v", err)
 	}
@@ -119,7 +119,7 @@ func TestTwoPromptsServedSideBySideOfferADeclinedRowOncePerTickEach(t *testing.T
 	id := e.seed(t, capturedRow{kind: "email"})
 	offered := func(ruleset string) bool {
 		t.Helper()
-		backlog, err := e.store.UnlabeledCaptureEmails(ctx, ruleset, 50, 200)
+		backlog, err := e.store.UnlabeledCaptureMessages(ctx, ruleset, 50, 200)
 		if err != nil {
 			t.Fatalf("reading the backlog under %s: %v", ruleset, err)
 		}
@@ -155,7 +155,7 @@ func TestTwoPromptsServedSideBySideOfferADeclinedRowOncePerTickEach(t *testing.T
 	}
 }
 
-func backlogHolds(backlog []UnlabeledEmail, id ids.UUID) bool {
+func backlogHolds(backlog []UnlabeledMessage, id ids.UUID) bool {
 	for _, m := range backlog {
 		if m.ID == id {
 			return true

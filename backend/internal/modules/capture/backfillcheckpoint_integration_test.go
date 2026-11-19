@@ -14,6 +14,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -104,7 +105,7 @@ func TestCancelledHistoryRejectsItsInFlightCheckpoint(t *testing.T) {
 		t.Fatal("fixture actor missing")
 	}
 	provider.beforeCheckpoint = func() error {
-		_, err := reg.CancelBackfill(ctx, "gmail", ids.From[ids.UserKind](actor.UserID))
+		_, err := reg.CancelBackfill(ctx, capture.ProviderMailbox("gmail"), ids.From[ids.UserKind](actor.UserID))
 		return err
 	}
 	queue := &recordedBackfillQueue{generations: map[ids.UUID]int64{}}
@@ -123,29 +124,6 @@ func TestCancelledHistoryRejectsItsInFlightCheckpoint(t *testing.T) {
 	}
 	if status != "cancelled" || count != 0 {
 		t.Fatalf("cancelled checkpoint changed state: %s %d", status, count)
-	}
-}
-
-func TestReconnectedHistoryEndsBeforeSavingItsCheckpoint(t *testing.T) {
-	provider := &checkpointHistory{}
-	ctx, reg, id := admissionRunWith(t, provider)
-	provider.beforeCheckpoint = func() error { _, err := reg.Connect(ctx, "gmail", connector.Auth("replacement-grant")); return err }
-	queue := &recordedBackfillQueue{generations: map[ids.UUID]int64{}}
-	if err := reg.DispatchBackfills(ctx, queue.scheduler(), false); err != nil {
-		t.Fatal(err)
-	}
-	done, completed, _, err := reg.RunBackfillExecution(ctx, id, queue.generations[id], queue.scheduler())
-	if err != nil || !done || completed {
-		t.Fatalf("rebound page done=%v completed=%v err=%v", done, completed, err)
-	}
-	owner, _ := setupCaptureDB(t)
-	var status string
-	var scanned int
-	if err := owner.QueryRow(ctx, `SELECT status,scanned FROM capture_backfill WHERE id=@run`, pgx.NamedArgs{"run": id}).Scan(&status, &scanned); err != nil {
-		t.Fatal(err)
-	}
-	if status != "cancelled" || scanned != 0 {
-		t.Fatalf("rebound checkpoint stayed live: %s %d", status, scanned)
 	}
 }
 

@@ -144,7 +144,7 @@ func requesterOf(ctx context.Context, req NewRequest) (principal.Principal, erro
 		// Asking a colleague for a favour is a human's act, made by them or by
 		// their agent at their word; automatic work spends nobody's goodwill.
 		return principal.Principal{}, fmt.Errorf(
-			"introductions: asking for an introduction needs an authenticated contact: %w",
+			"asking for an introduction needs an authenticated contact: %w",
 			apperrors.ErrPermissionDenied)
 	}
 	if req.IntroducerUser == actor.UserID {
@@ -155,7 +155,7 @@ func requesterOf(ctx context.Context, req NewRequest) (principal.Principal, erro
 		// row it would write puts a favour in the asker's own queue and records
 		// a handoff that never happened.
 		return principal.Principal{}, fmt.Errorf(
-			"introductions: an introduction is asked of somebody else: %w",
+			"an introduction is asked of somebody else: %w",
 			apperrors.ErrInvalidArgument)
 	}
 	if strings.TrimSpace(req.InternalReason) == "" {
@@ -271,7 +271,7 @@ func (s *Store) Complete(ctx context.Context, id ids.UUID, activity *ids.UUID, v
 			}
 			if !linked {
 				return pgconn.CommandTag{}, fmt.Errorf(
-					"introductions: that message is not about this contact: %w",
+					"that message is not about this contact: %w",
 					apperrors.ErrNotFound)
 			}
 		}
@@ -339,7 +339,7 @@ func (s *Store) moveTx(
 	// A stale answer needs a reload before the transition rules can be judged.
 	if cur.Version != version {
 		return fmt.Errorf(
-			"introductions: this ask moved since you read it: %w", apperrors.ErrVersionSkew)
+			"this ask moved since you read it: %w", apperrors.ErrVersionSkew)
 	}
 	if err := permit(cur); err != nil {
 		return err
@@ -354,7 +354,7 @@ func (s *Store) moveTx(
 	// loser writes an audit row and emits an event for a move it never made.
 	if tag.RowsAffected() == 0 {
 		return fmt.Errorf(
-			"introductions: this ask moved since you read it: %w", apperrors.ErrVersionSkew)
+			"this ask moved since you read it: %w", apperrors.ErrVersionSkew)
 	}
 	// Preserve both states so the audit distinguishes a reversal from an initial refusal.
 	auditID, err := storekit.Audit(ctx, tx, "update", "intro_request", id,

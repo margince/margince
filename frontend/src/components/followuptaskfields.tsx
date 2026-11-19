@@ -1,7 +1,7 @@
 import { Checkbox, Field, TextInput } from "../design-system/atoms";
 import { DateInput, isoOrBlank } from "../design-system/dateinput";
 import { clockOrBlank, TimeInput } from "../design-system/timeinput";
-import { dueInstant } from "../format/calendarday";
+import { dueDayBounds, dueInstant } from "../format/calendarday";
 import { formatTimeOfDay } from "../format/format";
 import { useDateTimePreferences } from "../format/preferences";
 import { formatClockTime, timePattern } from "../format/timepattern";
@@ -23,6 +23,7 @@ export function FollowUpTaskFields({
   records?: readonly AssignedRecord[];
 }>) {
   const t = useT();
+  const readerZone = useViewerZone();
   const patch = (change: Partial<TaskDraft>) => {
     if (value) onChange({ ...value, ...change });
   };
@@ -55,6 +56,7 @@ export function FollowUpTaskFields({
               <DateInput
                 {...control}
                 value={isoOrBlank(value.day)}
+                {...dueDayBounds(readerZone)}
                 onChange={(event) => patch({ day: event.target.value })}
               />
             )}

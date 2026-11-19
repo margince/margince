@@ -5,13 +5,15 @@ import { X } from "lucide-react";
 import {
   type ClipboardEvent,
   type KeyboardEvent,
+  type ReactNode,
   useRef,
   useState,
 } from "react";
 import { isImeCommit } from "../lib/imecommit";
 import { Avatar } from "./avatar";
-import { type PeekContent, usePeek } from "./peek";
+import { usePeek } from "./peek";
 import { type Suggestion, SuggestPopup, useSuggestList } from "./suggestlist";
+import { tokenCard } from "./tokencard";
 import "./tokeninput.css";
 
 /**
@@ -122,6 +124,12 @@ export type TokenInputProps = Readonly<{
   parse?: TokenParse;
   placeholder?: string;
   disabled?: boolean;
+  /** Values drawn in the warning tone, with `label` read after each one, for a
+   *  set where some values need the reader's attention. */
+  marked?: Readonly<{ values: ReadonlySet<string>; label: string }>;
+  /** A small control drawn inside each token before its remove button, for a
+   *  fact about that one value the reader may change (a recipient's country). */
+  aside?: (value: string) => ReactNode;
   id?: string;
   "aria-label"?: string;
   "aria-labelledby"?: string;
@@ -140,6 +148,8 @@ export function TokenInput({
   parse,
   placeholder,
   disabled,
+  marked,
+  aside,
   ...aria
 }: TokenInputProps) {
   const [typed, setTyped] = useState("");
@@ -271,6 +281,8 @@ export function TokenInput({
           offer={offers.get(keyOf(value))}
           removeLabel={removeLabel(value)}
           disabled={disabled}
+          mark={marked?.values.has(value) ? marked.label : undefined}
+          aside={aside?.(value)}
           onRemove={() => onChange(values.filter((v) => v !== value))}
         />
       ))}
@@ -324,12 +336,16 @@ function TokenChip({
   offer,
   removeLabel,
   disabled,
+  mark,
+  aside,
   onRemove,
 }: Readonly<{
   value: string;
   offer: TokenSuggestion | undefined;
   removeLabel: string;
   disabled: boolean | undefined;
+  mark: string | undefined;
+  aside: ReactNode;
   onRemove: () => void;
 }>) {
   const label = offer?.label;
@@ -346,7 +362,13 @@ function TokenChip({
     <>
       <span
         ref={ref}
-        className={card ? "token token-has-face" : "token"}
+        className={[
+          "token",
+          card && "token-has-face",
+          mark !== undefined && "token-marked",
+        ]
+          .filter(Boolean)
+          .join(" ")}
         {...anchor}
       >
         {card && (
@@ -359,6 +381,8 @@ function TokenChip({
         <span className={named ? "token-label" : "token-value"}>
           {named ? label : value}
         </span>
+        {mark !== undefined && <span className="sr-only">, {mark}</span>}
+        {aside}
         <button
           type="button"
           className="token-remove"
@@ -372,34 +396,6 @@ function TokenChip({
       {panel}
     </>
   );
-}
-
-function tokenCard(
-  value: string,
-  label: string,
-  card: TokenCard | undefined,
-): PeekContent {
-  return {
-    head: label,
-    headHidden: true,
-    items: [
-      {
-        key: value,
-        lead: card && (
-          <Avatar
-            name={label}
-            identity={card.identity}
-            photo={card.photo}
-            size="md"
-          />
-        ),
-        title: label,
-        sub: value,
-        href: card?.href,
-      },
-    ],
-    foot: card?.about || undefined,
-  };
 }
 
 // One frozen empty list rather than a fresh `[]` per render: the suggestion

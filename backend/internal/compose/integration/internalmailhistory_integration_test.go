@@ -137,7 +137,7 @@ func (f *internalHistoryFixture) complete(t *testing.T, run capture.BackfillRun)
 
 func TestInternalHistoryNeedsAdministratorScopeAndSeparateOwnerConsent(t *testing.T) {
 	f := newInternalHistoryFixture(t)
-	normal, err := f.registry.StartBackfill(f.owner, "gmail", f.user, 3, connector.BackfillEstimate{}, historyEnqueue)
+	normal, err := f.registry.StartBackfill(f.owner, capture.ProviderMailbox("gmail"), f.user, 3, connector.BackfillEstimate{}, historyEnqueue)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -145,18 +145,18 @@ func TestInternalHistoryNeedsAdministratorScopeAndSeparateOwnerConsent(t *testin
 	if len(f.captured) != 0 {
 		t.Fatal("ordinary history import captured internal mail")
 	}
-	preview, err := f.registry.EstimateBackfill(f.owner, "gmail", f.user, 3)
+	preview, err := f.registry.EstimateBackfill(f.owner, capture.ProviderMailbox("gmail"), f.user, 3)
 	if err != nil || preview.InternalMail == nil {
 		t.Fatalf("history preview: %+v %v", preview.InternalMail, err)
 	}
-	if _, err := f.registry.StartBackfillWithInternalHistory(f.owner, "gmail", f.user, 6, preview.BackfillEstimate, preview.InternalMail.Token, historyEnqueue); !errors.Is(err, apperrors.ErrConflict) {
+	if _, err := f.registry.StartBackfillWithInternalHistory(f.owner, capture.ProviderMailbox("gmail"), f.user, 6, preview.BackfillEstimate, preview.InternalMail.Token, historyEnqueue); !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("different window accepted preview: %v", err)
 	}
-	if _, err := f.registry.StartBackfillWithInternalHistory(f.owner, "gmail", f.user, 3, preview.BackfillEstimate, preview.InternalMail.Token, func(context.Context, pgx.Tx, ids.UUID) error { return errors.New("queue unavailable") }); err == nil {
+	if _, err := f.registry.StartBackfillWithInternalHistory(f.owner, capture.ProviderMailbox("gmail"), f.user, 3, preview.BackfillEstimate, preview.InternalMail.Token, func(context.Context, pgx.Tx, ids.UUID) error { return errors.New("queue unavailable") }); err == nil {
 		t.Fatal("failed scheduling authorized history")
 	}
 	assertInternalHistoryWrites(t, f, 1, 0)
-	authorized, err := f.registry.StartBackfillWithInternalHistory(f.owner, "gmail", f.user, 3, preview.BackfillEstimate, preview.InternalMail.Token, historyEnqueue)
+	authorized, err := f.registry.StartBackfillWithInternalHistory(f.owner, capture.ProviderMailbox("gmail"), f.user, 3, preview.BackfillEstimate, preview.InternalMail.Token, historyEnqueue)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -181,7 +181,7 @@ func TestInternalHistoryNeedsAdministratorScopeAndSeparateOwnerConsent(t *testin
 
 func TestInternalHistoryRejectsStalePreviewAndRevokedSourceDuringImport(t *testing.T) {
 	f := newInternalHistoryFixture(t)
-	preview, err := f.registry.EstimateBackfill(f.owner, "gmail", f.user, 3)
+	preview, err := f.registry.EstimateBackfill(f.owner, capture.ProviderMailbox("gmail"), f.user, 3)
 	if err != nil || preview.InternalMail == nil {
 		t.Fatalf("preview: %+v %v", preview.InternalMail, err)
 	}
@@ -189,7 +189,7 @@ func TestInternalHistoryRejectsStalePreviewAndRevokedSourceDuringImport(t *testi
 	if _, err := f.settings.SetInternalMailPolicy(f.admin, true, []capture.InternalMailSelection{f.source}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := f.registry.StartBackfillWithInternalHistory(f.owner, "gmail", f.user, 3, preview.BackfillEstimate, preview.InternalMail.Token, historyEnqueue); !errors.Is(err, apperrors.ErrConflict) {
+	if _, err := f.registry.StartBackfillWithInternalHistory(f.owner, capture.ProviderMailbox("gmail"), f.user, 3, preview.BackfillEstimate, preview.InternalMail.Token, historyEnqueue); !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("stale scope accepted: %v", err)
 	}
 	assertInternalHistoryWrites(t, f, 0, 0)
@@ -198,11 +198,11 @@ func TestInternalHistoryRejectsStalePreviewAndRevokedSourceDuringImport(t *testi
 	if _, err := f.settings.SetInternalMailPolicy(f.admin, true, []capture.InternalMailSelection{f.source}); err != nil {
 		t.Fatal(err)
 	}
-	preview, err = f.registry.EstimateBackfill(f.owner, "gmail", f.user, 3)
+	preview, err = f.registry.EstimateBackfill(f.owner, capture.ProviderMailbox("gmail"), f.user, 3)
 	if err != nil || preview.InternalMail == nil {
 		t.Fatalf("fresh preview: %+v %v", preview.InternalMail, err)
 	}
-	run, err := f.registry.StartBackfillWithInternalHistory(f.owner, "gmail", f.user, 3, preview.BackfillEstimate, preview.InternalMail.Token, historyEnqueue)
+	run, err := f.registry.StartBackfillWithInternalHistory(f.owner, capture.ProviderMailbox("gmail"), f.user, 3, preview.BackfillEstimate, preview.InternalMail.Token, historyEnqueue)
 	if err != nil {
 		t.Fatal(err)
 	}

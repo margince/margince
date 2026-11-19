@@ -49,7 +49,7 @@ func TestAutomaticOpeningKeepsItsHistoryOriginAndAnOwnerCanRequestALiveRead(t *t
 	if _, err := capture.NewSettings(NewSettingsStore(b.env.Pool), StoredConfig(b.env.Pool)).Update(b.env.Admin(), capture.SettingsPatch{MailSharing: new(true)}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := b.registry.SetMailPosture(b.human, "gmail", "classified", false); err != nil {
+	if _, err := b.registry.SetMailPosture(b.human, capture.ProviderMailbox("gmail"), "classified", false); err != nil {
 		t.Fatal(err)
 	}
 	seat := seatAddress(t, b.env, b.env.Rep1)

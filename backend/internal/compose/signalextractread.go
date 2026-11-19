@@ -23,6 +23,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/commitmentparty"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptref"
@@ -249,7 +250,11 @@ func (t settledThread) firstReadHere(m threadMessage) bool {
 // whose conversation this is, not which of its messages the model may read.
 func dueThreads(ctx context.Context, tx pgx.Tx, now time.Time, limit int) ([]settledThread, error) {
 	settled := now.Add(-extractSettleHours * time.Hour)
-	rows, err := tx.Query(ctx, dueThreadsQuery,
+	private, err := activities.SharesPrivateRequestsTx(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := tx.Query(ctx, dueThreadsQuery(private),
 		settled, limit, extractRefusalCap, now.Add(-extractParkFor))
 	if err != nil {
 		return nil, fmt.Errorf("list the threads due for a read: %w", err)

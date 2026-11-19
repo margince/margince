@@ -241,7 +241,10 @@ const SIGNATURES: Readonly<
   },
   limitedImportHistory: { sales: lacks("4 Oct"), team: shows("Members") },
   partialValuation: {
-    sales: shows(/1 open deal in NOK has no exchange rate to EUR\./),
+    sales: async () => {
+      await shows(/1 open deal in NOK has no exchange rate to EUR\./)();
+      expect(await screen.findByText("of €800,000 goal")).toBeVisible();
+    },
   },
   sourceUnavailable: {
     sales: async () => {

@@ -10,6 +10,7 @@
 import type { components } from "../../../api/schema";
 import { EmailReference } from "../../../design-system/emailreference";
 import { relayProvenance } from "../../../design-system/provenanceof";
+import { TIMELINE_ICON } from "../../../design-system/timelineicons";
 import { ProvenanceTag, type RelaySend } from "../../../design-system/trust";
 import { activityDay } from "../../../format/activitywhen";
 import { useLocale, useT } from "../../../i18n";
@@ -21,9 +22,8 @@ type Receipt = components["schemas"]["ContactGraphReceipt"];
  * ReceiptList names each message a count was read from.
  *
  * A mail takes the product's one email citation. The graph also counts
- * attendees and organizers, so a receipt can be a meeting or a call — those
- * keep the plain line, because an email's icon on a meeting would tell a
- * reader it was a mail.
+ * attendees and organizers, so a receipt can be a meeting or a call. Those
+ * wear their own kind's icon, because a mail icon would call them a mail.
  */
 export function ReceiptList({
   receipts,
@@ -43,7 +43,6 @@ export function ReceiptList({
    */
   onOpenEmail?: (activityId: string) => void;
 }>) {
-  const t = useT();
   const { locale } = useLocale();
   const readerZone = useViewerZone();
   return (
@@ -64,15 +63,7 @@ export function ReceiptList({
               }
             />
           ) : (
-            <>
-              {r.subject ?? t("contact.graph.untitledMessage")} ·{" "}
-              {activityDay(
-                r.occurred_at,
-                r.occurred_precision,
-                locale,
-                readerZone,
-              )}
-            </>
+            <OtherReceipt receipt={r} />
           )}
           {r.controller_send && (
             <>
@@ -85,5 +76,35 @@ export function ReceiptList({
         </li>
       ))}
     </ul>
+  );
+}
+
+/**
+ * OtherReceipt draws a meeting, call or note in the email citation's shape:
+ * its own kind's icon, a subject that truncates, and a date that stays.
+ */
+function OtherReceipt({ receipt }: Readonly<{ receipt: Receipt }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const readerZone = useViewerZone();
+  // A kind newer than this build gets no icon rather than a wrong one.
+  const Icon = Object.hasOwn(TIMELINE_ICON, receipt.kind)
+    ? TIMELINE_ICON[receipt.kind]
+    : undefined;
+  return (
+    <span className="pn-receipt">
+      {Icon && <Icon aria-hidden="true" />}
+      <span className="pn-receipt-subject">
+        {receipt.subject ?? t("contact.graph.untitledMessage")}
+      </span>
+      <span className="pn-receipt-when">
+        {activityDay(
+          receipt.occurred_at,
+          receipt.occurred_precision,
+          locale,
+          readerZone,
+        )}
+      </span>
+    </span>
   );
 }

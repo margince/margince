@@ -65,6 +65,38 @@ def check_licences(grant, copied):
                              "which no shipped package may carry; name it in ignore-packages")
 
 
+FOREIGN_LICENCE = re.compile(rb"SPDX-License-Identifier:[ \t]*(?!BUSL-1\.1\b)[A-Za-z0-9]")
+COPYRIGHT_HOLDER = re.compile(
+    rb"(?:Copyright|\xc2\xa9|SPDX-FileCopyrightText:)[ \t]*(?:\([cC]\)[ \t]*)?"
+    rb"(?:19|20)\d\d(?:[ \t]*[-,][ \t]*(?:19|20)\d\d)*,?[ \t]+(?!Gradion\b)[A-Z]")
+
+
+# A copy found with no licence text beside it still shows itself: by an
+# upstream licence or copyright line, or by the bytes of a copy we record.
+# Every recorded copy must be in the tracked list, so a short list fails.
+def check_unmarked_copies(root, tracked, copied):
+    recorded = {record.path for record in copied}
+    texts = {record.text for record in copied}
+    folders = {str(PurePosixPath(text).parent) for text in texts}
+    missing = recorded - set(tracked)
+    if missing:
+        raise ValueError(f"third-party files: recorded copy is not tracked: {sorted(missing)[0]}")
+    known = {(root / path).read_bytes(): path for path in sorted(recorded)}
+    for path in tracked:
+        if not path or path in recorded or path in texts or path == "LICENSE":
+            continue
+        if Path(path).name == "README.md" and str(PurePosixPath(path).parent) in folders:
+            continue
+        file = root / path
+        if file.is_symlink() or not file.is_file():
+            continue
+        content = file.read_bytes()
+        if content in known:
+            raise ValueError(f"third-party files: unrecorded copy of {known[content]} at {path}")
+        if FOREIGN_LICENCE.search(content) or COPYRIGHT_HOLDER.search(content):
+            raise ValueError(f"third-party files: unrecorded copied file {path} carries a third-party licence or copyright line")
+
+
 def check(root, manifest):
     root = Path(root)
     copied = records(manifest)
@@ -86,6 +118,7 @@ def check(root, manifest):
         for path in tracked:
             if path.startswith(folder) and path not in paths and path not in texts and Path(path).name != "README.md":
                 raise ValueError(f"third-party files: unrecorded copied file {path}")
+    check_unmarked_copies(root, tracked, copied)
     print(f"OK: {len(copied)} copied third-party files have provenance and allowed licences")
 
 

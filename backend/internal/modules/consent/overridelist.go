@@ -34,7 +34,7 @@ func (s *Store) ListContactOverrides(ctx context.Context, contactID ids.ContactI
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
-	pre, err := storekit.BuildListPrelude(ctx, "", nil, nil, nil, &limit, &cursor, nil)
+	pre, err := storekit.BuildListPrelude(ctx, "", "consent_overrides", nil, nil, nil, &limit, &cursor, nil)
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}

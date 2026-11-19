@@ -172,8 +172,6 @@ func (g *Gate) decideLeadAt(ctx context.Context, tx pgx.Tx, r connector.Recipien
 // purpose-key arm below has read one off the record — for the same reason
 // decideResolved returns it on the contact path.
 func (g *Gate) decideLeadOnItsRecord(ctx context.Context, tx pgx.Tx, r connector.Recipient, req commsauthz.Request, d commsauthz.Decision, phase commsauthz.Phase, leadID string, stops []liveStop, country RecipientCountry) (commsauthz.Decision, *ids.UUID, error) {
-	purposeKey := req.LegacyPurposeKey
-
 	// The evidence arms, before any purpose key is consulted, through the same
 	// helper the contact arm uses so the basis is recorded the same way.
 	//
@@ -220,7 +218,11 @@ func (g *Gate) decideLeadOnItsRecord(ctx context.Context, tx pgx.Tx, r connector
 		return allowOn(d, res), nil, nil
 	}
 
-	if unsupportedClaimAwaitsAnswer(req.Context, purposeKey) {
+	claimed, purposeKey, err := verdictQuestion(ctx, tx, req, res)
+	if err != nil {
+		return commsauthz.Decision{}, nil, err
+	}
+	if unsupportedClaimAwaitsAnswer(claimed, purposeKey) {
 		d.Verdict = commsauthz.VerdictReview
 		d.ReasonCode = res.Reason
 		return d, nil, nil

@@ -410,7 +410,7 @@ export function OnboardingStage({
                 by construction. */}
             <Heading
               size="xlarge"
-              className="ob-stage-title"
+              className="ob-stage-title arrival-focus"
               id={STAGE_TITLE_ID}
               tabIndex={-1}
             >

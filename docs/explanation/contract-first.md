@@ -34,7 +34,9 @@ runtime from the first day:
 5. `tools/gen-queryenums` lists every query parameter, on any method, that the
    contract closes to a string enum. It also lists each whole-number one with a
    lowest value (`internal/compose/queryenums_gen.go`). The server answers 422
-   for a value outside the enum or below that floor. No handler needs its own check.
+   for a value outside the enum or below that floor. It also lists every parameter an
+   operation declares (`internal/compose/queryguard/declared_gen.go`), and the server
+   answers 422 for a key outside that list. No handler needs its own check.
 
 ## Drift is merge-blocking
 

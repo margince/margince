@@ -19,6 +19,8 @@ package compose
 
 import (
 	"context"
+	"errors"
+	"log/slog"
 	"testing"
 	"time"
 
@@ -26,7 +28,9 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // traceReadClock is fixed so "settled" is a property of the fixture rather than
@@ -192,5 +196,40 @@ func TestATraceReadOfAThreadWithNoConversationIsNotKnown(t *testing.T) {
 	}
 	if reading.Known {
 		t.Error("the trace claims to know a conversation that was never captured")
+	}
+}
+
+// A promise read from a thread with routine-private mail stays with that mail:
+// the dispatch refuses it and the legacy conversion reads nothing.
+func TestAPromiseInRoutinePrivateMailIsNeverFiled(t *testing.T) {
+	e := integration.Setup(t)
+	company := e.SeedCompany(t, "Acme", &e.Rep1)
+	at := traceReadClock.Add(-48 * time.Hour)
+	cited := map[string]ids.UUID{}
+	for _, key := range []string{"thread-shared", "thread-routine"} {
+		cited[key] = seedConversation(t, e, company, key, at, "workspace")
+	}
+	limited := seedConversation(t, e, company, "thread-routine", at.Add(time.Minute), "participants")
+	e.WsExec(t, `UPDATE activity SET audience_reason = 'posture' WHERE id = $1`, limited)
+
+	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), signalScanActor)
+	x := NewSignalExtractor(e.Pool, nil, func() time.Time { return traceReadClock }, slog.Default())
+	for key, source := range cited {
+		thread := settledThread{Key: key, Messages: []threadMessage{{ID: source, Body: "Happy to continue."}}}
+		event := extractedEvent{Kind: extractKindCommitment, MessageID: source.String(), Quote: "Happy to continue."}
+		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+			legacy, err := legacyThread(ctx, tx, legacyCommitment{cited: source})
+			if err != nil {
+				return err
+			}
+			_, _, refused := x.emailCommitment(ctx, tx, thread, event, source, traceReadClock)
+			if private := key == "thread-routine"; (len(legacy.Messages) == 0) != private ||
+				errors.Is(refused, apperrors.ErrNotFound) != private {
+				t.Errorf("%s: legacy read %d messages, dispatch err %v", key, len(legacy.Messages), refused)
+			}
+			return nil
+		}); err != nil {
+			t.Fatal(err)
+		}
 	}
 }

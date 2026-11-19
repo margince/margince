@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+	"github.com/margince/margince/backend/internal/platform/database/rowvalue"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -356,13 +357,14 @@ func scanAnalyticsRows(pgRows pgx.Rows) ([][]any, error) {
 	// like the array it is; nil marshals to null, which a model reads as
 	// "unknown".
 	out := [][]any{}
+	reader := rowvalue.NewReader()
 	for pgRows.Next() {
-		values, err := pgRows.Values()
+		values, err := reader.Values(pgRows)
 		if err != nil {
 			return nil, err
 		}
 		for i, v := range values {
-			values[i] = wireValue(v)
+			values[i] = rowvalue.Document(v)
 		}
 		out = append(out, values)
 	}

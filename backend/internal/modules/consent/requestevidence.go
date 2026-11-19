@@ -77,7 +77,7 @@ func requestedNegotiation(ctx context.Context, tx pgx.Tx, deals []ids.UUID, subj
 			          AND a.archived_at IS NULL
 			          AND `+visible+`
 			          AND ((`+correspondence.AuthenticatedInboundSQL("a")+` AND `+authorIsTheSubject+`)
-			               OR (`+capturedMeetingSQL("$10")+` AND `+participantIsTheSubject+`)))
+			               OR (`+capturedMeetingSQL("$10")+` AND `+participantIsTheSubject+` AND p.relinked_at IS NULL)))
 			  OR EXISTS (
 			       SELECT 1 FROM consent_qualifying_event q
 			        WHERE q.contact_id = $2::uuid

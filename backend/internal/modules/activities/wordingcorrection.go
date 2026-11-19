@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/heldreason"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -56,8 +57,8 @@ func (s *Store) CorrectHeldWording(ctx context.Context, intent ids.UUID, in comm
 			return err
 		}
 		var status string
-		if err := tx.QueryRow(ctx, `SELECT version, status FROM scheduled_send WHERE id=@id AND scheduled_by=@seat AND held_reason=@hold_reason FOR UPDATE`,
-			pgx.StrictNamedArgs{"id": intent, argSeat: actor.UserID, "hold_reason": HeldSendRefused}).Scan(&version, &status); err != nil {
+		if err := tx.QueryRow(ctx, `SELECT version, status FROM scheduled_send WHERE id=@id AND scheduled_by=@seat AND held_reason = ANY(@hold_reasons) FOR UPDATE`,
+			pgx.StrictNamedArgs{"id": intent, argSeat: actor.UserID, "hold_reasons": heldreason.Reviewable()}).Scan(&version, &status); err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return apperrors.ErrNotFound
 			}

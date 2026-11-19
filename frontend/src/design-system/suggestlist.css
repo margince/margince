@@ -20,11 +20,6 @@
      the room anchoredpopup.ts measured — both arrive as inline styles. */
   padding: var(--controlGap);
 }
-/* On the rows rather than the popup: `ListPopover` draws the same rows. */
-.suggest-option,
-.suggest-group-label {
-  --suggestInlineInset: 9px; /* ds:ignore the option row's own optics, shared with Select's list */
-}
 .suggest-list {
   display: flex;
   flex-direction: column;
@@ -45,6 +40,11 @@
   font-family: var(--fontFamilyBody);
   color: var(--textPrimary);
   cursor: pointer;
+}
+/* On the rows rather than the popup: `ListPopover` draws the same rows. */
+.suggest-option,
+.suggest-group-label {
+  --suggestInlineInset: 9px; /* ds:ignore the option row's own optics, shared with Select's list */
 }
 .suggest-option-value {
   overflow: hidden;

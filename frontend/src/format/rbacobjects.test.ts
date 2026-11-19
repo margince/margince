@@ -50,3 +50,11 @@ describe("objectLabel", () => {
     expect(objectLabel("notes", "ext_notes_")).toBe("Notes");
   });
 });
+
+describe("objectLabel for a hyphenated unit", () => {
+  it("drops the underscored unit prefix from a record kind's object", () => {
+    expect(objectLabel("finance-demo", "ext_finance_demo_ledger_account")).toBe(
+      "Ledger account",
+    );
+  });
+});

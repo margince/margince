@@ -35,6 +35,23 @@ const AVAILABLE: SettingsAvailability = {
 
 export type GrantSpec = Partial<Record<RbacObject, readonly RbacAction[]>>;
 
+/** Read access to every record kind a primary rail destination lists. */
+export const READS_RECORDS: GrantSpec = {
+  contact: ["read"],
+  company: ["read"],
+  lead: ["read"],
+  deal: ["read"],
+  project: ["read"],
+};
+
+/** Read access to everything a primary rail destination needs, Insights, Progress and Goals included. */
+export const READS_DESTINATIONS: GrantSpec = {
+  ...READS_RECORDS,
+  forecast: ["read"],
+  report_definition: ["read"],
+  sales_target: ["read"],
+};
+
 /** The zone the fixture user stores, for fixtures that need a zone string. */
 export const FIXTURE_TIMEZONE = "Europe/Berlin";
 

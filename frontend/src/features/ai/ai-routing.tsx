@@ -19,6 +19,7 @@ import {
   type RoutingRead,
   useRouting,
 } from "../../lib/ai-routing-query";
+import { TIER_ORDER, tierLabel, tierRank } from "../../lib/ai-tier-label";
 import { useCan, useCanWrite } from "../../lib/capability";
 import { valueFor } from "../../lib/labelfor";
 import { problemMessageOf, throwProblem } from "../../lib/problem";
@@ -26,7 +27,6 @@ import { useMe } from "../../lib/session";
 import { SETUP_PROVIDERS } from "../../lib/setup-providers";
 import { useAiStatus } from "./ai-admin";
 import { BindingEditor } from "./ai-binding-editor";
-import { TIER_ORDER, tierLabel, tierRank } from "./ai-decision-labels";
 import { useAiHealth } from "./ai-health";
 import { unkeyedProviders } from "./ai-key-rows";
 import { useProviderKeys } from "./ai-provider-key-hooks";
@@ -316,6 +316,7 @@ function FirstBinding({
     onSuccess: async (saved) => {
       queryClient.setQueryData(ROUTING_KEY, saved);
       await queryClient.invalidateQueries({ queryKey: ["ai-status"] });
+      await queryClient.invalidateQueries({ queryKey: ["assistant-profile"] });
       await invalidateProviderHealth(queryClient);
     },
   });

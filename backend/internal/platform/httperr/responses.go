@@ -58,6 +58,14 @@ func Unavailable(w http.ResponseWriter, r *http.Request, code, detail string) {
 	writeProblem(w, problem{Status: http.StatusServiceUnavailable, Code: code, Detail: detail})
 }
 
+// ErrNotConfigured is what a model call returns while no AI model is bound: the
+// 501 an unwired operation answers. A job that meets it has nothing to do yet,
+// and a handler that returns it as it came says the same to its caller.
+var ErrNotConfigured = &DetailedError{
+	Status: http.StatusNotImplemented, Code: "not_implemented",
+	Detail: "no AI model is bound yet; save one under Settings, AI models",
+}
+
 // NotImplementedBecause is NotImplemented for a route that IS implemented and
 // cannot serve this installation yet.
 //
@@ -95,13 +103,22 @@ func TooLong(field string, limit, actual int) *DetailedError {
 	if actual > 0 {
 		message += fmt.Sprintf("; this one has %d", actual)
 	}
-	return withMax(Validation(field, "too_long", message), limit)
+	return Validation(field, "too_long", message).WithMax(limit)
 }
 
-// withMax states the limit on a one-field refusal.
-func withMax(refusal *DetailedError, limit int) *DetailedError {
-	refusal.Fields[0].Max = limit
-	return refusal
+// WithMax states the limit a one-field refusal names.
+func (e *DetailedError) WithMax(limit int) *DetailedError {
+	e.Fields[0].Max = limit
+	return e
+}
+
+// WithParams states the values a one-field refusal's code names, so a screen
+// can word the code in the reader's language without reading the message.
+func (e *DetailedError) WithParams(params map[string]string) *DetailedError {
+	if len(params) > 0 {
+		e.Fields[0].Params = params
+	}
+	return e
 }
 
 // RequirePair refuses a filter that names half of a discriminated reference.
@@ -190,6 +207,9 @@ func fieldDetails(fields []FieldError) map[string]any {
 		}
 		if f.Max > 0 {
 			entry["max"] = f.Max
+		}
+		if len(f.Params) > 0 {
+			entry["params"] = f.Params
 		}
 		errs = append(errs, entry)
 	}

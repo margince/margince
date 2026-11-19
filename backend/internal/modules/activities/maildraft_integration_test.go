@@ -553,3 +553,74 @@ func TestTheRetentionSweepLeavesADraftSavedWhileItWaited(t *testing.T) {
 		t.Errorf("the sweep purged %d (%v), draft kept %v; want the saved draft left and nothing counted", purged, swept, e.draftExists(t, draft.ID))
 	}
 }
+
+func forwardAnchor(id ids.ActivityID) MailDraftAnchor {
+	return MailDraftAnchor{Type: crmcontracts.MailDraftAnchorTypeForward, ID: id.UUID}
+}
+
+// A reply and a forward of one message are two messages, so each keeps its own
+// draft and saving one never replaces the other.
+func TestAForwardKeepsItsOwnDraftBesideTheReplysDraft(t *testing.T) {
+	e := setupSend(t)
+	ctx := e.as(principal.RowScopeAll)
+	message := e.seedAnchor(t, "", "")
+	store := draftStore(e)
+	reply := saveDraft(ctx, t, e, replyAnchor(message))
+	forwarded := typedDraft()
+	forwarded.Body = "For your eyes, Bob"
+	forward, err := store.SaveMailDraft(ctx, forwardAnchor(message), forwarded, nil)
+	if err != nil {
+		t.Fatalf("saving a forward's draft beside the reply's: %v", err)
+	}
+	if forward.ID == reply.ID {
+		t.Fatal("the forward's draft took the reply's row")
+	}
+	for anchor, want := range map[MailDraftAnchor]string{replyAnchor(message): typedDraft().Body, forwardAnchor(message): forwarded.Body} {
+		got, err := store.GetMailDraft(ctx, anchor)
+		if err != nil || got.Content.Body != want {
+			t.Errorf("the %s draft reads %q (%v), want %q", anchor.Type, got.Content.Body, err, want)
+		}
+	}
+}
+
+// A forward quotes the message, so its draft passes the message's content gate
+// like a reply's, on save and on every read after.
+func TestAForwardDraftAnswersToTheMessagesRowScope(t *testing.T) {
+	e := setupSend(t)
+	ctx := e.as(principal.RowScopeOwn)
+	hidden := e.seedAnchor(t, "", "")
+	e.linkToContactOwnedBy(t, hidden, e.other)
+	if _, err := draftStore(e).SaveMailDraft(ctx, forwardAnchor(hidden), typedDraft(), nil); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Errorf("saving a forward of a message outside the caller's scope → %v, want ErrNotFound", err)
+	}
+
+	visible := e.seedAnchor(t, "", "")
+	saveDraft(ctx, t, e, forwardAnchor(visible))
+	e.linkToContactOwnedBy(t, visible, e.other)
+	if _, err := draftStore(e).GetMailDraft(ctx, forwardAnchor(visible)); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Errorf("reading a forward draft whose message fell out of scope → %v, want ErrNotFound", err)
+	}
+}
+
+// A forward goes out as a new conversation, so the send that carries it takes
+// its draft; a reply naming that draft does not.
+func TestSendingAForwardDiscardsItsDraftAndAReplyDoesNot(t *testing.T) {
+	e := setupSend(t)
+	ctx := e.as(principal.RowScopeAll)
+	message := e.seedAnchor(t, "", "")
+	draft := saveDraft(ctx, t, e, forwardAnchor(message))
+
+	if err := discardInOwnTx(ctx, t, e, draft.ID, FromActivity(message)); err != nil {
+		t.Fatalf("a reply naming the forward's draft: %v", err)
+	}
+	if !e.draftExists(t, draft.ID) {
+		t.Error("a reply discarded the forward's draft")
+	}
+	account := FromAccount([]ActivityLinkInput{{EntityType: "contact", EntityID: e.seedContact(t, "Bob")}})
+	if err := discardInOwnTx(ctx, t, e, draft.ID, account); err != nil {
+		t.Fatalf("sending the forward: %v", err)
+	}
+	if e.draftExists(t, draft.ID) {
+		t.Error("the forward's draft outlived the send that carried it")
+	}
+}

@@ -35,6 +35,7 @@ function Body({
       role={role}
       directory={[role]}
       units={[]}
+      verbs={{ audit_log: ["read"] }}
       canUpdate={canUpdate}
       canWiden={canUpdate}
       writes={writes}

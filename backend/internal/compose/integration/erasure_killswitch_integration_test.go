@@ -49,7 +49,7 @@ func (m refusingMailbox) SendEmail(context.Context, connector.Auth, connector.Em
 	return connector.SendReceipt{}, nil
 }
 
-func (m refusingMailbox) Resolve(context.Context, ids.UserID, string) (connector.EmailSender, connector.Auth, []string, error) {
+func (m refusingMailbox) Resolve(context.Context, ids.UserID, string, *ids.UUID) (connector.EmailSender, connector.Auth, []string, error) {
 	return m, connector.Auth{}, nil, nil
 }
 

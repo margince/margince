@@ -83,11 +83,27 @@ func recipientSubjectAddress(r connector.Recipient) (address, channelProvider, c
 // correspondence, and treating it as such would let anyone create a lawful
 // basis for writing to a third party by putting them in Cc.
 func repliesToTheSubject(ctx context.Context, tx pgx.Tx, anchor ids.UUID, subject subjectRef) (bool, error) {
+	return subjectWroteInto(ctx, tx, anchor, subject, false)
+}
+
+// subjectWroteTheAnchor is repliesToTheSubject asked of the anchor message
+// alone: whether the subject wrote the very mail a reply answers. Its sender
+// must be authenticated too, because a forged From: is all it would take to
+// put a pitch in the contact's mouth. The thread question keeps its own
+// reach: channel messages carry no sender authentication.
+func subjectWroteTheAnchor(ctx context.Context, tx pgx.Tx, anchor ids.UUID, subject subjectRef) (bool, error) {
+	if anchor.IsZero() {
+		return false, nil
+	}
+	return subjectWroteInto(ctx, tx, anchor, subject, true)
+}
+
+func subjectWroteInto(ctx context.Context, tx pgx.Tx, anchor ids.UUID, subject subjectRef, anchorOnly bool) (bool, error) {
 	entity, err := evidenceEntity(ctx, tx, subject.SendingEntity)
 	if err != nil {
 		return false, err
 	}
-	args := []any{subject.Kind, subject.ID, subject.Address, subject.ChannelProvider, subject.ChannelUserID, anchor, entity}
+	args := []any{subject.Kind, subject.ID, subject.Address, subject.ChannelProvider, subject.ChannelUserID, anchor, anchorOnly, entity}
 	entityArg := storekit.SQLf("$%d", len(args))
 	visible, err := activityEvidenceSQL(ctx, entityArg, &args)
 	if err != nil {
@@ -107,6 +123,7 @@ func repliesToTheSubject(ctx context.Context, tx pgx.Tx, anchor ids.UUID, subjec
 			  JOIN activity_participant p ON p.activity_id = a.id
 			 WHERE a.direction = 'inbound'
 			   AND a.archived_at IS NULL
+			   AND (NOT $7 OR (a.id = $6 AND `+correspondence.AuthenticatedInboundSQL("a")+`))
 			   -- Authorship, from the shared spelling: the subject WROTE into
 			   -- this thread, and a recipient who was merely copied has
 			   -- initiated nothing.
@@ -338,8 +355,10 @@ const authorIsTheSubject = `(p.role = 'from' AND ` + participantIsTheSubject + `
 // the role. The participant row p names this recipient by record, by bare
 // address or by channel account. copiedOnThisMatter does not read it, because
 // a relink can repoint the record. Same placeholders as authorIsTheSubject.
+// A recipient with no record carries an empty ID, which must not reach a uuid
+// cast.
 const participantIsTheSubject = `(
-			            ($1 = 'contact' AND p.contact_id = $2::uuid)
+			            ($1 = 'contact' AND p.contact_id = NULLIF($2::text, '')::uuid)
 			         OR ($3 <> '' AND p.contact_id IS NULL AND lower(p.address) = lower($3))
 			         OR ($5 <> '' AND p.contact_id IS NULL AND p.channel_user_id = $5 AND a.channel_provider = $4)
 			       )`

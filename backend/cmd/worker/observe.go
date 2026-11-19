@@ -129,7 +129,7 @@ func startObserveListener(ctx context.Context, cfg workerConfig, pool *pgxpool.P
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", httpserver.Healthz)
-	mux.HandleFunc("/readyz", httpserver.Readyz("", nil, workerReadyChecks(pool, rdb, boot)...))
+	mux.HandleFunc("/readyz", httpserver.Readyz(nil, nil, workerReadyChecks(pool, rdb, boot)...))
 	// Backlog and JobStats are nil because each is a fleet-wide read
 	// of a shared table the api already serves, and a second copy of one
 	// number is a worse operator surface than one copy.

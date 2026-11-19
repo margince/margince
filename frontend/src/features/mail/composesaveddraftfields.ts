@@ -8,6 +8,7 @@ import { stable } from "../../format/collate";
 import { addressKey } from "../../lib/addresskey";
 import { distinctAddressLines } from "./composeaddresslist";
 import type { ChosenFile } from "./composeattachments";
+import { countriesOnMessage, sameCountries } from "./composecountries";
 import type { Grounding } from "./composedraftcall";
 import type { ComposeFields } from "./composefields";
 import {
@@ -22,11 +23,14 @@ export function savedFieldsOf(
   fields: ComposeFields,
   files: readonly ChosenFile[],
   filing: Partial<Grounding> | null,
+  overrideExplanation = "",
 ): SavedDraftFields {
   return {
+    overrideExplanation,
     to: fields.to,
     cc: fields.cc,
     bcc: fields.bcc,
+    recipientCountries: fields.countries.stated,
     subject: fields.subject,
     body: fields.body,
     html: fields.html,
@@ -63,6 +67,8 @@ export function fieldsOfDraft(draft: MailDraft): SavedDraftFields {
       byteSize: file.byte_size,
     })),
     context: draft.communication_context ?? "",
+    overrideExplanation: draft.override_explanation ?? "",
+    recipientCountries: draft.recipient_countries ?? [],
     sendAt:
       draft.scheduled_intent?.wall_clock ??
       (draft.scheduled_at && draft.scheduled_tz
@@ -114,6 +120,14 @@ const canonical = (line: readonly string[]) =>
 const sameLine = (a: readonly string[], b: readonly string[]) =>
   sameList(canonical(a), canonical(b));
 
+// Only statements about addresses on the draft count, as the server keeps only those.
+const onDraft = (fields: SavedDraftFields) =>
+  countriesOnMessage(fields.recipientCountries ?? [], [
+    ...fields.to,
+    ...fields.cc,
+    ...fields.bcc,
+  ]);
+
 export function sameFields(a: SavedDraftFields, b: SavedDraftFields): boolean {
   return (
     sameLine(a.to, b.to) &&
@@ -124,6 +138,8 @@ export function sameFields(a: SavedDraftFields, b: SavedDraftFields): boolean {
     a.html === b.html &&
     sameList(idsOf(a.files), idsOf(b.files)) &&
     a.context === b.context &&
+    (a.overrideExplanation ?? "") === (b.overrideExplanation ?? "") &&
+    sameCountries(onDraft(a), onDraft(b)) &&
     a.sendAt === b.sendAt &&
     sameScheduleSource(a.sendSchedule, b.sendSchedule) &&
     sameList(filingKeys(a), filingKeys(b)) &&

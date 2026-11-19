@@ -558,3 +558,18 @@
   border-inline-start: 2px solid var(--borderStrong);
   color: var(--textSecondary);
 }
+
+/* Send anyway: the finding strip, then the reason beside its button, both
+   inside the blocker band so the warning sits over the field it explains. */
+.compose-sendanyway-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-2) var(--space-3) var(--space-2) var(--space-4); /* ds:ignore one strip in the composer's blocker band, matched to compose-strip */
+  background: var(--warningBg);
+}
+.compose-sendanyway-reason {
+  flex: 1 1 16rem;
+  margin: 0;
+}

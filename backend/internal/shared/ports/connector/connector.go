@@ -392,6 +392,8 @@ type NormalizedRecord struct {
 	// distinguishable from a message that had none — silence would report the
 	// two identically, and only one of them means something is missing.
 	PartDrops []PartDrop
+
+	Forwarded *ForwardedOriginal // the original a forwarded mail carries; never its author
 }
 
 // WithProviderAttestedParticipants returns a copy recording that the PROVIDER

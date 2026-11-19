@@ -21,7 +21,7 @@ var ErrConnectorHasNoSignature = errors.New("capture: this connector keeps no se
 //nolint:ireturn // returns the optional connector.SendAsSignatureReader seam by design, as SenderFor does
 func (r *Registry) SignatureReaderFor(ctx context.Context, userID ids.UserID, provider string) (connector.SendAsSignatureReader, connector.Auth, []string, error) {
 	var reader connector.SendAsSignatureReader
-	auth, granted, err := r.liveConnection(ctx, userID, provider, func(c connector.Connector) error {
+	auth, granted, err := r.liveConnection(ctx, userID, ProviderMailbox(provider), func(c connector.Connector) error {
 		var reads bool
 		if reader, reads = c.(connector.SendAsSignatureReader); !reads {
 			return fmt.Errorf("capture: connector %q: %w", provider, ErrConnectorHasNoSignature)

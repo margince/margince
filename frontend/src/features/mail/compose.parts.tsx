@@ -34,6 +34,7 @@ import { AiDraftBand } from "./composeaiband";
 import { CarriageNotice } from "./composeattachments";
 import type { ComposeFields } from "./composefields";
 import { FieldNeed, toBox } from "./composehead";
+import type { Refusal } from "./composerefusal";
 import type { useSavedDraft } from "./composesaveddraft";
 import { SavedDraftFailure } from "./composesaveddraftnotices";
 import { ScheduleMenu, scheduledSendLabel } from "./composeschedule";
@@ -300,21 +301,21 @@ export function ComposeOutcome({
   isChannelReply,
   bodyKey,
   sendUnavailable,
-  send,
+  refusal,
 }: Readonly<{
   isChannelReply: boolean;
   bodyKey: MessageKey;
   sendUnavailable: boolean;
-  send: ComposeSend;
+  refusal: Refusal;
 }>) {
   const t = useT();
   return (
     <>
       {isChannelReply && <p>{t(bodyKey)}</p>}
       {sendUnavailable && <p>{t("compose.sendUnavailable")}</p>}
-      {send.refusal !== null && (
+      {refusal !== null && (
         <Suspense fallback={null}>
-          <LazySendRefusal refusal={send.refusal} />
+          <LazySendRefusal refusal={refusal} />
         </Suspense>
       )}
     </>
@@ -337,6 +338,7 @@ export function ComposeBody({
   voice,
   marksIn,
   attach,
+  locked = false,
 }: Readonly<{
   bodyId: string;
   fields: ComposeFields;
@@ -357,10 +359,12 @@ export function ComposeBody({
   marksIn: Element | null;
   /** The paperclip, among the editor's own marks. */
   attach: ReactNode;
+  /** A write about these words is in flight, so they cannot change. */
+  locked?: boolean;
 }>) {
   const t = useT();
   const richTextLabels = useRichTextLabels();
-  const frozen = voice.rejectionInFlight;
+  const frozen = voice.rejectionInFlight || locked;
   return (
     <>
       {mail && (
