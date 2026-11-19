@@ -348,9 +348,8 @@ export function useCustomFieldLabel() {
 // Where a displayed value may be followed to, or null when it is only text.
 //
 // A text field holding an address is a link too, so a link is recognised from
-// the VALUE, which makes the scheme check the load-bearing half rather than a
-// formality. Which schemes those are is not this file's to decide —
-// `format/weburl` is the one place that answers it for every surface.
+// the VALUE. That makes the scheme check what keeps the link safe. Which
+// schemes those are is decided in `format/weburl`, for every surface.
 export function customFieldHref(value: string): string | null {
   return webUrl(value)?.href ?? null;
 }

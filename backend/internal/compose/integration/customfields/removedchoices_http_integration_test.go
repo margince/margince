@@ -8,8 +8,8 @@ package customfields
 // Removing a choice from a picklist or multiselect field clears it from the
 // records that hold it, in the options edit itself. The admin reads how many
 // records hold each choice before confirming, and the edit answers how many it
-// changed. Records of other fields and other objects that hold the same text
-// are not touched, and a Live List whose filter names the choice keeps working.
+// changed. Other fields and other objects that hold the same text are not
+// touched. A Live List whose filter names the choice keeps working.
 
 import (
 	"context"
@@ -93,8 +93,8 @@ func TestEveryFieldObjectHasAChoiceRemover(t *testing.T) {
 	}
 }
 
-// The column becomes an identifier in the clearing UPDATE, so a remover asked to
-// clear a column the catalog does not list refuses before it writes.
+// The column becomes an identifier in the clearing UPDATE. So a remover refuses
+// a column the catalog does not list, before it writes.
 func TestARemoverRefusesAColumnTheCatalogDoesNotList(t *testing.T) {
 	e := schemaWiredEnv(t)
 	err := e.DB().Tx(t.Context(), func(tx pgx.Tx) error {

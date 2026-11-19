@@ -28,13 +28,12 @@ const (
 )
 
 // ClearRemovedChoices takes the choices an admin removed from a picklist or
-// multiselect field off every row of table that holds one, archived rows too,
-// because the field's CHECK covers them. It answers how many rows changed.
+// multiselect field off every row of table that holds one. Archived rows count
+// too, because the field's CHECK covers them. It answers how many rows changed.
 //
-// Each changed row gets its own audit entry and the event announce builds from
-// what changed, so a removed choice reads in a record's history like an edit.
-// The statement touches only the rows that hold a removed choice, and the audit
-// rows go in statements of auditEachChunk rows.
+// Each changed row gets an audit entry and the event announce builds, as an edit
+// does. Only rows holding a removed choice are touched, and the audit rows go in
+// statements of auditEachChunk rows.
 func ClearRemovedChoices(ctx context.Context, tx pgx.Tx, table string, column fieldcatalog.Column, removed []string,
 	announce func(changed map[string]any) events.Payload,
 ) (int, error) {

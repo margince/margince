@@ -360,7 +360,7 @@ func TestBuildOptionsDDL_LabelInjectionNeverReachesRawSQL(t *testing.T) {
 
 // The type list is what the custom_field.type CHECK admits, read from the
 // schema the migrations build. A type the engine offers and the CHECK refuses
-// fails every create; one the CHECK admits and the engine refuses is a column
+// fails every create. One the CHECK admits and the engine refuses is a column
 // no write can reach.
 func TestFieldTypes_IsTheCatalogCheckSet(t *testing.T) {
 	catalog, err := os.ReadFile("../../../migrations/testdata/head_catalog.txt")

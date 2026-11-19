@@ -32,10 +32,10 @@ const (
 	TypeURL         = "url"
 )
 
-// Types answers the closed set above, so a consumer handling EVERY field type
-// derives that obligation instead of restating it: a gate over a hand-copied
-// list passes unchanged the day a new type lands, which is the one moment it
-// exists to fail. Missing the segment vocabulary costs a column its filter;
+// Types answers the closed set above. A consumer handling every field type
+// derives that obligation from it instead of restating it. A gate over a
+// hand-copied list passes unchanged the day a new type lands, which is the one
+// moment it exists to fail. Missing the segment vocabulary costs a column its filter;
 // missing storekit's conversion matrix costs the VALUE on both write and read.
 //
 // A fresh slice per call, so no consumer can reorder it for every other.

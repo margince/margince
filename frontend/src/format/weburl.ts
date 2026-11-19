@@ -7,10 +7,10 @@ import { TEXT_LIMITS } from "../lib/textlimits_gen";
 //
 // Every href a record carries is untrusted input: a crawler wrote it, a
 // connector wrote it, or a contact pasted it into a text field. `javascript:`
-// and `data:` in an href are script execution on click, and a value that is not an absolute URL at all — a bare
-// `example.com`, a relative path — resolves against OUR origin, which is never
-// where the record points. So only the two schemes a web address can honestly
-// be are allowed through, and everything else is text.
+// and `data:` in an href run script on click. A value that is not an absolute
+// URL, such as a bare `example.com` or a relative path, resolves against OUR
+// origin. That is never where the record points. So only the two schemes of a
+// web address are allowed through, and everything else is text.
 //
 // It answers with the parsed URL rather than a boolean so a caller that needs
 // the normalized destination has it, and one that only needs the verdict can
@@ -31,10 +31,10 @@ export function webUrl(value: string): URL | null {
     : null;
 }
 
-// Whether a typed value may be STORED in a url field: an absolute http or https
-// address with a host, no user name or password, and no padding. It mirrors
-// values.IsWebAddress, which the server refuses on, so a value the form takes
-// is one the save keeps. The length is the server's bound too.
+// Whether a typed value may be STORED in a url field. It must be an absolute
+// http or https address with a host, no user name or password, and no padding.
+// It mirrors values.IsWebAddress, which the server refuses on. So a value the
+// form takes is one the save keeps, and the length is the server's bound too.
 const WEB_ADDRESS_START = /^https?:\/\/[^/?#@\s]/i;
 
 export function isWebAddress(value: string): boolean {

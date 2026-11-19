@@ -307,34 +307,6 @@ func IsStructural(label string) bool {
 	return false
 }
 
-// sqlType maps a validated field type to its storage type
-// (CUSTOM-FIELDS-PARAM-4): text->text, number->numeric (string round-trip,
-// no float), date->date, currency->bigint minor-units (the ISO-4217 code
-// lives in the catalog row, not the column), boolean->boolean,
-// picklist->text+generated CHECK.
-func sqlType(fieldType string) (string, error) {
-	switch fieldType {
-	case TypeText:
-		return "text", nil
-	case TypeNumber:
-		return "numeric", nil
-	case TypeDate:
-		return "date", nil
-	case TypeCurrency:
-		return "bigint", nil
-	case TypeMultiselect:
-		return "text[]", nil
-	case TypePicklist:
-		return "text", nil
-	case TypeBoolean:
-		return "boolean", nil
-	case TypeRecord, TypeURL:
-		return "text", nil
-	default:
-		return "", fmt.Errorf("customfields: unsupported type %q", fieldType)
-	}
-}
-
 // quoteIdentifier wraps name as a double-quoted Postgres identifier via
 // pgx.Identifier — the ONE spelling this package uses for identifier
 // quoting. pgx (unlike lib/pq) exposes no literal quoter, so it is used
@@ -485,19 +457,6 @@ func namesOneRegisteredKind(options []string) bool {
 	}
 	_, ok := recordkinds.Lookup(options[0])
 	return ok
-}
-
-// textBound is the character limit of a free text column, and false for a type
-// whose values the write checks some other way.
-func textBound(fieldType string) (int, bool) {
-	switch fieldType {
-	case TypeText:
-		return values.TextDocumentCharacters, true
-	case TypeURL:
-		return values.WebAddressCharacters, true
-	default:
-		return 0, false
-	}
 }
 
 func hasOptions(fieldType string) bool {

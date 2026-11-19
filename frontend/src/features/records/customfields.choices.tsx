@@ -2,9 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // Editing the choices of a picklist or multiselect field. Each choice shows how
-// many records hold it. Removing one that records hold says before Save how
-// many records lose it, because the save clears it from them, and the toast
-// after it says how many records changed.
+// many records hold it. The save clears a removed choice from those records, so
+// the dialog says before Save how many lose it. The toast after says how many
+// records changed.
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";

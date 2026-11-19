@@ -21,11 +21,11 @@ import (
 
 // SetOptions replaces a picklist or multiselect field's allowed option set and
 // regenerates the physical column's CHECK constraint from it
-// (CUSTOM-FIELDS-PARAM-5) — the one lifecycle mutation besides Create
-// that runs DDL, so it follows the same one-transaction schema-pool
-// shape: clearing removed choices off the records, the owner ALTER, then
-// the catalog UPDATE + one audit row, all as the schema pool's owner role.
-// The answer's RecordsChanged counts the records that lost a choice.
+// (CUSTOM-FIELDS-PARAM-5). Besides Create it is the one lifecycle mutation that
+// runs DDL, so it has the same one-transaction schema-pool shape. It clears
+// removed choices off the records, runs the owner ALTER, then writes the
+// catalog UPDATE and one audit row. All of it runs as the schema pool's owner role. The
+// answer's RecordsChanged counts the records that lost a choice.
 func (s *Service) SetOptions(ctx context.Context, id ids.UUID, options []string) (crmcontracts.CustomField, error) {
 	if err := auth.Require(ctx, rbacObject, principal.ActionUpdate); err != nil {
 		return crmcontracts.CustomField{}, err
