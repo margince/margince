@@ -680,15 +680,15 @@ describe("refusalSentences", () => {
       fieldRefusal(
         { field: "name", code: "required", message: "x" },
         {
-          field: "pipeline_id",
-          code: "stage_not_in_pipeline",
-          message: "The stage belongs to another pipeline.",
+          field: "close_from",
+          code: "range_inverted",
+          message: "The range starts after it ends.",
         },
       ),
       english,
       { name: "Name" },
     );
-    expect(rest).toBe("The stage belongs to another pipeline.");
+    expect(rest).toBe("The range starts after it ends.");
   });
 
   it("words that foot fault in German, where no server sentence is shown", () => {
