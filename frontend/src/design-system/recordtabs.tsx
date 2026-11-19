@@ -20,7 +20,7 @@ import { ChevronDown } from "lucide-react";
 import { type ReactNode, useEffect, useRef } from "react";
 import { useT } from "../i18n";
 import { offsetShowingStrip, stripPlace } from "../lib/reveal";
-import { seekScrollTop } from "../lib/scrollmemory";
+import { keepPlaceOnNextMove, seekScrollTop } from "../lib/scrollmemory";
 import { Button, OptionCount } from "./atoms";
 import { OverflowMenu } from "./overflowmenu";
 import { useFocusKeptOnFold, useFoldedTabs } from "./recordtabs.fold";
@@ -147,6 +147,7 @@ export function RecordTabs<Option extends string>({
         ? stripPlace(rowRef.current)
         : null;
     pressed.current = place && { option, place };
+    if (place) keepPlaceOnNextMove();
     onChange?.(option);
   };
   const tabBody = (option: Option) => {

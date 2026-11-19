@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   forgetScrollMemory,
   historyEntryId,
+  keepPlaceOnNextMove,
   useScrollMemory,
 } from "./scrollmemory";
 
@@ -139,12 +140,14 @@ describe("another tab of the same record", () => {
     return <div ref={column} data-testid="column" />;
   }
 
+  // A press on the record's tab strip, which asks to keep the place.
   function openTimeline() {
     const { container, rerender } = render(
       <Page address="#/contacts/c-1" view="#/contacts/c-1" />,
     );
     scrollTo(container, 900);
     const overview = window.history.state;
+    keepPlaceOnNextMove();
     window.history.pushState(null, "", "#/contacts/c-1/timeline");
     rerender(<Page address="#/contacts/c-1/timeline" view="#/contacts/c-1" />);
     return { container, rerender, overview };
@@ -153,6 +156,16 @@ describe("another tab of the same record", () => {
   it("keeps the reader's place when the new entry shows the same record", () => {
     const { container } = openTimeline();
     expect(offsetOf(container)).toBe(900);
+  });
+
+  it("opens another tab at its top when no press asked to keep the place", () => {
+    const { container, rerender } = render(
+      <Page address="#/contacts/c-1" view="#/contacts/c-1" />,
+    );
+    scrollTo(container, 900);
+    window.history.pushState(null, "", "#/contacts/c-1/tasks");
+    rerender(<Page address="#/contacts/c-1/tasks" view="#/contacts/c-1" />);
+    expect(offsetOf(container)).toBe(0);
   });
 
   it("opens another record at its top", () => {

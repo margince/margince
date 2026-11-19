@@ -331,8 +331,8 @@ describe("RecordTabs folds to one stable row", () => {
   });
 });
 
-// A page pane under a 56px top bar, standing at `offset`, whose strip sits
-// `stripTop` px below the pane's top edge. Its offset clamps to its range.
+// A page pane under the 50px top bar (`--topbarH`), standing at `offset`. Its
+// strip sits `stripTop` px below the pane's top edge; its offset clamps.
 function inPane(stripTop: number, { keepPlace = true, offset = 1000 } = {}) {
   let bottom = 10_000;
   let top = offset;
@@ -344,7 +344,7 @@ function inPane(stripTop: number, { keepPlace = true, offset = 1000 } = {}) {
   function Live() {
     const [value, setValue] = useState<Body>("overview");
     return (
-      <div className="scroll" style={{ marginTop: "-56px" }}>
+      <div className="scroll" style={{ marginTop: "-50px" }}>
         <RecordTabs
           options={["overview", "contacts"]}
           value={value}
@@ -496,8 +496,8 @@ describe("RecordTabs keeps a record reader's place across a press", () => {
   it("jumps up just far enough to show a strip left above the screen", () => {
     const at = inPane(-300);
     press("Contacts");
-    // 300px above the pane's edge and 56 more under the bar.
-    expect(at.pane.scrollTop).toBe(644);
+    // 300px above the pane's edge and 50 more under the bar.
+    expect(at.pane.scrollTop).toBe(650);
     expect(at.scrollTo).not.toHaveBeenCalled();
   });
 

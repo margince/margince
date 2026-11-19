@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
+import { de } from "../src/i18n/de";
 import { mockApi } from "./seed";
 
 // jsdom lays nothing out, so only a browser shows the page pane holding the
@@ -100,6 +101,13 @@ test.describe("a tab switch on a phone", () => {
     await expect(
       page.locator('.recordtabs-tab[data-tab="contacts"]'),
     ).toBeVisible();
+    // The Overview's body has loaded: its skeleton holds a fixed height, so an
+    // unchanged page height alone cannot tell a placeholder from the body.
+    const standing = de["standing.title"].split(" ·")[0];
+    await expect(
+      page.getByRole("heading", { name: new RegExp(`^${standing}`) }),
+    ).toBeVisible();
+    await expect(page.locator(".main > .scroll .skeleton")).toHaveCount(0);
   });
 
   test("keeps the reader's place on the record", async ({ page }) => {
