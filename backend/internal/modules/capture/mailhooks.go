@@ -12,6 +12,7 @@ package capture
 import (
 	"context"
 	"fmt"
+	"maps"
 	"slices"
 
 	"github.com/jackc/pgx/v5"
@@ -156,7 +157,7 @@ func (h MailHooks) adjustVerdict(ctx context.Context, tx pgx.Tx, facts dealFacts
 	if err != nil || !ok {
 		return verdict, err
 	}
-	accepted.Hooks = append(verdict.Hooks, changes...)
+	accepted.Hooks = slices.Concat(verdict.Hooks, changes)
 	return accepted, nil
 }
 
@@ -232,12 +233,10 @@ func withHookEvidence(evidence map[string]any, changes []HookChange) map[string]
 	}
 	recorded := make([]map[string]string, len(changes))
 	for i, c := range changes {
-		recorded[i] = map[string]string{"unit": c.Unit, "hook": c.Hook, "reason": c.Reason}
+		recorded[i] = map[string]string{"unit": c.Unit, "hook": c.Hook, fieldReason: c.Reason}
 	}
 	out := make(map[string]any, len(evidence)+1)
-	for k, v := range evidence {
-		out[k] = v
-	}
+	maps.Copy(out, evidence)
 	out["extension_hooks"] = recorded
 	return out
 }

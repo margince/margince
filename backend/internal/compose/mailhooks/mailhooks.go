@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+// Package mailhooks serves the mail-capture hooks the registered units declare.
 package mailhooks
 
 // The mail-capture hooks of the registered units. This adapter owns the order:

@@ -53,3 +53,8 @@ export function UnitNeeds({ needs }: Readonly<{ needs: readonly Need[] }>) {
     </ul>
   );
 }
+
+/** The needs row of a unit's "brings" list. */
+export function needsFact(needs: readonly Need[] | undefined, term: string) {
+  return { key: "needs", term, value: <UnitNeeds needs={needs ?? []} /> };
+}

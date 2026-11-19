@@ -54,7 +54,7 @@ import {
   nextGrant,
 } from "../settings/grantmatrix";
 import { UnitGovernance } from "./extension-governance";
-import { bringsCount, UnitNeeds } from "./extension-needs";
+import { bringsCount, needsFact } from "./extension-needs";
 
 // Extension access (settings → Extensions): what the composed extension tier
 // brought into this installation, and who may use it.
@@ -392,8 +392,7 @@ function UnitBrings({ unit }: Readonly<{ unit: ExtensionUnit }>) {
         {
           key: "routes",
           term: t("extAccess.brings.routes"),
-          // One entry per method and path: a DELETE must not hide behind the
-          // GET on the same path.
+          // One entry per method and path, so a DELETE never hides behind a GET.
           value: list(
             unit.routes.map((route) => `${route.method} ${route.path}`),
           ),
@@ -403,11 +402,7 @@ function UnitBrings({ unit }: Readonly<{ unit: ExtensionUnit }>) {
           term: t("extAccess.brings.jobs"),
           value: list(unit.jobs),
         },
-        {
-          key: "needs",
-          term: t("extAccess.brings.needs"),
-          value: <UnitNeeds needs={unit.needs ?? []} />,
-        },
+        needsFact(unit.needs, t("extAccess.brings.needs")),
       ]}
     />
   );
