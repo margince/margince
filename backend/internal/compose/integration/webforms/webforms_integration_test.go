@@ -16,6 +16,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"io"
 	"maps"
 	"net/http"
@@ -73,9 +74,18 @@ type formAnswer struct {
 // redirect, so the test asserts the answer a browser would act on.
 func postForm(t *testing.T, e *apptest.AppEnv, method, key, contentType string, body []byte, headers map[string]string) formAnswer {
 	t.Helper()
-	req, err := http.NewRequest(method, e.TS.URL+"/v1/public/forms/"+key, bytes.NewReader(body))
+	answer, err := sendForm(e, method, key, contentType, body, headers)
 	if err != nil {
 		t.Fatal(err)
+	}
+	return answer
+}
+
+// sendForm is postForm returning its failure, for a goroutine that may not end the test.
+func sendForm(e *apptest.AppEnv, method, key, contentType string, body []byte, headers map[string]string) (answer formAnswer, err error) {
+	req, err := http.NewRequest(method, e.TS.URL+"/v1/public/forms/"+key, bytes.NewReader(body))
+	if err != nil {
+		return formAnswer{}, err
 	}
 	if contentType != "" {
 		req.Header.Set("Content-Type", contentType)
@@ -87,16 +97,16 @@ func postForm(t *testing.T, e *apptest.AppEnv, method, key, contentType string, 
 		Transport:     e.TS.Client().Transport,
 		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
 	}
-	resp, err := client.Do(req) //nolint:bodyclose // closed by apptest.CloseBody below
+	resp, err := client.Do(req)
 	if err != nil {
-		t.Fatal(err)
+		return formAnswer{}, err
 	}
-	defer apptest.CloseBody(t, resp)
+	defer func() { err = errors.Join(err, resp.Body.Close()) }()
 	raw, err := io.ReadAll(resp.Body)
 	if err != nil {
-		t.Fatal(err)
+		return formAnswer{}, err
 	}
-	return formAnswer{Status: resp.StatusCode, Header: resp.Header, Body: string(raw)}
+	return formAnswer{Status: resp.StatusCode, Header: resp.Header, Body: string(raw)}, nil
 }
 
 // browserPost posts as the form code does, which always sends the render time.
@@ -106,7 +116,15 @@ func browserPost(t *testing.T, e *apptest.AppEnv, key string, fields url.Values,
 	if !fields.Has("_mrg_ts") {
 		fields = withRenderTime(t, fields)
 	}
-	return postForm(t, e, "POST", key, "application/x-www-form-urlencoded", []byte(fields.Encode()),
+	answer, err := sendBrowserForm(e, key, fields, origin)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return answer
+}
+
+func sendBrowserForm(e *apptest.AppEnv, key string, fields url.Values, origin string) (formAnswer, error) {
+	return sendForm(e, "POST", key, "application/x-www-form-urlencoded", []byte(fields.Encode()),
 		map[string]string{"Origin": origin, "Accept": "application/json"})
 }
 

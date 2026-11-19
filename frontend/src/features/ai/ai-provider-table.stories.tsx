@@ -78,6 +78,7 @@ function Table({ canManage }: Readonly<{ canManage: boolean }>) {
         <ProviderTable
           providers={PROVIDERS}
           usage={USAGE}
+          unhosted={() => false}
           health={[
             {
               provider: "openai",

@@ -47,6 +47,22 @@ export function tierLabel(tier: string, t: T): string {
   return lane ? t(lane) : tier;
 }
 
+// How a task runs, as /ai/status sends it. A mode this build cannot name is
+// shown as sent.
+const MODE_NAMES = {
+  interactive: "aiTasks.mode.interactive",
+  background: "aiTasks.mode.background",
+  embedding: "aiTasks.mode.embedding",
+} as const satisfies Record<string, MessageKey>;
+
+function isMode(mode: string): mode is keyof typeof MODE_NAMES {
+  return Object.hasOwn(MODE_NAMES, mode);
+}
+
+export function executionModeLabel(mode: string, t: T): string {
+  return isMode(mode) ? t(MODE_NAMES[mode]) : mode;
+}
+
 export function tierRank(tier: string): number {
   return isTier(tier) ? TIER_ORDER.indexOf(tier) : TIER_ORDER.length;
 }
