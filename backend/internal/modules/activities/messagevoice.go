@@ -88,11 +88,8 @@ func withMessageVoices(
 func pageParties(ctx context.Context, tx pgx.Tx, page []crmcontracts.Activity) (map[ids.UUID]emailParties, error) {
 	var wanted []ids.UUID
 	for i := range page {
-		switch page[i].Kind {
-		case crmcontracts.ActivityKindEmail, crmcontracts.ActivityKindMessage, crmcontracts.ActivityKindMeeting:
-			if contentReadable(page[i]) {
-				wanted = append(wanted, ids.UUID(page[i].Id))
-			}
+		if voiceNamesSender(page[i].Kind) && contentReadable(page[i]) {
+			wanted = append(wanted, ids.UUID(page[i].Id))
 		}
 	}
 	if len(wanted) == 0 {

@@ -16,6 +16,7 @@ func TestWhoHeldThePenFollowsTheVoiceWithinCorrespondence(t *testing.T) {
 	t.Parallel()
 	inbound := crmcontracts.ActivityDirectionInbound
 	outbound := crmcontracts.ActivityDirectionOutbound
+	email := crmcontracts.ActivityKindEmail
 	voice := func(kind crmcontracts.ActivityAuthorKind) *crmcontracts.ActivityVoice {
 		return &crmcontracts.ActivityVoice{Author: &crmcontracts.ActivityAuthor{Kind: kind}}
 	}
@@ -25,18 +26,24 @@ func TestWhoHeldThePenFollowsTheVoiceWithinCorrespondence(t *testing.T) {
 		ours, known bool
 	}{
 		{"a colleague's mail that arrived is ours", crmcontracts.Activity{
-			Direction: &inbound, Voice: voice(crmcontracts.ActivityAuthorKindColleague),
+			Kind: email, Direction: &inbound, Voice: voice(crmcontracts.ActivityAuthorKindColleague),
 		}, true, true},
 		{"the contact's mail that left here is theirs", crmcontracts.Activity{
-			Direction: &outbound, Voice: voice(crmcontracts.ActivityAuthorKindContactRecord),
+			Kind: email, Direction: &outbound, Voice: voice(crmcontracts.ActivityAuthorKindContactRecord),
 		}, false, true},
 		{"a machine names no side, so inbound is theirs", crmcontracts.Activity{
-			Direction: &inbound, Voice: voice(crmcontracts.ActivityAuthorKindMachine),
+			Kind: email, Direction: &inbound, Voice: voice(crmcontracts.ActivityAuthorKindMachine),
 		}, false, true},
 		{"an unresolved sender leaves outbound ours", crmcontracts.Activity{
-			Direction: &outbound, Voice: voice(crmcontracts.ActivityAuthorKindUnresolved),
+			Kind: email, Direction: &outbound, Voice: voice(crmcontracts.ActivityAuthorKindUnresolved),
 		}, true, true},
 		{"no voice at all reads the transport", crmcontracts.Activity{Direction: &inbound}, false, true},
+		{"a meeting the contact organised that we sent out is theirs", crmcontracts.Activity{
+			Kind: crmcontracts.ActivityKindMeeting, Direction: &outbound, Voice: voice(crmcontracts.ActivityAuthorKindContactRecord),
+		}, false, true},
+		{"an inbound call a colleague logged is still the caller's", crmcontracts.Activity{
+			Kind: crmcontracts.ActivityKindCall, Direction: &inbound, Voice: voice(crmcontracts.ActivityAuthorKindColleague),
+		}, false, true},
 		{"a logged row is nobody's word, whoever authored it", crmcontracts.Activity{
 			Voice: voice(crmcontracts.ActivityAuthorKindColleague),
 		}, false, false},

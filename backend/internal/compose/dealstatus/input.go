@@ -146,9 +146,8 @@ func actIn(a crmcontracts.Activity, now time.Time, loc *time.Location) ActIn {
 		ID: a.Id.String(), Kind: string(a.Kind),
 		At: occurredday.DateIn(activitywhen.MomentOf(a), loc).Format(time.DateOnly), When: whenOf(a, now, loc),
 	}
-	if a.Direction != nil {
-		out.Direction = string(*a.Direction)
-	}
+	// The model reads direction as who wrote it, so it gets the author's side.
+	out.Direction = activities.WriterSide(a)
 	// A withheld row keeps its place in the story — contact happened on this
 	// date — and gives up its words: the reader may not open them, so the
 	// model may not read them.
