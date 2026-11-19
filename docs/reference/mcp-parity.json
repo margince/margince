@@ -11,18 +11,18 @@
       "covered": 40,
       "sign_in": 1,
       "no_signed_in_user": 0,
-      "web_app_calls": 927,
+      "web_app_calls": 929,
       "web_app_calls_open": 759,
       "web_app_calls_ask_first": 107,
       "web_app_calls_pending": 0,
-      "web_app_calls_security": 141,
+      "web_app_calls_security": 143,
       "web_app_calls_covered": 26,
       "parity_signed_in_percent": 81.2,
-      "parity_web_app_percent": 81.8
+      "parity_web_app_percent": 81.7
     },
     "open_with_no_web_app_call_found": 108,
-    "parity_web_app_counting_covered_percent": 84.6,
-    "parity_web_app_once_pending_is_open_percent": 84.6
+    "parity_web_app_counting_covered_percent": 84.4,
+    "parity_web_app_once_pending_is_open_percent": 84.4
   },
   "web_app_scan": {
     "computed_calls_no_path_was_found_for": []
@@ -1481,14 +1481,14 @@
       "covered": 2,
       "sign_in": 1,
       "no_signed_in_user": 0,
-      "web_app_calls": 29,
+      "web_app_calls": 31,
       "web_app_calls_open": 17,
       "web_app_calls_ask_first": 5,
       "web_app_calls_pending": 0,
-      "web_app_calls_security": 9,
+      "web_app_calls_security": 11,
       "web_app_calls_covered": 2,
       "parity_signed_in_percent": 56.2,
-      "parity_web_app_percent": 58.6,
+      "parity_web_app_percent": 54.8,
       "areas": [
         {
           "key": "own_profile",
@@ -1521,11 +1521,11 @@
           "covered": 0,
           "sign_in": 1,
           "no_signed_in_user": 0,
-          "web_app_calls": 6,
+          "web_app_calls": 8,
           "web_app_calls_open": 0,
           "web_app_calls_ask_first": 0,
           "web_app_calls_pending": 0,
-          "web_app_calls_security": 5,
+          "web_app_calls_security": 7,
           "web_app_calls_covered": 0,
           "parity_signed_in_percent": 0,
           "parity_web_app_percent": 0
@@ -14098,7 +14098,8 @@
       ],
       "group": "own_account",
       "area": "own_security",
-      "state": "security"
+      "state": "security",
+      "web_app": "direct"
     },
     {
       "method": "DELETE",
@@ -14109,7 +14110,8 @@
       ],
       "group": "own_account",
       "area": "own_security",
-      "state": "security"
+      "state": "security",
+      "web_app": "direct"
     },
     {
       "method": "PUT",

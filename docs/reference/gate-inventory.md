@@ -106,6 +106,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendminorunits_test.go` | H3 | The browser and the server must scale money by the same table, or the integer they exchange means two different amounts. |
 | `frontendnoevidencemarker_test.go` | H3 | The server stores one sentence for a manual signal whose evidence was taken away. |
 | `frontendoauthoutcomes_test.go` | H3 | The OAuth landing outcome is one vocabulary spelled on both sides of a redirect: the api puts it in the URL the provider sends a human back to, and the SPA turns it into the sentence that human reads. |
+| `frontendpasswordrule_test.go` | H3 | The sign-in screens refuse a password before the server is asked, and the server refuses it again. |
 | `frontendphoneparse_test.go` | H3 | The browser reads a phone number with ParsePhone's trunk mark, separators, dial prefix and E.164 pattern. |
 | `frontendpicturelimits_test.go` | H3 | The profile picture row refuses a file before it is sent, so its list and its cap must be the server's. |
 | `frontendportfaultcopy_test.go` | H3 | A port error that answers a reader with its own code through MessageFault needs catalog copy on the screen. |
@@ -220,6 +221,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `textlimitparity_test.go` | H2 | Each text cap a module applies is a hand-typed mirror of a number `api/crm.yaml` publishes, because the generated server enforces no string length. |
 | `transcriptmarker_test.go` | H3 | One value, spelled once. |
 | `uniqueitemscontract_test.go` | H3 | Every list the contract declares `uniqueItems: true` must reach the request decoders as a tagged generated field. |
+| `vietnamesedatawords_test.go` | H3 | The search box picks a Vietnamese data question by its own word list. |
 | `voicereasoncoverage_test.go` | H3 | The forwarding method's argument is checked at every call above. |
 | `webhookeventsdoc_test.go` | H3 | eventSchema is the part of a public-events.yaml schema the reference prints. |
 | `webtierheaders_test.go` | H2 | The app shell and the api send the same browser-facing headers. |

@@ -313,6 +313,10 @@ var replayableOperations = map[string]replayTarget{
 	"POST /v1/bookings":                     {object: tableActivity, table: tableActivity, idPath: "id"},
 	"POST /v1/voice-profiles":               {object: tableVoiceProfile, table: tableVoiceProfile, idPath: "id"},
 
+	// Send anyway answers the outbound activity its decision released, gated
+	// on that activity like every other send.
+	"POST /v1/communication-reviews/{id}/direct-send": {object: tableActivity, table: tableActivity, idPath: "id"},
+
 	"POST /v1/voice-profiles/{id}/corpus/clear": {object: tableVoiceProfile, table: tableVoiceProfile, idPath: "id"},
 
 	// Bodies with no owner column of their own that hand back a record which

@@ -176,7 +176,7 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 	// configures one.
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", httpserver.Healthz)
-	mux.HandleFunc("/readyz", httpserver.Readyz(srv.aiStateOrDefault(), srv.readyzEmbedState(), srv.readinessChecks(pool.Ping,
+	mux.HandleFunc("/readyz", httpserver.Readyz(srv.aiStateOrDefault, srv.readyzEmbedState(), srv.readinessChecks(pool.Ping,
 		func(ctx context.Context) error { return AssertRuntimeRole(ctx, pool) }, SchemaAtHead(pool))...))
 	// The claim surface, beside the probes rather than under /v1: the session
 	// middleware fronting /v1 resolves the singleton company first and
@@ -213,7 +213,7 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 				publicPreferences(consent.NewStore(InstallationDB(pool)).
 					WithRequestTasks(requesttask.Writer{Tasks: activities.NewStore(InstallationDB(pool))}), newPublicPreferenceLimiters())(
 					publicBooking(activities.NewStore(InstallationDB(pool)), identity.NewService(pool), newPublicBookingLimiters(), srv)(
-						publicDealRoom(dealrooms.NewStore(InstallationDB(pool)), newPublicDealRoomLimiters())(
+						publicDealRoom(dealrooms.NewStore(InstallationDB(pool)), newPublicDealRoomLimiters(), httpserver.ConfiguredOrigin(srv.send.PublicBaseURL))(
 							extensionEdge(srv, log)(api),
 						),
 					),

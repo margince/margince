@@ -5,6 +5,7 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
+import { en } from "../../i18n/en";
 import { installFetchStub, jsonResponse } from "../../testing/story-utils";
 import { render } from "./analytics.testkit";
 import { sellerMarch, sellerMarchSummary } from "./progress.fixtures";
@@ -136,6 +137,25 @@ describe("ProgressScenarios", () => {
     expect(
       screen.getByText(/Deals with no amount or no exchange rate are left out/),
     ).toBeTruthy();
+  });
+
+  // A reader who may not see the call is told it is not shown here, in the
+  // words the Forecast page uses.
+  it("says a withheld call is not shown rather than not recorded", () => {
+    const withheld: SalesProgress = {
+      ...marchRunning,
+      scenarios: marchRunning.scenarios && {
+        ...marchRunning.scenarios,
+        landing: { ...marchRunning.scenarios.landing, caveat: "call_withheld" },
+      },
+    };
+    render(<ProgressScenarios progress={withheld} />);
+    expect(
+      screen.getByText(new RegExp(en["forecast.callWithheldLine"])),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(new RegExp(en["forecast.callAbsentLine"])),
+    ).toBeNull();
   });
 
   it("opens the forecast's deals for the running month", () => {

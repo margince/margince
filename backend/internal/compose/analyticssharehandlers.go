@@ -208,11 +208,22 @@ func (h analyticsShareHandlers) serveSnapshot(
 		out.Readings.ContributionsLimitedReason = &frozen.Reason
 	}
 	out.Withheld = shared.Withheld
+	mayAssert, err := forecasting.MayAssertAbout(ctx, tx, ForecastWritableScope, share.Scope)
+	if err != nil {
+		return err
+	}
+	call, noneStood := forecasting.FrozenCallSeen(mayAssert, forecasting.FrozenCall{
+		ForwardMeasure: frame.ForwardMeasure, LandingMeasure: frame.LandingMeasure,
+		OnePipeline: frame.PipelineID != nil, CallMinor: frame.LandingCallMinor,
+	})
+	if !noneStood {
+		out.Readings.CallWithheld = new(true)
+	}
 	// A snapshot frozen before the landing was kept states none.
 	if frame.LandingMeasure == nil {
 		return nil
 	}
-	landing, err := frozenShareLanding(ctx, tx, share.Scope, shared, frame)
+	landing, err := frozenShareLanding(call, shared, frame)
 	out.Readings.Landing = &landing
 	return err
 }
@@ -238,13 +249,16 @@ func (h analyticsShareHandlers) serveLive(
 	out.Readings = forecasting.ReadingsToWire(period, share.Scope, assembly.Readings, baseCurrency, at)
 	out.Readings.SelfCorrecting = &assembly.SelfCorrecting
 	out.Withheld = assembly.Limited
-	// The landing GET /forecast gives this reader, with the call only where
-	// the reader may see it.
-	call, seen, err := forecastCallSeen(ctx, tx, h.forecast, period, share.Scope, false)
+	// The call and landing GET /forecast states for this reader.
+	mayAssert, err := forecasting.MayAssertAbout(ctx, tx, ForecastWritableScope, share.Scope)
 	if err != nil {
 		return err
 	}
-	landing, err := forecasting.LandingFor(ctx, tx, ForecastForwardMeasure, assembly.Readings, seenCall(call, seen))
+	called, err := forecasting.StateCall(ctx, tx, h.forecast, mayAssert, period, share.Scope, &out.Readings)
+	if err != nil {
+		return err
+	}
+	landing, err := forecasting.LandingFor(ctx, tx, ForecastForwardMeasure, assembly.Readings, called)
 	if err != nil {
 		return err
 	}

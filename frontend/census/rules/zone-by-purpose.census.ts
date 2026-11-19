@@ -68,6 +68,10 @@ export function code(path: string, source: string): string {
 // cannot stand in for.
 const pinnedZones: { file: string; why: string }[] = [
   {
+    file: "features/deals/dealfilters.census.test.ts",
+    why: "Pins the zone so the date chips build the same options on every runner: the census compares requests, and the runner's own zone could move a date bound.",
+  },
+  {
     file: "features/companies/evidencesource.test.ts",
     why: "Pins the record zone so the meeting's date reads the same on every runner: the line under test prints a day, and the runner's own zone could move it.",
   },
@@ -337,7 +341,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The reader's zone is the subject: the suite names a reader zone, a company zone that disagrees with it by a calendar day, and a fixed offset the formatters refuse.",
   },
   {
-    file: "features/worklist/taskactions.test.tsx",
+    file: "features/worklist/taskdetail.testkit.tsx",
     why: "The task dialog renders its logged and due dates; the suite names the reader's zone so a snapshot of the dialog does not move with the machine it runs on.",
   },
   {

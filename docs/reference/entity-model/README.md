@@ -31,7 +31,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 368 |
-| Columns | 4540 |
+| Columns | 4541 |
 | Foreign keys | 633 |
 | Owning areas | 40 |
 
@@ -46,7 +46,7 @@ Ranked by how many foreign keys point at them.
 | [`contact`](contacts.md#contact) | [contacts](contacts.md) | 38 | 50 |
 | [`activity`](activities.md#activity) | [activities](activities.md) | 90 | 48 |
 | [`deal`](deals.md#deal) | [deals](deals.md) | 49 | 31 |
-| [`lead`](contacts.md#lead) | [contacts](contacts.md) | 48 | 20 |
+| [`lead`](contacts.md#lead) | [contacts](contacts.md) | 49 | 20 |
 | [`project`](projects.md#project) | [projects](projects.md) | 24 | 13 |
 | [`team`](identity.md#team) | [identity](identity.md) | 6 | 10 |
 | [`legal_entity`](contacts.md#legal_entity) | [contacts](contacts.md) | 29 | 9 |
@@ -351,7 +351,7 @@ erDiagram
 | [`knowledge_corpus`](knowledge.md#knowledge_corpus) | knowledge | 12 | 1 |
 | [`knowledge_document`](knowledge.md#knowledge_document) | knowledge | 16 | 1 |
 | [`lawful_basis_confirmation`](consent.md#lawful_basis_confirmation) | consent | 9 | 0 |
-| [`lead`](contacts.md#lead) | contacts | 48 | 20 |
+| [`lead`](contacts.md#lead) | contacts | 49 | 20 |
 | [`lead_disqualify_reason`](contacts.md#lead_disqualify_reason) | contacts | 11 | 1 |
 | [`lead_manual_signal`](contacts.md#lead_manual_signal) | contacts | 12 | 0 |
 | [`lead_origin`](contacts.md#lead_origin) | contacts | 13 | 2 |

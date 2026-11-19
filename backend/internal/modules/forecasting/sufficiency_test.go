@@ -27,7 +27,7 @@ func TestTheReferenceIsTheManagerCallWhenPresent(t *testing.T) {
 	call := int64(1_000_00)
 	got, err := AssessSufficiency(
 		Readings{WonMinor: 200_00, OpenMinor: 500_00},
-		fourPeriods(900_00, 800_00, 700_00, 600_00), &call)
+		fourPeriods(900_00, 800_00, 700_00, 600_00), SeenCall{Amount: &call})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -43,7 +43,7 @@ func TestWithoutACallTheReferenceIsTheMedianOfFourComparablePeriods(t *testing.T
 	t.Parallel()
 	got, err := AssessSufficiency(
 		Readings{WonMinor: 200_00, OpenMinor: 500_00},
-		fourPeriods(900_00, 800_00, 700_00, 600_00), nil)
+		fourPeriods(900_00, 800_00, 700_00, 600_00), SeenCall{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -62,7 +62,7 @@ func TestWithoutCallOrFourPeriodsSufficiencyIsAbsent(t *testing.T) {
 	t.Parallel()
 	got, err := AssessSufficiency(
 		Readings{WonMinor: 200_00, OpenMinor: 500_00},
-		fourPeriods(900_00, 800_00, 700_00), nil)
+		fourPeriods(900_00, 800_00, 700_00), SeenCall{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,7 +78,7 @@ func TestFewerThanTwentyClosedDealsIsInsufficientHistory(t *testing.T) {
 	t.Parallel()
 	history := fourPeriods(900_00, 800_00, 700_00, 600_00)
 	history.ClosedDeals = 19
-	got, err := AssessSufficiency(Readings{WonMinor: 200_00, OpenMinor: 500_00}, history, nil)
+	got, err := AssessSufficiency(Readings{WonMinor: 200_00, OpenMinor: 500_00}, history, SeenCall{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -99,7 +99,7 @@ func TestNeededPipelineUsesRemainingReferenceAfterWonNotProjectedLanding(t *test
 			// A big weighted number, which must not enter the requirement.
 			WeightedMinor: 5_000_00, EvidenceMinor: 4_000_00,
 		},
-		fourPeriods(900_00, 800_00, 700_00, 600_00), &call)
+		fourPeriods(900_00, 800_00, 700_00, 600_00), SeenCall{Amount: &call})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -117,7 +117,7 @@ func TestCoverageIsOpenPipelineOverNeeded(t *testing.T) {
 	call := int64(1_000_00)
 	got, err := AssessSufficiency(
 		Readings{WonMinor: 200_00, OpenMinor: 1_600_00},
-		fourPeriods(900_00, 800_00, 700_00, 600_00), &call)
+		fourPeriods(900_00, 800_00, 700_00, 600_00), SeenCall{Amount: &call})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -135,7 +135,7 @@ func TestAPeriodAlreadyPastItsReferenceNeedsNothingMore(t *testing.T) {
 	call := int64(100_00)
 	got, err := AssessSufficiency(
 		Readings{WonMinor: 500_00, OpenMinor: 0},
-		fourPeriods(900_00, 800_00, 700_00, 600_00), &call)
+		fourPeriods(900_00, 800_00, 700_00, 600_00), SeenCall{Amount: &call})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -151,7 +151,7 @@ func TestAZeroConversionRateNeverDividesByZero(t *testing.T) {
 	t.Parallel()
 	history := fourPeriods(900_00, 800_00, 700_00, 600_00)
 	history.BlendedWonPerReached = 0
-	got, err := AssessSufficiency(Readings{WonMinor: 200_00, OpenMinor: 500_00}, history, nil)
+	got, err := AssessSufficiency(Readings{WonMinor: 200_00, OpenMinor: 500_00}, history, SeenCall{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -169,7 +169,7 @@ func TestTheReferenceReadDoesNotReorderTheCallersHistory(t *testing.T) {
 	t.Parallel()
 	history := fourPeriods(900_00, 600_00, 800_00, 700_00)
 	before := append([]int64{}, history.ComparableWon...)
-	if _, err := AssessSufficiency(Readings{OpenMinor: 1}, history, nil); err != nil {
+	if _, err := AssessSufficiency(Readings{OpenMinor: 1}, history, SeenCall{}); err != nil {
 		t.Fatal(err)
 	}
 	for i := range before {
@@ -192,7 +192,7 @@ func TestAMedianOfTwoVeryLargePeriodsDoesNotWrapNegative(t *testing.T) {
 		Readings{WonMinor: 0, OpenMinor: 100},
 		// Four periods, the middle two of which are the large pair: summing
 		// them directly overflows before the halving.
-		fourPeriods(big, big, big, big), nil)
+		fourPeriods(big, big, big, big), SeenCall{})
 	if err != nil {
 		// Refusing is a correct answer here too; wrapping is not.
 		return
@@ -214,7 +214,7 @@ func TestAnOpenPipelineTooLargeToScaleIsRefusedRatherThanWrapped(t *testing.T) {
 	open := int64(math.MaxInt64 / 2)
 	got, err := AssessSufficiency(
 		Readings{WonMinor: 0, OpenMinor: open},
-		fourPeriods(900_00, 800_00, 700_00, 600_00), &call)
+		fourPeriods(900_00, 800_00, 700_00, 600_00), SeenCall{Amount: &call})
 	if err != nil {
 		// Refusing is the answer this guard gives. Anything but a wrapped
 		// figure is acceptable; a wrapped one is not.
@@ -243,10 +243,25 @@ func TestARequirementBeyondTheMoneyRangeIsRefused(t *testing.T) {
 		ConversionHistory{
 			ClosedDeals: 50, BlendedWonPerReached: 0.0001,
 			ComparableWon: []int64{1, 1, 1, 1},
-		}, &call)
+		}, SeenCall{Amount: &call})
 	if err == nil {
 		t.Fatalf("a requirement of about 9.2e22 minor units answered %d instead of "+
 			"refusing — the conversion cannot represent it, so whatever came back is "+
 			"a number nobody can act on", got.NeededOpenMinor)
+	}
+}
+
+// Below four periods, a reader who may not see the call is told it is withheld.
+// They are never told that no call is recorded.
+func TestAWithheldCallWithoutFourPeriodsSaysWithheld(t *testing.T) {
+	t.Parallel()
+	got, err := AssessSufficiency(
+		Readings{WonMinor: 200_00, OpenMinor: 500_00},
+		fourPeriods(900_00, 800_00, 700_00), SeenCall{Withheld: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Absent != AbsenceCallWithheld || got.NeededOpenMinor != 0 {
+		t.Fatalf("sufficiency = %+v, want absent %q and no figures", got, AbsenceCallWithheld)
 	}
 }

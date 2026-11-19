@@ -63,12 +63,12 @@ func TestAnOfferCountsWhereverTheSenderWroteIt(t *testing.T) {
 // so its visible text is what the recipient reads.
 func TestAnOfferInTheMarkupAloneIsAnOffer(t *testing.T) {
 	neutral := commsauthz.Request{AuthoredSubject: "Re: Termin", AuthoredBody: "Siehe unten."}
-	if withAuthoredOffer(neutral).Evidence.AuthoredOffer {
+	if withAuthoredOffer(neutral, "").Evidence.AuthoredOffer {
 		t.Fatal("a neutral message read as an offer: the fixture proves nothing")
 	}
 	pitched := neutral
 	pitched.AuthoredHTML = `<p>Siehe unten.</p><style>p{color:red}</style><p>Ihr <b>Sonder&shy;ange&shy;bot</b> f&uuml;r 2027</p>`
-	if !withAuthoredOffer(pitched).Evidence.AuthoredOffer {
+	if !withAuthoredOffer(pitched, "").Evidence.AuthoredOffer {
 		t.Error("an offer in the markup alone did not read as an offer")
 	}
 }
@@ -78,7 +78,32 @@ func TestAnOfferInTheMarkupAloneIsAnOffer(t *testing.T) {
 func TestMarkupPastTheRenderCapIsJudgedAsAnOffer(t *testing.T) {
 	long := strings.Repeat("<p>Können wir den Termin verschieben?</p>", htmltext.MaxRenderedLen/30)
 	req := commsauthz.Request{AuthoredBody: "Siehe unten.", AuthoredHTML: long + "<p>Unser Angebot</p>"}
-	if !withAuthoredOffer(req).Evidence.AuthoredOffer {
+	if !withAuthoredOffer(req, "").Evidence.AuthoredOffer {
 		t.Error("a pitch past the render cap did not read as an offer")
+	}
+}
+
+// A subject carried over from the message answered is left for the
+// recipient to settle. A subject the rep changed is read as written.
+func TestACarriedOverSubjectIsLeftForTheRecipientToSettle(t *testing.T) {
+	const anchor = "Termin und Angebot"
+	for _, c := range []struct {
+		subject       string
+		offer, quoted bool
+	}{
+		{"Re: Termin und Angebot", false, true},
+		{"AW: re:  termin und angebot", false, true},
+		{"WG: Termin und Angebot", false, true},
+		{"Re: Termin und Angebot mit 20 % Rabatt", true, false},
+		{"Unser Angebot", true, false},
+	} {
+		req := commsauthz.Request{AuthoredSubject: c.subject, AuthoredBody: "Können wir den Termin verschieben?"}
+		got := withAuthoredOffer(req, anchor).Evidence
+		if got.AuthoredOffer != c.offer || got.QuotedSubjectOffer != c.quoted {
+			t.Errorf("%q answering %q: offer %v, quoted %v; want %v, %v", c.subject, anchor, got.AuthoredOffer, got.QuotedSubjectOffer, c.offer, c.quoted)
+		}
+	}
+	if got := withAuthoredOffer(commsauthz.Request{AuthoredSubject: "Re: Termin und Angebot"}, "").Evidence; !got.AuthoredOffer || got.QuotedSubjectOffer {
+		t.Errorf("a subject naming an offer with no message answered reads %+v, want an authored offer", got)
 	}
 }

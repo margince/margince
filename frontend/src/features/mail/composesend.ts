@@ -4,6 +4,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { api } from "../../api/client";
+import { type IntentKeys, intentKeys } from "../../api/idempotencykey";
 import type { components } from "../../api/schema";
 import { useLawfulBasisGate } from "../../components/lawfulbasiswarning";
 import { useSettledValue } from "../../design-system/debouncedsearch";
@@ -38,7 +39,7 @@ type Activity = components["schemas"]["Activity"];
 // The one place the send's origin is chosen. An anchor sends a reply; no
 // anchor sends the account-started message with its links. A channel reply
 // is anchored by nature.
-async function sendFrom(args: SendRequest) {
+async function sendFrom(args: SendRequest, keyed: IntentKeys) {
   if (args.isChannelReply) {
     if (!args.activityId) {
       // The mail arm would post a channel message as an email, so a channel
@@ -52,13 +53,22 @@ async function sendFrom(args: SendRequest) {
       body: args.channelBody,
     });
   }
-  if (args.activityId) {
-    return api.POST("/activities/{id}/send-email", {
-      params: { path: { id: args.activityId } },
-      body: args.mail,
-    });
+  const anchor = args.activityId;
+  if (anchor) {
+    return keyed([anchor, args.mail], (key) =>
+      api.POST("/activities/{id}/send-email", {
+        params: { path: { id: anchor }, header: { "Idempotency-Key": key } },
+        body: args.mail,
+      }),
+    );
   }
-  return api.POST("/emails", { body: { ...args.mail, links: args.links } });
+  const body = { ...args.mail, links: args.links };
+  return keyed(body, (key) =>
+    api.POST("/emails", {
+      params: { header: { "Idempotency-Key": key } },
+      body,
+    }),
+  );
 }
 
 // What the send is waiting for, in reading order. A pressed Send names each
@@ -185,13 +195,17 @@ export function useComposeSend({
     onSent?.();
     onClose();
   };
+  const sendKeys = useRef(intentKeys());
   const send = useMutation({
     mutationKey: ["email", entityId],
     // The grounding is the variable, so a stale closure cannot file the mail
     // under a project the picker no longer shows.
     mutationFn: async (request: SendRequest): Promise<SendOutcome> => {
       setSendUnavailable(false);
-      const { data, error, response } = await sendFrom(request);
+      const { data, error, response } = await sendFrom(
+        request,
+        sendKeys.current,
+      );
       if (response.status === 501) return { sent: false as const };
       // Only a real 2xx is a send. openapi-fetch reports a falsy `error` for a
       // bodiless gateway 5xx, which must not close the modal as sent.

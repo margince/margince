@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
@@ -413,7 +414,7 @@ func (h *httpMCPHandler) exchange(w http.ResponseWriter, r *http.Request, req rp
 	// handler behind it, which keeps its goroutine and every database
 	// connection it takes from there on. Both halves, or the response is lost
 	// and the pool is still paying for it.
-	ctx, done := context.WithTimeout(r.Context(), mcpCallDeadline)
+	ctx, done := httpserver.WithinResponseDeadline(r.Context(), mcpCallDeadline)
 	defer done()
 	resp := h.server.handle(ctx, req, fr)
 	status := http.StatusOK

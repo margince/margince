@@ -75,10 +75,9 @@ type GrowthFitService struct {
 	self  SelfOffering
 	lane  Completer
 	now   func() time.Time
-	// routingVersion identifies the model binding in the fingerprint, so a
-	// re-pointed lane invalidates rather than serving assessments written
-	// against a model that is no longer wired.
-	routingVersion string
+	// routingVersion names the model binding in the fingerprint. It is read per
+	// request, so a rebind invalidates the assessments an unwired model wrote.
+	routingVersion func() string
 	// emailRows opens the messages the assessment cites. Held rather than read
 	// inline because the assessment is CACHED: a summary is assembled out of
 	// one reader's own grants, so it is attached on the way out and never to
@@ -124,10 +123,13 @@ func (s *GrowthFitService) enrich(ctx context.Context, out crmcontracts.CompanyG
 // once per process role. A nil lane is the no-model deployment, which serves
 // the deterministic floor and says so.
 func NewGrowthFitService(pool *pgxpool.Pool, facts Facts, self SelfOffering,
-	lane Completer, routingVersion string, now func() time.Time,
+	lane Completer, routingVersion func() string, now func() time.Time,
 ) *GrowthFitService {
 	if now == nil {
 		now = time.Now
+	}
+	if routingVersion == nil {
+		routingVersion = func() string { return "" }
 	}
 	return &GrowthFitService{
 		pool: pool, facts: facts, self: self, lane: lane,
@@ -195,7 +197,7 @@ func (s *GrowthFitService) Get(ctx context.Context, companyID ids.CompanyID, for
 		return zero, err
 	}
 	lang := identity.BaseLanguageForPrompt(ctx, s.pool)
-	fingerprint, err := growthFitFingerprint(in, s.routingVersion, offering, lang)
+	fingerprint, err := growthFitFingerprint(in, s.routingVersion(), offering, lang)
 	if err != nil {
 		return zero, err
 	}
