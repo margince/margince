@@ -355,8 +355,10 @@ const authorIsTheSubject = `(p.role = 'from' AND ` + participantIsTheSubject + `
 // the role. The participant row p names this recipient by record, by bare
 // address or by channel account. copiedOnThisMatter does not read it, because
 // a relink can repoint the record. Same placeholders as authorIsTheSubject.
+// A recipient with no record carries an empty ID, which must not reach a uuid
+// cast.
 const participantIsTheSubject = `(
-			            ($1 = 'contact' AND p.contact_id = $2::uuid)
+			            ($1 = 'contact' AND p.contact_id = NULLIF($2::text, '')::uuid)
 			         OR ($3 <> '' AND p.contact_id IS NULL AND lower(p.address) = lower($3))
 			         OR ($5 <> '' AND p.contact_id IS NULL AND p.channel_user_id = $5 AND a.channel_provider = $4)
 			       )`
