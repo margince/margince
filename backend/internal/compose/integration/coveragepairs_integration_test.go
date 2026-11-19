@@ -126,6 +126,23 @@ func TestAWorkspaceMessageDrawsALineWithItsDirectionAndDate(t *testing.T) {
 	}
 }
 
+func TestABuyersReplyDrawsALineWhereTheyWrote(t *testing.T) {
+	e := Setup(t)
+	buyer := e.SeedContact(t, "Mai Tran", nil)
+	dealID := seatedDeal(t, e, buyer)
+	seedPairMail(t, e.Rep2, buyer, "inbound", "workspace")
+
+	got := coverageAs(t, e, e.Rep1, coverageReaderPerms(true), dealID)
+
+	lines := linesFor(got, e.Rep2, buyer)
+	if len(lines) != 1 || lines[0].LastInboundAt == nil || lines[0].LastOutboundAt != nil || lines[0].LastMetAt != nil {
+		t.Fatalf("lines = %+v, want one line where they wrote", lines)
+	}
+	if reach := seatReach(t, got, buyer); reach != "reached" {
+		t.Errorf("seat reach = %q, want reached", reach)
+	}
+}
+
 func TestASeatNobodyWroteToIsNotReachedWhenNothingIsWithheld(t *testing.T) {
 	e := Setup(t)
 	buyer := e.SeedContact(t, "Mai Tran", nil)
