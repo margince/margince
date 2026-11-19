@@ -369,7 +369,7 @@ describe("the email composer with the switch on", () => {
     expect(keys[2]).not.toBe(keys[0]);
   });
 
-  it("sends the same key on a retried Send anyway and a new one after the reason changes", async () => {
+  async function sendAnywayTwice(changeReason: boolean) {
     const user = userEvent.setup();
     const sent = stubRoutes({
       "GET /me": inlineMe,
@@ -380,24 +380,32 @@ describe("the email composer with the switch on", () => {
     await openInline(sent);
     await fillInline(user);
     await pressSend(user);
-    await user.type(await reasonField(), "Asked by phone.");
+    const reason = await reasonField();
+    await user.type(reason, "Asked by phone.");
     const decisions = () =>
       sent.filter(
         (entry) => entry.key === "POST /communication-reviews/r-1/direct-send",
       );
     await user.click(await sendAnyway());
     await waitFor(() => expect(decisions()).toHaveLength(1));
+    if (changeReason) {
+      await user.type(reason, " Twice.");
+    }
     await user.click(await sendAnyway());
     await waitFor(() => expect(decisions()).toHaveLength(2));
-    await user.type(await reasonField(), " Twice.");
-    await user.click(await sendAnyway());
-    await waitFor(() => expect(decisions()).toHaveLength(3));
-    const keys = decisions().map((entry) =>
-      entry.headers.get("Idempotency-Key"),
-    );
+    return decisions().map((entry) => entry.headers.get("Idempotency-Key"));
+  }
+
+  it("sends the same key on a retried Send anyway", async () => {
+    const keys = await sendAnywayTwice(false);
     expect(keys[0]).toBeTruthy();
     expect(keys[1]).toBe(keys[0]);
-    expect(keys[2]).not.toBe(keys[0]);
+  });
+
+  it("sends a new key on a Send anyway after the reason changes", async () => {
+    const keys = await sendAnywayTwice(true);
+    expect(keys[0]).toBeTruthy();
+    expect(keys[1]).not.toBe(keys[0]);
   });
 
   it("sends one decision for a double press while it is in flight", async () => {
