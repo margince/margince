@@ -79,8 +79,7 @@ func (e *forecastEnv) issueWorkspaceShare(t *testing.T, kind string, snapshot *i
 	t.Helper()
 	_, token := e.issue(e.writerCtx(t), t, NewShare{
 		Kind: kind, Target: "someone@example.test", SnapshotID: snapshot,
-		Scope:     forecasting.Scope{Kind: forecasting.ScopeWorkspace},
-		ExpiresAt: clocktest.Now(t).UTC().Add(24 * time.Hour),
+		Scope: forecasting.Scope{Kind: forecasting.ScopeWorkspace}, ExpiresAt: clocktest.Now(t).UTC().Add(24 * time.Hour),
 	})
 	return token
 }
