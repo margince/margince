@@ -109,9 +109,7 @@ export function AttachmentTile({
               formatDateAbbrev,
             )
           : formatDateAbbrev(file.created_at, locale, zone),
-      ]
-        .filter(Boolean)
-        .join(" · ")}
+      ]}
       body={
         <>
           <FileOrigin origin={file.origin} onOpenEmail={onOpenEmail} />

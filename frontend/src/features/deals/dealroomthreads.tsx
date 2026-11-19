@@ -241,11 +241,9 @@ function DocumentCard({
       meta={[
         doc.meta,
         doc.byteSize === null || doc.byteSize === undefined
-          ? ""
+          ? null
           : formatBytes(doc.byteSize, locale),
-      ]
-        .filter((part) => part !== "")
-        .join(" · ")}
+      ]}
       body={
         <>
           {doc.shareMark ? (

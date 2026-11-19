@@ -42,7 +42,8 @@ export function DocumentTile({
   anchor?: DocumentAnchor;
   /** A badge in the stage's far corner: the one fact worth seeing first. */
   mark?: ReactNode;
-  meta?: ReactNode;
+  /** One line of facts. Each wraps as a unit, so a date never splits. */
+  meta?: readonly (string | null | undefined)[];
   /** A document no longer shared: its paper recedes. */
   lapsed?: boolean;
   /** A tile in a gallery, or a row in a list with the stage as its lead. */
@@ -83,11 +84,29 @@ export function DocumentTile({
       </div>
       <div className="board-doc-body">
         <DocumentDoor title={title} open={open} anchor={anchor} />
-        {meta ? <p className="t-caption board-doc-meta">{meta}</p> : null}
+        <DocumentFacts facts={meta} />
         {body}
       </div>
       {children}
     </article>
+  );
+}
+
+function DocumentFacts({
+  facts,
+}: Readonly<{ facts?: readonly (string | null | undefined)[] }>) {
+  const shown = (facts ?? []).filter((fact): fact is string => Boolean(fact));
+  if (shown.length === 0) {
+    return null;
+  }
+  const last = shown.at(-1);
+  return (
+    <p className="t-caption board-doc-meta">
+      {shown.slice(0, -1).map((fact) => (
+        <span key={fact} className="board-doc-fact">{`${fact} · `}</span>
+      ))}
+      <span className="board-doc-fact">{last}</span>
+    </p>
   );
 }
 
