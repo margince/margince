@@ -503,6 +503,64 @@ describe("the email composer with the switch on", () => {
     EIGHT_WAITS_TEST_MS,
   );
 
+  it(
+    "shows the country a refusal was judged under, and the refreshed one",
+    async () => {
+      const user = userEvent.setup();
+      const judged = (
+        country: string | undefined,
+        source: string,
+        revision: string,
+      ) => ({
+        ...REVIEW,
+        assessment_revision: revision,
+        refusals: [
+          {
+            address: "a@x.com",
+            reason_code: "marketing_objection",
+            ...(country ? { country } : {}),
+            country_source: source,
+          },
+        ],
+      });
+      let decisions = 0;
+      const sent = stubRoutes({
+        "GET /me": inlineMe,
+        "POST /emails": () =>
+          refused({}, judged("de", "contact_address", "rev-1")),
+        "POST /communication-reviews/r-1/direct-send": () => {
+          decisions += 1;
+          return decisions === 1
+            ? refused({}, judged(undefined, "sender_cleared", "rev-2"))
+            : jsonResponse({ ...activity202, id: "act-9" }, 201);
+        },
+      });
+      await openInline(sent);
+      await fillInline(user);
+      await pressSend(user);
+      expect(
+        await screen.findByText("Country: Germany, from the contact’s address"),
+      ).toBeTruthy();
+      await user.type(await reasonField(), "Asked by phone.");
+      await user.click(await sendAnyway());
+      expect(
+        await screen.findByText(
+          "Country: none, cleared by the sender for this message",
+        ),
+      ).toBeTruthy();
+      expect(
+        screen.queryByText("Country: Germany, from the contact’s address"),
+      ).toBeNull();
+      await user.click(await sendAnyway());
+      await waitFor(() => expect(decisions).toBe(2));
+      const second = sent.filter(
+        (entry) => entry.key === "POST /communication-reviews/r-1/direct-send",
+      )[1];
+      expect(second?.body).toMatchObject({ assessment_revision: "rev-2" });
+    },
+    EIGHT_WAITS_TEST_MS,
+  );
+
   it("keeps the reason in the saved draft and restores it", async () => {
     const user = userEvent.setup();
     const saved = {

@@ -33,6 +33,14 @@ func noImporterVerdictSQL(alias, status string) string {
  WHERE thread_hold_import.activity_id=%[1]s.id AND %[2]s)`, alias, status)
 }
 
+// AnySeatHoldsSQL is true while any seat holds the thread of activity alias,
+// or still waits on its verdict. One seat's hold protects the whole thread.
+func AnySeatHoldsSQL(alias string) string {
+	return fmt.Sprintf(`EXISTS (SELECT 1 FROM capture_thread_verdict any_seat
+ WHERE any_seat.thread_key = %[1]s.thread_key AND %[1]s.thread_key <> ''
+ AND %[2]s)`, alias, HoldsMessagesSQL("any_seat.status"))
+}
+
 // ReasonForKind maps a holding decision onto the activity’s audience reason.
 func ReasonForKind(kind string) string {
 	if kind == "explicitly_confidential" {

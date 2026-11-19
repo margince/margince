@@ -20,7 +20,9 @@ import (
 // (commsauthz.Request.OmitsAdvertisingDuties).
 func surfaceForRecipients(ctx context.Context, in SendEmailInput, origin SendOrigin, links []ActivityLinkInput, files []OutboundFile, gate ConsentGate) (unsubscribeSurface, error) {
 	surface := surfaceFor(in.Context, in.MarketingPurpose, in.ConsentPurpose)
-	if surface.disclosureCategory() == commsauthz.CategoryMarketing {
+	// A stated country is still put to the engine, which refuses one the user
+	// did not state. A scheduled send then learns it now rather than at fire.
+	if surface.disclosureCategory() == commsauthz.CategoryMarketing && len(in.Evidence.RecipientCountries) == 0 {
 		return surface, nil
 	}
 	previewer, ok := gate.(decisionPreviewer)

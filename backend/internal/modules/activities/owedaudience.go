@@ -5,21 +5,11 @@ package activities
 
 import (
 	"context"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/shared/kernel/threadverdict"
 )
-
-// routinePrivateReasons are the holds that narrow mail by setting rather than
-// by anybody's judgement of it. Every other reason protects the mail, and an
-// unknown one counts as protecting it.
-var routinePrivateReasons = []string{
-	ReasonPosture, ReasonWorkspaceFloor, ReasonPendingVerdict,
-	ReasonSharedMailbox, ReasonNoRecord, ReasonNoCounterparty,
-}
 
 // judgeableAudienceSQL is whether text of activity alias may go to a model.
 // Workspace mail may. With includePrivate, mail private for a routine reason
@@ -29,9 +19,7 @@ var routinePrivateReasons = []string{
 func judgeableAudienceSQL(alias string, includePrivate bool) string {
 	audience := auth.WorkspaceAudienceSQL(alias)
 	if includePrivate {
-		audience = `(` + audience + ` OR (` + alias + `.audience = '` + audienceParticipants + `'
-   AND ` + alias + `.audience_reason IN ('` + strings.Join(routinePrivateReasons, "', '") + `')
-   AND ` + threadverdict.SettledUnheldSQL(alias) + `))`
+		audience = `(` + audience + ` OR ` + privateForSQL(alias, reasonsWhere(func(r privateReason) bool { return r.read })) + `)`
 	}
 	return `(` + audience + ` AND ` + alias + `.restricted_at IS NULL)`
 }

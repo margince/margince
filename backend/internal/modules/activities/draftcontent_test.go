@@ -13,7 +13,7 @@ import (
 // stubDraftChecker answers one finding and counts the drafts it was asked about.
 type stubDraftChecker struct{ asked int }
 
-func (c *stubDraftChecker) CheckAdvertisingDraft(context.Context, []string, string, string) ([]DraftContentFinding, error) {
+func (c *stubDraftChecker) CheckAdvertisingDraft(context.Context, []string, []commsauthz.CountryOverride, string, string) ([]DraftContentFinding, error) {
 	c.asked++
 	return []DraftContentFinding{{Requirement: "claim_without_proof", Detail: "the draft claims"}}, nil
 }

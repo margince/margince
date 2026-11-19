@@ -76,7 +76,15 @@ func readDealForCaller(ctx context.Context, tx pgx.Tx, id ids.DealID, archived s
 	if err := attachClosingOccurrence(ctx, tx, id, &d); err != nil {
 		return crmcontracts.Deal{}, err
 	}
-	return finishDealForCaller(ctx, tx, d)
+	if err := attachModelWritten(ctx, tx, id, &d); err != nil {
+		return crmcontracts.Deal{}, err
+	}
+	out, err := finishDealForCaller(ctx, tx, d)
+	if err != nil {
+		return crmcontracts.Deal{}, err
+	}
+	withholdModelWritten(&out)
+	return out, nil
 }
 
 // dealTaggableType is the value taggable.entity_type stores for a deal. It

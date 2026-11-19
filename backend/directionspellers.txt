@@ -31,7 +31,7 @@ internal/compose/capturewhichdeal.go
 internal/compose/company360/roleproposalwrite.go
 internal/compose/datatask_leadmail.go
 internal/compose/datatask_senderauth.go
-internal/compose/dealscoutsql.go
+internal/compose/dealscout/sql.go
 internal/compose/introadvance.go
 internal/compose/network/intronote.go
 internal/compose/ownsentmailrepair.go
