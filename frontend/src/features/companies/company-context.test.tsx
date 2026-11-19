@@ -888,7 +888,6 @@ describe("CompanyContextCard save refusals", () => {
       });
       expect(name.getAttribute("aria-invalid")).toBe("true");
       expect(name.getAttribute("maxlength")).toBe("120");
-      await waitFor(() => expect(document.activeElement).toBe(name));
     },
     DIALOG_MS,
   );

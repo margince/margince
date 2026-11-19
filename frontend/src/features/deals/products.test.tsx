@@ -225,32 +225,28 @@ describe("ProductsAdmin", () => {
     expect(screen.queryByText(/sku already in use/)).toBeNull();
   });
 
-  it.each([
-    ["9.999", "Decimal places allowed in Unit price: 2."],
-    ["-5", "Unit price must be at least €0.00."],
-  ])(
-    "refuses a unit price of %s on its field before sending",
-    async (typed, sentence) => {
-      const user = userEvent.setup();
-      const posted: unknown[] = [];
-      vi.stubGlobal(
-        "fetch",
-        productsStub({ allow: PRODUCT_MANAGER, onPost: capture(posted) }),
-      );
-      render(<ProductsAdmin />);
-      await user.click(await screen.findByTestId("new-record"));
-      await user.type(
-        await screen.findByRole("textbox", { name: /Name/ }),
-        "Widget",
-      );
-      const price = screen.getByRole("textbox", { name: /Unit price/ });
-      await user.type(price, typed);
-      expect(await screen.findByText(sentence)).toBeTruthy();
-      expect(price.getAttribute("aria-invalid")).toBe("true");
-      await user.keyboard("{Enter}");
-      expect(posted).toEqual([]);
-    },
-  );
+  it("refuses a negative unit price on its field before sending", async () => {
+    const user = userEvent.setup();
+    const posted: unknown[] = [];
+    vi.stubGlobal(
+      "fetch",
+      productsStub({ allow: PRODUCT_MANAGER, onPost: capture(posted) }),
+    );
+    render(<ProductsAdmin />);
+    await user.click(await screen.findByTestId("new-record"));
+    await user.type(
+      await screen.findByRole("textbox", { name: /Name/ }),
+      "Widget",
+    );
+    const price = screen.getByRole("textbox", { name: /Unit price/ });
+    await user.type(price, "-5");
+    expect(
+      await screen.findByText("Unit price must be at least €0.00."),
+    ).toBeTruthy();
+    expect(price.getAttribute("aria-invalid")).toBe("true");
+    await user.keyboard("{Enter}");
+    expect(posted).toEqual([]);
+  });
 
   it.each([
     ["de", "Einzelpreis", /^Einzelpreis muss mindestens 0,00\s€ sein\.$/],

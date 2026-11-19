@@ -157,7 +157,7 @@ it("refuses a close date the server cannot store before sending it", async () =>
     expected_close_date: "2026-09-01",
   });
   await user.click(
-    await screen.findByRole("button", { name: /^Change Close/ }),
+    await screen.findByRole("button", { name: /^Change Expected close/ }),
   );
   const dialog = await screen.findByRole("dialog");
   const day = within(dialog).getByRole("textbox");

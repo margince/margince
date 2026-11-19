@@ -169,7 +169,7 @@ export const NewProductPriceRefused: Story = {
       form.getByRole("textbox", { name: /^Unit price/ }),
       "9.999",
     );
-    await form.findByText("Decimal places allowed in Unit price: 2.");
+    await form.findByText("This amount has more decimals than EUR allows.");
   },
 };
 

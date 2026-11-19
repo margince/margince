@@ -8,7 +8,7 @@ import {
   type LeadingCurrencies,
 } from "../../format/currencychoices";
 import { typedNumberFault, typedNumberOrNaN } from "../../format/decimalinput";
-import { minorUnitDigits, typedMinorUnits } from "../../format/minorunits";
+import { typedMinorUnits } from "../../format/minorunits";
 import { billingModelLabel } from "../../format/productbilling";
 import type { Locale, Translator } from "../../i18n";
 import { labelFor } from "../../lib/labelfor";
@@ -125,7 +125,7 @@ export function productFields(
   ];
 }
 
-// The shared money box, with too many decimals and below zero in the server's words.
+// The shared money box, with below zero in the server's words.
 function priceField(
   leadingCurrencies: LeadingCurrencies,
   locale: Locale,
@@ -156,14 +156,6 @@ function priceField(
           { label, limit: moneyLimit(currency(values), locale) },
           { min: "0" },
         );
-      }
-      if (
-        "refused" in typed &&
-        typed.refused.key === "record.amountTooPrecise"
-      ) {
-        return fieldCheckSentence("too_many_decimals", locale, label, {
-          max: String(minorUnitDigits(currency(values))),
-        });
       }
       return money.validate?.(value, values);
     },
