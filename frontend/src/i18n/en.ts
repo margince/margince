@@ -13345,6 +13345,8 @@ export const en = {
     "Someone must be the first person working in Margince. Add them now, or later in Settings under People.",
   "ob.conv.team.invitedLabel": "Invited so far",
   "ob.conv.team.invitedLine": "{name} is invited.",
+  "ob.conv.team.inviteUnconfirmed":
+    "Margince could not confirm the invitation. It may still have gone through, so check Settings → Members before you invite this address again.",
   "ob.conv.team.skip": "Skip for now",
   "ob.conv.team.finish": "Finish setup",
   "ob.conv.team.done":
@@ -15772,7 +15774,7 @@ export const en = {
   "users.inviteUnconfirmed":
     "Margince could not confirm the invitation. The member may already be on the list, so check it before you invite again.",
   "users.alreadyInvited":
-    "This address already has an invitation waiting. Use Resend invitation on the member in the list.",
+    "This address already has an invitation waiting. Resend it from Settings → Members.",
   "users.emailTaken":
     "A member with this address already exists. If they were deactivated, reactivate them from the list.",
   "users.removedEmail":

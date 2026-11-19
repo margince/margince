@@ -19,11 +19,11 @@ To invite a colleague to Margince, open **Settings → Members** and choose **In
 3. Fill **Email** (required) and **Full name** (required).
 4. Pick a **Role** and tick any **Teams** they should join. If your company has more than one legal entity, also pick the **Legal entity** they work for. It starts on your main company.
 5. Check the **User access** preview, then choose **Invite**.
-You need the permission to manage users. To pick the legal entity you also need the permission to change a legal entity. A role that may only read the page sees **Read-only settings** and no **Invite member**. An invite is refused when no seat is left. If the form says "Margince could not confirm the invitation", the colleague may already be on the list. Check the list first, because it refreshes for you. An address that already waits on an invitation is refused, and **Resend invitation** on that row sends it again.
+You need the permission to manage users. To pick the legal entity you also need the permission to change a legal entity. A role that may only read the page sees **Read-only settings** and no **Invite member**. An invite is refused when no seat is left.
 Also called: add a user, add a teammate, create an account, onboard a colleague.
 
 ### What if the invitation email did not arrive?
-You can send a new invitation to any colleague who has not set a password yet. This covers a link that expired after 7 days, an email that went to spam, and a colleague added without an invitation email. If the mail server refuses the invitation email, their row in **Settings → Members** shows **Invitation email failed**.
+You can send a new invitation to any colleague who has not set a password yet. This covers a link that expired after 7 days, an email that went to spam, and a colleague added without an invitation email. If the mail server refuses the invitation email, their row in **Settings → Members** shows **Invitation email failed**. If inviting says "Margince could not confirm the invitation", look for the colleague in the list before you invite again. An address that already waits on an invitation is refused, so use **Resend invitation** on that row.
 1. Check the email address on their row. If it is wrong, deactivate the seat and invite the right address.
 2. Open the **Actions for {name}** menu on their row and choose **Resend invitation**.
 3. The note "Invitation sent again to {name}" confirms it. The new email carries a new link, and any older link stops working.

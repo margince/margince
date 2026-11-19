@@ -29171,6 +29171,10 @@ paths:
         '409':
           description: >-
             Refused, with the reason distinguished by the problem `code`:
+            `already_invited` (a member with this email exists and is still waiting on an
+            invitation; resend it with `POST /users/{id}/resend-invite`. Answered only to a caller
+            who may read `user_admin`; any other caller is answered `email_taken` or the seat
+            refusal, as for any other taken address),
             `email_taken` (a member with this email already exists),
             `no_delivery_channel` (this installation has neither an outbound-email channel nor a
             public base URL, so neither the mailed link nor an admin-issued one could reach the

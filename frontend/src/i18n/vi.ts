@@ -13047,6 +13047,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Cần có một người đầu tiên làm việc trong Margince. Thêm ngay, hoặc thêm sau trong Cài đặt, mục Nhân sự.",
   "ob.conv.team.invitedLabel": "Đã mời",
   "ob.conv.team.invitedLine": "Đã mời {name}.",
+  "ob.conv.team.inviteUnconfirmed":
+    "Margince không thể xác nhận lời mời. Lời mời có thể vẫn đã được gửi, vì vậy hãy kiểm tra Cài đặt → Thành viên trước khi mời lại địa chỉ này.",
   "ob.conv.team.skip": "Tạm bỏ qua",
   "ob.conv.team.finish": "Hoàn tất thiết lập",
   "ob.conv.team.done":
@@ -15450,7 +15452,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "users.inviteUnconfirmed":
     "Margince không thể xác nhận lời mời. Thành viên có thể đã có trong danh sách, vì vậy hãy kiểm tra trước khi mời lại.",
   "users.alreadyInvited":
-    "Địa chỉ này đã có một lời mời đang chờ. Hãy dùng Gửi lại lời mời ở thành viên đó trong danh sách.",
+    "Địa chỉ này đã có một lời mời đang chờ. Hãy gửi lại lời mời trong Cài đặt → Thành viên.",
   "users.emailTaken":
     "Đã có thành viên dùng địa chỉ này. Nếu họ đã bị vô hiệu hóa, hãy kích hoạt lại từ danh sách.",
   "users.removedEmail":

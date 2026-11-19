@@ -67,8 +67,8 @@ func refuseWaitingInvitation(ctx context.Context, tx pgx.Tx, email string) error
 	var waiting bool
 	if err := tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM app_user u
 		 WHERE `+storekit.SeatLoginIsSQL("u", "@"+memberEmailField, "@"+memberDomainField)+`
-		   AND u.status = '`+userStatusInvited+`' AND NOT u.is_agent
-		   AND u.archived_at IS NULL AND u.removed_at IS NULL)`, memberLoginArgs(email)).Scan(&waiting); err != nil {
+		   AND `+ActivatableMemberSQL("u")+` AND u.status = '`+userStatusInvited+`'
+		   AND NOT u.is_agent AND u.removed_at IS NULL)`, memberLoginArgs(email)).Scan(&waiting); err != nil {
 		return err
 	}
 	if waiting {

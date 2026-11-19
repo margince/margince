@@ -11,6 +11,7 @@ import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
 import { useHoldsAdminRole } from "../../lib/capability";
 import { nameFromEmail } from "../../lib/namefromemail";
 import { unwrap, writeMayHaveLanded } from "../../lib/problem";
@@ -39,6 +40,7 @@ export type InvitedMember = Readonly<{ id: string; name: string }>;
 export function InviteUserForm({
   titleId,
   askName = true,
+  unconfirmedKey = "users.inviteUnconfirmed",
   onInvited,
 }: Readonly<{
   /**
@@ -53,6 +55,11 @@ export function InviteUserForm({
    * from it (`nameFromEmail`) until somebody changes it.
    */
   askName?: boolean;
+  /**
+   * What the form says when an invite may have landed unseen. The roster's
+   * dialog sits over the member list; the setup journey has none to point at.
+   */
+  unconfirmedKey?: MessageKey;
   onInvited: (member: InvitedMember) => void;
 }>) {
   const t = useT();
@@ -237,7 +244,7 @@ export function InviteUserForm({
           refusal: under the button it reads as a footnote to the form rather
           than as the answer to the press. */}
         {unconfirmed ? (
-          <ErrorLine>{t("users.inviteUnconfirmed")}</ErrorLine>
+          <ErrorLine>{t(unconfirmedKey)}</ErrorLine>
         ) : (
           <ErrorLine error={error} />
         )}

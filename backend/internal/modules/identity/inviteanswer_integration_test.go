@@ -8,6 +8,8 @@ package identity
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"maps"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -21,7 +23,9 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/testdb"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // requestEnder ends a request at one statement of its transaction, the way a
@@ -192,5 +196,29 @@ func TestAResendThatCommittedAnswersTheMember(t *testing.T) {
 	}
 	if member := answeredMember(t, rec); member.Id != id {
 		t.Errorf("the resend answered member %s, want %s", member.Id, id)
+	}
+}
+
+// With every seat taken, an invite sent again for a waiting invitee names that
+// invitee only to a caller who may read the roster. A caller who may only
+// create members gets the seat refusal, as for any other address.
+func TestOnlyARosterReaderLearnsAnAddressWaitsOnAnInvitation(t *testing.T) {
+	e := setupRevocationEnv(t, "invite-answer-reader")
+	again := InviteUserInput{Email: "waiting@" + e.slug + ".test", DisplayName: "Waiting", Role: "rep"}
+	if _, _, err := e.svc.InviteUser(e.wsCtx(e.admin), e.admin, again); err != nil {
+		t.Fatal(err)
+	}
+	// No stored role holds create without read, but a passport narrowing a
+	// grant (Permissions.Within) can leave that.
+	creator := e.admin
+	creator.Permissions.Objects = maps.Clone(e.admin.Permissions.Objects)
+	creator.Permissions.Objects[objectUserAdmin] = principal.ObjectGrant{Create: true}
+	licenseFor(t, e, licensedSeats(seatsInUse(t, e)))
+
+	if _, _, err := e.svc.InviteUser(e.wsCtx(e.admin), e.admin, again); !errors.Is(err, errAlreadyInvited) {
+		t.Errorf("a roster reader inviting the waiting address again: %v, want errAlreadyInvited", err)
+	}
+	if _, _, err := e.svc.InviteUser(e.wsCtx(creator), creator, again); !errors.Is(err, apperrors.ErrSeatLimitReached) {
+		t.Errorf("a create-only caller inviting the waiting address again: %v, want the seat refusal", err)
 	}
 }

@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -174,9 +175,12 @@ func (s *Service) refuseInviteTx(ctx context.Context, tx pgx.Tx, email string) e
 		return err
 	}
 	// Before the seat ceiling: an invite sent again after a lost answer learns
-	// the member exists, even when that member took the last seat.
-	if err := refuseWaitingInvitation(ctx, tx, email); err != nil {
-		return err
+	// the member exists, even when that member took the last seat. Only for a
+	// caller who may read the roster, since the answer tells who is invited.
+	if auth.Allows(ctx, objectUserAdmin, principal.ActionRead) {
+		if err := refuseWaitingInvitation(ctx, tx, email); err != nil {
+			return err
+		}
 	}
 	// An invited member is a full seat, since no invite makes a read seat. So
 	// the ceiling refuses here, before the member exists.
