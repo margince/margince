@@ -22,7 +22,7 @@ import (
 type Forecast struct {
 	Readings forecasting.Readings
 	Measure  forecasting.ForwardMeasure
-	Call     *int64
+	Call     forecasting.SeenCall
 	// Limited is true when the reader cannot see every deal of the scope.
 	Limited bool
 }

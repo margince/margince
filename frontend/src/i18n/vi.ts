@@ -8934,6 +8934,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Nhận định của quản lý: {call}. Deal đã chốt và deal khả năng cao: {evidence}.",
   "forecast.answerNoCall":
     "Deal đã chốt và deal khả năng cao: {evidence}. Quản lý chưa gửi nhận định.",
+  "forecast.answerCallWithheld":
+    "Deal đã chốt và deal khả năng cao: {evidence}.",
   "forecast.partialTitle": "Không phải deal nào cũng có giá",
   "forecast.partial":
     "{priced} trên {eligible} deal có giá. Deal chưa có giá không cộng thêm gì vào các tổng ở trên.",
@@ -8971,6 +8973,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "forecast.supportingNote": "Ghi chú kèm theo",
   "forecast.cancel": "Hủy",
   "forecast.saveCall": "Lưu dự báo",
+  "forecast.callAmountNeeded": "Hãy nhập tổng dự kiến trước.",
   "analytics.scopeLabel": "Phạm vi hồ sơ",
   "analytics.scopeFixed": "Các số liệu này bao gồm {scope}.",
   "forecast.period": "Kỳ",
@@ -15690,6 +15693,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "forecast.split": "{won} đã chốt + {remaining} sắp tới",
   "forecast.callNotAdded": "Ước tính của quản lý {call}, không cộng thêm",
   "forecast.recordsProject": "Riêng dữ liệu deal cho ra {amount}",
+  "forecast.callWithheldLine":
+    "Nhận định không hiển thị ở đây, nên hiển thị deal khả năng cao",
   "forecast.callAbsentLine": "Chưa có ước tính, nên hiển thị deal khả năng cao",
   "forecast.callBelowLine": "Thấp hơn {won} đã chốt, hiển thị như đã ghi",
   "forecast.model.quarter": "Kết quả quý theo mô hình",
@@ -15712,6 +15717,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "forecast.landingRecordsDetail":
     "Đã chốt cộng các deal khả năng cao, chưa tính dự báo của quản lý",
   "forecast.landingCaveat": "Dự kiến cuối kỳ có lưu ý",
+  "forecast.landing.caveat.call_withheld":
+    "Nhận định của quản lý không hiển thị ở đây, nên số này hiển thị deal khả năng cao.",
   "forecast.landing.caveat.call_absent":
     "Kỳ này chưa có nhận định nào, nên số này hiển thị deal khả năng cao.",
   "forecast.landing.caveat.call_below_actual":
@@ -15722,6 +15729,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "forecast.pipelineBasisWhy.historical_median":
     "Đo theo trung vị của 4 kỳ tương đương gần nhất.",
   "forecast.pipelineAbsentTitle": "Không có số liệu độ bao phủ cho kỳ này",
+  "forecast.pipelineAbsent.call_withheld":
+    "Nhận định của quản lý không hiển thị ở đây, và chưa đủ 4 kỳ tương đương đã kết thúc. Đo theo chính các deal đang mở này thì lúc nào cũng trông như đủ.",
   "forecast.pipelineAbsent.insufficient_basis":
     "Kỳ này chưa ghi nhận định nào, và chưa đủ 4 kỳ tương đương đã kết thúc. Đo theo chính các deal đang mở này thì lúc nào cũng trông như đủ.",
   "forecast.pipelineAbsent.insufficient_history":

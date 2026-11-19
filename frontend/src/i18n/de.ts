@@ -9173,6 +9173,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Einschätzung: {call}. Gewonnene plus wahrscheinliche Deals: {evidence}.",
   "forecast.answerNoCall":
     "Gewonnene plus wahrscheinliche Deals: {evidence}. Keine Einschätzung abgegeben.",
+  "forecast.answerCallWithheld":
+    "Gewonnene plus wahrscheinliche Deals: {evidence}.",
   "forecast.partialTitle": "Nicht jeder Deal ist bepreist",
   "forecast.partial":
     "{priced} von {eligible} Deals sind bepreist. Deals ohne Preis tragen nichts zu den Summen oben bei.",
@@ -9211,6 +9213,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forecast.supportingNote": "Begründung",
   "forecast.cancel": "Abbrechen",
   "forecast.saveCall": "Einschätzung speichern",
+  "forecast.callAmountNeeded": "Gib zuerst die erwartete Summe ein.",
   "analytics.scopeLabel": "Auswahl der Datensätze",
   "analytics.scopeFixed": "Diese Zahlen umfassen {scope}.",
   "forecast.period": "Zeitraum",
@@ -16115,6 +16118,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forecast.callNotAdded":
     "Einschätzung der Führungskraft {call}, nicht addiert",
   "forecast.recordsProject": "Die Deal-Daten allein ergeben {amount}",
+  "forecast.callWithheldLine":
+    "Einschätzung hier nicht sichtbar, daher wahrscheinliche Deals",
   "forecast.callAbsentLine":
     "Keine Einschätzung erfasst, daher wahrscheinliche Deals",
   "forecast.callBelowLine":
@@ -16141,6 +16146,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forecast.landingRecordsDetail":
     "Gewonnen plus wahrscheinliche Deals, ohne die Einschätzung",
   "forecast.landingCaveat": "Das erwartete Ergebnis hat einen Vorbehalt",
+  "forecast.landing.caveat.call_withheld":
+    "Angezeigt werden die wahrscheinlichen Deals, da die Einschätzung hier nicht sichtbar ist.",
   "forecast.landing.caveat.call_absent":
     "Angezeigt werden die wahrscheinlichen Deals, da für diesen Zeitraum keine Einschätzung erfasst ist.",
   "forecast.landing.caveat.call_below_actual":
@@ -16153,6 +16160,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Gemessen am Median der letzten 4 vergleichbaren Zeiträume.",
   "forecast.pipelineAbsentTitle":
     "Keine Pipeline-Abdeckung für diesen Zeitraum",
+  "forecast.pipelineAbsent.call_withheld":
+    "Die Einschätzung ist hier nicht sichtbar, und weniger als 4 vergleichbare Zeiträume sind abgeschlossen. Gemessen an diesen offenen Deals selbst sähe die Abdeckung immer ausreichend aus.",
   "forecast.pipelineAbsent.insufficient_basis":
     "Für diesen Zeitraum ist keine Einschätzung erfasst, und weniger als 4 vergleichbare Zeiträume sind abgeschlossen. Gemessen an diesen offenen Deals selbst sähe die Abdeckung immer ausreichend aus.",
   "forecast.pipelineAbsent.insufficient_history":

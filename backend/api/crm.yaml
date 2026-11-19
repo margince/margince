@@ -68159,6 +68159,13 @@ components:
           description: The zone the period's days were cut in, as an IANA name.
         base_currency: { type: string }
         current_call: { $ref: '#/components/schemas/ForecastCall' }
+        call_withheld:
+          type: boolean
+          description: >-
+            True when this answer leaves out a standing call that may exist: the reader may
+            not see calls about this population, the reading covers several populations
+            (`managed_teams`), or a frozen share cannot tell. A client then says nothing
+            about a manager forecast. Absent with no current_call means nobody has made one.
         scope_limited:
           type: boolean
           description: >-
@@ -68493,12 +68500,14 @@ components:
             amount_minor already is the records' projection.
         caveat:
           type: string
-          enum: [call_absent, call_below_actual]
+          enum: [call_absent, call_withheld, call_below_actual]
           x-extensible-enum: true
-          x-enum-varnames: [LandingCaveatCallAbsent, LandingCaveatCallBelowActual]
+          x-enum-varnames: [LandingCaveatCallAbsent, LandingCaveatCallWithheld, LandingCaveatCallBelowActual]
           description: >-
             Why this answer is not the plain one, absent when it is. `call_absent` is a
-            manager-call installation with no current call. `call_below_actual` is an
+            manager-call installation with no current call. `call_withheld` is a
+            manager-call installation whose call this answer does not show, so it lands on
+            Likely without saying whether a call exists. `call_below_actual` is an
             authored call less than the money already won — reported and never corrected,
             because the call is somebody's stated belief and the server does not overrule
             it.
@@ -68517,14 +68526,15 @@ components:
       properties:
         absent:
           type: string
-          enum: [insufficient_basis, insufficient_history]
+          enum: [insufficient_basis, call_withheld, insufficient_history]
           x-extensible-enum: true
-          x-enum-varnames: [SufficiencyAbsenceInsufficientBasis, SufficiencyAbsenceInsufficientHistory]
+          x-enum-varnames: [SufficiencyAbsenceInsufficientBasis, SufficiencyAbsenceCallWithheld, SufficiencyAbsenceInsufficientHistory]
           description: >-
             Why there is no answer, when there is none. Every other field is then absent
             and the surface says this rather than drawing a figure. `insufficient_basis` is
-            neither a manager call nor four completed comparable periods;
-            `insufficient_history` is too few closed deals for a conversion rate to be a
+            neither a manager call nor four completed comparable periods; `call_withheld` is
+            fewer than four completed periods and a call this reader may not see, without
+            saying whether one exists; `insufficient_history` is too few closed deals for a conversion rate to be a
             rate rather than an anecdote.
         basis:
           type: string

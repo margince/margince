@@ -9137,6 +9137,7 @@ export const en = {
     "Manager forecast: {call}. Won plus Likely deals: {evidence}.",
   "forecast.answerNoCall":
     "Won plus Likely deals: {evidence}. No manager forecast submitted.",
+  "forecast.answerCallWithheld": "Won plus Likely deals: {evidence}.",
   "forecast.partialTitle": "Not every deal is priced",
   "forecast.partial":
     "{priced} of {eligible} deals are priced. Unpriced deals add nothing to the totals above.",
@@ -9171,6 +9172,7 @@ export const en = {
   "forecast.supportingNote": "Supporting note",
   "forecast.cancel": "Cancel",
   "forecast.saveCall": "Save forecast",
+  "forecast.callAmountNeeded": "Type the expected total first.",
   "analytics.scopeLabel": "Record scope",
   "analytics.scopeFixed": "These numbers cover {scope}.",
   "forecast.period": "Period",
@@ -16003,6 +16005,8 @@ export const en = {
   "forecast.split": "{won} won + {remaining} to come",
   "forecast.callNotAdded": "Manager’s call {call}, not added",
   "forecast.recordsProject": "Records alone project {amount}",
+  "forecast.callWithheldLine":
+    "Manager’s call not shown here, so Likely is shown",
   "forecast.callAbsentLine": "No call recorded, so Likely is shown",
   "forecast.callBelowLine": "Below the {won} already won, shown as recorded",
   "forecast.model.quarter": "Modelled quarter finish",
@@ -16026,6 +16030,8 @@ export const en = {
   "forecast.landingRecordsDetail":
     "Won plus Likely deals, without the manager’s call",
   "forecast.landingCaveat": "Landing has a caveat",
+  "forecast.landing.caveat.call_withheld":
+    "The manager’s call is not shown here, so this shows the Likely deals.",
   "forecast.landing.caveat.call_absent":
     "No call recorded for this period, so this shows the Likely deals.",
   "forecast.landing.caveat.call_below_actual":
@@ -16037,6 +16043,8 @@ export const en = {
   "forecast.pipelineBasisWhy.historical_median":
     "Measured against the median of the last 4 comparable periods.",
   "forecast.pipelineAbsentTitle": "No coverage figure for this period",
+  "forecast.pipelineAbsent.call_withheld":
+    "The manager’s call is not shown here, and fewer than 4 comparable periods have finished. Measuring against these open deals themselves would always look sufficient.",
   "forecast.pipelineAbsent.insufficient_basis":
     "No call is recorded for this period, and fewer than 4 comparable periods have finished. Measuring against these open deals themselves would always look sufficient.",
   "forecast.pipelineAbsent.insufficient_history":

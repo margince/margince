@@ -263,7 +263,7 @@ The **Forecast** section of Analytics answers one question (where will this peri
 
 | Reading | What kind of claim it is |
 |---|---|
-| **Manager forecast** | Somebody's view. No forecast reads "No manager forecast submitted" |
+| **Manager forecast** | Somebody's view. No forecast reads "No manager forecast submitted". A reader who may not see it is told nothing about one |
 | **Likely** | Open deals at 90% or more with a confirmed expected close date in the period, counted in full |
 | **Weighted** | Each open deal's value times its probability |
 | **Already won** | Value of deals that closed won in the period |
@@ -299,7 +299,7 @@ quarter in its place.
 **"A call is the amount you expect to close. It records your number and changes
 no deal."**
 
-To record a call, press **Update forecast**. Fill **Expected total for this period** (in the base currency) and a **Supporting note**, then press **Save forecast**. The call is filed against the period *and* the records you are looking at.
+To record a call, press **Update forecast**. Fill **Expected total for this period** (in the base currency) and a **Supporting note**, then press **Save forecast**. The call is filed against the period *and* the records you are looking at. **Save forecast** stays off until you type an amount. To call nothing, type 0.
 
 Each new call is kept beside the ones before it. None is written over, and the first call of a period is recorded the same way.
 
@@ -384,7 +384,7 @@ capture.
 A share lets more colleagues know a link exists; it never changes what anybody
 is allowed to read. Whoever opens it must sign in with their own account, and the
 numbers are worked out under *their* permissions. Two colleagues opening one
-link can rightly see different figures.
+link can rightly see different figures. A live view shows the manager forecast as the **Forecast** section would show it to you. A snapshot uses the forecast for where the period lands, but does not show it.
 
 The link is shown once ("The link is shown only once. Copy it now; it cannot be
 retrieved later.") and stops working after 30 days.
