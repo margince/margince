@@ -11,7 +11,7 @@ import type { RailEdit } from "../../components/railfield";
 import { RecordCustomFields } from "../../components/recordcustomfields";
 import { type SectionLock, useSectionEdit } from "../../components/sectionedit";
 import { LeadStops } from "../../components/stops";
-import { TagsPanel } from "../../components/tagspanel";
+import { useTagsRow } from "../../components/tagsflow";
 import { Badge, PendingBody } from "../../design-system/atoms";
 import { ContactLink } from "../../design-system/contactlink";
 import { InfoTip } from "../../design-system/infotip";
@@ -30,7 +30,6 @@ import {
   useLeadOrigins,
 } from "../../lib/leadorigins";
 import { useListsAvailable, useRecordLists } from "../../lib/lists.queries";
-import { useRecordTags } from "../../lib/tags.queries";
 import { useViewerZone } from "../../lib/viewerzone";
 import { LeadCompany, useLeadCompanyFactsSection } from "./leadcompany";
 import { useLeadPickerFlows } from "./leaddetailsflows";
@@ -178,7 +177,7 @@ function useRegistrationRows(lead: Lead): DetailRow[] {
   const t = useT();
   const { locale } = useLocale();
   const origins = useLeadOrigins();
-  const tags = useRecordTags("lead", lead.id, !lead.archived_at);
+  const tags = useTagsRow("lead", lead);
   const partnerRow = useLeadPartnerRow(lead);
   const text = useRowText(lead);
   return [
@@ -215,41 +214,7 @@ function useRegistrationRows(lead: Lead): DetailRow[] {
         </>
       ),
     },
-    ...tagsRow(lead, tags, t),
-  ];
-}
-
-// Only a read that answered with no tags is empty. Loading and withheld are
-// the panel's to say. A failed read says nothing about the tags, so no row.
-function tagsRow(
-  lead: Lead,
-  tags: ReturnType<typeof useRecordTags>,
-  t: ReturnType<typeof useT>,
-): DetailRow[] {
-  const answered = tags.isSuccess && !tags.data.withheld;
-  const tagged = (tags.data?.data ?? []).length > 0;
-  if (lead.archived_at || (answered && !tagged)) {
-    return [
-      {
-        key: "tags",
-        term: t("tags.panelTitle"),
-        empty: true,
-        value: t("field.unset"),
-      },
-    ];
-  }
-  if (tags.isError) {
-    return [];
-  }
-  return [
-    {
-      key: "tags",
-      term: t("tags.panelTitle"),
-      block: tagged,
-      value: (
-        <TagsPanel entityType="lead" entityID={lead.id} bare canEdit={false} />
-      ),
-    },
+    ...tags,
   ];
 }
 

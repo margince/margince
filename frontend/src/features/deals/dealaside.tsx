@@ -12,7 +12,7 @@ import {
 } from "../../components/customfields.form";
 import { EntityRef } from "../../components/entityref";
 import { type SectionLock, useSectionEdit } from "../../components/sectionedit";
-import { TagsPanel } from "../../components/tagspanel";
+import { useTagsFlow, useTagsRow } from "../../components/tagsflow";
 import { AppLink } from "../../design-system/applink";
 import { Badge } from "../../design-system/atoms";
 import { OffsiteLink } from "../../design-system/offsitelink";
@@ -38,7 +38,6 @@ import { useListsAvailable, useRecordLists } from "../../lib/lists.queries";
 import { useMemberName } from "../../lib/membernames";
 import { routeHash } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
-import { useRecordTags } from "../../lib/tags.queries";
 import { useViewerZone } from "../../lib/viewerzone";
 import {
   MOTION_OPTIONS,
@@ -94,14 +93,14 @@ function DealAsideBody({
     row: rowMaker(deal.masked_fields ?? [], t),
     canEdit: edit.canEdit,
   };
-  const change = useSectionEdits(deal, edit, locale);
+  const tagRows = useTagsRow("deal", deal);
+  const change = useSectionEdits(deal, edit, locale, tagRows.length > 0);
   const owner = useMemberName(deal.owner_id).data;
   const cf = useObjectCustomFields("deal");
   const display = useCustomFieldDisplay();
   const reads = {
     viewerId,
     sources: useAcquisitionSources().data ?? [],
-    tags: useRecordTags("deal", deal.id, !deal.archived_at).data,
   };
   const sections: DetailSection[] = [
     {
@@ -152,7 +151,7 @@ function DealAsideBody({
       key: "registration",
       label: t("record.registration"),
       edit: change.registration,
-      rows: registrationRows(facts, reads),
+      rows: [...registrationRows(facts, reads), ...tagRows],
     },
     ...(lists ? [listSection(deal.id, lists, t)] : []),
   ];
@@ -171,8 +170,14 @@ const MONEY_KEYS = ["amount", "expected_arr", "currency"] as const;
 
 // A closed deal shows the day it closed and the stage's probability, so
 // neither is offered.
-function useSectionEdits(deal: Deal, edit: DealEdit, locale: Locale) {
+function useSectionEdits(
+  deal: Deal,
+  edit: DealEdit,
+  locale: Locale,
+  tagged: boolean,
+) {
   const t = useT();
+  const tags = useTagsFlow("deal", deal);
   const closed = deal.status === "won" || deal.status === "lost";
   const about = useSectionEdit(edit, {
     label: t("record.details.about"),
@@ -194,7 +199,8 @@ function useSectionEdits(deal: Deal, edit: DealEdit, locale: Locale) {
   });
   const registration = useSectionEdit(edit, {
     label: t("record.registration"),
-    keys: ["acquisition_source"],
+    keys: ["acquisition_source", ...(tagged ? ["tags"] : [])],
+    flows: tags.flow && { tags: tags.flow },
   });
   return {
     about: about.edit,
@@ -207,6 +213,7 @@ function useSectionEdits(deal: Deal, edit: DealEdit, locale: Locale) {
         {value.element}
         {ownership.element}
         {registration.element}
+        {tags.element}
       </>
     ),
   };
@@ -375,12 +382,9 @@ function registrationRows(
   reads: Readonly<{
     viewerId: string | undefined;
     sources: readonly { key: string; label: string }[];
-    tags: ReturnType<typeof useRecordTags>["data"];
   }>,
 ): DetailRow[] {
   const { deal, t, row } = facts;
-  const tags =
-    reads.tags && !reads.tags.withheld ? (reads.tags.data ?? []) : [];
   const source = deal.acquisition_source;
   return [
     row(
@@ -409,21 +413,6 @@ function registrationRows(
       "acquisition_source",
     ),
     row("created", "list.created", day(deal.created_at, facts)),
-    {
-      key: "tags",
-      term: t("tags.panelTitle"),
-      block: true,
-      empty: tags.length === 0,
-      value: (
-        <TagsPanel
-          entityType="deal"
-          entityID={deal.id}
-          bare
-          archived={Boolean(deal.archived_at)}
-          canEdit={facts.canEdit}
-        />
-      ),
-    },
   ];
 }
 

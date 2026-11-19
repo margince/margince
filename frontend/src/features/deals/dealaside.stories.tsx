@@ -165,6 +165,18 @@ function LoweredColumn() {
           },
         ],
       }),
+    "GET /records/deal/d1/tags": () =>
+      jsonResponse({
+        data: [
+          {
+            tag_id: "t-1",
+            name: "Fleet",
+            archived: false,
+            assigned_at: "2026-01-02T00:00:00Z",
+          },
+        ],
+        withheld: false,
+      }),
   });
   return (
     <StoryProviders locale="en">
@@ -212,6 +224,35 @@ export const EditValue: Story = {
     ).toBeNull();
   },
 };
+
+// The Tags row reads the tags; Registration's dialog leaves for their own editor.
+export const TagsFlow: Story = {
+  name: "Tags change through Registration",
+  render: () => <LoweredColumn />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByText("Fleet");
+    await expect(canvas.queryByRole("button", { name: "Add tag" })).toBeNull();
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Edit Registration" }),
+    );
+    const body = within(document.body);
+    const registration = within(
+      await body.findByRole("dialog", { name: "Registration" }),
+    );
+    await waitFor(() => expect(registration.getByText("Fleet")).toBeVisible());
+    await userEvent.click(
+      registration.getByRole("button", { name: "Change Tags" }),
+    );
+    const editor = await body.findByRole("dialog", { name: "Tags" });
+    await waitFor(() => expect(editor).toBeVisible());
+    await expect(
+      within(editor).getByRole("button", { name: "Add tag" }),
+    ).toBeVisible();
+  },
+};
+
+export const TagsFlowPhone: Story = { ...TagsFlow, tags: ["uat-phone"] };
 
 // A seat that may only read the deal gets no Edit at all.
 export const ReadOnly: Story = {

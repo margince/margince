@@ -51,11 +51,12 @@ function mount(
   grant: ("read" | "update")[],
   current: Deal = deal,
   locale: "en" | "de" = "en",
+  tags: () => Response = () => jsonResponse({ data: [] }),
 ) {
   const sent: Sent[] = [];
   installFetchStub({
     "GET /me": meRoute({ deal: grant }, { seat: "full" }),
-    "GET /records/deal/d1/tags": () => jsonResponse({ data: [] }),
+    "GET /records/deal/d1/tags": tags,
   });
   const stub = globalThis.fetch;
   globalThis.fetch = async (input, init) => {
@@ -146,7 +147,10 @@ it("opens Ownership with the owner and Registration with the acquisition source"
   expect(labels(ownership)).toEqual([en["list.owner"]]);
   await user.click(within(ownership).getByRole("button", { name: "Cancel" }));
   const registration = await openSection(user, "Registration");
-  expect(labels(registration)).toEqual([en["deal.acquisitionSource"]]);
+  expect(labels(registration)).toEqual([
+    en["deal.acquisitionSource"],
+    en["tags.panelTitle"],
+  ]);
 });
 
 it("saves a changed value as that field alone, in one PATCH against the version shown", async () => {
@@ -219,20 +223,72 @@ it("offers no money to change beside a masked currency", async () => {
   expect(screen.queryByRole("button", { name: "Edit Value" })).toBeNull();
 });
 
-it("adds a tag from the Tags row and offers no add to a reader", async () => {
+const fleet = () =>
+  jsonResponse({
+    data: [
+      {
+        tag_id: "t-1",
+        name: "Fleet",
+        archived: false,
+        assigned_at: "2026-01-02T00:00:00Z",
+      },
+    ],
+    withheld: false,
+  });
+
+it("changes tags through Registration's Edit, leaving the row a reading", async () => {
   const user = userEvent.setup();
-  mount(["read", "update"]);
-  await user.click(
-    await screen.findByRole("button", { name: /^Show \d+ empty fields$/ }),
-  );
-  expect(await screen.findByRole("button", { name: "Add tag" })).toBeTruthy();
-  cleanup();
-  mount(["read"]);
-  await user.click(
-    await screen.findByRole("button", { name: /^Show \d+ empty fields$/ }),
-  );
-  await screen.findByText("Tags");
+  mount(["read", "update"], deal, "en", fleet);
+  const registration = await screen.findByRole("region", {
+    name: "Registration",
+  });
+  expect(await within(registration).findByText("Fleet")).toBeTruthy();
   expect(screen.queryByRole("button", { name: "Add tag" })).toBeNull();
+  const dialog = await openSection(user, "Registration");
+  await user.click(within(dialog).getByRole("button", { name: "Change Tags" }));
+  const editor = await screen.findByRole("dialog", {
+    name: en["tags.panelTitle"],
+  });
+  expect(within(editor).getByRole("button", { name: "Add tag" })).toBeTruthy();
+  expect(screen.queryByRole("dialog", { name: "Registration" })).toBeNull();
+});
+
+it("offers a reader without the update grant no tag verb", async () => {
+  mount(["read"], deal, "en", fleet);
+  const registration = await screen.findByRole("region", {
+    name: "Registration",
+  });
+  expect(await within(registration).findByText("Fleet")).toBeTruthy();
+  expect(
+    screen.queryByRole("button", { name: "Edit Registration" }),
+  ).toBeNull();
+  expect(screen.queryByRole("button", { name: "Add tag" })).toBeNull();
+});
+
+it("says withheld tags are withheld rather than none", async () => {
+  mount(["read", "update"], deal, "en", () =>
+    jsonResponse({ data: [], withheld: true }),
+  );
+  const registration = await screen.findByRole("region", {
+    name: "Registration",
+  });
+  expect(
+    await within(registration).findByText(en["tags.withheld"]),
+  ).toBeTruthy();
+});
+
+it("claims nothing about the tags when their read fails", async () => {
+  const user = userEvent.setup();
+  mount(["read", "update"], deal, "en", () =>
+    jsonResponse({ detail: "down" }, 500),
+  );
+  const dialog = await openSection(user, "Registration");
+  await waitFor(() =>
+    expect(labels(dialog)).toEqual([en["deal.acquisitionSource"]]),
+  );
+  expect(
+    screen.queryByText(en["tags.panelTitle"], { selector: "dt" }),
+  ).toBeNull();
 });
 
 // German groups thousands with a dot: "12,5" is twelve and a half, and
