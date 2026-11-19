@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
+import { lineTops } from "../testing/textlines";
 import { DataTable } from "./datatable";
 import { KeyCode, KeyedName } from "./keyedname";
 
@@ -63,9 +64,7 @@ function keyLayout(key: HTMLElement) {
   const lines = new Set<number>();
   const brokenMidWord: string[] = [];
   for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-    const range = key.ownerDocument.createRange();
-    range.selectNodeContents(node);
-    const tops = new Set([...range.getClientRects()].map((rect) => rect.top));
+    const tops = lineTops(node);
     for (const top of tops) lines.add(top);
     if (tops.size > 1) brokenMidWord.push(node.textContent ?? "");
   }
