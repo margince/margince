@@ -126,7 +126,7 @@ type CallPage struct {
 // rows it keeps.
 func callSummaryFrom(query *callQuery) string {
 	fallbackFrom, fallbackTo := rateFallbacks()
-	rate := rateMatch("ac.provider", "ac.model_id", "ac.occurred_at::date",
+	rate := rateMatch("ac.provider", "ac.model_id", callDaySQL("ac"),
 		query.arg(fallbackFrom), query.arg(fallbackTo))
 	return storekit.SQLf(`ai_call c
 	CROSS JOIN LATERAL (

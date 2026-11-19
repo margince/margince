@@ -31,9 +31,9 @@ const batch = 200
 // longer matches its folded value. A refolded company leaves the selection.
 func DataTask() datatask.Task {
 	return datatask.Task{
-		ID: "core/1795101500_company_clock_reads_current_employment", Version: 1,
+		ID: "core/1795101500_company_clock_reads_current_employment", Version: 2,
 		Title:    systemtext.Literal("datatask.title.core.1795101500_company_clock_reads_current_employment"),
-		Requires: []string{"core/1795101500"},
+		Requires: []string{"core/1795101710"},
 		Steps: []datatask.Step{{
 			Name: "companies", Limit: batch, MinLimit: 10,
 			Audit: datatask.AuditPolicy{Reason: "the last-activity triggers move the same derived clock without an audit"},

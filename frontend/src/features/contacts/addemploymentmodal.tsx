@@ -14,7 +14,7 @@ import {
 } from "../../design-system/recordpicker";
 import { stable } from "../../format/collate";
 import { useT } from "../../i18n";
-import { stillHeld } from "../../lib/employmentcurrency";
+import { stillHeld, useEmploymentZone } from "../../lib/employmentcurrency";
 import {
   type Employment,
   type EmploymentActions,
@@ -240,6 +240,7 @@ export function useAddEmployment(
   create: EmploymentActions["create"],
   employments: readonly Employment[],
 ) {
+  const employmentZone = useEmploymentZone();
   const [adding, setAdding] = useState<
     EmploymentSeed & Readonly<{ open: boolean; seq: number }>
   >({ open: false, seq: 0 });
@@ -264,7 +265,9 @@ export function useAddEmployment(
       contactId={contactId}
       create={create}
       excludedCompanyIds={connected}
-      hasCurrentEmployment={employments.some(stillHeld)}
+      hasCurrentEmployment={employments.some((row) =>
+        stillHeld(row, employmentZone),
+      )}
     />
   );
   return {
