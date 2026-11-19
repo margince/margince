@@ -26,13 +26,11 @@ import (
 )
 
 // runReplayErasures builds the eraser the api erases with, from the same
-// environment. The replay then reaches attachment bytes, sealed link material
-// and provider originals, as an Art. 17 erasure does.
-//
-// The vault is resolved here and not by the dispatcher, so the other database
-// subcommands run without one, as they always have.
+// environment. The replay then reaches attachment bytes and provider originals,
+// as an Art. 17 erasure does. It resolves no vault: erasure marks link secrets
+// for the retrying passes that destroy them after the commit.
 func runReplayErasures(
-	ctx context.Context, pool *pgxpool.Pool, resolveVault func() (keyvault.Vault, error),
+	ctx context.Context, pool *pgxpool.Pool, _ func() (keyvault.Vault, error),
 	settings *config.Config, args []string, stdout io.Writer,
 ) error {
 	fs := flag.NewFlagSet("replay-erasures", flag.ContinueOnError)
@@ -49,11 +47,7 @@ func runReplayErasures(
 	if err != nil {
 		return fmt.Errorf("replay-erasures: blobstore: %w", err)
 	}
-	vault, err := resolveVault()
-	if err != nil {
-		return err
-	}
-	replay, err := compose.ReplayErasureSuppressions(ctx, pool, blob, vault, *emptyJournalOK)
+	replay, err := compose.ReplayErasureSuppressions(ctx, pool, blob, *emptyJournalOK)
 	if errors.Is(err, compose.ErrReplayNeedsObjectStore) || errors.Is(err, compose.ErrReplayJournalEmpty) {
 		return err
 	}

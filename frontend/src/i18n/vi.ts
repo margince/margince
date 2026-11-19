@@ -353,6 +353,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.merge.address_usage": "Mục đích địa chỉ",
   "approval.merge.address_primary_before": "Địa chỉ chính trước khi chuyển",
   "approval.merge.address_primary_after": "Địa chỉ chính sau khi chuyển",
+  "approval.merge.address_already_held": "Bản ghi giữ lại đã có",
   "approval.merge.assignment_collapsed": "Trách nhiệm trùng lặp bị loại bỏ",
   "approval.merge.assignment_moved": "Trách nhiệm được chuyển",
   "approval.merge.assignment_role": "Vai trò",
@@ -6468,6 +6469,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Bạn có thể ghi nhận hoạt động và thêm việc cần làm. Để thay đổi deal này, người chịu trách nhiệm cần chia sẻ deal với bạn.",
   "deal.closedTakesNoStage":
     "Deal này đã đóng. Mở lại deal để chuyển sang giai đoạn khác.",
+  "deal.pipelineRetired":
+    "Pipeline của deal này đã ngừng dùng nên các giai đoạn chỉ để xem. Khôi phục pipeline trong Cài đặt để chuyển deal.",
+  "deal.stageOtherPipeline":
+    "Giai đoạn đó thuộc pipeline khác. Hãy chọn một giai đoạn của pipeline của deal này.",
   "deal.reopen": "Mở lại",
   "deal.reopenPick": "Chuyển deal này về một giai đoạn đang mở",
   "deal.reopenConfirm": "Mở lại",
@@ -11660,6 +11665,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "translation.given": "{name} ({language})",
   "stage.name": "Tên",
   "stage.semantic": "Loại giai đoạn",
+  "stage.lastClosing":
+    "Pipeline cần một giai đoạn Thắng và một giai đoạn Thua. Hãy thêm một giai đoạn cùng loại trước.",
   "stage.winProb": "Xác suất thắng",
   "stage.semOpen": "Đang mở",
   "stage.semWon": "Thắng",
@@ -22393,6 +22400,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contactCase.ownerHint":
     "Chỉ người chịu trách nhiệm một liên hệ đã đánh dấu mới nhận được liên hệ còn lại.",
   "contactCase.ownerPlaceholder": "Chọn người chịu trách nhiệm",
+  "contactCase.prefer.legend": "Giữ giá trị nào",
+  "contactCase.prefer.hint":
+    "Các liên hệ khác nhau ở đây. Chọn giá trị mà liên hệ còn lại hiển thị trước. Các email và nơi làm việc khác vẫn được giữ.",
+  "contactCase.prefer.name": "Tên",
+  "contactCase.prefer.email": "Email chính",
+  "contactCase.prefer.employment": "Nơi làm việc hiện tại",
+  "contactCase.prefer.title": "Chức danh",
+  "contactCase.prefer.placeholder": "Chọn một giá trị",
   "contactCase.previewVerb": "Xem trước khi gộp",
   "contactCase.merge_one": "Gộp {count} liên hệ",
   "contactCase.merge_other": "Gộp {count} liên hệ",

@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"strings"
 	"testing"
 	"time"
 
@@ -248,9 +249,15 @@ func walkWorklist(
 // cursor names.
 func frozenTop(t *testing.T, e *integration.Env, token string) map[string]bool {
 	t.Helper()
+	// storekit.EncodeSigned appends a dot and a MAC to the opaque body. The
+	// server checks the MAC, so this reads only the body.
+	body, _, signed := strings.Cut(token, ".")
+	if !signed {
+		t.Fatalf("the worklist cursor %q carries no signature", token)
+	}
 	cursor, err := storekit.DecodeOpaque[struct {
 		Snapshot ids.UUID `json:"s"`
-	}](token)
+	}](body)
 	if err != nil {
 		t.Fatal(err)
 	}

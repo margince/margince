@@ -18,7 +18,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
-	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -57,7 +56,7 @@ type ErasureReplay struct {
 // under legal hold, does not stop the others. The refusals come back beside
 // the count of what was done.
 func ReplayErasureSuppressions(
-	ctx context.Context, pool *pgxpool.Pool, blob blobstore.Store, vault keyvault.Vault, emptyJournalOK bool,
+	ctx context.Context, pool *pgxpool.Pool, blob blobstore.Store, emptyJournalOK bool,
 ) (ErasureReplay, error) {
 	if blob == nil {
 		return ErasureReplay{}, ErrReplayNeedsObjectStore
@@ -67,7 +66,7 @@ func ReplayErasureSuppressions(
 		return ErasureReplay{}, fmt.Errorf("replaying erasures: %w", err)
 	}
 	ctx = principal.SystemActing(principal.WithWorkspaceID(ctx, workspace.UUID), erasureReplayActor)
-	eraser := ComposedEraser(pool, blob, vault)
+	eraser := ComposedEraser(pool, blob)
 
 	var replay ErasureReplay
 	replay.Journal, err = eraser.ReadJournalManifest(ctx)

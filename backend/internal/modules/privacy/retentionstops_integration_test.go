@@ -93,7 +93,7 @@ func TestAnAnonymizeKeepsAStopAsTheHashOfEachAddress(t *testing.T) {
 		INSERT INTO communication_suppression (contact_id, kind, source, captured_by, decided_by_level)
 		VALUES ($1, 'subject_request', 'operator_ui', 'human:x', 'user')`, contact)
 
-	if err := anonymizeContactRecord(ctx, tx, contact.UUID, &Eraser{payloads: noPayloads{t: t}}); err != nil {
+	if err := anonymizeContactRecord(ctx, tx, contact.UUID, &Eraser{}); err != nil {
 		t.Fatalf("anonymizing the contact: %v", err)
 	}
 
@@ -128,7 +128,7 @@ func TestAnAnonymizePinsABoundStopAndWithdrawalOnlyToTheirOwnAddresses(t *testin
 		INSERT INTO contact_consent (contact_id, purpose_id, state, captured_at, recorded_for_addresses)
 		VALUES ($1, $2, 'withdrawn', now(), ARRAY['ines.other@anon.test'])`, contact, purpose)
 
-	if err := anonymizeContactRecord(ctx, tx, contact.UUID, &Eraser{payloads: noPayloads{t: t}}); err != nil {
+	if err := anonymizeContactRecord(ctx, tx, contact.UUID, &Eraser{}); err != nil {
 		t.Fatalf("anonymizing the contact: %v", err)
 	}
 
@@ -164,7 +164,7 @@ func TestErasingAnAnonymizedContactKeepsItsAddressesRefused(t *testing.T) {
 	mustExec(ctx, t, tx, `
 		INSERT INTO communication_suppression (contact_id, kind, source, captured_by, decided_by_level)
 		VALUES ($1, 'subject_request', 'operator_ui', 'human:x', 'user')`, contact)
-	if err := anonymizeContactRecord(ctx, tx, contact.UUID, &Eraser{payloads: noPayloads{t: t}}); err != nil {
+	if err := anonymizeContactRecord(ctx, tx, contact.UUID, &Eraser{}); err != nil {
 		t.Fatalf("anonymizing the contact: %v", err)
 	}
 	if _, err := anonymizeSubjectRows(ctx, tx, contact, nil, nil, "test"); err != nil {

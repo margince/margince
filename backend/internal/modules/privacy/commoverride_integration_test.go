@@ -128,7 +128,7 @@ func TestRetentionAnonymizeDeletesTheContactsOverride(t *testing.T) {
 		 VALUES ($1, 'Hedda Subject', 'manual', 'user:'||$2::text)`, contact, user)
 	seedOverride(ctx, t, tx, &contact.UUID, nil)
 
-	if err := anonymizeContactRecord(ctx, tx, contact.UUID, &Eraser{payloads: noPayloads{t: t}}); err != nil {
+	if err := anonymizeContactRecord(ctx, tx, contact.UUID, &Eraser{}); err != nil {
 		t.Fatalf("anonymizing the contact: %v", err)
 	}
 
@@ -249,7 +249,7 @@ func TestRetentionAnonymizeDeletesAMergedPredecessorsOverride(t *testing.T) {
 		 VALUES ($1, 'Hedda Duplicate', 'manual', 'user:'||$2::text, $3, now())`, predecessor, user, contact)
 	seedOverride(ctx, t, tx, &predecessor.UUID, nil)
 
-	if err := anonymizeContactRecord(ctx, tx, contact.UUID, &Eraser{payloads: noPayloads{t: t}}); err != nil {
+	if err := anonymizeContactRecord(ctx, tx, contact.UUID, &Eraser{}); err != nil {
 		t.Fatalf("anonymizing the contact: %v", err)
 	}
 
@@ -285,7 +285,7 @@ func TestRetentionAnonymizeKeepsAMergedPredecessorsSuppression(t *testing.T) {
 		INSERT INTO communication_suppression (contact_id, kind, source, captured_by, decided_by_level)
 		VALUES ($1, 'marketing_objection', 'operator_ui', 'human:x', 'subject')`, predecessor)
 
-	if err := anonymizeContactRecord(ctx, tx, contact.UUID, &Eraser{payloads: noPayloads{t: t}}); err != nil {
+	if err := anonymizeContactRecord(ctx, tx, contact.UUID, &Eraser{}); err != nil {
 		t.Fatalf("anonymizing the contact: %v", err)
 	}
 
@@ -333,7 +333,7 @@ func TestRetentionAnonymizePinsOnlyActiveStops(t *testing.T) {
 		INSERT INTO communication_suppression (contact_id, address, kind, source, captured_by, decided_by_level, revoked_at)
 		VALUES ($1, $2, 'subject_request', 'operator_ui', 'human:x', 'user', now())`, contact, work)
 
-	if err := anonymizeContactRecord(ctx, tx, contact.UUID, &Eraser{payloads: noPayloads{t: t}}); err != nil {
+	if err := anonymizeContactRecord(ctx, tx, contact.UUID, &Eraser{}); err != nil {
 		t.Fatalf("anonymizing the contact: %v", err)
 	}
 
