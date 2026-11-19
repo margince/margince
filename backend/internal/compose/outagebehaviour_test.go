@@ -36,8 +36,8 @@ func TestEachTaskIsDeclaredForWhatItsWriterDoesWithoutAModel(t *testing.T) {
 		degradesNow func() bool
 	}{
 		"company brief (summarize)": {ai.TaskSummarize, func() bool {
-			_, by, err := companybrief.Write(ctx, blockedLane{}, "co-1", companybrief.Input{}, "en")
-			return err == nil && by == crmcontracts.WrittenByDeterministic
+			_, by, laneFailed := companybrief.Write(ctx, blockedLane{}, "co-1", companybrief.Input{}, "en")
+			return by == crmcontracts.WrittenByDeterministic && laneFailed
 		}},
 		"company fit (growth_fit)": {ai.TaskGrowthFit, func() bool {
 			now := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
