@@ -163,6 +163,62 @@ describe("a lead's phone", () => {
   });
 });
 
+describe("the Tags row", () => {
+  function serveTags(tags: Response, me: unknown = undefined) {
+    stubFetch(async (url) => {
+      if (url.includes("/records/lead/l-1/tags")) return tags.clone();
+      if (me && url.endsWith("/v1/me")) return jsonResponse(me);
+      return jsonResponse(lead);
+    });
+  }
+  const reader = {
+    user: { id: "u-2", display_name: "Reader" },
+    roles: ["rep"],
+    teams: [],
+    authorization: meFixture({ allow: { lead: ["read"] } }).authorization,
+  };
+
+  it("says the words are withheld, to a reader who may only look too", async () => {
+    serveTags(jsonResponse({ data: [], withheld: true }), reader);
+    render(<LeadScreen id="l-1" />);
+    const registration = await screen.findByRole("region", {
+      name: en["record.registration"],
+    });
+    expect(
+      await within(registration).findByText(en["tags.withheld"]),
+    ).toBeVisible();
+  });
+
+  it("folds a lead that carries no tags as an empty field", async () => {
+    serveTags(jsonResponse({ data: [] }));
+    const user = userEvent.setup();
+    render(<LeadScreen id="l-1" />);
+    const registration = await screen.findByRole("region", {
+      name: en["record.registration"],
+    });
+    await waitFor(() =>
+      expect(
+        within(registration).queryByText(en["tags.panelTitle"]),
+      ).toBeNull(),
+    );
+    await showEmptyFields(user);
+    expect(await detailValue(en["tags.panelTitle"])).toHaveTextContent(
+      en["field.unset"],
+    );
+  });
+
+  it("claims nothing about the tags when their read fails", async () => {
+    serveTags(jsonResponse({ detail: "down" }, 500));
+    const user = userEvent.setup();
+    render(<LeadScreen id="l-1" />);
+    await showEmptyFields(user);
+    await screen.findByText(en["lead.originDetail"], { selector: "dt" });
+    expect(
+      screen.queryByText(en["tags.panelTitle"], { selector: "dt" }),
+    ).toBeNull();
+  });
+});
+
 describe("the Company routing key row", () => {
   it("says what the key is for", async () => {
     serve(lead);
@@ -178,6 +234,25 @@ describe("the Company routing key row", () => {
 });
 
 describe("the About company row", () => {
+  it("reads a linked company's name in the dialog as the row reads it, without company read", async () => {
+    stubFetch(async (url) => {
+      const named = companyNamesAnswer(url, { "c-7": "Nordwind Holding SE" });
+      return named ?? jsonResponse({ ...linked, company_facts: undefined });
+    });
+    const user = userEvent.setup();
+    render(<LeadScreen id="l-1" />);
+    const row = await screen.findByRole("region", { name: "About" });
+    await waitFor(() =>
+      expect(
+        within(row).getByText("Company").nextElementSibling,
+      ).toHaveTextContent("Nordwind Holding SE"),
+    );
+    const about = await editSection(user, "About");
+    expect(
+      within(about).getByRole("group", { name: "Company" }),
+    ).toHaveTextContent("Nordwind Holding SE");
+  });
+
   // The name shown is the company's own, so an editor here would change a name
   // the row does not show.
   it("shows a linked lead's company name read-only, saying where it changes", async () => {

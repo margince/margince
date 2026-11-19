@@ -62,9 +62,11 @@ function page(
     lead: ["read", "update"],
     company: ["read"],
   },
+  tags: unknown = { data: [] },
 ) {
   return () => {
     installFetchStub({
+      "GET /records/lead/l-1/tags": () => jsonResponse(tags),
       "GET /records/lead/l-1/lists": () =>
         jsonResponse({ data: [{ id: "s-1", name: "Launch references" }] }),
       "GET /users": () =>
@@ -251,5 +253,25 @@ export const ReadOnly: Story = {
   play: async () => {
     await screen.findByRole("region", { name: "About" });
     await expect(screen.queryByRole("button", { name: /^Edit / })).toBeNull();
+  },
+};
+
+/** A reader the vocabulary is withheld from reads that, not an empty Tags row. */
+export const TagsWithheld: Story = {
+  render: page(
+    base,
+    "en",
+    undefined,
+    false,
+    { lead: ["read"], company: ["read"] },
+    { data: [], withheld: true },
+  ),
+  play: async () => {
+    const registration = within(
+      await screen.findByRole("region", { name: "Registration" }),
+    );
+    await expect(
+      await registration.findByText("Hidden for your role"),
+    ).toBeVisible();
   },
 };

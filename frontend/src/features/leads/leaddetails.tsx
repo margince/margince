@@ -53,13 +53,20 @@ type TextKey =
   | "candidate_company_key"
   | "origin_detail";
 
+// The row and the About dialog read a linked company's name from this one read.
+function useLinkedCompanyName(lead: Lead) {
+  const linked = useEntityName("company", lead.company_id);
+  const settling =
+    linked.name === null && (linked.reading === "pending" || linked.fetching);
+  return { name: linked.name, settling };
+}
+
 // A linked lead's name is the company's own, so it is changed there, not here.
 function useLinkedCompanyRow(lead: Lead): DetailRow | null {
   const t = useT();
-  const linked = useEntityName("company", lead.company_id);
+  const linked = useLinkedCompanyName(lead);
   if (!lead.company_id) return null;
-  const settling =
-    linked.name === null && (linked.reading === "pending" || linked.fetching);
+  const { settling } = linked;
   return {
     key: "company_name",
     term: t("create.companyName"),
@@ -174,7 +181,6 @@ function useRegistrationRows(lead: Lead): DetailRow[] {
   const tags = useRecordTags("lead", lead.id, !lead.archived_at);
   const partnerRow = useLeadPartnerRow(lead);
   const text = useRowText(lead);
-  const tagged = (tags.data?.data ?? []).length > 0;
   return [
     {
       key: "origin",
@@ -209,21 +215,39 @@ function useRegistrationRows(lead: Lead): DetailRow[] {
         </>
       ),
     },
+    ...tagsRow(lead, tags, t),
+  ];
+}
+
+// Only a read that answered with no tags is empty. Loading and withheld are
+// the panel's to say. A failed read says nothing about the tags, so no row.
+function tagsRow(
+  lead: Lead,
+  tags: ReturnType<typeof useRecordTags>,
+  t: ReturnType<typeof useT>,
+): DetailRow[] {
+  const answered = tags.isSuccess && !tags.data.withheld;
+  const tagged = (tags.data?.data ?? []).length > 0;
+  if (lead.archived_at || (answered && !tagged)) {
+    return [
+      {
+        key: "tags",
+        term: t("tags.panelTitle"),
+        empty: true,
+        value: t("field.unset"),
+      },
+    ];
+  }
+  if (tags.isError) {
+    return [];
+  }
+  return [
     {
       key: "tags",
       term: t("tags.panelTitle"),
       block: tagged,
-      empty: !tagged,
-      value: tagged ? (
-        <TagsPanel
-          entityType="lead"
-          entityID={lead.id}
-          bare
-          archived={Boolean(lead.archived_at)}
-          canEdit={false}
-        />
-      ) : (
-        t("field.unset")
+      value: (
+        <TagsPanel entityType="lead" entityID={lead.id} bare canEdit={false} />
       ),
     },
   ];
@@ -242,7 +266,9 @@ function useDetailLocks(
   lead: Lead,
   edit: RailEdit,
 ): Record<string, SectionLock> {
+  const t = useT();
   const partners = useLeadPartnerOptions();
+  const linked = useLinkedCompanyName(lead);
   const companyReason = edit.readOnlyFields?.company_name;
   const partnerReason = edit.readOnlyFields?.partner_company_id;
   return {
@@ -250,7 +276,9 @@ function useDetailLocks(
       ? {
           company_name: {
             reason: companyReason,
-            reading: <EntityRef kind="company" id={lead.company_id} asText />,
+            reading: linked.settling
+              ? t("common.loading")
+              : (linked.name ?? t("field.unset")),
           },
         }
       : {}),
