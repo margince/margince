@@ -74,7 +74,9 @@ export const FieldInUse: Story = {
       2,
     ),
   play: async () => {
-    await expect(await screen.findByText("Gold band customers")).toBeInTheDocument();
+    await expect(
+      await screen.findByText("Gold band customers"),
+    ).toBeInTheDocument();
     await expect(screen.getByText("Renewals this quarter")).toBeInTheDocument();
   },
 };
