@@ -263,6 +263,7 @@ export function DocumentExtractionPanel({
       onAccept={(fields) => accept.mutate(fields)}
       onDismiss={() => setDismissed(true)}
       onReadAgain={() => read.mutate()}
+      readError={read.error}
       accepting={accept.isPending}
       acceptFailed={accept.isError}
     />
@@ -331,6 +332,29 @@ function ReadOffer({
   );
 }
 
+// The press that reads a file again. It is refused with the link to AI settings
+// while no model is connected, and says the same after a refused press.
+function ReadAgain({
+  onReadAgain,
+  error,
+}: Readonly<{ onReadAgain: () => void; error: unknown }>) {
+  const t = useT();
+  const aiGate = useConnectAiGate("extraction-again-ai");
+  return (
+    <>
+      <Button onClick={onReadAgain} reasonId={aiGate.reasonId}>
+        {t("extraction.readAgain")}
+      </Button>
+      {aiGate.notice}
+      {aiGate.notice === null && isAiNotConnected(error) && (
+        <p>
+          <ConnectAiFirst />
+        </p>
+      )}
+    </>
+  );
+}
+
 function ExtractionBody({
   extraction,
   canAccept,
@@ -339,6 +363,7 @@ function ExtractionBody({
   onAccept,
   onDismiss,
   onReadAgain,
+  readError,
   accepting,
   acceptFailed,
 }: Readonly<{
@@ -349,6 +374,7 @@ function ExtractionBody({
   onAccept: (fields: readonly ExtractedField[]) => void;
   onDismiss: () => void;
   onReadAgain: () => void;
+  readError: unknown;
   accepting: boolean;
   acceptFailed: boolean;
 }>) {
@@ -365,7 +391,7 @@ function ExtractionBody({
       return (
         <div className="staging-card">
           <p>{t("extraction.stalled")}</p>
-          <Button onClick={onReadAgain}>{t("extraction.readAgain")}</Button>
+          <ReadAgain onReadAgain={onReadAgain} error={readError} />
         </div>
       );
     }
@@ -381,7 +407,7 @@ function ExtractionBody({
         {extraction.status_detail && (
           <p className="t-caption">{extraction.status_detail}</p>
         )}
-        <Button onClick={onReadAgain}>{t("extraction.readAgain")}</Button>
+        <ReadAgain onReadAgain={onReadAgain} error={readError} />
       </div>
     );
   }

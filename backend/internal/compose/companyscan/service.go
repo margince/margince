@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
@@ -164,6 +165,12 @@ func (s *Service) Ensure(ctx context.Context, companyID ids.CompanyID, force boo
 		return s.wire(ctx, companyID, stored, true)
 	}
 	queued, err := s.queue(ctx, userID, companyID, language)
+	if errors.Is(err, httperr.ErrNotConfigured) && !force {
+		// Opening an account page asks for a scan on its own. With no model
+		// connected there is nothing to read, so it answers with what is
+		// stored; the queue transaction rolled back, leaving no row.
+		return s.wire(ctx, companyID, stored, false)
+	}
 	if err != nil {
 		return crmcontracts.CompanyScan{}, err
 	}

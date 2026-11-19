@@ -240,3 +240,21 @@ func TestExplainSendsAnUnimplementedCapabilityToTheApp(t *testing.T) {
 		t.Errorf("explain = %q, sends the agent to change arguments no change can fix", got)
 	}
 }
+
+// A refusal for want of an AI model is the installation's to fix. The agent
+// tells the user to connect one and does not change its arguments.
+func TestExplainSendsAMissingModelToTheSettings(t *testing.T) {
+	srv := NewDispatcher(nil, nil, "t", "0").
+		WithLogger(slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil)))
+
+	got := srv.explain("enrich", httperr.ErrNotConfigured)
+
+	for _, want := range []string{"ai_not_configured", "connect an AI model", "Do not retry"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("explain = %q, want it to say %q", got, want)
+		}
+	}
+	if strings.Contains(got, "Correct the arguments") {
+		t.Errorf("explain = %q, sends the agent to change arguments no change can fix", got)
+	}
+}

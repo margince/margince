@@ -123,7 +123,11 @@ describe("the line under a button whose AI work failed", () => {
     mount(
       <ModelWorkError
         error={
-          new ProblemError({ status: 422, code: "x", detail: "Too long." })
+          new ProblemError({
+            status: 422,
+            code: "validation_error",
+            detail: "Too long.",
+          })
         }
       />,
     );

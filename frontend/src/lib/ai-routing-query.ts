@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useQuery } from "@tanstack/react-query";
+import { type QueryClient, useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { invalidateProviderHealth } from "./ai-provider-health";
 import { throwProblem } from "./problem";
 
 // The stored routing document and the ETag it was read at. One read, shared by
@@ -95,4 +96,20 @@ export function providerUsage(
     add("decisions", routing.decisions);
   }
   return usage;
+}
+
+/**
+ * What every saved binding refreshes: the routing read itself and each read
+ * that answers "is a model connected", the setup checklist among them. A
+ * screen that saves a binding calls this and invalidates nothing of its own.
+ */
+export async function refreshAfterBindingSaved(
+  queryClient: QueryClient,
+  saved: RoutingRead,
+): Promise<void> {
+  queryClient.setQueryData(ROUTING_KEY, saved);
+  await queryClient.invalidateQueries({ queryKey: ["ai-status"] });
+  await queryClient.invalidateQueries({ queryKey: ["assistant-profile"] });
+  await queryClient.invalidateQueries({ queryKey: ["installation-setup"] });
+  await invalidateProviderHealth(queryClient);
 }
