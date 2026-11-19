@@ -44,6 +44,8 @@ const METRIC_VIEW: Readonly<Record<ReportingMetricID, ReportingView>> = {
   partner_activity: "partners",
   stage_conversion: "conversion",
   lead_cohort_outcomes: "leads",
+  account_progression: "leads",
+  source_quality: "leads",
   bookings_mix: "sales",
   qualified_opportunities_created: "sales",
   initiative_pipeline: "sales",
@@ -84,7 +86,13 @@ export const VIEW_SHAPE: Readonly<
   leads: {
     label: "reporting.leads",
     section: "leads",
-    blocks: ["breakdown", "target_progress", "lead_cohort"],
+    blocks: [
+      "breakdown",
+      "target_progress",
+      "lead_cohort",
+      "account_cohort",
+      "source_quality",
+    ],
     dealFilters: false,
     closeWindow: false,
   },

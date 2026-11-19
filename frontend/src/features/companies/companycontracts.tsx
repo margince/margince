@@ -35,6 +35,7 @@ import { CustomFieldsPanel } from "./customfields.card";
 // it works today only because the company record page pulls that stylesheet in
 // for its own sake, so this file renders unstyled anywhere else.
 import "./company360.css";
+import { CONTRACT_STATUS_LABEL } from "../../lib/contractstatus";
 import { labelFor } from "../../lib/labelfor";
 import { useViewerZone } from "../../lib/viewerzone";
 
@@ -47,14 +48,6 @@ import { useViewerZone } from "../../lib/viewerzone";
 
 type Contract = components["schemas"]["Contract"];
 type ContractStatus = NonNullable<Contract["status"]>;
-
-const STATUS_LABELS: Record<ContractStatus, MessageKey> = {
-  draft: "contracts.status.draft",
-  active: "contracts.status.active",
-  expired: "contracts.status.expired",
-  cancelled: "contracts.status.cancelled",
-  superseded: "contracts.status.superseded",
-};
 
 // Only two states change how a row should READ. A superseded agreement is
 // history; a cancelled one is a fact the reader needs to notice. The rest are
@@ -333,7 +326,7 @@ function ContractRow({
         </span>
         {contract.status && (
           <Badge tone={STATUS_TONE[contract.status]}>
-            {t(labelFor(STATUS_LABELS, contract.status))}
+            {t(labelFor(CONTRACT_STATUS_LABEL, contract.status))}
           </Badge>
         )}
         {(mayWrite || mayArchive || mayRenewThis) && (

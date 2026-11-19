@@ -138,7 +138,7 @@ func packetCompanyOf(p reviewPacket) map[ids.UUID]ids.UUID {
 // packetWire renders a stored pack for one reader. Without the deal's facts
 // the deal reads as its name: the review is about it, and the queue names it.
 func packetWire(
-	p reviewPacket, names packetNames, openable map[ids.UUID]DocumentName, sight reviewerSight,
+	p reviewPacket, names packetNames, opened recordSight, sight reviewerSight,
 ) crmcontracts.LegalReviewPacket {
 	out := crmcontracts.LegalReviewPacket{
 		Deal:      crmcontracts.LegalReviewPacketDeal{Id: openapiUUID(p.Deal.ID), Name: names.deal},
@@ -154,6 +154,7 @@ func packetWire(
 		for _, st := range p.History {
 			out.History = append(out.History, crmcontracts.LegalReviewPacketStage{StageName: st.StageName, EnteredAt: st.EnteredAt})
 		}
+		recordsWire(p, opened, &out)
 	}
 	if seen.money {
 		out.Deal.AmountMinor, out.Deal.Currency = p.Deal.AmountMinor, p.Deal.Currency
@@ -173,7 +174,7 @@ func packetWire(
 		out.Binding = &binding
 	}
 	for _, d := range p.Documents {
-		if doc, shown := documentWire(d, openable, seen.facts); shown {
+		if doc, shown := documentWire(d, opened.documents, seen.facts); shown {
 			out.Documents = append(out.Documents, doc)
 		}
 	}
