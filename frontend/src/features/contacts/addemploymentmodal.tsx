@@ -181,7 +181,16 @@ export function AddEmploymentModal({
         </Field>
         <EmploymentStatusFields
           status={status}
-          onStatusChange={setStatus}
+          onStatusChange={(next) => {
+            setStatus(next);
+            // A company listed for a current role is not offered for another.
+            if (
+              next === "current" &&
+              excludedCompanyIds.includes(company?.id ?? "")
+            ) {
+              setCompany(null);
+            }
+          }}
           end={end}
           onEndChange={setEnd}
           disabled={create.isPending}

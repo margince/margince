@@ -1,7 +1,7 @@
 /** @vitest-environment happy-dom */
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, expect, it } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
 import { view } from "../../testing/contactpage.testkit";
 import {
@@ -12,14 +12,19 @@ import {
 } from "../../testing/story-utils";
 import { Employers } from "./contactemployers";
 
-afterEach(cleanup);
+// The picker debounces its search on a timer, so the clock is the test's.
+beforeEach(() => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+  cleanup();
+});
 
 const page = { has_more: false, next_cursor: null };
 
-// A contact who works at Employer GmbH now: a current role there is not
-// offered twice, and a past role there is.
-it("offers a company already on the list for a former role only", async () => {
-  const user = userEvent.setup();
+function openAddCompany() {
   installFetchStub({
     "GET /me": meRoute({ contact: ["read", "update"] }, { seat: "full" }),
     "GET /companies": () =>
@@ -53,16 +58,50 @@ it("offers a company already on the list for a former role only", async () => {
       />
     </StoryProviders>,
   );
+  return userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+}
+
+async function chooseStatus(
+  user: ReturnType<typeof openAddCompany>,
+  name: string,
+) {
+  await user.click(screen.getByRole("combobox", { name: "Employment status" }));
+  await user.click(screen.getByRole("option", { name }));
+}
+
+// A contact who works at Employer GmbH now: a current role there is not
+// offered twice, and a past role there is.
+it("offers a company already on the list for a former role only", async () => {
+  const user = openAddCompany();
   await user.click(await screen.findByRole("button", { name: "Add company" }));
   await user.type(screen.getByRole("searchbox"), "emp");
   expect(
     await screen.findByText(en["contact.rail.allCompaniesConnected"]),
   ).toBeTruthy();
-  await user.click(screen.getByRole("combobox", { name: "Employment status" }));
-  await user.click(screen.getByRole("option", { name: "Former" }));
+  await chooseStatus(user, "Former");
   const dialog = screen.getByRole("dialog");
   expect(await within(dialog).findByText("Employer GmbH")).toBeTruthy();
   expect(
     within(dialog).queryByText(en["contact.rail.allCompaniesConnected"]),
   ).toBeNull();
+});
+
+it("lets go of that company when the role turns current again", async () => {
+  const user = openAddCompany();
+  await user.click(await screen.findByRole("button", { name: "Add company" }));
+  await chooseStatus(user, "Former");
+  await user.type(screen.getByRole("searchbox"), "emp");
+  const dialog = screen.getByRole("dialog");
+  await user.click(await within(dialog).findByText("Employer GmbH"));
+  expect(
+    within(dialog)
+      .getByRole("button", { name: "Create" })
+      .hasAttribute("disabled"),
+  ).toBe(false);
+  await chooseStatus(user, "Current");
+  expect(
+    within(dialog)
+      .getByRole("button", { name: "Create" })
+      .hasAttribute("disabled"),
+  ).toBe(true);
 });
