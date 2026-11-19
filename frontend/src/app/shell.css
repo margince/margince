@@ -1220,6 +1220,7 @@
 }
 /* With an action beside it, the inset moves to the pair so both share one line. */
 .eyebrow-head:has(> .palette-group) {
+  /* ds:ignore the heading's own inset, moved up to the pair so its action shares the line */
   padding: var(--space-3) var(--space-2) var(--space-1);
   align-items: baseline;
 }
