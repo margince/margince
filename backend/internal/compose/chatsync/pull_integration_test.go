@@ -638,12 +638,7 @@ func (e *pullEnv) previous(t *testing.T, before time.Time) string {
 	var got string
 	err := database.WithWorkspaceTx(principal.WithWorkspaceID(context.Background(), e.ws), e.pool, func(tx pgx.Tx) error {
 		var err error
-		ctx := principal.WithWorkspaceID(context.Background(), e.ws)
-		readers, err := noteReaders(ctx, tx, link)
-		if err != nil {
-			return err
-		}
-		got, err = previousNote(ctx, tx, link, before, readers)
+		got, err = previousNote(context.Background(), tx, link, before)
 		return err
 	})
 	if err != nil {
@@ -654,7 +649,6 @@ func (e *pullEnv) previous(t *testing.T, before time.Time) string {
 
 func TestThePreviousNoteIsChosenByWhenItsTalkEndedThenByChannelSequence(t *testing.T) {
 	e := setupPull(t)
-	e.seedRoles(t, map[ids.UUID]string{e.rep: "management"})
 	at := func(minutes int) time.Time { return linkedAt.Add(time.Duration(minutes) * time.Minute) }
 	// A thread chosen later, rooted before the episode, whose replies run past it.
 	e.note(t, "acme:5:thread", "overlapping thread", at(10), at(300))

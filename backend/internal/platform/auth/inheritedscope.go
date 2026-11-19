@@ -66,6 +66,16 @@ func chatSummaryArm(p principal.Principal, alias string, arg func(any) int) stri
 		alias, provenance.ChatSummarySource, linkTargetVisible(p, "chat_link", arg, granted))
 }
 
+// ActivityChatSummaryArm is chatSummaryArm for the caller, for a reader that
+// composes the audience arm without the discover gate, such as the audit trail.
+func ActivityChatSummaryArm(ctx context.Context, alias string, arg func(any) int) (string, error) {
+	p, err := rbacActor(ctx)
+	if err != nil {
+		return "", err
+	}
+	return chatSummaryArm(p, alias, arg), nil
+}
+
 func linkedReach(p principal.Principal, alias string, arg func(any) int, taskArm clauseBuilder) string {
 	access := internalMailAccessClause(p, alias, arg)
 	if UnboundedFor(p, linkTargetTables...) {
