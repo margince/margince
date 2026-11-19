@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
@@ -62,9 +62,8 @@ export const NameTaken: Story = {
       "Churn Risk",
     );
     await userEvent.click(page.getByRole("button", { name: "Add" }));
-    await expect(
-      await page.findByText("A tag with this name already exists."),
-    ).toBeVisible();
+    const taken = await page.findByText("A tag with this name already exists.");
+    await waitFor(() => expect(taken).toBeVisible());
   },
 };
 
@@ -74,6 +73,7 @@ export const NameRequired: Story = {
   play: async ({ canvasElement }) => {
     const page = within(canvasElement.ownerDocument.body);
     await userEvent.click(await page.findByRole("button", { name: "Add" }));
-    await expect(await page.findByText("Name is required.")).toBeVisible();
+    const required = await page.findByText("Name is required.");
+    await waitFor(() => expect(required).toBeVisible());
   },
 };
