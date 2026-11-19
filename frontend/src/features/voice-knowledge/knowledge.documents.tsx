@@ -33,15 +33,16 @@ import {
 } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { postMultipart } from "../../lib/multipart";
-import {
-  problemCodeOf,
-  problemMessageOf,
-  throwProblem,
-  unwrap,
-} from "../../lib/problem";
+import { throwProblem, unwrap } from "../../lib/problem";
 import { useInstallationSettings, usePickRefusal } from "../../lib/uploadlimit";
 import { useViewerZone } from "../../lib/viewerzone";
-import { type UploadRefusal, UploadRefusals } from "./knowledge.notices";
+import {
+  DELETE_SHIPPED,
+  shippedRefusal,
+  UPLOAD_SHIPPED,
+  type UploadRefusal,
+  UploadRefusals,
+} from "./knowledge.notices";
 
 type CorpusDocument = components["schemas"]["KnowledgeDocument"];
 type EmbedState = components["schemas"]["KnowledgeEmbedState"];
@@ -402,24 +403,6 @@ export function DocumentList({
     </>
   );
 }
-
-// A write to what ships with Margince is refused in catalog copy, by code. The
-// list read can predate the shipped flag the press meets.
-export function shippedRefusal(
-  error: unknown,
-  t: Translator,
-  copy: ReadonlyMap<string, MessageKey>,
-): string {
-  const key = copy.get(problemCodeOf(error) ?? "");
-  return key ? t(key) : problemMessageOf(error, t);
-}
-
-const DELETE_SHIPPED = new Map<string, MessageKey>([
-  ["document_shipped", "knowledge.deleteShipped"],
-]);
-const UPLOAD_SHIPPED = new Map<string, MessageKey>([
-  ["corpus_shipped", "knowledge.uploadShipped"],
-]);
 
 // Two distinct files agreeing on all three are the same bytes for every
 // purpose here, and the server would refuse both identically.
