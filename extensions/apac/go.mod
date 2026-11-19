@@ -1,4 +1,4 @@
-module github.com/margince/margince/extensions/vn
+module github.com/margince/margince/extensions/apac
 
 go 1.27.4
 

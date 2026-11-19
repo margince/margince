@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package vn
+package apac
 
 import (
 	"reflect"
@@ -13,30 +13,22 @@ import (
 	"github.com/margince/margince/backend/pkg/extension/subjectrights"
 )
 
-// TestNewDeclaresTheJurisdictionAndNoRetentionClass pins the two structural
-// facts: this pack is Vietnam, and it declares no retention floor. The absent
-// class is deliberate content, so an added one must be an argued change rather
-// than a copy of the German pack in extensions/eu.
-func TestNewDeclaresTheJurisdictionAndNoRetentionClass(t *testing.T) {
-	e := New()
-	if e.Name != "vn" {
-		t.Fatalf("Name = %q, want the unit's directory name vn", e.Name)
+// vietnam is the compiled Vietnamese rule set.
+func vietnam(t *testing.T) messaging.Rules {
+	t.Helper()
+	for _, r := range messagingRules() {
+		if r.Jurisdiction == "vn" {
+			return r
+		}
 	}
-	if len(e.Jurisdictions) != 1 {
-		t.Fatalf("declaration carries %d jurisdiction packs, want 1", len(e.Jurisdictions))
-	}
-	if got := e.Jurisdictions[0].Code(); got != "vn" {
-		t.Fatalf("pack code = %q, want vn", got)
-	}
-	if classes := e.Jurisdictions[0].Retention().Classes(); len(classes) != 0 {
-		t.Fatalf("pack declares %d retention classes, want none — a CRM holds no record the Vietnamese floors bind", len(classes))
-	}
+	t.Fatal("the unit compiles no Vietnamese rule set; policy/vn/ is gone")
+	return messaging.Rules{}
 }
 
 // TestTheRulesAreValid runs the same check the boot preflight runs, so a rule
 // set this pack could not be composed with fails here rather than at startup.
 func TestTheRulesAreValid(t *testing.T) {
-	if err := messagingRules().Validate(); err != nil {
+	if err := vietnam(t).Validate(); err != nil {
 		t.Fatalf("the declared rules do not validate: %v", err)
 	}
 }
@@ -47,7 +39,7 @@ func TestTheRulesAreValid(t *testing.T) {
 // German existing-customer evidence, which the core fold could otherwise carry
 // across — authorize a Vietnamese advertising message.
 func TestAdvertisingNeedsPriorConsent(t *testing.T) {
-	if got := messagingRules().MarketingExceptions; len(got) != 0 {
+	if got := vietnam(t).MarketingExceptions; len(got) != 0 {
 		t.Fatalf("the pack declares %d marketing exceptions, want none — prior consent is the only route", len(got))
 	}
 }
@@ -56,14 +48,14 @@ func TestAdvertisingNeedsPriorConsent(t *testing.T) {
 // is legal content: a changed label stops the message being labelled as the
 // decree requires, and nothing else in the tree would notice.
 func TestTheAdvertisingLabelIsTheDecreesOwn(t *testing.T) {
-	if got := messagingRules().SubjectPrefix; got != "[QC]" {
+	if got := vietnam(t).SubjectPrefix; got != "[QC]" {
 		t.Fatalf("SubjectPrefix = %q, want the Art. 18 advertising label [QC]", got)
 	}
 }
 
 // TestTheDailyCeilingIsThreePerAddress pins Art. 13.5.
 func TestTheDailyCeilingIsThreePerAddress(t *testing.T) {
-	ceiling := messagingRules().FrequencyCap
+	ceiling := vietnam(t).FrequencyCap
 	if ceiling == nil {
 		t.Fatal("the pack declares no frequency cap, want three advertising messages per 24 hours")
 	}
@@ -77,16 +69,16 @@ func TestTheDailyCeilingIsThreePerAddress(t *testing.T) {
 
 // TestAnOptOutIsAcknowledged pins Art. 20.
 func TestAnOptOutIsAcknowledged(t *testing.T) {
-	if !messagingRules().OptOutAcknowledgement {
+	if !vietnam(t).OptOutAcknowledgement {
 		t.Fatal("the pack owes no opt-out acknowledgement, want one — Art. 20 requires a receipt at once")
 	}
-	if within := messagingRules().OptOutAcknowledgementWithin; within != time.Hour {
+	if within := vietnam(t).OptOutAcknowledgementWithin; within != time.Hour {
 		t.Errorf("an unsent receipt raises its alarm after %s, want 1h: Art. 20.3 owes it at once", within)
 	}
-	if keep := messagingRules().OptOutRecordsKeep; keep < 366*24*time.Hour {
+	if keep := vietnam(t).OptOutRecordsKeep; keep < 366*24*time.Hour {
 		t.Errorf("opt-out records are kept %s, want at least a year in every year: Art. 11.7", keep)
 	}
-	if offset := messagingRules().OptOutAcknowledgementUTCOffset; offset != 7*time.Hour {
+	if offset := vietnam(t).OptOutAcknowledgementUTCOffset; offset != 7*time.Hour {
 		t.Errorf("the receipt prints its times at UTC%+v, want UTC+7: Art. 20.4(a) times are read in Vietnam", offset)
 	}
 }
@@ -102,7 +94,7 @@ func TestAnAdvertisingMessageNamesItsAdvertiser(t *testing.T) {
 		messaging.AdvertiserContact:  true,
 	}
 	got := map[messaging.DisclosureKind]bool{}
-	for _, d := range messagingRules().Disclosures {
+	for _, d := range vietnam(t).Disclosures {
 		if _, seen := got[d.Kind]; seen {
 			t.Fatalf("disclosure %q declared twice", string(d.Kind))
 		}
@@ -140,7 +132,7 @@ func TestThePackStatesTheInstrumentsItsRulesRestOn(t *testing.T) {
 		"Decree 356/2025/ND-CP": time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
 	}
 	got := map[string]time.Time{}
-	for _, in := range messagingRules().Instruments {
+	for _, in := range vietnam(t).Instruments {
 		if _, seen := got[in.Name]; seen {
 			t.Fatalf("instrument %q declared twice", in.Name)
 		}
@@ -167,14 +159,14 @@ func TestThePackStatesTheInstrumentsItsRulesRestOn(t *testing.T) {
 // TestTheVersionMovedWithTheInstruments. The number exists to tell two records
 // apart, so it is meaningless if it stays put when the law it names changes.
 func TestTheVersionMovedWithTheInstruments(t *testing.T) {
-	if got := messagingRules().Version; got != 5 {
+	if got := vietnam(t).Version; got != 5 {
 		t.Errorf("ruleset version = %d, want 5 — the refusal means, the refusal "+
 			"section and the claims needing proof changed what a decision was judged under", got)
 	}
 }
 
 func TestDataProtectionFollowsAVietnameseRecipient(t *testing.T) {
-	rules := messagingRules()
+	rules := vietnam(t)
 	if !rules.DataProtectionFollowsRecipient {
 		t.Error("the pack does not follow the recipient; Law 91/2025 Art. 1.2(c) reaches a foreign controller")
 	}
@@ -187,7 +179,7 @@ func TestDataProtectionFollowsAVietnameseRecipient(t *testing.T) {
 }
 
 func TestRequestsAreCarriedOutWithinTheDecreesDays(t *testing.T) {
-	rules := subjectRights()
+	rules := vietnameseSubjectRights()
 	if err := rules.Validate(); err != nil {
 		t.Fatalf("the declared deadlines do not validate: %v", err)
 	}
@@ -211,7 +203,7 @@ func TestRequestsAreCarriedOutWithinTheDecreesDays(t *testing.T) {
 
 // TestRefusalIsPossibleByWebEmailAndPhone pins Decree 91/2020/ND-CP Art. 20.2.
 func TestRefusalIsPossibleByWebEmailAndPhone(t *testing.T) {
-	for _, d := range messagingRules().Disclosures {
+	for _, d := range vietnam(t).Disclosures {
 		if d.Kind != messaging.ObjectionRoute {
 			continue
 		}
@@ -227,7 +219,7 @@ func TestRefusalIsPossibleByWebEmailAndPhone(t *testing.T) {
 // TestAdvertisingIsVietnameseFirstAndEndsWithTheRefusal pins the Law on
 // Advertising Art. 18 and Decree 91/2020/ND-CP Art. 19 and 20.1.
 func TestAdvertisingIsVietnameseFirstAndEndsWithTheRefusal(t *testing.T) {
-	r := messagingRules()
+	r := vietnam(t)
 	if r.DisclosureLanguage != "vi" {
 		t.Errorf("disclosure language = %q, want vi: advertising leads with it", r.DisclosureLanguage)
 	}
@@ -243,7 +235,7 @@ func TestSuperlativesNeedAProof(t *testing.T) {
 		"nhất", "duy nhất", "tốt nhất", "số một", "số 1", "hàng đầu",
 		"best", "no. 1", "number one", "leading", "the only", "unique",
 	}
-	if got := messagingRules().ClaimsNeedProof; !slices.Equal(got, want) {
+	if got := vietnam(t).ClaimsNeedProof; !slices.Equal(got, want) {
 		t.Errorf("the claims that need a proof are %q, want %q", got, want)
 	}
 }
@@ -251,7 +243,7 @@ func TestSuperlativesNeedAProof(t *testing.T) {
 // TestAForeignAdvertiserIsToldToUseAVietnameseAgency pins Law on Advertising
 // Art. 39.2.
 func TestAForeignAdvertiserIsToldToUseAVietnameseAgency(t *testing.T) {
-	if !messagingRules().ForeignAdvertiserNeedsLocalAgency {
+	if !vietnam(t).ForeignAdvertiserNeedsLocalAgency {
 		t.Error("an advertiser outside Vietnam is not told to advertise through a Vietnamese agency")
 	}
 }
@@ -260,7 +252,7 @@ func TestAForeignAdvertiserIsToldToUseAVietnameseAgency(t *testing.T) {
 // Art. 11.2, which governs advertising by mail and by phone: a consent request
 // for correspondence needs no request of the contact's own.
 func TestOnlyAdvertisingConsentNeedsTheRequestFirst(t *testing.T) {
-	r := messagingRules()
+	r := vietnam(t)
 	want := []messaging.PurposeClass{messaging.PurposeClassMarketing, messaging.PurposeClassPhoneOutreach}
 	if !r.ConsentConfirmationNeedsRequest || !slices.Equal(r.ConsentRequestFirstFor, want) {
 		t.Errorf("the request rule covers %v, want the advertising classes %v", r.ConsentRequestFirstFor, want)
@@ -307,7 +299,7 @@ func TestTheCompiledRulesAreTheV5Rules(t *testing.T) {
 		ConsentConfirmationNeedsRequest:   true,
 		ConsentRequestFirstFor:            messaging.AdvertisingPurposeClasses(),
 	}
-	got := messagingRules()
+	got := vietnam(t)
 	got.Provenance, got.Digest = messaging.Provenance{}, ""
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("the compiled rules differ from the v5 rules:\n got %+v\nwant %+v", got, want)

@@ -51,29 +51,29 @@ consent-confirmation-needs-request: true
 consent-request-first-for: [marketing, phone_outreach]
 fixtures:
   - finding: claim_without_proof
-    triggers: fixtures/claim-without-proof.md
-    clears: fixtures/claim-with-proof.md
+    triggers: vn/fixtures/claim-without-proof.md
+    clears: vn/fixtures/claim-with-proof.md
   - finding: claim_without_proof
-    triggers: fixtures/number-one-without-proof.md
-    clears: fixtures/number-one-with-proof.md
+    triggers: vn/fixtures/number-one-without-proof.md
+    clears: vn/fixtures/number-one-with-proof.md
   - finding: advertising_language_first
-    triggers: fixtures/english-first.md
-    clears: fixtures/claim-with-proof.md
+    triggers: vn/fixtures/english-first.md
+    clears: vn/fixtures/claim-with-proof.md
   - finding: foreign_advertiser
-    triggers: fixtures/sent-from-abroad.md
-    clears: fixtures/claim-with-proof.md
+    triggers: vn/fixtures/sent-from-abroad.md
+    clears: vn/fixtures/claim-with-proof.md
   - finding: subject_prefix
-    triggers: fixtures/unlabelled-subject.md
-    clears: fixtures/claim-with-proof.md
+    triggers: vn/fixtures/unlabelled-subject.md
+    clears: vn/fixtures/claim-with-proof.md
   - finding: objection_route
-    triggers: fixtures/refusal-without-phone.md
-    clears: fixtures/claim-with-proof.md
+    triggers: vn/fixtures/refusal-without-phone.md
+    clears: vn/fixtures/claim-with-proof.md
   - finding: advertiser_contact
-    triggers: fixtures/no-advertiser-contact.md
-    clears: fixtures/claim-with-proof.md
+    triggers: vn/fixtures/no-advertiser-contact.md
+    clears: vn/fixtures/claim-with-proof.md
   - finding: privacy_contact
-    triggers: fixtures/invoice-from-abroad-without-privacy-contact.md
-    clears: fixtures/invoice-from-abroad.md
+    triggers: vn/fixtures/invoice-from-abroad-without-privacy-contact.md
+    clears: vn/fixtures/invoice-from-abroad.md
 ---
 
 # What Vietnamese law requires of an outbound message

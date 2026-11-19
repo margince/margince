@@ -36,7 +36,7 @@ const UNSET: Jurisdiction = {
     },
     {
       code: "vn",
-      unit_name: "vn",
+      unit_name: "apac",
       unit_version: "1.0.0",
       description: "Vietnamese pack",
     },

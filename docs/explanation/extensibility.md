@@ -10,7 +10,7 @@ tree, with no add-ons of its own, ships three units:
 | Unit | What it is |
 |---|---|
 | `extensions/eu` | The packs of the 27 EU member states: each one's outbound messaging rules on a shared EU layer, and the German legal floors on retention |
-| `extensions/vn` | The Vietnamese jurisdiction pack: the advertising-mail rules, and no retention floor |
+| `extensions/apac` | The Asia-Pacific packs, Vietnam's for now: the advertising-mail rules, the request deadlines, and no retention floor |
 | `extensions/openchannel` | The reference unit. It uses every capability the tier has: its own tables, governed agent tools, an inbound edge with no sign-in that checks a signature, a job that empties a queue, a subscription, ingress with a merge key, a transport it carries replies out on, and its own screen |
 
 Read this page for the whole tier. To *build* a unit, go to [how-to/add-an-extension.md](../how-to/add-an-extension.md).

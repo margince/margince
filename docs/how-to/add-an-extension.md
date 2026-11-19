@@ -17,8 +17,8 @@ the allow mark.
 [Build a custom Margince](build-a-custom-margince.md) says how to mark an example for development and tests.
 
 `extensions/openchannel` is the **reference unit**. It owns data and serves routes. It works with an outside provider through capture, a merge
-key declaration and a transport that replies leave on, and it ships a screen. Copy it first. `extensions/vn`
-(a country pack) and `fixtures/extensions/crm-hello` (the smallest unit that runs) are the smaller shapes.
+key declaration and a transport that replies leave on, and it ships a screen. Copy it first. `extensions/apac`
+(country packs) and `fixtures/extensions/crm-hello` (the smallest unit that runs) are the smaller shapes.
 
 A unit can ship a frontend too. `extensions/<name>/frontend/` is a pnpm package whose
 default export the web app mounts at `#/ext/<name>`. A unit that ships no screen still gets a route and a

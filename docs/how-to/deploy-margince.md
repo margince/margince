@@ -162,8 +162,8 @@ admin seat. A deployed installation leaves it off.
 ### Choose the country
 
 `workspace.country` names the country whose legal rules the installation follows, as a two-letter
-code in small letters (`de`, `vn`). The build must carry a pack for it: `extensions/eu` (the 27 EU
-member states) and `extensions/vn` ship in this repo. The api and the worker both refuse to boot on a code with no
+code in small letters (`de`, `vn`). The build must carry a pack for it: `extensions/eu` holds the 27 EU
+member states, and `extensions/apac` holds `vn`. The api and the worker both refuse to boot on a code with no
 pack, and the log names the codes the build carries.
 
 The country sets three things:

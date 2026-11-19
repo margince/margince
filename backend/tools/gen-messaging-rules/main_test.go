@@ -17,7 +17,7 @@ func TestTheCommittedRulesMatchTheirPolicies(t *testing.T) {
 		t.Fatal(err)
 	}
 	if len(units) < 2 {
-		t.Fatalf("found %d units with a policy, want the EU and Vietnamese packs at least: %v", len(units), units)
+		t.Fatalf("found %d units with a policy, want the EU and Asia-Pacific units at least: %v", len(units), units)
 	}
 	if err := run(repoRoot, "", true); err != nil {
 		t.Fatal(err)
@@ -35,9 +35,9 @@ func unit(t *testing.T, name string) string {
 }
 
 func TestCheckFailsAStaleGeneratedFile(t *testing.T) {
-	dir := unit(t, "vn")
+	dir := unit(t, "apac")
 	target := filepath.Join(dir, "messagingrules_gen.go")
-	if err := os.WriteFile(target, []byte("package vn\n"), 0o600); err != nil {
+	if err := os.WriteFile(target, []byte("package apac\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	if err := run("", dir, true); err == nil {
@@ -56,7 +56,7 @@ func TestCheckFailsAStaleGeneratedFile(t *testing.T) {
 func rootWith(t *testing.T, name string) (root, unit string) {
 	t.Helper()
 	root = t.TempDir()
-	for _, name := range []string{"eu", "vn"} {
+	for _, name := range []string{"eu", "apac"} {
 		if err := os.CopyFS(filepath.Join(root, "extensions", name), os.DirFS(filepath.Join(repoRoot, "extensions", name))); err != nil {
 			t.Fatal(err)
 		}
@@ -71,10 +71,9 @@ func TestCheckFailsWhenAPackLosesPartOfItsPolicy(t *testing.T) {
 	for name, remove := range map[string][]string{
 		"the policy folder":                        {"policy"},
 		"the generated file and the policy folder": {"messagingrules_gen.go", "policy"},
-		"the index":            {"policy/index.md"},
-		"the go:generate file": {"gen.go"},
+		"the go:generate file":                     {"gen.go"},
 	} {
-		root, unit := rootWith(t, "vn")
+		root, unit := rootWith(t, "apac")
 		for _, path := range remove {
 			if err := os.RemoveAll(filepath.Join(unit, path)); err != nil {
 				t.Fatal(err)

@@ -28,7 +28,7 @@ const AVAILABLE: Jurisdiction["available"] = [
   },
   {
     code: "vn",
-    unit_name: "vn",
+    unit_name: "apac",
     unit_version: "1.0.0",
     description: "Vietnamese jurisdiction pack: the advertising-email rules.",
   },
