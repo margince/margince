@@ -117,8 +117,12 @@ export function DealHistoryTab({
               currency={deal.currency}
               restore={{
                 version: deal.version,
+                // A restored change may be a stage move, so the ladder's
+                // stage reads are refetched with the record's.
                 onRestored: () =>
-                  invalidateRecord(queryClient, "deal", deal.id),
+                  invalidateRecord(queryClient, "deal", deal.id, {
+                    stageMove: true,
+                  }),
               }}
             />
           ) : (

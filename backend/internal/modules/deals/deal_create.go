@@ -158,6 +158,9 @@ func (s *Store) readyDealCreate(ctx context.Context, in CreateDealInput) (bornDe
 	if err != nil {
 		return bornDeal{}, err
 	}
+	if err := dealNameWithin(in.Name); err != nil {
+		return bornDeal{}, err
+	}
 	// The money pair holds from birth (data-model §6): a deal with an
 	// amount and no currency would silently skip the FX freeze at close
 	// and trip the deal_closed_fx CHECK far from the cause. moneyPairError is

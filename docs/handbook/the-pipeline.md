@@ -81,7 +81,7 @@ Give it a **Name** and choose **Default** or **Not default**. It starts with a W
 New deals need a default pipeline. To stop using a pipeline, choose **Retire**. It leaves the pickers and the forms for new deals, its deals keep their stage and history, and **Restore** brings it back. You cannot retire the default pipeline until another one is the default. Margince does not delete pipelines. Also called: second sales process, separate pipeline.
 
 ### How is the weighted pipeline value calculated?
-The weighted value of a deal in Margince is its value times its stage's **Win probability**, rounded for each deal. A column's or report's weighted total is the sum of those rounded numbers.
+The weighted value of a deal in Margince is its value times its **Probability**, rounded for each deal. A deal's probability is its stage's **Win probability** until the deal has its own. With **Let the forecast correct itself** on, a stage's probability is the one the forecast learned instead. A risk the forecast has learned from can then move one deal's probability ([How the forecast learns](forecast-learning.md)). A column's or report's weighted total is the sum of those rounded numbers. So a column's total can differ from its stage's **Win probability** times its open value.
 
 So a 10,000 EUR deal on a stage at 50 counts as 5,000. A Won stage counts at 100 and a Lost stage at 0. Because each deal is rounded before the sum, **Explain this number** always adds up to the total. The Analytics reports turn all money into your base currency first. Also called: weighted forecast, probability-weighted pipeline, expected value.
 
@@ -245,8 +245,8 @@ move when rates change.
 
 Reopening a closed deal is how a won or lost deal goes back into the pipeline.
 On a closed deal the stage ladder does nothing, and every stage is grey.
-**Reopen** sits in the header's **More actions** menu, which only appears on a
-won or lost deal. It asks which open stage to go back to. On the way it **clears
+**Reopen** sits in the header's **More actions** menu, and only on a won or
+lost deal. It asks which open stage to go back to. On the way it **clears
 the close date and the exchange rate fixed at close**, and the dialog does not
 tell you.
 

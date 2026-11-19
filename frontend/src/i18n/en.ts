@@ -2523,7 +2523,7 @@ export const en = {
   "history.verb.erase": "{subject} erased the record",
   "history.verb.anonymize": "{subject} anonymized the record",
   "history.verb.assign": "{subject} assigned the record",
-  "history.verb.advanceStage": "{subject} advanced the stage of the record",
+  "history.verb.advanceStage": "{subject} moved the record to another stage",
   "history.verb.advancePhase": "{subject} advanced the phase of the record",
   "history.verb.sendEmail": "{subject} sent an email for the record",
   "history.verb.consentGrant": "{subject} granted consent for the record",
