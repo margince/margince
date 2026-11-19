@@ -69,8 +69,7 @@ func TestNewDeclaresTheGoBDFloors(t *testing.T) {
 // This asserts the DECLARATION and no more, deliberately: a pack states rules
 // and the core evaluates them, and this unit cannot reach the evaluator — it is
 // unexported in internal/modules/consent, and backend cannot import this module
-// back without a cycle. The engine does not offer the exception today: consent's
-// verdict refuses it outright, whatever conditions a pack declares.
+// back without a cycle. The consent integration tests run the route itself.
 func TestTheExistingCustomerExceptionCarriesAllFourConditions(t *testing.T) {
 	rules := germanRules(t)
 	if len(rules.MarketingExceptions) != 1 {

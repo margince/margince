@@ -50,9 +50,10 @@ that no stored record falls under would hold nothing.
 
 ### Advertising without consent: the §7(3) exception for a current customer
 
-**Margince does not offer this exception.** The pack declares it with all four of its statutory
-conditions, and the engine refuses it. Nothing on a message names the goods it advertises, so the
-similarity condition cannot be checked.
+The pack declares the exception with all four of its statutory conditions. The engine checks each
+one before a send, in `backend/internal/modules/consent/existingcustomerroute.go`. The mail must go
+to an address that was on the buyer's record before the sale. An address added later gets no
+exception.
 
 | Condition | What §7(3) requires |
 |---|---|
