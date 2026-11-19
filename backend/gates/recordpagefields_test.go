@@ -211,15 +211,13 @@ func pageKeyAliases(src string, vocab map[string][]string) map[string]string {
 	return keys
 }
 
-// keyedComponents names the components and hooks whose props declare `field`
-// as a key type, directly or through an alias built from such props (a Pick).
+// keyedComponents names the components and hooks whose parameter type declares
+// `field` as a key type, inline or through props, or an alias built from them.
 func pageKeyedComponents(src string, keyTypes map[string]string) map[string]string {
 	props := map[string]string{}
 	for _, m := range pagePropsDecl.FindAllStringSubmatch(src, -1) {
-		for alias, schema := range keyTypes {
-			if regexp.MustCompile(`\bfield\??:\s*` + alias + `\b`).MatchString(m[2]) {
-				props[m[1]] = schema
-			}
+		if schema := pageDeclaredKey(m[2], keyTypes); schema != "" {
+			props[m[1]] = schema
 		}
 	}
 	var aliases [][2]string
@@ -248,6 +246,9 @@ func pageKeyedComponents(src string, keyTypes map[string]string) map[string]stri
 		if m[4] >= 0 {
 			name = m[4:6]
 		}
+		if schema := pageDeclaredKey(src[open:end], keyTypes); schema != "" {
+			out[src[name[0]:name[1]]] = schema
+		}
 		for prop, schema := range props {
 			if regexp.MustCompile(`\b` + prop + `\b`).MatchString(src[open:end]) {
 				out[src[name[0]:name[1]]] = schema
@@ -255,6 +256,17 @@ func pageKeyedComponents(src string, keyTypes map[string]string) map[string]stri
 		}
 	}
 	return out
+}
+
+// pageDeclaredKey answers the schema of the key type a type body declares
+// `field` as, or "" when it declares none.
+func pageDeclaredKey(body string, keyTypes map[string]string) string {
+	for alias, schema := range keyTypes {
+		if regexp.MustCompile(`\bfield\??:\s*` + alias + `\b`).MatchString(body) {
+			return schema
+		}
+	}
+	return ""
 }
 
 type pageTypedKey struct{ schema, key string }
@@ -524,6 +536,9 @@ type RowProps = Readonly<{
 	}{
 		{"a field prop on a keyed component", `export function Row(props: RowProps) { return props.label; }
 const vat = <Row label="VAT" field="register_vat" />;
+`, []string{"register_vat"}},
+		{"a field prop on a component that declares the key inline", `export function Mark({ field }: Readonly<{ label: string; field: Key }>) { return field; }
+const vat = <Mark label="VAT" field="register_vat" />;
 `, []string{"register_vat"}},
 		{"a field key in a keyed hook's argument", `export function useRow(target: RowProps) { return target; }
 const vat = useRow({ label: "VAT", field: "register_vat" });
