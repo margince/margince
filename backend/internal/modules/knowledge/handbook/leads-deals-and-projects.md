@@ -24,7 +24,7 @@ Also called: add a prospect, new lead.
 ### What if someone is already a contact?
 Someone is either a lead or a contact, never both. Open a deal when an existing contact has a new opportunity.
 
-When a new lead carries an email or LinkedIn profile already held by a contact, Margince creates no lead. When you enter it by hand, the form refuses it and offers **View existing record**, which opens the contact. The form says "A contact already has this email address or LinkedIn profile." An automatic request is filed on the contact. Its owner gets a task to review it.
+When a new lead carries an email or LinkedIn profile already held by a contact, Margince creates no lead. When you enter it by hand, the form refuses it and offers **View existing record**, which opens the contact. The form says "A contact already has this email address or LinkedIn profile." If someone else owns the contact, that owner gets a task on it to review what arrived. A contact with no owner, or one you own, gets none.
 ### The ladder
 
 A lead has five statuses. The first three are open, the last two are final.
