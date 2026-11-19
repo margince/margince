@@ -24,7 +24,7 @@ afterEach(() => {
 
 const page = { has_more: false, next_cursor: null };
 
-function openAddCompany() {
+function openAddCompany(endedAt: string | null = null) {
   installFetchStub({
     "GET /me": meRoute({ contact: ["read", "update"] }, { seat: "full" }),
     "GET /companies": () =>
@@ -47,9 +47,9 @@ function openAddCompany() {
                 relationship_id: "rel-9",
                 company_id: "o-9",
                 company_name: "Employer GmbH",
-                is_current_primary: true,
+                is_current_primary: endedAt === null,
                 started_at: "2022-03-01T00:00:00Z",
-                ended_at: null,
+                ended_at: endedAt,
               },
             ],
             page,
@@ -104,4 +104,17 @@ it("lets go of that company when the role turns current again", async () => {
       .getByRole("button", { name: "Create" })
       .hasAttribute("disabled"),
   ).toBe(true);
+});
+
+// A role there that has ended does not keep the company off a current role:
+// a contact can go back to a former employer.
+it("offers a former employer for a new current role", async () => {
+  const user = openAddCompany("2024-06-30T00:00:00Z");
+  await user.click(await screen.findByRole("button", { name: "Add company" }));
+  await user.type(screen.getByRole("searchbox"), "emp");
+  const dialog = screen.getByRole("dialog");
+  expect(await within(dialog).findByText("Employer GmbH")).toBeTruthy();
+  expect(
+    within(dialog).queryByText(en["contact.rail.allCompaniesConnected"]),
+  ).toBeNull();
 });

@@ -278,6 +278,7 @@ export function useAddEmployment(
   // A string key, so the picker keeps its candidates until the set of ids
   // changes; `stable` because the key is only compared with itself.
   const connectedKey = employments
+    .filter((employment) => stillHeld(employment, employmentZone))
     .map((employment) => employment.company_id)
     .sort(stable)
     .join(",");
