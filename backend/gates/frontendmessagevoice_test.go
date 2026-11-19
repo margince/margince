@@ -60,8 +60,8 @@ func TestTheFrontendReadsTheSameAuthorSideAsTheActivityEngine(t *testing.T) {
 	}
 }
 
-// messageVoiceCases is every direction and author of one kind, with the side
-// the activity engine reads; a row with no direction is listed once.
+// messageVoiceCases lists the contract's directions and authors for one kind,
+// with the side the activity engine reads. A row with no direction appears once.
 func messageVoiceCases(kind crmcontracts.ActivityKind, directions, authors []string) []messageVoiceCase {
 	var rows []messageVoiceCase
 	for _, direction := range append([]string{""}, directions...) {

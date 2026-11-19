@@ -22,7 +22,7 @@ import (
 )
 
 // The readers that hand a model a row's side straight from SQL name the side
-// the projected voice names, on rows written by the real capture, import and
+// the projected voice names. The rows come from the real capture, import and
 // logging paths.
 func TestTheStoredWriterSideIsTheProjectedVoicesSide(t *testing.T) {
 	o := setupOwed(t)

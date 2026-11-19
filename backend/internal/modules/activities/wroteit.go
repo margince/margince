@@ -74,11 +74,11 @@ func WriterSide(activity crmcontracts.Activity) string {
 // reader that never projects the row. It follows authorOf: the seat capture
 // recorded, then the first identified From party (the organizer on a meeting),
 // then the importer's seat. A sending system and an unresolved sender read
-// direction, and so does a row the reader may not open (readable false), whose
+// direction. So does a row the reader may not open (readable false), whose
 // voice the projection withholds. Two answers of the projection depend on the
-// reader and stay out: a bare From address it resolves to a contact, and a
-// contact outside the reader's scope. Both arise only on a row with a direction
-// capture already set from the same From, so the answers agree in practice.
+// reader and stay out. One is a bare From address it resolves to a contact,
+// the other a contact outside the reader's scope. Capture set the direction of
+// such a row from the same From, so the answers agree in practice.
 func WriterSideSQL(alias, readable string) string {
 	return fmt.Sprintf(writerSideSQL, alias,
 		firstPartySideSQL(alias, "from", relstrength.SendingSystemSQL(alias)), fromPartyExistsSQL(alias),
@@ -116,7 +116,7 @@ func fromPartyExistsSQL(alias string) string {
 }
 
 // firstPartySideSQL is partyAuthor's side for the first party in role a seat or
-// live contact identifies (identifiedFirst), or NULL when a machine, an
+// live contact identifies (identifiedFirst). It is NULL when a machine, an
 // unresolved address or no party wrote it.
 func firstPartySideSQL(alias, role, machine string) string {
 	return `(SELECT CASE WHEN ws.user_id IS NOT NULL THEN 'outbound' WHEN NOT ` + machine + ` THEN 'inbound' END

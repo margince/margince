@@ -17,8 +17,8 @@ import (
 
 // Direction names the transport, never the writer: a colleague's mail can
 // arrive inbound and a contact's can leave from here. A projected activity
-// carries it as a pointer, so a dereference or a nil check of a Direction field
-// in compose is a reader deciding who wrote the row by hand. It asks
+// carries it as a pointer. In compose, a dereference or a nil check of a
+// Direction field decides who wrote the row by hand. Such a reader asks
 // activities.WroteItOurSide or WriterSide instead.
 func TestComposeAsksTheActivityVoiceWhoWroteARow(t *testing.T) {
 	t.Parallel()
@@ -57,7 +57,7 @@ func isNilCheckOfDirection(field, other ast.Expr) bool {
 }
 
 // selectedDirection is an activity's direction read as a column: aliased and
-// followed by a comma, or behind coalesce. A WHERE test reads it otherwise.
+// followed by a comma, or behind coalesce. A `where` test reads it otherwise.
 var selectedDirection = regexp.MustCompile(`(?i)\b[a-z_]+\.direction\s*,|coalesce\(\s*([a-z_]+\.)?direction\b`)
 
 // The compose statements that select the transport itself, each with why.
