@@ -29,6 +29,7 @@ import { sendPermissionReasonKey } from "../../format/sendpermissionreason";
 import { useLocale, useT } from "../../i18n";
 import { communicationContextLabel } from "../../lib/compose-context";
 import { throwProblem } from "../../lib/problem";
+import { refusalCountryText } from "./refusalcountry";
 import { sendReviewOf } from "./sendreview";
 import { WordingCorrectionModal } from "./wordingcorrectionmodal";
 
@@ -104,6 +105,7 @@ export function DirectSendModal({
   onReviewRefreshed?: (review: CommunicationReview) => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const [review, setReview] = useState(initialReview);
   const correction = review.wording_correction;
   const prior = correction ?? {
@@ -245,6 +247,11 @@ export function DirectSendModal({
           key={`${refusal.address}-${refusal.subject_id ?? ""}-${refusal.category ?? ""}`}
         >
           <p>{refusal.address}</p>
+          {refusalCountryText(refusal, t, locale) && (
+            <p className="t-caption">
+              {refusalCountryText(refusal, t, locale)}
+            </p>
+          )}
           <ConfirmationFooter refusal={refusal} />
           <p className="t-caption">
             {t(

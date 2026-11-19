@@ -256,7 +256,7 @@ func TestTheLinksNameThePurposeTheCredentialStops(t *testing.T) {
 	surface := unsubscribeSurface{category: commsauthz.CategoryMarketing, purposeKey: "no_such_purpose"}
 
 	got, err := store.deliverability(context.Background(), "Hello there", "Offer",
-		[]string{"an@example.test"}, surface, ids.Nil, textlang.English)
+		[]string{"an@example.test"}, nil, surface, ids.Nil, textlang.English)
 	if err != nil {
 		t.Fatalf("deriving the message: %v", err)
 	}

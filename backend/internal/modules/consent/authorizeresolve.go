@@ -307,7 +307,7 @@ func stagedClaims(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (map[stri
 		if claimed != nil {
 			out.category = commsauthz.Category(*claimed)
 		}
-		out.evidence = evidenceFrom(evidence)
+		out.evidence = evidenceFrom(evidence, address)
 		if entity != nil {
 			out.entity = *entity
 		}

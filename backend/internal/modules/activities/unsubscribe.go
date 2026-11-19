@@ -303,7 +303,7 @@ func (s *Store) offersUnsubscribe(recipients []string, surface unsubscribeSurfac
 // deliverability renders usable disclosures and private links. Missing parts
 // travel with the message for the sender's recorded confirmation.
 func (s *Store) deliverability(
-	ctx context.Context, body, subject string, recipients []string, surface unsubscribeSurface, entity ids.UUID, lang textlang.Lang,
+	ctx context.Context, body, subject string, recipients []string, countries []commsauthz.CountryOverride, surface unsubscribeSurface, entity ids.UUID, lang textlang.Lang,
 ) (sendDeliverability, error) {
 	// THE SURFACE decides whether this is advertising, not the category alone.
 	// A caller that names only the deprecated consent key carries no category,
@@ -314,7 +314,7 @@ func (s *Store) deliverability(
 	if lang == "" {
 		lang = s.footerLanguage(ctx, body, subject)
 	}
-	owed, err := s.disclosuresFor(ctx, string(surface.disclosureCategory()), recipients, entity, string(lang))
+	owed, err := s.disclosuresFor(ctx, string(surface.disclosureCategory()), recipients, countries, entity, string(lang))
 	if err != nil {
 		return sendDeliverability{}, err
 	}
