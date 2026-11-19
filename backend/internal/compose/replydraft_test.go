@@ -26,10 +26,12 @@ type replyBrainStub struct {
 	response model.Response
 	err      error
 	request  model.Request
+	subject  ai.Subject
 }
 
-func (b *replyBrainStub) Complete(_ context.Context, req model.Request) (model.Response, error) {
+func (b *replyBrainStub) Complete(ctx context.Context, req model.Request) (model.Response, error) {
 	b.request = req
+	b.subject, _ = ai.SubjectOf(ctx)
 	return b.response, b.err
 }
 
@@ -559,36 +561,12 @@ func TestTheReplyPromptHasOnlySelectedContentAndDeclaredSteering(t *testing.T) {
 	}
 }
 
-// subjectBrainStub records the rail subject each call was made under.
-type subjectBrainStub struct {
-	replyBrainStub
-	subjects []ai.Subject
-}
-
-func (b *subjectBrainStub) Complete(ctx context.Context, req model.Request) (model.Response, error) {
-	subject, _ := ai.SubjectOf(ctx)
-	b.subjects = append(b.subjects, subject)
-	return b.replyBrainStub.Complete(ctx, req)
-}
-
-// The rail names a reply draft by the answered message's subject line. A
-// failed draft then tells the reader which thread it was for.
+// A failed reply draft is named on the rail by the subject line it answered.
 func TestReplyDraftNamesTheMessageItAnswersOnTheRail(t *testing.T) {
-	brain := &subjectBrainStub{}
-	brain.err = errors.New("provider down")
-	anchor := ids.NewV7()
-
+	brain, anchor := &replyBrainStub{err: errors.New("provider down")}, ids.NewV7()
 	_, _, _, err := replyDrafter{brain: brain}.completeVoiced(context.Background(), anchor,
 		replyActivityData{Subject: "Heat recovery quote", Thread: "inbound_mail"}, draftvoice.Context{})
-	if err == nil {
-		t.Fatal("a failing model must fail the voiced draft")
-	}
-	if len(brain.subjects) == 0 {
-		t.Fatal("the drafter reached no model")
-	}
-	for _, subject := range brain.subjects {
-		if subject.Label != "Heat recovery quote" || subject.Ref.ID != anchor {
-			t.Fatalf("subject = %+v, want the anchor named by its subject line", subject)
-		}
+	if err == nil || brain.subject.Label != "Heat recovery quote" || brain.subject.Ref.ID != anchor {
+		t.Fatalf("err %v, subject %+v; want a failed draft named by its subject line", err, brain.subject)
 	}
 }
