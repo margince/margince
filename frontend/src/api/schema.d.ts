@@ -55279,6 +55279,11 @@ export interface components {
             lawful_basis?: string | null;
             /** Format: date-time */
             double_opt_in_confirmed_at?: string | null;
+            /**
+             * Format: date-time
+             * @description When the confirmation link mailed for this purpose stops working. Set only while that link is unspent. A pending request is not consent.
+             */
+            confirmation_pending_until?: string | null;
             /** Format: date-time */
             updated_at?: string | null;
         };
@@ -77038,11 +77043,11 @@ export interface operations {
                         booking: "pending" | "confirmed" | "rescheduling" | "canceling" | "canceled" | "needs_attention";
                         invitation?: components["schemas"]["MeetingInvitation"];
                         /**
-                         * @description `not_requested` — the form carried no tick. `pending_confirmation` — the question
-                         *     was queued for delivery and the grant waits on the subject answering it; queued
-                         *     is not delivered. `not_asked` — the question could not be put, or this
-                         *     installation has no lane to put it on; the booking stands and no subscription
-                         *     mail follows.
+                         * @description `not_requested` — the form carried no tick. `pending_confirmation` — the tick was
+                         *     accepted. If this address can receive our mail, a confirmation link is on its way,
+                         *     and nothing is subscribed until it is opened. The answer is the same whatever the
+                         *     address's state, so it reveals nothing about it. `not_asked` — this installation
+                         *     has no mail lane, so no subscription mail follows. The booking stands in every case.
                          * @enum {string}
                          */
                         marketing: "not_requested" | "pending_confirmation" | "not_asked";

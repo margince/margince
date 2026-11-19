@@ -45,10 +45,9 @@ func TestPublicBookingRefusesArchivedRecipientBeforeConsent(t *testing.T) {
 //
 // issueLink answers a token it could not send rather than failing: an
 // installation with no relay gets a link it can see was not posted. So a nil
-// error says the row exists, never that anybody will receive it — and the
-// booking adapter builds its own consent store, which the confirmation lane is
-// not rewired onto. Reporting the nil error as pending_confirmation told every
-// booker a question was coming when none was.
+// error says the row exists, never that anybody will receive it. Reporting the
+// nil error as pending_confirmation would tell a booker a question is coming
+// when none is.
 //
 // The assertion is written against what the CONFIRM TOKEN table says, so it
 // stays honest whichever way this installation is wired: a staged mail leaves a
@@ -91,14 +90,9 @@ func TestTheMarketingOutcomeAgreesWithWhatWasActuallyStaged(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := "not_asked"
-	if delivered > 0 {
-		want = "pending_confirmation"
-	}
-	if answer.Marketing != want {
-		t.Errorf("the response says marketing=%q while %d confirmation mail(s) were staged, want "+
-			"%q — a booker told a question is coming waits for a mail nobody sent",
-			answer.Marketing, delivered, want)
+	if delivered != 1 || answer.Marketing != "pending_confirmation" {
+		t.Errorf("the response says marketing=%q with %d confirmation mail(s) staged, want "+
+			"pending_confirmation and exactly 1", answer.Marketing, delivered)
 	}
 }
 

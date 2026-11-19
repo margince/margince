@@ -3795,6 +3795,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Ob sich das senden lässt, ist noch nicht bekannt. Ein Neuladen der Seite prüft es erneut.",
   "consent.askExpires": "Der Link gilt bis",
   "consent.noRecord": "kein Eintrag",
+  "consent.confirmationPending":
+    "Wartet auf die Bestätigung per E-Mail. Der Link gilt bis {date}.",
   "consent.noPurposes":
     "Dieses Unternehmen erfasst noch keine Einwilligungszwecke.",
   "consent.defaultDeny":

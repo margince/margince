@@ -86,7 +86,7 @@ func bookingMarketingPreview(ctx context.Context, store *consent.Store, contact 
 	}
 	address, err := store.PreviewConsentLink(ctx, ids.From[ids.ContactKind](contact), ids.From[ids.PurposeKind](request.PurposeID))
 	if err != nil {
-		if _, err := bookingMarketingFailure(err); err != nil {
+		if _, err := bookingMarketingFailure(err, false); err != nil {
 			return nil, "", err
 		}
 		return details, "marketing_confirmation_unavailable", nil
