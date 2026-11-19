@@ -281,7 +281,7 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		WithPartyAuthority(identity.NewServiceFor(InstallationDB(pool))).
 		// A seat's own sent echo re-keys the send it copies when the send's
 		// read-back failed, through the module that owns the deliveries.
-		WithSentEchoAdoption(comms.NewStore(InstallationDB(pool), time.Now, activities.NewStore(InstallationDB(pool))).AdoptEchoIdentityTx).
+		WithSentEchoAdoption(comms.NewStore(InstallationDB(pool), time.Now, sentIdentity(InstallationDB(pool))).AdoptEchoIdentityTx).
 		WithPartyReceiptSettlement(sentPartySettlement(pool)).
 		WithMessagePurger(purgeRemoved).
 		// The files a captured message carried, written by the module that owns
