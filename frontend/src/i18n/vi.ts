@@ -6088,6 +6088,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.winProbability.band.zero": "0%",
   "field.unset": "Chưa có",
   "deal.standing.figure.offer": "Báo giá {number} · phiên bản {revision}",
+  "deal.standing.figure.amountByModel": "Do Margince đọc từ email",
+  "deal.standing.figure.currencyGuessed":
+    "Đơn vị tiền tệ là giả định, hãy kiểm tra",
   "deal.standing.figure.next": "Bước tiếp theo",
   "standing.noneYet": "Chưa có",
   "deal.standing.figure.daysInStage": "Số ngày trong giai đoạn",
@@ -7717,6 +7720,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.savedDraftDelete": "Xóa",
   "compose.savedDraftDeleted": "Đã xóa bản nháp đã lưu",
   "compose.savedDraftRestored": "Đã khôi phục bản nháp đã lưu",
+  "compose.savedDraftUndoSent": "Thư đã được gửi nên bản nháp vẫn bị xóa.",
   "compose.savedDraftRemove": "Xóa bản nháp đã lưu",
   "compose.savedDraftByAgent":
     "Đã khôi phục bản nháp của trợ lý AI. Đọc trước khi gửi.",
@@ -19624,6 +19628,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.committee.foot":
     "{named} người được nêu tên · {engaged}/{named} đang tương tác",
   "deal.brief.title": "Deal này là gì",
+  "deal.brief.byModel": "Do Margince viết từ email của khách hàng",
   "deal.room.open": "Mở",
   "deal.room.setUp": "Thiết lập",
   "deal.room.none": "Chưa có phòng",
@@ -20584,6 +20589,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.meetingNoShow": "Vắng mặt",
   "worklist.verb.meetingCanceled": "Không diễn ra",
   "worklist.verb.meetingOutcomeRecorded": "Đã ghi nhận kết quả cuộc họp",
+  "worklist.verb.meetingCanceledRecorded":
+    "Đã đánh dấu là không diễn ra (đã hủy).",
   "worklist.verb.meetingOutcomeFailed": "Không thể ghi nhận kết quả. Thử lại.",
   "worklist.verb.meetingDayMissing":
     "Ngày này không có trong múi giờ của công ty. Chọn ngày khác.",
@@ -21879,7 +21886,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "privateMailRequests.title": "Yêu cầu trong email riêng tư",
   "privateMailRequests.switch": "Kiểm tra yêu cầu trong email riêng tư",
   "privateMailRequests.hint":
-    "AI đọc email riêng tư để tìm yêu cầu mà khách hàng gửi tới bạn. Email được đánh dấu bảo mật hoặc được giữ lại có chủ ý thì không bao giờ được đọc.",
+    "AI đọc email riêng tư để tìm yêu cầu khách hàng gửi tới bạn và yêu cầu báo giá. Cài đặt này chỉ quyết định AI đọc gì. Email được đánh dấu bảo mật hoặc được giữ lại có chủ ý thì không bao giờ được đọc.",
+  "privateMailRequests.share": "Chia sẻ yêu cầu báo giá từ email riêng tư",
+  "privateMailRequests.shareHint":
+    "Yêu cầu báo giá trong email riêng tư sẽ mở một giao dịch. Khi bật, cả công ty thấy khách hàng đã yêu cầu gì trên giao dịch đó. Email được đánh dấu bảo mật hoặc được giữ lại có chủ ý thì không bao giờ được chia sẻ.",
   "privateMailRequests.readOnly": "Quản trị viên thay đổi cài đặt này.",
   "privateMailRequests.notSaved": "Chưa lưu được cài đặt.",
   "stage.criteria.kindLegalReviewed": "Pháp lý đã duyệt",

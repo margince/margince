@@ -40599,6 +40599,8 @@ export interface components {
             readonly closing_occurrence_id?: string | null;
             /** @description The fields of THIS row withheld from the caller (a field mask — e.g. `amount_minor` for a rep on a deal they may read but not change), or pointing at a record they may not open. A named field is null because it is withheld, not because it is empty; absent or empty means nothing is withheld. Every withheld field is named, including one withheld only because another was: masking either money figure withholds both and the currency with them, and a withheld partner takes its attribution along. Sorting or filtering the list by any of them is refused (422). */
             readonly masked_fields?: string[];
+            /** @description The fields of this deal that a model wrote and nobody has edited since, such as `description` or `amount_minor`. `currency` is named when the amount's words named no currency and the base currency was assumed. A client marks each as written by Margince. Any edit of a field removes it from the list. A field withheld from the reader (`masked_fields`) is never named. Filled only by `GET /deals/{id}`; every other read leaves it absent. Absent or empty means none. */
+            readonly ai_written_fields?: string[];
             /** @description Native→base, frozen at close (null while open). Decimal-as-string to avoid float rounding of the 10-dp rate. */
             fx_rate_to_base?: string | null;
             /** Format: date */
@@ -43704,10 +43706,10 @@ export interface components {
              *     moment a human actually knows the answer — the meeting is over — was the one
              *     moment the API could not be told.
              *
-             *     An omitted field is unchanged, like every other field on this patch. Sending
-             *     an explicit `null` is also unchanged rather than a clear, unlike `due_at`,
-             *     `remind_at` and `assignee_id`, where `null` removes the value. Recording the
-             *     wrong outcome is fixed by sending the right one.
+             *     An omitted field is unchanged, like every other field on this patch. An explicit
+             *     `null` removes the status, so the meeting is unanswered again; that is how a
+             *     recorded outcome is taken back. A meeting held by a live calendar invitation
+             *     refuses it like any status other than `held` or `no_show`.
              * @enum {string|null}
              */
             meeting_status?: null | "booked" | "held" | "no_show" | "canceled";
@@ -46234,14 +46236,24 @@ export interface components {
             /** @description Days a sent message may stay unanswered before its sender is reminded to follow up. */
             follow_up_after_days: number;
             /**
-             * @description Whether the AI checks private mail for a request its reader owes an answer to
-             *     (`activities.private_mail_requests`, on by default). Only mail private by a
-             *     routine setting is checked; mail held as confidential, by a counterparty or
-             *     members-only hold, or by hand never is. A GET always carries it; a PATCH that
-             *     leaves it out leaves the setting unchanged. Only a human may change it, because
-             *     it decides which mail reaches a model.
+             * @description Whether the AI reads private mail for requests (`activities.private_mail_requests`,
+             *     on by default): a request its reader owes an answer to, and a request for a
+             *     quotation. Only mail private by a mailbox setting is read; mail held as
+             *     confidential, by a counterparty or members-only hold, or by hand never is. It
+             *     says what a model reads, not what is shared. A GET always carries it; a PATCH
+             *     that leaves it out leaves the setting unchanged. Only a human may change it,
+             *     because it decides which mail reaches a model.
              */
             private_mail_requests?: boolean;
+            /**
+             * @description Whether a request for a quotation found in private mail is shared with the whole
+             *     workspace (`activities.share_private_quote_requests`, on by default). When on, what
+             *     the customer asked for becomes visible on the deal it opens. It needs
+             *     `private_mail_requests` on as well. Only mail private by a mailbox setting is
+             *     shared; mail held for any other reason never is. A GET always carries it; a PATCH
+             *     that leaves it out leaves it unchanged. Only a human may change it.
+             */
+            share_private_quote_requests?: boolean;
         };
         LeadSettings: {
             locks?: components["schemas"]["SettingLocks"];

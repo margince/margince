@@ -6732,7 +6732,7 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
 
 ### `signal_extract` / `thread_events`
 
-`system 6,723 B (~1,680 tok)`: rules 6,451 B · boundary 272 B · after boundary 0 B · **cacheable 95%**
+`system 7,078 B (~1,769 tok)`: rules 6,806 B · boundary 272 B · after boundary 0 B · **cacheable 96%**
 
 <details><summary>system prompt</summary>
 
@@ -6798,6 +6798,10 @@ Use supplier, partner or provider only when the source establishes that specific
 Merely relaying an unidentified company’s need does not establish a partnership: use unknown.
 A relationship the source does state still holds when the client it relays is unnamed: a
 transcript provider passing on an unidentified client’s need is provider, not unknown.
+For new_opportunity, request_kind is explicit_request only when the buyer asks us outright for a
+quotation, proposal, offer, RFI, RFQ or vendor brief; any other need is need. budget_quote copies
+the cited message's words that state their budget, or "". decision_date is the day they say they
+decide or need it by, or "". For other kinds all three are "".
 A meeting invitation alone establishes no buying intent. Neither does a pitch: a supplier offering
 us its product or price, when no one states a need for it, is no event at all.
 Every field is always present. A text field that does not apply to the kind is "", recipient_refs is [],
@@ -6827,6 +6831,10 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
       "items": {
         "additionalProperties": false,
         "properties": {
+          "budget_quote": {
+            "description": "For new_opportunity: the cited message's own words that state their budget, copied exactly, or empty.",
+            "type": "string"
+          },
           "buyer_ref": {
             "description": "Verified external contact: reference requesting our company’s work. Never an own seat: reference. Empty unless commercial_role is buyer.",
             "type": "string"
@@ -6882,6 +6890,10 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
           "confidence": {
             "type": "number"
           },
+          "decision_date": {
+            "description": "For new_opportunity: the day they say they decide or need it by, as YYYY-MM-DD resolved against the message date, or empty.",
+            "type": "string"
+          },
           "due_date": {
             "type": "string"
           },
@@ -6921,6 +6933,15 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
             },
             "type": "array"
           },
+          "request_kind": {
+            "description": "For new_opportunity: explicit_request when the buyer asks us outright for a quotation, proposal, offer, RFI, RFQ or vendor brief; need for any other need. Empty for other kinds.",
+            "enum": [
+              "",
+              "explicit_request",
+              "need"
+            ],
+            "type": "string"
+          },
           "restated_message_id": {
             "enum": [
               "m1",
@@ -6954,7 +6975,10 @@ Data is delimited by <untrusted-fence> … </untrusted-fence> (the opening marke
           "buyer_ref",
           "commercial_role",
           "lifecycle_scope",
-          "workstream"
+          "workstream",
+          "request_kind",
+          "budget_quote",
+          "decision_date"
         ],
         "type": "object"
       },

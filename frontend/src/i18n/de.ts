@@ -6249,6 +6249,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.winProbability.band.zero": "0 %",
   "field.unset": "Nicht festgelegt",
   "deal.standing.figure.offer": "Angebot {number} · Version {revision}",
+  "deal.standing.figure.amountByModel": "Von Margince aus der Mail gelesen",
+  "deal.standing.figure.currencyGuessed": "Währung angenommen, prüf sie",
   "deal.standing.figure.next": "Nächster Schritt",
   "standing.noneYet": "Noch keiner",
   "deal.standing.figure.daysInStage": "Tage in der Phase",
@@ -7902,6 +7904,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.savedDraftDelete": "Löschen",
   "compose.savedDraftDeleted": "Gespeicherter Entwurf gelöscht",
   "compose.savedDraftRestored": "Gespeicherter Entwurf wiederhergestellt",
+  "compose.savedDraftUndoSent":
+    "Die Nachricht wurde gesendet, der Entwurf bleibt gelöscht.",
   "compose.savedDraftRemove": "Gespeicherten Entwurf löschen",
   "compose.savedDraftByAgent":
     "Entwurf eines Agenten wiederhergestellt. Lies den Entwurf vor dem Senden.",
@@ -20132,6 +20136,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Weniger als zwei im Austausch. Erreiche einen zweiten Kontakt.",
   "deal.committee.foot": "{named} benannt · {engaged} von {named} aktiv",
   "deal.brief.title": "Worum es geht",
+  "deal.brief.byModel": "Von Margince aus der Mail des Kunden geschrieben",
   "deal.room.open": "Öffnen",
   "deal.room.setUp": "Einrichten",
   "deal.room.none": "Noch kein Raum",
@@ -21121,6 +21126,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.meetingNoShow": "Nicht erschienen",
   "worklist.verb.meetingCanceled": "Hat nicht stattgefunden",
   "worklist.verb.meetingOutcomeRecorded": "Terminergebnis erfasst",
+  "worklist.verb.meetingCanceledRecorded":
+    "Als nicht stattgefunden markiert (abgesagt).",
   "worklist.verb.meetingOutcomeFailed":
     "Das Ergebnis konnte nicht erfasst werden. Bitte versuche es erneut.",
   "worklist.verb.meetingDayMissing":
@@ -22472,7 +22479,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "privateMailRequests.title": "Anfragen in privaten E-Mails",
   "privateMailRequests.switch": "Private E-Mails auf Anfragen prüfen",
   "privateMailRequests.hint":
-    "Die KI liest private E-Mails, um zu finden, worum ein Kunde euch bittet. Als vertraulich markierte oder bewusst zurückgehaltene E-Mails liest sie nie.",
+    "Die KI liest private E-Mails, um zu finden, worum ein Kunde euch bittet, und Anfragen für ein Angebot. Das bestimmt nur, was die KI liest. Als vertraulich markierte oder bewusst zurückgehaltene E-Mails liest sie nie.",
+  "privateMailRequests.share": "Angebotsanfragen aus privaten E-Mails teilen",
+  "privateMailRequests.shareHint":
+    "Eine Angebotsanfrage in einer privaten E-Mail eröffnet einen Deal. Ist das an, sieht dein ganzes Unternehmen auf dem Deal, worum der Kunde gebeten hat. Als vertraulich markierte oder bewusst zurückgehaltene E-Mails teilst du so nie.",
   "privateMailRequests.readOnly": "Diese Einstellung ändert ein Admin.",
   "privateMailRequests.notSaved": "Einstellung wurde nicht gespeichert.",
   "stage.criteria.kindLegalReviewed": "Rechtlich freigegeben",

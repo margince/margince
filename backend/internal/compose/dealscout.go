@@ -8,25 +8,27 @@ package compose
 // to deals as a suggestion.
 //
 // A verified buyer request and a commitment establish the commercial matter.
+// So does one explicit request for a quotation from a verified buyer.
 // Meetings and documents corroborate it without assigning a buyer of their own.
 //
 // Only evidence the whole workspace may read is used: an activity with the
 // workspace audience on a thread nobody holds, and a signal visible to the
 // workspace whose cited messages are the same. A suggestion built from private
 // evidence would tell colleagues, by its mere existence, about mail they may
-// not read.
+// not read. An explicit request is the one exception: it opens a deal from
+// private mail too. The opener decides what of that mail the deal shows.
 
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/dealscout"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/modules/identity"
 )
 
 const (
@@ -38,23 +40,11 @@ const (
 	// a company with a held meeting; a company that is suggested leaves the
 	// candidate set, and the next pass reaches the ones this one did not.
 	dealScoutCompanyCap = 200
-	// signalPairWindow is how close the two signals must be.
-	signalPairWindow = 30 * 24 * time.Hour
-	// dealScoutItemCap bounds the meetings and documents one suggestion cites.
-	dealScoutItemCap = 5
 )
 
 // DealScoutPass is what one pass did, for the log line.
 type DealScoutPass struct {
 	Superseded, Considered, Raised int
-}
-
-// scoutItem is one cited piece of evidence about one chosen company.
-type scoutItem struct {
-	company     ids.UUID
-	evidence    deals.SuggestionEvidence
-	amountMinor *int64
-	currency    *string
 }
 
 // RunDealScout runs one pass inside the caller's transaction, as the system
@@ -67,7 +57,7 @@ func scoutPass(ctx context.Context, tx pgx.Tx, now time.Time, companyCap int) (D
 	var pass DealScoutPass
 	var err error
 	if pass.Superseded, err = deals.SupersedeStaleSuggestionsTx(ctx, tx, func(arg func(any) int) string {
-		return verifiedSuggestionBuyer("s.id", "s.company_id", fmt.Sprintf("$%d::timestamptz", arg(now.Add(-dealScoutWindow))), fmt.Sprintf("$%d::timestamptz", arg(now)))
+		return dealscout.VerifiedSuggestionBuyer("s.id", "s.company_id", fmt.Sprintf("$%d::timestamptz", arg(now.Add(-dealScoutWindow))), fmt.Sprintf("$%d::timestamptz", arg(now)))
 	}); err != nil {
 		return pass, err
 	}
@@ -80,13 +70,21 @@ func scoutPass(ctx context.Context, tx pgx.Tx, now time.Time, companyCap int) (D
 		return pass, err
 	}
 	pass.Superseded += raisedTwice
-	items, err := readScoutEvidence(ctx, tx, now.Add(-dealScoutWindow), now, companyCap)
+	items, err := dealscout.ReadEvidence(ctx, tx, now.Add(-dealScoutWindow), now, companyCap)
 	if err != nil {
 		return pass, err
 	}
-	for _, company := range byCompany(items) {
+	base, err := identity.BaseCurrencyAppliedTx(ctx, tx)
+	if err != nil {
+		return pass, err
+	}
+	today, err := installationToday(ctx, tx, now)
+	if err != nil {
+		return pass, err
+	}
+	for _, company := range dealscout.ByCompany(items) {
 		pass.Considered++
-		draft := draftSuggestion(company)
+		draft := dealscout.Draft(company, base, today)
 		if draft.DuplicateOf, err = contacts.OpenDuplicateCompaniesTx(ctx, tx, draft.CompanyID); err != nil {
 			return pass, err
 		}
@@ -99,58 +97,4 @@ func scoutPass(ctx context.Context, tx pgx.Tx, now time.Time, companyCap int) (D
 		}
 	}
 	return pass, nil
-}
-
-// readScoutEvidence answers the evidence each suggestion will cite, for at most
-// companyCap companies. One statement decides it all in the database: which
-// evidence counts, which companies it qualifies, which of those the cap keeps,
-// and — only for the documents of the companies kept — what their finished
-// readings stated.
-func readScoutEvidence(ctx context.Context, tx pgx.Tx, since, now time.Time, companyCap int) ([]scoutItem, error) {
-	query, args := dealScoutSQL(since, now, companyCap)
-	rows, err := tx.Query(ctx, query, args...)
-	if err != nil {
-		return nil, fmt.Errorf("deal scout: reading the evidence: %w", err)
-	}
-	items, err := pgx.CollectRows(rows, scanScoutItem)
-	if err != nil {
-		return nil, fmt.Errorf("deal scout: scanning the evidence: %w", err)
-	}
-	return items, nil
-}
-
-func scanScoutItem(row pgx.CollectableRow) (scoutItem, error) {
-	var it scoutItem
-	var ref ids.UUID
-	var amount, currency *string
-	if err := row.Scan(&it.company, &it.evidence.Kind, &ref, &it.evidence.OccurredAt, &amount, &currency); err != nil {
-		return scoutItem{}, err
-	}
-	switch it.evidence.Kind {
-	case deals.EvidenceMeeting:
-		it.evidence.ActivityID = &ref
-	case deals.EvidenceSignal:
-		it.evidence.SignalID = &ref
-	default:
-		it.evidence.AttachmentID = &ref
-	}
-	if amount != nil && currency != nil {
-		if minor, err := strconv.ParseInt(*amount, 10, 64); err == nil {
-			it.amountMinor, it.currency = &minor, currency
-		}
-	}
-	return it, nil
-}
-
-// byCompany groups the rows, which arrive ordered by company.
-func byCompany(items []scoutItem) [][]scoutItem {
-	var out [][]scoutItem
-	for _, it := range items {
-		if n := len(out); n > 0 && out[n-1][0].company == it.company {
-			out[n-1] = append(out[n-1], it)
-			continue
-		}
-		out = append(out, []scoutItem{it})
-	}
-	return out
 }

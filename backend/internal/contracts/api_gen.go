@@ -47504,7 +47504,10 @@ type DeactivateUserRequest struct {
 type Deal struct {
 	// AcquisitionSource The business channel this opportunity came from, as an administered key from `/acquisition-sources` (referral, inbound, partner, event...). Deliberately NOT the technical `source` field beside it: `source` records how the RECORD reached Margince (a connector, an import, a crawl), while this records how the OPPORTUNITY reached the business. A deal typed in by hand can be a referral; an imported one can be outbound. Null means unclassified, which is different from the explicit `other` key.
 	AcquisitionSource *string `json:"acquisition_source,omitempty"`
-	AmountMinor       *int64  `json:"amount_minor,omitempty"`
+
+	// AiWrittenFields The fields of this deal that a model wrote and nobody has edited since, such as `description` or `amount_minor`. `currency` is named when the amount's words named no currency and the base currency was assumed. A client marks each as written by Margince. Any edit of a field removes it from the list. A field withheld from the reader (`masked_fields`) is never named. Filled only by `GET /deals/{id}`; every other read leaves it absent. Absent or empty means none.
+	AiWrittenFields *[]string `json:"ai_written_fields,omitempty"`
+	AmountMinor     *int64    `json:"amount_minor,omitempty"`
 
 	// Archivable Whether THIS caller may archive THIS deal: the row write gate `writable` asks, plus the `deal:delete` grant or being the deal's owner with `deal:update`. An owner who named themselves owner (an edit or a claim) needs the delete grant. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable.
 	Archivable *bool      `json:"archivable,omitempty"`
@@ -47669,7 +47672,10 @@ type DealWonWithoutContractReason string
 type DealAdvanced struct {
 	// AcquisitionSource The business channel this opportunity came from, as an administered key from `/acquisition-sources` (referral, inbound, partner, event...). Deliberately NOT the technical `source` field beside it: `source` records how the RECORD reached Margince (a connector, an import, a crawl), while this records how the OPPORTUNITY reached the business. A deal typed in by hand can be a referral; an imported one can be outbound. Null means unclassified, which is different from the explicit `other` key.
 	AcquisitionSource *string `json:"acquisition_source,omitempty"`
-	AmountMinor       *int64  `json:"amount_minor,omitempty"`
+
+	// AiWrittenFields The fields of this deal that a model wrote and nobody has edited since, such as `description` or `amount_minor`. `currency` is named when the amount's words named no currency and the base currency was assumed. A client marks each as written by Margince. Any edit of a field removes it from the list. A field withheld from the reader (`masked_fields`) is never named. Filled only by `GET /deals/{id}`; every other read leaves it absent. Absent or empty means none.
+	AiWrittenFields *[]string `json:"ai_written_fields,omitempty"`
+	AmountMinor     *int64    `json:"amount_minor,omitempty"`
 
 	// Archivable Whether THIS caller may archive THIS deal: the row write gate `writable` asks, plus the `deal:delete` grant or being the deal's owner with `deal:update`. An owner who named themselves owner (an edit or a claim) needs the delete grant. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable.
 	Archivable *bool      `json:"archivable,omitempty"`
@@ -51033,13 +51039,22 @@ type FollowUpSettings struct {
 	// shows each as read-only. Empty when nothing is locked. A write ignores it.
 	Locks *SettingLocks `json:"locks,omitempty"`
 
-	// PrivateMailRequests Whether the AI checks private mail for a request its reader owes an answer to
-	// (`activities.private_mail_requests`, on by default). Only mail private by a
-	// routine setting is checked; mail held as confidential, by a counterparty or
-	// members-only hold, or by hand never is. A GET always carries it; a PATCH that
-	// leaves it out leaves the setting unchanged. Only a human may change it, because
-	// it decides which mail reaches a model.
+	// PrivateMailRequests Whether the AI reads private mail for requests (`activities.private_mail_requests`,
+	// on by default): a request its reader owes an answer to, and a request for a
+	// quotation. Only mail private by a mailbox setting is read; mail held as
+	// confidential, by a counterparty or members-only hold, or by hand never is. It
+	// says what a model reads, not what is shared. A GET always carries it; a PATCH
+	// that leaves it out leaves the setting unchanged. Only a human may change it,
+	// because it decides which mail reaches a model.
 	PrivateMailRequests *bool `json:"private_mail_requests,omitempty"`
+
+	// SharePrivateQuoteRequests Whether a request for a quotation found in private mail is shared with the whole
+	// workspace (`activities.share_private_quote_requests`, on by default). When on, what
+	// the customer asked for becomes visible on the deal it opens. It needs
+	// `private_mail_requests` on as well. Only mail private by a mailbox setting is
+	// shared; mail held for any other reason never is. A GET always carries it; a PATCH
+	// that leaves it out leaves it unchanged. Only a human may change it.
+	SharePrivateQuoteRequests *bool `json:"share_private_quote_requests,omitempty"`
 }
 
 // FooterFinding defines model for FooterFinding.
@@ -68530,10 +68545,10 @@ type UpdateActivityRequest struct {
 	// moment a human actually knows the answer — the meeting is over — was the one
 	// moment the API could not be told.
 	//
-	// An omitted field is unchanged, like every other field on this patch. Sending
-	// an explicit `null` is also unchanged rather than a clear, unlike `due_at`,
-	// `remind_at` and `assignee_id`, where `null` removes the value. Recording the
-	// wrong outcome is fixed by sending the right one.
+	// An omitted field is unchanged, like every other field on this patch. An explicit
+	// `null` removes the status, so the meeting is unanswered again; that is how a
+	// recorded outcome is taken back. A meeting held by a live calendar invitation
+	// refuses it like any status other than `held` or `no_show`.
 	MeetingStatus *UpdateActivityRequestMeetingStatus `json:"meeting_status,omitempty"`
 	OccurredAt    *time.Time                          `json:"occurred_at,omitempty"`
 
@@ -68564,10 +68579,10 @@ type UpdateActivityRequestCallOutcome string
 // moment a human actually knows the answer — the meeting is over — was the one
 // moment the API could not be told.
 //
-// An omitted field is unchanged, like every other field on this patch. Sending
-// an explicit `null` is also unchanged rather than a clear, unlike `due_at`,
-// `remind_at` and `assignee_id`, where `null` removes the value. Recording the
-// wrong outcome is fixed by sending the right one.
+// An omitted field is unchanged, like every other field on this patch. An explicit
+// `null` removes the status, so the meeting is unanswered again; that is how a
+// recorded outcome is taken back. A meeting held by a live calendar invitation
+// refuses it like any status other than `held` or `no_show`.
 type UpdateActivityRequestMeetingStatus string
 
 // UpdateActivityReviewTemplateRequest defines model for UpdateActivityReviewTemplateRequest.
@@ -89514,6 +89529,14 @@ func (a *Deal) UnmarshalJSON(b []byte) error {
 		delete(object, "acquisition_source")
 	}
 
+	if raw, found := object["ai_written_fields"]; found {
+		err = json.Unmarshal(raw, &a.AiWrittenFields)
+		if err != nil {
+			return fmt.Errorf("error reading 'ai_written_fields': %w", err)
+		}
+		delete(object, "ai_written_fields")
+	}
+
 	if raw, found := object["amount_minor"]; found {
 		err = json.Unmarshal(raw, &a.AmountMinor)
 		if err != nil {
@@ -89956,6 +89979,13 @@ func (a Deal) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.AiWrittenFields != nil {
+		object["ai_written_fields"], err = json.Marshal(a.AiWrittenFields)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'ai_written_fields': %w", err)
+		}
+	}
+
 	if a.AmountMinor != nil {
 		object["amount_minor"], err = json.Marshal(a.AmountMinor)
 		if err != nil {
@@ -90342,6 +90372,14 @@ func (a *DealAdvanced) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'acquisition_source': %w", err)
 		}
 		delete(object, "acquisition_source")
+	}
+
+	if raw, found := object["ai_written_fields"]; found {
+		err = json.Unmarshal(raw, &a.AiWrittenFields)
+		if err != nil {
+			return fmt.Errorf("error reading 'ai_written_fields': %w", err)
+		}
+		delete(object, "ai_written_fields")
 	}
 
 	if raw, found := object["amount_minor"]; found {
@@ -90791,6 +90829,13 @@ func (a DealAdvanced) MarshalJSON() ([]byte, error) {
 		object["acquisition_source"], err = json.Marshal(a.AcquisitionSource)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'acquisition_source': %w", err)
+		}
+	}
+
+	if a.AiWrittenFields != nil {
+		object["ai_written_fields"], err = json.Marshal(a.AiWrittenFields)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'ai_written_fields': %w", err)
 		}
 	}
 
