@@ -11476,6 +11476,27 @@ func (e DealCoverageRiskKind) Valid() bool {
 	}
 }
 
+// Defines values for DealCoverageSeatReach.
+const (
+	DealCoverageSeatReachNotReached DealCoverageSeatReach = "not_reached"
+	DealCoverageSeatReachReached    DealCoverageSeatReach = "reached"
+	DealCoverageSeatReachUnknown    DealCoverageSeatReach = "unknown"
+)
+
+// Valid indicates whether the value is a known member of the DealCoverageSeatReach enum.
+func (e DealCoverageSeatReach) Valid() bool {
+	switch e {
+	case DealCoverageSeatReachNotReached:
+		return true
+	case DealCoverageSeatReachReached:
+		return true
+	case DealCoverageSeatReachUnknown:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DealFollowUpDraftRequestSegment.
 const (
 	DealFollowUpDraftRequestSegmentSlipping DealFollowUpDraftRequestSegment = "slipping"
@@ -48264,6 +48285,12 @@ type DealCommitments struct {
 type DealCoverage struct {
 	DealId openapi_types.UUID `json:"deal_id"`
 
+	// Lines One entry per current colleague and readable seat who have exchanged mail or met,
+	// from the activities the caller may open, at the time of the read. A seat the caller
+	// cannot read has none. Absent, not empty, when the caller has no `activity` grant or
+	// the edge sections are withheld: absence says nothing about who has talked.
+	Lines *[]DealCoverageLine `json:"lines,omitempty"`
+
 	// OurSide One entry per colleague with recorded interaction with the deal's seats, warmest
 	// first. `interactions_90d` sums the colleague's exchanges with every seat, and the
 	// score is their warmest single relationship. `single_threaded_ours` reads the same
@@ -48291,6 +48318,31 @@ type DealCoverage struct {
 
 // DealCoverageSectionsOmitted defines model for DealCoverage.SectionsOmitted.
 type DealCoverageSectionsOmitted string
+
+// DealCoverageLine One colleague's exchange with one buyer seat, as the newest event in each direction.
+type DealCoverageLine struct {
+	ColleagueName string             `json:"colleague_name"`
+	ContactId     openapi_types.UUID `json:"contact_id"`
+
+	// LastInboundAt When the contact last wrote to this colleague.
+	LastInboundAt *time.Time `json:"last_inbound_at,omitempty"`
+
+	// LastInboundPrecision How to read `last_inbound_at`.
+	LastInboundPrecision *OccurredPrecision `json:"last_inbound_precision,omitempty"`
+
+	// LastMetAt The newest meeting or call of the pair that neither declined.
+	LastMetAt *time.Time `json:"last_met_at,omitempty"`
+
+	// LastMetPrecision How to read `last_met_at`.
+	LastMetPrecision *OccurredPrecision `json:"last_met_precision,omitempty"`
+
+	// LastOutboundAt When this colleague last wrote to the contact, or was copied on our mail to them.
+	LastOutboundAt *time.Time `json:"last_outbound_at,omitempty"`
+
+	// LastOutboundPrecision How to read `last_outbound_at`.
+	LastOutboundPrecision *OccurredPrecision `json:"last_outbound_precision,omitempty"`
+	UserId                openapi_types.UUID `json:"user_id"`
+}
 
 // DealCoverageRisk One finding, with the records behind it. `kind` names the rule so a surface can
 // explain the flag rather than assert it.
@@ -48325,8 +48377,22 @@ type DealCoverageSeat struct {
 
 	// LastInboundPrecision How to read `last_inbound_at`, from the activity it names. Absent when that is absent.
 	LastInboundPrecision *OccurredPrecision `json:"last_inbound_precision,omitempty"`
-	Role                 string             `json:"role"`
+
+	// Reach Whether a current colleague has exchanged mail with or met this seat, as the caller
+	// can prove it. `not_reached` only when no activity links the seat to a colleague at
+	// all. Anything withheld from the caller, or an exchange only with a colleague who has
+	// left, is `unknown`. Absent for a seat the caller cannot read, and without the
+	// `activity` grant.
+	Reach *DealCoverageSeatReach `json:"reach,omitempty"`
+	Role  string                 `json:"role"`
 }
+
+// DealCoverageSeatReach Whether a current colleague has exchanged mail with or met this seat, as the caller
+// can prove it. `not_reached` only when no activity links the seat to a colleague at
+// all. Anything withheld from the caller, or an exchange only with a colleague who has
+// left, is `unknown`. Absent for a seat the caller cannot read, and without the
+// `activity` grant.
+type DealCoverageSeatReach string
 
 // DealDocument One file in a deal's Files area: the attachment, whether it is hidden from this
 // deal, and where a captured file came from, so a reader can tell "the contract

@@ -19921,6 +19921,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "{role} · {engagement} · phản hồi lần cuối {date}",
   "deal.committee.carriesContact": "Đang giữ phần lớn trao đổi",
   "deal.committee.teamUnread": "Không đọc được còn ai khác phụ trách deal này.",
+  "deal.committee.lines.title": "Ai trao đổi với ai",
+  "deal.committee.lines.wrote": "Đã viết cho họ {date}",
+  "deal.committee.lines.replied": "Họ viết {date}",
+  "deal.committee.lines.met": "Đã gặp {date}",
+  "deal.committee.lines.pair": "{colleague} với {contact}: {how}",
+  "deal.committee.lines.unreached":
+    "Chưa đồng nghiệp hiện tại nào liên hệ được {contact}",
   "deal.committee.missing.champion": "Còn thiếu: người ủng hộ đang tương tác",
   "deal.committee.missing.firstContact": "Còn thiếu: liên hệ phía khách hàng",
   "deal.committee.missing.secondContact":
