@@ -13745,6 +13745,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "setup.errorNetwork":
     "Margince war nicht erreichbar. Prüfe die Verbindung und versuche es erneut.",
   "auth.forgotLink": "Passwort vergessen?",
+  "auth.forgotAskAdmin":
+    "Passwort vergessen? Frage einen Admin nach einem Link zum Festlegen des Passworts.",
   "auth.forgotTitle": "Passwort zurücksetzen",
   // "gibt", nicht "existiert" (Amtsdeutsch), und das Feld will eine Adresse, keine
   // E-Mail — die E-Mail ist die Nachricht. Was unterwegs ist, ist ebenfalls die

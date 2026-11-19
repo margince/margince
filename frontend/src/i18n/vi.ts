@@ -13379,6 +13379,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "setup.errorNetwork":
     "Không thể kết nối tới Margince. Kiểm tra kết nối rồi thử lại.",
   "auth.forgotLink": "Quên mật khẩu?",
+  "auth.forgotAskAdmin":
+    "Quên mật khẩu? Liên hệ quản trị viên để được gửi liên kết đặt mật khẩu.",
   "auth.forgotTitle": "Đặt lại mật khẩu",
   // Two sentences, sentence-cased, with no dash. VOICE-RULE-5 forbids an em or
   // en dash anywhere in user-facing copy, and a lowercase opening mid-surface

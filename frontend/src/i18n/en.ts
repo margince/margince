@@ -13702,6 +13702,8 @@ export const en = {
   "setup.errorNetwork":
     "Margince could not be reached. Check the connection and retry.",
   "auth.forgotLink": "Forgot password?",
+  "auth.forgotAskAdmin":
+    "Forgot your password? Ask an administrator for a set-password link.",
   "auth.forgotTitle": "Reset password",
   // Two sentences, sentence-cased, with no dash. VOICE-RULE-5 forbids an em or
   // en dash anywhere in user-facing copy, and a lowercase opening mid-surface

@@ -219,6 +219,9 @@ export function LoginForm({
         >
           {t("auth.signIn")}
         </Button>
+        {/* Where no forgot-password flow exists, the remedy is an admin's
+            set-password link, and a reader who never sees the advice has none. */}
+        {!resetAvailable && <p className="t-sub">{t("auth.forgotAskAdmin")}</p>}
       </div>
     </form>
   );

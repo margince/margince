@@ -251,11 +251,13 @@ describe("AuthScreen login", () => {
     render(<AuthScreen onAuthed={vi.fn()} />);
     await screen.findByLabelText("Email");
     expect(screen.queryByText("Forgot password?")).toBeNull();
+    expect(screen.getByText(t("auth.forgotAskAdmin"))).toBeTruthy();
     cleanup();
 
     stubApi({ password: true, password_reset: true }, () => ok(200));
     render(<AuthScreen onAuthed={vi.fn()} />);
     expect(await screen.findByText("Forgot password?")).toBeTruthy();
+    expect(screen.queryByText(t("auth.forgotAskAdmin"))).toBeNull();
   });
 
   // The reset UI-preview switch (app/ui-preview.ts), on the screen. The capability
