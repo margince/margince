@@ -3,7 +3,7 @@
 .co-tab-stack {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--gapCards);
   min-width: 0;
 }
 
