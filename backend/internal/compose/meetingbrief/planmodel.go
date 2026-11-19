@@ -117,7 +117,7 @@ func planPromptOf(in Input, floor Plan) PlanPrompt {
 		Company:     in.Company,
 		MeetingType: string(floor.Type.Value),
 		TypeSignals: floor.Type.Signals,
-		Deal:        in.Deal,
+		Deal:        in.Deal.inLanguage(in.Language),
 		Project:     in.Project,
 		Attendees:   in.Attendees,
 		Claims:      in.Commitments,

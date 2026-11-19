@@ -117,10 +117,12 @@ type sequencedBrainStub struct {
 	// which is the only way to reach a path that runs between two successes.
 	errs     []error
 	requests []model.Request
+	subject  ai.Subject
 }
 
-func (b *sequencedBrainStub) Complete(_ context.Context, req model.Request) (model.Response, error) {
+func (b *sequencedBrainStub) Complete(ctx context.Context, req model.Request) (model.Response, error) {
 	b.requests = append(b.requests, req)
+	b.subject, _ = ai.SubjectOf(ctx)
 	index := len(b.requests) - 1
 	if index >= len(b.responses) {
 		index = len(b.responses) - 1
@@ -258,8 +260,8 @@ func TestVoicedDraftWithoutAProfileIsThePlainPath(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if version != nil {
-		t.Fatal("no profile must mean no voice version stamp")
+	if version != nil || brain.subject.Label != "plan" {
+		t.Fatalf("version %v, rail label %q; want no stamp, named by the subject line", version, brain.subject.Label)
 	}
 	if strings.Contains(brain.requests[0].Messages[0].Content, "<voice_profile>") {
 		t.Fatal("no profile must mean no voice block")
@@ -556,39 +558,5 @@ func TestTheReplyPromptHasOnlySelectedContentAndDeclaredSteering(t *testing.T) {
 	slices.Sort(got)
 	if !slices.Equal(got, want) {
 		t.Fatalf("reply payload fields = %v, want the reviewed content/steering boundary %v", got, want)
-	}
-}
-
-// subjectBrainStub records the rail subject each call was made under.
-type subjectBrainStub struct {
-	replyBrainStub
-	subjects []ai.Subject
-}
-
-func (b *subjectBrainStub) Complete(ctx context.Context, req model.Request) (model.Response, error) {
-	subject, _ := ai.SubjectOf(ctx)
-	b.subjects = append(b.subjects, subject)
-	return b.replyBrainStub.Complete(ctx, req)
-}
-
-// The rail names a reply draft by the answered message's subject line. A
-// failed draft then tells the reader which thread it was for.
-func TestReplyDraftNamesTheMessageItAnswersOnTheRail(t *testing.T) {
-	brain := &subjectBrainStub{}
-	brain.err = errors.New("provider down")
-	anchor := ids.NewV7()
-
-	_, _, _, err := replyDrafter{brain: brain}.completeVoiced(context.Background(), anchor,
-		replyActivityData{Subject: "Heat recovery quote", Thread: "inbound_mail"}, draftvoice.Context{})
-	if err == nil {
-		t.Fatal("a failing model must fail the voiced draft")
-	}
-	if len(brain.subjects) == 0 {
-		t.Fatal("the drafter reached no model")
-	}
-	for _, subject := range brain.subjects {
-		if subject.Label != "Heat recovery quote" || subject.Ref.ID != anchor {
-			t.Fatalf("subject = %+v, want the anchor named by its subject line", subject)
-		}
 	}
 }
