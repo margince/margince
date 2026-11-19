@@ -30,6 +30,7 @@ import { useViewerZone } from "../../lib/viewerzone";
 import { AuditEntryLine } from "../settings/audit";
 import { ActivityKindsSelect } from "./customfields.kinds";
 import { objectLabels, typeLabels } from "./customfields.labels";
+import { CustomFieldChoices } from "./customfields.choices";
 import { CustomFieldTranslate } from "./customfields.translations";
 import "./customfields.css";
 
@@ -306,6 +307,7 @@ function FieldMenu({
         <Button aria-haspopup="dialog" onClick={onRename}>
           {t("cf.edit")}
         </Button>
+        <CustomFieldChoices field={field} />
         <CustomFieldTranslate field={field} />
         <Button aria-haspopup="dialog" onClick={onArchive}>
           {t("cf.archive")}

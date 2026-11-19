@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 275.1 KB |
+| Tool catalog | 275.2 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 71839 |
+| Approx. wire tokens | 71846 |
 | Largest tool | `read_details` (17.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -34,7 +34,7 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 |---|---:|---:|---|
 | Output schemas | 51.7 KB | 18% | **No**: a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 53.7 KB | 19% | Yes, every step |
-| Input schemas | 157.9 KB | 57% | Yes, every step |
+| Input schemas | 158.0 KB | 57% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 4% | Partly |
 | **Description + input schema** | **211.7 KB** | **76%** | **the recurring cost** |
 
@@ -104,7 +104,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
 | [`read_reports`](#read_reports) | Read sales reports | yes |  | 2825 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 358 |
-| [`read_view`](#read_view) | Read a view | yes |  | 1889 |
+| [`read_view`](#read_view) | Read a view | yes |  | 1896 |
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2779 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 618 |
 | [`run_research`](#run_research) | Run AI work for your user |  |  | 1365 |
@@ -11571,7 +11571,7 @@ find_records to find or list records, and read_reports for the standard metrics 
       "type": "string"
     },
     "id": {
-      "description": "views: automation, bulk_change, company_360, company_contacts, company_coverage, company_documents, company_facts, company_finance_summary, company_graph, company_hierarchy_rollup, company_profile_fields, company_strength, company_vat_check, contact_360, contact_conversation_suggestions, contact_graph, contact_strength, custom_field_live_lists, deal_commitments, deal_documents, deal_outcome_reviews, deal_stakeholders, deal_status, dedupe_candidate, email_presentation, export_reporting_edition, import_run, latest_site_read, latest_technical_enrich, latest_transcript_read, lead_conversation_suggestions, list_members, meeting_brief, meeting_invitation, name_seats, pipeline, preview_contact_employment_import, project_health_assessments, project_stakeholders, read_record_references, reply_recipient, reporting_execution, reporting_executions, reporting_schedules, reporting_target, signal, signal_intro_path, signal_warmth, site_read, stage, stage_evidence, stage_exit_criteria, transcript_read; one value; a list of values for name_seats, read_record_references",
+      "description": "views: automation, bulk_change, company_360, company_contacts, company_coverage, company_documents, company_facts, company_finance_summary, company_graph, company_hierarchy_rollup, company_profile_fields, company_strength, company_vat_check, contact_360, contact_conversation_suggestions, contact_graph, contact_strength, custom_field_choice_use, custom_field_live_lists, deal_commitments, deal_documents, deal_outcome_reviews, deal_stakeholders, deal_status, dedupe_candidate, email_presentation, export_reporting_edition, import_run, latest_site_read, latest_technical_enrich, latest_transcript_read, lead_conversation_suggestions, list_members, meeting_brief, meeting_invitation, name_seats, pipeline, preview_contact_employment_import, project_health_assessments, project_stakeholders, read_record_references, reply_recipient, reporting_execution, reporting_executions, reporting_schedules, reporting_target, signal, signal_intro_path, signal_warmth, site_read, stage, stage_evidence, stage_exit_criteria, transcript_read; one value; a list of values for name_seats, read_record_references",
       "type": "string"
     },
     "if_recommendation": {

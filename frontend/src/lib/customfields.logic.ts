@@ -5,15 +5,7 @@
 import type { components } from "../api/schema";
 
 export type CfObject = components["schemas"]["CustomField"]["object"];
-export type CfType =
-  | "text"
-  | "number"
-  | "date"
-  | "currency"
-  | "multiselect"
-  | "picklist"
-  | "boolean"
-  | "record";
+export type CfType = components["schemas"]["CustomField"]["type"];
 
 // Chip order is normative (AC-custom-fields-2), and the SET is the contract's:
 // CfObject is the generated `CustomField["object"]`, so this list cannot quietly
@@ -32,6 +24,10 @@ export const CF_OBJECTS: readonly CfObject[] = [
   "activity",
 ];
 
+// The type set mirrors fieldcatalog.Types() in the backend, in its order.
+// backend/gates/frontendcustomfieldtypes_test.go fails when the two differ in
+// either direction, and CfType is the generated contract enum, so a member the
+// contract lacks fails to compile.
 export const CF_TYPES: readonly CfType[] = [
   "text",
   "number",
@@ -41,6 +37,7 @@ export const CF_TYPES: readonly CfType[] = [
   "multiselect",
   "boolean",
   "record",
+  "url",
 ];
 
 export function slug(label: string): string {
@@ -78,6 +75,7 @@ function storageNote(type: CfType, currency: string): string {
     case "boolean":
       return "boolean";
     case "record":
+    case "url":
       return "text";
   }
 }

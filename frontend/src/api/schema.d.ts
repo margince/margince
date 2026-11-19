@@ -18435,6 +18435,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/custom-fields/{id}/choices": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * How many records hold each choice of a picklist or multiselect field.
+         * @description What removing a choice would clear, asked before an options edit is confirmed. Every
+         *     record of the field's object counts, archived ones included, because the edit clears
+         *     them all. Each current choice is listed, with zero where no record holds it. Needs the
+         *     grant that edits a field's options.
+         */
+        get: operations["listCustomFieldChoiceUse"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/custom-fields/{id}/retire": {
         parameters: {
             query?: never;
@@ -18484,17 +18510,24 @@ export interface paths {
         head?: never;
         /**
          * Edit a picklist custom field's allowed options (regenerates the column's CHECK).
-         * @description CUSTOM-FIELDS-PARAM-5. Only valid for `type=picklist` fields (422 `not_picklist`
+         * @description CUSTOM-FIELDS-PARAM-5. Only valid for `type=picklist` and `type=multiselect` fields (422 `not_picklist`
          *     otherwise). Replaces the catalog's `options` array and regenerates the physical
          *     column's CHECK constraint from the new set via the governed engine (the same
          *     one-transaction owner-ALTER shape as `createCustomField` — this is the
          *     one DDL path rename/retire never touch). Removing every option is refused (422,
          *     detail "A picklist needs at least one option") — a picklist always keeps at least
          *     one allowed value. Like `retireCustomField`, an agent asks its user first: this
-         *     mutates a schema-adjacent CHECK constraint. A retired field
+         *     mutates a schema-adjacent CHECK constraint, and clears data. A retired field
          *     refuses the edit with a 409 `conflict` — retirement is terminal, so its options
-         *     are frozen; removing an option that stored values still use is also a 409
-         *     (`ADD CONSTRAINT` validates existing rows — migrate the values first).
+         *     are frozen.
+         *
+         *     Removing a choice that records hold clears it from them in the same transaction:
+         *     a picklist value becomes null, and a multiselect keeps its other choices. Archived
+         *     records are cleared too. Each changed record gets its own audit entry and its
+         *     object's `*.updated` event, and the answer's `records_changed` counts them.
+         *     `listCustomFieldChoiceUse` tells the caller that count before they confirm. A Live
+         *     List whose filter names a removed choice keeps evaluating and matches no record
+         *     through it.
          */
         patch: operations["updateCustomFieldOptions"];
         trace?: never;
@@ -47965,7 +47998,7 @@ export interface components {
              */
             name: string;
             /**
-             * @description The six custom-field types, plus `id` for a reference to another record,
+             * @description The custom-field types, plus `id` for a reference to another record,
              *     `domain` for a host column and `distance` for a place on the earth. A `distance`
              *     field admits only `within_radius`, whose value is `{lat, lon, radius_km, label?}`;
              *     `lat` and `lon` are the center, `radius_km` is greater than zero, and `label` is the
@@ -47981,7 +48014,7 @@ export interface components {
              *     a folded value has no fragment to match against.
              * @enum {string}
              */
-            type: "text" | "number" | "date" | "currency" | "picklist" | "multiselect" | "boolean" | "record" | "id" | "domain" | "distance";
+            type: "text" | "number" | "date" | "currency" | "picklist" | "multiselect" | "boolean" | "record" | "url" | "id" | "domain" | "distance";
             /**
              * @description The operator subset this field's type admits (LVS-PARAM-1), in one
              *     stable order. An operator absent here is one the engine refuses for
@@ -52413,10 +52446,10 @@ export interface components {
             /** @description Admin-facing key the column_name derives from. */
             slug: string;
             /**
-             * @description The supported field types. Multiselect values are JSON string arrays; empty arrays clear the selection. A record field holds the id of one record of the kind named by its single option, and that option must be a record kind a unit declared. Immutable once created.
+             * @description The supported field types. Multiselect values are JSON string arrays; empty arrays clear the selection. A record field holds the id of one record of the kind named by its single option, and that option must be a record kind a unit declared. A url field holds an absolute `http` or `https` address of at most 2000 characters, with no user name or password; any other value is refused with `invalid_value`. Immutable once created.
              * @enum {string}
              */
-            type: "text" | "number" | "date" | "currency" | "picklist" | "multiselect" | "boolean" | "record";
+            type: "text" | "number" | "date" | "currency" | "picklist" | "multiselect" | "boolean" | "record" | "url";
             /**
              * @description retired = soft: hidden from the API and filtering, column and values preserved.
              * @enum {string}
@@ -52448,6 +52481,17 @@ export interface components {
              */
             archived_at?: string | null;
             version?: components["schemas"]["RowVersion"];
+            /** @description Only on the answer to `updateCustomFieldOptions`: how many records held a choice the edit removed and had it cleared. */
+            records_changed?: number;
+        };
+        /** @description How many records hold each current choice of a picklist or multiselect field. */
+        CustomFieldChoiceUse: {
+            choices: components["schemas"]["CustomFieldChoiceCount"][];
+        };
+        CustomFieldChoiceCount: {
+            choice: string;
+            /** @description Records that hold the choice, archived ones included. */
+            records: number;
         };
         /** @description The Live Lists whose filter names a custom field: the ones the caller may find by name, and how many more exist that they may not find. */
         CustomFieldLiveLists: {
@@ -52479,7 +52523,7 @@ export interface components {
             object: "contact" | "company" | "deal" | "lead" | "project" | "contract" | "activity";
             label: string;
             /** @enum {string} */
-            type: "text" | "number" | "date" | "currency" | "picklist" | "multiselect" | "boolean" | "record";
+            type: "text" | "number" | "date" | "currency" | "picklist" | "multiselect" | "boolean" | "record" | "url";
             currency?: string | null;
             options?: string[] | null;
             source: string;
@@ -92321,6 +92365,41 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
+    listCustomFieldChoiceUse: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The records holding each choice. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CustomFieldChoiceUse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description The field is not a picklist or multiselect. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     retireCustomField: {
         parameters: {
             query?: never;
@@ -92444,7 +92523,7 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
-            /** @description Stored values still use a removed option, the field is retired (options are frozen — retirement is terminal), or the target table is busy with concurrent activity — the last is retryable. */
+            /** @description The field is retired (options are frozen — retirement is terminal), a record that holds a removed choice belongs to a member who has left and must be handed on first, or the target table is busy with concurrent activity — the last is retryable. */
             409: {
                 headers: {
                     [name: string]: unknown;

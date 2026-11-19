@@ -22,7 +22,7 @@ import {
   typedMinorUnits,
 } from "../format/minorunits";
 import { browserZone } from "../format/timezone";
-import { webUrl } from "../format/weburl";
+import { isWebAddress, webUrl } from "../format/weburl";
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import type { CfObject } from "../lib/customfields.logic";
 import { translatedLabel } from "../lib/labeltranslation";
@@ -105,6 +105,17 @@ export function customFieldToFormField(
       };
     case "text":
       return { ...base, type: "text", maxLength: TEXT_LIMITS.document };
+    case "url":
+      return {
+        ...base,
+        type: "text",
+        maxLength: TEXT_LIMITS.note,
+        placeholder: "https://",
+        validate: (value) =>
+          value.trim() === "" || isWebAddress(value.trim())
+            ? undefined
+            : t("cf.url.invalid"),
+      };
     case "record": {
       // A record field keeps its one kind in `options`, as the server checks.
       const kind = field.options?.[0] ?? "";
@@ -336,9 +347,9 @@ export function useCustomFieldLabel() {
 
 // Where a displayed value may be followed to, or null when it is only text.
 //
-// The type set is closed and carries no `url` type, so a link is recognised
-// from the VALUE, which makes the scheme check the load-bearing half rather
-// than a formality. Which schemes those are is not this file's to decide —
+// A text field holding an address is a link too, so a link is recognised from
+// the VALUE, which makes the scheme check the load-bearing half rather than a
+// formality. Which schemes those are is not this file's to decide —
 // `format/weburl` is the one place that answers it for every surface.
 export function customFieldHref(value: string): string | null {
   return webUrl(value)?.href ?? null;
