@@ -40,8 +40,7 @@ const ADDRESS_LINES: readonly AddressLine[] = ["to", "cc", "bcc"];
 
 const ADDRESS_KEYS = [",", ";"];
 
-// With nothing typed the list is a short pick of the record's contacts; a
-// colleague is found by name, so they wait for the first letters.
+// A colleague is found by name, so colleagues wait for typed letters.
 const IDLE_CONTACTS = 8;
 const COLLEAGUES_AFTER = 2;
 
