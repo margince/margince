@@ -5045,6 +5045,7 @@
   "worklist.verb.meetingNoShow": "Vắng mặt",
   "worklist.verb.meetingCanceled": "Không diễn ra",
   "worklist.verb.meetingOutcomeRecorded": "Đã ghi nhận kết quả cuộc họp",
+  "worklist.verb.meetingCanceledRecorded": "Đã đánh dấu là không diễn ra (đã hủy).",
   "worklist.verb.meetingOutcomeFailed": "Không thể ghi nhận kết quả. Thử lại.",
   "worklist.verb.meetingDayMissing": "Ngày này không có trong múi giờ của công ty. Chọn ngày khác.",
   "worklist.verb.meetingAddNotesFor": "Thêm ghi chú: {subject}",
