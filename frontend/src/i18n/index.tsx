@@ -93,8 +93,8 @@ export function localeNameKey(locale: Locale): MessageKey {
   return `locale.name.${locale}`;
 }
 
-// Until /v1/me carries a locale, storage is the only place a pick made on the
-// sign-in screen can survive a reload.
+// Storage is where a pick made on the sign-in screen survives a reload, and the
+// only language a signed-out page can read.
 function rememberLocale(locale: Locale): void {
   writeStored(STORAGE_KEYS.locale, locale);
 }
@@ -346,6 +346,21 @@ export function LocaleProvider({
 
 export function useLocale(): LocaleContextValue {
   return useContext(LocaleContext);
+}
+
+/**
+ * The signed-in account's language, from `/me`, adopted for this page. It is
+ * stored as this browser's choice, so the sign-in screen after a sign-out or a
+ * reload speaks it too. A language this release does not ship is adopted as a
+ * fallback and never stored.
+ */
+export function useAccountLocale(chosen: Locale | undefined): void {
+  const { adoptLocale } = useLocale();
+  useEffect(() => {
+    if (!chosen) return;
+    adoptLocale(chosen);
+    if (isLocale(chosen)) rememberLocale(chosen);
+  }, [chosen, adoptLocale]);
 }
 
 export function useT() {

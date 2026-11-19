@@ -39,7 +39,7 @@ import { WriteToHost } from "./features/settings/writetohost";
 import type { AuthNotice } from "./features/sign-in/auth";
 import { RESET_ROUTE } from "./features/sign-in/auth.route";
 import { fetchSetupStatus } from "./features/sign-in/setupclaim.queries";
-import { CompleteLocale, useLocale } from "./i18n";
+import { CompleteLocale, useAccountLocale, useLocale } from "./i18n";
 import { lazy } from "./i18n/lazy";
 import { useSkewedApiRelease } from "./lib/capabilities";
 import {
@@ -267,13 +267,7 @@ function AuthedApp({
   // above this component. It cannot ask for `/me` itself, and this is the first
   // place the answer exists — so a choice made on another browser reaches the
   // catalog here or nowhere.
-  const { adoptLocale } = useLocale();
-  useEffect(() => {
-    const chosen = me.data?.user?.locale;
-    if (chosen) {
-      adoptLocale(chosen);
-    }
-  }, [me.data, adoptLocale]);
+  useAccountLocale(me.data?.user?.locale);
   // A user with no stored zone gets the browser's as a first guess. They
   // change it under Settings → Account.
   useBrowserZoneOnFirstSignIn(me.data);

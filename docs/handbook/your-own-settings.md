@@ -135,7 +135,7 @@ Also called: email footer, sign-off, signature block.
 <!-- opens: settings/account -->
 To change the language Margince uses with you, open Settings → **Account**. Pick one in the **Language** row: **English**, **Deutsch** or **Tiếng Việt**, then choose **Save**.
 The screen changes once the choice is saved. It is saved to your account, so your next sign-in uses it too, and it changes nothing for anyone else.
-The sign-in page has its own language switch at the foot of the page.
+The sign-in page has its own language switch at the foot of the page. It starts in the language of the last account that signed in on this browser.
 Also called: change to German, switch to Vietnamese, locale, translation.
 
 ### How do I change the theme?

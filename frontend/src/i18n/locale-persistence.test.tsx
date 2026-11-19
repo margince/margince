@@ -2,7 +2,13 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { LocaleProvider, storedLocale, useLocale } from "./index";
+import {
+  type Locale,
+  LocaleProvider,
+  storedLocale,
+  useAccountLocale,
+  useLocale,
+} from "./index";
 
 // A language a reader picks has to survive a reload, or the switcher reads as
 // broken: the next load falls back to the browser's preference and silently
@@ -132,5 +138,40 @@ describe("a locale the server reports but this release does not ship", () => {
 
     expect(shown()).not.toBe("de-DE");
     expect(shown()).toBe("en");
+  });
+});
+
+function AccountProbe({ chosen }: Readonly<{ chosen: string }>) {
+  // Cast for the reason Probe's is: the account's language comes off the wire.
+  useAccountLocale(chosen as Locale);
+  return <span data-testid="locale">{useLocale().locale}</span>;
+}
+
+// The sign-in screen this browser shows next reads storage. So it speaks the
+// language of the account last signed in here, before and after a reload.
+describe("the language of the account signed in here", () => {
+  it("becomes the stored choice that the next mount reads", () => {
+    localStorage.setItem(STORAGE_KEY, "de");
+    render(
+      <LocaleProvider>
+        <AccountProbe chosen="en" />
+      </LocaleProvider>,
+    );
+    expect(shown()).toBe("en");
+    expect(localStorage.getItem(STORAGE_KEY)).toBe("en");
+    cleanup();
+    mount();
+    expect(shown()).toBe("en");
+  });
+
+  it("is not stored when this release does not ship it", () => {
+    localStorage.setItem(STORAGE_KEY, "de");
+    render(
+      <LocaleProvider>
+        <AccountProbe chosen="de-DE" />
+      </LocaleProvider>,
+    );
+    expect(shown()).toBe("de");
+    expect(localStorage.getItem(STORAGE_KEY)).toBe("de");
   });
 });
