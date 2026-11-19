@@ -14723,7 +14723,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.rates.fromNotCurrency":
     "Nhập mã loại tiền gồm 3 chữ cái, ví dụ EUR, CHF hoặc USD.",
   "settings.rates.rateNotPositive":
-    "Nhập tỷ giá lớn hơn 0, tối đa 10 chữ số thập phân.",
+    "Nhập tỷ giá lớn hơn 0, tối đa 10 chữ số phần nguyên và 10 chữ số thập phân.",
   "settings.rates.pastDate":
     "Chỉ chọn được ngày đã qua nếu ngày đó trước tỷ giá đầu tiên của loại tiền này. Chọn hôm nay hoặc một ngày sau đó.",
   "taxRates.title": "Thuế suất",

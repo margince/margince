@@ -67,8 +67,8 @@ func assertDuplicateSlugConflict(t *testing.T, e *apptest.AppEnv) {
 		t.Fatalf("first create status = %d, want 201: %+v", first, field)
 	}
 	second, _, problem := createCustomField(t, e, body)
-	if second != http.StatusConflict {
-		t.Fatalf("second create status = %d, want 409: %+v", second, problem)
+	if second != http.StatusConflict || problem.Code != "custom_field_label_taken" {
+		t.Fatalf("second create = %d/%q, want 409/custom_field_label_taken: %+v", second, problem.Code, problem)
 	}
 }
 

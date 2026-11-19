@@ -11,9 +11,8 @@ import type { MessageKey } from "../i18n/en";
 import type { FieldProblem } from "./problembody";
 import { PROBLEM_CODE_COPY } from "./problemcodecopy";
 
-// How a screen names a field a refusal can name. `limit` shows a bound sent
-// in the wire's unit in the unit the reader typed: minor units as money, a
-// percent with its sign.
+// A field's name on screen. `limit` shows a wire bound in the unit the reader
+// typed: minor units as money, a percent with its sign.
 export type FieldLabel =
   | string
   | Readonly<{ label: string; limit?: (wire: string) => string }>;
@@ -104,15 +103,16 @@ const RANGE_WORDING = {
 const OUT_OF_RANGE = "out_of_range";
 const TOO_LONG = "too_long";
 
-// Whether faultSentence has its own words for the code, so an English reader
-// is not shown the server's sentence for it.
-export function wordsFaultCode(code: string): boolean {
-  return (
-    PROBLEM_CODE_COPY.has(code) ||
-    FIELD_CODE_WORDING.has(code) ||
-    code === OUT_OF_RANGE ||
-    code === TOO_LONG
-  );
+// Whether an English reader gets catalog words for the fault. A field the
+// screen does not label keeps the server's sentence, which names it.
+export function wordsFaultInEnglish(
+  fault: FieldProblem,
+  labels?: FieldLabels,
+): boolean {
+  if (PROBLEM_CODE_COPY.has(fault.code) || fault.code === TOO_LONG) return true;
+  const worded =
+    FIELD_CODE_WORDING.has(fault.code) || fault.code === OUT_OF_RANGE;
+  return worded && labels?.[fault.field] !== undefined;
 }
 
 // A field fault in the reader's words, for the callout and for the line under
@@ -123,12 +123,13 @@ export function faultSentence(
   labels?: FieldLabels,
 ): string {
   const key = PROBLEM_CODE_COPY.get(fault.code);
+  const label = labels?.[fault.field];
+  const serverWords =
+    locale === "en" && !wordsFaultInEnglish(fault, labels) && fault.message;
   const message = key
     ? translate(locale, key)
-    : (codeMessage(fault, locale, labels?.[fault.field]) ??
-      (locale === "en"
-        ? fault.message
-        : worded(INVALID, locale, labels?.[fault.field])));
+    : serverWords ||
+      (codeMessage(fault, locale, label) ?? worded(INVALID, locale, label));
   const sentence = openingCase(message, locale);
   return /[.!?]$/.test(sentence) ? sentence : `${sentence}.`;
 }

@@ -6,7 +6,7 @@ import { identifierNumber } from "../../format/format";
 import type { Locale } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { looksLikeEmail } from "../../lib/emailshape";
-import { inRange, PORT_RANGE } from "../../lib/imapconnect";
+import { IMAP_PORT_DEFAULT, inRange, PORT_RANGE } from "../../lib/imapconnect";
 import {
   type FieldLabel,
   type FieldLabels,
@@ -62,7 +62,7 @@ function valueFault(
   raw: string,
 ): Readonly<{ code: string; params?: Record<string, string> }> | null {
   const value = raw.trim();
-  if (value === "") return { code: "required" };
+  if (value === "") return key === "imap.port" ? null : { code: "required" };
   if (key === "address" && !looksLikeEmail(value)) {
     return { code: "email_malformed" };
   }
@@ -111,7 +111,10 @@ export function credentialsOf(
       return {
         imap: {
           host: value("imap.host").trim(),
-          port: Number(value("imap.port").trim()),
+          port:
+            value("imap.port").trim() === ""
+              ? IMAP_PORT_DEFAULT
+              : Number(value("imap.port").trim()),
           username: value("imap.username").trim(),
           secret: value("imap.secret"),
           mailbox: "INBOX",

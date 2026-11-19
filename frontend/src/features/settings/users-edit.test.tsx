@@ -77,8 +77,8 @@ it("puts an address another member holds on the email field", async () => {
         return new Response(
           JSON.stringify({
             status: 409,
-            code: "conflict",
-            detail: "conflict: a user with this email already exists",
+            code: "email_taken",
+            detail: "a user with this email already exists",
           }),
           { status: 409, headers: { "Content-Type": "application/json" } },
         );
@@ -93,7 +93,9 @@ it("puts an address another member holds on the email field", async () => {
   await user.click(screen.getByRole("button", { name: "Save member" }));
   expect(await screen.findByText(en["users.emailTaken"])).toBeTruthy();
   await waitFor(() => expect(document.activeElement).toBe(email));
-  expect(screen.queryByText(/conflict/)).toBeNull();
+  expect(
+    screen.queryByText("a user with this email already exists"),
+  ).toBeNull();
 });
 
 it("asks for a cleared name on its field and sends nothing", async () => {

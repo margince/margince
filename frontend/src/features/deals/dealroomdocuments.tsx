@@ -8,9 +8,14 @@ import { Button, Field } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { useFieldFaults } from "../../design-system/savepage";
 import { Select } from "../../design-system/select";
-import { useT } from "../../i18n";
+import { type Translator, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { problemCodeOf, refusalSentences, unwrap } from "../../lib/problem";
+import {
+  type FieldLabels,
+  problemCodeOf,
+  refusalSentences,
+  unwrap,
+} from "../../lib/problem";
 import { AddDocumentDialog } from "../voice-knowledge/adddocument";
 import { roomBriefKey } from "./dealroombrief.key";
 import "./dealroomdocuments.css";
@@ -89,16 +94,7 @@ export function AddDocument({
     attachment_id: t("room.docs.fileLabel"),
     group_key: t("room.docs.groupLabel"),
   };
-  const refused = refusalSentences(add.error, t, labels);
-  // The file already in the room is the file picked, so the refusal stands on
-  // that field rather than at the foot.
-  const alreadyPresent = problemCodeOf(add.error) === ALREADY_PRESENT;
-  const placed = (error: unknown): ReadonlyMap<string, string> => {
-    const answer = refusalSentences(error, t, labels);
-    return problemCodeOf(error) === ALREADY_PRESENT && answer.rest
-      ? new Map([["attachment_id", answer.rest]])
-      : answer.byField;
-  };
+  const refused = addRefusal(add.error, labels, t);
   const options = (files.data?.data ?? []).map((doc) => ({
     value: doc.attachment.id,
     label: doc.attachment.title || doc.attachment.filename,
@@ -155,7 +151,8 @@ export function AddDocument({
               { attachmentId, group },
               {
                 onSuccess: () => setAttachmentId(""),
-                onError: (error) => faults.show(placed(error)),
+                onError: (error) =>
+                  faults.show(addRefusal(error, labels, t).byField),
               },
             )
           }
@@ -178,11 +175,22 @@ export function AddDocument({
         onClose={() => setUploading(false)}
       />
       <p className="t-caption">{t("room.editorial")}</p>
-      {refused.rest && !alreadyPresent ? (
-        <ErrorLine>{refused.rest}</ErrorLine>
-      ) : null}
+      {refused.foot ? <ErrorLine>{refused.foot}</ErrorLine> : null}
     </>
   );
+}
+
+// The file already in the room is the file picked, so that refusal stands on
+// the file field rather than at the foot.
+function addRefusal(
+  error: unknown,
+  labels: FieldLabels,
+  t: Translator,
+): { byField: ReadonlyMap<string, string>; foot: string | null } {
+  const answer = refusalSentences(error, t, labels);
+  return problemCodeOf(error) === ALREADY_PRESENT && answer.rest
+    ? { byField: new Map([["attachment_id", answer.rest]]), foot: null }
+    : { byField: answer.byField, foot: answer.rest };
 }
 
 function useAddDocument(roomId: string) {

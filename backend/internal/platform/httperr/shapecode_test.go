@@ -138,3 +138,17 @@ func TestUnmarshalOrRefusalNamesTheKeyUnderItsArgument(t *testing.T) {
 		t.Errorf("named %s/%s, want fields.win_probability/not_integer", got.Field, got.Code)
 	}
 }
+
+// A key inside a nested object is named by its dotted path. A fault inside an
+// array item stays on the body, since the decoder reports no index.
+func TestDecodeNamesAKeyInsideANestedObject(t *testing.T) {
+	inObject := refusedFault(t, `{"display_name":"Acme","address":{"city":5}}`, &crmcontracts.CreateLegalEntityRequest{})
+	if inObject.Field != "address.city" || inObject.Code != "invalid_type" {
+		t.Errorf("named %s/%s, want address.city/invalid_type", inObject.Field, inObject.Code)
+	}
+	inItem := refusedFault(t, `{"currency":"EUR","source":"manual","line_items":[{"quantity":"many"}]}`,
+		&crmcontracts.CreateOfferRequest{})
+	if inItem.Field != "body" || inItem.Code != "malformed_json" {
+		t.Errorf("named %s/%s, want body/malformed_json", inItem.Field, inItem.Code)
+	}
+}

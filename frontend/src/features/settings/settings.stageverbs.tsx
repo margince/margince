@@ -169,11 +169,7 @@ export function StageCreate({
         title={t("stage.new")}
         fields={fields}
         pending={mutation.isPending}
-        error={
-          mutation.isError && !refused.allPlaced
-            ? problemMessageOf(mutation.error, t)
-            : null
-        }
+        error={mutation.isError ? refused.rest : null}
         fieldRefusals={refused.byField}
         refusedAt={mutation.isError ? mutation.submittedAt : undefined}
         onSubmit={(values) => mutation.mutate({ values, pipeline })}

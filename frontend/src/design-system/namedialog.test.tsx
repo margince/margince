@@ -216,6 +216,28 @@ describe("nameRefusal", () => {
     });
   });
 
+  it("puts only the caller's own code on the name when it names one", () => {
+    const taken = new ProblemError({
+      status: 409,
+      code: "custom_field_label_taken",
+      detail: "a custom field with this label already exists",
+    });
+    const busy = new ProblemError({
+      status: 409,
+      code: "conflict",
+      detail: "The table is busy. Try again.",
+    });
+    const code = "custom_field_label_taken";
+    expect(nameRefusal(taken, t, "cf.labelTaken", code)).toEqual({
+      problem: null,
+      nameProblem: t("cf.labelTaken"),
+    });
+    expect(nameRefusal(busy, t, "cf.labelTaken", code)).toEqual({
+      problem: "The table is busy. Try again.",
+      nameProblem: null,
+    });
+  });
+
   it("keeps any other refusal under the form", () => {
     const denied = new ProblemError({
       status: 403,

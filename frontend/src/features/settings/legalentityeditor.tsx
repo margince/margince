@@ -31,6 +31,7 @@ import {
   DEFAULT_ENTITY_KEYS,
   type Draft,
   type DraftKey,
+  ENTITY_KEYS,
   entityLabels,
   entityRefusal,
   FLAT_KEYS,
@@ -109,10 +110,7 @@ export function EditEntityDialog({
   const own = !entity.is_default;
   const body = changesOf(initial, draft);
   const dirty = Object.keys(body).length > 0;
-  const labels = entityLabels(
-    t,
-    own ? (Object.keys(LABEL_KEYS) as DraftKey[]) : DEFAULT_ENTITY_KEYS,
-  );
+  const labels = entityLabels(t, own ? ENTITY_KEYS : DEFAULT_ENTITY_KEYS);
   const [faults, faultsRoot] = useFieldFaults();
   const refused = entityRefusal(update.error, t, labels);
   const text = (key: DraftKey) => ({
@@ -127,12 +125,16 @@ export function EditEntityDialog({
   const submit = (event: FormEvent) => {
     event.preventDefault();
     if (busy) return;
-    if (own && faults.show(missingEntityFields(draft, labels, locale))) {
-      update.reset();
-      return;
-    }
     if (!dirty) {
       onClose();
+      return;
+    }
+    // Only a field the save sends can be refused; the server keeps the rest.
+    const blanked = [...missingEntityFields(draft, labels, locale)].filter(
+      ([key]) => Object.hasOwn(body, key),
+    );
+    if (own && faults.show(new Map(blanked))) {
+      update.reset();
       return;
     }
     update.mutate(

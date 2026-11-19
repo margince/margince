@@ -12,6 +12,7 @@ import { Heading } from "../../design-system/heading";
 import { formatNumber, identifierNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import {
+  IMAP_PORT_DEFAULT,
   imapErrorMessage,
   inRange,
   PORT_RANGE,
@@ -40,7 +41,7 @@ import "./imap-connect-form.css";
 
 type ImapConnectRequest = components["schemas"]["ImapCredentials"];
 
-const DEFAULT_PORT = "993";
+const DEFAULT_PORT = String(IMAP_PORT_DEFAULT);
 const DEFAULT_MAILBOX = "INBOX";
 const DEFAULT_MAX_MESSAGES = "50";
 
@@ -125,7 +126,7 @@ export function ImapMailboxForm({
     return () => onPendingChange?.(false);
   }, [connect.isPending, onPendingChange]);
 
-  const parsedPort = port.trim() === "" ? 993 : Number(port);
+  const parsedPort = port.trim() === "" ? IMAP_PORT_DEFAULT : Number(port);
   const parsedMax = maxMessages.trim() === "" ? 50 : Number(maxMessages);
   // The fields without which nothing can be dialled, by label, in the order
   // they stand on the form: what the rail names once Connect is pressed.

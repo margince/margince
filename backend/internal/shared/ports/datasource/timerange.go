@@ -21,11 +21,12 @@ var (
 	timeType                = reflect.TypeFor[time.Time]()
 )
 
-// The bound as the caller reads it, in the same words as the dates above.
+// The bound as the caller reads it, in the same words as the dates above. A
+// screen that checks a day before sending mirrors the first and last day.
 const (
-	acceptedInstantMin   = "0001-01-02"
-	acceptedInstantMax   = "9999-12-30"
-	acceptedInstantRange = "a date-time from " + acceptedInstantMin + " to " + acceptedInstantMax
+	AcceptedInstantMin   = "0001-01-02"
+	AcceptedInstantMax   = "9999-12-30"
+	acceptedInstantRange = "a date-time from " + AcceptedInstantMin + " to " + AcceptedInstantMax
 )
 
 // RejectOutOfRangeTimes names the first decoded date-time a request may not
@@ -44,7 +45,7 @@ func RejectOutOfRangeTimes(decoded any) *FieldShapeError {
 	}
 	return &FieldShapeError{
 		Field: walk.path(), Want: acceptedInstantRange, Got: "a date-time outside that range",
-		Params: map[string]string{paramMin: acceptedInstantMin, paramMax: acceptedInstantMax},
+		Params: map[string]string{paramMin: AcceptedInstantMin, paramMax: AcceptedInstantMax},
 	}
 }
 

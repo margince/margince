@@ -17,6 +17,10 @@ export type Range = Readonly<{ min: number; max: number }>;
 
 export const PORT_RANGE: Range = { min: 1, max: 65535 };
 
+// The port a connect sends when the reader leaves it empty, as the contract's
+// default for `port`.
+export const IMAP_PORT_DEFAULT = 993;
+
 export function inRange(value: number, { min, max }: Range): boolean {
   return Number.isInteger(value) && value >= min && value <= max;
 }

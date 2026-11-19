@@ -275,7 +275,7 @@ describe("connecting a shared mailbox", () => {
     ).toBeVisible();
   });
 
-  it("puts the server's refusal on the field it names, and keeps the password", async () => {
+  it("puts the server's refusal on the field it names, and empties the password", async () => {
     const sent = backend(
       () => json({ items: [] }),
       () =>
@@ -317,7 +317,18 @@ describe("connecting a shared mailbox", () => {
       within(dialog).getByLabelText(en["connectors.imapSecret"], {
         exact: false,
       }),
-    ).toHaveValue("app-password");
+    ).toHaveValue("");
+  });
+
+  it("sends the default port for an emptied Port, as the personal form does", async () => {
+    const sent = backend(() => json({ items: [] }));
+    const { user, dialog, box } = await openConnect();
+    await fillValid(user, dialog, box);
+    await user.clear(box(en["connectors.imapPort"]));
+    await press(user, dialog);
+
+    await waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent[0]?.body).toMatchObject({ imap: { port: 993 } });
   });
 
   it("says a refused login at the foot, as the personal form does", async () => {

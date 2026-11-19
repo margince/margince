@@ -293,8 +293,12 @@ function CompanyFieldInput({
 // The semantic minimum a company profile needs before it is saved.
 const REQUIRED_FIELDS = ["display_name", "offer_summary", "icp"] as const;
 
+const REQUIRED_SET: ReadonlySet<keyof CompanyInput> = new Set<
+  keyof CompanyInput
+>(REQUIRED_FIELDS);
+
 function isRequired(field: keyof CompanyInput): boolean {
-  return (REQUIRED_FIELDS as readonly string[]).includes(field);
+  return REQUIRED_SET.has(field);
 }
 
 function missingCompanyFields(

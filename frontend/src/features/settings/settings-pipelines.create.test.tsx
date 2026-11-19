@@ -202,7 +202,11 @@ describe("PipelinesCard: a name already in use", () => {
     vi.stubGlobal("fetch", async (input: RequestInfo | URL) => {
       if (input instanceof Request && input.method === "POST") {
         return jsonResponse(
-          { status: 409, code: "conflict", detail: "conflict" },
+          {
+            status: 409,
+            code: "pipeline_name_taken",
+            detail: "a pipeline with this name already exists",
+          },
           409,
         );
       }
@@ -222,7 +226,9 @@ describe("PipelinesCard: a name already in use", () => {
     expect(screen.getByLabelText(/Name/).getAttribute("aria-invalid")).toBe(
       "true",
     );
-    expect(screen.queryByText("conflict")).toBeNull();
+    expect(
+      screen.queryByText("a pipeline with this name already exists"),
+    ).toBeNull();
   });
 });
 

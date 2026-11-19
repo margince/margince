@@ -59,7 +59,7 @@ export function storeCompany(
 
 // The contract's maxLength for the company's display_name, which is also the
 // installation's name.
-export const COMPANY_NAME_MAX = 200;
+export const COMPANY_NAME_MAX = 120;
 
 // The profile fields a refusal can name, by wire path. A site-read confirm
 // nests the profile, so its name is `profile.display_name`.

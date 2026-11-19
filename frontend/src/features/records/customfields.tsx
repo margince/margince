@@ -244,7 +244,12 @@ export function CustomFieldsAdmin() {
       setRenaming(null);
     },
   });
-  const renameRefused = nameRefusal(rename.error, t, "cf.labelTaken");
+  const renameRefused = nameRefusal(
+    rename.error,
+    t,
+    "cf.labelTaken",
+    "custom_field_label_taken",
+  );
 
   // The variable carries the field, so a flip that lands before React re-arms
   // the mutation still writes the row the reader pressed. The saved row goes

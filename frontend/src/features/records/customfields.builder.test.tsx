@@ -98,14 +98,33 @@ describe("FieldBuilder", () => {
     expect(screen.queryByText("Label is required.")).toBeNull();
   });
 
+  it("leaves a conflict that is not the label's at the foot", async () => {
+    const { user, onSubmit } = builder({
+      error: new ProblemError({
+        status: 409,
+        code: "conflict",
+        detail: "The table is busy. Try again.",
+      }),
+    });
+    onSubmit.mockImplementation((_draft, refused: (error: unknown) => void) =>
+      refused(new ProblemError({ status: 409, code: "conflict" })),
+    );
+    const label = screen.getByRole("textbox", { name: en["cf.label"] });
+    await user.type(label, "Budget");
+    await user.click(screen.getByRole("button", { name: "Add field" }));
+    expect(screen.getByText("The table is busy. Try again.")).toBeVisible();
+    expect(screen.queryByText(en["cf.labelTaken"])).toBeNull();
+    expect(label).not.toHaveAttribute("aria-invalid");
+  });
+
   it("says on the label that the record type already has it", async () => {
     const { user, onSubmit } = builder();
     onSubmit.mockImplementation((_draft, refused: (error: unknown) => void) =>
       refused(
         new ProblemError({
           status: 409,
-          code: "conflict",
-          detail: 'a custom field labelled "Budget" already exists: conflict',
+          code: "custom_field_label_taken",
+          detail: 'a custom field labelled "Budget" already exists',
         }),
       ),
     );
@@ -114,7 +133,7 @@ describe("FieldBuilder", () => {
     await user.click(screen.getByRole("button", { name: "Add field" }));
     expect(await screen.findByText(en["cf.labelTaken"])).toBeVisible();
     expect(label).toHaveAttribute("aria-invalid", "true");
-    expect(screen.queryByText(/already exists: conflict/)).toBeNull();
+    expect(screen.queryByText(/labelled "Budget"/)).toBeNull();
   });
 
   it("reveals the ISO-4217 input for currency", async () => {
@@ -210,6 +229,9 @@ describe("FieldBuilder", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent(
       en["cf.lastOptionBlocked"],
     );
+    const option = screen.getByLabelText(/Option label/i);
+    expect(option).toHaveAttribute("aria-invalid", "true");
+    await vi.waitFor(() => expect(option).toHaveFocus());
     expect(onSubmit).not.toHaveBeenCalled();
     await user.type(screen.getByLabelText(/Option label/i), "Referral");
     expect(screen.queryByRole("alert")).toBeNull();

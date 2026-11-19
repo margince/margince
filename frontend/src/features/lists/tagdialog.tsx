@@ -152,71 +152,70 @@ export function TagDialog({
       intent="form"
       confirmLabel={existing ? t("tagAdmin.save") : t("tagAdmin.create")}
       confirmDisabled={unversioned}
+      bodyRef={faultsRoot}
       pending={pending}
       error={unversioned ? t("tagAdmin.noVersion") : refused.rest}
       onConfirm={submit}
     >
-      <div ref={faultsRoot} className="form-stack">
-        <Field label={labels.name} required error={faults.of("name")}>
-          {(control) => (
-            <TextInput
-              {...control}
-              value={name}
-              maxLength={64}
-              onChange={(event) => {
-                setName(event.target.value);
-                faults.edited("name");
-              }}
-            />
-          )}
-        </Field>
-        <Field label={labels.color} error={faults.of("color")}>
-          {(control) => (
-            <Select
-              {...control}
-              value={color}
-              onChange={(next) => {
-                setColor(asTagColor(next));
-                faults.edited("color");
-              }}
-              options={colorOptions(t)}
-            />
-          )}
-        </Field>
-        {/* Suggestions are switched on for a word that exists, so a new word is
-          coined first and described when it is edited. */}
-        {existing && (
-          <SuggestionFields
-            description={description}
-            descriptionError={faults.of("description")}
-            onDescription={(next) => {
-              setDescription(next);
-              faults.edited("description");
-            }}
-            suggestible={suggestible}
-            onSuggestible={(next) => {
-              setSuggestible(next);
-              faults.edited("description");
+      <Field label={labels.name} required error={faults.of("name")}>
+        {(control) => (
+          <TextInput
+            {...control}
+            value={name}
+            maxLength={64}
+            onChange={(event) => {
+              setName(event.target.value);
+              faults.edited("name");
             }}
           />
         )}
-        {near.length > 0 && (
-          <Callout
-            tone="warning"
-            kind="standing"
-            title={t("tagAdmin.nearMatchTitle")}
-          >
-            {t("tagAdmin.nearMatch", {
-              // Capped: a warning naming forty words is one an admin scrolls
-              // past, which costs the near-duplicate it exists to catch.
-              names: near
-                .slice(0, NEAR_MATCHES_NAMED)
-                .map((tag) => tag.name)
-                .join(", "),
-            })}
-          </Callout>
+      </Field>
+      <Field label={labels.color} error={faults.of("color")}>
+        {(control) => (
+          <Select
+            {...control}
+            value={color}
+            onChange={(next) => {
+              setColor(asTagColor(next));
+              faults.edited("color");
+            }}
+            options={colorOptions(t)}
+          />
         )}
-      </div>
+      </Field>
+      {/* Suggestions are switched on for a word that exists, so a new word is
+        coined first and described when it is edited. */}
+      {existing && (
+        <SuggestionFields
+          description={description}
+          descriptionError={faults.of("description")}
+          onDescription={(next) => {
+            setDescription(next);
+            faults.edited("description");
+          }}
+          suggestible={suggestible}
+          onSuggestible={(next) => {
+            setSuggestible(next);
+            faults.edited("description");
+          }}
+        />
+      )}
+      {near.length > 0 && (
+        <Callout
+          tone="warning"
+          kind="standing"
+          title={t("tagAdmin.nearMatchTitle")}
+        >
+          {t("tagAdmin.nearMatch", {
+            // Capped: a warning naming forty words is one an admin scrolls
+            // past, which costs the near-duplicate it exists to catch.
+            names: near
+              .slice(0, NEAR_MATCHES_NAMED)
+              .map((tag) => tag.name)
+              .join(", "),
+          })}
+        </Callout>
+      )}
     </ConfirmModal>
   );
 }

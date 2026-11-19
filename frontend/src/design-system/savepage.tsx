@@ -249,9 +249,8 @@ export type FieldFaults = Readonly<{
   show: (faults: ReadonlyMap<string, string>) => boolean;
 }>;
 
-// A form's refused fields, each until its field is edited, and the ref of the
-// element where focus looks for the first of them.
-// Not one object: the React Compiler reads an object holding a ref as a ref.
+// A form's refused fields, each until edited, and the ref focus searches.
+// A tuple: the React Compiler reads an object holding a ref as a ref.
 export function useFieldFaults<
   E extends HTMLElement = HTMLFormElement,
 >(): readonly [FieldFaults, (element: E | null) => void] {

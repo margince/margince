@@ -18,7 +18,7 @@ import { useFieldFaults } from "../../design-system/savepage";
 import { Select } from "../../design-system/select";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { imapRefusal } from "../../lib/imapconnect";
+import { IMAP_PORT_DEFAULT, imapRefusal } from "../../lib/imapconnect";
 import { labelFor } from "../../lib/labelfor";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { ImportWindowPicker } from "../../mail-history/window-picker";
@@ -120,15 +120,17 @@ function CredentialField({
   onChange,
   error,
   secret = false,
+  required = true,
 }: Readonly<{
   label: string;
   value: string;
   onChange: (next: string) => void;
   error?: string;
   secret?: boolean;
+  required?: boolean;
 }>) {
   return (
-    <Field label={label} required error={error}>
+    <Field label={label} required={required} error={error}>
       {(control) => (
         <TextInput
           {...control}
@@ -179,6 +181,7 @@ function CredentialFields({
         onChange={(next) => set(key, next)}
         error={errorOf(key)}
         secret={SECRETS.has(key)}
+        required={key !== "imap.port"}
       />
     ),
   );
@@ -195,7 +198,9 @@ export function ConnectSharedMailboxDialog({
   const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
   const [provider, setProvider] = useState<Provider>("imap");
   const [visibility, setVisibility] = useState<Visibility>("held");
-  const [values, setValues] = useState<Values>({ "imap.port": "993" });
+  const [values, setValues] = useState<Values>({
+    "imap.port": String(IMAP_PORT_DEFAULT),
+  });
   const connect = useMutation({
     mutationFn: async (body: ConnectRequest) =>
       unwrap(await api.POST("/shared-mailboxes", { body })),
@@ -203,6 +208,13 @@ export function ConnectSharedMailboxDialog({
       await invalidate();
       onClose();
     },
+    // A refused login keeps no secret on screen for the next try.
+    onError: () =>
+      setValues((prior) => ({
+        ...prior,
+        "imap.secret": "",
+        "graph.client_secret": "",
+      })),
   });
   const labels = fieldLabels(t);
   const set = (key: FieldKey, value: string) => {
@@ -235,39 +247,38 @@ export function ConnectSharedMailboxDialog({
       title={t("sharedMailboxes.connectTitle")}
       confirmLabel={t("sharedMailboxes.connect")}
       pending={connect.isPending}
+      bodyRef={faultsRoot}
       error={imapRefusal(connect.error, t, labels).rest}
       onConfirm={press}
     >
-      <div className="form-stack" ref={faultsRoot}>
-        <ChoiceList
-          legend={t("sharedMailboxes.provider")}
-          value={provider}
-          onChange={setProvider}
-          choices={PROVIDERS.map((choice) => ({
-            value: choice.value,
-            label: t(choice.label),
-          }))}
-        />
-        <CredentialField
-          label={t(FIELD_LABEL.address)}
-          value={values.address ?? ""}
-          onChange={(next) => set("address", next)}
-          error={faults.of("address")}
-        />
-        <TeamPicker
-          teams={teams}
-          value={values.reader_team_id ?? ""}
-          onChange={(id) => set("reader_team_id", id)}
-          error={faults.of("reader_team_id")}
-        />
-        <VisibilityChoice value={visibility} onChange={setVisibility} />
-        <CredentialFields
-          provider={provider}
-          values={values}
-          errorOf={faults.of}
-          set={set}
-        />
-      </div>
+      <ChoiceList
+        legend={t("sharedMailboxes.provider")}
+        value={provider}
+        onChange={setProvider}
+        choices={PROVIDERS.map((choice) => ({
+          value: choice.value,
+          label: t(choice.label),
+        }))}
+      />
+      <CredentialField
+        label={t(FIELD_LABEL.address)}
+        value={values.address ?? ""}
+        onChange={(next) => set("address", next)}
+        error={faults.of("address")}
+      />
+      <TeamPicker
+        teams={teams}
+        value={values.reader_team_id ?? ""}
+        onChange={(id) => set("reader_team_id", id)}
+        error={faults.of("reader_team_id")}
+      />
+      <VisibilityChoice value={visibility} onChange={setVisibility} />
+      <CredentialFields
+        provider={provider}
+        values={values}
+        errorOf={faults.of}
+        set={set}
+      />
     </ConfirmModal>
   );
 }

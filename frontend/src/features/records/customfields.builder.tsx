@@ -74,7 +74,11 @@ export function FieldBuilder({
   };
   const refusal = (refused: unknown) =>
     refusalSentences(refused, t, labels, {
-      conflict: { field: "label", sentence: t("cf.labelTaken") },
+      conflict: {
+        field: "label",
+        code: "custom_field_label_taken",
+        sentence: t("cf.labelTaken"),
+      },
     });
   const [label, setLabel] = useState("");
   const [type, setType] = useState<CfType>("text");
@@ -82,6 +86,7 @@ export function FieldBuilder({
   const [options, setOptions] = useState<string[]>([""]);
   const [showInCreate, setShowInCreate] = useState(true);
   const showInCreateHintId = useId();
+  const optionsErrorId = useId();
   // A record field points at a kind an installed extension declared, so the
   // type is offered only when there is one to pick.
   const kinds = useRecordKindDirectory().data?.data ?? [];
@@ -128,6 +133,7 @@ export function FieldBuilder({
       return;
     }
     setOptions((current) => current.filter((_, i) => i !== idx));
+    faults.edited("options");
   };
 
   const confirm = () => {
@@ -148,6 +154,7 @@ export function FieldBuilder({
     );
   };
   const rest = refusal(error).rest;
+  const optionsRefused = faults.of("options") !== undefined;
 
   return (
     <>
@@ -256,6 +263,10 @@ export function FieldBuilder({
                 <div className="cf-option-row" key={idx}>
                   <TextInput
                     aria-label={t("cf.optionPlaceholder")}
+                    aria-invalid={optionsRefused ? true : undefined}
+                    aria-describedby={
+                      optionsRefused ? optionsErrorId : undefined
+                    }
                     placeholder={t("cf.optionPlaceholder")}
                     value={option}
                     onChange={(event) => setOptionAt(idx, event.target.value)}
@@ -273,8 +284,8 @@ export function FieldBuilder({
             <Button onClick={() => setOptions((current) => [...current, ""])}>
               {t("cf.addOption")}
             </Button>
-            {faults.of("options") !== undefined && (
-              <ErrorLine>{faults.of("options")}</ErrorLine>
+            {optionsRefused && (
+              <ErrorLine id={optionsErrorId}>{faults.of("options")}</ErrorLine>
             )}
           </div>
         )}

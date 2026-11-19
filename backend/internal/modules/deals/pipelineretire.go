@@ -170,9 +170,34 @@ func (s *Store) RestorePipeline(ctx context.Context, id ids.PipelineID) (crmcont
 	return out, txErr
 }
 
-// errPipelineNameTaken says a retired pipeline cannot come back under its own name
-// because a live pipeline now holds it.
-var errPipelineNameTaken = fmt.Errorf("%w: a live pipeline already has this name", apperrors.ErrConflict)
+// PipelineNameTakenError refuses a name a live pipeline already holds. It
+// unwraps to ErrConflict, so it answers 409.
+type PipelineNameTakenError struct{}
+
+func (*PipelineNameTakenError) Error() string {
+	return "a live pipeline already has this name; choose a different one"
+}
+
+func (*PipelineNameTakenError) Unwrap() error { return apperrors.ErrConflict }
+
+// MessageFault names the clash, so a screen can tell it from the default-pipeline one.
+func (e *PipelineNameTakenError) MessageFault() (code, message string) {
+	return "pipeline_name_taken", e.Error()
+}
+
+var errPipelineNameTaken = &PipelineNameTakenError{}
+
+// pipelineUniqueRefusal answers a unique violation on a pipeline write, or nil.
+// The name index is a taken name; the default index is a plain conflict.
+func pipelineUniqueRefusal(err error) error {
+	if nameTakenMeanwhile(err) {
+		return errPipelineNameTaken
+	}
+	if storekit.IsUniqueViolation(err) {
+		return apperrors.ErrConflict
+	}
+	return nil
+}
 
 // nameStillFree answers whether this pipeline's name is free for it to hold again.
 //

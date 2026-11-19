@@ -258,11 +258,24 @@ describe("a field fault worded from the screen's label and limit", () => {
           }),
         ).toBe(named[locale]);
       });
-      it(`words ${shown} without a wire key when the screen names no label`, () => {
-        expect(faultSentence(fault(code, params), locale)).toBe(bare[locale]);
+      it(`words ${shown} for a form's own check with no label`, () => {
+        expect(fieldCheckSentence(code, locale, undefined, params)).toBe(
+          bare[locale],
+        );
       });
+      if (locale !== "en") {
+        it(`words ${shown} without a wire key for an unlabelled field`, () => {
+          expect(faultSentence(fault(code, params), locale)).toBe(bare[locale]);
+        });
+      }
     }
   }
+
+  it("keeps the server's sentence for an English reader of an unlabelled field", () => {
+    expect(faultSentence(fault("not_integer"), "en")).toBe(
+      "`win_probability` must be an integer, not a number.",
+    );
+  });
 
   it("gives an English reader the words, not the API sentence", () => {
     const english = Object.assign(t, { locale: "en" as const });

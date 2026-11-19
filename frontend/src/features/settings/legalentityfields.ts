@@ -109,11 +109,18 @@ const REQUIRED_ENTITY_FIELDS = [
 
 const NAME_TAKEN = "legal_entity_name_taken";
 
+const ADDRESS_KEY_SET: ReadonlySet<DraftKey> = new Set<DraftKey>(ADDRESS_KEYS);
+
+/** Every field the editor holds. */
+export const ENTITY_KEYS: readonly DraftKey[] = [
+  ...FLAT_KEYS,
+  ...ADDRESS_KEYS,
+  ...OFFERING_KEYS,
+];
+
 // The contract nests the address, so a refusal names `address.city`.
 export function wireOf(key: DraftKey): string {
-  return (ADDRESS_KEYS as readonly DraftKey[]).includes(key)
-    ? `address.${key}`
-    : key;
+  return ADDRESS_KEY_SET.has(key) ? `address.${key}` : key;
 }
 
 /** The on-screen label of each field the form shows, by its wire path. */

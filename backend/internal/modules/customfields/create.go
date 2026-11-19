@@ -145,8 +145,8 @@ func (s *Service) createInTx(ctx context.Context, tx pgx.Tx, spec FieldSpec, cre
 		// The (object, slug/column_name) unique index fired: a duplicate
 		// that raced past the pre-check. The failed INSERT rolls the whole
 		// transaction back, ALTER included.
-		return crmcontracts.CustomField{}, fmt.Errorf(
-			"a custom field named %q already exists on %s: %w", slug, spec.Object, apperrors.ErrConflict)
+		return crmcontracts.CustomField{}, &LabelTakenError{message: fmt.Sprintf(
+			"a custom field named %q already exists on %s", slug, spec.Object)}
 	}
 	if err != nil {
 		return crmcontracts.CustomField{}, fmt.Errorf("customfields: inserting catalog row: %w", err)
@@ -284,10 +284,25 @@ func refuseTakenLabel(ctx context.Context, tx pgx.Tx, object string, id ids.UUID
 		return fmt.Errorf("customfields: probing label namespace: %w", err)
 	}
 	if strings.EqualFold(strings.TrimSpace(heldLabel), strings.TrimSpace(label)) {
-		return fmt.Errorf("a custom field labelled %q already exists on %s: %w", label, object, apperrors.ErrConflict)
+		return &LabelTakenError{message: fmt.Sprintf("a custom field labelled %q already exists on %s", label, object)}
 	}
-	return fmt.Errorf("that label would reuse the key %q of the field labelled %q on %s; choose a different label: %w",
-		heldSlug, heldLabel, object, apperrors.ErrConflict)
+	return &LabelTakenError{message: fmt.Sprintf(
+		"that label would reuse the key %q of the field labelled %q on %s; choose a different label",
+		heldSlug, heldLabel, object)}
+}
+
+// LabelTakenError refuses a label another field of the record type holds, or
+// one whose key it would reuse. It unwraps to ErrConflict, so it answers 409.
+type LabelTakenError struct{ message string }
+
+func (e *LabelTakenError) Error() string { return e.message }
+
+func (e *LabelTakenError) Unwrap() error { return apperrors.ErrConflict }
+
+// MessageFault names the clash, so a screen can tell it from a busy table or a
+// retired field.
+func (e *LabelTakenError) MessageFault() (code, message string) {
+	return "custom_field_label_taken", e.message
 }
 
 // optionsJSON renders a picklist's option set for the jsonb catalog

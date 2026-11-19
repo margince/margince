@@ -62,7 +62,7 @@ export const LabelTaken: Story = {
           refused(
             new ProblemError({
               status: 409,
-              code: "conflict",
+              code: "custom_field_label_taken",
               detail: 'a custom field labelled "Budget" already exists',
             }),
           )

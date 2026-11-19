@@ -568,3 +568,28 @@ it("puts an edit's refused IBAN on the IBAN field", async () => {
   ).toBeVisible();
   await waitFor(() => expect(iban).toHaveFocus());
 });
+
+it("closes an unchanged entity whose stored name is blank, and sends nothing", async () => {
+  const user = userEvent.setup();
+  const calls: Call[] = [];
+  vi.stubGlobal(
+    "fetch",
+    backend(
+      ADMIN,
+      [...DEFAULT_ONLY, entity("le-legacy", { legal_name: "Legacy GmbH" })],
+      calls,
+    ),
+  );
+  render(<LegalEntitiesCard />);
+  await rowVerb(
+    user,
+    en["legalEntities.defaultUnnamed"],
+    en["legalEntities.edit"],
+  );
+  const dialog = await screen.findByRole("dialog");
+  await user.click(
+    within(dialog).getByRole("button", { name: en["legalEntities.save"] }),
+  );
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  expect(calls.some((call) => call.method === "PATCH")).toBe(false);
+});

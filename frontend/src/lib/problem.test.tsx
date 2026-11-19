@@ -662,13 +662,34 @@ describe("refusalSentences", () => {
     const { byField, rest } = refusalSentences(
       refused(
         { field: "name", code: "required", message: "x" },
-        { field: "pipeline_id", code: "invalid_uuid", message: "x" },
+        {
+          field: "pipeline_id",
+          code: "invalid_uuid",
+          message: "pipeline_id must be a UUID",
+        },
       ),
       english,
       { name: "Name" },
     );
     expect(byField.get("name")).toBe("Name is required.");
-    expect(rest).toBe("Check this value and try again.");
+    // English keeps the server's sentence for a field the screen does not label.
+    expect(rest).toBe("Pipeline_id must be a UUID.");
+  });
+
+  it("words that foot fault in German, where no server sentence is shown", () => {
+    const german = Object.assign(
+      (key: Parameters<typeof translate>[1]) => translate("de", key),
+      { locale: "de" as const },
+    );
+    const { rest } = refusalSentences(
+      refused(
+        { field: "name", code: "required", message: "x" },
+        { field: "pipeline_id", code: "invalid_uuid", message: "x" },
+      ),
+      german,
+      { name: "Name" },
+    );
+    expect(rest).toBe(german("common.fieldInvalid"));
   });
 
   it("puts a conflict on the form's unique field, in the form's words", () => {
@@ -684,6 +705,29 @@ describe("refusalSentences", () => {
     );
     expect(byField.get("name")).toBe("A tag with this name already exists.");
     expect(rest).toBeNull();
+  });
+
+  it("puts a conflict of the form's own code on its field, and no other", () => {
+    const clash = (code: string) =>
+      new ProblemError({ status: 409, code, detail: "an API sentence" });
+    const options = {
+      conflict: {
+        field: "name",
+        sentence: t("pipeline.nameTaken"),
+        code: "pipeline_name_taken",
+      },
+    };
+    expect(
+      refusalSentences(
+        clash("pipeline_name_taken"),
+        english,
+        {},
+        options,
+      ).byField.get("name"),
+    ).toBe(t("pipeline.nameTaken"));
+    const plain = refusalSentences(clash("conflict"), english, {}, options);
+    expect(plain.byField.size).toBe(0);
+    expect(plain.rest).toBe("an API sentence");
   });
 
   it("says a refusal with no field at the foot", () => {

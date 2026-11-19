@@ -144,7 +144,13 @@ export function AddToShortlistDialog({
       error,
       t,
       {},
-      { conflict: { field: LIST, sentence: t("lists.alreadyOnShortlist") } },
+      {
+        conflict: {
+          field: LIST,
+          code: "already_on_list",
+          sentence: t("lists.alreadyOnShortlist"),
+        },
+      },
     );
   const nameRefusal = (error: unknown) =>
     refusalSentences(error, t, { [NAME]: nameLabel });
@@ -197,6 +203,7 @@ export function AddToShortlistDialog({
       title={t("lists.addToShortlist")}
       confirmLabel={t("lists.add")}
       pending={create.isPending || change.isPending}
+      bodyRef={faultsRoot}
       error={memberRefusal(change.error).rest ?? nameRefusal(create.error).rest}
       onConfirm={() => {
         const input = { choice, newName, note };
@@ -206,56 +213,54 @@ export function AddToShortlistDialog({
         add(input).catch(() => undefined);
       }}
     >
-      <div className="form-stack" ref={faultsRoot}>
-        <Field label={listLabel} error={faults.of(LIST)}>
-          {(control) => (
-            <Select
-              {...control}
-              value={choice}
-              onChange={(next) => {
-                setChoice(next);
-                edited(LIST);
-              }}
-              placeholder={t("lists.pickShortlist")}
-              options={[
-                ...editable.map((list) => ({
-                  value: list.id,
-                  label: onLists.has(list.id)
-                    ? t("lists.alreadyOnOption", { name: list.name })
-                    : list.name,
-                })),
-                ...(mayCreate
-                  ? [{ value: NEW_LIST, label: t("lists.newShortlistOption") }]
-                  : []),
-              ]}
-            />
-          )}
-        </Field>
-        {choice === NEW_LIST && (
-          <Field label={nameLabel} error={faults.of(NAME)}>
-            {(control) => (
-              <TextInput
-                {...control}
-                value={newName}
-                onChange={(event) => {
-                  setNewName(event.target.value);
-                  edited(NAME);
-                }}
-              />
-            )}
-          </Field>
+      <Field label={listLabel} error={faults.of(LIST)}>
+        {(control) => (
+          <Select
+            {...control}
+            value={choice}
+            onChange={(next) => {
+              setChoice(next);
+              edited(LIST);
+            }}
+            placeholder={t("lists.pickShortlist")}
+            options={[
+              ...editable.map((list) => ({
+                value: list.id,
+                label: onLists.has(list.id)
+                  ? t("lists.alreadyOnOption", { name: list.name })
+                  : list.name,
+              })),
+              ...(mayCreate
+                ? [{ value: NEW_LIST, label: t("lists.newShortlistOption") }]
+                : []),
+            ]}
+          />
         )}
-        <Field label={t("lists.note")} hint={t("lists.noteHint")}>
+      </Field>
+      {choice === NEW_LIST && (
+        <Field label={nameLabel} error={faults.of(NAME)}>
           {(control) => (
-            <Textarea
+            <TextInput
               {...control}
-              value={note}
-              maxLength={500}
-              onChange={(event) => setNote(event.target.value)}
+              value={newName}
+              onChange={(event) => {
+                setNewName(event.target.value);
+                edited(NAME);
+              }}
             />
           )}
         </Field>
-      </div>
+      )}
+      <Field label={t("lists.note")} hint={t("lists.noteHint")}>
+        {(control) => (
+          <Textarea
+            {...control}
+            value={note}
+            maxLength={500}
+            onChange={(event) => setNote(event.target.value)}
+          />
+        )}
+      </Field>
     </ConfirmModal>
   );
 }

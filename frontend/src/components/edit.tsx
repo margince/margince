@@ -361,7 +361,6 @@ export function EditAction<Updated extends { id: string }>({
     typedValues(mutation.variables?.values),
   );
   const open = () => {
-    // A refusal from an earlier opening is about words no longer there.
     mutation.reset();
     setEditing(true);
   };

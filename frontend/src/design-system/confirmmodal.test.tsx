@@ -436,4 +436,26 @@ describe("the box a confirm sits in", () => {
     );
     expect(screen.getByRole("dialog", { name: "Full" })).toBeInTheDocument();
   });
+
+  it("hands its body, the element around the fields, to bodyRef", () => {
+    let body: HTMLDivElement | null = null;
+    rtlRender(
+      <ConfirmModal
+        open
+        onClose={vi.fn()}
+        title="Add to Shortlist"
+        confirmLabel="Add"
+        onConfirm={vi.fn()}
+        bodyRef={(element) => {
+          body = element;
+        }}
+      >
+        <input aria-label="Note" />
+      </ConfirmModal>,
+    );
+    const note = screen.getByRole("textbox", { name: "Note" });
+    expect(body).not.toBeNull();
+    expect(body).toBe(note.parentElement);
+    expect(note.closest(".form-stack")).toBe(body);
+  });
 });

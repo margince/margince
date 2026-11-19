@@ -61,22 +61,13 @@ func wantedShape(t reflect.Type) (want, shape string, perItem bool) {
 }
 
 // shapeCode names the wire code for a value a field of this type cannot hold.
-// Each spelling but not_integer and not_number is one a value object or a
-// handler already answers the same mistake with.
 func shapeCode(t reflect.Type) string {
 	t = derefType(t)
 	if t == nil {
 		return codeInvalidType
 	}
-	switch t.Name() {
-	case "UUID":
-		return "invalid_uuid"
-	case "Time":
-		return "datetime_malformed"
-	case "Date":
-		return "invalid_date"
-	case "Email":
-		return "email_malformed"
+	if named, ok := namedTypes[t.Name()]; ok {
+		return named.code
 	}
 	switch scalarShape(t.Kind()) {
 	case integerShape:
@@ -107,24 +98,25 @@ const (
 	numberShape  = "a number"
 )
 
+// namedType spells a type whose Go form is not its wire shape (a UUID is a byte
+// array, a date a struct): its sentence phrase, its sketch word, its refusal code.
+type namedType struct{ phrase, leaf, code string }
+
+var namedTypes = map[string]namedType{
+	"UUID":  {phrase: "a UUID string", leaf: "uuid", code: "invalid_uuid"},
+	"Time":  {phrase: "an RFC 3339 timestamp", leaf: "rfc3339", code: "datetime_malformed"},
+	"Date":  {phrase: "a date in YYYY-MM-DD form", leaf: "YYYY-MM-DD", code: "invalid_date"},
+	"Email": {phrase: "an email address", leaf: "email", code: "email_malformed"},
+}
+
 // namedShape names the WIRE shape of a type whose Go representation is not it.
 func namedShape(name string) (string, bool) {
-	switch name {
-	case "UUID":
-		return "a UUID string", true
-	case "Time":
-		return "an RFC 3339 timestamp", true
-	case "Date":
-		return "a date in YYYY-MM-DD form", true
-	case "Email":
-		return "an email address", true
-	default:
-		return "", false
-	}
+	named, ok := namedTypes[name]
+	return named.phrase, ok
 }
 
 func isNamedShape(name string) bool {
-	_, ok := namedShape(name)
+	_, ok := namedTypes[name]
 	return ok
 }
 
@@ -205,15 +197,8 @@ func leafShape(t reflect.Type) string {
 	// enum — reflection cannot see the values, so an enum field reads `string`
 	// here and its vocabulary in the description. That gap is structural, and
 	// the description is the half that carries it.
-	switch t.Name() {
-	case "UUID":
-		return "uuid"
-	case "Time":
-		return "rfc3339"
-	case "Date":
-		return "YYYY-MM-DD"
-	case "Email":
-		return "email"
+	if named, ok := namedTypes[t.Name()]; ok {
+		return named.leaf
 	}
 	switch t.Kind() {
 	case reflect.Slice, reflect.Array:

@@ -170,6 +170,7 @@ export function InviteDialog({
           : t("access.inviteTitle")
       }
       confirmLabel={issued ? t("access.done") : t("access.inviteConfirm")}
+      bodyRef={faultsRoot}
       pending={invite.isPending}
       error={
         invite.isError ? refusalSentences(invite.error, t, labels).rest : null
@@ -181,37 +182,35 @@ export function InviteDialog({
         <IssuedLink issued={issued} />
       ) : (
         <>
-          <div ref={faultsRoot} className="form-stack">
-            <Field
-              label={labels.full_name}
-              required
-              error={faults.of("full_name")}
-            >
-              {(control) => (
-                <TextInput
-                  {...control}
-                  value={name}
-                  onChange={(e) => {
-                    setName(e.target.value);
-                    faults.edited("full_name");
-                  }}
-                />
-              )}
-            </Field>
-            <Field label={labels.email} required error={faults.of("email")}>
-              {(control) => (
-                <TextInput
-                  {...control}
-                  type="email"
-                  value={email}
-                  onChange={(e) => {
-                    setEmail(e.target.value);
-                    faults.edited("email");
-                  }}
-                />
-              )}
-            </Field>
-          </div>
+          <Field
+            label={labels.full_name}
+            required
+            error={faults.of("full_name")}
+          >
+            {(control) => (
+              <TextInput
+                {...control}
+                value={name}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  faults.edited("full_name");
+                }}
+              />
+            )}
+          </Field>
+          <Field label={labels.email} required error={faults.of("email")}>
+            {(control) => (
+              <TextInput
+                {...control}
+                type="email"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  faults.edited("email");
+                }}
+              />
+            )}
+          </Field>
           <ChoiceList
             legend={t("access.capabilityLegend")}
             value={capability}

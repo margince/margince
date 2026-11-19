@@ -3987,7 +3987,7 @@
   "license.counting": "Full seats that are not deactivated or suspended, agents included. Read-only seats are unlimited and not counted.",
   "settings.rates.fromIsBase": "This is the base currency, and its rate is always 1. Choose another currency.",
   "settings.rates.fromNotCurrency": "Enter a 3-letter currency code, like EUR, CHF or USD.",
-  "settings.rates.rateNotPositive": "Enter a rate greater than zero, with at most 10 decimal places.",
+  "settings.rates.rateNotPositive": "Enter a rate greater than zero, with at most 10 digits before the decimal point and 10 after it.",
   "settings.rates.pastDate": "A past date works only before this currency’s first rate. Choose today or a later date.",
   "roles.object.activity": "Activities",
   "roles.object.relationship": "Relationships",

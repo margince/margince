@@ -13,12 +13,14 @@ export function nameRefusal(
   error: unknown,
   t: (key: MessageKey) => string,
   duplicate: MessageKey,
+  // The code of the 409 that means the name is taken; "conflict" by default.
+  code?: string,
 ): { problem: string | null; nameProblem: string | null } {
   const refused = refusalSentences(
     error,
     t,
     {},
-    { conflict: { field: NAME_FIELD, sentence: t(duplicate) } },
+    { conflict: { field: NAME_FIELD, sentence: t(duplicate), code } },
   );
   return {
     problem: refused.rest,

@@ -1,19 +1,6 @@
 import type { MessageKey } from "../i18n/en";
-import {
-  type FieldLabel,
-  type FieldProblem,
-  faultSentenceFor,
-  refusalSentences,
-} from "../lib/problem";
+import { type FieldLabel, refusalSentences } from "../lib/problem";
 import { type CreateField, fieldLabel } from "./create.fields";
-
-// The sentence a form shows beside the field one refusal names.
-export function fieldRefusalSentence(
-  problem: FieldProblem,
-  t: (key: MessageKey) => string,
-): string {
-  return faultSentenceFor(problem, t);
-}
 
 export type FieldRefusals = Readonly<{
   // The sentence for each form field the server refused, keyed by field key.
@@ -25,8 +12,11 @@ export type FieldRefusals = Readonly<{
   rest: string | null;
 }>;
 
-// A form's one unique field, by field key, and what a 409 `conflict` says on it.
-export type CreateConflict = Readonly<{ field: string; sentence: string }>;
+// A form's one unique field, by field key, and what a 409 that names it says
+// there: refusalSentences' own conflict, so the two cannot drift apart.
+export type CreateConflict = NonNullable<
+  NonNullable<Parameters<typeof refusalSentences>[3]>["conflict"]
+>;
 
 // A 422 names the wire field. A form field whose key differs (an amount typed
 // in major units, sent as amount_minor) declares it as wireField. An offered

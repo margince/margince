@@ -75,8 +75,8 @@ export const AlreadyOnIt: Story = {
           {
             title: "Conflict",
             status: 409,
-            code: "conflict",
-            detail: "the record is already on this list: conflict",
+            code: "already_on_list",
+            detail: "the record is already on this list",
           },
           409,
         ),

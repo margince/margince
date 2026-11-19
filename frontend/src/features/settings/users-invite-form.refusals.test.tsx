@@ -104,4 +104,34 @@ describe("InviteUserForm refusals", () => {
     await waitFor(() => expect(email).toHaveFocus());
     expect(screen.queryByText(/already exists in this company/)).toBeNull();
   });
+
+  it("drops the foot's refusal once the reader edits a field", async () => {
+    const user = userEvent.setup();
+    const sent: unknown[] = [];
+    renderForm(sent, () =>
+      jsonResponse(
+        {
+          status: 409,
+          code: "conflict",
+          detail: "This sign-in address is already used.",
+        },
+        409,
+      ),
+    );
+    const email = screen.getByRole("textbox", { name: "Email" });
+    await user.type(email, "ada@acme.test");
+    await user.type(
+      screen.getByRole("textbox", { name: "Full name" }),
+      "Ada Lovelace",
+    );
+    await user.click(screen.getByRole("button", { name: /invite/i }));
+    expect(
+      await screen.findByText("This sign-in address is already used."),
+    ).toBeVisible();
+    expect(screen.queryByText(en["users.emailTaken"])).toBeNull();
+    await user.type(email, "x");
+    expect(
+      screen.queryByText("This sign-in address is already used."),
+    ).toBeNull();
+  });
 });

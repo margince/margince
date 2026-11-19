@@ -63,9 +63,7 @@ export function memberRefusal(
       rest: null,
     };
   }
-  return refusalSentences(error, t, labels, {
-    conflict: { field: "email", sentence: t("users.emailTaken") },
-  });
+  return refusalSentences(error, t, labels);
 }
 
 /** What the member's name and address need before anything is sent. */
@@ -192,6 +190,11 @@ export function InviteUserForm({
     onError: (error) => faults.show(memberRefusal(error, t, labels).byField),
   });
   const refused = memberRefusal(invite.error, t, labels);
+  // An edit answers the refusal, so the foot's sentence goes with it.
+  const edited = (field: string) => {
+    faults.edited(field);
+    invite.reset();
+  };
 
   return (
     <>
@@ -247,7 +250,7 @@ export function InviteUserForm({
               value={email}
               onChange={(e) => {
                 setEmail(e.target.value);
-                faults.edited("email");
+                edited("email");
               }}
             />
           )}
@@ -266,7 +269,7 @@ export function InviteUserForm({
                 value={name}
                 onChange={(e) => {
                   setName(e.target.value);
-                  faults.edited("display_name");
+                  edited("display_name");
                 }}
               />
             )}
@@ -284,7 +287,7 @@ export function InviteUserForm({
                 value={greeting}
                 onChange={(e) => {
                   setGreeting(e.target.value);
-                  faults.edited("greeting_name");
+                  edited("greeting_name");
                 }}
               />
             )}
@@ -299,7 +302,7 @@ export function InviteUserForm({
               disabled={assignable.isPending}
               onChange={(next) => {
                 setRole(next);
-                faults.edited("role");
+                edited("role");
               }}
               options={roleOptions(t, offered)}
             />
@@ -309,7 +312,14 @@ export function InviteUserForm({
           team edits only its own records, and the preview below says so before
           the invite goes out. */}
         {placesOnTeams && (
-          <MemberTeamsField value={teamIds} onChange={setTeamIds} canManage />
+          <MemberTeamsField
+            value={teamIds}
+            onChange={(next) => {
+              setTeamIds(next);
+              invite.reset();
+            }}
+            canManage
+          />
         )}
         {fallback !== undefined && placedIn !== null && (
           <Field
@@ -322,7 +332,7 @@ export function InviteUserForm({
                 value={placedIn}
                 onChange={(next) => {
                   setEntityId(next);
-                  faults.edited("legal_entity_id");
+                  edited("legal_entity_id");
                 }}
                 options={entityOptions(t, entities)}
               />

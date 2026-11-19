@@ -5,7 +5,7 @@ import { ConnectivityError, writeFailureKey } from "./connectivity";
 import {
   type FieldLabels,
   faultSentence,
-  wordsFaultCode,
+  wordsFaultInEnglish,
 } from "./faultsentence";
 import {
   type FieldProblem,
@@ -49,7 +49,11 @@ function problemDetail(
   if (t && copyKey) return t(copyKey);
   const fault = problemFieldErrors(problem)[0];
   const locale = t ? problemLocale(t) : null;
-  if (locale && fault && (locale !== "en" || wordsFaultCode(fault.code))) {
+  if (
+    locale &&
+    fault &&
+    (locale !== "en" || wordsFaultInEnglish(fault, labels))
+  ) {
     return faultSentence(fault, locale, labels);
   }
   if (locale && locale !== "en") return null;
@@ -258,22 +262,21 @@ export type RefusalSentences = Readonly<{
   rest: string | null;
 }>;
 
-// A refusal split between a form's fields and its foot. A field is the form's
-// when `labels` names it. `conflict` places a 409 that names no field on the
-// form's one unique field, in the form's own words.
+// A refusal split between a form's fields (those `labels` names) and its foot.
+// `conflict` puts a 409 of its `code` ("conflict" by default) on one field.
 export function refusalSentences(
   error: unknown,
   t: (key: MessageKey) => string,
   labels: FieldLabels,
   options: Readonly<{
-    conflict?: Readonly<{ field: string; sentence: string }>;
+    conflict?: Readonly<{ field: string; sentence: string; code?: string }>;
     fallback?: string;
   }> = {},
 ): RefusalSentences {
   const byField = new Map<string, string>();
   if (error === null || error === undefined) return { byField, rest: null };
   const { conflict, fallback } = options;
-  if (conflict && problemCodeOf(error) === CONFLICT) {
+  if (conflict && problemCodeOf(error) === (conflict.code ?? CONFLICT)) {
     byField.set(conflict.field, conflict.sentence);
     return { byField, rest: null };
   }

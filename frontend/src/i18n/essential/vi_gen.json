@@ -3987,7 +3987,7 @@
   "license.counting": "Tài khoản đầy đủ quyền không bị vô hiệu hóa hay tạm khóa, kể cả trợ lý AI. Tài khoản chỉ xem không giới hạn và không được tính.",
   "settings.rates.fromIsBase": "Đây là tiền tệ cơ sở, nên tỷ giá luôn là 1. Chọn loại tiền khác.",
   "settings.rates.fromNotCurrency": "Nhập mã loại tiền gồm 3 chữ cái, ví dụ EUR, CHF hoặc USD.",
-  "settings.rates.rateNotPositive": "Nhập tỷ giá lớn hơn 0, tối đa 10 chữ số thập phân.",
+  "settings.rates.rateNotPositive": "Nhập tỷ giá lớn hơn 0, tối đa 10 chữ số phần nguyên và 10 chữ số thập phân.",
   "settings.rates.pastDate": "Chỉ chọn được ngày đã qua nếu ngày đó trước tỷ giá đầu tiên của loại tiền này. Chọn hôm nay hoặc một ngày sau đó.",
   "roles.object.activity": "Hoạt động",
   "roles.object.relationship": "Quan hệ",

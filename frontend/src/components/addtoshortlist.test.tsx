@@ -210,8 +210,8 @@ describe("a refused or unfinished add", () => {
           {
             title: "Conflict",
             status: 409,
-            code: "conflict",
-            detail: "the record is already on this list: conflict",
+            code: "already_on_list",
+            detail: "the record is already on this list",
           },
           409,
         ),
@@ -230,6 +230,36 @@ describe("a refused or unfinished add", () => {
     ).toHaveLength(1);
     expect(picker).toHaveAttribute("aria-invalid", "true");
     expect(screen.queryByText(/: conflict/)).toBeNull();
+  });
+
+  it("never calls another conflict an existing membership", async () => {
+    installFetchStub({
+      "GET /me": listsMe(true),
+      "GET /lists": () =>
+        jsonResponse({ data: [shortlist], page: { has_more: false } }),
+      [`POST /lists/${SHORTLIST_ID}/members`]: () =>
+        jsonResponse(
+          {
+            title: "Conflict",
+            status: 409,
+            code: "conflict",
+            detail: "an archived list is read-only: restore it first: conflict",
+          },
+          409,
+        ),
+    });
+    const { user, dialog, picker } = await openDialog();
+    await user.click(picker);
+    await user.click(
+      await screen.findByRole("option", { name: shortlist.name }),
+    );
+    await user.click(
+      within(dialog).getByRole("button", { name: en["lists.add"] }),
+    );
+
+    expect(await within(dialog).findByRole("alert")).toBeInTheDocument();
+    expect(screen.queryByText(en["lists.alreadyOnShortlist"])).toBeNull();
+    expect(picker).not.toHaveAttribute("aria-invalid", "true");
   });
 
   it("marks a Shortlist the record page already shows it on", async () => {

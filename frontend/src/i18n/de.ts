@@ -15133,7 +15133,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.rates.fromNotCurrency":
     "Gib einen Währungscode aus 3 Buchstaben ein, etwa EUR, CHF oder USD.",
   "settings.rates.rateNotPositive":
-    "Gib einen Kurs größer als null mit höchstens 10 Nachkommastellen ein.",
+    "Gib einen Kurs größer als null ein, mit höchstens 10 Stellen vor und 10 nach dem Komma.",
   "settings.rates.pastDate":
     "Ein vergangenes Datum geht nur vor dem ersten Kurs dieser Währung. Wähle heute oder ein späteres Datum.",
   "taxRates.title": "Steuersätze",

@@ -15041,7 +15041,7 @@ export const en = {
   "settings.rates.fromNotCurrency":
     "Enter a 3-letter currency code, like EUR, CHF or USD.",
   "settings.rates.rateNotPositive":
-    "Enter a rate greater than zero, with at most 10 decimal places.",
+    "Enter a rate greater than zero, with at most 10 digits before the decimal point and 10 after it.",
   "settings.rates.pastDate":
     "A past date works only before this currency’s first rate. Choose today or a later date.",
   "taxRates.title": "Tax rates",

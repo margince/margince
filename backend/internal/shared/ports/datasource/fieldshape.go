@@ -157,20 +157,10 @@ type ProbeDecoder func(raw json.RawMessage, into any) error
 //
 //craft:ignore naked-any mirror of StrictDecode's seam target
 func LocalizeFieldFault(raw json.RawMessage, into any, err error, decode ProbeDecoder) *FieldShapeError {
+	// A fault inside an array item stays the decoder's, which names no index. A
+	// top-level name is not trusted: for an array it reports the item's type.
 	var typeErr *json.UnmarshalTypeError
-	if errors.As(err, &typeErr) && namesAKeyBelowATopLevelField(typeErr.Field) {
-		// A path that reaches inside a nested value (`links.entity_id`) names a
-		// key this walk cannot reach, since it only decodes top-level keys, so
-		// the decoder's answer is the more precise one and must survive.
-		//
-		// A bare top-level name is NOT deferred to, even though the decoder
-		// supplies one: at that point it reports the type it was filling when it
-		// failed, which for an array is the ELEMENT type — `links` reads as
-		// "must be an object" when the field is an array of them, and a caller
-		// who believes it sends an object where an array belongs. The walk below
-		// reads the FIELD's own type, so it describes the field.
-		return nil
-	}
+	deeper := errors.As(err, &typeErr) && namesAKeyBelowATopLevelField(typeErr.Field)
 	target := structTypeOf(into)
 	if target == nil {
 		return nil
@@ -186,6 +176,13 @@ func LocalizeFieldFault(raw json.RawMessage, into any, err error, decode ProbeDe
 		if probeErr == nil {
 			continue
 		}
+		if inner := localizeInsideObject(keys[key], field.Type, probeErr, decode); inner != nil {
+			inner.Field = key + "." + inner.Field
+			return inner
+		}
+		if deeper {
+			return nil
+		}
 		want, shape, perItem := wantedShape(field.Type)
 		refusal := &FieldShapeError{
 			Field: key, Want: want, shape: shape, perItem: perItem, cause: probeErr, code: shapeCode(field.Type),
@@ -200,6 +197,16 @@ func LocalizeFieldFault(raw json.RawMessage, into any, err error, decode ProbeDe
 		return refusal
 	}
 	return nil
+}
+
+// localizeInsideObject names the key inside a nested object whose value failed,
+// or nil for a field that is no object the walk can open.
+func localizeInsideObject(raw json.RawMessage, t reflect.Type, err error, decode ProbeDecoder) *FieldShapeError {
+	inner := derefType(t)
+	if inner == nil || inner.Kind() != reflect.Struct || isNamedShape(inner.Name()) {
+		return nil
+	}
+	return LocalizeFieldFault(raw, reflect.New(inner).Interface(), err, decode)
 }
 
 // namesAKeyBelowATopLevelField reports whether a decoder path reaches a key
