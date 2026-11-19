@@ -129,6 +129,26 @@ describe("one review", () => {
     });
   });
 
+  it("says a pack made before the new sections predates them", async () => {
+    const older = review();
+    delete older.packet.contracts;
+    delete older.packet.touches;
+    delete older.packet.tasks;
+    stubWithSession(
+      {
+        "GET /legal-reviews/settings": legalOn,
+        [`GET /legal-reviews/${REVIEW_ID}`]: () => jsonResponse(older),
+      },
+      REVIEWER,
+    );
+    mount(REVIEW_ID);
+
+    expect(
+      await screen.findByText(en["legalReview.packOlder"]),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Master services agreement")).toBeNull();
+  });
+
   it("does not let the requester answer their own review", async () => {
     stubWithSession(
       {

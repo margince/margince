@@ -68,7 +68,9 @@ func TestThePackNamesTheDealsAgreementsTouchesAndTasks(t *testing.T) {
 	subject, taskSubject := "Pricing call", "Send the DPA"
 	e.records.touches = []PacketTouch{{ActivityID: call, Kind: "call", OccurredAt: now}, {ActivityID: mail, Kind: "email", OccurredAt: now}}
 	e.records.tasks = []PacketTask{{ActivityID: task, DueAt: &now}, {ActivityID: mailTask}}
-	e.records.subjects = map[ids.UUID]*string{call: &subject, task: &taskSubject, mail: nil}
+	// The mail and the second task are discoverable but not readable by the
+	// reader, so the fixture's readable set leaves them out.
+	e.records.subjects = map[ids.UUID]*string{call: &subject, task: &taskSubject}
 	id := e.request(t, dealID, nil)
 
 	// A title changed after the request is read now, and an agreement the
@@ -86,8 +88,8 @@ func TestThePackNamesTheDealsAgreementsTouchesAndTasks(t *testing.T) {
 		t.Fatalf("the pack showed agreements %+v, want the one still openable with its notice terms", contracts)
 	}
 	touches := *got.Packet.Touches
-	if len(touches) != 2 || touches[0].Subject == nil || *touches[0].Subject != subject || touches[1].Subject != nil {
-		t.Fatalf("the pack showed touches %+v, want the call named and the withheld mail unnamed", touches)
+	if len(touches) != 1 || ids.UUID(touches[0].ActivityId) != call || touches[0].Subject == nil || *touches[0].Subject != subject {
+		t.Fatalf("the pack showed touches %+v, want the readable call alone with no trace of the withheld mail", touches)
 	}
 	tasks := *got.Packet.Tasks
 	if len(tasks) != 1 || ids.UUID(tasks[0].ActivityId) != task || *tasks[0].Subject != taskSubject {
@@ -101,5 +103,30 @@ func TestThePackNamesTheDealsAgreementsTouchesAndTasks(t *testing.T) {
 	}
 	if blind.Packet.Contracts != nil || blind.Packet.Touches != nil || blind.Packet.Tasks != nil {
 		t.Fatalf("a reviewer without deal.read was shown records: %+v", blind.Packet)
+	}
+}
+
+// A pack asked for before the sections existed has none of their keys. It
+// reads as a pack that predates them, never as one that found nothing.
+func TestAPackFromBeforeTheRecordSectionsLeavesThemAbsent(t *testing.T) {
+	e := setupReviewEnv(t)
+	dealID, _, _ := gatedDeal(t, e)
+	id := e.request(t, dealID, nil)
+	reader := humanWith(e.ws, e.reviewer, map[string]principal.ObjectGrant{legalReviewEntity: {Read: true}, "deal": {Read: true}})
+
+	fresh, err := e.store.GetLegalReview(reader, id)
+	if err != nil || fresh.Packet.Contracts == nil || fresh.Packet.Touches == nil || fresh.Packet.Tasks == nil {
+		t.Fatalf("a new pack with nothing to list read %+v (%v), want empty sections", fresh.Packet, err)
+	}
+	if _, err := e.owner.Exec(t.Context(),
+		`UPDATE legal_review SET packet = packet - 'contracts' - 'touches' - 'tasks' WHERE id = $1`, id); err != nil {
+		t.Fatal(err)
+	}
+	old, err := e.store.GetLegalReview(reader, id)
+	if err != nil {
+		t.Fatalf("reading the older pack: %v", err)
+	}
+	if old.Packet.Contracts != nil || old.Packet.Touches != nil || old.Packet.Tasks != nil {
+		t.Fatalf("an older pack showed sections %+v, want them absent", old.Packet)
 	}
 }

@@ -22836,6 +22836,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "legalReview.taskDue": "Fällig am {date}",
   "legalReview.touchLine": "{kind}, {date}",
   "legalReview.offerPdf": "PDF",
+  "legalReview.packOlder":
+    "Dieses Paket entstand, bevor Verträge, Kontakte und Aufgaben dazugehörten.",
   "legalReview.packBinding": "Weitere an die Käuferseite gesendete Angebote",
   "aiTask.name.account_scan": "Analyse des Kundenbedarfs",
   "aiTask.name.agent_loop": "Agentensteuerung",

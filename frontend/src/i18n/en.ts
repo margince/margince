@@ -22519,6 +22519,8 @@ export const en = {
   "legalReview.taskDue": "Due {date}",
   "legalReview.touchLine": "{kind}, {date}",
   "legalReview.offerPdf": "PDF",
+  "legalReview.packOlder":
+    "This pack was made before agreements, contact and tasks were included.",
   "legalReview.packBinding": "Other offers sent to the buyer",
   "aiTask.name.account_scan": "Reading what an account needs",
   "aiTask.name.agent_loop": "Agent reasoning loop",

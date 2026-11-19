@@ -32,8 +32,6 @@ const (
 	// touchLimit and taskLimit keep the pack short: it is a briefing.
 	touchLimit = 5
 	taskLimit  = 10
-	// touchSweep reads past the automatic mail that is not a touch.
-	touchSweep = 25
 )
 
 // touchKinds are the kinds a person does with the buyer. A task is listed
@@ -88,12 +86,16 @@ func (r Reader) ReviewContracts(ctx context.Context, dealID ids.UUID) ([]deals.P
 	return out, nil
 }
 
-// ReviewActivity lists the deal's latest touches and its open tasks.
+// ReviewActivity lists the deal's latest touches and its open tasks, keeping
+// only what the caller can read. The list's discover gate also returns mail
+// outside the audience with its content withheld, so every row is asked again
+// through the readable gate before it is kept.
 func (r Reader) ReviewActivity(ctx context.Context, dealID ids.UUID) ([]deals.PacketTouch, []deals.PacketTask, error) {
 	entity := dealType
-	limit := touchSweep
+	limit := touchLimit
 	rows, _, err := r.activities.ListActivities(ctx, activities.ListActivitiesInput{
 		EntityType: &entity, EntityID: &dealID, Kinds: touchKinds, Limit: &limit,
+		ReadableOnly: true, WrittenByHuman: true,
 	})
 	if unreadable(err) {
 		return nil, nil, nil
@@ -101,15 +103,9 @@ func (r Reader) ReviewActivity(ctx context.Context, dealID ids.UUID) ([]deals.Pa
 	if err != nil {
 		return nil, nil, err
 	}
-	var touches []deals.PacketTouch
+	touches := make([]deals.PacketTouch, 0, len(rows))
 	for _, a := range rows {
-		if a.AutomaticKind != nil {
-			continue
-		}
 		touches = append(touches, deals.PacketTouch{ActivityID: ids.UUID(a.Id), Kind: string(a.Kind), OccurredAt: a.OccurredAt})
-		if len(touches) == touchLimit {
-			break
-		}
 	}
 	open, _, err := r.activities.ListOpenTasks(ctx, activities.ListOpenTasksInput{
 		EntityType: &entity, EntityID: &dealID, ExcludeSystemMinted: true, Limit: taskLimit,
@@ -120,28 +116,39 @@ func (r Reader) ReviewActivity(ctx context.Context, dealID ids.UUID) ([]deals.Pa
 	if err != nil {
 		return nil, nil, err
 	}
+	taskIDs := make([]ids.UUID, 0, len(open))
+	for _, t := range open {
+		taskIDs = append(taskIDs, t.ID)
+	}
+	readable, err := r.OpenableActivity(ctx, dealID, taskIDs)
+	if err != nil {
+		return nil, nil, err
+	}
 	tasks := make([]deals.PacketTask, 0, len(open))
 	for _, t := range open {
-		tasks = append(tasks, deals.PacketTask{ActivityID: t.ID, DueAt: t.DueAt})
+		if _, ok := readable[t.ID]; ok {
+			tasks = append(tasks, deals.PacketTask{ActivityID: t.ID, DueAt: t.DueAt})
+		}
 	}
 	return touches, tasks, nil
 }
 
-// OpenableActivity asks the activity list's own gate which of these the
-// caller can read, so mail outside their audience answers absent.
+// OpenableActivity asks the readable gate which of these the caller can read.
+// A row the caller may only discover, such as mail outside their audience,
+// answers absent.
 func (r Reader) OpenableActivity(ctx context.Context, dealID ids.UUID, activityIDs []ids.UUID) (map[ids.UUID]*string, error) {
 	out := make(map[ids.UUID]*string, len(activityIDs))
 	if len(activityIDs) == 0 {
 		return out, nil
 	}
 	entity := dealType
-	limit := max(len(activityIDs), 1)
+	limit := len(activityIDs)
 	wanted := make([]ids.ActivityID, 0, len(activityIDs))
 	for _, id := range activityIDs {
 		wanted = append(wanted, ids.From[ids.ActivityKind](id))
 	}
 	rows, _, err := r.activities.ListActivities(ctx, activities.ListActivitiesInput{
-		EntityType: &entity, EntityID: &dealID, IDs: wanted, Limit: &limit,
+		EntityType: &entity, EntityID: &dealID, IDs: wanted, Limit: &limit, ReadableOnly: true,
 	})
 	if unreadable(err) {
 		return out, nil
@@ -151,14 +158,9 @@ func (r Reader) OpenableActivity(ctx context.Context, dealID ids.UUID, activityI
 	}
 	for _, a := range rows {
 		id := ids.UUID(a.Id)
-		if !slices.Contains(activityIDs, id) {
-			continue
+		if slices.Contains(activityIDs, id) {
+			out[id] = a.Subject
 		}
-		if a.ContentState != nil && *a.ContentState == crmcontracts.ActivityContentStateWithheld {
-			out[id] = nil
-			continue
-		}
-		out[id] = a.Subject
 	}
 	return out, nil
 }

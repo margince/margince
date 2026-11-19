@@ -10,13 +10,16 @@ package integration
 // shows a seat without the object grant none of that kind.
 
 import (
+	"context"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/compose/legalreviewrecords"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestTheReviewPackReadsOnlyTheDealsOwnAgreementsTouchesAndTasks(t *testing.T) {
@@ -77,5 +80,97 @@ func TestTheReviewPackReadsOnlyTheDealsOwnAgreementsTouchesAndTasks(t *testing.T
 	}
 	if touches, tasks, err := reader.ReviewActivity(blind, deal); err != nil || len(touches)+len(tasks) != 0 {
 		t.Fatalf("a seat without activity.read was handed %d touches and %d tasks (%v)", len(touches), len(tasks), err)
+	}
+}
+
+func packSeat(e *Env, user ids.UUID, team ids.UUID) context.Context {
+	perms := activityLifecyclePerms
+	perms.Objects = map[string]principal.ObjectGrant{
+		"activity": {Create: true, Read: true, Update: true},
+		"deal":     {Read: true},
+		"contact":  {Read: true},
+	}
+	return e.As(user, []ids.UUID{team}, perms)
+}
+
+func packDeal(t *testing.T, e *Env) ids.UUID {
+	t.Helper()
+	company := e.SeedCompany(t, "Audience Holdings", nil)
+	pipeline, open, _ := DealFixture(t, e)
+	companyID := ids.From[ids.CompanyKind](company)
+	created, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
+		Name: "Audience renewal", PipelineID: pipeline, StageID: open, CompanyID: &companyID,
+	})
+	if err != nil {
+		t.Fatalf("seeding the deal: %v", err)
+	}
+	return ids.UUID(created.Id)
+}
+
+// Mail limited to its participants is discoverable but not readable by a
+// colleague. The pack freezes only what the requester read, and a reviewer
+// outside the audience gets no id, kind or time of it.
+func TestThePackLeavesOutMailOutsideTheRequestersAndTheReviewersAudience(t *testing.T) {
+	e := Setup(t)
+	reader := legalreviewrecords.New(e.Contracts, e.Activities)
+	deal := packDeal(t, e)
+	author, colleague := packSeat(e, e.Rep1, e.Team1), packSeat(e, e.Rep3, e.Team2)
+	subject := "Confidential pricing"
+	logged, _, err := e.Activities.LogActivity(author, activities.LogActivityInput{
+		Kind: "email", Subject: &subject, Direction: new("outbound"), Source: "manual",
+		Links: []activities.ActivityLinkInput{{EntityType: "deal", EntityID: deal}},
+	})
+	if err != nil {
+		t.Fatalf("logging the mail: %v", err)
+	}
+	mail := ids.UUID(logged.Id)
+	if _, err := e.Activities.SetAudience(author, ids.From[ids.ActivityKind](mail),
+		activities.SetAudienceInput{Audience: "participants"}); err != nil {
+		t.Fatalf("limiting the mail: %v", err)
+	}
+
+	outside, _, err := reader.ReviewActivity(colleague, deal)
+	if err != nil || len(outside) != 0 {
+		t.Fatalf("a requester outside the audience froze %+v (%v), want nothing", outside, err)
+	}
+	inside, _, err := reader.ReviewActivity(author, deal)
+	if err != nil || len(inside) != 1 || inside[0].ActivityID != mail {
+		t.Fatalf("a requester inside the audience froze %+v (%v), want the mail", inside, err)
+	}
+	seenByColleague, err := reader.OpenableActivity(colleague, deal, []ids.UUID{mail})
+	if err != nil || len(seenByColleague) != 0 {
+		t.Fatalf("a reviewer outside the audience was given %v (%v), want no trace", seenByColleague, err)
+	}
+	seenByAuthor, err := reader.OpenableActivity(author, deal, []ids.UUID{mail})
+	if err != nil || seenByAuthor[mail] == nil || *seenByAuthor[mail] != subject {
+		t.Fatalf("a reviewer inside the audience was given %v (%v), want the subject", seenByAuthor, err)
+	}
+}
+
+// Automatic mail is filtered in the query, so a run of it newer than a manual
+// touch cannot push the touch out of the five.
+func TestTheLatestTouchesSkipAutomaticMailBeforeCounting(t *testing.T) {
+	e := Setup(t)
+	reader := legalreviewrecords.New(e.Contracts, e.Activities)
+	deal := packDeal(t, e)
+	log := func(kind, subject string, ago time.Duration) ids.UUID {
+		at := time.Now().Add(-ago)
+		logged, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+			Kind: kind, Subject: &subject, OccurredAt: &at, Source: "manual",
+			Links: []activities.ActivityLinkInput{{EntityType: "deal", EntityID: deal}},
+		})
+		if err != nil {
+			t.Fatalf("logging %q: %v", subject, err)
+		}
+		return ids.UUID(logged.Id)
+	}
+	note := log("note", "Terms agreed", 72*time.Hour)
+	for i := range 30 {
+		bulk := log("email", "Newsletter", time.Duration(i+1)*time.Minute)
+		e.WsExec(t, `UPDATE activity SET bulk_mail_attested = true WHERE id = $1`, bulk)
+	}
+	touches, _, err := reader.ReviewActivity(e.Admin(), deal)
+	if err != nil || len(touches) != 1 || touches[0].ActivityID != note {
+		t.Fatalf("the latest touches were %+v (%v), want the one manual note", touches, err)
 	}
 }

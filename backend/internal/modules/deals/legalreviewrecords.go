@@ -85,6 +85,21 @@ type packetRecords struct {
 	tasks     []PacketTask
 }
 
+// emptied makes the sections of a new pack non-nil, so an empty one stores as
+// [] and only a pack from before the sections decodes them as nil.
+func (r packetRecords) emptied() packetRecords {
+	if r.contracts == nil {
+		r.contracts = []PacketContract{}
+	}
+	if r.touches == nil {
+		r.touches = []PacketTouch{}
+	}
+	if r.tasks == nil {
+		r.tasks = []PacketTask{}
+	}
+	return r
+}
+
 // readPacketRecords reads the pack's outside records under the requester.
 func (s *Store) readPacketRecords(ctx context.Context, dealID ids.UUID) (packetRecords, error) {
 	var out packetRecords
@@ -138,8 +153,13 @@ func packetActivityIDs(p reviewPacket) []ids.UUID {
 }
 
 // recordsWire renders the frozen records for a reader who may read the deal.
-// A record the reader cannot open is left out.
+// A record the reader cannot open is left out, and a pack that predates the
+// sections leaves them absent.
 func recordsWire(p reviewPacket, sight recordSight, out *crmcontracts.LegalReviewPacket) {
+	if p.Contracts == nil {
+		// A pack asked for before these sections existed has none of the keys.
+		return
+	}
 	contracts := make([]crmcontracts.LegalReviewPacketContract, 0, len(p.Contracts))
 	for _, c := range p.Contracts {
 		title, ok := sight.contracts[c.ContractID]

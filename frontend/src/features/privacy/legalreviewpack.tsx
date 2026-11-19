@@ -77,6 +77,9 @@ export function LegalReviewPack({ review }: Readonly<{ review: LegalReview }>) {
       <PackFacts packet={packet} />
       <PackOffer packet={packet} />
       <PackDocuments packet={packet} />
+      {packet.contracts === undefined && packet.deal.stage_name != null && (
+        <EmptyState>{t("legalReview.packOlder")}</EmptyState>
+      )}
       {(packet.contracts ?? []).length > 0 && <PackContracts packet={packet} />}
       {packet.history.length > 0 && <PackHistory packet={packet} />}
       {(packet.touches ?? []).length > 0 && <PackTouches packet={packet} />}

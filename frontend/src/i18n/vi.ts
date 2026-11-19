@@ -22227,6 +22227,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "legalReview.taskDue": "Hạn {date}",
   "legalReview.touchLine": "{kind}, lúc {date}",
   "legalReview.offerPdf": "Tệp PDF",
+  "legalReview.packOlder":
+    "Gói này được tạo trước khi có hợp đồng, liên hệ và việc cần làm.",
   "legalReview.packBinding": "Các báo giá khác đã gửi cho khách hàng",
   "aiTask.name.account_scan": "Phân tích nhu cầu khách hàng",
   "aiTask.name.agent_loop": "Điều phối tác nhân AI",

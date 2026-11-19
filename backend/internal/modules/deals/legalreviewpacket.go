@@ -37,9 +37,9 @@ type reviewPacket struct {
 	Binding       []packetOffer    `json:"binding,omitempty"`
 	History       []packetStage    `json:"history"`
 	Documents     []PacketDocument `json:"documents"`
-	Contracts     []PacketContract `json:"contracts,omitempty"`
-	Touches       []PacketTouch    `json:"touches,omitempty"`
-	Tasks         []PacketTask     `json:"tasks,omitempty"`
+	Contracts     []PacketContract `json:"contracts"`
+	Touches       []PacketTouch    `json:"touches"`
+	Tasks         []PacketTask     `json:"tasks"`
 	// Terms fingerprints what legal approved (legalreviewterms.go). The stage
 	// gate compares it with the deal at the move. It never leaves the server.
 	Terms string `json:"terms"`
@@ -131,6 +131,7 @@ func (s *Store) buildReviewPacket(
 		return out, err
 	}
 	out.Documents = records.documents
+	records = records.emptied()
 	out.Contracts, out.Touches, out.Tasks = records.contracts, records.touches, records.tasks
 	if out.Documents == nil {
 		out.Documents = []PacketDocument{}
