@@ -66,14 +66,15 @@ func rowReasonForKind(kind string) string { return threadverdict.ReasonForKind(k
 // answer and no reason at all to doubt a holding one.
 func inheritedVerdictTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) (string, error) {
 	user := actorUserID(ctx)
-	if user == ids.Nil || rec.ThreadKey == "" {
+	thread := verdictThread(rec)
+	if user == ids.Nil || thread == "" {
 		return "", nil
 	}
 	var status string
 	var seen []string
 	err := tx.QueryRow(ctx, `
 		SELECT status, seen_addresses FROM capture_thread_verdict
-		 WHERE thread_key = $1 AND user_id = $2`, rec.ThreadKey, user).Scan(&status, &seen)
+		 WHERE thread_key = $1 AND user_id = $2`, thread, user).Scan(&status, &seen)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return "", nil
@@ -96,7 +97,7 @@ func inheritedVerdictTx(ctx context.Context, tx pgx.Tx, rec connector.Normalized
 		// A party the verdict never saw, or a document it never read. Re-open
 		// the ledger rather than inheriting either way, and let the posture hold
 		// the message until the classifier has looked at it.
-		if err := reopenClearedThreadTx(ctx, tx, rec.ThreadKey); err != nil {
+		if err := reopenClearedThreadTx(ctx, tx, thread); err != nil {
 			return "", err
 		}
 		return applicableThreadVerdictTx(ctx, tx, VerdictPending)

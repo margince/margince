@@ -91,7 +91,7 @@ func (s *Store) ListDealOffers(ctx context.Context, dealID ids.DealID, in ListDe
 		if len(offers) > limit {
 			offers = offers[:limit]
 			last := offers[len(offers)-1]
-			next, err := storekit.EncodeCursor(last.CreatedAt, ids.UUID(last.Id))
+			next, err := storekit.EncodeCursor("offers", last.CreatedAt, ids.UUID(last.Id))
 			if err != nil {
 				return err
 			}
@@ -121,7 +121,7 @@ func dealOffersFilters(in ListDealOffersInput, arg func(any) int) ([]string, err
 		where = append(where, storekit.SQLf("status = $%d", arg(*in.Status)))
 	}
 	if in.Cursor != nil && *in.Cursor != "" {
-		c, err := storekit.DecodeCursor(*in.Cursor)
+		c, err := storekit.DecodeCursor("offers", *in.Cursor)
 		if err != nil {
 			return nil, err
 		}

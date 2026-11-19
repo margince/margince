@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/gmail"
 	"github.com/margince/margince/backend/internal/modules/capture/graph"
+	"github.com/margince/margince/backend/internal/modules/capture/imap"
 	"github.com/margince/margince/backend/internal/modules/capture/telegram"
 	"github.com/margince/margince/backend/internal/modules/capture/testmailbox"
 	"github.com/margince/margince/backend/internal/modules/comms"
@@ -33,11 +34,11 @@ var sendingMailProviders = []struct {
 }{
 	{provider: "gmail", recheck: gmail.SendScope, requested: gmailScopes},
 	{provider: "graph", recheck: graph.SendScope, requested: graphScopes},
-	// test_mailbox has no OAuth consent screen — its "request" is the one
-	// scope it always reports holding (testmailbox.GrantedScopes), which is
-	// also the scope comms.SendScopeFor demands back. Degenerate but honest:
-	// there is nothing else to request.
+	// test_mailbox and imap have no OAuth consent screen. Their "request" is the
+	// one scope the connector reports holding (GrantedScopes). comms.SendScopeFor
+	// demands that same scope back.
 	{provider: "test_mailbox", recheck: testmailbox.SendScope, requested: []string{testmailbox.SendScope}},
+	{provider: "imap", recheck: imap.SendScope, requested: []string{imap.SendScope}},
 }
 
 // The scope the authority gate DEMANDS must be the scope the connector
@@ -58,9 +59,8 @@ func TestTheSendScopeCommsDemandsIsTheOneTheConnectorRechecks(t *testing.T) {
 	}
 }
 
-// The OAuth consent must REQUEST what the gate demands. Neither vendor will add
-// a permission to an existing refresh token, so a connection consented without
-// this one can never be repaired short of reconnecting the mailbox.
+// The OAuth consent must REQUEST what the gate demands. No vendor adds a
+// permission to an existing grant, so a connection without it must reconnect.
 func TestEveryMailConsentRequestsTheScopeTheSendPathDemands(t *testing.T) {
 	for _, p := range sendingMailProviders {
 		t.Run(p.provider, func(t *testing.T) {

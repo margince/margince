@@ -4,6 +4,7 @@
 package de
 
 import (
+	"reflect"
 	"testing"
 	"time"
 
@@ -213,5 +214,34 @@ func TestThePackShipsEachDocumentInGermanAndEnglish(t *testing.T) {
 	}
 	if languages["de"] != 5 || languages["en"] != 5 {
 		t.Fatalf("documents per language = %v, want five German originals and five English copies", languages)
+	}
+}
+
+// TestTheCompiledRulesAreTheV2Rules pins every value of the compiled rule set.
+// Provenance and the digest describe the policy source, so they are left out.
+func TestTheCompiledRulesAreTheV2Rules(t *testing.T) {
+	want := messaging.Rules{
+		Jurisdiction:                  "de",
+		Version:                       2,
+		RecordConfirmationWithoutNews: true,
+		ReplyWindow:                   365 * 24 * time.Hour,
+		DealFollowUpWindow:            182 * 24 * time.Hour,
+		MarketingExceptions: []messaging.MarketingException{{
+			Kind:                         messaging.ExistingCustomer,
+			RequiresSaleEvidence:         true,
+			RequiresCollectionTimeOptOut: true,
+			RequiresSimilarity:           true,
+			RequiresNoObjection:          true,
+		}},
+		Disclosures: []messaging.Disclosure{
+			{Kind: messaging.ControllerIdentity},
+			{Kind: messaging.PrivacyContact},
+			{Kind: messaging.ObjectionRoute, MarketingOnly: true},
+		},
+	}
+	got := messagingRules()
+	got.Provenance, got.Digest = messaging.Provenance{}, ""
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("the compiled rules differ from the v2 rules:\n got %+v\nwant %+v", got, want)
 	}
 }

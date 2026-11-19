@@ -1,4 +1,7 @@
 /** @vitest-environment happy-dom */
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
 import "@testing-library/jest-dom/vitest";
 import { QueryClient } from "@tanstack/react-query";
 import { cleanup, screen, waitFor } from "@testing-library/react";
@@ -20,7 +23,11 @@ afterEach(() => {
 
 // The dialog opened on "Open a new deal" in an installation keeping currency.
 // refusal, when given, is the server's answer to the promotion.
-async function newDealDialog(refusal?: unknown, currency = "EUR") {
+async function newDealDialog(
+  refusal?: unknown,
+  currency = "EUR",
+  locale: "en" | "de" = "en",
+) {
   const user = steppedClock();
   vi.setSystemTime(new Date("2026-10-05T12:00:00Z"));
   const posted: unknown[] = [];
@@ -40,11 +47,17 @@ async function newDealDialog(refusal?: unknown, currency = "EUR") {
   render(
     <QualifyDialog lead={lead} open onClose={vi.fn()} onQualified={vi.fn()} />,
     new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+    locale,
   );
+  const de = locale === "de";
   await user.click(
-    await screen.findByRole("radio", { name: "Open a new deal" }),
+    await screen.findByRole("radio", {
+      name: de ? "Neuen Deal eröffnen" : "Open a new deal",
+    }),
   );
-  const amount = await screen.findByLabelText(`Amount (${currency})`);
+  const amount = await screen.findByLabelText(
+    `${de ? "Betrag" : "Amount"} (${currency})`,
+  );
   return { user, amount, posted };
 }
 
@@ -80,7 +93,7 @@ it("refuses a figure finer than the currency beside the field and sends nothing"
   expect(
     screen.getByText("This amount has more decimals than VND allows."),
   ).toBeVisible();
-  expect(f.amount).toHaveValue(1.5);
+  expect(f.amount).toHaveValue("1.5");
   expect(confirm).toBeDisabled();
   expect(f.posted).toHaveLength(0);
 
@@ -98,7 +111,8 @@ it("refuses a figure finer than the currency beside the field and sends nothing"
 it("drops a precision refusal when the deal choice takes its editor away", async () => {
   const f = await newDealDialog(undefined, "VND");
   await f.user.type(f.amount, "1");
-  await f.user.type(f.amount, ".5");
+  await f.user.tab();
+  await f.user.type(await screen.findByLabelText("Amount (VND)"), ".5");
   await f.user.click(
     screen.getByRole("button", { name: "Qualify and open deal" }),
   );
@@ -122,16 +136,15 @@ it("drops a precision refusal when the deal choice takes its editor away", async
   });
 });
 
-it("keeps the last amount it can hold, with its currency, when the typed figure is too large", async () => {
+// A prefix committed key by key is never sent in place of the figure typed.
+it("refuses a figure too large to store and sends nothing", async () => {
   const f = await newDealDialog();
   await f.user.type(f.amount, "99999999999999999999");
-  await f.user.click(
-    screen.getByRole("button", { name: "Qualify and open deal" }),
-  );
-  await waitFor(() => expect(f.posted).toHaveLength(1));
-  expect(f.posted[0]).toMatchObject({
-    deal: { amount_minor: 999999999999900, currency: "EUR" },
-  });
+  const confirm = screen.getByRole("button", { name: "Qualify and open deal" });
+  expect(confirm).toBeDisabled();
+  await f.user.click(confirm);
+  expect(screen.getByText("This amount is too large to store.")).toBeVisible();
+  expect(f.posted).toHaveLength(0);
 });
 
 it("puts the server's amount refusal under the field in the reader's words", async () => {
@@ -198,7 +211,7 @@ it("takes no amount before the base currency is known, then keeps the typed amou
   answerCurrency(jsonResponse({ base_currency: "VND" }));
   const amount = await screen.findByLabelText("Amount (VND)");
   await waitFor(() => expect(amount).toBeEnabled());
-  expect(amount).toHaveValue(null);
+  expect(amount).toHaveValue("");
   await user.type(amount, "500");
   await user.click(
     screen.getByRole("button", { name: "Qualify and open deal" }),
@@ -207,4 +220,32 @@ it("takes no amount before the base currency is known, then keeps the typed amou
   expect(posted[0]).toMatchObject({
     deal: { amount_minor: 500, currency: "VND" },
   });
+});
+
+// A German reader writes "12,5" for twelve and a half, and "1.500" reads as
+// fifteen hundred to them, so the dialog refuses it.
+it("sends 12,5 typed in German as 1250 minor units", async () => {
+  const f = await newDealDialog(undefined, "EUR", "de");
+  await f.user.type(f.amount, "12,5");
+  await f.user.click(
+    screen.getByRole("button", { name: "Qualifizieren und Deal erstellen" }),
+  );
+  await waitFor(() => expect(f.posted).toHaveLength(1));
+  expect(f.posted[0]).toMatchObject({
+    deal: { amount_minor: 1250, currency: "EUR" },
+  });
+});
+
+it("refuses 1.500 typed in German by naming the wanted form, and sends nothing", async () => {
+  const f = await newDealDialog(undefined, "EUR", "de");
+  await f.user.type(f.amount, "1.500");
+  const confirm = screen.getByRole("button", {
+    name: "Qualifizieren und Deal erstellen",
+  });
+  expect(confirm).toBeDisabled();
+  await f.user.click(confirm);
+  expect(
+    screen.getByText("Gib den Betrag als 1500 oder 1500,00 ein."),
+  ).toBeVisible();
+  expect(f.posted).toHaveLength(0);
 });

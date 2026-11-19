@@ -392,6 +392,9 @@ func loggedPath(r *http.Request) string {
 // cause is logged server-side, never leaked to the client.
 func Write(w http.ResponseWriter, r *http.Request, err error) {
 	fault, ok := Classify(err)
+	if timedOut, late := timedOutFault(r, err, ok); late {
+		fault, ok = timedOut, true
+	}
 	if !ok && CallerLeft(r.Context()) {
 		// Debug, not error: nothing failed on our side, and the sweep an operator
 		// reads for faults must not have to rule these out by hand. The cause

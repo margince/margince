@@ -81,6 +81,10 @@ func Prompt(fence promptfence.Fence, in Input) string {
 			activity.OccurredAt.Format(time.DateOnly), activity.Subject, activity.Body)
 		b.WriteString(fence.WrapAttr("activity_id", r.activities.For(activity.ID), text) + "\n")
 	}
+	for _, mail := range in.PrivateMail {
+		fmt.Fprintf(&b, "A private message was exchanged on this deal on %s. Its content is not shared.\n",
+			mail.OccurredAt.Format(time.DateOnly))
+	}
 	b.WriteString(`Return JSON: { "actions": [ { "kind", "date", "amount", "currency", "quoted_words", "probability", ` +
 		`"stage_id", "criteria", "cited_activity_ids", "reason", "confidence" } ] }. ` +
 		`Fields that do not apply to the kind are "", 0 or [].`)

@@ -37,7 +37,7 @@ func (w *csvWriters) isArchived(ctx context.Context, object string, id ids.UUID)
 		activity, err := w.activities.GetActivity(ctx, ids.From[ids.ActivityKind](id), storekit.IncludeArchived)
 		return err == nil && activity.ArchivedAt != nil, err
 	default:
-		return false, fmt.Errorf("import: %q is not an importable object: %w", object, apperrors.ErrConflict)
+		return false, fmt.Errorf("%q is not an importable object: %w", object, apperrors.ErrConflict)
 	}
 }
 
@@ -114,5 +114,41 @@ func (w *csvWriters) bind(ctx context.Context, row migration.Row, id ids.UUID) e
 		return err
 	}
 	w.links.markLanded(w.object, row.ExternalID, id)
+	return nil
+}
+
+// claimLandedPrefix rebuilds the run's key ledger for a commit slice that
+// starts at checkpoint. Each slice builds fresh writers. The rows before the
+// cursor reach the ledger through the identity map. A row bound there landed,
+// and the test run claimed its keys too.
+func (b *bundleWriters) claimLandedPrefix(ctx context.Context, src migration.Source, checkpoint int) error {
+	seen := 0
+	for _, object := range src.Objects() {
+		w, found := b.parts[object]
+		if !found || seen >= checkpoint {
+			continue
+		}
+		if err := w.preloadBindings(ctx); err != nil {
+			return err
+		}
+		for offset := 0; seen < checkpoint; {
+			rows, err := src.Rows(ctx, object, offset, importPredictPage)
+			if err != nil {
+				return err
+			}
+			for _, row := range rows[:min(len(rows), checkpoint-seen)] {
+				if binding, bound := w.bindings[row.ExternalID]; bound && binding.RunStatus != migration.StatusUndone {
+					typed, _, _ := w.landingCells(row)
+					w.claimRow(row, typed)
+				}
+			}
+			seen += min(len(rows), checkpoint-seen)
+			offset += len(rows)
+			if len(rows) < importPredictPage {
+				break
+			}
+		}
+		w.bindings = nil
+	}
 	return nil
 }

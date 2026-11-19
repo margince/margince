@@ -184,7 +184,7 @@ func (s *Service) addWaiting(
 		return err
 	}
 	for _, customer := range waiting {
-		if customer.AsksNothing || customer.ActionUnconfirmed {
+		if customer.AsksNothing || customer.unconfirmed() {
 			continue
 		}
 		owners := customer.DirectRecipients

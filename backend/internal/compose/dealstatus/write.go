@@ -57,6 +57,7 @@ func composeDeterministic(f facts, mv crmcontracts.DealStatusCardMove) crmcontra
 		out.ReplyTo = &id
 		out.RequestBasis = requestBasis(f, inbound, basisCurrentRequest)
 	}
+	out.OurReply = ourReplyOnCard(f)
 	return out
 }
 

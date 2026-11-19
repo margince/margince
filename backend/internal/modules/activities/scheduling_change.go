@@ -367,5 +367,5 @@ func (s *Store) executeInvitation(ctx context.Context, row invitationRow) (*conn
 
 func changesInvitation(in UpdateActivityInput) bool {
 	return in.OccurredAt != nil || in.OccurredPrecision != nil || in.DurationSeconds != nil || in.Subject != nil || in.Body != nil ||
-		(in.MeetingStatus != nil && !isMeetingOutcome(in.MeetingStatus))
+		(in.MeetingStatus != nil && !isMeetingOutcome(in.MeetingStatus)) || in.clears(auditFieldMeetingStatus)
 }

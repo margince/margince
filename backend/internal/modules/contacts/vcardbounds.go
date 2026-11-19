@@ -9,18 +9,6 @@ import (
 	"unicode/utf8"
 )
 
-// cardRefusal answers why a card is skipped before any lookup, or "" for a
-// card the import goes on with.
-func cardRefusal(entry VCardEntry) string {
-	if cardNamesASendingSystem(entry) {
-		return vcardMachineAddress
-	}
-	if _, _, length, over := OverlongContactName(map[string]string{contactNameColumn: entry.FullName}); over {
-		return fmt.Sprintf("The name is %d characters. A contact name holds at most %d.", length, ContactNameLimit)
-	}
-	return ""
-}
-
 // withTitleNote adds to a written card's reason that its title was cut to fit,
 // when the record took that title. A reader who sees only "imported" would
 // believe the whole title landed.

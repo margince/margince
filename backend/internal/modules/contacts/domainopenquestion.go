@@ -101,7 +101,7 @@ func (s *Store) ReopenWithheldDomain(ctx context.Context, domain string) (Blocke
 			// reopen something nobody asked to reopen. A CONFLICT rather than
 			// a validation fault — the domain is well formed and the request
 			// is intelligible; it is the row's state that refuses.
-			return fmt.Errorf("contacts: %s has an answer already; nothing to re-ask: %w", base, apperrors.ErrConflict)
+			return fmt.Errorf("%s has an answer already; nothing to re-ask: %w", base, apperrors.ErrConflict)
 		}
 		// evidenceAt is nil: this re-ask is the caller's own judgement, not a
 		// new message. Passing a date here would claim mail arrived that did
@@ -146,7 +146,7 @@ func readOpenQuestionTx(ctx context.Context, tx pgx.Tx, domain string) (BlockedD
 		// Nothing has ever asked about this domain, so there is no question to
 		// re-open. Not-found rather than a fault: the caller named a domain
 		// this installation holds no row for.
-		return BlockedDomain{}, fmt.Errorf("contacts: no open question about %s: %w", domain, apperrors.ErrNotFound)
+		return BlockedDomain{}, fmt.Errorf("no open question about %s: %w", domain, apperrors.ErrNotFound)
 	}
 	if err != nil {
 		return BlockedDomain{}, fmt.Errorf("contacts: reading where %s stands: %w", domain, err)

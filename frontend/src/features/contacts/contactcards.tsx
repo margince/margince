@@ -11,9 +11,10 @@ import { Panel, PanelRow } from "../../design-system/panel";
 import { badgeTone } from "../../design-system/readingtone";
 import { useNow } from "../../format/now";
 import { useLocale, useT } from "../../i18n";
-import { useDisabledCoreFeatures } from "../../lib/corefeatures";
+import { useHiddenCoreFeatures } from "../../lib/corefeatures";
 import { navigate } from "../../lib/router";
 import { useViewerZone } from "../../lib/viewerzone";
+import { LooksKeptLine } from "./claimlookskept";
 import { TakenOverLine, TakeOverPromiseButton } from "./claimtakeover";
 import { omitted } from "./contact360";
 import { ContactClaimsReview, claimsForReview } from "./contactclaimsreview";
@@ -87,13 +88,16 @@ export function ContactCommitmentsCard({
 // The line under a promise, and below it who took the promise over or the
 // verb that lets the reader take it.
 function loopSub(row: Row, contactId: string): ReactNode {
-  if (!row.takenBy && !row.takeable) {
+  if (!row.takenBy && !row.takeable && !row.looksKept) {
     return row.sub;
   }
   return (
     <>
       {row.sub}
       {row.takenBy && <TakenOverLine takenBy={row.takenBy} />}
+      {row.looksKept && (
+        <LooksKeptLine id={row.key} looksKept={row.looksKept} />
+      )}
       {row.takeable && (
         <TakeOverPromiseButton id={row.key} contactId={contactId} />
       )}
@@ -110,7 +114,7 @@ export function ContactDealCard({
   const { locale } = useLocale();
   const readerZone = useViewerZone();
   const card = dealCard(view, t, locale, readerZone);
-  const disabled = useDisabledCoreFeatures();
+  const disabled = useHiddenCoreFeatures();
   const title = t("contact.card.dealTitle", { name: firstName });
   if (disabled.includes("deals")) {
     return null;

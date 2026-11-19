@@ -42,7 +42,7 @@ var ErrTerminal = errors.New("comms: delivery is already terminal")
 // wrapped pgx violation carries the constraint and table names, and a client
 // is owed neither.
 var ErrDuplicateMessage = fmt.Errorf(
-	"comms: this message identity is already staged for delivery: %w", apperrors.ErrConflict)
+	"this message identity is already staged for delivery: %w", apperrors.ErrConflict)
 
 // ErrNoAddressee marks a delivery staged with nobody to reach. A message with
 // neither a To nor a Cc address can only be refused later — the consent gate
@@ -127,9 +127,12 @@ func NewStore(
 type StageInput struct {
 	ActivityID ids.ActivityID
 	Provider   string
-	MessageID  string // unbracketed
-	Recipients []string
-	Cc         []string
+	// ConnectionID is the sender's mailbox the message goes out from; zero
+	// leaves the choice to the transmission, which takes their default.
+	ConnectionID ids.UUID
+	MessageID    string // unbracketed
+	Recipients   []string
+	Cc           []string
 	// Bcc receives the message and is rendered into no header. It is stored so
 	// a retry addresses the same contacts the first attempt did.
 	Bcc     []string
@@ -215,13 +218,13 @@ func (s *Store) StageTx(ctx context.Context, tx pgx.Tx, in StageInput) (ids.UUID
 		INSERT INTO comms_outbound
 		  (id, activity_id, user_id, provider, message_id,
 		   recipients, cc, bcc, subject, body, html_body, from_name, consent_purpose, in_reply_to,
-		   references_chain, thread_key, list_unsubscribe, status, created_at, attachments, inline_logo_key)
+		   references_chain, thread_key, list_unsubscribe, status, created_at, attachments, inline_logo_key, connection_id)
 		VALUES ($1, $2, $3, $4, $5,
 		        $6, $7, $8, $9, $10, NULLIF($11,''), NULLIF($12,''), $13, NULLIF($14,''), $15,
-		        NULLIF($16,''), NULLIF($17,''), 'pending', $18, $19, NULLIF($20,''))`,
+		        NULLIF($16,''), NULLIF($17,''), 'pending', $18, $19, NULLIF($20,''), NULLIF($21::uuid, '00000000-0000-0000-0000-000000000000'))`,
 		id, in.ActivityID, userID, in.Provider, in.MessageID,
 		recipients, cc, bcc, in.Subject, in.Body, in.HTMLBody, in.FromName, in.ConsentPurpose,
-		in.InReplyTo, refs, in.ThreadKey, in.ListUnsubscribe, s.now().UTC(), files, in.InlineLogoKey); err != nil {
+		in.InReplyTo, refs, in.ThreadKey, in.ListUnsubscribe, s.now().UTC(), files, in.InlineLogoKey, in.ConnectionID); err != nil {
 		// The idempotency key is an ANSWER, and it is mapped rather than
 		// wrapped: a raw violation carries the constraint and table names, and
 		// no caller is owed the schema behind a refusal it can act on.
@@ -353,8 +356,8 @@ func (s *Store) commitReceipt(ctx context.Context, id ids.UUID, receipt connecto
 			   SET status = 'sent', party_admission_pending = true, provider_message_id = ` + arg(receipt.ProviderMessageID) + `, sent_at = ` + arg(sent.sentAt) + `,
 			       reason = NULL, inflight_at = NULL, from_address = coalesce(nullif(` + arg(receipt.FromAddress) + `, ''), from_address)
 			 WHERE id = ` + arg(id) + ` AND status = 'pending'
-			RETURNING activity_id, coalesce(message_id, ''), coalesce(user_id, '00000000-0000-0000-0000-000000000000'), provider`
-		return tx.QueryRow(ctx, query, args...).Scan(&sent.activity, &sent.staged, &sent.seat, &sent.provider)
+			RETURNING activity_id, coalesce(message_id, ''), coalesce(user_id, '00000000-0000-0000-0000-000000000000'), provider, connection_id`
+		return tx.QueryRow(ctx, query, args...).Scan(&sent.activity, &sent.staged, &sent.seat, &sent.provider, &sent.connection)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return sentReceipt{}, ErrTerminal

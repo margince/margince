@@ -196,7 +196,7 @@ func upsertSharedConnectionTx(ctx context.Context, tx pgx.Tx, in sharedUpsert) (
 	if err := announceSharedMailboxTx(ctx, tx, verb, change, id, before, after); err != nil {
 		return ids.Nil, nil, err
 	}
-	return id, prior.ref, resetConnectionSchedule(ctx, tx, id, false)
+	return id, prior.ref, resetConnectionSchedule(ctx, tx, id)
 }
 
 // sharedConnectPosture is the visibility a connect writes. A reconnect keeps

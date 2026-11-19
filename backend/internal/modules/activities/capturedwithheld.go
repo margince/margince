@@ -22,7 +22,7 @@ import (
 // ErrBytesWithheld is a file recorded by name only: capture kept no bytes for
 // it (RecordWithheldFiles), so there is nothing to serve or read. It answers as
 // not-found, the contract's only refusal for a file that cannot be had.
-var ErrBytesWithheld = fmt.Errorf("activities: the file's bytes were not kept: %w", apperrors.ErrNotFound)
+var ErrBytesWithheld = fmt.Errorf("the file's bytes were not kept: %w", apperrors.ErrNotFound)
 
 // fieldBytesWithheld is the column, and the audit images' key, that marks a
 // file recorded by name only.
@@ -36,11 +36,12 @@ type WithheldFile struct {
 	ContentType  string
 	DeclaredType string
 	ByteSize     int
-	// Checksum fingerprints the bytes that were not kept. Two readers use it.
+	// Checksum fingerprints the bytes that were not kept. Three readers use it.
 	// The replay proof compares an arriving message's parts with the stored
 	// rows. AdoptWithheldFiles refuses bytes whose fingerprint is not the one
-	// this row was named under. Empty for a private thread, whose row states
-	// nothing about its contents.
+	// this row was named under. readEmailAttachments reads its presence as "not
+	// addressed". Empty for a private thread, whose row states nothing about
+	// its contents.
 	Checksum string
 }
 

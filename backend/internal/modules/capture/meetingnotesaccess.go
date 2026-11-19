@@ -40,7 +40,7 @@ func MeetingNotesAccessTx(ctx context.Context, tx pgx.Tx, now time.Time) (NotesA
 	var notes, calendar *string
 	err = tx.QueryRow(ctx, `SELECT c.provider, c.provider_scopes, c.account_label, `+notesCalendarAccountSQL+`
  FROM capture_connection c WHERE c.user_id = @owner AND c.provider = 'gdocs'
- AND c.status IN ('connected','error') AND c.archived_at IS NULL`, pgx.NamedArgs{notesOwnerArg: actor.UserID}).Scan(&provider, &scopes, &notes, &calendar)
+ AND c.status IN ('connected','error') AND c.archived_at IS NULL ORDER BY c.created_at, c.id LIMIT 1`, pgx.NamedArgs{notesOwnerArg: actor.UserID}).Scan(&provider, &scopes, &notes, &calendar)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return result, nil
 	}

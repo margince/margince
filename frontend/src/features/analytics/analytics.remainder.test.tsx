@@ -27,6 +27,7 @@ describe("a report the server capped", () => {
     vi.stubGlobal(
       "fetch",
       reportsStub({
+        companyRead: true,
         companyRows,
         totalRows: { "open-deals-per-company": 1250 },
       }),
@@ -42,6 +43,7 @@ describe("a report the server capped", () => {
     vi.stubGlobal(
       "fetch",
       reportsStub({
+        companyRead: true,
         companyRows,
         totalRows: { "open-deals-per-company": 3 },
       }),
@@ -60,6 +62,7 @@ describe("a report the server answered in full", () => {
     vi.stubGlobal(
       "fetch",
       reportsStub({
+        companyRead: true,
         companyRows,
         totalRows: { "open-deals-per-company": 2 },
       }),

@@ -6,11 +6,13 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import { sessionOptions } from "../../lib/session";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
+  storyQueryClient,
 } from "../../testing/story-utils";
 import { DealStatusCardPanel } from "./dealstatus";
 
@@ -72,7 +74,11 @@ it("names the follow-up it created and opens that task, not the deal", async () 
   );
 });
 
-it("offers no follow-up to a seat that may not write activities", async () => {
+// The server's MoveRefusal is the one answer to whether a seat may take the
+// move. The card draws its refusal, with its reason, as a control that is off.
+it("draws the follow-up the server refused as off, with its reason, and writes no task", async () => {
+  const reason = "You do not have permission to add tasks";
+  const writes: string[] = [];
   installFetchStub({
     "GET /me": meRoute({ activity: ["read"] }),
     "GET /deals/demo-deal/status": () =>
@@ -81,6 +87,7 @@ it("offers no follow-up to a seat that may not write activities", async () => {
         story: { sentences: [] },
         next: {
           action: "create_task",
+          blocked_reason: reason,
           reason: "Agree the next step",
           arguments: { subject: "Agree the next step", source: "manual" },
           evidence: [],
@@ -90,6 +97,10 @@ it("offers no follow-up to a seat that may not write activities", async () => {
       }),
     "GET /deals/demo-deal/coverage": () =>
       jsonResponse({ stakeholders: [], risks: [] }),
+    "POST /tasks": () => {
+      writes.push("POST /tasks");
+      return jsonResponse({}, 201);
+    },
   });
   render(
     <StoryProviders>
@@ -100,16 +111,18 @@ it("offers no follow-up to a seat that may not write activities", async () => {
     </StoryProviders>,
   );
 
-  // The move is on screen; only its verb is withheld.
   expect(await screen.findByText("Agree the next step")).toBeVisible();
-  await waitFor(() =>
-    expect(
-      screen.queryByRole("button", { name: "Create follow-up" }),
-    ).not.toBeInTheDocument(),
-  );
+  const button = await screen.findByRole("button", {
+    name: "Create follow-up",
+  });
+  expect(button).toBeDisabled();
+  expect(button).toHaveAccessibleDescription(reason);
+  await userEvent.click(button);
+  expect(writes).toEqual([]);
 });
 
-it("offers no follow-up draft to a seat that may not write activities", async () => {
+it("draws the follow-up draft the server refused as off, with its reason", async () => {
+  const reason = "You do not have permission to send email";
   installFetchStub({
     "GET /me": meRoute({ activity: ["read"] }),
     "GET /deals/demo-deal/status": () =>
@@ -118,6 +131,7 @@ it("offers no follow-up draft to a seat that may not write activities", async ()
         story: { sentences: [] },
         next: {
           action: "draft_email",
+          blocked_reason: reason,
           reason: "Follow up on the meeting",
           arguments: {
             activity_id: "m-1",
@@ -141,9 +155,48 @@ it("offers no follow-up draft to a seat that may not write activities", async ()
   );
 
   expect(await screen.findByText("Follow up on the meeting")).toBeVisible();
-  await waitFor(() =>
-    expect(
-      screen.queryByRole("button", { name: "Draft follow-up" }),
-    ).not.toBeInTheDocument(),
+  const button = await screen.findByRole("button", {
+    name: /draft follow-up/i,
+  });
+  expect(button).toBeDisabled();
+  expect(button).toHaveAccessibleDescription(reason);
+});
+
+it("offers the follow-up the server did not refuse, whatever the session says", async () => {
+  installFetchStub({
+    "GET /me": meRoute({ activity: ["read"] }),
+    "GET /deals/demo-deal/status": () =>
+      jsonResponse({
+        deal_id: "demo-deal",
+        story: { sentences: [] },
+        next: {
+          action: "create_task",
+          reason: "Agree the next step",
+          arguments: { subject: "Agree the next step", source: "manual" },
+          evidence: [],
+        },
+        generated_at: "2026-08-24T12:00:00Z",
+        generated_by: "deterministic",
+      }),
+    "GET /deals/demo-deal/coverage": () =>
+      jsonResponse({ stakeholders: [], risks: [] }),
+  });
+  const client = storyQueryClient();
+  render(
+    <StoryProviders client={client}>
+      <DealStatusCardPanel
+        deal={{ id: "demo-deal", name: "Demo deal" }}
+        onOpenEmail={vi.fn()}
+      />
+    </StoryProviders>,
   );
+  await screen.findByText("Agree the next step");
+  // Asserted once the session is in, when a client-side grant check would
+  // already have hidden the verb.
+  await waitFor(() =>
+    expect(client.getQueryData(sessionOptions.queryKey)).toBeDefined(),
+  );
+  expect(
+    screen.getByRole("button", { name: "Create follow-up" }),
+  ).toBeEnabled();
 });

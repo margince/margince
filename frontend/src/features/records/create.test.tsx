@@ -199,10 +199,9 @@ describe("contact create flow", () => {
     });
   });
 
-  // A WORK primary and a PERSONAL primary are independent, matching what the
-  // server itself enforces (contactformfields.ts's contactEditFields: only a
-  // SAME-type primary swap is refused).
-  it("keeps a WORK primary and a PERSONAL primary independent", async () => {
+  // The server holds one primary address per contact, whatever its type, so
+  // marking a second row primary clears the first.
+  it("keeps one primary address across a WORK and a PERSONAL row", async () => {
     const captured: Captured[] = [];
     stubApi(
       {
@@ -241,10 +240,7 @@ describe("contact create flow", () => {
     await user.click(primaries[0]);
     await user.click(primaries[1]);
 
-    // Marking the PERSONAL row primary must not have cleared the WORK row's
-    // own primary — the DOM's own radio-group exclusivity, and the state
-    // update, are both scoped by type.
-    expect(primaries[0].checked).toBe(true);
+    expect(primaries[0].checked).toBe(false);
     expect(primaries[1].checked).toBe(true);
 
     await user.click(screen.getByRole("button", { name: "Create" }));
@@ -255,7 +251,7 @@ describe("contact create flow", () => {
         {
           email: "peter.work@neu.example",
           email_type: "work",
-          is_primary: true,
+          is_primary: false,
         },
         {
           email: "peter.personal@neu.example",
@@ -264,65 +260,6 @@ describe("contact create flow", () => {
         },
       ],
     });
-  });
-
-  // The request mapper's own fallback (asEmailType) resolves an unset type
-  // to "work" — the form has to group rows the same way, or an unset row
-  // and an explicit Work row read as two kinds here and collide once both
-  // reach the server as two primary work emails.
-  it("groups an unset type with the field's own default kind", async () => {
-    const user = userEvent.setup();
-    render(<ContactsScreen />);
-    await user.click(screen.getByText(en["create.contact"]));
-    await user.type(await screen.findByLabelText("Full name *"), "Peter Neu");
-
-    await user.click(screen.getByText("Add email"));
-    await user.click(screen.getByText("Add email"));
-    const emailInputs = screen.getAllByLabelText("Email *");
-    await user.type(emailInputs[0], "peter.unset@neu.example");
-    await user.type(emailInputs[1], "peter.work@neu.example");
-    const types = screen.getAllByRole("combobox", { name: "Type" });
-    await pickOption(user, types[1], "Work");
-    // types[0] stays unset on purpose.
-
-    const primaries = screen.getAllByRole("radio", {
-      name: "Primary",
-    }) as HTMLInputElement[];
-    await user.click(primaries[0]);
-    await user.click(primaries[1]);
-
-    expect(primaries[0].checked).toBe(false);
-    expect(primaries[1].checked).toBe(true);
-  });
-
-  it("clears a row's own primary when its kind changes, rather than colliding with the new kind's primary", async () => {
-    const user = userEvent.setup();
-    render(<ContactsScreen />);
-    await user.click(screen.getByText(en["create.contact"]));
-    await user.type(await screen.findByLabelText("Full name *"), "Peter Neu");
-
-    await user.click(screen.getByText("Add email"));
-    await user.click(screen.getByText("Add email"));
-    const emailInputs = screen.getAllByLabelText("Email *");
-    await user.type(emailInputs[0], "peter.personal@neu.example");
-    await user.type(emailInputs[1], "peter.work@neu.example");
-    const types = screen.getAllByRole("combobox", { name: "Type" });
-    await pickOption(user, types[0], "Personal");
-    await pickOption(user, types[1], "Work");
-
-    const primaries = screen.getAllByRole("radio", {
-      name: "Primary",
-    }) as HTMLInputElement[];
-    await user.click(primaries[0]);
-    await user.click(primaries[1]);
-    expect(primaries[0].checked).toBe(true);
-    expect(primaries[1].checked).toBe(true);
-
-    // Retype the PERSONAL row as Work — the second row's own kind.
-    await pickOption(user, types[0], "Work");
-
-    expect(primaries[0].checked).toBe(false);
-    expect(primaries[1].checked).toBe(true);
   });
 
   it("renders the server's 422 detail verbatim and stays open", async () => {

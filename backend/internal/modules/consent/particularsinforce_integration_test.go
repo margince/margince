@@ -126,7 +126,7 @@ func TestCheckAdvertisingDraftAsksTheRecipientsPack(t *testing.T) {
 	ctx := withActivityCreate(e.ctx)
 	recipient := recipientAddress(e)
 
-	found, err := store.CheckAdvertisingDraft(ctx, []string{recipient, recipient},
+	found, err := store.CheckAdvertisingDraft(ctx, []string{recipient, recipient}, nil,
 		"[QC] Ưu đãi", "Kính gửi quý khách,\n\nĐây là dịch vụ tốt nhất cho doanh nghiệp của quý khách.")
 	if err != nil {
 		t.Fatalf("checking the draft: %v", err)
@@ -135,7 +135,7 @@ func TestCheckAdvertisingDraftAsksTheRecipientsPack(t *testing.T) {
 		t.Fatalf("findings %+v, want one claim without proof, once for two recipients of one pack", found)
 	}
 
-	found, err = store.CheckAdvertisingDraft(ctx, []string{"nobody@elsewhere.test"},
+	found, err = store.CheckAdvertisingDraft(ctx, []string{"nobody@elsewhere.test"}, nil,
 		"Offer", "Dear customer,\n\nThis is the best service for your company and its whole team.")
 	if err != nil || len(found) != 0 {
 		t.Errorf("a recipient under no pack answered %+v, %v; want nothing", found, err)
@@ -152,7 +152,7 @@ func TestAnAdvertiserFromElsewhereIsToldToUseALocalAgency(t *testing.T) {
 	recipient := recipientAddress(e)
 	vietnameseOffer := "Kính gửi quý khách,\n\nChúng tôi xin giới thiệu dịch vụ của chúng tôi cho doanh nghiệp."
 
-	found, err := inside.CheckAdvertisingDraft(ctx, []string{recipient}, "[QC] Ưu đãi", vietnameseOffer)
+	found, err := inside.CheckAdvertisingDraft(ctx, []string{recipient}, nil, "[QC] Ưu đãi", vietnameseOffer)
 	if err != nil {
 		t.Fatalf("checking the draft: %v", err)
 	}
@@ -164,7 +164,7 @@ func TestAnAdvertiserFromElsewhereIsToldToUseALocalAgency(t *testing.T) {
 		InstallationCountryFunc(func(context.Context, pgx.Tx) (jurisdiction.Code, error) {
 			return "yz", nil
 		}))
-	found, err = abroad.CheckAdvertisingDraft(ctx, []string{recipient}, "[QC] Ưu đãi", vietnameseOffer)
+	found, err = abroad.CheckAdvertisingDraft(ctx, []string{recipient}, nil, "[QC] Ưu đãi", vietnameseOffer)
 	if err != nil {
 		t.Fatalf("checking the draft: %v", err)
 	}

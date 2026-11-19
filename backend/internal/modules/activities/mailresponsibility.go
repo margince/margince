@@ -6,6 +6,7 @@ package activities
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -118,6 +119,7 @@ func waitingReplyForOwner(row WaitingReply, owner *ids.UUID) WaitingReply {
 	} else if len(row.DirectRecipients) == 1 {
 		row.OwnerID = row.DirectRecipients[0]
 	}
+	row.OwnerWroteOnThread = !row.OwnerID.IsZero() && slices.Contains(row.threadWriters, row.OwnerID)
 	return row
 }
 

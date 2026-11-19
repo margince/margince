@@ -264,7 +264,7 @@ func (a *Assembler) factsFor(ctx context.Context, activityID *ids.UUID) (facts a
 func (a *Assembler) threadReading(
 	ctx context.Context, facts *activities.PipelineFacts, activityID *ids.UUID,
 ) (reading ThreadReading, known bool, err error) {
-	if a.threads == nil || facts == nil || facts.ThreadKey == "" || activityID == nil {
+	if a.threads == nil || facts == nil || !hasReadableConversation(*facts) || activityID == nil {
 		return ThreadReading{}, false, nil
 	}
 	reading, err = a.threads.ReadThread(ctx, facts.ThreadKey, activityID.String())

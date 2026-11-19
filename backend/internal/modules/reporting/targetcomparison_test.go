@@ -81,7 +81,7 @@ func TestEachStateThatCannotCompareSaysWhyAndGivesNoFigure(t *testing.T) {
 			delete(h, keyFor(e.Context.Scope, comparedMetric))
 		}, "no_target", ""},
 		{"missing exchange rate", func(_ *crmcontracts.ReportingEvaluation, o *ForecastOperands, _ heldTargets) {
-			o.FxMissing = true
+			o.FxMissingWon = true
 		}, "fx_missing", ""},
 		{"deals the reader cannot see", func(_ *crmcontracts.ReportingEvaluation, o *ForecastOperands, _ heldTargets) {
 			o.Narrowed = true
@@ -208,5 +208,23 @@ func TestTheShortfallFollowsTheLandingAndWhatIsLeftToWinDoesNot(t *testing.T) {
 		if got.Status != "no_target" || got.Basis == nil || *got.Basis != tc.measure || got.Gap != nil {
 			t.Fatalf("%s without a target: %+v, want no_target that still names its basis", tc.measure, got)
 		}
+	}
+}
+
+func TestAnOpenDealWithoutARateStillGivesTheTargetAndWhatIsWon(t *testing.T) {
+	evaluation, ops, held := sampleQuarter()
+	ops.FxMissingOpen = true
+	got := compareForecast(context.Background(), evaluation, ops, held)
+	if got.Status != "fx_missing" || got.Target == nil || *got.Target != 80_000_000 || got.Won == nil || *got.Won != 42_000_000 {
+		t.Fatalf("comparison %+v, want fx_missing with the 800k target and 420k won", got)
+	}
+	if got.Gap != nil || got.Coverage != nil || got.Landing != nil || got.OpenPipeline != nil {
+		t.Fatalf("comparison %+v, want no figure that rests on the open pipeline", got)
+	}
+
+	ops.FxMissingWon = true
+	got = compareForecast(context.Background(), evaluation, ops, held)
+	if got.Target != nil || got.Won != nil {
+		t.Fatalf("comparison %+v, want no figure when the won total itself is short", got)
 	}
 }

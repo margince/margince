@@ -45,7 +45,7 @@ import (
 // already held to the contacts on it, and refusing the record is not a reason to
 // lose the mail.
 func threadIsPrivateTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) (bool, string, error) {
-	return threadIsPrivateForTx(ctx, tx, actorUserID(ctx), rec.ThreadKey, rec.Counterparty.Email)
+	return threadIsPrivateForTx(ctx, tx, actorUserID(ctx), verdictThread(rec), verdictSender(rec))
 }
 
 // threadIsPrivateForTx is threadIsPrivateTx for one seat, thread and sender,

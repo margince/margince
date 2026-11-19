@@ -51,14 +51,9 @@ function RaillessFrame({ children }: Readonly<{ children: React.ReactNode }>) {
   );
 }
 
-function room(routes: RouteMap, session = true) {
+function room(routes: RouteMap) {
   return () => {
     installFetchStub(routes);
-    if (session) {
-      globalThis.sessionStorage.setItem("margince.room.session", "mdrs_story");
-    } else {
-      globalThis.sessionStorage.removeItem("margince.room.session");
-    }
     return (
       <StoryProviders>
         <RaillessFrame>
@@ -124,7 +119,10 @@ export const Expired: Story = {
 };
 
 export const DeadLink: Story = {
-  render: room({}, false),
+  render: room({
+    "GET /public/rooms/me": () =>
+      jsonResponse({ status: 401, code: "unauthorized" }, 401),
+  }),
 };
 
 // The refused states. They exist because a rep uses `View as buyer` to

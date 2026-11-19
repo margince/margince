@@ -52,7 +52,7 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 ## communication_decision
 
-30 columns · primary key `(id)` · referenced by 0 foreign keys
+32 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -61,6 +61,7 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 | `attempt` | `integer`, default `0` | yes |  |
 | `basis` | `text` |  | One of `contract`, `precontract_request`, `subject_initiated_correspondence`, `legitimate_interests`, `legal_obligation`, `vital_or_security_interest` and 3 more. |
 | `content_fingerprint` | `bytea` |  |  |
+| `country_source` | `text` |  |  |
 | `data_protection_country` | `text` |  |  |
 | `decided_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `decision_set_id` | `uuid` | yes |  |
@@ -81,6 +82,7 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 | `requested_category` | `text` |  |  |
 | `resolved_category` | `text` | yes | One of `reply_to_inbound`, `requested_followup`, `precontract_quote`, `active_deal_followup`, `customer_service`, `account_notice` and 8 more. |
 | `ruleset_codes` | `text[]` |  |  |
+| `ruleset_digest` | `text` |  |  |
 | `ruleset_version` | `integer` |  |  |
 | `subject_id` | `uuid` |  |  |
 | `subject_kind` | `text` |  | One of `contact`, `lead`. |
@@ -103,6 +105,7 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 - `communication_decision_instruction_shape`: `CHECK (((execution_authority = 'instruction') = (instruction_id IS NOT NULL)))`
 - `communication_decision_mode`: `CHECK ((mode = ANY (ARRAY['observe', 'warn', 'enforce'])))`
 - `communication_decision_phase`: `CHECK ((phase = ANY (ARRAY['staging', 'transmit'])))`
+- `communication_decision_ruleset_digest_shape`: `CHECK (((ruleset_digest IS NULL) OR ((ruleset_digest ~ '^[0-9a-f]{64}$') AND (ruleset_version IS NOT NULL) AND (COALESCE(array_length(ruleset_codes, 1), 0) = 1))))`
 - `communication_decision_ruleset_shape`: `CHECK ((((ruleset_codes IS NULL) OR (COALESCE(array_length(ruleset_codes, 1), 0) > 0)) AND ((ruleset_version IS NULL) OR (COALESCE(array_length(ruleset_codes, 1), 0) = 1))))`
 - `communication_decision_subject_kind`: `CHECK (((subject_kind IS NULL) OR (subject_kind = ANY (ARRAY['contact', 'lead']))))`
 - `communication_decision_subject_shape`: `CHECK (((subject_kind IS NULL) = (subject_id IS NULL)))`
@@ -118,8 +121,8 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"mode": 20000, "actor": 20000, "basis": 20000, "phase": 20000, "verdict": 20000, "purpose_key": 20000, "reason_code": 2000, "suppression": 20000, "subject_kind": 20000, "ruleset_codes": 20000, "legacy_verdict": 20000, "recipient_address": 20000, "resolved_category": 20000, "requested_category": 20000, "execution_authority": 20000, "data_protection_country": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"actor":20000,"basis":20000,"data_protection_country":20000,"execution_authority":20000,"legacy_verdict":20000,"mode":20000,"phase":20000,"purpose_key":20000,"reason_code":2000,"recipient_address":20000,"requested_category":20000,"resolved_category":20000,"ruleset_codes":20000,"subject_kind":20000,"suppression":20000,"verdict":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"mode": 20000, "actor": 20000, "basis": 20000, "phase": 20000, "verdict": 20000, "purpose_key": 20000, "reason_code": 2000, "suppression": 20000, "subject_kind": 20000, "ruleset_codes": 20000, "legacy_verdict": 20000, "recipient_address": 20000, "resolved_category": 20000, "requested_category": 20000, "execution_authority": 20000, "data_protection_country": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"actor":20000,"basis":20000,"data_protection_country":20000,"execution_authority":20000,"legacy_verdict":20000,"mode":20000,"phase":20000,"purpose_key":20000,"reason_code":2000,"recipient_address":20000,"requested_category":20000,"resolved_category":20000,"ruleset_codes":20000,"subject_kind":20000,"suppression":20000,"verdict":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"mode": 20000, "actor": 20000, "basis": 20000, "phase": 20000, "verdict": 20000, "purpose_key": 20000, "reason_code": 2000, "suppression": 20000, "subject_kind": 20000, "ruleset_codes": 20000, "country_source": 20000, "legacy_verdict": 20000, "ruleset_digest": 20000, "recipient_address": 20000, "resolved_category": 20000, "requested_category": 20000, "execution_authority": 20000, "data_protection_country": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"actor":20000,"basis":20000,"country_source":20000,"data_protection_country":20000,"execution_authority":20000,"legacy_verdict":20000,"mode":20000,"phase":20000,"purpose_key":20000,"reason_code":2000,"recipient_address":20000,"requested_category":20000,"resolved_category":20000,"ruleset_codes":20000,"ruleset_digest":20000,"subject_kind":20000,"suppression":20000,"verdict":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"mode": 20000, "actor": 20000, "basis": 20000, "phase": 20000, "verdict": 20000, "purpose_key": 20000, "reason_code": 2000, "suppression": 20000, "subject_kind": 20000, "ruleset_codes": 20000, "country_source": 20000, "legacy_verdict": 20000, "ruleset_digest": 20000, "recipient_address": 20000, "resolved_category": 20000, "requested_category": 20000, "execution_authority": 20000, "data_protection_country": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"actor":20000,"basis":20000,"country_source":20000,"data_protection_country":20000,"execution_authority":20000,"legacy_verdict":20000,"mode":20000,"phase":20000,"purpose_key":20000,"reason_code":2000,"recipient_address":20000,"requested_category":20000,"resolved_category":20000,"ruleset_codes":20000,"ruleset_digest":20000,"subject_kind":20000,"suppression":20000,"verdict":20000}')`
 
 ## communication_instruction
 
@@ -816,7 +819,7 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 ## lawful_basis_confirmation
 
-8 columns · primary key `(id)` · referenced by 0 foreign keys
+9 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -824,6 +827,7 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 | `confirmed_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `confirmed_by` | `uuid` | yes | Points at `app_user.id`. |
 | `contact_id` | `uuid` |  | Points at `contact.id`. |
+| `country` | `text` |  |  |
 | `delivery_id` | `uuid` |  | Points at `comms_outbound.id`. |
 | `expires_at` | `timestamp with time zone` | yes |  |
 | `lead_id` | `uuid` |  | Points at `lead.id`. |
@@ -852,6 +856,11 @@ The 23 tables owned by `consent`, as the migrations build them. [Back to the ent
 - `lawful_basis_confirmation_open_contact`: `btree (contact_id, confirmed_by) WHERE ((contact_id IS NOT NULL) AND (spent_at IS NULL))`
 - `lawful_basis_confirmation_open_lead`: `btree (lead_id, confirmed_by) WHERE ((lead_id IS NOT NULL) AND (spent_at IS NULL))`
 - `lawful_basis_confirmation_pkey`: `unique, btree (id)`
+
+**Triggers**
+
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"country": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"country":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"country": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"country":20000}')`
 
 ## lead_privacy_notice
 

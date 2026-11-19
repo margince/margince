@@ -262,12 +262,20 @@ func callerIsSenderSeat(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (bool
 // the content gate above admitted the caller, so it carries no second gate of
 // its own — the parent decided, exactly as ListAttachments' parent check does.
 func readEmailAttachments(ctx context.Context, tx pgx.Tx, id ids.ActivityID) ([]crmcontracts.EmailAttachmentSummary, error) {
-	rows, err := tx.Query(ctx, `
-		SELECT at.id, at.filename, at.byte_size, at.content_type, at.bytes_withheld
+	args := []any{id.UUID}
+	arg := func(v any) string { args = append(args, v); return fmt.Sprintf("$%d", len(args)) }
+	// Only a copied-only row keeps the fingerprint of what it withheld
+	// (WithheldFile.Checksum), so the fingerprint tells it from a private one.
+	query := `
+		SELECT at.id, at.filename, at.byte_size, at.content_type, at.bytes_withheld,
+		       CASE WHEN NOT at.bytes_withheld THEN NULL
+		            WHEN at.checksum IS NOT NULL THEN ` + arg(crmcontracts.EmailAttachmentSummaryWithheldReasonNotAddressed) + `
+		            ELSE ` + arg(crmcontracts.EmailAttachmentSummaryWithheldReasonPrivate) + ` END
 		  FROM attachment at
 		 WHERE at.entity_type = 'activity' AND at.entity_id = $1 AND at.archived_at IS NULL
-		   AND `+arrivedWithMessage("at")+`
-		 ORDER BY at.created_at, at.id`, id.UUID)
+		   AND ` + arrivedWithMessage("at") + `
+		 ORDER BY at.created_at, at.id`
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -277,10 +285,12 @@ func readEmailAttachments(ctx context.Context, tx pgx.Tx, id ids.ActivityID) ([]
 		var a crmcontracts.EmailAttachmentSummary
 		var raw ids.UUID
 		var withheld bool
-		if err := rows.Scan(&raw, &a.Filename, &a.ByteSize, &a.ContentType, &withheld); err != nil {
+		var reason *string
+		if err := rows.Scan(&raw, &a.Filename, &a.ByteSize, &a.ContentType, &withheld, &reason); err != nil {
 			return nil, err
 		}
 		a.BytesWithheld = &withheld
+		a.WithheldReason = (*crmcontracts.EmailAttachmentSummaryWithheldReason)(reason)
 		a.Id = openapi_types.UUID(raw)
 		out = append(out, a)
 	}

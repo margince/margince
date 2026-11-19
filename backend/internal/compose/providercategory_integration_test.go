@@ -14,6 +14,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // The point of the widening: an installation can say it captures no
@@ -23,8 +24,7 @@ func TestAProviderCategoryMayBindTheWholeInstallation(t *testing.T) {
 	store := capture.NewExclusionStore(InstallationDB(e.Pool))
 
 	for _, value := range capture.ProviderDefinedContainers() {
-		if _, err := store.Add(e.Admin(), capture.ExclusionScopeWorkspace,
-			capture.ExclusionKindContainer, value); err != nil {
+		if _, err := store.Add(e.Admin(), capture.ExclusionScopeWorkspace, capture.ExclusionKindContainer, value, ids.Nil); err != nil {
 			t.Fatalf("adding %s at workspace scope: %v", value, err)
 		}
 	}
@@ -38,7 +38,7 @@ func TestALabelSomebodyMadeStillCannotBindEverybody(t *testing.T) {
 	store := capture.NewExclusionStore(InstallationDB(e.Pool))
 
 	_, err := store.Add(e.Admin(), capture.ExclusionScopeWorkspace,
-		capture.ExclusionKindContainer, "gmail:Label_7")
+		capture.ExclusionKindContainer, "gmail:Label_7", ids.Nil)
 	if err == nil {
 		t.Fatal("a user-made label was accepted at workspace scope")
 	}
@@ -51,7 +51,7 @@ func TestTheRefusalNamesTheScopeRatherThanFailingOnTheConstraint(t *testing.T) {
 	store := capture.NewExclusionStore(InstallationDB(e.Pool))
 
 	_, err := store.Add(e.Admin(), capture.ExclusionScopeWorkspace,
-		capture.ExclusionKindContainer, "graph:AAMk-private")
+		capture.ExclusionKindContainer, "graph:AAMk-private", ids.Nil)
 	var invalid *capture.InvalidExclusionError
 	if !errors.As(err, &invalid) {
 		t.Fatalf("err = %v, want a stated refusal naming the field", err)
@@ -69,7 +69,7 @@ func TestAProviderCategoryIsStillWritableAsAPersonalRule(t *testing.T) {
 
 	if _, err := store.Add(e.As(e.Rep1, nil, integration.AccountRepPerms),
 		capture.ExclusionScopeUser, capture.ExclusionKindContainer,
-		capture.GmailCategoryPromotions); err != nil {
+		capture.GmailCategoryPromotions, ids.Nil); err != nil {
 		t.Fatalf("adding a category as a personal rule: %v", err)
 	}
 }

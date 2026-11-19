@@ -26,7 +26,13 @@ function services(connection: Connection) {
   return () => (
     <StoryProviders>
       <AccountServices
-        account={{ key: "imap", mail: connection, calendar: null, notes: null }}
+        account={{
+          key: "imap",
+          id: connection.id,
+          mail: connection,
+          calendar: null,
+          notes: null,
+        }}
         vendor={null}
         label="Mailbox services"
         heldWindow={null}

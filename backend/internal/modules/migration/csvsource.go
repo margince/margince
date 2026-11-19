@@ -49,8 +49,8 @@ const (
 // a table nobody chose.
 var ErrObjectNotInSource = errors.New("object is not in this import source")
 
-// SkippedLine is one row the source could not deliver, named by the line a
-// human would open the file to.
+// SkippedLine is one row the source could not deliver, named by the row
+// number a spreadsheet shows (the header is row 1).
 type SkippedLine struct {
 	Line   int
 	Reason string
@@ -316,6 +316,9 @@ type openFile struct {
 	records recordReader
 	header  []string
 	key     string
+	// row is the number of the record last read, counting the header as row 1,
+	// which is what a spreadsheet shows.
+	row int
 }
 
 // open reads the header and leaves the reader at the first data record.
@@ -347,6 +350,7 @@ func (s *CSVSource) open(ctx context.Context) (openFile, error) {
 		return openFile{}, err
 	}
 	file.header = header
+	file.row = 1
 	return file, nil
 }
 
@@ -391,7 +395,7 @@ func (f openFile) close(ctx context.Context) {
 }
 
 // walk opens the object and calls visit for each data record, handing it the
-// file line (the header is line 1) and the header index. One reader, one place
+// row number (the header is row 1) and the header index. One reader, one place
 // that knows the file's framing.
 func (s *CSVSource) walk(ctx context.Context, visit func(line int, record []string, index map[string]int) error) error {
 	file, err := s.open(ctx)
@@ -425,17 +429,19 @@ func headerIndex(header []string) map[string]int {
 	return index
 }
 
-// next reads one data record and the file line it starts on.
-func (f openFile) next() (int, []string, error) {
+// next reads one data record and its row number. The number counts records,
+// not file lines: a quoted cell may span several lines, and a spreadsheet
+// still shows one row for it.
+func (f *openFile) next() (int, []string, error) {
 	record, err := f.records.Read()
 	if errors.Is(err, io.EOF) {
 		return 0, nil, io.EOF
 	}
-	// The reader's own position, not a counter. A quoted field may span
-	// several lines, and the Nth record is then not line N+1.
-	line, _ := f.records.FieldPos(0)
+	f.row++
 	if err != nil {
-		return line, nil, unreadable(err)
+		// A refused file names the physical line instead, because the reader
+		// fixes it in a text editor, inside the cell that never closed.
+		return f.row, nil, unreadable(err)
 	}
-	return line, record, nil
+	return f.row, record, nil
 }

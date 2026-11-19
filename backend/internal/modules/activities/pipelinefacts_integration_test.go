@@ -158,10 +158,12 @@ func TestTheBacklogAndTheExplanationAgreeOnEveryExclusion(t *testing.T) {
 	e := setupFacts(t)
 	ctx := e.as()
 
-	eligible := e.seed(t, capturedRow{kind: "email"})
+	eligible := map[ids.UUID]bool{
+		e.seed(t, capturedRow{kind: "email"}):   true,
+		e.seed(t, capturedRow{kind: "message"}): true,
+	}
 	want := map[ids.UUID]pipelinetrace.Reason{
-		eligible:                                pipelinetrace.ReasonAwaitingBatch,
-		e.seed(t, capturedRow{kind: "message"}): pipelinetrace.ReasonTransportNotRead,
+		e.seed(t, capturedRow{kind: "meeting"}):                            pipelinetrace.ReasonTransportNotRead,
 		e.seed(t, capturedRow{kind: "email", archived: true}):              pipelinetrace.ReasonArchived,
 		e.seed(t, capturedRow{kind: "email", capturedBy: "human:someone"}): pipelinetrace.ReasonNotConnectorCaptured,
 		e.seed(t, capturedRow{kind: "email", undecidedSender: true}):       pipelinetrace.ReasonSenderUndecided,
@@ -193,18 +195,25 @@ func TestTheBacklogAndTheExplanationAgreeOnEveryExclusion(t *testing.T) {
 	// Half one: of the rows seeded here, the classifier's own backlog selects
 	// the eligible one and no other. The package shares one database, so a sibling
 	// test's rows are in the backlog too and are not this test's to count.
-	backlog, err := e.store.UnlabeledCaptureEmails(ctx, rulesetNew, 200, 200)
+	backlog, err := e.store.UnlabeledCaptureMessages(ctx, rulesetNew, 200, 200)
 	if err != nil {
 		t.Fatalf("reading the backlog: %v", err)
 	}
+	for id := range eligible {
+		want[id] = pipelinetrace.ReasonAwaitingBatch
+	}
 	var selected []ids.UUID
+	selectedEligible := 0
 	for _, row := range backlog {
 		if _, seeded := want[row.ID]; seeded || row.ID == limited {
 			selected = append(selected, row.ID)
 		}
+		if eligible[row.ID] {
+			selectedEligible++
+		}
 	}
-	if len(selected) != 1 || selected[0] != eligible {
-		t.Fatalf("the backlog selected %v of the seeded rows, want exactly the eligible one (%s)",
+	if len(selected) != len(eligible) || selectedEligible != len(eligible) {
+		t.Fatalf("the backlog selected %v of the seeded rows, want exactly the eligible mail and chat %v",
 			selected, eligible)
 	}
 
@@ -218,7 +227,7 @@ func TestTheBacklogAndTheExplanationAgreeOnEveryExclusion(t *testing.T) {
 		if facts.ClassifyReason != reason {
 			t.Errorf("reason for %s = %q, want %q", id, facts.ClassifyReason, reason)
 		}
-		if wantEligible := id == eligible; facts.ClassifyEligible != wantEligible {
+		if wantEligible := eligible[id]; facts.ClassifyEligible != wantEligible {
 			t.Errorf("eligible for %s = %v, want %v — the reader and the backlog "+
 				"disagree, so the shared predicate is no longer shared",
 				id, facts.ClassifyEligible, wantEligible)
@@ -324,7 +333,7 @@ func TestTheLabelWriteLosesToANarrowingThatLandedWhileTheModelThought(t *testing
 	// than a refusal that never had a chance. Asked of this row rather than of
 	// the backlog's size: the package shares one database, so a sibling test's
 	// rows are in it too and a count assertion would fail for their reason.
-	backlog, err := e.store.UnlabeledCaptureEmails(ctx, rulesetNew, 200, 200)
+	backlog, err := e.store.UnlabeledCaptureMessages(ctx, rulesetNew, 200, 200)
 	if err != nil {
 		t.Fatalf("reading the backlog: %v", err)
 	}
@@ -378,7 +387,7 @@ func TestTheLabelWriteLosesToAnArchiveThatLandedWhileTheModelThought(t *testing.
 	ctx := e.as()
 
 	open := e.seed(t, capturedRow{kind: "email"})
-	backlog, err := e.store.UnlabeledCaptureEmails(ctx, rulesetNew, 200, 200)
+	backlog, err := e.store.UnlabeledCaptureMessages(ctx, rulesetNew, 200, 200)
 	if err != nil {
 		t.Fatalf("reading the backlog: %v", err)
 	}

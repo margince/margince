@@ -114,6 +114,12 @@ type extractedEvent struct {
 	// message names no day. Empty for every other kind.
 	DueDate    string            `json:"due_date"`
 	Confidence schema.Confidence `json:"confidence"`
+	// RequestKind, BudgetQuote and DecisionDate describe a new_opportunity.
+	// They say whether the buyer asked us outright for a quotation, which words
+	// state the budget, and the day they decide. Empty for every other kind.
+	RequestKind  string `json:"request_kind"`
+	BudgetQuote  string `json:"budget_quote"`
+	DecisionDate string `json:"decision_date"`
 }
 
 // Events is a POINTER so an absent key stays distinguishable from an empty
@@ -293,8 +299,8 @@ func (x *SignalExtractor) commitReading(
 		// while the model reads it. Every event is filed against the audience
 		// the rule gives it now. A conversation it no longer reads gets
 		// nothing and is not retired.
-		company, privateTo, offered, err := threadReaderNow(ctx, tx, thread.Key)
-		if err != nil || !offered {
+		reader, err := threadReaderNow(ctx, tx, thread.Key)
+		if err != nil || !reader.offered {
 			return err
 		}
 		open, err := threadMessagesStillOpen(ctx, tx, thread)
@@ -302,8 +308,8 @@ func (x *SignalExtractor) commitReading(
 			return err
 		}
 		read = true
-		thread.CompanyID, thread.PrivateTo = company, privateTo
-		for _, event := range events {
+		thread.CompanyID, thread.PrivateTo = reader.company, reader.privateTo
+		for _, event := range keptFromThread(events, reader.everyMessageOpen) {
 			if event.Confidence < extractConfidenceFloor {
 				continue
 			}
@@ -333,18 +339,22 @@ func (x *SignalExtractor) commitReading(
 }
 
 // threadMessagesStillOpen reports whether every message this reading showed
-// the model is still within the automatic-content boundary. A message placed
+// may still go to a model and be shared (activities.ShareableAudienceTx). A message placed
 // under restriction while the model read the thread must not feed a signal.
 func threadMessagesStillOpen(ctx context.Context, tx pgx.Tx, thread settledThread) (bool, error) {
 	shown := make([]string, 0, len(thread.Messages))
 	for _, message := range thread.Messages {
 		shown = append(shown, message.ID.String())
 	}
+	judgeable, err := activities.ShareableAudienceTx(ctx, tx, "activity")
+	if err != nil {
+		return false, err
+	}
 	var open int
 	if err := tx.QueryRow(ctx, `
 		SELECT count(*) FROM activity
 		 WHERE id = ANY($1::uuid[]) AND archived_at IS NULL
-		   AND `+activities.AutomaticMailContent("activity"),
+		   AND `+judgeable,
 		shown).Scan(&open); err != nil {
 		return false, fmt.Errorf("signal extract: re-checking the messages read: %w", err)
 	}

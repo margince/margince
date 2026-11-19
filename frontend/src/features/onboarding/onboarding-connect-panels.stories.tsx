@@ -61,13 +61,16 @@ function ConnectedScene({
 
 async function fillAndSubmit(canvasElement: HTMLElement) {
   const canvas = within(canvasElement);
-  await userEvent.clear(await canvas.findByLabelText("IMAP host"));
-  await userEvent.type(canvas.getByLabelText("IMAP host"), "mail.example.org");
-  await userEvent.type(canvas.getByLabelText("Email"), "lars@example.org");
-  await userEvent.type(canvas.getByLabelText("App password"), "app-password");
-  await userEvent.click(
-    canvas.getByRole("button", { name: /test and connect/i }),
+  await userEvent.type(
+    await canvas.findByLabelText("IMAP server *"),
+    "mail.example.org",
   );
+  await userEvent.type(
+    canvas.getByLabelText("Email address *"),
+    "lars@example.org",
+  );
+  await userEvent.type(canvas.getByLabelText("App password *"), "app-password");
+  await userEvent.click(canvas.getByRole("button", { name: "Connect" }));
 }
 
 export const ImapIdle: Story = {

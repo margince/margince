@@ -99,7 +99,8 @@ func (s *Store) decideContactCase(ctx context.Context, contactID ids.UUID, d Con
 		return crmcontracts.ContactCaseOutcome{}, err
 	}
 	var out crmcontracts.ContactCaseOutcome
-	err = s.tx(ctx, func(tx pgx.Tx) error {
+	// errCasePreview is no lock cycle, so a preview's rollback is never run again.
+	err = s.txRetryingLockCycles(ctx, func(tx pgx.Tx) error {
 		var err error
 		if out, err = s.decideContactCaseTx(ctx, tx, contactID, d, selected, active); err != nil {
 			return err
@@ -181,16 +182,11 @@ func (s *Store) decideContactCaseTx(ctx context.Context, tx pgx.Tx, contactID id
 	}, active)
 }
 
-// lockMergingContacts takes the stop locks of contacts about to merge in one
-// call, then holds each live one in id order. Every contact merge keeps this
-// order, before any pair row. A contact already gone is left to the caller's
-// own check. selected is sorted.
+// lockMergingContacts takes lockMergeSubjects, then holds each live contact
+// in id order, before any pair row. A contact already gone is left to the
+// caller's own check. selected is sorted.
 func (s *Store) lockMergingContacts(ctx context.Context, tx pgx.Tx, selected []ids.UUID) error {
-	subjects := make([]commsauthz.StopSubject, 0, len(selected))
-	for _, id := range selected {
-		subjects = append(subjects, commsauthz.ContactStopSubject(ids.From[ids.ContactKind](id)))
-	}
-	if err := lockStopsOrSkip(ctx, tx, s.stopCarrier, subjects...); err != nil {
+	if err := s.lockMergeSubjects(ctx, tx, selected); err != nil {
 		return err
 	}
 	for _, id := range selected {
@@ -199,6 +195,21 @@ func (s *Store) lockMergingContacts(ctx context.Context, tx pgx.Tx, selected []i
 		}
 	}
 	return nil
+}
+
+// lockMergeSubjects takes the locks every contact merge holds before it locks
+// a contact row: consent's stop locks, then the employment locks. Employer
+// attach, the company roster and the seat repair take an employment lock and
+// then the contact row, so the reverse order deadlocks with them.
+func (s *Store) lockMergeSubjects(ctx context.Context, tx pgx.Tx, contacts []ids.UUID) error {
+	subjects := make([]commsauthz.StopSubject, 0, len(contacts))
+	for _, id := range contacts {
+		subjects = append(subjects, commsauthz.ContactStopSubject(ids.From[ids.ContactKind](id)))
+	}
+	if err := lockStopsOrSkip(ctx, tx, s.stopCarrier, subjects...); err != nil {
+		return err
+	}
+	return lockMergedEmployments(ctx, tx, contacts)
 }
 
 // caseGone answers for a contact the reviewer saw in a case that is in none

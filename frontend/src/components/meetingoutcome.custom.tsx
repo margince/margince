@@ -6,6 +6,7 @@
 
 import { type ReactNode, useState } from "react";
 import type { components } from "../api/schema";
+import { useLocale } from "../i18n";
 import { CustomFieldControls } from "./customfieldcontrols";
 import {
   customFieldFormValue,
@@ -29,6 +30,7 @@ const NO_ROW: Record<string, unknown> = {};
 export function useMeetingCustomFields(
   meeting: Activity | undefined,
 ): MeetingCustomFields {
+  const { locale } = useLocale();
   const held: Record<string, unknown> = meeting ?? NO_ROW;
   const catalog = useObjectCustomFields("activity", "record", {
     kind: meeting?.kind ?? "meeting",
@@ -42,6 +44,7 @@ export function useMeetingCustomFields(
       seeded[field.column_name] = customFieldFormValue(
         field,
         held[field.column_name],
+        locale,
       );
     }
     setValues(seeded);
