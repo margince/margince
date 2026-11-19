@@ -118,6 +118,7 @@ func (s *Service) worklistIn(
 	// Read beside the assembled day rather than inside it: /attention has its
 	// own fourteen-lane promise and this source is not one of its lanes. A
 	// refused read is named, never folded into an empty answer.
+	// The whole day, because step B asks which of its at-risk deals wait past a cut scan.
 	waiting, waitingErr := reader.waitingCustomers(ctx, day)
 	// The NARROWED service, not the shared one. The narrowing happens twice on
 	// this path — once when the lanes are read, once when the assembled rows are

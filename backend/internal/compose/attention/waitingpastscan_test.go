@@ -5,6 +5,7 @@ package attention
 
 import (
 	"context"
+	"errors"
 	"slices"
 	"testing"
 	"time"
@@ -52,24 +53,41 @@ func atRiskDay(deals ...ids.UUID) crmcontracts.Attention {
 	return crmcontracts.Attention{AsOf: rankInstant, AtRisk: &risk}
 }
 
+// cutScan is a waiting lane whose scan was cut, holding one card on a deal.
+type cutScan struct {
+	hidingWork
+	scanned ids.UUID
+}
+
+func (c cutScan) Unanswered(context.Context, time.Time, WaitingFor) ([]WaitingCustomer, bool, error) {
+	return []WaitingCustomer{{ActivityID: ids.NewV7(), DealID: c.scanned, Since: rankInstant.Add(-time.Hour)}}, true, nil
+}
+
+// atRiskRowsOf names the at-risk rows of a page.
+func atRiskRowsOf(page crmcontracts.Worklist) map[string]bool {
+	atRisk := map[string]bool{}
+	for _, row := range page.Queue {
+		if row.Source == sourceAtRisk {
+			atRisk[row.Id] = true
+		}
+	}
+	return atRisk
+}
+
 // A ranked deal whose customer's card lies past a cut waiting scan is not
 // shown at risk. Step B asks the tail's own read, so both drop the same deal.
 func TestARankedDealWaitedOnPastACutScanIsNotAtRisk(t *testing.T) {
 	waitedOn, scanned, quiet := ids.NewV7(), ids.NewV7(), ids.NewV7()
 	store := &dealsWaitingStore{waitedOn: map[ids.UUID]bool{waitedOn: true, scanned: true}}
-	s := (&Service{}).WithWaitingBacklog(store)
+	s := (&Service{}).WithWaiting(cutScan{scanned: scanned}).WithWaitingBacklog(store)
 	day := atRiskDay(waitedOn, scanned, quiet)
-	read := waitingRead{read: true, cut: true, rows: []WaitingCustomer{{ActivityID: ids.NewV7(), DealID: scanned}}}
 
-	read.dealsPastScan = s.dealsWaitingPastTheScan(t.Context(), day, read)
-	got := s.worklistFrom(t.Context(), day, scopeAll, "", 50, read, worklistCursor{}, nil)
-
-	atRisk := map[string]bool{}
-	for _, row := range got.Queue {
-		if row.Source == sourceAtRisk {
-			atRisk[row.Id] = true
-		}
+	read, unavailable := s.waitingCustomers(t.Context(), day)
+	if unavailable != nil {
+		t.Fatalf("the waiting read failed: %+v", unavailable)
 	}
+	atRisk := atRiskRowsOf(s.worklistFrom(t.Context(), day, scopeAll, "", 50, read, worklistCursor{}, nil))
+
 	if atRisk[waitedOn.String()] {
 		t.Error("the deal whose card lies past the scan is still shown at risk")
 	}
@@ -91,5 +109,30 @@ func TestAWholeWaitingScanAsksNoMore(t *testing.T) {
 	}
 	if len(store.asked) != 0 {
 		t.Errorf("a whole scan asked the store %d times, want 0", len(store.asked))
+	}
+}
+
+// failingDealsWaiting is a waiting backlog whose deal read fails.
+type failingDealsWaiting struct{ dealsWaitingStore }
+
+func (f *failingDealsWaiting) DealsWaiting(context.Context, time.Time, WaitingFor, []ids.UUID) (map[ids.UUID]bool, error) {
+	return nil, errors.New("the read failed")
+}
+
+// A failed read past the scan is counted under its own label, so /metrics
+// does not report it as the waiting lane failing.
+func TestAFailedReadPastTheScanCountsUnderItsOwnLabel(t *testing.T) {
+	before := LaneFailures()
+	s := (&Service{}).WithWaitingBacklog(&failingDealsWaiting{})
+
+	if got := s.dealsWaitingPastTheScan(t.Context(), atRiskDay(ids.NewV7()), waitingRead{read: true, cut: true}); got != nil {
+		t.Errorf("deals = %v, want none from a failed read", got)
+	}
+	after := LaneFailures()
+	own := LaneKey{Lane: waitingPastScanLane, Reason: LaneFailed}
+	lane := LaneKey{Lane: string(sourceWaiting), Reason: LaneFailed}
+	if after[own]-before[own] != 1 || after[lane] != before[lane] {
+		t.Errorf("failures: own label %d, waiting lane %d; want 1 and 0",
+			after[own]-before[own], after[lane]-before[lane])
 	}
 }

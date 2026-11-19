@@ -125,6 +125,10 @@ func (s *Service) dealsWaiting(ctx context.Context, asOf time.Time, deals []ids.
 	return s.backlog.waiting.DealsWaiting(ctx, asOf, s.waitingFor(ctx), deals)
 }
 
+// waitingPastScanLane names dealsWaitingPastTheScan's read on /metrics, apart
+// from the waiting lane it follows.
+const waitingPastScanLane = "waiting_past_scan"
+
 // dealsWaitingPastTheScan are the day's at-risk deals whose waiting card lies
 // past a cut waiting scan. A deal a scanned card names is left out, since
 // step B already sees that card. A failed read answers none, and the deal
@@ -144,7 +148,7 @@ func (s *Service) dealsWaitingPastTheScan(ctx context.Context, day crmcontracts.
 		}
 	}
 	var waiting map[ids.UUID]bool
-	err := s.degradable(ctx, sourceWaiting, laneBudget, func(ctx context.Context) error {
+	err := s.degradable(ctx, waitingPastScanLane, laneBudget, func(ctx context.Context) error {
 		var err error
 		waiting, err = s.dealsWaiting(ctx, day.AsOf, deals)
 		return err

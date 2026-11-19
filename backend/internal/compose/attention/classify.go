@@ -219,6 +219,8 @@ func classifyIntroduction(item crmcontracts.AttentionItem, asOf time.Time) ranke
 // dropDealsAlreadyInHand removes the at-risk row for a deal somebody is
 // already waiting on, or that has a task about it due within nearTaskDays.
 // waitingPastScan names deals whose waiting card the lane's scan did not reach.
+// Such a deal loses its at-risk facts, as in the tail: its card is not here to
+// carry them.
 //
 // One job must not become two rows. The waiting row names the message to reply
 // to, and the near task names the step already planned, so either one wins.
