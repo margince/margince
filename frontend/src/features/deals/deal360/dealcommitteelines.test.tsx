@@ -107,7 +107,7 @@ describe("committeeLines", () => {
     );
     expect(drawn?.lines.map((line) => line.text)).toEqual([
       "Jonas Weber with Mai Tran: Met 2026-11-06",
-      "Lena Fischer with Mai Tran: Email to them 2026-11-02",
+      "Lena Fischer with Mai Tran: Sent to them 2026-11-02",
     ]);
   });
 
