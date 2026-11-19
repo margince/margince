@@ -16129,6 +16129,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Gemessen am Median der letzten 4 vergleichbaren Zeiträume.",
   "forecast.pipelineAbsentTitle":
     "Keine Pipeline-Abdeckung für diesen Zeitraum",
+  "forecast.pipelineAbsent.call_withheld":
+    "Die Einschätzung ist hier nicht sichtbar, und weniger als 4 vergleichbare Zeiträume sind abgeschlossen. Gemessen an diesen offenen Deals selbst sähe die Abdeckung immer ausreichend aus.",
   "forecast.pipelineAbsent.insufficient_basis":
     "Für diesen Zeitraum ist keine Einschätzung erfasst, und weniger als 4 vergleichbare Zeiträume sind abgeschlossen. Gemessen an diesen offenen Deals selbst sähe die Abdeckung immer ausreichend aus.",
   "forecast.pipelineAbsent.insufficient_history":

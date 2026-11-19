@@ -243,7 +243,7 @@ func (h Handlers) project(
 	if err != nil {
 		return err
 	}
-	sufficiency, err := AssessSufficiency(readings, history, call.Amount)
+	sufficiency, err := AssessSufficiency(readings, history, call)
 	if err != nil {
 		return err
 	}

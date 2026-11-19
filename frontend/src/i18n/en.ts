@@ -16014,6 +16014,8 @@ export const en = {
   "forecast.pipelineBasisWhy.historical_median":
     "Measured against the median of the last 4 comparable periods.",
   "forecast.pipelineAbsentTitle": "No coverage figure for this period",
+  "forecast.pipelineAbsent.call_withheld":
+    "The manager’s call is not shown here, and fewer than 4 comparable periods have finished. Measuring against these open deals themselves would always look sufficient.",
   "forecast.pipelineAbsent.insufficient_basis":
     "No call is recorded for this period, and fewer than 4 comparable periods have finished. Measuring against these open deals themselves would always look sufficient.",
   "forecast.pipelineAbsent.insufficient_history":

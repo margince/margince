@@ -49854,10 +49854,10 @@ export interface components {
          */
         ForecastSufficiency: {
             /**
-             * @description Why there is no answer, when there is none. Every other field is then absent and the surface says this rather than drawing a figure. `insufficient_basis` is neither a manager call nor four completed comparable periods; `insufficient_history` is too few closed deals for a conversion rate to be a rate rather than an anecdote.
+             * @description Why there is no answer, when there is none. Every other field is then absent and the surface says this rather than drawing a figure. `insufficient_basis` is neither a manager call nor four completed comparable periods; `call_withheld` is fewer than four completed periods and a call this reader may not see, without saying whether one exists; `insufficient_history` is too few closed deals for a conversion rate to be a rate rather than an anecdote.
              * @enum {string}
              */
-            absent?: "insufficient_basis" | "insufficient_history";
+            absent?: "insufficient_basis" | "call_withheld" | "insufficient_history";
             /**
              * @description Where the reference came from. A current authored call outranks history: a manager who wrote a number down has said what this period is for, and the median of the last four completed comparable periods is the fallback for when nobody has.
              * @enum {string}

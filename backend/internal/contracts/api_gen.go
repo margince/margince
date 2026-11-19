@@ -13932,6 +13932,7 @@ func (e ForecastSnapshotRefTrigger) Valid() bool {
 
 // Defines values for ForecastSufficiencyAbsent.
 const (
+	ForecastSufficiencyAbsentSufficiencyAbsenceCallWithheld        ForecastSufficiencyAbsent = "call_withheld"
 	ForecastSufficiencyAbsentSufficiencyAbsenceInsufficientBasis   ForecastSufficiencyAbsent = "insufficient_basis"
 	ForecastSufficiencyAbsentSufficiencyAbsenceInsufficientHistory ForecastSufficiencyAbsent = "insufficient_history"
 )
@@ -13939,6 +13940,8 @@ const (
 // Valid indicates whether the value is a known member of the ForecastSufficiencyAbsent enum.
 func (e ForecastSufficiencyAbsent) Valid() bool {
 	switch e {
+	case ForecastSufficiencyAbsentSufficiencyAbsenceCallWithheld:
+		return true
 	case ForecastSufficiencyAbsentSufficiencyAbsenceInsufficientBasis:
 		return true
 	case ForecastSufficiencyAbsentSufficiencyAbsenceInsufficientHistory:
@@ -51531,7 +51534,7 @@ type ForecastStageChances struct {
 // ForecastSufficiency Whether the open pipeline supports the reference landing, and what the reference is.
 // NOT a target. Margince has no target model: `basis` names where the reference came from so a reader can disagree with the basis rather than with the arithmetic, and the reference is always from OUTSIDE the current projection — a coverage figure divided by a target derived from the same pipeline is always fine and says nothing.
 type ForecastSufficiency struct {
-	// Absent Why there is no answer, when there is none. Every other field is then absent and the surface says this rather than drawing a figure. `insufficient_basis` is neither a manager call nor four completed comparable periods; `insufficient_history` is too few closed deals for a conversion rate to be a rate rather than an anecdote.
+	// Absent Why there is no answer, when there is none. Every other field is then absent and the surface says this rather than drawing a figure. `insufficient_basis` is neither a manager call nor four completed comparable periods; `call_withheld` is fewer than four completed periods and a call this reader may not see, without saying whether one exists; `insufficient_history` is too few closed deals for a conversion rate to be a rate rather than an anecdote.
 	Absent *ForecastSufficiencyAbsent `json:"absent,omitempty"`
 
 	// Basis Where the reference came from. A current authored call outranks history: a manager who wrote a number down has said what this period is for, and the median of the last four completed comparable periods is the fallback for when nobody has.
@@ -51549,7 +51552,7 @@ type ForecastSufficiency struct {
 	RemainingToSupportMinor *int64 `json:"remaining_to_support_minor,omitempty"`
 }
 
-// ForecastSufficiencyAbsent Why there is no answer, when there is none. Every other field is then absent and the surface says this rather than drawing a figure. `insufficient_basis` is neither a manager call nor four completed comparable periods; `insufficient_history` is too few closed deals for a conversion rate to be a rate rather than an anecdote.
+// ForecastSufficiencyAbsent Why there is no answer, when there is none. Every other field is then absent and the surface says this rather than drawing a figure. `insufficient_basis` is neither a manager call nor four completed comparable periods; `call_withheld` is fewer than four completed periods and a call this reader may not see, without saying whether one exists; `insufficient_history` is too few closed deals for a conversion rate to be a rate rather than an anecdote.
 type ForecastSufficiencyAbsent string
 
 // ForecastSufficiencyBasis Where the reference came from. A current authored call outranks history: a manager who wrote a number down has said what this period is for, and the median of the last four completed comparable periods is the fallback for when nobody has.

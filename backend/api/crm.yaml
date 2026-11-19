@@ -68311,14 +68311,15 @@ components:
       properties:
         absent:
           type: string
-          enum: [insufficient_basis, insufficient_history]
+          enum: [insufficient_basis, call_withheld, insufficient_history]
           x-extensible-enum: true
-          x-enum-varnames: [SufficiencyAbsenceInsufficientBasis, SufficiencyAbsenceInsufficientHistory]
+          x-enum-varnames: [SufficiencyAbsenceInsufficientBasis, SufficiencyAbsenceCallWithheld, SufficiencyAbsenceInsufficientHistory]
           description: >-
             Why there is no answer, when there is none. Every other field is then absent
             and the surface says this rather than drawing a figure. `insufficient_basis` is
-            neither a manager call nor four completed comparable periods;
-            `insufficient_history` is too few closed deals for a conversion rate to be a
+            neither a manager call nor four completed comparable periods; `call_withheld` is
+            fewer than four completed periods and a call this reader may not see, without
+            saying whether one exists; `insufficient_history` is too few closed deals for a conversion rate to be a
             rate rather than an anecdote.
         basis:
           type: string

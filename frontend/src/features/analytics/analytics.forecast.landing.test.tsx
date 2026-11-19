@@ -197,6 +197,23 @@ describe("whether the open deals support the reference", () => {
     expect(screen.getByText(/50% of required deal value/i)).toBeTruthy();
   });
 
+  // A reader who may not see the call is told it is not shown here. The card
+  // never says that no call is recorded.
+  it("says a withheld call is not shown when there is no basis", () => {
+    draw(
+      <SufficiencyCard
+        sufficiency={{ absent: "call_withheld" }}
+        currency="EUR"
+        locale="en"
+      />,
+    );
+
+    expect(
+      screen.getByText(en["forecast.pipelineAbsent.call_withheld"]),
+    ).toBeTruthy();
+    expect(screen.queryByText(/No call is recorded/)).toBeNull();
+  });
+
   // The case a zeroed figure would get exactly backwards: no basis must not
   // draw "0 needed, 0 covered", which reads as a fully covered pipeline.
   it("draws no figure at all when there is no basis to measure against", () => {

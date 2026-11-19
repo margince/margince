@@ -4183,6 +4183,7 @@
   "forecast.pipelineBasisWhy.manager_call": "Đo theo nhận định của kỳ này.",
   "forecast.pipelineBasisWhy.historical_median": "Đo theo trung vị của 4 kỳ tương đương gần nhất.",
   "forecast.pipelineAbsentTitle": "Không có số liệu độ bao phủ cho kỳ này",
+  "forecast.pipelineAbsent.call_withheld": "Nhận định của quản lý không hiển thị ở đây, và chưa đủ 4 kỳ tương đương đã kết thúc. Đo theo chính các deal đang mở này thì lúc nào cũng trông như đủ.",
   "forecast.pipelineAbsent.insufficient_basis": "Kỳ này chưa ghi nhận định nào, và chưa đủ 4 kỳ tương đương đã kết thúc. Đo theo chính các deal đang mở này thì lúc nào cũng trông như đủ.",
   "forecast.pipelineAbsent.insufficient_history": "Quá ít deal đã đóng để tính tỷ lệ chuyển đổi. Tỷ lệ tính từ vài deal không đáng tin cậy.",
   "forecast.coverage": "{percent}% giá trị deal cần có",

@@ -15702,6 +15702,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "forecast.pipelineBasisWhy.historical_median":
     "Đo theo trung vị của 4 kỳ tương đương gần nhất.",
   "forecast.pipelineAbsentTitle": "Không có số liệu độ bao phủ cho kỳ này",
+  "forecast.pipelineAbsent.call_withheld":
+    "Nhận định của quản lý không hiển thị ở đây, và chưa đủ 4 kỳ tương đương đã kết thúc. Đo theo chính các deal đang mở này thì lúc nào cũng trông như đủ.",
   "forecast.pipelineAbsent.insufficient_basis":
     "Kỳ này chưa ghi nhận định nào, và chưa đủ 4 kỳ tương đương đã kết thúc. Đo theo chính các deal đang mở này thì lúc nào cũng trông như đủ.",
   "forecast.pipelineAbsent.insufficient_history":
