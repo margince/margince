@@ -119,24 +119,31 @@ func (s *Sync) withdrawIfNarrowed(ctx context.Context, id ids.UUID) error {
 	return s.store.Withdraw(ctx, id)
 }
 
-// sharedText is an activity as a channel may show it.
+// sharedText is an activity as a channel may show it. body is read only by
+// sharedNote.
 type sharedText struct {
 	ok           bool
 	kind         string
 	subject      string
+	body         string
 	sourceSystem string
 }
 
-// sharedActivity is the only reader of activity text in the chat engine. It
-// reads the row live under the workspace-only audience rule, so private and
-// selectively shared activities, and archived or restricted ones, read as
-// absent.
-// Held by: TestTheChatEngineReadsActivityTextOnlyThroughSharedActivity (backend/internal/compose/chatsync/sync_test.go)
+// sharedActivity is an activity as a channel may show it, by id.
 func sharedActivity(ctx context.Context, tx pgx.Tx, id ids.UUID) (sharedText, error) {
+	return sharedRow(ctx, tx, "a.id = $1", id)
+}
+
+// sharedRow is the only reader of activity text in the chat engine. It reads
+// the newest row that where selects, under the workspace-only audience rule.
+// Private, selectively shared, archived and restricted activities read as absent.
+// Held by: TestTheChatEngineReadsActivityTextOnlyThroughSharedRow (backend/internal/compose/chatsync/sync_test.go)
+func sharedRow(ctx context.Context, tx pgx.Tx, where string, args ...any) (sharedText, error) {
 	var out sharedText
-	err := tx.QueryRow(ctx, `SELECT a.kind, coalesce(a.subject, ''), coalesce(a.source_system, '')
-		FROM activity a WHERE a.id = $1 AND a.archived_at IS NULL AND a.restricted_at IS NULL`+
-		auth.AudienceWorkspaceOnly("a"), id).Scan(&out.kind, &out.subject, &out.sourceSystem)
+	err := tx.QueryRow(ctx, `SELECT a.kind, coalesce(a.subject, ''), coalesce(a.body, ''), coalesce(a.source_system, '')
+		FROM activity a WHERE a.archived_at IS NULL AND a.restricted_at IS NULL AND `+where+
+		auth.AudienceWorkspaceOnly("a")+` ORDER BY a.occurred_at DESC, a.id DESC LIMIT 1`, args...).
+		Scan(&out.kind, &out.subject, &out.body, &out.sourceSystem)
 	if err == pgx.ErrNoRows {
 		return sharedText{}, nil
 	}

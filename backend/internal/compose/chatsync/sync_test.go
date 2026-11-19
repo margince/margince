@@ -17,10 +17,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 )
 
-// TestTheChatEngineReadsActivityTextOnlyThroughSharedActivity holds the
+// TestTheChatEngineReadsActivityTextOnlyThroughSharedRow holds the
 // audience rule's one door. A second query of the activity table in the chat
 // engine could post text the workspace may not read.
-func TestTheChatEngineReadsActivityTextOnlyThroughSharedActivity(t *testing.T) {
+func TestTheChatEngineReadsActivityTextOnlyThroughSharedRow(t *testing.T) {
 	files, err := filepath.Glob("*.go")
 	if err != nil {
 		t.Fatal(err)
@@ -52,8 +52,8 @@ func TestTheChatEngineReadsActivityTextOnlyThroughSharedActivity(t *testing.T) {
 			})
 		}
 	}
-	if len(readers) != 1 || !readers["sync.go:sharedActivity"] {
-		t.Fatalf("activity text is read by %v; only sync.go:sharedActivity may read it", readers)
+	if len(readers) != 1 || !readers["sync.go:sharedRow"] {
+		t.Fatalf("activity text is read by %v; only sync.go:sharedRow may read it", readers)
 	}
 }
 

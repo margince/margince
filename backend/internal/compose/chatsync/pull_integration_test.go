@@ -409,3 +409,64 @@ func TestANoteUnderAMessageKeyThatTheChatDidNotWriteIsRefused(t *testing.T) {
 		t.Fatalf("filing over a planted note = %v, want a conflict", err)
 	}
 }
+
+// recordingSummary keeps every request it is sent and answers each episode
+// with a note that leaves a question open.
+type recordingSummary struct{ prompts []string }
+
+func (s *recordingSummary) Complete(_ context.Context, req model.Request) (model.Response, error) {
+	s.prompts = append(s.prompts, req.Messages[0].Content)
+	return model.Response{Text: `{"relevant":true,"reason":"a price","title":"Two-year discount asked",` +
+		`"summary":"Acme asked what discount a two-year deal earns.","decisions":[],"open_questions":["Which discount for two years?"]}`}, nil
+}
+
+func TestALaterEpisodeIsSentTheEarlierNoteAndOnlyWhatEveryMemberMayRead(t *testing.T) {
+	e := setupPull(t)
+	rec := &recordingSummary{}
+	e.puller.Lane = rec
+	company, shown, hidden, other := ids.NewV7(), ids.NewV7(), ids.NewV7(), ids.NewV7()
+	e.exec(t, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'Acme GmbH', 'seed', 'system')`, company)
+	e.exec(t, `UPDATE deal SET company_id = $2, amount_minor = 123456700, currency = 'EUR' WHERE id = $1`, e.deal, company)
+	for id, name := range map[ids.UUID]string{shown: "Clara Buyer", hidden: "Pia Private", other: "Olga Other"} {
+		e.exec(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, $2, 'seed', 'system')`, id, name)
+	}
+	e.exec(t, `UPDATE contact SET visibility = 'owner', owner_id = $2 WHERE id = $1`, hidden, e.rep)
+	for _, id := range []ids.UUID{shown, hidden} {
+		e.exec(t, `INSERT INTO relationship (kind, deal_id, contact_id, source, captured_by) VALUES ('deal_stakeholder', $1, $2, 'seed', 'system')`, e.deal, id)
+	}
+	foreign := ids.NewV7()
+	e.exec(t, `INSERT INTO deal (id, name, status, pipeline_id, stage_id, source, captured_by)
+		SELECT $2, 'Other deal', 'open', pipeline_id, stage_id, 'seed', 'system' FROM deal WHERE id = $1`, e.deal, foreign)
+	e.exec(t, `INSERT INTO relationship (kind, deal_id, contact_id, source, captured_by) VALUES ('deal_stakeholder', $1, $2, 'seed', 'system')`, foreign, other)
+
+	e.say("acme", 1, 60, "What discount can we offer for a two-year deal?")
+	e.say("acme", 2, 24*60+60, "agreed: option B, 7 percent")
+	e.say("acme", 3, e.minutesAgo(5), "still talking")
+	e.pull(t)
+
+	if len(rec.prompts) != 2 {
+		t.Fatalf("model requests = %d, want one per closed episode", len(rec.prompts))
+	}
+	first, second := rec.prompts[0], rec.prompts[1]
+	if strings.Contains(first, "Earlier note") {
+		t.Errorf("the first episode has no earlier note, got %q", first)
+	}
+	for _, want := range []string{"Which discount for two years?", "Acme GmbH", "Clara Buyer", "Rita Rep", "agreed: option B"} {
+		if !strings.Contains(second, want) {
+			t.Errorf("second request lacks %q: %q", want, second)
+		}
+	}
+	for _, banned := range []string{"1234567", "12345", "Pia Private", "Olga Other"} {
+		if strings.Contains(second, banned) {
+			t.Errorf("second request carries %q, which the record's readers may not see: %q", banned, second)
+		}
+	}
+
+	e.exec(t, `UPDATE activity SET audience = 'participants' WHERE source_system = 'dispact'`)
+	e.exec(t, `DELETE FROM activity WHERE source_id = 'acme:2'`)
+	e.exec(t, `UPDATE chat_link SET history_cursor = 1 WHERE id = $1`, e.link)
+	e.pull(t)
+	if last := rec.prompts[len(rec.prompts)-1]; strings.Contains(last, "Which discount for two years?") {
+		t.Errorf("a note limited to its participants reached the model: %q", last)
+	}
+}
