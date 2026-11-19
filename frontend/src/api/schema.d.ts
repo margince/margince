@@ -6281,8 +6281,8 @@ export interface paths {
          *
          *     `last_inbound` and `last_outbound` are the newest message the other side wrote and the
          *     newest one we wrote, of any age, read over every row the caller may list and counted as
-         *     the account's last-touch clocks count them: it has happened, it kept us in touch, and a
-         *     person wrote it. Each is absent when there is none.
+         *     the account's last-touch clocks count them: it has happened, it kept us in touch, and
+         *     it is not automatic mail. Each is absent when there is none.
          */
         get: operations["listLatestInbound"];
         put?: never;
