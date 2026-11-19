@@ -15798,6 +15798,7 @@ export const en = {
   "settings.companyMarkUnsupported":
     "Use a PNG, JPEG, GIF, WebP, ICO or SVG file.",
   "settings.companyMarkTooLarge": "Use a smaller file.",
+  "settings.companyMarkTooManyPixels": "Use a picture of up to 8 megapixels.",
   "settings.companyMarkSvgNotDrawable":
     "This SVG has parts that cannot be drawn here, or draws nothing. Export the logo as a PNG from your design tool.",
   "settings.companyMarkSvgText":
@@ -16844,6 +16845,8 @@ export const en = {
   "account.pictureWrongType":
     "Picture not uploaded. Use a PNG, JPEG or WebP file.",
   "account.pictureTooLarge": "Picture not uploaded. Use a file up to 5 MB.",
+  "account.pictureTooManyPixels":
+    "Picture not uploaded. Use a picture of up to 8 megapixels.",
   "account.pictureNoStorage":
     "This installation has no file storage for pictures. Contact your system administrator.",
   "account.pictureUploadFailed":

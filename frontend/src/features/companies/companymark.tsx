@@ -194,6 +194,7 @@ const REFUSAL_COPY = new Map<string, MessageKey>([
   ["body_too_large", "settings.companyMarkTooLarge"],
   ["svg_text_not_outlined", "settings.companyMarkSvgText"],
   ["svg_not_drawable", "settings.companyMarkSvgNotDrawable"],
+  ["too_many_pixels", "settings.companyMarkTooManyPixels"],
 ]);
 
 // Below the tiles, not inside a slot: a notice in a slot widens it and pushes

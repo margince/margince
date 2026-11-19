@@ -15911,6 +15911,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.companyMarkUnsupported":
     "Nimm eine PNG-, JPEG-, GIF-, WebP-, ICO- oder SVG-Datei.",
   "settings.companyMarkTooLarge": "Nimm eine kleinere Datei.",
+  "settings.companyMarkTooManyPixels":
+    "Nimm ein Bild mit höchstens 8 Megapixeln.",
   "settings.companyMarkSvgNotDrawable":
     "Diese SVG-Datei enthält Teile, die sich hier nicht darstellen lassen, oder sie zeigt nichts. Exportiere das Logo in deinem Grafikprogramm als PNG-Datei.",
   "settings.companyMarkSvgText":
@@ -16990,6 +16992,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Bild nicht hochgeladen. Nimm eine PNG-, JPEG- oder WebP-Datei.",
   "account.pictureTooLarge":
     "Bild nicht hochgeladen. Nimm eine Datei bis 5 MB.",
+  "account.pictureTooManyPixels":
+    "Bild nicht hochgeladen. Nimm ein Bild mit höchstens 8 Megapixeln.",
   "account.pictureNoStorage":
     "Diese Installation hat keinen Dateispeicher für Bilder. Bitte wende dich an die Systemadministration.",
   "account.pictureUploadFailed":

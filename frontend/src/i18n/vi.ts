@@ -15482,6 +15482,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.companyMarkUnsupported":
     "Hãy dùng tệp PNG, JPEG, GIF, WebP, ICO hoặc SVG.",
   "settings.companyMarkTooLarge": "Hãy dùng tệp nhỏ hơn.",
+  "settings.companyMarkTooManyPixels": "Hãy dùng ảnh tối đa 8 megapixel.",
   "settings.companyMarkSvgNotDrawable":
     "Tệp SVG này có phần không thể hiển thị ở đây, hoặc không hiển thị gì. Xuất logo dưới dạng tệp PNG từ công cụ thiết kế.",
   "settings.companyMarkSvgText":
@@ -16539,6 +16540,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "account.pictureWrongType":
     "Không thể tải ảnh lên. Hãy dùng tệp PNG, JPEG hoặc WebP.",
   "account.pictureTooLarge": "Không thể tải ảnh lên. Hãy dùng tệp tối đa 5 MB.",
+  "account.pictureTooManyPixels":
+    "Không thể tải ảnh lên. Hãy dùng ảnh tối đa 8 megapixel.",
   "account.pictureNoStorage":
     "Bản cài đặt này chưa có nơi lưu ảnh. Liên hệ quản trị viên.",
   "account.pictureUploadFailed":

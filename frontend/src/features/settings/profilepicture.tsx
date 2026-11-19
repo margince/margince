@@ -13,8 +13,14 @@ import type { Toast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { postMultipart } from "../../lib/multipart";
-import { problemMessageOf, problemStatus, unwrap } from "../../lib/problem";
+import {
+  problemCodeOf,
+  problemMessageOf,
+  problemStatus,
+  unwrap,
+} from "../../lib/problem";
 import { PICTURE_MAX_BYTES, PICTURE_TYPES } from "./picturelimits";
+import { shrinkPicture } from "./pictureshrink";
 
 type User = components["schemas"]["User"];
 
@@ -46,7 +52,7 @@ function usePictureWrite(toast: Toast) {
         unwrap(await api.DELETE("/me/avatar"));
         return;
       }
-      await postMultipart("/v1/me/avatar", { file });
+      await postMultipart("/v1/me/avatar", { file: await shrinkPicture(file) });
     },
     onSuccess: async (_done, file) => {
       toast.show(
@@ -133,7 +139,10 @@ function refusalText(
   if (error === null) {
     return null;
   }
-  const known = REFUSAL_BY_STATUS.get(problemStatus(error));
+  const known =
+    problemCodeOf(error) === "too_many_pixels"
+      ? "account.pictureTooManyPixels"
+      : REFUSAL_BY_STATUS.get(problemStatus(error));
   if (known !== undefined) {
     return t(known);
   }

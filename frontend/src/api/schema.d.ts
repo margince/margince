@@ -12651,7 +12651,8 @@ export interface paths {
          *     `svg_text_not_outlined`, because the rasterizer draws shapes and no glyphs, so
          *     the words would be lost. An SVG the rasterizer cannot draw faithfully (for example
          *     embedded images, filters, masks or a blank result) is refused as 422 with code
-         *     `svg_not_drawable`.
+         *     `svg_not_drawable`. A picture past 8,388,608 pixels is refused as 422 with code `too_many_pixels`: scale it
+         *     down and send it again.
          *
          *     The upload is a user's write, or their agent's, and takes precedence: while it stands, a website read
          *     resolving a different mark leaves it alone. `DELETE` gives the field back — the
@@ -12696,7 +12697,8 @@ export interface paths {
          *     this origin's own bytes, and a file that is not one of those types is refused as
          *     415. An SVG that draws its words as text is refused as 422 with code
          *     `svg_text_not_outlined`, and one with parts it cannot draw as 422 with code
-         *     `svg_not_drawable`.
+         *     `svg_not_drawable`. A picture past 8,388,608 pixels is refused as 422 with code `too_many_pixels`: scale it
+         *     down and send it again.
          *
          *     `DELETE` takes the icon off. The two slots are independent: a company with only a
          *     wide mark keeps drawing that mark in the collapsed rail, which is what every
@@ -12831,7 +12833,8 @@ export interface paths {
          * @description Multipart upload, decoded and re-encoded exactly as the company logo is: PNG, JPEG,
          *     GIF, WebP, ICO and SVG are accepted, and anything else is refused as 415. An SVG that
          *     draws its words as text is refused as 422 `svg_text_not_outlined`, and one with parts
-         *     the server cannot draw as 422 `svg_not_drawable`.
+         *     the server cannot draw as 422 `svg_not_drawable`. A picture past 8,388,608 pixels is refused as 422 with code `too_many_pixels`: scale it
+         *     down and send it again.
          *
          *     The default entity wears the company logo and is refused as 409
          *     `legal_entity_field_on_company_form`: upload it on the company form instead.
@@ -25012,8 +25015,9 @@ export interface paths {
          *     request is refused as 413. PNG, JPEG and WebP are accepted; anything else, SVG and
          *     GIF included, is refused as 415. The image is cropped to a centred square and
          *     re-encoded as this server's own PNG of at most 512px, so what `avatar_url` serves
-         *     is never the uploaded bytes. 503 with `Retry-After` when the server is reading too
-         *     many pictures at once; the same file may be sent again.
+         *     is never the uploaded bytes. A picture past 8,388,608 pixels is refused as 422 with code `too_many_pixels`: scale it
+         *     down and send it again. 503 with `Retry-After` when the server
+         *     is reading too many pictures at once; the same file may be sent again.
          *
          *     Which picture a seat shows: an uploaded one, else the picture of the Google
          *     account the member signs in with, else no picture and the client draws initials.

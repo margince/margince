@@ -15,7 +15,11 @@ import {
 } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { meFixture } from "../../testing/mefixture";
-import { PICTURE_MAX_BYTES, PICTURE_TYPES } from "./picturelimits";
+import {
+  PICTURE_MAX_BYTES,
+  PICTURE_MAX_PIXELS,
+  PICTURE_TYPES,
+} from "./picturelimits";
 import { ProfilePictureRow, pictureProblem } from "./profilepicture";
 
 type User = components["schemas"]["User"];
@@ -41,6 +45,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
 });
 
 // The server answers each write with `answer`, and every request is kept.
@@ -215,4 +220,94 @@ it("says in words that the installation cannot store pictures", async () => {
     ),
   ).toBeInTheDocument();
   expect(client.getQueryState(["me"])?.isInvalidated).toBe(false);
+});
+
+// The browser's decoder and canvas are the boundary. The bitmap has the given size;
+// the canvas records its drawing and yields a small blob of the asked type.
+function browserDraws(width: number, height: number) {
+  const close = vi.fn();
+  vi.stubGlobal(
+    "createImageBitmap",
+    vi.fn(async () => ({ width, height, close })),
+  );
+  const drawImage = vi.fn();
+  vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
+    drawImage,
+  } as unknown as CanvasRenderingContext2D);
+  vi.spyOn(HTMLCanvasElement.prototype, "toBlob").mockImplementation(
+    (done, type) => done(new Blob(["shrunk"], { type })),
+  );
+  return { drawImage, close };
+}
+
+function sentFile(): File | null {
+  const body = sent[0]?.body;
+  const file = body instanceof FormData ? body.get("file") : null;
+  return file instanceof File ? file : null;
+}
+
+it("sends a phone photo past the server's pixel bound as its shrunk centre square", async () => {
+  const { drawImage, close } = browserDraws(4032, 3024);
+  serve(() => json({ ...ME, avatar_url: PICTURE }));
+  const user = userEvent.setup();
+  show();
+  const photo = new File(["jpeg"], "me.jpg", { type: "image/jpeg" });
+  await user.upload(picker(), photo);
+
+  expect(await screen.findByText("Picture saved")).toBeInTheDocument();
+  expect(drawImage).toHaveBeenCalledWith(
+    expect.anything(),
+    504,
+    0,
+    3024,
+    3024,
+    0,
+    0,
+    1024,
+    1024,
+  );
+  const file = sentFile();
+  expect(file).not.toBe(photo);
+  expect(file?.name).toBe("me.jpg");
+  expect(file?.type).toBe("image/jpeg");
+  expect(await file?.text()).toBe("shrunk");
+  expect(close).toHaveBeenCalled();
+});
+
+it("sends a picture at the server's pixel bound as picked", async () => {
+  const edge = Math.floor(Math.sqrt(PICTURE_MAX_PIXELS));
+  const { drawImage } = browserDraws(edge, edge);
+  serve(() => json({ ...ME, avatar_url: PICTURE }));
+  const user = userEvent.setup();
+  show();
+  const photo = new File(["jpeg"], "me.jpg", { type: "image/jpeg" });
+  await user.upload(picker(), photo);
+
+  expect(await screen.findByText("Picture saved")).toBeInTheDocument();
+  expect(drawImage).not.toHaveBeenCalled();
+  expect(sentFile()).toBe(photo);
+});
+
+it("names the pixel bound when the server refuses a picture for its pixels", async () => {
+  serve(
+    () =>
+      new Response(JSON.stringify({ status: 422, code: "too_many_pixels" }), {
+        status: 422,
+        headers: { "content-type": "application/problem+json" },
+      }),
+  );
+  const user = userEvent.setup();
+  show();
+  await user.upload(
+    picker(),
+    new File(["jpeg"], "me.jpg", { type: "image/jpeg" }),
+  );
+  expect(
+    await screen.findByText(
+      "Picture not uploaded. Use a picture of up to 8 megapixels.",
+    ),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByText("Picture not uploaded. Use a PNG, JPEG or WebP file."),
+  ).toBeNull();
 });
