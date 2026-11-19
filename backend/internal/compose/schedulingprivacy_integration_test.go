@@ -132,7 +132,7 @@ func verifyMeetingPrivacy(t *testing.T, anonymize bool) {
 	if got := e.WsCount(t, `SELECT count(*) FROM meeting_invitation WHERE status<>'erased' OR appointment ? 'Attendees'`); got != 0 {
 		t.Fatalf("pending delivery survived erasure: %d", got)
 	}
-	destroyed := store.DestroyErasedLinks(ctx)
+	destroyed := e.DestroyErasedLinks(store)
 	if destroyed != nil || e.VaultHolds(vault, refs[0]) || e.VaultHolds(vault, refs[1]) || e.WsCount(t, `SELECT (SELECT count(*) FROM meeting_invitation WHERE management_ref<>'') + (SELECT count(*) FROM meeting_proposal)`) != 0 {
 		t.Errorf("a link secret, or a row naming one, survived the destroying pass: %v", destroyed)
 	}

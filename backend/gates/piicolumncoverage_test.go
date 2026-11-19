@@ -242,9 +242,7 @@ var erasureColumnBaseline = map[string][]string{
 		// anything a subject wrote or anything written about them, so the
 		// Art. 17 scrub leaves them standing.
 		//
-		// payload_ref names vault material and holds nothing a subject wrote.
-		// Erasure leaves it for the comms sweep to destroy after the commit and
-		// clear.
+		// Names vault material, nothing a subject wrote; the sweep clears it.
 		"payload_ref",
 		"sender_kind",
 		"template_key",

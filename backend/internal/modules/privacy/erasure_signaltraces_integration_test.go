@@ -42,10 +42,7 @@ func seedSignalTraces(t *testing.T) signalTraceFixture {
 		tx: tx, subject: ids.New[ids.ContactKind](), other: ids.New[ids.ContactKind](),
 		subjectSignal: ids.NewV7(), otherSig: ids.NewV7(), activity: ids.NewV7(), otherActivity: ids.NewV7(),
 	}
-	ws, user := ids.NewV7(), ids.NewV7()
-	mustExec(ctx, t, tx, `INSERT INTO workspace (id) VALUES ($1)`, ws)
-	mustExec(ctx, t, tx, `INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Admin')`,
-		user, "admin-"+user.String()+"@signals.test")
+	actorCtx, user := auditActorCtx(ctx, t, tx)
 	for _, c := range []ids.ContactID{f.subject, f.other} {
 		mustExec(ctx, t, tx, `INSERT INTO contact (id, full_name, source, captured_by)
 			VALUES ($1, 'Someone', 'manual', 'human:test')`, c)
@@ -69,10 +66,21 @@ func seedSignalTraces(t *testing.T) signalTraceFixture {
 	}
 	suggest(f.otherActivity, f.subject)
 	suggest(f.activity, f.other)
-	f.ctx = principal.WithWorkspaceID(ctx, ws)
-	f.ctx = principal.WithCorrelationID(f.ctx, ids.NewV7())
-	f.ctx = principal.WithActor(f.ctx, principal.Principal{Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user})
+	f.ctx = actorCtx
 	return f
+}
+
+// auditActorCtx seeds a workspace and a seat and answers the context an audited
+// write needs, with the seat's id.
+func auditActorCtx(ctx context.Context, t *testing.T, tx pgx.Tx) (context.Context, ids.UUID) {
+	t.Helper()
+	ws, user := ids.NewV7(), ids.NewV7()
+	mustExec(ctx, t, tx, `INSERT INTO workspace (id) VALUES ($1)`, ws)
+	mustExec(ctx, t, tx, `INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Admin')`,
+		user, "admin-"+user.String()+"@signals.test")
+	ctx = principal.WithWorkspaceID(ctx, ws)
+	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
+	return principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalHuman, ID: "human:" + user.String(), UserID: user}), user
 }
 
 func (f signalTraceFixture) text(t *testing.T, sql string, args ...any) string {
@@ -88,7 +96,7 @@ func TestScrubbingASubjectsSignalsReplacesTheDedupeKeyAndKeepsOthers(t *testing.
 	for _, cause := range scrubCauses {
 		t.Run(cause, func(t *testing.T) {
 			f := seedSignalTraces(t)
-			if err := scrubSubjectSignals(f.ctx, f.tx, f.subject, "subject request", cause); err != nil {
+			if err := scrubSubjectSignals(f.ctx, f.tx, f.subject, nil, "subject request", cause); err != nil {
 				t.Fatal(err)
 			}
 			got := f.text(t, `SELECT fingerprint FROM signal WHERE id = $1`, f.subjectSignal)
@@ -110,7 +118,7 @@ func TestScrubbingASubjectReplacesTheReasonOfTheSuggestionsNamingThem(t *testing
 	for _, cause := range scrubCauses {
 		t.Run(cause, func(t *testing.T) {
 			f := seedSignalTraces(t)
-			if err := scrubSubjectSignals(f.ctx, f.tx, f.subject, "subject request", cause); err != nil {
+			if err := scrubSubjectSignals(f.ctx, f.tx, f.subject, nil, "subject request", cause); err != nil {
 				t.Fatal(err)
 			}
 			if got := f.text(t, `SELECT reason FROM activity_link_suggestion WHERE entity_id = $1`, f.subject); got != erasedText {
@@ -151,7 +159,7 @@ func TestScrubbingASubjectWithholdsTheAuditImagesOfTheirCorrectedSignals(t *test
 			if served() != "1" {
 				t.Fatal("the correction's audit row is not served before the scrub, so the test proves nothing")
 			}
-			if err := scrubSubjectSignals(f.ctx, f.tx, f.subject, "subject request", cause); err != nil {
+			if err := scrubSubjectSignals(f.ctx, f.tx, f.subject, nil, "subject request", cause); err != nil {
 				t.Fatal(err)
 			}
 			if served() != "0" {
@@ -186,5 +194,65 @@ func TestErasureLeavesTheLinkSecretsForThePassAfterTheCommit(t *testing.T) {
 	}
 	if ref != "vault-ref-1" || !due {
 		t.Errorf("the delivery reads ref %q, due %v; want the reference kept and the payload due now", ref, due)
+	}
+}
+
+func TestScrubbingASubjectEmptiesTheEvidenceOfOrdinarySignalsAboutThem(t *testing.T) {
+	for _, cause := range scrubCauses {
+		t.Run(cause, func(t *testing.T) {
+			f := seedSignalTraces(t)
+			mustExec(f.ctx, t, f.tx, `INSERT INTO signal (id, kind, source_channel, entity_type, entity_id, resolution_state,
+					severity, summary, evidence, status, detected_at, source, captured_by)
+				VALUES ($1, 'risk', 'web', 'contact', $2, 'resolved', 'info', 'Hedda is leaving',
+					'[{"snippet":"Hedda wrote from hedda@signals.test"}]'::jsonb, 'open', now(), 'manual', 'test')`,
+				ids.NewV7(), f.subject)
+			if err := scrubSubjectSignals(f.ctx, f.tx, f.subject, nil, "subject request", cause); err != nil {
+				t.Fatal(err)
+			}
+			held := f.text(t, `SELECT string_agg(summary || evidence::text, ' ') FROM signal WHERE kind = 'risk'`)
+			if strings.Contains(held, "Hedda") || strings.Contains(held, "hedda@") {
+				t.Errorf("an ordinary signal about the subject still holds %q", held)
+			}
+		})
+	}
+}
+
+func TestScrubbingASubjectEmptiesDerivedSignalsOnOtherRecordsThatCiteThem(t *testing.T) {
+	for _, cause := range scrubCauses {
+		t.Run(cause, func(t *testing.T) {
+			f := seedSignalTraces(t)
+			company := ids.NewV7()
+			mustExec(f.ctx, t, f.tx, `INSERT INTO company (id, display_name, source, captured_by)
+				VALUES ($1, 'Muster AG', 'manual', 'human:test')`, company)
+			derive := func(id ids.UUID, evidence string) {
+				mustExec(f.ctx, t, f.tx, `INSERT INTO signal (id, kind, source_channel, entity_type, entity_id, resolution_state,
+						severity, summary, evidence, status, detected_at, source, captured_by)
+					VALUES ($1, 'risk', 'derived', 'company', $2, 'resolved', 'info', 'Hedda is leaving', $3::jsonb,
+						'open', now(), 'derived', 'test')`, id, company, evidence)
+			}
+			byBuyer, byMessage, unrelated := ids.NewV7(), ids.NewV7(), ids.NewV7()
+			derive(byBuyer, `[{"snippet":"Hedda is leaving","buyer_contact_id":"`+f.subject.String()+`"}]`)
+			derive(byMessage, `[{"snippet":"Hedda is leaving","source_type":"activity","source_id":"`+f.activity.String()+`"}]`)
+			derive(unrelated, `[{"snippet":"Hedda is leaving","source_type":"activity","source_id":"`+f.otherActivity.String()+`"}]`)
+			erased := []ids.UUID{f.activity}
+			if cause == causeRetention {
+				erased = nil
+			}
+			if err := scrubSubjectSignals(f.ctx, f.tx, f.subject, erased, "subject request", cause); err != nil {
+				t.Fatal(err)
+			}
+			read := func(id ids.UUID) string {
+				return f.text(t, `SELECT summary || evidence::text FROM signal WHERE id = $1`, id)
+			}
+			if got := read(byBuyer); strings.Contains(got, "Hedda") || strings.Contains(got, f.subject.String()) {
+				t.Errorf("a company signal naming the subject as buyer still reads %q", got)
+			}
+			if got := read(byMessage); cause == causeContactErasure && strings.Contains(got, "Hedda") {
+				t.Errorf("a company signal quoting an erased message still reads %q", got)
+			}
+			if got := read(unrelated); !strings.Contains(got, "Hedda") {
+				t.Errorf("a signal citing another contact's message was redacted: %q", got)
+			}
+		})
 	}
 }

@@ -111,6 +111,11 @@ func (e *Eraser) redactSubjectActivities(ctx context.Context, tx pgx.Tx, subject
 		return nil, nil, err
 	}
 	activitiesRedacted = append(activitiesRedacted, notesRedacted...)
+	// After the timeline, because a derived signal on a company cites the
+	// messages just emptied and is found by their ids.
+	if err := scrubSubjectSignals(ctx, tx, subject, activitiesRedacted, reason, causeContactErasure); err != nil {
+		return nil, nil, err
+	}
 	if len(pending) > 0 {
 		if err := e.invalidateEdges(ctx, tx, pending); err != nil {
 			return nil, nil, err

@@ -149,7 +149,7 @@ func (e *Eraser) runContactErasure(ctx context.Context, contactID ids.UUID, reas
 		if err := eraseDealRoomSeats(ctx, tx, emails, reason); err != nil {
 			return err
 		}
-		if err := tombstoneLeadsAndSignals(ctx, tx, subject, leadsWiped, reason); err != nil {
+		if err := tombstoneCollateralScrubs(ctx, tx, "lead", leadsWiped, reason, causeContactErasure); err != nil {
 			return err
 		}
 		activitiesRedacted, activitiesHeld, err := e.redactSubjectActivities(ctx, tx, subject, keys, floor, reason)

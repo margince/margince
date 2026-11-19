@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/erasedmark"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -27,6 +28,9 @@ type erasedLink struct {
 // secret; this pass runs after the commit. Each reference is cleared only once
 // the vault has deleted it, so a refusing vault is retried on the next run.
 func (s *Store) DestroyErasedLinks(ctx context.Context) error {
+	if err := auth.RequireSystem(ctx); err != nil {
+		return err
+	}
 	var invitations, proposals []erasedLink
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		var err error

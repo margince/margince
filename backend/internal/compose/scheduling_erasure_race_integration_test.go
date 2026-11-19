@@ -66,7 +66,7 @@ func TestErasureDuringProviderDeliveryCancelsTheLateReceiptAndSuppressesItsEcho(
 		t.Fatal(err)
 	}
 	now = now.Add(2 * time.Minute)
-	if err := errors.Join(store.DeliverInvitations(ctx), store.DestroyErasedLinks(ctx)); err != nil {
+	if err := errors.Join(store.DeliverInvitations(ctx), e.DestroyErasedLinks(store)); err != nil {
 		t.Fatal(err)
 	}
 	if calendar.canceled != ids.UUID(meeting.Id).String() {
