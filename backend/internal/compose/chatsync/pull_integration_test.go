@@ -421,8 +421,8 @@ func (s *recordingSummary) Complete(_ context.Context, req model.Request) (model
 }
 
 // partyEnv is a pull whose deal has an owner who writes nothing in the
-// channel, a company, and stakeholders of every standing. One management member
-// reads the deal and nobody else does, so that member stands for every reader.
+// channel, a company, and stakeholders of every standing. Every member holds
+// the management role, so each one may read the names.
 type partyEnv struct {
 	*pullEnv
 	rec   *recordingSummary
@@ -437,7 +437,7 @@ func setupParties(t *testing.T) *partyEnv {
 	e.exec(t, `UPDATE deal SET owner_id = $2, amount_minor = 123456700, currency = 'EUR' WHERE id = $1`, e.deal, e.owner)
 	reader := ids.NewV7()
 	e.exec(t, `INSERT INTO app_user (id, email, display_name) VALUES ($1, 'rex@chat.test', 'Rex Reader')`, reader)
-	e.seedRoles(t, map[ids.UUID]string{reader: "management"})
+	e.seedRoles(t, map[ids.UUID]string{reader: "management", e.owner: "management", e.rep: "management"})
 	company := ids.NewV7()
 	e.exec(t, `INSERT INTO company (id, display_name, source, captured_by) VALUES ($1, 'Acme GmbH', 'seed', 'system')`, company)
 	e.exec(t, `UPDATE deal SET company_id = $2 WHERE id = $1`, e.deal, company)
@@ -521,6 +521,19 @@ func TestAReaderWithoutTheCompanyOrContactOrEdgeReadLeavesThatNameOut(t *testing
 			requireNotIn(t, second, tc.withheld)
 		})
 	}
+}
+
+// A member who may not open the deal still reads the note, so a missing
+// contact read on that member alone withholds the name.
+func TestAMemberWhoCannotOpenTheDealStillBoundsTheNames(t *testing.T) {
+	e := setupParties(t)
+	outsider := ids.NewV7()
+	e.exec(t, `INSERT INTO app_user (id, email, display_name) VALUES ($1, 'otto@chat.test', 'Otto Outsider')`, outsider)
+	e.exec(t, `INSERT INTO role_assignment (role_id, user_id) SELECT id, $1 FROM role WHERE key = 'rep' AND is_system`, outsider)
+	e.exec(t, `UPDATE role SET permissions = jsonb_set(permissions, '{objects,contact,read}', 'false') WHERE key = 'rep'`)
+	second := e.secondRequest(t)
+	requireIn(t, second, "Acme GmbH")
+	requireNotIn(t, second, "Clara Buyer")
 }
 
 func TestADepartedOwnerIsNotNamed(t *testing.T) {

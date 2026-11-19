@@ -52,7 +52,7 @@ func readSummaryContext(ctx context.Context, pool *pgxpool.Pool, link chatlinks.
 			out.facts = append(out.facts, "Owner: "+owner)
 		}
 		if link.DealID != nil {
-			readers, err := recordReaders(ctx, tx, record)
+			readers, err := noteReaders(ctx, tx)
 			if err != nil {
 				return err
 			}
@@ -83,16 +83,17 @@ func liveOwner(ctx context.Context, tx pgx.Tx, record chatRecord) (string, error
 	return name, err
 }
 
-// recordReaders are the live members who may read the record, judged the way
-// the record's own page and the channel's admission judge them.
-func recordReaders(ctx context.Context, tx pgx.Tx, record chatRecord) ([]principal.Principal, error) {
-	viewers, err := Viewers(ctx, tx, record.kind, record.id)
+// noteReaders lists the live human members. The note is filed for the whole
+// workspace. A name is judged against all of these members, including those
+// who may not open the deal.
+func noteReaders(ctx context.Context, tx pgx.Tx) ([]principal.Principal, error) {
+	rows, err := tx.Query(ctx, `SELECT u.id FROM app_user u WHERE `+workforce.LiveHumanSQL("u")+` ORDER BY u.id`)
+	if err != nil {
+		return nil, fmt.Errorf("chat summary: reading the members: %w", err)
+	}
+	users, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
 	if err != nil {
 		return nil, err
-	}
-	users := make([]ids.UUID, len(viewers))
-	for i, v := range viewers {
-		users[i] = v.ID
 	}
 	byID, err := identity.MemberPrincipalsTx(ctx, tx, users)
 	if err != nil {
@@ -145,7 +146,7 @@ func companyName(ctx context.Context, tx pgx.Tx, dealID ids.UUID, readers []prin
 	}
 	var name string
 	err = tx.QueryRow(ctx, fmt.Sprintf(`SELECT c.display_name FROM deal d JOIN company c ON c.id = d.company_id
-		WHERE d.id = $%d AND c.archived_at IS NULL%s`, deal, andClause(scope)), args...).Scan(&name)
+		WHERE d.id = $%d AND c.archived_at IS NULL AND c.visibility = 'workspace'%s`, deal, andClause(scope)), args...).Scan(&name)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", nil
 	}
@@ -175,7 +176,7 @@ func stakeholderNames(ctx context.Context, tx pgx.Tx, dealID ids.UUID, readers [
 	limit := arg(maxContactFacts)
 	rows, err := tx.Query(ctx, fmt.Sprintf(`SELECT p.full_name FROM relationship r JOIN contact p ON p.id = r.contact_id
 		WHERE r.deal_id = $%d AND r.kind = 'deal_stakeholder' AND r.archived_at IS NULL AND r.ended_at IS NULL
-		  AND p.archived_at IS NULL AND NOT `+auth.ContactRestrictedSQL("p.id")+`%s
+		  AND p.archived_at IS NULL AND p.visibility = 'workspace' AND NOT `+auth.ContactRestrictedSQL("p.id")+`%s
 		ORDER BY r.is_current_primary DESC, p.full_name, p.id LIMIT $%d`, deal, andClause(strings.Join(nonEmpty(scopes), " AND ")), limit), args...)
 	if err != nil {
 		return nil, err
