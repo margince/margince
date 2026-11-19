@@ -24,7 +24,9 @@ func TestARenameDropsTheNamePartsTheNewNameNoLongerHolds(t *testing.T) {
 		{"a title or a change of case keeps both", UpdateContactInput{FullName: new("Dr. STEFAN ALTMANN")}, nil},
 		{"accents folded keep the part", UpdateContactInput{FullName: new("Stéfan Altmann")}, nil},
 		{"the unchanged name is no rename", UpdateContactInput{FullName: new("Stefan Altmann")}, nil},
-		{"an update that states a part decides it itself", UpdateContactInput{FullName: new("Maria Neumann"), FirstName: new("Maria")}, nil},
+		{"a stated part decides itself, the other is checked", UpdateContactInput{FullName: new("Maria Neumann"), FirstName: new("Maria")}, []string{"last_name"}},
+		{"a stated part decides itself, a held one stays", UpdateContactInput{FullName: new("Maria Altmann"), FirstName: new("Maria")}, nil},
+		{"a cleared part decides itself", UpdateContactInput{FullName: new("Maria Neumann"), Clear: []string{"last_name"}}, []string{"last_name", "first_name"}},
 		{"restated stored parts still drop", UpdateContactInput{FullName: new("Maria Neumann"), FirstName: new("Stefan"), LastName: new("Altmann")}, []string{"first_name", "last_name"}},
 	}
 	for _, tc := range cases {

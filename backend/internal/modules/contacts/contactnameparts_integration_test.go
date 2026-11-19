@@ -188,13 +188,17 @@ func TestAPartsEditDecidesOnTheDisplayNameCommittedBeforeIt(t *testing.T) {
 }
 
 // A rename to another contact's name leaves no old name part behind, and a reload of
-// the record reads the parts as cleared. Restating the stored parts beside it changes nothing.
+// the record reads the parts as cleared. A part the rename states is kept as stated.
 func TestRenamingToAnotherNameClearsTheOldNameParts(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	for name, rename := range map[string]UpdateContactInput{
-		"the name alone":         {FullName: new("Maria Neumann")},
-		"the name and its parts": {FullName: new("Maria Neumann"), FirstName: new("Stefan"), LastName: new("Altmann")},
+	for name, tc := range map[string]struct {
+		rename    UpdateContactInput
+		wantFirst *string
+	}{
+		"the name alone":                {UpdateContactInput{FullName: new("Maria Neumann")}, nil},
+		"the name and its parts":        {UpdateContactInput{FullName: new("Maria Neumann"), FirstName: new("Stefan"), LastName: new("Altmann")}, nil},
+		"the name and a new first name": {UpdateContactInput{FullName: new("Maria Neumann"), FirstName: new("Maria")}, new("Maria")},
 	} {
 		t.Run(name, func(t *testing.T) {
 			created, err := e.store.CreateContact(ctx, CreateContactInput{
@@ -204,15 +208,15 @@ func TestRenamingToAnotherNameClearsTheOldNameParts(t *testing.T) {
 				t.Fatalf("create: %v", err)
 			}
 			id := ids.From[ids.ContactKind](ids.UUID(created.Id))
-			if _, err := e.store.UpdateContact(ctx, id, rename); err != nil {
+			if _, err := e.store.UpdateContact(ctx, id, tc.rename); err != nil {
 				t.Fatalf("rename: %v", err)
 			}
 			got, err := e.store.GetContact(ctx, id, storekit.LiveOnly)
 			if err != nil {
 				t.Fatalf("read: %v", err)
 			}
-			if got.FullName != "Maria Neumann" || got.FirstName != nil || got.LastName != nil {
-				t.Fatalf("got %q / %v / %v, want Maria Neumann with no parts", got.FullName, got.FirstName, got.LastName)
+			if got.FullName != "Maria Neumann" || derefString(got.FirstName) != derefString(tc.wantFirst) || got.LastName != nil {
+				t.Fatalf("got %q / %v / %v, want Maria Neumann / %v / no last name", got.FullName, got.FirstName, got.LastName, tc.wantFirst)
 			}
 		})
 	}

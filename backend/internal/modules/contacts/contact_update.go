@@ -298,9 +298,9 @@ func withRestatedNamePartsDropped(current crmcontracts.Contact, in UpdateContact
 
 // namePartsARenameDrops lists each stored name part the new display name no
 // longer holds as a run of its words. A greeting then never reads the name of
-// the contact it was before. An update that states a part decides that part itself.
+// the contact it was before. A part the update states decides itself.
 func namePartsARenameDrops(current crmcontracts.Contact, in UpdateContactInput) []string {
-	if in.FullName == nil || *in.FullName == current.FullName || movesANamePart(in) {
+	if in.FullName == nil || *in.FullName == current.FullName {
 		return nil
 	}
 	words := nameWords(foldedNameKey(*in.FullName))
@@ -308,8 +308,12 @@ func namePartsARenameDrops(current crmcontracts.Contact, in UpdateContactInput) 
 	for _, part := range [...]struct {
 		column string
 		stored *string
-	}{{columnFirstName, current.FirstName}, {columnLastName, current.LastName}} {
-		if name := derefString(part.stored); name != "" && !containsRun(words, nameWords(foldedNameKey(name))) {
+		stated bool
+	}{
+		{columnFirstName, current.FirstName, in.FirstName != nil || slices.Contains(in.Clear, columnFirstName)},
+		{columnLastName, current.LastName, in.LastName != nil || slices.Contains(in.Clear, columnLastName)},
+	} {
+		if name := derefString(part.stored); !part.stated && name != "" && !containsRun(words, nameWords(foldedNameKey(name))) {
 			dropped = append(dropped, part.column)
 		}
 	}
