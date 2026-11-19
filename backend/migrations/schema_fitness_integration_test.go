@@ -295,7 +295,8 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	// activity write, not inside comms. Both send transports stage through
 	// that one path and pass the activity id they just created, never an
 	// externally-supplied reference.
-	"comms_outbound.activity_id": "child row: written only inside the caller's own transaction, alongside the activity write it reports on",
+	"comms_outbound.activity_id":         "child row: written only inside the caller's own transaction, alongside the activity write it reports on",
+	"comms_outbound.answers_activity_id": "the reply's anchor, which SendOrigin already resolved under the sender's row scope before the send was staged; nothing reads it back to a caller",
 	// A scheduled send names the conversation its reply will join, and that
 	// reference is CLIENT-SUPPLIED — the rep picks the thread. It is gated at
 	// the same moment an immediate reply's anchor is, by the same code:
