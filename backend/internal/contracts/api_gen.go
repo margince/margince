@@ -65563,6 +65563,33 @@ type SearchHitEmployer struct {
 	CompanyName string             `json:"company_name"`
 }
 
+// SearchHitStanding What a result list shows beside a record hit. A field that does not apply to the hit's type, or that the record does not hold, is null.
+type SearchHitStanding struct {
+	// AmountMinor A deal's amount in minor units of `currency`. Null when the deal is unpriced, and null when a field mask withholds it, which `masked_fields` then names.
+	AmountMinor *int64 `json:"amount_minor,omitempty"`
+
+	// Currency The ISO 4217 code of `amount_minor`; null with it.
+	Currency *string `json:"currency,omitempty"`
+
+	// DueOn A deal's expected close date or a project's target end date.
+	DueOn *openapi_types.Date `json:"due_on,omitempty"`
+
+	// JobTitle A contact's job title. Null on every other type.
+	JobTitle *string `json:"job_title,omitempty"`
+
+	// LastActivityAt When the record was last in touch: its newest logged call, mail, meeting or note. Set on a contact, a company and a deal.
+	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
+
+	// MaskedFields The fields above a field mask withheld from this caller, by their wire names.
+	MaskedFields *[]string `json:"masked_fields,omitempty"`
+
+	// Stage A deal's stage, named in the reader's language. Null on every other type.
+	Stage *string `json:"stage,omitempty"`
+
+	// State A deal's status (open, won, lost), a lead's status (new, contacted, engaged, promoted, disqualified) or a project's phase (initiative, pursuing, delivering, closed). Null on a contact and a company.
+	State *string `json:"state,omitempty"`
+}
+
 // SearchNearMatch defines model for SearchNearMatch.
 type SearchNearMatch struct {
 	Id openapi_types.UUID `json:"id"`
@@ -65609,6 +65636,9 @@ type SearchResult struct {
 	// Score Relevance score.
 	Score   *float32 `json:"score,omitempty"`
 	Snippet *string  `json:"snippet,omitempty"`
+
+	// Standing Where a contact, company, deal, lead or project hit stands, read with the page under THIS caller's grants and field masks, so a result list can say it without opening each record. Absent on every other hit type.
+	Standing *SearchHitStanding `json:"standing,omitempty"`
 
 	// Title Display label (name/subject).
 	Title *string `json:"title,omitempty"`
