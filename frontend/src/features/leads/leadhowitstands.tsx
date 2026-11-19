@@ -1,4 +1,5 @@
 import { EntityRef } from "../../components/entityref";
+import { useLatestInboundRead } from "../../components/latestinbound";
 import { HowItStands } from "../../design-system/howitstands";
 import { statTone } from "../../design-system/readingtone";
 import type { RecordTimeline } from "../../design-system/recordtimeline";
@@ -87,9 +88,14 @@ export function LeadHowItStands({
       ? (explain.data.current?.factors ?? [])
       : undefined;
   const score = leadScoreReading(lead, factors, ctx);
+  const lastMessages = useLatestInboundRead("lead", lead.id).data;
   const timeline = leadTimeline(
     lead,
     thread.activities,
+    {
+      inbound: lastMessages?.last_inbound,
+      outbound: lastMessages?.last_outbound,
+    },
     addedViaFor(lead, t),
     ctx,
   );

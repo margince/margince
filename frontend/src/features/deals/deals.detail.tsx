@@ -5,6 +5,7 @@ import { DealStatusBadge } from "../../components/dealstatusbadge";
 import {
   LatestInboundLine,
   useLatestInbound,
+  useLatestInboundRead,
 } from "../../components/latestinbound";
 import { useRailRename } from "../../components/railfield";
 import { Badge } from "../../design-system/atoms";
@@ -199,6 +200,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   const live = dealQuery.isSuccess && !dealQuery.data.archived_at;
   const statusQuery = useDealStatusCard(id, live);
   const latest = useLatestInbound("deal", id);
+  const lastInbound = useLatestInboundRead("deal", id).data?.last_inbound;
   const coverageRead = useDealCoverage(id, live);
   // How it stands reads the whole history, not what the History tab's own
   // filter has narrowed. A "no reply" read off a filtered view would be false.
@@ -349,6 +351,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                       stages,
                       asOf,
                       activities: threadQuery.activities,
+                      lastInbound,
                       history: threadQuery,
                       offers: offersQuery.data?.data,
                       coverage: coverageRead,
