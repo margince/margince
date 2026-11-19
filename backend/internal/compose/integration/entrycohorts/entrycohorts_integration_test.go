@@ -4,7 +4,7 @@
 //go:build integration
 
 // Package entrycohorts tests the reports built on history rows and on the lead
-// entry cohort: one row per loss, the companies of the cohort and its sources.
+// entry cohort. They are one row per loss, and the cohort's companies and sources.
 package entrycohorts
 
 import (
@@ -57,7 +57,7 @@ func lossStage(t *testing.T, e *integration.Env) ids.StageID {
 }
 
 // losses counts the loss events of the report by the dimension, as one reader asks.
-func losses(t *testing.T, e *integration.Env, reader context.Context, by string, filters ...analyticsquery.Filter) (map[string]any, error) {
+func losses(reader context.Context, t *testing.T, e *integration.Env, by string, filters ...analyticsquery.Filter) (map[string]any, error) {
 	t.Helper()
 	var answer compose.AnalyticsAnswer
 	query := analyticsquery.Query{Entity: "loss-events", GroupBy: []string{by}, Filters: filters, Measures: []analyticsquery.Measure{{Fn: analyticsquery.CountAll, As: "n"}}}
@@ -105,31 +105,29 @@ func TestADealLostTwiceIsTwoLossEventsAndARepIsRefusedAColleaguesLosses(t *testi
 	lose(twice, "competitor")
 	lose(newDeal(e.Rep3), "price")
 
-	everything, err := losses(t, e, readerOf(e, principal.RowScopeAll), "loss_reason")
+	everything, err := losses(readerOf(e, principal.RowScopeAll), t, e, "loss_reason")
 	if err != nil || everything["price"] != int64(2) || everything["competitor"] != int64(1) {
 		t.Errorf("loss events by reason = %v, %v, want price 2 (two deals) and competitor 1 (the second loss of one deal)", everything, err)
 	}
 	rep := readerOf(e, principal.RowScopeOwn)
 	mine := analyticsquery.Filter{Field: "owner_id", Op: analyticsquery.OpEq, Value: e.Rep1.String()}
-	own, err := losses(t, e, rep, "loss_reason", mine)
+	own, err := losses(rep, t, e, "loss_reason", mine)
 	if err != nil || own["price"] != int64(1) || own["competitor"] != int64(1) {
 		t.Errorf("a rep's own loss events by reason = %v, %v, want the two losses of their own deal", own, err)
 	}
 	colleague := analyticsquery.Filter{Field: "owner_id", Op: analyticsquery.OpEq, Value: e.Rep3.String()}
-	if _, err := losses(t, e, rep, "loss_reason", colleague); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := losses(rep, t, e, "loss_reason", colleague); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("a rep asking for a colleague's loss events got %v, want a permission refusal", err)
 	}
 }
 
-func leadsOf(t *testing.T, e *integration.Env, at time.Time) (create func(origin string, company *ids.UUID) ids.LeadID, store *contacts.Store, reader context.Context) {
+func leadsOf(t *testing.T, e *integration.Env, at time.Time) (create func(origin string, company *ids.UUID) ids.LeadID, store *contacts.Store) {
 	t.Helper()
 	store = contacts.NewStore(compose.InstallationDB(e.Pool)).SetClock(func() time.Time { return at })
-	reader = readerOf(e, principal.RowScopeAll)
-	writer := e.Admin()
 	owner := ids.From[ids.UserKind](e.Rep1)
-	return func(origin string, company *ids.UUID) ids.LeadID {
+	create = func(origin string, company *ids.UUID) ids.LeadID {
 		name := "Cohort lead"
-		made, _, err := store.CreateLead(writer, contacts.CreateLeadInput{FullName: &name, Status: "new", OwnerID: &owner, Source: "manual", Origin: &origin})
+		made, _, err := store.CreateLead(e.Admin(), contacts.CreateLeadInput{FullName: &name, Status: "new", OwnerID: &owner, Source: "manual", Origin: &origin})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -138,30 +136,31 @@ func leadsOf(t *testing.T, e *integration.Env, at time.Time) (create func(origin
 			e.WsExec(t, `UPDATE lead SET company_id = $1 WHERE id = $2`, *company, id.UUID)
 		}
 		return id
-	}, store, writer
+	}
+	return create, store
 }
 
-// The entry cohort read as companies and as sources: each company once under
-// the furthest outcome of its leads, and each source with its entrants and the
-// leads linked to a deal. Evidence opens exactly the members a count names.
+// The entry cohort read as companies counts each company once, under the
+// furthest outcome of its leads. Read as sources, each one shows its entrants and
+// the leads linked to a deal. Evidence opens the members a count names.
 func TestTheEntryCohortReadsAsCompaniesAndAsSources(t *testing.T) {
 	e := integration.Setup(t)
 	pipeline, open, _ := integration.DealFixture(t, e)
 	linkedTo := e.SeedDeal(t, "Linked deal", pipeline, open, &e.Rep1)
 	start := clocktest.Now(t).Add(-time.Minute)
 	at := start.Add(3 * time.Minute)
-	create, store, writer := leadsOf(t, e, start.Add(time.Minute))
+	create, store := leadsOf(t, e, start.Add(time.Minute))
 	acme, beta := e.SeedCompany(t, "Acme", &e.Rep1), e.SeedCompany(t, "Beta", &e.Rep1)
 	qualified := create("website", &acme)
 	create("website", &acme)
 	disqualified := create("website", &beta)
 	create("linkedin", &beta)
 	create("linkedin", nil)
-	if _, _, err := store.PromoteLead(writer, qualified, contacts.PromoteLeadInput{Trigger: "human_qualify"}); err != nil {
+	if _, _, err := store.PromoteLead(e.Admin(), qualified, contacts.PromoteLeadInput{Trigger: "human_qualify"}); err != nil {
 		t.Fatal(err)
 	}
 	e.WsExec(t, `UPDATE lead SET qualified_deal_id = $1 WHERE id = $2`, linkedTo, qualified.UUID)
-	if _, err := store.DisqualifyLead(writer, disqualified, contacts.DisqualifyLeadInput{}); err != nil {
+	if _, err := store.DisqualifyLead(e.Admin(), disqualified, contacts.DisqualifyLeadInput{}); err != nil {
 		t.Fatal(err)
 	}
 

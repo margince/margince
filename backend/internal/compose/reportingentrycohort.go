@@ -41,9 +41,9 @@ var entryCohortWords = struct{ Companies, CompanyAccess, Linked, NotLinked langc
 	NotLinked:     langcopy.Phrase{En: "Not linked yet", De: "Noch nicht verknüpft", Vi: "Chưa gắn với cơ hội"},
 }
 
-// readReportingAccountProgression reads each company the entry cohort's leads
-// belong to once, under the furthest outcome any of those leads reached, in the
-// order the lead cohort lists its outcomes. A company counts only for a reader
+// readReportingAccountProgression reads each company of the entry cohort's leads
+// once, under the furthest outcome any of those leads reached. The order is the
+// one the lead cohort lists its outcomes in. A company counts only for a reader
 // who may read it and its name.
 func readReportingAccountProgression(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, _ crmcontracts.ReportingFramework, _ metricEvaluator) ([]reporting.Fact, crmcontracts.ReportingCoverage, error) {
 	if frame.PipelineId != nil {
@@ -164,15 +164,20 @@ func reportingSourceQualityChart(out *reporting.Evaluation, chart crmcontracts.R
 		}
 		count := func(key string, n int64, label langcopy.Phrase) crmcontracts.ReportingCohortCount {
 			group := source + ":" + key
-			return crmcontracts.ReportingCohortCount{Key: key, Label: said.Say(label), Count: n,
-				Evidence: &crmcontracts.ReportingEvidenceRef{Metric: chart.Metric, ContextId: chart.ContextId, GroupKey: &group}}
+			return crmcontracts.ReportingCohortCount{
+				Key: key, Label: said.Say(label), Count: n,
+				Evidence: &crmcontracts.ReportingEvidenceRef{Metric: chart.Metric, ContextId: chart.ContextId, GroupKey: &group},
+			}
 		}
 		outcomes := []crmcontracts.ReportingCohortCount{
 			count(sourceLinked, linkedCount, entryCohortWords.Linked),
 			count(sourceNotLinked, entrants-linkedCount, entryCohortWords.NotLinked),
 		}
-		point := crmcontracts.ReportingPoint{Key: source, Label: facts[0].GroupLabel, Observations: &entrants, Outcomes: &outcomes,
-			Status: crmcontracts.ReportingStatus("ok"), Evidence: &crmcontracts.ReportingEvidenceRef{Metric: chart.Metric, ContextId: chart.ContextId, GroupKey: &source}}
+		point := crmcontracts.ReportingPoint{
+			Key: source, Label: facts[0].GroupLabel, Observations: &entrants, Outcomes: &outcomes,
+			Status:   crmcontracts.ReportingStatus("ok"),
+			Evidence: &crmcontracts.ReportingEvidenceRef{Metric: chart.Metric, ContextId: chart.ContextId, GroupKey: &source},
+		}
 		if entrants >= analyticsquery.PercentileSampleFloor {
 			rate := float64(linkedCount) / float64(entrants) * 100
 			point.Value = &rate

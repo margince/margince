@@ -83,8 +83,8 @@ func readReportingLeadCohort(ctx context.Context, tx pgx.Tx, frame crmcontracts.
 	return facts, coverage, nil
 }
 
-// leadEntryCohortSQL is the lead entry cohort every cohort reader follows: the
-// leads that arrived in the interval, narrowed by the reader's scope, as the
+// leadEntryCohortSQL is the lead entry cohort every cohort reader follows. It is
+// the leads that arrived in the interval, narrowed by the reader's scope, as the
 // arrived CTE, with the moves CTE over them. Outcomes are followed to the
 // evaluation instant, bound as cutoff.
 func leadEntryCohortSQL(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, metric crmcontracts.ReportingMetricID, b *reportingBindings) (ctes, cutoff string, withheld bool, err error) {
@@ -117,9 +117,9 @@ func finishCohortFacts(facts []reporting.Fact, coverage crmcontracts.ReportingCo
 	return facts, coverage
 }
 
-// leadOutcomeJoinsSQL joins what a lead reached by the cutoff: its first
-// qualification or disqualification (mv) and its accepted handoff (acc), over
-// the moves CTE and the lead alias l.
+// leadOutcomeJoinsSQL joins what a lead reached by the cutoff. That is its first
+// qualification or disqualification (mv) and its accepted handoff (acc), over the
+// moves CTE and the lead alias l.
 func leadOutcomeJoinsSQL(cutoff string) string {
 	return `LEFT JOIN LATERAL (SELECT min(m.occurred_at) FILTER (WHERE m.move='` + weekly.LeadMovePromoted + `') AS promoted,
    min(m.occurred_at) FILTER (WHERE m.move='` + weekly.LeadMoveDisqualified + `') AS disqualified

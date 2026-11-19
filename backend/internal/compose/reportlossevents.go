@@ -27,8 +27,8 @@ const (
 )
 
 // lossEventsSpec counts losses where win-loss counts deals. It reads the deal
-// through the same table alias as every deal report, so the deal's row scope,
-// field masks and owner gate narrow it without a second spelling.
+// through the table alias every deal report uses. The deal's row scope, field
+// masks and owner gate therefore narrow it without a second spelling.
 func lossEventsSpec() reportSpec {
 	dimensions := map[string]string{
 		fieldOwnerID:    colOwnerID,
