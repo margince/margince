@@ -18,36 +18,23 @@ import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { taskWriteKeys } from "../../lib/activitykeys";
 import { useMe } from "../../lib/session";
-import { ViewerZoneProvider } from "../../lib/viewerzone";
 import { type WriteTo, WriteToProvider } from "../../lib/writeto";
-import { companyNamesAnswer } from "../../testing/companynames.testkit";
-import { meFixture, READS_RECORDS } from "../../testing/mefixture";
+import { meFixture } from "../../testing/mefixture";
 import { SourceHost } from "../../testing/sourcehost";
 import {
   installFetchStub,
   jsonResponse,
-  meRoute,
   type RouteMap,
   StoryProviders,
 } from "../../testing/story-utils";
+import { openTask, taskAllow, taskMe } from "./taskdetail.testkit";
 import { TaskDetailModal } from "./taskdetailmodal";
 
 afterEach(cleanup);
 
-// The provenance sentence and the way back to the record behind it.
-//
-// A task read out of a meeting says so in words — "committed to this in the
-// meeting transcript (line 6)" — and for as long as that sentence was all it
-// carried, the only route to the meeting was the record's history tab and a
-// search for its exact subject. These hold the link, and hold that a task
-// nobody read out of anything does not offer one.
-
 function stubTask(sourceActivityId: string | null, capturedBy = "human:u-1") {
   installFetchStub({
-    "GET /me": meRoute(
-      { ...READS_RECORDS, activity: ["read", "update"] },
-      { seat: "full" },
-    ),
+    "GET /me": taskMe("update"),
     "GET /activities/task-1": () =>
       jsonResponse({
         id: "task-1",
@@ -81,30 +68,13 @@ function stubTask(sourceActivityId: string | null, capturedBy = "human:u-1") {
 
 // The reader's zone is named, so the due day and hour do not move with the
 // machine the suite runs on.
-const READER_ZONE = "Europe/Berlin";
-
-function openTask() {
-  return render(
-    <StoryProviders>
-      <SourceHost>
-        <ViewerZoneProvider zone={READER_ZONE}>
-          <TaskDetailModal
-            activityId="task-1"
-            readOnly={false}
-            onClose={() => {}}
-            update={
-              {
-                mutate: () => {},
-                isPending: false,
-              } as unknown as Parameters<typeof TaskDetailModal>[0]["update"]
-            }
-          />
-        </ViewerZoneProvider>
-      </SourceHost>
-    </StoryProviders>,
-  );
-}
-
+// The provenance sentence and the way back to the record behind it.
+//
+// A task read out of a meeting says so in words — "committed to this in the
+// meeting transcript (line 6)" — and for as long as that sentence was all it
+// carried, the only route to the meeting was the record's history tab and a
+// search for its exact subject. These hold the link, and hold that a task
+// nobody read out of anything does not offer one.
 test("a task read out of a meeting opens that meeting", async () => {
   const user = userEvent.setup();
   stubTask("meeting-9");
@@ -137,10 +107,7 @@ test("a transcript refused on reopen is not painted from the cache", async () =>
   // sitting in `data`. Rendering that beside the error is what this holds.
   let refused = false;
   installFetchStub({
-    "GET /me": meRoute(
-      { ...READS_RECORDS, activity: ["read", "update"] },
-      { seat: "full" },
-    ),
+    "GET /me": taskMe("update"),
     "GET /activities/task-1": () =>
       jsonResponse({
         id: "task-1",
@@ -187,10 +154,7 @@ test("a transcript refused on reopen is not painted from the cache", async () =>
 
 test("a source that cannot be read says so instead of disappearing", async () => {
   installFetchStub({
-    "GET /me": meRoute(
-      { ...READS_RECORDS, activity: ["read", "update"] },
-      { seat: "full" },
-    ),
+    "GET /me": taskMe("update"),
     "GET /activities/task-1": () =>
       jsonResponse({
         id: "task-1",
@@ -216,10 +180,7 @@ test("a source that cannot be read says so instead of disappearing", async () =>
 // the same presentation endpoint the panel asks.
 function stubEmailRequest(parties: Record<string, unknown> = {}) {
   installFetchStub({
-    "GET /me": meRoute(
-      { ...READS_RECORDS, activity: ["read", "update"] },
-      { seat: "full" },
-    ),
+    "GET /me": taskMe("update"),
     "GET /activities/task-1": () =>
       jsonResponse({
         id: "task-1",
@@ -379,95 +340,6 @@ test("a task a colleague typed carries no AI mark", async () => {
 
 // The records a task is filed under, as chips that open them from the panel.
 
-function stubFiledTask(links: { entity_type: string; entity_id: string }[]) {
-  installFetchStub({
-    "GET /me": meRoute(
-      { ...READS_RECORDS, activity: ["read", "update"] },
-      { seat: "full" },
-    ),
-    "GET /activities/task-1": () =>
-      jsonResponse({
-        id: "task-1",
-        kind: "task",
-        writable: true,
-        subject: "Send the renewal paperwork",
-        occurred_at: "2026-09-08T09:00:00Z",
-        is_done: false,
-        links,
-      }),
-    "GET /deals/deal-1": () =>
-      jsonResponse({ id: "deal-1", name: "Brandt renewal 2027" }),
-    "GET /companies": () =>
-      jsonResponse({
-        data: [{ id: "co-1", display_name: "Brandt Automotive" }],
-        next_cursor: null,
-      }),
-  });
-  const recordFetch = globalThis.fetch;
-  vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) => {
-    const request = input instanceof Request ? input : null;
-    const url = new URL(request?.url ?? String(input), "https://test.local");
-    const method = request?.method ?? init?.method ?? "GET";
-    if (method === "GET") {
-      const company = companyNamesAnswer(url.href, {
-        "co-1": "Brandt Automotive",
-      });
-      if (company) return Promise.resolve(company);
-      if (
-        url.pathname === "/v1/records/references" &&
-        url.searchParams.get("kind") === "deal"
-      ) {
-        return Promise.resolve(
-          jsonResponse({
-            data: url.searchParams
-              .getAll("id")
-              .flatMap((id) =>
-                id === "deal-1"
-                  ? [{ id, name: "Brandt renewal 2027", archived: false }]
-                  : [],
-              ),
-          }),
-        );
-      }
-    }
-    return recordFetch(input, init);
-  });
-}
-
-test("a task filed under a deal and its company names the deal first", async () => {
-  // The company first on the wire, so the order on screen is the panel's own.
-  stubFiledTask([
-    { entity_type: "company", entity_id: "co-1" },
-    { entity_type: "deal", entity_id: "deal-1" },
-  ]);
-  openTask();
-
-  const deal = await screen.findByRole("link", { name: "Brandt renewal 2027" });
-  await screen.findByRole("link", { name: "Brandt Automotive" });
-  const chips = screen.getAllByRole("link");
-  expect(chips.map((chip) => chip.className)).toEqual([
-    "chip chip-dense chip-link",
-    "chip chip-dense chip-lead chip-link",
-  ]);
-  // The company chip leads with its avatar, the deal chip with its kind's icon.
-  expect(chips[1]?.querySelector(".chip-mark")?.textContent).toBe("BA");
-  expect(chips.map((chip) => chip.lastElementChild?.textContent)).toEqual([
-    "Brandt renewal 2027",
-    "Brandt Automotive",
-  ]);
-  // Opened in place: following the record is leaving the panel for it.
-  expect(deal.getAttribute("href")).toBe("/#/deals/deal-1");
-  expect(deal.getAttribute("target")).toBeNull();
-});
-
-test("a task filed under nothing names no record", async () => {
-  stubFiledTask([]);
-  openTask();
-
-  await screen.findByText(/^Logged/);
-  expect(screen.queryByRole("link")).toBeNull();
-});
-
 // What the rep does next about the contact a task is owed to.
 
 const ALICE = {
@@ -518,10 +390,7 @@ function stubNextSteps({
   routes = {},
 }: NextStepsCase = {}) {
   installFetchStub({
-    "GET /me": meRoute(
-      { ...READS_RECORDS, activity: ["read", "update"] },
-      { seat: "full" },
-    ),
+    "GET /me": taskMe("update"),
     "GET /activities/task-1": () =>
       jsonResponse({
         id: "task-1",
@@ -871,10 +740,7 @@ function openWarm({ isDone = false, readOnly = false } = {}) {
   });
   client.setQueryData(
     ["me"],
-    meFixture({
-      allow: { ...READS_RECORDS, activity: ["read", "update"] },
-      seat: "full",
-    }),
+    meFixture({ allow: taskAllow("update"), seat: "full" }),
   );
   client.setQueryData(["activity", "src-1"], {
     id: "src-1",
@@ -964,10 +830,7 @@ test("Call logs the call inside the dialog, on the task's contact, and leaves th
   stubNextSteps({
     taskType: "reply_by_call",
     routes: {
-      "GET /me": meRoute(
-        { ...READS_RECORDS, activity: ["read", "create"] },
-        { seat: "full" },
-      ),
+      "GET /me": taskMe("create"),
       "POST /activities": (body) => {
         posted.push(body);
         return jsonResponse({ id: "a-9", kind: "call" }, 201);

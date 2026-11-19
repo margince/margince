@@ -178,7 +178,7 @@ describe("destinations the reader may not read", () => {
   it("offers every destination to a reader who reads everything they need", () => {
     const every = Object.fromEntries(
       READ_REQUIREMENTS.flatMap(([, objects]) =>
-        objects.map((object) => [object, ["read"]]),
+        objects.map((object) => [object, ["read"] as const]),
       ),
     );
     expect(unreadableCoreFeatures(meFixture({ allow: every }))).toEqual([]);
