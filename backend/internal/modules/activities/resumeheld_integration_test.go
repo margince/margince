@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/heldreason"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -60,5 +61,47 @@ func TestAResumeCannotSendWordingFromBeforeAConcurrentEdit(t *testing.T) {
 	}
 	if status != "held" || body != "Corrected wording." {
 		t.Fatalf("message after the race: status=%s body=%q", status, body)
+	}
+}
+
+// Only the seat that scheduled a held message resumes it, because the resume
+// sends from the caller's mailbox. Another seat with the same grants is refused
+// before the message is prepared, and the row stays held.
+//
+// Mutation: drop refuseAnotherSeatsHold from ResumeHeldSend and the other seat
+// stages the delivery.
+func TestOnlyTheAuthorResumesAHeldMessage(t *testing.T) {
+	e := setupSend(t)
+	ctx := e.as(principal.RowScopeAll)
+	store := e.store(stubUnsubscribeLinker{token: testUnsubscribeTok, ok: true})
+	intent := store.holdForReview(ctx, FromActivity(e.seedAnchor(t, "", "")), soloSendInput("transactional")).id
+	if intent.IsZero() {
+		t.Fatal("the refused message was not held")
+	}
+	author, ok := principal.Actor(ctx)
+	if !ok {
+		t.Fatal("the rep's context carries no principal")
+	}
+	other := author
+	other.UserID = ids.NewV7()
+	other.ID = "human:" + other.UserID.String()
+	colleague := principal.WithWorkspaceID(context.Background(), e.ws)
+	colleague = principal.WithActor(principal.WithCorrelationID(colleague, ids.NewV7()), other)
+
+	stager := &recordingStager{}
+	var refused *heldreason.AuthorOnlyError
+	if _, err := store.ResumeHeldSend(colleague, intent, stubConsentGate{}, stager); !errors.As(err, &refused) {
+		t.Fatalf("another seat resuming the message: err = %v, want the author-only refusal", err)
+	}
+	if len(stager.staged) != 0 {
+		t.Fatal("another seat's resume reached delivery")
+	}
+	var status string
+	if err := e.owner.QueryRow(ctx, `SELECT status FROM scheduled_send WHERE id=@intent`,
+		pgx.StrictNamedArgs{"intent": intent}).Scan(&status); err != nil {
+		t.Fatal(err)
+	}
+	if status != "held" {
+		t.Fatalf("the message reads %q after the refused resume, want held", status)
 	}
 }

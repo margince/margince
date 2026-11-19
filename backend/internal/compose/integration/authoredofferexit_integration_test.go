@@ -92,8 +92,8 @@ func TestAnOfferInAReplyStopsAtSendAndGoesOnceOnAReason(t *testing.T) {
 	if theirs.serves(consent.InlineWarningVersion) {
 		t.Fatal("a colleague was served the composer's warning they are never shown")
 	}
-	if status := colleague.Call(t, "POST", path, body, nil, nil); status != http.StatusUnprocessableEntity {
-		t.Fatalf("a colleague naming the inline warning → %d, want 422", status)
+	if status := colleague.Call(t, "POST", path, body, nil, nil); status != http.StatusForbidden {
+		t.Fatalf("a colleague sending the author's message → %d, want 403", status)
 	}
 	if status := c.Call(t, "POST", path, body, nil, nil); status != http.StatusCreated {
 		t.Fatalf("sending on the reason → %d, want 201", status)
