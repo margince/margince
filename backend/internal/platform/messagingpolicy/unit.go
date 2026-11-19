@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io/fs"
 	"path"
+	"slices"
 	"strings"
 )
 
@@ -67,7 +68,49 @@ func CompileUnit(fsys fs.FS) (Unit, error) {
 	if err := unlistedShared(fsys, listed); err != nil {
 		return Unit{}, err
 	}
+	if err := sameSharedLayers(fsys, out.Policies); err != nil {
+		return Unit{}, err
+	}
 	return out, nil
+}
+
+// sameSharedLayers refuses a pack that leaves out a shared layer or lists the
+// shared layers in another order than the others. A pack that skipped the
+// regional layer would escape the baseline every member state shares.
+func sameSharedLayers(fsys fs.FS, policies []Policy) error {
+	onDisk, err := fs.Glob(fsys, "regional/*.md")
+	if err != nil {
+		return err
+	}
+	if _, err := fs.Stat(fsys, "fallback.md"); err == nil {
+		onDisk = append([]string{"fallback.md"}, onDisk...)
+	}
+	want := sharedOf(policies[0])
+	for _, policy := range policies {
+		got := sharedOf(policy)
+		if !slices.Equal(got, want) {
+			return fmt.Errorf("%s lists the shared layers %v and %s lists %v; every pack lists the same ones in one order",
+				policy.Sources[0], got, policies[0].Sources[0], want)
+		}
+	}
+	for _, layer := range onDisk {
+		if !slices.Contains(want, layer) {
+			return fmt.Errorf("%s is a shared layer and %s does not list it; every pack lists every shared layer",
+				layer, policies[0].Sources[0])
+		}
+	}
+	return nil
+}
+
+// sharedOf answers the layers a pack compiled from outside its own folder.
+func sharedOf(policy Policy) []string {
+	var out []string
+	for _, source := range policy.Sources[1:] {
+		if source == "fallback.md" || strings.HasPrefix(source, "regional/") {
+			out = append(out, source)
+		}
+	}
+	return out
 }
 
 // unlistedShared refuses a file at the top of a per-country folder, or under

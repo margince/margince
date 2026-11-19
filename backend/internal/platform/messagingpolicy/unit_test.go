@@ -97,6 +97,18 @@ func TestAPerCountryFolderIsRefused(t *testing.T) {
 		"a fixture in another pack's folder": func(fsys fstest.MapFS) {
 			fsys["aa/aa.md"].Data = []byte(strings.Replace(string(fsys["aa/aa.md"].Data), "aa/fixtures/a.md", "bb/fixtures/a.md", 1))
 		},
+		"a pack that leaves out the regional layer": func(fsys fstest.MapFS) {
+			fsys["aa/index.md"] = &fstest.MapFile{Data: []byte("---\nlayers: [aa/aa.md]\n---\nThe layers.\n")}
+		},
+		"a pack naming another regional layer": func(fsys fstest.MapFS) {
+			fsys["regional/nordic.md"] = fsys["regional/eu.md"]
+			fsys["aa/index.md"] = &fstest.MapFile{Data: []byte("---\nlayers: [regional/nordic.md, aa/aa.md]\n---\nThe layers.\n")}
+		},
+		"two packs listing the shared layers in other orders": func(fsys fstest.MapFS) {
+			fsys["regional/nordic.md"] = fsys["regional/eu.md"]
+			fsys["aa/index.md"] = &fstest.MapFile{Data: []byte("---\nlayers: [regional/eu.md, regional/nordic.md, aa/aa.md]\n---\nThe layers.\n")}
+			fsys["bb/index.md"] = &fstest.MapFile{Data: []byte("---\nlayers: [regional/nordic.md, regional/eu.md, bb/bb.md]\n---\nThe layers.\n")}
+		},
 	} {
 		fsys := perCountryFS("", "", "")
 		change(fsys)
