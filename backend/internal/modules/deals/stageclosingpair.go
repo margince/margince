@@ -134,9 +134,8 @@ func insertClosingStage(ctx context.Context, tx pgx.Tx, pipelineID ids.PipelineI
 	if err := markLadderChanged(ctx, tx, pipelineID); err != nil {
 		return err
 	}
-	auditID, err := storekit.Audit(ctx, tx, "create", "stage", stageID.UUID, nil, map[string]any{
-		"pipeline_id": pipelineID, stageNameField: st.Name, stageSemanticField: st.Semantic,
-	})
+	auditID, err := storekit.Audit(ctx, tx, "create", "stage", stageID.UUID, nil,
+		stageCreateImage(pipelineID, st.Name, st.Semantic, nil))
 	if err != nil {
 		return fmt.Errorf("audit the missing closing stage: %w", err)
 	}

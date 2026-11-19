@@ -257,8 +257,8 @@ var defaultStages = []StageInput{
 	{Name: "Discovery", Position: 2, Semantic: string(DealOpen), WinProbability: 25},
 	{Name: "Proposal", Position: 3, Semantic: string(DealOpen), WinProbability: 50},
 	{Name: "Negotiation", Position: 4, Semantic: string(DealOpen), WinProbability: 75},
-	{Name: defaultWonStageName, Position: 5, Semantic: "won", WinProbability: 100},
-	{Name: defaultLostStageName, Position: 6, Semantic: "lost", WinProbability: 0},
+	{Name: defaultWonStageName, Position: 5, Semantic: string(SemanticWon), WinProbability: 100},
+	{Name: defaultLostStageName, Position: 6, Semantic: string(SemanticLost), WinProbability: 0},
 }
 
 // SeedDefaults provisions a fresh workspace's default pipeline. Called by
@@ -312,8 +312,8 @@ func (s *Store) SeedPipelineTx(ctx context.Context, tx pgx.Tx, name string, open
 	}
 	stages = append(
 		stages,
-		StageInput{Name: defaultWonStageName, Position: len(open) + 1, Semantic: "won", WinProbability: 100},
-		StageInput{Name: defaultLostStageName, Position: len(open) + 2, Semantic: "lost", WinProbability: 0},
+		StageInput{Name: defaultWonStageName, Position: len(open) + 1, Semantic: string(SemanticWon), WinProbability: 100},
+		StageInput{Name: defaultLostStageName, Position: len(open) + 2, Semantic: string(SemanticLost), WinProbability: 0},
 	)
 	_, err := createPipelineTx(ctx, tx, CreatePipelineInput{
 		Name: name, IsDefault: true, Position: 0, Stages: stages,

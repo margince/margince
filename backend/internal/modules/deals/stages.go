@@ -184,10 +184,8 @@ func (s *Store) CreateStage(ctx context.Context, in CreateStageInput) (crmcontra
 		if err := markLadderChanged(ctx, tx, in.PipelineID); err != nil {
 			return err
 		}
-		auditID, err := storekit.Audit(ctx, tx, "create", "stage", stageID.UUID, nil, map[string]any{
-			"pipeline_id": in.PipelineID, stageNameField: in.Name, stageSemanticField: in.Semantic,
-			stageNameTranslationsField: translations,
-		})
+		auditID, err := storekit.Audit(ctx, tx, "create", "stage", stageID.UUID, nil,
+			stageCreateImage(in.PipelineID, in.Name, in.Semantic, translations))
 		if err != nil {
 			return fmt.Errorf("audit stage create: %w", err)
 		}
@@ -205,6 +203,15 @@ func (s *Store) CreateStage(ctx context.Context, in CreateStageInput) (crmcontra
 		return nil
 	})
 	return out, err
+}
+
+// stageCreateImage is the audit image of a stage's creation, shared by every
+// writer that inserts a stage.
+func stageCreateImage(pipelineID ids.PipelineID, name, semantic string, translations map[string]string) map[string]any {
+	return map[string]any{
+		"pipeline_id": pipelineID, stageNameField: name, stageSemanticField: semantic,
+		stageNameTranslationsField: translations,
+	}
 }
 
 // stageCreatedPayload builds the stage.created wire payload from
