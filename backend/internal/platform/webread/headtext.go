@@ -35,7 +35,10 @@ const headTextRunes = 1000
 // headTextNames are the <head> declarations that say what a page is ABOUT,
 // in the order a reader would want them: the description first, because it is
 // written for a stranger, then the Open Graph pair a site keeps for sharing.
-var headTextNames = []string{"description", "og:title", "og:description"}
+var headTextNames = []string{"description", metaOGTitle, "og:description"}
+
+// metaOGTitle is the Open Graph name of a page's own title.
+const metaOGTitle = "og:title"
 
 // headTextFrom reads one <meta>'s attributes as a claim about what the page is
 // about. Open Graph names its fields in `property` and some CMSs emit them in
@@ -107,30 +110,4 @@ func countScripts(rawHTML string) (external, modules int) {
 			modules++
 		}
 	}
-}
-
-// readTitle takes the first <title>'s text; the tokenizer stands on its start
-// tag.
-func (h *headAssets) readTitle(tokenizer *html.Tokenizer) {
-	if h.title != "" || tokenizer.Next() != html.TextToken {
-		return
-	}
-	h.title = textcut.Runes(strings.Join(strings.Fields(string(tokenizer.Text())), " "), headTextRunes)
-}
-
-// readOGSiteName takes the first og:site_name, from `property` or `name` as
-// headTextFrom accepts them.
-func (h *headAssets) readOGSiteName(attrs map[string]string) {
-	if h.ogSiteName == "" && (attrs["property"] == "og:site_name" || attrs["name"] == "og:site_name") {
-		h.ogSiteName = textcut.Runes(strings.Join(strings.Fields(attrs["content"]), " "), headTextRunes)
-	}
-}
-
-// siteName prefers og:site_name, which names the site, over the <title>,
-// which often names the page as well.
-func (h headAssets) siteName() string {
-	if h.ogSiteName != "" {
-		return h.ogSiteName
-	}
-	return h.title
 }

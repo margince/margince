@@ -117,6 +117,31 @@ describe("Done on a waiting row", () => {
     ).toBeTruthy();
   });
 
+  // A row another tab already put down answers 404 once it left every list.
+  // Retrying cannot help, so the screen says the row is gone, not "Retry".
+  it("says a row already off the list is gone, not that it failed", async () => {
+    const user = userEvent.setup();
+    const fetch = draw();
+    fetch.mockImplementation(
+      async () =>
+        new Response(JSON.stringify({ status: 404, title: "Not Found" }), {
+          status: 404,
+          headers: { "content-type": "application/problem+json" },
+        }),
+    );
+
+    await user.click(
+      screen.getByRole("button", {
+        name: en["worklist.disposition.verb.handled"],
+      }),
+    );
+
+    expect(
+      await screen.findByText(en["worklist.disposition.gone"]),
+    ).toBeTruthy();
+    expect(screen.queryByText(en["worklist.disposition.failed"])).toBeNull();
+  });
+
   // Every other row takes the same Done, says it comes back when something new
   // happens, and its Undo takes it back through the same endpoint.
   it("takes a deal at risk off the list and undoes it", async () => {

@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/employmentrepair"
 	"github.com/margince/margince/backend/internal/compose/erasedseattraces"
 	"github.com/margince/margince/backend/internal/compose/initiativeenrolment"
+	"github.com/margince/margince/backend/internal/compose/invitationsenders"
 	"github.com/margince/margince/backend/internal/compose/provensenders"
 	"github.com/margince/margince/backend/internal/compose/qualifytasks"
 	"github.com/margince/margince/backend/internal/compose/retiredstagecards"
@@ -139,10 +140,11 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		answeredTasksDataTask(pool),
 		falseMeetingCancelsDataTask(now),
 		provensenders.DataTask(),
+		invitationsenders.DataTask(),
 		credentialrepair.DataTask(capture.NewPendingStore(InstallationDB(pool)).PurgeRawCaptureTx),
 		erasedseattraces.DataTask(),
 		newslettersDataTask(pool),
-		dealclockrefold.DataTask(),
+		dealclockrefold.DataTask(), dealclockrefold.PersonalMeetingsTask(),
 		companyclockrefold.DataTask(),
 		customerlinks.DataTask(),
 		qualifytasks.DuplicatesDataTask(now), qualifytasks.TextDataTask(),

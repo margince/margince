@@ -246,12 +246,14 @@ func walkWorklist(
 }
 
 // frozenTop reads the ranked rows a first page froze, from the walk its
-// cursor names. The token is signed: its body comes before the dot.
+// cursor names.
 func frozenTop(t *testing.T, e *integration.Env, token string) map[string]bool {
 	t.Helper()
+	// storekit.EncodeSigned appends a dot and a MAC to the opaque body. The
+	// server checks the MAC, so this reads only the body.
 	body, _, signed := strings.Cut(token, ".")
 	if !signed {
-		t.Fatalf("the first page's cursor %q carries no signature", token)
+		t.Fatalf("the worklist cursor %q carries no signature", token)
 	}
 	cursor, err := storekit.DecodeOpaque[struct {
 		Snapshot ids.UUID `json:"s"`
@@ -493,7 +495,7 @@ func assertLastTask(t *testing.T, served []servedRow, id string) {
 }
 
 // assertDoneTakesACardOff holds that Done on a waiting card past the lane's
-// scan succeeds, and the card leaves the reader's next walk. The Done check
+// scan succeeds, the card leaves the reader's next walk, and a second Done succeeds. The Done check
 // finds it through the tail's own cards, on a walk of its own, so it runs alone.
 func (w *waitingBacklog) assertDoneTakesACardOff(t *testing.T) {
 	r := w.r
@@ -517,5 +519,10 @@ func (w *waitingBacklog) assertDoneTakesACardOff(t *testing.T) {
 		if row.id == card {
 			t.Fatal("the card marked done was served again")
 		}
+	}
+	// A second tab still draws the card. Its Done finds the card off the list
+	// already, which is what it asked for.
+	if err := svc.MarkRowsDone(ctx, []attention.RowRef{{Source: string(crmcontracts.WorklistItemSourceCustomerWaiting), RowID: card}}); err != nil {
+		t.Fatalf("a second Done on the waiting card answered %v, want success", err)
 	}
 }

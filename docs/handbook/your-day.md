@@ -157,7 +157,7 @@ Margince writes the review on the Monday after the week, and then it is **Frozen
 Each item names its record and shows the facts that call for action. A badge says when Margince made the brief.
 - **Needs you**: at most 6 cards in Worklist order, each with its kind of work and who it is with, if Margince has that. A mailbox, booking page, AI task or automation that stopped takes no card. A badge beside **Needs you** counts the system issues and opens the Worklist on **System**. Mail that could not be delivered keeps its card and is counted there too.
   A dated task also shows its due day. The round mark marks a task done; a press opens the card where it stands.
-- Proposals, commitments due today and meetings in the next 24 hours sit there too. A task due later shows once its reminder is due. A quiet day says "No immediate priorities. The full Worklist is available."
+- Proposals, commitments due today and meetings in the next 24 hours sit there too. A task due later shows once its reminder is due. A quiet day shows a card that says "All caught up" and the time Margince last checked. It shows only when Margince could read every list of work. If it could not, Home says some work could not be checked. Calendar and mailbox status do not change this card.
 - **Review N deal suggestions** opens the saved brief. Its deals stay separate from the work that needs action now. A brief with no deals shows no opener.
 - **Show Worklist**, under the list: the whole list, with its own filters and pages, and work that is not due yet. Stage change notices stay in the notification center.
 - **Since your last brief**: what Margince did since your last brief, what waits on you, what it could not finish and what needs restoring.
@@ -339,11 +339,11 @@ As you move down, the list loads every task, every waiting customer and every de
 
 Each count is exact, or Margince says it is not:
 
-- **Today**, **Decisions** and **System** each show a count. When some work was not counted, the count ends in `+`, such as **Decisions 25+**: there are at least 25. The heading above the list shows it too, such as **12 outstanding actions**, or **25+ outstanding actions**.
-- A **Work type** button shows its count the same way. Tasks and approvals are counted in full. On **Team**, approvals are not.
+- **Today**, **Decisions** and **System** each show a count. When some work was not counted, the count ends in `+`, such as **Decisions 25+**: there are at least 25. The heading above the list shows it too, such as **12 outstanding actions**, or **25+ outstanding actions**. A count with `+` never reads below the items already loaded.
+- A **Work type** button shows its count the same way. Tasks and approvals are counted in full. On **Team**, approvals are not. **All** and **Team** count the weekly plans of you and your teammates.
 - **"{shown} of {considered} items loaded"**: how far you are, plus "{cards} cards on screen" for a group.
 - "{kinds} may have more items than this list shows", such as "Possible duplicates (200+)": nobody knows the total. Each load checks a fixed number of these, and the list stops there.
-- **"{count} sources did not load"**: the list may not be complete, even after the last row. **All** leaves weekly plans out, so the count for Today ends in `+`.
+- **"{count} sources did not load"**: the list may not be complete, even after the last row.
 
 **Worklist incomplete** names sources that did not load; an empty list says **"No items in the sources that loaded."**
 

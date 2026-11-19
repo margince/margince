@@ -128,7 +128,7 @@ func (s *Store) replayRequestTask(ctx context.Context, tx pgx.Tx, replay crmcont
 
 // errSeatMayNotHoldPrivateMail refuses a reminder out of private mail to a
 // seat that may not read that mail. A caller answers it as a 403.
-var errSeatMayNotHoldPrivateMail = fmt.Errorf("activities: the assignee may not read this private mail: %w", apperrors.ErrPermissionDenied)
+var errSeatMayNotHoldPrivateMail = fmt.Errorf("the assignee may not read this private mail: %w", apperrors.ErrPermissionDenied)
 
 // emailRequestTask is the reply reminder for one request, filed under who
 // asked: "Needs attention" on a contact's page means that contact is waiting

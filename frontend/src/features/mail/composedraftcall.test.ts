@@ -1,95 +1,28 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { describe, expect, it, vi } from "vitest";
-import type { CommunicationContext } from "../../lib/compose-context";
-import { fillFromDraft } from "./composedraftcall";
+import { describe, expect, it } from "vitest";
+import { isTemplateDraft, modelWrote } from "./composedraftcall";
 
-function formWith(
-  context: CommunicationContext | "",
-  reasonFromDraft = false,
-  fromInstruction = true,
-) {
-  return {
-    subject: "",
-    body: "",
-    toEmpty: false,
-    setSubject: vi.fn(),
-    setBody: vi.fn(),
-    setServedBody: vi.fn(),
-    setTo: vi.fn(),
-    setDraftRef: vi.fn(),
-    setProvenance: vi.fn(),
-    setReasoning: vi.fn(),
-    setScope: vi.fn(),
-    fromInstruction,
-    context,
-    reasonFromDraft,
-    setContext: vi.fn(),
-    setMeetingEvidence: vi.fn(),
-    setReasonFromDraft: vi.fn(),
-  };
-}
-
-const moved = {
-  available: true as const,
-  draft: {
-    subject: "Re: Thursday",
-    body: "Could we move our meeting to Friday?",
-    to: [],
-    communication_context: "requested_followup" as const,
-    evidence: { activity_id: "meeting-1" },
-  },
-};
-
-describe("fillFromDraft", () => {
-  it("takes the drafted reason and its meeting when none was picked", () => {
-    const form = formWith("");
-    fillFromDraft(moved, form);
-    expect(form.setContext).toHaveBeenCalledWith("requested_followup");
-    expect(form.setMeetingEvidence).toHaveBeenCalledWith("meeting-1");
-    expect(form.setReasonFromDraft).toHaveBeenCalledWith(true);
+describe("which writer drafted the words", () => {
+  it("is a model only when the answer says a model wrote it", () => {
+    expect(modelWrote({ ai_generated: true })).toBe(true);
+    expect(modelWrote({ ai_generated: false })).toBe(false);
+    expect(modelWrote(null)).toBe(false);
   });
 
-  it("drops a drafted reason when a later instruction names none", () => {
-    const form = formWith("requested_followup", true);
-    fillFromDraft(
-      { available: true, draft: { subject: "Hi", body: "Thanks", to: [] } },
-      form,
+  it("is a template when the server says its floor wrote the words", () => {
+    expect(
+      isTemplateDraft({ ai_generated: false, generated_by: "deterministic" }),
+    ).toBe(true);
+  });
+
+  it("is no template when a model wrote it or the route cannot say", () => {
+    expect(isTemplateDraft({ ai_generated: true, generated_by: "model" })).toBe(
+      false,
     );
-    expect(form.setContext).toHaveBeenCalledWith("");
-    expect(form.setMeetingEvidence).toHaveBeenCalledWith(undefined);
-    expect(form.setReasonFromDraft).toHaveBeenCalledWith(false);
-  });
-
-  it("names no reason for a draft the sender's own words held back", () => {
-    const form = { ...formWith(""), body: "My own words" };
-    fillFromDraft(moved, form);
-    expect(form.setContext).not.toHaveBeenCalled();
-  });
-
-  it("keeps a drafted reason through a rewrite verb", () => {
-    const form = formWith("requested_followup", true, false);
-    fillFromDraft(
-      { available: true, draft: { subject: "Hi", body: "Shorter", to: [] } },
-      form,
-    );
-    expect(form.setContext).not.toHaveBeenCalled();
-  });
-
-  it("never replaces a reason the sender picked", () => {
-    const form = formWith("marketing");
-    fillFromDraft(moved, form);
-    expect(form.setContext).not.toHaveBeenCalled();
-    expect(form.setMeetingEvidence).not.toHaveBeenCalled();
-  });
-
-  it("leaves the reason alone when the draft names none", () => {
-    const form = formWith("");
-    fillFromDraft(
-      { available: true, draft: { subject: "Hi", body: "Thanks", to: [] } },
-      form,
-    );
-    expect(form.setContext).not.toHaveBeenCalled();
+    // A reply draft carries no generated_by: no notice can name its writer.
+    expect(isTemplateDraft({ ai_generated: false })).toBe(false);
+    expect(isTemplateDraft(null)).toBe(false);
   });
 });

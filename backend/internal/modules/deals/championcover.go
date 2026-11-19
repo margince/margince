@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/dealrole"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // ChampionCover is what one deal's committee says about its champion seat.
@@ -258,15 +259,8 @@ func withheldSeats(
 }
 
 // engagedAmong answers which (deal, contact) pairs had a two-way exchange in
-// the window.
-//
-// The engagement test is EngagedStakeholders' — both directions required
-// inside the same window, over the same qualifying activity — asked of a set
-// rather than one deal. Two spellings of "engaged" is how one screen calls a
-// deal single-threaded while another calls it covered, which is the
-// disagreement the single-definition rule in this package's header exists to
-// stop; the shared pieces are healthEngagementWindowDays and
-// healthInteraction, so a change to either moves both readers at once.
+// the window: both directions, over activity that may speak for a deal.
+// EngagedStakeholders asks it of one deal, so both screens share one spelling.
 func engagedAmong(
 	ctx context.Context, tx pgx.Tx, dealIDs []ids.UUID, now time.Time,
 ) (map[dealContact]bool, error) {
@@ -290,13 +284,14 @@ func engagedAmong(
 			SELECT 1 FROM activity a
 			JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = r.contact_id
 			WHERE %[4]s AND a.archived_at IS NULL`+auth.AudienceWorkspaceOnly("a")+`
-			  AND %[2]s AND a.direction = 'inbound')
+			  AND %[2]s AND %[5]s AND a.direction = 'inbound')
 		  AND EXISTS (
 			SELECT 1 FROM activity a
 			JOIN activity_link l ON l.activity_id = a.id AND l.contact_id = r.contact_id
 			WHERE %[4]s AND a.archived_at IS NULL`+auth.AudienceWorkspaceOnly("a")+`
-			  AND %[2]s AND a.direction = 'outbound')`,
-		dealsPos, occurredday.FromSQL("a", fmt.Sprintf("$%d", windowPos)), bound, healthInteraction(fmt.Sprintf("$%d::timestamptz", nowPos))), args...)
+			  AND %[2]s AND %[5]s AND a.direction = 'outbound')`,
+		dealsPos, occurredday.FromSQL("a", fmt.Sprintf("$%d", windowPos)), bound, healthInteraction(fmt.Sprintf("$%d::timestamptz", nowPos)),
+		relstrength.DealEvidenceSQL("a")), args...)
 	if err != nil {
 		return nil, fmt.Errorf("deals: reading engagement across a set of deals: %w", err)
 	}

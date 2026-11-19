@@ -18,8 +18,11 @@ import (
 
 func TestANullClearsADealRoomField(t *testing.T) {
 	t.Parallel()
-	in := updateInput(crmcontracts.UpdateDealRoomRequest{},
+	in, err := updateInput(crmcontracts.UpdateDealRoomRequest{},
 		[]string{"welcome_message", "steward_user_id"}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if in.WelcomeMessage == nil {
 		t.Error("welcome_message was not named, so the null left the stored value in place")
@@ -37,7 +40,10 @@ func TestANullClearsADealRoomField(t *testing.T) {
 // pointer exists to carry.
 func TestAnAbsentDealRoomFieldIsUntouched(t *testing.T) {
 	t.Parallel()
-	in := updateInput(crmcontracts.UpdateDealRoomRequest{}, nil, nil)
+	in, err := updateInput(crmcontracts.UpdateDealRoomRequest{}, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	if in.WelcomeMessage != nil {
 		t.Error("an absent welcome_message was named for writing")

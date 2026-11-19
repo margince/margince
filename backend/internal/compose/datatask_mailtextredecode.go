@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/storedmail"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
 	"github.com/margince/margince/backend/internal/platform/datatask"
@@ -41,7 +42,7 @@ const redecodableMailTextScope = `FROM activity a ` + mailOriginalJoin + `
 // redecodeMailTextBatch inspects a page of stored mail and rewrites the text a
 // parser wrote before it read the message's charset.
 func redecodeMailTextBatch(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datatask.BatchOut, error) {
-	return pageStoredMail(ctx, tx, in,
+	return storedmail.Page(ctx, tx, in,
 		"a.id, a.version, a.subject, a.body, a.body_completeness, "+originalstore.SQL("rc"),
 		redecodableMailTextScope,
 		func(c *redecodableMailText) (ids.UUID, *[]byte) { return c.ID, &c.Payload },
@@ -87,5 +88,5 @@ func redecodeMailText(ctx context.Context, tx pgx.Tx, candidate redecodableMailT
 // left to correct. That is why this step is not EmptyWhenDone. A finished pass
 // still has rows in scope, which is the pass having read them.
 func estimateRedecodableMailText(ctx context.Context, q datatask.Querier, maximum int64) (int64, bool, error) {
-	return countStoredMail(ctx, q, redecodableMailTextScope, maximum)
+	return storedmail.Count(ctx, q, redecodableMailTextScope, maximum)
 }

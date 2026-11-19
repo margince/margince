@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, within } from "storybook/test";
 import { Badge } from "./atoms";
 import { RecordDetails } from "./recorddetails";
 
@@ -21,7 +22,8 @@ export default meta;
 
 type Story = StoryObj<typeof RecordDetails>;
 
-/** A company's details: three groups, lists, five empty fields folded. */
+/** A company's details: four group panes, five empty fields folded behind
+ *  the link under them, and the footnote pane. */
 export const Company: Story = {
   args: {
     sections: [
@@ -69,6 +71,22 @@ export const Company: Story = {
     ],
     footnote:
       "View only. Ask Lena Fischer to share it, or an administrator for edit rights.",
+  },
+};
+
+/** The fold opened: the empty fields join their groups' panes, and the link
+ *  under the panes folds them again. */
+export const EmptyFieldsShown: Story = {
+  args: Company.args,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Show 5 empty fields" }),
+    );
+    await expect(await canvas.findByText("VAT ID")).toBeVisible();
+    await expect(
+      canvas.getByRole("button", { name: "Hide empty fields" }),
+    ).toHaveAttribute("aria-expanded", "true");
   },
 };
 

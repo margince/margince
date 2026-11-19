@@ -100,7 +100,7 @@ describe("a saved draft put back whole", () => {
         return puts === 1 ? problem("internal", 503) : jsonResponse(SAVED);
       },
     });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(composer(onClose));
     await waitFor(() =>
       expect(calls(sent, "GET /mail-drafts")).toHaveLength(1),
@@ -130,13 +130,14 @@ describe("a composer opened with a caller's own words", () => {
   );
 
   it("closes without saving over the record's draft", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const onClose = vi.fn();
     const sent = stubRoutes({ "GET /mail-drafts": () => jsonResponse(SAVED) });
     render(proposal(onClose));
     await waitFor(() => expect(messageText("Body")).toContain("Pick a time"));
     writeMessage("Body", "Pick a time, Ada");
 
-    await userEvent.click(screen.getByRole("button", { name: "Close" }));
+    await user.click(screen.getByRole("button", { name: "Close" }));
 
     expect(onClose).toHaveBeenCalled();
     expect(calls(sent, "GET /mail-drafts")).toHaveLength(0);
@@ -144,22 +145,23 @@ describe("a composer opened with a caller's own words", () => {
   });
 
   it("sends without naming the record's draft", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({
       "GET /mail-drafts": () => jsonResponse(SAVED),
       "POST /emails": () => jsonResponse({ id: "act-9" }, 202),
     });
     render(proposal(vi.fn()));
-    await userEvent.type(
+    await user.type(
       await screen.findByRole("combobox", { name: "To" }),
       "buyer@acme.test{enter}",
     );
     await pickOption(
-      userEvent.setup(),
+      user,
       screen.getByRole("combobox", { name: "Reason for contact" }),
       "Follow-up they requested",
     );
 
-    await pressSend();
+    await pressSend(user);
 
     await waitFor(() => expect(calls(sent, "POST /emails")).toHaveLength(1));
     expect(calls(sent, "POST /emails")[0]?.body).not.toHaveProperty(

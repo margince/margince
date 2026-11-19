@@ -163,20 +163,21 @@ func TestARenamedPipelineRecordsTheNameItHadBefore(t *testing.T) {
 	e := setupConfigEnv(t)
 	ctx := e.as()
 
-	created, err := e.store.CreatePipeline(ctx, CreatePipelineInput{Name: "Original", Position: 3})
+	original := "Original " + ids.NewV7().String()
+	created, err := e.store.CreatePipeline(ctx, CreatePipelineInput{Name: original, Position: 3})
 	if err != nil {
 		t.Fatalf("seeding the pipeline: %v", err)
 	}
 	id := ids.From[ids.PipelineKind](ids.UUID(created.Id))
 
-	renamed := "Renamed"
+	renamed := "Renamed " + ids.NewV7().String()
 	if _, err := e.store.UpdatePipeline(ctx, id, UpdatePipelineInput{Name: &renamed}); err != nil {
 		t.Fatalf("renaming the pipeline: %v", err)
 	}
 
 	before, after := e.auditImages(t, "pipeline", id.UUID)
-	if before["name"] != "Original" {
-		t.Fatalf("the rename recorded %v as the previous name, but the row held \"Original\"", before["name"])
+	if before["name"] != original {
+		t.Fatalf("the rename recorded %v as the previous name, but the row held %q", before["name"], original)
 	}
 	if after["name"] != renamed {
 		t.Fatalf("the rename recorded %v as the new name, but it wrote %q", after["name"], renamed)
@@ -236,7 +237,7 @@ func TestAWonStageRecordsTheProbabilityTheRowActuallyHolds(t *testing.T) {
 // creators, and hands back its id.
 func (e *configEnv) seedStage(ctx context.Context, t *testing.T, name string, probability int) ids.StageID {
 	t.Helper()
-	pipeline, err := e.store.CreatePipeline(ctx, CreatePipelineInput{Name: "Sales " + name})
+	pipeline, err := e.store.CreatePipeline(ctx, CreatePipelineInput{Name: "Sales " + ids.NewV7().String()})
 	if err != nil {
 		t.Fatalf("seeding the pipeline: %v", err)
 	}

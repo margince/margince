@@ -145,7 +145,7 @@ func (s *Service) worklistIn(
 	withPins = withPins.readingScores(beside.night.scores, beside.night.cutoff)
 	withPins.briefSnoozed = beside.night.snoozed
 	withPins = withPins.readingBacklog(ctx, day, beside, token == "")
-	withPins, planErr := withPins.readingPlan(ctx, resolved, day.AsOf)
+	withPins, planErr := withPins.readingPlan(ctx, day.AsOf)
 	withPins, awaitingErrs := withPins.readingAwaiting(ctx, day.AsOf, beside.zone)
 	withPins = withPins.readingFollowUpPromises(ctx, day)
 	horizon := reader.meetingHorizon(ctx, day, beside.until)

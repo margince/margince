@@ -116,12 +116,10 @@ export function BriefQueue() {
   // record's "Back to Worklist" reopens the drawer on a NEW entry, and the
   // reader expects the place they left in this same list.
   const owner = params.get("owner");
-  useScrollMemory(
-    body,
-    useHash(),
-    `worklist-drawer:${drawerScope(params)}:${worklistFilterFrom(params)}:${owner ?? ""}`,
-    "load",
-  );
+  useScrollMemory(body, useHash(), {
+    lane: `worklist-drawer:${drawerScope(params)}:${worklistFilterFrom(params)}:${owner ?? ""}`,
+    span: "load",
+  });
   // Kept by this browser, so every way into the drawer opens it as wide as the
   // reader left it. A shared link carries no one's layout.
   const [span, setSpan] = useState<DrawerSpan>(() =>

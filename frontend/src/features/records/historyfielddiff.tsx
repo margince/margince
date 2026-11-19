@@ -1,6 +1,17 @@
 import { FieldDiff } from "../../design-system/trust";
 import type { OccurredPrecision } from "../../format/activitywhen";
 import { type HistoryValueCtx, historyValue } from "../../lib/historyvalues";
+import { useHistoryNameOf } from "./historynames";
+
+// The caller's own resolver first, then the reader for the field's kind.
+function useNamedValues(
+  field: string,
+  ids: readonly (string | null | undefined)[],
+  values: HistoryValueCtx,
+): HistoryValueCtx {
+  const named = useHistoryNameOf(field, ids);
+  return { ...values, nameOf: (id) => values.nameOf?.(id) ?? named(id) };
+}
 
 // One field's before and after, read the way the rest of the record page reads
 // them.
@@ -31,10 +42,29 @@ export function HistoryFieldDiff({
   // a row that scaled its money and still printed a uuid would be half-read.
   values: HistoryValueCtx;
 }>) {
+  const ctx = useNamedValues(field, [oldValue, newValue], values);
   return (
     <FieldDiff
-      oldValue={historyValue(field, oldValue, values, oldPrecision)}
-      newValue={historyValue(field, newValue, values, newPrecision)}
+      oldValue={historyValue(field, oldValue, ctx, oldPrecision)}
+      newValue={historyValue(field, newValue, ctx, newPrecision)}
     />
   );
+}
+
+/** One side of a change, read as the diff reads it; `cleared` stands for none. */
+export function HistoryFieldValue({
+  field,
+  value,
+  precision,
+  values,
+  cleared,
+}: Readonly<{
+  field: string;
+  value: string | null | undefined;
+  precision?: OccurredPrecision;
+  values: HistoryValueCtx;
+  cleared: string;
+}>) {
+  const ctx = useNamedValues(field, [value], values);
+  return <>{historyValue(field, value, ctx, precision) ?? cleared}</>;
 }

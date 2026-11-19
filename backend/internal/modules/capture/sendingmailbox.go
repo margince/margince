@@ -125,7 +125,7 @@ func (r *Registry) ChooseSendingMailbox(
 func (r *Registry) SetDefaultSender(ctx context.Context, mailbox Mailbox) (ConnectionView, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || !actor.HumanOrItsAgent() {
-		return ConnectionView{}, fmt.Errorf("capture: only a user or their agent chooses their sending mailbox: %w", apperrors.ErrPermissionDenied)
+		return ConnectionView{}, fmt.Errorf("only a user or their agent chooses their sending mailbox: %w", apperrors.ErrPermissionDenied)
 	}
 	match, err := r.resolveMemberMailbox(ctx, actor.UserID, mailbox)
 	if err != nil {

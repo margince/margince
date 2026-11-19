@@ -70,6 +70,18 @@ func AcceptedAttachmentExtensions() []string {
 	return out
 }
 
+// AcceptedAttachmentMediaTypes lists the declared types the upload takes, aliases
+// included, sorted. The browser mirrors it to judge a file with no known ending.
+func AcceptedAttachmentMediaTypes() []string {
+	var out []string
+	for _, kind := range attachmentTypes {
+		out = append(out, kind.mediaType)
+		out = append(out, kind.aliases...)
+	}
+	slices.Sort(out)
+	return slices.Compact(out)
+}
+
 // resolveAttachmentType answers the stored media type. A declared type must be
 // in the table; an extension in the table then names the type, since Windows
 // declares a .csv as Excel, and otherwise the declared type stands: a stored

@@ -371,3 +371,13 @@ func TestARestReadOnAGateWithNoBoundIsAdmitted(t *testing.T) {
 		t.Fatalf("a REST read on a gate with no meter → %v", err)
 	}
 }
+
+// A meter that can only read cannot hold a reservation, so a bulk change is
+// refused rather than charged after the fact.
+func TestABulkChangeOnAMeterThatCannotReserveIsRefused(t *testing.T) {
+	_, err := quotaGate(&spentQuota{}).ReserveRecordWrites(agentCtx(principal.ScopeWrite), "update_records", 10)
+
+	if !errors.Is(err, apperrors.ErrBudgetExceeded) {
+		t.Errorf("a bulk change on a read-only meter answered %v, want ErrBudgetExceeded", err)
+	}
+}

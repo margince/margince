@@ -5,6 +5,8 @@ import type { components } from "../../api/schema";
 import { paragraphsFrom } from "../../design-system/richtext";
 import { localDateTimeValue } from "../../format/calendarday";
 import { stable } from "../../format/collate";
+import { addressKey } from "../../lib/addresskey";
+import { distinctAddressLines } from "./composeaddresslist";
 import type { ChosenFile } from "./composeattachments";
 import { countriesOnMessage, sameCountries } from "./composecountries";
 import type { Grounding } from "./composedraftcall";
@@ -55,9 +57,7 @@ function selectedFiling(filing: Partial<Grounding> | null) {
 /** What a saved draft puts back in the composer. */
 export function fieldsOfDraft(draft: MailDraft): SavedDraftFields {
   return {
-    to: draft.to,
-    cc: draft.cc,
-    bcc: draft.bcc,
+    ...distinctAddressLines(draft),
     subject: draft.subject,
     body: draft.body,
     html: draft.html_body ?? paragraphsFrom(draft.body),
@@ -115,9 +115,7 @@ const idsOf = (files: readonly ChosenFile[]) => files.map((file) => file.id);
 // Mirrors the server's canonical address (`canonicalAddresses`, activities):
 // trimmed, lower case, blanks dropped.
 const canonical = (line: readonly string[]) =>
-  line
-    .map((address) => address.trim().toLowerCase())
-    .filter((address) => address !== "");
+  line.map(addressKey).filter((address) => address !== "");
 
 const sameLine = (a: readonly string[], b: readonly string[]) =>
   sameList(canonical(a), canonical(b));

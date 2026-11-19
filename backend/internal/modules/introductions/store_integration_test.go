@@ -900,3 +900,23 @@ func TestAnAgentsAskRecordsItsNoteAsModelProse(t *testing.T) {
 		})
 	}
 }
+
+// A message cited as proof of an introduction must be about the ask's own
+// contact; one filed under nobody proves nothing and is refused.
+func TestAnIntroductionCannotRestOnAMessageNotAboutItsContact(t *testing.T) {
+	e := setupIntro(t)
+	id, err := e.store.Create(e.asUser(e.requester), e.ask())
+	if err != nil {
+		t.Fatalf("Create: %v", err)
+	}
+	if err := e.store.Decide(e.asUser(e.introducer), id, StatusAccepted, "", nil, 1); err != nil {
+		t.Fatalf("Decide: %v", err)
+	}
+	unrelated := e.evidence(t)
+
+	err = e.store.Complete(e.asUser(e.introducer), id, &unrelated, 2)
+
+	if !errors.Is(err, apperrors.ErrNotFound) {
+		t.Errorf("completing on a message not about this contact answered %v, want ErrNotFound", err)
+	}
+}

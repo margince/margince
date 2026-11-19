@@ -25,12 +25,25 @@ func (p attentionPins) DoneRows(ctx context.Context, among []attention.RowRef) (
 		}
 		out = make(map[attention.RowRef]time.Time, len(done))
 		for ref, at := range done {
-			out[attention.RowRef{Source: ref.Source, RowID: ref.RowID}] = at
+			out[attention.RowRef(ref)] = at
 		}
 		return nil
 	})
 	if err != nil {
 		return nil, err
+	}
+	return out, nil
+}
+
+// AlreadyDone names the rows among these the acting reader has put down.
+func (p attentionPins) AlreadyDone(ctx context.Context, rows []attention.RowRef) (map[attention.RowRef]bool, error) {
+	done, err := p.store.WorklistRowsAlreadyDone(ctx, worklistRows(rows))
+	if err != nil {
+		return nil, err
+	}
+	out := make(map[attention.RowRef]bool, len(done))
+	for ref, put := range done {
+		out[attention.RowRef(ref)] = put
 	}
 	return out, nil
 }
@@ -48,7 +61,7 @@ func (p attentionPins) ReopenDone(ctx context.Context, rows []attention.RowRef) 
 func worklistRows(rows []attention.RowRef) []activities.WorklistRowRef {
 	out := make([]activities.WorklistRowRef, 0, len(rows))
 	for _, row := range rows {
-		out = append(out, activities.WorklistRowRef{Source: row.Source, RowID: row.RowID})
+		out = append(out, activities.WorklistRowRef(row))
 	}
 	return out
 }

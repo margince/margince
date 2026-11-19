@@ -99,6 +99,7 @@ export function EmailVerb({
   disabled,
   reason,
   reasonId,
+  reasonTip,
   word,
   keyShortcuts,
 }: Readonly<{
@@ -111,6 +112,7 @@ export function EmailVerb({
   disabled?: boolean;
   reason?: string;
   reasonId?: string;
+  reasonTip?: string;
   keyShortcuts?: string;
 }>) {
   const t = useT();
@@ -122,6 +124,7 @@ export function EmailVerb({
       disabled={disabled}
       reason={reason}
       reasonId={reasonId}
+      reasonTip={reasonTip}
       keyShortcuts={keyShortcuts}
       onClick={onClick}
     />
@@ -153,6 +156,7 @@ export function RecordEmailVerb({
   contactId,
   recordAddress,
   disabledReasonId,
+  reasonTip,
   disabled,
   keyShortcuts,
   open,
@@ -164,6 +168,8 @@ export function RecordEmailVerb({
   /** The record's own address, for a first message to it. See ComposeModal. */
   recordAddress?: string;
   disabledReasonId?: string;
+  /** The sentence `disabledReasonId` names, for the verb's tooltip. */
+  reasonTip?: string;
   disabled?: boolean;
   keyShortcuts?: string;
 }> &
@@ -183,6 +189,7 @@ export function RecordEmailVerb({
       <EmailVerb
         disabled={disabled}
         reasonId={disabledReasonId}
+        reasonTip={reasonTip}
         keyShortcuts={keyShortcuts}
         onClick={() => setComposing(true)}
       />

@@ -37,19 +37,51 @@ function member(overrides: Partial<User>): User {
 }
 
 describe("recipientSuggestions", () => {
-  it("offers workspace members after the record's own contacts", () => {
+  it("offers workspace members apart from the record's own contacts", () => {
     const offered = recipientSuggestions({
       contact: view,
       colleagues: [member({})],
     });
-    expect(offered.map((row) => row.value)).toEqual([
+    expect(offered.contacts.map((row) => row.value)).toEqual([
       "dana@brandt.example",
-      "sofia@gradion.test",
     ]);
-    expect(offered[1]?.label).toBe("Sofia Keller");
+    expect(offered.colleagues.map((row) => row.label)).toEqual([
+      "Sofia Keller",
+    ]);
   });
 
-  it("offers the contacts around the contact between it and the members", () => {
+  it("never offers the sender", () => {
+    const offered = recipientSuggestions({
+      colleagues: [
+        member({}),
+        member({ id: "u-2", email: "tom@gradion.test" }),
+      ],
+      senderAddress: "sofia@gradion.test",
+    });
+    expect(offered.colleagues.map((row) => row.value)).toEqual([
+      "tom@gradion.test",
+    ]);
+  });
+
+  it("never offers the sender's own address, even on a contact", () => {
+    const offered = recipientSuggestions({
+      contact: view,
+      colleagues: [member({ email: "DANA@brandt.example" })],
+      senderAddress: "Dana@Brandt.example",
+    });
+    expect(offered.contacts).toEqual([]);
+    expect(offered.colleagues).toEqual([]);
+  });
+
+  it("knows the sender without the roster, which can fail or come back partial", () => {
+    const offered = recipientSuggestions({
+      contact: view,
+      senderAddress: "dana@brandt.example",
+    });
+    expect(offered.contacts).toEqual([]);
+  });
+
+  it("offers the contacts around the contact after the contact itself", () => {
     const offered = recipientSuggestions({
       contact: view,
       related: [
@@ -67,12 +99,11 @@ describe("recipientSuggestions", () => {
       ],
       colleagues: [member({})],
     });
-    expect(offered.map((row) => row.value)).toEqual([
+    expect(offered.contacts.map((row) => row.value)).toEqual([
       "dana@brandt.example",
       "cole@nordwand.example",
-      "sofia@gradion.test",
     ]);
-    expect(offered[1]?.card?.about).toBe("Head of IT · Nordwand");
+    expect(offered.contacts[1]?.card?.about).toBe("Head of IT · Nordwand");
   });
 
   it("leaves out agents and members who cannot read mail", () => {
@@ -84,20 +115,27 @@ describe("recipientSuggestions", () => {
         member({ id: "i", email: "new@gradion.test", status: "invited" }),
       ],
     });
-    expect(offered.map((row) => row.value)).toEqual(["new@gradion.test"]);
+    expect(offered.colleagues.map((row) => row.value)).toEqual([
+      "new@gradion.test",
+    ]);
   });
 
   it("skips teams, which have no address", () => {
     const offered = recipientSuggestions({
       colleagues: [{ id: "t-1", name: "Sales" }, member({})],
     });
-    expect(offered.map((row) => row.value)).toEqual(["sofia@gradion.test"]);
+    expect(offered.colleagues.map((row) => row.value)).toEqual([
+      "sofia@gradion.test",
+    ]);
   });
 
-  it("offers an address once when a contact and a member share it", () => {
+  it("offers an address once when two members share it in any case", () => {
     const offered = recipientSuggestions({
-      colleagues: [member({}), member({ id: "u-2", display_name: "Sofia K." })],
+      colleagues: [
+        member({}),
+        member({ id: "u-2", email: "Sofia@Gradion.test" }),
+      ],
     });
-    expect(offered).toHaveLength(1);
+    expect(offered.colleagues).toHaveLength(1);
   });
 });

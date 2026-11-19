@@ -12,13 +12,13 @@
  * page passes UNDER it all the same — the scroller reaches up behind the strip
  * and pads its content clear of it (app/shell.css) — so the strip is
  * translucent with a blur behind it and shows what is sliding past. */
-/* The search is centred on the content column while the trail fits its half;
-   a longer trail grows into the room the end controls leave, up to its cap. */
+/* The search is centred on the content column while each side fits its half.
+   A longer side takes the room the other leaves; past that the trail ellipses. */
 .topbar {
   --topbarSearchW: min(420px, 34vw);
   display: grid;
-  grid-template-columns: minmax(min-content, 1fr) auto minmax(0, 1fr);
-  /* The query container `.topbar-lead` measures its cap against. */
+  grid-template-columns: minmax(min-content, 1fr) auto minmax(max-content, 1fr);
+  /* The query container both sides measure their caps against. */
   container-type: inline-size;
   align-items: center;
   gap: var(--space-3);
@@ -49,14 +49,14 @@
   align-items: center;
   gap: var(--space-2);
   min-width: 0;
-  /* The row less the search, its two gaps, and the bell and account control:
-     a trail longer than this ellipses rather than pushing them off the bar. */
+  /* The row less the search, its gaps and the end controls as drawn: CSS cannot
+     read a sibling's width, so topbar.tsx sets `--topbarTrailW`. */
   max-width: calc(
     100cqw -
     var(--topbarSearchW) -
-    var(--space-2) -
     2 *
-    (var(--space-3) + var(--controlHeight))
+    var(--space-3) -
+    var(--topbarTrailW, 0px)
   );
 }
 .topbar-trail {
@@ -65,6 +65,17 @@
   justify-content: flex-end;
   gap: var(--topbarGlyphGap);
   min-width: 0;
+  /* Its own width, not the track's, so `--topbarTrailW` measures the controls.
+     The cap keeps them in the bar beside the sidebar control; the reminder's
+     words give way first. */
+  justify-self: end;
+  max-width: calc(
+    100cqw -
+    var(--topbarSearchW) -
+    2 *
+    var(--space-3) -
+    var(--controlHeight)
+  );
 }
 
 /* The sidebar control lives HERE rather than in the sidebar, so the affordance
@@ -206,6 +217,7 @@
   }
   .topbar-trail {
     flex: none;
+    max-width: none;
   }
   /* A bare glyph, exactly like the bell beside it. The field's border and ground
      are what say "type here"; with no room for the label they said nothing and
@@ -419,11 +431,8 @@
   white-space: nowrap;
   min-width: 0;
 }
-/* The words give way, never the count. The strip squeezes this chip before the
-   bell and the account chip, and German asks about a third more room for the
-   same sentence, so something has to yield at 1440px that does not at 1280.
-   The count is the whole point of the chip; the words repeat what the panel
-   says when it opens. */
+/* Where the strip has to squeeze this chip, the words give way and never the
+   count: the words repeat what the panel says when it opens. */
 .setup-reminder-word {
   min-width: 0;
   overflow: hidden;

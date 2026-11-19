@@ -15,6 +15,17 @@ export function defaultPipelineOf(
   return pipelines.find((each) => each.is_default) ?? pipelines[0];
 }
 
+/** Each stage's name by its id, across every pipeline given. */
+export function stageNames(
+  pipelines: readonly components["schemas"]["Pipeline"][],
+): Map<string, string> {
+  return new Map(
+    pipelines.flatMap((pipeline) =>
+      (pipeline.stages ?? []).map((stage) => [stage.id, stage.name] as const),
+    ),
+  );
+}
+
 // Cache raw pipelines together so list and record readers share the same read.
 export const pipelinesOptions = queryOptions({
   queryKey: ["pipelines", "all"],
@@ -22,8 +33,8 @@ export const pipelinesOptions = queryOptions({
     unwrap(await api.GET("/pipelines", { params: { query: {} }, signal })).data,
 });
 
-// Retired pipelines too: a deal that sits on one still has to be drawn on its
-// own stages. The active catalog above is what pickers offer.
+// Retired pipelines too: a deal on one is drawn on its own stages, and a reader
+// names a stage a deal once held. Pickers offer the active catalog above.
 export const pipelinesWithArchivedOptions = queryOptions({
   queryKey: ["pipelines", "with-archived"],
   queryFn: async ({ signal }) =>

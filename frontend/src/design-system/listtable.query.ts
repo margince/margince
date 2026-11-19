@@ -119,3 +119,14 @@ export function applyView(dials: QueryDials, index: number) {
     dials.onChipChange?.(key, view?.filters?.[key] ?? "");
   }
 }
+
+// A narrowed list with no rows may get its count back with the next answer.
+// A body that owns its paging says its own count, so none is held for it.
+export function holdsCount(
+  bodyOwnsPaging: boolean,
+  pending: boolean,
+  dials: QueryDials,
+  rows: number,
+): boolean {
+  return !bodyOwnsPaging && (pending || (narrowedBy(dials) && rows === 0));
+}

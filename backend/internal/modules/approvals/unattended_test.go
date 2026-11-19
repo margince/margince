@@ -8,6 +8,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/platform/approvalsubject"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -32,5 +33,32 @@ func TestUnattendedAgentsCannotApproveAnything(t *testing.T) {
 				t.Fatalf("rejection of %s: %v", kind, err)
 			}
 		}
+	}
+}
+
+// The expiry sweep decides approvals in bulk under its own system name. A
+// caller with no actor, or any other actor, is refused before a row is read.
+func TestOnlyTheExpiryClockMayExpireApprovals(t *testing.T) {
+	for name, ctx := range map[string]context.Context{
+		"no actor": context.Background(),
+		"another system actor": principal.WithActor(context.Background(), principal.Principal{
+			Type: principal.PrincipalSystem, ID: "system:other",
+		}),
+	} {
+		if _, err := (&Service{}).ExpireDue(ctx); !errors.Is(err, apperrors.ErrPermissionDenied) {
+			t.Errorf("%s: ExpireDue = %v, want ErrPermissionDenied", name, err)
+		}
+	}
+}
+
+// A colleague's own request is read only by that colleague or the agent on
+// their passport. An unattended system actor has no request of its own.
+func TestAnOwnRequestIsReadOnlyByItsColleague(t *testing.T) {
+	ctx := principal.WithActor(context.Background(), principal.Principal{
+		Type: principal.PrincipalSystem, ID: "system:worker",
+	})
+	_, err := OwnRequestForTargetTx(ctx, nil, approvalsubject.KindOwnershipTransfer, "deal", ids.NewV7())
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a system actor reading an own request answered %v, want ErrPermissionDenied", err)
 	}
 }

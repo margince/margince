@@ -100,7 +100,8 @@ func quietAtSQL(alias string, days int, instant string) string {
 // its stored clock has not reached. That is a meeting still to come, or one
 // that started before the refold job moved the clock to it. The
 // audience is spelled as in last_activity_of_deal, so a meeting only some
-// colleagues may see changes no number everyone reads.
+// colleagues may see changes no number everyone reads. A personal meeting
+// defers nothing (relstrength.DealEvidenceSQL).
 func MeetingAheadSQL(alias string) string {
 	deal := "deal"
 	if alias != "" {
@@ -110,7 +111,7 @@ func MeetingAheadSQL(alias string) string {
 		JOIN activity ahead ON ahead.id = ahead_link.activity_id
 		WHERE ahead_link.deal_id = ` + deal + `.id AND ahead.archived_at IS NULL
 		  AND ahead.kind = 'meeting' AND ` + relstrength.MeetingNotCalledOffSQL("ahead") +
-		auth.OriginIsEngagement("ahead") + ` AND ` + auth.WorkspaceAudienceSQL("ahead") + `
+		auth.OriginIsEngagement("ahead") + ` AND ` + auth.WorkspaceAudienceSQL("ahead") + ` AND ` + relstrength.DealEvidenceSQL("ahead") + `
 		  AND coalesce(` + deal + `.last_activity_at, '-infinity') < ahead.occurred_at -- occurred_at raw: the stored clock holds an occurred_at
 		)`
 }

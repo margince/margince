@@ -12,9 +12,11 @@ import {
   useSoleProjectDefault,
 } from "../../design-system/projectpicker";
 import { useThreadProject } from "../../lib/activityfiling";
+import { addressKey } from "../../lib/addresskey";
 import { relatedContactsQuery } from "../../lib/contact.queries";
 import { useHealthScope } from "../../lib/healthscope";
 import { unwrap } from "../../lib/problem";
+import { useMe } from "../../lib/session";
 import { useCompany360 } from "../companies/company360";
 import { useContact360 } from "../contacts/contact360";
 import { useProjectRecord } from "../projects/projectrecord";
@@ -279,7 +281,7 @@ export function contactsByAddress(
     address: string | null | undefined,
     owner: { id: string; attachable: boolean },
   ) => {
-    const key = address?.trim().toLowerCase();
+    const key = address ? addressKey(address) : undefined;
     const held = key ? owners.get(key) : undefined;
     if (key && (!held || (owner.attachable && !held.attachable))) {
       owners.set(key, owner);
@@ -300,7 +302,7 @@ export function contactsByAddress(
       attachable: member.attachable,
     });
   }
-  return (address) => owners.get(address.trim().toLowerCase())?.id;
+  return (address) => owners.get(addressKey(address))?.id;
 }
 
 /**
@@ -341,11 +343,19 @@ export function useAccountRecipient(
   const startedFrom = contacts.find(
     (contact) => contact.contact_id === started.contactId,
   );
+  const offeredAddress =
+    started.recordAddress ?? startedFrom?.primary_email ?? undefined;
+  // The started contact's address may still be on its way off the account.
+  const offerPending =
+    started.recordAddress === undefined &&
+    started.contactId !== undefined &&
+    company.isLoading;
   return {
     recipientId,
     contactIds,
-    offeredAddress:
-      started.recordAddress ?? startedFrom?.primary_email ?? undefined,
+    offeredAddress,
+    // No address is offered into To, and none is still being read.
+    nothingOffered: !offeredAddress && !offerPending,
     // An account with no contact leaves the draft nobody to write for.
     noContacts: company.isSuccess && contacts.length === 0,
   };
@@ -413,7 +423,9 @@ export function useComposeRecords({
     enabled: open && recipientContact != null && readerScope !== undefined,
   });
   // roster-failure: suggestions only; the To field still takes any address.
-  const colleagues = useRoster("user", open && !isChannelReply);
+  const mailing = open && !isChannelReply;
+  const colleagues = useRoster("user", mailing);
+  const senderAddress = useMe(mailing).data?.user.email;
   const anchorProject = useAnchorProject(entityType, entityId);
   // A project page's message is about that project, read as a record so the
   // picker names it the way the page does.
@@ -454,12 +466,12 @@ export function useComposeRecords({
     projectFiling,
     // Addresses known not to arrive, warned under the fields.
     deadRecipients: deadRecipientsAmong(contact.data, [...addressed]),
-    // The contact, the contacts around it, the account's roster, the members.
     recipients: recipientSuggestions({
       contact: contact.data,
       related: related.data,
       company: anchorCompany.data,
       colleagues: colleagues.data,
+      senderAddress,
     }),
   };
 }

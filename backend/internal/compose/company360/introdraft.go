@@ -107,7 +107,7 @@ func (s *Service) IntroRequestDraft(
 	if asker, ok := principal.Actor(ctx); ok &&
 		req.ViaUserID == ids.From[ids.UserKind](asker.UserID) {
 		return crmcontracts.CompanyEmailDraft{}, fmt.Errorf(
-			"company360: an introduction is asked of somebody else: %w",
+			"an introduction is asked of somebody else: %w",
 			apperrors.ErrInvalidArgument)
 	}
 	// The custom-field catalog BEFORE the transaction opens. It takes a
@@ -123,7 +123,7 @@ func (s *Service) IntroRequestDraft(
 	}
 	if req.Function != nil {
 		return crmcontracts.CompanyEmailDraft{}, fmt.Errorf(
-			"company360: a function narrows an ask with no contact named, and this one names a contact: %w",
+			"a function narrows an ask with no contact named, and this one names a contact: %w",
 			apperrors.ErrInvalidArgument)
 	}
 	var facts introFacts

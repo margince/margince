@@ -83,7 +83,7 @@ func (r *Registry) chargeCall(ctx context.Context, spec mcp.ToolSpec, mayRefuse 
 		return nil
 	}
 	return fmt.Errorf(
-		"crmagents: %s could not be counted against this agent's call ceiling, so it was not run: %w",
+		"%s could not be counted against this agent's call ceiling, so it was not run: %w",
 		spec.Name, apperrors.ErrBudgetExceeded)
 }
 
@@ -147,7 +147,7 @@ func (r *Registry) charge(ctx context.Context, spec mcp.ToolSpec, c agentvolume.
 		return nil
 	}
 	return fmt.Errorf(
-		"crmagents: %s spent %d %s that could not be counted against this agent's volume budget, so the answer is withheld: %w",
+		"%s spent %d %s that could not be counted against this agent's volume budget, so the answer is withheld: %w",
 		spec.Name, n, c, apperrors.ErrBudgetExceeded)
 }
 
