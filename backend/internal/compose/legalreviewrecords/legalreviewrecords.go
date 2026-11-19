@@ -87,9 +87,9 @@ func (r Reader) ReviewContracts(ctx context.Context, dealID ids.UUID) ([]deals.P
 }
 
 // ReviewActivity lists the deal's latest touches and its open tasks, keeping
-// only what the caller can read. The list's discover gate also returns mail
-// outside the audience with its content withheld, so every row is asked again
-// through the readable gate before it is kept.
+// only what the caller can read. The discover gate also returns mail outside
+// the audience with its content withheld. So every row passes the readable
+// gate before it is kept.
 func (r Reader) ReviewActivity(ctx context.Context, dealID ids.UUID) ([]deals.PacketTouch, []deals.PacketTask, error) {
 	entity := dealType
 	limit := touchLimit

@@ -85,8 +85,8 @@ type packetRecords struct {
 	tasks     []PacketTask
 }
 
-// emptied makes the sections of a new pack non-nil, so an empty one stores as
-// [] and only a pack from before the sections decodes them as nil.
+// emptied makes the sections of a new pack non-nil. An empty one then stores
+// as [], and only a pack from before the sections decodes them as nil.
 func (r packetRecords) emptied() packetRecords {
 	if r.contracts == nil {
 		r.contracts = []PacketContract{}
