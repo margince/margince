@@ -11,7 +11,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { writeMessage } from "../../design-system/richtext-testing";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
@@ -22,7 +22,7 @@ import {
   previewedAddresses,
 } from "../../testing/sendpermission.testkit";
 import { ComposeModal } from "./compose";
-import { pressSend } from "./compose.testkit";
+import { installComposeClock, pressSend } from "./compose.testkit";
 
 // WHICH WAY a message leaves, asked inside the one composer.
 //
@@ -134,6 +134,8 @@ function drawer(
     />
   );
 }
+
+beforeEach(installComposeClock);
 
 afterEach(() => {
   cleanup();

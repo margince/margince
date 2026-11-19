@@ -11,7 +11,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { type ReactNode, useState } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import {
   messageText,
@@ -31,7 +31,7 @@ import {
   previewedAddresses,
 } from "../../testing/sendpermission.testkit";
 import { ComposeModal } from "./compose";
-import { pressSend } from "./compose.testkit";
+import { installComposeClock, pressSend } from "./compose.testkit";
 import { useSavedDraft } from "./composesaveddraft";
 
 // The rep's own unsent message, kept by the server: what the composer reads
@@ -151,6 +151,8 @@ function composer(onClose: () => void, activityId?: string) {
 
 const calls = (sent: Sent[], key: string) =>
   sent.filter((call) => call.key === key);
+
+beforeEach(installComposeClock);
 
 afterEach(() => {
   cleanup();

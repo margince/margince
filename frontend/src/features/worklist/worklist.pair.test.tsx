@@ -144,9 +144,7 @@ describe("deciding a duplicate pair on the row", () => {
   it("merges into the record the reader chose, once they confirm", async () => {
     const user = userEvent.setup();
     const fetched = stubOk();
-    draw(
-      pairRow({ subject: { type: "company", id: LEFT, label: "Acme GmbH" } }),
-    );
+    draw(pairRow({ kind: "company" }));
 
     // BY NAME, not by position: this is the assertion that the button the
     // reader believes they pressed is the record that survives.
@@ -164,9 +162,7 @@ describe("deciding a duplicate pair on the row", () => {
   it("names the record the merge archives, and says when it is done", async () => {
     const user = userEvent.setup();
     stubOk();
-    draw(
-      pairRow({ subject: { type: "company", id: LEFT, label: "Acme GmbH" } }),
-    );
+    draw(pairRow({ kind: "company" }));
 
     await user.click(screen.getByRole("button", { name: "Keep ACME Gmbh" }));
     const dialog = await screen.findByRole("dialog");
@@ -188,9 +184,7 @@ describe("deciding a duplicate pair on the row", () => {
   it("merges nothing when the question is cancelled", async () => {
     const user = userEvent.setup();
     const fetched = stubOk();
-    draw(
-      pairRow({ subject: { type: "company", id: LEFT, label: "Acme GmbH" } }),
-    );
+    draw(pairRow({ kind: "company" }));
 
     await user.click(screen.getByRole("button", { name: "Keep ACME Gmbh" }));
     await user.click(
@@ -204,9 +198,7 @@ describe("deciding a duplicate pair on the row", () => {
   });
 
   it("says why the two look alike and links each record", () => {
-    const row = pairRow({
-      subject: { type: "company", id: LEFT, label: "Acme GmbH" },
-    });
+    const row = pairRow({ kind: "company" });
     draw({
       ...row,
       pair: row.pair && {
@@ -228,6 +220,27 @@ describe("deciding a duplicate pair on the row", () => {
     ).toMatch(new RegExp(`#/companies/${RIGHT}$`));
   });
 
+  it("draws no evidence line for a name match, which the card titles already show", () => {
+    const row = pairRow({ kind: "company" });
+    const { container } = draw({
+      ...row,
+      pair: row.pair && {
+        ...row.pair,
+        evidence: [
+          {
+            field: "display_name",
+            signal: "collide",
+            left_value: "Acme GmbH",
+            right_value: "ACME Gmbh",
+          },
+        ],
+      },
+    });
+
+    expect(screen.queryByText(/^Name:/)).toBeNull();
+    expect(container.querySelector(".worklist-pair-evidence")).toBeNull();
+  });
+
   it("refreshes both companies' document libraries once the merge lands", async () => {
     const user = userEvent.setup();
     stubOk();
@@ -235,10 +248,7 @@ describe("deciding a duplicate pair on the row", () => {
     for (const id of [LEFT, RIGHT]) {
       client.setQueryData(companyDocumentsKey(id), { data: [] });
     }
-    draw(
-      pairRow({ subject: { type: "company", id: LEFT, label: "Acme GmbH" } }),
-      client,
-    );
+    draw(pairRow({ kind: "company" }), client);
     await user.click(screen.getByRole("button", { name: "Keep ACME Gmbh" }));
     await confirmMerge(user);
     await vi.waitFor(() =>
@@ -649,7 +659,7 @@ describe("deciding a duplicate pair on the row", () => {
     const user = userEvent.setup();
     draw(
       pairRow({
-        subject: { type: "contact", id: ANA, label: "Mira Kovac" },
+        kind: "contact",
         pair: {
           left: { id: ANA, label: "Mira Kovac" },
           right: { id: BEN, label: "Mira Kovač" },

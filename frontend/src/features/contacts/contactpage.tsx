@@ -5,6 +5,7 @@ import {
   type ActivityGate,
   useActivityGate,
 } from "../../components/activitygate";
+import { MergedIntoSentence } from "../../components/historymergedref";
 import {
   LatestInboundLine,
   useLatestInbound,
@@ -101,6 +102,12 @@ function refusalsOf(
   );
 }
 
+// An archived contact that was merged says where it went, after its reason.
+function mergedInto(row: Contact | undefined): ReactNode {
+  if (!row?.archived_at || !row.merged_into_id) return undefined;
+  return <MergedIntoSentence kind="contact" id={row.merged_into_id} />;
+}
+
 export function ContactPageV2({
   id,
   tab: addressedTab,
@@ -186,6 +193,7 @@ export function ContactPageV2({
     onOpen: () => openComposer(""),
     readOnlyReason: record.data?.archived_at ? readOnlyReason : undefined,
     readOnlyReasonId,
+    readOnlyMore: mergedInto(record.data),
   });
 
   const archived = archivedContactRow(record);

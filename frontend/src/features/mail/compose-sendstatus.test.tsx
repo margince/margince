@@ -2,7 +2,7 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { writeMessage } from "../../design-system/richtext-testing";
 import {
@@ -14,6 +14,7 @@ import {
 import { ComposeModal } from "./compose";
 import {
   fillSendableForm,
+  installComposeClock,
   jsonResponse,
   pickWhy,
   pressSend,
@@ -30,6 +31,8 @@ import { refusalIsCurrent } from "./composesend";
 // message changes or a newer check answers.
 
 type Preview = components["schemas"]["SendAuthorizationPreview"];
+
+beforeEach(installComposeClock);
 
 afterEach(() => {
   cleanup();

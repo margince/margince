@@ -4,7 +4,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
-import { MergedIntoLine } from "../../components/historymergedref";
 import { Badge } from "../../design-system/atoms";
 import { IdentityLine } from "../../design-system/identityline";
 import { Panel, PanelBody } from "../../design-system/panel";
@@ -68,9 +67,6 @@ export function ArchivedContactPage({
       >
         <Panel title={t("record.fullHistory")}>
           <PanelBody>
-            {contact.merged_into_id && (
-              <MergedIntoLine kind="contact" id={contact.merged_into_id} />
-            )}
             <RecordHistoryTab
               kind="contact"
               id={contact.id}

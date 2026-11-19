@@ -19,6 +19,7 @@ root="$(cd "$(dirname "$0")/.." && pwd)"
 state="$root/.tmp/production"
 stack="$state/stack"
 port="${PROD_PORT:-8090}"
+source "$root/scripts/lib-claim.sh"
 
 # project is one Compose project per settings folder. Its ID is drawn once and
 # kept in the folder, so a folder shared by a symlink shares its stack.
@@ -79,15 +80,15 @@ write_env() {
 	} >"$state/.env"
 }
 
-# hold_lock lets one run at a time change a settings folder: mkdir is atomic,
-# so a second run that starts meanwhile stops instead of rewriting .env.
+# hold_lock lets one run at a time change a settings folder, so a second run
+# that starts meanwhile stops instead of rewriting .env.
 hold_lock() {
 	mkdir -p "$state"
-	if ! mkdir "$state/.lock" 2>/dev/null; then
+	if ! claim "$state/.lock"; then
 		echo "prod: another make prod or prod-stop is using $state. If none is, delete $state/.lock." >&2
 		exit 1
 	fi
-	trap 'rmdir "$state/.lock" 2>/dev/null || true' EXIT
+	trap 'rm -f "$state/.lock"' EXIT
 }
 
 up() {
