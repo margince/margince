@@ -49,9 +49,9 @@ func rateMatch(provider, model, day string, fromArg, toArg int) string {
 // pricedRate is the rate the ai_call row aliased alias is priced at: the
 // answered model's rate on the call's day, else the binding's. So a served model
 // the sheet does not price yet still prices the call. Every SQL reader that
-// prices a call joins it LATERAL as r, the alias callCostMicroUSD reads. day is
-// the date expression the call is dated by, callDaySQL for a call row.
-func pricedRate(alias, day string, fromArg, toArg int) string {
+// prices a call joins it LATERAL as r, the alias callCostMicroUSD reads.
+func pricedRate(alias string, fromArg, toArg int) string {
+	day := callDaySQL(alias)
 	return fmt.Sprintf(`SELECT ranked.* FROM (
 		  SELECT 0 AS match_rank, answered.* FROM (%[1]s) answered WHERE %[3]s
 		  UNION ALL

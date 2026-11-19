@@ -84,7 +84,7 @@ func (s *RunTransparency) Get(ctx context.Context, correlationID ids.UUID) (RunS
 				COALESCE(r.cache_write_per_mtok_microusd, 0),
 				`+longContextColumns("r")+`
 			FROM ai_call c
-			LEFT JOIN LATERAL (`+pricedRate("c", callDaySQL("c"), 2, 3)+`) r ON true
+			LEFT JOIN LATERAL (`+pricedRate("c", 2, 3)+`) r ON true
 			WHERE c.correlation_id = $1
 			ORDER BY c.occurred_at ASC, c.attempt ASC`, correlationID, fallbackFrom, fallbackTo)
 		if err != nil {

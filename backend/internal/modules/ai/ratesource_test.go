@@ -28,7 +28,7 @@ func TestOnlyVertexIsPricedByAnotherProvider(t *testing.T) {
 // column pricedRate reads outside that key would price two unlike calls alike.
 func TestTheRateKeyHoldsEveryCallColumnPricedRateReads(t *testing.T) {
 	key := append(slices.Clone(rateKeyColumns), "occurred_at")
-	reads := regexp.MustCompile(`\bk\.(\w+)`).FindAllStringSubmatch(pricedRate("k", "k.occurred_at", 1, 2), -1)
+	reads := regexp.MustCompile(`\bk\.(\w+)`).FindAllStringSubmatch(pricedRate("k", 1, 2), -1)
 	if len(reads) == 0 {
 		t.Fatal("pricedRate(\"k\") reads no k column; the pattern no longer matches its SQL")
 	}

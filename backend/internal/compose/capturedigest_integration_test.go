@@ -113,3 +113,19 @@ func TestMorningDigestRefusesADayOutsideTheAcceptedRange(t *testing.T) {
 		t.Errorf("digest for a day nobody built → %d, want 404", status)
 	}
 }
+
+// A digest is labelled with the installation's day at the instant it is built.
+func TestADigestIsLabelledWithTheInstallationDay(t *testing.T) {
+	check := func(zone string, at time.Time, day string) {
+		b := setupBackfillWire(t)
+		b.env.WsExec(t, `UPDATE setting SET value = to_jsonb($1::text) WHERE key = 'installation.timezone'`, zone)
+		if err := b.registry.BuildDigests(b.human, at); err != nil {
+			t.Fatalf("%s: BuildDigests: %v", zone, err)
+		}
+		if _, got := b.readDigest(t, nil); got.Date.Format(time.DateOnly) != day {
+			t.Errorf("%s: dated %s, want %s", zone, got.Date.Format(time.DateOnly), day)
+		}
+	}
+	check("America/Los_Angeles", time.Date(2026, 8, 20, 6, 30, 0, 0, time.UTC), "2026-08-19")
+	check("Pacific/Auckland", time.Date(2026, 8, 19, 18, 30, 0, 0, time.UTC), "2026-08-20")
+}

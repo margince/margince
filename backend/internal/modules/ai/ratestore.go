@@ -145,7 +145,7 @@ func costReportSQL() string {
 	for _, column := range rateKeyColumns {
 		keyMatch = append(keyMatch, "r."+column+" = ac."+column)
 	}
-	keyMatch = append(keyMatch, "r.occurred_at = "+callDaySQL("ac"))
+	keyMatch = append(keyMatch, "r.day = "+callDaySQL("ac"))
 	return `
 			WITH key_rate AS MATERIALIZED (
 			  SELECT k.*,
@@ -153,11 +153,13 @@ func costReportSQL() string {
 			         r.cache_read_per_mtok_microusd, r.cache_write_per_mtok_microusd,
 			         ` + longContextColumns("r") + `
 			  FROM (
-			    -- The day keeps the name occurred_at, the column pricedRate dates a call by.
-			    SELECT DISTINCT ac.` + strings.Join(rateKeyColumns, ", ac.") + `, ` + callDaySQL("ac") + ` AS occurred_at
+			    -- One call's instant stands for its day, the column pricedRate dates a call by.
+			    SELECT ac.` + strings.Join(rateKeyColumns, ", ac.") + `, ` + callDaySQL("ac") + ` AS day,
+			           min(ac.occurred_at) AS occurred_at
 			    FROM ai_call ac WHERE ` + inWindow + `
+			    GROUP BY ac.` + strings.Join(rateKeyColumns, ", ac.") + `, ` + callDaySQL("ac") + `
 			  ) k
-			  LEFT JOIN LATERAL (` + pricedRate("k", "k.occurred_at", 3, 4) + `) r ON true
+			  LEFT JOIN LATERAL (` + pricedRate("k", 3, 4) + `) r ON true
 			)
 			SELECT
 			  ` + callDaySQL("ac") + ` AS day,

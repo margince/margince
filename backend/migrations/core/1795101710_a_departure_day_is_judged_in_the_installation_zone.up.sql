@@ -9,6 +9,15 @@
 -- employment next change, and when a departure day arrives (RefoldEnded).
 SET LOCAL lock_timeout = '3s';
 
+-- The end of a deal's pause: the start of its wait_until day in the owner's own
+-- zone, the installation's when the owner has none. One function, so every
+-- reader of the pause asks the same question and none spells the owner join.
+CREATE FUNCTION deal_pause_ends_at(d deal) RETURNS timestamptz
+    LANGUAGE sql STABLE
+    AS $$SELECT (LEAST(((d.wait_until)::timestamp AT TIME ZONE COALESCE((SELECT NULLIF(pause_owner.timezone, '') FROM app_user pause_owner WHERE pause_owner.id = d.owner_id), COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC'))), CASE WHEN ((((d.wait_until)::timestamp AT TIME ZONE COALESCE((SELECT NULLIF(pause_owner.timezone, '') FROM app_user pause_owner WHERE pause_owner.id = d.owner_id), COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC'))) - interval '1 hour') AT TIME ZONE COALESCE((SELECT NULLIF(pause_owner.timezone, '') FROM app_user pause_owner WHERE pause_owner.id = d.owner_id), COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')))::date = (d.wait_until)::date THEN ((d.wait_until)::timestamp AT TIME ZONE COALESCE((SELECT NULLIF(pause_owner.timezone, '') FROM app_user pause_owner WHERE pause_owner.id = d.owner_id), COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC'))) - interval '1 hour' END, CASE WHEN ((((d.wait_until)::timestamp AT TIME ZONE COALESCE((SELECT NULLIF(pause_owner.timezone, '') FROM app_user pause_owner WHERE pause_owner.id = d.owner_id), COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC'))) - interval '30 minutes') AT TIME ZONE COALESCE((SELECT NULLIF(pause_owner.timezone, '') FROM app_user pause_owner WHERE pause_owner.id = d.owner_id), COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC')))::date = (d.wait_until)::date THEN ((d.wait_until)::timestamp AT TIME ZONE COALESCE((SELECT NULLIF(pause_owner.timezone, '') FROM app_user pause_owner WHERE pause_owner.id = d.owner_id), COALESCE((SELECT st.value #>> '{}' FROM setting st WHERE st.key = 'installation.timezone'), 'UTC'))) - interval '30 minutes' END))$$;
+GRANT EXECUTE ON FUNCTION deal_pause_ends_at(deal) TO margince_app;
+
+
 CREATE OR REPLACE FUNCTION last_activity_of_company(cid uuid) RETURNS timestamptz
     LANGUAGE sql STABLE
     AS $$

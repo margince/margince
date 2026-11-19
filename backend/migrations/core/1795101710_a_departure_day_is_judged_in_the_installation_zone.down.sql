@@ -4,6 +4,8 @@
 -- Restores the three functions to the session's current_date reading.
 SET LOCAL lock_timeout = '3s';
 
+DROP FUNCTION deal_pause_ends_at(deal);
+
 CREATE OR REPLACE FUNCTION last_activity_of_company(cid uuid) RETURNS timestamptz
     LANGUAGE sql STABLE
     AS $$

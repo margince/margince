@@ -15,7 +15,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/idlebase"
-	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
@@ -100,15 +99,15 @@ func quietAtSQL(alias string, days int, instant string) string {
 
 // PauseEndsSQL is the instant a deal's pause ends: the start of the picked
 // wait_until day in the owner's own time zone, or in the installation's when
-// the owner has none. It is null without a pause. Every reader of the pause
-// reads this and compares the instant, so no reader cuts the day at UTC
-// midnight on its own. The owner, not the viewer, so a list, a report and the
+// the owner has none. The database function deal_pause_ends_at holds the rule
+// and answers null without a pause. Every reader of the pause reads this and
+// compares the instant, so no reader cuts the day at UTC midnight on its own. The owner, not the viewer, so a list, a report and the
 // worker all judge one deal alike.
 func PauseEndsSQL(alias string) string {
-	prefix := columnPrefix(alias)
-	zone := `COALESCE((SELECT NULLIF(pause_owner.timezone, '') FROM app_user pause_owner WHERE pause_owner.id = ` +
-		prefix + `owner_id), ` + occurredday.InstallationZoneSQL + `)`
-	return `(` + occurredday.DayStartInSQL(prefix+`wait_until`, zone) + `)`
+	if alias == "" {
+		alias = dealTable
+	}
+	return "deal_pause_ends_at(" + alias + ")"
 }
 
 // MeetingAheadSQL is true when the deal has a meeting nobody called off that
