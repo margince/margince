@@ -13294,7 +13294,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "auth.emailPlaceholder": "name@example.com",
   "auth.password": "Passwort",
   "auth.passwordPlaceholder": "Passwort",
-  "auth.passwordHint": "Mindestens 12 Zeichen",
+  "auth.passwordHint": "12 bis 256 Zeichen",
   "auth.showPassword": "Passwort anzeigen",
   "auth.hidePassword": "Passwort ausblenden",
   "auth.capsLock": "Feststelltaste ist aktiviert",
@@ -13343,9 +13343,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "password.current": "Aktuelles Passwort",
   "password.next": "Neues Passwort",
   "password.confirm": "Neues Passwort bestätigen",
-  "password.hint": "Mindestens 12 Zeichen",
+  "password.hint": "12 bis 256 Zeichen",
   "password.tooShort":
     "Das Passwort ist zu kurz. Verwende mindestens 12 Zeichen.",
+  "password.tooLong":
+    "Das Passwort ist zu lang. Verwende höchstens 256 Zeichen.",
+  "password.blank": "Das Passwort darf nicht nur aus Leerzeichen bestehen.",
+  "password.repeated":
+    "Das Passwort darf nicht aus einem einzigen wiederholten Zeichen bestehen.",
   "password.mismatch": "Die Passwörter stimmen nicht überein.",
   "password.changing": "Passwort wird geändert…",
   "password.open": "Passwort ändern",
@@ -13439,9 +13444,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "setup.adminName": "Dein Name",
   "setup.adminEmail": "Deine E-Mail-Adresse",
   "setup.adminPassword": "Passwort",
-  "setup.passwordHint": "Mindestens 12 Zeichen",
-  "setup.passwordShort":
-    "Das Passwort ist zu kurz. Verwende mindestens 12 Zeichen.",
+  "setup.passwordHint": "12 bis 256 Zeichen",
   "setup.rootWarning":
     "Damit wird das Adminkonto für die gesamte Installation erstellt, mit allen Berechtigungen, einschließlich der Verwaltung aller anderen Nutzerkonten.",
   "setup.claim": "Unternehmen erstellen",
@@ -21634,6 +21637,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.filterRefused": "Deine Rolle kann Leads nicht nach {dial} eingrenzen.",
   "lead.timeline.received": "{at} · eingegangen",
   "lead.timeline.weReplied": "Du hast geantwortet",
+  "lead.timeline.markedContacted": "Als kontaktiert markiert von {user}",
+  "lead.timeline.markedContactedNoName": "Als kontaktiert markiert",
   "lead.timeline.repliedIn": "{at} · in {span}",
   "lead.timeline.lastContact": "{at} · letzter Kontakt",
   "lead.timeline.booked": "{at} · gebucht",

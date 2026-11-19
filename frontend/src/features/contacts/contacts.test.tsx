@@ -491,7 +491,7 @@ describe("ContactsScreen — rich create (P-15)", () => {
         {
           email: "otto@example.test",
           email_type: "work",
-          is_primary: false,
+          is_primary: true,
           position: 0,
         },
       ],

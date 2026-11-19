@@ -13,12 +13,7 @@ import {
   fieldLabel,
   type SubField,
 } from "./create";
-import {
-  kindOf,
-  withPrimaryMarked,
-  withRowMoved,
-  withRowUpdated,
-} from "./createrows";
+import { withPrimaryMarked, withRowMoved, withRowUpdated } from "./createrows";
 import "./repeatablerowsfield.css";
 
 // A repeatable-row field (emails/phones/domains): each existing row renders
@@ -72,14 +67,14 @@ export function RepeatableRowsField({
   });
 
   function updateRow(index: number, key: string, value: string) {
-    setRows(withRowUpdated(rows, index, key, value, primaryKey, typeKey));
+    setRows(withRowUpdated(rows, index, key, value));
   }
 
   function markPrimary(index: number) {
     if (!primaryKey) {
       return;
     }
-    setRows(withPrimaryMarked(rows, index, primaryKey, typeKey, typeDefault));
+    setRows(withPrimaryMarked(rows, index, primaryKey));
   }
 
   function moveRow(index: number, direction: "up" | "down") {
@@ -176,8 +171,7 @@ export function RepeatableRowsField({
                 {primaryKey && (
                   <Radio
                     className="t-label repeatablerowsfield-primary"
-                    // Scoped by kind so the native radio group itself cannot enforce exclusivity across kinds.
-                    name={`${formId}-${field.key}-${kindOf(row, typeKey, typeDefault)}-primary`}
+                    name={`${formId}-${field.key}-primary`}
                     checked={row[primaryKey] === "true"}
                     onChange={() => markPrimary(index)}
                     label={t("field.primary")}
