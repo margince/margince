@@ -112,7 +112,7 @@ func (d *returnDoor) confirm(token string) int {
 // replay runs the restore replay the operator runs after a restore.
 func (d *returnDoor) replay() {
 	d.t.Helper()
-	if _, err := compose.ReplayErasureSuppressions(context.Background(), d.e.Pool, blobstore.NewMemory(), d.e.Vault, true); err != nil {
+	if _, err := compose.ReplayErasureSuppressions(context.Background(), d.e.Pool, blobstore.NewMemory(), true); err != nil {
 		d.t.Fatalf("replaying erasures: %v", err)
 	}
 }

@@ -470,9 +470,3 @@ func (s *RetentionService) retainOnly(ctx context.Context) (bool, error) {
 func isDestructive(action string) bool {
 	return action == actionAnonymize || action == actionErase
 }
-
-// WithPayloadVault lets destructive actions retire sealed booking capabilities.
-func (s *RetentionService) WithPayloadVault(payloads PayloadPurger) *RetentionService {
-	s.eraser = s.eraser.WithPayloadVault(payloads)
-	return s
-}

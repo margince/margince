@@ -38,6 +38,15 @@ const CONTACTS = [
   },
 ];
 
+const COLLEAGUES = [
+  {
+    value: "sofia@margince.example",
+    label: "Sofia Keller",
+    hint: "sofia@margince.example",
+    card: { identity: "u-sofia" },
+  },
+];
+
 /**
  * The block owns no state, so the story lends it some: a reader in the catalog
  * can add and remove tokens and watch Bcc open, which is the half of this
@@ -47,15 +56,17 @@ function Head({
   start = ["ada@brandt.example"],
   deadRecipients = [],
   invalidTo = false,
+  openCopies = false,
 }: Readonly<{
   start?: string[];
   deadRecipients?: readonly string[];
   invalidTo?: boolean;
+  openCopies?: boolean;
 }>) {
   const [to, setTo] = useState<string[]>(start);
   const [cc, setCc] = useState<string[]>([]);
   const [bcc, setBcc] = useState<string[]>([]);
-  const [copiesOpen, setCopiesOpen] = useState(false);
+  const [copiesOpen, setCopiesOpen] = useState(openCopies);
   const [refused, setRefused] = useState<
     Readonly<Record<AddressLine, readonly string[]>>
   >({ to: [], cc: [], bcc: [] });
@@ -70,7 +81,7 @@ function Head({
         onBccChange={setBcc}
         copiesOpen={copiesOpen}
         onOpenCopies={() => setCopiesOpen(true)}
-        suggestions={CONTACTS}
+        suggestions={{ contacts: CONTACTS, colleagues: COLLEAGUES }}
         onToEditing={() => {}}
         refused={refused}
         onRefuse={(line, parts) =>
@@ -141,6 +152,34 @@ export const RecipientRefused: Story = {
     await userEvent.paste(
       "Lars Strojny <lars@brandt.example>; not-an-address, someone@else.example",
     );
+  },
+};
+
+/** Cc and Bcc asked for: Bcc says that the others do not see its addresses. */
+export const CopiesOpen: Story = {
+  render: () => <Head openCopies />,
+};
+
+export const CopiesOpenDark: Story = {
+  ...CopiesOpen,
+  globals: { theme: "dark" },
+};
+
+/** An address already on the message, typed again in capitals in Cc: refused and named. */
+export const RecipientRepeated: Story = {
+  render: () => <Head openCopies />,
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByLabelText("Cc"));
+    await userEvent.keyboard("ADA@BRANDT.EXAMPLE{Enter}");
+  },
+};
+
+/** Two letters typed: the record's contacts, then colleagues under their heading. */
+export const ColleaguesOnTyping: Story = {
+  render: () => <Head start={[]} />,
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByLabelText("To"));
+    await userEvent.keyboard("ar");
   },
 };
 

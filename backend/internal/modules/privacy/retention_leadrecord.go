@@ -101,12 +101,11 @@ func (s *RetentionService) anonymizeLead(ctx context.Context, tx pgx.Tx, id ids.
 	// First the mail still waiting to go to the lead, an opt-out receipt among
 	// it, and the notices saying such a receipt is missing. Both name the lead
 	// the UPDATE above has just made nameless.
-	var payloads PayloadPurger
 	var extensions extprivacy.Registry
 	if s.eraser != nil {
-		payloads, extensions = s.eraser.payloads, s.eraser.extensions
+		extensions = s.eraser.extensions
 	}
-	if err := redactLeadDeliveries(ctx, tx, []ids.UUID{id}, payloads); err != nil {
+	if err := redactLeadDeliveries(ctx, tx, []ids.UUID{id}); err != nil {
 		return err
 	}
 	if err := retractReceiptNotices(ctx, tx, ids.UUID{}, []ids.UUID{id}, theClockRanOut.collateralReason, theClockRanOut.cause); err != nil {

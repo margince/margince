@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type { components } from "../../api/schema";
+import { addressKey } from "../../lib/addresskey";
 import { contactQuery } from "../../lib/contact.queries";
 
 type Contact360 = components["schemas"]["Contact360"];
@@ -40,13 +41,13 @@ export function deadRecipientsAmong(
   if (dead == null || dead.length === 0) return [];
   // Addresses compare case-insensitively — a rep who types Anna@… must be
   // warned about anna@…, and the ledger stores what the provider reported.
-  const marked = new Set(dead.map((address) => address.toLowerCase()));
+  const marked = new Set(dead.map(addressKey));
   // ONE MENTION PER ADDRESS. To and Cc are asked about together, and a rep who
   // has the same address in both would otherwise read it named twice in a
   // sentence about one thing being wrong with it.
   const named = new Map<string, string>();
   for (const address of recipients) {
-    const key = address.toLowerCase();
+    const key = addressKey(address);
     if (marked.has(key) && !named.has(key)) {
       named.set(key, address);
     }

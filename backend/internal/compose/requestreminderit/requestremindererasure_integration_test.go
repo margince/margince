@@ -77,7 +77,7 @@ func TestErasingAMailTakesItsQuoteFromTheFiledReminder(t *testing.T) {
 		t.Fatalf("%d reminder(s) quote the ask in body and system text, want 1; the test proves nothing otherwise", n)
 	}
 
-	eraser := compose.ComposedEraser(e.Pool, nil, nil)
+	eraser := compose.ComposedEraser(e.Pool, nil)
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return eraser.PurgeContentDerivedFromNoiseTx(e.Admin(), tx, []ids.UUID{message})
 	}); err != nil {

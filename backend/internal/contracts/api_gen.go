@@ -41645,9 +41645,10 @@ type CompanyAnswer struct {
 	GeneratedAt time.Time          `json:"generated_at"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 
 	// Question The prepared questions. Fixed, because each one names the records its answer is
@@ -41685,9 +41686,10 @@ type CompanyBrief struct {
 	GeneratedAt time.Time          `json:"generated_at"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 
 	// Scope What a read narrowed to one project reports about the narrowing, so a surface can
@@ -42131,9 +42133,10 @@ type CompanyDossier struct {
 	GeneratedAt time.Time          `json:"generated_at"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 
 	// NeedsRefresh The newest contributing source was retrieved more than thirty days ago
@@ -42203,9 +42206,10 @@ type CompanyEmailDraft struct {
 	DraftRef *string `json:"draft_ref,omitempty"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 
 	// Language The language this draft is written in: the `language` the request named, else the one the server resolved from the record's correspondence. The model draft and the deterministic floor report it alike. Absent on an introduction request or note, which reads its language on its own and says so through `language_undetermined`.
@@ -42645,9 +42649,10 @@ type CompanyGrowthFit struct {
 	GeneratedAt      time.Time        `json:"generated_at"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 
 	// NegativeFactors What argues against it.
@@ -44516,9 +44521,10 @@ type ContactBrief struct {
 	GeneratedAt time.Time          `json:"generated_at"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 
 	// Sentences Two to five sentences: who this contact is in the current commercial context, what they have explicitly cared about, what recently changed, and the unresolved decision or risk. A sentence whose citations cannot be resolved is dropped whole rather than shown uncited.
@@ -44597,6 +44603,11 @@ type ContactCaseDecisionRequest struct {
 
 	// OwnerId Who owns the remaining contact: the live owner of one of the selected members.
 	OwnerId openapi_types.UUID `json:"owner_id"`
+
+	// Prefer Where the selected members disagree, the member whose value the remaining contact takes.
+	// Each one must be in `member_ids`. A field left out keeps the survivor's value, and an empty one takes another member's.
+	// No value is lost: every address, number and employment of every member stays on the remaining contact.
+	Prefer *ContactCasePreference `json:"prefer,omitempty"`
 
 	// Revision The case revision the reviewer looked at.
 	Revision string `json:"revision"`
@@ -44691,6 +44702,23 @@ type ContactCaseOwner struct {
 
 // ContactCaseOwnerSeat defines model for ContactCaseOwner.Seat.
 type ContactCaseOwnerSeat string
+
+// ContactCasePreference Where the selected members disagree, the member whose value the remaining contact takes.
+// Each one must be in `member_ids`. A field left out keeps the survivor's value, and an empty one takes another member's.
+// No value is lost: every address, number and employment of every member stays on the remaining contact.
+type ContactCasePreference struct {
+	// Email The member whose primary email address becomes the remaining contact's primary one.
+	Email *openapi_types.UUID `json:"email,omitempty"`
+
+	// Employment The member whose current employer becomes the remaining contact's current one.
+	Employment *openapi_types.UUID `json:"employment,omitempty"`
+
+	// Name The member whose first and last name the remaining contact takes.
+	Name *openapi_types.UUID `json:"name,omitempty"`
+
+	// Title The member whose title the remaining contact takes.
+	Title *openapi_types.UUID `json:"title,omitempty"`
+}
 
 // ContactCaseResolution defines model for ContactCaseResolution.
 type ContactCaseResolution struct {
@@ -46050,9 +46078,10 @@ type ConversationMemoryEntry struct {
 	FirstActivityId *openapi_types.UUID `json:"first_activity_id,omitempty"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy *WrittenBy `json:"generated_by,omitempty"`
 
 	// Key The thread key, or the activity id for a meeting or a standalone message that has none.
@@ -48522,9 +48551,10 @@ type DealRevisionRequest struct {
 // DealRoleProposalResult defines model for DealRoleProposalResult.
 type DealRoleProposalResult struct {
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 
 	// Skipped How many of the model's proposals the gate refused — a wrong quote, a contact
@@ -48635,9 +48665,10 @@ type DealRoomBrief struct {
 	GeneratedAt time.Time `json:"generated_at"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy               `json:"generated_by"`
 	RoomId      openapi_types.UUID      `json:"room_id"`
 	Sentences   []DealRoomBriefSentence `json:"sentences"`
@@ -48977,9 +49008,10 @@ type DealStatusCard struct {
 	GeneratedAt time.Time              `json:"generated_at"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 
 	// MailCoverage The calling reader's mail capture for the requested interval. This does
@@ -54579,9 +54611,10 @@ type KnowledgeAnswer struct {
 	Coverage KnowledgeCoverage     `json:"coverage"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 
 	// Outcome The five are not interchangeable. not_covered is a statement about the QUESTION; not_ready is a statement about the corpus; retrieval_unavailable says no embed lane is bound, so nothing was searched at all; unreviewed says the corpus WAS searched and the nearest passages are attached, but no writer read them, so nothing has judged whether they answer the question — the claims are what the search found, not an answer. Collapsing them is the failure this endpoint exists to avoid.
@@ -54841,6 +54874,34 @@ type LatestInboundList struct {
 
 	// LastExchange The newest call, meeting, email or message on the record. Absent when there is none.
 	LastExchange *LastExchange `json:"last_exchange,omitempty"`
+
+	// LastInbound A polymorphic timeline item. Mirrors the `activity` table + `activity_link`.
+	// **Per-kind field constraints** (enforced server-side to match the DB `activity_task_fields`
+	// CHECK; the OpenAPI cannot express these conditionally): `due_at`/`assignee_id`/`is_done`/
+	// `done_at` are valid ONLY when `kind=task`; `meeting_status` ONLY when `kind=meeting`;
+	// `duration_seconds` only for meeting/call; `direction` is null for note/task. Setting a
+	// disallowed field for the kind returns `422 code: field_not_valid_for_kind` (the API rejects
+	// what the DB CHECK would reject, rather than 500-ing at write time).
+	// `channel_provider` is the same kind of constraint in both directions: non-null exactly
+	// when `kind=message` (ADR-0107).
+	// **Custom fields**: the values of the workspace's activity custom fields arrive as extra
+	// top-level `cf_` keys. They are content, so they are absent whenever `content_state` is
+	// `withheld`.
+	LastInbound *Activity `json:"last_inbound,omitempty"`
+
+	// LastOutbound A polymorphic timeline item. Mirrors the `activity` table + `activity_link`.
+	// **Per-kind field constraints** (enforced server-side to match the DB `activity_task_fields`
+	// CHECK; the OpenAPI cannot express these conditionally): `due_at`/`assignee_id`/`is_done`/
+	// `done_at` are valid ONLY when `kind=task`; `meeting_status` ONLY when `kind=meeting`;
+	// `duration_seconds` only for meeting/call; `direction` is null for note/task. Setting a
+	// disallowed field for the kind returns `422 code: field_not_valid_for_kind` (the API rejects
+	// what the DB CHECK would reject, rather than 500-ing at write time).
+	// `channel_provider` is the same kind of constraint in both directions: non-null exactly
+	// when `kind=message` (ADR-0107).
+	// **Custom fields**: the values of the workspace's activity custom fields arrive as extra
+	// top-level `cf_` keys. They are content, so they are absent whenever `content_state` is
+	// `withheld`.
+	LastOutbound *Activity `json:"last_outbound,omitempty"`
 }
 
 // LawfulBasisConfirmation defines model for LawfulBasisConfirmation.
@@ -57221,9 +57282,10 @@ type MeetingBrief struct {
 	GeneratedAt time.Time `json:"generated_at"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 
 	// Omitted What this reader's own grants kept OUT of the brief, named so a silence is never mistaken for an absence. A brief that cannot see the Deal Room reads exactly like a brief about a deal with no room, and a rep would walk in believing the buyer had done nothing. Empty when the reader could see everything the brief looks at.
@@ -57454,9 +57516,10 @@ type MeetingPlan struct {
 	CompanyArc []MeetingPlanArcMoment `json:"company_arc"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 
 	// LikelyAsks What the other side is likely to ask, each an assessment with the record behind it.
@@ -62773,9 +62836,10 @@ type ReportSetupProposal struct {
 	Clarifications []string `json:"clarifications"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 	ModelUsed   *string   `json:"model_used,omitempty"`
 
@@ -64388,9 +64452,10 @@ type SalesAssessment struct {
 	GeneratedAt   time.Time `json:"generated_at"`
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy  WrittenBy                `json:"generated_by"`
 	ModelUsed    *string                  `json:"model_used,omitempty"`
 	NextDecision *SalesAssessmentDecision `json:"next_decision,omitempty"`
@@ -64560,9 +64625,10 @@ type SalesGoalPlanState string
 // SalesGoalProposal defines model for SalesGoalProposal.
 type SalesGoalProposal struct {
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
-	// lane. `deterministic` — the structured fallback, used when no lane is configured
-	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-	// reader deciding how much to trust a sentence needs to know which wrote it.
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// the workspace's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
 	ModelUsed   *string   `json:"model_used,omitempty"`
 
@@ -74190,9 +74256,10 @@ type WorkspaceQueryResult struct {
 }
 
 // WrittenBy Which writer produced a piece of generated prose. `model` — the configured model
-// lane. `deterministic` — the structured fallback, used when no lane is configured
-// or the workspace's AI budget is exhausted. Never silently interchangeable: a
-// reader deciding how much to trust a sentence needs to know which wrote it.
+// lane. `deterministic` — the structured fallback, used when no lane is configured,
+// the workspace's AI budget is exhausted, the model call fails, or the checks the
+// surface runs refuse the model's answer. Never silently interchangeable: a reader
+// deciding how much to trust a sentence needs to know which wrote it.
 type WrittenBy string
 
 // AiWritten defines model for AiWritten.

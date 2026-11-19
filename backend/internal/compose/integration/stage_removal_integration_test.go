@@ -144,7 +144,7 @@ func TestStageRemovalRenumbersWhateverLayoutItFinds(t *testing.T) {
 	// The whole point of this fixture is the layout, so say so before
 	// indexing into it: a create that silently normalized the positions
 	// would otherwise fail somewhere further down, or panic.
-	if len(gapped) != 3 || gapped[0].Position != 2 || gapped[2].Position != 9 {
+	if len(gapped) != 5 || gapped[0].Position != 2 || gapped[2].Position != 9 {
 		t.Fatalf("the fixture is not the gapped 2/5/9 layout this scenario needs: %+v", gapped)
 	}
 
@@ -153,15 +153,15 @@ func TestStageRemovalRenumbersWhateverLayoutItFinds(t *testing.T) {
 	if status := e.Call(t, "DELETE", "/v1/stages/"+gapped[2].ID, nil, nil, nil); status != http.StatusNoContent {
 		t.Fatalf("removing the last stage → %d, want 204", status)
 	}
-	assertContiguous(t, e, pipeline.ID, 2)
+	assertContiguous(t, e, pipeline.ID, 4)
 
-	// Now the list is 1..n already, so removing its last stage moves
-	// nothing at all — and publishes no reorder.
+	// Now the list is 1..n already. Removing the last open stage moves the
+	// closing pair up, which is a second reorder.
 	survivors := readStages(t, e, pipeline.ID)
-	if status := e.Call(t, "DELETE", "/v1/stages/"+survivors[len(survivors)-1].ID, nil, nil, nil); status != http.StatusNoContent {
-		t.Fatalf("removing the trailing stage → %d, want 204", status)
+	if status := e.Call(t, "DELETE", "/v1/stages/"+survivors[1].ID, nil, nil, nil); status != http.StatusNoContent {
+		t.Fatalf("removing the last open stage → %d, want 204", status)
 	}
-	assertContiguous(t, e, pipeline.ID, 1)
+	assertContiguous(t, e, pipeline.ID, 3)
 
 	var reorders int
 	if err := e.Owner.QueryRow(t.Context(),
@@ -172,8 +172,8 @@ func TestStageRemovalRenumbersWhateverLayoutItFinds(t *testing.T) {
 		pipeline.ID).Scan(&reorders); err != nil {
 		t.Fatal(err)
 	}
-	if reorders != 1 {
-		t.Fatalf("%d reorder events for this pipeline, want 1 — only the removal that renumbered publishes one", reorders)
+	if reorders != 2 {
+		t.Fatalf("%d reorder events for this pipeline, want 2 — one per removal that renumbered", reorders)
 	}
 }
 

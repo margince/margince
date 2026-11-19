@@ -114,6 +114,7 @@ export function DealHowItStands({
           subs={subs}
           advancing={ladder.advancing}
           advanceRefused={ladder.advanceRefused}
+          pipelineRetired={ladder.pipelineRetired}
           refusedReasonId={ladder.refusedReasonId}
           onAdvance={ladder.onAdvance}
         />

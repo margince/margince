@@ -162,6 +162,7 @@ function RegisterForm({
               values={redirects}
               onChange={edited(setRedirects)}
               suggestions={REDIRECT_PRESETS}
+              removeLabel={(item) => t("tokenInput.remove", { value: item })}
             />
           )}
         </Field>

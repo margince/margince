@@ -37,7 +37,7 @@
 3 react-hooks/refs src/design-system/rowtags.tsx
 1 react-hooks/set-state-in-effect src/design-system/scrollregion.ts
 2 react-hooks/refs src/design-system/selectlistbox.ts
-12 react-hooks/refs src/design-system/suggestlist.tsx
+11 react-hooks/refs src/design-system/suggestlist.tsx
 1 react-hooks/set-state-in-effect src/design-system/toast.tsx
 1 react-hooks/set-state-in-effect src/design-system/tokenspecimen.ts
 1 react-hooks/set-state-in-effect src/design-system/tooltip.tsx
@@ -58,7 +58,6 @@
 1 react-hooks/set-state-in-effect src/features/mail/composefiling.ts
 4 react-hooks/refs src/features/mail/composerecipientoffer.ts
 1 react-hooks/set-state-in-effect src/features/mail/composesaveddraft.tsx
-1 react-hooks/set-state-in-effect src/features/mail/composeschedule.tsx
 1 react-hooks/set-state-in-effect src/features/mail/composesend.ts
 5 react-hooks/refs src/features/mail/composetarget.ts
 1 react-hooks/set-state-in-effect src/features/mail/composetarget.ts

@@ -337,6 +337,7 @@ export const en = {
   "approval.merge.address_usage": "Address use",
   "approval.merge.address_primary_before": "Primary on source",
   "approval.merge.address_primary_after": "Primary on survivor",
+  "approval.merge.address_already_held": "Survivor already has it",
   "approval.merge.assignment_collapsed": "Duplicate responsibility removed",
   "approval.merge.assignment_moved": "Responsibility moved",
   "approval.merge.assignment_role": "Role",
@@ -5547,6 +5548,7 @@ export const en = {
   "co.facts.addCancel": "Cancel",
   "co.facts.addIncomplete": "Select a fact type and enter a value.",
   "co.facts.remove": "Remove {value}",
+  "tokenInput.remove": "Remove {value}",
   "co.facts.removeTitle": "Remove this fact?",
   "co.facts.removeConfirm": "Remove",
   "co.facts.removeAsk":
@@ -6596,6 +6598,10 @@ export const en = {
     "You can log activity and add tasks. Changing this deal needs its owner to share it.",
   "deal.closedTakesNoStage":
     "This deal is closed. Reopen it to move it to another stage.",
+  "deal.pipelineRetired":
+    "This deal’s pipeline is retired, so its stages are read-only. Restore the pipeline in Settings to move the deal.",
+  "deal.stageOtherPipeline":
+    "That stage belongs to another pipeline. Pick a stage of the pipeline the deal is in.",
   "deal.reopen": "Reopen",
   "deal.reopenPick": "Move this deal back to an open stage",
   "deal.reopenConfirm": "Reopen",
@@ -8058,6 +8064,9 @@ export const en = {
   "compose.voiceDegraded":
     "Your voice profile could not be loaded, so this draft does not use your voice. Draft again, or edit before sending.",
   "compose.voiceDegradedTitle": "This draft is not in your voice",
+  "compose.templateDraftTitle": "AI could not write this draft",
+  "compose.templateDraft":
+    "A basic template was used. Your purpose was not used.",
   "compose.provisional": "Provisional voice",
   "compose.provisionalHint":
     "Your Voice DNA is still being built. It shapes this draft the same way a finished one would.",
@@ -8103,6 +8112,10 @@ export const en = {
   "compose.recipientHint": "Name or address",
   "compose.bodyPlaceholder": "Message text",
   "compose.bcc": "Bcc",
+  "compose.bccHint": "Other recipients do not see these addresses.",
+  "compose.alreadyIn": "Already in {field}.",
+  "compose.colleagues": "Colleagues",
+  "compose.replyTitle": "Reply",
   "compose.threadGone":
     "That thread can no longer be answered, so a new email was opened instead. Check the recipient before sending.",
   "compose.colleagueMailbox_one":
@@ -8180,6 +8193,8 @@ export const en = {
   "compose.scheduleDate": "Date",
   "compose.scheduleTime": "Time",
   "compose.scheduleGoesOut": "Sends {when}",
+  "compose.schedulePast": "Choose a time in the future.",
+  "compose.scheduleHoursPast": "Times that have passed cannot be chosen.",
   "compose.willGoOut": "Sends {when}",
   "compose.scheduleAfternoon": "Tomorrow afternoon",
   "compose.draftLanguage": "Draft language",
@@ -11909,6 +11924,8 @@ export const en = {
   "translation.given": "{language}: {name}",
   "stage.name": "Name",
   "stage.semantic": "Stage type",
+  "stage.lastClosing":
+    "A pipeline needs a Won and a Lost stage. Add another of this type first.",
   "stage.winProb": "Win probability",
   "stage.semOpen": "Open",
   "stage.semWon": "Won",
@@ -22662,6 +22679,14 @@ export const en = {
   "contactCase.ownerHint":
     "Only an owner of a ticked contact can own the remaining contact.",
   "contactCase.ownerPlaceholder": "Choose owner",
+  "contactCase.prefer.legend": "Which value to keep",
+  "contactCase.prefer.hint":
+    "The merged contacts disagree here. Pick the value the remaining contact shows first. The other email addresses and employers stay on it too.",
+  "contactCase.prefer.name": "Name",
+  "contactCase.prefer.email": "Primary email",
+  "contactCase.prefer.employment": "Current employer",
+  "contactCase.prefer.title": "Title",
+  "contactCase.prefer.placeholder": "Choose a value",
   "contactCase.previewVerb": "Preview merge",
   "contactCase.merge_one": "Merge {count} contact",
   "contactCase.merge_other": "Merge {count} contacts",

@@ -1325,9 +1325,9 @@ export interface paths {
          *     "Based on" line and the "Why this draft?" chips, and a body that explained itself
          *     would be a body the rep has to edit before sending.
          *
-         *     When no model lane is configured, or the workspace's AI budget is exhausted, the draft
-         *     degrades to a deterministic one rather than failing — `generated_by` says which wrote
-         *     it.
+         *     When no model lane is configured, the workspace's AI budget is exhausted, the model call
+         *     fails, or the draft checks refuse the model's answer, the draft degrades to a
+         *     deterministic one rather than failing — `generated_by` says which wrote it.
          *
          *     Human-only: drafting spends the workspace's model budget on prose for a contact to send
          *     under their own name.
@@ -3287,9 +3287,9 @@ export interface paths {
          *     the "Based on" line and the "Why this draft?" chips, and a body that explained
          *     itself would be a body the rep has to edit before sending.
          *
-         *     When no model lane is configured, or the workspace's AI budget is exhausted, the
-         *     draft degrades to a deterministic one rather than failing — `generated_by` says
-         *     which wrote it.
+         *     When no model lane is configured, the workspace's AI budget is exhausted, the model
+         *     call fails, or the draft checks refuse the model's answer, the draft degrades to a
+         *     deterministic one rather than failing — `generated_by` says which wrote it.
          *
          *     Human-only: drafting spends the workspace's model budget on prose for a contact to
          *     send under their own name.
@@ -5551,7 +5551,9 @@ export interface paths {
          * @description At most one default pipeline per workspace (409 if a second default). The opening
          *     `stages` keep the ladder's shape: a won or lost stage above an open one is refused
          *     `422` with the code `closing_stage_before_open`, and two stages naming one position
-         *     with `duplicate`.
+         *     with `duplicate`. A ladder without a won or without a lost stage gets the missing one
+         *     appended behind its last stage, named `Won` or `Lost`, so no pipeline is born unable to
+         *     close a deal.
          */
         post: operations["createPipeline"];
         delete?: never;
@@ -5770,7 +5772,9 @@ export interface paths {
          *     `422` with the code `closing_stage_before_open`; reorder the ladder with `reorderStages`
          *     instead. A `semantic` change keeps the ladder in shape itself: won and lost stages move
          *     behind the open ones, published as the same `pipeline.updated` position delta. A change
-         *     to either moves the pipeline's `version`.
+         *     to either moves the pipeline's `version`. Changing the `semantic` of a pipeline's only
+         *     live won (or lost) stage is refused `422` with the code `last_closing_stage` on
+         *     `semantic`: a pipeline keeps a way to win and a way to lose a deal.
          */
         patch: operations["updateStage"];
         trace?: never;
@@ -6274,6 +6278,11 @@ export interface paths {
          *     `last_exchange` is the newest call, meeting, email or message on the record of any
          *     age, with whose move it leaves. It says where the record stands when nothing is
          *     next, such as waiting on them since the last mail sent.
+         *
+         *     `last_inbound` and `last_outbound` are the newest message the other side wrote and the
+         *     newest one we wrote, of any age, read over every row the caller may list and counted as
+         *     the account's last-touch clocks count them: it has happened, it kept us in touch, and
+         *     it is not automatic mail. Each is absent when there is none.
          */
         get: operations["listLatestInbound"];
         put?: never;
@@ -9243,9 +9252,9 @@ export interface paths {
          *     A lead with no email address on record is `422`: a draft addressed to nobody is not a
          *     message, and the composer can say so before spending a model call.
          *
-         *     When no model lane is configured, or the workspace's AI budget is exhausted, the draft
-         *     degrades to a deterministic one rather than failing — `generated_by` says which wrote
-         *     it.
+         *     When no model lane is configured, the workspace's AI budget is exhausted, the model call
+         *     fails, or the draft checks refuse the model's answer, the draft degrades to a
+         *     deterministic one rather than failing — `generated_by` says which wrote it.
          *
          *     Human-only: drafting spends the workspace's model budget on prose for a contact to send
          *     under their own name.
@@ -31931,6 +31940,34 @@ export interface components {
              * @description Who owns the remaining contact: the live owner of one of the selected members.
              */
             owner_id: string;
+            prefer?: components["schemas"]["ContactCasePreference"];
+        };
+        /**
+         * @description Where the selected members disagree, the member whose value the remaining contact takes.
+         *     Each one must be in `member_ids`. A field left out keeps the survivor's value, and an empty one takes another member's.
+         *     No value is lost: every address, number and employment of every member stays on the remaining contact.
+         */
+        ContactCasePreference: {
+            /**
+             * Format: uuid
+             * @description The member whose first and last name the remaining contact takes.
+             */
+            name?: string;
+            /**
+             * Format: uuid
+             * @description The member whose title the remaining contact takes.
+             */
+            title?: string;
+            /**
+             * Format: uuid
+             * @description The member whose primary email address becomes the remaining contact's primary one.
+             */
+            email?: string;
+            /**
+             * Format: uuid
+             * @description The member whose current employer becomes the remaining contact's current one.
+             */
+            employment?: string;
         };
         /** @description What the merge did, or for a preview what it would do. Every selected member's owner other than the chosen one keeps access through a record grant. */
         ContactCaseOutcome: {
@@ -35511,9 +35548,10 @@ export interface components {
         };
         /**
          * @description Which writer produced a piece of generated prose. `model` — the configured model
-         *     lane. `deterministic` — the structured fallback, used when no lane is configured
-         *     or the workspace's AI budget is exhausted. Never silently interchangeable: a
-         *     reader deciding how much to trust a sentence needs to know which wrote it.
+         *     lane. `deterministic` — the structured fallback, used when no lane is configured,
+         *     the workspace's AI budget is exhausted, the model call fails, or the checks the
+         *     surface runs refuse the model's answer. Never silently interchangeable: a reader
+         *     deciding how much to trust a sentence needs to know which wrote it.
          * @enum {string}
          */
         WrittenBy: "model" | "deterministic";
@@ -43880,6 +43918,8 @@ export interface components {
         LatestInboundList: {
             data: components["schemas"]["LatestInbound"][];
             last_exchange?: components["schemas"]["LastExchange"];
+            last_inbound?: components["schemas"]["Activity"];
+            last_outbound?: components["schemas"]["Activity"];
         };
         /** @description The newest call, meeting, email or message on the record. Absent when there is none. */
         LastExchange: {

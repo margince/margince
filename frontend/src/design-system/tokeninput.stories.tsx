@@ -34,6 +34,9 @@ export default meta;
 
 type Story = StoryObj<typeof meta>;
 
+// English, as a story has no catalog; a screen passes `tokenInput.remove`.
+const removeLabel = (value: string) => `Remove ${value}`;
+
 const column: CSSProperties = {
   display: "flex",
   flexDirection: "column",
@@ -49,6 +52,7 @@ function TokenDemo({
   disabled,
   hint,
   suggestions,
+  offerFor,
 }: Readonly<{
   start?: readonly string[];
   label: string;
@@ -56,6 +60,7 @@ function TokenDemo({
   disabled?: boolean;
   hint?: string;
   suggestions?: readonly TokenSuggestion[];
+  offerFor?: (typed: string) => readonly TokenSuggestion[];
 }>) {
   const [values, setValues] = useState<readonly string[]>(start);
   return (
@@ -66,6 +71,8 @@ function TokenDemo({
           values={values}
           onChange={setValues}
           suggestions={suggestions}
+          offerFor={offerFor}
+          removeLabel={removeLabel}
           placeholder={placeholder}
           disabled={disabled}
         />
@@ -122,6 +129,7 @@ function MarkedDemo() {
             {...control}
             values={values}
             onChange={setValues}
+            removeLabel={removeLabel}
             marked={{
               values: new Set(["anna@acme.test", "cara@acme.test"]),
               label: "named in the warning",
@@ -159,6 +167,7 @@ function AsideDemo() {
             {...control}
             values={values}
             onChange={setValues}
+            removeLabel={removeLabel}
             aside={(value) => (
               <Button variant="link" aria-label={`Country for ${value}`}>
                 DE
@@ -318,6 +327,51 @@ export const Offering: Story = {
   ),
 };
 
+const COLLEAGUES: readonly TokenSuggestion[] = [
+  {
+    value: "sofia@margince.example",
+    label: "Sofia Keller",
+    hint: "sofia@margince.example",
+    group: "Colleagues",
+  },
+  {
+    value: "tom@margince.example",
+    label: "Tom Brandt",
+    hint: "tom@margince.example",
+    group: "Colleagues",
+  },
+];
+
+// Colleagues wait until two letters are typed, under their own heading.
+const contactsThenColleagues = (typed: string) =>
+  typed.trim().length < 2 ? CONTACTS : [...CONTACTS, ...COLLEAGUES];
+
+/**
+ * `offerFor` shapes the list by what is typed: the record's contacts at once,
+ * colleagues under their heading once a name is begun.
+ */
+export const OfferingInGroups: Story = {
+  render: () => (
+    <div style={column}>
+      <TokenDemo
+        label="To"
+        suggestions={[...CONTACTS, ...COLLEAGUES]}
+        offerFor={contactsThenColleagues}
+        placeholder="name@example.com"
+      />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole("combobox"));
+    await userEvent.keyboard("el");
+  },
+};
+
+export const OfferingInGroupsDark: Story = {
+  ...OfferingInGroups,
+  globals: { theme: "dark" },
+};
+
 /** The offered list in dark, where every row colour re-resolves. */
 export const OfferingDark: Story = {
   globals: { theme: "dark" },
@@ -331,6 +385,8 @@ export const OfferingDark: Story = {
     </div>
   ),
 };
+
+const foldCase = (value: string) => value.toLowerCase();
 
 const ADDRESSES: Omit<TokenParse, "onRefuse"> = {
   keys: [",", ";"],
@@ -361,7 +417,8 @@ function ParseDemo() {
           {...control}
           values={values}
           onChange={setValues}
-          parse={{ ...ADDRESSES, onRefuse: setRefused }}
+          parse={{ ...ADDRESSES, key: foldCase, onRefuse: setRefused }}
+          removeLabel={removeLabel}
           placeholder="name@example.com"
         />
       )}
@@ -371,7 +428,8 @@ function ParseDemo() {
 
 /**
  * A pasted line splits on commas, semicolons and spaces: each address becomes a token,
- * the rest stays in the box under an error.
+ * the rest stays in the box under an error. `key` folds case, so a repeat in
+ * capitals is dropped.
  */
 export const Parsing: Story = {
   render: () => (
@@ -382,7 +440,7 @@ export const Parsing: Story = {
   play: async ({ canvasElement }) => {
     await userEvent.click(within(canvasElement).getByRole("textbox"));
     await userEvent.paste(
-      "dana@nordwand.example; not-an-address milo@nordwand.example",
+      "dana@nordwand.example; not-an-address milo@nordwand.example DANA@NORDWAND.EXAMPLE",
     );
   },
 };
