@@ -16,7 +16,7 @@ import { FilterPills } from "../../design-system/filterpills";
 import { useLocale, useT } from "../../i18n";
 import { WORKLIST_FILTER_PARAM } from "../../lib/worklistrouting";
 import type { WorklistView } from "../../lib/worklistviews";
-import { completenessText, pillFigure } from "./worklist.completeness";
+import { completenessText, loadedFigure } from "./worklist.completeness";
 import { OwnerPicker } from "./worklist.manager";
 import type {
   Worklist,
@@ -196,9 +196,11 @@ export function WorklistHeader({
           whose day. A dial belongs beside the sentence it changes rather than
           under it, where it read as a control over the pills below. */}
       <div className="worklist-header-line">
-        {/* The view's own headline, counted by the server over the whole view
-            rather than the loaded rows, so it stays still while rows load. */}
-        <p className="t-h3 worklist-lead">{viewHeadline(day, view, locale)}</p>
+        {/* The view's own headline, counted by the server over the whole view.
+            Only a floor moves as rows load, so it never reads below them. */}
+        <p className="t-h3 worklist-lead">
+          {viewHeadline(day, view, locale, loaded)}
+        </p>
         {/* BOTH scope controls at the trailing end of the header's own line, in
             one group so they share the sentence's line rather than each
             claiming a row of the page. The owner picker was full width under
@@ -248,7 +250,7 @@ export function WorklistHeader({
             pills={pills.map((value) => ({
               value,
               label: t(`worklist.filter.${value}` as const),
-              ...pillFigure(day, value, view),
+              ...loadedFigure(day, value, loaded, view),
             }))}
             value={filter}
             onChange={onFilter}

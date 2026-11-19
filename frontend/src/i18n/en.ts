@@ -20556,6 +20556,8 @@ export const en = {
   "worklist.disposition.undoFailed":
     "Undo failed. The message is still off your list.",
   "worklist.disposition.failed": "Item was not removed. Retry.",
+  "worklist.disposition.gone":
+    "This item is no longer on your list. The list is up to date now.",
   "worklist.scope.label": "Whose work",
   "worklist.scope.mine": "Mine",
   "worklist.sourceUnavailable": "Source unavailable or not shared with you",

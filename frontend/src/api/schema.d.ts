@@ -14732,9 +14732,10 @@ export interface paths {
          *     on a deal at risk.
          *
          *     Each row must be one the caller's Worklist draws now, under a scope they hold, with
-         *     every lane's own grant and row scope. Any other row answers 404, the same as one
-         *     that does not exist, and nothing in the batch is written. A source whose rows never
-         *     offer Done answers 422. A row named twice is written once.
+         *     every lane's own grant and row scope, or one the caller already marked done. A row
+         *     already done answers 204 and is not written again. Any other row answers 404, the
+         *     same as one that does not exist, and nothing in the batch is written. A source whose
+         *     rows never offer Done answers 422. A row named twice is written once.
          */
         put: operations["markWorklistRowsDone"];
         post?: never;
@@ -60782,8 +60783,9 @@ export interface components {
             next_meeting?: components["schemas"]["Contact360NextMeeting"];
         };
         /**
-         * @description Whose weekly plans this read looked at, present only when `scope` is `team` and the
-         *     due commitments were read across the team roster. Absent under every other scope.
+         * @description Whose weekly plans this read looked at, present only when `scope` is `team` or `all`.
+         *     Both read the due commitments across the reader's team roster, the reader included.
+         *     Absent under every other scope.
          *
          *     It exists because "nothing due" and "not looked at" differ. A teammate whose plan
          *     could not be read contributes no rows, and without this a lead would read their

@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"slices"
 	"testing"
 	"time"
 
@@ -25,6 +26,14 @@ type doneStoreSpy struct {
 
 func (d *doneStoreSpy) DoneRows(context.Context, []RowRef) (map[RowRef]time.Time, error) {
 	return d.already, nil
+}
+
+func (d *doneStoreSpy) AlreadyDone(_ context.Context, rows []RowRef) (map[RowRef]bool, error) {
+	out := map[RowRef]bool{}
+	for _, row := range rows {
+		_, out[row] = d.already[row]
+	}
+	return out, nil
 }
 
 func (d *doneStoreSpy) MarkDone(_ context.Context, rows []RowRef) error {
@@ -64,6 +73,34 @@ func TestDoneIsWrittenOnlyForARowTheReadersDayDraws(t *testing.T) {
 		}
 		if wrote := len(spy.marked) > 0; wrote != (tc.want == nil) {
 			t.Errorf("%s: wrote = %v, want %v", tc.name, wrote, tc.want == nil)
+		}
+	}
+}
+
+// A second Done on a row its lane now hides answers success. The row is
+// already off the reader's list, so only the rows still drawn are written.
+func TestASecondDoneOnARowItsLaneHidesSucceedsWithoutAWrite(t *testing.T) {
+	t.Parallel()
+	meeting := ids.NewV7()
+	shown := RowRef{Source: sourceMeeting, RowID: meeting.String()}
+	putDown := RowRef{Source: string(sourceAwaitingReply), RowID: ids.NewV7().String()}
+	cases := []struct {
+		name  string
+		rows  []RowRef
+		wrote []RowRef
+	}{
+		{"the hidden row alone", []RowRef{putDown}, nil},
+		{"beside a row still drawn", []RowRef{shown, putDown}, []RowRef{shown}},
+	}
+	for _, tc := range cases {
+		spy := &doneStoreSpy{already: map[RowRef]time.Time{putDown: rankInstant.Add(-time.Hour)}}
+		kickOff := Meeting{ID: meeting, Subject: "Kick-off", StartsAt: readInstant.Add(30 * time.Minute), Preparation: ownPreparation(true)}
+		err := meetingPrepService([]Meeting{kickOff}).WithDone(spy).MarkRowsDone(meetingPrepReader(), tc.rows)
+		if err != nil {
+			t.Errorf("%s: answered %v, want success", tc.name, err)
+		}
+		if got := slices.Concat(spy.marked...); !slices.Equal(got, tc.wrote) {
+			t.Errorf("%s: wrote %v, want %v", tc.name, got, tc.wrote)
 		}
 	}
 }
