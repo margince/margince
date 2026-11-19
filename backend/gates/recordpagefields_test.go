@@ -424,29 +424,35 @@ func pageClosingBracket(src string, open int) int {
 	return -1
 }
 
-// pageOutsideCallbacks blanks the function bodies inside a hook's argument: a
-// `field:` there belongs to what that body calls, not to the hook.
+// pageOutsideCallbacks blanks each function inside a hook's argument, its
+// parameters too: a `field:` there belongs to what that function calls.
 func pageOutsideCallbacks(arg string) string {
 	out := []byte(arg)
 	for i := 0; i < len(arg); i++ {
-		arrow := strings.HasPrefix(arg[i:], "=>")
-		if !arrow && arg[i] != ')' {
+		head := i
+		switch {
+		case arg[i] == '(':
+			params := pageClosingBracket(arg, i)
+			if params < 0 {
+				continue
+			}
+			head = pageSkipSpace(arg, params+1)
+			if !strings.HasPrefix(arg[head:], "=>") && (head == len(arg) || arg[head] != '{') {
+				continue
+			}
+		case !strings.HasPrefix(arg[i:], "=>"):
 			continue
 		}
-		from := i + 1
-		if arrow {
-			from++
+		body := head
+		if strings.HasPrefix(arg[head:], "=>") {
+			body = pageSkipSpace(arg, head+2)
 		}
-		from = pageSkipSpace(arg, from)
-		end := -1
-		switch {
-		case from < len(arg) && arg[from] == '{':
-			end = pageClosingBracket(arg, from) + 1
-		case arrow:
-			end = pageEndOf(arg, from, ",)]}")
+		end := pageEndOf(arg, body, ",)]}")
+		if body < len(arg) && arg[body] == '{' {
+			end = pageClosingBracket(arg, body) + 1
 		}
-		if end > from {
-			copy(out[from:end], strings.Repeat(" ", end-from))
+		if end > i {
+			copy(out[i:end], strings.Repeat(" ", end-i))
 			i = end - 1
 		}
 	}
@@ -703,6 +709,12 @@ const shown = useBare({ label: "Shown", field: "display_only" });
 		{"an arrow body that opens with a bracket", `export function useRow(target: RowProps) { return target; }
 const icp = useRow({
   render: () => (ready) && note({ field: "display_only" }),
+  field: "icp",
+});
+`, []string{"icp"}},
+		{"a callback whose parameter defaults to a field", `export function useRow(target: RowProps) { return target; }
+const icp = useRow({
+  render: (row = { field: "display_only" }) => row,
   field: "icp",
 });
 `, []string{"icp"}},
