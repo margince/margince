@@ -13,7 +13,7 @@ import { DealAside } from "./dealaside";
 import { probabilityReason } from "./dealprobability";
 
 // The probability row draws the figure as a ring. A tip beside it says why the
-// deal has that figure, and the row keeps its edit.
+// deal has that figure, and About keeps its Edit.
 
 // The signed-in member of meRoute, who owns the deal.
 const VIEWER = "00000000-0000-4000-8000-000000000001";
@@ -102,9 +102,10 @@ async function tipText(): Promise<string> {
 it("quotes Margince's own reason for the figure it lowered, and keeps the edit", async () => {
   mount(deal, [dateOnly, verdict]);
   // The edit arrives with the reader's grants; the mark is focused after it.
-  const edit = await screen.findByRole("button", {
-    name: /^Change Probability .*35%/,
-  });
+  const edit = await screen.findByRole("button", { name: "Edit About" });
+  expect(document.querySelector(".probability-ring")?.textContent).toMatch(
+    /35%$/,
+  );
   const mark = await screen.findByRole("button", {
     name: "Why this probability",
   });
@@ -124,7 +125,7 @@ it("quotes a close-date sweep that also lowered the forecast", async () => {
     close_date_change: { date_changed: true, forecast_changed: true },
   };
   mount(deal, [sweep]);
-  await screen.findByRole("button", { name: /^Change Probability .*35%/ });
+  await screen.findByRole("button", { name: "Edit About" });
   await tipText();
   expect(await screen.findByText(QUIET, { exact: false })).toBe(
     screen.getByRole("tooltip"),
@@ -133,7 +134,7 @@ it("quotes a close-date sweep that also lowered the forecast", async () => {
 
 it("gives a reader who does not own the deal the rule, and asks for no changes", async () => {
   const asked = mount({ ...deal, owner_id: "u-mia" });
-  await screen.findByRole("button", { name: /^Change Probability .*35%/ });
+  await screen.findByRole("button", { name: "Edit About" });
   expect(await tipText()).toContain(
     "Margince may lower a figure nobody set by hand",
   );
@@ -147,7 +148,7 @@ it("names the colleague who set the figure and asks Margince for nothing", async
     win_probability_set_by_user_id: "u-mia",
     win_probability_set_by_name: "Mia Chen",
   });
-  await screen.findByRole("button", { name: /^Change Probability .*35%/ });
+  await screen.findByRole("button", { name: "Edit About" });
   const mark = await screen.findByRole("button", {
     name: "Why this probability",
   });

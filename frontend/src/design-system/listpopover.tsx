@@ -18,7 +18,7 @@ import { problemMessageOf } from "../lib/problem";
 import { useActiveOptionVisible } from "./anchoredpopup";
 import { type ButtonVariant, SearchField } from "./atoms";
 import { ErrorLine } from "./errorline";
-import { PopoverSheet } from "./popover";
+import { PopoverSheet, type SheetOpener } from "./popover";
 import { type CandidateSearch, useCandidateSearch } from "./recordpicker";
 import {
   type ListKey,
@@ -56,15 +56,26 @@ type ListSource =
       options?: undefined;
     }>;
 
+/** Its own trigger, open or closed by the reader or held by the caller; or
+ *  `opener="caller"`, opened from a control elsewhere and drawn as the sheet. */
+export type ListOpener =
+  | Readonly<{
+      opener?: undefined;
+      /** The trigger's face. */
+      label: ReactNode;
+      variant?: ButtonVariant;
+      className?: string;
+      reasonId?: string;
+      open?: boolean;
+      onOpenChange?: (open: boolean) => void;
+      onClose?: undefined;
+    }>
+  | Extract<SheetOpener, { opener: "caller" }>;
+
 type ListPopoverProps = Readonly<{
-  /** The trigger's face. */
-  label: ReactNode;
-  /** The list's name, and the sheet's heading on a phone. */
+  /** The list's name, and the sheet's heading on a phone or opened by a caller. */
   title: string;
   searchLabel: string;
-  variant?: ButtonVariant;
-  className?: string;
-  reasonId?: string;
   /** The id of the option the record holds now, marked selected. */
   selected?: string;
   /**
@@ -86,9 +97,8 @@ type ListPopoverProps = Readonly<{
    */
   emptyAction?: (term: string, done: () => void) => ReactNode;
   footer?: ReactNode;
-  open?: boolean;
-  onOpenChange?: (open: boolean) => void;
 }> &
+  ListOpener &
   ListSource;
 
 /**
@@ -97,7 +107,28 @@ type ListPopoverProps = Readonly<{
  * On a phone the same search and list fill a `Modal` sheet instead, because a
  * panel anchored to a thumb-sized trigger leaves no room for the keyboard.
  */
-export function ListPopover({
+export function ListPopover(props: ListPopoverProps) {
+  if (props.opener === "caller") {
+    return (
+      <PopoverSheet
+        opener="caller"
+        title={props.title}
+        open={props.open}
+        onClose={props.onClose}
+      >
+        <ListSearch
+          title={props.title}
+          searchLabel={props.searchLabel}
+          list={props}
+          done={props.onClose}
+        />
+      </PopoverSheet>
+    );
+  }
+  return <TriggeredListPopover {...props} />;
+}
+
+function TriggeredListPopover({
   label,
   title,
   searchLabel,
@@ -107,7 +138,7 @@ export function ListPopover({
   open: openProp,
   onOpenChange,
   ...list
-}: ListPopoverProps) {
+}: ListPopoverProps & Readonly<{ opener?: undefined }>) {
   const [ownOpen, setOwnOpen] = useState(false);
   const open = openProp ?? ownOpen;
   const setOpen = useCallback(

@@ -5,7 +5,7 @@
 // rendering in it, so it reads and tests on its own.
 
 import type { components } from "../../api/schema";
-import type { CreateField } from "../../components/create";
+import type { CreateField, CreateFieldOption } from "../../components/create";
 
 type UpdateLeadRequest = components["schemas"]["UpdateLeadRequest"];
 
@@ -38,13 +38,43 @@ export function mapLeadUpdate(
   };
 }
 
-export const leadEditFields: CreateField[] = [
-  { key: "full_name", label: "create.fullName", required: true },
-  { key: "email", label: "create.email", type: "email" },
-  // Plain text, as a contact's number is. The server normalises to E.164
-  // through values.ParsePhone. A `tel` input would let a browser offer a local
-  // format the writer then refuses.
-  { key: "phone", label: "create.phone" },
-  { key: "title", label: "create.contactTitle" },
-  { key: "company_name", label: "create.companyName" },
-];
+/** The choices of the lead's select fields, each with its own unset option first. */
+export type LeadFieldChoices = Readonly<{
+  industries: CreateFieldOption[];
+  origins: CreateFieldOption[];
+  partners: CreateFieldOption[];
+}>;
+
+export function leadEditFields(choices: LeadFieldChoices): CreateField[] {
+  return [
+    { key: "full_name", label: "create.fullName", required: true },
+    { key: "company_name", label: "create.companyName" },
+    { key: "title", label: "create.contactTitle" },
+    {
+      key: "industry",
+      label: "create.industry",
+      type: "select",
+      options: choices.industries,
+    },
+    { key: "email", label: "create.email", type: "email" },
+    // Plain text, as a contact's number is. The server normalises to E.164
+    // through values.ParsePhone. A `tel` input would let a browser offer a local
+    // format the writer then refuses.
+    { key: "phone", label: "create.phone" },
+    {
+      key: "origin",
+      label: "lead.origin",
+      type: "select",
+      options: choices.origins,
+    },
+    { key: "origin_detail", label: "lead.originDetail" },
+    {
+      key: "partner_company_id",
+      label: "lead.partner",
+      type: "select",
+      options: choices.partners,
+    },
+    { key: "linkedin_url", label: "create.linkedinUrl" },
+    { key: "candidate_company_key", label: "record.companyRoutingKey" },
+  ];
+}

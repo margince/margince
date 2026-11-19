@@ -3858,7 +3858,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.aside.visibleTheOwnerAndShared_other":
     "Người chịu trách nhiệm · {count} lượt chia sẻ",
   "co.aside.vatId": "Mã số thuế",
-  "co.aside.add": "Thêm…",
   "co.strip.unanswered": "Chưa trả lời",
   "co.strip.engagement.never_contacted": "Chưa từng liên hệ",
   "co.strip.engagement.active": "Đang hoạt động",
@@ -22277,6 +22276,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.handles.fewer": "Thu gọn",
   "record.reach.label": "Email và điện thoại",
   "record.details.hideEmpty": "Ẩn trường trống",
+  "record.details.editSection": "Sửa {section}",
   "record.verb.email": "Thư",
   "record.verb.call": "Gọi",
   "record.verb.meet": "Họp",

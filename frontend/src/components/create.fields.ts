@@ -95,7 +95,16 @@ export type CreateField = {
   showWhen?: (values: Record<string, string>) => boolean;
   // Recompute dependent choices; clear values no longer valid after a change.
   optionsFor?: (values: Record<string, string>) => CreateFieldOption[];
+  // Shown with why it is locked, and never sent.
+  readOnly?: Readonly<{ reading: ReactNode; reason: string }>;
+  // Changed by a flow of its own, which the form leaves before it opens.
+  flow?: Readonly<{ open: () => void; reading?: ReactNode }>;
 };
+
+/** A field the form shows but never answers: read-only, or changed by its own flow. */
+export function answerless(field: CreateField): boolean {
+  return Boolean(field.readOnly || field.flow);
+}
 
 // Publish after render so server-dependent choices also see seeded answers.
 // The callback ref avoids publishing again solely because its identity changed.

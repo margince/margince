@@ -3980,7 +3980,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.aside.visibleTheOwnerAndShared_other":
     "Die verantwortliche Person · {count} Freigaben",
   "co.aside.vatId": "USt-IdNr.",
-  "co.aside.add": "Hinzufügen…",
   "co.strip.unanswered": "Unbeantwortet",
   "co.strip.engagement.never_contacted": "Nie kontaktiert",
   "co.strip.engagement.active": "Aktiv",
@@ -22886,6 +22885,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.handles.fewer": "Weniger anzeigen",
   "record.reach.label": "E-Mail und Telefon",
   "record.details.hideEmpty": "Leere Felder ausblenden",
+  "record.details.editSection": "{section} bearbeiten",
   "record.verb.email": "E-Mail",
   "record.verb.call": "Anruf",
   "record.verb.meet": "Termin",

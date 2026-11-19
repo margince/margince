@@ -117,7 +117,9 @@ async function pickOwner(
   user: ReturnType<typeof userEvent.setup>,
   name: string,
 ) {
-  await user.click(await screen.findByRole("button", { name: "Change owner" }));
+  await user.click(
+    await screen.findByRole("button", { name: "Edit Ownership" }),
+  );
   await user.click(await screen.findByRole("option", { name }));
 }
 
