@@ -325,30 +325,16 @@ func runTxWith(ctx context.Context, pool *pgxpool.Pool, opts pgx.TxOptions, fn f
 	if err != nil {
 		return fmt.Errorf("pg: begin: %w", err)
 	}
-	// The deferred rollback only matters on the error path; after a
-	// successful Commit it answers ErrTxClosed by design, and on the error
-	// path the fn/commit error is the one the caller must see.
+	// The deferred rollback only matters on the error path. After a
+	// successful Commit it answers ErrTxClosed by design. On the error path
+	// the fn/commit error is the one the caller must see. It runs on the
+	// finishing context, so a request that timed out keeps its connection.
 	//craft:ignore swallowed-errors rollback after commit is a designed no-op; on the error path the fn error supersedes it
-	defer func() { _ = tx.Rollback(ctx) }()
+	defer func() { _ = rollbackDetached(ctx, tx) }()
 	defer openTxMemo(tx)()
 
 	if err := guardedTransaction(ctx, tx, fn); err != nil {
 		return err
 	}
 	return commitWhileAnswerable(ctx, tx)
-}
-
-// commitBudget bounds a COMMIT that runs past its caller's context.
-const commitBudget = 10 * time.Second
-
-// commitWhileAnswerable commits only while the caller's context is live, and
-// then lets the COMMIT finish. Cancelled mid-flight, a COMMIT may land with the
-// caller told it failed, so a retry saves the record twice.
-func commitWhileAnswerable(ctx context.Context, tx pgx.Tx) error {
-	if err := ctx.Err(); err != nil {
-		return fmt.Errorf("pg: commit: %w", err)
-	}
-	commitCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), commitBudget)
-	defer cancel()
-	return tx.Commit(commitCtx)
 }

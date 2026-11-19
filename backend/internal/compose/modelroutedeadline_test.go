@@ -15,14 +15,9 @@ import (
 )
 
 // A handler that CALLS a model needs longer to answer than the server's
-// WriteTimeout allows every other endpoint, and it takes that time on its own
-// route rather than from the server.
-//
-// Measured on a real installation, a reply draft runs 13 to 45 seconds and the
-// server-wide WriteTimeout is 30s: the response was cut mid-write and reached
-// the reader as a 502 from the proxy in front. Raising the global bound would
-// have let one slow-reading client hold a connection for as long as it liked,
-// which is the trade the MCP handler already refused.
+// WriteTimeout allows every other endpoint. It takes that time on its own
+// route rather than from the server. A longer global bound would let one
+// slow-reading client hold a connection for as long as it liked.
 func TestOnlyTheModelRoutesTakeTheLongerDeadline(t *testing.T) {
 	// A ResponseController reaches the deadline through the writer; a recorder
 	// does not implement it, so the middleware's refusal path is what a test
@@ -94,12 +89,8 @@ func TestTheRouteDeadlineCoversTheWholeLadder(t *testing.T) {
 
 // A route with no model behind it keeps the server's own write deadline. The
 // middleware must not hand an ordinary read the long one. Its context ends just
-// before that same figure, leaving time to answer.
-//
-// The context half is what stops a handler outliving the response it was
-// writing. Until it, a read whose answer was already lost kept its goroutine
-// and every database connection it took from there on, against a pool of 16
-// that the worklist family asks 33-54 transactions of per request.
+// before that same figure, leaving time to answer. Without the context half a
+// handler outlives its lost response and keeps its database connections.
 func TestAnOrdinaryRouteRunsUnderTheServersOwnDeadline(t *testing.T) {
 	// Measured from INSIDE the handler: the deadline is set a hair before it
 	// runs, so what the handler has left is what the bound actually gives it.

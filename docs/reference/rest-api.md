@@ -75,8 +75,9 @@ operation a bad value for each parameter and checks.
 
 A request has 30 seconds to answer (`httpserver.ResponseDeadline`), and a route that waits on a model has
 longer. The work stops two seconds before that limit, so there is time to answer. A request stopped there
-answers `503 request_timed_out` with a `Retry-After` header. Its `Idempotency-Key` is free again, so send
-the same request after the wait.
+answers `503 request_timed_out` with a `Retry-After` header. If it saved nothing, its `Idempotency-Key` is
+free again, so send the same request after the wait. If it saved before it stopped, a retry answers
+`409 idempotency_key_failed`.
 
 ## Changes that wait for a human
 

@@ -6,14 +6,8 @@
 package compose
 
 // The replay half of the Idempotency-Key promise, against the real claim
-// table: a replay repeats the ORIGINAL response verbatim — status, body,
-// AND media type (0069 response_content_type). The middleware records
-// whichever 2xx the handler produced; nothing about the claim may assume
-// application/json. A non-2xx outcome is deliberately never recorded
-// (see idempotency.go's package comment: a failed attempt releases the
-// claim), so the media-type invariant is proven on a recorded 2xx, and
-// the failure path is proven as a re-execution that keeps its own
-// problem+json.
+// table: a replay repeats the ORIGINAL status, body and media type. A refusal
+// that saved nothing releases the claim; one after a committed write does not.
 
 import (
 	"context"
@@ -24,14 +18,16 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// keyedTemplateRouter mounts a stub handler on an idempotency-mapped route,
-// wired exactly as the generated router wires the middleware (per-route,
-// so the chi RoutePattern the map is keyed by is bound).
+// keyedTemplateRouter mounts a stub on an idempotency-mapped route, wired per
+// route as the generated router does, so the chi RoutePattern binds.
 func keyedTemplateRouter(e *integration.Env, handler http.HandlerFunc) chi.Router {
 	r := chi.NewRouter()
 	r.With(idempotency(e.Pool, nil, nil)).Post("/v1/offer-templates", handler)
@@ -96,9 +92,7 @@ func TestIdempotencyFailedAttemptRetryIsAFreshExecution(t *testing.T) {
 		}
 	})
 
-	// A non-2xx outcome releases the claim, so the keyed retry
-	// re-executes — the 422 the client sees is always the handler's own
-	// problem+json, never a stored copy that could go stale or mistyped.
+	// The 422 the retry sees is the handler's own, never a stored copy.
 	first := keyedTemplateCall(ending, r, "failure-retry")
 	retry := keyedTemplateCall(e.Admin(), r, "failure-retry")
 	if calls != 2 {
@@ -108,6 +102,29 @@ func TestIdempotencyFailedAttemptRetryIsAFreshExecution(t *testing.T) {
 		if rec.Code != http.StatusUnprocessableEntity || rec.Header().Get("Content-Type") != "application/problem+json" {
 			t.Errorf("%s = %d %q, want 422 application/problem+json", name, rec.Code, rec.Header().Get("Content-Type"))
 		}
+	}
+}
+
+// A refusal after a committed write keeps its key: the retry must not save twice.
+func TestARefusalAfterACommittedWriteIsNotRunAgain(t *testing.T) {
+	e := integration.Setup(t)
+	ending, end := context.WithCancel(e.Admin())
+	calls := 0
+	r := keyedTemplateRouter(e, func(w http.ResponseWriter, req *http.Request) {
+		calls++
+		if err := database.WithWorkspaceTx(req.Context(), e.Pool, func(tx pgx.Tx) error {
+			_, err := tx.Exec(req.Context(), `SELECT txid_current()`)
+			return err
+		}); err != nil {
+			t.Errorf("committing the write: %v", err)
+		}
+		end()
+		httperr.Write(w, req, req.Context().Err())
+	})
+	keyedTemplateCall(ending, r, "committed-then-failed")
+	retry := keyedTemplateCall(e.Admin(), r, "committed-then-failed")
+	if calls != 1 || !strings.Contains(retry.Body.String(), "idempotency_key_failed") {
+		t.Fatalf("retry = %d %q after %d runs, want idempotency_key_failed and one run", retry.Code, retry.Body.String(), calls)
 	}
 }
 
@@ -127,11 +144,9 @@ func keyedContactCall(ctx context.Context, r chi.Router, contact ids.UUID, key s
 	return rec
 }
 
-// API-CC-8: the recorded body is a retransmission, not a receipt that
-// outlives the authority it was produced under. A caller who could see the
-// record when they wrote it, and cannot see it when they retry, gets the
-// read path's 404 — not the bytes. The same key still replays while they
-// CAN see it, so the gate refuses on visibility rather than on retrying.
+// API-CC-8: the recorded body is a retransmission, not a receipt that outlives
+// the authority it was produced under. A caller who can no longer see the
+// record gets the read path's 404, not the bytes.
 func TestReplayRefusesOnceTheCallerHasLostSightOfTheRecord(t *testing.T) {
 	e := integration.Setup(t)
 	rep1 := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.RepPerms)
@@ -152,9 +167,8 @@ func TestReplayRefusesOnceTheCallerHasLostSightOfTheRecord(t *testing.T) {
 		t.Fatalf("first call = %d, want 200", first.Code)
 	}
 
-	// While the record is still visible the key replays, and does NOT
-	// re-execute — without this the 404 below would prove nothing, since a
-	// gate that broke replay outright would produce it too.
+	// While the record is visible the key replays and does not re-execute;
+	// otherwise a gate that broke replay outright would pass the 404 below.
 	replay := keyedContactCall(rep1, r, contact, key)
 	if replay.Code != http.StatusOK {
 		t.Fatalf("replay while visible = %d, want the recorded 200", replay.Code)
@@ -166,9 +180,8 @@ func TestReplayRefusesOnceTheCallerHasLostSightOfTheRecord(t *testing.T) {
 		t.Fatalf("handler ran %d times, want 1 — the replay re-executed instead of replaying", calls)
 	}
 
-	// The record becomes capture-private to another rep — the one state that
-	// takes a contact out of this caller's read scope. Nothing about the claim
-	// changed: same principal, same key, same path, same body.
+	// Capture-private to another rep takes the contact out of this caller's
+	// read scope; the claim itself is unchanged.
 	e.MakeCapturePrivate(t, "contact", contact, e.Rep3)
 
 	after := keyedContactCall(rep1, r, contact, key)
