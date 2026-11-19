@@ -22,7 +22,7 @@ import type { EntityKind } from "../../lib/entity";
 import { historyFieldLabel } from "../../lib/historyfieldlabels";
 import { historyLine } from "../../lib/historyline";
 import { undoRefusalKey, VERSION_SKEW_CODE } from "../../lib/historyundo";
-import { type HistoryValueCtx, historyValue } from "../../lib/historyvalues";
+import type { HistoryValueCtx } from "../../lib/historyvalues";
 import { problemCodeOf, problemMessageOf, unwrap } from "../../lib/problem";
 import { useRecordRestore } from "../../lib/recordrestore";
 import { useViewerId } from "../../lib/session";
@@ -33,7 +33,7 @@ import {
   provenanceOfEntry,
 } from "./history.logic";
 import { HistoryEdgeDetail } from "./historyedge";
-import { HistoryFieldDiff } from "./historyfielddiff";
+import { HistoryFieldDiff, HistoryFieldValue } from "./historyfielddiff";
 import { LeftBehindNotice, useLeftBehind } from "./historyleftbehind";
 import { historyRows } from "./historyreversal";
 import { actorName, ReversalPairRow } from "./historyreversalrow";
@@ -309,12 +309,13 @@ function UndoButton({
               <li key={change.field} className="entry-field">
                 <span>{historyFieldLabel(change.field, t)}</span>
                 <span>
-                  {historyValue(
-                    change.field,
-                    change.oldValue,
-                    { currency, locale, zone: readerZone },
-                    change.oldPrecision,
-                  ) ?? t("history.cleared")}
+                  <HistoryFieldValue
+                    field={change.field}
+                    value={change.oldValue}
+                    precision={change.oldPrecision}
+                    values={{ currency, locale, zone: readerZone }}
+                    cleared={t("history.cleared")}
+                  />
                 </span>
               </li>
             ))}

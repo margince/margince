@@ -44,3 +44,10 @@ func TestAnOmittedBatchRelinkTargetIsNamed(t *testing.T) {
 	_, err = NewStore(nil).RelinkActivities(context.Background(), []ids.UUID{ids.NewV7()}, in)
 	faulttest.AssertNamesOmittedID(t, err, "entity_id")
 }
+
+func TestAnOmittedLinkParentIsNamed(t *testing.T) {
+	_, err := NewStore(nil).AddAttachmentLink(context.Background(), LinkInput{
+		EntityType: "contact", URL: "https://example.com/brief",
+	})
+	faulttest.AssertNamesOmittedID(t, err, "entity_id")
+}

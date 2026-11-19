@@ -563,6 +563,7 @@
     "POST /v1/approvals/{id}/failure-acknowledgement": "acknowledge_approval_failure",
     "POST /v1/approvals/{id}/reject": "decide_approval",
     "POST /v1/attachments": "attach_document",
+    "POST /v1/attachments/links": "attach_link",
     "POST /v1/attachments/{id}/extraction": "read_attachment_for_fields",
     "POST /v1/attachments/{id}/extraction:accept": "accept_attachment_extraction",
     "POST /v1/attachments/{id}/request-access": "request_attachment_access",

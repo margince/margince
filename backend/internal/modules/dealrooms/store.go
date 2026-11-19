@@ -25,6 +25,10 @@ const dealTable = "deal"
 // which room it happened in, so the three writers must agree on the spelling.
 const fieldRoomID = "room_id"
 
+// fieldLinkRequestedAt names the buyer's ask for a new link in an audit image.
+// The ask and the resend that answers it must record it under one key.
+const fieldLinkRequestedAt = "link_requested_at"
+
 // columnTitle is the room's headline, named once because the mapping refuses an
 // empty one, the audit image records it and the release snapshot freezes it —
 // three writers that must agree on the spelling.
