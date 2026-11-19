@@ -6,13 +6,7 @@ import {
   useRef,
   useState,
 } from "react";
-import {
-  Button,
-  EmptyState,
-  Kbd,
-  PendingBody,
-  SearchField,
-} from "../design-system/atoms";
+import { Button, Kbd, PendingBody, SearchField } from "../design-system/atoms";
 import { useBackdropDismiss } from "../design-system/backdrop";
 import { Callout } from "../design-system/callout";
 import { useDialogFocus } from "../design-system/dialogfocus";
@@ -28,6 +22,7 @@ import { openAsk, type UrlParams } from "../lib/urlstate";
 import { PaletteAnswer, usePaletteAsk } from "./paletteanswer";
 import {
   PaletteAskDocuments,
+  PaletteEmpty,
   PaletteFilter,
   PaletteKeys,
 } from "./palettechrome";
@@ -112,10 +107,23 @@ export function isCreateCommand(command: Command): boolean {
   return command.id.startsWith(CREATE_COMMAND_PREFIX);
 }
 
-// The row that lands on the full results screen for the typed words.
-function seeAllCommand(searched: string, t: Translator): Command | null {
+// The search answered the words with no record, and no command matches them.
+function foundNothing(
+  search: Readonly<{ empty: boolean }>,
+  matched: readonly Command[],
+): boolean {
+  return search.empty && matched.length === 0;
+}
+
+// The row that lands on the full results screen for the typed words. A results
+// page that would say "No matches" is no row to offer.
+function seeAllCommand(
+  searched: string,
+  t: Translator,
+  nothingFound: boolean,
+): Command | null {
   const words = searched.trim();
-  if (!words) return null;
+  if (!words || nothingFound) return null;
   return {
     id: "search:all",
     executedQuery: words,
@@ -213,7 +221,8 @@ export function CommandPalette({
   const recentCommands = recents.entries.map((entry) =>
     recentCommand(entry, t, recents.activating === recentIdentity(entry)),
   );
-  const seeAll = seeAllCommand(searched, t);
+  const nothingFound = foundNothing(search, filtered);
+  const seeAll = seeAllCommand(searched, t, nothingFound);
 
   const handbook = usePaletteAsk(searched, open, filtered.length);
   const askGroup = t("palette.askGroup");
@@ -380,9 +389,12 @@ export function CommandPalette({
               delayMs={SEARCH_PENDING_DELAY_MS}
             />
           )}
-          {rows.length === 0 && !search.pending && !search.failed && (
-            <EmptyState>{t("palette.empty")}</EmptyState>
-          )}
+          <PaletteEmpty
+            query={searched.trim()}
+            nothingFound={nothingFound}
+            listed={rows.length}
+            search={search}
+          />
           {listsRecents && recents.hasStored && (
             <Eyebrow
               as="h2"

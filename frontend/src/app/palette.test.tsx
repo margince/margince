@@ -372,6 +372,44 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     ).toBe(true);
   });
 
+  it("says nothing matched once the search finds no record, and offers no results page", async () => {
+    const user = steppedClock();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: [],
+          page: { next_cursor: null, has_more: false },
+        }),
+      ),
+    );
+    renderSignedIn(
+      <CommandPalette open onClose={() => {}} commands={commands} />,
+    );
+    await user.type(screen.getByRole("searchbox"), "zzzzqqq");
+
+    expect(await screen.findByText("No matches for “zzzzqqq”.")).toBeTruthy();
+    expect(screen.queryByText(/See all results/)).toBeNull();
+    expect(screen.getByText("Ask your documents")).toBeTruthy();
+    await user.keyboard("{Enter}");
+    expect(window.location.hash).toBe("");
+  });
+
+  it("keeps the results row while the search has not answered", async () => {
+    const user = steppedClock();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => new Promise<Response>(() => {})),
+    );
+    renderSignedIn(
+      <CommandPalette open onClose={() => {}} commands={commands} />,
+    );
+    await user.type(screen.getByRole("searchbox"), "zzzzqqq");
+
+    expect(screen.getByText("See all results for “zzzzqqq”")).toBeTruthy();
+    expect(screen.queryByText(/No matches/)).toBeNull();
+  });
+
   // A hit's kind is the heading of its group, in the reader's words. It used to
   // be the row's own second line, and before that the untranslated wire word.
   it("names a hit's kind in the reader's language, not the wire's", async () => {

@@ -78,6 +78,8 @@ type SearchArm = Readonly<{
   // What to tell the reader when it failed: the server's advice for a search
   // that was too broad, otherwise the shared line.
   failure: string;
+  // The search answered the words now in the box and found no record.
+  empty: boolean;
 }>;
 
 // Live record hits for the palette (RS-1): one request per pause in the typing
@@ -242,6 +244,11 @@ export function useSearchCommands(
     // would read as "no matches".
     pending: enabled && result.isFetching,
     failed,
+    empty:
+      !result.isFetching &&
+      answer !== undefined &&
+      foldForSearch(answer.q) === foldForSearch(typed) &&
+      commands.length === 0,
     failure: problemMessageOf(result.error, t, t("palette.searchFailed")),
   };
 }

@@ -143,7 +143,7 @@ For a typed search, Enter opens the row you moved to with the arrow keys. If you
 
 At the end of the list, **Ask your documents** puts your words to your documents instead.
 
-If nothing matches, the palette says **No matches.** If record search fails, it says **Search failed**, and the screen commands still work.
+If no screen, action or record matches, the palette says **No matches for “…”.** and offers no results page. If record search fails, it says **Search failed**, and the screen commands still work.
 Also called: find, look up, global search.
 
 **Search results** are in groups by kind: Contacts, Companies, Deals, Leads,
