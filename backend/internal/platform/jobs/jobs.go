@@ -93,7 +93,7 @@ type Runner struct {
 	client *river.Client[pgx.Tx]
 	pool   *pgxpool.Pool
 	// bound says whether a model is bound now. Nil checks nothing, which is
-	// the worker's posture: it queues no request a person is waiting on.
+	// the worker's posture: it queues no request a user is waiting on.
 	bound func() bool
 }
 

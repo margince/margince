@@ -61,7 +61,7 @@ type kindProbe string
 
 func (k kindProbe) Kind() string { return string(k) }
 
-// Every declared kind a person queues is refused with the typed problem while
+// Every declared kind a user queues is refused with the typed problem while
 // no model is bound, and every other kind is let through. The census comes from
 // the declarations, so a new requested kind is covered without a new case.
 func TestRequestedModelWorkIsRefusedWhileNoModelIsBound(t *testing.T) {
