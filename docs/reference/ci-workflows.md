@@ -248,12 +248,9 @@ Notes on the jobs:
   `backend/gates/testdata/wallclockfixtures.txt` holds the count. Many more compare
   against the `now()` of Postgres, so the change must reach both clocks. Moving the clock of the
   runner is the only change that does, and `scripts/clock-drift-host.sh` says why.
-- Downloads finish before the clock moves. One shell moves it, runs the suites and puts it back.
-  After 45 minutes it stops the suites; the clock goes back on failure too.
-  If that fails, the saved real date stays for the last step to try again.
-- Only a suite that failed while the clock was still moved files "the backend suite's verdict
-  depends on the calendar". Any other red, such as a runner lost while its clock is moved, files
-  "the backend clock-drift lane could not complete".
+- Downloads finish before the clock moves. One shell moves it, runs the suites for at most 45
+  minutes and puts it back, on failure too. Only a suite that failed at the moved clock files the
+  calendar issue; any other red, such as a lost runner, files "the backend clock-drift lane could not complete".
 - `BACKEND_CLOCK_SKEW=database:200 make backend-clock-drift` runs the lane on a laptop with the
   weaker database applier. `backend/internal/shared/clockskew` says what each applier reaches.
 - The model lane costs real tokens. It skips, and does not fail, when `CLAUDE_CODE_OAUTH_TOKEN` is
