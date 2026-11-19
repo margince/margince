@@ -14,7 +14,12 @@ export function CaughtUp({ asOf }: Readonly<{ asOf: string }>) {
   return (
     <div className="card brief-caughtup">
       <span className="brief-caughtup-mark" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+        >
           <path pathLength={1} d="M20 6 9 17l-5-5" />
         </svg>
       </span>

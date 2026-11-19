@@ -508,7 +508,8 @@
 .brief-caughtup-mark path {
   stroke-dasharray: 1;
   stroke-dashoffset: 1;
-  animation: brief-caughtup-draw var(--dur-enter) var(--ease-out) calc(var(--dur-enter) / 2) forwards;
+  animation: brief-caughtup-draw var(--dur-enter) var(--ease-out)
+    calc(var(--dur-enter) / 2) forwards;
 }
 .brief-caughtup-title {
   margin: 0;

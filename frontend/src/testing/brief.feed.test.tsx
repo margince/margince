@@ -6,8 +6,8 @@ import { ToastProvider } from "../design-system/toast";
 import { BriefFeed } from "../features/brief/brief.feed";
 import { BriefGlance } from "../features/brief/brief.glance";
 import { WorklistRow } from "../features/worklist/worklist.row";
-import { ViewerZoneProvider } from "../lib/viewerzone";
 import { en } from "../i18n/en";
+import { ViewerZoneProvider } from "../lib/viewerzone";
 import {
   failedApprovalRow,
   legacyStalledRow,

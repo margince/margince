@@ -67,11 +67,7 @@ export function BriefFeed({
     !day?.focus || day.readings?.more_available || laneUnread(day),
   );
   const shown =
-    state !== "ready"
-      ? state
-      : rows.length > 0 || partial
-        ? "ready"
-        : "empty";
+    state !== "ready" ? state : rows.length > 0 || partial ? "ready" : "empty";
   return (
     <section
       id="brief-today"
