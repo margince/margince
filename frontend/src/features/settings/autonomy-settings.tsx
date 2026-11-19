@@ -272,9 +272,11 @@ function AutonomyChoices({
     <>
       {!installationOn && (
         <PanelBody>
-          <Callout tone="warning" kind="standing">
-            {t("autonomy.installationOff")}
-          </Callout>
+          <Callout
+            tone="warning"
+            kind="standing"
+            title={t("autonomy.installationOff")}
+          />
         </PanelBody>
       )}
       {admin && (
