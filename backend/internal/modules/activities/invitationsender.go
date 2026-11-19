@@ -21,13 +21,14 @@ const auditFieldInvitationSender = "invitation_sender"
 
 // StampInvitationSenderTx names seat as the sender of a received invitation
 // stored without one. The caller holds the row and decided the seat by
-// capture's rule. A row that already names a sender keeps it.
+// capture's rule. A row that already names a sender keeps it, and an archived
+// row is left as it is.
 func StampInvitationSenderTx(ctx context.Context, tx pgx.Tx, activityID, seat, runID ids.UUID) (bool, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return false, err
 	}
 	tag, err := tx.Exec(ctx, `UPDATE activity SET invitation_sender = $2
-		 WHERE id = $1 AND invitation_sender IS NULL`, activityID, seat)
+		 WHERE id = $1 AND invitation_sender IS NULL AND archived_at IS NULL`, activityID, seat)
 	if err != nil {
 		return false, fmt.Errorf("activities: naming the sender of invitation %s: %w", activityID, err)
 	}

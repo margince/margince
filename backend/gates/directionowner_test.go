@@ -55,6 +55,8 @@ var messageStateReaders = gatekit.Waive(map[string]string{
 		"to name the contact its stated address proves; it never counts which side of a relationship wrote",
 	"internal/modules/activities/ownmessagedone.go": "asks whether one message the reader sent is still the newest " +
 		"to its contact in either direction; it never counts which side of a relationship wrote",
+	"internal/compose/invitationsenders/invitationsenders.go": "selects stored invitations that arrived inbound, " +
+		"to name the sender of each one message; it never counts which side of a relationship wrote",
 })
 
 func TestEveryExchangeReaderAsksTheDirectionRule(t *testing.T) {

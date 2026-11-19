@@ -188,9 +188,16 @@ func TestAnOlderInvitationNamesItsColleagueFromItsOriginal(t *testing.T) {
 		if err == nil && restamped {
 			t.Error("a second stamp replaced the sender the invitation already names")
 		}
+		if err != nil {
+			return err
+		}
+		archived, err := activities.StampInvitationSenderTx(ctx, tx, activityIDOf(t, e, "old-archived@search.test"), e.Rep3, ids.NewV7())
+		if err == nil && archived {
+			t.Error("a direct stamp named a sender on an archived invitation")
+		}
 		return err
 	}); err != nil {
-		t.Fatalf("stamping a named invitation again: %v", err)
+		t.Fatalf("stamping a named and an archived invitation: %v", err)
 	}
 	if n := senderAudits(t, e); n != 1 {
 		t.Errorf("a replay wrote %d more audit rows", n-1)
