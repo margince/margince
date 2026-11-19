@@ -25,6 +25,12 @@ export type SubField = {
 
 export type CreateField = {
   searchTargets?: (q: string) => Promise<RecordPickerCandidate[]>;
+  // Names the record a stored id points at, for a picker whose records are on
+  // no page the form loaded. `scope` keeps one kind's answers from another's.
+  resolveSelected?: Readonly<{
+    scope: string;
+    read: (id: string) => Promise<RecordPickerCandidate | null>;
+  }>;
   // A text field that offers existing records by name. See NameOffers.
   offers?: NameOffers;
   key: string;
@@ -37,6 +43,9 @@ export type CreateField = {
     | "text"
     | "email"
     | "number"
+    // A number typed as text (an amount, a rate), read by parseTypedDecimal.
+    // Never type="number", whose decimal sign is the browser's.
+    | "decimal"
     | "date"
     | "select"
     | "multiselect"
@@ -58,7 +67,7 @@ export type CreateField = {
     rows?: FormRows,
   ) => string | undefined;
   // repeatable-only: each row's subfields, the add label, the primary flag's
-  // key and (if set) the kind's key, which scopes primaryKey to one kind.
+  // key and (if set) the kind's key.
   rowFields?: SubField[];
   addLabel?: MessageKey;
   // The verb that opens the list's editor, naming the list: "Change Email"
@@ -66,8 +75,8 @@ export type CreateField = {
   editLabel?: MessageKey;
   primaryKey?: string;
   typeKey?: string;
-  // typeKey's value when unanswered. It must match the request mapper's own
-  // fallback, or an unset row groups differently here than once submitted.
+  // The kind a new row starts with. It must match the request mapper's own
+  // fallback, or an unset row reads differently here than once submitted.
   typeDefault?: string;
   // A heading that holds no value, setting custom fields apart from core ones.
   divider?: boolean;
@@ -173,6 +182,21 @@ export function keepUnsubmitted(
     }
   }
   return next;
+}
+
+/** The kind of box an inline editor draws for a field. */
+export function inlineTextKind(
+  field: CreateField,
+): "text" | "email" | "number" | "date" | "decimal" {
+  switch (field.type) {
+    case "number":
+    case "date":
+    case "email":
+    case "decimal":
+      return field.type;
+    default:
+      return "text";
+  }
 }
 
 // The label a top-level field shows: the literal labelText wins; otherwise the

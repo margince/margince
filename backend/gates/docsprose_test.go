@@ -108,7 +108,11 @@ func barLines(doc string) []barLine {
 	var out []barLine
 	inFence, inComment := false, false
 	allowNext := map[string]bool{}
+	skip := frontMatterLines(doc)
 	for i, raw := range strings.Split(doc, "\n") {
+		if i < skip {
+			continue
+		}
 		if barFence.MatchString(strings.TrimSpace(raw)) {
 			inFence = !inFence
 			allowNext = map[string]bool{}
@@ -143,6 +147,20 @@ func barLines(doc string) []barLine {
 		out = append(out, barLine{n: i + 1, text: line, allowed: allowed})
 	}
 	return out
+}
+
+// frontMatterLines counts the lines of a leading YAML front matter block, its
+// two fences included, or answers zero. Front matter is data a tool reads.
+func frontMatterLines(doc string) int {
+	rest, opened := strings.CutPrefix(doc, "---\n")
+	if !opened {
+		return 0
+	}
+	end := strings.Index(rest, "\n---\n")
+	if end < 0 {
+		return 0
+	}
+	return strings.Count(rest[:end], "\n") + 3
 }
 
 func checkHouseBar(rel, doc string, generated bool) []barFinding {
@@ -422,5 +440,18 @@ func TestDocsProseRulesFireOnPlantedDefects(t *testing.T) {
 		"| `X` | — | — (required) | — |\n| `Y` | — | — | — |"
 	if got := checkHouseBar("docs/clean.md", clean, false); len(got) > 0 {
 		t.Errorf("clean prose was flagged: %+v", got)
+	}
+}
+
+// Front matter is skipped and the prose below it is not.
+func TestFrontMatterIsDataAndTheBodyIsProse(t *testing.T) {
+	t.Parallel()
+	doc := "---\nnote: honest\n---\nThe relay is honest.\n"
+	got := checkHouseBar("extensions/x/policy/x.md", doc, false)
+	if len(got) != 1 || got[0].line != 4 {
+		t.Errorf("want one finding, on the body line 4: %+v", got)
+	}
+	if got := checkHouseBar("docs/rule.md", "---\nThe relay is honest.\n", false); len(got) != 1 {
+		t.Errorf("a page opening with a rule and no closing fence lost its prose: %+v", got)
 	}
 }

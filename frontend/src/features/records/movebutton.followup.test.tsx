@@ -6,7 +6,7 @@
 
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
@@ -70,7 +70,7 @@ it("drafts the follow-up to everyone the meeting was with", async () => {
   await userEvent.click(
     screen.getByRole("button", { name: /draft follow-up/i }),
   );
-  await userEvent.click(await draftButton());
+  await userEvent.click(await waitFor(() => draftButton()));
   await screen.findByDisplayValue("Thanks for the review");
   expect(drafts[0]?.url).toContain(`/contacts/${FIRST}/draft-email`);
   expect(drafts[0]?.body).toMatchObject({

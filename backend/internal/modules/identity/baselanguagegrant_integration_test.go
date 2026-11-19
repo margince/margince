@@ -51,6 +51,11 @@ type failingTx struct{ pgx.Tx }
 
 func (failingTx) QueryRow(context.Context, string, ...any) pgx.Row { return failingRow{} }
 
+// Begin refuses the savepoint the read opens first.
+func (failingTx) Begin(context.Context) (pgx.Tx, error) {
+	return nil, errors.New("statement refused")
+}
+
 type failingRow struct{}
 
 func (failingRow) Scan(...any) error { return errors.New("failingRow: no database here") }

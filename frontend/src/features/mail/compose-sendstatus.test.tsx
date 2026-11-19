@@ -2,7 +2,7 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { writeMessage } from "../../design-system/richtext-testing";
 import {
@@ -11,9 +11,9 @@ import {
   previewedAddresses,
   refusedPreview,
 } from "../../testing/sendpermission.testkit";
-import { ComposeModal } from "./compose";
 import {
   fillSendableForm,
+  installComposeClock,
   jsonResponse,
   pickWhy,
   pressSend,
@@ -23,13 +23,16 @@ import {
   WHY_ASK,
   WHY_LABEL,
 } from "./compose.testkit";
-import { refusalIsCurrent } from "./composesend";
+import { refusalIsCurrent } from "./composesendrequest";
+import { ComposeWindow } from "./composewindow";
 
 // The composer shows one status for the message. It is the engine's preview
 // while the rep writes. After a refused Send it is that refusal, until the
 // message changes or a newer check answers.
 
 type Preview = components["schemas"]["SendAuthorizationPreview"];
+
+beforeEach(installComposeClock);
 
 afterEach(() => {
   cleanup();
@@ -77,7 +80,7 @@ function refusedSend(refusals: unknown[]) {
 
 function openComposer() {
   return render(
-    <ComposeModal
+    <ComposeWindow
       activityId="act-1"
       entityType="contact"
       entityId="p-1"
@@ -427,7 +430,7 @@ describe("whether a refusal is about the message on screen", () => {
 it("carries the selected deal in both the permission check and the queued message", async () => {
   const sent = stubRoutes({ "POST /emails": () => jsonResponse({}, 201) });
   render(
-    <ComposeModal
+    <ComposeWindow
       entityType="contact"
       entityId="p-1"
       initialDealId="deal-one"

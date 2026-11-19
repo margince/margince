@@ -85,7 +85,7 @@ func (g *Gate) Admit(ctx context.Context, spec mcp.ToolSpec, resolve func() (mcp
 	// by kind rather than by the absence of a passport, because the absence
 	// is what makes the pass-through look safe.
 	if p.Type == principal.PrincipalBuyer {
-		return ctx, fmt.Errorf("gate: %s: a Deal Room participant holds no tool authority: %w",
+		return ctx, fmt.Errorf("%s is refused, because a Deal Room participant holds no tool authority: %w",
 			spec.Name, apperrors.ErrPermissionDenied)
 	}
 	if p.Type != principal.PrincipalAgent {
@@ -106,11 +106,11 @@ func (g *Gate) Admit(ctx context.Context, spec mcp.ToolSpec, resolve func() (mcp
 	// gate composed without a resolver, or an agent without a granting
 	// human, fails closed: absence of authority data is denial.
 	if g == nil || g.authority == nil {
-		return ctx, fmt.Errorf("gate: %s: no authority resolver composed: %w", spec.Name, apperrors.ErrPermissionDenied)
+		return ctx, fmt.Errorf("%s cannot run here, because this server cannot check whose authority a call carries: %w", spec.Name, apperrors.ErrPermissionDenied)
 	}
 	wsID, ok := principal.WorkspaceID(ctx)
 	if !ok || p.OnBehalfOf.IsZero() {
-		return ctx, fmt.Errorf("gate: %s: agent principal lacks workspace or granting human: %w", spec.Name, apperrors.ErrPermissionDenied)
+		return ctx, fmt.Errorf("%s runs only for an agent acting in a workspace for the human who granted it: %w", spec.Name, apperrors.ErrPermissionDenied)
 	}
 	// ONE read, answering three questions about one instant.
 	//
@@ -198,11 +198,11 @@ func (g *Gate) Admit(ctx context.Context, spec mcp.ToolSpec, resolve func() (mcp
 		tier = mcp.TierConfirmationRequired
 	case tier == mcp.TierAutoExecute && spec.Tier == mcp.TierDynamic && observed == nil:
 		return ctx, fmt.Errorf(
-			"gate: %s resolved to auto-execute without naming the record version it was resolved from: %w",
+			"%s resolved to auto-execute without naming the record version it was resolved from: %w",
 			spec.Name, apperrors.ErrRequiresApproval)
 	}
 	if tier != mcp.TierAutoExecute {
-		return ctx, fmt.Errorf("gate: %s is a confirm-first (🟡) action: %w", spec.Name, apperrors.ErrRequiresApproval)
+		return ctx, fmt.Errorf("%s is a confirm-first (🟡) action: %w", spec.Name, apperrors.ErrRequiresApproval)
 	}
 	// The tier said this call may run unattended, and for a dynamic tool it said
 	// so by reading a record. That read commits before the write it admits, and
@@ -283,7 +283,7 @@ func AutoExecutePin(ctx context.Context) (version int64, ok bool) {
 // killed the credential a moment ago.
 func deniedIfGone(what, tool string, err error) error {
 	if errors.Is(err, apperrors.ErrNotFound) {
-		return fmt.Errorf("gate: %s: %s no longer resolvable: %w", tool, what, apperrors.ErrPermissionDenied)
+		return fmt.Errorf("%s is refused, because %s can no longer be found: %w", tool, what, apperrors.ErrPermissionDenied)
 	}
 	return fmt.Errorf("gate: %s: resolving %s: %w", tool, what, err)
 }

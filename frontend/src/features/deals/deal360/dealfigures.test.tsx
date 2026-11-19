@@ -377,3 +377,31 @@ describe("what the axis marks", () => {
     ).toEqual([]);
   });
 });
+
+describe("an amount Margince read from the customer's mail", () => {
+  it.each([
+    [["amount_minor"], "deal.standing.figure.amountByModel"],
+    [["amount_minor", "currency"], "deal.standing.figure.currencyGuessed"],
+  ] as const)("says so under the value (%s)", (fields, key) => {
+    stubHistory([]);
+    show({
+      deal: deal({
+        stage_id: "s2",
+        amount_minor: 1_000_000,
+        currency: "EUR",
+        ai_written_fields: [...fields],
+      }),
+    });
+    expect(screen.getByText(en[key])).toBeInTheDocument();
+  });
+
+  it("says nothing once a rep edited it", () => {
+    stubHistory([]);
+    show({
+      deal: deal({ stage_id: "s2", amount_minor: 1_000_000, currency: "EUR" }),
+    });
+    expect(
+      screen.queryByText(en["deal.standing.figure.amountByModel"]),
+    ).toBeNull();
+  });
+});

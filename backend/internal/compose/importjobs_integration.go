@@ -6,6 +6,7 @@
 package compose
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -72,6 +73,12 @@ func VoiceBuildWorkerForTest(pool *pgxpool.Pool, path ModelPath) (river.Worker[V
 	addModelLaneJobs(reg, pool, JobRunnerConfig{VoiceBrain: path.VoiceBuild}, slog.New(slog.DiscardHandler))
 	var worker river.Worker[VoiceBuildArgs]
 	return worker, governedInto(reg, &worker)
+}
+
+// FreezeForecastsForTest runs the daily forecast freeze once, at now, over
+// every live workspace.
+func FreezeForecastsForTest(ctx context.Context, pool *pgxpool.Pool, now func() time.Time) error {
+	return (&forecastSnapshotSweepWorker{pool: pool, now: now, log: slog.New(slog.DiscardHandler)}).Work(ctx, nil)
 }
 
 // WithImportJobWorkersForTest fills into with the import workers over the

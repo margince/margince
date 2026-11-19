@@ -8,7 +8,6 @@ import {
 } from "../../design-system/richtext-testing";
 import { REWRITE_MAX_CHARACTERS } from "../../lib/rewrites";
 import { draftButton } from "../../testing/composedraft.testkit";
-import { ComposeModal } from "./compose";
 import {
   DISCLOSURE,
   emptyResponse,
@@ -20,6 +19,7 @@ import {
   stubRoutes,
   WHY_ASK,
 } from "./compose.testkit";
+import { ComposeWindow } from "./composewindow";
 
 afterEach(() => {
   cleanup();
@@ -66,7 +66,7 @@ async function openReply(
     "PUT /mail-drafts": () => emptyResponse(204),
   });
   render(
-    <ComposeModal
+    <ComposeWindow
       activityId="act-1"
       entityType="contact"
       entityId="p-1"
@@ -82,7 +82,7 @@ const polish = () => screen.getByRole("button", { name: "Polish" });
 const undo = () => screen.queryByRole("button", { name: "Undo" });
 const undoButton = () => screen.getByRole("button", { name: "Undo" });
 
-describe("ComposeModal rewrites over the rep's words", () => {
+describe("ComposeWindow rewrites over the rep's words", () => {
   it("keeps the rewrites after the rep edits a draft, and revises the edit", async () => {
     const calls = await openReply("Draft A body.", "Polished.");
     await userEvent.click(draftButton());

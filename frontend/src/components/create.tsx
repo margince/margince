@@ -44,6 +44,7 @@ export {
   type FormRows,
   fieldLabel,
   fieldOptions,
+  inlineTextKind,
   keepUnsubmitted,
   type SubField,
   submittedValues,

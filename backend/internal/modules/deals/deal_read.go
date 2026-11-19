@@ -76,7 +76,15 @@ func readDealForCaller(ctx context.Context, tx pgx.Tx, id ids.DealID, archived s
 	if err := attachClosingOccurrence(ctx, tx, id, &d); err != nil {
 		return crmcontracts.Deal{}, err
 	}
-	return finishDealForCaller(ctx, tx, d)
+	if err := attachModelWritten(ctx, tx, id, &d); err != nil {
+		return crmcontracts.Deal{}, err
+	}
+	out, err := finishDealForCaller(ctx, tx, d)
+	if err != nil {
+		return crmcontracts.Deal{}, err
+	}
+	withholdModelWritten(&out)
+	return out, nil
 }
 
 // dealTaggableType is the value taggable.entity_type stores for a deal. It
@@ -282,7 +290,7 @@ func (s *Store) dealListQuery(ctx context.Context, tx pgx.Tx, in ListDealsInput,
 		vocab = dealListVocabulary(valuation)
 		in.valuation = valuation
 	}
-	pre, err := storekit.BuildListPrelude(ctx, "deal", vocab, active,
+	pre, err := storekit.BuildListPrelude(ctx, "deal", "deals", vocab, active,
 		in.Sort, in.Limit, in.Cursor, in.CustomFilters)
 	if err != nil {
 		return nil, nil, err

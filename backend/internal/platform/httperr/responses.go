@@ -58,6 +58,14 @@ func Unavailable(w http.ResponseWriter, r *http.Request, code, detail string) {
 	writeProblem(w, problem{Status: http.StatusServiceUnavailable, Code: code, Detail: detail})
 }
 
+// ErrNotConfigured is what a model call returns while no AI model is bound: the
+// 501 an unwired operation answers. A job that meets it has nothing to do yet,
+// and a handler that returns it as it came says the same to its caller.
+var ErrNotConfigured = &DetailedError{
+	Status: http.StatusNotImplemented, Code: "not_implemented",
+	Detail: "no AI model is bound yet; save one under Settings, AI models",
+}
+
 // NotImplementedBecause is NotImplemented for a route that IS implemented and
 // cannot serve this installation yet.
 //

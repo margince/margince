@@ -136,7 +136,10 @@ func companyMergeAllowed(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.
 	if err := refuseWhenBothCarryProjects(ctx, tx, sourceID, targetID); err != nil {
 		return err
 	}
-	return refuseCrossCompanyContracts(ctx, tx, sourceID, targetID)
+	if err := refuseCrossCompanyContracts(ctx, tx, sourceID, targetID); err != nil {
+		return err
+	}
+	return refuseUnlinkedLedgerRows(ctx, tx, sourceID)
 }
 
 func (s *Store) previewMergeScope(ctx context.Context, tx pgx.Tx, kind string, source, target ids.UUID, out *MergeSurvivorship) error {

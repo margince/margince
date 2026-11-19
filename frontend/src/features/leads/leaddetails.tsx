@@ -8,6 +8,7 @@ import { EntityRef } from "../../components/entityref";
 import { useEntityName } from "../../components/entityref.queries";
 import { LinkedInChip } from "../../components/linkedinchip";
 import type { RailEdit } from "../../components/railfield";
+import { RecordCustomFields } from "../../components/recordcustomfields";
 import { type SectionLock, useSectionEdit } from "../../components/sectionedit";
 import { LeadStops } from "../../components/stops";
 import { TagsPanel } from "../../components/tagspanel";
@@ -148,8 +149,6 @@ function useReachRows(lead: Lead): DetailRow[] {
           kind="phone"
           value={lead.phone}
           record={{ entityType: "lead", entityId: lead.id }}
-          className="link-button lead-row-link"
-          textClassName="lead-row-link"
         />
       ),
     }),
@@ -394,6 +393,7 @@ function LeadDetailsBody({
   return (
     <>
       <RecordDetails sections={sections} footnote={t("lead.aside.footnote")} />
+      <RecordCustomFields kind="lead" record={lead} />
       {aboutEdit.element}
       {reachEdit.element}
       {registrationEdit.element}

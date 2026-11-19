@@ -1,36 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { api } from "../../api/client";
 import type { useT } from "../../i18n";
 import { throwProblem } from "../../lib/problem";
-import {
-  readStored,
-  removeStored,
-  STORAGE_KEYS,
-  writeStored,
-} from "../../lib/storage";
 
-// The buyer's session, as this tab holds it: the token the credential exchange
-// issued, kept in sessionStorage and presented as a Bearer on every call, and
-// the one way every call answers when that token has stopped admitting them.
-
-export function readSession(): string | null {
-  return readStored(STORAGE_KEYS.buyerRoomSession);
-}
-
-// A browser refusing storage still gets this one page view: the token lives in
-// React state for the tab's lifetime and is simply not kept.
-export function writeSession(token: string | null): void {
-  if (token === null) {
-    removeStored(STORAGE_KEYS.buyerRoomSession);
-  } else {
-    writeStored(STORAGE_KEYS.buyerRoomSession, token);
-  }
-}
-
-export function bearer(token: string): { headers: { Authorization: string } } {
-  return { headers: { Authorization: `Bearer ${token}` } };
-}
+// The buyer's session is an HttpOnly cookie the credential exchange sets,
+// scoped to the buyer API. No script here reads or stores the token; the
+// browser sends it, and every call answers the same way once it stops admitting.
 
 // The session stopped answering — revoked, lapsed, or signed out elsewhere.
 export class SessionRefusedError extends Error {}
@@ -48,6 +25,22 @@ export function refuseOrThrow(
   }
   throwProblem(error, t);
   throw new Error("unreachable");
+}
+
+// confirmSameRoom re-reads which seat the cookie names before a write. One
+// cookie serves the whole browser, so another tab's link may have moved it.
+// The write would then land in that other room.
+export async function confirmSameRoom(
+  participantId: string,
+  t: ReturnType<typeof useT>,
+): Promise<void> {
+  const { data, error, response } = await api.GET("/public/rooms/me");
+  if (error) {
+    refuseOrThrow(error, response, t);
+  }
+  if (data?.participant.id !== participantId) {
+    throwProblem({ status: 409, detail: t("buyer.roomReplaced") });
+  }
 }
 
 export function retireOnRefusal(onSessionLost: () => void) {

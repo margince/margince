@@ -84,5 +84,5 @@ func (r *Registry) InternalMailSourceContainers(ctx context.Context, connection 
 	if source.OwnerUserID == nil {
 		return r.listContainersOf(ctx, source.Provider, `id = $1 AND user_id IS NULL`, source.ConnectionID)
 	}
-	return r.ListContainers(ctx, source.Provider, ids.From[ids.UserKind](*source.OwnerUserID))
+	return r.ListContainers(ctx, Mailbox{Provider: source.Provider, ID: source.ConnectionID}, ids.From[ids.UserKind](*source.OwnerUserID))
 }

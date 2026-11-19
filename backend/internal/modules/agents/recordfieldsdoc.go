@@ -86,7 +86,7 @@ type RecordFieldsReader interface {
 // cannot see.
 func (r RecordFieldsResource) ReadResource(ctx context.Context, uri string) (mcp.ResourceContents, error) {
 	if uri != RecordFieldsURI {
-		return mcp.ResourceContents{}, fmt.Errorf("agents: resource %q: %w", uri, apperrors.ErrNotFound)
+		return mcp.ResourceContents{}, fmt.Errorf("no resource is published at %q: %w", uri, apperrors.ErrNotFound)
 	}
 	body, err := r.RecordFieldsDocument(ctx)
 	if err != nil {

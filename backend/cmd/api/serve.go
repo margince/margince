@@ -33,7 +33,7 @@ func serveUntilSignal(ctx context.Context, cfg apiConfig, handler http.Handler, 
 		ReadHeaderTimeout: 5 * time.Second,
 		ReadTimeout:       30 * time.Second,
 		// The chassis's own figure, because the request context is bounded by
-		// the same one: a handler may run exactly as long as its response has.
+		// the same one, less httpserver.AnswerGrace to write a timeout answer.
 		WriteTimeout: httpserver.ResponseDeadline,
 		IdleTimeout:  2 * time.Minute,
 	}

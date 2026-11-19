@@ -27,7 +27,7 @@ func (r *Registry) CalendarFor(ctx context.Context, host ids.UserID, provider st
 	var legacy []byte
 	var scopes []string
 	var generation int
-	args := []any{host, provider}
+	args := []any{host, provider, nil}
 	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT id, credential_ref, auth, provider_scopes, generation FROM capture_connection`+sendableConnection,
 			args...).Scan(&id, &ref, &legacy, &scopes, &generation)

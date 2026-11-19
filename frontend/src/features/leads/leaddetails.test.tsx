@@ -17,6 +17,7 @@ import {
   detailValue,
   editSection,
   jsonResponse,
+  LEAD_GRANTS,
   lead,
   render,
   stubFetch,
@@ -157,6 +158,8 @@ describe("a lead's phone", () => {
     render(<LeadScreen id="l-1" />);
     const number = await screen.findByRole("link", { name: "+49301234567" });
     expect(number).toHaveAttribute("href", "tel:+49301234567");
+    // As on a contact: a block link would push the chat action to a line of its own.
+    expect(number).not.toHaveClass("lead-row-link");
   });
 });
 
@@ -178,7 +181,22 @@ describe("the About company row", () => {
   // The name shown is the company's own, so an editor here would change a name
   // the row does not show.
   it("shows a linked lead's company name read-only, saying where it changes", async () => {
-    serve({ ...linked, company_name: "Nordwind Logistik" });
+    // A reader without company read gets no company name from a reference.
+    stubFetch(async (url) => {
+      const named = companyNamesAnswer(url, { "c-7": "Nordwind Holding SE" });
+      if (named) return named;
+      if (url.endsWith("/v1/me")) {
+        return jsonResponse({
+          user: { id: "u-9", display_name: "Me" },
+          roles: ["rep"],
+          teams: [],
+          authorization: meFixture({
+            allow: { ...LEAD_GRANTS, company: ["read"] },
+          }).authorization,
+        });
+      }
+      return jsonResponse({ ...linked, company_name: "Nordwind Logistik" });
+    });
     render(<LeadScreen id="l-1" />);
     const about = await screen.findByRole("region", { name: "About" });
     await waitFor(() =>

@@ -42,17 +42,17 @@ func TestAnAgentSetsAndDisconnectsItsUsersMailbox(t *testing.T) {
 	agent := agentOfSeat(seat, t)
 
 	off := false
-	if _, err := env.registry.SetSignatureEnrichment(agent, "gmail", &off); err != nil {
+	if _, err := env.registry.SetSignatureEnrichment(agent, capturemod.ProviderMailbox("gmail"), &off); err != nil {
 		t.Fatalf("setting the signature pass: %v", err)
 	}
-	if _, err := env.registry.SetMailPosture(agent, "gmail", capturemod.PostureClassified, false); err != nil {
+	if _, err := env.registry.SetMailPosture(agent, capturemod.ProviderMailbox("gmail"), capturemod.PostureClassified, false); err != nil {
 		t.Fatalf("setting the posture: %v", err)
 	}
 	day := clocktest.Now(t).AddDate(0, -1, 0)
-	if _, err := env.registry.SetHistoryBaseline(agent, "gmail", &day, "UTC"); err != nil {
+	if _, err := env.registry.SetHistoryBaseline(agent, capturemod.ProviderMailbox("gmail"), &day, "UTC"); err != nil {
 		t.Fatalf("setting the history baseline: %v", err)
 	}
-	if _, err := env.registry.SetContextTag(agent, "gmail", nil); err != nil {
+	if _, err := env.registry.SetContextTag(agent, capturemod.ProviderMailbox("gmail"), nil); err != nil {
 		t.Fatalf("clearing the filing word: %v", err)
 	}
 	views, err := env.registry.Connections(agent)
@@ -62,11 +62,11 @@ func TestAnAgentSetsAndDisconnectsItsUsersMailbox(t *testing.T) {
 
 	automatic, _ := principal.Actor(agent)
 	automatic.PassportID = ids.UUID{}
-	if _, err := env.registry.SetSignatureEnrichment(principal.WithActor(seat, automatic), "gmail", &off); err == nil {
+	if _, err := env.registry.SetSignatureEnrichment(principal.WithActor(seat, automatic), capturemod.ProviderMailbox("gmail"), &off); err == nil {
 		t.Error("automatic work changed a mailbox setting")
 	}
 
-	if err := env.registry.Disconnect(agent, "gmail"); err != nil {
+	if err := env.registry.Disconnect(agent, capturemod.ProviderMailbox("gmail")); err != nil {
 		t.Fatalf("disconnecting: %v", err)
 	}
 	var status string

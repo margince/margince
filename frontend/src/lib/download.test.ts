@@ -29,12 +29,13 @@ describe("filenameFromDisposition", () => {
     ["no header at all", null],
     ["a header with no filename", "attachment"],
     ["an empty name", 'attachment; filename=""'],
-    // RFC 6266's extended form carries a charset and percent-encoding. Half
-    // parsing it would produce a plausible-looking wrong name, which is worse
-    // than a name this code chose on purpose.
     [
-      "only the extended form",
-      "attachment; filename*=UTF-8''r%C3%A9sum%C3%A9.csv",
+      "a broken escape in the only name",
+      "attachment; filename*=UTF-8''%E0%A4%A",
+    ],
+    [
+      "another charset in the only name",
+      "attachment; filename*=ISO-8859-1''r%E9sum%E9.csv",
     ],
     ["a name that is only a separator", 'attachment; filename="/"'],
     ["a name that is only dots", 'attachment; filename=".."'],
@@ -42,6 +43,33 @@ describe("filenameFromDisposition", () => {
     expect(filenameFromDisposition(header, "fallback.csv")).toBe(
       "fallback.csv",
     );
+  });
+
+  it("unescapes a quote in the quoted name the way the server writes it", () => {
+    expect(
+      filenameFromDisposition(
+        'attachment; filename="a\\"b.txt"',
+        "fallback.csv",
+      ),
+    ).toBe('a"b.txt');
+  });
+
+  it("prefers the extended name over its ASCII fallback", () => {
+    expect(
+      filenameFromDisposition(
+        "attachment; filename=\"Angebot M_ller.txt\"; filename*=UTF-8''Angebot%20M%C3%BCller.txt",
+        "fallback.csv",
+      ),
+    ).toBe("Angebot Müller.txt");
+  });
+
+  it("uses the ASCII fallback when the extended name is broken", () => {
+    expect(
+      filenameFromDisposition(
+        "attachment; filename=\"M_ller.txt\"; filename*=UTF-8''%E0%A4%A",
+        "fallback.csv",
+      ),
+    ).toBe("M_ller.txt");
   });
 
   it("keeps only the leaf of a name carrying a path", () => {

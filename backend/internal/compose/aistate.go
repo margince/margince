@@ -24,12 +24,13 @@ const (
 // configuration from which the anonymous profile could be derived; callers
 // that own that configuration use WithAssistantProfile instead.
 func WithAIState(state string) Option {
-	return func(s *Server, _ *pgxpool.Pool) { s.aiState = state }
+	return func(s *Server, _ *pgxpool.Pool) { s.aiState = func() string { return state } }
 }
 
 // WithAssistantProfile binds both public login posture and the operational
-// readiness line from the process's one routing decision.
-func WithAssistantProfile(state string, profile func() ai.PublicProfile) Option {
+// readiness line from the process's one routing decision. Both are read per
+// request, so a binding adopted after boot shows on /readyz.
+func WithAssistantProfile(state func() string, profile func() ai.PublicProfile) Option {
 	return func(s *Server, _ *pgxpool.Pool) {
 		s.aiState = state
 		s.voiceHandlers = s.WithPublicProfile(profile)
@@ -40,10 +41,10 @@ func WithAssistantProfile(state string, profile func() ai.PublicProfile) Option 
 // WithAIState (it wires no AI surfaces at all) still answers honestly
 // rather than with an empty component.
 func (s *Server) aiStateOrDefault() string {
-	if s.aiState == "" {
+	if s.aiState == nil {
 		return AIStateUnconfigured
 	}
-	return s.aiState
+	return s.aiState()
 }
 
 // WithLaneHealthBindings counts each lane's /ai/health row against the model

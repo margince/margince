@@ -411,3 +411,34 @@ func TestOneToolCallSpendsOneOfTheCallCeiling(t *testing.T) {
 		})
 	}
 }
+
+// This surface has no approvals to redeem an approval_id against. A call that
+// presents one is refused as an invalid token, and the tool does not run.
+func TestAPresentedApprovalWithNoApprovalsToRedeemItIsRefused(t *testing.T) {
+	spec := readToolSpec("update_record")
+	spec.RequiredScope = principal.ScopeWrite
+	r, _, ctx := chargingRegistry(t, &servingTool{spec: spec}, withScope(principal.ScopeWrite))
+
+	args := json.RawMessage(`{"approval_id":"` + ids.New[ids.ApprovalKind]().String() + `"}`)
+	out, err := r.Invoke(ctx, spec.Name, args)
+
+	if !errors.Is(err, apperrors.ErrApprovalTokenInvalid) {
+		t.Fatalf("an approval presented to no approvals answered %v, want ErrApprovalTokenInvalid", err)
+	}
+	if out != nil {
+		t.Error("the tool ran on an approval nothing redeemed")
+	}
+}
+
+// The answer-stage charge withholds a read it cannot count. chargeAnswer
+// never charges a read today, so the rule is stated on charge itself.
+func TestAReadWhoseChargeCannotBeRecordedIsWithheld(t *testing.T) {
+	r, _, ctx := chargingRegistry(t, &servingTool{spec: readToolSpec("search_records")},
+		withChargerError(errors.New("redis is unreachable")))
+
+	err := r.charge(ctx, readToolSpec("search_records"), agentvolume.Writes, 3)
+
+	if !errors.Is(err, apperrors.ErrBudgetExceeded) {
+		t.Errorf("an uncountable read answered %v, want ErrBudgetExceeded", err)
+	}
+}

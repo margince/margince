@@ -49,7 +49,7 @@ func (s *Store) createTx(ctx context.Context, tx pgx.Tx, id ids.UUID, actor prin
 		// The partial unique index arbitrates concurrent asks on the same route.
 		if storekit.IsUniqueViolation(err) {
 			return fmt.Errorf(
-				"introductions: this colleague has already been asked about this contact: %w",
+				"this colleague has already been asked about this contact: %w",
 				apperrors.ErrConflict)
 		}
 		return fmt.Errorf("introductions: recording the ask: %w", err)

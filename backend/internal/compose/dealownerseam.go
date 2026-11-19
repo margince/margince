@@ -36,6 +36,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
 )
 
@@ -117,14 +118,16 @@ func (a dealOwnerAuthority) asOwner(ctx context.Context, owner ids.UUID) (contex
 	if err != nil {
 		return nil, fmt.Errorf("compose: deal owner %s authority: %w", owner, err)
 	}
-	return principal.WithActor(ctx, principal.Principal{
+	member := principal.Principal{
 		Type:        principal.PrincipalHuman,
 		ID:          principal.HumanIDPrefix + owner.String(),
 		UserID:      owner,
 		SeatType:    seat,
 		TeamIDs:     rbac.TeamIDs,
 		Permissions: rbac.Permissions,
-	}), nil
+	}
+	lang, err := a.users.ReadingLanguage(ctx, member)
+	return withOwnersLanguage(ctx, member, lang, err)
 }
 
 // ownersAgent binds the product acting FOR the owner: an agent principal named
@@ -139,7 +142,9 @@ func ownersAgent(ctx context.Context, users *identity.Service, owner ids.UUID, a
 	if err != nil {
 		return nil, fmt.Errorf("compose: authority of the owner to act for: %w", err)
 	}
-	return withOwnersAgent(ctx, owner, actorID, rbac, seat), nil
+	agent := ownersAgentPrincipal(owner, actorID, rbac, seat)
+	lang, err := users.ReadingLanguage(ctx, agent)
+	return withOwnersLanguage(ctx, agent, lang, err)
 }
 
 // ownersAgentTx is ownersAgent read in the write's own transaction. The write
@@ -150,14 +155,24 @@ func ownersAgentTx(users *identity.Service, owner ids.UUID, actorID string) deal
 		if err != nil {
 			return nil, fmt.Errorf("compose: authority of the owner to act for: %w", err)
 		}
-		return withOwnersAgent(ctx, owner, actorID, rbac, seat), nil
+		agent := ownersAgentPrincipal(owner, actorID, rbac, seat)
+		lang, err := identity.ReadingLanguageTx(ctx, tx, agent)
+		return withOwnersLanguage(ctx, agent, lang, err)
 	}
 }
 
-func withOwnersAgent(
-	ctx context.Context, owner ids.UUID, actorID string, rbac authz.RBAC, seat principal.SeatType,
-) context.Context {
-	return principal.WithActor(ctx, principal.Principal{
+// withOwnersLanguage binds actor, the owner or their agent, reading in the
+// owner's language.
+func withOwnersLanguage(ctx context.Context, actor principal.Principal, lang textlang.Lang, err error) (context.Context, error) {
+	if err != nil {
+		return nil, fmt.Errorf("compose: language of the owner: %w", err)
+	}
+	actor.Locale = string(lang)
+	return principal.WithActor(ctx, actor), nil
+}
+
+func ownersAgentPrincipal(owner ids.UUID, actorID string, rbac authz.RBAC, seat principal.SeatType) principal.Principal {
+	return principal.Principal{
 		Type:       principal.PrincipalAgent,
 		ID:         actorID,
 		UserID:     owner,
@@ -168,5 +183,5 @@ func withOwnersAgent(
 		// never puts a message on the wire.
 		Scopes:      principal.ScopeSet{principal.ScopeWrite: struct{}{}},
 		Permissions: rbac.Permissions,
-	})
+	}
 }

@@ -57,6 +57,11 @@ func extensionEngine(ctx context.Context, kind string) (storekit.Query, bool) {
 		}
 		fields[field.Name] = engineField
 	}
+	// The id is filterable as text so a picker holding a record's id can read its
+	// name back, which no declared field can answer.
+	if _, declared := fields["id"]; !declared {
+		fields["id"] = storekit.Field{Expr: "t.id::text", Type: storekit.FieldText}
+	}
 	withholdFromCaller(ctx, kind, fields)
 	return storekit.Query{
 		Table:     pgx.Identifier{"ext", declared.Table}.Sanitize(),

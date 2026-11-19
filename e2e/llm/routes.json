@@ -598,6 +598,7 @@
         "analytics_schema": "get_analytics_schema",
         "company_coverage": "get_company_coverage",
         "evidence": "search_report_evidence",
+        "forecast_focus": "get_forecast_focus",
         "question_card_answer": "answer_reporting_question_card",
         "question_card_records": "explain_reporting_question_card",
         "report_revisions": "list_reporting_report_revisions",

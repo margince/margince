@@ -11,10 +11,26 @@ import {
   screen,
 } from "@testing-library/react";
 import { useState } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { dropKeptPlace, keepPlaceOnNextMove } from "../lib/scrollmemory";
 import { Button } from "./atoms";
 import { RecordTabs } from "./recordtabs";
+
+// The mark the strip leaves for the page's scroll memory, watched as calls.
+vi.mock("../lib/scrollmemory", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../lib/scrollmemory")>();
+  return {
+    ...actual,
+    keepPlaceOnNextMove: vi.fn(actual.keepPlaceOnNextMove),
+    dropKeptPlace: vi.fn(actual.dropKeptPlace),
+  };
+});
+
+beforeEach(() => {
+  vi.mocked(keepPlaceOnNextMove).mockClear();
+  vi.mocked(dropKeptPlace).mockClear();
+});
 
 afterEach(() => {
   cleanup();
@@ -331,9 +347,12 @@ describe("RecordTabs folds to one stable row", () => {
   });
 });
 
-// A page pane under a 56px top bar, standing at `offset`, whose strip sits
-// `stripTop` px below the pane's top edge. Its offset clamps to its range.
-function inPane(stripTop: number, { keepPlace = true, offset = 1000 } = {}) {
+// A page pane under the 50px top bar (`--topbarH`), standing at `offset`. Its
+// strip sits `stripTop` px below the pane's top edge; its offset clamps.
+function inPane(
+  stripTop: number,
+  { keepPlace = true, offset = 1000, routed = false } = {},
+) {
   let bottom = 10_000;
   let top = offset;
   let arrival: number | null = null;
@@ -344,12 +363,13 @@ function inPane(stripTop: number, { keepPlace = true, offset = 1000 } = {}) {
   function Live() {
     const [value, setValue] = useState<Body>("overview");
     return (
-      <div className="scroll" style={{ marginTop: "-56px" }}>
+      <div className="scroll" style={{ marginTop: "-50px" }}>
         <RecordTabs
           options={["overview", "contacts"]}
           value={value}
           onChange={(next) => {
             setValue(next);
+            if (routed) window.location.hash = `#/companies/o-1/${next}`;
             stripAt += grownAbove;
             if (arrival !== null) {
               bottom = arrival;
@@ -496,8 +516,8 @@ describe("RecordTabs keeps a record reader's place across a press", () => {
   it("jumps up just far enough to show a strip left above the screen", () => {
     const at = inPane(-300);
     press("Contacts");
-    // 300px above the pane's edge and 56 more under the bar.
-    expect(at.pane.scrollTop).toBe(644);
+    // 300px above the pane's edge and 50 more under the bar.
+    expect(at.pane.scrollTop).toBe(650);
     expect(at.scrollTo).not.toHaveBeenCalled();
   });
 
@@ -514,5 +534,37 @@ describe("RecordTabs keeps a record reader's place across a press", () => {
     const at = inPane(-300);
     press("Overview");
     expect(at.writes).toEqual([]);
+  });
+});
+
+describe("RecordTabs marks a press for the page's scroll memory", () => {
+  afterEach(() => {
+    window.location.hash = "";
+  });
+
+  it("marks a press on another tab that moves the address", () => {
+    inPane(120, { routed: true });
+    press("Contacts");
+    expect(keepPlaceOnNextMove).toHaveBeenCalledOnce();
+    expect(dropKeptPlace).not.toHaveBeenCalled();
+  });
+
+  it("takes the mark back when the tab lives in state and no address moved", () => {
+    inPane(120);
+    press("Contacts");
+    expect(keepPlaceOnNextMove).toHaveBeenCalledOnce();
+    expect(dropKeptPlace).toHaveBeenCalledOnce();
+  });
+
+  it("marks nothing for a press on the tab already open", () => {
+    inPane(120, { routed: true });
+    press("Overview");
+    expect(keepPlaceOnNextMove).not.toHaveBeenCalled();
+  });
+
+  it("marks nothing on a strip that does not keep the place", () => {
+    inPane(120, { keepPlace: false, routed: true });
+    press("Contacts");
+    expect(keepPlaceOnNextMove).not.toHaveBeenCalled();
   });
 });

@@ -93,6 +93,7 @@ export function historyEntryId(): string {
  */
 export function forgetScrollMemory(): void {
   offsets.clear();
+  placeKept = false;
   stamped = 0;
   loadToken = newLoadToken();
 }
@@ -107,6 +108,28 @@ function arrivalOffset(place: string, sameView: boolean): number | null {
   return sameView ? null : 0;
 }
 
+let placeKept = false;
+
+/**
+ * Keep the page's place across the next move to another view of the same
+ * record. A record's tab strip calls it on a press; any other move opens the
+ * new view at its top.
+ */
+export function keepPlaceOnNextMove(): void {
+  placeKept = true;
+}
+
+/** Cancel `keepPlaceOnNextMove`, for a press that moved no address. */
+export function dropKeptPlace(): void {
+  placeKept = false;
+}
+
+function takeKeptPlace(): boolean {
+  const kept = placeKept;
+  dropKeptPlace();
+  return kept;
+}
+
 /** What a reader does to take a scroll position into their own hands. */
 export const READER_GESTURES = [
   "wheel",
@@ -114,6 +137,9 @@ export const READER_GESTURES = [
   "keydown",
   "pointerdown",
 ] as const;
+
+/** The offset each element is being sought to, while a seek is live. */
+const sought = new Map<HTMLElement, number>();
 
 /**
  * Puts `element` at `top`, and again as its content grows, until the offset
@@ -134,6 +160,7 @@ export function seekScrollTop(
   let seeking = true;
   const stop = () => {
     seeking = false;
+    if (sought.get(element) === top) sought.delete(element);
     growth?.disconnect();
     resize?.disconnect();
     for (const gesture of READER_GESTURES) {
@@ -156,18 +183,30 @@ export function seekScrollTop(
   };
   attempt();
   if (!seeking) return stop;
+  sought.set(element, top);
   for (const gesture of READER_GESTURES) {
     element.addEventListener(gesture, stop, { passive: true });
   }
-  // The subtree for rows arriving, the box for a height that settles with no
-  // node changing (a logo that loads).
-  if (typeof MutationObserver === "function") {
-    growth = new MutationObserver(attempt);
-    growth.observe(element, { childList: true, subtree: true });
-  }
+  // The pane's own box does not grow with its content, so its children are
+  // watched too. One grows when an image inside it loads, and no node moves.
   if (typeof ResizeObserver === "function") {
-    resize = new ResizeObserver(attempt);
-    resize.observe(element);
+    const observer = new ResizeObserver(attempt);
+    observer.observe(element);
+    for (const child of element.children) observer.observe(child);
+    resize = observer;
+  }
+  if (typeof MutationObserver === "function") {
+    growth = new MutationObserver((changes) => {
+      for (const change of changes) {
+        for (const added of change.addedNodes) {
+          if (added instanceof Element && added.parentElement === element) {
+            resize?.observe(added);
+          }
+        }
+      }
+      attempt();
+    });
+    growth.observe(element, { childList: true, subtree: true });
   }
   return stop;
 }
@@ -179,8 +218,8 @@ export function seekScrollTop(
  * browser makes for Back and Forward. On the way OUT the current offset is
  * recorded against the entry being left; on the way IN a recorded one is
  * restored. A new entry with the same `view` as the one left keeps the offset
- * it arrives with. Anything else opens at the top: a page nobody has visited
- * has no place to return to.
+ * it arrives with, when `keepPlaceOnNextMove` asked for it. Anything else
+ * opens at the top: a page nobody has visited has no place to return to.
  *
  * The restore is RETRIED while the column grows. A list restores its rows a
  * moment after the address arrives, so the first attempt lands against a column
@@ -223,7 +262,8 @@ export function useScrollMemory(
   // biome-ignore lint/correctness/useExhaustiveDependencies: trigger-only dep
   useEffect(() => {
     const id = historyEntryId();
-    const sameView = view !== undefined && view === viewLeft.current;
+    const kept = view !== undefined && takeKeptPlace();
+    const sameView = kept && view === viewLeft.current;
     viewLeft.current = view;
     setEntry((shown) => (shown.id === id ? shown : { id, sameView }));
   }, [address, view]);
@@ -256,7 +296,7 @@ export function useScrollMemory(
     const target = arrivalOffset(place, entry.sameView);
     let stopSeeking = () => {};
     if (target === null) {
-      offsets.set(place, scroller.scrollTop);
+      offsets.set(place, sought.get(scroller) ?? scroller.scrollTop);
     } else {
       seeking.current = true;
       stopSeeking = seekScrollTop(scroller, target, {
@@ -314,6 +354,13 @@ export function useScrollMemory(
       // detaches the DOM before a passive cleanup runs when the subtree
       // unmounts, which is exactly what opening a record does to a list.
       if (!scroller.isConnected) {
+        return;
+      }
+      // A seek still under way, such as a tab strip holding its place, is where
+      // the reader is headed. The clamp on the way there is not their choice.
+      const headed = sought.get(scroller);
+      if (headed !== undefined) {
+        offsets.set(place, headed);
         return;
       }
       const bottom = scroller.scrollHeight - scroller.clientHeight;

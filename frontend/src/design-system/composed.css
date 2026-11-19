@@ -943,6 +943,13 @@
   grid-template-columns: 140px 1fr;
   gap: 8px 16px;
 }
+/* A value that is a list of its own, such as a partner's open tasks, needs
+ * the panel's width on a phone, so below the fold it goes under its term. */
+@media (max-width: 720px) {
+  .detail-grid > .detail-grid-wide {
+    grid-column: 1 / -1;
+  }
+}
 
 /* A timeline list whose rows carry no date gutter or rail of their own —
    the change history and the consent log, whose date rides inline in each

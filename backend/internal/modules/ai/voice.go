@@ -128,7 +128,7 @@ func (s *VoiceStore) ListProfiles(ctx context.Context, cursor *string, limit *in
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	where := "archived_at IS NULL AND scope = 'user' AND owner_id = $1"
 	if cursor != nil && *cursor != "" {
-		c, err := storekit.DecodeCursor(*cursor)
+		c, err := storekit.DecodeCursor("voice_profiles", *cursor)
 		if err != nil {
 			return VoiceProfilePage{}, err
 		}
@@ -159,7 +159,7 @@ func (s *VoiceStore) ListProfiles(ctx context.Context, cursor *string, limit *in
 	if len(page.Items) > n {
 		page.Items = page.Items[:n]
 		last := page.Items[len(page.Items)-1]
-		next, err := storekit.EncodeCursor(last.CreatedAt, last.ID)
+		next, err := storekit.EncodeCursor("voice_profiles", last.CreatedAt, last.ID)
 		if err != nil {
 			return VoiceProfilePage{}, err
 		}

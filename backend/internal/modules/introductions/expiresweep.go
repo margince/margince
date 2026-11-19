@@ -215,13 +215,12 @@ func onlyTheExpirySweep(ctx context.Context) error {
 	p, ok := principal.Actor(ctx)
 	if !ok {
 		return fmt.Errorf(
-			"introductions: the expiry sweep ran with no bound actor: %w",
+			"the expiry sweep ran with no bound actor: %w",
 			apperrors.ErrPermissionDenied)
 	}
 	if p.Type != principal.PrincipalSystem || p.ID != ExpiryActor {
 		return fmt.Errorf(
-			"introductions: %s may not expire introductions — the sweep runs as %s: %w",
-			p.ID, ExpiryActor, apperrors.ErrPermissionDenied)
+			"only the expiry sweep's own system actor may expire introductions: %w", apperrors.ErrPermissionDenied)
 	}
 	return nil
 }

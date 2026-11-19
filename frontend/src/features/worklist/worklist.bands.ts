@@ -125,10 +125,10 @@ export function unbandedRows(
  * The groups that earn a heading, which is a narrower set than the wire's.
  *
  * `overdue` and `today` are deliberately absent: they draw under the band's own
- * heading, so there is no copy key for them and the type says so rather than
- * leaving a caller to discover it from a missing translation.
+ * heading. They have no copy key, and the type says so. `none` heads the
+ * undated backlog, after the dated upcoming work.
  */
-export type HeadedDueGroup = "tomorrow" | "this_week" | "later";
+export type HeadedDueGroup = "tomorrow" | "this_week" | "later" | "none";
 
 /** One run of rows inside a band that share a due group. */
 export type DueRun = {

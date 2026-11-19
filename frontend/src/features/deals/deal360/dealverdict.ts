@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { StandingVerdict } from "../../../design-system/howitstands";
+import { activityDay } from "../../../format/activitywhen";
 import { formatNumber } from "../../../format/format";
 import { formatDayMonthNearYear } from "../../../format/format.dates";
 import { type Locale, type Translator, translatePlural } from "../../../i18n";
@@ -33,6 +34,8 @@ function recordedVerdict(
   { deal, card, asOf }: DealStandingInputs,
   { t, locale, zone }: Words,
 ): StandingVerdict | undefined {
+  const day = (iso: string) =>
+    formatDayMonthNearYear(iso, locale, zone, new Date(asOf));
   const waiting = card ? waitingSince(card) : null;
   if (waiting) {
     const days = daysWaiting(waiting, asOf, zone);
@@ -47,8 +50,6 @@ function recordedVerdict(
       tone: "warning",
     };
   }
-  const day = (iso: string) =>
-    formatDayMonthNearYear(iso, locale, zone, new Date(asOf));
   if (deal.stalled) {
     return {
       word: t("deal.verdict.goneQuiet"),
@@ -57,6 +58,10 @@ function recordedVerdict(
         : t("deal.verdict.nothingFiled"),
       tone: "danger",
     };
+  }
+  const replied = card?.our_reply;
+  if (replied) {
+    return repliedVerdict(replied, asOf, { t, locale, zone });
   }
   if (waitHolds(deal.wait_until, zone, new Date(asOf))) {
     return {
@@ -90,4 +95,39 @@ function recordedVerdict(
     };
   }
   return undefined;
+}
+
+type RequestReply = NonNullable<DealStandingInputs["card"]>["our_reply"] &
+  object;
+
+// We replied after the buyer's request, and ours is still the newest message.
+// A colleague's reply is the team's, so it never reads as the reader's own.
+function repliedVerdict(
+  replied: RequestReply,
+  asOf: string,
+  { t, locale, zone }: Words,
+): StandingVerdict {
+  const date = activityDay(
+    replied.replied_at,
+    replied.replied_precision,
+    locale,
+    zone,
+    (at, locale, zone) =>
+      formatDayMonthNearYear(at, locale, zone, new Date(asOf)),
+  );
+  const mine = replied.by_reader;
+  return {
+    word: t(mine ? "deal.verdict.youReplied" : "deal.verdict.teamReplied"),
+    sentence: replied.still_asked
+      ? t(
+          mine
+            ? "deal.verdict.youRepliedAsked"
+            : "deal.verdict.teamRepliedAsked",
+          { date, ask: replied.still_asked },
+        )
+      : t(mine ? "deal.verdict.youRepliedOn" : "deal.verdict.teamRepliedOn", {
+          date,
+        }),
+    tone: "neutral",
+  };
 }

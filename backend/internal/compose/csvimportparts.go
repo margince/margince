@@ -52,7 +52,7 @@ func partSourceOf(source migration.Source, object string) (*migration.CSVSource,
 			return s, nil
 		}
 	}
-	return nil, fmt.Errorf("import: this run's source holds no %q file: %w", object, apperrors.ErrConflict)
+	return nil, fmt.Errorf("this run's source holds no %q file: %w", object, apperrors.ErrConflict)
 }
 
 // checkEveryPartsColumns runs checkPartColumns over each file of the run.

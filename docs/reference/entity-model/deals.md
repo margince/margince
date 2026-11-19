@@ -104,7 +104,7 @@ The 29 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `expected_close_date` | `date` |  | An open deal may not have a close date in the past: saving one is rejected with 422 close_date_past, and a date that ages into the past is corrected by the nightly run. |
 | `fx_rate_date` | `date` |  |  |
 | `fx_rate_to_base` | `numeric(20,10)` |  | Native→base, frozen at close (null while open). |
-| `last_activity_at` | `timestamp with time zone` |  | The newest `occurred_at` at or before now of a workspace-audience activity filed under the deal, so a booked meeting counts once it starts. |
+| `last_activity_at` | `timestamp with time zone` |  | The newest `occurred_at` at or before now of an activity filed under the deal, so a booked meeting counts once it starts. |
 | `lost_reason` | `text` |  | The free note on a lost deal. |
 | `lost_reason_basis` | `text` |  | How the code was set: `recorded` when the closer chose it, `mapped` when an administrator mapped the deal's legacy note to it. |
 | `lost_reason_code` | `text` |  | The key from `/loss-reasons` this loss counts under. |

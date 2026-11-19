@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	capturemod "github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -88,7 +89,7 @@ func TestASyncDisconnectedMidFlightCommitsNothing(t *testing.T) {
 		t.Fatalf("Connect: %v", err)
 	}
 	fake.duringSync = func() {
-		if err := registry.Disconnect(grantCtx, "gmail"); err != nil {
+		if err := registry.Disconnect(grantCtx, capturemod.ProviderMailbox("gmail")); err != nil {
 			t.Errorf("mid-sync disconnect: %v", err)
 		}
 	}
@@ -123,12 +124,12 @@ func TestABackfillPageDisconnectedMidFlightCommitsNothing(t *testing.T) {
 	if _, err := registry.Connect(grantCtx, "gmail", connector.Auth("refresh")); err != nil {
 		t.Fatalf("Connect: %v", err)
 	}
-	run, err := registry.StartBackfill(grantCtx, "gmail", ids.From[ids.UserKind](e.Rep1), 6, connector.BackfillEstimate{Messages: 25}, enqueueNothing)
+	run, err := registry.StartBackfill(grantCtx, capturemod.ProviderMailbox("gmail"), ids.From[ids.UserKind](e.Rep1), 6, connector.BackfillEstimate{Messages: 25}, enqueueNothing)
 	if err != nil {
 		t.Fatalf("StartBackfill: %v", err)
 	}
 	fake.duringPage = func() {
-		if err := registry.Disconnect(grantCtx, "gmail"); err != nil {
+		if err := registry.Disconnect(grantCtx, capturemod.ProviderMailbox("gmail")); err != nil {
 			t.Errorf("mid-page disconnect: %v", err)
 		}
 	}

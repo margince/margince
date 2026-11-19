@@ -181,7 +181,7 @@ func TestEveryPlaceholderInTheWindowIsDerivedFromTheArgumentList(t *testing.T) {
 	if err != nil {
 		t.Fatalf("rendering the CTE: %v", err)
 	}
-	sql := recordHistoryWindowSQL(typePos, idPos, arg(21), conds, cte)
+	sql := recordHistoryWindowSQL(typePos, idPos, arg(21), conds, cte, "")
 
 	named := map[int]bool{}
 	for _, match := range placeholderPattern.FindAllStringSubmatch(sql, -1) {
@@ -214,7 +214,7 @@ func TestBothArmsOfTheWindowTakeTheSameKeyset(t *testing.T) {
 	if err != nil {
 		t.Fatalf("rendering the CTE: %v", err)
 	}
-	sql := recordHistoryWindowSQL(typePos, idPos, arg(21), []string{keyset}, cte)
+	sql := recordHistoryWindowSQL(typePos, idPos, arg(21), []string{keyset}, cte, "")
 
 	if got := strings.Count(sql, keyset); got != 2 {
 		t.Errorf("the keyset appears %d time(s) in the window, want once per union arm:\n%s", got, sql)
@@ -232,7 +232,7 @@ func TestBothArmsOfTheWindowTakeTheSameKeyset(t *testing.T) {
 func TestAnEdgelessAnchorRendersTheRecordsOwnWindowAlone(t *testing.T) {
 	// No edge branch means no CTE and no union: the read a lead or an activity
 	// gets is the one it always had.
-	sql := recordHistoryWindowSQL(1, 2, 3, nil, "")
+	sql := recordHistoryWindowSQL(1, 2, 3, nil, "", "")
 	for _, unwanted := range []string{"WITH ", "UNION ALL", "relationship"} {
 		if strings.Contains(sql, unwanted) {
 			t.Errorf("an edgeless window still carries %q:\n%s", unwanted, sql)

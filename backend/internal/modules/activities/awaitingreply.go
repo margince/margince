@@ -297,10 +297,15 @@ func awaitingTheirAnswerSQL(asOf, sentByReader, laterContent, kinds string) stri
 // the reader's addresses. A seat row the legacy backfill guessed for bare
 // mail does not stand (auth.ParticipantStandsSQL), so its seat owes no reply.
 func sentByReaderSQL(reader, addresses string) string {
+	return sentByReaderOn("a", reader, addresses)
+}
+
+// sentByReaderOn is sentByReaderSQL for the mail under alias.
+func sentByReaderOn(alias, reader, addresses string) string {
 	return `EXISTS (SELECT 1 FROM activity_participant me
-	   WHERE me.activity_id = a.id AND me.role = 'from'
+	   WHERE me.activity_id = ` + alias + `.id AND me.role = 'from'
 	     AND (me.user_id = ` + reader + ` OR lower(me.address) = ANY(` + addresses + `::text[]))
-	     AND ` + auth.ParticipantStandsSQL("me", "a") + `)`
+	     AND ` + auth.ParticipantStandsSQL("me", alias) + `)`
 }
 
 // awaitingCandidatesSQL is the mail the follow-up lane may report: what the

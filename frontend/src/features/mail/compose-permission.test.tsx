@@ -19,7 +19,7 @@ import {
   previewedAddresses,
   refusedPreview,
 } from "../../testing/sendpermission.testkit";
-import { ComposeModal } from "./compose";
+import { ComposeWindow } from "./composewindow";
 
 // The composer asks the engine whether the message may go, and says so where
 // the rep is writing it.
@@ -109,7 +109,7 @@ afterEach(() => {
 
 async function openReplyAndAddress(address: string) {
   render(
-    <ComposeModal
+    <ComposeWindow
       activityId="act-1"
       entityType="contact"
       entityId="p-1"
@@ -229,7 +229,7 @@ describe("the composer asks before anybody presses Send", () => {
   it("asks about a blind copy too", async () => {
     const asks = stubEngine(allowedPreview);
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -280,7 +280,7 @@ describe("the composer asks before anybody presses Send", () => {
   it("draws no mark before there is anybody to ask about", async () => {
     stubEngine(allowedPreview);
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"

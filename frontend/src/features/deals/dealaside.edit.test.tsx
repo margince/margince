@@ -47,7 +47,11 @@ type Sent = Readonly<{ ifMatch: string | null; body: unknown }>;
 
 afterEach(cleanup);
 
-function mount(grant: ("read" | "update")[], current: Deal = deal) {
+function mount(
+  grant: ("read" | "update")[],
+  current: Deal = deal,
+  locale: "en" | "de" = "en",
+) {
   const sent: Sent[] = [];
   installFetchStub({
     "GET /me": meRoute({ deal: grant }, { seat: "full" }),
@@ -62,7 +66,7 @@ function mount(grant: ("read" | "update")[], current: Deal = deal) {
     return jsonResponse({ ...current, version: 5 });
   };
   render(
-    <StoryProviders>
+    <StoryProviders locale={locale}>
       <DealAside deal={current} stages={[]} />
     </StoryProviders>,
   );
@@ -148,7 +152,7 @@ it("saves a changed value as that field alone, in one PATCH against the version 
   const user = userEvent.setup();
   const sent = mount(["read", "update"]);
   const value = await openSection(user, "Value");
-  const amount = within(value).getByRole("spinbutton", { name: "Value" });
+  const amount = within(value).getByRole("textbox", { name: "Value" });
   await user.clear(amount);
   await user.type(amount, "52000");
   await user.click(within(value).getByRole("button", { name: "Save" }));
@@ -182,9 +186,9 @@ it("shows the ARR an offer set in its currency, locked with the reason", async (
   const user = userEvent.setup();
   mount(["read", "update"], { ...deal, arr_source_offer_id: "o1" });
   const value = await openSection(user, "Value");
-  expect(within(value).getByRole("spinbutton", { name: "Value" })).toBeTruthy();
+  expect(within(value).getByRole("textbox", { name: "Value" })).toBeTruthy();
   expect(
-    within(value).queryByRole("spinbutton", { name: "Expected ARR" }),
+    within(value).queryByRole("textbox", { name: "Expected ARR" }),
   ).toBeNull();
   const arr = within(value).getByRole("group", { name: "Expected ARR" });
   expect(arr).toHaveTextContent("€12,000");
@@ -198,4 +202,31 @@ it("offers no money to change beside a masked currency", async () => {
   mount(["read", "update"], shown);
   await screen.findByRole("button", { name: "Edit About" });
   expect(screen.queryByRole("button", { name: "Edit Value" })).toBeNull();
+});
+
+// German groups thousands with a dot: "12,5" is twelve and a half, and
+// "1.500" is refused because it also reads as fifteen hundred.
+it.each([
+  ["12,5", [{ amount_minor: 1250 }]],
+  ["1.500", []],
+])("in German, a typed %s saves %j", async (typed, want) => {
+  const user = userEvent.setup();
+  const sent = mount(["read", "update"], deal, "de");
+  await user.click(
+    await screen.findByRole("button", { name: "Wert bearbeiten" }),
+  );
+  const dialog = await screen.findByRole("dialog", { name: "Wert" });
+  const amount = within(dialog).getByRole("textbox", { name: "Wert" });
+  expect((amount as HTMLInputElement).value).toBe("48000,00");
+  await user.clear(amount);
+  await user.type(amount, typed);
+  await user.click(within(dialog).getByRole("button", { name: "Speichern" }));
+  if (want.length === 0) {
+    expect(
+      await within(dialog).findByText(
+        "Gib den Betrag als 1500 oder 1500,00 ein.",
+      ),
+    ).toBeTruthy();
+  }
+  await waitFor(() => expect(sent.map((one) => one.body)).toEqual(want));
 });

@@ -38,6 +38,7 @@ import {
 } from "../../design-system/surfacestate";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
+import { useCan } from "../../lib/capability";
 import {
   shownUndoable,
   usePendingMarginceChanges,
@@ -65,7 +66,7 @@ export function HandledForYouPanel() {
   const { locale } = useLocale();
   const readerZone = useViewerZone();
   const handled = useHandledForYou();
-  const pendingChanges = usePendingMarginceChanges().data;
+  const pendingChanges = usePendingMarginceChanges(useCan("deal", "read")).data;
   const lastRun = useRememberedUndoRun() !== null;
   const receipts = handled.data?.receipts;
   // Off the LIST, not off the query's flags alone. `receipts` is empty on most

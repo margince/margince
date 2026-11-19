@@ -13,7 +13,7 @@ import {
   type RouteMap,
   StoryProviders,
 } from "../../testing/story-utils";
-import { ComposeModal } from "./compose";
+import { ComposeWindow } from "./composewindow";
 
 // The rep's own unsent message as the composer holds it: put back when the
 // composer opens, saved beside Send, and refused when another window moved it.
@@ -53,7 +53,7 @@ function savedDraftStory(routes: RouteMap) {
     return (
       <StoryProviders>
         <ToastProvider>
-          <ComposeModal
+          <ComposeWindow
             entityType="contact"
             entityId="p-1"
             contactId="p-1"

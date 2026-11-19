@@ -10,7 +10,7 @@ import { vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import type { CompanyTab } from "../../lib/companytab";
-import { meFixture } from "../../testing/mefixture";
+import { meFixture, READS_RECORDS } from "../../testing/mefixture";
 import { CompanyOverviewCards } from "./companyoverviewcards";
 import { CompanyRail } from "./companyrail";
 
@@ -159,7 +159,9 @@ export function stub(
       // Then every gated control stands down and the suite proves nothing.
       if (pathname.endsWith("/me")) {
         return jsonResponse(
-          meFixture({ allow: { company: ["read", "update"] } }),
+          meFixture({
+            allow: { ...READS_RECORDS, company: ["read", "update"] },
+          }),
         );
       }
       if (pathname.endsWith("/signals")) {

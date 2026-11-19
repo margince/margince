@@ -38,6 +38,7 @@ const base = {
   unlinked: 0,
   colleagues: 0,
   informs_us: 0,
+  private_unchecked: 0,
   truncated: false,
   clear: false,
 };

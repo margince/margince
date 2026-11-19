@@ -14,7 +14,12 @@ import {
   problemMessageOf,
 } from "../lib/problem";
 import type { Route } from "../lib/router";
-import { type CreateField, type FormRows, fieldLabel } from "./create";
+import {
+  type CreateField,
+  type FormRows,
+  fieldLabel,
+  inlineTextKind,
+} from "./create";
 import { EditRecordModal } from "./edit";
 import { prefillFromRecord, prefillRowsFromRecord } from "./edit.prefill";
 import { useDetailsFieldTarget } from "./pageaside";
@@ -351,13 +356,7 @@ function RecordScalarField({
           link={rendered}
           placeholder={t("field.unset")}
           multiline={field.type === "textarea"}
-          type={
-            field.type === "number" ||
-            field.type === "date" ||
-            field.type === "email"
-              ? field.type
-              : "text"
-          }
+          type={inlineTextKind(field)}
           maxLength={field.maxLength}
           step={field.step ?? (field.type === "number" ? "any" : undefined)}
           canEdit={canEdit}

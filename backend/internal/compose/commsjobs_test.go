@@ -256,7 +256,7 @@ type stubSenders struct {
 	err     error
 }
 
-func (s stubSenders) SenderFor(context.Context, ids.UserID, string) (connector.EmailSender, connector.Auth, []string, error) {
+func (s stubSenders) SenderFor(context.Context, ids.UserID, capture.Mailbox) (connector.EmailSender, connector.Auth, []string, error) {
 	return s.sender, connector.Auth("cred"), s.granted, s.err
 }
 
@@ -278,7 +278,7 @@ func TestCommsResolverTranslatesOnlyTheTwoParkingSentinels(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			r := commsResolver{registry: stubSenders{err: tc.from}}
 
-			_, _, _, err := r.Resolve(context.Background(), ids.New[ids.UserKind](), "gmail")
+			_, _, _, err := r.Resolve(context.Background(), ids.New[ids.UserKind](), "gmail", nil)
 
 			if !errors.Is(err, tc.want) {
 				t.Fatalf("Resolve on %v → %v, want it to match %v", tc.from, err, tc.want)
@@ -303,7 +303,7 @@ func TestCommsResolverPassesAResolvedMailboxThrough(t *testing.T) {
 	want := []string{"https://www.googleapis.com/auth/gmail.send"}
 	r := commsResolver{registry: stubSenders{sender: stubSender{}, granted: want}}
 
-	sender, auth, granted, err := r.Resolve(context.Background(), ids.New[ids.UserKind](), "gmail")
+	sender, auth, granted, err := r.Resolve(context.Background(), ids.New[ids.UserKind](), "gmail", nil)
 	if err != nil {
 		t.Fatalf("Resolve: %v", err)
 	}

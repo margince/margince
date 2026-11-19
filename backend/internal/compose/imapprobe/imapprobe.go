@@ -44,6 +44,7 @@ func Probe(ctx context.Context, w http.ResponseWriter, r *http.Request, in *crmc
 	if in.MaxMessages != nil {
 		creds.MaxMessages = *in.MaxMessages
 	}
+	creds.SMTP = smtpSettings(in.Smtp)
 	authReq, err := imap.AuthRequestFrom(creds)
 	if err != nil {
 		httperr.Write(w, r, &httperr.DetailedError{
@@ -61,10 +62,47 @@ func Probe(ctx context.Context, w http.ResponseWriter, r *http.Request, in *crmc
 	return auth, true
 }
 
+// smtpSettings turns sending on when the request carries settings for it.
+// Absent fields stay zero, so the connector's own defaults apply.
+func smtpSettings(in *crmcontracts.ImapSmtpSettings) *imap.SMTPSettings {
+	if in == nil {
+		return nil
+	}
+	out := &imap.SMTPSettings{}
+	if in.Host != nil {
+		out.Host = *in.Host
+	}
+	if in.Port != nil {
+		out.Port = *in.Port
+	}
+	if in.Security != nil {
+		out.Security = string(*in.Security)
+	}
+	return out
+}
+
 // writeConnectError maps the connector sentinels onto the transport
 // without leaking the provider's raw error.
 func writeConnectError(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
+	case errors.Is(err, imap.ErrSendAddressInvalid):
+		httperr.Write(w, r, &httperr.DetailedError{
+			Status: http.StatusUnprocessableEntity,
+			Code:   "smtp_address_invalid",
+			Detail: "To send from this mailbox, its login must be an email address.",
+		})
+	case errors.Is(err, imap.ErrSendLoginRejected):
+		httperr.Write(w, r, &httperr.DetailedError{
+			Status: http.StatusUnprocessableEntity,
+			Code:   "smtp_login_rejected",
+			Detail: "The outgoing mail server rejected these credentials. Check the SMTP host, port, security and app password.",
+		})
+	case errors.Is(err, imap.ErrSendUnreachable):
+		httperr.Write(w, r, &httperr.DetailedError{
+			Status: http.StatusBadGateway,
+			Code:   "smtp_unreachable",
+			Detail: "The outgoing mail server could not be reached.",
+		})
 	case errors.Is(err, imap.ErrLoginRejected):
 		httperr.Write(w, r, &httperr.DetailedError{
 			Status: http.StatusUnprocessableEntity,

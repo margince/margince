@@ -278,7 +278,7 @@ describe("a meeting that owes an answer", () => {
         name: "Did not happen: Discovery call with Turbinenbau",
       }),
     );
-    expect(await screen.findByText(/Meeting outcome recorded/i)).not.toBeNull();
+    expect(await screen.findByText(/Marked as not held/i)).not.toBeNull();
     expect(sent).toEqual([{ meeting_status: "canceled" }]);
   });
 

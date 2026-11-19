@@ -148,6 +148,9 @@ func prepareLoggedActivity(ctx context.Context, tx pgx.Tx, in *LogActivityInput)
 	if err := admitTaskTime(in); err != nil {
 		return err
 	}
+	if err := checkDueWindow(in.DueAt, orWallClock(in.recordedAt)); err != nil {
+		return err
+	}
 	if err := validateActivityDuration(in.DurationSeconds); err != nil {
 		return err
 	}

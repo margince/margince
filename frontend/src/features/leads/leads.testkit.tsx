@@ -81,10 +81,11 @@ export function render(
   client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   }),
+  locale: "en" | "de" = "en",
 ): RenderResult {
   return rtlRender(
     <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">
+      <LocaleProvider initial={locale}>
         {/* The region is the shell's in the running app (`main.tsx`); a suite whose
           subject is what a write says mounts it the same way. */}
         <ToastProvider>

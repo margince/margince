@@ -118,7 +118,7 @@ func TestBackfillLifecycle(t *testing.T) {
 	rep := ids.From[ids.UserKind](e.Rep1)
 
 	t.Run("preview estimates before anything spends", func(t *testing.T) {
-		msgs, err := registry.EstimateBackfill(grantCtx, "gmail", rep, 6)
+		msgs, err := registry.EstimateBackfill(grantCtx, capturemod.ProviderMailbox("gmail"), rep, 6)
 		if err != nil {
 			t.Fatalf("EstimateBackfill: %v", err)
 		}
@@ -137,25 +137,25 @@ func TestBackfillLifecycle(t *testing.T) {
 			t.Error("an exactly counted preview was reported as a floor")
 		}
 		registry.SetClock(func() time.Time { return time.Date(2026, time.August, 31, 12, 0, 0, 0, time.UTC) })
-		august, err := registry.EstimateBackfill(grantCtx, "gmail", rep, 6)
+		august, err := registry.EstimateBackfill(grantCtx, capturemod.ProviderMailbox("gmail"), rep, 6)
 		registry.SetClock(func() time.Time { return now })
 		wantAugust := time.Date(2026, time.March, 3, 12, 0, 0, 0, time.UTC)
 		if err != nil || !august.AfterDate.Equal(wantAugust) {
 			t.Fatalf("August month-end preview = %s, want %s; error = %v", august.AfterDate, wantAugust, err)
 		}
 
-		if _, err := registry.EstimateBackfill(grantCtx, "gmail", rep, 5); !errors.Is(err, capturemod.ErrWindowInvalid) {
+		if _, err := registry.EstimateBackfill(grantCtx, capturemod.ProviderMailbox("gmail"), rep, 5); !errors.Is(err, capturemod.ErrWindowInvalid) {
 			t.Fatalf("a 5-month window must be refused, got %v", err)
 		}
 	})
 
-	run, err := registry.StartBackfill(grantCtx, "gmail", rep, 6, connector.BackfillEstimate{Messages: 25}, enqueueNothing)
+	run, err := registry.StartBackfill(grantCtx, capturemod.ProviderMailbox("gmail"), rep, 6, connector.BackfillEstimate{Messages: 25}, enqueueNothing)
 	if err != nil {
 		t.Fatalf("StartBackfill: %v", err)
 	}
 
 	t.Run("one live run per connection", func(t *testing.T) {
-		if _, err := registry.StartBackfill(grantCtx, "gmail", rep, 6, connector.BackfillEstimate{Messages: 25}, enqueueNothing); !errors.Is(err, capturemod.ErrBackfillRunning) {
+		if _, err := registry.StartBackfill(grantCtx, capturemod.ProviderMailbox("gmail"), rep, 6, connector.BackfillEstimate{Messages: 25}, enqueueNothing); !errors.Is(err, capturemod.ErrBackfillRunning) {
 			t.Fatalf("second start while running = %v, want ErrBackfillRunning", err)
 		}
 	})
@@ -208,10 +208,10 @@ func TestBackfillLifecycle(t *testing.T) {
 	})
 
 	t.Run("windows only widen", func(t *testing.T) {
-		if _, err := registry.StartBackfill(grantCtx, "gmail", rep, 3, connector.BackfillEstimate{Messages: 25}, enqueueNothing); !errors.Is(err, capturemod.ErrWindowNarrowing) {
+		if _, err := registry.StartBackfill(grantCtx, capturemod.ProviderMailbox("gmail"), rep, 3, connector.BackfillEstimate{Messages: 25}, enqueueNothing); !errors.Is(err, capturemod.ErrWindowNarrowing) {
 			t.Fatalf("narrowing 6m→3m = %v, want ErrWindowNarrowing", err)
 		}
-		wider, err := registry.StartBackfill(grantCtx, "gmail", rep, 120, connector.BackfillEstimate{Messages: 25}, enqueueNothing)
+		wider, err := registry.StartBackfill(grantCtx, capturemod.ProviderMailbox("gmail"), rep, 120, connector.BackfillEstimate{Messages: 25}, enqueueNothing)
 		if err != nil {
 			t.Fatalf("widening six months to ten years: %v", err)
 		}
@@ -219,7 +219,7 @@ func TestBackfillLifecycle(t *testing.T) {
 		if want := time.Date(2016, time.March, 31, 12, 0, 0, 0, time.UTC); wider.WindowMonths != 120 || !wider.AfterDate.Equal(want) {
 			t.Fatalf("ten-year run = %+v, want boundary %s", wider, want)
 		}
-		persisted, err := registry.BackfillStatus(grantCtx, "gmail", rep)
+		persisted, err := registry.BackfillStatus(grantCtx, capturemod.ProviderMailbox("gmail"), rep)
 		if err != nil || persisted == nil || !persisted.AfterDate.Equal(time.Date(2016, time.March, 31, 0, 0, 0, 0, time.UTC)) {
 			t.Fatalf("persisted ten-year boundary = %+v, error = %v", persisted, err)
 		}
@@ -229,14 +229,14 @@ func TestBackfillLifecycle(t *testing.T) {
 		}
 
 		// Cancel the widened run: terminal, with captured counts retained.
-		if _, err := registry.CancelBackfill(grantCtx, "gmail", rep); err != nil {
+		if _, err := registry.CancelBackfill(grantCtx, capturemod.ProviderMailbox("gmail"), rep); err != nil {
 			t.Fatalf("CancelBackfill: %v", err)
 		}
 		status, _, _, _ = readBackfillRow(t, e, wider.ID)
 		if status != "cancelled" {
 			t.Fatalf("status = %s, want cancelled", status)
 		}
-		if _, err := registry.CancelBackfill(grantCtx, "gmail", rep); err == nil {
+		if _, err := registry.CancelBackfill(grantCtx, capturemod.ProviderMailbox("gmail"), rep); err == nil {
 			t.Fatal("cancelling with nothing live must refuse, not invent a run")
 		}
 	})
@@ -280,7 +280,7 @@ func TestBackfillStepFaultsAreTerminal(t *testing.T) {
 		t.Helper()
 		// Over, not a plain start: a plain start would continue the previous
 		// subtest's failed run instead of opening a fresh one.
-		run, err := registry.StartBackfillOver(grantCtx, "gmail", rep, 6, connector.BackfillEstimate{Messages: 25}, enqueueNothing)
+		run, err := registry.StartBackfillOver(grantCtx, capturemod.ProviderMailbox("gmail"), rep, 6, connector.BackfillEstimate{Messages: 25}, enqueueNothing)
 		if err != nil {
 			t.Fatalf("StartBackfillOver: %v", err)
 		}
@@ -330,7 +330,7 @@ func TestBackfillStepFaultsAreTerminal(t *testing.T) {
 		}
 		// End it: a run left running here would be a live run nothing pages,
 		// refusing every later start on this connection.
-		if _, err := registry.CancelBackfill(grantCtx, "gmail", rep); err != nil {
+		if _, err := registry.CancelBackfill(grantCtx, capturemod.ProviderMailbox("gmail"), rep); err != nil {
 			t.Fatalf("CancelBackfill: %v", err)
 		}
 	})
@@ -352,7 +352,7 @@ func TestStartBackfillRollsBackWhenTheJobCannotBeScheduled(t *testing.T) {
 
 	queueDown := errors.New("the job queue refused the insert")
 	failToSchedule := func(context.Context, pgx.Tx, ids.UUID) error { return queueDown }
-	if _, err := registry.StartBackfill(grantCtx, "gmail", rep, 6, connector.BackfillEstimate{Messages: 25}, failToSchedule); !errors.Is(err, queueDown) {
+	if _, err := registry.StartBackfill(grantCtx, capturemod.ProviderMailbox("gmail"), rep, 6, connector.BackfillEstimate{Messages: 25}, failToSchedule); !errors.Is(err, queueDown) {
 		t.Fatalf("StartBackfill over a dead queue = %v, want the scheduling fault", err)
 	}
 
@@ -368,7 +368,7 @@ func TestStartBackfillRollsBackWhenTheJobCannotBeScheduled(t *testing.T) {
 
 	// What the rollback buys the user: the retry starts, instead of colliding
 	// with the wreckage of the attempt that failed.
-	if _, err := registry.StartBackfill(grantCtx, "gmail", rep, 6, connector.BackfillEstimate{Messages: 25}, enqueueNothing); err != nil {
+	if _, err := registry.StartBackfill(grantCtx, capturemod.ProviderMailbox("gmail"), rep, 6, connector.BackfillEstimate{Messages: 25}, enqueueNothing); err != nil {
 		t.Fatalf("the retry after a failed schedule must start cleanly, got %v", err)
 	}
 }

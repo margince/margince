@@ -52,7 +52,7 @@ func TestConversationSuggestionsFillTheVisiblePageAfterFilteringNewerMessages(t 
 	for range 10 {
 		captureSuggestionCopy(t, e, sink, "blocked@private.test")
 	}
-	if _, err := capture.NewExclusionStore(InstallationDB(e.Pool)).Add(e.Admin(), capture.ExclusionScopeUser, capture.ExclusionKindAddress, "blocked@private.test"); err != nil {
+	if _, err := capture.NewExclusionStore(InstallationDB(e.Pool)).Add(e.Admin(), capture.ExclusionScopeUser, capture.ExclusionKindAddress, "blocked@private.test", ids.Nil); err != nil {
 		t.Fatal(err)
 	}
 	out, err := sink.ConversationSuggestions(e.Admin(), anchor)
@@ -99,7 +99,7 @@ func TestConversationSuggestionsReportTheExhaustedScanBudget(t *testing.T) {
 		"source_id":    "r.source_id || '-' || n.ord",
 		"identity_key": "r.identity_key || '-' || n.ord",
 	})
-	if _, err := capture.NewExclusionStore(InstallationDB(e.Pool)).Add(e.Admin(), capture.ExclusionScopeUser, capture.ExclusionKindAddress, "blocked@private.test"); err != nil {
+	if _, err := capture.NewExclusionStore(InstallationDB(e.Pool)).Add(e.Admin(), capture.ExclusionScopeUser, capture.ExclusionKindAddress, "blocked@private.test", ids.Nil); err != nil {
 		t.Fatal(err)
 	}
 	out, err := sink.ConversationSuggestions(e.Admin(), anchor)

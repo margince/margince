@@ -244,7 +244,7 @@ func absorbEcho(ctx context.Context, tx pgx.Tx, survivorID ids.ActivityID, stamp
 		   AND ((@provider_attested AND echo.body_completeness = 'complete' AND echo.subject = @provider_subject AND echo.body = @provider_body)
  OR EXISTS (SELECT 1 FROM capture_import ci JOIN comms_outbound sent ON sent.activity_id = survivor.id
  WHERE ci.activity_id = echo.id AND ci.user_id = sent.user_id
- AND ci.provider_message_ids && `+storekit.ProviderMessageKeysSQL("sent.user_id", "sent.provider", "sent.provider_message_id")+`))
+ AND ci.provider_message_ids && `+storekit.ProviderMessageKeysSQL("sent.user_id", "sent.provider", "sent.connection_id", "sent.provider_message_id")+`))
 		   -- A held row is nobody's echo: the guard would refuse the fold, and a
 		   -- restricted record must not be folded into a live one anyway.
 		   AND echo.restricted_at IS NULL

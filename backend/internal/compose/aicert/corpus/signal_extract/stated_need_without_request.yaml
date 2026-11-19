@@ -1,0 +1,11 @@
+name: stated_need_without_request
+task: signal_extract
+site: thread_events
+source: hand_authored
+sanitized_by: hand_authored/claude
+fixture: [{"direction": "inbound", "subject": "Busy season", "sent": "2026-09-07", "body": "Hi Linh,\n\nOur agents keep losing track of support tickets. We need a better support desk before the busy season starts in March.\n\nBest,\nMira", "participants": [{"key": "buyer", "kind": "contact", "role": "from", "name": "Mira", "address": "mira@maple.test"}, {"key": "seller", "kind": "seat", "role": "to", "name": "Linh Nguyen", "address": "linh@seller.test"}]}]
+expect:
+  outcome: accepted
+  answer: [{"kind": "new_opportunity", "message": 1, "request_kind": "need"}]
+  rubric: "A buyer asking us outright for a quotation is an explicit request. A need the buyer only describes is a need."
+  bands: {certified_min: 70, degraded_min: 50, floor: 40}

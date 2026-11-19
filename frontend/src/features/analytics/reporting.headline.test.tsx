@@ -244,3 +244,41 @@ it("heads the sales figures with the win rate and new qualified pipeline beside 
   ]);
   expect(screen.getByText("42%")).toBeVisible();
 });
+
+// The share and the gap are the server's, so they are shown as sent. These
+// differ from what target and actual would give (72% and €84,000), so a card
+// that worked them out again fails here. A zero target has a gap and no share,
+// and its card states no target line.
+it("words the server's share and gap for a target and none for a zero target", () => {
+  const [won, ...rest] = reportingStoryEvaluation.metrics;
+  if (!won) throw new Error("the story evaluation has no sales won");
+  const held = (metric: Partial<typeof won>) => ({
+    ...reportingStoryEvaluation,
+    metrics: [{ ...won, ...metric }, ...rest],
+  });
+  const { unmount } = render(
+    <StoryProviders client={reportingCatalogClient()}>
+      <ResultsSummary
+        evaluation={held({ target_delta: -8_000_000, attainment: 70 })}
+        onEvidence={() => {}}
+      />
+    </StoryProviders>,
+  );
+  expect(screen.getAllByText(/70%/).length).toBeGreaterThan(0);
+  expect(document.body.textContent).toMatch(/€80(K|,000) remaining/);
+  expect(screen.queryByText(/72%/)).toBeNull();
+  unmount();
+  render(
+    <StoryProviders client={reportingCatalogClient()}>
+      <ResultsSummary
+        evaluation={held({
+          target: 0,
+          target_delta: 21_600_000,
+          attainment: undefined,
+        })}
+        onEvidence={() => {}}
+      />
+    </StoryProviders>,
+  );
+  expect(screen.queryByText(/remaining|above target/)).toBeNull();
+});

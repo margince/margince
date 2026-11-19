@@ -55,6 +55,11 @@ function CompanyRef({ view }: Readonly<{ view: Project360 }>) {
       <span data-testid="project-company-withheld">{t("state.withheld")}</span>
     );
   }
+  if (!view.project.company_id) {
+    return (
+      <span data-testid="project-company-none">{t("project.noCustomer")}</span>
+    );
+  }
   return (
     <EntityRef
       kind="company"
@@ -141,7 +146,14 @@ function CompanyCardRow({ view }: Readonly<{ view: Project360 }>) {
       <span data-testid="project-company-withheld">{t("state.withheld")}</span>
     );
   }
-  if (!companyId || !company) {
+  if (!companyId) {
+    return (
+      <span data-testid="project-company-none">
+        {t("project.noCustomerSet")}
+      </span>
+    );
+  }
+  if (!company) {
     return <span>{t("field.unset")}</span>;
   }
   return <CompanyCard companyId={companyId} name={company.name} />;
@@ -293,7 +305,13 @@ function useSectionEdits(project: Project) {
   const edit = useProjectEdit(project);
   const about = useSectionEdit(edit, {
     label: t("record.details.about"),
-    keys: ["target_end_date", "description"],
+    // A project gets its end day once it is closed, as its row does.
+    keys: [
+      "started_at",
+      "target_end_date",
+      ...(project.phase === "closed" ? ["ended_at"] : []),
+      "description",
+    ],
   });
   const ownership = useSectionEdit(edit, {
     label: t("record.details.ownership"),

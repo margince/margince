@@ -133,8 +133,9 @@ func (w *embedDriftSweepWorker) sweepWorkspace(ctx context.Context, workspace id
 // (NewJobRunner appends what it returns — addGraphJobs' self-registration
 // shape).
 //
-// Registered whatever the lane is bound to at boot, because RoutingWatcher
-// binds one on a running process and nothing re-runs this.
+// Registered whenever the role has a model path, bound or not, because the
+// embedder is the Router and RoutingWatcher binds it on a running process.
+// A role with no path at all registers nothing.
 //
 // An unbound lane costs a tick and no query: the store answers an empty
 // identity with nothing to do before it reads anything.

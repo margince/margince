@@ -85,6 +85,7 @@ func fileOf(size int) []byte {
 	for i := range content {
 		content[i] = byte(i%251 + 1)
 	}
+	copy(content, "%PDF-1.4")
 	return content
 }
 

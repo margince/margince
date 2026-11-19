@@ -44,12 +44,20 @@ var recencyFloor = []string{
 	"last_activity_of_project",
 	"last_activity_of_activity",
 	"last_activity_of_company_activity",
+	"last_activity_of_deal_activity",
 }
+
+// dealClockFunctions also count mail limited to its participants, because such
+// a message still shows its deal was worked. They carry their own audience
+// clause by design, and the census asserts that one instead.
+var dealClockFunctions = []string{"last_activity_of_deal", "last_activity_of_deal_activity"}
 
 // recencyFunctionRe finds a recency function's definition or its drop, by the
 // prefix every one carries. A dropped function is not live, so it leaves the
 // census. Case and line breaks are free in SQL, so neither may hide one.
 var recencyFunctionRe = regexp.MustCompile(`(?i)(CREATE\s+(?:OR\s+REPLACE\s+)?|DROP\s+)FUNCTION\s+(?:IF\s+EXISTS\s+)?(last_activity_of_\w+)`)
+
+const dealClockAudienceClause = "a.audience IN ('workspace', 'participants')"
 
 const remediationOrigin = "system_remediation"
 
@@ -96,6 +104,13 @@ func TestRecencyFunctionsExcludeRemediationWork(t *testing.T) {
 		// see, and a careless replace here would re-open that. Asserting it
 		// arm-for-arm means this gate fails rather than the privacy test
 		// failing somewhere else.
+		if slices.Contains(dealClockFunctions, name) {
+			if audience := strings.Count(body, dealClockAudienceClause); audience < arms {
+				t.Errorf("%s: %d activity arm(s) but only %d %q filter(s) — a deal clock counts "+
+					"participants-only mail but never a selected audience's", name, arms, audience, dealClockAudienceClause)
+			}
+			continue
+		}
 		if audience := strings.Count(body, workspaceAudienceClause); audience < arms {
 			t.Errorf("%s: %d activity arm(s) but only %d audience filter(s) — a "+
 				"replacement copied from a stale definition dropped one",

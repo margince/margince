@@ -6,7 +6,11 @@ import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { LocaleProvider } from "../i18n";
+import {
+  reportingLeadsEvaluation,
+  reportingSectionsCatalog,
+} from "../features/analytics/reporting.story-fixtures";
+import { type Locale, LocaleProvider } from "../i18n";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { steppedClock } from "../testing/steppedclock";
 import { type Command, CommandPalette } from "./palette";
@@ -97,11 +101,14 @@ function backend({
   allow = ASKER,
   sets = [HANDBOOK, DEFAULT],
   replies = {},
+  data = { outcome: "unsupported" },
   setsArrive = Promise.resolve(),
 }: {
   allow?: GrantSpec;
   sets?: unknown[];
   replies?: Record<string, unknown>;
+  // The answer of the CRM data reader.
+  data?: unknown;
   // Holds the set list back until it settles, as a slow network does.
   setsArrive?: Promise<void>;
 } = {}) {
@@ -113,6 +120,13 @@ function backend({
         input instanceof Request ? input : new Request(String(input), init);
       if (req.url.endsWith("/v1/me")) {
         return json(meFixture({ allow }));
+      }
+      if (req.url.endsWith("/v1/search/data-answer")) {
+        asked.push(`data:${(await req.json()).question}`);
+        return json(data);
+      }
+      if (req.url.endsWith("/v1/analytics/metrics")) {
+        return json(reportingSectionsCatalog);
       }
       if (req.url.includes("/ask")) {
         const id = req.url.split("/corpora/")[1]?.split("/")[0] ?? "";
@@ -152,13 +166,13 @@ const commands: Command[] = [
   },
 ];
 
-function renderPalette(onClose = () => {}) {
+function renderPalette(onClose = () => {}, locale: Locale = "en") {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   render(
     <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">
+      <LocaleProvider initial={locale}>
         <CommandPalette open onClose={onClose} commands={commands} />
       </LocaleProvider>
     </QueryClientProvider>,
@@ -174,6 +188,7 @@ function answerPanel() {
 beforeAll(async () => {
   await import("../features/voice-knowledge/corpusanswer");
   await import("../features/voice-knowledge/citeddocument");
+  await import("./palettedata");
 });
 
 afterEach(() => {
@@ -476,4 +491,35 @@ it("offers Analytics for a data question the handbook does not cover", async () 
     await screen.findByRole("button", { name: "Open in Analytics" }),
   ).toBeVisible();
   expect(screen.queryByText(/Ask an administrator or a colleague/)).toBeNull();
+});
+
+it("answers a Vietnamese data question with no question mark from the data reader", async () => {
+  const metric = reportingLeadsEvaluation.metrics[0];
+  if (!metric) throw new Error("fixture needs a metric");
+  const question = "tháng này tôi thắng bao nhiêu deal";
+  const asked = backend({
+    allow: { ...ASKER, installation_settings: ["read"], deal: ["read"] },
+    data: {
+      outcome: "answered",
+      count: true,
+      evaluation: {
+        ...reportingLeadsEvaluation,
+        metrics: [
+          { ...metric, coverage: { ...metric.coverage, eligible_count: 1234 } },
+        ],
+      },
+    },
+  });
+  renderPalette(() => {}, "vi");
+  const clock = steppedClock();
+  await clock.type(screen.getByRole("searchbox"), question);
+  expect(
+    await screen.findByText(`Hỏi dữ liệu CRM: “${question}”`),
+  ).toBeVisible();
+  await clock.keyboard("{Enter}");
+  expect(await screen.findByText("1.234")).toBeVisible();
+  expect(
+    screen.getByRole("button", { name: "Mở trong Phân tích" }),
+  ).toBeVisible();
+  expect(asked).toEqual([`data:${question}`]);
 });

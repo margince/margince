@@ -1,13 +1,23 @@
-import { type InputHTMLAttributes, useEffect, useRef, useState } from "react";
 import {
-  minorUnitDigits,
-  toMajorUnits,
-  toMinorUnits,
+  type InputHTMLAttributes,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from "react";
+import {
+  type AmountRefusal,
+  typedAmountText,
+  typedMinorUnits,
 } from "../format/minorunits";
+import { type Locale, useLocale, useT } from "../i18n";
 import { TextInput } from "./atoms";
+import { ErrorLine } from "./errorline";
 
-// A thin wrapper around TextInput type="number" that displays and edits MAJOR
-// units while emitting the MINOR units the API stores.
+// A thin wrapper around a text TextInput that displays and edits MAJOR units
+// while emitting the MINOR units the API stores. Text, not type="number": a
+// number box reads the browser's decimal sign, so "12,5" became 125. The text
+// is read by typedMinorUnits, which refuses an ambiguous "1.500".
 //
 // The scale is the CURRENCY's, taken from format/minorunits. This used to
 // assume two decimals, on the stated grounds that no caller needed a different
@@ -33,9 +43,9 @@ export function MoneyInput({
   onBlur,
   blankWhenZero = false,
   onClear,
-  onTooPrecise,
   display,
   onFocus,
+  onRefusedChange,
   ...rest
 }: Readonly<
   Omit<InputHTMLAttributes<HTMLInputElement>, "value" | "onChange" | "type"> & {
@@ -55,26 +65,33 @@ export function MoneyInput({
     // the reader is taking back. Without it an emptied box keeps the last
     // amount, which is right for a priced record (see onChange below).
     onClear?: () => void;
-    // Called when the reader types more decimals than the currency has. The box
-    // then keeps that text on blur, so the caller's error names what is on screen.
-    onTooPrecise?: () => void;
     // The amount as the page writes money, shown while the box is not being
     // edited. Focus brings back the plain number, which is what a reader types.
     display?: (minor: number) => string;
+    // Told whether the box holds text it refuses, for a save outside a form
+    // or dialog, where refuseUnreadableField cannot reach the box.
+    onRefusedChange?: (refused: boolean) => void;
   }
 >) {
-  const digits = minorUnitDigits(currency);
+  const t = useT();
+  const { locale } = useLocale();
+  const errorId = useId();
   const asText = (minor: number, forCurrency: string) =>
     blankWhenZero && minor === 0
       ? ""
-      : toMajorUnits(minor, forCurrency).toFixed(minorUnitDigits(forCurrency));
+      : typedAmountText(minor, forCurrency, locale);
   const [text, setText] = useState(() => asText(valueMinor, currency));
+  const [editing, setEditing] = useState(false);
+  // Why the text on screen is not the amount, shown once the reader leaves
+  // the box; the text itself stays so they can correct it.
+  const [refusal, setRefusal] = useState<AmountRefusal | null>(null);
   const lastCommittedMinor = useRef(valueMinor);
   // Whether the reader's last edit emptied the box through onClear, so blur
   // leaves it empty rather than restoring the amount it held.
   const cleared = useRef(false);
-  // Whether the text on screen is a figure refused through onTooPrecise.
-  const heldTooPrecise = useRef(false);
+  // The amount the box held when this edit began. A refused text puts it
+  // back, so a prefix committed key by key ("1.5" of "1.500") is never saved.
+  const beforeEdit = useRef<{ minor: number; cleared: boolean } | null>(null);
   // The currency the text on screen is written in, tracked beside the amount
   // because the SCALE is part of what that text says: an offer switched from
   // EUR to VND holds the same minor integer and must not keep showing the euro
@@ -99,151 +116,143 @@ export function MoneyInput({
     setText(
       blankWhenZero && valueMinor === 0
         ? ""
-        : toMajorUnits(valueMinor, currency).toFixed(minorUnitDigits(currency)),
+        : typedAmountText(valueMinor, currency, locale),
     );
+    setRefusal(null);
     lastCommittedMinor.current = valueMinor;
     lastRenderedCurrency.current = currency;
-  }, [valueMinor, currency, blankWhenZero]);
+  }, [valueMinor, currency, blankWhenZero, locale]);
 
-  const [editing, setEditing] = useState(false);
-  const shownMinor = lastShownMinor(text, valueMinor, currency);
-  // A held figure the currency cannot store stays in the editor, as typed.
-  if (display && !editing && text !== "" && Number.isFinite(shownMinor)) {
+  // The refusal the text on screen earns now, before any blur shows it. It is
+  // the box's custom validity, so refuseUnreadableField stops a save past it.
+  const typedNow =
+    text.trim() === "" ? null : typedMinorUnits(text, currency, locale);
+  const pending = typedNow && "refused" in typedNow ? typedNow.refused : null;
+  const pendingMessage = pending ? t(pending.key, pending.params) : "";
+  const input = useRef<HTMLInputElement | null>(null);
+  // Every render: the face that holds the input changes with editing.
+  useEffect(() => {
+    input.current?.setCustomValidity(pendingMessage);
+  });
+  const refusedNow = pending !== null;
+  useEffect(() => {
+    onRefusedChange?.(refusedNow);
+  }, [refusedNow, onRefusedChange]);
+
+  const startEdit = () => {
+    setEditing(true);
+    beforeEdit.current ??= {
+      minor: lastCommittedMinor.current,
+      cleared: cleared.current,
+    };
+  };
+  const commit = (minor: number) => {
+    cleared.current = false;
+    lastCommittedMinor.current = minor;
+    onChangeMinor(minor);
+  };
+  const restoreBeforeEdit = () => {
+    const before = beforeEdit.current;
+    if (!before) {
+      return;
+    }
+    if (before.cleared && onClear) {
+      cleared.current = true;
+      onClear();
+    } else if (!Object.is(before.minor, lastCommittedMinor.current)) {
+      commit(before.minor);
+    }
+  };
+  if (display && !editing && text !== "" && refusal === null) {
     return (
       <TextInput
         {...rest}
         type="text"
         inputMode="decimal"
-        value={display(shownMinor)}
+        value={display(lastShownMinor(text, valueMinor, currency, locale))}
         // Only focus brings a key press here, and focus has already swapped
         // this face for the editor.
         onChange={() => setEditing(true)}
         onFocus={(event) => {
-          setEditing(true);
+          startEdit();
           onFocus?.(event);
         }}
       />
     );
   }
+  const describedBy = [rest["aria-describedby"], refusal ? errorId : undefined]
+    .filter(Boolean)
+    .join(" ");
   return (
-    <TextInput
-      type="number"
-      value={text}
-      onFocus={(event) => {
-        setEditing(true);
-        onFocus?.(event);
-      }}
-      onChange={(event) => {
-        // A box that started empty has no display face to focus through.
-        setEditing(true);
-        setText(event.target.value);
-        // An empty or unparseable buffer (mid-edit, e.g. a lone "-" or a
-        // cleared field) is never committed as 0 — the last valid minor
-        // value stands until the user finishes typing a real number, and the
-        // blur below snaps the text back to it.
-        //
-        // This is deliberate and it has a cost worth naming: a reader cannot
-        // clear a priced field back to "no amount" by deleting it. That is
-        // right for an offer line, which must have a price, and wrong for an
-        // agreement that may legitimately be unpriced — but the remedy is an
-        // explicit control on the form that means "remove this value", not a
-        // component that reads a half-deleted buffer as an intention. Changing
-        // it here would also make every mid-edit keystroke commit a zero.
-        if (event.target.value.trim() === "") {
-          heldTooPrecise.current = false;
-          if (onClear) {
-            cleared.current = true;
-            onClear();
+    <>
+      <TextInput
+        ref={input}
+        type="text"
+        inputMode="decimal"
+        value={text}
+        onFocus={(event) => {
+          startEdit();
+          onFocus?.(event);
+        }}
+        onChange={(event) => {
+          // A box that started empty has no display face to focus through.
+          startEdit();
+          setRefusal(null);
+          setText(event.target.value);
+          // An empty buffer is never committed as 0: the last amount stands,
+          // so a priced record cannot be emptied by deleting its text. A
+          // value that may be absent takes onClear instead.
+          if (event.target.value.trim() === "") {
+            if (onClear) {
+              cleared.current = true;
+              onClear();
+            }
+            return;
           }
-          return;
-        }
-        // A figure with more decimals than the currency HAS is not committed.
-        // `step` governs native validity and nothing else — onChange still
-        // fires, so typing "1.5" into a dong field rounded to 2 minor units and
-        // an offer line saved the altered amount on blur. Holding the text
-        // instead lets the reader finish or correct it, exactly as an empty
-        // buffer is held above, and nothing is stored that nobody typed.
-        // isFinite, not !isNaN: a pasted overflowing exponent like 1e309
-        // parses to Infinity, which is not NaN and would reach the request
-        // body as a number no column can hold.
-        const parsed = Number(event.target.value);
-        if (!Number.isFinite(parsed) || exceedsPrecision(parsed, digits)) {
-          if (onTooPrecise && finerThanCurrency(parsed, digits)) {
-            heldTooPrecise.current = true;
-            onTooPrecise();
+          // A refused text puts back the amount the edit began with, at once.
+          // A prefix committed key by key ("1.5" of "1.500") then never
+          // reaches a caller that saves on blur.
+          const typed = typedMinorUnits(event.target.value, currency, locale);
+          if ("minor" in typed) {
+            commit(typed.minor);
+          } else {
+            restoreBeforeEdit();
           }
-          return;
-        }
-        {
-          const minor = toMinorUnits(parsed, currency);
-          cleared.current = false;
-          heldTooPrecise.current = false;
-          lastCommittedMinor.current = minor;
-          onChangeMinor(minor);
-        }
-      }}
-      onBlur={(event) => {
-        if (!heldTooPrecise.current) {
-          setText(
-            cleared.current ? "" : asText(lastCommittedMinor.current, currency),
-          );
-        }
-        setEditing(false);
-        onBlur?.(event);
-      }}
-      {...rest}
-      // type="number" defaults to step="1" — without this, a genuine
-      // 2-decimal amount like "12.34" fails the input's native constraint
-      // validation (:invalid, blocked form submission). The step is the
-      // currency's smallest unit, so a zero-decimal currency refuses a
-      // fractional dong instead of accepting one it cannot store.
-      //
-      // AFTER the spread, not before: a caller passing its own `step` would
-      // otherwise silently replace the currency's, and native validation would
-      // then admit a precision the storage scale cannot keep. This is the one
-      // prop the component owns rather than accepts.
-      step={digits === 0 ? "1" : `0.${"0".repeat(digits - 1)}1`}
-    />
+        }}
+        onInvalid={() => setRefusal(pending)}
+        onBlur={(event) => {
+          if (pending) {
+            setRefusal(pending);
+          } else {
+            setText(
+              cleared.current
+                ? ""
+                : asText(lastCommittedMinor.current, currency),
+            );
+          }
+          beforeEdit.current = null;
+          setEditing(false);
+          onBlur?.(event);
+        }}
+        {...rest}
+        aria-invalid={refusal ? true : rest["aria-invalid"]}
+        aria-describedby={describedBy || undefined}
+      />
+      {refusal && (
+        <ErrorLine id={errorId}>{t(refusal.key, refusal.params)}</ErrorLine>
+      )}
+    </>
   );
 }
 
 // The amount the display form names: what the text on screen says, so a
 // figure held mid-edit is never shown as the stored one.
-function lastShownMinor(text: string, valueMinor: number, currency: string) {
-  const parsed = Number(text);
-  return Number.isFinite(parsed) ? toMinorUnits(parsed, currency) : valueMinor;
-}
-
-// exceedsPrecision reports whether an amount needs finer division than its
-// currency has — a half dong, a tenth of a cent.
-//
-// Measured on the VALUE, not on the typed text. Counting written decimals is
-// the obvious approach and it is wrong in both directions once exponent
-// notation is allowed: `15e-1` has no decimal point and is one and a half,
-// while `150e-1` has none either and is exactly fifteen. Rounding to the
-// currency's own digits and asking whether the number moved answers both, and
-// every other notation, without a parser.
-function exceedsPrecision(value: number, digits: number): boolean {
-  // At 1e21 and beyond toFixed returns EXPONENTIAL notation, so the round-trip
-  // compares equal and the guard passes a value toMinorUnits then refuses as
-  // NaN — which the parent echoes back and the buffer snaps to. Such a value is
-  // over the safe-integer bound many times over, so it is refused here instead,
-  // where refusing means the text simply stands.
-  // The SCALED value has to be exact, not the typed one. A KWD amount can be a
-  // safe integer in dinars and past the bound once multiplied by a thousand,
-  // and this guard passing there hands toMinorUnits a figure it answers NaN to
-  // — which the parent echoes back and the buffer snaps to.
-  //
-  // It also covers the exponent case: at 1e21 and beyond toFixed returns
-  // exponential notation and the round-trip below compares equal.
-  if (!Number.isSafeInteger(Math.trunc(value) * 10 ** digits)) {
-    return true;
-  }
-  return finerThanCurrency(value, digits);
-}
-
-// finerThanCurrency reports whether a finite value has more decimals than
-// digits. From 1e21 toFixed writes exponential notation and this answers false.
-function finerThanCurrency(value: number, digits: number): boolean {
-  return Number.isFinite(value) && Number(value.toFixed(digits)) !== value;
+function lastShownMinor(
+  text: string,
+  valueMinor: number,
+  currency: string,
+  locale: Locale,
+) {
+  const typed = typedMinorUnits(text, currency, locale);
+  return "minor" in typed ? typed.minor : valueMinor;
 }

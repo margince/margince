@@ -18,6 +18,7 @@ import {
   StoryProviders,
 } from "../../testing/story-utils";
 import { ProjectDetails } from "./projectdetails";
+import type { Project } from "./projects.form";
 
 // Each details section offers one Edit, whose dialog holds that section's
 // fields and saves through the project's one record write.
@@ -26,13 +27,15 @@ afterEach(cleanup);
 
 type Sent = Readonly<{ body: unknown; ifMatch: string | null }>;
 
-function mount(grant: ("read" | "update")[]) {
-  const sent: Sent[] = [];
-  const bodies: unknown[] = [];
-  const current = project({
+function mount(
+  grant: ("read" | "update")[],
+  current: Project = project({
     description: "Old words",
     target_end_date: "2026-12-01",
-  });
+  }),
+) {
+  const sent: Sent[] = [];
+  const bodies: unknown[] = [];
   installFetchStub({
     "GET /me": meRoute({ project: grant }, { seat: "full" }),
     "GET /users": () => jsonResponse({ data: [], page: { has_more: false } }),
@@ -110,4 +113,37 @@ it("holds only the owner in the Ownership dialog", async () => {
   expect(dialog.getByLabelText(/^Owner/)).toBeTruthy();
   expect(dialog.queryByRole("textbox", { name: "Description" })).toBeNull();
   expect(dialog.queryByLabelText(en["project.targetEnd"])).toBeNull();
+});
+
+it("saves a start date from About as that field alone", async () => {
+  const user = userEvent.setup();
+  const sent = mount(["read", "update"]);
+  await user.click(await screen.findByRole("button", { name: "Edit About" }));
+  const dialog = within(await screen.findByRole("dialog", { name: "About" }));
+  await user.type(dialog.getByLabelText(en["project.startDate"]), "2026-10-20");
+  await user.click(dialog.getByRole("button", { name: "Save" }));
+  await waitFor(() =>
+    expect(sent).toEqual([
+      { body: { started_at: "2026-10-20" }, ifMatch: "3" },
+    ]),
+  );
+});
+
+it("offers the end date in About once the project is closed", async () => {
+  const user = userEvent.setup();
+  mount(
+    ["read", "update"],
+    project({ phase: "closed", closed_reason: "Done" }),
+  );
+  await user.click(await screen.findByRole("button", { name: "Edit About" }));
+  const dialog = within(await screen.findByRole("dialog", { name: "About" }));
+  expect(dialog.getByLabelText(en["project.endDate"])).toBeTruthy();
+});
+
+it("leaves the end date out of an open project's About", async () => {
+  const user = userEvent.setup();
+  mount(["read", "update"]);
+  await user.click(await screen.findByRole("button", { name: "Edit About" }));
+  const dialog = within(await screen.findByRole("dialog", { name: "About" }));
+  expect(dialog.queryByLabelText(en["project.endDate"])).toBeNull();
 });
