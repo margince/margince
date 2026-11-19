@@ -23,8 +23,6 @@ const VITE_ENGINES: Readonly<Record<string, string>> = {
 // recent Chrome, so the Chrome floor is the one the bundle is lowered for.
 const CHROMIUM_BUILDS: ReadonlySet<string> = new Set([
   "samsung",
-  "and_uc",
-  "and_qq",
   "android",
   "op_mob",
 ]);

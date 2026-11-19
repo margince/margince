@@ -26,9 +26,12 @@ Firefox ESR
 > 1% in VN
 
 # Never: Internet Explorer and the old Edge (both dead), Opera Mini's proxy
-# mode, which runs no app, KaiOS phones, and Firefox on Android.
+# mode, which runs no app, KaiOS phones, and Firefox on Android. UC Browser and
+# QQ Browser run an engine years behind Chrome, with no :has() or @container.
 not dead
 not ie > 0
 not op_mini all
 not kaios > 0
 not and_ff > 0
+not and_uc > 0
+not and_qq > 0

@@ -26,15 +26,17 @@ rare in Germany still counts. Browsers built on Chromium that caniuse does not l
 run a recent Chrome engine and follow the Chrome floor.
 
 The file shuts out Internet Explorer, the old Edge, Opera Mini in its proxy mode, KaiOS phones and
-Firefox on Android, and every browser that has had no update for two years (`not dead`).
+Firefox on Android, and every browser that has had no update for two years (`not dead`). It also
+shuts out UC Browser and QQ Browser. Both pass the usage line in Vietnam, but their engine is years
+behind Chrome and lacks `:has()`, `@container` and `dvh`, which the app already uses.
 
 ## How the list reaches the build
 
 [`frontend/scripts/browser-targets.ts`](../../frontend/scripts/browser-targets.ts) turns the list into
 the oldest version of each engine, and `vite.config.ts` passes that as `build.target`. Vite lowers
-JavaScript syntax to it and hands the same floor to Lightning CSS for the CSS. Samsung Internet, UC,
-QQ, Android WebView and Opera Mobile have no Vite target name, so the build lowers for the Chrome
-floor and leaves them out.
+JavaScript syntax to it and hands the same floor to Lightning CSS for the CSS. Samsung Internet,
+Android WebView and Opera Mobile have no Vite target name, so the build lowers for the Chrome floor
+and leaves them out. Any other browser the list admits without a Vite target name fails the build.
 
 The TypeScript `lib` in `tsconfig.app.json` names the JavaScript built-ins every browser on the list
 has (`ES2024`). A newer built-in needs the check below before code uses it.

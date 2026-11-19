@@ -26,13 +26,14 @@ describe("viteTargets", () => {
   });
 
   it("leaves out Chromium builds that Vite has no target name for", () => {
-    expect(viteTargets(["samsung 30", "and_uc 15.5", "chrome 150"])).toEqual([
+    expect(viteTargets(["samsung 30", "android 157", "chrome 150"])).toEqual([
       "chrome150",
     ]);
   });
 
   it("refuses a browser the build cannot lower for", () => {
     expect(() => viteTargets(["kaios 3.0-3.1"])).toThrow(/kaios 3\.0-3\.1/);
+    expect(() => viteTargets(["and_uc 15.5"])).toThrow(/and_uc 15\.5/);
     expect(() => viteTargets(["safari TP"])).toThrow(/safari TP/);
   });
 });
@@ -62,7 +63,15 @@ describe("the browser policy", () => {
   });
 
   it("names no browser it shuts out", () => {
-    for (const family of ["ie", "ie_mob", "op_mini", "kaios", "and_ff"]) {
+    for (const family of [
+      "ie",
+      "ie_mob",
+      "op_mini",
+      "kaios",
+      "and_ff",
+      "and_uc",
+      "and_qq",
+    ]) {
       expect(families).not.toContain(family);
     }
     const dead = new Set(browserslist("dead"));
