@@ -44,7 +44,7 @@ func (n *pageNaming) readTitle(tokenizer *html.Tokenizer) {
 // winning. Open Graph names them in `property`, some CMSs in `name`.
 func (n *pageNaming) readMeta(attrs map[string]string) {
 	switch {
-	case attrs["property"] == "og:title" || attrs["name"] == "og:title":
+	case attrs["property"] == metaOGTitle || attrs["name"] == metaOGTitle:
 		if n.ogTitle == "" {
 			n.ogTitle = oneLine(attrs["content"])
 		}

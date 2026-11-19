@@ -70,7 +70,7 @@ func LinkAddress(raw string) (string, error) {
 	case parsed.User != nil:
 		return "", linkFault("invalid_url", "an address with a user name in it cannot be listed; remove the part before @")
 	case len(address) > maxLinkAddressLength:
-		return "", &values.ParseError{Field: fieldURL, Code: "too_long", Max: maxLinkAddressLength,
+		return "", &values.ParseError{Field: fieldURL, Code: codeTooLong, Max: maxLinkAddressLength,
 			Message: fmt.Sprintf("the address is longer than %d characters", maxLinkAddressLength)}
 	}
 	// The CHECK on the column reads the scheme case-sensitively.
@@ -90,7 +90,7 @@ func linkTitle(raw string) (string, error) {
 		return r
 	}, raw)), " ")
 	if utf8.RuneCountInString(title) > maxLinkTitleRunes {
-		return "", &values.ParseError{Field: "title", Code: "too_long", Max: maxLinkTitleRunes,
+		return "", &values.ParseError{Field: fieldTitle, Code: codeTooLong, Max: maxLinkTitleRunes,
 			Message: fmt.Sprintf("the title is longer than %d characters", maxLinkTitleRunes)}
 	}
 	return title, nil
@@ -100,7 +100,7 @@ func refuseUnaddableCategory(category string) error {
 	if _, ok := addableLinkCategories[category]; ok || category == "" {
 		return nil
 	}
-	return &values.ParseError{Field: fieldCategory, Code: "category_not_assertable",
+	return &values.ParseError{Field: fieldCategory, Code: codeCategoryNotAssertable,
 		Message: "a link is filed by what it is: contract, offer, legal or other"}
 }
 
@@ -206,7 +206,7 @@ func announceAddedLink(ctx context.Context, tx pgx.Tx, id ids.UUID, in LinkInput
 		fieldEntityType: in.EntityType,
 		fieldEntityID:   in.EntityID.String(),
 		fieldURL:        in.URL,
-		"title":         in.Title,
+		fieldTitle:      in.Title,
 		fieldCategory:   in.Category,
 	})
 	if err != nil {

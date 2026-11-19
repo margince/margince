@@ -409,6 +409,9 @@ var provenanceCategories = map[string]struct{}{
 	"message_attachment": {},
 }
 
+// codeCategoryNotAssertable refuses a category that only the system may set.
+const codeCategoryNotAssertable = "category_not_assertable"
+
 // refuseAssertedProvenance stops a human from claiming a file arrived somewhere
 // it did not.
 //
@@ -429,13 +432,13 @@ func refuseAssertedProvenance(before crmcontracts.Attachment, in DocumentMetadat
 	}
 	if before.Category != nil && *before.Category == categoryLink {
 		return &values.ParseError{
-			Field: fieldCategory, Code: "category_not_assertable",
+			Field: fieldCategory, Code: codeCategoryNotAssertable,
 			Message: "a document link stays a link; archive it if it should not be listed",
 		}
 	}
 	if *in.Category == categoryLink {
 		return &values.ParseError{
-			Field: fieldCategory, Code: "category_not_assertable",
+			Field: fieldCategory, Code: codeCategoryNotAssertable,
 			Message: "only a link a mail carried is filed as sent; choose contract, offer, legal or other",
 		}
 	}
@@ -446,7 +449,7 @@ func refuseAssertedProvenance(before crmcontracts.Attachment, in DocumentMetadat
 		return nil
 	}
 	return &values.ParseError{
-		Field: fieldCategory, Code: "category_not_assertable",
+		Field: fieldCategory, Code: codeCategoryNotAssertable,
 		Message: "that category records how a file arrived and is derived from the message " +
 			"that carried it; an uploaded file has no arrival to claim — file it by what it is",
 	}
@@ -462,7 +465,7 @@ func documentMetadataPatch(before crmcontracts.Attachment, in DocumentMetadata) 
 		p.Set(fieldCategory, before.Category, *in.Category)
 	}
 	if in.Title != nil || in.ClearTitle {
-		p.Set("title", before.Title, in.Title)
+		p.Set(fieldTitle, before.Title, in.Title)
 	}
 	if in.DocState != nil {
 		p.Set("doc_state", before.DocState, *in.DocState)

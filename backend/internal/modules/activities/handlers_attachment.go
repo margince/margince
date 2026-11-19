@@ -273,7 +273,7 @@ func (h Handlers) UpdateAttachmentMetadata(w http.ResponseWriter, r *http.Reques
 	// A JSON null is an EDIT — "this document replaces nothing after all" — and
 	// an absent field is not. openapi's nullable pointer collapses the two, so
 	// the raw body decides which one arrived.
-	if raw, present := httperr.PresentField(r, "title"); present {
+	if raw, present := httperr.PresentField(r, fieldTitle); present {
 		in.ClearTitle = raw == nil
 		if raw != nil {
 			in.Title = req.Title
