@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"sync/atomic"
 	"time"
 
@@ -172,6 +173,12 @@ func (r *Router) Complete(ctx context.Context, task Task, req model.Request) (mo
 	}
 	if err := r.admitSubjects(ctx, task, req); err != nil {
 		return model.Response{}, RouteInfo{}, err
+	}
+	if req.Tier != "" {
+		if !slices.Contains(ladder, Tier(req.Tier)) {
+			return model.Response{}, RouteInfo{}, fmt.Errorf("ai: task %s has no %q tier", task, req.Tier)
+		}
+		ladder = []Tier{Tier(req.Tier)}
 	}
 	return r.serveCompletion(ctx, task, ladder, req)
 }
@@ -416,7 +423,8 @@ func cacheKey(wsID ids.WorkspaceID, task Task, req model.Request) (string, error
 		Site               string                     `json:"site,omitempty"`
 		ThinkingFloor      string                     `json:"thinking_floor,omitempty"`
 		ThinkingLevel      string                     `json:"thinking_level,omitempty"`
-	}{req.Model, req.System, req.Messages, req.Tools, req.MaxTokens, req.ResponseSchema, req.Attachments, req.ProviderOptions, req.ContextScopes, req.ContextFingerprint, req.Site, req.ThinkingFloor, req.ThinkingLevel})
+		Tier               string                     `json:"tier,omitempty"`
+	}{req.Model, req.System, req.Messages, req.Tools, req.MaxTokens, req.ResponseSchema, req.Attachments, req.ProviderOptions, req.ContextScopes, req.ContextFingerprint, req.Site, req.ThinkingFloor, req.ThinkingLevel, req.Tier})
 	if err != nil {
 		// A ProviderOptions namespace carrying invalid JSON would otherwise
 		// marshal to nil and collapse every such request onto one cache key —

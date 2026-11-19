@@ -20,6 +20,7 @@ const TASK_NAME_KEYS: Readonly<Record<AiTask, MessageKey>> = {
   document_extract: "aiTask.name.document_extract",
   draft_reply: "aiTask.name.draft_reply",
   enrich: "aiTask.name.enrich",
+  extension_call: "aiTask.name.extension_call",
   growth_fit: "aiTask.name.growth_fit",
   nl_search: "aiTask.name.nl_search",
   offer_draft: "aiTask.name.offer_draft",
