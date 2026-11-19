@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
@@ -275,6 +276,29 @@ func TestACapturedTouchCompletesTheSystemTaskAndLeavesTheHumans(t *testing.T) {
 	replay := fire(ctx, t, h, capturedEvent(t, call, "call"))
 	if len(replay.Applied) != 0 {
 		t.Error("a replayed touch claimed to resolve tasks a first pass already completed")
+	}
+}
+
+func TestTheWebsiteFormsOwnNoteLeavesTheLeadsFollowUpOpen(t *testing.T) {
+	e := setupResolve(t)
+	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
+	systemTask := e.seedTask(t, "system", "system")
+
+	enquiry := ids.NewV7()
+	e.exec(t, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by, source_system, source_id)
+		VALUES ($1, 'note', 'Website enquiry', now(), 'system', 'system', $2, $3)`,
+		enquiry, provenance.WebFormSource, provenance.WebFormSourceID(ids.NewV7().String(), "submission"))
+	e.exec(t, `INSERT INTO activity_link (activity_id, entity_type, lead_id) VALUES ($1, 'lead', $2)`, enquiry, e.lead)
+
+	ev := capturedEvent(t, enquiry, "note")
+	payload, err := json.Marshal(map[string]string{"kind": "note", "source_system": provenance.WebFormSource})
+	if err != nil {
+		t.Fatal(err)
+	}
+	ev.Payload = payload
+	fire(e.systemCtx(), t, handlerFor(t, store, "activity.captured"), ev)
+	if e.isDone(t, systemTask) {
+		t.Error("the visitor's own enquiry completed the task that asks someone to answer it")
 	}
 }
 

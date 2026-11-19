@@ -244,6 +244,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "filters.sentence.ref.pipeline_one",
   "cf.obj.deal",
   "cf.obj.lead",
+  "unit.lead",
   "co.brief.cite.deal",
   "co.brief.cite.lead",
   // The borrowed noun in the singular, which English and Vietnamese spell alike;

@@ -212,7 +212,7 @@ describe("lead work-board presentation", () => {
     expect(screen.queryByRole("link")).toBeNull();
   });
 
-  it("says where an unclassified lead came from as not set, and never prints how the row was written", () => {
+  it("names no origin for an unclassified lead, and never prints how the row was written", () => {
     renderBoard(
       <LeadBoard
         query={UNNARROWED_LIST_QUERY}
@@ -230,7 +230,8 @@ describe("lead work-board presentation", () => {
       />,
     );
 
-    expect(screen.getByText("Not set")).toBeTruthy();
+    expect(screen.getByText("Jonas Petersen")).toBeTruthy();
+    expect(screen.queryByText("Not set")).toBeNull();
     expect(screen.queryByText(/mirror|pipedrive|imported/i)).toBeNull();
   });
 
