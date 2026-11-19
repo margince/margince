@@ -9,15 +9,17 @@ import (
 	"go/ast"
 	"go/token"
 	"path/filepath"
+	"regexp"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// A projected activity row carries its direction as a pointer, and compose
-// reads that row only to decide who wrote it. Direction names the transport:
-// a colleague's mail can arrive inbound and a contact's can leave from here.
-// So compose asks activities.WroteItOurSide or WriterSide, and a pointer read
-// of a Direction field (a dereference or a nil check) is the shape of a reader
-// that decides authorship by hand.
+// Direction names the transport, never the writer: a colleague's mail can
+// arrive inbound and a contact's can leave from here. A projected activity
+// carries it as a pointer, so a dereference or a nil check of a Direction field
+// in compose is a reader deciding who wrote the row by hand. It asks
+// activities.WroteItOurSide or WriterSide instead.
 func TestComposeAsksTheActivityVoiceWhoWroteARow(t *testing.T) {
 	t.Parallel()
 	fset, files := parseGoFilesUnder(t, filepath.Join("internal", "compose"))
@@ -52,4 +54,35 @@ func isDirectionField(expr ast.Expr) bool {
 func isNilCheckOfDirection(field, other ast.Expr) bool {
 	ident, ok := other.(*ast.Ident)
 	return ok && ident.Name == "nil" && isDirectionField(field)
+}
+
+// selectedDirection is an activity's direction read as a column: aliased and
+// followed by a comma, or behind coalesce. A WHERE test reads it otherwise.
+var selectedDirection = regexp.MustCompile(`(?i)\b[a-z_]+\.direction\s*,|coalesce\(\s*([a-z_]+\.)?direction\b`)
+
+// The compose statements that select the transport itself, each with why.
+var transportDirectionReaders = gatekit.Waive(map[string]string{
+	"internal/compose/signalscan.go":    "asks whether we sent the newest message; directionowner_test holds it to the direction rule",
+	"internal/compose/extsystemmail.go": "hands an extension the stored transport fact of a sending system's mail",
+})
+
+// A statement that hands a model who wrote a row selects
+// activities.WriterSideSQL, never the stored direction.
+func TestComposeSelectsTheWriterSideNotTheDirection(t *testing.T) {
+	t.Parallel()
+	defer transportDirectionReaders.AssertAllMatched(t)
+	fset, files := parseGoFilesUnder(t, filepath.Join("internal", "compose"))
+	for _, file := range files {
+		name := filepath.ToSlash(fset.Position(file.Pos()).Filename)
+		ast.Inspect(file, func(node ast.Node) bool {
+			lit, ok := node.(*ast.BasicLit)
+			if !ok || lit.Kind != token.STRING || !selectedDirection.MatchString(lit.Value) {
+				return true
+			}
+			if !transportDirectionReaders.Waived(t, name) {
+				t.Errorf("%s selects an activity's direction; select activities.WriterSideSQL for who wrote it", fset.Position(lit.Pos()))
+			}
+			return true
+		})
+	}
 }

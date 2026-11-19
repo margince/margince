@@ -26,7 +26,7 @@ import (
 // logging paths.
 func TestTheStoredWriterSideIsTheProjectedVoicesSide(t *testing.T) {
 	o := setupOwed(t)
-	o.contact(t, "Alma Buyer", "buyer@alpha.test")
+	buyer := o.contact(t, "Alma Buyer", "buyer@alpha.test")
 	importer := o.e.As(o.e.AdminUser, nil, importerPerms())
 	status, imported := postActivity(importer, t, o.e, crmcontracts.CreateActivityRequest{
 		Source: "manual", Kind: "email", Subject: new("Pricing"), Body: new(ourAnswer),
@@ -35,6 +35,23 @@ func TestTheStoredWriterSideIsTheProjectedVoicesSide(t *testing.T) {
 	})
 	if status != http.StatusCreated {
 		t.Fatalf("import status = %d", status)
+	}
+	from, to := "buyer@alpha.test", []string{"someone@zeta.test"}
+	status, loggedSent := postActivity(importer, t, o.e, crmcontracts.CreateActivityRequest{
+		Source: "manual", Kind: "email", Subject: new("Pricing"), Body: new(alphaConfirms),
+		Direction: new(crmcontracts.CreateActivityRequestDirectionOutbound),
+		Participants: &struct {
+			Cc   *[]string `json:"cc,omitempty"`
+			From *string   `json:"from,omitempty"`
+			To   *[]string `json:"to,omitempty"`
+		}{From: &from, To: &to},
+		Links: &[]struct {
+			EntityId   openapi_types.UUID                                `json:"entity_id"` //nolint:staticcheck // mirrors the generated inline struct, whose field is spelled EntityId
+			EntityType crmcontracts.CreateActivityRequestLinksEntityType `json:"entity_type"`
+		}{{EntityId: openapi_types.UUID(buyer), EntityType: crmcontracts.CreateActivityRequestLinksEntityTypeContact}},
+	})
+	if status != http.StatusCreated {
+		t.Fatalf("logging the contact's sent mail: status = %d", status)
 	}
 	logger := o.e.As(o.e.Rep1, []ids.UUID{o.e.Team1}, integration.AdminPerms)
 	call, _, err := o.e.Activities.LogActivity(logger, activities.LogActivityInput{
@@ -47,11 +64,12 @@ func TestTheStoredWriterSideIsTheProjectedVoicesSide(t *testing.T) {
 		row  ids.UUID
 		side string
 	}{
-		"a contact's mail":              {o.capture(t, pricingMail("buyer@alpha.test", o.seat, pricingRoot, alphaAsks, 0, true)), "inbound"},
-		"our reply":                     {o.capture(t, pricingMail(o.seat, "buyer@alpha.test", "ours-1@ws.example", ourAnswer, 10, true)), "outbound"},
-		"a stranger's mail":             {o.capture(t, pricingMail("someone@zeta.test", o.seat, "zeta-1@zeta.test", betaWrites, 40, false)), "inbound"},
-		"an imported colleague's mail":  {ids.UUID(imported.Id), "outbound"},
-		"an inbound call a seat logged": {ids.UUID(call.Id), "inbound"},
+		"a contact's mail":                            {o.capture(t, pricingMail("buyer@alpha.test", o.seat, pricingRoot, alphaAsks, 0, true)), "inbound"},
+		"our reply":                                   {o.capture(t, pricingMail(o.seat, "buyer@alpha.test", "ours-1@ws.example", ourAnswer, 10, true)), "outbound"},
+		"a stranger's mail":                           {o.capture(t, pricingMail("someone@zeta.test", o.seat, "zeta-1@zeta.test", betaWrites, 40, false)), "inbound"},
+		"an imported colleague's mail":                {ids.UUID(imported.Id), "outbound"},
+		"sent mail naming us and the contact in From": {ids.UUID(loggedSent.Id), "outbound"},
+		"an inbound call a seat logged":               {ids.UUID(call.Id), "inbound"},
 	}
 	for name, c := range want {
 		row, err := o.e.Activities.GetActivity(logger, ids.From[ids.ActivityKind](c.row), storekit.LiveOnly)
@@ -61,7 +79,7 @@ func TestTheStoredWriterSideIsTheProjectedVoicesSide(t *testing.T) {
 		var stored string
 		if err := database.WithWorkspaceTx(logger, o.e.Pool, func(tx pgx.Tx) error {
 			return tx.QueryRow(context.Background(),
-				`SELECT coalesce(`+activities.WriterSideSQL("a")+`, '') FROM activity a WHERE a.id = $1`, c.row).Scan(&stored)
+				`SELECT coalesce(`+activities.WriterSideSQL("a", "true")+`, '') FROM activity a WHERE a.id = $1`, c.row).Scan(&stored)
 		}); err != nil {
 			t.Fatalf("%s: reading the stored side: %v", name, err)
 		}

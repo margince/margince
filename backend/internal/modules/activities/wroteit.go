@@ -5,6 +5,8 @@ package activities
 
 import (
 	"fmt"
+	"slices"
+	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -43,15 +45,15 @@ func WroteItOurSide(activity crmcontracts.Activity) (ours, known bool) {
 	return false, false
 }
 
-// voiceNamesSender says the voice of this kind names who sent it. On a logged
+// senderNamingKinds are the kinds whose voice names who sent them. On a logged
 // call the voice names the seat that wrote the record down, and only the
 // direction says who rang.
+var senderNamingKinds = []crmcontracts.ActivityKind{
+	crmcontracts.ActivityKindEmail, crmcontracts.ActivityKindMessage, crmcontracts.ActivityKindMeeting,
+}
+
 func voiceNamesSender(kind crmcontracts.ActivityKind) bool {
-	switch kind {
-	case crmcontracts.ActivityKindEmail, crmcontracts.ActivityKindMessage, crmcontracts.ActivityKindMeeting:
-		return true
-	}
-	return false
+	return slices.Contains(senderNamingKinds, kind)
 }
 
 // WriterSide spells WroteItOurSide as a direction word: "outbound" for our
@@ -70,18 +72,24 @@ func WriterSide(activity crmcontracts.Activity) string {
 
 // WriterSideSQL is WriterSide over the stored columns of activity alias, for a
 // reader that never projects the row. It follows authorOf: the seat capture
-// recorded, then the From party (the organizer on a meeting), then the
-// importer's seat. A sending system and an unresolved sender read direction.
-func WriterSideSQL(alias string) string {
+// recorded, then the first identified From party (the organizer on a meeting),
+// then the importer's seat. A sending system and an unresolved sender read
+// direction, and so does a row the reader may not open (readable false), whose
+// voice the projection withholds. Two answers of the projection depend on the
+// reader and stay out: a bare From address it resolves to a contact, and a
+// contact outside the reader's scope. Both arise only on a row with a direction
+// capture already set from the same From, so the answers agree in practice.
+func WriterSideSQL(alias, readable string) string {
 	return fmt.Sprintf(writerSideSQL, alias,
-		partyAuthorSideSQL(alias, "from", machineSentSQL(alias)), partyExistsSQL(alias, "from"),
-		partyAuthorSideSQL(alias, "organizer", "false"), partyExistsSQL(alias, "organizer"),
-		storekit.KnownMeetingHostSQL(alias))
+		firstPartySideSQL(alias, "from", relstrength.SendingSystemSQL(alias)), fromPartyExistsSQL(alias),
+		firstPartySideSQL(alias, "organizer", "false"), `EXISTS (`+partySQL(alias, "organizer")+`)`,
+		storekit.KnownMeetingHostSQL(alias), readable, kindListSQL(crmcontracts.ActivityKindEmail, crmcontracts.ActivityKindMessage))
 }
 
 const writerSideSQL = `(CASE
 	WHEN %[1]s.direction IS NULL THEN NULL
-	WHEN %[1]s.kind IN ('email','message') THEN CASE
+	WHEN NOT (%[7]s) THEN %[1]s.direction
+	WHEN %[1]s.kind IN (%[8]s) THEN CASE
 		WHEN %[1]s.invitation_sender IS NOT NULL THEN 'outbound'
 		WHEN %[3]s THEN coalesce(%[2]s, %[1]s.direction)
 		WHEN %[1]s.source_author_id IS NOT NULL THEN 'outbound'
@@ -93,35 +101,37 @@ const writerSideSQL = `(CASE
 		ELSE %[1]s.direction END
 	ELSE %[1]s.direction END)`
 
-// partyExistsSQL says the voice read a party in role, as readEmailPartiesOf
-// reads one; a received mail's bare sender counts as its From.
-func partyExistsSQL(alias, role string) string {
-	exists := `EXISTS (` + partySQL(alias, role) + `)`
-	if role != "from" {
-		return exists
+func kindListSQL(kinds ...crmcontracts.ActivityKind) string {
+	quoted := make([]string, len(kinds))
+	for i, kind := range kinds {
+		quoted[i] = "'" + string(kind) + "'"
 	}
-	return `(` + exists + ` OR (` + alias + `.direction = 'inbound' AND coalesce(` + alias + `.counterparty_email, '') <> ''))`
+	return strings.Join(quoted, ",")
 }
 
-// partyAuthorSideSQL is partyAuthor's side for the row's parties in role, or
-// NULL when a machine, an unresolved address or no party wrote it.
-func partyAuthorSideSQL(alias, role, machine string) string {
-	party := partySQL(alias, role)
-	return `(CASE WHEN EXISTS (` + party + ` AND ws.user_id IS NOT NULL) THEN 'outbound'
-		WHEN NOT ` + machine + ` AND EXISTS (` + party + ` AND EXISTS (SELECT 1 FROM contact wc
-		      WHERE wc.id = ws.contact_id AND wc.archived_at IS NULL)) THEN 'inbound' END)`
+// fromPartyExistsSQL says the voice read a From party: a stated one, or the
+// received mail's bare sender receivedFromSQL stands in.
+func fromPartyExistsSQL(alias string) string {
+	return `(EXISTS (` + partySQL(alias, "from") + `) OR ` + receivedFromArmSQL(alias) + `)`
+}
+
+// firstPartySideSQL is partyAuthor's side for the first party in role a seat or
+// live contact identifies (identifiedFirst), or NULL when a machine, an
+// unresolved address or no party wrote it.
+func firstPartySideSQL(alias, role, machine string) string {
+	return `(SELECT CASE WHEN ws.user_id IS NOT NULL THEN 'outbound' WHEN NOT ` + machine + ` THEN 'inbound' END
+		FROM activity_participant ws LEFT JOIN contact wc ON wc.id = ws.contact_id AND wc.archived_at IS NULL
+		WHERE ` + partyWhereSQL(alias, role) + ` AND (ws.user_id IS NOT NULL OR wc.id IS NOT NULL)
+		ORDER BY ws.created_at, ws.id LIMIT 1)`
 }
 
 // partySQL is one stated party of the row in role, under the filters
 // readEmailPartiesOf applies.
 func partySQL(alias, role string) string {
-	return `SELECT 1 FROM activity_participant ws WHERE ws.activity_id = ` + alias + `.id AND ws.role = '` + role +
-		`' AND NOT ` + auth.ParticipantUnstatedSQL("ws") + ` AND ` + auth.ParticipantStandsSQL("ws", alias)
+	return `SELECT 1 FROM activity_participant ws WHERE ` + partyWhereSQL(alias, role)
 }
 
-// machineSentSQL is machineSent over the stored columns: the automatic kind
-// relstrength.Evidence names a sending system.
-func machineSentSQL(alias string) string {
-	return `(` + alias + `.sender_is_machine AND ` + alias + `.kind = 'email' AND ` +
-		relstrength.OriginIsEngagementSQL(alias) + ` AND coalesce(` + alias + `.calendar_method, '') = '')`
+func partyWhereSQL(alias, role string) string {
+	return `ws.activity_id = ` + alias + `.id AND ws.role = '` + role + `' AND NOT ` +
+		auth.ParticipantUnstatedSQL("ws") + ` AND ` + auth.ParticipantStandsSQL("ws", alias)
 }

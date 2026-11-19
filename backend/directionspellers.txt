@@ -29,7 +29,6 @@
 internal/compose/briefs/briefsnoozelift.go
 internal/compose/capturewhichdeal.go
 internal/compose/company360/roleproposalwrite.go
-internal/compose/datatask_leadmail.go
 internal/compose/datatask_senderauth.go
 internal/compose/dealscout/sql.go
 internal/compose/introadvance.go

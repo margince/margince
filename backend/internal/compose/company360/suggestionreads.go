@@ -128,7 +128,7 @@ func newestMessage(
 		      ORDER BY a.created_at DESC, a.id DESC
 		      LIMIT %[5]d),
 		     %[7]s AS MATERIALIZED (%[8]s)
-		SELECT a.id, `+activities.WriterSideSQL("a")+`, a.occurred_at, a.occurred_precision = 'day', a.kind,
+		SELECT a.id, `+activities.WriterSideSQL("a", "%[1]s")+`, a.occurred_at, a.occurred_precision = 'day', a.kind,
 		       CASE WHEN %[1]s THEN a.subject END,
 		       CASE WHEN %[1]s THEN left(a.body, %[2]d) END,
 		       %[3]s
