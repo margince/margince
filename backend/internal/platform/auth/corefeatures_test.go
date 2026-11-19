@@ -60,8 +60,7 @@ func TestASwitchedOffKindNamesNoMissingGrant(t *testing.T) {
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("a switched-off kind answered %v, want a permission refusal", err)
 	}
-	var refusal grantRefusal
-	if errors.As(err, &refusal) {
+	if refusal, named := errors.AsType[grantRefusal](err); named {
 		t.Errorf("a switched-off kind was refused as a missing grant %s", refusal.check)
 	}
 }

@@ -477,7 +477,9 @@ describe("PrivacyInboxCard", () => {
     expect(
       await screen.findByText(en["common.permissionDenied"]),
     ).toBeInTheDocument();
-    expect(screen.queryByText(/does not grant update on data subject request/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/does not grant update on data subject request/i),
+    ).not.toBeInTheDocument();
     expect(screen.queryByText(/else decided this/i)).not.toBeInTheDocument();
   });
 
