@@ -1,11 +1,11 @@
 /* Every panel the top bar opens: the account menu, the notification centre and
-   the setup checklist. They hang from the strip's right edge at its end inset
-   and come out of it with one movement, so the strip's panels read as one set.
+   the setup checklist. They hang from the content card's top and right edges
+   (the page gutter on a phone) and come out of it with one movement, so the strip's panels read as one set.
    Transform and opacity only, which composite, on the shell's own state curve. */
 .topbar-popover {
   position: fixed;
-  top: calc(var(--topbarH) + var(--space-1));
-  right: var(--barInsetEnd, var(--pageGutter));
+  top: calc(var(--topbarH) + var(--topbarPopoverGap, var(--space-1)));
+  right: var(--cardInsetEnd, var(--barInsetEnd, var(--pageGutter)));
   /* The room under the strip, for a panel that scrolls inside itself. */
   --topbarPopoverRoom: calc(100dvh - var(--topbarH) - var(--space-8));
   /* The corner of the design system's floating panel (popover.css). */

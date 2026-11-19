@@ -7,7 +7,7 @@
  * the scroller is its sibling, which is cheaper than `position: sticky` and
  * cannot be defeated by a screen that establishes its own scroll container. */
 .topbar {
-  --topbarSearchW: min(420px, 34vw);
+  --topbarSearchW: min(640px, 34vw);
   display: flex;
   align-items: center;
   gap: var(--space-3);

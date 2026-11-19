@@ -146,6 +146,8 @@
   /* On the root, so the strip's panels, portalled to the body, read it too. */
   :root:has(.app:not(.railless)) {
     --barInsetEnd: calc(var(--pageGutter) / 2);
+    --cardInsetEnd: var(--space-2);
+    --topbarPopoverGap: 0px;
   }
   /* The sidebar and the bar stand on the page ground; the content is the card. */
   .app:not(.railless) :is(.rail, .topbar) {
@@ -155,7 +157,7 @@
     padding-bottom: var(--space-2);
   }
   .app:not(.railless) :is(.scroll, .appbanner) {
-    margin-inline-end: var(--space-2);
+    margin-inline-end: var(--cardInsetEnd);
   }
   .app:not(.railless) .scroll {
     background: var(--pageCard);
