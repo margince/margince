@@ -43,7 +43,7 @@ func (e episode) url(address, slug string) string {
 }
 
 // notices are the labels the chat puts on its own lines about the channel and
-// its members. Any other label, such as a file share, is a person's message.
+// its members. Any other label, such as a file share, is a message someone wrote.
 var notices = map[string]bool{
 	"system": true, "member_join": true, "member_added": true, "member_removed": true, "member_left": true,
 	"channel_join": true, "channel_leave": true, "channel_name": true, "channel_topic": true,

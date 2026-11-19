@@ -97,7 +97,7 @@ func TestBotPostsAndTheChatsNoticesAreNotJudged(t *testing.T) {
 	}
 }
 
-func TestEveryMessageAPersonWroteIsJudgedWhateverItsLabel(t *testing.T) {
+func TestEveryMessageSomeoneWroteIsJudgedWhateverItsLabel(t *testing.T) {
 	for _, subtype := range []string{"", "thread_broadcast", "file_share", "me_message", "a_label_the_chat_adds_later"} {
 		said := msg(3, day)
 		said.Subtype = subtype
