@@ -371,6 +371,10 @@ expect_split llm LLM_RESULT LLM_OUTCOME scenario-failed \
 	"the weekly model-driven use cases could not run" \
 	"a use case is failing when driven by a real model"
 
+expect_split backend-clock BACKEND_CLOCK_RESULT BACKEND_CLOCK_OUTCOME calendar \
+	"the backend clock-drift lane could not complete" \
+	"the backend suite's verdict depends on the calendar"
+
 # --- main-health arms ----------------------------------------------------------
 #
 # The health check's whole value is the SUSPECT RANGE it carries: "main is red" was
@@ -1082,6 +1086,21 @@ for wf in "$health" "$root/.github/workflows/scheduled.yml"; do
 	fi
 	echo "ok: $wf_name's report job is reached whatever its lanes said"
 done
+
+# Both ends of the backend clock lane's verdict: the line the drift script prints
+# when its suites fail, and the pattern scheduled.yml greps for to set outcome.
+verdict_pattern="$(sed -nE "s/.*grep -q '(\^backend-clock-drift: [^']*)' clock-drift\.log.*/\1/p" "$sched")"
+mkdir -p "$stub_dir/red-make"
+printf '#!/bin/sh\nexit 2\n' >"$stub_dir/red-make/make"
+chmod +x "$stub_dir/red-make/make"
+printed="$(PATH="$stub_dir/red-make:$PATH" BACKEND_CLOCK_SKEW=fixture:200 \
+	bash "$root/scripts/backend-clock-drift.sh" 2>&1 || true)"
+if [[ -z "$verdict_pattern" ]] || ! grep -q "$verdict_pattern" <<<"$printed"; then
+	echo "FAIL: scheduled.yml greps for '${verdict_pattern}', which backend-clock-drift.sh does not print when its suites fail"
+	failures=$((failures + 1))
+else
+	echo "ok: a failed suite at the moved clock prints the line scheduled.yml reads as its verdict"
+fi
 
 if [[ "$failures" -ne 0 ]]; then
 	echo "FAIL: $failures case(s)" >&2
