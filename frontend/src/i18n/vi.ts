@@ -13243,7 +13243,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "auth.noticeSessionExpired":
     "Phiên đăng nhập đã hết hạn. Đăng nhập lại để tiếp tục.",
   "auth.noticeOidcFailed":
-    "Đăng nhập bằng Google không thành công. Nếu bạn được mời, mở liên kết trong email mời để hoàn tất thiết lập tài khoản.",
+    "Đăng nhập qua nhà cung cấp không thành công. Nếu bạn được mời, mở liên kết trong email mời để hoàn tất thiết lập tài khoản.",
   "auth.connectionTitle": "Không thể kết nối tới Margince",
   "auth.connectionBody":
     "Kiểm tra kết nối rồi thử lại. Nếu vẫn lỗi, có thể máy chủ đang khởi động lại.",

@@ -964,4 +964,14 @@ describe("AvailabilityScreen", () => {
       expect(notice.length).toBeGreaterThan(40);
     }
   });
+
+  // Every provider's callback fails to the same address, so the notice cannot
+  // know which provider was used and names none.
+  it("names no provider, since every provider fails to the same address", () => {
+    for (const locale of LOCALES) {
+      expect(translate(locale, "auth.noticeOidcFailed")).not.toMatch(
+        /google|microsoft/i,
+      );
+    }
+  });
 });
