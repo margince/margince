@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/filesniff"
 	"github.com/margince/margince/backend/internal/platform/storedobjects"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/auditentity"
@@ -209,6 +210,11 @@ func (s *Store) readyUpload(ctx context.Context, in *NewDocument) (string, strin
 
 	media, ok := acceptedType(in.ContentType, in.Filename)
 	if !ok {
+		return "", "", 0, &UnsupportedTypeError{Got: refusedTypeName(media, *in)}
+	}
+	if contradicted, err := filesniff.Contradicts(media, filesniff.DeclaredCharset(in.ContentType), in.Content); err != nil {
+		return "", "", 0, err
+	} else if contradicted {
 		return "", "", 0, &UnsupportedTypeError{Got: refusedTypeName(media, *in)}
 	}
 	if err := s.tx(ctx, func(tx pgx.Tx) error {

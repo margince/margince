@@ -15,11 +15,13 @@ package network
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
@@ -514,5 +516,16 @@ func TestACallerWithNoActivityGrantGetsNoLanguageRatherThanAnError(t *testing.T)
 	}
 	if said != "" {
 		t.Errorf("a denied activity grant answered %q, want nothing to detect from", said)
+	}
+}
+
+// The note asks on behalf of the signed-in member, read from their own row. A
+// caller naming no member has nobody to ask for, so the draft is refused.
+func TestANoteForACallerWithNoMemberIsRefused(t *testing.T) {
+	agent := principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalAgent, ID: "agent:test"})
+	for name, ctx := range map[string]context.Context{"no actor": context.Background(), "no member": agent} {
+		if _, err := (Reads{}).callerName(ctx, nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
+			t.Errorf("%s: callerName = %v, want ErrPermissionDenied", name, err)
+		}
 	}
 }

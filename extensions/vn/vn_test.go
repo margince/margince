@@ -4,6 +4,7 @@
 package vn
 
 import (
+	"reflect"
 	"slices"
 	"testing"
 	"time"
@@ -238,13 +239,12 @@ func TestAdvertisingIsVietnameseFirstAndEndsWithTheRefusal(t *testing.T) {
 // TestSuperlativesNeedAProof pins Law on Advertising Art. 8.11 and Circular
 // 12/2026/TT-BVHTTDL Art. 3.1, which reaches a claim in any language.
 func TestSuperlativesNeedAProof(t *testing.T) {
-	for _, word := range []string{
-		"nhất", "duy nhất", "tốt nhất", "số một", "hàng đầu",
+	want := []string{
+		"nhất", "duy nhất", "tốt nhất", "số một", "số 1", "hàng đầu",
 		"best", "no. 1", "number one", "leading", "the only", "unique",
-	} {
-		if !slices.Contains(messagingRules().ClaimsNeedProof, word) {
-			t.Errorf("%q is not among the claims that need a proof", word)
-		}
+	}
+	if got := messagingRules().ClaimsNeedProof; !slices.Equal(got, want) {
+		t.Errorf("the claims that need a proof are %q, want %q", got, want)
 	}
 }
 
@@ -264,5 +264,52 @@ func TestOnlyAdvertisingConsentNeedsTheRequestFirst(t *testing.T) {
 	want := []messaging.PurposeClass{messaging.PurposeClassMarketing, messaging.PurposeClassPhoneOutreach}
 	if !r.ConsentConfirmationNeedsRequest || !slices.Equal(r.ConsentRequestFirstFor, want) {
 		t.Errorf("the request rule covers %v, want the advertising classes %v", r.ConsentRequestFirstFor, want)
+	}
+}
+
+// TestTheCompiledRulesAreTheV5Rules pins every value of the compiled rule set.
+// Provenance and the digest describe the policy source, so they are left out.
+func TestTheCompiledRulesAreTheV5Rules(t *testing.T) {
+	commencement2025 := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	want := messaging.Rules{
+		Jurisdiction: "vn",
+		Version:      5,
+		Instruments: []messaging.Instrument{
+			{Name: "Decree 91/2020/ND-CP", EffectiveFrom: time.Date(2020, 10, 1, 0, 0, 0, 0, time.UTC)},
+			{Name: "Law 91/2025/QH15", EffectiveFrom: commencement2025},
+			{Name: "Decree 356/2025/ND-CP", EffectiveFrom: commencement2025},
+		},
+		ReplyWindow:        365 * 24 * time.Hour,
+		DealFollowUpWindow: 182 * 24 * time.Hour,
+		ConsentOnly:        true,
+		Disclosures: []messaging.Disclosure{
+			{Kind: messaging.ControllerIdentity},
+			{Kind: messaging.PrivacyContact},
+			{Kind: messaging.ObjectionRoute, MarketingOnly: true,
+				Means: []messaging.ContactMeans{messaging.MeansWeb, messaging.MeansEmail, messaging.MeansPhone}},
+			{Kind: messaging.AdvertiserContact, MarketingOnly: true},
+		},
+		RefusalSectionLast: true,
+		ClaimsNeedProof: []string{
+			"nhất", "duy nhất", "tốt nhất", "số một", "số 1", "hàng đầu",
+			"best", "no. 1", "number one", "leading", "the only", "unique",
+		},
+		ForeignAdvertiserNeedsLocalAgency: true,
+		SubjectPrefix:                     "[QC]",
+		FrequencyCap:                      &messaging.FrequencyCap{Messages: 3, Window: 24 * time.Hour},
+		OptOutAcknowledgement:             true,
+		OptOutAcknowledgementWithin:       time.Hour,
+		OptOutAcknowledgementUTCOffset:    7 * time.Hour,
+		OptOutRecordsKeep:                 366 * 24 * time.Hour,
+		DataProtectionFollowsRecipient:    true,
+		DisclosureLanguage:                "vi",
+		NoLegitimateInterests:             true,
+		ConsentConfirmationNeedsRequest:   true,
+		ConsentRequestFirstFor:            messaging.AdvertisingPurposeClasses(),
+	}
+	got := messagingRules()
+	got.Provenance, got.Digest = messaging.Provenance{}, ""
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("the compiled rules differ from the v5 rules:\n got %+v\nwant %+v", got, want)
 	}
 }

@@ -251,7 +251,7 @@ func newForecastHandlers(pool *pgxpool.Pool, now func() time.Time) forecasting.H
 		ForecastAssemble, ForecastPeriodAt, ForecastWritableScope,
 		ForecastConversionHistory, ForecastForwardMeasure, ForecastScopeHoldsDeals, now,
 	).WithCallBaseline(ForecastCallBaseline).WithStageChances(ForecastStageChances).
-		WithReaderRows(ForecastReaderContributions)
+		WithReaderRows(ForecastReaderContributions).WithGoalReadable(newReportingService(pool, now).GoalReadable)
 }
 
 func (s *Server) wireAnalyticsSurface(pool *pgxpool.Pool) {
@@ -272,7 +272,7 @@ func (s *Server) wireAnalyticsSurface(pool *pgxpool.Pool) {
 	s.analyticsContextHandlers = newAnalyticsContextHandlers(
 		InstallationDB(pool), func() time.Time { return time.Now().UTC() },
 	)
-	s.salesProgressReading = salesprogress.Reading{DB: InstallationDB(pool), Reports: reportingService, Deals: deals.NewStore(InstallationDB(pool), DealsInstallation())}
+	s.salesProgressReading = salesprogress.Reading{DB: InstallationDB(pool), Reports: reportingService, Deals: deals.NewStore(InstallationDB(pool), DealsInstallation()), Forecast: progressForecast(newForecastStoreFor(pool))}
 	s.sdrSummaryHandlers = newSdrSummaryHandlers(
 		InstallationDB(pool), func() time.Time { return time.Now().UTC() },
 	).withTargets(reportingService)

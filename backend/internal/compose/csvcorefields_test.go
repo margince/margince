@@ -79,7 +79,7 @@ func TestACheckedPhoneComparesUnchangedAgainstTheStoredPrimary(t *testing.T) {
 	}
 }
 
-func TestAFilePhoneBecomesThePrimaryWorkNumberAndKeepsTheOthers(t *testing.T) {
+func TestAFilePhoneBecomesTheContactsOnePrimaryAndKeepsTheOthers(t *testing.T) {
 	stored := []byte(`{"phones":[{"phone":"+49301234567","phone_type":"work","is_primary":true},` +
 		`{"phone":"+842812345678","phone_type":"mobile","is_primary":true}]}`)
 	merged, given, err := phonesMergedOnto(stored, contactPhonesFrom(map[string]string{fieldPhone: "+49307654321"}, nil))
@@ -89,7 +89,7 @@ func TestAFilePhoneBecomesThePrimaryWorkNumberAndKeepsTheOthers(t *testing.T) {
 	want := []contacts.ContactPhoneInput{
 		{Phone: "+49307654321", PhoneType: contactPhoneTypeWork, IsPrimary: true, Position: 1},
 		{Phone: "+49301234567", PhoneType: contactPhoneTypeWork, IsPrimary: false, Position: 2},
-		{Phone: "+842812345678", PhoneType: "mobile", IsPrimary: true, Position: 3},
+		{Phone: "+842812345678", PhoneType: "mobile", IsPrimary: false, Position: 3},
 	}
 	if !reflect.DeepEqual(merged, want) {
 		t.Fatalf("merged = %+v\nwant %+v", merged, want)

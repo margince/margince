@@ -250,11 +250,10 @@ const ExpiryActor = "system:approval-expiry"
 func onlyTheExpirySweep(ctx context.Context) error {
 	p, ok := principal.Actor(ctx)
 	if !ok {
-		return fmt.Errorf("crmapprovals: expiry sweep without a bound actor: %w", apperrors.ErrPermissionDenied)
+		return fmt.Errorf("the approval expiry sweep runs only under a bound actor: %w", apperrors.ErrPermissionDenied)
 	}
 	if p.Type != principal.PrincipalSystem || p.ID != ExpiryActor {
-		return fmt.Errorf("crmapprovals: %s may not expire approvals — the sweep runs as %s: %w",
-			p.ID, ExpiryActor, apperrors.ErrPermissionDenied)
+		return fmt.Errorf("only the expiry sweep's own system actor may expire approvals: %w", apperrors.ErrPermissionDenied)
 	}
 	return nil
 }

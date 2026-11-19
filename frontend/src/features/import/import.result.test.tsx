@@ -7,6 +7,8 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { meFixture, READS_RECORDS } from "../../testing/mefixture";
+import { recordNamesAnswer } from "../../testing/recordnames.testkit";
 import {
   dryRun,
   jsonResponse,
@@ -151,6 +153,19 @@ describe("the import and its result", () => {
                 : undefined,
           }),
         "GET /imports/r1": () => jsonResponse({ ...run, id: "r1", status }),
+        "GET /me": () =>
+          jsonResponse(
+            meFixture({
+              roles: ["admin"],
+              allow: {
+                ...READS_RECORDS,
+                import_run: ["create", "update", "read"],
+              },
+            }),
+          ),
+        "GET /records/references": (url) =>
+          recordNamesAnswer(url, { lead: { "l-1": "Jo Tran" } }) ??
+          jsonResponse({ data: [] }),
         "POST /imports/r1/undo": () => {
           status = "undoing";
           return jsonResponse({ ...run, id: "r1", status }, 202);
@@ -173,16 +188,16 @@ describe("the import and its result", () => {
       status = "undone";
       await vi.advanceTimersByTimeAsync(IMPORT_POLL_MS);
       expect(await screen.findByText("Import undone")).toBeVisible();
-      expect(
-        screen.getByText(
-          "Prospects: l-1 — Someone changed this record after the import, so it was left in place.",
-        ),
-      ).toBeVisible();
-      expect(
-        screen.getByText(
-          "Companies: c-1 — Live deals or contacts still name this company (deals: 2, contacts: 1), so it was left in place.",
-        ),
-      ).toBeVisible();
+      const lead = await screen.findByRole("link", { name: "Jo Tran" });
+      expect(lead.closest("li")).toHaveTextContent(
+        "Leads: Jo Tran — Someone changed this record after the import, so it was left in place.",
+      );
+      expect(lead.getAttribute("href")).toContain("l-1");
+      // A record the reader cannot see comes back with no name, and keeps its id.
+      expect(await screen.findByTitle("c-1")).toHaveTextContent("c-1");
+      expect(screen.getByTitle("c-1").closest("li")).toHaveTextContent(
+        "Companies: c-1 — Live deals or contacts still name this company (deals: 2, contacts: 1), so it was left in place.",
+      );
     } finally {
       vi.useRealTimers();
     }

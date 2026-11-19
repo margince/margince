@@ -22,8 +22,8 @@ import {
   isPreviewDoor,
   previewedAddresses,
 } from "../../testing/sendpermission.testkit";
-import { ComposeModal } from "./compose";
 import { installComposeClock, pressSend } from "./compose.testkit";
+import { ComposeWindow } from "./composewindow";
 
 // The head of the message: who it is to, and the two things a rep could not
 // reach from here before — a blind copy, and the paper the mail is about.
@@ -170,7 +170,7 @@ function render(ui: ReactNode) {
 
 function drawer() {
   return (
-    <ComposeModal
+    <ComposeWindow
       entityType="contact"
       entityId="p-1"
       contactId="p-1"
@@ -635,7 +635,7 @@ describe("the project a message files under", () => {
   it("files a project's own mail under it, chosen and visible", async () => {
     fileStubs();
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="project"
         entityId="proj-1"
         open
@@ -654,7 +654,7 @@ describe("the project a message files under", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = fileStubs();
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="project"
         entityId="proj-1"
         open
@@ -680,7 +680,7 @@ describe("the project a message files under", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     fileStubs();
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="project"
         entityId="proj-1"
         open
@@ -703,7 +703,7 @@ describe("the project a message files under", () => {
         jsonResponse({ ...PROJECT, phase: "closed" }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="project"
         entityId="proj-1"
         open
@@ -749,7 +749,7 @@ describe("a reply written from a deal", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="deal"
         entityId="deal-1"
         activityId="act-1"

@@ -49,7 +49,7 @@ const MAILBOX_NOT_SEND_CAPABLE = {
 
 // Each refusal is a product state with a fix, so each reads as its own copy.
 // None may fall into the generic line.
-describe("ComposeModal send refusals", () => {
+describe("ComposeWindow send refusals", () => {
   async function expectReconnect(onClose: () => void) {
     expect(await screen.findByText(/without permission to send/i)).toBeTruthy();
     expect(

@@ -55,6 +55,11 @@ function CompanyRef({ view }: Readonly<{ view: Project360 }>) {
       <span data-testid="project-company-withheld">{t("state.withheld")}</span>
     );
   }
+  if (!view.project.company_id) {
+    return (
+      <span data-testid="project-company-none">{t("project.noCustomer")}</span>
+    );
+  }
   return (
     <EntityRef
       kind="company"
@@ -141,7 +146,14 @@ function CompanyCardRow({ view }: Readonly<{ view: Project360 }>) {
       <span data-testid="project-company-withheld">{t("state.withheld")}</span>
     );
   }
-  if (!companyId || !company) {
+  if (!companyId) {
+    return (
+      <span data-testid="project-company-none">
+        {t("project.noCustomerSet")}
+      </span>
+    );
+  }
+  if (!company) {
     return <span>{t("field.unset")}</span>;
   }
   return <CompanyCard companyId={companyId} name={company.name} />;
@@ -208,7 +220,15 @@ export function ProjectDetails({ view }: Readonly<{ view: Project360 }>) {
     {
       key: "started",
       term: t("project.started"),
-      value: day(project.started_at),
+      value: (
+        <RailField
+          edit={edit}
+          keys={["started_at"]}
+          label={t("project.started")}
+          reading={day(project.started_at)}
+          text={project.started_at ? day(project.started_at) : ""}
+        />
+      ),
       empty: !project.started_at,
     },
     {
@@ -230,7 +250,15 @@ export function ProjectDetails({ view }: Readonly<{ view: Project360 }>) {
           {
             key: "ended",
             term: t("project.aside.ended"),
-            value: day(project.ended_at),
+            value: (
+              <RailField
+                edit={edit}
+                keys={["ended_at"]}
+                label={t("project.aside.ended")}
+                reading={day(project.ended_at)}
+                text={project.ended_at ? day(project.ended_at) : ""}
+              />
+            ),
             empty: !project.ended_at,
           },
           {

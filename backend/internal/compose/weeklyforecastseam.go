@@ -351,7 +351,7 @@ func (w *WeeklyForecast) freezeClosing(
 	// assertion about a period a contact is still working; a retrospective
 	// reports what the PIPELINE said, and substituting somebody's number would
 	// freeze an opinion as a measurement.
-	landing, err := forecasting.ProjectLanding(readings, measure, nil)
+	landing, err := forecasting.ProjectLanding(readings, measure, forecasting.SeenCall{})
 	if err != nil {
 		return ids.Nil, closingReadings{}, "", err
 	}

@@ -14,7 +14,7 @@ import (
 
 // ErrDayWithoutDate refuses a date-only record that names no date. The capture
 // time stands in for a missing moment, but it is no date the source named.
-var ErrDayWithoutDate = fmt.Errorf("capture: a date-only record needs the date it happened on: %w", apperrors.ErrInvalidArgument)
+var ErrDayWithoutDate = fmt.Errorf("a date-only record needs the date it happened on: %w", apperrors.ErrInvalidArgument)
 
 // dayAnchor is where a date-only capture is stored: the anchor of the date
 // named in its own offset.

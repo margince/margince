@@ -20,7 +20,7 @@ import {
   isPreviewDoor,
   previewedAddresses,
 } from "../../testing/sendpermission.testkit";
-import { ComposeModal } from "./compose";
+import { ComposeWindow } from "./composewindow";
 
 // The composer's "why are you writing?" dial is found by name, not by role
 // alone. To, Cc and Bcc are comboboxes too, so a bare role query matches four
@@ -73,7 +73,7 @@ export function render(
 // open.
 export function renderComposer(onClose = vi.fn()) {
   render(
-    <ComposeModal
+    <ComposeWindow
       activityId="act-1"
       entityType="contact"
       entityId="p-1"
@@ -325,10 +325,24 @@ export async function footSendButton(name = "Send") {
     if (!found || found.hasAttribute("disabled")) {
       throw new Error(`${name} is not ready`);
     }
-    if (screen.queryByText("Checking whether this message can be sent…")) {
-      throw new Error("the recipient check is running");
-    }
+    throwWhileChecking();
     return found;
+  });
+}
+
+function throwWhileChecking() {
+  if (screen.queryByText("Checking whether this message can be sent…")) {
+    throw new Error("the recipient check is running");
+  }
+}
+
+// A button the permission band draws, once the check for the message on screen
+// has answered. A recheck redraws the band, so a button found earlier is gone.
+export async function permissionBandButton(name: string) {
+  await settleSendCheck();
+  return waitFor(() => {
+    throwWhileChecking();
+    return screen.getByRole("button", { name });
   });
 }
 

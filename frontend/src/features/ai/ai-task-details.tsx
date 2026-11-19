@@ -8,7 +8,7 @@ import { Badge } from "../../design-system/atoms";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { providerName } from "../../lib/ai-provider-names";
-import { decisionSkipLabel, executionModeLabel } from "./ai-decision-labels";
+import { decisionSkipLabel } from "./ai-decision-labels";
 import {
   type LaneKeyGap,
   laneKeyGap,
@@ -118,9 +118,6 @@ export function TaskDetails({
   );
   return (
     <div className="ai-task-details">
-      <p className="t-caption">
-        {row.task} · {executionModeLabel(row.execution_mode, t)}
-      </p>
       {row.decision_first && row.decision_candidate ? (
         <span className="ai-task-details-badges">
           <Badge>{t("aiTasks.decisionFirst")}</Badge>

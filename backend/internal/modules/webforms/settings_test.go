@@ -4,9 +4,13 @@
 package webforms
 
 import (
+	"context"
 	"errors"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/platform/keyvault"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
 // refusedField is the field a refusal names, or "" when the input was taken.
@@ -125,5 +129,17 @@ func TestTheInstallationMintsEverySecretABuilderLetsSomeoneTypeIn(t *testing.T) 
 		if got := MintsSecret(tc.sender, tc.pasted); got != tc.mints {
 			t.Errorf("%s: mints = %v, want %v", name, got, tc.mints)
 		}
+	}
+}
+
+// A secret is sealed under a workspace, so a request bound to none seals
+// nothing and is refused.
+func TestASecretIsNotSealedForARequestBoundToNoWorkspace(t *testing.T) {
+	store := (&Store{}).WithVault(keyvault.NewMemory())
+
+	_, _, err := store.storeSecret(context.Background(), SenderServer, nil)
+
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("sealing with no workspace answered %v, want ErrPermissionDenied", err)
 	}
 }

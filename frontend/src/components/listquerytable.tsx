@@ -190,7 +190,7 @@ export function ListTable<Row>({
   // readers to the top of a list they had scrolled a long way down. Its own
   // lane, so a record page's column and a list's rows are two separate places.
   const rowsScroller = useRef<HTMLDivElement>(null);
-  useScrollMemory(rowsScroller, useHash(), "rows");
+  useScrollMemory(rowsScroller, useHash(), { lane: "rows" });
   const [localSearch, setLocalSearch] = useState(query.q);
   // What this box last put on the wire. It tells a `q` that moved for another
   // reason apart from this box's own debounce landing.

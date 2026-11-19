@@ -59,7 +59,7 @@ func (r *Registry) monitorBackfill(ctx context.Context) (context.Context, func()
 			defer stop()
 			if execution, ok := ctx.Value(backfillExecutionKeyType{}).(backfillExecution); ok {
 				if err := execution.lease.Ping(probe); err != nil {
-					return fmt.Errorf("capture: execution connection lost: %w: %v", apperrors.ErrConflict, err)
+					return fmt.Errorf("the history import lost its database connection: %w: %v", apperrors.ErrConflict, err)
 				}
 			}
 			return r.db.Tx(probe, func(pgx.Tx) error { return nil })

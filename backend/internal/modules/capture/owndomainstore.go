@@ -191,11 +191,11 @@ func (s *OwnDomainStore) Add(ctx context.Context, raw string) (OwnDomain, error)
 		if err := lockOwnDomain(ctx, tx, domain); err != nil {
 			return err
 		}
-		consumer, matcherErr := MatcherTx(ctx, tx)
-		if matcherErr != nil {
-			return matcherErr
+		class, classErr := ClassifyDomainTx(ctx, tx, domain)
+		if classErr != nil {
+			return classErr
 		}
-		if consumer.IsConsumer(domain) {
+		if class.Role.IsConsumer() {
 			return ErrConsumerMailDomain
 		}
 		// The prior state, so the trail distinguishes "an admin registered a new

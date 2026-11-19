@@ -36,6 +36,7 @@ import {
   roleRefusalOf,
   useCreateRole,
   useRoles,
+  useRoleVerbs,
 } from "../../lib/roles.queries";
 import {
   replaceDial,
@@ -72,6 +73,7 @@ export function RolesSettings() {
   const openRole = (key: string | undefined) => replaceDial(ROLE_PARAM, key);
   const readsMembers = useCan("user_admin", "read");
   const roles = useRoles(readsRoles, showArchived);
+  const verbs = useRoleVerbs(readsRoles, showArchived);
   const linked = useLinkedRole(roles, openKey, readsRoles && !showArchived);
   const roster = useRosterWalk("user", readsRoles && readsMembers);
   const units = useExtensions(readsRoles && readsUnits);
@@ -127,6 +129,7 @@ export function RolesSettings() {
           returnFocusTo={() => document.getElementById(rowId(shown.key))}
           directory={roles.data ?? []}
           units={units.data ?? []}
+          verbs={verbs.data ?? {}}
           canUpdate={mayUpdate}
           canMove={mayMove}
           canRestore={mayMove && isAdmin}

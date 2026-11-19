@@ -7,6 +7,7 @@ import type { components } from "../../api/schema";
 import { Badge, Disclosure } from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
 import { useT } from "../../i18n";
+import { tierLabel } from "../../lib/ai-tier-label";
 import { unwrap } from "../../lib/problem";
 import { type Source, summarize } from "./ai-request-summary";
 import "./ai-settings.css";
@@ -136,7 +137,9 @@ export function RequestSummary({
     <section className="ai-serving-summary">
       <div className="ai-figures-head">
         <Heading size="xsmall">{t("aiServing.asked")}</Heading>
-        <span className="t-caption">{t("aiServing.askedFor", { lane })}</span>
+        <span className="t-caption">
+          {t("aiServing.askedFor", { lane: tierLabel(lane, t) })}
+        </span>
       </div>
       {!effective ? (
         <p className="t-caption">

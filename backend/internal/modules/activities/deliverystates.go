@@ -68,6 +68,7 @@ func applyEmailStates(page []crmcontracts.Activity, states map[ids.UUID]EmailRow
 		if known {
 			summary.Move = state.Move
 			summary.RequestHasReminder = &state.RequestHasReminder
+			summary.OurReply = state.OurReply
 		}
 	}
 }

@@ -30,10 +30,9 @@ import (
 // through — the historical answer, kept because the pre-flight is advisory and
 // an absent one must not change which mailbox a send uses.
 //
-// It is not the answer for a composed installation. There, the provider is
-// RESOLVED per send (sendableMailProvider): a mail send carries no `from`, so
-// something has to choose, and a constant refused every rep whose only mailbox
-// was the other vendor's.
+// It is not the answer for a composed installation. There, sendableMailbox
+// resolves the mailbox per send. A constant refused every rep whose only
+// mailbox was the other vendor's.
 //
 // Whichever way it is arrived at, this value names the DELIVERY alone. The
 // timeline row the send writes is keyed on the transport-independent mail
@@ -65,6 +64,9 @@ var errNoDeliveryStager = errors.New("activities: send path has no delivery mach
 // SendEmailInput is one consented outbound send anchored to an
 // existing activity (the thread being replied to).
 type SendEmailInput struct {
+	// FromConnection is the sender's own mailbox they chose to send from; zero
+	// leaves the choice to the store (SendAuthority.SendableMailbox).
+	FromConnection ids.UUID
 	// Recipients is the MERGED addressee list — every To, Cc AND Bcc address —
 	// because consent is owed to everyone who receives the message, however
 	// they were addressed. Cc and Bcc below are SUBSETS of it, by design and
@@ -151,9 +153,12 @@ type DeliveryStager interface {
 type DeliveryRequest struct {
 	ActivityID ids.ActivityID
 	Provider   string
-	MessageID  string
-	Recipients []string // To: only — the merged consent list minus Cc and Bcc
-	Cc         []string
+	// ConnectionID is the sender's mailbox the message goes out from; zero
+	// leaves it to the transmission, which takes their default.
+	ConnectionID ids.UUID
+	MessageID    string
+	Recipients   []string // To: only, the merged consent list minus Cc and Bcc
+	Cc           []string
 	// Bcc is transmitted to but never rendered into a header the recipients
 	// read. The connector addresses it; the message does not name it.
 	Bcc      []string
@@ -232,9 +237,9 @@ func MintMessageID(domain string) string {
 // It RETURNS the provider it resolved, so the send that follows uses the very
 // mailbox this guard cleared. Asking twice would be two round-trips and two
 // answers, and the second could differ from the one that was judged.
-func (s *Store) refuseUnsendable(ctx context.Context, in SendEmailInput, gate ConsentGate, checkDelivery func() error) (string, error) {
+func (s *Store) refuseUnsendable(ctx context.Context, in SendEmailInput, anchor ids.ActivityID, gate ConsentGate, checkDelivery func() error) (string, ids.UUID, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
-		return "", err
+		return "", ids.Nil, err
 	}
 	// Guard the To: LINE, not the merged list, because they are not the same
 	// thing and only the first one goes on the wire. Recipients is To+Cc
@@ -257,17 +262,17 @@ func (s *Store) refuseUnsendable(ctx context.Context, in SendEmailInput, gate Co
 	// loosening this in Go while the contract still refuses it would make the
 	// two disagree about what a valid send is.
 	if len(ToRecipients(in.Recipients, in.Cc, in.Bcc)) == 0 {
-		return "", &NoRecipientsError{}
+		return "", ids.Nil, &NoRecipientsError{}
 	}
 	// The composition guards report a deployment defect, and a caller who may
 	// not send has no business learning which parts of this installation's
 	// send path are wired — hence their position, not their existence.
 	if gate == nil {
-		return "", fmt.Errorf("send path has no consent authority wired: %w", apperrors.ErrConsentNotGranted)
+		return "", ids.Nil, fmt.Errorf("send path has no consent authority wired: %w", apperrors.ErrConsentNotGranted)
 	}
 	if checkDelivery != nil {
 		if err := checkDelivery(); err != nil {
-			return "", err
+			return "", ids.Nil, err
 		}
 	}
 	// The mailbox pre-flight is the SENDER's own authority and precedes the
@@ -279,9 +284,9 @@ func (s *Store) refuseUnsendable(ctx context.Context, in SendEmailInput, gate Co
 	// carries no `from`, so something has to choose; a constant was an honest
 	// answer only while one provider could send, and refused a rep whose only
 	// mailbox is the other.
-	provider, err := s.sendableMailProvider(ctx)
+	provider, connection, err := s.sendableMailbox(ctx, in.FromConnection, anchor)
 	if err != nil {
-		return "", err
+		return "", ids.Nil, err
 	}
 	// NO CONSENT CHECK HERE. It was the old purpose gate, asked before the
 	// engine existed and kept while the engine only observed. The engine now
@@ -294,28 +299,28 @@ func (s *Store) refuseUnsendable(ctx context.Context, in SendEmailInput, gate Co
 	// The refusal still reaches the rep at the keyboard: compose's
 	// refuseAtStaging returns it from the same request, before the activity
 	// commits.
-	return provider, nil
+	return provider, connection, nil
 }
 
-// sendableMailProvider names the mailbox this send will go out through, or
-// refuses with the error the caller can act on.
+// sendableMailbox names the mailbox this send will go out through, or refuses
+// with the error the caller can act on.
 //
 // An unwired authority answers with the historical default rather than
 // refusing: the pre-flight is advisory by contract (see SendAuthority), and a
 // store composed without one must accept the send exactly as it did before this
 // question existed.
-func (s *Store) sendableMailProvider(ctx context.Context) (string, error) {
+func (s *Store) sendableMailbox(ctx context.Context, from ids.UUID, anchor ids.ActivityID) (string, ids.UUID, error) {
 	if s.sendAuthority == nil {
-		return DefaultSendProvider, nil
+		return DefaultSendProvider, ids.Nil, nil
 	}
-	provider, err := s.sendAuthority.SendableMailProvider(ctx)
+	provider, connection, err := s.sendAuthority.SendableMailbox(ctx, from, anchor)
 	if err != nil {
-		return "", err
+		return "", ids.Nil, err
 	}
 	if provider == "" {
-		return "", &MailboxNotSendCapableError{}
+		return "", ids.Nil, &MailboxNotSendCapableError{}
 	}
-	return provider, nil
+	return provider, connection, nil
 }
 
 // messageIDDomain is the right-hand side of every minted Message-ID: the

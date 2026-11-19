@@ -5,16 +5,18 @@ import type { QueryKey } from "@tanstack/react-query";
 import { useState } from "react";
 import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
-import { useToast } from "../design-system/toast";
+import { undoAction, useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { useCanWriteRecord } from "../lib/capability";
-import { problemFieldErrorsOf } from "../lib/problem";
+import { isVersionSkewOf, problemFieldErrorsOf } from "../lib/problem";
 import { worklistKey } from "../lib/workkeys";
 import {
   type MeetingDialogMode,
   MeetingOutcomeDialog,
 } from "./meetingoutcome.dialog";
-import { useMeetingOutcome } from "./taskactions";
+import { readMeetingStatus, useMeetingOutcome } from "./taskactions";
+
+const readPrior = (id: string) => readMeetingStatus(id).catch(() => null);
 
 type Activity = components["schemas"]["Activity"];
 
@@ -44,6 +46,7 @@ export function RecordMeetingOutcome({
       version={activity.version}
       title={activity.subject ?? undefined}
       cancellable={activity.calendar_managed !== true}
+      priorStatus={activity.meeting_status === "booked" ? "booked" : null}
       // The Worklist asks about the same meeting, so an answer here clears it there.
       invalidateKeys={[...invalidateKeys, worklistKey]}
     />
@@ -115,9 +118,13 @@ export function MeetingOutcome({
   title,
   invalidateKeys,
   cancellable,
+  priorStatus,
 }: Readonly<{
   id: string;
   version: number | undefined;
+  // What the meeting holds now, for the Undo of a cancel. Left out where the
+  // surface does not know it, and read before the cancel then.
+  priorStatus?: "booked" | null;
   // The reads that show this meeting, so each surface refreshes its own list.
   invalidateKeys: readonly QueryKey[];
   // The row's own heading for the meeting, so the dialog is titled before its read answers.
@@ -130,21 +137,43 @@ export function MeetingOutcome({
   const [open, setOpen] = useState<MeetingDialogMode | undefined>();
   // An invitation can arrive after the row was read, so its refusal hides Cancel too.
   const [refusedAsManaged, setRefusedAsManaged] = useState(false);
+  const [reading, setReading] = useState(false);
   const record = useMeetingOutcome(invalidateKeys);
-  const answer = (status: "held" | "canceled") =>
+  const cancel = async () => {
+    // The row may not carry the status, and an Undo that guesses would write
+    // "booked" over a meeting that had none.
+    setReading(true);
+    const prior = priorStatus === undefined ? await readPrior(id) : priorStatus;
+    setReading(false);
     record.mutate(
-      { id, version, status },
+      { id, version, status: "canceled" },
       {
-        onSuccess: () => toast.show(t("worklist.verb.meetingOutcomeRecorded")),
+        onSuccess: (saved) =>
+          toast.show(t("worklist.verb.meetingCanceledRecorded"), {
+            action: undoAction(t("common.undo"), () =>
+              // The version is the one the cancel produced. The row may be
+              // gone by then, so a refusal is told here.
+              record
+                .mutateAsync({ id, version: saved.version, status: prior })
+                .catch((error: unknown) =>
+                  toast.show(
+                    t(
+                      isVersionSkewOf(error)
+                        ? "common.versionSkew"
+                        : "worklist.verb.meetingOutcomeFailed",
+                    ),
+                    { tone: "danger" },
+                  ),
+                ),
+            ),
+          }),
         // A refused write leaves the row as it was, which looks like a
         // click that did nothing.
         onError: (error) => {
-          const managed =
-            status === "canceled" &&
-            problemFieldErrorsOf(error).some(
-              (fault) => fault.code === "calendar_managed",
-            );
-          if (status === "canceled") setRefusedAsManaged(managed);
+          const managed = problemFieldErrorsOf(error).some(
+            (fault) => fault.code === "calendar_managed",
+          );
+          setRefusedAsManaged(managed);
           toast.show(
             t(
               managed
@@ -156,6 +185,7 @@ export function MeetingOutcome({
         },
       },
     );
+  };
   return (
     <>
       <span className="t-caption">{t("worklist.verb.meetingHowDidItGo")}</span>
@@ -185,13 +215,13 @@ export function MeetingOutcome({
       </Button>
       {cancellable && !refusedAsManaged && (
         <Button
-          pending={record.isPending}
+          pending={record.isPending || reading}
           aria-label={
             title
               ? t("worklist.verb.meetingCanceledFor", { subject: title })
               : undefined
           }
-          onClick={() => answer("canceled")}
+          onClick={() => void cancel()}
         >
           {t("worklist.verb.meetingCanceled")}
         </Button>

@@ -95,6 +95,41 @@ it("records a rate in the sheet's spelling", async () => {
   });
 });
 
+it("sends a tiny rate as a plain decimal, never an exponent", async () => {
+  const user = userEvent.setup();
+  const calls: Call[] = [];
+  vi.stubGlobal("fetch", backend(KEEPER, calls));
+  render(<TaxRatesCard />);
+  await user.click(
+    await screen.findByRole("button", { name: en["taxRates.add"] }),
+  );
+  const dialog = await screen.findByRole("dialog");
+  await pickOption(
+    user,
+    within(dialog).getByRole("combobox", { name: en["taxRates.colCountry"] }),
+    "Austria",
+  );
+  await pickOption(
+    user,
+    within(dialog).getByRole("combobox", { name: en["taxRates.colCategory"] }),
+    en["taxRates.category.reduced"],
+  );
+  await user.type(
+    within(dialog).getByRole("textbox", { name: en["taxRates.colRate"] }),
+    "0,0000001",
+  );
+  await user.click(
+    within(dialog).getByRole("button", { name: en["taxRates.save"] }),
+  );
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  const post = calls.find((call) => call.method === "POST");
+  expect(post?.body).toMatchObject({
+    country: "at",
+    category: "reduced",
+    rate: "0.0000001",
+  });
+});
+
 it("says the sheet is withheld from a seat without the read grant", async () => {
   vi.stubGlobal("fetch", backend({}));
   render(<TaxRatesCard />);

@@ -43,7 +43,7 @@ func (h captureOwnerIdentityHandlers) CreateCaptureOwnerIdentity(w http.Response
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	identity, err := h.store.Add(r.Context(), string(req.Kind), req.Value)
+	identity, err := h.store.AddConfirmed(r.Context(), string(req.Kind), req.Value, req.Confirm != nil && *req.Confirm)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

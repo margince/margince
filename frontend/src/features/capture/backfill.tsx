@@ -77,12 +77,15 @@ function classifyBackfillErrors(
  */
 export function ImportPastEmailDialog({
   provider,
+  connectionId,
   initial,
   baseline,
   open,
   onClose,
 }: Readonly<{
   provider: Provider;
+  /** The mailbox's row id, which names it among several of one provider. */
+  connectionId?: string;
   initial?: BackfillStatus;
   baseline?: ReactNode;
   open: boolean;
@@ -98,6 +101,7 @@ export function ImportPastEmailDialog({
       {open && (
         <BackfillPanel
           provider={provider}
+          connectionId={connectionId}
           initial={initial}
           baseline={baseline}
           onClose={onClose}
@@ -109,11 +113,13 @@ export function ImportPastEmailDialog({
 
 export function BackfillPanel({
   provider,
+  connectionId,
   initial,
   onClose,
   baseline,
 }: {
   provider: Provider;
+  connectionId?: string;
   // The run row already embedded in GET /connectors (CaptureConnection.
   // backfill): seeds the first render so a live run shows immediately.
   initial?: BackfillStatus;
@@ -124,7 +130,7 @@ export function BackfillPanel({
   baseline?: ReactNode;
 }) {
   const t = useT();
-  const importRun = useBackfillRun({ provider, initial });
+  const importRun = useBackfillRun({ provider, connectionId, initial });
   const { status, preview, start, cancel, window, setWindow } = importRun;
   const [internalConsent, setInternalConsent] = useState<string | null>(null);
   const internalOffer =

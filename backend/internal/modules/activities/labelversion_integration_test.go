@@ -33,11 +33,11 @@ func TestAVerdictAboutAnEarlierBodyDoesNotLabelTheRestoredOne(t *testing.T) {
 	ctx := e.as()
 	id := e.seed(t, capturedRow{kind: "email"})
 
-	backlog, err := e.store.UnlabeledCaptureEmails(ctx, rulesetNew, 200, 200)
+	backlog, err := e.store.UnlabeledCaptureMessages(ctx, rulesetNew, 200, 200)
 	if err != nil {
 		t.Fatalf("reading the backlog: %v", err)
 	}
-	var read *UnlabeledEmail
+	var read *UnlabeledMessage
 	for i := range backlog {
 		if backlog[i].ID == id {
 			read = &backlog[i]

@@ -104,7 +104,7 @@ function draftsOnCue() {
 
 // The send-time binding to the voice draft: `draft_ref` is what makes the
 // server's accepted/edited_sent verdict about the rep's own words.
-describe("ComposeModal draft binding", () => {
+describe("ComposeWindow draft binding", () => {
   it("sends the reference of the draft whose text it is sending", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({
@@ -708,7 +708,7 @@ describe("ComposeModal draft binding", () => {
 // condition that puts a served draft there, and leaves when they do. A banner
 // that outlived its text would attribute a human's writing to a model, or
 // credit it to a voice version that never touched it.
-describe("ComposeModal draft provenance", () => {
+describe("ComposeWindow draft provenance", () => {
   it("discloses nothing when a draft's words were discarded for the rep's own", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const drafts = draftsOnCue();

@@ -133,8 +133,9 @@ func meetingNotesReaderTx(ctx context.Context, tx pgx.Tx) (notesReader, bool, er
 	var calendarLabel *string
 	err = tx.QueryRow(ctx, `
 		SELECT account_label FROM capture_connection
-		 WHERE user_id = $1 AND provider = $2 AND status IN ('connected','error') AND archived_at IS NULL`,
-		owner, calendar).Scan(&calendarLabel)
+		 WHERE user_id = $1 AND provider = $2 AND status IN ('connected','error') AND archived_at IS NULL
+		 ORDER BY lower(account_label) = lower($3) DESC, created_at, id LIMIT 1`,
+		owner, calendar, *label).Scan(&calendarLabel)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return notesReader{}, false, nil
 	}

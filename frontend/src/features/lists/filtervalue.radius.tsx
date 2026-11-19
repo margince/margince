@@ -6,7 +6,8 @@
 // refuses a missing part, a distance of zero or less, and a point off the globe.
 
 import { useState } from "react";
-import { useT } from "../../i18n";
+import { typedNumberOrNaN, writtenDecimal } from "../../format/decimalinput";
+import { type Locale, useLocale, useT } from "../../i18n";
 import {
   isRadiusOperand,
   type LeafValue,
@@ -15,29 +16,28 @@ import {
 
 type Draft = Readonly<{ label: string; lat: string; lon: string; km: string }>;
 
-function draftOf(value: LeafValue): Draft {
+function draftOf(value: LeafValue, locale: Locale): Draft {
   if (!isRadiusOperand(value)) {
     return { label: "", lat: "", lon: "", km: "" };
   }
   return {
     label: value.label ?? "",
-    lat: String(value.lat),
-    lon: String(value.lon),
-    km: String(value.radius_km),
+    lat: writtenDecimal(String(value.lat), locale),
+    lon: writtenDecimal(String(value.lon), locale),
+    km: writtenDecimal(String(value.radius_km), locale),
   };
 }
 
-function numberOf(text: string): number {
-  return text.trim() === "" ? Number.NaN : Number(text);
-}
-
 /** The operand the draft states, or undefined until it passes the shared validator. */
-export function radiusOf(draft: Draft): RadiusOperand | undefined {
+export function radiusOf(
+  draft: Draft,
+  locale: Locale,
+): RadiusOperand | undefined {
   const label = draft.label.trim();
   const candidate = {
-    lat: numberOf(draft.lat),
-    lon: numberOf(draft.lon),
-    radius_km: numberOf(draft.km),
+    lat: typedNumberOrNaN(draft.lat, locale),
+    lon: typedNumberOrNaN(draft.lon, locale),
+    radius_km: typedNumberOrNaN(draft.km, locale),
     ...(label === "" ? {} : { label }),
   };
   return isRadiusOperand(candidate) ? candidate : undefined;
@@ -58,21 +58,22 @@ export function RadiusValue({
   label: string;
 }>) {
   const t = useT();
-  const [draft, setDraft] = useState<Draft>(() => draftOf(value));
+  const { locale } = useLocale();
+  const [draft, setDraft] = useState<Draft>(() => draftOf(value, locale));
   // A change the tree made without this editor, such as Discard, replaces the
   // typed boxes. The editor's own edits already equal the tree and change nothing.
   const [seen, setSeen] = useState<LeafValue>(value);
   if (seen !== value) {
     setSeen(value);
     const held = isRadiusOperand(value) ? value : undefined;
-    if (JSON.stringify(held) !== JSON.stringify(radiusOf(draft))) {
-      setDraft(draftOf(value));
+    if (JSON.stringify(held) !== JSON.stringify(radiusOf(draft, locale))) {
+      setDraft(draftOf(value, locale));
     }
   }
   const edit = (part: Partial<Draft>) => {
     const next = { ...draft, ...part };
     setDraft(next);
-    onChange(radiusOf(next) ?? "");
+    onChange(radiusOf(next, locale) ?? "");
   };
   return (
     <fieldset className="filter-radius-value" aria-label={label}>

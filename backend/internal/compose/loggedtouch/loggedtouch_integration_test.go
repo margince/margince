@@ -27,10 +27,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// The issue's case: a contact met once, with more than a page of newer
-// activity on top. The note is past the timeline page, and the draft still
-// does not write to them as a stranger.
-func TestANoteOlderThanAPageOfActivityStillCountsAsContact(t *testing.T) {
+// A contact met once, with more than a page of newer activity on top, and a
+// newer internal note. The meeting is past the timeline page, the note does not
+// hide it, and the draft does not write to them as a stranger.
+func TestAMeetingOlderThanAPageOfActivityStillCountsAsContact(t *testing.T) {
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Einmal Getroffen", nil)
 	now := clocktest.Now(t)
@@ -45,7 +45,8 @@ func TestANoteOlderThanAPageOfActivityStillCountsAsContact(t *testing.T) {
 		}
 		return ids.UUID(row.Id)
 	}
-	note := log("note", "Met at the trade fair", now.Add(-40*24*time.Hour), nil)
+	met := log("meeting", "Met at the trade fair", now.Add(-40*24*time.Hour), nil)
+	log("note", "Researched their website", now.Add(-30*24*time.Hour), nil)
 	log("meeting", "Canceled demo", now.Add(-20*24*time.Hour), new("canceled"))
 	log("meeting", "Demo ahead", now.Add(48*time.Hour), new("booked"))
 	for i := range 60 {
@@ -62,12 +63,12 @@ func TestANoteOlderThanAPageOfActivityStillCountsAsContact(t *testing.T) {
 		t.Fatalf("assembling contact360: %v", err)
 	}
 	for _, row := range page.Activities.Data {
-		if row.Id == openapi_types.UUID(note) {
-			t.Fatal("the note is on the timeline page; log more newer tasks so the case is past a page")
+		if row.Id == openapi_types.UUID(met) {
+			t.Fatal("the meeting is on the timeline page; log more newer tasks so the case is past a page")
 		}
 	}
 	if state := contactdraft.ConversationState(page, now, time.UTC); state.Band != convstate.BandNone {
-		t.Fatalf("the page alone reads band %q; the case needs a note it cannot see", state.Band)
+		t.Fatalf("the page alone reads band %q; the case needs a meeting it cannot see", state.Band)
 	}
 
 	newest, err := Reader{Store: activities.NewStore(e.DB())}.NewestLoggedTouch(
@@ -75,11 +76,11 @@ func TestANoteOlderThanAPageOfActivityStillCountsAsContact(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading the newest logged touch: %v", err)
 	}
-	if len(newest) != 1 || newest[0].Id != openapi_types.UUID(note) {
-		t.Fatalf("newest logged touch = %v, want the note past the canceled and the future meeting", newest)
+	if len(newest) != 1 || newest[0].Id != openapi_types.UUID(met) {
+		t.Fatalf("newest logged touch = %v, want the past meeting, not the newer note, the canceled or the future meeting", newest)
 	}
 	if state := contactdraft.ConversationState(page, now, time.UTC, newest...); state.Band == convstate.BandNone {
-		t.Error("with the note read past the page, the draft still writes a first touch")
+		t.Error("with the meeting read past the page, the draft still writes a first touch")
 	}
 }
 

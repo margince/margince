@@ -65,7 +65,7 @@ func (r *QuerySchemaResource) Resources(context.Context) []mcp.Resource {
 // cannot see.
 func (r *QuerySchemaResource) ReadResource(ctx context.Context, uri string) (mcp.ResourceContents, error) {
 	if uri != QuerySchemaURI {
-		return mcp.ResourceContents{}, fmt.Errorf("search: resource %q: %w", uri, apperrors.ErrNotFound)
+		return mcp.ResourceContents{}, fmt.Errorf("no resource is published at %q: %w", uri, apperrors.ErrNotFound)
 	}
 	vocab, err := r.vocab.Resolve(ctx)
 	if err != nil {

@@ -6,6 +6,8 @@ package httperr
 import (
 	"context"
 	"errors"
+	"log/slog"
+	"net/http"
 )
 
 // statusClientClosedRequest is the status a request is recorded under when its
@@ -21,4 +23,35 @@ const statusClientClosedRequest = 499
 // qualifies.
 func CallerLeft(ctx context.Context) bool {
 	return errors.Is(ctx.Err(), context.Canceled)
+}
+
+// requestTimedOutCode is a request stopped because it ran past the time the
+// server gives one answer.
+const requestTimedOutCode = "request_timed_out"
+
+// requestTimedOutRetryAfter is the wait, in seconds, a timed-out request is
+// told to take. A slow request is most often one queued behind other writes.
+const requestTimedOutRetryAfter = 2
+
+// RanOutOfTime is true when the request's own context passed its deadline. The
+// request context carries no deadline but the server's own bound, so no deeper
+// timeout qualifies.
+func RanOutOfTime(ctx context.Context) bool {
+	return errors.Is(ctx.Err(), context.DeadlineExceeded)
+}
+
+// timedOutFault answers err when the server's own deadline caused it. A driver
+// error after the deadline often names no context error, so an unclassified
+// error counts too. A classified one keeps its answer unless it is the deadline.
+func timedOutFault(r *http.Request, err error, classified bool) (Fault, bool) {
+	if (classified && !errors.Is(err, context.DeadlineExceeded)) || !RanOutOfTime(r.Context()) {
+		return Fault{}, false
+	}
+	slog.WarnContext(r.Context(), "request ran past its time limit",
+		"method", r.Method, "path", loggedPath(r), "err", err)
+	return Fault{
+		Status: http.StatusServiceUnavailable, Code: requestTimedOutCode,
+		Detail:            "The request took longer than the server allows and was stopped. Send it again in a moment.",
+		RetryAfterSeconds: requestTimedOutRetryAfter,
+	}, true
 }

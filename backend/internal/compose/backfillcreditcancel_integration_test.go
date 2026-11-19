@@ -85,12 +85,12 @@ func TestACommittedCreationIsCreditedAfterItsImportIsCancelled(t *testing.T) {
 	if _, err := registry.Connect(human, "gmail", connector.Auth("refresh")); err != nil {
 		t.Fatal(err)
 	}
-	run, err := registry.StartBackfill(human, "gmail", ids.From[ids.UserKind](e.AdminUser), 3, connector.BackfillEstimate{Messages: 1}, func(context.Context, pgx.Tx, ids.UUID) error { return nil })
+	run, err := registry.StartBackfill(human, capture.ProviderMailbox("gmail"), ids.From[ids.UserKind](e.AdminUser), 3, connector.BackfillEstimate{Messages: 1}, func(context.Context, pgx.Tx, ids.UUID) error { return nil })
 	if err != nil {
 		t.Fatal(err)
 	}
 	ensurer.cancel = func() error {
-		_, err := registry.CancelBackfill(human, "gmail", ids.From[ids.UserKind](e.AdminUser))
+		_, err := registry.CancelBackfill(human, capture.ProviderMailbox("gmail"), ids.From[ids.UserKind](e.AdminUser))
 		return err
 	}
 	if _, _, _, err := registry.RunBackfillStep(human, run.ID); err != nil && !errors.Is(err, apperrors.ErrConflict) {

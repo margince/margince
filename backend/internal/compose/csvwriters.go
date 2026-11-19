@@ -48,7 +48,7 @@ type csvWriters struct {
 	runID      migration.RunID
 	object     string
 	// sourceSystem is the namespace the run files its rows under, from its
-	// source name (importSourceSystem).
+	// source name (importwire.SourceSystem).
 	sourceSystem string
 	// onDuplicate is the run's answer for a row naming a record the estate
 	// already holds: "" or "create" lands it and files a review pair, "skip"
@@ -116,6 +116,9 @@ type csvWriters struct {
 	updated int
 	// predictedNotes is the notes the dry run predicted filed (noteTwinKey).
 	predictedNotes map[string]bool
+	// predictedWarnings are a predicted row's warnings beyond the one predictRow
+	// returns; predictPages reports and clears them.
+	predictedWarnings []migration.SkippedRow
 }
 
 var _ migration.Writers = (*csvWriters)(nil)
@@ -227,6 +230,7 @@ func (w *csvWriters) ensureOne(ctx context.Context, object string, row migration
 	landed, err := w.ensureRow(ctx, object, row, link.into(typed))
 	if err == nil && !landed.Skipped {
 		landed.Problem = cmp.Or(link.problem, unknownOwner)
+		w.claimRow(row, typed)
 	}
 	return landed, err
 }
@@ -262,8 +266,22 @@ func (w *csvWriters) ensureRow(ctx context.Context, object string, row migration
 		}
 		return w.reconcile(ctx, id, row, typed)
 	}
+	holder, matched, err := w.domainHolderOf(ctx, row)
+	if err != nil {
+		return migration.EnsureResult{}, err
+	}
+	if matched {
+		return w.landOnDomainHolder(ctx, row, holder, typed)
+	}
 	if expected, reviewed := w.reviewRows[row.ExternalID]; reviewed && expected.TargetID != "" {
 		return migration.EnsureResult{}, apperrors.ErrVersionSkew
+	}
+	why, err := w.newRecordRefusal(ctx, row, typed)
+	if err != nil {
+		return migration.EnsureResult{}, err
+	}
+	if why.Code != "" {
+		return skippedFor(why), nil
 	}
 	// Not a row this importer has landed before — but the estate may hold the
 	// record anyway, and the run says what to do about that. The check runs on
@@ -341,14 +359,18 @@ func (w *csvWriters) reconcile(ctx context.Context, id ids.UUID, row migration.R
 	if err != nil {
 		return migration.EnsureResult{}, err
 	}
-	changed, err := changedFields(current, textFields(row.Fields), typed)
+	changed, keptWhy, err := w.landingChanges(ctx, row, current, typed)
 	if err != nil {
 		return migration.EnsureResult{}, err
+	}
+	var kept []migration.SkippedRow
+	if keptWhy.Code != "" {
+		kept = append(kept, migration.SkippedRow{}.Because(keptWhy))
 	}
 	if len(changed) == 0 {
 		// Counted as neither a create nor an update: reporting work that never
 		// happened would inflate both the disposition table and the audit log.
-		return migration.EnsureResult{Unchanged: true}, w.tagExisting(ctx, id, row)
+		return migration.EnsureResult{Unchanged: true, Warnings: kept}, w.tagExisting(ctx, id, row)
 	}
 	if !auth.Allows(ctx, w.object, principal.ActionUpdate) {
 		return skippedFor(cannotEditWhy(w.object)), nil
@@ -388,7 +410,7 @@ func (w *csvWriters) reconcile(ctx context.Context, id ids.UUID, row migration.R
 		return migration.EnsureResult{}, err
 	}
 	w.updated++
-	return migration.EnsureResult{Disclosure: fmt.Sprintf("row %s: %d field(s) rewritten from the file", row.ExternalID, len(changed))}, nil
+	return migration.EnsureResult{Disclosure: fmt.Sprintf("row %s: %d field(s) rewritten from the file", row.ExternalID, len(changed)), Warnings: kept}, nil
 }
 
 // apply writes the changed fields. `current` is the stored record's JSON, which
@@ -449,9 +471,6 @@ func (w *csvWriters) apply(
 //nolint:dupl // createContact has the same SHAPE and not the same job: a
 func (w *csvWriters) createCompany(ctx context.Context, row migration.Row, typed map[string]any) (migration.EnsureResult, error) {
 	in := companyCreateFrom(textFields(row.Fields), typed, w.sourceSystem, w.provenanceOf(row.ExternalID))
-	if in.DisplayName == "" {
-		return skippedFor(companyNameEmptyWhy), nil
-	}
 	err := w.land(ctx, row, func(tx pgx.Tx) (ids.UUID, error) {
 		if err := w.authors.resolve(ctx, tx, &in.Author); err != nil {
 			return ids.UUID{}, err

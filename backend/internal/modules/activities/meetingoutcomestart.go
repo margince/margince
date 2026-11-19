@@ -50,7 +50,7 @@ func refuseOutcomeBeforeStart(ctx context.Context, tx pgx.Tx, current crmcontrac
 		precision = *in.OccurredPrecision
 	}
 	moved := !SameStoredStart(start, current.OccurredAt) || precision != string(current.OccurredPrecision)
-	if status == nil && moved && current.MeetingStatus != nil {
+	if status == nil && moved && current.MeetingStatus != nil && !in.clears(auditFieldMeetingStatus) {
 		status = new(string(*current.MeetingStatus))
 	}
 	return refuseOutcomeAt(ctx, tx, status, &start, precision, in.recordedAt)

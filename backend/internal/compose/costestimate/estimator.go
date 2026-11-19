@@ -85,7 +85,7 @@ type (
 	// YieldReader is capture.Registry.BackfillYields — the previewing
 	// connection's representative completed run (zero-value ⇒ floor).
 	YieldReader interface {
-		BackfillYields(ctx context.Context, provider string, userID ids.UserID) (capture.BackfillYields, error)
+		BackfillYields(ctx context.Context, mailbox capture.Mailbox, userID ids.UserID) (capture.BackfillYields, error)
 	}
 )
 
@@ -117,7 +117,7 @@ const (
 
 // EstimateBackfill prices the projected spend of backfilling scannedMessages for
 // the given connection. Every port read propagates its error (never swallowed).
-func (e *Estimator) EstimateBackfill(ctx context.Context, provider string, userID ids.UserID, scannedMessages int64) (BackfillCost, error) {
+func (e *Estimator) EstimateBackfill(ctx context.Context, mailbox capture.Mailbox, userID ids.UserID, scannedMessages int64) (BackfillCost, error) {
 	today := e.clock.Now()
 	since := today.Add(-estimateWindow)
 
@@ -134,7 +134,7 @@ func (e *Estimator) EstimateBackfill(ctx context.Context, provider string, userI
 	if err != nil {
 		return BackfillCost{}, err
 	}
-	yields, err := e.yields.BackfillYields(ctx, provider, userID)
+	yields, err := e.yields.BackfillYields(ctx, mailbox, userID)
 	if err != nil {
 		return BackfillCost{}, err
 	}

@@ -16,8 +16,8 @@ import { FilePreviewProvider } from "../../design-system/filepreview";
 import { LocaleProvider } from "../../i18n";
 import { BuyerRoomScreen } from "./buyerroom";
 
-// The buyer's Deal Room: the credential in the hash is exchanged once and
-// scrubbed, the session rides as a Bearer on every call, and each access
+// The buyer's Deal Room. The credential in the hash is exchanged once and
+// scrubbed. The session rides on the server's HttpOnly cookie. Each access
 // state gets its own screen. What went out on the wire is the contract.
 
 function jsonResponse(body: unknown, status = 200) {
@@ -27,7 +27,12 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
-type Sent = { key: string; authorization: string | null; body: unknown };
+type Sent = {
+  key: string;
+  authorization: string | null;
+  credentials: RequestCredentials | undefined;
+  body: unknown;
+};
 
 function stubRoom(
   overrides: Record<string, () => Response> = {},
@@ -56,10 +61,11 @@ function stubRoom(
       sent.push({
         key,
         // The generated client sends a Request; the file preview sends a URL
-        // and an init. The token has to be visible either way.
+        // and an init. Both are read, so a token sent either way shows.
         authorization:
           request?.headers.get("Authorization") ??
           new Headers(init?.headers).get("Authorization"),
+        credentials: request?.credentials ?? init?.credentials,
         body,
       });
       const override = overrides[key];
@@ -153,11 +159,12 @@ afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
   globalThis.sessionStorage.clear();
+  globalThis.localStorage.clear();
   globalThis.location.hash = "";
 });
 
 describe("BuyerRoomScreen", () => {
-  it("exchanges the credential from the link, scrubs it, and reads the room as a Bearer", async () => {
+  it("exchanges the credential from the link, scrubs it, and reads the room on the cookie alone", async () => {
     globalThis.location.hash = "#/room?c=mdr_secret";
     const sent = stubRoom();
     render(<BuyerRoomScreen />);
@@ -171,10 +178,72 @@ describe("BuyerRoomScreen", () => {
     const exchange = sent.find((s) => s.key === "POST /public/rooms/exchange");
     expect(exchange?.body).toEqual({ credential: "mdr_secret" });
     const me = sent.find((s) => s.key === "GET /public/rooms/me");
-    expect(me?.authorization).toBe("Bearer mdrs_session");
-    expect(globalThis.sessionStorage.getItem("margince.room.session")).toBe(
-      "mdrs_session",
+    expect(me?.authorization).toBeNull();
+    expect(me?.credentials).toBe("include");
+    // The token stays in the HttpOnly cookie, where no script on the page reads it.
+    const stored = [sessionStorage, localStorage].flatMap((store) =>
+      Array.from({ length: store.length }, (_, i) =>
+        store.getItem(store.key(i) ?? ""),
+      ),
     );
+    expect(stored).not.toContain("mdrs_session");
+  });
+
+  // A second tab, or the same browser after the tab closed, holds no link and
+  // no stored token. The browser still sends the cookie, so the room opens.
+  it("a new tab with no link opens the room on the kept session", async () => {
+    const sent = stubRoom();
+    render(<BuyerRoomScreen />);
+
+    await screen.findByRole("heading", { name: "Acme rollout" });
+    expect(sent.some((s) => s.key === "POST /public/rooms/exchange")).toBe(
+      false,
+    );
+  });
+
+  // The kept session may be another room's. A refused link says so rather
+  // than opening whatever room the browser last held.
+  it("a refused link shows the dead-link page even with a kept session", async () => {
+    globalThis.location.hash = "#/room?c=mdr_used";
+    const sent = stubRoom({
+      "POST /public/rooms/exchange": () =>
+        jsonResponse({ status: 404, code: "not_found" }, 404),
+    });
+    render(<BuyerRoomScreen />);
+
+    await screen.findByText(/The link was already used/);
+    expect(screen.queryByRole("heading", { name: "Acme rollout" })).toBeNull();
+    expect(sent.some((s) => s.key === "GET /public/rooms/me")).toBe(false);
+  });
+
+  // One cookie serves the browser. A link opened in another tab moves it to
+  // another room; this tab must neither draw that room nor write into it.
+  it("a tab whose room another tab replaced draws nothing and writes nothing", async () => {
+    let seat = "p-1";
+    const sent = stubRoom({
+      "GET /public/rooms/me": () =>
+        jsonResponse({
+          ...LIVE,
+          participant: { ...LIVE.participant, id: seat },
+          room: {
+            ...LIVE.room,
+            title: seat === "p-1" ? "Acme rollout" : "Other room",
+          },
+        }),
+    });
+    const user = userEvent.setup();
+    render(<BuyerRoomScreen />);
+    await screen.findByText("Does clause 4 work for you?");
+
+    seat = "p-2";
+    await user.type(screen.getByLabelText("Reply"), "Thirty days would.");
+    await user.click(screen.getByRole("button", { name: "Reply" }));
+
+    await screen.findByText("This tab shows an older room");
+    expect(screen.queryByRole("heading", { name: "Other room" })).toBeNull();
+    expect(
+      sent.some((s) => s.key === "POST /public/rooms/threads/th-1/comments"),
+    ).toBe(false);
   });
 
   // The credential no longer waits in the address bar for the screen to read
@@ -199,8 +268,7 @@ describe("BuyerRoomScreen", () => {
     ).toHaveLength(1);
   });
 
-  it("the buyer reads the seller's question and answers it with the Bearer", async () => {
-    globalThis.sessionStorage.setItem("margince.room.session", "mdrs_session");
+  it("the buyer reads the seller's question and answers it on the cookie", async () => {
     const sent = stubRoom();
     const user = userEvent.setup();
     render(<BuyerRoomScreen />);
@@ -217,11 +285,11 @@ describe("BuyerRoomScreen", () => {
       (s) => s.key === "POST /public/rooms/threads/th-1/comments",
     );
     expect(posted?.body).toEqual({ body: "Thirty days would." });
-    expect(posted?.authorization).toBe("Bearer mdrs_session");
+    expect(posted?.authorization).toBeNull();
+    expect(posted?.credentials).toBe("include");
   });
 
   it("a paused room shows the paused notice and no content", async () => {
-    globalThis.sessionStorage.setItem("margince.room.session", "mdrs_session");
     stubRoom({
       "GET /public/rooms/me": () =>
         jsonResponse({ ...LIVE, access: "paused", room: undefined }),
@@ -235,11 +303,13 @@ describe("BuyerRoomScreen", () => {
     expect(screen.queryByText("Acme rollout")).not.toBeInTheDocument();
   });
 
-  it("a dead link offers a fresh one by email, and the session is dropped on a 401", async () => {
+  it("a dead link with no kept session offers a fresh one by email", async () => {
     globalThis.location.hash = "#/room?c=mdr_used";
     const sent = stubRoom({
       "POST /public/rooms/exchange": () =>
         jsonResponse({ status: 404, code: "not_found" }, 404),
+      "GET /public/rooms/me": () =>
+        jsonResponse({ status: 401, code: "unauthorized" }, 401),
     });
     const user = userEvent.setup();
     render(<BuyerRoomScreen />);
@@ -257,8 +327,7 @@ describe("BuyerRoomScreen", () => {
     expect(request?.body).toEqual({ email: "laura@buyer.example" });
   });
 
-  it("a session the server refuses is forgotten", async () => {
-    globalThis.sessionStorage.setItem("margince.room.session", "mdrs_stale");
+  it("a session the server refuses shows the dead-link page", async () => {
     stubRoom({
       "GET /public/rooms/me": () =>
         jsonResponse({ status: 401, code: "unauthorized" }, 401),
@@ -266,12 +335,46 @@ describe("BuyerRoomScreen", () => {
     render(<BuyerRoomScreen />);
 
     await screen.findByText("This link no longer works");
-    expect(globalThis.sessionStorage.getItem("margince.room.session")).toBe(
-      null,
+  });
+
+  it("signing out ends the session on the server and leaves the room", async () => {
+    const sent = stubRoom({
+      "POST /public/rooms/sign-out": () => new Response(null, { status: 204 }),
+    });
+    const user = userEvent.setup();
+    render(<BuyerRoomScreen />);
+
+    await user.click(await screen.findByRole("button", { name: "Sign out" }));
+    await screen.findByText("This link no longer works");
+    expect(sent.some((s) => s.key === "POST /public/rooms/sign-out")).toBe(
+      true,
     );
   });
 
+  // On a shared computer, a sign-out that failed must not look like one that
+  // worked: the room stays and the failure shows.
+  it("a failed sign-out stays in the room and says it failed", async () => {
+    stubRoom({
+      "POST /public/rooms/sign-out": () =>
+        jsonResponse(
+          { status: 500, detail: "The server could not sign you out." },
+          500,
+        ),
+    });
+    const user = userEvent.setup();
+    render(<BuyerRoomScreen />);
+
+    await user.click(await screen.findByRole("button", { name: "Sign out" }));
+    await screen.findByRole("alert");
+    expect(
+      screen.getByRole("heading", { name: "Acme rollout" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("This link no longer works")).toBeNull();
+  });
+
   it("hides the open room while a second link's exchange is pending", async () => {
+    // The browser's cookie: each exchange the server answers replaces it.
+    let cookie = "";
     let answerB: (response: Response) => void = () => undefined;
     const exchangeB = new Promise<Response>((resolve) => {
       answerB = resolve;
@@ -292,11 +395,11 @@ describe("BuyerRoomScreen", () => {
           if (credential === "mdr_b") {
             return exchangeB;
           }
+          cookie = "mdrs_a";
           return jsonResponse({ session_token: "mdrs_a" });
         }
         if (path === "/public/rooms/me") {
-          const bearerToken = request?.headers.get("Authorization");
-          return roomFor(bearerToken === "Bearer mdrs_b" ? "Room B" : "Room A");
+          return roomFor(cookie === "mdrs_b" ? "Room B" : "Room A");
         }
         return jsonResponse({ data: [] });
       }),
@@ -313,7 +416,13 @@ describe("BuyerRoomScreen", () => {
     expect(screen.queryByRole("heading", { name: "Room A" })).toBeNull();
     expect(screen.getByText("Opening your Deal Room…")).toBeInTheDocument();
 
+    cookie = "mdrs_b";
     answerB(jsonResponse({ session_token: "mdrs_b" }));
+    // No read cached under room A's session may answer for room B's.
+    await waitFor(() =>
+      expect(screen.queryByText("Opening your Deal Room…")).toBeNull(),
+    );
+    expect(screen.queryByRole("heading", { name: "Room A" })).toBeNull();
     await screen.findByRole("heading", { name: "Room B" });
     expect(screen.queryByRole("heading", { name: "Room A" })).toBeNull();
   });
@@ -358,7 +467,6 @@ describe("BuyerRoomScreen", () => {
           headers: { "Content-Type": "application/pdf" },
         }),
     });
-    globalThis.sessionStorage.setItem("margince.room.session", "mdrs_session");
     const user = userEvent.setup();
     render(<BuyerRoomScreen />);
 
@@ -381,7 +489,6 @@ describe("BuyerRoomScreen", () => {
       "GET /public/rooms/documents/d-1/file": () =>
         jsonResponse({ code: "not_found" }, 404),
     });
-    globalThis.sessionStorage.setItem("margince.room.session", "mdrs_session");
     const user = userEvent.setup();
     render(<BuyerRoomScreen />);
 
@@ -406,10 +513,8 @@ describe("BuyerRoomScreen", () => {
 // cannot write. Only the server minting every preview seat read-only kept
 // that off the screen.
 describe("reading a document in place", () => {
-  // The preview reads the bytes with the room's Bearer, exactly as the list
-  // did: a buyer holds no cookie, so a read that rode the cookie alone would
-  // be refused and the dialog would say the file could not be shown.
-  it("opens a PDF over the room, read with the Bearer", async () => {
+  // The preview reads the bytes on the room's cookie, as the list did.
+  it("opens a PDF over the room, read on the cookie", async () => {
     vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:room-read");
     vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
     const sent = stubRoom({
@@ -419,7 +524,6 @@ describe("reading a document in place", () => {
           headers: { "Content-Type": "application/pdf" },
         }),
     });
-    globalThis.sessionStorage.setItem("margince.room.session", "mdrs_session");
     const user = userEvent.setup();
     render(
       <FilePreviewProvider>
@@ -440,8 +544,8 @@ describe("reading a document in place", () => {
     await waitFor(() =>
       expect(
         sent.find((call) => call.key === "GET /public/rooms/documents/d-1/file")
-          ?.authorization,
-      ).toBe("Bearer mdrs_session"),
+          ?.credentials,
+      ).toBe("include"),
     );
   });
 
@@ -462,7 +566,6 @@ describe("reading a document in place", () => {
           ],
         }),
     });
-    globalThis.sessionStorage.setItem("margince.room.session", "mdrs_session");
     render(
       <FilePreviewProvider>
         <BuyerRoomScreen />
@@ -497,7 +600,6 @@ describe("the hero the buyer lands on", () => {
   // seat the tab is in before they write in it.
   it("names the contact beside the documents and who is signed in", async () => {
     stubRoom();
-    globalThis.sessionStorage.setItem("margince.room.session", "mdrs_session");
     render(<BuyerRoomScreen />);
 
     const side = await screen.findByRole("complementary");
@@ -517,7 +619,6 @@ describe("the hero the buyer lands on", () => {
           room: { ...LIVE.room, closed_at: "2026-08-22T10:00:00Z" },
         }),
     });
-    globalThis.sessionStorage.setItem("margince.room.session", "mdrs_session");
     render(<BuyerRoomScreen />);
 
     expect(await screen.findByText("Closed")).toBeInTheDocument();
@@ -549,7 +650,6 @@ describe("a preview never gets a working composer", () => {
       "GET /public/rooms/documents": () => jsonResponse({ data: [] }),
       "GET /public/rooms/threads": () => jsonResponse({ data: [] }),
     });
-    globalThis.sessionStorage.setItem("margince.room.session", "mdrs_session");
     render(<BuyerRoomScreen />);
 
     // LIVE's participant carries `capability: "comment"`, so a write gate that
@@ -569,7 +669,6 @@ describe("a preview never gets a working composer", () => {
       "GET /public/rooms/documents": () => jsonResponse({ data: [] }),
       "GET /public/rooms/threads": () => jsonResponse({ data: [] }),
     });
-    globalThis.sessionStorage.setItem("margince.room.session", "mdrs_session");
     render(<BuyerRoomScreen />);
 
     // The admit case, without which the refusal above passes against a page
@@ -592,7 +691,6 @@ describe("an access state this build does not know", () => {
       "GET /public/rooms/documents": () => jsonResponse({ data: [] }),
       "GET /public/rooms/threads": () => jsonResponse({ data: [] }),
     });
-    globalThis.sessionStorage.setItem("margince.room.session", "mdrs_session");
     render(<BuyerRoomScreen />);
 
     const start = await screen.findByRole("button", { name: "New thread" });
@@ -607,7 +705,6 @@ describe("an access state this build does not know", () => {
       "GET /public/rooms/documents": () => jsonResponse({ data: [] }),
       "GET /public/rooms/threads": () => jsonResponse({ data: [] }),
     });
-    globalThis.sessionStorage.setItem("margince.room.session", "mdrs_session");
     render(<BuyerRoomScreen />);
 
     expect(await screen.findByText("This room is now read-only.")).toBeTruthy();

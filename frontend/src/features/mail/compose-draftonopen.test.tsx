@@ -4,7 +4,6 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { messageText } from "../../design-system/richtext-testing";
 import { draftButton, purposeField } from "../../testing/composedraft.testkit";
-import { ComposeModal } from "./compose";
 import {
   jsonResponse,
   PROVISIONAL_VOICE_PROFILE,
@@ -12,6 +11,7 @@ import {
   stubRoutes,
   WHY_ASK,
 } from "./compose.testkit";
+import { ComposeWindow } from "./composewindow";
 
 // An indigo verb ("Draft reply") promises that the model writes. The composer
 // it opens keeps that promise itself, rather than offering the same verb again.
@@ -36,7 +36,7 @@ const drafted = {
 
 function renderReply(draftOnOpen: boolean) {
   render(
-    <ComposeModal
+    <ComposeWindow
       activityId="act-1"
       entityType="contact"
       entityId="p-1"
@@ -48,7 +48,7 @@ function renderReply(draftOnOpen: boolean) {
   );
 }
 
-describe("ComposeModal draftOnOpen", () => {
+describe("ComposeWindow draftOnOpen", () => {
   it("drafts once on open, steered by the intent it was given", async () => {
     const sent = stubRoutes({
       "GET /voice-profiles": () => jsonResponse(PROVISIONAL_VOICE_PROFILE),

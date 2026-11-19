@@ -104,6 +104,7 @@ function DealTabs({
       options={tabsOf(deal, legalReview)}
       value={value}
       onChange={onChange}
+      keepPlace
       counts={counts}
       labels={{
         overview: t("tab.overview"),
@@ -164,6 +165,12 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   // point at it are two different slots of the same header.
   const readOnlyReasonId = useId();
   const [tab, setTab] = useState<DealTab>("overview");
+  // The tab lives in state, so no move of the address opens the new one at its
+  // top. A door in a tab's body does that here; the strip keeps the place.
+  const openTab = (next: DealTab) => {
+    setTab(next);
+    scrollPageToTop();
+  };
   const [editingDetails, setEditingDetails] = useState(false);
   const legalReview = useLegalReviewAvailable() === true;
   const [pending, setPending] = useState<PendingAdvance | null>(null);
@@ -304,7 +311,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                 shownTab !== "overview" && (
                   <LatestInboundLine
                     latest={latest}
-                    onOpen={() => setTab("overview")}
+                    onOpen={() => openTab("overview")}
                   />
                 )
               }
@@ -328,10 +335,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                   legalReview={legalReview}
                   thread={threadQuery}
                   value={shownTab}
-                  onChange={(next) => {
-                    setTab(next);
-                    scrollPageToTop();
-                  }}
+                  onChange={setTab}
                 />
               }
             >
@@ -362,10 +366,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                       },
                     }}
                     onOpenEmail={setOpenEmail}
-                    onOpenTab={(next) => {
-                      setTab(next);
-                      scrollPageToTop();
-                    }}
+                    onOpenTab={openTab}
                     onEditDetails={() => setEditingDetails(true)}
                     threadComplete={
                       threadQuery.isSuccess && !threadQuery.hasNextPage

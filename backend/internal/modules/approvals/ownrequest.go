@@ -81,7 +81,7 @@ func ownRequestStager(ctx context.Context, kind string) (ids.UUID, error) {
 	}
 	p, ok := principal.Actor(ctx)
 	if !ok || !p.HumanOrItsAgent() || p.UserID.IsZero() {
-		return ids.Nil, fmt.Errorf("crmapprovals: a colleague's own request is read by that colleague or their agent: %w",
+		return ids.Nil, fmt.Errorf("a colleague's own request is read by that colleague or their agent: %w",
 			apperrors.ErrPermissionDenied)
 	}
 	return p.UserID, nil

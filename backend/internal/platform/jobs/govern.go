@@ -40,6 +40,7 @@ type governedWorker[T river.JobArgs] struct {
 	river.WorkerDefaults[T]
 	work    WorkOnly[T]
 	timeout time.Duration
+	spec    Spec
 }
 
 func (w governedWorker[T]) Timeout(*river.Job[T]) time.Duration { return w.timeout }
@@ -55,11 +56,11 @@ func (w governedWorker[T]) Work(ctx context.Context, job *river.Job[T]) error {
 					panic(rec)
 				}
 			}()
-			return w.work.Work(ctx, job)
+			return quietOnUnboundRefusal(w.work.Work(ctx, job), w.spec)
 		})
 }
 
 // Govern binds a worker to its declaration.
 func Govern[T river.JobArgs](w WorkOnly[T], s Spec) river.Worker[T] {
-	return governedWorker[T]{work: w, timeout: s.Timeout.Duration()}
+	return governedWorker[T]{work: w, timeout: s.Timeout.Duration(), spec: s}
 }

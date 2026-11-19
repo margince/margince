@@ -290,7 +290,7 @@ func liveAddressHolderTx(ctx context.Context, tx pgx.Tx, email string) (addresse
 		return addressedContact{}, false, nil // not a known recipient in this workspace: no token, no header
 	}
 	if len(matches) > 1 {
-		return addressedContact{}, false, fmt.Errorf("consent: the recipient address is live on more than one contact, so no unsubscribe link can name which: %w",
+		return addressedContact{}, false, fmt.Errorf("the recipient address is live on more than one contact, so no unsubscribe link can name which: %w",
 			apperrors.ErrConflict)
 	}
 	return matches[0], true, nil

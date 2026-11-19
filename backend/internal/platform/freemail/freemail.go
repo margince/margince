@@ -131,6 +131,25 @@ func CarveOutKey(domain string) (string, bool) {
 	return base, true
 }
 
+// Ancestors lists the domains a subdomain sits under, nearest first, down to its
+// registrable domain: `team.eu.example.com` sits under `eu.example.com` and
+// `example.com`. A registrable domain sits under nothing, because a public
+// suffix such as `co.uk` is nobody's company.
+func Ancestors(domain string) []string {
+	sub := normalize(domain)
+	registrable := Registrable(sub)
+	if registrable == "" || registrable == sub || !strings.HasSuffix(sub, "."+registrable) {
+		return nil
+	}
+	var ancestors []string
+	for rest := sub; rest != registrable; {
+		_, parent, _ := strings.Cut(rest, ".")
+		ancestors = append(ancestors, parent)
+		rest = parent
+	}
+	return ancestors
+}
+
 // Matcher decides consumer-provider membership against the pinned baseline (the
 // vendored dataset plus this repo's own pins) with a deployment overlay: extra
 // adds domains the baseline misses, never carves out a false positive. never
@@ -183,6 +202,13 @@ func (m *Matcher) IsConsumer(domain string) bool {
 		}
 		candidate = rest
 	}
+}
+
+// IsShipped reports whether the shipped baseline alone makes the domain
+// consumer mail, after the workspace's carve-outs. A domain that is consumer
+// mail only because the workspace added it answers false.
+func (m *Matcher) IsShipped(domain string) bool {
+	return (&Matcher{never: m.never}).IsConsumer(domain)
 }
 
 // normalizedSet folds a configured list into a lookup set, dropping blanks.

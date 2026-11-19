@@ -5,7 +5,13 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { Button, Field, Modal, TextInput } from "../../design-system/atoms";
+import {
+  Button,
+  Field,
+  Modal,
+  SegmentedControl,
+  TextInput,
+} from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { ChoiceList } from "../../design-system/choicelist";
 import { FileDropzone } from "../../design-system/filedropzone";
@@ -18,7 +24,6 @@ import { Select } from "../../design-system/select";
 import { searchWords } from "../../format/collate";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
 import { fileListKeys } from "../../lib/attachmentkeys";
 import {
   ACCEPTED_ATTACHMENT_ATTR,
@@ -31,12 +36,27 @@ import { labelFor } from "../../lib/labelfor";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { formatUploadLimit, useMaxUploadBytes } from "../../lib/uploadlimit";
 import {
+  CATEGORY_KEYS,
+  type Choosable,
+  SOURCE_WORDS,
+  SOURCES,
+  type Source,
+  UPLOADABLE_CATEGORIES,
+} from "./adddocument.choices";
+import {
   DEAL_MATCH_LIMIT,
   DEAL_PAGE_FRESH_MS,
   DEAL_PAGE_SIZE,
   DEAL_SEARCH_REACH,
   walkAccountDeals,
 } from "./adddocument.dealsearch";
+import {
+  addLink,
+  type LinkSubmission,
+  linkRefusal,
+  useLinkTitle,
+} from "./adddocument.link";
+import { LinkAddressField } from "./adddocument.linkfield";
 import { uploadRefusal } from "./adddocument.upload";
 
 // Adding a document to the record the dialog was opened from — an account's
@@ -56,40 +76,7 @@ import { uploadRefusal } from "./adddocument.upload";
 // account can offer its own deals as filing targets. A contact sits on deals at
 // companies they may not work for, so its library files against the contact.
 
-type Attachment = components["schemas"]["Attachment"];
-
-// A document link arrives with a mail and is never filed from this dialog.
-type Category = Exclude<NonNullable<Attachment["category"]>, "link">;
-
 type DealPage = components["schemas"]["DealListResponse"];
-
-const CATEGORY_KEYS: Record<Category, MessageKey> = {
-  contract: "docs.category.contract",
-  offer: "docs.category.offer",
-  legal: "docs.category.legal",
-  email_attachment: "docs.category.email",
-  message_attachment: "docs.category.message",
-  other: "docs.category.other",
-};
-
-// WHAT A HUMAN MAY CHOOSE, which is not the whole vocabulary. The two
-// `*_attachment` values record PROVENANCE — capture derives them from the
-// transport a file arrived on — and a file being uploaded from this dialog
-// arrived on none. Offering them would let the picker mint a claim about where a
-// file came from that is false the moment it is chosen, and the document library
-// reads that column as an answer to exactly that question.
-//
-// Derived by subtraction from CATEGORY_KEYS rather than listed, so a value added
-// to the contract lands in the picker by default and only a deliberate edit here
-// keeps it out. Not a second hand-kept list: the two drift apart.
-const CAPTURED_ONLY: readonly Category[] = [
-  "email_attachment",
-  "message_attachment",
-];
-
-const UPLOADABLE_CATEGORIES = (Object.keys(CATEGORY_KEYS) as Category[]).filter(
-  (key) => !CAPTURED_ONLY.includes(key),
-);
 
 /**
  * The record whose document library this dialog was opened from.
@@ -128,7 +115,7 @@ function parentOf(
 
 type Submission = {
   parent: AttachmentParent;
-  category: Category;
+  category: Choosable;
   title: string;
   file: File;
 };
@@ -138,7 +125,7 @@ type Submission = {
 // itself, and would put this dialog's assumptions into a record it never read.
 function metadataFor(submitted: Submission) {
   const title = submitted.title.trim();
-  const patch: { category?: Category; title?: string } = {};
+  const patch: { category?: Choosable; title?: string } = {};
   if (submitted.category !== "other") {
     patch.category = submitted.category;
   }
@@ -164,8 +151,12 @@ export function AddDocumentDialog({
 
   const [filing, setFiling] = useState<Filing>("anchor");
   const [deal, setDeal] = useState<RecordPickerCandidate | null>(null);
-  const [category, setCategory] = useState<Category>("other");
+  const [category, setCategory] = useState<Choosable>("other");
+  const [source, setSource] = useState<Source>("file");
   const [title, setTitle] = useState("");
+  // Until the reader types a title, a link shows the one its page gives.
+  const [titleTyped, setTitleTyped] = useState(false);
+  const [url, setUrl] = useState("");
   const [file, setFile] = useState<File | undefined>();
   // Set when the bytes landed and the metadata did not. It is not an error
   // state: the upload succeeded, and the row exists.
@@ -250,7 +241,10 @@ export function AddDocumentDialog({
     setFiling("anchor");
     setDeal(null);
     setCategory("other");
+    setSource("file");
     setTitle("");
+    setTitleTyped(false);
+    setUrl("");
     setFile(undefined);
   };
 
@@ -292,11 +286,14 @@ export function AddDocumentDialog({
       }
     },
     onSuccess: async (result) => {
+      // Closed before the refetch, so a dialog reopened meanwhile keeps its draft.
+      if (result.filed) {
+        closeAndClear();
+      }
       for (const queryKey of fileListKeys(result.home)) {
         await queryClient.invalidateQueries({ queryKey });
       }
       if (result.filed) {
-        closeAndClear();
         return;
       }
       // Guarded on the dialog still being open. React Query runs a mutation to
@@ -313,24 +310,44 @@ export function AddDocumentDialog({
     },
   });
 
-  // Closing empties the form. The dialog is MOUNTED for the life of the card —
-  // Modal renders nothing while shut, it does not unmount its children — so
-  // anything left here is what the next opening starts with. That is a hazard
-  // rather than untidiness: a file still in the field is one a later, unrelated
-  // upload would silently send a second copy of.
+  const link = useMutation({
+    mutationFn: async (submitted: LinkSubmission) => {
+      const row = await addLink(submitted);
+      return { ...submitted.parent, companyId: row.company_id };
+    },
+    onSuccess: async (home) => {
+      closeAndClear();
+      for (const queryKey of fileListKeys(home)) {
+        await queryClient.invalidateQueries({ queryKey });
+      }
+    },
+  });
+
+  const preview = useLinkTitle(source === "link", url, title, titleTyped);
+  const shownTitle = preview.title;
+
+  // Closing empties the form. The dialog stays mounted while shut, so what is
+  // left here starts the next opening, and a later upload would resend a file.
   function closeAndClear() {
     clearDraft();
     setPartial(false);
     upload.reset();
+    link.reset();
     onClose();
   }
 
-  const refusal = uploadRefusal({
-    file,
-    parent,
-    permitted,
-    maxBytes: maxUploadBytes,
-  });
+  const refusal =
+    source === "link"
+      ? linkRefusal({ url, parent, permitted })
+      : uploadRefusal({ file, parent, permitted, maxBytes: maxUploadBytes });
+
+  function submit() {
+    if (parent && source === "link") {
+      link.mutate({ parent, category, title: shownTitle, url });
+    } else if (parent && file) {
+      upload.mutate({ parent, category, title, file });
+    }
+  }
 
   return (
     <Modal
@@ -343,6 +360,16 @@ export function AddDocumentDialog({
         {t("docs.add.title")}
       </Heading>
       <div className="form-stack">
+        <SegmentedControl
+          label={t("docs.add.source")}
+          options={SOURCES}
+          value={source}
+          onChange={setSource}
+          labels={{
+            file: t("docs.add.sourceFile"),
+            link: t("docs.add.sourceLink"),
+          }}
+        />
         {partial && (
           <Callout
             tone="warning"
@@ -361,6 +388,18 @@ export function AddDocumentDialog({
             {/* Oversize and permission denied need different next moves. */}
             {problemMessageOf(upload.error, t, t("docs.add.failed"))}
           </Callout>
+        )}
+        {link.isError && (
+          <Callout
+            tone="danger"
+            kind="outcome"
+            title={t("docs.add.linkFailedTitle")}
+          >
+            {problemMessageOf(link.error, t, t("docs.add.linkFailed"))}
+          </Callout>
+        )}
+        {source === "link" && (
+          <LinkAddressField url={url} onChange={setUrl} hint={preview.hint} />
         )}
         {/* Not a dropdown: a menu hides the alternative this choice is about.
             Only an account asks: a contact's library has no second answer. */}
@@ -386,7 +425,7 @@ export function AddDocumentDialog({
                   searchTargets={searchDeals}
                   selected={deal}
                   onPick={setDeal}
-                  disabled={upload.isPending}
+                  disabled={upload.isPending || link.isPending}
                 />
                 {/* Always shown: RecordPicker cannot say which search ran out. */}
                 <p className="t-caption">
@@ -404,7 +443,7 @@ export function AddDocumentDialog({
             <Select
               {...control}
               value={category}
-              onChange={(picked) => setCategory(picked as Category)}
+              onChange={(picked) => setCategory(picked as Choosable)}
               options={UPLOADABLE_CATEGORIES.map((key) => ({
                 value: key,
                 label: t(labelFor(CATEGORY_KEYS, key)),
@@ -412,43 +451,47 @@ export function AddDocumentDialog({
             />
           )}
         </Field>
-        <Field label={t("docs.add.name")} hint={t("docs.add.nameHint")}>
+        <Field
+          label={t("docs.add.name")}
+          hint={t(SOURCE_WORDS[source].nameHint)}
+        >
           {(control) => (
             <TextInput
               {...control}
-              value={title}
-              onChange={(event) => setTitle(event.target.value)}
+              value={shownTitle}
+              onChange={(event) => {
+                setTitle(event.target.value);
+                setTitleTyped(true);
+              }}
             />
           )}
         </Field>
         {/* The limit is set per deployment, so the hint waits for the server. */}
-        <FileDropzone
-          label={t("docs.add.file")}
-          hint={
-            limitLabel
-              ? t("docs.add.fileHint", { size: limitLabel })
-              : undefined
-          }
-          emptyLabel={t("docs.add.fileEmpty")}
-          file={file}
-          onPick={setFile}
-          accept={ACCEPTED_ATTACHMENT_ATTR}
-        />
+        {source === "file" && (
+          <FileDropzone
+            label={t("docs.add.file")}
+            hint={
+              limitLabel
+                ? t("docs.add.fileHint", { size: limitLabel })
+                : undefined
+            }
+            emptyLabel={t("docs.add.fileEmpty")}
+            file={file}
+            onPick={setFile}
+            accept={ACCEPTED_ATTACHMENT_ATTR}
+          />
+        )}
       </div>
       <div className="actions">
         <Button onClick={closeAndClear}>{t("docs.add.cancel")}</Button>
         <Button
           variant="primary"
           reason={refusal ? t(refusal, { size: limitLabel }) : undefined}
-          pending={upload.isPending}
-          busyLabel={t("docs.add.uploading")}
-          onClick={() => {
-            if (file && parent) {
-              upload.mutate({ parent, category, title, file });
-            }
-          }}
+          pending={upload.isPending || link.isPending}
+          busyLabel={t(SOURCE_WORDS[source].busy)}
+          onClick={submit}
         >
-          {t("docs.add.submit")}
+          {t(SOURCE_WORDS[source].submit)}
         </Button>
       </div>
     </Modal>

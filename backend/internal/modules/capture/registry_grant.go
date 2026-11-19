@@ -14,6 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -36,18 +37,35 @@ import (
 // than a per-connect acknowledgment; share_acknowledged_at records when
 // this grant connected under that regime.
 //
+// A grant for an account the caller already connected lands on that row, so
+// connecting one account twice never makes a second mailbox.
+//
 // note: the returned id (and the connectionID threaded through SyncOnce and
 // the sync-state recording) names a capture_connection row, which the kernel
 // does not model as a first-class entity — no kind exists for it, so it stays
 // ids.UUID rather than inventing one.
 func (r *Registry) Connect(ctx context.Context, name string, auth connector.Auth) (ids.UUID, error) {
+	return r.Grant(ctx, name, auth, ids.Nil)
+}
+
+// ErrReconnectOtherAccount refuses a reconnect whose grant names a different
+// account than the mailbox holds. That account is another mailbox, which the
+// caller adds instead. The old row's watermark, posture and baseline are not
+// its to inherit.
+var ErrReconnectOtherAccount = fmt.Errorf("the account you signed in with is not this mailbox's; add it as another mailbox instead: %w",
+	apperrors.ErrConflict)
+
+// Grant is Connect when target is zero. Otherwise it grants again over target,
+// the caller's own connection that a reauth banner asks them to repair. It
+// refuses a grant for another account.
+func (r *Registry) Grant(ctx context.Context, name string, auth connector.Auth, target ids.UUID) (ids.UUID, error) {
 	c, err := r.connector(name)
 	if err != nil {
 		return ids.Nil, err
 	}
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalHuman {
-		return ids.Nil, fmt.Errorf("capture: only a human grants a connector: %w", apperrors.ErrPermissionDenied)
+		return ids.Nil, fmt.Errorf("only a human grants a connector: %w", apperrors.ErrPermissionDenied)
 	}
 	scopes, err := grantedScopes(c, actor, name)
 	if err != nil {
@@ -93,32 +111,15 @@ func (r *Registry) Connect(ctx context.Context, name string, auth connector.Auth
 	var priorRef *string
 	refused := false
 	if err := r.db.Tx(ctx, func(tx pgx.Tx) error {
-		// Asked again before any row lock and held until commit: a demotion
-		// since the check above either waits for this row or refuses it.
-		if _, err := r.sink.captureAllowedTx(ctx, tx, actor.UserID); err != nil {
-			refused = true
-			return err
-		}
-		// The SAME lock the OAuth-app write takes, before this row is counted
-		// by anything. refuseStrandingConnections reads the connection count
-		// under it and then commits the new client id; without this the count
-		// and that commit straddle a window in which this row can land, and the
-		// mailbox is connected against an id that no longer exists — the exact
-		// outcome the refusal is there to prevent, arrived at by timing.
-		if key := appSettingKeyForConnector(name); key != "" {
-			if err := settings.LockForWrite(ctx, tx, key); err != nil {
-				return err
-			}
-		}
-		if err := lockConnectionClaimsTx(ctx, tx, row.userID, row.provider, row.accountLabel); err != nil {
-			return err
-		}
 		var err error
-		id, priorRef, err = upsertConnection(ctx, tx, row)
+		id, priorRef, refused, err = r.grantTx(ctx, tx, row, target)
 		return err
 	}); err != nil {
 		if refused {
 			keyvault.DeleteDetached(ctx, r.vault, slog.Default(), ws, ref, "refused connect")
+		}
+		if errors.Is(err, ErrNoConnection) {
+			return ids.Nil, err
 		}
 		return ids.Nil, fmt.Errorf("capture: storing connection: %w", err)
 	}
@@ -134,6 +135,30 @@ func (r *Registry) Connect(ctx context.Context, name string, auth connector.Auth
 		keyvault.DeleteDetached(ctx, r.vault, slog.Default(), ws, keyvault.Ref(*priorRef), "reconnect")
 	}
 	return id, nil
+}
+
+// grantTx writes one grant's row under the locks it needs. refused reports a
+// refusal, after which the caller destroys the credential it sealed.
+func (r *Registry) grantTx(ctx context.Context, tx pgx.Tx, row connectionUpsert, target ids.UUID) (ids.UUID, *string, bool, error) {
+	// Asked again before any row lock and held until commit: a demotion
+	// since the check above either waits for this row or refuses it.
+	if _, err := r.sink.captureAllowedTx(ctx, tx, row.userID); err != nil {
+		return ids.Nil, nil, true, err
+	}
+	// The same lock the OAuth-app write takes, before anything counts this
+	// row. refuseStrandingConnections reads the connection count under it and
+	// then commits the new client id. Without it this row could land between
+	// the two, connected against a client id that no longer exists.
+	if key := appSettingKeyForConnector(row.provider); key != "" {
+		if err := settings.LockForWrite(ctx, tx, key); err != nil {
+			return ids.Nil, nil, false, err
+		}
+	}
+	if err := lockConnectionClaimsTx(ctx, tx, row.userID, target, row.accountLabel); err != nil {
+		return ids.Nil, nil, false, err
+	}
+	id, priorRef, err := upsertConnection(ctx, tx, row, target)
+	return id, priorRef, errors.Is(err, ErrReconnectOtherAccount) || errors.Is(err, ErrNoConnection), err
 }
 
 // requireCapturingMember is requireCapturingGrantor for the member a history
@@ -179,7 +204,7 @@ func grantedScopes(c connector.Connector, actor principal.Principal, name string
 	out := make([]string, 0, len(declared))
 	for _, scope := range declared {
 		if !actor.Scopes.Has(scope) {
-			return nil, fmt.Errorf("capture: connector %s needs scope %q the granting human does not hold: %w",
+			return nil, fmt.Errorf("the connector %s needs the scope %q, which the granting human does not hold: %w",
 				name, scope, apperrors.ErrScopeExceeded)
 		}
 		out = append(out, string(scope))
@@ -226,19 +251,15 @@ func providerScopesFor(ctx context.Context, c connector.Connector, auth connecto
 	return granted
 }
 
-// rebindsAccount reports whether this grant points the row at a DIFFERENT
-// provider account than the one it held.
-//
-// Both labels must be known for the answer to be yes. A connector that cannot
-// name its account — or one whose bundle carried no owner this time — reports
-// nothing, and nothing is not evidence of a change: treating it as one would
-// throw away the watermark of every routine reauth through such a connector,
-// re-reading the whole mailbox each time.
-func rebindsAccount(prior, next *string) bool {
+// otherAccount reports whether a reconnect's grant names a DIFFERENT provider
+// account than the row holds. Both labels must be known: a connector that
+// cannot name its account reports nothing, and nothing is not evidence of a
+// change. Addresses compare without case, as the unique key does.
+func otherAccount(prior, next *string) bool {
 	if prior == nil || *prior == "" || next == nil || *next == "" {
 		return false
 	}
-	return *prior != *next
+	return !strings.EqualFold(*prior, *next)
 }
 
 // connectionUpsert is one connect transaction's write: the granting human, the
@@ -257,132 +278,80 @@ type connectionUpsert struct {
 	accountLabel   *string
 }
 
-// upsertConnection writes (or re-points) the caller's connection row and
-// audits the change inside the connect transaction. It returns the row id and
-// the credential ref this write superseded — nil for a first-time connect —
-// which the caller destroys once the transaction has committed.
-func upsertConnection(ctx context.Context, tx pgx.Tx, in connectionUpsert) (ids.UUID, *string, error) {
-	// Capture what this (re)connect is about to overwrite, if a row for this
-	// (workspace, user, provider) already exists. The FOR UPDATE lock holds the
-	// row still for the span of this transaction, so a concurrent
-	// disconnect/reconnect on the same row serializes behind this one rather
-	// than racing it. Without the credential_ref read the upsert below would
-	// silently orphan the previous secret in the vault — every reconnect
-	// (including the reauth_required → Reconnect flow) would leak the prior
-	// credential; status and account_label are the audit before-image, which
-	// only this read can supply.
-	var priorRef, priorStatus, priorLabel *string
-	var priorID ids.UUID
-	if err := tx.QueryRow(ctx, `
-		SELECT id, credential_ref, status, account_label FROM capture_connection
-		 WHERE user_id = $1 AND provider = $2
-		   FOR UPDATE`,
-		in.userID, in.provider).Scan(&priorID, &priorRef, &priorStatus, &priorLabel); err != nil && !errors.Is(err, pgx.ErrNoRows) {
-		return ids.Nil, nil, err
-	}
-	// A rebind — this grant naming a DIFFERENT mailbox than the row held — is the
-	// write that ends the previous grant, and it does two things at once.
-	//
-	// The generation bump fences every cycle still out at the provider: a sync or
-	// backfill page holding the old generation commits nothing onto a row now
-	// pointing at another mailbox. And the watermark goes: the row is keyed on
-	// (user, provider), so a second account authorized over the first
-	// lands on the SAME row, and the previous mailbox's cursor would tell the new
-	// one to resume from a point it has never reached — silently skipping
-	// everything before it.
-	//
-	// A reauth of the SAME account fences nothing. The banner asked its human for
-	// exactly this reconnect, and the page still out at the provider belongs to
-	// the mailbox it was fetched from: bumping the generation here would cancel
-	// the very import the human was told to repair. Disconnect is the other write
-	// that ends a grant, and it bumps the generation itself.
-	// A rebind re-stamps share_acknowledged_at — the column reads as "this
-	// mailbox has flowed under the workspace sharing regime since", and the
-	// previous mailbox's date is not this one's. A same-account reconnect
-	// keeps the original stamp.
-	rebound := rebindsAccount(priorLabel, in.accountLabel)
-	args, err := connectionGrantArgs(ctx, tx, in, priorID, rebound)
+// grantSet is what a grant writes over a row it lands on. A label the
+// connector could not read keeps the one the row holds.
+const grantSet = `credential_ref = @ref, auth = NULL, status = 'connected', archived_at = NULL, connected_at = now(),
+	share_acknowledged_at = COALESCE(capture_connection.share_acknowledged_at, now()),
+	account_label = COALESCE(@label, capture_connection.account_label), provider_scopes = @provider_scopes`
+
+// memberMailboxConflict is the unique key one member's account lands on.
+const memberMailboxConflict = `(user_id, provider, lower(account_label)) WHERE user_id IS NOT NULL`
+
+// upsertConnection writes (or re-points) one of the caller's connection rows
+// and audits the change inside the connect transaction. It returns the row id
+// and the credential ref this write superseded, nil for a first-time connect.
+// The caller destroys that ref once the transaction has committed.
+func upsertConnection(ctx context.Context, tx pgx.Tx, in connectionUpsert, target ids.UUID) (ids.UUID, *string, error) {
+	prior, err := priorGrantTx(ctx, tx, in, target)
 	if err != nil {
 		return ids.Nil, nil, err
 	}
+	if !target.IsZero() && otherAccount(prior.label, in.accountLabel) {
+		return ids.Nil, nil, ErrReconnectOtherAccount
+	}
+	granted := pgx.StrictNamedArgs{"ref": string(in.ref), "label": in.accountLabel, "provider_scopes": in.providerScopes}
 	var id ids.UUID
-	if err := tx.QueryRow(ctx, `
+	if prior.id.IsZero() {
+		granted[sqlArgProvider], granted["user"], granted["scopes"] = in.provider, in.userID, in.scopes
+		err = tx.QueryRow(ctx, `
 		INSERT INTO capture_connection (provider, user_id, scopes, credential_ref, status, account_label, provider_scopes, share_acknowledged_at, legal_entity_id)
 		VALUES (@provider, @user, @scopes, @ref, 'connected', @label, @provider_scopes, now(), `+storekit.LegalEntityOfSQL("@user")+`)
-		ON CONFLICT (user_id, provider)
-		DO UPDATE SET credential_ref = EXCLUDED.credential_ref, auth = NULL, status = 'connected', archived_at = NULL,
-		              connected_at = now(),
-		              silence_dismissed_since = CASE WHEN @rebound THEN NULL ELSE capture_connection.silence_dismissed_since END,
-		              share_acknowledged_at = CASE WHEN @rebound THEN now()
-		                                           ELSE COALESCE(capture_connection.share_acknowledged_at, now()) END,
-		              legal_entity_id = CASE WHEN @rebound THEN EXCLUDED.legal_entity_id ELSE capture_connection.legal_entity_id END,
-                  account_label = EXCLUDED.account_label, provider_scopes = EXCLUDED.provider_scopes,
-		              -- A rebind points this row at a DIFFERENT account, so the
-              -- previous mailbox's answer about who may read its mail is not
-              -- this one's to inherit. Reset to HELD rather than to the
-              -- classified default: the seat chose a posture for a mailbox
-              -- that is now gone, and the new one is held until they say
-              -- otherwise. The opening direction is the one that must never
-              -- happen by inheritance — rebinding a shared role mailbox to a
-              -- personal account would publish that account's mail on arrival.
-              mail_posture = CASE WHEN @rebound THEN 'held' ELSE capture_connection.mail_posture END,
-              generation = capture_connection.generation + CASE WHEN @rebound THEN 1 ELSE 0 END,
-		              sync_cursor = CASE WHEN @rebound THEN NULL ELSE capture_connection.sync_cursor END,
-		              -- A rebind points this row at a DIFFERENT account, so the
-		              -- previous mailbox's answer about reading its signatures
-		              -- is not this one's to inherit. Cleared to NULL rather
-		              -- than to a value: the new mailbox follows the tenant
-		              -- default until somebody judges it, which is the honest
-		              -- state for a mailbox nobody has been asked about. The
-		              -- alternative — carrying the old answer — would silently
-		              -- apply one contact's opt-out to another's mail, in either
-		              -- direction.
-		              signature_enrich_enabled = CASE WHEN @rebound THEN NULL
-		                                              ELSE capture_connection.signature_enrich_enabled END,
-		              -- The history baseline is a date chosen for the previous account's mail.
-		              history_baseline_date = CASE WHEN @rebound THEN NULL ELSE capture_connection.history_baseline_date END,
-		              history_baseline_tz = CASE WHEN @rebound THEN NULL ELSE capture_connection.history_baseline_tz END,
-		              history_baseline_set_by = CASE WHEN @rebound THEN NULL ELSE capture_connection.history_baseline_set_by END,
-		              history_baseline_set_at = CASE WHEN @rebound THEN NULL ELSE capture_connection.history_baseline_set_at END,
-		              -- A rebind points this row at a DIFFERENT mailbox, and a
-		              -- watch handle names a subscription in the mailbox it was
-		              -- made against. Kept, it would send the next renewal to
-		              -- extend the previous mailbox's subscription — which the
-		              -- app is entitled to do, so it would succeed — leaving the
-		              -- new mailbox with no push at all and nothing failing to
-		              -- say so. The deadline goes with it: a stored deadline for
-		              -- a subscription this row no longer owns keeps the renewal
-		              -- scan away until it lapses.
-		              watch_ref = CASE WHEN @rebound THEN NULL ELSE capture_connection.watch_ref END,
-		              watch_expires_at = CASE WHEN @rebound THEN NULL ELSE capture_connection.watch_expires_at END,
-		              account_bound_at = CASE WHEN @rebound THEN @bound ELSE capture_connection.account_bound_at END
-		RETURNING id`, args).Scan(&id); err != nil {
+		ON CONFLICT `+memberMailboxConflict+` DO UPDATE SET `+grantSet+`
+		RETURNING id`, granted).Scan(&id)
+	} else {
+		granted["id"] = prior.id
+		err = tx.QueryRow(ctx, `UPDATE capture_connection SET `+grantSet+` WHERE id = @id RETURNING id`, granted).Scan(&id)
+	}
+	if err != nil {
 		return ids.Nil, nil, err
 	}
 	database.Forget(tx, ownerIdentitiesMemo)
-	if err := auditConnectedAccountTx(ctx, tx, id, in, priorStatus, priorLabel); err != nil {
+	if err := auditConnectedAccountTx(ctx, tx, id, in, prior.status, prior.label); err != nil {
 		return ids.Nil, nil, err
 	}
-	if err := resetConnectionSchedule(ctx, tx, id, rebound); err != nil {
+	if err := resetConnectionSchedule(ctx, tx, id); err != nil {
 		return ids.Nil, nil, err
 	}
-	return id, priorRef, nil
+	return id, prior.ref, nil
 }
 
-func connectionGrantArgs(ctx context.Context, tx pgx.Tx, in connectionUpsert, priorID ids.UUID, rebound bool) (pgx.StrictNamedArgs, error) {
-	args := pgx.StrictNamedArgs{
-		sqlArgProvider: in.provider, "user": in.userID, "scopes": in.scopes,
-		"ref": string(in.ref), "label": in.accountLabel, "provider_scopes": in.providerScopes,
-		"rebound": rebound, "bound": nil,
+// priorGrant is the row a grant lands on, as it stood; a zero id is none.
+type priorGrant struct {
+	id                 ids.UUID
+	ref, status, label *string
+}
+
+// priorGrantTx locks the row a grant lands on. That is the target of a
+// reconnect, which must be the caller's own, or the added account's own row.
+// The FOR UPDATE lock serializes a concurrent disconnect or reconnect.
+// Without the credential_ref read the write would orphan the previous secret
+// in the vault; status and label are the audit before-image.
+func priorGrantTx(ctx context.Context, tx pgx.Tx, in connectionUpsert, target ids.UUID) (priorGrant, error) {
+	var prior priorGrant
+	match, args := `lower(account_label) IS NOT DISTINCT FROM lower($3::text)`, []any{in.userID, in.provider, in.accountLabel}
+	if !target.IsZero() {
+		match, args = `id = $3`, []any{in.userID, in.provider, target}
 	}
-	if rebound {
-		boundary, err := nextBackfillAccountTimeTx(ctx, tx, priorID)
-		if err != nil {
-			return nil, err
-		}
-		args["bound"] = boundary
+	err := tx.QueryRow(ctx, `SELECT id, credential_ref, status, account_label FROM capture_connection
+		 WHERE user_id = $1 AND provider = $2 AND `+match+` FOR UPDATE`, args...).
+		Scan(&prior.id, &prior.ref, &prior.status, &prior.label)
+	switch {
+	case errors.Is(err, pgx.ErrNoRows) && !target.IsZero():
+		return prior, ErrNoConnection
+	case errors.Is(err, pgx.ErrNoRows):
+		return prior, nil
 	}
-	return args, nil
+	return prior, err
 }
 
 func auditConnectedAccountTx(ctx context.Context, tx pgx.Tx, id ids.UUID, in connectionUpsert, priorStatus, priorLabel *string) error {
@@ -399,23 +368,13 @@ func auditConnectedAccountTx(ctx context.Context, tx pgx.Tx, id ids.UUID, in con
 		connectionAuditImage(in.provider, "connected", in.accountLabel))
 }
 
-func resetConnectionSchedule(ctx context.Context, tx pgx.Tx, id ids.UUID, rebound bool) error {
-	if rebound {
-		if err := cancelPriorAccountBackfillTx(ctx, tx, id); err != nil {
-			return err
-		}
-	}
-	// A (re)connect starts the scheduling ladder clean: a row parked by
-	// reauth_required or degraded by backoff is due immediately with a fresh
-	// credential (ADR-0063).
-	if _, err := tx.Exec(ctx, `
+// resetConnectionSchedule starts the scheduling ladder clean: a row parked by
+// reauth_required or degraded by backoff is due immediately with a fresh
+// credential (ADR-0063).
+func resetConnectionSchedule(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
+	_, err := tx.Exec(ctx, `
 		UPDATE capture_sync_state
-		SET next_sync_at = now(), consecutive_failures = 0, last_error_class = NULL, failing_since = NULL,
-		    last_synced_at = CASE WHEN @rebound THEN NULL ELSE last_synced_at END,
-		    last_success_at = CASE WHEN @rebound THEN NULL ELSE last_success_at END,
- last_delivery_at = CASE WHEN @rebound THEN NULL ELSE last_delivery_at END
-		WHERE connection_id = @id`, pgx.NamedArgs{"id": id, "rebound": rebound}); err != nil {
-		return err
-	}
-	return nil
+		SET next_sync_at = now(), consecutive_failures = 0, last_error_class = NULL, failing_since = NULL
+		WHERE connection_id = $1`, id)
+	return err
 }

@@ -11,9 +11,9 @@ import {
   allowedPreview,
   refusedPreview,
 } from "../../testing/sendpermission.testkit";
-import { ComposeModal } from "./compose";
 import { jsonResponse, pickWhy, render, stubRoutes } from "./compose.testkit";
 import { alternativeReasonOf } from "./composereason";
+import { ComposeWindow } from "./composewindow";
 
 // A refused reason answered with the one the record already carries.
 //
@@ -51,7 +51,7 @@ function openComposer(alternatives: string[]) {
       ),
   });
   render(
-    <ComposeModal
+    <ComposeWindow
       entityType="contact"
       entityId="c-1"
       contactId="c-1"

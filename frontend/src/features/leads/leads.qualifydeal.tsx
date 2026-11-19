@@ -204,24 +204,15 @@ export function qualifyRefusals(
   };
 }
 
-// The sentence under the amount: the box's own refusal first, then the
-// server's. Only the box's own (local) holds the confirm back.
+// The sentence under the amount, and whether the box's own state holds the
+// confirm back. Text the box refuses names its reason under the box itself.
 export function amountRefusal(
-  amount: {
-    amountMinor: number | null;
-    tooPrecise: boolean;
-    currency?: string;
-  },
+  amount: { amountMinor: number | null; refused: boolean },
   server: string | undefined,
   t: ReturnType<typeof useT>,
 ) {
-  if (amount.tooPrecise) {
-    return {
-      local: true,
-      sentence: t("record.amountTooPrecise", {
-        currency: amount.currency ?? "",
-      }),
-    };
+  if (amount.refused) {
+    return { local: true, sentence: undefined };
   }
   if (amount.amountMinor !== null && amount.amountMinor < 0) {
     return { local: true, sentence: t("create.amountNegative") };

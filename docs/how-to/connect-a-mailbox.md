@@ -149,7 +149,9 @@ printf '%s' "$APP_PW" \
 unset APP_PW
 ```
 
-The two IMAP failures are `422 imap_login_rejected` and `502 imap_unreachable`. Backfill (Gmail and Graph) is a
+The two IMAP failures are `422 imap_login_rejected` and `502 imap_unreachable`. To send from the mailbox too, add
+`smtp:{host:"smtp.gmail.com", port:465, security:"tls"}` to the `imap` object. The SMTP login is checked
+the same way. It fails as `422 smtp_login_rejected` or `502 smtp_unreachable`. Backfill (Gmail and Graph) is a
 preview that spends nothing, a start, and a status read:
 
 ```sh

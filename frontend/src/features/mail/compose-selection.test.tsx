@@ -22,7 +22,7 @@ import {
   isPreviewDoor,
   previewedAddresses,
 } from "../../testing/sendpermission.testkit";
-import { ComposeModal } from "./compose";
+import { ComposeWindow } from "./composewindow";
 
 type Activity = components["schemas"]["Activity"];
 function email(
@@ -110,7 +110,7 @@ function setup(
   render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <ComposeModal
+        <ComposeWindow
           activityId={activityId}
           entityType="contact"
           entityId="c1"

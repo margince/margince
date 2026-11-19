@@ -40,7 +40,14 @@ import (
 // id — which reads correctly as "no review stands over this", the same answer
 // every unrefused message gives.
 type ReviewLookup interface {
-	LiveReviewsForIntents(ctx context.Context, intents []ids.UUID) (map[ids.UUID]ids.UUID, error)
+	LiveReviewsForIntents(ctx context.Context, intents []ids.UUID) (map[ids.UUID]ReviewLink, error)
+}
+
+// ReviewLink is the review standing over one held message, and what the
+// caller may do about it in the words a refusal's available_actions uses.
+type ReviewLink struct {
+	ID      ids.UUID
+	Actions []string
 }
 
 // WithReviewLookup wires the consent-side read a held row uses to find the work
@@ -50,3 +57,13 @@ func (s *Store) WithReviewLookup(lookup ReviewLookup) *Store {
 	clone.reviewLookup = lookup
 	return &clone
 }
+
+// HeldResolution is how a held message stopped needing its rep's card.
+type HeldResolution string
+
+const (
+	// HeldResolvedByRep means the rep rescheduled or cancelled it.
+	HeldResolvedByRep HeldResolution = "rep_moved"
+	// HeldResolvedBySending means it was sent after its review was confirmed.
+	HeldResolvedBySending HeldResolution = "sent_after_confirmation"
+)

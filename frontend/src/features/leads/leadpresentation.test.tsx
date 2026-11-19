@@ -15,7 +15,7 @@ import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { companyNamesAnswer } from "../../testing/companynames.testkit";
 import { UNNARROWED_LIST_QUERY } from "../../testing/listquery.fixture";
-import { meFixture } from "../../testing/mefixture";
+import { meFixture, READS_RECORDS } from "../../testing/mefixture";
 import { LeadBoard, StatusBadge, scoreTone } from "./leadpresentation";
 
 const { navigate } = vi.hoisted(() => ({ navigate: vi.fn() }));
@@ -38,7 +38,10 @@ function renderBoardWithClient(ui: ReactNode) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  client.setQueryData(["me"], meFixture({ rowScope: "all" }));
+  client.setQueryData(
+    ["me"],
+    meFixture({ rowScope: "all", allow: READS_RECORDS }),
+  );
   const invalidated: unknown[] = [];
   const real = client.invalidateQueries.bind(client);
   client.invalidateQueries = ((filters?: { queryKey?: unknown }) => {

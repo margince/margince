@@ -246,14 +246,11 @@ func TestTheMemberReadFollowsAnyAdministrationVerbNotReadAlone(t *testing.T) {
 	}
 }
 
-// deleteOnlyMemberAdmin is a seat holding user_admin.delete and not read, edited through the
-// real role editor so the grant is one an operator can produce.
+// deleteOnlyMemberAdmin is a seat holding user_admin.delete and not read. The role editor now
+// refuses that grant, but a document stored before the rule can still hold it, so the seat's
+// permissions are built directly.
 func deleteOnlyMemberAdmin(t *testing.T, e *revocationEnv) Identity {
 	t.Helper()
-	if _, err := e.svc.SetRoleObjectGrant(e.wsCtx(e.admin), e.admin, "ops", objectUserAdmin,
-		storedGrant{Delete: true}, nil); err != nil {
-		t.Fatalf("granting ops user_admin.delete and nothing else: %v", err)
-	}
 	deleter := e.admin
 	deleter.Roles = []string{"ops"}
 	deleter.Permissions = principal.Permissions{

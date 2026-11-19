@@ -137,7 +137,7 @@ func (s *Store) confirmCompanySiteReadTx(
 		return Company{}, nil, err
 	}
 
-	confirmation, err := applySiteReadConfirmation(ctx, tx, read, in, by)
+	confirmation, err := s.applySiteReadConfirmation(ctx, tx, read, in, by)
 	if err != nil {
 		return Company{}, nil, err
 	}
@@ -193,7 +193,7 @@ func validateSiteReadConfirmation(read SiteRead, in ConfirmCompanySiteReadInput)
 	return nil
 }
 
-func applySiteReadConfirmation(
+func (s *Store) applySiteReadConfirmation(
 	ctx context.Context,
 	tx pgx.Tx,
 	read SiteRead,
@@ -216,7 +216,7 @@ func applySiteReadConfirmation(
 		return siteReadConfirmation{}, err
 	}
 	if in.Website != nil {
-		if err := setCompanyDomain(ctx, tx, companyID, *in.Website, by); err != nil {
+		if err := s.setCompanyDomain(ctx, tx, companyID, *in.Website, by); err != nil {
 			return siteReadConfirmation{}, err
 		}
 	}
@@ -409,11 +409,11 @@ func selectSiteReadFacts(proposed []DeepReadFact, selected []string) ([]DeepRead
 	seen := make(map[string]bool, len(selected))
 	for _, key := range selected {
 		if seen[key] {
-			return nil, fmt.Errorf("contacts: selected fact key %q appears more than once", key)
+			return nil, fmt.Errorf("the selected fact key %q appears more than once", key)
 		}
 		fact, ok := byKey[key]
 		if !ok {
-			return nil, fmt.Errorf("contacts: selected fact key %q is not in the inspected website draft: %w", key, apperrors.ErrVersionSkew)
+			return nil, fmt.Errorf("the selected fact key %q is not in the inspected website draft: %w", key, apperrors.ErrVersionSkew)
 		}
 		seen[key] = true
 		out = append(out, fact)

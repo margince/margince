@@ -46,3 +46,32 @@ func TestStagingRefusesAMalformedRecipient(t *testing.T) {
 		t.Error("a malformed recipient is a caller defect, not an answer about anybody's consent")
 	}
 }
+
+// A preview and a transmit decision about nobody are caller defects, refused
+// before either opens a transaction.
+func TestPreviewAndTransmitRefuseARequestWithNoRecipients(t *testing.T) {
+	ctx := context.Background()
+	if _, err := (&Gate{}).PreviewTx(ctx, nil, commsauthz.Request{}); !errors.Is(err, apperrors.ErrInvalidArgument) {
+		t.Errorf("a preview addressed to nobody answered %v, want ErrInvalidArgument", err)
+	}
+	_, err := (&Gate{}).AcquireTransmitPermit(ctx, commsauthz.TransmitRequest{}, commsauthz.TransmitTicket{})
+	if !errors.Is(err, apperrors.ErrInvalidArgument) {
+		t.Errorf("a transmit addressed to nobody answered %v, want ErrInvalidArgument", err)
+	}
+}
+
+// A ticket issued for another attempt of the delivery cannot license this one.
+func TestATransmitPermitNeedsATicketForThisAttempt(t *testing.T) {
+	delivery := ids.NewV7()
+	req := commsauthz.TransmitRequest{
+		DeliveryID: delivery, Attempt: 2,
+		Recipients: []connector.Recipient{{Email: "someone@example.test"}},
+	}
+	earlier := commsauthz.TransmitTicket{DecisionSetID: ids.NewV7(), DeliveryID: delivery, Attempt: 1}
+
+	_, err := (&Gate{}).AcquireTransmitPermit(context.Background(), req, earlier)
+
+	if !errors.Is(err, apperrors.ErrInvalidArgument) {
+		t.Errorf("a ticket for attempt 1 on attempt 2 answered %v, want ErrInvalidArgument", err)
+	}
+}

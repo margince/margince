@@ -23,8 +23,8 @@ import {
   isPreviewDoor,
   previewedAddresses,
 } from "../../testing/sendpermission.testkit";
-import { ComposeModal } from "./compose";
 import { REWRITE_ROUTE, rewrittenBody } from "./compose.testkit";
+import { ComposeWindow } from "./composewindow";
 
 // Drafting to a CONTACT, from the contact's own page.
 //
@@ -130,7 +130,7 @@ describe("drafting to a contact", () => {
       "POST /contacts/c-1/draft-email": () => jsonResponse(CONTACT_DRAFT),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         intent="Follow up on our discussion"
         entityType="contact"
         entityId="c-1"
@@ -161,7 +161,7 @@ describe("drafting to a contact", () => {
       "POST /contacts/c-1/draft-email": () => jsonResponse(CONTACT_DRAFT),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="contact"
         entityId="c-1"
         contactId="c-1"
@@ -197,7 +197,7 @@ describe("drafting to a contact", () => {
       [REWRITE_ROUTE]: () => rewrittenBody("Kürzer.", "de"),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         intent="Follow up on our discussion"
         entityType="contact"
         entityId="c-1"
@@ -233,7 +233,7 @@ describe("drafting to a contact", () => {
       "POST /contacts/c-1/draft-email": () => jsonResponse(CONTACT_DRAFT),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         intent="Follow up on our discussion"
         entityType="contact"
         entityId="c-1"
@@ -258,7 +258,7 @@ describe("drafting to a contact", () => {
       "POST /contacts/c-1/draft-email": () => jsonResponse(CONTACT_DRAFT),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         intent="Make this nicer"
         entityType="contact"
         entityId="c-1"
@@ -297,7 +297,7 @@ describe("drafting to a contact", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         intent="Make this nicer"
         entityType="contact"
         entityId="c-1"
@@ -338,7 +338,7 @@ describe("drafting to a contact", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         intent="Make this nicer"
         entityType="contact"
         entityId="c-1"
@@ -367,7 +367,7 @@ describe("drafting to a contact", () => {
       "POST /contacts/c-1/draft-email": () => jsonResponse(CONTACT_DRAFT),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         intent="Make this nicer"
         entityType="contact"
         entityId="c-1"
@@ -396,7 +396,7 @@ describe("drafting to a contact", () => {
       "POST /contacts/c-1/draft-email": () => jsonResponse(CONTACT_DRAFT),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         intent="Follow up on our discussion"
         entityType="contact"
         entityId="c-1"
@@ -422,7 +422,7 @@ describe("drafting to a contact", () => {
       "POST /contacts/c-1/draft-email": () => jsonResponse({}, 501),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         intent="Follow up on our discussion"
         entityType="contact"
         entityId="c-1"
@@ -449,7 +449,7 @@ describe("drafting to a contact", () => {
     const user = userEvent.setup();
     const sent = stubRoutes();
     render(
-      <ComposeModal
+      <ComposeWindow
         intent="Follow up on our discussion"
         entityType="deal"
         entityId="d-1"
@@ -483,7 +483,7 @@ describe("drafting to everyone a meeting was with", () => {
         jsonResponse({ ...CONTACT_DRAFT, to: everyone }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         intent="follow up after the meeting"
         entityType="contact"
         entityId="c-1"

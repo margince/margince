@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/settings/settings.jurisdiction.tsx frontend/src/features/settings/controllerparticulars.tsx frontend/src/features/capture/capture-senders.tsx backend/internal/shared/ports/compliancedocs backend/internal/shared/ports/jurisdiction backend/internal/modules/consent/dsrdeadline.go backend/internal/modules/consent/ruleselectors.go backend/internal/modules/consent/optoutack.go backend/internal/modules/consent/optoutrecords.go backend/internal/modules/consent/recipientpack.go backend/internal/modules/consent/draftcontent.go frontend/src/components/lawfulbasiswarning.tsx backend/internal/modules/consent/requesttask.go backend/internal/modules/capture/purgefloor.go backend/internal/modules/identity/settingsindividualperformance.go frontend/src/features/sign-in/installation-settings.individual.tsx -->
+<!-- describes: frontend/src/features/settings/settings.jurisdiction.tsx frontend/src/features/settings/controllerparticulars.tsx frontend/src/features/capture/capture-senders.tsx backend/internal/shared/ports/compliancedocs backend/internal/shared/ports/jurisdiction backend/internal/modules/consent/dsrdeadline.go backend/internal/modules/consent/ruleselectors.go backend/internal/modules/consent/optoutack.go backend/internal/modules/consent/optoutrecords.go backend/internal/modules/consent/recipientpack.go backend/internal/modules/consent/draftcontent.go frontend/src/components/lawfulbasiswarning.tsx frontend/src/features/mail/composecountry.tsx backend/internal/modules/consent/requesttask.go backend/internal/modules/capture/purgefloor.go backend/internal/modules/identity/settingsindividualperformance.go frontend/src/features/sign-in/installation-settings.individual.tsx -->
 # Compliance: what you have to do, and what Margince does not check
 
 **Margince checks none of the compliance papers below.** It will connect a
@@ -88,6 +88,8 @@ passing around inside the company; the German versions are the ones to sign.
 | --- | --- |
 | Does mail leave the company's systems? | The AI egress reference, which lists every AI task and whether its text can leave your installation |
 | Who decided this message was private, and when? | The message's audience reason, and the audit log |
+| Does the AI read private mail? | Only to find a request owed an answer or a request for a quotation. It reads only mail private because of a mailbox setting. The AI never reads mail marked confidential or held by hand. It also skips mail held because of who it is with, or because only colleagues are on it. It waits until a thread's own privacy check is done. **Check private mail for requests**, under **Settings → AI models → Tasks**, turns this off; it is on at installation. Only a signed-in admin changes it, never an AI agent |
+| Is anything from private mail shared with the workspace? | Only a request for a quotation, and only from mail private because of a mailbox setting. It opens a deal, and everyone in the workspace sees on that deal what the customer asked for. Mail on the workspace sharing floor, in a held shared mailbox, filed under no record, or held by any seat is never shared. **Share quotation requests from private mail**, beside the switch above, turns this off; it is on at installation |
 | What was decided about the senders who write to me? | Settings → Connections → Activity → Sender decisions, per seat |
 | Can an administrator read a held message? | No. An administrator cannot open a held message |
 | What happens when the sorting model is down? | Everything stays held |
@@ -109,6 +111,8 @@ Margince follows one law for the whole installation. An admin chooses it at firs
 
 The sales-mail rules follow the law where each recipient is, not where you are. Margince reads it from the contact's address, then from the address of the company they work for. For a lead, it reads the address of the lead's company. If it is wrong, fix the address. With no address on record, sales mail they did not ask for needs their consent. Every such mail offers a way to unsubscribe.
 
+To fix the law for one message, press the recipient's chip in the composer. It names the law Margince read and where it read it. You can pick another one or clear it for this message only, and the contact's record does not change. With it cleared, mail they did not ask for still needs their consent, and a stop they asked for still holds. Your company's own lines at the foot stay. The audit log names your choice, and an agent cannot make it.
+
 Some laws change what the mails to a contact about their own data may ask:
 
 - Under German law, the mail that asks a contact to check their details asks nothing about news.
@@ -127,8 +131,8 @@ Vietnamese data-protection law also follows the recipient. When a contact's or l
 - when they object to the use of their data or take back their consent, Margince makes a task due in 15 days;
 - a request to stop using their data, or to take back consent to anything other than marketing, also gets an email at once. It says when the request arrived and when it will be done;
 - the reason recorded for using their data is their consent to that use, with its date. Your own business need is never enough;
-- without that consent, the send screen and the approval card show the warning **No valid basis recorded**. You can still send once you confirm it with **Send anyway**. The audit log records your confirmation, and one confirmation covers one send. A send nobody confirmed is held for a colleague to decide;
-- **Ask for consent** in that warning sends the contact the mail that asks for their consent, and does not send your message. It shows when a consent purpose covers this kind of mail, as the built-in **Business correspondence** purpose covers replies and other business mail. Once the contact confirms, the warning no longer shows for them. Sales mail is different: without the contact's consent it goes out only as one message a colleague sends with a recorded reason.
+- without that consent, the send screen and the approval card show the warning **No valid basis recorded**. You can still send once you confirm it with **Send anyway**. The audit log records your confirmation, and one confirmation covers one send. A send you did not confirm stays held until you confirm it. Only you can send it; a colleague or an admin cannot;
+- **Ask for consent** in that warning sends the contact the mail that asks for their consent, and does not send your message. It shows when a consent purpose covers this kind of mail, as the built-in **Business correspondence** purpose covers replies and other business mail. Once the contact confirms, the warning no longer shows for them. Sales mail is different: without the contact's consent it goes out only as one message its sender sends with a recorded reason.
 
 Margince learns where a contact is only from the addresses above. A Vietnamese contact whose address is not a Vietnamese one is not found. The Vietnamese rules do not apply to that contact.
 
