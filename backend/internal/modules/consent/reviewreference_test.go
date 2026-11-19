@@ -6,6 +6,7 @@ package consent
 import (
 	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -91,5 +92,26 @@ func TestABlockingRefusalCarriesTheSendersOwnClaim(t *testing.T) {
 	}
 	if got[0].RequestedCategory != "active_deal_followup" || got[0].Category != "requested_followup" {
 		t.Errorf("refusal = %+v, want requested active_deal_followup beside resolved requested_followup", got[0])
+	}
+}
+
+// The flat refusal list of a 409 names the law a refusal cites. A refusal that
+// cites none has no such key.
+func TestARefusalNamesTheLawItCites(t *testing.T) {
+	law := commsauthz.Provision{Instrument: "UWG", Provision: "§ 7(2)", SourceURL: "https://example.org/uwg"}
+	refusal := &SendRefusedError{ReviewID: ids.NewV7(), Refusals: []RefusedRecipient{
+		{Address: "ana@example.test", ReasonCode: commsauthz.ReasonObjection, Provision: law},
+		{Address: "ben@example.test", ReasonCode: commsauthz.ReasonObjection},
+	}}
+	got, ok := refusal.FaultReference()["refusals"].([]map[string]any)
+	if !ok || len(got) != 2 {
+		t.Fatalf("refusals on the wire = %#v", refusal.FaultReference()["refusals"])
+	}
+	cited := fmt.Sprintf("%+v", got[0]["provision"])
+	if !strings.Contains(cited, law.Provision) || !strings.Contains(cited, law.SourceURL) {
+		t.Errorf("ana's refusal cites %s, want %+v", cited, law)
+	}
+	if _, present := got[1]["provision"]; present {
+		t.Errorf("ben's refusal carries a provision %v, and none was cited", got[1]["provision"])
 	}
 }

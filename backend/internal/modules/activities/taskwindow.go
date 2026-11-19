@@ -23,7 +23,13 @@ import (
 // their bounds MEET rather than overlap.
 // reminders widens the upper bound: a due reminder is today's work.
 func openTaskWindowClauses(in ListActivitiesInput, reminders string, arg func(any) int) []string {
-	openTask := "a.kind = 'task' AND NOT a.is_done AND " + storekit.TaskDueSQL("a") + " IS NOT NULL"
+	openTask := "a.kind = 'task' AND NOT a.is_done AND "
+	// The later window also holds the undated backlog: an open task a user,
+	// an agent or an importer wrote with no date. Today never admits it.
+	backlog := ""
+	if in.OpenAndDueAfter != nil {
+		backlog = " OR (" + storekit.TaskDueSQL("a") + " IS NULL AND " + storekit.HumanOrImportedTaskSQL("a") + ")"
+	}
 	var clauses []string
 	if in.OpenAndDueBy != nil {
 		// Strictly before the instant, which is what deadline.Passed means and
@@ -43,7 +49,10 @@ func openTaskWindowClauses(in ListActivitiesInput, reminders string, arg func(an
 		if in.OrRemindersDue && reminders != "" {
 			deadline = "(" + deadline + " OR " + reminders + ")"
 		}
-		clauses = append(clauses, "a.kind = 'task' AND NOT a.is_done AND "+deadline)
+		if backlog != "" {
+			deadline = "(" + deadline + backlog + ")"
+		}
+		clauses = append(clauses, openTask+deadline)
 	}
 	if in.OpenAndDueAfter != nil {
 		// The open end of the same window, INCLUSIVE of the instant, so it
@@ -57,7 +66,7 @@ func openTaskWindowClauses(in ListActivitiesInput, reminders string, arg func(an
 		}
 		from := arg(*in.OpenAndDueAfter)
 		clauses = append(clauses,
-			sprintf(openTask+" AND a.due_at >= $%[1]d AND "+storekit.TaskDueSQL("a")+" >= $%[1]d", from))
+			sprintf(openTask+"((a.due_at >= $%[1]d AND "+storekit.TaskDueSQL("a")+" >= $%[1]d)"+backlog+")", from))
 	}
 	if in.ExceptRemindersDue && reminders != "" {
 		clauses = append(clauses, "NOT COALESCE("+reminders+", FALSE)")

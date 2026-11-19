@@ -97,7 +97,7 @@ func (e *configEnv) as() context.Context {
 		Type: principal.PrincipalHuman, ID: "human:" + e.admin.String(), UserID: e.admin,
 		Permissions: principal.Permissions{
 			RoleKeys: []string{"admin"},
-			Objects:  map[string]principal.ObjectGrant{"pipeline": {Create: true, Read: true, Update: true}},
+			Objects:  map[string]principal.ObjectGrant{"pipeline": {Create: true, Read: true, Update: true, Delete: true}},
 		},
 	})
 }
@@ -289,4 +289,20 @@ func twoStagePipeline(t *testing.T, e *configEnv) (ids.DealID, ids.StageID, ids.
 	}
 	return ids.From[ids.DealKind](ids.UUID(deal.Id)), fromID,
 		ids.From[ids.StageKind](ids.UUID(second.Id))
+}
+
+// closingStageUUIDs answers the ids of a pipeline's closing stages, which a
+// full-ladder reorder must name after the open ones.
+func closingStageUUIDs(t *testing.T, owner *pgx.Conn, pipelineID ids.PipelineID) []ids.UUID {
+	t.Helper()
+	rows, err := owner.Query(context.Background(),
+		`SELECT id FROM stage WHERE pipeline_id = $1 AND semantic <> 'open' AND archived_at IS NULL ORDER BY position`, pipelineID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		t.Fatal(err)
+	}
+	return out
 }

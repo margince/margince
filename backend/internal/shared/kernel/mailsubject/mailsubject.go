@@ -44,7 +44,22 @@ func ReplyPrefixPattern() string {
 var (
 	replyPrefixes = regexp.MustCompile(`(?i)` + ReplyPrefixPattern())
 	innerSpaces   = regexp.MustCompile(`\s+`)
+	anyPrefixes   = regexp.MustCompile(`^(\s*(` + strings.Join(prefixWords(), "|") + `)\s*:)+\s*`)
 )
+
+func prefixWords() []string {
+	var words []string
+	for _, prefix := range append(ReplyPrefixes(), ForwardPrefixes()...) {
+		words = append(words, strings.TrimSuffix(prefix, ":"))
+	}
+	return words
+}
+
+// Topic is Normalized with forward prefixes removed as well: the subject a
+// reply or a forward carries over from the message it answers.
+func Topic(subject string) string {
+	return Normalized(anyPrefixes.ReplaceAllString(Normalized(subject), ""))
+}
 
 // Normalized is a subject as the answer check compares it: reply prefixes and
 // outer spaces removed, inner runs of space folded, lower-cased. A forward

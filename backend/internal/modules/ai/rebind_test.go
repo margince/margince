@@ -191,3 +191,40 @@ func TestBoundModelsFollowsARebind(t *testing.T) {
 		}
 	}
 }
+
+// The profile reads name the models a reader's assistant runs on. They must
+// name the binding served now, not the one the process booted with.
+func TestConfiguredProfileFollowsARebind(t *testing.T) {
+	const local = `profile: eu_hosted
+tiers:
+  local_small: {provider: ollama, model: first-small}
+  premium: {provider: ollama, model: first-large}
+embeddings: {provider: ollama, model: first-embed, dimensions: 8}
+`
+	r, err := NewRouter(parsed(t, local), nil, DefaultMonthlyTokens, nil, false, nil)
+	if err != nil {
+		t.Fatalf("NewRouter: %v", err)
+	}
+	if got := premiumModel(r.ConfiguredProfile()); got != "ollama/first-large" {
+		t.Fatalf("premium before the rebind = %q, want ollama/first-large", got)
+	}
+	if err := r.Rebind(parsed(t, strings.ReplaceAll(strings.ReplaceAll(local, "ollama", "vllm"), "first-", "second-"))); err != nil {
+		t.Fatalf("Rebind: %v", err)
+	}
+	profile := r.ConfiguredProfile()
+	if got := premiumModel(profile); got != "vllm/second-large" {
+		t.Errorf("premium after the rebind = %q, want vllm/second-large", got)
+	}
+	if len(profile.Providers) != 1 || profile.Providers[0] != "vllm" {
+		t.Errorf("providers after the rebind = %v, want [vllm]", profile.Providers)
+	}
+}
+
+func premiumModel(profile PublicProfile) string {
+	for _, m := range profile.ConfiguredModels {
+		if m.Tier == "premium" {
+			return string(m.Provider) + "/" + m.Model
+		}
+	}
+	return ""
+}

@@ -144,7 +144,11 @@ func predictPages(ctx context.Context, source *migration.CSVSource, writers *csv
 				}
 				p.review.Add(review)
 			}
-			if !p.tally(object, row, outcome, problem) {
+			landed := p.tally(object, row, outcome, problem)
+			if landed {
+				p.warnings = append(p.warnings, writers.predictedWarnings...)
+			}
+			if !landed {
 				writers.links.markRefused(object, row.ExternalID)
 				continue
 			}

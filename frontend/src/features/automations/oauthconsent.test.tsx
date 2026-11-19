@@ -498,7 +498,7 @@ describe("OAuthConsent — one pane on the sign-in surface", () => {
       );
       expect(panes[0]).toContainElement(action);
       expect(panes[0]).not.toContainElement(
-        screen.getByRole("link", { name: "Terms" }),
+        screen.getByRole("link", { name: "Privacy" }),
       );
     },
   );

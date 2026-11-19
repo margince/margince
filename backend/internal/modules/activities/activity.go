@@ -80,6 +80,8 @@ type LogActivityInput struct {
 	audienceOf *ids.ActivityID
 	// recordsMeeting is the meeting a transcript records (records_meeting_id).
 	recordsMeeting *ids.ActivityID
+	// inheritedProject is the deal's project the activity is filed under too.
+	inheritedProject ids.UUID
 	// Automatic notes can also record a meeting that already has its outcome.
 	keepRecordedOutcome     bool
 	recordedMeetingWritable bool

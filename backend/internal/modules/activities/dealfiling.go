@@ -137,11 +137,16 @@ func dealFilingApplies(ctx context.Context, in *LogActivityInput) bool {
 	if in.Kind != string(crmcontracts.ActivityKindCall) && in.Kind != KindMeeting {
 		return false
 	}
-	imported, _ := storekit.ImportMark(ctx)
-	if in.DealFiling == nil && ((imported != nil && *imported) || (in.SourceSystem != nil && strings.HasPrefix(*in.SourceSystem, provenance.ReservedSourceSystemPrefix))) {
+	if in.DealFiling == nil && importedLog(ctx, *in) {
 		return false
 	}
 	return meetingHeldOrUnset(in)
+}
+
+// importedLog is true for a write an importer or another system made.
+func importedLog(ctx context.Context, in LogActivityInput) bool {
+	imported, _ := storekit.ImportMark(ctx)
+	return (imported != nil && *imported) || (in.SourceSystem != nil && strings.HasPrefix(*in.SourceSystem, provenance.ReservedSourceSystemPrefix))
 }
 
 // meetingHeldOrUnset is false only for a meeting that states it was not held.
@@ -258,7 +263,11 @@ func (s *Store) fileUpdatedActivity(ctx context.Context, tx pgx.Tx, current crmc
 	if len(added) == 0 {
 		return current, nil
 	}
-	if err := storekit.LockLastActivityTargets(ctx, tx, lastActivityTargets(added)); err != nil {
+	project, err := inheritedProjectOf(ctx, tx, filing.Links)
+	if err != nil {
+		return current, err
+	}
+	if err := storekit.LockLastActivityTargets(ctx, tx, linkLockTargets(added, project)); err != nil {
 		return current, err
 	}
 	for _, link := range added {

@@ -17,6 +17,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/commsauthzwire"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -112,16 +113,9 @@ func wireRefusal(refusal RefusedRecipient) crmcontracts.RefusedRecipient {
 		wire.FooterPreview = &refusal.FooterPreview
 	}
 	if len(refusal.FooterFindings) > 0 {
-		findings := make([]crmcontracts.FooterFinding, 0, len(refusal.FooterFindings))
-		for _, finding := range refusal.FooterFindings {
-			wireFinding := crmcontracts.FooterFinding(finding)
-			if wireFinding.MissingMeans == nil {
-				wireFinding.MissingMeans = []string{}
-			}
-			findings = append(findings, wireFinding)
-		}
-		wire.FooterFindings = &findings
+		wire.FooterFindings = commsauthzwire.FooterFindings(refusal.FooterFindings)
 	}
+	wire.Provision = commsauthzwire.Provision(refusal.Provision)
 	if refusal.SendingEntity != nil {
 		id := openapi_types.UUID(*refusal.SendingEntity)
 		wire.SendingEntityId = &id

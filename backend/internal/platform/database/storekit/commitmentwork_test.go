@@ -4,9 +4,12 @@
 package storekit
 
 import (
+	"slices"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // The answer test is the largest part of the current-task clause, and Postgres
@@ -22,6 +25,20 @@ func TestTheCurrentTaskClauseAsksWhetherTheSourceWasAnsweredOnce(t *testing.T) {
 	} {
 		if got := strings.Count(clause, "FROM activity answer_thread"); got != 1 {
 			t.Errorf("the %s task clause carries %d answer tests, want 1", name, got)
+		}
+	}
+}
+
+// Today holds an undated source's task with no date. The undated backlog
+// holds only a user's. A source stating neither writes tasks no list shows.
+func TestEveryAutomaticTaskSourceStatesWhetherItsTasksCarryADate(t *testing.T) {
+	for _, source := range TaskSourceFamilies() {
+		if slices.Contains(provenance.RetiredTaskSources(), source) {
+			continue
+		}
+		policy := taskSourceFamilies[source]
+		if policy.undated == policy.dated {
+			t.Errorf("task source %s states undated=%t and dated=%t, want exactly one", source, policy.undated, policy.dated)
 		}
 	}
 }

@@ -327,41 +327,9 @@ func threadProject(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecor
 }
 
 // dealProject is the inheritance rung: a message filed under a deal that
-// belongs to a project belongs to that project too. The deal's own rollup is
-// the claim; this rung only follows it.
-//
-// An activity can carry several deal links, so this reads the DISTINCT projects
-// they roll up to rather than picking one: two deals naming two different
-// projects is ambiguity, and the ladder answers ambiguity the same way here as
-// it does for a subject naming two keys — with no project at all. LIMIT 2 is
-// what makes that a bounded question; the ORDER BY makes the one-match case
-// reproducible rather than dependent on scan order.
+// belongs to a project belongs to that project too. storekit.DealsProject
+// decides it, as it does for a note or a send logged on the deal. Two deals
+// naming two projects file the message under neither.
 func dealProject(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID) (ids.UUID, error) {
-	args := []any{activityID}
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	scoped, err := projectScopeClause(ctx, "p", arg)
-	if err != nil {
-		return ids.Nil, err
-	}
-	rows, err := tx.Query(ctx, `
-		SELECT DISTINCT p.id
-		  FROM activity_link al
-		  JOIN deal d ON d.id = al.deal_id
-		  JOIN project p ON p.id = d.project_id
-		 WHERE al.activity_id = $1 AND al.entity_type = 'deal'
-		   AND d.archived_at IS NULL
-		   AND p.archived_at IS NULL`+scoped+`
-		 ORDER BY p.id
-		 LIMIT 2`, args...)
-	if err != nil {
-		return ids.Nil, fmt.Errorf("capture: reading the deal's project: %w", err)
-	}
-	matched, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
-	if err != nil {
-		return ids.Nil, fmt.Errorf("capture: reading the deal's project: %w", err)
-	}
-	if len(matched) != 1 {
-		return ids.Nil, nil
-	}
-	return matched[0], nil
+	return storekit.ActivityDealsProject(ctx, tx, activityID)
 }

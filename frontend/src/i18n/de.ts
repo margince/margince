@@ -362,6 +362,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.merge.address_usage": "Verwendung der Adresse",
   "approval.merge.address_primary_before": "Primäradresse der Quelle",
   "approval.merge.address_primary_after": "Primäradresse des Ziels",
+  "approval.merge.address_already_held": "Ziel hat sie schon",
   "approval.merge.assignment_collapsed": "Doppelte Zuständigkeit entfernt",
   "approval.merge.assignment_moved": "Übernommene Zuständigkeit",
   "approval.merge.assignment_role": "Rolle",
@@ -2915,6 +2916,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Aktiviere sie unter Einstellungen → Nutzerkonto.",
   "shell.more": "Mehr",
   "shell.unknownPage": "Nicht gefunden",
+  "shell.unavailableForRole": "Für deine Rolle nicht verfügbar.",
   "shell.closeMenu": "Schließen",
   "shell.agent.scope": "Margince liest nur, was du sehen kannst.",
   "shell.capture.importing": "Postfachverlauf wird importiert",
@@ -3443,6 +3445,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Der KI-Anbieter antwortet gerade nicht. Bitte versuche es später erneut oder wende dich an die Systemadministration.",
   "common.gatewayUnavailable":
     "Der Server hat die Anfrage nicht rechtzeitig abgeschlossen und verarbeitet sie möglicherweise noch. Warte, bevor du es erneut versuchst, sonst kann die Arbeit zweimal laufen.",
+  "common.requestTimedOut":
+    "Der Server hat zu lange gebraucht und die Anfrage abgebrochen. Versuche es gleich noch einmal.",
   "common.individualPerformanceOff":
     "Ein Admin hat die Einzelleistung ausgeschaltet. Du siehst deine eigenen Zahlen. Eine Zahl wird zurückgehalten, wenn weniger als zwei andere Mitglieder zu ihr beitragen oder wenn nach Abzug der Summe eines anderen Teams weniger als zwei übrig blieben. Eine Prognose wird ganz zurückgehalten, wenn eine ihrer Teilgruppen die Zahlen eines einzelnen Mitglieds zeigen würde.",
   "common.permissionDenied":
@@ -6565,6 +6569,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Du kannst Aktivitäten erfassen und Aufgaben hinzufügen. Um diesen Deal zu ändern, muss die verantwortliche Person ihn mit dir teilen.",
   "deal.closedTakesNoStage":
     "Dieser Deal ist abgeschlossen. Öffne den Deal wieder, um ihn in eine andere Phase zu verschieben.",
+  "deal.pipelineRetired":
+    "Die Pipeline dieses Deals ist stillgelegt, daher sind ihre Phasen schreibgeschützt. Stelle die Pipeline in den Einstellungen wieder her, um den Deal zu verschieben.",
+  "deal.stageOtherPipeline":
+    "Diese Phase gehört zu einer anderen Pipeline. Wähle eine Phase der Pipeline dieses Deals.",
   "deal.reopen": "Wieder öffnen",
   "deal.reopenPick": "Diesen Deal in eine offene Phase zurücksetzen",
   "deal.reopenConfirm": "Wieder öffnen",
@@ -8327,6 +8335,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Diese Nachricht kann so nicht an {address} gesendet werden.",
   "compose.sendAnyway.finding.none":
     "Diese Nachricht kann so nicht gesendet werden.",
+  "compose.sendAnyway.cited":
+    "Achtung: Eine E-Mail an {address} verstößt vielleicht gegen",
+  "compose.citation.law": "Vorschrift:",
   "compose.sendAnyway.warning":
     "Die Versandprüfung blockiert diese Nachricht weiterhin. Trotzdem senden sendet nur diese Nachricht und erlaubt keine späteren. Dein Name, deine Begründung und die Nachricht werden in einem Eintrag gespeichert, der nicht geändert werden kann.",
   "compose.sendAnyway.editOnly":
@@ -10067,6 +10078,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "setup.step.aiDone": "{name} ist verbunden.",
   "setup.step.aiDoneUnnamed": "Ein KI-Tool ist verbunden.",
   "firstRun.ai.skip": "Nicht jetzt",
+  "firstRun.ai.connectAnyway": "Trotzdem verbinden",
   "ob.gate.noModelSub":
     "Noch ist kein KI-Anbieter eingerichtet, daher kann Margince deine Website nicht lesen. Gib die Angaben zu deinem Unternehmen selbst ein oder füge jetzt einen Schlüssel hinzu.",
   "ob.gate.addModel": "KI-Schlüssel hinzufügen",
@@ -10410,6 +10422,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Du darfst Tags nicht lesen, daher wird die Tag-Spalte nicht importiert.",
   "import.reason.cannot_write_type":
     "„{value}“ kann nicht in ein Feld vom Typ „{type}“ geschrieben werden.",
+  "import.reason.company_domain_matched":
+    "Das Unternehmen, dem die Domain {value} bereits gehört, übernimmt diese Zeile. Es wird kein zweites Unternehmen angelegt.",
   "import.reason.company_duplicate_found":
     "Ein Unternehmen mit diesem Namen ist bereits im CRM. Der Import dieser Zeile legt ein zweites an und stellt das Paar zur Prüfung bereit.",
   "import.reason.company_duplicate_skipped":
@@ -10505,6 +10519,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Der Wert „{value}“ der Spalte „{column}“ wird bereits in Zeile {line} verwendet. Jede Zeile braucht einen eigenen, weil ein erneuter Import und das Rückgängigmachen die Zeile daran erkennen.",
   "import.reason.size_band_invalid":
     "Mitarbeitende „{value}“ gehört nicht zu: {allowed}.",
+  "import.reason.stored_values_kept":
+    "Die Zeile hat diesen Datensatz weder angelegt noch per ID benannt, daher bleibt sein Wert für {column}. Die Zeile füllt nur leere Felder.",
   "import.reason.tag_created":
     "Kein Tag hatte diesen Namen, daher hat der Import ihn angelegt.",
   "import.reason.tag_name_invalid":
@@ -11728,6 +11744,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "translation.given": "{language}: {name}",
   "stage.name": "Name",
   "stage.semantic": "Phasentyp",
+  "stage.lastClosing":
+    "Eine Pipeline braucht eine Phase Gewonnen und eine Phase Verloren. Lege zuerst eine weitere dieses Typs an.",
   "stage.winProb": "Gewinnwahrscheinlichkeit",
   "stage.semOpen": "Offen",
   "stage.semWon": "Gewonnen",
@@ -13309,7 +13327,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "auth.noMethodOffered":
     "Die Anmeldung für dieses Unternehmen läuft über einen Identitätsanbieter, der nicht verfügbar ist. Bitte wende dich an einen Admin, der die Einrichtung abschließen kann.",
   "auth.legalProtected": "Der Zugang zu diesem Unternehmen ist beschränkt.",
-  "auth.legalTerms": "Nutzungsbedingungen",
   "auth.legalPrivacy": "Datenschutz",
   "auth.signingIn": "Wird angemeldet…",
   "auth.signIn": "Anmelden",
@@ -13601,6 +13618,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Der Link wurde bereits verwendet, ist abgelaufen oder wurde durch einen neueren ersetzt. Fordern Sie unten einen neuen Link an.",
   "buyer.noLink":
     "Öffnen Sie diese Seite über den Link, den Sie erhalten haben. Falls Sie ihn nicht mehr haben, fordern Sie unten einen neuen an.",
+  "buyer.roomReplacedTitle": "Dieser Tab zeigt einen älteren Raum",
+  "buyer.roomReplaced":
+    "Dieser Browser hat inzwischen einen anderen Deal Room geöffnet. Laden Sie die Seite neu, um ihn zu sehen.",
   "buyer.emailLabel": "Ihre E-Mail-Adresse",
   "buyer.emailHint": "Die Adresse, an die die Einladung gesendet wurde.",
   "buyer.requestLink": "Neuen Link anfordern",
@@ -16731,6 +16751,20 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Andere Geräte wurden abgemeldet, und verbundene Apps müssen neu verbunden werden.",
   "account.signOutHelp":
     "Beendet deine Sitzung in diesem Browser. Andere Geräte bleiben angemeldet.",
+  "account.devicesCard": "Angemeldete Geräte",
+  "account.devicesBrowserOn": "{browser} auf {system}",
+  "account.devicesUnknown": "Unbekanntes Gerät",
+  "account.devicesWhen": "Angemeldet {signedIn}. Zuletzt aktiv {lastActive}.",
+  "account.devicesThisOne": "Dieses Gerät",
+  "account.devicesSignOut": "Abmelden",
+  "account.devicesSignOutNamed": "{device} abmelden",
+  "account.devicesOthers": "Andere Geräte",
+  "account.devicesOthersHelp": "Beendet jede Sitzung außer dieser.",
+  "account.devicesSignOutOthers": "Alle anderen abmelden",
+  "account.devicesFailed_one":
+    "{count} Gerät wurde nicht abgemeldet. Wiederholen.",
+  "account.devicesFailed_other":
+    "{count} Geräte wurden nicht abgemeldet. Wiederholen.",
   "account.languageHelp":
     "Die Sprache von Menüs, Seiten und Nachrichten aus Margince. In deinem Konto gespeichert, sie gilt also auf jedem Gerät, auf dem du dich anmeldest.",
   "account.appearanceHelp":
@@ -20001,6 +20035,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "project.assignOwner": "Einem Teammitglied zuweisen",
   "project.description": "Beschreibung",
   "project.targetEnd": "Geplantes Enddatum",
+  "project.startDate": "Startdatum",
+  "project.endDate": "Enddatum",
+  "project.noCustomer": "Kein Kundenunternehmen",
+  "project.noCustomerSet":
+    "Kein Kundenunternehmen. Leg eines unter Mehr, Unternehmen und Kontakte fest.",
+  "project.newDealNeedsCustomer":
+    "Ein neuer Deal braucht ein Kundenunternehmen.",
   "project.new": "Neues Projekt",
   "project.edit": "Projekt bearbeiten",
   "project.archive": "Projekt archivieren",
@@ -20588,6 +20629,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.dueGroup.tomorrow": "Morgen fällig",
   "worklist.dueGroup.this_week": "Diese Woche fällig",
   "worklist.dueGroup.later": "Später",
+  "worklist.dueGroup.none": "Ohne Fälligkeitsdatum",
   "worklist.band.build_pipeline": "Akquise",
   "worklist.band.keep_momentum": "In Bewegung halten",
   "worklist.band.review": "Prüfen",
@@ -22738,6 +22780,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contactCase.ownerHint":
     "Nur wer für einen markierten Kontakt verantwortlich ist, kann den verbleibenden Kontakt übernehmen.",
   "contactCase.ownerPlaceholder": "Verantwortliche Person wählen",
+  "contactCase.prefer.legend": "Welcher Wert bleibt",
+  "contactCase.prefer.hint":
+    "Hier unterscheiden sich die Kontakte. Wähle den Wert, den der verbleibende Kontakt zuerst zeigt. Die anderen E-Mail-Adressen und Arbeitgeber bleiben auch erhalten.",
+  "contactCase.prefer.name": "Name",
+  "contactCase.prefer.email": "Primäre E-Mail-Adresse",
+  "contactCase.prefer.employment": "Aktueller Arbeitgeber",
+  "contactCase.prefer.title": "Position",
+  "contactCase.prefer.placeholder": "Wert wählen",
   "contactCase.previewVerb": "Vorschau anzeigen",
   "contactCase.merge_one": "{count} Kontakt zusammenführen",
   "contactCase.merge_other": "{count} Kontakte zusammenführen",
