@@ -14,6 +14,7 @@ import { SurfaceState } from "../../design-system/surfacestate";
 import { type Translator, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { providerName } from "../../lib/ai-provider-names";
+import { tierLabel } from "../../lib/ai-tier-label";
 import { useCan } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { routeHash } from "../../lib/router";
@@ -24,7 +25,6 @@ import {
   type UrlParams,
   useUrlParams,
 } from "../../lib/urlstate";
-import { tierLabel } from "./ai-decision-labels";
 import { type AiCallRecord, CallDrawer } from "./aicalls-detail";
 import {
   CALL_PARAMS,

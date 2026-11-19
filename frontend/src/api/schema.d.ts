@@ -6278,6 +6278,11 @@ export interface paths {
          *     `last_exchange` is the newest call, meeting, email or message on the record of any
          *     age, with whose move it leaves. It says where the record stands when nothing is
          *     next, such as waiting on them since the last mail sent.
+         *
+         *     `last_inbound` and `last_outbound` are the newest message the other side wrote and the
+         *     newest one we wrote, of any age, read over every row the caller may list and counted as
+         *     the account's last-touch clocks count them: it has happened, it kept us in touch, and
+         *     it is not automatic mail. Each is absent when there is none.
          */
         get: operations["listLatestInbound"];
         put?: never;
@@ -25458,7 +25463,19 @@ export interface paths {
          *
          *     The file's rows are counted first. A file with more rows than one test
          *     run reads is refused 422 `too_many_rows`, and no run and no stored file
-         *     are left behind.
+         *     are left behind. Its `max` is the limit and `params.rows` the file's count.
+         *
+         *     A file that cannot be read is refused 422 on `file`, with `params` naming
+         *     why. `not_utf8` names nothing. `unreadable` names the `line` when the
+         *     reader knows it, with `reason` `field_count` or `quote`.
+         *     `header_unusable` has `reason` `no_header`, `blank_name` (with
+         *     `position`) or `repeated_name` (with `name`). `bundle_refused` has
+         *     `reason` `not_a_zip`, `empty`, `files_too_large` or `zip_too_large`
+         *     (with `max_mb`), `too_many_files` (with `files` and `max_files`),
+         *     `password_protected`, `file_damaged` or `file_missing` (with `file`),
+         *     `two_files_one_type` (with `file`, `other_file` and `object`) or
+         *     `type_not_importable` (with `object`). A refusal of one file of a ZIP
+         *     also names it in `file`.
          *
          *     A cell an export quoted against formula evaluation (a quote before `=`,
          *     `+`, `-`, `@`, a tab or a carriage return) is read without that one
@@ -25504,6 +25521,13 @@ export interface paths {
          *     and moves the run to `awaiting_approval` carrying the report
          *     `getImportRunReport` reads, or back to `pending` with the reason in
          *     `error` when the test stopped on the file or ran past its time.
+         *
+         *     A mapping the object cannot satisfy is refused 422 with `params`:
+         *     `duplicate_target` on `mapping` names the `target` and the two columns
+         *     (`column`, `other_column`); `unmappable` on `source_key` names the
+         *     `object` and its key `target`, and `ref_target` when a column mapped to
+         *     `ref` would also identify each row. `invalid` on `source_name` carries
+         *     `max`. A file refusal reads as it does on `uploadImportSource`.
          *
          *     An upload has one run. This call writes the mapping onto the draft the
          *     upload opened and tests it, so a second call on one `source_ref`
@@ -29405,13 +29429,13 @@ export interface components {
              *       as a company.
              *     - `bulk_sender`: mail from the domain was judged bulk or automated, so it is not a
              *       company this business works with. `sender_kind` says which, when it is known.
-             *     - `unevidenced`, `stale_evidence`, `near_duplicate`, `vendor_verdict`: the undecided
+             *     - `unevidenced`, `stale_evidence`, `near_duplicate`, `vendor_verdict`, `foreign_site`: the undecided
              *       domain's open question, as `source` describes each one.
              *     - `unknown`: the row records a reason this server has no word for. `reason` still
              *       carries its stored sentence.
              * @enum {string}
              */
-            reason_code: "stated" | "company_created" | "kept_as_company" | "bulk_sender" | "unevidenced" | "stale_evidence" | "near_duplicate" | "forwarded_identity" | "vendor_verdict" | "reserved_domain" | "unknown";
+            reason_code: "stated" | "company_created" | "kept_as_company" | "bulk_sender" | "unevidenced" | "stale_evidence" | "near_duplicate" | "forwarded_identity" | "vendor_verdict" | "reserved_domain" | "foreign_site" | "unknown";
             /** @description The reason as its author wrote it, in their words. Sent only with `reason_code` `stated`. */
             note?: string;
             /**
@@ -29432,10 +29456,12 @@ export interface components {
              *     old to mint one from today's site; `near_duplicate` means more than one company
              *     here already carries the name it resolved to, and which of them this domain belongs
              *     to is a human's call rather than the machine's; `vendor_verdict` means the site reads
-             *     as a mail or hosting vendor, and a colleague decides whether its staff get a company.
+             *     as a mail or hosting vendor, and a colleague decides whether its staff get a company;
+             *     `foreign_site` means the site names a different business than the domain, which may
+             *     have changed hands.
              * @enum {string}
              */
-            source: "verdict" | "heuristic" | "human" | "agent" | "unevidenced" | "stale_evidence" | "near_duplicate" | "forwarded_identity" | "vendor_verdict" | "reserved_domain";
+            source: "verdict" | "heuristic" | "human" | "agent" | "unevidenced" | "stale_evidence" | "near_duplicate" | "forwarded_identity" | "vendor_verdict" | "reserved_domain" | "foreign_site";
             /**
              * Format: date-time
              * @description When the decision was recorded. For an `undecided` domain, when the row last moved.
@@ -32746,6 +32772,18 @@ export interface components {
             /** @description Rows the upload holds: the file's for a single CSV, the sum of `parts[].row_count` for a ZIP. */
             row_count: number;
             object?: components["schemas"]["ImportObject"];
+            /**
+             * @description How `object` was chosen for a CSV uploaded without one. The header is
+             *     matched as `suggested_mapping` matches it, once for each type, and
+             *     only a column that exactly one type's suggestion maps counts.
+             *     `columns`: one type's suggestion maps more such columns than any
+             *     other's. `none`: no type maps strictly the most, so `object` is
+             *     `lead` and a screen asks the reader to choose. Absent when the upload
+             *     named its type, and for a ZIP. The run's `profile` keeps it until a
+             *     draft save names `object`, which is the reader's own choice.
+             * @enum {string}
+             */
+            object_chosen_by?: "columns" | "none";
             /** @description The uploaded file's name, for display. The client echoes it to `createImportRun`. */
             file_name?: string;
             /**
@@ -32982,9 +33020,12 @@ export interface components {
          */
         ImportRunLinks: {
             /**
-             * @description Links the file asks for. A dry run reports this and nothing else,
-             *     because resolving an endpoint is a read the dry run has not done —
-             *     it says how many rows named an employer, not how many will find one.
+             * @description Links the file asks for on the rows the run lands. A link whose own
+             *     row is skipped is not counted, because that row is reported as a
+             *     skip; `unresolved` still lists it. A dry run reports this and nothing
+             *     else, because resolving an endpoint is a read the dry run has not
+             *     done — it says how many landing rows named an employer, not how many
+             *     will find one.
              */
             offered: number;
             /** @description Links actually written. Zero on a dry run, which writes nothing. */
@@ -33549,8 +33590,12 @@ export interface components {
             instance?: string;
             /**
              * @description Structured machine context — e.g. `existing_id` on 409 duplicate, or an
-             *     `errors` array of `{ field, code, message }` on 422 validation. A `too_long`
-             *     entry also carries `max`, the limit in characters.
+             *     `errors` array of `{ field, code, message }` on 422 validation. An entry that
+             *     refuses at a limit also carries `max`: the limit in characters for `too_long`,
+             *     in rows for `too_many_rows`, in characters for `source_name`. An entry whose
+             *     code names other values carries them in `params`, an object of text values by
+             *     name, so a screen can word the code in the reader's language; `message` stays
+             *     the English sentence.
              *
              *     A 429 that an agent's limit answers carries `limit`: `kind` names it (`calls`,
              *     `writes` or `egress` for a window allowance, `pacing` for the per-minute limit),
@@ -34486,8 +34531,9 @@ export interface components {
              *     stays in `superseded_value`, and a field a human corrected stands.
              *     `needs_review` — a resemblance, written nowhere; open the candidate and decide.
              *     `proposed` — a card read from a photo that nobody matched, waiting on an approval.
-             *     `skipped` — the card states no name, carries a sending system's address, or matches a
-             *     contact the caller may not write; `reason` says which.
+             *     `skipped` — the card states no name or one over 120 characters, carries a sending
+             *     system's address, holds a value that is not readable text or cannot be stored, or
+             *     matches a contact the caller may not write; `reason` says which.
              * @enum {string}
              */
             outcome: "created" | "updated" | "needs_review" | "proposed" | "skipped";
@@ -34496,7 +34542,10 @@ export interface components {
              * @description The contact created or updated, or — for `needs_review` — the candidate the card resembles.
              */
             contact_id?: string | null;
-            /** @description Why a card was skipped, or a warning about an imported contact without a channel. */
+            /**
+             * @description Why a card was skipped. For a written card, a warning: the contact has no channel, or the
+             *     card's title was cut to the length the field holds.
+             */
             reason?: string | null;
             /**
              * Format: uuid
@@ -43797,6 +43846,8 @@ export interface components {
         LatestInboundList: {
             data: components["schemas"]["LatestInbound"][];
             last_exchange?: components["schemas"]["LastExchange"];
+            last_inbound?: components["schemas"]["Activity"];
+            last_outbound?: components["schemas"]["Activity"];
         };
         /** @description The newest call, meeting, email or message on the record. Absent when there is none. */
         LastExchange: {
@@ -52379,6 +52430,8 @@ export interface components {
             readonly works_at?: components["schemas"]["SearchHitEmployer"] | null;
             /** @description For a `company` hit only: the company's logo, the same URL its record carries as `Company.logo_url`. Absent when it has none, and on every other hit type. */
             readonly logo_url?: string | null;
+            /** @description Where a contact, company, deal, lead or project hit stands, read with the page under THIS caller's grants and field masks, so a result list can say it without opening each record. Absent on every other hit type. */
+            readonly standing?: components["schemas"]["SearchHitStanding"];
             /** @description For a `company` hit only: whether the account carries a LIVE partner programme. True when a partner record exists and has not been retired, false when it was checked and carries none. Null on every other hit type, and null when the marker was not taken — a caller who may not read partner programmes gets null rather than false, because null means UNKNOWN while false would tell them this account is not a partner. A client renders the partner marker, with a route to the company's partner record, on `true` alone. */
             is_partner?: boolean | null;
             /** @description The canonical email row, on an `activity` hit whose activity is an email THIS caller may read. Null on every other hit type, and null for a non-email activity — a call, a note, a task and a meeting are activities too, and each keeps its generic hit. An email whose content is not this caller's produces no hit at all, because the activity branch is content-gated. A client renders the canonical row when this is present and falls back to `title`/`snippet` when it is not. */
@@ -52388,6 +52441,34 @@ export interface components {
              * @enum {string|null}
              */
             trust_tier?: "authoritative" | "external" | "unverified" | null;
+        };
+        /** @description What a result list shows beside a record hit. A field that does not apply to the hit's type, or that the record does not hold, is null. */
+        SearchHitStanding: {
+            /** @description A deal's status (open, won, lost), a lead's status (new, contacted, engaged, promoted, disqualified) or a project's phase (initiative, pursuing, delivering, closed). Null on a contact and a company. */
+            state?: string | null;
+            /** @description A deal's stage, named in the reader's language. Null on every other type. */
+            stage?: string | null;
+            /**
+             * Format: int64
+             * @description A deal's amount in minor units of `currency`. Null when the deal is unpriced, and null when a field mask withholds it, which `masked_fields` then names.
+             */
+            amount_minor?: number | null;
+            /** @description The ISO 4217 code of `amount_minor`; null with it. */
+            currency?: string | null;
+            /**
+             * Format: date
+             * @description A deal's expected close date or a project's target end date.
+             */
+            due_on?: string | null;
+            /** @description A contact's job title. Null on every other type. */
+            job_title?: string | null;
+            /**
+             * Format: date-time
+             * @description When the record was last in touch: its newest logged call, mail, meeting or note. Set on a contact, a company and a deal.
+             */
+            last_activity_at?: string | null;
+            /** @description The fields above a field mask withheld from this caller, by their wire names. */
+            masked_fields?: string[];
         };
         /** @description A company a contact currently works at, by any current employment — the same reading as the company's own roster, not only the contact's primary employer. */
         SearchHitEmployer: {
@@ -102407,7 +102488,7 @@ export interface operations {
                 "multipart/form-data": {
                     /**
                      * Format: binary
-                     * @description The delimited file to import, or a ZIP of them named by type (`companies.csv`, `contacts.csv`, `leads.csv`, `deals.csv`, `activities.csv`). UTF-8; the first row is the header. `object` is required for a CSV and ignored for a ZIP, whose file names say each part's type. A ZIP is known by its content, not its name.
+                     * @description The delimited file to import, or a ZIP of them named by type (`companies.csv`, `contacts.csv`, `leads.csv`, `deals.csv`, `activities.csv`). UTF-8; the first row is the header. `object` is ignored for a ZIP, whose file names say each part's type. A CSV sent without `object` is typed by its header, and the profile's `object_chosen_by` says how. A ZIP is known by its content, not its name.
                      */
                     file: string;
                     object?: components["schemas"]["ImportObject"];

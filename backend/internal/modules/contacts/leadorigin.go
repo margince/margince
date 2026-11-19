@@ -120,7 +120,7 @@ func ResolveOrigin(ctx context.Context, tx pgx.Tx, text string) (string, bool, e
 type UnknownLeadOriginError struct{ Key string }
 
 func (e *UnknownLeadOriginError) Error() string {
-	return "origin " + e.Key + " is not in the lead origin list; pick one from Settings › Data model"
+	return "origin " + e.Key + " is not in the lead origin list; pick one from Settings › Leads"
 }
 
 // FieldFault names the origin as the invalid input.
@@ -133,7 +133,7 @@ func (e *UnknownLeadOriginError) FieldFault() (field, code, message string) {
 type InactiveLeadOriginError struct{ Key string }
 
 func (e *InactiveLeadOriginError) Error() string {
-	return "origin " + e.Key + " is retired; pick an active origin or reactivate it in Settings › Data model"
+	return "origin " + e.Key + " is retired; pick an active origin or reactivate it in Settings › Leads"
 }
 
 // FieldFault names the origin as the invalid input.

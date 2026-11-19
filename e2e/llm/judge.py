@@ -79,9 +79,11 @@ import tempfile
 # The criteria Haiku misread were sharpened rather than the labels moved to meet
 # it — a criterion a weaker reader gets wrong is usually a criterion that left a
 # case unstated, and the fixtures still discriminate for every model.
-DEFAULT_MODEL = "claude-haiku-4-5-20251001"
+DEFAULT_MODEL = "claude-haiku-5-5"
 
-# The judge's own reply is one line of JSON. The instruction is the one
+# The judge's own reply is one line of JSON, reason before verdict: a model
+# with thinking off decides at the first token it writes, so a verdict written
+# first is a guess its reason may then contradict. The instruction is the one
 # backend/internal/compose/certjudge.go sends its grader, in this lane's
 # vocabulary: a strict single object, no fence, one sentence of reason. The
 # score is a yes/no rather than certjudge's 0-100 because a criterion here is a
@@ -90,9 +92,9 @@ DEFAULT_MODEL = "claude-haiku-4-5-20251001"
 _INSTRUCTION = """You are a strict grader for an end-to-end test harness. Decide whether the CRITERION below holds of the ANSWER below.
 
 Reply with EXACTLY one JSON object and nothing else — no prose, no markdown fence:
-{"verdict": "yes", "reason": "<one sentence>"}
+{"reason": "<one sentence>", "verdict": "yes"}
 or
-{"verdict": "no", "reason": "<one sentence>"}
+{"reason": "<one sentence>", "verdict": "no"}
 
 Judge only what the criterion asks. Wording, tone, length, formatting, the order things were done in and extra correct information are NOT yours to judge. Where the criterion says the answer must not do something, "yes" means the answer stayed clear of it."""
 

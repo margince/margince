@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -188,7 +189,8 @@ func (h Handlers) ApproveApproval(w http.ResponseWriter, r *http.Request, id crm
 	if req.EditedPayload != nil {
 		edited, marshalErr := json.Marshal(*req.EditedPayload)
 		if marshalErr != nil {
-			httperr.Write(w, r, httperr.Validation("edited_payload", "malformed_json", marshalErr.Error()))
+			slog.WarnContext(r.Context(), "re-encoding an edited approval payload", "err", marshalErr)
+			httperr.Write(w, r, httperr.Validation("edited_payload", "malformed_json", "edited_payload must be a JSON object"))
 			return
 		}
 		a, err = h.svc.DecideEditedWire(r.Context(), approvalID, edited, req.Reason)

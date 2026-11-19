@@ -131,6 +131,9 @@ type Hit struct {
 	WorksAt *Employer
 	// LogoURL is set on a `company` hit wearing a logo, when a reader is bound.
 	LogoURL *string
+	// Standing is set on a contact, company, deal, lead or project hit the
+	// caller may read: what a result list shows beside the name.
+	Standing *crmcontracts.SearchHitStanding
 }
 
 type Page struct {

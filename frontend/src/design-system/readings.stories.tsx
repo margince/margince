@@ -163,6 +163,48 @@ export const RecordChips: Story = {
   ),
 };
 
+// A name longer than its column breaks inside the chip; the short one beside it
+// stays on one line.
+export const WrappedChipPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: () => (
+    <div
+      style={{
+        maxWidth: 200,
+        display: "flex",
+        flexWrap: "wrap",
+        gap: "var(--space-1)",
+      }}
+    >
+      <Chip
+        dense
+        wrap
+        appHref="#/contacts/contact-maximilian"
+        lead={
+          <Avatar
+            name="Maximilian Konstantinopoulou-Wertheimer"
+            identity="contact-maximilian"
+          />
+        }
+      >
+        Maximilian Konstantinopoulou-Wertheimer
+      </Chip>
+      <Chip
+        dense
+        wrap
+        appHref="#/contacts/contact-sonya"
+        lead={<Avatar name="Sonya Beck" identity="contact-sonya" />}
+      >
+        Sonya Beck
+      </Chip>
+      <Chip dense wrap icon={Mail}>
+        procurement.and.vendor.onboarding@weber.example
+      </Chip>
+    </div>
+  ),
+};
+
 // The row a chip and a badge share: a name and the marks on it, one line.
 const NAME_CELL = {
   display: "flex",

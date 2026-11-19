@@ -1,3 +1,8 @@
 .partnercommissions-outstanding {
   margin-bottom: var(--space-4);
 }
+
+/* A minus sign left alone on a line reads as a stray dash, not a reversal. */
+.partnercommissions-earned {
+  white-space: nowrap;
+}

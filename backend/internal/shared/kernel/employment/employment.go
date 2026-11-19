@@ -61,8 +61,15 @@ func IsCurrentSQL(date string, asserted ...string) string {
 	if len(asserted) > 1 {
 		precision = asserted[1]
 	}
-	end := sqlf("CASE WHEN %s = 'month' THEN (date_trunc('month', %s::date) + interval '1 month')::date ELSE %s END", precision, date, date)
+	end := EndDaySQL(date, precision)
 	return sqlf("(coalesce(%s, 'current') = 'current' AND (%s IS NULL OR %s > current_date))", status, date, end)
+}
+
+// EndDaySQL is the first day an employment is no longer current. That is the
+// departure day itself, or the first day of the next month for month precision.
+// IsCurrentSQL holds while that day is still ahead.
+func EndDaySQL(date, precision string) string {
+	return sqlf("CASE WHEN %s = 'month' THEN (date_trunc('month', %s::date) + interval '1 month')::date ELSE %s END", precision, date, date)
 }
 
 // CurrentMembershipSQL is a live employment edge that still belongs to its contact.

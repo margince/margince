@@ -12,7 +12,6 @@ import (
 	"bytes"
 	"encoding/csv"
 	"errors"
-	"fmt"
 	"io"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/formulacell"
@@ -43,12 +42,12 @@ func newRecordReader(r io.Reader) (recordReader, error) {
 	buffered := bufio.NewReaderSize(r, sniffWindow)
 	if head, err := buffered.Peek(len(byteOrderMark)); err == nil && bytes.Equal(head, byteOrderMark) {
 		if _, err := buffered.Discard(len(byteOrderMark)); err != nil {
-			return recordReader{}, fmt.Errorf("%w: %v", ErrSourceUnreadable, err)
+			return recordReader{}, unreadable(err)
 		}
 	}
 	head, err := buffered.Peek(sniffWindow)
 	if err != nil && !errors.Is(err, io.EOF) && !errors.Is(err, bufio.ErrBufferFull) {
-		return recordReader{}, fmt.Errorf("%w: %v", ErrSourceUnreadable, err)
+		return recordReader{}, unreadable(err)
 	}
 	reader := csv.NewReader(buffered)
 	reader.Comma = delimiterOf(head)

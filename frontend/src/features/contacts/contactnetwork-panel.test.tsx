@@ -126,19 +126,14 @@ describe("ContactNetworkTab", () => {
     });
     renderPanel();
     await waitFor(() =>
-      expect(
-        screen.getByText(
-          en["contact.intro.verdictDirect"].replace("{name}", "Direct Dana"),
-        ),
-      ).toBeTruthy(),
+      expect(screen.getByText(en["contact.intro.bestWayIn"])).toBeTruthy(),
     );
-    // The sentence the server used to write in English, now assembled from the
-    // counts in the reader's own language. Asserting the words rather than the
-    // field is what proves the translation still says the same thing.
+    // The figures the server used to write as one English sentence, now read
+    // from the counts in the reader's own language.
+    expect(screen.getByText(en["contact.intro.exchangesWindow"])).toBeTruthy();
+    expect(screen.getByText(en["contact.intro.lastYesterday"])).toBeTruthy();
     expect(
-      screen.getByText(
-        "6 two-way exchanges in 90 days · last contact yesterday",
-      ),
+      screen.getByRole("button", { name: "Ask Direct Dana to introduce you" }),
     ).toBeTruthy();
   });
 
@@ -168,7 +163,17 @@ describe("ContactNetworkTab", () => {
         },
       ],
       groups_omitted: [],
+      // Quinn ranks second, so the row under the lead writes the sentence.
       routes: [
+        {
+          route_id: "direct:u-2",
+          route_type: "direct",
+          via_user_id: "u-2",
+          via_display_name: "Loud Lee",
+          strength_bucket: "strong",
+          evidence: { interactions_90d: 9, two_way: true, days_since_last: 1 },
+          availability: "available",
+        },
         {
           route_id: "direct:u-1",
           route_type: "direct",

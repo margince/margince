@@ -26,9 +26,6 @@ export type ImportRowIssue = components["schemas"]["ImportRowIssue"];
 // nothing else.
 export const DONT_IMPORT = "";
 
-// The row type a flow opens on when nothing names one.
-export const UNNAMED_IMPORT_OBJECT: ImportObject = "lead";
-
 // IMPORT_OBJECTS has one key per contract type; a type the contract adds fails
 // to compile here until the screens are taught it.
 const IMPORT_OBJECTS = {

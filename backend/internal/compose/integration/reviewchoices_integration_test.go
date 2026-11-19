@@ -36,6 +36,7 @@ func TestReviewChoicesRemainFrozenAfterTemplateEdits(t *testing.T) {
 			template = candidate
 		}
 	}
+	restoreReviewTemplate(t, e, template.Id)
 	options := []string{"Fit, scope", "Trust"}
 	question := crmcontracts.ReviewQuestion{Key: "reasons", Label: "Reasons", Type: "multiselect", Required: true, Options: &options}
 	req := crmcontracts.UpdateActivityReviewTemplateRequest{Version: *template.Version, Questions: append(template.Questions, question)}

@@ -603,3 +603,23 @@ func TestCaptureDecidesAMessagesProjectOnlyOnce(t *testing.T) {
 		t.Fatalf("%d project links on one activity, want exactly 1", n)
 	}
 }
+
+// A new message is filed inside its capture. A replay files it after the
+// commit, so a message the ladder could not file the first time is filed by
+// the next pull.
+func TestAReplayFilesAMessageItsFirstCaptureLeftUnfiled(t *testing.T) {
+	env := newCaptureEnv(t)
+	e, sync := env.e, env.sync
+	seed := newProjectSeeder(t, e)
+	erp := seed.project(t, "ERP replacement")
+
+	sync(t, emailAbout("late1@acme.example", "", "[LATE-1] kickoff"))
+	if got := linkedProject(t, e, "late1@acme.example"); !got.IsZero() {
+		t.Fatalf("a key no project holds filed the message under %s, want nothing", got)
+	}
+	seed.rekey(t, erp, "LATE-1")
+	sync(t, emailAbout("late1@acme.example", "", "[LATE-1] kickoff"))
+	if got := linkedProject(t, e, "late1@acme.example"); got != erp.ID {
+		t.Fatalf("the replay filed the message under %s, want %s", got, erp.ID)
+	}
+}

@@ -1,7 +1,7 @@
 /** @vitest-environment happy-dom */
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { messageText } from "../../design-system/richtext-testing";
 import { draftButton } from "../../testing/composedraft.testkit";
 import {
@@ -9,6 +9,7 @@ import {
   activity202,
   fillSendableForm,
   findThreadChoice,
+  installComposeClock,
   jsonResponse,
   NO_VOICE_PROFILE,
   PURPOSES,
@@ -18,6 +19,8 @@ import {
   WHY_ASK,
 } from "./compose.testkit";
 import { ComposeWindow } from "./composewindow";
+
+beforeEach(installComposeClock);
 
 afterEach(() => {
   cleanup();

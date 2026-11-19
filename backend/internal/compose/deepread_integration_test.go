@@ -5,15 +5,10 @@
 
 package compose
 
-// The deep read end-to-end: the worker crawls the site, runs the
-// page-parallel fact lane and the profile lane through the citation
-// gates, and stages ONE "deepread" proposal a human can accept. Acceptance lands both halves in one transaction:
-// profile fields fill-empty, category facts into company_fact under
-// the human-precedence guard. The dossier records the honest outcome —
-// done with findings, done with zero findings and NO proposal, partial
-// when the model lane dies midway, failed when the crawl itself does.
-// Retries ride BeginSiteRead's CAS: a second attempt after any terminal
-// outcome no-ops.
+// The deep read end-to-end. The worker crawls the site, runs the page fact lane
+// and the profile lane through the citation gates, and applies what survives.
+// The dossier records the outcome: done, empty, partial when the model lane
+// dies midway, failed when the crawl does. A retry no-ops.
 
 import (
 	"bytes"
@@ -25,6 +20,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -39,7 +35,9 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/webread"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/providerwait"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -67,11 +65,8 @@ func acmeDeepSite() *fakeSite {
 	}}
 }
 
-// acmeDeepBrain answers both lanes for acmeDeepSite: the profile call
-// grounds a positioning field on the home passage (excerpt ids are
-// global over the RANK-SORTED pages — imprint s0, home s1) and the
-// legal name on the imprint's; the page calls yield the phone, a market
-// signal, and the single-entity census that lets the trio stand.
+// acmeDeepBrain answers both lanes for acmeDeepSite (excerpt ids follow the
+// rank-sorted pages: imprint s0, home s1).
 func acmeDeepBrain() laneFake {
 	return laneFake{
 		profileReply: `{"fields":[
@@ -133,6 +128,16 @@ func startDeepRead(t *testing.T, e *integration.Env, company ids.UUID) (contacts
 // companyIDOf types a harness-seeded untyped company id for the contacts store.
 func companyIDOf(u ids.UUID) ids.CompanyID { return ids.From[ids.CompanyKind](u) }
 
+// readDossier reads one dossier back as its requester.
+func readDossier(t *testing.T, e *integration.Env, company, read ids.UUID) contacts.SiteRead {
+	t.Helper()
+	dossier, err := e.Contacts.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), read)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return dossier
+}
+
 // deepReadApprovals counts staged "deepread" rows (workspace-scoped).
 func deepReadApprovals(t *testing.T, e *integration.Env) int {
 	t.Helper()
@@ -149,10 +154,7 @@ func TestDeepReadCrawlsExtractsAppliesWhatItEvidencedAndFinishesDone(t *testing.
 		t.Fatalf("run: %v", err)
 	}
 
-	done, err := e.Contacts.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), read.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
+	done := readDossier(t, e, company, read.ID)
 	if done.Status != "done" || done.FinishedAt == nil || done.StoppedReason != nil {
 		t.Fatalf("dossier = %+v, want done with no stop reason (discovery exhausted)", done)
 	}
@@ -178,69 +180,28 @@ func TestDeepReadCrawlsExtractsAppliesWhatItEvidencedAndFinishesDone(t *testing.
 		t.Fatal("no audit row on behalf of the requesting human")
 	}
 
-	// A River retry after the terminal outcome no-ops on the Begin CAS: no
-	// second crawl, and — now that the findings land rather than stage —
-	// nothing written twice.
+	// A River retry after the terminal outcome no-ops: no second crawl, nothing written twice.
 	if err := worker.run(context.Background(), args); err != nil {
 		t.Fatalf("retry after done: %v", err)
 	}
-	var profileRows, factRows, updatedEvents int
-	var capturedBy, legalName, factCapturedBy string
-	var phoneValue, signalValue string
-	var phoneSiteRead ids.UUID
-	err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		ctx := context.Background()
-		if err := tx.QueryRow(ctx,
-			`SELECT count(*), max(captured_by) FROM company_profile_field WHERE company_id = $1`,
-			company).Scan(&profileRows, &capturedBy); err != nil {
-			return err
-		}
-		if err := tx.QueryRow(ctx,
-			`SELECT coalesce(max(value), '') FROM company_profile_field
-			 WHERE company_id = $1 AND field = 'legal_name'`, company).Scan(&legalName); err != nil {
-			return err
-		}
-		if err := tx.QueryRow(ctx,
-			`SELECT count(*), max(captured_by) FROM company_fact WHERE company_id = $1`,
-			company).Scan(&factRows, &factCapturedBy); err != nil {
-			return err
-		}
-		if err := tx.QueryRow(ctx,
-			`SELECT value, site_read_id FROM company_fact
-			 WHERE company_id = $1 AND category = 'company' AND field = 'phone'`,
-			company).Scan(&phoneValue, &phoneSiteRead); err != nil {
-			return err
-		}
-		if err := tx.QueryRow(ctx,
-			`SELECT coalesce(max(value), '') FROM company_fact
-			 WHERE company_id = $1 AND category = 'signal' AND field = 'named_customer'`,
-			company).Scan(&signalValue); err != nil {
-			return err
-		}
-		return tx.QueryRow(ctx,
-			`SELECT count(*) FROM event_outbox
-			 WHERE envelope->>'type' = 'company.updated'`).Scan(&updatedEvents)
-	})
-	if err != nil {
-		t.Fatal(err)
+	if got := e.WsScalar(t, `SELECT count(*) || ' ' || max(captured_by) FROM company_profile_field WHERE company_id = $1`, company); got != "2 agent:deepread" {
+		t.Fatalf("evidence rows = %q, want 2 as agent:deepread", got)
 	}
-	if profileRows != 2 || capturedBy != "agent:deepread" {
-		t.Fatalf("accept wrote %d evidence rows as %q, want 2 as agent:deepread", profileRows, capturedBy)
+	if got := e.WsScalar(t, `SELECT coalesce(max(value), '') FROM company_profile_field WHERE company_id = $1 AND field = 'legal_name'`, company); got != "Acme Robotics GmbH" {
+		t.Fatalf("legal_name = %q, want the Impressum's statement over the home page's guess", got)
 	}
-	if legalName != "Acme Robotics GmbH" {
-		t.Fatalf("legal_name = %q, want the Impressum's statement over the home page's guess", legalName)
+	if got := e.WsScalar(t, `SELECT count(*) || ' ' || max(captured_by) FROM company_fact WHERE company_id = $1`, company); got != "2 agent:deepread" {
+		t.Fatalf("company_fact rows = %q, want 2 as agent:deepread", got)
 	}
-	if factRows != 2 || factCapturedBy != "agent:deepread" {
-		t.Fatalf("accept wrote %d company_fact rows as %q, want 2 as agent:deepread", factRows, factCapturedBy)
+	phone := e.WsScalar(t, `SELECT value || ' ' || site_read_id FROM company_fact WHERE company_id = $1 AND category = 'company' AND field = 'phone'`, company)
+	if phone != "+49 711 555 0100 "+read.ID.String() {
+		t.Fatalf("company/phone = %q, want the Impressum's number linked to the dossier", phone)
 	}
-	if phoneValue != "+49 711 555 0100" || phoneSiteRead != read.ID {
-		t.Fatalf("company/phone = %q linked to read %s, want the Impressum's number linked to the dossier", phoneValue, phoneSiteRead)
-	}
-	if signalValue == "" {
+	if e.WsCount(t, `SELECT count(*) FROM company_fact WHERE company_id = $1 AND category = 'signal' AND field = 'named_customer'`, company) == 0 {
 		t.Fatal("the home page's named_customer signal never landed in company_fact")
 	}
-	if updatedEvents != 1 {
-		t.Fatalf("%d company.updated outbox events after accept, want exactly 1 for the whole delta", updatedEvents)
+	if n := e.WsCount(t, `SELECT count(*) FROM event_outbox WHERE envelope->>'type' = 'company.updated'`); n != 1 {
+		t.Fatalf("%d company.updated outbox events, want exactly 1 for the whole delta", n)
 	}
 }
 
@@ -296,10 +257,7 @@ func TestDeepReadWithNothingEvidencedIsAnHonestEmptyDoneWithNoProposal(t *testin
 		t.Fatalf("run: %v", err)
 	}
 
-	done, err := e.Contacts.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), read.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
+	done := readDossier(t, e, company, read.ID)
 	if done.Status != "done" || done.FactCount != 0 {
 		t.Fatalf("dossier = %+v, want done with fact_count 0 — an empty read is not an error", done)
 	}
@@ -321,10 +279,7 @@ func TestDeepReadCrawlFailureFinishesFailedAndARetryNoOps(t *testing.T) {
 	if err := worker.run(context.Background(), args); err == nil {
 		t.Fatal("a failed crawl returned nil — River would record success")
 	}
-	failed, err := e.Contacts.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), read.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
+	failed := readDossier(t, e, company, read.ID)
 	if failed.Status != "failed" || failed.FinishedAt == nil {
 		t.Fatalf("dossier = %+v, want failed with finished_at stamped", failed)
 	}
@@ -334,10 +289,7 @@ func TestDeepReadCrawlFailureFinishesFailedAndARetryNoOps(t *testing.T) {
 	if err := worker.run(context.Background(), args); err != nil {
 		t.Fatalf("retry after failed: %v", err)
 	}
-	after, err := e.Contacts.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), read.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
+	after := readDossier(t, e, company, read.ID)
 	if after.Status != "failed" || !after.FinishedAt.Equal(*failed.FinishedAt) {
 		t.Fatalf("retry touched the failed dossier: %+v", after)
 	}
@@ -356,10 +308,7 @@ func TestDeepReadOnABrainlessWorkerFailsTheReadActionably(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "--ai-routing") {
 		t.Fatalf("run on a brainless worker → %v, want the actionable no-model-path error", err)
 	}
-	failed, gerr := e.Contacts.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), read.ID)
-	if gerr != nil {
-		t.Fatal(gerr)
-	}
+	failed := readDossier(t, e, company, read.ID)
 	if failed.Status != "failed" {
 		t.Fatalf("dossier = %+v, want failed — never queued forever behind a worker that cannot extract", failed)
 	}
@@ -379,10 +328,7 @@ func TestDeepReadBudgetDeferralSnoozesTheDurableJob(t *testing.T) {
 	if !errors.As(err, &snooze) || snooze.Duration != next.Sub(now) {
 		t.Fatalf("Work error = %v, want snooze for %s", err, next.Sub(now))
 	}
-	deferred, getErr := e.Contacts.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), read.ID)
-	if getErr != nil {
-		t.Fatal(getErr)
-	}
+	deferred := readDossier(t, e, company, read.ID)
 	if deferred.Status != "deferred" || deferred.StatusCode == nil || *deferred.StatusCode != "budget_deferred" ||
 		deferred.NextAttemptAt == nil || !deferred.NextAttemptAt.Equal(next) || deferred.FinishedAt != nil {
 		t.Fatalf("dossier after budget deferral = %+v", deferred)
@@ -404,10 +350,7 @@ func TestDeepReadProviderOutageSnoozesUntilTheProbe(t *testing.T) {
 	if !errors.As(err, &snooze) || snooze.Duration != probe.Sub(now) {
 		t.Fatalf("Work error = %v, want snooze for %s, not a failed attempt", err, probe.Sub(now))
 	}
-	deferred, getErr := e.Contacts.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), read.ID)
-	if getErr != nil {
-		t.Fatal(getErr)
-	}
+	deferred := readDossier(t, e, company, read.ID)
 	if deferred.Status != "deferred" || deferred.NextAttemptAt == nil || !deferred.NextAttemptAt.Equal(probe) {
 		t.Fatalf("dossier after an outage = %+v, want deferred until the probe", deferred)
 	}
@@ -431,10 +374,7 @@ func TestDeepReadModelFailureMidwayKeepsWhatWasReadAsPartial(t *testing.T) {
 		t.Fatalf("run: %v", err)
 	}
 
-	partial, err := e.Contacts.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), read.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
+	partial := readDossier(t, e, company, read.ID)
 	if partial.Status != "partial" {
 		t.Fatalf("dossier status = %q, want partial — evidence in hand is kept, not discarded", partial.Status)
 	}
@@ -490,10 +430,7 @@ func runServicesDeepRead(t *testing.T, e *integration.Env, company ids.UUID) (co
 	if err := worker.run(context.Background(), args); err != nil {
 		t.Fatalf("run: %v", err)
 	}
-	done, err := e.Contacts.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), read.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
+	done := readDossier(t, e, company, read.ID)
 	if done.FactCount != 2 || len(done.ProposalIDs) != 0 {
 		t.Fatalf("dossier = %+v, want the 2 deduped offerings landed and nothing staged", done)
 	}
@@ -712,10 +649,7 @@ func TestDeepReadFinishSurvivesACancelledWorkContext(t *testing.T) {
 		t.Fatalf("finish under a cancelled work context: %v", err)
 	}
 
-	got, err := e.Contacts.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), read.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
+	got := readDossier(t, e, company, read.ID)
 	if got.Status != "partial" {
 		t.Fatalf("dossier status = %q, want partial — the terminal write was starved by the dead work context", got.Status)
 	}
@@ -754,10 +688,7 @@ func TestDeepReadCancelsAnAutoEnrichJobWhenTheSettingWentOff(t *testing.T) {
 	if n := len(site.pageCalls); n != 0 {
 		t.Errorf("the crawler fetched %d pages — cancelling after the crawl saves nothing", n)
 	}
-	done, err := e.Contacts.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), read.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
+	done := readDossier(t, e, company, read.ID)
 	if done.Status != "cancelled" {
 		t.Errorf("status = %q, want cancelled — the read did not fail, it was withdrawn", done.Status)
 	}
@@ -815,11 +746,78 @@ func TestDeepReadHonoursThePageLimitAnAdminSetBeforeItStarted(t *testing.T) {
 		t.Fatalf("run: %v", err)
 	}
 
-	done, err := e.Contacts.GetSiteRead(e.As(e.Rep1, nil, integration.AdminPerms), companyIDOf(company), read.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
+	done := readDossier(t, e, company, read.ID)
 	if len(done.Pages) != 1 {
 		t.Fatalf("the read kept %d pages, want the 1 the admin's limit allows", len(done.Pages))
+	}
+}
+
+// readTheCasinoOnAcmesDomain reads acme.example after the domain changed
+// hands: a casino with its own icon, phone and staff.
+func readTheCasinoOnAcmesDomain(t *testing.T, e *integration.Env, company ids.UUID, requestedBy, profileReply, siteName string) contacts.SiteRead {
+	t.Helper()
+	site := &fakeSite{pages: map[string]fakeSitePage{seedURL: {
+		siteName: siteName,
+		text:     readable("Lucky Spin Casino.") + " Play slots tonight. Call +49 711 555 0199. Max Spinner, Chief Executive Officer. Not Acme GmbH.",
+		icons:    []webread.IconRef{{URL: touchIconURL, Rel: webread.RelAppleTouchIcon}},
+	}}}
+	worker, _ := newDeepReadTestWorker(e, site, laneFake{
+		profileReply: profileReply,
+		pageReplies: map[string]string{seedURL: `{"facts":[{"f":"phone","v":"+49 711 555 0199","e":"s0"}],
+			"contacts":[{"n":"Max Spinner","r":"Chief Executive Officer","q":"Max Spinner, Chief Executive Officer","e":"s0"}]}`},
+	})
+	worker.blob, worker.fetch = blobstore.NewMemory(), &assetSite{assets: map[string][]byte{touchIconURL: logoFixture(t, 512, 512)}}
+	read, args := startDeepRead(t, e, company)
+	e.WsExec(t, `UPDATE site_read SET requested_by = $1 WHERE id = $2`, requestedBy, read.ID)
+	if err := worker.run(context.Background(), args); err != nil {
+		t.Fatalf("run: %v", err)
+	}
+	return readDossier(t, e, company, read.ID)
+}
+
+// casinoNamesItself is the profile reply of a site that states its own name. The
+// legal name off its home page is one the legal gate drops.
+const casinoNamesItself = `{"fields":[{"f":"display_name","v":"Lucky Spin Casino","e":"s0","c":0.9},{"f":"legal_name","v":"Acme GmbH","e":"s0","c":0.9},{"f":"value_proposition","v":"Slots","e":"s0","c":0.9}]}`
+
+// Nothing the casino says or shows lands on Acme, and the dossier says why.
+func TestADeepReadOfAnotherBusinessOnTheDomainAppliesNothing(t *testing.T) {
+	e := integration.Setup(t)
+	company := insertCompany(t, e, e.Rep1, "acme.example", "")
+	if done := readTheCasinoOnAcmesDomain(t, e, company, "human:"+e.Rep1.String(), casinoNamesItself, ""); !slices.Contains(done.Warnings, siteAnotherBusinessWarning) {
+		t.Fatalf("dossier warnings = %v, want the another-business caveat", done.Warnings)
+	}
+	if n := e.WsCount(t, `SELECT (SELECT count(*) FROM company_profile_field WHERE company_id = $1)
+		+ (SELECT count(*) FROM company_fact WHERE company_id = $1)
+		+ (SELECT count(*) FROM company WHERE id = $1 AND logo_object_key IS NOT NULL)`, company); n != 0 {
+		t.Fatalf("%d fields, facts or logos landed from another business's site, want 0", n)
+	}
+}
+
+// The automatic read closes its cursor as a read that landed nothing.
+func TestAnAutomaticReadOfAnotherBusinessClosesItsCursorEmpty(t *testing.T) {
+	e := integration.Setup(t)
+	company := insertCompany(t, e, e.Rep1, "acme.example", "")
+	e.WsExec(t, `INSERT INTO capture_auto_enrich_state (company_id) VALUES ($1)`, company)
+	readTheCasinoOnAcmesDomain(t, e, company, systemAutoEnrichActor, casinoNamesItself, "")
+	if got := e.WsScalar(t, `SELECT coalesce(last_outcome, '') FROM capture_auto_enrich_state WHERE company_id = $1`, company); got != autoEnrichOutcomeEmpty {
+		t.Fatalf("last_outcome = %q, want %q", got, autoEnrichOutcomeEmpty)
+	}
+	if n := e.WsCount(t, `SELECT (SELECT count(*) FROM company_fact WHERE company_id = $1) + (SELECT count(*) FROM approval)`, company); n != 0 {
+		t.Fatalf("%d facts or staged leads from another business's site, want 0", n)
+	}
+}
+
+// With no name from the model, the page title names the site. With none at all
+// the findings land, but the logo is nobody's to wear.
+func TestASiteTheModelDidNotNameIsJudgedByItsTitle(t *testing.T) {
+	e := integration.Setup(t)
+	company := insertCompany(t, e, e.Rep1, "acme.example", "")
+	unnamed := `{"fields":[{"f":"value_proposition","v":"Slots","e":"s0","c":0.9}]}`
+	if done := readTheCasinoOnAcmesDomain(t, e, company, "human:"+e.Rep1.String(), unnamed, "Home | Lucky Spin Casino"); !slices.Contains(done.Warnings, siteAnotherBusinessWarning) {
+		t.Fatalf("warnings = %v, want the title judged as the site's name", done.Warnings)
+	}
+	readTheCasinoOnAcmesDomain(t, e, company, "human:"+e.Rep1.String(), unnamed, "")
+	if got := e.WsScalar(t, `SELECT (SELECT count(*) FROM company_profile_field WHERE company_id = $1) || ' ' || (logo_object_key IS NULL) FROM company WHERE id = $1`, company); got != "1 true" {
+		t.Fatalf("fields and no-logo = %q, want the nameless read's field and no logo", got)
 	}
 }

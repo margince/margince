@@ -70,6 +70,12 @@ export const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
   ["invalid_bic", "legalEntities.invalidBic"],
   ["invalid_country", "legalEntities.invalidCountry"],
   ["invalid_language", "legalEntities.invalidLanguage"],
+  // The phone parser's details are English and speak of E.164.
+  ["phone_empty", "common.phone.empty"],
+  ["phone_needs_country_code", "common.phone.needsCountryCode"],
+  ["phone_malformed", "common.phone.malformed"],
+  // The detail speaks of a promotion; the screen calls it a qualification.
+  ["contact_has_deal", "lead.demoteContactHasDeal"],
 ]);
 
 // The held refusal names no record; its words depend only on whether the

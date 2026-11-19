@@ -32,6 +32,11 @@ function ids(
 }
 
 describe("settingsSearch", () => {
+  it("finds About Margince by version and by commit", () => {
+    expect(ids("version")).toContain("about");
+    expect(ids("commit")).toContain("about");
+  });
+
   it("finds a page by its own name", () => {
     expect(ids("audit")).toContain("audit");
   });

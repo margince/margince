@@ -11,9 +11,9 @@
 #   cache:PREFIX  the GitHub Actions cache service. Creating a cache entry for a
 #                 key that already has one fails, and that holds for every job
 #                 of the run. Needs ACTIONS_RUNTIME_TOKEN and ACTIONS_RESULTS_URL.
-#   dir:PATH      a directory on this machine: `mkdir` either makes the claim
-#                 directory or finds it there. For tests and for shards started
-#                 side by side on one machine.
+#   dir:PATH      a directory on this machine: `claim` (scripts/lib-claim.sh)
+#                 either creates the group's file or finds it there. For tests
+#                 and for shards started side by side on one machine.
 #
 # Each group has a home shard (group g belongs to shard ((g - 1) mod N) + 1).
 # A shard claims its own groups from the front, heaviest first. With none left,
@@ -27,6 +27,8 @@
 #     the gap is never left without a claimer. A shard that never starts loses
 #     none of its groups.
 # The fan-in still fails the run when two shards report one test.
+
+source "$(dirname "${BASH_SOURCE[0]}")/lib-claim.sh"
 
 # queue_open SPEC SHARD TOTAL GROUPS DONE — set up this shard's view of the
 # queue. GROUPS is queue_groups output; DONE lists group numbers an earlier
@@ -109,10 +111,10 @@ queue_take() {
     queue_take_cache "${QUEUE_PREFIX}-g$1"
     return
   fi
-  mkdir "$QUEUE_PREFIX/g$1" 2>/dev/null && return 0
-  [[ -d "$QUEUE_PREFIX/g$1" ]] && return 1
-  echo "FAIL: cannot claim group $1: $QUEUE_PREFIX is not writable" >&2
-  return 2
+  local st=0
+  claim "$QUEUE_PREFIX/g$1" || st=$?
+  (( st != 2 )) || echo "FAIL: cannot claim group $1: $QUEUE_PREFIX is not writable" >&2
+  return "$st"
 }
 
 # The version is part of a cache entry's identity, so every claim of a key has

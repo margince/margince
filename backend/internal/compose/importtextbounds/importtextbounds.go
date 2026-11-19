@@ -7,12 +7,14 @@
 package importtextbounds
 
 import (
+	"errors"
 	"maps"
 	"slices"
 	"strconv"
 	"strings"
 	"unicode/utf8"
 
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/database/textbounds"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -23,9 +25,16 @@ import (
 // ReasonValueTooLong.
 var reasons = map[string]migration.ReasonCode{migration.ObjectCompany + ".description": migration.ReasonDescriptionTooLong}
 
-// Refusal answers the first target, in name order, whose trimmed cell is past
-// the limit of the column it writes.
-func Refusal(object string, fields map[string]string) (target string, why migration.Reason, refused bool) {
+// Refusal answers a contact name past the name limit first, with the text it
+// measured. Otherwise it answers the first target, in name order, whose trimmed
+// cell is past its column's limit.
+func Refusal(object string, fields map[string]string) (target, value string, why migration.Reason, refused bool) {
+	if object == migration.ObjectContact {
+		// The registry exempts the name columns; the contacts module owns their limit.
+		if column, text, length, over := contacts.OverlongContactName(fields); over {
+			return column, text, tooLong(migration.ReasonValueTooLong, length, contacts.ContactNameLimit), true
+		}
+	}
 	for _, target := range slices.Sorted(maps.Keys(fields)) {
 		limit := limitOf(object, target)
 		length := utf8.RuneCountInString(strings.TrimSpace(fields[target]))
@@ -34,10 +43,24 @@ func Refusal(object string, fields map[string]string) (target string, why migrat
 			if !worded {
 				reason = migration.ReasonValueTooLong
 			}
-			return target, migration.Why(reason, "length", strconv.Itoa(length), "max", strconv.Itoa(limit)), true
+			return target, fields[target], tooLong(reason, length, limit), true
 		}
 	}
-	return "", migration.Reason{}, false
+	return "", "", migration.Reason{}, false
+}
+
+// NameTooLong reads a store's contact-name refusal as the reason an import
+// skips its row, in the wording the row check gives.
+func NameTooLong(err error) (migration.Reason, bool) {
+	refusal, ok := errors.AsType[*contacts.ContactNameTooLongError](err)
+	if !ok {
+		return migration.Reason{}, false
+	}
+	return tooLong(migration.ReasonValueTooLong, refusal.Runes, contacts.ContactNameLimit), true
+}
+
+func tooLong(reason migration.ReasonCode, length, limit int) migration.Reason {
+	return migration.Why(reason, "length", strconv.Itoa(length), "max", strconv.Itoa(limit))
 }
 
 // limitOf reads a target as the column of the object's table it names. A custom

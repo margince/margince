@@ -21,7 +21,7 @@ var touchWords = struct {
 	EarlierAt      langcopy.Phrase
 	LooksKept      langcopy.Phrase
 }{
-	None:           langcopy.Phrase{En: "Nothing has been captured with anyone in this room before.", De: "Bisher wurde kein Austausch mit den Teilnehmenden erfasst.", Vi: "Chưa ghi nhận trao đổi nào với những người tham gia cuộc họp này."},
+	None:           langcopy.Phrase{En: "Nothing has been captured with anyone in this meeting before.", De: "Bisher wurde kein Austausch mit den Teilnehmenden erfasst.", Vi: "Chưa ghi nhận trao đổi nào với những người tham gia cuộc họp này."},
 	Today:          langcopy.Phrase{En: "Last touch was today.", De: "Der letzte Kontakt war heute.", Vi: "Lần liên hệ gần nhất là hôm nay."},
 	Yesterday:      langcopy.Phrase{En: "Last touch was yesterday.", De: "Der letzte Kontakt war gestern.", Vi: "Lần liên hệ gần nhất là hôm qua."},
 	Days:           langcopy.Phrase{En: "Last touch was %d days ago.", De: "Der letzte Kontakt war vor %d Tagen.", Vi: "Lần liên hệ gần nhất cách đây %d ngày."},

@@ -74,7 +74,7 @@ test("AC-mailbox-2: narrowing the posture offers to narrow the history too", asy
   const posture = page.waitForRequest(
     (req) =>
       req.method() === "PUT" &&
-      req.url().endsWith("/connectors/gmail/mail-posture"),
+      new URL(req.url()).pathname.endsWith("/connectors/gmail/mail-posture"),
   );
   await page
     .getByRole("region", { name: de["saveBar.unsaved"] })
@@ -198,8 +198,11 @@ test("AC-mailbox-6: the connect form says what happens before it asks for a pass
   await expect(dialog).toContainText(
     "Ein neues Postfach wird standardmäßig zurückgehalten",
   );
-  // The notice asks for nothing: there is no checkbox and no field the server
-  // records, and a mailbox connects with it unread. An acknowledgement here
-  // would be a consent record nobody gave.
-  await expect(dialog.getByRole("checkbox")).toHaveCount(0);
+  // The notice asks for nothing, and a mailbox connects with it unread. The
+  // one checkbox is the unticked send opt-in; an acknowledgement here would be
+  // a consent record nobody gave.
+  await expect(dialog.getByRole("checkbox")).toHaveCount(1);
+  await expect(
+    dialog.getByRole("checkbox", { name: de["connectors.imapSend"] }),
+  ).not.toBeChecked();
 });

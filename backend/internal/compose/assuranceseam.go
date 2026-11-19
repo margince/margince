@@ -236,6 +236,7 @@ func scanAssuranceSubject(
 		return out, err
 	}
 	out.DealID = dealID.String()
+	out.Zone = zone
 	if owner != nil {
 		out.Owner = owner.String()
 	}

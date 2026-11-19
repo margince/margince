@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/companyclockrefold"
 	"github.com/margince/margince/backend/internal/compose/companyprofiles"
 	"github.com/margince/margince/backend/internal/compose/credentialrepair"
 	"github.com/margince/margince/backend/internal/compose/customerlinks"
@@ -25,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/retiredstagecards"
 	"github.com/margince/margince/backend/internal/compose/retiredthreadsplit"
 	"github.com/margince/margince/backend/internal/compose/unaskedcommitments"
+	"github.com/margince/margince/backend/internal/compose/viabilitytasks"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -128,6 +130,7 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		technicalAddressDataTask(pool),
 		gmailDedupeScanDataTask(),
 		retiredReviewsDataTask(pool),
+		viabilitytasks.DataTask(activities.NewStore(InstallationDB(pool))),
 		auditRedactionDataTask(),
 		linkedAuditRedactionDataTask(pool),
 		markedAuditRedactionDataTask(),
@@ -140,6 +143,7 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		erasedseattraces.DataTask(),
 		newslettersDataTask(pool),
 		dealclockrefold.DataTask(),
+		companyclockrefold.DataTask(),
 		customerlinks.DataTask(),
 		qualifytasks.DuplicatesDataTask(now), qualifytasks.TextDataTask(),
 		companyprofiles.OfferDuplicatesTask(),

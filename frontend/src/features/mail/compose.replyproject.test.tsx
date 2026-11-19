@@ -1,7 +1,7 @@
 /** @vitest-environment happy-dom */
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   ASYNC_UTIL_TIMEOUT_MS,
   SLOWEST_MEASURED_TEST_MS,
@@ -9,6 +9,7 @@ import {
 import { pickOption } from "../../design-system/select-testing";
 import { draftButton } from "../../testing/composedraft.testkit";
 import {
+  installComposeClock,
   jsonResponse,
   pickWhy,
   render,
@@ -22,6 +23,8 @@ import { ComposeWindow } from "./composewindow";
 
 const EIGHT_WAITS_TEST_MS =
   ASYNC_UTIL_TIMEOUT_MS * 8 + SLOWEST_MEASURED_TEST_MS;
+
+beforeEach(installComposeClock);
 
 afterEach(() => {
   cleanup();

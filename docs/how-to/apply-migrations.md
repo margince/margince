@@ -161,7 +161,7 @@ Two edits to applied migrations exist, and each one was safe for a stated reason
 
 1. **The tenant scope work** edited applied migrations.
    It shipped with repair migrations that only add, so it reached every database in use.
-2. **The baseline merge** put one baseline file each in place of the history of core and custom.
+2. **The first baseline merge** put one baseline file each in place of the history of core and custom.
    It has no repair half, because no installation then held data that could not be built again.
    It stops an old database instead.
    The baseline uses version `0001` again, and on such a database that row names a migration that no longer exists.
@@ -170,6 +170,72 @@ Two edits to applied migrations exist, and each one was safe for a stated reason
 Neither case sets a rule for others. The second needed every database to be one that could be built again.
 `scripts/migration-baseline.sh verify` also needed to prove that the baseline builds the same schema as the
 history, byte for byte. Without both, never edit a shipped migration.
+
+## A new installation starts from a baseline
+
+`backend/migrations/baseline/core/` holds one file that builds what core's migrations through a release
+build. Its `replaces.txt` names each version the file stands for, with the version's name and checksum. It
+also names the release a database part-way through those versions must reach first. `migrate up` reads the core ledger before it applies anything:
+
+- **The ledger is empty.** It runs the baseline. In the same transaction it records the baseline and
+  every replaced version, each under its own file's name and checksum. Data tasks that require an old
+  version, and repairs that read its `applied_at`, find the row they look for.
+- **The ledger holds every replaced version.** It records the baseline and does not run it.
+- **The ledger holds only some.** It stops before it changes anything and names the release to upgrade
+  with first. Run that release's `migrate up`, then this one. The first release ships the first
+  baseline, so its `replaces.txt` says `release none`. No release has part of that history. A
+  database built from a commit between releases is built again (`make dev-fresh`).
+
+In the first two cases, migrations after the baseline then apply one by one. The replaced files stay in
+`backend/migrations/core/`, so an installation that applied them upgrades as it always did. `migrate down`
+rolls them back one by one and never rolls back the baseline. After a full `down`, `up` replays the
+history, because the baseline's row stays.
+
+`migrations.Core()` is core with the baseline. `migrations.CoreHistory()` leaves it out, for a
+test that migrates to a version part-way through the history.
+
+Loading core fails when a file below the baseline is missing from `replaces.txt`, or when a listed file's
+name or checksum no longer matches. So a replaced migration that someone edits stops every binary,
+the same as an edit to an applied migration does.
+
+### Prove the baseline
+
+```sh
+make db-up
+scripts/migration-baseline.sh verify
+```
+
+`verify` builds one database by the full history and one by the baseline, both with the code `migrate up` runs.
+It then compares their schemas, reference rows and ledgers, and prints `OK` only when they match byte
+for byte. Run it on a change to the baseline, to `replaces.txt` or to the baseline code in
+`backend/internal/platform/dbmigrate/baseline.go`.
+
+### Write a new baseline
+
+```sh
+RELEASE=<tag or none> THROUGH=<last version in the tag> VERSION=<new version> NAME=<name> \
+  scripts/migration-baseline.sh generate
+scripts/migration-baseline.sh verify
+```
+
+`VERSION` sorts above `THROUGH` and below the first migration after it. Without arguments, `generate`
+writes the current baseline again.
+
+The script builds core's history through `THROUGH` and writes the baseline from that database's
+`pg_dump` output (`backend/tools/gen-baseline`). The tool changes what `pg_dump` output cannot carry:
+
+- It grants to `margince_app` only where that role exists.
+- It copies the migration that makes the `ext_runtime` role.
+- A reference row's generated key becomes `uuidv7()`, and its build time `now()`.
+- A check that `pg_dump` prints in a form that builds a different tree goes back to the words its
+  migration used.
+
+### When the replaced files may go
+
+Delete the replaced files only after every supported installation runs the release with the baseline,
+or a later one. Then every ledger records the baseline. That is a change of its own. Keep
+`replaces.txt`: a new installation still records the replaced versions from it. Then the
+`renumbered.txt` lines and the `equivalentContent` entries for those versions can go too.
 
 ## A migration that moved to a new version
 

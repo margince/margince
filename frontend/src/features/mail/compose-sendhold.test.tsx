@@ -4,7 +4,7 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { messageBox } from "../../design-system/richtext-testing";
 import {
@@ -15,6 +15,7 @@ import {
 } from "../../testing/sendpermission.testkit";
 import {
   fillSendableForm,
+  installComposeClock,
   jsonResponse,
   pickWhy,
   pressSend,
@@ -31,6 +32,8 @@ import { ComposeWindow } from "./composewindow";
 
 type Preview = components["schemas"]["SendAuthorizationPreview"];
 type Recipient = Preview["recipients"][number];
+
+beforeEach(installComposeClock);
 
 afterEach(() => {
   cleanup();

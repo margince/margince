@@ -13,7 +13,6 @@ import { useUrlParams } from "../../lib/urlstate";
 import { RecordEmailVerb } from "../records/recordemail";
 import { ShareAction } from "../records/share";
 import { ReopenAction, terminalSentence } from "./leadband";
-import { LeadFillFromContact } from "./leadfillfromcontact";
 import { leadIdentityName } from "./leadname";
 import { promoteEligible } from "./leadpresentation";
 import type { Lead, LeadWriter } from "./leads";
@@ -40,6 +39,14 @@ function ClosedReason({
   ) : null;
 }
 
+// The kind each header verb opens the drawer on; Log starts on a note.
+const OPENING_KIND = {
+  log: undefined,
+  task: "task",
+  call: "call",
+  meet: "meeting",
+} as const;
+
 // The lead's identity row and its verbs. It stands apart from LeadScreen to
 // keep that render inside the complexity budget. A header is a unit of its own:
 // the name, why the verbs are gone when they are, and the verbs themselves.
@@ -57,7 +64,7 @@ export function LeadActions({
 }: Readonly<{
   lead: Lead;
   id: string;
-  // Fill from a contact saves through the page's one lead write.
+  // The closure sentence reads who may reopen the lead.
   writer: LeadWriter;
   onQualify: () => void;
   onDisqualify: () => void;
@@ -164,7 +171,7 @@ export function LeadActions({
         onClick={() => setDrawer("call")}
       />
       <IconAction
-        label={t("contact.action.meetings")}
+        label={t("record.verb.meet")}
         word={t("record.verb.meet")}
         icon={<CalendarDays aria-hidden="true" />}
         disabled={logPending}
@@ -193,9 +200,7 @@ export function LeadActions({
         <LogActivityAction
           entityType="lead"
           entityId={id}
-          askedKind={
-            drawer === "task" || drawer === "call" ? drawer : undefined
-          }
+          askedKind={OPENING_KIND[drawer]}
           openOnMount
           onLogged={onLogged}
           onClose={() => setDrawer(null)}
@@ -231,13 +236,17 @@ export function LeadActions({
             the reopen's. Neither is on a live lead. */}
         {lead.promoted_contact_id && <DemoteAction id={lead.id} />}
         <ReopenAction lead={lead} />
-        <LeadFillFromContact writer={writer} reasonId={refusedReasonId} />
         <ShareAction
           recordType="lead"
           recordId={lead.id}
           disabledReasonId={refusedReasonId}
         />
-        <AddToShortlistAction entityType="lead" entityId={lead.id} />
+        {/* The server keeps no list membership for a closed lead. */}
+        <AddToShortlistAction
+          entityType="lead"
+          entityId={lead.id}
+          reasonId={archived}
+        />
         {/* Last: it is the one verb here a reader cannot walk back from
                 the header, so it does not sit where a pointer sliding down
                 the list reaches it on the way to something routine. It asks

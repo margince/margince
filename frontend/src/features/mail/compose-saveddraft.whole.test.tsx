@@ -1,14 +1,14 @@
 /** @vitest-environment happy-dom */
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   messageText,
   writeMessage,
 } from "../../design-system/richtext-testing";
 import { pickOption } from "../../design-system/select-testing";
 import { UTC_ZONE } from "../../format/timezone";
-import { pressSend } from "./compose.testkit";
+import { installComposeClock, pressSend } from "./compose.testkit";
 import {
   calls,
   composer,
@@ -20,6 +20,8 @@ import {
   stubRoutes,
 } from "./compose-saveddraft.testkit";
 import { ComposeWindow } from "./composewindow";
+
+beforeEach(installComposeClock);
 
 afterEach(() => {
   cleanup();

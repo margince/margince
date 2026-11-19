@@ -127,7 +127,7 @@ function OpenCommitmentsCell({ view }: Readonly<{ view: Project360 }>) {
           : undefined
       }
       peek={commitmentsPeek(view, { t, plural, locale, zone }, open)}
-      onOpen={open}
+      onOpen={reading.open > 0 ? open : undefined}
     />
   );
 }

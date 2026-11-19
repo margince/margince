@@ -52,6 +52,9 @@ export const Dismissed: Story = { render: story({ kind: "dismissed" }) };
 // iPhone and iPad browsers install by hand from the share sheet.
 export const Manual: Story = { render: story({ kind: "manual-ios" }) };
 
+// Safari on a Mac adds the app to the Dock from its File menu.
+export const ManualMac: Story = { render: story({ kind: "manual-macos" }) };
+
 export const Installed: Story = { render: story({ kind: "installed" }) };
 
 export const Phone: Story = {
