@@ -21,9 +21,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
-// ListContractsInput selects one account's agreements.
+// ListContractsInput selects one account's agreements, or the agreements one
+// deal produced when DealID is set.
 type ListContractsInput struct {
 	CompanyID ids.CompanyID
+	// DealID narrows to the agreements filed against one deal. It replaces the
+	// company as the anchor, so ListDealContracts leaves CompanyID zero.
+	DealID *ids.DealID
 	// Status filters to one asserted status. Nil means every status, which
 	// includes the superseded predecessors that make a renewal chain readable.
 	Status *string
@@ -62,13 +66,47 @@ func (s *Store) ListCompanyContracts(ctx context.Context, in ListContractsInput)
 	return out, err
 }
 
+// dealContractsLimit is the page cap: a deal produces a handful of agreements.
+var dealContractsLimit = 200
+
+// ListDealContracts reads the agreements filed against one deal, newest term
+// first. Naming the deal is a read of it, as naming the company is on the
+// account list.
+func (s *Store) ListDealContracts(ctx context.Context, dealID ids.DealID) (crmcontracts.ContractListResponse, error) {
+	if err := auth.Require(ctx, contractObject, principal.ActionRead); err != nil {
+		return crmcontracts.ContractListResponse{}, err
+	}
+	active, err := s.catalogColumns(ctx)
+	if err != nil {
+		return crmcontracts.ContractListResponse{}, err
+	}
+	var out crmcontracts.ContractListResponse
+	err = s.tx(ctx, func(tx pgx.Tx) error {
+		if err := auth.EnsureLinkTarget(ctx, tx, dealTable, dealID.UUID); err != nil {
+			return err
+		}
+		today, err := s.today(ctx, tx)
+		if err != nil {
+			return err
+		}
+		out, err = listContractsTx(ctx, tx, ListContractsInput{DealID: &dealID, Limit: &dealContractsLimit}, today, active)
+		return err
+	})
+	return out, err
+}
+
 func listContractsTx(ctx context.Context, tx pgx.Tx, in ListContractsInput, asOf time.Time, active []fieldcatalog.Column) (crmcontracts.ContractListResponse, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	companyPos := arg(in.CompanyID)
 	asOfPos := arg(asOf)
 
-	where := []string{storekit.SQLf("company_id = $%d", companyPos), "archived_at IS NULL"}
+	var anchor string
+	if in.DealID != nil {
+		anchor = storekit.SQLf("deal_id = $%d", arg(*in.DealID))
+	} else {
+		anchor = storekit.SQLf("company_id = $%d", arg(in.CompanyID))
+	}
+	where := []string{anchor, "archived_at IS NULL"}
 
 	scope, err := VisibleClause(ctx, "", arg)
 	if err != nil {

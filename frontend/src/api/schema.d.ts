@@ -31525,6 +31525,20 @@ export interface components {
             history: components["schemas"]["LegalReviewPacketStage"][];
             /** @description The deal's contract, legal and offer documents, newest first. */
             documents: components["schemas"]["LegalReviewPacketDocument"][];
+            /**
+             * @description The agreements filed against the deal, newest term first. Absent on a
+             *     pack asked for before agreements were packed. An agreement this reader
+             *     may not open, and every agreement for a reader without `deal.read`, is not listed.
+             */
+            contracts?: components["schemas"]["LegalReviewPacketContract"][];
+            /**
+             * @description The deal's latest calls, meetings, messages and notes, newest first. One
+             *     this reader may not read, such as mail outside their audience, is not
+             *     listed. Absent on an older pack.
+             */
+            touches?: components["schemas"]["LegalReviewPacketTouch"][];
+            /** @description The deal's tasks that were open at the request. One this reader may not read is not listed. Absent on an older pack. */
+            tasks?: components["schemas"]["LegalReviewPacketTask"][];
         };
         LegalReviewPacketDeal: {
             /** Format: uuid */
@@ -31596,6 +31610,48 @@ export interface components {
             stage_name: string;
             /** Format: date-time */
             entered_at: string;
+        };
+        /**
+         * @description One agreement as it stood at the request. Its title is read now for this
+         *     reader. The dates and notice terms are the ones frozen with the pack.
+         */
+        LegalReviewPacketContract: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            contract_number?: string | null;
+            /** @enum {string} */
+            status: "draft" | "active" | "expired" | "cancelled" | "superseded";
+            /** Format: date */
+            starts_on?: string | null;
+            /** Format: date */
+            ends_on?: string | null;
+            /** Format: date */
+            renewal_on?: string | null;
+            /** Format: date */
+            cancellation_notice_on?: string | null;
+            notice_period_days?: number | null;
+            auto_renew?: boolean | null;
+        };
+        /** @description One recent activity on the deal. Its subject is read now, and absent when this reader may not see the content. */
+        LegalReviewPacketTouch: {
+            /** Format: uuid */
+            activity_id: string;
+            /** @enum {string} */
+            kind: "call" | "email" | "meeting" | "message" | "note";
+            /** Format: date-time */
+            occurred_at: string;
+            /** @description How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time. */
+            occurred_precision: components["schemas"]["OccurredPrecision"];
+            subject?: string | null;
+        };
+        /** @description One task that was open at the request. Its subject is read now. */
+        LegalReviewPacketTask: {
+            /** Format: uuid */
+            activity_id: string;
+            subject?: string | null;
+            /** Format: date-time */
+            due_at?: string | null;
         };
         /**
          * @description One document as it stood at the request, read now for this reader. A
