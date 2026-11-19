@@ -324,14 +324,14 @@ func (w *siteDeepReadWorker) run(ctx context.Context, args SiteDeepReadArgs) err
 	if crawl.SeedURL != "" {
 		claim.SeedURL = crawl.SeedURL
 	}
-	speaks, err := w.siteSpeaksForCompany(ctx, claim, extraction)
+	gated := w.gateLegalCensus(ctx, args, claim, crawl, &extraction)
+	identity, err := w.siteIdentityOf(ctx, claim, crawl, gated.fields, extraction.merged.entities)
 	if err != nil {
 		return w.fail(ctx, args.SiteReadID, fmt.Errorf("site deep read %s: %w", args.SiteReadID, err))
 	}
-	if speaks {
-		w.readSideLanes(ctx, args, claim, crawl)
-	}
-	return w.reportRead(ctx, args, claim, crawl, extraction, speaks)
+	gated.speaks = identity.speaks
+	w.readSideLanes(ctx, args, claim, crawl, identity)
+	return w.reportRead(ctx, args, claim, crawl, extraction, gated)
 }
 
 // routeClaimedRead dispatches a claimed read to the lane that owns it, before

@@ -35,7 +35,9 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/webread"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/providerwait"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -187,63 +189,24 @@ func TestDeepReadCrawlsExtractsAppliesWhatItEvidencedAndFinishesDone(t *testing.
 	if err := worker.run(context.Background(), args); err != nil {
 		t.Fatalf("retry after done: %v", err)
 	}
-	var profileRows, factRows, updatedEvents int
-	var capturedBy, legalName, factCapturedBy string
-	var phoneValue, signalValue string
-	var phoneSiteRead ids.UUID
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		ctx := context.Background()
-		if err := tx.QueryRow(ctx,
-			`SELECT count(*), max(captured_by) FROM company_profile_field WHERE company_id = $1`,
-			company).Scan(&profileRows, &capturedBy); err != nil {
-			return err
-		}
-		if err := tx.QueryRow(ctx,
-			`SELECT coalesce(max(value), '') FROM company_profile_field
-			 WHERE company_id = $1 AND field = 'legal_name'`, company).Scan(&legalName); err != nil {
-			return err
-		}
-		if err := tx.QueryRow(ctx,
-			`SELECT count(*), max(captured_by) FROM company_fact WHERE company_id = $1`,
-			company).Scan(&factRows, &factCapturedBy); err != nil {
-			return err
-		}
-		if err := tx.QueryRow(ctx,
-			`SELECT value, site_read_id FROM company_fact
-			 WHERE company_id = $1 AND category = 'company' AND field = 'phone'`,
-			company).Scan(&phoneValue, &phoneSiteRead); err != nil {
-			return err
-		}
-		if err := tx.QueryRow(ctx,
-			`SELECT coalesce(max(value), '') FROM company_fact
-			 WHERE company_id = $1 AND category = 'signal' AND field = 'named_customer'`,
-			company).Scan(&signalValue); err != nil {
-			return err
-		}
-		return tx.QueryRow(ctx,
-			`SELECT count(*) FROM event_outbox
-			 WHERE envelope->>'type' = 'company.updated'`).Scan(&updatedEvents)
-	})
-	if err != nil {
-		t.Fatal(err)
+	if got := e.WsScalar(t, `SELECT count(*) || ' ' || max(captured_by) FROM company_profile_field WHERE company_id = $1`, company); got != "2 agent:deepread" {
+		t.Fatalf("evidence rows = %q, want 2 as agent:deepread", got)
 	}
-	if profileRows != 2 || capturedBy != "agent:deepread" {
-		t.Fatalf("accept wrote %d evidence rows as %q, want 2 as agent:deepread", profileRows, capturedBy)
+	if got := e.WsScalar(t, `SELECT coalesce(max(value), '') FROM company_profile_field WHERE company_id = $1 AND field = 'legal_name'`, company); got != "Acme Robotics GmbH" {
+		t.Fatalf("legal_name = %q, want the Impressum's statement over the home page's guess", got)
 	}
-	if legalName != "Acme Robotics GmbH" {
-		t.Fatalf("legal_name = %q, want the Impressum's statement over the home page's guess", legalName)
+	if got := e.WsScalar(t, `SELECT count(*) || ' ' || max(captured_by) FROM company_fact WHERE company_id = $1`, company); got != "2 agent:deepread" {
+		t.Fatalf("company_fact rows = %q, want 2 as agent:deepread", got)
 	}
-	if factRows != 2 || factCapturedBy != "agent:deepread" {
-		t.Fatalf("accept wrote %d company_fact rows as %q, want 2 as agent:deepread", factRows, factCapturedBy)
+	phone := e.WsScalar(t, `SELECT value || ' ' || site_read_id FROM company_fact WHERE company_id = $1 AND category = 'company' AND field = 'phone'`, company)
+	if phone != "+49 711 555 0100 "+read.ID.String() {
+		t.Fatalf("company/phone = %q, want the Impressum's number linked to the dossier", phone)
 	}
-	if phoneValue != "+49 711 555 0100" || phoneSiteRead != read.ID {
-		t.Fatalf("company/phone = %q linked to read %s, want the Impressum's number linked to the dossier", phoneValue, phoneSiteRead)
-	}
-	if signalValue == "" {
+	if e.WsCount(t, `SELECT count(*) FROM company_fact WHERE company_id = $1 AND category = 'signal' AND field = 'named_customer'`, company) == 0 {
 		t.Fatal("the home page's named_customer signal never landed in company_fact")
 	}
-	if updatedEvents != 1 {
-		t.Fatalf("%d company.updated outbox events after accept, want exactly 1 for the whole delta", updatedEvents)
+	if n := e.WsCount(t, `SELECT count(*) FROM event_outbox WHERE envelope->>'type' = 'company.updated'`); n != 1 {
+		t.Fatalf("%d company.updated outbox events, want exactly 1 for the whole delta", n)
 	}
 }
 
@@ -794,23 +757,71 @@ func TestDeepReadHonoursThePageLimitAnAdminSetBeforeItStarted(t *testing.T) {
 	}
 }
 
-// A taken-over domain: acme.example now serves a casino. Nothing the casino
-// says lands on Acme, and the dossier says why.
-func TestADeepReadOfAnotherBusinessOnTheDomainAppliesNothing(t *testing.T) {
-	e := integration.Setup(t)
-	company := insertCompany(t, e, e.Rep1, "acme.example", "")
-	site := &fakeSite{pages: map[string]fakeSitePage{seedURL: {text: readable("Lucky Spin Casino.") + " Play slots online tonight."}}}
-	worker, _ := newDeepReadTestWorker(e, site, laneFake{profileReply: `{"fields":[
-		{"f":"display_name","v":"Lucky Spin Casino","e":"s0","c":0.9},
-		{"f":"value_proposition","v":"Online slots","e":"s0","c":0.9}]}`})
+// readTheCasinoOnAcmesDomain reads acme.example after the domain changed
+// hands: a casino with its own icon, phone and staff.
+func readTheCasinoOnAcmesDomain(t *testing.T, e *integration.Env, company ids.UUID, requestedBy, profileReply, siteName string) contacts.SiteRead {
+	t.Helper()
+	site := &fakeSite{pages: map[string]fakeSitePage{seedURL: {siteName: siteName,
+		text:  readable("Lucky Spin Casino.") + " Play slots tonight. Call +49 711 555 0199. Max Spinner, Chief Executive Officer. Not Acme GmbH.",
+		icons: []webread.IconRef{{URL: touchIconURL, Rel: webread.RelAppleTouchIcon}},
+	}}}
+	worker, _ := newDeepReadTestWorker(e, site, laneFake{
+		profileReply: profileReply,
+		pageReplies: map[string]string{seedURL: `{"facts":[{"f":"phone","v":"+49 711 555 0199","e":"s0"}],
+			"contacts":[{"n":"Max Spinner","r":"Chief Executive Officer","q":"Max Spinner, Chief Executive Officer","e":"s0"}]}`},
+	})
+	worker.blob, worker.fetch = blobstore.NewMemory(), &assetSite{assets: map[string][]byte{touchIconURL: logoFixture(t, 512, 512)}}
 	read, args := startDeepRead(t, e, company)
+	e.WsExec(t, `UPDATE site_read SET requested_by = $1 WHERE id = $2`, requestedBy, read.ID)
 	if err := worker.run(context.Background(), args); err != nil {
 		t.Fatalf("run: %v", err)
 	}
-	if done := readDossier(t, e, company, read.ID); !slices.Contains(done.Warnings, siteAnotherBusinessWarning) {
+	return readDossier(t, e, company, read.ID)
+}
+
+// casinoNamesItself is the profile reply of a site that states its own name. The
+// legal name off its home page is one the legal gate drops.
+const casinoNamesItself = `{"fields":[{"f":"display_name","v":"Lucky Spin Casino","e":"s0","c":0.9},{"f":"legal_name","v":"Acme GmbH","e":"s0","c":0.9},{"f":"value_proposition","v":"Slots","e":"s0","c":0.9}]}`
+
+// Nothing the casino says or shows lands on Acme, and the dossier says why.
+func TestADeepReadOfAnotherBusinessOnTheDomainAppliesNothing(t *testing.T) {
+	e := integration.Setup(t)
+	company := insertCompany(t, e, e.Rep1, "acme.example", "")
+	if done := readTheCasinoOnAcmesDomain(t, e, company, "human:"+e.Rep1.String(), casinoNamesItself, ""); !slices.Contains(done.Warnings, siteAnotherBusinessWarning) {
 		t.Fatalf("dossier warnings = %v, want the another-business caveat", done.Warnings)
 	}
-	if n := e.WsCount(t, `SELECT count(*) FROM company_profile_field WHERE company_id = $1`, company); n != 0 {
-		t.Fatalf("%d profile fields landed from another business's site, want 0", n)
+	if n := e.WsCount(t, `SELECT (SELECT count(*) FROM company_profile_field WHERE company_id = $1)
+		+ (SELECT count(*) FROM company_fact WHERE company_id = $1)
+		+ (SELECT count(*) FROM company WHERE id = $1 AND logo_object_key IS NOT NULL)`, company); n != 0 {
+		t.Fatalf("%d fields, facts or logos landed from another business's site, want 0", n)
+	}
+}
+
+// The automatic read closes its cursor as a read that landed nothing.
+func TestAnAutomaticReadOfAnotherBusinessClosesItsCursorEmpty(t *testing.T) {
+	e := integration.Setup(t)
+	company := insertCompany(t, e, e.Rep1, "acme.example", "")
+	e.WsExec(t, `INSERT INTO capture_auto_enrich_state (company_id) VALUES ($1)`, company)
+	readTheCasinoOnAcmesDomain(t, e, company, systemAutoEnrichActor, casinoNamesItself, "")
+	if got := e.WsScalar(t, `SELECT coalesce(last_outcome, '') FROM capture_auto_enrich_state WHERE company_id = $1`, company); got != autoEnrichOutcomeEmpty {
+		t.Fatalf("last_outcome = %q, want %q", got, autoEnrichOutcomeEmpty)
+	}
+	if n := e.WsCount(t, `SELECT (SELECT count(*) FROM company_fact WHERE company_id = $1) + (SELECT count(*) FROM approval)`, company); n != 0 {
+		t.Fatalf("%d facts or staged leads from another business's site, want 0", n)
+	}
+}
+
+// With no name from the model, the page title names the site. With none at all
+// the findings land, but the logo is nobody's to wear.
+func TestASiteTheModelDidNotNameIsJudgedByItsTitle(t *testing.T) {
+	e := integration.Setup(t)
+	company := insertCompany(t, e, e.Rep1, "acme.example", "")
+	unnamed := `{"fields":[{"f":"value_proposition","v":"Slots","e":"s0","c":0.9}]}`
+	if done := readTheCasinoOnAcmesDomain(t, e, company, "human:"+e.Rep1.String(), unnamed, "Home | Lucky Spin Casino"); !slices.Contains(done.Warnings, siteAnotherBusinessWarning) {
+		t.Fatalf("warnings = %v, want the title judged as the site's name", done.Warnings)
+	}
+	readTheCasinoOnAcmesDomain(t, e, company, "human:"+e.Rep1.String(), unnamed, "")
+	if got := e.WsScalar(t, `SELECT (SELECT count(*) FROM company_profile_field WHERE company_id = $1) || ' ' || (logo_object_key IS NULL) FROM company WHERE id = $1`, company); got != "1 true" {
+		t.Fatalf("fields and no-logo = %q, want the nameless read's field and no logo", got)
 	}
 }

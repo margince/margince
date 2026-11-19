@@ -249,7 +249,6 @@ func TestSeveralCompaniesOfOneNameHoldTheQuestion(t *testing.T) {
 
 // The installation's own company is never a name twin. Adopting onto it would
 // make the new domain one of the workspace's own, and its senders colleagues.
-// The lookalike does not spell the name it shows, so a human answers it.
 func TestADomainNamedLikeTheOwnCompanyDoesNotJoinIt(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
@@ -259,9 +258,11 @@ func TestADomainNamedLikeTheOwnCompanyDoesNotJoinIt(t *testing.T) {
 	if err != nil {
 		t.Fatalf("seeding the own company: %v", err)
 	}
-	res := e.resolveSiteVerdict(ctx, t, "eve@lookalike.test", "lookalike.test", "Our House GmbH")
+	res := e.resolveSiteVerdict(ctx, t, "eve@ourhouse.example", "ourhouse.example", "Our House GmbH")
 
-	e.assertHeldForAHuman(ctx, t, "lookalike.test", res)
+	if !res.CompanyCreated || res.CompanyID == nil || *res.CompanyID == anchor.CompanyID {
+		t.Fatalf("the verdict = %+v, want a record of its own beside the own company", res)
+	}
 	if domains := e.liveDomainsOf(ctx, t, anchor.CompanyID); len(domains) != 1 || !domains["ourhouse.test"] {
 		t.Fatalf("own company domains = %v, want only ourhouse.test", domains)
 	}

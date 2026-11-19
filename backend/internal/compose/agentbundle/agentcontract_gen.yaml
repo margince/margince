@@ -27914,7 +27914,7 @@ components:
             words and shows `note` for a decision somebody explained.
         reason_code:
           type: string
-          enum: [stated, company_created, kept_as_company, bulk_sender, unevidenced, stale_evidence, near_duplicate, forwarded_identity, vendor_verdict, reserved_domain, unknown]
+          enum: [stated, company_created, kept_as_company, bulk_sender, unevidenced, stale_evidence, near_duplicate, forwarded_identity, vendor_verdict, reserved_domain, foreign_site, unknown]
           description: |-
             Why, as a code the client words in the reader's language.
         note:
@@ -27931,7 +27931,7 @@ components:
             a company the reader may not see stays withheld by both.
         source:
           type: string
-          enum: [verdict, heuristic, human, agent, unevidenced, stale_evidence, near_duplicate, forwarded_identity, vendor_verdict, reserved_domain]
+          enum: [verdict, heuristic, human, agent, unevidenced, stale_evidence, near_duplicate, forwarded_identity, vendor_verdict, reserved_domain, foreign_site]
           description: |-
             What decided it, or — for an `undecided` domain — what stopped the machine deciding.
             `human` decisions outrank every other. `agent`, an agent deciding for its user, outranks
@@ -27940,7 +27940,9 @@ components:
             old to mint one from today's site; `near_duplicate` means more than one company
             here already carries the name it resolved to, and which of them this domain belongs
             to is a human's call rather than the machine's; `vendor_verdict` means the site reads
-            as a mail or hosting vendor, and a colleague decides whether its staff get a company.
+            as a mail or hosting vendor, and a colleague decides whether its staff get a company;
+            `foreign_site` means the site names a different business than the domain, which may
+            have changed hands.
         decided_at: {type: string, format: date-time, description: 'When the decision was recorded. For an `undecided` domain, when the row last moved.'}
         company_id:
           type: string

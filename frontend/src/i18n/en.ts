@@ -12649,6 +12649,8 @@ export const en = {
     "Their website was read, but it does not name a company.",
   "worklist.domainQuestion.reason.forwarded":
     "Their website redirects to another website, so Margince could not confidently match their company.",
+  "worklist.domainQuestion.reason.foreignSite":
+    "The site names a different business than this domain. The domain may have changed hands.",
   "worklist.domainQuestion.reason.vendor":
     "Their website looks like a mail or hosting provider, which can host addresses for many companies.",
   "worklist.domainQuestion.reason.nearDuplicate":
@@ -12717,6 +12719,7 @@ export const en = {
   "blockedDomains.source.unevidenced": "No company found from the site",
   "blockedDomains.source.staleEvidence": "Supporting mail too old",
   "blockedDomains.source.nearDuplicate": "Company name already exists",
+  "blockedDomains.source.foreignSite": "Names a different business",
   "blockedDomains.source.vendorVerdict": "Reads as a mail or hosting vendor",
   "blockedDomains.rowAdmit": "Allow",
   "blockedDomains.rowRefuse": "Refuse",

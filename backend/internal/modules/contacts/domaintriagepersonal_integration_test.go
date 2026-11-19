@@ -53,8 +53,11 @@ func TestASiteNamingAnotherBusinessOnTheDomainIsHeldForAHuman(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 	e.openTriageFirst(ctx, t, "anna.weber@example-analytics.example", "Anna Weber", "example-analytics.example")
-	e.assertHeldForAHuman(ctx, t, "example-analytics.example",
-		e.resolveStatedName(ctx, t, "example-analytics.example", "Lucky Spin Casino Ltd"))
+	res := e.resolveStatedName(ctx, t, "example-analytics.example", "Lucky Spin Casino Ltd")
+	status, reason, _, _, companyID := e.dispositionRow(ctx, t, "example-analytics.example")
+	if res.CompanyID != nil || status != DomainPending || reason != PendingForeignSite || companyID != nil {
+		t.Fatalf("resolve = %+v, disposition = %q/%q, want pending %q with no company", res, status, reason, PendingForeignSite)
+	}
 }
 
 // A personal page that names its owner's employer reads like a founder's brand.

@@ -5,12 +5,15 @@ package contacts
 
 // Whether a website speaks for the company it was read for. A domain can change
 // hands, and a lapsed one may now serve a casino or a spam shop. That site's
-// name, text, logo and staff describe another business. Every writer that lands
-// a site read on a company, or names a new one after it, asks SiteSpeaksFor.
+// name, text, logo and staff describe another business. Domain triage and the
+// deep read's own apply ask SiteSpeaksFor, because no human checks their values.
+// A human who confirms exact values (onboarding, cold start, an approval) is
+// the check on those paths.
 
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 	"unicode"
 
@@ -56,51 +59,126 @@ func nameAccountsFor(stated string, known CompanyIdentity) bool {
 	for _, name := range known.Names {
 		// Both ways round: "Acme" agrees with "Acme Robotics GmbH", and so does
 		// "IBM" with "International Business Machines".
-		storedKey, statedKey := compactName(name), compactName(stated)
-		if storedKey != "" && statedKey != "" &&
-			(statedNameSpellsLabel(stated, storedKey) || statedNameSpellsLabel(name, statedKey)) {
-			return true
+		for _, storedKey := range compactNames(name) {
+			for _, statedKey := range compactNames(stated) {
+				if statedNameSpellsLabel(stated, storedKey) || statedNameSpellsLabel(name, statedKey) {
+					return true
+				}
+			}
 		}
 	}
 	return false
 }
 
+// genericBrandWords are words that many unrelated companies share, in English,
+// German and Vietnamese, folded. Sharing one says nothing about being the same
+// business, so they never match alone.
+var genericBrandWords = map[string]bool{
+	"group": true, "solutions": true, "services": true, "service": true, "consulting": true,
+	"tech": true, "digital": true, "global": true, "holding": true, "holdings": true,
+	"international": true, "systems": true, "partners": true, "partner": true,
+	"gruppe": true, "losungen": true, "loesungen": true, "dienstleistungen": true, "beratung": true,
+	"technik": true, "technologie": true, "technologien": true, "systeme": true, "gmbh": true,
+	"cong": true, "tnhh": true, "phan": true, "doan": true, "dich": true, "giai": true, "phap": true,
+	"nghe": true, "quoc": true, "toan": true, "thong": true,
+}
+
+// initialConnectives are the small words a name's initials may leave out, keep
+// as a letter, or keep whole. "The Boston Consulting Group" is bcg, and "Bank of
+// America" is bofa.
+var initialConnectives = map[string]bool{
+	"the": true, "of": true, "and": true, "und": true, "der": true, "die": true, "das": true, "va": true, "cua": true,
+}
+
 // statedNameSpellsLabel reports whether a company name accounts for a domain
 // label. "Kestner Consulting" spells kestnerconsulting, and "Marsh Advisory"
 // spells rowanmarsh through its word "marsh". "Bayerische Motoren Werke AG"
-// spells bmw through its initials.
+// spells bmw through its initials, and "Müller GmbH" spells mueller.
 func statedNameSpellsLabel(stated, label string) bool {
-	label = namematch.Fold(strings.Join(strings.FieldsFunc(label, isNameSeparator), ""))
-	words := brandWords(namematch.Fold(stated))
-	if label == "" || strings.Contains(strings.Join(words, ""), label) {
+	for _, foldedLabel := range brandFolds(label) {
+		key := strings.Join(brandWords(foldedLabel), "")
+		if key == "" {
+			return true
+		}
+		for _, folded := range brandFolds(stated) {
+			if wordsSpellLabel(folded, key) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// wordsSpellLabel is statedNameSpellsLabel for one folding of each side. A
+// label under four runes counts only as the whole name or its initials:
+// "Slot Hub Online" does not spell hub.
+func wordsSpellLabel(folded, label string) bool {
+	words := brandWords(folded)
+	joined := strings.Join(words, "")
+	if joined == label || (len([]rune(label)) >= 4 && strings.Contains(joined, label)) {
 		return true
 	}
 	for _, word := range words {
-		// Four runes keeps a legal suffix ("AG", "Ltd") from matching by itself.
-		if (len([]rune(word)) >= 4 && strings.Contains(label, word)) || namematch.JaroWinkler(word, label) >= domainPersonalSimilarity {
+		if len([]rune(word)) < 4 || genericBrandWords[word] {
+			continue
+		}
+		if strings.Contains(label, word) || namematch.JaroWinkler(word, label) >= domainPersonalSimilarity {
 			return true
 		}
 	}
-	core := brandWords(NormalizeCompanyName(stated))
-	return len(core) >= 2 && initialsOf(core) == label
+	core := brandWords(NormalizeCompanyName(folded))
+	significant := 0
+	for _, word := range core {
+		if !initialConnectives[word] {
+			significant++
+		}
+	}
+	return significant >= 2 && slices.Contains(initialsOf(core), label)
+}
+
+// brandFolds are the two spellings a name is compared in: accents dropped
+// ("muller") and umlauts written out ("mueller"). Both write đ as d, which
+// the shared fold keeps.
+func brandFolds(name string) []string {
+	return []string{
+		strings.ReplaceAll(namematch.Fold(name), "đ", "d"),
+		strings.ReplaceAll(namematch.Fold(namematch.Digraphs(name)), "đ", "d"),
+	}
 }
 
 func brandWords(name string) []string {
 	return strings.FieldsFunc(name, func(r rune) bool { return !unicode.IsLetter(r) && !unicode.IsDigit(r) })
 }
 
-func initialsOf(words []string) string {
-	var out strings.Builder
+// initialsOf lists every reading of a name's initials, taking each connective
+// out, as its letter, or whole.
+func initialsOf(words []string) []string {
+	readings := []string{""}
 	for _, word := range words {
-		out.WriteRune([]rune(word)[0])
+		first := string([]rune(word)[0])
+		next := make([]string, 0, len(readings)*3)
+		for _, prefix := range readings {
+			next = append(next, prefix+first)
+			if initialConnectives[word] {
+				next = append(next, prefix, prefix+word)
+			}
+		}
+		readings = next
 	}
-	return out.String()
+	return readings
 }
 
-// compactName is a company name with its legal form and spacing taken out, the
-// shape a domain label has: "Example Analytics GmbH" reads exampleanalytics.
-func compactName(name string) string {
-	return strings.Join(brandWords(NormalizeCompanyName(name)), "")
+// compactNames are a company name with its legal form and spacing taken out, in
+// both foldings: the shape a domain label has. "Example Analytics GmbH" reads
+// exampleanalytics.
+func compactNames(name string) []string {
+	var out []string
+	for _, folded := range brandFolds(name) {
+		if key := strings.Join(brandWords(NormalizeCompanyName(folded)), ""); key != "" {
+			out = append(out, key)
+		}
+	}
+	return out
 }
 
 // SiteStatedNames lists the names a read says the site gives itself: its
@@ -128,7 +206,7 @@ func withholdForeignSite(ctx context.Context, tx pgx.Tx, in ResolveDomainTriageI
 	if in.decidedByAUser() || match.Decision == DecisionFuzzyReview || in.siteSpeaksForDomain() {
 		return false, nil
 	}
-	return true, withholdDomainTx(ctx, tx, in.Domain, PendingUnevidenced, in.Evidence, in.ReadID)
+	return true, withholdDomainTx(ctx, tx, in.Domain, PendingForeignSite, in.Evidence, in.ReadID)
 }
 
 // SiteSpeaksForCompany asks SiteSpeaksFor against what the workspace holds for

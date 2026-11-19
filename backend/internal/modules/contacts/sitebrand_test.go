@@ -22,6 +22,20 @@ func TestASiteSpeaksForACompanyOnlyUnderANameItAlreadyHas(t *testing.T) {
 		{"initials of the stated name", []string{"Bayerische Motoren Werke AG"}, CompanyIdentity{Domains: []string{"bmw.example"}}, true},
 		{"initials of the stored name", []string{"IBM"}, CompanyIdentity{Names: []string{"International Business Machines"}}, true},
 		{"one of several names agrees", []string{"Holding Nord GmbH", "Acme"}, acme, true},
+		{"the umlaut written out", []string{"Müller GmbH"}, domainOnly("mueller.example"), true},
+		{"the umlaut written out with a second word", []string{"Schröder Bau GmbH"}, domainOnly("schroeder-bau.example"), true},
+		{"a Vietnamese name with Đ", []string{"Công ty TNHH Đông Á"}, domainOnly("donga.example"), true},
+		{"initials without the article", []string{"The Boston Consulting Group"}, domainOnly("bcg.example"), true},
+		{"initials with the connective whole", []string{"Bank of America"}, domainOnly("bofa.example"), true},
+		{"a shared word group", []string{"Lucky Spin Group"}, nameOnly("Nordic Group AG"), false},
+		{"a shared word solutions", []string{"Bet Solutions Ltd"}, nameOnly("Acme Solutions GmbH"), false},
+		{"a shared word services", []string{"Global Casino Services"}, nameOnly("Kestner Services"), false},
+		{"a shared word tech", []string{"Spin Tech"}, nameOnly("Nova Tech"), false},
+		{"a generic word in the domain", []string{"Lucky Solutions Ltd"}, domainOnly("nordic-solutions.example"), false},
+		{"a generic word ending the domain", []string{"Casino Group"}, domainOnly("acme-group.example"), false},
+		{"a two-letter label inside a word", []string{"Lucky Lab Casino"}, domainOnly("ab.example"), false},
+		{"a three-letter label as one word of several", []string{"Slot Hub Online"}, domainOnly("hub.example"), false},
+		{"a three-letter name inside a longer one", []string{"Bet"}, nameOnly("Alphabet"), false},
 		{"no name stated", nil, acme, true},
 		{"only blank names stated", []string{" ", ""}, acme, true},
 	}
@@ -31,6 +45,10 @@ func TestASiteSpeaksForACompanyOnlyUnderANameItAlreadyHas(t *testing.T) {
 		}
 	}
 }
+
+func domainOnly(domain string) CompanyIdentity { return CompanyIdentity{Domains: []string{domain}} }
+
+func nameOnly(name string) CompanyIdentity { return CompanyIdentity{Names: []string{name}} }
 
 func TestSiteStatedNamesAreTheDisplayAndLegalName(t *testing.T) {
 	got := SiteStatedNames([]DeepReadField{

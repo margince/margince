@@ -18,11 +18,11 @@ import (
 // reportRead records the outcome of a crawl that succeeded. A read whose lanes
 // all died before evidencing anything has nothing honest to report but the
 // failure; everything else — down to zero surviving findings — is a read.
-func (w *siteDeepReadWorker) reportRead(ctx context.Context, args SiteDeepReadArgs, claim contacts.SiteReadClaim, crawl siteCrawl, extraction siteExtraction, speaks bool) error {
+func (w *siteDeepReadWorker) reportRead(ctx context.Context, args SiteDeepReadArgs, claim contacts.SiteReadClaim, crawl siteCrawl, extraction siteExtraction, gated gatedRead) error {
 	if deferred, deferErr := w.deferForBudget(ctx, args.SiteReadID, extraction.err); deferred {
 		return deferErr
 	}
-	mergedFields, legalWarning := w.gateLegalCensus(ctx, args, claim, crawl, &extraction)
+	mergedFields, legalWarning := gated.fields, gated.legalWarning
 	factCount := len(mergedFields) + len(extraction.merged.facts)
 	if extraction.err != nil && factCount == 0 && len(extraction.merged.contacts) == 0 && len(extraction.merged.entities) == 0 {
 		// Every lane died before anything was evidenced: nothing honest
@@ -35,7 +35,7 @@ func (w *siteDeepReadWorker) reportRead(ctx context.Context, args SiteDeepReadAr
 
 	var proposalIDs []ids.UUID
 	warnings := readWarnings(legalWarning, extraction.err, seedIsJSShell(readPages))
-	if speaks {
+	if gated.speaks {
 		var err error
 		if proposalIDs, err = w.landFindings(ctx, args, claim, mergedFields, extraction.merged); err != nil {
 			return w.fail(ctx, args.SiteReadID, fmt.Errorf("site deep read %s: %w", args.SiteReadID, err))
@@ -64,7 +64,7 @@ func (w *siteDeepReadWorker) reportRead(ctx context.Context, args SiteDeepReadAr
 // abstention is both logged and carried to the dossier as the warning naming the
 // cause that fired — a read that could not settle WHICH entity the company is
 // and a read whose legal page never came back are different things to be told.
-func (w *siteDeepReadWorker) gateLegalCensus(ctx context.Context, args SiteDeepReadArgs, claim contacts.SiteReadClaim, crawl siteCrawl, extraction *siteExtraction) ([]evidencedField, string) {
+func (w *siteDeepReadWorker) gateLegalCensus(ctx context.Context, args SiteDeepReadArgs, claim contacts.SiteReadClaim, crawl siteCrawl, extraction *siteExtraction) gatedRead {
 	// The gate answers THAT it abstained; a human is owed WHY, so the cause is
 	// read from the same census the gate votes on.
 	warning := legalAbstentionOf(extraction.merged.entities, extraction.legalCensusIncomplete).warning()
@@ -77,7 +77,7 @@ func (w *siteDeepReadWorker) gateLegalCensus(ctx context.Context, args SiteDeepR
 	if warning != "" {
 		w.log.WarnContext(ctx, warning, "read", args.SiteReadID.String(), "seed", claim.SeedURL)
 	}
-	return mergedFields, warning
+	return gatedRead{fields: mergedFields, legalWarning: warning}
 }
 
 // dossierStatus is the terminal status of a read that evidenced something: a

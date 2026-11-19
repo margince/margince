@@ -271,3 +271,19 @@ func TestAForwardedQuestionCarriesItsContextAndKeepsItsVerbs(t *testing.T) {
 		t.Fatalf("suggested_company = %+v, want the redirect target's owner", got.SuggestedCompany)
 	}
 }
+
+func TestAForeignSiteQuestionOffersNoReread(t *testing.T) {
+	t.Parallel()
+	svc := domainQuestionLaneService(&stubDomainQuestions{rows: []DomainQuestion{{
+		Domain: "example-analytics.example", Reason: "The site names a different business than this domain.",
+		ReasonCode: contacts.PendingForeignSite, AskedAt: readInstant,
+	}}})
+	out, err := svc.Assemble(pageReader())
+	if err != nil {
+		t.Fatalf("assembling: %v", err)
+	}
+	want := []crmcontracts.AttentionItemActions{"keep", "discard"}
+	if got := (*out.DomainQuestions)[0].Actions; !slices.Equal(got, want) {
+		t.Errorf("foreign-site actions = %v, want %v: a re-read would find the same other business", got, want)
+	}
+}

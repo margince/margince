@@ -167,3 +167,5 @@
 1795048714_the_confirmation_country_is_bounded.up.sql | * | adds the two text guards on lawful_basis_confirmation; the guards act on later writes only, and it changes no existing row
 1795101202_a_contact_has_one_primary_address_and_one_primary_number.up.sql | contact_email, contact_phone | only the extra live primaries of a contact holding more than one are demoted, so the set is the contacts with a primary of two types, a fraction of the contacts; each statement is one indexed pass that takes row locks only, and the index builds that follow are concurrent
 1795101202_a_contact_has_one_primary_address_and_one_primary_number.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795101300_a_foreign_site_waits_for_a_colleague.down.sql | company_domain_disposition | only the open foreign-site questions are moved back to unevidenced, one row per domain whose site named another business, a handful of rows
+1795101301_a_foreign_site_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing

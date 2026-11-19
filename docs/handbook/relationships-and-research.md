@@ -320,7 +320,7 @@ A read that started on its own has a harder limit than one you ask for: 12 pages
 
 ### What a read writes
 
-A read fills the company's facts and empty fields, and never replaces a value you set or the company's name. A domain can change hands, so the site's own name must match the company's name or a domain. If it does not, nothing is applied. The read then says "This site names a different business than this company, so nothing it says was applied." A domain with no company yet waits for a colleague to answer instead.
+A read fills the company's facts and empty fields, and never replaces a value you set or the company's name. A domain can change hands, so the site's own name must match the company's name or a domain. If it does not, nothing is applied, and the read says so. If the company changed its name or uses a parent brand, add that name or domain to the company, then read again. A domain with no company yet waits for a colleague to answer instead.
 
 Nobody named on the company's website is added. Someone found that way may only become a record once Margince can tell them it has their details. It must also record that it told them (the notice that GDPR Article 14 asks for). Until that exists, a read suggests no one, and such a proposal left from an earlier read cannot be accepted. You can still decline it to clear it.
 

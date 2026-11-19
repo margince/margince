@@ -4274,6 +4274,7 @@ func (e BlockedDomainAdmission) Valid() bool {
 const (
 	BlockedDomainReasonCodeBulkSender        BlockedDomainReasonCode = "bulk_sender"
 	BlockedDomainReasonCodeCompanyCreated    BlockedDomainReasonCode = "company_created"
+	BlockedDomainReasonCodeForeignSite       BlockedDomainReasonCode = "foreign_site"
 	BlockedDomainReasonCodeForwardedIdentity BlockedDomainReasonCode = "forwarded_identity"
 	BlockedDomainReasonCodeKeptAsCompany     BlockedDomainReasonCode = "kept_as_company"
 	BlockedDomainReasonCodeNearDuplicate     BlockedDomainReasonCode = "near_duplicate"
@@ -4291,6 +4292,8 @@ func (e BlockedDomainReasonCode) Valid() bool {
 	case BlockedDomainReasonCodeBulkSender:
 		return true
 	case BlockedDomainReasonCodeCompanyCreated:
+		return true
+	case BlockedDomainReasonCodeForeignSite:
 		return true
 	case BlockedDomainReasonCodeForwardedIdentity:
 		return true
@@ -4339,6 +4342,7 @@ func (e BlockedDomainSenderKind) Valid() bool {
 // Defines values for BlockedDomainSource.
 const (
 	BlockedDomainSourceAgent             BlockedDomainSource = "agent"
+	BlockedDomainSourceForeignSite       BlockedDomainSource = "foreign_site"
 	BlockedDomainSourceForwardedIdentity BlockedDomainSource = "forwarded_identity"
 	BlockedDomainSourceHeuristic         BlockedDomainSource = "heuristic"
 	BlockedDomainSourceHuman             BlockedDomainSource = "human"
@@ -4354,6 +4358,8 @@ const (
 func (e BlockedDomainSource) Valid() bool {
 	switch e {
 	case BlockedDomainSourceAgent:
+		return true
+	case BlockedDomainSourceForeignSite:
 		return true
 	case BlockedDomainSourceForwardedIdentity:
 		return true
@@ -38459,7 +38465,7 @@ type BlockedDomain struct {
 	//   as a company.
 	// - `bulk_sender`: mail from the domain was judged bulk or automated, so it is not a
 	//   company this business works with. `sender_kind` says which, when it is known.
-	// - `unevidenced`, `stale_evidence`, `near_duplicate`, `vendor_verdict`: the undecided
+	// - `unevidenced`, `stale_evidence`, `near_duplicate`, `vendor_verdict`, `foreign_site`: the undecided
 	//   domain's open question, as `source` describes each one.
 	// - `unknown`: the row records a reason this server has no word for. `reason` still
 	//   carries its stored sentence.
@@ -38475,7 +38481,9 @@ type BlockedDomain struct {
 	// old to mint one from today's site; `near_duplicate` means more than one company
 	// here already carries the name it resolved to, and which of them this domain belongs
 	// to is a human's call rather than the machine's; `vendor_verdict` means the site reads
-	// as a mail or hosting vendor, and a colleague decides whether its staff get a company.
+	// as a mail or hosting vendor, and a colleague decides whether its staff get a company;
+	// `foreign_site` means the site names a different business than the domain, which may
+	// have changed hands.
 	Source BlockedDomainSource `json:"source"`
 }
 
@@ -38492,7 +38500,7 @@ type BlockedDomainAdmission string
 //     as a company.
 //   - `bulk_sender`: mail from the domain was judged bulk or automated, so it is not a
 //     company this business works with. `sender_kind` says which, when it is known.
-//   - `unevidenced`, `stale_evidence`, `near_duplicate`, `vendor_verdict`: the undecided
+//   - `unevidenced`, `stale_evidence`, `near_duplicate`, `vendor_verdict`, `foreign_site`: the undecided
 //     domain's open question, as `source` describes each one.
 //   - `unknown`: the row records a reason this server has no word for. `reason` still
 //     carries its stored sentence.
@@ -38508,7 +38516,9 @@ type BlockedDomainSenderKind string
 // old to mint one from today's site; `near_duplicate` means more than one company
 // here already carries the name it resolved to, and which of them this domain belongs
 // to is a human's call rather than the machine's; `vendor_verdict` means the site reads
-// as a mail or hosting vendor, and a colleague decides whether its staff get a company.
+// as a mail or hosting vendor, and a colleague decides whether its staff get a company;
+// `foreign_site` means the site names a different business than the domain, which may
+// have changed hands.
 type BlockedDomainSource string
 
 // BlockedDomainListResponse defines model for BlockedDomainListResponse.
