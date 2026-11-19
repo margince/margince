@@ -21,13 +21,13 @@ const job = (over: Partial<Relationship>): Relationship => ({
 describe("dateRange", () => {
   it("calls an undated job current only while the contact page would", () => {
     expect(
-      dateRange(job({ employment_status: "current" }), t, "en", "UTC"),
+      dateRange(job({ employment_status: "current" }), t, "en", "UTC", "UTC"),
     ).toBe("rel.current");
     expect(
-      dateRange(job({ employment_status: "former" }), t, "en", "UTC"),
+      dateRange(job({ employment_status: "former" }), t, "en", "UTC", "UTC"),
     ).toBe("rel.former");
     expect(
-      dateRange(job({ employment_status: "unknown" }), t, "en", "UTC"),
+      dateRange(job({ employment_status: "unknown" }), t, "en", "UTC", "UTC"),
     ).toBe("");
   });
 
@@ -38,8 +38,8 @@ describe("dateRange", () => {
       ended_at: "2025-01-01",
       ended_precision: "month",
     });
-    expect(dateRange(months, t, "en", "UTC")).toBe("2024-03 – 2025-01");
-    expect(dateRange(job({ kind: "works_with" }), t, "en", "UTC")).toBe(
+    expect(dateRange(months, t, "en", "UTC", "UTC")).toBe("2024-03 – 2025-01");
+    expect(dateRange(job({ kind: "works_with" }), t, "en", "UTC", "UTC")).toBe(
       "rel.current",
     );
   });
@@ -50,10 +50,10 @@ describe("dateRange", () => {
       started_precision: "day",
       employment_status: "current",
     });
-    expect(dateRange(started, t, "en", "UTC")).toBe(
+    expect(dateRange(started, t, "en", "UTC", "UTC")).toBe(
       `${formatDate("2026-12-31", "en", "UTC")} – rel.current`,
     );
-    expect(dateRange(started, t, "de", "Europe/Berlin")).toBe(
+    expect(dateRange(started, t, "de", "Europe/Berlin", "Europe/Berlin")).toBe(
       "31.12.2026 – rel.current",
     );
   });

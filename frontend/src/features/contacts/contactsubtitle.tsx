@@ -1,6 +1,9 @@
 import type { ReactNode } from "react";
 import { useT } from "../../i18n";
-import { currentEmployer } from "../../lib/employmentcurrency";
+import {
+  currentEmployer,
+  useEmploymentZone,
+} from "../../lib/employmentcurrency";
 import { navigate } from "../../lib/router";
 import { BoughtMark, BoughtText, boughtFields } from "./boughtmarks";
 import type { Contact360 } from "./contact360";
@@ -14,7 +17,10 @@ export function ContactSubtitle({
   const t = useT();
   const contact = view.contact;
   const bought = boughtFields(contact);
-  const employment = currentEmployer(view.employments?.data);
+  const employment = currentEmployer(
+    view.employments?.data,
+    useEmploymentZone(),
+  );
   const company = employment?.company_name;
   return (
     <>
