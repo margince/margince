@@ -16,7 +16,6 @@ import { CommitteeBoard } from "./summary.board";
 import { ROLE_LABELS } from "./summary.roles";
 
 export { mapLabels } from "./summary.board";
-export { buyingRoleLabel } from "./summary.roles";
 
 export type Coverage = components["schemas"]["CompanyCoverage"];
 

@@ -295,7 +295,7 @@ to the list of document sets."
 
 Margince takes files in two more places, with their own limits:
 
-- **A CSV file to import** (prospects, companies or contacts), and **vCard
+- **A CSV file to import** (leads, companies or contacts), and **vCard
   files**: 10 MB by default.
 - **Your own LinkedIn `Connections.csv`**: 8 MB by default.
 

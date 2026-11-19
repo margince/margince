@@ -13,6 +13,7 @@ export type RefusalSurface = Readonly<{
 export type RefusalKind =
   | "missingContext"
   | "missingEvidence"
+  | "missingFooter"
   | "missingPermission"
   | "restricted";
 
@@ -35,6 +36,8 @@ export function refusalKindOf(
     case "claim_contradicts_resolution":
     case "legacy_transactional_unevidenced":
       return "missingContext";
+    case "footer_incomplete":
+      return "missingFooter";
     case "no_marketing_consent":
     case "unconfirmed_double_opt_in":
     case "marketing_consent_required":
@@ -77,6 +80,8 @@ export function sendPermissionReasonKey(
       return "sendPermission.reason.ambiguous" as const;
     case "unconfirmed_double_opt_in":
       return "sendPermission.reason.unconfirmed" as const;
+    case "footer_incomplete":
+      return "sendPermission.reason.footerIncomplete" as const;
     case "lawful_basis_unconfirmed":
       return "sendPermission.reason.lawfulBasisUnconfirmed" as const;
     case "no_compatible_evidence":

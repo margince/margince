@@ -169,7 +169,7 @@ The answers are:
 - Their customer relationship
 - Marketing
 
-Margince does not ask for a reason when you reply to their own message. On a contact's page,
+A reply to their own message needs no reason, unless the check cannot tell why you write; then the reply asks too. When you ask the assistant to move a meeting, such as "Termin verschieben", the draft picks **Follow-up they requested**. A meeting from your calendar with them, still to come, supports it. On a contact's page,
 **Active deal** adds **Deal this follow-up is about**: pick their open deal before **Send**.
 
 The consent check reads the reason, and it runs *before* you send. Beside
@@ -192,14 +192,14 @@ Some purposes that Margince knows, such as a security notice, are not offered he
 ### Why can't I send an email to this contact?
 When Margince will not send an email to a contact, the warning bar above **Send** names the reason. Where there is a fix, it names that too.
 - **This message needs one more detail**: for "Choose the deal for this follow-up.", pick it in **Deal this follow-up is about**. You can also write from the deal's page. When the record already shows another reason, the bar offers **Use "…" instead**. It switches the reason and checks again; it does not send.
-- **Permission needed for this message**: the required permission is not on record. Record the recipient's consent or the facts that support an allowed customer route. A staff exception cannot replace them.
+- **Permission needed for this message**: the required permission is not on record. Record the recipient's consent or the facts that support an allowed customer route, or send this one message with a recorded exception.
 - **No recorded reason to contact this recipient**: Margince first uses a request or meeting it already holds. Where a fact is missing, press **Record what happened**. Say what was agreed and when. This records the exchange for that recipient and sending company, and for a deal when one is picked. It does not send the email, record marketing consent or make a standing exception. Margince checks again; any stop that remains still blocks the message.
-- **Send with a recorded exception**: where the check allows it and you hold the exception right, this queues only this message. Press **Send with a reason…**, or this button in the bar after a refused send. Pick why the message may go, say why in your own words and confirm that you take responsibility. Your name and reason stay on record.
+- **Send with a recorded exception**: if you hold the exception right, you can send one message past a refusal. Reps hold it by default. An address that does not take mail, or one on several records or none, needs a fix first. This queues only this message. Press **Send with a reason…**, or this button in the bar after a refused send. Pick why the message may go, say why in your own words and confirm that you take responsibility; your name and reason stay on record.
 
-  The exception covers this one message, and grants no consent for later mail. The composer closes once the email is queued. A retry checks current support and stops, without asking again for facts that still hold.
+  The exception covers this one message, and grants no consent for later mail. The next message is refused again. Only you record an exception, in the composer; an agent cannot. The composer closes once the email is queued. A retry checks current support and stops, without asking again for facts that still hold.
 
-  If that approved send fails, open its review and choose **Correct spelling or punctuation**. You must own the message, have approved it yourself and still hold permission to edit and approve mail. Confirm that its meaning and facts stay the same, then choose **Save correction**. The original approval stays on record; the message stays held until you retry. A change in meaning, recipients, sender, purpose or attachments needs a new message and approval. Later stops still block it.
-- **Message cannot be sent**: a reason nobody can lift, such as "The recipient objected to marketing", or an address that does not take mail. No exception is offered, and **Send** stays off until you remove that recipient.
+  If that approved send fails, open its review and choose **Correct spelling or punctuation**. You must own the message, have approved it yourself and still hold permission to edit and approve mail. Confirm that its meaning and facts stay the same, then choose **Save correction**. The original approval stays on record; the message stays held until you retry. A change in meaning, recipients, sender, purpose or attachments needs a new message and approval. A later stop needs a new decision.
+- **Sending needs your reason** also covers a recipient who objected, took back consent, limited the use of their data or asked you to stop. Read the warning before you decide. Your reason covers this one email and does not change their choice. A new stop needs a new decision. **Message cannot be sent**: the address does not take mail, or is on several records or none. Correct the address or remove that recipient.
 - A mailbox connected only to read mail: press **Reconnect your mailbox** and allow sending.
 
 The lead stays a lead when you record an exchange. When you make it a contact later, that exchange keeps its original addresses and sending company.
@@ -213,7 +213,7 @@ A marketing send without consent is refused:
 > **Permission needed for this message**
 > Marketing needs the recipient's consent, and none is on record.
 
-An administrator cannot send marketing after the recipient objected.
+Nobody can send marketing after the recipient objected, an administrator included.
 Correct an address that does not take mail. If several records share one address,
 merge them so Margince can tell who the recipient is.
 
@@ -234,9 +234,9 @@ connected only to read mail, without permission to send. Reconnect it and allow
 sending. A mailbox you connected before Margince could send cannot be changed in
 place. The **Reconnect your mailbox** link opens Settings → Connections.
 
-**One recipient per unsubscribe link.** A message with an unsubscribe link goes
-to one recipient at a time, because that link is the recipient's own consent
-record. Send it once per recipient, with no Cc.
+**Company footer.** The check names missing text, language, contact details or links. Choose **Send with a reason**, read what is kept or left out, enter one reason and confirm. This covers one email and keeps consent as it is. Changed details need a new confirmation; your reason stays in the form.
+
+Mail to several contacts keeps To, Cc and Bcc as written and leaves out private links. Read and confirm this with your reason. A contact's private link is never shared.
 
 **Chat channel limits.** A channel such as Telegram may carry no files at all.
 Or it may limit how many files, how large each one is, and how large they are in total. It may also limit how long the text under them is. When a message goes past one of these, the
@@ -309,7 +309,7 @@ A held message also adds an approval card that never runs out. See [Approvals](a
 
 ## What the recipient controls
 
-Every marketing message carries a footer with two links: unsubscribe, and manage preferences. Both are the recipient's own private links.
+Marketing email normally includes unsubscribe and manage-preferences links. Both belong to the recipient. An email sent with a recorded exception may leave out links the send warning named.
 
 **The preference centre** says that each purpose is separate. The recipient
 cannot switch off messages they need for something they did, such as an order note. All other purposes are theirs to control.

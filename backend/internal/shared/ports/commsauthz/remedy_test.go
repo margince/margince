@@ -25,22 +25,16 @@ func TestEveryReasonDeclaresItsRemedy(t *testing.T) {
 	}
 }
 
-// TestNobodySendsPastASubjectsStop holds that a subject's own stop lists no
-// remedy at all: no answer, no fact, and no exception, an admin's included.
-func TestNobodySendsPastASubjectsStop(t *testing.T) {
+func TestSubjectStopsOfferOnlyAOneMessageException(t *testing.T) {
 	t.Parallel()
-	stops := 0
 	for _, reason := range reasonConstants(t) {
 		if LevelForReason(reason) != LevelSubject {
 			continue
 		}
-		stops++
-		if got := RemediesFor(reason); len(got) != 0 {
-			t.Errorf("%q is the subject's own stop and lists %v; nobody may send past it", reason, got)
+		got := RemediesFor(reason)
+		if len(got) != 1 || got[0] != RemedyException {
+			t.Errorf("%q remedies = %v, want one-message exception", reason, got)
 		}
-	}
-	if stops != 5 {
-		t.Errorf("found %d subject-level stops, want the five: objection, withdrawal, restriction, request to stop, opt-out after a request", stops)
 	}
 }
 
@@ -71,18 +65,13 @@ func TestRemediesForReturnsACopyAndNothingForAnUnknownReason(t *testing.T) {
 	}
 }
 
-func TestAnExceptionAnswersNoSetThatHoldsASubjectsStop(t *testing.T) {
+func TestAnExceptionAnswersCombinedPolicyWarnings(t *testing.T) {
 	t.Parallel()
 	missing := Decision{Verdict: VerdictDeny, ReasonCode: ReasonNoMarketingConsent}
-	bounced := Decision{Verdict: VerdictDeny, ReasonCode: ReasonHardBounce}
-	allowed := Decision{Verdict: VerdictAllow, ReasonCode: ReasonAllowed}
-	if (DecisionSet{Decisions: []Decision{missing, bounced, allowed}}).ExceptionMayAnswer(true) {
-		t.Error("an admin's exception answers a bounced address")
-	}
-	for _, stop := range []string{ReasonObjection, ReasonConsentWithdrawn, ReasonRestricted, ReasonSubjectRequest} {
+	for _, stop := range []string{ReasonObjection, ReasonConsentWithdrawn, ReasonRestricted, ReasonSubjectRequest, ReasonOptedOutAfterRequest} {
 		set := DecisionSet{Decisions: []Decision{missing, {Verdict: VerdictDeny, ReasonCode: stop}}}
-		if set.ExceptionMayAnswer(true) {
-			t.Errorf("an admin's exception answers a set holding %q", stop)
+		if !set.ExceptionMayAnswer(false) {
+			t.Errorf("a rep cannot answer combined warning %q", stop)
 		}
 	}
 }
@@ -103,34 +92,24 @@ func TestNoStaffExceptionAnswersAHardBounce(t *testing.T) {
 	}
 }
 
-// Where the recipient's country requires prior consent, nobody records an
-// exception in its place. The country's advertising ceiling is not lifted for
-// one message either.
-func TestNoExceptionStandsInForConsentWhereTheCountryRequiresIt(t *testing.T) {
+// Transport faults remain outside the human policy decision.
+func TestARepMaySendPastEveryPolicyRefusal(t *testing.T) {
 	t.Parallel()
-	for _, reason := range []string{ReasonMarketingConsentRequired, ReasonFrequencyCapReached, ReasonOptedOutAfterRequest} {
-		if got := RemediesFor(reason); len(got) != 0 {
-			t.Errorf("%q lists %v; nobody may send past it, an admin included", reason, got)
+	for _, reason := range RefusalCodes() {
+		refused := Decision{Verdict: VerdictDeny, ReasonCode: reason}
+		mayPass := reason != ReasonHardBounce && reason != ReasonNoSubject
+		if got := (DecisionSet{Decisions: []Decision{refused}}).ExceptionMayAnswer(false); got != mayPass {
+			t.Errorf("a rep's exception over %q = %v, want %v", reason, got, mayPass)
 		}
-		set := DecisionSet{Decisions: []Decision{{Verdict: VerdictDeny, ReasonCode: reason}}}
-		if set.ExceptionMayAnswer(true) {
-			t.Errorf("an admin's exception answers %q", reason)
-		}
-	}
-	if !HasRemedy(ReasonNoMarketingConsent, RemedyException) {
-		t.Error("outside such a country missing marketing consent keeps the exception")
-	}
-}
-
-func TestAnExceptionCannotWaiveAnAbsoluteRefusal(t *testing.T) {
-	t.Parallel()
-	for reason := range absoluteDenials {
-		set := DecisionSet{Decisions: []Decision{{Verdict: VerdictDeny, ReasonCode: reason}}}
-		if set.ExceptionMayAnswer(false) || set.ExceptionMayAnswer(true) {
-			t.Errorf("an exception waives the absolute refusal %s", reason)
+		if got := refused.OverrulableForOneMessage(); got != mayPass {
+			t.Errorf("%q offered for one message = %v, want %v", reason, got, mayPass)
 		}
 	}
 	if (DecisionSet{}).ExceptionMayAnswer(true) {
 		t.Error("an exception answers an empty check")
+	}
+	allowed := Decision{Verdict: VerdictAllow, ReasonCode: ReasonAllowed}
+	if allowed.OverrulableForOneMessage() {
+		t.Error("an allowed recipient is offered an override")
 	}
 }

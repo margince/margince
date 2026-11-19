@@ -179,6 +179,7 @@ export function CompaniesScreen({
         title={pageName}
         state={state}
         unit="unit.companies"
+        unitOne="unit.company"
         emptyNote={mineEmptyNote({
           t,
           state,

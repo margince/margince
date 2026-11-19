@@ -118,9 +118,6 @@ export function TaskDetails({
   );
   return (
     <div className="ai-task-details">
-      <p className="t-caption">
-        {row.task} · {row.execution_mode}
-      </p>
       {row.decision_first && row.decision_candidate ? (
         <span className="ai-task-details-badges">
           <Badge>{t("aiTasks.decisionFirst")}</Badge>

@@ -3,7 +3,13 @@
 
 package contacts
 
-import "github.com/margince/margince/backend/internal/shared/kernel/values"
+import (
+	"fmt"
+	"slices"
+	"strings"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
+)
 
 // LeadStatus is the lead lifecycle vocabulary — the Go spelling of the
 // lead_status CHECK, kept in sync by the enumsync fitness gate. Domain
@@ -30,6 +36,24 @@ const (
 // a literal, module by module, because a fragment cannot cross the module
 // boundary — TestLadderClimbsFromActivityAndNeverDescends holds the ladder.
 var openLeadStatuses = []LeadStatus{LeadStatusNew, LeadStatusContacted, LeadStatusEngaged}
+
+// LeadStatusRungSQL ranks the lead status in column by its place in ladder
+// order. withTerminal ranks promoted and disqualified after the open ladder;
+// without it they rank -1, off the ladder, as any other value does. Each status
+// is a Go constant and column a caller's literal, so both are formatted in.
+func LeadStatusRungSQL(column string, withTerminal bool) string {
+	statuses := openLeadStatuses
+	if withTerminal {
+		statuses = append(slices.Clone(openLeadStatuses), LeadStatusPromoted, LeadStatusDisqualified)
+	}
+	var b strings.Builder
+	b.WriteString("(CASE " + column)
+	for rung, status := range statuses {
+		fmt.Fprintf(&b, " WHEN '%s' THEN %d", status, rung)
+	}
+	b.WriteString(" ELSE -1 END)")
+	return b.String()
+}
 
 // OpenLeadStatuses answers the statuses a lead may be written with, in ladder
 // order: the ones a file or an edit may place by hand.

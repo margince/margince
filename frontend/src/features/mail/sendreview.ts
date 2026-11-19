@@ -1,3 +1,4 @@
+import type { components } from "../../api/schema";
 // What a rep can do about a send the engine refused.
 //
 // A refusal used to be a dead end wearing an explanation: "a recipient has not
@@ -85,7 +86,11 @@ function refusalsIn(raw: unknown): readonly RefusedRecipient[] {
     if (typeof address !== "string" || typeof reasonCode !== "string") {
       continue;
     }
+    const footerFindings = parseFooterFindings(
+      Reflect.get(entry, "footer_findings"),
+    );
     out.push({
+      ...(footerFindings.length ? { footerFindings } : {}),
       address,
       reasonCode,
       category: typeof category === "string" ? category : undefined,
@@ -117,4 +122,26 @@ function actionsIn(raw: unknown): readonly SendReviewAction[] {
     }
   }
   return known;
+}
+
+function parseFooterFindings(
+  raw: unknown,
+): components["schemas"]["FooterFinding"][] {
+  if (!Array.isArray(raw)) return [];
+  return raw.flatMap((value: unknown) => {
+    if (typeof value !== "object" || value === null) return [];
+    const kind: unknown = Reflect.get(value, "kind");
+    const language: unknown = Reflect.get(value, "language");
+    const means: unknown = Reflect.get(value, "missing_means");
+    if (typeof kind !== "string") return [];
+    return [
+      {
+        kind,
+        language: typeof language === "string" ? language : "",
+        missing_means: Array.isArray(means)
+          ? means.filter((item): item is string => typeof item === "string")
+          : [],
+      },
+    ];
+  });
 }

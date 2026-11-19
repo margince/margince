@@ -1,0 +1,22 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package principal
+
+import "context"
+
+type unattendedKey struct{}
+
+// WithUnattended marks work with no human present to authorise its sends.
+func WithUnattended(ctx context.Context) context.Context {
+	return context.WithValue(ctx, unattendedKey{}, struct{}{})
+}
+
+// Unattended reports work nobody is watching. A run ID marks a scheduled run;
+// the flag marks the runner even when no run row was written.
+func Unattended(ctx context.Context) bool {
+	if _, scheduled := AgentRunID(ctx); scheduled {
+		return true
+	}
+	return ctx.Value(unattendedKey{}) != nil
+}

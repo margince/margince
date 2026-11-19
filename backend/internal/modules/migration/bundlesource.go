@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"maps"
 	"slices"
+	"strconv"
 
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 )
@@ -39,10 +40,12 @@ func openZipEntry(ctx context.Context, blobs blobstore.Store, part ZipPart) (io.
 		slog.WarnContext(ctx, "closing the import source", "key", part.Key, "err", cerr)
 	}
 	if err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrSourceUnreadable, err)
+		return nil, unreadable(err)
 	}
 	if int64(len(body)) > part.Budget {
-		return nil, fmt.Errorf("%w: the stored ZIP is larger than the upload limit", ErrBundleRefused)
+		return nil, refuseFile(BundleZipTooLarge,
+			fmt.Sprintf("The ZIP is larger than the %d MB an upload may hold. Split it into smaller ZIPs.", part.Budget>>20),
+			map[RefusalParam]string{ParamMaxMB: strconv.FormatInt(part.Budget>>20, 10)})
 	}
 	bundle, err := OpenBundle(body, part.Budget)
 	if err != nil {
@@ -66,10 +69,11 @@ func NewBundleSource(parts ...*CSVSource) (*BundleSource, error) {
 	byObject := map[string]*CSVSource{}
 	for _, p := range parts {
 		if !slices.Contains(ImportOrder, p.object) {
-			return nil, fmt.Errorf("%w: %q is not an importable type", ErrBundleRefused, p.object)
+			return nil, refuseFile(BundleTypeNotImportable, fmt.Sprintf("“%s” is not a type an import lands.", p.object),
+				map[RefusalParam]string{ParamObject: p.object})
 		}
-		if _, taken := byObject[p.object]; taken {
-			return nil, fmt.Errorf("%w: two files are both %s", ErrBundleRefused, p.object)
+		if first, taken := byObject[p.object]; taken {
+			return nil, twoFilesOneType(first.zip.Entry, p.zip.Entry, p.object)
 		}
 		byObject[p.object] = p
 	}

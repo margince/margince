@@ -25,11 +25,13 @@ variable "REPO" {
   default = "registry.test.margince.com/margince"
 }
 
-# The release this set is built from — the version the release workflow drafted
-# (`1970.<build>`, the constellation YYYY.edition scheme). "dev" is the local
-# default and is deliberately the same string internal/shared/buildinfo calls
-# Unknown: a local build has no release, and a comparison against one would be
-# a difference that means nothing.
+# The release this set is built from: the x.y.z version, never the git tag.
+# Both release lanes pass the tag without its v (1.0.0 for v1.0.0), and that
+# value becomes the build argument and the OCI version label. release.yml
+# pushes by digest and drops the image tag.
+# "dev" is the local default and is deliberately the same string
+# internal/shared/buildinfo calls Unknown: a local build has no release, and a
+# comparison against one would be a difference that means nothing.
 variable "VERSION" {
   default = "dev"
 }

@@ -31,6 +31,7 @@ import {
   previewedAddresses,
 } from "../../testing/sendpermission.testkit";
 import { ComposeModal } from "./compose";
+import { pressSend } from "./compose.testkit";
 import { useSavedDraft } from "./composesaveddraft";
 
 // The rep's own unsent message, kept by the server: what the composer reads
@@ -584,7 +585,7 @@ describe("a saved draft", () => {
       "Follow-up they requested",
     );
 
-    await user.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend(user);
 
     await waitFor(() => expect(screen.getAllByRole("alert")).toHaveLength(2));
     const saveLine = screen.getByText(/The draft was not saved/);
@@ -607,7 +608,7 @@ describe("a saved draft", () => {
       "Follow-up they requested",
     );
 
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());
     expect(calls(sent, "POST /emails")[0]?.body).toMatchObject({

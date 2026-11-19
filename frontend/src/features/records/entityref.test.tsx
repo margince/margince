@@ -106,6 +106,20 @@ describe("EntityRef", () => {
     expect(window.location.hash).toBe("#/companies/o-1");
   });
 
+  // A record id is no reader's word for the record, so a hover never shows it.
+  it("names a resolved reference without the record id as its tooltip", () => {
+    render(
+      <>
+        <EntityRef kind="company" id="o-1" name="Brandt GmbH" />
+        <EntityRef kind="contact" id="p-1" name="Anna Weber" asText />
+        <EntityRef kind="user" id="u-1" name="Mai Trần" />
+      </>,
+    );
+    for (const name of ["Brandt GmbH", "Anna Weber", "Mai Trần"]) {
+      expect(screen.getByText(name).getAttribute("title")).toBeNull();
+    }
+  });
+
   it("resolves a contact to contacts/{id} and a deal to deals/{id}", async () => {
     vi.stubGlobal(
       "fetch",

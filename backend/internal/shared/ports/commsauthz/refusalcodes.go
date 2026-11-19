@@ -7,6 +7,7 @@ package commsauthz
 // Held by: TestEveryReasonIsARefusalOrAnAllow (refusalcodes_test.go)
 func RefusalCodes() []string {
 	return []string{
+		ReasonFooterIncomplete,
 		ReasonObjection,
 		ReasonRestricted,
 		ReasonSubjectRequest,

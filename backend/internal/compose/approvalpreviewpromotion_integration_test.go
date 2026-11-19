@@ -6,6 +6,7 @@
 package compose
 
 import (
+	"context"
 	"fmt"
 	"maps"
 	"slices"
@@ -13,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
@@ -26,10 +28,7 @@ func TestPromotionApprovalNamesTheContactAndOptionalDeal(t *testing.T) {
 	for _, rest := range []bool{false, true} {
 		t.Run(fmt.Sprintf("rest=%t", rest), func(t *testing.T) {
 			e := integration.Setup(t)
-			perms := integration.AdminPerms
-			perms.Objects = maps.Clone(perms.Objects)
-			perms.Objects["custom_field"] = principal.ObjectGrant{Read: true}
-			ctx := e.As(e.AdminUser, nil, perms)
+			ctx := promotionReviewer(e)
 			dealStore := deals.NewStore(e.DB(), DealsInstallation())
 			if err := dealStore.SeedDefaults(ctx); err != nil {
 				t.Fatal(err)
@@ -42,19 +41,7 @@ func TestPromotionApprovalNamesTheContactAndOptionalDeal(t *testing.T) {
 			if rest {
 				payload = `{"operation":"PromoteLead","body":{"trigger":"human_qualify","evidence":{"note":"Buyer confirmed interest"},"deal":{"amount_minor":250000,"currency":"USD"}}}`
 			}
-			raw, hash, err := diffhash.Canonical([]byte(payload))
-			if err != nil {
-				t.Fatal(err)
-			}
-			svc := NewApprovalsService(e.DB())
-			id, err := svc.Stage(ctx, approvals.StageInput{Kind: "promote_lead", TargetType: "lead", TargetID: ids.UUID(lead.Id), ProposedChange: raw, DiffHash: hash})
-			if err != nil {
-				t.Fatal(err)
-			}
-			proposal, err := svc.GetWire(ctx, id)
-			if err != nil {
-				t.Fatal(err)
-			}
+			proposal := stagedPromotion(ctx, t, e, ids.UUID(lead.Id), []byte(payload))
 			preview := proposal.Preview
 			if preview == nil || preview.State != "ready" || preview.Version != 2 || preview.Details == nil || preview.Effects == nil {
 				t.Fatalf("promotion preview: %+v", preview)
@@ -90,24 +77,17 @@ func TestPromotionApprovalNamesTheContactAndOptionalDeal(t *testing.T) {
 	}
 }
 
-// The preview names the industry a promotion writes to the linked company. It
-// names none where the company already holds one, as the promotion writes none.
+// The preview names the industry a promotion writes to the linked or created
+// company. It names none where the company already holds one, as the promotion writes none.
 func TestPromotionApprovalNamesTheIndustryItCarriesToTheCompany(t *testing.T) {
 	for _, tc := range []struct {
-		name string
-		held *string
-	}{{"a company with no industry", nil}, {"a company with one", new("education")}} {
+		name    string
+		held    *string
+		created bool
+	}{{"a company with no industry", nil, false}, {"a company with one", new("education"), false}, {"a company the promotion creates", nil, true}} {
 		t.Run(tc.name, func(t *testing.T) {
 			e := integration.Setup(t)
-			perms := integration.AdminPerms
-			perms.Objects = maps.Clone(perms.Objects)
-			perms.Objects["custom_field"] = principal.ObjectGrant{Read: true}
-			ctx := e.As(e.AdminUser, nil, perms)
-			company, err := e.Contacts.CreateCompany(ctx, contacts.CreateCompanyInput{DisplayName: "Harbor Clinic", Industry: tc.held, Source: "manual"})
-			if err != nil {
-				t.Fatal(err)
-			}
-			companyID := ids.From[ids.CompanyKind](ids.UUID(company.Id))
+			ctx := promotionReviewer(e)
 			lead, _, err := e.Contacts.CreateLead(ctx, contacts.CreateLeadInput{
 				FullName: new("Ines Buyer"), Email: new("ines@harbor.test"), CompanyName: new("Harbor Clinic"),
 				Industry: new("Healthcare"), Source: "manual",
@@ -116,22 +96,18 @@ func TestPromotionApprovalNamesTheIndustryItCarriesToTheCompany(t *testing.T) {
 				t.Fatal(err)
 			}
 			leadID := ids.From[ids.LeadKind](ids.UUID(lead.Id))
-			if _, err := e.Contacts.LinkLeadCompany(ctx, leadID, companyID); err != nil {
-				t.Fatal(err)
+			var companyID ids.CompanyID
+			if !tc.created {
+				company, err := e.Contacts.CreateCompany(ctx, contacts.CreateCompanyInput{DisplayName: "Harbor Clinic", Industry: tc.held, Source: "manual"})
+				if err != nil {
+					t.Fatal(err)
+				}
+				companyID = ids.From[ids.CompanyKind](ids.UUID(company.Id))
+				if _, err := e.Contacts.LinkLeadCompany(ctx, leadID, companyID); err != nil {
+					t.Fatal(err)
+				}
 			}
-			raw, hash, err := diffhash.Canonical([]byte(fmt.Sprintf(`{"lead_id":%q,"trigger":"human_qualify"}`, lead.Id)))
-			if err != nil {
-				t.Fatal(err)
-			}
-			svc := NewApprovalsService(e.DB())
-			id, err := svc.Stage(ctx, approvals.StageInput{Kind: "promote_lead", TargetType: "lead", TargetID: leadID.UUID, ProposedChange: raw, DiffHash: hash})
-			if err != nil {
-				t.Fatal(err)
-			}
-			proposal, err := svc.GetWire(ctx, id)
-			if err != nil {
-				t.Fatal(err)
-			}
+			proposal := stagedPromotion(ctx, t, e, leadID.UUID, fmt.Appendf(nil, `{"lead_id":%q,"trigger":"human_qualify"}`, lead.Id))
 			preview := proposal.Preview
 			if preview == nil || preview.State != "ready" || preview.Details == nil || preview.Effects == nil {
 				t.Fatalf("promotion preview: %+v", preview)
@@ -150,8 +126,15 @@ func TestPromotionApprovalNamesTheIndustryItCarriesToTheCompany(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if _, err := e.Contacts.QualifyLead(ctx, leadID, input); err != nil {
+			out, err := e.Contacts.QualifyLead(ctx, leadID, input)
+			if err != nil {
 				t.Fatal(err)
+			}
+			if tc.created {
+				if out.Contact.Employer == nil {
+					t.Fatal("the promotion created no employer for the contact")
+				}
+				companyID = ids.From[ids.CompanyKind](ids.UUID(out.Contact.Employer.CompanyId))
 			}
 			after, err := e.Contacts.GetCompany(ctx, companyID, storekit.LiveOnly)
 			if err != nil {
@@ -173,10 +156,7 @@ func TestPromotionApprovalPreviewShowsTheEvidenceThePromotionWillRecord(t *testi
 	}{{"a meeting the lead held", "meeting_held", true}, {"a reply the lead never sent", "inbound_reply", false}} {
 		t.Run(tc.name, func(t *testing.T) {
 			e := integration.Setup(t)
-			perms := integration.AdminPerms
-			perms.Objects = maps.Clone(perms.Objects)
-			perms.Objects["custom_field"] = principal.ObjectGrant{Read: true}
-			ctx := e.As(e.AdminUser, nil, perms)
+			ctx := promotionReviewer(e)
 			lead, _, err := e.Contacts.CreateLead(ctx, contacts.CreateLeadInput{FullName: new("Mona Met"), Email: new("mona@example.test"), Source: "manual"})
 			if err != nil {
 				t.Fatal(err)
@@ -185,19 +165,7 @@ func TestPromotionApprovalPreviewShowsTheEvidenceThePromotionWillRecord(t *testi
 			e.WsExec(t, `INSERT INTO activity (id, kind, subject, meeting_status, occurred_at, source, captured_by, counterparty_email)
 			             VALUES ($1, 'meeting', 'Intro call', 'held', now(), 'manual', 'human:x', 'mona@example.test')`, meeting)
 			e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, lead_id) VALUES ($1, 'lead', $2)`, meeting, ids.UUID(lead.Id))
-			raw, hash, err := diffhash.Canonical(fmt.Appendf(nil, `{"lead_id":%q,"trigger":%q}`, lead.Id, tc.trigger))
-			if err != nil {
-				t.Fatal(err)
-			}
-			svc := NewApprovalsService(e.DB())
-			id, err := svc.Stage(ctx, approvals.StageInput{Kind: "promote_lead", TargetType: "lead", TargetID: ids.UUID(lead.Id), ProposedChange: raw, DiffHash: hash})
-			if err != nil {
-				t.Fatal(err)
-			}
-			proposal, err := svc.GetWire(ctx, id)
-			if err != nil {
-				t.Fatal(err)
-			}
+			proposal := stagedPromotion(ctx, t, e, ids.UUID(lead.Id), fmt.Appendf(nil, `{"lead_id":%q,"trigger":%q}`, lead.Id, tc.trigger))
 			preview := proposal.Preview
 			if preview == nil || (preview.State == previewReadyState) != tc.wantReady {
 				t.Fatalf("preview of a %s promotion: %+v, want ready=%t", tc.trigger, preview, tc.wantReady)
@@ -220,10 +188,7 @@ func TestPromotionApprovalPreviewShowsTheEvidenceThePromotionWillRecord(t *testi
 // It is named by its date, and its subject stays withheld.
 func TestPromotionApprovalPreviewNamesWithheldEvidenceWithoutItsSubject(t *testing.T) {
 	e := integration.Setup(t)
-	perms := integration.AdminPerms
-	perms.Objects = maps.Clone(perms.Objects)
-	perms.Objects["custom_field"] = principal.ObjectGrant{Read: true}
-	ctx := e.As(e.AdminUser, nil, perms)
+	ctx := promotionReviewer(e)
 	lead, _, err := e.Contacts.CreateLead(ctx, contacts.CreateLeadInput{FullName: new("Nora Held"), Email: new("nora@example.test"), Source: "manual"})
 	if err != nil {
 		t.Fatal(err)
@@ -232,19 +197,7 @@ func TestPromotionApprovalPreviewNamesWithheldEvidenceWithoutItsSubject(t *testi
 	e.WsExec(t, `INSERT INTO activity (id, kind, subject, meeting_status, occurred_at, source, captured_by, counterparty_email, audience)
 	             VALUES ($1, 'meeting', 'Board compensation', 'held', now(), 'manual', 'human:someone-else', 'nora@example.test', 'participants')`, meeting)
 	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, lead_id) VALUES ($1, 'lead', $2)`, meeting, ids.UUID(lead.Id))
-	raw, hash, err := diffhash.Canonical(fmt.Appendf(nil, `{"lead_id":%q,"trigger":"meeting_held"}`, lead.Id))
-	if err != nil {
-		t.Fatal(err)
-	}
-	svc := NewApprovalsService(e.DB())
-	id, err := svc.Stage(ctx, approvals.StageInput{Kind: "promote_lead", TargetType: "lead", TargetID: ids.UUID(lead.Id), ProposedChange: raw, DiffHash: hash})
-	if err != nil {
-		t.Fatal(err)
-	}
-	proposal, err := svc.GetWire(ctx, id)
-	if err != nil {
-		t.Fatal(err)
-	}
+	proposal := stagedPromotion(ctx, t, e, ids.UUID(lead.Id), fmt.Appendf(nil, `{"lead_id":%q,"trigger":"meeting_held"}`, lead.Id))
 	preview := proposal.Preview
 	if preview == nil || preview.State != previewReadyState || preview.Details == nil {
 		t.Fatalf("preview of a promotion on withheld evidence: %+v, want ready", preview)
@@ -261,4 +214,33 @@ func TestPromotionApprovalPreviewNamesWithheldEvidenceWithoutItsSubject(t *testi
 	if !named {
 		t.Errorf("the preview does not name the withheld meeting by its date: %+v", *preview.Details)
 	}
+}
+
+// promotionReviewer acts as an admin who may also read custom fields, which
+// the promotion preview reads for its field details.
+func promotionReviewer(e *integration.Env) context.Context {
+	perms := integration.AdminPerms
+	perms.Objects = maps.Clone(perms.Objects)
+	perms.Objects["custom_field"] = principal.ObjectGrant{Read: true}
+	return e.As(e.AdminUser, nil, perms)
+}
+
+// stagedPromotion stages a lead promotion through the composed approvals
+// service and reads it back the way the reviewer sees it.
+func stagedPromotion(ctx context.Context, t *testing.T, e *integration.Env, lead ids.UUID, payload []byte) crmcontracts.Approval {
+	t.Helper()
+	raw, hash, err := diffhash.Canonical(payload)
+	if err != nil {
+		t.Fatal(err)
+	}
+	svc := NewApprovalsService(e.DB())
+	id, err := svc.Stage(ctx, approvals.StageInput{Kind: "promote_lead", TargetType: "lead", TargetID: lead, ProposedChange: raw, DiffHash: hash})
+	if err != nil {
+		t.Fatal(err)
+	}
+	proposal, err := svc.GetWire(ctx, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return proposal
 }

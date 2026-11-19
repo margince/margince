@@ -22,6 +22,7 @@ type localOpts struct {
 	monthlyBudget   int64
 	fakeClient      *FakeClient
 	capturePayloads bool
+	captureWhole    bool
 	harness         harnessClient
 	fakeDecider     decision.Client
 	everyCertified  bool
@@ -84,14 +85,11 @@ func WithHarnessClient(provider string, c model.Client) LocalOption {
 	return func(o *localOpts) { o.harness = harnessClient{provider: provider, client: c} }
 }
 
-// WithPayloadCapture turns on the Layer-3 content capture (the same
-// post-SecretStripper request+response the production router writes to
-// ai_call_payload) on this DB-less router, so a caller that installed a
-// CallRecorder sees each terminal Call carry its Payload. Off by default:
-// the debug/dev paths only pay the marshal+strip cost when a caller (the
-// aicert lane's trace dump) actually wants the bodies.
+// WithPayloadCapture makes each recorded Call carry its post-stripper request
+// and response, for the aicert trace. It keeps the whole text: a trace audits a
+// grade, and the ai_call_payload row caps would cut a long answer.
 func WithPayloadCapture() LocalOption {
-	return func(o *localOpts) { o.capturePayloads = true }
+	return func(o *localOpts) { o.capturePayloads, o.captureWhole = true, true }
 }
 
 // WithFakeDecider stands client in for the decisions lane's own, so a test or
@@ -194,6 +192,7 @@ func NewLocalRouter(cfg RoutingConfig, opts ...LocalOption) (*Router, error) {
 	// WithCallStore opts a caller into tracing.
 	router := assembleRouter(clients, embedder, cfg.Profile, &memoryMeter{}, StaticBudget(o.monthlyBudget), o.callStore, meta, o.capturePayloads, nil)
 	router.cacheOff = o.cacheOff
+	router.captureWhole = o.captureWhole
 	if o.everyCertified {
 		router.decisionCertified = func(DecisionCertKey) bool { return true }
 	}

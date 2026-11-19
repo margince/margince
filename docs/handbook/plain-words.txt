@@ -417,7 +417,6 @@ except
 exception
 exchange
 exclude
-execute
 exhausted
 exist
 expect
@@ -1305,7 +1304,6 @@ verdict
 verification
 version
 versus
-via
 video
 view
 visibility

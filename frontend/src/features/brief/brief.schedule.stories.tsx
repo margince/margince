@@ -9,6 +9,7 @@ import {
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
+import { expectTextFits } from "../../testing/unbrokentext";
 import type { WorklistItem } from "../worklist/worklist.queries";
 import { SchedulePanel } from "./brief.schedule";
 
@@ -292,6 +293,42 @@ export const LongTitleAndAttendees: Story = {
       />
     </>,
   ),
+};
+
+const LONG_NAME = "Maximilian Konstantinopoulou-Wertheimer";
+
+export const LongAttendeeNamePhone: Story = {
+  render: panel(
+    <SchedulePanel
+      day={readingsDay({}, [
+        {
+          ...withBrief(meetingRow("m1", false, "2026-08-21T07:30:00Z")),
+          room: {
+            participants: [
+              { contact_id: "c-1", full_name: LONG_NAME },
+              { contact_id: "c-2", full_name: "Lena Hartmann" },
+            ],
+          },
+        },
+      ])}
+      state="ready"
+      now={NOW}
+    />,
+  ),
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const panelBox = canvasElement.querySelector(".rail-schedule");
+    if (!panelBox) throw new Error("no schedule panel");
+    const chip = (await canvas.findByText(LONG_NAME)).closest(".chip");
+    const short = canvas.getByText("Lena Hartmann").closest(".chip");
+    if (!chip || !short) throw new Error("an attendee is not a chip");
+    await expectTextFits(chip, panelBox.getBoundingClientRect());
+    await expect(chip.getBoundingClientRect().height).toBeGreaterThan(
+      short.getBoundingClientRect().height,
+    );
+  },
 };
 
 // No calendar connected: the panel says its meetings are Margince's own, leads

@@ -149,7 +149,7 @@ func TestAnUnnamedRecordDoesNotBecomeAZeroID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("thawing: %v", err)
 	}
-	if out.Evidence != (commsauthz.Evidence{}) {
+	if !reflect.DeepEqual(out.Evidence, commsauthz.Evidence{}) {
 		t.Errorf("evidence = %+v, want zero after a round trip that named nothing", out.Evidence)
 	}
 }

@@ -25,6 +25,7 @@ import { CaptureHealthBanner } from "./capturehealthbanner";
 import { ConnectivityBanner } from "./connectivitybanner";
 import { EconomyBanner } from "./economybanner";
 import { EmbedReindexBanner } from "./embedreindexbanner";
+import { InstallHint } from "./installhint";
 import { LicenseBanner } from "./licensebanner";
 import { type NavCounts, RAIL_LESS_SCREENS } from "./nav";
 import { NavWalkProvider, useNavWalk } from "./navlevel";
@@ -246,7 +247,7 @@ export function Shell({
             {/* Mounted from the start: it holds the outage watcher, and a
                 known offline state shows in the first paint. */}
             <ConnectivityBanner />
-            <ShellBanners />
+            <ShellBanners scroller={scroller} />
             {/* The import's gauge, floating bottom-centre of this column for as
             long as mail is arriving. Inside `.main` rather than beside the
             edge below, because it is positioned against the content column
@@ -283,7 +284,9 @@ export { navigate } from "../lib/router";
 export { useRoute };
 
 // Each banner makes its own read; they wait for the first screen's day.
-function ShellBanners() {
+function ShellBanners({
+  scroller,
+}: Readonly<{ scroller: RefObject<HTMLElement | null> }>) {
   if (!useFirstScreenSettled()) return null;
   return (
     <>
@@ -291,6 +294,7 @@ function ShellBanners() {
       <EconomyBanner />
       <EmbedReindexBanner />
       <LicenseBanner />
+      <InstallHint scroller={scroller} />
     </>
   );
 }

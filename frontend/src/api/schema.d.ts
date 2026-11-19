@@ -17751,9 +17751,13 @@ export interface paths {
          *     instruction rather than under the engine's permission. A subject asking later why they
          *     received it is shown the refusal AND the decision, never a grant nobody made.
          *
-         *     THE DECISION IS THE USER'S. A user's agent may carry it out, and asks that user first. The
-         *     row names that user as the one who took it on, and names the agent that acted for them. A
-         *     connector may not. It also needs the `communication_exception` object at `create`: directing
+         *     A SUBJECT'S OWN STOP IS NEVER PASSED. A review that holds an objection, a withdrawal, a
+         *     restriction or a request to stop is refused with 403, admin included, even beside a refusal
+         *     a decision could pass.
+         *
+         *     THE DECISION IS THE USER'S, taken in their own session. The row names them as the one who
+         *     took it on. An agent or a connector is refused: it may read the review and send its user
+         *     there. It also needs the `communication_exception` object at `create`: directing
          *     a send is its own authority, and a seat that may edit a contact has not thereby been given
          *     the right to act against the engine's answer about them.
          *
@@ -25265,7 +25269,19 @@ export interface paths {
          *
          *     The file's rows are counted first. A file with more rows than one test
          *     run reads is refused 422 `too_many_rows`, and no run and no stored file
-         *     are left behind.
+         *     are left behind. Its `max` is the limit and `params.rows` the file's count.
+         *
+         *     A file that cannot be read is refused 422 on `file`, with `params` naming
+         *     why. `not_utf8` names nothing. `unreadable` names the `line` when the
+         *     reader knows it, with `reason` `field_count` or `quote`.
+         *     `header_unusable` has `reason` `no_header`, `blank_name` (with
+         *     `position`) or `repeated_name` (with `name`). `bundle_refused` has
+         *     `reason` `not_a_zip`, `empty`, `files_too_large` or `zip_too_large`
+         *     (with `max_mb`), `too_many_files` (with `files` and `max_files`),
+         *     `password_protected`, `file_damaged` or `file_missing` (with `file`),
+         *     `two_files_one_type` (with `file`, `other_file` and `object`) or
+         *     `type_not_importable` (with `object`). A refusal of one file of a ZIP
+         *     also names it in `file`.
          *
          *     A cell an export quoted against formula evaluation (a quote before `=`,
          *     `+`, `-`, `@`, a tab or a carriage return) is read without that one
@@ -25311,6 +25327,13 @@ export interface paths {
          *     and moves the run to `awaiting_approval` carrying the report
          *     `getImportRunReport` reads, or back to `pending` with the reason in
          *     `error` when the test stopped on the file or ran past its time.
+         *
+         *     A mapping the object cannot satisfy is refused 422 with `params`:
+         *     `duplicate_target` on `mapping` names the `target` and the two columns
+         *     (`column`, `other_column`); `unmappable` on `source_key` names the
+         *     `object` and its key `target`, and `ref_target` when a column mapped to
+         *     `ref` would also identify each row. `invalid` on `source_name` carries
+         *     `max`. A file refusal reads as it does on `uploadImportSource`.
          *
          *     An upload has one run. This call writes the mapping onto the draft the
          *     upload opened and tests it, so a second call on one `source_ref`
@@ -32457,6 +32480,18 @@ export interface components {
             /** @description Rows the upload holds: the file's for a single CSV, the sum of `parts[].row_count` for a ZIP. */
             row_count: number;
             object?: components["schemas"]["ImportObject"];
+            /**
+             * @description How `object` was chosen for a CSV uploaded without one. The header is
+             *     matched as `suggested_mapping` matches it, once for each type, and
+             *     only a column that exactly one type's suggestion maps counts.
+             *     `columns`: one type's suggestion maps more such columns than any
+             *     other's. `none`: no type maps strictly the most, so `object` is
+             *     `lead` and a screen asks the reader to choose. Absent when the upload
+             *     named its type, and for a ZIP. The run's `profile` keeps it until a
+             *     draft save names `object`, which is the reader's own choice.
+             * @enum {string}
+             */
+            object_chosen_by?: "columns" | "none";
             /** @description The uploaded file's name, for display. The client echoes it to `createImportRun`. */
             file_name?: string;
             /**
@@ -32693,9 +32728,12 @@ export interface components {
          */
         ImportRunLinks: {
             /**
-             * @description Links the file asks for. A dry run reports this and nothing else,
-             *     because resolving an endpoint is a read the dry run has not done —
-             *     it says how many rows named an employer, not how many will find one.
+             * @description Links the file asks for on the rows the run lands. A link whose own
+             *     row is skipped is not counted, because that row is reported as a
+             *     skip; `unresolved` still lists it. A dry run reports this and nothing
+             *     else, because resolving an endpoint is a read the dry run has not
+             *     done — it says how many landing rows named an employer, not how many
+             *     will find one.
              */
             offered: number;
             /** @description Links actually written. Zero on a dry run, which writes nothing. */
@@ -33260,8 +33298,12 @@ export interface components {
             instance?: string;
             /**
              * @description Structured machine context — e.g. `existing_id` on 409 duplicate, or an
-             *     `errors` array of `{ field, code, message }` on 422 validation. A `too_long`
-             *     entry also carries `max`, the limit in characters.
+             *     `errors` array of `{ field, code, message }` on 422 validation. An entry that
+             *     refuses at a limit also carries `max`: the limit in characters for `too_long`,
+             *     in rows for `too_many_rows`, in characters for `source_name`. An entry whose
+             *     code names other values carries them in `params`, an object of text values by
+             *     name, so a screen can word the code in the reader's language; `message` stays
+             *     the English sentence.
              *
              *     A 429 that an agent's limit answers carries `limit`: `kind` names it (`calls`,
              *     `writes` or `egress` for a window allowance, `pacing` for the per-minute limit),
@@ -34194,8 +34236,8 @@ export interface components {
              *     stays in `superseded_value`, and a field a human corrected stands.
              *     `needs_review` — a resemblance, written nowhere; open the candidate and decide.
              *     `proposed` — a card read from a photo that nobody matched, waiting on an approval.
-             *     `skipped` — the card states no name, carries a sending system's address, or matches a
-             *     contact the caller may not write; `reason` says which.
+             *     `skipped` — the card states no name or one over 120 characters, carries a sending
+             *     system's address, or matches a contact the caller may not write; `reason` says which.
              * @enum {string}
              */
             outcome: "created" | "updated" | "needs_review" | "proposed" | "skipped";
@@ -34204,7 +34246,10 @@ export interface components {
              * @description The contact created or updated, or — for `needs_review` — the candidate the card resembles.
              */
             contact_id?: string | null;
-            /** @description Why a card was skipped, or a warning about an imported contact without a channel. */
+            /**
+             * @description Why a card was skipped. For a written card, a warning: the contact has no channel, or the
+             *     card's title was cut to the length the field holds.
+             */
             reason?: string | null;
             /**
              * Format: uuid
@@ -43832,6 +43877,20 @@ export interface components {
             /** @description True when the sender's voice could not even be looked up, so this draft may be missing a voice its sender built. Distinct from voice_profile_version being null, which also covers the ordinary no-profile case. A client should say so: the sender cannot detect a missing voice by reading the text. Absent reads as false. */
             readonly voice_degraded?: boolean;
             /**
+             * @description What the drafting instruction says this message is, for the composer to send
+             *     with it. `requested_followup` when the instruction asks to move an appointment,
+             *     in English, German or Vietnamese. Absent when the instruction says nothing the
+             *     send check can use, which leaves the reason to the thread or the sender. The
+             *     send check still needs its own evidence, here an agreed appointment with the
+             *     recipient.
+             */
+            readonly communication_context?: components["schemas"]["CommunicationContext"];
+            /**
+             * @description The record the drafted reason rests on: the meeting itself, when the draft was
+             *     written from it. Absent otherwise.
+             */
+            readonly evidence?: components["schemas"]["CommunicationEvidence"];
+            /**
              * @description The language this draft is written in: the `language` the request named, else the one the server resolved from the correspondence. The model draft and the deterministic fallback report it alike. A client shows it as the composer's current choice and names it again on a rewrite that must keep it.
              * @enum {string}
              */
@@ -43889,6 +43948,12 @@ export interface components {
          *     deterministic floor is a real outcome here rather than an error.
          */
         CompanyEmailDraft: {
+            /**
+             * @description What the drafting instruction says this message is, for the composer to send with it:
+             *     `requested_followup` when it asks to move an appointment. Absent otherwise. The send
+             *     check still needs an agreed appointment with the recipient.
+             */
+            readonly communication_context?: components["schemas"]["CommunicationContext"];
             subject: string;
             /** @description Plain text, end to end. There is no rich-text storage format, no paste sanitiser and no HTML+text send pair, so a formatted draft would be a wire change rather than a toolbar. */
             body: string;
@@ -44045,11 +44110,9 @@ export interface components {
              *     they were addressed — and they are absent from the headers the recipients
              *     see, which is the whole of what "blind" means.
              *
-             *     A message with a tokenized unsubscribe link may still have only ONE
-             *     addressee in total: that token is a bearer credential over one contact's
-             *     consent record, so a bcc'd copy of a marketing send is refused 422
-             *     `shared_unsubscribe_token` rather than handing a stranger somebody else's
-             *     preference link.
+             *     Private unsubscribe links are omitted for multiple recipients, preserving
+             *     To, Cc and Bcc visibility. The sender must confirm that omission with
+             *     a recorded one-message reason before delivery.
              */
             bcc?: string[];
             /**
@@ -44581,8 +44644,18 @@ export interface components {
             /** Format: uuid */
             entity_id: string;
         };
+        FooterFinding: {
+            /** @description Missing disclosure kind or unavailable private link. Unknown kinds remain visible as an unspecified footer omission. */
+            kind: string;
+            /** @description Required language, or empty when no language is missing. */
+            language: string;
+            /** @description Missing contact methods, such as email, phone or web. */
+            missing_means: string[];
+        };
         /** @description One recipient's answer. It describes the MESSAGE, never the contact's file. */
         SendAuthorizationPreviewRecipient: {
+            /** @description Server-derived missing footer disclosures or unavailable private links shown before the sender confirms this message. Contains no credentials. */
+            footer_findings?: components["schemas"]["FooterFinding"][];
             /** Format: email */
             address: string;
             /**
@@ -44663,24 +44736,22 @@ export interface components {
              */
             would_refuse?: boolean;
             /**
-             * @description Whether a contact may lift this refusal by recording why they are writing.
-             *
-             *     It needs BOTH halves of a question the engine keeps on two axes, which is why it
-             *     is answered here rather than derived. `decided_by` says whose decision it is, and
-             *     an absolute reason says no rollout mode softens it — and the two disagree: a hard
-             *     bounce, a rolling frequency cap, an unresolvable recipient and an unconfirmed
-             *     opt-in are all the engine's own reading (`machine`) AND absolute. A surface that
-             *     offered an override on those would render a button that cannot achieve what it
-             *     promises, and the rep would type a justification the staging gate then ignores.
-             *     A recorded reason lifts one category, so a refusal that resolved to no single
-             *     category, such as `unknown_purpose`, answers false.
+             * @description Whether the sender may send this one message past the refusal by recording a
+             *     reason. True for every policy refusal except the subject's own stops: the refusal
+             *     stays on the record, and the reason is kept with the message. False for a stop
+             *     (`decided_by` is `subject`), which nobody sends past, admin included. False for a
+             *     hard bounce, because no decision makes a dead address accept mail, and for a
+             *     recipient that resolves to nobody or to two contacts, whose stops were never read.
+             *     Only a user in their own session sends past it, never an agent, and only with the
+             *     `communication_exception` grant. The refused send's review offers `direct_send` only
+             *     to such a caller.
              */
             can_be_overruled?: boolean;
             /**
              * @description Whose decision this answer is, which is what says whether anybody may overrule
              *     it. `machine` is the engine reading an incomplete record and a rep who knows
              *     better may say so. `subject` is the contact's own act — an objection or a
-             *     withdrawal — and nobody in the installation lifts it, admin included.
+             *     withdrawal. Nobody in the installation lifts it or sends past it, admin included.
              *
              *     It is sent rather than derived because the rule lives in Go
              *     (`commsauthz.LevelForReason`), and a surface that mapped reason codes to
@@ -44744,11 +44815,9 @@ export interface components {
              *     they were addressed — and they are absent from the headers the recipients
              *     see, which is the whole of what "blind" means.
              *
-             *     A message with a tokenized unsubscribe link may still have only ONE
-             *     addressee in total: that token is a bearer credential over one contact's
-             *     consent record, so a bcc'd copy of a marketing send is refused 422
-             *     `shared_unsubscribe_token` rather than handing a stranger somebody else's
-             *     preference link.
+             *     Private unsubscribe links are omitted for multiple recipients, preserving
+             *     To, Cc and Bcc visibility. The sender must confirm that omission with
+             *     a recorded one-message reason before delivery.
              */
             bcc?: string[];
             /**
@@ -51657,6 +51726,8 @@ export interface components {
             readonly works_at?: components["schemas"]["SearchHitEmployer"] | null;
             /** @description For a `company` hit only: the company's logo, the same URL its record carries as `Company.logo_url`. Absent when it has none, and on every other hit type. */
             readonly logo_url?: string | null;
+            /** @description Where a contact, company, deal, lead or project hit stands, read with the page under THIS caller's grants and field masks, so a result list can say it without opening each record. Absent on every other hit type. */
+            readonly standing?: components["schemas"]["SearchHitStanding"];
             /** @description For a `company` hit only: whether the account carries a LIVE partner programme. True when a partner record exists and has not been retired, false when it was checked and carries none. Null on every other hit type, and null when the marker was not taken — a caller who may not read partner programmes gets null rather than false, because null means UNKNOWN while false would tell them this account is not a partner. A client renders the partner marker, with a route to the company's partner record, on `true` alone. */
             is_partner?: boolean | null;
             /** @description The canonical email row, on an `activity` hit whose activity is an email THIS caller may read. Null on every other hit type, and null for a non-email activity — a call, a note, a task and a meeting are activities too, and each keeps its generic hit. An email whose content is not this caller's produces no hit at all, because the activity branch is content-gated. A client renders the canonical row when this is present and falls back to `title`/`snippet` when it is not. */
@@ -51666,6 +51737,34 @@ export interface components {
              * @enum {string|null}
              */
             trust_tier?: "authoritative" | "external" | "unverified" | null;
+        };
+        /** @description What a result list shows beside a record hit. A field that does not apply to the hit's type, or that the record does not hold, is null. */
+        SearchHitStanding: {
+            /** @description A deal's status (open, won, lost), a lead's status (new, contacted, engaged, promoted, disqualified) or a project's phase (initiative, pursuing, delivering, closed). Null on a contact and a company. */
+            state?: string | null;
+            /** @description A deal's stage, named in the reader's language. Null on every other type. */
+            stage?: string | null;
+            /**
+             * Format: int64
+             * @description A deal's amount in minor units of `currency`. Null when the deal is unpriced, and null when a field mask withholds it, which `masked_fields` then names.
+             */
+            amount_minor?: number | null;
+            /** @description The ISO 4217 code of `amount_minor`; null with it. */
+            currency?: string | null;
+            /**
+             * Format: date
+             * @description A deal's expected close date or a project's target end date.
+             */
+            due_on?: string | null;
+            /** @description A contact's job title. Null on every other type. */
+            job_title?: string | null;
+            /**
+             * Format: date-time
+             * @description When the record was last in touch: its newest logged call, mail, meeting or note. Set on a contact, a company and a deal.
+             */
+            last_activity_at?: string | null;
+            /** @description The fields above a field mask withheld from this caller, by their wire names. */
+            masked_fields?: string[];
         };
         /** @description A company a contact currently works at, by any current employment — the same reading as the company's own roster, not only the contact's primary employer. */
         SearchHitEmployer: {
@@ -54491,6 +54590,10 @@ export interface components {
          *     the rep is actually asking — and it is why an erasure clears this list.
          */
         RefusedRecipient: {
+            /** @description Configured disclosure text included in this message. Contains no recipient credentials. */
+            footer_preview?: string[];
+            /** @description Server-derived missing footer disclosures or unavailable private links shown before the sender confirms this message. Contains no credentials. */
+            footer_findings?: components["schemas"]["FooterFinding"][];
             address: string;
             /** @enum {string} */
             subject_kind?: "contact" | "lead";
@@ -54509,6 +54612,8 @@ export interface components {
          *     what the consent rows say today.
          */
         CommunicationReview: {
+            /** @description Revision of the displayed refusal and footer details, echoed when confirming. */
+            assessment_revision?: string;
             /** Format: uuid */
             id: string;
             /**
@@ -54622,6 +54727,15 @@ export interface components {
              *     without one would record a decision nobody made.
              */
             acknowledged: boolean;
+            /** @description The review revision the sender read. Required when footer findings apply or a refusal is the recipient's own choice, such as an objection. */
+            assessment_revision?: string;
+            /**
+             * @description The refusal reason codes the director was shown, from the review's `refusals`. When the
+             *     review's refusals changed since then, the decision is refused with `instruction_stale`
+             *     and the director opens the review again. A refusal the subject made themselves (an
+             *     objection, a withdrawal, a restriction or a request to stop) is never passed.
+             */
+            shown_reasons?: string[];
         };
         /**
          * @description What a subject typed into the confirm link we mailed them, and what somebody decided about
@@ -101024,7 +101138,7 @@ export interface operations {
                 "multipart/form-data": {
                     /**
                      * Format: binary
-                     * @description The delimited file to import, or a ZIP of them named by type (`companies.csv`, `contacts.csv`, `leads.csv`, `deals.csv`, `activities.csv`). UTF-8; the first row is the header. `object` is required for a CSV and ignored for a ZIP, whose file names say each part's type. A ZIP is known by its content, not its name.
+                     * @description The delimited file to import, or a ZIP of them named by type (`companies.csv`, `contacts.csv`, `leads.csv`, `deals.csv`, `activities.csv`). UTF-8; the first row is the header. `object` is ignored for a ZIP, whose file names say each part's type. A CSV sent without `object` is typed by its header, and the profile's `object_chosen_by` says how. A ZIP is known by its content, not its name.
                      */
                     file: string;
                     object?: components["schemas"]["ImportObject"];

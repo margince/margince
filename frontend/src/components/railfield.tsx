@@ -50,6 +50,8 @@ type Props = Readonly<{
   text?: string;
   // The value is a link: it keeps its action, and the pill around it edits.
   link?: boolean;
+  // The value is a card that fills its row.
+  block?: boolean;
   beside?: ReactNode;
 }>;
 
@@ -215,6 +217,7 @@ function RailForm({
   label,
   reading,
   link,
+  block,
   beside,
 }: Props & Readonly<{ fields: readonly CreateField[] }>) {
   const t = useT();
@@ -226,6 +229,7 @@ function RailForm({
         editLabel={t("inlineChoice.change", { field: label })}
         placeholder={t("field.unset")}
         link={link}
+        block={block}
         // A save elsewhere on the record pauses this row, never its own open form.
         editable={open || !pending}
         onEdit={() => {

@@ -133,6 +133,39 @@ describe("RecordTabs keeps pressable tabs when there is a choice", () => {
   });
 });
 
+describe("RecordTabs names what a count counts", () => {
+  function counted(countLabels?: Partial<Record<Body, string>>) {
+    render(
+      <LocaleProvider initial="en">
+        <RecordTabs
+          options={["overview", "contacts"]}
+          value="overview"
+          onChange={() => undefined}
+          labels={LABELS}
+          counts={{ contacts: 2 }}
+          countLabels={countLabels}
+        />
+      </LocaleProvider>,
+    );
+  }
+
+  it("speaks the label in place of the bare figure", () => {
+    counted({ contacts: "2 columns not imported" });
+    expect(
+      screen.getByRole("button", {
+        name: /^Contacts\s*, 2 columns not imported$/,
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it("speaks the figure alone when no label says what it counts", () => {
+    counted();
+    expect(
+      screen.getByRole("button", { name: /^Contacts\s*, 2$/ }),
+    ).toBeInTheDocument();
+  });
+});
+
 // The strip hides its scrollbar, so the fade is the only sign that tabs run
 // past an edge. It marks the end that hides tabs, and a strip that fits
 // carries none.

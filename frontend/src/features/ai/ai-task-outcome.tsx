@@ -9,6 +9,7 @@ import {
 } from "../../design-system/segmentbar";
 import { formatNumber, formatPercent } from "../../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
+import { tierLabel } from "../../lib/ai-tier-label";
 import { formatSeconds, switchedSentence } from "./ai-call-figures";
 import { gaveUpLabel } from "./ai-decision-labels";
 import "./ai-settings.css";
@@ -81,6 +82,9 @@ export function TaskOutcome({ flow }: Readonly<{ flow: Flow }>) {
           />
         ))}
       </ol>
+      {flow.steps.some((step) => step.attempts > total) ? (
+        <p className="t-caption">{t("aiOutcome.triesNote")}</p>
+      ) : null}
       {lost ? (
         <ErrorLine standing>
           {plural("aiOutcome.lostNote", lost, { lost: number(lost) })}
@@ -109,11 +113,15 @@ function StepCard({
       <span className="t-caption">
         {t("aiOutcome.step", { n: formatNumber(index + 1, locale), role })}
       </span>
-      <code className="t-caption">{step.model || step.tier}</code>
+      {step.model ? (
+        <code className="t-caption">{step.model}</code>
+      ) : (
+        <span className="t-caption">{tierLabel(step.tier, t)}</span>
+      )}
       {step.attempts ? (
         <>
           <span className="ai-outcome-big">
-            {t("aiOutcome.answered", {
+            {plural("aiOutcome.answered", step.attempts, {
               answered: formatNumber(step.answered, locale),
               attempts: formatNumber(step.attempts, locale),
             })}

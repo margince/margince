@@ -312,11 +312,11 @@ func TestCSVImportDoesNotPromiseLinksForRowsThatWillNotLand(t *testing.T) {
 	if s := e.Call(t, http.MethodGet, "/v1/imports/"+run.ID+"/report", nil, nil, &report); s != http.StatusOK {
 		t.Fatalf("report → %d, want 200", s)
 	}
-	if report.Links == nil || report.Links.Offered != 2 {
-		t.Fatalf("links = %+v, want both rows counted as asking for a link", report.Links)
+	if report.Links == nil || report.Links.Offered != 1 {
+		t.Fatalf("links = %+v, want only the landing row's link offered", report.Links)
 	}
-	if len(report.Links.Unresolved) != 1 {
-		t.Fatalf("unresolved = %+v, want the refused row's link reported as unmakeable",
+	if len(report.Links.Unresolved) != 1 || report.Links.Unresolved[0].ReasonCode != "link_row_not_imported" {
+		t.Fatalf("unresolved = %+v, want the refused row's link reported as having no row to link",
 			report.Links.Unresolved)
 	}
 
@@ -328,8 +328,8 @@ func TestCSVImportDoesNotPromiseLinksForRowsThatWillNotLand(t *testing.T) {
 	if s := e.Call(t, http.MethodGet, "/v1/imports/"+run.ID+"/report", nil, nil, &after); s != http.StatusOK {
 		t.Fatalf("report after commit → %d, want 200", s)
 	}
-	if after.Links == nil || after.Links.Applied != 1 {
-		t.Fatalf("applied = %+v, want the one link the preview promised", after.Links)
+	if after.Links == nil || after.Links.Applied != 1 || after.Links.Offered != 1 {
+		t.Fatalf("links = %+v, want the one link the preview promised, written, and no link of the refused row offered", after.Links)
 	}
 }
 

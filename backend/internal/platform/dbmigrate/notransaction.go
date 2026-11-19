@@ -72,6 +72,9 @@ type Namespace struct {
 	// Renumbered declares the versions a migration of this namespace shipped
 	// under before it moved to the version it carries now.
 	Renumbered []Renumber
+	// Baseline, when set, is what a new installation applies in place of the
+	// versions it replaces (baseline.go).
+	Baseline *Baseline
 }
 
 // apply runs one migration's SQL and records it, wrapped or not as the file asked.

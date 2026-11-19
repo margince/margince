@@ -13,16 +13,17 @@ import (
 // A note or a call is what its subject or body says, so the create wire
 // refuses one that says nothing. Every other kind carries its content elsewhere.
 func TestANoteOrCallWithNeitherSubjectNorBodyIsRefused(t *testing.T) {
-	blank, text := "  \n", "Left a voicemail"
+	blank, invisible, text := "  \n", "\u200b", "Left a voicemail"
 	for _, kind := range []crmcontracts.CreateActivityRequestKind{
 		crmcontracts.CreateActivityRequestKindCreateActivityRequestKindNote,
 		crmcontracts.CreateActivityRequestKindCreateActivityRequestKindCall,
 	} {
 		for name, req := range map[string]crmcontracts.CreateActivityRequest{
-			"nothing sent":  {Kind: kind, Source: "manual"},
-			"blank both":    {Kind: kind, Subject: &blank, Body: &blank, Source: "manual"},
-			"blank subject": {Kind: kind, Subject: &blank, Source: "manual"},
-			"blank body":    {Kind: kind, Body: &blank, Source: "manual"},
+			"nothing sent":   {Kind: kind, Source: "manual"},
+			"blank both":     {Kind: kind, Subject: &blank, Body: &blank, Source: "manual"},
+			"blank subject":  {Kind: kind, Subject: &blank, Source: "manual"},
+			"blank body":     {Kind: kind, Body: &blank, Source: "manual"},
+			"invisible both": {Kind: kind, Subject: &invisible, Body: &invisible, Source: "manual"},
 		} {
 			_, err := LogActivityInputFrom(req)
 			if _, ok := errors.AsType[*EmptyEntryError](err); !ok {

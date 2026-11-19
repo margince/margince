@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 274.1 KB |
+| Tool catalog | 273.9 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 71576 |
+| Approx. wire tokens | 71535 |
 | Largest tool | `read_details` (17.4 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -33,10 +33,10 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 51.5 KB | 18% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 53.6 KB | 19% | Yes, every step |
+| Descriptions (incl. governance clause) | 53.5 KB | 19% | Yes, every step |
 | Input schemas | 157.1 KB | 57% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 4% | Partly |
-| **Description + input schema** | **210.8 KB** | **76%** | **the recurring cost** |
+| **Description + input schema** | **210.6 KB** | **76%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -85,7 +85,7 @@ descriptions and input schemas are what each step pays for.
 | [`commit_import`](#commit_import) | Commit an import |  |  | 275 |
 | [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 891 |
 | [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 429 |
-| [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 517 |
+| [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 524 |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 395 |
 | [`find_records`](#find_records) | Find records | yes |  | 2033 |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes | [`ui://margince/approval-queue.html`](#approval_queue_view) | 474 |
@@ -109,7 +109,7 @@ descriptions and input schemas are what each step pays for.
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 618 |
 | [`run_research`](#run_research) | Run AI work for your user |  |  | 1344 |
 | [`schedule_meeting`](#schedule_meeting) | Invite to a meeting |  |  | 487 |
-| [`send_outbound`](#send_outbound) | Send a message |  |  | 1722 |
+| [`send_outbound`](#send_outbound) | Send a message |  |  | 1678 |
 | [`update_record`](#update_record) | Update a record |  | [`ui://margince/update.html`](#update_view) | 626 |
 | [`whoami`](#whoami) | Who this passport acts for | yes |  | 129 |
 
@@ -4491,9 +4491,9 @@ today `slipping` — each left on its deal's timeline. A first email waits on th
 marked as drafted by an agent, until the human you act for sends it there; a reply, or one not_saved
 because they keep an unsent draft of their own, is not saved, so show it in full. slipping_deals
 covers the deals read_attention with view=slipping reports, at most 25. send_outbound sends an email
-once it is written. Keep the subject, body, to and the activity_id or links a message echoes; the
-send takes them unchanged. Each follow-up comes back with its deal_id and draft_activity_id. (Runs
-immediately; requires passport scope "draft".)
+once it is written. Keep the subject, body, to, the activity_id or links, and the
+communication_context a message echoes; the send takes them unchanged. Each follow-up comes back
+with its deal_id and draft_activity_id. (Runs immediately; requires passport scope "draft".)
 ```
 
 <details><summary>Input schema</summary>
@@ -12683,23 +12683,22 @@ buyer reads at once, meeting_proposal makes an expiring scheduling link and mail
 change_invitation changes an invitation already sent, invite_member adds a member and mails their
 sign-in link where the installation can send mail, signature_template and my_signature set the
 sign-off every later mail carries, and double_opt_in, privacy_notice and details_confirmation mail a
-contact a link about their data: ask the user first. direct_send sends a message the engine refused
-and held: show the user the review's warning, call only once they have seen it and said yes, and
-give their reason. It names them as the one who took it on and you as the agent, and the refusal
-stays on record. Every recipient must have granted the consent purpose the call names. A sent
-message cannot be recalled, and by default nothing holds it: where an installation has raised a send
-to confirm first, the answer is a staged approval instead. chat_reply cannot start a conversation or
-choose a channel. Use draft_outbound first when the message does not exist yet, and
-change_activities with action=log to record that something was said rather than say it. Send the
-subject, body and activity_id or links the draft produced, and keep the staged approval id: the
-approval binds that exact message, so changed text needs a new one. email_new answers with the new
-conversation's activity_id. (Runs immediately; the user's yes is needed for the actions
-add_room_document, answer_invitation, change_invitation, chat_reply, deal_room_invite,
-deal_room_resend, details_confirmation, direct_send, double_opt_in, email_new, email_reply,
-invite_member, link_channel, meeting_proposal, my_signature, open_room_thread, privacy_notice,
-remove_room_document, reply_room_thread, resend_member_invite, resume_room, set_room_expiry,
-signature_template, update_room, update_room_document, so tell them what the call will change and
-get it before calling, unless they asked for this call themselves; requires passport scope "send".)
+contact a link about their data: ask the user first. A message the engine refused and held is sent
+anyway only by the user, in the app: show them the review and its warning. Every recipient must have
+granted the consent purpose the call names. A sent message cannot be recalled, and by default
+nothing holds it: where an installation has raised a send to confirm first, the answer is a staged
+approval instead. chat_reply cannot start a conversation or choose a channel. Use draft_outbound
+first when the message does not exist yet, and change_activities with action=log to record that
+something was said rather than say it. Send the subject, body and activity_id or links the draft
+produced, and keep the staged approval id: the approval binds that exact message, so changed text
+needs a new one. email_new answers with the new conversation's activity_id. (Runs immediately; the
+user's yes is needed for the actions add_room_document, answer_invitation, change_invitation,
+chat_reply, deal_room_invite, deal_room_resend, details_confirmation, double_opt_in, email_new,
+email_reply, invite_member, link_channel, meeting_proposal, my_signature, open_room_thread,
+privacy_notice, remove_room_document, reply_room_thread, resend_member_invite, resume_room,
+set_room_expiry, signature_template, update_room, update_room_document, so tell them what the call
+will change and get it before calling, unless they asked for this call themselves; requires passport
+scope "send".)
 ```
 
 <details><summary>Input schema</summary>
@@ -12727,7 +12726,6 @@ get it before calling, unless they asked for this call themselves; requires pass
         "deal_room_invite",
         "deal_room_resend",
         "details_confirmation",
-        "direct_send",
         "double_opt_in",
         "email_new",
         "email_reply",
@@ -12804,7 +12802,7 @@ get it before calling, unless they asked for this call themselves; requires pass
       "type": "object"
     },
     "id": {
-      "description": "add_room_document, answer_invitation, change_invitation, deal_room_invite, deal_room_resend, details_confirmation, direct_send, double_opt_in, link_channel, open_room_thread, privacy_notice, remove_room_document, reply_room_thread, resend_member_invite, resume_room, set_room_expiry, update_room, update_room_document only",
+      "description": "add_room_document, answer_invitation, change_invitation, deal_room_invite, deal_room_resend, details_confirmation, double_opt_in, link_channel, open_room_thread, privacy_notice, remove_room_document, reply_room_thread, resend_member_invite, resume_room, set_room_expiry, update_room, update_room_document only",
       "type": "string"
     },
     "idempotency_key": {
@@ -12864,7 +12862,7 @@ get it before calling, unless they asked for this call themselves; requires pass
       "type": "string"
     },
     "request_body": {
-      "description": "add_room_document, answer_invitation, change_invitation, deal_room_invite, details_confirmation, direct_send, double_opt_in, invite_member, link_channel, meeting_proposal, my_signature, open_room_thread, privacy_notice, reply_room_thread, set_room_expiry, signature_template, update_room, update_room_document only: The chosen action's request body; read_workspace topic actions lists its shape",
+      "description": "add_room_document, answer_invitation, change_invitation, deal_room_invite, details_confirmation, double_opt_in, invite_member, link_channel, meeting_proposal, my_signature, open_room_thread, privacy_notice, reply_room_thread, set_room_expiry, signature_template, update_room, update_room_document only: The chosen action's request body; read_workspace topic actions lists its shape",
       "type": "object"
     },
     "scheduled_at": {

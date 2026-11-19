@@ -35,13 +35,13 @@ func TestTheDealAmountReachesTheModelAsAMajorUnitFigure(t *testing.T) {
 		reject   string
 	}{
 		// The issue's own case: 180,000.00 EUR read as eighteen million.
-		{"a two-decimal currency", 18_000_000, "EUR", `"amount":"180000.00"`, "18000000"},
+		{"a two-decimal currency", 18_000_000, "EUR", `"amount":"180,000.00"`, "18000000"},
 		// The other direction, and the one `/100` gets wrong: yen has no minor
 		// unit, so the integer IS the figure and dividing would understate it
 		// a hundredfold.
-		{"a zero-decimal currency", 18_000_000, "JPY", `"amount":"18000000"`, "180000.00"},
+		{"a zero-decimal currency", 18_000_000, "JPY", `"amount":"18,000,000"`, "180,000.00"},
 		// Three digits, the standard's other exception.
-		{"a three-decimal currency", 18_000_000, "KWD", `"amount":"18000.000"`, "180000.00"},
+		{"a three-decimal currency", 18_000_000, "KWD", `"amount":"18,000.000"`, "180,000.00"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			encoded, err := json.Marshal(DealIn{
@@ -98,8 +98,8 @@ func TestTheWonLifetimeTotalReachesTheModelAsAMajorUnitFigure(t *testing.T) {
 	if err != nil {
 		t.Fatalf("encoding the input: %v", err)
 	}
-	if !strings.Contains(string(encoded), `"won_lifetime":"12000.00"`) {
-		t.Errorf("the won total reaches the model as %s, want 12000.00 — the same minor-unit "+
+	if !strings.Contains(string(encoded), `"won_lifetime":"12,000.00"`) {
+		t.Errorf("the won total reaches the model as %s, want 12,000.00 — the same minor-unit "+
 			"misreading as the open deals, on the figure that describes the whole account", encoded)
 	}
 	if strings.Contains(string(encoded), "1200000") {

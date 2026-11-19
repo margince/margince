@@ -35,8 +35,21 @@
   align-items: center;
 }
 .pn-route-rank {
+  inline-size: var(--space-6);
+  block-size: var(--space-6);
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: var(--bgChip);
+  font: var(--fontBodySmall);
+  font-weight: var(--fontWeightMedium);
+  color: var(--textPrimary);
   font-variant-numeric: tabular-nums;
-  min-width: 1.5em;
+}
+.pn-rank-best {
+  background: var(--accent);
+  color: var(--textOnAccentControl);
 }
 .pn-route-who {
   min-width: 0;
@@ -75,52 +88,153 @@
   padding-left: var(--space-4);
   overflow-wrap: anywhere;
 }
-/* The verdict's two halves: the move, and the figures it rests on. Both
-   halves may shrink: a half that could not would overflow the panel and be
-   clipped at its edge, which is how the readings lost their last letters. */
-.pn-verdict {
-  display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(17.5rem, 1fr);
+/* The way in: one card, the recommendation on top and the other routes
+   ranked under it. */
+.pn-way {
+  container: way / inline-size;
 }
-.pn-verdict > * {
-  min-width: 0;
-}
-.pn-verdict-main {
-  padding: var(--space-4) var(--padPanel);
+.pn-lead {
   display: grid;
-  gap: var(--space-3);
+  gap: var(--space-5);
+}
+.pn-lead-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.pn-lead-head > .badge {
+  margin-inline-start: auto;
+}
+.pn-lead-foot {
+  margin: 0;
+  display: flex;
+  justify-content: flex-end;
+}
+/* The chain on a quiet well: who asks whom, the tie's weight as the line's. */
+.pn-chain {
+  /* The node avatars are `md`, and the links centre their line on them. */
+  --pn-avatar: 44px;
+  list-style: none;
+  margin: 0;
+  padding: var(--space-5) var(--space-4);
+  display: flex;
+  align-items: flex-start;
+  border-radius: var(--r-md);
+  corner-shape: round;
+  background: var(--bgWell);
+}
+.pn-chain-node {
+  flex: 0 1 8rem;
+  min-inline-size: 0;
+  display: grid;
+  justify-items: center;
+  gap: var(--space-1);
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.pn-chain-node b {
+  font-weight: var(--fontWeightMedium);
+  margin-block-start: var(--space-1);
+}
+.pn-chain-node-target .avatar {
+  box-shadow:
+    0 0 0 3px var(--bgWell),
+    0 0 0 4px var(--accent);
+}
+/* A link runs under the nodes beside it, so the line meets both avatars. The
+   top inset is half the avatar, less half the line. */
+.pn-chain-link {
+  flex: 1 1 0;
+  min-inline-size: var(--space-10);
+  margin-inline: calc(-1 * var(--space-6));
+  padding-block-start: calc(var(--pn-avatar) / 2 - 1px);
+  display: grid;
+  justify-items: center;
   align-content: start;
+  gap: var(--space-2);
+  text-align: center;
 }
-.pn-evidence {
-  padding: var(--space-4) var(--padPanel);
-  border-left: 1px solid var(--accentMed);
-  background: var(--accentLight);
+.pn-chain-link-line {
+  inline-size: 100%;
+  border-block-start: 2px dashed var(--borderStrong);
+}
+.pn-chain-link[data-strength="strong"],
+.pn-chain-link[data-strength="moderate"] {
+  padding-block-start: calc(var(--pn-avatar) / 2 - 2px);
+}
+.pn-chain-link[data-strength="strong"] .pn-chain-link-line {
+  border-block-start: 4px solid var(--accent);
+  border-radius: var(--r-full);
+  corner-shape: round;
+}
+.pn-chain-link[data-strength="moderate"] .pn-chain-link-line {
+  border-block-start: 3px solid var(--accentMed);
+  border-radius: var(--r-full);
+  corner-shape: round;
+}
+.pn-chain-link[data-strength="weak"] .pn-chain-link-line,
+.pn-chain-link[data-strength="none"] .pn-chain-link-line {
+  border-block-start-style: solid;
+}
+.pn-chain-link-words {
+  font: var(--fontBodySmall);
+  color: var(--textSecondary);
+  padding-inline: var(--space-6);
+}
+.pn-chain-link[data-strength="strong"] .pn-chain-link-words {
+  color: var(--accentText);
+  font-weight: var(--fontWeightMedium);
+}
+/* The figures: two readings, then the messages they rest on. */
+.pn-figures {
+  margin: 0;
   display: grid;
-  /* Not the implicit `auto` track: it grows to a citation's full subject, and
-     the subject must cut short inside the plate instead. */
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--space-3);
-  align-content: start;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  gap: var(--space-4) var(--space-8);
 }
-.pn-readings {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
-  gap: var(--space-3) var(--space-5);
-}
-.pn-reading {
+.pn-figures > div {
   display: grid;
   gap: var(--space-1);
   align-content: start;
-  min-width: 0;
+  min-inline-size: 0;
 }
-.pn-reading b {
-  font-family: var(--fontFamilyHeading);
+.pn-figures dd {
+  margin: 0;
+}
+.pn-figure {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.pn-figure b {
+  font: var(--fontPlateFigure);
+  color: var(--textPrimary);
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
-/* The gap is a real space in the text, so a screen reader and a copy read
-   "4 in 90 days" rather than "4in 90 days". */
-.pn-reading b small {
-  font-family: var(--fontFamilyBody);
+.pn-figure-note {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.pn-split-wrap {
+  display: grid;
+  gap: var(--space-1);
+  min-inline-size: 7rem;
+}
+.pn-figure-receipts .pn-receipts {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--space-2);
+}
+.pn-figure-receipts .pn-receipts > li {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-md);
+  corner-shape: round;
 }
 /* Who sent what: the target's share in full accent, the colleague's in the
    lighter one, and the counts in words under it. */
@@ -145,10 +259,7 @@
 .pn-split-legend {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-1) var(--space-3);
-}
-.pn-split-legend > span {
-  min-width: 0;
+  gap: 0 var(--space-3);
 }
 .pn-split-key-in::before,
 .pn-split-key-out::before {
@@ -156,7 +267,7 @@
   display: inline-block;
   width: 8px;
   height: 8px;
-  border-radius: var(--r-xs);
+  border-radius: var(--r-full);
   corner-shape: round;
   margin-right: var(--space-1);
   vertical-align: middle;
@@ -164,82 +275,6 @@
 }
 .pn-split-key-out::before {
   background: var(--accentMed);
-}
-.pn-evidence-receipts {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--space-1);
-}
-.pn-evidence-receipts .pn-receipts {
-  margin-top: 0;
-}
-
-/* The route as a path from the introducer to the contact. The tie is a line
-   whose weight is the route's band, with the tie's words sitting on it. */
-.pn-hero {
-  display: grid;
-  grid-template-columns: minmax(0, auto) minmax(6rem, 1fr) minmax(0, auto);
-  align-items: start;
-  gap: var(--space-2);
-  padding: var(--space-4);
-  border: 1px solid var(--groundEdge);
-  border-radius: var(--r-md);
-  corner-shape: round;
-}
-.pn-hero-who {
-  display: grid;
-  justify-items: center;
-  gap: var(--space-1);
-  min-width: 0;
-  max-width: 10rem;
-  text-align: center;
-  overflow-wrap: anywhere;
-}
-.pn-hero-link {
-  position: relative;
-  margin: 0;
-  /* As tall as the large avatars, so the line runs through their centres
-     even when a long tie wraps. */
-  height: 46px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-}
-.pn-hero-link::before {
-  content: "";
-  position: absolute;
-  inset-inline: 0;
-  top: 50%;
-  translate: 0 -50%;
-  height: 2px;
-  border-radius: var(--r-xs);
-  background: var(--borderStrong);
-}
-.pn-hero[data-strength="strong"] .pn-hero-link::before {
-  height: 4px;
-  background: var(--accent);
-}
-.pn-hero[data-strength="moderate"] .pn-hero-link::before {
-  height: 3px;
-  background: var(--accentMed);
-}
-/* The tie's words as a pill on the line, so the line passes behind them. */
-.pn-hero-link > span {
-  position: relative;
-  padding: var(--space-1) var(--space-2);
-  border: 1px solid var(--groundEdge);
-  border-radius: var(--r-full);
-  corner-shape: round;
-  background: var(--ground);
-}
-.pn-facts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
-.pn-verdict-actions {
-  margin: var(--space-1) 0 0;
 }
 
 /* The handoff, as a connected stepper. The rail between the rings fills as
@@ -334,22 +369,51 @@
 .pn-relay-owner .pn-relay-due {
   color: var(--textPrimary);
 }
-/* What moved: a dated list, newest first. A column of dates because it is a
+/* What moved: a dated rail, newest first. A column of dates because it is a
    chronology, and a reader scans it rather than reads it. */
 .pn-moments {
-  margin: var(--space-2) 0 0;
+  margin: 0;
   padding: 0;
   list-style: none;
 }
 .pn-moment {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: var(--space-3);
-  align-items: baseline;
-  padding: var(--space-2) 0;
+  grid-template-columns: 6.5rem minmax(0, 1fr);
+  gap: var(--space-4);
+  padding-block: var(--space-2);
 }
-.pn-moment + .pn-moment {
-  border-top: 1px solid var(--borderSubtle);
+.pn-moment-when {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+/* Each moment hangs off a dot on one rail; the newest change's dot is lit. */
+.pn-moment-body {
+  position: relative;
+  display: grid;
+  gap: var(--space-2);
+  padding-inline-start: var(--space-5);
+}
+.pn-moment-body::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block-start: 0.45lh;
+  inline-size: var(--space-2);
+  block-size: var(--space-2);
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: var(--borderStrong);
+}
+.pn-moment:not(:last-child) .pn-moment-body::after {
+  content: "";
+  position: absolute;
+  inset-inline-start: calc(var(--space-1) - 0.5px);
+  inset-block: calc(0.45lh + var(--space-3)) calc(-1 * var(--space-2) - 0.45lh);
+  border-inline-start: 1px solid var(--borderSubtle);
+}
+.pn-moment[data-latest] .pn-moment-body::before {
+  background: var(--accent);
+  box-shadow: 0 0 0 4px var(--accentLight);
 }
 /* A row, so the flag on the head change keeps its distance from the sentence
    and sits on its baseline, wrapping under it when the line is full. */
@@ -363,9 +427,50 @@
 .pn-moment:first-child p {
   color: var(--textPrimary);
 }
-.pn-moment-when {
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
+.pn-shift {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font: var(--fontBodySmall);
+  color: var(--textSecondary);
+}
+
+/* Who knows: the drawing on a dotted field filling the card, the selected
+   tie under it, and how complete the picture is as the card's foot. */
+.pn-who .rmap-legend {
+  margin: 0;
+  padding: var(--padPanel);
+}
+.pn-who .rmap {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+}
+.pn-who .rmap-scroll {
+  border: 0;
+  border-block: 1px solid var(--borderSubtle);
+  border-radius: 0;
+  padding: var(--padPanel);
+  background-color: transparent;
+  background-image: radial-gradient(var(--borderSubtle) 1px, transparent 1px);
+  background-size: var(--space-4) var(--space-4);
+}
+.pn-who .rmap-panel {
+  order: 1;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  padding: var(--padPanel);
+}
+.pn-who .rmap-completeness:empty {
+  display: none;
+}
+.pn-who .rmap-completeness {
+  order: 2;
+  padding: var(--space-3) var(--padPanel);
+  border-block-start: 1px solid var(--borderSubtle);
+  background: var(--bgWell);
 }
 
 /* The handoff measures its own panel. */
@@ -396,16 +501,31 @@
   }
 }
 
-/* 46rem is where the verdict's plate folds under it, and where a route row
-   can no longer hold its five columns on one line. */
+/* 40rem of card is where the chain stacks and the figures fold to one
+   column. */
+@container way (max-width: 40rem) {
+  .pn-chain {
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+  }
+  .pn-chain-node {
+    flex: none;
+  }
+  .pn-chain .pn-chain-link {
+    margin: 0;
+    padding: 0;
+  }
+  .pn-chain-link-line {
+    display: none;
+  }
+  .pn-figures {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* 46rem is where a route row can no longer hold its five columns. */
 @container network (max-width: 46rem) {
-  .pn-verdict {
-    grid-template-columns: 1fr;
-  }
-  .pn-evidence {
-    border-left: 0;
-    border-top: 1px solid var(--accentMed);
-  }
   .pn-route-line {
     grid-template-columns: auto auto minmax(0, 1fr);
   }

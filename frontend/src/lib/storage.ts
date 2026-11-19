@@ -173,6 +173,13 @@ export const STORAGE_KEYS = {
     area: "local",
     lifetime: "seat",
   },
+  // The install hint's schedule: the day this device first ran the app, and
+  // what the reader did with the hint since. Device: a new seat changes neither.
+  installHint: {
+    name: "margince.installHint",
+    area: "local",
+    lifetime: "device",
+  },
 } as const satisfies Record<string, Declared>;
 
 type Registered = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];

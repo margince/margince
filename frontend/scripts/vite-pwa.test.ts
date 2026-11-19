@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -11,14 +12,12 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 import { LOCALES } from "../src/i18n";
 import { SERVICE_WORKER_URL } from "../src/lib/pwa";
 import spaConfig from "../vite.config";
-import { pwa, workerCacheName } from "./vite-pwa";
+import { apiNavigationPaths, pwa, workerCacheName } from "./vite-pwa";
 
 const ORIGIN = "https://margince.test";
 const RELEASE = "2026.9.1";
-const WORKER_SOURCE = join(
-  dirname(fileURLToPath(import.meta.url)),
-  "../src/offline/serviceworker.js",
-);
+const FRONTEND = join(dirname(fileURLToPath(import.meta.url)), "..");
+const WORKER_SOURCE = join(FRONTEND, "src/offline/serviceworker.js");
 
 /** A plugin option is a plugin, a nested array of them, a promise, or nothing. */
 function pluginNames(options: unknown): string[] {
@@ -27,6 +26,19 @@ function pluginNames(options: unknown): string[] {
   return "name" in options && typeof options.name === "string"
     ? [options.name]
     : [];
+}
+
+async function bundled(config: InlineConfig): Promise<Map<string, string>> {
+  const result = await build(config);
+  const outputs = (Array.isArray(result) ? result : [result]).flatMap(
+    (bundle) => ("output" in bundle ? bundle.output : []),
+  );
+  return new Map(
+    outputs.map((item) => [
+      item.fileName,
+      item.type === "chunk" ? item.code : String(item.source),
+    ]),
+  );
 }
 
 // A site with nothing in it but a document, built through the plugin the way
@@ -46,16 +58,7 @@ async function buildSite(document: string): Promise<Map<string, string>> {
         rolldownOptions: { input: join(root, document) },
       },
     };
-    const result = await build(config);
-    const outputs = (Array.isArray(result) ? result : [result]).flatMap(
-      (bundle) => ("output" in bundle ? bundle.output : []),
-    );
-    return new Map(
-      outputs.map((item) => [
-        item.fileName,
-        item.type === "chunk" ? item.code : String(item.source),
-      ]),
-    );
+    return await bundled(config);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
@@ -194,15 +197,28 @@ describe("the build", () => {
     expect(site.has("offline.html")).toBe(false);
   });
 
-  it("names the worker's cache for the release and for exactly what it holds", () => {
+  it("names the worker's cache for the release and for exactly what it holds", async () => {
     expect(settingsOf(emitted("sw.js")).cacheName).toBe(
       workerCacheName({
         release: RELEASE,
         page: emitted(pageFile()),
         workerSource: readFileSync(WORKER_SOURCE, "utf8"),
-        passThrough: Object.keys(spaConfig.server?.proxy ?? {}),
+        passThrough: await apiNavigationPaths(spaConfig.server?.proxy ?? {}),
       }),
     );
+  });
+
+  it("passes through the proxy keys the api answers, by whole segment, and none a navigation gets the app at", async () => {
+    const toApp = { target: "http://api", bypass: () => "/index.html" };
+    const toApi = { target: "http://api", bypass: () => undefined };
+    expect(
+      await apiNavigationPaths({
+        "/v1": "http://api",
+        "/files/": toApi,
+        "/r/": toApp,
+        "/book": toApp,
+      }),
+    ).toEqual(["/v1", "/files"]);
   });
 
   it("builds the same worker twice from the same tree", async () => {
@@ -229,6 +245,48 @@ describe("the build", () => {
       expect(workerCacheName(changed)).not.toBe(name);
     }
   });
+
+  it("ships every font of app.css as a file, which the CSP's font-src 'self' admits and a data: URL is not", async () => {
+    const appCss = readFileSync(join(FRONTEND, "src/app.css"), "utf8");
+    const resolveSheet = createRequire(join(FRONTEND, "package.json")).resolve;
+    const sheets = [...appCss.matchAll(/@import "(@fontsource\/[^"]+)";/g)].map(
+      ([, sheet]) => resolveSheet(sheet),
+    );
+    expect(sheets.length).toBeGreaterThan(0);
+    const root = mkdtempSync(join(tmpdir(), "margince-fonts-"));
+    try {
+      writeFileSync(
+        join(root, "fonts.css"),
+        sheets.map((sheet) => `@import ${JSON.stringify(sheet)};`).join("\n"),
+      );
+      writeFileSync(
+        join(root, "index.html"),
+        '<!doctype html><link rel="stylesheet" href="./fonts.css">',
+      );
+      const files = await bundled({
+        configFile: false,
+        root,
+        logLevel: "warn",
+        build: {
+          write: false,
+          assetsInlineLimit: spaConfig.build?.assetsInlineLimit,
+          rolldownOptions: { input: join(root, "index.html") },
+        },
+      });
+      const inlined = [...files]
+        .filter(([name]) => /\.(?:css|js)$/.test(name))
+        .filter(([, source]) =>
+          /data:(?:font\/|application\/(?:x-)?font)/.test(source),
+        )
+        .map(([name]) => name);
+      expect(
+        [...files.keys()].filter((name) => /\.woff2?$/.test(name)),
+      ).not.toEqual([]);
+      expect(inlined).toEqual([]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  }, 60_000);
 
   it("emits nothing into a build that is not the SPA's", async () => {
     const storybook = await buildSite("iframe.html");
@@ -391,6 +449,18 @@ describe("the service worker", () => {
       "/mcp-apps/create-followups.html",
       "/v1beta",
       "/setup-guide",
+    ]) {
+      const answer = await worker.request(url, "navigate");
+      expect(await answer?.text(), url).toBe(page());
+    }
+  });
+
+  it("gives the offline page to a failed navigation to a record card or a booking page, which the web tier serves as the app", async () => {
+    const worker = await installed();
+    worker.scope.fetch.mockRejectedValue(new TypeError("Failed to fetch"));
+    for (const url of [
+      "/r/deals/0b6f3c1e-5d2a-4c8e-9f10-2a3b4c5d6e7f",
+      "/book/anna-meyer",
     ]) {
       const answer = await worker.request(url, "navigate");
       expect(await answer?.text(), url).toBe(page());

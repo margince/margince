@@ -17693,37 +17693,6 @@ paths:
               schema: {$ref: '#/components/schemas/CommunicationReview'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
-  /communication-reviews/{id}/direct-send:
-    parameters:
-      - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
-    post:
-      tags: [Communication]
-      operationId: directCommunicationSend
-      security: [{bearerAuth: []}]
-      summary: Send a refused message anyway, on a named human's recorded decision.
-      description: |-
-        The engine refused this message and the refusal stands. This records that a designated human
-        read it, was shown the compliance warning, acknowledged it, and decided in writing that the
-        message goes — and then sends the exact message the review was holding.
-
-        Needs the passport permission Send messages.
-
-        Runs at once.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: {$ref: '#/components/schemas/DirectCommunicationSendRequest'}
-      responses:
-        '201':
-          description: The activity the sent message produced.
-          content:
-            application/json:
-              schema: {$ref: '#/components/schemas/Activity'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
-        '409': {$ref: '#/components/responses/Conflict'}
-        '422': {$ref: '#/components/responses/ValidationError'}
   /data-subject-requests/{id}:
     parameters:
       - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
@@ -30511,6 +30480,18 @@ components:
         source_ref: {type: string, description: 'Opaque handle to the stored upload. Supplied verbatim to `createImportRun`; never a path a client can construct.'}
         row_count: {type: integer, minimum: 0, description: 'Rows the upload holds: the file''s for a single CSV, the sum of `parts[].row_count` for a ZIP.'}
         object: {$ref: '#/components/schemas/ImportObject'}
+        object_chosen_by:
+          type: string
+          enum: [columns, none]
+          description: |-
+            How `object` was chosen for a CSV uploaded without one. The header is
+            matched as `suggested_mapping` matches it, once for each type, and
+            only a column that exactly one type's suggestion maps counts.
+            `columns`: one type's suggestion maps more such columns than any
+            other's. `none`: no type maps strictly the most, so `object` is
+            `lead` and a screen asks the reader to choose. Absent when the upload
+            named its type, and for a ZIP. The run's `profile` keeps it until a
+            draft save names `object`, which is the reader's own choice.
         file_name: {type: string, description: 'The uploaded file''s name, for display. The client echoes it to `createImportRun`.'}
         suggested_source_name:
           type: string
@@ -30690,9 +30671,12 @@ components:
           type: integer
           minimum: 0
           description: |-
-            Links the file asks for. A dry run reports this and nothing else,
-            because resolving an endpoint is a read the dry run has not done —
-            it says how many rows named an employer, not how many will find one.
+            Links the file asks for on the rows the run lands. A link whose own
+            row is skipped is not counted, because that row is reported as a
+            skip; `unresolved` still lists it. A dry run reports this and nothing
+            else, because resolving an endpoint is a read the dry run has not
+            done — it says how many landing rows named an employer, not how many
+            will find one.
         applied:
           type: integer
           minimum: 0
@@ -31228,8 +31212,12 @@ components:
           additionalProperties: true
           description: |-
             Structured machine context — e.g. `existing_id` on 409 duplicate, or an
-            `errors` array of `{ field, code, message }` on 422 validation. A `too_long`
-            entry also carries `max`, the limit in characters.
+            `errors` array of `{ field, code, message }` on 422 validation. An entry that
+            refuses at a limit also carries `max`: the limit in characters for `too_long`,
+            in rows for `too_many_rows`, in characters for `source_name`. An entry whose
+            code names other values carries them in `params`, an object of text values by
+            name, so a screen can word the code in the reader's language; `message` stays
+            the English sentence.
     PageInfo:
       type: object
       required: [has_more]
@@ -32089,15 +32077,17 @@ components:
             stays in `superseded_value`, and a field a human corrected stands.
             `needs_review` — a resemblance, written nowhere; open the candidate and decide.
             `proposed` — a card read from a photo that nobody matched, waiting on an approval.
-            `skipped` — the card states no name, carries a sending system's address, or matches a
-            contact the caller may not write; `reason` says which.
+            `skipped` — the card states no name or one over 120 characters, carries a sending
+            system's address, or matches a contact the caller may not write; `reason` says which.
         contact_id:
           type: [string, 'null']
           format: uuid
           description: The contact created or updated, or — for `needs_review` — the candidate the card resembles.
         reason:
           type: [string, 'null']
-          description: Why a card was skipped, or a warning about an imported contact without a channel.
+          description: |-
+            Why a card was skipped. For a written card, a warning: the contact has no channel, or the
+            card's title was cut to the length the field holds.
         lead_id:
           type: [string, 'null']
           format: uuid
@@ -41338,6 +41328,22 @@ components:
         voice_profile_version: {type: [integer, 'null'], readOnly: true, minimum: 1, description: 'The Voice DNA PROFILE version (not a model version) that styled this draft — the "built from your corpus · vN" provenance; null when no ready voice profile shaped it.'}
         draft_ref: {type: [string, 'null'], readOnly: true, description: 'Opaque reference identifying this served voice draft for learning feedback (rejectVoiceDraft); null when no voice profile styled it.'}
         voice_degraded: {type: boolean, readOnly: true, description: 'True when the sender''s voice could not even be looked up, so this draft may be missing a voice its sender built. A client should say so: the sender cannot detect a missing voice by reading the text. Absent reads as false.'}
+        communication_context:
+          allOf: [{$ref: '#/components/schemas/CommunicationContext'}]
+          readOnly: true
+          description: |-
+            What the drafting instruction says this message is, for the composer to send
+            with it. `requested_followup` when the instruction asks to move an appointment,
+            in English, German or Vietnamese. Absent when the instruction says nothing the
+            send check can use, which leaves the reason to the thread or the sender. The
+            send check still needs its own evidence, here an agreed appointment with the
+            recipient.
+        evidence:
+          allOf: [{$ref: '#/components/schemas/CommunicationEvidence'}]
+          readOnly: true
+          description: |-
+            The record the drafted reason rests on: the meeting itself, when the draft was
+            written from it. Absent otherwise.
         language:
           type: string
           enum: [en, de, vi]
@@ -41383,6 +41389,13 @@ components:
         A draft written from an account's records, and what it was written from. Never sent by drafting; send via `POST /emails`.
       required: [subject, body, reasoning, generated_by, ai_generated]
       properties:
+        communication_context:
+          allOf: [{$ref: '#/components/schemas/CommunicationContext'}]
+          readOnly: true
+          description: |-
+            What the drafting instruction says this message is, for the composer to send with it:
+            `requested_followup` when it asks to move an appointment. Absent otherwise. The send
+            check still needs an agreed appointment with the recipient.
         subject: {type: string}
         body:
           type: string
@@ -42030,11 +42043,22 @@ components:
           type: string
           enum: [contact, lead]
         entity_id: {type: string, format: uuid}
+    FooterFinding:
+      type: object
+      required: [kind, language, missing_means]
+      properties:
+        kind: {type: string, description: 'Missing disclosure kind or unavailable private link. Unknown kinds remain visible as an unspecified footer omission.'}
+        language: {type: string, description: 'Required language, or empty when no language is missing.'}
+        missing_means: {type: array, items: {type: string}, description: 'Missing contact methods, such as email, phone or web.'}
     SendAuthorizationPreviewRecipient:
       type: object
       required: [address, verdict, reason_code]
       description: One recipient's answer. It describes the MESSAGE, never the contact's file.
       properties:
+        footer_findings:
+          type: array
+          items: {$ref: '#/components/schemas/FooterFinding'}
+          description: Server-derived missing footer disclosures or unavailable private links shown before the sender confirms this message. Contains no credentials.
         address: {type: string, format: email}
         lawful_basis_missing:
           type: boolean
@@ -42113,7 +42137,15 @@ components:
         can_be_overruled:
           type: boolean
           description: |-
-            Whether a contact may lift this refusal by recording why they are writing.
+            Whether the sender may send this one message past the refusal by recording a
+            reason. True for every policy refusal except the subject's own stops: the refusal
+            stays on the record, and the reason is kept with the message. False for a stop
+            (`decided_by` is `subject`), which nobody sends past, admin included. False for a
+            hard bounce, because no decision makes a dead address accept mail, and for a
+            recipient that resolves to nobody or to two contacts, whose stops were never read.
+            Only a user in their own session sends past it, never an agent, and only with the
+            `communication_exception` grant. The refused send's review offers `direct_send` only
+            to such a caller.
         decided_by:
           type: string
           enum: [machine, user, admin, subject]
@@ -42121,7 +42153,7 @@ components:
             Whose decision this answer is, which is what says whether anybody may overrule
             it. `machine` is the engine reading an incomplete record and a rep who knows
             better may say so. `subject` is the contact's own act — an objection or a
-            withdrawal — and nobody in the installation lifts it, admin included.
+            withdrawal. Nobody in the installation lifts it or sends past it, admin included.
     SendCompanyEmailRequest:
       type: object
       required: [subject, body, to, links]
@@ -49631,6 +49663,11 @@ components:
           readOnly: true
           description: >-
             For a `company` hit only: the company's logo, the same URL its record carries as `Company.logo_url`. Absent when it has none, and on every other hit type.
+        standing:
+          allOf: [{$ref: '#/components/schemas/SearchHitStanding'}]
+          readOnly: true
+          description: >-
+            Where a contact, company, deal, lead or project hit stands, read with the page under THIS caller's grants and field masks, so a result list can say it without opening each record. Absent on every other hit type.
         is_partner:
           type: [boolean, 'null']
           description: >-
@@ -49646,6 +49683,42 @@ components:
           enum: [authoritative, external, unverified, null]
           description: >-
             Provenance tier of the underlying record. EVERY hit this server returns carries `authoritative`, with no exception: search reads the store the record lives in, so a hit is never a copy of somebody else's. `external` and `unverified` are declared for connector-sourced rows and nothing emits either yet, and `null` means UNKNOWN rather than authoritative — this field is never guessed. A client must accept all four and must not expect any but the first.
+    SearchHitStanding:
+      type: object
+      description: >-
+        What a result list shows beside a record hit. A field that does not apply to the hit's type, or that the record does not hold, is null.
+      properties:
+        state:
+          type: [string, 'null']
+          description: >-
+            A deal's status (open, won, lost), a lead's status (new, contacted, engaged, promoted, disqualified) or a project's phase (initiative, pursuing, delivering, closed). Null on a contact and a company.
+        stage:
+          type: [string, 'null']
+          description: A deal's stage, named in the reader's language. Null on every other type.
+        amount_minor:
+          type: [integer, 'null']
+          format: int64
+          description: >-
+            A deal's amount in minor units of `currency`. Null when the deal is unpriced, and null when a field mask withholds it, which `masked_fields` then names.
+        currency:
+          type: [string, 'null']
+          description: The ISO 4217 code of `amount_minor`; null with it.
+        due_on:
+          type: [string, 'null']
+          format: date
+          description: A deal's expected close date or a project's target end date.
+        job_title:
+          type: [string, 'null']
+          description: A contact's job title. Null on every other type.
+        last_activity_at:
+          type: [string, 'null']
+          format: date-time
+          description: >-
+            When the record was last in touch: its newest logged call, mail, meeting or note. Set on a contact, a company and a deal.
+        masked_fields:
+          type: array
+          items: {type: string}
+          description: The fields above a field mask withheld from this caller, by their wire names.
     SearchHitEmployer:
       type: object
       description: >-
@@ -51823,6 +51896,14 @@ components:
         the rep is actually asking — and it is why an erasure clears this list.
       required: [address, reason_code]
       properties:
+        footer_preview:
+          type: array
+          items: {type: string}
+          description: Configured disclosure text included in this message. Contains no recipient credentials.
+        footer_findings:
+          type: array
+          items: {$ref: '#/components/schemas/FooterFinding'}
+          description: Server-derived missing footer disclosures or unavailable private links shown before the sender confirms this message. Contains no credentials.
         address: {type: string}
         subject_kind: {type: string, enum: [contact, lead]}
         subject_id: {type: string, format: uuid}
@@ -51839,6 +51920,9 @@ components:
         what the consent rows say today.
       required: [id, state, kind, reason_code, refusals]
       properties:
+        assessment_revision:
+          type: string
+          description: Revision of the displayed refusal and footer details, echoed when confirming.
         id: {type: string, format: uuid}
         state:
           type: string
@@ -51910,37 +51994,6 @@ components:
         explanation: {type: string}
         warning_version: {type: string}
       additionalProperties: false
-    DirectCommunicationSendRequest:
-      type: object
-      description: |-
-        A designated human's decision that one refused message goes out anyway. Every field is frozen
-        on the record once written.
-      required: [reason_code, explanation, warning_version, acknowledged]
-      properties:
-        reason_code:
-          type: string
-          enum: [customer_requested_outside_crm, contractual_necessity, legal_obligation, other]
-          description: |-
-            Why the installation has a basis the engine cannot see. A closed list, because an audit
-            of overrides needs to be countable — free text alone cannot answer "how often do we send
-            on a contract clause".
-        explanation:
-          type: string
-          minLength: 1
-          maxLength: 2000
-          description: |-
-            What this colleague says the reason is, in their own words. Required and must say something:
-            a blank explanation is an acknowledgement nobody can be held to.
-        warning_version:
-          type: string
-          description: |-
-            The compliance text they were shown. Recorded because a record naming no version cannot
-            say what they were told, and the text changes.
-        acknowledged:
-          type: boolean
-          description: |-
-            The tick. Refused when false — the acknowledgement is the act, and an instruction written
-            without one would record a decision nobody made.
     ConfirmSubmission:
       type: object
       description: |-

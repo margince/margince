@@ -4,6 +4,7 @@
 package approvals
 
 import (
+	"context"
 	"errors"
 	"testing"
 	"time"
@@ -45,7 +46,7 @@ func TestARotatedCredentialDoesNotReleaseTheIrreversibleCallItStaged(t *testing.
 	connection := ids.NewV7()
 	a, rotated := connected(connection, ids.NewV7(), ids.NewV7())
 
-	err := agentMayDecide(rotated, a, true, ownReleaseRefused)
+	err := agentMayDecide(context.Background(), rotated, a, true, ownReleaseRefused)
 	if err == nil {
 		t.Fatal("a credential released the proposal it staged, having done nothing but refresh its token")
 	}
@@ -54,7 +55,7 @@ func TestARotatedCredentialDoesNotReleaseTheIrreversibleCallItStaged(t *testing.
 	}
 	// An undoable change it may release, rotated or not: the human it acts for
 	// could, and the rule binds the human.
-	if err := agentMayDecide(rotated, a, true, ownReleaseAllowed); err != nil {
+	if err := agentMayDecide(context.Background(), rotated, a, true, ownReleaseAllowed); err != nil {
 		t.Fatalf("a connected credential was refused the undoable change it staged for its human: %v", err)
 	}
 }

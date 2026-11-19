@@ -226,6 +226,7 @@ func TestEveryAbsoluteReasonIsClassifiedDeliberately(t *testing.T) {
 		// purpose that means what the caller claimed — nothing about the
 		// recipient refuses it.
 		ReasonClaimContradictsResolution: LevelMachine,
+		ReasonFooterIncomplete:           LevelMachine,
 	}
 
 	for reason := range absoluteDenials {

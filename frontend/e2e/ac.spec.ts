@@ -541,6 +541,98 @@ test("help and feedback and the keyboard shortcuts meet AA", async ({
   await expect(accountTrigger(page)).toBeFocused();
 });
 
+test("About Margince meets AA", async ({ page }) => {
+  await page.goto("/#/home");
+  await page.waitForLoadState("networkidle");
+  await accountTrigger(page).click();
+  await page
+    .locator(".topbar [role='menu']")
+    .first()
+    .getByRole("menuitem", { name: de["shell.helpMenu"] })
+    .press("ArrowRight");
+  await page
+    .getByRole("menu", { name: de["shell.helpMenu"] })
+    .getByRole("menuitem", { name: de["about.title"] })
+    .click();
+  const dialog = page.getByRole("dialog", { name: de["about.title"] });
+  await expect(dialog).toBeVisible();
+  await settleAnimations(page);
+  await expectNoAaViolations(page, "home — about margince");
+  await page.keyboard.press("Escape");
+  await expect(accountTrigger(page)).toBeFocused();
+});
+
+// Headless Chromium never offers to install, so the test makes the offer itself.
+for (const colorScheme of ["light", "dark"] as const) {
+  test.describe(`the install hint on Home at 390px in ${colorScheme}`, () => {
+    test.use({
+      viewport: { width: 390, height: 844 },
+      hasTouch: true,
+      isMobile: true,
+      colorScheme,
+    });
+
+    test("meets AA, sits in the tab order, and Not now hands focus to the page", async ({
+      page,
+    }) => {
+      await page.addInitScript(() => {
+        const earlier = new Date(Date.now() - 2 * 86_400_000);
+        window.localStorage.setItem(
+          "margince.installHint",
+          JSON.stringify({ firstDay: earlier.toISOString().slice(0, 10) }),
+        );
+      });
+      await page.goto("/#/home");
+      await expectShellRendered(page);
+      await page.evaluate(() => {
+        const offer = Object.assign(
+          new Event("beforeinstallprompt", { cancelable: true }),
+          {
+            platforms: ["web"],
+            userChoice: Promise.resolve({
+              outcome: "dismissed",
+              platform: "web",
+            }),
+            prompt: async () => undefined,
+          },
+        );
+        window.dispatchEvent(offer);
+      });
+      const hint = page.locator(".appbanner", {
+        hasText: de["installHint.title"],
+      });
+      await expect(hint).toBeVisible();
+      await settleAnimations(page);
+      await expectNoAaViolations(
+        page,
+        `home — install hint (390px, ${colorScheme})`,
+      );
+      expect(await pageOverflow(page)).toEqual([]);
+
+      const install = hint.getByRole("button", {
+        name: de["settings.installAppAction"],
+      });
+      const notNow = hint.getByRole("button", {
+        name: de["installHint.notNow"],
+      });
+      await notNow.focus();
+      await page.keyboard.press("Tab");
+      await expect(install).toBeFocused();
+      await page.keyboard.press("Shift+Tab");
+      await expect(notNow).toBeFocused();
+      await page.keyboard.press("Enter");
+      await expect(hint).toHaveCount(0);
+      expect(
+        await page.evaluate(
+          () =>
+            document.activeElement !== null &&
+            document.activeElement !== document.body,
+        ),
+      ).toBe(true);
+    });
+  });
+}
+
 // A page whose heading has drawn, with focus out of every field, so a key
 // press reaches the app's shortcuts.
 async function openForKeys(page: Page, hash: string) {
@@ -579,7 +671,8 @@ test("keyboard shortcuts: G then C goes to Contacts, G then D to Deals", async (
   await openForKeys(page, "home");
   await page.keyboard.press("g");
   await page.keyboard.press("c");
-  await expect(page).toHaveURL(/#\/contacts$/);
+  // The list may already have spelled its opening sort into the address.
+  await expect(page).toHaveURL(/#\/contacts(\?[^/]*)?$/);
 
   await openForKeys(page, "home");
   await page.keyboard.press("g");
@@ -1774,6 +1867,60 @@ test.describe("§3.8: 390px mobile", () => {
     await expectShellRendered(page);
     await expect(page.getByRole("heading", { name: "Produkte" })).toBeVisible();
     expect(await pageOverflow(page)).toEqual([]);
+  });
+
+  test("AC-company-relationships: a company's relationship table folds at 390 and keeps each date whole", async ({
+    page,
+  }) => {
+    await page.route(/\/v1\/relationships(\?.*)?$/, (route) =>
+      route.fulfill({
+        json: listPage([
+          {
+            id: "r-anna",
+            kind: "employment",
+            company_id: brandt.id,
+            contact_id: "p-anna",
+            role: "Leiterin Einkauf und strategische Beschaffung",
+            started_at: "2021-03-01",
+            ended_at: "2024-11-30",
+            is_current_primary: false,
+            employment_status: "former",
+            version: 1,
+            created_at: "2026-01-01T00:00:00Z",
+            updated_at: "2026-06-01T00:00:00Z",
+          },
+        ]),
+      }),
+    );
+    await page.goto(`/#/companies/${brandt.id}/profile`);
+    await page.waitForLoadState("networkidle");
+    await expectShellRendered(page);
+    const dates = page.locator(".relationshiprows-date");
+    await expect(dates).toHaveCount(2);
+    await settleAnimations(page);
+    expect(await pageOverflow(page)).toEqual([]);
+    const pastScrollBox = await page.evaluate(() =>
+      Array.from(document.querySelectorAll(".table-scroll")).flatMap((box) =>
+        Array.from(box.querySelectorAll("td, th"))
+          .filter(
+            (cell) =>
+              cell.getBoundingClientRect().right >
+              box.getBoundingClientRect().right + 1,
+          )
+          .map((cell) => (cell.textContent ?? "").trim()),
+      ),
+    );
+    expect(pastScrollBox).toEqual([]);
+    const lineBoxes = await dates.evaluateAll((nodes) =>
+      nodes.map(
+        (node) =>
+          new Set(
+            Array.from(node.getClientRects(), (rect) => Math.round(rect.top)),
+          ).size,
+      ),
+    );
+    expect(lineBoxes).toEqual([1, 1]);
+    await expectNoAaViolations(page, "company profile, relationships (390px)");
   });
 
   test("the More menu opens above the bar and meets AA at 390px", async ({

@@ -1,4 +1,4 @@
-# CASE 88 — Sending over a refusal is the user's own decision, on a warning they have read. A wish to send gets no direct_send until the warning has been put to them.
+# CASE 88 — Sending over a refusal is the user's own decision, on a warning they have read. The agent cannot send past a refusal and sends the user to the review.
 name: case88_send_it_anyway
 criteria: [1]
 writes: true
@@ -14,7 +14,6 @@ must_call_matching:
   - read_details~contact_consent
 
 must_not_call_with:
-  - send_outbound~direct_send
   - change_compliance~record_consent
   - update_record~consent
 

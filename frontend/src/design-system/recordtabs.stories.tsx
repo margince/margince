@@ -68,6 +68,31 @@ export const SelectedTabHasNoCount: Story = {
   render: () => <Live initial="brief" />,
 };
 
+// A count the tab name does not explain carries a label.
+export const LabelledCounts: Story = {
+  render: () => (
+    <RecordTabs
+      label="Files to map"
+      options={["contacts", "activity"]}
+      value="contacts"
+      onChange={() => undefined}
+      labels={LABELS}
+      counts={{ contacts: 3, activity: 1 }}
+      countLabels={{
+        contacts: "3 columns not imported",
+        activity: "1 column not imported",
+      }}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByRole("button", {
+        name: /^Contacts\s*, 3 columns not imported$/,
+      }),
+    ).toBeVisible();
+  },
+};
+
 // A record read in ONE body. The lone tab is a LABEL for the page the reader
 // is already on — no press, no handler — and what earns the row is the control
 // riding at its end, which stands where every other record page keeps it.

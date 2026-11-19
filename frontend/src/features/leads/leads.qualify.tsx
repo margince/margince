@@ -16,21 +16,29 @@ import {
 } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { Heading } from "../../design-system/heading";
+import { MoneyInput } from "../../design-system/moneyinput";
 import { Select } from "../../design-system/select";
-import { toMinorUnits } from "../../format/minorunits";
+import { formatMoney } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
-import { leadPromotePreviewKey, leadWriteKeys } from "../../lib/leadkeys";
+import {
+  invalidateClosedLead,
+  leadPromotePreviewKey,
+} from "../../lib/leadkeys";
 import { defaultPipelineOf, usePipelines } from "../../lib/pipelines.queries";
-import { problemMessageOf, unwrap } from "../../lib/problem";
+import { unwrap } from "../../lib/problem";
 import { useInstallationSettings } from "../../lib/uploadlimit";
 import { useViewerZone } from "../../lib/viewerzone";
 import { useLeadCompanyNameReading } from "./leadcompany";
 import { leadIdentityName } from "./leadname";
 import {
+  amountRefusal,
+  dealBlock,
   ExistingQualificationDeal,
+  openStagesOf,
   type QualificationDealChoice,
   qualificationConfirmState,
   qualificationDealState,
+  qualifyRefusals,
 } from "./leads.qualifydeal";
 import { reasonSentence, triggerFor } from "./leads.qualifyreason";
 import "./leads.css";
@@ -38,7 +46,6 @@ import "./leads.css";
 type Lead = components["schemas"]["Lead"];
 type PromoteLeadRequest = components["schemas"]["PromoteLeadRequest"];
 type PromoteLeadResponse = components["schemas"]["PromoteLeadResponse"];
-type Pipeline = components["schemas"]["Pipeline"];
 
 // The qualify dialog: "this lead is now a contact, and maybe an opportunity".
 // Three blocks — what happens to the contact (read from the server's own
@@ -98,49 +105,6 @@ export function usePromotePreview(
 // triggerFor reads the wire trigger off the lead's captured evidence; a lead
 // with none is qualified by the human's own judgement.
 export { triggerFor } from "./leads.qualifyreason";
-
-// dealBlock is the wire's deal request from the dialog's fields. The money
-// pair holds from birth: an amount only travels with the currency, and an
-// empty or unreadable amount travels as no money at all.
-function dealBlock(input: {
-  pipelineId: string | undefined;
-  stageId: string | undefined;
-  name: string;
-  amount: string;
-  currency: string | undefined;
-}): NonNullable<PromoteLeadRequest["deal"]> {
-  const parsed = Number(input.amount);
-  const priced =
-    input.amount.trim() !== "" && Number.isFinite(parsed) && input.currency;
-  return {
-    pipeline_id: input.pipelineId ?? null,
-    stage_id: input.stageId ?? null,
-    name: input.name.trim() || null,
-    // priced is false without a currency, so the code below is always the
-    // real one — a lead promoted at a dong price is stored as dong, not as a
-    // hundredth of one.
-    amount_minor: priced ? toMinorUnits(parsed, input.currency ?? "") : null,
-    currency: priced ? (input.currency ?? null) : null,
-  };
-}
-
-// amountState is what the typed amount does to the confirm: an unreadable
-// number is refused, and a number with no currency to carry it waits — sent
-// as-is it would be dropped on the way to the server, which is worse than a
-// wait.
-function amountState(amount: string, currency: string | undefined) {
-  const typed = amount.trim() !== "";
-  return {
-    amountInvalid: typed && !Number.isFinite(Number(amount)),
-    amountWaitsForCurrency: typed && !currency,
-  };
-}
-
-function openStagesOf(pipeline: Pipeline | undefined) {
-  return [...(pipeline?.stages ?? [])]
-    .filter((stage) => stage.semantic === "open")
-    .sort((a, b) => a.position - b.position);
-}
 
 type QualifyDialogProps = Readonly<{
   lead: Lead;
@@ -231,7 +195,9 @@ function QualificationForm({
   const [pipelineId, setPipelineId] = useState("");
   const [stageId, setStageId] = useState("");
   const [dealName, setDealName] = useState("");
-  const [amount, setAmount] = useState("");
+  const [amountMinor, setAmountMinor] = useState<number | null>(null);
+  // The box holds a figure finer than the currency, so amountMinor is not what it says.
+  const [amountTooPrecise, setAmountTooPrecise] = useState(false);
   const [note, setNote] = useState("");
   const typedCompany = preview.data?.typed_company;
 
@@ -260,12 +226,9 @@ function QualificationForm({
       );
     },
     onSuccess: (result) => {
-      // leadWriteKeys carries the history key: the promotion WROTE the audit
-      // row the page reads its outcome from, and so does every other lead
-      // mutation.
-      for (const key of leadWriteKeys(lead.id)) {
-        queryClient.invalidateQueries({ queryKey: key });
-      }
+      // The history key is among them: the promotion WROTE the audit row the
+      // page reads its outcome from.
+      invalidateClosedLead(queryClient, lead.id);
       if (result.deal_id) {
         queryClient.invalidateQueries({ queryKey: ["deals"] });
       }
@@ -296,21 +259,23 @@ function QualificationForm({
             pipelineId: chosenPipeline?.id,
             stageId: chosenStage?.id,
             name: dealName.trim() || suggestedName,
-            amount,
+            amountMinor,
             currency,
           })
         : undefined,
     });
   };
 
-  const { amountInvalid, amountWaitsForCurrency } = amountState(
-    amount,
-    currency,
+  const refused = qualifyRefusals(qualify.error, t);
+  const amountError = amountRefusal(
+    { amountMinor, tooPrecise: amountTooPrecise, currency },
+    refused.amount,
+    t,
   );
   const confirmation = qualificationConfirmState(
     { selectedDeal, withDeal, invalidSelection },
     preview,
-    { amountInvalid, amountWaitsForCurrency },
+    { amountInvalid: amountError.local },
     { nameSettling: company.settling && !dealName.trim() },
   );
   const name = leadIdentityName(lead);
@@ -325,7 +290,7 @@ function QualificationForm({
       confirmDisabled={confirmation.disabled}
       onConfirm={submit}
       pending={qualify.isPending}
-      error={qualify.isError ? problemMessageOf(qualify.error, t) : undefined}
+      error={qualify.isError ? refused.foot : undefined}
     >
       <section className="lead-qualify-block">
         <Heading size="xsmall" as="h3">
@@ -350,7 +315,12 @@ function QualificationForm({
         more={preview.hasNextPage}
         fetching={preview.isFetchingNextPage}
         loadMore={() => preview.fetchNextPage()}
-        choose={setDealChoice}
+        choose={(next) => {
+          // A new choice unmounts the amount editor or remounts it on the
+          // committed amount. The refused figure is gone, so its refusal goes.
+          setAmountTooPrecise(false);
+          setDealChoice(next);
+        }}
       />
       {withDeal && (
         <div className="lead-qualify-deal">
@@ -396,21 +366,38 @@ function QualificationForm({
           </Field>
           <Field
             label={t("lead.qualify.amount", { currency: currency ?? "" })}
-            hint={t("lead.qualify.amountHint")}
-            error={
-              amountInvalid
-                ? t("lead.qualify.amountInvalid")
-                : amountWaitsForCurrency
-                  ? t("lead.qualify.amountNoCurrency")
-                  : undefined
-            }
+            hint={t(
+              currency
+                ? "lead.qualify.amountHint"
+                : "lead.qualify.amountNoCurrency",
+            )}
+            error={amountError.sentence}
           >
             {(control) => (
-              <TextInput
+              <MoneyInput
                 {...control}
+                // The scale is the currency's, so a figure typed before it is
+                // known would be stored at the two-digit fallback.
+                disabled={!currency}
+                valueMinor={amountMinor ?? 0}
+                blankWhenZero={amountMinor === null}
+                currency={currency ?? ""}
+                min={0}
                 inputMode="decimal"
-                value={amount}
-                onChange={(event) => setAmount(event.target.value)}
+                display={
+                  currency
+                    ? (minor) => formatMoney(minor, currency, locale)
+                    : undefined
+                }
+                onChangeMinor={(minor) => {
+                  setAmountTooPrecise(false);
+                  setAmountMinor(Number.isNaN(minor) ? null : minor);
+                }}
+                onClear={() => {
+                  setAmountTooPrecise(false);
+                  setAmountMinor(null);
+                }}
+                onTooPrecise={() => setAmountTooPrecise(true)}
               />
             )}
           </Field>

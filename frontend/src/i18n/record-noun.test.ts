@@ -321,17 +321,12 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "trust.typedByHuman",
     // A human being in a sentence about contacts rather than about the record.
     "privacy.inboxAdminOnly",
-    "sendPermission.reason.askedUsToStop",
     "sendPermission.reason.noMarketingConsent",
     "sendPermission.reason.noMarketingConsentFact",
-    "sendPermission.reason.objected",
-    "sendPermission.reason.restricted",
     "sendPermission.reason.tooMany",
-    "sendPermission.reason.optedOutAfterRequest",
     "sendPermission.reason.consentRequired",
     "sendPermission.reason.dealNotRequested",
     "sendPermission.reason.unconfirmed",
-    "sendPermission.reason.withdrawn",
     // A human being on the committee, or who owns or sets something, not the record type.
     "co.aside.visibleOnlyOwner",
     "co.aside.visibleTheOwnerAndShared_one",
@@ -418,6 +413,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "contactCase.preview.noShares",
     "worklist.contactCase.owners",
     "sharedMergeReviews.switch",
+    "common.duplicate.contactHolds",
     "linkedinReach.sub",
     // A colleague's LinkedIn acquaintances (người quen) are people, counted.
     "companyReach.sub",
@@ -614,7 +610,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "compose.colleagueMailbox_one",
     "compose.colleagueMailbox_other",
     "compose.emptyRecipients",
-    "compose.multiRecipientWarning",
     "compose.sharedUnsubscribeToken",
     "compose.threadGone",
     // "người gửi" is a sender, a human the mailbox heard from.

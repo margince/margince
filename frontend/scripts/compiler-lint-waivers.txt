@@ -78,7 +78,6 @@
 1 react-hooks/refs src/features/lists/filterview.tsx
 1 react-hooks/set-state-in-effect src/features/records/historyfields.tsx
 1 react-hooks/refs src/features/voice-knowledge/knowledge.documents.tsx
-1 react-hooks/set-state-in-effect src/features/leads/leadfillfromcontact.tsx
 1 react-hooks/set-state-in-effect src/features/leads/leadraillinks.tsx
 1 react-hooks/set-state-in-effect src/features/leads/leads.actions.tsx
 1 react-hooks/set-state-in-effect src/features/leads/leads.score.tsx
