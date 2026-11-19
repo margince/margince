@@ -77,12 +77,12 @@ func readReportingAccountProgression(ctx context.Context, tx pgx.Tx, frame crmco
  WHERE l.company_id IS NOT NULL),
  best AS (SELECT DISTINCT ON (company_id) * FROM reached ORDER BY company_id,rank,reached_at,lead_id)
  SELECT c.id::text,c.id,c.display_name,best.arrival_owner_id,COALESCE(u.display_name,''),best.arrived_at,
- (EXTRACT(EPOCH FROM (best.reached_at-best.arrived_at))/86400)::float8,best.provenance,best.outcome,''
+ (EXTRACT(EPOCH FROM (best.reached_at-best.arrived_at))/86400)::float8,best.provenance,best.outcome,'',best.lead_id
  FROM best JOIN company c ON c.id=best.company_id LEFT JOIN app_user u ON u.id=best.arrival_owner_id
  WHERE c.archived_at IS NULL AND ` + orUnnarrowed(rowScope) + ` AND ` + companyFields + `
  ORDER BY c.id LIMIT ` + b.add(reportingFactLimit+1)
 	withheld := leadWithheld || companyWithheld
-	facts, coverage, err := readGroupedFacts(ctx, tx, frame, reportingAccountProgression, string(recordTypeCompany), query, b, withheld)
+	facts, coverage, err := readGroupedFactsVia(ctx, tx, frame, reportingAccountProgression, string(recordTypeCompany), query, b, withheld, withLeadVia)
 	if err != nil {
 		return nil, coverage, err
 	}

@@ -32,7 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
-func readerOf(e *integration.Env, scope principal.RowScope, readsCompanies ...bool) context.Context {
+func readerOf(e *integration.Env, scope principal.RowScope, without ...string) context.Context {
 	objects := maps.Clone(integration.AdminPerms.Objects)
 	for _, object := range []string{"deal", "lead", "company", "pipeline", "installation_settings", "forecast", "activity", "contact"} {
 		objects[object] = principal.ObjectGrant{Read: true}
@@ -40,8 +40,8 @@ func readerOf(e *integration.Env, scope principal.RowScope, readsCompanies ...bo
 	for _, object := range []string{"report_definition", "report_edition", "report_schedule", "reporting_framework", "sales_target", "team_oversight"} {
 		objects[object] = principal.ObjectGrant{Read: true, Create: true, Update: true, Delete: true}
 	}
-	if len(readsCompanies) > 0 && !readsCompanies[0] {
-		delete(objects, "company")
+	for _, object := range without {
+		delete(objects, object)
 	}
 	perms := principal.Permissions{RoleKeys: integration.AdminPerms.RoleKeys, Objects: objects, RowScope: scope}
 	ctx := integration.OnSeat(e.As(e.Rep1, []ids.UUID{e.Team1}, perms), principal.SeatFull)
@@ -374,23 +374,7 @@ func TestAnEditionWithTheEntryCohortCardsReadsBack(t *testing.T) {
 	e := integration.Setup(t)
 	w := seedCohort(t, e)
 	admin := readerOf(e, principal.RowScopeAll)
-	e.GrantRole(t, e.Rep1, "admin")
-	report, err := w.service.CreateReport(admin, crmcontracts.ReportingReportInput{Name: "Entry cohort", Audience: "workspace", Selection: w.selection})
-	if err != nil {
-		t.Fatal(err)
-	}
-	run, err := w.service.Freeze(admin, ids.UUID(report.Id), 0, "entry-cohort")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := w.service.Sweep(principal.SystemActing(admin, "system:entry-cohort")); err != nil {
-		t.Fatal(err)
-	}
-	done, err := w.service.GetExecution(admin, ids.UUID(run.Id))
-	if err != nil || done.EditionId == nil {
-		t.Fatalf("publication: %+v %v", done, err)
-	}
-	edition := ids.UUID(*done.EditionId)
+	edition := w.publish(admin, t)
 
 	whole, err := w.service.GetEdition(admin, edition)
 	if err != nil {
@@ -409,7 +393,7 @@ func TestAnEditionWithTheEntryCohortCardsReadsBack(t *testing.T) {
 		}
 	}
 
-	rep := readerOf(e, principal.RowScopeAll, false)
+	rep := readerOf(e, principal.RowScopeAll, "company")
 	narrowed, err := w.service.GetEdition(rep, edition)
 	if err != nil {
 		t.Fatalf("a rep without company read reading the edition: %v", err)
@@ -436,4 +420,54 @@ func deref(s *string) string {
 // reportingExpectation binds evidence to the evaluation a reader just saw.
 func reportingExpectation(result crmcontracts.ReportingEvaluation) reporting.EvidenceExpectation {
 	return reporting.EvidenceExpectation{Key: result.EvaluationKey, At: result.Context.EvaluatedAt, FrameworkRevision: result.Context.FrameworkRevision}
+}
+
+// publish freezes the selection as a workspace edition and answers its id.
+func (w cohortWorld) publish(admin context.Context, t *testing.T) ids.UUID {
+	t.Helper()
+	w.e.GrantRole(t, w.e.Rep1, "admin")
+	report, err := w.service.CreateReport(admin, crmcontracts.ReportingReportInput{Name: "Entry cohort", Audience: "workspace", Selection: w.selection})
+	if err != nil {
+		t.Fatal(err)
+	}
+	run, err := w.service.Freeze(admin, ids.UUID(report.Id), 0, "entry-cohort")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := w.service.Sweep(principal.SystemActing(admin, "system:entry-cohort")); err != nil {
+		t.Fatal(err)
+	}
+	done, err := w.service.GetExecution(admin, ids.UUID(run.Id))
+	if err != nil || done.EditionId == nil {
+		t.Fatalf("publication: %+v %v", done, err)
+	}
+	return ids.UUID(*done.EditionId)
+}
+
+// The company card is derived from leads. A reader who may read companies but
+// not leads gets it withheld, on a frozen edition and on a live evaluation.
+func TestTheCompanyCardIsWithheldFromAReaderWhoMayNotReadItsLeads(t *testing.T) {
+	e := integration.Setup(t)
+	w := seedCohort(t, e)
+	admin := readerOf(e, principal.RowScopeAll)
+	edition := w.publish(admin, t)
+	noLeads := readerOf(e, principal.RowScopeAll, "lead")
+
+	frozen, err := w.service.GetEdition(noLeads, edition)
+	if err != nil {
+		t.Fatalf("frozen edition for a reader without lead read: %v", err)
+	}
+	if points := chartsOf(frozen.Evaluation)["account_cohort"].Points; !frozen.Withheld || (len(points) != 0 && *points[0].Observations != 0) {
+		t.Errorf("frozen: withheld %v, company points %+v, want the card withheld", frozen.Withheld, points)
+	}
+
+	selection := w.selection
+	selection.Metrics = []crmcontracts.ReportingMetricID{"account_progression"}
+	selection.Blocks = []crmcontracts.ReportingBlockKind{"account_cohort"}
+	live, err := w.service.Evaluate(noLeads, selection)
+	if err == nil {
+		if points := chartsOf(live)["account_cohort"].Points; len(points) != 0 && *points[0].Observations != 0 {
+			t.Errorf("live: company points %+v, want none for a reader without lead read", points)
+		}
+	}
 }

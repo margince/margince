@@ -60,6 +60,10 @@ func (a reportingAuthority) visibleFacts(ctx context.Context, tx pgx.Tx, owners 
 		}
 		visible[key] = allowed
 	}
+	leads, err := a.visibleSourceLeads(ctx, tx, facts)
+	if err != nil {
+		return nil, false, err
+	}
 	out := make([]reporting.Fact, 0, len(facts))
 	projections := []reporting.Fact{}
 	withheld := false
@@ -68,13 +72,34 @@ func (a reportingAuthority) visibleFacts(ctx context.Context, tx pgx.Tx, owners 
 			projections = append(projections, fact)
 			continue
 		}
-		if !visible[factVisibilityKey(fact)][fact.SourceID] {
+		if !visible[factVisibilityKey(fact)][fact.SourceID] || (fact.ViaID != nil && !leads[fact.Metric][*fact.ViaID]) {
 			withheld = true
 			continue
 		}
 		out = append(out, fact)
 	}
 	return a.visibleForecastProjections(ctx, tx, out, projections, withheld || lone)
+}
+
+// visibleSourceLeads answers, per metric, which of the leads that facts were
+// derived from this reader may see. A company fact is as visible as the lead
+// behind it, as it is on a live evaluation.
+func (reportingAuthority) visibleSourceLeads(ctx context.Context, tx pgx.Tx, facts []reporting.Fact) (map[crmcontracts.ReportingMetricID]map[ids.UUID]bool, error) {
+	via := map[crmcontracts.ReportingMetricID][]ids.UUID{}
+	for _, fact := range facts {
+		if fact.ViaID != nil {
+			via[fact.Metric] = append(via[fact.Metric], *fact.ViaID)
+		}
+	}
+	out := map[crmcontracts.ReportingMetricID]map[ids.UUID]bool{}
+	for metric, leads := range via {
+		allowed, err := reportingVisibleSources(ctx, tx, reportingVisibilityKey{table: string(recordTypeLead), metric: metric}, leads)
+		if err != nil {
+			return nil, err
+		}
+		out[metric] = allowed
+	}
+	return out, nil
 }
 
 func reportingVisibleSources(ctx context.Context, tx pgx.Tx, key reportingVisibilityKey, sourceIDs []ids.UUID) (map[ids.UUID]bool, error) {
