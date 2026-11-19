@@ -49,6 +49,7 @@ type stagedEvidence struct {
 	BasisID        *ids.UUID                  `json:"basis_id,omitempty"`
 	LeadID         *ids.UUID                  `json:"lead_id,omitempty"`
 	AuthoredOffer  bool                       `json:"authored_offer,omitempty"`
+	QuotedAnchorID *ids.UUID                  `json:"quoted_anchor_id,omitempty"`
 	// StatedCountry is the country the sender stated for this row's recipient,
 	// "" for one they cleared and absent for none. The row's own address names
 	// the recipient; the column never holds one, so erasure has nothing here.
@@ -70,6 +71,7 @@ func evidenceJSON(e commsauthz.Evidence) ([]byte, error) {
 		BasisID:        nonZeroID(e.BasisID),
 		LeadID:         nonZeroID(e.LeadID),
 		AuthoredOffer:  e.AuthoredOffer,
+		QuotedAnchorID: nonZeroID(e.QuotedAnchorID),
 		StatedCountry:  statedCountryJSON(e.RecipientCountries),
 	})
 	if err != nil {
@@ -106,6 +108,7 @@ func evidenceFrom(raw []byte, address string) commsauthz.Evidence {
 		BasisID:            derefID(in.BasisID),
 		LeadID:             derefID(in.LeadID),
 		AuthoredOffer:      in.AuthoredOffer,
+		QuotedAnchorID:     derefID(in.QuotedAnchorID),
 		RecipientCountries: statedCountryFrom(in.StatedCountry, address),
 	}
 }

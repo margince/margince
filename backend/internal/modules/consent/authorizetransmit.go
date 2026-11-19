@@ -237,6 +237,10 @@ func (g *Gate) decideOne(ctx context.Context, tx pgx.Tx, r connector.Recipient, 
 // decideOneIn is decideOne under a country the caller already resolved for
 // this recipient, which every step of one decision then shares.
 func (g *Gate) decideOneIn(ctx context.Context, tx pgx.Tx, r connector.Recipient, req commsauthz.Request, phase commsauthz.Phase, country RecipientCountry) (commsauthz.Decision, error) {
+	req, err := quotedSubjectFor(ctx, tx, r, req)
+	if err != nil {
+		return commsauthz.Decision{}, err
+	}
 	decision, err := g.decideRecipientIn(ctx, tx, r, req, phase, country)
 	decision = decision.WithFooterFindings(req.Evidence.FooterFindings)
 	decision.Evidence.FooterPreview = req.Evidence.FooterPreview
@@ -244,6 +248,9 @@ func (g *Gate) decideOneIn(ctx context.Context, tx pgx.Tx, r connector.Recipient
 	// Not an id, so carried past the EvidenceChecked gate: transmit must judge
 	// the same words staging judged, whichever arm resolved the message.
 	decision.Evidence.AuthoredOffer = req.Evidence.AuthoredOffer
+	// Checked at staging against the recipient's own authenticated mail, and
+	// asked again at transmit; never a record the sender named.
+	decision.Evidence.QuotedAnchorID = req.Evidence.QuotedAnchorID
 	// This recipient's own statement only: a row never names another
 	// recipient's address.
 	decision.Evidence.RecipientCountries = commsauthz.CountryOverridesFor(req.Evidence.RecipientCountries, r.Email)

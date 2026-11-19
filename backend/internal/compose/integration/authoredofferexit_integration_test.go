@@ -11,10 +11,15 @@ import (
 	"reflect"
 	"slices"
 	"testing"
+	"time"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 const (
@@ -198,4 +203,126 @@ func (c *consentEnv) embeddedReviewMatchesTheGet(t *testing.T, refused refusedSe
 		t.Fatalf("served review %+v does not name the refusal %s", review, refused.Details.ReviewID)
 	}
 	return review
+}
+
+// capturedInbound plants mail the contact sent, as a mail connector captures
+// it: their own message in its own thread, filed under them.
+func (c *consentEnv) capturedInbound(t *testing.T, subject, body string) string {
+	t.Helper()
+	id := ids.NewV7()
+	if _, err := c.Owner.Exec(t.Context(), `
+		INSERT INTO activity (id, kind, direction, subject, body, thread_key, occurred_at, source, captured_by, inbound_sender_authenticated)
+		VALUES (@id, 'email', 'inbound', @subject, @body, @thread, @at, 'gmail', 'connector:gmail', true)`,
+		pgx.StrictNamedArgs{"id": id, "subject": subject, "body": body, "thread": "thread-" + id.String(), "at": clocktest.Now(t).Add(-time.Hour)}); err != nil {
+		t.Fatalf("planting the inbound: %v", err)
+	}
+	if _, err := c.Owner.Exec(t.Context(), `
+		INSERT INTO activity_participant (activity_id, contact_id, address, address_domain_folded, role)
+		VALUES (@id, @contact, 'subject@consent.test', 'consent.test', 'from')`,
+		pgx.StrictNamedArgs{"id": id, "contact": c.contactID}); err != nil {
+		t.Fatalf("planting the inbound's sender: %v", err)
+	}
+	if _, err := c.Owner.Exec(t.Context(), `INSERT INTO activity_link (activity_id, entity_type, contact_id) VALUES (@id, 'contact', @contact)`,
+		pgx.StrictNamedArgs{"id": id, "contact": c.contactID}); err != nil {
+		t.Fatalf("filing the inbound: %v", err)
+	}
+	return id.String()
+}
+
+// sentInto plants the rep's own mail into the thread of a captured inbound.
+func (c *consentEnv) sentInto(t *testing.T, inbound, subject string) string {
+	t.Helper()
+	id := ids.NewV7()
+	if _, err := c.Owner.Exec(t.Context(), `
+		INSERT INTO activity (id, kind, direction, subject, body, thread_key, occurred_at, source, captured_by)
+		SELECT @id, 'email', 'outbound', @subject, 'Anbei.', thread_key, @at, 'gmail', 'connector:gmail'
+		  FROM activity WHERE id = @inbound`,
+		pgx.StrictNamedArgs{"id": id, "subject": subject, "inbound": inbound, "at": clocktest.Now(t).Add(-time.Minute)}); err != nil {
+		t.Fatalf("planting the rep's mail: %v", err)
+	}
+	if _, err := c.Owner.Exec(t.Context(), `INSERT INTO activity_link (activity_id, entity_type, contact_id) VALUES (@id, 'contact', @contact)`,
+		pgx.StrictNamedArgs{"id": id, "contact": c.contactID}); err != nil {
+		t.Fatalf("filing the rep's mail: %v", err)
+	}
+	return id.String()
+}
+
+// loggedBy writes an activity into the record by hand, as a rep logs one.
+func (c *consentEnv) loggedBy(t *testing.T, direction, subject string) string {
+	t.Helper()
+	var logged struct {
+		ID string `json:"id"`
+	}
+	if status := c.Call(t, "POST", "/v1/activities", AnyMap{
+		"kind": "email", "subject": subject, "direction": direction,
+		"links": []AnyMap{{"entity_type": "contact", "entity_id": c.contactID}},
+	}, nil, &logged); status != http.StatusCreated {
+		t.Fatalf("logging the %s mail → %d", direction, status)
+	}
+	return logged.ID
+}
+
+// answerWith replies to anchor with subject and body.
+func (c *consentEnv) answerWith(t *testing.T, anchor, subject, body string) int {
+	t.Helper()
+	return c.Call(t, "POST", "/v1/activities/"+anchor+"/send-email", AnyMap{
+		"subject": subject, "body": body, "to": []string{"subject@consent.test"},
+		"consent_purpose": "business_correspondence",
+	}, nil, nil)
+}
+
+// A pitch the contact wrote stays theirs, in the body and in the carried-over
+// subject. A reschedule answering it queues on the first click. A rep who
+// quotes the pitch back, or puts an offer in the subject, has written an offer.
+func TestAQuotedPitchCountsOnlyWhenTheRepTypesItBack(t *testing.T) {
+	c := setupConsent(t)
+	c.useReviewableMarketingProfile(t)
+	const pitch = "Unser Angebot: 20 % Rabatt auf Ihre Lizenzen."
+	answer := func(subject, body string) int {
+		return c.answerWith(t, c.capturedInbound(t, "Termin und Angebot", pitch), subject, body)
+	}
+
+	if status := answer("Re: Termin und Angebot", exitReschedule); status != http.StatusAccepted {
+		t.Fatalf("a reschedule answering a pitch → %d, want 202 on the first click", status)
+	}
+	if n := c.count(t, `SELECT count(*) FROM communication_review`); n != 0 {
+		t.Fatalf("%d reviews after the reschedule, want none", n)
+	}
+	if status := answer("Re: Termin und Angebot", exitReschedule+"\n\n> "+pitch); status != http.StatusConflict {
+		t.Fatalf("a reply quoting the pitch back → %d, want 409", status)
+	}
+	if status := answer("Re: Termin und Angebot mit 20 % Rabatt", exitReschedule); status != http.StatusConflict {
+		t.Fatalf("a reply whose subject the rep turned into an offer → %d, want 409", status)
+	}
+}
+
+// A subject is quoted only when the contact wrote it. A subject carried over
+// from the rep's own pitch, from mail logged by hand or from a sender that
+// failed authentication is the rep's.
+// Each anchor first answers a plain subject, so the fixture shows the cause.
+func TestASubjectTheContactDidNotWriteIsTheReps(t *testing.T) {
+	for name, anchor := range map[string]func(c *consentEnv, subject string) string{
+		"the rep's own pitch in the contact's thread": func(c *consentEnv, subject string) string {
+			return c.sentInto(t, c.capturedInbound(t, "Termin", exitReschedule), subject)
+		},
+		"a hand-logged inbound": func(c *consentEnv, subject string) string { return c.loggedBy(t, "inbound", subject) },
+		"an inbound whose sender failed authentication": func(c *consentEnv, subject string) string {
+			anchor := c.capturedInbound(t, subject, exitReschedule)
+			if _, err := c.Owner.Exec(t.Context(), `UPDATE activity SET inbound_sender_authenticated = false WHERE id = $1`, anchor); err != nil {
+				t.Fatal(err)
+			}
+			return anchor
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			c := setupConsent(t)
+			c.useReviewableMarketingProfile(t)
+			if status := c.answerWith(t, anchor(c, "Termin"), "Re: Termin", exitReschedule); status != http.StatusAccepted {
+				t.Fatalf("a plain reply to this anchor → %d, want 202: the fixture proves nothing", status)
+			}
+			if status := c.answerWith(t, anchor(c, "Termin und Angebot"), "Re: Termin und Angebot", exitReschedule); status != http.StatusConflict {
+				t.Fatalf("a reply carrying over a subject the contact did not write → %d, want 409", status)
+			}
+		})
+	}
 }
