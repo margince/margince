@@ -2,7 +2,7 @@
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { writeMessage } from "../../design-system/richtext-testing";
 import { en } from "../../i18n/en";
 import { draftButton } from "../../testing/composedraft.testkit";
@@ -12,6 +12,7 @@ import {
   type Activity,
   activity202,
   findThreadChoice,
+  installComposeClock,
   jsonResponse,
   pickWhy,
   pressSend,
@@ -20,6 +21,8 @@ import {
   WHY_ASK,
   WHY_LABEL,
 } from "./compose.testkit";
+
+beforeEach(installComposeClock);
 
 afterEach(() => {
   cleanup();
