@@ -221,11 +221,9 @@ function RoomBody({
   // link opened in another tab can move it to another room under this one.
   const [drawn, setDrawn] = useState<string | null>(null);
   const shown = room.data?.participant.id;
-  useEffect(() => {
-    if (shown !== undefined && drawn === null) {
-      setDrawn(shown);
-    }
-  }, [shown, drawn]);
+  if (shown !== undefined && drawn === null) {
+    setDrawn(shown);
+  }
   const signOut = useMutation({
     mutationKey: ["buyer-room-sign-out"],
     mutationFn: async () => {
