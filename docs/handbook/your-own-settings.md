@@ -31,12 +31,13 @@ Also called: save settings, changes not saved, undo changes.
 <!-- opens: settings/notifications -->
 To change your notifications in Margince, open Settings → **Notifications**.
 1. Under **Delivery by kind**, pick how each kind reaches you: **Off**, **In the app**, **Email** or **Daily digest**. Not every kind offers every choice.
-2. In the **Browser notifications** row at the top of **Delivery by kind**, press **Allow**. Then allow it in the browser's own question.
-   The browser then shows a due reminder on one of your tasks while Margince is open in a tab.
-   To turn it off, block notifications for this site in your browser settings. If the browser
-   blocks them, the row says so and offers no **Allow**.
-3. Under **Email summaries**, set **Morning brief** and **Weekly review** to **By email** or **Not by email**.
-4. Choose **Save** in the bar at the foot of the page.
+2. Under **Email summaries**, set **Morning brief** and **Weekly review** to **By email** or **Not by email**.
+3. Choose **Save** in the bar at the foot of the page.
+
+To get a due reminder from the browser as well, press **Allow** in the **Browser notifications** row at the top of **Delivery by kind**. Then allow it in the browser's own question. This needs no **Save**.
+The browser then shows a due reminder on one of your tasks while Margince is open in a tab.
+To turn it off, block notifications for this site in your browser settings. If the browser
+blocks them, the row says so and offers no **Allow**.
 
 The other rows under **Email summaries** decide how those emails come:
 - **Routine email time**: the hour they are sent, or **Start of my working hours**. They arrive within three hours of it, on your working days and in your time zone.
@@ -146,7 +147,7 @@ Also called: email footer, sign-off, signature block.
 To change the language Margince uses with you, open Settings → **Account**. Pick one in the **Language** row: **English**, **Deutsch** or **Tiếng Việt**, then choose **Save**.
 The screen changes once the choice is saved. It is saved to your account, so your next sign-in uses it too, and it changes nothing for anyone else.
 
-The sign-in page has its own language switch at the foot of the page. It starts in the language of the last account that signed in on this browser.
+The sign-in page has its own language switch at the foot of the page. It starts in the language last set on this browser. That is the language of the last account that signed in here, unless someone picked another one on the sign-in page since. If neither happened, it follows the browser's language.
 Also called: change to German, switch to Vietnamese, locale, translation.
 
 ### How do I change the theme?
