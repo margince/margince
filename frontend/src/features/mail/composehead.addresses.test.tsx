@@ -90,6 +90,26 @@ describe("an address already on the message", () => {
     expect(screen.getByText("Already in To")).toBeTruthy();
   });
 
+  it("leaves no refusal once the typed text is cleared", async () => {
+    const user = userEvent.setup();
+    render(<Head start={["buyer1@brandt.example"]} openCopies />);
+    await user.type(line("Cc"), "BUYER1@BRANDT.EXAMPLE{Enter}");
+    expect(screen.getByText("Already in To")).toBeTruthy();
+    await user.keyboard("{Control>}a{/Control}{Backspace}");
+    expect(line("Cc").value).toBe("");
+    expect(screen.queryByText("Already in To")).toBeNull();
+  });
+
+  it("leaves no refusal once the typed text is deleted key by key", async () => {
+    const user = userEvent.setup();
+    render(<Head start={["buyer1@brandt.example"]} />);
+    await user.type(line("To"), "BUYER1@BRANDT.EXAMPLE{Enter}");
+    await user.keyboard("{Backspace>21/}");
+    expect(line("To").value).toBe("");
+    expect(screen.queryByText("Already in To")).toBeNull();
+    expect(held()).toBe("to=buyer1@brandt.example cc=");
+  });
+
   it("is no longer offered in any line", async () => {
     const user = userEvent.setup();
     render(<Head start={["buyer1@brandt.example"]} openCopies />);

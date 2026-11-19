@@ -237,8 +237,6 @@ describe("what a sent message files under", () => {
       />,
     );
 
-    // The picker holds its place from the start; it opens once the record's
-    // projects and deals have arrived.
     await waitFor(() =>
       expect(screen.getByLabelText("Related to").hasAttribute("disabled")).toBe(
         false,
