@@ -318,13 +318,11 @@ func assertNoMarketingGrant(t *testing.T, e *apptest.AppEnv, contactID, purposeI
 // addresses must AGREE, because when they disagree neither the mint nor the
 // subject can tell who actually asked.
 //
-// WHAT THE REFUSAL DOES NOT DO ANY MORE IS TAKE THE BOOKING WITH IT. The guard
-// is unchanged where it counts — no token, no mail — but the visitor who typed
-// the second address they hold came for a meeting, and losing it over an
-// optional checkbox left the record saying they consented to be contacted
-// about a booking that does not exist. The response reports `not_asked`, which
-// is what the contract already declares for a question this installation could
-// not put.
+// The refusal no longer takes the booking with it. The guard still writes no
+// token and sends no mail. The visitor came for a meeting. Losing it over an
+// optional checkbox would leave consent on record for a booking that does not
+// exist. The response is the neutral `pending_confirmation`, the same answer
+// every address gets.
 func TestAMarketingTickFromANonPrimaryAddressIsNotAsked(t *testing.T) {
 	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)
@@ -374,8 +372,8 @@ func TestAMarketingTickFromANonPrimaryAddressIsNotAsked(t *testing.T) {
 		t.Fatalf("a tick from a non-primary address → %d, want 201: the link is not minted "+
 			"either way, and refusing to ask need not refuse the meeting", status)
 	}
-	if answer.Booking != "pending" || answer.Marketing != "not_asked" {
-		t.Errorf("the response says booking=%q marketing=%q, want pending/not_asked — a booker "+
+	if answer.Booking != "pending" || answer.Marketing != "pending_confirmation" {
+		t.Errorf("the response says booking=%q marketing=%q, want pending/pending_confirmation — a booker "+
 			"who ticked the box is owed the fact that no mail is coming",
 			answer.Booking, answer.Marketing)
 	}
@@ -423,10 +421,9 @@ func TestAMarketingTickFromANonPrimaryAddressIsNotAsked(t *testing.T) {
 // NeverOverrideExisting, "a decision already on record, above all a withdrawal,
 // must stand". The marketing path did not copy it.
 //
-// THE MEETING IS NOT PART OF THE REFUSAL. Nothing is staged and nothing is
-// granted, which is the whole of what the guard protects; the booking form
-// simply stops being the place where that is paid for by somebody who came to
-// book a slot. The response says `not_asked`, and the withdrawal stands.
+// The meeting is not part of the refusal. Nothing is staged and nothing is
+// granted, which is all the guard protects. A visitor who came to book a slot
+// does not pay for it. The response stays neutral, and the withdrawal stands.
 func TestAMarketingTickDoesNotReSolicitAWithdrawnSubject(t *testing.T) {
 	e := setupBookingApp(t)
 	e.BootstrapWorkspace(t)
@@ -488,8 +485,8 @@ func TestAMarketingTickDoesNotReSolicitAWithdrawnSubject(t *testing.T) {
 		t.Fatalf("a tick naming a withdrawn subject → %d, want 201: they are asked nothing, and "+
 			"the question they are not asked is not one they wanted", status)
 	}
-	if answer.Booking != "pending" || answer.Marketing != "not_asked" {
-		t.Errorf("the response says booking=%q marketing=%q, want pending/not_asked",
+	if answer.Booking != "pending" || answer.Marketing != "pending_confirmation" {
+		t.Errorf("the response says booking=%q marketing=%q, want pending/pending_confirmation",
 			answer.Booking, answer.Marketing)
 	}
 	if n := linksFor(withdrawn); n != 0 {

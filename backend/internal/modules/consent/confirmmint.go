@@ -71,6 +71,8 @@ type mintedLink struct {
 	// alreadyPending is set when a recent link for this contact and purpose is
 	// still live, so no second token or mail was made.
 	alreadyPending bool
+	// noLane is set when the installation cannot mail a confirmation at all.
+	noLane bool
 }
 
 // issueLinkTx is the mint itself, on a transaction the caller owns.
@@ -117,7 +119,7 @@ func (s *Store) issueLinkTx(
 		issued := s.now().UTC()
 		held, err := s.automaticAnswerTx(ctx, tx, req, admitted, issued)
 		if err != nil || held.stop {
-			out = mintedLink{deliveredTo: deliveredTo, alreadyPending: held.pending}
+			out = mintedLink{deliveredTo: deliveredTo, alreadyPending: held.pending, noLane: held.noLane}
 			return err
 		}
 		expires := issued.Add(confirmTokenTTL)
@@ -267,6 +269,7 @@ func pendingLinkSQL(nowArg string) string {
 type automaticStop struct {
 	stop    bool
 	pending bool
+	noLane  bool
 }
 
 // automaticAnswerTx decides whether an automatic request may mail. It stops
@@ -277,7 +280,7 @@ func (s *Store) automaticAnswerTx(ctx context.Context, tx pgx.Tx, req mintReques
 		return automaticStop{}, nil
 	}
 	if !s.canSendConfirm() {
-		return automaticStop{stop: true}, nil
+		return automaticStop{stop: true, noLane: true}, nil
 	}
 	held, err := subjectGrantedTx(ctx, tx, "contact_id", req.contactID.String(), req.purposeID.String(), admitted.purpose.requiresDOI)
 	if err != nil || held {

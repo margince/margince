@@ -90,14 +90,9 @@ func TestTheMarketingOutcomeAgreesWithWhatWasActuallyStaged(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := "not_asked"
-	if delivered > 0 {
-		want = "pending_confirmation"
-	}
-	if answer.Marketing != want {
-		t.Errorf("the response says marketing=%q while %d confirmation mail(s) were staged, want "+
-			"%q — a booker told a question is coming waits for a mail nobody sent",
-			answer.Marketing, delivered, want)
+	if delivered != 1 || answer.Marketing != "pending_confirmation" {
+		t.Errorf("the response says marketing=%q with %d confirmation mail(s) staged, want "+
+			"pending_confirmation and exactly 1", answer.Marketing, delivered)
 	}
 }
 

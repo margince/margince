@@ -73,10 +73,10 @@ func (x *tickEnv) counts(t *testing.T, email string) (tokens, mails int) {
 	return tokens, mails
 }
 
-func (x *tickEnv) wantQuiet(t *testing.T, email, outcome, wantOutcome string, tokens, mails int) {
+func (x *tickEnv) wantQuiet(t *testing.T, email, outcome string, tokens, mails int) {
 	t.Helper()
-	if outcome != wantOutcome {
-		t.Errorf("outcome = %q, want %q", outcome, wantOutcome)
+	if outcome != "pending_confirmation" {
+		t.Errorf("outcome = %q, want the same neutral answer for every address", outcome)
 	}
 	if gotT, gotM := x.counts(t, email); gotT != tokens || gotM != mails {
 		t.Errorf("tokens=%d mails=%d, want tokens=%d mails=%d", gotT, gotM, tokens, mails)
@@ -108,7 +108,7 @@ func (x *tickEnv) consentState(t *testing.T, email string) string {
 func TestAMarketingTickMailsOneConfirmationAndARepeatDoesNotMailAgain(t *testing.T) {
 	x := newTickEnv(t)
 	email := "mia@visitor.example"
-	x.wantQuiet(t, email, x.book(t, email), "pending_confirmation", 1, 1)
+	x.wantQuiet(t, email, x.book(t, email), 1, 1)
 	assertNoMarketingGrant(t, x.e, contactIDByEmail(t, x.e, email), x.marketing)
 
 	var read struct {
@@ -127,23 +127,23 @@ func TestAMarketingTickMailsOneConfirmationAndARepeatDoesNotMailAgain(t *testing
 		}
 	}
 
-	x.wantQuiet(t, email, x.book(t, email), "pending_confirmation", 1, 1)
+	x.wantQuiet(t, email, x.book(t, email), 1, 1)
 }
 
 func TestTheConfirmationBudgetPerAddressIsOnePerWeekAndThreePerQuarter(t *testing.T) {
 	x := newTickEnv(t)
 	email := "budget@visitor.example"
-	x.wantQuiet(t, email, x.book(t, email), "pending_confirmation", 1, 1)
+	x.wantQuiet(t, email, x.book(t, email), 1, 1)
 	x.ageLinks(t, 1)
-	x.wantQuiet(t, email, x.book(t, email), "pending_confirmation", 1, 1)
+	x.wantQuiet(t, email, x.book(t, email), 1, 1)
 	x.ageLinks(t, 7)
-	x.wantQuiet(t, email, x.book(t, email), "pending_confirmation", 2, 2)
+	x.wantQuiet(t, email, x.book(t, email), 2, 2)
 	x.ageLinks(t, 8)
-	x.wantQuiet(t, email, x.book(t, email), "pending_confirmation", 3, 3)
+	x.wantQuiet(t, email, x.book(t, email), 3, 3)
 	x.ageLinks(t, 15)
-	// A fourth within 90 days: the address spent its budget and the first
-	// links expired, so there is no live link to report as pending.
-	x.wantQuiet(t, email, x.book(t, email), "not_asked", 3, 3)
+	// A fourth within 90 days: the address spent its budget, nothing is mailed,
+	// and the answer is still the neutral one.
+	x.wantQuiet(t, email, x.book(t, email), 3, 3)
 	assertNoMarketingGrant(t, x.e, contactIDByEmail(t, x.e, email), x.marketing)
 }
 
@@ -155,7 +155,7 @@ func TestAnErasedAddressIsNotMailedAConfirmation(t *testing.T) {
 		storekit.SuppressionHash(email)); err != nil {
 		t.Fatal(err)
 	}
-	x.wantQuiet(t, email, x.book(t, email), "not_asked", 0, 0)
+	x.wantQuiet(t, email, x.book(t, email), 0, 0)
 	if got := x.consentState(t, email); got == "granted" {
 		t.Errorf("an erased address holds marketing consent %q", got)
 	}
@@ -164,13 +164,13 @@ func TestAnErasedAddressIsNotMailedAConfirmation(t *testing.T) {
 func TestAContactWhoAlreadySubscribedIsNotMailedAgain(t *testing.T) {
 	x := newTickEnv(t)
 	email := "subscribed@visitor.example"
-	x.wantQuiet(t, email, x.book(t, email), "pending_confirmation", 1, 1)
+	x.wantQuiet(t, email, x.book(t, email), 1, 1)
 	grantWithServedQuestion(t, x.e, confirmLinkToken(t, x.e))
 	if got := x.consentState(t, email); got != "granted" {
 		t.Fatalf("consent after spending the link = %q, want granted", got)
 	}
 	x.ageLinks(t, 30)
-	x.wantQuiet(t, email, x.book(t, email), "not_asked", 1, 1)
+	x.wantQuiet(t, email, x.book(t, email), 1, 1)
 	if got := x.consentState(t, email); got != "granted" {
 		t.Errorf("consent after the second booking = %q, want granted", got)
 	}
@@ -194,7 +194,7 @@ func TestAStoppedContactIsNotMailedAConfirmation(t *testing.T) {
 				AnyMap{"kind": kind, "reason": "The recipient asked us to stop."}, nil, nil); status != http.StatusNoContent {
 				t.Fatalf("recording the stop → %d", status)
 			}
-			x.wantQuiet(t, email, x.book(t, email), "not_asked", 0, 0)
+			x.wantQuiet(t, email, x.book(t, email), 0, 0)
 		})
 	}
 }
@@ -207,5 +207,5 @@ func TestATickOnABookingMatchedToALeadMailsNothing(t *testing.T) {
 	}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("create lead → %d", status)
 	}
-	x.wantQuiet(t, email, x.book(t, email), "not_asked", 0, 0)
+	x.wantQuiet(t, email, x.book(t, email), 0, 0)
 }
