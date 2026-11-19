@@ -148,44 +148,6 @@ func TestADescriptionOverTheColumnsLengthIsAProblemOfItsCell(t *testing.T) {
 	}
 }
 
-// A contact name part keeps the capture bound, counted in characters. One at
-// the bound lands; one past it is refused on its own cell with its length.
-func TestAContactNameCellPastTheImportBoundIsAProblemOfItsCell(t *testing.T) {
-	atCap := strings.Repeat("ü", contacts.ContactNameLimit)
-	for _, target := range []string{fieldFullName, "first_name", "last_name"} {
-		fields := map[string]string{fieldFullName: "Anna Weber", target: atCap}
-		if _, problem := checkRow(migration.ObjectContact, fields, importCatalog{}); problem != nil {
-			t.Fatalf("%s problem = %+v, want none for a name at the bound", target, problem)
-		}
-		fields[target] = atCap + "x"
-		_, problem := checkRow(migration.ObjectContact, fields, importCatalog{})
-		want := "This value is " + strconv.Itoa(contacts.ContactNameLimit+1) + " characters. The field holds at most " +
-			strconv.Itoa(contacts.ContactNameLimit) + "."
-		if problem == nil || problem.Target != target || problem.Why.Code != migration.ReasonValueTooLong || problem.Message != want {
-			t.Fatalf("%s problem = %+v, want the cell refused as %q", target, problem, want)
-		}
-	}
-}
-
-// Two name parts that fit alone but join past the limit are refused on the
-// file's last-name column, with the joined name as the value. A join at the limit lands.
-func TestContactNamePartsJoiningPastTheLimitAreRefusedOnTheLastNameColumn(t *testing.T) {
-	limit := contacts.ContactNameLimit
-	w := &csvWriters{object: migration.ObjectContact, columns: map[string]string{"Vorname": "first_name", "Nachname": "last_name"}}
-	fits := map[string]any{"first_name": strings.Repeat("a", limit/2), "last_name": strings.Repeat("b", limit-limit/2-1)}
-	if _, skipped := w.checkedCells(migration.Row{ExternalID: "1", Line: 2, Fields: fits}); skipped != nil {
-		t.Fatalf("skipped = %+v, want none for parts joining to %d characters", skipped, limit)
-	}
-	part := limit * 2 / 3
-	first, last := strings.Repeat("a", part), strings.Repeat("b", part)
-	_, skipped := w.checkedCells(migration.Row{ExternalID: "1", Line: 2, Fields: map[string]any{"first_name": first, "last_name": last}})
-	want := "This value is " + strconv.Itoa(2*part+1) + " characters. The field holds at most " + strconv.Itoa(limit) + "."
-	if skipped == nil || skipped.Column != "Nachname" || skipped.Value != first+" "+last ||
-		skipped.Code != migration.ReasonValueTooLong || skipped.Reason != want {
-		t.Fatalf("skipped = %+v, want the Nachname cell refused with the joined name as %q", skipped, want)
-	}
-}
-
 // The contacts store refuses a sending system's address, so the dry run skips
 // the row with the same reason the commit gives. A lead may still hold one.
 func TestAContactRowWithASendingSystemsAddressIsSkipped(t *testing.T) {

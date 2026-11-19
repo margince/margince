@@ -379,7 +379,6 @@ func (w *csvWriters) reconcile(ctx context.Context, id ids.UUID, row migration.R
 		if refusedAsErased(err) {
 			return skippedFor(addressErasedWhy), nil
 		}
-		// Joined to a stored part, a name can pass the limit the row check could not see.
 		if why, over := importtextbounds.NameTooLong(err); over {
 			return skippedFor(why), nil
 		}

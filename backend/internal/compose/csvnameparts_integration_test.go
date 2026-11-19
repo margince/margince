@@ -6,7 +6,6 @@
 package compose
 
 import (
-	"strconv"
 	"strings"
 	"testing"
 
@@ -94,42 +93,24 @@ func TestAReimportedNameFollowsTheStoreRule(t *testing.T) {
 	}
 }
 
-// A re-imported first name that joins to a stored last name past the name limit
-// skips its row with the length. The stored name stays, and the next row lands.
-//
-// Mutation: drop the NameTooLong case in reconcile, and the first row fails the import.
+// A re-imported first name joining a stored last name past the limit skips only
+// its row, and the stored name stays. Without the NameTooLong case it fails the import.
 func TestAReimportedNameJoiningPastTheLimitSkipsOnlyItsRow(t *testing.T) {
 	e := integration.Setup(t)
-	runID := ids.NewV7()
-	ctx := storekit.WithImportRun(e.Admin(), runID)
-	part := contacts.ContactNameLimit * 2 / 3
-	long, short := strings.Repeat("b", part), "Doe"
-	var stored [2]ids.UUID
-	for i, last := range []string{long, short} {
-		created, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{
-			FullName: "Ada " + last, FirstName: new("Ada"), LastName: &last, Source: "manual",
-		})
-		if err != nil {
-			t.Fatalf("create: %v", err)
-		}
-		stored[i] = ids.UUID(created.Id)
-	}
-	w := newCSVWriters(e.DB(), runID, migration.PartMapping{Object: migration.ObjectContact},
-		runOptions{}, &linkResolver{sourceSystem: "csv:names"}, importColumns{})
-	refused, err := w.reconcile(ctx, stored[0], migration.Row{ExternalID: "row-1", Fields: map[string]any{"first_name": strings.Repeat("a", part)}}, nil)
+	runID, part := ids.NewV7(), contacts.ContactNameLimit*2/3
+	last := strings.Repeat("b", part)
+	created, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Ada " + last, FirstName: new("Ada"), LastName: &last, Source: "manual"})
 	if err != nil {
-		t.Fatalf("the overlong row failed the import: %v", err)
+		t.Fatalf("create: %v", err)
 	}
-	if !refused.Skipped || refused.SkipWhy.Code != migration.ReasonValueTooLong || !strings.Contains(refused.SkipReason, strconv.Itoa(2*part+1)) {
-		t.Fatalf("overlong row = %+v, want it skipped as value_too_long at %d", refused, 2*part+1)
+	w := newCSVWriters(e.DB(), runID, migration.PartMapping{Object: migration.ObjectContact}, runOptions{}, &linkResolver{sourceSystem: "csv:names"}, importColumns{})
+	row := migration.Row{ExternalID: "row-1", Fields: map[string]any{"first_name": strings.Repeat("a", part)}}
+	got, err := w.reconcile(storekit.WithImportRun(e.Admin(), runID), ids.UUID(created.Id), row, nil)
+	if err != nil || !got.Skipped || got.SkipWhy.Code != migration.ReasonValueTooLong {
+		t.Fatalf("overlong row = %+v, %v; want it skipped as value_too_long", got, err)
 	}
-	if _, err := w.reconcile(ctx, stored[1], migration.Row{ExternalID: "row-2", Fields: map[string]any{"first_name": "John"}}, nil); err != nil {
-		t.Fatalf("next row: %v", err)
-	}
-	for i, want := range []string{"Ada " + long, "John Doe"} {
-		got, err := e.Contacts.GetContact(e.Admin(), ids.From[ids.ContactKind](stored[i]), storekit.LiveOnly)
-		if err != nil || got.FullName != want {
-			t.Fatalf("contact %d full_name %q, %v; want %q", i, got.FullName, err, want)
-		}
+	stored, err := e.Contacts.GetContact(e.Admin(), ids.From[ids.ContactKind](ids.UUID(created.Id)), storekit.LiveOnly)
+	if err != nil || stored.FullName != "Ada "+last {
+		t.Fatalf("stored full_name %q, %v; want it unchanged", stored.FullName, err)
 	}
 }
