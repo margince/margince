@@ -243,7 +243,7 @@ func (r *Registry) syncConnection(ctx context.Context, connectionID ids.UUID) er
 			Scan(&name, &grantedBy, &credentialRef, &authBytes, &cursor, &generation, &revision, &heldAnchor)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		return fmt.Errorf("capture: connection %s: %w", connectionID, apperrors.ErrNotFound)
+		return fmt.Errorf("the connection is gone, or was never yours to reach: %w", apperrors.ErrNotFound)
 	}
 	if err != nil {
 		return err
@@ -479,7 +479,7 @@ func (r *Registry) connector(name string) (connector.Connector, error) {
 	defer r.mu.RUnlock()
 	c, ok := r.connectors[name]
 	if !ok {
-		return nil, fmt.Errorf("capture: connector %q is not compiled in: %w", name, apperrors.ErrNotFound)
+		return nil, fmt.Errorf("the connector %q is not part of this installation: %w", name, apperrors.ErrNotFound)
 	}
 	return c, nil
 }

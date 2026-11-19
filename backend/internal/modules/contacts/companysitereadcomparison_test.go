@@ -532,3 +532,17 @@ func TestASiteReadTreatsAnAgentsValueAsAConflictToDecide(t *testing.T) {
 		t.Fatalf("classification = %q, want %q", got.Classification, siteReadComparisonHumanConflict)
 	}
 }
+
+// A confirmation names each fact of the inspected draft once. A key named twice,
+// or one the draft never held, refuses the whole confirmation.
+func TestAConfirmationRefusesARepeatedOrUnknownFactKey(t *testing.T) {
+	fact := DeepReadFact{Category: "market", Field: "geographies", Value: "DACH", ValueKey: "dach"}
+	key := SiteReadFactKey(fact)
+	if _, err := selectSiteReadFacts([]DeepReadFact{fact}, []string{key, key}); err == nil {
+		t.Error("a fact key selected twice was accepted")
+	}
+	_, err := selectSiteReadFacts([]DeepReadFact{fact}, []string{"market/geographies/nordics"})
+	if !errors.Is(err, apperrors.ErrVersionSkew) {
+		t.Errorf("a key outside the draft = %v, want ErrVersionSkew", err)
+	}
+}

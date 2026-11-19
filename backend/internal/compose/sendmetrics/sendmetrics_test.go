@@ -42,7 +42,7 @@ func switchedTo(on bool) func(context.Context) (bool, error) {
 func refusedSend(category commsauthz.Category, actions ...string) error {
 	return &consent.SendRefusedError{
 		ReviewID: ids.NewV7(),
-		Cause:    fmt.Errorf("consent: 1 of 1 recipients may not be written to: %w", apperrors.ErrConsentNotGranted),
+		Cause:    fmt.Errorf("1 of 1 recipients may not be written to: %w", apperrors.ErrConsentNotGranted),
 		Actions:  actions,
 		Refusals: []consent.RefusedRecipient{{
 			Address: "anna.private@customer.test", ReasonCode: commsauthz.ReasonNoEvidence, Category: string(category),

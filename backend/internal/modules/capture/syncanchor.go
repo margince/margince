@@ -164,7 +164,7 @@ func recordUnreadPeriod(
 // unread span is recorded.
 func (c *syncCheckpointer) NarrowSyncAnchor(ctx context.Context, from, to time.Time) error {
 	if !from.Before(to) {
-		return fmt.Errorf("capture: a narrowed anchor must move later, not from %s to %s: %w",
+		return fmt.Errorf("a narrowed anchor must move later, not from %s to %s: %w",
 			from.UTC().Format(time.RFC3339), to.UTC().Format(time.RFC3339), apperrors.ErrInvalidArgument)
 	}
 	args := c.snapshot.args()
@@ -236,7 +236,7 @@ func releaseSyncAnchor(
 	// decline means the row changed under an open transaction.
 	if tag.RowsAffected() != 1 {
 		return fmt.Errorf(
-			"capture: the watermark was stored and its anchor was not released: %w",
+			"the watermark was stored and its anchor was not released: %w",
 			apperrors.ErrConflict)
 	}
 	return nil

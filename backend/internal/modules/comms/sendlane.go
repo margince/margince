@@ -182,7 +182,7 @@ SELECT o.id, left(COALESCE(o.subject, ''), %d), COALESCE(o.%s, ''), o.%s, l.cont
 func (s *Store) readSendLane(ctx context.Context, lane sendLane, what string, since time.Time, limit int) ([]laneSend, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.UserID.IsZero() {
-		return nil, fmt.Errorf("comms: reading your %s needs an authenticated contact: %w", what, apperrors.ErrPermissionDenied)
+		return nil, fmt.Errorf("reading your %s needs an authenticated contact: %w", what, apperrors.ErrPermissionDenied)
 	}
 	// A send is an activity, and reading one back — subject line included —
 	// carries the activity read grant like every other timeline read. After

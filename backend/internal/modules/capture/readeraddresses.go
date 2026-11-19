@@ -110,7 +110,7 @@ func selfOnly(ctx context.Context, user ids.UUID) error {
 	if actor.UserID == user {
 		return nil
 	}
-	return fmt.Errorf("capture: a seat's own addresses are theirs alone: %w",
+	return fmt.Errorf("a seat's own addresses are theirs alone: %w",
 		apperrors.ErrPermissionDenied)
 }
 

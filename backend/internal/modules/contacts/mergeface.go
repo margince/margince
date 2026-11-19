@@ -60,7 +60,7 @@ func (s *Store) DescribeForMerge(
 		return map[ids.UUID]MergeFace{}, nil
 	}
 	if !isMergeFaceEntity(entityType) {
-		return nil, fmt.Errorf("contacts: %q has no merge face: %w", entityType, apperrors.ErrNotFound)
+		return nil, fmt.Errorf("%q records cannot be merged: %w", entityType, apperrors.ErrNotFound)
 	}
 	if err := auth.Require(ctx, entityType, principal.ActionRead); err != nil {
 		return nil, err
@@ -116,7 +116,7 @@ func (s *Store) DecidableForMerge(
 		return map[ids.UUID]bool{}, nil
 	}
 	if !isMergeFaceEntity(entityType) {
-		return nil, fmt.Errorf("contacts: %q has no merge face: %w", entityType, apperrors.ErrNotFound)
+		return nil, fmt.Errorf("%q records cannot be merged: %w", entityType, apperrors.ErrNotFound)
 	}
 	var decidable map[ids.UUID]bool
 	err := s.tx(ctx, func(tx pgx.Tx) error {
