@@ -17343,7 +17343,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Ein Admin hat automatische Änderungen für alle ausgeschaltet. Nichts läuft von selbst, und deine Schalter unten bleiben, wie du sie gesetzt hast.",
   "autonomy.installationSwitch": "Automatische Änderungen für alle",
   "autonomy.installationHelp":
-    "Aus stoppt jede automatische Änderung. Die Schalter jeder Person bleiben, wie sie sie gesetzt hat.",
+    "Aus stoppt jede automatische Änderung. Die eigenen Schalter aller bleiben, wie sie gesetzt wurden.",
   "autonomy.noneDecidedYet":
     "Du hast noch keinen dieser Vorschläge geprüft. Je nachdem, was unten aktiviert ist, können automatische Änderungen bereits laufen. Vorschläge hängen von deinen Datensätzen und der dir zugewiesenen Arbeit ab.",
   "autonomy.noRecord": "Noch keine Entscheidungen dieser Art.",

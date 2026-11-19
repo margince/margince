@@ -17189,7 +17189,7 @@ export const en = {
     "An admin turned automatic changes off for everyone. Nothing runs on its own, and your switches below stay as you set them.",
   "autonomy.installationSwitch": "Automatic changes for everyone",
   "autonomy.installationHelp":
-    "Off stops every automatic change. Each person's own switches stay as they set them.",
+    "Off stops every automatic change. Everyone’s own switches stay as they set them.",
   "autonomy.noneDecidedYet":
     "You have not reviewed any of these proposals yet. Automatic changes can already run according to the switches below. Proposals depend on your records and the work routed to you.",
   "autonomy.noRecord": "No decisions of this kind yet.",
