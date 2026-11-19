@@ -31,13 +31,13 @@ func TestOnlyAUserOrTheirAgentChangesTheirOwnMailbox(t *testing.T) {
 	r := NewRegistry(nil, nil, nil, nil)
 	for name, ctx := range callers {
 		t.Run(name, func(t *testing.T) {
-			if _, err := r.SetContextTag(ctx, "gmail", nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
+			if _, err := r.SetContextTag(ctx, ProviderMailbox("gmail"), nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
 				t.Errorf("filing a mailbox under a word answered %v, want a permission refusal", err)
 			}
-			if _, err := r.SetMailPosture(ctx, "gmail", "private", false); !errors.Is(err, apperrors.ErrPermissionDenied) {
+			if _, err := r.SetMailPosture(ctx, ProviderMailbox("gmail"), "private", false); !errors.Is(err, apperrors.ErrPermissionDenied) {
 				t.Errorf("setting a mailbox's posture answered %v, want a permission refusal", err)
 			}
-			if err := r.Disconnect(ctx, "gmail"); !errors.Is(err, apperrors.ErrPermissionDenied) {
+			if err := r.Disconnect(ctx, ProviderMailbox("gmail")); !errors.Is(err, apperrors.ErrPermissionDenied) {
 				t.Errorf("disconnecting answered %v, want a permission refusal", err)
 			}
 		})

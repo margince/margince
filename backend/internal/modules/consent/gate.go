@@ -47,10 +47,13 @@ func (g *Gate) RequireGrantedForEmails(ctx context.Context, recipients []string,
 // block. A DOI purpose additionally demands the confirmed round-trip on the
 // proof log — a granted-but-unconfirmed row does not send.
 func (g *Gate) RequireGrantedForRecipients(ctx context.Context, recipients []connector.Recipient, purposeKey string) error {
-	return g.checkGrantedRecipients(ctx, recipients, purposeKey, true)
+	return g.checkGrantedRecipients(ctx, recipients, purposeKey, true, nil)
 }
 
-func (g *Gate) checkGrantedRecipients(ctx context.Context, recipients []connector.Recipient, purposeKey string, record bool) error {
+// checkGrantedRecipients asks the legacy gate. countries, when given, are the
+// recipients' countries already resolved for the message, in recipient order;
+// nil reads each from the record.
+func (g *Gate) checkGrantedRecipients(ctx context.Context, recipients []connector.Recipient, purposeKey string, record bool, countries []RecipientCountry) error {
 	if len(recipients) == 0 {
 		return fmt.Errorf("a send needs at least one recipient: %w", apperrors.ErrConsentNotGranted)
 	}
@@ -81,10 +84,10 @@ func (g *Gate) checkGrantedRecipients(ctx context.Context, recipients []connecto
 		if err != nil {
 			return fmt.Errorf("consent: reading the sending purpose: %w", err)
 		}
-		for _, r := range recipients {
+		for i, r := range recipients {
 			// Each recipient's own country sets the window a qualifying event
 			// still supports an unprompted message within.
-			country, err := recipientCountryOf(ctx, tx, r)
+			country, err := countryOrRecord(ctx, tx, r, countries, i)
 			if err != nil {
 				return err
 			}
@@ -313,4 +316,11 @@ func recipientLabel(r connector.Recipient) string {
 		return "this " + r.Channel.Provider + " recipient"
 	}
 	return r.Email
+}
+
+func countryOrRecord(ctx context.Context, tx pgx.Tx, r connector.Recipient, countries []RecipientCountry, i int) (RecipientCountry, error) {
+	if i < len(countries) {
+		return countries[i], nil
+	}
+	return recipientCountryOf(ctx, tx, r)
 }

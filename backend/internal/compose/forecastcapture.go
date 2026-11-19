@@ -29,12 +29,12 @@ func (w *forecastSnapshotSweepWorker) freeze(ctx context.Context, ws ids.UUID) e
 		return errors.New("forecast capture context limit exceeded")
 	}
 	store := newForecastStoreFor(w.pool)
-	attempts, err := reportingCaptureAttempts(ctx, store, contexts)
+	attempts, err := store.CaptureAttempts(ctx, contexts)
 	if err != nil {
 		return err
 	}
 	sort.SliceStable(contexts, func(i, j int) bool {
-		return attempts[reportingCaptureKey(contexts[i])].Before(attempts[reportingCaptureKey(contexts[j])])
+		return attempts[forecasting.CaptureContextKey(contexts[i])].Before(attempts[forecasting.CaptureContextKey(contexts[j])])
 	})
 	language := textlang.Lang(identity.BaseLanguageForPrompt(ctx, w.pool))
 	failures := []error{frameworkErr}
@@ -43,7 +43,7 @@ func (w *forecastSnapshotSweepWorker) freeze(ctx context.Context, ws ids.UUID) e
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-		key := reportingCaptureKey(capture)
+		key := forecasting.CaptureContextKey(capture)
 		if seen[key] {
 			continue
 		}
@@ -54,7 +54,7 @@ func (w *forecastSnapshotSweepWorker) freeze(ctx context.Context, ws ids.UUID) e
 		captureCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
 		err := w.freezeContext(captureCtx, capture)
 		cancel()
-		statusErr := store.RecordCaptureStatus(ctx, forecasting.Scope{Kind: string(capture.Scope.Kind), ID: (*ids.UUID)(capture.Scope.Id)}, (*ids.UUID)(capture.PipelineId), w.now(), err == nil || alreadyFrozenToday(err), language)
+		statusErr := store.RecordCaptureStatus(ctx, forecasting.CaptureScope(capture), (*ids.UUID)(capture.PipelineId), w.now(), err == nil || alreadyFrozenToday(err), language)
 		if statusErr != nil {
 			return errors.Join(err, statusErr)
 		}
@@ -67,10 +67,6 @@ func (w *forecastSnapshotSweepWorker) freeze(ctx context.Context, ws ids.UUID) e
 		}
 	}
 	return errors.Join(failures...)
-}
-
-func reportingCaptureKey(capture crmcontracts.ReportingCaptureContext) string {
-	return forecasting.CaptureKey(forecasting.Scope{Kind: string(capture.Scope.Kind), ID: (*ids.UUID)(capture.Scope.Id)}, (*ids.UUID)(capture.PipelineId))
 }
 
 func (w *forecastSnapshotSweepWorker) freezeContext(ctx context.Context, capture crmcontracts.ReportingCaptureContext) error {
@@ -98,6 +94,13 @@ func (w *forecastSnapshotSweepWorker) freezeContext(ctx context.Context, capture
 			PipelineID: (*ids.UUID)(capture.PipelineId), PopulationFingerprint: captured.PopulationFingerprint,
 		}
 		snapshot.StampChances(captured.Assembly)
+		goal, set, err := newReportingService(w.pool, w.now).CaptureGoal(ctx, tx, capture, crmcontracts.ReportingWindow{StartAt: period.Start, EndAt: period.End})
+		if err != nil {
+			return err
+		}
+		if set {
+			snapshot.FocusGoal = &goal
+		}
 		if err := stampForecastBasis(ctx, tx, &snapshot); err != nil {
 			return err
 		}
@@ -134,25 +137,6 @@ func captureReadings(
 	}
 	out.PopulationFingerprint, err = reportingPopulationFingerprint(scope, names)
 	return out, err
-}
-
-func reportingCaptureAttempts(ctx context.Context, store *forecasting.Store, contexts []crmcontracts.ReportingCaptureContext) (map[string]time.Time, error) {
-	attempts := map[string]time.Time{}
-	if err := store.InTx(ctx, func(ctx context.Context, tx pgx.Tx) error {
-		for _, capture := range contexts {
-			status, err := store.CaptureStatusTx(ctx, tx, forecasting.Scope{Kind: string(capture.Scope.Kind), ID: (*ids.UUID)(capture.Scope.Id)}, (*ids.UUID)(capture.PipelineId))
-			if err != nil {
-				return err
-			}
-			if status != nil {
-				attempts[reportingCaptureKey(capture)] = status.LastAttemptAt
-			}
-		}
-		return nil
-	}); err != nil {
-		return nil, err
-	}
-	return attempts, nil
 }
 
 // stampForecastBasis records on a snapshot the forward measure that shaped

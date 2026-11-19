@@ -83,7 +83,7 @@ func (w *WeeklyForecast) teamCoverage(
 	if err != nil {
 		return weekly.Coverage{}, err
 	}
-	sufficiency, err := forecasting.AssessSufficiency(horizon.readings, history, called)
+	sufficiency, err := forecasting.AssessSufficiency(horizon.readings, history, forecasting.SeenCall{Amount: called})
 	if err != nil {
 		return weekly.Coverage{}, err
 	}

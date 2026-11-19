@@ -80,9 +80,6 @@ func (s *Service) CreateRole(ctx context.Context, actor Identity, copyFrom, name
 	if err != nil {
 		return roleRow{}, err
 	}
-	if err := refuseWideningUnlessAdmin(actor, true); err != nil {
-		return roleRow{}, err
-	}
 	name, err = validRoleName(name)
 	if err != nil {
 		return roleRow{}, err
@@ -95,11 +92,15 @@ func (s *Service) CreateRole(ctx context.Context, actor Identity, copyFrom, name
 	}
 	var created roleRow
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := lockAuthorization(ctx, tx); err != nil {
+		live, err := lockAsRoleAdmin(ctx, tx, actor, principal.ActionCreate)
+		if err != nil {
+			return err
+		}
+		if err := refuseWideningUnlessAdmin(live, true); err != nil {
 			return err
 		}
 		var sourceID ids.UUID
-		err := tx.QueryRow(ctx,
+		err = tx.QueryRow(ctx,
 			`SELECT id FROM role WHERE key = $1 AND archived_at IS NULL`,
 			copyFrom).Scan(&sourceID)
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -184,11 +185,11 @@ func (s *Service) UpdateRole(ctx context.Context, actor Identity, key string, ch
 	}
 	var updated roleRow
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := lockAuthorization(ctx, tx); err != nil {
+		live, err := lockAsRoleAdmin(ctx, tx, actor, principal.ActionUpdate)
+		if err != nil {
 			return err
 		}
-		var err error
-		updated, err = applyRoleChange(ctx, tx, actor, key, change, ifVersion)
+		updated, err = applyRoleChange(ctx, tx, live, key, change, ifVersion)
 		return err
 	})
 	if err != nil {
@@ -266,7 +267,7 @@ func (s *Service) ArchiveRole(ctx context.Context, actor Identity, key string) (
 	}
 	var out roleRow
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := lockAuthorization(ctx, tx); err != nil {
+		if _, err := lockAsRoleAdmin(ctx, tx, actor, principal.ActionDelete); err != nil {
 			return err
 		}
 		var err error
@@ -330,15 +331,15 @@ func (s *Service) RestoreRole(ctx context.Context, actor Identity, key string) (
 	if err != nil {
 		return roleRow{}, err
 	}
-	if err := refuseWideningUnlessAdmin(actor, true); err != nil {
-		return roleRow{}, err
-	}
 	var out roleRow
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := lockAuthorization(ctx, tx); err != nil {
+		live, err := lockAsRoleAdmin(ctx, tx, actor, principal.ActionDelete)
+		if err != nil {
 			return err
 		}
-		var err error
+		if err := refuseWideningUnlessAdmin(live, true); err != nil {
+			return err
+		}
 		out, err = restoreRoleTx(ctx, tx, key)
 		return err
 	})

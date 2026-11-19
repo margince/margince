@@ -8,7 +8,7 @@ import {
   writeMessage,
 } from "../../design-system/richtext-testing";
 import { TimelineActions } from "../records/timelineactions";
-import { ChannelReplyAction, ComposeModal } from "./compose";
+import { ChannelReplyAction } from "./compose.reply";
 import {
   type Activity,
   activity202,
@@ -22,6 +22,7 @@ import {
   WHY_ASK,
   WHY_LABEL,
 } from "./compose.testkit";
+import { ComposeWindow } from "./composewindow";
 
 beforeEach(installComposeClock);
 
@@ -31,10 +32,10 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-// The Telegram reply reuses ComposeModal's confirm-first send, its consent
+// The Telegram reply reuses ComposeWindow's confirm-first send, its consent
 // rendering, and its post-send refresh wholesale. Only the wire target and the
 // fields a channel has no concept of differ from the mail path.
-describe("ComposeModal — channel reply", () => {
+describe("ComposeWindow — channel reply", () => {
   const telegramActivity: Activity = {
     ...activity202,
     id: "act-1",
@@ -54,7 +55,7 @@ describe("ComposeModal — channel reply", () => {
         ),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -86,7 +87,7 @@ describe("ComposeModal — channel reply", () => {
   it("hides subject and cc for a channel reply", async () => {
     stubRoutes();
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -111,7 +112,7 @@ describe("ComposeModal — channel reply", () => {
   it("names the channel it is about to send on, and says the send is final", async () => {
     stubRoutes();
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -135,7 +136,7 @@ describe("ComposeModal — channel reply", () => {
   it("gives the message box an accessible name of its own", async () => {
     stubRoutes();
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -165,7 +166,7 @@ describe("ComposeModal — channel reply", () => {
         ),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"

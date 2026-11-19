@@ -25,8 +25,9 @@ func TestADefaultTheFillCouldNotApplyIsRefusedBeforeAnythingIsRegistered(t *test
 		{"an object outside the extension grammar", []RbacDefault{{Object: "deal", Role: "rep", Actions: []string{"read"}}}, "not a valid extension object"},
 		{"a role listed twice for one object", []RbacDefault{
 			{Object: object, Role: "rep", Actions: []string{"read"}},
-			{Object: object, Role: "rep", Actions: []string{"create"}},
+			{Object: object, Role: "rep", Actions: []string{"read", "create"}},
 		}, "twice"},
+		{"a write without read", []RbacDefault{{Object: object, Role: "rep", Actions: []string{"update"}}}, "need Read"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

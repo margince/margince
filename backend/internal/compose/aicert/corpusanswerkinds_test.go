@@ -105,6 +105,9 @@ var recognisedOwners = []string{
 	// scoring only the two confident words would never measure the abstention
 	// the floor exists to produce.
 	"request_settlement/request_settle",
+	// explicit_request | need: whether the buyer asked us outright for a
+	// quote. Deal Scout opens a deal on the first alone, so each wants a scenario.
+	"signal_extract/thread_events",
 	"signal_extract/thread_events",
 	"signal_extract/thread_events",
 	"signal_extract/thread_events",

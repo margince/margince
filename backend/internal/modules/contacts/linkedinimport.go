@@ -32,6 +32,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/namematch"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -266,10 +267,10 @@ func linkedInRowFrom(record []string, index map[string]int) (linkedInRow, bool) 
 	}
 	row := linkedInRow{
 		fullName:   name,
-		normalized: normalizeName(name),
+		normalized: namematch.Fold(name),
 		position:   at(csvPosition),
 		company:    at(csvCompany),
-		// NormalizeCompanyName, not normalizeName: it strips the legal suffix,
+		// NormalizeCompanyName, not namematch.Fold: it strips the legal suffix,
 		// so a connection at "Acme GmbH" matches the account stored as "Acme".
 		// Through the LinkedIn cleaner first, because the field is a free-text
 		// headline on LinkedIn and not a company name.

@@ -165,6 +165,7 @@ const STAGE_KEYS: Partial<Record<string, MessageKey>> = {
 
 const REASON_KEYS: Partial<Record<string, MessageKey>> = {
   "internal_drop.internal_only": "pipeline.reason.internal_only",
+  "internal_drop.own_addresses_only": "pipeline.reason.own_addresses_only",
   "activity_write.invisible_incumbent": "pipeline.reason.invisible_incumbent",
   "tier_ladder.transactional_infra": "pipeline.reason.transactional_infra",
   "tier_ladder.transactional_prefix": "pipeline.reason.transactional_prefix",

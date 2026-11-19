@@ -20,6 +20,7 @@ package pipelinetrace
 import (
 	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	trace "github.com/margince/margince/backend/internal/shared/kernel/pipelinetrace"
@@ -240,10 +241,7 @@ func materialEventsRung(out Rung, v view, facts *activities.PipelineFacts, readi
 		out.Status = trace.StatusNotApplicable
 		return out
 	}
-	if facts.ThreadKey == "" {
-		// The extractor's unit of work is a thread settled for a window, and a
-		// transport with no thread key has no such unit (#1433). Not a gap
-		// report: it is the whole answer for that transport class.
+	if !hasReadableConversation(*facts) {
 		out.Status, out.Reason = trace.StatusSkipped, trace.ReasonTransportNotRead
 		return out
 	}
@@ -276,6 +274,14 @@ func materialEventsRung(out Rung, v view, facts *activities.PipelineFacts, readi
 	}
 	out.Status, out.Reason = trace.StatusPending, trace.ReasonAwaitingScan
 	return out
+}
+
+// hasReadableConversation reports whether the extractor has a unit of work for
+// this message: a mail thread. The extractor reads mail only (conversationCTE).
+// A chat with a thread key would otherwise read as "archived", because the
+// extractor sees no conversation under its key.
+func hasReadableConversation(facts activities.PipelineFacts) bool {
+	return facts.ThreadKey != "" && facts.Kind == string(crmcontracts.ActivityKindEmail)
 }
 
 // threadRefusal names the first arm of the offer this conversation fails, and

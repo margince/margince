@@ -36,11 +36,12 @@ type WithheldFile struct {
 	ContentType  string
 	DeclaredType string
 	ByteSize     int
-	// Checksum fingerprints the bytes that were not kept. Two readers use it.
+	// Checksum fingerprints the bytes that were not kept. Three readers use it.
 	// The replay proof compares an arriving message's parts with the stored
 	// rows. AdoptWithheldFiles refuses bytes whose fingerprint is not the one
-	// this row was named under. Empty for a private thread, whose row states
-	// nothing about its contents.
+	// this row was named under. readEmailAttachments reads its presence as "not
+	// addressed". Empty for a private thread, whose row states nothing about
+	// its contents.
 	Checksum string
 }
 

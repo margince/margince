@@ -27,7 +27,7 @@ import { AuthSplash } from "./app/bootsplash";
 import { lockScreen, useProbeAnswer } from "./app/confinement";
 import { DateFormatsProvider } from "./app/dateformats";
 import { useFeatureLanding } from "./app/featurelanding";
-import { prefetchHome } from "./app/homeprefetch";
+import { mayReadHomeDeals, prefetchHome } from "./app/homeprefetch";
 import { passesOnboardingGate } from "./app/onboarding-gate";
 import { useCommandPalette } from "./app/palettehotkey";
 import { Shell, useRoute } from "./app/shell";
@@ -45,7 +45,7 @@ import {
   CompanyZoneProvider,
   useConfiguredCompanyZone,
 } from "./lib/companyzone";
-import { screenEnabled, useDisabledCoreFeatures } from "./lib/corefeatures";
+import { screenEnabled, useHiddenCoreFeatures } from "./lib/corefeatures";
 import { useInstallationDescribed } from "./lib/installationcompany";
 import { notifyNavigate } from "./lib/instruments";
 import { markJourney } from "./lib/journeymarks";
@@ -243,7 +243,7 @@ function AuthedApp({
   route,
 }: Readonly<{ route: ReturnType<typeof useRoute> }>) {
   const me = useMe();
-  const disabled = useDisabledCoreFeatures();
+  const disabled = useHiddenCoreFeatures();
   // A 401 after a previously live session is an expiry (or a deliberate
   // sign-out, which useLogout marks); a 401 on first load is just "not
   // signed in" and carries no notice.
@@ -359,6 +359,7 @@ function AuthedApp({
     unfinished: progress.unfinished,
   });
   const queryClient = useQueryClient();
+  const readsDeals = mayReadHomeDeals(me.data);
   useEffect(() => {
     if (shellReady) {
       markJourney("gates");
@@ -368,8 +369,8 @@ function AuthedApp({
     if (!opensHome) {
       return;
     }
-    return prefetchHome(queryClient, currentParams());
-  }, [opensHome, queryClient]);
+    return prefetchHome(queryClient, currentParams(), readsDeals);
+  }, [opensHome, queryClient, readsDeals]);
   useTaskReminderNotifications(authed);
   useFeatureLanding(shellReady, confinement !== null, disabled);
 

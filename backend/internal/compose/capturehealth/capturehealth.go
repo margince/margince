@@ -93,7 +93,7 @@ func MailboxHealth(
 			OldestThreadAgeSeconds:   AgeSeconds(now, oldestT),
 		}
 		row.DisplayName = name
-		row.UnreadPeriod = unreadPeriodOf(unreadFrom, unreadTo)
+		row.UnreadPeriod = UnreadPeriodOf(unreadFrom, unreadTo)
 		out = append(out, row)
 	}
 	return out, rows.Err()
@@ -126,13 +126,13 @@ func ClassifierHealth(
 	return out, nil
 }
 
-// unreadPeriodOf is the gap a mailbox was never read for, or nil when there is
+// UnreadPeriodOf is the gap a mailbox was never read for, or nil when there is
 // none to report.
 //
 // Both ends or neither, which the column CHECK holds. Read for it anyway. A
 // half period on the wire is one a client cannot choose a backfill window
 // from, and this is where that shape would reach it.
-func unreadPeriodOf(from, to *time.Time) *crmcontracts.CaptureUnreadPeriod {
+func UnreadPeriodOf(from, to *time.Time) *crmcontracts.CaptureUnreadPeriod {
 	if from == nil || to == nil {
 		return nil
 	}

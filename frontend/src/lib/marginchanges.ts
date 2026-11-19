@@ -26,9 +26,18 @@ export type TeamMarginceOwnerlessDeal =
   components["schemas"]["TeamMarginceOwnerlessDeal"];
 export type DealMarginceCheck = components["schemas"]["DealMarginceCheck"];
 
-/** The reader's open changes, one bundle per deal. */
-export function usePendingMarginceChanges() {
-  return useQuery(pendingChangesQuery());
+/**
+ * The reader's open changes, one bundle per deal. `enabled` is false for a
+ * reader without `deal.read`, which the server requires to list them.
+ */
+export function usePendingMarginceChanges(enabled = true) {
+  // `select` as well: a revoked grant leaves the cached answer, which must not
+  // keep offering Undo.
+  return useQuery({
+    ...pendingChangesQuery(),
+    enabled,
+    select: (summary) => (enabled ? summary : undefined),
+  });
 }
 
 /** One deal's changes, newest first, a page at a time. */

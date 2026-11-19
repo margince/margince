@@ -8,9 +8,9 @@ import (
 	"testing"
 )
 
-// Every served version reads back with its own words, and only the current one
+// Every served version reads back with its own words, and only the current two
 // may name a new instruction.
-func TestEveryServedWarningVersionReadsBackAndOnlyTheCurrentOneIsAccepted(t *testing.T) {
+func TestEveryServedWarningVersionReadsBackAndOnlyTheCurrentOnesAreAccepted(t *testing.T) {
 	t.Parallel()
 	old, known := OverrideWarningFor("override-v1")
 	if !known || !strings.HasPrefix(old.Text, "The engine refused this message") {
@@ -25,7 +25,9 @@ func TestEveryServedWarningVersionReadsBackAndOnlyTheCurrentOneIsAccepted(t *tes
 	if servedWarningVersion("override-v1") {
 		t.Error("a new instruction may name the retired override-v1")
 	}
-	if !servedWarningVersion(OverrideWarningVersion) {
-		t.Errorf("a new instruction may not name the current %s", OverrideWarningVersion)
+	for _, current := range []string{OverrideWarningVersion, InlineWarningVersion} {
+		if !servedWarningVersion(current) {
+			t.Errorf("a new instruction may not name the current %s", current)
+		}
 	}
 }

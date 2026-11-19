@@ -8,22 +8,24 @@ package compose
 import "testing"
 
 // A refusal gives the key back so the caller can fix the call and retry. A
-// success is recorded for replay and never released.
+// success, or a refusal after a committed write, is never released.
 //
 // Asserted on the DECISION rather than on the database, because the database
 // half is recordClaimOutcome and releaseClaim, each already held.
 func TestARefusalReleasesTheKeyAndASuccessDoesNot(t *testing.T) {
 	for _, tc := range []struct {
-		name    string
-		status  int
-		release bool
+		name      string
+		status    int
+		committed bool
+		release   bool
 	}{
-		{"a refusal", 422, true},
-		{"a server error", 500, true},
-		{"a success", 200, false},
+		{"a refusal", 422, false, true},
+		{"a server error", 500, false, true},
+		{"a success", 200, false, false},
+		{"a timeout after a commit", 503, true, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := claimIsReleased(tc.status); got != tc.release {
+			if got := claimIsReleased(tc.status, tc.committed); got != tc.release {
 				t.Errorf("released = %v, want %v", got, tc.release)
 			}
 		})

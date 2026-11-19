@@ -83,7 +83,8 @@ func contextTagOf(id *ids.UUID, name *string, archived *bool) *ContextTag {
 // It governs what the connector creates AFTERWARDS. Records already captured
 // keep the filing they have, because refiling a year of history under a word
 // chosen today would claim they arrived with it.
-func (r *Registry) SetContextTag(ctx context.Context, name string, tagID *ids.UUID) (ConnectionView, error) {
+func (r *Registry) SetContextTag(ctx context.Context, mb Mailbox, tagID *ids.UUID) (ConnectionView, error) {
+	name := mb.Provider
 	actor, ok := principal.Actor(ctx)
 	if !ok || !actor.HumanOrItsAgent() {
 		return ConnectionView{}, fmt.Errorf("only a user or their agent files a mailbox under a word: %w", apperrors.ErrPermissionDenied)
@@ -91,8 +92,12 @@ func (r *Registry) SetContextTag(ctx context.Context, name string, tagID *ids.UU
 	if _, ok := r.connectors[name]; !ok {
 		return ConnectionView{}, ErrNoConnection
 	}
+	match, err := r.resolveMemberMailbox(ctx, actor.UserID, mb)
+	if err != nil {
+		return ConnectionView{}, err
+	}
 
-	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
+	err = r.db.Tx(ctx, func(tx pgx.Tx) error {
 		if tagID != nil {
 			if err := requireLiveTag(ctx, tx, *tagID); err != nil {
 				return err
@@ -105,10 +110,10 @@ func (r *Registry) SetContextTag(ctx context.Context, name string, tagID *ids.UU
 		row := tx.QueryRow(ctx, `
 			UPDATE capture_connection
 			   SET context_tag_id = $3
-			 WHERE user_id = $1 AND provider = $2 AND archived_at IS NULL
+			 WHERE `+match.where+` AND archived_at IS NULL
 			RETURNING (SELECT c.context_tag_id
 			             FROM capture_connection c WHERE c.id = capture_connection.id)`,
-			actor.UserID, name, tagID)
+			match.id, actor.UserID, tagID)
 		if err := row.Scan(&before); err != nil {
 			return err
 		}
@@ -125,7 +130,7 @@ func (r *Registry) SetContextTag(ctx context.Context, name string, tagID *ids.UU
 	if err != nil {
 		return ConnectionView{}, fmt.Errorf("capture: filing this mailbox under a word: %w", err)
 	}
-	return r.connectionFor(ctx, name)
+	return r.connectionFor(ctx, match.id)
 }
 
 // requireLiveTag refuses a word the vocabulary does not carry or has retired.

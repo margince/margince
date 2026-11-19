@@ -25,6 +25,7 @@ import {
 } from "../records/record360";
 import type { DealStandingHead } from "./deal360/dealhowitstands";
 import { dealVerdictTone, verdictSourceCount } from "./deal360/dealstanding";
+import { ReminderDone, reminderToComplete } from "./dealmoveverb";
 import { useDealSignals } from "./dealsignals";
 import "./dealstatus.css";
 
@@ -393,7 +394,8 @@ function DealNextBar({
     move.basis?.kind === "request_review" && move.basis.scope === "deal"
       ? move.basis.source_activity_id
       : undefined;
-  const source = reviewSource ?? card.reply_to;
+  const source =
+    reviewSource ?? card.reply_to ?? card.our_reply?.request_activity_id;
   const message = move.evidence.some(
     (row) => row.activity_id && row.activity_id === source,
   )
@@ -416,11 +418,7 @@ function DealNextBar({
             </Button>
           ) : undefined
         }
-        action={
-          hasMoveControl(move) ? (
-            <MoveButton dealId={dealId} move={move} />
-          ) : undefined
-        }
+        action={dealMoveVerb(dealId, card, move)}
         snooze={
           snooze
             ? { onSnooze: snooze.onDefer, pending: snooze.pending }
@@ -431,6 +429,27 @@ function DealNextBar({
       {notNow.failure && <ErrorLine error={notNow.failure} />}
     </>
   );
+}
+
+/** The verb the deal's Next bar draws, or none when the move has no control. */
+function dealMoveVerb(
+  dealId: string,
+  card: DealStatusCard,
+  move: NonNullable<DealStatusCard["next"]>,
+): ReactNode | undefined {
+  const reminder = reminderToComplete(card, move);
+  if (reminder) {
+    return (
+      <ReminderDone
+        dealId={dealId}
+        reminder={reminder}
+        fallback={<MoveButton dealId={dealId} move={move} />}
+      />
+    );
+  }
+  return hasMoveControl(move) ? (
+    <MoveButton dealId={dealId} move={move} />
+  ) : undefined;
 }
 
 // The deal card's "Not now": set aside for this reader until the card names a

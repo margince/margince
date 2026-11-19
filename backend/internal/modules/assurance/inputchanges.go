@@ -118,6 +118,7 @@ var inputChanges = map[string]InputChange{
 	},
 	"activity.invitation_answered": {ScopeNone, "an attendee's answer is not a rule input; the meeting it changes arrives on its own"},
 	"activity.marked_handled":      {ScopeDealActivity, "the fingerprint decides whether the deal's reading moved"},
+	"comms.delivery_bounced":       {ScopeDealActivity, "a returned reply no longer answers the request it was sent to"},
 	"activity.readiness_recorded":  {ScopeDealActivity, "the fingerprint decides whether the deal's reading moved"},
 
 	"signal.detected": {ScopeSignal, "a new buying signal was never judged"},

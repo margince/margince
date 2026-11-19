@@ -240,7 +240,7 @@ func (f *readingFixture) drainEvery(t *testing.T) {
 // offer a caller something that never matches what the feed answers with.
 func (f *readingFixture) settleOne(t *testing.T, name, status, detail string) {
 	t.Helper()
-	att := uploadDealAttachment(f.ctx, t, f.handlers, f.deal, name, []byte("bytes for "+name))
+	att := uploadDealAttachment(f.ctx, t, f.handlers, f.deal, name, []byte("%PDF-1.4 bytes for "+name))
 	read, _, err := f.store.StartExtractionReadQueued(f.ctx, ids.UUID(att.Id), "human:"+f.env.AdminUser.String(), nil)
 	if err != nil {
 		t.Fatalf("starting the reading for %s: %v", name, err)
@@ -348,7 +348,7 @@ func TestTheLiveTotalIsNotCappedByTheLiveBound(t *testing.T) {
 	f := newReadingFixture(t)
 	for i := range 25 {
 		att := uploadDealAttachment(f.ctx, t, f.handlers, f.deal,
-			fmt.Sprintf("queued-%02d.pdf", i), []byte(fmt.Sprintf("bytes %02d", i)))
+			fmt.Sprintf("queued-%02d.pdf", i), []byte(fmt.Sprintf("%%PDF-1.4 bytes %02d", i)))
 		if _, _, err := f.store.StartExtractionReadQueued(f.ctx, ids.UUID(att.Id),
 			"human:"+f.env.AdminUser.String(), nil); err != nil {
 			t.Fatalf("queueing reading %d: %v", i, err)

@@ -98,7 +98,7 @@ const anchorSeenCap = 100_000
 
 // ErrAnchorTooLarge is an anchor round whose window holds more messages than
 // its census can hold. The round stops rather than certify a count it cannot
-// keep exact.
+// keep exact, and DeltaInit answers the bound a narrower round fits from.
 var ErrAnchorTooLarge = errors.New("graph: the anchor window holds more messages than one certified round can count")
 
 // ErrAnchorShort is a census that closed below the folder's tally. It is
@@ -152,8 +152,7 @@ func (c *AnchorCensus) count(id string, receivedAt time.Time, removed bool) erro
 		return nil
 	}
 	if len(c.seen) >= anchorSeenCap {
-		return fmt.Errorf("%w: more than %d messages since %s; run the history import for this mailbox, then re-anchor it",
-			ErrAnchorTooLarge, anchorSeenCap, c.After.UTC().Format(time.RFC3339))
+		return ErrAnchorTooLarge
 	}
 	c.seen[digest] = struct{}{}
 	return nil
@@ -214,7 +213,21 @@ func (a *httpAPI) DeltaInit(ctx context.Context, accessToken, folder string, aft
 	if err != nil {
 		return "", err
 	}
+	// Counted before a fresh walk, so a window past the cap narrows before any
+	// message is fetched rather than after a hundred thousand.
+	if resume == nil {
+		held, err := a.countInFolder(ctx, accessToken, folder, receivedBetweenFilter(census.After, census.Opened))
+		if err != nil {
+			return "", err
+		}
+		if held > anchorSeenCap {
+			return "", a.narrowAnchor(ctx, accessToken, folder, census)
+		}
+	}
 	deltaLink, err := a.deltaWalk(ctx, accessToken, start, census, visit)
+	if errors.Is(err, ErrAnchorTooLarge) {
+		return "", a.narrowAnchor(ctx, accessToken, folder, census)
+	}
 	if err != nil {
 		return "", err
 	}
@@ -255,7 +268,7 @@ func (a *httpAPI) anchorStart(folder string, after time.Time, resume *DeltaResum
 		paramFilter: {receivedAfterFilter(after)},
 		paramSelect: {"id,receivedDateTime"},
 	}
-	return newAnchorCensus(after, time.Now().UTC()),
+	return newAnchorCensus(after, a.now().UTC()),
 		a.root() + "/mailFolders/" + url.PathEscape(folder) + "/messages/delta?" + q.Encode(), nil
 }
 

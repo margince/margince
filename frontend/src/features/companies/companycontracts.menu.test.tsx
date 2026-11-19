@@ -5,7 +5,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
-import { meFixture } from "../../testing/mefixture";
+import { meFixture, READS_RECORDS } from "../../testing/mefixture";
 import { CompanyContractsCard } from "./companycontracts";
 
 // margince#3286: the row menu offered Edit and Archive only. Renew, change
@@ -42,7 +42,7 @@ const EXPIRED = { ...ACTIVE, id: "c-2", status: "expired" };
 const RENEWED_DEAL = { id: "d-1", name: "2025 renewal" };
 
 const GRANTED = meFixture({
-  allow: { contract: ["read", "create", "update", "delete"] },
+  allow: { ...READS_RECORDS, contract: ["read", "create", "update", "delete"] },
 });
 
 function stub(contracts: unknown[], me: unknown = GRANTED) {
@@ -153,7 +153,10 @@ describe("the contract row menu", () => {
     // contract:update in one call — it both creates the successor and
     // supersedes the predecessor. A seat holding update alone would see every
     // press of Renew refused by the server.
-    stub([ACTIVE], meFixture({ allow: { contract: ["read", "update"] } }));
+    stub(
+      [ACTIVE],
+      meFixture({ allow: { ...READS_RECORDS, contract: ["read", "update"] } }),
+    );
     const user = userEvent.setup();
     show(<CompanyContractsCard companyId="o-1" />);
 
@@ -169,7 +172,10 @@ describe("the contract row menu", () => {
   });
 
   it("offers no menu at all to a seat with no write grants", async () => {
-    stub([ACTIVE], meFixture({ allow: { contract: ["read"] } }));
+    stub(
+      [ACTIVE],
+      meFixture({ allow: { ...READS_RECORDS, contract: ["read"] } }),
+    );
     show(<CompanyContractsCard companyId="o-1" />);
 
     await screen.findByText("Framework agreement 2024");

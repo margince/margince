@@ -79,7 +79,7 @@ func (e *SharedPostureNotAllowedError) FieldFault() (field, code, message string
 // rather than in the handler because the posture is also settable at grant, and
 // a check in one transport would leave the other open.
 func (r *Registry) SetMailPosture(
-	ctx context.Context, name, posture string, applyToHistory bool,
+	ctx context.Context, mb Mailbox, posture string, applyToHistory bool,
 ) (ConnectionView, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || !actor.HumanOrItsAgent() {
@@ -88,17 +88,22 @@ func (r *Registry) SetMailPosture(
 	if !validPosture(posture) {
 		return ConnectionView{}, &InvalidPostureError{Posture: posture}
 	}
+	name := mb.Provider
 	if _, ok := r.connectors[name]; !ok {
 		return ConnectionView{}, ErrNoConnection
 	}
+	match, err := r.resolveMemberMailbox(ctx, actor.UserID, mb)
+	if err != nil {
+		return ConnectionView{}, err
+	}
 
 	var before string
-	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
+	err = r.db.Tx(ctx, func(tx pgx.Tx) error {
 		if err := refuseSharedWithoutOptInTx(ctx, tx, posture); err != nil {
 			return err
 		}
 		var err error
-		if before, err = replacePostureTx(ctx, tx, seatConnection(actor.UserID, name), posture); err != nil {
+		if before, err = replacePostureTx(ctx, tx, match, posture); err != nil {
 			return err
 		}
 		// Audit-only, like every other capture-configuration change beside it:
@@ -126,7 +131,7 @@ func (r *Registry) SetMailPosture(
 	if err != nil {
 		return ConnectionView{}, fmt.Errorf("capture: setting the mailbox's posture: %w", err)
 	}
-	return r.connectionFor(ctx, name)
+	return r.connectionFor(ctx, match.id)
 }
 
 // narrowHistoryTo applies one posture to the mail an importer already brought in,
@@ -206,4 +211,32 @@ func refuseSharedWithoutOptInTx(ctx context.Context, tx pgx.Tx, posture string) 
 // carrying only the posture would not say which one this row is about.
 func mailPostureImage(provider, posture string) map[string]any {
 	return map[string]any{auditKeyProvider: provider, auditKeyPosture: posture}
+}
+
+// MailboxSettings is what the mail-posture route asks of one mailbox.
+type MailboxSettings struct {
+	// Posture is nil when the request leaves it as it is.
+	Posture        *string
+	ApplyToHistory bool
+	DefaultSender  bool
+}
+
+// SetMailboxSettings applies a posture, the default-sender mark, or both. A
+// request asking neither is refused.
+func (r *Registry) SetMailboxSettings(ctx context.Context, mb Mailbox, asked MailboxSettings) (ConnectionView, error) {
+	posture, applyToHistory, defaultSender := asked.Posture, asked.ApplyToHistory, asked.DefaultSender
+	if posture == nil && !defaultSender {
+		return ConnectionView{}, fmt.Errorf("send a posture, default_sender, or both: %w", apperrors.ErrInvalidArgument)
+	}
+	var view ConnectionView
+	if posture != nil {
+		var err error
+		if view, err = r.SetMailPosture(ctx, mb, *posture, applyToHistory); err != nil {
+			return view, err
+		}
+	}
+	if defaultSender {
+		return r.SetDefaultSender(ctx, mb)
+	}
+	return view, nil
 }

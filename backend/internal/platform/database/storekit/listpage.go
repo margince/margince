@@ -32,6 +32,8 @@ const ListWhereSeed = "1=1"
 // value copy would leave those arguments on a dead struct and the query
 // short of placeholders.
 type ListPrelude struct {
+	// scope is the list's cursor scope: the cursors it mints and reads name it.
+	scope  string
 	sorted *ListSort
 	limit  int
 	where  []string
@@ -61,7 +63,7 @@ func (p *ListPrelude) Arg(v any) int { return p.arg(v) }
 // out-of-vocabulary sort field, an unknown cf_ filter, an unreadable cursor.
 func BuildListPrelude(
 	ctx context.Context,
-	object string,
+	object, scope string,
 	fields map[string]SortField,
 	active []fieldcatalog.Column,
 	sort *string,
@@ -69,7 +71,7 @@ func BuildListPrelude(
 	cursor *string,
 	customFilters map[string]string,
 ) (*ListPrelude, error) {
-	p := &ListPrelude{limit: ClampLimit(limit), where: []string{ListWhereSeed}}
+	p := &ListPrelude{scope: scope, limit: ClampLimit(limit), where: []string{ListWhereSeed}}
 	p.arg = func(v any) int { p.args = append(p.args, v); return len(p.args) }
 
 	// The sort first, because a reference sort binds parameters of its own and
@@ -101,7 +103,7 @@ func BuildListPrelude(
 	p.where = append(p.where, cfClauses...)
 
 	if cursor != nil && *cursor != "" {
-		clause, err := sorted.KeysetClause(*cursor, p.arg)
+		clause, err := sorted.KeysetClause(scope, *cursor, p.arg)
 		if err != nil {
 			return nil, err
 		}
@@ -175,7 +177,7 @@ func RunListPageTx[T any](
 	if pre.positions != nil {
 		for i := range min(len(out), pre.limit) {
 			createdAt, id := key(out[i])
-			after, err := pre.sorted.EncodePageCursor(cursorKeys[i], createdAt, id)
+			after, err := pre.sorted.EncodePageCursor(pre.scope, cursorKeys[i], createdAt, id)
 			if err != nil {
 				return nil, Page{}, err
 			}
@@ -186,7 +188,7 @@ func RunListPageTx[T any](
 	if len(out) > pre.limit {
 		out = out[:pre.limit]
 		createdAt, id := key(out[len(out)-1])
-		if page, err = nextPage(pre.sorted, cursorKeys[pre.limit-1], createdAt, id); err != nil {
+		if page, err = nextPage(pre.sorted, pre.scope, cursorKeys[pre.limit-1], createdAt, id); err != nil {
 			return nil, Page{}, err
 		}
 	}
@@ -212,8 +214,8 @@ func RunListPageTx[T any](
 // The failure is reachable: time.Time refuses an instant outside years
 // 0000-9999 and Postgres timestamptz reaches year 294276, so one absurd row's
 // created_at is enough.
-func nextPage(sorted *ListSort, sortKey *string, createdAt time.Time, id ids.UUID) (Page, error) {
-	next, err := sorted.EncodePageCursor(sortKey, createdAt, id)
+func nextPage(sorted *ListSort, scope string, sortKey *string, createdAt time.Time, id ids.UUID) (Page, error) {
+	next, err := sorted.EncodePageCursor(scope, sortKey, createdAt, id)
 	if err != nil {
 		return Page{}, err
 	}

@@ -14,7 +14,7 @@ import { Modal } from "./design-system/modal";
 import { LocaleProvider } from "./i18n";
 import { useRoute } from "./lib/router";
 import { useUnsavedGuard } from "./lib/unsavedclaims";
-import { meFixture } from "./testing/mefixture";
+import { meFixture, READS_RECORDS } from "./testing/mefixture";
 
 // A dialog a routed screen holds leaves with the screen: the screen is keyed by
 // what it shows. Its own page check must not close it a second time.
@@ -69,7 +69,7 @@ function renderRouted(at: string) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  client.setQueryData(["me"], meFixture({}));
+  client.setQueryData(["me"], meFixture({ allow: READS_RECORDS }));
   return render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">

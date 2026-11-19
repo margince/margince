@@ -154,7 +154,7 @@ func TestLeadSourceListNoLongerGovernsWritesOrTheScore(t *testing.T) {
 	if lead.Score != 0 || lead.SourceLabel != nil {
 		t.Errorf("connector lead = score %d label %v, want 0 and no label until the family is adopted", lead.Score, lead.SourceLabel)
 	}
-	lowImport, _, err := e.store.CreateLead(e.ctx, CreateLeadInput{Source: "import"})
+	lowImport, _, err := e.store.CreateLead(e.ctx, CreateLeadInput{FullName: new("Import Lead"), Source: "import"})
 	if err != nil {
 		t.Fatalf("create with the import source: %v", err)
 	}
@@ -167,7 +167,7 @@ func TestLeadSourceListNoLongerGovernsWritesOrTheScore(t *testing.T) {
 	if _, err := e.store.UpdateLead(e.ctx, leadID, UpdateLeadInput{Source: &crawlKey}); !isSourceFieldError(err) {
 		t.Errorf("rewriting how the lead arrived = %v, want a source field error", err)
 	}
-	labelled, _, err := e.store.CreateLead(e.ctx, CreateLeadInput{Source: "referral"})
+	labelled, _, err := e.store.CreateLead(e.ctx, CreateLeadInput{FullName: new("Referral Lead"), Source: "referral"})
 	if err != nil {
 		t.Fatalf("create with the referral source: %v", err)
 	}

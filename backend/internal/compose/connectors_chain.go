@@ -42,8 +42,8 @@ var errImportUnwired = errors.New("connector callback: no backfill engine is wir
 // registry's estimate, and backfillHandlers.begin, the run the start endpoint
 // opens. Compose wires both; a role without the backfill surface leaves them nil.
 type connectImport struct {
-	estimate func(ctx context.Context, provider string, userID ids.UserID, months int) (capture.BackfillPreview, error)
-	begin    func(ctx context.Context, ws ids.UUID, provider string, userID ids.UserID, months int, estimate connector.BackfillEstimate, startOver bool) (capture.BackfillRun, error)
+	estimate func(ctx context.Context, mailbox capture.Mailbox, userID ids.UserID, months int) (capture.BackfillPreview, error)
+	begin    func(ctx context.Context, ws ids.UUID, mailbox capture.Mailbox, userID ids.UserID, months int, estimate connector.BackfillEstimate, startOver bool) (capture.BackfillRun, error)
 }
 
 // startsOnItsOwn is the auto-import rule. A floor is not known to be under the
@@ -61,7 +61,7 @@ func (c connectImport) start(ctx context.Context, st connectState) (bool, error)
 	}
 	userID := ids.From[ids.UserKind](st.User)
 	sizeCtx, cancel := context.WithTimeout(ctx, autoImportEstimateTimeout)
-	preview, err := c.estimate(sizeCtx, st.Provider, userID, st.WindowMonths)
+	preview, err := c.estimate(sizeCtx, capture.Mailbox{Provider: st.Provider, ID: st.Connection}, userID, st.WindowMonths)
 	cancel()
 	if err != nil {
 		slog.WarnContext(ctx, "connector callback: the import window could not be counted, so it waits for the reader",
@@ -71,7 +71,7 @@ func (c connectImport) start(ctx context.Context, st connectState) (bool, error)
 	if !startsOnItsOwn(preview.BackfillEstimate) {
 		return false, nil
 	}
-	_, err = c.begin(ctx, st.Workspace, st.Provider, userID, st.WindowMonths, preview.BackfillEstimate, false)
+	_, err = c.begin(ctx, st.Workspace, capture.Mailbox{Provider: st.Provider, ID: st.Connection}, userID, st.WindowMonths, preview.BackfillEstimate, false)
 	return err == nil, err
 }
 
@@ -145,6 +145,7 @@ type connectAsk struct {
 	returnTo     string
 	then         string
 	windowMonths int
+	connection   ids.UUID
 }
 
 // decodeConnectRequest reads the optional OAuth connect body. False means the
@@ -164,6 +165,7 @@ func (h connectorHandlers) decodeConnectRequest(w http.ResponseWriter, r *http.R
 	if req.ReturnTo != nil {
 		ask.returnTo = landingSurface(string(*req.ReturnTo))
 	}
+	ask.connection = capture.MailboxNamed(provider, req.ConnectionId).ID
 	ok := true
 	if req.ImportWindow != nil {
 		ask.windowMonths, ok = h.connectWindow(w, r, provider, string(*req.ImportWindow))

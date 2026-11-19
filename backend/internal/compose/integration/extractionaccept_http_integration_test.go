@@ -28,7 +28,7 @@ import (
 // only speaks JSON) and returns the new attachment's id.
 func uploadAttachmentHTTP(t *testing.T, e *apptest.AppEnv, entityType, entityID, filename string) string {
 	t.Helper()
-	body, ctype := apptest.MultipartAttachment(t, entityType, entityID, filename, []byte("attachment bytes"))
+	body, ctype := apptest.MultipartAttachment(t, entityType, entityID, filename, []byte("%PDF-1.4 attachment"))
 	req, err := http.NewRequest(http.MethodPost, e.TS.URL+"/v1/attachments", body)
 	if err != nil {
 		t.Fatalf("building upload request: %v", err)

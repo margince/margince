@@ -52,6 +52,10 @@ export const E2E_ADMIN_GRANTS: GrantSpec = {
   // spec writes a contact from here. The Privacy & retention entry opens on
   // `privacy_request` below, and its card still needs this read.
   contact: ["read"],
+  // The rail offers Companies and Sales targets only on these reads. Read
+  // alone keeps a company's name plain text on the record chrome.
+  company: ["read"],
+  sales_target: ["read"],
   // Filters & views reads the vocabulary and previews under `list:read`
   // (collections/handlers.go). Saving a filter as a dynamic list is a
   // `list:create`. Without them the picker never loads, and the sweeps pass.

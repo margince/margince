@@ -39,14 +39,17 @@ func (g *Gate) AuthorizeTransmit(ctx context.Context, req commsauthz.TransmitReq
 	if err := transmittable(req); err != nil {
 		return commsauthz.TransmitTicket{}, err
 	}
-	legacy := g.legacyTransmitAnswer(ctx, req, true)
+	legacy, err := g.legacyTransmitAnswer(ctx, req, true)
+	if err != nil {
+		return commsauthz.TransmitTicket{}, err
+	}
 	setID := ids.NewV7()
 	// Counted after the commit, not beside the insert. Two arms return an error
 	// after the rows are written (an unanswerable legacy gate, the wording
 	// check), and each rolls them back. A count taken inside would keep them.
 	var recorded []commsauthz.Decision
 	var ticket commsauthz.TransmitTicket
-	err := g.store.db.Tx(ctx, func(tx pgx.Tx) error {
+	err = g.store.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
 		ticket, recorded, err = g.transmitVerdictTx(ctx, tx, req, setID, legacy, true)
 		return err
@@ -83,35 +86,6 @@ func transmittable(req commsauthz.TransmitRequest) error {
 	return nil
 }
 
-// legacyTransmitAnswer is the legacy gate's answer, carried into the
-// transaction as a value.
-type legacyTransmitAnswer struct {
-	allowed, unanswerable bool
-	err                   error
-}
-
-func (g *Gate) legacyTransmitAnswer(ctx context.Context, req commsauthz.TransmitRequest, record bool) legacyTransmitAnswer {
-	// The legacy gate's answer, recorded beside the engine's on every row so a
-	// disagreement is readable in the record rather than only in a counter that
-	// dies with the process.
-	//
-	// IT NO LONGER DECIDES, with one exception the rollback lever depends on:
-	// Effective consults it only when NO recipient's category is enforced,
-	// which the shipped posture never produces but an operator moving a
-	// category back to observe deliberately does. The dispatcher used to ask it
-	// a second time after the ticket already said yes; that call is gone.
-	legacyErr := g.checkGrantedRecipients(ctx, req.Recipients, req.PurposeKey, record)
-	// Three outcomes, and only two of them are answers: granted, not granted,
-	// and anything else. That third one is NOT a no — whether it matters
-	// depends on the posture, and the posture is not known until the modes are
-	// read inside the transaction below, so it is carried there as a value
-	// rather than decided here.
-	legacyUnanswerable := legacyErr != nil && !errors.Is(legacyErr, apperrors.ErrConsentNotGranted)
-	legacyAllowed := legacyErr == nil
-
-	return legacyTransmitAnswer{allowed: legacyAllowed, unanswerable: legacyUnanswerable, err: legacyErr}
-}
-
 // transmitVerdictTx is the whole transmit decision inside one transaction.
 // record writes the decision rows; RecheckTransmit asks without them.
 func (g *Gate) transmitVerdictTx(
@@ -127,7 +101,8 @@ func (g *Gate) transmitVerdictTx(
 		return commsauthz.TransmitTicket{}, nil, err
 	}
 	modeFor := func(c commsauthz.Category) commsauthz.Mode { return ModeFor(modes, c) }
-	set, countries, err := g.decideRecipients(ctx, tx, req, legacyAllowed, modeFor)
+	countries := legacy.countries
+	set, err := g.decideRecipients(ctx, tx, req, legacyAllowed, modeFor, countries)
 	if err != nil {
 		return commsauthz.TransmitTicket{}, nil, err
 	}
@@ -182,7 +157,7 @@ func (g *Gate) transmitVerdictTx(
 // Every recipient is asked even once one has refused, because the record is
 // per recipient: an operator answering "why did this not go" is owed the whole
 // answer, not the first line of it.
-func (g *Gate) decideRecipients(ctx context.Context, tx pgx.Tx, req commsauthz.TransmitRequest, legacyAllowed bool, modeFor func(commsauthz.Category) commsauthz.Mode) (commsauthz.DecisionSet, []RecipientCountry, error) {
+func (g *Gate) decideRecipients(ctx context.Context, tx pgx.Tx, req commsauthz.TransmitRequest, legacyAllowed bool, modeFor func(commsauthz.Category) commsauthz.Mode, countries []RecipientCountry) (commsauthz.DecisionSet, error) {
 	legacy := commsauthz.VerdictDeny
 	if legacyAllowed {
 		legacy = commsauthz.VerdictAllow
@@ -194,41 +169,36 @@ func (g *Gate) decideRecipients(ctx context.Context, tx pgx.Tx, req commsauthz.T
 	// because one message can be several things at once.
 	claims, err := stagedClaims(ctx, tx, req.DeliveryID)
 	if err != nil {
-		return commsauthz.DecisionSet{}, nil, err
+		return commsauthz.DecisionSet{}, err
 	}
 	// The conversation this delivery belongs to. Staging asked the thread arm
 	// with the anchor the caller named; nothing carries that anchor forward, so
 	// transmit names the same thread from the delivery row instead.
 	threadKey, err := deliveryThreadKey(ctx, tx, req.DeliveryID)
 	if err != nil {
-		return commsauthz.DecisionSet{}, nil, err
+		return commsauthz.DecisionSet{}, err
 	}
 	// The records this delivery's activity is filed under — the live-deal
 	// arm's own evidence, absent from TransmitRequest for deliveryThreadKey's
 	// reason.
 	links, err := deliveryLinks(ctx, tx, req.DeliveryID)
 	if err != nil {
-		return commsauthz.DecisionSet{}, nil, err
+		return commsauthz.DecisionSet{}, err
 	}
 	// Every address's cap lock, sorted, before the first recipient is counted.
 	// Taking them inside the loop would order them by the caller's To list, and
 	// two messages naming the same pair in opposite orders would deadlock.
 	//
-	// Each recipient's country is resolved once, here, and the lock, the
-	// verdict, the count and the recorded stamp all read it.
-	countries, err := recipientCountries(ctx, tx, req.Recipients, func(r connector.Recipient) commsauthz.Request {
-		return stagedRequestFor(req, r, claims, threadKey, links)
-	})
-	if err != nil {
-		return commsauthz.DecisionSet{}, nil, err
-	}
+	// Each recipient's country was resolved once, before the legacy gate was
+	// asked. The lock, the verdict, the count and the recorded stamp all read
+	// that list.
 	if err := g.lockCapAddresses(ctx, tx, req.Recipients, countries); err != nil {
-		return commsauthz.DecisionSet{}, nil, err
+		return commsauthz.DecisionSet{}, err
 	}
 	for i, r := range req.Recipients {
 		d, err := g.decideOneIn(ctx, tx, r, stagedRequestFor(req, r, claims, threadKey, links), commsauthz.PhaseTransmit, countries[i])
 		if err != nil {
-			return commsauthz.DecisionSet{}, nil, err
+			return commsauthz.DecisionSet{}, err
 		}
 		// The ceiling is applied HERE and not at staging, because it counts
 		// what has already been delivered and that number moves while a message
@@ -236,7 +206,7 @@ func (g *Gate) decideRecipients(ctx context.Context, tx pgx.Tx, req commsauthz.T
 		// a moment that has passed by the time the message goes.
 		d, err = g.applyFrequencyCap(ctx, tx, d, now, countries[i])
 		if err != nil {
-			return commsauthz.DecisionSet{}, nil, err
+			return commsauthz.DecisionSet{}, err
 		}
 		d.Phase = commsauthz.PhaseTransmit
 		// Stamped from the category the engine RESOLVED, not the one the
@@ -246,7 +216,7 @@ func (g *Gate) decideRecipients(ctx context.Context, tx pgx.Tx, req commsauthz.T
 		d.LegacyVerdict = string(legacy)
 		set.Decisions = append(set.Decisions, d)
 	}
-	return set, countries, nil
+	return set, nil
 }
 
 // decideOne answers about a single recipient: who they are, whether anything
@@ -267,10 +237,28 @@ func (g *Gate) decideOne(ctx context.Context, tx pgx.Tx, r connector.Recipient, 
 // decideOneIn is decideOne under a country the caller already resolved for
 // this recipient, which every step of one decision then shares.
 func (g *Gate) decideOneIn(ctx context.Context, tx pgx.Tx, r connector.Recipient, req commsauthz.Request, phase commsauthz.Phase, country RecipientCountry) (commsauthz.Decision, error) {
+	req, err := quotedSubjectFor(ctx, tx, r, req)
+	if err != nil {
+		return commsauthz.Decision{}, err
+	}
 	decision, err := g.decideRecipientIn(ctx, tx, r, req, phase, country)
+	if err == nil {
+		// Before the footer findings, which read their provision from here.
+		decision.Citations, err = g.citationsFor(ctx, tx, country, req.SendingEntity)
+	}
 	decision = decision.WithFooterFindings(req.Evidence.FooterFindings)
 	decision.Evidence.FooterPreview = req.Evidence.FooterPreview
 	decision.Evidence.FooterDigest = req.Evidence.FooterDigest
+	// Not an id, so carried past the EvidenceChecked gate: transmit must judge
+	// the same words staging judged, whichever arm resolved the message.
+	decision.Evidence.AuthoredOffer = req.Evidence.AuthoredOffer
+	// Checked at staging against the recipient's own authenticated mail, and
+	// asked again at transmit; never a record the sender named.
+	decision.Evidence.QuotedAnchorID = req.Evidence.QuotedAnchorID
+	// This recipient's own statement only: a row never names another
+	// recipient's address.
+	decision.Evidence.RecipientCountries = commsauthz.CountryOverridesFor(req.Evidence.RecipientCountries, r.Email)
+	decision.Country, decision.CountrySource = string(country.Code), string(country.Source)
 	if err != nil {
 		return decision, err
 	}

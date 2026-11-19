@@ -6,7 +6,8 @@ import { afterEach, expect, it, vi } from "vitest";
 import { handledForYouOptions } from "../lib/handled";
 import { homeDayOptions } from "../lib/worklistday";
 import { quietRun, readingsDay } from "../testing/brief.fixtures";
-import { prefetchHome } from "./homeprefetch";
+import { meFixture, READS_RECORDS } from "../testing/mefixture";
+import { mayReadHomeDeals, prefetchHome } from "./homeprefetch";
 import { createQueryClient, liveOnMount } from "./queryclient";
 
 afterEach(() => vi.restoreAllMocks());
@@ -43,7 +44,7 @@ function answering(handled: unknown) {
 it("lets Home's mount use an answer the prefetch fetched", async () => {
   answering(handledPage);
   const client = createQueryClient();
-  prefetchHome(client, new Map());
+  prefetchHome(client, new Map(), true);
   await vi.waitFor(() => expect(handledQuery(client).state.data).toBeDefined());
   await vi.waitFor(() => expect(liveOnMount(handledQuery(client))).toBe(true));
 });
@@ -58,14 +59,14 @@ it("keeps the mount refetch for an answer already cached before the prefetch", a
     { pages: [handledPage], pageParams: [undefined] },
     { updatedAt: Date.now() + 1 },
   );
-  prefetchHome(client, new Map());
+  prefetchHome(client, new Map(), true);
   await new Promise((resolve) => setTimeout(resolve, 0));
   expect(liveOnMount(handledQuery(client))).toBe("always");
 });
 
 it("prefetches nothing for the weekly view", () => {
   const fetched = vi.spyOn(globalThis, "fetch");
-  prefetchHome(createQueryClient(), new Map([["view", "weekly"]]));
+  prefetchHome(createQueryClient(), new Map([["view", "weekly"]]), true);
   expect(fetched).not.toHaveBeenCalled();
 });
 
@@ -90,7 +91,7 @@ function stubHangingWorklist(): () => AbortSignal | undefined {
 
 it("aborts the day's Worklist read when the reader leaves before Home renders", async () => {
   const worklist = stubHangingWorklist();
-  const leave = prefetchHome(createQueryClient(), new Map());
+  const leave = prefetchHome(createQueryClient(), new Map(), true);
   await vi.waitFor(() => expect(worklist()).toBeDefined());
 
   leave();
@@ -100,7 +101,7 @@ it("aborts the day's Worklist read when the reader leaves before Home renders", 
 it("leaves the read running when Home already watches it", async () => {
   const worklist = stubHangingWorklist();
   const client = createQueryClient();
-  const leave = prefetchHome(client, new Map());
+  const leave = prefetchHome(client, new Map(), true);
   await vi.waitFor(() => expect(worklist()).toBeDefined());
   const home = new InfiniteQueryObserver(client, homeDayOptions()).subscribe(
     () => undefined,
@@ -116,7 +117,7 @@ it("leaves the read running when Home already watches it", async () => {
 it("lets go of the day's Worklist once its read answers", async () => {
   answering(handledPage);
   const client = createQueryClient();
-  prefetchHome(client, new Map());
+  prefetchHome(client, new Map(), true);
   const day = () =>
     client.getQueryCache().find({
       queryKey: homeDayOptions().queryKey,
@@ -125,4 +126,24 @@ it("lets go of the day's Worklist once its read answers", async () => {
   await vi.waitFor(() => expect(day()?.state.fetchStatus).toBe("idle"));
   expect(day()?.state.status).toBe("success");
   expect(day()?.getObserversCount()).toBe(0);
+});
+
+it("does not read the brief or the done-for-you receipt for a reader without deal read", async () => {
+  const fetched = vi
+    .spyOn(globalThis, "fetch")
+    .mockImplementation(async () => Response.json({}));
+  prefetchHome(createQueryClient(), new Map(), false);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  const paths = fetched.mock.calls.map(
+    ([input]) =>
+      new URL(input instanceof Request ? input.url : String(input)).pathname,
+  );
+  expect(paths.some((path) => path.endsWith("/brief"))).toBe(false);
+  expect(paths.some((path) => path.endsWith("/magic"))).toBe(false);
+});
+
+it("starts the deal-only reads only once the grant is known", () => {
+  expect(mayReadHomeDeals(undefined)).toBe(false);
+  expect(mayReadHomeDeals(meFixture({}))).toBe(false);
+  expect(mayReadHomeDeals(meFixture({ allow: READS_RECORDS }))).toBe(true);
 });

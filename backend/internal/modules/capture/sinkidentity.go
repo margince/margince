@@ -161,7 +161,7 @@ func (s *Sink) claimRecordIdentity(
 	if _, err := s.claimIdentity(ctx, tx, id, kind, key, capturedByFor(ctx, rec)); err != nil {
 		return err
 	}
-	return s.claimCalendarSend(ctx, tx, id, rec)
+	return s.claimSeatCopy(ctx, tx, id, rec)
 }
 
 // reclaimMeetingIdentity files a REPLAYED meeting under its identity again,
@@ -198,9 +198,24 @@ func calendarSendKey(seat ids.UUID, send string) string {
 	return calendarSendPrefix + seat.String() + " " + send
 }
 
+// seatCopyKey is the identity the copies of one message in one seat's mailbox
+// share, or "". The copies are a calendar send's per-guest copies, or the
+// seat's forwards to self of one original. Each is one activity.
+func seatCopyKey(seat ids.UUID, rec connector.NormalizedRecord) string {
+	fields, isActivity := rec.Fields.(ActivityFields)
+	if !isActivity {
+		return ""
+	}
+	if key := calendarSendKey(seat, fields.CalendarSend); key != "" {
+		return key
+	}
+	return forwardKey(seat, fields)
+}
+
 // activityHoldingIdentity is activityHoldingStatedIdentity, and then the
-// activity a per-guest copy of a calendar send joins. A copy whose own natural
-// key is stored already replays as that row, so the rows stored apart stay apart.
+// activity another copy in this seat's mailbox filed (seatCopyKey). A copy
+// whose own natural key is stored already replays as that row, so the rows
+// stored apart stay apart.
 func (s *Sink) activityHoldingIdentity(
 	ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord,
 ) (ids.ActivityID, bool, error) {
@@ -208,9 +223,8 @@ func (s *Sink) activityHoldingIdentity(
 	if err != nil || found {
 		return known, found, err
 	}
-	fields, isActivity := rec.Fields.(ActivityFields)
-	key := calendarSendKey(actorUserID(ctx), fields.CalendarSend)
-	if !isActivity || key == "" || s.mailIdentityKind == "" || s.resolveIdentity == nil {
+	key := seatCopyKey(actorUserID(ctx), rec)
+	if key == "" || s.mailIdentityKind == "" || s.resolveIdentity == nil {
 		return ids.ActivityID{}, false, nil
 	}
 	var stored bool
@@ -224,12 +238,11 @@ func (s *Sink) activityHoldingIdentity(
 	return s.resolveIdentity(ctx, tx, s.mailIdentityKind, key)
 }
 
-// claimCalendarSend files a new row under its calendar send, so the send's
-// other copies resolve onto it. A lost claim leaves the row as it is.
-func (s *Sink) claimCalendarSend(ctx context.Context, tx pgx.Tx, id ids.ActivityID, rec connector.NormalizedRecord) error {
-	fields, isActivity := rec.Fields.(ActivityFields)
-	key := calendarSendKey(actorUserID(ctx), fields.CalendarSend)
-	if !isActivity || key == "" || s.mailIdentityKind == "" {
+// claimSeatCopy files a new row under its seatCopyKey, so the other copies
+// resolve onto it. A lost claim leaves the row as it is.
+func (s *Sink) claimSeatCopy(ctx context.Context, tx pgx.Tx, id ids.ActivityID, rec connector.NormalizedRecord) error {
+	key := seatCopyKey(actorUserID(ctx), rec)
+	if key == "" || s.mailIdentityKind == "" {
 		return nil
 	}
 	_, err := s.claimIdentity(ctx, tx, id, s.mailIdentityKind, key, capturedByFor(ctx, rec))

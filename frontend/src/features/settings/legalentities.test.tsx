@@ -141,6 +141,27 @@ it("lists the default entity alone, named after the company and marked default",
   ).toBeNull();
 });
 
+it("shows an admin a further entity that names no country, and not the default one", async () => {
+  vi.stubGlobal(
+    "fetch",
+    backend(READER, [
+      ...DEFAULT_ONLY,
+      VIENNA,
+      entity("le-branch", { display_name: "Acme Branch" }),
+    ]),
+  );
+  render(<LegalEntitiesCard />);
+  const gap = en["legalEntities.countryMissing"];
+  const branch = await screen.findByTestId("legal-entity-le-branch");
+  expect(within(branch).getByText(gap)).toBeInTheDocument();
+  expect(
+    within(screen.getByTestId("legal-entity-le-default")).queryByText(gap),
+  ).toBeNull();
+  const vienna = screen.getByTestId("legal-entity-le-vienna");
+  expect(within(vienna).queryByText(gap)).toBeNull();
+  expect(within(vienna).getByText("AT")).toBeInTheDocument();
+});
+
 it("names the default entity of an undescribed company in words", async () => {
   vi.stubGlobal(
     "fetch",

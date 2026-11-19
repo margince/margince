@@ -6,7 +6,7 @@ Nobody should have to copy an email into a CRM by hand. **Capture** is the part 
 
 ### How does email get into Margince?
 Email gets into Margince through a mailbox you connect at **Settings → Connections**: Gmail, Outlook or an IMAP mailbox. On each sync, capture reads new mail and files it on the timelines of the contacts on it.
-There is no address to forward to and no step to copy and paste. Mail between colleagues is not stored by default.
+There is no shared address to forward to and no step to copy and paste. Mail between colleagues is not stored by default. Forward a customer's email to your connected address to file it on their timeline as your own, never as a reply.
 
 An admin can choose sources for [internal mail about work](who-can-see-an-email.md#mail-between-colleagues). Other mail follows the usual rules, and senders judged to be newsletters, automated tools or spam create no contact.
 For older mail, choose **Import older email** in the account's menu; to see what happened to one message, open **Settings → Connections → Activity**.
@@ -153,6 +153,7 @@ Margince puts a captured email on a deal by itself only when one deal, and no ot
 1. **The project.** An email filed under a project goes on that project's one open deal. If the project has no open deal, or several, the email goes on no deal. The company's deals are not asked.
 2. **Your thread.** Your own sent email in the thread is on a deal. The reply goes on that deal if it is the reply's company's deal.
 3. **The company.** If neither fits, the company's one open deal is suggested. With several open deals, a stakeholder on only one of them suggests it. An AI check reads the email and files it only when it is fully sure it is about that deal. Without an AI answer, the email waits for a later pass.
+4. **A stakeholder at another company.** If the company has no open deal, a seat on one open deal at another company suggests it. The AI check applies as in step 3. The contact must have sent the email, with the mail server confirming it, or a colleague wrote to them. A contact only on Cc files nothing.
 
 An email stays on no deal when nothing picks one of several open deals, or the AI check is not sure. It also stays off when its contacts work at two companies, or when a colleague said it is not about the deal that fits. An email already on a deal keeps it, and a deal you chose by hand is never changed.
 
@@ -170,8 +171,7 @@ Margince checks recent mail and meetings again when a deal opens or changes comp
 
 An hourly pass picks up work left behind; it uses the same waiting horizon as other automatic work. It also checks, once, the deal links Margince suggested on mail of the last 90 days before the AI check existed. A link the AI says is not about its deal comes off.
 
-An email only its participants can read still appears on the deal's timeline. It does not change the deal's last activity date.
-
+An email only its participants can read still appears on the deal's timeline. It moves the deal's last activity date by its date alone, so the deal does not read as stalled. The deal's last email and stakeholder engagement ignore it, as do contact and company dates.
 To put an email on a deal yourself, [use **Relink**](#how-do-i-move-an-email-to-the-right-contact-or-deal).
 
 ## How a message finds its project
@@ -250,7 +250,7 @@ To read a whole thread in Margince, press an email on the **History** tab. The t
 2. Press the "to …" line under a sender to see the whole envelope and where it is filed.
 3. At the foot, **Reply** answers in the thread, and **Forward** starts a new email with the message in it. **More actions** holds **File under another record…**.
 
-**Reply** and **Forward** open the composer at the bottom of the page. The thread comes back when you close the composer, and after a reply it says "Sent and added to this thread." A forward does not carry the message's files.
+**Reply** and **Forward** open the composer at the bottom of the page. The thread comes back when you close the composer, and after a reply it says "Sent and added to this thread." A forward does not carry the message's files. A forward keeps its own saved draft, apart from a reply and from a new email to the same contact.
 Also called: open an email, read a conversation, forward an email.
 
 ### How do I move an email to the right contact or deal?
@@ -355,7 +355,7 @@ mail internal. Adding one cannot be taken back for mail already skipped: "Mail s
 registered is never offered again by any mailbox."
 
 **Your other addresses** (Settings → Connections): an address you send as, a private domain you
-read, an address you forward from. Mail between them is not captured and never creates a contact.
+read, an address you forward from. Mail between them is not captured, unless it forwards a customer's email to your connected mailbox.
 Private to you. Removing one takes effect at once, and **Undo** on the notice puts it back. Removing
 an address Margince found also stops Margince finding it again.
 

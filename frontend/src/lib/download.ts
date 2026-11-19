@@ -61,17 +61,18 @@ export function downloadFrom(href: string, filename: string) {
  * which format it just rendered, and a name built here would be a second guess
  * at it that drifts the moment either changes.
  *
- * Only the quoted `filename="…"` form is read, which is the form this API sends.
- * RFC 6266's `filename*` extended form carries a charset and percent-encoding,
- * and half-parsing it would produce a plausible-looking wrong name — worse than
- * falling back to one this code chose deliberately.
+ * RFC 6266's `filename*=UTF-8''…` form wins when present, because it holds the
+ * real name; the quoted `filename="…"` form is its ASCII fallback. Any other
+ * charset or a broken escape falls back to the quoted form.
  */
 export function filenameFromDisposition(
   disposition: string | null,
   fallback: string,
 ): string {
-  const quoted = /filename="([^"]+)"/.exec(disposition ?? "");
-  const name = quoted?.[1]?.trim();
+  const extended = /filename\*=UTF-8''([^;\s]+)/i.exec(disposition ?? "");
+  const quoted = /filename="((?:[^"\\]|\\.)+)"/.exec(disposition ?? "");
+  const unescaped = quoted?.[1]?.replace(/\\(.)/g, "$1");
+  const name = (decodeExtended(extended?.[1]) ?? unescaped)?.trim();
   if (!name) {
     return fallback;
   }
@@ -80,4 +81,15 @@ export function filenameFromDisposition(
   // still input, and the leaf is the only part that is ever wanted.
   const leaf = name.split(/[/\\]/).pop() ?? "";
   return leaf === "" || leaf === "." || leaf === ".." ? fallback : leaf;
+}
+
+function decodeExtended(encoded: string | undefined): string | undefined {
+  if (encoded === undefined) {
+    return undefined;
+  }
+  try {
+    return decodeURIComponent(encoded);
+  } catch {
+    return undefined;
+  }
 }

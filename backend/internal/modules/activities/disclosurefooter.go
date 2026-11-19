@@ -79,8 +79,9 @@ type DisclosureResolver interface {
 	// sending legal entity picks the data-protection ones and names the
 	// controller; zero is the one the sender works for now. language is the
 	// message's, which picks the stated translation of each particular. An
-	// empty answer means nothing is owed here.
-	DisclosuresFor(ctx context.Context, category string, recipients []string, entity ids.UUID, language string) ([]DisclosureLine, error)
+	// empty answer means nothing is owed here. countries are the ones the
+	// sender stated for this message, which come before the record's.
+	DisclosuresFor(ctx context.Context, category string, recipients []string, countries []commsauthz.CountryOverride, entity ids.UUID, language string) ([]DisclosureLine, error)
 }
 
 // WithDisclosures wires the resolver onto the send path.
@@ -144,9 +145,9 @@ func htmlDisclosures(lines []DisclosureLine) string {
 // resolver owns the vocabulary and answers what an unrecognised category owes,
 // which for the packs that exist is the obligations binding every first
 // contact.
-func (s *Store) disclosuresFor(ctx context.Context, category string, recipients []string, entity ids.UUID, language string) ([]DisclosureLine, error) {
+func (s *Store) disclosuresFor(ctx context.Context, category string, recipients []string, countries []commsauthz.CountryOverride, entity ids.UUID, language string) ([]DisclosureLine, error) {
 	if s.disclosures == nil {
 		return nil, nil
 	}
-	return s.disclosures.DisclosuresFor(ctx, category, recipients, entity, language)
+	return s.disclosures.DisclosuresFor(ctx, category, recipients, countries, entity, language)
 }

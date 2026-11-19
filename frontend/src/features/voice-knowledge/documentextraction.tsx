@@ -8,8 +8,8 @@ import { Button } from "../../design-system/atoms";
 import type { ConfidenceLevel } from "../../design-system/trust";
 import { StagingCard } from "../../design-system/trust";
 import { formatNumber } from "../../format/format";
-import { minorUnitDigits, toMajorUnits } from "../../format/minorunits";
-import { useLocale, usePlural, useT } from "../../i18n";
+import { typedAmountText, typedMinorUnits } from "../../format/minorunits";
+import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { throwProblem, unwrap } from "../../lib/problem";
 import { GroundedField, OmittedList } from "./documentextraction.fields";
@@ -95,30 +95,29 @@ export const CONFIDENCE: Record<ExtractedField["confidence"], ConfidenceLevel> =
 // The currency is always there to convert with: a reading omits an amount it
 // could not pair with one, precisely so no figure is ever scaled by a guess.
 // majorUnits renders a stored minor-unit amount as the figure a human types.
-// Plain digits rather than a formatted amount: this is what goes INTO an input,
+// Plain digits with the reader's decimal sign: this is what goes into an input,
 // and a grouped "148,500.00" would come back out as something to re-parse.
-export function majorUnits(minor: string, currency: string): string {
+export function majorUnits(
+  minor: string,
+  currency: string,
+  locale: Locale,
+): string {
   const value = Number(minor);
   if (!Number.isFinite(value)) {
     return minor;
   }
-  return toMajorUnits(value, currency).toFixed(minorUnitDigits(currency));
+  return typedAmountText(value, currency, locale);
 }
 
-// minorUnits is its inverse, and it REFUSES rather than rounds: a figure with
-// more decimals than the currency has is a misread, and silently dropping a
-// digit is how an amount becomes wrong by an order of magnitude.
-export function minorUnits(major: string, currency: string): string | null {
-  const trimmed = major.trim().replace(/[\s,]/g, "");
-  if (!/^-?\d+(\.\d+)?$/.test(trimmed)) {
-    return null;
-  }
-  const digits = minorUnitDigits(currency);
-  const [whole, fraction = ""] = trimmed.split(".");
-  if (fraction.length > digits) {
-    return null;
-  }
-  return `${whole}${fraction.padEnd(digits, "0")}`;
+// minorUnits is its inverse, read by the one amount reader. It REFUSES rather
+// than rounds: a figure finer than the currency is a misread.
+export function minorUnits(
+  major: string,
+  currency: string,
+  locale: Locale,
+): string | null {
+  const typed = typedMinorUnits(major, currency, locale);
+  return "minor" in typed ? String(typed.minor) : null;
 }
 
 function isLive(extraction: Extraction | undefined): boolean {
@@ -208,7 +207,12 @@ export function DocumentExtractionPanel({
             // else started while this one was on screen must not decide what is written.
             extraction_id: extraction.id,
             field_keys: fields.map((f) => f.field),
-            edits: editedOnly(fields, edits, groundedCurrency(extraction)),
+            edits: editedOnly(
+              fields,
+              edits,
+              groundedCurrency(extraction),
+              locale,
+            ),
           },
         }),
       );
@@ -267,6 +271,7 @@ function editedOnly(
   fields: readonly ExtractedField[],
   edits: Readonly<Record<string, string>>,
   currency: string,
+  locale: Locale,
 ): Record<string, string> {
   const out: Record<string, string> = {};
   for (const field of fields) {
@@ -280,7 +285,7 @@ function editedOnly(
     // by name, rather than being silently rounded into something plausible.
     const value =
       field.field === AMOUNT_FIELD && currency !== ""
-        ? (minorUnits(draft, currency) ?? draft)
+        ? (minorUnits(draft, currency, locale) ?? draft)
         : draft;
     if (value !== field.value) {
       out[field.field] = value;

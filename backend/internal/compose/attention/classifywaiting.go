@@ -69,7 +69,7 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 		Because:     waitingBecause(waiting, days, demoted),
 		Actions:     []crmcontracts.WorklistItemActions{},
 	}
-	if demoted.informational || waiting.ActionUnconfirmed || demoted.elsewhere || waiting.NonBuyer {
+	if demoted.informational || waiting.unconfirmed() || demoted.elsewhere || waiting.NonBuyer {
 		row.Consequence = "none"
 	}
 	// The subject travels because the row exists at all only for a reader the
@@ -189,6 +189,13 @@ func demotionsOf(waiting WaitingCustomer, days int) waitingDemotions {
 	}
 }
 
+// unconfirmed is a wait with no verdict to rank it by. Mail no model may judge
+// never gets one. On a conversation the seat owing the reply wrote on first,
+// it is the customer answering that seat, so it ranks as a request.
+func (w WaitingCustomer) unconfirmed() bool {
+	return w.ActionUnconfirmed && (!w.JudgeWithheld || !w.OwnerWroteOnThread)
+}
+
 // answeredOnTheCalendar is calendar mail no drafted reply answers: an
 // invitation, or a change only to be seen. A proposed new time may get a reply.
 func answeredOnTheCalendar(mail *crmcontracts.EmailSummary) bool {
@@ -223,7 +230,7 @@ func waitingLevel(waiting WaitingCustomer, d waitingDemotions) int {
 			level = levelMaterialRisk
 		}
 	}
-	if d.unproven || d.elsewhere || d.informational || waiting.ActionUnconfirmed || waiting.NonBuyer || d.booked {
+	if d.unproven || d.elsewhere || d.informational || waiting.unconfirmed() || waiting.NonBuyer || d.booked {
 		level = levelRoutine
 	}
 	if d.strangerBcc || d.strangerLink {

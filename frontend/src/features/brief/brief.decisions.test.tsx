@@ -130,6 +130,38 @@ describe("waiting on you", () => {
     expect(screen.getByRole("button", { name: en["trust.edit"] })).toBeTruthy();
   });
 
+  // The Brief and the Worklist read one rule: a yes-or-no request offers no Edit.
+  it("offers no Edit on a contact share request", async () => {
+    const user = userEvent.setup();
+    render(
+      <DecisionsSection
+        items={deckItems([
+          proposal("ap-share", "Rep One asks you to share this contact.", {
+            kind: "contact_share",
+            expires_at: "2026-08-20T12:00:00Z",
+            proposed_change: {
+              contact_id: "01a03781-912c-774e-a74e-7cdceca98829",
+              owner_id: "01a03781-912c-774e-a74e-7cdceca98830",
+              requester_id: "01a03781-912c-774e-a74e-7cdceca98831",
+            },
+          }),
+        ])}
+        nowMs={NOW}
+        state="ready"
+        onAlreadyDecided={() => undefined}
+      />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: en["brief.deck.rowMore"] }),
+    );
+
+    expect(
+      await screen.findByRole("button", { name: en["brief.deck.later"] }),
+    ).toBeTruthy();
+    expect(screen.queryByRole("button", { name: en["trust.edit"] })).toBeNull();
+  });
+
   // Three questions a reader can answer on the way past, and the rest where
   // every one of them is. A block showing three of nine that did not say where
   // the other six are has hidden them.
@@ -224,5 +256,42 @@ describe("waiting on you", () => {
       />,
     );
     expect(screen.queryByText(en["brief.deck.empty"])).toBeNull();
+  });
+});
+
+describe("a mail its sender cannot send", () => {
+  const unsendable = { mailbox_send_capable: false };
+
+  it("offers no approve on a single decision", () => {
+    render(
+      <DecisionsSection
+        items={deckItems([proposal("ap-1", "Reply to Anna", unsendable)])}
+        nowMs={NOW}
+        state="ready"
+        onAlreadyDecided={() => undefined}
+      />,
+    );
+
+    expect(
+      screen.queryByRole("button", { name: en["brief.approval.approve"] }),
+    ).toBeNull();
+  });
+
+  it("offers no approve on a bundle that holds one", () => {
+    render(
+      <DecisionsSection
+        items={deckItems([
+          proposal("ap-1", "Reply to Anna", { bundle_id: "b1" }),
+          proposal("ap-2", "Reply to Bo", { bundle_id: "b1", ...unsendable }),
+        ])}
+        nowMs={NOW}
+        state="ready"
+        onAlreadyDecided={() => undefined}
+      />,
+    );
+
+    expect(
+      screen.queryByRole("button", { name: en["brief.approval.approve"] }),
+    ).toBeNull();
   });
 });

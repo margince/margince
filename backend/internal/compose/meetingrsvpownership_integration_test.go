@@ -346,7 +346,7 @@ func TestADisconnectedCalendarsAnswerFollowsTheOrganizersRosterUntilItReconnects
 			rows := o.ownRows(t, meeting, e.Rep2)
 
 			registry := NewCaptureRegistry(e.Pool, keyvault.NewMemory(), CaptureConfig{})
-			if err := registry.Disconnect(e.As(e.Rep2, []ids.UUID{e.Team1}, integration.AdminPerms), provider); err != nil {
+			if err := registry.Disconnect(e.As(e.Rep2, []ids.UUID{e.Team1}, integration.AdminPerms), capture.ProviderMailbox(provider)); err != nil {
 				t.Fatal(err)
 			}
 			o.sync(t, e.Rep1, listed("accepted"))
@@ -410,7 +410,7 @@ func TestAReconnectedSeatsRemovalRetiresTheRowAnotherCalendarTookOver(t *testing
 			o.sync(t, e.Rep2, own)
 
 			registry := NewCaptureRegistry(e.Pool, keyvault.NewMemory(), CaptureConfig{})
-			if err := registry.Disconnect(e.As(e.Rep2, []ids.UUID{e.Team1}, integration.AdminPerms), provider); err != nil {
+			if err := registry.Disconnect(e.As(e.Rep2, []ids.UUID{e.Team1}, integration.AdminPerms), capture.ProviderMailbox(provider)); err != nil {
 				t.Fatal(err)
 			}
 			o.sync(t, e.Rep1, mailboxCopy{id: "evt-1", organizer: organizer, guests: listed})

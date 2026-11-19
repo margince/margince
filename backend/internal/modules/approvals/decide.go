@@ -250,6 +250,9 @@ func landEditedPayload(
 	if err := assertEditableMembers(a.Kind, a.ProposedChange, edited); err != nil {
 		return err
 	}
+	if err := assertMailHasText(a.Kind, edited); err != nil {
+		return err
+	}
 	return applyEditedPayload(ctx, tx, id, edited, a, auditEvidence, decidedPayload)
 }
 

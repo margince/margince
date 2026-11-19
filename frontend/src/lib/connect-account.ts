@@ -26,6 +26,9 @@ export type ConnectAccountInput = Readonly<{
   alsoConnect?: PairedCalendar;
   /** How far back to import past email once the mail grant is stored. */
   importWindow?: ImportWindow;
+  /** The mailbox a Reconnect repairs. Absent adds the account the consent
+   *  names as another mailbox. */
+  reconnects?: string;
 }>;
 
 /** What a press led to that the screen still has to draw. A redirect leaves
@@ -47,6 +50,7 @@ function connectBody(input: ConnectAccountInput): ConnectRequest {
     return_to: input.returnTo,
     ...(input.alsoConnect && { also_connect: input.alsoConnect }),
     ...(input.importWindow && { import_window: input.importWindow }),
+    ...(input.reconnects && { connection_id: input.reconnects }),
   };
 }
 

@@ -353,6 +353,7 @@ func (h Handlers) SendCompanyEmail(w http.ResponseWriter, r *http.Request, _ crm
 	}
 	out, err := h.store.SendOrSchedule(r.Context(), FromAccount(links), in,
 		sched, h.consent, h.delivery, h.timer)
+	h.observeSend(r.Context(), out, err)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
@@ -450,6 +451,7 @@ func (h Handlers) SendEmail(w http.ResponseWriter, r *http.Request, id crmcontra
 	}
 	out, err := h.store.SendOrSchedule(r.Context(), origin, in,
 		sched, h.consent, h.delivery, h.timer)
+	h.observeSend(r.Context(), out, err)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return

@@ -118,7 +118,7 @@ func sendCapableMailbox(t *testing.T, e *apptest.AppEnv) {
 		_, err := tx.Exec(t.Context(), `
 			INSERT INTO capture_connection (provider, user_id, scopes, status, auth, provider_scopes)
 			VALUES ('gmail', $1, '{}', 'connected', $2, $3)
-			ON CONFLICT (user_id, provider) DO UPDATE SET status = 'connected',
+			ON CONFLICT (user_id, provider, lower(account_label)) WHERE user_id IS NOT NULL DO UPDATE SET status = 'connected',
 				provider_scopes = capture_connection.provider_scopes || EXCLUDED.provider_scopes`,
 			apptest.SessionUserID(t, e), []byte(`{"refresh_token":"r","granted":[]}`), []string{apptest.GmailReadonlyScope, apptest.GmailSendScope})
 		return err

@@ -102,7 +102,7 @@ func TestTwoStagedCallsDifferingOnlyInArgumentsAreDistinguishable(t *testing.T) 
 	e.BootstrapWorkspace(t)
 	companyID := createdID(t, e, "/v1/companies", AnyMap{
 		"source": "manual", "display_name": "Two Pages GmbH",
-		"domains": []AnyMap{{"domain": "example.com", "is_primary": true}},
+		"domains": []AnyMap{{"domain": "example.test", "is_primary": true}},
 	})
 	bearer := apptest.PassportBearer(t, e, "site-read agent", "read", "enrich")
 

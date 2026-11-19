@@ -126,20 +126,6 @@
   margin-top: 2px; /* ds:ignore optical: sets the glyph on the first text line */
 }
 
-/* step 5 connect */
-
-.imap-form {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-3);
-  text-align: left;
-  max-width: 460px;
-  margin: 0 auto;
-}
-.imap-form .full {
-  grid-column: 1 / -1;
-}
-
 /* spinner (shared inline). The info family, not the brand: a turning ring is
    work still in flight, and drawn in the accent it read as the page's next
    move rather than as a wait. */
@@ -157,12 +143,6 @@
 @keyframes obSpin {
   to {
     transform: rotate(360deg);
-  }
-}
-
-@media (max-width: 640px) {
-  .imap-form {
-    grid-template-columns: 1fr;
   }
 }
 

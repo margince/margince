@@ -268,9 +268,8 @@ func rowCarriedHold(stored string, storedReason *string) (bool, string) {
 	if stored != audienceParticipants {
 		return false, ""
 	}
-	switch why := deref(storedReason); why {
-	case ReasonNoRecord, ReasonNoCounterparty, ReasonWorkspaceFloor, ReasonCounterparty, ReasonConfidentialMarker,
-		ReasonMembersOnly, ReasonInternalOperational:
+	why := deref(storedReason)
+	if privateReasons[why].carried {
 		return true, why
 	}
 	return false, ""

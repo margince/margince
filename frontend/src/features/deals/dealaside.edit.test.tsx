@@ -38,7 +38,11 @@ const deal: components["schemas"]["Deal"] = {
 
 afterEach(cleanup);
 
-function mount(grant: ("read" | "update")[], current = deal) {
+function mount(
+  grant: ("read" | "update")[],
+  current = deal,
+  locale: "en" | "de" = "en",
+) {
   const sent: unknown[] = [];
   installFetchStub({
     "GET /me": meRoute({ deal: grant }, { seat: "full" }),
@@ -48,7 +52,7 @@ function mount(grant: ("read" | "update")[], current = deal) {
     },
   });
   render(
-    <StoryProviders>
+    <StoryProviders locale={locale}>
       <DealAside deal={current} stages={[]} />
     </StoryProviders>,
   );
@@ -62,7 +66,7 @@ it("saves a changed value from the left column's money form as that field alone"
     await screen.findByRole("button", { name: /^Change Value €48,000$/ }),
   );
   const dialog = await screen.findByRole("dialog", { name: "Value" });
-  const amount = within(dialog).getByRole("spinbutton", { name: "Value" });
+  const amount = within(dialog).getByRole("textbox", { name: "Value" });
   await user.clear(amount);
   await user.type(amount, "52000");
   await user.click(within(dialog).getByRole("button", { name: "Save" }));
@@ -97,4 +101,29 @@ it("changes the amount of a deal whose ARR an offer set", async () => {
   expect(
     await screen.findByRole("button", { name: /^Change Value/ }),
   ).toBeTruthy();
+});
+
+// German groups thousands with a dot: "12,5" is twelve and a half, and
+// "1.500" is refused because it also reads as fifteen hundred.
+it.each([
+  ["12,5", [{ amount_minor: 1250 }]],
+  ["1.500", []],
+])("in German, a typed %s saves %j", async (typed, want) => {
+  const user = userEvent.setup();
+  const sent = mount(["read", "update"], deal, "de");
+  await user.click(await screen.findByRole("button", { name: /^Wert/ }));
+  const dialog = await screen.findByRole("dialog", { name: "Wert" });
+  const amount = within(dialog).getByRole("textbox", { name: "Wert" });
+  expect((amount as HTMLInputElement).value).toBe("48000,00");
+  await user.clear(amount);
+  await user.type(amount, typed);
+  await user.click(within(dialog).getByRole("button", { name: "Speichern" }));
+  if (want.length === 0) {
+    expect(
+      await within(dialog).findByText(
+        "Gib den Betrag als 1500 oder 1500,00 ein.",
+      ),
+    ).toBeTruthy();
+  }
+  await waitFor(() => expect(sent).toEqual(want));
 });
