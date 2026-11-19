@@ -848,6 +848,58 @@ describe("a session confined while it is open", () => {
   });
 });
 
+describe("a session that ends while it is open", () => {
+  // A refused re-read keeps the earlier answer beside its error, so the
+  // notice must follow the refusal and not the answer still held.
+  it("tells the reader on the sign-in screen that the session expired", async () => {
+    let ended = false;
+    const answer = (body: unknown, status = 200) =>
+      new Response(JSON.stringify(body), {
+        status,
+        headers: { "Content-Type": "application/problem+json" },
+      });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: Request | string | URL) => {
+        const path = new URL(
+          String(input instanceof Request ? input.url : input),
+          "http://localhost",
+        ).pathname;
+        if (ended) return answer({ code: "unauthorized" }, 401);
+        if (path === "/v1/me") return answer(meFixture());
+        if (path === "/v1/company") {
+          return answer({ company_id: "o1", display_name: "Acme" });
+        }
+        return answer({ data: [], page: {} });
+      }),
+    );
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    window.location.hash = "#/settings/account";
+    render(
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">
+          <App />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+    await screen.findByText("Two-step sign-in");
+
+    ended = true;
+    await client.invalidateQueries({ queryKey: ["me"] });
+
+    expect(
+      await screen.findByText(
+        "The session expired. Sign in again to continue.",
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { name: "Sign in to Margince" }),
+    ).toBeTruthy();
+  });
+});
+
 describe("the forced two-step setup, held at the boundary", () => {
   const SECRET = "JBSWY3DPEHPK3PXP";
   const json = (body: unknown, status = 200) =>

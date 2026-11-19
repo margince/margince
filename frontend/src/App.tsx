@@ -264,14 +264,8 @@ function AuthedApp({
   // change it under Settings → Account.
   useBrowserZoneOnFirstSignIn(me.data);
   useEffect(() => {
-    const refused = noteSessionSeen(me.data, me.error);
-    if (me.data) {
-      hadSession.current = true;
-      setNotice(null);
-      markJourney("session");
-      return;
-    }
-    if (refused) {
+    // The refusal is tested first: a refused re-read still holds the old data.
+    if (noteSessionSeen(me.data, me.error)) {
       const exit = consumeAuthExitNotice();
       if (exit) {
         setNotice(exit);
@@ -279,6 +273,12 @@ function AuthedApp({
         setNotice("session-expired");
       }
       hadSession.current = false;
+      return;
+    }
+    if (me.data) {
+      hadSession.current = true;
+      setNotice(null);
+      markJourney("session");
     }
   }, [me.data, me.error]);
 
