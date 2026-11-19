@@ -90,6 +90,24 @@ describe("repeated rows", () => {
     expect(sent).toHaveLength(0);
   });
 
+  it("points every address box at the line that names the repeat", async () => {
+    await fillRows(contactCreateFields, "Add email", ["a@x.test", "a@x.test"]);
+    const line = await screen.findByText(
+      "a@x.test is in two rows. Remove one of them.",
+    );
+    const boxes = line
+      .closest(".field-repeatable")
+      ?.querySelectorAll(".repeatablerowsfield-value input");
+    expect(line.id).not.toBe("");
+    expect(boxes?.length).toBe(2);
+    for (const box of boxes ?? []) {
+      expect(box.getAttribute("aria-invalid")).toBe("true");
+      expect(box.getAttribute("aria-describedby")?.split(" ")).toContain(
+        line.id,
+      );
+    }
+  });
+
   it("marks a domain typed in two rows", async () => {
     await fillRows(companyCreateFields, "Add domain", [
       "example.com",

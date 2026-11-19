@@ -124,6 +124,20 @@ export function RepeatableRowsField({
     setRows([...rows, typeKey ? { [typeKey]: typeDefault } : {}]);
   }
 
+  // The refusal names the rows' values, so each value box points at it.
+  const refusalId = `${formId}-${field.key}-refusal`;
+  function refusedControl<T extends { "aria-describedby"?: string }>(
+    control: T,
+  ): T {
+    if (!error) return control;
+    const described = [control["aria-describedby"], refusalId];
+    return {
+      ...control,
+      "aria-invalid": true,
+      "aria-describedby": described.filter(Boolean).join(" "),
+    };
+  }
+
   function subFieldControl(subField: SubField, index: number) {
     const row = rows[index] ?? {};
     return (
@@ -140,7 +154,7 @@ export function RepeatableRowsField({
         {(control) =>
           fieldControl(
             subField,
-            control,
+            subField === valueField ? refusedControl(control) : control,
             row[subField.key] ?? "",
             (next) => updateRow(index, subField.key, next),
             t,
@@ -228,7 +242,7 @@ export function RepeatableRowsField({
           ))}
         </div>
       )}
-      {error && <ErrorLine>{error}</ErrorLine>}
+      {error && <ErrorLine id={refusalId}>{error}</ErrorLine>}
       <Button
         type="button"
         className="repeatablerowsfield-add"
