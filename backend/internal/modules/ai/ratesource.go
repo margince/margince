@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // pricedByFor is the provider whose sheet prices provider's unpriced models,
@@ -49,7 +51,7 @@ func rateMatch(provider, model, day string, fromArg, toArg int) string {
 // the sheet does not price yet still prices the call. Every SQL reader that
 // prices a call joins it LATERAL as r, the alias callCostMicroUSD reads.
 func pricedRate(alias string, fromArg, toArg int) string {
-	day := alias + ".occurred_at::date"
+	day := occurredday.TodaySQL(alias + ".occurred_at")
 	return fmt.Sprintf(`SELECT ranked.* FROM (
 		  SELECT 0 AS match_rank, answered.* FROM (%[1]s) answered WHERE %[3]s
 		  UNION ALL

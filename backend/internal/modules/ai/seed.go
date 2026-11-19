@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // SeedWorkspaceDefaultsTx plants the starting ai_model_rate price sheet
@@ -33,7 +35,11 @@ import (
 // form's picker reads, and the reason a seeded embedder must never land as the
 // column default.
 func SeedWorkspaceDefaultsTx(ctx context.Context, tx pgx.Tx, now time.Time) error {
-	for _, r := range SeedModelRates(now) {
+	var day time.Time
+	if err := tx.QueryRow(ctx, `SELECT `+occurredday.TodaySQL("$1::timestamptz"), now).Scan(&day); err != nil {
+		return fmt.Errorf("ai: reading the installation's day for the seed rates: %w", err)
+	}
+	for _, r := range SeedModelRates(day) {
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO ai_model_rate (
 				provider, model_id,

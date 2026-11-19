@@ -38,7 +38,7 @@ var assuranceSubjectsSQL = `
 		       ` + deals.WinProbabilitySQL("d") + `, s.name, d.stage_id,
 		       COALESCE((SELECT max(h.changed_at) FROM deal_stage_history h
 		                  WHERE h.deal_id = d.id AND h.to_stage_id = d.stage_id), d.created_at),
-		       d.created_at, d.wait_until,
+		       d.created_at, ` + deals.PauseEndsSQL("d") + `,
 		       (SELECT max(a.occurred_at)
 		          FROM activity a
 		          JOIN activity_link al ON al.activity_id = a.id

@@ -22,6 +22,7 @@ import { QueryGate } from "../design-system/querystates";
 import { useLocale, useT } from "../i18n";
 import { useCanWrite } from "../lib/capability";
 import { unwrap } from "../lib/problem";
+import { useEmploymentZone } from "../lib/employmentcurrency";
 import { useViewerZone } from "../lib/viewerzone";
 import { EditAction } from "./edit";
 import "../design-system/querystates.css";
@@ -139,7 +140,9 @@ export function RelationshipRows({
   const copy = scopeCopy(scope);
   const { locale } = useLocale();
   const zone = useViewerZone();
-  const datesOf = (rel: Relationship) => dateRange(rel, t, locale, zone);
+  const employmentZone = useEmploymentZone();
+  const datesOf = (rel: Relationship) =>
+    dateRange(rel, t, locale, zone, employmentZone);
   // The object half of each verb's gate, asked as the server asks it
   // (relationship:create on an add, :update on an edit, :delete on a
   // removal). A verb the role holds no grant for is withheld outright — there
@@ -317,7 +320,9 @@ export function RelationshipRows({
       key: "dates",
       header: t("rel.dates"),
       render: (rel: Relationship) => (
-        <DateRangeText {...dateRangeParts(rel, t, locale, zone)} />
+        <DateRangeText
+          {...dateRangeParts(rel, t, locale, zone, employmentZone)}
+        />
       ),
     },
     {

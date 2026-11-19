@@ -39,7 +39,8 @@ var employmentEndColumn = regexp.MustCompile(`^(?:[A-Za-z_][A-Za-z_0-9]*\.)?ende
 // IsCurrentSQL treats a future departure as a notice period: the contact still works there.
 // A departure day that has arrived is already over, so ending employment today
 // removes it from current-employer views immediately. Postgres owns the clock
-// because every server-side reader evaluates this rule in its transaction.
+// because every server-side reader evaluates this rule in its transaction, and
+// the day is the installation's, the zone the picked departure day belongs to.
 // Expression callers provide status and precision explicitly; only a plain
 // ended_at column (optionally qualified) derives its sibling columns.
 // IsCurrentSQL combines assertion and date evidence. A former or unknown
@@ -62,7 +63,7 @@ func IsCurrentSQL(date string, asserted ...string) string {
 		precision = asserted[1]
 	}
 	end := EndDaySQL(date, precision)
-	return sqlf("(coalesce(%s, 'current') = 'current' AND (%s IS NULL OR %s > current_date))", status, date, end)
+	return sqlf("(coalesce(%s, 'current') = 'current' AND (%s IS NULL OR %s > %s))", status, date, end, occurredday.TodaySQL("now()"))
 }
 
 // EndDaySQL is the first day an employment is no longer current. That is the

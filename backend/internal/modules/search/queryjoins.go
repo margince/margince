@@ -27,6 +27,7 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -409,10 +410,9 @@ func joinEdgeCondition(edge JoinEdge) string {
 		// about.
 		//
 		// A FUTURE ended_at is a notice period, and it is still current — the
-		// contact works there until the date arrives. Compared against the
-		// DATABASE's clock, because the row is dated by it and a comparison
-		// against any other would disagree with it near midnight.
-		where = append(where, fmt.Sprintf("(j.%s IS NULL OR j.%s > current_date)", columnEndedAt, columnEndedAt))
+		// contact works there until the date arrives, in the installation's
+		// zone, the one employment.IsCurrentSQL reads.
+		where = append(where, fmt.Sprintf("(j.%s IS NULL OR j.%s > %s)", columnEndedAt, columnEndedAt, occurredday.TodaySQL("now()")))
 	}
 	return fmt.Sprintf("h.id IN (SELECT j.%s FROM %s j WHERE %s)",
 		sanitize(edge.To), sanitize(edge.Table), strings.Join(where, " AND "))

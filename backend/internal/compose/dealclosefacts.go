@@ -34,7 +34,7 @@ type closeFacts struct {
 	// replyOwed is a current customer request on the deal that nobody has
 	// settled, whether or not we replied on its thread.
 	replyOwed bool
-	// waitUntil is the day the customer asked us to wait until; meetingAhead
+	// waitUntil is the instant the wait ends (deals.PauseEndsSQL); meetingAhead
 	// is a meeting still to come that a customer guest accepted.
 	waitUntil    *time.Time
 	meetingAhead bool
@@ -66,7 +66,7 @@ var closeFactsSQL = `
 	       (SELECT max(a.occurred_at) FROM activity a JOIN activity_link al ON al.activity_id = a.id
 	         WHERE al.deal_id = d.id AND a.archived_at IS NULL AND %[1]s),
 	       refusal.id, refusal.occurred_at,
-	       d.wait_until,
+	       ` + deals.PauseEndsSQL("d") + `,
 	       EXISTS (SELECT 1 FROM activity a JOIN activity_link al ON al.activity_id = a.id
 	                WHERE al.deal_id = d.id AND a.archived_at IS NULL AND a.kind = 'meeting' AND %[3]s
 	                  AND EXISTS (SELECT 1 FROM activity_participant p

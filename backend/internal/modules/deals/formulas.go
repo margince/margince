@@ -15,6 +15,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/idlebase"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
@@ -34,7 +35,8 @@ const StalledThresholdDays = 60
 // "quiet 19 days" and "stalled" are different claims about the same deal.
 const QuietThresholdDays = 19
 
-// IsStalled evaluates §8.1 at one instant. Idle is an absolute-duration
+// IsStalled evaluates §8.1 at one instant. waitUntil is the instant the pause
+// ends (PauseEndsSQL), never the picked date. Idle is an absolute-duration
 // comparison on UTC instants, never a calendar-day count — stable under
 // a fixed test clock, identical across zones.
 // meetingAhead is MeetingAheadSQL's answer for the deal, read in the same
@@ -91,9 +93,22 @@ func QuietSQL(alias string, days int) string {
 func quietAtSQL(alias string, days int, instant string) string {
 	return fmt.Sprintf(`(%[1]sstatus = 'open'
 		AND %[3]s < %[5]s - interval '%[2]d days'
-		AND (%[1]swait_until IS NULL OR %[1]swait_until <= %[5]s)
+		AND (%[1]swait_until IS NULL OR %[6]s <= %[5]s)
 		AND NOT %[4]s)`,
-		columnPrefix(alias), days, idlebase.SQL(alias), MeetingAheadSQL(alias), instant)
+		columnPrefix(alias), days, idlebase.SQL(alias), MeetingAheadSQL(alias), instant, PauseEndsSQL(alias))
+}
+
+// PauseEndsSQL is the instant a deal's pause ends: the start of the picked
+// wait_until day in the owner's own time zone, or in the installation's when
+// the owner has none. It is null without a pause. Every reader of the pause
+// reads this and compares the instant, so no reader cuts the day at UTC
+// midnight on its own. The owner, not the viewer, so a list, a report and the
+// worker all judge one deal alike.
+func PauseEndsSQL(alias string) string {
+	prefix := columnPrefix(alias)
+	zone := `COALESCE((SELECT NULLIF(pause_owner.timezone, '') FROM app_user pause_owner WHERE pause_owner.id = ` +
+		prefix + `owner_id), ` + occurredday.InstallationZoneSQL + `)`
+	return `(` + occurredday.DayStartInSQL(prefix+`wait_until`, zone) + `)`
 }
 
 // MeetingAheadSQL is true when the deal has a meeting nobody called off that
