@@ -361,4 +361,53 @@ describe("the deal's committee card", () => {
       screen.queryByText(translate("en", "deal.committee.change")),
     ).toBeNull();
   });
+
+  it("names who talks to which seat, and the seat nobody has reached", async () => {
+    stubFetch();
+    draw(
+      coverage({
+        our_side: [
+          {
+            user_id: OWNER,
+            display_name: "Lena Fischer",
+            strength_bucket: "strong",
+            interactions_90d: 3,
+          },
+        ],
+        lines: [
+          {
+            user_id: OWNER,
+            contact_id: "c-1",
+            last_inbound_at: "2026-11-04T09:00:00Z",
+          },
+        ],
+      }),
+    );
+    const lines = await screen.findByRole("region", {
+      name: translate("en", "deal.committee.lines.title"),
+    });
+    expect(within(lines).getAllByRole("listitem")).toHaveLength(2);
+    expect(
+      within(lines).getByText(/Lena Fischer with Mai Tr.n: They wrote/),
+    ).toBeInTheDocument();
+    expect(
+      within(lines).getByText(
+        translate("en", "deal.committee.lines.unreached", {
+          contact: "Bảo Nguyễn",
+        }),
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("draws no pairs and calls no seat unreached when the read withheld them", async () => {
+    stubFetch();
+    draw(coverage({ lines: undefined }));
+    await screen.findByText("Mai Trần");
+    expect(
+      screen.queryByText(translate("en", "deal.committee.lines.title")),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/No one on our team has reached/),
+    ).not.toBeInTheDocument();
+  });
 });

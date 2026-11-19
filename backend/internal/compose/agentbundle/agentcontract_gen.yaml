@@ -36069,6 +36069,16 @@ components:
         last_inbound_precision:
           allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
           description: How to read `last_inbound_at`, from the activity it names. Absent when that is absent.
+    DealCoverageLine:
+      type: object
+      description: One colleague's exchange with one buyer seat, as the newest event in each direction.
+      required: [user_id, contact_id]
+      properties:
+        user_id: {type: string, format: uuid}
+        contact_id: {type: string, format: uuid}
+        last_inbound_at: {type: [string, 'null'], format: date-time, description: When the contact last wrote to this colleague.}
+        last_outbound_at: {type: [string, 'null'], format: date-time, description: "When this colleague last wrote to the contact, or was copied on our mail to them."}
+        last_met_at: {type: [string, 'null'], format: date-time, description: The newest meeting or call of the pair that neither declined.}
     DealCoverageRisk:
       type: object
       description: |-
@@ -37142,6 +37152,14 @@ components:
             score is their warmest single relationship. `single_threaded_ours` reads the same
             entries, so its colleague is always one of them.
           items: {$ref: '#/components/schemas/ContactNetworkColleague'}
+        lines:
+          type: array
+          description: |-
+            One entry per colleague and seat who have exchanged mail or met, read from the same
+            per-pair edges as `our_side`. A pair with no exchange has no entry. Absent, not empty,
+            when the caller has no `activity` grant: an absent list says nothing about who has
+            talked, and a seat must not be called unreached from it.
+          items: {$ref: '#/components/schemas/DealCoverageLine'}
         risks: {type: array, items: {$ref: '#/components/schemas/DealCoverageRisk'}}
         sections_omitted:
           type: array

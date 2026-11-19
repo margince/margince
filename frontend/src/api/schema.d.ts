@@ -38399,6 +38399,28 @@ export interface components {
             /** @description How to read `last_inbound_at`, from the activity it names. Absent when that is absent. */
             last_inbound_precision?: components["schemas"]["OccurredPrecision"];
         };
+        /** @description One colleague's exchange with one buyer seat, as the newest event in each direction. */
+        DealCoverageLine: {
+            /** Format: uuid */
+            user_id: string;
+            /** Format: uuid */
+            contact_id: string;
+            /**
+             * Format: date-time
+             * @description When the contact last wrote to this colleague.
+             */
+            last_inbound_at?: string | null;
+            /**
+             * Format: date-time
+             * @description When this colleague last wrote to the contact, or was copied on our mail to them.
+             */
+            last_outbound_at?: string | null;
+            /**
+             * Format: date-time
+             * @description The newest meeting or call of the pair that neither declined.
+             */
+            last_met_at?: string | null;
+        };
         /**
          * @description One finding, with the records behind it. `kind` names the rule so a surface can
          *     explain the flag rather than assert it.
@@ -39306,6 +39328,13 @@ export interface components {
              *     entries, so its colleague is always one of them.
              */
             our_side: components["schemas"]["ContactNetworkColleague"][];
+            /**
+             * @description One entry per colleague and seat who have exchanged mail or met, read from the same
+             *     per-pair edges as `our_side`. A pair with no exchange has no entry. Absent, not empty,
+             *     when the caller has no `activity` grant: an absent list says nothing about who has
+             *     talked, and a seat must not be called unreached from it.
+             */
+            lines?: components["schemas"]["DealCoverageLine"][];
             risks: components["schemas"]["DealCoverageRisk"][];
             /**
              * @description The sections withheld for lack of the `relationship` grant — so a client can say

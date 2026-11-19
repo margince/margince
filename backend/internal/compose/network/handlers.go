@@ -166,6 +166,7 @@ func (h Reads) GetDealCoverage(w http.ResponseWriter, r *http.Request, id crmcon
 		if err != nil {
 			return err
 		}
+		coverage.LinesReadable = auth.ReadGranted(ctx, "activity")
 		// Only this page shows when a seat last wrote. So the status card, the
 		// assistant and the intro paths neither pay for that read nor fail on it.
 		if coverage.SeatsInbound, err = readSeatsInbound(ctx, tx, coverage.Stakeholders, now); err != nil {
@@ -226,6 +227,26 @@ func WireColleague(e search.InteractionEdge, name string, now time.Time) crmcont
 	return out
 }
 
+// wireLines names each colleague and seat who exchanged mail or met. It is nil
+// unless the reader holds the activity grant. An empty list would tell a reader
+// who may not know that nobody has talked.
+func wireLines(c DealCoverage) *[]crmcontracts.DealCoverageLine {
+	if !c.LinesReadable || len(c.SectionsOmitted) > 0 {
+		return nil
+	}
+	lines := []crmcontracts.DealCoverageLine{}
+	for _, e := range c.OurSide {
+		if e.LastInboundAt == nil && e.LastOutboundAt == nil && e.LastMetAt == nil {
+			continue
+		}
+		lines = append(lines, crmcontracts.DealCoverageLine{
+			UserId: openapi_types.UUID(e.UserID), ContactId: openapi_types.UUID(e.ContactID),
+			LastInboundAt: e.LastInboundAt, LastOutboundAt: e.LastOutboundAt, LastMetAt: e.LastMetAt,
+		})
+	}
+	return &lines
+}
+
 func wireCoverage(
 	c DealCoverage, names map[ids.UUID]string, contacts map[ids.UUID]string,
 ) crmcontracts.DealCoverage {
@@ -273,6 +294,7 @@ func wireCoverage(
 		}
 		out.OurSide = append(out.OurSide, colleague)
 	}
+	out.Lines = wireLines(c)
 	for _, r := range c.Risks {
 		risk := crmcontracts.DealCoverageRisk{
 			Kind:       crmcontracts.DealCoverageRiskKind(r.Kind),

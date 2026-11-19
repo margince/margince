@@ -48264,6 +48264,12 @@ type DealCommitments struct {
 type DealCoverage struct {
 	DealId openapi_types.UUID `json:"deal_id"`
 
+	// Lines One entry per colleague and seat who have exchanged mail or met, read from the same
+	// per-pair edges as `our_side`. A pair with no exchange has no entry. Absent, not empty,
+	// when the caller has no `activity` grant: an absent list says nothing about who has
+	// talked, and a seat must not be called unreached from it.
+	Lines *[]DealCoverageLine `json:"lines,omitempty"`
+
 	// OurSide One entry per colleague with recorded interaction with the deal's seats, warmest
 	// first. `interactions_90d` sums the colleague's exchanges with every seat, and the
 	// score is their warmest single relationship. `single_threaded_ours` reads the same
@@ -48291,6 +48297,21 @@ type DealCoverage struct {
 
 // DealCoverageSectionsOmitted defines model for DealCoverage.SectionsOmitted.
 type DealCoverageSectionsOmitted string
+
+// DealCoverageLine One colleague's exchange with one buyer seat, as the newest event in each direction.
+type DealCoverageLine struct {
+	ContactId openapi_types.UUID `json:"contact_id"`
+
+	// LastInboundAt When the contact last wrote to this colleague.
+	LastInboundAt *time.Time `json:"last_inbound_at,omitempty"`
+
+	// LastMetAt The newest meeting or call of the pair that neither declined.
+	LastMetAt *time.Time `json:"last_met_at,omitempty"`
+
+	// LastOutboundAt When this colleague last wrote to the contact, or was copied on our mail to them.
+	LastOutboundAt *time.Time         `json:"last_outbound_at,omitempty"`
+	UserId         openapi_types.UUID `json:"user_id"`
+}
 
 // DealCoverageRisk One finding, with the records behind it. `kind` names the rule so a surface can
 // explain the flag rather than assert it.
