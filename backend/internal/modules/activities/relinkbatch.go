@@ -477,12 +477,15 @@ func (s *Store) RelinkActivities(ctx context.Context, activityIDs []ids.UUID, in
 	return out, err
 }
 
-// answerOnDealFiling lets each row a batch door files on a deal answer its
-// conversation's question, as the single door's row does. The first of a
-// conversation's rows settles its question, and the rest find none open.
+// answerOnDealFiling files each row a batch door moves onto a deal under the
+// deal's project, and answers its conversation's question. The single door
+// does both too. The first of a conversation's rows settles its question.
 func (s *Store) answerOnDealFiling(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in RelinkActivityInput) error {
 	if in.EntityType != linkEntityDeal {
 		return nil
+	}
+	if err := fileRelinkedDealProject(ctx, tx, id, in.EntityID); err != nil {
+		return err
 	}
 	return s.answerWhichDealTx(ctx, tx, id, in.EntityID)
 }

@@ -31,7 +31,11 @@ func relinkAdmittedRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in Rel
 	if err := auth.EnsureAttachTarget(ctx, tx, in.EntityType, in.EntityID); err != nil {
 		return false, false, err
 	}
-	return relinkActivityRow(ctx, tx, id, in, column)
+	wrote, held, err = relinkActivityRow(ctx, tx, id, in, column)
+	if err != nil || !wrote || in.EntityType != linkEntityDeal {
+		return wrote, held, err
+	}
+	return wrote, held, fileRelinkedDealProject(ctx, tx, id, in.EntityID)
 }
 
 // deleteVisibleLinksOfType drops the activity's links of one entity type and

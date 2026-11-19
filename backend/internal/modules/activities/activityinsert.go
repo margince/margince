@@ -136,6 +136,9 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 	if err := applyLoggedDealFiling(ctx, tx, &in); err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
+	if err := inheritDealProject(ctx, tx, &in); err != nil {
+		return crmcontracts.Activity{}, false, err
+	}
 
 	id, occurredAt, err := insertLoggedActivityRow(ctx, tx, in, by, assignee, host)
 	if err != nil {
