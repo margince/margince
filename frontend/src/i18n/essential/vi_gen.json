@@ -4309,6 +4309,8 @@
   "linkSuggestions.unavailable": "Không đọc được các liên kết gợi ý. Hãy thử lại sau.",
   "reindexbanner.needed": "Cần lập chỉ mục lại",
   "reindexbanner.link": "Xem lại trong Cài đặt",
+  "connectAi.first": "Hãy kết nối AI trước",
+  "connectAi.link": "Mở cài đặt AI",
   "contact.intro.stateRequested": "Chờ trả lời",
   "contact.intro.stateAccepted": "Đã đồng ý giới thiệu",
   "contact.intro.stateNameDropApproved": "Đã cho nhắc tên",

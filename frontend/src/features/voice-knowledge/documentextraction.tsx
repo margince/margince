@@ -5,6 +5,11 @@ import type { components } from "../../api/schema";
 import { watchStartedAiRun } from "../../app/ai-activity";
 import { ActionRow } from "../../design-system/actionrow";
 import { Button } from "../../design-system/atoms";
+import {
+  ConnectAiFirst,
+  isAiNotConnected,
+  useConnectAiGate,
+} from "../../design-system/connectai";
 import type { ConfidenceLevel } from "../../design-system/trust";
 import { StagingCard } from "../../design-system/trust";
 import { formatNumber } from "../../format/format";
@@ -245,7 +250,7 @@ export function DocumentExtractionPanel({
       <ReadOffer
         onRead={() => read.mutate()}
         pending={read.isPending}
-        failed={read.isError}
+        error={read.error}
       />
     );
   }
@@ -297,9 +302,10 @@ function editedOnly(
 function ReadOffer({
   onRead,
   pending,
-  failed,
-}: Readonly<{ onRead: () => void; pending: boolean; failed: boolean }>) {
+  error,
+}: Readonly<{ onRead: () => void; pending: boolean; error: unknown }>) {
   const t = useT();
+  const aiGate = useConnectAiGate("extraction-ai");
   return (
     <div className="staging-card">
       <p>{t("extraction.neverRead")}</p>
@@ -307,10 +313,20 @@ function ReadOffer({
         onClick={onRead}
         pending={pending}
         busyLabel={t("extraction.starting")}
+        reasonId={aiGate.reasonId}
       >
         {t("extraction.readIt")}
       </Button>
-      {failed && <p>{t("extraction.startFailed")}</p>}
+      {aiGate.notice}
+      {error !== null && error !== undefined && (
+        <p>
+          {isAiNotConnected(error) ? (
+            <ConnectAiFirst />
+          ) : (
+            t("extraction.startFailed")
+          )}
+        </p>
+      )}
     </div>
   );
 }

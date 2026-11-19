@@ -43,6 +43,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 	"github.com/riverqueue/river/riverdriver/riverpgxv5"
+
+	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
 // Config is the runner's wiring, populated by the composition layer. Both
@@ -90,6 +92,26 @@ type Config struct {
 type Runner struct {
 	client *river.Client[pgx.Tx]
 	pool   *pgxpool.Pool
+	// bound says whether a model is bound now. Nil checks nothing, which is
+	// the worker's posture: it queues no request a person is waiting on.
+	bound func() bool
+}
+
+// WithModelBound makes this runner refuse a request for model work while no
+// model is bound, with the typed refusal a handler answers as it came.
+func (r *Runner) WithModelBound(bound func() bool) *Runner {
+	r.bound = bound
+	return r
+}
+
+func (r *Runner) refuseUnbound(kind string) error {
+	if r.bound == nil || r.bound() {
+		return nil
+	}
+	if spec, ok := SpecFor(kind); ok && isRequestedModelWork(spec.Registration.When) {
+		return httperr.ErrNotConfigured
+	}
+	return nil
 }
 
 // New builds a River client over the given pool. The pool must outlive the
@@ -140,6 +162,9 @@ func NewTxInserter(log *slog.Logger) (*Runner, error) {
 
 // Enqueue coalesces waiting session-owned jobs; running rows never block their replacements.
 func (r *Runner) Enqueue(ctx context.Context, args river.JobArgs, opts *river.InsertOpts) error {
+	if err := r.refuseUnbound(args.Kind()); err != nil {
+		return err
+	}
 	if _, locked := args.(SessionLocked); locked {
 		if r.pool == nil {
 			return fmt.Errorf("jobs: enqueue %s requires a pool", args.Kind())
@@ -160,6 +185,9 @@ func (r *Runner) EnqueueTx(ctx context.Context, tx pgx.Tx, args river.JobArgs, o
 
 // EnqueueTxUnique reports whether a job was inserted rather than coalesced with waiting work.
 func (r *Runner) EnqueueTxUnique(ctx context.Context, tx pgx.Tx, args river.JobArgs, opts *river.InsertOpts) (bool, error) {
+	if err := r.refuseUnbound(args.Kind()); err != nil {
+		return false, err
+	}
 	if _, locked := args.(SessionLocked); locked {
 		return r.insertSessionTx(ctx, tx, args, opts)
 	}

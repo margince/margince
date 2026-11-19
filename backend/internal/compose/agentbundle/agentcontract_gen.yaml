@@ -2749,6 +2749,11 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '409':
+          description: 'A scan would have to be queued and no AI model is connected (`code: ai_not_configured`).'
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /companies/{id}/growth-fit:
     parameters:
@@ -3159,6 +3164,11 @@ paths:
               schema: {$ref: '#/components/schemas/SiteReadStarted'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '409':
+          description: 'No AI model is connected (`code: ai_not_configured`). Nothing was queued.'
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
         '422':
           description: No URL to read (no override, company has no domain).
           content:
@@ -7336,6 +7346,11 @@ paths:
               schema: {$ref: '#/components/schemas/TranscriptReadStarted'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '409':
+          description: 'No AI model is connected (`code: ai_not_configured`). Nothing was queued.'
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
         '422':
           description: This activity carries no transcript, or its transcript is blank or too long for one reading.
           content:
@@ -25279,6 +25294,11 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '409':
+          description: 'No AI model is connected (`code: ai_not_configured`). Nothing was queued.'
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
         '422': {$ref: '#/components/responses/ValidationError'}
         '501':
           description: The process role wired no model path or no job runner — declared absent, never a silent no-op.

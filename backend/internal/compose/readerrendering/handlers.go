@@ -16,8 +16,7 @@ import (
 
 // The problem codes this endpoint adds to modelfailure's.
 const (
-	codeAINotConfigured = "ai_not_configured"
-	codeTooLong         = "too_long"
+	codeTooLong = "too_long"
 )
 
 // Handlers shadows the generated reader-rendering stub.
@@ -62,7 +61,7 @@ func (h Handlers) RenderActivityForReader(w http.ResponseWriter, r *http.Request
 	switch {
 	case errors.Is(err, ErrNoModel):
 		httperr.Write(w, r, &httperr.DetailedError{
-			Status: http.StatusConflict, Code: codeAINotConfigured,
+			Status: http.StatusConflict, Code: httperr.CodeAINotConfigured,
 			Detail: "showing a message in your language needs an AI model; an administrator can bind one under Settings → AI",
 		})
 	case errors.Is(err, ErrTooLong):
