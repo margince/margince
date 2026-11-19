@@ -7716,7 +7716,7 @@ export const en = {
   "files.unhide": "Show on this deal again",
   "files.delete": "Delete",
   "files.pick.empty":
-    "The file is empty, so there is nothing to add. Choose the file again.",
+    "The file is empty, so there is nothing to add. Choose a file that has content.",
   "files.pick.unsupported":
     "This kind of file cannot be attached. Choose a document, image, zip archive or saved email.",
   "files.deleteTitle": "Delete {name}?",

@@ -235,15 +235,27 @@ function FilesPicker({ files, onChange, disabled }: FieldProps) {
   });
   // One line per file, because a drop of several can refuse several. Refused
   // here, before the activity exists, so none of them waits for Log.
-  const [refused, setRefused] = useState<readonly string[]>([]);
+  // Keyed by name, so a later pick of that name replaces its line or clears it.
+  const [refused, setRefused] = useState<ReadonlyMap<string, string>>(
+    new Map(),
+  );
   const pick = (file: File) => {
     const reason = refusalOf(file);
+    setRefused((shown) => {
+      const next = new Map(shown);
+      if (reason === null) {
+        next.delete(file.name);
+      } else {
+        next.set(
+          file.name,
+          t("log.fileNotAdded", { filename: file.name, reason }),
+        );
+      }
+      return next;
+    });
     if (reason === null) {
       onChange((current) => [...current, picked(file)]);
-      return;
     }
-    const line = t("log.fileNotAdded", { filename: file.name, reason });
-    setRefused((shown) => (shown.includes(line) ? shown : [...shown, line]));
   };
   return (
     <div className="form-stack">
@@ -274,8 +286,8 @@ function FilesPicker({ files, onChange, disabled }: FieldProps) {
           }
         />
       )}
-      {refused.map((line) => (
-        <ErrorLine key={line}>{line}</ErrorLine>
+      {[...refused].map(([filename, line]) => (
+        <ErrorLine key={filename}>{line}</ErrorLine>
       ))}
     </div>
   );

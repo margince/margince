@@ -33064,7 +33064,8 @@ export interface components {
             object: components["schemas"]["ImportObject"];
             /**
              * @description The columns that tell this file's rows apart. A file needs at
-             *     least one of them mapped, or the test run does not start.
+             *     least one of them mapped, or the test run does not start, unless
+             *     the request names its own `source_key` column.
              */
             key_columns: string[];
             columns: components["schemas"]["ImportFormatColumn"][];

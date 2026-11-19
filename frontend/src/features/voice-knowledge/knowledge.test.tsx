@@ -463,7 +463,7 @@ describe("KnowledgeCard", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByText(
-        "empty.txt: The file is empty, so there is nothing to add. Choose the file again.",
+        "empty.txt: The file is empty, so there is nothing to add. Choose a file that has content.",
       ),
     ).toBeInTheDocument();
     // Only the file that can be added is held, and nothing was sent.
@@ -472,6 +472,11 @@ describe("KnowledgeCard", () => {
     ).not.toBeDisabled();
     expect(screen.getByText("notes.md")).toBeInTheDocument();
     expect(backend.posts).toHaveLength(0);
+
+    // Sending the rest keeps naming the files the drop refused.
+    await userEvent.click(screen.getByRole("button", { name: "Add document" }));
+    await waitFor(() => expect(backend.posts).toHaveLength(1));
+    expect(screen.getByText(/^big\.txt: The file exceeds/)).toBeInTheDocument();
   });
 
   it("clears a refused file from the drop zone once the server has said why", async () => {

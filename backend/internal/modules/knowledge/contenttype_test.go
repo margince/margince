@@ -45,7 +45,7 @@ func TestAnEmptyFileIsRefusedWithAReasonTheUploaderCanActOn(t *testing.T) {
 	if field != "file" || code != "empty_file" {
 		t.Fatalf("fault = %s/%s, want file/empty_file", field, code)
 	}
-	if message != "The file is empty, so there is nothing to add. Choose the file again." {
+	if message != "The file is empty, so there is nothing to add. Choose a file that has content." {
 		t.Fatalf("message = %q", message)
 	}
 }

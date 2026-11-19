@@ -34,7 +34,7 @@ To import a file, open **Settings → Data import** and drop the file on **Uploa
 4. **Importing** shows each file as it goes. **Result** shows what was written.
 5. To take the import back, choose **Undo this import** on the result, or **Undo** in **Recent imports**.
 
-A column named like a field starts with that field chosen. Its name may be in any language of the app, or a common name such as **Website**. An **ID** column starts as **Margince ID** only when its values are Margince IDs.
+A column named like a field starts with that field chosen. Its name may be in any language of the app, or a common name such as **Website**. An **ID** column starts as **Margince ID** only when the first values read from it are Margince IDs.
 Also called: upload a CSV, import steps, import a ZIP.
 
 ### What does the test run tell me?

@@ -7707,7 +7707,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "files.unhide": "Wieder an diesem Deal anzeigen",
   "files.delete": "Löschen",
   "files.pick.empty":
-    "Die Datei ist leer, es gibt also nichts hinzuzufügen. Wähle die Datei erneut.",
+    "Die Datei ist leer, es gibt also nichts hinzuzufügen. Wähle eine Datei mit Inhalt.",
   "files.pick.unsupported":
     "Diese Art von Datei kann nicht angehängt werden. Wähle ein Dokument, ein Bild, ein ZIP-Archiv oder eine gespeicherte E-Mail.",
   "files.deleteTitle": "{name} löschen?",

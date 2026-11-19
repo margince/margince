@@ -14,10 +14,11 @@ import (
 
 // Column is one column's guide. It holds the mapping step's name for the
 // column, what goes in it and an example. It also says whether a row that
-// creates a record needs the column.
+// creates a record needs the column. Aliases are other names exports give it.
 type Column struct {
 	Description, Example, Label langcopy.Phrase
 	RequiredOnNew               bool
+	Aliases                     []string
 }
 
 // Columns is the guide of every core import target, keyed by target or by
@@ -37,7 +38,7 @@ var Columns = withLabels(withActivityColumns(map[string]Column{
 		En: "The company's display name. Used to find an existing company when the row has no ref.",
 		De: "Der Anzeigename des Unternehmens. Hat die Zeile keine Ref, wird damit ein vorhandenes Unternehmen gesucht.",
 		Vi: "Tên hiển thị của công ty. Dùng để tìm công ty đã có khi dòng không có ref.",
-	}, Example: same("Acme GmbH"), RequiredOnNew: true},
+	}, Example: same("Acme GmbH"), RequiredOnNew: true, Aliases: []string{"Name"}},
 	"legal_name": {Description: langcopy.Phrase{
 		En: "The registered legal name, if it differs from the display name.",
 		De: "Der eingetragene rechtliche Name, falls er vom Anzeigenamen abweicht.",
@@ -52,7 +53,7 @@ var Columns = withLabels(withActivityColumns(map[string]Column{
 		En: "Number of employees, as one of the bands Margince uses.",
 		De: "Anzahl der Beschäftigten als eine der Größenklassen, die Margince verwendet.",
 		Vi: "Số nhân viên, theo một trong các nhóm quy mô Margince dùng.",
-	}, Example: same("1-10 · 11-50 · 51-200")},
+	}, Example: same("1-10 · 11-50 · 51-200"), Aliases: []string{"Number of employees", "Anzahl Mitarbeiter"}},
 	"description": {Description: langcopy.Phrase{
 		En: "A short description of the company.",
 		De: "Eine kurze Beschreibung des Unternehmens.",
@@ -62,7 +63,7 @@ var Columns = withLabels(withActivityColumns(map[string]Column{
 		En: "The company's web domain, without https:// or www. Contacts can link to a company by its domain.",
 		De: "Die Webdomain des Unternehmens, ohne https:// und www. Kontakte können über die Domain mit einem Unternehmen verknüpft werden.",
 		Vi: "Tên miền web của công ty, không có https:// hay www. Liên hệ có thể liên kết tới công ty qua tên miền.",
-	}, Example: same("acme.com")},
+	}, Example: same("acme.com"), Aliases: []string{"Website", "Webseite", "Web"}},
 	"company.linkedin_url": {Description: langcopy.Phrase{
 		En: "The full address of the company's LinkedIn page.",
 		De: "Die vollständige Adresse der LinkedIn-Seite des Unternehmens.",
@@ -92,7 +93,7 @@ var Columns = withLabels(withActivityColumns(map[string]Column{
 		En: "Street and house number. A whole address here, with no other address column, is split into its parts.",
 		De: "Straße und Hausnummer. Eine ganze Adresse hier, ohne weitere Adressspalte, wird in ihre Teile aufgeteilt.",
 		Vi: "Số nhà và tên đường. Một địa chỉ đầy đủ ở đây, khi không có cột địa chỉ nào khác, được tách thành các phần.",
-	}, Example: same("Hauptstraße 5")},
+	}, Example: same("Hauptstraße 5"), Aliases: []string{"Address", "Adresse", "Street", "Straße"}},
 	"address.line2": {Description: langcopy.Phrase{
 		En: "A second address line: building, floor or suite.",
 		De: "Zweite Adresszeile: Gebäude, Etage oder Büro.",
@@ -132,7 +133,7 @@ var Columns = withLabels(withActivityColumns(map[string]Column{
 		En: "The whole name in one cell, when you do not have it split.",
 		De: "Der ganze Name in einer Zelle, wenn er nicht aufgeteilt vorliegt.",
 		Vi: "Họ tên đầy đủ trong một ô, khi chưa tách riêng.",
-	}, Example: same("Jo Tran")},
+	}, Example: same("Jo Tran"), Aliases: []string{"Name"}},
 	"email": {Description: langcopy.Phrase{
 		En: "Email address. Used to find an existing contact or lead when the row has no ref, so uploading again does not make duplicates.",
 		De: "E-Mail-Adresse. Hat die Zeile keine Ref, wird damit ein vorhandener Kontakt oder Lead gesucht, sodass erneutes Hochladen keine Duplikate erzeugt.",
@@ -142,7 +143,7 @@ var Columns = withLabels(withActivityColumns(map[string]Column{
 		En: "Phone number with its country code.",
 		De: "Telefonnummer mit Ländervorwahl.",
 		Vi: "Số điện thoại kèm mã quốc gia.",
-	}, Example: same("+49 30 1234567")},
+	}, Example: same("+49 30 1234567"), Aliases: []string{"Phone number", "Telephone", "Telefonnummer"}},
 	"company.email": {Description: langcopy.Phrase{
 		En: "The company's general address, such as info@. It is stored on the company and never finds or creates a contact.",
 		De: "Die allgemeine Adresse des Unternehmens, etwa info@. Sie wird beim Unternehmen gespeichert und findet oder erzeugt nie einen Kontakt.",
@@ -157,7 +158,7 @@ var Columns = withLabels(withActivityColumns(map[string]Column{
 		En: "The company the lead works for, as text. A lead links to no company record.",
 		De: "Das Unternehmen, für das der Lead arbeitet, als Text. Ein Lead ist mit keinem Unternehmen verknüpft.",
 		Vi: "Công ty nơi lead làm việc, dạng văn bản. Lead không liên kết với hồ sơ công ty nào.",
-	}, Example: same("Acme")},
+	}, Example: same("Acme"), Aliases: []string{"Company"}},
 	"lead.status": {Description: langcopy.Phrase{
 		En: "Where the lead stands: new, contacted or engaged. Leave it empty for new. A lead is qualified or disqualified in Margince, so a file cannot set those.",
 		De: "Wo der Lead steht: new, contacted oder engaged. Leer bedeutet new. Ein Lead wird in Margince qualifiziert oder disqualifiziert, daher kann eine Datei das nicht setzen.",
@@ -177,7 +178,7 @@ var Columns = withLabels(withActivityColumns(map[string]Column{
 		En: "The company this contact works for, by its name. The import links the company with that name, or creates one if none matches, and the import preview says when it will create one.",
 		De: "Das Unternehmen, für das dieser Kontakt arbeitet, mit seinem Namen. Der Import verknüpft das Unternehmen mit diesem Namen oder legt eines an, wenn keines passt, und die Importvorschau sagt, wann sie eines anlegt.",
 		Vi: "Công ty nơi liên hệ này làm việc, theo tên. Lần nhập liên kết công ty có tên này, hoặc tạo công ty mới nếu không có công ty nào khớp, và bản xem trước lần nhập cho biết khi nào sẽ tạo.",
-	}, Example: same("Acme GmbH")},
+	}, Example: same("Acme GmbH"), Aliases: []string{"Company"}},
 	"company_ref": {Description: langcopy.Phrase{
 		En: "The company this contact works for: the company's ref in this upload or an earlier one, its domain, its exact name, or its Margince ID. If none matches, the import preview reports a broken link.",
 		De: "Das Unternehmen, für das dieser Kontakt arbeitet: die Ref des Unternehmens aus diesem oder einem früheren Import, seine Domain, sein genauer Name oder seine Margince-ID. Passt nichts, meldet die Importvorschau eine fehlerhafte Verknüpfung.",

@@ -169,7 +169,7 @@ export const RefusedAsDropped: Story = {
     ]);
     await expect(
       await canvas.findByText(
-        "empty.md: The file is empty, so there is nothing to add. Choose the file again.",
+        "empty.md: The file is empty, so there is nothing to add. Choose a file that has content.",
       ),
     ).toBeVisible();
   },

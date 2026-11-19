@@ -415,6 +415,11 @@ function UploadDocument({ corpusId }: Readonly<{ corpusId: string }>) {
   const plural = usePlural();
   const { locale } = useLocale();
   const [files, setFiles] = useState<readonly File[]>([]);
+  // Refused as dropped, apart from what the last send refused, so a send
+  // never hides a file it did not carry.
+  const [dropRefusals, setDropRefusals] = useState<readonly UploadRefusal[]>(
+    [],
+  );
   const [refusals, setRefusals] = useState<readonly UploadRefusal[]>([]);
   const [sending, setSending] = useState(false);
   const upload = useDocumentWrite(corpusId, uploadDocument);
@@ -426,14 +431,16 @@ function UploadDocument({ corpusId }: Readonly<{ corpusId: string }>) {
   // refusals as it is dropped.
   const pick = (file: File) => {
     const message = refusalOf(file);
+    const others = (shown: readonly UploadRefusal[]) =>
+      shown.filter((refusal) => refusal.filename !== file.name);
     if (message === null) {
+      setDropRefusals(others);
       setFiles((held) => [...held, file]);
       return;
     }
-    const id = fileIdentity(file);
-    setRefusals((shown) => [
-      ...shown.filter((refusal) => refusal.id !== id),
-      { id, filename: file.name, message },
+    setDropRefusals((shown) => [
+      ...others(shown),
+      { id: fileIdentity(file), filename: file.name, message },
     ]);
   };
 
@@ -483,7 +490,7 @@ function UploadDocument({ corpusId }: Readonly<{ corpusId: string }>) {
           })}
         </Button>
       </div>
-      <UploadRefusals refusals={refusals} />
+      <UploadRefusals refusals={[...dropRefusals, ...refusals]} />
     </div>
   );
 }

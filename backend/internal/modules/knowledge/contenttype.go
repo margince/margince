@@ -96,7 +96,7 @@ func notAlphanumeric(r rune) bool {
 type EmptyDocumentError struct{}
 
 func (e *EmptyDocumentError) Error() string {
-	return "The file is empty, so there is nothing to add. Choose the file again."
+	return "The file is empty, so there is nothing to add. Choose a file that has content."
 }
 
 // FieldFault names the part of the upload the caller must correct.

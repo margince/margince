@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"hash/crc32"
 	"io"
 	"strings"
@@ -235,6 +236,18 @@ func TestAnExcelWorkbookIsRefusedAsAWorkbook(t *testing.T) {
 	fault, ok := errors.AsType[*FileFault](err)
 	if !ok || fault.Params[string(ParamReason)] != string(BundleSpreadsheet) || !strings.Contains(fault.Message, "CSV UTF-8") {
 		t.Fatalf("err = %v, want a workbook refusal that says to save the sheet as CSV UTF-8", err)
+	}
+}
+
+// A workbook of more sheets than a bundle may hold is still told to become a CSV.
+func TestAWorkbookPastTheEntryLimitIsRefusedAsAWorkbook(t *testing.T) {
+	files := map[string]string{"xl/workbook.xml": "<workbook/>"}
+	for i := range MaxBundleEntries + 1 {
+		files[fmt.Sprintf("xl/worksheets/sheet%d.xml", i)] = "<worksheet/>"
+	}
+	_, err := OpenBundle(zipOf(t, files), 10<<20)
+	if fault, ok := errors.AsType[*FileFault](err); !ok || fault.Params[string(ParamReason)] != string(BundleSpreadsheet) {
+		t.Fatalf("err = %v, want the workbook refusal", err)
 	}
 }
 

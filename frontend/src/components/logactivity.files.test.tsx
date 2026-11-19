@@ -418,7 +418,7 @@ it("names each dropped file the server would refuse, before anything is logged",
   ).toBeTruthy();
   expect(
     screen.getByText(
-      "blank.pdf was not added. The file is empty, so there is nothing to add. Choose the file again.",
+      "blank.pdf was not added. The file is empty, so there is nothing to add. Choose a file that has content.",
     ),
   ).toBeTruthy();
   expect(
@@ -431,6 +431,25 @@ it("names each dropped file the server would refuse, before anything is logged",
     screen.queryByRole("button", { name: /Remove blank\.pdf/ }),
   ).toBeNull();
   expect(created(calls)).toBe(false);
+});
+
+it("clears a file's refusal once a file of that name is accepted", async () => {
+  stubApi();
+  renderForm();
+  const input = await screen.findByLabelText("Attach files");
+  await screen.findByText("Up to 1 MB.");
+  const refusal = /blank\.pdf was not added/;
+  fireEvent.drop(input, {
+    dataTransfer: {
+      files: [new File([], "blank.pdf", { type: "application/pdf" })],
+    },
+  });
+  expect(await screen.findByText(refusal)).toBeTruthy();
+  fireEvent.drop(input, { dataTransfer: { files: [pdf("blank.pdf")] } });
+  expect(
+    await screen.findByRole("button", { name: /Remove blank\.pdf/ }),
+  ).toBeTruthy();
+  expect(screen.queryByText(refusal)).toBeNull();
 });
 
 it("lets a picked file be taken off before logging", async () => {

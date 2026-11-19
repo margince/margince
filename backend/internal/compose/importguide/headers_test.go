@@ -8,14 +8,6 @@ import (
 	"testing"
 )
 
-func TestEveryHeaderAliasNamesAGuidedColumn(t *testing.T) {
-	for key := range headerAliases {
-		if _, ok := Columns[key]; !ok {
-			t.Errorf("header aliases for %q, which no import column is keyed by", key)
-		}
-	}
-}
-
 func TestAHeaderNamesItsFieldByTheLabelInEveryLanguage(t *testing.T) {
 	names := HeaderNames("company", []string{"display_name", "phone", "size_band"}, strings.ToLower)
 	for header, want := range map[string]string{

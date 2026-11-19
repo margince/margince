@@ -120,6 +120,12 @@ func OpenBundle(body []byte, uploadCap int64) (Bundle, error) {
 	if len(zr.File) == 0 {
 		return Bundle{}, refuseFile(BundleEmpty, "The ZIP is empty. Add one CSV file per type and upload it again.", nil)
 	}
+	// A workbook's sheets would meet the entry and size limits first, whose
+	// advice to trim the ZIP does not apply to it.
+	if isWorkbook(zr) {
+		return Bundle{}, refuseFile(BundleSpreadsheet,
+			"This is an Excel workbook. Save the sheet as CSV UTF-8 and upload that.", nil)
+	}
 	limit := uint64(declaredSizeFactor) * uint64(max(uploadCap, 0))
 	var entries []*zip.File
 	var declared uint64
@@ -165,7 +171,7 @@ func OpenBundle(body []byte, uploadCap int64) (Bundle, error) {
 		}
 	}
 	if len(b.Parts) == 0 {
-		return Bundle{}, noImportableFile(zr)
+		return Bundle{}, noImportableFile()
 	}
 	return b, nil
 }
@@ -173,15 +179,21 @@ func OpenBundle(body []byte, uploadCap int64) (Bundle, error) {
 // workbookPart is the entry every Excel workbook holds, whatever it was named.
 const workbookPart = "xl/workbook.xml"
 
-// noImportableFile refuses a ZIP no type takes a file of. A workbook is told to
-// become a CSV; any other ZIP is told the file names the import reads.
-func noImportableFile(zr *zip.Reader) error {
+// isWorkbook reports a ZIP that holds a workbook and no file a type takes.
+func isWorkbook(zr *zip.Reader) bool {
+	workbook := false
 	for _, f := range zr.File {
-		if f.Name == workbookPart {
-			return refuseFile(BundleSpreadsheet,
-				"This is an Excel workbook. Save the sheet as CSV UTF-8 and upload that.", nil)
+		if bundleFileObjects[stemOf(f.Name)] != "" {
+			return false
 		}
+		workbook = workbook || f.Name == workbookPart
 	}
+	return workbook
+}
+
+// noImportableFile refuses a ZIP no type takes a file of, naming the file
+// names the import reads.
+func noImportableFile() error {
 	names := make([]string, 0, len(ImportOrder))
 	for _, object := range ImportOrder {
 		names = append(names, FileNameFor(object))

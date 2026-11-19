@@ -2899,7 +2899,7 @@
   "docs.category.message": "Tệp đính kèm tin nhắn",
   "docs.category.other": "Khác",
   "files.title": "Tệp",
-  "files.pick.empty": "Tệp trống nên không có gì để thêm. Hãy chọn lại tệp.",
+  "files.pick.empty": "Tệp trống nên không có gì để thêm. Hãy chọn một tệp có nội dung.",
   "files.pick.unsupported": "Không thể đính kèm loại tệp này. Hãy chọn tài liệu, hình ảnh, tệp nén zip hoặc email đã lưu.",
   "log.title": "Ghi nhận hoạt động",
   "log.addFollowUp": "Thêm công việc tiếp theo",
