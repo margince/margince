@@ -10,6 +10,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
+// shownLaw is a citation a sender reads beside a refusal or footer finding.
+var shownLaw = commsauthz.Provision{Instrument: "UWG", Provision: "§ 7(2)", SourceURL: "https://example.org/uwg"}
+
 func TestFooterAcknowledgementRevisionChangesWithEveryDisplayedDetail(t *testing.T) {
 	original := Review{Refusals: []RefusedRecipient{{Address: "anna@example.test", ReasonCode: "no_compatible_evidence", FooterFindings: []commsauthz.FooterFinding{{Kind: "objection_route"}}, FooterPreview: []string{"Example Ltd"}}}}
 	baseline := original.AssessmentRevision()
@@ -17,6 +20,8 @@ func TestFooterAcknowledgementRevisionChangesWithEveryDisplayedDetail(t *testing
 		{Address: "other@example.test", ReasonCode: "no_compatible_evidence", FooterFindings: []commsauthz.FooterFinding{{Kind: "objection_route"}}, FooterPreview: []string{"Example Ltd"}},
 		{Address: "anna@example.test", ReasonCode: "no_compatible_evidence", FooterFindings: []commsauthz.FooterFinding{{Kind: "objection_route", Language: "vi"}}, FooterPreview: []string{"Example Ltd"}},
 		{Address: "anna@example.test", ReasonCode: "no_compatible_evidence", FooterFindings: []commsauthz.FooterFinding{{Kind: "objection_route"}}, FooterPreview: []string{"Other Ltd"}},
+		{Address: "anna@example.test", ReasonCode: "no_compatible_evidence", Provision: shownLaw, FooterFindings: []commsauthz.FooterFinding{{Kind: "objection_route"}}, FooterPreview: []string{"Example Ltd"}},
+		{Address: "anna@example.test", ReasonCode: "no_compatible_evidence", FooterFindings: []commsauthz.FooterFinding{{Kind: "objection_route", Provision: shownLaw}}, FooterPreview: []string{"Example Ltd"}},
 	} {
 		if (Review{Refusals: []RefusedRecipient{current}}).AssessmentRevision() == baseline {
 			t.Fatalf("changed disclosure reused the acknowledgement: %+v", current)

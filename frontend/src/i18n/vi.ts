@@ -353,6 +353,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.merge.address_usage": "Mục đích địa chỉ",
   "approval.merge.address_primary_before": "Địa chỉ chính trước khi chuyển",
   "approval.merge.address_primary_after": "Địa chỉ chính sau khi chuyển",
+  "approval.merge.address_already_held": "Bản ghi giữ lại đã có",
   "approval.merge.assignment_collapsed": "Trách nhiệm trùng lặp bị loại bỏ",
   "approval.merge.assignment_moved": "Trách nhiệm được chuyển",
   "approval.merge.assignment_role": "Vai trò",
@@ -6401,6 +6402,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Bạn có thể ghi nhận hoạt động và thêm việc cần làm. Để thay đổi deal này, người chịu trách nhiệm cần chia sẻ deal với bạn.",
   "deal.closedTakesNoStage":
     "Deal này đã đóng. Mở lại deal để chuyển sang giai đoạn khác.",
+  "deal.pipelineRetired":
+    "Pipeline của deal này đã ngừng dùng nên các giai đoạn chỉ để xem. Khôi phục pipeline trong Cài đặt để chuyển deal.",
+  "deal.stageOtherPipeline":
+    "Giai đoạn đó thuộc pipeline khác. Hãy chọn một giai đoạn của pipeline của deal này.",
   "deal.reopen": "Mở lại",
   "deal.reopenPick": "Chuyển deal này về một giai đoạn đang mở",
   "deal.reopenConfirm": "Mở lại",
@@ -8123,6 +8128,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Không thể gửi tin nhắn này tới {address} ở dạng hiện tại.",
   "compose.sendAnyway.finding.none":
     "Không thể gửi tin nhắn này ở dạng hiện tại.",
+  "compose.sendAnyway.cited": "Lưu ý: gửi tới {address} có thể vi phạm",
+  "compose.citation.law": "Quy định:",
   "compose.sendAnyway.warning":
     "Lần kiểm tra trước khi gửi vẫn chặn tin nhắn này. Vẫn gửi chỉ gửi tin nhắn này và không cho phép các tin nhắn sau. Tên, lý do của bạn và tin nhắn được lưu trong một bản ghi không thể chỉnh sửa.",
   "compose.sendAnyway.editOnly": "Sửa tin nhắn hoặc bỏ địa chỉ này để gửi.",
@@ -10125,6 +10132,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Bạn không có quyền đọc thẻ nên cột thẻ không được nhập.",
   "import.reason.cannot_write_type":
     "Không thể ghi “{value}” vào trường kiểu {type}.",
+  "import.reason.company_domain_matched":
+    "Công ty đã sở hữu tên miền {value} nhận hàng này, nên không tạo công ty thứ hai.",
   "import.reason.company_duplicate_found":
     "Đã có công ty cùng tên trong CRM. Nhập hàng này sẽ tạo công ty thứ hai và đưa cặp này vào hàng đợi xem xét.",
   "import.reason.company_duplicate_skipped":
@@ -10218,6 +10227,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Giá trị “{value}” của cột “{column}” đã được dùng ở dòng {line}. Mỗi hàng cần một giá trị riêng vì nhập lại và hoàn tác nhận ra hàng theo giá trị đó.",
   "import.reason.size_band_invalid":
     "Số nhân viên “{value}” không thuộc: {allowed}.",
+  "import.reason.stored_values_kept":
+    "Hàng này không tạo bản ghi này và không nêu nó theo ID, nên giữ nguyên {column} của nó. Hàng chỉ điền các trường còn trống.",
   "import.reason.tag_created":
     "Không có thẻ nào mang tên này nên quá trình nhập đã tạo thẻ.",
   "import.reason.tag_name_invalid":
@@ -11421,6 +11432,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "translation.given": "{name} ({language})",
   "stage.name": "Tên",
   "stage.semantic": "Loại giai đoạn",
+  "stage.lastClosing":
+    "Pipeline cần một giai đoạn Thắng và một giai đoạn Thua. Hãy thêm một giai đoạn cùng loại trước.",
   "stage.winProb": "Xác suất thắng",
   "stage.semOpen": "Đang mở",
   "stage.semWon": "Thắng",
@@ -19511,6 +19524,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "project.assignOwner": "Giao cho một đồng nghiệp",
   "project.description": "Mô tả",
   "project.targetEnd": "Ngày kết thúc dự kiến",
+  "project.startDate": "Ngày bắt đầu",
+  "project.endDate": "Ngày kết thúc",
+  "project.noCustomer": "Chưa có công ty khách hàng",
+  "project.noCustomerSet":
+    "Chưa có công ty khách hàng. Đặt một công ty trong Thêm, Công ty và liên hệ.",
+  "project.newDealNeedsCustomer": "Deal mới cần có công ty khách hàng.",
   "project.new": "Dự án mới",
   "project.edit": "Sửa dự án",
   "project.archive": "Chuyển dự án vào kho lưu trữ",
@@ -22152,6 +22171,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contactCase.ownerHint":
     "Chỉ người chịu trách nhiệm một liên hệ đã đánh dấu mới nhận được liên hệ còn lại.",
   "contactCase.ownerPlaceholder": "Chọn người chịu trách nhiệm",
+  "contactCase.prefer.legend": "Giữ giá trị nào",
+  "contactCase.prefer.hint":
+    "Các liên hệ khác nhau ở đây. Chọn giá trị mà liên hệ còn lại hiển thị trước. Các email và nơi làm việc khác vẫn được giữ.",
+  "contactCase.prefer.name": "Tên",
+  "contactCase.prefer.email": "Email chính",
+  "contactCase.prefer.employment": "Nơi làm việc hiện tại",
+  "contactCase.prefer.title": "Chức danh",
+  "contactCase.prefer.placeholder": "Chọn một giá trị",
   "contactCase.previewVerb": "Xem trước khi gộp",
   "contactCase.merge_one": "Gộp {count} liên hệ",
   "contactCase.merge_other": "Gộp {count} liên hệ",

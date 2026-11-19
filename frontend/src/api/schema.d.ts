@@ -5551,7 +5551,9 @@ export interface paths {
          * @description At most one default pipeline per workspace (409 if a second default). The opening
          *     `stages` keep the ladder's shape: a won or lost stage above an open one is refused
          *     `422` with the code `closing_stage_before_open`, and two stages naming one position
-         *     with `duplicate`.
+         *     with `duplicate`. A ladder without a won or without a lost stage gets the missing one
+         *     appended behind its last stage, named `Won` or `Lost`, so no pipeline is born unable to
+         *     close a deal.
          */
         post: operations["createPipeline"];
         delete?: never;
@@ -5770,7 +5772,9 @@ export interface paths {
          *     `422` with the code `closing_stage_before_open`; reorder the ladder with `reorderStages`
          *     instead. A `semantic` change keeps the ladder in shape itself: won and lost stages move
          *     behind the open ones, published as the same `pipeline.updated` position delta. A change
-         *     to either moves the pipeline's `version`.
+         *     to either moves the pipeline's `version`. Changing the `semantic` of a pipeline's only
+         *     live won (or lost) stage is refused `422` with the code `last_closing_stage` on
+         *     `semantic`: a pipeline keeps a way to win and a way to lose a deal.
          */
         patch: operations["updateStage"];
         trace?: never;
@@ -31846,6 +31850,34 @@ export interface components {
              * @description Who owns the remaining contact: the live owner of one of the selected members.
              */
             owner_id: string;
+            prefer?: components["schemas"]["ContactCasePreference"];
+        };
+        /**
+         * @description Where the selected members disagree, the member whose value the remaining contact takes.
+         *     Each one must be in `member_ids`. A field left out keeps the survivor's value, and an empty one takes another member's.
+         *     No value is lost: every address, number and employment of every member stays on the remaining contact.
+         */
+        ContactCasePreference: {
+            /**
+             * Format: uuid
+             * @description The member whose first and last name the remaining contact takes.
+             */
+            name?: string;
+            /**
+             * Format: uuid
+             * @description The member whose title the remaining contact takes.
+             */
+            title?: string;
+            /**
+             * Format: uuid
+             * @description The member whose primary email address becomes the remaining contact's primary one.
+             */
+            email?: string;
+            /**
+             * Format: uuid
+             * @description The member whose current employer becomes the remaining contact's current one.
+             */
+            employment?: string;
         };
         /** @description What the merge did, or for a preview what it would do. Every selected member's owner other than the chosen one keeps access through a record grant. */
         ContactCaseOutcome: {
@@ -32803,7 +32835,7 @@ export interface components {
          * @description Why a row was skipped or warned about, so a screen can say it in the reader's language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code. `run_in_flight` is the one refusal code: it answers a commit or undo on a run another attempt holds, and no row carries it.
          * @enum {string}
          */
-        ImportReasonCode: "activity_empty" | "activity_held" | "address_erased" | "address_not_split" | "activity_link_ambiguous" | "activity_link_ambiguous_dropped" | "activity_type_unknown" | "activity_type_unnamed" | "activity_unlinked" | "amount_negative" | "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_future" | "close_date_past" | "company_duplicate_found" | "company_duplicate_skipped" | "company_link_on_meeting" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_holds_lead" | "contact_not_found" | "contact_not_found_dropped" | "contact_channel_missing" | "contact_unnamed" | "currency_not_a_code" | "currency_unset" | "deal_already_closed" | "deal_company_has_contracts" | "deal_legal_gate" | "deal_not_found" | "deal_not_found_dropped" | "deal_pipeline_fixed" | "description_too_long" | "direction_unknown" | "domain_held" | "duplicate_email" | "duration_not_valid_for_kind" | "email_names_no_contact" | "duration_out_of_range" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_not_found" | "employer_not_found_dropped" | "employer_refused" | "employer_will_create" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_visible" | "id_on_non_company" | "lead_not_found" | "lead_not_found_dropped" | "lead_status_not_importable" | "lead_status_unknown" | "link_ambiguous" | "link_ambiguous_dropped" | "link_contact_not_imported" | "link_edge_unsupported" | "link_malformed" | "link_not_attachable" | "link_not_found" | "link_not_found_dropped" | "link_row_not_imported" | "link_row_skipped" | "link_row_skipped_dropped" | "link_type_unknown" | "linkedin_held" | "lost_reason_missing" | "meeting_not_taken_place" | "meeting_status_not_valid_for_kind" | "meeting_status_unknown" | "message_not_importable" | "natural_key_taken" | "not_a_date" | "note_repeated" | "not_a_domain" | "not_a_number" | "not_an_amount" | "not_an_email" | "not_yes_no" | "occurred_at_future" | "occurred_at_unnamed" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "row_key_empty" | "row_key_repeated" | "run_in_flight" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "tag_created" | "tag_name_invalid" | "tag_new" | "task_not_importable" | "timestamp_needs_zone" | "too_many_links" | "undo_edited" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "undo_still_referenced" | "value_refused" | "value_too_long" | "value_unreadable";
+        ImportReasonCode: "activity_empty" | "activity_held" | "address_erased" | "address_not_split" | "activity_link_ambiguous" | "activity_link_ambiguous_dropped" | "activity_type_unknown" | "activity_type_unnamed" | "activity_unlinked" | "amount_negative" | "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_future" | "close_date_past" | "company_domain_matched" | "company_duplicate_found" | "company_duplicate_skipped" | "company_link_on_meeting" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_holds_lead" | "contact_not_found" | "contact_not_found_dropped" | "contact_channel_missing" | "contact_unnamed" | "currency_not_a_code" | "currency_unset" | "deal_already_closed" | "deal_company_has_contracts" | "deal_legal_gate" | "deal_not_found" | "deal_not_found_dropped" | "deal_pipeline_fixed" | "description_too_long" | "direction_unknown" | "domain_held" | "duplicate_email" | "duration_not_valid_for_kind" | "email_names_no_contact" | "duration_out_of_range" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_not_found" | "employer_not_found_dropped" | "employer_refused" | "employer_will_create" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_visible" | "id_on_non_company" | "lead_not_found" | "lead_not_found_dropped" | "lead_status_not_importable" | "lead_status_unknown" | "link_ambiguous" | "link_ambiguous_dropped" | "link_contact_not_imported" | "link_edge_unsupported" | "link_malformed" | "link_not_attachable" | "link_not_found" | "link_not_found_dropped" | "link_row_not_imported" | "link_row_skipped" | "link_row_skipped_dropped" | "link_type_unknown" | "linkedin_held" | "lost_reason_missing" | "meeting_not_taken_place" | "meeting_status_not_valid_for_kind" | "meeting_status_unknown" | "message_not_importable" | "natural_key_taken" | "not_a_date" | "note_repeated" | "not_a_domain" | "not_a_number" | "not_an_amount" | "not_an_email" | "not_yes_no" | "occurred_at_future" | "occurred_at_unnamed" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "row_key_empty" | "row_key_repeated" | "run_in_flight" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "stored_values_kept" | "tag_created" | "tag_name_invalid" | "tag_new" | "task_not_importable" | "timestamp_needs_zone" | "too_many_links" | "undo_edited" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "undo_still_referenced" | "value_refused" | "value_too_long" | "value_unreadable";
         /**
          * @description Exactly one of two shapes: `object` and `mapping` (and optionally
          *     `source_key`) for one CSV, or `parts` for a ZIP, each part with its own
@@ -45040,6 +45072,25 @@ export interface components {
             language?: string;
             /** @description The recipient's country, lower-case ISO 3166-1 alpha-2, for `foreign_advertiser`. */
             country?: string;
+            provision?: components["schemas"]["CitedProvision"];
+        };
+        /**
+         * @description The law a finding or refusal rests on, as the recipient's own jurisdiction pack cites it
+         *     for the sending legal entity. Shown beside the engine's sentence; it decides nothing.
+         *     Absent when the pack cites no law for it, or when the citation may not be shown: the pack's
+         *     review is overdue or not yet done, or the law has not taken effect or has expired. On a
+         *     review it is the citation shown when the refusal was assessed, never today's.
+         */
+        CitedProvision: {
+            /** @description The law or decree, as a regulator cites it. Not translated. */
+            instrument: string;
+            /** @description The part of the instrument, such as "§ 7(2)". */
+            provision: string;
+            /**
+             * Format: uri
+             * @description The official published text, over https.
+             */
+            source_url: string;
         };
         /** @description An existing recipient record the caller can read. */
         CommunicationEvidenceSubject: {
@@ -45055,9 +45106,12 @@ export interface components {
             language: string;
             /** @description Missing contact methods, such as email, phone or web. */
             missing_means: string[];
+            provision?: components["schemas"]["CitedProvision"];
         };
         /** @description One recipient's answer. It describes the MESSAGE, never the contact's file. */
         SendAuthorizationPreviewRecipient: {
+            /** @description The law the recipient's pack cites for `reason_code`, absent when none may be shown. */
+            provision?: components["schemas"]["CitedProvision"];
             /** @description Server-derived missing footer disclosures or unavailable private links shown before the sender confirms this message. Contains no credentials. */
             footer_findings?: components["schemas"]["FooterFinding"][];
             /** Format: email */
@@ -55182,6 +55236,8 @@ export interface components {
             /** Format: uuid */
             subject_id?: string;
             reason_code: string;
+            /** @description The law the recipient's pack cites for `reason_code`, as shown when the refusal was assessed. */
+            provision?: components["schemas"]["CitedProvision"];
             category?: string;
             /** Format: uuid */
             sending_entity_id?: string;
@@ -91031,6 +91087,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.

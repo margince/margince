@@ -362,6 +362,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.merge.address_usage": "Verwendung der Adresse",
   "approval.merge.address_primary_before": "Primäradresse der Quelle",
   "approval.merge.address_primary_after": "Primäradresse des Ziels",
+  "approval.merge.address_already_held": "Ziel hat sie schon",
   "approval.merge.assignment_collapsed": "Doppelte Zuständigkeit entfernt",
   "approval.merge.assignment_moved": "Übernommene Zuständigkeit",
   "approval.merge.assignment_role": "Rolle",
@@ -6568,6 +6569,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Du kannst Aktivitäten erfassen und Aufgaben hinzufügen. Um diesen Deal zu ändern, muss die verantwortliche Person ihn mit dir teilen.",
   "deal.closedTakesNoStage":
     "Dieser Deal ist abgeschlossen. Öffne den Deal wieder, um ihn in eine andere Phase zu verschieben.",
+  "deal.pipelineRetired":
+    "Die Pipeline dieses Deals ist stillgelegt, daher sind ihre Phasen schreibgeschützt. Stelle die Pipeline in den Einstellungen wieder her, um den Deal zu verschieben.",
+  "deal.stageOtherPipeline":
+    "Diese Phase gehört zu einer anderen Pipeline. Wähle eine Phase der Pipeline dieses Deals.",
   "deal.reopen": "Wieder öffnen",
   "deal.reopenPick": "Diesen Deal in eine offene Phase zurücksetzen",
   "deal.reopenConfirm": "Wieder öffnen",
@@ -8330,6 +8335,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Diese Nachricht kann so nicht an {address} gesendet werden.",
   "compose.sendAnyway.finding.none":
     "Diese Nachricht kann so nicht gesendet werden.",
+  "compose.sendAnyway.cited":
+    "Achtung: Eine E-Mail an {address} verstößt vielleicht gegen",
+  "compose.citation.law": "Vorschrift:",
   "compose.sendAnyway.warning":
     "Die Versandprüfung blockiert diese Nachricht weiterhin. Trotzdem senden sendet nur diese Nachricht und erlaubt keine späteren. Dein Name, deine Begründung und die Nachricht werden in einem Eintrag gespeichert, der nicht geändert werden kann.",
   "compose.sendAnyway.editOnly":
@@ -10414,6 +10422,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Du darfst Tags nicht lesen, daher wird die Tag-Spalte nicht importiert.",
   "import.reason.cannot_write_type":
     "„{value}“ kann nicht in ein Feld vom Typ „{type}“ geschrieben werden.",
+  "import.reason.company_domain_matched":
+    "Das Unternehmen, dem die Domain {value} bereits gehört, übernimmt diese Zeile. Es wird kein zweites Unternehmen angelegt.",
   "import.reason.company_duplicate_found":
     "Ein Unternehmen mit diesem Namen ist bereits im CRM. Der Import dieser Zeile legt ein zweites an und stellt das Paar zur Prüfung bereit.",
   "import.reason.company_duplicate_skipped":
@@ -10509,6 +10519,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Der Wert „{value}“ der Spalte „{column}“ wird bereits in Zeile {line} verwendet. Jede Zeile braucht einen eigenen, weil ein erneuter Import und das Rückgängigmachen die Zeile daran erkennen.",
   "import.reason.size_band_invalid":
     "Mitarbeitende „{value}“ gehört nicht zu: {allowed}.",
+  "import.reason.stored_values_kept":
+    "Die Zeile hat diesen Datensatz weder angelegt noch per ID benannt, daher bleibt sein Wert für {column}. Die Zeile füllt nur leere Felder.",
   "import.reason.tag_created":
     "Kein Tag hatte diesen Namen, daher hat der Import ihn angelegt.",
   "import.reason.tag_name_invalid":
@@ -11732,6 +11744,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "translation.given": "{language}: {name}",
   "stage.name": "Name",
   "stage.semantic": "Phasentyp",
+  "stage.lastClosing":
+    "Eine Pipeline braucht eine Phase Gewonnen und eine Phase Verloren. Lege zuerst eine weitere dieses Typs an.",
   "stage.winProb": "Gewinnwahrscheinlichkeit",
   "stage.semOpen": "Offen",
   "stage.semWon": "Gewonnen",
@@ -20018,6 +20032,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "project.assignOwner": "Einem Teammitglied zuweisen",
   "project.description": "Beschreibung",
   "project.targetEnd": "Geplantes Enddatum",
+  "project.startDate": "Startdatum",
+  "project.endDate": "Enddatum",
+  "project.noCustomer": "Kein Kundenunternehmen",
+  "project.noCustomerSet":
+    "Kein Kundenunternehmen. Leg eines unter Mehr, Unternehmen und Kontakte fest.",
+  "project.newDealNeedsCustomer":
+    "Ein neuer Deal braucht ein Kundenunternehmen.",
   "project.new": "Neues Projekt",
   "project.edit": "Projekt bearbeiten",
   "project.archive": "Projekt archivieren",
@@ -22756,6 +22777,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contactCase.ownerHint":
     "Nur wer für einen markierten Kontakt verantwortlich ist, kann den verbleibenden Kontakt übernehmen.",
   "contactCase.ownerPlaceholder": "Verantwortliche Person wählen",
+  "contactCase.prefer.legend": "Welcher Wert bleibt",
+  "contactCase.prefer.hint":
+    "Hier unterscheiden sich die Kontakte. Wähle den Wert, den der verbleibende Kontakt zuerst zeigt. Die anderen E-Mail-Adressen und Arbeitgeber bleiben auch erhalten.",
+  "contactCase.prefer.name": "Name",
+  "contactCase.prefer.email": "Primäre E-Mail-Adresse",
+  "contactCase.prefer.employment": "Aktueller Arbeitgeber",
+  "contactCase.prefer.title": "Position",
+  "contactCase.prefer.placeholder": "Wert wählen",
   "contactCase.previewVerb": "Vorschau anzeigen",
   "contactCase.merge_one": "{count} Kontakt zusammenführen",
   "contactCase.merge_other": "{count} Kontakte zusammenführen",

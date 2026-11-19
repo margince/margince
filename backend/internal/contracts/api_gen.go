@@ -14853,6 +14853,7 @@ const (
 	ImportReasonCodeCannotWriteType              ImportReasonCode = "cannot_write_type"
 	ImportReasonCodeCloseDateFuture              ImportReasonCode = "close_date_future"
 	ImportReasonCodeCloseDatePast                ImportReasonCode = "close_date_past"
+	ImportReasonCodeCompanyDomainMatched         ImportReasonCode = "company_domain_matched"
 	ImportReasonCodeCompanyDuplicateFound        ImportReasonCode = "company_duplicate_found"
 	ImportReasonCodeCompanyDuplicateSkipped      ImportReasonCode = "company_duplicate_skipped"
 	ImportReasonCodeCompanyLinkOnMeeting         ImportReasonCode = "company_link_on_meeting"
@@ -14941,6 +14942,7 @@ const (
 	ImportReasonCodeSizeBandInvalid              ImportReasonCode = "size_band_invalid"
 	ImportReasonCodeStageUnknown                 ImportReasonCode = "stage_unknown"
 	ImportReasonCodeStageUnnamed                 ImportReasonCode = "stage_unnamed"
+	ImportReasonCodeStoredValuesKept             ImportReasonCode = "stored_values_kept"
 	ImportReasonCodeTagCreated                   ImportReasonCode = "tag_created"
 	ImportReasonCodeTagNameInvalid               ImportReasonCode = "tag_name_invalid"
 	ImportReasonCodeTagNew                       ImportReasonCode = "tag_new"
@@ -15002,6 +15004,8 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeCloseDateFuture:
 		return true
 	case ImportReasonCodeCloseDatePast:
+		return true
+	case ImportReasonCodeCompanyDomainMatched:
 		return true
 	case ImportReasonCodeCompanyDuplicateFound:
 		return true
@@ -15178,6 +15182,8 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeStageUnknown:
 		return true
 	case ImportReasonCodeStageUnnamed:
+		return true
+	case ImportReasonCodeStoredValuesKept:
 		return true
 	case ImportReasonCodeTagCreated:
 		return true
@@ -40176,6 +40182,22 @@ type ChatEpisode struct {
 	Url string `json:"url"`
 }
 
+// CitedProvision The law a finding or refusal rests on, as the recipient's own jurisdiction pack cites it
+// for the sending legal entity. Shown beside the engine's sentence; it decides nothing.
+// Absent when the pack cites no law for it, or when the citation may not be shown: the pack's
+// review is overdue or not yet done, or the law has not taken effect or has expired. On a
+// review it is the citation shown when the refusal was assessed, never today's.
+type CitedProvision struct {
+	// Instrument The law or decree, as a regulator cites it. Not translated.
+	Instrument string `json:"instrument"`
+
+	// Provision The part of the instrument, such as "§ 7(2)".
+	Provision string `json:"provision"`
+
+	// SourceUrl The official published text, over https.
+	SourceUrl string `json:"source_url"`
+}
+
 // ClaimEvidence The receipt behind one cited record (DOSS-WIRE-3). Each `source_kind` owes its own
 // identifying fields (DOSS-PARAM-9), carried in `identity`; a receipt that cannot fill one
 // names the gap in `gaps` rather than substituting a plausible value.
@@ -44456,6 +44478,11 @@ type ContactCaseDecisionRequest struct {
 	// OwnerId Who owns the remaining contact: the live owner of one of the selected members.
 	OwnerId openapi_types.UUID `json:"owner_id"`
 
+	// Prefer Where the selected members disagree, the member whose value the remaining contact takes.
+	// Each one must be in `member_ids`. A field left out keeps the survivor's value, and an empty one takes another member's.
+	// No value is lost: every address, number and employment of every member stays on the remaining contact.
+	Prefer *ContactCasePreference `json:"prefer,omitempty"`
+
 	// Revision The case revision the reviewer looked at.
 	Revision string `json:"revision"`
 
@@ -44549,6 +44576,23 @@ type ContactCaseOwner struct {
 
 // ContactCaseOwnerSeat defines model for ContactCaseOwner.Seat.
 type ContactCaseOwnerSeat string
+
+// ContactCasePreference Where the selected members disagree, the member whose value the remaining contact takes.
+// Each one must be in `member_ids`. A field left out keeps the survivor's value, and an empty one takes another member's.
+// No value is lost: every address, number and employment of every member stays on the remaining contact.
+type ContactCasePreference struct {
+	// Email The member whose primary email address becomes the remaining contact's primary one.
+	Email *openapi_types.UUID `json:"email,omitempty"`
+
+	// Employment The member whose current employer becomes the remaining contact's current one.
+	Employment *openapi_types.UUID `json:"employment,omitempty"`
+
+	// Name The member whose first and last name the remaining contact takes.
+	Name *openapi_types.UUID `json:"name,omitempty"`
+
+	// Title The member whose title the remaining contact takes.
+	Title *openapi_types.UUID `json:"title,omitempty"`
+}
 
 // ContactCaseResolution defines model for ContactCaseResolution.
 type ContactCaseResolution struct {
@@ -49582,6 +49626,13 @@ type DraftContentFinding struct {
 	// Language The language the draft must lead with, for `advertising_language_first`.
 	Language *string `json:"language,omitempty"`
 
+	// Provision The law a finding or refusal rests on, as the recipient's own jurisdiction pack cites it
+	// for the sending legal entity. Shown beside the engine's sentence; it decides nothing.
+	// Absent when the pack cites no law for it, or when the citation may not be shown: the pack's
+	// review is overdue or not yet done, or the law has not taken effect or has expired. On a
+	// review it is the citation shown when the refusal was assessed, never today's.
+	Provision *CitedProvision `json:"provision,omitempty"`
+
 	// Requirement `claim_without_proof`: the draft makes a claim the pack allows only beside a stated
 	// proof (the document's name, number and date), and states none.
 	// `advertising_language_first`: the draft does not open in the pack's disclosure
@@ -51150,6 +51201,13 @@ type FooterFinding struct {
 
 	// MissingMeans Missing contact methods, such as email, phone or web.
 	MissingMeans []string `json:"missing_means"`
+
+	// Provision The law a finding or refusal rests on, as the recipient's own jurisdiction pack cites it
+	// for the sending legal entity. Shown beside the engine's sentence; it decides nothing.
+	// Absent when the pack cites no law for it, or when the citation may not be shown: the pack's
+	// review is overdue or not yet done, or the law has not taken effect or has expired. On a
+	// review it is the citation shown when the refusal was assessed, never today's.
+	Provision *CitedProvision `json:"provision,omitempty"`
 }
 
 // ForecastAssurance What the most recent nightly input check found, and how much of the pipeline it was able to reach.
@@ -61885,7 +61943,10 @@ type RefusedRecipient struct {
 	FooterFindings *[]FooterFinding `json:"footer_findings,omitempty"`
 
 	// FooterPreview Configured disclosure text included in this message. Contains no recipient credentials.
-	FooterPreview     *[]string                    `json:"footer_preview,omitempty"`
+	FooterPreview *[]string `json:"footer_preview,omitempty"`
+
+	// Provision The law the recipient's pack cites for `reason_code`, as shown when the refusal was assessed.
+	Provision         *CitedProvision              `json:"provision,omitempty"`
 	ReasonCode        string                       `json:"reason_code"`
 	RequestedCategory *string                      `json:"requested_category,omitempty"`
 	SendingEntityId   *openapi_types.UUID          `json:"sending_entity_id,omitempty"`
@@ -65755,6 +65816,9 @@ type SendAuthorizationPreviewRecipient struct {
 	// the sender, before the message is checked, and this answer is the one that new
 	// contact gets. Absent or false for an address a record already holds.
 	NewContact *bool `json:"new_contact,omitempty"`
+
+	// Provision The law the recipient's pack cites for `reason_code`, absent when none may be shown.
+	Provision *CitedProvision `json:"provision,omitempty"`
 
 	// ReasonCode Why, in the engine's own vocabulary — `allowed`, `no_compatible_evidence`,
 	// `marketing_objection`, `no_marketing_consent` and the rest. A composer maps it to
@@ -75903,6 +75967,9 @@ type DirectCommunicationSendParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
