@@ -34,6 +34,7 @@ import { problemMessageOf } from "../lib/problem";
 import "./oauth-app.css";
 import { OAuthAppSteps, REDIRECTS_HOW_TO } from "./oauth-app-steps";
 import { RedirectUris } from "./oauth-redirects";
+import { useUnsavedGuard } from "./unsaved";
 
 // The drawer's per-vendor wording, as literal keys for the reason vendorCopy
 // spells its own that way.
@@ -156,6 +157,11 @@ function SetupForm({
     id.trim() !== "" &&
     clientSecret.trim() !== "";
   const locked = !canManage || save.isPending || lockReason !== undefined;
+  // While the PUT is out the drawer refuses to close at all, so nothing asks.
+  useUnsavedGuard(
+    !save.isPending &&
+      (clientId !== undefined || tenant !== undefined || clientSecret !== ""),
+  );
 
   function submit() {
     save.mutate(

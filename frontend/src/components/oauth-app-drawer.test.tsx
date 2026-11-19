@@ -336,6 +336,17 @@ describe("the app setup drawer", () => {
     await waitFor(() => expect(dependentsRefreshed(qc)).toBe(true));
   });
 
+  it("asks before Escape drops a typed pair", async () => {
+    const user = userEvent.setup();
+    const { onClose } = mount(absent(), "google", { view: "drawer" });
+    await user.type(await openFields(), CLIENT_ID);
+    await user.type(screen.getByLabelText("Client secret"), "GOCSPX-secret");
+    await user.keyboard("{Escape}");
+
+    await screen.findByRole("dialog", { name: "Discard unsaved changes?" });
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
   it("cannot be dismissed while the save is on its way", async () => {
     const user = userEvent.setup();
     let answer = () => {};
