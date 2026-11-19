@@ -13,8 +13,12 @@ func TestASiteSpeaksForACompanyOnlyUnderANameItAlreadyHas(t *testing.T) {
 		known  CompanyIdentity
 		want   bool
 	}{
-		{"a casino on a taken-over domain", []string{"Lucky Spin Casino"},
-			CompanyIdentity{Names: []string{"Example Analytics"}, Domains: []string{"example-analytics.example"}}, false},
+		{
+			"a casino on a taken-over domain",
+			[]string{"Lucky Spin Casino"},
+			CompanyIdentity{Names: []string{"Example Analytics"}, Domains: []string{"example-analytics.example"}},
+			false,
+		},
 		{"a casino on a triage domain", []string{"SPAMBRAND Ltd"}, CompanyIdentity{Domains: []string{"example-analytics.example"}}, false},
 		{"the stored name with its legal form", []string{"Acme Robotics GmbH"}, acme, true},
 		{"the brand alone", []string{"Acme"}, acme, true},

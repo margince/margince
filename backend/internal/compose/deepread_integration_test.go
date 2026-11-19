@@ -761,9 +761,10 @@ func TestDeepReadHonoursThePageLimitAnAdminSetBeforeItStarted(t *testing.T) {
 // hands: a casino with its own icon, phone and staff.
 func readTheCasinoOnAcmesDomain(t *testing.T, e *integration.Env, company ids.UUID, requestedBy, profileReply, siteName string) contacts.SiteRead {
 	t.Helper()
-	site := &fakeSite{pages: map[string]fakeSitePage{seedURL: {siteName: siteName,
-		text:  readable("Lucky Spin Casino.") + " Play slots tonight. Call +49 711 555 0199. Max Spinner, Chief Executive Officer. Not Acme GmbH.",
-		icons: []webread.IconRef{{URL: touchIconURL, Rel: webread.RelAppleTouchIcon}},
+	site := &fakeSite{pages: map[string]fakeSitePage{seedURL: {
+		siteName: siteName,
+		text:     readable("Lucky Spin Casino.") + " Play slots tonight. Call +49 711 555 0199. Max Spinner, Chief Executive Officer. Not Acme GmbH.",
+		icons:    []webread.IconRef{{URL: touchIconURL, Rel: webread.RelAppleTouchIcon}},
 	}}}
 	worker, _ := newDeepReadTestWorker(e, site, laneFake{
 		profileReply: profileReply,
