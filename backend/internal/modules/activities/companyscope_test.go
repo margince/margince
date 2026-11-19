@@ -301,7 +301,7 @@ func TestTheWaitingQueryBreaksTimestampTies(t *testing.T) {
 		t.Fatal("an answer is ordered by id, so capture order decides whether a same-second reply answered")
 	}
 	rest := answers
-	for _, arm := range []string{"answer_thread", "answer_mail", "answer_touch"} {
+	for _, arm := range []string{"answer_thread", "answer_split", "answer_mail", "answer_touch"} {
 		ordered := occurredday.AnswersSQL(arm, "a")
 		if !strings.Contains(rest, ordered) {
 			t.Errorf("the %s arm does not ask occurredday.AnswersSQL, so a day tie and an instant tie read alike", arm)

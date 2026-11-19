@@ -60,8 +60,8 @@ func TestASplitReplySettlesTheRequestItAnswers(t *testing.T) {
 	}
 }
 
-// splitReplyTo writes our attested reply under a key of its own, and the sent
-// delivery that names the request it answers, as the send path writes them.
+// splitReplyTo writes our attested reply under a key of its own. Its sent
+// delivery names the request it answers, as the send path writes them.
 func splitReplyTo(t *testing.T, e *loadEnv, request ids.UUID, at time.Time) {
 	t.Helper()
 	subject, body, direction := "Invoice 4711 overdue", "Attached.", "outbound"

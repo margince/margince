@@ -56,7 +56,7 @@ func TestAReplyInItsOwnConversationFollowsAMergeToTransmit(t *testing.T) {
 	}
 }
 
-// splitReplyDelivery is a delivery whose activity sits on its own key and names
+// splitReplyDelivery is a delivery whose activity sits on its own key. It names
 // the anchor it answers, as the send path writes a reply on a new topic.
 func (e *resolveEnv) splitReplyDelivery(t *testing.T, anchor ids.UUID) ids.UUID {
 	t.Helper()

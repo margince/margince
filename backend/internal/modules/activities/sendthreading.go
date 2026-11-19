@@ -41,8 +41,8 @@ type threading struct {
 // applies to mailbox copies (mailsubject.TopicsDifferSQL). It carries no
 // In-Reply-To and no References. Every provider, mail client and echo then
 // derives its own Message-ID as the key, as this row stores it. A conversation
-// a seat has not judged yet does not split: its pending question names the old
-// message, and the reply waits in it with the rest.
+// a seat has not judged yet does not split. Its pending question names the old
+// message, so the reply waits in it with the rest.
 func anchorThreading(ctx context.Context, tx pgx.Tx, id ids.ActivityID, messageID, subject string) (threading, error) {
 	if err := auth.EnsureActivityContentVisible(ctx, tx, id.UUID); err != nil {
 		return threading{}, err
