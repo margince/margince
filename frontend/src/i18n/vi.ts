@@ -13276,6 +13276,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "password.submit": "Lưu mật khẩu mới",
   "password.doneTitle": "Đã đổi mật khẩu",
   "password.changeFailedTitle": "Không thể đổi mật khẩu",
+  "password.currentWrong":
+    "Mật khẩu hiện tại không khớp. Kiểm tra rồi nhập lại.",
+  "password.locked":
+    "Tài khoản bị khóa do nhập sai mật khẩu quá nhiều lần. Đợi 15 phút rồi thử lại.",
+  "password.unchanged":
+    "Mật khẩu mới trùng với mật khẩu hiện tại. Chọn mật khẩu khác.",
+  "password.email":
+    "Mật khẩu mới trùng với địa chỉ email của bạn. Chọn mật khẩu khác.",
+  "password.length": "Dùng mật khẩu mới có từ 12 đến 256 ký tự.",
   "password.errorGeneric": "Không rõ nguyên nhân. Thử lại.",
   "mfa.title": "Đăng nhập hai bước",
   "mfa.body": "Mã từ ứng dụng xác thực, được hỏi sau mật khẩu.",

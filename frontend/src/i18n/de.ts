@@ -13633,6 +13633,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "password.submit": "Neues Passwort speichern",
   "password.doneTitle": "Passwort geändert",
   "password.changeFailedTitle": "Passwort wurde nicht geändert",
+  "password.currentWrong":
+    "Das aktuelle Passwort stimmt nicht. Prüfe es und gib es erneut ein.",
+  "password.locked":
+    "Das Konto ist nach zu vielen falschen Passwörtern gesperrt. Warte 15 Minuten und versuche es dann erneut.",
+  "password.unchanged":
+    "Das neue Passwort ist dasselbe wie das aktuelle. Wähle ein anderes Passwort.",
+  "password.email":
+    "Das neue Passwort ist deine E-Mail-Adresse. Wähle ein anderes Passwort.",
+  "password.length": "Verwende ein neues Passwort mit 12 bis 256 Zeichen.",
   "password.errorGeneric":
     "Es wurde keine Ursache gemeldet. Bitte versuche es erneut.",
   "mfa.title": "Zweistufige Anmeldung",
