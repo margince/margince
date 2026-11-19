@@ -21,11 +21,13 @@ package contacts
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -339,4 +341,18 @@ func earlierIDStrings(activities []ids.ActivityID) []string {
 		out = append(out, a.String())
 	}
 	return out
+}
+
+// A contact the table no longer holds is reported as gone. A failed read is not,
+// so the caller can tell the two apart.
+func TestTheCohortRepairOfAContactThatIsGoneIsNotFound(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		_, err := e.store.PromoteContactCohortTx(ctx, tx, ids.New[ids.ContactKind]())
+		return err
+	})
+	if !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("repairing the cohort of a missing contact = %v, want ErrNotFound", err)
+	}
 }
