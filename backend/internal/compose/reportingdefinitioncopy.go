@@ -35,6 +35,8 @@ var reportingMetricNames = map[crmcontracts.ReportingMetricID]langcopy.Phrase{
 	reportingPartnerActivity:               {En: "Active partners", De: "Aktive Partnerunternehmen", Vi: "Đối tác đang hoạt động"},
 	reportingStageConversion:               {En: "Stage conversion", De: "Weiterkommen pro Phase", Vi: "Tỷ lệ đi tiếp theo giai đoạn"},
 	reportingLeadCohortOutcomes:            {En: "What became of new leads", De: "Was aus neuen Leads wurde", Vi: "Kết quả của lead mới"},
+	reportingAccountProgression:            {En: "How far companies got", De: "Wie weit Unternehmen kamen", Vi: "Công ty đã đi đến đâu"},
+	reportingSourceQuality:                 {En: "Lead source quality", De: "Qualität der Lead-Quellen", Vi: "Chất lượng nguồn lead"},
 	reportingBookingsMix:                   {En: "Commercial mix", De: "Umsatzmix", Vi: "Cơ cấu doanh số"},
 	reportingQualifiedOpportunitiesCreated: {En: "Qualified opportunities", De: "Qualifizierte Verkaufschancen", Vi: "Cơ hội đủ điều kiện"},
 	reportingInitiativePipeline:            {En: "Initiative pipeline by origin", De: "Initiativen-Pipeline nach Herkunft", Vi: "Pipeline sáng kiến theo nguồn gốc"},
@@ -150,6 +152,16 @@ var reportingDefinitionWords = map[crmcontracts.ReportingMetricID]langcopy.Phras
 		En: "Of the leads that arrived during the period you picked, the share since qualified or handed on and accepted, out of those that reached an outcome; leads still open are shown apart and never count as lost. Example: 20 leads arrived in May, 3 were handed on and accepted, 4 qualified, 5 disqualified and 8 are still open, so May shows 7 of 12.",
 		De: "Von den Leads, die im gewählten Zeitraum eingegangen sind, der Anteil derer, die seitdem qualifiziert oder übergeben und angenommen wurden, gemessen an denen mit einem Ergebnis; noch offene Leads stehen getrennt und zählen nie als verloren. Beispiel: Im Mai gehen 20 Leads ein, 3 werden übergeben und angenommen, 4 qualifiziert, 5 disqualifiziert und 8 sind noch offen, also zeigt der Mai 7 von 12.",
 		Vi: "Trong các lead đến trong khoảng thời gian bạn chọn, phần lead sau đó đủ điều kiện hoặc được bàn giao và chấp nhận, trên số lead đã có kết quả; lead vẫn đang mở được hiển thị riêng và không bao giờ bị tính là thua. Ví dụ: tháng 5 có 20 lead đến, 3 lead được bàn giao và chấp nhận, 4 lead đủ điều kiện, 5 lead bị loại và 8 lead vẫn đang mở, nên tháng 5 hiển thị 7 trên 12.",
+	},
+	reportingAccountProgression: {
+		En: "Of the companies that own the leads that arrived during the period you picked, how many each reached: handoff accepted, qualified, disqualified or still open. A company counts once, under the furthest outcome any of its leads reached. Example: 3 leads from one company arrived in May, one was qualified and two are open, so the company shows once, as qualified.",
+		De: "Von den Unternehmen, zu denen die im gewählten Zeitraum eingegangenen Leads gehören, wie weit jedes kam: Übergabe angenommen, qualifiziert, disqualifiziert oder noch offen. Ein Unternehmen zählt einmal, mit dem weitesten Ergebnis, das einer seiner Leads erreicht hat. Beispiel: Im Mai gehen 3 Leads eines Unternehmens ein, einer wird qualifiziert und zwei sind offen, also steht das Unternehmen einmal da, als qualifiziert.",
+		Vi: "Trong các công ty có lead đến trong khoảng thời gian bạn chọn, mỗi công ty đã đi đến đâu: bàn giao đã chấp nhận, đủ điều kiện, bị loại hoặc vẫn đang mở. Mỗi công ty được tính một lần, theo kết quả xa nhất mà một lead của công ty đạt được. Ví dụ: tháng 5 có 3 lead của một công ty đến, 1 lead đủ điều kiện và 2 lead đang mở, nên công ty hiển thị một lần, là đủ điều kiện.",
+	},
+	reportingSourceQuality: {
+		En: "For each lead origin, how many leads arrived during the period you picked and how many of them were linked to a deal by the time the figures were read. Example: 20 leads arrived from the website in May and 5 were qualified into a deal, so the website shows 5 of 20.",
+		De: "Je Herkunft eines Leads, wie viele Leads im gewählten Zeitraum eingegangen sind und wie viele davon beim Abruf der Zahlen mit einem Deal verknüpft waren. Beispiel: Im Mai gehen 20 Leads von der Website ein und 5 werden zu einem Deal qualifiziert, also zeigt die Website 5 von 20.",
+		Vi: "Với mỗi nguồn lead, có bao nhiêu lead đến trong khoảng thời gian bạn chọn và bao nhiêu lead trong số đó đã gắn với một deal tại thời điểm số liệu được đọc. Ví dụ: tháng 5 có 20 lead đến từ website và 5 lead đủ điều kiện thành deal, nên website hiển thị 5 trên 20.",
 	},
 	reportingBookingsMix: {
 		En: "The value of deals won in the period you picked, split by what each product sold is: software, implementation or other, with the part of a deal no product carries shown as unallocated. The split reads the accepted offer's lines, or the products set by hand on the deal. Example: a €10,000 deal won in May with €7,000 of software and €3,000 of implementation on its accepted offer counts €7,000 under software and €3,000 under implementation.",
@@ -267,6 +279,16 @@ var reportingAttributionWords = map[crmcontracts.ReportingMetricID]langcopy.Phra
 		De: "Gutgeschrieben wird der Person, der der Lead bei seinem Eingang gehörte, sodass ein neu zugewiesener Lead dort bleibt; jeder Lead zählt im Zeitraum seines Eingangs, egal wie spät sein Ergebnis kommt.",
 		Vi: "Kết quả tính cho người phụ trách lead tại lúc lead đến, nên lead được giao lại vẫn tính cho họ; mỗi lead được tính vào kỳ lead đến, dù kết quả đến muộn đến đâu.",
 	},
+	reportingAccountProgression: {
+		En: "Credit goes to the owner each lead had when it arrived; a company counts for the owner of the lead that took it furthest, in the period that lead arrived.",
+		De: "Gutgeschrieben wird der Person, der jeder Lead bei seinem Eingang gehörte; ein Unternehmen zählt für die Person, deren Lead am weitesten kam, in dem Zeitraum, in dem dieser Lead eingegangen ist.",
+		Vi: "Kết quả tính cho người phụ trách mỗi lead tại lúc lead đến; một công ty được tính cho người phụ trách lead đi xa nhất, trong kỳ lead đó đến.",
+	},
+	reportingSourceQuality: {
+		En: "Credit goes to the owner the lead had when it arrived, so a reassigned lead stays with them; each lead counts under the origin it was created with, in the period it arrived.",
+		De: "Gutgeschrieben wird der Person, der der Lead bei seinem Eingang gehörte, sodass ein neu zugewiesener Lead dort bleibt; jeder Lead zählt unter der Herkunft, mit der er angelegt wurde, in dem Zeitraum seines Eingangs.",
+		Vi: "Kết quả tính cho người phụ trách lead tại lúc lead đến, nên lead được giao lại vẫn tính cho họ; mỗi lead được tính theo nguồn lúc tạo, trong kỳ lead đến.",
+	},
 	reportingBookingsMix: {
 		En: "Credit goes to the deal's current owner and pipeline, so a reassigned deal moves with it; each allocation keeps the product's classification from when it was written, so a later catalog change does not rewrite a closed deal.",
 		De: "Gutgeschrieben wird der aktuell verantwortlichen Person und der aktuellen Pipeline des Deals, ein neu zugewiesener Deal wandert also mit; jede Zuordnung behält die Einordnung des Produkts vom Zeitpunkt des Schreibens, sodass eine spätere Katalogänderung einen abgeschlossenen Deal nicht umschreibt.",
@@ -382,6 +404,16 @@ var reportingIncompleteWords = map[crmcontracts.ReportingMetricID]langcopy.Phras
 		En: "Only leads you may see are counted; imported leads, merged duplicates and leads archived without being qualified or disqualified are left out, there is no rate with fewer than 5 leads with an outcome, and with a pipeline chosen there is no figure.",
 		De: "Gezählt werden nur Leads, die du sehen darfst; importierte Leads, zusammengeführte Duplikate und Leads, die ohne Qualifizierung oder Disqualifizierung archiviert wurden, bleiben außen vor, bei weniger als 5 Leads mit einem Ergebnis gibt es keine Quote, und mit einer gewählten Pipeline gibt es keine Zahl.",
 		Vi: "Chỉ tính các lead bạn được phép xem; lead nhập từ hệ thống khác, lead trùng đã gộp và lead đã lưu trữ mà không đủ điều kiện hay bị loại không được tính, không có tỷ lệ khi có ít hơn 5 lead đã có kết quả, và khi chọn một pipeline thì không có số liệu.",
+	},
+	reportingAccountProgression: {
+		En: "Only companies and leads you may see are counted; imported leads, merged duplicates, leads without a company and leads archived without being qualified or disqualified are left out, there is no rate with fewer than 5 companies with an outcome, and with a pipeline chosen there is no figure.",
+		De: "Gezählt werden nur Unternehmen und Leads, die du sehen darfst; importierte Leads, zusammengeführte Duplikate, Leads ohne Unternehmen und Leads, die ohne Qualifizierung oder Disqualifizierung archiviert wurden, bleiben außen vor, bei weniger als 5 Unternehmen mit einem Ergebnis gibt es keine Quote, und mit einer gewählten Pipeline gibt es keine Zahl.",
+		Vi: "Chỉ tính các công ty và lead bạn được phép xem; lead nhập từ hệ thống khác, lead trùng đã gộp, lead không có công ty và lead đã lưu trữ mà không đủ điều kiện hay bị loại không được tính, không có tỷ lệ khi có ít hơn 5 công ty đã có kết quả, và khi chọn một pipeline thì không có số liệu.",
+	},
+	reportingSourceQuality: {
+		En: "Only leads you may see are counted; imported leads, merged duplicates and leads archived without being qualified or disqualified are left out, a lead with no origin counts under No origin, there is no rate with fewer than 5 leads from an origin, and with a pipeline chosen there is no figure.",
+		De: "Gezählt werden nur Leads, die du sehen darfst; importierte Leads, zusammengeführte Duplikate und Leads, die ohne Qualifizierung oder Disqualifizierung archiviert wurden, bleiben außen vor, ein Lead ohne Herkunft zählt unter Keine Herkunft, bei weniger als 5 Leads einer Herkunft gibt es keine Quote, und mit einer gewählten Pipeline gibt es keine Zahl.",
+		Vi: "Chỉ tính các lead bạn được phép xem; lead nhập từ hệ thống khác, lead trùng đã gộp và lead đã lưu trữ mà không đủ điều kiện hay bị loại không được tính, lead không có nguồn được tính vào Chưa có nguồn gốc, không có tỷ lệ khi một nguồn có ít hơn 5 lead, và khi chọn một pipeline thì không có số liệu.",
 	},
 	reportingBookingsMix: {
 		En: "Only deals you may see are counted; a won deal with no accepted offer and no products set by hand counts whole as unallocated, an allocation in another currency than the deal's has no value, and a deal whose amount is unknown adds nothing.",

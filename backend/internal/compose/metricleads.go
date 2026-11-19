@@ -6,6 +6,7 @@ package compose
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -54,6 +55,10 @@ func reportingLeadFields(metric crmcontracts.ReportingMetricID) []string {
 		fields = append(fields, "routed_at", "first_response_at")
 	case reportingLeadCohortOutcomes:
 		fields = append(fields, "routed_at")
+	case reportingAccountProgression:
+		fields = append(fields, "routed_at", "company_id")
+	case reportingSourceQuality:
+		fields = append(fields, "routed_at", "origin", "qualified_deal_id", "promoted_at")
 	}
 	return fields
 }
@@ -66,7 +71,7 @@ func leadMetricScope(ctx context.Context, tx pgx.Tx, frame crmcontracts.Reportin
 	if metric == reportingLeadsQualified {
 		owner = "qualified.owner_id"
 	}
-	if metric == reportingLeadCohortOutcomes {
+	if slices.Contains(leadEntryCohortMetrics, metric) {
 		owner = leadArrivalOwnerColumn
 	}
 	_, population, err := analyticsPopulationExpression(ctx, tx, reportingRequested(frame.Scope), owner, b.arg, unownedIsExcluded)

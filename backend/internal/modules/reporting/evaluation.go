@@ -239,6 +239,10 @@ func evidenceGroup(fact Fact, group string, week evidenceWeekSpan) bool {
 	if after, ok := strings.CutPrefix(group, "stage:"); ok {
 		return fact.StageID == after || fact.GroupKey == group
 	}
+	// A source's group names its leads and, by suffix, each outcome under it.
+	if strings.HasPrefix(group, "source:") {
+		return fact.GroupKey == group || strings.HasPrefix(fact.GroupKey, group+":")
+	}
 	if strings.HasPrefix(group, "week:") && fact.At() != nil {
 		return week.valid && !fact.At().Before(week.start) && fact.At().Before(week.end)
 	}

@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/weekly"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/reporting"
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 )
 
 const (
@@ -31,6 +32,8 @@ const (
 
 	leadCohortProvenance      = "lead_arrival"
 	leadCohortOwnerUnrecorded = "lead_arrival_owner_unrecorded"
+
+	leadCohortProvenanceSQL = "CASE WHEN l.arrival_owner_id IS NULL AND l.owner_id IS NOT NULL THEN '" + leadCohortOwnerUnrecorded + "' ELSE '" + leadCohortProvenance + "' END"
 )
 
 // leadCohortOutcomes is the order the lead cohort point lists its outcomes in.
@@ -53,38 +56,53 @@ func readReportingLeadCohort(ctx context.Context, tx pgx.Tx, frame crmcontracts.
 		return nil, noPipelineGap(frame), nil
 	}
 	var b reportingBindings
-	scope, withheld, err := leadMetricScope(ctx, tx, frame, reportingLeadCohortOutcomes, &b)
+	said := reporting.ExplanationCopy(frame)
+	ctes, cutoff, withheld, err := leadEntryCohortSQL(ctx, tx, frame, reportingLeadCohortOutcomes, &b)
 	if err != nil {
 		return nil, crmcontracts.ReportingCoverage{}, err
 	}
-	said := reporting.ExplanationCopy(frame)
-	// Arrivals are the interval's alone; their outcomes are followed to the cutoff.
-	start, end := cohortWindow(frame)
-	from, cutoff := b.add(start), b.add(frame.EvaluatedAt)
-	arrived := "SELECT l.id FROM lead l WHERE " + leadArrivedBetweenSQL(from, b.add(end)) + " AND " + scope
-	moves := weekly.LeadMovesSQL("arrived", from, cutoff)
 	label, err := leadLabelSQL(ctx, &b, b.add(said.Say(reportingBreakdownLabels.Lead)))
 	if err != nil {
 		return nil, crmcontracts.ReportingCoverage{}, err
 	}
 	outcome, reachedAt := leadReachedSQL(cutoff)
-	query := `WITH arrived AS (` + arrived + `), moves AS (` + moves + `)
+	query := ctes + `
  SELECT l.id::text,l.id,` + label + `,l.arrival_owner_id,COALESCE(u.display_name,''),` + leadArrivalSQL + `,
  (EXTRACT(EPOCH FROM (` + reachedAt + `-` + leadArrivalSQL + `))/86400)::float8,
- CASE WHEN l.arrival_owner_id IS NULL AND l.owner_id IS NOT NULL THEN '` + leadCohortOwnerUnrecorded + `' ELSE '` + leadCohortProvenance + `' END,
+ ` + leadCohortProvenanceSQL + `,
  ` + outcome + `,''
  FROM lead l JOIN arrived ON arrived.id=l.id
  LEFT JOIN app_user u ON u.id=l.arrival_owner_id
- LEFT JOIN LATERAL (SELECT min(m.occurred_at) FILTER (WHERE m.move='` + weekly.LeadMovePromoted + `') AS promoted,
-   min(m.occurred_at) FILTER (WHERE m.move='` + weekly.LeadMoveDisqualified + `') AS disqualified
-   FROM moves m WHERE m.lead_id=l.id AND m.occurred_at>=` + leadArrivalSQL + `) mv ON true
- LEFT JOIN LATERAL (SELECT min(e.occurred_at) AS at FROM sdr_handoff h JOIN sdr_handoff_event e ON e.handoff_id=h.id
-   WHERE h.lead_id=l.id AND e.to_status='accepted' AND e.occurred_at>=` + leadArrivalSQL + ` AND e.occurred_at<` + cutoff + `) acc ON true
+ ` + leadOutcomeJoinsSQL(cutoff) + `
  ORDER BY l.id LIMIT ` + b.add(reportingFactLimit+1)
 	facts, coverage, err := readGroupedFacts(ctx, tx, frame, reportingLeadCohortOutcomes, string(recordTypeLead), query, b, withheld)
 	if err != nil {
 		return nil, coverage, err
 	}
+	facts, coverage = finishCohortFacts(facts, coverage, said, withheld)
+	return facts, coverage, nil
+}
+
+// leadEntryCohortSQL is the lead entry cohort every cohort reader follows: the
+// leads that arrived in the interval, narrowed by the reader's scope, as the
+// arrived CTE, with the moves CTE over them. Outcomes are followed to the
+// evaluation instant, bound as cutoff.
+func leadEntryCohortSQL(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, metric crmcontracts.ReportingMetricID, b *reportingBindings) (ctes, cutoff string, withheld bool, err error) {
+	scope, withheld, err := leadMetricScope(ctx, tx, frame, metric, b)
+	if err != nil {
+		return "", "", false, err
+	}
+	start, end := cohortWindow(frame)
+	from := b.add(start)
+	cutoff = b.add(frame.EvaluatedAt)
+	arrived := "SELECT l.id FROM lead l WHERE " + leadArrivedBetweenSQL(from, b.add(end)) + " AND " + scope
+	return "WITH arrived AS (" + arrived + "), moves AS (" + weekly.LeadMovesSQL("arrived", from, cutoff) + ")", cutoff, withheld, nil
+}
+
+// finishCohortFacts moves each fact's outcome out of its group column and into
+// its own evidence group. A lead that arrived before the arrival owner was kept
+// makes the coverage partial.
+func finishCohortFacts(facts []reporting.Fact, coverage crmcontracts.ReportingCoverage, said langcopy.Spoken, withheld bool) ([]reporting.Fact, crmcontracts.ReportingCoverage) {
 	unrecorded := false
 	for i := range facts {
 		facts[i].Outcome = facts[i].GroupKey
@@ -96,5 +114,16 @@ func readReportingLeadCohort(ctx context.Context, tx pgx.Tx, frame crmcontracts.
 		coverage = reportingGap(reportingPartial, said.Say(cohortWords.ArrivalOwnerUnknown))
 		coverage.Withheld = withheld
 	}
-	return facts, coverage, nil
+	return facts, coverage
+}
+
+// leadOutcomeJoinsSQL joins what a lead reached by the cutoff: its first
+// qualification or disqualification (mv) and its accepted handoff (acc), over
+// the moves CTE and the lead alias l.
+func leadOutcomeJoinsSQL(cutoff string) string {
+	return `LEFT JOIN LATERAL (SELECT min(m.occurred_at) FILTER (WHERE m.move='` + weekly.LeadMovePromoted + `') AS promoted,
+   min(m.occurred_at) FILTER (WHERE m.move='` + weekly.LeadMoveDisqualified + `') AS disqualified
+   FROM moves m WHERE m.lead_id=l.id AND m.occurred_at>=` + leadArrivalSQL + `) mv ON true
+ LEFT JOIN LATERAL (SELECT min(e.occurred_at) AS at FROM sdr_handoff h JOIN sdr_handoff_event e ON e.handoff_id=h.id
+   WHERE h.lead_id=l.id AND e.to_status='accepted' AND e.occurred_at>=` + leadArrivalSQL + ` AND e.occurred_at<` + cutoff + `) acc ON true`
 }
