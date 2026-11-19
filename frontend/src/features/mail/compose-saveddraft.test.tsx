@@ -4,15 +4,13 @@ import {
   act,
   cleanup,
   renderHook,
-  render as rtlRender,
   screen,
   waitFor,
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { type ReactNode, useState } from "react";
+import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { components } from "../../api/schema";
 import {
   messageText,
   writeMessage,
@@ -23,134 +21,22 @@ import {
   ToastRegion,
   useToast,
 } from "../../design-system/toast";
-import { UTC_ZONE } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
-import {
-  allowedPreview,
-  isPreviewDoor,
-  previewedAddresses,
-} from "../../testing/sendpermission.testkit";
 import { pressSend } from "./compose.testkit";
+import {
+  calls,
+  composer,
+  foundUnderTyping,
+  jsonResponse,
+  problem,
+  type Route,
+  render,
+  SAVED,
+  type Sent,
+  stubRoutes,
+} from "./compose-saveddraft.testkit";
 import { useSavedDraft } from "./composesaveddraft";
 import { ComposeWindow } from "./composewindow";
-
-// The rep's own unsent message, kept by the server: what the composer reads
-// back when it opens, writes when it closes, and hands the send to discard.
-
-type MailDraft = components["schemas"]["MailDraft"];
-type Sent = { key: string; query: string; body: unknown; headers: Headers };
-
-function jsonResponse(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-}
-
-function problem(code: string, status: number) {
-  return new Response(JSON.stringify({ code, title: "Conflict" }), {
-    status,
-    headers: { "Content-Type": "application/problem+json" },
-  });
-}
-
-const SAVED: MailDraft = {
-  id: "md-1",
-  anchor_type: "contact",
-  anchor_id: "p-1",
-  to: ["buyer@acme.test"],
-  cc: [],
-  bcc: [],
-  subject: "Pricing for 40 seats",
-  body: "Half written before lunch",
-  html_body: "<p>Half written before lunch</p>",
-  version: 3,
-  agent_drafted: false,
-  created_at: "2026-09-20T09:00:00Z",
-  updated_at: "2026-09-20T09:05:00Z",
-};
-
-const PURPOSES = {
-  data: [
-    {
-      id: "p1",
-      key: "transactional",
-      label: "Deal messages",
-      requires_double_opt_in: false,
-      created_at: "2026-01-01T00:00:00Z",
-    },
-  ],
-};
-
-type Route = () => Response | Promise<Response>;
-
-function stubRoutes(overrides: Record<string, Route> = {}) {
-  const sent: Sent[] = [];
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const request = input instanceof Request ? input : null;
-      const url = new URL(
-        request ? request.url : String(input),
-        "https://test.local",
-      );
-      const method = request?.method ?? init?.method ?? "GET";
-      const key = `${method} ${url.pathname.replace(/^\/v1/, "")}`;
-      let body: unknown = null;
-      if (method !== "GET" && method !== "DELETE") {
-        body = request
-          ? await request.clone().json()
-          : JSON.parse(String(init?.body));
-      }
-      const headers = request
-        ? request.headers
-        : new Headers(init?.headers ?? {});
-      sent.push({ key, query: url.search, body, headers });
-      const override = overrides[key];
-      if (override) return override();
-      if (key === "GET /mail-drafts") return problem("not_found", 404);
-      if (key === "GET /consent-purposes") return jsonResponse(PURPOSES);
-      if (key === "GET /voice-profiles") return jsonResponse({ data: [] });
-      if (isPreviewDoor(url.pathname)) {
-        return jsonResponse(allowedPreview(previewedAddresses(body)));
-      }
-      return jsonResponse({});
-    }),
-  );
-  return sent;
-}
-
-function render(ui: ReactNode) {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
-  });
-  return rtlRender(
-    <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">
-        <ToastProvider>
-          {ui}
-          <ToastRegion />
-        </ToastProvider>
-      </LocaleProvider>
-    </QueryClientProvider>,
-  );
-}
-
-function composer(onClose: () => void, activityId?: string) {
-  return (
-    <ComposeWindow
-      activityId={activityId}
-      entityType="contact"
-      entityId="p-1"
-      contactId="p-1"
-      open
-      onClose={onClose}
-    />
-  );
-}
-
-const calls = (sent: Sent[], key: string) =>
-  sent.filter((call) => call.key === key);
 
 afterEach(() => {
   cleanup();
@@ -440,6 +326,203 @@ describe("a saved draft", () => {
     expect(await screen.findByText("Saved draft deleted")).toBeTruthy();
     expect(calls(sent, "DELETE /mail-drafts/md-1")).toHaveLength(1);
     await waitFor(() => expect(messageText("Body")).toBe(""));
+  });
+
+  it("is written back by Undo after the trash deletes it, with the same words and recipients", async () => {
+    const onClose = vi.fn();
+    const sent = stubRoutes({
+      "GET /mail-drafts": () => jsonResponse(SAVED),
+      "DELETE /mail-drafts/md-1": () => new Response(null, { status: 204 }),
+      "PUT /mail-drafts": () => jsonResponse({ ...SAVED, id: "md-2" }),
+    });
+    render(composer(onClose));
+    await screen.findByText("Saved draft restored");
+
+    await userEvent.click(screen.getByRole("button", { name: "Delete draft" }));
+    expect(await screen.findByText("Saved draft deleted")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "Undo" }));
+
+    await waitFor(() =>
+      expect(calls(sent, "PUT /mail-drafts")).toHaveLength(1),
+    );
+    expect(calls(sent, "PUT /mail-drafts")[0]?.body).toMatchObject({
+      anchor_type: "contact",
+      anchor_id: "p-1",
+      to: ["buyer@acme.test"],
+      subject: "Pricing for 40 seats",
+      body: "Half written before lunch",
+    });
+    expect(
+      calls(sent, "PUT /mail-drafts")[0]?.headers.get("If-Match"),
+    ).toBeNull();
+    expect(await screen.findAllByText("Saved draft restored")).not.toHaveLength(
+      0,
+    );
+  });
+
+  describe("Undo after a delete", () => {
+    function hookFor(onRestore: (fields: unknown) => void) {
+      const client = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      });
+      return renderHook(
+        (props: { entityId: string; open: boolean }) =>
+          useSavedDraft({
+            where: {
+              answering: undefined,
+              entityType: "contact",
+              entityId: props.entityId,
+              isChannelReply: false,
+            },
+            open: props.open,
+            fields: {
+              to: [],
+              cc: [],
+              bcc: [],
+              subject: "",
+              body: "",
+              html: "",
+              files: [],
+              context: "",
+              sendAt: "",
+            },
+            replyTo: undefined,
+            offeredRecipient: undefined,
+            onRestore,
+            onClose: () => {},
+          }),
+        {
+          initialProps: { entityId: "p-1", open: true },
+          wrapper: ({ children }) => (
+            <QueryClientProvider client={client}>
+              <LocaleProvider initial="en">
+                <ToastProvider>
+                  {children}
+                  <ToastRegion />
+                </ToastProvider>
+              </LocaleProvider>
+            </QueryClientProvider>
+          ),
+        },
+      );
+    }
+    const routes = (extra: Record<string, Route> = {}) =>
+      stubRoutes({
+        "GET /mail-drafts": () => jsonResponse(SAVED),
+        "DELETE /mail-drafts/md-1": () => new Response(null, { status: 204 }),
+        "PUT /mail-drafts": () => jsonResponse({ ...SAVED, id: "md-2" }),
+        ...extra,
+      });
+    const deleteThenUndo = async (
+      hook: ReturnType<typeof hookFor>,
+      between: () => void = () => {},
+    ) => {
+      await waitFor(() => expect(hook.result.current.held).not.toBeNull());
+      act(() => hook.result.current.remove());
+      await screen.findByText("Saved draft deleted");
+      between();
+      await userEvent.click(screen.getByRole("button", { name: "Undo" }));
+    };
+
+    it("puts the server's answer on screen while the composer is still on that record", async () => {
+      const restored = vi.fn();
+      const sent = routes({
+        "PUT /mail-drafts": () =>
+          jsonResponse({ ...SAVED, id: "md-2", attachments: [] }),
+      });
+      const hook = hookFor(restored);
+      await waitFor(() => expect(hook.result.current.held).not.toBeNull());
+      restored.mockClear();
+      act(() => hook.result.current.remove());
+      await screen.findByText("Saved draft deleted");
+      await userEvent.click(screen.getByRole("button", { name: "Undo" }));
+
+      await waitFor(() =>
+        expect(restored).toHaveBeenLastCalledWith(
+          expect.objectContaining({
+            subject: "Pricing for 40 seats",
+            files: [],
+          }),
+        ),
+      );
+      expect(calls(sent, "PUT /mail-drafts")).toHaveLength(1);
+    });
+
+    it("leaves a file the server dropped off the restored words", async () => {
+      const restored = vi.fn();
+      routes({
+        "GET /mail-drafts": () =>
+          jsonResponse({
+            ...SAVED,
+            attachments: [{ id: "f-1", filename: "a.pdf", byte_size: 10 }],
+          }),
+        "PUT /mail-drafts": () =>
+          jsonResponse({ ...SAVED, id: "md-2", attachments: [] }),
+      });
+      const hook = hookFor(restored);
+      await deleteThenUndo(hook);
+
+      await waitFor(() =>
+        expect(restored).toHaveBeenLastCalledWith(
+          expect.objectContaining({ files: [] }),
+        ),
+      );
+    });
+
+    it("writes the draft back but injects nothing once the composer moved to another record", async () => {
+      const restored = vi.fn();
+      let reads = 0;
+      const sent = routes({
+        "GET /mail-drafts": () =>
+          reads++ === 0 ? jsonResponse(SAVED) : problem("not_found", 404),
+      });
+      const hook = hookFor(restored);
+      await deleteThenUndo(hook, () => {
+        hook.rerender({ entityId: "p-2", open: true });
+        restored.mockClear();
+      });
+
+      await waitFor(() =>
+        expect(calls(sent, "PUT /mail-drafts")).toHaveLength(1),
+      );
+      expect(calls(sent, "PUT /mail-drafts")[0]?.body).toMatchObject({
+        anchor_id: "p-1",
+      });
+      expect(restored).not.toHaveBeenCalled();
+    });
+
+    it("injects nothing into a composer that was closed", async () => {
+      const restored = vi.fn();
+      const sent = routes();
+      const hook = hookFor(restored);
+      await deleteThenUndo(hook, () => {
+        hook.rerender({ entityId: "p-1", open: false });
+        restored.mockClear();
+      });
+
+      await waitFor(() =>
+        expect(calls(sent, "PUT /mail-drafts")).toHaveLength(1),
+      );
+      expect(restored).not.toHaveBeenCalled();
+    });
+
+    it("does not bring a draft back after a send", async () => {
+      const restored = vi.fn();
+      const sent = routes();
+      const hook = hookFor(restored);
+      await deleteThenUndo(hook, () => {
+        act(() => hook.result.current.sent());
+        restored.mockClear();
+      });
+
+      expect(
+        await screen.findByText(
+          "The message was sent, so its draft stays deleted.",
+        ),
+      ).toBeTruthy();
+      expect(calls(sent, "PUT /mail-drafts")).toHaveLength(0);
+      expect(restored).not.toHaveBeenCalled();
+    });
   });
 
   it("is deleted from the restored notice, and the fields empty", async () => {
@@ -751,164 +834,5 @@ describe("a saved draft", () => {
     expect(client.getQueryData(["mail-draft", "contact", "p-1"])).toBeNull();
     expect(result.current.held).toBeNull();
     expect(onClose).not.toHaveBeenCalled();
-  });
-});
-
-describe("a saved draft put back whole", () => {
-  const WHOLE: MailDraft = {
-    ...SAVED,
-    attachments: [
-      {
-        id: "f-1",
-        filename: "seat-pricing.pdf",
-        content_type: "application/pdf",
-        byte_size: 48_213,
-      },
-    ],
-    communication_context: "requested_followup",
-    scheduled_at: "2026-11-20T08:00:00Z",
-    scheduled_tz: UTC_ZONE,
-  };
-
-  it("brings back its files, its reason for contact and its send time", async () => {
-    const sent = stubRoutes({ "GET /mail-drafts": () => jsonResponse(WHOLE) });
-    render(composer(vi.fn()));
-    await screen.findByText("Saved draft restored");
-
-    expect(screen.getByText("seat-pricing.pdf")).toBeTruthy();
-    expect(
-      screen.getByRole("combobox", { name: "Reason for contact" }).textContent,
-    ).toContain("Follow-up they requested");
-    expect(screen.getByRole("button", { name: "Schedule send" })).toBeTruthy();
-    expect(screen.getByText(/^Sends /)).toBeTruthy();
-    // What came back is what the draft holds, so nothing is written again.
-    expect(calls(sent, "PUT /mail-drafts")).toHaveLength(0);
-  });
-
-  it("counts the files that could not come back, and names none", async () => {
-    stubRoutes({
-      "GET /mail-drafts": () =>
-        jsonResponse({ ...WHOLE, attachments_unavailable: 2 }),
-    });
-    render(composer(vi.fn()));
-
-    expect(
-      await screen.findByText("2 files could not be restored."),
-    ).toBeTruthy();
-    expect(screen.getByText("seat-pricing.pdf")).toBeTruthy();
-  });
-
-  it("marks an agent's draft as the agent's, files and all", async () => {
-    stubRoutes({
-      "GET /mail-drafts": () =>
-        jsonResponse({
-          ...WHOLE,
-          agent_drafted: true,
-          attachments_unavailable: 1,
-        }),
-    });
-    render(composer(vi.fn()));
-
-    expect(
-      await screen.findByText("Agent draft restored. Read it before sending."),
-    ).toBeTruthy();
-    expect(screen.getByText("1 file could not be restored.")).toBeTruthy();
-    expect(screen.getByText("seat-pricing.pdf")).toBeTruthy();
-  });
-
-  it("offers Retry under a refused save, and the retry saves and closes", async () => {
-    const onClose = vi.fn();
-    let puts = 0;
-    const sent = stubRoutes({
-      "PUT /mail-drafts": () => {
-        puts += 1;
-        return puts === 1 ? problem("internal", 503) : jsonResponse(SAVED);
-      },
-    });
-    const user = userEvent.setup();
-    render(composer(onClose));
-    await waitFor(() =>
-      expect(calls(sent, "GET /mail-drafts")).toHaveLength(1),
-    );
-    writeMessage("Body", "Half written before lunch");
-    await user.click(screen.getByRole("button", { name: "Close" }));
-    const line = await screen.findByRole("alert");
-
-    await user.click(within(line).getByRole("button", { name: "Retry" }));
-
-    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
-    expect(calls(sent, "PUT /mail-drafts")).toHaveLength(2);
-    expect(messageText("Body")).toBe("Half written before lunch");
-  });
-});
-
-// The saved draft lands only after the reader typed, so its words never
-// reached the screen.
-function foundUnderTyping(
-  onClose: () => void,
-  overrides: Record<string, Route> = {},
-): Sent[] {
-  let answer: (response: Response) => void = () => {};
-  const sent = stubRoutes({
-    "GET /mail-drafts": () =>
-      new Promise<Response>((resolve) => {
-        answer = resolve;
-      }),
-    ...overrides,
-  });
-  render(composer(onClose));
-  writeMessage("Body", "Written before the read");
-  act(() => answer(jsonResponse(SAVED)));
-  return sent;
-}
-
-describe("a composer opened with a caller's own words", () => {
-  const proposal = (onClose: () => void) => (
-    <ComposeWindow
-      entityType="contact"
-      entityId="p-1"
-      contactId="p-1"
-      initialMessage={{ subject: "Times to meet", body: "Pick a time" }}
-      open
-      onClose={onClose}
-    />
-  );
-
-  it("closes without saving over the record's draft", async () => {
-    const onClose = vi.fn();
-    const sent = stubRoutes({ "GET /mail-drafts": () => jsonResponse(SAVED) });
-    render(proposal(onClose));
-    await waitFor(() => expect(messageText("Body")).toContain("Pick a time"));
-    writeMessage("Body", "Pick a time, Ada");
-
-    await userEvent.click(screen.getByRole("button", { name: "Close" }));
-
-    expect(onClose).toHaveBeenCalled();
-    expect(calls(sent, "GET /mail-drafts")).toHaveLength(0);
-    expect(calls(sent, "PUT /mail-drafts")).toHaveLength(0);
-  });
-
-  it("sends without naming the record's draft", async () => {
-    const sent = stubRoutes({
-      "GET /mail-drafts": () => jsonResponse(SAVED),
-      "POST /emails": () => jsonResponse({ id: "act-9" }, 202),
-    });
-    render(proposal(vi.fn()));
-    await userEvent.type(
-      await screen.findByRole("combobox", { name: "To" }),
-      "buyer@acme.test{enter}",
-    );
-    await pickOption(
-      userEvent.setup(),
-      screen.getByRole("combobox", { name: "Reason for contact" }),
-      "Follow-up they requested",
-    );
-
-    await pressSend();
-
-    await waitFor(() => expect(calls(sent, "POST /emails")).toHaveLength(1));
-    expect(calls(sent, "POST /emails")[0]?.body).not.toHaveProperty(
-      "mail_draft_id",
-    );
   });
 });

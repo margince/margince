@@ -7907,6 +7907,8 @@ export const en = {
   "compose.savedDraftDelete": "Delete",
   "compose.savedDraftDeleted": "Saved draft deleted",
   "compose.savedDraftRestored": "Saved draft restored",
+  "compose.savedDraftUndoSent":
+    "The message was sent, so its draft stays deleted.",
   "compose.savedDraftRemove": "Delete saved draft",
   "compose.savedDraftByAgent": "Agent draft restored. Read it before sending.",
   "compose.waitingDraftTitle": "Draft waiting",
@@ -20849,6 +20851,7 @@ export const en = {
   "worklist.verb.meetingNoShow": "No-show",
   "worklist.verb.meetingCanceled": "Did not happen",
   "worklist.verb.meetingOutcomeRecorded": "Meeting outcome recorded",
+  "worklist.verb.meetingCanceledRecorded": "Marked as not held (canceled).",
   "worklist.verb.meetingOutcomeFailed": "Outcome was not recorded. Retry.",
   "worklist.verb.meetingDayMissing":
     "That date does not exist in the company’s time zone. Pick another date.",
