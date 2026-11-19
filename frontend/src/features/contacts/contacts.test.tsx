@@ -18,7 +18,7 @@ import { activityTimeline } from "../../design-system/activitytimeline";
 import { stubClipboard } from "../../design-system/clipboard-testing";
 import { LocaleProvider } from "../../i18n";
 import { WriteToProvider } from "../../lib/writeto";
-import { meFixture } from "../../testing/mefixture";
+import { meFixture, READS_RECORDS } from "../../testing/mefixture";
 import { phoneRowOf, stubWindowWidth } from "../../testing/phonerow.testkit";
 import { ContactsScreen } from "./contacts";
 
@@ -44,7 +44,10 @@ function render(ui: ReactNode) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  client.setQueryData(["me"], meFixture({ rowScope: "all" }));
+  client.setQueryData(
+    ["me"],
+    meFixture({ rowScope: "all", allow: READS_RECORDS }),
+  );
   return rtlRender(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">{ui}</LocaleProvider>
@@ -334,6 +337,7 @@ function stubFetch(
       return jsonResponse(
         meFixture({
           allow: {
+            ...READS_RECORDS,
             contact: ["read", "create", "update", "delete"],
             relationship: ["read", "create", "update", "delete"],
             activity: ["read", "create"],
@@ -448,7 +452,10 @@ describe("ContactsScreen — rich create (P-15)", () => {
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
-    client.setQueryData(["me"], meFixture({ rowScope: "all" }));
+    client.setQueryData(
+      ["me"],
+      meFixture({ rowScope: "all", allow: READS_RECORDS }),
+    );
     rtlRender(
       <QueryClientProvider client={client}>
         <LocaleProvider initial="de">

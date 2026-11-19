@@ -2824,6 +2824,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "shell.shortcuts.singleKeyOffHint": "Bật lại trong Cài đặt, mục Tài khoản.",
   "shell.more": "Thêm",
   "shell.unknownPage": "Không tìm thấy",
+  "shell.unavailableForRole": "Không khả dụng cho vai trò của bạn.",
   "shell.closeMenu": "Đóng",
   "shell.agent.scope": "Margince chỉ đọc những gì bạn xem được.",
   "shell.capture.importing": "Đang nhập lịch sử hộp thư",
@@ -12970,7 +12971,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   // claims the installation's own configuration can contradict, on the screen a
   // CISO reads on the way in.
   "auth.legalProtected": "Quyền truy cập vào công ty này bị giới hạn.",
-  "auth.legalTerms": "Điều khoản",
   "auth.legalPrivacy": "Quyền riêng tư",
   "auth.signingIn": "Đang đăng nhập…",
   "auth.signIn": "Đăng nhập",
@@ -16293,6 +16293,20 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Các thiết bị khác đã được đăng xuất và các ứng dụng đã kết nối cần được kết nối lại.",
   "account.signOutHelp":
     "Kết thúc phiên của bạn trên trình duyệt này. Các thiết bị khác vẫn đăng nhập.",
+  "account.devicesCard": "Thiết bị đã đăng nhập",
+  "account.devicesBrowserOn": "{browser} trên {system}",
+  "account.devicesUnknown": "Thiết bị không rõ",
+  "account.devicesWhen":
+    "Đăng nhập {signedIn}. Hoạt động gần nhất {lastActive}.",
+  "account.devicesThisOne": "Thiết bị này",
+  "account.devicesSignOut": "Đăng xuất",
+  "account.devicesSignOutNamed": "Đăng xuất {device}",
+  "account.devicesOthers": "Các thiết bị khác",
+  "account.devicesOthersHelp": "Kết thúc mọi phiên trừ phiên này.",
+  "account.devicesSignOutOthers": "Đăng xuất tất cả thiết bị khác",
+  "account.devicesFailed_one": "{count} thiết bị chưa được đăng xuất. Thử lại.",
+  "account.devicesFailed_other":
+    "{count} thiết bị chưa được đăng xuất. Thử lại.",
   "account.languageHelp":
     "Ngôn ngữ của menu, trang và tin nhắn từ Margince. Được lưu vào tài khoản của bạn, nên áp dụng trên mọi thiết bị bạn đăng nhập.",
   "account.appearanceHelp":
