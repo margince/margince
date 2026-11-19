@@ -34359,6 +34359,11 @@ export interface components {
              */
             readonly created_from_activity_id?: string | null;
             /**
+             * @description How a message to this contact opens: `formal` takes the surname, `familiar` the first name. A rep sets it once and every draft to the contact uses it ahead of what the thread suggests. Null means nobody set it, and a draft reads the register from the correspondence.
+             * @enum {string|null}
+             */
+            greeting_register?: "formal" | "familiar" | null;
+            /**
              * @description Set when the workspace's relationship to this contact is not an ordinary one. `vendor_marketing` is a named sender who only pitches something to this business and whom nobody here has answered. The default contact lists leave a marked contact out; a text search and a read by id still find it. Null is not marked. Written through `PATCH /contacts/{id}` or by the sender check, never by the request body of a create.
              * @enum {string|null}
              */
@@ -34783,6 +34788,11 @@ export interface components {
         };
         /** @description Partial update. Omitted fields are unchanged. */
         UpdateContactRequest: {
+            /**
+             * @description Sets how a message to the contact opens (`formal` or `familiar`), or clears it (null) so drafts read the register from the correspondence again.
+             * @enum {string|null}
+             */
+            greeting_register?: "formal" | "familiar" | null;
             /**
              * @description Marks the contact (`vendor_marketing`) or clears the mark (null). The mark records who set it, so a mark set by hand is never lifted by the automatic check that lifts the mark the sender check set.
              * @enum {string|null}
@@ -36160,6 +36170,11 @@ export interface components {
             /** @description Whether this caller may file an activity under this contact. Computed with the same row-scope and write-share predicate the attach gate uses, so a mail started from the company links only the recipients this is true for. A read-only share grants no attach right. The server rechecks every write. */
             attachable: boolean;
             title?: string | null;
+            /**
+             * @description The register a rep set for opening a message to this contact; null when none is set.
+             * @enum {string|null}
+             */
+            greeting_register?: "formal" | "familiar" | null;
             /** @description A provider-sourced job title, populated ONLY where the canonical title is empty (PO-EXT-9): a bought title fills a blank, never overwrites or seconds one a human typed. */
             provider_title?: string | null;
             /**

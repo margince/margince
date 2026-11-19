@@ -2662,6 +2662,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.ended_at": "Kết thúc",
   "history.field.expected_close_date": "Ngày chốt dự kiến",
   "history.field.first_name": "Tên",
+  "history.field.greeting_register": "Cách chào",
   "history.field.full_name": "Tên",
   "history.field.win_probability": "Xác suất",
   "history.field.stage_id": "Giai đoạn",
@@ -7246,6 +7247,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "create.firstName": "Tên",
   "create.lastName": "Họ",
   "create.contactTitle": "Chức danh",
+  "create.greetingRegister": "Cách chào",
+  "create.greetingRegisterHint":
+    "Bản nháp gửi liên hệ này mở đầu theo cách này.",
+  "create.greetingRegister.unset": "Để Margince quyết định",
+  "create.greetingRegister.formal": "Trang trọng, gọi bằng họ",
+  "create.greetingRegister.familiar": "Thân mật, gọi bằng tên",
   "create.acquisitionSource": "Nguồn của liên hệ",
   "create.acquisitionSourceHint":
     "Thông tin này hiển thị trên trang thông tin bảo vệ dữ liệu cá nhân của liên hệ.",

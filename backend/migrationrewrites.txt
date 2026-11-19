@@ -172,3 +172,5 @@
 1795101301_a_foreign_site_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1795101700_a_personal_meeting_moves_no_deal_clock.up.sql | * | the procedural bodies are clock trigger functions that move a derived column; the migration replaces two functions and one trigger, adds one trigger, and changes no existing row
 1795101700_a_personal_meeting_moves_no_deal_clock.down.sql | * | the procedural bodies are clock trigger functions; the down migration drops one trigger and restores two functions and changes no existing row
+1795108620_a_contact_greeting_register_checks_its_length.up.sql | * | replaces the two text guards on contact; the guards act on later writes only, and it changes no existing row
+1795108620_a_contact_greeting_register_checks_its_length.down.sql | * | replaces the two text guards on contact; the guards act on later writes only, and it changes no existing row

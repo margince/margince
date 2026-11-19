@@ -1523,6 +1523,7 @@
   "history.field.ended_at": "Beendet",
   "history.field.expected_close_date": "Voraussichtlicher Abschluss",
   "history.field.first_name": "Vorname",
+  "history.field.greeting_register": "Anrede",
   "history.field.full_name": "Name",
   "history.field.win_probability": "Abschlusschance",
   "history.field.stage_id": "Phase",

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
+	"github.com/margince/margince/backend/internal/shared/kernel/greetingregister"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -143,6 +144,9 @@ type Written struct {
 	// first, as draftcore.AddresseeEvidence gives it. It outranks Stored: it is
 	// the sender's own text with quotes cut, read with today's quote rule.
 	Addressee []string
+	// Greeting is the register a rep set on the addressee. It outranks every
+	// reading of the text, because the rep decided it once for this contact.
+	Greeting greetingregister.Register
 	// Stored is the language recorded on the message, empty when none is.
 	// It outranks the rest of the text: the same message read twice must not
 	// answer two languages because a quoted chain grew underneath it.
@@ -197,8 +201,12 @@ func (r *Resolver) Resolve(ctx context.Context, written Written, state convstate
 	// envelope carries a register only for a German draft, so a language
 	// corrected after construction would leave a German register on an English
 	// envelope, or drop one the other way.
-	return NewEnvelopeWithRegister(r.language(ctx, written),
+	envelope := NewEnvelopeWithRegister(r.language(ctx, written),
 		register(written), state, now, name, email)
+	if greetingregister.Valid(written.Greeting) {
+		envelope.GreetingRegister = string(written.Greeting)
+	}
+	return envelope
 }
 
 // evidence is the text a draft's language and register are read from, in the
@@ -212,8 +220,11 @@ func (w Written) evidence() []string {
 	return append(out, w.Rewrite, w.DraftSubject, w.Purpose)
 }
 
-// register is the first du or Sie the evidence shows.
+// register is the du or Sie the rep set on the addressee, else the first one the evidence shows.
 func register(written Written) textlang.Register {
+	if stored := greetingregister.Address(written.Greeting); stored != textlang.RegisterUnknown {
+		return stored
+	}
 	for _, text := range written.evidence() {
 		if found := textlang.DetectRegister(text); found != textlang.RegisterUnknown {
 			return found

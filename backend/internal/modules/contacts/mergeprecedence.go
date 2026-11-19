@@ -109,6 +109,9 @@ func buildSurvivorshipPatch(target, source crmcontracts.Contact, sourceID ids.Co
 	if target.ConvertedFromLeadId == nil && source.ConvertedFromLeadId != nil {
 		p.Set("converted_from_lead_id", nil, ids.UUID(*source.ConvertedFromLeadId))
 	}
+	// The survivor keeps its own register. The duplicate's fills an empty one;
+	// when both are set and differ, the survivor's stands.
+	takeString(p, fieldGreetingRegister, greetingRegisterText(target), greetingRegisterText(source), false)
 	fillMergeAddress(p, target.Address, source.Address)
 	return p
 }

@@ -144,6 +144,10 @@ func (h Handlers) draftForActivity(ctx context.Context, anchor ids.UUID, activit
 		subject, body, err := h.emailDrafter.DraftEmail(ctx, anchor, steering.Intent)
 		return DraftResult{Subject: subject, Body: body}, err
 	}
-	subject, body, lang := h.store.FloorDraft(ctx, anchor, activity, steering.Language)
+	covers, err := h.ownAddress(ctx)
+	if err != nil {
+		return DraftResult{}, err
+	}
+	subject, body, lang := h.store.FloorDraft(ctx, anchor, activity, steering.Language, covers)
 	return DraftResult{Subject: subject, Body: body, Language: lang}, nil
 }
