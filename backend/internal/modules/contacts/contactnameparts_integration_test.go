@@ -187,9 +187,9 @@ func TestAPartsEditDecidesOnTheDisplayNameCommittedBeforeIt(t *testing.T) {
 	}
 }
 
-// A rename to another person leaves no old name part behind, and a reload of
+// A rename to another contact's name leaves no old name part behind, and a reload of
 // the record reads the parts as cleared.
-func TestRenamingToAnotherPersonClearsTheOldNameParts(t *testing.T) {
+func TestRenamingToAnotherNameClearsTheOldNameParts(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 	created, err := e.store.CreateContact(ctx, CreateContactInput{

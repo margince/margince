@@ -7282,7 +7282,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "create.amount": "Giá trị",
   "create.amountNegative": "Nhập số tiền từ 0 trở lên.",
   "create.emailNamesNoOne":
-    "Địa chỉ này thuộc về một hệ thống gửi thư, không phải một người. Hãy nhập địa chỉ riêng của liên hệ.",
+    "Địa chỉ này thuộc về một hệ thống gửi thư mà không ai trả lời. Hãy nhập địa chỉ riêng của liên hệ.",
   "create.addressErased":
     "Giá trị này đã bị xóa theo yêu cầu của chủ sở hữu và không thể lưu lại.",
   "create.linkedinMalformed":
@@ -7290,7 +7290,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "create.linkedinNotLinkedin":
     "Hãy nhập đường liên kết tới một trang trên linkedin.com.",
   "create.linkedinNotProfile":
-    "Hãy nhập đường liên kết tới hồ sơ của một người, ví dụ linkedin.com/in/ten.",
+    "Hãy nhập đường liên kết tới hồ sơ cá nhân, ví dụ linkedin.com/in/ten.",
   "create.dateRangeReversed":
     "Ngày kết thúc đứng trước ngày bắt đầu. Hãy chọn ngày kết thúc muộn hơn.",
   "create.countryCodeInvalid":

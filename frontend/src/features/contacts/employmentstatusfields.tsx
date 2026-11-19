@@ -2,7 +2,7 @@ import { Field, TextInput } from "../../design-system/atoms";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
 
-/** A status a person picked; empty until one is, for a link imported as unknown. */
+/** A status the reader picked; empty until one is, for a link imported as unknown. */
 export type EmploymentStatusChoice = "current" | "former" | "";
 
 /**

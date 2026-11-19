@@ -7474,14 +7474,14 @@ export const en = {
   "create.amount": "Value",
   "create.amountNegative": "Enter an amount of zero or more.",
   "create.emailNamesNoOne":
-    "This address belongs to a sending system, not a person. Enter the contact’s own address.",
+    "This address belongs to a sending system that nobody answers. Enter the contact’s own address.",
   "create.addressErased":
     "This value was erased at its owner’s request and cannot be stored again.",
   "create.linkedinMalformed":
     "This is not a link. Paste the address of the LinkedIn page.",
   "create.linkedinNotLinkedin": "Enter a link to a page on linkedin.com.",
   "create.linkedinNotProfile":
-    "Enter a link to a person’s profile, such as linkedin.com/in/name.",
+    "Enter a link to someone’s own profile, such as linkedin.com/in/name.",
   "create.dateRangeReversed":
     "The end date is before the start date. Choose a later end date.",
   "create.countryCodeInvalid":

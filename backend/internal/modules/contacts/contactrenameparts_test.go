@@ -11,7 +11,7 @@ import (
 )
 
 // A rename drops each stored name part the new display name no longer holds, so
-// a greeting never reads the old person's first name. A part it still holds stays.
+// a greeting never reads the old first name. A part it still holds stays.
 func TestARenameDropsTheNamePartsTheNewNameNoLongerHolds(t *testing.T) {
 	stored := crmcontracts.Contact{FullName: "Stefan Altmann", FirstName: new("Stefan"), LastName: new("Altmann")}
 	cases := []struct {
@@ -19,7 +19,7 @@ func TestARenameDropsTheNamePartsTheNewNameNoLongerHolds(t *testing.T) {
 		update    UpdateContactInput
 		wantClear []string
 	}{
-		{"another person's name drops both parts", UpdateContactInput{FullName: new("Maria Neumann")}, []string{"first_name", "last_name"}},
+		{"another name drops both parts", UpdateContactInput{FullName: new("Maria Neumann")}, []string{"first_name", "last_name"}},
 		{"a new surname drops only the last name", UpdateContactInput{FullName: new("Stefan Neumann")}, []string{"last_name"}},
 		{"a title or a change of case keeps both", UpdateContactInput{FullName: new("Dr. STEFAN ALTMANN")}, nil},
 		{"accents folded keep the part", UpdateContactInput{FullName: new("Stéfan Altmann")}, nil},

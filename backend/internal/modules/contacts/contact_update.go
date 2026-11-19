@@ -284,8 +284,8 @@ func updateAsWritten(current crmcontracts.Contact, in UpdateContactInput, active
 }
 
 // namePartsARenameDrops lists each stored name part the new display name no
-// longer holds as a run of its words. A greeting then never reads the old
-// person's name. An update that states a part decides that part itself.
+// longer holds as a run of its words. A greeting then never reads the name of
+// the contact it was before. An update that states a part decides that part itself.
 func namePartsARenameDrops(current crmcontracts.Contact, in UpdateContactInput) []string {
 	if in.FullName == nil || *in.FullName == current.FullName || movesANamePart(in) {
 		return nil
