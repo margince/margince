@@ -59,17 +59,19 @@ export function timezoneOptions(locale: Locale, selected: string, at: Date) {
   );
 }
 
-// The filter also matches the IANA id and a former city name, so "Saigon" and
-// "Europe/Berlin" find their zone as well as the label does.
+// The filter also matches every IANA id of the zone, current and former, and a
+// former city name. "Saigon", "Asia/Saigon" and "Asia/Ho_Chi_Minh" all find it,
+// whichever of the two ids was saved.
 export function timezoneOption(locale: Locale, zone: string, at: Date) {
   const named = currentZoneName(zone);
-  const formerCities = (FORMER_NAMES.get(named) ?? []).map((former) =>
+  const formerIds = FORMER_NAMES.get(named) ?? [];
+  const formerCities = formerIds.map((former) =>
     (former.split("/").pop() ?? former).replaceAll("_", " "),
   );
   return {
     value: zone,
     label: timezoneOptionLabel(locale, named, at),
-    keywords: [zone, ...formerCities],
+    keywords: [...new Set([zone, named, ...formerIds, ...formerCities])],
   };
 }
 

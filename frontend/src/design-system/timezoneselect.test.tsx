@@ -50,3 +50,32 @@ it("shows a saved former zone name as the one current entry", async () => {
   await user.keyboard("Ho Chi Minh");
   expect(screen.getAllByRole("option")).toHaveLength(1);
 });
+
+it("finds the zone by either id, whichever of the two was saved", async () => {
+  const user = userEvent.setup();
+  const onChange = vi.fn();
+  const { rerender } = render(
+    <StoryProviders>
+      <TimezoneSelect aria-label="Time zone" value="UTC" onChange={onChange} />
+    </StoryProviders>,
+  );
+  const picker = screen.getByRole("combobox", { name: "Time zone" });
+  await user.click(picker);
+  await user.keyboard("asia/saigon{Enter}");
+  expect(onChange).toHaveBeenLastCalledWith("Asia/Ho_Chi_Minh");
+
+  rerender(
+    <StoryProviders>
+      <TimezoneSelect
+        aria-label="Time zone"
+        value="Asia/Saigon"
+        onChange={onChange}
+      />
+    </StoryProviders>,
+  );
+  await user.click(picker);
+  await user.keyboard("asia/ho_chi_minh");
+  expect(screen.getAllByRole("option")).toHaveLength(1);
+  await user.keyboard("{Enter}");
+  expect(onChange).toHaveBeenLastCalledWith("Asia/Saigon");
+});
