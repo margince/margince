@@ -309,8 +309,8 @@ func TestTheEngineReadsAtLeastOneRuleField(t *testing.T) {
 	// to a subpackage would report the movers unapplied rather than say what
 	// happened.
 	//
-	// No shipped pack narrows the two windows — extensions/de and extensions/vn
-	// both declare the core defaults, and vn's own comment says so. What the
+	// No shipped pack narrows the two windows — extensions/eu and extensions/vn
+	// all declare the core defaults, and vn's own comment says so. What the
 	// scan proves is that the reader exists, which is what this gate asks; a
 	// pack that one day sends a shorter window reaches an engine that reads it.
 	for _, field := range []string{"FrequencyCap", "ReplyWindow", "DealFollowUpWindow", "MarketingExceptions"} {
@@ -555,19 +555,20 @@ func TestEveryCitationExplainsACodeTheEngineEmits(t *testing.T) {
 }
 
 // compiledRulesFiles are the files gen-messaging-rules writes, one beside each
-// policy folder. Their citations are Go literals like a hand-written pack's.
+// policy folder, whether it holds one pack or one per country. Their citations
+// are Go literals like a hand-written pack's.
 func compiledRulesFiles(t *testing.T) []string {
 	t.Helper()
-	indexes, err := filepath.Glob("../extensions/*/policy/index.md")
+	folders, err := filepath.Glob("../extensions/*/policy")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(indexes) == 0 {
+	if len(folders) == 0 {
 		t.Fatal("no pack has a policy folder; the packs moved, and their compiled citations are unread")
 	}
-	out := make([]string, 0, len(indexes))
-	for _, index := range indexes {
-		out = append(out, filepath.Join(filepath.Dir(filepath.Dir(index)), "messagingrules_gen.go"))
+	out := make([]string, 0, len(folders))
+	for _, folder := range folders {
+		out = append(out, filepath.Join(filepath.Dir(folder), "messagingrules_gen.go"))
 	}
 	return out
 }

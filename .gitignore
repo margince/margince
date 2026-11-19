@@ -17,7 +17,7 @@ coverage-extensions.out
 # an unrelated future /build asset is never silently hidden), and
 # extensions/ is the installation-owned enabled set. The vanilla tree
 # ships the placeholder, the approval lock, and the FIRST-PARTY units
-# enabled by default (extensions/de and extensions/vn, the German and
+# enabled by default (extensions/eu and extensions/vn, the EU member-state and
 # Vietnamese jurisdiction packs; extensions/openchannel, the reference
 # connector; extensions/finance-demo, the demonstration accounting source). instance/go.mod
 # turns a unit on, and a unit missing from the un-ignore list below is a unit
@@ -39,7 +39,7 @@ coverage-extensions.out
 /extensions/*
 !/extensions/.gitkeep
 !/extensions/approvals.lock
-!/extensions/de
+!/extensions/eu
 !/extensions/finance-demo
 !/extensions/openchannel
 !/extensions/vn

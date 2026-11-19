@@ -16,7 +16,7 @@ import (
 // TestNewDeclaresTheJurisdictionAndNoRetentionClass pins the two structural
 // facts: this pack is Vietnam, and it declares no retention floor. The absent
 // class is deliberate content, so an added one must be an argued change rather
-// than a copy of extensions/de.
+// than a copy of the German pack in extensions/eu.
 func TestNewDeclaresTheJurisdictionAndNoRetentionClass(t *testing.T) {
 	e := New()
 	if e.Name != "vn" {

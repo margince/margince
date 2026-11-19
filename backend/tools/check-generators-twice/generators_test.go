@@ -67,7 +67,7 @@ func TestEachFrontendScriptRunsOnceEvenWhenAnotherCallsIt(t *testing.T) {
 func TestAToolNamesAnOutputByAnyTrailingPartOfItsPath(t *testing.T) {
 	named := map[string]string{"manifest.generated.json": "gen-composition", "frontend/src/stub.gen.ts": "gen-composition"}
 	for output, want := range map[string]bool{
-		"extensions/de/manifest.generated.json": true,
+		"extensions/eu/manifest.generated.json": true,
 		"frontend/src/stub.gen.ts":              true,
 		"other/src/stub.gen.ts":                 false,
 	} {

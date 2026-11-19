@@ -4,6 +4,7 @@
 package consent
 
 import (
+	"maps"
 	"slices"
 	"sync"
 	"testing"
@@ -14,26 +15,50 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
 )
 
-// The outcomes the engine gives under the shipped German and Vietnamese packs.
-// They are written as answers, not read off the rules. So a change to how a
-// pack is built cannot move them unseen.
+// The outcomes the engine gives under the shipped packs. They are written as
+// answers, not read off the rules. So a change to how a pack is built cannot
+// move them unseen.
 
-// shippedPackCodes registers each shipped pack under a test code of its own.
-// The real country codes stay free for every other test in this binary. The
-// p codes sit outside the range testMessagingRules hands out (qm-qz, xa-xz).
+// shippedPackCodes registers each shipped pack under a test code of its own,
+// handed out from shippedPackCodeRanges in the order of the real codes. The
+// real country codes stay free for every other test in this binary.
 func shippedPackCodes(t *testing.T) map[string]jurisdiction.Code {
 	t.Helper()
 	packs := shippedPacks(t)
-	if len(packs) != 2 {
-		t.Fatalf("%d packs ship; give each new one a test code here", len(packs))
+	var free []jurisdiction.Code
+	for _, r := range shippedPackCodeRanges {
+		for second := r.first; second <= r.last; second++ {
+			free = append(free, jurisdiction.Code(string([]rune{r.prefix, second})))
+		}
+	}
+	countries := slices.Sorted(maps.Keys(packs))
+	if len(countries) > len(free) {
+		t.Fatalf("%d packs ship and shippedPackCodeRanges holds %d codes", len(countries), len(free))
+	}
+	out := map[string]jurisdiction.Code{}
+	for i, country := range countries {
+		out[country] = free[i]
 	}
 	registerShipped.Do(func() {
-		de, vn := packs["de"], packs["vn"]
-		de.Jurisdiction, vn.Jurisdiction = "pd", "pv"
-		messagingrules.Register(de)
-		messagingrules.Register(vn)
+		for _, country := range countries {
+			rules := packs[country]
+			rules.Jurisdiction = out[country]
+			messagingrules.Register(rules)
+		}
 	})
-	return map[string]jurisdiction.Code{"de": "pd", "vn": "pv"}
+	return out
+}
+
+// shippedPackCodeRange is a prefix and the second letters handed out under it.
+type shippedPackCodeRange struct{ prefix, first, last rune }
+
+// shippedPackCodeRanges are the codes shippedPackCodes hands out. They sit
+// outside the ranges testMessagingRules hands out, and
+// gates/messagingtestcodes_test.go fails a literal code another test in this
+// package registers inside them.
+var shippedPackCodeRanges = [...]shippedPackCodeRange{
+	{prefix: 'm', first: 'a', last: 'z'},
+	{prefix: 'n', first: 'a', last: 'z'},
 }
 
 var registerShipped sync.Once
@@ -46,13 +71,16 @@ type packOutcome struct {
 	prefix            string
 }
 
+// existingCustomer is the Art. 13(2) exception with all four of its conditions.
+var existingCustomer = &messagingrules.MarketingException{
+	Kind: messagingrules.ExistingCustomer, RequiresSaleEvidence: true, RequiresCollectionTimeOptOut: true,
+	RequiresSimilarity: true, RequiresNoObjection: true,
+}
+
 var shippedOutcomes = map[string]packOutcome{
 	"de": {
 		reply: 365 * 24 * time.Hour, dealFollow: 182 * 24 * time.Hour,
-		exception: &messagingrules.MarketingException{
-			Kind: messagingrules.ExistingCustomer, RequiresSaleEvidence: true, RequiresCollectionTimeOptOut: true,
-			RequiresSimilarity: true, RequiresNoObjection: true,
-		},
+		exception:         existingCustomer,
 		unconsentedReason: commsauthz.ReasonMarketingPermissionRequired,
 	},
 	"vn": {
@@ -60,6 +88,30 @@ var shippedOutcomes = map[string]packOutcome{
 		unconsentedReason: commsauthz.ReasonMarketingConsentRequired,
 		capped:            true, prefix: "[QC]",
 	},
+	"at": memberStateOutcome(false, ""), "be": memberStateOutcome(true, ""), "bg": memberStateOutcome(false, ""),
+	"cy": memberStateOutcome(true, ""), "cz": memberStateOutcome(true, ""), "dk": memberStateOutcome(true, ""),
+	"ee": memberStateOutcome(true, ""), "es": memberStateOutcome(true, "Publicidad"), "fi": memberStateOutcome(true, ""),
+	"fr": memberStateOutcome(true, ""), "gr": memberStateOutcome(true, ""), "hr": memberStateOutcome(true, ""),
+	"hu": memberStateOutcome(false, ""), "ie": memberStateOutcome(false, ""), "it": memberStateOutcome(true, ""),
+	"lt": memberStateOutcome(true, ""), "lu": memberStateOutcome(true, ""), "lv": memberStateOutcome(true, ""),
+	"mt": memberStateOutcome(true, ""), "nl": memberStateOutcome(true, ""), "pl": memberStateOutcome(false, ""),
+	"pt": memberStateOutcome(true, ""), "ro": memberStateOutcome(true, ""), "se": memberStateOutcome(true, ""),
+	"si": memberStateOutcome(true, ""), "sk": memberStateOutcome(true, ""),
+}
+
+// memberStateOutcome is what an EU member-state pack other than Germany's
+// gives. With the existing-customer exception, advertising without consent
+// asks for a permission; without it, the refusal stands as the core gave it.
+func memberStateOutcome(exception bool, prefix string) packOutcome {
+	out := packOutcome{
+		reply: 365 * 24 * time.Hour, dealFollow: 182 * 24 * time.Hour,
+		unconsentedReason: commsauthz.ReasonNoMarketingConsent, prefix: prefix,
+	}
+	if exception {
+		out.exception = existingCustomer
+		out.unconsentedReason = commsauthz.ReasonMarketingPermissionRequired
+	}
+	return out
 }
 
 func TestTheShippedPacksGiveTheOutcomesTheyGaveBeforeTheyWereCompiled(t *testing.T) {
@@ -157,13 +209,14 @@ type shippedSend struct {
 }
 
 // sendFindings answers the codes the engine's draft, subject and footer checks
-// raise for one send. A sender in the recipient's own country sends under that
-// pack; any other sender is established under no pack this test loads.
+// raise for one send. A sender in the recipient's own country, or a fixture
+// that names no sender, sends under that pack; any other sender is established
+// under no pack this test loads.
 func sendFindings(t *testing.T, s shippedSend) []string {
 	t.Helper()
 	recipient := shippedPackCodes(t)[s.country]
 	sender := jurisdiction.Code(s.sender)
-	if s.sender == s.country {
+	if s.sender == s.country || s.sender == "" {
 		sender = recipient
 	}
 	var codes []string

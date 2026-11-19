@@ -227,7 +227,7 @@ The catalog comes from the `mcp.ToolSpec` each tool returns from `Spec()`. **The
   A tool that must be confirmed first must declare `x-mcp-tool.subject`. At boot, Margince refuses `send` and `enrich`
   from an extension; the rules are in [how-to/add-an-extension.md](../how-to/add-an-extension.md). The composed set is
   a trust line, and that limits what the handler of a unit can do.
-- **The plain tree adds no tools.** `extensions/de` and `extensions/vn` register none, and every operation of
+- **The plain tree adds no tools.** `extensions/eu` and `extensions/vn` register none, and every operation of
   `extensions/openchannel` is `human-only`. On a plain install, the catalog below is all an agent can reach.
 
 `TestTheToolCatalogsTiersAreTheContractsTiers` holds the tiers and rows of the tables against the contract, both ways,

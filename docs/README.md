@@ -44,7 +44,7 @@ customer signs them, and Margince does not check them.
 [handbook/compliance.md](handbook/compliance.md) says why.
 
 - [compliance/README.md](compliance/README.md): the list, with each German document next to its
-  English copy. `extensions/de` ships them, and only the German text is the legal one.
+  English copy. `extensions/eu` ships them, and only the German text is the legal one.
 
 ### Attacks: what we must do as the maker
 

@@ -17,7 +17,7 @@ the allow mark.
 [Build a custom Margince](build-a-custom-margince.md) says how to mark an example for development and tests.
 
 `extensions/openchannel` is the **reference unit**. It owns data and serves routes. It works with an outside provider through capture, a merge
-key declaration and a transport that replies leave on, and it ships a screen. Copy it first. `extensions/de`
+key declaration and a transport that replies leave on, and it ships a screen. Copy it first. `extensions/vn`
 (a country pack) and `fixtures/extensions/crm-hello` (the smallest unit that runs) are the smaller shapes.
 
 A unit can ship a frontend too. `extensions/<name>/frontend/` is a pnpm package whose
@@ -1601,7 +1601,7 @@ Each unit is its own Go module, so the `./...` of the backend never reaches it. 
 `make test-extensions` runs on the composed workspace. Its Go files are under the same craftsmanship and license
 header gates as `backend/`. `make craft-static`, which `make check` runs, scans `extensions/`. Pin the legal
 content, so a changed length or class name is a planned, reviewed edit (copy the shape from
-`extensions/de/de_test.go`):
+`extensions/eu/de_test.go`):
 
 ```go
 func TestNewDeclaresTheFloors(t *testing.T) {
@@ -1666,7 +1666,7 @@ committed `composition/` stub.
 ## Ship it
 
 **`.gitignore` ignores the folder of a new unit.** It ignores `/extensions/*`, but not a list of allowed ones
-(`!/extensions/de`, …). So a unit from the main project that you mean to ship in the plain tree **must add its
+(`!/extensions/eu`, …). So a unit from the main project that you mean to ship in the plain tree **must add its
 own line**, `!/extensions/<name>`. If it does not, the pull request opens with no extension files, and git also
 ignores files you add to the unit later. `git add -f` stages the files once, but leaves the folder ignored. So
 it does not take the place of the line.

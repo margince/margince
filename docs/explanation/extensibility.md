@@ -9,7 +9,7 @@ tree, with no add-ons of its own, ships three units:
 
 | Unit | What it is |
 |---|---|
-| `extensions/de` | The German jurisdiction pack: the legal floors on retention and the outbound messaging rules |
+| `extensions/eu` | The packs of the 27 EU member states: each one's outbound messaging rules on a shared EU layer, and the German legal floors on retention |
 | `extensions/vn` | The Vietnamese jurisdiction pack: the advertising-mail rules, and no retention floor |
 | `extensions/openchannel` | The reference unit. It uses every capability the tier has: its own tables, governed agent tools, an inbound edge with no sign-in that checks a signature, a job that empties a queue, a subscription, ingress with a merge key, a transport it carries replies out on, and its own screen |
 
@@ -322,7 +322,7 @@ name to show, and would otherwise refuse it by stopping the boot that composed t
 
 The core stays free of any one jurisdiction. A fitness gate (`check-no-jurisdiction.sh`) scans the core
 source written by hand for names that belong to one jurisdiction, and fails the build on a match. Germany
-lives in `extensions/de`, which declares the legal **retention floors** of GoBD and AO:
+lives in `extensions/eu`, which declares the legal **retention floors** of GoBD and AO:
 
 - business mail, calls, meetings and messages with outside parties, 6 years;
 - accounting records (*Buchungsbelege*), the 8-year class of §147 AO, as changed in 2025.
@@ -592,7 +592,7 @@ fixture units under `fixtures/extensions/` (`crm-hello`, the smallest unit that 
 | The composition generate step | `backend/tools/gen-composition/` |
 | The committed plain stub (and its `replace` in `backend/go.mod`) | `composition/extensions_gen.go` |
 | The `GOWORK` switch every build lane carries | `backend/Makefile` (`GOWORK_COMPOSED`) |
-| The first-party German pack | `extensions/de/de.go` |
+| The first-party German pack | `extensions/eu/de.go` |
 | The reference unit (every capability but a finance source), and its served tools | `extensions/openchannel/openchannel.go`, `endpoint.go` |
 | Its connector half: ingress, merge key, transport | `extensions/openchannel/drain.go`, `record.go`, `send.go` |
 | Its inbound edge with no sign-in | `extensions/openchannel/inbound.go` |

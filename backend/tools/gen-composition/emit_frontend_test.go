@@ -101,7 +101,7 @@ func TestFrontendRegistryCarriesEveryDeclaredVerbUnderItsUnit(t *testing.T) {
 }
 
 // A unit that composes but declares no governed operation is a real state
-// (a Go-only unit with no api/ fragment — extensions/de today). It must reach
+// (a Go-only unit with no api/ fragment, such as extensions/eu). It must reach
 // the registry with an empty verb list rather than disappearing from it: the
 // SPA's not-found card is a claim that the unit is not ENABLED, and it would
 // be a lie for a unit that is.

@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/consent backend/internal/modules/privacy backend/internal/shared/ports/commsauthz backend/internal/shared/ports/jurisdiction backend/internal/compose/jobs_privacyretention.go backend/internal/compose/siteleadnotice.go extensions/de -->
+<!-- describes: backend/internal/modules/consent backend/internal/modules/privacy backend/internal/shared/ports/commsauthz backend/internal/shared/ports/jurisdiction backend/internal/compose/jobs_privacyretention.go backend/internal/compose/siteleadnotice.go extensions/eu -->
 # Privacy, consent & the GDPR engines
 
 ## The authorization engine (`consent`)
@@ -430,7 +430,7 @@ record, or is listed as owing one.
 ## The installation's jurisdiction
 
 An installation runs under one jurisdiction, stored as `installation.country`. It comes from
-`workspace.country` in `margince.yaml`, from the setup claim, or from the Jurisdiction settings page. Packs are extensions (`extensions/de`, `extensions/vn`), built in through the
+`workspace.country` in `margince.yaml`, from the setup claim, or from the Jurisdiction settings page. Packs are extensions (`extensions/eu`, `extensions/vn`), built in through the
 `ports/jurisdiction` seam; see [extensibility.md](extensibility.md). Core code never names a
 jurisdiction.
 
@@ -617,4 +617,4 @@ Later mail capture and data tasks keep a user's confirmed source decision.
 | Decision counters | `internal/modules/consent/decisioncounter.go`, exported by `internal/compose/authzmetrics.go` |
 | The engine-and-gate report | `internal/modules/consent/authorizedisagreement.go`, run daily by `internal/compose/authzdisagreement.go` |
 | Cross-store agreement | `backend/gates/tableownershipwaivers_test.go` |
-| Jurisdiction packs | `internal/shared/ports/jurisdiction/`, `extensions/de/` |
+| Jurisdiction packs | `internal/shared/ports/jurisdiction/`, `extensions/eu/` |

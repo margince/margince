@@ -20,7 +20,7 @@ const SIX_YEARS = {
 const AVAILABLE: Jurisdiction["available"] = [
   {
     code: "de",
-    unit_name: "de",
+    unit_name: "eu",
     unit_version: "1.0.0",
     description:
       "German jurisdiction pack: the statutory retention floors and the outbound-messaging rules.",
