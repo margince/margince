@@ -13,11 +13,11 @@ import (
 	"context"
 	"slices"
 	"testing"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -232,7 +232,7 @@ func TestAPreferredEmployerTheSurvivorLeftBecomesItsCurrentOne(t *testing.T) {
 	fx := e.seedFlipFixture(ctx, t, "Eda Varga", "Current Employer", "Former Employer")
 	survivor := contactWithPhones(t, e, "Eda Varga", "eda@current.example")
 	e.employAt(ctx, t, survivor, fx.first, true)
-	ended, notPrimary := time.Now().AddDate(-1, 0, 0), false
+	ended, notPrimary := clocktest.Now(t).AddDate(-1, 0, 0), false
 	if _, err := e.store.CreateRelationship(ctx, CreateRelationshipInput{
 		Kind: employmentKind, ContactID: &survivor, CompanyID: &fx.second, IsCurrentPrimary: &notPrimary, EndedAt: &ended, Source: "manual",
 	}); err != nil {
