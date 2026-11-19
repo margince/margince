@@ -103,7 +103,7 @@ func (h Handlers) WithRecipientFiler(filer RecipientFiler) Handlers {
 func (h Handlers) GetReplyRecipient(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	ctx := r.Context()
 	anchor := ids.From[ids.ActivityKind](ids.UUID(id))
-	recipient, err := h.store.ReplyRecipientFor(ctx, anchor)
+	recipient, err := h.replyRecipient(ctx, anchor)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
@@ -189,8 +189,8 @@ func (h Handlers) replyAddress(ctx context.Context, anchor ids.ActivityID) (stri
 // counterparty produce the same empty field, and only the log tells them
 // apart afterwards.
 func (h Handlers) replyAddresses(ctx context.Context, anchor ids.ActivityID) *[]openapi_types.Email {
-	recipient, err := h.store.ReplyRecipientFor(ctx, anchor)
 	address := ""
+	recipient, err := h.replyRecipient(ctx, anchor)
 	if err == nil {
 		address, err = h.offeredAddress(ctx, anchor, recipient)
 	}

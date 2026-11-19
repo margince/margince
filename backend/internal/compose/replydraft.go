@@ -251,7 +251,11 @@ func (d replyDrafter) recipientFor(ctx context.Context, anchor ids.ActivityID) a
 	if d.store == nil {
 		return activities.ReplyRecipient{}
 	}
-	recipient, err := d.store.ReplyRecipientFor(ctx, anchor)
+	covers, ok := d.ownCovers(ctx)
+	if !ok {
+		return activities.ReplyRecipient{}
+	}
+	recipient, err := d.store.ReplyRecipientFor(ctx, anchor, covers)
 	if err != nil {
 		d.logger().WarnContext(ctx, "reply recipient unavailable; drafting without a greeting name", "err", err)
 		return activities.ReplyRecipient{}
@@ -305,6 +309,21 @@ func activityLanguage(activity crmcontracts.Activity) string {
 	return string(*activity.Language)
 }
 
+// ownCovers is the predicate naming addresses that are ours by domain, nil when
+// no reader is wired. It is false when the domains cannot be read, and the
+// caller then drafts without an addressee.
+func (d replyDrafter) ownCovers(ctx context.Context) (func(address string) bool, bool) {
+	if d.colleagues == nil {
+		return nil, true
+	}
+	own, err := d.colleagues.Covers(ctx)
+	if err != nil {
+		d.logger().WarnContext(ctx, "colleague domains unavailable; drafting without an addressee", "err", err)
+		return nil, false
+	}
+	return own, true
+}
+
 // deliveredTo is the address and contact a reply to this activity is delivered
 // to, by the send path's own rule. It is zero when none can be named. The
 // contact's mail decides the language; the greeting answers another question.
@@ -312,14 +331,9 @@ func (d replyDrafter) deliveredTo(ctx context.Context, anchor ids.ActivityID) ac
 	if d.store == nil {
 		return activities.ReplyAddressee{}
 	}
-	var covers func(address string) bool
-	if d.colleagues != nil {
-		own, err := d.colleagues.Covers(ctx)
-		if err != nil {
-			d.logger().WarnContext(ctx, "colleague domains unavailable; reading the reply language without an addressee", "err", err)
-			return activities.ReplyAddressee{}
-		}
-		covers = own
+	covers, ok := d.ownCovers(ctx)
+	if !ok {
+		return activities.ReplyAddressee{}
 	}
 	to, err := d.store.ReplyAddresseeFor(ctx, anchor, covers)
 	if _, none := errors.AsType[*activities.NoReplyAddressError](err); err != nil && !none {

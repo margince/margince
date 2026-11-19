@@ -17,6 +17,7 @@ package activities
 import (
 	"context"
 	"errors"
+	"fmt"
 	"slices"
 
 	"github.com/jackc/pgx/v5"
@@ -26,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/mailrole"
 	"github.com/margince/margince/backend/internal/shared/kernel/contactaddress"
+	"github.com/margince/margince/backend/internal/shared/kernel/greetingregister"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -52,6 +54,9 @@ type ReplyRecipient struct {
 	// Empty where the record holds no surname, which is an answer: the greeting
 	// falls back to the familiar form rather than to a guess.
 	LastName string
+	// GreetingRegister is the register a rep stored on this contact, empty when
+	// none is set.
+	GreetingRegister greetingregister.Register
 	// WrittenAbout marks a row that records work about a contact rather than
 	// correspondence with one: its To comes from FiledAddress, never the participants.
 	WrittenAbout bool
@@ -69,25 +74,27 @@ func (r ReplyRecipient) GreetingNames() (greeting, surname string) {
 	return r.FullName, r.LastName
 }
 
-// ReplyRecipientFor names the contact a reply to this activity is written to.
+// ReplyRecipientFor names the contact a reply to this activity is delivered to.
 //
-// It carries the row-scope gate the same way every other read here does: the
-// activity is gated by the link-walk, and the contact by their own visibility,
-// so an activity the caller cannot reach and a contact they cannot read both
-// answer the empty recipient rather than leaking a name.
+// It asks deliveryOf who that is, so name, surname, register and address come
+// from one ranking and one own-domain filter. The contact is read again under
+// the caller's row scope. An activity the caller cannot reach and a contact they
+// cannot read both answer the empty recipient, and no name leaks.
 //
-// One contact, not a list. A reply is written to somebody, and the counterparty
-// is read from the message's PARTICIPANTS by role — the sender of an inbound
-// message first, then an addressee, then anyone else on it — falling back to the
-// activity link only for rows that carry no participants. A group thread is a
-// real shape this does not model yet; it degrades to greeting the most likely
-// counterparty rather than to greeting nobody.
-func (s *Store) ReplyRecipientFor(ctx context.Context, id ids.ActivityID) (ReplyRecipient, error) {
+// One contact, not a list. A row that carries no participants at all, such as a
+// note, falls back to the contact it is filed on. A message whose delivered-to
+// participant is unknown or unreadable greets nobody: a copied contact never
+// stands in for it. colleague is the same predicate ReplyAddresseeFor takes.
+func (s *Store) ReplyRecipientFor(ctx context.Context, id ids.ActivityID, colleague func(address string) bool) (ReplyRecipient, error) {
 	// Naming a contact is a contact read, so it takes the contact read GRANT as
 	// well as the row scope. A caller permitted to read activities but not
 	// contacts would otherwise be told a name through this door that the contacts
 	// surface refuses them.
 	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
+		return ReplyRecipient{}, err
+	}
+	delivered, err := s.deliveryOf(ctx, id, colleague)
+	if _, none := errors.AsType[*NoReplyAddressError](err); err != nil && !none {
 		return ReplyRecipient{}, err
 	}
 
@@ -96,10 +103,7 @@ func (s *Store) ReplyRecipientFor(ctx context.Context, id ids.ActivityID) (Reply
 		written bool
 		target  EmailTarget
 	)
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// The activity read applies the link-walk scope. Reaching a contact
-		// through an activity the caller cannot see would answer a name their
-		// own scope withholds.
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		activity, err := readActivityContent(ctx, tx, id, storekit.LiveOnly)
 		if err != nil {
 			return err
@@ -107,82 +111,14 @@ func (s *Store) ReplyRecipientFor(ctx context.Context, id ids.ActivityID) (Reply
 		if written, target, err = writtenAboutTarget(ctx, tx, id, activity.Kind); err != nil {
 			return err
 		}
-
-		// ONE statement: the row scope, the archived test and the name are
-		// decided together. Split across two, a contact archived or flipped to
-		// owner-private between them still yields their name under READ
-		// COMMITTED — a race that is small, real, and needless when the scope
-		// composes into the predicate.
-		args := []any{id}
-		scope, err := auth.ScopeClauseFor(ctx, "contact", "p", func(v any) int {
-			args = append(args, v)
-			return len(args)
-		})
-		if err != nil {
-			return err
-		}
-		// The counterparty comes from the PARTICIPANTS, which record who was
-		// on the message and in what role, and only falls back to the link
-		// when an activity carries none. A link says what a message is about;
-		// a CC'd colleague and the contact who wrote it are both linked, and
-		// picking whichever was linked first addresses the reply to whoever
-		// happens to sort earliest.
-		//
-		// A participant with a user_id is one of our own seats. A reply is never
-		// addressed to us, so ReplyAddresseeFor skips it too.
-		//
-		// Rank: the sender of an inbound message is who we are answering, then
-		// a "to" recipient (our own outbound, where the addressee is the
-		// counterparty), then anyone else on it, then the bare link.
-		q := `
-				SELECT p.id, p.full_name, coalesce(p.first_name, ''), coalesce(p.last_name, ''),
-				       coalesce((SELECT pe.email
-				                   FROM contact_email pe
-				                  WHERE pe.contact_id = p.id AND pe.archived_at IS NULL` +
-			contactaddress.ReachableOrder + `
-				                  LIMIT 1), '')
-				  FROM contact p
-				  JOIN (
-				       SELECT contact_id,
-				              CASE role WHEN 'from' THEN 1 WHEN 'to' THEN 2 ELSE 3 END AS rank,
-				              created_at, id
-				         FROM activity_participant
-				        WHERE activity_id = $1 AND contact_id IS NOT NULL
-				          AND user_id IS NULL
-				       UNION ALL
-				       SELECT contact_id, 4 AS rank, created_at, id
-				         FROM activity_link
-				        WHERE activity_id = $1 AND contact_id IS NOT NULL
-				  ) c ON c.contact_id = p.id
-				 WHERE p.archived_at IS NULL`
-		if scope != "" {
-			q += ` AND (` + scope + `)`
-		}
-		q += ` ORDER BY c.rank, c.created_at, c.id LIMIT 1`
-
-		var contactID ids.UUID
 		var address string
-		err = tx.QueryRow(ctx, q, args...).Scan(
-			&contactID, &out.FullName, &out.FirstName, &out.LastName, &address)
-		if errors.Is(err, pgx.ErrNoRows) {
-			// Linked to nobody, or to a contact out of scope. Both mean no
-			// name, which the floor renders as an unnamed greeting rather
-			// than a refused draft.
-			return nil
-		}
+		out, address, err = greetingContact(ctx, tx, id, delivered.Counterparty)
 		if err != nil {
 			return err
 		}
-		// A shared mailbox has a record and no contact behind it, and its
-		// display name splits into a first name like any other: "steireif
-		// Partnernet" at partner@steireif.net greeted a company as "steireif,"
-		// in a message a rep was about to send.
-		//
-		// Cleared WHOLE rather than just the first name, because the drafter
-		// falls back to the full name when the first is empty — a half-cleared
-		// recipient would greet "steireif Partnernet," which is worse than
-		// either. The empty recipient is already this type's documented answer
-		// for "no name", and the floor opens without one.
+		// A shared mailbox has a record and no contact behind it, and its display
+		// name splits into a first name like any other. It is cleared entirely,
+		// because a half-cleared recipient would greet "steireif Partnernet,".
 		if mailrole.GreetsNobody(out.FullName, address) {
 			out = ReplyRecipient{}
 		}
@@ -200,6 +136,58 @@ func (s *Store) ReplyRecipientFor(ctx context.Context, id ids.ActivityID) (Reply
 		out.FullName = target.Name
 	}
 	return out, nil
+}
+
+// greetingContact reads the names, register and reachable address of the contact
+// a reply is greeted by. The row scope sits in the same statement as the
+// archived test, so a contact flipped to private between two reads is not named.
+// delivered is the counterparty deliveryOf resolved. Without one, only an
+// activity with no participants falls back to the contact it is filed on.
+func greetingContact(ctx context.Context, tx pgx.Tx, id ids.ActivityID, delivered string) (ReplyRecipient, string, error) {
+	var args []any
+	arg := func(v any) int {
+		args = append(args, v)
+		return len(args)
+	}
+	scope, err := auth.ScopeClauseFor(ctx, "contact", "p", arg)
+	if err != nil {
+		return ReplyRecipient{}, "", err
+	}
+	q := `
+		SELECT p.full_name, coalesce(p.first_name, ''), coalesce(p.last_name, ''),
+		       coalesce(p.greeting_register, ''),
+		       coalesce((SELECT pe.email
+		                   FROM contact_email pe
+		                  WHERE pe.contact_id = p.id AND pe.archived_at IS NULL` +
+		contactaddress.ReachableOrder + `
+		                  LIMIT 1), '')
+		  FROM contact p`
+	if delivered != "" {
+		q += fmt.Sprintf(` WHERE p.id = $%d AND p.archived_at IS NULL`, arg(delivered))
+	} else {
+		activity := arg(id)
+		q += fmt.Sprintf(`
+		  JOIN activity_link l ON l.contact_id = p.id AND l.activity_id = $%[1]d
+		 WHERE p.archived_at IS NULL
+		   AND NOT EXISTS (SELECT 1 FROM activity_participant ap WHERE ap.activity_id = $%[1]d)`, activity)
+	}
+	if scope != "" {
+		q += ` AND (` + scope + `)`
+	}
+	if delivered == "" {
+		q += ` ORDER BY l.created_at, l.id`
+	}
+	q += ` LIMIT 1`
+
+	var out ReplyRecipient
+	var address string
+	err = tx.QueryRow(ctx, q, args...).Scan(&out.FullName, &out.FirstName, &out.LastName, &out.GreetingRegister, &address)
+	if errors.Is(err, pgx.ErrNoRows) {
+		// Linked to nobody, or to a contact out of scope: no name, which the
+		// floor renders as an unnamed greeting rather than a refused draft.
+		return ReplyRecipient{}, "", nil
+	}
+	return out, address, err
 }
 
 // writtenAboutTarget says whether a reply to this kind writes about the record,

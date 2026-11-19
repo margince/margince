@@ -100,6 +100,10 @@ func TestAFollowUpToOurOwnMailTakesTheRegisterOfWhoItIsDeliveredTo(t *testing.T)
 	o.namedContact(t, "Sam", "Colleague", o.seat, "familiar")
 	o.capture(t, pricingMail("buyer@alpha.test", o.seat, pricingRoot, familiarGermanMail, 0, true))
 	ours := o.capture(t, pricingMail(o.seat, "buyer@alpha.test", "pricing-ours@ws.example", familiarGermanMail, 30, false))
+	// Our own seat's address has a contact, linked to the sender participant.
+	// A ranking that ignored seats would take that contact's register.
+	o.e.WsExec(t, `UPDATE activity_participant SET contact_id = (SELECT contact_id FROM contact_email WHERE email = $2 LIMIT 1)
+		WHERE activity_id = $1 AND (user_id IS NOT NULL OR address = $2)`, ours, o.seat)
 	prompt := replyPrompt(t, o, ours)
 	if !strings.Contains(prompt, `"greeting_register":"formal"`) || strings.Contains(prompt, `"greeting_register":"familiar"`) {
 		t.Errorf("a follow-up took the register of someone other than the addressee: %s", prompt)
@@ -159,5 +163,26 @@ func TestTheNoModelActivityPathOpensInTheStoredRegister(t *testing.T) {
 	_, body, _ := drafter.store.FloorDraft(reader, anchor, activity, textlang.English, nil)
 	if !strings.HasPrefix(body, "Dear Dietmar Rietsch,") {
 		t.Errorf("floor body = %q, want the formal opening", body)
+	}
+}
+
+// A colleague known only by our domain is skipped as the addressee.
+// Greeting and register then belong to the external contact the reply goes to.
+func TestAColleagueKnownOnlyByDomainLendsNeitherNameNorRegister(t *testing.T) {
+	o := setupOwed(t)
+	o.e.WsExec(t, `INSERT INTO workspace_email_domain (domain, source, verified) VALUES ('ws.example', 'admin', true)`)
+	o.namedContact(t, "Bea", "Billing", "billing@ws.example", "familiar")
+	o.namedContact(t, "Dietmar", "Rietsch", "buyer@alpha.test", "formal")
+	mail := pricingMail("billing@ws.example", o.seat, pricingRoot, alphaAsks, 0, true)
+	mail.cc = "buyer@alpha.test"
+	anchor := o.capture(t, mail)
+	prompt := replyPrompt(t, o, anchor)
+	for _, want := range []string{`"recipient":"Dietmar"`, `"recipient_last_name":"Rietsch"`, `"greeting_register":"formal"`} {
+		if !strings.Contains(prompt, want) {
+			t.Errorf("the prompt lacks %s: %s", want, prompt)
+		}
+	}
+	if strings.Contains(prompt, "Bea") {
+		t.Errorf("the colleague known only by domain was greeted: %s", prompt)
 	}
 }
