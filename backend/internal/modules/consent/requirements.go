@@ -21,7 +21,6 @@ package consent
 import (
 	"context"
 	"fmt"
-	"slices"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -31,6 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
+	"github.com/margince/margince/backend/internal/shared/ports/messagingrules"
 )
 
 // The requirement names, in the vocabulary a reader of a parked delivery sees.
@@ -89,18 +89,17 @@ func (s *Store) CheckMessage(
 		// running backwards.
 		//
 		// One subject line goes to every recipient, so it owes the label of
-		// each pack that judged an advertising row.
+		// each pack that judged an advertising row. A fold keeps its first
+		// label in SubjectPrefix and every distinct one in the applied list.
+		var owed []string
 		for _, codes := range rulesets {
-			rules, _, applicable := applicableRules(codes...)
-			if !applicable {
+			rules, applied, applicable := applicableRules(codes...)
+			if !applicable || rules.SubjectPrefix == "" {
 				continue
 			}
-			for _, f := range subjectPrefixFindings(rules.SubjectPrefix, string(rules.Jurisdiction), subject) {
-				if !slices.Contains(findings, f) {
-					findings = append(findings, f)
-				}
-			}
+			owed = messagingrules.AddSubjectPrefixes(owed, applied.SubjectPrefixes...)
 		}
+		findings = subjectPrefixFindings(owed, subject)
 		return nil
 	})
 	if err != nil {
@@ -123,7 +122,8 @@ type RequirementFinding struct {
 }
 
 // subjectPrefixFindings reports an advertising message whose subject does not
-// carry the label its pack fixes.
+// carry the label each of its packs fixes. One subject begins with one label,
+// so a message owing two different ones is held until its recipients are split.
 //
 // ADVERTISING ONLY. The packs declare the prefix as a marking on advertising,
 // and putting it on an invoice would tell a recipient their payment reminder is
@@ -133,18 +133,22 @@ type RequirementFinding struct {
 // The comparison is case-insensitive on a trimmed subject. A composer that
 // wrote "[qc]" met the decree's purpose, and refusing over the case of a label
 // would park lawful mail on a typographic reading nobody argues for.
-func subjectPrefixFindings(declared, jurisdiction, subject string) []RequirementFinding {
-	prefix := strings.TrimSpace(declared)
-	if prefix == "" {
+func subjectPrefixFindings(owed []string, subject string) []RequirementFinding {
+	switch {
+	case len(owed) == 0:
 		return nil
-	}
-	if strings.HasPrefix(strings.ToUpper(strings.TrimSpace(subject)), strings.ToUpper(prefix)) {
+	case len(owed) > 1:
+		return []RequirementFinding{{
+			Requirement: RequirementSubjectPrefix,
+			Detail: fmt.Sprintf("the recipients owe the different subject labels %q, and a subject begins with one; "+
+				"split the recipients into one message per label", owed),
+		}}
+	case strings.HasPrefix(strings.ToUpper(strings.TrimSpace(subject)), strings.ToUpper(owed[0])):
 		return nil
 	}
 	return []RequirementFinding{{
 		Requirement: RequirementSubjectPrefix,
-		Detail: fmt.Sprintf("an advertising subject carries %q in %s, and this one begins %q",
-			prefix, jurisdiction, firstRunes(subject, 24)),
+		Detail:      fmt.Sprintf("an advertising subject carries %q, and this one begins %q", owed[0], firstRunes(subject, 24)),
 	}}
 }
 

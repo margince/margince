@@ -6,6 +6,7 @@ package consent
 import (
 	"maps"
 	"slices"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -158,12 +159,12 @@ func TestTheShippedPacksGiveTheOutcomesTheyGaveBeforeTheyWereCompiled(t *testing
 		if got := requireConsentWhereNothingStandsIn(refused, where).ReasonCode; got != want.unconsentedReason {
 			t.Errorf("%s: advertising without consent is refused with %q, want %q", country, got, want.unconsentedReason)
 		}
-		applied, _, _ := applicableRules(where.Code)
+		applied, folded, _ := applicableRules(where.Code)
 		if (applied.FrequencyCap != nil) != want.capped {
 			t.Errorf("%s: capped = %v, want %v", country, applied.FrequencyCap != nil, want.capped)
 		}
-		unlabelled := subjectPrefixFindings(applied.SubjectPrefix, string(where.Code), "Offer")
-		labelled := subjectPrefixFindings(applied.SubjectPrefix, string(where.Code), want.prefix+" Offer")
+		unlabelled := subjectPrefixFindings(folded.SubjectPrefixes, "Offer")
+		labelled := subjectPrefixFindings(folded.SubjectPrefixes, want.prefix+" Offer")
 		if (len(unlabelled) > 0) != (want.prefix != "") || len(labelled) > 0 {
 			t.Errorf("%s: an unlabelled subject gave %v and a labelled one %v", country, unlabelled, labelled)
 		}
@@ -248,8 +249,8 @@ func sendFindings(t *testing.T, s shippedSend) []string {
 		for _, f := range packDraftFindings(recipient, sender, s.subject, s.body) {
 			codes = append(codes, f.Requirement)
 		}
-		rules, _, _ := applicableRules(recipient)
-		for _, f := range subjectPrefixFindings(rules.SubjectPrefix, string(recipient), s.subject) {
+		_, folded, _ := applicableRules(recipient)
+		for _, f := range subjectPrefixFindings(folded.SubjectPrefixes, s.subject) {
 			codes = append(codes, f.Requirement)
 		}
 	}
@@ -262,4 +263,26 @@ func sendFindings(t *testing.T, s shippedSend) []string {
 	}
 	slices.Sort(codes)
 	return slices.Compact(codes)
+}
+
+// One subject begins with one label. A message under the Korean and the
+// Singapore packs owes two, so it is held whatever its subject says.
+func TestAMessageOwingTwoDifferentLabelsIsHeldUntilItsRecipientsAreSplit(t *testing.T) {
+	t.Parallel()
+	codes := shippedPackCodes(t)
+	_, korean, _ := applicableRules(codes["kr"])
+	if got := subjectPrefixFindings(korean.SubjectPrefixes, "(광고) Offer"); len(got) != 0 {
+		t.Errorf("a labelled subject under one pack gave %v", got)
+	}
+	_, twice, _ := applicableRules(codes["kr"], codes["kr"])
+	if got := subjectPrefixFindings(twice.SubjectPrefixes, "(광고) Offer"); len(got) != 0 {
+		t.Errorf("a label owed twice gave %v", got)
+	}
+	_, both, _ := applicableRules(codes["kr"], codes["sg"])
+	for _, subject := range []string{"(광고) Offer", "<ADV> Offer", "(광고) <ADV> Offer", "Offer"} {
+		got := subjectPrefixFindings(both.SubjectPrefixes, subject)
+		if len(got) != 1 || got[0].Requirement != RequirementSubjectPrefix || !strings.Contains(got[0].Detail, "split the recipients") {
+			t.Errorf("%q under the Korean and Singapore labels gave %v, want one finding that asks for a split", subject, got)
+		}
+	}
 }
