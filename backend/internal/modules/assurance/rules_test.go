@@ -67,8 +67,7 @@ func TestEveryRuleAdmitsAndRefuses(t *testing.T) {
 		{
 			ruleType: TypeClosePast,
 			fires:    func(s Subject) Subject { s.ExpectedClose = new(at(time.April, 30)); return s },
-			// Due TODAY has not gone by. The boundary, and the case a `<=`
-			// would get wrong on the one day it matters most.
+			// Due today has not gone by: the boundary a `<=` would get wrong.
 			quiet: func(s Subject) Subject { s.ExpectedClose = new(at(time.May, 14)); return s },
 		},
 		{
@@ -101,7 +100,10 @@ func TestEveryRuleAdmitsAndRefuses(t *testing.T) {
 		},
 		{
 			ruleType: TypeNoNextStep,
-			fires:    func(s Subject) Subject { s.HasNextStep = false; return s },
+			fires: func(s Subject) Subject {
+				s.HasNextStep, s.Viability = false, unsupportedFor(viability.ReasonNoNextStep)
+				return s
+			},
 			// No next step on a deal nobody is forecasting is not a finding.
 			quiet: func(s Subject) Subject { s.HasNextStep, s.Likely = false, false; return s },
 		},
@@ -270,6 +272,12 @@ func TestNoRuleCopiesFreeTextIntoAFinding(t *testing.T) {
 	}
 }
 
+// unsupportedFor is the assessment of a deal the customer talks about that
+// lacks what the reasons name.
+func unsupportedFor(reasons ...viability.Reason) *SubjectViability {
+	return &SubjectViability{Outcome: viability.OutcomeUnsupported, Reasons: reasons}
+}
+
 // reviewRequired is the assessment of a deal whose customer went silent.
 func reviewRequired() *SubjectViability {
 	return &SubjectViability{
@@ -293,5 +301,45 @@ func TestNoRuleRaisesARetiredType(t *testing.T) {
 			(found.Type == TypeDealViability || found.Type == TypeBuyerSilent) {
 			t.Errorf("rule %s raised a retired %s finding", rule.Type, found.Type)
 		}
+	}
+}
+
+// 23:00 UTC on 14 May is already 15 May in Auckland, so a deal due on the 14th
+// has gone by there and has not in UTC.
+func TestClosePastReadsTheDayInTheInstallationZone(t *testing.T) {
+	t.Parallel()
+	auckland, err := time.LoadLocation("Pacific/Auckland")
+	if err != nil {
+		t.Fatalf("loading the zone: %v", err)
+	}
+	asOf := time.Date(testYear, time.May, 14, 23, 0, 0, 0, time.UTC)
+	due := healthy()
+	due.ExpectedClose = new(at(time.May, 14))
+	if got := ask(t, TypeClosePast, asOf, due, DefaultConfig()); got != nil {
+		t.Errorf("with no zone the 14th is still today, got %+v", got)
+	}
+	due.Zone = auckland
+	if got := ask(t, TypeClosePast, asOf, due, DefaultConfig()); got == nil {
+		t.Error("in Auckland the 14th is over, and the rule stayed quiet")
+	}
+}
+
+// 03:00 UTC on 15 May is still the evening of the 14th in Los Angeles.
+// A deal due on the 14th is due today there and already past in UTC.
+func TestClosePastReadsTheDayWestOfUTC(t *testing.T) {
+	t.Parallel()
+	losAngeles, err := time.LoadLocation("America/Los_Angeles")
+	if err != nil {
+		t.Fatalf("loading the zone: %v", err)
+	}
+	asOf := time.Date(testYear, time.May, 15, 3, 0, 0, 0, time.UTC)
+	due := healthy()
+	due.ExpectedClose = new(at(time.May, 14))
+	if got := ask(t, TypeClosePast, asOf, due, DefaultConfig()); got == nil {
+		t.Error("in UTC the 14th is over, and the rule stayed quiet")
+	}
+	due.Zone = losAngeles
+	if got := ask(t, TypeClosePast, asOf, due, DefaultConfig()); got != nil {
+		t.Errorf("in Los Angeles the 14th is still today, got %+v", got)
 	}
 }

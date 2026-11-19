@@ -8306,6 +8306,10 @@ export const en = {
     "The recipient asked not to be contacted. Sending this email does not change their request.",
   "sendPermission.reason.bounced":
     "This address does not accept mail. Correct the address; an override does not apply.",
+  "sendPermission.reason.subjectLabelMissing":
+    "Marketing to a recipient in this country must start its subject with the label their law sets. Add it to the subject.",
+  "sendPermission.reason.subjectLabelsConflict":
+    "These recipients’ countries set different subject labels for marketing, and a subject starts with one. Send one message per label.",
   "sendPermission.reason.optedOutAfterRequest":
     "The recipient opted out of marketing after requesting this quote. Sending this email does not change their choice.",
   "sendPermission.reason.permissionRequired":
@@ -12894,6 +12898,8 @@ export const en = {
     "Their website was read, but it does not name a company.",
   "worklist.domainQuestion.reason.forwarded":
     "Their website redirects to another website, so Margince could not confidently match their company.",
+  "worklist.domainQuestion.reason.foreignSite":
+    "The site names a different business than this domain. The domain may have changed hands.",
   "worklist.domainQuestion.reason.vendor":
     "Their website looks like a mail or hosting provider, which can host addresses for many companies.",
   "worklist.domainQuestion.reason.nearDuplicate":
@@ -12962,6 +12968,7 @@ export const en = {
   "blockedDomains.source.unevidenced": "No company found from the site",
   "blockedDomains.source.staleEvidence": "Supporting mail too old",
   "blockedDomains.source.nearDuplicate": "Company name already exists",
+  "blockedDomains.source.foreignSite": "Names a different business",
   "blockedDomains.source.vendorVerdict": "Reads as a mail or hosting vendor",
   "blockedDomains.rowAdmit": "Allow",
   "blockedDomains.rowRefuse": "Refuse",
@@ -20613,6 +20620,8 @@ export const en = {
   "worklist.disposition.undoFailed":
     "Undo failed. The message is still off your list.",
   "worklist.disposition.failed": "Item was not removed. Retry.",
+  "worklist.disposition.gone":
+    "This item is no longer on your list. The list is up to date now.",
   "worklist.scope.label": "Whose work",
   "worklist.scope.mine": "Mine",
   "worklist.sourceUnavailable": "Source unavailable or not shared with you",

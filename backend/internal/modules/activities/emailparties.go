@@ -160,10 +160,16 @@ func receivedFromSQL() string {
 		SELECT a.id, 'from', a.counterparty_email, NULL::uuid, NULL::text, NULL::uuid, '', '',
 		       a.created_at, a.id
 		  FROM activity a
-		 WHERE a.id = ANY($1) AND a.archived_at IS NULL AND a.direction = 'inbound'
-		   AND coalesce(a.counterparty_email, '') <> ''
-		   AND NOT EXISTS (SELECT 1 FROM activity_participant ap
-		         WHERE ap.activity_id = a.id AND ap.role = 'from' AND NOT ` + auth.ParticipantUnstatedSQL("ap") + `)`
+		 WHERE a.id = ANY($1) AND ` + receivedFromArmSQL("a")
+}
+
+// receivedFromArmSQL admits a received row whose sender the mail named only
+// as its counterparty: no From party was stated.
+func receivedFromArmSQL(alias string) string {
+	return `(` + alias + `.archived_at IS NULL AND ` + alias + `.direction = 'inbound'
+		AND coalesce(` + alias + `.counterparty_email, '') <> ''
+		AND NOT EXISTS (SELECT 1 FROM activity_participant ap
+		      WHERE ap.activity_id = ` + alias + `.id AND ap.role = 'from' AND NOT ` + auth.ParticipantUnstatedSQL("ap") + `))`
 }
 
 // rowCounterparty is whom a message row was with: the far side of the

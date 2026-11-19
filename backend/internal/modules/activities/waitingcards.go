@@ -104,13 +104,30 @@ func (s *Store) WaitingCardsAfter(
 // WaitingCardsOnDeals answers the cards whose messages are filed under any of
 // these deals, judged as WaitingCardsAfter judges them. A card names the deal
 // its own row carries, which may be none of these.
+//
+// One statement: the card statement judges the deals' linked messages itself,
+// since it applies every rule the candidate read would. Its cost follows the
+// mail filed under these deals, not the whole waiting horizon.
 func (s *Store) WaitingCardsOnDeals(
 	ctx context.Context, asOf time.Time, narrow WaitingNarrow, deals []ids.UUID,
-) ([]WaitingReply, error) {
-	return s.waitingCardsWhere(ctx, asOf, narrow, deals, func(arg func(any) int) string {
-		return fmt.Sprintf(" AND EXISTS (SELECT 1 FROM activity_link on_deal WHERE on_deal.activity_id = a.id"+
-			" AND on_deal.deal_id = ANY ($%d::uuid[]))", arg(deals))
-	})
+) (cards []WaitingReply, err error) {
+	if len(deals) == 0 {
+		return nil, auth.Require(ctx, "activity", principal.ActionRead)
+	}
+	seats := narrow.mailSeats()
+	err = s.readWaitingQueue(ctx, asOf, seats, waitingShape{drawsRows: true},
+		func(slots waitingSlots, arg func(any) int) string {
+			return waitingCardsStatement(slots, fmt.Sprintf("ARRAY(SELECT on_deal.activity_id FROM activity_link on_deal"+
+				" WHERE on_deal.deal_id = ANY ($%d::uuid[]))", arg(deals)))
+		},
+		func(rows pgx.Rows) (err error) {
+			cards, err = collectWaiting(rows, seats.owner)
+			return err
+		})
+	if err != nil {
+		return nil, fmt.Errorf("activities: judging waiting cards on deals: %w", err)
+	}
+	return cards, nil
 }
 
 // WaitingCardsAmong answers which of these messages are cards, judged as
@@ -161,7 +178,7 @@ func (s *Store) cardsAmong(
 	}
 	err = s.queryWaitingQueue(ctx, tx, asOf, seats, waitingShape{drawsRows: true},
 		func(slots waitingSlots, arg func(any) int) string {
-			return waitingCardsStatement(slots, arg, messages)
+			return waitingCardsStatement(slots, fmt.Sprintf("$%d::uuid[]", arg(messages)))
 		},
 		func(rows pgx.Rows) (err error) {
 			cards, err = collectWaiting(rows, seats.owner)
@@ -220,16 +237,15 @@ func (s *Store) waitingCandidates(
 }
 
 // waitingCardsStatement draws the cards among the judged messages, oldest
-// first. The newer-member read formats the same template, so a member is
-// waiting by the same rules as the card it would fold into.
-func waitingCardsStatement(slots waitingSlots, arg func(any) int, judged []ids.UUID) string {
+// first. judged is an SQL array of message ids. The newer-member read formats
+// the same template, so a member is waiting by the same rules as its card.
+func waitingCardsStatement(slots waitingSlots, judged string) string {
 	newer := slices.Clone(slots.values)
 	newer[waitingResponsibilitySlot] = fmt.Sprintf("(%s) AND %s", newer[waitingResponsibilitySlot], waitingSameFoldNewerSQL)
 	newer[waitingKeysetSlot] = waitingNotMachineSQL
-	judgedSlot := arg(judged)
-	slots.values[waitingResponsibilitySlot] = fmt.Sprintf("(%s) AND a.id = ANY ($%d::uuid[])",
-		slots.values[waitingResponsibilitySlot], judgedSlot)
-	slots.values[waitingCapSlot] = fmt.Sprintf("cardinality($%d::uuid[])", judgedSlot)
+	slots.values[waitingResponsibilitySlot] = fmt.Sprintf("(%s) AND a.id = ANY (%s)",
+		slots.values[waitingResponsibilitySlot], judged)
+	slots.values[waitingCapSlot] = fmt.Sprintf("cardinality(%s)", judged)
 	slots.values[waitingKeysetSlot] = waitingNotMachineSQL +
 		" AND NOT EXISTS (SELECT 1 FROM " + waitingCardOfSQL + " CROSS JOIN LATERAL (" +
 		fmt.Sprintf(waitingEligibleSQL, newer...) + " LIMIT 1) newer)"

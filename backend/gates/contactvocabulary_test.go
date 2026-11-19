@@ -45,11 +45,11 @@ import (
 // suffix and needs no arm of its own.
 var theRetiredWord = regexp.MustCompile(`(?i)person|people`)
 
-// notThisRecord is the words that merely spell those letters: a mask, an
-// adjective, a payroll noun, the German for persons, a forgery, a job title,
-// and the one that means physically present. Removed before the match rather
-// than waived per site, because they are a property of the language and not of
-// any one file.
+// notThisRecord is the words that merely spell those letters. Some are a mask,
+// an adjective, a payroll noun or the German for persons. Others are a forgery,
+// a job title, the law's natural and legal persons, and the word for being
+// physically present. They are removed before the match rather than waived per site,
+// because they are a property of the language and not of any one file.
 //
 // Each is a STEM and not a next-character rule, which is the case this test was
 // written without. A lowercase run has no boundary in it: `personname.go` and
@@ -59,6 +59,9 @@ var theRetiredWord = regexp.MustCompile(`(?i)person|people`)
 var notThisRecord = regexp.MustCompile(
 	`(?i)personal\w*|personnel\w*|personas?(?:[^a-z]|$)|personen\w*` +
 		`|impersonat\w*|salespe(?:rson|ople)\w*` +
+		// The law's two kinds of addressee, as the ePrivacy Directive and its
+		// national acts name them.
+		`|(?:natural|legal) persons?(?:'s)?` +
 		// Physically present. The separator decides how far this reaches:
 		// `in_person` and `InPerson` are one name, so nothing after them
 		// matters, while a prose "in person" ends where the word ends — "it
@@ -292,7 +295,7 @@ var retired = gatekit.Waive(map[string]string{
 	// Waived rather than renamed because the rename was tried: it produced
 	// "die beschäftigte Contact" and "Eine Einwilligung je Contact", which are
 	// not German, in four documents that get printed and signed.
-	"extensions/de/documents/de": "German legal prose about the employees whose mail is captured — " +
+	"extensions/eu/documents/de/de": "German legal prose about the employees whose mail is captured — " +
 		"die beschäftigte Person is a human being, and these documents never name this record",
 
 	"scripts/handbook-ask/questions.txt": "questions in the words users type — \"add a new " +

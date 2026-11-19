@@ -236,3 +236,38 @@ func TestDoneTwiceOnOneMessageWritesItOnce(t *testing.T) {
 			audited, announced)
 	}
 }
+
+// Which rows a reader has put down, wherever each kind keeps its Done. A
+// follow-up keeps it on the activity, any other row in the Done set. A
+// colleague's Done and a row nobody marked are not the reader's.
+func TestAlreadyDoneReadsBothPlacesADoneIsKept(t *testing.T) {
+	e := setupLoad(t)
+	s := storeAddressing(e, readerAddress)
+	rep := e.followUpReader()
+	sent, _ := e.sentTo(t, e.customerAt(t, "customer"), "", 3*24*time.Hour)
+	met := e.metWith(t, e.customerAt(t, "customer"), e.rep, "held", 3*24*time.Hour)
+	reply := WorklistRowRef{Source: "awaiting_reply", RowID: sent.String()}
+	meeting := WorklistRowRef{Source: "meeting_follow_up", RowID: met.String()}
+	deal := WorklistRowRef{Source: "deal_at_risk", RowID: ids.NewV7().String()}
+	untouched := WorklistRowRef{Source: "bounce", RowID: ids.NewV7().String()}
+	if err := s.MarkWorklistRowsDone(rep, []WorklistRowRef{reply, deal}); err != nil {
+		t.Fatalf("marking the rows done: %v", err)
+	}
+	alreadyDone := func(ctx context.Context) map[WorklistRowRef]bool {
+		t.Helper()
+		out, err := s.WorklistRowsAlreadyDone(ctx, []WorklistRowRef{reply, meeting, deal, untouched})
+		if err != nil {
+			t.Fatalf("reading the rows already done: %v", err)
+		}
+		return out
+	}
+	got := alreadyDone(rep)
+	if !got[reply] || !got[deal] || got[meeting] || got[untouched] {
+		t.Errorf("already done = %v, want the follow-up and the deal only", got)
+	}
+	for row, done := range alreadyDone(e.asSeat(e.other)) {
+		if done {
+			t.Errorf("a colleague reads the rep's Done on %+v", row)
+		}
+	}
+}

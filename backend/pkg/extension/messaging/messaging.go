@@ -243,7 +243,8 @@ func (k ExceptionKind) Validate() error {
 type MarketingException struct {
 	Kind ExceptionKind
 
-	// RequiresSaleEvidence: there must be a recorded sale to this contact.
+	// RequiresSaleEvidence: there must be a recorded sale to this contact, and
+	// the address the message goes to must have come with that sale.
 	RequiresSaleEvidence bool
 
 	// RequiresCollectionTimeOptOut: the address must have been collected with

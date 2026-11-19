@@ -174,7 +174,8 @@ type Project360Activities struct {
 	Truncated bool                 `json:"truncated"`
 }
 
-// Project360Activity is one timeline row.
+// Project360Activity is one timeline row. Direction names the side that wrote
+// it, which is not always the side the mail travelled from.
 type Project360Activity struct {
 	ActivityID ids.UUID  `json:"activity_id"`
 	Kind       string    `json:"kind"`
@@ -218,7 +219,7 @@ func (r Project360Result) truncated() bool {
 // project360Result carries the page onto the surface's shape. It is a
 // rename and a flattening, never a judgement: every row the page holds is
 // here, and nothing the page withheld is invented.
-func project360Result(page crmcontracts.Project360) Project360Result {
+func project360Result(page crmcontracts.Project360, writerSide ActivityWriterSide) Project360Result {
 	out := Project360Result{
 		AsOf:            page.AsOf,
 		Project:         project360Project(page.Project),
@@ -263,7 +264,7 @@ func project360Result(page crmcontracts.Project360) Project360Result {
 	}
 	if page.Activities != nil {
 		out.Activities = &Project360Activities{
-			Items: project360Activities(page.Activities.Data), Truncated: page.Activities.Page.HasMore,
+			Items: project360Activities(page.Activities.Data, writerSide), Truncated: page.Activities.Page.HasMore,
 		}
 	}
 	if page.Coverage != nil {

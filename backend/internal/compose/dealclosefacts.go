@@ -16,7 +16,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // closeFacts is what a close reads besides the input check's evidence.
@@ -106,7 +105,7 @@ func closeFactsFor(
 
 func closeFactsRead(ctx context.Context, tx pgx.Tx, now time.Time, dealIDs []string) (map[string]closeFacts, error) {
 	query := fmt.Sprintf(closeFactsSQL, customerProgressAnyAudienceSQL("a", "$2"), customerRefusalAnyAudienceSQL("a", "$2"),
-		relstrength.MeetingAheadSQL("a", "$2"), dealMailboxesAnyAudienceSQL("d"))
+		dealMeetingAheadSQL("a", "$2"), dealMailboxesAnyAudienceSQL("d"))
 	rows, err := tx.Query(ctx, query, dealIDs, now, deals.CloseLostCorrection,
 		activities.OriginHuman, principal.HumanIDPrefix)
 	if err != nil {

@@ -108,7 +108,7 @@ func domainQuestionContextTx(ctx context.Context, tx pgx.Tx, evidence map[string
 	for domain, known := range evidence {
 		domains = append(domains, domain)
 		one := DomainQuestionContext{}
-		if known.reasonCode == PendingUnevidenced {
+		if known.reasonCode == PendingUnevidenced || known.reasonCode == PendingForeignSite {
 			one.SiteRead = QuestionSiteRead
 			if known.siteUnreadable {
 				one.SiteRead = QuestionSiteUnread

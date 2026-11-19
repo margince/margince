@@ -11,6 +11,7 @@ package compose
 // activities stores, with the verdict written by the classifier's own writer.
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -36,6 +37,14 @@ func (v *viabilityEnv) customerMails(t *testing.T, deal ids.UUID, at time.Time) 
 	return ids.UUID(mail.Id)
 }
 
+// refuses judges a reply a refusal through the classifier's own writer.
+func (v *viabilityEnv) refuses(t *testing.T, reply ids.UUID) {
+	t.Helper()
+	if applied, err := activities.NewStore(v.DB()).SetReplyVerdict(v.Admin(), reply, activities.ReplyVerdictNegative, "test"); err != nil || !applied {
+		t.Fatalf("judging the reply: applied=%v err=%v", applied, err)
+	}
+}
+
 func (v *viabilityEnv) receiptOf(t *testing.T, deal ids.UUID) (outcome, reasons string) {
 	t.Helper()
 	return v.WsScalar(t, `SELECT outcome FROM assurance_deal_receipt WHERE deal_id = $1`, deal),
@@ -45,10 +54,7 @@ func (v *viabilityEnv) receiptOf(t *testing.T, deal ids.UUID) (outcome, reasons 
 func TestARefusalRequiresAReviewAndAnUnjudgedReplyCounts(t *testing.T) {
 	v := setupViability(t)
 	refusal := v.customerMails(t, v.supported, v.now.AddDate(0, 0, -2))
-	if applied, err := activities.NewStore(v.DB()).SetReplyVerdict(v.Admin(), refusal,
-		activities.ReplyVerdictNegative, "test"); err != nil || !applied {
-		t.Fatalf("judging the reply: applied=%v err=%v", applied, err)
-	}
+	v.refuses(t, refusal)
 	v.customerMails(t, v.silent, v.now.AddDate(0, 0, -1))
 
 	v.check(t)
@@ -76,12 +82,17 @@ func TestADealWithNoNextStepIsUnsupported(t *testing.T) {
 	}
 	completeCreatedTask(t, v.Env, ids.From[ids.ActivityKind](step))
 
-	// Twice: the first pass files the "no next step" finding's own task, and
-	// that task must not pass for the next step on the second.
+	// Twice: the first pass files the check's own task, and that task must not
+	// pass for the next step on the second. The missing next step files none.
 	for range 2 {
 		v.check(t)
 		if outcome, reasons := v.receiptOf(t, v.supported); outcome != "unsupported" || reasons != "no_next_step" {
 			t.Fatalf("receipt %s %q, want unsupported for the missing next step", outcome, reasons)
+		}
+		filed := v.WsScalar(t, `SELECT coalesce(string_agg(DISTINCT e.type, ','), '') FROM assurance_task_item i
+			JOIN assurance_exception e ON e.id = i.exception_id WHERE i.subject_id = $1`, v.supported)
+		if strings.Contains(filed, "no_next_step") || !strings.Contains(filed, "no_economic_buyer") {
+			t.Fatalf("the check tasks carry %q, want no_economic_buyer and never no_next_step", filed)
 		}
 	}
 }
@@ -89,10 +100,7 @@ func TestADealWithNoNextStepIsUnsupported(t *testing.T) {
 func TestARefusalNotEveryMemberMayReadMovesNothing(t *testing.T) {
 	v := setupViability(t)
 	refusal := v.customerMails(t, v.supported, v.now.AddDate(0, 0, -2))
-	if applied, err := activities.NewStore(v.DB()).SetReplyVerdict(v.Admin(), refusal,
-		activities.ReplyVerdictNegative, "test"); err != nil || !applied {
-		t.Fatalf("judging the reply: applied=%v err=%v", applied, err)
-	}
+	v.refuses(t, refusal)
 	if _, err := v.Activities.SetAudience(v.Admin(), ids.From[ids.ActivityKind](refusal),
 		activities.SetAudienceInput{Audience: "participants"}); err != nil {
 		t.Fatalf("limiting the reply: %v", err)
@@ -111,10 +119,7 @@ func TestAVerdictThatLandsAfterTheCheckMakesTheReceiptStale(t *testing.T) {
 	if v.receiptStale(t, v.supported) {
 		t.Fatal("the receipt is stale before the verdict")
 	}
-	if applied, err := activities.NewStore(v.DB()).SetReplyVerdict(v.Admin(), reply,
-		activities.ReplyVerdictNegative, "test"); err != nil || !applied {
-		t.Fatalf("judging the reply: applied=%v err=%v", applied, err)
-	}
+	v.refuses(t, reply)
 	if !v.receiptStale(t, v.supported) {
 		t.Fatal("a reply that turned out a refusal left the receipt current")
 	}

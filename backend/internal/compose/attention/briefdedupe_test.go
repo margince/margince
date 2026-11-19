@@ -465,7 +465,7 @@ func TestTheBriefsVerbsSurviveTheRowTheyWereAttachedTo(t *testing.T) {
 	deal, briefItem := ids.NewV7(), ids.NewV7()
 	waiting := waitingRowAbout(deal)
 
-	rows := dropDealsAlreadyInHand([]ranked{atRiskRow(deal), waiting}, time.Date(2026, 10, 31, 9, 0, 0, 0, time.UTC))
+	rows := dropDealsAlreadyInHand([]ranked{atRiskRow(deal), waiting}, time.Date(2026, 10, 31, 9, 0, 0, 0, time.UTC), nil)
 	rows = foldBriefIntoRisk(append(rows, rankedBriefRow(briefItem, deal)))
 
 	var carrier *ranked
