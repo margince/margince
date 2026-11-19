@@ -41110,6 +41110,8 @@ components:
           maxItems: 10
           items: {$ref: '#/components/schemas/LatestInbound'}
         last_exchange: {$ref: '#/components/schemas/LastExchange'}
+        last_inbound: {$ref: '#/components/schemas/Activity'}
+        last_outbound: {$ref: '#/components/schemas/Activity'}
     LastExchange:
       type: object
       description: |-

@@ -11,6 +11,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
@@ -247,5 +248,45 @@ func TestLatestInboundRefusesARecordNobodyHolds(t *testing.T) {
 	_, err := storeKnowing(e).LatestInbound(e.asSeat(e.rep), "contact", ids.NewV7())
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("err = %v, want not found for an id no contact holds", err)
+	}
+}
+
+func (e *recencyEnv) seedMail(t *testing.T, deal ids.UUID, direction string, at time.Time) ids.UUID {
+	t.Helper()
+	mail := ids.NewV7()
+	e.exec(t, `INSERT INTO activity
+		  (id, kind, subject, occurred_at, direction, audience, source, captured_by, origin)
+		VALUES ($1, 'email', 'Terms', $2, $3, 'workspace', 'manual', 'human:rep', 'human')`,
+		mail, at, direction)
+	e.exec(t, `INSERT INTO activity_link (id, activity_id, entity_type, deal_id)
+		VALUES ($1, $2, 'deal', $3)`, ids.NewV7(), mail, deal)
+	return mail
+}
+
+func TestLatestInboundDatesTheLastMessagesOverEveryRowNotOnePage(t *testing.T) {
+	e := setupRecency(t)
+	deal := e.seedQuietDeal(t, pinnedQuiet)
+	inbound := e.seedMail(t, deal, "inbound", pinnedQuiet.AddDate(0, 0, 1))
+	outbound := e.seedMail(t, deal, "outbound", pinnedQuiet.AddDate(0, 0, 2))
+	for day := range 60 {
+		e.exec(t, `INSERT INTO activity (id, kind, subject, occurred_at, audience, source, captured_by, origin)
+			VALUES ($1, 'note', 'Later note', $2, 'workspace', 'manual', 'human:rep', 'human')`,
+			ids.NewV7(), pinnedQuiet.AddDate(0, 0, 3+day))
+		e.exec(t, `INSERT INTO activity_link (id, activity_id, entity_type, deal_id)
+			SELECT $1, id, 'deal', $2 FROM activity WHERE subject = 'Later note' AND occurred_at = $3`,
+			ids.NewV7(), deal, pinnedQuiet.AddDate(0, 0, 3+day))
+	}
+	now := pinnedQuiet.AddDate(0, 0, 100)
+	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws))).WithClock(func() time.Time { return now })
+
+	list, err := store.LatestInbound(e.as(), "deal", deal)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if list.LastInbound == nil || ids.UUID(list.LastInbound.Id) != inbound {
+		t.Errorf("last inbound = %+v, want the mail %s", list.LastInbound, inbound)
+	}
+	if list.LastOutbound == nil || ids.UUID(list.LastOutbound.Id) != outbound {
+		t.Errorf("last outbound = %+v, want the mail %s", list.LastOutbound, outbound)
 	}
 }

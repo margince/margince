@@ -21,7 +21,12 @@ import (
 // transport, and the record the activities hang off.
 type ListActivitiesInput struct {
 	InteractionsAsOf *time.Time
-	mailIdentities   map[string][]string
+	// ClockDirection with DirectionClockAsOf keeps the rows that move the
+	// "they last wrote" or "we last wrote" clock in that direction, as the
+	// account's clocks count them (relstrength.DirectionClockSQL).
+	ClockDirection     string
+	DirectionClockAsOf *time.Time
+	mailIdentities     map[string][]string
 	// onlyID narrows a read to one row, so a caller can ask whether this list
 	// returns it without a second spelling of the list's clauses.
 	onlyID *ids.ActivityID

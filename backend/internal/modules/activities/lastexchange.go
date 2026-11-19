@@ -76,6 +76,23 @@ func (s *Store) lastExchange(
 	return &crmcontracts.LastExchange{Activity: row, WhoseMove: WhoseMove(move, direction, owed)}, nil
 }
 
+// lastWrote reads the record's newest human-written message in one direction
+// over every row the reader may list, by the clock the account's header uses.
+// Nil when there is none.
+func (s *Store) lastWrote(
+	ctx context.Context, tx pgx.Tx, entityType string, entityID ids.UUID, direction crmcontracts.ActivityDirection,
+	now time.Time, columns CustomColumns,
+) (*crmcontracts.Activity, error) {
+	tied, err := s.newestTied(ctx, tx, ListActivitiesInput{
+		EntityType: &entityType, EntityID: &entityID, ClockDirection: string(direction), DirectionClockAsOf: &now,
+		AsOf: &now, Columns: columns,
+	})
+	if err != nil || len(tied) == 0 {
+		return nil, err
+	}
+	return &tied[0], nil
+}
+
 // earlierInboundMailSQL keeps the live inbound mail the row aliased their that
 // the row aliased ours comes after. It asks the answer rule, so a reply logged
 // on the mail's date follows it.
