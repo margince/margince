@@ -58,8 +58,10 @@ func TestACaseMergeKeepsASharedNumberOnceAndThePreferredAddress(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading the case: %v", err)
 	}
-	decision := contacts.ContactCaseDecision{Revision: read.Revision, MemberIDs: members, SurvivorID: members[0], OwnerID: e.Rep1,
-		Prefer: contacts.MergePreference{contacts.MergeFieldEmail: members[2]}}
+	decision := contacts.ContactCaseDecision{
+		Revision: read.Revision, MemberIDs: members, SurvivorID: members[0], OwnerID: e.Rep1,
+		Prefer: contacts.MergePreference{contacts.MergeFieldEmail: members[2]},
+	}
 
 	preview, err := store.PreviewContactCaseMerge(admin, members[0], decision)
 	if err != nil {

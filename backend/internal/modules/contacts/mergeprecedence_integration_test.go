@@ -28,8 +28,10 @@ const sharedNumber = "+493055500001"
 // contactWithPhones creates a contact through the real create, primary first.
 func contactWithPhones(t *testing.T, e *dedupeEnv, name, email string, phones ...string) ids.ContactID {
 	t.Helper()
-	in := CreateContactInput{FullName: name, Source: "manual",
-		Emails: []ContactEmailInput{{Email: email, EmailType: "work", IsPrimary: true}}}
+	in := CreateContactInput{
+		FullName: name, Source: "manual",
+		Emails: []ContactEmailInput{{Email: email, EmailType: "work", IsPrimary: true}},
+	}
 	for i, phone := range phones {
 		in.Phones = append(in.Phones, ContactPhoneInput{Phone: phone, PhoneType: "mobile", IsPrimary: i == 0, Position: i})
 	}

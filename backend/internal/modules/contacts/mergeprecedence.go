@@ -159,11 +159,13 @@ func yieldPreferredSlots(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.
 	if prefer.sourceWins(MergeFieldEmail, sourceID) {
 		// The address that wins is the one the review showed for the member: its
 		// reachable-first address, which is its primary when it has one.
-		for _, stmt := range []string{`UPDATE contact_email SET is_primary = false
+		for _, stmt := range []string{
+			`UPDATE contact_email SET is_primary = false
  WHERE contact_id = @target AND is_primary AND archived_at IS NULL
  AND EXISTS (SELECT 1 FROM contact_email s WHERE s.contact_id = @source AND s.archived_at IS NULL)`,
 			`UPDATE contact_email SET is_primary = true WHERE NOT is_primary AND id = (SELECT id FROM contact_email
- WHERE contact_id = @source AND archived_at IS NULL` + ReachableEmailOrder + ` LIMIT 1)`} {
+ WHERE contact_id = @source AND archived_at IS NULL` + ReachableEmailOrder + ` LIMIT 1)`,
+		} {
 			if _, err := tx.Exec(ctx, stmt, args); err != nil {
 				return fmt.Errorf("contacts: handing the primary address to the preferred member: %w", err)
 			}

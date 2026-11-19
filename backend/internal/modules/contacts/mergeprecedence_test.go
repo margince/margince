@@ -18,8 +18,10 @@ import (
 func TestACasePreferenceMustNameASelectedMember(t *testing.T) {
 	t.Parallel()
 	a, b := ids.NewV7(), ids.NewV7()
-	d := ContactCaseDecision{MemberIDs: []ids.UUID{a, b}, SurvivorID: a, OwnerID: ids.NewV7(),
-		Prefer: MergePreference{MergeFieldEmail: b}}
+	d := ContactCaseDecision{
+		MemberIDs: []ids.UUID{a, b}, SurvivorID: a, OwnerID: ids.NewV7(),
+		Prefer: MergePreference{MergeFieldEmail: b},
+	}
 	if _, err := caseSelection(d); err != nil {
 		t.Fatalf("a preference for a selected member was refused: %v", err)
 	}
