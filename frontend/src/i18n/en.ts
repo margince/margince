@@ -7620,6 +7620,7 @@ export const en = {
   "docs.add.sourceFile": "File",
   "docs.add.sourceLink": "Link",
   "docs.add.url": "Address",
+  "docs.add.urlPlaceholder": "https://",
   "docs.add.urlHint":
     "Paste the link to a page or a shared file, such as a Google Doc.",
   "docs.add.linkReading": "Reading the page…",

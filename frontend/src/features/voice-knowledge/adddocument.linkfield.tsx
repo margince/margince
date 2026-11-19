@@ -28,7 +28,7 @@ export function LinkAddressField({
           type="url"
           inputMode="url"
           autoComplete="off"
-          placeholder="https://"
+          placeholder={t("docs.add.urlPlaceholder")}
           value={url}
           onChange={(event) => onChange(event.target.value)}
         />

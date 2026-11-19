@@ -7607,6 +7607,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "docs.add.sourceFile": "Datei",
   "docs.add.sourceLink": "Link",
   "docs.add.url": "Adresse",
+  "docs.add.urlPlaceholder": "https://",
   "docs.add.urlHint":
     "Füge den Link zu einer Seite oder einer geteilten Datei ein, etwa einem Google-Dokument.",
   "docs.add.linkReading": "Seite wird gelesen…",

@@ -25,6 +25,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "docs.kind.forms",
   "docs.kind.drive",
   "docs.kind.web",
+  "docs.add.urlPlaceholder",
   // Product and protocol names, an example address and an example header name.
   "webhooks.body.preset.slack",
   "webhooks.body.preset.teams",

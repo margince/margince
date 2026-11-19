@@ -7428,6 +7428,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "docs.add.sourceFile": "Tệp",
   "docs.add.sourceLink": "Liên kết",
   "docs.add.url": "Địa chỉ",
+  "docs.add.urlPlaceholder": "https://",
   "docs.add.urlHint":
     "Dán liên kết tới một trang hoặc một tệp được chia sẻ, chẳng hạn Google Docs.",
   "docs.add.linkReading": "Đang đọc trang…",
