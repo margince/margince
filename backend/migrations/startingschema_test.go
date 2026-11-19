@@ -12,8 +12,8 @@ import (
 	"testing"
 )
 
-// The integration tests here share one database per package run, and several
-// rewind it or empty it, so the schema a test finds depends on the test order.
+// The integration tests here share one database per package run. Several rewind
+// or empty it, so the schema a test finds depends on the test order.
 // A test that connects must therefore set its own starting schema, and every
 // helper that does so drops the schema through resetSchema first.
 func TestEveryTestThatConnectsSetsItsOwnStartingSchema(t *testing.T) {
