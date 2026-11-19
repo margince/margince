@@ -55,7 +55,9 @@ func Admit(plan Plan, question, vocabulary string) (Plan, error) {
 func admitWonCount(plan Plan, question, vocabulary string) error {
 	// Both, in either order: Vietnamese puts the verb first ("thắng bao nhiêu deal").
 	words := vietnameseWords(question)
-	if !(countQuestion.MatchString(question) || asksVietnameseCount(words)) || !(wonQuestion.MatchString(question) || saysVietnameseWon(words)) {
+	asksCount := countQuestion.MatchString(question) || asksVietnameseCount(words)
+	asksWon := wonQuestion.MatchString(question) || saysVietnameseWon(words)
+	if !asksCount || !asksWon {
 		return nil
 	}
 	if plan.Engine != EngineReporting || !plan.Count {
