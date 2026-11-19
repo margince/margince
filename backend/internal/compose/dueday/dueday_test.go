@@ -4,10 +4,9 @@
 package dueday
 
 import (
+	"context"
 	"testing"
 	"time"
-
-	"github.com/margince/margince/backend/internal/platform/clocktest"
 )
 
 func TestTheDayAfterAPromisedDayIsTheNextCalendarDay(t *testing.T) {
@@ -27,12 +26,24 @@ func TestTheDayAfterAPromisedDayIsTheNextCalendarDay(t *testing.T) {
 	}
 }
 
-func TestOddNamesOnlyADayOutsideTheDueWindow(t *testing.T) {
-	far := clocktest.Now(t).AddDate(15, 0, 0).Format(time.DateOnly)
-	soon := clocktest.Now(t).AddDate(0, 0, 7).Format(time.DateOnly)
-	for day, want := range map[string]string{far: far, soon: "", "": ""} {
-		if got := Odd(day); got != want {
-			t.Errorf("Odd(%q) = %q, want %q", day, got, want)
+func TestOddClassifiesTheExactEndOfTheDayAtBothEdgesOfTheWindow(t *testing.T) {
+	now := time.Date(2026, 11, 20, 12, 0, 0, 0, time.UTC)
+	for day, want := range map[string]string{
+		"2036-11-19": "", "2036-11-20": "2036-11-20",
+		"2016-11-20": "", "2016-11-19": "2016-11-19",
+		"": "",
+	} {
+		got, err := Odd(context.Background(), nil, day, "UTC", now)
+		if err != nil || got != want {
+			t.Errorf("Odd(%q) = %q, %v; want %q", day, got, err, want)
 		}
+	}
+}
+
+func TestOddReadsTheDayInTheWritersZone(t *testing.T) {
+	now := time.Date(2026, 11, 20, 12, 0, 0, 0, time.UTC)
+	got, err := Odd(context.Background(), nil, "2036-11-20", "Pacific/Auckland", now)
+	if err != nil || got != "" {
+		t.Errorf("the day ends before the edge in Auckland: Odd = %q, %v; want none", got, err)
 	}
 }

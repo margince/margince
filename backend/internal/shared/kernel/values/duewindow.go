@@ -18,10 +18,3 @@ const (
 func DueInWindow(due, now time.Time) bool {
 	return !due.Before(now.AddDate(-DueYearsBack, 0, 0)) && !due.After(now.AddDate(DueYearsAhead, 0, 0))
 }
-
-// DueDayInWindow is DueInWindow for a stated calendar day (YYYY-MM-DD). A day
-// that does not parse is not a window question, so it passes.
-func DueDayInWindow(day string, now time.Time) bool {
-	parsed, err := time.Parse(time.DateOnly, day)
-	return err != nil || DueInWindow(parsed, now)
-}

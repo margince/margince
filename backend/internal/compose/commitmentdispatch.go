@@ -39,7 +39,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/approvalsubject"
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
@@ -158,6 +157,8 @@ type CommitmentDispatcher struct {
 	claims   *contacts.Store
 	tasks    *activities.Store
 	approval *approvals.Service
+	// now dates the due window.
+	now func() time.Time
 }
 
 // NewCommitmentDispatcher builds the rule over the stores it writes and the
@@ -165,7 +166,7 @@ type CommitmentDispatcher struct {
 func NewCommitmentDispatcher(pool *pgxpool.Pool, approval *approvals.Service) *CommitmentDispatcher {
 	db := InstallationDB(pool)
 	return &CommitmentDispatcher{
-		claims: contacts.NewStore(db), tasks: activities.NewStore(db), approval: approval,
+		claims: contacts.NewStore(db), tasks: activities.NewStore(db), approval: approval, now: time.Now,
 	}
 }
 
@@ -304,7 +305,11 @@ func (d *CommitmentDispatcher) createOurCommitment(ctx context.Context, tx pgx.T
 	if asked.IsZero() {
 		return CommitmentPromiserUnassignable, ids.UUID{}, nil
 	}
-	if !c.NeedsConfirmation && c.Confidence >= CommitmentTaskConfidence && dueday.Odd(c.DueDate) == "" {
+	oddDue, err := dueday.Odd(ctx, tx, c.DueDate, c.DueZone, d.now())
+	if err != nil {
+		return CommitmentRemembered, ids.UUID{}, err
+	}
+	if !c.NeedsConfirmation && c.Confidence >= CommitmentTaskConfidence && oddDue == "" {
 		task, err := writeCommitmentTask(ctx, tx, d.tasks, d.claims, commitmentTask{
 			Extractor: c.Extractor, Locator: c.Locator, Summary: c.Summary, Body: c.Body, SystemText: c.SystemText,
 			SourceActivityID: c.SourceActivityID, Links: c.Links, DueDate: c.DueDate, DueZone: c.DueZone,
@@ -316,20 +321,9 @@ func (d *CommitmentDispatcher) createOurCommitment(ctx context.Context, tx pgx.T
 	proposal := CommitmentTaskProposal{
 		SourceActivityID: c.SourceActivityID, Summary: c.Summary, Party: c.Party, SystemText: c.SystemText,
 		SeatID: &asked, PromiserSeatID: &asked, DueDate: c.DueDate, DueZone: c.DueZone, Links: c.Links, Quote: c.Quote,
-		Locator: c.Locator, ClaimID: claimID, ClaimIDs: claimIDs, Body: c.Body, PrivateTo: c.PrivateTo, Tentative: c.Tentative, OddDueDate: dueday.Odd(c.DueDate),
+		Locator: c.Locator, ClaimID: claimID, ClaimIDs: claimIDs, Body: c.Body, PrivateTo: c.PrivateTo, Tentative: c.Tentative, OddDueDate: oddDue,
 	}
 	return d.stageCommitmentProposal(ctx, tx, c, proposal, bundleID, asked, commitmentWindow(state, late))
-}
-
-// commitmentWindow is how long a proposal waits for its promiser. An invited
-// colleague finds the card when they first sign in, which may be weeks away,
-// and the default 72 hours would expire it unseen. A promise from a late
-// report is as old as the horizon already, so it gets the same wait.
-func commitmentWindow(state activities.SeatWorkState, late bool) *time.Duration {
-	if state != activities.SeatInvited && !late {
-		return nil
-	}
-	return new(time.Duration(provenance.CommitmentHorizonDays) * 24 * time.Hour)
 }
 
 // watchCommitment files a customer's promise on them. A new one also asks the

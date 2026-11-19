@@ -27,14 +27,3 @@ func TestDueInWindowRefusesAbsurdYearsAndKeepsRealOnes(t *testing.T) {
 		}
 	}
 }
-
-func TestDueDayInWindowJudgesAStatedDay(t *testing.T) {
-	now := time.Date(2026, 11, 20, 12, 0, 0, 0, time.UTC)
-	for day, want := range map[string]bool{
-		"2026-12-01": true, "2046-12-01": false, "1999-01-01": false, "not a day": true,
-	} {
-		if got := DueDayInWindow(day, now); got != want {
-			t.Errorf("DueDayInWindow(%q) = %v, want %v", day, got, want)
-		}
-	}
-}
