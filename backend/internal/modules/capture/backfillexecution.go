@@ -61,7 +61,7 @@ func (r *Registry) RunBackfillExecution(ctx context.Context, id ids.UUID, genera
 	}
 	if result.scheduled {
 		if result.err == nil && !result.done {
-			capturemetrics.ObservePacing(ctx, backfillPageDelay)
+			capturemetrics.ObservePacing(ctx, r.backfillPageDelay)
 		}
 		return true, result.completed, result.retryAfter, result.err
 	}

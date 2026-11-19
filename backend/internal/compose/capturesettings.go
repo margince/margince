@@ -5,8 +5,11 @@ package compose
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
+	"time"
 
+	"github.com/margince/margince/backend/internal/modules/capture/gmail"
 	"github.com/margince/margince/backend/internal/platform/config"
 )
 
@@ -47,6 +50,46 @@ var (
 		},
 		Doc: "Limit on history imports running at once across the installation. Use the same value in every process.",
 	})
+	CaptureHistoryPageSize = config.Define(config.Spec[int]{
+		Key: "capture.history_page_size", Env: "MARGINCE_CAPTURE_HISTORY_PAGE_SIZE", Type: config.Int, Default: config.Some(0), Roles: bothRoles,
+		Validate: func(value int) error {
+			if value < 0 || value > gmail.MaxBackfillPageSize {
+				return fmt.Errorf("must be between 0 and %d", gmail.MaxBackfillPageSize)
+			}
+			return nil
+		},
+		Doc: "Messages one history page lists, and so how many it works through before it saves its place. 0 keeps the built-in 100 for Gmail and for Microsoft.",
+	})
+	CaptureHistoryFetchWorkers = config.Define(config.Spec[int]{
+		Key: "capture.history_fetch_workers", Env: "MARGINCE_CAPTURE_HISTORY_FETCH_WORKERS", Type: config.Int, Default: config.Some(0), Roles: bothRoles,
+		Validate: func(value int) error {
+			if value < 0 || value > 16 {
+				return errors.New("must be between 0 and 16")
+			}
+			return nil
+		},
+		Doc: "Messages one history page downloads at once. 0 keeps the built-in 4 for Gmail and 2 for Microsoft. Microsoft allows four requests at once per mailbox, so it never uses more than 4. Memory held by Gmail downloads stays bounded however high this is.",
+	})
+	CaptureHistoryLookahead = config.Define(config.Spec[int]{
+		Key: "capture.history_lookahead", Env: "MARGINCE_CAPTURE_HISTORY_LOOKAHEAD", Type: config.Int, Default: config.Some(0), Roles: bothRoles,
+		Validate: func(value int) error {
+			if value < 0 || value > 128 {
+				return errors.New("must be between 0 and 128")
+			}
+			return nil
+		},
+		Doc: "How many messages a history page may download ahead of the ones saved. 0 means twice the fetch workers; a value under the workers is raised to match.",
+	})
+	CaptureHistoryPageDelay = config.Define(config.Spec[time.Duration]{
+		Key: "capture.history_page_delay", Env: "MARGINCE_CAPTURE_HISTORY_PAGE_DELAY", Type: config.Duration, Default: config.Some(time.Duration(0)), Roles: bothRoles,
+		Validate: func(value time.Duration) error {
+			if value < 0 || value > 10*time.Minute {
+				return errors.New("must be between 0s and 10m")
+			}
+			return nil
+		},
+		Doc: "How long a history import waits after saving a page before it starts the next. 0 starts it at once. A longer wait lowers the load on the database and the worker and slows the import. Applies to Gmail and Microsoft.",
+	})
 	CaptureGmailMailboxQuota = config.Define(config.Spec[int]{
 		Key: "capture.gmail_mailbox_quota", Env: "MARGINCE_CAPTURE_GMAIL_MAILBOX_QUOTA", Type: config.Int, Default: config.Some(6000), Roles: bothRoles,
 		Validate: validateGmailQuota, Doc: "Effective Gmail quota units per minute per mailbox. Shared across live and history requests and OAuth apps; 100 units are kept free. Match the limit shown by Google.",
@@ -74,7 +117,7 @@ var (
 func captureSettings() []config.Any {
 	return []config.Any{
 		CaptureFreemailExtra, CaptureFreemailNever, CaptureTransactionalExtra, CaptureTransactionalNever,
-		CaptureTracePayloads, CaptureMaxBackfillMonths, CaptureHistoryConcurrency, CaptureHistoryHold, CaptureGmailMailboxQuota, CaptureGmailProjectQuota, CaptureSkipReservedDomainProposals,
+		CaptureTracePayloads, CaptureMaxBackfillMonths, CaptureHistoryConcurrency, CaptureHistoryHold, CaptureHistoryPageSize, CaptureHistoryFetchWorkers, CaptureHistoryLookahead, CaptureHistoryPageDelay, CaptureGmailMailboxQuota, CaptureGmailProjectQuota, CaptureSkipReservedDomainProposals,
 	}
 }
 
@@ -87,15 +130,19 @@ func CaptureConfigFromDeploy(c *config.Config, log *slog.Logger) CaptureConfig {
 			"list moved to the workspace, editable under Settings or at POST /v1/capture/consumer-mail-domains. Remove them from margince.yaml.")
 	}
 	return CaptureConfig{
-		TransactionalExtra: config.Val(c, CaptureTransactionalExtra),
-		TransactionalNever: config.Val(c, CaptureTransactionalNever),
-		TracePayloads:      config.Val(c, CaptureTracePayloads),
-		MaxBackfillMonths:  config.Val(c, CaptureMaxBackfillMonths),
-		HistoryConcurrency: config.Val(c, CaptureHistoryConcurrency),
-		HistoryHold:        config.Val(c, CaptureHistoryHold),
-		GmailMailboxQuota:  config.Val(c, CaptureGmailMailboxQuota),
-		GmailProjectQuota:  config.Val(c, CaptureGmailProjectQuota),
-		Logger:             log,
+		TransactionalExtra:  config.Val(c, CaptureTransactionalExtra),
+		TransactionalNever:  config.Val(c, CaptureTransactionalNever),
+		TracePayloads:       config.Val(c, CaptureTracePayloads),
+		MaxBackfillMonths:   config.Val(c, CaptureMaxBackfillMonths),
+		HistoryConcurrency:  config.Val(c, CaptureHistoryConcurrency),
+		HistoryHold:         config.Val(c, CaptureHistoryHold),
+		HistoryPageSize:     config.Val(c, CaptureHistoryPageSize),
+		HistoryFetchWorkers: config.Val(c, CaptureHistoryFetchWorkers),
+		HistoryLookahead:    config.Val(c, CaptureHistoryLookahead),
+		HistoryPageDelay:    config.Val(c, CaptureHistoryPageDelay),
+		GmailMailboxQuota:   config.Val(c, CaptureGmailMailboxQuota),
+		GmailProjectQuota:   config.Val(c, CaptureGmailProjectQuota),
+		Logger:              log,
 
 		SkipReservedDomainProposals: config.Val(c, CaptureSkipReservedDomainProposals),
 	}
