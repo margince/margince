@@ -104,7 +104,7 @@ func TestAWholeWaitingScanAsksNoMore(t *testing.T) {
 	store := &dealsWaitingStore{waitedOn: map[ids.UUID]bool{}}
 	s := (&Service{}).WithWaitingBacklog(store)
 
-	if got := s.dealsWaitingPastTheScan(t.Context(), atRiskDay(ids.NewV7()), waitingRead{read: true}); got != nil {
+	if got := s.dealsWaitingPastTheScan(t.Context(), atRiskDay(ids.NewV7()), waitingRead{read: true}); len(got) != 0 {
 		t.Errorf("deals = %v, want none", got)
 	}
 	if len(store.asked) != 0 {
@@ -125,7 +125,7 @@ func TestAFailedReadPastTheScanCountsUnderItsOwnLabel(t *testing.T) {
 	before := LaneFailures()
 	s := (&Service{}).WithWaitingBacklog(&failingDealsWaiting{})
 
-	if got := s.dealsWaitingPastTheScan(t.Context(), atRiskDay(ids.NewV7()), waitingRead{read: true, cut: true}); got != nil {
+	if got := s.dealsWaitingPastTheScan(t.Context(), atRiskDay(ids.NewV7()), waitingRead{read: true, cut: true}); len(got) != 0 {
 		t.Errorf("deals = %v, want none from a failed read", got)
 	}
 	after := LaneFailures()

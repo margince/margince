@@ -120,7 +120,7 @@ func (s *Service) dealsElsewhere(
 // tail alike: the deals a waiting card names under this page's narrowing.
 func (s *Service) dealsWaiting(ctx context.Context, asOf time.Time, deals []ids.UUID) (map[ids.UUID]bool, error) {
 	if s.backlog.waiting == nil || len(deals) == 0 {
-		return nil, nil
+		return map[ids.UUID]bool{}, nil
 	}
 	return s.backlog.waiting.DealsWaiting(ctx, asOf, s.waitingFor(ctx), deals)
 }
