@@ -1,6 +1,10 @@
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import type { components } from "../../api/schema";
+import {
+  keyTestReasonKey,
+  useTestProviderKey,
+} from "../../components/ai-provider-key-test";
 import { DEFAULT_VERTEX_LOCATION } from "../../components/vertex-location";
 import { Button, Field } from "../../design-system/atoms";
 import { ComboBox } from "../../design-system/combobox";
@@ -26,10 +30,6 @@ import {
   useRemoveProviderKey,
   useSetProviderKey,
 } from "../ai/ai-provider-key-hooks";
-import {
-  keyTestReasonKey,
-  useTestProviderKey,
-} from "../ai/ai-provider-key-test";
 import { ModelRatePlate } from "./ai-rates";
 import {
   AiKeyFields,
