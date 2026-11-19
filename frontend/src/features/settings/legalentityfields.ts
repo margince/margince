@@ -110,6 +110,10 @@ const REQUIRED_ENTITY_FIELDS = [
 const NAME_TAKEN = "legal_entity_name_taken";
 
 const ADDRESS_KEY_SET: ReadonlySet<DraftKey> = new Set<DraftKey>(ADDRESS_KEYS);
+const OFFERING_KEY_SET: ReadonlySet<DraftKey> = new Set<DraftKey>(
+  OFFERING_KEYS,
+);
+const OFFERING_PREFIX = "offering.";
 
 /** Every field the editor holds. */
 export const ENTITY_KEYS: readonly DraftKey[] = [
@@ -123,13 +127,23 @@ export function wireOf(key: DraftKey): string {
   return ADDRESS_KEY_SET.has(key) ? `address.${key}` : key;
 }
 
-/** The on-screen label of each field the form shows, by its wire path. */
+/**
+ * The on-screen label of each field the form shows, by its wire path. The
+ * request decoder names an offering field `offering.icp`, the store `icp`.
+ */
 export function entityLabels(
   t: Translator,
   keys: readonly DraftKey[],
 ): FieldLabels {
   return Object.fromEntries(
-    keys.map((key) => [wireOf(key), t(LABEL_KEYS[key])]),
+    keys.flatMap((key) => {
+      const label = t(LABEL_KEYS[key]);
+      const named: [string, string][] = [[wireOf(key), label]];
+      if (OFFERING_KEY_SET.has(key)) {
+        named.push([`${OFFERING_PREFIX}${key}`, label]);
+      }
+      return named;
+    }),
   );
 }
 
@@ -148,7 +162,15 @@ export function entityRefusal(
       rest: null,
     };
   }
-  return refusalSentences(error, t, labels);
+  const refused = refusalSentences(error, t, labels);
+  const byField = new Map<string, string>();
+  for (const [wire, sentence] of refused.byField) {
+    const field = wire.startsWith(OFFERING_PREFIX)
+      ? wire.slice(OFFERING_PREFIX.length)
+      : wire;
+    if (!byField.has(field)) byField.set(field, sentence);
+  }
+  return { byField, rest: refused.rest };
 }
 
 /** The sentence for each required field left blank, before anything is sent. */

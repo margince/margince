@@ -593,3 +593,31 @@ it("closes an unchanged entity whose stored name is blank, and sends nothing", a
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   expect(calls.some((call) => call.method === "PATCH")).toBe(false);
 });
+
+it("puts a refusal the decoder names under offering on its field", async () => {
+  const user = userEvent.setup();
+  vi.stubGlobal(
+    "fetch",
+    backend(ADMIN, [...DEFAULT_ONLY, VIENNA], [], {
+      "/legal-entities/le-vienna": fieldFault("offering.icp", "too_long", {
+        max: 2000,
+      }),
+    }),
+  );
+  render(<LegalEntitiesCard />);
+  await rowVerb(user, "Acme Wien", en["legalEntities.edit"]);
+  const dialog = await screen.findByRole("dialog");
+  const icp = within(dialog).getByRole("textbox", {
+    name: en["legalEntities.icp"],
+  });
+  await user.type(icp, "Mid-size utilities");
+  await user.click(
+    within(dialog).getByRole("button", { name: en["legalEntities.save"] }),
+  );
+  expect(
+    await within(dialog).findByText(
+      `${en["legalEntities.icp"]}: at most 2,000 characters.`,
+    ),
+  ).toBeVisible();
+  await waitFor(() => expect(icp).toHaveFocus());
+});

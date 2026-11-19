@@ -28,8 +28,8 @@ const TOO_LONG = new ProblemError({
       {
         field: "display_name",
         code: "too_long",
-        message: "a company name is at most 200 characters",
-        max: 200,
+        message: "a company name is at most 120 characters",
+        max: 120,
       },
     ],
   },
@@ -80,16 +80,16 @@ describe("CompanyProfileDialog", () => {
     const view = render(<Dialog onSubmit={onSubmit} />);
     const name = await screen.findByRole("textbox", { name: "Company name" });
     view.rerender(<Dialog onSubmit={onSubmit} refused={TOO_LONG} />);
-    expect(name).toHaveAttribute("maxlength", "200");
+    expect(name).toHaveAttribute("maxlength", "120");
     expect(
-      await screen.findByText("Company name: at most 200 characters."),
+      await screen.findByText("Company name: at most 120 characters."),
     ).toBeVisible();
     expect(name).toHaveAttribute("aria-invalid", "true");
     await waitFor(() => expect(name).toHaveFocus());
     expect(screen.queryByText(/failed validation/)).toBeNull();
     await user.type(name, "x");
     expect(
-      screen.queryByText("Company name: at most 200 characters."),
+      screen.queryByText("Company name: at most 120 characters."),
     ).toBeNull();
   });
 });

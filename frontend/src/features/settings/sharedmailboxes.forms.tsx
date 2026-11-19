@@ -208,7 +208,7 @@ export function ConnectSharedMailboxDialog({
       await invalidate();
       onClose();
     },
-    // A refused login keeps no secret on screen for the next try.
+    // A failed connect keeps no secret on screen, as the personal form does.
     onError: () =>
       setValues((prior) => ({
         ...prior,

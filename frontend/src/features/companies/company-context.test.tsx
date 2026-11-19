@@ -844,8 +844,8 @@ describe("CompanyContextCard save refusals", () => {
                       field: "display_name",
                       code: "too_long",
                       message:
-                        "a company name is at most 200 characters; this one is 201",
-                      max: 200,
+                        "a company name is at most 120 characters; this one is 121",
+                      max: 120,
                     },
                   ],
                 },
@@ -876,18 +876,18 @@ describe("CompanyContextCard save refusals", () => {
       );
 
       const said = await within(dialog).findByText(
-        "Company name: at most 200 characters.",
+        "Company name: at most 120 characters.",
         undefined,
         { timeout: SETTLE_MS },
       );
       expect(said.className).toContain("field-error");
-      expect(within(dialog).getAllByText(/at most 200/)).toHaveLength(1);
+      expect(within(dialog).getAllByText(/at most 120/)).toHaveLength(1);
       expect(within(dialog).queryByText(/failed validation/)).toBeNull();
       const name = within(dialog).getByRole("textbox", {
         name: "Company name",
       });
       expect(name.getAttribute("aria-invalid")).toBe("true");
-      expect(name.getAttribute("maxlength")).toBe("200");
+      expect(name.getAttribute("maxlength")).toBe("120");
       await waitFor(() => expect(document.activeElement).toBe(name));
     },
     DIALOG_MS,
@@ -915,8 +915,8 @@ describe("ManualCompanySetup save refusals", () => {
                   {
                     field: "display_name",
                     code: "too_long",
-                    message: "a company name is at most 200 characters",
-                    max: 200,
+                    message: "a company name is at most 120 characters",
+                    max: 120,
                   },
                 ],
               },
@@ -940,7 +940,7 @@ describe("ManualCompanySetup save refusals", () => {
     );
 
     expect(
-      await screen.findByText("Company name: at most 200 characters."),
+      await screen.findByText("Company name: at most 120 characters."),
     ).toBeTruthy();
     expect(screen.queryByText(/failed validation/)).toBeNull();
   });
