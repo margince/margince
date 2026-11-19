@@ -10,10 +10,13 @@ package mailhooks
 
 import (
 	"cmp"
+	"context"
 	"fmt"
 	"log/slog"
 	"slices"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -29,20 +32,23 @@ const (
 	mailHookDeal    = "deal"
 )
 
-// units reads the served units. New calls it at each hook, because capture is
-// composed before the units are registered.
-type units func() []extension.Extension
+// units reads the served units. It is called at each hook, because capture is
+// composed before the units are registered. The pool backs a hook's Lookup.
+type units struct {
+	served func() []extension.Extension
+	pool   *pgxpool.Pool
+}
 
-// New is the capture hooks of the units that units serves.
-func New(served func() []extension.Extension) capture.MailHooks {
-	u := units(served)
+// New is the capture hooks of the units that served lists.
+func New(served func() []extension.Extension, pool *pgxpool.Pool) capture.MailHooks {
+	u := units{served: served, pool: pool}
 	return capture.MailHooks{Active: u.any, Parties: u.runParties, Verdict: u.runDeal}
 }
 
 // withHook are the units that registered a hook, in unit-name order.
 func (u units) withHook(has func(extension.MailHooks) bool) []extension.Extension {
 	var found []extension.Extension
-	for _, unit := range u() {
+	for _, unit := range u.served() {
 		if has(unit.MailHooks) {
 			found = append(found, unit)
 		}
@@ -78,11 +84,13 @@ func callMailHook[T any](fn func() (T, error)) (T, error) {
 	}
 }
 
-func (u units) runParties(view capture.MailView, parties capture.MailParties) (capture.MailParties, []capture.HookChange) {
+func (u units) runParties(ctx context.Context, view capture.MailView, parties capture.MailParties) (capture.MailParties, []capture.HookChange) {
 	var changes []capture.HookChange
 	for _, unit := range u.withHook(func(h extension.MailHooks) bool { return h.Parties != nil }) {
 		in := extension.MailParties{Contacts: uuidStrings(parties.Contacts), Companies: uuidStrings(parties.Companies)}
-		out, err := callMailHook(func() (extension.MailParties, error) { return unit.MailHooks.Parties(extensionMailView(view), in) })
+		out, err := callMailHook(func() (extension.MailParties, error) {
+			return unit.MailHooks.Parties(u.extensionMailView(ctx, view), in)
+		})
 		if err != nil {
 			slog.Warn("compose: a mail hook failed and its result was ignored", "unit", unit.Name, "hook", mailHookParties, "err", err)
 			continue
@@ -97,11 +105,11 @@ func (u units) runParties(view capture.MailView, parties capture.MailParties) (c
 	return parties, changes
 }
 
-func (u units) runDeal(view capture.MailView, verdict capture.DealVerdict) (capture.DealVerdict, []capture.HookChange) {
+func (u units) runDeal(ctx context.Context, view capture.MailView, verdict capture.DealVerdict) (capture.DealVerdict, []capture.HookChange) {
 	var changes []capture.HookChange
 	for _, unit := range u.withHook(func(h extension.MailHooks) bool { return h.Deal != nil }) {
 		in := dealForHook(verdict)
-		out, err := callMailHook(func() (extension.MailDeal, error) { return unit.MailHooks.Deal(extensionMailView(view), in) })
+		out, err := callMailHook(func() (extension.MailDeal, error) { return unit.MailHooks.Deal(u.extensionMailView(ctx, view), in) })
 		if err != nil {
 			slog.Warn("compose: a mail hook failed and its result was ignored", "unit", unit.Name, "hook", mailHookDeal, "err", err)
 			continue
@@ -116,8 +124,11 @@ func (u units) runDeal(view capture.MailView, verdict capture.DealVerdict) (capt
 	return verdict, changes
 }
 
-func extensionMailView(v capture.MailView) extension.MailView {
-	return extension.MailView{Activity: v.Activity.String(), Meeting: v.Meeting, Subject: v.Subject, Addresses: slices.Clone(v.Addresses)}
+func (u units) extensionMailView(ctx context.Context, v capture.MailView) extension.MailView {
+	return extension.MailView{
+		Activity: v.Activity.String(), Meeting: v.Meeting, Subject: v.Subject, Body: v.Body,
+		Addresses: slices.Clone(v.Addresses), Lookup: lookupFor(ctx, u.pool),
+	}
 }
 
 func uuidStrings(list []ids.UUID) []string {

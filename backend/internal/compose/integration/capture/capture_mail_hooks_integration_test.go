@@ -9,12 +9,15 @@ package capture
 // change, what core records, and what a colleague's decision keeps out of reach.
 
 import (
+	"bytes"
+	"context"
 	"net/http"
 	"slices"
 	"sync/atomic"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -126,5 +129,48 @@ func TestADealHookCannotReachADealOfAnotherCompany(t *testing.T) {
 	env.sync(t, mailFrom("alice@acme.example", "hook5@acme.example", "", "hello"))
 	if slices.Contains(dealsOf(t, e, "hook5@acme.example"), foreign) {
 		t.Fatal("the mail was filed on a deal of another company")
+	}
+}
+
+// A deal hook reads the mail's text, looks the reference in it up in the
+// unit's own table and links that deal. The same Lookup cannot write.
+func TestADealHookReadsTheBodyAndLooksARefUpInTheUnitsOwnData(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	w := newDealWorld(t, e)
+	w.employee(t, "alice@acme.example", w.customer)
+	w.deal(t, "Acme rollout")
+	chosen := w.deal(t, "Acme reporting")
+	owner := integration.OwnerConn(t)
+	for _, statement := range []string{
+		`CREATE SCHEMA IF NOT EXISTS ext`,
+		`CREATE TABLE ext.ext_deal_rules_ref (ref text PRIMARY KEY, deal uuid NOT NULL)`,
+		`GRANT SELECT, INSERT ON ext.ext_deal_rules_ref TO ext_runtime`,
+		`INSERT INTO ext.ext_deal_rules_ref VALUES ('PO-7731', '` + chosen.String() + `')`,
+	} {
+		if _, err := owner.Exec(context.Background(), statement); err != nil {
+			t.Fatalf("preparing the unit's table (%s): %v", statement, err)
+		}
+	}
+	t.Cleanup(func() {
+		if _, err := owner.Exec(context.Background(), `DROP TABLE ext.ext_deal_rules_ref`); err != nil {
+			t.Errorf("removing the unit's table: %v", err)
+		}
+	})
+	var writeErr atomic.Value
+	registerMailHooks(t, extension.MailHooks{Deal: func(m extension.MailView, d extension.MailDeal) (extension.MailDeal, error) {
+		var deal string
+		if err := m.Lookup(`SELECT deal::text FROM ext.ext_deal_rules_ref WHERE $1 LIKE '%' || ref || '%'`, m.Body).Scan(&deal); err != nil {
+			return d, err
+		}
+		if err := m.Lookup(`INSERT INTO ext.ext_deal_rules_ref VALUES ('X', $1) RETURNING ref`, deal).Scan(new(string)); err != nil {
+			writeErr.Store(err.Error())
+		}
+		return extension.MailDeal{Outcome: "linked", Deal: deal, Reason: "the purchase order in the text"}, nil
+	}})
+	env.sync(t, bytes.Replace(mailFrom("alice@acme.example", "hook6@acme.example", "", "an order"), []byte("hello"), []byte("our order PO-7731 please"), 1))
+	wantDeals(t, e, "hook6@acme.example", chosen)
+	if writeErr.Load() == nil {
+		t.Fatal("the lookup accepted a write")
 	}
 }

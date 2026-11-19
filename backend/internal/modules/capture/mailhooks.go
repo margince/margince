@@ -20,6 +20,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// mailBodyLimit is how many characters of the text a hook reads.
+const mailBodyLimit = "8000"
+
 // DealBasisExtension is the verdict of an extension that linked a deal. No topic
 // check follows it, because the extension decided on its own rules.
 const DealBasisExtension DealBasis = "extension"
@@ -37,6 +40,8 @@ type MailView struct {
 	Meeting   bool
 	Subject   string
 	Addresses []string
+	// Body is the start of the text, read only where the seat may read it.
+	Body string
 }
 
 // MailParties is the contacts and companies derived for a mail.
@@ -49,8 +54,8 @@ type MailParties struct {
 // reports itself not Active costs the rule nothing, not even a read.
 type MailHooks struct {
 	Active  func() bool
-	Parties func(MailView, MailParties) (MailParties, []HookChange)
-	Verdict func(MailView, DealVerdict) (DealVerdict, []HookChange)
+	Parties func(context.Context, MailView, MailParties) (MailParties, []HookChange)
+	Verdict func(context.Context, MailView, DealVerdict) (DealVerdict, []HookChange)
 }
 
 // mailView reads what a hook may see. It answers false when the deciding seat
@@ -67,10 +72,10 @@ func mailView(ctx context.Context, tx pgx.Tx, facts dealFacts) (MailView, bool, 
 	}
 	view := MailView{Activity: facts.activity, Meeting: facts.meeting}
 	err = tx.QueryRow(ctx, `
-		SELECT coalesce(a.subject, ''),
+		SELECT coalesce(a.subject, ''), coalesce(left(a.body, `+mailBodyLimit+`), ''),
 		       coalesce((SELECT array_agg(DISTINCT lower(p.address) ORDER BY lower(p.address))
 		                   FROM activity_participant p WHERE p.activity_id = a.id AND p.address IS NOT NULL), '{}')
-		  FROM activity a WHERE a.id = $1 AND (`+scope+`)`, args...).Scan(&view.Subject, &view.Addresses)
+		  FROM activity a WHERE a.id = $1 AND (`+scope+`)`, args...).Scan(&view.Subject, &view.Body, &view.Addresses)
 	if err == pgx.ErrNoRows {
 		return MailView{}, false, nil
 	}
@@ -91,7 +96,7 @@ func (h MailHooks) adjustParties(ctx context.Context, tx pgx.Tx, facts *dealFact
 	if err != nil || !ok {
 		return err
 	}
-	out, changes := h.Parties(view, MailParties{Contacts: facts.contacts, Companies: facts.companies})
+	out, changes := h.Parties(ctx, view, MailParties{Contacts: facts.contacts, Companies: facts.companies})
 	if len(changes) == 0 || (slices.Equal(out.Contacts, facts.contacts) && slices.Equal(out.Companies, facts.companies)) {
 		return nil
 	}
@@ -143,7 +148,7 @@ func (h MailHooks) adjustVerdict(ctx context.Context, tx pgx.Tx, facts dealFacts
 	if err != nil || !ok {
 		return verdict, err
 	}
-	out, changes := h.Verdict(view, verdict)
+	out, changes := h.Verdict(ctx, view, verdict)
 	if len(changes) == 0 {
 		return verdict, nil
 	}

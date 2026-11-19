@@ -53,6 +53,6 @@ func mailDealRepair(pool *pgxpool.Pool) capture.DealRepair {
 	return capture.DealRepair{
 		Candidates: deals.NewStore(InstallationDB(pool), DealsInstallation()),
 		Authority:  identity.NewService(pool), Filer: ActivityDealFiler{},
-		Hooks: mailhooks.New(ComposedExtensions),
+		Hooks: mailhooks.New(ComposedExtensions, pool),
 	}
 }

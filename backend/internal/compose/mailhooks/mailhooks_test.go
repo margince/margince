@@ -4,6 +4,7 @@
 package mailhooks
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -30,8 +31,8 @@ func TestHooksRunInUnitNameOrderAndAnUnreadableAnswerChangesNothing(t *testing.T
 			return p, nil
 		}
 	}
-	h := New(served(partiesUnit("b-unit", step("b")), partiesUnit("a-unit", step("a"))))
-	_, changes := h.Parties(capture.MailView{}, capture.MailParties{})
+	h := New(served(partiesUnit("b-unit", step("b")), partiesUnit("a-unit", step("a"))), nil)
+	_, changes := h.Parties(context.Background(), capture.MailView{}, capture.MailParties{})
 	if len(seen) != 2 || seen[0] != "a" || seen[1] != "b" {
 		t.Fatalf("order = %v, want a then b", seen)
 	}
@@ -55,7 +56,7 @@ func TestAFailingPanickingOrSlowHookLeavesTheResultAlone(t *testing.T) {
 			return extension.MailParties{}, nil
 		},
 	} {
-		out, changes := New(served(partiesUnit("u", hook))).Parties(capture.MailView{}, in)
+		out, changes := New(served(partiesUnit("u", hook)), nil).Parties(context.Background(), capture.MailView{}, in)
 		if len(changes) != 0 || len(out.Contacts) != 1 || out.Contacts[0] != id {
 			t.Errorf("%s: result changed: %v %v", name, out, changes)
 		}
@@ -63,12 +64,12 @@ func TestAFailingPanickingOrSlowHookLeavesTheResultAlone(t *testing.T) {
 }
 
 func TestNoUnitMeansNoHooksActive(t *testing.T) {
-	if New(served()).Active() {
+	if New(served(), nil).Active() {
 		t.Fatal("Active with no unit")
 	}
 	if !New(served(partiesUnit("u", nil), extension.Extension{Name: "d", MailHooks: extension.MailHooks{Deal: func(extension.MailView, extension.MailDeal) (extension.MailDeal, error) {
 		return extension.MailDeal{}, nil
-	}}})).Active() {
+	}}}), nil).Active() {
 		t.Fatal("not Active with a deal hook")
 	}
 }

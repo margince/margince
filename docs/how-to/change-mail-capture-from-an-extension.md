@@ -22,7 +22,16 @@ Set `Reason` to one sentence whenever you change something. Leave it empty when 
 
 ## What a hook may read
 
-`MailView` holds the mail's id, whether it is a meeting, its subject, and its participants' addresses. It has no body and no files. A hook gets no context and no `Runtime`, so it can read and write nothing else. It runs only for a mail the deciding seat may read.
+`MailView` holds the mail's id, whether it is a meeting, its subject, its participants' addresses, and the start of its text (`Body`, at most 8,000 characters). It has no files. It runs only for a mail the deciding seat may read, so a held mail's text never reaches a hook.
+
+`MailView.Lookup` reads one row of your own tables. It takes the statement and its arguments as `Tx.QueryRow` does, with your table spelled `ext.ext_<unit>_<table>`:
+
+```go
+var deal string
+err := mail.Lookup(`SELECT deal::text FROM ext.ext_deal_rules_ref WHERE $1 LIKE '%' || ref || '%'`, mail.Body).Scan(&deal)
+```
+
+A lookup cannot write. It runs in its own read-only transaction as the unit role, so core's tables stay out of reach, and it ends after 250 milliseconds. A hook gets no context and no `Runtime`, so it can read nothing else.
 
 ## What core promises
 

@@ -9,8 +9,8 @@
 package extension
 
 // MailView is what a mail hook may read about one captured mail or meeting.
-// It carries no body and no attachment, and it gives the hook no way to read
-// or write anything else.
+// It carries no attachment. Its body is cut to the first characters, and its
+// Lookup reads the unit's own data and nothing else.
 type MailView struct {
 	// Activity is the id of the mail.
 	Activity string
@@ -20,6 +20,12 @@ type MailView struct {
 	Subject string
 	// Addresses are the participants' addresses, lower case, in order.
 	Addresses []string
+	// Body is the start of the text, at most 8000 characters.
+	Body string
+	// Lookup reads one row of the unit's own tables, for example the customer
+	// a reference in the subject belongs to. It cannot write, and it ends after
+	// 250 milliseconds. Pass the statement and its arguments as for Tx.QueryRow.
+	Lookup func(sql string, args ...any) Row
 }
 
 // MailParties is the contacts and companies core derived for a mail, as ids.
@@ -55,8 +61,9 @@ type MailDealHook func(mail MailView, deal MailDeal) (MailDeal, error)
 
 // MailHooks are the behavior a unit registers in mail capture. Either may be nil.
 //
-// A hook is a plain function with no context and no Runtime. It reads and
-// writes nothing, and the same input gives the same answer.
+// A hook is a plain function with no context and no Runtime. It writes
+// nothing and reads only its MailView, and the same input gives the same
+// answer.
 // Hooks run in unit-name order, each seeing the previous result. A failed or
 // slow hook leaves it unchanged. A hook cannot change what a colleague decided.
 // A filed mail never reaches it. A deal a colleague ruled out is dropped.
