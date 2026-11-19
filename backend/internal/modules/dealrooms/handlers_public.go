@@ -30,14 +30,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
-// noSessionDetail is the 401 a buyer reads. It names no room and no reason.
-const noSessionDetail = "this link no longer admits you: ask for a new one"
-
 // writeBuyerFault answers a buyer request's error. A seat revoked after the
 // session resolved refuses with ErrSessionRefused, which is the same 401.
 func writeBuyerFault(w http.ResponseWriter, r *http.Request, err error) {
 	if errors.Is(err, ErrSessionRefused) {
-		httperr.Unauthorized(w, r, noSessionDetail)
+		httperr.Unauthorized(w, r, NoSessionDetail)
 		return
 	}
 	httperr.Write(w, r, err)
@@ -88,6 +85,8 @@ func (h Handlers) ExchangeDealRoomCredential(w http.ResponseWriter, r *http.Requ
 		httperr.Write(w, r, err)
 		return
 	}
+	setSessionCookie(w, issued.Token, issued.ExpiresAt)
+	w.Header().Set("Cache-Control", "no-store")
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.DealRoomSessionIssued{
 		SessionToken: issued.Token,
 		ExpiresAt:    issued.ExpiresAt,
@@ -186,7 +185,7 @@ func answerAndFlush(w http.ResponseWriter, r *http.Request, status int) {
 func (h Handlers) GetBuyerRoom(w http.ResponseWriter, r *http.Request) {
 	sess, ok := SessionFrom(r.Context())
 	if !ok {
-		httperr.Unauthorized(w, r, noSessionDetail)
+		httperr.Unauthorized(w, r, NoSessionDetail)
 		return
 	}
 	view, err := h.store.BuyerView(r.Context(), sess)
@@ -201,13 +200,14 @@ func (h Handlers) GetBuyerRoom(w http.ResponseWriter, r *http.Request) {
 func (h Handlers) SignOutBuyerRoom(w http.ResponseWriter, r *http.Request) {
 	sess, ok := SessionFrom(r.Context())
 	if !ok {
-		httperr.Unauthorized(w, r, noSessionDetail)
+		httperr.Unauthorized(w, r, NoSessionDetail)
 		return
 	}
 	if err := h.store.SignOut(r.Context(), sess); err != nil {
 		writeBuyerFault(w, r, err)
 		return
 	}
+	clearSessionCookie(w)
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -215,7 +215,7 @@ func (h Handlers) SignOutBuyerRoom(w http.ResponseWriter, r *http.Request) {
 func (h Handlers) ListBuyerRoomDocuments(w http.ResponseWriter, r *http.Request) {
 	sess, ok := SessionFrom(r.Context())
 	if !ok {
-		httperr.Unauthorized(w, r, noSessionDetail)
+		httperr.Unauthorized(w, r, NoSessionDetail)
 		return
 	}
 	docs, err := h.store.BuyerDocuments(r.Context(), sess)
@@ -230,7 +230,7 @@ func (h Handlers) ListBuyerRoomDocuments(w http.ResponseWriter, r *http.Request)
 func (h Handlers) DownloadBuyerRoomDocument(w http.ResponseWriter, r *http.Request, documentID openapi_types.UUID) {
 	sess, ok := SessionFrom(r.Context())
 	if !ok {
-		httperr.Unauthorized(w, r, noSessionDetail)
+		httperr.Unauthorized(w, r, NoSessionDetail)
 		return
 	}
 	if h.documents == nil {
@@ -278,7 +278,7 @@ var errNoDocumentStore = errors.New("dealrooms: no object store is configured, s
 func (h Handlers) ListBuyerRoomThreads(w http.ResponseWriter, r *http.Request, params crmcontracts.ListBuyerRoomThreadsParams) {
 	sess, ok := SessionFrom(r.Context())
 	if !ok {
-		httperr.Unauthorized(w, r, noSessionDetail)
+		httperr.Unauthorized(w, r, NoSessionDetail)
 		return
 	}
 	threads, err := h.store.BuyerThreads(r.Context(), sess, optionalUUID(params.DocumentId))
@@ -293,7 +293,7 @@ func (h Handlers) ListBuyerRoomThreads(w http.ResponseWriter, r *http.Request, p
 func (h Handlers) OpenBuyerRoomThread(w http.ResponseWriter, r *http.Request) {
 	sess, ok := SessionFrom(r.Context())
 	if !ok {
-		httperr.Unauthorized(w, r, noSessionDetail)
+		httperr.Unauthorized(w, r, NoSessionDetail)
 		return
 	}
 	var req crmcontracts.OpenDealRoomThreadRequest
@@ -317,7 +317,7 @@ func (h Handlers) OpenBuyerRoomThread(w http.ResponseWriter, r *http.Request) {
 func (h Handlers) ReplyBuyerRoomThread(w http.ResponseWriter, r *http.Request, threadID openapi_types.UUID) {
 	sess, ok := SessionFrom(r.Context())
 	if !ok {
-		httperr.Unauthorized(w, r, noSessionDetail)
+		httperr.Unauthorized(w, r, NoSessionDetail)
 		return
 	}
 	var req crmcontracts.PostDealRoomCommentRequest

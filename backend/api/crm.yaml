@@ -12198,8 +12198,11 @@ paths:
       summary: Exchange a one-time Deal Room credential for a room session (anonymous).
       description: |
         Consumes the credential — a second exchange of the same string is refused —
-        and issues a session token the buyer presents as a Bearer on every other
-        `/public/rooms` operation. The session is bound to ONE participant in ONE
+        and issues a session token the buyer presents on every other
+        `/public/rooms` operation. The same answer sets it as the
+        `crm_room_session` cookie: HttpOnly, Secure, SameSite=Strict, scoped to
+        `/v1/public/rooms/` and expiring with the session, so a browser keeps
+        access after its tab closes. The session is bound to ONE participant in ONE
         room and is resolved fresh on every request, so revocation binds on the next
         call. A paused room still exchanges: the session is established and the
         room bootstrap then says access is paused.
@@ -12211,6 +12214,10 @@ paths:
       responses:
         '200':
           description: The session token, returned once.
+          headers:
+            Set-Cookie:
+              description: The `crm_room_session` cookie carrying the same session token.
+              schema: { type: string }
           content:
             application/json:
               schema: { $ref: '#/components/schemas/DealRoomSessionIssued' }
@@ -12408,9 +12415,9 @@ paths:
       x-agent-access: human-only
       summary: End the room session.
       description: |
-        Revokes this session only. The participant keeps their standing; a fresh
-        link admits them again. Works in every room state, because ending a session
-        is an access act, not a content one.
+        Revokes this session only and clears the `crm_room_session` cookie. The
+        participant keeps their standing; a fresh link admits them again. Works in
+        every room state, because ending a session is an access act, not a content one.
       responses:
         '204': { description: 'Signed out.' }
         '401': { $ref: '#/components/responses/Unauthorized' }
@@ -38912,7 +38919,9 @@ components:
       type: http
       scheme: bearer
       description: |
-        A Deal Room BUYER session (the `/public/rooms` surface only). Exchanged once
+        A Deal Room BUYER session (the `/public/rooms` surface only), presented as a
+        Bearer or, from a browser, as the `crm_room_session` cookie the exchange sets.
+        A present Bearer wins over the cookie. Exchanged once
         from an invitation credential; the server stores only its SHA-256 and
         resolves it on every request, so revocation and room pause bind on the next
         call. It carries no CRM authority whatsoever: every platform/auth gate
@@ -77839,7 +77848,7 @@ components:
       properties:
         session_token:
           type: string
-          description: "Present as `Authorization: Bearer`. Returned once; only its hash is stored."
+          description: "Present as `Authorization: Bearer`, or let the browser send the `crm_room_session` cookie. Returned once; only its hash is stored."
         expires_at:
           type: string
           format: date-time

@@ -3,34 +3,10 @@
 
 import type { useT } from "../../i18n";
 import { throwProblem } from "../../lib/problem";
-import {
-  readStored,
-  removeStored,
-  STORAGE_KEYS,
-  writeStored,
-} from "../../lib/storage";
 
-// The buyer's session, as this tab holds it: the token the credential exchange
-// issued, kept in sessionStorage and presented as a Bearer on every call, and
-// the one way every call answers when that token has stopped admitting them.
-
-export function readSession(): string | null {
-  return readStored(STORAGE_KEYS.buyerRoomSession);
-}
-
-// A browser refusing storage still gets this one page view: the token lives in
-// React state for the tab's lifetime and is simply not kept.
-export function writeSession(token: string | null): void {
-  if (token === null) {
-    removeStored(STORAGE_KEYS.buyerRoomSession);
-  } else {
-    writeStored(STORAGE_KEYS.buyerRoomSession, token);
-  }
-}
-
-export function bearer(token: string): { headers: { Authorization: string } } {
-  return { headers: { Authorization: `Bearer ${token}` } };
-}
+// The buyer's session is an HttpOnly cookie the credential exchange sets,
+// scoped to the buyer API. No script here reads or stores the token; the
+// browser sends it, and every call answers the same way once it stops admitting.
 
 // The session stopped answering — revoked, lapsed, or signed out elsewhere.
 export class SessionRefusedError extends Error {}

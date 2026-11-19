@@ -15,7 +15,6 @@ import { useT } from "../../i18n";
 import { downloadBytes } from "../../lib/download";
 import { throwProblem } from "../../lib/problem";
 import {
-  bearer,
   refuseOrThrow,
   retireOnRefusal,
   SessionRefusedError,
@@ -23,18 +22,16 @@ import {
 import { DOCUMENT_GROUPS } from "./dealroomdocuments";
 import { type BoardDocument, DocumentBoard } from "./dealroomthreads";
 
-// The buyer's half of the document board: the shared documents and the
-// conversation, read and written on the room session's Bearer. The board
-// itself is drawn once for both sides in dealroomthreads.tsx; this file is
-// what the buyer brings to it — download, read in place, ask and reply — and
-// never resolve.
+// The buyer's half of the document board, read and written on the room
+// session's cookie. dealroomthreads.tsx draws the board for both sides. This
+// file adds the buyer's verbs: download, read in place, ask and reply.
 
 // The buyer's documents query, shared by the board and the decision verbs so
 // one request serves both.
-function useBuyerDocuments(token: string, onSessionLost: () => void) {
+function useBuyerDocuments(session: number, onSessionLost: () => void) {
   const t = useT();
   const docs = useQuery({
-    queryKey: ["buyer-room-documents", token],
+    queryKey: ["buyer-room-documents", session],
     retry: false,
     // Re-asked with the tab, for the same reason /public/rooms/me is: a release
     // published while the buyer was away is what they came back to read.
@@ -42,7 +39,6 @@ function useBuyerDocuments(token: string, onSessionLost: () => void) {
     queryFn: async () => {
       const { data, error, response } = await api.GET(
         "/public/rooms/documents",
-        { ...bearer(token) },
       );
       if (error) {
         if (response.status === 401) {
@@ -71,10 +67,7 @@ type BuyerRoomDocument = components["schemas"]["BuyerRoomDocument"];
 // for, and one reading "Confirm this version" under a transcript cannot tell
 // what they would be agreeing to. What they want to say goes in the thread
 // under it, which is the whole point of the board.
-function BuyerDocumentVerbs({
-  token,
-  doc,
-}: Readonly<{ token: string; doc: BuyerRoomDocument }>) {
+function BuyerDocumentVerbs({ doc }: Readonly<{ doc: BuyerRoomDocument }>) {
   const t = useT();
   const download = useMutation({
     mutationKey: ["buyer-room-document-download"],
@@ -85,14 +78,12 @@ function BuyerDocumentVerbs({
       documentId: string;
       filename: string;
       failure: string;
-      token: string;
     }) => {
       const { data, error, response } = await api.GET(
         "/public/rooms/documents/{documentId}/file",
         {
           params: { path: { documentId: input.documentId } },
           parseAs: "blob",
-          ...bearer(input.token),
         },
       );
       if (error || !data) {
@@ -117,7 +108,6 @@ function BuyerDocumentVerbs({
             documentId: doc.id,
             filename: doc.filename,
             failure: t("buyer.docs.downloadFailed"),
-            token,
           })
         }
       >
@@ -133,12 +123,12 @@ function BuyerDocumentVerbs({
 // and the room-wide conversation. The verbs are the buyer's — download, open,
 // reply — and never resolve.
 export function BuyerBoard({
-  token,
+  session,
   onSessionLost,
   mayWrite,
   refusal,
 }: Readonly<{
-  token: string;
+  session: number;
   onSessionLost: () => void;
   mayWrite: boolean;
   refusal: string | undefined;
@@ -146,16 +136,14 @@ export function BuyerBoard({
   const t = useT();
   const queryClient = useQueryClient();
   const preview = useFilePreview();
-  const docs = useBuyerDocuments(token, onSessionLost);
+  const docs = useBuyerDocuments(session, onSessionLost);
   const threads = useQuery({
-    queryKey: ["buyer-room-threads", token],
+    queryKey: ["buyer-room-threads", session],
     retry: false,
     // The conversation is live on both sides, so a returning tab re-reads it.
     refetchOnWindowFocus: "always",
     queryFn: async () => {
-      const { data, error, response } = await api.GET("/public/rooms/threads", {
-        ...bearer(token),
-      });
+      const { data, error, response } = await api.GET("/public/rooms/threads");
       if (error) {
         if (response.status === 401) {
           throw new SessionRefusedError();
@@ -172,7 +160,9 @@ export function BuyerBoard({
     }
   }, [lost, onSessionLost]);
   const refresh = () =>
-    queryClient.invalidateQueries({ queryKey: ["buyer-room-threads", token] });
+    queryClient.invalidateQueries({
+      queryKey: ["buyer-room-threads", session],
+    });
   const open = useMutation({
     mutationKey: ["buyer-room-thread-open"],
     mutationFn: async (input: {
@@ -188,7 +178,6 @@ export function BuyerBoard({
             body: input.body,
             required_change: input.requiredChange,
           },
-          ...bearer(token),
         },
       );
       if (error) {
@@ -207,7 +196,6 @@ export function BuyerBoard({
         {
           params: { path: { threadId: input.threadId } },
           body: { body: input.body },
-          ...bearer(token),
         },
       );
       if (error) {
@@ -219,10 +207,9 @@ export function BuyerBoard({
     onSuccess: refresh,
   });
   const documents: BoardDocument[] = (docs.data?.data ?? []).map((doc) => {
-    // Read here, over the room, rather than in the downloads folder: the bytes
-    // ride the same Bearer the list did, and the preview re-types them from
-    // the filename exactly as it does for a seat's own files. A kind no
-    // browser draws keeps the download as its only verb.
+    // Read over the room on the list's cookie. The preview types the bytes
+    // from the filename, as for a seat's own files. A kind no browser draws
+    // keeps the download as its only verb.
     const mediaType = previewMediaType(doc.filename);
     const read =
       preview !== null && mediaType !== null
@@ -231,7 +218,6 @@ export function BuyerBoard({
               href: `/v1/public/rooms/documents/${doc.id}/file`,
               filename: doc.filename,
               mediaType,
-              bearer: token,
             })
         : undefined;
     return {
@@ -242,7 +228,7 @@ export function BuyerBoard({
       meta: doc.filename,
       byteSize: doc.byte_size,
       read,
-      actions: <BuyerDocumentVerbs token={token} doc={doc} />,
+      actions: <BuyerDocumentVerbs doc={doc} />,
     };
   });
   return (
