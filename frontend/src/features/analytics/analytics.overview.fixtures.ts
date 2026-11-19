@@ -50,6 +50,8 @@ const UNITS: Readonly<Record<MetricID, string>> = {
   partner_activity: "count",
   stage_conversion: "percent",
   lead_cohort_outcomes: "percent",
+  account_progression: "percent",
+  source_quality: "count",
   bookings_mix: "Commercial mix",
   qualified_opportunities_created: "Qualified opportunities",
   initiative_pipeline: "Initiative pipeline by origin",

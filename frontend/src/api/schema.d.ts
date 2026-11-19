@@ -11994,7 +11994,7 @@ export interface paths {
             header?: never;
             path: {
                 /** @description A prebuilt report key. Saved reports are not served; a UUID here is refused. */
-                report: "activities-by-kind" | "deals-by-stage" | "forecast" | "leads-by-status" | "meeting-conversion" | "open-deals-per-company" | "pipeline-current" | "project-commitments" | "projects-by-phase" | "projects-gone-quiet" | "stage-age" | "win-loss";
+                report: "activities-by-kind" | "deals-by-stage" | "forecast" | "leads-by-status" | "loss-events" | "meeting-conversion" | "open-deals-per-company" | "pipeline-current" | "project-commitments" | "projects-by-phase" | "projects-gone-quiet" | "stage-age" | "win-loss";
             };
             cookie?: never;
         };
@@ -48174,7 +48174,7 @@ export interface components {
         /** @description The list a saved view is over: one of core's lists, or `ext:<unit>:<kind>` for a kind an extension declared. One schema for the record, the create body and the list filter, so the three cannot drift. */
         SavedViewTarget: string;
         /** @enum {string} */
-        ReportingMetricID: "bookings_won" | "closed_win_rate" | "open_pipeline" | "stage_age" | "qualified_pipeline_created" | "meetings_held" | "accepted_opportunities" | "forecast_landing" | "leads_created" | "lead_status_moves" | "leads_promoted" | "leads_qualified" | "lead_first_response" | "leads_awaiting_response" | "leads_awaiting_response_now" | "partner_pipeline" | "partner_won" | "partner_commission" | "partner_activity" | "stage_conversion" | "lead_cohort_outcomes" | "bookings_mix" | "qualified_opportunities_created" | "initiative_pipeline";
+        ReportingMetricID: "bookings_won" | "closed_win_rate" | "open_pipeline" | "stage_age" | "qualified_pipeline_created" | "meetings_held" | "accepted_opportunities" | "forecast_landing" | "leads_created" | "lead_status_moves" | "leads_promoted" | "leads_qualified" | "lead_first_response" | "leads_awaiting_response" | "leads_awaiting_response_now" | "partner_pipeline" | "partner_won" | "partner_commission" | "partner_activity" | "stage_conversion" | "lead_cohort_outcomes" | "bookings_mix" | "qualified_opportunities_created" | "initiative_pipeline" | "account_progression" | "source_quality";
         /**
          * @description `breakdown` splits one metric's figure into named groups: a lead's origin,
          *     the status a lead moved to, a partner and whether it sourced or influenced
@@ -48186,9 +48186,13 @@ export interface components {
          *     `lead_cohort` follows the leads that arrived in the interval the same
          *     way: one point, its `outcomes` saying whether each lead was accepted,
          *     qualified, disqualified or is still open.
+         *     `account_cohort` follows the distinct accounts of those leads: one point,
+         *     its `outcomes` saying the furthest outcome any of an account's leads
+         *     reached. `source_quality` is one point per lead origin: how many leads
+         *     arrived from it and how many of them were linked to an opportunity.
          * @enum {string}
          */
-        ReportingBlockKind: "bookings_trend" | "stage_distribution" | "owner_attainment" | "stage_age" | "sdr_outcomes" | "target_progress" | "forecast_support" | "pipeline_movement" | "metric_reading" | "breakdown" | "stage_cohort" | "lead_cohort";
+        ReportingBlockKind: "bookings_trend" | "stage_distribution" | "owner_attainment" | "stage_age" | "sdr_outcomes" | "target_progress" | "forecast_support" | "pipeline_movement" | "metric_reading" | "breakdown" | "stage_cohort" | "lead_cohort" | "account_cohort" | "source_quality";
         /**
          * @description `failed` means the database could not calculate this figure on this
          *     read. The other figures in the same evaluation are unaffected, and a
@@ -48536,7 +48540,7 @@ export interface components {
          *     `assessment`, the report's figures written up in a few sentences.
          * @enum {string}
          */
-        ReportingCardKind: "bookings_trend" | "stage_distribution" | "owner_attainment" | "stage_age" | "sdr_outcomes" | "target_progress" | "forecast_support" | "pipeline_movement" | "metric_reading" | "breakdown" | "stage_cohort" | "lead_cohort" | "question" | "assessment";
+        ReportingCardKind: "bookings_trend" | "stage_distribution" | "owner_attainment" | "stage_age" | "sdr_outcomes" | "target_progress" | "forecast_support" | "pipeline_movement" | "metric_reading" | "breakdown" | "stage_cohort" | "lead_cohort" | "account_cohort" | "source_quality" | "question" | "assessment";
         /**
          * @description A custom analytics question a card asks. Present exactly when the card's `kind` is
          *     `question`. Every reader of the report receives it, so it carries no filters (a filter
@@ -84287,7 +84291,7 @@ export interface operations {
             header?: never;
             path: {
                 /** @description A prebuilt report key. Saved reports are not served; a UUID here is refused. */
-                report: "activities-by-kind" | "deals-by-stage" | "forecast" | "leads-by-status" | "meeting-conversion" | "open-deals-per-company" | "pipeline-current" | "project-commitments" | "projects-by-phase" | "projects-gone-quiet" | "stage-age" | "win-loss";
+                report: "activities-by-kind" | "deals-by-stage" | "forecast" | "leads-by-status" | "loss-events" | "meeting-conversion" | "open-deals-per-company" | "pipeline-current" | "project-commitments" | "projects-by-phase" | "projects-gone-quiet" | "stage-age" | "win-loss";
             };
             cookie?: never;
         };

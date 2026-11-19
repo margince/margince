@@ -1631,6 +1631,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.conversion": "Weiterkommen pro Phase",
   "reporting.stage_cohort": "Weiterkommen pro Phase",
   "reporting.lead_cohort": "Was aus neuen Leads wurde",
+  "reporting.account_cohort": "Wie weit Unternehmen kamen",
+  "reporting.source_quality": "Qualität der Lead-Quellen",
   "reporting.cohortStage": "Phase",
   "reporting.cohortEntered": "Eingetreten",
   "reporting.cohortArrived": "Eingegangen",
@@ -1652,6 +1654,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.cohortOutcome.accepted": "Übergabe angenommen",
   "reporting.cohortOutcome.qualified": "Qualifiziert",
   "reporting.cohortOutcome.disqualified": "Disqualifiziert",
+  "reporting.cohortOutcome.opportunity_linked": "Mit einem Deal verknüpft",
+  "reporting.cohortOutcome.not_linked": "Noch nicht verknüpft",
+  "reporting.cohortLinkedRate": "Anteil verknüpft",
   "reporting.cohortEntry.repeat": "Erneut in dieser Phase",
   "reporting.cohortEntry.reopened": "Nach Abschluss wieder geöffnet",
   "reporting.cohortStillOpenNote":
@@ -9139,6 +9144,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.outcomesOwnLensOnly":
     "Dieser Bereich misst die Datensätze eines einzelnen Nutzerkontos. Die breiteren Bereiche decken den Rest der Sicht ab.",
   "analytics.reportWinLoss": "Gewonnen und verloren",
+  "analytics.reportLossEvents": "Jeder Verlust einzeln",
   "analytics.reportStageAge": "Verweildauer je Phase",
   "analytics.baseValue": "Deal-Wert · {currency}",
   "analytics.baseValueUnnamed": "Deal-Wert",

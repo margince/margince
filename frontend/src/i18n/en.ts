@@ -1565,6 +1565,8 @@ export const en = {
   "reporting.conversion": "Stage conversion",
   "reporting.stage_cohort": "Stage conversion",
   "reporting.lead_cohort": "What became of new leads",
+  "reporting.account_cohort": "How far companies got",
+  "reporting.source_quality": "Lead source quality",
   "reporting.cohortStage": "Stage",
   "reporting.cohortEntered": "Entered",
   "reporting.cohortArrived": "Arrived",
@@ -1584,6 +1586,9 @@ export const en = {
   "reporting.cohortOutcome.accepted": "Handoff accepted",
   "reporting.cohortOutcome.qualified": "Qualified",
   "reporting.cohortOutcome.disqualified": "Disqualified",
+  "reporting.cohortOutcome.opportunity_linked": "Linked to a deal",
+  "reporting.cohortOutcome.not_linked": "Not linked yet",
+  "reporting.cohortLinkedRate": "Share linked",
   "reporting.cohortEntry.repeat": "Back in this stage",
   "reporting.cohortEntry.reopened": "Reopened after a close",
   "reporting.cohortStillOpenNote":
@@ -9099,6 +9104,7 @@ export const en = {
   "analytics.outcomesOwnLensOnly":
     "This section measures one user’s records. Wider sections cover the rest of the lens.",
   "analytics.reportWinLoss": "Won and lost",
+  "analytics.reportLossEvents": "Every loss, one by one",
   "analytics.reportStageAge": "Time in stage",
   "analytics.baseValue": "Deal value · {currency}",
   "analytics.baseValueUnnamed": "Deal value",

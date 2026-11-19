@@ -1600,6 +1600,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.conversion": "Tỷ lệ đi tiếp theo giai đoạn",
   "reporting.stage_cohort": "Tỷ lệ đi tiếp theo giai đoạn",
   "reporting.lead_cohort": "Kết quả của lead mới",
+  "reporting.account_cohort": "Công ty đã đi đến đâu",
+  "reporting.source_quality": "Chất lượng nguồn lead",
   "reporting.cohortStage": "Giai đoạn",
   "reporting.cohortEntered": "Đã vào",
   "reporting.cohortArrived": "Đã đến",
@@ -1619,6 +1621,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.cohortOutcome.accepted": "Bàn giao đã được chấp nhận",
   "reporting.cohortOutcome.qualified": "Đủ điều kiện",
   "reporting.cohortOutcome.disqualified": "Đã loại",
+  "reporting.cohortOutcome.opportunity_linked": "Đã gắn với một deal",
+  "reporting.cohortOutcome.not_linked": "Chưa gắn với cơ hội",
+  "reporting.cohortLinkedRate": "Tỷ lệ đã gắn",
   "reporting.cohortEntry.repeat": "Quay lại giai đoạn này",
   "reporting.cohortEntry.reopened": "Mở lại sau khi đã đóng",
   "reporting.cohortStillOpenNote":
@@ -8891,6 +8896,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.outcomesOwnLensOnly":
     "Mục này đo hồ sơ của một thành viên. Các mục rộng hơn bao gồm phần còn lại của phạm vi.",
   "analytics.reportWinLoss": "Thắng và thua",
+  "analytics.reportLossEvents": "Từng lần thua",
   "analytics.reportStageAge": "Thời gian ở giai đoạn",
   "analytics.baseValue": "Giá trị deal ({currency})",
   "analytics.baseValueUnnamed": "Giá trị deal",

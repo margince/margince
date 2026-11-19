@@ -6,6 +6,7 @@ package compose
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -54,6 +55,10 @@ func reportingLeadFields(metric crmcontracts.ReportingMetricID) []string {
 		fields = append(fields, "routed_at", "first_response_at")
 	case reportingLeadCohortOutcomes:
 		fields = append(fields, "routed_at")
+	case reportingAccountProgression:
+		fields = append(fields, "routed_at", "company_id")
+	case reportingSourceQuality:
+		fields = append(fields, "routed_at", "origin", "qualified_deal_id", "promoted_at")
 	}
 	return fields
 }
@@ -66,7 +71,7 @@ func leadMetricScope(ctx context.Context, tx pgx.Tx, frame crmcontracts.Reportin
 	if metric == reportingLeadsQualified {
 		owner = "qualified.owner_id"
 	}
-	if metric == reportingLeadCohortOutcomes {
+	if slices.Contains(leadEntryCohortMetrics, metric) {
 		owner = leadArrivalOwnerColumn
 	}
 	_, population, err := analyticsPopulationExpression(ctx, tx, reportingRequested(frame.Scope), owner, b.arg, unownedIsExcluded)
@@ -272,6 +277,21 @@ func readUnansweredLeads(ctx context.Context, tx pgx.Tx, frame crmcontracts.Repo
 // readGroupedFacts scans a reader's rows of key, source, label, owner, owner
 // label, instant, value, provenance, group key and group label into facts.
 func readGroupedFacts(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, metric crmcontracts.ReportingMetricID, source, query string, b reportingBindings, withheld bool) ([]reporting.Fact, crmcontracts.ReportingCoverage, error) {
+	return readGroupedFactsVia(ctx, tx, frame, metric, source, query, b, withheld, noLeadVia)
+}
+
+// leadVia says whether a grouped query carries a last column naming the lead a
+// fact was derived from.
+type leadVia bool
+
+const (
+	noLeadVia   leadVia = false
+	withLeadVia leadVia = true
+)
+
+// readGroupedFactsVia is readGroupedFacts for a query with one more column: the
+// lead each fact was derived from, kept on the fact as ViaID.
+func readGroupedFactsVia(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, metric crmcontracts.ReportingMetricID, source, query string, b reportingBindings, withheld bool, via leadVia) ([]reporting.Fact, crmcontracts.ReportingCoverage, error) {
 	rows, err := tx.Query(ctx, query, b.values...)
 	if err != nil {
 		return nil, crmcontracts.ReportingCoverage{}, err
@@ -279,7 +299,11 @@ func readGroupedFacts(ctx context.Context, tx pgx.Tx, frame crmcontracts.Reporti
 	facts, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (reporting.Fact, error) {
 		fact := reporting.Fact{Metric: metric, SourceType: source}
 		var owner *ids.UUID
-		err := row.Scan(&fact.Row.Key, &fact.SourceID, &fact.Row.Label, &owner, &fact.OwnerLabel, &fact.Row.OccurredAt, &fact.Row.Value, &fact.Provenance, &fact.GroupKey, &fact.GroupLabel)
+		targets := []any{&fact.Row.Key, &fact.SourceID, &fact.Row.Label, &owner, &fact.OwnerLabel, &fact.Row.OccurredAt, &fact.Row.Value, &fact.Provenance, &fact.GroupKey, &fact.GroupLabel}
+		if via {
+			targets = append(targets, &fact.ViaID)
+		}
+		err := row.Scan(targets...)
 		if owner != nil {
 			fact.OwnerID = *owner
 			fact.Row.OwnerId = ptrUUID(*owner)

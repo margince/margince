@@ -21231,6 +21231,7 @@ func (e ReportSetupUnsupportedCode) Valid() bool {
 
 // Defines values for ReportingBlockKind.
 const (
+	ReportingBlockKindAccountCohort     ReportingBlockKind = "account_cohort"
 	ReportingBlockKindBookingsTrend     ReportingBlockKind = "bookings_trend"
 	ReportingBlockKindBreakdown         ReportingBlockKind = "breakdown"
 	ReportingBlockKindForecastSupport   ReportingBlockKind = "forecast_support"
@@ -21239,6 +21240,7 @@ const (
 	ReportingBlockKindOwnerAttainment   ReportingBlockKind = "owner_attainment"
 	ReportingBlockKindPipelineMovement  ReportingBlockKind = "pipeline_movement"
 	ReportingBlockKindSdrOutcomes       ReportingBlockKind = "sdr_outcomes"
+	ReportingBlockKindSourceQuality     ReportingBlockKind = "source_quality"
 	ReportingBlockKindStageAge          ReportingBlockKind = "stage_age"
 	ReportingBlockKindStageCohort       ReportingBlockKind = "stage_cohort"
 	ReportingBlockKindStageDistribution ReportingBlockKind = "stage_distribution"
@@ -21248,6 +21250,8 @@ const (
 // Valid indicates whether the value is a known member of the ReportingBlockKind enum.
 func (e ReportingBlockKind) Valid() bool {
 	switch e {
+	case ReportingBlockKindAccountCohort:
+		return true
 	case ReportingBlockKindBookingsTrend:
 		return true
 	case ReportingBlockKindBreakdown:
@@ -21263,6 +21267,8 @@ func (e ReportingBlockKind) Valid() bool {
 	case ReportingBlockKindPipelineMovement:
 		return true
 	case ReportingBlockKindSdrOutcomes:
+		return true
+	case ReportingBlockKindSourceQuality:
 		return true
 	case ReportingBlockKindStageAge:
 		return true
@@ -21297,6 +21303,7 @@ func (e ReportingCardWidth) Valid() bool {
 
 // Defines values for ReportingCardKind.
 const (
+	ReportingCardKindAccountCohort     ReportingCardKind = "account_cohort"
 	ReportingCardKindAssessment        ReportingCardKind = "assessment"
 	ReportingCardKindBookingsTrend     ReportingCardKind = "bookings_trend"
 	ReportingCardKindBreakdown         ReportingCardKind = "breakdown"
@@ -21307,6 +21314,7 @@ const (
 	ReportingCardKindPipelineMovement  ReportingCardKind = "pipeline_movement"
 	ReportingCardKindQuestion          ReportingCardKind = "question"
 	ReportingCardKindSdrOutcomes       ReportingCardKind = "sdr_outcomes"
+	ReportingCardKindSourceQuality     ReportingCardKind = "source_quality"
 	ReportingCardKindStageAge          ReportingCardKind = "stage_age"
 	ReportingCardKindStageCohort       ReportingCardKind = "stage_cohort"
 	ReportingCardKindStageDistribution ReportingCardKind = "stage_distribution"
@@ -21316,6 +21324,8 @@ const (
 // Valid indicates whether the value is a known member of the ReportingCardKind enum.
 func (e ReportingCardKind) Valid() bool {
 	switch e {
+	case ReportingCardKindAccountCohort:
+		return true
 	case ReportingCardKindAssessment:
 		return true
 	case ReportingCardKindBookingsTrend:
@@ -21335,6 +21345,8 @@ func (e ReportingCardKind) Valid() bool {
 	case ReportingCardKindQuestion:
 		return true
 	case ReportingCardKindSdrOutcomes:
+		return true
+	case ReportingCardKindSourceQuality:
 		return true
 	case ReportingCardKindStageAge:
 		return true
@@ -21502,6 +21514,7 @@ func (e ReportingMetricDefinitionTemporalBasis) Valid() bool {
 // Defines values for ReportingMetricID.
 const (
 	ReportingMetricIDAcceptedOpportunities         ReportingMetricID = "accepted_opportunities"
+	ReportingMetricIDAccountProgression            ReportingMetricID = "account_progression"
 	ReportingMetricIDBookingsMix                   ReportingMetricID = "bookings_mix"
 	ReportingMetricIDBookingsWon                   ReportingMetricID = "bookings_won"
 	ReportingMetricIDClosedWinRate                 ReportingMetricID = "closed_win_rate"
@@ -21523,6 +21536,7 @@ const (
 	ReportingMetricIDPartnerWon                    ReportingMetricID = "partner_won"
 	ReportingMetricIDQualifiedOpportunitiesCreated ReportingMetricID = "qualified_opportunities_created"
 	ReportingMetricIDQualifiedPipelineCreated      ReportingMetricID = "qualified_pipeline_created"
+	ReportingMetricIDSourceQuality                 ReportingMetricID = "source_quality"
 	ReportingMetricIDStageAge                      ReportingMetricID = "stage_age"
 	ReportingMetricIDStageConversion               ReportingMetricID = "stage_conversion"
 )
@@ -21531,6 +21545,8 @@ const (
 func (e ReportingMetricID) Valid() bool {
 	switch e {
 	case ReportingMetricIDAcceptedOpportunities:
+		return true
+	case ReportingMetricIDAccountProgression:
 		return true
 	case ReportingMetricIDBookingsMix:
 		return true
@@ -21573,6 +21589,8 @@ func (e ReportingMetricID) Valid() bool {
 	case ReportingMetricIDQualifiedOpportunitiesCreated:
 		return true
 	case ReportingMetricIDQualifiedPipelineCreated:
+		return true
+	case ReportingMetricIDSourceQuality:
 		return true
 	case ReportingMetricIDStageAge:
 		return true
@@ -63115,6 +63133,10 @@ type ReportVocabulary struct {
 // `lead_cohort` follows the leads that arrived in the interval the same
 // way: one point, its `outcomes` saying whether each lead was accepted,
 // qualified, disqualified or is still open.
+// `account_cohort` follows the distinct accounts of those leads: one point,
+// its `outcomes` saying the furthest outcome any of an account's leads
+// reached. `source_quality` is one point per lead origin: how many leads
+// arrived from it and how many of them were linked to an opportunity.
 type ReportingBlockKind string
 
 // ReportingCaptureContext defines model for ReportingCaptureContext.
@@ -63216,6 +63238,10 @@ type ReportingChart struct {
 	// `lead_cohort` follows the leads that arrived in the interval the same
 	// way: one point, its `outcomes` saying whether each lead was accepted,
 	// qualified, disqualified or is still open.
+	// `account_cohort` follows the distinct accounts of those leads: one point,
+	// its `outcomes` saying the furthest outcome any of an account's leads
+	// reached. `source_quality` is one point per lead origin: how many leads
+	// arrived from it and how many of them were linked to an opportunity.
 	Kind              ReportingBlockKind  `json:"kind"`
 	Marker            *float64            `json:"marker,omitempty"`
 	Metric            ReportingMetricID   `json:"metric"`

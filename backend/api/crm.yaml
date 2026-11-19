@@ -18581,6 +18581,7 @@ paths:
             - deals-by-stage
             - forecast
             - leads-by-status
+            - loss-events
             - meeting-conversion
             - open-deals-per-company
             - pipeline-current
@@ -65512,6 +65513,8 @@ components:
       - bookings_mix
       - qualified_opportunities_created
       - initiative_pipeline
+      - account_progression
+      - source_quality
       x-extensible-enum: true
     ReportingBlockKind:
       type: string
@@ -65526,6 +65529,10 @@ components:
         `lead_cohort` follows the leads that arrived in the interval the same
         way: one point, its `outcomes` saying whether each lead was accepted,
         qualified, disqualified or is still open.
+        `account_cohort` follows the distinct accounts of those leads: one point,
+        its `outcomes` saying the furthest outcome any of an account's leads
+        reached. `source_quality` is one point per lead origin: how many leads
+        arrived from it and how many of them were linked to an opportunity.
       enum:
       - bookings_trend
       - stage_distribution
@@ -65539,6 +65546,8 @@ components:
       - breakdown
       - stage_cohort
       - lead_cohort
+      - account_cohort
+      - source_quality
       x-extensible-enum: true
     ReportingStatus:
       type: string
@@ -65971,6 +65980,8 @@ components:
       - breakdown
       - stage_cohort
       - lead_cohort
+      - account_cohort
+      - source_quality
       - question
       - assessment
       x-extensible-enum: true
