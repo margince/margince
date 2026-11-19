@@ -14,7 +14,7 @@ import {
   type RecordPickerCandidate,
 } from "../../design-system/recordpicker";
 import { useT } from "../../i18n";
-import { stillHeld } from "../../lib/employmentcurrency";
+import { stillHeld, useEmploymentZone } from "../../lib/employmentcurrency";
 import { unwrap } from "../../lib/problem";
 import { useAddEmployment } from "./addemploymentmodal";
 import {
@@ -109,6 +109,7 @@ export function ChangeEmployerModal({
   actions: EmploymentActions;
 }>) {
   const t = useT();
+  const employmentZone = useEmploymentZone();
   const headingId = useId();
   const current = employer.company_name ?? t("field.unset");
   const [picked, setPicked] = useState<RecordPickerCandidate | null>(null);
@@ -120,7 +121,14 @@ export function ChangeEmployerModal({
       // The reader's answer: a company named here is their primary employer.
       const named = answer.target !== null;
       if (answer.target !== null) {
-        await promote(answer.target, named, contactId, employer, actions);
+        await promote(
+          answer.target,
+          named,
+          contactId,
+          employer,
+          actions,
+          employmentZone,
+        );
       }
       // A promotion demotes the old job in its own transaction, so the image
       // this end compares against is the demoted one.
@@ -217,9 +225,11 @@ async function promote(
   contactId: string,
   employer: Employment,
   actions: EmploymentActions,
+  zone: string,
 ): Promise<void> {
   const held = (await employmentsAt(contactId, company.id)).find(
-    (row) => row.relationship_id !== employer.relationship_id && stillHeld(row),
+    (row) =>
+      row.relationship_id !== employer.relationship_id && stillHeld(row, zone),
   );
   if (held) {
     await actions.update.mutateAsync({

@@ -40930,6 +40930,11 @@ export interface components {
              * @description 'Customer asked us to wait until' date; suppresses the stalled flag but not the overdue close-date flag.
              */
             wait_until?: string | null;
+            /**
+             * Format: date-time
+             * @description The instant the pause ends: the start of the `wait_until` day in the deal owner's own time zone, the installation's when the owner has none. Clients judge a pause against this, never against the date.
+             */
+            readonly wait_ends_at?: string | null;
             /** Format: date-time */
             closed_at?: string | null;
             /**
