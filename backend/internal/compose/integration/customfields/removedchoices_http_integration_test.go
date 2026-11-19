@@ -12,16 +12,21 @@ package customfields
 // are not touched, and a Live List whose filter names the choice keeps working.
 
 import (
+	"context"
 	"maps"
 	"net/http"
 	"reflect"
 	"slices"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	customfieldsmod "github.com/margince/margince/backend/internal/modules/customfields"
+	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
 type choiceUseWire struct {
@@ -85,6 +90,19 @@ func TestEveryFieldObjectHasAChoiceRemover(t *testing.T) {
 	if !slices.Equal(wired, objects) {
 		t.Fatalf("choice removers are wired for %v, custom fields attach to %v; "+
 			"an object without one refuses every options edit its records hold a removed choice of", wired, objects)
+	}
+}
+
+// The column becomes an identifier in the clearing UPDATE, so a remover asked to
+// clear a column the catalog does not list refuses before it writes.
+func TestARemoverRefusesAColumnTheCatalogDoesNotList(t *testing.T) {
+	e := schemaWiredEnv(t)
+	err := e.DB().Tx(t.Context(), func(tx pgx.Tx) error {
+		_, err := deals.RemoveCustomChoices(context.Background(), tx, fieldcatalog.Column{Name: "name", Type: fieldcatalog.TypePicklist}, []string{"Acme"})
+		return err
+	})
+	if err == nil {
+		t.Fatal("clearing the core name column was accepted")
 	}
 }
 
