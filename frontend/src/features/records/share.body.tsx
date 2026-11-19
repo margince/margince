@@ -41,6 +41,7 @@ import {
 } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { throwProblem } from "../../lib/problem";
+import { useViewerId } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
 import { isAccessKind, WhoCanSeePanel } from "./recordaccesspanel";
 import { ShareConfirmation } from "./share.confirmation";
@@ -54,15 +55,20 @@ export function ShareScreenBody({
   recordType,
   recordId,
   contactsOnly = false,
+  refusal,
 }: Readonly<{
   recordType: RecordType;
   recordId: string;
   contactsOnly?: boolean;
+  // Why this reader may not share the record; the screen then only shows who
+  // can see it.
+  refusal?: string;
 }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
   const zone = useViewerZone();
+  const viewerId = useViewerId();
   const queryClient = useQueryClient();
   // The picker survives both dialogs when their original triggers disappear.
   const subjectField = useRef<HTMLInputElement>(null);
@@ -240,159 +246,163 @@ export function ShareScreenBody({
               </span>
             </p>
           )}
+          {refusal && <p className="t-caption">{refusal}</p>}
         </PanelBody>
       </Panel>
 
-      <Panel
-        title={t("share.grantAccess")}
-        actions={
-          <Button
-            variant="primary"
-            disabled={!subject}
-            pending={grant.isPending}
-            onClick={() => subject && submit(subject)}
-            data-testid="share-grant-submit"
-          >
-            {subject && heldBySubject.has(subjectKey(subject.kind, subject.id))
-              ? t("share.update")
-              : t("share.grant")}
-          </Button>
-        }
-      >
-        <PanelBody className="form-stack">
-          <div className="field">
-            <Field label={t("share.subject")}>
+      {!refusal && (
+        <Panel
+          title={t("share.grantAccess")}
+          actions={
+            <Button
+              variant="primary"
+              disabled={!subject}
+              pending={grant.isPending}
+              onClick={() => subject && submit(subject)}
+              data-testid="share-grant-submit"
+            >
+              {subject &&
+              heldBySubject.has(subjectKey(subject.kind, subject.id))
+                ? t("share.update")
+                : t("share.grant")}
+            </Button>
+          }
+        >
+          <PanelBody className="form-stack">
+            <div className="field">
+              <Field label={t("share.subject")}>
+                {(control) => (
+                  <SearchField
+                    {...control}
+                    ref={subjectField}
+                    placeholder={t("share.subject")}
+                    value={term}
+                    onChange={(event) => {
+                      setTerm(event.target.value);
+                      setSubject(null);
+                      dismissGrantFeedback();
+                    }}
+                  />
+                )}
+              </Field>
+              <RosterPicker
+                usersQuery={usersQuery}
+                teamsQuery={teamsQuery}
+                partial={rosterPartial}
+                filteredRoster={filteredRoster}
+                held={heldBySubject}
+                subject={subject}
+                t={t}
+                onPick={(candidate) => {
+                  setSubject(candidate);
+                  setTerm(candidate.name);
+                  const heldGrant = heldBySubject.get(
+                    subjectKey(candidate.kind, candidate.id),
+                  );
+                  if (heldGrant) {
+                    setAccess(heldGrant.access);
+                    setReason(heldGrant.reason ?? "");
+                    if (!heldGrant.expires_at) {
+                      setExpiryDays(0);
+                    }
+                  } else {
+                    setAccess(candidate.kind === "team" ? "write" : "read");
+                    setExpiryDays(candidate.kind === "team" ? 0 : 7);
+                  }
+                  dismissGrantFeedback();
+                }}
+              />
+            </div>
+
+            <div className="field">
+              <div>
+                <SegmentedControl
+                  options={["read", "write"] as const}
+                  value={access}
+                  label={t("share.access")}
+                  onChange={(next) => {
+                    setAccess(next);
+                    dismissGrantFeedback();
+                  }}
+                  labels={{
+                    read: t("share.access.read"),
+                    write: t("share.access.write"),
+                  }}
+                />
+              </div>
+              <p className="t-caption">
+                {access === "read"
+                  ? t("share.access.readNote")
+                  : t("share.access.writeNote")}
+              </p>
+            </div>
+
+            <Field label={t("share.expiry")}>
               {(control) => (
-                <SearchField
+                <Select
                   {...control}
-                  ref={subjectField}
-                  placeholder={t("share.subject")}
-                  value={term}
+                  // A day count is the state; the control speaks strings, so the
+                  // conversion happens here at the boundary and nowhere else.
+                  value={identifierNumber(expiryDays)}
+                  onChange={(value) => {
+                    setExpiryDays(Number(value));
+                    dismissGrantFeedback();
+                  }}
+                  options={EXPIRY_OPTIONS.map((option) => ({
+                    value: identifierNumber(option.days),
+                    label: t(option.key),
+                  }))}
+                />
+              )}
+            </Field>
+
+            <p className="t-caption" data-testid="share-expiry-consequence">
+              {expiryDays > 0
+                ? plural("share.expiryConsequence", expiryDays, {
+                    days: formatNumber(expiryDays, locale),
+                  })
+                : t("share.expiryConsequenceNone")}
+            </p>
+
+            <Field label={t("share.reason")}>
+              {(control) => (
+                <Textarea
+                  {...control}
+                  className="share-reason"
+                  value={reason}
                   onChange={(event) => {
-                    setTerm(event.target.value);
-                    setSubject(null);
+                    setReason(event.target.value);
                     dismissGrantFeedback();
                   }}
                 />
               )}
             </Field>
-            <RosterPicker
-              usersQuery={usersQuery}
-              teamsQuery={teamsQuery}
-              partial={rosterPartial}
-              filteredRoster={filteredRoster}
-              held={heldBySubject}
-              subject={subject}
-              t={t}
-              onPick={(candidate) => {
-                setSubject(candidate);
-                setTerm(candidate.name);
-                const heldGrant = heldBySubject.get(
-                  subjectKey(candidate.kind, candidate.id),
-                );
-                if (heldGrant) {
-                  setAccess(heldGrant.access);
-                  setReason(heldGrant.reason ?? "");
-                  if (!heldGrant.expires_at) {
-                    setExpiryDays(0);
-                  }
-                } else {
-                  setAccess(candidate.kind === "team" ? "write" : "read");
-                  setExpiryDays(candidate.kind === "team" ? 0 : 7);
-                }
-                dismissGrantFeedback();
-              }}
-            />
-          </div>
 
-          <div className="field">
-            <div>
-              <SegmentedControl
-                options={["read", "write"] as const}
-                value={access}
-                label={t("share.access")}
-                onChange={(next) => {
-                  setAccess(next);
-                  dismissGrantFeedback();
-                }}
-                labels={{
-                  read: t("share.access.read"),
-                  write: t("share.access.write"),
-                }}
-              />
-            </div>
-            <p className="t-caption">
-              {access === "read"
-                ? t("share.access.readNote")
-                : t("share.access.writeNote")}
-            </p>
-          </div>
-
-          <Field label={t("share.expiry")}>
-            {(control) => (
-              <Select
-                {...control}
-                // A day count is the state; the control speaks strings, so the
-                // conversion happens here at the boundary and nowhere else.
-                value={identifierNumber(expiryDays)}
-                onChange={(value) => {
-                  setExpiryDays(Number(value));
-                  dismissGrantFeedback();
-                }}
-                options={EXPIRY_OPTIONS.map((option) => ({
-                  value: identifierNumber(option.days),
-                  label: t(option.key),
-                }))}
-              />
+            {unchanged && (
+              <p
+                className="t-caption"
+                role="status"
+                data-testid="share-unchanged"
+              >
+                {t("share.unchanged", {
+                  name: unchanged.name,
+                  access: accessLabel(unchanged.access, t),
+                })}
+              </p>
             )}
-          </Field>
 
-          <p className="t-caption" data-testid="share-expiry-consequence">
-            {expiryDays > 0
-              ? plural("share.expiryConsequence", expiryDays, {
-                  days: formatNumber(expiryDays, locale),
-                })
-              : t("share.expiryConsequenceNone")}
-          </p>
-
-          <Field label={t("share.reason")}>
-            {(control) => (
-              <Textarea
-                {...control}
-                className="share-reason"
-                value={reason}
-                onChange={(event) => {
-                  setReason(event.target.value);
-                  dismissGrantFeedback();
-                }}
-              />
+            {sharedResult && (
+              <p role="status">
+                {t("share.companyContactsResult", {
+                  shared: formatNumber(sharedResult.shared, locale),
+                  skipped: formatNumber(sharedResult.skipped, locale),
+                })}
+              </p>
             )}
-          </Field>
-
-          {unchanged && (
-            <p
-              className="t-caption"
-              role="status"
-              data-testid="share-unchanged"
-            >
-              {t("share.unchanged", {
-                name: unchanged.name,
-                access: accessLabel(unchanged.access, t),
-              })}
-            </p>
-          )}
-
-          {sharedResult && (
-            <p role="status">
-              {t("share.companyContactsResult", {
-                shared: formatNumber(sharedResult.shared, locale),
-                skipped: formatNumber(sharedResult.skipped, locale),
-              })}
-            </p>
-          )}
-          {grantErrorMessage && <ErrorLine>{grantErrorMessage}</ErrorLine>}
-        </PanelBody>
-      </Panel>
+            {grantErrorMessage && <ErrorLine>{grantErrorMessage}</ErrorLine>}
+          </PanelBody>
+        </Panel>
+      )}
 
       {!contactsOnly && (
         <>
@@ -434,13 +444,19 @@ export function ShareScreenBody({
                           )}
                         </div>
                       </div>
-                      <Button
-                        variant="danger"
-                        onClick={() => setRevokingId(g.id)}
-                        data-testid="revoke-grant"
-                      >
-                        {t("share.revoke")}
-                      </Button>
+                      {/* The one share a reader who may not share can take
+                          away is one made to themselves (grants.go mayRevoke). */}
+                      {(!refusal ||
+                        (g.subject_type === "user" &&
+                          g.subject_id === viewerId)) && (
+                        <Button
+                          variant="danger"
+                          onClick={() => setRevokingId(g.id)}
+                          data-testid="revoke-grant"
+                        >
+                          {t("share.revoke")}
+                        </Button>
+                      )}
                     </PanelRow>
                   ))}
                 </div>

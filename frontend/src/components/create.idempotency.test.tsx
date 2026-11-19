@@ -24,6 +24,7 @@ function mount(
     <QueryClientProvider client={new QueryClient()}>
       <LocaleProvider initial="en">
         <CreateAction
+          requires={{ object: "contact", action: "create" }}
           label="New thing"
           fields={fields}
           create={create}

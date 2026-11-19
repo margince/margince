@@ -125,6 +125,9 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
   // control describes itself by pointing at the same explanation.
   const readOnlyReason = useProjectVerbRefusal(project);
   const readOnly = Boolean(readOnlyReason);
+  // Logging files an activity under the project rather than changing it, so
+  // only the archive refuses it here; the activity grant decides the rest.
+  const logRefusedId = project.archived_at ? readOnlyReasonId : undefined;
   // The task detail and the health dialog are owned here rather than by the
   // cards. One modal per page, so two cards cannot both put one on screen.
   const [openTask, setOpenTask] = useState<string | null>(null);
@@ -170,7 +173,7 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
         <>
           <ProjectLogVerbs
             projectId={project.id}
-            refusedReasonId={readOnly ? readOnlyReasonId : undefined}
+            refusedReasonId={logRefusedId}
             activity={activity}
             drawer={logDrawer}
             onDrawer={setLogDrawer}
@@ -178,6 +181,7 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
           <ProjectActions
             project={project}
             refusedReasonId={readOnly ? readOnlyReasonId : undefined}
+            logRefusedId={logRefusedId}
             activity={activity}
             onAddTask={() => setLogDrawer("task")}
             cf={cf}
@@ -363,6 +367,7 @@ function CommitmentTick({
 function ProjectActions({
   project,
   refusedReasonId,
+  logRefusedId,
   activity,
   onAddTask,
   cf,
@@ -372,6 +377,8 @@ function ProjectActions({
 }: Readonly<{
   project: Project;
   refusedReasonId?: string;
+  // Add task's own refusal, which only the archive sets; see the page.
+  logRefusedId?: string;
   activity: ActivityGate;
   onAddTask: () => void;
   cf: ObjectCustomFields;
@@ -382,7 +389,7 @@ function ProjectActions({
 }>) {
   const t = useT();
   const owner = useOwnerPicker(project.owner_id);
-  const taskRefusedId = refusedReasonId ?? activity.refusedId;
+  const taskRefusedId = logRefusedId ?? activity.refusedId;
   const taskKeys = useShortcut(
     "record.addTask",
     onAddTask,

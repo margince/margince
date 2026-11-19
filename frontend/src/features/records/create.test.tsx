@@ -615,8 +615,11 @@ describe("a field that depends on another", () => {
 describe("the deal form's partner fields", () => {
   const partnerRoutes = {
     // A partner is a company, so only a reader of companies is offered one.
+    // The form opens only for a seat that may create a deal.
     "GET /me": () =>
-      jsonResponse(meFixture({ allow: { deal: ["read"], company: ["read"] } })),
+      jsonResponse(
+        meFixture({ allow: { deal: ["read", "create"], company: ["read"] } }),
+      ),
     "GET /pipelines": () =>
       jsonResponse({ data: [pipeline], page: { next_cursor: null } }),
     "GET /companies": () =>
@@ -869,6 +872,7 @@ describe("the record dialog's shape", () => {
       <>
         <DealCatalog />
         <CreateAction
+          requires={{ object: "company", action: "create" }}
           label="New company"
           create={vi.fn()}
           invalidate="companies"

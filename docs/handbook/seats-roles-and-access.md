@@ -8,7 +8,7 @@ What you can do in Margince is decided by three things, and one cannot stand in 
 2. **Your role**: what kinds of record you may act on.
 3. **Row scope**: which records you may act on.
 
-A "no" from any one of them is a no. **Settings → Overview** shows your own answer to all three under **Your seat**, **Your role** and **Visible records**.
+A "no" from any one of them is a no. **Settings → Overview** shows your own answer under **Your role**, **Your seat**, **Records you can read** and **Records you can change**. A role with no right to change records, or a read seat, reads **None** under **Records you can change**, whatever its row scope.
 
 ## Managing colleagues, roles and teams
 
@@ -186,7 +186,7 @@ Row scope has three levels: **own**, **team**, **all**.
 - **team**: those, plus records owned by your teammates
 - **all**: everything in the company
 
-This is not how most CRM products work. Any seat that can read records reads every contact, company, lead, deal and project in the company, whatever its row scope. The app says so: "Reads every contact, company, lead and deal in the company." Row scope decides which records you may change. This includes projects.
+This is not how most CRM products work. Any seat that can read records reads every contact, company, lead, deal and project in the company, whatever its row scope. The **User access** preview names the kinds a role may read, such as "Reads all contacts, companies, deals, leads and projects in the company.", and a role with no right to change records "Changes no records." Row scope decides which records you may change. This includes projects.
 
 Two exceptions count for every role, Admin included:
 
@@ -251,7 +251,7 @@ Also called: contact already exists, email already taken, hidden contact.
 3. Choose the **Access level**: **Read** or **Write**.
 4. Choose an **Expiry**: **No expiry (until revoked)**, **Expires in 24 hours**, **Expires in 7 days** or **Expires in 30 days**.
 5. If you like, add a **Reason**, then choose **Grant access**.
-You cannot share more access than you hold.
+You cannot share more access than you hold. Sharing takes the right to change the record. Someone without it sees who can see the record and the reason, with no **Grant access** and no **Revoke**, except on a share made to them. A record you cannot open reads "This record does not exist, or it is not shared with you."
 
 On a company, choose **Share contacts** to share contacts who work there now with a person or team. Pick the access level and end date, then choose **Grant access** and confirm **Share these contacts?**. This replaces that recipient's existing shares on those contacts. Other recipients keep their access.
 

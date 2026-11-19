@@ -43,6 +43,7 @@ describe("CreateAction dedupe link", () => {
   it("renders a view-existing link on a duplicate ProblemError and navigates on click", async () => {
     render(
       <CreateAction
+        requires={{ object: "contact", action: "create" }}
         label="New contact"
         fields={[
           { key: "full_name", label: "create.fullName", required: true },

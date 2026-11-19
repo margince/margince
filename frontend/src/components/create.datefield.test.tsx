@@ -36,6 +36,7 @@ function renderNewDeal() {
     >
       <LocaleProvider initial="en">
         <CreateAction
+          requires={{ object: "deal", action: "create" }}
           label="New deal"
           fields={fields}
           create={create}

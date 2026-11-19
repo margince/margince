@@ -1,10 +1,11 @@
-import { Button, EmptyState } from "../../design-system/atoms";
+import { Button, EmptyState, PendingBody } from "../../design-system/atoms";
 import { useT } from "../../i18n";
 import { navigate } from "../../lib/router";
 import "./share.css";
 
 import type { RecordType } from "../../components/share.parts";
 import { ShareScreenBody } from "./share.body";
+import { useShareStanding } from "./sharerecord";
 
 // The record-share screen: grant a user or team read/write on this one record,
 // list and revoke the manual grants. For a contact or company, the panel above
@@ -82,10 +83,48 @@ export function ShareScreen({
     );
   }
   return (
-    <ShareScreenBody
+    <ShareScreenGate
       recordType={kind}
       recordId={recordId}
       contactsOnly={contactsOnly}
+    />
+  );
+}
+
+// The record is read before anything is offered: one the reader cannot see is
+// not offered for sharing, and one they may not share shows who can see it and
+// why they cannot change that.
+function ShareScreenGate({
+  recordType,
+  recordId,
+  contactsOnly,
+}: Readonly<{
+  recordType: RecordType;
+  recordId: string;
+  contactsOnly: boolean;
+}>) {
+  const t = useT();
+  const standing = useShareStanding(recordType, recordId, contactsOnly);
+  if (standing.state === "missing") {
+    return (
+      <div className="wrap">
+        <EmptyState>{t("share.missingRecord")}</EmptyState>
+      </div>
+    );
+  }
+  if (standing.state === "pending") {
+    return (
+      <div className="wrap">
+        <PendingBody label={t("share.title")} />
+      </div>
+    );
+  }
+  return (
+    <ShareScreenBody
+      recordType={recordType}
+      recordId={recordId}
+      contactsOnly={contactsOnly}
+      refusal={standing.refusal}
     />
   );
 }

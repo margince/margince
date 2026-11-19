@@ -494,11 +494,15 @@ describe("ProjectScreen", () => {
     for (const label of ["New deal"]) {
       expect(screen.queryByRole("button", { name: label })).toBeNull();
     }
-    expect(
-      screen
-        .getByRole("button", { name: en["log.title"] })
-        .hasAttribute("disabled"),
-    ).toBe(true);
+    // Logging files an activity under the project rather than changing it, so
+    // a colleague's project takes a note as every other record page does.
+    await waitFor(() =>
+      expect(
+        screen
+          .getByRole("button", { name: en["log.title"] })
+          .hasAttribute("disabled"),
+      ).toBe(false),
+    );
     // Inside the overflow menu the verbs are refused rather than dropped, so a
     // reader learns the verb exists and why it is shut. What must NOT happen is
     // a pressable one: clicking it opens the flow and the save 403s. Edit is
@@ -510,8 +514,12 @@ describe("ProjectScreen", () => {
     // aria-disabled for "busy" — and each carries aria-describedby pointing at
     // the one sentence in the band, so a reader is told why rather than left
     // with a dead control.
+    expect(
+      screen
+        .getByRole("button", { name: /^Add task/ })
+        .hasAttribute("disabled"),
+    ).toBe(false);
     for (const label of [
-      /^Add task/,
       /^Edit project/,
       /^Archive/,
       /^Assign/,
@@ -891,14 +899,28 @@ describe("the project's record keys", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
-  it("do nothing on a project this caller may not change", async () => {
+  it("open the log on a project this caller may not change", async () => {
     const user = userEvent.setup();
-    await mountProject(
+    const log = await mountProject(
       project360({
         project: project({ owner_id: "u-someone-else", writable: false }),
       }),
     );
     await screen.findByText(/You cannot edit this project/);
+    await waitFor(() => expect(log.hasAttribute("disabled")).toBe(false));
+
+    await user.keyboard("n");
+    expect(await screen.findByRole("dialog")).toBeTruthy();
+  });
+
+  it("do nothing on an archived project", async () => {
+    const user = userEvent.setup();
+    await mountProject(
+      project360({
+        project: project({ archived_at: "2026-01-02T00:00:00Z" }),
+      }),
+    );
+    await screen.findByText(en["project.archivedReadOnly"]);
 
     await user.keyboard("nt");
     expect(screen.queryByRole("dialog")).toBeNull();

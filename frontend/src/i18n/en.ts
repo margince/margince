@@ -3109,6 +3109,8 @@ export const en = {
   "share.ceiling.noWider": "no wider",
   "share.ceiling.post": ".",
   "share.unknownRecord": "This record cannot be shared.",
+  "share.missingRecord":
+    "This record does not exist, or it is not shared with you.",
   "share.grantAccess": "Grant access",
   "share.subject": "Person or team",
   "share.holdsRead": "Has read",
@@ -14334,10 +14336,14 @@ export const en = {
   "settings.home.seatLabel": "Your seat",
   "settings.home.seat.full": "Full seat: changes allowed",
   "settings.home.seat.read": "Read-only seat: view only",
-  "settings.home.reachLabel": "Visible records",
-  "settings.home.reach.own": "Your own records",
-  "settings.home.reach.team": "Your team\u2019s records",
-  "settings.home.reach.all": "All company records",
+  "settings.home.reachLabel": "Records you can change",
+  "settings.home.reach.none": "None",
+  "settings.home.reach.own": "Your own",
+  "settings.home.reach.team": "Yours and your team\u2019s",
+  "settings.home.reach.all": "All in the company",
+  "settings.home.readLabel": "Records you can read",
+  "settings.home.read.some": "All {kinds}, except private ones",
+  "settings.home.read.none": "None",
   "settings.home.access": "Your access",
   "settings.home.accessLoading": "Loading your access…",
   "settings.boundary.deniedTitle": "No access to this settings page",
@@ -15028,7 +15034,7 @@ export const en = {
   "license.check.failed":
     "The license token could not be read again. The last result stands, and the server log says why.",
   "license.counting":
-    "Full seats that are not deactivated or suspended, agents included. Read-only seats are unlimited and not counted.",
+    "Full seats that are not deactivated or suspended. Agents and read-only seats are not counted.",
   "settings.rates.fxTitle": "Currency rates",
   "settings.rates.fxIntro":
     "Exchange rates that convert foreign-currency amounts to the base currency. New rates take effect today or later. A past date works only before the currency’s first rate. A rate already in force never changes.",
@@ -15405,7 +15411,7 @@ export const en = {
   "roles.renameSubmit": "Save name",
   "roles.scopeTitle": "Whose records members change",
   "roles.scopeSub":
-    "Contacts, companies, leads and deals stay readable to every role allowed to read them. This decides what members may change, and which projects they see.",
+    "Every role allowed to read contacts, companies, leads, deals and projects reads all of them. This decides which of them members may change.",
   "roles.scope.own": "Their own",
   "roles.scope.ownSub": "Records the member owns.",
   "roles.scope.team": "Their teams’",
@@ -15606,8 +15612,9 @@ export const en = {
   "users.notArchived": "Team not archived",
   "users.teamNotChanged": "Membership not changed",
   "users.access.title": "User access",
-  "users.access.identity":
-    "Reads every contact, company, lead and deal in the company.",
+  "users.access.reads": "Reads all {kinds} in the company.",
+  "users.access.readsNone": "Reads no records.",
+  "users.access.writesNone": "Changes no records.",
   "users.access.writesAll": "Edits every record.",
   "users.access.writesTeam":
     "Edits their own records and those of the teams {teams}.",

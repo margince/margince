@@ -36,6 +36,7 @@ function ContactsList() {
   const fields: CreateField[] = [{ key: "name", labelText: "Name" }];
   return (
     <CreateAction
+      requires={{ object: "contact", action: "create" }}
       key={routeIdentity(route)}
       label="New contact"
       fields={fields}

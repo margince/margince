@@ -242,7 +242,10 @@ describe("AccessPreviewPanel", () => {
       </Providers>,
     );
 
-    await screen.findByText(en["users.access.identity"]);
+    // Only the kinds the server granted read on, never a fixed list.
+    await screen.findByText(
+      en["users.access.reads"].replace("{kinds}", "contacts and deals"),
+    );
     // The team the scope names, not just the word "team": a preview that lost
     // the roster would still read as a team scope.
     expect(
@@ -286,7 +289,11 @@ describe("AccessPreviewPanel", () => {
   // and it must not read as if it edited every record.
   it("says a team scope with no team edits only their own records", async () => {
     const { fetchMock } = backend({
-      preview: { row_scope: "team", teams: [] },
+      preview: {
+        row_scope: "team",
+        teams: [],
+        objects: { contact: { read: true, update: true } },
+      },
     });
     vi.stubGlobal("fetch", fetchMock);
     render(
@@ -298,6 +305,77 @@ describe("AccessPreviewPanel", () => {
     expect(
       await screen.findByText(en["users.access.writesTeamNone"]),
     ).toBeTruthy();
+  });
+});
+
+describe("AccessPreviewPanel for a role that changes nothing", () => {
+  // The seeded Read-only role: row scope `all`, every record kind read, no
+  // write. The scope says whose records a write would reach; with no write it
+  // reaches none.
+  it("says a read-only role changes no records, whatever its row scope", async () => {
+    const { fetchMock } = backend({
+      preview: {
+        row_scope: "all",
+        objects: {
+          contact: { read: true },
+          company: { read: true },
+          lead: { read: true },
+          deal: { read: true },
+          project: { read: true },
+        },
+      },
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(
+      <Providers>
+        <AccessPreviewPanel role={REP} teamIds={[]} />
+      </Providers>,
+    );
+
+    expect(await screen.findByText(en["users.access.writesNone"])).toBeTruthy();
+    expect(screen.queryByText(en["users.access.writesAll"])).toBeNull();
+  });
+
+  it("leaves deals out of what a role reads when its deal read is off", async () => {
+    const { fetchMock } = backend({
+      preview: {
+        row_scope: "own",
+        objects: {
+          contact: { read: true, update: true },
+          company: { read: true },
+        },
+      },
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(
+      <Providers>
+        <AccessPreviewPanel role={REP} teamIds={[]} />
+      </Providers>,
+    );
+
+    expect(
+      await screen.findByText(
+        en["users.access.reads"].replace("{kinds}", "contacts and companies"),
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(
+        `${en["users.access.object.deal"]}: ${en["users.access.none"]}`,
+      ),
+    ).toBeTruthy();
+  });
+
+  it("says a role that reads no record kind reads nothing", async () => {
+    const { fetchMock } = backend({ preview: { row_scope: "all" } });
+    vi.stubGlobal("fetch", fetchMock);
+    render(
+      <Providers>
+        <AccessPreviewPanel role={REP} teamIds={[]} />
+      </Providers>,
+    );
+
+    expect(await screen.findByText(en["users.access.readsNone"])).toBeTruthy();
+    expect(screen.getByText(en["users.access.writesNone"])).toBeTruthy();
   });
 });
 

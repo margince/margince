@@ -231,7 +231,8 @@ function NewPipeline({
       invalidate="pipelines"
       screen="settings"
       stay
-      reason={refusal}
+      requires={{ object: "pipeline", action: "create" }}
+      refusedReason={refusal}
       onCreated={(created) => onOpen(created.id)}
       // A new pipeline lands last and already holds the two ways out. Its
       // ladder is open stages plus the close.

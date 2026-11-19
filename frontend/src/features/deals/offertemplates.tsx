@@ -215,6 +215,7 @@ export function OfferTemplatesAdmin() {
         canCreate ? (
           <CreateAction
             label={t("template.new")}
+            requires={{ object: "offer_template", action: "create" }}
             invalidate="offer-templates"
             // `stay`: a fresh template has no page of its own to open. The list
             // it joins is already on screen.

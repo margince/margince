@@ -56,6 +56,7 @@ function refusal(field: string, code: string) {
 async function submitWith(problem: unknown, locale: "en" | "de" = "en") {
   render(
     <CreateAction
+      requires={{ object: "deal", action: "create" }}
       label="New deal"
       fields={fields}
       create={() => throwProblem(problem)}
@@ -75,6 +76,7 @@ describe("CreateAction field refusals", () => {
   it("declares the lowest amount the browser accepts", async () => {
     render(
       <CreateAction
+        requires={{ object: "deal", action: "create" }}
         label="New deal"
         fields={fields}
         create={() => Promise.resolve({ id: "1" })}

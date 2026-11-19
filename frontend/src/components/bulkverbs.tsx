@@ -10,6 +10,7 @@ import { Select } from "../design-system/select";
 import { stable } from "../format/collate";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
+import { useGrantRefused } from "../lib/capability";
 import { useRecordOwnerOptions } from "./assigneepicker";
 import {
   BulkChangeDialog,
@@ -69,6 +70,10 @@ export function BulkVerbs({
   const { options: ownerOptions, roster } = useRecordOwnerOptions();
   const rosterPartial = useRosterPartial("user", true);
   const partialNoteId = useId();
+  const refusalId = useId();
+  const refused = useBulkRefusals(recordType);
+  const refusedId = (verb: keyof BulkRefusals) =>
+    refused[verb] ? refusalId : undefined;
 
   // An owner picked for one selection must not be applied to the next, so the
   // picker clears when the membership changes. `stable` because the key is only
@@ -108,7 +113,7 @@ export function BulkVerbs({
         aria-label={t("bulk.owner")}
         value={ownerId}
         placeholder={t("bulk.ownerPick")}
-        disabled={busy}
+        disabled={busy || refused.update}
         onChange={setOwnerId}
         // The caveat sits last in the row (below), so the picker names it.
         aria-describedby={rosterPartial ? partialNoteId : undefined}
@@ -117,14 +122,20 @@ export function BulkVerbs({
       <Button
         variant="primary"
         disabled={!idle || ownerId === ""}
+        reasonId={refusedId("update")}
         onClick={() => open("reassign_owner")}
       >
         {t("bulk.assign")}
       </Button>
       {children}
-      <TagVerbs disabled={!idle} onPick={(verb, tag) => open(verb, { tag })} />
+      <TagVerbs
+        disabled={!idle}
+        reasonId={refusedId("update")}
+        onPick={(verb, tag) => open(verb, { tag })}
+      />
       <TaskVerb
         disabled={!idle}
+        reasonId={refusedId("task")}
         onReady={(task) => open("create_task", { task })}
       />
       <ShortlistVerb
@@ -143,13 +154,22 @@ export function BulkVerbs({
       )}
       {/* A lead has no archive: it leaves the queue by being disqualified. */}
       {recordType !== "lead" && (
-        <Button disabled={!idle} onClick={() => open("archive")}>
+        <Button
+          disabled={!idle}
+          reasonId={refusedId("archive")}
+          onClick={() => open("archive")}
+        >
           {t("bulk.archive")}
         </Button>
       )}
       {/* Last, after every verb: the bar is one wrapping flex row, and a
           sentence between the picker and its button is where the row would
           break, splitting the control from its verb. */}
+      {Object.values(refused).some(Boolean) && (
+        <span className="t-caption" id={refusalId}>
+          {t("record.actionRefused")}
+        </span>
+      )}
       <RosterPartialNote partial={rosterPartial} id={partialNoteId} />
       <RosterFailedLine kind="user" roster={roster} />
       <BulkChangeDialog
@@ -162,6 +182,23 @@ export function BulkVerbs({
       />
     </>
   );
+}
+
+type BulkRefusals = Readonly<{
+  update: boolean;
+  task: boolean;
+  archive: boolean;
+}>;
+
+// The grant each verb's server admission asks up front (compose/
+// bulkrecordverbs.go admitVerb): a new owner and a tag ask the record's
+// update, a task the activity create. Archive is admitted on update or delete
+// (the owner's own archive), so only a seat holding neither is refused here.
+function useBulkRefusals(recordType: BulkRecordType): BulkRefusals {
+  const update = useGrantRefused({ object: recordType, action: "update" });
+  const remove = useGrantRefused({ object: recordType, action: "delete" });
+  const task = useGrantRefused({ object: "activity", action: "create" });
+  return { update, task, archive: update && remove };
 }
 
 /** A list row the bulk verbs can act on. */

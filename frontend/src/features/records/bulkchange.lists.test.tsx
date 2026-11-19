@@ -17,7 +17,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
-import { meFixture } from "../../testing/mefixture";
+import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { CompaniesScreen } from "../companies/companies";
 import { ContactsScreen } from "../contacts/contacts";
 
@@ -38,11 +38,18 @@ function json(body: unknown) {
   });
 }
 
-function render(ui: ReactNode) {
+// The grants the bar's verbs ask: a record's update and delete, a task.
+const WRITER: GrantSpec = {
+  contact: ["read", "update", "delete"],
+  company: ["read", "update", "delete"],
+  activity: ["read", "create"],
+};
+
+function render(ui: ReactNode, allow: GrantSpec = WRITER) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  client.setQueryData(["me"], meFixture({ rowScope: "all" }));
+  client.setQueryData(["me"], meFixture({ rowScope: "all", allow }));
   return rtlRender(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">{ui}</LocaleProvider>
@@ -138,5 +145,38 @@ describe.each(cases)("the $screen list's bulk bar", (entry) => {
       verb: "archive",
       items: [{ id: entry.row.id, version: entry.row.version }],
     });
+  });
+
+  // The seeded Read-only role: every record kind read, nothing written. The
+  // server refuses each of these verbs at its preview, so the bar refuses them
+  // first and says why once.
+  it("refuses a seat that may only read every verb that changes a record", async () => {
+    stubList(entry.listPath, [entry.row]);
+    const user = userEvent.setup();
+    render(entry.ui, {
+      contact: ["read"],
+      company: ["read"],
+      activity: ["read"],
+    });
+
+    await user.click(
+      await screen.findByRole("checkbox", {
+        name: en["bulk.selectRow"].replace("{name}", entry.name),
+      }),
+    );
+    const sentences = new Set<string | null>();
+    for (const verb of [
+      en["bulk.assign"],
+      en["bulk.createTask"],
+      en["bulk.addTag"],
+      en["bulk.removeTag"],
+      en["bulk.archive"],
+    ]) {
+      const button = screen.getByRole("button", { name: verb });
+      expect(button).toBeDisabled();
+      expect(button).toHaveAccessibleDescription(en["record.actionRefused"]);
+      sentences.add(button.getAttribute("aria-describedby"));
+    }
+    expect(sentences.size).toBe(1);
   });
 });

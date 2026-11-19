@@ -193,6 +193,7 @@ export function CompaniesScreen({
             </Button>
             <CreateAction
               label={t("create.company")}
+              requires={{ object: "company", action: "create" }}
               invalidate="companies"
               screen="companies"
               listCreate={{ open: startCreating }}

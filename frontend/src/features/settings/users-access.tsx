@@ -20,10 +20,13 @@ import { stable } from "../../format/collate";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { changeReach, readableKinds } from "../../lib/accessreach";
 import { ANALYTICS_CONTEXT_KEY } from "../../lib/analyticskeys";
 import { useCan, useCanWrite, useHoldsAdminRole } from "../../lib/capability";
+import { ENTITY_KINDS } from "../../lib/entity";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
+import { useKindList } from "./accesswords";
 import {
   membersOf,
   NewTeamAction,
@@ -44,15 +47,6 @@ type Team = components["schemas"]["Team"];
 // endpoint is a GET, so its parameters are the query and there is no body shape
 // to name.
 type Role = operations["previewAccess"]["parameters"]["query"]["role"];
-
-// The objects worth a line in the preview: the record kinds a rep works.
-const PREVIEW_OBJECTS = [
-  "contact",
-  "company",
-  "lead",
-  "deal",
-  "project",
-] as const;
 
 function useAccessPreview(role: Role, teamIds: string[]) {
   return useQuery({
@@ -97,20 +91,29 @@ function AccessSummary({ access }: Readonly<{ access: AccessPreview }>) {
     if (grant.delete) parts.push(t("users.access.delete"));
     return parts.join(" · ");
   };
+  const kindList = useKindList();
+  const readable = readableKinds(access.objects);
   const teams = (access.teams ?? []).map((team) => team.name).join(", ");
+  const reach = changeReach(access.objects, access.row_scope);
   return (
     <ul className="users-access-list">
-      <li>{t("users.access.identity")}</li>
       <li>
-        {access.row_scope === "all"
-          ? t("users.access.writesAll")
-          : access.row_scope === "team"
-            ? teams
-              ? t("users.access.writesTeam", { teams })
-              : t("users.access.writesTeamNone")
-            : t("users.access.writesOwn")}
+        {readable.length === 0
+          ? t("users.access.readsNone")
+          : t("users.access.reads", { kinds: kindList(readable) })}
       </li>
-      {PREVIEW_OBJECTS.map((object) => (
+      <li>
+        {reach === "none"
+          ? t("users.access.writesNone")
+          : reach === "all"
+            ? t("users.access.writesAll")
+            : reach === "team"
+              ? teams
+                ? t("users.access.writesTeam", { teams })
+                : t("users.access.writesTeamNone")
+              : t("users.access.writesOwn")}
+      </li>
+      {ENTITY_KINDS.map((object) => (
         <li key={object}>
           {t(`users.access.object.${object}` satisfies MessageKey)}:{" "}
           {verbs(object)}

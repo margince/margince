@@ -9,6 +9,7 @@ import { type ReactNode, useState } from "react";
 import { useIdempotencyKey } from "../api/idempotencykey";
 import { Button } from "../design-system/atoms";
 import { useT } from "../i18n";
+import { type RequiredGrant, useGrantRefused } from "../lib/capability";
 import { binding, shortcutTip } from "../lib/keymap";
 import { leaveCreateForm } from "../lib/listreturn";
 import { fromHere } from "../lib/navigatefrom";
@@ -142,7 +143,9 @@ export function CreateAction<Created extends { id: string }>({
   onCreated,
   onValuesChange,
   testId,
-  reason,
+  requires,
+  refusedReason,
+  refusalId,
   link,
   refusalNotice,
 }: Readonly<{
@@ -150,9 +153,16 @@ export function CreateAction<Created extends { id: string }>({
   fields: CreateField[];
   // Draws the verb as a card's text link. See NewRecordButton.
   link?: boolean;
-  // Why this reader may not create, drawn beside the refused button. The verb
-  // stays visible, because a hidden create reads as "there is nothing to add".
-  reason?: string;
+  // The grant the create asks. Required, so no create opens a form its save
+  // would refuse: a seat without it sees the verb refused with the reason. The
+  // verb stays visible, because a hidden create reads as "there is nothing to
+  // add".
+  requires: RequiredGrant;
+  // What a refused reader is told, where the role sentence is wrong.
+  refusedReason?: string;
+  // The id of a sentence already on the page saying why, for a header where
+  // several verbs are refused by one fact.
+  refusalId?: string;
   // The form's live answers, for a screen whose field list depends on them —
   // a dependent picker whose options only the server can narrow. See
   // usePublishedValues.
@@ -192,6 +202,11 @@ export function CreateAction<Created extends { id: string }>({
   resolveExisting?: (code: string, id: string) => Route;
 }>) {
   const t = useT();
+  const refused = useGrantRefused(requires);
+  const reason =
+    refused && refusalId === undefined
+      ? (refusedReason ?? t("record.actionRefused"))
+      : undefined;
   const [creating, setCreating] = useState(listCreate?.open ?? false);
   const shown = useSettledOpen(creating, catalogOfScreen(screen));
   // Counts this session's saves, which empties the form between them. Not a
@@ -225,7 +240,7 @@ export function CreateAction<Created extends { id: string }>({
     mutation.error instanceof ProblemError
       ? problemExistingId(mutation.error.problem)
       : null;
-  const refused = fieldRefusals(mutation.error, fields, t);
+  const fieldRefused = fieldRefusals(mutation.error, fields, t);
   const notice = mutation.isError
     ? refusalNotice?.(
         mutation.error,
@@ -247,23 +262,24 @@ export function CreateAction<Created extends { id: string }>({
         testId={testId}
         pending={creating && !shown}
         reason={reason}
+        reasonId={refused ? refusalId : undefined}
         link={link}
         opensOnCreateKey={listCreate !== undefined}
       />
       <CreateRecordModal
         // A refusal that lands while the dialog is open closes it. A verb the
         // reader may no longer take must not stay one press from the server.
-        open={shown && reason === undefined}
+        open={shown && !refused}
         onClose={close}
         title={label}
         fields={fields}
         pending={mutation.isPending}
         error={
-          mutation.isError && !refused.allPlaced
+          mutation.isError && !fieldRefused.allPlaced
             ? problemMessageOf(mutation.error, t)
             : null
         }
-        fieldRefusals={refused.byField}
+        fieldRefusals={fieldRefused.byField}
         existing={existing}
         resolveExisting={resolveExisting}
         notice={notice}
@@ -283,6 +299,7 @@ export function NewRecordButton({
   testId = "new-record",
   pending,
   reason,
+  reasonId,
   link,
   opensOnCreateKey = false,
 }: Readonly<{
@@ -295,6 +312,7 @@ export function NewRecordButton({
   testId?: string;
   pending?: boolean;
   reason?: string;
+  reasonId?: string;
   opensOnCreateKey?: boolean;
 }>) {
   const createKey = useShortcutAria("create");
@@ -306,6 +324,7 @@ export function NewRecordButton({
       data-testid={testId}
       pending={pending}
       reason={reason}
+      reasonId={reasonId}
       variant={link ? "link" : undefined}
       aria-keyshortcuts={keyShortcut}
       title={

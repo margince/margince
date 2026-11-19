@@ -42,6 +42,7 @@ function mount(
       <LocaleProvider initial="en">
         <ScreenAddress.Provider value={props.drawnFor ?? null}>
           <CreateAction
+            requires={{ object: "contact", action: "create" }}
             label="New contact"
             fields={fields}
             create={props.create ?? (async () => ({ id: "c1" }))}

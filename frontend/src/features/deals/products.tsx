@@ -299,6 +299,7 @@ export function ProductsAdmin() {
         canCreate ? (
           <CreateAction
             label={t("product.new")}
+            requires={{ object: "product", action: "create" }}
             invalidate="products"
             // `stay`: a fresh product has no page of its own to open. The list
             // it joins is already on screen.

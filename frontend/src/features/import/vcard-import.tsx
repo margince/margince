@@ -17,6 +17,7 @@ import { RecordBack } from "../../design-system/recordview";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import type { ACCEPTED_ATTACHMENT_EXTENSIONS } from "../../lib/attachmentupload";
+import { useGrantRefused } from "../../lib/capability";
 import { valueFor } from "../../lib/labelfor";
 import { ACTION_PARAM, QUALIFY_ACTION } from "../../lib/leads.address";
 import { postMultipart } from "../../lib/multipart";
@@ -146,14 +147,37 @@ function useImportVCards() {
 }
 
 /**
+ * Whether this seat is refused the vCard import, which writes a new contact
+ * or updates the one a card matches, so it asks both grants
+ * (contacts/vcardimport.go).
+ */
+export function useVCardImportRefused(): boolean {
+  const create = useGrantRefused({ object: "contact", action: "create" });
+  const update = useGrantRefused({ object: "contact", action: "update" });
+  return create || update;
+}
+
+/**
  * The link a contact follows to import address cards. A handed-over card is
  * first-party data — the contact gave it — which is what justifies storing their
  * details, and a human pressing this is what makes the import WRITE rather than
  * stage. So the verb lives on the contact list beside the other ways a contact
  * comes to exist, not in a settings page.
  */
-export function VCardImportAction() {
+export function VCardImportAction({
+  refusalId,
+}: Readonly<{
+  // The page's sentence saying why the import is refused, when it is.
+  refusalId?: string;
+}>) {
   const t = useT();
+  if (refusalId !== undefined) {
+    return (
+      <Button reasonId={refusalId} data-testid="vcard-import">
+        {t("vcardImport.action")}
+      </Button>
+    );
+  }
   return (
     <AppLink
       className="btn btn-ghost"
