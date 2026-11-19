@@ -47,6 +47,8 @@ export type FieldProblem = Readonly<{
   message: string;
   // The limit a too_long refusal names. Absent from an older server.
   max?: number;
+  // The values the code's sentence names, by name. Absent when it names none.
+  params?: Readonly<Record<string, string>>;
 }>;
 
 // The top-level code every 422 carries. httperr.Validation is the only
@@ -71,12 +73,24 @@ export function problemFieldErrors(problem: unknown): FieldProblem[] {
       typeof code === "string" &&
       typeof message === "string"
     ) {
-      out.push(
-        typeof max === "number" && max > 0
-          ? { field, code, message, max }
-          : { field, code, message },
-      );
+      const params = stringParams(entry.params);
+      out.push({
+        field,
+        code,
+        message,
+        ...(typeof max === "number" && max > 0 ? { max } : null),
+        ...(params ? { params } : null),
+      });
     }
   }
   return out;
+}
+
+// Only the string values: a sentence puts each one in as it is.
+function stringParams(value: unknown): Readonly<Record<string, string>> | null {
+  if (!isRecord(value)) return null;
+  const entries = Object.entries(value).filter(
+    (pair): pair is [string, string] => typeof pair[1] === "string",
+  );
+  return entries.length > 0 ? Object.fromEntries(entries) : null;
 }

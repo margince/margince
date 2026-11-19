@@ -8,3 +8,7 @@
 .relationshiprows-verbs-stacked {
   justify-content: flex-end;
 }
+
+.relationshiprows-date {
+  white-space: nowrap;
+}

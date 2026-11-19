@@ -332,7 +332,7 @@ function PipelineDetail({
   return (
     <Panel
       title={
-        <span ref={title} tabIndex={-1}>
+        <span ref={title} tabIndex={-1} className="arrival-focus">
           {pipeline.name}
         </span>
       }

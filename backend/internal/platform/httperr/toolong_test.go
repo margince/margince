@@ -90,3 +90,16 @@ func TestTooLongRefusesALimitThatStatesNone(t *testing.T) {
 		}()
 	}
 }
+
+func TestAFieldRefusalPutsItsParamsOnTheWire(t *testing.T) {
+	t.Parallel()
+	fault := firstFieldFault(t, Validation("file", "unreadable", "Line 2 is broken.").
+		WithParams(map[string]string{"line": "2"}))
+	params, ok := fault["params"].(map[string]any)
+	if !ok || params["line"] != "2" || len(params) != 1 {
+		t.Errorf("params = %v, want {line: 2}", fault["params"])
+	}
+	if fault := firstFieldFault(t, Validation("file", "not_utf8", "Save it as UTF-8.").WithParams(nil)); fault["params"] != nil {
+		t.Errorf("params = %v, want no key for a refusal that names no value", fault["params"])
+	}
+}

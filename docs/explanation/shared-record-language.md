@@ -24,7 +24,7 @@ an unmeasured snapshot carries no language until measurement replaces it.
 A meeting brief resolves its language in a separate transaction before assembling the record.
 The same value controls its deterministic prose, model requests and manager coaching. A failed
 settings query can fall back to English without aborting the transaction that reads the meeting.
-Its dates use ISO calendar dates; meeting times retain their timezone.
+Its lines write dates and times in the installation's date format and timezone, as the app does. The model request keeps ISO dates.
 
 A report evaluation stores its explanation language in its context. Frozen projections reuse it;
 legacy contexts use English. Comparisons explain a refusal in the selected right-hand edition's
