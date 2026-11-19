@@ -22,7 +22,9 @@ import { OptionRows } from "./customfields.optionrows";
 
 type CustomField = components["schemas"]["CustomField"];
 
-export function CustomFieldChoices({ field }: Readonly<{ field: CustomField }>) {
+export function CustomFieldChoices({
+  field,
+}: Readonly<{ field: CustomField }>) {
   const t = useT();
   const [open, setOpen] = useState(false);
   if (field.type !== "picklist" && field.type !== "multiselect") {
@@ -33,9 +35,7 @@ export function CustomFieldChoices({ field }: Readonly<{ field: CustomField }>) 
       <Button aria-haspopup="dialog" onClick={() => setOpen(true)}>
         {t("cf.choices.edit")}
       </Button>
-      {open && (
-        <ChoicesDialog field={field} onClose={() => setOpen(false)} />
-      )}
+      {open && <ChoicesDialog field={field} onClose={() => setOpen(false)} />}
     </>
   );
 }
@@ -115,7 +115,9 @@ function ChoicesDialog({
       onConfirm={() => save.mutate()}
     >
       <SurfaceState
-        state={use.isPending ? "loading" : use.isError ? "unavailable" : "ready"}
+        state={
+          use.isPending ? "loading" : use.isError ? "unavailable" : "ready"
+        }
         emptyLabel=""
         loadingLabel={t("cf.choices.checking")}
         loadingLines={2}

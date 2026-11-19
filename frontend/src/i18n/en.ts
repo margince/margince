@@ -14318,10 +14318,13 @@ export const en = {
   "cf.choices.checking": "Counting the records that hold each choice",
   "cf.choices.held_one": "{count} record",
   "cf.choices.held_other": "{count} records",
-  "cf.choices.clears_one": "Saving clears the removed choices from {count} record.",
-  "cf.choices.clears_other": "Saving clears the removed choices from {count} records.",
+  "cf.choices.clears_one":
+    "Saving clears the removed choices from {count} record.",
+  "cf.choices.clears_other":
+    "Saving clears the removed choices from {count} records.",
   "cf.choices.saved_one": "Choices of “{label}” saved. {count} record changed.",
-  "cf.choices.saved_other": "Choices of “{label}” saved. {count} records changed.",
+  "cf.choices.saved_other":
+    "Choices of “{label}” saved. {count} records changed.",
   "cf.gate.title": "Add this field?",
   "cf.gate.body":
     "On confirm, it becomes a live column on every {object}: on the 360 page, in search and filters, lists, export and the API. The addition is recorded in the audit log.",

@@ -190,7 +190,11 @@ describe("customFieldToFormField", () => {
   it("refuses a url value the server would refuse, and takes a web address", () => {
     const field = customFieldToFormField(cf({ type: "url" }), BOOL_LABELS, T);
     expect(field.type).toBe("text");
-    for (const refused of ["javascript:alert(1)", "data:text/html,x", "example.com/offer"]) {
+    for (const refused of [
+      "javascript:alert(1)",
+      "data:text/html,x",
+      "example.com/offer",
+    ]) {
       expect(field.validate?.(refused), refused).toBe(
         "Enter a web address that starts with http:// or https://.",
       );

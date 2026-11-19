@@ -28,9 +28,9 @@ import { useLocale, useT } from "../../i18n";
 import type { CfObject, CfType } from "../../lib/customfields.logic";
 import { useViewerZone } from "../../lib/viewerzone";
 import { AuditEntryLine } from "../settings/audit";
+import { CustomFieldChoices } from "./customfields.choices";
 import { ActivityKindsSelect } from "./customfields.kinds";
 import { objectLabels, typeLabels } from "./customfields.labels";
-import { CustomFieldChoices } from "./customfields.choices";
 import { CustomFieldTranslate } from "./customfields.translations";
 import "./customfields.css";
 

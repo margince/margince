@@ -34,7 +34,7 @@ func TestTheFrontendCustomFieldTypesMatchTheGoList(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading the frontend type list: %v", err)
 	}
-	const marker = "CF_TYPES: readonly CfType[] = ["
+	const marker = "CF_TYPES = ["
 	start := indexAfter(string(source), marker)
 	if start < 0 {
 		t.Fatalf("%s no longer declares %s as an array literal; this gate reads a shape that is gone",

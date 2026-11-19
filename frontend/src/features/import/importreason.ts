@@ -22,7 +22,6 @@ const OBJECT_OF_PLURAL: Readonly<Record<string, ImportObject>> = {
   activities: "activity",
 };
 
-
 function objectOf(value: string): ImportObject | undefined {
   return OBJECTS.find((one) => one === value) ?? OBJECT_OF_PLURAL[value];
 }

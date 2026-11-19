@@ -43,8 +43,13 @@ afterEach(() => {
 describe("the choices editor", () => {
   it("counts only the records holding a choice the edit drops", () => {
     expect(recordsLosingAChoice({ North: 3, West: 2 }, ["West"])).toBe(3);
-    expect(recordsLosingAChoice({ North: 3, West: 2 }, ["North", "West"])).toBe(0);
-    expect(cleanChoices([" North ", "", "North", "East"])).toEqual(["North", "East"]);
+    expect(recordsLosingAChoice({ North: 3, West: 2 }, ["North", "West"])).toBe(
+      0,
+    );
+    expect(cleanChoices([" North ", "", "North", "East"])).toEqual([
+      "North",
+      "East",
+    ]);
   });
 
   it("says before Save how many records lose a removed choice", async () => {
@@ -59,7 +64,9 @@ describe("the choices editor", () => {
         }),
       ),
     );
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
     render(
       <QueryClientProvider client={client}>
         <LocaleProvider initial="en">
@@ -70,9 +77,13 @@ describe("the choices editor", () => {
     fireEvent.click(screen.getByRole("button", { name: "Edit choices" }));
     expect(await screen.findByText("12 records")).toBeInTheDocument();
     expect(screen.queryByText(/Saving clears/)).not.toBeInTheDocument();
-    fireEvent.click(screen.getAllByRole("button", { name: "Remove option" })[0]);
+    fireEvent.click(
+      screen.getAllByRole("button", { name: "Remove option" })[0],
+    );
     expect(
-      await screen.findByText("Saving clears the removed choices from 12 records."),
+      await screen.findByText(
+        "Saving clears the removed choices from 12 records.",
+      ),
     ).toBeInTheDocument();
   });
 });

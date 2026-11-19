@@ -5,7 +5,6 @@
 import type { components } from "../api/schema";
 
 export type CfObject = components["schemas"]["CustomField"]["object"];
-export type CfType = components["schemas"]["CustomField"]["type"];
 
 // Chip order is normative (AC-custom-fields-2), and the SET is the contract's:
 // CfObject is the generated `CustomField["object"]`, so this list cannot quietly
@@ -26,9 +25,9 @@ export const CF_OBJECTS: readonly CfObject[] = [
 
 // The type set mirrors fieldcatalog.Types() in the backend, in its order.
 // backend/gates/frontendcustomfieldtypes_test.go fails when the two differ in
-// either direction, and CfType is the generated contract enum, so a member the
+// either direction. The create request takes a CfType, so a member the
 // contract lacks fails to compile.
-export const CF_TYPES: readonly CfType[] = [
+export const CF_TYPES = [
   "text",
   "number",
   "date",
@@ -38,7 +37,9 @@ export const CF_TYPES: readonly CfType[] = [
   "boolean",
   "record",
   "url",
-];
+] as const;
+
+export type CfType = (typeof CF_TYPES)[number];
 
 export function slug(label: string): string {
   return label
