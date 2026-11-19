@@ -10,10 +10,10 @@ import { committeeContacts } from "./dealcommittee";
 type DealCoverage = components["schemas"]["DealCoverage"];
 type DealCoverageLine = components["schemas"]["DealCoverageLine"];
 
-type Way = "wrote" | "replied" | "met";
+type Way = "mailed" | "replied" | "met";
 
 const WAY_WORDS: Record<Way, MessageKey> = {
-  wrote: "deal.committee.lines.wrote",
+  mailed: "deal.committee.lines.mailed",
   replied: "deal.committee.lines.replied",
   met: "deal.committee.lines.met",
 };
@@ -37,7 +37,7 @@ function newest(line: DealCoverageLine): Newest | undefined {
   const events: Newest[] = [];
   if (line.last_outbound_at) {
     events.push({
-      way: "wrote",
+      way: "mailed",
       at: line.last_outbound_at,
       precision: line.last_outbound_precision ?? "instant",
     });

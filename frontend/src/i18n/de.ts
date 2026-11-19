@@ -20452,7 +20452,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.committee.teamUnread":
     "Nicht lesbar, wer sonst an diesem Deal arbeitet.",
   "deal.committee.lines.title": "Wer mit wem spricht",
-  "deal.committee.lines.wrote": "Am {date} angeschrieben",
+  "deal.committee.lines.mailed": "E-Mail an sie am {date}",
   "deal.committee.lines.replied": "Hat am {date} geschrieben",
   "deal.committee.lines.met": "Am {date} getroffen",
   "deal.committee.lines.pair": "{colleague} mit {contact}: {how}",
@@ -22842,6 +22842,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "legalReview.contractNoticeDays_one": "{count} Tag",
   "legalReview.contractNoticeDays_other": "{count} Tage",
   "legalReview.contractCancelBy": "Kündigung erklärt",
+  "legalReview.contractRenewal": "Verlängerung",
   "legalReview.contractAutoRenews": "Verlängert sich automatisch",
   "legalReview.contractNoAutoRenew": "Verlängert sich nicht automatisch",
   "legalReview.packTouches": "Letzter Kontakt",

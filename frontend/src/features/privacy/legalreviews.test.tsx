@@ -155,6 +155,26 @@ describe("one review", () => {
     expect(screen.queryByText("Master services agreement")).toBeNull();
   });
 
+  it("states auto-renewal on a contract that has no renewal date", async () => {
+    const undated = review();
+    for (const contract of undated.packet.contracts ?? []) {
+      delete contract.renewal_on;
+    }
+    stubWithSession(
+      {
+        "GET /legal-reviews/settings": legalOn,
+        [`GET /legal-reviews/${REVIEW_ID}`]: () => jsonResponse(undated),
+      },
+      REVIEWER,
+    );
+    mount(REVIEW_ID);
+
+    expect(
+      await screen.findByText(en["legalReview.contractAutoRenews"]),
+    ).toBeInTheDocument();
+    expect(screen.getByText(en["legalReview.contractRenewal"])).toBeVisible();
+  });
+
   it("does not let the requester answer their own review", async () => {
     stubWithSession(
       {

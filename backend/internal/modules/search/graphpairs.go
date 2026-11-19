@@ -45,8 +45,8 @@ type PairReading struct {
 // the caller's content gate admits. The edge projection holds only
 // workspace-audience mail and lags an audience change, so it cannot answer this.
 //
-// A contact is `not_reached` only when no linked activity exists. One the
-// caller cannot read, or one with a colleague who has left, makes it `unknown`.
+// A contact is `not_reached` only when no linked activity exists. One it may not
+// date (unreadable, a colleague who left, a row that does not stand) is `unknown`.
 //
 // The caller has passed the contact row scope for every id and holds the
 // activity grant.
@@ -67,23 +67,23 @@ func ReadablePairDates(ctx context.Context, tx pgx.Tx, contacts []ids.UUID) (Pai
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		WITH links AS (
 		    SELECT up.user_id AS pair_user, pp.contact_id AS pair_contact, %[1]s,
-		           %[2]s AS met, (%[3]s) AS live, (%[4]s) AS readable
+		           %[2]s AS met, (%[3]s) AND (%[4]s) AND (%[6]s) AS dated
 		      FROM activity_participant up
 		      JOIN activity_participant pp ON pp.activity_id = up.activity_id
 		      JOIN activity a ON a.id = up.activity_id AND a.archived_at IS NULL
-		       AND %[5]s AND %[6]s
+		       AND %[5]s
 		      JOIN app_user u ON u.id = up.user_id
 		     WHERE up.user_id IS NOT NULL AND up.role IN %[7]s
 		       AND pp.contact_id = ANY($1) AND pp.role IN %[7]s
 		)
 		SELECT c.pair_user, c.pair_contact,
-		       max(c.occurred_at) FILTER (WHERE c.readable AND c.live AND %[8]s),
-		       (array_agg(c.occurred_precision ORDER BY c.occurred_at DESC) FILTER (WHERE c.readable AND c.live AND %[8]s))[1],
-		       max(c.occurred_at) FILTER (WHERE c.readable AND c.live AND %[9]s),
-		       (array_agg(c.occurred_precision ORDER BY c.occurred_at DESC) FILTER (WHERE c.readable AND c.live AND %[9]s))[1],
-		       max(c.occurred_at) FILTER (WHERE c.readable AND c.live AND c.met),
-		       (array_agg(c.occurred_precision ORDER BY c.occurred_at DESC) FILTER (WHERE c.readable AND c.live AND c.met))[1],
-		       bool_or(NOT c.readable OR NOT c.live)
+		       max(c.occurred_at) FILTER (WHERE c.dated AND %[8]s),
+		       (array_agg(c.occurred_precision ORDER BY c.occurred_at DESC) FILTER (WHERE c.dated AND %[8]s))[1],
+		       max(c.occurred_at) FILTER (WHERE c.dated AND %[9]s),
+		       (array_agg(c.occurred_precision ORDER BY c.occurred_at DESC) FILTER (WHERE c.dated AND %[9]s))[1],
+		       max(c.occurred_at) FILTER (WHERE c.dated AND c.met),
+		       (array_agg(c.occurred_precision ORDER BY c.occurred_at DESC) FILTER (WHERE c.dated AND c.met))[1],
+		       bool_or(NOT c.dated)
 		  FROM links c
 		 GROUP BY c.pair_user, c.pair_contact
 		 ORDER BY c.pair_contact, c.pair_user`,

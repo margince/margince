@@ -5,16 +5,14 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../../../api/schema";
 import { translate } from "../../../i18n";
+import { StoryProviders } from "../../../testing/story-utils";
 import { CommitteeLines } from "./dealcommitteelinelist";
 import { committeeLines } from "./dealcommitteelines";
 
 type DealCoverage = components["schemas"]["DealCoverage"];
-
-const navigate = vi.hoisted(() => vi.fn());
-vi.mock("../../../lib/router", () => ({ navigate }));
 
 const t = (
   key: Parameters<typeof translate>[1],
@@ -60,10 +58,7 @@ const coverage = (over: Partial<DealCoverage> = {}): DealCoverage => ({
   ...over,
 });
 
-afterEach(() => {
-  cleanup();
-  navigate.mockReset();
-});
+afterEach(cleanup);
 
 describe("committeeLines", () => {
   it("draws a line with the newest event and which way it went", () => {
@@ -87,7 +82,9 @@ describe("committeeLines", () => {
     ]);
   });
 
-  it("says the colleague wrote or met when that is the newest event", () => {
+  // Outbound mail includes mail the colleague was only copied on, so the line
+  // names the mail and never says the colleague wrote it.
+  it("names our mail or the meeting when that is the newest event", () => {
     const drawn = committeeLines(
       coverage({
         lines: [
@@ -110,7 +107,7 @@ describe("committeeLines", () => {
     );
     expect(drawn?.lines.map((line) => line.text)).toEqual([
       "Jonas Weber with Mai Tran: Met 2026-11-06",
-      "Lena Fischer with Mai Tran: Wrote to them 2026-11-02",
+      "Lena Fischer with Mai Tran: Email to them 2026-11-02",
     ]);
   });
 
@@ -197,10 +194,12 @@ describe("CommitteeLines", () => {
       when,
     );
     render(
-      <CommitteeLines
-        lines={drawn?.lines ?? []}
-        unreached={drawn?.unreached ?? []}
-      />,
+      <StoryProviders>
+        <CommitteeLines
+          lines={drawn?.lines ?? []}
+          unreached={drawn?.unreached ?? []}
+        />
+      </StoryProviders>,
     );
     const list = screen.getByRole("list");
     expect(
@@ -212,17 +211,19 @@ describe("CommitteeLines", () => {
       "No current colleague has reached Bao Nguyen",
     ]);
     await userEvent.setup().tab();
-    expect(
-      screen.getByRole("button", {
-        name: "Lena Fischer with Mai Tran: Met 2026-11-06",
-      }),
-    ).toHaveFocus();
-    await userEvent.keyboard("{Enter}");
-    expect(navigate).toHaveBeenCalledWith({ screen: "contacts", id: "c-1" });
+    const pair = screen.getByRole("link", {
+      name: "Lena Fischer with Mai Tran: Met 2026-11-06",
+    });
+    expect(pair).toHaveFocus();
+    expect(pair.getAttribute("href")).toMatch(/#\/contacts\/c-1$/);
   });
 
   it("draws nothing when there is neither a line nor a gap", () => {
-    const { container } = render(<CommitteeLines lines={[]} unreached={[]} />);
-    expect(container).toBeEmptyDOMElement();
+    render(
+      <StoryProviders>
+        <CommitteeLines lines={[]} unreached={[]} />
+      </StoryProviders>,
+    );
+    expect(screen.queryByRole("region")).toBeNull();
   });
 });

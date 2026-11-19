@@ -250,6 +250,28 @@ func TestAColleagueWhoLeftDrawsNoLineAndLeavesTheSeatUnknown(t *testing.T) {
 	}
 }
 
+// A bare connector stamp names no mailbox, so the colleague's row on that mail
+// does not stand. The mail still exists, so the seat is unknown, not unreached.
+func TestAMailWhoseColleagueRowDoesNotStandDrawsNoLineAndLeavesTheSeatUnknown(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+	buyer := e.SeedContact(t, "Mai Tran", nil)
+	dealID := seatedDeal(t, e, buyer)
+	activity := seedPairMail(t, e.Rep2, buyer, "outbound", "workspace")
+	if _, err := owner.Exec(t.Context(), `UPDATE activity SET captured_by = 'connector:gmail' WHERE id = $1`, activity); err != nil {
+		t.Fatal(err)
+	}
+
+	got := coverageAs(t, e, e.Rep1, coverageReaderPerms(true), dealID)
+
+	if lines := linesFor(got, e.Rep2, buyer); len(lines) != 0 {
+		t.Errorf("a colleague row that does not stand drew a line: %+v", lines)
+	}
+	if reach := seatReach(t, got, buyer); reach != "unknown" {
+		t.Errorf("seat reach = %q, want unknown rather than a claim nobody was reached", reach)
+	}
+}
+
 func TestAReaderWithoutTheActivityGrantGetsNeitherLinesNorStates(t *testing.T) {
 	e := Setup(t)
 	buyer := e.SeedContact(t, "Mai Tran", nil)

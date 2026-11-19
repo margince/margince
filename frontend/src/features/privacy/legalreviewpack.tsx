@@ -364,6 +364,15 @@ function ContractFields({ contract }: Readonly<{ contract: PacketContract }>) {
   const zone = useViewerZone();
   const day = (value: string) => calendarDayLabel(value, locale, zone);
   const days = contract.notice_period_days;
+  // A contract may state auto-renewal without a renewal date.
+  const autoRenew =
+    contract.auto_renew == null
+      ? null
+      : t(
+          contract.auto_renew
+            ? "legalReview.contractAutoRenews"
+            : "legalReview.contractNoAutoRenew",
+        );
   return (
     <FieldGrid>
       <FieldRow label={contract.title}>
@@ -387,15 +396,12 @@ function ContractFields({ contract }: Readonly<{ contract: PacketContract }>) {
       {contract.renewal_on && (
         <FieldRow label={t("contracts.form.renewalOn")}>
           {day(contract.renewal_on)}
-          {contract.auto_renew != null && (
-            <div className="t-caption">
-              {t(
-                contract.auto_renew
-                  ? "legalReview.contractAutoRenews"
-                  : "legalReview.contractNoAutoRenew",
-              )}
-            </div>
-          )}
+          {autoRenew && <div className="t-caption">{autoRenew}</div>}
+        </FieldRow>
+      )}
+      {!contract.renewal_on && autoRenew && (
+        <FieldRow label={t("legalReview.contractRenewal")}>
+          {autoRenew}
         </FieldRow>
       )}
       {days != null && (

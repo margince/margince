@@ -348,6 +348,9 @@ func TestTheEntryCohortReadsAsCompaniesAndAsSources(t *testing.T) {
 	if got := countsOf(companies[0]); got["qualified"] != 1 || got["disqualified"] != 1 || got["unresolved"] != 0 {
 		t.Errorf("company outcomes %v, want Acme qualified (its furthest lead) and Beta disqualified, the open lead behind it left out", got)
 	}
+	if unit := charts["source_quality"].Unit; unit != "percent" {
+		t.Errorf("source card unit %q, want percent: each point's value is the linked share", unit)
+	}
 	sources := charts["source_quality"].Points
 	if len(sources) != 2 || sources[0].Label != "Website" || *sources[0].Observations != 3 || *sources[1].Observations != 2 {
 		t.Fatalf("source points %+v, want Website with 3 entrants before Website campaign with 2", sources)
@@ -475,10 +478,17 @@ func TestTheCompanyCardIsWithheldFromAReaderWhoMayNotReadItsLeads(t *testing.T) 
 	selection := w.selection
 	selection.Metrics = []crmcontracts.ReportingMetricID{"account_progression"}
 	selection.Blocks = []crmcontracts.ReportingBlockKind{"account_cohort"}
+	// The reader's catalog leaves the lead-derived metric out, so a live
+	// evaluation refuses it by name rather than drawing the card.
 	live, err := w.service.Evaluate(noLeads, selection)
-	if err == nil {
-		if points := chartsOf(live)["account_cohort"].Points; len(points) != 0 && *points[0].Observations != 0 {
-			t.Errorf("live: company points %+v, want none for a reader without lead read", points)
-		}
+	fault, refused := errors.AsType[interface {
+		error
+		FieldFault() (field, code, message string)
+	}](err)
+	if !refused {
+		t.Fatalf("live: answered %+v, %v; want the metric refused as unavailable", live.Charts, err)
+	}
+	if field, code, _ := fault.FieldFault(); field != "selection.metrics" || code != "unsupported" {
+		t.Errorf("live: refused %s/%s, want selection.metrics/unsupported", field, code)
 	}
 }
