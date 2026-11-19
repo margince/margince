@@ -14,6 +14,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/attention"
+	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -203,9 +204,7 @@ func TestADepartedOwnerOrASwitchOffKeepsTheLostDealClosed(t *testing.T) {
 	switched := e.SeedCompany(t, "Globex", &e.AdminUser)
 	off := e.lostDeal(t, switched, e.AdminUser, e.daysAgo(40))
 	e.buyerPair(t, switched, e.daysAgo(10))
-	if _, err := approvals.NewService(e.DB()).SetAutoApply(e.Admin(), deals.DealReviveKind, false); err != nil {
-		t.Fatalf("switching deal_revive off: %v", err)
-	}
+	integration.TurnKindOff(e.Admin(), t, approvals.NewService(e.DB()), deals.DealReviveKind)
 
 	if done := e.openScouted(t); done != 0 {
 		t.Fatalf("acted on %d suggestions, want none", done)

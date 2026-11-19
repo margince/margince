@@ -51,6 +51,7 @@ export const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
   // The team chat link refusals: each detail is an English API sentence.
   ["channel_bot_not_connected", "channelLink.refused.botNotConnected"],
   ["channel_not_found", "channelLink.refused.channelNotFound"],
+  ["channel_name_refused", "channelLink.refused.nameRefused"],
   ["channel_not_private", "channelLink.refused.channelNotPrivate"],
   ["channel_bot_not_member", "channelLink.refused.botNotMember"],
   ["channel_already_linked", "channelLink.refused.channelAlreadyLinked"],

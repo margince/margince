@@ -45,24 +45,14 @@ const (
 
 // dateColumnCalendar is one column's statement. why is required for every
 // calendar but installationDay, because an exception nobody explained is the
-// convention this registry replaces. drift names, with its issue, a reader that
-// asks with a different today than the writer used.
+// convention this registry replaces.
 type dateColumnCalendar struct {
 	calendar dayCalendar
 	why      string
-	drift    string
 }
 
-// readersDisagree is the issue that tracks every drift note below; a column's
-// note goes when its readers agree with its writer.
-const readersDisagree = "#6714"
-
 var dateColumnCalendars = map[string]dateColumnCalendar{
-	"ai_model_rate.effective_date": {
-		calendar: utcDay,
-		why:      "the AI price sheet's effective day, guarded and matched against todayUTC() on both sides",
-		drift:    "belongs in the installation zone once RateStore can resolve it, like fx_rate beside it; " + readersDisagree,
-	},
+	"ai_model_rate.effective_date": {calendar: installationDay},
 	"ai_usage.day": {
 		calendar: utcDay,
 		why:      "a metering counter: written and windowed on the UTC calendar, the monthly AI budget included, so every reader of one day's spend sums the same rows",
@@ -82,29 +72,22 @@ var dateColumnCalendars = map[string]dateColumnCalendar{
 		calendar: utcDay,
 		why:      "the provider window's lower bound, handed to Graph and Gmail as a UTC instant; it is a fetch boundary, never a business day",
 	},
-	"capture_digest.digest_date": {
-		calendar: utcDay,
-		why:      "the capture digest is built and labelled on the UTC calendar",
-		drift:    "it sits beside brief_run.local_day, an installation day; " + readersDisagree,
-	},
-	"close_date_run.as_of":               {calendar: installationDay},
-	"contract.cancellation_effective_on": {calendar: installationDay},
-	"contract.cancellation_notice_on":    {calendar: installationDay},
-	"contract.ends_on":                   {calendar: installationDay},
-	"contract.fx_rate_date":              {calendar: installationDay},
-	"contract.renewal_on":                {calendar: installationDay},
-	"contract.signed_on":                 {calendar: installationDay},
-	"contract.starts_on":                 {calendar: installationDay},
-	"deal.expected_close_date":           {calendar: installationDay},
-	"deal.fx_rate_date":                  {calendar: installationDay},
-	"deal.wait_until":                    {calendar: installationDay, drift: "the stall formulas end the pause at 00:00 UTC; " + readersDisagree},
-	"deal_risk_day.local_day":            {calendar: installationDay},
-	"deal_stage_history.fx_date_at_change": {
-		calendar: installationDay,
-		drift:    "stage valuation picks its rate with the process clock's day, not the installation's; " + readersDisagree,
-	},
-	"deal_suggestion.proposed_close_date": {calendar: installationDay},
-	"legal_review.expected_close_date":    {calendar: installationDay},
+	"capture_digest.digest_date":           {calendar: installationDay},
+	"close_date_run.as_of":                 {calendar: installationDay},
+	"contract.cancellation_effective_on":   {calendar: installationDay},
+	"contract.cancellation_notice_on":      {calendar: installationDay},
+	"contract.ends_on":                     {calendar: installationDay},
+	"contract.fx_rate_date":                {calendar: installationDay},
+	"contract.renewal_on":                  {calendar: installationDay},
+	"contract.signed_on":                   {calendar: installationDay},
+	"contract.starts_on":                   {calendar: installationDay},
+	"deal.expected_close_date":             {calendar: installationDay},
+	"deal.fx_rate_date":                    {calendar: installationDay},
+	"deal.wait_until":                      {calendar: installationDay},
+	"deal_risk_day.local_day":              {calendar: installationDay},
+	"deal_stage_history.fx_date_at_change": {calendar: installationDay},
+	"deal_suggestion.proposed_close_date":  {calendar: installationDay},
+	"legal_review.expected_close_date":     {calendar: installationDay},
 	"extension_ingest_refusal.day": {
 		calendar: utcDay,
 		why:      "an operator health counter, written and windowed with time.Now().UTC() on both sides",
@@ -129,7 +112,7 @@ var dateColumnCalendars = map[string]dateColumnCalendar{
 	"forecast_snapshot.period_end":               {calendar: installationDay},
 	"forecast_snapshot.period_start":             {calendar: installationDay},
 	"tax_rate.valid_from":                        {calendar: installationDay},
-	"fx_rate.rate_date":                          {calendar: installationDay, drift: "the open-pipeline rollup, company 360, the brief and the deal list's base value ask it with a UTC or session-zone today; " + readersDisagree},
+	"fx_rate.rate_date":                          {calendar: installationDay},
 	"linkedin_connection.connected_on":           {calendar: suppliedDay, why: "parsed from the member's LinkedIn export as written; only a dedupe key and a subject-access export read it"},
 	"notification_digest_run.digest_date":        {calendar: installationDay},
 	"offer.fx_rate_date":                         {calendar: installationDay},
@@ -140,7 +123,7 @@ var dateColumnCalendars = map[string]dateColumnCalendar{
 	"project.ended_at":                           {calendar: installationDay},
 	"project.started_at":                         {calendar: installationDay},
 	"project.target_end_date":                    {calendar: installationDay},
-	"relationship.ended_at":                      {calendar: installationDay, drift: "the UI writes the browser's day and the employment reads compare it with CURRENT_DATE; " + readersDisagree},
+	"relationship.ended_at":                      {calendar: installationDay},
 	"relationship.started_at":                    {calendar: installationDay},
 	"team_weekly_review.local_week_start":        {calendar: installationDay},
 	"team_weekly_review_outlook.period_end":      {calendar: installationDay},
@@ -205,16 +188,6 @@ func TestADateColumnOutsideTheInstallationZoneSaysWhy(t *testing.T) {
 		default:
 			t.Errorf("%s states calendar %q, which is none of the three this registry knows",
 				column, stated.calendar)
-		}
-	}
-}
-
-func TestADriftNoteNamesTheIssueThatTracksIt(t *testing.T) {
-	t.Parallel()
-	for column, stated := range dateColumnCalendars {
-		if stated.drift != "" && !strings.HasSuffix(stated.drift, readersDisagree) {
-			t.Errorf("%s notes reader drift without citing %s, the issue that tracks every "+
-				"drift note: %q", column, readersDisagree, stated.drift)
 		}
 	}
 }

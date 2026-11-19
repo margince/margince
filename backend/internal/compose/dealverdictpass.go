@@ -90,7 +90,7 @@ func (p dealVerdictPass) RunWorkspace(ctx context.Context) error {
 	}
 	now := p.now()
 	var due []verdictCandidate
-	night := verdictNight{lang: identity.BaseLanguageForPrompt(ctx, p.pool)}
+	night := verdictNight{at: now, lang: identity.BaseLanguageForPrompt(ctx, p.pool)}
 	err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
 		var err error
 		if night.today, err = installationToday(ctx, tx, now); err != nil {
@@ -120,6 +120,9 @@ func (p dealVerdictPass) RunWorkspace(ctx context.Context) error {
 
 // verdictNight is what every deal of one night's pass is judged against.
 type verdictNight struct {
+	// at is the instant the pass reads at. today is the installation's day at it,
+	// and rates are read at at, so the two name one day.
+	at       time.Time
 	today    time.Time
 	lang     string
 	mailRead mailReadFor

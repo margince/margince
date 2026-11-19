@@ -19,12 +19,17 @@ import (
 
 // A close date has passed when its day is over where the installation works.
 // At 18:00 UTC it is already the next day in Saigon. A deal closing on the UTC
-// day is late there, though not yet in UTC.
+// day is late there, though not yet in UTC. The close day is Saigon's today, so
+// the deal can still be saved after Saigon's midnight.
 func TestTheInputCheckReadsAPastCloseInTheInstallationZone(t *testing.T) {
 	e := Setup(t)
 	e.WsExec(t, `UPDATE setting SET value = '"Asia/Ho_Chi_Minh"'::jsonb WHERE key = 'installation.timezone'`)
+	saigon, err := time.LoadLocation("Asia/Ho_Chi_Minh")
+	if err != nil {
+		t.Fatalf("load zone: %v", err)
+	}
 	pipeline, open, _ := DealFixture(t, e)
-	now := clocktest.Now(t).UTC()
+	now := clocktest.Now(t).In(saigon)
 	closes := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
 	asOf := closes.Add(18 * time.Hour)
 	owner := ids.From[ids.UserKind](e.Rep1)

@@ -12865,6 +12865,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Es ist kein Chat-Bot verbunden. Ein Admin verbindet ihn in den Einstellungen.",
   "channelLink.refused.channelNotFound":
     "Der Bot ist in keinem Kanal mit diesem Namen. Füge den Bot im Chat zum Kanal hinzu und versuche es dann erneut.",
+  "channelLink.refused.nameRefused":
+    "Der Chat lehnt diesen Kanalnamen ab. Benenne den Datensatz um oder verknüpfe einen bestehenden Kanal.",
   "channelLink.refused.channelNotPrivate":
     "Dieser Kanal ist öffentlich. Verknüpfe stattdessen einen privaten Kanal.",
   "channelLink.refused.botNotMember":
@@ -17339,6 +17341,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "autonomy.sub":
     "Mit jedem Schalter läuft eine Art von Änderung ohne deine Prüfung. Jeder Schalter gilt für deine Arbeit, nicht für das ganze Team.",
   "autonomy.updateFailed": "Einstellung nicht gespeichert",
+  "autonomy.installationOff":
+    "Ein Admin hat automatische Änderungen für alle ausgeschaltet. Nichts läuft von selbst, und deine Schalter unten bleiben, wie du sie gesetzt hast.",
+  "autonomy.installationSwitch": "Automatische Änderungen für alle",
+  "autonomy.installationHelp":
+    "Aus stoppt jede automatische Änderung. Die eigenen Schalter aller bleiben, wie sie gesetzt wurden.",
   "autonomy.noneDecidedYet":
     "Du hast noch keinen dieser Vorschläge geprüft. Je nachdem, was unten aktiviert ist, können automatische Änderungen bereits laufen. Vorschläge hängen von deinen Datensätzen und der dir zugewiesenen Arbeit ab.",
   "autonomy.noRecord": "Noch keine Entscheidungen dieser Art.",

@@ -46,6 +46,9 @@ var (
 	ErrBotNotConnected = errors.New("chatlinks: no chat bot is connected")
 	// ErrChannelNotFound means the named channel does not exist in the chat.
 	ErrChannelNotFound = errors.New("chatlinks: the channel was not found")
+	// ErrChannelNameRefused means the chat will not make a channel under the
+	// record's name, even in the form derived from the record.
+	ErrChannelNameRefused = errors.New("chatlinks: the chat refused the channel name")
 	// ErrChannelNotPrivate means only a private channel may carry a record.
 	ErrChannelNotPrivate = errors.New("chatlinks: the channel is public")
 	// ErrBotNotMember means the bot must be in the channel before it is linked.

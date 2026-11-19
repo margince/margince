@@ -3,10 +3,12 @@
 
 package chatsync
 
-// What a summary request carries besides the talk: the note filed for the
-// channel's previous stretch, and the parties on the record. Both are read the
-// way every member may read them, because the note is filed where the whole
-// workspace reads it. The deal's amount is never among them.
+// What a summary request carries besides the talk. It holds the note filed for
+// the channel's previous stretch and the parties on the record. It also holds
+// the seat addresses and own domains that tell a colleague. Names are judged
+// against the members who may read the summary note. The activity gate limits
+// that note to holders of read on the link's deal or project. The deal's amount
+// is never among them.
 
 import (
 	"context"
@@ -18,10 +20,12 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/chatlinks"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -36,6 +40,7 @@ const maxContactFacts = 8
 type summaryContext struct {
 	facts   []string
 	earlier string
+	place   placing
 }
 
 // readSummaryContext reads the owner, and for a deal its company and contact
@@ -51,18 +56,24 @@ func readSummaryContext(ctx context.Context, pool *pgxpool.Pool, link chatlinks.
 		if owner != "" {
 			out.facts = append(out.facts, "Owner: "+owner)
 		}
+		readers, err := noteReaders(ctx, tx, link)
+		if err != nil {
+			return err
+		}
 		if link.DealID != nil {
-			readers, err := noteReaders(ctx, tx)
-			if err != nil {
-				return err
-			}
 			facts, err := dealParties(ctx, tx, *link.DealID, readers)
 			if err != nil {
 				return err
 			}
 			out.facts = append(out.facts, facts...)
 		}
-		out.earlier, err = previousNote(ctx, tx, link, before)
+		if out.earlier, err = previousNote(ctx, tx, link, before); err != nil {
+			return err
+		}
+		if out.place.seats, err = storekit.WorkspaceSeatAddresses(ctx, tx); err != nil {
+			return err
+		}
+		out.place.own, err = capture.TrustedColleagueDomainsTx(ctx, tx)
 		return err
 	})
 	return out, err
@@ -83,10 +94,9 @@ func liveOwner(ctx context.Context, tx pgx.Tx, record chatRecord) (string, error
 	return name, err
 }
 
-// noteReaders lists the live human members. The note is filed for the whole
-// workspace. A name is judged against all of these members, including those
-// who may not open the deal.
-func noteReaders(ctx context.Context, tx pgx.Tx) ([]principal.Principal, error) {
+// noteReaders lists the live human members who may read the summary note. The
+// activity gate admits those holding read on the link's deal or project.
+func noteReaders(ctx context.Context, tx pgx.Tx, link chatlinks.Link) ([]principal.Principal, error) {
 	rows, err := tx.Query(ctx, `SELECT u.id FROM app_user u WHERE `+workforce.LiveHumanSQL("u")+` ORDER BY u.id`)
 	if err != nil {
 		return nil, fmt.Errorf("chat summary: reading the members: %w", err)
@@ -101,11 +111,17 @@ func noteReaders(ctx context.Context, tx pgx.Tx) ([]principal.Principal, error) 
 	}
 	readers := make([]principal.Principal, 0, len(users))
 	for _, id := range users {
-		if p, live := byID[id]; live {
+		if p, live := byID[id]; live && holdsReadOnLink(principal.WithActor(ctx, p), link) {
 			readers = append(readers, p)
 		}
 	}
 	return readers, nil
+}
+
+// holdsReadOnLink is whether the actor may read the link's deal or project.
+func holdsReadOnLink(ctx context.Context, link chatlinks.Link) bool {
+	return link.DealID != nil && auth.Allows(ctx, chatlinks.RecordDeal, principal.ActionRead) ||
+		link.ProjectID != nil && auth.Allows(ctx, chatlinks.RecordProject, principal.ActionRead)
 }
 
 // dealParties names the deal's company and its current stakeholders. Each name
@@ -213,14 +229,15 @@ func nonEmpty(clauses []string) []string {
 // previousNote is the latest summary note of the link's channel, filed on the
 // link's record, whose talk ended before the given time. Ties on the end go to
 // the later channel sequence. It reads as empty when that note is private,
-// archived or restricted.
+// archived or restricted. Being a chat summary on this record, it has the
+// readers the new note has.
 func previousNote(ctx context.Context, tx pgx.Tx, link chatlinks.Link, before time.Time) (string, error) {
-	record, column := link.DealID, "deal_id"
-	if record == nil {
-		record, column = link.ProjectID, "project_id"
-	}
-	if record == nil {
+	record, column := linkRecord(link), "project_id"
+	if record.ID.IsZero() {
 		return "", nil
+	}
+	if record.Type == chatlinks.RecordDeal {
+		column = "deal_id"
 	}
 	const seq = `split_part(substring(a.source_id from length($2::text) + 2), ':', 1)::bigint`
 	note, err := sharedRow(ctx, tx, `a.kind = 'note' AND a.source_system = $1
@@ -228,7 +245,7 @@ func previousNote(ctx context.Context, tx pgx.Tx, link chatlinks.Link, before ti
 		AND (a.raw->>'ended_at')::timestamptz < $3
 		AND EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = a.id AND l.`+column+` = $4)`,
 		`(a.raw->>'ended_at')::timestamptz DESC, `+seq+` DESC, a.id DESC`,
-		provenance.ChatSummarySource, link.ChannelSlug, before, *record)
+		provenance.ChatSummarySource, link.ChannelSlug, before, record.ID)
 	if err != nil || !note.ok {
 		return "", err
 	}

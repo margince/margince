@@ -23,9 +23,12 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/chatlinks"
 	"github.com/margince/margince/backend/internal/modules/chatlinks/dispact"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -58,9 +61,7 @@ func (p summariser) summarise(ctx context.Context, link chatlinks.Link, record c
 	}
 	in.Facts = append(in.Facts, extra.facts...)
 	in.Earlier = extra.earlier
-	for _, m := range messages {
-		in.Messages = append(in.Messages, chatsummary.Message{Author: authorOf(m), At: m.PostedAt, Text: m.Text})
-	}
+	in.Messages = transcript(messages, extra.place)
 	about := &model.Subjects{}
 	if link.DealID != nil {
 		about.Deals = append(about.Deals, *link.DealID)
@@ -93,14 +94,56 @@ func (p summariser) summarise(ctx context.Context, link chatlinks.Link, record c
 	return chatsummary.Parse(res.Text)
 }
 
+// transcript is the talk as the model reads it. The email the chat gives an
+// author only places them and is never sent.
+func transcript(messages []dispact.Message, place placing) []chatsummary.Message {
+	out := make([]chatsummary.Message, 0, len(messages))
+	for _, m := range messages {
+		said := chatsummary.Message{ID: m.TS, Author: authorOf(m), Side: place.sideOf(m.UserEmail), At: m.PostedAt, Text: m.Text}
+		if m.ThreadTS != "" && m.ThreadTS != m.TS {
+			said.ReplyTo = m.ThreadTS
+		}
+		for _, f := range m.Files {
+			said.Files = append(said.Files, chatsummary.File{Name: f.Name, Type: f.MimeType})
+		}
+		out = append(out, said)
+	}
+	return out
+}
+
+// authorOf is the name the chat shows. An author with no name is "someone",
+// never their email.
 func authorOf(m dispact.Message) string {
 	if m.UserName != "" {
 		return m.UserName
 	}
-	if m.UserEmail != "" {
-		return m.UserEmail
-	}
 	return "someone"
+}
+
+// placing is what tells a colleague: the seat addresses and the vouched-for
+// own domains.
+type placing struct {
+	seats storekit.SeatAddresses
+	own   []string
+}
+
+// sideOf places an author by their chat email. A proven seat address is a
+// colleague, as for any channel address with no mailbox owner. Otherwise the
+// deal-evidence rule judges the domain (deals.AddressSide).
+func (p placing) sideOf(email string) chatsummary.Side {
+	if email == "" {
+		return chatsummary.SideUnknown
+	}
+	if p.seats.Covers(email, ids.Nil) {
+		return chatsummary.SideColleague
+	}
+	switch deals.AddressSide(email, p.own) {
+	case deals.AuthorSeller:
+		return chatsummary.SideColleague
+	case deals.AuthorUnknown:
+		return chatsummary.SideUnknown
+	}
+	return chatsummary.SideOutside
 }
 
 // talk is what a note says about the messages it summarises. It holds no
@@ -140,8 +183,9 @@ type filing struct {
 	link  chatlinks.Link
 }
 
-// fileNote files the summary as one note on the link's records, keyed on the
-// talk so a replay returns the note already there. ctx carries the actor: the
+// fileNote files the summary as one note on the link's records. It is keyed
+// on the talk and the record, so a replay returns the note already there. A
+// record that takes the channel over files its own note. ctx carries the actor: the
 // chat engine for a pull, the member for a message they chose. The link is
 // checked live in the same transaction, so a note never lands after an unlink.
 func fileNote(ctx context.Context, f filing, said talk, reply chatsummary.Reply) (crmcontracts.Activity, error) {
@@ -152,13 +196,8 @@ func fileNote(ctx context.Context, f filing, said talk, reply chatsummary.Reply)
 		"ended_at":      said.ended.UTC().Format(time.RFC3339),
 		"url":           said.url,
 	}
-	var links []activities.ActivityLinkInput
-	if link.DealID != nil {
-		links = append(links, activities.ActivityLinkInput{EntityType: chatlinks.RecordDeal, EntityID: *link.DealID})
-	}
-	if link.ProjectID != nil {
-		links = append(links, activities.ActivityLinkInput{EntityType: chatlinks.RecordProject, EntityID: *link.ProjectID})
-	}
+	record := linkRecord(link)
+	key := said.key + ":" + record.Type + ":" + record.ID.String()
 	body := noteBody(reply)
 	// Both the title and the summary are the model's words, in the talk's language.
 	written := textlang.Detect(reply.Summary)
@@ -172,9 +211,8 @@ func fileNote(ctx context.Context, f filing, said talk, reply chatsummary.Reply)
 		Body:         &body,
 		OccurredAt:   &said.started,
 		SourceSystem: &system,
-		SourceID:     &said.key,
+		SourceID:     &key,
 		Raw:          &raw,
-		Links:        links,
 		Source:       summarySource,
 		Origin:       activities.OriginAgent,
 	}
@@ -183,18 +221,50 @@ func fileNote(ctx context.Context, f filing, said talk, reply chatsummary.Reply)
 		if err := f.store.HoldLiveLinkTx(ctx, tx, link); err != nil {
 			return err
 		}
-		var created bool
-		var err error
-		note, created, err = f.acts.LogActivityTx(ctx, tx, in)
+		filed, links, err := priorNote(ctx, tx, link, said.key)
+		created := false
+		switch {
+		case err != nil:
+			return err
+		case !filed.IsZero():
+			note, err = f.acts.GetActivityTx(ctx, tx, ids.ActivityID{UUID: filed}, storekit.IncludeArchived, activities.CustomColumns{})
+		default:
+			in.Links = links
+			note, created, err = f.acts.LogActivityTx(ctx, tx, in)
+		}
 		if err == nil && !created && note.Source != summarySource {
 			return errSummaryKeyTaken
 		}
 		return err
 	})
 	if err != nil {
-		return crmcontracts.Activity{}, fmt.Errorf("chat summary: filing the note for %s: %w", said.key, err)
+		return crmcontracts.Activity{}, fmt.Errorf("chat summary: filing the note for %s: %w", key, err)
 	}
 	return note, nil
+}
+
+// priorNote finds a note of the talk on the link's own record. It looks under
+// every key a summary of it was filed with, the old one without a record too.
+// With none, it answers the records a new note is linked to. A project that
+// already holds the talk through another deal's note is left out.
+func priorNote(ctx context.Context, tx pgx.Tx, link chatlinks.Link, talkKey string) (ids.UUID, []activities.ActivityLinkInput, error) {
+	engine := principal.WithActor(ctx, chatLinksPrincipal)
+	escaped := storekit.EscapeLike(talkKey)
+	keys := []string{escaped, escaped + ":" + chatlinks.RecordDeal + ":%", escaped + ":" + chatlinks.RecordProject + ":%"}
+	record := linkRecord(link)
+	filed, err := activities.SourceFiledOnTx(engine, tx, provenance.ChatSummarySource, keys, record.Type, record.ID)
+	if err != nil || !filed.IsZero() {
+		return filed, nil, err
+	}
+	links := []activities.ActivityLinkInput{{EntityType: record.Type, EntityID: record.ID}}
+	if link.ProjectID == nil || record.Type == chatlinks.RecordProject {
+		return ids.Nil, links, nil
+	}
+	held, err := activities.SourceFiledOnTx(engine, tx, provenance.ChatSummarySource, keys, chatlinks.RecordProject, *link.ProjectID)
+	if err != nil || !held.IsZero() {
+		return ids.Nil, links, err
+	}
+	return ids.Nil, append(links, activities.ActivityLinkInput{EntityType: chatlinks.RecordProject, EntityID: *link.ProjectID}), nil
 }
 
 // noteHeadings name the lists under a summary, in the language it is written in.

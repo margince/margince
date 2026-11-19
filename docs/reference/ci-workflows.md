@@ -323,8 +323,8 @@ with a required `tag` input, such as `v1.0.0`, and a `target` input, `test` or `
 
 `scripts/release-dist-version.sh` refuses a pre-release part, build metadata or a leading zero
 (`make test-release-dist-version`). The dist version is the tag without its `v`. Either way the run builds the
-commit the tag names, and refuses a tag not on `main` (`make test-release-tag-on-main`). No branch push starts
-it, so the role images have no other build ([#1965](https://github.com/margince/margince/issues/1965)).
+commit the tag names. It refuses a tag not on `main` (`make test-release-tag-on-main`), or one Go recorded at another
+commit. No branch push starts it, so the role images have no other build ([#1965](https://github.com/margince/margince/issues/1965)).
 
 What a run does, after the `version` job checks the tag:
 
@@ -378,10 +378,10 @@ The tag is the version, read and checked by [`scripts/release-tag-version.sh`](.
 default; a tag with an ending, such as `v1.0.0-rc.1`, becomes a `pre-release`. A tag the script cannot
 read is refused in seconds, before anything is published.
 
-More checks share that first job. The tag points at a commit on `main`. `LICENSE` carries the
-release's Change Date and version ([`scripts/release-license-stamped.sh`](../../scripts/release-license-stamped.sh)).
-`VERSION` names the tag's version without its `v` ([`scripts/release-version-file.sh`](../../scripts/release-version-file.sh)).
-No open issue carries `release: blocker`. And the commit carries no failing `verdict` from `merge-attest`.
+More checks share that first job. The tag points at a commit on `main`, and Go recorded no other commit for it
+([`scripts/release-tag-go-proxy.sh`](../../scripts/release-tag-go-proxy.sh)). `LICENSE` carries the release's Change Date
+and version ([`scripts/release-license-stamped.sh`](../../scripts/release-license-stamped.sh)). `VERSION` names the tag's
+version without its `v` ([`scripts/release-version-file.sh`](../../scripts/release-version-file.sh)). No open issue carries `release: blocker`. And the commit carries no failing `verdict` from `merge-attest`.
 
 The `draft` job then checks that a plain tag has a draft release with notes. It holds
 `contents: write` only to read: GitHub shows a draft to no token that cannot write.
