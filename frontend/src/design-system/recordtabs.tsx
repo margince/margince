@@ -20,7 +20,11 @@ import { ChevronDown } from "lucide-react";
 import { type ReactNode, useEffect, useRef } from "react";
 import { useT } from "../i18n";
 import { offsetShowingStrip, stripPlace } from "../lib/reveal";
-import { keepPlaceOnNextMove, seekScrollTop } from "../lib/scrollmemory";
+import {
+  dropKeptPlace,
+  keepPlaceOnNextMove,
+  seekScrollTop,
+} from "../lib/scrollmemory";
 import { Button, OptionCount } from "./atoms";
 import { OverflowMenu } from "./overflowmenu";
 import { useFocusKeptOnFold, useFoldedTabs } from "./recordtabs.fold";
@@ -148,7 +152,10 @@ export function RecordTabs<Option extends string>({
         : null;
     pressed.current = place && { option, place };
     if (place) keepPlaceOnNextMove();
+    const before = globalThis.location.hash;
     onChange?.(option);
+    // A tab kept in state moves no address, so no move would spend the mark.
+    if (place && globalThis.location.hash === before) dropKeptPlace();
   };
   const tabBody = (option: Option) => {
     const count = counts?.[option];

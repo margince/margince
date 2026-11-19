@@ -119,9 +119,14 @@ export function keepPlaceOnNextMove(): void {
   placeKept = true;
 }
 
+/** Cancel `keepPlaceOnNextMove`, for a press that moved no address. */
+export function dropKeptPlace(): void {
+  placeKept = false;
+}
+
 function takeKeptPlace(): boolean {
   const kept = placeKept;
-  placeKept = false;
+  dropKeptPlace();
   return kept;
 }
 

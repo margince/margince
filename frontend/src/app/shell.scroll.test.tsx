@@ -3,6 +3,7 @@
 
 /** @vitest-environment happy-dom */
 import { act, cleanup, fireEvent, screen } from "@testing-library/react";
+import { useState } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { RecordTabs } from "../design-system/recordtabs";
 import { useHash, useRoute } from "../lib/router";
@@ -46,6 +47,23 @@ function Account() {
       <button type="button" onClick={() => open("tasks")}>
         All tasks
       </button>
+    </>
+  );
+}
+
+// A deal's strip: its tab lives in state, so a press moves no address.
+function Deal() {
+  const [tab, setTab] = useState<Tab>("overview");
+  return (
+    <>
+      <Showing address={useHash()} />
+      <RecordTabs
+        options={["overview", "tasks"]}
+        value={tab}
+        onChange={setTab}
+        keepPlace
+        labels={{ overview: "Overview", tasks: "Tasks" }}
+      />
     </>
   );
 }
@@ -188,6 +206,22 @@ describe("the content column's place", () => {
     await moveTo("#/companies/o-1");
     scrollColumnTo(300);
     await pressAndArrive("All tasks", "#/companies/o-1/tasks");
+    expect(column().scrollTop).toBe(0);
+  });
+
+  it("opens a new entry of the record at its top after a press that moved no address", async () => {
+    window.history.replaceState(null, "", "#/deals/d-1");
+    render(
+      <Shell onOpenSearch={ignoreSearch}>
+        <Deal />
+      </Shell>,
+    );
+    scrollColumnTo(300);
+    fireEvent.click(screen.getByRole("button", { name: "Tasks" }));
+    expect(column().scrollTop).toBe(300);
+
+    // The same deal opened again, from search.
+    await moveTo("#/deals/d-1?from=search");
     expect(column().scrollTop).toBe(0);
   });
 });
