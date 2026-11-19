@@ -4,8 +4,9 @@
 package capture
 
 // Filing a captured message under a project (PROJ-FORM-1..3): a deterministic
-// ladder, run AFTER the capture transaction committed, first match wins, no
-// model call anywhere in it.
+// ladder, first match wins, no model call anywhere in it. It runs inside the
+// capture transaction of a new activity (fileUnderProjectInCaptureTx), and
+// after the commit when that did not finish it.
 //
 // Most mail belongs to no project and that is the correct answer. The ladder is
 // therefore allowed to conclude nothing — it never guesses, and it never fails
@@ -86,52 +87,94 @@ func (s *Sink) WithProjectAttribution(attribution ProjectAttribution) *Sink {
 	return &c
 }
 
-// attributeProject runs the ladder for one captured activity and writes at
-// most one project link.
+// attributeProject runs the ladder after the commit, in its own transaction,
+// for a capture whose transaction did not run it. A fault is recorded in
+// system_log and never returned: the message stays on the timeline.
 //
-// Post-commit, in its own transaction, for the reason ensureCounterparty is:
-// the timeline row must never be lost to an attribution fault, and the capture
-// budget must not wait on this. A fault is recorded in system_log and never
-// returned — the message is already on the timeline and stays there.
-//
-// It runs on EVERY capture of the activity, not only the first, and that is the
-// retry. A transient fault used to leave the message unfiled forever — the
-// ladder ran on creation alone, so every later replay found the activity
-// present and skipped it, and the reconcile the old comment here promised had
-// no caller. alreadyFiledUnderAProject below is what makes the re-run cheap;
-// linkActivityToProject was always what made it safe.
+// Every replay of the activity runs it again, and that is the retry.
+// alreadyFiledUnderAProject makes the re-run cheap, and linkActivityToProject
+// makes it safe.
 func (s *Sink) attributeProject(ctx context.Context, rec connector.NormalizedRecord, ref datasource.EntityRef) {
-	if s.projectKeys == nil || s.stampProject == nil {
+	if !s.attributesProject(ref) {
 		return
 	}
-	// A project is something an ACTIVITY is filed under. decideProject refuses
-	// any other record anyway, but it refuses from inside the transaction this
-	// function opens — so a lead capture paid for a transaction and an indexed
-	// read to be told what its record type already says.
-	if ref.Type != datasource.EntityActivity {
-		return
-	}
-	activityID := ids.From[ids.ActivityKind](ref.ID)
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		filed, err := alreadyFiledUnderAProject(ctx, tx, activityID)
-		if err != nil {
-			return err
-		}
-		// A zero project is "nothing to propose": the activity is already
-		// filed, so the ladder has nothing left to decide and
-		// linkActivityToProject goes straight to the repair below.
-		var projectID ids.UUID
-		var rung string
-		if !filed {
-			if projectID, rung, err = s.decideProject(ctx, tx, rec, activityID); err != nil || projectID.IsZero() {
-				return err
-			}
-		}
-		return linkActivityToProject(ctx, tx, activityID, projectFiling{project: projectID, rung: rung}, s.stampProject)
+		return s.fileUnderProjectTx(ctx, tx, rec, ref)
 	})
 	if err != nil {
 		s.logProjectAttributionFault(ctx, rec, err)
 	}
+}
+
+// ladderInCapture is how the ladder went inside the capture transaction.
+// ran false leaves it to the run after the commit.
+type ladderInCapture struct {
+	ran   bool
+	fault error
+}
+
+// fileUnderProjectInCaptureTx runs the ladder for a new activity inside the
+// capture transaction. Mail from a deferred or suppressed sender is filed under
+// nobody by the sender ensure, so its project link is its first. Written here,
+// no other transaction sees the mail unlinked, and the link does not move the
+// Home fence (home_read_fence_first_link).
+//
+// A savepoint holds the ladder, so a fault costs the filing and not the mail.
+// A lock cycle is returned, so the whole capture runs again.
+func (s *Sink) fileUnderProjectInCaptureTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, landed activityLanding) (ladderInCapture, error) {
+	if !landed.created || landed.internal {
+		return ladderInCapture{}, nil
+	}
+	if !s.attributesProject(landed.ref) {
+		return ladderInCapture{ran: true}, nil
+	}
+	_, err := storekit.Savepoint(ctx, tx, func(sp pgx.Tx) (bool, error) {
+		return true, s.fileUnderProjectTx(ctx, sp, rec, landed.ref)
+	})
+	if err != nil && storekit.IsLockCycle(err) {
+		return ladderInCapture{}, err
+	}
+	return ladderInCapture{ran: true, fault: err}, nil
+}
+
+// settleProject finishes the ladder once the capture committed. A fault inside
+// the capture is recorded, and the next replay retries it, as after any fault.
+func (s *Sink) settleProject(ctx context.Context, rec connector.NormalizedRecord, ref datasource.EntityRef, ladder ladderInCapture) {
+	switch {
+	case !ladder.ran:
+		s.attributeProject(ctx, rec, ref)
+	case ladder.fault != nil:
+		s.logProjectAttributionFault(ctx, rec, ladder.fault)
+	}
+}
+
+// attributesProject says whether the ladder applies. A project is something an
+// ACTIVITY is filed under, so any other record skips the transaction.
+func (s *Sink) attributesProject(ref datasource.EntityRef) bool {
+	return s.projectKeys != nil && s.stampProject != nil && ref.Type == datasource.EntityActivity
+}
+
+// fileUnderProjectTx is the ladder and its one link, on the caller's
+// transaction. Both the capture transaction and the run after it call it.
+func (s *Sink) fileUnderProjectTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, ref datasource.EntityRef) error {
+	if !s.attributesProject(ref) {
+		return nil
+	}
+	activityID := ids.From[ids.ActivityKind](ref.ID)
+	filed, err := alreadyFiledUnderAProject(ctx, tx, activityID)
+	if err != nil {
+		return err
+	}
+	// A zero project is "nothing to propose": the activity is already filed, so
+	// linkActivityToProject goes straight to the stamp repair.
+	var projectID ids.UUID
+	var rung string
+	if !filed {
+		if projectID, rung, err = s.decideProject(ctx, tx, rec, activityID); err != nil || projectID.IsZero() {
+			return err
+		}
+	}
+	return linkActivityToProject(ctx, tx, activityID, projectFiling{project: projectID, rung: rung}, s.stampProject)
 }
 
 // alreadyFiledUnderAProject is what makes the ladder safe to run on a REPLAY, and
