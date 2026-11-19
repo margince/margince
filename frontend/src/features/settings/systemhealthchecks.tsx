@@ -5,6 +5,7 @@ import {
   Activity,
   ArchiveRestore,
   Bot,
+  EyeOff,
   Inbox,
   type LucideIcon,
   Mail,
@@ -88,6 +89,7 @@ const SOURCE_ICONS: Readonly<Record<string, LucideIcon>> = {
   updates: RefreshCw,
   recovery: ArchiveRestore,
   automatic: Bot,
+  unplaced: EyeOff,
 };
 
 function guideFor(source: Source): SetupGuide | undefined {
@@ -101,6 +103,7 @@ export type HealthGroups = Readonly<{
   setup: readonly Source[];
   waiting: readonly Source[];
   passing: readonly Source[];
+  information: readonly Source[];
 }>;
 
 /**
@@ -116,9 +119,13 @@ export function healthGroups(
       .filter((finding) => finding.requires_action)
       .map((finding) => finding.source),
   );
-  const open = sources.filter(
+  const readable = sources.filter(
     (source) => source.availability !== "withheld" && !explained.has(source.id),
   );
+  const information = readable.filter(
+    (source) => source.condition === "information",
+  );
+  const open = readable.filter((source) => !information.includes(source));
   const passing = open.filter((source) => healthTone(source) === "success");
   const setup = open.filter(
     (source) => !passing.includes(source) && guideFor(source) !== undefined,
@@ -129,10 +136,11 @@ export function healthGroups(
       (source) => !passing.includes(source) && !setup.includes(source),
     ),
     passing,
+    information,
   };
 }
 
-/** The three groups below the findings: not set up, waiting, passing. */
+/** The groups below the findings: not set up, waiting, passing, information. */
 export function HealthChecks({ groups }: Readonly<{ groups: HealthGroups }>) {
   const t = useT();
   return (
@@ -153,6 +161,12 @@ export function HealthChecks({ groups }: Readonly<{ groups: HealthGroups }>) {
       )}
       {groups.passing.length > 0 && (
         <CheckList title={t("health.group.passing")} sources={groups.passing} />
+      )}
+      {groups.information.length > 0 && (
+        <CheckList
+          title={t("health.group.information")}
+          sources={groups.information}
+        />
       )}
     </>
   );
@@ -223,6 +237,8 @@ function checkStatus(source: Source, t: (key: MessageKey) => string) {
   const tone = healthTone(source);
   if (tone === "success")
     return { tone, label: t("health.checkPassing") } as const;
+  if (source.condition === "information" && tone === "default")
+    return { tone, label: t("health.condition.information") } as const;
   return {
     tone: tone === "danger" || tone === "warning" ? tone : "default",
     label: t(labelFor(healthAvailability, source.availability)),

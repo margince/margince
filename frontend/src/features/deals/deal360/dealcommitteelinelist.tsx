@@ -2,9 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useId } from "react";
+import { EntityRef } from "../../../components/entityref";
 import { Eyebrow } from "../../../design-system/eyebrow";
 import { useT } from "../../../i18n";
-import { navigate } from "../../../lib/router";
 import type {
   CommitteeLineRow,
   CommitteeUnreached,
@@ -36,15 +36,9 @@ export function CommitteeLines({
       <ul className="dc-rows">
         {lines.map((line) => (
           <li key={line.key} className="dc-row">
-            <button
-              type="button"
-              className="dc-seat-open"
-              onClick={() =>
-                navigate({ screen: "contacts", id: line.contactId })
-              }
-            >
-              <span className="dc-row-name">{line.text}</span>
-            </button>
+            <span className="dc-row-name">
+              <EntityRef kind="contact" id={line.contactId} name={line.text} />
+            </span>
           </li>
         ))}
         {unreached.map((gap) => (

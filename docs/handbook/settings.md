@@ -317,10 +317,11 @@ Admin and Ops can see Retention and the **Held** list. The audit log and privacy
 
 System health and Reset data sit in the **System** group, and Data import in **Data**.
 
-**System health** opens on **Overview**: what needs work, who can act and the next step. A row of counts at the top says how many checks need you, are not set up yet, and pass.
-Work that needs a person comes first, with its effect and an action button. The status label says what to fix or review.
+**System health** opens on **Overview**: what needs work, who can act and the next step. A row of counts at the top says how many checks need you, are not set up yet, and pass. Work that needs a person comes first, with its effect and an action button. The status label says what to fix or review.
 
 **Not set up yet** lists each part nobody has set up, such as AI providers, search or restore tests. Each says what happened, why it matters and what to do, with a button that goes there. **Passing** lists the checks with nothing to do. **All checks** holds service status; **Diagnostics** shows the technical details.
+
+With **AI diagnostics read**, a **For information** group below **Passing** lists **Changes Home leaves out**. These are automatic changes from the last 7 days that Home cannot show. **All checks** counts them by record type and action. They are facts, not problems: they need no action, and the counts at the top leave them out.
 
 **Review mailbox decisions** lists who has choices waiting. **Review my choices** opens your **Worklist → Decisions** for proposed contacts, or your held conversations on the **Activity** tab of **Connections** for sharing choices. For another owner, copy a request with their personal review link. The request sends no message and gives you no access to their mail.
 

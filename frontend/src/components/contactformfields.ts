@@ -412,9 +412,11 @@ export function contactEditFields(t: ReturnType<typeof useT>): CreateField[] {
 export function contactEditComparison(
   record: components["schemas"]["Contact"],
 ) {
+  const social = listedSocial(record.social);
   return {
     ...record,
-    social: listedSocial(record.social),
+    // The form opens a missing link as an empty field, so an untouched one is no change.
+    social: { ...social, linkedin: social.linkedin ?? "" },
     emails: withPrimaryDefault(
       (record.emails ?? []).map((row, position) => ({
         email: row.email,

@@ -14,6 +14,7 @@ export function healthTone(reading: Reading) {
     ["read_failed", "queue_unverified"].includes(reading.code)
   )
     return "danger";
+  if (reading.condition === "information") return "default";
   if (["retrying", "waiting_human", "unverified"].includes(reading.condition))
     return "warning";
   if (

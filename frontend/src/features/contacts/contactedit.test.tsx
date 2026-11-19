@@ -132,6 +132,27 @@ describe("saving the LinkedIn field", () => {
     expect(await savedSocial("")).toMatchObject({ linkedin: "" });
   });
 
+  it("sends no link when a contact without one saves another field", async () => {
+    let body: Record<string, unknown> = {};
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const request = input instanceof Request ? input : new Request(input);
+        if (request.method === "PATCH") body = await request.json();
+        return jsonResponse({ ...contact, version: 5 });
+      }),
+    );
+    const { result } = renderHook(() => useContactEdit(contact), { wrapper });
+    await act(async () => {
+      await result.current.save(
+        { title: "Head of fleet", "social.linkedin": "" },
+        {},
+        contact,
+      );
+    });
+    expect(body).toEqual({ title: "Head of fleet" });
+  });
+
   it("sends a changed link as the profile it now names", async () => {
     expect(
       await savedSocial("https://www.linkedin.com/in/dana-new"),

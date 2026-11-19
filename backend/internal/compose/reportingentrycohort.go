@@ -37,8 +37,8 @@ var leadEntryCohortMetrics = []crmcontracts.ReportingMetricID{reportingLeadCohor
 var entryCohortWords = struct{ Companies, CompanyAccess, Linked, NotLinked langcopy.Phrase }{
 	Companies:     langcopy.Phrase{En: "Companies that entered", De: "Eingegangene Unternehmen", Vi: "Công ty đã vào"},
 	CompanyAccess: langcopy.Phrase{En: "Companies are counted only for readers who may see companies", De: "Unternehmen werden nur gezählt, wenn du Unternehmen sehen darfst.", Vi: "Chỉ đếm công ty khi bạn được phép xem công ty."},
-	Linked:        langcopy.Phrase{En: "Linked to an opportunity", De: "Mit Verkaufschance verknüpft", Vi: "Đã gắn với cơ hội"},
-	NotLinked:     langcopy.Phrase{En: "Not linked yet", De: "Noch nicht verknüpft", Vi: "Chưa gắn với cơ hội"},
+	Linked:        langcopy.Phrase{En: "Linked to a deal", De: "Mit einem Deal verknüpft", Vi: "Đã gắn với một deal"},
+	NotLinked:     langcopy.Phrase{En: "Not linked yet", De: "Noch nicht verknüpft", Vi: "Chưa gắn với một deal"},
 }
 
 // readReportingAccountProgression reads each company of the entry cohort's leads
@@ -149,6 +149,8 @@ func reportingSourceQualityChart(out *reporting.Evaluation, chart crmcontracts.R
 	said := reporting.ExplanationCopy(frame)
 	chart.ContextId = reportingInterval
 	chart.Interval = &frame.Interval
+	// The metric counts linked leads; each point's value is a share of entrants.
+	chart.Unit = reportingPercentUnit
 	sources := map[string][]reporting.Fact{}
 	for _, fact := range metricFacts(out.Facts, chart.Metric, chart.ContextId) {
 		source, _ := sourceOfGroup(fact.GroupKey)
