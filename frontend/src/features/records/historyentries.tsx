@@ -7,6 +7,10 @@ import {
 import { type ReactNode, useState } from "react";
 import { api, FIRST_PAGE } from "../../api/client";
 import type { components } from "../../api/schema";
+import {
+  isMergeReference,
+  MergedRecordName,
+} from "../../components/historymergedref";
 import { Button, Card, EmptyState } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { LoadMoreButton, QueryStates } from "../../design-system/querystates";
@@ -31,7 +35,6 @@ import {
 import { HistoryEdgeDetail } from "./historyedge";
 import { HistoryFieldDiff } from "./historyfielddiff";
 import { LeftBehindNotice, useLeftBehind } from "./historyleftbehind";
-import { isMergeReference, MergedRecordName } from "./historymergedref";
 import { historyRows } from "./historyreversal";
 import { actorName, ReversalPairRow } from "./historyreversalrow";
 import "./history.css";

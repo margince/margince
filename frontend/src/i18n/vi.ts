@@ -3134,8 +3134,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "merge.pickTarget": "Chọn hồ sơ giữ lại",
   "merge.confirm":
     "Gộp {source} vào {target}? Thao tác này sẽ chuyển {source} vào kho lưu trữ.",
-  "merge.confirmDetail":
-    "Gộp {source} vào {target} ({detail})? Thao tác này sẽ chuyển {source} vào kho lưu trữ.",
+  "merge.recordDetail": "{name} ({detail})",
+  "merge.done": "Đã gộp {source} vào {target}.",
   "merge.targetReadOnly":
     "Bạn chỉ có quyền xem hồ sơ này nên không thể giữ lại.",
   "merge.submit": "Gộp",
@@ -3184,10 +3184,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "commission.column.rate": "Tỷ lệ",
   "commission.column.basis": "Giá trị deal",
   "commission.column.status": "Trạng thái",
+  "commission.column.date": "Ngày",
   "commission.status.accrued": "Đã ghi nhận",
   "commission.status.approved": "Đã duyệt",
   "commission.status.paid": "Đã thanh toán",
   "commission.status.void": "Đã đảo ngược",
+  "commission.status.reversal": "Khoản bù trừ",
   "commission.outstanding": "Chưa thanh toán",
   "commission.outstandingDetail_one": "1 khoản · đã ghi nhận hoặc đã duyệt",
   "commission.outstandingDetail_other":
@@ -3321,7 +3323,21 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "rel.empty": "Chưa có quan hệ nào",
   "rel.counterparty": "Liên kết với",
   "rel.dates": "Thời gian",
-  "rel.addConfirm": "Thêm liên kết {kind} tới {target}.",
+  "rel.addConfirm.employment": "Thêm liên kết công tác tới {target}.",
+  "rel.addConfirm.dealStakeholder": "Thêm liên kết bên liên quan tới {target}.",
+  "rel.addConfirm.projectStakeholder":
+    "Thêm liên kết bên liên quan dự án tới {target}.",
+  "rel.addConfirm.partnerOf": "Thêm liên kết đối tác tới {target}.",
+  "rel.addConfirm.referredBy":
+    "Thêm liên kết giới thiệu: {target} đã giới thiệu công ty này.",
+  "rel.addConfirm.coSellWith": "Thêm liên kết bán chung tới {target}.",
+  "rel.addConfirm.worksWith": "Thêm liên kết đồng nghiệp tới {target}.",
+  "rel.addConfirm.billingContact":
+    "Thêm liên kết liên hệ thanh toán tới {target}.",
+  "rel.edit": "Sửa quan hệ",
+  "rel.editStakeholder": "Sửa bên liên quan",
+  "rel.removeRelationship": "Gỡ quan hệ?",
+  "rel.removeStakeholder": "Gỡ bên liên quan?",
   "rel.kind.employment": "Quan hệ công tác",
   "rel.kind.dealStakeholder": "Bên liên quan deal",
   "rel.kind.projectStakeholder": "Bên liên quan dự án",
@@ -3720,6 +3736,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "company.relType.portfolio_company": "Công ty trong danh mục",
   "company.relType.competitor": "Đối thủ",
   "company.relType.other": "Khác",
+  "co.archived.overview":
+    "Công ty này đã được lưu trữ. Lịch sử, tài liệu và thông tin vẫn có ở các thẻ khác.",
   // Why a stored fact contradicts its own field. The fact is still shown
   // with its evidence — a reader can tell, and hiding it would be worse.
   "co.factSuspect.phoneShapedLocation": "Trông giống số điện thoại",
@@ -4841,6 +4859,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "filter.label": "Bộ lọc",
   "chronology.all": "Tất cả",
   "chronology.conversations": "Chuỗi thư",
+  "chronology.filteredEmpty": "Không có hoạt động nào khớp với các bộ lọc này.",
   "chronology.conversationsEmpty": "Chưa có chuỗi thư nào.",
   "chronology.changesEmpty":
     "Chưa có trường nào thay đổi kể từ khi tạo hồ sơ này.",
@@ -5235,6 +5254,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.contacts.band.untried":
     "{count} chưa liên hệ · {waiting} đang chờ bạn trả lời",
   "co.contacts.board.nobodyHolds": "Chưa ai giữ vai trò này",
+  "co.contacts.board.count_one": "{count} liên hệ",
+  "co.contacts.board.count_other": "{count} liên hệ",
   "co.contacts.band.noOpenDeal": "Không có deal đang mở",
   "co.contacts.band.noOpenDealWhy": "Vai trò gán theo từng deal",
   "co.contacts.band.committeePartial": "Bị ẩn một phần",
@@ -5268,7 +5289,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "{count} trong nhóm quyết định mua · chỉ deal đã chọn.",
   "co.contacts.map.routesWithheld":
     "Các hướng tiếp cận đến liên hệ này bị ẩn với bạn",
-  "co.contacts.map.assignHint": "Chưa ai chịu trách nhiệm deal này",
   "co.contacts.map.scopePartial":
     "{count} trong nhóm quyết định mua · {hidden} liên hệ khác bị ẩn.",
   "co.contacts.board.readFromMessages": "Đọc từ tin nhắn của họ",
@@ -6005,7 +6025,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.ownerUnassign": "Hủy giao",
   "deal.partnerCompany": "Đối tác giới thiệu",
   "deal.partnerNoneYet":
-    "Chưa có đối tác. Liên hệ quản trị viên để thêm đối tác.",
+    "Chưa có đối tác. Thiết lập đối tác trong mục Thao tác khác của một công ty.",
   "deal.referredBy": "Đối tác giới thiệu:",
   "deal.supportedBy": "Đối tác hỗ trợ:",
   "deal.referral.sourced": "(mang về)",
@@ -9278,6 +9298,28 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agent.activity.offerDraft.failed": "Không thể soạn bản nháp báo giá",
   "agent.activity.offerDraft.stalled":
     "Quá trình soạn bản nháp báo giá kéo dài bất thường",
+  "agent.activity.draftReplyNamed.queued":
+    "Đang chờ soạn bản nháp trả lời “{name}”",
+  "agent.activity.draftReplyNamed.running": "Đang soạn thư trả lời “{name}”…",
+  "agent.activity.draftReplyNamed.done":
+    "Bản nháp trả lời “{name}” đã sẵn sàng",
+  "agent.activity.draftReplyNamed.degraded":
+    "Quá trình soạn bản nháp trả lời “{name}” bị gián đoạn",
+  "agent.activity.draftReplyNamed.failed":
+    "Không thể soạn bản nháp trả lời “{name}”",
+  "agent.activity.draftReplyNamed.stalled":
+    "Quá trình soạn bản nháp trả lời “{name}” kéo dài bất thường",
+  "agent.activity.offerDraftNamed.queued":
+    "Đang chờ soạn bản nháp báo giá cho {name}",
+  "agent.activity.offerDraftNamed.running": "Đang soạn báo giá cho {name}…",
+  "agent.activity.offerDraftNamed.done":
+    "Bản nháp báo giá cho {name} đã sẵn sàng",
+  "agent.activity.offerDraftNamed.degraded":
+    "Quá trình soạn bản nháp báo giá cho {name} bị gián đoạn",
+  "agent.activity.offerDraftNamed.failed":
+    "Không thể soạn bản nháp báo giá cho {name}",
+  "agent.activity.offerDraftNamed.stalled":
+    "Quá trình soạn bản nháp báo giá cho {name} kéo dài bất thường",
   "agent.rail.region": "Trợ lý AI Margince",
   "agent.panel.label": "Bảng trợ lý AI",
   "agent.rail.open": "Mở bảng trợ lý AI",
@@ -9304,6 +9346,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agent.fact.offline": "ngoại tuyến",
   "agent.fact.sourceOnProvider": "{account} ({provider})",
   "agent.fact.searchIndex": "Chỉ mục tìm kiếm: {model}",
+  "agent.fact.noAnswers": "Không có câu trả lời từ {model}",
   "agent.fact.noCalls": "Chưa có lượt gọi mô hình",
   "agent.fact.hidden": "Bị ẩn với vai trò hiện tại",
   "agent.fact.noModel": "Chưa cấu hình mô hình",
@@ -16453,6 +16496,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Tác vụ được nhóm theo cấp chạy chúng; chọn tên để xem tác vụ làm gì, hoặc mở dòng để thiết lập mức suy nghĩ và thời gian chờ.",
   "aiTasks.whatItDoes": "{task}: tác vụ này làm gì",
   "aiTasks.decisionFirst": "Mô hình quyết định trước",
+  "aiTasks.mode.interactive": "Trong lúc chờ trả lời",
+  "aiTasks.mode.background": "Chạy nền",
+  "aiTasks.mode.embedding": "Lập chỉ mục tìm kiếm",
   "aiTasks.viewCalls": "Xem lượt gọi",
   "aiTasks.deferral.nowEmbedding":
     "Đang bị từ chối: lập chỉ mục tìm kiếm sẽ tự thử lại theo lịch riêng.",
@@ -19566,6 +19612,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.pair.notDuplicate": "Không trùng nhau",
   "worklist.pair.mergeBlocked":
     "Không thể gộp hai hồ sơ này: cả hai đều có dự án đang chạy, và không có gì cho biết công việc nào thuộc về hồ sơ nào. Vẫn có thể đánh dấu là không trùng nhau.",
+  "worklist.pair.created": "Tạo ngày {date}",
+  "worklist.pair.dismissed": "Đã đánh dấu là không trùng nhau.",
   "worklist.pair.related": "{count} hồ sơ liên kết",
   "worklist.pair.failed": "Không thể xử lý cặp này. Thử lại.",
   "worklist.pair.refused":
@@ -20725,6 +20773,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiProviders.state.active": "Đang hoạt động",
   "aiProviders.state.ready": "Sẵn sàng",
   "aiProviders.state.needsKey": "Cần khóa",
+  "aiProviders.state.needsService": "Cần chọn dịch vụ",
   "aiProviders.state.inactive": "Không hoạt động",
   "aiProviders.colUsedBy": "Dùng cho",
   "aiProviders.colStatus": "Trạng thái",
@@ -21531,7 +21580,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiTaskSheet.fixed": "Cố định theo hợp đồng",
   "aiTaskSheet.tiersTried": "Cấp đã thử",
   "aiTaskSheet.runs": "Lượt chạy",
-  "aiTaskSheet.fixed.help": "Đổi các mục này trong ai-tasks.yaml.",
+  "aiTaskSheet.fixed.help":
+    "Nhà phát triển đổi các mục này trong định nghĩa của tác vụ, và chúng có hiệu lực từ bản phát hành kế tiếp.",
   "aiTaskSheet.addTask": "Thêm hoặc sửa tác vụ AI ↗",
   "aiTaskSheet.conflict": "Ai đó đã lưu các cài đặt này trong lúc đang sửa",
   "aiTaskSheet.conflict.help":
@@ -21561,7 +21611,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiOutcome.role.decision": "mô hình quyết định",
   "aiOutcome.role.tier": "mô hình theo cấp",
   "aiOutcome.role.fallback": "dự phòng",
-  "aiOutcome.answered": "{answered} trên {attempts} đã trả lời",
+  "aiOutcome.answered_one": "{answered} đã trả lời trong {attempts} lần thử",
+  "aiOutcome.answered_other": "{answered} đã trả lời trong {attempts} lần thử",
+  "aiOutcome.triesNote":
+    "Một lần thử bị lỗi hoặc hết giờ có thể được thử lại ở cùng bước, nên một bước có thể đếm nhiều lần thử hơn số lượt gọi.",
   "aiOutcome.usually": "thường trong {latency}",
   "aiOutcome.notNeeded": "Không cần trong khoảng này",
   "aiOutcome.gaveUp.on_one": "{count} {reason} → chuyển tiếp",

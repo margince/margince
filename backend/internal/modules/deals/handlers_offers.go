@@ -94,7 +94,7 @@ func (h Handlers) CreateOffer(w http.ResponseWriter, r *http.Request, id crmcont
 		httperr.Write(w, r, httperr.Validation("body", "unreadable", "request body could not be read"))
 		return
 	}
-	in, err := OfferCreationInput(raw)
+	in, err := OfferCreationInput(r.Context(), raw)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

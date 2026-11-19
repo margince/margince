@@ -237,7 +237,7 @@ To add a contact to a deal in Margince as a stakeholder, open the deal. Choose *
 1. Search for and pick the **Contact** (required). It must already exist.
 2. You may type a **Role**, such as economic buyer, and a **Started** date.
 3. Choose **Create**.
-To change a role or take someone off, open **Change or remove stakeholders** on the same panel. Choose **Edit** on the row to change the role, or **Remove** to take the contact off ("Remove this relationship? There is no undo.").
+To change a role or take someone off, open **Change or remove stakeholders** on the same panel. Choose **Edit stakeholder** on the row to change the role. To take the contact off, choose **Remove** on the row, then **Remove** in the **Remove stakeholder?** dialog ("Remove this relationship? There is no undo.").
 
 From a contact's **Deals** tab, **Add to a deal** does the same from the other end. Select the search field to see open deals at their current employers. Typing searches open deals, with employer deals first and each deal's company shown.
 Also called: add a stakeholder, add a decision maker, link a contact to an opportunity.
@@ -377,7 +377,7 @@ To add a contact to a project in Margince, open the project and choose **Add sta
 1. Search under **Search contacts by name** and pick the contact.
 2. Pick the **Role**: one of those listed above.
 3. Choose **Add**. A contact already on the project takes the new role instead: one role per contact.
-To take someone off, choose **Remove** on the row and confirm **Remove stakeholder?**; their activity stays where it is.
+To take someone off, choose **Remove** on the row, then **Remove** in the **Remove stakeholder?** dialog. Their activity stays where it is.
 Also called: add a sponsor, add a project lead, add someone to a project team.
 
 ### Who may do what

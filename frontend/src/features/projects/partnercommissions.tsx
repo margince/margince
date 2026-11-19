@@ -6,15 +6,21 @@ import { Badge, EmptyState, StatCard } from "../../design-system/atoms";
 import { DataTable } from "../../design-system/datatable";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
-import { Row } from "../../design-system/stack";
+import { Row, Stack } from "../../design-system/stack";
 import { StatStrip } from "../../design-system/statstrip";
 import { stable } from "../../format/collate";
-import { formatMoney, formatNumber, INTL_LOCALE } from "../../format/format";
+import {
+  formatDate,
+  formatMoney,
+  formatNumber,
+  INTL_LOCALE,
+} from "../../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCanWrite } from "../../lib/capability";
 import { labelFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
+import { useViewerZone } from "../../lib/viewerzone";
 import { CommissionDecision, decisionsFor } from "./commissiondecide";
 import "./partnercommissions.css";
 
@@ -229,6 +235,7 @@ function CommissionLedger({
   // (decide.go's write probe) — so a grant-holder can still be refused, and
   // the dialog surfaces that refusal rather than pretending it cannot happen.
   const canDecide = useCanWrite("commission", "update");
+  const zone = useViewerZone();
   return (
     <div data-testid="commission-ledger">
       <DataTable
@@ -246,10 +253,23 @@ function CommissionLedger({
             render: (entry) => <EntityRef kind="deal" id={entry.deal_id} />,
           },
           {
+            // The day the line was written: accrued for an entry, reversed
+            // for the line that cancels one.
+            key: "date",
+            header: t("commission.column.date"),
+            render: (entry) => formatDate(entry.created_at, locale, zone),
+          },
+          {
+            // A reversal carries the amount it takes back; drawn negative, it
+            // reads as the offsetting line it is.
             key: "amount",
             header: t("commission.column.amount"),
             render: (entry) =>
-              formatMoney(entry.amount_minor, entry.currency, locale),
+              formatMoney(
+                entry.reversal_of ? -entry.amount_minor : entry.amount_minor,
+                entry.currency,
+                locale,
+              ),
           },
           {
             key: "rate",
@@ -267,11 +287,23 @@ function CommissionLedger({
           {
             key: "status",
             header: t("commission.column.status"),
-            render: (entry) => (
-              <Badge tone={STATUS_TONES[entry.status]}>
-                {t(labelFor(STATUS_LABELS, entry.status))}
-              </Badge>
-            ),
+            render: (entry) =>
+              entry.reversal_of ? (
+                // The reason is said once, on the line that answers a
+                // partner's "what happened to that one".
+                <Stack gap="1">
+                  <Badge tone={STATUS_TONES.void}>
+                    {t("commission.status.reversal")}
+                  </Badge>
+                  {entry.void_reason && (
+                    <span className="t-caption">{entry.void_reason}</span>
+                  )}
+                </Stack>
+              ) : (
+                <Badge tone={STATUS_TONES[entry.status]}>
+                  {t(labelFor(STATUS_LABELS, entry.status))}
+                </Badge>
+              ),
           },
           {
             // Only what this row's state actually admits — decisionsFor
