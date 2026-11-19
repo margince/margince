@@ -76,6 +76,7 @@ const REASON_LABEL: Record<
   forwarded_identity: "blockedDomains.source.forwardedIdentity",
   vendor_verdict: "blockedDomains.source.vendorVerdict",
   reserved_domain: "blockedDomains.source.reservedDomain",
+  foreign_site: "blockedDomains.source.foreignSite",
 };
 
 const BULK_LABEL: Record<

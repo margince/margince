@@ -153,6 +153,8 @@ type SkippedAssoc struct {
 	// before they existed has only Reason.
 	Code   ReasonCode `json:"reason_code,omitempty"`
 	Params Params     `json:"params,omitempty"`
+	// RowSkipped says the edge's own row does not land, whatever the reason.
+	RowSkipped bool `json:"row_skipped,omitempty"`
 }
 
 // record folds one row's outcome into the class's disposition.

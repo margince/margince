@@ -52,12 +52,12 @@ nginx files name `/opt/margince`, so an upgrade only moves that link.
 ```sh
 sudo tar -xzf "margince-$VERSION-linux-$ARCH.tar.gz" -C /opt
 sudo ln -sfn "/opt/margince-$VERSION-linux-$ARCH" /opt/margince
-cat /opt/margince/VERSION
+cat /opt/margince/VERSION /opt/margince/REVISION
 /opt/margince/bin/margince-api --version
 sudo useradd --system --user-group --home-dir /var/lib/margince --create-home --shell /usr/sbin/nologin margince
 ```
 
-`VERSION` and `--version` name the release and the commit it was built from. Each of the three
+`VERSION`, `REVISION` and `--version` name the release and the commit it was built from. Each of the three
 programs answers `--version`.
 
 ## Set up the database once

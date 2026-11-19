@@ -63,4 +63,9 @@ make -C backend test-integration || suites=$?
 if [[ "${SKEW%%:*}" == "machine" ]]; then
 	./scripts/clock-drift-host.sh assert "${SKEW##*:}"
 fi
+# The one line that makes a red a finding about the tree: scheduled.yml reads it
+# to tell a failed suite from a lane that stopped before its verdict.
+if [[ "$suites" -ne 0 ]]; then
+	echo "backend-clock-drift: the suites failed at $SKEW"
+fi
 exit "$suites"

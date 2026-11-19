@@ -22,7 +22,7 @@ import {
   isPreviewDoor,
   previewedAddresses,
 } from "../../testing/sendpermission.testkit";
-import { pressSend } from "./compose.testkit";
+import { installComposeClock, pressSend } from "./compose.testkit";
 import { ComposeWindow } from "./composewindow";
 
 // The composer's "why are you writing?" dial, named rather than reached for
@@ -140,6 +140,8 @@ async function composeAndSend() {
 beforeEach(() => {
   window.location.hash = "";
 });
+
+beforeEach(installComposeClock);
 
 afterEach(() => {
   cleanup();

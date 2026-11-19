@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strconv"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -48,7 +49,7 @@ func CheckUTF8(body []byte) error {
 	if utf8.Valid(body) {
 		return nil
 	}
-	return fmt.Errorf("%w: the file is not saved as UTF-8; save it as CSV UTF-8 and upload it again", ErrNotUTF8)
+	return refuseFileAs(ErrNotUTF8, "The file is not saved as UTF-8. Save it as CSV UTF-8 and upload it again.", nil)
 }
 
 // Column is one column of an uploaded file, described well enough to map it
@@ -81,7 +82,7 @@ func CountRecords(r io.Reader) (int, error) {
 			return max(rows, 0), nil
 		}
 		if err != nil {
-			return 0, fmt.Errorf("%w: %v", ErrSourceUnreadable, err)
+			return 0, unreadable(err)
 		}
 		rows++
 	}
@@ -98,10 +99,10 @@ func ProfileCSV(r io.Reader, rowLimit int) (Profile, error) {
 
 	header, err := cr.Read()
 	if errors.Is(err, io.EOF) {
-		return Profile{}, fmt.Errorf("%w: the file has no header row", ErrHeaderInvalid)
+		return Profile{}, headerMissing()
 	}
 	if err != nil {
-		return Profile{}, fmt.Errorf("%w: %v", ErrSourceUnreadable, err)
+		return Profile{}, unreadable(err)
 	}
 	if err := validateHeader(header); err != nil {
 		return Profile{}, err
@@ -131,7 +132,7 @@ func profileRows(cr recordReader, columns, rowLimit int) (filled []int, samples 
 			return filled, samples, rows, nil
 		}
 		if err != nil {
-			return nil, nil, 0, fmt.Errorf("%w: %v", ErrSourceUnreadable, err)
+			return nil, nil, 0, unreadable(err)
 		}
 		rows++
 		for i, value := range record {
@@ -159,16 +160,20 @@ func fillRate(filled, rows int) float64 {
 
 func validateHeader(header []string) error {
 	if len(header) == 0 {
-		return fmt.Errorf("%w: the file has no header row", ErrHeaderInvalid)
+		return headerMissing()
 	}
 	seen := make(map[string]bool, len(header))
 	for i, name := range header {
 		trimmed := strings.TrimSpace(name)
 		if trimmed == "" {
-			return fmt.Errorf("%w: column %d has no name", ErrHeaderInvalid, i+1)
+			return refuseFile(FileBlankName,
+				fmt.Sprintf("Column %d of the header row has no name. Name every column and upload the file again.", i+1),
+				map[RefusalParam]string{ParamPosition: strconv.Itoa(i + 1)})
 		}
 		if seen[trimmed] {
-			return fmt.Errorf("%w: the name %q appears twice", ErrHeaderInvalid, trimmed)
+			return refuseFile(FileRepeatedName,
+				fmt.Sprintf("The header row names “%s” twice. Give each column its own name and upload the file again.", trimmed),
+				map[RefusalParam]string{ParamName: trimmed})
 		}
 		seen[trimmed] = true
 	}

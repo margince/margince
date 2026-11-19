@@ -20,19 +20,12 @@ import { LeadScreen, LeadsScreen } from "./leads";
 
 type Contact = components["schemas"]["Contact"];
 
+// A contact the search would return if the form still asked it.
 const ben: Partial<Contact> = {
   id: "c-ben",
   full_name: "Ben Sample",
   primary_email: "ben@contoso.example",
-  title: "Head of Logistics",
   employer: { company_id: "co-1", company_name: "Contoso Ltd" },
-};
-
-const anna: Partial<Contact> = {
-  id: "c-anna",
-  full_name: "Anna Example",
-  primary_email: "anna@northwind.example",
-  employer: { company_id: "co-2", company_name: "Northwind Traders" },
 };
 
 const unnamedLead = {
@@ -101,7 +94,7 @@ function stubBackend(writes: { method: string; body: unknown }[]) {
       }
       if (url.includes("/contacts?")) {
         return jsonResponse({
-          data: [ben, anna],
+          data: [ben],
           page: { next_cursor: null, has_more: false },
         });
       }
@@ -133,8 +126,8 @@ afterEach(() => {
   window.location.hash = "";
 });
 
-describe("a lead's identity, offered from the contacts", () => {
-  it("fills the new lead from the contact picked by name, and names the contact to the server", async () => {
+describe("a lead's identity is typed, never offered from the contacts", () => {
+  it("offers no contact while the name and email of a new lead are typed", async () => {
     const writes: { method: string; body: unknown }[] = [];
     stubBackend(writes);
     const user = userEvent.setup();
@@ -142,59 +135,23 @@ describe("a lead's identity, offered from the contacts", () => {
 
     await user.click(await screen.findByTestId("new-record"));
     const form = within(screen.getByRole("dialog"));
-    await user.type(form.getByRole("combobox", { name: /Full name/ }), "Ben");
-    await user.click(await screen.findByRole("option", { name: /Ben Sample/ }));
-
-    expect(form.getByRole("combobox", { name: "Email" })).toHaveValue(
-      "ben@contoso.example",
-    );
-    expect(form.getByLabelText("Company")).toHaveValue("Contoso Ltd");
+    // A plain box: a combobox is how the form offers records to pick.
+    expect(form.queryByRole("combobox", { name: /Full name/ })).toBeNull();
+    expect(form.queryByRole("combobox", { name: "Email" })).toBeNull();
+    await user.type(form.getByLabelText(/Full name/), "Ben");
+    await user.type(form.getByLabelText("Email"), "ben@contoso.example");
     await user.click(form.getByRole("button", { name: "Create" }));
 
     await waitFor(() => expect(writes).toHaveLength(1));
     expect(writes[0]?.body).toMatchObject({
-      full_name: "Ben Sample",
+      full_name: "Ben",
       email: "ben@contoso.example",
-      title: "Head of Logistics",
-      company_name: "Contoso Ltd",
-      contact_id: "c-ben",
     });
+    expect(writes[0]?.body).not.toHaveProperty("contact_id");
   });
 
-  it("replaces the first contact when a second is picked, leaving nothing of them behind", async () => {
-    const writes: { method: string; body: unknown }[] = [];
-    stubBackend(writes);
-    const user = userEvent.setup();
-    mount(<LeadsScreen />);
-
-    await user.click(await screen.findByTestId("new-record"));
-    const form = within(screen.getByRole("dialog"));
-    await user.type(form.getByRole("combobox", { name: /Full name/ }), "Ben");
-    await user.click(await screen.findByRole("option", { name: /Ben Sample/ }));
-    // Typed by the reader after the first pick, so no pick may take it back.
-    await user.clear(form.getByLabelText("Title"));
-    await user.type(form.getByLabelText("Title"), "VP Sales");
-    const email = form.getByRole("combobox", { name: "Email" });
-    await user.clear(email);
-    await user.type(email, "anna");
-    await user.click(
-      await screen.findByRole("option", { name: /anna@northwind/ }),
-    );
-    await user.click(form.getByRole("button", { name: "Create" }));
-
-    await waitFor(() => expect(writes).toHaveLength(1));
-    expect(writes[0]?.body).toMatchObject({
-      full_name: "Anna Example",
-      email: "anna@northwind.example",
-      company_name: "Northwind Traders",
-      contact_id: "c-anna",
-    });
-    expect(writes[0]?.body).toMatchObject({ title: "VP Sales" });
-  });
-
-  it("fills an unnamed lead from a contact in one save", async () => {
-    const writes: { method: string; body: unknown }[] = [];
-    stubBackend(writes);
+  it("offers no Fill from a contact on a lead", async () => {
+    stubBackend([]);
     const user = userEvent.setup();
     mount(
       <RecordShell>
@@ -202,30 +159,12 @@ describe("a lead's identity, offered from the contacts", () => {
       </RecordShell>,
     );
 
-    // A rare verb, so it waits in the head's More menu.
     await user.click(
       await screen.findByRole("button", { name: "More actions" }),
     );
-    await user.click(
-      await screen.findByRole("button", { name: "Fill from a contact" }),
-    );
-    await user.type(
-      screen.getByRole("combobox", {
-        name: "Search contacts by name or email",
-      }),
-      "ben",
-    );
-    await user.click(await screen.findByRole("option", { name: /Ben Sample/ }));
-
-    await waitFor(() => expect(writes).toHaveLength(1));
-    expect(writes[0]).toMatchObject({
-      method: "PATCH",
-      body: {
-        full_name: "Ben Sample",
-        email: "ben@contoso.example",
-        title: "Head of Logistics",
-        company_name: "Contoso Ltd",
-      },
-    });
+    await screen.findByRole("button", { name: "Share" });
+    expect(
+      screen.queryByRole("button", { name: "Fill from a contact" }),
+    ).toBeNull();
   });
 });

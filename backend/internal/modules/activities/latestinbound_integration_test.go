@@ -11,6 +11,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
@@ -247,5 +248,79 @@ func TestLatestInboundRefusesARecordNobodyHolds(t *testing.T) {
 	_, err := storeKnowing(e).LatestInbound(e.asSeat(e.rep), "contact", ids.NewV7())
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("err = %v, want not found for an id no contact holds", err)
+	}
+}
+
+// seedMail files one email on the deal. extra holds the columns the case sets.
+func (e *recencyEnv) seedMail(t *testing.T, deal ids.UUID, direction string, at time.Time, extra string) ids.UUID {
+	t.Helper()
+	mail := ids.NewV7()
+	e.exec(t, `INSERT INTO activity
+		  (id, kind, subject, occurred_at, direction, audience, source, captured_by, origin)
+		VALUES ($1, 'email', 'Terms', $2, $3, 'workspace', 'manual', 'human:rep', 'human')`,
+		mail, at, direction)
+	if extra != "" {
+		e.exec(t, `UPDATE activity SET `+extra+` WHERE id = $1`, mail)
+	}
+	e.exec(t, `INSERT INTO activity_link (id, activity_id, entity_type, deal_id)
+		VALUES ($1, $2, 'deal', $3)`, ids.NewV7(), mail, deal)
+	return mail
+}
+
+func (e *recencyEnv) seedCallOrMeeting(t *testing.T, deal ids.UUID, kind, direction string, at time.Time) {
+	t.Helper()
+	row := ids.NewV7()
+	status := "NULL"
+	if kind == "meeting" {
+		status = "'held'"
+	}
+	e.exec(t, `INSERT INTO activity
+		  (id, kind, subject, occurred_at, direction, audience, source, captured_by, origin, meeting_status)
+		VALUES ($1, $2, 'Talk', $3, $4, 'workspace', 'manual', 'human:rep', 'human', `+status+`)`,
+		row, kind, at, direction)
+	e.exec(t, `INSERT INTO activity_link (id, activity_id, entity_type, deal_id)
+		VALUES ($1, $2, 'deal', $3)`, ids.NewV7(), row, deal)
+}
+
+// The newest candidates in each direction are decoys that must not count.
+// They are a colleague's mail that arrives inbound, a withheld mail, automatic
+// mail, mail forwarded to oneself, a call and a meeting. Sixty notes follow them.
+func TestLatestInboundDatesTheLastMessagesOverEveryRowNotOnePage(t *testing.T) {
+	e := setupRecency(t)
+	deal := e.seedQuietDeal(t, pinnedQuiet)
+	inbound := e.seedMail(t, deal, "inbound", pinnedQuiet.AddDate(0, 0, 1), "")
+	outbound := e.seedMail(t, deal, "outbound", pinnedQuiet.AddDate(0, 0, 2), "")
+	later := pinnedQuiet.AddDate(0, 0, 3)
+	colleague := e.seedMail(t, deal, "inbound", later, "")
+	e.exec(t, `INSERT INTO activity_participant (id, activity_id, role, user_id) VALUES ($1, $2, 'from', $3)`,
+		ids.NewV7(), colleague, e.rep)
+	for _, direction := range []string{"inbound", "outbound"} {
+		e.seedMail(t, deal, direction, later.Add(time.Hour), "audience = 'selected', captured_by = 'human:"+ids.NewV7().String()+"'")
+		e.seedMail(t, deal, direction, later.Add(2*time.Hour), "sender_is_machine = true")
+		e.seedMail(t, deal, direction, later.Add(3*time.Hour), "forwarded_to_self = true")
+		e.seedMail(t, deal, direction, later.Add(4*time.Hour), "bulk_mail_attested = true")
+		e.seedCallOrMeeting(t, deal, "call", direction, later.Add(5*time.Hour))
+		e.seedCallOrMeeting(t, deal, "meeting", direction, later.Add(6*time.Hour))
+	}
+	for day := range 60 {
+		at := later.AddDate(0, 0, 1+day)
+		note := ids.NewV7()
+		e.exec(t, `INSERT INTO activity (id, kind, subject, occurred_at, audience, source, captured_by, origin)
+			VALUES ($1, 'note', 'Later note', $2, 'workspace', 'manual', 'human:rep', 'human')`, note, at)
+		e.exec(t, `INSERT INTO activity_link (id, activity_id, entity_type, deal_id)
+			VALUES ($1, $2, 'deal', $3)`, ids.NewV7(), note, deal)
+	}
+	now := pinnedQuiet.AddDate(0, 0, 200)
+	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws))).WithClock(func() time.Time { return now })
+
+	list, err := store.LatestInbound(e.as(), "deal", deal)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if list.LastInbound == nil || ids.UUID(list.LastInbound.Id) != inbound {
+		t.Errorf("last inbound = %+v, want the buyer's mail %s", list.LastInbound, inbound)
+	}
+	if list.LastOutbound == nil || ids.UUID(list.LastOutbound.Id) != outbound {
+		t.Errorf("last outbound = %+v, want our mail %s", list.LastOutbound, outbound)
 	}
 }

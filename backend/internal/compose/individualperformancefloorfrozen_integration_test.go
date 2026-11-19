@@ -20,6 +20,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+	"github.com/margince/margince/backend/internal/compose/reportingcsv"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -124,13 +125,14 @@ func TestIndividualPerformanceOffWithholdsAnEditionANewTeamWouldExpose(t *testin
 	e.showIndividualPerformance(t, false)
 	safe, safeCSV := read()
 	won := safe.Evaluation.Metrics[0].Value
-	if won == nil || !strings.Contains(safeCSV, reportingCSVNumber(won)) {
+	wonCell := reportingcsv.Major(won, safe.Evaluation.Context.Currency)
+	if won == nil || !strings.Contains(safeCSV, wonCell) {
 		t.Fatalf("the safe edition's sales won = %v; want it shown in the view and the export", won)
 	}
 	e.seedTeam(t, "North", e.Rep1, members[0], members[1])
 	exposed, exposedCSV := read()
 	shown := exposed.Evaluation.Metrics[0].Value
-	if !exposed.Withheld || (shown != nil && *shown == *won) || strings.Contains(exposedCSV, reportingCSVNumber(won)) {
+	if !exposed.Withheld || (shown != nil && *shown == *won) || strings.Contains(exposedCSV, wonCell) {
 		t.Errorf("the edition beside North = withheld %v, sales won %v; want the captured %v gone from the view and the export",
 			exposed.Withheld, shown, *won)
 	}

@@ -277,6 +277,14 @@ describe("the What was said card", () => {
     expect(screen.queryByRole("button", { name: "Call prep" })).toBeNull();
   });
 
+  it("draws a note's words as they render, without their markdown", () => {
+    renderCard(
+      viewWith([{ ...noteRow, body: "> Wants **fleet** numbers.\n> Soon." }]),
+    );
+
+    expect(screen.getByText("Wants fleet numbers. Soon.")).toBeTruthy();
+  });
+
   it("discloses nothing from a withheld message", () => {
     renderCard(
       viewWith([

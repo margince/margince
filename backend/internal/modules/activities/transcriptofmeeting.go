@@ -119,7 +119,7 @@ func markRecordedMeetingHeld(
 	missing := slices.DeleteFunc(slices.Clone(filingKinds), func(kind string) bool {
 		return len(linksOfKinds(meeting, []string{kind})) > 0
 	})
-	for _, link := range linksOfKinds(transcript, missing) {
+	for _, link := range projectLinksFirst(linksOfKinds(transcript, missing)) {
 		if _, err := RelinkActivityInTx(ctx, tx, id, RelinkActivityInput{EntityType: link.EntityType, EntityID: link.EntityID}); err != nil {
 			return crmcontracts.Activity{}, err
 		}

@@ -3,7 +3,7 @@
 /** @vitest-environment happy-dom */
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { writeMessage } from "../../design-system/richtext-testing";
 import { pickOption } from "../../design-system/select-testing";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
@@ -11,6 +11,7 @@ import { meFixture } from "../../testing/mefixture";
 import { isPreviewDoor } from "../../testing/sendpermission.testkit";
 import {
   activity202,
+  installComposeClock,
   jsonResponse,
   pressSend,
   render,
@@ -74,6 +75,8 @@ const sentEmail = (sent: Sent[]) =>
   sent.filter((entry) => entry.key === "POST /emails").at(-1)?.body as
     | Record<string, unknown>
     | undefined;
+
+beforeEach(installComposeClock);
 
 afterEach(() => {
   cleanup();

@@ -10,7 +10,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   messageText,
   writeMessage,
@@ -22,7 +22,7 @@ import {
   useToast,
 } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
-import { pressSend } from "./compose.testkit";
+import { installComposeClock, pressSend } from "./compose.testkit";
 import {
   calls,
   composer,
@@ -37,6 +37,8 @@ import {
 } from "./compose-saveddraft.testkit";
 import { useSavedDraft } from "./composesaveddraft";
 import { ComposeWindow } from "./composewindow";
+
+beforeEach(installComposeClock);
 
 afterEach(() => {
   cleanup();

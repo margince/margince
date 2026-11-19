@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: SECURITY.md CONTRIBUTING.md -->
+<!-- describes: SECURITY.md CONTRIBUTING.md frontend/src/components/aboutmargince.tsx frontend/src/app/accounthelp.tsx -->
 # Report a problem
 
 Mail a short description of the problem to **bugs@gradion.com**, with a subject
@@ -10,6 +10,10 @@ You do not need a GitHub account, and nothing you write is posted as it stands.
 ### How do I report a problem or request a feature?
 To report a problem in Margince, open the account menu, choose **Help and feedback**, then **Report a problem**. It opens the public form for problems, with your release filled in. **Request a feature** opens the form for a feature you miss. Without a GitHub account, mail **bugs@gradion.com** instead.
 Also called: send a problem, error report, feature request, contact support, help menu.
+
+### Which version of Margince do I have?
+To see which version of Margince you are on, open the account menu, choose **Help and feedback**, then **About Margince**. Press the version to copy it in one line, with its commit when the build knows one, to paste into your report. **About Margince** is also a page in Settings, in the **System** group.
+Also called: version, build, commit, release number.
 
 ### How do I ask for a new feature?
 To ask for a new feature in Margince, open the account menu, choose **Help and feedback**, then **Request a feature**. It opens the public form for a feature you miss.

@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -59,10 +60,14 @@ func refreshContactPhoneEvidence(ctx context.Context, tx pgx.Tx, pair openPair, 
 	return err
 }
 
-// Lane conflicts and unfamiliar evidence stand for a human to decide.
-const phoneCollisionEvidenceSQL = `CASE WHEN jsonb_typeof(d.evidence) = 'array' THEN
+// collideEvidenceSQL answers whether every evidence line of the pair d is a
+// collision on one of the given fields. Lane conflicts and unfamiliar evidence
+// answer false, so they stand for a human to decide.
+func collideEvidenceSQL(fields ...string) string {
+	return `CASE WHEN jsonb_typeof(d.evidence) = 'array' THEN
 	jsonb_array_length(d.evidence) > 0 AND NOT EXISTS (
 		SELECT 1 FROM jsonb_array_elements(d.evidence) e
-		WHERE e->>'field' IS DISTINCT FROM '` + fieldPhone + `'
+		WHERE e->>'field' IS NULL OR e->>'field' NOT IN ('` + strings.Join(fields, "', '") + `')
 		   OR e->>'signal' IS DISTINCT FROM '` + evidenceSignalCollide + `')
 	ELSE false END`
+}

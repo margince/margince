@@ -10,6 +10,18 @@ import (
 	"time"
 )
 
+// registerForTest registers r for one test and removes it after, so the
+// package's tests stay repeatable within one process (-count).
+func registerForTest(t *testing.T, r Rules) {
+	t.Helper()
+	Register(r)
+	t.Cleanup(func() {
+		mu.Lock()
+		defer mu.Unlock()
+		delete(rules, r.Jurisdiction)
+	})
+}
+
 // Two jurisdictions apply to one message when the sender and the recipient sit
 // in different countries, and the answer is never "pick one". A message lawful
 // where the sender sits and unlawful where the recipient does is unlawful, so
@@ -168,7 +180,7 @@ func TestAnUnknownJurisdictionIsNotAnAnswer(t *testing.T) {
 // thing to write — would rewrite the registered rules for every later send in
 // the process, silently dropping a statutory condition with nothing failing.
 func TestTheRegistryHandsOutCopies(t *testing.T) {
-	Register(Rules{
+	registerForTest(t, Rules{
 		Jurisdiction: "qa", Version: 1,
 		MarketingExceptions: []MarketingException{{Kind: ExistingCustomer, RequiresSimilarity: true}},
 		FrequencyCap:        &FrequencyCap{Messages: 3, Window: 24 * time.Hour},
@@ -211,7 +223,7 @@ func TestTheRegistryHandsOutCopies(t *testing.T) {
 func TestRegisteringTakesACopy(t *testing.T) {
 	exceptions := []MarketingException{{Kind: ExistingCustomer, RequiresSaleEvidence: true}}
 	instruments := []Instrument{{Name: "Decree 1/2020"}}
-	Register(Rules{
+	registerForTest(t, Rules{
 		Jurisdiction: "qb", Version: 1,
 		MarketingExceptions: exceptions,
 		Instruments:         instruments,
@@ -328,7 +340,7 @@ func TestEqualRatesBreakTowardTheSmallerBurst(t *testing.T) {
 // whose law the process knows nothing about, which is exactly the
 // laxest-country-decides failure the fold exists to prevent.
 func TestStrictestReportsTheJurisdictionsItCouldNotResolve(t *testing.T) {
-	Register(Rules{
+	registerForTest(t, Rules{
 		Jurisdiction: "qc", Version: 1,
 		MarketingExceptions: []MarketingException{{Kind: ExistingCustomer, RequiresSaleEvidence: true}},
 	})
@@ -364,8 +376,8 @@ func TestStrictestReportsTheJurisdictionsItCouldNotResolve(t *testing.T) {
 // with nothing to say about what judged it. The applied codes are the answer,
 // and they are the reason Strictest returns them at all.
 func TestAFoldNamesTheJurisdictionsItUsedBecauseTheVersionCannot(t *testing.T) {
-	Register(Rules{Jurisdiction: "fa", Version: 7, ReplyWindow: 30 * 24 * time.Hour})
-	Register(Rules{Jurisdiction: "fb", Version: 9, ReplyWindow: 365 * 24 * time.Hour})
+	registerForTest(t, Rules{Jurisdiction: "fa", Version: 7, ReplyWindow: 30 * 24 * time.Hour})
+	registerForTest(t, Rules{Jurisdiction: "fb", Version: 9, ReplyWindow: 365 * 24 * time.Hour})
 
 	got, applied, ok := Strictest("fa", "fb")
 	if !ok {

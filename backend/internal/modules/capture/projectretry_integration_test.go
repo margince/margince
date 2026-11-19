@@ -78,6 +78,14 @@ func TestAFailedAttributionIsRetriedByTheNextCapture(t *testing.T) {
 	if linked := projectLinkCount(t, owner, ws); linked != 0 {
 		t.Fatalf("the faulted attribution filed %d link(s), want none", linked)
 	}
+	var faults int
+	if err := owner.QueryRow(ctx, `SELECT count(*) FROM system_log
+		WHERE action = 'capture_project_attribution_fault'`).Scan(&faults); err != nil {
+		t.Fatalf("counting the recorded faults: %v", err)
+	}
+	if faults != 1 {
+		t.Errorf("the faulted attribution recorded %d fault(s), want 1: an operator must see the unfiled message", faults)
+	}
 
 	// The replay. Before this change it found the activity present and skipped
 	// the ladder, leaving the message unfiled forever.

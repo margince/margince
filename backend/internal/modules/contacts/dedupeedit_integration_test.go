@@ -102,3 +102,32 @@ func TestAddingAnUnrelatedDomainToACompanyFilesNothing(t *testing.T) {
 		t.Fatalf("%d company pairs, want none", n)
 	}
 }
+
+// A rename that ends the name match withdraws the pair it made; a rename that
+// keeps the brand keeps it.
+func TestRenamingACompanyAwayFromItsTwinClosesTheirPair(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	twin := e.plainCompany(ctx, t, "Kranbau Nord")
+	renamed := e.plainCompany(ctx, t, "Molkerei Sued")
+	rename := func(name string) {
+		t.Helper()
+		if _, err := e.store.UpdateCompany(ctx, ids.From[ids.CompanyKind](renamed), UpdateCompanyInput{DisplayName: &name}); err != nil {
+			t.Fatalf("rename to %q: %v", name, err)
+		}
+	}
+	rename("Kranbau Nord")
+	pair := e.openPairID(ctx, t, entityCompany, twin, renamed)
+	if pair.IsZero() {
+		t.Fatal("the rename onto the twin's name filed no pair")
+	}
+
+	rename("Kranbau Nord GmbH")
+	if archived, _ := e.candidateState(ctx, t, pair); archived {
+		t.Error("a rename that keeps the brand closed the pair")
+	}
+	rename("Ziegelei West")
+	if archived, _ := e.candidateState(ctx, t, pair); !archived {
+		t.Error("a rename away from the twin's name left the pair open")
+	}
+}

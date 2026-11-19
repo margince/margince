@@ -8,13 +8,21 @@ import type { Lead } from "./leads.list";
 
 type CreateLeadRequest = components["schemas"]["CreateLeadRequest"];
 
+// Qualifying and disqualifying archive the lead, so a status dial naming either
+// reads the archived rows whether or not Show archived is on.
+const CLOSED_LEAD_STATUSES: ReadonlySet<string> = new Set([
+  "promoted",
+  "disqualified",
+]);
+
 // The queue's dials as `GET /leads` reads them, for the list and the board's
 // terminal columns alike, so both narrow one address the same way.
 export function leadsQueryParams(query: ListQuery) {
+  const namesClosed = CLOSED_LEAD_STATUSES.has(query.filters.status ?? "");
   return {
     q: query.q || undefined,
     sort: query.sort || undefined,
-    include_archived: query.includeArchived || undefined,
+    include_archived: query.includeArchived || namesClosed || undefined,
     ...listQueryParams(query.filters),
   };
 }

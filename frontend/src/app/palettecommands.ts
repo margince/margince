@@ -40,6 +40,7 @@ export function useBuiltinCommands(): Command[] {
     const screens: Command[] = NAV.map((item) => ({
       id: `screen:${item.screen}`,
       label: t(item.labelKey),
+      icon: item.icon,
       keywords: [item.screen, ...(item.aliases ?? [])],
       type: "screen",
       route: { screen: item.screen },

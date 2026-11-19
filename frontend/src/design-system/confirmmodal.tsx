@@ -33,6 +33,7 @@ export function ConfirmModal({
   returnFocusTo,
   initialFocusTo,
   unsaved,
+  unsavedBody,
   children,
 }: Readonly<{
   open: boolean;
@@ -84,6 +85,7 @@ export function ConfirmModal({
   initialFocusTo?: () => HTMLElement | null;
   /** The caller holds a draft, so a close other than the confirm asks first. */
   unsaved?: boolean;
+  unsavedBody?: string;
   children: ReactNode;
 }>) {
   const t = useT();
@@ -116,6 +118,7 @@ export function ConfirmModal({
       returnFocusTo={returnFocusTo}
       initialFocusTo={initialFocusTo}
       unsaved={unsaved}
+      unsavedBody={unsavedBody}
     >
       <Heading size="large" id={headingId} className="t-h2 modal-title">
         {tier && (

@@ -24,7 +24,10 @@ func (s *Store) decorate(ctx context.Context, tx pgx.Tx, hits []Hit) error {
 	if err := s.markPartners(ctx, tx, hits); err != nil {
 		return err
 	}
-	return s.attachCompanyLogos(ctx, tx, hits)
+	if err := s.attachCompanyLogos(ctx, tx, hits); err != nil {
+		return err
+	}
+	return s.attachStandings(ctx, tx, hits)
 }
 
 // noteCaptureWithheld reports, on the page's own snapshot, that capture privacy

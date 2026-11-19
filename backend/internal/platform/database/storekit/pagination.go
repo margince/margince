@@ -214,6 +214,16 @@ func ClampLimit(limit *int) int {
 	}
 }
 
+// QuickFindQuery is a list's q without its outer spaces, and false when nothing
+// is left: a box holding only spaces asks for no filter.
+func QuickFindQuery(q *string) (string, bool) {
+	if q == nil {
+		return "", false
+	}
+	trimmed := strings.TrimSpace(*q)
+	return trimmed, trimmed != ""
+}
+
 // QuickFindClause renders the list-q predicate: the full-text match
 // (websearch syntax, accent-folded) OR a trigram contains-match on the
 // entity's name expression — the as-you-type quick-find ("Rech" finds

@@ -409,6 +409,51 @@ func TestQualifyingCarriesTheTypedIndustryOnlyToACompanyWithNone(t *testing.T) {
 	}
 }
 
+// A promotion that creates the contact and its employer gives them the lead's
+// LinkedIn profile and industry. The company comes from the work domain or
+// from the typed name the promoter chose to create.
+func TestQualifyingCarriesTheLinkedInProfileAndIndustryToWhatItCreates(t *testing.T) {
+	e := setupCapturePrivacy(t)
+	owner := e.linker(e.owner, principal.RowScopeOwn)
+	for _, tc := range []struct {
+		name          string
+		domain        string
+		createCompany bool
+	}{
+		{"a company the promotion creates from the work domain", ids.NewV7().String() + ".test", false},
+		{"a company the promoter chose to create", "gmail.com", true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			company := "Carry " + ids.NewV7().String()
+			profile := "https://www.linkedin.com/in/carry-" + ids.NewV7().String()
+			lead := e.factLead(owner, t, e.owner, CreateLeadInput{
+				Email: new("carry." + ids.NewV7().String() + "@" + tc.domain), CompanyName: new(company),
+				Industry: new("Software"), LinkedInURL: new(profile),
+			})
+			out, err := e.store.QualifyLead(owner, lead, PromoteLeadInput{Trigger: string(TriggerHumanQualify), CreateCompany: tc.createCompany})
+			if err != nil {
+				t.Fatalf("promote: %v", err)
+			}
+			var industry, held *string
+			if err := e.store.tx(owner, func(tx pgx.Tx) error {
+				if err := tx.QueryRow(owner, `SELECT industry FROM company WHERE display_name = $1`, company).Scan(&industry); err != nil {
+					return err
+				}
+				return tx.QueryRow(owner, `SELECT max(handle) FROM contact_social WHERE contact_id = $1 AND platform = $2`,
+					out.Contact.Id, SocialLinkedIn).Scan(&held)
+			}); err != nil {
+				t.Fatalf("read what the promotion created: %v", err)
+			}
+			if deref(industry) != "software" {
+				t.Errorf("the created company's industry = %v, want software", industry)
+			}
+			if deref(held) != profile {
+				t.Errorf("the contact's LinkedIn profile = %v, want %s", held, profile)
+			}
+		})
+	}
+}
+
 // industryAudits counts the company's audit rows that wrote its industry.
 func (e *privacyEnv) industryAudits(ctx context.Context, t *testing.T, company ids.CompanyID) int {
 	t.Helper()

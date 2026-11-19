@@ -46,6 +46,7 @@ import { InstallationSettingsCard } from "../sign-in/installation-settings";
 import { SignInMethodsCard } from "../sign-in/sign-in-methods";
 import { KnowledgeCard } from "../voice-knowledge/knowledge";
 import { VoiceDnaCard, VoiceIntakeHost } from "../voice-knowledge/voice-dna";
+import { AboutPage } from "./aboutpage";
 import { AccountSettings } from "./account-settings";
 import { AcquisitionSourcesCard } from "./acquisitionsources";
 import { ControllerParticularsCard } from "./controllerparticulars";
@@ -276,6 +277,8 @@ export function tabContent(
       // Its own page: a reindex, a queue reading and "empty the installation"
       // were three verbs on one screen, separated by nothing.
       return <ResetDataCard />;
+    case "about":
+      return <AboutPage />;
   }
 }
 

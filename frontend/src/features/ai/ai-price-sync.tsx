@@ -25,6 +25,7 @@ import {
 } from "../settings/rate-catalogue-refresh";
 import { ModelPriceDialog } from "../settings/rate-manual";
 import { ModelPriceSheet } from "../settings/rates";
+import { useProviderKeys } from "./ai-provider-key-hooks";
 import "./ai-settings.css";
 
 type PriceSyncRun = components["schemas"]["AiPriceSyncRun"];
@@ -36,6 +37,21 @@ const QUIET = new Set<ProviderRefresh["outcome"]>([
   "not_bound",
   "not_configured",
 ]);
+
+/**
+ * Whether a provider has a row on the Providers tab, read from the query that
+ * tab renders. A reader who may not see that tab, or a list not yet answered,
+ * hides nothing: which providers it lists is then unknown here.
+ */
+function useOnProvidersTab(): (provider: string) => boolean {
+  const canSee = useCan("ai_routing", "read");
+  const list = useProviderKeys(canSee).data;
+  if (!canSee || list === undefined) {
+    return () => true;
+  }
+  const listed = new Set(list.providers.map((p) => p.provider));
+  return (provider) => listed.has(provider);
+}
 
 export function usePriceSync(enabled: boolean) {
   return useQuery({
@@ -83,6 +99,7 @@ export function ModelPricesCard() {
   const query = usePriceSync(canRead);
   const refresh = useRefreshModelPrices();
   const setAutoSync = useSetAutoSync();
+  const onProvidersTab = useOnProvidersTab();
   if (!canRead) {
     return (
       <Panel title={t("aiPriceSync.title")}>
@@ -147,7 +164,9 @@ export function ModelPricesCard() {
               </PanelBody>
             ) : null}
             {state.last_run?.report.providers
-              .filter((p) => !QUIET.has(p.outcome))
+              .filter(
+                (p) => !QUIET.has(p.outcome) && onProvidersTab(p.provider),
+              )
               .map((p) => (
                 <PanelRow record key={p.provider}>
                   <div className="ai-price-sync-line">
@@ -159,7 +178,7 @@ export function ModelPricesCard() {
           </>
         )}
       </QueryGate>
-      <ModelPriceSheet />
+      <ModelPriceSheet shown={onProvidersTab} />
       {adding ? <ModelPriceDialog onClose={() => setAdding(false)} /> : null}
     </Panel>
   );

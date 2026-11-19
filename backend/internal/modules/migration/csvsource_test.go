@@ -302,6 +302,15 @@ func TestRowNumbersCountRecordsNotFileLines(t *testing.T) {
 	}
 }
 
+func TestARefusedFileNamesTheFileLineNotTheRow(t *testing.T) {
+	mapping, sourceKey := leadMapping()
+	body := "Email,First Name\na@x.test,\"A\nB\"\nb@x.test\n"
+	src := NewCSVSource(seedCSV(t, body), testCSVKey, ObjectLead, mapping, sourceKey)
+
+	_, err := src.Rows(context.Background(), ObjectLead, 0, 10)
+	wantParams(t, fileFaultOf(t, err, ErrSourceUnreadable), values{ParamReason: string(FileFieldCount), ParamLine: "4"})
+}
+
 // A row's outcome carries the row's line into the report, so a skip the WRITER
 // refused is as findable as one the source disclosed.
 func TestASkipNamesTheLineTheRowCameFrom(t *testing.T) {

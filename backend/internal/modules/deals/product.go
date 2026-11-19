@@ -216,8 +216,11 @@ func buildProductPatch(current crmcontracts.Product, in UpdateProductInput) (*st
 		p.Set("unit_price_minor", current.UnitPriceMinor, *in.UnitPriceMinor)
 	}
 	if in.Currency != nil {
-		if err := checkCurrency(*in.Currency); err != nil {
-			return nil, err
+		// Only a change is judged, so an edit resending a stored legacy code passes.
+		if *in.Currency != current.Currency {
+			if err := checkCurrency(*in.Currency); err != nil {
+				return nil, err
+			}
 		}
 		p.Set("currency", current.Currency, *in.Currency)
 	}

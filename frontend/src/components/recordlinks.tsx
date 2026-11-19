@@ -13,7 +13,7 @@ import {
   type LucideIcon,
   UserPlus,
 } from "lucide-react";
-import { Fragment } from "react";
+import { Fragment, type ReactNode } from "react";
 
 import type { components } from "../api/schema";
 import { Avatar } from "../design-system/avatar";
@@ -117,23 +117,48 @@ export function RecordLinkChips({
     ));
 }
 
+/**
+ * One record as a chip: its face, or the icon of a kind with none, then its
+ * name. A long name wraps inside a phone's row.
+ */
+export function RecordMarkChip({
+  id,
+  name,
+  icon,
+  href,
+  children = name,
+}: Readonly<{
+  id: string;
+  name: string;
+  icon?: LucideIcon;
+  href?: string;
+  children?: ReactNode;
+}>) {
+  const mark = icon ? { icon } : { lead: <Avatar name={name} identity={id} /> };
+  return (
+    <Chip dense wrap appHref={href} {...mark}>
+      {children}
+    </Chip>
+  );
+}
+
 function RecordLinkChip({ link }: Readonly<{ link: ActivityLink }>) {
   const { entity_type: kind, entity_id: id } = link;
   const { name } = useEntityName(kind, id);
   const icon = RECORD_CHIP_ICONS[kind];
-  const mark = icon
-    ? { icon }
-    : { lead: <Avatar name={name ?? id} identity={id} /> };
   const entity = valueFor(ENTITY, kind, null);
   // Only a resolved name is a link; until then the chip says what the read
   // knows, the way every other reference to a record does.
   return name && entity ? (
-    <Chip dense appHref={routeHash(entity.route(id))} {...mark}>
-      {name}
-    </Chip>
+    <RecordMarkChip
+      id={id}
+      name={name}
+      icon={icon}
+      href={routeHash(entity.route(id))}
+    />
   ) : (
-    <Chip dense {...mark}>
+    <RecordMarkChip id={id} name={name ?? id} icon={icon}>
       <EntityRef kind={kind} id={id} asText />
-    </Chip>
+    </RecordMarkChip>
   );
 }

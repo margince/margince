@@ -8,8 +8,8 @@ Four questions go together here. Who here already knows a contact, from mail or 
 To see who in your company knows a contact in Margince, open the contact's page and choose the **Relationships** tab. **Routes** lists the colleagues who write with them, best route first.
 1. Open the contact.
 2. Choose the **Relationships** tab.
-3. Read the top route, such as "Ask {name}. They already correspond with this contact.", with its **Evidence**: exchanges in 90 days and **Last contact**.
-4. **Other routes** lists the rest, "Ranked by two-way correspondence."
+3. Read the **Best way in** card. It shows your route to the contact, the exchanges in 90 days and the **Last contact**.
+4. The other routes are listed under it in the same card, ranked 2, 3 and on.
 When nobody does: "No one in the company has corresponded with this contact."
 Also called: who knows this client, warm path, relationship map, colleague connections, who has talked to them.
 
@@ -17,7 +17,7 @@ Also called: who knows this client, warm path, relationship map, colleague conne
 
 A contact's **Relationships** tab shows which colleagues have written with them, best first, with the number of exchanges behind each. When nobody has: "No one in the company has corresponded with this contact."
 
-The tab reads in three parts, each with a one-line answer: **Way in**, **Who knows {name}** and **Progress**. Way in shows the best route, and the links at the top take you to each part. Progress holds the introduction steps and your open asks, then one dated list of recent changes and earlier asks. The **Research** tab has three parts too: **To check**, **Sources** and **Record keeping**. To check holds what Margince read from mail and pages, for you to confirm, correct or dismiss. Sources has **Research public sources**, and Record keeping holds the details, permissions and lists.
+The tab reads in three parts, each with a one-line answer: **Way in**, **Who knows {name}** and **Progress**. Way in shows the best route with the other routes under it, and the links at the top take you to each part. Progress holds the introduction steps and one dated list of recent changes and earlier asks, then your open asks. The **Research** tab has three parts too: **To check**, **Sources** and **Record keeping**. To check holds what Margince read from mail and pages, for you to confirm, correct or dismiss. Sources has **Research public sources**, and Record keeping holds the details, permissions and lists.
 
 When you write with the contact yourself, the tab names you **You**: in the top card, on the map and in the card under it. Your own place on the map offers **Write email**, not **Use this route**, because you need no introduction to a contact you already write with. The top card's badge gives the best route's own strength, such as "Barely in contact", in the same words as the map.
 
@@ -318,9 +318,9 @@ When a read fails, it names the cause in plain words. For example: the site aske
 
 A read that started on its own has a harder limit than one you ask for: 12 pages, not 60.
 
-### Nothing is written until you accept
+### What a read writes
 
-Every result of company research comes as a **staged proposal** in your approvals, one for the company's facts.
+A read fills the company's facts and empty fields, and never replaces a value you set or the company's name. A domain can change hands, so the site's own name must match the company's name or a domain. If it does not, nothing is applied, and the read says so. If the company changed its name or uses a parent brand, add that name or domain to the company, then read again. A domain with no company yet waits for a colleague to answer instead.
 
 Nobody named on the company's website is added. Someone found that way may only become a record once Margince can tell them it has their details. It must also record that it told them (the notice that GDPR Article 14 asks for). Until that exists, a read suggests no one, and such a proposal left from an earlier read cannot be accepted. You can still decline it to clear it.
 

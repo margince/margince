@@ -494,7 +494,7 @@ describe("a gemini_vertex lane", () => {
     await pickOption(
       user,
       within(lane).getByRole("combobox", { name: "Provider" }),
-      "gemini_vertex",
+      "Gemini on Vertex AI",
     );
     await user.type(
       within(lane).getByRole("combobox", { name: "Model" }),
@@ -557,7 +557,7 @@ describe("a tier newly pointed at Vertex", () => {
     await pickOption(
       user,
       within(lane).getByRole("combobox", { name: "Provider" }),
-      "gemini_vertex",
+      "Gemini on Vertex AI",
     );
     await user.type(
       within(lane).getByRole("combobox", { name: "Model" }),

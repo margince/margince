@@ -20,7 +20,7 @@ What each list offers:
 |---|---|---|---|---|---|
 | **Contacts** | name, or exact email | Owner, Team, Tags | All, Mine, Shared with me | table only | Assign owner, Add or Remove tag, Create task, Add to Shortlist, Archive |
 | **Companies** | name, or exact domain | Owner, Team, Company size, Tags, Lifecycle, Relationship type, Partner kinds, Relationship stage and Stage meaning (if you may see partners) | All, Mine, Customers, Prospects | table only | Assign owner, Add or Remove tag, Create task, Add to Shortlist, Archive |
-| **Leads** | name, exact email or LinkedIn URL | Status, Score, Response, Origin, Owner, Team, Tags, **Industry**, **Country**, **Company size** | Mine, All, Unassigned, New and unassigned, New, Needs follow-up, Engaged, Hot, Overdue | both | Assign, Disqualify |
+| **Leads** | name, exact email or LinkedIn URL | Status, Score, Response, Origin, Owner, Team, Tags, **Industry**, **Country**, **Company size** | Mine, All, Unassigned, New and unassigned, New, Contacted, Engaged, Hot, Overdue | both | Assign, Disqualify |
 | **Deals** | name or description | Owner, Team, Stage, Company, Tags, Stalled only, Partner-sourced, Forecast, Motion, Priority, Source, Partner | Newest | both, opens on Board | Assign owner, Move to stage, Add or Remove tag, Create task, Add to Shortlist, Archive |
 | **Projects** | name or project key | Owner, Team, Phase | All, In delivery | table only | none |
 
@@ -132,7 +132,7 @@ The columns you can sort on each Margince list are:
 - **Contacts**: Name, Email, Company, Owner, Last activity, Created.
 - **Companies**: Company, Description, Website, Contacts, Open deals, Lifecycle, Owner, Last activity, Created.
 - **Leads**: Name, Score, Status, Next step, Last activity, Origin, Owner, Created.
-- **Deals**: Name, Company, via partner, Stage, Value, Expected close, Last signal, Status, Owner.
+- **Deals**: Name, Company, **Referring partner**, Stage, Value, Expected close, Last signal, Status, Owner.
 - **Projects**: Project name, Company, Phase, Owner, Last activity.
 **Owner** sorts by the owner's name, with unassigned records last. You cannot sort by **Tags**, **Relationship type** or **Last email**. You can still pick a hidden column under **View** → **Sort**.
 Also called: sort options, order by column.
@@ -162,7 +162,7 @@ Also called: page size, see all records, load more.
 ### How do I see archived records?
 To see archived records in Margince, open the list (**Contacts**, **Companies**, **Leads**, **Deals** or **Projects**). Press **View**, then press **Show archived**.
 
-Archived rows show with the live ones, with an **Archived** mark, until you press **Show archived** again. On **Leads**, disqualified and qualified leads are the archived ones. An archived record opens read-only, and **Undo** on its archive entry in its history brings back a contact, company or deal. See [Contacts, companies, leads, deals and projects](records.md).
+Archived rows show with the live ones, with an **Archived** mark, until you press **Show archived** again. On **Leads**, disqualified and qualified leads are the archived ones, and the **Status** filter set to **Qualified** or **Disqualified** lists them without **Show archived**. An archived record opens read-only, and **Undo** on its archive entry in its history brings back a contact, company or deal. See [Contacts, companies, leads, deals and projects](records.md).
 Also called: show deleted, find an archived contact, closed records, inactive.
 
 ## Views

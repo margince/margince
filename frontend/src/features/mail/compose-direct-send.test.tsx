@@ -4,11 +4,12 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { entityTimelineKeys } from "../../lib/activitykeys";
 import {
   fillSendableForm,
+  installComposeClock,
   jsonResponse,
   pressSend,
   problemResponse,
@@ -33,6 +34,8 @@ const REVIEW = {
     text: "The send check still blocks this message.",
   },
 };
+
+beforeEach(installComposeClock);
 
 afterEach(() => {
   cleanup();

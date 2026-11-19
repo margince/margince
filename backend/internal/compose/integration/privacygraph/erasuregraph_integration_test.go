@@ -66,18 +66,18 @@ func TestErasureRefoldsARelinkedActivityBeforeItsEventIsDelivered(t *testing.T) 
 	if got := edgeCount(); got != 1 {
 		t.Fatalf("undelivered relink lost the stale-edge fixture: %d", got)
 	}
-	if err := compose.ComposedEraser(e.Pool, nil, nil).WithEdgeInvalidator(nil).EraseContact(ctx, subject, "subject request"); err == nil {
+	if err := compose.ComposedEraser(e.Pool, nil).WithEdgeInvalidator(nil).EraseContact(ctx, subject, "subject request"); err == nil {
 		t.Fatal("erasure cancelled a pending graph update without its invalidator")
 	}
 	broken := errors.New("graph correction unavailable")
-	failing := compose.ComposedEraser(e.Pool, nil, nil).WithEdgeInvalidator(func(context.Context, pgx.Tx, []ids.UUID) error { return broken })
+	failing := compose.ComposedEraser(e.Pool, nil).WithEdgeInvalidator(func(context.Context, pgx.Tx, []ids.UUID) error { return broken })
 	if err := failing.EraseContact(ctx, subject, "subject request"); !errors.Is(err, broken) {
 		t.Fatalf("failed graph correction=%v", err)
 	}
 	if got := countGraphRows(t, e, `SELECT count(*) FROM contact WHERE id=@id AND full_name='Erasure requester'`, pgx.NamedArgs{"id": subject}); got != 1 {
 		t.Fatal("graph failure committed part of the erasure")
 	}
-	if err := compose.ComposedEraser(e.Pool, nil, nil).EraseContact(ctx, subject, "subject request"); err != nil {
+	if err := compose.ComposedEraser(e.Pool, nil).EraseContact(ctx, subject, "subject request"); err != nil {
 		t.Fatal(err)
 	}
 	if got := edgeCount(); got != 0 {

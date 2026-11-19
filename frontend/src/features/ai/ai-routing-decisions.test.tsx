@@ -49,10 +49,14 @@ describe("the decision model lane", () => {
     const offered = within(screen.getByRole("listbox"))
       .getAllByRole("option")
       .map((option) => option.textContent);
-    expect(offered).toEqual(["jev", "jev_compatible", "gemini_decision"]);
+    expect(offered).toEqual([
+      "TypeSafe Jev",
+      "Jev-compatible",
+      "Gemini Decisions API",
+    ]);
     await user.click(
       within(screen.getByRole("listbox")).getByRole("option", {
-        name: "jev_compatible",
+        name: "Jev-compatible",
       }),
     );
     await user.type(
@@ -63,7 +67,7 @@ describe("the decision model lane", () => {
     // provider's sheet, so the lane names none and says where to set it.
     expect(within(lane).queryByLabelText("Host")).toBeNull();
     expect(
-      within(lane).getByText(/jev_compatible has no host yet/),
+      within(lane).getByText(/Jev-compatible has no host yet/),
     ).toBeInTheDocument();
 
     const sent = await saveEditor(user, backend);
@@ -91,7 +95,7 @@ describe("the decision model lane", () => {
     await user.click(within(lane).getByRole("combobox", { name: "Provider" }));
     await user.click(
       within(screen.getByRole("listbox")).getByRole("option", {
-        name: "gemini_decision",
+        name: "Gemini Decisions API",
       }),
     );
     await user.click(within(lane).getByRole("combobox", { name: "Model" }));
@@ -162,7 +166,7 @@ describe("the decision model lane", () => {
     const offered = within(screen.getByRole("listbox"))
       .getAllByRole("option")
       .map((option) => option.textContent);
-    expect(offered).not.toContain("gemini_decision");
+    expect(offered).not.toContain("Gemini Decisions API");
   });
 
   // An installation that reaches decisions only through OpenRouter holds no
@@ -203,7 +207,7 @@ describe("the decision model lane", () => {
     );
     expect(
       within(dialog).getByRole("combobox", { name: "Provider" }),
-    ).toHaveTextContent("jev_compatible");
+    ).toHaveTextContent("Jev-compatible");
     expect(within(dialog).queryByText("Provider key missing")).toBeNull();
   });
 
@@ -299,7 +303,9 @@ describe("the decision model lane", () => {
     const lane = await openEditor(user, "ai-routing-decisions");
     await user.click(within(lane).getByRole("combobox", { name: "Provider" }));
     await user.click(
-      within(screen.getByRole("listbox")).getByRole("option", { name: "jev" }),
+      within(screen.getByRole("listbox")).getByRole("option", {
+        name: "TypeSafe Jev",
+      }),
     );
 
     const model = within(lane).getByRole("combobox", { name: "Model" });
@@ -472,7 +478,9 @@ describe("saving one binding", () => {
     await user.type(model, "gemini-9-imaginary");
 
     expect(
-      await within(dialog).findByText(/not in gemini’s published model list/i),
+      await within(dialog).findByText(
+        /not in Google Gemini’s published model list/i,
+      ),
     ).toBeTruthy();
     const sent = await saveEditor(user, backend);
     expect(sent?.tiers.premium.model).toBe("gemini-9-imaginary");

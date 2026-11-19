@@ -108,3 +108,29 @@ func countScripts(rawHTML string) (external, modules int) {
 		}
 	}
 }
+
+// readTitle takes the first <title>'s text; the tokenizer stands on its start
+// tag.
+func (h *headAssets) readTitle(tokenizer *html.Tokenizer) {
+	if h.title != "" || tokenizer.Next() != html.TextToken {
+		return
+	}
+	h.title = textcut.Runes(strings.Join(strings.Fields(string(tokenizer.Text())), " "), headTextRunes)
+}
+
+// readOGSiteName takes the first og:site_name, from `property` or `name` as
+// headTextFrom accepts them.
+func (h *headAssets) readOGSiteName(attrs map[string]string) {
+	if h.ogSiteName == "" && (attrs["property"] == "og:site_name" || attrs["name"] == "og:site_name") {
+		h.ogSiteName = textcut.Runes(strings.Join(strings.Fields(attrs["content"]), " "), headTextRunes)
+	}
+}
+
+// siteName prefers og:site_name, which names the site, over the <title>,
+// which often names the page as well.
+func (h headAssets) siteName() string {
+	if h.ogSiteName != "" {
+		return h.ogSiteName
+	}
+	return h.title
+}

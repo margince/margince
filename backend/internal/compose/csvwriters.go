@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/importtextbounds"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -47,7 +48,7 @@ type csvWriters struct {
 	runID      migration.RunID
 	object     string
 	// sourceSystem is the namespace the run files its rows under, from its
-	// source name (importSourceSystem).
+	// source name (importwire.SourceSystem).
 	sourceSystem string
 	// onDuplicate is the run's answer for a row naming a record the estate
 	// already holds: "" or "create" lands it and files a review pair, "skip"
@@ -399,6 +400,9 @@ func (w *csvWriters) reconcile(ctx context.Context, id ids.UUID, row migration.R
 		}
 		if refusedAsErased(err) {
 			return skippedFor(addressErasedWhy), nil
+		}
+		if why, over := importtextbounds.NameTooLong(err); over {
+			return skippedFor(why), nil
 		}
 		return migration.EnsureResult{}, err
 	}

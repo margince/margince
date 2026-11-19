@@ -49,7 +49,7 @@ func TestAFailedErasureKeepsTheAttachmentObjectItsRowNames(t *testing.T) {
 	contact := e.SeedContact(t, "Failed erasure", &e.Rep1)
 	file, key := uploadSubjectFile(t, e, blob, contact)
 
-	eraser := compose.ComposedEraser(e.Pool, blob, nil).
+	eraser := compose.ComposedEraser(e.Pool, blob).
 		WithRawCapturePurger(failingCopyScrub{compose.RawCapturePurgerFor(e.DB())})
 	if err := eraser.EraseContact(e.Admin(), contact, "subject request"); err == nil {
 		t.Fatal("the failure after the attachment step was hidden")
