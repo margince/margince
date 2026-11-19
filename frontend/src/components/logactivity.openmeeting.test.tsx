@@ -23,7 +23,7 @@ import { UTC_ZONE } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { ViewerZoneProvider } from "../lib/viewerzone";
-import { meFixture } from "../testing/mefixture";
+import { meFixture, READS_RECORDS } from "../testing/mefixture";
 import { LogActivity } from "./logactivity";
 import {
   appendedNotes,
@@ -147,7 +147,11 @@ function stubApi(
       if (key === "GET /me") {
         return jsonResponse(
           meFixture({
-            allow: { activity: ["create", "update"], contact: ["read"] },
+            allow: {
+              ...READS_RECORDS,
+              activity: ["create", "update"],
+              contact: ["read"],
+            },
           }),
         );
       }

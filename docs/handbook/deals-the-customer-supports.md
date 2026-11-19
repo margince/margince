@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/deals/viability.go backend/internal/compose/dealcloselost.go backend/internal/compose/dealclosefacts.go backend/internal/compose/captureclassify.go backend/internal/modules/deals/closelost.go backend/internal/compose/dealverdictpass.go backend/internal/compose/dealverdict/guards.go backend/internal/modules/deals/verdictapply.go backend/internal/modules/deals/dealrevive.go backend/internal/compose/dealscoutrevive.go backend/internal/compose/margincecheck.go backend/internal/modules/deals/ownerless.go backend/internal/modules/deals/changemoves.go -->
+<!-- describes: backend/internal/modules/deals/viability.go backend/internal/compose/dealcloselost.go backend/internal/compose/dealclosefacts.go backend/internal/compose/captureclassify.go backend/internal/modules/deals/closelost.go backend/internal/compose/dealverdictpass.go backend/internal/compose/dealverdict/guards.go backend/internal/modules/deals/verdictapply.go backend/internal/modules/deals/dealrevive.go backend/internal/compose/dealscoutrevive.go backend/internal/compose/margincecheck.go backend/internal/modules/deals/ownerless.go backend/internal/modules/deals/changemoves.go backend/internal/compose/dealstatus/ourreply.go frontend/src/features/deals/deal360/dealverdict.ts -->
 # Deals the customer still supports
 
 The nightly check asks one more thing of every open deal: has the customer said
@@ -29,8 +29,8 @@ Margince closes a deal only when all of these hold:
   a colleague's included.
 - The deal is not on legal hold.
 - No wait the customer asked for, and no meeting they accepted, is still to come.
-- No message on the deal is still waiting for your reply. This is the same
-  check that shows **Team reply owed** on the deal.
+- No customer request on the deal is still open. A request stays open after
+  you reply, until its reminder is marked done.
 
 A message from the customer that only its participants can see also keeps the
 deal open. Margince reads only its date.
@@ -56,6 +56,12 @@ the automatic changes. [Approvals](approvals.md) says where the switches are.
 ### Why did Margince close my deal as lost, and how do I undo it?
 Margince closes an open deal as lost, with the reason **Stopped responding**, after 120 days with no word from the customer. To undo it, open **Home**, find the deal under **Done for you** and choose **Undo** within 7 days. To stop it for your own deals, turn off **Close silent deals as lost** among the automatic changes.
 Also called: deal closed automatically, auto-lost, reopen a deal Margince closed, why is my deal lost.
+
+### What does "You replied" on a deal mean?
+A customer's request on a deal stays open after you reply. A reply such as "Thanks, I will check" may not answer it. While your reply is the newest message on the request's thread, the deal says **You replied** with the date, not **Your move**. When a colleague replied, it says **Your team replied**. A reply that never reached them, or came back, does not count.
+
+**Team reply owed** does not show then, and History no longer marks the request **Needs reply**. If Margince found that the request still asks for something, the deal quotes it. If you may change the request's reminder, the **Next** bar offers **Done**, which marks it done and closes the request. A new message from the customer on that thread makes it your move again. A deal that has gone quiet still says so first.
+Also called: already answered, reply sent, close the reminder.
 
 ## When the customer names a date, a price or a decision
 

@@ -186,7 +186,8 @@ func meetingAttendeesSQL(addressable string) string {
 // a later activity.
 const laterActivityColumns = `keyed.id, keyed.kind, keyed.direction, keyed.origin, keyed.occurred_at,
 	keyed.occurred_precision, keyed.archived_at, keyed.restricted_at, keyed.meeting_status, keyed.call_outcome,
-	keyed.calendar_method, keyed.sender_is_machine, keyed.bulk_mail_attested, keyed.internal_mail_authorization`
+	keyed.calendar_method, keyed.sender_is_machine, keyed.bulk_mail_attested, keyed.internal_mail_authorization,
+	keyed.forwarded_to_self`
 
 // The limit keeps the keyed lookup ahead of predicates on the later activity,
 // even when stale statistics favor scanning the whole activity table.

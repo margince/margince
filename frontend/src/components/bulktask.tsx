@@ -11,6 +11,7 @@ import { Button, Field, TextInput } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { DateInput, type ISODate } from "../design-system/dateinput";
 import { Select } from "../design-system/select";
+import { dueDayBounds } from "../format/calendarday";
 import { useT } from "../i18n";
 import { taskDueFields } from "../lib/activitybody";
 import { useViewerZone } from "../lib/viewerzone";
@@ -77,6 +78,7 @@ export function TaskVerb({
             <DateInput
               {...control}
               value={due}
+              {...dueDayBounds(readerZone)}
               onChange={(event) => setDue(event.target.value)}
             />
           )}

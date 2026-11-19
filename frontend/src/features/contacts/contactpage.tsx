@@ -45,7 +45,7 @@ import { ContactRail } from "./contactrail";
 import { ContactSubtitle } from "./contactsubtitle";
 import { ContactLatestInbound } from "./contacttabs";
 import "./contact360.css";
-import { useDisabledCoreFeatures } from "../../lib/corefeatures";
+import { useHiddenCoreFeatures } from "../../lib/corefeatures";
 import { useViewerZone } from "../../lib/viewerzone";
 import {
   openContactTab,
@@ -110,7 +110,7 @@ export function ContactPageV2({
   id,
   tab: addressedTab,
 }: Readonly<{ id: string; tab: ContactTab }>) {
-  const tab = contactTabForFeatures(addressedTab, useDisabledCoreFeatures());
+  const tab = contactTabForFeatures(addressedTab, useHiddenCoreFeatures());
 
   // Which message the drawer is showing. One drawer over the record, owned by
   // the page: the timeline and the rail both open into it, so a citation in

@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/heldreason"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -98,11 +99,11 @@ const (
 	// ReviewOutcomeCancelled is a message nobody will send.
 	ReviewOutcomeCancelled ReviewOutcome = "cancelled"
 	// ReviewOutcomeSent is a held message resumed and allowed by the engine.
-	//
-	// It consumes no instruction, so it never reached the directed path's own
-	// closer — the message went and the review stayed live. This is the one
-	// outcome of the four that records a delivery.
+	// It consumes no instruction, so the directed path's closer never ran.
 	ReviewOutcomeSent ReviewOutcome = "sent"
+	// ReviewOutcomeMoved is a message moved to a new moment. It closes only a
+	// review nobody has decided yet.
+	ReviewOutcomeMoved ReviewOutcome = "moved"
 )
 
 // HeldNotifier puts a stopped message in front of the human who scheduled it.
@@ -121,10 +122,9 @@ const (
 // far worse than a quiet stop.
 type HeldNotifier interface {
 	NotifyHeldInTx(ctx context.Context, tx pgx.Tx, in HeldNotice) error
-	// ResolveHeldInTx clears the item once the rep has answered it. Rescheduling
-	// or cancelling IS the answer, and an item outliving it asks the same
-	// question twice.
-	ResolveHeldInTx(ctx context.Context, tx pgx.Tx, scheduledSendID ids.UUID) error
+	// ResolveHeldInTx clears the item once the message is answered, saying how.
+	// An item outliving the answer asks the same question twice.
+	ResolveHeldInTx(ctx context.Context, tx pgx.Tx, scheduledSendID ids.UUID, how HeldResolution) error
 }
 
 // HeldNotice is one stopped message as the rep needs to see it: whose it is,
@@ -174,11 +174,10 @@ type ScheduledSend struct {
 	ScheduledBy     ids.UUID
 	ActivityID      ids.UUID
 	HeldReason      string
-	// ReviewID is the review standing over this message's refusal, when one
-	// does. Zero on every message nobody refused — and on a held row whose
-	// review has since been answered, which is a row a rep can only cancel or
-	// reschedule now.
-	ReviewID ids.UUID
+	// ReviewID is the live review over this message's refusal, or zero, and
+	// ReviewActions what the caller may do about it.
+	ReviewID      ids.UUID
+	ReviewActions []string
 	// Links are the records an account-started message files itself under,
 	// frozen at composition. Empty on a reply, whose records come from its
 	// anchor; the ones a reply adds beyond those travel in also_links and are
@@ -221,7 +220,7 @@ const (
 // Hold reasons. Each names what a human has to decide about, because "held" on
 // its own tells a rep nothing they can act on.
 const (
-	HeldConsentWithdrawn = "consent_withdrawn"
+	HeldConsentWithdrawn = heldreason.ConsentWithdrawn
 	HeldSenderInactive   = "sender_inactive"
 	// HeldPassportRevoked is its own reason rather than sender_inactive: the
 	// human is fine, and telling them their account is inactive would send them
@@ -230,7 +229,7 @@ const (
 	HeldPassportRevoked = "passport_revoked"
 	HeldMissedWindow    = "missed_window"
 	HeldTimerExhausted  = "timer_exhausted"
-	HeldSendRefused     = "send_refused"
+	HeldSendRefused     = heldreason.SendRefused
 	HeldFollowupSettled = "followup_settled"
 	HeldMeetingCanceled = "meeting_canceled"
 )

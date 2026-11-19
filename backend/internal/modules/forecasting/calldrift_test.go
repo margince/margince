@@ -117,7 +117,7 @@ func TestAChangedBasisIsALimitationNotADelta(t *testing.T) {
 	}{
 		{"another team", todayOf(moved, "team-b", "EUR"), LimitationPopulation},
 		{"another base currency", todayOf(moved, "team-a", "USD"), LimitationCurrency},
-		{"another definition", func() snapshotSide { s := today(moved...); s.DefinitionVersion = "forecast_v1"; return s }(), LimitationDefinition},
+		{"another definition", func() snapshotSide { s := today(moved...); s.DefinitionVersion = "forecast_v5"; return s }(), LimitationDefinition},
 	} {
 		drift := CompareWithBaseline(called(rows...), tc.today)
 		if drift.Limitation != tc.want || len(drift.Deals) != 0 || len(drift.Net) != 0 {

@@ -47,6 +47,8 @@ export type ReadingContext = Readonly<{
   record: string;
   // The instant the page read the lead at.
   asOf: string;
+  // Who marked the lead contacted by a status move, once the name is known.
+  markedBy?: string | null;
 }>;
 
 const LADDER: readonly LadderOpenStep[] = ["new", "contacted", "engaged"];

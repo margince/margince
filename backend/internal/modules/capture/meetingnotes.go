@@ -54,4 +54,5 @@ func MeetingNotesConcern(provider string, scopes []string, notes, calendar *stri
 
 const notesCalendarAccountSQL = `(SELECT cal.account_label FROM capture_connection cal
  WHERE cal.user_id = c.user_id AND cal.provider = 'gcal'
- AND cal.status IN ('connected','error') AND cal.archived_at IS NULL)`
+ AND cal.status IN ('connected','error') AND cal.archived_at IS NULL
+ ORDER BY lower(cal.account_label) = lower(c.account_label) DESC, cal.created_at, cal.id LIMIT 1)`

@@ -309,10 +309,24 @@ export async function footSendButton(name = "Send") {
     if (!found || found.hasAttribute("disabled")) {
       throw new Error(`${name} is not ready`);
     }
-    if (screen.queryByText("Checking whether this message can be sent…")) {
-      throw new Error("the recipient check is running");
-    }
+    throwWhileChecking();
     return found;
+  });
+}
+
+function throwWhileChecking() {
+  if (screen.queryByText("Checking whether this message can be sent…")) {
+    throw new Error("the recipient check is running");
+  }
+}
+
+// A button the permission band draws, once the check for the message on screen
+// has answered. A recheck redraws the band, so a button found earlier is gone.
+export async function permissionBandButton(name: string) {
+  await settleSendCheck();
+  return waitFor(() => {
+    throwWhileChecking();
+    return screen.getByRole("button", { name });
   });
 }
 

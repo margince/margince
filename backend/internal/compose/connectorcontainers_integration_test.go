@@ -70,7 +70,7 @@ func TestListContainersResolvesTheSeatsOwnCredential(t *testing.T) {
 	r := capture.NewRegistry(InstallationDB(e.Pool), nil, nil, nil)
 	r.Register(conn)
 
-	got, _, err := r.ListContainers(e.As(e.Rep1, nil, integration.AccountRepPerms), "imap",
+	got, _, err := r.ListContainers(e.As(e.Rep1, nil, integration.AccountRepPerms), capture.ProviderMailbox("imap"),
 		ids.From[ids.UserKind](e.Rep1))
 	if err != nil {
 		t.Fatalf("ListContainers: %v", err)
@@ -92,7 +92,7 @@ func TestListContainersAnswersAbsentForASeatWithNoConnection(t *testing.T) {
 	r := capture.NewRegistry(InstallationDB(e.Pool), nil, nil, nil)
 	r.Register(&listingConnector{})
 
-	_, _, err := r.ListContainers(e.As(e.Rep2, nil, integration.AccountRepPerms), "imap",
+	_, _, err := r.ListContainers(e.As(e.Rep2, nil, integration.AccountRepPerms), capture.ProviderMailbox("imap"),
 		ids.From[ids.UserKind](e.Rep2))
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("err = %v, want not-found for a seat with no connection", err)
@@ -109,7 +109,7 @@ func TestListContainersDoesNotReachAColleaguesMailbox(t *testing.T) {
 	r := capture.NewRegistry(InstallationDB(e.Pool), nil, nil, nil)
 	r.Register(conn)
 
-	_, _, err := r.ListContainers(e.As(e.Rep2, nil, integration.AccountRepPerms), "imap",
+	_, _, err := r.ListContainers(e.As(e.Rep2, nil, integration.AccountRepPerms), capture.ProviderMailbox("imap"),
 		ids.From[ids.UserKind](e.Rep2))
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("err = %v, want not-found rather than the colleague's folders", err)

@@ -709,6 +709,9 @@ func TestAnOffOriginDeltaLinkIsRefusedRatherThanStored(t *testing.T) {
 			"@odata.deltaLink": "https://attacker.example/me/mailFolders/inbox/messages/delta?%24deltatoken=d1",
 		})
 	})
+	mux.HandleFunc("/me/mailFolders/inbox/messages", func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(w, map[string]any{"@odata.count": 1, "value": []map[string]any{}})
+	})
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
 

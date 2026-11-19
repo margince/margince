@@ -120,6 +120,9 @@ type DerivedEvidence struct {
 	Snippet        string
 	ActivityID     ids.UUID
 	SourceURL      string
+	// Fields are the producer's facts about the cited source, written under
+	// the cite's "fields" key.
+	Fields map[string]any
 }
 
 // RecordDerived writes one derived signal inside the caller's transaction, or
@@ -244,6 +247,9 @@ func derivedEvidenceRows(in []DerivedEvidence) []map[string]any {
 		}
 		if cited.CommercialRole != "" {
 			row["commercial_role"] = cited.CommercialRole
+		}
+		if len(cited.Fields) > 0 {
+			row["fields"] = cited.Fields
 		}
 		if cited.SourceURL != "" {
 			// `page` is the contract's own word for a cited web page

@@ -35,7 +35,7 @@ func SelectRemovedPurgeTx(
 	var args []any
 	arg := func(value any) string { args = append(args, value); return fmt.Sprintf("$%d", len(args)) }
 	seatParam, providerParam, messageParam := arg(user), arg(provider), arg(providerMessageID)
-	keys := storekit.ProviderMessageKeysSQL(seatParam, providerParam, messageParam)
+	keys := storekit.ProviderMessageKeysSQL(seatParam, providerParam, arg(runConnection(ctx)), messageParam)
 	// Another provider copy keeps the activity. Consume only the removed alias.
 	_, err := tx.Exec(ctx, `UPDATE capture_import i SET provider_message_ids = array_remove(i.provider_message_ids, (`+keys+`)[1])
         WHERE i.user_id = `+seatParam+` AND i.provider_message_ids @> `+keys+`
@@ -43,7 +43,7 @@ func SelectRemovedPurgeTx(
  AND EXISTS (SELECT 1 FROM unnest(i.provider_message_ids) alias
  JOIN capture_connection c ON c.user_id = i.user_id AND c.archived_at IS NULL
  AND c.status IN ('connected','error')
- AND starts_with(alias, c.provider || ':' || c.generation || ':')
+ AND starts_with(alias, `+storekit.MailboxMarkSQL("c")+` || ':')
  WHERE alias <> (`+keys+`)[1])`, args...)
 	if err != nil {
 		return subject, fmt.Errorf("capture: removing a mailbox message alias: %w", err)

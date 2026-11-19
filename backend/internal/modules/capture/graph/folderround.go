@@ -47,6 +47,9 @@ func (c *Connector) pullFolder(
 		resume = state.Rounds[folder]
 	}
 	next, err := c.walkFolder(ctx, access, folder, state.link(folder), resume, anchorFrom, visit)
+	if tooLarge, ok := errors.AsType[*AnchorTooLargeError](err); ok {
+		next, err = c.reanchorNarrower(ctx, access, folder, state, tooLarge, visit)
+	}
 	if errors.Is(err, ErrAnchorShort) {
 		// Resuming the same census cannot find what it missed, so the next
 		// cycle opens a fresh anchor instead.

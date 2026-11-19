@@ -13,7 +13,6 @@ import { ListChecks } from "lucide-react";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { useActivityWritable } from "../../components/activitygate";
 import { useTaskUpdate } from "../../components/taskactions";
 import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
@@ -34,6 +33,8 @@ export type PerformableMove = {
   recommendation?: components["schemas"]["RecommendationReceipt"];
   arguments?: Record<string, unknown>;
   // Set by the server when this reader may not take the verb; drawn as refused.
+  // It is the only answer to whether this reader may: the server marks every
+  // move it serves, and the client itself builds only `open_task`, a read.
   blocked_reason?: string;
 };
 
@@ -275,7 +276,6 @@ function FollowUpDraft({
 }>) {
   const t = useT();
   const queryClient = useQueryClient();
-  const writable = useActivityWritable();
   const [target, setTarget] = useState<{
     dealId?: string;
     meetingId: string;
@@ -285,9 +285,6 @@ function FollowUpDraft({
   const selected = target ?? { dealId, meetingId, recipients };
   const [contact, ...alsoTo] = selected.recipients;
   if (contact === undefined) return null;
-  // The server's refusal is drawn with its reason; without one, a seat that
-  // may not write is offered nothing.
-  if (!writable && refused === undefined) return null;
   return (
     <>
       <Button
@@ -345,10 +342,8 @@ function CreateTaskVerb({
   onCreate: (body: Record<string, unknown>) => void;
 }>) {
   const t = useT();
-  const writable = useActivityWritable();
-  // No body, no button: a click that sent {} would only be refused, and so
-  // would any press from a seat that may not write activities.
-  if (!body || (!writable && refused === undefined)) {
+  // No body, no button: a click that sent {} would only be refused.
+  if (!body) {
     return null;
   }
   return (

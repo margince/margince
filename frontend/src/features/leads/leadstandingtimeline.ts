@@ -129,6 +129,16 @@ export function leadTimeline(
   };
 }
 
+// A stamp written by a status move claims no reply, only who moved the lead.
+function firstResponseTitle(lead: Lead, ctx: ReadingContext): string {
+  if (!lead.first_response_marked_by) {
+    return ctx.t("lead.timeline.weReplied");
+  }
+  return ctx.markedBy
+    ? ctx.t("lead.timeline.markedContacted", { user: ctx.markedBy })
+    : ctx.t("lead.timeline.markedContactedNoName");
+}
+
 // Our first answer, with how long the lead waited for it.
 function firstResponseEvent(
   lead: Lead,
@@ -143,7 +153,7 @@ function firstResponseEvent(
   return {
     key: "first-response",
     at,
-    title: ctx.t("lead.timeline.weReplied"),
+    title: firstResponseTitle(lead, ctx),
     sub:
       span >= 0
         ? ctx.t("lead.timeline.repliedIn", {

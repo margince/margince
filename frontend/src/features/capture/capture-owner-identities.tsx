@@ -34,6 +34,7 @@ import {
 } from "../../lib/undoableremoval";
 import { useViewerZone } from "../../lib/viewerzone";
 import { captureValueMessage } from "./capturevalue";
+import { DomainQuestionCallout, domainQuestionOf } from "./domainquestion";
 import "./capture-owner-identities.css";
 
 // A seat's own other addresses. Examples are a send-as alias, a private domain
@@ -71,7 +72,11 @@ function useAddIdentity() {
   const t = useT();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (body: { kind: Kind; value: string }) => {
+    mutationFn: async (body: {
+      kind: Kind;
+      value: string;
+      confirm?: boolean;
+    }) => {
       return unwrap(
         await api.POST("/capture/owner-identities", {
           body,
@@ -93,6 +98,7 @@ const RESTORE_REFUSALS = new Map<string, MessageKey>([
   ["not_found", "ownerIdentities.restoreGone"],
   ["removal_moved_on", "ownerIdentities.restoreMovedOn"],
   ["identity_declared_again", "ownerIdentities.restoreDeclaredAgain"],
+  ["domain_needs_confirmation", "ownerIdentities.restoreOnFile"],
 ]);
 
 // On the hooks, not on `mutate`: an Undo runs after its row has unmounted.
@@ -256,7 +262,7 @@ function IdentityRow({
   const learned = learnedNote(identity.source);
   return (
     <SettingRow
-      label={identity.value}
+      label={<span className="owner-identity-value">{identity.value}</span>}
       description={
         <span className="owner-identity-caption">
           <span>{t(labelFor(kindLabel, identity.kind))}</span>
@@ -333,15 +339,37 @@ function DeclareDialog({ onClose }: Readonly<{ onClose: () => void }>) {
             />
           )}
         </Field>
-        {add.isError && (
+        {add.isError && domainQuestionOf(add.error) === null && (
           <Callout
             tone="danger"
             kind="outcome"
             title={t("ownerIdentities.addFailed")}
           >
-            {captureValueMessage(add.error, add.variables?.kind, t)}
+            {captureValueMessage(
+              add.error,
+              add.variables?.kind,
+              t,
+              add.variables?.value,
+            )}
           </Callout>
         )}
+        {add.isError &&
+          add.variables?.value === value &&
+          add.variables?.kind === kind && (
+            <DomainQuestionCallout
+              error={add.error}
+              value={value}
+              scope="ownAddress"
+              pending={add.isPending}
+              t={t}
+              onConfirm={() =>
+                add.mutate(
+                  { kind, value, confirm: true },
+                  { onSuccess: onClose },
+                )
+              }
+            />
+          )}
       </form>
       <div className="actions">
         <Button variant="ghost" onClick={onClose} type="button">

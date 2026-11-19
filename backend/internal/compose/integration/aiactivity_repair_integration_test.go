@@ -199,7 +199,7 @@ func (f *readingFixture) secondReading(t *testing.T) ids.UUID {
 	t.Helper()
 	// The in-flight index admits one live reading per ATTACHMENT, so the second
 	// one hangs off a second document.
-	att := uploadDealAttachment(f.ctx, t, f.handlers, f.deal, "second.pdf", []byte("second bytes"))
+	att := uploadDealAttachment(f.ctx, t, f.handlers, f.deal, "second.pdf", []byte("%PDF-1.4 second bytes"))
 	read, _, err := f.store.StartExtractionReadQueued(f.ctx, ids.UUID(att.Id), "human:"+f.env.AdminUser.String(), nil)
 	if err != nil {
 		t.Fatalf("starting the second reading: %v", err)

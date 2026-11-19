@@ -97,7 +97,7 @@ func (s *VoiceStore) ListVersions(ctx context.Context, profileID ids.UUID, curso
 	args := []any{profileID}
 	where := "voice_profile_id = $1 AND archived_at IS NULL"
 	if cursor != nil && *cursor != "" {
-		decoded, err := storekit.DecodeCursor(*cursor)
+		decoded, err := storekit.DecodeCursor("voice_versions", *cursor)
 		if err != nil {
 			return VoiceProfileVersionPage{}, err
 		}
@@ -131,7 +131,7 @@ func (s *VoiceStore) ListVersions(ctx context.Context, profileID ids.UUID, curso
 	if len(page.Items) > n {
 		page.Items = page.Items[:n]
 		last := page.Items[len(page.Items)-1]
-		next, err := storekit.EncodeCursor(last.CreatedAt, last.ID)
+		next, err := storekit.EncodeCursor("voice_versions", last.CreatedAt, last.ID)
 		if err != nil {
 			return VoiceProfileVersionPage{}, err
 		}

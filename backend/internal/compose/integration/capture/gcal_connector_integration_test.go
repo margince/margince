@@ -193,7 +193,7 @@ func assertGcalConnectionSurface(grantCtx context.Context, e *integration.Search
 		t.Fatalf("DueConnections past the pacing clock = %+v, want the one connection %s", due, connID)
 	}
 
-	if err := registry.Disconnect(grantCtx, "gcal"); err != nil {
+	if err := registry.Disconnect(grantCtx, capturemod.ProviderMailbox("gcal")); err != nil {
 		t.Fatalf("Disconnect: %v", err)
 	}
 	due2, err := registry.DueConnections(context.Background(), "gcal")

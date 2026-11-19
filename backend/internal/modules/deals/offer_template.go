@@ -249,7 +249,7 @@ func (s *Store) ListOfferTemplates(ctx context.Context, in ListOfferTemplatesInp
 	}
 	// Templates carry no custom columns, so the vocabulary is the fixed one
 	// and there is nothing to append to the select.
-	pre, err := storekit.BuildListPrelude(ctx, "", offerTemplateListFields, nil,
+	pre, err := storekit.BuildListPrelude(ctx, "", "offer_templates", offerTemplateListFields, nil,
 		in.Sort, in.Limit, in.Cursor, nil)
 	if err != nil {
 		return nil, storekit.Page{}, err

@@ -134,7 +134,13 @@ type ComposerProps = Readonly<{
   channel?: boolean;
 }>;
 
-function mount(initial: SavedDraftFields) {
+// The words a caller opens the composer with, and the message a forward carries.
+type Opening = Readonly<{
+  forwarding?: string;
+  initialMessage?: Readonly<{ subject: string; body: string }>;
+}>;
+
+function mount(initial: SavedDraftFields, opening: Opening = {}) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -145,6 +151,8 @@ function mount(initial: SavedDraftFields) {
       useKeptComposer({
         where: {
           answering: undefined,
+          forwarding: opening.forwarding,
+          prefilled: opening.initialMessage !== undefined,
           entityType: "contact",
           entityId: entityId ?? "p-1",
           isChannelReply: channel === true,
@@ -153,6 +161,7 @@ function mount(initial: SavedDraftFields) {
         fields,
         replyTo: undefined,
         offeredRecipient: undefined,
+        initialMessage: opening.initialMessage,
         onRestore,
         onClose,
         sending: sending === true,
@@ -736,5 +745,72 @@ describe("a close pressed while a quiet save is out", () => {
     );
     expect(out.written).toHaveLength(2);
     expect(view.onClose).not.toHaveBeenCalled();
+  });
+});
+
+describe("a forward", () => {
+  const QUOTE = {
+    subject: "Fwd: Pricing",
+    body: "---------- Forwarded ----------",
+  };
+  const opened: SavedDraftFields = {
+    ...EMPTY,
+    subject: QUOTE.subject,
+    body: QUOTE.body,
+    html: `<p>${QUOTE.body}</p>`,
+  };
+
+  it("saves nothing while it holds only the message it carries", async () => {
+    const written = stubDrafts(null, [savedAs]);
+    mount(opened, { forwarding: "act-9", initialMessage: QUOTE });
+    await pass(PAUSE_MS);
+
+    expect(written).toHaveLength(0);
+  });
+
+  it("keeps its draft on the message it carries, apart from the record's", async () => {
+    const written = stubDrafts(null, [savedAs]);
+    const view = mount(opened, { forwarding: "act-9", initialMessage: QUOTE });
+    await pass(0);
+    view.rerender({
+      fields: {
+        ...opened,
+        to: ["bob@example.test"],
+        body: `Bob, see below.\n${QUOTE.body}`,
+      },
+    });
+    await pass(PAUSE_MS);
+
+    expect(written).toHaveLength(1);
+    expect(written[0]).toMatchObject({
+      anchor_type: "forward",
+      anchor_id: "act-9",
+    });
+  });
+});
+
+describe("a composer a caller opened with its own words", () => {
+  it("reads no saved draft and writes none, so the record's draft stays", async () => {
+    const written = stubDrafts(HELD, [savedAs]);
+    const proposal = { subject: "Times to meet", body: "Pick a time" };
+    const view = mount(
+      { ...EMPTY, ...proposal, html: "<p>Pick a time</p>" },
+      { initialMessage: proposal },
+    );
+    await pass(0);
+    view.rerender({
+      fields: {
+        ...EMPTY,
+        subject: proposal.subject,
+        body: "Pick a time, Ada",
+        html: "<p>Pick a time, Ada</p>",
+      },
+    });
+    await pass(PAUSE_MS);
+
+    expect(vi.mocked(fetch)).not.toHaveBeenCalled();
+    expect(view.result.current.enabled).toBe(false);
+    expect(view.onRestore).not.toHaveBeenCalled();
+    expect(written).toHaveLength(0);
   });
 });

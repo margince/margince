@@ -25,6 +25,8 @@ import type { Transport } from "../../lib/contacttransports";
 import { ENTITY } from "../../lib/entity";
 import { routeHash } from "../../lib/router";
 import { readAddressList } from "./composeaddresslist";
+import type { RecipientCountries } from "./composecountries";
+import { RecipientCountryControl } from "./composecountry";
 import "./composehead.css";
 
 type Contact = components["schemas"]["Contact"];
@@ -206,6 +208,8 @@ export function AddressBlock({
   needTo,
   deadRecipients,
   disabled,
+  marked,
+  countries,
 }: Readonly<{
   to: string[];
   onToChange: (next: string[]) => void;
@@ -226,9 +230,22 @@ export function AddressBlock({
   /** The recipients on this draft that are known not to arrive. */
   deadRecipients: readonly string[];
   disabled?: boolean;
+  /** Recipients a refused Send named, marked on their chips. */
+  marked?: Readonly<{ values: ReadonlySet<string>; label: string }>;
+  /** The countries stated for this message, offered on each chip. */
+  countries?: RecipientCountries;
 }>) {
   const t = useT();
   const plural = usePlural();
+  const aside = countries
+    ? (address: string) => (
+        <RecipientCountryControl
+          address={address}
+          countries={countries}
+          disabled={disabled}
+        />
+      )
+    : undefined;
   const parse = (line: AddressLine): TokenParse => ({
     keys: ADDRESS_KEYS,
     read: readAddressList,
@@ -266,6 +283,8 @@ export function AddressBlock({
             suggestions={suggestions}
             onEditing={onToEditing}
             disabled={disabled}
+            marked={marked}
+            aside={aside}
             placeholder={t("compose.recipientHint")}
           />
         )}
@@ -285,6 +304,8 @@ export function AddressBlock({
                 parse={parse("cc")}
                 suggestions={suggestions}
                 disabled={disabled}
+                marked={marked}
+                aside={aside}
               />
             )}
           </Field>
@@ -301,6 +322,8 @@ export function AddressBlock({
                 parse={parse("bcc")}
                 suggestions={suggestions}
                 disabled={disabled}
+                marked={marked}
+                aside={aside}
               />
             )}
           </Field>

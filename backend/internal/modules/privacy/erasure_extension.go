@@ -69,7 +69,7 @@ func exportExtensionRows(
 	for _, a := range activities {
 		raw, ok := a["id"].(string)
 		if !ok {
-			return nil, fmt.Errorf("privacy: an exported activity carries an id of type %T, want the text readableValue renders", a["id"])
+			return nil, fmt.Errorf("privacy: an exported activity carries an id of type %T, want the text rowvalue.Document renders", a["id"])
 		}
 		id, err := ids.Parse(raw)
 		if err != nil {

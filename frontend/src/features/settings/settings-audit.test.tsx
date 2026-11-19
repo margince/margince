@@ -7,7 +7,7 @@ import { SEARCH_DEBOUNCE_MS } from "../../components/listquery";
 import { pickOption } from "../../design-system/select-testing";
 import { en } from "../../i18n/en";
 import { auditHistoryHref } from "../../lib/auditloglink";
-import { meFixture } from "../../testing/mefixture";
+import { meFixture, READS_RECORDS } from "../../testing/mefixture";
 import {
   auditEntry,
   jsonResponse,
@@ -64,7 +64,10 @@ function auditLogBackend(...pages: Page[]) {
     const url = String(input instanceof Request ? input.url : input);
     if (url.endsWith("/v1/me")) {
       return jsonResponse(
-        meFixture({ roles: ["admin"], allow: { audit_log: ["read"] } }),
+        meFixture({
+          roles: ["admin"],
+          allow: { ...READS_RECORDS, audit_log: ["read"] },
+        }),
       );
     }
     if (url.includes("/audit-log")) {
@@ -194,7 +197,10 @@ describe("AuditLogCard", () => {
         const url = String(input instanceof Request ? input.url : input);
         if (url.endsWith("/v1/me")) {
           return jsonResponse(
-            meFixture({ roles: ["admin"], allow: { audit_log: ["read"] } }),
+            meFixture({
+              roles: ["admin"],
+              allow: { ...READS_RECORDS, audit_log: ["read"] },
+            }),
           );
         }
         return jsonResponse({ title: "Upstream is down" }, 500);

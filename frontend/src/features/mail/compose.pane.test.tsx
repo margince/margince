@@ -7,7 +7,6 @@ import { writeMessage } from "../../design-system/richtext-testing";
 import { en } from "../../i18n/en";
 import { draftButton } from "../../testing/composedraft.testkit";
 import { steppedClock } from "../../testing/steppedclock";
-import { ComposeModal } from "./compose";
 import {
   type Activity,
   activity202,
@@ -21,6 +20,7 @@ import {
   WHY_ASK,
   WHY_LABEL,
 } from "./compose.testkit";
+import { ComposeWindow } from "./composewindow";
 
 beforeEach(installComposeClock);
 
@@ -47,7 +47,7 @@ describe("what the composer says this message is", () => {
   it("asks nothing on a reply, and says why not", async () => {
     stubRoutes({ "GET /activities/act-1": () => jsonResponse(inbound) });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -68,7 +68,7 @@ describe("what the composer says this message is", () => {
       "POST /activities/act-1/send-email": () => jsonResponse(activity202, 202),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -122,7 +122,7 @@ describe("what the composer says this message is", () => {
           <button type="button" onClick={() => setAnchored(true)}>
             anchor it
           </button>
-          <ComposeModal
+          <ComposeWindow
             activityId={anchored ? "act-1" : undefined}
             entityType="contact"
             entityId="p-1"
@@ -161,7 +161,7 @@ describe("what the composer says this message is", () => {
       "POST /emails": () => jsonResponse(activity202, 202),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="contact"
         entityId="p-1"
         open
@@ -196,7 +196,7 @@ describe("what the composer says this message is", () => {
       },
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="contact"
         entityId="p-1"
         open
@@ -257,7 +257,7 @@ describe("the composer's conversation pane", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="company"
         entityId="o-1"
@@ -301,7 +301,7 @@ describe("the composer's conversation pane", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="company"
         entityId="o-1"
@@ -347,7 +347,7 @@ describe("the composer's conversation pane", () => {
     };
     stubRoutes({ "GET /activities/act-1": () => jsonResponse(colleague) });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="company"
         entityId="o-1"
@@ -372,7 +372,7 @@ describe("the composer's conversation pane", () => {
         jsonResponse({ data: [threaded, sibling], page: { has_more: false } }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="company"
         entityId="o-1"
@@ -408,7 +408,7 @@ describe("the composer's conversation pane", () => {
         jsonResponse({ data: [threaded, withheld], page: { has_more: false } }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="company"
         entityId="o-1"
@@ -445,7 +445,7 @@ describe("the composer's conversation pane", () => {
       "GET /activities/act-1": () => jsonResponse(threaded),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="o-1"
         open
@@ -482,7 +482,7 @@ describe("the composer's conversation pane", () => {
       "GET /activities/act-1": () => jsonResponse(note),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="company"
         entityId="o-1"
@@ -513,7 +513,7 @@ describe("the composer's conversation pane", () => {
       "GET /activities/act-1": () => jsonResponse(loose),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="company"
         entityId="o-1"
@@ -564,7 +564,7 @@ describe("the composer's conversation pane", () => {
       },
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="o-1"
         open
@@ -622,7 +622,7 @@ it.each([false, true])(
         jsonResponse({ id: "d-1", name: "Open negotiation", status: "open" }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="contact"
         entityId="p-1"
         initialDealId="d-1"

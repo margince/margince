@@ -33,7 +33,7 @@ var projectKeyShapeMirrors = []string{
 	"internal/shared/kernel/projectkey/projectkey.go",
 	"api/crm.yaml",
 	"internal/compose/agentbundle/agentcontract_gen.yaml",
-	"../frontend/src/features/projects/projectrecord.ts",
+	"../frontend/src/features/mail/subjecttag.ts",
 	"../docs/reference/entity-model/projects.md",
 }
 

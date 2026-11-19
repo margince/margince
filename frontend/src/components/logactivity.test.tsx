@@ -541,7 +541,7 @@ describe("log activity from a 360", () => {
     await user.click(today);
     expect(dayBox("Date").value).toBe("23/10/2026");
   });
-  it("refuses a future day for a note but not for a task's due date", async () => {
+  it("refuses a future day for a note and a due date past the window", async () => {
     const captured: Captured[] = [];
     stubApi({ "POST /activities": createdActivity }, captured);
     render(<LogActivity entityType="company" entityId="o1" />);
@@ -556,10 +556,14 @@ describe("log activity from a 360", () => {
     expect(captured.some((entry) => entry.key === "POST /activities")).toBe(
       false,
     );
-    // A due date has no ceiling — tasks are usually for the future.
+    // A due date may lie ahead, up to the window's ten years; 2199 is a typo.
     await pickOption(user, screen.getByLabelText("Type"), "Task");
     const dueDay = dayBox("Due date");
     await typeDay(user, dueDay, "2199-01-01");
+    await user.tab();
+    expect(dueDay.getAttribute("aria-invalid")).toBe("true");
+    const nextYear = `${new Date().getFullYear() + 1}-06-15`;
+    await typeDay(user, dueDay, nextYear);
     await user.tab();
     expect(dueDay.getAttribute("aria-invalid")).not.toBe("true");
   });

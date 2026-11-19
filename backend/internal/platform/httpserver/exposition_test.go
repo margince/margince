@@ -92,7 +92,7 @@ func TestReadyzStopsWritingWhenItsReaderHangsUp(t *testing.T) {
 	w := &hangUp{ResponseWriter: httptest.NewRecorder(), accepts: 1}
 	resolved := false
 
-	Readyz("declared", func(context.Context) string { resolved = true; return "ready" })(
+	Readyz(func() string { return "declared" }, func(context.Context) string { resolved = true; return "ready" })(
 		w, httptest.NewRequest(http.MethodGet, "/readyz", nil))
 
 	if resolved {

@@ -91,14 +91,19 @@ func (s *Sink) adoptInSavepointTx(ctx context.Context, tx pgx.Tx, seat ids.UUID,
 	return sp.Commit(ctx)
 }
 
-// connectionAccountSinceTx answers when the seat's live connection was bound
-// to the account it holds now (nil: never rebound), and whether one is live.
+// connectionAccountSinceTx answers when the live connection the echo came
+// through was bound to its current account, nil when never rebound. It also
+// answers whether that connection is live.
 func connectionAccountSinceTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, provider string) (*time.Time, bool, error) {
+	connection, ok, err := seatMailboxTx(ctx, tx, seat, provider)
+	if err != nil || !ok {
+		return nil, false, err
+	}
 	var since *time.Time
-	err := tx.QueryRow(ctx, `
+	err = tx.QueryRow(ctx, `
 		SELECT account_bound_at FROM capture_connection
-		 WHERE user_id = $1 AND provider = $2 AND archived_at IS NULL AND status IN ('connected','error')`,
-		seat, provider).Scan(&since)
+		 WHERE id = $1 AND user_id = $2 AND archived_at IS NULL AND status IN ('connected','error')`,
+		connection, seat).Scan(&since)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, false, nil
 	}
@@ -112,16 +117,19 @@ func connectionAccountSinceTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, pro
 // message, found by the provider's message id under the connection that
 // delivered it. comms reads it through compose when a read-back failed. The
 // connection must have held its current account when the message was sent.
-func EchoIdentityTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, provider, providerMessageID string, sentAt time.Time) (string, bool, error) {
+// connection is the mailbox the message went out from, nil for a send staged
+// before deliveries named one.
+func EchoIdentityTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, provider string, connection *ids.UUID, providerMessageID string, sentAt time.Time) (string, bool, error) {
 	var stamped string
 	err := tx.QueryRow(ctx, `
 		SELECT a.source_id FROM capture_import ci JOIN activity a ON a.id = ci.activity_id
-		 WHERE ci.user_id = $1 AND ci.provider_message_ids && `+storekit.ProviderMessageKeysSQL("$1", "$2", "$3")+`
+		 WHERE ci.user_id = $1 AND ci.provider_message_ids && `+storekit.ProviderMessageKeysSQL("$1", "$2", "$6", "$3")+`
 		   AND a.source_system = $4 AND a.direction = 'outbound' AND a.archived_at IS NULL
 		   AND EXISTS (SELECT 1 FROM capture_connection c WHERE c.user_id = $1 AND c.provider = $2
+		               AND ($6::uuid IS NULL OR c.id = $6::uuid)
 		               AND c.archived_at IS NULL AND (c.account_bound_at IS NULL OR c.account_bound_at <= $5))
 		 ORDER BY a.created_at, a.id LIMIT 1`,
-		seat, provider, providerMessageID, connector.EmailSourceSystem, sentAt).Scan(&stamped)
+		seat, provider, providerMessageID, connector.EmailSourceSystem, sentAt, connection).Scan(&stamped)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return "", false, nil
 	}

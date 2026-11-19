@@ -226,6 +226,9 @@ type Task struct {
 	ReadOnly bool
 	// ReminderDue says the reader is the assignee and the reminder came due.
 	ReminderDue bool
+	// later says the later window read this task. Undated there, it is agreed
+	// work nobody dated, which waits after the dated upcoming work.
+	later bool
 }
 
 // Receipts is what the system did on its own, most recent first.

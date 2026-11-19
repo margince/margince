@@ -79,9 +79,9 @@ func TestAKeptMoneyMeasureStatesItsUnitAndCurrency(t *testing.T) {
 		row     map[string]any
 		want    [3]string
 	}{
-		"a native amount in its row's currency":    {native, sum(fieldAmountMinor), map[string]any{fieldCurrency: "USD"}, [3]string{"minor_units", "USD", "ok"}},
+		"a native amount in its row's currency":    {native, sum(fieldAmountMinor), map[string]any{fieldCurrency: "USD"}, [3]string{"money", "USD", "ok"}},
 		"a native amount over several currencies":  {native, sum(fieldAmountMinor), map[string]any{}, [3]string{"", "", "mixed_currency"}},
-		"a converted amount in the base currency":  {native, sum(fieldAmountBaseMinor), map[string]any{}, [3]string{"minor_units", "EUR", "ok"}},
+		"a converted amount in the base currency":  {native, sum(fieldAmountBaseMinor), map[string]any{}, [3]string{"money", "EUR", "ok"}},
 		"a converted amount with no base currency": {noBase, sum(fieldAmountBaseMinor), map[string]any{}, [3]string{"", "", "no_base_currency"}},
 		"a count of a money field":                 {native, analyticsquery.Measure{Fn: analyticsquery.CountAll, Field: fieldAmountMinor}, map[string]any{}, [3]string{"", "", "ok"}},
 	} {

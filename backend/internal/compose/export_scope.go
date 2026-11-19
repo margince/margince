@@ -172,7 +172,7 @@ func polymorphicVisibleWith(ctx context.Context, typeCol, idCol, activityArm str
 			match, e.table, idCol, predicate("ep"),
 		))
 	}
-	parts = append(parts, activityArm)
+	parts = append(parts, activityArm, auth.CompanySidecarRowsOf(typeCol, idCol, auth.VisiblePredicate(actor, "company", arg)))
 	return "(" + strings.Join(parts, " OR ") + ")", nil
 }
 

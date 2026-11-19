@@ -32,8 +32,8 @@ type closeFacts struct {
 	refusalAt     *time.Time
 	// refusal is the newest message judged a refusal; zero when none was.
 	refusal ids.UUID
-	// replyOwed is a customer request on the deal still waiting for our
-	// answer, as the deal card's "Team reply owed" reads it.
+	// replyOwed is a current customer request on the deal that nobody has
+	// settled, whether or not we replied on its thread.
 	replyOwed bool
 	// waitUntil is the day the customer asked us to wait until; meetingAhead
 	// is a meeting still to come that a customer guest accepted.
@@ -130,9 +130,9 @@ func closeFactsRead(ctx context.Context, tx pgx.Tx, now time.Time, dealIDs []str
 	return out, rows.Err()
 }
 
-// repliesOwed reports, per deal, whether a customer request is still owed our
-// answer. It is the read behind the deal card's "Team reply owed", over mail
-// of every audience: the close reads only that a request is open.
+// repliesOwed reports, per deal, whether a customer request is still open. It
+// reads the deal card's current requests over mail of every audience: the
+// close reads only that a request is open.
 //
 // It reads as the sweep, not as the caller. The re-check under the row lock
 // runs as the owner's agent, which cannot list a colleague's private thread.

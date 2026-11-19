@@ -61,6 +61,7 @@ func (s *Service) cardAndTimeline(
 	if verdict.serve {
 		card := verdict.card
 		card.MailCoverage = f.mailCoverage
+		card.OurReply = ourReplyOnCard(f)
 		if current, ok := unansweredInbound(f); ok {
 			card.RequestBasis = requestBasis(f, current, basisCurrentRequest)
 		}

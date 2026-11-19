@@ -116,7 +116,7 @@ func TestMergeRecordsLeavesTheSameOnEitherDoor(t *testing.T) {
 			Archived     bool   `json:"archived"`
 			MergedIntoID string `json:"merged_into_id"`
 		}
-		if err := json.Unmarshal(d.restStatus(t, "GET", "/v1/contacts/"+pair[0]+"?include_archived=true", nil, http.StatusOK), &read); err != nil {
+		if err := json.Unmarshal(d.restStatus(t, "GET", "/v1/contacts/"+pair[0], nil, http.StatusOK), &read); err != nil {
 			t.Fatal(err)
 		}
 		if read.MergedIntoID != pair[1] {

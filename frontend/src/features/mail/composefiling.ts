@@ -17,15 +17,11 @@ import { useHealthScope } from "../../lib/healthscope";
 import { unwrap } from "../../lib/problem";
 import { useCompany360 } from "../companies/company360";
 import { useContact360 } from "../contacts/contact360";
-import {
-  stripSubjectTag,
-  subjectTag,
-  useProjectRecord,
-  withSubjectTag,
-} from "../projects/projectrecord";
+import { useProjectRecord } from "../projects/projectrecord";
 import { recipientSuggestions } from "./composehead";
 import { deadRecipientsAmong } from "./composereachability";
 import type { RelinkKind } from "./composerelink";
+import { stripSubjectTag, subjectTag, withSubjectTag } from "./subjecttag";
 
 // A project record as the one row its own picker offers. `liveProjects` still
 // filters it, so a closed project gets no picker. Nothing is offered while the

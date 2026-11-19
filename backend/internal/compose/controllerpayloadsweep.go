@@ -238,21 +238,10 @@ func (w *controllerPayloadSweepWorker) retire(ctx context.Context, id ids.UUID) 
 	return w.store.ClearPayloadRef(ctx, id)
 }
 
-// addControllerPayloadSweepJob registers the pass and its cadence.
-//
-// Gated on exactly what jobs.yaml declares — SendRegistry and SendDelivery,
-// what the controller lane itself needs — and NOT additionally on the vault.
-// The declaration is the contract the job census reads, and a guard demanding
-// more than it says makes this kind declared-but-unregistered: the census fails,
-// and a role that ticked its dispatcher would queue rows nothing can claim.
-//
-// A missing vault is handled where it can be said honestly, in the worker: the
-// pass reads first and then reports the count it cannot destroy, rather than
-// returning early and reporting nothing.
+// addControllerPayloadSweepJob registers the pass and its cadence on every
+// worker. No half of it calls the send lane, and the missed-receipt half must
+// run where no mail can go out. A missing vault is reported by the worker.
 func addControllerPayloadSweepJob(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig, log *slog.Logger) []*river.PeriodicJob {
-	if cfg.SendRegistry == nil || cfg.SendDelivery == nil {
-		return nil
-	}
 	db := InstallationDB(pool)
 	worker := newControllerPayloadSweepWorker(
 		identity.NewService(pool),

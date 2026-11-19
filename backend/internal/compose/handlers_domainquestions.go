@@ -177,7 +177,7 @@ func (h domainQuestionHandlers) DiscardDomainQuestion(w http.ResponseWriter, r *
 	}
 	// Idempotent on the folded value: pressing discard twice answers the rule
 	// that already exists rather than failing on the unique index.
-	rule, err := h.exclusions.Add(r.Context(), capture.ExclusionScopeUser, capture.ExclusionKindDomain, base)
+	rule, err := h.exclusions.Add(r.Context(), capture.ExclusionScopeUser, capture.ExclusionKindDomain, base, ids.Nil)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

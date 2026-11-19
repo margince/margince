@@ -133,22 +133,58 @@ func TestAGenericCursorMissingHalfItsTupleIsRefused(t *testing.T) {
 		if err != nil {
 			t.Fatalf("minting %s: %v", name, err)
 		}
-		if _, err := storekit.DecodeCursor(token); !errors.As(err, new(*storekit.MalformedCursorError)) {
+		if _, err := storekit.DecodeCursor("list", token); !errors.As(err, new(*storekit.MalformedCursorError)) {
 			t.Errorf("DecodeCursor(<%s>) = %v, want MalformedCursorError — a zero position reads as the "+
 				"top of the list and pages it from the start", name, err)
 		}
 	}
 	// And the whole tuple still round-trips.
-	whole := storekit.Cursor{CreatedAt: at, ID: ids.NewV7()}
+	whole := storekit.Cursor{Scope: "list", CreatedAt: at, ID: ids.NewV7()}
 	token, err := storekit.EncodeOpaque(whole)
 	if err != nil {
 		t.Fatalf("minting a whole position: %v", err)
 	}
-	got, err := storekit.DecodeCursor(token)
+	got, err := storekit.DecodeCursor("list", token)
 	if err != nil {
 		t.Fatalf("DecodeCursor(<a whole position>): %v", err)
 	}
 	if !got.CreatedAt.Equal(whole.CreatedAt) || got.ID != whole.ID {
 		t.Errorf("round trip = %+v, want %+v", got, whole)
+	}
+}
+
+func TestACursorFromAnotherListIsRefusedAsASortMismatch(t *testing.T) {
+	at := time.Date(2026, 8, 25, 9, 0, 0, 0, time.UTC)
+	token, err := storekit.EncodeCursor("contacts", at, ids.NewV7())
+	if err != nil {
+		t.Fatalf("minting: %v", err)
+	}
+	if _, err := storekit.DecodeCursor("contacts", token); err != nil {
+		t.Fatalf("the list that minted the token refused it: %v", err)
+	}
+	if _, err := storekit.DecodeCursor("deals", token); !errors.As(err, new(*storekit.CursorSortMismatchError)) {
+		t.Errorf("a contacts token read by deals = %v, want CursorSortMismatchError", err)
+	}
+	unscoped, err := storekit.EncodeOpaque(storekit.Cursor{CreatedAt: at, ID: ids.NewV7()})
+	if err != nil {
+		t.Fatalf("minting an unscoped token: %v", err)
+	}
+	if _, err := storekit.DecodeCursor("contacts", unscoped); !errors.As(err, new(*storekit.CursorSortMismatchError)) {
+		t.Errorf("an unscoped token = %v, want CursorSortMismatchError", err)
+	}
+}
+
+func TestASortedCursorFromAnotherListIsRefused(t *testing.T) {
+	var sorted *storekit.ListSort
+	token, err := sorted.EncodePageCursor("contacts", nil, time.Date(2026, 8, 25, 9, 0, 0, 0, time.UTC), ids.NewV7())
+	if err != nil {
+		t.Fatalf("minting: %v", err)
+	}
+	arg := func(any) int { return 1 }
+	if _, err := sorted.KeysetClause("contacts", token, arg); err != nil {
+		t.Fatalf("the list that minted the token refused it: %v", err)
+	}
+	if _, err := sorted.KeysetClause("deals", token, arg); !errors.As(err, new(*storekit.CursorSortMismatchError)) {
+		t.Errorf("a contacts token read by deals = %v, want CursorSortMismatchError", err)
 	}
 }

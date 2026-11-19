@@ -29,6 +29,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/contactbrief"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -46,6 +48,9 @@ type ExcerptIn struct {
 	Direction  string
 	At         time.Time
 	Text       string
+	// Speaker is who wrote the message, from the activities module's author
+	// projection. Nil when the record names no author.
+	Speaker *contactbrief.Speaker
 }
 
 const excerptQuery = `
@@ -109,6 +114,18 @@ func (s *Service) readExcerpts(
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("read the conversation excerpts: %w", err)
+	}
+	rows.Close()
+	voices, err := activities.VoicesByIDBatch(ctx, tx, parsed, s.now().UTC())
+	if err != nil {
+		return nil, err
+	}
+	for i := range excerpts {
+		id, err := ids.Parse(excerpts[i].ActivityID)
+		if err != nil {
+			return nil, fmt.Errorf("excerpt id %q: %w", excerpts[i].ActivityID, err)
+		}
+		excerpts[i].Speaker = contactbrief.SpeakerFor(voices[id])
 	}
 	return excerpts, nil
 }

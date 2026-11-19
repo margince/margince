@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render } from "@testing-library/react";
 import { App } from "../App";
 import { LocaleProvider } from "../i18n";
+import { meFixture, READS_RECORDS } from "./mefixture";
 
 // The fixtures every App-level suite needs, in one place.
 //
@@ -57,10 +58,18 @@ export function sessionOnlyFetch() {
   return async (input: Request | string | URL) => {
     const url = String(input instanceof Request ? input.url : input);
     if (url.endsWith("/v1/me")) {
-      return new Response(JSON.stringify({ user: {}, roles: [], teams: [] }), {
-        status: 200,
-        headers: { "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({
+          user: {},
+          roles: [],
+          teams: [],
+          authorization: meFixture({ allow: READS_RECORDS }).authorization,
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      );
     }
     return new Response(JSON.stringify({ code: "service_unavailable" }), {
       status: 503,

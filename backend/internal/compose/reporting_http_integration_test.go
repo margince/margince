@@ -120,7 +120,7 @@ func TestReportingHTTPRevisionsSchedulesAndFrozenHistory(t *testing.T) {
 		t.Fatalf("frozen contribution count: %d", len(evidence.Rows))
 	}
 	export := reportingRequest(f.human, t, handler, http.MethodGet, editionPath+"/export.csv", nil, -1, http.StatusOK)
-	if !strings.Contains(export.Body.String(), "21600000") {
+	if !strings.Contains(export.Body.String(), "216000.00") {
 		t.Fatal("export lost frozen bookings")
 	}
 	reportingRequest(f.human, t, handler, http.MethodDelete, path, nil, -1, http.StatusOK)

@@ -58,7 +58,7 @@ func scopedTaskClause(alias string, asOf time.Time, identities string, arg func(
 	// this clause, and Postgres keeps a plan of every copy per connection.
 	unanswered := `NOT EXISTS (SELECT 1 FROM activity answered_source WHERE answered_source.id = ` + provenance.TaskSourceActivitySQL(alias) + `
  AND ` + InboundReplySQL("answered_source") + ` AND ` + AnsweredSQL("answered_source", instant) + `)`
-	return fmt.Sprintf(`(`+humanOrImportedTaskSQL(alias)+` OR `+HumanWroteActivityClause(alias)+`
+	return fmt.Sprintf(`(`+HumanOrImportedTaskSQL(alias)+` OR `+HumanWroteActivityClause(alias)+`
  OR (`+pinner+`, %[1]s.id::text) IN (SELECT reader_id, row_id FROM `+auth.EffectiveWorklistPinsSQL(arg)+` adopted WHERE adopted.source='task')
  OR %[1]s.source_system = ANY($%[4]d)
  OR (%[1]s.source_system = $%[2]d AND `+source+`)
@@ -68,14 +68,14 @@ func scopedTaskClause(alias string, asOf time.Time, identities string, arg func(
 		arg(taskSourcesOf(currentByItsWriter)), arg(taskSourcesOf(currentBySourceMail)), arg(taskSourcesOf(currentByLeadEngagement)))
 }
 
-// humanOrImportedTaskSQL names the tasks that stay current by their own
+// HumanOrImportedTaskSQL names the tasks that stay current by their own
 // lifecycle with no automatic family. One has no source_system: a human or an
 // agent created it by hand. One is in an importer's reserved namespace. The
 // last is a task an extension unit filed for a named colleague. The capture
 // door refuses an assignee who cannot hold work, so it is already addressed.
 // Any other source_system waits for its family in taskSourceFamilies, or for a
 // human to write or adopt the task.
-func humanOrImportedTaskSQL(alias string) string {
+func HumanOrImportedTaskSQL(alias string) string {
 	return fmt.Sprintf(`(coalesce(%[1]s.source_system, '') = ''
  OR starts_with(%[1]s.source_system, '%[2]s') OR starts_with(%[1]s.source_system, '%[3]s'))`,
 		alias, provenance.ReservedSourceSystemPrefix, connector.ExtensionSourceSystemPrefix)
@@ -101,9 +101,11 @@ const (
 //
 // Held by: TestEveryAutomaticTaskWriterAndOpenTaskReaderIsDeclared (backend/gates/automatictaskwriters_test.go)
 type taskSourcePolicy struct {
-	currency      taskCurrency
-	undated       bool
-	generatedDate bool
+	currency taskCurrency
+	// undated: its task may carry no date and is owed now, so Today holds it.
+	// dated: its writer always sets a due date. Every source states one.
+	undated, dated bool
+	generatedDate  bool
 	// taskType is the work the source's tasks ask for, read by a task that
 	// was not typed when it was made (TaskTypeSQL).
 	taskType crmcontracts.TaskType
@@ -115,14 +117,14 @@ var taskSourceFamilies = map[string]taskSourcePolicy{
 	provenance.AcceptedRecommendationSource: {currency: currentByItsWriter, undated: true},
 	provenance.CommitmentTaskSource:         {currency: currentByCommitment, undated: true, taskType: crmcontracts.TaskTypeReachOut},
 	provenance.EmailRequestSource:           {currency: currentByRequest, undated: true, taskType: crmcontracts.TaskTypeReply},
-	provenance.NoActivityReminderSource:     {currency: currentByItsWriter, taskType: crmcontracts.TaskTypeReachOut},
-	provenance.WebsiteInquirySource:         {currency: currentByItsWriter},
-	provenance.CheckInCadenceSource:         {currency: currentByItsWriter, taskType: crmcontracts.TaskTypeReachOut},
-	provenance.LeadSLATaskSource:            {currency: currentByItsWriter, taskType: crmcontracts.TaskTypeReachOut},
+	provenance.NoActivityReminderSource:     {currency: currentByItsWriter, dated: true, taskType: crmcontracts.TaskTypeReachOut},
+	provenance.WebsiteInquirySource:         {currency: currentByItsWriter, dated: true},
+	provenance.CheckInCadenceSource:         {currency: currentByItsWriter, dated: true, taskType: crmcontracts.TaskTypeReachOut},
+	provenance.LeadSLATaskSource:            {currency: currentByItsWriter, dated: true, taskType: crmcontracts.TaskTypeReachOut},
 	provenance.LeadQualifyTaskSource:        {currency: currentByItsWriter, taskType: crmcontracts.TaskTypeReview},
-	provenance.AssuranceTaskSource:          {currency: currentByItsWriter, taskType: crmcontracts.TaskTypeReview},
-	provenance.AnalyticsDecisionSource:      {currency: currentByItsWriter, taskType: crmcontracts.TaskTypeReview},
-	provenance.OvernightReconcileSource:     {currency: currentByItsWriter, taskType: crmcontracts.TaskTypeReview},
+	provenance.AssuranceTaskSource:          {currency: currentByItsWriter, undated: true, taskType: crmcontracts.TaskTypeReview},
+	provenance.AnalyticsDecisionSource:      {currency: currentByItsWriter, dated: true, taskType: crmcontracts.TaskTypeReview},
+	provenance.OvernightReconcileSource:     {currency: currentByItsWriter, dated: true, taskType: crmcontracts.TaskTypeReview},
 	provenance.LeadRepliedSource: {
 		currency: currentByLeadEngagement, undated: true, generatedDate: true,
 		taskType: crmcontracts.TaskTypeReview,
@@ -132,8 +134,8 @@ var taskSourceFamilies = map[string]taskSourcePolicy{
 		currency: currentByItsWriter, undated: true, generatedDate: true,
 		taskType: crmcontracts.TaskTypeReview,
 	},
-	provenance.WhichDealSource:          {currency: currentBySourceMail, taskType: crmcontracts.TaskTypeDecide},
-	provenance.PrivacyRequestTaskSource: {currency: currentByItsWriter, taskType: crmcontracts.TaskTypeDo},
+	provenance.WhichDealSource:          {currency: currentBySourceMail, undated: true, taskType: crmcontracts.TaskTypeDecide},
+	provenance.PrivacyRequestTaskSource: {currency: currentByItsWriter, dated: true, taskType: crmcontracts.TaskTypeDo},
 }
 
 // TaskSourceFamilies lists native task sources for the census gate.

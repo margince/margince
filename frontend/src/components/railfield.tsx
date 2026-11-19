@@ -14,7 +14,7 @@ import {
   problemMessageOf,
 } from "../lib/problem";
 import type { Route } from "../lib/router";
-import type { CreateField } from "./create";
+import { type CreateField, inlineTextKind } from "./create";
 import { EditRecordModal } from "./edit";
 import { prefillFromRecord } from "./edit.prefill";
 import type { FieldRecord, RecordFieldSave } from "./recordfieldtypes";
@@ -158,13 +158,7 @@ function RailText({ edit, field, label, text, beside }: FieldProps) {
         display={text || dateDisplay(field, stored, locale)}
         placeholder={t("field.unset")}
         multiline={field.type === "textarea"}
-        type={
-          field.type === "number" ||
-          field.type === "date" ||
-          field.type === "email"
-            ? field.type
-            : "text"
-        }
+        type={inlineTextKind(field)}
         maxLength={field.maxLength}
         step={field.step ?? (field.type === "number" ? "any" : undefined)}
         {...write}

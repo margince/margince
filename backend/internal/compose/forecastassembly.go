@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/salesprogress"
 	"github.com/margince/margince/backend/internal/modules/assurance"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -64,4 +65,27 @@ func assembleForecast(
 		out.RiskSignalsVersion = assurance.RiskSignalsVersion
 	}
 	return out, nil
+}
+
+// progressForecast reads the month Progress states its scenarios from, by the
+// assembly, forward measure and call GET /forecast lands with.
+func progressForecast(store *forecasting.Store) salesprogress.ForecastReader {
+	return func(ctx context.Context, tx pgx.Tx, monthStart, asOf time.Time, scope forecasting.Scope) (salesprogress.Forecast, error) {
+		period, base, err := ForecastPeriodAt(ctx, tx, forecasting.PeriodMonth, monthStart)
+		if err != nil {
+			return salesprogress.Forecast{}, err
+		}
+		assembly, err := ForecastAssemble(ctx, tx, period, scope, asOf, base)
+		if err != nil {
+			return salesprogress.Forecast{}, err
+		}
+		measure, err := ForecastForwardMeasure(ctx, tx)
+		if err != nil {
+			return salesprogress.Forecast{}, err
+		}
+		_, seen, err := forecastCallRecord(ctx, tx, store, period, assembly.Scope, false)
+		return salesprogress.Forecast{
+			Readings: assembly.Readings, Measure: measure, Call: seen, Limited: assembly.Limited,
+		}, err
+	}
 }

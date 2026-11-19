@@ -108,6 +108,8 @@ func refusal(err error) error {
 		return HandlingUnavailable()
 	case errors.Is(err, ErrPaused):
 		return &httperr.DetailedError{Status: http.StatusGone, Code: "form_paused", Detail: "this form is not taking submissions right now"}
+	case errors.Is(err, errMalformedText):
+		return httperr.Validation("body", "malformed_json", err.Error())
 	case errors.Is(err, errUnreadable), errors.Is(err, errBodyTooLarge):
 		return httperr.Validation("body", "unreadable", err.Error())
 	}

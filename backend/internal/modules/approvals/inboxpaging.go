@@ -54,7 +54,7 @@ func startOf(token string) (*keysetStart, error) {
 // client paging on that loses every row it had not yet seen and is told
 // nothing, which is the one outcome a page token must never produce.
 func decodeStart(token string) (keysetStart, error) {
-	c, err := storekit.DecodeCursor(token)
+	c, err := storekit.DecodeCursor("approval_inbox", token)
 	if err != nil {
 		return keysetStart{}, err
 	}
@@ -106,5 +106,5 @@ func PositionAfter(a crmcontracts.Approval) (string, error) {
 }
 
 func resumeAfter(createdAt time.Time, id ids.UUID) (string, error) {
-	return storekit.EncodeCursor(createdAt, id)
+	return storekit.EncodeCursor("approval_inbox", createdAt, id)
 }

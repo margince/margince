@@ -383,34 +383,45 @@ func (s *Store) withdrawPurposesTx(
 	var changed []string
 	for _, key := range purposeKeys {
 		key = normalizedPurposeKey(key)
-		if LockedPurpose(key) {
-			return nil, &ValidationError{
-				Field:  fieldKeyPurpose,
-				Reason: "transactional consent is locked and cannot be withdrawn",
-			}
-		}
 		purposeID, err := purposeByKeyTx(ctx, tx, key)
 		if err != nil {
 			return nil, err
 		}
-		source := sourcePreferenceCenter
-		in := RecordInput{
-			ContactID: contactID,
-			PurposeID: purposeID,
-			NewState:  string(StateWithdrawn),
-			Source:    &source,
-		}
-		sub, state, err := admitRecord(ctx, in)
+		moved, err := s.withdrawPurposeTx(ctx, tx, contactID, purposeID, key)
 		if err != nil {
 			return nil, err
 		}
-		out, err := s.recordAdmittedTx(ctx, tx, in, sub, state)
-		if err != nil {
-			return nil, err
-		}
-		if out.Changed {
+		if moved {
 			changed = append(changed, key)
 		}
 	}
 	return changed, nil
+}
+
+// withdrawPurposeTx records one withdrawal and says whether it changed the state.
+func (s *Store) withdrawPurposeTx(
+	ctx context.Context, tx pgx.Tx, contactID ids.ContactID, purposeID ids.PurposeID, key string,
+) (bool, error) {
+	if LockedPurpose(key) {
+		return false, &ValidationError{
+			Field:  fieldKeyPurpose,
+			Reason: "transactional consent is locked and cannot be withdrawn",
+		}
+	}
+	source := sourcePreferenceCenter
+	in := RecordInput{
+		ContactID: contactID,
+		PurposeID: purposeID,
+		NewState:  string(StateWithdrawn),
+		Source:    &source,
+	}
+	sub, state, err := admitRecord(ctx, in)
+	if err != nil {
+		return false, err
+	}
+	out, err := s.recordAdmittedTx(ctx, tx, in, sub, state)
+	if err != nil {
+		return false, err
+	}
+	return out.Changed, nil
 }
