@@ -230,7 +230,7 @@ func conversationRows(ctx context.Context, tx pgx.Tx, requestID ids.UUID,
 		return nil, err
 	}
 	rows, err := tx.Query(ctx, `
-		SELECT activity.id, coalesce(activity.direction, ''), coalesce(activity.subject, ''),
+		SELECT activity.id, coalesce(`+activities.WriterSideSQL("activity")+`, ''), coalesce(activity.subject, ''),
 		       coalesce(left(activity.body, $1), ''), activity.occurred_at, NOT `+provenance.MailBodyCompleteSQL("activity")+`
 		  FROM activity
 		  JOIN activity request ON request.id = $2

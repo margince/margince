@@ -211,12 +211,8 @@ type ActIn struct {
 	At        time.Time
 	// DateOnly says At is a day entry's anchor (Input.MarshalJSON).
 	DateOnly bool `json:"-"`
-	// WroteOurSide and SideKnown are activities.WroteItOurSide for this row,
-	// which answers who wrote it where the voice names a side.
-	//
-	// Kept out of the prompt, which is told the direction. These are for the
-	// sentence Go writes, where the transport alone credits a colleague's
-	// inbound mail to the counterpart.
+	// WroteOurSide and SideKnown are activities.WroteItOurSide for this row, for
+	// the sentence Go writes; the prompt reads the same side as Direction.
 	WroteOurSide bool `json:"-"`
 	SideKnown    bool `json:"-"`
 	// Speaker says who wrote this row (contactbrief.SpeakerFor), because the
@@ -383,9 +379,7 @@ func WithCounterpart(in *Input, view crmcontracts.Contact360) {
 		if activity.Subject != nil {
 			folded.Subject = *activity.Subject
 		}
-		if activity.Direction != nil {
-			folded.Direction = string(*activity.Direction)
-		}
+		folded.Direction = activities.WriterSide(activity)
 		folded.WroteOurSide, folded.SideKnown = activities.WroteItOurSide(activity)
 		folded.Speaker = contactbrief.SpeakerFor(activity.Voice)
 		in.Recent = append(in.Recent, folded)

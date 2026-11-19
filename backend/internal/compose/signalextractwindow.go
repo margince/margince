@@ -125,7 +125,7 @@ func threadWindow(
 		SELECT id, coalesce(direction, ''), coalesce(subject, ''),
 		       coalesce(left(body, $1), ''),
 		       coalesce(substring(body FROM $1 + 1), ''), occurred_at, NOT complete
-		  FROM (SELECT id, direction, subject, body, occurred_at,
+		  FROM (SELECT id, `+activities.WriterSideSQL("activity")+` AS direction, subject, body, occurred_at,
 		               `+provenance.MailBodyCompleteSQL("activity")+` AS complete
 		          FROM activity
 		         WHERE thread_key = $2 AND kind = 'email' AND archived_at IS NULL
