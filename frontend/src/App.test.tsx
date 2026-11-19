@@ -642,6 +642,43 @@ describe("password-reset deep link", () => {
     expect(await screen.findByLabelText("New password")).toBeTruthy();
   });
 
+  it("keeps a signed-in browser in the app on a bare reset link", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: Request | string | URL) => {
+        const supporting = await supportingRoutes(input);
+        if (supporting) return supporting;
+        const url = String(input instanceof Request ? input.url : input);
+        if (url.endsWith("/v1/me")) {
+          return new Response(
+            JSON.stringify({ user: { id: "u1" }, roles: [], teams: [] }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          );
+        }
+        if (url.endsWith("/v1/company")) {
+          return new Response(
+            JSON.stringify({ company_id: "o1", display_name: "Acme" }),
+            { status: 200, headers: { "Content-Type": "application/json" } },
+          );
+        }
+        return new Response(JSON.stringify({ data: [], page: {} }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }),
+    );
+    window.location.hash = "#/reset-password";
+    mount();
+
+    expect(
+      await screen.findByRole("navigation", { name: "Primary navigation" }),
+    ).toBeTruthy();
+    await waitFor(() =>
+      expect(window.location.hash).not.toContain("reset-password"),
+    );
+    expect(screen.queryByLabelText("Email")).toBeNull();
+  });
+
   it("reaches the Brief on the sign-in that follows a completed reset", async () => {
     // No session at the start: the ordinary case for a password reset. Once
     // the login below succeeds, /v1/me flips to authenticated — proving the

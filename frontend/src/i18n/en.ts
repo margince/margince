@@ -13557,6 +13557,8 @@ export const en = {
   "auth.noticeSignedOut": "You have been signed out.",
   "auth.noticeSessionExpired":
     "The session expired. Sign in again to continue.",
+  "auth.noticeResetIncomplete":
+    "This set-password link is incomplete or was already opened. Ask for a new link.",
   "auth.noticeOidcFailed":
     "Sign-in with the provider did not complete. If you were invited, open the link in the invitation email to complete account setup.",
   "auth.connectionTitle": "Margince could not be reached",

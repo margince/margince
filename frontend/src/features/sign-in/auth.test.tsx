@@ -918,6 +918,15 @@ describe("AuthScreen reset deep link", () => {
     expect(screen.queryByLabelText("New password")).toBeNull();
   });
 
+  it("tells a signed-out reader that a reset address without its token is incomplete", async () => {
+    stubApi({ password: true, password_reset: false }, () => ok(204));
+    globalThis.location.hash = "#/reset-password";
+    render(<AuthScreen onAuthed={vi.fn()} />);
+
+    expect(await screen.findByLabelText("Email")).toBeTruthy();
+    expect(screen.getByText(t("auth.noticeResetIncomplete"))).toBeTruthy();
+  });
+
   it("ignores a token in the server-visible query string", async () => {
     // The security property, asserted directly rather than implied by the happy
     // path: a query string is sent to servers, lands in access logs, is attached

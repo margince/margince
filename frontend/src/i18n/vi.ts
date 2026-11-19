@@ -13245,6 +13245,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "auth.noticeSignedOut": "Đã đăng xuất.",
   "auth.noticeSessionExpired":
     "Phiên đăng nhập đã hết hạn. Đăng nhập lại để tiếp tục.",
+  "auth.noticeResetIncomplete":
+    "Liên kết đặt mật khẩu này không đầy đủ hoặc đã được mở. Hãy yêu cầu một liên kết mới.",
   "auth.noticeOidcFailed":
     "Đăng nhập qua nhà cung cấp không thành công. Nếu bạn được mời, mở liên kết trong email mời để hoàn tất thiết lập tài khoản.",
   "auth.connectionTitle": "Không thể kết nối tới Margince",

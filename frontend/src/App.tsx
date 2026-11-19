@@ -52,7 +52,7 @@ import { markJourney } from "./lib/journeymarks";
 import { useWarmProgressName } from "./lib/progressreader";
 import { SPA_RELEASE } from "./lib/release";
 import { routePattern } from "./lib/routepattern";
-import type { Screen } from "./lib/router";
+import { type Screen, takeHashCredential } from "./lib/router";
 import { AuthProbeError, consumeAuthExitNotice, useMe } from "./lib/session";
 import {
   readStored,
@@ -130,22 +130,35 @@ export function App() {
       </Shell>
     );
   }
-  // The emailed reset link is a bearer credential, not a session check: it
-  // must reach the reset form whether or not this browser already carries a
-  // live cookie, so it is routed here, ahead of AuthedApp's session gate,
-  // rather than left for AuthedApp to reach only when unauthenticated (where
-  // an existing session instead rendered the authenticated shell's fallback
-  // for an unrecognised route).
   if (route.screen === RESET_ROUTE) {
-    return (
-      <RaillessFrame>
-        <CompleteLocale>
-          <ResetRoute />
-        </CompleteLocale>
-      </RaillessFrame>
-    );
+    return <ResetEntry route={route} />;
   }
   return <AuthedApp route={route} />;
+}
+
+// The emailed reset link is a bearer credential, not a session check: one that
+// carries its token reaches the reset form ahead of AuthedApp's session gate,
+// whether or not this browser already has a live cookie. An address without a
+// token has nothing to redeem and goes through the gate like any other.
+//
+// Decided once per arrival, in state: the reset form forgets the token as it
+// takes it, and a later render must not drop the form the reader is typing in.
+function ResetEntry({
+  route,
+}: Readonly<{ route: ReturnType<typeof useRoute> }>) {
+  const [carriesToken] = useState(
+    () => takeHashCredential(RESET_ROUTE) !== null,
+  );
+  if (!carriesToken) {
+    return <AuthedApp route={route} />;
+  }
+  return (
+    <RaillessFrame>
+      <CompleteLocale>
+        <ResetRoute />
+      </CompleteLocale>
+    </RaillessFrame>
+  );
 }
 
 // UnavailableOrClaimable splits the 503 the boundary already reached into its

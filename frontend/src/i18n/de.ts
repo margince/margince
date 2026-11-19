@@ -13597,6 +13597,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "auth.noticeSignedOut": "Du wurdest abgemeldet.",
   "auth.noticeSessionExpired":
     "Sitzung abgelaufen. Melde dich erneut an, um fortzufahren.",
+  "auth.noticeResetIncomplete":
+    "Dieser Link zum Festlegen des Passworts ist unvollständig oder wurde schon geöffnet. Frage nach einem neuen Link.",
   "auth.noticeOidcFailed":
     "Die Anmeldung über den Anbieter wurde nicht abgeschlossen. Wenn du eingeladen wurdest, öffne den Link in der Einladungs-E-Mail, um die Einrichtung deines Nutzerkontos abzuschließen.",
   "auth.connectionTitle": "Margince war nicht erreichbar",
