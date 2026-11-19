@@ -74,6 +74,14 @@ function Dialog({
       dealsFail
         ? jsonResponse({ title: "Server error", status: 500 }, 500)
         : jsonResponse({ data: deals, page }),
+    "POST /attachments/links/preview": () =>
+      jsonResponse({
+        url: "https://acme.example/pricing",
+        host: "acme.example",
+        read: true,
+        title: "Pricing and plans",
+        site_name: "Acme",
+      }),
   });
   const anchor = onContact
     ? ({ record: "contact", id: "p-1" } as const)
@@ -135,5 +143,22 @@ export const DealSearchUnavailable: Story = {
   render: () => <Dialog dealsFail />,
   play: async ({ canvasElement }) => {
     await searchForADeal(canvasElement, "graz");
+  },
+};
+
+/** A link in place of a file: the address pasted, and the title the page
+ * gives filled in until the user types their own. */
+export const AddingALink: Story = {
+  render: () => <Dialog />,
+  play: async ({ canvasElement }) => {
+    const body = within(canvasElement.ownerDocument.body);
+    await userEvent.click(
+      await body.findByRole("button", { name: en["docs.add.sourceLink"] }),
+    );
+    await userEvent.type(
+      await body.findByRole("textbox", { name: en["docs.add.url"] }),
+      "https://acme.example/pricing",
+    );
+    await body.findByDisplayValue("Pricing and plans");
   },
 };

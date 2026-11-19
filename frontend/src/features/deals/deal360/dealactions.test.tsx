@@ -157,3 +157,53 @@ describe("the deal's record keys", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 });
+
+// The server marks an archived deal not writable, so the way back must not
+// wait on the write gate that the archive already closed.
+describe("an archived deal's way back", () => {
+  const archived: Partial<Deal> = {
+    archived_at: "2026-11-01T09:00:00Z",
+    writable: false,
+  };
+
+  async function openMore() {
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: en["record.moreActions"] }),
+    );
+    await screen.findByRole("button", { name: en["log.addTask"] });
+  }
+
+  it("offers Restore deal to a reader who may archive deals", async () => {
+    mount({ deal: ["read", "update", "delete"] }, archived);
+    await openMore();
+
+    expect(
+      await screen.findByRole("button", { name: en["deal.restore"] }),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: en["deal.archive"] }),
+    ).toBeNull();
+  });
+
+  it("offers no Restore deal to a reader who may not archive deals", async () => {
+    mount({ deal: ["read", "update"] }, archived);
+    await openMore();
+
+    expect(
+      screen.queryByRole("button", { name: en["deal.restore"] }),
+    ).toBeNull();
+  });
+
+  it("offers Archive deal, not Restore deal, on a live deal", async () => {
+    mount({ deal: ["read", "update", "delete"] }, { writable: true });
+    await openMore();
+
+    expect(
+      await screen.findByRole("button", { name: en["deal.archive"] }),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: en["deal.restore"] }),
+    ).toBeNull();
+  });
+});

@@ -341,7 +341,7 @@ it("says what to do when the file is over the upload limit", async () => {
     title: "Request Entity Too Large",
     status: 413,
     code: "body_too_large",
-    detail: "the upload exceeds the 5 MB limit",
+    detail: "The upload exceeds the 5 MB limit.",
   });
   mark(WITHOUT_MARK);
 

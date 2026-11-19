@@ -22,27 +22,27 @@ import { ExtensionEntries } from "../../../components/extensionentries";
 import { LogActivityAction } from "../../../components/logactivity.action";
 import { searchCompanyContacts } from "../../../components/meetingattendees";
 import { Button, OverflowMenu } from "../../../design-system/atoms";
-import { ConfirmModal } from "../../../design-system/confirmmodal";
-import { ErrorLine } from "../../../design-system/errorline";
 import { VerbWord } from "../../../design-system/iconaction";
 import { ListPopover } from "../../../design-system/listpopover";
 import { useToast } from "../../../design-system/toast";
 import { useLocale, useT } from "../../../i18n";
-import { dealRecordKeys } from "../../../lib/activitykeys";
-import { useCanWriteRecord } from "../../../lib/capability";
+import { dealStageMoveKeys } from "../../../lib/activitykeys";
+import { useCanWrite, useCanWriteRecord } from "../../../lib/capability";
 import { unwrap } from "../../../lib/problem";
 import { navigate } from "../../../lib/router";
 import { useShortcut } from "../../../lib/shortcuts";
 import { RecordEmailVerb } from "../../records/recordemail";
 import { ShareAction } from "../../records/share";
-import { probabilitySetNote } from "../dealprobability";
+import { advanceNote } from "../dealprobability";
 import { archiveDeal } from "../deals.write";
 import { CorrectCloseDayAction } from "./correctcloseday";
+import { RestoreDealAction } from "./dealrestore";
 import { useDealCoverage } from "./usedealcoverage";
 import { useDealRecipientAddress } from "./usedealrecipient";
 import "./deal360.css";
 import { AddToShortlistAction } from "../../../components/addtoshortlist";
 import { RequestLegalReviewAction } from "./deallegaltab";
+import { ReopenModal } from "./reopenmodal";
 
 type Deal = components["schemas"]["Deal"];
 type Stage = components["schemas"]["Stage"];
@@ -115,7 +115,6 @@ function ReopenAction({
   const toast = useToast();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [stageId, setStageId] = useState<string | null>(null);
   const reopen = useMutation({
     mutationKey: ["deal-edit", dealId],
     // Stage and version both ride the variables: a version read out of the
@@ -123,7 +122,7 @@ function ReopenAction({
     // reopen that pins the wrong version either fails for no reason the reader
     // can see or lands on a deal somebody else has since moved.
     mutationFn: async (input: {
-      toStageId: string;
+      toStage: Stage;
       version: number | undefined;
     }) => {
       return unwrap(
@@ -132,18 +131,22 @@ function ReopenAction({
             path: { id: dealId },
             ...ifMatch(requireVersion(input.version)),
           },
-          body: { to_stage_id: input.toStageId, status: "open" },
+          body: { to_stage_id: input.toStage.id, status: "open" },
         }),
         t,
       );
     },
-    onSuccess: (advanced) => {
+    onSuccess: (advanced, input) => {
       setOpen(false);
-      const note = probabilitySetNote(advanced, t, locale);
-      if (note) {
-        toast.show(note);
-      }
-      for (const queryKey of dealRecordKeys(dealId)) {
+      toast.show(
+        advanceNote(
+          advanced,
+          { toStage: input.toStage, reopens: true },
+          t,
+          locale,
+        ),
+      );
+      for (const queryKey of dealStageMoveKeys(dealId)) {
         queryClient.invalidateQueries({ queryKey });
       }
       queryClient.invalidateQueries({ queryKey: ["deals"] });
@@ -161,34 +164,39 @@ function ReopenAction({
       >
         {t("deal.reopen")}
       </Button>
-      <ConfirmModal
+      <ReopenModal
         open={open}
         onClose={() => setOpen(false)}
-        title={t("deal.reopenPick")}
-        confirmLabel={t("deal.reopenConfirm")}
-        confirmDisabled={!stageId}
+        openStages={openStages}
         pending={reopen.isPending}
-        onConfirm={() => {
-          if (stageId) {
-            reopen.mutate({ toStageId: stageId, version: dealVersion });
-          }
-        }}
-      >
-        <div className="d360-reopen-stages">
-          {openStages.map((s) => (
-            <Button
-              key={s.id}
-              aria-pressed={stageId === s.id}
-              data-testid={`reopen-stage-${s.id}`}
-              onClick={() => setStageId(s.id)}
-            >
-              {s.name}
-            </Button>
-          ))}
-        </div>
-        <ErrorLine error={reopen.error} />
-      </ConfirmModal>
+        error={reopen.error}
+        onConfirm={(toStage) =>
+          reopen.mutate({ toStage, version: dealVersion })
+        }
+      />
     </>
+  );
+}
+
+function DealArchiveAction({
+  deal,
+  refusedReasonId,
+}: Readonly<{ deal: Deal; refusedReasonId?: string }>) {
+  const t = useT();
+  return (
+    <ArchiveAction
+      requires={{ object: "deal", action: "delete" }}
+      archivable={deal.archivable ?? false}
+      refusedReason={t("deal.archiveRefused")}
+      disabledReasonId={refusedReasonId}
+      label={t("deal.archive")}
+      confirmText={t("deal.archiveConfirm")}
+      archivedMessage={t("record.archiveDone", { name: deal.name })}
+      archive={() => archiveDeal(deal)}
+      invalidate="deals"
+      recordKey="deal"
+      onArchived={(from) => from.closeOnto({ screen: "deals" })}
+    />
   );
 }
 
@@ -212,6 +220,9 @@ export function DealActions({
 }>) {
   const t = useT();
   const canWrite = useCanWriteRecord("deal", deal);
+  // The server marks an archived deal not writable, so the way back rests on
+  // the archive grant alone.
+  const canRestore = useCanWrite("deal", "delete");
   const refusedByArchive = deal.archived_at ? refusedReasonId : undefined;
   // The log/task drawer's own state: one drawer with two doors, the same
   // shape companyheaderactions.tsx and leads.tsx keep for the identical pair.
@@ -344,21 +355,10 @@ export function DealActions({
             />
           </>
         )}
-        {canWrite && (
-          <ArchiveAction
-            requires={{ object: "deal", action: "delete" }}
-            archivable={deal.archivable ?? false}
-            refusedReason={t("deal.archiveRefused")}
-            disabledReasonId={refusedReasonId}
-            label={t("deal.archive")}
-            confirmText={t("deal.archiveConfirm")}
-            archivedMessage={t("record.archiveDone", { name: deal.name })}
-            archive={() => archiveDeal(deal)}
-            invalidate="deals"
-            recordKey="deal"
-            onArchived={(from) => from.closeOnto({ screen: "deals" })}
-          />
+        {canWrite && !deal.archived_at && (
+          <DealArchiveAction deal={deal} refusedReasonId={refusedReasonId} />
         )}
+        {canRestore && deal.archived_at && <RestoreDealAction deal={deal} />}
       </OverflowMenu>
     </>
   );

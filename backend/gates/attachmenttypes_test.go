@@ -5,10 +5,11 @@
 
 package gates
 
-// The file picker offers the kinds of file the server keeps, no more and no fewer.
+// The file picker offers the kinds of file the server keeps, no more and no fewer,
+// by ending and by declared media type.
 //
-// An extension only the browser lists lets a reader pick a file the upload then
-// refuses; one only the server lists is a kind the picker hides. Both directions
+// An entry only the browser lists lets a reader pick a file the upload then
+// refuses. One only the server lists is a kind the picker hides. Both directions
 // fail here.
 
 import (
@@ -22,11 +23,8 @@ import (
 
 const frontendAttachmentUpload = "../frontend/src/lib/attachmentupload.ts"
 
-// tsAttachmentList is the array literal's body; tsExtension one quoted entry in it.
-var (
-	tsAttachmentList = regexp.MustCompile(`(?s)ACCEPTED_ATTACHMENT_EXTENSIONS\s*=\s*\[(.*?)\]`)
-	tsExtension      = regexp.MustCompile(`["']([^"']*)["']`)
-)
+// tsAttachmentEntry is one quoted entry of an attachment list.
+var tsAttachmentEntry = regexp.MustCompile(`["']([^"']*)["']`)
 
 func TestTheAttachmentPickerOffersTheKindsTheServerKeeps(t *testing.T) {
 	t.Parallel()
@@ -34,28 +32,37 @@ func TestTheAttachmentPickerOffersTheKindsTheServerKeeps(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading the frontend attachment list: %v", err)
 	}
-	list := tsAttachmentList.FindSubmatch(source)
-	if list == nil {
-		t.Fatalf("%s no longer declares ACCEPTED_ATTACHMENT_EXTENSIONS as an array literal — this gate is reading a shape that is gone", frontendAttachmentUpload)
+	for name, inGo := range map[string][]string{
+		"ACCEPTED_ATTACHMENT_EXTENSIONS":  activities.AcceptedAttachmentExtensions(),
+		"ACCEPTED_ATTACHMENT_MEDIA_TYPES": activities.AcceptedAttachmentMediaTypes(),
+	} {
+		inTS := tsArrayEntries(t, source, name)
+		for _, entry := range inGo {
+			if !slices.Contains(inTS, entry) {
+				t.Errorf("%s: %s is accepted by the server and missing from the picker, so a reader cannot choose a file the upload would keep", name, entry)
+			}
+		}
+		for _, entry := range inTS {
+			if !slices.Contains(inGo, entry) {
+				t.Errorf("%s: %s is offered by the picker and refused by the server, so a reader can choose a file the upload will turn away", name, entry)
+			}
+		}
 	}
-	body := tsComment.ReplaceAll(list[1], []byte(" "))
-	var inTS []string
-	for _, m := range tsExtension.FindAllSubmatch(body, -1) {
-		inTS = append(inTS, string(m[1]))
-	}
-	if len(inTS) == 0 {
-		t.Fatal("no extensions parsed out of the frontend list — a gate that reads nothing agrees with everything")
-	}
+}
 
-	inGo := activities.AcceptedAttachmentExtensions()
-	for _, ext := range inGo {
-		if !slices.Contains(inTS, ext) {
-			t.Errorf("%s is accepted by the server and missing from the picker, so a reader cannot choose a file the upload would keep", ext)
-		}
+// tsArrayEntries reads the quoted entries of the array literal bound to name.
+func tsArrayEntries(t *testing.T, source []byte, name string) []string {
+	t.Helper()
+	list := regexp.MustCompile(`(?s)` + name + `\s*=\s*\[(.*?)\]`).FindSubmatch(source)
+	if list == nil {
+		t.Fatalf("%s no longer declares %s as an array literal — this gate is reading a shape that is gone", frontendAttachmentUpload, name)
 	}
-	for _, ext := range inTS {
-		if !slices.Contains(inGo, ext) {
-			t.Errorf("%s is offered by the picker and refused by the server, so a reader can choose a file the upload will turn away", ext)
-		}
+	var entries []string
+	for _, m := range tsAttachmentEntry.FindAllSubmatch(tsComment.ReplaceAll(list[1], []byte(" ")), -1) {
+		entries = append(entries, string(m[1]))
 	}
+	if len(entries) == 0 {
+		t.Fatalf("no entries parsed out of %s — a gate that reads nothing agrees with everything", name)
+	}
+	return entries
 }

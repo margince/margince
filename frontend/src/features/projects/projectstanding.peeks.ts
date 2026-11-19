@@ -3,6 +3,7 @@ import type { StandingPeek } from "../../design-system/standingdims";
 import { DEAL_STATUS_LABEL } from "../../format/dealstatus";
 import { formatMoney } from "../../format/format";
 import { formatDayMonth } from "../../format/format.dates";
+import { attachmentTitle } from "../../lib/attachmentlink";
 import { labelFor } from "../../lib/labelfor";
 import { routeHash } from "../../lib/router";
 import { type PeekWords, partialFoot } from "../../lib/standingpeeks";
@@ -131,7 +132,7 @@ export function documentsPeek(
     head: t("project.standing.peek.documents"),
     items: rows.map((file) => ({
       key: file.id,
-      title: file.title || file.filename,
+      title: attachmentTitle(file),
       sub: file.title ? file.filename : undefined,
     })),
     foot: view.documents?.page.has_more

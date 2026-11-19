@@ -141,11 +141,17 @@ export function RecordPicker({
   unavailableReason,
   noMatch,
   id,
+  placeholder = label,
+  required,
   "aria-describedby": describedBy,
   "aria-invalid": invalid,
 }: Readonly<{
   "aria-describedby"?: string;
   "aria-invalid"?: boolean;
+  // The hint inside a field a `Field` names; a `label` is its own hint.
+  placeholder?: string;
+  // Announced, not native: the field empties once a candidate is picked.
+  required?: boolean;
   searchTargets: (q: string) => Promise<RecordPickerCandidate[]>;
   onPick: (candidate: RecordPickerCandidate) => void;
   selected?: RecordPickerCandidate | null;
@@ -192,8 +198,9 @@ export function RecordPicker({
         id={id}
         aria-describedby={describedBy}
         aria-invalid={invalid}
-        placeholder={label}
+        placeholder={placeholder}
         aria-label={label}
+        aria-required={required || undefined}
         value={term}
         onFocus={() => setShowDefaults(true)}
         disabled={disabled}

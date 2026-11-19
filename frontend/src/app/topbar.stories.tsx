@@ -11,13 +11,20 @@ import type { Locale } from "../i18n";
 import { LISTS_KEY, type List } from "../lib/lists.queries";
 import type { Route } from "../lib/router";
 import { LIVE_ID, liveList } from "../testing/lists.fixtures";
+import type { GrantSpec } from "../testing/mefixture";
+import {
+  setupReminderGrants,
+  setupReminderRoutes,
+} from "../testing/setupreminder.fixtures";
 import {
   installFetchStub,
+  jsonResponse,
   meRoute,
+  type RouteMap,
   StoryProviders,
   WithInstallationBrand,
 } from "../testing/story-utils";
-import type { NavCounts, NavSection } from "./nav";
+import { type NavCounts, type NavSection, recordKindOf } from "./nav";
 import { CommandPalette, useBuiltinCommands } from "./palette";
 import { PageTitle, WorkspaceRail } from "./shell";
 import { TopBar } from "./topbar";
@@ -118,8 +125,8 @@ const NARROW_VIEWPORT = {
  * `meRoute({})` is an admin holding no object grants — a real principal, and the
  * right one here, because nothing in this strip is grant-dependent.
  */
-function stubSession() {
-  installFetchStub({ "GET /me": meRoute({}) });
+function stubSession(routes: RouteMap = {}, allow: GrantSpec = {}) {
+  installFetchStub({ "GET /me": meRoute(allow), ...routes });
 }
 
 /**
@@ -134,19 +141,18 @@ function stubSession() {
  */
 function SeedCache({
   record,
+  kind = "contact",
   list,
   children,
 }: Readonly<{
   record?: { id: string; name: string };
+  kind?: string;
   list?: List;
   children: ReactNode;
 }>) {
   const client = useQueryClient();
-  if (
-    record &&
-    client.getQueryData(["contact", "ref", record.id]) === undefined
-  ) {
-    client.setQueryData(["contact", "ref", record.id], record.name);
+  if (record && client.getQueryData([kind, "ref", record.id]) === undefined) {
+    client.setQueryData([kind, "ref", record.id], record.name);
   }
   if (list && client.getQueryData([LISTS_KEY, "one", list.id]) === undefined) {
     client.setQueryData([LISTS_KEY, "one", list.id], list);
@@ -236,6 +242,8 @@ function BarStory({
   startCollapsed,
   record,
   locale,
+  routes,
+  allow,
 }: Readonly<{
   route: Route;
   section?: NavSection;
@@ -243,11 +251,14 @@ function BarStory({
   startCollapsed?: boolean;
   record?: { id: string; name: string };
   locale?: Locale;
+  /** Reads beyond the session, for a frame that draws the end controls' extras. */
+  routes?: RouteMap;
+  allow?: GrantSpec;
 }>) {
-  stubSession();
+  stubSession(routes, allow);
   return (
     <StoryProviders locale={locale}>
-      <SeedCache record={record}>
+      <SeedCache record={record} kind={recordKindOf(route)}>
         <BarFrame
           route={route}
           section={section}
@@ -373,8 +384,8 @@ export const BelowFiltersAndViewsPhone: Story = {
  * rest of the name is on the tooltip the clipped label carries, on hover and on
  * keyboard focus alike.
  *
- * Above 1100px `.topbar-lead` carries a cap, the bound the trail shrinks
- * against; below it the lead takes what the end controls leave.
+ * Above 1100px the lead is capped at what the search and the end controls
+ * leave. Below it the lead takes the rest.
  */
 export const RecordLongName: Story = {
   name: "a record whose name outruns the row",
@@ -389,6 +400,58 @@ export const RecordLongName: Story = {
       }}
     />
   ),
+};
+
+/**
+ * A long deal name beside the setup reminder and the scheduled-messages clock.
+ *
+ * The end controls keep their own width, so the reminder's words stay whole and
+ * no glyph draws over another. The deal's name is the part that ellipses.
+ */
+export const LongDealNameBesideTheReminder: Story = {
+  name: "a long deal name beside the setup reminder",
+  parameters: WIDE_VIEWPORT,
+  globals: { viewport: { value: "wide" } },
+  tags: ["uat-wide"],
+  render: () => (
+    <BarStory
+      route={{ screen: "deals", id: "d-long" }}
+      record={{
+        id: "d-long",
+        name:
+          "Framework agreement for the cold-chain fleet renewal across the " +
+          "Hamburg, Rotterdam and Antwerp depots, phase two",
+      }}
+      routes={{
+        ...setupReminderRoutes(),
+        "GET /scheduled-sends": () => jsonResponse([]),
+      }}
+      allow={setupReminderGrants()}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    await waitFor(() => {
+      const end = canvasElement.querySelector(".topbar-trail");
+      const words = end?.querySelector(".setup-reminder-word");
+      const search = canvasElement.querySelector(".topbar-searchslot");
+      const lead = canvasElement.querySelector(".topbar-lead");
+      if (!end?.querySelector(".outbox") || !words || !search || !lead) {
+        throw new Error("the bar has no reminder, clock, search or lead yet");
+      }
+      expect(words.scrollWidth).toBeLessThanOrEqual(words.clientWidth);
+      const boxes = [...end.children].map((c) => c.getBoundingClientRect());
+      for (const [i, box] of boxes.entries()) {
+        expect(box.left).toBeGreaterThanOrEqual((boxes[i - 1]?.right ?? 0) - 1);
+      }
+      expect(search.getBoundingClientRect().left).toBeGreaterThanOrEqual(
+        lead.getBoundingClientRect().right,
+      );
+      const bar = canvasElement.querySelector(".topbar");
+      expect(boxes.at(-1)?.right ?? 0).toBeLessThanOrEqual(
+        bar?.getBoundingClientRect().right ?? 0,
+      );
+    });
+  },
 };
 
 /**

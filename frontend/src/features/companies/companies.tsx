@@ -13,7 +13,6 @@ import { useT } from "../../i18n";
 import { COMPANY_TABS, type CompanyTab } from "../../lib/companytab";
 import { useHiddenCoreFeatures } from "../../lib/corefeatures";
 import { unwrap } from "../../lib/problem";
-import { scrollPageToTop } from "../../lib/reveal";
 import { useAddressedTab } from "../records/recordtab";
 import { CompanyPage } from "./companies.page";
 import { useAcknowledgeCompanyView, useCompany360 } from "./company360";
@@ -218,10 +217,8 @@ function CompanyRecord({
       <RecordTabs
         options={visibleTabs}
         value={tab}
-        onChange={(next) => {
-          onTab(next);
-          scrollPageToTop();
-        }}
+        onChange={onTab}
+        keepPlace
         counts={companyTabCounts(assembled)}
         labels={{
           // "360", not the shared "Overview": this tab is the account's

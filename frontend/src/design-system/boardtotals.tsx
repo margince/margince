@@ -73,7 +73,6 @@ export function ColumnTotals({
           money.currency,
           locale,
         ),
-        probability: `${formatNumber(money.probabilityPct, locale)}%`,
       }),
       unpriced > 0 &&
         translatePlural(locale, "board.unpricedTip", unpriced, {

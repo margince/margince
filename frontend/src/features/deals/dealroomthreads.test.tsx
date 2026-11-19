@@ -154,7 +154,9 @@ describe("what a tile says about its document", () => {
     );
     const tile = screen.getByRole("article", { name: "Rahmenvertrag" });
     expect(tile.querySelector(".board-doc-kind")?.textContent).toBe("PDF");
-    expect(within(tile).getByText(/rahmenvertrag\.pdf · 412 kB/)).toBeTruthy();
+    expect(tile.querySelector(".board-doc-meta")?.textContent).toBe(
+      "rahmenvertrag.pdf · 412 kB",
+    );
   });
 });
 
