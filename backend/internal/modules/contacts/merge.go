@@ -224,16 +224,8 @@ func (s *Store) mergeContactCarryingTx(ctx context.Context, tx pgx.Tx, sourceID,
 	if err := moveDedupeCandidates(ctx, tx, entityContact, sourceID.UUID, targetID.UUID); err != nil {
 		return crmcontracts.Contact{}, nil, err
 	}
-	p := buildSurvivorshipPatch(tgt, src, sourceID, prefer)
-	if !p.Empty() {
-		if err := p.ApplyLocked(ctx, tx, tgtLock); err != nil {
-			return crmcontracts.Contact{}, nil, fmt.Errorf("apply survivorship fill: %w", err)
-		}
-	}
-	if err := archiveMergedAway(ctx, tx, contactEntity, sourceID.UUID, targetID.UUID); err != nil {
-		return crmcontracts.Contact{}, nil, fmt.Errorf("retire merged-away contact: %w", err)
-	}
-	if err := auditContactMerge(ctx, tx, sourceID, targetID, counts, p, prefer.wonBy(sourceID)); err != nil {
+	if err := settleContactMerge(ctx, tx, tgtLock, buildSurvivorshipPatch(tgt, src, sourceID, prefer),
+		sourceID, targetID, counts, prefer.wonBy(sourceID)); err != nil {
 		return crmcontracts.Contact{}, nil, err
 	}
 	out, err := readContact(ctx, tx, targetID, storekit.LiveOnly, active)
@@ -241,6 +233,22 @@ func (s *Store) mergeContactCarryingTx(ctx context.Context, tx pgx.Tx, sourceID,
 		return crmcontracts.Contact{}, nil, fmt.Errorf("read surviving contact: %w", err)
 	}
 	return out, carry, nil
+}
+
+// settleContactMerge applies the survivorship patch, retires the merged-away
+// contact and audits the merge.
+func settleContactMerge(ctx context.Context, tx pgx.Tx, tgtLock storekit.RowLock, p *storekit.Patch,
+	sourceID, targetID ids.ContactID, counts relinkCounts, won []string,
+) error {
+	if !p.Empty() {
+		if err := p.ApplyLocked(ctx, tx, tgtLock); err != nil {
+			return fmt.Errorf("apply survivorship fill: %w", err)
+		}
+	}
+	if err := archiveMergedAway(ctx, tx, contactEntity, sourceID.UUID, targetID.UUID); err != nil {
+		return fmt.Errorf("retire merged-away contact: %w", err)
+	}
+	return auditContactMerge(ctx, tx, sourceID, targetID, counts, p, won)
 }
 
 // auditContactMerge records the merge on both rows and emits contact.merged.
