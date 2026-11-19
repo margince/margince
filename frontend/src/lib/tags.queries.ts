@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -66,15 +67,21 @@ export function useRecordTags(
   });
 }
 
-// Whether a record page's Tags row has words. The page's own read answers until
-// the panel's read has run, so a folded row sends no request of its own.
+// Whether a record page's Tags row shows. It folds only while every read holds
+// none, and once shown it stays, so removing the last tag keeps focus in place.
 export function useRecordCarriesTags(
   entityType: TaggableType,
   entityID: string,
   carried: readonly unknown[] | undefined,
 ): boolean {
-  const read = useRecordTags(entityType, entityID, false);
-  return (read.data?.data ?? carried ?? []).length > 0;
+  const read = useRecordTags(entityType, entityID, false).data;
+  const [shownFor, setShownFor] = useState<string | null>(null);
+  const carries =
+    read?.withheld === true ||
+    (read?.data ?? []).length > 0 ||
+    (carried ?? []).length > 0;
+  if (carries && shownFor !== entityID) setShownFor(entityID);
+  return carries || shownFor === entityID;
 }
 
 /**

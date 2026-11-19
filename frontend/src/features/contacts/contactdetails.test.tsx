@@ -475,4 +475,38 @@ describe("the tags in the About group", () => {
       within(about).getByRole("button", { name: en["tags.add"] }),
     ).toBeTruthy();
   });
+
+  it("keeps the row and the focus in it when the last tag is removed", async () => {
+    const user = userEvent.setup();
+    let held = [{ tag_id: "t-1", name: "Champion", archived: false }];
+    installFetchStub({
+      "GET /me": meRoute({ contact: ["read", "update"] }, { seat: "full" }),
+      "GET /records/contact/p-1/tags": () =>
+        jsonResponse({ data: held, withheld: false }),
+      "DELETE /tags/t-1/apply": () => {
+        held = [];
+        return jsonResponse({ restore: "r-1" });
+      },
+    });
+    const tagged = { ...view, contact: { ...contact, tags: [held[0]] } };
+    const { rerender } = render(
+      <StoryProviders>
+        <About page={tagged} />
+      </StoryProviders>,
+    );
+    await user.click(
+      await screen.findByRole("button", { name: "Remove Champion" }),
+    );
+    await waitFor(() => expect(screen.queryByText("Champion")).toBeNull());
+    rerender(
+      <StoryProviders>
+        <About page={{ ...view, contact: { ...contact, tags: [] } }} />
+      </StoryProviders>,
+    );
+    const about = screen.getByRole("region", {
+      name: en["record.details.about"],
+    });
+    expect(within(about).getByText(en["tags.panelTitle"])).toBeTruthy();
+    expect(about.contains(document.activeElement)).toBe(true);
+  });
 });
