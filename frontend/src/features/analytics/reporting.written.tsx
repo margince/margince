@@ -108,11 +108,12 @@ function targetSentence(
   const { context } = evaluation;
   const target = won?.target;
   const actual = won?.target_actual;
+  const attainment = won?.attainment;
   if (
     won?.coverage.status !== "ok" ||
     target == null ||
-    target <= 0 ||
     actual == null ||
+    attainment == null ||
     !context.target_interval
   ) {
     return null;
@@ -125,10 +126,7 @@ function targetSentence(
     ),
     target: amount(evaluation, won, target, words),
     actual: amount(evaluation, won, actual, words),
-    percent: formatAnalyticsNumber(
-      Math.round((actual / target) * 100),
-      words.locale,
-    ),
+    percent: formatAnalyticsNumber(Math.round(attainment), words.locale),
   });
 }
 

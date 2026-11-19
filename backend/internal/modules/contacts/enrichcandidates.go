@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
@@ -112,17 +113,9 @@ func signatureMailSQL(defaultEnabled string) string {
 				  AND ` + provenance.MailBodyCompleteSQL("a") + `
 				  AND NOT a.bulk_mail_attested
 				  AND COALESCE((
-					SELECT cc.signature_enrich_enabled AND cc.status = 'connected'
-					  FROM capture_connection cc WHERE ` + capturingMailboxSQL("a") + `
+					SELECT bool_and(cc.signature_enrich_enabled AND cc.status = 'connected')
+					  FROM capture_connection cc WHERE ` + storekit.CapturingMailboxSQL("cc", "a") + `
 				  ), ` + defaultEnabled + `)`
-}
-
-// capturingMailboxSQL matches the live connection whose mailbox captured the
-// activity, by the provenance string capture stamps (connector:<provider>:<user
-// id>). There is no foreign key.
-func capturingMailboxSQL(activity string) string {
-	return `('connector:' || cc.provider || ':' || cc.user_id::text) = ` + activity + `.captured_by
-					   AND cc.archived_at IS NULL`
 }
 
 // SignatureSourceEligible is the ONE spelling of "may this message be mined for

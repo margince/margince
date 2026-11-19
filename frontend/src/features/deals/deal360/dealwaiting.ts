@@ -26,6 +26,20 @@ export function currentReplyTarget(card: DealStatusCard): string | null {
   return card.reply_to;
 }
 
+/**
+ * The reminder our reply leaves to mark done, when the reader may write it.
+ * The server sets `our_reply` by the one rule that also withholds `reply_to`,
+ * so a card never says both that the buyer waits and that we replied.
+ */
+export function replyReminder(
+  card: DealStatusCard,
+): Readonly<{ id: string; version: number }> | null {
+  const reply = card.our_reply;
+  return reply?.reminder_id && reply.reminder_version !== undefined
+    ? { id: reply.reminder_id, version: reply.reminder_version }
+    : null;
+}
+
 export function waitingSince(card: DealStatusCard): ActivityMoment | null {
   const basis = card.request_basis;
   return currentReplyTarget(card) && basis

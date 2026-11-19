@@ -15,8 +15,8 @@ import (
 const (
 	mergeContactAddressSource = "a.contact_id = @source AND a.archived_at IS NULL"
 	mergeCompanyDomainSource  = "a.company_id = @source AND a.archived_at IS NULL"
-	mergeEmailPrimary         = `a.is_primary AND NOT EXISTS (SELECT 1 FROM contact_email b WHERE b.contact_id = @target AND b.email_type = a.email_type AND b.is_primary AND b.archived_at IS NULL)`
-	mergePhonePrimary         = `a.is_primary AND NOT EXISTS (SELECT 1 FROM contact_phone b WHERE b.contact_id = @target AND b.phone_type = a.phone_type AND b.is_primary AND b.archived_at IS NULL)`
+	mergeEmailPrimary         = `a.is_primary AND NOT EXISTS (SELECT 1 FROM contact_email b WHERE b.contact_id = @target AND b.is_primary AND b.archived_at IS NULL)`
+	mergePhonePrimary         = `a.is_primary AND NOT EXISTS (SELECT 1 FROM contact_phone b WHERE b.contact_id = @target AND b.is_primary AND b.archived_at IS NULL)`
 	mergeDomainPrimary        = `a.is_primary AND NOT EXISTS (SELECT 1 FROM company_domain b WHERE b.company_id = @target AND b.is_primary AND b.archived_at IS NULL)`
 )
 

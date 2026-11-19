@@ -241,7 +241,7 @@ var queryEnumTable = map[string][]queryEnum{
 		{Name: "sharing", Values: []string{"private", "team", "workspace"}, Array: true, Explode: true},
 	},
 	"GET /v1/mail-drafts": {
-		{Name: "anchor_type", Values: []string{"activity", "contact", "company", "deal", "lead", "project"}, Array: false, Explode: true},
+		{Name: "anchor_type", Values: []string{"activity", "forward", "contact", "company", "deal", "lead", "project"}, Array: false, Explode: true},
 	},
 	"GET /v1/me": {
 		{Name: "prepare", Values: []string{"analytics"}, Array: false, Explode: true},

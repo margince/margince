@@ -1,9 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
-  amountFault,
   minorUnitDigits,
   toMajorUnits,
   toMinorUnits,
+  typedAmountText,
+  typedMinorUnits,
 } from "./minorunits";
 
 // The defect this module closes: eleven call sites hard-coded 100, so a dong
@@ -141,26 +142,71 @@ describe("the scale between what a human types and what we store", () => {
   );
 });
 
-// A form names the refusal before it sends, so a field can say what is wrong
-// instead of posting the NaN that toMinorUnits returns.
-describe("why a typed amount cannot be stored", () => {
+describe("typedMinorUnits", () => {
   it.each([
-    ["", "EUR"],
-    ["  ", "VND"],
-    ["12.34", "EUR"],
-    ["18000000", "VND"],
-  ])("%o in %s is storable, so it has no fault", (text, currency) => {
-    expect(amountFault(text, currency)).toBeUndefined();
-  });
+    ["de", "12,5", "EUR", 1250],
+    ["de", "1500", "EUR", 150_000],
+    ["de", "1500,00", "EUR", 150_000],
+    ["en", "1.500", "EUR", 150],
+    ["en", "12,5", "EUR", 1250],
+    ["de", "18000000", "VND", 18_000_000],
+    ["de", "1,234", "KWD", 1234],
+  ] as const)(
+    "%s reads %s %s as %d minor units",
+    (locale, typed, currency, want) => {
+      expect(typedMinorUnits(typed, currency, locale)).toEqual({ minor: want });
+    },
+  );
 
+  // The refusal names the form the reader wants, in their own decimal sign.
   it.each([
-    ["1.5", "VND"],
-    ["12.345", "EUR"],
-  ])("%o in %s has more decimals than the currency holds", (text, currency) => {
-    expect(amountFault(text, currency)).toBe("too_precise");
-  });
+    [
+      "de",
+      "1.500",
+      "EUR",
+      "amount.refused.ambiguous",
+      { whole: "1500", decimal: "1500,00" },
+    ],
+    [
+      "en",
+      "1,500",
+      "EUR",
+      "amount.refused.ambiguous",
+      { whole: "1500", decimal: "1500.00" },
+    ],
+    ["de", "1.500", "JPY", "amount.refused.ambiguousWhole", { whole: "1500" }],
+    [
+      "de",
+      "1.234,56",
+      "EUR",
+      "amount.refused.grouping",
+      { example: "1234,56" },
+    ],
+    ["en", "abc", "EUR", "amount.refused.notNumber", { example: "1234.56" }],
+    ["de", "12,345", "EUR", "record.amountTooPrecise", { currency: "EUR" }],
+    ["de", "1,5", "JPY", "record.amountTooPrecise", { currency: "JPY" }],
+    ["en", "99999999999999999", "EUR", "amount.refused.tooLarge", {}],
+  ] as const)(
+    "%s refuses %s %s with %s",
+    (locale, typed, currency, key, params) => {
+      expect(typedMinorUnits(typed, currency, locale)).toEqual({
+        refused: { key, params },
+      });
+    },
+  );
 
-  it("a figure past what a minor-unit integer holds is too large", () => {
-    expect(amountFault("1e300", "EUR")).toBe("too_large");
-  });
+  // A box seeded from a stored amount must save back unchanged: a dinar's
+  // "1.234" in German would otherwise be refused as grouped.
+  it.each([
+    ["de", 1234, "KWD", "1,234"],
+    ["en", 1234, "KWD", "1.234"],
+    ["de", 150_000, "EUR", "1500,00"],
+    ["vi", 18_000_000, "VND", "18000000"],
+  ] as const)(
+    "%s seeds %d %s as %s, which reads back",
+    (locale, minor, currency, text) => {
+      expect(typedAmountText(minor, currency, locale)).toBe(text);
+      expect(typedMinorUnits(text, currency, locale)).toEqual({ minor });
+    },
+  );
 });

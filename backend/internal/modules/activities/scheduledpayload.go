@@ -45,6 +45,9 @@ type scheduledPayload struct {
 	// SendingEntity is the legal entity the scheduling resolved. A payload
 	// written before it was frozen has none, and the fire resolves one.
 	SendingEntity string `json:"sending_entity,omitempty"`
+	// FromConnection is the mailbox the sender chose. A payload with none
+	// leaves the choice to the fire, as an unchosen send does.
+	FromConnection string `json:"from_connection,omitempty"`
 }
 
 // frozenEvidence is the evidence block as it sits on a scheduled row. Ids as
@@ -57,6 +60,16 @@ type frozenEvidence struct {
 	ContractID     string `json:"contract_id,omitempty"`
 	ConsentEventID string `json:"consent_event_id,omitempty"`
 	BasisID        string `json:"basis_id,omitempty"`
+	// RecipientCountries are the countries the sender stated. A payload
+	// written before them has none, which is every recipient on the record's
+	// country, so version 2 reads both shapes.
+	RecipientCountries []frozenCountry `json:"recipient_countries,omitempty"`
+}
+
+// frozenCountry keeps a cleared country as null, apart from no entry.
+type frozenCountry struct {
+	Address string  `json:"address"`
+	Country *string `json:"country"`
 }
 
 // freezeEvidence and thawEvidence are inverses. An id that is zero stays empty
@@ -70,7 +83,35 @@ func freezeEvidence(e commsauthz.Evidence) frozenEvidence {
 		ContractID:     idText(e.ContractID),
 		ConsentEventID: idText(e.ConsentEventID),
 		BasisID:        idText(e.BasisID),
+
+		RecipientCountries: freezeCountries(e.RecipientCountries),
 	}
+}
+
+func freezeCountries(stated []commsauthz.CountryOverride) []frozenCountry {
+	if len(stated) == 0 {
+		return nil
+	}
+	out := make([]frozenCountry, 0, len(stated))
+	for _, o := range stated {
+		entry := frozenCountry{Address: o.Address}
+		if !o.Cleared() {
+			entry.Country = &o.Country
+		}
+		out = append(out, entry)
+	}
+	return out
+}
+
+func thawCountries(frozen []frozenCountry) []commsauthz.CountryOverride {
+	if len(frozen) == 0 {
+		return nil
+	}
+	out := make([]commsauthz.CountryOverride, 0, len(frozen))
+	for _, entry := range frozen {
+		out = append(out, commsauthz.CountryOverride{Address: entry.Address, Country: orEmpty(entry.Country)})
+	}
+	return out
 }
 
 func (f frozenEvidence) thaw() (commsauthz.Evidence, error) {
@@ -95,6 +136,7 @@ func (f frozenEvidence) thaw() (commsauthz.Evidence, error) {
 		}
 		*field.into = id
 	}
+	out.RecipientCountries = thawCountries(f.RecipientCountries)
 	return out, nil
 }
 
@@ -144,6 +186,7 @@ func freezePayload(in SendEmailInput) scheduledPayload {
 		OperatorReason:   in.OperatorReason,
 		Evidence:         freezeEvidence(in.Evidence),
 		SendingEntity:    idText(in.SendingEntity),
+		FromConnection:   idText(in.FromConnection),
 	}
 }
 
@@ -160,11 +203,13 @@ func (p scheduledPayload) thaw() (SendEmailInput, error) {
 	if err != nil {
 		return SendEmailInput{}, err
 	}
-	var entity ids.UUID
-	if p.SendingEntity != "" {
-		if entity, err = ids.Parse(p.SendingEntity); err != nil {
-			return SendEmailInput{}, fmt.Errorf("scheduled send: sending entity %q: %w", p.SendingEntity, err)
-		}
+	entity, err := frozenID("sending entity", p.SendingEntity)
+	if err != nil {
+		return SendEmailInput{}, err
+	}
+	from, err := frozenID("sending mailbox", p.FromConnection)
+	if err != nil {
+		return SendEmailInput{}, err
 	}
 	// A category reserved for the installation's own notices can never
 	// legitimately be in a scheduled payload: the door that wrote it refuses
@@ -192,5 +237,18 @@ func (p scheduledPayload) thaw() (SendEmailInput, error) {
 		OperatorReason:   p.OperatorReason,
 		Evidence:         evidence,
 		SendingEntity:    entity,
+		FromConnection:   from,
 	}, nil
+}
+
+// frozenID reads an optional id off a payload; empty is the zero id.
+func frozenID(what, raw string) (ids.UUID, error) {
+	if raw == "" {
+		return ids.UUID{}, nil
+	}
+	id, err := ids.Parse(raw)
+	if err != nil {
+		return ids.UUID{}, fmt.Errorf("scheduled send: %s %q: %w", what, raw, err)
+	}
+	return id, nil
 }

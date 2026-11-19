@@ -303,6 +303,10 @@ function DealBriefCard({
 }: Readonly<{ deal: Deal; readOnly: boolean }>) {
   const edit = useContext(DealEditContext);
   return (
-    <DealBrief brief={deal.description} edit={readOnly ? undefined : edit} />
+    <DealBrief
+      brief={deal.description}
+      byModel={deal.ai_written_fields?.includes("description")}
+      edit={readOnly ? undefined : edit}
+    />
   );
 }

@@ -14,6 +14,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -295,7 +296,22 @@ func normalizedCreateLeadInput(in CreateLeadInput) (CreateLeadInput, error) {
 		return CreateLeadInput{}, err
 	}
 	in.Industry = industry
+	if !hasLeadIdentity(in) {
+		return CreateLeadInput{}, httperr.Validation(contactNameColumn, "lead_identity_required",
+			"send at least one of full_name, email, phone, linkedin_url or company_name")
+	}
 	return in, nil
+}
+
+// hasLeadIdentity reports whether a lead names someone: a row with none of
+// these fields could never be recognised, worked or matched.
+func hasLeadIdentity(in CreateLeadInput) bool {
+	for _, field := range []*string{in.FullName, in.Email, in.Phone, in.LinkedInURL, in.CompanyName} {
+		if field != nil && strings.TrimSpace(*field) != "" {
+			return true
+		}
+	}
+	return false
 }
 
 // replayedLead resolves the (source_system, source_id) idempotency key:

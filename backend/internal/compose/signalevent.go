@@ -5,14 +5,41 @@ package compose
 
 import (
 	"context"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/dealscout"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
+
+// keptFromThread is what a reading may file. A thread with mail private by a
+// routine setting gives up only an explicit request, and that request is
+// shared. The deal it opens shows what the customer asked for. Every other
+// finding stays with that mail.
+func keptFromThread(events []extractedEvent, everyMessageOpen bool) []extractedEvent {
+	if everyMessageOpen {
+		return events
+	}
+	return slices.DeleteFunc(slices.Clone(events), func(event extractedEvent) bool {
+		return event.Kind != extractKindOpportunity || event.RequestKind != dealscout.RequestKindExplicit
+	})
+}
+
+// requestFacts are a new opportunity's request facts as its cited message
+// states them (dealscout.RequestFacts).
+func requestFacts(event extractedEvent, thread settledThread, cited ids.UUID) map[string]any {
+	if event.Kind != extractKindOpportunity {
+		return nil
+	}
+	message, _ := citedMessage(thread, cited)
+	return dealscout.RequestFacts(event.RequestKind, event.BudgetQuote, event.DecisionDate,
+		textlang.CurrentMessage(message.Body))
+}
 
 // recordEventSignal files one event as a signal on the account.
 func recordEventSignal(
@@ -43,6 +70,7 @@ func recordEventSignal(
 	}
 	evidence := eventSignalEvidence(event, cited, thread)
 	evidence.BuyerContactID, evidence.CommercialRole = buyer, role
+	evidence.Fields = requestFacts(event, thread, cited)
 	return signals.RecordDerived(ctx, tx, signals.DerivedSignal{
 		Kind:        event.Kind,
 		CompanyID:   thread.CompanyID,

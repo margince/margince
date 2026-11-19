@@ -138,6 +138,9 @@ function stubApi(connections: CaptureConnection[], opts: StubOpts = {}) {
       if (path.endsWith("/disconnect") && request.method === "POST") {
         return new Response(null, { status: 204 });
       }
+      if (path.endsWith("/mail-posture") && request.method === "PUT") {
+        return jsonResponse({ ...connections[0], default_sender: true });
+      }
       throw new Error(`unstubbed: ${request.method} ${path}`);
     }),
   );
@@ -172,7 +175,7 @@ function requestsTo(calls: Request[], suffix: string, method: string) {
 // the dialog first and scopes its queries to it.
 async function openAddDialog() {
   await userEvent.click(
-    await screen.findByRole("button", { name: "Add account" }),
+    await screen.findByRole("button", { name: "Add another mailbox" }),
   );
   return screen.getByRole("dialog", { name: "Connect mail and calendar" });
 }
@@ -214,7 +217,11 @@ describe("the connected-inboxes card", () => {
     ).toBeInTheDocument();
     expect(screen.getByText(en["connectors.errForbidden"])).toBeInTheDocument();
     expect(screen.queryByText(en["connectors.errUnknown"])).toBeNull();
-    for (const verb of ["Add account", "Reconnect", "Connect calendar"]) {
+    for (const verb of [
+      "Add another mailbox",
+      "Reconnect",
+      "Connect calendar",
+    ]) {
       expect(screen.queryByRole("button", { name: verb })).toBeNull();
     }
     await userEvent.click(
@@ -463,7 +470,12 @@ describe("the connected-inboxes card", () => {
       return requests;
     });
     const body = await connectRequests[0].clone().json();
-    expect(body).toEqual({ return_to: "settings" });
+    // The reconnect names the mailbox it repairs, so the server refuses a
+    // consent for another account rather than letting it take this one's place.
+    expect(body).toEqual({
+      return_to: "settings",
+      connection_id: gmailStale.id,
+    });
   });
 
   it("offers the inline IMAP form to reconnect an imap connection instead of an OAuth reconnect", async () => {
@@ -721,28 +733,26 @@ describe("the OAuth return outcome", () => {
   });
 });
 
-// "Add account" opens the connect dialog over the roster it adds to.
+// "Add another mailbox" opens the connect dialog over the roster it adds to.
 // connect-flow.test.tsx pins what the dialog sends for each answer. These cases
 // pin what the card hands it: the roster, and the way out to the IMAP form.
 describe("add an account", () => {
-  it("offers what is left of a half-connected account, and refuses a full one", async () => {
+  it("offers a second account of a vendor already connected", async () => {
     stubApi([
       gmailConnected,
       { ...gmailConnected, id: "c2", provider: "gcal" },
     ]);
     render(<ConnectorsCard />);
     const dialog = await openAddDialog();
-    const google = within(dialog).getByRole("radio", { name: /^Google/ });
-    expect(google).toBeDisabled();
-    expect(google.closest("label")?.textContent).toContain(
-      "Already connected.",
-    );
+    expect(
+      within(dialog).getByRole("radio", { name: /^Google/ }),
+    ).toBeEnabled();
     expect(
       within(dialog).getByRole("radio", { name: /^Microsoft 365/ }),
     ).toBeEnabled();
   });
 
-  it("connects the calendar Gmail is missing and hands the browser over", async () => {
+  it("adds a second Google account, mail and calendar, beside the first", async () => {
     const assign = vi.fn();
     vi.stubGlobal("location", locationDouble({ assign }));
     const calls = stubApi([gmailConnected], {
@@ -765,9 +775,12 @@ describe("add an account", () => {
     await waitFor(() =>
       expect(assign).toHaveBeenCalledWith("https://accounts.google/cal"),
     );
-    expect(requestsTo(calls, "/connectors/gcal/connect", "POST")).toHaveLength(
-      1,
-    );
+    const [added] = requestsTo(calls, "/connectors/gmail/connect", "POST");
+    // No connection_id: the consent adds an account rather than repairing one.
+    expect(await added.clone().json()).toMatchObject({
+      also_connect: "gcal",
+    });
+    expect(await added.clone().json()).not.toHaveProperty("connection_id");
   });
 
   it("reports a refused connect inside the dialog whose button produced it", async () => {
@@ -794,7 +807,7 @@ describe("add an account", () => {
     expect(dialog.contains(alert)).toBe(true);
   });
 
-  it("withdraws the header verb when every account is fully connected", async () => {
+  it("keeps the header verb when every account is fully connected, to add another", async () => {
     stubApi([
       gmailConnected,
       { ...gmailConnected, id: "c2", provider: "gcal" },
@@ -804,7 +817,9 @@ describe("add an account", () => {
     ]);
     render(<ConnectorsCard />);
     await screen.findByTestId("connector-graphcal"); // a roster service
-    expect(screen.queryByRole("button", { name: "Add account" })).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "Add another mailbox" }),
+    ).toBeEnabled();
   });
 });
 
@@ -813,4 +828,71 @@ it("offers reconnect for a healthy read-only calendar", async () => {
   render(<ConnectorsCard />);
   expect(await screen.findByText("Read-only calendar")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Reconnect" })).toBeEnabled();
+});
+
+// A member may connect two accounts of one vendor. Each is its own row. Every
+// verb on a row names that row's mailbox by id, so a press never reaches the
+// other.
+describe("two mailboxes of one provider", () => {
+  const work: CaptureConnection = {
+    ...gmailConnected,
+    account_label: "rep@acme.test",
+  };
+  const personal: CaptureConnection = {
+    ...gmailConnected,
+    id: "018f3a1b-0000-7000-8000-0000000000c2",
+    account_label: "rep@second.test",
+  };
+
+  async function openSecondVerb(verb: string) {
+    const menus = await screen.findAllByRole("button", {
+      name: "More actions for Google",
+    });
+    expect(menus).toHaveLength(2);
+    await userEvent.click(menus[1]);
+    await userEvent.click(await screen.findByRole("button", { name: verb }));
+  }
+
+  it("marks the pressed mailbox the one new mail goes out from", async () => {
+    const calls = stubApi([work, personal]);
+    render(<ConnectorsCard />);
+    await openSecondVerb("Send new mail from this mailbox");
+    await waitFor(() =>
+      expect(requestsTo(calls, "/mail-posture", "PUT")).toHaveLength(1),
+    );
+    const [chosen] = requestsTo(calls, "/mail-posture", "PUT");
+    expect(new URL(chosen.url).searchParams.get("connection_id")).toBe(
+      personal.id,
+    );
+    expect(await chosen.clone().json()).toMatchObject({ default_sender: true });
+  });
+
+  it("offers no sending choice when only one mailbox can send", async () => {
+    stubApi([work, { ...personal, scopes: [] }]);
+    render(<ConnectorsCard />);
+    const menus = await screen.findAllByRole("button", {
+      name: "More actions for Google",
+    });
+    await userEvent.click(menus[0]);
+    expect(
+      screen.queryByRole("button", { name: "Send new mail from this mailbox" }),
+    ).toBeNull();
+  });
+
+  it("stops only the mailbox whose row was pressed", async () => {
+    const calls = stubApi([work, personal]);
+    render(<ConnectorsCard />);
+    await openSecondVerb("Disconnect");
+    const dialog = await screen.findByRole("dialog");
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: "Disconnect" }),
+    );
+    await waitFor(() =>
+      expect(requestsTo(calls, "/disconnect", "POST")).toHaveLength(1),
+    );
+    const [stopped] = requestsTo(calls, "/disconnect", "POST");
+    expect(new URL(stopped.url).searchParams.get("connection_id")).toBe(
+      personal.id,
+    );
+  });
 });

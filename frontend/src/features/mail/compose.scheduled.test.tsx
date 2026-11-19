@@ -22,8 +22,8 @@ import {
   isPreviewDoor,
   previewedAddresses,
 } from "../../testing/sendpermission.testkit";
-import { ComposeModal } from "./compose";
-import { pressSend } from "./compose.testkit";
+import { installComposeClock, pressSend } from "./compose.testkit";
+import { ComposeWindow } from "./composewindow";
 
 // The composer's "why are you writing?" dial, named rather than reached for
 // by role alone: the To, Cc and Bcc lines are comboboxes of their own now
@@ -114,7 +114,7 @@ function render(ui: ReactNode) {
 async function composeAndSend() {
   const onClose = vi.fn();
   render(
-    <ComposeModal
+    <ComposeWindow
       activityId="act-1"
       entityType="contact"
       entityId="p-1"
@@ -140,6 +140,8 @@ async function composeAndSend() {
 beforeEach(() => {
   window.location.hash = "";
 });
+
+beforeEach(installComposeClock);
 
 afterEach(() => {
   cleanup();

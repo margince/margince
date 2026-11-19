@@ -1,8 +1,7 @@
 import { searchCompanyTargets } from "../../components/companyform";
 import type { CreateField } from "../../components/create";
-import { currencyField } from "../../components/currencyfield";
+import { amountField, currencyField } from "../../components/currencyfield";
 import { partnerFields } from "../../components/dealpartnerfields";
-import { moneyAmountField } from "../../components/moneyamountfield";
 import type { ProjectOwnerPicker } from "../../components/projectownerfield";
 import type { LeadingCurrencies } from "../../format/currencychoices";
 import type { Locale } from "../../i18n";
@@ -137,6 +136,15 @@ export function dealEditFields(
     { value: opts.me, label: t("deal.ownerMe") },
     { value: "", label: t("deal.ownerUnassign") },
   ];
+  // An inline edit checks one field without the form, so the deal's own
+  // currency stands in for the form's.
+  const money = {
+    currency: (values: Record<string, string>) =>
+      values.currency || opts.currency,
+    locale: opts.locale,
+    t,
+    nonNegative: true,
+  };
   return [
     {
       key: "name",
@@ -144,22 +152,12 @@ export function dealEditFields(
       required: true,
       maxLength: TEXT_LIMITS.label,
     },
-    moneyAmountField(t, {
-      key: "amount",
-      label: "create.amount",
-      wireField: "amount_minor",
-      currency: opts.currency,
-    }),
+    amountField({ key: "amount", label: "create.amount" }, money),
     // The recurring half of the price, annual, in the same currency as the
     // amount above. Beside it, not in a section of its own: the two are one
     // money value on the row. They share the currency field below, and the
     // server refuses either one stranded without it.
-    moneyAmountField(t, {
-      key: "expected_arr",
-      label: "deal.expectedArr",
-      wireField: "expected_arr_minor",
-      currency: opts.currency,
-    }),
+    amountField({ key: "expected_arr", label: "deal.expectedArr" }, money),
     {
       ...currencyField(opts.leadingCurrencies, opts.locale, opts.currency),
       required: false,

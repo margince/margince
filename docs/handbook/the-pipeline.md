@@ -50,9 +50,7 @@ To reopen a won or lost deal in Margince, open it and choose **More actions** â†
 2. Choose **More actions** â†’ **Reopen**.
 3. Under **Move this deal back to an open stage**, pick a stage and press **Reopen**.
 
-On **Board**, dragging a won or lost card onto an open column opens the same dialog, with that column's stage picked. Nothing moves until you press **Reopen**. A closed card dropped on the other closed column stays where it is.
-
-Reopening clears the close date and the exchange rate fixed at close, and the dialog does not say so. It needs permission to change the deal, and you cannot reopen an archived deal. Also called: undo a close, reopen a lost deal.
+On **Board**, dragging a won or lost card onto an open column opens the same dialog, with that column's stage picked. Nothing moves until you press **Reopen**. A closed card dropped on the other closed column stays where it is. Reopening clears the close date and the exchange rate fixed at close, and the dialog does not say so. It needs permission to change the deal, and you cannot reopen an archived deal. Also called: undo a close, reopen a lost deal.
 
 ### How do I bring back a deal that went cold?
 A deal that went cold is still open unless someone closed it. Margince marks an open deal **stalled** after more than 60 days with no activity, and real activity brings it back. A meeting booked for later keeps the deal off stalled until it starts or is called off.
@@ -305,9 +303,7 @@ A stage move sets it back to the new stage's and says so:
 it, and one at 90% or more (the **Likely threshold** setting) with a confirmed
 close date counts as **Likely**.
 
-An open deal's card on the board shows its probability beside its value, with
-a small round mark that fills to match it. A closed deal's card shows none. It
-shows the day it closed, not the expected one, with the year if not this year.
+An open deal's card on the board shows its probability beside its value, with a small round mark that fills to match it. A closed deal's card shows none. It shows the day it closed, not the expected one, with the year if not this year.
 
 ## Close dates Margince sets
 
@@ -342,7 +338,11 @@ Margince may move an open deal to a later stage when the customer's own words me
 
 ## Deals Margince opens and reopens
 
-A customer may ask for an offer at a company with no open deal. Margince then opens a deal for the company's owner at the first stage. When the company's last closed deal was lost, Margince reopens that deal instead, for its owner. It counts only messages that reached Margince after the deal was lost.
+A customer may ask for an offer at a company with no open deal. Margince then opens a deal for the company's owner at the first stage. One clear request for a quotation or a proposal from a contact at the company is enough. When the company's last closed deal was lost, Margince reopens that deal instead, for its owner. It counts only messages that reached Margince after the deal was lost.
+
+Margince fills a new deal from the request. The amount is the budget the email states, and the close date is the day the customer decides. **What this deal is** says what the customer asked for. Margince marks each of these until someone edits it. A budget with no currency is read in the base currency and marked **Currency assumed, check it**.
+
+Private email counts too. Email private only because of a mailbox setting counts in full while **Share quotation requests from private mail** is on. The deal then shows what the customer asked for. Email someone protected still opens the deal, but the deal shows nothing from it.
 
 Both show on **Home** with **Undo**. Undo of a reopen closes the deal as lost again, with its earlier reason. See [Deals the customer supports](deals-the-customer-supports.md#when-a-lost-deals-customer-comes-back). Also called: revive a lost deal, automatic new deal.
 

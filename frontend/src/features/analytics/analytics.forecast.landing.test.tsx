@@ -110,6 +110,22 @@ describe("the projected landing", () => {
     ).toBeTruthy();
   });
 
+  it("names a withheld call without saying nobody called", () => {
+    draw(
+      <LandingCard
+        landing={landing({ caveat: "call_withheld" })}
+        currency="EUR"
+        locale="en"
+      />,
+    );
+
+    expect(
+      screen.getByText(en["forecast.landing.caveat.call_withheld"]),
+    ).toBeTruthy();
+    expect(screen.getByText(en["forecast.callWithheldLine"])).toBeTruthy();
+    expect(screen.queryByText(en["forecast.callAbsentLine"])).toBeNull();
+  });
+
   it("reports a call below the money already won rather than correcting it", () => {
     draw(
       <LandingCard
@@ -179,6 +195,23 @@ describe("whether the open deals support the reference", () => {
     );
 
     expect(screen.getByText(/50% of required deal value/i)).toBeTruthy();
+  });
+
+  // A reader who may not see the call is told it is not shown here. The card
+  // never says that no call is recorded.
+  it("says a withheld call is not shown when there is no basis", () => {
+    draw(
+      <SufficiencyCard
+        sufficiency={{ absent: "call_withheld" }}
+        currency="EUR"
+        locale="en"
+      />,
+    );
+
+    expect(
+      screen.getByText(en["forecast.pipelineAbsent.call_withheld"]),
+    ).toBeTruthy();
+    expect(screen.queryByText(/No call is recorded/)).toBeNull();
   });
 
   // The case a zeroed figure would get exactly backwards: no basis must not

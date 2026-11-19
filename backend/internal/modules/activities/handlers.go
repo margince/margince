@@ -27,6 +27,9 @@ type Handlers struct {
 	// nil leaves the field out.
 	locks func(surface []config.Any) *[]crmcontracts.SettingLock
 	store *Store
+	// linkPages reads the page a link names for its preview; nil reads the
+	// public web through webread.
+	linkPages LinkPageReader
 	// settings reads and writes the follow-up window; nil refuses both its
 	// endpoints.
 	settings *config.Config
@@ -36,6 +39,8 @@ type Handlers struct {
 	emailDrafter EmailDrafter
 	// consent gates the send path; nil fails closed (WithConsent wires it).
 	consent ConsentGate
+	// sendObserver hears each email Send's outcome; nil reports to nobody.
+	sendObserver SendObserver
 	// calendars answers whether a host's own diary reaches this product, which
 	// decides what an empty availability window may claim. Nil answers no.
 	calendars CalendarConnected

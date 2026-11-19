@@ -363,7 +363,7 @@ func (h Reads) callerName(ctx context.Context, tx pgx.Tx) (string, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.UserID.IsZero() {
 		return "", fmt.Errorf(
-			"network: drafting a note needs an authenticated contact: %w",
+			"drafting a note needs an authenticated contact: %w",
 			apperrors.ErrPermissionDenied)
 	}
 	names, err := UserNames(ctx, tx, []ids.UUID{actor.UserID})

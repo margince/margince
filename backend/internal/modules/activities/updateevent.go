@@ -57,6 +57,10 @@ func activityUpdatedChangedFields(in UpdateActivityInput, current crmcontracts.A
 		status := crmcontracts.PublicEventActivityChangedFieldsMeetingStatus(*in.MeetingStatus)
 		fields.MeetingStatus = &status
 	}
+	// A cleared status is a change too: the meeting is unanswered again.
+	if in.clears(auditFieldMeetingStatus) && current.MeetingStatus != nil {
+		fields.MeetingStatusCleared = new(true)
+	}
 	if in.CallOutcome != nil {
 		outcome := crmcontracts.PublicEventActivityChangedFieldsCallOutcome(*in.CallOutcome)
 		fields.CallOutcome = &outcome

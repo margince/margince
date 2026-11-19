@@ -390,6 +390,35 @@ func TestABrowserFormRefusesWhatItShouldNotLand(t *testing.T) {
 	}
 }
 
+func TestAPostWithTextThatIsNotValidUTF8IsRefusedAndLandsNothing(t *testing.T) {
+	e := setupFormsApp(t)
+	form := createForm(t, e, integration.AnyMap{"name": "Contact", "sender": "browser", "allowed_origins": []string{siteOrigin}})
+	const email = "broken-text@visitor.example"
+	var multipartBody bytes.Buffer
+	multipartBody.WriteString("--b\r\nContent-Disposition: form-data; name=\"email\"\r\n\r\n" + email + "\r\n")
+	multipartBody.WriteString("--b\r\nContent-Disposition: form-data; name=\"message\"\r\n\r\nbad \xff\xfe\r\n--b--\r\n")
+	for name, post := range map[string]struct {
+		contentType string
+		body        []byte
+	}{
+		"urlencoded":     {"application/x-www-form-urlencoded", []byte("email=" + email + "&message=bad%FF%FE")},
+		"json bytes":     {"application/json", []byte("{\"email\":\"" + email + "\",\"message\":\"bad \xff\"}")},
+		"json surrogate": {"application/json", []byte(`{"email":"` + email + `","message":"\ud800"}`)},
+		"multipart":      {"multipart/form-data; boundary=b", multipartBody.Bytes()},
+	} {
+		t.Run(name, func(t *testing.T) {
+			answer := postForm(t, e, "POST", form.FormKey, post.contentType, post.body,
+				map[string]string{"Origin": siteOrigin, "Accept": "application/json"})
+			if answer.Status != http.StatusUnprocessableEntity || !strings.Contains(answer.Body, "malformed_json") {
+				t.Fatalf("→ %d %s, want 422 malformed_json", answer.Status, answer.Body)
+			}
+			if count, _, _ := leadsWithEmail(t, e, email); count != 0 {
+				t.Fatalf("a refused post landed %d leads", count)
+			}
+		})
+	}
+}
+
 // A form a site builder makes sends no render time, and its posts still land.
 func TestABrowserPostWithoutARenderTimeLandsAsALead(t *testing.T) {
 	e := setupFormsApp(t)

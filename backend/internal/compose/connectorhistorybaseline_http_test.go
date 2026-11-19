@@ -17,7 +17,7 @@ func putHistoryBaseline(h connectorHandlers, provider, body string) int {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPut, "/v1/connectors/"+provider+"/history-baseline", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
-	h.SetConnectorHistoryBaseline(rec, asSeat(req), crmcontracts.CaptureProvider(provider))
+	h.SetConnectorHistoryBaseline(rec, asSeat(req), crmcontracts.CaptureProvider(provider), crmcontracts.SetConnectorHistoryBaselineParams{})
 	return rec.Code
 }
 

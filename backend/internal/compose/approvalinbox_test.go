@@ -26,7 +26,7 @@ func stagedFixture() crmcontracts.Approval {
 		Id: openapi_types.UUID(ids.NewV7()), Kind: "archive_record", Status: "pending",
 		ProposedBy: "agent:test", CreatedAt: time.Now(), Summary: &summary,
 		TargetEntityType: &target, TargetEntityId: &targetID,
-		ProposedChange: &change, Evidence: &[]crmcontracts.ApprovalEvidence{snippet},
+		ProposedChange: &change, Evidence: &[]crmcontracts.ApprovalEvidence{snippet}, AwaitingAgent: new(true),
 	}
 }
 
@@ -45,8 +45,8 @@ func TestTheListingCarriesTheSummaryAndNotTheStagedDocument(t *testing.T) {
 		t.Errorf("the listing carries evidence: %v", listed.Evidence)
 	}
 	read := stagedActionFrom(stagedFixture(), true)
-	if len(read.ProposedChange) == 0 || len(read.Evidence) == 0 {
-		t.Error("read_approval answered without the change or the evidence it was formed on")
+	if len(read.ProposedChange) == 0 || len(read.Evidence) == 0 || !read.AwaitingAgent {
+		t.Error("read_approval answered without the change, the evidence it was formed on, or whether it awaits its agent")
 	}
 }
 

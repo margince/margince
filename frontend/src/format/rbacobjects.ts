@@ -175,7 +175,8 @@ function isCoreObject(object: string): object is CoreRbacObject {
 // Not translated: the contract carries no label for an extension's object, so
 // its key, less the unit's own prefix, is the only name there is.
 export function objectLabel(unit: string, object: string): string {
-  const prefix = `ext_${unit}_`;
+  // The object spells a hyphenated unit name with underscores.
+  const prefix = `ext_${unit.replaceAll("-", "_")}_`;
   const bare = object.startsWith(prefix)
     ? object.slice(prefix.length)
     : object.replace(/^ext_/, "");

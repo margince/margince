@@ -5,7 +5,7 @@ import { usePageName } from "../../app/pagemeta";
 import { BULK_MAX_ITEMS } from "../../components/bulkchangeapi";
 import { searchCompanyTargets } from "../../components/companyform";
 import { CreateAction } from "../../components/create";
-import { currencyField } from "../../components/currencyfield";
+import { amountField, currencyField } from "../../components/currencyfield";
 import {
   type ObjectCustomFields,
   useObjectCustomFields,
@@ -17,7 +17,6 @@ import {
   ListTable,
   useTagChips,
 } from "../../components/listquery";
-import { moneyAmountField } from "../../components/moneyamountfield";
 import { useOwnerChips } from "../../components/ownerdials";
 import { mineEmptyNote, standardViews } from "../../components/recordlist";
 import { useOwnerPicker } from "../../components/recordowners";
@@ -137,6 +136,7 @@ function DealCreateAction({
             { ...values, project_id: projectId ?? "" },
             pipeline.id,
             leading[0],
+            locale,
           ),
           ...cf.toBody(values),
         },
@@ -160,12 +160,15 @@ function DealCreateAction({
           required: true,
           maxLength: TEXT_LIMITS.label,
         },
-        moneyAmountField(t, {
-          key: "amount",
-          label: "create.amount",
-          wireField: "amount_minor",
-          currency: leading[0],
-        }),
+        amountField(
+          { key: "amount", label: "create.amount", wireField: "amount_minor" },
+          {
+            currency: (values) => values.currency || leading[0],
+            locale,
+            t,
+            nonNegative: true,
+          },
+        ),
         currencyField(leading, locale),
         {
           key: "stage_id",

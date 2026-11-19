@@ -92,3 +92,20 @@ it("clamps a brief longer than six lines and opens it on request", async () => {
   await user.click(more);
   expect(document.querySelector(".d360-brief-clamped")).toBeNull();
 });
+
+it.each([
+  [true, 1],
+  [false, 0],
+] as const)(
+  "marks a brief Margince wrote until a rep edits it (by model %s)",
+  (byModel, marks) => {
+    render(
+      <StoryProviders>
+        <DealBrief brief="They want a quote for 40 seats." byModel={byModel} />
+      </StoryProviders>,
+    );
+    expect(
+      screen.queryAllByText(translate("en", "deal.brief.byModel")),
+    ).toHaveLength(marks);
+  },
+);

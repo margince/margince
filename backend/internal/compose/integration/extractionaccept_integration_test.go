@@ -129,7 +129,7 @@ func setupExtractionAccept(t *testing.T) acceptEnv {
 	h := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling).WithBlobstore(blobstore.NewMemory())
 	pipeline, open, _ := DealFixture(t, e)
 	deal := e.SeedDeal(t, "Accept Target", pipeline, open, &e.Rep1)
-	att := uploadDealAttachment(e.Admin(), t, h, deal, "quote.pdf", []byte("quote bytes"))
+	att := uploadDealAttachment(e.Admin(), t, h, deal, "quote.pdf", []byte("%PDF-1.4 quote bytes"))
 	return acceptEnv{
 		Env:     e,
 		deal:    deal,
@@ -269,7 +269,7 @@ func TestAcceptAttachmentExtractionRefusesNonDealAttachment(t *testing.T) {
 	e := Setup(t)
 	h := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling).WithBlobstore(blobstore.NewMemory())
 	company := e.SeedCompany(t, "Non-Deal Accept Parent", &e.Rep1)
-	att := uploadTestAttachmentForCompany(e.Admin(), t, h, company, "company-notes.pdf", []byte("company bytes"))
+	att := uploadTestAttachmentForCompany(e.Admin(), t, h, company, "company-notes.pdf", []byte("%PDF-1.4 company bytes"))
 	reading := seedExtractionReading(e.Admin(), t, e, ids.UUID(att.Id), acceptExtractionFields())
 	engine := compose.NewExtractionAccept(e.Pool)
 
@@ -402,7 +402,7 @@ func TestAcceptAttachmentExtractionEditedAcceptRequiresActivityGrant(t *testing.
 func TestAcceptAttachmentExtractionRefusesAReadingOfAnotherDocument(t *testing.T) {
 	a := setupExtractionAccept(t)
 	h := activities.NewHandlers(a.DB()).WithUploadLimit(uploadCeiling).WithBlobstore(blobstore.NewMemory())
-	other := uploadDealAttachment(a.Admin(), t, h, a.deal, "other.pdf", []byte("other bytes"))
+	other := uploadDealAttachment(a.Admin(), t, h, a.deal, "other.pdf", []byte("%PDF-1.4 other bytes"))
 	elsewhere := seedExtractionReading(a.Admin(), t, a.Env, ids.UUID(other.Id), acceptExtractionFields())
 
 	_, err := a.engine.Accept(a.Admin(), ids.UUID(a.att.Id), crmcontracts.AcceptExtractionRequest{
@@ -421,7 +421,7 @@ func TestAcceptAttachmentExtractionRefusesWhenNothingHasReadTheDocument(t *testi
 	h := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling).WithBlobstore(blobstore.NewMemory())
 	pipeline, open, _ := DealFixture(t, e)
 	deal := e.SeedDeal(t, "Accept Target", pipeline, open, &e.Rep1)
-	att := uploadDealAttachment(e.Admin(), t, h, deal, "quote.pdf", []byte("quote bytes"))
+	att := uploadDealAttachment(e.Admin(), t, h, deal, "quote.pdf", []byte("%PDF-1.4 quote bytes"))
 
 	_, err := compose.NewExtractionAccept(e.Pool).Accept(e.Admin(), ids.UUID(att.Id),
 		crmcontracts.AcceptExtractionRequest{

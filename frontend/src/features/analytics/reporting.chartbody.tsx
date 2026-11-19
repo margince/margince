@@ -132,14 +132,11 @@ export function ChartBody({
       return (
         <>
           <BulletChart {...shared} targetLabel={t("reporting.target")} />
-          {chart.points.map((point) => (
-            <TargetProgress
-              key={point.key}
-              value={point.value}
-              target={point.target}
-              format={format}
-            />
-          ))}
+          <TargetProgress
+            chart={chart}
+            evaluation={evaluation}
+            format={format}
+          />
         </>
       );
     case "stage_distribution":

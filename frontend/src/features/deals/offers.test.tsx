@@ -35,13 +35,13 @@ function confirmInDialog(verb: string): HTMLElement {
   return within(screen.getByRole("dialog")).getByRole("button", { name: verb });
 }
 
-function render(ui: ReactNode) {
+function render(ui: ReactNode, locale: "en" | "de" = "en") {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   const result = rtlRender(
     <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">{ui}</LocaleProvider>
+      <LocaleProvider initial={locale}>{ui}</LocaleProvider>
     </QueryClientProvider>,
   );
   return { ...result, client };
@@ -350,6 +350,110 @@ describe("OfferLineEditor (OP-7/OP-13)", () => {
     await user.click(screen.getByTestId("add-line"));
     await waitFor(() => expect(mutations).toHaveLength(1));
     expect(mutations[0].body).toMatchObject({ unit: "Seat" });
+  });
+
+  // German groups thousands with a dot: "1,5" is one and a half, and "1.500"
+  // is refused because it also reads as fifteen hundred.
+  it("reads a new line's figures the German way, and refuses 1.500", async () => {
+    const mutations: { method: string; url: string; body: unknown }[] = [];
+    stubOfferWithMutations(
+      { ...baseOffer, line_items: [existingLine] },
+      { ...baseOffer, line_items: [existingLine] },
+      mutations,
+    );
+    const user = userEvent.setup();
+    render(<OfferScreen id="o-1" />, "de");
+    await screen.findByText("ANG-2026-0007");
+    await user.type(screen.getByTestId("new-line-description"), "Schulung");
+    await user.type(screen.getByTestId("new-line-quantity"), "1,5");
+    await user.type(screen.getByTestId("new-line-discount"), "12,5");
+    await user.type(screen.getByTestId("new-line-tax"), "1.500");
+    await user.click(screen.getByTestId("add-line"));
+    expect(
+      await screen.findByText("Gib die Zahl als 1500 oder 1,5 ein."),
+    ).toBeTruthy();
+    expect(mutations).toHaveLength(0);
+
+    await user.clear(screen.getByTestId("new-line-tax"));
+    await user.type(screen.getByTestId("new-line-tax"), "19");
+    await user.click(screen.getByTestId("add-line"));
+    await waitFor(() => expect(mutations).toHaveLength(1));
+    expect(mutations[0].body).toMatchObject({
+      quantity: 1.5,
+      discount_pct: 12.5,
+      tax_rate: 19,
+    });
+  });
+
+  it("saves an existing line's German quantity, and refuses 1.500 under it", async () => {
+    const mutations: { method: string; url: string; body: unknown }[] = [];
+    stubOfferWithMutations(
+      { ...baseOffer, line_items: [existingLine] },
+      { ...baseOffer, line_items: [existingLine] },
+      mutations,
+    );
+    const user = userEvent.setup();
+    render(<OfferScreen id="o-1" />, "de");
+    await screen.findByText("ANG-2026-0007");
+    const quantity = screen.getByTestId("line-quantity-li-1");
+    await user.clear(quantity);
+    await user.type(quantity, "1.500");
+    quantity.blur();
+    expect(
+      await screen.findByText("Gib die Zahl als 1500 oder 1,5 ein."),
+    ).toBeTruthy();
+    expect(mutations).toHaveLength(0);
+
+    await user.clear(quantity);
+    await user.type(quantity, "2,5");
+    quantity.blur();
+    await waitFor(() => expect(mutations).toHaveLength(1));
+    expect(mutations[0].body).toMatchObject({ quantity: 2.5 });
+  });
+
+  // Typed key by key, "1,500" passes "1,5" on its way. The cell saves on blur,
+  // so a prefix the box committed would be saved as €1.50.
+  it("saves nothing when a line's price text is refused", async () => {
+    const mutations: { method: string; url: string; body: unknown }[] = [];
+    stubOfferWithMutations(
+      { ...baseOffer, line_items: [existingLine] },
+      { ...baseOffer, line_items: [existingLine] },
+      mutations,
+    );
+    const user = userEvent.setup();
+    render(<OfferScreen id="o-1" />);
+    await screen.findByText("ANG-2026-0007");
+    const price = screen.getByTestId("line-unit-price-li-1");
+    await user.click(price);
+    await user.clear(price);
+    await user.type(price, "1,500");
+    await user.tab();
+    expect(
+      await screen.findByText("Enter the amount as 1500 or 1500.00."),
+    ).toBeTruthy();
+    expect(mutations).toHaveLength(0);
+  });
+
+  it("adds no line while the new line's price text is refused", async () => {
+    const mutations: { method: string; url: string; body: unknown }[] = [];
+    stubOfferWithMutations(
+      { ...baseOffer, line_items: [existingLine] },
+      { ...baseOffer, line_items: [existingLine] },
+      mutations,
+    );
+    const user = userEvent.setup();
+    render(<OfferScreen id="o-1" />);
+    await screen.findByText("ANG-2026-0007");
+    await user.type(screen.getByTestId("new-line-description"), "Seats");
+    await user.type(screen.getByTestId("new-line-quantity"), "3");
+    const price = screen.getByTestId("new-line-unit-price");
+    await user.clear(price);
+    await user.type(price, "1,500");
+    await user.click(screen.getByTestId("add-line"));
+    expect(
+      await screen.findByText("Enter the amount as 1500 or 1500.00."),
+    ).toBeTruthy();
+    expect(mutations).toHaveLength(0);
   });
 
   it("removes a line using the delete response's recomputed totals", async () => {

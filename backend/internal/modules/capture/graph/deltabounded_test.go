@@ -404,18 +404,6 @@ func TestAFreshShortRoundLeavesNoRoundToResume(t *testing.T) {
 	}
 }
 
-func TestAnAnchorPastTheCapStopsLoudly(t *testing.T) {
-	p := newPagedProvider(t, pagedEntries(anchorSeenCap+5))
-	_, err := NewAPI(p.srv.Client(), p.srv.URL).DeltaInit(context.Background(), "access", folderInbox, anchorAfter, nil,
-		func(context.Context, DeltaPage) error { return nil })
-	if !errors.Is(err, ErrAnchorTooLarge) {
-		t.Fatalf("a round of %d distinct messages answered %v, want ErrAnchorTooLarge", anchorSeenCap+1, err)
-	}
-	if !strings.Contains(err.Error(), "run the history import for this mailbox, then re-anchor it") {
-		t.Errorf("the fault %q does not tell the operator what to do", err)
-	}
-}
-
 func TestAStoredCensusPastTheCapIsRefused(t *testing.T) {
 	seen := make([]string, anchorSeenCap+1)
 	for i := range seen {

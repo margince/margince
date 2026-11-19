@@ -45,6 +45,7 @@ import {
 import { ApprovalEvidence } from "../automations/approvalevidence";
 import {
   approvalAcceptLabel,
+  approvalEditable,
   approvalExpiryLabel,
   approvalKindLabel,
   decisionSkewKey,
@@ -54,7 +55,7 @@ import {
   useApprovalNames,
 } from "../automations/approvalresponsibility";
 import { worklistLaneHref } from "../worklist/worklist.header";
-import { commitTray } from "./brief.decisions.commit";
+import { type CommitResult, commitTray } from "./brief.decisions.commit";
 import { DECK_KEY_WORDS } from "./brief.deckwords";
 
 // The decisions half of Brief: the deck, its tray, and the one act that sends
@@ -93,6 +94,36 @@ function verdictFailure(
   return isVersionSkewOf(error)
     ? t(decisionSkewKey(kind))
     : problemMessageOf(error, t);
+}
+
+// What a sent tray did beyond recording the verdicts. An approval the agent
+// has yet to run changed nothing. A failed effect did not happen.
+function announceWhatRan(
+  toast: ReturnType<typeof useToast>,
+  plural: ReturnType<typeof usePlural>,
+  locale: Locale,
+  result: Pick<CommitResult, "awaitingAgent" | "effectFailed">,
+) {
+  const count = (n: number) => ({ count: formatNumber(n, locale) });
+  if (result.awaitingAgent > 0) {
+    toast.show(
+      plural(
+        "brief.deck.awaitingAgent",
+        result.awaitingAgent,
+        count(result.awaitingAgent),
+      ),
+    );
+  }
+  if (result.effectFailed > 0) {
+    toast.show(
+      plural(
+        "brief.deck.effectFailed",
+        result.effectFailed,
+        count(result.effectFailed),
+      ),
+      { tone: "danger", sticky: true },
+    );
+  }
 }
 
 /** The deck's vocabulary, in this surface's own words. */
@@ -233,6 +264,7 @@ export function DecisionsSection({
         return;
       }
       setFailure(null);
+      announceWhatRan(toast, plural, locale, result);
       // The full queue is where an edit's form lives, so a tray carrying one
       // takes the reader there rather than telling them the deck cannot do it.
       if (result.edits > 0) {
@@ -340,6 +372,7 @@ export function DecisionsSection({
         // ACT; the body shows one proposal in the set.
         chips={(approval, shared) => ({
           canAccept: approvalAcceptable(approval),
+          canEdit: approvalEditable(approval.kind, approval.proposed_change),
           detail: <ApprovalEvidence approval={approval} />,
           acceptLabel: approvalAcceptLabel(
             shared.kind,

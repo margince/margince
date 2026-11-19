@@ -26,6 +26,9 @@ var ErrEmbedLaneFailed = errors.New("ai: the embed lane did not answer")
 // enforcement point here. One provider call is exactly one logical call —
 // the embed lane has no retry ladder to bundle.
 func (r *Router) Embed(ctx context.Context, req model.EmbedRequest) (model.Embeddings, error) {
+	if err := r.refuseUnbound(); err != nil {
+		return model.Embeddings{}, err
+	}
 	// One load per call — see binding: a rebind mid-call must not mix an embedder
 	// with another binding's width or provider label.
 	b := r.binding()

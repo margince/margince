@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { CreateField } from "../../../components/create";
 import { type RailEdit, useRailText } from "../../../components/railfield";
-import { Button } from "../../../design-system/atoms";
+import { Badge, Button } from "../../../design-system/atoms";
 import {
   FieldEditDialog,
   useFieldEditor,
@@ -25,9 +25,13 @@ const COLLAPSED_LINES = 6;
  */
 export function DealBrief({
   brief,
+  byModel,
   edit,
 }: Readonly<{
   brief?: string | null;
+  // Margince wrote the brief from the customer's mail and nobody edited it
+  // since. The rep checks it before trusting it.
+  byModel?: boolean;
   // The deal's field edit; absent while the deal takes no writes from this
   // reader.
   edit?: RailEdit;
@@ -56,6 +60,7 @@ export function DealBrief({
     >
       {text ? (
         <>
+          <ByModelMark shown={byModel} />
           <OverviewText>
             <span
               className={
@@ -125,4 +130,10 @@ function BriefEditor({
       </FieldEditDialog>
     </>
   );
+}
+
+/** Says Margince wrote the brief from the customer's email. */
+function ByModelMark({ shown }: Readonly<{ shown?: boolean }>) {
+  const t = useT();
+  return shown ? <Badge tone="ai">{t("deal.brief.byModel")}</Badge> : null;
 }

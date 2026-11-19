@@ -18,6 +18,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/dealscout"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -58,7 +59,7 @@ func TestAProposalIsNamedByAWordOfItsFileName(t *testing.T) {
 	ctx := e.system()
 	for _, c := range cases {
 		args := []any{c.filename, c.contentType}
-		matcher := proposalDocumentSQL("$1::text", "$2::text", func(v any) int { args = append(args, v); return len(args) })
+		matcher := dealscout.ProposalDocumentSQL("$1::text", "$2::text", func(v any) int { args = append(args, v); return len(args) })
 		var got bool
 		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			return tx.QueryRow(ctx, `SELECT `+matcher, args...).Scan(&got)

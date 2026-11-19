@@ -19,7 +19,9 @@ func TestReportingMutationHandlersRejectMalformedBodiesBeforeCallingTheService(t
 		name string
 		call http.HandlerFunc
 	}{
-		{"create report", handlers.CreateReportingReport},
+		{"create report", func(w http.ResponseWriter, r *http.Request) {
+			handlers.CreateReportingReport(w, r, crmcontracts.CreateReportingReportParams{})
+		}},
 		{"create target", handlers.CreateReportingTarget},
 		{"update report", func(w http.ResponseWriter, r *http.Request) {
 			handlers.UpdateReportingReport(w, r, id, crmcontracts.UpdateReportingReportParams{})

@@ -1750,7 +1750,7 @@ test("AC-create-2: the palette's New-deal action opens the create form; only ope
   await expect(page.locator('[role="listbox"]')).toHaveCount(0);
   await page.getByLabel("Deal-Name").fill("Neuer Deal");
   // By role: getByLabel("Wert") matches any label containing the word.
-  await page.getByRole("spinbutton", { name: "Wert" }).fill("480");
+  await page.getByRole("textbox", { name: "Wert" }).fill("480");
   await page.getByRole("button", { name: "Erstellen" }).click();
   await expect(page).toHaveURL(/#\/deals\/d-new$/);
 });
@@ -3688,8 +3688,12 @@ const SHARED_LINK_ROWS = Array.from({ length: 3 }, (_, index) => ({
 
 // The analytics forecast for a reader who may share it, with the drawer open
 // from its trigger by the KEYBOARD, so every caller starts from the same place.
+// The rail offers Analytics only to a reader who may read the forecast.
 async function openSharedLinks(page: Page) {
-  await servePrincipal(page, meFixture({ allow: { forecast: ["create"] } }));
+  await servePrincipal(
+    page,
+    meFixture({ allow: { forecast: ["read", "create"] } }),
+  );
   await page.route(/\/v1\/forecast\/shares$/, (route) =>
     route.fulfill({ json: { data: SHARED_LINK_ROWS } }),
   );

@@ -4,7 +4,6 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { RecordFormBody } from "../../components/create.form";
-import { moneyAmountField } from "../../components/moneyamountfield";
 import { LocaleProvider, translate } from "../../i18n";
 import { dealEditFields } from "./deals.fields";
 
@@ -72,13 +71,13 @@ describe("a deal amount the currency cannot hold", () => {
     ],
     ["Value", "1.999", "This amount has more decimals than EUR allows."],
     ["Value", "-3", "Enter an amount of zero or more."],
-    ["Value", "900000000000000", "This amount is too large to save."],
+    ["Value", "900000000000000", "This amount is too large to store."],
   ])(
     "refuses %s %s under the field and sends nothing",
     (label, typed, sentence) => {
       const save = vi.fn();
       render(<Form currency="EUR" keys={MONEY} seeded={PRICED} save={save} />);
-      fireEvent.change(screen.getByRole("spinbutton", { name: label }), {
+      fireEvent.change(screen.getByRole("textbox", { name: label }), {
         target: { value: typed },
       });
       expect(screen.getByText(sentence)).toBeInTheDocument();
@@ -121,25 +120,11 @@ describe("a deal amount the currency cannot hold", () => {
   it("lets an amount the currency holds through", () => {
     const save = vi.fn();
     render(<Form currency="EUR" keys={MONEY} seeded={PRICED} save={save} />);
-    fireEvent.change(screen.getByRole("spinbutton", { name: "Value" }), {
+    fireEvent.change(screen.getByRole("textbox", { name: "Value" }), {
       target: { value: "1.99" },
     });
     expect(screen.getByRole("button", { name: "Save" })).toBeEnabled();
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(save.mock.calls[0]?.[0]).toMatchObject({ amount: "1.99" });
-  });
-
-  // New deal reads the leading currency when the form has not named one.
-  it("falls back to the given currency when the form names none", () => {
-    const field = moneyAmountField(t, {
-      key: "amount",
-      label: "create.amount",
-      wireField: "amount_minor",
-      currency: "JPY",
-    });
-    expect(field.validate?.("1000.5", { amount: "1000.5" })).toBe(
-      "This amount has more decimals than JPY allows.",
-    );
-    expect(field.validate?.("", {})).toBeUndefined();
   });
 });

@@ -86,6 +86,18 @@ describe("parseHash", () => {
   it("drops the segments under a screen this app does not answer", () => {
     expect(parseHash("#/dealz/01J9ZK/tab")).toEqual({ screen: "not-found" });
   });
+  // A purpose-free unsubscribe link ends at its token, and an older mail ends
+  // in an empty segment. Both carry the message's language as a query.
+  it("parses an unsubscribe link with no purpose, with or without a trailing slash", () => {
+    for (const hash of [
+      "#/unsubscribe/tok?lang=de",
+      "#/unsubscribe/tok/?lang=de",
+    ]) {
+      const route = parseHash(hash);
+      expect(route).toEqual({ screen: "unsubscribe", id: "tok" });
+      expect(route.id2).toBeUndefined();
+    }
+  });
 });
 
 describe("routeHash", () => {

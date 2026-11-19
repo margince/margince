@@ -46,6 +46,9 @@ func (s *Store) PreviewCompanyCreationForActor(ctx context.Context, in CreateCom
 			return err
 		}
 		in.OwnerID = owner
+		if err := s.refuseConsumerCompanyDomains(ctx, tx, ids.CompanyID{}, in.Domains); err != nil {
+			return err
+		}
 		match, err := admitAndDedupeCompanyCreate(ctx, tx, in)
 		if err != nil {
 			return err

@@ -71,7 +71,7 @@ func (f fakeLabels) LabeledCaptureCountSince(context.Context, time.Time) (int64,
 
 type fakeYields capture.BackfillYields
 
-func (f fakeYields) BackfillYields(context.Context, string, ids.UserID) (capture.BackfillYields, error) {
+func (f fakeYields) BackfillYields(context.Context, capture.Mailbox, ids.UserID) (capture.BackfillYields, error) {
 	return capture.BackfillYields(f), nil
 }
 
@@ -99,7 +99,7 @@ func estimatorFor(totals *fakeTotals, rates fakeRates, ladder fakeLadder, labels
 
 func mustEstimate(t *testing.T, e *Estimator, scanned int64) BackfillCost {
 	t.Helper()
-	got, err := e.EstimateBackfill(context.Background(), "gmail", ids.New[ids.UserKind](), scanned)
+	got, err := e.EstimateBackfill(context.Background(), capture.ProviderMailbox("gmail"), ids.New[ids.UserKind](), scanned)
 	if err != nil {
 		t.Fatalf("EstimateBackfill: %v", err)
 	}

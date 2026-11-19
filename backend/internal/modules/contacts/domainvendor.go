@@ -56,7 +56,7 @@ func (s *Store) KeepDomainAsVendor(ctx context.Context, domain string) error {
 	}
 	base, ok := freemail.Hostname(domain)
 	if !ok {
-		return fmt.Errorf("contacts: %q is not a domain: %w", domain, apperrors.ErrInvalidArgument)
+		return fmt.Errorf("%q is not a domain: %w", domain, apperrors.ErrInvalidArgument)
 	}
 	reader := actingHuman(ctx)
 	if reader == nil {
@@ -72,7 +72,7 @@ func (s *Store) KeepDomainAsVendor(ctx context.Context, domain string) error {
 			return err
 		}
 		if !known || !decides {
-			return fmt.Errorf("contacts: no question about %s for this reader: %w", base, apperrors.ErrNotFound)
+			return fmt.Errorf("no question about %s for this reader: %w", base, apperrors.ErrNotFound)
 		}
 		var args []any
 		arg := func(value any) string { args = append(args, value); return fmt.Sprintf("$%d", len(args)) }
@@ -83,7 +83,7 @@ func (s *Store) KeepDomainAsVendor(ctx context.Context, domain string) error {
  WHERE domain = `+row+` AND status = 'pending' AND pending_reason = `+reason+` RETURNING id`, args...).Scan(&id)
 		if errors.Is(err, pgx.ErrNoRows) {
 			// The row is locked, so only its own state refuses: no open vendor question.
-			return fmt.Errorf("contacts: %s has no open vendor question: %w", base, apperrors.ErrConflict)
+			return fmt.Errorf("%s has no open vendor question: %w", base, apperrors.ErrConflict)
 		}
 		if err != nil {
 			return fmt.Errorf("contacts: keeping %s as a vendor: %w", base, err)

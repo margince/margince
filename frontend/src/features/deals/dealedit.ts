@@ -149,7 +149,7 @@ export function useDealEdit(
         keys: ["partner_company_id", "partner_attribution"],
       },
     ],
-    record: openDealEdit(deal),
+    record: openDealEdit(deal, locale),
     onValuesChange: setFormValues,
     save: async (values, _rows, opened) => {
       const submitted = stringValues({ ...opened, ...values });
@@ -164,6 +164,7 @@ export function useDealEdit(
         opened,
         { ...values, project_id: projectId ?? "" },
         masked,
+        locale,
       );
     },
   };

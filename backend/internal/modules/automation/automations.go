@@ -138,7 +138,7 @@ func (s *AutomationStore) List(ctx context.Context, cursor *string, limit *int) 
 	joins := storekit.SQLf(runSummaryJoins, len(args))
 	where := "archived_at IS NULL"
 	if cursor != nil && *cursor != "" {
-		c, err := storekit.DecodeCursor(*cursor)
+		c, err := storekit.DecodeCursor("automations", *cursor)
 		if err != nil {
 			return AutomationPage{}, err
 		}
@@ -178,7 +178,7 @@ func (s *AutomationStore) List(ctx context.Context, cursor *string, limit *int) 
 	if len(page.Items) > n {
 		page.Items = page.Items[:n]
 		last := page.Items[len(page.Items)-1]
-		next, err := storekit.EncodeCursor(last.CreatedAt, last.ID.UUID)
+		next, err := storekit.EncodeCursor("automations", last.CreatedAt, last.ID.UUID)
 		if err != nil {
 			return AutomationPage{}, err
 		}

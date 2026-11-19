@@ -75,7 +75,7 @@ func (h domainQuestionHandlers) KeepDomainQuestion(w http.ResponseWriter, r *htt
 		return
 	}
 	if !asked {
-		httperr.Write(w, r, fmt.Errorf("compose: no open question about %s for this reader: %w", base, apperrors.ErrNotFound))
+		httperr.Write(w, r, fmt.Errorf("no open question about %s for this reader: %w", base, apperrors.ErrNotFound))
 		return
 	}
 	var input crmcontracts.KeepDomainQuestionJSONRequestBody
@@ -108,7 +108,7 @@ func (h domainQuestionHandlers) KeepDomainQuestion(w http.ResponseWriter, r *htt
 		// already settled as something other than a company. Both mean the
 		// row's state refuses, which is a conflict rather than a fault.
 		httperr.Write(w, r, fmt.Errorf(
-			"compose: %s already carries an answer that keeping it would overturn: %w",
+			"%s already carries an answer that keeping it would overturn: %w",
 			base, apperrors.ErrConflict))
 		return
 	}
@@ -177,7 +177,7 @@ func (h domainQuestionHandlers) DiscardDomainQuestion(w http.ResponseWriter, r *
 	}
 	// Idempotent on the folded value: pressing discard twice answers the rule
 	// that already exists rather than failing on the unique index.
-	rule, err := h.exclusions.Add(r.Context(), capture.ExclusionScopeUser, capture.ExclusionKindDomain, base)
+	rule, err := h.exclusions.Add(r.Context(), capture.ExclusionScopeUser, capture.ExclusionKindDomain, base, ids.Nil)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

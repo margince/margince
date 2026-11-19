@@ -285,7 +285,7 @@ func theirLaterMail(t *testing.T, e *loadEnv, request ids.UUID, at time.Time) id
 func newestSettlementAnswer(t *testing.T, e *loadEnv, request ids.UUID, at time.Time) ids.UUID {
 	t.Helper()
 	var newest *ids.UUID
-	if err := e.owner.QueryRow(t.Context(), `SELECT (`+newestAnswerSince+`) FROM activity a WHERE a.id = $2`, at, request).Scan(&newest); err != nil {
+	if err := e.owner.QueryRow(t.Context(), `SELECT (`+newestAnswerSince(true)+`) FROM activity a WHERE a.id = $2`, at, request).Scan(&newest); err != nil {
 		t.Fatal(err)
 	}
 	if newest == nil {

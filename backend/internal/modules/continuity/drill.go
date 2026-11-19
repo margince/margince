@@ -86,7 +86,7 @@ func (s *Store) Begin(ctx context.Context, restoredTo time.Time, operator, notes
 	}
 	operator = strings.TrimSpace(operator)
 	if operator == "" {
-		return ids.Nil, fmt.Errorf("continuity: a drill is recorded by somebody: %w", apperrors.ErrInvalidArgument)
+		return ids.Nil, fmt.Errorf("a drill is recorded by somebody: %w", apperrors.ErrInvalidArgument)
 	}
 	var id ids.UUID
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
@@ -120,7 +120,7 @@ func (s *Store) Finish(ctx context.Context, id ids.UUID, outcome, notes string) 
 		return err
 	}
 	if outcome != OutcomePassed && outcome != OutcomeFailed {
-		return fmt.Errorf("continuity: a drill closes as passed or failed, not %q: %w",
+		return fmt.Errorf("a drill closes as passed or failed, not %q: %w",
 			outcome, apperrors.ErrInvalidArgument)
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {

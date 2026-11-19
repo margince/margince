@@ -179,20 +179,13 @@ func TestAMessageWhoseReviewIsOverNamesItNoMore(t *testing.T) {
 	}
 }
 
-// A RESCHEDULED MESSAGE NAMES NO REVIEW, THOUGH ITS REVIEW IS STILL LIVE.
-//
-// This is the case that makes the held-status filter in stampReviews decide the
-// answer rather than merely narrow the read, and it took a review round to
-// find: rescheduling a held message moves it back to 'scheduled' and
-// deliberately LEAVES ITS REVIEW LIVE, because the message is still going out
-// and its decision is still outstanding (RescheduleInTx).
-//
-// So the lookup would happily answer for that row. Without the filter, a
-// message the rep has already dealt with would carry a route to a refusal taken
-// at a moment that has passed — and the rep would be sent to work about a
-// message they have already moved.
+// A rescheduled message names no review, though a decided review stays live.
+// A move keeps a review whose decision is recorded, so the fire at the new
+// moment can spend it. The held-status filter in stampReviews is then what keeps
+// the moved row from offering work that is already decided.
 func TestARescheduledMessageNamesNoReview(t *testing.T) {
 	c := setupConsent(t)
+	c.useReviewableMarketingProfile(t)
 
 	if status, _ := c.send(t, "marketing_email"); status != http.StatusConflict {
 		t.Fatalf("marketing send with no grant → %d, want 409", status)
@@ -202,6 +195,21 @@ func TestARescheduledMessageNamesNoReview(t *testing.T) {
 		t.Fatalf("no held row naming a review to begin with: %+v", held)
 	}
 	review := *held[0].ReviewID
+	// The decision is recorded and its send interrupted, so it stays unspent.
+	if _, err := c.Owner.Exec(t.Context(), `CREATE FUNCTION reject_link_staging() RETURNS trigger LANGUAGE plpgsql
+		AS $$ BEGIN RAISE EXCEPTION 'delivery staging interrupted by the test'; END $$`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := c.Owner.Exec(t.Context(), `CREATE TRIGGER reject_link_staging BEFORE UPDATE ON communication_instruction
+		FOR EACH ROW WHEN (NEW.status='consumed') EXECUTE FUNCTION reject_link_staging()`); err != nil {
+		t.Fatal(err)
+	}
+	if status := c.Call(t, "POST", "/v1/communication-reviews/"+review+"/direct-send", directed(), nil, nil); status != http.StatusInternalServerError {
+		t.Fatalf("the interrupted direction → %d, want 500", status)
+	}
+	if _, err := c.Owner.Exec(t.Context(), `DROP FUNCTION reject_link_staging() CASCADE`); err != nil {
+		t.Fatal(err)
+	}
 
 	var current struct {
 		Version int64 `json:"version"`
@@ -216,16 +224,15 @@ func TestARescheduledMessageNamesNoReview(t *testing.T) {
 		t.Fatalf("moving the held message → %d", status)
 	}
 
-	// The review really is still live, which is what makes this test about the
-	// filter rather than about a review that closed itself.
+	// The decided review is still live, so this test is about the filter.
 	var resolved *string
 	if err := c.Owner.QueryRow(context.Background(),
 		`SELECT resolved_at::text FROM communication_review WHERE id = $1`, review).Scan(&resolved); err != nil {
 		t.Fatalf("reading the review: %v", err)
 	}
 	if resolved != nil {
-		t.Fatalf("the review closed when the message moved, so the filter is not what this test " +
-			"is exercising")
+		t.Fatalf("the decided review closed when the message moved, so the filter is not what " +
+			"this test is exercising")
 	}
 
 	after := scheduledList(t, c)

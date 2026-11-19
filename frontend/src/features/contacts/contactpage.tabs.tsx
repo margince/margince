@@ -2,10 +2,7 @@ import { RecordTabs } from "../../design-system/recordtabs";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { CONTACT_TABS, type ContactTab } from "../../lib/contacttab";
-import {
-  type CoreFeature,
-  useDisabledCoreFeatures,
-} from "../../lib/corefeatures";
+import { useHiddenCoreFeatures, type Withheld } from "../../lib/corefeatures";
 import { useWriteRefusal } from "./contactactions";
 import { ContactDealsTab } from "./contactdeals";
 import { Employers } from "./contactemployers";
@@ -32,7 +29,7 @@ export const TAB_LABEL_KEYS: Readonly<Record<ContactTab, MessageKey>> = {
 
 export function contactTabForFeatures(
   tab: ContactTab,
-  disabled: readonly CoreFeature[],
+  disabled: readonly Withheld[],
 ): ContactTab {
   return tab === "deals" && disabled.includes("deals") ? "overview" : tab;
 }
@@ -56,7 +53,7 @@ export function ContactRecordTabs({
   onChange: (next: ContactTab) => void;
 }>) {
   const t = useT();
-  const disabled = useDisabledCoreFeatures();
+  const disabled = useHiddenCoreFeatures();
   const files = useContactFiles(view.contact.id);
   const filesRead =
     files.query.isSuccess && !files.hasMore ? files.files.length : undefined;
@@ -67,6 +64,7 @@ export function ContactRecordTabs({
       )}
       value={value}
       onChange={onChange}
+      keepPlace
       labels={{
         overview: t(TAB_LABEL_KEYS.overview),
         timeline: t(TAB_LABEL_KEYS.timeline),
@@ -125,7 +123,7 @@ export function ContactTabPanel({
   // the tab whose verb writes the record: the upload on Documents.
   refusedReasonId?: string;
 }>) {
-  const disabled = useDisabledCoreFeatures();
+  const disabled = useHiddenCoreFeatures();
   if (contactTabForFeatures(tab, disabled) !== tab) {
     return null;
   }

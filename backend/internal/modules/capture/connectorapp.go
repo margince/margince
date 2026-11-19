@@ -311,7 +311,7 @@ var appKinds = map[AppProvider]appKind{
 // rather than defaulted: guessing Google for an unrecognized name would store
 // somebody's Entra secret under the Google key.
 var ErrUnknownAppProvider = fmt.Errorf(
-	"capture: no OAuth app is held for that provider: %w", apperrors.ErrNotFound,
+	"no OAuth app is held for that provider: %w", apperrors.ErrNotFound,
 )
 
 // AppProviders reads the vendor table's keys, in a stable order.

@@ -130,10 +130,7 @@ async function fillRequired(user: User) {
     await screen.findByRole("textbox", { name: /Name/ }),
     "Consulting Day",
   );
-  await user.type(
-    screen.getByRole("spinbutton", { name: /Unit price/ }),
-    "1500",
-  );
+  await user.type(screen.getByRole("textbox", { name: /Unit price/ }), "1500");
 }
 
 // Records each create body and answers with the product it would make.
@@ -221,7 +218,7 @@ describe("ProductsAdmin", () => {
     const nameField = await screen.findByRole("textbox", { name: /Name/ });
     await userEvent.type(nameField, "Consulting Day");
     await userEvent.type(
-      screen.getByRole("spinbutton", { name: /Unit price/ }),
+      screen.getByRole("textbox", { name: /Unit price/ }),
       "1500",
     );
     await userEvent.click(screen.getByText("Create"));
@@ -245,7 +242,7 @@ describe("ProductsAdmin", () => {
       "Consulting Day",
     );
     await userEvent.type(
-      screen.getByRole("spinbutton", { name: /Unit price/ }),
+      screen.getByRole("textbox", { name: /Unit price/ }),
       "15.999",
     );
     expect(

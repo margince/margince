@@ -35,7 +35,10 @@ import {
 } from "./reporting.story-fixtures";
 import { ReportingTargets } from "./reporting.targets";
 
-vi.mock("../../lib/download", () => ({ downloadBytes: vi.fn() }));
+vi.mock("../../lib/download", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../lib/download")>()),
+  downloadBytes: vi.fn(),
+}));
 const originalFetch = globalThis.fetch;
 afterEach(() => {
   cleanup();
@@ -239,7 +242,7 @@ it("creates a fiscal-quarter count target on every pipeline and pages the target
     dialog.getByRole("combobox", { name: /Month starting/ }),
     "October",
   );
-  fireEvent.change(dialog.getByRole("spinbutton", { name: /^Target/ }), {
+  fireEvent.change(dialog.getByRole("textbox", { name: /^Target/ }), {
     target: { value: "120" },
   });
   await user.type(dialog.getByLabelText(/Reason/), "Quarter commitment");
@@ -306,7 +309,11 @@ it.each([undefined, "edition-september"])(
       ...reportingStoryRoutes(),
       [route]: () =>
         new Response("metric,value\nbookings_won,21600000", {
-          headers: { "Content-Type": "text/csv" },
+          headers: {
+            "Content-Type": "text/csv",
+            "Content-Disposition":
+              'attachment; filename="reporting-team-this-quarter-2026-11-18.csv"',
+          },
         }),
     });
     render(
@@ -321,7 +328,7 @@ it.each([undefined, "edition-september"])(
     await waitFor(() =>
       expect(downloadBytes).toHaveBeenCalledWith(
         expect.any(Blob),
-        "reporting.csv",
+        "reporting-team-this-quarter-2026-11-18.csv",
         "text/csv",
       ),
     );

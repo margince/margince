@@ -4,7 +4,7 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { messageBox } from "../../design-system/richtext-testing";
 import {
@@ -13,9 +13,9 @@ import {
   previewedAddresses,
   refusedPreview,
 } from "../../testing/sendpermission.testkit";
-import { ComposeModal } from "./compose";
 import {
   fillSendableForm,
+  installComposeClock,
   jsonResponse,
   pickWhy,
   pressSend,
@@ -24,6 +24,7 @@ import {
   stubRoutes,
   WHY_LABEL,
 } from "./compose.testkit";
+import { ComposeWindow } from "./composewindow";
 
 // Send follows the engine's answer for the message as it stands. It waits
 // while a check runs or after one failed. It stays off for a refusal no reason
@@ -31,6 +32,8 @@ import {
 
 type Preview = components["schemas"]["SendAuthorizationPreview"];
 type Recipient = Preview["recipients"][number];
+
+beforeEach(installComposeClock);
 
 afterEach(() => {
   cleanup();
@@ -113,7 +116,7 @@ function heldAnswer() {
 
 function openComposer() {
   return render(
-    <ComposeModal
+    <ComposeWindow
       entityType="contact"
       entityId="c-1"
       contactId="c-1"

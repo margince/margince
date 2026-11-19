@@ -25,11 +25,11 @@ type backfillStart struct {
 }
 
 // StartBackfillWithInternalHistory needs both prior administrator approval and the owner's explicit preview.
-func (r *Registry) StartBackfillWithInternalHistory(ctx context.Context, provider string, owner ids.UserID, months int, estimate connector.BackfillEstimate, token string, enqueue EnqueueBackfill) (BackfillRun, error) {
+func (r *Registry) StartBackfillWithInternalHistory(ctx context.Context, mailbox Mailbox, owner ids.UserID, months int, estimate connector.BackfillEstimate, token string, enqueue EnqueueBackfill) (BackfillRun, error) {
 	if token == "" {
 		return BackfillRun{}, apperrors.ErrInvalidArgument
 	}
-	return r.openBackfill(ctx, provider, owner, months, estimate, enqueue, backfillStart{internalMailToken: token})
+	return r.openBackfill(ctx, mailbox, owner, months, estimate, enqueue, backfillStart{internalMailToken: token})
 }
 
 func insertBackfillRunTx(ctx context.Context, tx pgx.Tx, run *BackfillRun, estimate connector.BackfillEstimate, history *internalMailHistoryAuthorization) error {

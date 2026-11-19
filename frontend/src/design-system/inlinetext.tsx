@@ -43,7 +43,9 @@ function ReadOnlyText({
   );
 }
 
-type TextKind = "text" | "email" | "number" | "date";
+// "decimal" is a number typed as text, for an amount whose decimal sign the
+// reader chooses rather than the browser.
+type TextKind = "text" | "email" | "number" | "date" | "decimal";
 
 /** The one control a text field's edit dialog holds. */
 export function InlineTextControl({
@@ -89,7 +91,8 @@ export function InlineTextControl({
   return (
     <TextInput
       {...control}
-      type={type}
+      type={type === "decimal" ? "text" : type}
+      inputMode={type === "decimal" ? "decimal" : undefined}
       step={step}
       value={draft}
       maxLength={maxLength}

@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/voice-knowledge frontend/src/features/deals/dealfiles.tsx frontend/src/features/records/activityfiles.tsx backend/internal/compose/uploadsettings.go backend/internal/modules/activities/attachmenttypes.go backend/internal/modules/activities/documents.go backend/internal/modules/knowledge frontend/src/features/contacts/contactchatcapture.tsx backend/internal/compose/chatcapturefile.go -->
+<!-- describes: frontend/src/features/voice-knowledge frontend/src/features/deals/dealfiles.tsx frontend/src/features/records/activityfiles.tsx backend/internal/compose/uploadsettings.go backend/internal/modules/activities/attachmenttypes.go backend/internal/modules/activities/documents.go backend/internal/modules/activities/attachmentlink.go backend/internal/modules/knowledge frontend/src/features/contacts/contactchatcapture.tsx backend/internal/compose/chatcapturefile.go -->
 # Documents and files
 
 Margince holds files in three different places, for three different reasons:
@@ -18,6 +18,16 @@ To upload a document in Margince, such as a customer's signed contract, open the
 3. Drop the file on **File**, or click to choose one, and click **Upload**.
 Without write access the button is not shown. The contract record itself is added on its own, see [Contracts and invoices](contracts-and-invoices.md).
 Also called: attach a file, add an attachment, add a PDF, upload a contract document.
+
+### How do I add a link, such as a Google Doc?
+To add a link to a Google Doc, a Google Sheet or a web page, open the company, contact or deal. Choose its **Documents** tab and click **Add document**.
+1. Choose **Link** at the top of the form and paste the address into **Address**.
+2. Margince reads the page and fills **Title** with the name the page gives.
+3. Choose a **Category** and, on a company, **About**, as for a file. Click **Add link**.
+Margince does not read Google files, so type a title for one. Without a title, the link shows the site's address.
+
+The link opens in a new tab. Its tile says **Docs**, **Sheets**, **Slides**, **Forms**, **Drive** or **Web**. Margince keeps only the address, so whoever opens it needs access to the file itself. One address can be added to a record only once.
+Also called: link a Google Drive file, add a URL, add a web link to a company.
 
 ### How do I attach a file to a contact?
 To attach or upload a file to a contact in Margince, open the contact, choose its **Documents** tab and click **Add document**.
@@ -66,7 +76,7 @@ Margince takes these kinds of file as a document on a record, or as a file on an
 - Text files: `.txt`, `.csv`, `.md`, `.html`, `.htm`
 - Images: `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, `.heic`, `.heif`, `.tif`, `.tiff`
 - Archives and saved emails: `.zip`, `.eml`, `.msg`
-Any other kind is refused, and the message names the kinds Margince takes. An `.svg` image and a program such as an `.exe` are refused.
+Any other kind is refused, and the message names the kinds Margince takes. An `.svg` image and a program such as an `.exe` are refused. The file's content must also match its kind, so a program renamed to `.pdf` is refused too.
 Files that arrive with a captured email are kept even when they are of another kind.
 A document set takes fewer kinds; see [Which files can a document set take?](#which-files-can-a-document-set-take).
 Also called: supported file types, file formats, can I upload an archive.

@@ -60,7 +60,7 @@ func assertNoFileFields(t *testing.T, where string, raw json.RawMessage) {
 
 func (p *preflightEnv) uploadToAnchor(t *testing.T) string {
 	t.Helper()
-	status, raw := apptest.UploadAs(t, p.AppEnv, nil, "activity", p.activityID, []byte("%PDF the quote"))
+	status, raw := apptest.UploadAs(t, p.AppEnv, nil, "activity", p.activityID, []byte("%PDF-1.4 the quote"))
 	if status != http.StatusCreated {
 		t.Fatalf("uploading a file → %d: %s", status, raw)
 	}

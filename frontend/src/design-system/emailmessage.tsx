@@ -66,10 +66,16 @@ export function EmailAttachments({
         {files.map((file) => (
           <li key={file.id}>
             <FileChip
-              // A private message's file was named but not kept, so it is
-              // listed without a link to bytes that do not exist.
+              // A withheld file was named but not kept, so it is listed with
+              // why and without a link to bytes that do not exist.
               {...(file.bytes_withheld
-                ? { withheld: t("email.detail.attachmentWithheld") }
+                ? {
+                    withheld: t(
+                      file.withheld_reason === "not_addressed"
+                        ? "email.detail.attachmentNotAddressed"
+                        : "email.detail.attachmentWithheld",
+                    ),
+                  }
                 : { href: `/v1/attachments/${file.id}` })}
               filename={file.filename}
               // Absent rather than zero when the server sent no size: a size

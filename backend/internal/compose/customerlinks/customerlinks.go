@@ -18,8 +18,8 @@ import (
 )
 
 // DataTask names the customer link on every mirrored invoice and
-// payment written before rows named one. It is the precondition for a NOT NULL
-// check on customer_link_id.
+// payment written before rows named one. A row it cannot name keeps NULL,
+// which the `NOT VALID` link checks allow.
 func DataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1794458739_customer_link_backfill", Version: 1,

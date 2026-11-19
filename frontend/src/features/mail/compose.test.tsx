@@ -2,16 +2,16 @@
 import { QueryClient } from "@tanstack/react-query";
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { messageText } from "../../design-system/richtext-testing";
 import { draftButton } from "../../testing/composedraft.testkit";
 import { contactDocuments } from "../../testing/contactdocuments";
-import { ComposeModal, RelinkModal } from "./compose";
 import {
   activity202,
   DISCLOSURE,
   emptyResponse,
   fillSendableForm,
+  installComposeClock,
   jsonResponse,
   PROVISIONAL_VOICE_PROFILE,
   pressSend,
@@ -20,6 +20,10 @@ import {
   stubRoutes,
   WHY_ASK,
 } from "./compose.testkit";
+import { RelinkModal } from "./composerelink";
+import { ComposeWindow } from "./composewindow";
+
+beforeEach(installComposeClock);
 
 afterEach(() => {
   cleanup();
@@ -293,7 +297,7 @@ describe("RelinkModal", () => {
   });
 });
 
-describe("ComposeModal", () => {
+describe("ComposeWindow", () => {
   it("fills To/Subject/Body from the AI draft", async () => {
     stubRoutes({
       "POST /activities/act-1/draft-email": () =>
@@ -304,7 +308,7 @@ describe("ComposeModal", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -339,7 +343,7 @@ describe("ComposeModal", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -372,7 +376,7 @@ describe("ComposeModal", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -399,7 +403,7 @@ describe("ComposeModal", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -430,7 +434,7 @@ describe("ComposeModal", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -461,7 +465,7 @@ describe("ComposeModal", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -489,7 +493,7 @@ describe("ComposeModal", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -524,7 +528,7 @@ describe("ComposeModal", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -546,7 +550,7 @@ describe("ComposeModal", () => {
       "POST /activities/act-1/draft-email": () => emptyResponse(501),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -568,7 +572,7 @@ describe("ComposeModal", () => {
   it("names every field it is waiting for, and sends nothing", async () => {
     const sent = stubRoutes();
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -600,13 +604,13 @@ describe("ComposeModal", () => {
     expect(screen.queryByText("Enter a subject.")).toBeNull();
   });
 
-  it("sends the edited email with no approval token or idempotency key", async () => {
+  it("sends the edited email with no approval token and with an idempotency key", async () => {
     const onClose = vi.fn();
     const sent = stubRoutes({
       "POST /activities/act-1/send-email": () => jsonResponse(activity202, 202),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -633,9 +637,10 @@ describe("ComposeModal", () => {
       to: ["a@x.com"],
       communication_context: "requested_followup",
     });
-    // ADR-0055: the human click is the approval — neither header rides along.
+    // ADR-0055: the human click is the approval, so no token rides along. The
+    // key only makes a retried click the same send.
     expect(req?.headers.get("X-Approval-Token")).toBeNull();
-    expect(req?.headers.get("Idempotency-Key")).toBeNull();
+    expect(req?.headers.get("Idempotency-Key")).toBeTruthy();
   });
 
   it("surfaces a refused send on 409 without closing", async () => {
@@ -652,7 +657,7 @@ describe("ComposeModal", () => {
         ),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -680,7 +685,7 @@ describe("ComposeModal", () => {
       "POST /activities/act-1/send-email": () => emptyResponse(501),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -705,7 +710,7 @@ describe("ComposeModal", () => {
       "POST /activities/act-1/send-email": () => emptyResponse(503),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -733,7 +738,7 @@ describe("ComposeModal", () => {
       "POST /activities/act-1/draft-email": () => emptyResponse(502),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"

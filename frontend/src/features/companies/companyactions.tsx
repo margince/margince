@@ -2,9 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { CreateAction, type CreateField } from "../../components/create";
-import { currencyField } from "../../components/currencyfield";
+import { amountField, currencyField } from "../../components/currencyfield";
 import { useDealCreateFields } from "../../components/dealcreatefields";
-import { moneyAmountField } from "../../components/moneyamountfield";
 import { useOwnerPicker } from "../../components/recordowners";
 import { useLocale, useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
@@ -65,12 +64,15 @@ export function NewDealAction({
       required: true,
       maxLength: TEXT_LIMITS.label,
     },
-    moneyAmountField(t, {
-      key: "amount",
-      label: "create.amount",
-      wireField: "amount_minor",
-      currency: leading[0],
-    }),
+    amountField(
+      { key: "amount", label: "create.amount", wireField: "amount_minor" },
+      {
+        currency: (values) => values.currency || leading[0],
+        locale,
+        t,
+        nonNegative: true,
+      },
+    ),
     currencyField(leading, locale),
     {
       key: "stage_id",
@@ -95,6 +97,7 @@ export function NewDealAction({
           { ...values, company_id: companyId, project_id: projectId ?? "" },
           pipeline.id,
           leading[0],
+          locale,
         ),
       }),
       t,

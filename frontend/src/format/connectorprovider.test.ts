@@ -28,6 +28,40 @@ function shape(rows: readonly CaptureConnection[]): string[] {
 }
 
 describe("accountsOf", () => {
+  const at = (
+    provider: CaptureConnection["provider"],
+    address: string | null,
+  ): CaptureConnection => ({
+    ...connection(provider),
+    id: `id-${provider}-${address}`,
+    account_label: address,
+  });
+
+  it("makes two accounts of two Google addresses, each with its own calendar", () => {
+    const accounts = accountsOf([
+      at("gmail", "rep@acme.test"),
+      at("gcal", "REP@acme.test"),
+      at("gmail", "rep@second.test"),
+    ]);
+    expect(accounts.map((a) => [a.mail?.id, a.calendar?.id ?? null])).toEqual([
+      ["id-gmail-rep@acme.test", "id-gcal-REP@acme.test"],
+      ["id-gmail-rep@second.test", null],
+    ]);
+    expect(new Set(accounts.map((a) => a.id)).size).toBe(2);
+  });
+
+  it("keeps meeting notes and an unnamed calendar on the first account", () => {
+    const [first, second] = accountsOf([
+      at("gmail", "rep@acme.test"),
+      at("gmail", "rep@second.test"),
+      at("gdocs", "other@elsewhere.test"),
+      at("gcal", null),
+    ]);
+    expect(first.notes?.id).toBe("id-gdocs-other@elsewhere.test");
+    expect(first.calendar?.id).toBe("id-gcal-null");
+    expect(second.notes).toBeNull();
+  });
+
   it("folds Gmail and Google Calendar into one Google account", () => {
     expect(shape([connection("gcal"), connection("gmail")])).toEqual([
       "google: gmail+gcal",

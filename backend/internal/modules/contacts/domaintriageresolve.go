@@ -138,7 +138,7 @@ func (s *Store) resolveDomainTriageTx(ctx context.Context, tx pgx.Tx, in Resolve
 		in.ReadID = *prior.SiteReadID
 	}
 	if prior.PendingReason == PendingForwardedIdentity && in.Status == DomainCompany && in.CompanyID == nil {
-		return ResolveDomainTriageResult{}, fmt.Errorf("contacts: forwarded identity needs an explicit company match: %w", apperrors.ErrConflict)
+		return ResolveDomainTriageResult{}, fmt.Errorf("a forwarded identity needs an explicit company match: %w", apperrors.ErrConflict)
 	}
 	if prior.Settled() {
 		// Already answered. A worker that resolved this and then died before

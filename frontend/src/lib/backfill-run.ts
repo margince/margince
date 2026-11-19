@@ -38,37 +38,52 @@ const POLL_MS = 2500;
 
 /** The one spelling of the run-row cache key: a start or a stop on either
  *  surface invalidates the read on both. */
-const statusQueryKey = (provider: Provider) => ["backfill-status", provider];
+const statusQueryKey = (mailbox: Mailbox) => [
+  "backfill-status",
+  mailbox.provider,
+  mailbox.id,
+];
 
-async function readRun(provider: Provider): Promise<BackfillStatus> {
+/** The mailbox a run belongs to. The id names one of several mailboxes of one
+ *  provider; a caller that holds no row yet names the provider alone. */
+type Mailbox = Readonly<{ provider: Provider; id?: string }>;
+
+function runParams(mailbox: Mailbox) {
+  return {
+    path: { provider: mailbox.provider },
+    ...(mailbox.id && { query: { connection_id: mailbox.id } }),
+  };
+}
+
+async function readRun(mailbox: Mailbox): Promise<BackfillStatus> {
   return unwrap(
     await api.GET("/connectors/{provider}/backfill", {
-      params: { path: { provider } },
+      params: runParams(mailbox),
     }),
   );
 }
 
 async function previewRun(
-  provider: Provider,
+  mailbox: Mailbox,
   window: ImportWindow,
 ): Promise<BackfillPreview> {
   return unwrap(
     await api.POST("/connectors/{provider}/backfill/preview", {
-      params: { path: { provider } },
+      params: runParams(mailbox),
       body: { window },
     }),
   );
 }
 
 async function startRun(
-  provider: Provider,
+  mailbox: Mailbox,
   window: ImportWindow,
   startOver: boolean,
   internalMailToken?: string,
 ): Promise<BackfillStatus> {
   return unwrap(
     await api.POST("/connectors/{provider}/backfill", {
-      params: { path: { provider } },
+      params: runParams(mailbox),
       // Without start_over the server continues a run that stopped on an error
       // whose window covers this one, so only an explicit "start over" sends it.
       body: {
@@ -82,10 +97,10 @@ async function startRun(
   );
 }
 
-async function cancelRun(provider: Provider): Promise<BackfillStatus> {
+async function cancelRun(mailbox: Mailbox): Promise<BackfillStatus> {
   return unwrap(
     await api.DELETE("/connectors/{provider}/backfill", {
-      params: { path: { provider } },
+      params: runParams(mailbox),
     }),
   );
 }
@@ -109,11 +124,14 @@ async function cancelRun(provider: Provider): Promise<BackfillStatus> {
  */
 export function useBackfillRun({
   provider,
+  connectionId,
   initial,
   previewHeld = false,
   initialWindow,
 }: Readonly<{
   provider: Provider;
+  /** The mailbox's row id, which names it among several of one provider. */
+  connectionId?: string;
   /** The run row already embedded in the `GET /connectors` roster row — seeds
    *  the first render, so a live run shows immediately and never offers to
    *  start a second one. */
@@ -128,6 +146,7 @@ export function useBackfillRun({
   initialWindow?: ImportWindow;
 }>) {
   const qc = useQueryClient();
+  const mailbox: Mailbox = { provider, id: connectionId };
   const [window, setWindow] = useState<ImportWindow>(
     initialWindow ?? DEFAULT_IMPORT_WINDOW,
   );
@@ -144,8 +163,8 @@ export function useBackfillRun({
   );
 
   const status = useQuery({
-    queryKey: statusQueryKey(provider),
-    queryFn: () => readRun(provider),
+    queryKey: statusQueryKey(mailbox),
+    queryFn: () => readRun(mailbox),
     initialData: initial,
     // The embedded snapshot already answered this read once; skip the
     // mount-time revalidation react-query would otherwise run (it treats
@@ -157,7 +176,7 @@ export function useBackfillRun({
   });
 
   const preview = useMutation({
-    mutationFn: (pick: ImportWindow) => previewRun(provider, pick),
+    mutationFn: (pick: ImportWindow) => previewRun(mailbox, pick),
   });
 
   const start = useMutation({
@@ -169,20 +188,20 @@ export function useBackfillRun({
       startOver: boolean;
       internalMailToken?: string;
     }) =>
-      startRun(provider, pick.window, pick.startOver, pick.internalMailToken),
+      startRun(mailbox, pick.window, pick.startOver, pick.internalMailToken),
     onSuccess: () => {
       // The new run is what the reader watches now, so the pick they started it
       // from stands down with it.
       setRestarting(false);
       setStartOver(false);
-      return qc.invalidateQueries({ queryKey: statusQueryKey(provider) });
+      return qc.invalidateQueries({ queryKey: statusQueryKey(mailbox) });
     },
   });
 
   const cancel = useMutation({
-    mutationFn: () => cancelRun(provider),
+    mutationFn: () => cancelRun(mailbox),
     onSuccess: () =>
-      qc.invalidateQueries({ queryKey: statusQueryKey(provider) }),
+      qc.invalidateQueries({ queryKey: statusQueryKey(mailbox) }),
   });
 
   // The scope loads itself for whichever window is selected: the first thing a

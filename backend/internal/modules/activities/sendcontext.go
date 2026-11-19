@@ -17,18 +17,22 @@ package activities
 // behind it produces a visible disagreement rather than a send.
 
 import (
+	"strings"
+
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
+	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 )
 
 // contextField is the wire path a refusal about a claimed category points at,
 // and operatorReasonField its twin for the sentence beside it.
 const (
-	contextField        = "communication_context"
-	operatorReasonField = "operator_reason"
+	contextField            = "communication_context"
+	operatorReasonField     = "operator_reason"
+	recipientCountriesField = "recipient_countries"
 )
 
 // maxOperatorReasonRunes mirrors the contract's maxLength. Named rather than
@@ -114,6 +118,55 @@ func evidenceFrom(in *crmcontracts.CommunicationEvidence) commsauthz.Evidence {
 	}
 }
 
+// countryOverridesFrom decodes the countries a sender stated. A null country
+// is one they cleared. A code that is not a country is refused: read as
+// cleared, it would judge the recipient under the baseline unasked.
+func countryOverridesFrom(list *[]crmcontracts.RecipientCountry) ([]commsauthz.CountryOverride, error) {
+	if list == nil {
+		return nil, nil
+	}
+	out := make([]commsauthz.CountryOverride, 0, len(*list))
+	seen := make(map[string]bool, len(*list))
+	for _, entry := range *list {
+		stated := commsauthz.CountryOverride{Address: normalizeAddress(entry.Address)}
+		// One statement per recipient, so every reader of the list takes the
+		// same one.
+		if seen[stated.Address] {
+			return nil, &CommunicationContextError{
+				field: recipientCountriesField, Reason: "a recipient has more than one country stated; state each one once",
+			}
+		}
+		seen[stated.Address] = true
+		if entry.Country != nil {
+			stated.Country = strings.ToLower(strings.TrimSpace(*entry.Country))
+			if jurisdiction.Code(stated.Country).Validate() != nil {
+				return nil, &CommunicationContextError{
+					field: recipientCountriesField, Reason: "a recipient country is a two-letter ISO 3166-1 code or null",
+				}
+			}
+		}
+		out = append(out, stated)
+	}
+	return out, nil
+}
+
+// countriesOnWire is countryOverridesFrom read backwards, absent when the
+// sender stated none.
+func countriesOnWire(stated []commsauthz.CountryOverride) *[]crmcontracts.RecipientCountry {
+	if len(stated) == 0 {
+		return nil
+	}
+	out := make([]crmcontracts.RecipientCountry, 0, len(stated))
+	for _, o := range stated {
+		entry := crmcontracts.RecipientCountry{Address: o.Address}
+		if !o.Cleared() {
+			entry.Country = &o.Country
+		}
+		out = append(out, entry)
+	}
+	return &out
+}
+
 func derefID(id *openapi_types.UUID) ids.UUID {
 	if id == nil {
 		return ids.UUID{}
@@ -154,11 +207,15 @@ func replySendInput(req crmcontracts.SendEmailRequest) (SendEmailInput, error) {
 	if err != nil {
 		return SendEmailInput{}, err
 	}
+	if claimed.evidence.RecipientCountries, err = countryOverridesFrom(req.RecipientCountries); err != nil {
+		return SendEmailInput{}, err
+	}
 	in := claimed.applyTo(sendInputFrom(
 		req.To, req.Cc, req.Bcc, req.Subject, req.Body, req.HtmlBody, req.AttachmentIds,
 		legacyPurposeOf(req.ConsentPurpose), req.DraftRef,
 	))
-	in.MailDraftID = mailDraftIDOf(req.MailDraftId)
+	in.MailDraftID = optionalID(req.MailDraftId)
+	in.FromConnection = optionalID(req.FromConnectionId)
 	return in, nil
 }
 
@@ -170,11 +227,15 @@ func DecodeCompanyEmailRequest(req crmcontracts.SendCompanyEmailRequest) (SendEm
 	if err != nil {
 		return SendEmailInput{}, err
 	}
+	if claimed.evidence.RecipientCountries, err = countryOverridesFrom(req.RecipientCountries); err != nil {
+		return SendEmailInput{}, err
+	}
 	in := claimed.applyTo(sendInputFrom(
 		req.To, req.Cc, req.Bcc, req.Subject, req.Body, req.HtmlBody, req.AttachmentIds,
 		legacyPurposeOf(req.ConsentPurpose), req.DraftRef,
 	))
-	in.MailDraftID = mailDraftIDOf(req.MailDraftId)
+	in.MailDraftID = optionalID(req.MailDraftId)
+	in.FromConnection = optionalID(req.FromConnectionId)
 	return in, nil
 }
 

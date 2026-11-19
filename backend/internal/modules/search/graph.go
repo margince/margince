@@ -146,7 +146,7 @@ func (s *Store) assembleRecordWithin(ctx context.Context, tx pgx.Tx, anchorType 
 		// slipped past that gate, so the store layer answers with the same
 		// sentinel every other invalid-record-reference case in this module
 		// uses.
-		return nil, fmt.Errorf("search: %s is not a graph anchor: %w", anchorType, apperrors.ErrNotFound)
+		return nil, fmt.Errorf("a %s cannot anchor a relationship graph: %w", anchorType, apperrors.ErrNotFound)
 	}
 	// Object RBAC before row scope, the order every read in this module takes
 	// (Search's branch admission spells it the same way). The row-scope probe

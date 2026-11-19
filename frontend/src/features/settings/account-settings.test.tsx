@@ -27,6 +27,7 @@ it("says so on the save bar and under the field when the account refuses the new
   const user = userEvent.setup();
   installFetchStub({
     "GET /me": () => jsonResponse(meFixture({})),
+    "GET /me/sessions": () => jsonResponse({ sessions: [] }),
     "PUT /me/locale": () =>
       new Response(
         JSON.stringify({
@@ -64,6 +65,7 @@ it("says so on the save bar and under the field when the account refuses the new
 it("says an agent set the time zone while the zone is the agent's", async () => {
   const seat = meFixture({});
   installFetchStub({
+    "GET /me/sessions": () => jsonResponse({ sessions: [] }),
     "GET /me": () =>
       jsonResponse({
         ...seat,
@@ -88,6 +90,7 @@ it("saves the picked time zone as the user's own choice", async () => {
   const writes: unknown[] = [];
   installFetchStub({
     "GET /me": () => jsonResponse(meFixture({})),
+    "GET /me/sessions": () => jsonResponse({ sessions: [] }),
     "PUT /me/timezone": (body) => {
       writes.push(body);
       return jsonResponse({
@@ -121,7 +124,10 @@ it("saves the picked time zone as the user's own choice", async () => {
 // A Switch writes when turned, so the page's save bar never hears of it.
 it("turns single-key shortcuts off for this browser on the flip", async () => {
   const user = userEvent.setup();
-  installFetchStub({ "GET /me": () => jsonResponse(meFixture({})) });
+  installFetchStub({
+    "GET /me": () => jsonResponse(meFixture({})),
+    "GET /me/sessions": () => jsonResponse({ sessions: [] }),
+  });
   render(
     <StoryProviders>
       <SavePageProvider>

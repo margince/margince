@@ -2,15 +2,16 @@
 import "@testing-library/jest-dom/vitest";
 import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createQueryClient } from "../app/queryclient";
 import { writeMessage } from "../design-system/richtext-testing";
 import { pickOption } from "../design-system/select-testing";
-import { ComposeModal } from "../features/mail/compose";
 import { MailSendNotices } from "../features/mail/compose.parts";
 import {
   activity202,
+  installComposeClock,
   jsonResponse,
+  permissionBandButton,
   render,
   stubRoutes,
 } from "../features/mail/compose.testkit";
@@ -18,12 +19,16 @@ import {
   newContactsOf,
   reasonTargetOf,
 } from "../features/mail/composeblockers";
+import { ComposeWindow } from "../features/mail/composewindow";
+import { refusalSentenceKey } from "../format/sendpermissionreason";
 import { meFixture } from "./mefixture";
 import {
   allowedPreview,
   isPreviewDoor,
   refusedPreview,
 } from "./sendpermission.testkit";
+
+beforeEach(installComposeClock);
 
 afterEach(() => {
   cleanup();
@@ -224,7 +229,7 @@ describe("recording a fact where the refusal is read", () => {
     const user = userEvent.setup();
     const sent = requestBackend();
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="c-1"
@@ -237,9 +242,7 @@ describe("recording a fact where the refusal is read", () => {
     await user.type(await screen.findByLabelText("To"), "anna@example.test");
     await user.tab();
     writeMessage("Body", "The agreed follow-up.");
-    await user.click(
-      await screen.findByRole("button", { name: "Record what happened" }),
-    );
+    await user.click(await permissionBandButton("Record what happened"));
     const dialog = within(
       await screen.findByRole("dialog", {
         name: "Record the exchange with anna@example.test",
@@ -298,7 +301,7 @@ describe("recording a fact where the refusal is read", () => {
         "deal-one",
       );
       render(
-        <ComposeModal
+        <ComposeWindow
           entityType={source === "deal page" ? "deal" : "contact"}
           entityId={source === "deal page" ? "deal-one" : "c-1"}
           contactId="c-1"
@@ -316,9 +319,7 @@ describe("recording a fact where the refusal is read", () => {
           "Quote or proposal they requested",
         );
       }
-      await user.click(
-        await screen.findByRole("button", { name: "Record what happened" }),
-      );
+      await user.click(await permissionBandButton("Record what happened"));
       const dialog = within(
         await screen.findByRole("dialog", {
           name: "Record the exchange with anna@example.test",
@@ -365,7 +366,7 @@ describe("recording a fact where the refusal is read", () => {
     const user = userEvent.setup();
     const sent = requestBackend();
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="contact"
         entityId="c-1"
         contactId="c-1"
@@ -393,7 +394,7 @@ describe("recording a fact where the refusal is read", () => {
     const user = userEvent.setup();
     const sent = requestBackend(DEAL_CLAIM_UNBACKED);
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="contact"
         entityId="c-1"
         contactId="c-1"
@@ -479,7 +480,7 @@ function answeringBackend(preview: ReturnType<typeof refusedPreview>) {
 async function newMessageTo(address: string) {
   const user = userEvent.setup();
   render(
-    <ComposeModal
+    <ComposeWindow
       entityType="contact"
       entityId="c-1"
       contactId="c-1"
@@ -539,11 +540,67 @@ describe("a message with no reason for contact yet", () => {
   });
 });
 
+describe("a reply the thread gives no reason for", () => {
+  // Alice copied a colleague onto a customer's thread. The engine cannot place
+  // the reply, and nothing on the message names a purpose.
+  const UNPLACED = {
+    evidence_subject: { entity_type: "contact", entity_id: "c-1" },
+    reason_code: "unknown_purpose",
+    decided_by: "machine",
+    can_be_overruled: true,
+  } as const;
+
+  it("offers the reason list, states the gap once and lets the rep send with a reason", async () => {
+    const user = userEvent.setup();
+    requestBackend(UNPLACED);
+    render(
+      <ComposeWindow
+        activityId="act-1"
+        entityType="contact"
+        entityId="c-1"
+        contactId="c-1"
+        open
+        onClose={vi.fn()}
+      />,
+      createQueryClient(),
+    );
+    await user.type(await screen.findByLabelText("To"), "anna@example.test");
+    await user.tab();
+
+    expect(
+      await screen.findByRole("combobox", { name: "Reason for contact" }),
+    ).toBeTruthy();
+    expect(
+      await screen.findByRole("button", { name: "Send with a reason…" }),
+    ).toBeEnabled();
+    expect(screen.getAllByText("No contact reason.")).toHaveLength(1);
+    expect(screen.queryByText(/gives no contact reason/)).toBeNull();
+    expect(
+      screen.queryByText(/names a purpose Margince does not know/),
+    ).toBeNull();
+  });
+
+  it("names the missing reason, not an unknown purpose, where no reason was given", () => {
+    expect(refusalSentenceKey("unknown_purpose", { unclaimed: true })).toBe(
+      "sendPermission.reason.noReasonFact",
+    );
+    expect(
+      refusalSentenceKey("unknown_purpose", {
+        unclaimed: true,
+        picksReason: true,
+      }),
+    ).toBe("sendPermission.reason.noReason");
+    expect(refusalSentenceKey("unknown_purpose")).toBe(
+      "sendPermission.reason.unknownPurposeFact",
+    );
+  });
+});
+
 it("keeps an open exchange and its note through a background permission check", async () => {
   requestBackend();
   const user = userEvent.setup();
   const { queryClient } = render(
-    <ComposeModal
+    <ComposeWindow
       activityId="act-1"
       entityType="contact"
       entityId="c-1"
@@ -556,9 +613,7 @@ it("keeps an open exchange and its note through a background permission check", 
   await user.type(await screen.findByLabelText("To"), "anna@example.test");
   await user.tab();
   writeMessage("Body", "The agreed follow-up.");
-  await user.click(
-    await screen.findByRole("button", { name: "Record what happened" }),
-  );
+  await user.click(await permissionBandButton("Record what happened"));
   const dialog = await screen.findByRole("dialog", {
     name: "Record the exchange with anna@example.test",
   });

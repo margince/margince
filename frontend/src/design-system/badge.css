@@ -42,12 +42,13 @@
 .badge > svg {
   flex: none;
 }
-/* A label whose every word is read wraps instead. It takes a box's radius, so
-   two lines leave the end letters clear of the curve; one line still reads as
-   the pill. */
+/* A label whose every word is read wraps instead, between its words, and inside
+   one only when it is wider than the box. It takes a box's radius, so two lines
+   leave the end letters clear of the curve; one line still reads as the pill. */
 .badge-wrap,
 .badge-wrap .badge-label {
   white-space: normal;
+  overflow-wrap: break-word;
 }
 .badge-wrap {
   border-radius: var(--r-sm);

@@ -181,12 +181,13 @@ func recordFirstResponseTx(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, at
 			return err
 		}
 		var current *time.Time
+		var markedBy *ids.UUID
 		var takes bool
 		// A backdated activity can predate the lead it answers. The first
 		// response is the earliest one, since the bus is at-least-once and
 		// unordered; a later or equal stamp is a replay and a no-op.
-		if err := tx.QueryRow(ctx, `SELECT first_response_at, `+firstResponseAtSQL("lead", "$2")+`, `+
-			leadTakesFirstResponseSQL("lead", "$2")+` FROM lead WHERE id = $1`, leadID, at).Scan(&current, &at, &takes); err != nil {
+		if err := tx.QueryRow(ctx, `SELECT first_response_at, first_response_marked_by, `+firstResponseAtSQL("lead", "$2")+`, `+
+			leadTakesFirstResponseSQL("lead", "$2")+` FROM lead WHERE id = $1`, leadID, at).Scan(&current, &markedBy, &at, &takes); err != nil {
 			return err
 		}
 		if !takes {
@@ -195,11 +196,14 @@ func recordFirstResponseTx(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, at
 		at = at.UTC()
 		p := storekit.NewPatch()
 		p.Set(firstResponseColumn, current, at)
+		if markedBy != nil {
+			p.Set(firstResponseMarkedByColumn, markedBy, nil)
+		}
 		if err := p.ApplyLocked(ctx, tx, lock); err != nil {
 			return err
 		}
 		auditID, err := storekit.Audit(ctx, tx, "update", "lead", leadID.UUID,
-			map[string]any{firstResponseColumn: current}, map[string]any{firstResponseColumn: at})
+			p.Before(), p.After())
 		if err != nil {
 			return err
 		}

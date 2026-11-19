@@ -26,6 +26,7 @@ To share a Deal Room with a buyer in Margince, open the deal's **Deal Room** tab
 2. Under **Permissions**, choose **Read-only** ("Can read the documents and comments.") or **Read and comment** ("Can also ask questions and reply.").
 3. Click **Invite**. The **Invitation link** is shown; click **Copy link** and send it to the buyer.
 Each buyer needs an invitation of their own: the link is personal and works once, on one device.
+After that, the buyer stays signed in on that browser for 7 days.
 Also called: invite a customer, give the client access, send the room link.
 
 ### Is the deal room link emailed to the buyer?
@@ -164,6 +165,16 @@ you are west of UTC, you lose part of that last day.
 Buyers are invited to a Deal Room one address at a time. Each buyer gets a
 **personal link** that works once, on one device, and every buyer
 needs an invitation of their own.
+
+Once a buyer has opened their link, that browser keeps them signed in for
+7 days. They can close the tab and open the room page again later. A used
+link still shows "This link no longer works". **Sign out** on the buyer page
+ends access at once, which matters on a shared computer. Revoking the buyer
+or archiving the room also ends it on their next click.
+
+A paused room still shows no content, and a closed room stays read-only. One
+browser holds one room at a time, so a second room's link replaces the first.
+A tab still showing the first room then asks the buyer to open the page again.
 
 A buyer who loses their link can ask for a new one from the room's sign-in
 page, with **Request new link**. The answer is always the same: "If that

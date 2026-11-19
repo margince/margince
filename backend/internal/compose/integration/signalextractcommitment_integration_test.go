@@ -442,7 +442,7 @@ func commitmentMailAddress(t *testing.T, e *Env, contact ids.UUID) string {
 func captureCommitmentMessage(t *testing.T, e *Env, contact ids.UUID, key, subject, body, direction string, at time.Time, recipients ...commitmentMailRecipient) ids.UUID {
 	t.Helper()
 	owner, buyer := "rep@workspace.example", commitmentMailAddress(t, e, contact)
-	e.WsExec(t, `INSERT INTO capture_connection (user_id,provider,status,credential_ref,account_label) VALUES ($1,'gmail','connected','vault:test',$2) ON CONFLICT (user_id,provider) DO UPDATE SET account_label=$2`, e.Rep1, owner)
+	e.WsExec(t, `INSERT INTO capture_connection (user_id,provider,status,credential_ref,account_label) VALUES ($1,'gmail','connected','vault:test',$2) ON CONFLICT (user_id, provider, lower(account_label)) WHERE user_id IS NOT NULL DO UPDATE SET account_label=$2`, e.Rep1, owner)
 	from, to := buyer, owner
 	if direction == "outbound" {
 		from, to = owner, buyer

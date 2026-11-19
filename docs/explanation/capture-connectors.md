@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/capture/captureauthority.go backend/internal/modules/capture/health.go backend/internal/modules/capture/healthfleet.go backend/internal/modules/contacts/employerresolve.go backend/internal/shared/ports/connector backend/internal/modules/capture/sink.go backend/internal/modules/capture/registry.go backend/internal/modules/capture/syncstate.go backend/internal/modules/capture/mailmap/mailmap.go backend/internal/compose/connectors.go backend/internal/compose/connectors_picture.go backend/internal/compose/capture.go backend/internal/modules/capture/gcal/client.go backend/internal/modules/capture/googleconn/userinfo.go backend/internal/compose/avatarprovider.go backend/internal/modules/identity/providerpicture.go backend/internal/compose/jobs.go frontend/src/features/capture/connectors.tsx backend/internal/modules/capture/graph/deletions.go -->
+<!-- describes: backend/internal/modules/capture/forwardtoself.go backend/internal/modules/capture/captureauthority.go backend/internal/modules/capture/health.go backend/internal/modules/capture/healthfleet.go backend/internal/modules/contacts/employerresolve.go backend/internal/shared/ports/connector backend/internal/modules/capture/sink.go backend/internal/modules/capture/registry.go backend/internal/modules/capture/syncstate.go backend/internal/modules/capture/mailmap/mailmap.go backend/internal/compose/connectors.go backend/internal/compose/connectors_picture.go backend/internal/compose/capture.go backend/internal/modules/capture/gcal/client.go backend/internal/modules/capture/googleconn/userinfo.go backend/internal/compose/avatarprovider.go backend/internal/modules/identity/providerpicture.go backend/internal/compose/jobs.go frontend/src/features/capture/connectors.tsx backend/internal/modules/capture/graph/deletions.go backend/internal/modules/capture/imap/send.go -->
 # Capture connectors: the inbound integration seam and the mail pipeline
 
 `internal/modules/capture` is the **inbound** integration surface of Margince. A *connector* works with an
@@ -112,16 +112,16 @@ checks the type, and skips a connector that does not:
 `Sink.Upsert` is the single write path (the picture under the core principle above). One transaction
 commits the raw original + the domain row + the `audit_log` entry + the outbox event. The audit entry is
 stamped from the *connector* principal, so nobody can forge it. It is idempotent on the
-`(source_system, source_id)` key, so any replay falls into a no-op. That covers a push delivered again, a
-cursor set back again, or a backfill page that overlaps. It also covers *the same message read by a
-second mail connector*.
+`(source_system, source_id)` key, so any replay falls into a no-op. That covers a push delivered again, a cursor set back again, or a backfill page that overlaps. It also covers *the same message read by a second mail connector*.
 
-Mail is keyed on one identity that does not depend on the transport (`connector.EmailSourceSystem`):
-`("email", Message-ID)`, the same key no matter which adapter read the message. One mailbox synced over
+Mail is keyed on one identity that does not depend on the transport (`connector.EmailSourceSystem`): `("email", Message-ID)`, the same key no matter which adapter read the message. One mailbox synced over
 both Gmail and IMAP lands one activity. The Sink refuses an email record keyed on an adapter's name. The
 adapter's name stays on `source` and `captured_by`, which answers "which mailbox". The first adapter to
 deliver a message gives the stored original and its attached files; a later copy adds no second set.
 Google Calendar's copy for each guest of one send joins the first copy's activity (`mailmap/calendarsend.go`).
+
+A seat's forward of a customer's mail to their connected mailbox is filed under that customer (`capture/forwardtoself.go`).
+It is marked `forwarded_to_self`, and every exchange reader skips it (`relstrength.ForwardToSelfSQL`).
 
 One pipeline step runs *inside* the Sink, before anything is written:
 
@@ -287,12 +287,12 @@ for both on one Google screen. The callback seals that one grant into both conne
 
 | | **Gmail** | **IMAP** | **Graph** (Outlook mail) | **Calendar** (gcal) | **Graph calendar** (graphcal) | **Telegram** |
 |---|---|---|---|---|---|---|
-| Auth | OAuth `gmail.readonly` + `gmail.send` + `userinfo.profile` | IMAPS app password | OAuth `Mail.Read` + `Mail.Send` | OAuth `calendar.readonly` + `calendar.events.owned` + `userinfo.profile` | OAuth `Calendars.Read` | BotFather bot token |
+| Auth | OAuth `gmail.readonly` + `gmail.send` + `userinfo.profile` | IMAPS app password, the same one for SMTP when sending is on | OAuth `Mail.Read` + `Mail.Send` | OAuth `calendar.readonly` + `calendar.events.owned` + `userinfo.profile` | OAuth `Calendars.Read` | BotFather bot token |
 | Connection | standing, per human | standing, per human | standing, per human | standing, per human | standing, per human | standing, **per workspace** (an admin binds one bot) |
 | Cursor | `historyId` | UID watermark | `deltaLink` | `syncToken` | `deltaLink` | `getUpdates` offset |
 | Push | Pub/Sub 7 day | none (poll) | subscription, <3 day | none (poll) | none (poll) | none (long poll, one reader per bot) |
 | Backfill | ✔ | none | ✔ | none | none (the window is the sync) | none (the Bot API has no history endpoint) |
-| Send | ✔ (`EmailSender`) | none | ✔ (`EmailSender`) | none | none | ✔ (`MessageSender`) |
+| Send | ✔ (`EmailSender`) | opt-in, over SMTP (`EmailSender`) | ✔ (`EmailSender`) | none | none | ✔ (`MessageSender`) |
 | Connect UI | onboarding + Settings | onboarding + Settings | onboarding + Settings | Settings only | Settings only | Settings only (its own card) |
 
 ### Gmail: standing OAuth, push-capable, send-capable
@@ -339,25 +339,25 @@ ranges from the watermark up, and doubles a range while it comes back short. A s
 names the lowest new UID, so a gap costs nothing. Without it, a range below the newest message that holds no
 mail can never fill, so the watermark moves past it.
 
-**Disconnect deletes the sealed credential**. So an app
-password you handed over can be revoked from inside the product. That is the promise about who holds it
-that you can depend on.
+**Disconnect deletes the sealed credential**, so an app password you handed over can be revoked from
+inside the product. Until then it is a lasting secret in the vault: nothing logs it, no read surface
+returns it, and it never touches the connection row.
 
-The app password is a lasting secret in the vault for as long as the connection stands. Nothing logs it,
-no read surface returns it, and it never touches the connection row. But it is not used once and then
-dropped. Revoke it at the provider, or disconnect here, and it is gone.
+There is no push and no backfill (no `Watcher`, no `Backfiller`). The dial is **guarded against SSRF**
+(`netguard.RefusePrivate`, checked after DNS on the real IP): it refuses private and loopback hosts.
 
-There is no push and no backfill (IMAP implements neither `Watcher` nor `Backfiller`). So the wait is
-the poll window, and mail older than the connection is not imported. The code that connects is **guarded against
-SSRF** (`netguard.RefusePrivate`, checked after DNS on the real IP), so it refuses private and loopback
-hosts. You cannot point it at a mail server on localhost.
+**Sending is opt-in.** Connect logs in to the SMTP server named in `imap.smtp`, and seals it only if that
+passed. `imap.GrantedScopes` then reports `urn:margince:imap:send`, the scope the send checks ask for.
 
-**To run:** the vault key, plus the host + port + user name + app password (both Gmail and Outlook block
-IMAP with a normal password).
+A send goes through `mailer.Submission`, the exchange the installation relay uses: TLS required, the same
+guarded dial. It carries the Message-ID comms chose, with Bcc in the envelope only. The copy filed in the
+`\Sent` folder (else a common Sent name) is captured back onto the sent row by that Message-ID. That copy
+may be missing, so `DetectsPriorSend` is false: a retry whose outcome is unknown parks instead of sending again.
 
-**UI:** the same inline form can be reached from both the onboarding **IMAP** chip and the Settings
-**Add a connection** footer. It answers with the connected row, not a count of captured mail, because the
-connect returns before any mail is read.
+**To run:** the vault key, plus the host, port, user name and app password.
+
+**UI:** one form (`ImapMailboxForm`), reached from the onboarding **IMAP** chip and the Settings **Add a
+connection** footer. It answers with the connected row, because the connect returns before mail is read.
 
 ### Microsoft Graph: standing OAuth, push-capable, send-capable
 
@@ -526,8 +526,8 @@ and Microsoft 365 calendar.
   - `OAuthConnectPanel` takes the provider as a parameter (`gmail` or `graph`). It runs a full page OAuth
     redirect, then proves the connection. It then renders the `BackfillPanel` (window → estimate → start
     → live progress) for the ones that support it.
-  - `ImapConnectPanel` is a form that sends the app password and shows the connected row. It never shows
-    a count of captured mail, because the connect answers before any mail is read.
+  - `ImapConnectPanel` is the Settings IMAP form (`ImapMailboxForm`) with the step's own dismissal. It
+    never shows a count of captured mail, because the connect answers before any mail is read.
   - The connect step (`connect-act.tsx`) offers a live chip for each of **Google**, **Microsoft**, and **IMAP**.
 - **Settings → Integrations** (`connectors.tsx`, `ConnectorsCard`): the roster of standing connections.
   - It shows a status badge (`connected` / `reauth_required` / `error`) + the last sync time per

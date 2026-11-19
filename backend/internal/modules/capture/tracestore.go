@@ -194,7 +194,7 @@ func (s *TraceStore) readPage(ctx context.Context, tx pgx.Tx, scope traceScope,
 	addArg := func(v any) int { args = append(args, v); return len(args) }
 	where := traceWhere(scope, addArg)
 	if cursor != nil && *cursor != "" {
-		decoded, err := storekit.DecodeCursor(*cursor)
+		decoded, err := storekit.DecodeCursor("capture_traces", *cursor)
 		if err != nil {
 			return nil, "", err
 		}
@@ -248,7 +248,7 @@ func finishTracePage(items []TraceRow, n int) ([]TraceRow, string, error) {
 		return items, "", nil
 	}
 	last := items[n-1]
-	next, err := storekit.EncodeCursor(last.OccurredAt, last.ID)
+	next, err := storekit.EncodeCursor("capture_traces", last.OccurredAt, last.ID)
 	if err != nil {
 		return nil, "", err
 	}
