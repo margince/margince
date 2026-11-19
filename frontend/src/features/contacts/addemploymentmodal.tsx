@@ -44,9 +44,9 @@ export function AddEmploymentModal({
   onClose: () => void;
   contactId: string;
   create: EmploymentActions["create"];
-  // Companies this contact already has a live employment edge to — the
-  // picker refuses to offer a second edge to the same company, since only
-  // a duplicated current-primary is refused server-side.
+  // Companies this contact already has a live employment edge to. The picker
+  // refuses a second current edge to one: the server refuses only a duplicated
+  // current-primary.
   excludedCompanyIds: ReadonlyArray<string>;
   // Whether this contact already holds a job that has not ended. It is the exact
   // fact the server's own rule turns on, read off the same rows, so the box can
@@ -100,22 +100,26 @@ export function AddEmploymentModal({
   const [allConnected, setAllConnected] = useState(false);
 
   // Wraps the shared company search with this contact's own already-connected
-  // list. Kept on `excludedCompanyIds` alone, nothing that changes while the
-  // reader types — RecordPicker treats a new `searchTargets` identity as a
-  // new search space and empties whatever it was already showing.
+  // list. It depends on that list and the status alone, never on what the reader
+  // types. RecordPicker treats a new `searchTargets` as a new search space and
+  // empties what it showed. A past role may sit beside another at the same
+  // company, so Former offers every company.
   const searchTargets = useCallback(
     async (q: string) => {
       const results = await searchCompanyCandidates(q);
-      const offered = results.filter(
-        (candidate) => !excludedCompanyIds.includes(candidate.id),
-      );
+      const offered =
+        status === "current"
+          ? results.filter(
+              (candidate) => !excludedCompanyIds.includes(candidate.id),
+            )
+          : results;
       // Every match this query found is a company already on the list, not
       // an empty search — the two read the same in a bare candidate box, so
       // the modal says which one it is rather than leaving a silent gap.
       setAllConnected(results.length > 0 && offered.length === 0);
       return offered;
     },
-    [excludedCompanyIds],
+    [excludedCompanyIds, status],
   );
 
   function close() {
