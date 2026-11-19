@@ -38011,6 +38011,15 @@ type AuthorizationRowScope string
 // AuthorizationSeatType The licensing seat. A read seat may read but never mutate over REST, whatever its role grants. A client that cannot read a recognized value MUST assume a read seat: the ceiling fails closed, so an omission never buys the ability to mutate.
 type AuthorizationSeatType string
 
+// AutoApplyInstallation defines model for AutoApplyInstallation.
+type AutoApplyInstallation struct {
+	Enabled bool `json:"enabled"`
+
+	// Locks The settings in this response that a boot source sets, each with its source. A client
+	// shows each as read-only. Empty when nothing is locked. A write ignores it.
+	Locks *SettingLocks `json:"locks,omitempty"`
+}
+
 // AutomaticWorkColleague defines model for AutomaticWorkColleague.
 type AutomaticWorkColleague struct {
 	DisplayName string                       `json:"display_name"`
@@ -38342,7 +38351,10 @@ type AutomationRunTier string
 // AutonomySettings What the reader has decided about answering their own queue: one row per kind
 // that is eligible to apply automatically, whether or not they have ever met it.
 type AutonomySettings struct {
-	Data []KindAutonomy `json:"data"`
+	// AutoApplyEnabled The installation's switch over every row. False means nothing applies
+	// itself for anybody; the modes in `data` stay as the reader set them.
+	AutoApplyEnabled bool           `json:"auto_apply_enabled"`
+	Data             []KindAutonomy `json:"data"`
 }
 
 // AvailableModel One model a vendor says it serves.
@@ -83614,6 +83626,9 @@ type PreviewAutomationJSONRequestBody = AutomationPreviewRequest
 // UpdateAutonomyJSONRequestBody defines body for UpdateAutonomy for application/json ContentType.
 type UpdateAutonomyJSONRequestBody = UpdateAutonomyRequest
 
+// UpdateAutoApplyInstallationJSONRequestBody defines body for UpdateAutoApplyInstallation for application/json ContentType.
+type UpdateAutoApplyInstallationJSONRequestBody = AutoApplyInstallation
+
 // BookMeetingJSONRequestBody defines body for BookMeeting for application/json ContentType.
 type BookMeetingJSONRequestBody BookMeetingJSONBody
 
@@ -98874,6 +98889,9 @@ type ServerInterface interface {
 	// Turn automatic application on or off for one kind.
 	// (PATCH /autonomy)
 	UpdateAutonomy(w http.ResponseWriter, r *http.Request)
+	// Switch automatic application on or off for the whole installation.
+	// (PUT /autonomy/installation)
+	UpdateAutoApplyInstallation(w http.ResponseWriter, r *http.Request)
 	// Free/busy availability for one or more hosts in a window (the `check_availability` MCP verb).
 	// (GET /availability)
 	GetAvailability(w http.ResponseWriter, r *http.Request, params GetAvailabilityParams)
@@ -102858,6 +102876,12 @@ func (_ Unimplemented) GetAutonomy(w http.ResponseWriter, r *http.Request) {
 // Turn automatic application on or off for one kind.
 // (PATCH /autonomy)
 func (_ Unimplemented) UpdateAutonomy(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Switch automatic application on or off for the whole installation.
+// (PUT /autonomy/installation)
+func (_ Unimplemented) UpdateAutoApplyInstallation(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -118352,6 +118376,26 @@ func (siw *ServerInterfaceWrapper) UpdateAutonomy(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateAutonomy(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateAutoApplyInstallation operation middleware
+func (siw *ServerInterfaceWrapper) UpdateAutoApplyInstallation(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateAutoApplyInstallation(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -158019,6 +158063,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/autonomy", wrapper.UpdateAutonomy)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/autonomy/installation", wrapper.UpdateAutoApplyInstallation)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/availability", wrapper.GetAvailability)

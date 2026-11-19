@@ -17157,6 +17157,30 @@ export interface paths {
         patch: operations["updateAutonomy"];
         trace?: never;
     };
+    "/autonomy/installation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Switch automatic application on or off for the whole installation.
+         * @description Admin only (`approvals.auto_apply_enabled`). Off, no proposal applies itself
+         *     for anybody, whatever a reader's own setting says. On, nothing changes for a
+         *     reader: their own mode per kind still decides, so turning it back on never
+         *     switches on a kind somebody turned off. The switch is read back as
+         *     `auto_apply_enabled` on `GET /autonomy`.
+         */
+        put: operations["updateAutoApplyInstallation"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/approval-preferences": {
         parameters: {
             query?: never;
@@ -54420,6 +54444,15 @@ export interface components {
          */
         AutonomySettings: {
             data: components["schemas"]["KindAutonomy"][];
+            /**
+             * @description The installation's switch over every row. False means nothing applies
+             *     itself for anybody; the modes in `data` stay as the reader set them.
+             */
+            auto_apply_enabled: boolean;
+        };
+        AutoApplyInstallation: {
+            readonly locks?: components["schemas"]["SettingLocks"];
+            enabled: boolean;
         };
         /**
          * @description One kind's standing with the reader — how it will be handled next time, and the
@@ -90362,6 +90395,33 @@ export interface operations {
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    updateAutoApplyInstallation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AutoApplyInstallation"];
+            };
+        };
+        responses: {
+            /** @description The switch as stored. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutoApplyInstallation"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["SettingLocked"];
         };
     };
     listApprovalPreferences: {

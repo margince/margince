@@ -240,8 +240,17 @@ func AutoApplyModeTx(ctx context.Context, tx pgx.Tx, rep ids.UUID, kind string) 
 	if err := shareLockPersonalPolicy(ctx, tx, rep, kind); err != nil {
 		return ModeManual, fmt.Errorf("crmapprovals: holding the autonomy mode: %w", err)
 	}
+	// The installation bound caps the rep's own choice and never replaces it:
+	// the stored mode below is not touched, so lifting the bound restores it.
+	on, err := AutoApplyEnabledTx(ctx, tx)
+	if err != nil {
+		return ModeManual, fmt.Errorf("crmapprovals: reading the installation switch: %w", err)
+	}
+	if !on {
+		return ModeManual, nil
+	}
 	var mode string
-	err := tx.QueryRow(ctx,
+	err = tx.QueryRow(ctx,
 		`SELECT mode FROM approval_autonomy_policy WHERE user_id = $1 AND kind = $2`,
 		rep, kind).Scan(&mode)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -275,6 +284,19 @@ type KindAutonomy struct {
 	ApprovedClean  int
 	ApprovedEdited int
 	Rejected       int
+}
+
+// autoApplyInstallationOn reports the installation switch the rep's own modes
+// sit under, so the screen can say why nothing applies while it is off. Every
+// seat may ask: it is a fact about the installation, not about a record.
+func (s *Service) autoApplyInstallationOn(ctx context.Context) (bool, error) {
+	var on bool
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		on, err = AutoApplyEnabledTx(ctx, tx)
+		return err
+	})
+	return on, err
 }
 
 // AutoApplySettings reports every kind a rep may put on automatic, each with the

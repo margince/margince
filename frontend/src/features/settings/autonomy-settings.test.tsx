@@ -46,15 +46,24 @@ function row(kind: string, mode: "manual" | "auto", clean = 0): Row {
 // backendFor answers /autonomy with the given rows and applies a PATCH the way
 // the server does — writing the mode and answering with the WHOLE set, which is
 // the behaviour the card's cache update depends on.
-function backendFor(rows: Row[]) {
+function backendFor(
+  rows: Row[],
+  installationOn = true,
+  roles: string[] = ["rep"],
+) {
   let state = rows;
+  let bound = installationOn;
   const patches: unknown[] = [];
   const fetchMock = vi.fn(
     async (input: RequestInfo | URL, init?: RequestInit) => {
       const req =
         input instanceof Request ? input : new Request(String(input), init);
       if (req.url.endsWith("/v1/me")) {
-        return jsonResponse(meFixture({}));
+        return jsonResponse(meFixture({ roles }));
+      }
+      if (req.url.endsWith("/autonomy/installation")) {
+        bound = ((await req.json()) as { enabled: boolean }).enabled;
+        return jsonResponse({ enabled: bound });
       }
       if (req.url.includes("/autonomy")) {
         if (req.method === "PATCH") {
@@ -66,7 +75,7 @@ function backendFor(rows: Row[]) {
               : r,
           );
         }
-        return jsonResponse({ data: state });
+        return jsonResponse({ data: state, auto_apply_enabled: bound });
       }
       throw new Error(`unexpected request: ${req.method} ${req.url}`);
     },
@@ -95,6 +104,55 @@ afterEach(() => {
 });
 
 describe("AutonomySettingsCard", () => {
+  it("says why nothing applies while the installation switch is off, and keeps the reader's own switches", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor([row("close_date_correction", "auto")], false).fetchMock,
+    );
+    render(<AutonomySettingsCard />);
+    expect(
+      await screen.findByText(/turned automatic changes off/i),
+    ).not.toBeNull();
+    expect(
+      screen
+        .getByTestId("autonomy-toggle-close_date_correction")
+        .getAttribute("aria-checked"),
+    ).toBe("true");
+  });
+
+  it("lets an admin switch automatic changes off for everyone", async () => {
+    const backend = backendFor([row("close_date_correction", "auto")], true, [
+      "admin",
+    ]);
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(<AutonomySettingsCard />);
+    const user = userEvent.setup();
+    await user.click(await screen.findByTestId("autonomy-installation-switch"));
+    expect(
+      await screen.findByText(/turned automatic changes off/i),
+    ).not.toBeNull();
+  });
+
+  it("offers a rep no installation switch", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor([row("close_date_correction", "auto")]).fetchMock,
+    );
+    render(<AutonomySettingsCard />);
+    await screen.findAllByRole("switch");
+    expect(screen.queryByTestId("autonomy-installation-switch")).toBeNull();
+  });
+
+  it("shows no notice while the installation switch is on", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor([row("close_date_correction", "auto")]).fetchMock,
+    );
+    render(<AutonomySettingsCard />);
+    await screen.findAllByRole("switch");
+    expect(screen.queryByText(/turned automatic changes off/i)).toBeNull();
+  });
+
   it("shows all three defaults on and lets the reader turn one off", async () => {
     const backend = backendFor([
       row("close_date_correction", "auto"),
@@ -336,7 +394,7 @@ describe("AutonomySettingsCard", () => {
         const req =
           input instanceof Request ? input : new Request(String(input), init);
         if (req.url.endsWith("/v1/me")) {
-          return jsonResponse(meFixture({}));
+          return jsonResponse(meFixture({ roles }));
         }
         if (req.method === "PATCH") {
           return jsonResponse(
