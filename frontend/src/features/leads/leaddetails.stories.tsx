@@ -270,8 +270,8 @@ export const TagsWithheld: Story = {
     const registration = within(
       await screen.findByRole("region", { name: "Registration" }),
     );
-    await expect(
-      await registration.findByText("Hidden for your role"),
-    ).toBeVisible();
+    const note = await registration.findByText("Hidden for your role");
+    // The page fades in as it arrives, so the note is visible once that ends.
+    await waitFor(() => expect(note).toBeVisible());
   },
 };
