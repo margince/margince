@@ -449,7 +449,8 @@ func RemovedSinceAskedTx(ctx context.Context, tx pgx.Tx, row PendingCounterparty
 	if err := tx.QueryRow(ctx, `
 		SELECT coalesce(a.occurred_at, q.created_at) <= -- occurred_at raw: the judged message against the address's release
 		       `+addressReleasedSQL("q.email")+`
-		  FROM capture_pending_counterparty q LEFT JOIN activity a ON a.id = q.activity_id
+		  FROM capture_pending_counterparty q
+		  LEFT JOIN activity a ON a.id = q.activity_id AND a.restricted_at IS NULL AND a.archived_at IS NULL
 		 WHERE q.id = $1`, row.ID).Scan(&removed); err != nil {
 		return false, fmt.Errorf("capture: reading whether the asked-about contact was removed: %w", err)
 	}
