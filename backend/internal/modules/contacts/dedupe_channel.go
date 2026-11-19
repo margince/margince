@@ -76,10 +76,14 @@ func exactContactByPhone(ctx context.Context, tx pgx.Tx, phones []string, exclud
 	if len(normalized) == 0 {
 		return nil, nil
 	}
-	return exactContactIDs(ctx, tx, `
+	return exactContactIDs(ctx, tx, contactByPhoneSQL, normalized, exclude)
+}
+
+// contactByPhoneSQL is served by idx_contact_phone_live_phone, whose predicate
+// is this query's archived_at filter.
+const contactByPhoneSQL = `
 		SELECT DISTINCT contact_id FROM contact_phone
 		WHERE phone = ANY($1) AND archived_at IS NULL
 		  AND ($2::uuid IS NULL OR contact_id <> $2)
 		ORDER BY contact_id
-		LIMIT 2`, normalized, exclude)
-}
+		LIMIT 2`

@@ -25,6 +25,8 @@ import (
 	"strings"
 
 	"golang.org/x/text/unicode/norm"
+
+	"github.com/margince/margince/backend/internal/platform/namematch"
 )
 
 // cjkLegalForms are the company-type strings, matched against the ends of a name
@@ -126,7 +128,7 @@ func normalizeCJKName(s string) string {
 	// Unicode folding is what makes Greek final sigma and ß behave, and a second
 	// spelling of "lowercase" here would make this path disagree with every
 	// other one about the same Latin name.
-	return normalizeName(strings.Join(strings.Fields(out.String()), " "))
+	return namematch.Fold(strings.Join(strings.Fields(out.String()), " "))
 }
 
 // isVariationSelector reports the two ranges that pick a glyph shape.

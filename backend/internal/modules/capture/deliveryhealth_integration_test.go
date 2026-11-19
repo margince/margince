@@ -86,10 +86,10 @@ func TestSuccessfulEmailDeliveryDatesSilenceAndDismissal(t *testing.T) {
 	if len(concerns) != 1 || concerns[0].Kind != capture.ConcernCaptureSilent || !concerns[0].FailingSince.Equal(first) || concerns[0].ChangedAt == nil || !concerns[0].ChangedAt.Equal(first) {
 		t.Fatalf("concerns = %+v", concerns)
 	}
-	if _, err := reg.DismissSilence(ctx, "gmail", first); err != nil {
+	if _, err := reg.DismissSilence(ctx, capture.ProviderMailbox("gmail"), first); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := reg.DismissSilence(ctx, "gmail", first); err != nil {
+	if _, err := reg.DismissSilence(ctx, capture.ProviderMailbox("gmail"), first); err != nil {
 		t.Fatalf("repeated dismissal: %v", err)
 	}
 	concerns, err = reg.HealthConcerns(ctx)
@@ -110,7 +110,7 @@ func TestSuccessfulEmailDeliveryDatesSilenceAndDismissal(t *testing.T) {
 	if err := reg.SyncOnce(ctx, id); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := reg.DismissSilence(ctx, "gmail", first); !errors.Is(err, apperrors.ErrConflict) {
+	if _, err := reg.DismissSilence(ctx, capture.ProviderMailbox("gmail"), first); !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("stale dismissal = %v", err)
 	}
 	delivered = false
@@ -163,7 +163,7 @@ func (c deliveryConnector) AccountLabel(auth connector.Auth) (string, error) {
 	return c.fixtureConnector.AccountLabel(auth)
 }
 
-func TestReauthenticationKeepsSilenceDismissalAndRebindClearsIt(t *testing.T) {
+func TestReauthenticationKeepsSilenceDismissalAndAnotherAccountStartsClean(t *testing.T) {
 	ctx, _, vault, ws := newCaptureRegistryFixture(t)
 	owner, pool := setupCaptureDB(t)
 	db := database.BindTo(pool, ws)
@@ -190,7 +190,7 @@ func TestReauthenticationKeepsSilenceDismissalAndRebindClearsIt(t *testing.T) {
 	if err := reg.SyncOnce(ctx, id); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := reg.DismissSilence(ctx, "gmail", first); err != nil {
+	if _, err := reg.DismissSilence(ctx, capture.ProviderMailbox("gmail"), first); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := reg.Connect(ctx, "gmail", connector.Auth("replacement-token")); err != nil {
@@ -204,18 +204,24 @@ func TestReauthenticationKeepsSilenceDismissalAndRebindClearsIt(t *testing.T) {
 		t.Fatal("same-account reconnect lost its delivery or dismissal")
 	}
 	account = "other@example.test"
-	if _, err := reg.Connect(ctx, "gmail", connector.Auth("other-account")); err != nil {
-		t.Fatal(err)
+	other, err := reg.Connect(ctx, "gmail", connector.Auth("other-account"))
+	if err != nil || other == id {
+		t.Fatalf("another account = %s, %v; want a mailbox of its own", other, err)
 	}
 	views, err = reg.Connections(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if views[0].SilenceDismissedSince != nil || views[0].LastDeliveryAt != nil {
-		t.Fatal("new mailbox inherited the old mailbox's delivery or dismissal")
+	for _, view := range views {
+		if view.ID == other && (view.SilenceDismissedSince != nil || view.LastDeliveryAt != nil) {
+			t.Fatal("new mailbox inherited the old mailbox's delivery or dismissal")
+		}
+		if view.ID == id && view.SilenceDismissedSince == nil {
+			t.Fatal("adding another account cleared this mailbox's dismissal")
+		}
 	}
-	if _, err := reg.DismissSilence(ctx, "gmail", first); !errors.Is(err, apperrors.ErrConflict) {
-		t.Fatalf("old-account dismissal = %v", err)
+	if _, err := reg.DismissSilence(ctx, capture.Mailbox{Provider: "gmail", ID: other}, first); !errors.Is(err, apperrors.ErrConflict) {
+		t.Fatalf("old-account dismissal on the new mailbox = %v", err)
 	}
 }
 
@@ -227,7 +233,7 @@ func TestSupersededPullCannotPublishDelivery(t *testing.T) {
 	receivedAt := at
 	reg := capture.NewRegistry(db, capture.NewSink(db), fixtureAuthority{}, vault)
 	delivered, failed := true, false
-	reg.Register(deliveryConnector{receivedAt: &receivedAt, deliver: &delivered, failed: &failed, after: func() error { return reg.Disconnect(ctx, "gmail") }})
+	reg.Register(deliveryConnector{receivedAt: &receivedAt, deliver: &delivered, failed: &failed, after: func() error { return reg.Disconnect(ctx, capture.ProviderMailbox("gmail")) }})
 	id, err := reg.Connect(ctx, "gmail", connector.Auth("fixture-token"))
 	if err != nil {
 		t.Fatal(err)

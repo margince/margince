@@ -31,6 +31,7 @@ import { Select } from "../../../design-system/select";
 import { useT } from "../../../i18n";
 import { problemMessageOf, unwrap } from "../../../lib/problem";
 import { navigate } from "../../../lib/router";
+import { TEXT_LIMITS } from "../../../lib/textlimits_gen";
 import "./dealroomtab.css";
 
 type DealRoom = components["schemas"]["DealRoom"];
@@ -295,6 +296,7 @@ export function ManageRoomDialog({
             <TextInput
               {...control}
               value={title}
+              maxLength={TEXT_LIMITS.label}
               disabled={finished}
               onChange={(event) => setTitle(event.target.value)}
             />

@@ -23,7 +23,7 @@ import (
 // SetConnectorContextTag: PUT /connectors/{provider}/context-tag.
 // The word this connector files what it captures under; the registry owns the
 // scoping, the vocabulary check and the audit, and this is wire-only.
-func (h connectorHandlers) SetConnectorContextTag(w http.ResponseWriter, r *http.Request, provider crmcontracts.CaptureProvider) {
+func (h connectorHandlers) SetConnectorContextTag(w http.ResponseWriter, r *http.Request, provider crmcontracts.CaptureProvider, params crmcontracts.SetConnectorContextTagParams) {
 	if h.registry == nil {
 		httperr.NotImplemented(w, r, "SetConnectorContextTag")
 		return
@@ -42,7 +42,7 @@ func (h connectorHandlers) SetConnectorContextTag(w http.ResponseWriter, r *http
 		chosen := ids.UUID(*req.TagId)
 		tagID = &chosen
 	}
-	view, err := h.registry.SetContextTag(r.Context(), string(provider), tagID)
+	view, err := h.registry.SetContextTag(r.Context(), capture.MailboxNamed(string(provider), params.ConnectionId), tagID)
 	// A mailbox this caller has not connected is not theirs to configure, and
 	// answers as absent, for the reason the siblings above say.
 	if errors.Is(err, capture.ErrNoConnection) {

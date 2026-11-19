@@ -6,7 +6,11 @@ import type {
   QueryClient,
   QueryKey,
 } from "@tanstack/react-query";
-import { dealRecordKeys, derivedRecordKeys } from "./activitykeys";
+import {
+  dealRecordKeys,
+  dealStageHistoryKey,
+  derivedRecordKeys,
+} from "./activitykeys";
 import type { EntityKind } from "./entity";
 import { leadWriteKeys } from "./leadkeys";
 
@@ -29,7 +33,9 @@ export function recordWriteKeys(kind: EntityKind, id: string): QueryKey[] {
 }
 
 // `anchor` is the record's `is_anchor`: the installation's own company.
-type RecordWriteScope = Readonly<{ anchor?: boolean }>;
+// `stageMove` is a deal write that may have moved its stage, so its stage
+// moves are read again.
+type RecordWriteScope = Readonly<{ anchor?: boolean; stageMove?: boolean }>;
 
 // The anchor is also read as the settings company profile and as /me's brand.
 // Not a ["company"] prefix: it would also stale every company record read.
@@ -74,6 +80,7 @@ export function invalidateRecord(
     (queryKey) => ({ queryKey }),
   );
   if (scope.anchor) filters.push(...ANCHOR_WRITE_FILTERS);
+  if (scope.stageMove) filters.push({ queryKey: dealStageHistoryKey(id) });
   return Promise.all(
     filters.map((filter) => client.invalidateQueries(filter)),
   ).then(() => undefined);

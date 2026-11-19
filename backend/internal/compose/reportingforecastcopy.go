@@ -17,6 +17,7 @@ var reportingForecastWords = struct{ Unpriced, MovementUnpriced langcopy.Phrase 
 
 var reportingForecastCaveats = map[forecasting.LandingCaveat]langcopy.Phrase{
 	forecasting.CaveatCallAbsent:      {En: "No call recorded for this period, so this shows commit evidence.", De: "Angezeigt werden die Commit-Belege, da für diesen Zeitraum keine Einschätzung erfasst ist.", Vi: "Kỳ này chưa có nhận định nào, nên số này hiển thị bằng chứng Commit."},
+	forecasting.CaveatCallWithheld:    {En: "The manager's call is not shown here, so this shows commit evidence.", De: "Angezeigt werden die Commit-Belege, da die Einschätzung hier nicht sichtbar ist.", Vi: "Nhận định của quản lý không hiển thị ở đây, nên số này hiển thị bằng chứng Commit."},
 	forecasting.CaveatCallBelowActual: {En: "The call is below the amount already won. It is shown as recorded, not corrected.", De: "Die Einschätzung liegt unter dem bereits gewonnenen Betrag. Die Einschätzung wird wie erfasst angezeigt, nicht korrigiert.", Vi: "Nhận định thấp hơn số tiền đã chốt. Số này hiển thị đúng như đã ghi, không chỉnh sửa."},
 }
 

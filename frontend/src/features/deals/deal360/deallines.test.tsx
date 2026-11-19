@@ -133,7 +133,7 @@ describe("a deal priced from its lines", () => {
     );
     await user.click(within(dialog).getByRole("button", { name: "Add item" }));
     await user.type(
-      within(dialog).getByRole("spinbutton", { name: "Quantity" }),
+      within(dialog).getByRole("textbox", { name: "Quantity" }),
       "2",
     );
     await user.click(
@@ -184,7 +184,7 @@ describe("a deal priced from its lines", () => {
     await user.clear(description);
     await user.type(description, "Ripe bananas");
     await user.type(
-      within(dialog).getByRole("spinbutton", { name: "Selling price" }),
+      within(dialog).getByRole("textbox", { name: "Selling price" }),
       "1.80",
     );
     await user.click(
@@ -231,7 +231,7 @@ describe("a deal priced from its lines", () => {
       await screen.findByRole("button", { name: "Edit products" }),
     );
     const dialog = await screen.findByRole("dialog");
-    const quantity = within(dialog).getByRole("spinbutton", {
+    const quantity = within(dialog).getByRole("textbox", {
       name: "Quantity",
     });
     await user.clear(quantity);

@@ -214,6 +214,7 @@ func newJobRunner(ctx context.Context, pool *pgxpool.Pool, logger *slog.Logger, 
 	}
 	return compose.NewJobRunner(pool, logger, compose.JobRunnerConfig{
 		Paused:               workPause(ctx),
+		ModelBound:           modelPath.Bound,
 		ListsEnabled:         cfg.listsEnabled,
 		DisabledCoreFeatures: config.Val(cfg.settings, ps.CoreFeaturesDisabled),
 		DataTasksPace:        cfg.dataTasksPace,

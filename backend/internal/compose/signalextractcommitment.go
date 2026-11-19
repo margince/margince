@@ -179,14 +179,16 @@ func (x *SignalExtractor) emailCommitment(
 	// Who may read the conversation is asked again here, in the transaction
 	// that files: the reading ran outside it, and a conversation made private
 	// in between must not be filed as a shared one.
-	company, privateTo, offered, err := threadReaderNow(ctx, tx, thread.Key)
+	reader, err := threadReaderNow(ctx, tx, thread.Key)
 	if err != nil {
 		return Commitment{}, false, err
 	}
-	if !offered {
+	// A promise in routine-private mail stays with that mail: only an
+	// explicit request is ever kept from it.
+	if !reader.offered || !reader.everyMessageOpen {
 		return Commitment{}, false, apperrors.ErrNotFound
 	}
-	thread.CompanyID, thread.PrivateTo = company, privateTo
+	thread.CompanyID, thread.PrivateTo = reader.company, reader.privateTo
 	parties, err := x.messages.PartiesOf(extractorContext(ctx, signalScanActor), tx, cited)
 	if err != nil {
 		return Commitment{}, false, err

@@ -78,7 +78,7 @@ func (s *Store) RetireMeetingCopyTx(ctx context.Context, tx pgx.Tx, duplicate, s
 func requireFoldActor(ctx context.Context, verb string) error {
 	actor, ok := principal.Actor(ctx)
 	if !ok || (actor.Type != principal.PrincipalSystem && actor.Type != principal.PrincipalConnector) {
-		return fmt.Errorf("activities: only a system job or a connector sync %s: %w", verb, apperrors.ErrPermissionDenied)
+		return fmt.Errorf("only a system job or a connector sync %s: %w", verb, apperrors.ErrPermissionDenied)
 	}
 	return nil
 }

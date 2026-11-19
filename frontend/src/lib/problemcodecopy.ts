@@ -16,13 +16,17 @@ export const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
   ["approval_preview_unavailable", "approval.preview.unavailable"],
   ["approval_preview_conflict", "approval.preview.resolveConflict"],
   ["approval_needs_wider_sight", "approval.preview.needsWiderSight"],
+  // An edit that moves an entity id; the detail names JSON paths.
+  ["retargeted", "approval.editRetargeted"],
   ["gateway_unavailable", "common.gatewayUnavailable"],
+  ["request_timed_out", "common.requestTimedOut"],
   ["assistant_unavailable", "common.assistantUnavailable"],
   ["provider_out_of_credit", "common.providerOutOfCredit"],
   ["provider_unauthorized", "common.providerUnauthorized"],
   ["provider_unavailable", "common.providerUnavailable"],
   ["calendar_unavailable", "scheduling.calendarUnavailable"],
   ["permission_denied", "common.permissionDenied"],
+  ["consumer_mail_domain", "captureValue.consumerMail"],
   ["seat_tier_insufficient", "common.seatReadOnly"],
   ["trial_ended", "common.trialEnded"],
   ["license_lapsed", "common.licenseLapsed"],
@@ -31,6 +35,10 @@ export const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
   ["individual_performance_off", "common.individualPerformanceOff"],
   // The server's skew detail is English, worded for API and agent readers.
   ["version_skew", "common.versionSkew"],
+  // The detail names a stage or a kind of stage in English.
+  ["stage_not_in_pipeline", "deal.stageOtherPipeline"],
+  ["pipeline_retired", "deal.pipelineRetired"],
+  ["last_closing_stage", "stage.lastClosing"],
   // Every code httperr.Duplicate sends: its detail is one fixed API sentence
   // for all of them. backend/gates/frontendproblemcodecopy_test.go holds the set.
   ["duplicate_email", "common.duplicate.email"],

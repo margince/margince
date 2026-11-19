@@ -66,7 +66,11 @@ type controllerPayloadSweepWorker struct {
 	// material does, and a second spelling of that resolution is a second answer
 	// to "whose vault is this".
 	vault controllerPayloads
-	alarm receiptAlarm
+	// meetings destroys the vault links that erased invitations and proposals
+	// still name. It runs here because this job is registered on every worker
+	// that has a vault, where the meeting delivery job needs a calendar.
+	meetings *activities.Store
+	alarm    receiptAlarm
 	// restrictions ends a restriction whose lift notice went out while the
 	// receipt's own effect did not apply.
 	restrictions *consent.Store
@@ -78,12 +82,13 @@ func newControllerPayloadSweepWorker(
 	idsvc *identity.Service,
 	store *comms.Store,
 	vault controllerPayloads,
+	meetings *activities.Store,
 	alarm receiptAlarm,
 	restrictions *consent.Store,
 	log *slog.Logger,
 ) *controllerPayloadSweepWorker {
 	return &controllerPayloadSweepWorker{
-		identity: idsvc, store: store, vault: vault, alarm: alarm, restrictions: restrictions, clock: time.Now, log: log,
+		identity: idsvc, store: store, vault: vault, meetings: meetings, alarm: alarm, restrictions: restrictions, clock: time.Now, log: log,
 	}
 }
 
@@ -145,6 +150,17 @@ func (w *controllerPayloadSweepWorker) raiseOwedReceipts(ctx context.Context, no
 	}
 }
 
+// destroyErasedMeetingLinks is best effort like the passes above it: a refused
+// delete leaves the reference in its row, and the next cadence retries it.
+func (w *controllerPayloadSweepWorker) destroyErasedMeetingLinks(ctx context.Context) {
+	if w.vault.v == nil {
+		return
+	}
+	if err := w.meetings.DestroyErasedLinks(ctx); err != nil {
+		w.log.ErrorContext(ctx, "destroying the link secrets of erased meetings failed", "err", err)
+	}
+}
+
 func (w *controllerPayloadSweepWorker) Work(ctx context.Context, _ *river.Job[ControllerPayloadSweepArgs]) error {
 	ctx, err := installationJobCtx(ctx, w.identity)
 	if err != nil {
@@ -156,6 +172,7 @@ func (w *controllerPayloadSweepWorker) Work(ctx context.Context, _ *river.Job[Co
 		return jobs.FaultContext(ctx, err)
 	}
 	w.liftSentRestrictions(ctx)
+	w.destroyErasedMeetingLinks(ctx)
 
 	// Paged past what this run already attempted, so a batch that will never
 	// delete costs one batch rather than the whole backlog: without it the same
@@ -238,26 +255,16 @@ func (w *controllerPayloadSweepWorker) retire(ctx context.Context, id ids.UUID) 
 	return w.store.ClearPayloadRef(ctx, id)
 }
 
-// addControllerPayloadSweepJob registers the pass and its cadence.
-//
-// Gated on exactly what jobs.yaml declares — SendRegistry and SendDelivery,
-// what the controller lane itself needs — and NOT additionally on the vault.
-// The declaration is the contract the job census reads, and a guard demanding
-// more than it says makes this kind declared-but-unregistered: the census fails,
-// and a role that ticked its dispatcher would queue rows nothing can claim.
-//
-// A missing vault is handled where it can be said honestly, in the worker: the
-// pass reads first and then reports the count it cannot destroy, rather than
-// returning early and reporting nothing.
+// addControllerPayloadSweepJob registers the pass and its cadence on every
+// worker. No half of it calls the send lane, and the missed-receipt half must
+// run where no mail can go out. A missing vault is reported by the worker.
 func addControllerPayloadSweepJob(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig, log *slog.Logger) []*river.PeriodicJob {
-	if cfg.SendRegistry == nil || cfg.SendDelivery == nil {
-		return nil
-	}
 	db := InstallationDB(pool)
 	worker := newControllerPayloadSweepWorker(
 		identity.NewService(pool),
 		comms.NewStore(db, time.Now, activities.NewStore(db)),
 		controllerPayloads{v: cfg.ControllerVault},
+		activities.NewStore(db).WithMeetingVault(cfg.ControllerVault),
 		receiptAlarm{db: db},
 		consent.NewStore(db),
 		log)

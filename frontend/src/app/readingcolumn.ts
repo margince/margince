@@ -21,9 +21,7 @@ export function useReadingColumn(route: Route): {
   griddedRecord: boolean;
 } {
   const shown = useDeferredValue(route);
-  // A RECORD id makes one: `#/companies` and `#/deals/new` are both lists.
-  const recordPage = shown.id !== undefined && !opensReservedPage(shown);
-  const griddedRecord = recordPage && GRIDDED_RECORD_SCREENS.has(shown.screen);
+  const griddedRecord = isRecordPage(shown);
   // The id-less half of the same policy: a screen that reads down but is not a
   // record, so there is no id to key on. Brief is the one today.
   const griddedScreen = GRIDDED_SCREENS.has(shown.screen);
@@ -33,4 +31,11 @@ export function useReadingColumn(route: Route): {
   const gridded =
     shown.screen === SETTINGS_SCREEN || griddedRecord || griddedScreen;
   return { gridded, griddedRecord };
+}
+
+/** Whether `route` is a record's own page, as against its list or a form. */
+export function isRecordPage(route: Route): boolean {
+  // A RECORD id makes one: `#/companies` and `#/deals/new` are both lists.
+  const recordPage = route.id !== undefined && !opensReservedPage(route);
+  return recordPage && GRIDDED_RECORD_SCREENS.has(route.screen);
 }

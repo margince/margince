@@ -15,6 +15,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/salutation"
 	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
@@ -80,6 +81,21 @@ func signatureNameShapeValid(text string) error {
 		return nil
 	}
 	return fmt.Errorf("name order %q is not one of %s", clampToken(parsed.Name.Order), strings.Join(signatureNameOrders, ", "))
+}
+
+// signatureNameIsTheirs reports whether the reply's name is this contact's.
+// A block that printed only their address needs a name that is theirs.
+// Otherwise the title and numbers in it may be anybody's.
+func signatureNameIsTheirs(modelText string, cand contacts.SignatureCandidate, signer salutation.Signer) bool {
+	var parsed struct {
+		Name *signatureNameReply `json:"name"`
+	}
+	if err := json.Unmarshal([]byte(ai.Unfence(modelText)), &parsed); err != nil || parsed.Name == nil ||
+		parsed.Name.Order == contacts.SignatureOrderUnclear {
+		return signer == salutation.SignedByName
+	}
+	n := parsed.Name
+	return salutation.NameIsContacts(n.GivenNames+" "+n.Middle, n.FamilyName, cand.FullName, cand.Email)
 }
 
 // gateSignatureName applies to the name object what gateEvidence applies to a

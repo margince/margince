@@ -72,7 +72,7 @@ func advanceDealInput(req crmcontracts.AdvanceDealRequest, ifVersion *int64) (Ad
 	// Unchecked, the zero UUID travels to the stage lookup, whose composite
 	// WHERE matches nothing and answers a bare not-found — for a deal that is in
 	// the URL and exists, sending the caller hunting for a stage it never named.
-	if err := requireBodyID("to_stage_id", req.ToStageId); err != nil {
+	if err := requireBodyID(advanceTargetField, req.ToStageId); err != nil {
 		return AdvanceDealInput{}, err
 	}
 	in := AdvanceDealInput{

@@ -39,7 +39,7 @@ func TestErasureDestroysTheAuditAndOutboxCopiesWrittenByContactCreation(t *testi
 					t.Fatal(err)
 				}
 			}
-			err = compose.ComposedEraser(e.Pool, nil, nil).EraseContact(ctx, id, "erase Erasure Audit Subject")
+			err = compose.ComposedEraser(e.Pool, nil).EraseContact(ctx, id, "erase Erasure Audit Subject")
 			if (held && !errors.Is(err, apperrors.ErrConflict)) || (!held && err != nil) {
 				t.Fatalf("erasure under legal hold=%v: %v", held, err)
 			}

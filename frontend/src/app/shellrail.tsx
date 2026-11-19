@@ -16,7 +16,7 @@ import { useTruncationTooltip } from "../design-system/tooltip";
 import { useSettingsSection } from "../features/settings/settingsnav";
 import { useT } from "../i18n";
 import { lazy } from "../i18n/lazy";
-import { useDisabledCoreFeatures } from "../lib/corefeatures";
+import { useHiddenCoreFeatures } from "../lib/corefeatures";
 import { entryDepth } from "../lib/historydepth";
 import { type Route, routeHash, useHash } from "../lib/router";
 import { useMe } from "../lib/session";
@@ -117,7 +117,7 @@ export function WorkspaceChip({ id }: Readonly<{ id?: string }>) {
 // from assistive tech. The link covers the whole card (shell.css).
 function BrandBlock() {
   const t = useT();
-  const start = routeHash(firstAvailableRoute(useDisabledCoreFeatures()));
+  const start = routeHash(firstAvailableRoute(useHiddenCoreFeatures()));
   const installation = useInstallationBrand();
   const homeLabel = useHomeLinkLabel();
   // On the link, not the heading: the link already holds the tab stop, and the

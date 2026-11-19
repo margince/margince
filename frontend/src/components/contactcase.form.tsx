@@ -13,6 +13,7 @@ import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemCodeOf, problemStatus } from "../lib/problem";
 import { CaseEvidence, CasePreview } from "./contactcase.evidence";
+import { CasePreferences } from "./contactcase.prefer";
 import {
   type ContactCase,
   type ContactCaseDecision,
@@ -22,6 +23,7 @@ import {
   useContactCasePreview,
 } from "./contactcase.queries";
 import {
+  type CasePreference,
   defaultOwner,
   defaultSelection,
   dismissedWith,
@@ -31,6 +33,7 @@ import {
   pairKeep,
   pairLocked,
   pairProblem,
+  preferFor,
 } from "./contactcase.selection";
 
 type Props = Readonly<{
@@ -123,6 +126,7 @@ export function CaseForm({
   );
   // Until the reviewer picks an owner, the owner follows the kept record.
   const [ownerPicked, setOwnerPicked] = useState(false);
+  const [prefer, setPrefer] = useState<CasePreference>({});
   const preview = useContactCasePreview();
   const merge = useContactCaseMerge();
   const locked = !contactCase.can_merge;
@@ -134,6 +138,7 @@ export function CaseForm({
     member_ids: [...selected],
     survivor_id: survivor,
     owner_id: owner,
+    prefer: preferFor(contactCase, selected, survivor, prefer),
   };
   const previewed =
     preview.data && preview.variables?.body
@@ -241,6 +246,16 @@ export function CaseForm({
             />
           )}
         </Field>
+        <CasePreferences
+          contactCase={contactCase}
+          selected={selected}
+          survivor={survivor}
+          prefer={prefer}
+          disabled={locked}
+          onChange={(field, member) =>
+            setPrefer((now) => ({ ...now, [field]: member }))
+          }
+        />
         {!locked && problem && <p className="t-caption">{t(problem)}</p>}
         <CaseEvidence
           contactCase={contactCase}

@@ -149,7 +149,7 @@ func listPartnersTx(ctx context.Context, tx pgx.Tx, in ListPartnersInput, limit 
 	var page storekit.Page
 	if len(out) > limit {
 		out = out[:limit]
-		next, err := sorted.EncodePageCursor(cursorKeys[limit-1], out[limit-1].CreatedAt, rowIDs[limit-1])
+		next, err := sorted.EncodePageCursor("partners", cursorKeys[limit-1], out[limit-1].CreatedAt, rowIDs[limit-1])
 		if err != nil {
 			return nil, storekit.Page{}, err
 		}
@@ -189,7 +189,7 @@ func partnerListWhere(ctx context.Context, in ListPartnersInput, sorted *storeki
 		// Through the sort's own keyset, which refuses a token minted under a
 		// different ordering rather than resuming on an axis this page is not
 		// ordered by.
-		keyset, err := sorted.KeysetClause(in.Cursor, arg)
+		keyset, err := sorted.KeysetClause("partners", in.Cursor, arg)
 		if err != nil {
 			return nil, err
 		}

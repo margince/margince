@@ -146,7 +146,7 @@ func (r *Registry) internalMailHistoryPreview(ctx context.Context, connection id
 	if len(preview.admission.Containers) == 0 {
 		return preview, nil
 	}
-	folders, _, err := r.ListContainers(ctx, preview.admission.Provider, owner)
+	folders, _, err := r.ListContainers(ctx, Mailbox{Provider: preview.admission.Provider, ID: preview.admission.ConnectionID}, owner)
 	if err != nil {
 		return nil, err
 	}

@@ -316,6 +316,19 @@ export function isConsentNotGranted(problem: unknown): boolean {
   return problemCode(problem) === "consent_not_granted";
 }
 
+// A read whose surface shows some refusals as its own state, such as a not
+// found page, names their statuses under this query `meta` key. The query
+// failure sink then leaves them out of the console.
+export const SHOWN_REFUSALS = "shownRefusals";
+
+export function refusalShown(
+  meta: Readonly<Record<string, unknown>> | undefined,
+  error: unknown,
+): boolean {
+  const statuses = meta?.[SHOWN_REFUSALS];
+  return Array.isArray(statuses) && statuses.includes(problemStatus(error));
+}
+
 // The HTTP status out of a thrown RFC-7807 body, or 0 when the failure carried
 // none (a dropped connection throws no problem document at all).
 export function problemStatus(err: unknown): number {
@@ -334,4 +347,24 @@ export function problemStatus(err: unknown): number {
   }
   const { status } = err.problem;
   return typeof status === "number" ? status : 0;
+}
+
+/**
+ * Whether the server refused a request for good: a 4xx other than a timeout or
+ * a rate limit. A network failure, a 5xx, 408 or 429 may pass when sent again.
+ */
+export function refusedForGood(error: unknown): boolean {
+  if (!(error instanceof ProblemError)) return false;
+  const { problem } = error;
+  const status =
+    typeof problem === "object" && problem !== null && "status" in problem
+      ? problem.status
+      : undefined;
+  return (
+    typeof status === "number" &&
+    status >= 400 &&
+    status < 500 &&
+    status !== 408 &&
+    status !== 429
+  );
 }

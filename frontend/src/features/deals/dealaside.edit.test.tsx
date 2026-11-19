@@ -38,17 +38,22 @@ const deal: components["schemas"]["Deal"] = {
 
 afterEach(cleanup);
 
-function mount(grant: ("read" | "update")[], current = deal) {
+function mount(
+  grant: ("read" | "update")[],
+  current = deal,
+  locale: "en" | "de" = "en",
+) {
   const sent: unknown[] = [];
   installFetchStub({
     "GET /me": meRoute({ deal: grant }, { seat: "full" }),
+    "GET /records/deal/d1/tags": () => jsonResponse({ data: [] }),
     "PATCH /deals/d1": (body) => {
       sent.push(body);
       return jsonResponse({ ...current, version: 5 });
     },
   });
   render(
-    <StoryProviders>
+    <StoryProviders locale={locale}>
       <DealAside deal={current} stages={[]} />
     </StoryProviders>,
   );
@@ -62,7 +67,7 @@ it("saves a changed value from the left column's money form as that field alone"
     await screen.findByRole("button", { name: /^Change Value €48,000$/ }),
   );
   const dialog = await screen.findByRole("dialog", { name: "Value" });
-  const amount = within(dialog).getByRole("spinbutton", { name: "Value" });
+  const amount = within(dialog).getByRole("textbox", { name: "Value" });
   await user.clear(amount);
   await user.type(amount, "52000");
   await user.click(within(dialog).getByRole("button", { name: "Save" }));
@@ -79,8 +84,9 @@ it("offers no change to a reader without the update grant", async () => {
 it("changes an open deal's forecast close day and leaves a won deal's close day alone", async () => {
   const open = { ...deal, expected_close_date: "2026-12-01" };
   mount(["read", "update"], open);
+  // Named as the create form and Edit details name the field it changes.
   expect(
-    await screen.findByRole("button", { name: /^Change Close/ }),
+    await screen.findByRole("button", { name: /^Change Expected close/ }),
   ).toBeTruthy();
   cleanup();
   mount(["read", "update"], {
@@ -89,7 +95,11 @@ it("changes an open deal's forecast close day and leaves a won deal's close day 
     closed_at: "2026-10-01T00:00:00Z",
   });
   await screen.findByRole("button", { name: /^Change Value/ });
-  expect(screen.queryByRole("button", { name: /^Change Close/ })).toBeNull();
+  expect(
+    screen.queryByRole("button", { name: /^Change (Expected )?Close/ }),
+  ).toBeNull();
+  // A decided deal's day is no forecast, so it is not called one.
+  expect(screen.getByText("Close")).toBeTruthy();
 });
 
 it("changes the amount of a deal whose ARR an offer set", async () => {
@@ -97,4 +107,45 @@ it("changes the amount of a deal whose ARR an offer set", async () => {
   expect(
     await screen.findByRole("button", { name: /^Change Value/ }),
   ).toBeTruthy();
+});
+
+it("adds a tag from the Tags row and offers no add to a reader", async () => {
+  const user = userEvent.setup();
+  mount(["read", "update"]);
+  await user.click(
+    await screen.findByRole("button", { name: /^Show \d+ empty fields$/ }),
+  );
+  expect(await screen.findByRole("button", { name: "Add tag" })).toBeTruthy();
+  cleanup();
+  mount(["read"]);
+  await user.click(
+    await screen.findByRole("button", { name: /^Show \d+ empty fields$/ }),
+  );
+  await screen.findByText("Tags");
+  expect(screen.queryByRole("button", { name: "Add tag" })).toBeNull();
+});
+
+// German groups thousands with a dot: "12,5" is twelve and a half, and
+// "1.500" is refused because it also reads as fifteen hundred.
+it.each([
+  ["12,5", [{ amount_minor: 1250 }]],
+  ["1.500", []],
+])("in German, a typed %s saves %j", async (typed, want) => {
+  const user = userEvent.setup();
+  const sent = mount(["read", "update"], deal, "de");
+  await user.click(await screen.findByRole("button", { name: /^Wert/ }));
+  const dialog = await screen.findByRole("dialog", { name: "Wert" });
+  const amount = within(dialog).getByRole("textbox", { name: "Wert" });
+  expect((amount as HTMLInputElement).value).toBe("48000,00");
+  await user.clear(amount);
+  await user.type(amount, typed);
+  await user.click(within(dialog).getByRole("button", { name: "Speichern" }));
+  if (want.length === 0) {
+    expect(
+      await within(dialog).findByText(
+        "Gib den Betrag als 1500 oder 1500,00 ein.",
+      ),
+    ).toBeTruthy();
+  }
+  await waitFor(() => expect(sent).toEqual(want));
 });

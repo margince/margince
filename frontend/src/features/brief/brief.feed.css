@@ -470,3 +470,74 @@
 .brief-triage-lead .which-deal-verbs > .btn-primary {
   order: 2;
 }
+
+/* ── A clear morning ──────────────────────────────────────────────────────
+ * One quiet card: a tick that draws once, the word, and when Margince last
+ * looked. Motion is stroke and scale only, and stops for reduced motion. */
+.brief-caughtup {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-2);
+  padding: var(--space-10) var(--space-8) var(--space-8);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-rest);
+  text-align: center;
+}
+/* The tick sits on two quiet rings, all drawn in one SVG. */
+.brief-caughtup-mark {
+  inline-size: calc(var(--space-16) + var(--space-8));
+  block-size: calc(var(--space-16) + var(--space-8));
+  margin-block-end: var(--space-2);
+  overflow: visible;
+  animation: brief-caughtup-ring var(--dur-enter) var(--ease-out) both;
+}
+.brief-caughtup-halo {
+  fill: color-mix(in srgb, var(--accentLight) 25%, transparent);
+}
+.brief-caughtup-ring {
+  fill: color-mix(in srgb, var(--accentLight) 55%, transparent);
+}
+.brief-caughtup-disc {
+  fill: var(--accentLight);
+}
+.brief-caughtup-tick {
+  fill: none;
+  stroke: var(--accentText);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: brief-caughtup-draw var(--dur-enter) var(--ease-out)
+    calc(var(--dur-enter) / 2) forwards;
+}
+.brief-caughtup-line {
+  margin: 0;
+  max-inline-size: 52ch;
+  font: var(--fontBody);
+  color: var(--textSecondary);
+  text-wrap: pretty;
+}
+@keyframes brief-caughtup-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes brief-caughtup-ring {
+  from {
+    opacity: 0;
+    scale: 0.92;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .brief-caughtup-mark,
+  .brief-caughtup-tick {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}
+@media (max-width: 640px) {
+  .brief-caughtup {
+    padding: var(--space-8) var(--space-5) var(--space-6);
+  }
+}

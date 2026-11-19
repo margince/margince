@@ -62,7 +62,9 @@ func (f ActivityLeadFiler) FileOnLead(ctx context.Context, tx pgx.Tx, id ids.Act
 		return written, err
 	}
 	var inbound bool
-	if err := tx.QueryRow(ctx, `SELECT COALESCE(direction = 'inbound', false) FROM activity WHERE id = $1 AND archived_at IS NULL`, id).Scan(&inbound); err != nil {
+	// A reply task is owed only for mail the lead wrote, not a colleague's copy.
+	if err := tx.QueryRow(ctx, `SELECT COALESCE(`+activities.WriterSideSQL("activity", "true")+` = 'inbound', false)
+		FROM activity WHERE id = $1 AND archived_at IS NULL`, id).Scan(&inbound); err != nil {
 		return false, err
 	}
 	if !inbound {

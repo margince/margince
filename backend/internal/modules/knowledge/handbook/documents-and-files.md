@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/voice-knowledge frontend/src/features/deals/dealfiles.tsx frontend/src/features/records/activityfiles.tsx backend/internal/compose/uploadsettings.go backend/internal/modules/activities/attachmenttypes.go backend/internal/modules/activities/documents.go backend/internal/modules/knowledge frontend/src/features/contacts/contactchatcapture.tsx backend/internal/compose/chatcapturefile.go -->
+<!-- describes: frontend/src/features/voice-knowledge frontend/src/features/deals/dealfiles.tsx frontend/src/features/records/activityfiles.tsx backend/internal/compose/uploadsettings.go backend/internal/modules/activities/attachmenttypes.go backend/internal/modules/activities/documents.go backend/internal/modules/activities/attachmentlink.go backend/internal/modules/knowledge frontend/src/features/contacts/contactchatcapture.tsx backend/internal/compose/chatcapturefile.go -->
 # Documents and files
 
 Margince holds files in three different places, for three different reasons:
@@ -18,6 +18,16 @@ To upload a document in Margince, such as a customer's signed contract, open the
 3. Drop the file on **File**, or click to choose one, and click **Upload**.
 Without write access the button is not shown. The contract record itself is added on its own, see [Contracts and invoices](contracts-and-invoices.md).
 Also called: attach a file, add an attachment, add a PDF, upload a contract document.
+
+### How do I add a link, such as a Google Doc?
+To add a link to a Google Doc, a Google Sheet or a web page, open the company, contact or deal. Choose its **Documents** tab and click **Add document**.
+1. Choose **Link** at the top of the form and paste the address into **Address**.
+2. Margince reads the page and fills **Title** with the name the page gives.
+3. Choose a **Category** and, on a company, **About**, as for a file. Click **Add link**.
+Margince does not read Google files, so type a title for one. Without a title, the link shows the site's address.
+
+The link opens in a new tab. Its tile says **Docs**, **Sheets**, **Slides**, **Forms**, **Drive** or **Web**. Margince keeps only the address, so whoever opens it needs access to the file itself. One address can be added to a record only once.
+Also called: link a Google Drive file, add a URL, add a web link to a company.
 
 ### How do I attach a file to a contact?
 To attach or upload a file to a contact in Margince, open the contact, choose its **Documents** tab and click **Add document**.
@@ -48,7 +58,9 @@ Also called: attach a proposal to a deal, add a file to an opportunity.
 To attach a file to a meeting, call or note in Margince, add it while you log the activity.
 1. In the **Log activity** form, drop the files on **Attach files**, or click it to choose them.
 2. Choose **Log**. The files are uploaded once the activity is logged.
-If a file is refused, a message names it and says why. The others are still attached.
+An empty file, a file over the limit, or a kind Margince does not keep is not added.
+A line under **Attach files** names it and says why, before you log.
+If the server still refuses a file, a message names it and says why. The others are still attached.
 
 If an upload does not finish, Margince checks the activity's files first, so no message asks you to add a file that is already there. To add a file later, press **Files** on the activity in the record's History, then **Add document**. The activity panel that opens from search or the worklist lists the same files under **Files**. The size limit and the file kinds are the same as for any document. Whoever may read the activity may open its files.
 Also called: attach a document to a meeting, add a file to a call, meeting attachments.
@@ -66,7 +78,7 @@ Margince takes these kinds of file as a document on a record, or as a file on an
 - Text files: `.txt`, `.csv`, `.md`, `.html`, `.htm`
 - Images: `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, `.heic`, `.heif`, `.tif`, `.tiff`
 - Archives and saved emails: `.zip`, `.eml`, `.msg`
-Any other kind is refused, and the message names the kinds Margince takes. An `.svg` image and a program such as an `.exe` are refused.
+Any other kind is refused, and the message names the kinds Margince takes. An `.svg` image and a program such as an `.exe` are refused. The file's content must also match its kind, so a program renamed to `.pdf` is refused too.
 Files that arrive with a captured email are kept even when they are of another kind.
 A document set takes fewer kinds; see [Which files can a document set take?](#which-files-can-a-document-set-take).
 Also called: supported file types, file formats, can I upload an archive.
@@ -189,7 +201,7 @@ sender is unknown, it says "an unknown sender".
 ### How do I remove a file from a deal?
 To remove a file from a deal in Margince, open the deal's **Documents** tab. Open the file's **⋯** menu on its tile or row in the **Files** panel, and choose **Hide from this deal** or **Delete**. The panel's **Grid** and **List** switch shows files as tiles or as rows, and your device keeps the choice.
 - **Hide from this deal**: the deal stops listing the file at once. The message and its attachment stay on the activity and in the company library. The toast "Hidden from this deal" offers **Undo**. Later, bring it back with **Show hidden files** and **Show on this deal again**.
-- **Delete**: asks first, "The file is removed from this deal, and from any Deal Room sharing it."
+- **Delete**: asks first, and names the file as its tile does. "The file is removed from this deal, and buyers no longer see it in any Deal Room. The room entry stays until you remove it from the room."
 Use hide when the file does not matter here; use delete when it should not be on the deal at all.
 Also called: delete an attachment, remove a document.
 
@@ -215,8 +227,11 @@ Also called: knowledge base, FAQ, handbook, document library, corpus.
 
 ### Which files can a document set take?
 A document set in Margince takes **plain text, Markdown, CSV or JSON** only: "PDF and Word files are not supported and are refused."
-Each refused file is named: `{filename}: {message}`. To use a PDF or Word document, save it as plain text or Markdown first.
+Each refused file is named: `{filename}: {message}`, for example "contract.docx: Word files are not supported. Save it as plain text, Markdown, CSV or JSON first."
 The size limit for one document in a set is **5 MB by default**; see [What is the maximum file size for an upload?](#what-is-the-maximum-file-size-for-an-upload).
+
+An empty file, or one over the limit, is named as soon as you drop it and is not added.
+Once you click **Add document**, every file it sent leaves the drop zone; the ones refused are named below it.
 Also called: can I upload a PDF to the knowledge base, supported formats.
 
 ### How do I ask my documents a question?
@@ -295,7 +310,7 @@ to the list of document sets."
 
 Margince takes files in two more places, with their own limits:
 
-- **A CSV file to import** (prospects, companies or contacts), and **vCard
+- **A CSV file to import** (leads, companies or contacts), and **vCard
   files**: 10 MB by default.
 - **Your own LinkedIn `Connections.csv`**: 8 MB by default.
 

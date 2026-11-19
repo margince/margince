@@ -87,7 +87,7 @@ func ReclaimStoredOwnSentMailTx(
 	}
 	pass, ok := principal.Actor(ctx)
 	if !ok {
-		return "", fmt.Errorf("capture: re-reading %s as sent mail needs a bound pass: %w", row.Activity, apperrors.ErrPermissionDenied)
+		return "", fmt.Errorf("re-reading an activity as sent mail needs a bound pass: %w", apperrors.ErrPermissionDenied)
 	}
 	pass.OnBehalfOf = row.Seat
 	ctx = principal.WithActor(ctx, pass)

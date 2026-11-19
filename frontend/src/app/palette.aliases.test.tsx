@@ -24,7 +24,7 @@ import {
   SETTINGS_PAGES,
   type SettingsPageId,
 } from "../lib/settingscatalog";
-import { type GrantSpec, meFixture } from "../testing/mefixture";
+import { type GrantSpec, meFixture, READS_RECORDS } from "../testing/mefixture";
 import {
   type Command,
   CommandPalette,
@@ -122,7 +122,10 @@ async function adminCommands(): Promise<readonly Command[]> {
     defaultOptions: { queries: { staleTime: Infinity } },
   });
   client.setQueryData(["me"], {
-    ...meFixture({ roles: ["admin"], allow: everyCatalogGrant() }),
+    ...meFixture({
+      roles: ["admin"],
+      allow: { ...READS_RECORDS, ...everyCatalogGrant() },
+    }),
     data_reset_available: true,
   });
   client.setQueryData(companyContextCapabilitiesQueryKey, COMPANY_CONTEXT_ON);

@@ -132,7 +132,8 @@ func TestResolveFindsACompanyByTheDomainInsideAnAddress(t *testing.T) {
 func TestResolveIgnoresAConsumerMailDomainOnACompany(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	e.seedEmployedContact(ctx, t, "Anna Weber", "anna@gmail.com", "Gmail Holdings", "gmail.com")
+	_, holdings := e.seedEmployedContact(ctx, t, "Anna Weber", "anna@gmail.com", "Gmail Holdings", "gmail-holdings.test")
+	e.addLegacyDomain(ctx, t, holdings, "gmail.com")
 
 	out, err := e.store.Resolve(ctx, []ResolveCandidate{
 		{Kind: ResolveCompany, Name: "Kärcher", Emails: []string{"someone@gmail.com"}},

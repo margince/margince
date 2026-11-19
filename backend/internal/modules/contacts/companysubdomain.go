@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 	"slices"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -26,24 +25,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// domainAncestors lists the domains a subdomain sits under, nearest first, down
-// to its registrable domain: `team.eu.example.com` sits under `eu.example.com`
-// and `example.com`. A registrable domain sits under nothing, because a public
-// suffix such as `co.uk` is nobody's company.
-func domainAncestors(domain string) []string {
-	sub := normalizeDomain(domain)
-	registrable := freemail.Registrable(sub)
-	if registrable == "" || registrable == sub || !strings.HasSuffix(sub, "."+registrable) {
-		return nil
-	}
-	var ancestors []string
-	for rest := sub; rest != registrable; {
-		_, parent, _ := strings.Cut(rest, ".")
-		ancestors = append(ancestors, parent)
-		rest = parent
-	}
-	return ancestors
-}
+// domainAncestors lists the domains a subdomain sits under, nearest first.
+func domainAncestors(domain string) []string { return freemail.Ancestors(domain) }
 
 // domainNests is the subdomain lane's pair test: one of the two domains sits
 // under the other.

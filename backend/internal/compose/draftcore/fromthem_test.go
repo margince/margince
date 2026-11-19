@@ -24,10 +24,10 @@ func TestFromThemReadsTheVoiceBeforeTheTransport(t *testing.T) {
 		{"our outbound mail", crmcontracts.Activity{Direction: &outbound}, false},
 		{"their inbound mail", crmcontracts.Activity{Direction: &inbound}, true},
 		{"a colleague's inbound mail", crmcontracts.Activity{
-			Direction: &inbound, Voice: written(crmcontracts.ActivityAuthorKindColleague),
+			Kind: crmcontracts.ActivityKindEmail, Direction: &inbound, Voice: written(crmcontracts.ActivityAuthorKindColleague),
 		}, false},
 		{"the contact's inbound mail", crmcontracts.Activity{
-			Direction: &inbound, Voice: written(crmcontracts.ActivityAuthorKindContactRecord),
+			Kind: crmcontracts.ActivityKindEmail, Direction: &inbound, Voice: written(crmcontracts.ActivityAuthorKindContactRecord),
 		}, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

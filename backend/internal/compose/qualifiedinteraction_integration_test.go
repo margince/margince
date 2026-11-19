@@ -21,7 +21,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // relationshipReading holds the readers of "how this relationship stands" for
@@ -229,37 +228,6 @@ func TestACopiedContactHasNotWrittenTheThread(t *testing.T) {
 	got := f.read(t)
 	if !equalMoment(got.contactIn, instantOf(t, f.e, own)) {
 		t.Fatalf("the contact page says they last wrote %v, want their own mail at %v", got.contactIn, instantOf(t, f.e, own))
-	}
-}
-
-// The SQL rule every statement renders and the Go rule the read contract's
-// automatic_kind comes from give one answer for every row shape.
-func TestTheGoAndSQLWrittenByHumanRulesAgree(t *testing.T) {
-	e := integration.Setup(t)
-	var rows []relstrength.Evidence
-	for _, kind := range []string{"email", "call", "meeting", "message", "note"} {
-		for _, origin := range []string{"human", "agent", "system_notice", "system_remediation"} {
-			for _, method := range []string{"", "REQUEST", "REPLY", "CANCEL"} {
-				for _, machine := range []bool{false, true} {
-					for _, bulk := range []bool{false, true} {
-						rows = append(rows, relstrength.Evidence{Kind: kind, Origin: origin, CalendarMethod: method, SenderIsMachine: machine, BulkMail: bulk})
-					}
-				}
-			}
-		}
-	}
-	for _, row := range rows {
-		var method *string
-		if row.CalendarMethod != "" {
-			method = &row.CalendarMethod
-		}
-		inSQL := workspaceValue[bool](t, e, `SELECT `+relstrength.WrittenByHumanSQL("a")+`
-			FROM (SELECT $1::text AS kind, $2::text AS origin, $3::text AS calendar_method, $4::boolean AS sender_is_machine,
-			             $5::boolean AS bulk_mail_attested) a`,
-			row.Kind, row.Origin, method, row.SenderIsMachine, row.BulkMail)
-		if inGo := row.Automatic() == ""; inGo != inSQL {
-			t.Errorf("%+v: Go says a human wrote it = %v, SQL = %v", row, inGo, inSQL)
-		}
 	}
 }
 

@@ -22,6 +22,7 @@ const row: Activity = {
   updated_at: "2026-09-01T09:00:00Z",
 };
 type WriterCase = {
+  kind: Activity["kind"];
   direction: Activity["direction"];
   author: Author["kind"] | null;
   side: "ours" | "theirs" | null;
@@ -36,10 +37,11 @@ it("has the activity engine's generated cases", () =>
   expect(cases.length).toBeGreaterThan(0));
 it.each(cases)(
   "reads the activity engine's author side: %j",
-  ({ author, direction, side }) => {
+  ({ kind, author, direction, side }) => {
     expect(
       correspondenceSide({
         ...row,
+        kind,
         direction,
         ...(author
           ? { voice: { author: { kind: author, is_reader: false } } }

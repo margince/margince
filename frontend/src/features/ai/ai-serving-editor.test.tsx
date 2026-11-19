@@ -408,5 +408,7 @@ describe("RequestSummary", () => {
         "Thinking level comes from each task’s setting under AI tasks.",
       ),
     ).toBeTruthy();
+    expect(screen.getByText(/every call from Everyday cloud,/)).toBeTruthy();
+    expect(screen.queryByText(/cheap_cloud/)).toBeNull();
   });
 });

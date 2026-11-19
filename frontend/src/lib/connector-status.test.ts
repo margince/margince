@@ -9,6 +9,7 @@ import {
   type ConnectorStatus,
   errorClassKey,
   healthBadge,
+  holdsSendGrant,
   isConnectedAtAll,
   isUnhealthy,
   missingSendGrant,
@@ -110,11 +111,19 @@ describe("missingSendGrant", () => {
   });
 
   // A provider that cannot send at all is not "cannot send" — it was never a
-  // sending mailbox, and its scope vocabulary is neither vendor's, so no absent
-  // scope says anything about it.
+  // sending mailbox, so no absent scope says anything about it.
   it("never badges a provider that does not send in the first place", () => {
-    expect(missingSendGrant({ provider: "imap", scopes: [] })).toBe(false);
     expect(missingSendGrant({ provider: "gcal", scopes: [] })).toBe(false);
+  });
+
+  // An IMAP mailbox sends only when its owner turned sending on. Left off, it
+  // is read-only by choice, which is not a grant to reconnect for.
+  it("never badges an IMAP mailbox left read-only, and lets one that sends send", () => {
+    expect(missingSendGrant({ provider: "imap", scopes: [] })).toBe(false);
+    expect(holdsSendGrant({ provider: "imap", scopes: [] })).toBe(false);
+    expect(
+      holdsSendGrant({ provider: "imap", scopes: ["urn:margince:imap:send"] }),
+    ).toBe(true);
   });
 
   // Outlook sends too, and its grant carries Microsoft's own permission name —

@@ -109,6 +109,7 @@ func (s *Service) readDecisionContext(ctx context.Context, rows []crmcontracts.A
 	if err := s.readAssignmentStates(ctx, rows); err != nil {
 		return err
 	}
+	s.readSendBlockers(ctx, rows, subjects)
 	return s.readPlans(ctx, rows, subjects)
 }
 

@@ -44,7 +44,7 @@ customer signs them, and Margince does not check them.
 [handbook/compliance.md](handbook/compliance.md) says why.
 
 - [compliance/README.md](compliance/README.md): the list, with each German document next to its
-  English copy. `extensions/de` ships them, and only the German text is the legal one.
+  English copy. `extensions/eu` ships them, and only the German text is the legal one.
 
 ### Attacks: what we must do as the maker
 
@@ -159,6 +159,7 @@ ready before we need it, because the first date comes 24 hours after we learn of
   (`make bench-daily`).
 - [register-a-webhook.md](how-to/register-a-webhook.md): send events to your own HTTPS endpoint.
 - [add-an-extension.md](how-to/add-an-extension.md): add an extension under `extensions/`.
+- [update-a-messaging-policy-pack.md](how-to/update-a-messaging-policy-pack.md): change the mail rules in `extensions/eu` or `extensions/apac`.
 - [install-extensions-as-go-modules.md](how-to/install-extensions-as-go-modules.md): turn
   extensions on from `instance/go.mod`, here or in a client's own repository.
 - [declare-a-service-member.md](how-to/declare-a-service-member.md): make the account that a timed job
@@ -229,6 +230,7 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [Watch an installation](operations/observability.md): how to watch work, check a problem and show that it is fixed.
 - [operator-endpoints.md](reference/operator-endpoints.md) and [job-surfaces.md](reference/job-surfaces.md):
   the checks and numbers the api and the worker serve.
+- [send-metrics.md](reference/send-metrics.md): the numbers the api counts for each email Send.
 - [worker-diagnostics.md](reference/worker-diagnostics.md): profile the worker, read one site, stop it.
 - [feature-settings.md](reference/feature-settings.md), [connectors-and-sign-in.md](reference/connectors-and-sign-in.md),
   [storage-secrets-and-license.md](reference/storage-secrets-and-license.md),
@@ -321,6 +323,7 @@ A generated page, and each `perfbench/` record, says so in its first line. Do no
 - [scheduling.md](explanation/scheduling.md): how the app finds a meeting time.
 - [privacy-and-consent.md](explanation/privacy-and-consent.md): whether a message may go, and the GDPR
   rules.
+- [messaging-policy-packs.md](explanation/messaging-policy-packs.md): where the mail rules of `extensions/eu` and `extensions/apac` are read.
 
 #### AI, search and workflows
 

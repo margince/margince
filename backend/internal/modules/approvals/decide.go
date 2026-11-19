@@ -250,6 +250,9 @@ func landEditedPayload(
 	if err := assertEditableMembers(a.Kind, a.ProposedChange, edited); err != nil {
 		return err
 	}
+	if err := assertMailHasText(a.Kind, edited); err != nil {
+		return err
+	}
 	return applyEditedPayload(ctx, tx, id, edited, a, auditEvidence, decidedPayload)
 }
 
@@ -311,7 +314,7 @@ func (s *Service) pendingToDecide(ctx context.Context, tx pgx.Tx, p principal.Pr
 	// A retired kind is governed only so its decided cards stay readable;
 	// nothing applies it, so a yes would be recorded and do nothing.
 	if approve && retiredKinds[a.Kind] {
-		return row{}, fmt.Errorf("crmapprovals: %s is retired and can no longer be applied: %w",
+		return row{}, fmt.Errorf("approvals of the kind %s are retired and can no longer be applied: %w",
 			a.Kind, apperrors.ErrConflict)
 	}
 	return a, nil

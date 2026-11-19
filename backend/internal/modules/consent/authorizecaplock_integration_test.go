@@ -88,10 +88,38 @@ var capJurisdictions = struct {
 	codes []jurisdiction.Code
 }{}
 
-const (
-	reservedQSlots        = int('z' - 'm' + 1)
-	testJurisdictionSlots = reservedQSlots + int('z'-'a'+1)
-)
+// testCodeRange is one prefix and the second letters testMessagingRules hands
+// out under it, first to last.
+type testCodeRange struct{ prefix, first, last rune }
+
+// testCodeRanges are the codes testMessagingRules hands out, in order.
+// gates/messagingtestcodes_test.go reads this table and fails any literal code
+// another test in this package registers inside it.
+var testCodeRanges = [...]testCodeRange{
+	{prefix: 'q', first: 'm', last: 'z'},
+	{prefix: 'x', first: 'a', last: 'z'},
+}
+
+// testCodeAt answers the index-th code of testCodeRanges, or false past the end.
+func testCodeAt(index int) (jurisdiction.Code, bool) {
+	for _, r := range testCodeRanges {
+		size := int(r.last - r.first + 1)
+		if index < size {
+			return jurisdiction.Code(string([]rune{r.prefix, r.first + rune(index)})), true
+		}
+		index -= size
+	}
+	return "", false
+}
+
+// testJurisdictionSlots is how many codes testCodeRanges holds.
+var testJurisdictionSlots = func() int {
+	slots := 0
+	for _, r := range testCodeRanges {
+		slots += int(r.last - r.first + 1)
+	}
+	return slots
+}()
 
 // Identical immutable rules share a jurisdiction across tests and repeated runs.
 func testMessagingRules(t *testing.T, rules messagingrules.Rules) jurisdiction.Code {
@@ -117,15 +145,10 @@ func testMessagingRules(t *testing.T, rules messagingrules.Rules) jurisdiction.C
 			return code
 		}
 	}
-	index := len(capJurisdictions.codes)
-	if index >= testJurisdictionSlots {
+	code, free := testCodeAt(len(capJurisdictions.codes))
+	if !free {
 		t.Fatalf("this package exhausted its %d distinct test rule sets", testJurisdictionSlots)
 	}
-	prefix, suffix := 'q', rune('m'+index)
-	if index >= reservedQSlots {
-		prefix, suffix = 'x', rune('a'+index-reservedQSlots)
-	}
-	code := jurisdiction.Code(string([]rune{prefix, suffix}))
 	rules.Jurisdiction = code
 	messagingrules.Register(rules)
 	capJurisdictions.codes = append(capJurisdictions.codes, code)

@@ -10,9 +10,9 @@ import {
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
-import { ComposeModal } from "./compose";
 import { SelectedReply } from "./composethread.stories";
 import { ThreadBar } from "./composethreadbar";
+import { ComposeWindow } from "./composewindow";
 
 const meta: Meta = {
   title: "Patterns/Compose mail/Thread bar",
@@ -88,7 +88,7 @@ export const LongRecord: StoryObj = {
     });
     return (
       <StoryProviders>
-        <ComposeModal
+        <ComposeWindow
           entityType="contact"
           entityId="ada"
           open
@@ -130,7 +130,7 @@ function withReadable(readable: number) {
     });
     return (
       <StoryProviders>
-        <ComposeModal
+        <ComposeWindow
           entityType="contact"
           entityId="ada"
           open

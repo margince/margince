@@ -139,7 +139,7 @@ func TestForecastLanguageChangesOnlyEvidenceAndChartLabels(t *testing.T) {
 func TestTheComparisonTakesAManagerCallAsTheWholeQuarter(t *testing.T) {
 	call := int64(76_000_000)
 	readings := forecasting.Readings{WonMinor: 42_000_000, EvidenceMinor: 10_000_000, OpenMinor: 136_000_000}
-	landing, err := forecasting.ProjectLanding(readings, forecasting.MeasureManagerCall, &call)
+	landing, err := forecasting.ProjectLanding(readings, forecasting.MeasureManagerCall, forecasting.SeenCall{Amount: &call})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -150,7 +150,7 @@ func TestTheComparisonTakesAManagerCallAsTheWholeQuarter(t *testing.T) {
 }
 
 func TestAMissingRateLeavesTheOpenTotalUnknown(t *testing.T) {
-	readings := forecasting.Readings{OpenMinor: 50_000, FxMissingCount: 1}
+	readings := forecasting.Readings{OpenMinor: 50_000, FxMissingCount: 1, Contributions: []forecasting.Contribution{{InWon: true, ExclusionReason: forecasting.ExcludedFxMissing}}}
 	facts, err := forecastOpenFacts(crmcontracts.ReportingContext{}, nil, readings)
 	if err != nil {
 		t.Fatal(err)
@@ -158,15 +158,15 @@ func TestAMissingRateLeavesTheOpenTotalUnknown(t *testing.T) {
 	if len(facts) != 1 || facts[0].Money != nil || facts[0].Row.Value != nil {
 		t.Fatalf("open total %+v, want it present and not a number: a short total reads as the whole", facts)
 	}
-	if !forecastOperands(forecasting.Period{}, readings, forecasting.Landing{}, false).FxMissing {
-		t.Fatal("the comparison was not told a rate is missing")
+	if o := forecastOperands(forecasting.Period{}, readings, forecasting.Landing{}, false); !o.FxMissingOpen || !o.FxMissingWon {
+		t.Fatalf("operands %+v, want the open pipeline and the won total each marked short of a rate", o)
 	}
 }
 
 func TestACallBelowWhatIsWonIsMarkedForTheComparison(t *testing.T) {
 	call := int64(70_000_000)
 	readings := forecasting.Readings{WonMinor: 90_000_000}
-	landing, err := forecasting.ProjectLanding(readings, forecasting.MeasureManagerCall, &call)
+	landing, err := forecasting.ProjectLanding(readings, forecasting.MeasureManagerCall, forecasting.SeenCall{Amount: &call})
 	if err != nil {
 		t.Fatal(err)
 	}

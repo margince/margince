@@ -123,6 +123,10 @@ replace github.com/margince/margince/composition => ./not-composed-yet
 	if len(got) != len(want) || got["crm"] != want["crm"] || got["notes"] != want["notes"] {
 		t.Fatalf("units = %v, want %v: not the indirect library, not core, not the unrequired folder", got, want)
 	}
+	index, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(fetchedUnitsIndex)))
+	if err != nil || string(index) != "crm | example.test/acme/crm/v2@v2.1.0\n" {
+		t.Errorf("fetched-units index = %q, %v; want only the downloaded unit", index, err)
+	}
 	copied, err := os.ReadFile(filepath.Join(got["crm"], "go.mod"))
 	if err != nil {
 		t.Fatal(err)

@@ -126,8 +126,8 @@ func TestReportingWorkerFreezesReconciledChartsAndUsesCurrentAuthority(t *testin
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(export), "minor_units,EUR") {
-		t.Fatalf("CSV lost monetary scale: %s", export)
+	if !strings.Contains(string(export), "216000.00") {
+		t.Fatalf("CSV lost the major-unit amount: %s", export)
 	}
 	doc := reportdoc.Document{Blocks: []reportdoc.Block{{Kind: reportdoc.KindStatStrip, Cells: []reportdoc.Cell{{EditionRef: &crmcontracts.ReportEditionReference{EditionId: edition.Id, Metric: "bookings_won"}}, {MetricRef: &crmcontracts.ReportMetricReference{Selection: selection, Metric: "bookings_won"}}}}}}
 	live, err := service.Evaluate(human, selection)

@@ -130,10 +130,7 @@ async function fillRequired(user: User) {
     await screen.findByRole("textbox", { name: /Name/ }),
     "Consulting Day",
   );
-  await user.type(
-    screen.getByRole("spinbutton", { name: /Unit price/ }),
-    "1500",
-  );
+  await user.type(screen.getByRole("textbox", { name: /Unit price/ }), "1500");
 }
 
 // Records each create body and answers with the product it would make.
@@ -221,13 +218,38 @@ describe("ProductsAdmin", () => {
     const nameField = await screen.findByRole("textbox", { name: /Name/ });
     await userEvent.type(nameField, "Consulting Day");
     await userEvent.type(
-      screen.getByRole("spinbutton", { name: /Unit price/ }),
+      screen.getByRole("textbox", { name: /Unit price/ }),
       "1500",
     );
     await userEvent.click(screen.getByText("Create"));
     expect(
       await screen.findByText("sku already in use by a live product: conflict"),
     ).toBeTruthy();
+  });
+
+  // Converted, a price finer than its currency is NaN, which the request would
+  // send as a null price.
+  it("refuses a price finer than its currency before it creates", async () => {
+    const posted = vi.fn(() => jsonResponse({}, 201));
+    vi.stubGlobal(
+      "fetch",
+      productsStub({ allow: PRODUCT_MANAGER, onPost: posted }),
+    );
+    render(<ProductsAdmin />);
+    await userEvent.click(await screen.findByTestId("new-record"));
+    await userEvent.type(
+      await screen.findByRole("textbox", { name: /Name/ }),
+      "Consulting Day",
+    );
+    await userEvent.type(
+      screen.getByRole("textbox", { name: /Unit price/ }),
+      "15.999",
+    );
+    expect(
+      await screen.findByText("This amount has more decimals than EUR allows."),
+    ).toBeTruthy();
+    await userEvent.click(screen.getByText("Create"));
+    expect(posted).not.toHaveBeenCalled();
   });
 
   it("gives a read-only seat the rows, the posture line and no write affordance", async () => {

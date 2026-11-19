@@ -28,11 +28,12 @@ import (
 const testBooks = "test_books"
 
 // testBooksSource lists two customers and answers one invoice for each, in EUR
-// unless currency names another.
+// unless currency names another. With paid, each invoice has one payment.
 type testBooksSource struct {
 	checkErr error
 	currency string
 	netMinor int64
+	paid     bool
 }
 
 func (testBooksSource) Name() string                  { return testBooks }
@@ -53,10 +54,17 @@ func (s testBooksSource) InvoicesFor(_ context.Context, customer string) (financ
 	if s.currency != "" {
 		currency, net = s.currency, s.netMinor
 	}
-	return finance.SourceLedger{Invoices: []finance.SourceInvoice{{
+	ledger := finance.SourceLedger{Invoices: []finance.SourceInvoice{{
 		ExternalID: customer + "-INV-1", Number: customer + "-1", IssuedOn: testBooksIssuedOn, DueOn: &due,
 		Currency: currency, NetMinor: net, GrossMinor: net,
-	}}}, nil
+	}}}
+	if s.paid {
+		ledger.Payments = []finance.SourcePayment{{
+			ExternalID: customer + "-PAY-1", InvoiceExternalID: customer + "-INV-1",
+			PaidAt: testBooksIssuedOn, Currency: currency, AmountMinor: net / 2,
+		}}
+	}
+	return ledger, nil
 }
 
 func (testBooksSource) InvoiceDocument(context.Context, string) (finance.SourceDocument, error) {

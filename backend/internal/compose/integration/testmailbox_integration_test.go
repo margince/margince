@@ -177,8 +177,8 @@ type testMailboxResolver struct {
 
 var _ comms.ConnectionResolver = testMailboxResolver{}
 
-func (m testMailboxResolver) Resolve(ctx context.Context, userID ids.UserID, provider string) (connector.EmailSender, connector.Auth, []string, error) {
-	sender, auth, granted, err := m.registry.SenderFor(ctx, userID, provider)
+func (m testMailboxResolver) Resolve(ctx context.Context, userID ids.UserID, provider string, connection *ids.UUID) (connector.EmailSender, connector.Auth, []string, error) {
+	sender, auth, granted, err := m.registry.SenderFor(ctx, userID, capture.MailboxNamed(provider, connection))
 	switch {
 	case errors.Is(err, capture.ErrNoConnection):
 		return nil, nil, nil, fmt.Errorf("%w: %w", comms.ErrNoMailbox, err)

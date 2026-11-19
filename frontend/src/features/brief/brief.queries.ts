@@ -23,8 +23,15 @@ export type WeeklyReview = components["schemas"]["WeeklyReview"];
 export type MorningBriefItem = components["schemas"]["MorningBriefItem"];
 export type Deal = components["schemas"]["Deal"];
 
-export function useMorningBrief(): UseQueryResult<MorningBrief | null> {
-  return useQuery(morningBriefOptions);
+// `enabled` is false for a reader without `deal.read`, which the run needs.
+export function useMorningBrief(
+  enabled = true,
+): UseQueryResult<MorningBrief | null> {
+  return useQuery({
+    ...morningBriefOptions,
+    enabled,
+    select: (run) => (enabled ? run : null),
+  });
 }
 
 /** The read useMorningBrief makes, which Home's prefetch also starts. */

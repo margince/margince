@@ -6,6 +6,7 @@
 package integration
 
 import (
+	"encoding/json"
 	"net/http"
 	"strings"
 	"testing"
@@ -52,10 +53,72 @@ func TestAZipWithAFileThatIsNotUTF8IsRefusedNamingTheFile(t *testing.T) {
 	}
 }
 
-func TestACSVUploadWithoutATypeIsStillRefused(t *testing.T) {
+func TestAReaderWhoNamesTheTypeOfAnUntypedCSVLeavesNoChoiceByNothing(t *testing.T) {
 	e := setupImportApp(t)
-	if status, errs := uploadRefusal(t, e, "", prospectCSV); status != http.StatusUnprocessableEntity || len(errs) == 0 || errs[0].Field != "object" {
-		t.Fatalf("status %d errs %+v, want 422 on object", status, errs)
+	raw, status := importjobtest.PostCSVFile(t, e, "", prospectCSV)
+	var profile struct {
+		RunID          string `json:"run_id"`
+		Object         string `json:"object"`
+		ObjectChosenBy string `json:"object_chosen_by"`
+	}
+	if err := json.Unmarshal(raw, &profile); err != nil || status != http.StatusOK || profile.ObjectChosenBy != "none" {
+		t.Fatalf("status %d body %s (%v), want a lead nothing chose", status, raw, err)
+	}
+	if s := e.Call(t, http.MethodPatch, "/v1/imports/"+profile.RunID, AnyMap{
+		"version": 1, "object": profile.Object,
+	}, nil, nil); s != http.StatusOK {
+		t.Fatalf("PATCH object → %d, want 200", s)
+	}
+	var run struct {
+		Profile map[string]any `json:"profile"`
+	}
+	if s := e.Call(t, http.MethodGet, "/v1/imports/"+profile.RunID, nil, nil, &run); s != http.StatusOK ||
+		run.Profile == nil || run.Profile["object_chosen_by"] != nil {
+		t.Fatalf("run → %d %+v, want its profile to carry the reader's choice and no object_chosen_by", s, run)
+	}
+}
+
+func TestACSVUploadWithoutATypeIsTypedByItsColumns(t *testing.T) {
+	e := setupImportApp(t)
+	for _, tc := range []struct {
+		name, csv, object, chosenBy string
+	}{
+		{"a contact's own columns", "Email,First Name,Last Name\nada@x.test,Ada,Lovelace\n", "contact", "columns"},
+		{"columns several types share", prospectCSV, "lead", "none"},
+		{"a deal's own columns", "Pipeline,Stage,Amount\nSales,Won,100\n", "deal", "columns"},
+		{"a common header beside a company's own column", "Name,Domain\nAcme,acme.example\n", "company", "columns"},
+		{"two spellings of one column count for neither", "First Name,first_name,Status\nAda,Ada,new\n", "lead", "columns"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			raw, status := importjobtest.PostCSVFile(t, e, "", tc.csv)
+			var profile struct {
+				RunID          string `json:"run_id"`
+				Object         string `json:"object"`
+				ObjectChosenBy string `json:"object_chosen_by"`
+			}
+			if err := json.Unmarshal(raw, &profile); err != nil || status != http.StatusOK {
+				t.Fatalf("status %d body %s (%v), want 200", status, raw, err)
+			}
+			if profile.Object != tc.object || profile.ObjectChosenBy != tc.chosenBy {
+				t.Fatalf("profile = %+v, want %s chosen by %s", profile, tc.object, tc.chosenBy)
+			}
+			var run struct {
+				Profile struct {
+					ObjectChosenBy string `json:"object_chosen_by"`
+				} `json:"profile"`
+			}
+			if s := e.Call(t, http.MethodGet, "/v1/imports/"+profile.RunID, nil, nil, &run); s != http.StatusOK ||
+				run.Profile.ObjectChosenBy != tc.chosenBy {
+				t.Fatalf("run → %d %+v, want its profile to keep %s", s, run, tc.chosenBy)
+			}
+		})
+	}
+	if status, errs := uploadRefusal(t, e, "widget", prospectCSV); status != http.StatusUnprocessableEntity || len(errs) == 0 || errs[0].Field != "object" {
+		t.Fatalf("status %d errs %+v, want 422 on an object no import takes", status, errs)
+	}
+	raw, status := importjobtest.PostCSVFile(t, e, "lead", "Email,First Name,Last Name\nbo@x.test,Bo,Ek\n")
+	if status != http.StatusOK || strings.Contains(string(raw), "object_chosen_by") || !strings.Contains(string(raw), `"object":"lead"`) {
+		t.Fatalf("status %d body %s, want a named type kept and no choice reported", status, raw)
 	}
 }
 
@@ -63,8 +126,28 @@ func TestAZipHoldingOneTypeTwiceIsRefusedAsABundle(t *testing.T) {
 	e := setupImportApp(t)
 	body := zipBytes(t, map[string]string{"companies.csv": "name\nAcme\n", "a/company.csv": "name\nBeta\n"})
 	raw, status := postZipFile(t, e, "x.zip", body)
-	if status != http.StatusUnprocessableEntity || !strings.Contains(string(raw), "bundle_refused") {
+	errs := fieldRefusalsOf(t, raw)
+	if status != http.StatusUnprocessableEntity || len(errs) != 1 || errs[0].Code != "bundle_refused" {
 		t.Fatalf("status %d body %s, want 422 bundle_refused", status, raw)
+	}
+	files := map[string]bool{errs[0].Params["file"]: true, errs[0].Params["other_file"]: true}
+	if errs[0].Params["reason"] != "two_files_one_type" || errs[0].Params["object"] != "company" ||
+		!files["companies.csv"] || !files["a/company.csv"] {
+		t.Fatalf("params = %v, want the reason, the type and both files", errs[0].Params)
+	}
+}
+
+func TestAnEmptyZipAndARaggedRowAreRefusedWithWhatTheirSentencesName(t *testing.T) {
+	e := setupImportApp(t)
+	raw, status := postZipFile(t, e, "empty.zip", zipBytes(t, nil))
+	if errs := fieldRefusalsOf(t, raw); status != http.StatusUnprocessableEntity || len(errs) != 1 ||
+		errs[0].Code != "bundle_refused" || errs[0].Params["reason"] != "empty" {
+		t.Fatalf("status %d body %s, want 422 bundle_refused for an empty ZIP", status, raw)
+	}
+	status, errs := uploadRefusal(t, e, "contact", "Email,Full Name\nada@x.test\n")
+	if status != http.StatusUnprocessableEntity || len(errs) != 1 || errs[0].Code != "unreadable" ||
+		errs[0].Params["line"] != "2" || errs[0].Params["reason"] != "field_count" {
+		t.Fatalf("status %d errs %+v, want 422 unreadable naming line 2 and its cause", status, errs)
 	}
 }
 
@@ -82,5 +165,28 @@ func TestAZipSentWithAnObjectIsProfiledByItsFileNames(t *testing.T) {
 	mustJSON(t, raw, &profile)
 	if len(profile.Parts) != 1 || profile.Parts[0].Object != "company" {
 		t.Fatalf("parts = %+v, want the one companies.csv part as company, not lead", profile.Parts)
+	}
+}
+
+// A workbook, or a ZIP of files no type takes, opens no draft. The upload is
+// refused before anything is stored, and says what to send instead.
+func TestAZipWithNoImportableFileIsRefusedAndLeavesNoDraft(t *testing.T) {
+	e := setupImportApp(t)
+	for name, c := range map[string]struct {
+		files  map[string]string
+		reason string
+	}{
+		"Pipeline.csv": {map[string]string{"[Content_Types].xml": "<Types/>", "xl/workbook.xml": "<workbook/>"}, "spreadsheet"},
+		"other.zip":    {map[string]string{"products.csv": "Product\nWidget\n"}, "no_importable_file"},
+	} {
+		raw, status := postZipFile(t, e, name, zipBytes(t, c.files))
+		errs := fieldRefusalsOf(t, raw)
+		if status != http.StatusUnprocessableEntity || len(errs) != 1 || errs[0].Code != "bundle_refused" ||
+			errs[0].Params["reason"] != c.reason {
+			t.Errorf("%s: status %d body %s, want 422 bundle_refused for %s", name, status, raw, c.reason)
+		}
+	}
+	if runs := importRuns(t, e); len(runs) != 0 {
+		t.Fatalf("runs = %+v, want no draft left by a refused upload", runs)
 	}
 }

@@ -53,3 +53,49 @@ func TestAnInstructionKeepsItsRecipientCompanyAndPurpose(t *testing.T) {
 		})
 	}
 }
+
+// A pack that changes only the law it cites changes what the human was shown.
+// The review refreshes and an instruction acknowledging the old law is stale.
+// Where nothing is cited on either side, the answer is as it always was.
+func TestAChangedCitationNeedsAFreshAcknowledgement(t *testing.T) {
+	t.Parallel()
+	old := commsauthz.Provision{Instrument: "UWG", Provision: "§ 7(2)", SourceURL: "https://example.org/uwg"}
+	amended := commsauthz.Provision{Instrument: "UWG", Provision: "§ 7(3)", SourceURL: "https://example.org/uwg"}
+	refused := func(refusal, footer commsauthz.Provision) commsauthz.Decision {
+		d := commsauthz.Decision{
+			Recipient:   connector.Recipient{Email: "anna@example.test"},
+			SubjectKind: entityContact, SubjectID: ids.UUID{1}, Verdict: commsauthz.VerdictDeny,
+			ReasonCode: commsauthz.ReasonObjection, Mode: commsauthz.ModeEnforce,
+			Citations: map[string]commsauthz.Provision{
+				commsauthz.ReasonObjection: refusal, "objection_route": footer,
+			},
+		}
+		return d.WithFooterFindings([]commsauthz.FooterFinding{{Kind: "objection_route"}})
+	}
+	for _, tc := range []struct {
+		name       string
+		shown, now commsauthz.Decision
+		stale      bool
+	}{
+		{"the refusal's law changed", refused(old, old), refused(amended, old), true},
+		{"the footer finding's law changed", refused(old, old), refused(old, amended), true},
+		{"a law is cited where none was", refused(commsauthz.Provision{}, commsauthz.Provision{}), refused(old, old), true},
+		{"the same law", refused(old, old), refused(old, old), false},
+		{"nothing cited either time", refused(commsauthz.Provision{}, commsauthz.Provision{}), refused(commsauthz.Provision{}, commsauthz.Provision{}), false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			recorded := []RefusedRecipient{refusedRecipientOf(tc.shown)}
+			current := commsauthz.DecisionSet{Decisions: []commsauthz.Decision{tc.now}}
+			if matches := (Review{Refusals: recorded}).MatchesAssessment(current); matches == tc.stale {
+				t.Errorf("the review matches the current send = %v, want %v", matches, !tc.stale)
+			}
+			if shown := everyRefusalWasShown(recorded, current); shown == tc.stale {
+				t.Errorf("every refusal was shown = %v, want %v", shown, !tc.stale)
+			}
+			_, stale := errors.AsType[*InstructionStaleError](instructionScopeStillFits(t.Context(), nil, recorded, current))
+			if stale != tc.stale {
+				t.Errorf("the instruction's scope is stale = %v, want %v", stale, tc.stale)
+			}
+		})
+	}
+}

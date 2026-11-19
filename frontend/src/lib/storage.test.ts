@@ -120,7 +120,6 @@ describe("a stored value", () => {
       "ob.connect.oauthAttempt",
       "ob.connect.overnightChoice",
       "margince.signin.returnRoute",
-      "margince.room.session",
       "margince.staleBuildReloadedAt",
       "margince.setup.reminderHidden",
       "margince.changes.lastBulkUndo",
@@ -163,9 +162,9 @@ describe("a browser that refuses storage", () => {
   it("answers absent in a runtime with no Web Storage at all", () => {
     vi.stubGlobal("sessionStorage", undefined);
 
-    expect(readStored(STORAGE_KEYS.buyerRoomSession)).toBeNull();
+    expect(readStored(STORAGE_KEYS.signInReturnRoute)).toBeNull();
     expect(() =>
-      writeStored(STORAGE_KEYS.buyerRoomSession, "mdrs_token"),
+      writeStored(STORAGE_KEYS.signInReturnRoute, "#/deals"),
     ).not.toThrow();
   });
 });
@@ -208,7 +207,7 @@ describe("forgetting a seat", () => {
     );
     expect(readStored(STORAGE_KEYS.theme)).toBe("kept");
     expect(readStored(STORAGE_KEYS.faultsSeen)).toBeNull();
-    expect(readStored(STORAGE_KEYS.buyerRoomSession)).toBeNull();
+    expect(readStored(STORAGE_KEYS.signInReturnRoute)).toBeNull();
     // Named by its account, so the next reader cannot inherit it.
     expect(
       readStored({ family: STORAGE_KEYS.platformDeclined, member: "first" }),

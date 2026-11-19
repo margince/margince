@@ -22,11 +22,8 @@ package gates
 //
 // Exceptions are explicit, keyed by "package-dir:FuncName", each with
 // the rationale that ratified it; a reasonless or stale waiver fails. The
-// key stays coarser than the resolution above — it names the FUNCTION, not
-// the receiver — so if two receivers in one package ever hold the same
-// ungated name, one waiver ratifies both. No pair does today, and the
-// stale-waiver check would not notice if one appeared, so a receiver-keyed
-// waiver is the change to make when one does.
+// key names the function, not the receiver. Two receivers with one ungated
+// name would share a waiver. None do; if one does, key it by receiver.
 //
 // The tree the gate reads is itself proven rather than assumed:
 // storeEntryPointScope sweeps the whole module for the same entry-point
@@ -58,12 +55,12 @@ import (
 // job carries, a predicate written in the SQL, an aggregate that returns no
 // row, or authentication itself.
 //
-// So an entry added here is a security decision, and the reason has to survive
-// being read on its own: "a sweep runs it" is not one, "no row leaves this
-// call" is.
+// So an entry here is a security decision. "No row leaves this call" is a
+// reason; "a sweep runs it" is not.
 var ungatedEntryPoints = gatekit.Waive(map[string]string{
 	"internal/modules/activities:DefaultMeetingSubject":   "reads only the installation language to render the built-in booking caption, which anonymous booking pages already publish; it reads and returns no activity or account data",
 	"internal/modules/identity:EffectiveAuthorityTx":      "The same current identity authority snapshot as EffectiveAuthority, inside a caller transaction. This supplies RBAC to an admission gate, so gating it on itself would recurse; the service method also serializes the live member with mutation.",
+	"internal/modules/identity:ReadingLanguage":           "reads only the reading language of the actor it is given: that seat's own saved locale, else the installation base language through the gated settings read. It reads and returns no record, and it runs for an actor the caller has already resolved",
 	"internal/modules/identity:HeldAuthorityTx":           "The same authority snapshot as EffectiveAuthorityTx, under the shared authorization lock and with no member row lock. It supplies RBAC to the capture admission check, so gating it on itself would recurse; every role, team, seat and deactivation change takes that lock exclusively.",
 	"internal/modules/contacts:TellContactOwnerOfLead":    "the follow-up to a refusal the caller's own gated lead write produced: it acts only on a ContactHoldsIdentityError that a create behind auth.Require(lead, create) returned, and files a task for the contact's owner as the system. It reads and returns no record; the caller learns only whether the owner was told",
 	"internal/modules/contacts:TellContactOwnerOfArrival": "the same follow-up for a door that found the contact itself: the capture sink after its lead create was gated by auth.Require(lead, create), and TellContactOwnerOfLead. It reads only the contact's owner, to address the task, and returns no record",
@@ -71,6 +68,7 @@ var ungatedEntryPoints = gatekit.Waive(map[string]string{
 	"internal/modules/activities:ClaimOrganizerHostTx":    "names a synced meeting's organizer as its host when the organizer is a colleague whose own calendar holds it. It refuses any principal but a system job or a calendar sync, and moves the host only on a row a sync created and the app did not book. No human grant can cover it, because the meeting may be a colleague's row. It returns whether the host moved, not a record",
 	"internal/modules/activities:RetireMeetingCopyTx":     "archives one meeting row onto another live row holding the same meeting. It refuses any principal but a system job or a calendar sync, and both callers prove first that the copy's own seat stored it and that its calendar binds the event to the survivor. No human grant can cover it, because the copy may be a colleague's row. It returns no record",
 	"internal/modules/activities:DoneRows":                "answers which of the named Worklist rows the CALLER marked done, read by the caller's own user id and refused to any principal without a human behind it. It takes no object grant because it reads the reader's own choices and no record: a privacy officer without activity read still has a Worklist, and their Done must still hide their rows",
+	"internal/modules/activities:WorklistRowsAlreadyDone": "answers which of the named Worklist rows the CALLER already put down, in worklist_done or as handled on the reader's own activity_reader_state, read by the caller's own user id. Like DoneRows it reads the reader's own choices and no record, so it takes no object grant",
 	"internal/compose/attention:ReopenRows":               "the undo behind Done. It removes only the caller's own Done rows, keyed by their user id, and the store refuses a caller with no human behind it. A row on an activity keeps the activity grant and content gate in the store. Nothing it reaches is a record the caller could not already see",
 	"internal/modules/contacts:RecordLogoIntent":          "declares a mark's key provisional before its bytes are put. It writes one row naming a key the caller already holds, reads nothing, and discloses nothing — and what may then be DELETED is decided by the sweep's reference check against the mark columns, never by this row. Gating it on the company write grant would refuse the site-read worker, which calls it and is itself ungated for the reason RecordSiteReadLogo gives: the worker is not a human principal and the human's authority was checked when the read was started",
 	"internal/modules/deals:RecordOfferPdfIntent":         "the same declaration for a rendered offer PDF: one row naming the key the handler is about to put, written immediately before it. The handler's own grant governs the render, and the sweep's reference check against offer.pdf_asset_ref governs deletion — this row only asks that the key be looked at",
@@ -410,7 +408,7 @@ var ungatedEntryPoints = gatekit.Waive(map[string]string{
 	"internal/modules/search:SweepWorkspaceEmbeddingDrift":   "periodic worker sweep (ADR-0069 §3a): heals identity-matched embedding gaps under the system principal, same posture as Reembed — no request, no human actor to gate",
 	"internal/modules/customfields:ActiveColumns":            "called from inside a record store's own gated Get/List/Create/Update, whose object-level RBAC already ran; the column names/types it answers are workspace-visible schema (the same shape custom_field:read already exposes), not row data a second gate would need to narrow",
 	"internal/modules/customfields:FilterableColumns":        "the filter-side twin of ActiveColumns and ungated for the same reason: it answers which cf_* columns exist and of what type — workspace-visible schema, the same shape custom_field:read already exposes — never row data a second gate would narrow. It additionally answers retired columns, which is still schema: the values behind them are reached only through a record store's own gated read",
-	"internal/modules/activities:UnlabeledCaptureEmails":     "classify-backlog read driven by the worker sweep under the workspace GUC, no human principal (ADR-0063); the rows were admitted at capture time and the labels route attention only",
+	"internal/modules/activities:UnlabeledCaptureMessages":   "classify-backlog read driven by the worker sweep under the workspace GUC, no human principal (ADR-0063); the rows were admitted at capture time and the labels route attention only",
 	"internal/modules/activities:SetCaptureLabel":            "classify verdict write driven by the worker sweep under the workspace GUC; a CAS on capture_label IS NULL that touches nothing but the two label columns — attention routing, not a record mutation (§3.2)",
 	"internal/modules/activities:MarkCaptureLabelDeclined":   "the classify sweep's own bookkeeping, driven by the worker under the workspace GUC with no human principal, same posture as SetCaptureLabel: it stamps when every rung declined to label the message and which classify prompt they declined, which removes it from that prompt's backlog; it states no verdict, discloses nothing and writes no other column",
 	"internal/modules/activities:HideCapturedNoiseTx":        "the ADR-0072 noise disposition's hide, driven by the verdict engine's system principal on the caller's transaction; its authority is the floored verdict that resolved the ledger row, and there is no human principal in a sweep for object-RBAC to admit — the write is idempotent, reversible, and touches only archived_at",

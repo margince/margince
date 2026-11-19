@@ -195,7 +195,7 @@ func (s *Sink) stageParts(ctx context.Context, rec connector.NormalizedRecord) (
 	workspace, ok := principal.WorkspaceID(ctx)
 	if !ok || workspace == (ids.UUID{}) {
 		return nil, fmt.Errorf(
-			"capture: a message's files cannot be stored without a bound workspace: %w",
+			"a message's files cannot be stored without a bound workspace: %w",
 			apperrors.ErrPermissionDenied,
 		)
 	}

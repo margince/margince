@@ -81,7 +81,7 @@ func (s *Store) ListDealDocuments(
 			where = append(where, fmt.Sprintf("at.category = $%d", arg(*in.Category)))
 		}
 		if in.Cursor != nil && *in.Cursor != "" {
-			c, err := storekit.DecodeCursor(*in.Cursor)
+			c, err := storekit.DecodeCursor("deal_documents", *in.Cursor)
 			if err != nil {
 				return err
 			}
@@ -119,7 +119,7 @@ func (s *Store) ListDealDocuments(
 		if len(out) > lim {
 			out = out[:lim]
 			last := out[len(out)-1].Attachment
-			next, err := storekit.EncodeCursor(last.CreatedAt, ids.UUID(last.Id))
+			next, err := storekit.EncodeCursor("deal_documents", last.CreatedAt, ids.UUID(last.Id))
 			if err != nil {
 				return err
 			}

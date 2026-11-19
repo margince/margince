@@ -548,6 +548,8 @@
      "Account to keep",
     "merge_address":
      "Address moved",
+    "merge_address_already_held":
+     "Survivor already has it",
     "merge_address_kind":
      "Address kind",
     "merge_address_primary_after":
@@ -6832,6 +6834,26 @@
      "Unknown",
     "merge_address/boolean/true":
      "Yes",
+    "merge_address_already_held/lifecycle/customer":
+     "Customer",
+    "merge_address_already_held/lifecycle/disqualified":
+     "Disqualified",
+    "merge_address_already_held/lifecycle/former_customer":
+     "Former customer",
+    "merge_address_already_held/lifecycle/live":
+     "Live",
+    "merge_address_already_held/lifecycle/onboarding":
+     "Onboarding",
+    "merge_address_already_held/lifecycle/opportunity":
+     "Opportunity",
+    "merge_address_already_held/lifecycle/prospect":
+     "Prospect",
+    "merge_address_already_held/lifecycle/target":
+     "Target",
+    "merge_address_already_held/lifecycle/unknown":
+     "Unknown",
+    "merge_address_already_held/boolean/true":
+     "Yes",
     "merge_address_kind/text/domain":
      "Domain",
     "merge_address_kind/text/email":
@@ -9094,6 +9116,10 @@
      "Notes",
     "merge_profile_field/text/bounce":
      "Delivery bounce",
+    "merge_profile_field/text/buying_center":
+     "Buying center",
+    "merge_profile_field/text/buying_intents":
+     "Purchase triggers",
     "merge_profile_field/text/call_outcome":
      "Call outcome",
     "merge_profile_field/text/candidate_company_key":
@@ -9112,6 +9138,8 @@
      "Commercial motion",
     "merge_profile_field/text/commitment_evidence_unavailable":
      "Commitment evidence unavailable",
+    "merge_profile_field/text/common_objections":
+     "Common objections",
     "merge_profile_field/text/communication_basis":
      "Legal basis",
     "merge_profile_field/text/company_id":
@@ -9126,10 +9154,14 @@
      "Result corrected",
     "merge_profile_field/text/currency":
      "Currency",
+    "merge_profile_field/text/customer_pains":
+     "Customer pains",
     "merge_profile_field/text/decided_by_level":
      "Decided by",
     "merge_profile_field/text/description":
      "Description",
+    "merge_profile_field/text/desired_outcomes":
+     "Desired outcomes",
     "merge_profile_field/text/display_name":
      "Name",
     "merge_profile_field/text/disposition":
@@ -9176,6 +9208,10 @@
      "Guests not listed",
     "merge_profile_field/text/guests_retired":
      "Guests removed by the calendar",
+    "merge_profile_field/text/history":
+     "History",
+    "merge_profile_field/text/icp":
+     "Ideal customer profile",
     "merge_profile_field/text/industry":
      "Industry",
     "merge_profile_field/text/invitation_status":
@@ -9186,6 +9222,8 @@
      "Last name",
     "merge_profile_field/text/legal_entity_id":
      "Sending company",
+    "merge_profile_field/text/legal_form":
+     "Legal form",
     "merge_profile_field/text/legal_name":
      "Legal name",
     "merge_profile_field/text/lifecycle":
@@ -9224,6 +9262,8 @@
      "Occurred",
     "merge_profile_field/text/occurred_precision":
      "Time precision",
+    "merge_profile_field/text/offer_summary":
+     "Offering",
     "merge_profile_field/text/origin":
      "Origin",
     "merge_profile_field/text/origin_detail":
@@ -9266,6 +9306,14 @@
      "Link",
     "merge_profile_field/text/recorded_at_level":
      "Recorded at level",
+    "merge_profile_field/text/register_court":
+     "Register court",
+    "merge_profile_field/text/register_number":
+     "Register number",
+    "merge_profile_field/text/register_vat":
+     "Register / VAT ID",
+    "merge_profile_field/text/registered_address":
+     "Registered address",
     "merge_profile_field/text/relationship_mark":
      "Relationship mark",
     "merge_profile_field/text/relationship_types":
@@ -9302,6 +9350,8 @@
      "Revoked override",
     "merge_profile_field/text/revoked_rows":
      "Overrides taken back",
+    "merge_profile_field/text/sales_motion":
+     "Sales motion",
     "merge_profile_field/text/scope":
      "Scope",
     "merge_profile_field/text/score":
@@ -9338,6 +9388,10 @@
      "Task type",
     "merge_profile_field/text/title":
      "Job title",
+    "merge_profile_field/text/usp":
+     "Differentiation",
+    "merge_profile_field/text/value_proposition":
+     "Value proposition",
     "merge_profile_field/text/vat_checked_at":
      "VAT checked",
     "merge_profile_field/text/vat_consultation_number":
@@ -9394,6 +9448,10 @@
      "Notes",
     "merge_profile_field/lifecycle/bounce":
      "Delivery bounce",
+    "merge_profile_field/lifecycle/buying_center":
+     "Buying center",
+    "merge_profile_field/lifecycle/buying_intents":
+     "Purchase triggers",
     "merge_profile_field/lifecycle/call_outcome":
      "Call outcome",
     "merge_profile_field/lifecycle/candidate_company_key":
@@ -9412,6 +9470,8 @@
      "Commercial motion",
     "merge_profile_field/lifecycle/commitment_evidence_unavailable":
      "Commitment evidence unavailable",
+    "merge_profile_field/lifecycle/common_objections":
+     "Common objections",
     "merge_profile_field/lifecycle/communication_basis":
      "Legal basis",
     "merge_profile_field/lifecycle/company_id":
@@ -9426,10 +9486,14 @@
      "Result corrected",
     "merge_profile_field/lifecycle/currency":
      "Currency",
+    "merge_profile_field/lifecycle/customer_pains":
+     "Customer pains",
     "merge_profile_field/lifecycle/decided_by_level":
      "Decided by",
     "merge_profile_field/lifecycle/description":
      "Description",
+    "merge_profile_field/lifecycle/desired_outcomes":
+     "Desired outcomes",
     "merge_profile_field/lifecycle/display_name":
      "Name",
     "merge_profile_field/lifecycle/disposition":
@@ -9476,6 +9540,10 @@
      "Guests not listed",
     "merge_profile_field/lifecycle/guests_retired":
      "Guests removed by the calendar",
+    "merge_profile_field/lifecycle/history":
+     "History",
+    "merge_profile_field/lifecycle/icp":
+     "Ideal customer profile",
     "merge_profile_field/lifecycle/industry":
      "Industry",
     "merge_profile_field/lifecycle/invitation_status":
@@ -9486,6 +9554,8 @@
      "Last name",
     "merge_profile_field/lifecycle/legal_entity_id":
      "Sending company",
+    "merge_profile_field/lifecycle/legal_form":
+     "Legal form",
     "merge_profile_field/lifecycle/legal_name":
      "Legal name",
     "merge_profile_field/lifecycle/lifecycle":
@@ -9524,6 +9594,8 @@
      "Occurred",
     "merge_profile_field/lifecycle/occurred_precision":
      "Time precision",
+    "merge_profile_field/lifecycle/offer_summary":
+     "Offering",
     "merge_profile_field/lifecycle/origin":
      "Origin",
     "merge_profile_field/lifecycle/origin_detail":
@@ -9566,6 +9638,14 @@
      "Link",
     "merge_profile_field/lifecycle/recorded_at_level":
      "Recorded at level",
+    "merge_profile_field/lifecycle/register_court":
+     "Register court",
+    "merge_profile_field/lifecycle/register_number":
+     "Register number",
+    "merge_profile_field/lifecycle/register_vat":
+     "Register / VAT ID",
+    "merge_profile_field/lifecycle/registered_address":
+     "Registered address",
     "merge_profile_field/lifecycle/relationship_mark":
      "Relationship mark",
     "merge_profile_field/lifecycle/relationship_types":
@@ -9602,6 +9682,8 @@
      "Revoked override",
     "merge_profile_field/lifecycle/revoked_rows":
      "Overrides taken back",
+    "merge_profile_field/lifecycle/sales_motion":
+     "Sales motion",
     "merge_profile_field/lifecycle/scope":
      "Scope",
     "merge_profile_field/lifecycle/score":
@@ -9638,6 +9720,10 @@
      "Task type",
     "merge_profile_field/lifecycle/title":
      "Job title",
+    "merge_profile_field/lifecycle/usp":
+     "Differentiation",
+    "merge_profile_field/lifecycle/value_proposition":
+     "Value proposition",
     "merge_profile_field/lifecycle/vat_checked_at":
      "VAT checked",
     "merge_profile_field/lifecycle/vat_consultation_number":
@@ -12138,6 +12224,10 @@
      "The recipient’s data is under a processing restriction. Sending this email does not lift the restriction.",
     "promotion_restriction/text/recipient_resolves_to_no_single_subject":
      "This address is on several records, or on none you can write to, so the recipient is unknown. Check the address, or merge the records that share it.",
+    "promotion_restriction/text/subject_label_missing":
+     "Marketing to a recipient in this country must start its subject with the label their law sets. Add it to the subject.",
+    "promotion_restriction/text/subject_labels_conflict":
+     "These recipients’ countries set different subject labels for marketing, and a subject starts with one. Send one message per label.",
     "promotion_restriction/text/subject_request":
      "The recipient asked not to be contacted. Sending this email does not change their request.",
     "promotion_restriction/text/unconfirmed_double_opt_in":
@@ -12176,6 +12266,10 @@
      "The recipient’s data is under a processing restriction. Sending this email does not lift the restriction.",
     "promotion_restriction/lifecycle/recipient_resolves_to_no_single_subject":
      "This address is on several records, or on none you can write to, so the recipient is unknown. Check the address, or merge the records that share it.",
+    "promotion_restriction/lifecycle/subject_label_missing":
+     "Marketing to a recipient in this country must start its subject with the label their law sets. Add it to the subject.",
+    "promotion_restriction/lifecycle/subject_labels_conflict":
+     "These recipients’ countries set different subject labels for marketing, and a subject starts with one. Send one message per label.",
     "promotion_restriction/lifecycle/subject_request":
      "The recipient asked not to be contacted. Sending this email does not change their request.",
     "promotion_restriction/lifecycle/unconfirmed_double_opt_in":
@@ -17482,6 +17576,12 @@
      "Not set",
     "merge_address/execution":
      "Set when applied",
+    "merge_address_already_held/boolean":
+     "No",
+    "merge_address_already_held/empty":
+     "Not set",
+    "merge_address_already_held/execution":
+     "Set when applied",
     "merge_address_kind/text":
      "Approval context is unavailable. Reload or request a new proposal.",
     "merge_address_kind/lifecycle":
@@ -20450,6 +20550,8 @@
      "Konto behalten",
     "merge_address":
      "Übernommene Adresse",
+    "merge_address_already_held":
+     "Ziel hat sie schon",
     "merge_address_kind":
      "Adressart",
     "merge_address_primary_after":
@@ -26734,6 +26836,26 @@
      "Unbekannt",
     "merge_address/boolean/true":
      "Ja",
+    "merge_address_already_held/lifecycle/customer":
+     "Kunde",
+    "merge_address_already_held/lifecycle/disqualified":
+     "Disqualifiziert",
+    "merge_address_already_held/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "merge_address_already_held/lifecycle/live":
+     "Live",
+    "merge_address_already_held/lifecycle/onboarding":
+     "Onboarding",
+    "merge_address_already_held/lifecycle/opportunity":
+     "Chance",
+    "merge_address_already_held/lifecycle/prospect":
+     "Interessent",
+    "merge_address_already_held/lifecycle/target":
+     "Zielunternehmen",
+    "merge_address_already_held/lifecycle/unknown":
+     "Unbekannt",
+    "merge_address_already_held/boolean/true":
+     "Ja",
     "merge_address_kind/text/domain":
      "Domain",
     "merge_address_kind/text/email":
@@ -28996,6 +29118,10 @@
      "Notizen",
     "merge_profile_field/text/bounce":
      "Unzustellbar",
+    "merge_profile_field/text/buying_center":
+     "Buying Center",
+    "merge_profile_field/text/buying_intents":
+     "Kaufanlässe",
     "merge_profile_field/text/call_outcome":
      "Ergebnis des Anrufs",
     "merge_profile_field/text/candidate_company_key":
@@ -29014,6 +29140,8 @@
      "Deal-Typ",
     "merge_profile_field/text/commitment_evidence_unavailable":
      "Nachweis der Zusage nicht verfügbar",
+    "merge_profile_field/text/common_objections":
+     "Häufige Einwände",
     "merge_profile_field/text/communication_basis":
      "Rechtsgrundlage",
     "merge_profile_field/text/company_id":
@@ -29028,10 +29156,14 @@
      "Ergebnis korrigiert",
     "merge_profile_field/text/currency":
      "Währung",
+    "merge_profile_field/text/customer_pains":
+     "Kundenprobleme",
     "merge_profile_field/text/decided_by_level":
      "Entschieden von",
     "merge_profile_field/text/description":
      "Beschreibung",
+    "merge_profile_field/text/desired_outcomes":
+     "Gewünschte Ergebnisse",
     "merge_profile_field/text/display_name":
      "Name",
     "merge_profile_field/text/disposition":
@@ -29078,6 +29210,10 @@
      "Nicht aufgeführte Gäste",
     "merge_profile_field/text/guests_retired":
      "Gäste vom Kalender entfernt",
+    "merge_profile_field/text/history":
+     "Geschichte",
+    "merge_profile_field/text/icp":
+     "Ideales Kundenprofil",
     "merge_profile_field/text/industry":
      "Branche",
     "merge_profile_field/text/invitation_status":
@@ -29088,6 +29224,8 @@
      "Nachname",
     "merge_profile_field/text/legal_entity_id":
      "Absendendes Unternehmen",
+    "merge_profile_field/text/legal_form":
+     "Rechtsform",
     "merge_profile_field/text/legal_name":
      "Rechtlicher Name",
     "merge_profile_field/text/lifecycle":
@@ -29126,6 +29264,8 @@
      "Zeitpunkt",
     "merge_profile_field/text/occurred_precision":
      "Zeitgenauigkeit",
+    "merge_profile_field/text/offer_summary":
+     "Angebot",
     "merge_profile_field/text/origin":
      "Herkunft",
     "merge_profile_field/text/origin_detail":
@@ -29168,6 +29308,14 @@
      "Verknüpfung",
     "merge_profile_field/text/recorded_at_level":
      "Erfasst auf Ebene",
+    "merge_profile_field/text/register_court":
+     "Registergericht",
+    "merge_profile_field/text/register_number":
+     "Registernummer",
+    "merge_profile_field/text/register_vat":
+     "Register / USt-ID",
+    "merge_profile_field/text/registered_address":
+     "Eingetragene Anschrift",
     "merge_profile_field/text/relationship_mark":
      "Beziehungsmarkierung",
     "merge_profile_field/text/relationship_types":
@@ -29204,6 +29352,8 @@
      "Widerrufene Freigabe",
     "merge_profile_field/text/revoked_rows":
      "Zurückgenommene Freigaben",
+    "merge_profile_field/text/sales_motion":
+     "Vertriebsprozess",
     "merge_profile_field/text/scope":
      "Umfang",
     "merge_profile_field/text/score":
@@ -29240,6 +29390,10 @@
      "Aufgabentyp",
     "merge_profile_field/text/title":
      "Jobtitel",
+    "merge_profile_field/text/usp":
+     "Differenzierung",
+    "merge_profile_field/text/value_proposition":
+     "Nutzenversprechen",
     "merge_profile_field/text/vat_checked_at":
      "USt-ID geprüft",
     "merge_profile_field/text/vat_consultation_number":
@@ -29296,6 +29450,10 @@
      "Notizen",
     "merge_profile_field/lifecycle/bounce":
      "Unzustellbar",
+    "merge_profile_field/lifecycle/buying_center":
+     "Buying Center",
+    "merge_profile_field/lifecycle/buying_intents":
+     "Kaufanlässe",
     "merge_profile_field/lifecycle/call_outcome":
      "Ergebnis des Anrufs",
     "merge_profile_field/lifecycle/candidate_company_key":
@@ -29314,6 +29472,8 @@
      "Deal-Typ",
     "merge_profile_field/lifecycle/commitment_evidence_unavailable":
      "Nachweis der Zusage nicht verfügbar",
+    "merge_profile_field/lifecycle/common_objections":
+     "Häufige Einwände",
     "merge_profile_field/lifecycle/communication_basis":
      "Rechtsgrundlage",
     "merge_profile_field/lifecycle/company_id":
@@ -29328,10 +29488,14 @@
      "Ergebnis korrigiert",
     "merge_profile_field/lifecycle/currency":
      "Währung",
+    "merge_profile_field/lifecycle/customer_pains":
+     "Kundenprobleme",
     "merge_profile_field/lifecycle/decided_by_level":
      "Entschieden von",
     "merge_profile_field/lifecycle/description":
      "Beschreibung",
+    "merge_profile_field/lifecycle/desired_outcomes":
+     "Gewünschte Ergebnisse",
     "merge_profile_field/lifecycle/display_name":
      "Name",
     "merge_profile_field/lifecycle/disposition":
@@ -29378,6 +29542,10 @@
      "Nicht aufgeführte Gäste",
     "merge_profile_field/lifecycle/guests_retired":
      "Gäste vom Kalender entfernt",
+    "merge_profile_field/lifecycle/history":
+     "Geschichte",
+    "merge_profile_field/lifecycle/icp":
+     "Ideales Kundenprofil",
     "merge_profile_field/lifecycle/industry":
      "Branche",
     "merge_profile_field/lifecycle/invitation_status":
@@ -29388,6 +29556,8 @@
      "Nachname",
     "merge_profile_field/lifecycle/legal_entity_id":
      "Absendendes Unternehmen",
+    "merge_profile_field/lifecycle/legal_form":
+     "Rechtsform",
     "merge_profile_field/lifecycle/legal_name":
      "Rechtlicher Name",
     "merge_profile_field/lifecycle/lifecycle":
@@ -29426,6 +29596,8 @@
      "Zeitpunkt",
     "merge_profile_field/lifecycle/occurred_precision":
      "Zeitgenauigkeit",
+    "merge_profile_field/lifecycle/offer_summary":
+     "Angebot",
     "merge_profile_field/lifecycle/origin":
      "Herkunft",
     "merge_profile_field/lifecycle/origin_detail":
@@ -29468,6 +29640,14 @@
      "Verknüpfung",
     "merge_profile_field/lifecycle/recorded_at_level":
      "Erfasst auf Ebene",
+    "merge_profile_field/lifecycle/register_court":
+     "Registergericht",
+    "merge_profile_field/lifecycle/register_number":
+     "Registernummer",
+    "merge_profile_field/lifecycle/register_vat":
+     "Register / USt-ID",
+    "merge_profile_field/lifecycle/registered_address":
+     "Eingetragene Anschrift",
     "merge_profile_field/lifecycle/relationship_mark":
      "Beziehungsmarkierung",
     "merge_profile_field/lifecycle/relationship_types":
@@ -29504,6 +29684,8 @@
      "Widerrufene Freigabe",
     "merge_profile_field/lifecycle/revoked_rows":
      "Zurückgenommene Freigaben",
+    "merge_profile_field/lifecycle/sales_motion":
+     "Vertriebsprozess",
     "merge_profile_field/lifecycle/scope":
      "Umfang",
     "merge_profile_field/lifecycle/score":
@@ -29540,6 +29722,10 @@
      "Aufgabentyp",
     "merge_profile_field/lifecycle/title":
      "Jobtitel",
+    "merge_profile_field/lifecycle/usp":
+     "Differenzierung",
+    "merge_profile_field/lifecycle/value_proposition":
+     "Nutzenversprechen",
     "merge_profile_field/lifecycle/vat_checked_at":
      "USt-ID geprüft",
     "merge_profile_field/lifecycle/vat_consultation_number":
@@ -32040,6 +32226,10 @@
      "Die Verarbeitung der Daten dieses Kontakts ist eingeschränkt. Der Versand dieser E-Mail hebt die Einschränkung nicht auf.",
     "promotion_restriction/text/recipient_resolves_to_no_single_subject":
      "Diese Adresse steht in mehreren Datensätzen oder in keinem, an den du schreiben darfst. Daher ist unklar, wer die Nachricht erhält. Prüfe die Adresse oder führe die Datensätze zusammen, die sie teilen.",
+    "promotion_restriction/text/subject_label_missing":
+     "Marketing an eine empfangende Person in diesem Land muss den Betreff mit der Kennzeichnung beginnen, die ihr Recht vorschreibt. Ergänze sie im Betreff.",
+    "promotion_restriction/text/subject_labels_conflict":
+     "Die Länder dieser empfangenden Personen schreiben für Marketing verschiedene Kennzeichnungen im Betreff vor, und ein Betreff beginnt mit einer. Sende eine Nachricht je Kennzeichnung.",
     "promotion_restriction/text/subject_request":
      "Der Kontakt möchte nicht mehr kontaktiert werden. Der Versand dieser E-Mail ändert seinen Wunsch nicht.",
     "promotion_restriction/text/unconfirmed_double_opt_in":
@@ -32078,6 +32268,10 @@
      "Die Verarbeitung der Daten dieses Kontakts ist eingeschränkt. Der Versand dieser E-Mail hebt die Einschränkung nicht auf.",
     "promotion_restriction/lifecycle/recipient_resolves_to_no_single_subject":
      "Diese Adresse steht in mehreren Datensätzen oder in keinem, an den du schreiben darfst. Daher ist unklar, wer die Nachricht erhält. Prüfe die Adresse oder führe die Datensätze zusammen, die sie teilen.",
+    "promotion_restriction/lifecycle/subject_label_missing":
+     "Marketing an eine empfangende Person in diesem Land muss den Betreff mit der Kennzeichnung beginnen, die ihr Recht vorschreibt. Ergänze sie im Betreff.",
+    "promotion_restriction/lifecycle/subject_labels_conflict":
+     "Die Länder dieser empfangenden Personen schreiben für Marketing verschiedene Kennzeichnungen im Betreff vor, und ein Betreff beginnt mit einer. Sende eine Nachricht je Kennzeichnung.",
     "promotion_restriction/lifecycle/subject_request":
      "Der Kontakt möchte nicht mehr kontaktiert werden. Der Versand dieser E-Mail ändert seinen Wunsch nicht.",
     "promotion_restriction/lifecycle/unconfirmed_double_opt_in":
@@ -37384,6 +37578,12 @@
      "Nicht gesetzt",
     "merge_address/execution":
      "Wird beim Anwenden festgelegt",
+    "merge_address_already_held/boolean":
+     "Nein",
+    "merge_address_already_held/empty":
+     "Nicht gesetzt",
+    "merge_address_already_held/execution":
+     "Wird beim Anwenden festgelegt",
     "merge_address_kind/text":
      "Der Freigabekontext ist nicht verfügbar. Lade die Seite neu oder fordere einen neuen Vorschlag an.",
     "merge_address_kind/lifecycle":
@@ -40352,6 +40552,8 @@
      "Tài khoản giữ lại",
     "merge_address":
      "Địa chỉ được chuyển",
+    "merge_address_already_held":
+     "Bản ghi giữ lại đã có",
     "merge_address_kind":
      "Loại địa chỉ",
     "merge_address_primary_after":
@@ -46636,6 +46838,26 @@
      "Chưa rõ",
     "merge_address/boolean/true":
      "Có",
+    "merge_address_already_held/lifecycle/customer":
+     "Khách hàng",
+    "merge_address_already_held/lifecycle/disqualified":
+     "Đã loại",
+    "merge_address_already_held/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "merge_address_already_held/lifecycle/live":
+     "Đang vận hành",
+    "merge_address_already_held/lifecycle/onboarding":
+     "Đang triển khai",
+    "merge_address_already_held/lifecycle/opportunity":
+     "Cơ hội",
+    "merge_address_already_held/lifecycle/prospect":
+     "Tiềm năng",
+    "merge_address_already_held/lifecycle/target":
+     "Mục tiêu",
+    "merge_address_already_held/lifecycle/unknown":
+     "Chưa rõ",
+    "merge_address_already_held/boolean/true":
+     "Có",
     "merge_address_kind/text/domain":
      "Tên miền",
     "merge_address_kind/text/email":
@@ -48898,6 +49120,10 @@
      "Ghi chú",
     "merge_profile_field/text/bounce":
      "Thư bị trả lại",
+    "merge_profile_field/text/buying_center":
+     "Nhóm quyết định mua",
+    "merge_profile_field/text/buying_intents":
+     "Yếu tố thúc đẩy mua",
     "merge_profile_field/text/call_outcome":
      "Kết quả cuộc gọi",
     "merge_profile_field/text/candidate_company_key":
@@ -48916,6 +49142,8 @@
      "Hình thức bán hàng",
     "merge_profile_field/text/commitment_evidence_unavailable":
      "Bằng chứng cam kết không còn khả dụng",
+    "merge_profile_field/text/common_objections":
+     "Ý kiến phản đối thường gặp",
     "merge_profile_field/text/communication_basis":
      "Căn cứ pháp lý",
     "merge_profile_field/text/company_id":
@@ -48930,10 +49158,14 @@
      "Đã sửa kết quả",
     "merge_profile_field/text/currency":
      "Loại tiền",
+    "merge_profile_field/text/customer_pains":
+     "Vấn đề của khách hàng",
     "merge_profile_field/text/decided_by_level":
      "Nguồn quyết định",
     "merge_profile_field/text/description":
      "Mô tả",
+    "merge_profile_field/text/desired_outcomes":
+     "Kết quả mong muốn",
     "merge_profile_field/text/display_name":
      "Tên",
     "merge_profile_field/text/disposition":
@@ -48980,6 +49212,10 @@
      "Khách không được liệt kê",
     "merge_profile_field/text/guests_retired":
      "Khách bị lịch xóa",
+    "merge_profile_field/text/history":
+     "Lịch sử",
+    "merge_profile_field/text/icp":
+     "Hồ sơ khách hàng lý tưởng",
     "merge_profile_field/text/industry":
      "Ngành",
     "merge_profile_field/text/invitation_status":
@@ -48990,6 +49226,8 @@
      "Họ",
     "merge_profile_field/text/legal_entity_id":
      "Công ty gửi",
+    "merge_profile_field/text/legal_form":
+     "Loại hình pháp lý",
     "merge_profile_field/text/legal_name":
      "Tên pháp lý",
     "merge_profile_field/text/lifecycle":
@@ -49028,6 +49266,8 @@
      "Thời điểm xảy ra",
     "merge_profile_field/text/occurred_precision":
      "Độ chính xác của thời gian",
+    "merge_profile_field/text/offer_summary":
+     "Sản phẩm cung cấp",
     "merge_profile_field/text/origin":
      "Nguồn gốc",
     "merge_profile_field/text/origin_detail":
@@ -49070,6 +49310,14 @@
      "Liên kết",
     "merge_profile_field/text/recorded_at_level":
      "Ghi nhận ở cấp",
+    "merge_profile_field/text/register_court":
+     "Tòa án đăng ký",
+    "merge_profile_field/text/register_number":
+     "Số đăng ký kinh doanh",
+    "merge_profile_field/text/register_vat":
+     "Số đăng ký / mã số VAT",
+    "merge_profile_field/text/registered_address":
+     "Địa chỉ đăng ký",
     "merge_profile_field/text/relationship_mark":
      "Nhãn quan hệ",
     "merge_profile_field/text/relationship_types":
@@ -49106,6 +49354,8 @@
      "Ghi đè đã thu hồi",
     "merge_profile_field/text/revoked_rows":
      "Số ghi đè đã thu hồi",
+    "merge_profile_field/text/sales_motion":
+     "Cách bán hàng",
     "merge_profile_field/text/scope":
      "Phạm vi",
     "merge_profile_field/text/score":
@@ -49142,6 +49392,10 @@
      "Loại việc",
     "merge_profile_field/text/title":
      "Chức danh",
+    "merge_profile_field/text/usp":
+     "Điểm khác biệt",
+    "merge_profile_field/text/value_proposition":
+     "Đề xuất giá trị",
     "merge_profile_field/text/vat_checked_at":
      "Đã kiểm tra VAT",
     "merge_profile_field/text/vat_consultation_number":
@@ -49198,6 +49452,10 @@
      "Ghi chú",
     "merge_profile_field/lifecycle/bounce":
      "Thư bị trả lại",
+    "merge_profile_field/lifecycle/buying_center":
+     "Nhóm quyết định mua",
+    "merge_profile_field/lifecycle/buying_intents":
+     "Yếu tố thúc đẩy mua",
     "merge_profile_field/lifecycle/call_outcome":
      "Kết quả cuộc gọi",
     "merge_profile_field/lifecycle/candidate_company_key":
@@ -49216,6 +49474,8 @@
      "Hình thức bán hàng",
     "merge_profile_field/lifecycle/commitment_evidence_unavailable":
      "Bằng chứng cam kết không còn khả dụng",
+    "merge_profile_field/lifecycle/common_objections":
+     "Ý kiến phản đối thường gặp",
     "merge_profile_field/lifecycle/communication_basis":
      "Căn cứ pháp lý",
     "merge_profile_field/lifecycle/company_id":
@@ -49230,10 +49490,14 @@
      "Đã sửa kết quả",
     "merge_profile_field/lifecycle/currency":
      "Loại tiền",
+    "merge_profile_field/lifecycle/customer_pains":
+     "Vấn đề của khách hàng",
     "merge_profile_field/lifecycle/decided_by_level":
      "Nguồn quyết định",
     "merge_profile_field/lifecycle/description":
      "Mô tả",
+    "merge_profile_field/lifecycle/desired_outcomes":
+     "Kết quả mong muốn",
     "merge_profile_field/lifecycle/display_name":
      "Tên",
     "merge_profile_field/lifecycle/disposition":
@@ -49280,6 +49544,10 @@
      "Khách không được liệt kê",
     "merge_profile_field/lifecycle/guests_retired":
      "Khách bị lịch xóa",
+    "merge_profile_field/lifecycle/history":
+     "Lịch sử",
+    "merge_profile_field/lifecycle/icp":
+     "Hồ sơ khách hàng lý tưởng",
     "merge_profile_field/lifecycle/industry":
      "Ngành",
     "merge_profile_field/lifecycle/invitation_status":
@@ -49290,6 +49558,8 @@
      "Họ",
     "merge_profile_field/lifecycle/legal_entity_id":
      "Công ty gửi",
+    "merge_profile_field/lifecycle/legal_form":
+     "Loại hình pháp lý",
     "merge_profile_field/lifecycle/legal_name":
      "Tên pháp lý",
     "merge_profile_field/lifecycle/lifecycle":
@@ -49328,6 +49598,8 @@
      "Thời điểm xảy ra",
     "merge_profile_field/lifecycle/occurred_precision":
      "Độ chính xác của thời gian",
+    "merge_profile_field/lifecycle/offer_summary":
+     "Sản phẩm cung cấp",
     "merge_profile_field/lifecycle/origin":
      "Nguồn gốc",
     "merge_profile_field/lifecycle/origin_detail":
@@ -49370,6 +49642,14 @@
      "Liên kết",
     "merge_profile_field/lifecycle/recorded_at_level":
      "Ghi nhận ở cấp",
+    "merge_profile_field/lifecycle/register_court":
+     "Tòa án đăng ký",
+    "merge_profile_field/lifecycle/register_number":
+     "Số đăng ký kinh doanh",
+    "merge_profile_field/lifecycle/register_vat":
+     "Số đăng ký / mã số VAT",
+    "merge_profile_field/lifecycle/registered_address":
+     "Địa chỉ đăng ký",
     "merge_profile_field/lifecycle/relationship_mark":
      "Nhãn quan hệ",
     "merge_profile_field/lifecycle/relationship_types":
@@ -49406,6 +49686,8 @@
      "Ghi đè đã thu hồi",
     "merge_profile_field/lifecycle/revoked_rows":
      "Số ghi đè đã thu hồi",
+    "merge_profile_field/lifecycle/sales_motion":
+     "Cách bán hàng",
     "merge_profile_field/lifecycle/scope":
      "Phạm vi",
     "merge_profile_field/lifecycle/score":
@@ -49442,6 +49724,10 @@
      "Loại việc",
     "merge_profile_field/lifecycle/title":
      "Chức danh",
+    "merge_profile_field/lifecycle/usp":
+     "Điểm khác biệt",
+    "merge_profile_field/lifecycle/value_proposition":
+     "Đề xuất giá trị",
     "merge_profile_field/lifecycle/vat_checked_at":
      "Đã kiểm tra VAT",
     "merge_profile_field/lifecycle/vat_consultation_number":
@@ -51942,6 +52228,10 @@
      "Dữ liệu của người nhận đang bị hạn chế xử lý. Gửi email này không gỡ bỏ hạn chế đó.",
     "promotion_restriction/text/recipient_resolves_to_no_single_subject":
      "Địa chỉ này nằm trên nhiều hồ sơ, hoặc không nằm trên hồ sơ nào bạn được gửi tới, nên chưa xác định được người nhận. Kiểm tra lại địa chỉ, hoặc gộp các hồ sơ dùng chung địa chỉ này.",
+    "promotion_restriction/text/subject_label_missing":
+     "Tin tiếp thị gửi người nhận ở quốc gia này phải bắt đầu tiêu đề bằng nhãn mà luật của họ quy định. Thêm nhãn vào tiêu đề.",
+    "promotion_restriction/text/subject_labels_conflict":
+     "Quốc gia của những người nhận này quy định nhãn tiêu đề khác nhau cho tin tiếp thị, và một tiêu đề chỉ bắt đầu bằng một nhãn. Gửi riêng một tin cho mỗi nhãn.",
     "promotion_restriction/text/subject_request":
      "Người nhận đã yêu cầu không liên hệ nữa. Gửi email này không thay đổi yêu cầu của họ.",
     "promotion_restriction/text/unconfirmed_double_opt_in":
@@ -51980,6 +52270,10 @@
      "Dữ liệu của người nhận đang bị hạn chế xử lý. Gửi email này không gỡ bỏ hạn chế đó.",
     "promotion_restriction/lifecycle/recipient_resolves_to_no_single_subject":
      "Địa chỉ này nằm trên nhiều hồ sơ, hoặc không nằm trên hồ sơ nào bạn được gửi tới, nên chưa xác định được người nhận. Kiểm tra lại địa chỉ, hoặc gộp các hồ sơ dùng chung địa chỉ này.",
+    "promotion_restriction/lifecycle/subject_label_missing":
+     "Tin tiếp thị gửi người nhận ở quốc gia này phải bắt đầu tiêu đề bằng nhãn mà luật của họ quy định. Thêm nhãn vào tiêu đề.",
+    "promotion_restriction/lifecycle/subject_labels_conflict":
+     "Quốc gia của những người nhận này quy định nhãn tiêu đề khác nhau cho tin tiếp thị, và một tiêu đề chỉ bắt đầu bằng một nhãn. Gửi riêng một tin cho mỗi nhãn.",
     "promotion_restriction/lifecycle/subject_request":
      "Người nhận đã yêu cầu không liên hệ nữa. Gửi email này không thay đổi yêu cầu của họ.",
     "promotion_restriction/lifecycle/unconfirmed_double_opt_in":
@@ -57285,6 +57579,12 @@
     "merge_address/empty":
      "Chưa đặt",
     "merge_address/execution":
+     "Được xác định khi áp dụng",
+    "merge_address_already_held/boolean":
+     "Không",
+    "merge_address_already_held/empty":
+     "Chưa đặt",
+    "merge_address_already_held/execution":
      "Được xác định khi áp dụng",
     "merge_address_kind/text":
      "Ngữ cảnh phê duyệt không có sẵn. Tải lại hoặc yêu cầu đề xuất mới.",

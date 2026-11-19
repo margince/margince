@@ -30,10 +30,9 @@ import (
 // through — the historical answer, kept because the pre-flight is advisory and
 // an absent one must not change which mailbox a send uses.
 //
-// It is not the answer for a composed installation. There, the provider is
-// RESOLVED per send (sendableMailProvider): a mail send carries no `from`, so
-// something has to choose, and a constant refused every rep whose only mailbox
-// was the other vendor's.
+// It is not the answer for a composed installation. There, sendableMailbox
+// resolves the mailbox per send. A constant refused every rep whose only
+// mailbox was the other vendor's.
 //
 // Whichever way it is arrived at, this value names the DELIVERY alone. The
 // timeline row the send writes is keyed on the transport-independent mail
@@ -65,6 +64,9 @@ var errNoDeliveryStager = errors.New("activities: send path has no delivery mach
 // SendEmailInput is one consented outbound send anchored to an
 // existing activity (the thread being replied to).
 type SendEmailInput struct {
+	// FromConnection is the sender's own mailbox they chose to send from; zero
+	// leaves the choice to the store (SendAuthority.SendableMailbox).
+	FromConnection ids.UUID
 	// Recipients is the MERGED addressee list — every To, Cc AND Bcc address —
 	// because consent is owed to everyone who receives the message, however
 	// they were addressed. Cc and Bcc below are SUBSETS of it, by design and
@@ -151,9 +153,12 @@ type DeliveryStager interface {
 type DeliveryRequest struct {
 	ActivityID ids.ActivityID
 	Provider   string
-	MessageID  string
-	Recipients []string // To: only — the merged consent list minus Cc and Bcc
-	Cc         []string
+	// ConnectionID is the sender's mailbox the message goes out from; zero
+	// leaves it to the transmission, which takes their default.
+	ConnectionID ids.UUID
+	MessageID    string
+	Recipients   []string // To: only, the merged consent list minus Cc and Bcc
+	Cc           []string
 	// Bcc is transmitted to but never rendered into a header the recipients
 	// read. The connector addresses it; the message does not name it.
 	Bcc      []string
@@ -203,6 +208,12 @@ type DeliveryRequest struct {
 	InReplyTo       string   // unbracketed; empty starts a conversation
 	References      []string // unbracketed ancestry, oldest first
 	ThreadKey       string
+	// SplitFromThread is the conversation a reply on a new topic leaves. The
+	// stager gives ThreadKey each seat's settled verdict on it, as capture does.
+	SplitFromThread string
+	// AnswersActivity is the message that reply answers, zero on any other send.
+	// The delivery keeps it, so the owed reply settles and consent asks there.
+	AnswersActivity ids.UUID
 	// ListUnsubscribe is the RFC 8058 header VALUE (bracketed URL). The
 	// companion List-Unsubscribe-Post value is fixed by the RFC at
 	// "List-Unsubscribe=One-Click", so it is rendered at the wire from this
@@ -232,9 +243,9 @@ func MintMessageID(domain string) string {
 // It RETURNS the provider it resolved, so the send that follows uses the very
 // mailbox this guard cleared. Asking twice would be two round-trips and two
 // answers, and the second could differ from the one that was judged.
-func (s *Store) refuseUnsendable(ctx context.Context, in SendEmailInput, gate ConsentGate, checkDelivery func() error) (string, error) {
+func (s *Store) refuseUnsendable(ctx context.Context, in SendEmailInput, anchor ids.ActivityID, gate ConsentGate, checkDelivery func() error) (string, ids.UUID, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
-		return "", err
+		return "", ids.Nil, err
 	}
 	// Guard the To: LINE, not the merged list, because they are not the same
 	// thing and only the first one goes on the wire. Recipients is To+Cc
@@ -257,17 +268,17 @@ func (s *Store) refuseUnsendable(ctx context.Context, in SendEmailInput, gate Co
 	// loosening this in Go while the contract still refuses it would make the
 	// two disagree about what a valid send is.
 	if len(ToRecipients(in.Recipients, in.Cc, in.Bcc)) == 0 {
-		return "", &NoRecipientsError{}
+		return "", ids.Nil, &NoRecipientsError{}
 	}
 	// The composition guards report a deployment defect, and a caller who may
 	// not send has no business learning which parts of this installation's
 	// send path are wired — hence their position, not their existence.
 	if gate == nil {
-		return "", fmt.Errorf("send path has no consent authority wired: %w", apperrors.ErrConsentNotGranted)
+		return "", ids.Nil, fmt.Errorf("send path has no consent authority wired: %w", apperrors.ErrConsentNotGranted)
 	}
 	if checkDelivery != nil {
 		if err := checkDelivery(); err != nil {
-			return "", err
+			return "", ids.Nil, err
 		}
 	}
 	// The mailbox pre-flight is the SENDER's own authority and precedes the
@@ -279,9 +290,9 @@ func (s *Store) refuseUnsendable(ctx context.Context, in SendEmailInput, gate Co
 	// carries no `from`, so something has to choose; a constant was an honest
 	// answer only while one provider could send, and refused a rep whose only
 	// mailbox is the other.
-	provider, err := s.sendableMailProvider(ctx)
+	provider, connection, err := s.sendableMailbox(ctx, in.FromConnection, anchor)
 	if err != nil {
-		return "", err
+		return "", ids.Nil, err
 	}
 	// NO CONSENT CHECK HERE. It was the old purpose gate, asked before the
 	// engine existed and kept while the engine only observed. The engine now
@@ -294,28 +305,28 @@ func (s *Store) refuseUnsendable(ctx context.Context, in SendEmailInput, gate Co
 	// The refusal still reaches the rep at the keyboard: compose's
 	// refuseAtStaging returns it from the same request, before the activity
 	// commits.
-	return provider, nil
+	return provider, connection, nil
 }
 
-// sendableMailProvider names the mailbox this send will go out through, or
-// refuses with the error the caller can act on.
+// sendableMailbox names the mailbox this send will go out through, or refuses
+// with the error the caller can act on.
 //
 // An unwired authority answers with the historical default rather than
 // refusing: the pre-flight is advisory by contract (see SendAuthority), and a
 // store composed without one must accept the send exactly as it did before this
 // question existed.
-func (s *Store) sendableMailProvider(ctx context.Context) (string, error) {
+func (s *Store) sendableMailbox(ctx context.Context, from ids.UUID, anchor ids.ActivityID) (string, ids.UUID, error) {
 	if s.sendAuthority == nil {
-		return DefaultSendProvider, nil
+		return DefaultSendProvider, ids.Nil, nil
 	}
-	provider, err := s.sendAuthority.SendableMailProvider(ctx)
+	provider, connection, err := s.sendAuthority.SendableMailbox(ctx, from, anchor)
 	if err != nil {
-		return "", err
+		return "", ids.Nil, err
 	}
 	if provider == "" {
-		return "", &MailboxNotSendCapableError{}
+		return "", ids.Nil, &MailboxNotSendCapableError{}
 	}
-	return provider, nil
+	return provider, connection, nil
 }
 
 // messageIDDomain is the right-hand side of every minted Message-ID: the
@@ -400,89 +411,4 @@ func messageIdentity(kind, value string) string {
 		return ""
 	}
 	return shared
-}
-
-// threading is the RFC 5322 conversation chain one outbound message
-// carries, plus the key the timeline files it under.
-type threading struct {
-	inReplyTo  string
-	references []string
-	threadKey  string
-}
-
-// anchorThreading derives the conversation chain this send must carry from
-// the activity it replies to, inside the staging transaction.
-//
-// The visibility probe is repeated here rather than inherited from the
-// caller's earlier read: this reads an activity's own columns and the
-// staged delivery then names that record, and anything that returns or
-// references a record carries the row-scope gate — an out-of-scope anchor
-// reads as ErrNotFound, the same answer a missing one gives.
-//
-// The chain is rooted at the anchor's thread_key because that is what the
-// recipient's reply will root at: their mail client sets References to ours
-// plus our Message-ID, and capture derives a thread key from the FIRST
-// element of that chain. A chain whose root were not this message's stored
-// thread_key would key the reply to a conversation this send is not part
-// of, and the reply-detection join would miss the very mail it exists for.
-// V1 reconstructs a two-element chain (root, parent) because an activity
-// stores no References column; a deep thread's middle ancestors are lost,
-// which costs nothing to the join and only some clients' visual nesting.
-func anchorThreading(ctx context.Context, tx pgx.Tx, id ids.ActivityID, messageID string) (threading, error) {
-	if err := auth.EnsureActivityContentVisible(ctx, tx, id.UUID); err != nil {
-		return threading{}, err
-	}
-	// LIVE ONLY, the same filter the origin resolution applied before this
-	// transaction opened. Without it the two reads disagree: SendEmail refuses
-	// an archived anchor when it resolves the origin, and this one — the read
-	// that actually builds the chain — accepted a row archived in between, so a
-	// reply went out threaded onto a conversation the workspace had since
-	// archived. The window is small and the answer is wrong for its whole width.
-	var kind, parent, root string
-	err := tx.QueryRow(ctx,
-		`SELECT kind, coalesce(source_id, ''), coalesce(thread_key, '')
-		   FROM activity
-		  WHERE id = $1 AND restricted_at IS NULL AND archived_at IS NULL`,
-		id).Scan(&kind, &parent, &root)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return threading{}, apperrors.ErrNotFound
-	}
-	if err != nil {
-		return threading{}, err
-	}
-	// Only a mail activity's identifiers are RFC822 message identities.
-	// Nothing constrains an anchor to one — a send can be anchored to a
-	// meeting captured from a calendar, or to a note — and emitting that
-	// system's opaque id as In-Reply-To/References produces headers no mail
-	// client can resolve to a message. An anchor that carries none simply
-	// starts a conversation, which is the honest reading of a reply to
-	// something that was never mail.
-	parent, root = messageIdentity(kind, parent), messageIdentity(kind, root)
-
-	chain := threading{inReplyTo: parent, threadKey: root}
-	if root != "" && root != parent {
-		chain.references = append(chain.references, root)
-	}
-	if parent != "" {
-		chain.references = append(chain.references, parent)
-	}
-	if chain.threadKey == "" {
-		// AN ANCHOR WITH NO STORED THREAD KEY STARTS A CONVERSATION, and this
-		// send's own identity is its root — the same key capture derives when
-		// it reads a root message back out of the mailbox.
-		//
-		// NOT the anchor's source_id, which an earlier version fell back to.
-		// source_id is caller-supplied on the REST activity door and thread_key
-		// is not mapped there at all, so that fallback let anybody name a
-		// stranger's thread as this delivery's: post an email activity whose
-		// source_id is a Message-ID from their conversation, reply to it, and
-		// the delivery carried their thread key. The authorization engine reads
-		// that key at transmit to re-derive the reply evidence staging proved
-		// with the anchor, so a forged key manufactured a
-		// subject_initiated_correspondence basis for someone who never wrote to
-		// us. The thread key a delivery carries must be one the workspace
-		// derived, never one a request body chose.
-		chain.threadKey = messageID
-	}
-	return chain, nil
 }

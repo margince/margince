@@ -902,7 +902,7 @@ func TestEndToEnd_anArchiveRestoreNamesTheLinkItCouldNotBringBack(t *testing.T) 
 	var version struct {
 		Version int64 `json:"version"`
 	}
-	if status := e.Call(t, "GET", "/v1/companies/"+oldCo.ID+"?include_archived=true", nil, nil, &version); status != 200 {
+	if status := e.Call(t, "GET", "/v1/companies/"+oldCo.ID, nil, nil, &version); status != 200 {
 		t.Fatalf("read the archived company → %d", status)
 	}
 	status := e.Call(t, "POST",

@@ -54,6 +54,11 @@ func ReceiptsWithin(rows []crmcontracts.Approval, since time.Time) []Receipt {
 		if row.DecidedAt == nil || deadline.Passed(row.DecidedAt, since) {
 			continue
 		}
+		// An approval the agent has not run changed nothing yet, so it is not
+		// a completed receipt.
+		if row.AwaitingAgent != nil && *row.AwaitingAgent {
+			continue
+		}
 		summary := ""
 		if row.Summary != nil {
 			summary = *row.Summary

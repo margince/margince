@@ -14,8 +14,8 @@ package migration
 // SkippedRow is one disclosed skip in the run report.
 type SkippedRow struct {
 	ExternalID string `json:"external_id"`
-	// Line is the file line the row came from, so the reader reading the report
-	// can go to it. Zero when the source has no file behind it.
+	// Line is the row number the row came from (the header is row 1, as in a
+	// spreadsheet), so the reader can go to it. Zero when the source has no file behind it.
 	Line   int    `json:"line,omitempty"`
 	Reason string `json:"reason"`
 	Column string `json:"column,omitempty"`
@@ -153,6 +153,8 @@ type SkippedAssoc struct {
 	// before they existed has only Reason.
 	Code   ReasonCode `json:"reason_code,omitempty"`
 	Params Params     `json:"params,omitempty"`
+	// RowSkipped says the edge's own row does not land, whatever the reason.
+	RowSkipped bool `json:"row_skipped,omitempty"`
 }
 
 // record folds one row's outcome into the class's disposition.

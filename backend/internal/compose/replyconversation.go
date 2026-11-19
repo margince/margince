@@ -53,7 +53,7 @@ func (d replyDrafter) replyConversation(ctx context.Context, anchor crmcontracts
 func (d replyDrafter) markSenders(ctx context.Context, turns []draftcore.Turn) {
 	var inbound []ids.UUID
 	for _, turn := range turns {
-		if id, err := ids.Parse(turn.ID); err == nil && turn.Direction == string(crmcontracts.ActivityDirectionInbound) {
+		if id, err := ids.Parse(turn.ID); err == nil && turn.TheirWord() {
 			inbound = append(inbound, id)
 		}
 	}

@@ -24,7 +24,7 @@ import type { MessageKey } from "../../i18n/en";
 import { useHealthScope } from "../../lib/healthscope";
 import { valueFor } from "../../lib/labelfor";
 import { useMemberNames } from "../../lib/membernames";
-import { usePipelines } from "../../lib/pipelines.queries";
+import { stageNames, usePipelines } from "../../lib/pipelines.queries";
 import { unwrap } from "../../lib/problem";
 import { routeHash } from "../../lib/router";
 import type { SalesProgress } from "./progress.queries";
@@ -121,11 +121,7 @@ export function useDealColumns(
   const { locale } = useLocale();
   const [today] = useState(() => todayIn(progress.timezone));
   const pipelines = usePipelines();
-  const stages = new Map(
-    (pipelines.data ?? []).flatMap((pipeline) =>
-      (pipeline.stages ?? []).map((stage) => [stage.id, stage.name] as const),
-    ),
-  );
+  const stages = stageNames(pipelines.data ?? []);
   const names = useMemberNames(
     rows
       .flatMap((row) => [

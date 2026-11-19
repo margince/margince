@@ -42,9 +42,18 @@ var (
 // or more than one currency. It also reports false for several numbers unless
 // only one of them has its currency written next to it.
 func QuotedPrice(quote string) (int64, string, bool) {
+	minor, currency, assumed, ok := QuotedBudget(quote, "")
+	return minor, currency, ok && !assumed
+}
+
+// QuotedBudget is QuotedPrice for a budget, whose words may name no currency.
+// A quote with one number and no currency at all is read in fallback,
+// and assumed reports that the currency is a guess. An empty fallback reads
+// no such budget.
+func QuotedBudget(quote, fallback string) (minor int64, currency string, assumed, ok bool) {
 	start, end, ok := priceNumber(quote)
 	if !ok {
-		return 0, "", false
+		return 0, "", false, false
 	}
 	decimal := plainDecimal(quote[start:end])
 	rest := quote[end:]
@@ -52,15 +61,32 @@ func QuotedPrice(quote string) (int64, string, bool) {
 		decimal = thousands(decimal)
 		rest = rest[1:]
 	}
-	currency, ok := quotedCurrency(quote[:start] + " " + rest)
+	currency, ok = quotedCurrency(quote[:start] + " " + rest)
 	if !ok {
-		return 0, "", false
+		if fallback == "" || namesACurrency(quote) || len(quotedNumber.FindAllStringIndex(quote, -1)) != 1 {
+			return 0, "", false, false
+		}
+		currency, assumed = fallback, true
 	}
-	minor, ok := values.MinorUnits(decimal, currency)
+	minor, ok = values.MinorUnits(decimal, currency)
 	if !ok || minor > maxQuotedAmount*values.MinorUnitScale(currency) || minor > jsSafeMax {
-		return 0, "", false
+		return 0, "", false, false
 	}
-	return minor, currency, true
+	return minor, currency, assumed, true
+}
+
+// namesACurrency reports whether a quote names any currency anywhere. Words
+// that name two currencies state no one budget, and a guess would hide that.
+func namesACurrency(quote string) bool {
+	if quotedCode.MatchString(quote) {
+		return true
+	}
+	for symbol := range currencySymbol {
+		if strings.Contains(quote, symbol) {
+			return true
+		}
+	}
+	return false
 }
 
 // priceNumber is where the price's number stands in the quote. That is its

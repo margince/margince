@@ -204,13 +204,13 @@ type recordedImport struct {
 
 func (f *recordedImport) engine() connectImport {
 	return connectImport{
-		estimate: func(_ context.Context, provider string, _ ids.UserID, months int) (capture.BackfillPreview, error) {
-			if provider != "gmail" || months != 6 {
+		estimate: func(_ context.Context, mailbox capture.Mailbox, _ ids.UserID, months int) (capture.BackfillPreview, error) {
+			if mailbox.Provider != "gmail" || months != 6 {
 				return capture.BackfillPreview{}, errors.New("estimated the wrong window")
 			}
 			return capture.BackfillPreview{BackfillEstimate: f.estimate}, f.estimateErr
 		},
-		begin: func(_ context.Context, ws ids.UUID, _ string, userID ids.UserID, _ int, estimate connector.BackfillEstimate, startOver bool) (capture.BackfillRun, error) {
+		begin: func(_ context.Context, ws ids.UUID, _ capture.Mailbox, userID ids.UserID, _ int, estimate connector.BackfillEstimate, startOver bool) (capture.BackfillRun, error) {
 			if ws != chainWorkspace || userID.UUID != chainUser || startOver {
 				return capture.BackfillRun{}, errors.New("began for the wrong mailbox, or over")
 			}

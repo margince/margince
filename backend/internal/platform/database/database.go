@@ -325,15 +325,16 @@ func runTxWith(ctx context.Context, pool *pgxpool.Pool, opts pgx.TxOptions, fn f
 	if err != nil {
 		return fmt.Errorf("pg: begin: %w", err)
 	}
-	// The deferred rollback only matters on the error path; after a
-	// successful Commit it answers ErrTxClosed by design, and on the error
-	// path the fn/commit error is the one the caller must see.
+	// The deferred rollback only matters on the error path. After a
+	// successful Commit it answers ErrTxClosed by design. On the error path
+	// the fn/commit error is the one the caller must see. It runs on the
+	// finishing context, so a request that timed out keeps its connection.
 	//craft:ignore swallowed-errors rollback after commit is a designed no-op; on the error path the fn error supersedes it
-	defer func() { _ = tx.Rollback(ctx) }()
+	defer func() { _ = rollbackDetached(ctx, tx) }()
 	defer openTxMemo(tx)()
 
 	if err := guardedTransaction(ctx, tx, fn); err != nil {
 		return err
 	}
-	return tx.Commit(ctx)
+	return commitWhileAnswerable(ctx, tx)
 }

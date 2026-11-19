@@ -473,6 +473,13 @@ export const routes: readonly MockRoute[] = [
   { path: "/ai/usage/summary", handle: reply(aiUsageSummary) },
   { method: "GET", path: "/ai/agent-usage", handle: reply(agentUsageByUser) },
   { method: "GET", path: "/ai/provider-keys", handle: reply(aiProviderKeys) },
+  // The cold start binds the model only after the vendor accepts the key.
+  {
+    method: "POST",
+    path: /^\/ai\/provider-keys\/([^/]+)\/test$/,
+    handle: ({ json, params }) =>
+      json({ provider: params[0], ok: true, key_confirmed: true }),
+  },
   { path: "/ai/provider-health", handle: reply(aiProviderHealth) },
   { method: "GET", path: "/ai/calls", handle: reply(aiCalls) },
   { path: "/ai/call-stats", handle: ai.callStats },

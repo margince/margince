@@ -353,7 +353,7 @@ func ListAuditLog(ctx context.Context, db *database.DB, f AuditFilter) (AuditPag
 	if len(page.Entries) > limit {
 		page.Entries = page.Entries[:limit]
 		last := page.Entries[len(page.Entries)-1]
-		next, err := storekit.EncodeCursor(last.OccurredAt, last.ID)
+		next, err := storekit.EncodeCursor("audit_log", last.OccurredAt, last.ID)
 		if err != nil {
 			return AuditPage{}, err
 		}
@@ -400,7 +400,7 @@ func buildAuditWhere(f AuditFilter) (string, []any, error) {
 		where += " AND a.occurred_at <= " + arg(*f.To)
 	}
 	if f.Cursor != nil && *f.Cursor != "" {
-		c, err := storekit.DecodeCursor(*f.Cursor)
+		c, err := storekit.DecodeCursor("audit_log", *f.Cursor)
 		if err != nil {
 			return "", nil, err
 		}

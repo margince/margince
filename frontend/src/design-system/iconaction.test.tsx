@@ -5,6 +5,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
+import { armHoverIntent } from "./hoverintent-testing";
 import { IconAction } from "./iconaction";
 
 // A glyph verb's second sentence.
@@ -149,5 +150,75 @@ describe("a glyph verb a key also presses", () => {
         .getByRole("button", { name: "Call" })
         .hasAttribute("aria-keyshortcuts"),
     ).toBe(false);
+  });
+});
+
+describe("a glyph verb refused by a sentence elsewhere on the page", () => {
+  const WHY = "No address and no thread to reply to.";
+
+  it("shows the sentence in its tip and is described by the page's copy alone", async () => {
+    const user = userEvent.setup();
+    armHoverIntent();
+    render(
+      <>
+        <IconAction
+          label="Write"
+          reasonId="page-why"
+          reasonTip={WHY}
+          icon={<span aria-hidden="true">@</span>}
+        />
+        <p id="page-why">{WHY}</p>
+      </>,
+    );
+    const control = screen.getByRole("button", { name: "Write" });
+    expect(control).toHaveProperty("disabled", true);
+    expect(describedTextOf(control)).toBe(WHY);
+    expect(screen.getAllByText(WHY)).toHaveLength(1);
+
+    const host = control.closest(".icon-action");
+    if (!(host instanceof HTMLElement)) {
+      throw new Error("the glyph lost its tooltip host");
+    }
+    await user.hover(host);
+    expect((await screen.findByRole("tooltip")).textContent).toBe(
+      `Write. ${WHY}`,
+    );
+  });
+
+  it("shows its own reason in the tip when no page sentence is named", async () => {
+    const user = userEvent.setup();
+    armHoverIntent();
+    render(
+      <IconAction
+        label="Write"
+        reason={WHY}
+        icon={<span aria-hidden="true">@</span>}
+      />,
+    );
+    const control = screen.getByRole("button", { name: "Write" });
+    expect(control).toHaveProperty("disabled", true);
+    expect(describedTextOf(control)).toBe(WHY);
+
+    const host = control.closest(".icon-action");
+    if (!(host instanceof HTMLElement)) {
+      throw new Error("the glyph lost its tooltip host");
+    }
+    await user.hover(host);
+    expect((await screen.findByRole("tooltip")).textContent).toBe(
+      `Write. ${WHY}`,
+    );
+  });
+
+  it("keeps a live control's tip to its name", async () => {
+    const user = userEvent.setup();
+    render(
+      <IconAction
+        label="Write"
+        reasonTip={WHY}
+        icon={<span aria-hidden="true">@</span>}
+      />,
+    );
+    await user.tab();
+    expect(screen.getByRole("tooltip").textContent).toBe("Write");
   });
 });

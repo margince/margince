@@ -36,6 +36,7 @@ const OAUTH_OUTCOME_NOTE: Record<string, MessageKey> = {
   misconfigured: "connectors.oauthMisconfigured",
   bad_client: "connectors.oauthBadClient",
   role_cannot_capture: "connectors.oauthRoleCannotCapture",
+  other_account: "connectors.oauthOtherAccount",
   error: "connectors.oauthError",
 };
 

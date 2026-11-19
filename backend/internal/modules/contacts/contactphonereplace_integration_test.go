@@ -10,9 +10,9 @@ package contacts
 // This lives at the integration tier for the reason its address twin does: the
 // promise is one only Postgres can answer.
 //
-//	uq_contact_phone_primary (contact_id, phone_type) WHERE is_primary AND archived_at IS NULL
+//	uq_contact_phone_primary (contact_id) WHERE is_primary AND archived_at IS NULL
 //
-// Per phone_type, NOT one primary per contact — so a corrected work number walks
+// One primary per contact, whatever the type, so a corrected work number walks
 // straight into the slot the stored one still holds. There is deliberately no
 // dedupe index across contacts here, unlike addresses: a switchboard reaches
 // several contacts, and that is not a duplicate.
@@ -161,10 +161,10 @@ func TestSwappingWhichWorkPhoneIsPrimary(t *testing.T) {
 	}
 }
 
-// The same contradiction on numbers: two primaries of one type is refused
-// before any write, and the refusal names the type rather than the bare
-// conflict uq_contact_phone_primary would answer with.
-func TestTwoPrimaryPhonesOfOneTypeIsRefusedByType(t *testing.T) {
+// The same contradiction on numbers: two primaries, whatever their types, are
+// refused before any write. The refusal is typed, not the bare conflict
+// uq_contact_phone_primary would answer with.
+func TestTwoPrimaryPhonesAreRefusedWhateverTheirTypes(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -180,16 +180,12 @@ func TestTwoPrimaryPhonesOfOneTypeIsRefusedByType(t *testing.T) {
 	_, err = e.store.UpdateContact(ctx, ids.From[ids.ContactKind](ids.UUID(contact.Id)), UpdateContactInput{
 		Phones: []ContactPhoneInput{
 			{Phone: "+493011111111", PhoneType: "work", IsPrimary: true, Position: 0},
-			{Phone: "+493022222222", PhoneType: "work", IsPrimary: true, Position: 1},
+			{Phone: "+493022222222", PhoneType: "mobile", IsPrimary: true, Position: 1},
 		},
 		Source: "test",
 	})
-	var conflict *PrimaryConflictError
-	if !errors.As(err, &conflict) {
-		t.Fatalf("two work primaries → %v, want PrimaryConflictError", err)
-	}
-	if conflict.Type != "work" {
-		t.Fatalf("conflict names type %q, want work", conflict.Type)
+	if _, ok := errors.AsType[*PrimaryConflictError](err); !ok {
+		t.Fatalf("a work and a mobile primary → %v, want PrimaryConflictError", err)
 	}
 }
 
@@ -276,14 +272,11 @@ func TestDroppingOneTypeKeepsTheSurvivorsIdentity(t *testing.T) {
 	}
 }
 
-// A work primary corrected to a home primary while a second number takes over the
-// work slot — both submitted primary, of different types. A row can leave a
-// per-type primary slot by CHANGING TYPE, not only by dropping primary, so a
-// demote-the-non-primaries-only pass promoted the incoming work row while the
-// outgoing one still held the work slot: two live work primaries for the length of
-// a statement, which uq_contact_phone_primary refused. Landing every retained row
-// demoted before raising any primary is what makes this valid change go through.
-func TestRetypingAPrimaryWhileAnotherTakesItsSlot(t *testing.T) {
+// A work primary corrected to a home primary while a second number keeps the
+// work type. A row can leave the primary slot by changing type, not only by
+// dropping primary. Landing every retained row demoted before raising the
+// primary lets this valid change go through.
+func TestRetypingThePrimaryKeepsItPrimary(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 
@@ -302,12 +295,12 @@ func TestRetypingAPrimaryWhileAnotherTakesItsSlot(t *testing.T) {
 	updated, err := e.store.UpdateContact(ctx, ids.From[ids.ContactKind](ids.UUID(contact.Id)), UpdateContactInput{
 		Phones: []ContactPhoneInput{
 			{Phone: "+493011111111", PhoneType: "home", IsPrimary: true, Position: 0},
-			{Phone: "+493022222222", PhoneType: "work", IsPrimary: true, Position: 1},
+			{Phone: "+493022222222", PhoneType: "work", IsPrimary: false, Position: 1},
 		},
 		Source: "test",
 	})
 	if err != nil {
-		t.Fatalf("retyping the primary while another takes the work slot: %v", err)
+		t.Fatalf("retyping the primary: %v", err)
 	}
 
 	rows := livePhoneRows(updated)
@@ -321,8 +314,8 @@ func TestRetypingAPrimaryWhileAnotherTakesItsSlot(t *testing.T) {
 	if r := byNumber["+493011111111"]; r.PhoneType != "home" || !r.IsPrimary {
 		t.Fatalf("first number = %+v, want home + primary", r)
 	}
-	if r := byNumber["+493022222222"]; r.PhoneType != "work" || !r.IsPrimary {
-		t.Fatalf("second number = %+v, want work + primary", r)
+	if r := byNumber["+493022222222"]; r.PhoneType != "work" || r.IsPrimary {
+		t.Fatalf("second number = %+v, want work, not primary", r)
 	}
 }
 

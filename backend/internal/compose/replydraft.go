@@ -152,7 +152,7 @@ func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.U
 	}
 	addressee := d.recipientFor(ctx, ids.From[ids.ActivityKind](anchor))
 	topic, body := stringValue(activity.Subject), stringValue(activity.Body)
-	threaded := activity.Kind == crmcontracts.ActivityKindEmail && theirTurn(activity)
+	threaded := activity.Kind == crmcontracts.ActivityKindEmail && draftcore.FromThem(activity)
 	state := d.conversationState(ctx, activity)
 	envelope := d.envelope.Resolve(ctx, written, state)
 	recipient, surname := addressee.GreetingNames()
@@ -275,7 +275,7 @@ func (d replyDrafter) conversationState(ctx context.Context, activity crmcontrac
 	if occurredday.IsDay(activity.OccurredPrecision) {
 		occurred = occurredday.Begins(occurred, zone)
 	}
-	if theirTurn(activity) {
+	if draftcore.FromThem(activity) {
 		return convstate.Classify(d.envelope.Now(), occurred, time.Time{}, zone)
 	}
 	return convstate.Classify(d.envelope.Now(), time.Time{}, occurred, zone)
@@ -324,15 +324,6 @@ func (d replyDrafter) deliveredTo(ctx context.Context, anchor ids.ActivityID) ac
 		d.logger().WarnContext(ctx, "reply addressee unavailable; ranking inbound mail alike", "err", err)
 	}
 	return to
-}
-
-// theirTurn says the other side spoke last on this row.
-//
-// Who wrote it, not which way it travelled. A colleague's mail can arrive
-// inbound, and read as theirs it told the draft they had spoken last.
-func theirTurn(activity crmcontracts.Activity) bool {
-	ours, known := activities.WroteItOurSide(activity)
-	return known && !ours
 }
 
 func (d replyDrafter) languageInputs(ctx context.Context, anchor ids.UUID, steering draftfloor.Steering) (activity crmcontracts.Activity, written draftfloor.Written, err error) {

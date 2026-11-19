@@ -53,6 +53,43 @@ describe("DealCard close date", () => {
   });
 });
 
+describe("DealCard on a closed deal", () => {
+  function closedCard(closedAt: string | null): string {
+    render(
+      <LocaleProvider initial="en">
+        <DealCard
+          deal={{
+            id: "d1",
+            name: "ERP connector",
+            company: "",
+            companyId: "",
+            valueMinor: 100_000,
+            currency: "EUR",
+            idleSince: "2026-05-15T12:00:00Z",
+            measuredAt: Date.parse("2026-06-10T12:00:00Z"),
+            closedAt,
+          }}
+          href="#/deals/d1"
+          zone="UTC"
+        />
+      </LocaleProvider>,
+    );
+    return document.querySelector(".deal-closes")?.textContent ?? "";
+  }
+
+  it("says the day it closed", () => {
+    expect(closedCard("2026-05-13T12:00:00Z")).toBe("closed 13 May");
+  });
+
+  it("names the year of a close in another year", () => {
+    expect(closedCard("2020-01-01T12:00:00Z")).toBe("closed 1 Jan 2020");
+  });
+
+  it("claims no day an imported close does not carry", () => {
+    expect(closedCard(null)).toBe("no close date");
+  });
+});
+
 describe("deal ages agree with the server calendar", () => {
   it.each(ages)("$name", ({ at, now, zone, days }) => {
     const measuredAt = Date.parse(now);

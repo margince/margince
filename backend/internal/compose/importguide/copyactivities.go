@@ -33,9 +33,9 @@ var activityColumns = map[string]Column{
 		Vi: "Nội dung ghi chú, hoặc những gì đã nói trong cuộc gọi, cuộc họp hoặc email.",
 	}, Example: langcopy.Phrase{En: "Asked for a quote by Friday", De: "Wünscht ein Angebot bis Freitag", Vi: "Yêu cầu báo giá trước thứ Sáu"}},
 	"occurred_at": {Description: langcopy.Phrase{
-		En: "When it happened: YYYY-MM-DD, or a full timestamp with its time zone. A date alone means midnight UTC. A time without a zone, or in the future, is refused.",
-		De: "Wann es stattfand: YYYY-MM-DD oder ein vollständiger Zeitstempel mit Zeitzone. Ein Datum allein bedeutet Mitternacht UTC. Eine Uhrzeit ohne Zeitzone oder in der Zukunft wird abgelehnt.",
-		Vi: "Thời điểm xảy ra: YYYY-MM-DD, hoặc mốc thời gian đầy đủ kèm múi giờ. Chỉ có ngày nghĩa là nửa đêm UTC. Giờ không có múi giờ hoặc ở tương lai sẽ bị từ chối.",
+		En: "When it happened: YYYY-MM-DD, or a full timestamp with its time zone. A date alone names the day, with no time. A time without a zone, or in the future, is refused.",
+		De: "Wann es stattfand: YYYY-MM-DD oder ein vollständiger Zeitstempel mit Zeitzone. Ein Datum allein nennt den Tag, ohne Uhrzeit. Eine Uhrzeit ohne Zeitzone oder in der Zukunft wird abgelehnt.",
+		Vi: "Thời điểm xảy ra: YYYY-MM-DD, hoặc mốc thời gian đầy đủ kèm múi giờ. Chỉ có ngày nghĩa là ghi ngày, không có giờ. Giờ không có múi giờ hoặc ở tương lai sẽ bị từ chối.",
 	}, Example: same("2026-03-02 · 2026-03-02T10:00:00+07:00"), RequiredOnNew: true},
 	"links": {Description: langcopy.Phrase{
 		En: "The records the activity is about, as type:key pairs separated by semicolons. The type is company, contact, lead or deal; the key is a ref, an email, a domain or a Margince ID. A call or meeting links to a contact, not a company.",

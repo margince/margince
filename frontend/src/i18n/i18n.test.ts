@@ -18,6 +18,16 @@ import { vi as viCatalog } from "./vi";
 // name" from "missed translation" at a glance — an addition to any group
 // must be defensible on the same grounds as its neighbours.
 const KEPT_IN_ENGLISH = new Set<string>([
+  // A link's kind is the product's own name, or "Web".
+  "docs.kind.docs",
+  "docs.kind.sheets",
+  "docs.kind.slides",
+  "docs.kind.forms",
+  "docs.kind.drive",
+  "docs.kind.web",
+  "docs.add.urlPlaceholder",
+  // ui-copy-style-vi.md retires the Vietnamese phrase for a best case.
+  "progress.scenario.best",
   // Product and protocol names, an example address and an example header name.
   "webhooks.body.preset.slack",
   "webhooks.body.preset.teams",
@@ -294,8 +304,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "consumerMail.baselinePlaceholder",
   "linkedinImport.profilePlaceholder",
   "ob.conv.linkedin.profilePlaceholder",
-  "ob.s4.imapHostPlaceholder",
-  "ob.s4.imapEmail",
+  "connectors.imapSmtpTls",
+  "connectors.imapSmtpStartTls",
   "ob.conv.clarify.question",
   "ob.conv.clarify.optionDetail",
   "create.linkedin",
@@ -325,6 +335,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // The same loanword, naming the record an approval's evidence came from.
   "decision.evidenceSource.deal",
   "worklist.pane.deal",
+  "worklist.gap.deal",
 
   // "Cc" is the mail header itself, which vi writes as the Latin abbreviation
   // exactly as en does. Translating it would name a field no mail client

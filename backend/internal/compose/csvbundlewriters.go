@@ -11,6 +11,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/importwire"
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -78,12 +79,12 @@ func newBundleWriters(
 	seen := map[string]bool{}
 	for _, part := range parts {
 		if seen[part.Object] {
-			return nil, fmt.Errorf("import: two files of this run are both %q: %w", part.Object, apperrors.ErrConflict)
+			return nil, fmt.Errorf("two files of this run are both %q: %w", part.Object, apperrors.ErrConflict)
 		}
 		seen[part.Object] = true
 	}
 	options := runOptionsOf(settled)
-	b := &bundleWriters{parts: map[string]*csvWriters{}, links: newLinkResolver(db, importSourceSystem(settled.SourceName))}
+	b := &bundleWriters{parts: map[string]*csvWriters{}, links: newLinkResolver(db, importwire.SourceSystem(settled.SourceName))}
 	if err := b.resolveOwnersAndTags(ctx, db, src); err != nil {
 		return nil, err
 	}
@@ -206,7 +207,7 @@ func (b *bundleWriters) part(object string) (*csvWriters, error) {
 	if w, ok := b.parts[object]; ok {
 		return w, nil
 	}
-	return nil, fmt.Errorf("import: this run carries no %q file: %w", object, apperrors.ErrConflict)
+	return nil, fmt.Errorf("this run carries no %q file: %w", object, apperrors.ErrConflict)
 }
 
 // Exists asks the writer of the row's type.

@@ -41,9 +41,14 @@ export function HeroAside({
   if (forecast?.coverage.withheld) return null;
   const comparison = forecast?.target_comparison;
   if (comparison?.status === "no_target") return targetSetup;
+  const wonAgainstGoal =
+    comparison?.status === "fx_missing" &&
+    comparison.target != null &&
+    comparison.won != null;
   if (
     comparison?.status === "compared" ||
-    comparison?.status === "target_reached"
+    comparison?.status === "target_reached" ||
+    wonAgainstGoal
   ) {
     const { currency } = evaluation.context;
     // A goal summed from the sales goals is no stored target, and Progress

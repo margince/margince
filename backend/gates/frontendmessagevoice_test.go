@@ -21,6 +21,7 @@ import (
 var updateMessageVoice = flag.Bool("update-messagevoice", false, "rewrite the frontend's author-side cases from the activity engine")
 
 type messageVoiceCase struct {
+	Kind      crmcontracts.ActivityKind        `json:"kind"`
 	Direction *crmcontracts.ActivityDirection  `json:"direction"`
 	Author    *crmcontracts.ActivityAuthorKind `json:"author"`
 	Side      *string                          `json:"side"`
@@ -31,35 +32,13 @@ func TestTheFrontendReadsTheSameAuthorSideAsTheActivityEngine(t *testing.T) {
 	schemas := crmYAMLSchemas(t)
 	directions := schemas["Activity"].Properties["direction"].Enum
 	authors := schemas["ActivityAuthor"].Properties["kind"].Enum
-	if len(directions) == 0 || len(authors) == 0 {
-		t.Fatal("the contract's direction or author census is empty")
+	kinds := schemas["Activity"].Properties["kind"].Enum
+	if len(directions) == 0 || len(authors) == 0 || len(kinds) == 0 {
+		t.Fatal("the contract's direction, author or kind census is empty")
 	}
 	var rows []messageVoiceCase
-	for _, direction := range append([]string{""}, directions...) {
-		if direction == "" && len(rows) > 0 {
-			continue
-		}
-		for _, author := range append([]string{""}, authors...) {
-			row := crmcontracts.Activity{}
-			test := messageVoiceCase{}
-			if direction != "" {
-				value := crmcontracts.ActivityDirection(direction)
-				row.Direction, test.Direction = &value, &value
-			}
-			if author != "" {
-				value := crmcontracts.ActivityAuthorKind(author)
-				row.Voice = &crmcontracts.ActivityVoice{Author: &crmcontracts.ActivityAuthor{Kind: value}}
-				test.Author = &value
-			}
-			if ours, known := activities.WroteItOurSide(row); known {
-				side := "theirs"
-				if ours {
-					side = "ours"
-				}
-				test.Side = &side
-			}
-			rows = append(rows, test)
-		}
+	for _, kind := range kinds {
+		rows = append(rows, messageVoiceCases(crmcontracts.ActivityKind(kind), directions, authors)...)
 	}
 	rendered, err := json.MarshalIndent(rows, "", "  ")
 	if err != nil {
@@ -79,4 +58,37 @@ func TestTheFrontendReadsTheSameAuthorSideAsTheActivityEngine(t *testing.T) {
 	if !bytes.Equal(committed, rendered) {
 		t.Fatal("author-side cases are stale; run go test ./gates -run TestTheFrontendReadsTheSameAuthorSide -update-messagevoice")
 	}
+}
+
+// messageVoiceCases lists the contract's directions and authors for one kind,
+// with the side the activity engine reads. A row with no direction appears once.
+func messageVoiceCases(kind crmcontracts.ActivityKind, directions, authors []string) []messageVoiceCase {
+	var rows []messageVoiceCase
+	for _, direction := range append([]string{""}, directions...) {
+		if direction == "" && len(rows) > 0 {
+			continue
+		}
+		for _, author := range append([]string{""}, authors...) {
+			row := crmcontracts.Activity{Kind: kind}
+			test := messageVoiceCase{Kind: kind}
+			if direction != "" {
+				value := crmcontracts.ActivityDirection(direction)
+				row.Direction, test.Direction = &value, &value
+			}
+			if author != "" {
+				value := crmcontracts.ActivityAuthorKind(author)
+				row.Voice = &crmcontracts.ActivityVoice{Author: &crmcontracts.ActivityAuthor{Kind: value}}
+				test.Author = &value
+			}
+			if ours, known := activities.WroteItOurSide(row); known {
+				side := "theirs"
+				if ours {
+					side = "ours"
+				}
+				test.Side = &side
+			}
+			rows = append(rows, test)
+		}
+	}
+	return rows
 }

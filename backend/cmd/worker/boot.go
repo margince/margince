@@ -35,6 +35,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/originalstore"
 	"github.com/margince/margince/backend/internal/platform/providerhealthstore"
 	"github.com/margince/margince/backend/internal/platform/ratelimit"
+	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -347,7 +348,14 @@ func startProjectionLanes(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cl
 	if modelPath.Embedder != nil {
 		gen := search.NewEmbedGen(search.NewStore(compose.InstallationDB(pool)), modelPath.Embedder)
 		_, _ = fmt.Fprintln(stdout, "worker maintaining retrieval embeddings")
-		background.Go(func() { runSubscriber(ctx, rdb, "cg:context-graph", gen.HandleEvent, logger, 0) })
+		// Quiet until a model is bound: an unbound embed lane refuses every event.
+		embed := func(ctx context.Context, env kevents.Envelope) error {
+			if !modelPath.Bound() {
+				return nil
+			}
+			return gen.HandleEvent(ctx, env)
+		}
+		background.Go(func() { runSubscriber(ctx, rdb, "cg:context-graph", embed, logger, 0) })
 	}
 	// The interaction-edge projection (ADR-0078). Unlike embeddings it needs no
 	// model, so it runs on every worker rather than only where a provider is

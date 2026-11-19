@@ -381,7 +381,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `PATCH /scheduling/invitations/{id}` | changeMeetingInvitation | Reschedule, cancel or retry an invitation through its original calendar event. | Send messages | at once |
 | `GET /availability` | getAvailability | Free/busy availability for one or more hosts in a window (the `check_availability` MCP verb). | Read records | at once |
 | `GET /activities/follow-up-settings` | getFollowUpSettings | How long a sent message may go unanswered before the worklist reminds its sender. | Read records | at once |
-| `PATCH /activities/follow-up-settings` | updateFollowUpSettings | Change the follow-up window (admin/ops). | Change records | at once |
+| `PATCH /activities/follow-up-settings` | updateFollowUpSettings | Change the follow-up window or the private-mail request check (admin/ops). | Change records | at once |
 | `GET /commitments` | listOpenCommitments | The promises still open, overdue first. | Read records | at once |
 | `POST /activities/threads/{thread_key}/audience` | setThreadAudience | Share a thread with the team, or keep it private. | Change records | at once |
 | `GET /activity-review-templates` | listActivityReviewTemplates | The question sets an outcome review can ask. | Read records | at once |
@@ -552,6 +552,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /forecast/assurance/exceptions` | listInputChecks | The open findings this caller can see. | Read records | at once |
 | `POST /forecast/assurance/exceptions/{id}/resolve` | resolveInputCheck | Answer a finding from the nightly input check. | Change records | at once |
 | `GET /forecast/movement` | getForecastMovement | What moved the forecast between two snapshots, and which deals moved it. | Read records | at once |
+| `GET /forecast/focus` | getForecastFocus | The deals each team should work to meet its goal this quarter. | Read records | at once |
 | `GET /forecast/calls` | listForecastCalls | What this period's forecast has been called, newest first. | Read records | at once |
 | `POST /forecast/calls` | recordForecastCall | Record what somebody believes will close. | Change records | at once |
 | `GET /forecast/shares` | listForecastShares | List the share links you issued that still serve. | Read records | at once |
@@ -770,6 +771,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | --- | --- | --- | --- | --- |
 | `GET /attachments` | listAttachments | List the attachments hung off one entity (cursor-paginated metadata). | Read records | at once |
 | `POST /attachments` | uploadAttachment | Upload a file and attach it to an entity. | Change records | at once |
+| `POST /attachments/links` | addAttachmentLink | Add a web link to a record's documents. | Change records | at once |
 | `GET /deals/{id}/documents` | listDealDocuments | The deal's Files area — its own uploads and the files of every message linked to it. | Read records | at once |
 | `PUT /deals/{id}/documents/{attachmentId}/hide` | hideDealDocument | Stop listing a captured file on this deal without touching the file. | Change records | at once |
 | `DELETE /deals/{id}/documents/{attachmentId}/hide` | unhideDealDocument | List the file on this deal again. | Change records | at once |

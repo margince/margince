@@ -162,7 +162,7 @@ func pageListedRows(in ListActivitiesInput, sorted *storekit.ListSort, paged []p
 	}
 	if in.positions != nil && in.RequestReviewAsOf == nil && in.RequestCurrentAsOf == nil {
 		for i := range min(len(paged), limit) {
-			after, err := sorted.EncodePageCursor(paged[i].key, paged[i].activity.CreatedAt, ids.UUID(paged[i].activity.Id))
+			after, err := sorted.EncodePageCursor("activities", paged[i].key, paged[i].activity.CreatedAt, ids.UUID(paged[i].activity.Id))
 			if err != nil {
 				return nil, storekit.Page{}, err
 			}
@@ -174,7 +174,7 @@ func pageListedRows(in ListActivitiesInput, sorted *storekit.ListSort, paged []p
 		activities = activities[:limit]
 		if in.RequestReviewAsOf == nil && in.RequestCurrentAsOf == nil {
 			last := activities[limit-1]
-			next, err := sorted.EncodePageCursor(paged[limit-1].key, last.CreatedAt, ids.UUID(last.Id))
+			next, err := sorted.EncodePageCursor("activities", paged[limit-1].key, last.CreatedAt, ids.UUID(last.Id))
 			if err != nil {
 				return nil, storekit.Page{}, err
 			}

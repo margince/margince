@@ -56,6 +56,7 @@ func StageLabel(stage Stage) string {
 
 var reasonTexts = map[Reason]string{
 	ReasonInternalOnly:        "every party was on your own domains",
+	ReasonOwnAddressesOnly:    "every party was one of your own addresses, and it forwarded no customer's mail",
 	ReasonInvisibleIncumbent:  "it matched a record outside what you can see",
 	ReasonTransactionalInfra:  "the sender is mail infrastructure, not a company you work with",
 	ReasonTransactionalPrefix: "the sender looks like an automated mailer, not a contact",
@@ -75,7 +76,7 @@ var reasonTexts = map[Reason]string{
 	ReasonNoOpenQuestion:      "there was no open question about this sender",
 	ReasonRecordNotAvailable: "this step's record is no longer kept, or is not yours to read — " +
 		"once the record is gone the two cannot be told apart",
-	ReasonTransportNotRead:     "this step reads email only, and the message arrived over another transport",
+	ReasonTransportNotRead:     "this step does not read messages that arrived this way",
 	ReasonSenderUndecided:      "the sender is still waiting on a verdict, so the message is held back",
 	ReasonArchived:             "the message is archived",
 	ReasonNotConnectorCaptured: "the message was not captured by a connector",

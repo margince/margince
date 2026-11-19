@@ -288,7 +288,7 @@ func (s *Store) SaveCompany(ctx context.Context, in SaveCompanyInput) (Company, 
 			return err
 		}
 		if in.Website != nil {
-			if err := setCompanyDomain(ctx, tx, companyID, *in.Website, by); err != nil {
+			if err := s.setCompanyDomain(ctx, tx, companyID, *in.Website, by); err != nil {
 				return err
 			}
 			applied["website"] = *in.Website

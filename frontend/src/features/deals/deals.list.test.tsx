@@ -583,16 +583,7 @@ describe("DealsScreen", () => {
       expect(screen.getAllByText("Fleet retrofit")[0]).toBeTruthy(),
     );
 
-    // simulate the drop on the Won column via the drop handler path
-    const wonColumn = document.querySelector(
-      '[data-stage="s3"]',
-    ) as HTMLElement;
-    const dataTransfer = { getData: () => "d1", setData: () => {} };
-    const dropEvent = new Event("drop", { bubbles: true }) as unknown as {
-      dataTransfer: typeof dataTransfer;
-    };
-    Object.assign(dropEvent, { dataTransfer });
-    wonColumn.dispatchEvent(dropEvent as unknown as Event);
+    dropOnStage("s3");
 
     await askedToClose("Won");
     expect(advances).toHaveLength(0); // nothing posted yet: confirm-first
@@ -927,15 +918,7 @@ describe("DealsScreen", () => {
       expect(screen.getAllByText("Fleet retrofit")[0]).toBeTruthy(),
     );
 
-    const wonColumn = document.querySelector(
-      '[data-stage="s3"]',
-    ) as HTMLElement;
-    const dataTransfer = { getData: () => "d1", setData: () => {} };
-    const dropEvent = new Event("drop", { bubbles: true }) as unknown as {
-      dataTransfer: typeof dataTransfer;
-    };
-    Object.assign(dropEvent, { dataTransfer });
-    wonColumn.dispatchEvent(dropEvent as unknown as Event);
+    dropOnStage("s3");
 
     await askedToClose("Won");
     // progress_deal is catalogued "auto_execute". A hardcoded "confirm" dot
@@ -956,14 +939,7 @@ describe("DealsScreen", () => {
       expect(screen.getAllByText("Fleet retrofit")[0]).toBeTruthy(),
     );
 
-    const proposalColumn = document.querySelector(
-      '[data-stage="s2"]',
-    ) as HTMLElement;
-    const dropEvent = new Event("drop", { bubbles: true });
-    Object.assign(dropEvent, {
-      dataTransfer: { getData: () => "d1", setData: () => {} },
-    });
-    proposalColumn.dispatchEvent(dropEvent);
+    dropOnStage("s2");
 
     await waitFor(() => expect(advances).toHaveLength(1));
     expect(advances[0]).toEqual([{ to_stage_id: "s2" }, "4"]);

@@ -61,7 +61,7 @@ function Column({
 }: Readonly<{ address: string; range: Range; drawn?: boolean }>) {
   const column = useRef<HTMLDivElement>(null);
   const armed = useRef(false);
-  useScrollMemory(column, address, "rows");
+  useScrollMemory(column, address, { lane: "rows" });
   if (!drawn) {
     return <div data-testid="board" />;
   }
@@ -282,7 +282,7 @@ describe("a list's rows, remembered across a move", () => {
 
     function PageColumn({ address }: Readonly<{ address: string }>) {
       const column = useRef<HTMLDivElement>(null);
-      useScrollMemory(column, address, "page");
+      useScrollMemory(column, address, { lane: "page" });
       return <div ref={column} data-testid="page" />;
     }
     const page = render(<PageColumn address="#/companies" />);

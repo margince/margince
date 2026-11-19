@@ -239,7 +239,7 @@ func TestEstimatorPricesObservedHistory(t *testing.T) {
 		e.insertLabeledActivity(t, ws)
 	}
 
-	got, err := e.newEstimator(ws).EstimateBackfill(wsCtx, "gmail", user, 100)
+	got, err := e.newEstimator(ws).EstimateBackfill(wsCtx, capture.ProviderMailbox("gmail"), user, 100)
 	if err != nil {
 		t.Fatalf("EstimateBackfill: %v", err)
 	}
@@ -293,7 +293,7 @@ func TestEstimatorEnrichFloorsWhenContactsCreatedZero(t *testing.T) {
 		e.insertLabeledActivity(t, ws)
 	}
 
-	got, err := e.newEstimator(ws).EstimateBackfill(wsCtx, "gmail", user, 100)
+	got, err := e.newEstimator(ws).EstimateBackfill(wsCtx, capture.ProviderMailbox("gmail"), user, 100)
 	if err != nil {
 		t.Fatalf("EstimateBackfill: %v", err)
 	}
@@ -332,7 +332,7 @@ func TestEstimatorExcludesRatelessModelAndFlagsHeuristic(t *testing.T) {
 		e.insertLabeledActivity(t, ws)
 	}
 
-	got, err := e.newEstimator(ws).EstimateBackfill(wsCtx, "gmail", user, 100)
+	got, err := e.newEstimator(ws).EstimateBackfill(wsCtx, capture.ProviderMailbox("gmail"), user, 100)
 	if err != nil {
 		t.Fatalf("EstimateBackfill: %v", err)
 	}
@@ -372,7 +372,7 @@ func TestEstimatorCountsMeteringFailedRows(t *testing.T) {
 	e.insertCall(t, callRow{task: ai.TaskCaptureClassify, tier: ai.TierCheapCloud, provider: ai.ProviderFake, model: "cloud-model", tokensIn: 2_000_000, tokensOut: 0, errorSentinel: "metering_failed"})
 	e.insertLabeledActivity(t, ws)
 
-	got, err := e.newEstimator(ws).EstimateBackfill(wsCtx, "gmail", user, 100)
+	got, err := e.newEstimator(ws).EstimateBackfill(wsCtx, capture.ProviderMailbox("gmail"), user, 100)
 	if err != nil {
 		t.Fatalf("EstimateBackfill: %v", err)
 	}
@@ -413,7 +413,7 @@ func TestEstimatorEnrichMeteringFailedRetryDoesNotInflateDenominator(t *testing.
 	e.insertCall(t, callRow{task: ai.TaskEnrich, tier: ai.TierCheapCloud, provider: ai.ProviderFake, model: "cloud-model", tokensIn: 500_000, tokensOut: 0})
 	e.insertCall(t, callRow{task: ai.TaskEnrich, tier: ai.TierCheapCloud, provider: ai.ProviderFake, model: "cloud-model", tokensIn: 500_000, tokensOut: 0, errorSentinel: "metering_failed"})
 
-	got, err := e.newEstimator(ws).EstimateBackfill(wsCtx, "gmail", user, 100)
+	got, err := e.newEstimator(ws).EstimateBackfill(wsCtx, capture.ProviderMailbox("gmail"), user, 100)
 	if err != nil {
 		t.Fatalf("EstimateBackfill: %v", err)
 	}
@@ -447,7 +447,7 @@ func TestEstimatorRepricesSinceUnboundSlice(t *testing.T) {
 	e.insertCall(t, callRow{task: ai.TaskCaptureClassify, tier: ai.TierCheapCloud, provider: ai.ProviderFake, model: "old-cloud-model", tokensIn: 2_000_000, tokensOut: 0})
 	e.insertLabeledActivity(t, ws)
 
-	got, err := e.newEstimator(ws).EstimateBackfill(wsCtx, "gmail", user, 100)
+	got, err := e.newEstimator(ws).EstimateBackfill(wsCtx, capture.ProviderMailbox("gmail"), user, 100)
 	if err != nil {
 		t.Fatalf("EstimateBackfill: %v", err)
 	}
@@ -472,7 +472,7 @@ func TestEstimatorNoHistoryUsesFloor(t *testing.T) {
 	// Rate the floor's classify head (local-model) so the floor prices honestly.
 	e.insertRate(t, "local-model", 1_000_000, 0)
 
-	got, err := e.newEstimator(ws).EstimateBackfill(wsCtx, "gmail", user, 100)
+	got, err := e.newEstimator(ws).EstimateBackfill(wsCtx, capture.ProviderMailbox("gmail"), user, 100)
 	if err != nil {
 		t.Fatalf("EstimateBackfill: %v", err)
 	}
@@ -499,7 +499,7 @@ func TestEstimatorConnectionScopedYields(t *testing.T) {
 	e.insertRate(t, "local-model", 1_000_000, 0)
 
 	est := e.newEstimator(ws)
-	imap, err := est.EstimateBackfill(wsCtx, "imap", user, 100)
+	imap, err := est.EstimateBackfill(wsCtx, capture.ProviderMailbox("imap"), user, 100)
 	if err != nil {
 		t.Fatalf("EstimateBackfill(imap): %v", err)
 	}

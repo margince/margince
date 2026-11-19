@@ -126,6 +126,10 @@ func (s *Store) replayRequestTask(ctx context.Context, tx pgx.Tx, replay crmcont
 	return s.restoreRequestTask(ctx, tx, task, pending, userID, in)
 }
 
+// errSeatMayNotHoldPrivateMail refuses a reminder out of private mail to a
+// seat that may not read that mail. A caller answers it as a 403.
+var errSeatMayNotHoldPrivateMail = fmt.Errorf("the assignee may not read this private mail: %w", apperrors.ErrPermissionDenied)
+
 // emailRequestTask is the reply reminder for one request, filed under who
 // asked: "Needs attention" on a contact's page means that contact is waiting
 // for us, and one only copied on the mail is not.
@@ -142,6 +146,19 @@ func emailRequestTask(ctx context.Context, tx pgx.Tx, source crmcontracts.Activi
 	shared, err := readMailSharedWithWorkspace(ctx, tx, ids.UUID(source.Id))
 	if err != nil {
 		return LogActivityInput{}, err
+	}
+	// A reminder out of private mail is its assignee's alone, so the assignee
+	// must be a seat that may read that mail. The nil owner makes no seat the
+	// thread's owner, so the read gate decides.
+	if !shared {
+		nobody := ids.Nil
+		may, err := auth.SeatMayHoldPrivateWorkTx(ctx, tx, ids.UUID(source.Id), &nobody, seat.UserID)
+		if err != nil {
+			return LogActivityInput{}, err
+		}
+		if !may {
+			return LogActivityInput{}, errSeatMayNotHoldPrivateMail
+		}
 	}
 	return emailRequestTaskInput(source, requesterLinks(filed), seat.UserID, asOf, shared), nil
 }

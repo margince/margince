@@ -39,7 +39,7 @@ func importerOf(ctx context.Context, seat ids.UUID) (importer, bool) {
 func seatImporter(seat ids.UUID) importer {
 	return importer{
 		id: seat, column: "user_id", conflict: "(activity_id, user_id)",
-		connection: "c.user_id = @importer AND c.provider = @delivering_provider",
+		connection: "c.user_id = @importer AND c.provider = @delivering_provider AND " + deliveringMailboxSQL,
 	}
 }
 
@@ -49,6 +49,14 @@ func mailboxImporter(connection ids.UUID) importer {
 		connection: "c.id = @importer AND c.user_id IS NULL",
 	}
 }
+
+// deliveringMailboxSQL narrows a seat's connections of the delivering provider
+// to the run's own, when the capture runs for one. Outside a run it picks the
+// one row the send and posture reads also pick, so no import names two
+// mailboxes for one delivery.
+const deliveringMailboxSQL = `c.id = coalesce(@delivering_connection::uuid, (SELECT m.id FROM capture_connection m
+	 WHERE m.user_id = @importer AND m.provider = @delivering_provider AND m.archived_at IS NULL
+	 ORDER BY m.status = 'disconnected', m.default_sender DESC, m.created_at, m.id LIMIT 1))`
 
 // importerHoldsActivityTx answers whether the row is already this importer's:
 // the seat's standing, or the shared mailbox's own earlier import row.

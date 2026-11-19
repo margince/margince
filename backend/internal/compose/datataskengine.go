@@ -13,17 +13,21 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/companyclockrefold"
 	"github.com/margince/margince/backend/internal/compose/companyprofiles"
 	"github.com/margince/margince/backend/internal/compose/credentialrepair"
 	"github.com/margince/margince/backend/internal/compose/customerlinks"
+	"github.com/margince/margince/backend/internal/compose/dealclockrefold"
 	"github.com/margince/margince/backend/internal/compose/employmentrepair"
 	"github.com/margince/margince/backend/internal/compose/erasedseattraces"
 	"github.com/margince/margince/backend/internal/compose/initiativeenrolment"
+	"github.com/margince/margince/backend/internal/compose/invitationsenders"
 	"github.com/margince/margince/backend/internal/compose/provensenders"
 	"github.com/margince/margince/backend/internal/compose/qualifytasks"
 	"github.com/margince/margince/backend/internal/compose/retiredstagecards"
 	"github.com/margince/margince/backend/internal/compose/retiredthreadsplit"
 	"github.com/margince/margince/backend/internal/compose/unaskedcommitments"
+	"github.com/margince/margince/backend/internal/compose/viabilitytasks"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -127,6 +131,7 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		technicalAddressDataTask(pool),
 		gmailDedupeScanDataTask(),
 		retiredReviewsDataTask(pool),
+		viabilitytasks.DataTask(activities.NewStore(InstallationDB(pool))),
 		auditRedactionDataTask(),
 		linkedAuditRedactionDataTask(pool),
 		markedAuditRedactionDataTask(),
@@ -135,9 +140,12 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		answeredTasksDataTask(pool),
 		falseMeetingCancelsDataTask(now),
 		provensenders.DataTask(),
+		invitationsenders.DataTask(),
 		credentialrepair.DataTask(capture.NewPendingStore(InstallationDB(pool)).PurgeRawCaptureTx),
 		erasedseattraces.DataTask(),
 		newslettersDataTask(pool),
+		dealclockrefold.DataTask(), dealclockrefold.PersonalMeetingsTask(),
+		companyclockrefold.DataTask(),
 		customerlinks.DataTask(),
 		qualifytasks.DuplicatesDataTask(now), qualifytasks.TextDataTask(),
 		companyprofiles.OfferDuplicatesTask(),

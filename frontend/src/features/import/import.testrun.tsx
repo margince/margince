@@ -209,12 +209,10 @@ function TestRunNotices({ report }: Readonly<{ report: ImportReport }>) {
 function PrimaryAction({
   wizard,
   nothingToWrite,
-  nothingLands,
   landing,
 }: Readonly<{
   wizard: ImportWizardState;
   nothingToWrite: boolean;
-  nothingLands: boolean;
   landing: number;
 }>) {
   const t = useT();
@@ -234,7 +232,7 @@ function PrimaryAction({
   return (
     <Button
       variant="primary"
-      disabled={wizard.test.isPending || nothingLands}
+      disabled={wizard.test.isPending || landing === 0}
       pending={wizard.approve.isPending}
       busyLabel={t("import.importing")}
       onClick={() => {
@@ -242,11 +240,11 @@ function PrimaryAction({
         if (run) wizard.approve.mutate(run);
       }}
     >
-      {wizard.anyway
-        ? t("import.test.importAnyway")
-        : plural("import.test.import", landing, {
-            count: formatNumber(landing, locale),
-          })}
+      {plural(
+        wizard.anyway ? "import.test.importAnyway" : "import.test.import",
+        landing,
+        { count: formatNumber(landing, locale) },
+      )}
     </Button>
   );
 }
@@ -268,10 +266,10 @@ function TestRunBody({
   const linkless = countOf(issuesOf(report), "broken_link", "dropped_link");
   const restaging = wizard.test.isPending;
   const landing = report.disposition.created + report.disposition.updated;
+  const empty = report.rows_read === 0;
   // Rows with a broken link can still land, but only once the box is ticked.
   const nothingToWrite =
-    report.rows_read > 0 && landing === 0 && (linkless === 0 || !wizard.anyway);
-  const nothingLands = landing === 0 && !wizard.anyway;
+    empty || (landing === 0 && (linkless === 0 || !wizard.anyway));
   const skippedRows = report.disposition.skipped > 0;
   return (
     <div className="import">
@@ -306,7 +304,9 @@ function TestRunBody({
           kind="standing"
           title={t("import.test.nothing.title")}
         >
-          {t("import.test.nothing.body")}
+          {empty
+            ? t("import.test.nothing.empty")
+            : t("import.test.nothing.body")}
           {skippedRows ? ` ${t("import.test.nothing.skipped")}` : null}
         </Callout>
       ) : null}
@@ -320,7 +320,6 @@ function TestRunBody({
             <PrimaryAction
               wizard={wizard}
               nothingToWrite={nothingToWrite}
-              nothingLands={nothingLands}
               landing={landing}
             />
           </>
@@ -339,6 +338,7 @@ function TestRunBody({
         <ImportRefusal
           title={t("import.map.stageFailed")}
           error={wizard.test.error}
+          format={format}
           keepsDraft
         />
       ) : null}
@@ -357,7 +357,11 @@ export function PartCounts({
   const t = useT();
   const { locale } = useLocale();
   return (
-    <StatStrip className="import__counts" label={t("import.test.counts")}>
+    <StatStrip
+      className="import__counts"
+      label={t("import.test.counts")}
+      density="compact"
+    >
       {parts.map((part) => (
         <StatCard
           key={`${part.object}-${part.file}`}

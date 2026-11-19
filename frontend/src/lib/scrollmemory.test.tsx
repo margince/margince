@@ -1,10 +1,12 @@
 /** @vitest-environment happy-dom */
 import { render } from "@testing-library/react";
 import { act, useRef } from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   forgetScrollMemory,
   historyEntryId,
+  keepPlaceOnNextMove,
+  seekScrollTop,
   useScrollMemory,
 } from "./scrollmemory";
 
@@ -127,10 +129,177 @@ describe("returning to a page", () => {
   });
 });
 
+// A column whose offset clamps to its range, as a browser's does.
+function clampedColumn(container: HTMLElement) {
+  const element = container.querySelector<HTMLElement>(
+    '[data-testid="column"]',
+  );
+  if (!element) throw new Error("the harness drew no column");
+  return clamped(element);
+}
+
+function clamped(element: HTMLElement) {
+  let bottom = 10_000;
+  let top = element.scrollTop;
+  Object.defineProperty(element, "scrollTop", {
+    configurable: true,
+    get: () => top,
+    set: (next: number) => {
+      top = Math.max(0, Math.min(next, bottom));
+    },
+  });
+  return {
+    element,
+    shorten: (height: number) => {
+      bottom = height;
+      top = Math.min(top, bottom);
+    },
+  };
+}
+
+describe("seeking an offset", () => {
+  // Only the boxes a test grows report, as a browser's observer does.
+  class Boxes {
+    static watching = new Map<Element, Boxes>();
+    constructor(private readonly report: () => void) {}
+    observe(target: Element) {
+      Boxes.watching.set(target, this);
+    }
+    disconnect() {
+      for (const [target, owner] of Boxes.watching) {
+        if (owner === this) Boxes.watching.delete(target);
+      }
+    }
+    static grow(target: Element) {
+      Boxes.watching.get(target)?.report();
+    }
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    Boxes.watching.clear();
+  });
+
+  it("lands once a child grows with no node added and the pane's box unchanged", () => {
+    vi.stubGlobal("ResizeObserver", Boxes);
+    const pane = document.createElement("div");
+    const body = document.createElement("div");
+    pane.append(body);
+    document.body.append(pane);
+    const column = clamped(pane);
+    column.shorten(200);
+    const stop = seekScrollTop(pane, 1000);
+    expect(pane.scrollTop).toBe(200);
+
+    // An image inside the body loads: the body's box grows, nothing else.
+    column.shorten(10_000);
+    Boxes.grow(body);
+    expect(pane.scrollTop).toBe(1000);
+    stop();
+    pane.remove();
+  });
+});
+
+describe("another tab of the same record", () => {
+  // `view` is what the address is about, as lib/routeidentity.ts derives it:
+  // a record's tabs share one, and each record has its own.
+  function Page({
+    address,
+    view,
+  }: Readonly<{ address: string; view: string }>) {
+    const column = useRef<HTMLDivElement>(null);
+    useScrollMemory(column, address, { view });
+    return <div ref={column} data-testid="column" />;
+  }
+
+  // A press on the record's tab strip, which asks to keep the place.
+  function openTimeline() {
+    const { container, rerender } = render(
+      <Page address="#/contacts/c-1" view="#/contacts/c-1" />,
+    );
+    scrollTo(container, 900);
+    const overview = window.history.state;
+    keepPlaceOnNextMove();
+    window.history.pushState(null, "", "#/contacts/c-1/timeline");
+    rerender(<Page address="#/contacts/c-1/timeline" view="#/contacts/c-1" />);
+    return { container, rerender, overview };
+  }
+
+  it("remembers where a held press is headed, not the clamp on the way", () => {
+    const view = "#/contacts/c-1";
+    const { container, rerender } = render(
+      <Page address="#/contacts/c-1" view={view} />,
+    );
+    const column = clampedColumn(container);
+    scrollTo(container, 1000);
+    keepPlaceOnNextMove();
+    window.history.pushState(null, "", "#/contacts/c-1/timeline");
+    // The new tab's body arrives short, and the strip holds its place.
+    column.shorten(200);
+    const stop = seekScrollTop(column.element, 1000);
+    rerender(<Page address="#/contacts/c-1/timeline" view={view} />);
+    act(() => {
+      column.element.dispatchEvent(new Event("scroll"));
+    });
+    const timeline = window.history.state;
+
+    // The reader leaves before the body grows, and comes back after.
+    stop();
+    window.history.pushState(null, "", "#/deals");
+    rerender(<Page address="#/deals" view="#/deals" />);
+    column.shorten(10_000);
+    window.history.pushState(timeline, "", "#/contacts/c-1/timeline");
+    rerender(<Page address="#/contacts/c-1/timeline" view={view} />);
+    expect(column.element.scrollTop).toBe(1000);
+  });
+
+  it("keeps the reader's place when the new entry shows the same record", () => {
+    const { container } = openTimeline();
+    expect(offsetOf(container)).toBe(900);
+  });
+
+  it("opens another tab at its top when no press asked to keep the place", () => {
+    const { container, rerender } = render(
+      <Page address="#/contacts/c-1" view="#/contacts/c-1" />,
+    );
+    scrollTo(container, 900);
+    window.history.pushState(null, "", "#/contacts/c-1/tasks");
+    rerender(<Page address="#/contacts/c-1/tasks" view="#/contacts/c-1" />);
+    expect(offsetOf(container)).toBe(0);
+  });
+
+  it("opens another record at its top", () => {
+    const { container, rerender } = openTimeline();
+    window.history.pushState(null, "", "#/contacts/c-2");
+    rerender(<Page address="#/contacts/c-2" view="#/contacts/c-2" />);
+    expect(offsetOf(container)).toBe(0);
+  });
+
+  it("restores the offset a tab was left at when the reader goes Back to it", () => {
+    const { container, rerender, overview } = openTimeline();
+    scrollTo(container, 300);
+    // Back: the browser puts the earlier entry's state, its id included, back.
+    window.history.pushState(overview, "", "#/contacts/c-1");
+    rerender(<Page address="#/contacts/c-1" view="#/contacts/c-1" />);
+    expect(offsetOf(container)).toBe(900);
+  });
+
+  it("remembers the kept place for the tab, so Back to it returns there", () => {
+    const { container, rerender } = openTimeline();
+    const timeline = window.history.state;
+    window.history.pushState(null, "", "#/deals");
+    rerender(<Page address="#/deals" view="#/deals" />);
+    expect(offsetOf(container)).toBe(0);
+    window.history.pushState(timeline, "", "#/contacts/c-1/timeline");
+    rerender(<Page address="#/contacts/c-1/timeline" view="#/contacts/c-1" />);
+    expect(offsetOf(container)).toBe(900);
+  });
+});
+
 describe("a lane kept for the whole load", () => {
   function Drawer({ address }: Readonly<{ address: string }>) {
     const column = useRef<HTMLDivElement>(null);
-    useScrollMemory(column, address, "drawer", "load");
+    useScrollMemory(column, address, { lane: "drawer", span: "load" });
     return <div ref={column} data-testid="column" />;
   }
 

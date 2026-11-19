@@ -227,7 +227,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_connection
 
-34 columns · primary key `(id)` · referenced by 3 foreign keys
+36 columns · primary key `(id)` · referenced by 5 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -240,11 +240,13 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `connected_by` | `uuid` |  | Points at `app_user.id`. |
 | `context_tag_id` | `uuid` |  | Points at `tag.id`. |
 | `credential_ref` | `text` |  |  |
+| `default_sender` | `boolean`, default `false` | yes | True on the mailbox the member marked for new mail (`PUT /connectors/{provider}/mail-posture` with `default_sender`). |
 | `generation` | `integer`, default `0` | yes |  |
 | `history_baseline_date` | `date` |  |  |
 | `history_baseline_set_at` | `timestamp with time zone` |  |  |
 | `history_baseline_set_by` | `text` |  |  |
 | `history_baseline_tz` | `text` |  |  |
+| `keys_by_provider` | `boolean`, default `false` | yes |  |
 | `legal_entity_id` | `uuid` |  | Points at `legal_entity.id`. |
 | `mail_posture` | `text`, default `'classified'::text` | yes | What this mailbox asks of the mail it brings in. |
 | `provider` | `text` | yes | The mail/calendar/meeting-notes provider (A51 email+calendar parity). |
@@ -285,13 +287,13 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 - `capture_connection_provider_check`: `CHECK ((provider = ANY (ARRAY['gmail', 'gcal', 'gdocs', 'imap', 'graph', 'graphcal', 'whatsapp', 'telegram', 'offline_demo', 'test_mailbox'])))`
 - `capture_connection_shared_shape`: `CHECK ((((user_id IS NOT NULL) AND (reader_team_id IS NULL)) OR ((user_id IS NULL) AND (reader_team_id IS NOT NULL) AND (account_label IS NOT NULL) AND (mail_posture <> 'classified'))))`
 - `capture_connection_status_check`: `CHECK ((status = ANY (ARRAY['connected', 'disconnected', 'error', 'reauth_required'])))`
-- `capture_connection_unique`: `UNIQUE (user_id, provider)`
 - `capture_connection_unread_period_whole`: `CHECK ((((unread_from IS NULL) AND (unread_to IS NULL)) OR ((unread_from IS NOT NULL) AND (unread_to IS NOT NULL) AND (unread_from < unread_to))))`
 
 **Indexes**
 
+- `capture_connection_member_mailbox`: `unique, btree (user_id, provider, lower(account_label)) NULLS NOT DISTINCT WHERE (user_id IS NOT NULL)`
+- `capture_connection_one_default_sender`: `unique, btree (user_id) WHERE default_sender`
 - `capture_connection_shared_mailbox`: `unique, btree (provider, lower(account_label)) WHERE (user_id IS NULL)`
-- `capture_connection_unique`: `unique, btree (user_id, provider)`
 - `connector_connection_pkey`: `unique, btree (id)`
 - `idx_capture_connection`: `btree (provider, status) WHERE (archived_at IS NULL)`
 - `idx_capture_watch_renew`: `btree (watch_expires_at) WHERE ((watch_expires_at IS NOT NULL) AND (status = 'connected'))`
@@ -366,11 +368,12 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_exclusion
 
-7 columns · primary key `(id)` · referenced by 0 foreign keys
+8 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
+| `connection_id` | `uuid` |  | The mailbox a container rule matches in. |
 | `created_by` | `text` | yes |  |
 | `kind` | `text` | yes | One of `address`, `domain`, `container`. |
 | `scope` | `text` | yes | One of `workspace`, `user`. |
@@ -382,6 +385,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 | Columns | Table | When the parent goes |
 |---|---|---|
+| `connection_id` | `capture_connection` | deleting the parent deletes this row |
 | `user_id` | `app_user` | deleting the parent deletes this row |
 
 **Rules**
@@ -395,9 +399,10 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 **Indexes**
 
 - `capture_exclusion_pkey`: `unique, btree (id)`
+- `idx_capture_exclusion_connection`: `btree (connection_id) WHERE (connection_id IS NOT NULL)`
 - `idx_capture_exclusion_user`: `btree (user_id)`
 - `idx_capture_exclusion_value`: `btree (kind, value)`
-- `uq_capture_exclusion`: `unique, btree (scope, user_id, kind, value) NULLS NOT DISTINCT`
+- `uq_capture_exclusion`: `unique, btree (scope, user_id, kind, value, connection_id) NULLS NOT DISTINCT`
 
 **Triggers**
 
@@ -899,6 +904,7 @@ The 28 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 **Triggers**
 
+- `capture_thread_verdict_deal_clock`: `AFTER INSERT OR DELETE OR UPDATE OF kind, status, thread_key, user_id FOR EACH ROW EXECUTE FUNCTION trg_thread_verdict_deal_clock()`
 - `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"kind": 20000, "status": 20000, "thread_key": 20000, "seen_addresses": 20000, "disposition_reason": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"disposition_reason":2000,"kind":20000,"seen_addresses":20000,"status":20000,"thread_key":20000}')`
 - `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "status": 20000, "thread_key": 20000, "seen_addresses": 20000, "disposition_reason": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"disposition_reason":2000,"kind":20000,"seen_addresses":20000,"status":20000,"thread_key":20000}')`
 

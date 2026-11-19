@@ -8,12 +8,14 @@ import { Button, Field, Textarea, TextInput } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { Modal } from "../../design-system/modal";
+import { useSinglePress } from "../../design-system/presslatch";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
 import { type Departure, fromHere } from "../../lib/navigatefrom";
 import { throwProblem, unwrap } from "../../lib/problem";
 import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import { ReportComposition, useComposition } from "./reporting.composition";
+import { useCreateReport } from "./reporting.create";
 import { blocksOf } from "./reporting.layout";
 import type { ReportingReport, ReportingSelection } from "./reporting.model";
 import { reportRevisionsKey } from "./reporting.versions";
@@ -45,6 +47,8 @@ export function SaveReportingDialog({
   );
   const composition = useComposition(initialSelection);
   const { metrics, kept } = composition;
+  const createReport = useCreateReport();
+  const singlePress = useSinglePress();
   const write = useMutation({
     mutationFn: async ({
       body,
@@ -63,15 +67,14 @@ export function SaveReportingDialog({
           }),
         );
       }
-      const response = existing
-        ? await api.PATCH("/analytics/reports/{id}", {
-            params: {
-              path: { id: existing.id },
-              ...ifMatch(existing.version),
-            },
-            body,
-          })
-        : await api.POST("/analytics/reports", { body });
+      if (!existing) return createReport(body);
+      const response = await api.PATCH("/analytics/reports/{id}", {
+        params: {
+          path: { id: existing.id },
+          ...ifMatch(existing.version),
+        },
+        body,
+      });
       if (response.error) throwProblem(response.error);
       return response.data;
     },
@@ -128,10 +131,10 @@ export function SaveReportingDialog({
       <form
         id={formId}
         className="form-stack"
-        onSubmit={(event) => {
+        onSubmit={singlePress((event) => {
           event.preventDefault();
           save(draftOpen);
-        }}
+        })}
       >
         <Field label={t("reporting.name")} required>
           {(field) => (

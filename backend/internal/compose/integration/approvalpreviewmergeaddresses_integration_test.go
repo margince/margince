@@ -25,8 +25,8 @@ func TestContactMergePreviewShowsPrimaryAddressDemotions(t *testing.T) {
 			ctx := e.As(e.AdminUser, nil, integration.AdminPerms)
 			source, err := e.Contacts.CreateContact(ctx, contacts.CreateContactInput{
 				FullName: "Source contact", Source: "manual",
-				Emails: []contacts.ContactEmailInput{{Email: "source-work@example.test", EmailType: "work", IsPrimary: true}, {Email: "source-personal@example.test", EmailType: "personal", IsPrimary: true}},
-				Phones: []contacts.ContactPhoneInput{{Phone: "+49301234001", PhoneType: "work", IsPrimary: true}, {Phone: "+49301234002", PhoneType: "home", IsPrimary: true}},
+				Emails: []contacts.ContactEmailInput{{Email: "source-work@example.test", EmailType: "work", IsPrimary: true}, {Email: "source-personal@example.test", EmailType: "personal"}},
+				Phones: []contacts.ContactPhoneInput{{Phone: "+49301234001", PhoneType: "work", IsPrimary: true}, {Phone: "+49301234002", PhoneType: "home"}},
 			})
 			if err != nil {
 				t.Fatal(err)
@@ -49,9 +49,10 @@ func TestContactMergePreviewShowsPrimaryAddressDemotions(t *testing.T) {
 				t.Fatalf("addresses=%+v", preview.Addresses)
 			}
 			for _, address := range preview.Addresses {
-				primary := !occupied || address.Usage != "work"
-				if !address.WasPrimary || address.WillBePrimary != primary {
-					t.Errorf("address=%+v want primary=%t", address, primary)
+				wasPrimary := address.Usage == "work"
+				willBePrimary := wasPrimary && !occupied
+				if address.WasPrimary != wasPrimary || address.WillBePrimary != willBePrimary {
+					t.Errorf("address=%+v want was=%t will=%t", address, wasPrimary, willBePrimary)
 				}
 			}
 			checkMergeAddressMasks(t, e, "contact", sourceID, targetID, []string{"email", "emails", "phone", "phones"})
@@ -59,6 +60,52 @@ func TestContactMergePreviewShowsPrimaryAddressDemotions(t *testing.T) {
 				t.Fatal(err)
 			}
 			checkMergedAddresses(ctx, t, e, targetID, preview.Addresses)
+		})
+	}
+}
+
+// A number both contacts hold shows as held in the preview, and the merge then
+// keeps the survivor's row of it alone. That row stays primary, or takes the
+// source's primary flag when the survivor had no primary number.
+func TestContactMergePreviewShowsANumberTheSurvivorHolds(t *testing.T) {
+	for _, survivorPrimary := range []bool{true, false} {
+		t.Run(fmt.Sprintf("survivorPrimary=%t", survivorPrimary), func(t *testing.T) {
+			e := integration.Setup(t)
+			ctx := e.As(e.AdminUser, nil, integration.AdminPerms)
+			source, err := e.Contacts.CreateContact(ctx, contacts.CreateContactInput{
+				FullName: "Held source", Source: "manual",
+				Phones: []contacts.ContactPhoneInput{{Phone: "+49301235001", PhoneType: "mobile", IsPrimary: true}, {Phone: "+49301235002", PhoneType: "work", Position: 1}},
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			held := []contacts.ContactPhoneInput{{Phone: "+49301235001", PhoneType: "mobile", IsPrimary: true}}
+			target, err := e.Contacts.CreateContact(ctx, contacts.CreateContactInput{FullName: "Held survivor", Source: "manual", Phones: held})
+			if err != nil {
+				t.Fatal(err)
+			}
+			targetID := ids.From[ids.ContactKind](ids.UUID(target.Id))
+			if !survivorPrimary {
+				held[0].IsPrimary = false
+				if _, err := e.Contacts.UpdateContact(ctx, targetID, contacts.UpdateContactInput{Phones: held}); err != nil {
+					t.Fatal(err)
+				}
+			}
+			sourceID := ids.UUID(source.Id)
+			preview, err := e.Contacts.PreviewMergeSurvivorship(ctx, "contact", sourceID, targetID.UUID, nil, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, address := range preview.Addresses {
+				isHeld := address.Value == "+49301235001"
+				if address.AlreadyHeld != isHeld || (isHeld && !address.WillBePrimary) {
+					t.Errorf("address=%+v want held=%t, and the held number primary on the survivor", address, isHeld)
+				}
+			}
+			if _, err := e.Contacts.MergeContact(ctx, ids.From[ids.ContactKind](sourceID), targetID, &preview.SourceVersion); err != nil {
+				t.Fatal(err)
+			}
+			checkMergedAddresses(ctx, t, e, targetID.UUID, preview.Addresses)
 		})
 	}
 }
@@ -124,20 +171,27 @@ func checkMergedAddresses(ctx context.Context, t *testing.T, e *integration.Env,
 			var query string
 			switch address.Kind {
 			case "email":
-				query = `SELECT email, is_primary FROM contact_email WHERE id=@id AND contact_id=@target AND archived_at IS NULL`
+				query = `SELECT email, is_primary, archived_at IS NOT NULL FROM contact_email WHERE id=@id AND contact_id=@target`
 			case "phone":
-				query = `SELECT phone, is_primary FROM contact_phone WHERE id=@id AND contact_id=@target AND archived_at IS NULL`
+				query = `SELECT phone, is_primary, archived_at IS NOT NULL FROM contact_phone WHERE id=@id AND contact_id=@target`
 			case "domain":
-				query = `SELECT domain, is_primary FROM company_domain WHERE id=@id AND company_id=@target AND archived_at IS NULL`
+				query = `SELECT domain, is_primary, archived_at IS NOT NULL FROM company_domain WHERE id=@id AND company_id=@target`
 			default:
 				return fmt.Errorf("unexpected address kind %s", address.Kind)
 			}
 			var value string
-			var primary bool
-			if err := tx.QueryRow(ctx, query, pgx.StrictNamedArgs{"id": address.ID, "target": target}).Scan(&value, &primary); err != nil {
+			var primary, archived bool
+			if err := tx.QueryRow(ctx, query, pgx.StrictNamedArgs{"id": address.ID, "target": target}).Scan(&value, &primary, &archived); err != nil {
 				return err
 			}
-			if value != address.Value || primary != address.WillBePrimary {
+			if archived {
+				// A held number's primary flag lives on the survivor's own row of it.
+				if err := tx.QueryRow(ctx, `SELECT bool_or(is_primary) FROM contact_phone WHERE contact_id=@target AND phone=@phone AND archived_at IS NULL`,
+					pgx.StrictNamedArgs{"target": target, "phone": value}).Scan(&primary); err != nil {
+					return err
+				}
+			}
+			if value != address.Value || primary != address.WillBePrimary || archived != address.AlreadyHeld {
 				t.Errorf("%s value=%q primary=%t preview=%+v", address.Kind, value, primary, address)
 			}
 		}

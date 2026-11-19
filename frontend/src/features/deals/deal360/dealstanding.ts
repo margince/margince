@@ -14,8 +14,7 @@ import {
 } from "../../../format/activitywhen";
 import { calendarDaysUntil } from "../../../format/daysuntil";
 import { calendarDaysBetween } from "../../../format/format";
-import { messageFromOutside } from "../../../lib/messagevoice";
-import { ghostCount } from "./dealcommittee";
+import { committeeContacts, ghostCount } from "./dealcommittee";
 
 type Deal = components["schemas"]["Deal"];
 type Stage = components["schemas"]["Stage"];
@@ -29,6 +28,8 @@ type FieldHistoryEntry = components["schemas"]["FieldHistoryEntry"];
 export type DealLadderControl = Readonly<{
   advancing: boolean;
   advanceRefused: boolean;
+  /** The deal's pipeline is retired, so its stages are shown and not offered. */
+  pipelineRetired?: boolean;
   refusedReasonId?: string;
   onAdvance: (toStage: Stage) => void;
 }>;
@@ -41,6 +42,9 @@ export type DealStandingInputs = Readonly<{
   // The instant the page was read at: where today stands on the axis.
   asOf: string;
   activities: readonly Activity[];
+  // The newest message the other side wrote, read by the server over every
+  // row rather than off the loaded page.
+  lastInbound?: Activity;
   // The list `activities` came from, which pages older rows in for the line.
   history?: TimelineHistory;
   offers: readonly Offer[] | undefined;
@@ -158,10 +162,11 @@ export function committeeOf(
   if (!coverage?.stakeholders || withheld) {
     return { state: "unknown" };
   }
+  const contacts = committeeContacts(coverage.stakeholders);
   return {
     state: "read",
-    named: coverage.stakeholders.length,
-    engaged: coverage.stakeholders.filter((seat) => seat.engaged).length,
+    named: contacts.length,
+    engaged: contacts.filter((contact) => contact.engaged).length,
     gaps: ghostCount(coverage.risks ?? []),
   };
 }
@@ -202,13 +207,14 @@ export function closeTone(
 /**
  * When the deal entered each stage, from the advance rows of its field
  * history. A stage visited twice keeps its latest entry, because the time
- * spent there now runs from the last arrival. When the history is whole but
- * has no creation row (an import), the stage the first advance left is dated
- * by the deal's creation. A cut history dates nothing it cannot see.
+ * spent there now runs from the last arrival. A history may be whole but have
+ * no creation row (an import). Then the deal's creation dates the stage the
+ * first advance left, as it dates the stage of a deal that never moved. A cut
+ * history dates nothing it cannot see.
  */
 export function stageEntries(
   history: readonly FieldHistoryEntry[],
-  deal: Pick<Deal, "created_at">,
+  deal: Pick<Deal, "created_at" | "stage_id">,
   complete: boolean,
 ): ReadonlyMap<string, string> {
   const entries = new Map<string, string>();
@@ -216,8 +222,9 @@ export function stageEntries(
     .filter((row) => row.field === "stage_id" && row.new_value)
     .sort((a, b) => Date.parse(a.changed_at) - Date.parse(b.changed_at));
   const first = rows[0];
-  if (complete && first?.old_value) {
-    entries.set(first.old_value, deal.created_at);
+  const startedIn = first ? first.old_value : deal.stage_id;
+  if (complete && startedIn) {
+    entries.set(startedIn, deal.created_at);
   }
   for (const row of rows) {
     if (row.new_value) {
@@ -358,27 +365,4 @@ function soonest(
     }
   }
   return best;
-}
-
-/**
- * The newest message the other side wrote, from the loaded page of the
- * timeline. Read from the recorded author, not the direction: a colleague's
- * mail arrives inbound too. A row no human wrote (automatic_kind) is no word.
- */
-export function lastInbound(
-  activities: readonly Activity[],
-): Activity | undefined {
-  let latest: Activity | undefined;
-  for (const row of activities) {
-    if (row.automatic_kind || !messageFromOutside(row)) {
-      continue;
-    }
-    if (
-      !latest ||
-      Date.parse(row.occurred_at) > Date.parse(latest.occurred_at)
-    ) {
-      latest = row;
-    }
-  }
-  return latest;
 }

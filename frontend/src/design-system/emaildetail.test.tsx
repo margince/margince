@@ -182,6 +182,35 @@ describe("the email drawer's attachments", () => {
     expect(screen.getByText("120 kB")).toBeTruthy();
   });
 
+  it("says a file waits for a copy addressed to a colleague", async () => {
+    stubRead(
+      presentation({
+        attachments: [
+          {
+            id: "01a05500-0000-7000-8000-0000000000f4",
+            filename: "offer.pdf",
+            byte_size: 120000,
+            content_type: "application/pdf",
+            bytes_withheld: true,
+            withheld_reason: "not_addressed",
+          },
+        ],
+      }),
+    );
+    draw(open());
+
+    await waitFor(() => expect(screen.getByText("offer.pdf")).toBeTruthy());
+    expect(screen.getByText("offer.pdf").closest("a")).toBeNull();
+    expect(
+      screen.getByText(
+        "Not kept, because no colleague here sent this message or was in its To line.",
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText("Not kept, because the message is private."),
+    ).toBeNull();
+  });
+
   it("draws no region for a message that carried nothing", async () => {
     stubRead(
       presentation({

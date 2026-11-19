@@ -64,6 +64,7 @@
     "acknowledgeCompanyView": "business",
     "acknowledgeContactView": "business",
     "activateHomeRepair": "operator",
+    "addAttachmentLink": "business",
     "addConsumerMailDomain": "workspace_settings",
     "addDealLine": "business",
     "addDealRoomDocument": "business",
@@ -365,6 +366,7 @@
     "getFollowUpSettings": "workspace_settings",
     "getForecast": "business",
     "getForecastAssurance": "business",
+    "getForecastFocus": "business",
     "getForecastMovement": "business",
     "getForecastStageChances": "business",
     "getHandledForYou": "business",
@@ -934,6 +936,7 @@
     "acknowledgeCompanyView": "companies",
     "acknowledgeContactView": "contacts",
     "activateHomeRepair": "system_health",
+    "addAttachmentLink": "documents",
     "addConsumerMailDomain": "capture_rules",
     "addDealLine": "deals",
     "addDealRoomDocument": "deal_rooms",
@@ -1317,6 +1320,7 @@
     "getForecast": "forecast",
     "getForecastAssurance": "forecast",
     "getForecastAssuranceEnforcement": "forecast",
+    "getForecastFocus": "forecast",
     "getForecastMovement": "forecast",
     "getForecastStageChances": "forecast",
     "getHandledForYou": "worklist",
@@ -1681,6 +1685,7 @@
     "previewAiBudget": "ai_models",
     "previewAiRouting": "ai_models",
     "previewAiTaskOverrides": "ai_models",
+    "previewAttachmentLink": "documents",
     "previewAutomation": "automations",
     "previewBookingReturn": "booking_pages",
     "previewBulkChange": "bulk",
@@ -1816,6 +1821,7 @@
     "resolveDealRoomThread": "deal_rooms",
     "resolveEntities": "search",
     "resolveInputCheck": "forecast",
+    "resolveRecipientCountries": "activities",
     "resolveSignal": "signals",
     "restoreCaptureOwnerIdentity": "capture_rules",
     "restoreCompanySuggestion": "companies",
@@ -1829,6 +1835,7 @@
     "restoreRelationshipNudge": "contacts",
     "restoreReportingReportRevision": "reports",
     "restoreRole": "members",
+    "restoreRoleGrants": "members",
     "restoreTag": "tags",
     "restoreTagApplication": "tags",
     "resumeDealRoom": "deal_rooms",
@@ -2203,6 +2210,9 @@
       "deals"
     ],
     "attach_document": [
+      "documents"
+    ],
+    "attach_link": [
       "documents"
     ],
     "backfill_employment_import": [
@@ -2771,6 +2781,9 @@
     ],
     "get_finance_source": [
       "finance_source"
+    ],
+    "get_forecast_focus": [
+      "forecast"
     ],
     "get_forecast_stage_chances": [
       "forecast"
@@ -4323,6 +4336,9 @@
     "attach_document": [
       "business"
     ],
+    "attach_link": [
+      "business"
+    ],
     "backfill_employment_import": [
       "business"
     ],
@@ -4881,6 +4897,9 @@
     ],
     "get_finance_source": [
       "capture"
+    ],
+    "get_forecast_focus": [
+      "business"
     ],
     "get_forecast_stage_chances": [
       "business"

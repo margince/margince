@@ -75,7 +75,7 @@ func (e *resolveEnv) decideRequestAs(t *testing.T, user, entity ids.UUID) commsa
 	ctx := e.seatCtx(user)
 	var decision commsauthz.Decision
 	if err := e.store.db.Tx(ctx, func(tx pgx.Tx) error {
-		req, err := withSendingEntity(ctx, tx, commsauthz.Request{Context: commsauthz.CategoryRequestedFollowup, SendingEntity: entity})
+		req, err := withSendFacts(ctx, tx, commsauthz.Request{Context: commsauthz.CategoryRequestedFollowup, SendingEntity: entity})
 		if err != nil {
 			return err
 		}

@@ -218,7 +218,7 @@ func (w *commsSendWorker) Work(ctx context.Context, job *river.Job[SendEmailArgs
 // whose mis-reading permanently destroys mail, so it must be provable without
 // a database. *capture.Registry is the only implementation the product ships.
 type mailboxSenders interface {
-	SenderFor(ctx context.Context, userID ids.UserID, provider string) (connector.EmailSender, connector.Auth, []string, error)
+	SenderFor(ctx context.Context, userID ids.UserID, mailbox capture.Mailbox) (connector.EmailSender, connector.Auth, []string, error)
 }
 
 var _ mailboxSenders = (*capture.Registry)(nil)
@@ -242,8 +242,8 @@ type commsResolver struct {
 var _ comms.ConnectionResolver = commsResolver{}
 
 //nolint:ireturn // implements comms.ConnectionResolver, whose contract returns the optional connector.EmailSender seam
-func (r commsResolver) Resolve(ctx context.Context, userID ids.UserID, provider string) (connector.EmailSender, connector.Auth, []string, error) {
-	sender, auth, granted, err := r.registry.SenderFor(ctx, userID, provider)
+func (r commsResolver) Resolve(ctx context.Context, userID ids.UserID, provider string, connection *ids.UUID) (connector.EmailSender, connector.Auth, []string, error) {
+	sender, auth, granted, err := r.registry.SenderFor(ctx, userID, capture.MailboxNamed(provider, connection))
 	switch {
 	case errors.Is(err, capture.ErrNoConnection):
 		return nil, nil, nil, fmt.Errorf("%w: %w", comms.ErrNoMailbox, err)
@@ -332,7 +332,7 @@ func newSendWorker(pool *pgxpool.Pool, registry *capture.Registry, blob blobstor
 // Capture owns the echo that can supply an identity the read-back could not.
 // Consent owns the restriction a sent lift notice releases.
 func NewMailDeliveryStore(pool *pgxpool.Pool, admitParties func(context.Context, ids.ActivityID) error) *comms.Store {
-	return comms.NewStore(InstallationDB(pool), time.Now, activities.NewStore(InstallationDB(pool)),
+	return comms.NewStore(InstallationDB(pool), time.Now, sentIdentity(InstallationDB(pool)),
 		comms.WithPartyAdmission(admitParties), comms.WithEchoIdentity(capture.EchoIdentityTx),
 		comms.WithSentEffect(consent.NewStore(InstallationDB(pool)).LiftNoticedRestriction))
 }

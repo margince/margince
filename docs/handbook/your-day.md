@@ -98,7 +98,7 @@ Also called: follow-up reminder, remind me to call back, schedule a follow-up, c
 
 ### How do I see all my tasks?
 To see all your open tasks in Margince, open **Home**, press **Show Worklist**, and choose the **Tasks** button under **Work type**.
-Tasks are in groups by when they are due. Late ones and today's come first, then **Due tomorrow**, **Due this week** and **Later**. There is no separate "Due today" heading.
+Tasks are in groups by when they are due. Late ones and today's come first, then **Due tomorrow**, **Due this week** and **Later**. There is no separate "Due today" heading. A task you wrote without a due date is last, under **No due date** in **Upcoming and backlog**.
 
 A task more than 30 days late leaves the Worklist and its counts. A pin keeps it there while the pin is one of your 50 newest, and so does a reminder of yours that is due. The task stays open, keeps its due date, and still shows on its record. A company also has a **Tasks** tab with its own tasks; a contact has no Tasks tab. Also called: my to-dos, tasks due today, open tasks, task list.
 
@@ -157,7 +157,7 @@ Margince writes the review on the Monday after the week, and then it is **Frozen
 Each item names its record and shows the facts that call for action. A badge says when Margince made the brief.
 - **Needs you**: at most 6 cards in Worklist order, each with its kind of work and who it is with, if Margince has that. A mailbox, booking page, AI task or automation that stopped takes no card. A badge beside **Needs you** counts the system issues and opens the Worklist on **System**. Mail that could not be delivered keeps its card and is counted there too.
   A dated task also shows its due day. The round mark marks a task done; a press opens the card where it stands.
-- Proposals, commitments due today and meetings in the next 24 hours sit there too. A task due later shows once its reminder is due. A quiet day says "No immediate priorities. The full Worklist is available."
+- Proposals, commitments due today and meetings in the next 24 hours sit there too. A task due later shows once its reminder is due. A quiet day shows a card that says "All caught up" and the time Margince last checked. It shows only when Margince could read every list of work. If it could not, Home says some work could not be checked. Calendar and mailbox status do not change this card.
 - **Review N deal suggestions** opens the saved brief. Its deals stay separate from the work that needs action now. A brief with no deals shows no opener.
 - **Show Worklist**, under the list: the whole list, with its own filters and pages, and work that is not due yet. Stage change notices stay in the notification center.
 - **Since your last brief**: what Margince did since your last brief, what waits on you, what it could not finish and what needs restoring.
@@ -237,12 +237,10 @@ When a customer email asks you for something and nobody answered, Margince files
 It is due on a day the email names, such as "Deadline: 27 October", and has **No due date** if it names none.
 - It needs a clear request. A note that only tells you something, or one Margince cannot judge, stays in review and does not claim to be urgent.
 - The task takes the place of the email in your Worklist, and its source opens the email. If you can no longer open the email, you cannot read the task either.
-- Completing the task closes the request for every reader. Archiving it before it is done sends the
-  request back to review, with no new task.
-- A reply closes only its own conversation, and does not prove the promised thing was sent. The task
-  stays until someone handles it.
-- Private mail is left out. When it is not clear whose task it is, Margince leaves the email for review.
-Also called: customer request, email nobody answered, email to-do.
+- Completing the task closes the request for every reader. Archiving it before it is done sends the request back to review, with no new task.
+- A reply closes only its own conversation, and does not prove the promised thing was sent. The task stays until someone handles it. When it is not clear whose task it is, Margince leaves the email for review.
+- Private mail is checked too, and its task is visible to you alone. The AI never reads mail marked confidential or held by hand. It also skips mail held because of who it is with, or because only colleagues are on it. Such mail counts as a request only when you wrote on its conversation first. An admin turns this off under **Settings → AI models → Tasks**, with **Check private mail for requests**, and the AI then reads no private mail.
+Also called: customer request, email nobody answered, email to-do, private email request.
 
 ### How do I answer a calendar invitation?
 A meeting invitation shows **Accept**, **Maybe** and **Decline** in place of **Reply** on Home, in the Worklist and in a record's **History**. The email reader shows them beside **Reply**, which is for proposing another time.
@@ -341,18 +339,18 @@ As you move down, the list loads every task, every waiting customer and every de
 
 Each count is exact, or Margince says it is not:
 
-- **Today**, **Decisions** and **System** each show a count. When some work was not counted, the count ends in `+`, such as **Decisions 25+**: there are at least 25. The heading above the list shows it too, such as **12 outstanding actions**, or **25+ outstanding actions**.
-- A **Work type** button shows its count the same way. Tasks and approvals are counted in full. On **Team**, approvals are not.
+- **Today**, **Decisions** and **System** each show a count. When some work was not counted, the count ends in `+`, such as **Decisions 25+**: there are at least 25. The heading above the list shows it too, such as **12 outstanding actions**, or **25+ outstanding actions**. A count with `+` never reads below the items already loaded.
+- A **Work type** button shows its count the same way. Tasks and approvals are counted in full. On **Team**, approvals are not. **All** and **Team** count the weekly plans of you and your teammates.
 - **"{shown} of {considered} items loaded"**: how far you are, plus "{cards} cards on screen" for a group.
 - "{kinds} may have more items than this list shows", such as "Possible duplicates (200+)": nobody knows the total. Each load checks a fixed number of these, and the list stops there.
-- **"{count} sources did not load"**: the list may not be complete, even after the last row. **All** leaves weekly plans out, so the count for Today ends in `+`.
+- **"{count} sources did not load"**: the list may not be complete, even after the last row.
 
 **Worklist incomplete** names sources that did not load; an empty list says **"No items in the sources that loaded."**
 
 ### Where are tasks due later?
 **Upcoming and backlog**, at the end of **Today**, holds tasks due in the 14 days after today. A task due later than that shows on its record until it comes within 14 days. Press it to open it. Its rows load as you move down, until it says "All upcoming work is loaded." With nothing planned it says "Nothing planned after today." Its count is not part of Today's count.
 
-A task that is late, or whose reminder is due, stays in Today. Also called: later tasks, planned work, future tasks.
+A task you or a colleague wrote without a due date waits at the end, under **No due date**, and counts here. A task Margince made without a date, such as a reply to a request, stays in Today. So does a task that is late, or whose reminder is due. Also called: later tasks, planned work, future tasks, tasks with no date.
 
 ### Change history
 
@@ -370,11 +368,13 @@ On **Home → Team** you get the team board and the coaching suggestions. The re
 
 **Team exceptions** shows money at risk, work nobody has taken, or the same thing failing again. Each row names **what it was judged against**, so you can see the bar instead of guessing it. You can take a row on from here.
 
+At **Team**, a switch above that panel opens **Close the gap**. It lists up to 20 open deals your team should work to meet its quarter goal. Behind the goal, the deals with the most weighted value come first, and a risk to the close date moves a deal up. On target, only deals whose close date is at risk are listed. A close date is at risk when it has passed, is not confirmed, keeps moving, or is within a week with no next step. **Why** lists those facts for each deal.
+
+Margince ranks a team once a day if two things hold. **Setup → Metric definitions** lists the team under **Record daily pipeline history**, for all pipelines. Every member has a goal for each month of the quarter. You see a team's list only if you may read its goal. The list shows the day it was ranked. A deal whose amount you may not see is left out, and the list says how many.
+
 Your brief and digest stay personal. **Team**, **All**, and teammate views show shared work you may read, not a colleague's private messages or personal notices. A teammate's decision keeps its owner; it is not yours.
 
-**Team work needing attention** has a row per teammate: waiting on a reply, deals at risk, past due, promises due. Unassigned work gets its own row. **Changes by Margince on your team** counts, per teammate and kind, the deals Margince changed this week, their value and how many were undone.
-
-**Coaching suggestions** has at most one suggestion per teammate: the most urgent kind, not the one with the most work.
+**Team work needing attention** has a row per teammate: waiting on a reply, deals at risk, past due, promises due. Unassigned work gets its own row. **Changes by Margince on your team** counts, per teammate and kind, the deals Margince changed this week, their value and how many were undone. **Coaching suggestions** has at most one suggestion per teammate: the most urgent kind, not the one with the most work.
 
 **Hidden from the Worklist** lists the reasons work is held back, each with what it costs you:
 - **Too old for the Worklist**: no one decided this; the sender wrote months back and nobody answered
@@ -383,7 +383,7 @@ Your brief and digest stay personal. **Team**, **All**, and teammate views show 
 - **Marked not sales work**
 - **Set aside by you**
 
-When nothing is held back, it says: "Nothing is hidden. Every waiting customer reaches a Worklist."
+When nothing is held back, it says: "Nothing is hidden. Every waiting customer reaches a Worklist." A line such as "2 private emails not checked by AI" counts waiting mail the AI may not read. That mail stays in the Worklist, ranked without the AI reading it.
 
 You can also add a note to a teammate's Worklist with **Add note** ("A short note that appears in their Worklist.").
 
