@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/capturetimeline"
+	"github.com/margince/margince/backend/internal/compose/mailhooks"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/gmail"
@@ -350,7 +351,7 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 				now:   cfg.clock(),
 			}.Ask,
 			Filer: ActivityDealFiler{},
-			Check: NewDealTopicCheck(pool, cfg.DealTopicBrain),
+			Check: NewDealTopicCheck(pool, cfg.DealTopicBrain), Hooks: mailhooks.New(ComposedExtensions),
 		}).
 		// The audience derivation, from the module that owns `activity`. It
 		// runs INSIDE the capture transaction because the audience it derives
