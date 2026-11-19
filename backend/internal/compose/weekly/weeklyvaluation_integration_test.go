@@ -59,8 +59,8 @@ func TestWeeklyClosedMoneyIsUnknownWhenAHistoricalWinCannotBePriced(t *testing.T
 	read(false)
 }
 
-// A week is valued at its last day, so a rate effective on the following
-// Monday, the day the exclusive window end names, does not price it.
+// A week is valued at its last day. A rate effective on the following Monday
+// is the day the exclusive window end names, and it does not price the week.
 func TestWeeklyMoneyIsValuedAtTheWeeksLastInstant(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.Admin()

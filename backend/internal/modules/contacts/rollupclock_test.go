@@ -3,8 +3,8 @@
 
 package contacts
 
-// One clock decides which FX rate an account's pipeline converts at, and it
-// hands over an instant: the installation's day is cut from it in SQL.
+// One clock decides which FX rate an account's pipeline converts at. It hands
+// over an instant, and SQL cuts the installation's day from it.
 
 import (
 	"testing"

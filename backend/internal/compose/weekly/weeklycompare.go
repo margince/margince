@@ -27,8 +27,8 @@ import (
 )
 
 // weekValuedAt is the instant a week is valued at: the last instant inside it.
-// The window's end is the exclusive midnight that starts the next week, and a
-// rate effective that Monday must not price a week that ended before it.
+// The window's end is the exclusive midnight that starts the next week.
+// A rate effective that Monday must not price a week that ended before it.
 // Postgres keeps microseconds, so one microsecond is the smallest step.
 func weekValuedAt(end time.Time) time.Time {
 	return end.Add(-time.Microsecond)

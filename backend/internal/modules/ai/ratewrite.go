@@ -266,11 +266,12 @@ func modelRateImage(r preparedModelRate, effDate time.Time) map[string]any {
 	}, r.band)
 }
 
-// writeModelRate does the transactional body: resolve and guard the effective
-// day against a clock sampled INSIDE the tx (so a write that waited for the pool
-// across midnight is stored against the day it commits — append-forward
-// stays true at write time), require the grant the upsert turns out to need,
-// then upsert the append-forward row and audit — all in the caller-owned tx.
+// writeModelRate does the transactional body in the caller-owned tx. It first
+// resolves and guards the effective day against a clock sampled inside the tx.
+// A write that waited for the pool across midnight is then stored against the
+// day it commits, so append-forward stays true at write time. It then requires
+// the grant the upsert turns out to need. Last it upserts the append-forward
+// row and audits it.
 func (s *RateStore) writeModelRate(ctx context.Context, tx pgx.Tx, p preparedModelRate, effectiveDate time.Time) (ModelRateRow, error) {
 	// Serialize writers of this model's sheet identity BEFORE sampling the
 	// clock: a write that waited here for a precondition-holding transaction

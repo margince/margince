@@ -95,10 +95,10 @@ export type Momentum =
   | Readonly<{ state: "quiet" }>;
 
 /**
- * Whether the buyer's wait date still pauses the deal at `now`. The server
- * ends the pause at `waitEndsAt`, the start of that day in the deal owner's
- * zone, so the page reads that instant and never re-cuts the date in the
- * viewer's zone. A server that sends no instant is read as UTC midnight.
+ * Whether the buyer's wait date still pauses the deal at `now`. The server ends
+ * the pause at `waitEndsAt`, the start of that day in the deal owner's zone.
+ * The page reads that instant. It never re-cuts the date in the viewer's zone.
+ * A server that sends no instant is read as UTC midnight.
  */
 export function waitHolds(
   waitUntil: string | null | undefined,

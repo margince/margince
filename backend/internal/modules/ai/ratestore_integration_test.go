@@ -681,8 +681,8 @@ func TestSheetHeadLeavesOutTheRowThatNamesNoModelWhilePricingStillReadsIt(t *tes
 	}
 }
 
-// Two calls on one UTC date fall on different Los Angeles days, so the report
-// lists them under different days and prices each at the rate in force on its
+// Two calls on one UTC date fall on different Los Angeles days. The report
+// lists them under different days. It prices each at the rate in force on its
 // own installation day.
 func TestCostReportDatesACallByTheInstallationDay(t *testing.T) {
 	e := setupRateStore(t)

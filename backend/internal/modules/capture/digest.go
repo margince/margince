@@ -74,11 +74,11 @@ type DigestConnRow struct {
 	LastErrorClass *string    `json:"last_sync_error_class,omitempty"`
 }
 
-// BuildDigests assembles one digest per user holding a live connection in
-// the current workspace, labelled with the installation's day at the instant
-// at and covering the window since the start of the day before. Idempotent per
-// (user, day): a re-run replaces the day's payload (the counts are as-of-now
-// truths, not increments). A day already stored keeps its label.
+// BuildDigests assembles one digest per user holding a live connection in the
+// current workspace. Each is labelled with the installation's day at the
+// instant at. It covers the window since the start of the day before.
+// Idempotent per (user, day): a re-run replaces the day's payload, because the
+// counts are as-of-now truths and not increments.
 func (r *Registry) BuildDigests(ctx context.Context, at time.Time) error {
 	return r.db.Tx(ctx, func(tx pgx.Tx) error {
 		var day string

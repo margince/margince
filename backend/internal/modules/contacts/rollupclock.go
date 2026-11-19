@@ -14,10 +14,9 @@ package contacts
 // the day from it (occurredday.TodaySQL), so no reader here picks a calendar day
 // itself.
 //
-// A package var rather than a field, matching leadSLAClock beside it: both are
-// read by free functions on a transaction rather than by methods, and threading
-// a clock through them would change every signature to say what one line says
-// here.
+// A package var rather than a field, matching leadSLAClock beside it. Both are
+// read by free functions on a transaction, not by methods. Threading a clock
+// through them would change every signature to say what one line says here.
 
 import "time"
 

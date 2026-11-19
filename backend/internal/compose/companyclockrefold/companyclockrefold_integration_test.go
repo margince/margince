@@ -131,9 +131,9 @@ func TestTheUpgradeTaskRefoldsACompanyClockStoredUnderTheOldPredicate(t *testing
 	}
 }
 
-// An install that finished the task at version 1 runs it again after the
-// migration that moved "today" to the installation zone, because the engine
-// treats a step stored at an older version as unfinished.
+// An install that finished version 1 runs the task again after the migration
+// that moved "today" to the installation zone. The engine treats a step stored
+// at an older version as unfinished.
 func TestAnInstallThatFinishedVersionOneRefoldsAfterTheNewMigration(t *testing.T) {
 	a := newAccount(t)
 	now := clocktest.Now(t)

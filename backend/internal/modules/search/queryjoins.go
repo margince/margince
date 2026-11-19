@@ -409,9 +409,9 @@ func joinEdgeCondition(edge JoinEdge) string {
 		// costs something: a stale contact is acted on, a missing one is asked
 		// about.
 		//
-		// A FUTURE ended_at is a notice period, and it is still current — the
-		// contact works there until the date arrives, in the installation's
-		// zone, the one employment.IsCurrentSQL reads.
+		// A FUTURE ended_at is a notice period and is still current. The contact
+		// works there until the date arrives. That date is judged in the
+		// installation's zone, as employment.IsCurrentSQL judges it.
 		where = append(where, fmt.Sprintf("(j.%s IS NULL OR j.%s > %s)", columnEndedAt, columnEndedAt, occurredday.TodaySQL("now()")))
 	}
 	return fmt.Sprintf("h.id IN (SELECT j.%s FROM %s j WHERE %s)",

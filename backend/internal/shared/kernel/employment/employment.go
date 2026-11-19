@@ -39,8 +39,8 @@ var employmentEndColumn = regexp.MustCompile(`^(?:[A-Za-z_][A-Za-z_0-9]*\.)?ende
 // IsCurrentSQL treats a future departure as a notice period: the contact still works there.
 // A departure day that has arrived is already over, so ending employment today
 // removes it from current-employer views immediately. Postgres owns the clock
-// because every server-side reader evaluates this rule in its transaction, and
-// the day is the installation's, the zone the picked departure day belongs to.
+// because every server-side reader evaluates this rule in its transaction. The
+// day is the installation's, the zone the picked departure day belongs to.
 // Expression callers provide status and precision explicitly; only a plain
 // ended_at column (optionally qualified) derives its sibling columns.
 // IsCurrentSQL combines assertion and date evidence. A former or unknown

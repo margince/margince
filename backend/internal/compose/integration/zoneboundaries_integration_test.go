@@ -93,13 +93,13 @@ func TestAPauseEndsAtTheStartOfItsDayInTheOwnersZone(t *testing.T) {
 }
 
 // A departure day is over when the installation's day reaches it. The database
-// clock cannot be pinned, so the zone is chosen so that its day differs from
-// the UTC day right now, whatever time the suite runs at: Kiritimati is ahead
-// of UTC and Pago Pago behind it, and one of the two always sits on another day.
+// clock cannot be pinned, so the zone is chosen to sit on another day than UTC.
+// Kiritimati is ahead of UTC and Pago Pago behind it. One of the two always
+// sits on another day, whatever time the suite runs at.
 func TestADepartureDayIsJudgedInTheInstallationZone(t *testing.T) {
 	e := Setup(t)
-	// The database clock is the one the predicate reads, so the zone and its day
-	// are asked of the same clock with plain AT TIME ZONE.
+	// The predicate reads the database clock. So the zone and its day come from
+	// that clock, with plain AT TIME ZONE.
 	var zone string
 	var today time.Time
 	inWorkspaceTx(t, e, func(ctx context.Context, tx pgx.Tx) error {

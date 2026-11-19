@@ -99,22 +99,7 @@ func scanDeal(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmcontr
 	probability, source := EffectiveWinProbability(override, overrideBy, stageProbability)
 	wireSource := crmcontracts.DealWinProbabilitySource(source)
 	d.WinProbability, d.WinProbabilitySource, d.StageWinProbability = &probability, &wireSource, &stageProbability
-	if wonReason != nil {
-		reason := crmcontracts.DealWonWithoutContractReason(*wonReason)
-		d.WonWithoutContractReason = &reason
-	}
-	if lossBasis != nil {
-		basis := crmcontracts.DealLostReasonBasis(*lossBasis)
-		d.LostReasonBasis = &basis
-	}
-	if motion != nil {
-		m := crmcontracts.DealCommercialMotion(*motion)
-		d.CommercialMotion = &m
-	}
-	if priority != nil {
-		pr := crmcontracts.DealPriority(*priority)
-		d.Priority = &pr
-	}
+	setDealEnums(&d, wonReason, lossBasis, motion, priority)
 
 	d.Id = openapi_types.UUID(id)
 	pid := openapi_types.UUID(pipelineID)
@@ -144,6 +129,26 @@ func scanDeal(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmcontr
 	stalled := IsStalled(status, d.CreatedAt, d.LastActivityAt, pauseEnds, meetingAhead, time.Now().UTC())
 	d.Stalled = &stalled
 	return d, nil
+}
+
+// setDealEnums maps the four nullable enum columns onto their wire types.
+func setDealEnums(d *crmcontracts.Deal, wonReason, lossBasis, motion, priority *string) {
+	if wonReason != nil {
+		reason := crmcontracts.DealWonWithoutContractReason(*wonReason)
+		d.WonWithoutContractReason = &reason
+	}
+	if lossBasis != nil {
+		basis := crmcontracts.DealLostReasonBasis(*lossBasis)
+		d.LostReasonBasis = &basis
+	}
+	if motion != nil {
+		m := crmcontracts.DealCommercialMotion(*motion)
+		d.CommercialMotion = &m
+	}
+	if priority != nil {
+		pr := crmcontracts.DealPriority(*priority)
+		d.Priority = &pr
+	}
 }
 
 // attachModelWritten names the deal's fields a model wrote and nobody edited

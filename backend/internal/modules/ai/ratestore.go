@@ -40,13 +40,12 @@ func (s *RateStore) SetClock(clock func() time.Time) *RateStore {
 	return s
 }
 
-// RateFor resolves the rate effective at the instant at for (provider, modelID):
-// the latest row whose effective_date is on or before the installation's day at
-// at, mirroring
-// fx_rate's as-of-date resolution (deal_advance.go). No matching row is
-// not an error: it means the call is UNPRICED, a materially different
-// signal from a 0 price (price-on-read; never fabricate a price), so the
-// caller gets (nil, nil) and decides what "unpriced" means to it.
+// RateFor resolves the rate effective at the instant at for (provider, modelID).
+// It is the latest row whose effective_date is on or before the installation's
+// day at that instant, mirroring fx_rate's as-of-date resolution. No matching
+// row is not an error. It means the call is UNPRICED, a different signal from
+// a 0 price (price-on-read; never fabricate a price). The caller gets
+// (nil, nil) and decides what "unpriced" means to it.
 func (s *RateStore) RateFor(ctx context.Context, provider, modelID string, at time.Time) (*ModelRate, error) {
 	var rate *ModelRate
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {

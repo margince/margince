@@ -34,12 +34,13 @@ const StalledThresholdDays = 60
 // "quiet 19 days" and "stalled" are different claims about the same deal.
 const QuietThresholdDays = 19
 
-// IsStalled evaluates §8.1 at one instant. waitUntil is the instant the pause
-// ends (PauseEndsSQL), never the picked date. Idle is an absolute-duration
-// comparison on UTC instants, never a calendar-day count — stable under
-// a fixed test clock, identical across zones.
-// meetingAhead is MeetingAheadSQL's answer for the deal, read in the same
-// statement as lastActivityAt.
+// IsStalled evaluates the stalled rule at one instant. A deal is stalled when it
+// is open, has no meeting ahead, has been idle longer than the threshold and is
+// not paused. waitUntil is the instant the pause ends (PauseEndsSQL), never the
+// picked date. Idle is an absolute-duration comparison on UTC instants, never a
+// calendar-day count, so it is stable under a fixed test clock and identical
+// across zones. meetingAhead is MeetingAheadSQL's answer for the deal, read in
+// the same statement as lastActivityAt.
 func IsStalled(status string, createdAt time.Time, lastActivityAt, waitUntil *time.Time, meetingAhead bool, now time.Time) bool {
 	return IsQuietFor(StalledThresholdDays, status, createdAt, lastActivityAt, waitUntil, meetingAhead, now)
 }
@@ -97,12 +98,11 @@ func quietAtSQL(alias string, days int, instant string) string {
 		columnPrefix(alias), days, idlebase.SQL(alias), MeetingAheadSQL(alias), instant, PauseEndsSQL(alias))
 }
 
-// PauseEndsSQL is the instant a deal's pause ends: the start of the picked
-// wait_until day in the owner's own time zone, or in the installation's when
-// the owner has none. The database function deal_pause_ends_at holds the rule
-// and answers null without a pause. Every reader of the pause reads this and
-// compares the instant, so no reader cuts the day at UTC midnight on its own. The owner, not the viewer, so a list, a report and the
-// worker all judge one deal alike.
+// PauseEndsSQL is the instant a deal's pause ends. That is the start of the
+// picked wait_until day in the owner's own time zone. The installation's zone
+// applies when the owner has none. The function deal_pause_ends_at holds the rule.
+// Every reader compares this instant, so none cuts the day at UTC midnight.
+// The zone is the owner's, not the viewer's, so all readers judge one deal alike.
 func PauseEndsSQL(alias string) string {
 	if alias == "" {
 		alias = dealTable
