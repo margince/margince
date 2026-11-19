@@ -16,6 +16,7 @@ import { Modal } from "../design-system/modal";
 import { LocaleProvider } from "../i18n";
 import { navigate, useHash } from "../lib/router";
 import {
+  BesidePage,
   UnsavedExits,
   UnsavedGuard,
   useBeforeUnload,
@@ -440,6 +441,42 @@ function SignOutBeside({
   );
 }
 
+// Stable, as a claim's `save` must be.
+const savesAtOnce = async () => true;
+
+// The docked composer's shape: a draft that outlives the page beside it.
+function DockedDraft() {
+  const [typed, setTyped] = useState("");
+  useUnsavedGuard(typed !== "");
+  return (
+    <label>
+      Message
+      <input value={typed} onChange={(event) => setTyped(event.target.value)} />
+    </label>
+  );
+}
+
+function SignOutBesideADock({
+  signOut,
+  withPage = true,
+}: Readonly<{ signOut: () => void; withPage?: boolean }>) {
+  return (
+    <LocaleProvider>
+      <UnsavedExits>
+        <SignOutButton signOut={signOut} />
+        <BesidePage>
+          <DockedDraft />
+        </BesidePage>
+        {withPage && (
+          <UnsavedGuard address="first" onKeep={() => undefined}>
+            {() => <SaveableCard save={savesAtOnce} />}
+          </UnsavedGuard>
+        )}
+      </UnsavedExits>
+    </LocaleProvider>
+  );
+}
+
 function SignOutButton({ signOut }: Readonly<{ signOut: () => void }>) {
   const askFirst = useExitAsking();
   return (
@@ -498,6 +535,63 @@ describe("useExitAsking", () => {
 
     await waitFor(() => expect(signOut).toHaveBeenCalledTimes(1));
     expect(save).toHaveBeenCalledTimes(1);
+  });
+
+  it("asks over a draft beside a clean page, and only while it holds words", async () => {
+    const user = userEvent.setup();
+    const signOut = vi.fn();
+    render(<SignOutBesideADock signOut={signOut} />);
+    await user.click(screen.getByRole("button", { name: "sign out" }));
+    expect(signOut).toHaveBeenCalledTimes(1);
+    expect(dialog()).toBeNull();
+
+    await user.type(screen.getByRole("textbox", { name: /Message/ }), "Hi");
+    await user.click(screen.getByRole("button", { name: "sign out" }));
+    expect(dialog()).not.toBeNull();
+    await user.click(screen.getByRole("button", { name: "Discard changes" }));
+    expect(signOut).toHaveBeenCalledTimes(2);
+  });
+
+  it("offers no Save while a draft beside the page would be lost", async () => {
+    const user = userEvent.setup();
+    const signOut = vi.fn();
+    render(<SignOutBesideADock signOut={signOut} />);
+    await user.type(screen.getByRole("textbox", { name: /Name/ }), "Jane");
+    await user.type(screen.getByRole("textbox", { name: /Message/ }), "Hi");
+    await user.click(screen.getByRole("button", { name: "sign out" }));
+
+    expect(dialog()).not.toBeNull();
+    expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
+    expect(signOut).not.toHaveBeenCalled();
+  });
+
+  it("asks over a draft beside the page while no page guard is mounted", async () => {
+    const user = userEvent.setup();
+    const signOut = vi.fn();
+    render(<SignOutBesideADock signOut={signOut} withPage={false} />);
+    await user.type(screen.getByRole("textbox", { name: /Message/ }), "Hi");
+    await user.click(screen.getByRole("button", { name: "sign out" }));
+    expect(signOut).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Discard changes" }));
+    expect(signOut).toHaveBeenCalledTimes(1);
+  });
+
+  it("lets a draft beside the page hold no move between pages", async () => {
+    const user = userEvent.setup();
+    render(
+      <LocaleProvider>
+        <UnsavedExits>
+          <BesidePage>
+            <DockedDraft />
+          </BesidePage>
+          <Page />
+        </UnsavedExits>
+      </LocaleProvider>,
+    );
+    await user.type(screen.getByRole("textbox", { name: /Message/ }), "Hi");
+    await user.click(screen.getByRole("button", { name: "go second" }));
+    expect(await screen.findByText("Second page")).toBeInTheDocument();
+    expect(dialog()).toBeNull();
   });
 
   it("runs the exit at once where no guard is installed", async () => {

@@ -7,6 +7,7 @@ import {
   useEffect,
   useId,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -18,6 +19,7 @@ import { navigate, type Route, useLiveHash } from "../lib/router";
 import {
   type Saver,
   UnsavedContext,
+  type UnsavedRegistry,
   useHasUnsavedChanges,
   useUnsavedGuard,
   useUnsavedRegistry,
@@ -131,29 +133,86 @@ export function useBeforeUnload(dirty: boolean): void {
 type AskThen = (exit: () => void) => void;
 
 // The guard's way to ask, for controls outside it: the account menu sits beside
-// the routed screen, not inside it. A ref, so a claim re-renders no shell.
-const ExitContext = createContext<RefObject<AskThen | null> | null>(null);
+// the routed screen, not inside it. Refs, so a claim re-renders no shell.
+type Exits = Readonly<{
+  ask: RefObject<AskThen | null>;
+  /** Makes `asking` the page guard's way to ask, and returns its release. */
+  holdAsk: (asking: AskThen) => () => void;
+  /** Whether a draft beside the page, such as the docked composer, is unkept. */
+  beside: RefObject<boolean>;
+  askBeside: AskThen;
+}>;
+const ExitContext = createContext<Exits | null>(null);
+const BesideContext = createContext<UnsavedRegistry | null>(null);
 
 /** Wraps the `UnsavedGuard` and the controls beside it that `useExitAsking` serves. */
 export function UnsavedExits({ children }: Readonly<{ children: ReactNode }>) {
   const ask = useRef<AskThen | null>(null);
-  return <ExitContext.Provider value={ask}>{children}</ExitContext.Provider>;
+  const beside = useRef(false);
+  const claims = useUnsavedRegistry(null);
+  useLayoutEffect(() => {
+    beside.current = claims.dirty;
+  }, [claims.dirty]);
+  // Asked here only while no page guard is mounted, such as between screens.
+  const [pending, setPending] = useState<(() => void) | null>(null);
+  const exits = useMemo<Exits>(
+    () => ({
+      ask,
+      beside,
+      holdAsk: (asking) => {
+        ask.current = asking;
+        return () => {
+          if (ask.current === asking) ask.current = null;
+        };
+      },
+      askBeside: (then) => setPending(() => then),
+    }),
+    [],
+  );
+  return (
+    <ExitContext.Provider value={exits}>
+      <BesideContext.Provider value={claims}>{children}</BesideContext.Provider>
+      <LeaveQuestion
+        open={pending !== null}
+        savers={[]}
+        onStay={() => setPending(null)}
+        onLeave={() => {
+          setPending(null);
+          pending?.();
+        }}
+      />
+    </ExitContext.Provider>
+  );
+}
+
+/**
+ * Claims made below it hold Sign out but no move between pages. The docked
+ * composer sits here, because its message outlives the page that opened it.
+ */
+export function BesidePage({ children }: Readonly<{ children: ReactNode }>) {
+  const claims = useContext(BesideContext);
+  return claims ? (
+    <UnsavedContext.Provider value={claims}>{children}</UnsavedContext.Provider>
+  ) : (
+    children
+  );
 }
 
 /**
  * Runs an exit that does not move the address, such as Sign out, once the
- * page's drafts are settled. It runs at once when nothing is unsaved, and
- * otherwise after the question a move off the page asks.
+ * drafts are settled: the page's and those beside it. It runs at once when
+ * nothing is unsaved, and otherwise after the question a move off the page asks.
  */
 export function useExitAsking(): AskThen {
-  const askRef = useContext(ExitContext);
+  const exits = useContext(ExitContext);
   return useCallback(
     (exit: () => void) => {
-      const guard = askRef?.current;
+      const guard = exits?.ask.current;
       if (guard) guard(exit);
+      else if (exits?.beside.current) exits.askBeside(exit);
       else exit();
     },
-    [askRef],
+    [exits],
   );
 }
 
@@ -193,26 +252,29 @@ export function UnsavedGuard<Address extends string>({
 
   const asking = address !== shown.address && dirty;
 
-  const exitsRef = useContext(ExitContext);
-  const [exit, setExit] = useState<(() => void) | null>(null);
+  const exits = useContext(ExitContext);
+  // `savable` is false while a draft beside the page is unkept: Save would
+  // write the page and leave that draft to be lost.
+  const [exit, setExit] = useState<{
+    run: () => void;
+    savable: boolean;
+  } | null>(null);
   useLayoutEffect(() => {
-    if (!exitsRef) return;
+    if (!exits) return;
     const ask: AskThen = (then) => {
-      if (dirty) setExit(() => then);
+      const beside = exits.beside.current;
+      if (dirty || beside) setExit({ run: then, savable: !beside });
       else then();
     };
-    exitsRef.current = ask;
-    return () => {
-      if (exitsRef.current === ask) exitsRef.current = null;
-    };
-  }, [exitsRef, dirty]);
+    return exits.holdAsk(ask);
+  }, [exits, dirty]);
 
   return (
     <UnsavedContext.Provider value={registry}>
       {children(shown.address)}
       <LeaveQuestion
         open={asking || exit !== null}
-        savers={registry.savers}
+        savers={exit?.savable === false ? [] : registry.savers}
         onStay={
           exit ? () => setExit(null) : () => onKeep(shown.address, shown.depth)
         }
@@ -220,7 +282,7 @@ export function UnsavedGuard<Address extends string>({
           exit
             ? () => {
                 setExit(null);
-                exit();
+                exit.run();
               }
             : () => setShown({ address, depth: entryDepth() })
         }
