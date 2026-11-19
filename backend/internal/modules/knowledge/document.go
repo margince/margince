@@ -196,16 +196,9 @@ func (s *Store) readyUpload(ctx context.Context, in *NewDocument) (string, strin
 	if s.blob == nil {
 		return "", "", 0, ErrBlobstoreUnconfigured
 	}
-	// The name a contact TYPED, made safe — the same call every other uploaded
-	// name in this tree goes through. It is presentational only (nothing opens
-	// a file by it) but it is read back in a citation, a list and an ingest
-	// failure, and a path separator or a bidirectional override in it rewrites
-	// whichever of those quotes it.
-	//
-	// Normalised HERE, above the type check, rather than after it: the 415
-	// detail quotes this name when no media type could be derived, so a
-	// refusal is one of the surfaces that reads it back. Sanitising afterwards
-	// left the one path that handles hostile input quoting it raw.
+	// Made safe the way every uploaded name is: it is read back in a citation,
+	// a list and an ingest failure. The type check reads its ending, so the
+	// check and the stored name see one spelling.
 	in.Filename = extension.SafeFilename(in.Filename, 0)
 
 	media, ok := acceptedType(in.ContentType, in.Filename)

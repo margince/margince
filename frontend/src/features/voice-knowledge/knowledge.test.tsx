@@ -522,6 +522,44 @@ describe("KnowledgeCard", () => {
     ).toBeInTheDocument();
   });
 
+  it("keeps a file the server could not take just now, for a retry", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor(ADMIN, {
+        refuse: {
+          upload: () =>
+            jsonResponse(
+              {
+                type: "about:blank",
+                title: "Service unavailable",
+                status: 503,
+                code: "service_unavailable",
+                detail: "Try again in a moment.",
+              },
+              503,
+            ),
+        },
+      }).fetchMock,
+    );
+    const user = userEvent.setup();
+    render(<KnowledgeCard />);
+
+    await user.click(
+      await screen.findByRole("button", { name: "Documents in How-to" }),
+    );
+    await user.upload(
+      await screen.findByLabelText(/add document/i),
+      new File(["# Notes"], "notes.md", { type: "text/markdown" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Add document" }));
+
+    expect(await screen.findByText(/^notes\.md: /)).toBeInTheDocument();
+    expect(screen.getByText("notes.md")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Add document" }),
+    ).not.toBeDisabled();
+  });
+
   it("says what a document may be before one is chosen", async () => {
     vi.stubGlobal("fetch", backendFor(ADMIN).fetchMock);
     render(<KnowledgeCard />);

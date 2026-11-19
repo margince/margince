@@ -23,7 +23,7 @@ func TestTheTemplateHeaderShowsALabelAndTheReadmeListsTheOptions(t *testing.T) {
 		Version: crmcontracts.ImportFormatVersionMarginceImport1, SizeLimitMb: 10,
 		Order: []crmcontracts.ImportObject{crmcontracts.ImportObjectCompany},
 		Files: []crmcontracts.ImportFormatFile{
-			{File: "companies.csv", Object: crmcontracts.ImportObjectCompany, KeyColumns: []string{"display_name", "ref"}, Columns: []crmcontracts.ImportFormatColumn{
+			{File: "companies.csv", Object: crmcontracts.ImportObjectCompany, KeyColumns: &[]string{"display_name", "ref"}, Columns: []crmcontracts.ImportFormatColumn{
 				{Name: "ref", Description: "Your key", Example: "CO-1"},
 				{Name: "cf_tier", Label: new("Tier"), Custom: true, Type: new("picklist"), Options: &[]string{"A", "B"}, Description: "x", Example: "A"},
 				{Name: "cf_note", Label: new("Note, internal"), Custom: true, Description: "y", Example: "z"},

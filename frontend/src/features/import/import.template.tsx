@@ -95,10 +95,12 @@ function TemplateBody({ format }: Readonly<{ format: ImportFormat }>) {
 // One key column alone wears the dot; a choice of several is said in words.
 function KeyColumns({ file }: Readonly<{ file: FormatFile }>) {
   const t = useT();
-  if (file.key_columns.length < 2) {
+  // A server older than the field sends none, and then the dots say it all.
+  const keys = file.key_columns ?? [];
+  if (keys.length < 2) {
     return null;
   }
-  const names = file.key_columns.map(
+  const names = keys.map(
     (key) => file.columns.find((column) => column.name === key)?.label ?? key,
   );
   return (

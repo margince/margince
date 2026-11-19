@@ -92,7 +92,7 @@ func formatFrom(cats map[string]importCatalog, spoken langcopy.Spoken, capMB int
 		f.Order = append(f.Order, crmcontracts.ImportObject(object))
 		f.Files = append(f.Files, crmcontracts.ImportFormatFile{
 			File: migration.FileNameFor(object), Object: crmcontracts.ImportObject(object), Columns: columns,
-			KeyColumns: rowKeyTargets(object),
+			KeyColumns: new(rowKeyTargets(object)),
 		})
 	}
 	return f, nil

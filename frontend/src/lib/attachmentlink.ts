@@ -9,8 +9,10 @@ type AttachmentAnchor =
 const WEB_ADDRESS = /^https?:\/\//i;
 
 /** The name a file goes by on screen: the title someone gave it, or its filename. */
-export function attachmentTitle(file: Attachment): string {
-  return file.title || file.filename;
+export function attachmentTitle(
+  file: Readonly<{ title?: string | null; filename?: string | null }>,
+): string {
+  return file.title || file.filename || "";
 }
 
 // Where a document row's name points. A file downloads from the API. A link row

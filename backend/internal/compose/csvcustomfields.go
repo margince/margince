@@ -171,29 +171,48 @@ func suggestImportMapping(p migration.Profile, object string, targets []string, 
 	}
 	out := make(map[string]string, len(headersOf))
 	for target, headers := range headersOf {
-		if len(headers) == 1 && (target != csvTargetID || namesMarginceIDs(p, headers[0])) {
+		fits, guarded := sampleGuards[target]
+		if len(headers) == 1 && (!guarded || samplesFit(p, headers[0], fits)) {
 			out[headers[0]] = target
 		}
 	}
 	return out
 }
 
-// namesMarginceIDs reports whether every sampled value of a column is a
-// Margince ID. Another system's "ID" column would otherwise skip every row as
-// naming no record.
-func namesMarginceIDs(p migration.Profile, header string) bool {
+// sampleGuards are the targets a header names but a value can refuse. Another
+// CRM's "ID" names no Margince record, and a headcount of plain numbers is no
+// size band, so either would skip every row.
+var sampleGuards = map[string]func(string) bool{
+	csvTargetID:   isMarginceID,
+	fieldSizeBand: func(value string) bool { return importableSizeBands[value] },
+}
+
+// isMarginceID reports a version-7 UUID, the only kind ids.NewV7 mints. Another
+// CRM's GUIDs are mostly version 4.
+func isMarginceID(value string) bool {
+	id, err := ids.Parse(value)
+	return err == nil && id[6]>>4 == 7
+}
+
+// samplesFit reports whether a column has a sampled value and every one fits.
+func samplesFit(p migration.Profile, header string, fits func(string) bool) bool {
+	seen := false
 	for _, col := range p.Columns {
 		if col.Header != header {
 			continue
 		}
 		for _, sample := range col.Samples {
 			value := strings.TrimSpace(sample)
-			if _, err := ids.Parse(value); value != "" && err != nil {
+			if value == "" {
+				continue
+			}
+			if !fits(value) {
 				return false
 			}
+			seen = true
 		}
 	}
-	return true
+	return seen
 }
 
 // suggestionsByObject is the mapping suggested for each of objects, keyed by object.

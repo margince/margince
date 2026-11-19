@@ -690,9 +690,9 @@ func TestAnUploadWithNoContentTypeIsReadByItsFilename(t *testing.T) {
 	}
 }
 
-// A STATED type stands, wrong extension or not: it is the client's claim, and
-// a filename is only a name.
-func TestAStatedContentTypeIsNotOverriddenByTheExtension(t *testing.T) {
+// A readable ending names the type, so a PDF renamed .md is refused by its
+// bytes, which contradict the type its name claims.
+func TestAPDFNamedAsMarkdownIsRefusedByItsBytes(t *testing.T) {
 	ie := newIngestEnv(t)
 	_, err := ie.store.UploadDocument(ie.ctx, knowledge.NewDocument{
 		CorpusID:    ie.corpus,

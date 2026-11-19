@@ -88,10 +88,11 @@ func TestTheFormatNamesEachFileSoAnUploadDetectsIt(t *testing.T) {
 			t.Errorf("%s is detected as %q, want %s", file.File, got, file.Object)
 		}
 		// The key columns are what partMappingFrom takes: any one alone, none refused.
-		for _, key := range append(file.KeyColumns, csvTargetAuthor) {
+		keys := *file.KeyColumns
+		for _, key := range append(slices.Clone(keys), csvTargetAuthor) {
 			_, err := partMappingFrom(string(file.Object), map[string]string{"key": key}, nil, importCatalog{})
-			if (err == nil) != slices.Contains(file.KeyColumns, key) {
-				t.Errorf("%s with only %s: err %v, key columns %v", file.File, key, err, file.KeyColumns)
+			if (err == nil) != slices.Contains(keys, key) {
+				t.Errorf("%s with only %s: err %v, key columns %v", file.File, key, err, keys)
 			}
 		}
 	}

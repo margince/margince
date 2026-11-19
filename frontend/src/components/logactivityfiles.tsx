@@ -13,10 +13,11 @@ import { useLocale, useT } from "../i18n";
 import {
   ACCEPTED_ATTACHMENT_ATTR,
   ACCEPTED_ATTACHMENT_EXTENSIONS,
+  ACCEPTED_ATTACHMENT_MEDIA_TYPES,
   uploadAttachment,
 } from "../lib/attachmentupload";
 import { useCanWrite } from "../lib/capability";
-import { ProblemError, problemMessageOf, unwrap } from "../lib/problem";
+import { problemMessageOf, refusedForGood, unwrap } from "../lib/problem";
 import {
   formatUploadLimit,
   useMaxUploadBytes,
@@ -48,16 +49,6 @@ function picked(file: File): PickedFile {
 
 // Only a 4xx answer proves nothing was stored. Any other failure may have
 // come after the server committed the file.
-function refusedByServer(error: unknown): boolean {
-  if (!(error instanceof ProblemError)) return false;
-  const { problem } = error;
-  const status =
-    typeof problem === "object" && problem !== null && "status" in problem
-      ? problem.status
-      : undefined;
-  return typeof status === "number" && status >= 400 && status < 500;
-}
-
 async function sha256Hex(file: File): Promise<string> {
   const digest = await crypto.subtle.digest(
     "SHA-256",
@@ -127,7 +118,7 @@ export async function attachLoggedFiles(
       );
       completed?.add(file);
     } catch (error) {
-      if (refusedByServer(error)) {
+      if (refusedForGood(error)) {
         refused.push({ filename: file.name, error, uncertain: false });
       } else {
         unanswered.push({ file, error });
@@ -224,6 +215,11 @@ export function LogActivityFilesField(props: FieldProps) {
   return permitted ? <FilesPicker {...props} /> : null;
 }
 
+const ATTACHMENT_KINDS = {
+  extensions: ACCEPTED_ATTACHMENT_EXTENSIONS,
+  mediaTypes: ACCEPTED_ATTACHMENT_MEDIA_TYPES,
+};
+
 function FilesPicker({ files, onChange, disabled }: FieldProps) {
   const t = useT();
   const { locale } = useLocale();
@@ -231,7 +227,7 @@ function FilesPicker({ files, onChange, disabled }: FieldProps) {
   const limitLabel = maxBytes ? formatUploadLimit(maxBytes, locale) : "";
   const refusalOf = usePickRefusal({
     maxBytes,
-    extensions: ACCEPTED_ATTACHMENT_EXTENSIONS,
+    kinds: ATTACHMENT_KINDS,
   });
   // One line per file, because a drop of several can refuse several. Refused
   // here, before the activity exists, so none of them waits for Log.

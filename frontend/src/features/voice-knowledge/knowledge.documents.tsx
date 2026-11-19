@@ -33,7 +33,7 @@ import {
 } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { postMultipart } from "../../lib/multipart";
-import { throwProblem, unwrap } from "../../lib/problem";
+import { refusedForGood, throwProblem, unwrap } from "../../lib/problem";
 import { useInstallationSettings, usePickRefusal } from "../../lib/uploadlimit";
 import { useViewerZone } from "../../lib/viewerzone";
 import {
@@ -427,8 +427,7 @@ function UploadDocument({ corpusId }: Readonly<{ corpusId: string }>) {
     maxBytes: useInstallationSettings().data?.max_knowledge_document_bytes,
   });
 
-  // A file the server would refuse never waits in the zone: it is named in the
-  // refusals as it is dropped.
+  // A file the server would refuse is named as it is dropped, never held.
   const pick = (file: File) => {
     const message = refusalOf(file);
     const others = (shown: readonly UploadRefusal[]) =>
@@ -451,10 +450,13 @@ function UploadDocument({ corpusId }: Readonly<{ corpusId: string }>) {
     setRefusals([]);
     const sent = files;
     const refused: UploadRefusal[] = [];
+    const retry: File[] = [];
     for (const file of sent) {
       try {
         await upload.mutateAsync({ corpusId, file });
       } catch (err) {
+        // A file that may pass when sent again stays in the zone for a retry.
+        if (!refusedForGood(err)) retry.push(file);
         // One bad file does not abandon the rest of the drop.
         refused.push({
           id: fileIdentity(file),
@@ -464,8 +466,10 @@ function UploadDocument({ corpusId }: Readonly<{ corpusId: string }>) {
       }
     }
     // A refused file is named below, so it leaves the zone with the rest. One
-    // added mid-send was not sent and stays.
-    setFiles((held) => held.filter((one) => !sent.includes(one)));
+    // added mid-send was not sent and stays, and so does one worth a retry.
+    setFiles((held) =>
+      held.filter((one) => !sent.includes(one) || retry.includes(one)),
+    );
     setRefusals(refused);
     setSending(false);
   };

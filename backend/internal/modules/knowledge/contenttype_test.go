@@ -39,6 +39,23 @@ func TestARefusedFileIsNamedByItsKindInPlainWords(t *testing.T) {
 	}
 }
 
+// A browser types a file by its own registry, so a readable ending is filed as
+// what it is whatever type rode along.
+func TestAReadableEndingIsFiledAsItsOwnTypeWhateverTheBrowserSent(t *testing.T) {
+	t.Parallel()
+	for _, c := range []struct{ contentType, filename, want string }{
+		{"application/vnd.ms-excel", "data.csv", "text/csv"},
+		{"text/x-markdown", "notes.md", "text/markdown"},
+		{"", "notes.MD", "text/markdown"},
+		{"application/octet-stream", "faq.json", "application/json"},
+		{"text/plain; charset=utf-8", "readme", "text/plain"},
+	} {
+		if media, ok := acceptedType(c.contentType, c.filename); !ok || media != c.want {
+			t.Errorf("%s sent as %q = %q (accepted %v), want %s", c.filename, c.contentType, media, ok, c.want)
+		}
+	}
+}
+
 func TestAnEmptyFileIsRefusedWithAReasonTheUploaderCanActOn(t *testing.T) {
 	t.Parallel()
 	field, code, message := (&EmptyDocumentError{}).FieldFault()

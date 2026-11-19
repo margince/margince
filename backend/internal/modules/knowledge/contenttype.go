@@ -135,14 +135,15 @@ func (e *AlreadyFiledError) Error() string {
 // answering it as a validation failure would send them off to fix their file.
 var ErrBlobstoreUnconfigured = errors.New("knowledge: object storage is not configured; a document cannot be stored")
 
-// acceptedType decides the media type an upload is filed under. It drops a
-// Content-Type's parameters, and reads the filename only when the client stated
-// no type: a browser with no `.md` entry sends none. A stated type stands.
+// acceptedType decides the media type an upload is filed under. An ending this
+// route reads wins over the stated type, as an attachment's does: a browser
+// sends `.csv` as an Excel type and `.md` as `text/x-markdown` or nothing. The
+// bytes are still sniffed against the type, so a renamed binary is refused.
 func acceptedType(contentType, filename string) (string, bool) {
-	media := strings.ToLower(strings.TrimSpace(strings.SplitN(contentType, ";", 2)[0]))
-	if media == "" || media == "application/octet-stream" {
-		media = typeByExtension(filename)
+	if named := typeByExtension(filename); named != "" {
+		return named, true
 	}
+	media := strings.ToLower(strings.TrimSpace(strings.SplitN(contentType, ";", 2)[0]))
 	return media, slices.Contains(acceptedContentTypes, media)
 }
 

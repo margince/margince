@@ -4614,7 +4614,6 @@
                   "required": [
                     "columns",
                     "file",
-                    "key_columns",
                     "object"
                   ]
                 }

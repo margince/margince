@@ -84,10 +84,19 @@ export function formatUploadLimit(bytes: number, locale: Locale): string {
 /** What a picked file is held to before it is sent. Unset, a rule is the server's alone. */
 export type PickRules = Readonly<{
   maxBytes: number | undefined;
-  // The picker's `accept` endings, lower case with their dot. A drop skips that
-  // filter, so the same list is applied to it here.
-  extensions?: readonly string[];
+  // The kinds the server keeps, read as it reads them. A declared type must be
+  // in `mediaTypes`; a file with none needs an ending in `extensions`.
+  kinds?: Readonly<{
+    extensions: readonly string[];
+    mediaTypes: readonly string[];
+  }>;
 }>;
+
+// The declared type without its parameters, or "" when it says nothing.
+function declaredTypeOf(file: File): string {
+  const media = (file.type.split(";")[0] ?? "").trim().toLowerCase();
+  return media === "application/octet-stream" ? "" : media;
+}
 
 // The last ".ending" of a name, as the server reads it, or "" for none.
 function endingOf(filename: string): string {
@@ -115,8 +124,13 @@ export function usePickRefusal(
         size: formatUploadLimit(rules.maxBytes, locale),
       });
     }
-    if (rules.extensions && !rules.extensions.includes(endingOf(file.name))) {
-      return t("files.pick.unsupported");
+    if (rules.kinds) {
+      const declared = declaredTypeOf(file);
+      const kept =
+        declared === ""
+          ? rules.kinds.extensions.includes(endingOf(file.name))
+          : rules.kinds.mediaTypes.includes(declared);
+      if (!kept) return t("files.pick.unsupported");
     }
     return null;
   };

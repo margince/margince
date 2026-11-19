@@ -52503,8 +52503,9 @@ type ImportFormatFile struct {
 
 	// KeyColumns The columns that tell this file's rows apart. A file needs at
 	// least one of them mapped, or the test run does not start, unless
-	// the request names its own `source_key` column.
-	KeyColumns []string `json:"key_columns"`
+	// the request names its own `source_key` column. Absent from a
+	// server older than this field.
+	KeyColumns *[]string `json:"key_columns,omitempty"`
 
 	// Object What the file's rows are, and therefore what the run creates.
 	//
