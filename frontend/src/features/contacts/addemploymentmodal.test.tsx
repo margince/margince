@@ -156,3 +156,21 @@ it("adds a past job as former, with the end date it was given", async () => {
     is_current_primary: false,
   });
 });
+
+it("drops a past end date when the role turns current, and keeps a coming one", async () => {
+  const user = openAddCompany();
+  await user.click(await screen.findByRole("button", { name: "Add company" }));
+  const dialog = screen.getByRole("dialog");
+  await chooseStatus(user, "Former");
+  await user.type(within(dialog).getByLabelText("End date"), "2019-03");
+  await chooseStatus(user, "Current");
+  expect(within(dialog).getByLabelText("End date")).toHaveProperty("value", "");
+
+  await user.type(within(dialog).getByLabelText("End date"), "2999-03");
+  await chooseStatus(user, "Former");
+  await chooseStatus(user, "Current");
+  expect(within(dialog).getByLabelText("End date")).toHaveProperty(
+    "value",
+    "2999-03",
+  );
+});
