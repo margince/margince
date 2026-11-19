@@ -16,7 +16,7 @@ export function TaskName({
   mode,
   summary,
   details,
-  nameId,
+  inTitle = false,
 }: Readonly<{
   name: string;
   // The task's key, as the contract and the calls log spell it.
@@ -26,26 +26,28 @@ export function TaskName({
   summary: string | undefined;
   // What else the reader may want behind the name, below what the task does.
   details?: ReactNode;
-  // Names a dialog by this task. The id sits on the name alone, so the
-  // trigger's "what it does" phrasing never names the dialog.
-  nameId?: string;
+  // A dialog's title is named by its content, so there the trigger says the
+  // name alone and the dialog reads the task's name, not "what it does".
+  inTitle?: boolean;
 }>) {
   const t = useT();
   if (!summary && details == null && task === name) {
-    return <span id={nameId}>{name}</span>;
+    return <span>{name}</span>;
   }
   return (
     <Popover
       className="evmark-trigger"
       label={
-        <>
-          <span id={nameId} aria-hidden>
-            {name}
-          </span>
-          <span className="sr-only">
-            {t("aiTasks.whatItDoes", { task: name })}
-          </span>
-        </>
+        inTitle ? (
+          name
+        ) : (
+          <>
+            <span aria-hidden>{name}</span>
+            <span className="sr-only">
+              {t("aiTasks.whatItDoes", { task: name })}
+            </span>
+          </>
+        )
       }
     >
       {summary ? <p>{summary}</p> : null}

@@ -342,7 +342,7 @@ describe("TaskSheet", () => {
 
     await user.click(
       within(sheet).getByRole("button", {
-        name: "Thread confidentiality check: what it does",
+        name: "Thread confidentiality check",
       }),
     );
 

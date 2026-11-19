@@ -181,17 +181,13 @@ export function TaskSheet({
       unsaved={changed}
     >
       <DrawerHead>
-        <Heading
-          size="large"
-          className="t-h2 modal-title"
-          aria-labelledby={titleId}
-        >
+        <Heading size="large" id={titleId} className="t-h2 modal-title">
           <TaskName
             name={aiTaskLabel(route.task, t, route.display_name)}
             task={route.task}
             mode={mode}
             summary={route.summary}
-            nameId={titleId}
+            inTitle
           />
         </Heading>
         <p className="t-caption">

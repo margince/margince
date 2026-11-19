@@ -79,8 +79,8 @@ test.beforeEach(async ({ page }) => {
 });
 
 /** The aside a task name opens, named by the trigger that opened it. */
-function popoverOf(page: Page) {
-  return page.getByRole("region", { name: `${NAME}: what it does` });
+function popoverOf(page: Page, trigger: string) {
+  return page.getByRole("region", { name: trigger, exact: true });
 }
 
 test("names an AI task by its name, with what it does and its key behind it", async ({
@@ -94,7 +94,7 @@ test("names an AI task by its name, with what it does and its key behind it", as
   await row
     .getByRole("button", { name: `${NAME}: what it does`, exact: true })
     .click();
-  const aside = popoverOf(page);
+  const aside = popoverOf(page, `${NAME}: what it does`);
   await expect(aside).toContainText(SUMMARY);
   await expect(aside.locator("code", { hasText: TASK })).toBeVisible();
   await page.screenshot({ path: test.info().outputPath("tasks-popover.png") });
@@ -108,10 +108,9 @@ test("names an AI task by its name, with what it does and its key behind it", as
   await expect(sheet).not.toContainText("cheap_cloud");
   await page.screenshot({ path: test.info().outputPath("sheet.png") });
 
-  await sheet
-    .getByRole("button", { name: `${NAME}: what it does`, exact: true })
-    .click();
-  const sheetAside = popoverOf(page);
+  // In the title the trigger says the name alone, so it names the dialog.
+  await sheet.getByRole("button", { name: NAME, exact: true }).click();
+  const sheetAside = popoverOf(page, NAME);
   await expect(sheetAside).toContainText(SUMMARY);
   await expect(sheetAside).toContainText(`${TASK} · While the user waits`);
   await page.screenshot({ path: test.info().outputPath("sheet-popover.png") });

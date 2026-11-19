@@ -367,16 +367,12 @@ export function CallDrawer({
       }
     >
       <DrawerHead>
-        <Heading
-          size="large"
-          className="t-h2 modal-title"
-          aria-labelledby={titleId}
-        >
+        <Heading size="large" id={titleId} className="t-h2 modal-title">
           <TaskName
             name={aiTaskLabel(call.task, t, call.task_display_name)}
             task={call.task}
             summary={undefined}
-            nameId={titleId}
+            inTitle
           />
         </Heading>
         <div className="aicalls-drawer-meta">

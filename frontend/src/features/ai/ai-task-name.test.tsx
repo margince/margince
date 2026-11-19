@@ -3,6 +3,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
+import { Heading } from "../../design-system/heading";
 import { LocaleProvider } from "../../i18n";
 import { TaskName } from "./ai-task-name";
 
@@ -72,21 +73,26 @@ describe("TaskName", () => {
     expect(await screen.findByText("nightly_batch")).toBeInTheDocument();
   });
 
-  it("names a dialog by the task name alone", () => {
+  it("names a dialog titled by it with the task name alone", () => {
     renderName(
       <div role="dialog" aria-labelledby="sheet-title">
-        <TaskName
-          name="Assessing a sales report"
-          task="report_interpret"
-          summary="Reads a sales report and says what it shows."
-          nameId="sheet-title"
-        />
+        <Heading size="large" id="sheet-title">
+          <TaskName
+            name="Assessing a sales report"
+            task="report_interpret"
+            summary="Reads a sales report and says what it shows."
+            inTitle
+          />
+        </Heading>
       </div>,
     );
 
     expect(
       screen.getByRole("dialog", { name: "Assessing a sales report" }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Assessing a sales report" }),
+    ).toHaveAttribute("aria-expanded", "false");
   });
 
   it("is plain text when the name is the key and there is nothing to say", () => {
