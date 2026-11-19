@@ -120,8 +120,8 @@ Also called: restore a lead, undo a disqualification.
 
 ### How do I edit a lead?
 To edit a lead in Margince, open it from **Leads** and press **Edit** in a section of its **Details** panel. The sections are **About**, **Email and phone**, **Ownership** and **Registration**. Each **Edit** opens a dialog with only the fields of its section.
-1. Press **Edit** in the section, change the fields in the dialog, and press **Save**. Nothing is stored until **Save**; **Cancel** or Esc closes without saving. To rename the lead, press the name at the top. Pressing the **Email** address starts a message.
-2. **About** holds **Company**, **Title**, **Industry**, **Project** and **Product**. **Email and phone** holds **Email** and **Phone**. **Registration** holds **Origin**, **Origin note**, **Referred by partner**, **Company routing key** and **Tags**. In the dialog, **Change Project**, **Change Product** and **Change Tags** open a list of their own.
+1. Press **Edit** in the section, change the fields in the dialog, and press **Save**. Nothing in the dialog is stored until **Save**; **Cancel** or Esc closes without saving. To rename the lead, press the name at the top. Pressing the **Email** address starts a message.
+2. **About** holds **Company**, **Title**, **Industry**, **Project** and **Product**. **Email and phone** holds **Email** and **Phone**. **Registration** holds **Origin**, **Origin note**, **Referred by partner**, **Company routing key** and **Tags**. In the dialog, **Change Project**, **Change Product** and **Change Tags** close it and open a list of their own. A pick there saves at once.
 3. The owner has its own control; see [How do I change a lead's owner?](#how-do-i-change-a-leads-owner). **Added via** shows how the row came into Margince, and Margince writes it.
 
 **LinkedIn URL** cannot be changed on a lead. Status moves on the **Lead status** ladder; score moves with **Override score** and a reason. A closed lead is read-only.
@@ -209,7 +209,7 @@ The recurring value may come from an accepted offer. Then the row reads **Expect
 Also called: change the amount, update deal size, switch to dollars.
 
 ### How do I change a deal's expected close date?
-To change when a deal is expected to close, open the deal and press **Edit** in the **About** section of its **Details** panel. Pick the date under **Expected close** and press **Save**. On the **Board** view, an open deal's card has **Change close date** in its **…** menu.
+To change when a deal is expected to close, open the deal and press **Edit** in the **About** section of its **Details** panel. Pick the date under **Expected close** and press **Save**. On a closed deal, use **More actions** → **Edit details** and press **Expected close**. On the **Board** view, an open deal's card has **Change close date** in its **…** menu.
 
 An open deal cannot get a date in the past: "an open deal cannot claim a close date in the past; pick today or later". A closed deal keeps its dates open to edits, past ones included.
 To hold a deal until a date without moving its close date, set **Wait until** instead. **How it stands** reads **On hold** until that day, and **Follow-up overdue** from that day on.
