@@ -272,6 +272,7 @@ export function EditRecordModal({
         onClose={onClose}
         intent="save"
         answerlessRow={answerless.row}
+        unsaved={dirty}
       />
       {answerless.question}
     </>

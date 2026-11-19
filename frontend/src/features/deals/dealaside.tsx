@@ -214,7 +214,7 @@ function useSectionEdits(deal: Deal, edit: DealEdit, locale: Locale) {
 type DealEdit = ReturnType<typeof useDealEdit>;
 
 // A locked figure reads in its currency, as its row does, never as a bare number.
-// The server withholds the money as one unit, so a mask on any part locks all three.
+// Each figure is in its currency's minor units, so nothing changes while any part is withheld.
 function moneyLocks(
   deal: Deal,
   edit: DealEdit,

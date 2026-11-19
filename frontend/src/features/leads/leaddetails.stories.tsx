@@ -205,7 +205,7 @@ export const AboutEditDark: Story = {
 
 export const AboutEditPhone: Story = { ...AboutEdit, tags: ["uat-phone"] };
 
-/** Email and phone holds the address, the number and the profile, which stays fixed with why. */
+/** Email and phone holds the address, the number and the profile; the profile shows locked, with its reason. */
 export const ReachEdit: Story = {
   render: page({ ...base, phone: "+49301234567" }),
   play: async () => {

@@ -214,6 +214,42 @@ describe("section edit", () => {
     );
   });
 
+  it("asks nothing once a typed change is taken back, by the X or a flow", async () => {
+    const openOwner = vi.fn();
+    const user = userEvent.setup();
+    render(
+      <Section
+        edit={railEdit(noSave)}
+        section={{
+          label: "About",
+          keys: ["title", "owner"],
+          flows: { owner: { label: "Owner", open: openOwner } },
+        }}
+      />,
+      { wrapper },
+    );
+    const typeAndTakeBack = async () => {
+      await user.click(screen.getByRole("button", { name: "Edit About" }));
+      const dialog = await screen.findByRole("dialog", { name: "About" });
+      const title = within(dialog).getByRole("textbox", { name: "Title" });
+      await user.type(title, "s");
+      await user.type(title, "{Backspace}");
+      expect(title).toHaveValue("Director");
+      return dialog;
+    };
+    await user.click(
+      within(await typeAndTakeBack()).getByRole("button", { name: "Close" }),
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    await user.click(
+      within(await typeAndTakeBack()).getByRole("button", {
+        name: "Change Owner",
+      }),
+    );
+    expect(openOwner).toHaveBeenCalledOnce();
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
   it("opens a section's only change, a flow, directly", async () => {
     const openOwner = vi.fn();
     const user = userEvent.setup();

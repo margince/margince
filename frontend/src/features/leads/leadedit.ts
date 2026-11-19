@@ -56,6 +56,9 @@ export function useLeadEdit(
       ...(lead.company_id
         ? { company_name: t("lead.company.nameFollowsLink") }
         : {}),
+      ...(lead.partner_accepted_at
+        ? { partner_company_id: t("lead.partnerAcceptedKept") }
+        : {}),
     },
     save: (values, _rows, opened) => saveLeadFields(opened, values),
   };

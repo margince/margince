@@ -238,14 +238,14 @@ function sectionKeys(rows: readonly DetailRow[]): string[] {
   return [...new Set(keys)];
 }
 
-/** What a section's dialog shows of a field without offering it, and why. */
+/** How a section's dialog reads a locked field. The reason is the edit's own. */
 function useDetailLocks(
   lead: Lead,
   edit: RailEdit,
 ): Record<string, SectionLock> {
-  const t = useT();
   const partners = useLeadPartnerOptions();
   const companyReason = edit.readOnlyFields?.company_name;
+  const partnerReason = edit.readOnlyFields?.partner_company_id;
   return {
     ...(lead.company_id && companyReason
       ? {
@@ -255,10 +255,10 @@ function useDetailLocks(
           },
         }
       : {}),
-    ...(lead.partner_company_id && lead.partner_accepted_at
+    ...(lead.partner_company_id && partnerReason
       ? {
           partner_company_id: {
-            reason: t("lead.partnerAcceptedKept"),
+            reason: partnerReason,
             reading: (
               <LeadPartnerName
                 partners={partners}
@@ -328,9 +328,7 @@ function LeadDetailsBody({
   const pickers = useLeadPickerFlows(lead, writer);
   const locks = useDetailLocks(lead, edit);
   const section = (key: string, label: string, rows: DetailRow[]) => ({
-    key,
-    label,
-    rows,
+    part: { key, label },
     options: {
       label,
       keys: sectionKeys(rows),
@@ -358,9 +356,9 @@ function LeadDetailsBody({
   const setBy = statusSetBy(lead, t);
   const companyFacts = useLeadCompanyFactsSection(lead);
   const sections: DetailSection[] = [
-    { ...aboutPart, rows: shown(about), edit: aboutEdit.edit },
+    { ...aboutPart.part, rows: shown(about), edit: aboutEdit.edit },
     ...(companyFacts ? [companyFacts] : []),
-    { ...reachPart, rows: shown(reach), edit: reachEdit.edit },
+    { ...reachPart.part, rows: shown(reach), edit: reachEdit.edit },
     {
       key: "ownership",
       label: ownershipLabel,
@@ -387,7 +385,7 @@ function LeadDetailsBody({
       ],
     },
     {
-      ...registrationPart,
+      ...registrationPart.part,
       rows: shown(registration),
       edit: registrationEdit.edit,
     },

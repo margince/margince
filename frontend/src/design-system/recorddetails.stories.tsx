@@ -143,18 +143,15 @@ export const EditTouchLayerPhone: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const link = await canvas.findByRole("button", { name: "Edit About" });
-    const value = canvas.getByText("brandt.example");
+    const row = canvas.getByText("brandt.example").closest(".factlist-row");
+    if (!row) throw new Error("the first row is not a fact list row");
     const layer = getComputedStyle(link, "::before");
-    const top = value.getBoundingClientRect().top;
     const layerEnd =
       link.getBoundingClientRect().bottom - Number.parseFloat(layer.bottom);
     await expect(Number.parseFloat(layer.height)).toBeGreaterThanOrEqual(44);
-    await expect(layerEnd).toBeLessThanOrEqual(top + 0.5);
-    const hit = document.elementFromPoint(
-      value.getBoundingClientRect().left + 2,
-      top + 1,
+    await expect(layerEnd).toBeLessThanOrEqual(
+      row.getBoundingClientRect().top + 0.5,
     );
-    await expect(value.contains(hit)).toBe(true);
   },
 };
 

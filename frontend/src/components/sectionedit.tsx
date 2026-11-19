@@ -61,7 +61,7 @@ export function useFieldsDialog(
       }
     />
   );
-  return { open, pending, start, element };
+  return { open, waiting: open && !shown, pending, start, element };
 }
 
 /** A row of a section whose change is a flow of its own, such as an owner handover. */

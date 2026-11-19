@@ -10,6 +10,7 @@ import {
   useActivityGate,
 } from "../../components/activitygate";
 import { ArchiveAction } from "../../components/archive";
+import { catalogOfRecord } from "../../components/create.dialog";
 import { useRailRename } from "../../components/railfield";
 import { RecordTeam } from "../../components/recordteam";
 import { useFieldsDialog } from "../../components/sectionedit";
@@ -135,7 +136,7 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
     t("project.edit"),
     edit.fields,
     edit.canEdit,
-    "project",
+    catalogOfRecord("project"),
   );
   return (
     <RecordView
@@ -169,6 +170,7 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
             activity={activity}
             onAddTask={() => setLogDrawer("task")}
             onEdit={editAll.start}
+            editWaiting={editAll.waiting}
             health={view.health?.current}
             onOpen={setDrawer}
             onHealth={setHealthEdit}
@@ -360,6 +362,7 @@ function ProjectActions({
   activity,
   onAddTask,
   onEdit,
+  editWaiting,
   health,
   onOpen,
   onHealth,
@@ -369,6 +372,8 @@ function ProjectActions({
   activity: ActivityGate;
   onAddTask: () => void;
   onEdit: () => void;
+  // The edit is open but holds its dialog for the custom-field catalog.
+  editWaiting: boolean;
   // The reading that stands, which Correct reading corrects.
   health?: ProjectHealthAssessment;
   onOpen: (drawer: ProjectDrawerKind) => void;
@@ -393,7 +398,7 @@ function ProjectActions({
         {t("log.addTask")}
       </Button>
       {/* Worded: a bare pencil among sentences names nothing to a reader. */}
-      <Button reasonId={refusedReasonId} onClick={onEdit}>
+      <Button reasonId={refusedReasonId} onClick={onEdit} pending={editWaiting}>
         {t("project.edit")}
       </Button>
       <ShareAction

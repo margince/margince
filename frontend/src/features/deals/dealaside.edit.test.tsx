@@ -191,19 +191,11 @@ it("shows the ARR an offer set in its currency, locked with the reason", async (
   expect(arr).toHaveAccessibleDescription(en["deal.arrFromOffer"]);
 });
 
-// The server withholds the money as one unit. A masked figure takes the other
-// figure and the currency with it; a masked currency goes alone.
-function withheld(masked: string[]): Deal {
-  const shown: Deal = { ...deal, masked_fields: masked };
-  for (const key of masked) delete shown[key as keyof Deal];
-  return shown;
-}
-
-it.each([
-  ["a masked figure", ["amount_minor", "expected_arr_minor", "currency"]],
-  ["a masked currency", ["currency"]],
-])("offers no money to change beside %s", async (_case, masked) => {
-  mount(["read", "update"], withheld(masked));
+// A masked currency goes alone, and a figure means nothing without the currency of its minor units.
+it("offers no money to change beside a masked currency", async () => {
+  const shown: Deal = { ...deal, masked_fields: ["currency"] };
+  delete shown.currency;
+  mount(["read", "update"], shown);
   await screen.findByRole("button", { name: "Edit About" });
   expect(screen.queryByRole("button", { name: "Edit Value" })).toBeNull();
 });

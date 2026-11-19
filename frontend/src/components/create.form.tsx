@@ -30,6 +30,7 @@ import {
   usePrefilledPick,
 } from "./create.offered";
 import { RepeatableRowsField } from "./repeatablerowsfield";
+import "./create.css";
 
 // A submit button's resting and busy labels travel as one pair, so an edit
 // can never announce "Creating…" while it saves.
@@ -59,6 +60,7 @@ export function RecordFormBody({
   intent,
   dialog,
   answerlessRow,
+  unsaved,
 }: Readonly<{
   fields: CreateField[];
   values: Record<string, string>;
@@ -82,6 +84,8 @@ export function RecordFormBody({
   dialog?: { open: boolean; title: string };
   // A read-only or flow field's row. Only an edit has them, so a create form never loads them.
   answerlessRow?: (field: CreateField) => ReactNode;
+  // Whether a close asks first. Left out, any keystroke since the opening counts.
+  unsaved?: boolean;
 }>) {
   const t = useT();
   const formId = useId();
@@ -278,7 +282,7 @@ export function RecordFormBody({
       title={dialog.title}
       onClose={onClose}
       fieldCount={fields.filter((field) => !field.divider).length}
-      unsaved={edited}
+      unsaved={unsaved ?? edited}
       closeDisabled={pending}
       form={
         <form id={formId} className="form-stack" onSubmit={submit}>

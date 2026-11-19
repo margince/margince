@@ -62,16 +62,16 @@ To add a contact quickly in Margince, open **Contacts** and choose **Quick captu
 - A card photo must be a JPEG or PNG. An iPhone converts it automatically when you pick it. A photo in another format is refused until you save it as JPEG or PNG.
 
 ### How do I edit a contact?
-To edit a contact in Margince, open it and press the value to change in the **Details** panel next to the record. There is no Edit button. A value you may change shows a box and an edit mark when the pointer is over it. On a touch screen the mark always shows.
+To edit a contact in Margince, open it and press **Edit** in a section of the **Details** panel next to the record. The sections are **About**, **Address**, **Ownership** and **Consent and channels**. Each **Edit** opens a dialog with only the fields of its section.
 1. If the panel is hidden, choose **Show details**.
-2. Press the value (an empty one says **Not set**) or its mark, change it in the dialog, and press **Save**. Nothing is stored before that, even a choice from a list. **Cancel** or `Esc` closes the dialog without saving.
-3. **Email**, **Phone** and **Address** open a dialog with several fields. Each email or phone is one row with **Type**, **Primary** and buttons to move or remove it. **About** shows them in one card under **Employer**, one line each with its type, **Primary** first. Past three of a kind, a **more** link opens the rest. Pressing an address or number starts a message or call; the card and its mark open the dialog.
+2. Press **Edit** in the section, change the fields in the dialog, and press **Save**. Nothing is stored before that, even a choice from a list. **Cancel** or `Esc` closes the dialog without saving.
+3. **About** holds **Employer**, **Email**, **Phone**, **LinkedIn** and **Title**. Each email or phone is one row with **Type**, **Primary** and buttons to move or remove it. The panel shows them in one card under **Employer**, one line each with its type, **Primary** first. Past three of a kind, a **more** link opens the rest. Pressing an address or number starts a message or call.
 
-**Title**, **LinkedIn**, **Owner**, custom fields and the **Full name** at the top of the page change the same way. First and last name are set only when the contact is created. **LinkedIn** shows as a chip with the LinkedIn logo and the record's name: the chip opens the profile, and the mark opens the dialog. A company's **LinkedIn URL** and a lead's LinkedIn show the same chip, but a lead's cannot be changed. An address on another host shows as plain text.
+**Ownership** holds **Owner**, and **Edit** in **Consent and channels** opens **Manage consent and proof history**. Custom fields change on the **Research** tab, where you press the value. To rename the contact, press the **Full name** at the top of the page; first and last name are set only when it is created. **LinkedIn** shows as a chip with the LinkedIn logo and the record's name, and the chip opens the profile. A company's **LinkedIn URL** and a lead's LinkedIn show the same chip, but a lead's cannot be changed. An address on another host shows as plain text.
 ### Why can't I edit a contact or company?
 A contact or company in Margince takes no edits when it is archived ("This contact is archived and takes no changes."). It also takes none when it is not yours to change: "You cannot edit this contact. Ask the owner to hand it over or share it, or ask an administrator."
 
-Fields you cannot edit show as plain text with no box or mark, and other actions are greyed out. The page states the reason once, at the foot of the **Details** panel, or in the band at the top of an archived contact. If someone else changed the same field while you were editing, your edit is refused: "This record changed after you opened it. Reload it to see the change, then make yours again."
+A section you cannot change shows no **Edit**. Fields you cannot edit show as plain text with no box or mark, and other actions are greyed out. The page states the reason once, at the foot of the **Details** panel, or in the band at the top of an archived contact. If someone else changed the same field while you were editing, your edit is refused: "This record changed after you opened it. Reload it to see the change, then make yours again."
 Also called: read-only record, edit greyed out, cannot change.
 
 ### How do I link a contact to a company?
@@ -81,11 +81,11 @@ To link a contact to a company in Margince, open the contact's **Companies** tab
 2. If you like, enter the **Role** and a **Start date** (`YYYY-MM` or `YYYY-MM-DD`).
 3. Tick **This is their current employer** if it is.
 4. Choose **Create**.
-To change or end the link later, use the row's **More actions** menu: **Edit employment**, **Mark as ended** or **Remove**. To move a contact to another company, choose **Employer** in **About** and pick it, or tick **No current employer**. Then say if they left the old one or it was never their employer. In **Edit employment**, choose **Current** or **Former**. An imported link marked **Status unknown** needs a choice before you save.
+To change or end the link later, use the row's **More actions** menu: **Edit employment**, **Mark as ended** or **Remove**. To move a contact, press **Edit** in **About**, then **Change Employer**, and pick the company or tick **No current employer**. Then say if they left the old one or it was never their employer. In **Edit employment**, choose **Current** or **Former**. An imported link marked **Status unknown** needs a choice before you save.
 
 A company name Margince read for a contact with no current job shows under **Work history** on the **Companies** tab and under **Employer** in **About**. **Link** opens **Add company** already searching for that name, and **Dismiss** removes the offer for good. **Create and link** creates and links the company, with the domain of the contact's work email unless that is consumer mail, blocked or another company's. If you can open the company that holds the domain, Margince uses it and links the contact. **Link** and **Create and link** also confirm the read company, as **Confirm value** does. Also called: set a contact's company, assign to an account, employer, company from a signature, past employers, former companies, job history.
 ### How do I change a contact's employer when they move company?
-To change a contact's employer in Margince, open the contact and choose **Employer** in **About**. Pick the new company under **Change employer**, or tick **No current employer**. Then answer **What about {company}?**: **They left {company}** keeps it as a former employer, ending today; **{company} was never their employer** deletes the link.
+To change a contact's employer in Margince, open the contact, press **Edit** in the **About** section, then **Change Employer**. Pick the new company under **Change employer**, or tick **No current employer**. Then answer **What about {company}?**: **They left {company}** keeps it as a former employer, ending today; **{company} was never their employer** deletes the link.
 Also called: changed jobs, new company, left the company, update employer.
 
 ### How do I match a purchased job history entry to a company?
@@ -142,17 +142,17 @@ To add a company (a new customer, client or account) in Margince, open **Compani
 A new company with a domain lists the unlinked contacts with an email address on it, none ticked. Margince links those with no current job to it each day, ticked or not, so ticks matter most for contacts with another employer. Tick those who work there and choose **Link contacts**, or choose **Review contacts** on its **Contacts** tab later. Also called: new account, new business, add a client or customer.
 
 ### How do I edit a company?
-To edit a company in Margince, open it and press the value to change. There is no Edit button. A value you may change shows a box and an edit mark when the pointer is over it. On a touch screen the mark always shows. **Description** is on **Profile** and shows on its own when its text differs from the offer.
+To edit a company in Margince, open it and press **Edit** in a section of the panel beside the tabs. The sections are **About**, **Address**, **Ownership** and **Registration**. Each **Edit** opens a dialog with only the fields of its section. **Description** is on **Profile** and shows on its own when its text differs from the offer.
 1. If the panel beside the tabs is hidden, choose **Show details**.
-2. Press a value or its mark, change it in the dialog, and press **Save**. Nothing is stored until **Save**; **Cancel** or `Esc` closes without saving. **Address**, **Domain**, **Parent company** and **Relationship type** open a dialog with several fields.
+2. Press **Edit** in the section, change the fields in the dialog, and press **Save**. Nothing is stored until **Save**; **Cancel** or `Esc` closes without saving.
 
-The panel beside the tabs holds **Domain**, **Industry**, **Employees**, **Lifecycle** and **Address** under **About**, **Owner** under **Ownership** and **VAT ID** under **Registration**. The **Profile** tab holds **Legal name**, **Relationship type**, **Parent company**, **LinkedIn URL**, **Phone**, **Email** and **Registered address** under **Details**, and custom fields. To rename the company, press its name at the top of the page, type the new **Company name** in the dialog and press **Save**. The website follows the main domain. **Industry** is a fixed list, and an import's text that names none of it goes into the **Description**.
+**About** holds **Domain**, **Industry**, **Employees** and **Lifecycle**; **Address**, **Ownership** and **Registration** hold the address, **Owner** and **VAT ID**. The **Profile** tab holds **Legal name**, **Relationship type**, **Parent company**, **LinkedIn URL**, **Phone**, **Email** and **Registered address** under **Details**, and custom fields. There you press a value to change it; **Parent company** and **Relationship type** open a dialog with several fields. To rename the company, press its name at the top, type the new **Company name** and press **Save**; the website follows the main domain. **Industry** is a fixed list, and an import's text that names none of it goes into the **Description**.
 Also called: rename a company, update an account.
 
 ### How do I check a company's VAT number?
 To check a VAT number with the EU VAT register, type it into **VAT ID** in the panel beside the company's tabs. Margince checks a new number on its own.
-1. Open the company, and find **VAT ID** under **Registration** beside the tabs.
-2. Press the number, type it as it is written in the dialog, and press **Save**.
+1. Open the company, and press **Edit** in the **Registration** section beside the tabs.
+2. Type the number as it is written in the dialog, and press **Save**.
 3. Press the mark that shows the check result, beside the number, to read the answer. The mark shows **Valid**, **Not valid**, or "not yet checked with the register". **Check with the register** or **Check again** asks once more. The answer arrives a few seconds later, while the button shows "Checking with register…". A number checked in the last five minutes is not checked again.
 Also called: VIES check, check a VAT ID, tax number check.
 
@@ -165,7 +165,7 @@ A grey question mark means the answer could not be loaded; press it to try again
 Also called: VAT ID valid, VAT receipt, Registered to.
 
 ### How do I change the owner of a contact or company?
-To change who owns a contact or company in Margince, open the record and press **Owner** under **Ownership**, beside the tabs. Pick a colleague in the dialog and press **Save**. You need edit rights on the record: your own, your team's, one shared with you for writing, or a role that edits every record. A private contact must keep an owner ("This field is required."). To give many records to a colleague at once, see [Lists, filters and views](lists-filters-and-views.md).
+To change who owns a contact or company in Margince, open the record and press **Edit** in the **Ownership** section, beside the tabs. Pick a colleague in the dialog and press **Save**. You need edit rights on the record: your own, your team's, one shared with you for writing, or a role that edits every record. A private contact must keep an owner ("This field is required."). To give many records to a colleague at once, see [Lists, filters and views](lists-filters-and-views.md).
 Also called: reassign a contact, hand over an account, transfer ownership, account owner.
 
 ### How do I claim a company nobody owns?
