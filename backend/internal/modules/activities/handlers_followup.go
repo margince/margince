@@ -40,16 +40,23 @@ func (h Handlers) UpdateFollowUpSettings(w http.ResponseWriter, r *http.Request)
 	}
 	// Which mail reaches a model is a human's to decide. An agent writing this
 	// could be steered by the very mail it would expose.
-	if actor, ok := principal.Actor(r.Context()); req.PrivateMailRequests != nil && (!ok || actor.Type != principal.PrincipalHuman) {
-		writeStoreErr(w, r, fmt.Errorf("activities: only a human may change %s: %w", PrivateMailRequests.Key(), apperrors.ErrPermissionDenied))
+	if actor, ok := principal.Actor(r.Context()); (req.PrivateMailRequests != nil || req.SharePrivateQuoteRequests != nil) &&
+		(!ok || actor.Type != principal.PrincipalHuman) {
+		writeStoreErr(w, r, fmt.Errorf("activities: only a human may change %s or %s: %w",
+			PrivateMailRequests.Key(), SharePrivateQuoteRequests.Key(), apperrors.ErrPermissionDenied))
 		return
 	}
 	if err := config.Save(r.Context(), h.settings, FollowUpAfterDays, req.FollowUpAfterDays); err != nil {
 		writeStoreErr(w, r, err)
 		return
 	}
-	if req.PrivateMailRequests != nil {
-		if err := config.Save(r.Context(), h.settings, PrivateMailRequests, *req.PrivateMailRequests); err != nil {
+	for setting, value := range map[*config.Setting[bool]]*bool{
+		PrivateMailRequests: req.PrivateMailRequests, SharePrivateQuoteRequests: req.SharePrivateQuoteRequests,
+	} {
+		if value == nil {
+			continue
+		}
+		if err := config.Save(r.Context(), h.settings, setting, *value); err != nil {
 			writeStoreErr(w, r, err)
 			return
 		}
@@ -75,8 +82,14 @@ func (h Handlers) writeFollowUpSettings(w http.ResponseWriter, r *http.Request) 
 		writeStoreErr(w, r, err)
 		return
 	}
+	share, err := config.StoredVal(r.Context(), h.settings, SharePrivateQuoteRequests)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.FollowUpSettings{
-		FollowUpAfterDays: days, PrivateMailRequests: &private, Locks: h.settingLocks(ConfigSettings()...),
+		FollowUpAfterDays: days, PrivateMailRequests: &private, SharePrivateQuoteRequests: &share,
+		Locks: h.settingLocks(ConfigSettings()...),
 	})
 }
 

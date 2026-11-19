@@ -1171,7 +1171,7 @@ The 34 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## mail_draft
 
-22 columns · primary key `(id)` · referenced by 0 foreign keys
+23 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1189,6 +1189,7 @@ The 34 tables owned by `activities`, as the migrations build them. [Back to the 
 | `grounding` | `jsonb`, default `'[]'::jsonb` | yes | The records this draft was written from, which an agent draft records and a human draft leaves empty. |
 | `html_body` | `text` |  | The editor's markup beside the plain body, so reopening restores the formatting. |
 | `override_explanation` | `text` |  | The reason the author typed for sending past a refusal. |
+| `recipient_countries` | `jsonb` |  | The countries the author stated for recipients, with `country: null` for one they cleared. |
 | `scheduled_at` | `timestamp with time zone` |  | The moment the author picked to send at, as saved. |
 | `scheduled_tz` | `text` |  | The IANA zone `scheduled_at` was picked in. |
 | `scheduled_wall` | `timestamp without time zone` |  |  |

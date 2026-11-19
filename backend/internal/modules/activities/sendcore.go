@@ -174,7 +174,7 @@ func (s *Store) prepareRenderedSend(ctx context.Context, origin SendOrigin, in S
 	if err != nil {
 		return PreparedSend{}, err
 	}
-	derived, err := s.deliverability(ctx, signed, in.Subject, in.Recipients, surface, in.SendingEntity, s.footerLanguage(ctx, in.Body, in.Subject))
+	derived, err := s.deliverability(ctx, signed, in.Subject, in.Recipients, in.Evidence.RecipientCountries, surface, in.SendingEntity, s.footerLanguage(ctx, in.Body, in.Subject))
 	if err != nil {
 		return PreparedSend{}, err
 	}

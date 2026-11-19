@@ -80,7 +80,7 @@ func pinnedSubjectTx(ctx context.Context, tx pgx.Tx, lead ids.UUID, recipient co
 
 func recipientRequestCountry(ctx context.Context, tx pgx.Tx, recipient connector.Recipient, req commsauthz.Request) (RecipientCountry, error) {
 	if req.Evidence.LeadID.IsZero() {
-		return recipientCountryOf(ctx, tx, recipient)
+		return recipientCountryStated(ctx, tx, recipient, req.Evidence.RecipientCountries)
 	}
 	subject, found, err := pinnedSubjectTx(ctx, tx, req.Evidence.LeadID, recipient)
 	if err != nil || !found {

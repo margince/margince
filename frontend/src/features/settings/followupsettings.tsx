@@ -101,9 +101,10 @@ export function FollowUpSettingsCard() {
   );
 }
 
-// Whether the AI checks private mail for requests owed an answer. It rides the
-// follow-up settings because both are the activities module's; the PATCH
-// carries the window unchanged beside it.
+// Whether the AI reads private mail for requests, and whether a quotation
+// request found there is shared with the workspace. Both ride the follow-up
+// settings because they are the activities module's; the PATCH carries the
+// window unchanged beside them.
 export function PrivateMailRequestsCard() {
   const t = useT();
   const canEdit = useCanWrite("installation_settings", "update");
@@ -141,6 +142,35 @@ export function PrivateMailRequestsCard() {
                     update.mutate({
                       follow_up_after_days: settings.follow_up_after_days,
                       private_mail_requests: next,
+                    })
+                  }
+                />
+              )}
+            />
+            <SettingRow
+              label={t("privateMailRequests.share")}
+              description={t("privateMailRequests.shareHint")}
+              control={(control) => (
+                <Switch
+                  describedBy={describedByIds(
+                    control["aria-describedby"],
+                    update.isError && refusalId,
+                  )}
+                  label={t("privateMailRequests.share")}
+                  labelHidden
+                  checked={settings.share_private_quote_requests ?? true}
+                  pending={update.isPending}
+                  reason={lockReasonOr(
+                    settings.locks,
+                    "activities.share_private_quote_requests",
+                    t,
+                    canEdit ? undefined : t("privateMailRequests.readOnly"),
+                  )}
+                  testId="share-private-quote-requests-switch"
+                  onChange={(next) =>
+                    update.mutate({
+                      follow_up_after_days: settings.follow_up_after_days,
+                      share_private_quote_requests: next,
                     })
                   }
                 />

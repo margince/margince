@@ -62,6 +62,9 @@ type MailDraftContent struct {
 	// OverrideExplanation is the reason the author typed for sending past a
 	// refusal. Kept with the words; it grants nothing until they send.
 	OverrideExplanation string
+	// RecipientCountries are the countries the author stated or cleared for
+	// recipients. Only entries for an address on the draft are kept.
+	RecipientCountries []commsauthz.CountryOverride
 }
 
 // MailDraft is one saved draft.
@@ -103,7 +106,7 @@ const (
 const mailDraftColumns = `id, anchor_type, anchor_id, to_addresses, cc_addresses, bcc_addresses,
 	subject, body, html_body, version, agent_drafted, grounding, attachment_ids,
 	communication_context, ` + scheduleInstantSQL + ` AS scheduled_at, scheduled_tz, scheduled_wall, created_at, updated_at, editor_state,
-	override_explanation`
+	override_explanation, recipient_countries`
 
 // InvalidMailDraftError refuses a draft the store will not keep.
 type InvalidMailDraftError struct {
@@ -219,6 +222,7 @@ func mailDraftArgs(author ids.UUID, anchor MailDraftAnchor, content MailDraftCon
 		fieldSubject: content.Subject, fieldBody: content.Body, argHTML: nullableText(content.HTMLBody),
 		"attachments": content.AttachmentIDs, "context": nullableText(string(content.Context)),
 		"at": at, argZone: tz, argWall: wall, fieldExplanation: nullableText(content.OverrideExplanation),
+		recipientCountriesField: freezeCountries(content.RecipientCountries),
 	}
 }
 
@@ -228,9 +232,10 @@ func insertMailDraft(ctx context.Context, tx pgx.Tx, author ids.UUID, anchor Mai
 	row := tx.QueryRow(ctx, `
  INSERT INTO mail_draft(id,author_id,anchor_type,anchor_id,to_addresses,cc_addresses,
  bcc_addresses,subject,body,html_body,attachment_ids,communication_context,
- scheduled_at,scheduled_tz,scheduled_wall,editor_state,override_explanation)
+ scheduled_at,scheduled_tz,scheduled_wall,editor_state,override_explanation,recipient_countries)
  SELECT @id,@author,@anchor_type,@anchor_id,@to,@cc,@bcc,@subject,@body,@html,
- @attachments,@context,planned.instant,COALESCE(planned.timezone,@zone),planned.wall_time,@editor,@override_explanation
+ @attachments,@context,planned.instant,COALESCE(planned.timezone,@zone),planned.wall_time,@editor,@override_explanation,
+ @recipient_countries::jsonb
  FROM public.update_intent_time(NULL,NULL,NULL,@wall::text::timestamp,@zone,@at) AS planned
  WHERE true
  ON CONFLICT(author_id,anchor_type,anchor_id) DO NOTHING
@@ -261,7 +266,8 @@ func replaceMailDraft(ctx context.Context, tx pgx.Tx, author ids.UUID, anchor Ma
  (scheduled_at,scheduled_tz,scheduled_wall)=(
  SELECT planned.instant,COALESCE(planned.timezone,@zone),planned.wall_time
  FROM public.update_intent_time(scheduled_wall,scheduled_tz,scheduled_at,@wall::text::timestamp,@zone,@at) AS planned),
- editor_state=@editor,override_explanation=@override_explanation,version=version+1,agent_drafted=false,updated_at=now()
+ editor_state=@editor,override_explanation=@override_explanation,recipient_countries=@recipient_countries::jsonb,
+ version=version+1,agent_drafted=false,updated_at=now()
  WHERE author_id=@author AND anchor_type=@anchor_type AND anchor_id=@anchor_id AND version=@version
  RETURNING `+mailDraftColumns, args)
 	saved, err := scanMailDraft(row)
@@ -376,8 +382,29 @@ func canonicalDraft(content MailDraftContent) MailDraftContent {
 	content.To = canonicalAddresses(content.To)
 	content.Cc = canonicalAddresses(content.Cc)
 	content.Bcc = canonicalAddresses(content.Bcc)
+	content.RecipientCountries = countriesOnTheDraft(content)
 	content.EditorState.ContentFingerprint = new(draftContentFingerprint(content))
 	return content
+}
+
+// countriesOnTheDraft keeps the statements about addresses the draft holds, so
+// a removed recipient takes their country with them. countryOverridesFrom has
+// already refused a second statement about one address.
+func countriesOnTheDraft(content MailDraftContent) []commsauthz.CountryOverride {
+	held := map[string]bool{}
+	for _, line := range [][]string{content.To, content.Cc, content.Bcc} {
+		for _, addr := range line {
+			held[addr] = true
+		}
+	}
+	var out []commsauthz.CountryOverride
+	for _, stated := range content.RecipientCountries {
+		stated.Address = normalizeAddress(stated.Address)
+		if held[stated.Address] {
+			out = append(out, stated)
+		}
+	}
+	return out
 }
 
 func canonicalAddresses(line []string) []string {
@@ -424,11 +451,12 @@ func scanMailDraft(row pgx.Row) (MailDraft, error) {
 		wall       *time.Time
 		tz         *string
 		explained  *string
+		countries  []frozenCountry
 	)
 	err := row.Scan(&out.ID, &anchorType, &out.Anchor.ID, &out.Content.To, &out.Content.Cc,
 		&out.Content.Bcc, &out.Content.Subject, &out.Content.Body, &html, &out.Version,
 		&out.AgentDrafted, &grounding, &out.Content.AttachmentIDs, &claimed, &at, &tz, &wall,
-		&out.CreatedAt, &out.UpdatedAt, &out.Content.EditorState, &explained)
+		&out.CreatedAt, &out.UpdatedAt, &out.Content.EditorState, &explained, &countries)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return MailDraft{}, apperrors.ErrNotFound
 	}
@@ -447,6 +475,7 @@ func scanMailDraft(row pgx.Row) (MailDraft, error) {
 	}
 	out.Content.Context = commsauthz.Category(orEmpty(claimed))
 	out.Content.OverrideExplanation = orEmpty(explained)
+	out.Content.RecipientCountries = thawCountries(countries)
 	schedule, err := readSchedule(at, tz, wall)
 	if err != nil {
 		return MailDraft{}, err

@@ -60,49 +60,7 @@ func (g *Gate) ServedReview(ctx context.Context, id ids.UUID) (crmcontracts.Comm
 func wireReview(review Review) crmcontracts.CommunicationReview {
 	refusals := make([]crmcontracts.RefusedRecipient, 0, len(review.Refusals))
 	for _, refusal := range review.Refusals {
-		wire := crmcontracts.RefusedRecipient{
-			Address:    refusal.Address,
-			ReasonCode: refusal.ReasonCode,
-		}
-		if len(refusal.FooterPreview) > 0 {
-			wire.FooterPreview = &refusal.FooterPreview
-		}
-		if len(refusal.FooterFindings) > 0 {
-			findings := make([]crmcontracts.FooterFinding, 0, len(refusal.FooterFindings))
-			for _, finding := range refusal.FooterFindings {
-				wireFinding := crmcontracts.FooterFinding(finding)
-				if wireFinding.MissingMeans == nil {
-					wireFinding.MissingMeans = []string{}
-				}
-				findings = append(findings, wireFinding)
-			}
-			wire.FooterFindings = &findings
-		}
-		if refusal.SendingEntity != nil {
-			id := openapi_types.UUID(*refusal.SendingEntity)
-			wire.SendingEntityId = &id
-		}
-		if refusal.SendingEntityName != "" {
-			name := refusal.SendingEntityName
-			wire.SendingEntityName = &name
-		}
-		if refusal.Requested != "" {
-			requested := refusal.Requested
-			wire.RequestedCategory = &requested
-		}
-		if refusal.Category != "" {
-			category := refusal.Category
-			wire.Category = &category
-		}
-		if refusal.SubjectKind != "" {
-			kind := crmcontracts.RefusedRecipientSubjectKind(refusal.SubjectKind)
-			wire.SubjectKind = &kind
-		}
-		if subject, err := ids.Parse(refusal.SubjectID); err == nil {
-			id := openapi_types.UUID(subject)
-			wire.SubjectId = &id
-		}
-		refusals = append(refusals, wire)
+		refusals = append(refusals, wireRefusal(refusal))
 	}
 	revision := review.AssessmentRevision()
 	out := crmcontracts.CommunicationReview{
@@ -142,6 +100,61 @@ func wireReview(review Review) crmcontracts.CommunicationReview {
 		}
 	}
 	return out
+}
+
+// wireRefusal renders one refused recipient as the rep may read it.
+func wireRefusal(refusal RefusedRecipient) crmcontracts.RefusedRecipient {
+	wire := crmcontracts.RefusedRecipient{
+		Address:    refusal.Address,
+		ReasonCode: refusal.ReasonCode,
+	}
+	if len(refusal.FooterPreview) > 0 {
+		wire.FooterPreview = &refusal.FooterPreview
+	}
+	if len(refusal.FooterFindings) > 0 {
+		findings := make([]crmcontracts.FooterFinding, 0, len(refusal.FooterFindings))
+		for _, finding := range refusal.FooterFindings {
+			wireFinding := crmcontracts.FooterFinding(finding)
+			if wireFinding.MissingMeans == nil {
+				wireFinding.MissingMeans = []string{}
+			}
+			findings = append(findings, wireFinding)
+		}
+		wire.FooterFindings = &findings
+	}
+	if refusal.SendingEntity != nil {
+		id := openapi_types.UUID(*refusal.SendingEntity)
+		wire.SendingEntityId = &id
+	}
+	if refusal.SendingEntityName != "" {
+		name := refusal.SendingEntityName
+		wire.SendingEntityName = &name
+	}
+	if refusal.Requested != "" {
+		requested := refusal.Requested
+		wire.RequestedCategory = &requested
+	}
+	if refusal.Category != "" {
+		category := refusal.Category
+		wire.Category = &category
+	}
+	if refusal.Country != "" {
+		country := refusal.Country
+		wire.Country = &country
+	}
+	if refusal.CountrySource != "" {
+		source := crmcontracts.RefusedRecipientCountrySource(refusal.CountrySource)
+		wire.CountrySource = &source
+	}
+	if refusal.SubjectKind != "" {
+		kind := crmcontracts.RefusedRecipientSubjectKind(refusal.SubjectKind)
+		wire.SubjectKind = &kind
+	}
+	if subject, err := ids.Parse(refusal.SubjectID); err == nil {
+		id := openapi_types.UUID(subject)
+		wire.SubjectId = &id
+	}
+	return wire
 }
 
 // RecordCommunicationContext takes one rep's statement about one contact and

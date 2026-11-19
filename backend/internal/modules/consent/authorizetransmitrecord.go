@@ -78,6 +78,7 @@ func (g *Gate) recordDecisions(ctx context.Context, tx pgx.Tx, req commsauthz.Tr
 			authorityFor(authority, d.Verdict), instructionFor(instruction, d.Verdict),
 			ruleset.Version, ruleset.Codes, ruleset.Digest, zeroAsNull(d.SendingEntity), nullableText(d.PurposeKey),
 			groundNotice(d), groundOffer(d), groundSoldAt(d), protection,
+			nullableText(string(countries[i].Source)),
 		}
 		tag, err := tx.Exec(ctx, `
 			INSERT INTO communication_decision
@@ -86,7 +87,7 @@ func (g *Gate) recordDecisions(ctx context.Context, tx pgx.Tx, req commsauthz.Tr
 			   content_fingerprint, legacy_verdict, mode, actor,
 			   execution_authority, instruction_id, ruleset_version, ruleset_codes, ruleset_digest,
 			   legal_entity_id, purpose_key, existing_customer_notice_id, existing_customer_offer_id,
-			   existing_customer_sold_at, data_protection_country)
+			   existing_customer_sold_at, data_protection_country, country_source)
 			VALUES (`+storekit.Placeholders(values)+`)
 			ON CONFLICT (decision_set_id, recipient_address, phase) DO NOTHING`, values...)
 		if err != nil {

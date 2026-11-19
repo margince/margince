@@ -4,7 +4,7 @@
 package deals
 
 import (
-	"encoding/json"
+	"context"
 	"slices"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -50,10 +50,10 @@ func (c clientSuppliedTotals) refuse() error {
 // OfferCreationInput maps a create body. It decodes twice. The generated shape's
 // UnmarshalJSON owns the extension map. A probe then reads the nested lines,
 // whose decode target has none and would drop a smuggled total.
-func OfferCreationInput(raw []byte) (CreateOfferInput, error) {
+func OfferCreationInput(ctx context.Context, raw []byte) (CreateOfferInput, error) {
 	var req crmcontracts.CreateOfferRequest
-	if err := json.Unmarshal(raw, &req); err != nil {
-		return CreateOfferInput{}, httperr.Validation("body", "malformed_json", err.Error())
+	if err := httperr.UnmarshalOrRefusal(ctx, "body", raw, &req); err != nil {
+		return CreateOfferInput{}, err
 	}
 	if err := datasource.ClaimKeys(raw, claimClientTotal); err != nil {
 		return CreateOfferInput{}, err
@@ -64,8 +64,8 @@ func OfferCreationInput(raw []byte) (CreateOfferInput, error) {
 	var probe struct {
 		LineItems []clientSuppliedTotals `json:"line_items"`
 	}
-	if err := json.Unmarshal(raw, &probe); err != nil {
-		return CreateOfferInput{}, httperr.Validation("body", "malformed_json", err.Error())
+	if err := httperr.UnmarshalOrRefusal(ctx, "body", raw, &probe); err != nil {
+		return CreateOfferInput{}, err
 	}
 	for _, li := range probe.LineItems {
 		if err := li.refuse(); err != nil {

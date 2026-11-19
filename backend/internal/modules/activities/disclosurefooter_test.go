@@ -109,7 +109,7 @@ type stubDisclosures struct {
 	entities []ids.UUID
 }
 
-func (s *stubDisclosures) DisclosuresFor(_ context.Context, category string, _ []string, entity ids.UUID, _ string) ([]DisclosureLine, error) {
+func (s *stubDisclosures) DisclosuresFor(_ context.Context, category string, _ []string, _ []commsauthz.CountryOverride, entity ids.UUID, _ string) ([]DisclosureLine, error) {
 	s.asked = append(s.asked, category)
 	s.entities = append(s.entities, entity)
 	return s.lines, nil
@@ -132,7 +132,7 @@ func TestADisclosureRidesAMessageCarryingNoUnsubscribeSurface(t *testing.T) {
 	store := (&Store{}).WithDisclosures(stub)
 
 	got, err := store.deliverability(context.Background(), "As discussed.", "Re: your question",
-		[]string{"anna@example.test"},
+		[]string{"anna@example.test"}, nil,
 		unsubscribeSurface{category: commsauthz.CategoryReplyToInbound}, ids.Nil, "")
 	if err != nil {
 		t.Fatalf("deriving the message: %v", err)
@@ -166,7 +166,7 @@ func TestADisclosureSurvivesEveryEarlyReturn(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			got, err := store.deliverability(context.Background(), "As discussed.", "Subject",
-				tc.recipients, unsubscribeSurface{category: commsauthz.CategoryMarketing}, ids.Nil, "")
+				tc.recipients, nil, unsubscribeSurface{category: commsauthz.CategoryMarketing}, ids.Nil, "")
 			if err != nil {
 				t.Fatalf("deriving the message: %v", err)
 			}
@@ -185,7 +185,7 @@ func TestTheCategoryCrossesTheSeam(t *testing.T) {
 	store := (&Store{}).WithDisclosures(stub)
 
 	if _, err := store.deliverability(context.Background(), "body", "subject",
-		[]string{"anna@example.test"},
+		[]string{"anna@example.test"}, nil,
 		unsubscribeSurface{category: commsauthz.CategoryMarketing}, ids.Nil, ""); err != nil {
 		t.Fatalf("deriving the message: %v", err)
 	}
@@ -199,7 +199,7 @@ func TestTheCategoryCrossesTheSeam(t *testing.T) {
 // jurisdiction pack is. Production wires it on both doors.
 func TestNoResolverWiredSendsWhatItAlwaysSent(t *testing.T) {
 	got, err := (&Store{}).deliverability(context.Background(), "As discussed.", "Subject",
-		[]string{"anna@example.test"},
+		[]string{"anna@example.test"}, nil,
 		unsubscribeSurface{category: commsauthz.CategoryMarketing}, ids.Nil, "")
 	if err != nil {
 		t.Fatalf("deriving the message: %v", err)
@@ -226,7 +226,7 @@ func TestTheMarkupAlternativeCarriesTheSameDisclosures(t *testing.T) {
 	// markup path is wired, which is exactly the gap that let the HTML
 	// alternative ship without disclosures in the first place.
 	derived, err := store.deliverability(context.Background(), "As discussed.", "Subject",
-		[]string{"anna@example.test"},
+		[]string{"anna@example.test"}, nil,
 		unsubscribeSurface{category: commsauthz.CategoryReplyToInbound}, ids.Nil, "")
 	if err != nil {
 		t.Fatalf("deriving the message: %v", err)
@@ -297,7 +297,7 @@ func TestAnExplicitCategoryIsNeverOverruled(t *testing.T) {
 func TestAMissingDisclosureBecomesARecordedFooterFinding(t *testing.T) {
 	store := (&Store{}).WithDisclosures(&stubDisclosures{lines: []DisclosureLine{{Kind: "controller_identity"}}})
 	rendered, err := store.deliverability(context.Background(), "As discussed.", "Re: your question",
-		[]string{"anna@example.test"}, unsubscribeSurface{category: commsauthz.CategoryReplyToInbound}, ids.Nil, "")
+		[]string{"anna@example.test"}, nil, unsubscribeSurface{category: commsauthz.CategoryReplyToInbound}, ids.Nil, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -318,7 +318,7 @@ func TestAMetObligationStillSends(t *testing.T) {
 	store := (&Store{}).WithDisclosures(stub)
 
 	got, err := store.deliverability(context.Background(), "As discussed.", "Re: your question",
-		[]string{"anna@example.test"},
+		[]string{"anna@example.test"}, nil,
 		unsubscribeSurface{category: commsauthz.CategoryReplyToInbound}, ids.Nil, "")
 	if err != nil {
 		t.Fatalf("a fully stated installation was refused: %v", err)
@@ -344,7 +344,7 @@ func TestAVietnameseAdvertisingMailEndsWithTheAdvertiserThenTheRefusal(t *testin
 	store.publicBaseURL = "https://mail.example.test"
 
 	got, err := store.deliverability(context.Background(), "Ưu đãi tháng này dành cho quý khách.", "[QC] Ưu đãi",
-		[]string{"an@example.vn"}, unsubscribeSurface{category: commsauthz.CategoryMarketing}, ids.Nil, "")
+		[]string{"an@example.vn"}, nil, unsubscribeSurface{category: commsauthz.CategoryMarketing}, ids.Nil, "")
 	if err != nil {
 		t.Fatalf("deriving the message: %v", err)
 	}
