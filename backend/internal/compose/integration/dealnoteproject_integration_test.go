@@ -135,7 +135,7 @@ func TestOnlyAMembersNoteOnADealTakesTheProject(t *testing.T) {
 		"agent":  e.AgentFor(t, e.AdminUser, nil, AdminPerms),
 		"system": principal.SystemActing(e.Admin(), "system:deal-room"),
 	} {
-		if n := projectsOf(t, e, logDealNote(t, e, ctx, onDeal(f.erpDeal))); n != 0 {
+		if n := projectsOf(t, e, logDealNote(ctx, t, e, onDeal(f.erpDeal))); n != 0 {
 			t.Errorf("the %s note is on %d projects, want none", name, n)
 		}
 	}
