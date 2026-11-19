@@ -14245,6 +14245,7 @@ export const en = {
     "Derived automatically and fixed once live. The cf_ prefix prevents collisions with core fields.",
   "cf.typeLabel": "Type",
   "cf.currencyCode": "Currency code",
+  "cf.currencyNotCode": "Enter a 3-letter currency code, like EUR, CHF or USD.",
   "cf.currencyHint":
     "Three-letter ISO 4217 code, for example EUR or USD. Amounts are stored to the cent.",
   "cf.options": "Options",
@@ -15035,6 +15036,14 @@ export const en = {
   "settings.rates.modelEmpty": "No model rates yet.",
   "settings.rates.modelModalTitle": "Set model price",
   "settings.rates.notSaved": "Rate not saved",
+  "settings.rates.fromIsBase":
+    "This is the base currency, and its rate is always 1. Choose another currency.",
+  "settings.rates.fromNotCurrency":
+    "Enter a 3-letter currency code, like EUR, CHF or USD.",
+  "settings.rates.rateNotPositive":
+    "Enter a rate greater than zero, with at most 10 decimal places.",
+  "settings.rates.pastDate":
+    "A past date works only before this currency’s first rate. Choose today or a later date.",
   "taxRates.title": "Tax rates",
   "taxRates.withheld": "Only an Admin or Ops can see the tax rates.",
   "taxRates.intro":
@@ -15786,7 +15795,6 @@ export const en = {
   "settings.companySave": "Save company context",
   "settings.companySaved": "Saved",
   "settings.companySaveFailed": "Company context not saved",
-  "settings.companyNameTooLong": "Shorten the company name.",
   "settings.companyRefreshFailed": "Website read did not finish",
   "settings.companyApplyFailed": "Changes not applied",
   "settings.companyRefreshWarnings": "Warnings from this read",
@@ -15823,6 +15831,7 @@ export const en = {
   "product.readOnly": "Read-only. Your role cannot change products.",
   "product.new": "New product",
   "product.edit": "Edit product",
+  "product.skuTaken": "Another product already has this SKU.",
   "product.taxCategory": "Tax category",
   "product.taxCategoryUnset": "Not classified",
   "product.taxCategoryFilter": "Tax category",
@@ -19590,6 +19599,7 @@ export const en = {
   "lists.loading": "Loading list",
   "lists.kind.live": "Live List",
   "lists.alreadyOnShortlist": "Already on this Shortlist.",
+  "lists.alreadyOnOption": "{name} (already on it)",
   "lists.kind.shortlist": "Shortlist",
   "lists.type.contact": "Contacts",
   "lists.type.company": "Companies",

@@ -27,7 +27,7 @@ import { useInstallationSettings } from "../../lib/uploadlimit";
 import { type ContractDraft, draftProblem, pricedIn } from "./contractform";
 import { renewContract } from "./contractrenewal";
 import { renewDraftOf } from "./contracttermsbody";
-import { ContractTermsFields } from "./contracttermsfields";
+import { ContractTermsFields, useTermsFaults } from "./contracttermsfields";
 
 // The three transitions a signed agreement goes through after it is recorded:
 // renew, assert a status, record a cancellation.
@@ -143,9 +143,16 @@ export function ContractRenewModal({
   });
 
   const invalid = draftProblem(draft);
+  const [terms, termsRoot] = useTermsFaults(draft, setDraft);
+  const refusedRest = terms.rest(renew.error);
+  const close = () => {
+    renew.reset();
+    terms.clear();
+    onClose();
+  };
 
   return (
-    <Modal open={open} onClose={onClose} labelledBy={titleId} intent="drawer">
+    <Modal open={open} onClose={close} labelledBy={titleId} intent="drawer">
       <DrawerHead>
         <Heading size="large" id={titleId}>
           {t("contracts.renew.title")}
@@ -156,6 +163,7 @@ export function ContractRenewModal({
             draftProblem and the server accept. */}
         <form
           id={formId}
+          ref={termsRoot}
           className="form-stack"
           noValidate
           onSubmit={(event) => {
@@ -163,20 +171,24 @@ export function ContractRenewModal({
             if (refuseUnreadableField(event.currentTarget)) {
               return;
             }
-            if (invalid === null) {
-              renew.mutate({
-                predecessor: contract,
-                draft: pricedIn(draft, baseCurrency),
-                dealId,
-              });
+            if (invalid === null && !terms.refused()) {
+              renew.mutate(
+                {
+                  predecessor: contract,
+                  draft: pricedIn(draft, baseCurrency),
+                  dealId,
+                },
+                { onError: terms.showRefusal },
+              );
             }
           }}
         >
           <p>{t("contracts.renew.hint")}</p>
           <ContractTermsFields
             draft={draft}
-            setDraft={setDraft}
+            setDraft={terms.setDraft}
             currency={contractCurrency}
+            errors={terms.errors}
           />
           {/* Never required: the server accepts a renewal with no deal. */}
           {anchor == null ? (
@@ -208,11 +220,11 @@ export function ContractRenewModal({
               )}
             </Field>
           )}
-          <ErrorLine error={renew.error} />
+          {refusedRest ? <ErrorLine>{refusedRest}</ErrorLine> : null}
         </form>
       </DrawerBody>
       <DrawerFoot className="actions">
-        <Button onClick={onClose}>{t("create.cancel")}</Button>
+        <Button onClick={close}>{t("create.cancel")}</Button>
         <Button
           type="submit"
           form={formId}

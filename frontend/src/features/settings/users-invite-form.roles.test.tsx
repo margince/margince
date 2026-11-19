@@ -14,8 +14,8 @@ import { installFetchStub, jsonResponse } from "../../testing/story-utils";
 import { InviteUserForm } from "./users-invite-form";
 
 // The invite form's role: it starts on the ordinary seat when the reader may
-// hand it out, and otherwise sends nothing until the reader picks a role they
-// are offered. An invite the server would refuse is never one click away.
+// hand it out, and otherwise sends nothing and asks for a role they are
+// offered. An invite the server would refuse is never sent.
 
 const FIELD_SALES = {
   key: "custom_field_sales",
@@ -66,10 +66,12 @@ describe("InviteUserForm role", () => {
     await waitFor(() => expect(role).not.toBeDisabled());
 
     expect(role).toHaveTextContent("Set role…");
-    expect(screen.getByRole("button", { name: /invite/i })).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: /invite/i }));
+    expect(await screen.findByText("Role is required.")).toBeVisible();
+    await waitFor(() => expect(role).toHaveFocus());
 
     await pickOption(user, role, "Field sales");
-    expect(screen.getByRole("button", { name: /invite/i })).toBeEnabled();
+    expect(screen.queryByText("Role is required.")).toBeNull();
   });
 
   it("starts on the ordinary seat when the reader may hand it out", async () => {

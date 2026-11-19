@@ -10,6 +10,7 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
 import { type CreateField, CreateRecordModal } from "../../components/create";
+import { fieldRefusals } from "../../components/create.refusals";
 import { EditAction } from "../../components/edit";
 import {
   translationFields,
@@ -21,10 +22,12 @@ import { ConfirmModal } from "../../design-system/confirmmodal";
 import { useLastSubject } from "../../design-system/presence";
 import { useToast } from "../../design-system/toast";
 import { formatNumber } from "../../format/format";
-import { useLocale, usePlural, useT } from "../../i18n";
+import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import {
+  fieldCheckSentence,
   isVersionSkew,
   isVersionSkewOf,
+  percentLimit,
   problemMessageOf,
   unwrap,
 } from "../../lib/problem";
@@ -66,7 +69,26 @@ function mapStageBody(v: Record<string, unknown>) {
 // The form keys the stage's name in further languages travel under.
 const STAGE_NAME = "name";
 
-function stageFields(t: T): CreateField[] {
+// The server's bounds on a stage's chance, checked in its own words.
+const WIN_PROBABILITY = { min: "0", max: "100" } as const;
+
+function winProbabilityFault(
+  value: string,
+  label: Readonly<{ label: string; limit: (wire: string) => string }>,
+  locale: Locale,
+): string | undefined {
+  if (value.trim() === "") return undefined;
+  const percent = Number(value);
+  if (!Number.isInteger(percent)) {
+    return fieldCheckSentence("not_integer", locale, label);
+  }
+  return percent < 0 || percent > 100
+    ? fieldCheckSentence("out_of_range", locale, label, WIN_PROBABILITY)
+    : undefined;
+}
+
+function stageFields(t: T, locale: Locale): CreateField[] {
+  const chance = { label: t("stage.winProb"), limit: percentLimit(locale) };
   return [
     { key: "name", label: "stage.name", required: true },
     ...translationFields(STAGE_NAME),
@@ -81,7 +103,13 @@ function stageFields(t: T): CreateField[] {
         { value: "lost", label: t("stage.semLost") },
       ],
     },
-    { key: "win_probability", label: "stage.winProb", type: "number" },
+    {
+      key: "win_probability",
+      label: "stage.winProb",
+      type: "number",
+      limit: chance.limit,
+      validate: (value) => winProbabilityFault(value, chance, locale),
+    },
   ];
 }
 
@@ -111,9 +139,11 @@ export function StageCreate({
   reason,
 }: Readonly<{ pipeline: Pipeline; reason?: string }>) {
   const t = useT();
+  const { locale } = useLocale();
   const toast = useToast();
   const [open, setOpen] = useState(false);
   const queryClient = useQueryClient();
+  const fields = stageFields(t, locale);
   const mutation = useMutation({
     mutationFn: createStage,
     onSuccess: () => {
@@ -122,6 +152,7 @@ export function StageCreate({
       toast.show(t("stage.added"));
     },
   });
+  const refused = fieldRefusals(mutation.error, fields, t);
   return (
     <>
       <Button
@@ -136,9 +167,15 @@ export function StageCreate({
         open={open && reason === undefined}
         onClose={() => setOpen(false)}
         title={t("stage.new")}
-        fields={stageFields(t)}
+        fields={fields}
         pending={mutation.isPending}
-        error={mutation.isError ? problemMessageOf(mutation.error, t) : null}
+        error={
+          mutation.isError && !refused.allPlaced
+            ? problemMessageOf(mutation.error, t)
+            : null
+        }
+        fieldRefusals={refused.byField}
+        refusedAt={mutation.isError ? mutation.submittedAt : undefined}
         onSubmit={(values) => mutation.mutate({ values, pipeline })}
       />
     </>
@@ -149,6 +186,7 @@ export function StageCreate({
 // stage renumbers its siblings, and each sibling's version moves with it.
 function StageEdit({ stage }: Readonly<{ stage: Stage }>) {
   const t = useT();
+  const { locale } = useLocale();
   const queryClient = useQueryClient();
   return (
     <EditAction<Stage>
@@ -165,7 +203,7 @@ function StageEdit({ stage }: Readonly<{ stage: Stage }>) {
         semantic: stage.semantic,
         win_probability: String(stage.win_probability),
       }}
-      fields={stageFields(t)}
+      fields={stageFields(t, locale)}
       update={async (values, _rows, opened) => {
         const answer = await api.PATCH("/stages/{id}", {
           params: {

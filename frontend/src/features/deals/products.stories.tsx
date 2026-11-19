@@ -155,6 +155,24 @@ export const NewProductBilling: Story = {
     await within(document.body).findByRole("option", { name: "Quarterly" });
   },
 };
+// A price with more decimals than its currency holds, refused on its field.
+export const NewProductPriceRefused: Story = {
+  render: renderCatalogue,
+  play: async ({ canvasElement }) => {
+    await pressHeadVerb(canvasElement, "New product");
+    const form = within(await within(document.body).findByRole("dialog"));
+    await userEvent.type(
+      form.getByRole("textbox", { name: /^Name/ }),
+      "Widget",
+    );
+    await userEvent.type(
+      form.getByRole("textbox", { name: /^Unit price/ }),
+      "9.999",
+    );
+    await form.findByText("Decimal places allowed in Unit price: 2.");
+  },
+};
+
 // At 390px each row is a card: the name heads it and the "…" sits beside it.
 export const ListPhone: Story = {
   globals: { viewport: { value: "phone" } },

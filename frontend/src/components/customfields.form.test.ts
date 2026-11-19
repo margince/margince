@@ -119,6 +119,23 @@ describe("customFieldToFormField", () => {
     expect(field.required).toBeFalsy();
   });
 
+  it("refuses a day the server cannot store before sending, naming the bounds", () => {
+    const field = customFieldToFormField(
+      cf({
+        label: "Renewal date",
+        column_name: "cf_renewal_date",
+        type: "date",
+      }),
+      BOOL_LABELS,
+      T,
+    );
+    expect(field.validate?.("9999-12-31")).toMatch(
+      /^Renewal date must be from .*0001 to .*9999\.$/,
+    );
+    expect(field.validate?.("2026-03-01")).toBeUndefined();
+    expect(field.validate?.("")).toBeUndefined();
+  });
+
   it("names the label and options in the reader's language, keeping stored values", () => {
     const services = cf({
       label: "Services",

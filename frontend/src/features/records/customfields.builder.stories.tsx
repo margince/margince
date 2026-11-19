@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import { ProblemError } from "../../lib/problem";
 import { StoryProviders } from "../../testing/story-utils";
 import { FieldBuilder } from "./customfields.builder";
 
@@ -27,6 +28,7 @@ export const Phone: Story = {
       <FieldBuilder
         object="deal"
         pending={false}
+        error={null}
         onSubmit={noop}
         onCancel={noop}
       />
@@ -34,12 +36,47 @@ export const Phone: Story = {
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.type(canvas.getByLabelText("Label"), "Ceiling");
+    await userEvent.type(
+      canvas.getByRole("textbox", { name: "Label" }),
+      "Ceiling",
+    );
     await userEvent.click(canvas.getByRole("combobox", { name: "Type" }));
     const page = within(canvasElement.ownerDocument.body);
     await userEvent.click(
       await page.findByRole("option", { name: "Currency" }),
     );
     await canvas.findByLabelText("Currency code");
+  },
+};
+
+// A label the record type already has: the server's conflict lands on the
+// Label field in the screen's own words.
+export const LabelTaken: Story = {
+  render: () => (
+    <StoryProviders>
+      <FieldBuilder
+        object="contact"
+        pending={false}
+        error={null}
+        onSubmit={(_draft, refused) =>
+          refused(
+            new ProblemError({
+              status: 409,
+              code: "conflict",
+              detail: 'a custom field labelled "Budget" already exists',
+            }),
+          )
+        }
+        onCancel={noop}
+      />
+    </StoryProviders>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.type(
+      canvas.getByRole("textbox", { name: "Label" }),
+      "Budget",
+    );
+    await userEvent.click(canvas.getByRole("button", { name: "Add field" }));
   },
 };

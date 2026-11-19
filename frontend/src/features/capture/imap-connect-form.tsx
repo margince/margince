@@ -11,8 +11,13 @@ import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { formatNumber, identifierNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
-import { problemCodeOf, problemMessageOf, unwrap } from "../../lib/problem";
+import {
+  imapErrorMessage,
+  inRange,
+  PORT_RANGE,
+  type Range,
+} from "../../lib/imapconnect";
+import { unwrap } from "../../lib/problem";
 import {
   ImapSendFields,
   READ_ONLY,
@@ -39,33 +44,8 @@ const DEFAULT_PORT = "993";
 const DEFAULT_MAILBOX = "INBOX";
 const DEFAULT_MAX_MESSAGES = "50";
 
-type Range = { min: number; max: number };
-const PORT_RANGE: Range = { min: 1, max: 65535 };
 // The server clamps a larger count rather than refusing it; the form asks first.
 const MAX_MESSAGES_RANGE: Range = { min: 1, max: 200 };
-
-function inRange(value: number, { min, max }: Range): boolean {
-  return Number.isInteger(value) && value >= min && value <= max;
-}
-
-// The IMAP and SMTP server conditions get their own sentence; every other
-// failure reads the way failures read everywhere else. No sentence echoes the
-// submitted host, and the server does not send it back either.
-const SERVER_SENTENCES: Readonly<Record<string, MessageKey>> = {
-  imap_login_rejected: "connectors.imapLoginRejected",
-  imap_unreachable: "connectors.imapUnreachable",
-  smtp_login_rejected: "connectors.smtpLoginRejected",
-  smtp_unreachable: "connectors.smtpUnreachable",
-  smtp_address_invalid: "connectors.smtpAddressInvalid",
-};
-
-function imapErrorMessage(
-  error: unknown,
-  t: (key: MessageKey) => string,
-): string {
-  const key = SERVER_SENTENCES[problemCodeOf(error) ?? ""];
-  return key ? t(key) : problemMessageOf(error, t);
-}
 
 /**
  * The mailbox form itself: fields, the standing connect, and the two actions.

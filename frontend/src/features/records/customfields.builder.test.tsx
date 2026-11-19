@@ -8,6 +8,7 @@ import { pickOption } from "../../design-system/select-testing";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import { ProblemError } from "../../lib/problem";
 import { FieldBuilder } from "./customfields.builder";
 
 afterEach(() => {
@@ -38,6 +39,7 @@ function builder(
         <FieldBuilder
           object="company"
           pending={false}
+          error={null}
           onSubmit={onSubmit}
           onCancel={onCancel}
           {...overrides}
@@ -84,15 +86,35 @@ describe("FieldBuilder", () => {
     expect(screen.getByRole("button", { name: "Add field" })).toBeDisabled();
   });
 
-  it("guards an empty label: Confirm disabled, guard toast on click attempt", async () => {
-    const { onSubmit } = builder();
-    const confirm = screen.getByRole("button", {
-      name: "Add field",
-    });
-    expect(confirm).toBeDisabled();
-    // the guard toast is wired to the always-clickable Add affordance
+  it("asks for a label on its field and sends nothing", async () => {
+    const { user, onSubmit } = builder();
+    await user.click(screen.getByRole("button", { name: "Add field" }));
+    expect(await screen.findByText("Label is required.")).toBeVisible();
+    const label = screen.getByRole("textbox", { name: en["cf.label"] });
+    expect(label).toHaveAttribute("aria-invalid", "true");
+    await vi.waitFor(() => expect(label).toHaveFocus());
     expect(onSubmit).not.toHaveBeenCalled();
-    expect(screen.queryByRole("status")).toBeNull();
+    await user.type(label, "Renewal date");
+    expect(screen.queryByText("Label is required.")).toBeNull();
+  });
+
+  it("says on the label that the record type already has it", async () => {
+    const { user, onSubmit } = builder();
+    onSubmit.mockImplementation((_draft, refused: (error: unknown) => void) =>
+      refused(
+        new ProblemError({
+          status: 409,
+          code: "conflict",
+          detail: 'a custom field labelled "Budget" already exists: conflict',
+        }),
+      ),
+    );
+    const label = screen.getByRole("textbox", { name: en["cf.label"] });
+    await user.type(label, "Budget");
+    await user.click(screen.getByRole("button", { name: "Add field" }));
+    expect(await screen.findByText(en["cf.labelTaken"])).toBeVisible();
+    expect(label).toHaveAttribute("aria-invalid", "true");
+    expect(screen.queryByText(/already exists: conflict/)).toBeNull();
   });
 
   it("reveals the ISO-4217 input for currency", async () => {
@@ -133,6 +155,7 @@ describe("FieldBuilder", () => {
         label: "Renewal date",
         type: "date",
       }),
+      expect.any(Function),
     );
   });
 
@@ -141,7 +164,11 @@ describe("FieldBuilder", () => {
     await user.type(screen.getByLabelText(/Label/i), "Last visit");
     await pickType(en["cf.type.record"]);
     const add = screen.getByRole("button", { name: "Add field" });
-    expect(add).toBeDisabled();
+    await user.click(add);
+    expect(
+      await screen.findByText(`${en["cf.recordKind"]} is required.`),
+    ).toBeVisible();
+    expect(onSubmit).not.toHaveBeenCalled();
     await pickOption(
       user,
       screen.getByRole("combobox", { name: en["cf.recordKind"] }),
@@ -150,6 +177,7 @@ describe("FieldBuilder", () => {
     await user.click(add);
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ type: "record", options: ["ext:alpha:visit"] }),
+      expect.any(Function),
     );
   });
 
@@ -162,6 +190,7 @@ describe("FieldBuilder", () => {
     await user.click(screen.getByRole("button", { name: "Add field" }));
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ label: "Previous owner", showInCreate: false }),
+      expect.any(Function),
     );
   });
 
@@ -173,15 +202,16 @@ describe("FieldBuilder", () => {
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
-  it("keeps Confirm disabled for a picklist whose only option is blank", async () => {
-    const { user, pickType } = builder();
+  it("asks for a real option before a picklist is sent", async () => {
+    const { user, onSubmit, pickType } = builder();
     await user.type(screen.getByLabelText(/Label/i), "Deal source");
     await pickType("Picklist");
-    // The single option row is left blank: a picklist with no real choice
-    // must not be confirmable.
-    expect(screen.getByRole("button", { name: "Add field" })).toBeDisabled();
-    // Typing a real option flips Confirm back on.
+    await user.click(screen.getByRole("button", { name: "Add field" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      en["cf.lastOptionBlocked"],
+    );
+    expect(onSubmit).not.toHaveBeenCalled();
     await user.type(screen.getByLabelText(/Option label/i), "Referral");
-    expect(screen.getByRole("button", { name: "Add field" })).toBeEnabled();
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 });

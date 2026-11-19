@@ -13924,6 +13924,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Tự động suy ra và cố định khi đã hoạt động. Tiền tố cf_ tránh trùng với trường lõi.",
   "cf.typeLabel": "Loại",
   "cf.currencyCode": "Mã loại tiền",
+  "cf.currencyNotCode":
+    "Nhập mã loại tiền gồm 3 chữ cái, ví dụ EUR, CHF hoặc USD.",
   "cf.currencyHint":
     "Mã ISO 4217 gồm ba chữ cái, ví dụ EUR hoặc USD. Số tiền được lưu đến đơn vị xu.",
   "cf.options": "Lựa chọn",
@@ -14716,6 +14718,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.rates.modelEmpty": "Chưa có giá mô hình nào.",
   "settings.rates.modelModalTitle": "Nhập giá mô hình",
   "settings.rates.notSaved": "Không thể lưu tỷ giá",
+  "settings.rates.fromIsBase":
+    "Đây là tiền tệ cơ sở, nên tỷ giá luôn là 1. Chọn loại tiền khác.",
+  "settings.rates.fromNotCurrency":
+    "Nhập mã loại tiền gồm 3 chữ cái, ví dụ EUR, CHF hoặc USD.",
+  "settings.rates.rateNotPositive":
+    "Nhập tỷ giá lớn hơn 0, tối đa 10 chữ số thập phân.",
+  "settings.rates.pastDate":
+    "Chỉ chọn được ngày đã qua nếu ngày đó trước tỷ giá đầu tiên của loại tiền này. Chọn hôm nay hoặc một ngày sau đó.",
   "taxRates.title": "Thuế suất",
   "taxRates.withheld": "Chỉ Admin hoặc Ops xem được thuế suất.",
   "taxRates.intro":
@@ -15471,7 +15481,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.companySave": "Lưu bối cảnh công ty",
   "settings.companySaved": "Đã lưu",
   "settings.companySaveFailed": "Không thể lưu bối cảnh công ty",
-  "settings.companyNameTooLong": "Hãy rút ngắn tên công ty.",
   "settings.companyRefreshFailed": "Quá trình đọc trang web bị gián đoạn",
   "settings.companyApplyFailed": "Không thể áp dụng thay đổi",
   "settings.companyRefreshWarnings": "Cảnh báo từ lần đọc này",
@@ -15509,6 +15518,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "product.settingsSub": "Các mục bảng giá để sao chép vào dòng báo giá.",
   "product.new": "Sản phẩm mới",
   "product.edit": "Sửa sản phẩm",
+  "product.skuTaken": "Một sản phẩm khác đã có mã hàng này.",
   "product.taxCategory": "Loại thuế",
   "product.taxCategoryUnset": "Chưa phân loại",
   "product.taxCategoryFilter": "Loại thuế",
@@ -19270,6 +19280,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lists.loading": "Đang tải danh sách",
   "lists.kind.live": "Danh sách tự cập nhật",
   "lists.alreadyOnShortlist": "Đã có trong danh sách chọn tay này.",
+  "lists.alreadyOnOption": "{name} (đã có trong danh sách chọn tay)",
   "lists.kind.shortlist": "Danh sách chọn tay",
   "lists.type.contact": "Li\u00ean h\u1ec7",
   "lists.type.company": "C\u00f4ng ty",

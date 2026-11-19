@@ -83,7 +83,12 @@ function backend(
       request.url.endsWith(path),
     );
     if (refusal && request.method !== "GET") {
-      return jsonResponse(refusal[1], 409);
+      const answer = refusal[1];
+      const status =
+        "status" in answer && typeof answer.status === "number"
+          ? answer.status
+          : 409;
+      return jsonResponse(answer, status);
     }
     if (request.method === "POST" && request.url.endsWith("/legal-entities")) {
       return jsonResponse(entity("le-new", JSON.parse(raw)), 201);
@@ -428,4 +433,138 @@ it("holds Save and the close while a logo write is out", async () => {
   await user.click(save);
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   expect(calls.find((call) => call.method === "PATCH")?.ifMatch).toBe("5");
+});
+
+function fieldFault(field: string, code: string, extra: object = {}) {
+  return {
+    title: "Validation failed",
+    status: 422,
+    code: "validation_error",
+    detail: `${field} is wrong`,
+    details: {
+      errors: [{ field, code, message: `${field} is wrong`, ...extra }],
+    },
+  };
+}
+
+async function openNewEntity(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(
+    await screen.findByRole("button", { name: en["legalEntities.addOpen"] }),
+  );
+  return screen.findByRole("dialog");
+}
+
+it("says on each blank required field what it needs, focuses the first and sends nothing", async () => {
+  const user = userEvent.setup();
+  const calls: Call[] = [];
+  vi.stubGlobal("fetch", backend(ADMIN, DEFAULT_ONLY, calls));
+  render(<LegalEntitiesCard />);
+  const dialog = await openNewEntity(user);
+  const [name, legal] = within(dialog).getAllByRole("textbox");
+  await user.type(name as HTMLElement, "   ");
+  await user.type(legal as HTMLElement, "Wien GmbH");
+  await user.click(
+    within(dialog).getByRole("button", {
+      name: en["legalEntities.addConfirm"],
+    }),
+  );
+  expect(await within(dialog).findByText("Name is required.")).toBeVisible();
+  expect(within(dialog).getByText("Country is required.")).toBeVisible();
+  await waitFor(() => expect(name).toHaveFocus());
+  expect(name).toHaveAttribute("aria-invalid", "true");
+  expect(legal).not.toHaveAttribute("aria-invalid");
+  expect(calls.some((call) => call.method === "POST")).toBe(false);
+
+  await user.type(name as HTMLElement, "Wien");
+  expect(within(dialog).queryByText("Name is required.")).toBeNull();
+  expect(within(dialog).getByText("Country is required.")).toBeVisible();
+});
+
+it("puts a refusal the server names on its field, by the field's label", async () => {
+  const user = userEvent.setup();
+  vi.stubGlobal(
+    "fetch",
+    backend(ADMIN, DEFAULT_ONLY, [], {
+      "/legal-entities": fieldFault("legal_name", "too_long", { max: 200 }),
+    }),
+  );
+  render(<LegalEntitiesCard />);
+  const dialog = await openNewEntity(user);
+  const [name, legal] = within(dialog).getAllByRole("textbox");
+  await user.type(name as HTMLElement, "Wien");
+  await user.type(legal as HTMLElement, "Wien GmbH");
+  await pickOption(
+    user,
+    within(dialog).getByRole("combobox", { name: /Country/ }),
+    "Austria",
+  );
+  await user.click(
+    within(dialog).getByRole("button", {
+      name: en["legalEntities.addConfirm"],
+    }),
+  );
+  expect(
+    await within(dialog).findByText("Legal name: at most 200 characters."),
+  ).toBeVisible();
+  await waitFor(() => expect(legal).toHaveFocus());
+  expect(within(dialog).queryByText("legal_name is wrong")).toBeNull();
+});
+
+it("says on the name field that another entity has the name", async () => {
+  const user = userEvent.setup();
+  vi.stubGlobal(
+    "fetch",
+    backend(ADMIN, DEFAULT_ONLY, [], {
+      "/legal-entities": {
+        title: "Conflict",
+        status: 409,
+        code: "legal_entity_name_taken",
+        detail: "another live legal entity already has this name",
+      },
+    }),
+  );
+  render(<LegalEntitiesCard />);
+  const dialog = await openNewEntity(user);
+  const [name, legal] = within(dialog).getAllByRole("textbox");
+  await user.type(name as HTMLElement, "Acme");
+  await user.type(legal as HTMLElement, "Acme GmbH");
+  await pickOption(
+    user,
+    within(dialog).getByRole("combobox", { name: /Country/ }),
+    "Austria",
+  );
+  await user.click(
+    within(dialog).getByRole("button", {
+      name: en["legalEntities.addConfirm"],
+    }),
+  );
+  expect(
+    await within(dialog).findByText(en["legalEntities.nameTaken"]),
+  ).toBeVisible();
+  expect(name).toHaveAttribute("aria-invalid", "true");
+  await waitFor(() => expect(name).toHaveFocus());
+});
+
+it("puts an edit's refused IBAN on the IBAN field", async () => {
+  const user = userEvent.setup();
+  vi.stubGlobal(
+    "fetch",
+    backend(ADMIN, [...DEFAULT_ONLY, VIENNA], [], {
+      "/legal-entities/le-vienna": fieldFault("iban", "invalid_iban"),
+    }),
+  );
+  render(<LegalEntitiesCard />);
+  await rowVerb(user, "Acme Wien", en["legalEntities.edit"]);
+  const dialog = await screen.findByRole("dialog");
+  const iban = within(dialog).getByRole("textbox", {
+    name: en["legalEntities.iban"],
+  });
+  await user.type(iban, "AT00");
+  await user.click(
+    within(dialog).getByRole("button", { name: en["legalEntities.save"] }),
+  );
+  expect(
+    await within(dialog).findByText(en["legalEntities.invalidIban"]),
+  ).toBeVisible();
+  await waitFor(() => expect(iban).toHaveFocus());
 });

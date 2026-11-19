@@ -75,3 +75,58 @@ export const UnreadableDayPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
 };
+
+export const DayOutOfRange: Story = {
+  render: (args) => <DealForm onSubmit={args.onSubmit} />,
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement);
+    const close = await canvas.findByRole("textbox", {
+      name: /Expected close/,
+    });
+    await userEvent.type(close, "31/12/9999");
+    await userEvent.tab();
+    await expect(
+      await canvas.findByText(
+        "Expected close must be from 02/01/0001 to 30/12/9999.",
+      ),
+    ).toBeVisible();
+    await expect(close).toHaveAttribute("aria-invalid", "true");
+    await expect(args.onSubmit).not.toHaveBeenCalled();
+  },
+};
+
+// The server's refusal on the field it names, until that field is edited.
+function RefusedForm({ onSubmit }: Args) {
+  const [values, setValues] = useState<Record<string, string>>({
+    name: "Acme renewal",
+    expected_close_date: "2026-06-03",
+  });
+  const [rows, setRows] = useState<FormRows>({});
+  return (
+    <RecordFormBody
+      fields={dealFields}
+      values={values}
+      setValues={setValues}
+      rows={rows}
+      setRows={setRows}
+      pending={false}
+      error={null}
+      fieldRefusals={
+        new Map([
+          [
+            "expected_close_date",
+            "Expected close must be at least 10/06/2026.",
+          ],
+        ])
+      }
+      refusedAt={1}
+      onSubmit={onSubmit}
+      onClose={() => {}}
+      intent="create"
+    />
+  );
+}
+
+export const RefusedByServer: Story = {
+  render: (args) => <RefusedForm onSubmit={args.onSubmit} />,
+};

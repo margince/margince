@@ -21,7 +21,7 @@ import { useInstallationSettings } from "../../lib/uploadlimit";
 import { useSeededCustomFields } from "./contractcustomseed";
 import { SignedFileField } from "./contractform.signedfile";
 import { contractTermsBody } from "./contracttermsbody";
-import { ContractTermsFields } from "./contracttermsfields";
+import { ContractTermsFields, useTermsFaults } from "./contracttermsfields";
 import { createContract, patchContract } from "./contractwrites";
 
 // Recording an agreement.
@@ -234,9 +234,16 @@ export function ContractForm({
   });
 
   const invalid = draftProblem(draft);
+  const [terms, termsRoot] = useTermsFaults(draft, setDraft);
+  const refusedRest = terms.rest(save.error);
+  const close = () => {
+    save.reset();
+    terms.clear();
+    onClose();
+  };
 
   return (
-    <Modal open={open} onClose={onClose} labelledBy={titleId} intent="drawer">
+    <Modal open={open} onClose={close} labelledBy={titleId} intent="drawer">
       <DrawerHead>
         <Heading size="large" id={titleId}>
           {t(contract ? "contracts.form.editTitle" : "contracts.form.title")}
@@ -247,6 +254,7 @@ export function ContractForm({
             draftProblem and the server accept. */}
         <form
           id={formId}
+          ref={termsRoot}
           className="form-stack"
           noValidate
           onSubmit={(event) => {
@@ -254,15 +262,21 @@ export function ContractForm({
             if (refuseUnreadableField(event.currentTarget)) {
               return;
             }
-            if (invalid === null) {
-              save.mutate({ draft: pricedIn(draft, baseCurrency), file });
+            if (invalid === null && !terms.refused()) {
+              save.mutate(
+                { draft: pricedIn(draft, baseCurrency), file },
+                {
+                  onError: terms.showRefusal,
+                },
+              );
             }
           }}
         >
           <ContractTermsFields
             draft={draft}
-            setDraft={setDraft}
+            setDraft={terms.setDraft}
             currency={contractCurrency}
+            errors={terms.errors}
           />
           <CustomFieldControls
             fields={cf.formFields}
@@ -275,11 +289,11 @@ export function ContractForm({
             file={file}
             onPick={setFile}
           />
-          <ErrorLine error={save.error} />
+          {refusedRest ? <ErrorLine>{refusedRest}</ErrorLine> : null}
         </form>
       </DrawerBody>
       <DrawerFoot className="actions">
-        <Button onClick={onClose}>{t("create.cancel")}</Button>
+        <Button onClick={close}>{t("create.cancel")}</Button>
         {/* A reason in a paragraph above the button reaches no screen reader. */}
         <Button
           type="submit"

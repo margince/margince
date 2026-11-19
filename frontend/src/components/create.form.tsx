@@ -10,12 +10,15 @@ import { ErrorLine } from "../design-system/errorline";
 import { refuseUnreadableField } from "../design-system/formvalidity";
 import { useSinglePress } from "../design-system/presslatch";
 import { RecordFormDialog } from "../design-system/recordformdialog";
-import { useT } from "../i18n";
+import { useFieldFaults } from "../design-system/savepage";
+import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { fieldCheckSentence } from "../lib/problem";
 import { navigate, type Route } from "../lib/router";
 import { fieldControl, MultiselectField } from "./create.controls";
 import {
   type CreateField,
+  dayOutOfRange,
   type FormRows,
   fieldLabel,
   rowsRequirementMet,
@@ -49,6 +52,7 @@ export function RecordFormBody({
   pending,
   error,
   fieldRefusals,
+  refusedAt,
   existing,
   resolveExisting,
   notice,
@@ -66,6 +70,8 @@ export function RecordFormBody({
   error: string | null;
   // What the server refused per field, shown beside the field it names.
   fieldRefusals?: ReadonlyMap<string, string>;
+  // When the submit the server refused was sent; each new one moves focus.
+  refusedAt?: number;
   // A duplicate (409)'s collided record and the screen's route to it: both
   // present, the "view existing" link renders under the error.
   existing?: { id: string; code: string } | null;
@@ -79,6 +85,7 @@ export function RecordFormBody({
   dialog?: { open: boolean; title: string };
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const formId = useId();
 
   // Laid over the reader's values where the form shows and sends them. Other
@@ -92,24 +99,46 @@ export function RecordFormBody({
   // after it.
   const [edited, setEdited] = useState(false);
   const [editedOpen, setEditedOpen] = useState(dialog?.open);
+  // The fields the reader has emptied or tried to save empty: each says it is
+  // required, where a disabled Save alone would not say why.
+  const [touched, setTouched] = useState<ReadonlySet<string>>(new Set());
+  // The server's refusals, each on its field until that field is edited.
+  const [faults, faultsRoot] = useFieldFaults();
+  const [refusalShown, setRefusalShown] = useState<number>();
+  if (refusedAt !== refusalShown) {
+    setRefusalShown(refusedAt);
+    faults.show(
+      refusedAt === undefined ? new Map() : (fieldRefusals ?? new Map()),
+    );
+  }
   // Each opening starts unchanged; a close that is not a save asks only after an edit.
   if (dialog && dialog.open !== editedOpen) {
     setEditedOpen(dialog.open);
     setEdited(false);
+    setTouched(new Set());
+    faults.show(new Map());
   }
   const setVisibleValues = (next: Record<string, string>) => {
+    const changed = Object.keys(next).filter(
+      (key) => next[key] !== values[key],
+    );
     setEdited(true);
+    setTouched(new Set([...touched, ...changed]));
+    for (const key of changed) faults.edited(key);
     setValues(submittedValues(fields, next));
   };
-  const requiredMissing = shown.some((field) => {
+  const missing = shown.filter((field) => {
     if (field.type === "repeatable") {
       return !rowsRequirementMet(field, rows[field.key] ?? []);
     }
     return field.required && !(values[field.key] ?? "").trim();
   });
+  const requiredMissing = missing.length > 0;
   const refusals = new Map(
     shown.flatMap((field) => {
-      const refusal = field.validate?.(values[field.key] ?? "", values, rows);
+      const refusal =
+        field.validate?.(values[field.key] ?? "", values, rows) ??
+        ownCheck(field, values[field.key] ?? "", touched, locale, t);
       return refusal ? [[field.key, refusal] as const] : [];
     }),
   );
@@ -126,13 +155,26 @@ export function RecordFormBody({
   const singlePress = useSinglePress(pending);
   const submit = singlePress((event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (
-      !pending &&
-      !requiredMissing &&
-      refusals.size === 0 &&
-      !refuseUnreadableField(event.currentTarget)
-    )
+    if (pending) return;
+    if (requiredMissing || refusals.size > 0) {
+      setTouched(new Set([...touched, ...missing.map((field) => field.key)]));
+      faults.show(
+        new Map([
+          ...missing.map(
+            (field) =>
+              [
+                field.key,
+                fieldCheckSentence("required", locale, fieldLabel(field, t)),
+              ] as const,
+          ),
+          ...refusals,
+        ]),
+      );
+      return;
+    }
+    if (!refuseUnreadableField(event.currentTarget)) {
       onSubmit(submittedValues(fields, answers), rows);
+    }
   });
   // A dialog titled with its one field's name says that name once.
   const [only, ...others] = shown.filter((field) => !field.divider);
@@ -196,7 +238,7 @@ export function RecordFormBody({
                   )
                 : field.hint
             }
-            error={refusals.get(field.key) ?? fieldRefusals?.get(field.key)}
+            error={refusals.get(field.key) ?? faults.of(field.key)}
           >
             {(control) =>
               field.offers ? (
@@ -256,7 +298,7 @@ export function RecordFormBody({
   );
   if (!dialog) {
     return (
-      <form id={formId} onSubmit={submit}>
+      <form id={formId} ref={faultsRoot} onSubmit={submit}>
         <div className="form-stack">{stack}</div>
         <div className="actions">{actions}</div>
       </form>
@@ -271,11 +313,35 @@ export function RecordFormBody({
       unsaved={edited}
       closeDisabled={pending}
       form={
-        <form id={formId} className="form-stack" onSubmit={submit}>
+        <form
+          id={formId}
+          ref={faultsRoot}
+          className="form-stack"
+          onSubmit={submit}
+        >
           {stack}
         </form>
       }
       actions={actions}
     />
   );
+}
+
+// A check the form makes before sending, beyond the field's own validate: a
+// required field once emptied, and a day the server cannot store.
+function ownCheck(
+  field: CreateField,
+  value: string,
+  touched: ReadonlySet<string>,
+  locale: Locale,
+  t: (key: MessageKey) => string,
+): string | undefined {
+  const label = fieldLabel(field, t);
+  const boxed = field.type !== "repeatable" && field.type !== "multiselect";
+  if (boxed && field.required && touched.has(field.key) && !value.trim()) {
+    return fieldCheckSentence("required", locale, label);
+  }
+  return field.type === "date"
+    ? dayOutOfRange(value, locale, label)
+    : undefined;
 }

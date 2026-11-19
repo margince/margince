@@ -6,10 +6,11 @@ import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
 import { Button, Field } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
+import { useFieldFaults } from "../../design-system/savepage";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { unwrap } from "../../lib/problem";
+import { problemCodeOf, refusalSentences, unwrap } from "../../lib/problem";
 import { AddDocumentDialog } from "../voice-knowledge/adddocument";
 import { roomBriefKey } from "./dealroombrief.key";
 import "./dealroomdocuments.css";
@@ -28,6 +29,8 @@ import { dealFilesKey, roomDocumentsKey } from "../../lib/attachmentkeys";
 // screen to go — the upload existed one tab away and nothing said so.
 
 type DealRoom = components["schemas"]["DealRoom"];
+
+const ALREADY_PRESENT = "deal_room_document_already_present";
 
 // The four groups are machine keys on the wire; these are their names.
 export const DOCUMENT_GROUPS: readonly {
@@ -78,44 +81,71 @@ export function AddDocument({
     },
   });
   const add = useAddDocument(room.id);
+  const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
   if (refusal !== undefined) {
     return <p>{refusal}</p>;
   }
+  const labels = {
+    attachment_id: t("room.docs.fileLabel"),
+    group_key: t("room.docs.groupLabel"),
+  };
+  const refused = refusalSentences(add.error, t, labels);
+  // The file already in the room is the file picked, so the refusal stands on
+  // that field rather than at the foot.
+  const alreadyPresent = problemCodeOf(add.error) === ALREADY_PRESENT;
+  const placed = (error: unknown): ReadonlyMap<string, string> => {
+    const answer = refusalSentences(error, t, labels);
+    return problemCodeOf(error) === ALREADY_PRESENT && answer.rest
+      ? new Map([["attachment_id", answer.rest]])
+      : answer.byField;
+  };
   const options = (files.data?.data ?? []).map((doc) => ({
     value: doc.attachment.id,
     label: doc.attachment.title || doc.attachment.filename,
   }));
   return (
     <>
-      <Field label={t("room.docs.fileLabel")} hint={t("room.docs.fileHint")}>
-        {(control) => (
-          <Select
-            id={control.id}
-            options={options}
-            value={attachmentId}
-            onChange={setAttachmentId}
-            placeholder={
-              options.length === 0
-                ? t("room.docs.noFiles")
-                : t("room.docs.pickFile")
-            }
-            disabled={options.length === 0}
-          />
-        )}
-      </Field>
-      <Field label={t("room.docs.groupLabel")}>
-        {(control) => (
-          <Select
-            id={control.id}
-            options={DOCUMENT_GROUPS.map((g) => ({
-              value: g.key,
-              label: t(g.labelKey),
-            }))}
-            value={group}
-            onChange={setGroup}
-          />
-        )}
-      </Field>
+      <div ref={faultsRoot} className="form-stack">
+        <Field
+          label={labels.attachment_id}
+          hint={t("room.docs.fileHint")}
+          error={faults.of("attachment_id")}
+        >
+          {(control) => (
+            <Select
+              {...control}
+              options={options}
+              value={attachmentId}
+              onChange={(next) => {
+                setAttachmentId(next);
+                faults.edited("attachment_id");
+              }}
+              placeholder={
+                options.length === 0
+                  ? t("room.docs.noFiles")
+                  : t("room.docs.pickFile")
+              }
+              disabled={options.length === 0}
+            />
+          )}
+        </Field>
+        <Field label={labels.group_key} error={faults.of("group_key")}>
+          {(control) => (
+            <Select
+              {...control}
+              options={DOCUMENT_GROUPS.map((g) => ({
+                value: g.key,
+                label: t(g.labelKey),
+              }))}
+              value={group}
+              onChange={(next) => {
+                setGroup(next);
+                faults.edited("group_key");
+              }}
+            />
+          )}
+        </Field>
+      </div>
       <div className="card-actions">
         <Button
           disabled={attachmentId === ""}
@@ -123,7 +153,10 @@ export function AddDocument({
           onClick={() =>
             add.mutate(
               { attachmentId, group },
-              { onSuccess: () => setAttachmentId("") },
+              {
+                onSuccess: () => setAttachmentId(""),
+                onError: (error) => faults.show(placed(error)),
+              },
             )
           }
         >
@@ -145,7 +178,9 @@ export function AddDocument({
         onClose={() => setUploading(false)}
       />
       <p className="t-caption">{t("room.editorial")}</p>
-      <ErrorLine error={add.error} />
+      {refused.rest && !alreadyPresent ? (
+        <ErrorLine>{refused.rest}</ErrorLine>
+      ) : null}
     </>
   );
 }

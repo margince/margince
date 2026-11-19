@@ -231,12 +231,54 @@ export function useSavePage(): SavePage | null {
   return useContext(SavePageContext)?.page ?? null;
 }
 
-// The bar is pinned over the foot of the view, so a refused field below the
-// fold would sit under it. Centring it keeps it clear of the bar.
-function showFirstRefused() {
-  const field = document.querySelector<HTMLElement>('[aria-invalid="true"]');
+// Focus the first refused field under `root`: `aria-invalid` is the mark every
+// control shares. Centred, so a pinned bar or dialog foot does not cover it.
+export function focusFirstRefused(root: ParentNode | null): void {
+  const field = root?.querySelector<HTMLElement>('[aria-invalid="true"]');
   field?.scrollIntoView?.({ block: "center" });
   field?.focus({ preventScroll: true });
+}
+
+const NO_FAULTS: ReadonlyMap<string, string> = new Map();
+
+export type FieldFaults = Readonly<{
+  of: (field: string) => string | undefined;
+  // The reader changed the field, so its refusal no longer describes it.
+  edited: (field: string) => void;
+  // Puts each sentence on its field and focuses the first; true when any.
+  show: (faults: ReadonlyMap<string, string>) => boolean;
+}>;
+
+// A form's refused fields, each until its field is edited, and the ref of the
+// element where focus looks for the first of them.
+// Not one object: the React Compiler reads an object holding a ref as a ref.
+export function useFieldFaults<
+  E extends HTMLElement = HTMLFormElement,
+>(): readonly [FieldFaults, (element: E | null) => void] {
+  const [root, setRoot] = useState<E | null>(null);
+  const [faults, setFaults] = useState(NO_FAULTS);
+  // Counts the refusals shown, so focus moves once the fields carry them.
+  const [shown, setShown] = useState(0);
+  useEffect(() => {
+    if (shown > 0) focusFirstRefused(root);
+  }, [shown, root]);
+  const fieldFaults: FieldFaults = {
+    of: (field) => faults.get(field),
+    edited: (field) =>
+      setFaults((current) => {
+        if (!current.has(field)) return current;
+        const next = new Map(current);
+        next.delete(field);
+        return next;
+      }),
+    show: (next) => {
+      setFaults(next);
+      if (next.size === 0) return false;
+      setShown((count) => count + 1);
+      return true;
+    },
+  };
+  return [fieldFaults, setRoot];
 }
 
 /**
@@ -257,7 +299,11 @@ export function PageSaveBar() {
             reason={page.invalid ? t("saveBar.invalid") : undefined}
             onClick={() => {
               void page.save().then((saved) => {
-                if (!saved) globalThis.requestAnimationFrame(showFirstRefused);
+                if (!saved) {
+                  globalThis.requestAnimationFrame(() =>
+                    focusFirstRefused(document),
+                  );
+                }
               });
             }}
           >

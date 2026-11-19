@@ -14312,6 +14312,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Wird automatisch abgeleitet und ist ab dem Livegang fest. Das Präfix cf_ verhindert Konflikte mit Kernfeldern.",
   "cf.typeLabel": "Typ",
   "cf.currencyCode": "Währungscode",
+  "cf.currencyNotCode":
+    "Gib einen Währungscode aus 3 Buchstaben ein, etwa EUR, CHF oder USD.",
   "cf.currencyHint":
     "Dreistelliger ISO-4217-Code, zum Beispiel EUR oder USD. Beträge werden auf den Cent genau gespeichert.",
   "cf.options": "Optionen",
@@ -15126,6 +15128,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.rates.modelEmpty": "Noch keine Modellpreise.",
   "settings.rates.modelModalTitle": "Modellpreis festlegen",
   "settings.rates.notSaved": "Wert nicht gespeichert",
+  "settings.rates.fromIsBase":
+    "Das ist die Basiswährung, ihr Kurs ist immer 1. Wähle eine andere Währung.",
+  "settings.rates.fromNotCurrency":
+    "Gib einen Währungscode aus 3 Buchstaben ein, etwa EUR, CHF oder USD.",
+  "settings.rates.rateNotPositive":
+    "Gib einen Kurs größer als null mit höchstens 10 Nachkommastellen ein.",
+  "settings.rates.pastDate":
+    "Ein vergangenes Datum geht nur vor dem ersten Kurs dieser Währung. Wähle heute oder ein späteres Datum.",
   "taxRates.title": "Steuersätze",
   "taxRates.withheld": "Nur Admin oder Ops sehen die Steuersätze.",
   "taxRates.intro":
@@ -15897,7 +15907,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.companySave": "Unternehmenskontext speichern",
   "settings.companySaved": "Gespeichert",
   "settings.companySaveFailed": "Unternehmenskontext nicht gespeichert",
-  "settings.companyNameTooLong": "Kürze den Unternehmensnamen.",
   "settings.companyRefreshFailed": "Analyse der Website nicht abgeschlossen",
   "settings.companyApplyFailed": "Änderungen nicht übernommen",
   "settings.companyRefreshWarnings": "Warnungen aus dieser Analyse",
@@ -15936,6 +15945,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Einträge der Preisliste, aus denen Angebotspositionen übernommen werden.",
   "product.new": "Neues Produkt",
   "product.edit": "Produkt bearbeiten",
+  "product.skuTaken": "Ein anderes Produkt hat diese Artikelnummer bereits.",
   "product.taxCategory": "Steuerkategorie",
   "product.taxCategoryUnset": "Nicht eingeordnet",
   "product.taxCategoryFilter": "Steuerkategorie",
@@ -19789,6 +19799,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lists.loading": "Liste wird geladen",
   "lists.kind.live": "Live-Liste",
   "lists.alreadyOnShortlist": "Bereits auf dieser Shortlist.",
+  "lists.alreadyOnOption": "{name} (bereits enthalten)",
   "lists.kind.shortlist": "Shortlist",
   "lists.type.contact": "Kontakte",
   "lists.type.company": "Unternehmen",

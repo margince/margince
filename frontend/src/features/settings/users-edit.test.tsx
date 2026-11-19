@@ -6,6 +6,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 /** @vitest-environment happy-dom */
 import { UTC_ZONE } from "../../format/timezone";
+import { en } from "../../i18n/en";
 import { backend, render } from "./users-admin.testkit";
 import { EditMember } from "./users-edit";
 import type { User } from "./users-members";
@@ -62,4 +63,55 @@ it("saves a reactivated invitation's name and team before first sign-in", async 
       expected_updated_at: MEMBER.updated_at,
     },
   ]);
+});
+
+it("puts an address another member holds on the email field", async () => {
+  const user = userEvent.setup();
+  const routed = backend([]);
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const req =
+        input instanceof Request ? input : new Request(String(input), init);
+      if (req.method === "PATCH") {
+        return new Response(
+          JSON.stringify({
+            status: 409,
+            code: "conflict",
+            detail: "conflict: a user with this email already exists",
+          }),
+          { status: 409, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      return routed(input, init);
+    }),
+  );
+  render(<EditMember member={MEMBER} onClose={vi.fn()} />);
+  const email = screen.getByRole("textbox", { name: "Email" });
+  await user.clear(email);
+  await user.type(email, "taken@example.test");
+  await user.click(screen.getByRole("button", { name: "Save member" }));
+  expect(await screen.findByText(en["users.emailTaken"])).toBeTruthy();
+  await waitFor(() => expect(document.activeElement).toBe(email));
+  expect(screen.queryByText(/conflict/)).toBeNull();
+});
+
+it("asks for a cleared name on its field and sends nothing", async () => {
+  const user = userEvent.setup();
+  const saved: unknown[] = [];
+  const routed = backend([]);
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const req =
+        input instanceof Request ? input : new Request(String(input), init);
+      if (req.method === "PATCH") saved.push(await req.json());
+      return routed(input, init);
+    }),
+  );
+  render(<EditMember member={MEMBER} onClose={vi.fn()} />);
+  await user.clear(screen.getByRole("textbox", { name: "Full name" }));
+  await user.click(screen.getByRole("button", { name: "Save member" }));
+  expect(await screen.findByText("Full name is required.")).toBeTruthy();
+  expect(saved).toEqual([]);
 });

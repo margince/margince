@@ -367,7 +367,8 @@ export function CompanyContextCard() {
           form={form}
           focus={editing}
           pending={save.isPending}
-          error={save.isError ? companySaveMessage(save.error, t) : null}
+          error={save.error}
+          refusedAt={save.isError ? save.submittedAt : undefined}
           onChange={setForm}
           onClose={() => setEditing(null)}
           onSubmit={() => save.mutate(trimCompanyInput(form))}

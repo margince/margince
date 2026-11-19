@@ -6,12 +6,22 @@
 // The Shared mailboxes card in each state an admin or a colleague meets it. The
 // last case is the write that moves a mailbox's whole history.
 
+import "@testing-library/jest-dom/vitest";
+
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
+import { en } from "../../i18n/en";
 import { SharedMailboxesCard } from "./sharedmailboxes";
 
 type SharedMailbox = components["schemas"]["SharedMailbox"];
@@ -40,7 +50,10 @@ function json(body: unknown, status = 200) {
 }
 
 /** Answers the list with `list`, and records every write the card sends. */
-function backend(list: () => Response): Sent[] {
+function backend(
+  list: () => Response,
+  connect: () => Response = () => json(SALES),
+): Sent[] {
   const sent: Sent[] = [];
   vi.stubGlobal(
     "fetch",
@@ -48,6 +61,10 @@ function backend(list: () => Response): Sent[] {
       const path = new URL(request.url).pathname;
       if (request.method === "GET" && path.endsWith("/shared-mailboxes")) {
         return list();
+      }
+      if (request.method === "POST" && path.endsWith("/shared-mailboxes")) {
+        sent.push({ method: "POST", path, body: await request.json() });
+        return connect();
       }
       if (request.method === "PATCH") {
         sent.push({ method: "PATCH", path, body: await request.json() });
@@ -174,5 +191,155 @@ describe("the Shared mailboxes card", () => {
       path: `/v1/shared-mailboxes/${SALES.id}`,
       body: { confirm: true, mail_visibility: "held", apply_to_history: true },
     });
+  });
+});
+
+describe("connecting a shared mailbox", () => {
+  async function openConnect() {
+    const user = userEvent.setup();
+    draw();
+    await user.click(
+      await screen.findByRole("button", { name: /Connect a shared mailbox/ }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    const box = (label: string) =>
+      within(dialog).getByRole("textbox", { name: label });
+    return { user, dialog, box };
+  }
+
+  async function fillValid(
+    user: ReturnType<typeof userEvent.setup>,
+    dialog: HTMLElement,
+    box: (label: string) => HTMLElement,
+  ) {
+    await user.type(box(en["sharedMailboxes.address"]), "sales@demo.test");
+    await pickOption(
+      user,
+      within(dialog).getByRole("combobox", {
+        name: en["sharedMailboxes.readerTeam"],
+      }),
+      "Sales desk",
+    );
+    await user.type(box(en["connectors.imapHost"]), "imap.demo.test");
+    await user.type(box(en["connectors.imapUsername"]), "sales@demo.test");
+    await user.type(
+      within(dialog).getByLabelText(en["connectors.imapSecret"], {
+        exact: false,
+      }),
+      "app-password",
+    );
+  }
+
+  const press = (
+    user: ReturnType<typeof userEvent.setup>,
+    dialog: HTMLElement,
+  ) =>
+    user.click(
+      within(dialog).getByRole("button", {
+        name: en["sharedMailboxes.connect"],
+      }),
+    );
+
+  it("names each field it cannot send, on that field, before sending", async () => {
+    const sent = backend(() => json({ items: [] }));
+    const { user, dialog, box } = await openConnect();
+    await user.type(box(en["sharedMailboxes.address"]), "not-an-email");
+    const port = box(en["connectors.imapPort"]);
+    await user.clear(port);
+    await user.type(port, "abc");
+    await press(user, dialog);
+
+    expect(
+      await within(dialog).findByText(
+        "Enter an email address for Mailbox address.",
+      ),
+    ).toBeVisible();
+    expect(
+      within(dialog).getByText("Enter a whole number for Port."),
+    ).toBeVisible();
+    expect(within(dialog).getByText("IMAP server is required.")).toBeVisible();
+    expect(
+      within(dialog).getByText("Team that reads it is required."),
+    ).toBeVisible();
+    await waitFor(() =>
+      expect(box(en["sharedMailboxes.address"])).toHaveFocus(),
+    );
+    expect(sent).toHaveLength(0);
+
+    await user.clear(port);
+    await user.type(port, "0");
+    expect(port).not.toHaveAttribute("aria-invalid", "true");
+    await press(user, dialog);
+    expect(
+      await within(dialog).findByText("Port must be from 1 to 65535."),
+    ).toBeVisible();
+  });
+
+  it("puts the server's refusal on the field it names, and keeps the password", async () => {
+    const sent = backend(
+      () => json({ items: [] }),
+      () =>
+        json(
+          {
+            title: "Unprocessable Entity",
+            status: 422,
+            code: "validation_error",
+            detail: "`address` must be an email address",
+            details: {
+              errors: [
+                {
+                  field: "address",
+                  code: "email_malformed",
+                  message: "`address` must be an email address",
+                },
+              ],
+            },
+          },
+          422,
+        ),
+    );
+    const { user, dialog, box } = await openConnect();
+    await fillValid(user, dialog, box);
+    await press(user, dialog);
+
+    await waitFor(() => expect(sent).toHaveLength(1));
+    expect(
+      await within(dialog).findAllByText(
+        "Enter an email address for Mailbox address.",
+      ),
+    ).toHaveLength(1);
+    expect(box(en["sharedMailboxes.address"])).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+    expect(within(dialog).queryByText(/`address`/)).toBeNull();
+    expect(
+      within(dialog).getByLabelText(en["connectors.imapSecret"], {
+        exact: false,
+      }),
+    ).toHaveValue("app-password");
+  });
+
+  it("says a refused login at the foot, as the personal form does", async () => {
+    backend(
+      () => json({ items: [] }),
+      () =>
+        json(
+          {
+            title: "Unprocessable Entity",
+            status: 422,
+            code: "imap_login_rejected",
+            detail: "The mailbox rejected these credentials.",
+          },
+          422,
+        ),
+    );
+    const { user, dialog, box } = await openConnect();
+    await fillValid(user, dialog, box);
+    await press(user, dialog);
+
+    expect(
+      await within(dialog).findByText(en["connectors.imapLoginRejected"]),
+    ).toBeVisible();
   });
 });

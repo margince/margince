@@ -172,6 +172,7 @@ export const NameTooLong: Story = {
                   field: "display_name",
                   code: "too_long",
                   message: "a company name is at most 200 characters",
+                  max: 200,
                 },
               ],
             },
@@ -197,6 +198,6 @@ export const NameTooLong: Story = {
     await userEvent.click(
       dialog.getByRole("button", { name: "Save company context" }),
     );
-    await dialog.findByText("Shorten the company name.");
+    await dialog.findByText("Company name: at most 200 characters.");
   },
 };

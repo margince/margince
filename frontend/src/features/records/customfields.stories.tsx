@@ -86,6 +86,7 @@ export const BuilderText: Story = {
       <FieldBuilder
         object="company"
         pending={false}
+        error={null}
         onSubmit={noop}
         onCancel={noop}
       />
@@ -106,6 +107,7 @@ export const BuilderTextDark: Story = {
       <FieldBuilder
         object="company"
         pending={false}
+        error={null}
         onSubmit={noop}
         onCancel={noop}
       />
@@ -121,6 +123,7 @@ export const BuilderCurrency: Story = {
       <FieldBuilder
         object="deal"
         pending={false}
+        error={null}
         onSubmit={noop}
         onCancel={noop}
       />
@@ -142,6 +145,7 @@ export const BuilderPicklist: Story = {
       <FieldBuilder
         object="deal"
         pending={false}
+        error={null}
         onSubmit={noop}
         onCancel={noop}
       />
@@ -169,6 +173,7 @@ export const BuilderRefusal: Story = {
       <FieldBuilder
         object="company"
         pending={false}
+        error={null}
         onSubmit={noop}
         onCancel={noop}
       />

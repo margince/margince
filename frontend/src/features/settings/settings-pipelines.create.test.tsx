@@ -194,3 +194,107 @@ describe("PipelinesCard: a read seat", () => {
     expectRefused(screen.getByTestId("new-stage-pl"), seat);
   });
 });
+
+describe("PipelinesCard: a name already in use", () => {
+  it("says on the name field that another pipeline has the name", async () => {
+    server([SALES]);
+    const served = globalThis.fetch;
+    vi.stubGlobal("fetch", async (input: RequestInfo | URL) => {
+      if (input instanceof Request && input.method === "POST") {
+        return jsonResponse(
+          { status: 409, code: "conflict", detail: "conflict" },
+          409,
+        );
+      }
+      return served(input);
+    });
+    const user = userEvent.setup();
+    render(<PipelinesCard />);
+    const head = await screen.findByRole("region", { name: "Sales" });
+    await user.click(
+      await within(head).findByRole("button", { name: "New pipeline" }),
+    );
+    await user.type(screen.getByLabelText(/Name/), "Sales");
+    await user.click(screen.getByRole("button", { name: "Create" }));
+    expect(
+      await screen.findByText("A pipeline with this name already exists."),
+    ).toBeTruthy();
+    expect(screen.getByLabelText(/Name/).getAttribute("aria-invalid")).toBe(
+      "true",
+    );
+    expect(screen.queryByText("conflict")).toBeNull();
+  });
+});
+
+describe("PipelinesCard: a new stage's win probability", () => {
+  async function openNewStage(posted: unknown[], answer?: () => Response) {
+    server([SALES]);
+    const served = globalThis.fetch;
+    vi.stubGlobal("fetch", async (input: RequestInfo | URL) => {
+      if (input instanceof Request && input.method === "POST") {
+        posted.push(await input.clone().json());
+        if (answer) return answer();
+      }
+      return served(input);
+    });
+    const user = userEvent.setup();
+    render(<PipelinesCard />);
+    await user.click(await screen.findByTestId("new-stage-pl"));
+    const form = within(screen.getByRole("dialog"));
+    await user.type(form.getByLabelText("Name *"), "Discovery");
+    return { user, form };
+  }
+
+  it("asks for a whole number before sending", async () => {
+    const posted: unknown[] = [];
+    const { user, form } = await openNewStage(posted);
+    await user.type(form.getByLabelText(/Win probability/), "50.5");
+    await user.click(form.getByRole("button", { name: "Create" }));
+    expect(
+      await form.findByText("Enter a whole number for Win probability."),
+    ).toBeTruthy();
+    expect(posted).toEqual([]);
+  });
+
+  it("states the bounds in percent before sending", async () => {
+    const posted: unknown[] = [];
+    const { user, form } = await openNewStage(posted);
+    await user.type(form.getByLabelText(/Win probability/), "-1");
+    await user.click(form.getByRole("button", { name: "Create" }));
+    expect(
+      await form.findByText("Win probability must be from 0% to 100%."),
+    ).toBeTruthy();
+    expect(posted).toEqual([]);
+  });
+
+  it("puts the server's refusal on the field, by its label and in percent", async () => {
+    const posted: unknown[] = [];
+    const { user, form } = await openNewStage(posted, () =>
+      jsonResponse(
+        {
+          status: 422,
+          code: "validation_error",
+          detail: "win_probability is out of range",
+          details: {
+            errors: [
+              {
+                field: "win_probability",
+                code: "out_of_range",
+                message: "`win_probability` must be a number from 0 to 100",
+                params: { min: "0", max: "100" },
+              },
+            ],
+          },
+        },
+        422,
+      ),
+    );
+    await user.type(form.getByLabelText(/Win probability/), "40");
+    await user.click(form.getByRole("button", { name: "Create" }));
+    expect(
+      await form.findByText("Win probability must be from 0% to 100%."),
+    ).toBeTruthy();
+    expect(form.queryByText(/`win_probability`/)).toBeNull();
+    expect(posted).toHaveLength(1);
+  });
+});

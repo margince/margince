@@ -10,7 +10,7 @@ import {
 } from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
 import { KeyCode } from "../../design-system/keyedname";
-import { NameDialog } from "../../design-system/namedialog";
+import { NameDialog, nameRefusal } from "../../design-system/namedialog";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryStates } from "../../design-system/querystates";
 import { Select } from "../../design-system/select";
@@ -205,11 +205,11 @@ export function CustomFieldsAdmin() {
       );
       return { previous, key };
     },
-    onError: (error, _draft, context) => {
+    // The refusal is the open dialog's to show, on its fields.
+    onError: (_error, _draft, context) => {
       if (context) {
         queryClient.setQueryData(context.key, context.previous);
       }
-      toast.show(problemMessageOf(error, t), { tone: "danger" });
     },
     onSuccess: (_data, draft) => {
       queryClient.invalidateQueries({
@@ -244,6 +244,7 @@ export function CustomFieldsAdmin() {
       setRenaming(null);
     },
   });
+  const renameRefused = nameRefusal(rename.error, t, "cf.labelTaken");
 
   // The variable carries the field, so a flip that lands before React re-arms
   // the mutation still writes the row the reader pressed. The saved row goes
@@ -315,6 +316,7 @@ export function CustomFieldsAdmin() {
           <Button
             onClick={() => {
               setAddSeq((seq) => seq + 1);
+              create.reset();
               setAdding(true);
             }}
           >
@@ -412,7 +414,10 @@ export function CustomFieldsAdmin() {
           key={addSeq}
           object={object}
           pending={create.isPending}
-          onSubmit={(draft) => create.mutate(draft)}
+          error={create.error}
+          onSubmit={(draft, refused) =>
+            create.mutate(draft, { onError: refused })
+          }
           onCancel={() => setAdding(false)}
         />
       </Modal>
@@ -440,7 +445,8 @@ export function CustomFieldsAdmin() {
         }
         confirmLabel={t("trust.save")}
         pending={rename.isPending}
-        problem={rename.isError ? problemMessageOf(rename.error, t) : null}
+        problem={renameRefused.problem}
+        nameProblem={renameRefused.nameProblem}
         onSave={(label) => {
           if (renaming) rename.mutate({ field: renaming, label });
         }}

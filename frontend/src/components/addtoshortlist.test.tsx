@@ -9,6 +9,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { en } from "../i18n/en";
+import { recordListsKey } from "../lib/activitykeys";
 import {
   listsMe,
   MEMBER_ID,
@@ -20,6 +21,7 @@ import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
+  storyQueryClient,
 } from "../testing/story-utils";
 import { AddToShortlistAction } from "./addtoshortlist";
 
@@ -28,9 +30,9 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function action() {
+function action(client = storyQueryClient()) {
   return render(
-    <StoryProviders>
+    <StoryProviders client={client}>
       <AddToShortlistAction entityType="company" entityId={MEMBER_ID} />
     </StoryProviders>,
   );
@@ -158,5 +160,96 @@ describe("Add to Shortlist on a record page", () => {
       entity_id: MEMBER_ID,
       note: "reference",
     });
+  });
+});
+
+describe("a refused or unfinished add", () => {
+  async function openDialog(client = storyQueryClient()) {
+    const user = userEvent.setup();
+    action(client);
+    await user.click(
+      await screen.findByRole("button", { name: en["lists.addToShortlist"] }),
+    );
+    const dialog = await screen.findByRole("dialog");
+    const picker = within(dialog).getByRole("combobox", {
+      name: en["lists.shortlist"],
+    });
+    return { user, dialog, picker };
+  }
+
+  it("asks for a Shortlist on its field instead of a grey button", async () => {
+    let posted = 0;
+    installFetchStub({
+      "GET /me": listsMe(true),
+      "GET /lists": () =>
+        jsonResponse({ data: [shortlist], page: { has_more: false } }),
+      [`POST /lists/${SHORTLIST_ID}/members`]: () => {
+        posted++;
+        return jsonResponse({}, 201);
+      },
+    });
+    const { user, dialog, picker } = await openDialog();
+    await user.click(
+      within(dialog).getByRole("button", { name: en["lists.add"] }),
+    );
+
+    expect(
+      await within(dialog).findByText(`${en["lists.shortlist"]} is required.`),
+    ).toBeVisible();
+    expect(picker).toHaveAttribute("aria-invalid", "true");
+    expect(posted).toBe(0);
+  });
+
+  it("says once, on the Shortlist field, that the record is already on it", async () => {
+    installFetchStub({
+      "GET /me": listsMe(true),
+      "GET /lists": () =>
+        jsonResponse({ data: [shortlist], page: { has_more: false } }),
+      [`POST /lists/${SHORTLIST_ID}/members`]: () =>
+        jsonResponse(
+          {
+            title: "Conflict",
+            status: 409,
+            code: "conflict",
+            detail: "the record is already on this list: conflict",
+          },
+          409,
+        ),
+    });
+    const { user, dialog, picker } = await openDialog();
+    await user.click(picker);
+    await user.click(
+      await screen.findByRole("option", { name: shortlist.name }),
+    );
+    await user.click(
+      within(dialog).getByRole("button", { name: en["lists.add"] }),
+    );
+
+    expect(
+      await screen.findAllByText(en["lists.alreadyOnShortlist"]),
+    ).toHaveLength(1);
+    expect(picker).toHaveAttribute("aria-invalid", "true");
+    expect(screen.queryByText(/: conflict/)).toBeNull();
+  });
+
+  it("marks a Shortlist the record page already shows it on", async () => {
+    installFetchStub({
+      "GET /me": listsMe(true),
+      "GET /lists": () =>
+        jsonResponse({ data: [shortlist], page: { has_more: false } }),
+    });
+    const client = storyQueryClient();
+    client.setQueryData(recordListsKey("company", MEMBER_ID), {
+      data: [shortlist],
+      page: { has_more: false },
+    });
+    const { user, picker } = await openDialog(client);
+    await user.click(picker);
+
+    expect(
+      await screen.findByRole("option", {
+        name: en["lists.alreadyOnOption"].replace("{name}", shortlist.name),
+      }),
+    ).toBeInTheDocument();
   });
 });

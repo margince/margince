@@ -2,12 +2,18 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import { en } from "../i18n/en";
-import { listsMe, MEMBER_ID, shortlist } from "../testing/lists.fixtures";
+import {
+  listsMe,
+  MEMBER_ID,
+  SHORTLIST_ID,
+  shortlist,
+} from "../testing/lists.fixtures";
 import {
   installFetchStub,
   jsonResponse,
+  type RouteMap,
   StoryProviders,
 } from "../testing/story-utils";
 import { AddToShortlistAction } from "./addtoshortlist";
@@ -19,11 +25,12 @@ export default meta;
 
 type Story = StoryObj;
 
-function offered(reasonId?: string) {
+function offered(reasonId?: string, routes: RouteMap = {}) {
   installFetchStub({
     "GET /me": listsMe(true),
     "GET /lists": () =>
       jsonResponse({ data: [shortlist], page: { has_more: false } }),
+    ...routes,
   });
   return (
     <StoryProviders>
@@ -56,5 +63,40 @@ export const Choosing: Story = {
       }),
     );
     await within(document.body).findByRole("dialog");
+  },
+};
+
+/** The record is already on the chosen Shortlist: said once, on that field. */
+export const AlreadyOnIt: Story = {
+  render: () =>
+    offered(undefined, {
+      [`POST /lists/${SHORTLIST_ID}/members`]: () =>
+        jsonResponse(
+          {
+            title: "Conflict",
+            status: 409,
+            code: "conflict",
+            detail: "the record is already on this list: conflict",
+          },
+          409,
+        ),
+    }),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", {
+        name: "Add to Shortlist",
+      }),
+    );
+    const page = within(document.body);
+    await userEvent.click(
+      await page.findByRole("combobox", { name: "Shortlist" }),
+    );
+    await userEvent.click(
+      await page.findByRole("option", { name: shortlist.name }),
+    );
+    await userEvent.click(page.getByRole("button", { name: "Add" }));
+    await expect(
+      await page.findByText("Already on this Shortlist."),
+    ).toBeVisible();
   },
 };

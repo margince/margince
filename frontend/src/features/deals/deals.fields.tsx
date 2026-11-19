@@ -1,5 +1,5 @@
 import { searchCompanyTargets } from "../../components/companyform";
-import type { CreateField } from "../../components/create";
+import { type CreateField, dayOutOfRange } from "../../components/create";
 import { amountField, currencyField } from "../../components/currencyfield";
 import { partnerFields } from "../../components/dealpartnerfields";
 import type { ProjectOwnerPicker } from "../../components/projectownerfield";
@@ -99,6 +99,27 @@ export const dealCloseDateField = {
   type: "date",
 } satisfies CreateField;
 
+// A date field that refuses a day the server cannot store. Its own check, so
+// an edit of the one field in the rail refuses it before sending, as the form does.
+function storableDay(
+  field: CreateField & { label: MessageKey },
+  t: (k: MessageKey) => string,
+  locale: Locale,
+): CreateField {
+  return {
+    ...field,
+    validate: (value) => dayOutOfRange(value, locale, t(field.label)),
+  };
+}
+
+/** The deal's close date as every editor of it checks it. */
+export function dealCloseDate(
+  t: (k: MessageKey) => string,
+  locale: Locale,
+): CreateField {
+  return storableDay(dealCloseDateField, t, locale);
+}
+
 export function dealEditFields(
   t: (k: MessageKey) => string,
   opts: {
@@ -170,8 +191,12 @@ export function dealEditFields(
       noneYet: opts.noPartnersYet,
     }),
     ...(opts.closed ? [] : [winProbabilityField(t)]),
-    dealCloseDateField,
-    { key: "wait_until", label: "deal.waitUntil", type: "date" },
+    dealCloseDate(t, opts.locale),
+    storableDay(
+      { key: "wait_until", label: "deal.waitUntil", type: "date" },
+      t,
+      opts.locale,
+    ),
     {
       key: "__commercial__",
       labelText: t("deal.commercialContext"),

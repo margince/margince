@@ -127,3 +127,26 @@ it.each([
   }
   await waitFor(() => expect(sent).toEqual(want));
 });
+
+it("refuses a close date the server cannot store before sending it", async () => {
+  const user = userEvent.setup();
+  const sent = mount(["read", "update"], {
+    ...deal,
+    expected_close_date: "2026-09-01",
+  });
+  await user.click(
+    await screen.findByRole("button", { name: /^Change Close/ }),
+  );
+  const dialog = await screen.findByRole("dialog");
+  const day = within(dialog).getByRole("textbox");
+  await user.clear(day);
+  await user.type(day, "31/12/9999");
+  await user.tab();
+  await user.click(within(dialog).getByRole("button", { name: "Save" }));
+  expect(
+    await within(dialog).findByText(
+      "Expected close must be from 02/01/0001 to 30/12/9999.",
+    ),
+  ).toBeTruthy();
+  expect(sent).toEqual([]);
+});

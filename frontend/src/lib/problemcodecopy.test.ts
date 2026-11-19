@@ -115,3 +115,24 @@ it.each([en, de, vi])(
     ).toBe(catalog["common.requestTimedOut"]);
   },
 );
+
+describe("a currency rate refusal reads as the product's own sentence", () => {
+  it.each([
+    ["fx_rate_base_self", "from_currency", "settings.rates.fromIsBase"],
+    ["fx_rate_currency", "from_currency", "settings.rates.fromNotCurrency"],
+    ["fx_rate_positive", "rate", "settings.rates.rateNotPositive"],
+    ["fx_rate_past", "effective_date", "settings.rates.pastDate"],
+  ] as const)("words %s in every catalog", (code, field, key) => {
+    for (const catalog of [en, de, vi]) {
+      const problem = {
+        code: "validation_error",
+        details: {
+          errors: [{ field, code, message: "English server detail" }],
+        },
+      };
+      expect(problemMessage(problem, (each) => catalog[each])).toBe(
+        catalog[key],
+      );
+    }
+  });
+});
