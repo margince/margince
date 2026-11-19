@@ -5,9 +5,11 @@ package assurance
 
 import (
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/closerisk"
 	"github.com/margince/margince/backend/internal/shared/kernel/viability"
 )
 
@@ -160,7 +162,45 @@ type Rule struct {
 	// finding and to clear one. A rule that reads only the deal graph needs
 	// none: the subjects read itself proves the graph was reachable.
 	Needs []string
-	Ask   func(asOf time.Time, s Subject, cfg Config) *Finding
+	// AnsweredBy is the viability reason behind this rule's question. The walk
+	// skips the rule where viability judged the deal without that reason, and
+	// on a judged deal its finding files no task (ViabilityAnsweredTypes).
+	AnsweredBy viability.Reason
+	Ask        func(asOf time.Time, s Subject, cfg Config) *Finding
+}
+
+// ViabilityAnsweredTypes are the rule types the viability decision answers.
+// It asks nobody about a deal it judged, so their findings file no task there.
+func ViabilityAnsweredTypes() []string {
+	var out []string
+	for _, rule := range Rules() {
+		if rule.AnsweredBy != "" {
+			out = append(out, rule.Type)
+		}
+	}
+	return out
+}
+
+// answeredOtherwise reports a rule whose question the viability decision
+// answered "no" on this deal. A deal it could not judge keeps the record's own
+// answer. The bundler's twin is bundleableFindings in compose/assurancebundle.go.
+func answeredOtherwise(rule Rule, s Subject) bool {
+	return rule.AnsweredBy != "" && judged(s) && !slices.Contains(s.Viability.Reasons, rule.AnsweredBy)
+}
+
+// judged reports a deal the viability decision could judge.
+func judged(s Subject) bool {
+	return s.Viability != nil && s.Viability.Outcome != viability.OutcomeUnknown
+}
+
+// lacksNextStep is the one answer to "does the deal lack a next step": the
+// viability decision's where it judged the deal, else the record's. A wait the
+// customer asked for, or a meeting they accepted, is a next step.
+func lacksNextStep(s Subject) bool {
+	if judged(s) {
+		return slices.Contains(s.Viability.Reasons, viability.ReasonNoNextStep)
+	}
+	return !s.HasNextStep
 }
 
 // Config is what an installation decides rather than the product.
@@ -202,18 +242,18 @@ func Rules() []Rule {
 // there is, and the one that quietly inflates a quarter: nobody moved the date,
 // so the deal still counts toward a period it cannot close in.
 func closePast() Rule {
-	return Rule{Type: TypeClosePast, Version: "v2", Ask: func(asOf time.Time, s Subject, _ Config) *Finding {
-		today := day(asOf)
-		if s.Zone != nil {
-			today = storekit.WorkspaceDay(asOf, s.Zone)
+	return Rule{Type: TypeClosePast, Version: "v3", AnsweredBy: viability.ReasonCloseDateUnsupported, Ask: func(asOf time.Time, s Subject, _ Config) *Finding {
+		zone := s.Zone
+		if zone == nil {
+			zone = asOf.Location()
 		}
-		if s.ExpectedClose == nil || !closeDayOn(s.ExpectedClose, today.Location()).Before(today) {
+		if s.ExpectedClose == nil || !closerisk.Overdue(*s.ExpectedClose, asOf, zone) {
 			return nil
 		}
 		return &Finding{
 			Type: TypeClosePast, SubjectID: s.DealID, Severity: SeverityHigh,
 			Claim:         map[string]any{"expected_close": s.ExpectedClose.Format(time.DateOnly)},
-			Observed:      map[string]any{"as_of": today.Format(time.DateOnly)},
+			Observed:      map[string]any{"as_of": storekit.WorkspaceDay(asOf, zone).Format(time.DateOnly)},
 			AffectedMinor: s.AmountMinor, Currency: s.Currency,
 		}
 	}}
@@ -223,7 +263,7 @@ func closePast() Rule {
 // guess, which the evidence reading excludes. A manager asking "are we sure"
 // is asking about such a deal.
 func closeUnconfirmed() Rule {
-	return Rule{Type: TypeCloseUnconfirmed, Version: "v2", Ask: func(_ time.Time, s Subject, _ Config) *Finding {
+	return Rule{Type: TypeCloseUnconfirmed, Version: "v3", AnsweredBy: viability.ReasonCloseDateUnsupported, Ask: func(_ time.Time, s Subject, _ Config) *Finding {
 		if !s.Likely || !s.CloseProvisional {
 			return nil
 		}
@@ -303,11 +343,8 @@ func amountDisagreement(kind string, s Subject, against *int64, slot string, cfg
 // bookkeeping complaint: a deal nobody can say the next step for is usually a
 // deal that has stopped moving.
 func noNextStep() Rule {
-	return Rule{Type: TypeNoNextStep, Version: "v2", Ask: func(_ time.Time, s Subject, _ Config) *Finding {
-		if !s.Likely {
-			return nil
-		}
-		if s.HasNextStep {
+	return Rule{Type: TypeNoNextStep, Version: "v3", AnsweredBy: viability.ReasonNoNextStep, Ask: func(_ time.Time, s Subject, _ Config) *Finding {
+		if !s.Likely || !lacksNextStep(s) {
 			return nil
 		}
 		return &Finding{
@@ -358,12 +395,6 @@ func commitUnpriced() Rule {
 // and somebody would resolve the same finding three times.
 func LogicalKey(f Finding) string {
 	return fmt.Sprintf("%s:%s", f.Type, f.SubjectID)
-}
-
-// day drops the clock. A rule comparing a date against an instant would answer
-// differently at noon than at midnight on the same day.
-func day(at time.Time) time.Time {
-	return time.Date(at.Year(), at.Month(), at.Day(), 0, 0, 0, 0, at.Location())
 }
 
 // closeDayOn places a close date, a zoneless day, on loc's calendar, so it
