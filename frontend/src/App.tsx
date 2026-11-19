@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   type ReactNode,
   Suspense,
@@ -16,12 +16,7 @@ import { ScreenView } from "./App.views";
 import { useWarmRouteChunks } from "./App.warmchunks";
 import { ApprovalHost } from "./app/approvalhost";
 import { AskFromAddress } from "./app/askfromaddress";
-import {
-  AuthScreen,
-  AvailabilityScreen,
-  ReleaseSkewScreen,
-  SetupClaimScreen,
-} from "./app/authscreens";
+import { AuthScreen, ReleaseSkewScreen } from "./app/authscreens";
 import { isPublicBookingId } from "./app/bookingroute";
 import { AuthSplash } from "./app/bootsplash";
 import { lockScreen, useProbeAnswer } from "./app/confinement";
@@ -32,13 +27,13 @@ import { passesOnboardingGate } from "./app/onboarding-gate";
 import { useCommandPalette } from "./app/palettehotkey";
 import { Shell, useRoute } from "./app/shell";
 import { SourceHost } from "./app/sourcehost";
+import { UnavailableOrClaimable } from "./app/unavailableorclaimable";
 import { CallLogHost } from "./components/calllog.host";
 import { UnsavedExits } from "./components/unsaved";
 import { useJourneyProgress } from "./features/onboarding/onboarding-journey";
 import { WriteToHost } from "./features/settings/writetohost";
 import type { AuthNotice } from "./features/sign-in/auth";
 import { RESET_ROUTE } from "./features/sign-in/auth.route";
-import { fetchSetupStatus } from "./features/sign-in/setupclaim.queries";
 import { CompleteLocale, useAccountLocale, useLocale } from "./i18n";
 import { lazy } from "./i18n/lazy";
 import { useSkewedApiRelease } from "./lib/capabilities";
@@ -137,13 +132,12 @@ export function App() {
   return <AuthedApp route={route} />;
 }
 
-// The emailed reset link is a bearer credential, not a session check: one that
-// carries its token reaches the reset form ahead of AuthedApp's session gate,
-// whether or not this browser already has a live cookie. An address without a
-// token has nothing to redeem and goes through the gate like any other.
+// The emailed reset link is a bearer credential, not a session check. A link
+// with its token reaches the reset form ahead of AuthedApp's session gate,
+// live cookie or not. An address without a token goes through the gate.
 //
-// Decided once per arrival, in state: the reset form forgets the token as it
-// takes it, and a later render must not drop the form the reader is typing in.
+// Decided once per arrival, in state. The reset form forgets the token as it
+// takes it, and a later render must not drop the form being typed in.
 function ResetEntry({
   route,
 }: Readonly<{ route: ReturnType<typeof useRoute> }>) {
@@ -160,46 +154,6 @@ function ResetEntry({
       </CompleteLocale>
     </RaillessFrame>
   );
-}
-
-// UnavailableOrClaimable splits the 503 the boundary already reached into its
-// two product states. "Not ready" is true of both, but only one of them has
-// something the contact in front of the browser can do: an installation that
-// holds no company and is WAITING to be claimed (ADR-0105) gets the claim
-// screen; anything else keeps the availability message.
-//
-// The probe runs only on this branch, and only for the installation kind: a
-// connectivity failure says nothing about whether a claim is possible, and
-// asking would replace a true message with a guess. While it is in flight the
-// availability screen stands — it is the honest answer until the probe says
-// otherwise, and it is what the user would have seen anyway.
-function UnavailableOrClaimable({
-  kind,
-  onRetry,
-}: Readonly<{ kind: "connection" | "installation"; onRetry: () => void }>) {
-  const claimable = useQuery({
-    queryKey: ["setup-status"],
-    queryFn: fetchSetupStatus,
-    enabled: kind === "installation",
-    retry: false,
-  });
-  // Retry re-probes BOTH. fetchSetupStatus resolves rather than throws, so a
-  // one-off failure caches a `false` under this key — without refetching it,
-  // "Try again" would keep showing the availability screen for an installation
-  // that has been claimable all along, and only a page reload would recover.
-  const retryBoth = () => {
-    onRetry();
-    if (kind === "installation") {
-      void claimable.refetch();
-    }
-  };
-  if (kind === "installation" && claimable.data?.claimable) {
-    // A successful claim provisions the installation, so the same /v1/me probe
-    // that sent us here now answers — the boundary re-resolves rather than this
-    // screen deciding where to go next.
-    return <SetupClaimScreen onClaimed={onRetry} status={claimable.data} />;
-  }
-  return <AvailabilityScreen kind={kind} onRetry={retryBoth} />;
 }
 
 // Watched, so a sign-out here or in another tab ends Home's early reads at once.

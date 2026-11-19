@@ -8,11 +8,11 @@ import {
   FALLBACK_COMPANY_ZONE,
   sameWallClockOnDay,
   startOfDayInZone,
-  timezoneOptions,
   wallClockIntent,
   zoneNameAndOffset,
   zoneOffsetMs,
 } from "./timezone";
+import { timezoneOptions } from "./timezoneoptions";
 
 afterEach(() => {
   vi.restoreAllMocks();

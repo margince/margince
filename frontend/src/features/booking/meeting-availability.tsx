@@ -13,7 +13,7 @@ import { QueryGate } from "../../design-system/querystates";
 import { useSaveDraft } from "../../design-system/savepage";
 import { StatusBadge } from "../../design-system/statusbadge";
 import { clockOrBlank, TimeInput } from "../../design-system/timeinput";
-import { timezoneOption } from "../../format/timezone";
+import { timezoneOption } from "../../format/timezoneoptions";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { problemFieldSentencesOf, unwrap } from "../../lib/problem";
