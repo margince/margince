@@ -109,8 +109,8 @@ accept [CLA.md](CLA.md) to send code.
 - Each release becomes Apache 2.0 no later than two years after it ships.
 
 Without a license token, a production install runs a 14-day trial and then stops working until a token is
-set up. For up to 3 seats, ask for a free token with the
-[free license form](https://dist.margince.com/free-license). It lasts one year. If this blocks you, please say so
+set up. To get a token, use **Talk to the Margince team** in the app
+([Get a license token](docs/how-to/deploy-margince.md#get-a-license-token)). If this blocks you, please say so
 in an issue.
 
 Prices are on [margince.com](https://margince.com). Margince is built by [Gradion](https://gradion.com).
