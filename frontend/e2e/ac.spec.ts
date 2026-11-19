@@ -671,7 +671,8 @@ test("keyboard shortcuts: G then C goes to Contacts, G then D to Deals", async (
   await openForKeys(page, "home");
   await page.keyboard.press("g");
   await page.keyboard.press("c");
-  await expect(page).toHaveURL(/#\/contacts$/);
+  // The list may already have spelled its opening sort into the address.
+  await expect(page).toHaveURL(/#\/contacts(\?[^/]*)?$/);
 
   await openForKeys(page, "home");
   await page.keyboard.press("g");
