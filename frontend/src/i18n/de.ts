@@ -10085,17 +10085,20 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "import.withheld": "Nur Admins und Operations können Dateien importieren.",
   "import.title": "Datei importieren",
   "import.back": "Zurück zum Datenimport",
-  "import.object.lead": "Interessenten",
+  "import.object.lead": "Leads",
   "import.object.company": "Unternehmen",
   "import.object.contact": "Kontakte",
   "import.object.deal": "Deals",
   "import.object.activity": "Aktivitäten",
-  "import.profiled": "Ausgewertete Zeilen ab Dateianfang: {rows}.",
+  "import.profiled_one":
+    "„Ausgefüllt“ und „Werte“ stammen aus der ersten Zeile der Datei.",
+  "import.profiled_other":
+    "„Ausgefüllt“ und „Werte“ stammen aus den ersten {count} Zeilen der Datei.",
   "import.mappingTable": "Spaltenzuordnung",
   "import.col.column": "Spalte",
   "import.col.filled": "Ausgefüllt",
   "import.col.filledHint":
-    "Anteil der Zeilen in dieser Datei, die in der Spalte einen Wert haben",
+    "Anteil der gelesenen Zeilen, die in der Spalte einen Wert haben",
   "import.col.samples": "Werte",
   "import.col.destination": "Feld",
   "import.dontImport": "Nicht importieren",
@@ -10129,6 +10132,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "import.hub.uploadLabel": "Daten hochladen",
   "import.hub.uploadHint":
     "Ein ZIP mit CSV-Dateien oder eine CSV. Bis {mb} MB.",
+  "import.hub.uploadHintCsv": "Eine CSV-Datei. Bis {mb} MB.",
   "import.hub.uploadEmpty": "Datei auswählen oder hier ablegen",
   "import.hub.csvOnly":
     "Hier kann nur eine CSV-Datei importiert werden. Wähle eine .csv-Datei.",
@@ -10158,6 +10162,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "import.closed.stopped":
     "Dieser Import wurde angehalten, bevor etwas importiert wurde.",
   "import.closed.upload": "Datei hochladen",
+  "import.missing.title": "Import nicht gefunden",
+  "import.missing.body": "Diesen Import gibt es nicht, oder er wurde entfernt.",
   "import.cancelFailed": "Der Import wurde nicht abgebrochen",
   "import.conflictDismiss": "Verstanden",
   "import.conflictOtherTab":
@@ -10174,12 +10180,81 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "import.upload.tooManyRowsTitle": "Die Datei ist zu lang für einen Testlauf",
   "import.upload.tooManyRows":
     "Diese Datei hat mehr Zeilen, als ein Testlauf lesen kann. Teile die Datei in kleinere Dateien auf und importiere jede einzeln.",
+  "import.refusal.inFile": "In „{file}“: {sentence}",
+  "import.refusal.notUtf8":
+    "Die Datei ist nicht als UTF-8 gespeichert. Speichere sie als CSV UTF-8 und lade sie erneut hoch.",
+  "import.refusal.unreadable":
+    "Die Datei konnte nicht gelesen werden. Lade sie erneut hoch.",
+  "import.refusal.unreadable.line":
+    "Zeile {line} konnte nicht gelesen werden. Korrigiere diese Zeile und lade die Datei erneut hoch.",
+  "import.refusal.unreadable.fieldCount":
+    "Zeile {line} hat mehr oder weniger Felder als die Kopfzeile. Korrigiere diese Zeile und lade die Datei erneut hoch.",
+  "import.refusal.unreadable.quote":
+    "Zeile {line} hat ein Anführungszeichen an falscher Stelle. Korrigiere diese Zeile und lade die Datei erneut hoch.",
+  "import.refusal.header":
+    "Die Kopfzeile ist nicht verwendbar. Gib jeder Spalte einen eigenen Namen und lade die Datei erneut hoch.",
+  "import.refusal.header.repeatedName":
+    "Die Kopfzeile nennt „{name}“ zweimal. Gib jeder Spalte einen eigenen Namen und lade die Datei erneut hoch.",
+  "import.refusal.header.blankName":
+    "Spalte {position} der Kopfzeile hat keinen Namen. Benenne jede Spalte und lade die Datei erneut hoch.",
+  "import.refusal.header.noHeader":
+    "Die Datei hat keine Kopfzeile. Schreibe die Spaltennamen in die erste Zeile und lade sie erneut hoch.",
+  "import.refusal.bundle":
+    "Die ZIP-Datei lässt sich nicht importieren. Prüfe die Dateien darin und lade sie erneut hoch.",
+  "import.refusal.bundle.twoFilesOneType":
+    "„{other_file}“ und „{file}“ sind beide {object}. Behalte eine davon und lade die ZIP-Datei erneut hoch.",
+  "import.refusal.bundle.tooManyFiles":
+    "Die ZIP-Datei enthält {files} Dateien, ein Import liest höchstens {max_files}. Entferne die Dateien, die du nicht importierst, und lade sie erneut hoch.",
+  "import.refusal.bundle.empty":
+    "Die ZIP-Datei ist leer. Lege eine CSV-Datei pro Datensatztyp hinein und lade sie erneut hoch.",
+  "import.refusal.bundle.notAZip":
+    "Die ZIP-Datei ließ sich nicht öffnen. Erstelle die ZIP-Datei neu und lade sie hoch.",
+  "import.refusal.bundle.filesTooLarge":
+    "Die Dateien in der ZIP-Datei sind zusammen größer als {max_mb} MB. Verteile sie auf kleinere ZIP-Dateien und importiere jede einzeln.",
+  "import.refusal.bundle.zipTooLarge":
+    "Die ZIP-Datei ist größer als {max_mb} MB, das Maximum für einen Upload. Teile sie in kleinere ZIP-Dateien auf.",
+  "import.refusal.bundle.passwordProtected":
+    "„{file}“ ist passwortgeschützt. Entferne das Passwort und lade die ZIP-Datei erneut hoch.",
+  "import.refusal.bundle.fileDamaged":
+    "„{file}“ in der ZIP-Datei ist beschädigt. Erstelle die ZIP-Datei neu und lade sie hoch.",
+  "import.refusal.bundle.fileMissing":
+    "„{file}“ fehlt in der ZIP-Datei. Lade die ZIP-Datei erneut hoch.",
+  "import.refusal.bundle.typeNotImportable":
+    "„{object}“ ist kein Datensatztyp, den ein Import übernimmt. Entferne diese Datei und lade die ZIP-Datei erneut hoch.",
+  "import.refusal.tooManyRows":
+    "Diese Datei hat {rows} Zeilen, ein Testlauf liest höchstens {max}. Teile sie in kleinere Dateien auf und importiere jede einzeln.",
+  "import.refusal.unsupported":
+    "Ein Import übernimmt Unternehmen, Kontakte, Leads, Deals oder Aktivitäten. Wähle den Typ, den die Datei enthält.",
+  "import.refusal.duplicateTarget":
+    "Zwei Spalten sind demselben Feld zugeordnet. Ordne jedem Feld eine Spalte zu.",
+  "import.refusal.duplicateTarget.named":
+    "Die Spalten „{other_column}“ und „{column}“ sind beide „{target}“ zugeordnet. Ordne jedem Feld eine Spalte zu.",
+  "import.refusal.unmappable":
+    "Keine Spalte kennzeichnet die einzelnen Zeilen. Ordne eine Spalte dem Feld zu, das die Zeilen unterscheidet.",
+  "import.refusal.unmappable.target":
+    "Keine Spalte kennzeichnet die einzelnen Zeilen. Ordne eine Spalte „{target}“ zu.",
+  "import.refusal.unmappable.targetOrRef":
+    "Keine Spalte kennzeichnet die einzelnen Zeilen. Ordne eine Spalte „{target}“ oder „{ref_target}“ zu.",
+  "import.refusal.fileEmpty":
+    "Die Datei ist leer. Wähle eine Datei mit Kopfzeile und lade sie erneut hoch.",
+  "import.refusal.objectMismatch":
+    "Die Datei enthält nicht den Datensatztyp, der für sie gewählt ist. Prüfe „Importieren als“ und starte den Test erneut.",
+  "import.refusal.mappingEmpty":
+    "Keine Spalte ist einem Feld zugeordnet. Ordne mindestens eine Spalte zu und starte den Test erneut.",
+  "import.refusal.unknownColumn":
+    "Die Zuordnung nennt eine Spalte, die die Datei nicht hat. Lade die Datei erneut hoch und ordne ihre Spalten zu.",
+  "import.refusal.unknownTarget":
+    "Eine Spalte ist einem Feld zugeordnet, das dieser Datensatztyp nicht hat. Wähle ein anderes Feld dafür.",
+  "import.refusal.unmappedColumn":
+    "Die Spalte, die jede Zeile kennzeichnet, ist nicht zugeordnet. Ordne sie einem Feld zu und starte den Test erneut.",
+  "import.refusal.sourceName":
+    "Dieser Quellname ist nicht zulässig. Verwende bis zu {max} Zeichen: Buchstaben A bis Z, Ziffern, Leerzeichen, Punkte, Unterstriche und Bindestriche.",
   "import.undoConfirm.title": "Diesen Import rückgängig machen?",
   "import.undoConfirm.confirm": "Import rückgängig machen",
   "import.undoConfirm.order":
     "Rückgängig gemacht wird in umgekehrter Reihenfolge: {order}.",
   "import.undoConfirm.archived":
-    "Von diesem Import erstellte Datensätze werden archiviert, und Interessenten werden disqualifiziert.",
+    "Von diesem Import erstellte Datensätze werden archiviert, und Leads werden disqualifiziert.",
   "import.undoConfirm.kept":
     "Seit dem Import bearbeitete Datensätze bleiben erhalten und werden aufgelistet.",
   "import.undoConfirm.updated":
@@ -10221,7 +10296,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "import.wizard.cancel": "Abbrechen",
   "import.files.table": "Dateien im Upload",
   "import.files.col.file": "Datei",
-  "import.files.col.rows": "Geprüfte Zeilen",
+  "import.files.col.rows": "Zeilen",
   "import.files.col.type": "Importieren als",
   "import.files.columns_one": "1 Spalte",
   "import.files.columns_other": "{count} Spalten",
@@ -10237,6 +10312,18 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "import.files.sourceName": "Quellname",
   "import.files.sourceNameHint":
     "Mit demselben Namen aktualisiert ein späterer Upload diese Datensätze, statt sie erneut hinzuzufügen.",
+  "import.files.sourceNameRule":
+    "Bis zu {max} Zeichen: Buchstaben A bis Z, Ziffern, Leerzeichen, Punkte, Unterstriche und Bindestriche.",
+  "import.files.sourceNameInvalid":
+    "Der Quellname enthält ein unzulässiges Zeichen. Verwende Buchstaben A bis Z, Ziffern, Leerzeichen, Punkte, Unterstriche oder Bindestriche.",
+  "import.files.guessed": "Datensatztyp aus den Spalten bestimmt",
+  "import.files.guessedCheck":
+    "Der Dateiname nennt keinen Datensatztyp. Prüfe „Importieren als“, bevor du weitermachst.",
+  "import.files.unguessed": "Kein Datensatztyp erkannt",
+  "import.files.unguessedChoose":
+    "Weder der Dateiname noch die Spalten nennen einen. Wähle ihn unter „Importieren als“.",
+  "import.files.retireFailed":
+    "Der frühere Entwurf dieser Datei wurde nicht abgebrochen",
   "import.files.noneTyped":
     "Wähle für mindestens eine Datei einen Datensatztyp aus.",
   "import.files.clash":
@@ -10244,6 +10331,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "import.files.next_one": "Weiter: 1 Datei zuordnen",
   "import.files.next_other": "Weiter: {count} Dateien zuordnen",
   "import.map.tabs": "Zuzuordnende Dateien",
+  "import.map.leftOut_one": "1 Spalte nicht importiert",
+  "import.map.leftOut_other": "{count} Spalten nicht importiert",
   "import.map.lead":
     "{file} als {type}. Eine Spalte auf „Nicht importieren“ wird ausgelassen.",
   "import.map.link": "Verknüpfung",
@@ -10325,11 +10414,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "import.test.nothing.skipped":
     "Lade problems.csv herunter, bevor du auf Fertig klickst: Die Datei nennt die übersprungenen Zeilen und warum.",
   "import.test.nothing.done": "Fertig",
+  "import.test.nothing.empty": "Die Datei hat eine Kopfzeile und keine Zeilen.",
   "import.test.reupload": "Korrigieren und neu hochladen",
   "import.test.issuesUnit": "Probleme",
   "import.test.import_one": "1 Zeile importieren",
   "import.test.import_other": "{count} Zeilen importieren",
-  "import.test.importAnyway": "Trotzdem importieren",
+  "import.test.importAnyway_one": "1 Zeile trotzdem importieren",
+  "import.test.importAnyway_other": "{count} Zeilen trotzdem importieren",
   "import.test.counts": "Zeilen je Datensatztyp",
   "import.test.testing": "Deine Datei wird getestet…",
   "import.test.stop": "Test anhalten",

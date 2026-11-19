@@ -10079,18 +10079,21 @@ export const en = {
     "Only an administrator or operations user can import files.",
   "import.title": "Import file",
   "import.back": "Back to data import",
-  "import.object.lead": "Prospects",
+  "import.object.lead": "Leads",
   "import.object.company": "Companies",
   "import.object.contact": "Contacts",
   "import.object.deal": "Deals",
   "import.object.activity": "Activities",
-  "import.profiled": "Rows profiled from the start of the file: {rows}.",
+  "import.profiled_one":
+    "“Filled in” and “Values” come from the first row of the file.",
+  "import.profiled_other":
+    "“Filled in” and “Values” come from the first {count} rows of the file.",
   // The name the mapping grid announces once it is wider than its box.
   "import.mappingTable": "Column mapping",
   "import.col.column": "Column",
   "import.col.filled": "Filled in",
   "import.col.filledHint":
-    "Share of rows in this file that have a value in the column",
+    "Share of the rows read that have a value in the column",
   "import.col.samples": "Values",
   "import.col.destination": "Field",
   "import.dontImport": "Do not import",
@@ -10124,6 +10127,7 @@ export const en = {
   "import.hub.preview": "Preview template",
   "import.hub.uploadLabel": "Upload your data",
   "import.hub.uploadHint": "A ZIP of CSV files, or one CSV. Up to {mb} MB.",
+  "import.hub.uploadHintCsv": "One CSV file. Up to {mb} MB.",
   "import.hub.uploadEmpty": "Choose a file or drop it here",
   "import.hub.csvOnly":
     "Only a CSV file can be imported here. Choose a .csv file.",
@@ -10152,6 +10156,8 @@ export const en = {
     "This draft is not offered again. Upload the file again to start over.",
   "import.closed.stopped": "This import stopped before anything was imported.",
   "import.closed.upload": "Upload a file",
+  "import.missing.title": "Import not found",
+  "import.missing.body": "This import does not exist or was removed.",
   "import.cancelFailed": "The import was not canceled",
   "import.conflictDismiss": "Dismiss",
   "import.conflictOtherTab":
@@ -10168,11 +10174,79 @@ export const en = {
   "import.upload.tooManyRowsTitle": "File is too long for one test run",
   "import.upload.tooManyRows":
     "This file has more rows than one test run can read. Split it into smaller files and import each one.",
+  "import.refusal.inFile": "In “{file}”: {sentence}",
+  "import.refusal.notUtf8":
+    "The file is not saved as UTF-8. Save it as CSV UTF-8 and upload it again.",
+  "import.refusal.unreadable": "The file could not be read. Upload it again.",
+  "import.refusal.unreadable.line":
+    "Line {line} could not be read. Fix that line and upload the file again.",
+  "import.refusal.unreadable.fieldCount":
+    "Line {line} has more or fewer fields than the header row. Fix that line and upload the file again.",
+  "import.refusal.unreadable.quote":
+    "Line {line} has a quotation mark out of place. Fix that line and upload the file again.",
+  "import.refusal.header":
+    "The header row cannot be used. Give every column a name of its own and upload the file again.",
+  "import.refusal.header.repeatedName":
+    "The header row names “{name}” twice. Give each column its own name and upload the file again.",
+  "import.refusal.header.blankName":
+    "Column {position} of the header row has no name. Name every column and upload the file again.",
+  "import.refusal.header.noHeader":
+    "The file has no header row. Put the column names on the first line and upload it again.",
+  "import.refusal.bundle":
+    "The ZIP cannot be imported. Check the files in it and upload it again.",
+  "import.refusal.bundle.twoFilesOneType":
+    "“{other_file}” and “{file}” are both {object}. Keep one of them and upload the ZIP again.",
+  "import.refusal.bundle.tooManyFiles":
+    "The ZIP holds {files} files, and an import reads at most {max_files}. Remove the files you do not import and upload it again.",
+  "import.refusal.bundle.empty":
+    "The ZIP is empty. Add one CSV file per record type and upload it again.",
+  "import.refusal.bundle.notAZip":
+    "The ZIP could not be opened. Make the ZIP again and upload it.",
+  "import.refusal.bundle.filesTooLarge":
+    "The files in the ZIP add up to more than {max_mb} MB. Split them over smaller ZIPs and import each one.",
+  "import.refusal.bundle.zipTooLarge":
+    "The ZIP is larger than {max_mb} MB, the most one upload holds. Split it into smaller ZIPs.",
+  "import.refusal.bundle.passwordProtected":
+    "“{file}” is password-protected. Remove the password and upload the ZIP again.",
+  "import.refusal.bundle.fileDamaged":
+    "“{file}” in the ZIP is damaged. Make the ZIP again and upload it.",
+  "import.refusal.bundle.fileMissing":
+    "“{file}” is not in the ZIP. Upload the ZIP again.",
+  "import.refusal.bundle.typeNotImportable":
+    "“{object}” is not a record type an import takes. Remove that file and upload the ZIP again.",
+  "import.refusal.tooManyRows":
+    "This file has {rows} rows, and one test run reads at most {max}. Split it into smaller files and import each one.",
+  "import.refusal.unsupported":
+    "An import takes companies, contacts, leads, deals or activities. Choose the type the file holds.",
+  "import.refusal.duplicateTarget":
+    "Two columns map to the same field. Map one column to each field.",
+  "import.refusal.duplicateTarget.named":
+    "The columns “{other_column}” and “{column}” both map to “{target}”. Map one column to each field.",
+  "import.refusal.unmappable":
+    "No column identifies each row. Map a column to the field that tells the rows apart.",
+  "import.refusal.unmappable.target":
+    "No column identifies each row. Map a column to “{target}”.",
+  "import.refusal.unmappable.targetOrRef":
+    "No column identifies each row. Map a column to “{target}” or to “{ref_target}”.",
+  "import.refusal.fileEmpty":
+    "The file is empty. Choose a file with a header row and upload it again.",
+  "import.refusal.objectMismatch":
+    "The file does not hold the record type chosen for it. Check “Import as” and run the test again.",
+  "import.refusal.mappingEmpty":
+    "No column is mapped to a field. Map at least one column and run the test again.",
+  "import.refusal.unknownColumn":
+    "The map names a column the file does not have. Upload the file again and map its columns.",
+  "import.refusal.unknownTarget":
+    "A column is mapped to a field this record type does not take. Choose another field for it.",
+  "import.refusal.unmappedColumn":
+    "The column that identifies each row is not mapped. Map it to a field and run the test again.",
+  "import.refusal.sourceName":
+    "The source name is not allowed. Use up to {max} characters: letters A to Z, digits, spaces, dots, underscores and hyphens.",
   "import.undoConfirm.title": "Undo this import?",
   "import.undoConfirm.confirm": "Undo import",
   "import.undoConfirm.order": "Undo runs in reverse order: {order}.",
   "import.undoConfirm.archived":
-    "Records this import created are archived, and prospects are disqualified.",
+    "Records this import created are archived, and leads are disqualified.",
   "import.undoConfirm.kept":
     "Records edited since the import are kept and listed.",
   "import.undoConfirm.updated":
@@ -10212,7 +10286,7 @@ export const en = {
   "import.wizard.cancel": "Cancel",
   "import.files.table": "Files in the upload",
   "import.files.col.file": "File",
-  "import.files.col.rows": "Rows profiled",
+  "import.files.col.rows": "Rows",
   "import.files.col.type": "Import as",
   "import.files.columns_one": "1 column",
   "import.files.columns_other": "{count} columns",
@@ -10227,12 +10301,26 @@ export const en = {
   "import.files.sourceName": "Source name",
   "import.files.sourceNameHint":
     "Use the same name on a later upload to update these records, not add them again.",
+  "import.files.sourceNameRule":
+    "Up to {max} characters: letters A to Z, digits, spaces, dots, underscores and hyphens.",
+  "import.files.sourceNameInvalid":
+    "The source name holds a character that is not allowed. Use letters A to Z, digits, spaces, dots, underscores or hyphens.",
+  "import.files.guessed": "Record type chosen from the columns",
+  "import.files.guessedCheck":
+    "The file name names no record type. Check “Import as” before you go on.",
+  "import.files.unguessed": "No record type found",
+  "import.files.unguessedChoose":
+    "Neither the file name nor its columns name one. Choose it under “Import as”.",
+  "import.files.retireFailed":
+    "The earlier draft of this file was not canceled",
   "import.files.noneTyped": "Choose a record type for at least one file.",
   "import.files.clash":
     "{first} and {second} are both {type}. Each type takes one file.",
   "import.files.next_one": "Next: map 1 file",
   "import.files.next_other": "Next: map {count} files",
   "import.map.tabs": "Files to map",
+  "import.map.leftOut_one": "1 column not imported",
+  "import.map.leftOut_other": "{count} columns not imported",
   "import.map.lead":
     "{file} as {type}. A column left on “Do not import” is left out.",
   "import.map.link": "link",
@@ -10310,11 +10398,13 @@ export const en = {
   "import.test.nothing.skipped":
     "Download problems.csv before you press Done: it lists the skipped rows and why.",
   "import.test.nothing.done": "Done",
+  "import.test.nothing.empty": "The file has a header and no rows.",
   "import.test.reupload": "Fix and re-upload",
   "import.test.issuesUnit": "issues",
   "import.test.import_one": "Import 1 row",
   "import.test.import_other": "Import {count} rows",
-  "import.test.importAnyway": "Import anyway",
+  "import.test.importAnyway_one": "Import 1 row anyway",
+  "import.test.importAnyway_other": "Import {count} rows anyway",
   "import.test.counts": "Rows per record type",
   "import.test.testing": "Testing your file…",
   "import.test.stop": "Stop test",

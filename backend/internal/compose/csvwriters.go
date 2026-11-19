@@ -48,7 +48,7 @@ type csvWriters struct {
 	runID      migration.RunID
 	object     string
 	// sourceSystem is the namespace the run files its rows under, from its
-	// source name (importSourceSystem).
+	// source name (importwire.SourceSystem).
 	sourceSystem string
 	// onDuplicate is the run's answer for a row naming a record the estate
 	// already holds: "" or "create" lands it and files a review pair, "skip"
