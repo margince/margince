@@ -59980,10 +59980,10 @@ export interface components {
             overdue?: boolean;
             /**
              * @description Which run of the page this dated row belongs to, so a client can head "Due tomorrow" without deciding the boundary itself.
-             *     Resolved server-side for the reason every other boundary here is: the day's end depends on the installation's zone, and a browser computing it from its own clock would group a task differently from the counts above it. Present only on rows carrying `due_at`.
+             *     Resolved server-side for the reason every other boundary here is: the day's end depends on the installation's zone, and a browser computing it from its own clock would group a task differently from the counts above it. Present on rows carrying `due_at`, and `none` on an undated task of the backlog, which sits at the end of the upcoming work.
              * @enum {string}
              */
-            due_group?: "overdue" | "today" | "tomorrow" | "this_week" | "later";
+            due_group?: "overdue" | "today" | "tomorrow" | "this_week" | "later" | "none";
             /**
              * @description The version of the row this item's own verbs write to, present where it names one — a
              *     task or a promise today. Carried for the reason `email_summary` carries one: a lane that offers
@@ -61705,10 +61705,10 @@ export interface components {
             overdue?: boolean;
             /**
              * @description Which run of the page this dated row belongs to, so a client can head "Due tomorrow" without deciding the boundary itself.
-             *     Resolved server-side for the reason every other boundary here is: the day's end depends on the installation's zone, and a browser computing it from its own clock would group a task differently from the counts above it. Present only on rows carrying `due_at`.
+             *     Resolved server-side for the reason every other boundary here is: the day's end depends on the installation's zone, and a browser computing it from its own clock would group a task differently from the counts above it. Present on rows carrying `due_at`, and `none` on an undated task of the backlog, which sits at the end of the upcoming work.
              * @enum {string}
              */
-            due_group?: "overdue" | "today" | "tomorrow" | "this_week" | "later";
+            due_group?: "overdue" | "today" | "tomorrow" | "this_week" | "later" | "none";
             /**
              * @description The version of the row this item's own verbs write to, present where it names one — a
              *     task today. Carried for the reason `email_summary` carries one: a lane that offers

@@ -37,9 +37,10 @@ var worklistStages = []string{
 // savepoint statements count where the exchange that carries them does.
 const worklistOutsideStatements = 9
 
-// The seeded read includes every bound lane and an open task. Lower this
-// pgx-call ceiling when a batch or empty-set shortcut removes calls.
-const worklistExchangeBudget = 68
+// The seeded read includes every bound lane and an open task, which is undated
+// and so drawn under Upcoming. Lower this pgx-call ceiling when a batch or
+// empty-set shortcut removes calls.
+const worklistExchangeBudget = 73
 
 const worklistRoundTripBudget = worklistExchangeBudget
 

@@ -3163,6 +3163,7 @@ func (e AttentionItemActions) Valid() bool {
 // Defines values for AttentionItemDueGroup.
 const (
 	AttentionItemDueGroupLater    AttentionItemDueGroup = "later"
+	AttentionItemDueGroupNone     AttentionItemDueGroup = "none"
 	AttentionItemDueGroupOverdue  AttentionItemDueGroup = "overdue"
 	AttentionItemDueGroupThisWeek AttentionItemDueGroup = "this_week"
 	AttentionItemDueGroupToday    AttentionItemDueGroup = "today"
@@ -3173,6 +3174,8 @@ const (
 func (e AttentionItemDueGroup) Valid() bool {
 	switch e {
 	case AttentionItemDueGroupLater:
+		return true
+	case AttentionItemDueGroupNone:
 		return true
 	case AttentionItemDueGroupOverdue:
 		return true
@@ -28183,6 +28186,7 @@ func (e WorklistItemDispositions) Valid() bool {
 // Defines values for WorklistItemDueGroup.
 const (
 	WorklistItemDueGroupWorklistDueGroupLater    WorklistItemDueGroup = "later"
+	WorklistItemDueGroupWorklistDueGroupNone     WorklistItemDueGroup = "none"
 	WorklistItemDueGroupWorklistDueGroupOverdue  WorklistItemDueGroup = "overdue"
 	WorklistItemDueGroupWorklistDueGroupThisWeek WorklistItemDueGroup = "this_week"
 	WorklistItemDueGroupWorklistDueGroupToday    WorklistItemDueGroup = "today"
@@ -28193,6 +28197,8 @@ const (
 func (e WorklistItemDueGroup) Valid() bool {
 	switch e {
 	case WorklistItemDueGroupWorklistDueGroupLater:
+		return true
+	case WorklistItemDueGroupWorklistDueGroupNone:
 		return true
 	case WorklistItemDueGroupWorklistDueGroupOverdue:
 		return true
@@ -37198,7 +37204,7 @@ type AttentionItem struct {
 	DueAt *time.Time `json:"due_at,omitempty"`
 
 	// DueGroup Which run of the page this dated row belongs to, so a client can head "Due tomorrow" without deciding the boundary itself.
-	// Resolved server-side for the reason every other boundary here is: the day's end depends on the installation's zone, and a browser computing it from its own clock would group a task differently from the counts above it. Present only on rows carrying `due_at`.
+	// Resolved server-side for the reason every other boundary here is: the day's end depends on the installation's zone, and a browser computing it from its own clock would group a task differently from the counts above it. Present on rows carrying `due_at`, and `none` on an undated task of the backlog, which sits at the end of the upcoming work.
 	DueGroup *AttentionItemDueGroup `json:"due_group,omitempty"`
 
 	// DueHasTime On a task row: true when `due_at` names an agreed time of day, false when the task is due by that day. Absent on other rows.
@@ -37374,7 +37380,7 @@ type AttentionItem struct {
 type AttentionItemActions string
 
 // AttentionItemDueGroup Which run of the page this dated row belongs to, so a client can head "Due tomorrow" without deciding the boundary itself.
-// Resolved server-side for the reason every other boundary here is: the day's end depends on the installation's zone, and a browser computing it from its own clock would group a task differently from the counts above it. Present only on rows carrying `due_at`.
+// Resolved server-side for the reason every other boundary here is: the day's end depends on the installation's zone, and a browser computing it from its own clock would group a task differently from the counts above it. Present on rows carrying `due_at`, and `none` on an undated task of the backlog, which sits at the end of the upcoming work.
 type AttentionItemDueGroup string
 
 // AttentionItemSource Which producer raised it, and therefore which endpoint its verbs go to.
@@ -72792,7 +72798,7 @@ type WorklistItem struct {
 	DueAt *time.Time `json:"due_at,omitempty"`
 
 	// DueGroup Which run of the page this dated row belongs to, so a client can head "Due tomorrow" without deciding the boundary itself.
-	// Resolved server-side for the reason every other boundary here is: the day's end depends on the installation's zone, and a browser computing it from its own clock would group a task differently from the counts above it. Present only on rows carrying `due_at`.
+	// Resolved server-side for the reason every other boundary here is: the day's end depends on the installation's zone, and a browser computing it from its own clock would group a task differently from the counts above it. Present on rows carrying `due_at`, and `none` on an undated task of the backlog, which sits at the end of the upcoming work.
 	DueGroup *WorklistItemDueGroup `json:"due_group,omitempty"`
 
 	// DueHasTime On a task row: true when `due_at` names an agreed time of day, false when the task is due by that day. Absent on other rows.
@@ -73063,7 +73069,7 @@ type WorklistItemDestination string
 type WorklistItemDispositions string
 
 // WorklistItemDueGroup Which run of the page this dated row belongs to, so a client can head "Due tomorrow" without deciding the boundary itself.
-// Resolved server-side for the reason every other boundary here is: the day's end depends on the installation's zone, and a browser computing it from its own clock would group a task differently from the counts above it. Present only on rows carrying `due_at`.
+// Resolved server-side for the reason every other boundary here is: the day's end depends on the installation's zone, and a browser computing it from its own clock would group a task differently from the counts above it. Present on rows carrying `due_at`, and `none` on an undated task of the backlog, which sits at the end of the upcoming work.
 type WorklistItemDueGroup string
 
 // WorklistItemPrimaryAction The one verb this row is FOR, out of `actions`. The queue is ranked, so the
