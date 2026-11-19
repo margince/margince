@@ -4,7 +4,7 @@
 
 Meetings and booking in Margince covers how a contact books time with you, and what happens to the invitation after that. You set your hours, calendars and booking link in **Settings → Meetings**; see [Your own settings](your-own-settings.md#meetings) for that set-up.
 
-There are three ways to set up a meeting with a contact. You can offer two or three times, send an invitation for a time you agreed, or share a personal link. **My booking link**, in the account menu, is a fourth way that needs no contact.
+There are three ways to set up a meeting with a contact. You can offer two or three times, send an invitation for a time you agreed, or share a personal link. **My booking link**, in the account menu, is a fourth way that needs no contact. Until you create the link, that row reads **Set up my booking link**.
 
 ### How do I send a meeting invitation to a contact?
 To send a calendar invitation in Margince, open the contact's **Meetings** tab, choose **Book a meeting**, and pick the time you agreed.

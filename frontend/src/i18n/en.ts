@@ -1780,6 +1780,7 @@ export const en = {
     "The reminder could not be sent. Check your email connection and email the guest directly.",
   "history.field.reminder_status": "Reminder status",
   "scheduling.myLink": "My booking link",
+  "scheduling.setUpMyLink": "Set up my booking link",
   "scheduling.linkIntro":
     "One link for your email signature, messages and website. Anyone can choose a time within your availability.",
   "scheduling.copyLink": "Copy link",

@@ -1813,6 +1813,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Không thể gửi lời nhắc. Kiểm tra kết nối email và gửi email trực tiếp cho khách.",
   "history.field.reminder_status": "Trạng thái lời nhắc",
   "scheduling.myLink": "Liên kết đặt lịch của tôi",
+  "scheduling.setUpMyLink": "Thiết lập liên kết đặt lịch của tôi",
   "scheduling.linkIntro":
     "Một liên kết cho chữ ký email, tin nhắn và trang web. Ai cũng có thể chọn giờ trong khoảng thời gian rảnh của bạn.",
   "scheduling.copyLink": "Sao chép liên kết",
