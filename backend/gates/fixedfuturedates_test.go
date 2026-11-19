@@ -362,8 +362,8 @@ func fixedDates(fset *token.FileSet, file *ast.File) []fixedDate {
 				found = append(found, fixedDate{day: day, line: fset.Position(node.Pos()).Line})
 			}
 		case *ast.BasicLit:
-			if node.Kind == token.STRING {
-				for _, day := range daysInString(node.Value) {
+			if text, isString := gatekit.LiteralText(node); isString {
+				for _, day := range daysInString(text) {
 					found = append(found, fixedDate{day: day, line: fset.Position(node.Pos()).Line})
 				}
 			}
