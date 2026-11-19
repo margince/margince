@@ -124,7 +124,7 @@ describe("problemMessage", () => {
       t,
     );
     expect(message).toBe(t("common.permissionDenied"));
-    expect(message).not.toContain("contact.update");
+    expect(message).not.toContain("your role does not grant update on contact");
   });
 
   it("keeps the server detail when no translator is given", () => {

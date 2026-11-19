@@ -108,7 +108,7 @@ describe("a choice edited in a dialog", () => {
     await user.click(screen.getByRole("button", { name: en["record.save"] }));
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent("do not have permission");
-    expect(alert).not.toHaveTextContent("company.update");
+    expect(alert).not.toHaveTextContent("your role does not grant update on company");
     expect(alert).toHaveClass("field-error");
     expect(chooser).toHaveTextContent("Customer");
     expect(chooser).toHaveAttribute("aria-invalid", "true");

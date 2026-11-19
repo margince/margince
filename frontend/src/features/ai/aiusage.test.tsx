@@ -306,7 +306,7 @@ it("distinguishes an empty window from a refused read", async () => {
   );
   // The RBAC object and verb the gate wrapped its refusal with never reach the
   // reader: that is the authority model's shape, not an explanation.
-  expect(screen.queryByText(/automation.update/)).toBeNull();
+  expect(screen.queryByText(/your role does not grant update on automation/)).toBeNull();
 });
 
 it("names each arrow and switches the one table between tasks and days", async () => {

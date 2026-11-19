@@ -5,8 +5,11 @@ package auth
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"github.com/margince/margince/backend/internal/platform/corefeatures"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -45,7 +48,13 @@ func probeCheck(ctx context.Context, c Check) error {
 	if p.Type == principal.PrincipalBuyer {
 		return refuseBuyer(p)
 	}
-	if !corefeatures.FromContext(ctx).RecordEnabled(c.Object) || !c.HeldBy(p) {
+	// A kind the installation switched off is refused whatever the role holds,
+	// so it names no grant: adding one would not lift it.
+	if !corefeatures.FromContext(ctx).RecordEnabled(c.Object) {
+		return fmt.Errorf("this installation has switched off %s records: %w",
+			strings.ReplaceAll(c.Object, "_", " "), apperrors.ErrPermissionDenied)
+	}
+	if !c.HeldBy(p) {
 		return refuseGrant(c)
 	}
 	return nil
