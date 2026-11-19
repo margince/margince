@@ -9,9 +9,9 @@ import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { formatRelativeTime } from "../../format/relativetime";
 import { type Translator, useLocale, usePlural, useT } from "../../i18n";
-import { deviceLabel } from "../../lib/devicelabel";
 import { problemMessageOf } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
+import { deviceLabel } from "./devicelabel";
 import {
   type MySession,
   useEndSessions,
