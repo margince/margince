@@ -44,6 +44,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "worklist.happened.deal",
   "contact.chapter.wayInAnswer",
   "contact.chapter.withDetail",
+  "merge.recordDetail",
   // The promiser and stored summary are values separated by punctuation.
   "magic.action.approval_commitment_task_named",
   "magic.action.approval_commitment_task_summary",
@@ -243,6 +244,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "filters.sentence.ref.pipeline_one",
   "cf.obj.deal",
   "cf.obj.lead",
+  "unit.lead",
   "co.brief.cite.deal",
   "co.brief.cite.lead",
   // The borrowed noun in the singular, which English and Vietnamese spell alike;

@@ -131,6 +131,7 @@ describe("a stored value", () => {
       "margince.analytics.overviewTab:*",
       "margince.session.seen",
       "margince.trial.noticeHiddenOn",
+      "margince.installHint",
     ]);
   });
 });

@@ -90,7 +90,7 @@ var requiredInputs = []requiredInput{
 	{code: crmcontracts.GrowthFitInputIndustry, counts: industryKnown},
 	profileInput(crmcontracts.GrowthFitInputBuyingCenter, crmcontracts.CompanyProfileFieldFieldBuyingCenter),
 	profileInput(crmcontracts.GrowthFitInputBuyingIntents, crmcontracts.CompanyProfileFieldFieldBuyingIntents),
-	factInput(crmcontracts.GrowthFitInputEmployeeRange, crmcontracts.CompanyFactFieldEmployeeRange),
+	{code: crmcontracts.GrowthFitInputEmployeeRange, counts: employeesKnown},
 	factInput(crmcontracts.GrowthFitInputTechnology, crmcontracts.CompanyFactFieldTechnology),
 }
 
@@ -105,6 +105,15 @@ func industryKnown(in Input, now time.Time) (bool, time.Time) {
 		return true, time.Time{}
 	}
 	return freshProfileField(in, crmcontracts.CompanyProfileFieldFieldIndustry, now)
+}
+
+// employeesKnown is industryKnown for size: the company's own size band counts
+// with no expiry, and a site-read employee range counts while fresh.
+func employeesKnown(in Input, now time.Time) (bool, time.Time) {
+	if in.SizeBand != "" {
+		return true, time.Time{}
+	}
+	return freshFact(in, crmcontracts.CompanyFactFieldEmployeeRange, now)
 }
 
 // Offering is what this workspace knows about ITSELF, as the growth fit needs

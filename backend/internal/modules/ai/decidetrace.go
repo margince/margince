@@ -75,7 +75,7 @@ func (r *Router) finalizeDecisionAttempt(ctx context.Context, lc *logicalCall, t
 // document then passes the stripper again, as buildPayload's does, because
 // the questions are text too.
 func (r *Router) buildDecisionPayload(ctx context.Context, dreq decision.Request, resp decision.Response) (*Payload, error) {
-	budget := captureBudget{remaining: maxCapturedRequestRunes}
+	budget := r.newCaptureBudget()
 	reqDoc, err := json.Marshal(struct {
 		State     string                          `json:"state"`
 		Questions map[string]decisionWireQuestion `json:"questions"`

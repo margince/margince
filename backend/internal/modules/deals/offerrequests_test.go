@@ -32,7 +32,7 @@ func TestAnOfferCreateRefusesEveryTotalTheServerDerives(t *testing.T) {
 		"a line total": `{"currency":"EUR","source":"manual",
 			"line_items":[{"quantity":1,"unit_price_minor":100,"line_net_minor":100}]}`,
 	} {
-		_, err := OfferCreationInput([]byte(body))
+		_, err := OfferCreationInput(t.Context(), []byte(body))
 		if field, code := refusedOn(t, err); code != "totals_derived" {
 			t.Errorf("%s was refused on %s/%s, want totals_derived", name, field, code)
 		}
@@ -45,7 +45,7 @@ func TestAnOfferCreateNamesWhatIsWrongWithItsBody(t *testing.T) {
 		"line items as one": {`{"currency":"EUR","source":"manual","line_items":{}}`, "body", "malformed_json"},
 		"a blank source":    {`{"currency":"EUR","source":"  "}`, "source", "required"},
 	} {
-		_, err := OfferCreationInput([]byte(tc.body))
+		_, err := OfferCreationInput(t.Context(), []byte(tc.body))
 		if field, code := refusedOn(t, err); field != tc.field || code != tc.code {
 			t.Errorf("%s was refused on %s/%s, want %s/%s", name, field, code, tc.field, tc.code)
 		}
@@ -53,7 +53,7 @@ func TestAnOfferCreateNamesWhatIsWrongWithItsBody(t *testing.T) {
 }
 
 func TestAnOfferCreateMapsItsDateAndLinesOneWay(t *testing.T) {
-	in, err := OfferCreationInput([]byte(`{"currency":"EUR","source":" manual ","valid_until":"2099-12-31",
+	in, err := OfferCreationInput(t.Context(), []byte(`{"currency":"EUR","source":" manual ","valid_until":"2099-12-31",
 		"line_items":[{"description":"Setup","quantity":2,"unit_price_minor":5000,"tax_rate":19}]}`))
 	if err != nil {
 		t.Fatalf("a clean create body was refused: %v", err)
@@ -80,7 +80,7 @@ func TestAnOfferPatchBodyClaimsATotalBeforeItIsNamedUnknown(t *testing.T) {
 }
 
 func TestAnOfferCreateNamingNoFieldIsRefusedByName(t *testing.T) {
-	_, err := OfferCreationInput([]byte(`{"currency":"EUR","source":"manual","valid_unti":"2099-12-31"}`))
+	_, err := OfferCreationInput(t.Context(), []byte(`{"currency":"EUR","source":"manual","valid_unti":"2099-12-31"}`))
 	if field, code := refusedOn(t, err); field != "body" || code != "unknown_field" || !strings.Contains(err.Error(), "valid_unti") {
 		t.Fatalf("a create naming valid_unti was refused on %s/%s (%v), want body/unknown_field naming it", field, code, err)
 	}

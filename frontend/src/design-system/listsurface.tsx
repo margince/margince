@@ -357,6 +357,7 @@ export function countSays(total: number, sortedBy?: string): boolean {
  */
 export function CountLine({
   unit,
+  unitOne = unit,
   first,
   last,
   total,
@@ -365,6 +366,8 @@ export function CountLine({
   sortedBy,
 }: Readonly<{
   unit: string;
+  /** The noun for a total of one, where it differs from `unit`. */
+  unitOne?: string;
   first: number;
   last: number;
   total: number;
@@ -390,7 +393,7 @@ export function CountLine({
     first: formatNumber(first, locale),
     last: formatNumber(last, locale),
     count: formatNumber(total, locale),
-    unit,
+    unit: total === 1 ? unitOne : unit,
   };
   // An empty list says why in its body: none yet, none matching, a failed read.
   // A zero here would only repeat that sentence or contradict it.

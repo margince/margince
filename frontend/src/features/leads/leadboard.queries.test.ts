@@ -10,6 +10,7 @@ import {
   terminalCountsWithheldBecause,
   terminalLeadsQueryParams,
 } from "./leadboard.queries";
+import { leadsQueryParams } from "./leads.list.queries";
 
 function narrowed(filters: Record<string, string>, q = ""): ListQuery {
   return { ...UNNARROWED_LIST_QUERY, q, filters };
@@ -115,5 +116,22 @@ describe("a terminal column's cards", () => {
       status: "disqualified",
       include_archived: true,
     });
+  });
+});
+
+describe("the list's archived dial", () => {
+  it("is sent for a status dial naming a closed status, and only then", () => {
+    for (const status of ["promoted", "disqualified"]) {
+      expect(leadsQueryParams(narrowed({ status }))).toMatchObject({
+        status,
+        include_archived: true,
+      });
+    }
+    for (const status of ["new", "contacted", "engaged"]) {
+      expect(
+        leadsQueryParams(narrowed({ status })).include_archived,
+      ).toBeUndefined();
+    }
+    expect(leadsQueryParams(narrowed({})).include_archived).toBeUndefined();
   });
 });

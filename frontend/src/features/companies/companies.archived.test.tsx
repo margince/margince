@@ -6,6 +6,7 @@ import { createQueryClient } from "../../app/queryclient";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { company, company360 } from "../../testing/company.fixtures";
+import { recordNamesRoutes } from "../../testing/recordnames.testkit";
 import { RecordShell } from "../../testing/recordshell.testkit";
 import {
   installFetchStub,
@@ -188,6 +189,27 @@ describe("CompanyScreen — an archived account", () => {
 
     expect(await screen.findByText(en["record.archivedReadOnly"])).toBeTruthy();
     expect(asked).not.toContain("/companies/o-1/360");
+  });
+
+  it("says on the Overview that it is archived instead of opening on nothing", async () => {
+    mountArchived();
+
+    expect(await screen.findByText(en["co.archived.overview"])).toBeTruthy();
+    expect(screen.queryByText(en["history.field.merged_into_id"])).toBeNull();
+  });
+
+  it("links the company it was merged into from the Overview", async () => {
+    mountArchived({
+      routes: {
+        "GET /companies/o-1": () =>
+          jsonResponse({ ...archived, merged_into_id: "o-2" }),
+        ...recordNamesRoutes({ company: { "o-2": "Kept Holdings" } }),
+      },
+    });
+
+    const link = await screen.findByRole("link", { name: "Kept Holdings" });
+    expect(link.getAttribute("href")).toMatch(/#\/companies\/o-2$/);
+    expect(screen.getByText(en["history.field.merged_into_id"])).toBeTruthy();
   });
 
   it("reads no contracts on its documents tab", async () => {

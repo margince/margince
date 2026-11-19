@@ -496,7 +496,9 @@ merge gate and needs Node and pnpm.
 | | |
 |---|---|
 | The API seam and the generated contract types | `frontend/src/api/{client.ts,schema.d.ts,public-events.ts}` |
-| Boot: theme, install offer, service worker, query client, 403 handling | `frontend/src/main.tsx` |
+| Start, before the app's code loads: install offer, service worker, first session read, language | `frontend/src/bootstrap.ts` |
+| Boot: theme, the first render | `frontend/src/main.tsx` |
+| The query client and its 403 handling | `frontend/src/app/queryclient.ts` |
 | Registering the service worker, install state / the worker and its offline page | `frontend/src/lib/pwa.ts` / `frontend/src/offline/`, built by `frontend/scripts/vite-pwa.ts` |
 | Route → screen, the sign-in gate, the onboarding gate | `frontend/src/App.tsx` |
 | The shell, sidebar, page title | `frontend/src/app/{shell.tsx,shell.css}` |

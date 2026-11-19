@@ -18,6 +18,15 @@ export function modelText(
   if (answering) {
     return `${answering.provider}/${answering.served_model}`;
   }
+  // Every recent answer failing is the state the user most needs to see, so
+  // it outranks the search index. A call that never reached a model has no
+  // served model, so it names the configured one.
+  const failed = read.calls.find((call) => call.kind !== "embedding");
+  if (failed) {
+    return t("agent.fact.noAnswers", {
+      model: `${failed.provider}/${failed.served_model || failed.model_id}`,
+    });
+  }
   const indexing = read.calls.find((call) => call.kind === "embedding");
   if (indexing) {
     return t("agent.fact.searchIndex", {

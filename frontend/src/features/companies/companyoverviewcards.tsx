@@ -112,6 +112,11 @@ function OtherOpenTasks({
 }>) {
   const t = useT();
   const steps = otherOpenTasks(view, shownTaskId);
+  const restricted = emptyWords(view, ["next_steps"]);
+  // Nothing left to list draws no card; the header keeps Add task.
+  if (steps.length === 0 && !restricted) {
+    return null;
+  }
   return (
     <OverviewCard
       title={t("co.overview.otherOpen")}
@@ -120,10 +125,7 @@ function OtherOpenTasks({
           {t("record.allTasks")}
         </Button>
       }
-      empty={t(
-        emptyWords(view, ["next_steps"]) ??
-          (shownTaskId ? "co.overview.nothingOpen" : "co.next.empty"),
-      )}
+      empty={restricted && t(restricted)}
     >
       {steps.length > 0 && (
         <OverviewList>

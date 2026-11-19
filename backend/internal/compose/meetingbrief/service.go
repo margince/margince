@@ -26,7 +26,9 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/datenotation"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -181,7 +183,7 @@ func (s *Service) assembleFiled(ctx context.Context, activityID ids.UUID, reques
 		return crmcontracts.MeetingBrief{}, nil, err
 	}
 	if coached {
-		plan.ManagerCoaching = wireCoaching(briefCopyFor(in.Language).coachingFor(written.plan))
+		plan.ManagerCoaching = wireCoaching(in.words().coachingFor(written.plan))
 	}
 	var filed *ids.UUID
 	if in.Project != nil {
@@ -218,7 +220,7 @@ func (s *Service) assembleFiled(ctx context.Context, activityID ids.UUID, reques
 // contract's field is optional, and an empty array on the wire invites a client
 // to render an empty "what you cannot see" heading.
 func omissions(in Input) *[]crmcontracts.MeetingBriefOmission {
-	words := briefCopyFor(in.Language)
+	words := in.words()
 	var out []crmcontracts.MeetingBriefOmission
 	if in.RoomHidden {
 		out = append(out, crmcontracts.MeetingBriefOmission{
@@ -296,6 +298,7 @@ func (s *Service) assembleInput(ctx context.Context, activityID ids.UUID, reques
 	var excerpts []ExcerptIn
 	var seats []ids.UUID
 	var zone *time.Location
+	var dates datenotation.Notation
 	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
 		// The requested project is gated BEFORE the meeting is read, because
 		// the meeting read already narrows by it (the attendees' last-touch
@@ -309,9 +312,10 @@ func (s *Service) assembleInput(ctx context.Context, activityID ids.UUID, reques
 		if err != nil {
 			return err
 		}
-		if zone, err = identity.ZoneAppliedTx(ctx, tx); err != nil {
+		if dates, err = identity.DateNotationTx(ctx, tx, langcopy.For(language).Lang()); err != nil {
 			return err
 		}
+		zone = dates.Zone
 		loaded.Opens = opensAt(loaded, zone)
 		room = loaded
 		chosen, err := resolveScope(loaded, requested)
@@ -355,6 +359,7 @@ func (s *Service) assembleInput(ctx context.Context, activityID ids.UUID, reques
 	in := s.foldRoom(room, perAttendee, earlier, lastSpoke, moves, roomHidden, history, excerpts, seats)
 	in.Language = language
 	in.Zone = zone
+	in.Dates = dates
 	var viewScope *crmcontracts.ProjectScope
 	// With nobody in the room this caller may see, there is no 360 to read.
 	// The header still stands.

@@ -91,6 +91,7 @@ git push origin v1.0.0
    `THIRD-PARTY-NOTICES.txt`, the license texts of the Go modules the programs link. It is written by
    [`scripts/backend-notices.sh`](../../scripts/backend-notices.sh). The pack refuses a bundle without it.
 3. It writes the SBOMs, `images.txt` (each image pinned by its hash) and `SHA256SUMS` over the bundles, the SBOMs and `images.txt`.
+   One SBOM job runs beside the build, and the dist release takes the same files.
 4. It signs each image and `SHA256SUMS` with cosign.
 5. It uploads those files with your notes, the changes and the install steps, then publishes the release.
 
@@ -117,28 +118,38 @@ on the release. Run **all** jobs again. To run only the failed jobs again leaves
 that read the tag not run. GitHub drops the values of a job that did not run, so the publish has no
 version to name anything after. It refuses, and says so.
 
+All jobs include the test dist release. If the first run published it, the service refuses that version a
+second time, and the dist jobs fail. The GitHub release does not wait for them, so it still goes out.
+
 ## Two release kinds
 
 Two kinds of release live here, and they carry different versions:
 
-| | `release-tag.yml` | `release.yml` |
+| | GitHub release (`release-tag.yml`) | dist release (`_release-dist.yml`) |
 |---|---|---|
-| Trigger | a `v*` tag | the same plain `vX.Y.Z` tag, or started by hand with that tag |
+| Trigger | a `v*` tag | the same plain `vX.Y.Z` tag, or `release.yml` started by hand with that tag |
 | Version | `v1.0.0` (semver) | `1.0.0`: the tag without its `v` |
-| Publishes to | the GitHub release page | the dist service at `dist.test.margince.com` |
+| Publishes to | the GitHub release page | `dist.test.margince.com` on a tag, or by hand with the default `target=test`; `dist.margince.com` only by hand with `target=production` |
 | Carries | the notes, the images on `ghcr.io`, a server bundle for each Linux platform, SBOMs, a signed `SHA256SUMS` | the patch of changes, SBOMs, a changelog, role images, an archive of the programs for each Linux platform |
 
-One tag cuts both releases. The dist service accepts no `v` prefix, so the tag `v1.0.0` makes the dist
+One tag cuts both releases in one run of `release-tag.yml`, from one set of SBOMs. Neither release waits for
+the checks of the other: an open blocker holds only the GitHub release. The dist service accepts no `v` prefix, so the tag `v1.0.0` makes the dist
 release `1.0.0`. Never push a tag `1.0.0` next to `v1.0.0`: the release CLI refuses that pair. A tag
 with an added part, such as `v1.0.0-rc.1`, makes no dist release.
 
 ### Start a dist release by hand
 
-If the run of a tag failed before its draft, start `release.yml` again and name the tag:
+A tag publishes to the test service only. Once the test release works, publish the same tag to production:
 
 ```sh
-gh workflow run release.yml --ref main -f tag=v1.0.0
+gh workflow run release.yml --ref main -f tag=v1.0.0 -f target=production
 ```
+
+If the run of a tag failed before its draft, start it again with `-f target=test`. Each target has its own
+publisher tokens. Test uses the repository secrets `MARGINCE_DIST_PUBLISHER_TOKEN` and
+`MARGINCE_AUTH_PUBLISHER_TOKEN`. Production uses `MARGINCE_PRODUCTION_DIST_PUBLISHER_TOKEN` and
+`MARGINCE_PRODUCTION_AUTH_PUBLISHER_TOKEN`, set only in the `dist-production` environment, so no test run gets
+them. A run whose tokens are missing stops before it drafts, and never uses the tokens of the other target.
 
 The run builds the commit the tag names, never the tip of `main`, so the dist release describes the
 same source as the GitHub release. `--ref main` only picks the copy of the workflow that runs.
@@ -171,7 +182,7 @@ The role images are pushed with no version tag. The release names each image by 
 
 ### Where the patch of changes starts
 
-The patch of `release.yml` starts at the patch base. The patch base is the newest published release,
+The patch of a dist release starts at the patch base. The patch base is the newest published release,
 as the dist service records it. A withdrawn release was published, so it can be the base: an installation that
 runs it still gets the next patch.
 

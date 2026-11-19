@@ -10,7 +10,6 @@ package contacts
 import (
 	"context"
 	"errors"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -58,9 +57,11 @@ var leadListFields = map[string]storekit.SortField{
 	updatedAtColumn:   storekit.Column(storekit.KindTimestamp),
 	leadNameColumn:    storekit.Column(fieldcatalog.TypeText),
 	leadCompanyColumn: storekit.Column(fieldcatalog.TypeText),
-	leadStatusColumn:  storekit.Column(fieldcatalog.TypeText),
-	leadScoreColumn:   storekit.Column(fieldcatalog.TypeNumber),
-	ownerIDColumn:     storekit.OwnerNameSort(leadEntity),
+	// The ladder position, so New sorts before Contacted. The cursor field is
+	// renamed so a cursor from the alphabetical order is refused.
+	leadStatusColumn: {Kind: fieldcatalog.TypeNumber, CursorField: "status_rung", Expr: orderByLeadStatusRung},
+	leadScoreColumn:  storekit.Column(fieldcatalog.TypeNumber),
+	ownerIDColumn:    storekit.OwnerNameSort(leadEntity),
 	// The three the list draws and does not store. Each reads the same
 	// expression the row is PRINTED from (lead_read.go), so a reader sees the
 	// value the page was arranged by.
@@ -90,6 +91,12 @@ func orderByLeadNextTaskDue(ctx context.Context, arg func(any) int) (string, err
 		return "", err
 	}
 	return leadNextTaskDueSQL(work), nil
+}
+
+// orderByLeadStatusRung orders by the status's place in the lead's lifecycle:
+// the open ladder, then the terminal pair.
+func orderByLeadStatusRung(context.Context, func(any) int) (string, error) {
+	return LeadStatusRungSQL("lead.status", true), nil
 }
 
 // orderByLeadSourceLabel orders by the words the Source column prints rather
@@ -244,8 +251,8 @@ func leadNarrowing(ctx context.Context, in ListLeadsInput, policy leadSLAPolicy,
 		}
 		where = append(where, member)
 	}
-	if in.Query != nil && *in.Query != "" {
-		where = append(where, leadQuickFindClause(*in.Query, arg))
+	if q, ok := storekit.QuickFindQuery(in.Query); ok {
+		where = append(where, leadQuickFindClause(q, arg))
 	}
 	if in.Status != nil {
 		where = append(where, storekit.SQLf(leadStatusColumn+" = $%d", arg(*in.Status)))
@@ -295,7 +302,7 @@ func attachLeadRows(ctx context.Context, tx pgx.Tx, leads []crmcontracts.Lead) e
 const leadQuickFindExpr = `(coalesce(full_name, '') || ' ' || coalesce(company_name, ''))`
 
 func leadQuickFindClause(query string, arg func(any) int) string {
-	pos := arg(strings.TrimSpace(query))
+	pos := arg(query)
 	return storekit.SQLf(`(%s
 		OR lower(rtrim(linkedin_url, '/')) = lower(rtrim($%d, '/')))`,
 		storekit.QuickFindClauseWith(pos, leadQuickFindExpr, storekit.LeadEmails), pos)

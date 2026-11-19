@@ -45,6 +45,10 @@ func TestValidate_CurrencyRequiresISOCode(t *testing.T) {
 	if !hasFieldError(errsBad, "currency", "required_for_type_currency") {
 		t.Fatalf("lowercase currency must fail the ^[A-Z]{3}$ pattern, got %+v", errsBad)
 	}
+	unassigned := "ZZZ"
+	if errs := Validate(FieldSpec{Object: "deal", Label: "Budget", Type: TypeCurrency, Currency: &unassigned, Source: "manual"}); !hasFieldError(errs, "currency", "required_for_type_currency") {
+		t.Fatalf("a code ISO does not assign must fail as a deal's would, got %+v", errs)
+	}
 	USD := "USD"
 	if errs := Validate(FieldSpec{Object: "deal", Label: "Budget", Type: TypeCurrency, Currency: &USD, Source: "manual"}); len(errs) != 0 {
 		t.Fatalf("valid currency must pass, got %+v", errs)

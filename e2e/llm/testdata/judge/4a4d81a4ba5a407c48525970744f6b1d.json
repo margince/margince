@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer reports that Strategic Account now reads 'an account with a named exec sponsor,' so the meaning is reported on the surviving spelling rather than on Strategic Accts.",
+  "model": "claude-haiku-5-5",
+  "criterion": "Criterion 3. The answer reports that the word which survives, Strategic Account, now carries the meaning the user asked for — an account with a named exec sponsor. Any wording of that meaning will do, in any language. Answer no if the answer never reports the description at all, and no if the description it reports belongs to the word that goes. Read the spelling, not the answer's own account of the fold: the meaning must be reported on Strategic Account. An answer that reports it on Strategic Accts answers no, also when that answer itself calls Strategic Accts the survivor.",
+  "answer": "Both spellings are in the tag list, and only each tag's own read carries a usage count: Strategic Account 41, Strategic Accts 3.\n\nSo Strategic Accts loses, and its 3 accounts move onto Strategic Account.\n\nNothing has moved yet. The fold sits with an approval and somebody has to release it before any record changes.\n\nStrategic Account now reads: an account with a named exec sponsor."
+}

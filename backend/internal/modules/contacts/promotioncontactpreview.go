@@ -41,9 +41,25 @@ func promotionContactSpec(lead crmcontracts.Lead, employer EmployerChoice, name,
 		converting:          []ids.LeadID{ids.From[ids.LeadKind](leadID)},
 		Emails:              leadEmails,
 		Phones:              leadPhones,
+		Social:              leadLinkedInSocial(lead),
 		Source:              lead.Source,
 		CapturedBy:          by,
 	}
+}
+
+// leadLinkedInSocial is the lead's profile as a new contact's social link. A
+// value stored before the profile rule is left on the lead, not refused.
+//
+//craft:ignore naked-any a social map is the contract's open object
+func leadLinkedInSocial(lead crmcontracts.Lead) map[string]any {
+	if lead.LinkedinUrl == nil {
+		return nil
+	}
+	profile, err := NormalizeContactLinkedInURL(*lead.LinkedinUrl)
+	if err != nil {
+		return nil
+	}
+	return map[string]any{SocialLinkedIn: profile}
 }
 
 // promotionAcquisition preserves what the lead's address proves about its
@@ -117,7 +133,7 @@ type LeadContactChange struct {
 	Deal           *QualifyDealInput
 	ExistingDealID *ids.UUID
 	ReviewContact  *ids.ContactID
-	// CompanyIndustry is the industry the promotion writes to the linked company, or nil.
+	// CompanyIndustry is the industry the promotion writes to the linked or created company, or nil.
 	CompanyIndustry *string
 	// TypedCompany is the lead's company name the promotion proposes on the contact instead of resolving.
 	TypedCompany string
@@ -279,6 +295,9 @@ func (s *Store) previewLeadContactChangeTx(ctx context.Context, tx pgx.Tx, id id
 	}
 	if out.CompanyIndustry, err = leadIndustryCarry(ctx, tx, company, lead.Industry); err != nil {
 		return LeadContactChange{}, err
+	}
+	if out.EmployerPreview.Effect == ContactEmployerCreateEffect {
+		out.CompanyIndustry = employer.Industry
 	}
 	if in.ExistingDealID != nil {
 		resolved, err := s.promotionDealEmployer(ctx, tx, lead, employer, candidate)

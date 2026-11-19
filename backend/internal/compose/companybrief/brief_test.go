@@ -261,9 +261,9 @@ func TestWriteFallsBackRatherThanFailing(t *testing.T) {
 		"lane answering prose": nonsenseLane{},
 	} {
 		t.Run(name, func(t *testing.T) {
-			sections, by, err := Write(context.Background(), lane, companyID, in, string(textlang.English))
-			if err != nil {
-				t.Fatalf("write: %v", err)
+			sections, by, laneFailed := Write(context.Background(), lane, companyID, in, string(textlang.English))
+			if laneFailed != (lane != nil) {
+				t.Errorf("laneFailed = %v; only a configured lane that failed may keep its floor out of the cache", laneFailed)
 			}
 			if by != "deterministic" {
 				t.Errorf("generated_by = %q, want deterministic — the reader must know which wrote it", by)
@@ -482,9 +482,9 @@ func TestModelBriefKeepsWhatItGroundsAndDropsWhatItDoesNot(t *testing.T) {
 			{"text":"This account is a poor fit.","nature":"assessment","evidence":[{"entity_type":"company","entity_id":"`+briefCompanyID+`"}]}]}
 	]}`)}
 
-	written, by, err := Write(context.Background(), lane, briefCompanyID, in, string(textlang.English))
-	if err != nil {
-		t.Fatalf("Write: %v", err)
+	written, by, laneFailed := Write(context.Background(), lane, briefCompanyID, in, string(textlang.English))
+	if laneFailed {
+		t.Fatal("a lane that answered was reported as failed")
 	}
 	if by != crmcontracts.WrittenByModel {
 		t.Fatalf("generated_by = %q, want the model path", by)

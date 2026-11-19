@@ -217,6 +217,32 @@ func TestMergeGivesTheSurvivorTheCodeOrTheNote(t *testing.T) {
 	}
 }
 
+func TestMergeGivesAnUnassessedSurvivorTheLifecycleAndSize(t *testing.T) {
+	unknown, customer, prospect := crmcontracts.CompanyLifecycleUnknown, crmcontracts.CompanyLifecycleCustomer, crmcontracts.CompanyLifecycleProspect
+	large, small := crmcontracts.CompanySizeBandN51200, crmcontracts.CompanySizeBandN1150
+	source := crmcontracts.Company{Lifecycle: &customer, SizeBand: &large}
+
+	p := buildCompanySurvivorshipPatch(crmcontracts.Company{Lifecycle: &unknown}, source)
+	if got := p.After()["lifecycle"]; got != "customer" {
+		t.Errorf("an unknown survivor got lifecycle %v, want customer", got)
+	}
+	if got := p.After()["size_band"]; got != "51-200" {
+		t.Errorf("a survivor without a size got %v, want 51-200", got)
+	}
+
+	p = buildCompanySurvivorshipPatch(crmcontracts.Company{Lifecycle: &prospect, SizeBand: &small}, source)
+	for _, column := range []string{"lifecycle", "size_band"} {
+		if got, staged := p.After()[column]; staged {
+			t.Errorf("the survivor's own %s was replaced by %v", column, got)
+		}
+	}
+
+	p = buildCompanySurvivorshipPatch(crmcontracts.Company{Lifecycle: &customer}, crmcontracts.Company{Lifecycle: &unknown})
+	if got, staged := p.After()["lifecycle"]; staged {
+		t.Errorf("an unknown source staged lifecycle %v", got)
+	}
+}
+
 func TestACreateStoresTheCodeOrKeepsTheTextInTheDescription(t *testing.T) {
 	industry, description := CompanyIndustryColumns(new("Healthcare"), new("Clinics"))
 	if industry == nil || *industry != "healthcare" || *description != "Clinics" {

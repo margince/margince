@@ -1,382 +1,56 @@
 name: Release
 
-# Draft, fill and publish a dist release. A plain tag vX.Y.Z starts it and
-# names the dist release X.Y.Z, the tag without its v. A run by hand names a tag
-# and builds the commit that tag names, so a release that failed, or a dist
-# service that did not get one, can be served again from the same source. The dist service holds server releases: role images, an
-# incremental patch, program archives and SBOMs. GitHub hosts none of that.
+# A dist release by hand. A tag push cuts its test dist release in
+# release-tag.yml, which calls _release-dist.yml after its own SBOM job. This
+# run calls the same lane for a tag that already exists.
 #
-# A release is a decision somebody makes, so no branch push starts this lane.
-# A run on every push spent shared runner time on releases nobody asked for.
+# Two dist services exist, each with its own registry and publisher tokens. A
+# tag push publishes to test. Only this run reaches production, with target
+# production, so each production release is chosen by hand after test took the
+# same tag. A run with target test serves again a tag whose test release failed.
 #
-# One tag cuts both releases. The GitHub release is not here: it belongs to
-# release-tag.yml, which runs on the same tag. Only that lane creates a GitHub
-# release, so a release page cannot appear twice for one build. A pre-release
-# tag drafts nothing here, because the dist service has no pre-release.
-#
-# The flow: check the version, then draft the release with the patch, the
-# three source SBOMs and the changelog. Then bake the role images and the
-# server programs, add the images and one archive per platform, and publish.
-# The dist service publishes only a draft with the patch, the SBOMs and the
-# changelog.
-#
-# The release-management CLI runs every dist call against this checkout,
-# because the source the release describes lives here. Uploads use the dist
-# publisher token, which only CI holds.
-#
-# The patch starts at the patch base: the newest release that went out,
-# withdrawn included. resolve-patch-base names its version and git revision
-# from one dist row. With no release out yet, the patch is the whole tree.
-#
-# The changelog lists every non-merge commit subject since that revision,
-# through scripts/release_changelog.py, so it describes what the patch carries.
+# The run builds the commit the tag names. --ref only picks the copy of this
+# workflow that runs.
 on:
-  push:
-    tags: ['v*']
   workflow_dispatch:
     inputs:
       tag:
         description: 'The release tag to build, such as v1.0.0. It must be on main, and its version above every release that went out.'
         required: true
         type: string
+      target:
+        description: 'The dist service: test (dist.test.margince.com) or production (dist.margince.com).'
+        required: true
+        type: choice
+        options: [test, production]
+        default: test
 
 permissions:
   contents: read
 
-# Cancellation is scoped per JOB below rather than to the whole workflow, because
-# the two halves of this flow want opposite treatment. Drafting and baking are
-# superseded work — a second dispatch should not wait out a full docker bake for
-# a commit nobody will consume — while publishing is a mutation of the dist
-# service and must never be interrupted part-way, so it carries a group that
-# serializes instead of one that cancels.
-#
-# Each group is per tag, so it only decides runs of one tag. Runs of two tags
-# can overlap; the dist service then refuses the one whose version is not above
-# every release that went out.
-
-env:
-  # The release-management CLI image, private to another organization. Each job
-  # pulls it with the RELEASE_TOOL_GHCR_TOKEN read token.
-  RELEASE_MANAGEMENT_IMAGE: ghcr.io/gradionhq/margince-constellation/release-management:latest
-  # The dist service of the constellation deployment the release is drafted
-  # into. The CLI reads this variable directly and refuses a non-https URL.
-  # ONE constellation deployment exists (test.margince.com), so main and test
-  # both draft into it; this becomes a per-ref selection when a production
-  # constellation exists.
-  MARGINCE_RELEASE_MANAGEMENT_DIST_URL: https://dist.test.margince.com
-
 jobs:
-  draft:
-    name: Draft release
-    if: ${{ !contains(inputs.tag || github.ref_name, '-') }}
-    # The upload can wait up to about 68 minutes for the dist service.
-    timeout-minutes: 90
-    # Superseded by a newer run of the same tag.
+  # The dist service has no pre-release, so a suffixed tag runs nothing.
+  sbom:
+    name: SBOMs
+    if: ${{ !contains(inputs.tag, '-') }}
+    # A newer run of the same tag and target replaces this scan.
     concurrency:
-      group: ${{ github.workflow }}-draft-${{ inputs.tag || github.ref_name }}
+      group: release-dist-sbom-${{ inputs.target }}-${{ inputs.tag }}
       cancel-in-progress: true
-    runs-on: ubuntu-24.04-arm
-    permissions:
-      contents: read
-    outputs:
-      version: ${{ steps.version.outputs.version }}
-      revision: ${{ steps.version.outputs.revision }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          # The tag's commit, for a tag push and a run by hand alike.
-          ref: refs/tags/${{ inputs.tag || github.ref_name }}
-          persist-credentials: false
-          # Full history so the patch base's revision resolves and the tag can
-          # be checked against main.
-          fetch-depth: 0
-      # The same checks as the GitHub release, before any work starts.
-      - name: The tag is on main and names a dist version
-        id: version
-        env:
-          TAG: ${{ inputs.tag || github.ref_name }}
-        run: |
-          set -euo pipefail
-          bash scripts/release-tag-on-main.sh "$TAG"
-          bash scripts/release-dist-version.sh "$TAG" >> "$GITHUB_OUTPUT"
-          echo "revision=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-      # The tool image belongs to another organization, which GITHUB_TOKEN cannot read.
-      - name: Log in to ghcr.io
-        env:
-          GHCR_TOKEN: ${{ secrets.RELEASE_TOOL_GHCR_TOKEN }}
-          GHCR_USER: ${{ vars.RELEASE_TOOL_GHCR_USER }}
-        run: echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
-      # The SBOM pipeline pins its Python steps, the SPDX validator and the
-      # lockfile census, to linux/amd64 (their dependency wheel hashes resolve
-      # for that platform), which this arm64 runner can only execute emulated.
-      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
-      # Fresh SBOMs at the release commit, through the full pinned pipeline
-      # (generate, normalize, supplement, parity, census, validate). The dist service
-      # verifies that the SBOMs attest the bytes of every file the patch
-      # produces, so the committed sboms/, which may lag the tree, are never
-      # uploaded. Both read the git archive export, so REVISION holds the
-      # commit in each.
-      - name: Generate the SBOMs at the release commit
-        run: make sbom
-      - name: Cut the patch and draft the release
-        env:
-          AFTER: ${{ steps.version.outputs.revision }}
-          version: ${{ steps.version.outputs.version }}
-          MARGINCE_RELEASE_MANAGEMENT_DIST_TOKEN: ${{ secrets.MARGINCE_DIST_PUBLISHER_TOKEN }}
-        run: |
-          set -euo pipefail
-          # The CLI picks the base; the script checks the record and fails
-          # closed on anything but a base or the first-release mark.
-          docker run --rm \
-            -e MARGINCE_RELEASE_MANAGEMENT_DIST_URL \
-            -e MARGINCE_RELEASE_MANAGEMENT_DIST_TOKEN \
-            "$RELEASE_MANAGEMENT_IMAGE" \
-            resolve-patch-base --release "$version" --jsonl > "$RUNNER_TEMP/patch-base.jsonl"
-          bash scripts/release-patch-base.sh < "$RUNNER_TEMP/patch-base.jsonl" > "$RUNNER_TEMP/patch-base.env"
-          # shellcheck source=/dev/null
-          . "$RUNNER_TEMP/patch-base.env"
-          if [ "$first_release" = true ]; then
-            patch_from=(--first-release)
-            patch_base=(--first-release)
-          else
-            patch_from=(--from "$base_revision")
-            patch_base=(--patch-base "$base_version")
-          fi
-          patch_file="release-$version.patch"
-          # The image ENTRYPOINT is the CLI (WORKDIR /work); mount the checkout
-          # there and diff it with --repo. The image's own user is non-root and
-          # does not own the runner's checkout, so run as the runner's uid/gid —
-          # the CLI then writes the patch as the mount's owner. That uid has no
-          # passwd entry in the image, so point HOME at a writable path, and
-          # inject safe.directory via git's env config (no writable config file
-          # needed) for the CLI's git subprocess.
-          docker run --rm \
-            --user "$(id -u):$(id -g)" \
-            -v "$PWD":/work \
-            -e HOME=/tmp \
-            -e GIT_CONFIG_COUNT=1 \
-            -e GIT_CONFIG_KEY_0=safe.directory \
-            -e GIT_CONFIG_VALUE_0='*' \
-            "$RELEASE_MANAGEMENT_IMAGE" \
-            create-patch "${patch_from[@]}" --to "$AFTER" --repo . --out "$patch_file"
-          # The changelog sits beside the patch, inside the CLI's mount. It is built
-          # from every non-merge commit subject since the patch base, so a change that
-          # came through another branch keeps its own subject. The script drops
-          # invalid UTF-8 bytes and refuses a base with no subject since it; the
-          # CLI refuses an empty or too large file before any request.
-          changelog_file="release-$version.changelog.md"
-          if [ "$first_release" = true ]; then
-            python3 scripts/release_changelog.py "$version" "$GITHUB_REPOSITORY" "$AFTER" > "$changelog_file"
-          else
-            git log --no-merges --format=%s "$base_revision..$AFTER" |
-              python3 scripts/release_changelog.py "$version" "$GITHUB_REPOSITORY" "$AFTER" "$base_version" "$base_revision" > "$changelog_file"
-          fi
-          docker run --rm \
-            --user "$(id -u):$(id -g)" \
-            -v "$PWD":/work \
-            -e HOME=/tmp \
-            -e MARGINCE_RELEASE_MANAGEMENT_DIST_URL \
-            -e MARGINCE_RELEASE_MANAGEMENT_DIST_TOKEN \
-            "$RELEASE_MANAGEMENT_IMAGE" \
-            draft-release --release "$version" --revision "$AFTER" \
-            --patch "$patch_file" "${patch_base[@]}" \
-            --changelog "$changelog_file" \
-            --sbom-cyclonedx sboms/margince.cdx.json \
-            --sbom-spdx22 sboms/margince.spdx221.json \
-            --sbom-spdx30 sboms/margince.spdx300.json
+    uses: ./.github/workflows/_release-sbom.yml
+    with:
+      tag: ${{ inputs.tag }}
+      ref: refs/tags/${{ inputs.tag }}
+      artifact: release-sboms
 
-  # Bake the three role images and the server programs, and add them to the
-  # draft in one add-artifacts call. A release needs every role, and the dist
-  # service refuses a platform that arrives in parts.
-  #
-  # `docker-image`, not `image`: the check-image-pins gate key-anchors every
-  # `image:` in a workflow as a container reference to digest-check, and that
-  # includes a job id.
-  docker-image:
-    name: Build docker container
-    # The bake, then one upload that can wait up to about 68 minutes.
-    timeout-minutes: 180
-    needs: [draft]
-    # The long half, and the reason cancellation is here at all: a newer run of
-    # the same tag replaces this bake.
-    concurrency:
-      group: ${{ github.workflow }}-bake-${{ inputs.tag || github.ref_name }}
-      cancel-in-progress: true
-    runs-on: ubuntu-24.04-arm
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          ref: ${{ needs.draft.outputs.revision }}
-          persist-credentials: false
-      # qemu runs the foreign runtime layers of the multi-platform bake; the
-      # builder stages cross-compile on the native platform (the Dockerfiles
-      # pin their builders to $BUILDPLATFORM).
-      - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4.4.0
-      # The docker-container driver: with the default docker driver the bake
-      # metadata file carries no pushed-manifest digest, and the digest is
-      # exactly what the release records.
-      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
-      # The runner is ephemeral, so every bake would otherwise start cold. Two
-      # caches bridge the runs, and they cover different things:
-      #   - CACHE=gha (docker-bake.hcl) exports the LAYER cache — its one
-      #     durable win is the dependency-download layer, which only busts
-      #     when a module pin changes. This step exposes the Actions cache
-      #     credentials buildx needs for type=gha.
-      #   - The cache MOUNTS (the Go compile cache, the pnpm store, tsc's
-      #     .tsbuildinfo) are not layers and no layer cache carries them;
-      #     actions/cache + buildkit-cache-dance below save and restore their
-      #     contents around the bake. Corepack's download is NOT among them:
-      #     the pinned pnpm is baked into a layer of its own, so a mount over
-      #     its home would hide the version the image is supposed to run.
-      #
-      # Both cache steps carry continue-on-error: they only make the bake
-      # faster, so a cache-service outage or a broken injection must cost this
-      # run a cold bake, never the release. The bake and publish steps after
-      # them stay fatal.
-      - uses: crazy-max/ghaction-github-runtime@04d248b84655b509d8c44dc1d6f990c879747487 # v4.0.0
-      - name: Restore the BuildKit cache-mount contents
-        id: mount-cache
-        continue-on-error: true
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: .buildx-mount-cache
-          # Keyed by commit so every run saves its (grown) caches; the
-          # restore-key makes any previous run's save the starting point.
-          key: buildx-mounts-${{ github.sha }}
-          restore-keys: |
-            buildx-mounts-
-      - name: Inject the cache-mount contents into the builder
-        continue-on-error: true
-        uses: reproducible-containers/buildkit-cache-dance@5422eac04292c961a382e0f584ea0f03ad9da723 # v3.4.0
-        with:
-          utility-image: ghcr.io/containerd/busybox:1.36@sha256:7b3ccabffc97de872a30dfd234fd972a66d247c8cfc69b0550f276481852627c
-          cache-map: |
-            {
-              ".buildx-mount-cache/go-build": { "target": "/root/.cache/go-build", "id": "margince-gobuild" },
-              ".buildx-mount-cache/pnpm-store": { "target": "/pnpm-store", "id": "margince-pnpm-store" },
-              ".buildx-mount-cache/tsbuildinfo": { "target": "/app/frontend/node_modules/.tmp", "id": "margince-tsbuildinfo" }
-            }
-          skip-extraction: ${{ steps.mount-cache.outputs.cache-hit }}
-      # ghcr only for pulling the release-management CLI image; the baked
-      # images go to the constellation registry as the registry publisher.
-      # The tool image belongs to another organization, which GITHUB_TOKEN cannot read.
-      - name: Log in to ghcr.io
-        env:
-          GHCR_TOKEN: ${{ secrets.RELEASE_TOOL_GHCR_TOKEN }}
-          GHCR_USER: ${{ vars.RELEASE_TOOL_GHCR_USER }}
-        run: echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
-      - name: Log in to the constellation registry
-        env:
-          PUBLISHER_TOKEN: ${{ secrets.MARGINCE_AUTH_PUBLISHER_TOKEN }}
-        run: echo "$PUBLISHER_TOKEN" | docker login registry.test.margince.com -u _publisher --password-stdin
-      - name: Bake and push the images, add them to the draft
-        env:
-          REPO: registry.test.margince.com/margince
-          VERSION: ${{ needs.draft.outputs.version }}
-          PLATFORMS: linux/amd64,linux/arm64
-          CACHE: gha
-          MARGINCE_BUILD_REVISION: ${{ needs.draft.outputs.revision }}
-          MARGINCE_RELEASE_MANAGEMENT_DIST_TOKEN: ${{ secrets.MARGINCE_DIST_PUBLISHER_TOKEN }}
-        run: |
-          set -euo pipefail
-          # The one path that must always stamp, proving it did — see
-          # scripts/release-version-stamped.sh for what an unstamped release
-          # costs, and its .test.sh for what the guard refuses.
-          VERSION="$(./scripts/release-version-stamped.sh "${VERSION:-}")"
-          export VERSION
-          # The dist release names each image by digest, so no version tag is
-          # pushed. BuildKit refuses a tagged name with push-by-digest, so each
-          # role's name loses its tag here.
-          names=()
-          for role in api web worker; do
-            names+=(--set "$role.tags=$REPO/$role")
-          done
-          docker buildx bake "${names[@]}" \
-            --set '*.output=type=image,push-by-digest=true,push=true' \
-            --provenance "mode=max" \
-            --metadata-file bake-metadata.json
-          images=()
-          for role in api web worker; do
-            digest="$(jq -er --arg role "$role" '.[$role]."containerimage.digest"' bake-metadata.json)"
-            images+=(--image "$role=$REPO/$role@$digest")
-          done
-          # The same bundle bake and packing as release-tag.yml, on this
-          # builder, so the programs come from the stages the images just built.
-          # An archive is the bundle tree without its top folder.
-          docker buildx bake bundle
-          bash scripts/release-bundle.sh "$VERSION" "$MARGINCE_BUILD_REVISION" dist/bundle dist/release
-          archives=()
-          for platform in linux-amd64 linux-arm64; do
-            tree="dist/archive-tree/$platform"
-            mkdir -p "$tree"
-            tar -xzf "dist/release/margince-$VERSION-$platform.tar.gz" -C "$tree" --strip-components=1
-            docker run --rm \
-              --user "$(id -u):$(id -g)" \
-              -v "$PWD":/work \
-              -e HOME=/tmp \
-              "$RELEASE_MANAGEMENT_IMAGE" \
-              build-archive --platform "$platform" --tree "$tree" --out dist/archive
-            base="dist/archive/margince-$platform"
-            archives+=(--archive "$platform=$base.zip"
-              --archive-sbom "$platform:cyclonedx-json=$base.cdx.json"
-              --archive-sbom "$platform:spdx22-json=$base.spdx22.json"
-              --archive-sbom "$platform:spdx30-json=$base.spdx30.json")
-          done
-          # The runner is arm64, so its tree can run. Each program must name
-          # the release the dist service carries.
-          for role in api worker migrate; do
-            want="margince-$role $VERSION (revision $MARGINCE_BUILD_REVISION)"
-            got="$("dist/archive-tree/linux-arm64/bin/margince-$role" --version)"
-            if [[ "$got" != "$want" ]]; then
-              echo "release: margince-$role --version printed '$got', want '$want'." >&2
-              exit 1
-            fi
-          done
-          docker run --rm \
-            --user "$(id -u):$(id -g)" \
-            -v "$PWD":/work \
-            -e HOME=/tmp \
-            -e MARGINCE_RELEASE_MANAGEMENT_DIST_URL \
-            -e MARGINCE_RELEASE_MANAGEMENT_DIST_TOKEN \
-            "$RELEASE_MANAGEMENT_IMAGE" \
-            add-artifacts --release "$VERSION" "${images[@]}" "${archives[@]}"
-
-  # Publish only after the images and archives are attached. The dist service
-  # requires only the patch, the SBOMs and the changelog, so this order is ours.
-  publish:
-    name: Publish release
-    # One request that can wait up to about 68 minutes.
-    timeout-minutes: 75
-    needs: [draft, docker-image]
-    # `cancel-in-progress: false` here and nowhere else: publishing mutates the
-    # dist service, so a publish that has started always finishes. The group
-    # bounds how many can be in flight — one publish at a time per tag, and a
-    # publish still pending when a newer one arrives gives up its place. It is a
-    # mutual exclusion, not an ordering: which version reaches the dist service
-    # first is not something a concurrency group can decide.
-    concurrency:
-      group: ${{ github.workflow }}-publish-${{ inputs.tag || github.ref_name }}
-      cancel-in-progress: false
-    runs-on: ubuntu-24.04-arm
-    permissions:
-      contents: read
-    steps:
-      # The tool image belongs to another organization, which GITHUB_TOKEN cannot read.
-      - name: Log in to ghcr.io
-        env:
-          GHCR_TOKEN: ${{ secrets.RELEASE_TOOL_GHCR_TOKEN }}
-          GHCR_USER: ${{ vars.RELEASE_TOOL_GHCR_USER }}
-        run: echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
-      - name: Publish the release
-        env:
-          VERSION: ${{ needs.draft.outputs.version }}
-          MARGINCE_RELEASE_MANAGEMENT_DIST_TOKEN: ${{ secrets.MARGINCE_DIST_PUBLISHER_TOKEN }}
-        run: |
-          docker run --rm \
-            -e MARGINCE_RELEASE_MANAGEMENT_DIST_URL \
-            -e MARGINCE_RELEASE_MANAGEMENT_DIST_TOKEN \
-            "$RELEASE_MANAGEMENT_IMAGE" \
-            publish-release --release "$VERSION"
-
+  dist:
+    name: Dist release
+    needs: [sbom]
+    uses: ./.github/workflows/_release-dist.yml
+    with:
+      tag: ${{ inputs.tag }}
+      target: ${{ inputs.target }}
+      sbom-artifact: release-sboms
+    # The dist jobs read the publisher and tool tokens. Production tokens
+    # come from the dist-production environment that those jobs name.
+    secrets: inherit

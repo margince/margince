@@ -72,7 +72,7 @@ sent the message and it is still the newest one either way with a contact it wen
 (`backend/internal/compose/contact360/momentowndone.go`).
 
 The **Open tasks** card under the bar lists `next_steps` without what the bar draws. `nextBarChoice` in `contacttoday.tsx` answers both,
-so no task shows twice.
+so no task shows twice. With nothing left to list, the card is not drawn. A section the reader may not see still draws it, and says so.
 
 The last-touch fields (`last_inbound_at`, `last_outbound_at`, `relationship_direction` and the rest)
 come from `contact360.LastTouchFor` in `backend/internal/compose/contact360/lasttouch.go`. It counts

@@ -369,6 +369,36 @@ describe("MoneyInput", () => {
     expect(input.value).toBe("19.90");
   });
 
+  it("tells a caller that takes it of a figure too fine, and keeps that figure on blur", () => {
+    const onTooPrecise = vi.fn();
+    const onChangeMinor = vi.fn();
+    rtlRender(
+      <MoneyInput
+        currency="VND"
+        valueMinor={1}
+        onChangeMinor={onChangeMinor}
+        onTooPrecise={onTooPrecise}
+        display={(minor) => `VND ${minor}`}
+        aria-label="Amount"
+      />,
+    );
+    const input = screen.getByLabelText("Amount") as HTMLInputElement;
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: "1.5" } });
+    fireEvent.blur(input);
+    expect(onTooPrecise).toHaveBeenCalledTimes(1);
+    expect(onChangeMinor).not.toHaveBeenCalled();
+    expect(input.value).toBe("1.5");
+
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: "2" } });
+    fireEvent.blur(input);
+    expect(onChangeMinor).toHaveBeenCalledWith(2);
+    expect((screen.getByLabelText("Amount") as HTMLInputElement).value).toBe(
+      "VND 2",
+    );
+  });
+
   it("resyncs the buffer when valueMinor changes from outside (a different row swapped in)", () => {
     const onChangeMinor = vi.fn();
     const { rerender } = rtlRender(

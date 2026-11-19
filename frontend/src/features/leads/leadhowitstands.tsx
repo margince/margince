@@ -99,6 +99,7 @@ export function LeadHowItStands({
         ) : (
           verdict.sentence
         ),
+        note: verdict.note,
         tone: verdict.tone,
       }}
       latest={latestWord(thread.activities, {
@@ -135,8 +136,11 @@ export function LeadHowItStands({
           peek={score.peek}
         />
       }
+      // A closed lead keeps its figure; the breakdown is not read for it.
       dims={
-        <StandingDims label={t("lead.score")} dims={leadDims(factors, ctx)} />
+        lead.archived_at ? undefined : (
+          <StandingDims label={t("lead.score")} dims={leadDims(factors, ctx)} />
+        )
       }
       timeline={
         <StandingTimeline

@@ -84,6 +84,7 @@ export function Modal({
   closeReason,
   closeDisabled,
   unsaved = false,
+  unsavedBody,
   commitSubmits = intent === "form",
   children,
 }: Readonly<{
@@ -116,6 +117,8 @@ export function Modal({
    * dialog claims one with `useUnsavedGuard` instead.
    */
   unsaved?: boolean;
+  /** What closing loses, when it is not what the reader typed. */
+  unsavedBody?: string;
   /** ⌘/Ctrl+Enter presses the submit of the form it holds. */
   commitSubmits?: boolean;
   children: ReactNode;
@@ -254,7 +257,7 @@ export function Modal({
       {/* Portalled to the body on its own; it sits here only for React. */}
       <DiscardDraftQuestion
         open={open && asking}
-        body={t("unsaved.dialogBody")}
+        body={unsavedBody ?? t("unsaved.dialogBody")}
         onKeep={() => setAsking(false)}
         onDiscard={() => {
           setAsking(false);
