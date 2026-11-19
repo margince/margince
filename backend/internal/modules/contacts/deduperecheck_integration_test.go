@@ -66,6 +66,21 @@ func (e *dedupeEnv) fileOldRulePair(ctx context.Context, t *testing.T, entityTyp
 	return id
 }
 
+// fileSameNamePair files a company pair as the name lane files two equal
+// names, at 1.0, whatever the two are called now.
+func (e *dedupeEnv) fileSameNamePair(ctx context.Context, t *testing.T, a, b ids.UUID) ids.UUID {
+	t.Helper()
+	id := e.fileOldRulePair(ctx, t, entityCompany, a, b, 1)
+	evidence := nearMatchEvidence(fieldDisplayName, "Wingtip Toys", "Wingtip Toys", 1)
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `UPDATE dedupe_candidate SET evidence = $2 WHERE id = $1`, id, evidence)
+		return err
+	}); err != nil {
+		t.Fatalf("give the pair name evidence: %v", err)
+	}
+	return id
+}
+
 // candidateState is a pair's archived flag and the audit verbs on its history.
 func (e *dedupeEnv) candidateState(ctx context.Context, t *testing.T, id ids.UUID) (archived bool, verbs []string) {
 	t.Helper()
@@ -199,17 +214,21 @@ func TestTheRecheckClosesLeadAndCompanyPairsTheRuleNoLongerFiles(t *testing.T) {
 		lead("Mia Schulz", "mia@first.example"), lead("Mia Schulz", "mia@second.example"), 1)
 	staleCompany := e.fileOldRulePair(ctx, t, entityCompany, company("Northwind Traders"), company("Contoso Pharma"), 0.8)
 	keptCompany := e.fileOldRulePair(ctx, t, entityCompany, company("Fabrikam GmbH"), company("Fabrikam AG"), 0.9)
+	renamedAway := e.fileSameNamePair(ctx, t, company("Wingtip Toys"), company("Lucerne Publishing"))
+	domainConflict := e.fileOldRulePair(ctx, t, entityCompany, company("Adatum"), company("Tailspin"), 1)
 
 	e.recheck(t)
 	for name, tc := range map[string]struct {
 		id     ids.UUID
 		closed bool
 	}{
-		"lead pair with different family names": {staleLead, true},
-		"lead pair sharing only a mail host":    {consumerMailLead, true},
-		"lead pair sharing only a name":         {sameNameLead, true},
-		"company pair sharing no word":          {staleCompany, true},
-		"company pair with one brand":           {keptCompany, false},
+		"lead pair with different family names":      {staleLead, true},
+		"lead pair sharing only a mail host":         {consumerMailLead, true},
+		"lead pair sharing only a name":              {sameNameLead, true},
+		"company pair sharing no word":               {staleCompany, true},
+		"company pair with one brand":                {keptCompany, false},
+		"company pair filed on a name since renamed": {renamedAway, true},
+		"company pair filed at 1 on other evidence":  {domainConflict, false},
 	} {
 		if archived, _ := e.candidateState(ctx, t, tc.id); archived != tc.closed {
 			t.Errorf("%s: archived=%v, want %v", name, archived, tc.closed)

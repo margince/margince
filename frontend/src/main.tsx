@@ -20,7 +20,6 @@ import {
   startInstruments,
 } from "./lib/instruments";
 import { startPointerTarget } from "./lib/pointertarget";
-import { listenForInstall, registerServiceWorker } from "./lib/pwa";
 import { SPA_RELEASE } from "./lib/release";
 import { restoreReturnRoute } from "./lib/returnroute";
 import { startTheme } from "./lib/theme";
@@ -44,9 +43,6 @@ startPointerTarget();
 
 // Before the first render reads the address: a provider sign-in lands bare.
 restoreReturnRoute();
-
-listenForInstall();
-registerServiceWorker();
 
 // Extension instruments start before the first render, so an error in it is
 // theirs to see. The generated registry is untyped; it is annotated here.

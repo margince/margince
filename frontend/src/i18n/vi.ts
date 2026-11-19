@@ -3134,8 +3134,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "merge.pickTarget": "Chọn hồ sơ giữ lại",
   "merge.confirm":
     "Gộp {source} vào {target}? Thao tác này sẽ chuyển {source} vào kho lưu trữ.",
-  "merge.confirmDetail":
-    "Gộp {source} vào {target} ({detail})? Thao tác này sẽ chuyển {source} vào kho lưu trữ.",
+  "merge.recordDetail": "{name} ({detail})",
+  "merge.done": "Đã gộp {source} vào {target}.",
   "merge.targetReadOnly":
     "Bạn chỉ có quyền xem hồ sơ này nên không thể giữ lại.",
   "merge.submit": "Gộp",
@@ -3184,10 +3184,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "commission.column.rate": "Tỷ lệ",
   "commission.column.basis": "Giá trị deal",
   "commission.column.status": "Trạng thái",
+  "commission.column.date": "Ngày",
   "commission.status.accrued": "Đã ghi nhận",
   "commission.status.approved": "Đã duyệt",
   "commission.status.paid": "Đã thanh toán",
   "commission.status.void": "Đã đảo ngược",
+  "commission.status.reversal": "Khoản bù trừ",
   "commission.outstanding": "Chưa thanh toán",
   "commission.outstandingDetail_one": "1 khoản · đã ghi nhận hoặc đã duyệt",
   "commission.outstandingDetail_other":
@@ -3321,7 +3323,21 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "rel.empty": "Chưa có quan hệ nào",
   "rel.counterparty": "Liên kết với",
   "rel.dates": "Thời gian",
-  "rel.addConfirm": "Thêm liên kết {kind} tới {target}.",
+  "rel.addConfirm.employment": "Thêm liên kết công tác tới {target}.",
+  "rel.addConfirm.dealStakeholder": "Thêm liên kết bên liên quan tới {target}.",
+  "rel.addConfirm.projectStakeholder":
+    "Thêm liên kết bên liên quan dự án tới {target}.",
+  "rel.addConfirm.partnerOf": "Thêm liên kết đối tác tới {target}.",
+  "rel.addConfirm.referredBy":
+    "Thêm liên kết giới thiệu: {target} đã giới thiệu công ty này.",
+  "rel.addConfirm.coSellWith": "Thêm liên kết bán chung tới {target}.",
+  "rel.addConfirm.worksWith": "Thêm liên kết đồng nghiệp tới {target}.",
+  "rel.addConfirm.billingContact":
+    "Thêm liên kết liên hệ thanh toán tới {target}.",
+  "rel.edit": "Sửa quan hệ",
+  "rel.editStakeholder": "Sửa bên liên quan",
+  "rel.removeRelationship": "Gỡ quan hệ?",
+  "rel.removeStakeholder": "Gỡ bên liên quan?",
   "rel.kind.employment": "Quan hệ công tác",
   "rel.kind.dealStakeholder": "Bên liên quan deal",
   "rel.kind.projectStakeholder": "Bên liên quan dự án",
@@ -3720,6 +3736,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "company.relType.portfolio_company": "Công ty trong danh mục",
   "company.relType.competitor": "Đối thủ",
   "company.relType.other": "Khác",
+  "co.archived.overview":
+    "Công ty này đã được lưu trữ. Lịch sử, tài liệu và thông tin vẫn có ở các thẻ khác.",
   // Why a stored fact contradicts its own field. The fact is still shown
   // with its evidence — a reader can tell, and hiding it would be worse.
   "co.factSuspect.phoneShapedLocation": "Trông giống số điện thoại",
@@ -3767,7 +3785,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.overview.otherOpen": "Việc cần làm khác đang mở",
   "record.allTasks": "Tất cả công việc",
   "co.overview.latest": "Mới nhất",
-  "co.overview.nothingOpen": "Không còn việc nào khác",
   "co.overview.for": "cho {name}",
   "co.overview.noDate": "Chưa có ngày",
   "co.overview.allDeals": "Tất cả deal",
@@ -4842,6 +4859,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "filter.label": "Bộ lọc",
   "chronology.all": "Tất cả",
   "chronology.conversations": "Chuỗi thư",
+  "chronology.filteredEmpty": "Không có hoạt động nào khớp với các bộ lọc này.",
   "chronology.conversationsEmpty": "Chưa có chuỗi thư nào.",
   "chronology.changesEmpty":
     "Chưa có trường nào thay đổi kể từ khi tạo hồ sơ này.",
@@ -5236,6 +5254,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.contacts.band.untried":
     "{count} chưa liên hệ · {waiting} đang chờ bạn trả lời",
   "co.contacts.board.nobodyHolds": "Chưa ai giữ vai trò này",
+  "co.contacts.board.count_one": "{count} liên hệ",
+  "co.contacts.board.count_other": "{count} liên hệ",
   "co.contacts.band.noOpenDeal": "Không có deal đang mở",
   "co.contacts.band.noOpenDealWhy": "Vai trò gán theo từng deal",
   "co.contacts.band.committeePartial": "Bị ẩn một phần",
@@ -5269,7 +5289,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "{count} trong nhóm quyết định mua · chỉ deal đã chọn.",
   "co.contacts.map.routesWithheld":
     "Các hướng tiếp cận đến liên hệ này bị ẩn với bạn",
-  "co.contacts.map.assignHint": "Chưa ai chịu trách nhiệm deal này",
   "co.contacts.map.scopePartial":
     "{count} trong nhóm quyết định mua · {hidden} liên hệ khác bị ẩn.",
   "co.contacts.board.readFromMessages": "Đọc từ tin nhắn của họ",
@@ -6006,7 +6025,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.ownerUnassign": "Hủy giao",
   "deal.partnerCompany": "Đối tác giới thiệu",
   "deal.partnerNoneYet":
-    "Chưa có đối tác. Liên hệ quản trị viên để thêm đối tác.",
+    "Chưa có đối tác. Thiết lập đối tác trong mục Thao tác khác của một công ty.",
   "deal.referredBy": "Đối tác giới thiệu:",
   "deal.supportedBy": "Đối tác hỗ trợ:",
   "deal.referral.sourced": "(mang về)",
@@ -9048,6 +9067,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.installAppDismissed":
     "Cài Margince sau qua menu của trình duyệt hoặc biểu tượng cài đặt trên thanh địa chỉ.",
   "settings.installAppAction": "Cài đặt",
+  "settings.installAppManualMac":
+    "Để cài ứng dụng, chọn “Tệp”, rồi “Thêm vào Dock”.",
+  "installHint.title": "Cài Margince thành ứng dụng",
+  "installHint.value":
+    "Mở bằng một lần chạm trên màn hình chính, trong cửa sổ riêng. Không cần cửa hàng ứng dụng, không phải tải xuống.",
+  "installHint.manual":
+    "Chạm {share} “Chia sẻ” (Share), rồi “Thêm vào MH chính” (Add to Home Screen).",
+  "installHint.notNow": "Để sau",
   "role.admin": "Quản trị",
   "role.management": "Quản lý",
   "role.manager": "Trưởng nhóm",
@@ -17947,33 +17974,22 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.graph.withheldAccount": "Đã ẩn một số liên hệ tại công ty này.",
   "contact.intro.askFirstName": "Nhờ {name} giới thiệu bạn",
   "contact.intro.heroDirect": "quen trực tiếp với họ",
-  "contact.intro.heroIndirect": "tiếp cận họ qua {through}",
   "contact.intro.heroYou": "Bạn",
   "contact.intro.heroDirectYou": "quen trực tiếp với họ",
-  "contact.intro.heroIndirectYou": "tiếp cận họ qua {through}",
   "contact.intro.factReciprocal": "Hai chiều",
   "contact.intro.factOneSided": "Một chiều",
   "contact.intro.factDirect": "Quan hệ trực tiếp",
   "contact.intro.factIndirect": "Qua một đồng nghiệp",
   "contact.intro.factReceipts_one": "{count} bằng chứng có thể xem",
   "contact.intro.factReceipts_other": "{count} bằng chứng có thể xem",
-  "contact.intro.verdictDirect": "Hỏi {name}: hai bên đã trao đổi với nhau.",
-  "contact.intro.verdictOneSided":
-    "Hỏi {name}: đã viết cho liên hệ này nhưng chưa ghi nhận hồi âm.",
-  "contact.intro.verdictVia":
-    "Hỏi {name}: tiếp cận được liên hệ này qua {through}.",
-  "contact.intro.verdictDirectYou": "Bạn đã trao đổi với liên hệ này.",
-  "contact.intro.verdictOneSidedYou":
-    "Bạn đã viết cho liên hệ này nhưng chưa ghi nhận hồi âm.",
-  "contact.intro.verdictViaYou": "Bạn tiếp cận được họ qua {through}.",
   "contact.intro.ownRouteNoAsk":
     "Không cần nhờ ai. Viết trực tiếp cho liên hệ này.",
-  "contact.intro.evidenceEyebrow": "Bằng chứng",
-  "contact.intro.evidenceExchanges": "Lượt trao đổi",
-  "contact.intro.evidenceWindow": "trong 90 ngày",
   "contact.intro.evidenceFrom": "{count} từ {name}",
   "contact.intro.evidenceFromYou": "{count} từ bạn",
   "contact.intro.evidenceLastContact": "Liên lạc gần nhất",
+  "contact.intro.bestWayIn": "Hướng tốt nhất",
+  "contact.intro.sameTeam": "cùng nhóm",
+  "contact.intro.exchangesWindow": "Lượt trao đổi trong 90 ngày",
   "contact.intro.lastToday": "Hôm nay",
   "contact.intro.lastYesterday": "Hôm qua",
   "contact.intro.lastDays": "{days} ngày trước",
@@ -17981,8 +17997,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.intro.stripWhoMix":
     "{direct} trực tiếp · {indirect} qua một liên hệ",
   "contact.intro.stripWhoOwn": "Gồm cả quan hệ của chính bạn",
-  "contact.intro.otherRoutesTitle": "Hướng tiếp cận khác",
-  "contact.intro.otherRoutesSub": "Xếp theo mức trao đổi hai chiều.",
   "contact.intro.relayDue": "hạn {date}",
   "contact.intro.stripDirect": "Quan hệ trực tiếp",
   "contact.intro.stripNoPath": "Chưa ai trao đổi với liên hệ này",
@@ -18001,7 +18015,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.intro.handoffOwner": "Tiếp theo: {name}",
   "contact.intro.ownerColleague": "một đồng nghiệp",
   "contact.intro.ownerNobody": "không ai",
-  "contact.intro.relayTitle": "Trạng thái giới thiệu",
   "contact.chapter.jump": "Trong thẻ này",
   "contact.chapter.wayIn": "Cách tiếp cận",
   "contact.chapter.whoAnswer":
@@ -18163,9 +18176,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.intro.alreadyRequested": "Đã hỏi",
   "contact.intro.declined": "Đã từ chối trước đó",
   "contact.intro.unavailable": "Không khả dụng",
-  "contact.network.momentsTitle": "Những gì đã thay đổi",
-  "contact.network.momentsSub":
-    "Thay đổi lấy từ tin nhắn và các yêu cầu giới thiệu trước đây.",
   "contact.network.noMoments": "Chưa có thay đổi gần đây trong quan hệ này.",
   "contact.change.repliedAfterGap": "Họ đã trả lời sau {days} ngày im lặng.",
   "contact.change.wentQuiet": "Không có hoạt động trong {days} ngày.",
@@ -19571,6 +19581,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.pair.notDuplicate": "Không trùng nhau",
   "worklist.pair.mergeBlocked":
     "Không thể gộp hai hồ sơ này: cả hai đều có dự án đang chạy, và không có gì cho biết công việc nào thuộc về hồ sơ nào. Vẫn có thể đánh dấu là không trùng nhau.",
+  "worklist.pair.created": "Tạo ngày {date}",
+  "worklist.pair.dismissed": "Đã đánh dấu là không trùng nhau.",
   "worklist.pair.related": "{count} hồ sơ liên kết",
   "worklist.pair.failed": "Không thể xử lý cặp này. Thử lại.",
   "worklist.pair.refused":
@@ -20808,7 +20820,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.card.dealTitle": "Deal {name} quyết định",
   "contact.card.deals": "Deal",
   "contact.card.openTasks": "Việc cần làm đang mở",
-  "contact.card.noOpenTasks": "Không có việc cần làm đang mở",
   "contact.moment.doneToast":
     "Đã đánh dấu xong. Mục này sẽ quay lại khi một trong hai bên viết tiếp.",
   "contact.card.understandingTitle": "Hiểu {name}",
@@ -21793,6 +21804,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.handles.more_one": "+{count} mục khác",
   "contact.handles.more_other": "+{count} mục khác",
   "contact.handles.fewer": "Thu gọn",
+  "record.reach.label": "Email và điện thoại",
   "record.details.hideEmpty": "Ẩn trường trống",
   "record.verb.email": "Thư",
   "record.verb.call": "Gọi",

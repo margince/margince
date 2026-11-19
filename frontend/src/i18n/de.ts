@@ -3227,8 +3227,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "merge.pickTarget": "Datensatz auswählen, der bleibt",
   "merge.confirm":
     "{source} mit {target} zusammenführen? {source} wird dabei archiviert.",
-  "merge.confirmDetail":
-    "{source} mit {target} ({detail}) zusammenführen? {source} wird dabei archiviert.",
+  "merge.recordDetail": "{name} ({detail})",
+  "merge.done": "{source} wurde in {target} zusammengeführt.",
   "merge.targetReadOnly":
     "Du kannst diesen Datensatz nur lesen, deshalb kann er nicht bleiben.",
   "merge.submit": "Zusammenführen",
@@ -3278,10 +3278,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "commission.column.rate": "Satz",
   "commission.column.basis": "Deal-Wert",
   "commission.column.status": "Status",
+  "commission.column.date": "Datum",
   "commission.status.accrued": "Aufgelaufen",
   "commission.status.approved": "Freigegeben",
   "commission.status.paid": "Ausgezahlt",
   "commission.status.void": "Storniert",
+  "commission.status.reversal": "Gegenposten",
   "commission.outstanding": "Offen",
   "commission.outstandingDetail_one":
     "1 Eintrag · aufgelaufen oder freigegeben",
@@ -3417,7 +3419,23 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "rel.empty": "Noch keine Beziehungen",
   "rel.counterparty": "Verknüpft mit",
   "rel.dates": "Zeitraum",
-  "rel.addConfirm": "Verknüpfung „{kind}“ zu {target} hinzufügen.",
+  "rel.addConfirm.employment": "Anstellungsverknüpfung zu {target} hinzufügen.",
+  "rel.addConfirm.dealStakeholder":
+    "Stakeholder-Verknüpfung zu {target} hinzufügen.",
+  "rel.addConfirm.projectStakeholder":
+    "Projekt-Stakeholder-Verknüpfung zu {target} hinzufügen.",
+  "rel.addConfirm.partnerOf": "Partner-Verknüpfung zu {target} hinzufügen.",
+  "rel.addConfirm.referredBy":
+    "Empfehlungsverknüpfung hinzufügen: {target} hat dieses Unternehmen empfohlen.",
+  "rel.addConfirm.coSellWith": "Co-Selling-Verknüpfung zu {target} hinzufügen.",
+  "rel.addConfirm.worksWith":
+    "Zusammenarbeitsverknüpfung zu {target} hinzufügen.",
+  "rel.addConfirm.billingContact":
+    "Rechnungskontakt-Verknüpfung zu {target} hinzufügen.",
+  "rel.edit": "Beziehung bearbeiten",
+  "rel.editStakeholder": "Stakeholder bearbeiten",
+  "rel.removeRelationship": "Beziehung entfernen?",
+  "rel.removeStakeholder": "Stakeholder entfernen?",
   "rel.kind.employment": "Anstellung",
   "rel.kind.dealStakeholder": "Deal-Stakeholder",
   "rel.kind.projectStakeholder": "Projekt-Stakeholder",
@@ -3839,6 +3857,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "company.relType.portfolio_company": "Portfoliounternehmen",
   "company.relType.competitor": "Wettbewerber",
   "company.relType.other": "Sonstiges",
+  "co.archived.overview":
+    "Dieses Unternehmen ist archiviert. Verlauf, Dokumente und Profil stehen weiter auf den anderen Tabs.",
   // Warum ein Fakt seinem eigenen Feld widerspricht. Der Fakt bleibt mit
   // seinem Beleg sichtbar — ein Mensch erkennt es, Ausblenden wäre schlechter.
   "co.factSuspect.phoneShapedLocation": "Sieht wie eine Telefonnummer aus",
@@ -3885,7 +3905,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.overview.otherOpen": "Weitere offene Aufgaben",
   "record.allTasks": "Alle Aufgaben",
   "co.overview.latest": "Zuletzt",
-  "co.overview.nothingOpen": "Sonst ist nichts offen",
   "co.overview.for": "für {name}",
   "co.overview.noDate": "Kein Datum",
   "co.overview.allDeals": "Alle Deals",
@@ -4968,6 +4987,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filter.label": "Filter",
   "chronology.all": "Alles",
   "chronology.conversations": "Threads",
+  "chronology.filteredEmpty": "Keine Aktivität passt zu diesen Filtern.",
   "chronology.conversationsEmpty": "Noch keine Threads.",
   "chronology.changesEmpty":
     "Seit dem Erstellen dieses Datensatzes wurde kein Feld geändert.",
@@ -5378,6 +5398,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.contacts.band.untried":
     "Nicht kontaktiert: {count} · Wartet auf deine Antwort: {waiting}",
   "co.contacts.board.nobodyHolds": "Niemand hat diese Rolle",
+  "co.contacts.board.count_one": "Kontakt: {count}",
+  "co.contacts.board.count_other": "Kontakte: {count}",
   "co.contacts.band.noOpenDeal": "Kein offener Deal",
   "co.contacts.band.noOpenDealWhy": "Rollen werden pro Deal vergeben",
   "co.contacts.band.committeePartial": "Teilweise ausgeblendet",
@@ -5409,7 +5431,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.contacts.map.onDeal": "am Deal beteiligt",
   "co.contacts.map.routesWithheld":
     "Zugänge zu diesem Kontakt sind für dich ausgeblendet",
-  "co.contacts.map.assignHint": "Für diesen Deal ist niemand verantwortlich",
   "co.contacts.map.scope":
     "{count} im Buying Center · nur der ausgewählte Deal.",
   "co.contacts.map.scopePartial":
@@ -6164,7 +6185,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.ownerMe": "Mir zuweisen",
   "deal.ownerUnassign": "Zuweisung aufheben",
   "deal.partnerCompany": "Vermittelndes Partnerunternehmen",
-  "deal.partnerNoneYet": "Noch keine Partner. Ein Admin kann einen anlegen.",
+  "deal.partnerNoneYet":
+    "Noch keine Partner. Richte einen in einem Unternehmen unter „Weitere Aktionen“ ein.",
   "deal.referredBy": "Partner",
   "deal.supportedBy": "Partner",
   "deal.referral.sourced": "(vermittelt)",
@@ -9289,6 +9311,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.installAppDismissed":
     "Installiere Margince später über das Menü des Browsers oder das Symbol zum Installieren in der Adressleiste.",
   "settings.installAppAction": "Installieren",
+  "settings.installAppManualMac":
+    "Zum Installieren wähle „Ablage“ und dann „Zum Dock hinzufügen“.",
+  "installHint.title": "Margince als App installieren",
+  "installHint.value":
+    "Öffnet sich mit einem Tipp auf dem Home-Bildschirm im eigenen Fenster. Kein App Store, nichts herunterzuladen.",
+  "installHint.manual":
+    "Tippe auf {share} „Teilen“ und dann auf „Zum Home-Bildschirm“.",
+  "installHint.notNow": "Nicht jetzt",
   "role.admin": "Admin",
   "role.management": "Geschäftsleitung",
   "role.manager": "Teamleitung",
@@ -18428,35 +18458,22 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Einige Kontakte dieses Unternehmens werden nicht angezeigt.",
   "contact.intro.askFirstName": "{name} um eine Vorstellung bitten",
   "contact.intro.heroDirect": "kennt den Kontakt direkt",
-  "contact.intro.heroIndirect": "erreicht den Kontakt über {through}",
   "contact.intro.heroYou": "Du",
   "contact.intro.heroDirectYou": "kennst den Kontakt direkt",
-  "contact.intro.heroIndirectYou": "erreichst den Kontakt über {through}",
   "contact.intro.factReciprocal": "Wechselseitig",
   "contact.intro.factOneSided": "Einseitig",
   "contact.intro.factDirect": "Direkte Beziehung",
   "contact.intro.factIndirect": "Über ein Teammitglied",
   "contact.intro.factReceipts_one": "{count} sichtbarer Beleg",
   "contact.intro.factReceipts_other": "{count} sichtbare Belege",
-  "contact.intro.verdictDirect":
-    "Frage {name}. Das Teammitglied steht bereits im Austausch mit diesem Kontakt.",
-  "contact.intro.verdictOneSided":
-    "Frage {name}. Das Teammitglied hat diesem Kontakt geschrieben. Eine Antwort ist nicht erfasst.",
-  "contact.intro.verdictVia":
-    "Frage {name}. Das Teammitglied erreicht diesen Kontakt über {through}.",
-  "contact.intro.verdictDirectYou":
-    "Du stehst bereits im Austausch mit diesem Kontakt.",
-  "contact.intro.verdictOneSidedYou":
-    "Du hast diesem Kontakt geschrieben. Eine Antwort ist nicht erfasst.",
-  "contact.intro.verdictViaYou": "Du erreichst den Kontakt über {through}.",
   "contact.intro.ownRouteNoAsk":
     "Es gibt niemanden, den du fragen kannst. Schreibe diesem Kontakt direkt.",
-  "contact.intro.evidenceEyebrow": "Belege",
-  "contact.intro.evidenceExchanges": "Austausch",
-  "contact.intro.evidenceWindow": "in 90 Tagen",
   "contact.intro.evidenceFrom": "{count} von {name}",
   "contact.intro.evidenceFromYou": "{count} von dir",
   "contact.intro.evidenceLastContact": "Letzter Kontakt",
+  "contact.intro.bestWayIn": "Bester Weg",
+  "contact.intro.sameTeam": "gleiches Team",
+  "contact.intro.exchangesWindow": "Austausch in 90 Tagen",
   "contact.intro.lastToday": "Heute",
   "contact.intro.lastYesterday": "Gestern",
   "contact.intro.lastDays": "Vor {days} Tagen",
@@ -18464,9 +18481,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.intro.stripWhoMix":
     "{direct} direkt · {indirect} über einen Kontakt",
   "contact.intro.stripWhoOwn": "Inklusive deiner eigenen Beziehung",
-  "contact.intro.otherRoutesTitle": "Weitere Wege",
-  "contact.intro.otherRoutesSub":
-    "Sortiert nach wechselseitiger Korrespondenz.",
   "contact.intro.relayDue": "fällig {date}",
   "contact.intro.stripDirect": "Direkte Beziehung",
   "contact.intro.stripNoPath": "Niemand steht im Austausch mit diesem Kontakt",
@@ -18485,7 +18499,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.intro.handoffOwner": "Als Nächstes: {name}",
   "contact.intro.ownerColleague": "ein Teammitglied",
   "contact.intro.ownerNobody": "niemand",
-  "contact.intro.relayTitle": "Status der Vorstellung",
   "contact.chapter.jump": "Auf diesem Tab",
   "contact.chapter.wayIn": "Zugang",
   "contact.chapter.whoAnswer":
@@ -18654,9 +18667,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.intro.alreadyRequested": "Bereits angefragt",
   "contact.intro.declined": "Früher abgelehnt",
   "contact.intro.unavailable": "Nicht verfügbar",
-  "contact.network.momentsTitle": "Was sich geändert hat",
-  "contact.network.momentsSub":
-    "Veränderungen aus den Nachrichten und frühere Vorstellungen.",
   "contact.network.noMoments": "Keine neuen Veränderungen in dieser Beziehung.",
   "contact.change.repliedAfterGap":
     "Der Kontakt hat nach {days} ruhigen Tagen geantwortet.",
@@ -20075,6 +20085,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.pair.notDuplicate": "Keine Duplikate",
   "worklist.pair.mergeBlocked":
     "Diese Datensätze können nicht zusammengeführt werden, da beide laufende Projekte haben und nicht erkennbar ist, welche Arbeit wohin gehört. Du kannst trotzdem festhalten, dass es keine Duplikate sind.",
+  "worklist.pair.created": "Erstellt am {date}",
+  "worklist.pair.dismissed": "Als keine Duplikate markiert.",
   "worklist.pair.related": "{count} verknüpft",
   "worklist.pair.failed":
     "Das Paar konnte nicht geklärt werden. Bitte versuche es erneut.",
@@ -21358,7 +21370,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.card.dealTitle": "Deal von {name}",
   "contact.card.deals": "Deals",
   "contact.card.openTasks": "Offene Aufgaben",
-  "contact.card.noOpenTasks": "Keine offenen Aufgaben",
   "contact.moment.doneToast":
     "Als erledigt markiert. Es kommt wieder, sobald eine Seite erneut schreibt.",
   "contact.card.understandingTitle": "{name} verstehen",
@@ -22380,6 +22391,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.handles.more_one": "+{count} weitere",
   "contact.handles.more_other": "+{count} weitere",
   "contact.handles.fewer": "Weniger anzeigen",
+  "record.reach.label": "E-Mail und Telefon",
   "record.details.hideEmpty": "Leere Felder ausblenden",
   "record.verb.email": "E-Mail",
   "record.verb.call": "Anruf",

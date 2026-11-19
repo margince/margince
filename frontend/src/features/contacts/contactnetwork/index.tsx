@@ -40,8 +40,8 @@ import {
   mapModelFromContactGraph,
   WRITE_EMAIL_ACTION,
 } from "./mapmodel";
-import { latestChange, MomentsPanel } from "./moments";
-import { RelayPanel } from "./relay";
+import { latestChange, MomentsTimeline } from "./moments";
+import { RelaySteps } from "./relay";
 import "../contactnetwork.css";
 
 type RelationshipMoments = Pick<
@@ -190,6 +190,8 @@ function NetworkChapters({
         {read.lead ? (
           <LeadPanel
             route={read.lead}
+            alternatives={read.routes.slice(1)}
+            roles={read.roles}
             targetName={read.targetName}
             targetId={contactId}
             blocked={availabilityLabel(read.lead.availability, t)}
@@ -197,15 +199,9 @@ function NetworkChapters({
             onOpenEmail={onOpenEmail}
           />
         ) : null}
-        {/* The alternatives, and only those: the lead is drawn above, and one
-            route means no alternatives. */}
-        {read.alternatives ? (
-          <RoutesPanel
-            graph={data}
-            onAsk={setAsking}
-            skipLead={read.skipLead}
-          />
-        ) : null}
+        {/* Only a server that predates the ranked list sends a lone route,
+            which the lead card cannot draw. */}
+        {read.legacy ? <RoutesPanel graph={data} onAsk={setAsking} /> : null}
         {/* A group withheld for lack of a grant says so in the product's one
             spelling of that fact, rather than reading as nobody knowing them. */}
         {read.withheld ? (
@@ -258,48 +254,46 @@ function NetworkChapters({
           title={whoTitle}
           answer={t("contact.chapter.whoAnswer", { name: read.targetName })}
         >
-          <Panel>
-            <PanelBody>
-              <RelationshipMap
-                model={model}
-                focusId={read.focused}
-                onFocus={setFocus}
-                onAction={(nodeId, actionId) => {
-                  if (actionId === WRITE_EMAIL_ACTION) {
-                    onWrite?.();
-                    return;
-                  }
-                  const picked = read.routeAt(nodeId);
-                  // The reader's own route, or one spoken for, opens no drawer.
-                  // The server refuses an ask whose introducer is the contact
-                  // making it.
-                  if (
-                    picked &&
-                    !own(picked) &&
-                    picked.availability === "available"
-                  ) {
-                    setAsking(picked);
-                  }
-                }}
-                completenessText={complete}
-                // The account page's word set, with the one label that names the
-                // subject swapped: this drawing is about a contact.
-                labels={mapLabels(t, locale, t("contact.intro.mapRegion"))}
-                // The selected contact's own detail, including the one write this
-                // picture offers: recording an observed acquaintance.
-                panelSlot={
-                  read.focused && read.anchor ? (
-                    <EdgeDetail
-                      graph={data}
-                      nodeId={read.focused}
-                      anchorId={read.anchor.id}
-                      viewerId={viewerId}
-                      onOpenEmail={onOpenEmail}
-                    />
-                  ) : null
+          <Panel className="pn-who">
+            <RelationshipMap
+              model={model}
+              focusId={read.focused}
+              onFocus={setFocus}
+              onAction={(nodeId, actionId) => {
+                if (actionId === WRITE_EMAIL_ACTION) {
+                  onWrite?.();
+                  return;
                 }
-              />
-            </PanelBody>
+                const picked = read.routeAt(nodeId);
+                // The reader's own route, or one spoken for, opens no drawer.
+                // The server refuses an ask whose introducer is the contact
+                // making it.
+                if (
+                  picked &&
+                  !own(picked) &&
+                  picked.availability === "available"
+                ) {
+                  setAsking(picked);
+                }
+              }}
+              completenessText={complete}
+              // The account page's word set, with the one label that names the
+              // subject swapped: this drawing is about a contact.
+              labels={mapLabels(t, locale, t("contact.intro.mapRegion"))}
+              // The selected contact's own detail, including the one write this
+              // picture offers: recording an observed acquaintance.
+              panelSlot={
+                read.focused && read.anchor ? (
+                  <EdgeDetail
+                    graph={data}
+                    nodeId={read.focused}
+                    anchorId={read.anchor.id}
+                    viewerId={viewerId}
+                    onOpenEmail={onOpenEmail}
+                  />
+                ) : null
+              }
+            />
           </Panel>
           <CaptureGapsNotice contactId={contactId} />
         </Chapter>
@@ -315,10 +309,16 @@ function NetworkChapters({
             />
           }
         >
-          <RelayPanel ask={read.open} />
+          {/* One card: where the handoff stands, then what moved lately with
+              earlier asks among it. */}
+          <Panel>
+            <PanelBody>
+              <RelaySteps ask={read.open} />
+            </PanelBody>
+            <MomentsTimeline view={view} asks={settledAsks} />
+          </Panel>
+          {/* An open ask keeps its verbs in a card of its own. */}
           <IntroAsksPanel contactId={contactId} contactName={read.targetName} />
-          {/* What moved lately, earlier asks among it, closes the tab. */}
-          <MomentsPanel view={view} asks={settledAsks} />
         </Chapter>
 
         {asking ? (
@@ -372,7 +372,16 @@ function readGraph(
     // offered a choice of none. The legacy payload is the one that has a
     // singular `route` to draw.
     alternatives,
-    skipLead: routes.length > 1,
+    // Job titles for the lead's chain, read off the same payload's nodes.
+    roles: {
+      via: nodes.find((n) => n.user_id === routes[0]?.via_user_id)?.sublabel,
+      through: nodes.find(
+        (n) =>
+          n.contact_id !== undefined &&
+          n.contact_id === routes[0]?.through_contact_id,
+      )?.sublabel,
+      target: nodes.find((n) => n.group === "anchor")?.sublabel,
+    },
     legacy: routes.length === 0 ? data.route : undefined,
     withheld,
     // Whether the working grid has a left column at all.

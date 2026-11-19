@@ -237,7 +237,7 @@ To add a contact to a deal in Margince as a stakeholder, open the deal. Choose *
 1. Search for and pick the **Contact** (required). It must already exist.
 2. You may type a **Role**, such as economic buyer, and a **Started** date.
 3. Choose **Create**.
-To change a role or take someone off, open **Change or remove stakeholders** on the same panel. Choose **Edit** on the row to change the role, or **Remove** to take the contact off ("Remove this relationship? There is no undo.").
+To change a role or take someone off, open **Change or remove stakeholders** on the same panel. Choose **Edit stakeholder** on the row to change the role. To take the contact off, choose **Remove** on the row, then **Remove** in the **Remove stakeholder?** dialog ("Remove this relationship? There is no undo.").
 
 From a contact's **Deals** tab, **Add to a deal** does the same from the other end. Select the search field to see open deals at their current employers. Typing searches open deals, with employer deals first and each deal's company shown.
 Also called: add a stakeholder, add a decision maker, link a contact to an opportunity.
@@ -283,7 +283,7 @@ Also called: add a project to a client.
 A project page in Margince brings together everything filed under the work. Its phase and key are beside the name, and the **Phase** bar runs under the top of the page. **More actions** holds **Edit project**, **Share**, **Assign to a colleague** and **Archive project**.
 
 The large column opens with the figures **Open deals**, **Won deals**, **Open tasks** and **Activity**. Then come **Delivery health**, and the **Deals** card with **New deal**.
-Then comes **Open tasks**: the open tasks filed under the project, soonest due first, late ones marked **Overdue**. The timeline follows.
+Then comes **Open tasks**: the open tasks filed under the project, soonest due first, late ones marked **Overdue**. With none open, the card is not shown, unless you may not see the tasks. The timeline follows.
 
 The side column of a project page in Margince holds **Companies**, **Responsibilities**, **Stakeholders**, **Contracts**, **Documents** and **Phase history**. **Phase history** records every phase move, with who made it and the reason. A move an AI agent made names the colleague it worked for and the tool, as in "Anna Weber, via Claude, moved it". If nobody recorded who made a move, Phase history says so; it is never shown as **System**. Files attached to the project's deals stay on the deals.
 
@@ -377,7 +377,7 @@ To add a contact to a project in Margince, open the project and choose **Add sta
 1. Search under **Search contacts by name** and pick the contact.
 2. Pick the **Role**: one of those listed above.
 3. Choose **Add**. A contact already on the project takes the new role instead: one role per contact.
-To take someone off, choose **Remove** on the row and confirm **Remove stakeholder?**; their activity stays where it is.
+To take someone off, choose **Remove** on the row, then **Remove** in the **Remove stakeholder?** dialog. Their activity stays where it is.
 Also called: add a sponsor, add a project lead, add someone to a project team.
 
 ### Who may do what
