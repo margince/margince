@@ -6,7 +6,7 @@ package capture
 // The two places an extension may adjust the deal rule. Compose has already
 // run every unit's hook in order, with its error and time limit. This file
 // holds what core insists on afterwards. The result must be one core could have
-// reached, and it must not undo what a person decided. A result that fails is
+// reached, and it must not undo what a colleague decided. A result that fails is
 // dropped and the previous one stays.
 
 import (
@@ -134,7 +134,7 @@ func hasDuplicate(list []ids.UUID) bool {
 
 // adjustVerdict runs the verdict hook at the end of the rule. It offers only a
 // linked, ambiguous or empty verdict. Companies in conflict are not offered.
-func (h MailHooks) adjustVerdict(ctx context.Context, tx pgx.Tx, facts dealFacts, verdict DealVerdict) (DealVerdict, error) {
+func (h MailHooks) adjustVerdict(ctx context.Context, tx pgx.Tx, facts dealFacts, candidates DealCandidates, verdict DealVerdict) (DealVerdict, error) {
 	verdict.Hooks = append(slices.Clone(facts.hooks), verdict.Hooks...)
 	if h.Verdict == nil || !h.active() || !slices.Contains([]DealOutcome{DealLinked, DealAmbiguous, DealNone}, verdict.Outcome) {
 		return verdict, nil
@@ -147,7 +147,7 @@ func (h MailHooks) adjustVerdict(ctx context.Context, tx pgx.Tx, facts dealFacts
 	if len(changes) == 0 {
 		return verdict, nil
 	}
-	accepted, ok, err := acceptHookVerdict(ctx, tx, facts.activity, verdict, out)
+	accepted, ok, err := acceptHookVerdict(ctx, tx, facts, candidates, verdict, out)
 	if err != nil || !ok {
 		return verdict, err
 	}
@@ -159,7 +159,7 @@ func (h MailHooks) adjustVerdict(ctx context.Context, tx pgx.Tx, facts dealFacts
 // and no colleague declined it. A hook can drop a deal, narrow a question or
 // name a deal. It cannot raise a question the rule did not, add a candidate,
 // or bring back a deal a colleague said the mail is not about.
-func acceptHookVerdict(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, prev, out DealVerdict) (DealVerdict, bool, error) {
+func acceptHookVerdict(ctx context.Context, tx pgx.Tx, facts dealFacts, candidates DealCandidates, prev, out DealVerdict) (DealVerdict, bool, error) {
 	switch out.Outcome {
 	case DealNone:
 		return DealVerdict{Outcome: DealNone, Basis: prev.Basis}, true, nil
@@ -167,7 +167,11 @@ func acceptHookVerdict(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, prev
 		if out.Deal.IsZero() {
 			return prev, false, nil
 		}
-		declined, err := dealDeclined(ctx, tx, mail, out.Deal)
+		reached, err := dealReachable(ctx, tx, facts, candidates, prev, out.Deal)
+		if err != nil || !reached {
+			return prev, false, err
+		}
+		declined, err := dealDeclined(ctx, tx, facts.activity, out.Deal)
 		if err != nil || declined {
 			return prev, false, err
 		}
@@ -181,7 +185,7 @@ func acceptHookVerdict(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, prev
 				return prev, false, nil
 			}
 		}
-		kept, err := undeclinedDeals(ctx, tx, mail, out.Candidates)
+		kept, err := undeclinedDeals(ctx, tx, facts.activity, out.Candidates)
 		if err != nil || len(kept) == 0 {
 			return prev, false, err
 		}
@@ -190,6 +194,29 @@ func acceptHookVerdict(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, prev
 		return next, true, nil
 	}
 	return prev, false, nil
+}
+
+// dealReachable is whether core could have named the deal. It was a candidate
+// of the verdict, or it is open on the mail's project or one of its companies.
+// A deal of a company the mail has nothing to do with is out of reach.
+func dealReachable(ctx context.Context, tx pgx.Tx, facts dealFacts, candidates DealCandidates, prev DealVerdict, deal ids.UUID) (bool, error) {
+	if slices.Contains(prev.Candidates, deal) {
+		return true, nil
+	}
+	var open []ids.UUID
+	var err error
+	if !facts.project.IsZero() {
+		open, err = candidates.OpenDealsOfProject(ctx, tx, facts.project)
+	}
+	for _, company := range facts.companies {
+		if err != nil {
+			break
+		}
+		var more []ids.UUID
+		more, err = candidates.OpenDealsOfCompany(ctx, tx, company)
+		open = append(open, more...)
+	}
+	return slices.Contains(open, deal), err
 }
 
 // withHookEvidence adds the extensions that shaped a verdict to the link's

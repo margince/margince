@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+package mailhooks
 
 // The mail-capture hooks of the registered units. This adapter owns the order:
 // unit name, each hook seeing the previous result. An error, a panic or a slow
-// call leaves the previous result as it was. The checks that keep a person's
+// call leaves the previous result as it was. The checks that keep a colleague's
 // decision whole are in capture/mailhooks.go.
 
 import (
@@ -29,22 +29,26 @@ const (
 	mailHookDeal    = "deal"
 )
 
-// composedMailHooks reads the served units at each call, because capture is
+// units reads the served units. New calls it at each hook, because capture is
 // composed before the units are registered.
-func composedMailHooks() capture.MailHooks {
-	return capture.MailHooks{Active: anyMailHook, Parties: runPartiesHooks, Verdict: runDealHooks}
+type units func() []extension.Extension
+
+// New is the capture hooks of the units that units serves.
+func New(served func() []extension.Extension) capture.MailHooks {
+	u := units(served)
+	return capture.MailHooks{Active: u.any, Parties: u.runParties, Verdict: u.runDeal}
 }
 
-// mailHookUnits are the units that registered a hook, in unit-name order.
-func mailHookUnits(has func(extension.MailHooks) bool) []extension.Extension {
-	var units []extension.Extension
-	for _, unit := range ComposedExtensions() {
+// withHook are the units that registered a hook, in unit-name order.
+func (u units) withHook(has func(extension.MailHooks) bool) []extension.Extension {
+	var found []extension.Extension
+	for _, unit := range u() {
 		if has(unit.MailHooks) {
-			units = append(units, unit)
+			found = append(found, unit)
 		}
 	}
-	slices.SortFunc(units, func(a, b extension.Extension) int { return cmp.Compare(a.Name, b.Name) })
-	return units
+	slices.SortFunc(found, func(a, b extension.Extension) int { return cmp.Compare(a.Name, b.Name) })
+	return found
 }
 
 // callMailHook runs fn with the limit and turns a panic or a slow call into an error.
@@ -74,9 +78,9 @@ func callMailHook[T any](fn func() (T, error)) (T, error) {
 	}
 }
 
-func runPartiesHooks(view capture.MailView, parties capture.MailParties) (capture.MailParties, []capture.HookChange) {
+func (u units) runParties(view capture.MailView, parties capture.MailParties) (capture.MailParties, []capture.HookChange) {
 	var changes []capture.HookChange
-	for _, unit := range mailHookUnits(func(h extension.MailHooks) bool { return h.Parties != nil }) {
+	for _, unit := range u.withHook(func(h extension.MailHooks) bool { return h.Parties != nil }) {
 		in := extension.MailParties{Contacts: uuidStrings(parties.Contacts), Companies: uuidStrings(parties.Companies)}
 		out, err := callMailHook(func() (extension.MailParties, error) { return unit.MailHooks.Parties(extensionMailView(view), in) })
 		if err != nil {
@@ -93,9 +97,9 @@ func runPartiesHooks(view capture.MailView, parties capture.MailParties) (captur
 	return parties, changes
 }
 
-func runDealHooks(view capture.MailView, verdict capture.DealVerdict) (capture.DealVerdict, []capture.HookChange) {
+func (u units) runDeal(view capture.MailView, verdict capture.DealVerdict) (capture.DealVerdict, []capture.HookChange) {
 	var changes []capture.HookChange
-	for _, unit := range mailHookUnits(func(h extension.MailHooks) bool { return h.Deal != nil }) {
+	for _, unit := range u.withHook(func(h extension.MailHooks) bool { return h.Deal != nil }) {
 		in := dealForHook(verdict)
 		out, err := callMailHook(func() (extension.MailDeal, error) { return unit.MailHooks.Deal(extensionMailView(view), in) })
 		if err != nil {
@@ -178,6 +182,6 @@ func dealFromHook(prev capture.DealVerdict, out extension.MailDeal) (capture.Dea
 }
 
 // anyMailHook is false on an installation where no unit registered a hook.
-func anyMailHook() bool {
-	return len(mailHookUnits(func(h extension.MailHooks) bool { return h.Parties != nil || h.Deal != nil })) > 0
+func (u units) any() bool {
+	return len(u.withHook(func(h extension.MailHooks) bool { return h.Parties != nil || h.Deal != nil })) > 0
 }

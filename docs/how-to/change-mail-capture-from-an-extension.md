@@ -1,6 +1,6 @@
-# Adjust mail capture from an extension
+# Change mail capture from an extension
 
-An extension can adjust two answers core gives while it files a captured mail: which contacts and companies the mail names, and which deal it belongs to. This page is for an extension author. The types are in `backend/pkg/extension/mailhooks.go`.
+An extension can change two answers core gives while it files a captured mail: which contacts and companies the mail names, and which deal it belongs to. This page is for an extension author. The types are in `backend/pkg/extension/mailhooks.go`.
 
 ## Register the hooks
 
@@ -29,7 +29,7 @@ Set `Reason` to one sentence whenever you change something. Leave it empty when 
 - Hooks run in unit-name order. Each sees the previous result.
 - A hook must give the same answer for the same input. Core asks again whenever it re-decides a mail.
 - An error, a panic, or a call that runs longer than 250 milliseconds leaves the previous result as it was.
-- A hook cannot change what a person decided. A mail that is already filed never reaches a hook. A deal a colleague said the mail is "Not about" is dropped from the answer, and core files by its own rule instead.
+- A hook cannot change what a colleague decided. A mail that is already filed never reaches a hook. A deal a colleague said the mail is "Not about" is dropped from the answer, and core files by its own rule instead.
 - A deal you link is filed without the model's topic check, because you decided it by your own rules.
 - Core records the change. The deal link's audit row names each unit, the hook and its reason under `extension_hooks`.
 

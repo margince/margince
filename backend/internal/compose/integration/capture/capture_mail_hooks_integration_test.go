@@ -6,10 +6,11 @@
 package capture
 
 // A unit's two mail-capture hooks through the production sink: what they may
-// change, what core records, and what a person's decision keeps out of reach.
+// change, what core records, and what a colleague's decision keeps out of reach.
 
 import (
 	"net/http"
+	"slices"
 	"sync/atomic"
 	"testing"
 
@@ -109,4 +110,21 @@ func TestAPartiesHookAdjustsTheCompaniesTheRuleReads(t *testing.T) {
 	only := beta.deal(t, "Beta rollout")
 	env.sync(t, mailFrom("bob@beta.example", "hook4@beta.example", "", "hello"))
 	wantDeals(t, e, "hook4@beta.example", only)
+}
+
+// A deal hook cannot name a deal of a company the mail has nothing to do with.
+func TestADealHookCannotReachADealOfAnotherCompany(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	w := newDealWorld(t, e)
+	w.employee(t, "alice@acme.example", w.customer)
+	w.deal(t, "Acme rollout")
+	foreign := w.at(t, "Elsewhere").deal(t, "Elsewhere rollout")
+	registerMailHooks(t, extension.MailHooks{Deal: func(_ extension.MailView, d extension.MailDeal) (extension.MailDeal, error) {
+		return extension.MailDeal{Outcome: "linked", Deal: foreign.String(), Reason: "pointing elsewhere"}, nil
+	}})
+	env.sync(t, mailFrom("alice@acme.example", "hook5@acme.example", "", "hello"))
+	if slices.Contains(dealsOf(t, e, "hook5@acme.example"), foreign) {
+		t.Fatal("the mail was filed on a deal of another company")
+	}
 }

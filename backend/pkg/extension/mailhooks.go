@@ -58,8 +58,8 @@ type MailDealHook func(mail MailView, deal MailDeal) (MailDeal, error)
 // A hook is a plain function with no context and no Runtime. It reads and
 // writes nothing, and the same input gives the same answer.
 // Hooks run in unit-name order, each seeing the previous result. A failed or
-// slow hook leaves it unchanged. A hook cannot change what a person decided.
-// A filed mail never reaches it. A deal a person ruled out is dropped.
+// slow hook leaves it unchanged. A hook cannot change what a colleague decided.
+// A filed mail never reaches it. A deal a colleague ruled out is dropped.
 type MailHooks struct {
 	Parties MailPartiesHook
 	Deal    MailDealHook

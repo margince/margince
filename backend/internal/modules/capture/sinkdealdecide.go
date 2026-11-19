@@ -92,7 +92,7 @@ func decideDeal(ctx context.Context, tx pgx.Tx, facts dealFacts, candidates Deal
 	if err != nil {
 		return verdict, err
 	}
-	return hooks.adjustVerdict(ctx, tx, facts, verdict)
+	return hooks.adjustVerdict(ctx, tx, facts, candidates, verdict)
 }
 
 // decideCore is the rule with a colleague's declines applied and no extension.

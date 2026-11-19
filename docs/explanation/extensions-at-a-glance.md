@@ -311,6 +311,6 @@ first how-to below.
   service that holds a secret.
 - [override-core-wording-from-an-extension.md](../how-to/override-core-wording-from-an-extension.md): change the
   words the core shows.
-- [adjust-mail-capture-from-an-extension.md](../how-to/adjust-mail-capture-from-an-extension.md): adjust a mail's
+- [change-mail-capture-from-an-extension.md](../how-to/change-mail-capture-from-an-extension.md): change a mail's
   contacts, companies and deal.
 - [extensibility.md](extensibility.md): why the tier is built this way, and what it guards.
