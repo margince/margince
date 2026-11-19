@@ -162,6 +162,6 @@
 1795025701_the_ruleset_digest_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1795025702_the_ruleset_digest_checks_its_length.up.sql | * | replaces the two text guards on communication_decision; the guards act on later writes only, and it changes no existing row
 1795025702_the_ruleset_digest_checks_its_length.down.sql | * | restores the two earlier text guards on communication_decision; it changes no existing row
-1795035934_the_decision_country_source_is_bounded.up.sql | * | replaces the two text guards on communication_decision; the guards act on later writes only, and it changes no existing row
-1795035934_the_decision_country_source_is_bounded.down.sql | * | restores the two earlier text guards on communication_decision; it changes no existing row
-1795035936_the_confirmation_country_is_bounded.up.sql | * | adds the two text guards on lawful_basis_confirmation; the guards act on later writes only, and it changes no existing row
+1795048712_the_decision_country_source_is_bounded.up.sql | * | replaces the two text guards on communication_decision; the guards act on later writes only, and it changes no existing row
+1795048712_the_decision_country_source_is_bounded.down.sql | * | restores the two earlier text guards on communication_decision; it changes no existing row
+1795048714_the_confirmation_country_is_bounded.up.sql | * | adds the two text guards on lawful_basis_confirmation; the guards act on later writes only, and it changes no existing row
