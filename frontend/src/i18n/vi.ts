@@ -14016,7 +14016,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.home.reach.all": "Mọi hồ sơ trong công ty",
   "settings.home.readLabel": "Hồ sơ bạn được đọc",
   "settings.home.read.some":
-    "Mọi {kinds}, trừ hồ sơ riêng tư của người khác chưa chia sẻ với bạn",
+    "Mọi {kinds}, trừ hồ sơ riêng tư của đồng nghiệp chưa chia sẻ với bạn",
   "settings.home.read.none": "Không có",
   "settings.home.access": "Quy\u1ec1n truy c\u1eadp c\u1ee7a b\u1ea1n",
   "settings.home.accessLoading": "Đang tải quyền truy cập…",
