@@ -74,6 +74,13 @@ export function useBuiltinCommands(): Command[] {
         type: "action",
         route: { screen: "book" },
       },
+      {
+        id: "action:shortcuts",
+        label: t("shell.help.shortcuts"),
+        keywords: ["shortcuts", "keyboard", "hotkeys", "help"],
+        type: "action",
+        presses: "shortcuts",
+      },
     ];
     const settingsScreens: Command[] = visible.map((page) => ({
       id: settingsCommandId(page.id),

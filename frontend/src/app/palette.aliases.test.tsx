@@ -26,6 +26,7 @@ import {
   SETTINGS_PAGES,
   type SettingsPageId,
 } from "../lib/settingscatalog";
+import { useShortcutHandler } from "../lib/shortcuts";
 import {
   type GrantSpec,
   meFixture,
@@ -93,6 +94,9 @@ const PHRASES: readonly (readonly [string, SettingsPageId])[] = [
   ["date format", "company"],
   ["sync interval", "capture"],
   ["two-step", "account"],
+  ["timezone", "account"],
+  ["dark mode", "account"],
+  ["dark", "account"],
 ];
 
 // Seats and license cannot change what anyone pays.
@@ -182,6 +186,55 @@ describe("the palette and the settings search", () => {
       expect(searchFinds(word)).not.toContain("seats");
     },
   );
+});
+
+// What a reader types for a screen or for the shortcuts, and where it lands.
+const COMMAND_PHRASES: readonly (readonly [string, string])[] = [
+  ["reports", "screen:analytics"],
+  ["forecast", "screen:analytics"],
+  ["shortcuts", "action:shortcuts"],
+  ["keyboard", "action:shortcuts"],
+  ["help", "action:shortcuts"],
+];
+
+describe("the palette's own commands", () => {
+  it.each(COMMAND_PHRASES)("send %j to %s", async (phrase, id) => {
+    const commands = await adminCommands();
+    expect(paletteFinds(commands, phrase)).toContain(id);
+  });
+
+  it("opens the keyboard shortcuts as the ? key does", async () => {
+    const commands = await adminCommands();
+    const opened = vi.fn();
+    renderHook(() => useShortcutHandler("shortcuts", opened));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) =>
+        (input instanceof Request ? input.url : String(input)).endsWith(
+          "/installation/configuration",
+        )
+          ? Response.json([])
+          : Response.json({
+              data: [],
+              page: { next_cursor: null, has_more: false },
+            }),
+      ),
+    );
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <LocaleProvider initial="en">
+          <CommandPalette open onClose={onClose} commands={[...commands]} />
+        </LocaleProvider>
+      </QueryClientProvider>,
+    );
+    await user.type(screen.getByRole("searchbox"), "keyboard shortcuts");
+    await user.keyboard("{Enter}");
+    expect(onClose).toHaveBeenCalled();
+    expect(opened).toHaveBeenCalledTimes(1);
+    expect(window.location.hash).toBe("");
+  });
 });
 
 describe("a settings page in the palette", () => {

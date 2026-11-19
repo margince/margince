@@ -16,8 +16,10 @@ import type { StatusKind } from "../design-system/statusbadge";
 import { holdsEveryWord, searchWords } from "../format/collate";
 import { type Translator, useT } from "../i18n";
 import { isImeCommit } from "../lib/imecommit";
+import type { ShortcutId } from "../lib/keymap";
 import { navigate, type Route } from "../lib/router";
 import type { CoreSearchHitType, SearchHitGroup } from "../lib/searchkinds";
+import { pressShortcut } from "../lib/shortcuts";
 import { openAsk, type UrlParams } from "../lib/urlstate";
 import { PaletteAnswer, usePaletteAsk } from "./paletteanswer";
 import {
@@ -64,6 +66,9 @@ export type Command = {
   // instead of leaving it — asking does that, and a route it never follows
   // would be a claim about where the reader ends up that is simply untrue.
   route?: Route;
+  // A binding the row presses instead of going anywhere, as the keyboard
+  // shortcuts list does.
+  presses?: ShortcutId;
   // How the page at `route` opens narrowed: the query half of the address.
   dials?: UrlParams;
   // Execution provenance keeps replay separate from recording a new search.
@@ -274,6 +279,7 @@ export function CommandPalette({
     if (command.executedQuery)
       void recents.remember(command.executedQuery, command.searchedRecord);
     onClose();
+    if (command.presses) pressShortcut(command.presses);
     if (command.route) {
       navigate(command.route, command.dials);
     }

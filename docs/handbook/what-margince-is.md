@@ -160,8 +160,8 @@ names that are written close to what you typed. It lists only names you may open
 ### What is the command palette?
 The command palette is the Margince box that finds any screen, action, setting or record from one place. It opens over the page you are on, and its empty field reads **Search or ask Margince**.
 
-Each row carries a badge. **Screen** marks a sidebar screen, and **Action** marks something it does (**New deal**, **Booking page**). **Record** marks a record that matches what you typed.
-It also lists every settings page you may open, and **Scheduled messages**. It knows other words for a page: "price" finds **Products and offers**, and "password" finds **Account**.
+Each row carries a badge. **Screen** marks a sidebar screen, and **Action** marks something it does (**New deal**, **Booking page**, **Keyboard shortcuts**). **Record** marks a record that matches what you typed.
+It also lists every settings page you may open, and **Scheduled messages**. It knows other words for a page: "price" finds **Products and offers**, "password" or "dark mode" finds **Account**, and "reports" or "forecast" finds **Analytics**.
 Its first row is always **Ask your documents**.
 
 ### How do I open the command palette?
@@ -171,7 +171,7 @@ Press ⌘K again, or Esc, to close it. Back, or a move to another page, closes i
 Also called: quick search, command menu, Cmd K, Ctrl K, keyboard shortcut.
 
 ### What keyboard shortcuts does Margince have?
-Margince has keyboard shortcuts for search, for moving between pages and for work on a record. Press `?` to see the full list, while single-key shortcuts are on and you are not typing in a field. The account menu always opens it, under **Help and feedback** → **Keyboard shortcuts**.
+Margince has keyboard shortcuts for search, for moving between pages and for work on a record. Press `?` to see the full list, while single-key shortcuts are on and you are not typing in a field. The account menu always opens it, under **Help and feedback** → **Keyboard shortcuts**, and so does **Keyboard shortcuts** in the command palette.
 
 On Windows and Linux, press Ctrl where this list says ⌘.
 
