@@ -66,7 +66,9 @@ func TestNoUnitMeansNoHooksActive(t *testing.T) {
 	if New(served()).Active() {
 		t.Fatal("Active with no unit")
 	}
-	if !New(served(partiesUnit("u", nil), extension.Extension{Name: "d", MailHooks: extension.MailHooks{Deal: func(extension.MailView, extension.MailDeal) (extension.MailDeal, error) { return extension.MailDeal{}, nil }}})).Active() {
+	if !New(served(partiesUnit("u", nil), extension.Extension{Name: "d", MailHooks: extension.MailHooks{Deal: func(extension.MailView, extension.MailDeal) (extension.MailDeal, error) {
+		return extension.MailDeal{}, nil
+	}}})).Active() {
 		t.Fatal("not Active with a deal hook")
 	}
 }
