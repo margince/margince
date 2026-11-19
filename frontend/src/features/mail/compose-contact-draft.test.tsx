@@ -507,3 +507,69 @@ describe("drafting to everyone a meeting was with", () => {
     }
   });
 });
+
+describe("saying which writer drafted the email", () => {
+  const TEMPLATE_DRAFT = {
+    subject: "Following up",
+    body: "Hi Annabelle,\n\nWould a short call in the next week or two be useful?",
+    generated_by: "deterministic",
+    ai_generated: false,
+    ai_disclosure: null,
+    language: "en",
+  };
+
+  function draftTo(answer: object) {
+    stubRoutes({
+      "POST /contacts/c-1/draft-email": () => jsonResponse(answer),
+    });
+    render(
+      <ComposeWindow
+        intent="Ask whether they want a demo next Tuesday"
+        entityType="contact"
+        entityId="c-1"
+        contactId="c-1"
+        recordAddress="annabelle@akeneo.example"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+  }
+
+  it("says a template wrote the words and offers no rewrites", async () => {
+    const user = userEvent.setup();
+    draftTo(TEMPLATE_DRAFT);
+
+    await user.click(draftButton());
+
+    expect(
+      await screen.findByText("AI could not write this draft"),
+    ).toBeTruthy();
+    expect(
+      screen.getByText("A basic template was used. Your purpose was not used."),
+    ).toBeTruthy();
+    expect(messageText("Body")).toContain("Would a short call");
+    // The arrival in indigo says a model wrote the words, so a template has none.
+    expect(document.querySelector("[data-ai-reveal]")).toBeNull();
+    expect(screen.queryByText("AI-assisted draft")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Polish" })).toBeNull();
+    expect(
+      screen.queryByRole("combobox", { name: "Draft language" }),
+    ).toBeNull();
+    // The purpose stays, so the reader can ask again.
+    expect(
+      screen.getByDisplayValue("Ask whether they want a demo next Tuesday"),
+    ).toBeTruthy();
+    expect(draftButton()).toBeTruthy();
+  });
+
+  it("discloses a model's draft and offers its rewrites", async () => {
+    const user = userEvent.setup();
+    draftTo(CONTACT_DRAFT);
+
+    await user.click(draftButton());
+
+    expect(await screen.findByText("AI-assisted draft")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Polish" })).toBeTruthy();
+    expect(screen.queryByText("AI could not write this draft")).toBeNull();
+  });
+});

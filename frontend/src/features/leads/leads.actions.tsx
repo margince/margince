@@ -5,7 +5,7 @@ import { AddToShortlistAction } from "../../components/addtoshortlist";
 import { EntityRef } from "../../components/entityref";
 import { LogActivityAction } from "../../components/logactivity.action";
 import { Button, OverflowMenu } from "../../design-system/atoms";
-import { IconAction, VerbWord } from "../../design-system/iconaction";
+import { IconAction, tipText, VerbWord } from "../../design-system/iconaction";
 import { useT } from "../../i18n";
 import { ACTION_PARAM, CALL_ACTION } from "../../lib/leads.address";
 import { useShortcut } from "../../lib/shortcuts";
@@ -91,6 +91,9 @@ export function LeadActions({
   const activity = useActivityGate();
   const archived = lead.archived_at ? terminalReasonId : undefined;
   const logRefused = archived ?? activity.refusedId;
+  // An archive is the page's sentence, so only its id reaches here.
+  const logRefusal =
+    !archived && activity.refusalKey ? t(activity.refusalKey) : undefined;
   const logPending = !archived && activity.pending;
   // The verb the reader arrived to perform, named by the address rather than
   // guessed. A link sent here to log a call says so. The drawer then opens on
@@ -155,6 +158,7 @@ export function LeadActions({
         entityId={id}
         recordAddress={lead.email ?? undefined}
         disabledReasonId={logRefused}
+        reasonTip={logRefusal}
         disabled={logPending}
         open={emailOpen}
         onOpenChange={onEmailOpenChange}
@@ -168,6 +172,7 @@ export function LeadActions({
         icon={<Phone aria-hidden="true" />}
         disabled={logPending}
         reasonId={logRefused}
+        reasonTip={logRefusal}
         onClick={() => setDrawer("call")}
       />
       <IconAction
@@ -176,11 +181,10 @@ export function LeadActions({
         icon={<CalendarDays aria-hidden="true" />}
         disabled={logPending}
         reasonId={logRefused}
+        reasonTip={logRefusal}
         onClick={() => setDrawer("meet")}
       />
-      {!archived && activity.refusedId && (
-        <p id={activity.sentenceId}>{t("record.logActivityRefused")}</p>
-      )}
+      {logRefusal && <p id={activity.sentenceId}>{logRefusal}</p>}
       {/* A CRM a rep cannot write a meeting into is a CRM that only reads.
           This is the standing way in, the same pair contactactions.tsx and
           companyheaderactions.tsx carry: what happened, and what happens
@@ -189,7 +193,7 @@ export function LeadActions({
       <Button
         disabled={logPending}
         reasonId={logRefused}
-        title={t("log.title")}
+        title={tipText(t("log.title"), logRefusal)}
         onClick={() => setDrawer("log")}
         aria-keyshortcuts={logKeys}
       >

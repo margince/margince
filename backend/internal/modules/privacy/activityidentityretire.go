@@ -47,18 +47,10 @@ func retireActivityIdentities(ctx context.Context, tx pgx.Tx, activityIDs []ids.
 		DELETE FROM activity_mail_reference WHERE activity_id = ANY($1)`, activityIDs); err != nil {
 		return fmt.Errorf("privacy: retiring the erased messages' reply links: %w", err)
 	}
-	return eraseMeetingProposals(ctx, tx, activityIDs)
-}
-
-func eraseMeetingProposals(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) error {
-	args := []any{activityIDs}
-	if _, err := tx.Exec(ctx, fmt.Sprintf(`DELETE FROM meeting_proposal WHERE activity_id=ANY($%d)`, len(args)), args...); err != nil {
-		return err
-	}
 	return nil
 }
 
-func eraseContactMeetingCapabilities(ctx context.Context, tx pgx.Tx, contact ids.UUID, payloads PayloadPurger) error {
+func eraseContactMeetingCapabilities(ctx context.Context, tx pgx.Tx, contact ids.UUID) error {
 	rows, err := tx.Query(ctx, `SELECT activity_id FROM activity_link WHERE contact_id=@contact`, pgx.NamedArgs{contactObject: contact})
 	if err != nil {
 		return err
@@ -67,8 +59,5 @@ func eraseContactMeetingCapabilities(ctx context.Context, tx pgx.Tx, contact ids
 	if err != nil {
 		return err
 	}
-	if err := erasePayloads(ctx, tx, activityIDs, payloads); err != nil {
-		return err
-	}
-	return eraseMeetingProposals(ctx, tx, activityIDs)
+	return erasePayloads(ctx, tx, activityIDs)
 }

@@ -34,6 +34,7 @@ export function DealStageLadder({
   stages,
   advancing,
   advanceRefused,
+  pipelineRetired,
   refusedReasonId,
   onAdvance,
   variant,
@@ -44,6 +45,8 @@ export function DealStageLadder({
   stages: readonly Stage[];
   advancing: boolean;
   advanceRefused: boolean;
+  /** The deal's pipeline is retired: the stages are drawn, and say why they take no move. */
+  pipelineRetired?: boolean;
   /** The id of the page's sentence about why this deal takes no changes, or
    * undefined while it does. */
   refusedReasonId?: string;
@@ -69,10 +72,14 @@ export function DealStageLadder({
   // still in flight, and a sentence about it would tell them what they just
   // did — the disabled moment passes on its own.
   const ownReasonId = useId();
-  const ownReason =
-    canWrite && advanceRefused && refusedReasonId === undefined
-      ? t("deal.closedTakesNoStage")
-      : undefined;
+  // A retired pipeline always says so: the page's band names another cause.
+  const ownReason = ownRefusal({
+    canWrite,
+    advanceRefused,
+    pipelineRetired,
+    pageSaysWhy: refusedReasonId !== undefined,
+    t,
+  });
   return (
     <StageLadder
       label={t("deals.stage")}
@@ -83,13 +90,31 @@ export function DealStageLadder({
         deal,
         stages,
         refused: advancing || advanceRefused,
-        reasonId: advanceRefused ? (refusedReasonId ?? ownReasonId) : undefined,
+        reasonId: advanceRefused
+          ? ((pipelineRetired ? undefined : refusedReasonId) ?? ownReasonId)
+          : undefined,
         onAdvance: canWrite ? onAdvance : undefined,
       }).map((step) =>
         subs?.has(step.key) ? { ...step, sub: subs.get(step.key) } : step,
       )}
     />
   );
+}
+
+function ownRefusal(
+  input: Readonly<{
+    canWrite: boolean;
+    advanceRefused: boolean;
+    pipelineRetired?: boolean;
+    pageSaysWhy: boolean;
+    t: ReturnType<typeof useT>;
+  }>,
+): string | undefined {
+  if (!input.canWrite) return undefined;
+  if (input.pipelineRetired) return input.t("deal.pipelineRetired");
+  return input.advanceRefused && !input.pageSaysWhy
+    ? input.t("deal.closedTakesNoStage")
+    : undefined;
 }
 
 // The pipeline's stages as ladder rungs: what is behind the deal, where it

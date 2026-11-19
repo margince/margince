@@ -31,6 +31,21 @@ const SEND: ScheduledSend = {
   updated_at: "2026-08-20T09:00:00Z",
 };
 
+it("seeds each recipient once, where it first stands in To, Cc, Bcc", () => {
+  expect(
+    editSeedOf({
+      ...SEND,
+      to: ["ceo@acme.test", "CEO@acme.test"],
+      cc: ["Ceo@Acme.test", "cfo@acme.test"],
+      bcc: ["cfo@acme.test", "boss@acme.test"],
+    }),
+  ).toMatchObject({
+    to: ["ceo@acme.test"],
+    cc: ["cfo@acme.test"],
+    bcc: ["boss@acme.test"],
+  });
+});
+
 it("seeds the composer from the first link and the grounding links after it", () => {
   expect(editSeedOf(SEND)).toMatchObject({
     anchor: { type: "company", id: "company-1" },

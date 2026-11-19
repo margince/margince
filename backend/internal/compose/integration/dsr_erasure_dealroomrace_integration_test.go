@@ -59,7 +59,7 @@ func TestABuyerThreadOpenedAcrossAnErasureIsRefused(t *testing.T) {
 	}()
 	testdb.AwaitQueuedBehind(t, OwnerConn(t), int32(holder), 1, buyerDone, "the buyer's thread")
 
-	if err := compose.ComposedEraser(e.Pool, nil, nil).EraseContact(
+	if err := compose.ComposedEraser(e.Pool, nil).EraseContact(
 		e.As(e.AdminUser, nil, roomErasureAdmin), buyer.contact.UUID, "subject request"); err != nil {
 		t.Fatalf("erasing the subject: %v", err)
 	}
@@ -106,7 +106,7 @@ func TestAnErasureWaitsForABuyerReplyAndTakesItWithTheRest(t *testing.T) {
 	var erasureErr error
 	erasureDone := make(chan struct{})
 	go func() {
-		erasureErr = compose.ComposedEraser(e.Pool, nil, nil).EraseContact(
+		erasureErr = compose.ComposedEraser(e.Pool, nil).EraseContact(
 			e.As(e.AdminUser, nil, roomErasureAdmin), buyer.contact.UUID, "subject request")
 		close(erasureDone)
 	}()
@@ -135,7 +135,7 @@ func TestADownloadRecordedAfterAnErasureIsRefused(t *testing.T) {
 	buyer := seedBuyerInARoom(t, e, "download.race@acme.test")
 	doc := roomDocument(t, e, buyer)
 	sess := signedInBuyer(t, e, buyer)
-	if err := compose.ComposedEraser(e.Pool, nil, nil).EraseContact(
+	if err := compose.ComposedEraser(e.Pool, nil).EraseContact(
 		e.As(e.AdminUser, nil, roomErasureAdmin), buyer.contact.UUID, "subject request"); err != nil {
 		t.Fatalf("erasing the subject: %v", err)
 	}

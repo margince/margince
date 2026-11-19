@@ -66,7 +66,11 @@ type controllerPayloadSweepWorker struct {
 	// material does, and a second spelling of that resolution is a second answer
 	// to "whose vault is this".
 	vault controllerPayloads
-	alarm receiptAlarm
+	// meetings destroys the vault links that erased invitations and proposals
+	// still name. It runs here because this job is registered on every worker
+	// that has a vault, where the meeting delivery job needs a calendar.
+	meetings *activities.Store
+	alarm    receiptAlarm
 	// restrictions ends a restriction whose lift notice went out while the
 	// receipt's own effect did not apply.
 	restrictions *consent.Store
@@ -78,12 +82,13 @@ func newControllerPayloadSweepWorker(
 	idsvc *identity.Service,
 	store *comms.Store,
 	vault controllerPayloads,
+	meetings *activities.Store,
 	alarm receiptAlarm,
 	restrictions *consent.Store,
 	log *slog.Logger,
 ) *controllerPayloadSweepWorker {
 	return &controllerPayloadSweepWorker{
-		identity: idsvc, store: store, vault: vault, alarm: alarm, restrictions: restrictions, clock: time.Now, log: log,
+		identity: idsvc, store: store, vault: vault, meetings: meetings, alarm: alarm, restrictions: restrictions, clock: time.Now, log: log,
 	}
 }
 
@@ -145,6 +150,17 @@ func (w *controllerPayloadSweepWorker) raiseOwedReceipts(ctx context.Context, no
 	}
 }
 
+// destroyErasedMeetingLinks is best effort like the passes above it: a refused
+// delete leaves the reference in its row, and the next cadence retries it.
+func (w *controllerPayloadSweepWorker) destroyErasedMeetingLinks(ctx context.Context) {
+	if w.vault.v == nil {
+		return
+	}
+	if err := w.meetings.DestroyErasedLinks(ctx); err != nil {
+		w.log.ErrorContext(ctx, "destroying the link secrets of erased meetings failed", "err", err)
+	}
+}
+
 func (w *controllerPayloadSweepWorker) Work(ctx context.Context, _ *river.Job[ControllerPayloadSweepArgs]) error {
 	ctx, err := installationJobCtx(ctx, w.identity)
 	if err != nil {
@@ -156,6 +172,7 @@ func (w *controllerPayloadSweepWorker) Work(ctx context.Context, _ *river.Job[Co
 		return jobs.FaultContext(ctx, err)
 	}
 	w.liftSentRestrictions(ctx)
+	w.destroyErasedMeetingLinks(ctx)
 
 	// Paged past what this run already attempted, so a batch that will never
 	// delete costs one batch rather than the whole backlog: without it the same
@@ -247,6 +264,7 @@ func addControllerPayloadSweepJob(reg *jobRegistry, pool *pgxpool.Pool, cfg JobR
 		identity.NewService(pool),
 		comms.NewStore(db, time.Now, activities.NewStore(db)),
 		controllerPayloads{v: cfg.ControllerVault},
+		activities.NewStore(db).WithMeetingVault(cfg.ControllerVault),
 		receiptAlarm{db: db},
 		consent.NewStore(db),
 		log)

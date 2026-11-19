@@ -548,6 +548,8 @@
      "Account to keep",
     "merge_address":
      "Address moved",
+    "merge_address_already_held":
+     "Survivor already has it",
     "merge_address_kind":
      "Address kind",
     "merge_address_primary_after":
@@ -6831,6 +6833,26 @@
     "merge_address/lifecycle/unknown":
      "Unknown",
     "merge_address/boolean/true":
+     "Yes",
+    "merge_address_already_held/lifecycle/customer":
+     "Customer",
+    "merge_address_already_held/lifecycle/disqualified":
+     "Disqualified",
+    "merge_address_already_held/lifecycle/former_customer":
+     "Former customer",
+    "merge_address_already_held/lifecycle/live":
+     "Live",
+    "merge_address_already_held/lifecycle/onboarding":
+     "Onboarding",
+    "merge_address_already_held/lifecycle/opportunity":
+     "Opportunity",
+    "merge_address_already_held/lifecycle/prospect":
+     "Prospect",
+    "merge_address_already_held/lifecycle/target":
+     "Target",
+    "merge_address_already_held/lifecycle/unknown":
+     "Unknown",
+    "merge_address_already_held/boolean/true":
      "Yes",
     "merge_address_kind/text/domain":
      "Domain",
@@ -17546,6 +17568,12 @@
      "Not set",
     "merge_address/execution":
      "Set when applied",
+    "merge_address_already_held/boolean":
+     "No",
+    "merge_address_already_held/empty":
+     "Not set",
+    "merge_address_already_held/execution":
+     "Set when applied",
     "merge_address_kind/text":
      "Approval context is unavailable. Reload or request a new proposal.",
     "merge_address_kind/lifecycle":
@@ -20514,6 +20542,8 @@
      "Konto behalten",
     "merge_address":
      "Übernommene Adresse",
+    "merge_address_already_held":
+     "Ziel hat sie schon",
     "merge_address_kind":
      "Adressart",
     "merge_address_primary_after":
@@ -26797,6 +26827,26 @@
     "merge_address/lifecycle/unknown":
      "Unbekannt",
     "merge_address/boolean/true":
+     "Ja",
+    "merge_address_already_held/lifecycle/customer":
+     "Kunde",
+    "merge_address_already_held/lifecycle/disqualified":
+     "Disqualifiziert",
+    "merge_address_already_held/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "merge_address_already_held/lifecycle/live":
+     "Live",
+    "merge_address_already_held/lifecycle/onboarding":
+     "Onboarding",
+    "merge_address_already_held/lifecycle/opportunity":
+     "Chance",
+    "merge_address_already_held/lifecycle/prospect":
+     "Interessent",
+    "merge_address_already_held/lifecycle/target":
+     "Zielunternehmen",
+    "merge_address_already_held/lifecycle/unknown":
+     "Unbekannt",
+    "merge_address_already_held/boolean/true":
      "Ja",
     "merge_address_kind/text/domain":
      "Domain",
@@ -37512,6 +37562,12 @@
      "Nicht gesetzt",
     "merge_address/execution":
      "Wird beim Anwenden festgelegt",
+    "merge_address_already_held/boolean":
+     "Nein",
+    "merge_address_already_held/empty":
+     "Nicht gesetzt",
+    "merge_address_already_held/execution":
+     "Wird beim Anwenden festgelegt",
     "merge_address_kind/text":
      "Der Freigabekontext ist nicht verfügbar. Lade die Seite neu oder fordere einen neuen Vorschlag an.",
     "merge_address_kind/lifecycle":
@@ -40480,6 +40536,8 @@
      "Tài khoản giữ lại",
     "merge_address":
      "Địa chỉ được chuyển",
+    "merge_address_already_held":
+     "Bản ghi giữ lại đã có",
     "merge_address_kind":
      "Loại địa chỉ",
     "merge_address_primary_after":
@@ -46763,6 +46821,26 @@
     "merge_address/lifecycle/unknown":
      "Chưa rõ",
     "merge_address/boolean/true":
+     "Có",
+    "merge_address_already_held/lifecycle/customer":
+     "Khách hàng",
+    "merge_address_already_held/lifecycle/disqualified":
+     "Đã loại",
+    "merge_address_already_held/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "merge_address_already_held/lifecycle/live":
+     "Đang vận hành",
+    "merge_address_already_held/lifecycle/onboarding":
+     "Đang triển khai",
+    "merge_address_already_held/lifecycle/opportunity":
+     "Cơ hội",
+    "merge_address_already_held/lifecycle/prospect":
+     "Tiềm năng",
+    "merge_address_already_held/lifecycle/target":
+     "Mục tiêu",
+    "merge_address_already_held/lifecycle/unknown":
+     "Chưa rõ",
+    "merge_address_already_held/boolean/true":
      "Có",
     "merge_address_kind/text/domain":
      "Tên miền",
@@ -57477,6 +57555,12 @@
     "merge_address/empty":
      "Chưa đặt",
     "merge_address/execution":
+     "Được xác định khi áp dụng",
+    "merge_address_already_held/boolean":
+     "Không",
+    "merge_address_already_held/empty":
+     "Chưa đặt",
+    "merge_address_already_held/execution":
      "Được xác định khi áp dụng",
     "merge_address_kind/text":
      "Ngữ cảnh phê duyệt không có sẵn. Tải lại hoặc yêu cầu đề xuất mới.",

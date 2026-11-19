@@ -73,7 +73,7 @@ func TestErasurePhysicallyClearsRecheckedDuplicateEvidence(t *testing.T) {
 		pgx.StrictNamedArgs{"audits": uuidStrings(audits)}); count == 0 {
 		t.Fatal("the real contact writes left no pending event copies")
 	}
-	if err := compose.ComposedEraser(e.Pool, nil, nil).EraseContact(e.Admin(), subject.UUID, "test"); err != nil {
+	if err := compose.ComposedEraser(e.Pool, nil).EraseContact(e.Admin(), subject.UUID, "test"); err != nil {
 		t.Fatal(err)
 	}
 	if count := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE id=ANY(@audits)`, pgx.StrictNamedArgs{"audits": audits}); count != len(audits) {

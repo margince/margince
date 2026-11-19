@@ -5,6 +5,7 @@ import { DealStatusBadge } from "../../components/dealstatusbadge";
 import {
   LatestInboundLine,
   useLatestInbound,
+  useLatestInboundRead,
 } from "../../components/latestinbound";
 import { useRailRename } from "../../components/railfield";
 import { Badge } from "../../design-system/atoms";
@@ -185,6 +186,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   const advance = useAdvanceDeal();
   const dealQuery = useDeal(id);
   const pipelineQuery = usePipeline(dealQuery.data?.pipeline_id);
+  const pipelineRetired = Boolean(pipelineQuery.data?.archived_at);
   // Every write affordance on this page answers one question, asked once. An
   // archived deal takes no changes, and its verbs stay, refused. One this
   // caller cannot write takes none from them, so its verbs are left out.
@@ -208,6 +210,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   const live = dealQuery.isSuccess && !dealQuery.data.archived_at;
   const statusQuery = useDealStatusCard(id, live);
   const latest = useLatestInbound("deal", id);
+  const lastInbound = useLatestInboundRead("deal", id).data?.last_inbound;
   const coverageRead = useDealCoverage(id, live);
   // How it stands reads the whole history, not what the History tab's own
   // filter has narrowed. A "no reply" read off a filtered view would be false.
@@ -326,6 +329,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                 <DealActions
                   deal={deal}
                   openStages={openStages}
+                  pipelineRetired={pipelineRetired}
                   refusedReasonId={refusedReasonId}
                   onEditDetails={() => setEditingDetails(true)}
                 />
@@ -358,6 +362,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                       stages,
                       asOf,
                       activities: threadQuery.activities,
+                      lastInbound,
                       history: threadQuery,
                       offers: offersQuery.data?.data,
                       coverage: coverageRead,
@@ -367,7 +372,9 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                         // A deal that takes no changes is not moved through
                         // the pipeline. A closed one is reopened by its own
                         // action, whose dialog says what reopening clears.
-                        advanceRefused: readOnly || deal.status !== "open",
+                        advanceRefused:
+                          readOnly || deal.status !== "open" || pipelineRetired,
+                        pipelineRetired,
                         refusedReasonId,
                         onAdvance,
                       },
@@ -418,6 +425,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                 zone={readerZone}
                 onClose={() => setOpenEmail(null)}
               />
+              <ErrorLine error={pipelineQuery.error} />
               <ErrorLine
                 error={advanceErrorBehind(advance.error, pending !== null)}
               />

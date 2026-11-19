@@ -16,13 +16,16 @@ import { useCallback, useState } from "react";
 import { api } from "../../../api/client";
 import type { components } from "../../../api/schema";
 import { ifMatch, requireVersion } from "../../../api/version";
-import { useActivityGate } from "../../../components/activitygate";
+import {
+  type ActivityGate,
+  useActivityGate,
+} from "../../../components/activitygate";
 import { ArchiveAction } from "../../../components/archive";
 import { ExtensionEntries } from "../../../components/extensionentries";
 import { LogActivityAction } from "../../../components/logactivity.action";
 import { searchCompanyContacts } from "../../../components/meetingattendees";
 import { Button, OverflowMenu } from "../../../design-system/atoms";
-import { VerbWord } from "../../../design-system/iconaction";
+import { tipText, VerbWord } from "../../../design-system/iconaction";
 import { ListPopover } from "../../../design-system/listpopover";
 import { useToast } from "../../../design-system/toast";
 import { useLocale, useT } from "../../../i18n";
@@ -51,6 +54,7 @@ type Stage = components["schemas"]["Stage"];
 function DealEmailVerb({
   deal,
   disabledReasonId,
+  reasonTip,
   disabled,
   keyShortcuts,
   open,
@@ -58,6 +62,7 @@ function DealEmailVerb({
 }: Readonly<{
   deal: Deal;
   disabledReasonId?: string;
+  reasonTip?: string;
   disabled?: boolean;
   keyShortcuts?: string;
   open: boolean;
@@ -77,12 +82,25 @@ function DealEmailVerb({
       // over what the reader typed.
       recordAddress={recordAddress}
       disabledReasonId={disabledReasonId}
+      reasonTip={reasonTip}
       disabled={disabled}
       keyShortcuts={keyShortcuts}
       open={open}
       onOpenChange={onOpenChange}
     />
   );
+}
+
+// The sentence the header states when the seat may not log. An archive is
+// the page's sentence, so only its id reaches here.
+function activityRefusal(
+  t: ReturnType<typeof useT>,
+  refusedByArchive: string | undefined,
+  activity: ActivityGate,
+): string | undefined {
+  return !refusedByArchive && activity.refusalKey
+    ? t(activity.refusalKey)
+    : undefined;
 }
 
 // Reopens a won/lost deal back to an open-semantic stage — the same advance
@@ -92,6 +110,7 @@ function ReopenAction({
   dealId,
   dealVersion,
   openStages,
+  pipelineRetired,
   disabledReasonId,
 }: Readonly<{
   dealId: string;
@@ -101,6 +120,8 @@ function ReopenAction({
   // and a fresh one would be the wrong answer anyway.
   dealVersion: number | undefined;
   openStages: Stage[];
+  // A retired pipeline takes no stage, so a closed deal on it cannot reopen.
+  pipelineRetired?: boolean;
   // The id of the sentence saying why this reopen is refused, when it is.
   // STATE-4a: a control blocked by the record's STATE rather than by a
   // permission stays visible and says why, because the reason is the
@@ -149,6 +170,9 @@ function ReopenAction({
       queryClient.invalidateQueries({ queryKey: ["deals"] });
     },
   });
+  if (pipelineRetired) {
+    return null;
+  }
   return (
     <>
       <Button
@@ -197,11 +221,13 @@ function DealArchiveAction({
 export function DealActions({
   deal,
   openStages,
+  pipelineRetired,
   refusedReasonId,
   onEditDetails,
 }: Readonly<{
   deal: Deal;
   openStages: Stage[];
+  pipelineRetired?: boolean;
   // Opens the drawer that holds every field of the deal and its editors.
   onEditDetails: () => void;
   // The id of the page's one sentence about why this deal takes no changes —
@@ -221,6 +247,7 @@ export function DealActions({
   const [drawer, setDrawer] = useState<"log" | "task" | "call" | null>(null);
   const activity = useActivityGate();
   const logRefused = refusedByArchive ?? activity.refusedId;
+  const logRefusal = activityRefusal(t, refusedByArchive, activity);
   const logPending = !refusedByArchive && activity.pending;
   const [writing, setWriting] = useState(false);
   const logOpen = !logPending && !logRefused;
@@ -241,9 +268,7 @@ export function DealActions({
   );
   return (
     <>
-      {!refusedByArchive && activity.refusedId && (
-        <p id={activity.sentenceId}>{t("record.logActivityRefused")}</p>
-      )}
+      {logRefusal && <p id={activity.sentenceId}>{logRefusal}</p>}
       {/* Mail first, then the hairline, then what the reader records about
           this deal: the same two groups, in the same order, that the contact,
           company and lead headers draw. A rep moving between records must not
@@ -251,6 +276,7 @@ export function DealActions({
       <DealEmailVerb
         deal={deal}
         disabledReasonId={logRefused}
+        reasonTip={logRefusal}
         disabled={logPending}
         open={writing}
         onOpenChange={setWriting}
@@ -259,7 +285,7 @@ export function DealActions({
       <Button
         disabled={logPending}
         reasonId={logRefused}
-        title={t("log.kindCall")}
+        title={tipText(t("log.kindCall"), logRefusal)}
         onClick={() => setDrawer("call")}
       >
         <Phone aria-hidden="true" />
@@ -271,11 +297,12 @@ export function DealActions({
         allowed={!logPending && !logRefused}
         pending={logPending}
         reasonId={logRefused}
+        reasonTip={logRefusal}
       />
       <Button
         disabled={logPending}
         reasonId={logRefused}
-        title={t("log.title")}
+        title={tipText(t("log.title"), logRefusal)}
         onClick={() => setDrawer("log")}
         aria-keyshortcuts={logKeys}
       >
@@ -342,6 +369,7 @@ export function DealActions({
               dealId={deal.id}
               dealVersion={deal.version}
               openStages={openStages}
+              pipelineRetired={pipelineRetired}
               disabledReasonId={refusedReasonId}
             />
           </>
@@ -363,12 +391,15 @@ function DealBookMeeting({
   allowed,
   pending,
   reasonId,
+  reasonTip,
 }: Readonly<{
   dealId: string;
   companyId?: string;
   allowed: boolean;
   pending: boolean;
   reasonId?: string;
+  /** The sentence `reasonId` names, for the verb's tooltip. */
+  reasonTip?: string;
 }>) {
   const t = useT();
   // Held across renders, because a new search function drops the answer the
@@ -390,12 +421,13 @@ function DealBookMeeting({
     // A refusal the page already states wins; otherwise the missing company
     // is the one thing standing between the reader and a booking.
     const noCompany = !reasonId && !companyId;
+    const why = noCompany ? t("deal.meetNeedsCompany") : undefined;
     return (
       <Button
         disabled={pending || !companyId}
         reasonId={reasonId}
-        reason={noCompany ? t("deal.meetNeedsCompany") : undefined}
-        title={t("scheduling.bookContact")}
+        reason={why}
+        title={tipText(t("scheduling.bookContact"), reasonId ? reasonTip : why)}
       >
         {face}
       </Button>

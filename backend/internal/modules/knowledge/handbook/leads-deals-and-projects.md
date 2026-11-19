@@ -106,16 +106,14 @@ To disqualify a lead in Margince, open the lead, choose **More actions**, then *
 1. In **Disqualify {name}?**, pick a **Reason** (required; without one it says "Choose a reason first.").
 2. You may add a **Note (optional)**.
 3. Choose **Disqualify**.
-To disqualify several, tick them on the **Leads** list, pick a reason in the bulk bar and choose **Disqualify**. A message then says how many leads were disqualified, and the bar names any lead that was not.
-Leads have no archive action; disqualifying is how you close one.
+To disqualify several, tick them on the **Leads** list, pick a reason in the bulk bar and choose **Disqualify**. A message then says how many leads were disqualified, and the bar names any lead that was not. Leads have no archive action; disqualifying is how you close one.
 Also called: reject a lead, close a lead, archive a lead.
 
 Disqualifying archives the lead. It records a reason, from a list that administrators manage, and a note if you add one. You can still open the lead, but it becomes read-only: "Disqualified. This lead is read-only." Its overview says "Closed: {reason}. The record is kept as history." with your note under it.
 
 ### How do I reopen a disqualified lead?
 To reopen a disqualified lead in Margince, open the lead, choose **More actions**, then **Reopen**, then **Reopen lead** in the **Reopen this lead?** dialog.
-The lead goes back to the status it held before it was disqualified, and the reason is cleared. History and score are kept.
-Leads disqualified in bulk have no one-step undo: reopen them one at a time. Reopening needs the rights to edit and to close leads.
+The lead goes back to the status it held before it was disqualified, and the reason is cleared. History and score are kept. Leads disqualified in bulk have no one-step undo: reopen them one at a time. Reopening needs the rights to edit and to close leads.
 Also called: restore a lead, undo a disqualification.
 
 ### How do I edit a lead?
@@ -203,8 +201,7 @@ Also called: update an opportunity, rename a deal, change deal details.
 
 ### How do I change a deal's value or currency?
 To change a deal's value or currency, press **Edit** in the **Value** section of the deal's **Details** panel, change them and choose **Save**.
-Value and currency go together: a value with no currency is refused, and so is a currency with no value.
-Changing the currency keeps the figures as typed, now in the new currency; nothing is turned into the new currency.
+Value and currency go together: a value with no currency is refused, and so is a currency with no value. Changing the currency keeps the figures as typed, now in the new currency; nothing is turned into the new currency.
 The recurring value may come from an accepted offer. Then the row reads **Expected ARR**, "comes from the accepted offer and is not edited here"; accepting another offer replaces it.
 Also called: change the amount, update deal size, switch to dollars.
 
@@ -289,6 +286,9 @@ The large column opens with the figures **Open deals**, **Won deals**, **Open ta
 Then comes **Open tasks**: the open tasks filed under the project, soonest due first, late ones marked **Overdue**. With none open, the card is not shown, unless you may not see the tasks. The timeline follows.
 
 The side column of a project page in Margince holds **Companies**, **Responsibilities**, **Stakeholders**, **Contracts**, **Documents** and **Phase history**. **Phase history** records every phase move, with who made it and the reason. A move an AI agent made names the colleague it worked for and the tool, as in "Anna Weber, via Claude, moved it". If nobody recorded who made a move, Phase history says so; it is never shown as **System**. Files attached to the project's deals stay on the deals.
+
+### Does a note on a deal show on its project?
+Yes. In Margince, what you log on a deal, or relink onto it, also goes under the deal's project, unless you pick a project yourself. Deals of two projects, or a deal with no project, add none. A note an AI agent or Margince itself logs stays on the deal only. Take the note off the deal, and the project goes too; moving the deal later moves no older note.
 
 ### How do I edit or rename a project?
 To rename a project in Margince, open it from **Projects**, press its name at the top, type the new name and press **Save**. To edit the rest, choose **More actions** → **Edit project**, change the fields and choose **Save**.
