@@ -210,7 +210,9 @@ export function Employers({ view }: Readonly<{ view: Contact360 }>) {
   };
   const imported = useEmploymentImport(importView, !withheld);
   const importState =
-    employments.length === 0 ? unreadImport(imported.reading) : undefined;
+    !withheld && employments.length === 0
+      ? unreadImport(imported.reading)
+      : undefined;
   return (
     <Panel
       title={t("contact.rail.employmentTitle")}

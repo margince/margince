@@ -816,6 +816,22 @@ describe("bought work history that waits for a company match", () => {
     expect(panel.queryByText(PROVIDER_DOWN)).toBeNull();
     expect(panel.queryByText(en["contact.rail.noEmployment"])).toBeNull();
   });
+
+  it("says the section is withheld, with no retry, over a failed read it no longer may make", async () => {
+    const { rerender } = mount(bought, undefined, "failed");
+    const panel = () => within(section(en["contact.rail.employmentTitle"]));
+    expect(await panel().findByText(en["state.failed"])).toBeTruthy();
+    rerender({
+      ...bought,
+      employments: undefined,
+      sections_omitted: ["employments"],
+    });
+    expect(await panel().findByText(WITHHELD_SENTENCE)).toBeTruthy();
+    expect(panel().queryByText(en["state.failed"])).toBeNull();
+    expect(
+      panel().queryByRole("button", { name: en["state.retry"] }),
+    ).toBeNull();
+  });
 });
 
 // THE TRANSPORT ROW ANSWERS FOR ITSELF OR NOT AT ALL.
