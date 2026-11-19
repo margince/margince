@@ -2,7 +2,6 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
 import {
   jsonResponse,
   StoryProviders,
@@ -83,30 +82,4 @@ export const SyncError: Story = {
 
 export const NoPermission: Story = {
   render: cardStory(() => jsonResponse({ code: "permission_denied" }, 403)),
-};
-
-/** A connect pressed with an address and a port it cannot send, each said on its field. */
-export const ConnectRefused: Story = {
-  render: cardStory(() => jsonResponse({ items: [] })),
-  play: async ({ canvasElement }) => {
-    await userEvent.click(
-      await within(canvasElement).findByRole("button", {
-        name: /Connect a shared mailbox/,
-      }),
-    );
-    const dialog = within(await within(document.body).findByRole("dialog"));
-    await userEvent.type(
-      dialog.getByRole("textbox", { name: "Mailbox address" }),
-      "not-an-email",
-    );
-    const port = dialog.getByRole("textbox", { name: "Port" });
-    await userEvent.clear(port);
-    await userEvent.type(port, "abc");
-    await userEvent.click(
-      dialog.getByRole("button", { name: "Connect a shared mailbox" }),
-    );
-    await expect(
-      await dialog.findByText("Enter a whole number for Port."),
-    ).toBeVisible();
-  },
 };

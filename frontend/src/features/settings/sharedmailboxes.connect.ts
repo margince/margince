@@ -7,6 +7,7 @@ import type { Locale } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { looksLikeEmail } from "../../lib/emailshape";
 import { IMAP_PORT_DEFAULT, inRange, PORT_RANGE } from "../../lib/imapconnect";
+import { valueFor } from "../../lib/labelfor";
 import {
   type FieldLabel,
   type FieldLabels,
@@ -33,11 +34,16 @@ export const FIELD_LABEL = {
 export type FieldKey = keyof typeof FIELD_LABEL;
 export type Values = Readonly<Partial<Record<FieldKey, string>>>;
 
-export const PROVIDER_FIELDS: Record<Provider, readonly FieldKey[]> = {
+const PROVIDER_FIELDS: Record<Provider, readonly FieldKey[]> = {
   imap: ["imap.host", "imap.port", "imap.username", "imap.secret"],
   graph: ["graph.tenant_id", "graph.client_id", "graph.client_secret"],
   gmail: ["gmail.service_account_key"],
 };
+
+// A provider this build does not know asks for no fields of its own.
+export function providerFields(provider: Provider): readonly FieldKey[] {
+  return valueFor(PROVIDER_FIELDS, provider, []);
+}
 
 export const SECRETS: ReadonlySet<FieldKey> = new Set([
   "imap.secret",
@@ -86,7 +92,7 @@ export function checkedFields(
   const keys: readonly FieldKey[] = [
     "address",
     "reader_team_id",
-    ...PROVIDER_FIELDS[provider],
+    ...providerFields(provider),
   ];
   const faults = new Map<FieldKey, string>();
   for (const key of keys) {

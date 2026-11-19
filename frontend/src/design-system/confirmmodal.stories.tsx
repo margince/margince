@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { expect, screen, userEvent, within } from "storybook/test";
+import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import { Field, Textarea, TextInput } from "./atoms";
 import { ChoiceList } from "./choicelist";
 import { ConfirmModal } from "./confirmmodal";
@@ -169,9 +169,9 @@ export const WithRefusedField: Story = {
   play: async () => {
     const dialog = within(await screen.findByRole("dialog"));
     await userEvent.click(dialog.getByRole("button", { name: "Mark lost" }));
-    await expect(
-      await dialog.findByText("Competitor is required."),
-    ).toBeVisible();
+    const sentence = await dialog.findByText("Competitor is required.");
+    // The dialog fades in, and a line read during that fade is not yet visible.
+    await waitFor(() => expect(sentence).toBeVisible());
     await expect(dialog.getByLabelText("Competitor")).toHaveFocus();
   },
 };

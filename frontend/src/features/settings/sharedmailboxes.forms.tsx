@@ -28,8 +28,8 @@ import {
   FIELD_LABEL,
   type FieldKey,
   fieldLabels,
-  PROVIDER_FIELDS,
   type Provider,
+  providerFields,
   SECRETS,
   type Values,
 } from "./sharedmailboxes.connect";
@@ -156,7 +156,7 @@ function CredentialFields({
   set: (key: FieldKey, value: string) => void;
 }>) {
   const t = useT();
-  return PROVIDER_FIELDS[provider].map((key) =>
+  return providerFields(provider).map((key) =>
     key === "gmail.service_account_key" ? (
       <Field
         key={key}
