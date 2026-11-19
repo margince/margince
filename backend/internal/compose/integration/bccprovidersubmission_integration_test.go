@@ -30,9 +30,12 @@ type footedRefusal struct {
 
 // One message has an objection in Bcc, a To with no evidence and a footer
 // nobody can fill. The objection leads and the sender sees every finding. One
-// confirmation sends. The copy handed to the provider names the blind copy only
-// in the Bcc header Gmail strips. It carries no reason and no private link.
-func TestABlindObjectionLeadsAndTheDeliveredCopyKeepsTheBlindCopyPrivate(t *testing.T) {
+// confirmation sends. The provider submission names the blind copy only in its
+// Bcc header, and carries no reason and no private link.
+//
+// These are the bytes handed to Gmail, not what a recipient receives. Gmail
+// strips the Bcc header before delivery; this test does not model delivery.
+func TestABlindObjectionLeadsAndTheProviderSubmissionKeepsTheBlindCopyPrivate(t *testing.T) {
 	p := setupPreflight(t)
 	p.connect(t, apptest.GmailReadonlyScope, apptest.GmailSendScope)
 	c := &consentEnv{AppEnv: p.AppEnv, contactID: p.contactID, activityID: p.activityID}
@@ -89,17 +92,17 @@ func TestABlindObjectionLeadsAndTheDeliveredCopyKeepsTheBlindCopyPrivate(t *test
 		t.Fatal(err)
 	}
 	delivery, _ := p.deliveryFor(t, activity)
-	mime, _ := p.transmit(t, delivery, "")
-	headers, body, found := strings.Cut(string(mime), "\r\n\r\n")
+	submission, _ := p.transmit(t, delivery, "")
+	headers, body, found := strings.Cut(string(submission), "\r\n\r\n")
 	if !found {
-		t.Fatalf("the delivered copy has no header boundary:\n%s", mime)
+		t.Fatalf("the provider submission has no header boundary:\n%s", submission)
 	}
-	if !strings.Contains(headers, "\r\nBcc: "+blindObjector+"\r\n") || strings.Count(string(mime), blindObjector) != 1 {
-		t.Fatalf("the blind copy is named outside its own Bcc header:\n%s", mime)
+	if !strings.Contains(headers, "\r\nBcc: "+blindObjector+"\r\n") || strings.Count(string(submission), blindObjector) != 1 {
+		t.Fatalf("the provider submission names the blind copy outside its Bcc header:\n%s", submission)
 	}
 	for _, private := range []string{explanation, read.ID, "/preferences/", "/unsubscribe", "List-Unsubscribe"} {
-		if strings.Contains(string(mime), private) {
-			t.Errorf("the delivered copy carries %q:\n%s", private, body)
+		if strings.Contains(string(submission), private) {
+			t.Errorf("the provider submission carries %q:\n%s", private, body)
 		}
 	}
 }
