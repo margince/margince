@@ -142,6 +142,23 @@ export const TopBarMenuPhoto: Story = {
 };
 
 /**
+ * A name with no space in it. The menu stops at its ceiling, and the name ends
+ * in an ellipsis instead of widening the menu.
+ */
+export const TopBarMenuLongName: Story = {
+  name: "Top bar menu with a long name",
+  play: async (context) => {
+    await openMenu(context);
+    const menu = await within(document.body).findByRole("menu");
+    await expect(menu.getBoundingClientRect().width).toBeLessThanOrEqual(360);
+  },
+  render: () => {
+    stubSession({ display_name: "Maximiliane".repeat(10) });
+    return <AccountMenuFrame />;
+  },
+};
+
+/**
  * The appearance flyout, open, opening LEFT.
  *
  * That direction is the point of the frame: the menu is anchored to a trigger at

@@ -49,8 +49,9 @@
   /* The floor above is the comfortable reading measure; this keeps it a measure
      rather than a promise the viewport cannot keep. A narrow phone at 200% zoom
      leaves less room than that plus the gutter, and the menu is anchored to an
-     edge, so growing past the viewport clips it on the other side. */
-  max-width: calc(100vw - 2 * var(--space-2));
+     edge, so growing past the viewport clips it on the other side. The fixed
+     ceiling makes a long name ellipse rather than widen the menu. */
+  max-width: min(360px, calc(100vw - 2 * var(--space-2)));
   display: flex;
   flex-direction: column;
   padding: var(--controlGap);
