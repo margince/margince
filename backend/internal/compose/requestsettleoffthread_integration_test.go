@@ -402,7 +402,13 @@ func TestSettlementReadsTheFilesOnTheActualAnswer(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	assertFiles(0)
+	// A send still pending has not reached them, so it answers nothing.
+	if _, ok := o.offered(t, request); ok {
+		t.Fatal("an answer whose send is pending was offered")
+	}
+	if slices.ContainsFunc(o.evidence(t, candidate), func(message threadMessage) bool { return message.ID == reply }) {
+		t.Fatal("an answer whose send is pending reached the evidence")
+	}
 	if err := store.RecordSent(sendWorkerScope(actor), delivery, connector.SendReceipt{ProviderMessageID: "report-delivery"}); err != nil {
 		t.Fatal(err)
 	}
