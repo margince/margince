@@ -5031,6 +5031,7 @@
   "worklist.verb.meetingNoShow": "Nicht erschienen",
   "worklist.verb.meetingCanceled": "Hat nicht stattgefunden",
   "worklist.verb.meetingOutcomeRecorded": "Terminergebnis erfasst",
+  "worklist.verb.meetingCanceledRecorded": "Als nicht stattgefunden markiert (abgesagt).",
   "worklist.verb.meetingOutcomeFailed": "Das Ergebnis konnte nicht erfasst werden. Bitte versuche es erneut.",
   "worklist.verb.meetingDayMissing": "Dieses Datum gibt es in der Zeitzone des Unternehmens nicht. Wähle ein anderes Datum.",
   "worklist.verb.meetingAddNotesFor": "Notizen hinzufügen: {subject}",

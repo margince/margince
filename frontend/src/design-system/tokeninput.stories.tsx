@@ -5,7 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type CSSProperties, useState } from "react";
 import { userEvent, within } from "storybook/test";
 import { mailbox } from "../format/contacturi";
-import { Field } from "./atoms";
+import { Button, Field } from "./atoms";
 import { DateInput } from "./dateinput";
 import {
   TokenInput,
@@ -126,6 +126,44 @@ function MarkedDemo() {
               values: new Set(["anna@acme.test", "cara@acme.test"]),
               label: "named in the warning",
             }}
+          />
+        )}
+      </Field>
+    </div>
+  );
+}
+
+/**
+ * A small control inside each token, before its remove button: the composer
+ * puts a recipient's country there.
+ */
+export const WithAside: Story = {
+  render: () => <AsideDemo />,
+};
+
+export const WithAsideDark: Story = {
+  globals: { theme: "dark" },
+  render: () => <AsideDemo />,
+};
+
+function AsideDemo() {
+  const [values, setValues] = useState<readonly string[]>([
+    "anna@acme.test",
+    "ben@acme.test",
+  ]);
+  return (
+    <div style={column}>
+      <Field label="To">
+        {(control) => (
+          <TokenInput
+            {...control}
+            values={values}
+            onChange={setValues}
+            aside={(value) => (
+              <Button variant="link" aria-label={`Country for ${value}`}>
+                DE
+              </Button>
+            )}
           />
         )}
       </Field>

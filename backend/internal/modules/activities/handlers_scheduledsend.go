@@ -199,6 +199,7 @@ func scheduledSendResponse(row ScheduledSend) crmcontracts.ScheduledSend {
 	if evidence, named := evidenceOnWire(row.Evidence); named {
 		out.Evidence = &evidence
 	}
+	out.RecipientCountries = countriesOnWire(row.Evidence.RecipientCountries)
 	if row.ActivityID != (ids.UUID{}) {
 		activityID := openapi_types.UUID(row.ActivityID)
 		out.ActivityId = &activityID

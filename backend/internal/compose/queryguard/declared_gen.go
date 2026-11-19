@@ -925,6 +925,7 @@ var Declared = map[string][]string{
 	"POST /v1/public/rooms/sign-out":                                           {},
 	"POST /v1/public/rooms/threads":                                            {},
 	"POST /v1/public/rooms/threads/{threadId}/comments":                        {},
+	"POST /v1/recipient-countries":                                             {},
 	"POST /v1/record-grants":                                                   {},
 	"POST /v1/record-links":                                                    {},
 	"POST /v1/record-roles":                                                    {},

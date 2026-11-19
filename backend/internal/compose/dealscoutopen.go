@@ -19,6 +19,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/dealscout"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -38,16 +39,24 @@ type scoutDealOpener struct {
 	users      *identity.Service
 	activities *activities.Store
 	log        *slog.Logger
+	now        func() time.Time
 }
 
-func newScoutDealOpener(pool *pgxpool.Pool, log *slog.Logger) scoutDealOpener {
+func newScoutDealOpener(pool *pgxpool.Pool, log *slog.Logger, now func() time.Time) scoutDealOpener {
 	return scoutDealOpener{
+		now:        now,
 		pool:       pool,
 		deals:      deals.NewStore(InstallationDB(pool), DealsInstallation()).WithSuggestionEffects(dealSuggestionEffects{}),
 		users:      identity.NewService(pool),
 		activities: activities.NewStore(InstallationDB(pool)),
 		log:        log,
 	}
+}
+
+// OpenScoutedDeals opens or reopens a deal for every suggestion it may in the
+// workspace bound in ctx. The deal scout job runs it after each pass.
+func OpenScoutedDeals(ctx context.Context, pool *pgxpool.Pool, log *slog.Logger, now func() time.Time) (int, error) {
+	return newScoutDealOpener(pool, log, now).OpenWorkspace(ctx)
 }
 
 // openableSuggestion is one suggestion, the owner of its company, and the
@@ -139,28 +148,30 @@ func (o scoutDealOpener) openOne(ctx context.Context, s openableSuggestion) (ids
 	if err != nil {
 		return ids.Nil, err
 	}
-	basis := scoutBasis(suggestion)
+	basis := scoutBasis(suggestion, false)
 	return o.deals.OpenSuggestedDeal(ownerCtx, deals.OpenSuggestedDealInput{
 		SuggestionID: s.id, Owner: s.owner, Basis: basis,
-		EvidenceHolds: scoutEvidenceHolds, Amount: scoutStatedAmount,
+		EvidenceHolds: dealscout.EvidenceHolds, Prefill: dealscout.Prefill(o.now(), installationToday),
 		SwitchOn: func(ctx context.Context, tx pgx.Tx) (bool, error) {
 			mode, err := approvals.AutoApplyModeTx(ctx, tx, s.owner, deals.DealOpenKind)
 			return mode == approvals.ModeAuto, err
 		},
-		Record: func(ctx context.Context, tx pgx.Tx, deal, _ ids.UUID) error {
-			return o.recordOnTimeline(ctx, tx, deal, suggestion.CompanyName, basis)
+		Record: func(ctx context.Context, tx pgx.Tx, deal, _ ids.UUID, fill deals.DealPrefill) error {
+			return o.recordOnTimeline(ctx, tx, deal, suggestion.CompanyName, scoutBasis(suggestion, fill.Withheld))
 		},
 		AsOwner: ownersAgentTx(o.users, s.owner, marginceActorID),
 	})
 }
 
 // scoutBasis is the receipt's reason: each cited item as the reader knows it,
-// with its date, newest first as the suggestion lists them.
-func scoutBasis(s deals.Suggestion) string {
+// with its date, newest first as the suggestion lists them. The receipt shows
+// it only to the owner it was written for. The timeline note shows it to every
+// reader of the deal, so with withheld it names each item by its kind alone.
+func scoutBasis(s deals.Suggestion, withheld bool) string {
 	parts := make([]string, 0, len(s.Evidence))
 	for _, item := range s.Evidence {
 		title := strings.TrimSpace(item.Title)
-		if title == "" {
+		if title == "" || withheld {
 			title = item.Kind
 		}
 		parts = append(parts, fmt.Sprintf("%s (%s, %s)", title, item.Kind, item.OccurredAt.UTC().Format(time.DateOnly)))

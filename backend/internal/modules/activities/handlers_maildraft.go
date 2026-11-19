@@ -61,6 +61,10 @@ func mailDraftContentFrom(req crmcontracts.MailDraftInput) (MailDraftContent, er
 	if err != nil {
 		return MailDraftContent{}, err
 	}
+	countries, err := countryOverridesFrom(req.RecipientCountries)
+	if err != nil {
+		return MailDraftContent{}, err
+	}
 	return MailDraftContent{
 		To:            valueOr(req.To),
 		Cc:            valueOr(req.Cc),
@@ -74,6 +78,7 @@ func mailDraftContentFrom(req crmcontracts.MailDraftInput) (MailDraftContent, er
 		EditorState:   valueOr(req.EditorState),
 		// The reason is the author's own words, kept as typed.
 		OverrideExplanation: valueOr(req.OverrideExplanation),
+		RecipientCountries:  countries,
 	}, nil
 }
 
@@ -152,6 +157,7 @@ func withDraftSending(out *crmcontracts.MailDraft, d MailDraft) {
 		explanation := d.Content.OverrideExplanation
 		out.OverrideExplanation = &explanation
 	}
+	out.RecipientCountries = countriesOnWire(d.Content.RecipientCountries)
 	if d.Content.Schedule != nil {
 		at, tz := d.Content.Schedule.At, d.Content.Schedule.TZ
 		out.ScheduledAt, out.ScheduledTz = &at, &tz

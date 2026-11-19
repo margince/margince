@@ -39,8 +39,9 @@ var FollowUpAfterDays = config.DefineStored(config.Spec[int]{
 	MachineryApplied: true, // the worklist applies it to rows the reader is separately gated for
 })
 
-// PrivateMailRequests lets the owed-reply check read mail that is private for a
-// routine reason (routinePrivateReasons). Mail held for any other reason never
+// PrivateMailRequests lets the AI read mail that is private for a routine reason
+// (privateReasons): the owed-reply check, and the signal pass for a quotation
+// request. Mail held for any other reason never
 // goes to a model, whatever this says. On by default: with mail sharing off, every new
 // mail is private, and without it no request in it would ever be found.
 var PrivateMailRequests = config.DefineStored(config.Spec[bool]{
@@ -48,15 +49,42 @@ var PrivateMailRequests = config.DefineStored(config.Spec[bool]{
 	Env:     "MARGINCE_ACTIVITIES_PRIVATE_MAIL_REQUESTS",
 	Type:    config.Bool,
 	Default: config.Some(true),
-	Doc:     "Let the AI check whether private mail asks its reader for something. Only mail private because of a setting is checked; mail held for any other reason never is.",
+	Doc:     "Let the AI read private mail for requests: what a customer asks of its reader, and a request for a quote. Only mail private because of a setting is read; mail held for any other reason never is. Sharing a quote request with the workspace is a separate setting.",
 }, config.Store{
 	RBACObject: settingsObject, AuditVerb: settingsAuditVerb,
 	MachineryApplied: true, // the owed-reply pass reads it as the system, for every seat's mail
 })
 
+// SharePrivateQuoteRequests lets a quote request in mail private only by a
+// mailbox setting become visible to the whole workspace, on the deal it opens.
+// It needs PrivateMailRequests on as well. Mail held for any
+// other reason is never shared. On by default, as the product decided.
+var SharePrivateQuoteRequests = config.DefineStored(config.Spec[bool]{
+	Key:     "activities.share_private_quote_requests",
+	Env:     "MARGINCE_ACTIVITIES_SHARE_PRIVATE_QUOTE_REQUESTS",
+	Type:    config.Bool,
+	Default: config.Some(true),
+	Doc:     "Share a request for a quote found in private mail with the whole workspace: what the customer asked for becomes visible on the deal it opens. Only mail private because of a mailbox setting counts; mail held for any other reason never does.",
+}, config.Store{
+	RBACObject: settingsObject, AuditVerb: settingsAuditVerb,
+	MachineryApplied: true, // the signal pass and the deal opener read it as the system
+})
+
 // ConfigSettings are this module's settings in the configuration registry.
 func ConfigSettings() []config.Any {
-	return []config.Any{FollowUpAfterDays, InlineSendReview, PrivateMailRequests}
+	return []config.Any{FollowUpAfterDays, InlineSendReview, PrivateMailRequests, SharePrivateQuoteRequests}
+}
+
+// sharePrivateQuoteRequests reads SharePrivateQuoteRequests in the caller's
+// transaction.
+func sharePrivateQuoteRequests(ctx context.Context, tx pgx.Tx) (bool, error) {
+	on, err := database.Remember(tx, settings.ValueMemoKey(SharePrivateQuoteRequests.Key()), func() (bool, error) {
+		return config.StoredApplyTx(ctx, tx, config.Bound(), SharePrivateQuoteRequests)
+	})
+	if err != nil {
+		return false, fmt.Errorf("read %s: %w", SharePrivateQuoteRequests.Key(), err)
+	}
+	return on, nil
 }
 
 // followUpAfterDays reads the setting inside the caller's transaction, under
