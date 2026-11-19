@@ -21,10 +21,12 @@ import (
 	"github.com/margince/margince/backend/internal/modules/chatlinks"
 	"github.com/margince/margince/backend/internal/modules/chatlinks/dispact"
 	"github.com/margince/margince/backend/internal/modules/chatlinks/dispact/dispacttest"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -526,17 +528,79 @@ func TestAReaderWithoutTheCompanyOrContactOrEdgeReadLeavesThatNameOut(t *testing
 	}
 }
 
-// A member who may not open the deal still reads the note, so a missing
-// contact read on that member alone withholds the name.
-func TestAMemberWhoCannotOpenTheDealStillBoundsTheNames(t *testing.T) {
-	e := setupParties(t)
+// outsider holds the rep role, which this test strips of deal read, so the
+// summary note is not theirs to read.
+func (e *partyEnv) outsider(t *testing.T) ids.UUID {
+	t.Helper()
 	outsider := ids.NewV7()
 	e.exec(t, `INSERT INTO app_user (id, email, display_name) VALUES ($1, 'otto@chat.test', 'Otto Outsider')`, outsider)
 	e.exec(t, `INSERT INTO role_assignment (role_id, user_id) SELECT id, $1 FROM role WHERE key = 'rep' AND is_system`, outsider)
-	e.exec(t, `UPDATE role SET permissions = jsonb_set(permissions, '{objects,contact,read}', 'false') WHERE key = 'rep'`)
+	e.denyRead(t, "rep", "deal")
+	return outsider
+}
+
+func (e *partyEnv) denyRead(t *testing.T, role, object string) {
+	t.Helper()
+	e.exec(t, `UPDATE role SET permissions = jsonb_set(permissions, ARRAY['objects', $2, 'read'], 'false') WHERE key = $1`, role, object)
+}
+
+func TestAMemberWhoCannotReadTheDealDoesNotBoundTheNames(t *testing.T) {
+	e := setupParties(t)
+	e.outsider(t)
+	e.denyRead(t, "rep", "contact")
+	second := e.secondRequest(t)
+	requireIn(t, second, "Acme GmbH", "Clara Buyer")
+}
+
+func TestAMemberWhoCanReadTheDealBoundsTheNames(t *testing.T) {
+	e := setupParties(t)
+	e.exec(t, `DELETE FROM role_assignment WHERE user_id = $1`, e.owner)
+	e.exec(t, `INSERT INTO role_assignment (role_id, user_id) SELECT id, $1 FROM role WHERE key = 'rep' AND is_system`, e.owner)
+	e.denyRead(t, "rep", "contact")
 	second := e.secondRequest(t)
 	requireIn(t, second, "Acme GmbH")
 	requireNotIn(t, second, "Clara Buyer")
+}
+
+func (e *partyEnv) chatNotesAs(t *testing.T, user ids.UUID, query *string) int {
+	t.Helper()
+	var found int
+	ws := principal.WithWorkspaceID(context.Background(), e.ws)
+	err := database.WithWorkspaceTx(ws, e.pool, func(tx pgx.Tx) error {
+		members, err := identity.MemberPrincipalsTx(ws, tx, []ids.UUID{user})
+		if err != nil {
+			return err
+		}
+		kind := "note"
+		rows, _, err := e.puller.Activities.ListActivitiesIn(principal.WithActor(ws, members[user]), tx, activities.ListActivitiesInput{
+			Kind: &kind, Query: query,
+		})
+		for _, row := range rows {
+			if row.SourceSystem != nil && *row.SourceSystem == provenance.ChatSummarySource {
+				found++
+			}
+		}
+		return err
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return found
+}
+
+func TestTheFiledNoteIsReadByDealReadersOnlyInTheListAndInSearch(t *testing.T) {
+	e := setupParties(t)
+	outsider := e.outsider(t)
+	e.secondRequest(t)
+	search := "discount"
+	for name, query := range map[string]*string{"list": nil, "search": &search} {
+		if got := e.chatNotesAs(t, e.owner, query); got != 2 {
+			t.Errorf("%s: a deal reader sees %d chat notes, want both", name, got)
+		}
+		if got := e.chatNotesAs(t, outsider, query); got != 0 {
+			t.Errorf("%s: a member without deal read sees %d chat notes, want none", name, got)
+		}
+	}
 }
 
 func TestADepartedOwnerIsNotNamed(t *testing.T) {
