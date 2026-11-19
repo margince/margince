@@ -205,7 +205,7 @@ export const EditValue: Story = {
       await within(document.body).findByRole("dialog", { name: "Value" }),
     );
     await waitFor(() =>
-      expect(value.getByRole("spinbutton", { name: "Value" })).toBeVisible(),
+      expect(value.getByRole("textbox", { name: "Value" })).toBeVisible(),
     );
     await expect(
       value.queryByRole("spinbutton", { name: "Probability" }),
