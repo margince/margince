@@ -49,4 +49,23 @@ describe("the problem-words rule", () => {
       "src/features/contract.ts:3 prints the server's words for a refusal",
     ]);
   });
+
+  it("lets the modules lib/problem.ts re-exports read the words, and no other lib file", () => {
+    const lib = (name: string, text: string) => ({
+      path: join(srcDir, "lib", name),
+      area: "src" as const,
+      text,
+    });
+    const reader =
+      'import type { FieldProblem } from "./problembody";\n' +
+      "export const words = (fault: FieldProblem) => fault.message;\n";
+    const findings = plantedFindings(rule, [
+      lib("problem.ts", 'export { words } from "./faultsentence";\n'),
+      lib("faultsentence.ts", reader),
+      lib("elsewhere.ts", reader),
+    ]);
+    expect(findings).toEqual([
+      "src/lib/elsewhere.ts:2 prints the server's words for a refusal",
+    ]);
+  });
 });

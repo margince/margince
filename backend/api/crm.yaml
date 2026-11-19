@@ -73229,7 +73229,7 @@ components:
         sent empty is cleared.
       required: [display_name]
       properties:
-        display_name: { type: string, minLength: 1, maxLength: 120, description: 'The installation''s name too. The company''s own record holds it, so it carries a company name''s rule: `422 required` when blank, `422 too_long` past 120 characters.' }
+        display_name: { type: string, minLength: 1, maxLength: 200, description: 'The installation''s name too. The company''s own record holds it, so a blank name answers `422 required` and a changed name past 120 characters `422 too_long`.' }
         legal_name: { type: [string, 'null'], description: The registered legal entity. }
         registered_address: { type: [string, 'null'], description: The registered address as one formatted line. }
         register_vat: { type: [string, 'null'], description: 'VAT ID / commercial register entry (e.g. DE123456789, HRB 12345 B). Rows predate register_number and may hold either; a new read puts the VAT ID here and the register entry in register_number.' }

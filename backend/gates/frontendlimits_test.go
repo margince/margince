@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -41,8 +42,10 @@ func TestTheFrontendsCopiesOfServerLimitsMatchTheirOwners(t *testing.T) {
 		},
 		{
 			file: "../frontend/src/lib/installationcompany.ts", name: "COMPANY_NAME_MAX",
-			read:  regexp.MustCompile(`\bCOMPANY_NAME_MAX\s*=\s*(\d+)`),
-			owner: bodyMaxLength("/company", "put", "display_name"),
+			read: regexp.MustCompile(`\bCOMPANY_NAME_MAX\s*=\s*(\d+)`),
+			// The anchor company's write refuses a changed name past this, below the
+			// contract's maxLength of 200.
+			owner: fixed(strconv.Itoa(values.TextLabelCharacters)),
 		},
 		{
 			file: "../frontend/src/features/settings/users-invite-form.tsx", name: "the invite's display_name maxLength",
