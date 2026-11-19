@@ -75,12 +75,16 @@ func TestComposeSelectsTheWriterSideNotTheDirection(t *testing.T) {
 	for _, file := range files {
 		name := filepath.ToSlash(fset.Position(file.Pos()).Filename)
 		ast.Inspect(file, func(node ast.Node) bool {
-			lit, ok := node.(*ast.BasicLit)
-			if !ok || lit.Kind != token.STRING || !selectedDirection.MatchString(lit.Value) {
+			expr, ok := node.(ast.Expr)
+			if !ok {
+				return true
+			}
+			text, isLiteral := gatekit.LiteralText(expr)
+			if !isLiteral || !selectedDirection.MatchString(text) {
 				return true
 			}
 			if !transportDirectionReaders.Waived(t, name) {
-				t.Errorf("%s selects an activity's direction; select activities.WriterSideSQL for who wrote it", fset.Position(lit.Pos()))
+				t.Errorf("%s selects an activity's direction; select activities.WriterSideSQL for who wrote it", fset.Position(expr.Pos()))
 			}
 			return true
 		})

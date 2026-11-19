@@ -120,18 +120,18 @@ func fromPartyExistsSQL(alias string) string {
 // unresolved address or no party wrote it.
 func firstPartySideSQL(alias, role, machine string) string {
 	return `(SELECT CASE WHEN ws.user_id IS NOT NULL THEN 'outbound' WHEN NOT ` + machine + ` THEN 'inbound' END
-		FROM activity_participant ws LEFT JOIN contact wc ON wc.id = ws.contact_id AND wc.archived_at IS NULL
-		WHERE ` + partyWhereSQL(alias, role) + ` AND (ws.user_id IS NOT NULL OR wc.id IS NOT NULL)
+		FROM activity_participant ws
+		WHERE ` + partyWhereSQL(alias, role) + ` AND ` + auth.ParticipantStandsSQL("ws", alias) + `
+		  AND (ws.user_id IS NOT NULL OR EXISTS (SELECT 1 FROM contact wc WHERE wc.id = ws.contact_id AND wc.archived_at IS NULL))
 		ORDER BY ws.created_at, ws.id LIMIT 1)`
 }
 
 // partySQL is one stated party of the row in role, under the filters
 // readEmailPartiesOf applies.
 func partySQL(alias, role string) string {
-	return `SELECT 1 FROM activity_participant ws WHERE ` + partyWhereSQL(alias, role)
+	return `SELECT 1 FROM activity_participant ws WHERE ` + partyWhereSQL(alias, role) + ` AND ` + auth.ParticipantStandsSQL("ws", alias)
 }
 
 func partyWhereSQL(alias, role string) string {
-	return `ws.activity_id = ` + alias + `.id AND ws.role = '` + role + `' AND NOT ` +
-		auth.ParticipantUnstatedSQL("ws") + ` AND ` + auth.ParticipantStandsSQL("ws", alias)
+	return `ws.activity_id = ` + alias + `.id AND ws.role = '` + role + `' AND NOT ` + auth.ParticipantUnstatedSQL("ws")
 }
