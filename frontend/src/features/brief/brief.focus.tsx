@@ -88,29 +88,48 @@ export function Triage({
       {t("brief.focus.next")} <ArrowRight aria-hidden />
     </Button>
   );
+  // Every row opens on what it asks and why it is here, first on the line.
+  const details = onContext && (
+    <Button
+      variant="ghost"
+      className="brief-triage-details"
+      onClick={() => onContext(lead)}
+    >
+      {t("brief.focus.context")}
+    </Button>
+  );
+  // The type's step stands beside Done: it is the task's next step.
   const cardVerbs =
-    onContext || task || taskPending ? (
+    task || taskPending ? (
       <>
-        {/* The type's step stands beside Done, ahead of the way to read
-            more: it is the task's next step, the details are about it. */}
         {taskPending && <TaskNextStepsPending />}
         {step.steps}
-        {/* Every row opens on what it asks and why it is here. */}
-        {onContext && (
-          <Button
-            variant="ghost"
-            className="brief-triage-details"
-            onClick={() => onContext(lead)}
-          >
-            {t("brief.focus.context")}
-          </Button>
-        )}
       </>
     ) : undefined;
   // The open card says what to do, then its chips, then the deal's figures.
   // With no line of its own from the producer, the row's ask is its line.
   const told = Boolean(briefContextTitle(lead) || lead.detail);
   const inbox = lead.email_summary?.display_status;
+  // The chips are read after the name, so they follow it in the page too. They
+  // sit in the head after a message's own title, or else under the row's title.
+  const head = (
+    <div className="brief-triage-lead-head">
+      {emailNamesRow(lead) && (
+        <div className="brief-triage-title">
+          <Heading size="small" as="h3">
+            {taskName(lead, viewer, t, locale)}
+          </Heading>
+          {nextLink}
+        </div>
+      )}
+      <TaskMeta item={lead} link={listed} taskType={task && taskTypeOf(task)} />
+      {inbox && (
+        <p className="t-caption brief-triage-facts">
+          {t(`visibility.${inbox}`)}
+        </p>
+      )}
+    </div>
+  );
   // Every row of the day is a card in the server's order, and the one in hand
   // opens where it stands. An ordered list, so the order reaches a screen
   // reader as the claim it is.
@@ -133,26 +152,7 @@ export function Triage({
                 >
                   <LeadTick item={lead} />
                   <div className="brief-triage-body">
-                    <div className="brief-triage-lead-head">
-                      {emailNamesRow(lead) && (
-                        <div className="brief-triage-title">
-                          <Heading size="small" as="h3">
-                            {taskName(lead, viewer, t, locale)}
-                          </Heading>
-                          {nextLink}
-                        </div>
-                      )}
-                      <TaskMeta
-                        item={lead}
-                        link={listed}
-                        taskType={task && taskTypeOf(task)}
-                      />
-                      {inbox && (
-                        <p className="t-caption brief-triage-facts">
-                          {t(`visibility.${inbox}`)}
-                        </p>
-                      )}
-                    </div>
+                    {emailNamesRow(lead) && head}
                     <WorklistRow
                       // Personal ordering is the queue's, not the focus projection's.
                       allowPin={false}
@@ -166,9 +166,11 @@ export function Triage({
                           new Map([["filter", lead.category]]),
                         )
                       }
-                      context={cardVerbs}
+                      context={details}
+                      verbs={cardVerbs}
                       menu={step.others}
                       titleEnd={emailNamesRow(lead) ? undefined : nextLink}
+                      underTitle={emailNamesRow(lead) ? undefined : head}
                       quiet={step.fills}
                       // The card around this row says whose it is, why it is
                       // here and where it stands in the day, each once.
