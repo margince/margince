@@ -270,3 +270,37 @@ func TestAStartDateBoundsTheSameInEverySessionZone(t *testing.T) {
 		}
 	}
 }
+
+// The stored clock asks "does this contact work there now" the way the walk
+// does: a departure still ahead is a notice period, and an employment
+// asserted as former is over though it has no end date.
+func TestTheCompanyClockReadsCurrentEmploymentLikeTheWalk(t *testing.T) {
+	e := Setup(t)
+	notice := time.Date(2099, time.January, 1, 0, 0, 0, 0, time.UTC)
+	former := "former"
+	for _, tc := range []struct {
+		name   string
+		domain string
+		input  contacts.CreateRelationshipInput
+		counts bool
+	}{
+		{"a departure still ahead", "notice.test", contacts.CreateRelationshipInput{EndedAt: &notice}, true},
+		{"asserted former without an end date", "former.test", contacts.CreateRelationshipInput{EmploymentStatus: &former}, false},
+	} {
+		company := seedEmployerOnDomain(t, e, tc.name, tc.domain)
+		ann := e.SeedContact(t, "Ann "+tc.name, &e.Rep1)
+		contactID, companyID := ids.From[ids.ContactKind](ann), ids.From[ids.CompanyKind](company)
+		tc.input.Kind, tc.input.ContactID, tc.input.CompanyID, tc.input.Source = "employment", &contactID, &companyID, "manual"
+		if _, err := e.Contacts.CreateRelationship(e.Admin(), tc.input); err != nil {
+			t.Fatalf("%s: recording the employment: %v", tc.name, err)
+		}
+		seedOldJobMail(t, ann)
+		got := companyClock(t, e, company)
+		if tc.counts && (got == nil || !got.Equal(mailAtTheOldJob)) {
+			t.Errorf("%s: company clock = %v, want %v", tc.name, got, mailAtTheOldJob)
+		}
+		if !tc.counts && got != nil {
+			t.Errorf("%s: company clock = %v, want none", tc.name, got)
+		}
+	}
+}

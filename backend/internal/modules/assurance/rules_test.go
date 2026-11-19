@@ -295,3 +295,23 @@ func TestNoRuleRaisesARetiredType(t *testing.T) {
 		}
 	}
 }
+
+// 23:00 UTC on 14 May is already 15 May in Auckland, so a deal due on the 14th
+// has gone by there and has not in UTC.
+func TestClosePastReadsTheDayInTheInstallationZone(t *testing.T) {
+	t.Parallel()
+	auckland, err := time.LoadLocation("Pacific/Auckland")
+	if err != nil {
+		t.Fatalf("loading the zone: %v", err)
+	}
+	asOf := time.Date(testYear, time.May, 14, 23, 0, 0, 0, time.UTC)
+	due := healthy()
+	due.ExpectedClose = new(at(time.May, 14))
+	if got := ask(t, TypeClosePast, asOf, due, DefaultConfig()); got != nil {
+		t.Errorf("with no zone the 14th is still today, got %+v", got)
+	}
+	due.Zone = auckland
+	if got := ask(t, TypeClosePast, asOf, due, DefaultConfig()); got == nil {
+		t.Error("in Auckland the 14th is over, and the rule stayed quiet")
+	}
+}

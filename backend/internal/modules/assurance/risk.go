@@ -89,8 +89,7 @@ func closeDaysFrom(asOf time.Time, closes *time.Time, loc *time.Location) *int {
 	if closes == nil {
 		return nil
 	}
-	day := time.Date(closes.Year(), closes.Month(), closes.Day(), 0, 0, 0, 0, loc)
-	return new(elapsed.Days(asOf, day, loc))
+	return new(elapsed.Days(asOf, closeDayOn(closes, loc), loc))
 }
 
 // closeKeepsMoving is the close_pushed rule's own test. The review and the

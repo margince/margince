@@ -25,6 +25,9 @@ type Subject struct {
 	// The close date the deal carries, and whether anybody confirmed it.
 	ExpectedClose    *time.Time
 	CloseProvisional bool
+	// Zone is the installation's reporting zone, which names the day a close
+	// date is held against. Nil reads asOf's own location.
+	Zone *time.Location
 	// WinProbability is the deal's effective probability, and Likely whether
 	// it reaches the installation's Likely threshold.
 	WinProbability int
@@ -199,13 +202,17 @@ func Rules() []Rule {
 // so the deal still counts toward a period it cannot close in.
 func closePast() Rule {
 	return Rule{Type: TypeClosePast, Version: "v1", Ask: func(asOf time.Time, s Subject, _ Config) *Finding {
-		if s.ExpectedClose == nil || !s.ExpectedClose.Before(day(asOf)) {
+		today := day(asOf)
+		if s.Zone != nil {
+			today = day(asOf.In(s.Zone))
+		}
+		if s.ExpectedClose == nil || !closeDayOn(s.ExpectedClose, today.Location()).Before(today) {
 			return nil
 		}
 		return &Finding{
 			Type: TypeClosePast, SubjectID: s.DealID, Severity: SeverityHigh,
 			Claim:         map[string]any{"expected_close": s.ExpectedClose.Format(time.DateOnly)},
-			Observed:      map[string]any{"as_of": day(asOf).Format(time.DateOnly)},
+			Observed:      map[string]any{"as_of": today.Format(time.DateOnly)},
 			AffectedMinor: s.AmountMinor, Currency: s.Currency,
 		}
 	}}
@@ -356,6 +363,12 @@ func LogicalKey(f Finding) string {
 // differently at noon than at midnight on the same day.
 func day(at time.Time) time.Time {
 	return time.Date(at.Year(), at.Month(), at.Day(), 0, 0, 0, 0, at.Location())
+}
+
+// closeDayOn places a close date, a zoneless day, on loc's calendar, so it
+// compares with a day cut in loc.
+func closeDayOn(close *time.Time, loc *time.Location) time.Time {
+	return time.Date(close.Year(), close.Month(), close.Day(), 0, 0, 0, 0, loc)
 }
 
 // A deal in a stage whose own exit criteria are not met.

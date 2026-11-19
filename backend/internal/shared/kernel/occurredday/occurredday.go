@@ -195,6 +195,18 @@ func TodayAnchorSQL(asOf string) string {
 		`) + interval '12 hours') AT TIME ZONE 'UTC')`
 }
 
+// TodaySQL is the installation's calendar day at asOf, a date. CURRENT_DATE is
+// the session zone's day, which is the installation's only by coincidence.
+func TodaySQL(asOf string) string {
+	return `(CAST(` + asOf + ` AS timestamptz) AT TIME ZONE ` + installationZoneSQL + `)::date`
+}
+
+// DayStartSQL is the instant the installation's day begins, for a date
+// expression day. A bare cast to timestamptz would cut it at the session zone's midnight.
+func DayStartSQL(day string) string {
+	return `((` + day + `)::timestamp AT TIME ZONE ` + installationZoneSQL + `)`
+}
+
 // EndSQL is when the activity under alias ends. An instant ends at its start
 // plus its duration. A day entry ends with its date in the installation zone,
 // Ended's rule. alias is SQL the caller renders, never request text.
