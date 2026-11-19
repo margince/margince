@@ -32,7 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
-func readerOf(e *integration.Env, scope principal.RowScope, without ...string) context.Context {
+func readerOf(e *integration.Env, without ...string) context.Context {
 	objects := maps.Clone(integration.AdminPerms.Objects)
 	for _, object := range []string{"deal", "lead", "company", "pipeline", "installation_settings", "forecast", "activity", "contact"} {
 		objects[object] = principal.ObjectGrant{Read: true}
@@ -43,9 +43,20 @@ func readerOf(e *integration.Env, scope principal.RowScope, without ...string) c
 	for _, object := range without {
 		delete(objects, object)
 	}
-	perms := principal.Permissions{RoleKeys: integration.AdminPerms.RoleKeys, Objects: objects, RowScope: scope}
+	perms := principal.Permissions{RoleKeys: integration.AdminPerms.RoleKeys, Objects: objects, RowScope: principal.RowScopeAll}
 	ctx := integration.OnSeat(e.As(e.Rep1, []ids.UUID{e.Team1}, perms), principal.SeatFull)
 	return auth.WithIndividualPerformance(ctx, true)
+}
+
+// repReader is Rep1 on the shipped rep permissions, bounded to the team's rows,
+// with the reads a loss question needs.
+func repReader(e *integration.Env) context.Context {
+	perms := integration.RepPerms
+	perms.Objects = maps.Clone(perms.Objects)
+	for _, object := range []string{"deal", "pipeline", "installation_settings", "company", "contact"} {
+		perms.Objects[object] = principal.ObjectGrant{Read: true}
+	}
+	return auth.WithIndividualPerformance(integration.OnSeat(e.As(e.Rep1, []ids.UUID{e.Team1}, perms), principal.SeatFull), true)
 }
 
 func lossStage(t *testing.T, e *integration.Env) ids.StageID {
@@ -134,7 +145,7 @@ func (d dealsOf) win(deal ids.DealID) {
 func TestEveryLossIsOneEventWhateverHappenedToTheDealAfterwards(t *testing.T) {
 	e := integration.Setup(t)
 	d := newDeals(t, e)
-	rep := readerOf(e, principal.RowScopeAll)
+	rep := readerOf(e)
 	want := map[string]any{}
 	check := func(step string, price, competitor int64) {
 		t.Helper()
@@ -183,12 +194,12 @@ func TestEveryLossIsOneEventWhateverHappenedToTheDealAfterwards(t *testing.T) {
 	check("an explicitly reversed loss", 4, 2)
 
 	mine := analyticsquery.Filter{Field: "owner_id", Op: analyticsquery.OpEq, Value: e.Rep1.String()}
-	own, err := losses(readerOf(e, principal.RowScopeOwn), t, e, "loss_reason", mine)
+	own, err := losses(repReader(e), t, e, "loss_reason", mine)
 	if err != nil || own["price"] != int64(3) || own["competitor"] != int64(2) {
 		t.Errorf("a rep's own loss events by reason = %v, %v, want price 3 and competitor 2", own, err)
 	}
 	colleague := analyticsquery.Filter{Field: "owner_id", Op: analyticsquery.OpEq, Value: e.Rep3.String()}
-	if _, err := losses(readerOf(e, principal.RowScopeOwn), t, e, "loss_reason", colleague); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := losses(repReader(e), t, e, "loss_reason", colleague); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("a rep asking for a colleague's loss events got %v, want a permission refusal", err)
 	}
 }
@@ -206,7 +217,7 @@ func TestLossesFallInTheirOwnPeriodsNotTheFinalCloses(t *testing.T) {
 		WHEN 'price' THEN '2026-01-15T12:00:00Z'::timestamptz ELSE '2026-02-15T12:00:00Z'::timestamptz END
 		WHERE deal_id = $1 AND semantic_at_change = 'lost'`, deal.UUID)
 
-	got, err := losses(readerOf(e, principal.RowScopeAll), t, e, "period_month")
+	got, err := losses(readerOf(e), t, e, "period_month")
 	if err != nil || len(got) != 2 {
 		t.Fatalf("loss events by month = %v (%v), want two months", got, err)
 	}
@@ -221,7 +232,7 @@ func TestLossesFallInTheirOwnPeriodsNotTheFinalCloses(t *testing.T) {
 // closingMonths counts win-loss by the month of each deal's final close.
 func closingMonths(t *testing.T, e *integration.Env) map[string]any {
 	t.Helper()
-	reader := readerOf(e, principal.RowScopeAll)
+	reader := readerOf(e)
 	var answer compose.AnalyticsAnswer
 	query := analyticsquery.Query{Entity: "win-loss", GroupBy: []string{"period_month"}, Measures: []analyticsquery.Measure{{Fn: analyticsquery.CountAll, As: "n"}}}
 	if err := database.WithWorkspaceTx(reader, e.Pool, func(tx pgx.Tx) error {
@@ -323,7 +334,7 @@ func countsOf(point crmcontracts.ReportingPoint) map[string]int64 {
 func TestTheEntryCohortReadsAsCompaniesAndAsSources(t *testing.T) {
 	e := integration.Setup(t)
 	w := seedCohort(t, e)
-	reader := readerOf(e, principal.RowScopeAll)
+	reader := readerOf(e)
 	result, err := w.service.Evaluate(reader, w.selection)
 	if err != nil {
 		t.Fatal(err)
@@ -373,7 +384,7 @@ func TestTheEntryCohortReadsAsCompaniesAndAsSources(t *testing.T) {
 func TestAnEditionWithTheEntryCohortCardsReadsBack(t *testing.T) {
 	e := integration.Setup(t)
 	w := seedCohort(t, e)
-	admin := readerOf(e, principal.RowScopeAll)
+	admin := readerOf(e)
 	edition := w.publish(admin, t)
 
 	whole, err := w.service.GetEdition(admin, edition)
@@ -393,7 +404,7 @@ func TestAnEditionWithTheEntryCohortCardsReadsBack(t *testing.T) {
 		}
 	}
 
-	rep := readerOf(e, principal.RowScopeAll, "company")
+	rep := readerOf(e, "company")
 	narrowed, err := w.service.GetEdition(rep, edition)
 	if err != nil {
 		t.Fatalf("a rep without company read reading the edition: %v", err)
@@ -449,9 +460,9 @@ func (w cohortWorld) publish(admin context.Context, t *testing.T) ids.UUID {
 func TestTheCompanyCardIsWithheldFromAReaderWhoMayNotReadItsLeads(t *testing.T) {
 	e := integration.Setup(t)
 	w := seedCohort(t, e)
-	admin := readerOf(e, principal.RowScopeAll)
+	admin := readerOf(e)
 	edition := w.publish(admin, t)
-	noLeads := readerOf(e, principal.RowScopeAll, "lead")
+	noLeads := readerOf(e, "lead")
 
 	frozen, err := w.service.GetEdition(noLeads, edition)
 	if err != nil {
