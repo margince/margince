@@ -48,7 +48,7 @@ type liveStage struct {
 // resolveLiveStage answers whether a deal in this pipeline may stand in this
 // stage. A stage nobody has, or that is archived, is a StageGoneError. A live
 // stage of another pipeline is a 422 naming field. Both the advance and the
-// create door ask it, and a door whose caller typed the stage wraps the first
+// create door ask it. A retired pipeline takes no deal in or along its stages. A door whose caller typed the stage wraps the first
 // in auth.ReferenceNotFoundError.
 func resolveLiveStage(ctx context.Context, tx pgx.Tx, stageID ids.StageID, pipelineID ids.PipelineID, field string) (liveStage, error) {
 	var stage liveStage
@@ -65,6 +65,14 @@ func resolveLiveStage(ctx context.Context, tx pgx.Tx, stageID ids.StageID, pipel
 	}
 	if stagePipeline.UUID != pipelineID.UUID {
 		return liveStage{}, &StagePipelineMismatchError{StageID: stageID, Field: field}
+	}
+	var retired bool
+	if err := tx.QueryRow(ctx,
+		`SELECT archived_at IS NOT NULL FROM pipeline WHERE id = $1`, pipelineID).Scan(&retired); err != nil {
+		return liveStage{}, fmt.Errorf("read the stage's pipeline: %w", err)
+	}
+	if retired {
+		return liveStage{}, &PipelineRetiredError{Field: field}
 	}
 	return stage, nil
 }

@@ -22,6 +22,19 @@ export const pipelinesOptions = queryOptions({
     unwrap(await api.GET("/pipelines", { params: { query: {} }, signal })).data,
 });
 
+// Retired pipelines too: a deal that sits on one still has to be drawn on its
+// own stages. The active catalog above is what pickers offer.
+export const pipelinesWithArchivedOptions = queryOptions({
+  queryKey: ["pipelines", "with-archived"],
+  queryFn: async ({ signal }) =>
+    unwrap(
+      await api.GET("/pipelines", {
+        params: { query: { include_archived: true } },
+        signal,
+      }),
+    ).data,
+});
+
 /**
  * The pipelines with each stage named in the reader's UI language. Settings
  * reads the stored names through its own query, so it edits what is stored.
