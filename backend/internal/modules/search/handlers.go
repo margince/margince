@@ -153,6 +153,9 @@ func wireHits(hits []Hit) []crmcontracts.SearchResult {
 		if hit.LogoURL != nil {
 			result.LogoUrl = new(*hit.LogoURL)
 		}
+		if hit.Standing != nil {
+			result.Standing = new(*hit.Standing)
+		}
 		data = append(data, result)
 	}
 	return data

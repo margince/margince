@@ -57,7 +57,7 @@ step 4. The dev default we ship binds **`gemini`** on `cheap_cloud` and `premium
 # variable:
 tiers:
   cheap_cloud: { provider: gemini, model: gemini-3.1-flash-lite }
-  premium:     { provider: gemini, model: gemini-3.5-flash }
+  premium:     { provider: gemini, model: gemini-3.8-flash, thinking_level: low }
 
 # …or any OpenAI-compatible vendor via the generic adapter. It needs a host,
 # set once on the provider (the key comes from OPENAI_COMPATIBLE_API_KEY):

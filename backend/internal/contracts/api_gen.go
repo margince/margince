@@ -14853,6 +14853,7 @@ const (
 	ImportReasonCodeCannotWriteType              ImportReasonCode = "cannot_write_type"
 	ImportReasonCodeCloseDateFuture              ImportReasonCode = "close_date_future"
 	ImportReasonCodeCloseDatePast                ImportReasonCode = "close_date_past"
+	ImportReasonCodeCompanyDomainMatched         ImportReasonCode = "company_domain_matched"
 	ImportReasonCodeCompanyDuplicateFound        ImportReasonCode = "company_duplicate_found"
 	ImportReasonCodeCompanyDuplicateSkipped      ImportReasonCode = "company_duplicate_skipped"
 	ImportReasonCodeCompanyLinkOnMeeting         ImportReasonCode = "company_link_on_meeting"
@@ -14941,6 +14942,7 @@ const (
 	ImportReasonCodeSizeBandInvalid              ImportReasonCode = "size_band_invalid"
 	ImportReasonCodeStageUnknown                 ImportReasonCode = "stage_unknown"
 	ImportReasonCodeStageUnnamed                 ImportReasonCode = "stage_unnamed"
+	ImportReasonCodeStoredValuesKept             ImportReasonCode = "stored_values_kept"
 	ImportReasonCodeTagCreated                   ImportReasonCode = "tag_created"
 	ImportReasonCodeTagNameInvalid               ImportReasonCode = "tag_name_invalid"
 	ImportReasonCodeTagNew                       ImportReasonCode = "tag_new"
@@ -15002,6 +15004,8 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeCloseDateFuture:
 		return true
 	case ImportReasonCodeCloseDatePast:
+		return true
+	case ImportReasonCodeCompanyDomainMatched:
 		return true
 	case ImportReasonCodeCompanyDuplicateFound:
 		return true
@@ -15179,6 +15183,8 @@ func (e ImportReasonCode) Valid() bool {
 		return true
 	case ImportReasonCodeStageUnnamed:
 		return true
+	case ImportReasonCodeStoredValuesKept:
+		return true
 	case ImportReasonCodeTagCreated:
 		return true
 	case ImportReasonCodeTagNameInvalid:
@@ -15316,6 +15322,24 @@ func (e ImportRunStatus) Valid() bool {
 	case ImportRunStatusUndone:
 		return true
 	case ImportRunStatusValidating:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ImportSourceProfileObjectChosenBy.
+const (
+	ImportSourceProfileObjectChosenByColumns ImportSourceProfileObjectChosenBy = "columns"
+	ImportSourceProfileObjectChosenByNone    ImportSourceProfileObjectChosenBy = "none"
+)
+
+// Valid indicates whether the value is a known member of the ImportSourceProfileObjectChosenBy enum.
+func (e ImportSourceProfileObjectChosenBy) Valid() bool {
+	switch e {
+	case ImportSourceProfileObjectChosenByColumns:
+		return true
+	case ImportSourceProfileObjectChosenByNone:
 		return true
 	default:
 		return false
@@ -40176,6 +40200,22 @@ type ChatEpisode struct {
 	Url string `json:"url"`
 }
 
+// CitedProvision The law a finding or refusal rests on, as the recipient's own jurisdiction pack cites it
+// for the sending legal entity. Shown beside the engine's sentence; it decides nothing.
+// Absent when the pack cites no law for it, or when the citation may not be shown: the pack's
+// review is overdue or not yet done, or the law has not taken effect or has expired. On a
+// review it is the citation shown when the refusal was assessed, never today's.
+type CitedProvision struct {
+	// Instrument The law or decree, as a regulator cites it. Not translated.
+	Instrument string `json:"instrument"`
+
+	// Provision The part of the instrument, such as "§ 7(2)".
+	Provision string `json:"provision"`
+
+	// SourceUrl The official published text, over https.
+	SourceUrl string `json:"source_url"`
+}
+
 // ClaimEvidence The receipt behind one cited record (DOSS-WIRE-3). Each `source_kind` owes its own
 // identifying fields (DOSS-PARAM-9), carried in `identity`; a receipt that cannot fill one
 // names the gap in `gaps` rather than substituting a plausible value.
@@ -44456,6 +44496,11 @@ type ContactCaseDecisionRequest struct {
 	// OwnerId Who owns the remaining contact: the live owner of one of the selected members.
 	OwnerId openapi_types.UUID `json:"owner_id"`
 
+	// Prefer Where the selected members disagree, the member whose value the remaining contact takes.
+	// Each one must be in `member_ids`. A field left out keeps the survivor's value, and an empty one takes another member's.
+	// No value is lost: every address, number and employment of every member stays on the remaining contact.
+	Prefer *ContactCasePreference `json:"prefer,omitempty"`
+
 	// Revision The case revision the reviewer looked at.
 	Revision string `json:"revision"`
 
@@ -44549,6 +44594,23 @@ type ContactCaseOwner struct {
 
 // ContactCaseOwnerSeat defines model for ContactCaseOwner.Seat.
 type ContactCaseOwnerSeat string
+
+// ContactCasePreference Where the selected members disagree, the member whose value the remaining contact takes.
+// Each one must be in `member_ids`. A field left out keeps the survivor's value, and an empty one takes another member's.
+// No value is lost: every address, number and employment of every member stays on the remaining contact.
+type ContactCasePreference struct {
+	// Email The member whose primary email address becomes the remaining contact's primary one.
+	Email *openapi_types.UUID `json:"email,omitempty"`
+
+	// Employment The member whose current employer becomes the remaining contact's current one.
+	Employment *openapi_types.UUID `json:"employment,omitempty"`
+
+	// Name The member whose first and last name the remaining contact takes.
+	Name *openapi_types.UUID `json:"name,omitempty"`
+
+	// Title The member whose title the remaining contact takes.
+	Title *openapi_types.UUID `json:"title,omitempty"`
+}
 
 // ContactCaseResolution defines model for ContactCaseResolution.
 type ContactCaseResolution struct {
@@ -49582,6 +49644,13 @@ type DraftContentFinding struct {
 	// Language The language the draft must lead with, for `advertising_language_first`.
 	Language *string `json:"language,omitempty"`
 
+	// Provision The law a finding or refusal rests on, as the recipient's own jurisdiction pack cites it
+	// for the sending legal entity. Shown beside the engine's sentence; it decides nothing.
+	// Absent when the pack cites no law for it, or when the citation may not be shown: the pack's
+	// review is overdue or not yet done, or the law has not taken effect or has expired. On a
+	// review it is the citation shown when the refusal was assessed, never today's.
+	Provision *CitedProvision `json:"provision,omitempty"`
+
 	// Requirement `claim_without_proof`: the draft makes a claim the pack allows only beside a stated
 	// proof (the document's name, number and date), and states none.
 	// `advertising_language_first`: the draft does not open in the pack's disclosure
@@ -51150,6 +51219,13 @@ type FooterFinding struct {
 
 	// MissingMeans Missing contact methods, such as email, phone or web.
 	MissingMeans []string `json:"missing_means"`
+
+	// Provision The law a finding or refusal rests on, as the recipient's own jurisdiction pack cites it
+	// for the sending legal entity. Shown beside the engine's sentence; it decides nothing.
+	// Absent when the pack cites no law for it, or when the citation may not be shown: the pack's
+	// review is overdue or not yet done, or the law has not taken effect or has expired. On a
+	// review it is the citation shown when the refusal was assessed, never today's.
+	Provision *CitedProvision `json:"provision,omitempty"`
 }
 
 // ForecastAssurance What the most recent nightly input check found, and how much of the pipeline it was able to reach.
@@ -52943,9 +53019,12 @@ type ImportRunLinks struct {
 	// Applied Links actually written. Zero on a dry run, which writes nothing.
 	Applied int `json:"applied" minimum:"0"`
 
-	// Offered Links the file asks for. A dry run reports this and nothing else,
-	// because resolving an endpoint is a read the dry run has not done —
-	// it says how many rows named an employer, not how many will find one.
+	// Offered Links the file asks for on the rows the run lands. A link whose own
+	// row is skipped is not counted, because that row is reported as a
+	// skip; `unresolved` still lists it. A dry run reports this and nothing
+	// else, because resolving an endpoint is a read the dry run has not
+	// done — it says how many landing rows named an employer, not how many
+	// will find one.
 	Offered int `json:"offered" minimum:"0"`
 
 	// Unresolved The links that named something the run could not act on, each with
@@ -53145,6 +53224,16 @@ type ImportSourceProfile struct {
 	// merge.
 	Object *ImportObject `json:"object,omitempty"`
 
+	// ObjectChosenBy How `object` was chosen for a CSV uploaded without one. The header is
+	// matched as `suggested_mapping` matches it, once for each type, and
+	// only a column that exactly one type's suggestion maps counts.
+	// `columns`: one type's suggestion maps more such columns than any
+	// other's. `none`: no type maps strictly the most, so `object` is
+	// `lead` and a screen asks the reader to choose. Absent when the upload
+	// named its type, and for a ZIP. The run's `profile` keeps it until a
+	// draft save names `object`, which is the reader's own choice.
+	ObjectChosenBy *ImportSourceProfileObjectChosenBy `json:"object_chosen_by,omitempty"`
+
 	// Parts One profile per importable file of a ZIP, in import order. Absent for a single CSV, whose profile is the top level.
 	Parts *[]ImportPartProfile `json:"parts,omitempty"`
 
@@ -53176,6 +53265,16 @@ type ImportSourceProfile struct {
 	// against the field's type and picklist options.
 	Targets []string `json:"targets"`
 }
+
+// ImportSourceProfileObjectChosenBy How `object` was chosen for a CSV uploaded without one. The header is
+// matched as `suggested_mapping` matches it, once for each type, and
+// only a column that exactly one type's suggestion maps counts.
+// `columns`: one type's suggestion maps more such columns than any
+// other's. `none`: no type maps strictly the most, so `object` is
+// `lead` and a screen asks the reader to choose. Absent when the upload
+// named its type, and for a ZIP. The run's `profile` keeps it until a
+// draft save names `object`, which is the reader's own choice.
+type ImportSourceProfileObjectChosenBy string
 
 // ImportUndoReport The result of undoing a committed import run (IEM-WIRE-9; A93). Every
 // import-created row lands in exactly one of three buckets: reversed,
@@ -54637,6 +54736,34 @@ type LatestInboundList struct {
 
 	// LastExchange The newest call, meeting, email or message on the record. Absent when there is none.
 	LastExchange *LastExchange `json:"last_exchange,omitempty"`
+
+	// LastInbound A polymorphic timeline item. Mirrors the `activity` table + `activity_link`.
+	// **Per-kind field constraints** (enforced server-side to match the DB `activity_task_fields`
+	// CHECK; the OpenAPI cannot express these conditionally): `due_at`/`assignee_id`/`is_done`/
+	// `done_at` are valid ONLY when `kind=task`; `meeting_status` ONLY when `kind=meeting`;
+	// `duration_seconds` only for meeting/call; `direction` is null for note/task. Setting a
+	// disallowed field for the kind returns `422 code: field_not_valid_for_kind` (the API rejects
+	// what the DB CHECK would reject, rather than 500-ing at write time).
+	// `channel_provider` is the same kind of constraint in both directions: non-null exactly
+	// when `kind=message` (ADR-0107).
+	// **Custom fields**: the values of the workspace's activity custom fields arrive as extra
+	// top-level `cf_` keys. They are content, so they are absent whenever `content_state` is
+	// `withheld`.
+	LastInbound *Activity `json:"last_inbound,omitempty"`
+
+	// LastOutbound A polymorphic timeline item. Mirrors the `activity` table + `activity_link`.
+	// **Per-kind field constraints** (enforced server-side to match the DB `activity_task_fields`
+	// CHECK; the OpenAPI cannot express these conditionally): `due_at`/`assignee_id`/`is_done`/
+	// `done_at` are valid ONLY when `kind=task`; `meeting_status` ONLY when `kind=meeting`;
+	// `duration_seconds` only for meeting/call; `direction` is null for note/task. Setting a
+	// disallowed field for the kind returns `422 code: field_not_valid_for_kind` (the API rejects
+	// what the DB CHECK would reject, rather than 500-ing at write time).
+	// `channel_provider` is the same kind of constraint in both directions: non-null exactly
+	// when `kind=message` (ADR-0107).
+	// **Custom fields**: the values of the workspace's activity custom fields arrive as extra
+	// top-level `cf_` keys. They are content, so they are absent whenever `content_state` is
+	// `withheld`.
+	LastOutbound *Activity `json:"last_outbound,omitempty"`
 }
 
 // LawfulBasisConfirmation defines model for LawfulBasisConfirmation.
@@ -59864,8 +59991,12 @@ type Problem struct {
 	Detail *string `json:"detail,omitempty"`
 
 	// Details Structured machine context — e.g. `existing_id` on 409 duplicate, or an
-	// `errors` array of `{ field, code, message }` on 422 validation. A `too_long`
-	// entry also carries `max`, the limit in characters.
+	// `errors` array of `{ field, code, message }` on 422 validation. An entry that
+	// refuses at a limit also carries `max`: the limit in characters for `too_long`,
+	// in rows for `too_many_rows`, in characters for `source_name`. An entry whose
+	// code names other values carries them in `params`, an object of text values by
+	// name, so a screen can word the code in the reader's language; `message` stays
+	// the English sentence.
 	//
 	// A 429 that an agent's limit answers carries `limit`: `kind` names it (`calls`,
 	// `writes` or `egress` for a window allowance, `pacing` for the per-minute limit),
@@ -61885,7 +62016,10 @@ type RefusedRecipient struct {
 	FooterFindings *[]FooterFinding `json:"footer_findings,omitempty"`
 
 	// FooterPreview Configured disclosure text included in this message. Contains no recipient credentials.
-	FooterPreview     *[]string                    `json:"footer_preview,omitempty"`
+	FooterPreview *[]string `json:"footer_preview,omitempty"`
+
+	// Provision The law the recipient's pack cites for `reason_code`, as shown when the refusal was assessed.
+	Provision         *CitedProvision              `json:"provision,omitempty"`
 	ReasonCode        string                       `json:"reason_code"`
 	RequestedCategory *string                      `json:"requested_category,omitempty"`
 	SendingEntityId   *openapi_types.UUID          `json:"sending_entity_id,omitempty"`
@@ -65563,6 +65697,33 @@ type SearchHitEmployer struct {
 	CompanyName string             `json:"company_name"`
 }
 
+// SearchHitStanding What a result list shows beside a record hit. A field that does not apply to the hit's type, or that the record does not hold, is null.
+type SearchHitStanding struct {
+	// AmountMinor A deal's amount in minor units of `currency`. Null when the deal is unpriced, and null when a field mask withholds it, which `masked_fields` then names.
+	AmountMinor *int64 `json:"amount_minor,omitempty"`
+
+	// Currency The ISO 4217 code of `amount_minor`; null with it.
+	Currency *string `json:"currency,omitempty"`
+
+	// DueOn A deal's expected close date or a project's target end date.
+	DueOn *openapi_types.Date `json:"due_on,omitempty"`
+
+	// JobTitle A contact's job title. Null on every other type.
+	JobTitle *string `json:"job_title,omitempty"`
+
+	// LastActivityAt When the record was last in touch: its newest logged call, mail, meeting or note. Set on a contact, a company and a deal.
+	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
+
+	// MaskedFields The fields above a field mask withheld from this caller, by their wire names.
+	MaskedFields *[]string `json:"masked_fields,omitempty"`
+
+	// Stage A deal's stage, named in the reader's language. Null on every other type.
+	Stage *string `json:"stage,omitempty"`
+
+	// State A deal's status (open, won, lost), a lead's status (new, contacted, engaged, promoted, disqualified) or a project's phase (initiative, pursuing, delivering, closed). Null on a contact and a company.
+	State *string `json:"state,omitempty"`
+}
+
 // SearchNearMatch defines model for SearchNearMatch.
 type SearchNearMatch struct {
 	Id openapi_types.UUID `json:"id"`
@@ -65609,6 +65770,9 @@ type SearchResult struct {
 	// Score Relevance score.
 	Score   *float32 `json:"score,omitempty"`
 	Snippet *string  `json:"snippet,omitempty"`
+
+	// Standing Where a contact, company, deal, lead or project hit stands, read with the page under THIS caller's grants and field masks, so a result list can say it without opening each record. Absent on every other hit type.
+	Standing *SearchHitStanding `json:"standing,omitempty"`
 
 	// Title Display label (name/subject).
 	Title *string `json:"title,omitempty"`
@@ -65755,6 +65919,9 @@ type SendAuthorizationPreviewRecipient struct {
 	// the sender, before the message is checked, and this answer is the one that new
 	// contact gets. Absent or false for an address a record already holds.
 	NewContact *bool `json:"new_contact,omitempty"`
+
+	// Provision The law the recipient's pack cites for `reason_code`, absent when none may be shown.
+	Provision *CitedProvision `json:"provision,omitempty"`
 
 	// ReasonCode Why, in the engine's own vocabulary — `allowed`, `no_compatible_evidence`,
 	// `marketing_objection`, `no_marketing_consent` and the rest. A composer maps it to
@@ -70438,11 +70605,13 @@ type VCardImportResult struct {
 	// stays in `superseded_value`, and a field a human corrected stands.
 	// `needs_review` — a resemblance, written nowhere; open the candidate and decide.
 	// `proposed` — a card read from a photo that nobody matched, waiting on an approval.
-	// `skipped` — the card states no name, carries a sending system's address, or matches a
-	// contact the caller may not write; `reason` says which.
+	// `skipped` — the card states no name or one over 120 characters, carries a sending
+	// system's address, holds a value that is not readable text or cannot be stored, or
+	// matches a contact the caller may not write; `reason` says which.
 	Outcome VCardImportResultOutcome `json:"outcome"`
 
-	// Reason Why a card was skipped, or a warning about an imported contact without a channel.
+	// Reason Why a card was skipped. For a written card, a warning: the contact has no channel, or the
+	// card's title was cut to the length the field holds.
 	Reason *string `json:"reason,omitempty"`
 }
 
@@ -70451,8 +70620,9 @@ type VCardImportResult struct {
 // stays in `superseded_value`, and a field a human corrected stands.
 // `needs_review` — a resemblance, written nowhere; open the candidate and decide.
 // `proposed` — a card read from a photo that nobody matched, waiting on an approval.
-// `skipped` — the card states no name, carries a sending system's address, or matches a
-// contact the caller may not write; `reason` says which.
+// `skipped` — the card states no name or one over 120 characters, carries a sending
+// system's address, holds a value that is not readable text or cannot be stored, or
+// matches a contact the caller may not write; `reason` says which.
 type VCardImportResultOutcome string
 
 // VoiceBuild defines model for VoiceBuild.
@@ -74105,6 +74275,9 @@ type CreateAcquisitionSourceParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -74136,6 +74309,9 @@ type UpdateAcquisitionSourceParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -74248,6 +74424,9 @@ type LogActivityParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -74287,6 +74466,9 @@ type RelinkActivitiesParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -74311,6 +74493,9 @@ type RelinkThreadParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -74351,6 +74536,9 @@ type UpdateActivityParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -74434,6 +74622,9 @@ type RelinkActivityParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -74468,6 +74659,9 @@ type SendEmailParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -74500,6 +74694,9 @@ type SendMessageParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -74737,6 +74934,9 @@ type RecordSalesDecisionParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -74992,6 +75192,9 @@ type CreateReportingReportParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -75110,6 +75313,9 @@ type SaveSalesGoalDraftParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -75136,6 +75342,9 @@ type PublishSalesGoalPlanParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -75334,6 +75543,9 @@ type ApproveApprovalParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -75369,6 +75581,9 @@ type UpdateRecordAssignmentParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -75594,6 +75809,9 @@ type BookMeetingParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -75618,6 +75836,9 @@ type ExecuteBulkChangeParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -75642,6 +75863,9 @@ type UndoBulkChangeParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -75835,6 +76059,33 @@ type ListOpenCommitmentsParams struct {
 
 	// Limit Cap the set. 50 is also the ceiling.
 	Limit *int `form:"limit,omitempty" json:"limit,omitempty" maximum:"50" minimum:"1"`
+}
+
+// DirectCommunicationSendParams defines parameters for DirectCommunicationSend.
+type DirectCommunicationSendParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
 // ListCompaniesParams defines parameters for ListCompanies.
@@ -76036,6 +76287,9 @@ type CreateCompanyParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -76076,6 +76330,9 @@ type UpdateCompanyParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -76279,6 +76536,9 @@ type CreateCompanyFactParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -76311,6 +76571,9 @@ type DeleteCompanyFactParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -76350,6 +76613,9 @@ type UpdateCompanyFactParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -76389,6 +76655,9 @@ type ConfirmCompanyFactParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -76461,6 +76730,9 @@ type LinkCompanyContactsParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -76491,6 +76763,9 @@ type MergeCompanyParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -76556,6 +76831,9 @@ type UpdateCompanyProfileFieldParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -76595,6 +76873,9 @@ type ConfirmCompanyProfileFieldParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -76634,6 +76915,9 @@ type RejectCompanyParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -76665,6 +76949,9 @@ type ShareCompanyContactsParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -76738,6 +77025,9 @@ type StartAnchorCompanySiteReadParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -76762,6 +77052,9 @@ type ConfirmAnchorCompanySiteReadParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -77078,6 +77371,9 @@ type CreateContactParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -77108,6 +77404,9 @@ type QuickCaptureContactParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -77148,6 +77447,9 @@ type UpdateContactParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -77201,6 +77503,9 @@ type RecordConsentParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -77335,6 +77640,9 @@ type LinkContactEmployerParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -77359,6 +77667,9 @@ type CreateContactEnrichmentRunParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -77402,6 +77713,9 @@ type MergeContactParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -77463,6 +77777,9 @@ type CreateContractParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -77569,6 +77886,9 @@ type CreateCustomFieldParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -77593,6 +77913,9 @@ type RenameCustomFieldParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -77624,6 +77947,9 @@ type UpdateCustomFieldOptionsParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -77648,6 +77974,9 @@ type RetireCustomFieldParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -77693,6 +78022,9 @@ type CreateDataSubjectRequestParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -77768,6 +78100,9 @@ type CreateDealRoomParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -77874,6 +78209,9 @@ type AcceptDealSuggestionParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -77898,6 +78236,9 @@ type DismissDealSuggestionParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -78085,6 +78426,9 @@ type CreateDealParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -78153,6 +78497,9 @@ type UpdateDealParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -78184,6 +78531,9 @@ type AdvanceDealParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -78296,6 +78646,9 @@ type CreateOfferParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -78386,6 +78739,9 @@ type SendCompanyEmailParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -78595,6 +78951,9 @@ type RecordForecastCallParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -78664,7 +79023,7 @@ type GetImportFormatParamsLang string
 
 // UploadImportSourceMultipartBody defines parameters for UploadImportSource.
 type UploadImportSourceMultipartBody struct {
-	// File The delimited file to import, or a ZIP of them named by type (`companies.csv`, `contacts.csv`, `leads.csv`, `deals.csv`, `activities.csv`). UTF-8; the first row is the header. `object` is required for a CSV and ignored for a ZIP, whose file names say each part's type. A ZIP is known by its content, not its name.
+	// File The delimited file to import, or a ZIP of them named by type (`companies.csv`, `contacts.csv`, `leads.csv`, `deals.csv`, `activities.csv`). UTF-8; the first row is the header. `object` is ignored for a ZIP, whose file names say each part's type. A CSV sent without `object` is typed by its header, and the profile's `object_chosen_by` says how. A ZIP is known by its content, not its name.
 	File openapi_types.File `json:"file"`
 
 	// Object What the file's rows are, and therefore what the run creates.
@@ -78768,6 +79127,9 @@ type CreateLeadDisqualifyReasonParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -78792,6 +79154,9 @@ type UpdateLeadDisqualifyReasonParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -78816,6 +79181,9 @@ type CreateLeadOriginParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -78840,6 +79208,9 @@ type UpdateLeadOriginParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -78864,6 +79235,9 @@ type CreateLeadSourceParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -78888,6 +79262,9 @@ type UpdateLeadSourceParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -79095,6 +79472,9 @@ type CreateLeadParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -79119,6 +79499,9 @@ type UpdateLeadParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -79156,6 +79539,9 @@ type DemoteLeadParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -79180,6 +79566,9 @@ type AcceptPartnerLeadParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -79204,6 +79593,9 @@ type PromoteLeadParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -79258,6 +79650,9 @@ type ReopenLeadParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -79423,6 +79818,9 @@ type CreateLossReasonParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -79452,6 +79850,9 @@ type DecideLegacyLossReasonParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -79483,6 +79884,9 @@ type UpdateLossReasonParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -79698,6 +80102,9 @@ type CreateOfferTemplateParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -79739,6 +80146,9 @@ type UpdateOfferTemplateParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -79803,6 +80213,9 @@ type RegenerateOfferParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -79837,6 +80250,9 @@ type RenderOfferParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -79861,6 +80277,9 @@ type SendOfferParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -79901,6 +80320,9 @@ type PutOnboardingStateParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -79925,6 +80347,9 @@ type CreatePartnerStageParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -79949,6 +80374,9 @@ type UpdatePartnerStageParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -80028,6 +80456,9 @@ type CreatePipelineParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -80052,6 +80483,9 @@ type ReorderPipelinesParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -80086,6 +80520,9 @@ type UpdatePipelineParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -80117,6 +80554,9 @@ type ReorderStagesParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -80213,6 +80653,9 @@ type CreateProductParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -80318,6 +80761,9 @@ type CreateProjectParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -80355,6 +80801,9 @@ type TransferProjectOwnershipParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -80397,6 +80846,9 @@ type UpdateProjectParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -80436,6 +80888,9 @@ type AdvanceProjectPhaseParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -80513,6 +80968,9 @@ type CreateProjectHealthAssessmentParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -80537,6 +80995,9 @@ type CorrectProjectHealthAssessmentParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -80561,6 +81022,9 @@ type UndoProjectHealthAssessmentParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -80607,6 +81071,9 @@ type UpdateProviderConnectionParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -80638,6 +81105,9 @@ type ConnectProviderParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -80692,6 +81162,9 @@ type BookPublicMeetingParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -80880,6 +81353,9 @@ type CreateRecordGrantParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -80923,6 +81399,9 @@ type CreateRecordRoleParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -80947,6 +81426,9 @@ type UpdateRecordRoleParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -81029,6 +81511,9 @@ type OfferOwnershipTransferParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -81053,6 +81538,9 @@ type RequestOwnershipTransferParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -81077,6 +81565,9 @@ type CreateRecordAssignmentParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -81196,6 +81687,9 @@ type DeleteArchivedActivitiesParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -81236,6 +81730,9 @@ type LiftLegalHoldParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -81260,6 +81757,9 @@ type PlaceLegalHoldParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -81300,6 +81800,9 @@ type PinActivityToFloorParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -81324,6 +81827,9 @@ type ReleaseRestrictedActivityParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -81416,6 +81922,9 @@ type CreateMeetingInvitationParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -81459,6 +81968,9 @@ type CreateMeetingProposalParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -81559,6 +82071,9 @@ type CreateSignalParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -81583,6 +82098,9 @@ type UpdateSignalParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -81614,6 +82132,9 @@ type ResolveSignalParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -81646,6 +82167,9 @@ type CreateStageParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -81680,6 +82204,9 @@ type UpdateStageParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -81716,6 +82243,9 @@ type CreateStageExitCriterionParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -81779,6 +82309,9 @@ type CreateTaskParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -81875,6 +82408,9 @@ type HandOverUserWorkParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -81899,6 +82435,9 @@ type MergeMembersParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -81958,6 +82497,9 @@ type CreateVoiceProfileParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -82002,6 +82544,9 @@ type CreateVoiceBuildParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -82033,6 +82578,9 @@ type ClearVoiceCorpusParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -82073,6 +82621,9 @@ type RejectVoiceDraftParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -82097,6 +82648,9 @@ type IngestVoiceCorpusSourceParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -82121,6 +82675,9 @@ type LearnVoiceFromSentMailParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -82188,6 +82745,9 @@ type ApplyVoiceProfileVersionParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -82219,6 +82779,9 @@ type RejectVoiceProfileVersionParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -82243,6 +82806,9 @@ type RollbackVoiceProfileVersionParams struct {
 	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
 	// request under the key failed after it had started, so check whether it took effect before
 	// retrying under a new key.
+	// A request the server stopped for time answers `503 code: request_timed_out` with
+	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
 	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
 	// answer lost": without it the blind retry answers `409 version_skew`, because the first
 	// attempt already bumped the version.
@@ -98378,7 +98944,7 @@ type ServerInterface interface {
 	CorrectCommunicationWording(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Send a refused message anyway, on a named human's recorded decision.
 	// (POST /communication-reviews/{id}/direct-send)
-	DirectCommunicationSend(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	DirectCommunicationSend(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params DirectCommunicationSendParams)
 	// List companies (live by default; cursor-paginated).
 	// (GET /companies)
 	ListCompanies(w http.ResponseWriter, r *http.Request, params ListCompaniesParams)
@@ -102578,7 +103144,7 @@ func (_ Unimplemented) CorrectCommunicationWording(w http.ResponseWriter, r *htt
 
 // Send a refused message anyway, on a named human's recorded decision.
 // (POST /communication-reviews/{id}/direct-send)
-func (_ Unimplemented) DirectCommunicationSend(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+func (_ Unimplemented) DirectCommunicationSend(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params DirectCommunicationSendParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -120398,8 +120964,32 @@ func (siw *ServerInterfaceWrapper) DirectCommunicationSend(w http.ResponseWriter
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DirectCommunicationSendParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.DirectCommunicationSend(w, r, id)
+		siw.Handler.DirectCommunicationSend(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {

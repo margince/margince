@@ -15,6 +15,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
@@ -135,9 +136,9 @@ func (w followUpAutoResolve) Spec() workflow.Spec {
 // minted arrives as its own activity.captured, and counting it as "the
 // follow-up happened" would complete every reminder the moment it was
 // created. A human capturing a task is a plan, not contact, and declines
-// for the same reason. Every other captured kind — a call, an email, a
-// meeting, a note — is the touch the reminder was waiting for. Lead
-// triggers always match: leaving the open pool resolves unconditionally.
+// for the same reason. Every other captured kind (a call, an email, a
+// meeting, a note) is the touch the reminder was waiting for. Apply skips the
+// website form's own note on the lead. Lead triggers always match.
 func (w followUpAutoResolve) Match(_ context.Context, ev workflow.Event) (bool, error) {
 	if !w.leadsFromLinks {
 		return true, nil
@@ -149,13 +150,35 @@ func (w followUpAutoResolve) Match(_ context.Context, ev workflow.Event) (bool, 
 		}
 		return updated.ChangedFields.OutboundAttested != nil && *updated.ChangedFields.OutboundAttested, nil
 	}
-	var captured crmcontracts.PublicEventActivityCaptured
-	if len(ev.Payload) > 0 {
-		if err := json.Unmarshal(ev.Payload, &captured); err != nil {
-			return false, fmt.Errorf("activities: decoding the captured activity kind: %w", err)
-		}
+	captured, err := decodeCaptured(ev.Payload)
+	if err != nil {
+		return false, err
 	}
 	return captured.Kind != string(crmcontracts.ActivityKindTask), nil
+}
+
+func decodeCaptured(payload []byte) (crmcontracts.PublicEventActivityCaptured, error) {
+	var captured crmcontracts.PublicEventActivityCaptured
+	if len(payload) > 0 {
+		if err := json.Unmarshal(payload, &captured); err != nil {
+			return captured, fmt.Errorf("activities: decoding the captured activity kind: %w", err)
+		}
+	}
+	return captured, nil
+}
+
+// answersLead reports whether the fired activity is the team reaching the
+// lead. The note a website form writes is the visitor's enquiry: the very
+// thing the lead's follow-up task asks someone to answer.
+func (w followUpAutoResolve) answersLead(ev workflow.Event) (bool, error) {
+	if w.trigger != activityCapturedTrigger {
+		return true, nil
+	}
+	captured, err := decodeCaptured(ev.Payload)
+	if err != nil {
+		return false, err
+	}
+	return captured.SourceSystem == nil || *captured.SourceSystem != provenance.WebFormSource, nil
 }
 
 func (w followUpAutoResolve) Plan(_ context.Context, ev workflow.Event) (workflow.Effect, error) {
@@ -197,6 +220,13 @@ func (w followUpAutoResolve) Apply(ctx context.Context, ev workflow.Event, eff w
 	complete := w.store.CompleteOpenSystemTasksForLead
 	if w.leadsFromLinks {
 		complete = w.store.CompleteFollowUpsTouchingLead
+	}
+	answers, err := w.answersLead(ev)
+	if err != nil {
+		return workflow.RunResult{}, err
+	}
+	if !answers {
+		leads = nil
 	}
 	for _, leadID := range leads {
 		done, err := complete(ctx, leadID)

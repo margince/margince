@@ -58,7 +58,17 @@ export function projectFields(
       mode: opts.mode,
     }),
     { key: "description", label: "project.description", type: "textarea" },
+    { key: "started_at", label: "project.startDate", type: "date" },
     { key: "target_end_date", label: "project.targetEnd", type: "date" },
+    ...(opts.mode === "edit"
+      ? [
+          {
+            key: "ended_at",
+            label: "project.endDate" as const,
+            type: "date" as const,
+          },
+        ]
+      : []),
   ];
 }
 
@@ -117,6 +127,7 @@ export function mapProjectCreate(
     company_id: str(values.company_id),
     owner_id: str(values.owner_id) || null,
     description: str(values.description) || null,
+    started_at: str(values.started_at) || null,
     target_end_date: str(values.target_end_date) || null,
     key: str(values.key) || null,
     phase: (str(values.phase) || null) as CreateProjectRequest["phase"],
@@ -137,7 +148,9 @@ export function mapProjectUpdate(
     name: str(values.name) || undefined,
     owner_id: str(values.owner_id) || null,
     description: str(values.description) || null,
+    started_at: str(values.started_at) || null,
     target_end_date: str(values.target_end_date) || null,
+    ended_at: str(values.ended_at) || null,
   };
 }
 
@@ -156,6 +169,8 @@ export function projectEditRecord(project: Project): Record<
     key: project.key ?? "",
     owner_id: project.owner_id ?? "",
     description: project.description ?? "",
+    started_at: project.started_at ?? "",
     target_end_date: project.target_end_date ?? "",
+    ended_at: project.ended_at ?? "",
   };
 }

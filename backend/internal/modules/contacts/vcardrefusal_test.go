@@ -17,7 +17,8 @@ func TestCardRefusalNamesTheValueThatCannotBeStored(t *testing.T) {
 		{"a malformed email", VCardEntry{FullName: "A", Emails: []VCardChannel{{Value: "not-an-email"}}}, "email address"},
 		{"a phone without a country prefix", VCardEntry{FullName: "A", Phones: []VCardChannel{{Value: "0301234567"}}}, "phone number"},
 		{"an unreadable property", VCardEntry{FullName: "A", Unreadable: []string{"TITLE"}}, "job title"},
-		{"an unreadable name", VCardEntry{Unreadable: []string{"FN"}}, "name"},
+		{"an unreadable name", VCardEntry{Unreadable: []string{"FN"}}, "the name on this card is not readable"},
+		{"no name at all", VCardEntry{Emails: []VCardChannel{{Value: "a@example.com"}}}, "the card states no name"},
 	}
 	for _, tc := range cases {
 		if got := cardRefusal(tc.entry); !strings.Contains(got, tc.want) {

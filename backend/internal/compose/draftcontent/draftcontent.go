@@ -30,6 +30,7 @@ func (a Adapter) CheckAdvertisingDraft(
 	for _, f := range found {
 		out = append(out, activities.DraftContentFinding{
 			Requirement: f.Requirement, Detail: f.Detail, Words: f.Words, Language: f.Language, Country: f.Country,
+			Provision: f.Provision,
 		})
 	}
 	return out, nil

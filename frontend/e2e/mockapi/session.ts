@@ -24,10 +24,14 @@ export const me: Handler = ({ json }, { options }) => {
     );
   }
   const fixture = meFixture({
-    allow:
-      options.dataTasks === "withheld"
-        ? { ...E2E_ADMIN_GRANTS, data_task: [] }
-        : E2E_ADMIN_GRANTS,
+    allow: {
+      ...E2E_ADMIN_GRANTS,
+      ...(options.dataTasks === "withheld" && { data_task: [] }),
+      // The cold start asks for a model only from a reader who may bind one.
+      ...(options.journey === "unconfigured" && {
+        ai_routing: ["read", "update"],
+      }),
+    },
   });
   return json({
     ...fixture,

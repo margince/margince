@@ -18,6 +18,7 @@ type DraftContentFinding struct {
 	Words       []string
 	Language    string
 	Country     string
+	Provision   commsauthz.Provision
 }
 
 // DraftContentChecker answers what an advertising draft does not meet among

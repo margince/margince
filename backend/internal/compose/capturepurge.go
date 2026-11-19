@@ -34,7 +34,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -424,11 +423,11 @@ func noSuchRule() error {
 // the rows naming an attachment and left its bytes in the bucket would report
 // mail as gone while it is not, so a role that cannot reach the blobs does not
 // purge at all.
-func capturePurgerFor(pool *pgxpool.Pool, blob blobstore.Store, log *slog.Logger, vault keyvault.Vault) *CapturePurger {
+func capturePurgerFor(pool *pgxpool.Pool, blob blobstore.Store, log *slog.Logger) *CapturePurger {
 	if blob == nil {
 		return nil
 	}
-	return NewCapturePurger(pool, NewRetentionServiceFor(InstallationDB(pool), blob, log).WithPayloadVault(privacyPayloads(vault)))
+	return NewCapturePurger(pool, NewRetentionServiceFor(InstallationDB(pool), blob, log))
 }
 
 // PurgeRemoved applies a provider deletion under the caller's maintenance authority.

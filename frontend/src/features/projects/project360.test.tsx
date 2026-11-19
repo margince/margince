@@ -110,8 +110,8 @@ describe("ProjectScreen", () => {
     ).toBeTruthy();
     expect(screen.queryByTestId("project-coverage")).toBeNull();
 
-    // The four cards: a linked deal row, the phase history with its visit,
-    // and empty states for contracts and tasks.
+    // The cards: a linked deal row, the phase history with its visit, an
+    // empty contracts card, and no tasks card while none is open.
     expect(
       screen.getByRole("button", { name: "Phase one licence" }),
     ).toBeTruthy();
@@ -120,8 +120,8 @@ describe("ProjectScreen", () => {
       screen.getByText(/No contract is filed under this project/),
     ).toBeTruthy();
     expect(
-      screen.getByText(/No open task is filed under this project/),
-    ).toBeTruthy();
+      screen.queryByText(en["project.openTasks"], { selector: "h2, h3" }),
+    ).toBeNull();
 
     // Nothing else: the stakeholders, the files, the health log and the
     // chronology open from the menus, not from the Overview.
@@ -317,6 +317,51 @@ describe("ProjectScreen", () => {
     expect(screen.queryByTestId("project-coverage-withheld")).toBeNull();
     expect(screen.getAllByTestId("project-company-withheld")).toHaveLength(2);
     expect(screen.queryByText("Brandt Automotive")).toBeNull();
+  });
+
+  it("says a project with no customer has none, never hidden, and explains the missing New deal", async () => {
+    projectsBackend({
+      view: project360({
+        project: project({ company_id: undefined, writable: true }),
+        company: undefined,
+        sections_omitted: [],
+      }),
+    });
+    render(<ProjectScreen id="pr-1" />);
+    await screen.findByRole("heading", { name: "CRM rollout" });
+    expect(screen.queryByText("Hidden for your role")).toBeNull();
+    expect(screen.queryByTestId("project-company-withheld")).toBeNull();
+    expect(screen.getByTestId("project-company-none").textContent).toBe(
+      "No customer company",
+    );
+    expect(
+      await screen.findByTestId("project-new-deal-needs-company"),
+    ).toBeTruthy();
+  });
+
+  it("offers neither New deal nor its customer hint to a reader who may not create deals", async () => {
+    projectsBackend({
+      view: project360({
+        project: project({ company_id: undefined, writable: true }),
+        company: undefined,
+      }),
+      respond: async (url) =>
+        url.endsWith("/v1/me")
+          ? jsonResponse(
+              meFixture({
+                allow: {
+                  project: ["read", "update"],
+                  deal: ["read"],
+                  activity: ["read", "create", "update"],
+                },
+              }),
+            )
+          : null,
+    });
+    render(<ProjectScreen id="pr-1" />);
+    await screen.findByRole("heading", { name: "CRM rollout" });
+    expect(screen.queryByTestId("project-new-deal-needs-company")).toBeNull();
+    expect(screen.queryByRole("button", { name: "New deal" })).toBeNull();
   });
 
   it("closing asks for a reason, holds Confirm until it is given, and posts the move", async () => {

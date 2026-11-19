@@ -148,9 +148,10 @@ func (s *Service) Get(ctx context.Context, contactID ids.ContactID, force bool) 
 	// The contact is NAMED to the rail here, where the assembled input holds
 	// the name the product shows for them everywhere else.
 	lane, withheld := ai.ReadLane(ctx, s.lane)
-	sentences, by, err := Write(ai.WithSubject(ctx, contactID.Ref(), in.Name), lane, contactID.String(), in, lang)
-	if err != nil {
-		return crmcontracts.ContactBrief{}, err
+	sentences, by, laneFailed := Write(ai.WithSubject(ctx, contactID.Ref(), in.Name), lane, contactID.String(), in, lang)
+	if laneFailed && found && cached.Version == storedVersion && cached.Fingerprint == fingerprint {
+		// A forced rewrite that failed keeps the model's brief for these facts.
+		return s.enrich(ctx, cached.wire(contactID))
 	}
 	written := stored{
 		Fingerprint: fingerprint,
@@ -159,7 +160,7 @@ func (s *Service) Get(ctx context.Context, contactID ids.ContactID, force bool) 
 		GeneratedBy: by,
 		Sentences:   sentences,
 	}
-	if withheld {
+	if laneFailed || withheld {
 		return s.enrich(ctx, written.wire(contactID))
 	}
 	if err := s.save(ctx, userID, contactID, written); err != nil {

@@ -240,6 +240,22 @@ describe("speak", () => {
     expect(line && spokenText(line)).toBe("Summary of Acme ready");
   });
 
+  // A failed draft says which thread or deal it was for. An occurrence that
+  // carried no name keeps the unnamed line rather than empty quotes.
+  it.each([
+    ["draft_reply", "Re: Pricing", "Reply draft for “Re: Pricing” failed"],
+    ["draft_reply", null, "Reply draft failed"],
+    ["offer_draft", "Acme Renewal", "Offer draft for Acme Renewal failed"],
+    ["offer_draft", "", "Offer draft failed"],
+  ])("names the record a failed %s was about (%s)", (kind, label, text) => {
+    expect(
+      lineFor(
+        { kind, state: "failed", subject_label: label },
+        (key) => en[key],
+      ),
+    ).toBe(text);
+  });
+
   it("renders the line for a state that has copy", () => {
     expect(
       lineFor({ kind: "morning_brief", state: "running" }, (key) => en[key]),

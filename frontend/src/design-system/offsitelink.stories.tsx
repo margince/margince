@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { OffsiteLink } from "./offsitelink";
+import { NewTabMark, OffsiteLink } from "./offsitelink";
 
 // A destination off our origin. What these stories document is the decision the
 // component owns and a call site must not repeat: an address the product may
@@ -38,4 +38,17 @@ export const RefusedAddress: Story = {
 export const NotAnAddress: Story = {
   // What a half-typed field holds. Same treatment as a refused scheme: text.
   args: { href: "jdoe", children: "jdoe" },
+};
+
+export const MarkedNewTab: Story = {
+  // A link a reader should know leaves this tab says so in words and a glyph.
+  args: {
+    href: "https://github.com/margince/margince/releases",
+    children: (
+      <>
+        Release notes
+        <NewTabMark />
+      </>
+    ),
+  },
 };

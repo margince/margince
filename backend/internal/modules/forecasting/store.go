@@ -298,6 +298,9 @@ func checkCall(in NewCall) (string, error) {
 			Message: "a called amount names the currency it is in",
 		}
 	}
+	if err := values.RequireAssignableCurrency(in.Currency); err != nil {
+		return "", err
+	}
 	if err := checkScope(in.Scope); err != nil {
 		return "", err
 	}

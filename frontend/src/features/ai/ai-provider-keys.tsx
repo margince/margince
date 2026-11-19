@@ -21,6 +21,7 @@ import { useCan, useCanWrite } from "../../lib/capability";
 import { problemMessageOf } from "../../lib/problem";
 import { ProviderRecentCalls } from "./ai-call-figures";
 import {
+  type CredentialKind,
   credentialKindOf,
   KeyEntry,
   keyStateLabel,
@@ -38,6 +39,7 @@ import {
 } from "./ai-provider-settings";
 import { ProviderSheet } from "./ai-provider-sheet";
 import { ProviderTable } from "./ai-provider-table";
+import { hostMissing } from "./ai-routing-fields";
 import { ProvidersStatus } from "./ai-settings";
 import { PanelTitle } from "./ai-terms";
 import "./ai-settings.css";
@@ -78,6 +80,13 @@ export function AiProviderKeysCard() {
   // longer see.
   const health = useProviderHealth(canDiagnose).data;
   const usage = routing.data ? providerUsage(routing.data.routing) : null;
+  const unhosted = (provider: string) =>
+    hostMissing(
+      provider,
+      routing.data
+        ? (routing.data.routing.providers?.[provider] ?? {})
+        : undefined,
+    );
   // The provider whose sheet is open, by name so it follows the list as a key
   // is saved rather than holding a copy that goes stale.
   const [opened, setOpened] = useState<string | null>(null);
@@ -124,6 +133,7 @@ export function AiProviderKeysCard() {
                 providers={list.providers}
                 canManage={canManage}
                 usage={usage}
+                unhosted={unhosted}
                 health={canDiagnose ? health?.providers : undefined}
                 onOpen={(provider) => {
                   setDraftHost(null);
@@ -137,6 +147,7 @@ export function AiProviderKeysCard() {
                 <ProviderSheet
                   status={openStatus}
                   usage={usage?.get(openStatus.provider)}
+                  unhosted={unhosted(openStatus.provider)}
                   health={
                     canDiagnose
                       ? health?.providers.find(
@@ -211,6 +222,30 @@ function keyEntryHint(
   return status.provider === "gemini_vertex"
     ? `${stored} ${t("aiProviderKeys.vertexRoleHint")}`
     : stored;
+}
+
+// What a vendor's row asks for, by the field's own name. The variable says
+// whether an export seeded the key, so it stays as the hint, verbatim.
+function CredentialName({
+  envVar,
+  kind,
+}: Readonly<{ envVar: string; kind: CredentialKind }>) {
+  const t = useT();
+  if (envVar === "") {
+    return <span className="ai-provider-who">{"\u2014"}</span>;
+  }
+  return (
+    <span className="ai-provider-who">
+      <span className="t-name">
+        {t(
+          kind === "service_account"
+            ? "serviceAccountKey.label"
+            : "aiProviderKeys.field",
+        )}
+      </span>
+      <span className="ai-provider-env t-caption">{envVar}</span>
+    </span>
+  );
 }
 
 // The credential controls for ONE vendor, drawn inside its sheet: whether it is
@@ -346,15 +381,7 @@ function ProviderConnection({
         data-testid={`ai-provider-key-${status.provider}`}
       >
         <div className="ai-provider">
-          <span className="ai-provider-who">
-            {/* The variable is the only thing that says HOW a key reached the
-                vault, and an operator debugging a vendor wants to know whether
-                an export seeded it. Verbatim, because it is a name to be typed
-                somewhere else exactly as it reads here. */}
-            <span className="ai-provider-env">
-              {keyless ? "\u2014" : status.env_var}
-            </span>
-          </span>
+          <CredentialName envVar={status.env_var} kind={kind} />
           <Badge tone={keyStateTone(status, keyless)}>
             {t(keyStateLabel(status, keyless, kind))}
           </Badge>

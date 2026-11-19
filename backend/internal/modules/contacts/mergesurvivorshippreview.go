@@ -111,7 +111,7 @@ func readMergeSurvivorship(ctx context.Context, tx pgx.Tx, kind string, source, 
 		if src.Version == nil || tgt.Version == nil {
 			return MergeSurvivorship{}, apperrors.ErrInvalidArgument
 		}
-		return MergeSurvivorship{Fields: buildSurvivorshipPatch(tgt, src).After(), SourceVersion: int64(*src.Version), TargetVersion: int64(*tgt.Version)}, nil
+		return MergeSurvivorship{Fields: buildSurvivorshipPatch(tgt, src, ids.From[ids.ContactKind](source), nil).After(), SourceVersion: int64(*src.Version), TargetVersion: int64(*tgt.Version)}, nil
 	}
 	src, tgt, err := mergePair(ctx, tx, kind, ids.From[ids.CompanyKind](source), ids.From[ids.CompanyKind](target), nil, readCompanyMergeState)
 	if err != nil {

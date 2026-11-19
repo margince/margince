@@ -76,6 +76,7 @@ export const ClosedWithReopen: Story = {
     status: "disqualified",
     disqualify_reason: "No budget this year",
     archived_at: "2026-07-13T00:00:00Z",
+    writable: false,
   }),
 };
 

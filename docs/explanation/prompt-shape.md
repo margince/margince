@@ -234,9 +234,8 @@ about 0. *The floor*, below, has the numbers.
 
 ### What we measured
 
-Over 7 days on staging (`margince-staging`, every task on its set-up binding:
-Gemini on `gemini-3.1-flash-lite` for the background lanes and `gemini-3.5-flash`
-above them):
+Over 7 days, with every task on its set-up binding (Gemini on
+`gemini-3.1-flash-lite` for the background lanes and `gemini-3.5-flash` above them):
 
 ```
   input tokens sent ............. 10,700,530
@@ -263,8 +262,7 @@ exists for. Each site of `agent_loop` is one scheduled agent that lists only the
 tools it has. The size per site is in
 [ai-prompts.json](../reference/ai-prompts.json), and what each run's list costs is
 in [agent-tool-budget.md](../reference/agent-tool-budget.md). `agent_loop` made
-only **four calls in 7 days** on staging, so there are not enough calls there for
-a share to move.
+only **four calls in 7 days**, so there are not enough calls for a share to move.
 
 ### The floor: why next to nothing is reused
 
@@ -578,8 +576,7 @@ each item alone.
 | Routes, token counts, traces | [ai-runtime.md](ai-runtime.md) |
 | What the company block carries | [company-context.md](company-context.md) |
 
-We measured the numbers on this page on staging in September 2026, over a 7-day
-window. They are the 0.38% cache number, the table per task in *The floor*, and
+We measured the numbers on this page in September 2026, over a 7-day window. They are the 0.38% cache number, the table per task in *The floor*, and
 the 86.3% share of opened emails from `capture_confidentiality_verdict`. Measure
 them again before you trust them again.
 

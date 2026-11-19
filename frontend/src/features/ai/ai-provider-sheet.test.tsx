@@ -11,6 +11,7 @@ import { LocaleProvider } from "../../i18n";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { AiProviderKeysCard } from "./ai-provider-keys";
 import { providerState } from "./ai-provider-sheet";
+import { hostMissing } from "./ai-routing-fields";
 
 afterEach(() => {
   cleanup();
@@ -504,9 +505,33 @@ describe("providerState", () => {
       credential_kind: "api_key" as const,
       usable: true,
     };
-    expect(providerState(status, undefined)).toBe("ready");
-    expect(providerState({ ...status, usable: false }, undefined)).toBe(
+    expect(providerState(status, undefined, false)).toBe("ready");
+    expect(providerState({ ...status, usable: false }, undefined, false)).toBe(
       "inactive",
     );
+  });
+
+  it("asks for a service before a keyed vendor with no host reads as ready", () => {
+    const jev = {
+      provider: "jev_compatible",
+      configured: false,
+      optional: true,
+      env_var: "JEV_COMPATIBLE_API_KEY",
+      credential_kind: "api_key" as const,
+      usable: true,
+    };
+    const unhosted = hostMissing(jev.provider, {});
+    expect(unhosted).toBe(true);
+    expect(providerState(jev, undefined, unhosted)).toBe("needs_service");
+    expect(
+      providerState(jev, undefined, hostMissing(jev.provider, undefined)),
+    ).toBe("ready");
+    expect(
+      providerState(
+        jev,
+        undefined,
+        hostMissing(jev.provider, { base_url: "https://jev.example/v1" }),
+      ),
+    ).toBe("ready");
   });
 });

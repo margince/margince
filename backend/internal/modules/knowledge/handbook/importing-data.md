@@ -2,16 +2,18 @@
 <!-- describes: frontend/src/features/import backend/internal/modules/migration backend/internal/modules/contacts/creatededupe.go backend/internal/modules/contacts/deduperecheck.go backend/internal/modules/contacts/dedupescan.go -->
 # Importing data
 
-**Data import** brings companies, contacts, prospects, deals and activities into Margince from CSV files. You find it in Settings, in the **Data** group. Only an admin or ops user can import. Nothing is written until you read the test run and choose to import.
+**Data import** brings companies, contacts, leads, deals and activities into Margince from CSV files. You find it in Settings, in the **Data** group. Only an admin or ops user can import. Nothing is written until you read the test run and choose to import.
 
 ### What can I import?
-You can import companies, contacts, prospects (leads), deals and activities, from one CSV file or from one ZIP of CSV files.
+You can import companies, contacts, leads, deals and activities, from one CSV file or from one ZIP of CSV files.
 
 In a ZIP the file name gives the record type: `companies.csv`, `contacts.csv`, `leads.csv`, `deals.csv` or `activities.csv`. Each type takes one file. A ZIP holds at most 20 files and cannot have a password.
 
 Margince imports the files in that order, companies first and activities last. So a contact can name a company from the same ZIP, and a deal can name a company or a contact. An activity can name any of them.
 
-A file whose name gives no record type is listed under **Files left out**. Nothing in it is read.
+A file in a ZIP whose name gives no record type is listed under **Files left out**. Nothing in it is read.
+
+One CSV whose name gives no record type is typed by its columns. **Check your files** then says **Record type chosen from the columns**; check **Import as** before you go on. When the columns name no type either, it says **No record type found**, and **Next** waits until you choose one under **Import as**.
 
 Also called: bulk import, upload a spreadsheet, move from another CRM, Excel import.
 
@@ -26,8 +28,8 @@ Also called: import template, column help, import format.
 
 ### What are the steps of an import?
 To import a file, open **Settings → Data import** and drop the file on **Upload your data**.
-1. On **Check your files**, set **Import as** for each file, or choose **Skip this file**. Then choose **Next: map {count} files**.
-2. In **Map columns**, pick a **Field** for each column, or **Do not import**. Choose **Run test**.
+1. On **Check your files**, set **Import as** for each file, or choose **Skip this file**. **Rows** counts every row of the file. Then choose **Next: map {count} files**.
+2. In **Map columns**, pick a **Field** for each column, or **Do not import**. Each file's tab counts the columns it leaves out. **Filled in** and **Values** come from the first 500 rows of the file. Choose **Run test**.
 3. Read the **Test run**. Fix the file and choose **Fix and re-upload**, or choose **Import {count} rows**.
 4. **Importing** shows each file as it goes. **Result** shows what was written.
 5. To take the import back, choose **Undo this import** on the result, or **Undo** in **Recent imports**.
@@ -49,10 +51,15 @@ These skip the row:
 - a value its field does not take, such as an amount that is not a number or a date not in `YYYY-MM-DD`;
 - a company reference that finds no company, or an employer name that finds more than one or conflicts with its work email (**Broken link**);
 - a row with no value in its `ref` column, or a `ref` that an earlier row of the same file already used;
-- an email address, domain or LinkedIn address that another live record already holds, when the row would create a second record under it;
+- an email address, domain or LinkedIn address that another live record or an earlier row already holds, for a new record;
+- a contact row with no name and no email, or a company row with no name;
 - a row whose record was archived since the earlier import;
 - a contact row whose email belongs to a sending system, such as `noreply@`, `notifications@` or `receipts@`;
+- a contact row whose full name, first name or last name is over 120 characters, the same limit as typing a name;
+- a contact row whose first and last name together are over 120 characters;
 - a record type you may not create, or a change to a record you may not edit.
+
+A company row whose domain belongs to one company you may edit lands on that company. Its `ref` then names that company. Contacts that link to the `ref` keep their employer. The row fills only the fields that company has empty. It never renames the company or changes a stored value, also on a later import. The test run lists what it kept.
 
 A contact row with **First name** and **Last name** filled takes its full name from those two. This holds even when the file also has a **Full name** column. A contact you add or edit in Margince keeps the full name you type. A name-only CSV contact is kept, with a warning to add an email, phone or LinkedIn profile link; the import summary counts that warning.
 
@@ -63,12 +70,13 @@ These stop nothing. The row lands, and the problem is listed:
 Also called: rows skipped, import errors, why was my row not imported.
 
 ### What does **Import anyway** do?
-**Import anyway** lands the rows that have a broken link, without the link. It appears when the test run finds one. Tick the box, and the test runs again with the button changed.
+**Import anyway** lands the rows that have a broken link, without the link. It appears when the test run finds one. Tick the box, and the test runs again. The button then says **Import {count} rows anyway**, with the rows it lands counted.
+
 The result lists every link that was left out as **Link left out**. A row with another problem is still skipped.
 Also called: keep rows with broken links, import without the company link.
 
 ### How long does an import take, and can I leave the page?
-You can leave the page. An import runs on its own once it starts. **Recent imports** shows when it is done, and its file name opens it again.
+You can leave the page. An import runs on its own once it starts. **Recent imports** shows when it is done, and its file name opens it again. A canceled draft is not listed, so a CSV whose **Import as** you changed shows as one draft. An address that names no import, or one that was removed, says **Import not found**.
 
 While it runs, **Importing** shows the rows done and the rows in all. It also shows the rows per second, the time passed and the minutes left. The time left shows only after the import has run for about 10 seconds, and it is a guess, not a promise.
 
@@ -79,7 +87,7 @@ Also called: progress bar, time left, import stuck, continue an import.
 ### What is the source name?
 **Source name** keeps the records of one source together. Use the same name on a later upload, and Margince updates the records it made the first time. Use another name, and the same `ref` in the new file means a different record.
 
-A ZIP starts with the source name of your last ZIP import, or else with the ZIP's own name. One CSV starts with none. A name has at most 80 characters: letters, numbers, dots, `_` or `-`.
+A ZIP starts with the source name of your last ZIP import, or else with the ZIP's own name. One CSV starts with none. A name has at most 80 characters: only the letters A to Z, the numbers 0 to 9, blanks, dots, `_` and `-`. A name that does not follow the rule says so under **Source name**, and **Next** waits until it is fixed.
 
 While an import of one source name is still writing, Margince does not test another file under that name. Your file waits as a draft in Recent imports. Wait for the other import to finish, then select **Continue** on the draft. A draft that nobody touches for 7 days is canceled.
 
@@ -90,7 +98,7 @@ Also called: re-import a ZIP, upload the export again.
 
 A row is found by its `ref` within its source name and its record type. Company `a1` and contact `a1` are two keys. A deal always needs a `ref`, because two deals can share a name.
 
-A row without a `ref` is matched by a company's display name, or by a contact's or prospect's email address.
+A row without a `ref` is matched by a company's display name, or by a contact's or lead's email address.
 
 Also called: ID from another system, key column, record ID from my old system.
 
@@ -106,10 +114,10 @@ A company or contact file may hold the whole address in one column. Map that col
 If Margince cannot split it, the address stays in line 1, and the test run warns about that row. A file that also maps another address part keeps line 1 as it is written.
 Also called: import a full address, split an address column.
 
-### How do I set a prospect's status?
-A `leads.csv` row can carry a `status`: `new`, `contacted` or `engaged`. Case does not matter. An empty box leaves a new prospect as `new`, and an existing one as it is.
+### How do I set a lead's status?
+A `leads.csv` row can carry a `status`: `new`, `contacted` or `engaged`. Case does not matter. An empty box leaves a new lead as `new`, and an existing one as it is.
 
-A file cannot set a prospect to qualified or disqualified. Use **Qualify** or **Disqualify** on the prospect. A row with another word is skipped, and the problem lists the allowed values.
+A file cannot set a lead to qualified or disqualified. Use **Qualify** or **Disqualify** on the lead. A row with another word is skipped, and the problem lists the allowed values.
 Also called: import lead status, set the stage of a lead.
 
 ### How do I map a lead source from my old system to Origin?
@@ -195,7 +203,8 @@ No. Two contacts that share only a first name are not filed, even at one company
 Also called: duplicate queue too long after import, same name flagged.
 
 ### Why did a pair leave the duplicate list without anyone deciding it?
-Margince checks the open duplicate list every night, and each time it starts. It closes a pair that today's rules would no longer suggest, for example two contacts who share only a first name. It also closes two companies with close names that share no address, phone number or contact.
+Margince checks the open duplicate list every night, and each time it starts. It closes a pair that today's rules would no longer suggest, for example two contacts who share only a first name. It also closes two companies with close names that share no address, phone number or contact. A company renamed so that its name no longer matches the other one's leaves the list. The pair stays if one domain sits under the other, or if it was filed on a shared identity, such as a domain. A pair someone is deciding at that moment is left for a later check.
+
 A pair someone has dismissed or reopened is never closed this way. A closed pair keeps its history, and it comes back by itself if the two records start to match again.
 Also called: duplicate gone, shorter duplicate list, fewer duplicates.
 
@@ -220,7 +229,7 @@ Also called: bulk edit companies, update companies from Excel, fix company data.
 ### What happens if I import the same file again?
 Importing a file again with the same source name updates the records the file made. It does not copy them. These rules hold for every record type:
 - **Rows are matched on the `ref`** within the source name and the record type.
-- **A row that did not change writes nothing.** The test run counts it as the same. When every row is the same or skipped, the test run says **Nothing to import**. **Done** closes the run, and there is nothing to undo.
+- **A row that did not change writes nothing.** The test run counts it as the same. When every row is the same or skipped, the test run says **Nothing to import**. A file with a header and no rows says it too. **Done** closes the run, and there is nothing to undo.
 - **A changed row updates only its changed fields.** Every other field of the record stays as it is.
 - **A new `ref` creates a new record.**
 - **A missing row is left alone.** A re-import never archives or deletes a record because its row is gone.
@@ -231,7 +240,7 @@ Importing a file again with the same source name updates the records the file ma
 - **A clash skips one row.** If another record already holds a changed value, such as an email address or a domain, Margince skips that row with the reason. It goes on with the rest.
 - **A row whose record was archived is skipped** with the reason "This row's record was archived". Restore the record to update it.
 - **Owners, tags and custom fields:** the same rules hold. An owner email that no user has leaves the owner as it is.
-- **Re-importing after an undo works for every object.** That includes prospects, because undo frees the `ref` and the same file creates the records again.
+- **Re-importing after an undo works for every object.** That includes leads, because undo frees the `ref` and the same file creates the records again.
 
 A deal also has its own rules. A re-import moves an open deal to a later stage, but never to another pipeline, and never reopens a closed deal. It writes `lost_reason` only when the row creates the deal. An activity's `direction` and `owner_email` are written only when the row creates it.
 
@@ -244,10 +253,10 @@ An example. ZIP 1 has the contacts `a1`, `a2` and `a3`. ZIP 2, with the same sou
 Also called: re-import, upload again, update from a spreadsheet, import twice, duplicates after a second upload.
 
 ### What does undo keep?
-Undo reverses one import, in reverse order: activities, then deals, then prospects, then contacts, then companies. The steps are in [What is kept, what is destroyed](retention-exports-and-deletion.md). These are the rules:
-- Undo archives only the records that import created. A prospect is disqualified instead.
+Undo reverses one import, in reverse order: activities, then deals, then leads, then contacts, then companies. The steps are in [What is kept, what is destroyed](retention-exports-and-deletion.md). These are the rules:
+- Undo archives only the records that import created. A lead is disqualified instead.
 - Records the import only updated keep their new values. Undo never puts back the old values.
-- A record someone edited after the import stays. It is listed under "Left in place by the undo:", with the reason beside it.
+- A record someone edited after the import stays. It is listed under "Left in place by the undo:" by its name, which opens the record, with the reason beside it. A record you cannot see is listed by its ID.
 - A company that a live deal or contact still names stays too. It is listed under the same heading, with the number of deals and contacts that name it. A company the import only matched by its ID is never archived.
 - New tags stay, because they may be in use.
 - A finished undo frees the `ref` values of that import. The same file can be imported again, and it creates the records again.
@@ -258,11 +267,22 @@ Also called: reverse an import, roll back an upload, import again after undo.
 | Limit | Value |
 |---|---|
 | File size | 10 MB, unless whoever runs your installation set another. **Upload your data** shows the number. |
-| Rows | 15,000 in one upload, all files together. A larger upload is refused: split it into smaller files. |
+| Rows | 15,000 in one upload, all files together. A larger upload is refused with its row count and the limit: split it into smaller files. |
 | Files in a ZIP | 20, one for each record type. |
 | File format | CSV in UTF-8. |
-| Source name | 80 characters: letters, numbers, dots, `_` or `-`. |
+| Source name | 80 characters: only the letters A to Z, the numbers 0 to 9, blanks, dots, `_` and `-`. |
 | Who | Admin and ops users. |
 
 A spreadsheet app can change a value on its own. A value that starts with `=`, `+`, `@` or a minus sign may be read as a sum. Long numbers or dates may change their form. Save as CSV in UTF-8 and check those values before you upload.
 Also called: import limits, file too big, too many rows, who can import.
+
+### Why was my file refused?
+A file Margince cannot read is refused before any test run, and the message says what to change. The common ones:
+- **Not UTF-8:** save the file as CSV UTF-8 and upload it again.
+- **A line it cannot read:** the message names the line. It may have more or fewer fields than the header, or a quotation mark out of place.
+- **A header it cannot use:** no header row, a column with no name, or a name given twice.
+- **A ZIP it cannot use:** empty, broken, password-protected, more than 20 files, or two files of one record type. The message names the files.
+- **Too many rows:** the message gives the file's row count and the limit.
+
+At **Run test**, a map is refused when two columns map to one field, or when no column tells the rows apart. Then map a column to the field the message names. That is the email address for contacts and leads, or the company name for companies. **Your own key (ref)** works for any type. Inside a ZIP, the message names the file it is about.
+Also called: file refused, import error, file could not be read.

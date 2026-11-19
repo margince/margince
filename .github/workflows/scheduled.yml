@@ -290,6 +290,8 @@ jobs:
     timeout-minutes: 90
     permissions:
       contents: read
+    outputs:
+      outcome: ${{ steps.suites.outputs.outcome }}
     env:
       BACKEND_CLOCK_SKEW: machine:200
     defaults:
@@ -324,8 +326,18 @@ jobs:
         run: make -C backend fetch-test-deps
       # Keep the clock jump, suites and recovery in one shell: the runner's
       # control-plane credentials must be valid before it starts another step.
+      # outcome=calendar only on the line scripts/backend-clock-drift.sh prints
+      # after the suites failed under a shift it proved still in force.
       - name: The backend suites at the moved clock
-        run: ./scripts/clock-drift-host.sh run "${BACKEND_CLOCK_SKEW##*:}"
+        id: suites
+        run: |
+          if ./scripts/clock-drift-host.sh run "${BACKEND_CLOCK_SKEW##*:}" 2>&1 | tee clock-drift.log; then
+            exit 0
+          fi
+          if grep -q '^backend-clock-drift: the suites failed at ' clock-drift.log; then
+            echo "outcome=calendar" >> "$GITHUB_OUTPUT"
+          fi
+          exit 1
       # The clock goes back even when the suites failed. A runner handed back to
       # the pool 200 days ahead poisons whatever runs on it next, and that
       # failure would surface in someone else's lane with nothing to point at.
@@ -1306,6 +1318,7 @@ jobs:
           RENOVATE_OUTCOME: ${{ needs['renovate-liveness'].outputs.outcome }}
           CLOCK_RESULT: ${{ needs['fe-clock-drift'].result }}
           BACKEND_CLOCK_RESULT: ${{ needs['backend-clock-drift'].result }}
+          BACKEND_CLOCK_OUTCOME: ${{ needs['backend-clock-drift'].outputs.outcome }}
           STORIES_RESULT: ${{ needs['fe-all-stories'].result }}
           PERF_RESULT: ${{ needs.perf-budgets.result }}
           PERF_OUTCOME: ${{ needs.perf-budgets.outputs.outcome }}

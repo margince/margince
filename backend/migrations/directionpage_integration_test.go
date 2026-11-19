@@ -23,7 +23,7 @@ func TestTheDirectionIndexReplacementKeepsARecordedIndexAcrossRetries(t *testing
 	conn := connect(t, owner)
 	headSchema(t, conn)
 	ctx := context.Background()
-	core, err := migrations.Core()
+	core, err := migrations.CoreHistory()
 	if err != nil {
 		t.Fatal(err)
 	}

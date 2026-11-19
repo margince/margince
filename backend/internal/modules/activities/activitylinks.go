@@ -101,14 +101,15 @@ func (e *TooManyLinksError) FieldFault() (field, code, message string) {
 // (capture/sinkproject.go: "a principal that may create captured mail but not
 // change it attributes nothing"). Two doors onto one act must not disagree
 // about who may perform it; before this the create door was the cheaper way in.
-func insertActivityLinks(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, kind string, links []ActivityLinkInput, fromRequest bool) error {
+func insertActivityLinks(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, in LogActivityInput, inherited ids.UUID) error {
+	links, kind, fromRequest := in.Links, in.Kind, in.LinksFromRequest
 	if len(links) > maxActivityLinks {
 		return &TooManyLinksError{Count: len(links)}
 	}
 	// The whole reach locked once, before the first probe: sorting the links
 	// below orders the firings, but not what each firing reaches through a
 	// contact or a deal, nor the probe's share the trigger then upgrades.
-	if err := storekit.LockLastActivityTargets(ctx, tx, lastActivityTargets(links)); err != nil {
+	if err := storekit.LockLastActivityTargets(ctx, tx, linkLockTargets(links, inherited)); err != nil {
 		return err
 	}
 	// SORTED, and the order is the one the last-activity trigger locks in.
@@ -157,7 +158,7 @@ func insertActivityLinks(ctx context.Context, tx pgx.Tx, activityID ids.Activity
 			}
 		}
 	}
-	return nil
+	return insertInheritedProject(ctx, tx, activityID, inherited)
 }
 
 // mayAttach asks everything the caller must be allowed before one link is

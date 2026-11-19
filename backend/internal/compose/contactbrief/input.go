@@ -29,9 +29,9 @@ import (
 	"github.com/margince/margince/backend/internal/compose/contactcontext"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/shared/kernel/moneynotation"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
-	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // floorVersion is bumped by hand when the DETERMINISTIC floor's wording
@@ -140,6 +140,18 @@ type DealIn struct {
 	AmountMinor int64  `json:"-"`
 	Currency    string `json:"currency,omitempty"`
 	CloseDate   string `json:"close_date,omitempty"`
+	// lang is the brief's language, which decides the digit marks of amount.
+	lang textlang.Lang
+}
+
+// inLanguage is the input as a brief in lang shows it: 12.345,00 in German.
+func (in Input) inLanguage(lang string) Input {
+	if in.OpenDeal != nil {
+		deal := *in.OpenDeal
+		deal.lang = textlang.Lang(lang)
+		in.OpenDeal = &deal
+	}
+	return in
 }
 
 // MarshalJSON renders the deal's amount as a contact would say it, derived from
@@ -150,14 +162,14 @@ func (d DealIn) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		plain
 		Amount string `json:"amount,omitempty"`
-	}{plain: plain(d), Amount: renderedAmount(d.AmountMinor, d.Currency)})
+	}{plain: plain(d), Amount: renderedAmount(d.AmountMinor, d.Currency, d.lang)})
 }
 
-func renderedAmount(minor int64, currency string) string {
+func renderedAmount(minor int64, currency string, lang textlang.Lang) string {
 	if minor == 0 || currency == "" {
 		return ""
 	}
-	return values.MajorUnits(minor, currency)
+	return moneynotation.Grouped(minor, currency, lang)
 }
 
 // ClaimIn is one thing this contact said, as the brief reads it.

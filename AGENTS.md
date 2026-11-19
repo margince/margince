@@ -208,10 +208,10 @@ The DAG is `shared → platform → modules → compose → cmd`, and three tool
 `extensions/<name>/` holds Go units that import only the approved `backend/pkg/**` surface.
 `instance/go.mod` names those to build; `// margince:development-only` lines are only for dev and tests.
 
-Working in `frontend/`? It has its own [AGENTS.md](frontend/AGENTS.md), which opens with the design
-system catalog. Read that catalog before you build something a user sees. No tool can tell that the
-component you wrote is already there under some other name. That gap has twice put a second card
-component in this tree.
+Working in `frontend/`? It has its own [AGENTS.md](frontend/AGENTS.md), which sends you to the
+design system catalog. Read that catalog before you build something a user sees. No tool can tell
+that the component you wrote is already there under some other name. That gap has twice put a second
+card component in this tree.
 
 Where each folder and module sits:
 [docs/explanation/architecture.md](docs/explanation/architecture.md) and

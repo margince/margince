@@ -1,9 +1,10 @@
 import { useEffect } from "react";
 import { ROUTE_CHUNKS } from "./App.screens";
+import { COARSE_POINTER } from "./lib/viewport";
 
 export function useWarmRouteChunks() {
   useEffect(() => {
-    if (window.matchMedia?.("(pointer: coarse)").matches) return;
+    if (window.matchMedia?.(COARSE_POINTER).matches) return;
     let cancelled = false;
     let next = 0;
     let cancelPending: (() => void) | undefined;

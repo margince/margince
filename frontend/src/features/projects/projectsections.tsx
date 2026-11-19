@@ -361,6 +361,17 @@ function ContractRow({ contract }: Readonly<{ contract: Contract }>) {
   );
 }
 
+// An Overview with nothing open draws no card: the header's Add task is the
+// way to start one.
+export function commitmentsState(view: Project360 | undefined): SectionState {
+  return stateOf(
+    view,
+    "commitments",
+    Boolean(view?.commitments),
+    view?.commitments?.data.length ?? 0,
+  );
+}
+
 /** The open tasks filed under the project, soonest due first. */
 export function CommitmentsCard({
   view,
@@ -382,12 +393,10 @@ export function CommitmentsCard({
 }>) {
   const t = useT();
   const commitments = view?.commitments?.data ?? [];
-  const state = stateOf(
-    view,
-    "commitments",
-    Boolean(view?.commitments),
-    commitments.length,
-  );
+  const state = commitmentsState(view);
+  if (state === "empty") {
+    return null;
+  }
   return (
     <OverviewSection
       title={t("project.openTasks")}

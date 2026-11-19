@@ -241,7 +241,7 @@ func (r *erasureRace) webhookAdmin() context.Context {
 
 func (r *erasureRace) eraseSubject(t *testing.T) func() {
 	return func() {
-		if err := ComposedEraser(r.e.Pool, nil, nil).EraseContact(r.e.Admin(), r.subject, "test"); err != nil {
+		if err := ComposedEraser(r.e.Pool, nil).EraseContact(r.e.Admin(), r.subject, "test"); err != nil {
 			t.Error(err)
 		}
 	}

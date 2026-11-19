@@ -2,14 +2,16 @@
 import "@testing-library/jest-dom/vitest";
 import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createQueryClient } from "../app/queryclient";
 import { writeMessage } from "../design-system/richtext-testing";
 import { pickOption } from "../design-system/select-testing";
 import { MailSendNotices } from "../features/mail/compose.parts";
 import {
   activity202,
+  installComposeClock,
   jsonResponse,
+  permissionBandButton,
   render,
   stubRoutes,
 } from "../features/mail/compose.testkit";
@@ -25,6 +27,8 @@ import {
   isPreviewDoor,
   refusedPreview,
 } from "./sendpermission.testkit";
+
+beforeEach(installComposeClock);
 
 afterEach(() => {
   cleanup();
@@ -238,9 +242,7 @@ describe("recording a fact where the refusal is read", () => {
     await user.type(await screen.findByLabelText("To"), "anna@example.test");
     await user.tab();
     writeMessage("Body", "The agreed follow-up.");
-    await user.click(
-      await screen.findByRole("button", { name: "Record what happened" }),
-    );
+    await user.click(await permissionBandButton("Record what happened"));
     const dialog = within(
       await screen.findByRole("dialog", {
         name: "Record the exchange with anna@example.test",
@@ -317,9 +319,7 @@ describe("recording a fact where the refusal is read", () => {
           "Quote or proposal they requested",
         );
       }
-      await user.click(
-        await screen.findByRole("button", { name: "Record what happened" }),
-      );
+      await user.click(await permissionBandButton("Record what happened"));
       const dialog = within(
         await screen.findByRole("dialog", {
           name: "Record the exchange with anna@example.test",
@@ -613,9 +613,7 @@ it("keeps an open exchange and its note through a background permission check", 
   await user.type(await screen.findByLabelText("To"), "anna@example.test");
   await user.tab();
   writeMessage("Body", "The agreed follow-up.");
-  await user.click(
-    await screen.findByRole("button", { name: "Record what happened" }),
-  );
+  await user.click(await permissionBandButton("Record what happened"));
   const dialog = await screen.findByRole("dialog", {
     name: "Record the exchange with anna@example.test",
   });

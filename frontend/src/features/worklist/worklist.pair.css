@@ -96,3 +96,10 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Why the two look alike, one comparison a line, under the question. */
+.worklist-pair-evidence {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}

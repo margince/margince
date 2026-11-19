@@ -40,6 +40,9 @@ type RefusedRecipient struct {
 	// for the baseline, so a confirmation never outlives a changed country.
 	Country       string `json:"country,omitempty"`
 	CountrySource string `json:"country_source,omitempty"`
+	// Provision is the law cited for ReasonCode at assessment, zero when none
+	// was shown. Stored, so a later pack never puts new law beside it.
+	Provision commsauthz.Provision `json:"provision,omitzero"`
 	// CanBeOverruled is the preview's own answer for this refusal. It is told
 	// to the sender and never stored: a stored copy would outlive the rule.
 	CanBeOverruled bool `json:"-"`
@@ -80,6 +83,7 @@ func refusedRecipientOf(d commsauthz.Decision) RefusedRecipient {
 		Address:       strings.ToLower(strings.TrimSpace(d.Recipient.Email)),
 		SubjectKind:   d.SubjectKind,
 		ReasonCode:    d.ReasonCode,
+		Provision:     d.ProvisionFor(d.ReasonCode),
 		Category:      string(d.Resolved),
 		Requested:     string(d.Requested),
 		PurposeID:     d.PurposeID,
