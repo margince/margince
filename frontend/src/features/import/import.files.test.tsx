@@ -11,6 +11,7 @@ import { ImportDropzone } from "./import.files";
 import {
   formatFixture,
   jsonResponse,
+  profile,
   render,
   run,
   stubRoutes,
@@ -134,7 +135,59 @@ describe("the files step", () => {
   });
 });
 
+describe("the files step of a single CSV", () => {
+  async function dropLeads(answer: object = profile) {
+    const user = userEvent.setup();
+    stubRoutes({ "POST /imports/sources": () => jsonResponse(answer) });
+    render(<ImportWizardPage />);
+    await user.upload(
+      await screen.findByLabelText("Upload your data"),
+      new File(["Email\n"], "leads.csv"),
+    );
+    await screen.findByLabelText("Source name");
+    return user;
+  }
+
+  it("counts the rows the file holds, not the rows profiled", async () => {
+    await dropLeads({ ...profile, rows_profiled: 500, row_count: 5000 });
+    expect(screen.getByRole("columnheader", { name: "Rows" })).toBeVisible();
+    expect(screen.getByRole("cell", { name: "5,000" })).toBeVisible();
+    expect(screen.queryByRole("cell", { name: "500" })).toBeNull();
+  });
+
+  it("states the source name rule and stops the field at 80 characters", async () => {
+    await dropLeads();
+    const field = screen.getByLabelText("Source name");
+    expect(field).toHaveAttribute("maxLength", "80");
+    expect(field).toHaveAccessibleDescription(
+      /letters A to Z, digits, spaces, dots, underscores and hyphens/,
+    );
+    expect(field).not.toHaveAttribute("aria-invalid");
+  });
+
+  it("marks a source name the server refuses and refuses Next with why", async () => {
+    const user = await dropLeads();
+    const field = screen.getByLabelText("Source name");
+    await user.type(field, "wiz ünïcödé!");
+    expect(field).toHaveAttribute("aria-invalid", "true");
+    expect(field).toHaveAccessibleDescription(
+      /The source name holds a character that is not allowed/,
+    );
+    expect(screen.getByRole("button", { name: /Next: map/ })).toBeDisabled();
+    await user.clear(field);
+    await user.type(field, "crm export_2026-11.v2");
+    expect(field).not.toHaveAttribute("aria-invalid");
+    expect(screen.getByRole("button", { name: /Next: map/ })).toBeEnabled();
+  });
+});
+
 describe("a CSV-only drop zone", () => {
+  it("names one CSV in its hint, never a ZIP", () => {
+    render(<ImportDropzone csvOnly sizeLimitMb={10} onPick={vi.fn()} />);
+    expect(screen.getByText("One CSV file. Up to 10 MB.")).toBeVisible();
+    expect(screen.queryByText(/ZIP/)).toBeNull();
+  });
+
   function drop(onPick: (file: File) => void, file: File) {
     render(<ImportDropzone csvOnly onPick={onPick} />);
     fireEvent.drop(screen.getByLabelText("Upload your data"), {

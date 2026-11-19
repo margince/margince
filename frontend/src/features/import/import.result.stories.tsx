@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { formatFixture } from "../../testing/import.fixtures";
+import { recordNamesRoutes } from "../../testing/recordnames.testkit";
 import {
   installFetchStub,
   jsonResponse,
@@ -23,6 +24,8 @@ const meta: Meta = {
 export default meta;
 
 type Story = StoryObj;
+
+const KEPT_CONTACT = "01a04298-2000-7000-8000-000000000002";
 
 const PARTS: ImportRunPart[] = [
   { file: "companies.csv", object: "company", row_count: 52 },
@@ -101,6 +104,9 @@ function page(
       "GET /imports/format": () => jsonResponse(formatFixture),
       [`GET /imports/${theRun.id}`]: () => jsonResponse(theRun),
       [`GET /imports/${theRun.id}/report`]: () => jsonResponse(theReport),
+      // The contact is named; the company is one the reader may not see, so
+      // it keeps its id.
+      ...recordNamesRoutes({ contact: { [KEPT_CONTACT]: "Jo Tran" } }),
     });
     return (
       <StoryProviders>
@@ -135,7 +141,8 @@ export const CompleteDark: Story = {
   render: page(run("complete", { checkpoint: 266 }), report("complete")),
 };
 
-/** An undo that kept an edited record and a company that a deal still names. */
+/** An undo kept an edited contact, named and linked, and a company a deal
+ * still names. The company comes back with no name and keeps its id. */
 export const Undone: Story = {
   render: page(
     run("undone", { checkpoint: 266 }),
@@ -147,7 +154,7 @@ export const Undone: Story = {
         kept: [
           {
             object: "contact",
-            id: "01a04298-2000-7000-8000-000000000002",
+            id: KEPT_CONTACT,
             reason_code: "undo_edited",
           },
           {

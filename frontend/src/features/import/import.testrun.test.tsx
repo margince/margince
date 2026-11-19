@@ -113,7 +113,7 @@ describe("the test run", () => {
       },
     ]);
     await user.click(
-      await screen.findByRole("button", { name: "Import anyway" }),
+      await screen.findByRole("button", { name: "Import 4 rows anyway" }),
     );
     await waitFor(() =>
       expect(sent.map((s) => s.path)).toContain(
@@ -153,7 +153,7 @@ describe("the test run", () => {
     );
   });
 
-  it("does not say every row is in the CRM when the file held no rows", async () => {
+  it("says a file with a header and no rows has nothing to import, and offers Done", async () => {
     const user = userEvent.setup();
     stubRoutes({
       [REPORT]: () =>
@@ -166,10 +166,13 @@ describe("the test run", () => {
       [`GET /imports/${run.id}`]: () => jsonResponse(run),
     });
     await renderAtTestRun(user);
+    expect(await screen.findByText("Nothing to import")).toBeVisible();
     expect(
-      await screen.findByRole("button", { name: "Import 0 rows" }),
-    ).toBeDisabled();
-    expect(screen.queryByText("Nothing to import")).toBeNull();
+      screen.getByText("The file has a header and no rows."),
+    ).toBeVisible();
+    expect(screen.queryByText(/already in the CRM/)).toBeNull();
+    expect(screen.queryByRole("button", { name: /^Import \d/ })).toBeNull();
+    expect(screen.getByRole("button", { name: "Done" })).toBeEnabled();
   });
 
   it("reads a report that sends no issue list as a clean one", async () => {
@@ -192,11 +195,15 @@ describe("the test run", () => {
     const user = userEvent.setup();
     let tests = 0;
     stubRoutes({
+      // Ticked, the test runs again and counts the row without its link.
       [REPORT]: () =>
         jsonResponse({
           ...dryRun,
           rows_read: 1,
-          disposition: { created: 0, updated: 0, unchanged: 0, skipped: 1 },
+          disposition:
+            tests > 1
+              ? { created: 1, updated: 0, unchanged: 0, skipped: 0 }
+              : { created: 0, updated: 0, unchanged: 0, skipped: 1 },
           issues: [bundleReportFixture.issues[0]],
         }),
       [`GET /imports/${run.id}`]: () =>
@@ -214,7 +221,7 @@ describe("the test run", () => {
     expect(screen.queryByRole("button", { name: "Import 0 rows" })).toBeNull();
     await user.click(screen.getByRole("checkbox", { name: /anyway/ }));
     expect(
-      await screen.findByRole("button", { name: /^Import anyway/ }),
+      await screen.findByRole("button", { name: "Import 1 row anyway" }),
     ).toBeEnabled();
   });
 

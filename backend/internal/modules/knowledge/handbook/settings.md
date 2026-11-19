@@ -63,7 +63,7 @@ Sales and data settings in Margince each have one page.
 - The price list, rate card and offer templates: **Products and offers**.
 - Turn each question sent from a form on your website into a lead: **Website forms**.
 - Upload a document set to ask questions of: **Knowledge**.
-- Import companies, contacts or prospects from a ZIP of CSV files or one CSV: **Data import**.
+- Import companies, contacts or leads from a ZIP of CSV files or one CSV: **Data import**.
 
 ### Which settings page do I need for AI, compliance and the system?
 AI, compliance and system settings in Margince each have one page.
@@ -331,7 +331,7 @@ A canceled run is not a failed run. Deleted runs do not prove the work is done. 
 **System health > Schedules and sending** holds background schedules and mail send limits. Edits use the page save bar. The read-only [Configuration](configuration.md) page is separate.
 Moving to another view asks you to save a draft first. **Search settings** opens the view with the control you asked for.
 
-- **Data import**: a ZIP of CSV files, or one CSV, of companies, contacts, prospects (leads), deals and activities. The limit is 10 MB unless the installation sets another. Nothing is written until you check the test run.
+- **Data import**: a ZIP of CSV files, or one CSV, of companies, contacts, leads, deals and activities. The limit is 10 MB unless the installation sets another. Nothing is written until you check the test run.
 - **Search index**: building the index again, behind search and behind what the AI finds.
 - **Data updates**: progress and controls for background changes. Work that needs review waits until an authorized user starts it.
 - **Background jobs**: jobs that wait to run, and jobs that failed, by owner. Admin and Ops.
@@ -368,7 +368,7 @@ A changed rule or an old preview requires another review before starting.
 
 ## Data import
 
-The Data import page in Settings (group **Data**) brings in companies, contacts, prospects, deals and activities from CSV files. Only an admin or ops user can import.
+The Data import page in Settings (group **Data**) brings in companies, contacts, leads, deals and activities from CSV files. Only an admin or ops user can import.
 
 [Importing data](importing-data.md) holds the rest. It covers the template, the steps and the test run. It also covers deals, activities, importing the same file again, undo and the limits.
 

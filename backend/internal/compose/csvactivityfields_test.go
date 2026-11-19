@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/importwire"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -20,7 +21,7 @@ func activityRoundTrip(fields map[string]string, typed map[string]any) (created,
 	typed[activityTargetMeetingStatus] = "held"
 	typed[activityTargetDirection] = "outbound"
 	typed[activityTargetLinks] = []activities.ActivityLinkInput{{EntityType: "contact", EntityID: ids.NewV7()}}
-	in := activityCreateFrom(fields, typed, importSourceSystem(""), "src")
+	in := activityCreateFrom(fields, typed, importwire.SourceSystem(""), "src")
 	up := activityUpdateFrom(fields, typed)
 	created = map[string]bool{
 		"type":             in.Kind != "",
@@ -46,11 +47,11 @@ func activityRoundTrip(fields map[string]string, typed map[string]any) (created,
 
 func TestAnActivityCreateLeavesTheSourceKeyEmpty(t *testing.T) {
 	in := activityCreateFrom(map[string]string{"ref": "A-1"}, map[string]any{activityTargetType: "note"},
-		importSourceSystem("crm-old"), "mirror:csv:crm-old:activity:A-1")
+		importwire.SourceSystem("crm-old"), "mirror:csv:crm-old:activity:A-1")
 	if in.SourceID != nil {
 		t.Fatalf("SourceID = %q, want none: idempotency lives in the identity map, and a source key would replay an archived row", *in.SourceID)
 	}
-	if in.SourceSystem == nil || *in.SourceSystem != importSourceSystem("crm-old") {
+	if in.SourceSystem == nil || *in.SourceSystem != importwire.SourceSystem("crm-old") {
 		t.Fatalf("SourceSystem = %v, want the run's namespace", in.SourceSystem)
 	}
 }
@@ -73,7 +74,7 @@ func TestADayCellCarriesItsPrecisionToTheCreateAndTheUpdate(t *testing.T) {
 		if problem != nil {
 			t.Fatalf("%s: %+v", cell, problem)
 		}
-		if got := activityCreateFrom(fields, typed, importSourceSystem(""), "src").OccurredPrecision; got != want {
+		if got := activityCreateFrom(fields, typed, importwire.SourceSystem(""), "src").OccurredPrecision; got != want {
 			t.Errorf("%s creates as %q, want %q", cell, got, want)
 		}
 		got := ""
