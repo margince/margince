@@ -424,6 +424,7 @@ describe("AnalyticsScreen", () => {
     vi.stubGlobal(
       "fetch",
       reportsStub({
+        companyRead: true,
         companyRows: [
           {
             company_id: "o1",

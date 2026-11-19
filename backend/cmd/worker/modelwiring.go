@@ -30,9 +30,8 @@ type modelPathSpec struct {
 }
 
 // selectModelPath resolves the model path: a routing config for real
-// deployments, the offline fake behind an explicit dev flag, or the
-// zero path — the runner and the embed lane simply don't start without
-// a declared model; nothing is picked silently.
+// deployments, or the offline fake behind an explicit dev flag. With neither it
+// is a path over an unbound router, which serves nothing until a binding is saved.
 func selectModelPath(ctx context.Context, spec modelPathSpec, pool *pgxpool.Pool, log *slog.Logger) (compose.ModelPath, error) {
 	// The stored binding, seeded from the routing file when this installation
 	// has none yet. Resolved before the switch rather than inside an arm,
@@ -51,9 +50,10 @@ func selectModelPath(ctx context.Context, spec modelPathSpec, pool *pgxpool.Pool
 	}
 	candidates := modelPathCandidates(cfg, spec.fake)
 	if len(candidates) == 0 {
-		// Neither a binding nor --ai-fake: the runner and the embed lane simply
-		// don't start, and nothing is picked silently.
-		return compose.ModelPath{}, nil
+		// Neither a binding nor --ai-fake: the path is built over an unbound
+		// router, so a binding saved later reaches every lane through the
+		// routing watcher. Nothing is picked silently.
+		candidates = []ai.RoutingConfig{{}}
 	}
 	if !cfg.Unconfigured() {
 		// A deployment may legitimately not run every workload, so a task

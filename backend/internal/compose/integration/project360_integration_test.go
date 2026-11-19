@@ -34,6 +34,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/projects"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -356,5 +357,27 @@ func TestProject360OmitsTheCompanyForACallerWithoutThatGrant(t *testing.T) {
 	}
 	if page.Deals == nil || page.Activities == nil || page.PhaseHistory == nil {
 		t.Error("the rest of the page must still be served")
+	}
+}
+
+func TestProject360ReadsAProjectWithNoCustomerAsHavingNone(t *testing.T) {
+	e := Setup(t)
+	admin := e.Admin()
+	company := e.SeedCompany(t, "Acme", &e.Rep1)
+	project := seedProject(admin, t, e, "Partner-only work", company, &e.Rep1).ID
+	if _, err := e.Contacts.SetProjectCompany(admin, contacts.SetProjectCompanyInput{
+		ProjectID: project, CompanyID: companyIDOf(company), Role: "partner",
+	}); err != nil {
+		t.Fatalf("make the only company a partner: %v", err)
+	}
+	page, err := project360Service(e, clocktest.Now(t)).Assemble(admin, project)
+	if err != nil {
+		t.Fatalf("assemble a project with no customer: %v", err)
+	}
+	if page.Company != nil || page.Project.CompanyId != nil {
+		t.Errorf("company = %+v, company_id = %v, want none", page.Company, page.Project.CompanyId)
+	}
+	if slices.Contains(page.SectionsOmitted, crmcontracts.Project360SectionCompany) {
+		t.Errorf("sections_omitted = %v: a missing customer is not a withheld one", page.SectionsOmitted)
 	}
 }

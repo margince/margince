@@ -2804,6 +2804,7 @@ export const en = {
   "shell.shortcuts.singleKeyOffHint": "Turn them on in Settings → Account.",
   "shell.more": "More",
   "shell.unknownPage": "Not found",
+  "shell.unavailableForRole": "Not available for your role.",
   "shell.closeMenu": "Close",
   // The agent panel's one promise, as opposed to its readings: what the agent
   // can REACH. Row scope bounds it on the server, and a guarantee nobody is
@@ -3346,6 +3347,8 @@ export const en = {
     "The AI provider is not answering right now. Try again later or contact your system administrator.",
   "common.gatewayUnavailable":
     "The server did not finish the request in time and may still be processing it. Wait before retrying, or the work can run twice.",
+  "common.requestTimedOut":
+    "The server took too long and stopped this request. Try again in a moment.",
   // Every 403 the server codes `permission_denied`, which is two refusals with
   // one name: a role that does not admit the action on this kind of record, and
   // a record the reader holds read-only through a share. Nothing on the wire
@@ -8322,6 +8325,8 @@ export const en = {
     "This message cannot be sent to {address} as it stands.",
   "compose.sendAnyway.finding.none":
     "This message cannot be sent as it stands.",
+  "compose.sendAnyway.cited": "Attention: sending to {address} may break",
+  "compose.citation.law": "Law:",
   "compose.sendAnyway.warning":
     "The send check still blocks this message. Send anyway sends only this message and grants no permission for later ones. Your name, your reason and the message are kept in a record that cannot be edited.",
   "compose.sendAnyway.editOnly":
@@ -10063,6 +10068,7 @@ export const en = {
   "setup.step.aiDone": "{name} is connected.",
   "setup.step.aiDoneUnnamed": "An AI tool is connected.",
   "firstRun.ai.skip": "Not now",
+  "firstRun.ai.connectAnyway": "Connect anyway",
   "ob.gate.noModelSub":
     "No AI provider is set up yet, so Margince cannot read your website. Enter your company details yourself, or add a key now.",
   "ob.gate.addModel": "Add an AI key",
@@ -10394,6 +10400,8 @@ export const en = {
     "You cannot read tags, so the tags column is not imported.",
   "import.reason.cannot_write_type":
     "“{value}” cannot be written to a {type} field.",
+  "import.reason.company_domain_matched":
+    "The company that already holds the domain {value} takes this row, so no second company is created.",
   "import.reason.company_duplicate_found":
     "A company of this name is already in the CRM. Importing this row creates a second one and files the pair for review.",
   "import.reason.company_duplicate_skipped":
@@ -10488,6 +10496,8 @@ export const en = {
     "The “{column}” value “{value}” is already used by row {line}. Each row needs its own, because it is what a re-import matches on and what an undo finds this row by.",
   "import.reason.size_band_invalid":
     "Employees “{value}” is not one of {allowed}.",
+  "import.reason.stored_values_kept":
+    "The row neither created this record nor names it by id, so it keeps its own {column}. The row fills only empty fields.",
   "import.reason.tag_created":
     "No tag had this name, so the import created it.",
   "import.reason.tag_name_invalid":
@@ -13284,7 +13294,6 @@ export const en = {
   // claims the installation's own configuration can contradict, on the screen a
   // CISO reads on the way in.
   "auth.legalProtected": "Access to this company is restricted.",
-  "auth.legalTerms": "Terms",
   "auth.legalPrivacy": "Privacy",
   "auth.signingIn": "Signing in…",
   "auth.signIn": "Sign in",
@@ -13564,6 +13573,9 @@ export const en = {
     "The link was already used, has expired or was replaced by a newer one. Request a new link below.",
   "buyer.noLink":
     "Open this page from the link you received. If you no longer have it, request a new one below.",
+  "buyer.roomReplacedTitle": "This tab shows an older room",
+  "buyer.roomReplaced":
+    "This browser has opened another Deal Room since. Reload the page to see it.",
   "buyer.emailLabel": "Your email address",
   "buyer.emailHint": "The address the invitation was sent to.",
   "buyer.requestLink": "Request new link",
@@ -16599,6 +16611,18 @@ export const en = {
     "Other devices were signed out and connected apps need connecting again.",
   "account.signOutHelp":
     "Ends your session in this browser. Other devices stay signed in.",
+  "account.devicesCard": "Signed-in devices",
+  "account.devicesBrowserOn": "{browser} on {system}",
+  "account.devicesUnknown": "Unknown device",
+  "account.devicesWhen": "Signed in {signedIn}. Last active {lastActive}.",
+  "account.devicesThisOne": "This device",
+  "account.devicesSignOut": "Sign out",
+  "account.devicesSignOutNamed": "Sign out {device}",
+  "account.devicesOthers": "Other devices",
+  "account.devicesOthersHelp": "Ends every session except this one.",
+  "account.devicesSignOutOthers": "Sign out all others",
+  "account.devicesFailed_one": "{count} device was not signed out. Retry.",
+  "account.devicesFailed_other": "{count} devices were not signed out. Retry.",
   "account.languageHelp":
     "The language of menus, pages and messages from Margince. Saved to your account, so it follows you to every device you sign in on.",
   "account.appearanceHelp":
@@ -19817,6 +19841,12 @@ export const en = {
   "project.assignOwner": "Assign to a colleague",
   "project.description": "Description",
   "project.targetEnd": "Target end date",
+  "project.startDate": "Start date",
+  "project.endDate": "End date",
+  "project.noCustomer": "No customer company",
+  "project.noCustomerSet":
+    "No customer company. Set one under Companies and contacts.",
+  "project.newDealNeedsCustomer": "New deal needs a customer company.",
   "project.new": "New project",
   "project.edit": "Edit project",
   "project.archive": "Archive project",
@@ -20325,6 +20355,7 @@ export const en = {
   "worklist.dueGroup.tomorrow": "Due tomorrow",
   "worklist.dueGroup.this_week": "Due this week",
   "worklist.dueGroup.later": "Later",
+  "worklist.dueGroup.none": "No due date",
   "worklist.band.build_pipeline": "Prospecting",
   "worklist.band.keep_momentum": "Keep momentum",
   "worklist.band.review": "Review",

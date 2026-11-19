@@ -19,9 +19,8 @@ import {
 import { useT } from "../i18n";
 import { lazy } from "../i18n/lazy";
 import { grants } from "../lib/accessgrants";
-import { looksLikeDataQuestion } from "../lib/dataquestion";
 import { problemMessageOf } from "../lib/problem";
-import { looksLikeQuestion } from "../lib/question";
+import { looksLikeDataQuestion, looksLikeQuestion } from "../lib/question";
 import { navigate } from "../lib/router";
 import { useMe } from "../lib/session";
 import type { SettingsPageId } from "../lib/settingscatalog";

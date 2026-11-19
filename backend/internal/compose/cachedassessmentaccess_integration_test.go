@@ -48,7 +48,7 @@ func TestAnEarlierAssessmentRequiresItsUncitedInputToRemainReadable(t *testing.T
 		scope := refWhere(t, request, "subject", "Scope discussion")
 		return model.Response{Text: fmt.Sprintf(`{"story":[{"text":"The scope was discussed.","evidence":[%q]}],"blocker":[],"buyer":[],"verdict":{"standing":"drifting","because":[{"text":"The budget requires approval.","evidence":[%q]}]},"move_reason":[]}`, scope, scope)}, nil
 	})
-	service := newDealStatusService(e.Pool, func() time.Time { return at }).WithLane(lane, "test")
+	service := newDealStatusService(e.Pool, func() time.Time { return at }).WithLane(lane, func() string { return "test" })
 	card, err := service.Get(reader, ids.From[ids.DealKind](deal), true)
 	if err != nil {
 		t.Fatal(err)
@@ -104,7 +104,7 @@ func TestAnEarlierAssessmentRequiresItsStakeholderContextToRemainReadable(t *tes
 				scope := refWhere(t, request, "subject", subject)
 				return model.Response{Text: fmt.Sprintf(`{"story":[{"text":"The scope was discussed.","evidence":[%q]}],"blocker":[],"buyer":[],"verdict":{"standing":"live","because":[{"text":"The scope was discussed with the champion.","evidence":[%q]}]},"move_reason":[]}`, scope, scope)}, nil
 			})
-			service := newDealStatusService(e.Pool, func() time.Time { return at }).WithLane(lane, "test")
+			service := newDealStatusService(e.Pool, func() time.Time { return at }).WithLane(lane, func() string { return "test" })
 			reader := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 			card, err := service.Get(reader, deal, true)
 			if err != nil || card.GeneratedBy != crmcontracts.WrittenByModel || card.Verdict == nil {

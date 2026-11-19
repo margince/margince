@@ -30,7 +30,7 @@ const writableSeat = () =>
   jsonResponse({
     user: { id: "u-1", display_name: "Mira Voss" },
     authorization: {
-      objects: { company: { update: true } },
+      objects: { company: { read: true, update: true } },
       seat_type: "full",
     },
   });
