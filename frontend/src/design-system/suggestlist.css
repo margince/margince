@@ -70,3 +70,12 @@
   background: none;
   color: var(--textSecondary);
 }
+/* A heading names its rows and is not one of them, so the arrows walk past it. */
+.suggest-group-label {
+  padding: var(--space-2) 9px var(--space-1); /* ds:ignore the inline inset lines the heading up with the option rows' text */
+  color: var(--textSecondary);
+}
+.suggest-group {
+  display: flex;
+  flex-direction: column;
+}

@@ -5524,6 +5524,7 @@ export const en = {
   "co.facts.addCancel": "Cancel",
   "co.facts.addIncomplete": "Select a fact type and enter a value.",
   "co.facts.remove": "Remove {value}",
+  "tokenInput.remove": "Remove {value}",
   "co.facts.removeTitle": "Remove this fact?",
   "co.facts.removeConfirm": "Remove",
   "co.facts.removeAsk":
@@ -8010,6 +8011,10 @@ export const en = {
   "compose.recipientHint": "Name or address",
   "compose.bodyPlaceholder": "Message text",
   "compose.bcc": "Bcc",
+  "compose.bccHint": "Other recipients do not see these addresses.",
+  "compose.alreadyIn": "Already in {field}",
+  "compose.colleagues": "Colleagues",
+  "compose.replyTitle": "Reply",
   "compose.threadGone":
     "That thread can no longer be answered, so a new email was opened instead. Check the recipient before sending.",
   "compose.colleagueMailbox_one":

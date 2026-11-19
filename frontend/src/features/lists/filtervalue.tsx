@@ -120,6 +120,7 @@ export function ValueControl({
       <TokenInput
         values={Array.isArray(value) ? value.map(String) : []}
         onChange={(next) => onChange(next)}
+        removeLabel={(item) => t("tokenInput.remove", { value: item })}
         aria-label={label ?? t("filters.values")}
         placeholder={t("filters.addValue")}
       />

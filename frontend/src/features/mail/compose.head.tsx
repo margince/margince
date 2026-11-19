@@ -2,7 +2,6 @@ import type { ReactNode } from "react";
 import { Callout } from "../../design-system/callout";
 import { ProjectPicker, projectLabel } from "../../design-system/projectpicker";
 import { Switch } from "../../design-system/switch";
-import type { TokenSuggestion } from "../../design-system/tokeninput";
 import { INTL_LOCALE } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useThreadProject } from "../../lib/activityfiling";
@@ -16,6 +15,7 @@ import type { ComposeRecords } from "./composefiling";
 import {
   AddressBlock,
   type AddressLine,
+  type RecipientOffers,
   SubjectRow,
   TransportRow,
 } from "./composehead";
@@ -131,7 +131,7 @@ function MailOnlyFields({
   copiesOpen: boolean;
   onOpenCopies: () => void;
   /** The addresses this record already knows, offered as the reader types. */
-  recipients: readonly TokenSuggestion[];
+  recipients: RecipientOffers;
   /** The reader has started typing a recipient, before any is committed. */
   onToEditing: () => void;
   refused: Readonly<Record<AddressLine, readonly string[]>>;

@@ -8,7 +8,7 @@
 // the refusal vocabulary and the send itself. What is here is only the form.
 
 import { Mail, MessageSquare } from "lucide-react";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import type { components } from "../../api/schema";
 import { Button, Field, TextInput } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
@@ -20,11 +20,12 @@ import {
   type TokenParse,
   type TokenSuggestion,
 } from "../../design-system/tokeninput";
-import { usePlural, useT } from "../../i18n";
+import { INTL_LOCALE } from "../../format/format";
+import { useLocale, usePlural, useT } from "../../i18n";
 import type { Transport } from "../../lib/contacttransports";
 import { ENTITY } from "../../lib/entity";
 import { routeHash } from "../../lib/router";
-import { readAddressList } from "./composeaddresslist";
+import { addressKey, readAddressList } from "./composeaddresslist";
 import "./composehead.css";
 
 type Contact = components["schemas"]["Contact"];
@@ -35,12 +36,34 @@ type Team = components["schemas"]["Team"];
 
 export type AddressLine = "to" | "cc" | "bcc";
 
+const ADDRESS_LINES: readonly AddressLine[] = ["to", "cc", "bcc"];
+
 const ADDRESS_KEYS = [",", ";"];
+
+// With nothing typed the list is a short pick of the record's contacts; a
+// colleague is found by name, so they wait for the first letters.
+const IDLE_CONTACTS = 8;
+const COLLEAGUES_AFTER = 2;
+
+const NO_REPEATS: Readonly<Record<AddressLine, readonly string[]>> = {
+  to: [],
+  cc: [],
+  bcc: [],
+};
 
 const MAILABLE_STATUS: ReadonlySet<User["status"]> = new Set([
   "active",
   "invited",
 ]);
+
+const TO_FIELD = "compose-to-field";
+
+/** The To line's text box inside a composer. */
+export function toBox(
+  composer: Element | null | undefined,
+): HTMLElement | null {
+  return composer?.querySelector<HTMLElement>(`.${TO_FIELD} input`) ?? null;
+}
 
 /** What a pressed Send is still waiting for, under the field it waits on. */
 export function FieldNeed({
@@ -53,10 +76,15 @@ export function FieldNeed({
   return <ErrorLine>{need}</ErrorLine>;
 }
 
+export type RecipientOffers = Readonly<{
+  contacts: readonly TokenSuggestion[];
+  colleagues: readonly TokenSuggestion[];
+}>;
+
 /**
  * The addresses this message can be built out of, from reads the composer already holds.
  * The label is the name a reader remembers; the address is the value and the hint.
- * Order: the contact, the contacts around it, the account's roster, then members.
+ * Contacts: the contact, the contacts around it, then the account's roster.
  * A contact with no address is left out, because it would refuse at the send.
  */
 export function recipientSuggestions({
@@ -64,26 +92,29 @@ export function recipientSuggestions({
   related = [],
   company,
   colleagues = [],
+  viewerId,
 }: Readonly<{
   contact?: Contact360;
   related?: readonly Contact[];
   company?: Company360;
   colleagues?: readonly (User | Team)[];
-}>): readonly TokenSuggestion[] {
+  /** The sender, who is never a recipient of their own mail. */
+  viewerId?: string;
+}>): RecipientOffers {
   const seen = new Set<string>();
-  const out: TokenSuggestion[] = [];
-  const offer = (
-    value: string | null | undefined,
-    label: string,
-    card?: TokenCard,
-  ) => {
-    const address = value?.trim();
-    if (!address || seen.has(address)) {
-      return;
-    }
-    seen.add(address);
-    out.push({ value: address, label, hint: address, card });
-  };
+  const contacts: TokenSuggestion[] = [];
+  const members: TokenSuggestion[] = [];
+  const offerInto =
+    (out: TokenSuggestion[]) =>
+    (value: string | null | undefined, label: string, card?: TokenCard) => {
+      const address = value?.trim();
+      if (!address || seen.has(addressKey(address))) {
+        return;
+      }
+      seen.add(addressKey(address));
+      out.push({ value: address, label, hint: address, card });
+    };
+  const offer = offerInto(contacts);
   const account = company?.company?.display_name;
   const contactCard = (
     id: string,
@@ -116,23 +147,24 @@ export function recipientSuggestions({
       contactCard(rostered.contact_id, rostered.title, account),
     );
   }
+  const offerMember = offerInto(members);
   for (const member of colleagues) {
-    // Members come last: a message goes to the record's contacts first.
     // An agent seat has no mailbox anyone writes to, and a suspended or
     // deactivated member no longer reads one.
     if (
       !("email" in member) ||
       member.is_agent ||
+      member.id === viewerId ||
       !MAILABLE_STATUS.has(member.status)
     ) {
       continue;
     }
-    offer(member.email, member.display_name, {
+    offerMember(member.email, member.display_name, {
       identity: member.id,
       photo: member.avatar_url,
     });
   }
-  return out;
+  return { contacts, colleagues: members };
 }
 
 /**
@@ -188,6 +220,9 @@ export function TransportRow({
  * read as a form with empty fields in it. Once opened they stay open. They
  * open on their own when either holds an address, because a field with a value
  * in it may never be hidden.
+ *
+ * An address stands once on a message. One already in any field, in any case,
+ * is refused and stays typed, with the field that holds it named.
  */
 export function AddressBlock({
   to,
@@ -215,7 +250,7 @@ export function AddressBlock({
   onBccChange: (next: string[]) => void;
   copiesOpen: boolean;
   onOpenCopies: () => void;
-  suggestions: readonly TokenSuggestion[];
+  suggestions: RecipientOffers;
   /** The reader has taken the To line over — see TokenInput's own prop. */
   onToEditing: () => void;
   /** Text each line could not read as addresses. */
@@ -229,24 +264,92 @@ export function AddressBlock({
 }>) {
   const t = useT();
   const plural = usePlural();
+  const { locale } = useLocale();
+  // Repeats stay typed but hold no send: the address is on the message already.
+  const [repeats, setRepeats] = useState(NO_REPEATS);
+  const lines: Readonly<Record<AddressLine, readonly string[]>> = {
+    to,
+    cc,
+    bcc,
+  };
+  const label: Readonly<Record<AddressLine, string>> = {
+    to: t("compose.to"),
+    cc: t("compose.cc"),
+    bcc: t("compose.bcc"),
+  };
+  const holder = (address: string) =>
+    ADDRESS_LINES.find((line) =>
+      lines[line].some((held) => addressKey(held) === addressKey(address)),
+    );
+  const isHeld = (address: string) => holder(address) !== undefined;
   const parse = (line: AddressLine): TokenParse => ({
     keys: ADDRESS_KEYS,
-    read: readAddressList,
-    onRefuse: (parts) => onRefuse(line, parts),
+    key: addressKey,
+    read: (raw) => {
+      const reading = readAddressList(raw);
+      return {
+        values: reading.values.filter((value) => !isHeld(value)),
+        refused: [...reading.refused, ...reading.values.filter(isHeld)],
+      };
+    },
+    onRefuse: (parts) => {
+      setRepeats((prev) => ({ ...prev, [line]: parts.filter(isHeld) }));
+      onRefuse(
+        line,
+        parts.filter((part) => !isHeld(part)),
+      );
+    },
   });
-  const refusal = (line: AddressLine) =>
-    refused[line].length === 0
-      ? undefined
-      : plural("compose.notAnAddress", refused[line].length, {
-          parts: refused[line].join(", "),
-        });
+  const colleagues = suggestions.colleagues.map((row) => ({
+    ...row,
+    group: t("compose.colleagues"),
+  }));
+  const named = [...suggestions.contacts, ...colleagues];
+  const offerFor = (typed: string) => {
+    const free = (row: TokenSuggestion) => !isHeld(row.value);
+    const contacts = suggestions.contacts.filter(free);
+    const words = typed.trim();
+    if (words === "") {
+      return contacts.slice(0, IDLE_CONTACTS);
+    }
+    return words.length < COLLEAGUES_AFTER
+      ? contacts
+      : [...contacts, ...colleagues.filter(free)];
+  };
+  const removeLabel = (value: string) => t("tokenInput.remove", { value });
+  const refusal = (line: AddressLine) => {
+    const holders = [
+      ...new Set(repeats[line].flatMap((part) => holder(part) ?? [])),
+    ];
+    const lines = [
+      refused[line].length === 0
+        ? undefined
+        : plural("compose.notAnAddress", refused[line].length, {
+            parts: refused[line].join(", "),
+          }),
+      holders.length === 0
+        ? undefined
+        : t("compose.alreadyIn", {
+            field: new Intl.ListFormat(INTL_LOCALE[locale], {
+              type: "conjunction",
+            }).format(holders.map((held) => label[held])),
+          }),
+    ].filter((sentence) => sentence !== undefined);
+    return lines.length === 0 ? undefined : lines.join(" ");
+  };
   const commit = (next: readonly string[]) => [...next];
   const copies = copiesOpen || cc.length > 0 || bcc.length > 0;
+  const tokenProps = {
+    suggestions: named,
+    offerFor,
+    removeLabel,
+    disabled,
+  };
   return (
     <>
       <Field
-        className="compose-address-field"
-        label={t("compose.to")}
+        className={`compose-address-field ${TO_FIELD}`}
+        label={label.to}
         error={refusal("to") ?? (invalidTo ? needTo : undefined)}
         trailing={
           copies ? undefined : (
@@ -260,12 +363,11 @@ export function AddressBlock({
         {(control) => (
           <TokenInput
             {...control}
+            {...tokenProps}
             values={to}
             onChange={(next) => onToChange(commit(next))}
             parse={parse("to")}
-            suggestions={suggestions}
             onEditing={onToEditing}
-            disabled={disabled}
             placeholder={t("compose.recipientHint")}
           />
         )}
@@ -274,33 +376,32 @@ export function AddressBlock({
         <>
           <Field
             className="compose-address-field"
-            label={t("compose.cc")}
+            label={label.cc}
             error={refusal("cc")}
           >
             {(control) => (
               <TokenInput
                 {...control}
+                {...tokenProps}
                 values={cc}
                 onChange={(next) => onCcChange(commit(next))}
                 parse={parse("cc")}
-                suggestions={suggestions}
-                disabled={disabled}
               />
             )}
           </Field>
           <Field
             className="compose-address-field"
-            label={t("compose.bcc")}
+            label={label.bcc}
+            hint={t("compose.bccHint")}
             error={refusal("bcc")}
           >
             {(control) => (
               <TokenInput
                 {...control}
+                {...tokenProps}
                 values={bcc}
                 onChange={(next) => onBccChange(commit(next))}
                 parse={parse("bcc")}
-                suggestions={suggestions}
-                disabled={disabled}
               />
             )}
           </Field>

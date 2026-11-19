@@ -15,6 +15,7 @@ import { useThreadProject } from "../../lib/activityfiling";
 import { relatedContactsQuery } from "../../lib/contact.queries";
 import { useHealthScope } from "../../lib/healthscope";
 import { unwrap } from "../../lib/problem";
+import { useViewerId } from "../../lib/session";
 import { useCompany360 } from "../companies/company360";
 import { useContact360 } from "../contacts/contact360";
 import {
@@ -23,6 +24,7 @@ import {
   useProjectRecord,
   withSubjectTag,
 } from "../projects/projectrecord";
+import { addressKey } from "./composeaddresslist";
 import { recipientSuggestions } from "./composehead";
 import { deadRecipientsAmong } from "./composereachability";
 import type { RelinkKind } from "./composerelink";
@@ -283,7 +285,7 @@ export function contactsByAddress(
     address: string | null | undefined,
     owner: { id: string; attachable: boolean },
   ) => {
-    const key = address?.trim().toLowerCase();
+    const key = address ? addressKey(address) : undefined;
     const held = key ? owners.get(key) : undefined;
     if (key && (!held || (owner.attachable && !held.attachable))) {
       owners.set(key, owner);
@@ -304,7 +306,7 @@ export function contactsByAddress(
       attachable: member.attachable,
     });
   }
-  return (address) => owners.get(address.trim().toLowerCase())?.id;
+  return (address) => owners.get(addressKey(address))?.id;
 }
 
 /**
@@ -417,7 +419,9 @@ export function useComposeRecords({
     enabled: open && recipientContact != null && readerScope !== undefined,
   });
   // roster-failure: suggestions only; the To field still takes any address.
-  const colleagues = useRoster("user", open && !isChannelReply);
+  const mailing = open && !isChannelReply;
+  const colleagues = useRoster("user", mailing);
+  const viewerId = useViewerId(mailing);
   const anchorProject = useAnchorProject(entityType, entityId);
   // A project page's message is about that project, read as a record so the
   // picker names it the way the page does.
@@ -458,12 +462,12 @@ export function useComposeRecords({
     projectFiling,
     // Addresses known not to arrive, warned under the fields.
     deadRecipients: deadRecipientsAmong(contact.data, [...addressed]),
-    // The contact, the contacts around it, the account's roster, the members.
     recipients: recipientSuggestions({
       contact: contact.data,
       related: related.data,
       company: anchorCompany.data,
       colleagues: colleagues.data,
+      viewerId,
     }),
   };
 }

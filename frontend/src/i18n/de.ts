@@ -5587,6 +5587,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.facts.addIncomplete":
     "Wähle den Typ des Fakts aus und gib einen Wert ein.",
   "co.facts.remove": "{value} entfernen",
+  "tokenInput.remove": "{value} entfernen",
   "co.facts.removeTitle": "Diesen Fakt entfernen?",
   "co.facts.removeConfirm": "Entfernen",
   "co.facts.removeAsk":
@@ -8009,6 +8010,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.recipientHint": "Name oder Adresse",
   "compose.bodyPlaceholder": "Nachrichtentext",
   "compose.bcc": "Bcc",
+  "compose.bccHint": "Andere Empfangende sehen diese Adressen nicht.",
+  "compose.alreadyIn": "Steht schon in „{field}“",
+  "compose.colleagues": "Teammitglieder",
+  "compose.replyTitle": "Antwort",
   "compose.threadGone":
     "Stattdessen wurde eine neue E-Mail geöffnet, da dieser Thread nicht mehr beantwortet werden kann. Prüfe die Empfangsadresse vor dem Senden.",
   "compose.colleagueMailbox_one":
@@ -12084,7 +12089,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "extUnits.workspace.sub":
     "Erweiterungen, die diese Installation mit gemeinsamen Zugangsdaten betreibt. Einstellungen hier gelten für alle Nutzenden.",
 
-  "connectors.title": "Mail und Kalender",
+  "connectors.title": "E-Mail und Kalender",
   // Die dauerhafte Nacht-Vollmacht der Nutzerin — eine Frage, gestellt beim
   // Postfach-Verbinden im Onboarding und noch einmal in den Einstellungen.
   "overnightGrant.title": "Vorbereitung über Nacht",
@@ -16356,7 +16361,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "connectors.vendorGoogle": "Google",
   "connectors.vendorMicrosoft": "Microsoft 365",
   "connectors.oauthConnectedTitle": "{provider} verbunden",
-  "connectors.oauthBoth": "Mail und Kalender werden synchronisiert.",
+  "connectors.oauthBoth": "E-Mail und Kalender werden synchronisiert.",
   "connectors.oauthMailOnly": "Mail wird synchronisiert.",
   "connectors.oauthCalendarOnly": "Kalender wird synchronisiert.",
   "connectors.oauthImportRuns":
@@ -16371,7 +16376,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "connectors.health.reconnect": "Neuverbindung nötig",
   "connectors.health.attention": "Handlungsbedarf",
   "connectors.health.notConnected": "Nicht verbunden",
-  "connectFlow.title": "Mail und Kalender verbinden",
+  "connectFlow.title": "E-Mail und Kalender verbinden",
   "connectFlow.progress": "Schritte",
   "connectFlow.stepAccount": "Konto",
   "connectFlow.stepBringIn": "Was übernommen wird",
@@ -16423,7 +16428,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "connectors.bringsMail": "Mail",
   "connectors.bringsCalendar": "Kalender",
   "connectors.bringsSend": "Sendet aus Margince",
-  "connectors.servicesBoth": "Mail und Kalender",
+  "connectors.servicesBoth": "E-Mail und Kalender",
   "connectors.connectMail": "Mail verbinden",
   "connectors.account.connectedOn": "Verbunden {date}",
   "connectors.account.menu": "Weitere Aktionen für {account}",
@@ -16479,7 +16484,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "connectors.connectVendor": "{vendor} verbinden",
   "connectors.strip.label": "So läuft das Verbinden",
   "connectors.strip.pick": "Konto wählen",
-  "connectors.strip.tick": "Mail und Kalender ankreuzen",
+  "connectors.strip.tick": "E-Mail und Kalender ankreuzen",
   "connectors.strip.signIn": "Anmelden",
   "connectors.strip.syncs": "Die Synchronisierung startet von selbst",
   "mailSharing.plate.scope": "Ganzes Unternehmen",
@@ -21264,7 +21269,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "oauthApp.steps.google.pasteBody":
     "Google zeigt beides in einem Dialog, nachdem du „Erstellen“ gewählt hast. Hast du ihn geschlossen, öffne den Client unter „Anmeldedaten“: Oben steht die Client-ID, und „Secret hinzufügen“ erzeugt einen neuen Clientschlüssel.",
   "oauthApp.steps.microsoft.permissionsTitle":
-    "Zugriff auf Mail und Kalender erlauben",
+    "Zugriff auf E-Mail und Kalender erlauben",
   "oauthApp.steps.microsoft.permissionsBody":
     "Öffne „API-Berechtigungen“, wähle „Berechtigung hinzufügen“, dann „Microsoft Graph“, dann „Delegierte Berechtigungen“. Füge openid, email, profile, offline_access, User.Read, Mail.Read, Mail.Send und Calendars.ReadWrite hinzu. Wähle dann „Administratorzustimmung erteilen“, damit niemand in deinem Unternehmen sie einzeln bestätigen muss.",
   "oauthApp.steps.microsoft.secretTitle": "Clientschlüssel erstellen",

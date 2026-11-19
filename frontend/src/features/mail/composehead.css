@@ -91,3 +91,9 @@
   box-shadow: none;
   font-weight: var(--fontWeightMedium);
 }
+/* The bare lines still show which one the keyboard is in. */
+.compose-address-field .token-input:focus-within,
+.compose-subject-field .input:focus {
+  border-color: var(--accent);
+  box-shadow: var(--focus-glow);
+}

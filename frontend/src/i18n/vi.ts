@@ -5440,6 +5440,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.facts.addCancel": "Hủy",
   "co.facts.addIncomplete": "Chọn loại dữ kiện và nhập giá trị.",
   "co.facts.remove": "Gỡ {value}",
+  "tokenInput.remove": "Gỡ {value}",
   "co.facts.removeTitle": "Gỡ dữ kiện này?",
   "co.facts.removeConfirm": "Gỡ",
   "co.facts.removeAsk":
@@ -7817,6 +7818,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.recipientHint": "Tên hoặc địa chỉ",
   "compose.bodyPlaceholder": "Nội dung tin nhắn",
   "compose.bcc": "Bcc",
+  "compose.bccHint": "Những ai cùng nhận thư không thấy các địa chỉ này.",
+  "compose.alreadyIn": "Đã có trong ô {field}",
+  "compose.colleagues": "Đồng nghiệp",
+  "compose.replyTitle": "Trả lời",
   "compose.threadGone":
     "Không thể trả lời chuỗi thư đó nữa, nên đã mở email mới thay thế. Kiểm tra người nhận trước khi gửi.",
   "compose.colleagueMailbox_one":

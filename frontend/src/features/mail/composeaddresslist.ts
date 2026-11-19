@@ -17,6 +17,30 @@ function recipient(text: string): string | null {
   return RECIPIENT.test(trimmed) ? trimmed : null;
 }
 
+/** Two addresses are one mailbox when they match case-blind, as the server stores them. */
+export function addressKey(address: string): string {
+  return address.trim().toLowerCase();
+}
+
+export type AddressLines = Readonly<{
+  to: readonly string[];
+  cc: readonly string[];
+  bcc: readonly string[];
+}>;
+
+/** Each address once, where it first stands in To, Cc, Bcc order. */
+export function distinctAddressLines(lines: AddressLines) {
+  const seen = new Set<string>();
+  const once = (line: readonly string[]) =>
+    line.filter((address) => {
+      const key = addressKey(address);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  return { to: once(lines.to), cc: once(lines.cc), bcc: once(lines.bcc) };
+}
+
 const isQuoted = (piece: string) =>
   piece.length > 1 && (piece[0] === '"' || piece[0] === "'");
 

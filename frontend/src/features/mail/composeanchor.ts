@@ -116,7 +116,8 @@ export function windowTitle(
     isChannelReply: boolean;
     wordingTitle: string;
     replying: boolean;
-    anchorSubject: string | null | undefined;
+    /** The answered message; absent while it loads. */
+    anchor: Readonly<{ subject?: string | null }> | undefined;
     subject: string;
     recordName: string | undefined;
     t: ReturnType<typeof useT>;
@@ -127,7 +128,9 @@ export function windowTitle(
   if (input.isChannelReply) return input.wordingTitle;
   if (stripEveryKeyTag(input.subject).trim()) return input.subject.trim();
   if (input.replying) {
-    return replySubject(input.anchorSubject?.trim() || t("email.noSubject"));
+    // An unread anchor is not one without a subject.
+    if (!input.anchor) return t("compose.replyTitle");
+    return replySubject(input.anchor.subject?.trim() || t("email.noSubject"));
   }
   return input.recordName
     ? t("compose.newEmailTo", { name: input.recordName })

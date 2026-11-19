@@ -324,7 +324,7 @@ export function ComposeWindow({
     isChannelReply,
     wordingTitle: t(wording.title),
     replying: thread.replying,
-    anchorSubject: thread.anchorActivity?.subject,
+    anchor: thread.anchorActivity,
     subject: fields.subject,
     recordName: records.recordName,
     t,
@@ -351,6 +351,13 @@ export function ComposeWindow({
           onClose={savedDraft.requestClose}
           closeDisabled={sendPending}
           bodyId={bodyId}
+          recipientFirst={
+            !answering &&
+            !isChannelReply &&
+            !account.offeredAddress &&
+            !contactId &&
+            fields.to.length === 0
+          }
           openedFrom={openedFrom}
         >
           <ChannelDraftNotice

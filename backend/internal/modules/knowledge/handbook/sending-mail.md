@@ -41,7 +41,7 @@ Rest the mouse on **Preview** to see a message's text, and press **Read full ema
 To file an email you send under a project in Margince, choose the project in the composer's head, beside its title. Margince puts its key, such as `[NER]`, at the start of the **Subject**, so the client's answer is filed under the project too.
 The switch **Add project key to subject (helps filing)** under the subject is on. Turn it off to send this email without the key; the next email starts with it on. Choosing **No project** also takes the key out; deleting it from the text does not.
 
-The list starts on the thread's own project, then on the deal's, then on the company's only live project. Writing from a project page files under that project; with no live project to offer, the project list is hidden. A new email from a company has one **Related to** list there instead: the company's live projects, its open deals ("Deal: {name}"), and **Nothing specific**. A deal has no key, so choosing one takes the key out of the subject and files the email under the deal. Also called: tag an email with a project, project key in the subject, file an email under a deal.
+The list starts on the thread's own project, then on the deal's, then on the company's only live project. Writing from a project page files under that project; with no live project to offer, the project list is hidden. A new email from a company has one **Related to** list there instead: the company's live projects, its open deals ("Deal: {name}"), and **Nothing specific**. When the company has no live project and no open deal, the list is hidden. A deal has no key, so choosing one takes the key out of the subject and files the email under the deal. Also called: tag an email with a project, project key in the subject, file an email under a deal.
 
 ### What do the composer's error messages mean?
 The composer in Margince does not send until four things are filled in, and names each one under its field.
@@ -80,11 +80,11 @@ text is only for you to read; it is not sent.
 Anything that stops the send shows in a warning bar above **Send**, with what
 you can do about it there.
 
-To is on the form. **Cc and Bcc** is a link until you press it. Then Bcc says
-what it means: other recipients cannot see these addresses, or that anyone else
-has a copy. A recipient Margince knows shows as the contact's name. Point at the name, or reach it with Tab, to see the address and the company.
+To is on the form. **Cc and Bcc** is a link until you press it. Under **Bcc** the composer says: "Other recipients do not see these addresses." A recipient Margince knows shows as the contact's name. Point at the name, or reach it with Tab, to see the address and the company.
 
-Type a name or an address in **To**, **Cc** or **Bcc** to pick a recipient. When you write to a contact, the list offers that contact first. The contacts around them come next: colleagues at the company they work at now, and the contacts on the same deals. From a company, deal or project, the company's contacts are offered. Your own colleagues in Margince come last. You only see contacts you can open in Margince.
+Click in **To**, **Cc** or **Bcc** to see up to eight contacts of the record. When you write to a contact, the list offers that contact first. The contacts around them come next: colleagues at the company they work at now, and the contacts on the same deals. From a company, deal or project, the company's contacts are offered. Type a name or an address to find more. Once you type two letters, your own colleagues in Margince show under **Colleagues**.
+
+You are never offered as a recipient, and you only see contacts you can open in Margince. The list closes when you pick a recipient. An address is on a message only once. Type one that is already there, in capital letters or not, and the composer keeps your text and names its field: "Already in To". When **To** is empty, you start in **To**; else you start in the message.
 
 A channel reply, such as Telegram, drops the subject and Cc, because the channel
 has neither.

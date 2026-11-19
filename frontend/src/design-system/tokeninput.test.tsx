@@ -12,12 +12,14 @@ import {
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it } from "vitest";
-import { TokenInput, TokenList } from "./tokeninput";
+import { TokenInput, TokenList, type TokenSuggestion } from "./tokeninput";
 
 // The `in` operator's value control. Every rule below is one a reader would
 // otherwise discover by losing a value they typed.
 
 afterEach(cleanup);
+
+const removeLabel = (value: string) => `Remove ${value}`;
 
 /** Controlled, because a test that never feeds the value back proves only that
  *  the callback fired. */
@@ -27,6 +29,7 @@ function Harness({ start = [] }: Readonly<{ start?: readonly string[] }>) {
     <TokenInput
       values={values}
       onChange={setValues}
+      removeLabel={removeLabel}
       aria-label="Region"
       placeholder="DE, AT"
     />
@@ -209,6 +212,7 @@ function Parsing({ start = [] }: Readonly<{ start?: readonly string[] }>) {
       <TokenInput
         values={values}
         onChange={setValues}
+        removeLabel={removeLabel}
         parse={{ ...REGIONS, onRefuse: setRefused }}
         aria-label="Region"
       />
@@ -393,6 +397,7 @@ function Offering({ start = [] }: Readonly<{ start?: readonly string[] }>) {
     <TokenInput
       values={values}
       onChange={setValues}
+      removeLabel={removeLabel}
       suggestions={CONTACTS}
       aria-label="To"
       placeholder="name@example.com"
@@ -506,5 +511,108 @@ describe("a named token", () => {
     expect(screen.getByText("stranger@example.com")).toBeTruthy();
     await user.tab();
     expect(screen.queryByRole("region")).toBeNull();
+  });
+});
+
+describe("a remove button's name", () => {
+  it("is the one the caller words for that value", () => {
+    render(
+      <TokenInput
+        values={["DE"]}
+        onChange={() => {}}
+        removeLabel={(value) => `${value} entfernen`}
+        aria-label="Region"
+      />,
+    );
+    expect(screen.getByRole("button", { name: "DE entfernen" })).toBeTruthy();
+  });
+});
+
+const ADDRESS_LIKE = {
+  keys: [","],
+  read: (raw: string) => ({ values: raw.split(","), refused: [] }),
+  key: (value: string) => value.toLowerCase(),
+  onRefuse: () => {},
+};
+
+function CaseBlind({
+  start = [],
+  offerFor,
+}: Readonly<{
+  start?: readonly string[];
+  offerFor?: (typed: string) => readonly TokenSuggestion[];
+}>) {
+  const [values, setValues] = useState<readonly string[]>(start);
+  return (
+    <TokenInput
+      values={values}
+      onChange={setValues}
+      removeLabel={removeLabel}
+      parse={ADDRESS_LIKE}
+      suggestions={CONTACTS}
+      offerFor={offerFor}
+      aria-label="To"
+    />
+  );
+}
+
+describe("a field whose parse has a key", () => {
+  it("drops a value held in other capitals", async () => {
+    const user = userEvent.setup();
+    render(<CaseBlind start={["dana@nordwand.example"]} />);
+    await user.type(toBox(), "DANA@NORDWAND.EXAMPLE{Enter}");
+    expect(screen.getAllByRole("button", { name: /^Remove / })).toHaveLength(1);
+  });
+
+  it("names a value by the offer its key matches, and offers it no more", async () => {
+    const user = userEvent.setup();
+    render(<CaseBlind start={["Dana@Nordwand.example"]} />);
+    expect(screen.getByText("Dana Ellwanger")).toBeTruthy();
+    await user.click(toBox());
+    expect(screen.queryByRole("option", { name: /Dana/ })).toBeNull();
+    expect(screen.getByRole("option", { name: /Milo/ })).toBeTruthy();
+  });
+});
+
+const COLLEAGUE: TokenSuggestion = {
+  value: "sofia@margince.example",
+  label: "Sofia Keller",
+  group: "Colleagues",
+};
+
+describe("offering by what is typed", () => {
+  const offerFor = (typed: string) =>
+    typed.trim().length < 2 ? CONTACTS : [...CONTACTS, COLLEAGUE];
+
+  it("offers what offerFor gives for the text typed", async () => {
+    const user = userEvent.setup();
+    render(<CaseBlind offerFor={offerFor} />);
+    await user.click(toBox());
+    expect(screen.getAllByRole("option")).toHaveLength(2);
+    await user.keyboard("ma");
+    expect(screen.getByRole("option", { name: /Sofia Keller/ })).toBeTruthy();
+  });
+
+  it("lists a grouped row under its named heading, which the arrows skip", async () => {
+    const user = userEvent.setup();
+    render(<CaseBlind offerFor={offerFor} />);
+    await user.type(toBox(), "el");
+    const group = screen.getByRole("group", { name: "Colleagues" });
+    expect(
+      within(group).getByRole("option", { name: /Sofia Keller/ }),
+    ).toBeTruthy();
+    await user.keyboard("{ArrowDown}{ArrowDown}");
+    expect(toBox().getAttribute("aria-activedescendant")).toBe(
+      screen.getByRole("option", { name: /Sofia Keller/ }).id,
+    );
+  });
+
+  it("closes the list after a pick", async () => {
+    const user = userEvent.setup();
+    render(<CaseBlind offerFor={offerFor} />);
+    await user.click(toBox());
+    await user.keyboard("{ArrowDown}{Enter}");
+    expect(screen.queryByRole("listbox")).toBeNull();
+    expect(toBox().getAttribute("aria-expanded")).toBe("false");
   });
 });

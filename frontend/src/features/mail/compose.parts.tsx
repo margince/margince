@@ -26,7 +26,7 @@ import type { Activity, VoiceProfile } from "./compose";
 import { AiDraftBand } from "./composeaiband";
 import { CarriageNotice } from "./composeattachments";
 import type { ComposeFields } from "./composefields";
-import { FieldNeed } from "./composehead";
+import { FieldNeed, toBox } from "./composehead";
 import type { useSavedDraft } from "./composesaveddraft";
 import { SavedDraftFailure } from "./composesaveddraftnotices";
 import { ScheduleMenu, scheduledSendLabel } from "./composeschedule";
@@ -112,6 +112,7 @@ export function ComposeFrame({
   onClose,
   closeDisabled,
   bodyId,
+  recipientFirst,
   openedFrom,
   children,
 }: Readonly<{
@@ -123,6 +124,8 @@ export function ComposeFrame({
   openedFrom?: HTMLElement;
   /** The words' field, where focus lands as the window opens. */
   bodyId: string;
+  /** To opens empty and no address is coming, so focus lands in To instead. */
+  recipientFirst: boolean;
   children: ReactNode;
 }>) {
   const [state, setState] = useState<DockState>("open");
@@ -134,7 +137,13 @@ export function ComposeFrame({
       onStateChange={setState}
       onClose={onClose}
       closeDisabled={closeDisabled}
-      initialFocusTo={() => document.getElementById(bodyId)}
+      initialFocusTo={() => {
+        const body = document.getElementById(bodyId);
+        return (
+          (recipientFirst ? toBox(body?.closest(".compose-window")) : null) ??
+          body
+        );
+      }}
       openedFrom={openedFrom}
     >
       {children}
