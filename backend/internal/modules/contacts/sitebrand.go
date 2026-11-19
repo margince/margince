@@ -85,7 +85,7 @@ var initialConnectives = wordSet("the of and und der die das va cua")
 // wordSet reads a list of words separated by spaces.
 func wordSet(words string) map[string]bool {
 	set := map[string]bool{}
-	for _, w := range strings.Fields(words) {
+	for w := range strings.FieldsSeq(words) {
 		set[w] = true
 	}
 	return set
