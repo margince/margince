@@ -19,6 +19,7 @@ export const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
   // An edit that moves an entity id; the detail names JSON paths.
   ["retargeted", "approval.editRetargeted"],
   ["gateway_unavailable", "common.gatewayUnavailable"],
+  ["request_timed_out", "common.requestTimedOut"],
   ["assistant_unavailable", "common.assistantUnavailable"],
   ["provider_out_of_credit", "common.providerOutOfCredit"],
   ["provider_unauthorized", "common.providerUnauthorized"],

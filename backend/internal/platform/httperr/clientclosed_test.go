@@ -6,6 +6,7 @@ package httperr
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -13,6 +14,8 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
 // A caller who leaves closes the connection under the work. A later read on it
@@ -58,20 +61,74 @@ func TestACallerLeftLineKeepsTheCause(t *testing.T) {
 	}
 }
 
-// The server's own deadline ends the request context with DeadlineExceeded:
-// that is its failure to finish, not a caller leaving.
-func TestARequestThatTimedOutIsStillAServerFault(t *testing.T) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Nanosecond)
-	defer cancel()
-	<-ctx.Done()
-	req := httptest.NewRequest(http.MethodGet, "/v1/worklist", nil).WithContext(ctx)
+// The server's own deadline ends the request context with DeadlineExceeded. It
+// is answered as a timeout the caller may retry, never as an unhandled 500.
+func TestARequestPastItsDeadlineIsAnsweredAsARetryableTimeout(t *testing.T) {
+	for name, cause := range map[string]error{
+		"a driver error naming no context": errors.New("conn closed"),
+		"a sentinel around the deadline":   fmt.Errorf("%w: %w", apperrors.ErrConflict, context.DeadlineExceeded),
+	} {
+		t.Run(name, func(t *testing.T) {
+			var logged bytes.Buffer
+			restore := slog.Default()
+			slog.SetDefault(slog.New(slog.NewTextHandler(&logged, &slog.HandlerOptions{Level: slog.LevelWarn})))
+			t.Cleanup(func() { slog.SetDefault(restore) })
+			rec := httptest.NewRecorder()
+
+			Write(rec, pastDeadline(t, "/v1/contacts"), cause)
+
+			if rec.Code != http.StatusServiceUnavailable {
+				t.Fatalf("a timed-out request was answered %d, want 503", rec.Code)
+			}
+			if got := problemCode(t, rec); got != requestTimedOutCode {
+				t.Errorf("code = %q, want %q", got, requestTimedOutCode)
+			}
+			if got := rec.Header().Get("Retry-After"); got != "2" {
+				t.Errorf("Retry-After = %q, want 2", got)
+			}
+			if !bytes.Contains(logged.Bytes(), []byte("time limit")) || bytes.Contains(logged.Bytes(), []byte("unhandled")) {
+				t.Errorf("the log does not name the timeout: %s", logged.String())
+			}
+		})
+	}
+}
+
+// A refusal the handler decided keeps its own answer when the deadline also
+// passed: the deadline did not cause it.
+func TestARefusalAfterTheDeadlineKeepsItsOwnAnswer(t *testing.T) {
 	rec := httptest.NewRecorder()
 
-	Write(rec, req, errors.New("conn closed"))
+	Write(rec, pastDeadline(t, "/v1/contacts/1"), apperrors.ErrNotFound)
 
-	if rec.Code != http.StatusInternalServerError {
-		t.Errorf("a timed-out request was answered %d, want 500", rec.Code)
+	if rec.Code != http.StatusNotFound {
+		t.Errorf("a not-found after the deadline was answered %d, want 404", rec.Code)
 	}
+}
+
+func TestATimedOutRequestIsWorthRetrying(t *testing.T) {
+	if !(Fault{Code: requestTimedOutCode}).Transient() {
+		t.Error("a timed-out request is reported as settled, so an agent never sends it again")
+	}
+}
+
+// pastDeadline is a request whose context passed its deadline before it was
+// built, so no test waits on a clock.
+func pastDeadline(t *testing.T, path string) *http.Request {
+	t.Helper()
+	ctx, cancel := context.WithDeadline(context.Background(), time.Unix(0, 0))
+	t.Cleanup(cancel)
+	return httptest.NewRequest(http.MethodPost, path, nil).WithContext(ctx)
+}
+
+func problemCode(t *testing.T, rec *httptest.ResponseRecorder) string {
+	t.Helper()
+	var body struct {
+		Code string `json:"code"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("the answer is not a problem body: %v (%q)", err, rec.Body.String())
+	}
+	return body.Code
 }
 
 // A client that abandons a request is not a server fault: the store call
