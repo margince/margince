@@ -163,12 +163,15 @@
     0 0 0 4px var(--accent);
 }
 /* A link runs under the nodes beside it, so the line meets both avatars. The
-   top inset is half the avatar, less half the line. */
+   top inset is half the avatar, less half the line. The line's ink lives in
+   custom properties, so the narrow layout can turn it upright. */
 .pn-chain-link {
+  --pn-line-width: 2px;
+  --pn-line-ink: dashed var(--borderStrong);
   flex: 1 1 0;
   min-inline-size: var(--space-10);
   margin-inline: calc(-1 * var(--space-6));
-  padding-block-start: calc(var(--pn-avatar) / 2 - 1px);
+  padding-block-start: calc(var(--pn-avatar) / 2 - var(--pn-line-width) / 2);
   display: grid;
   justify-items: center;
   align-content: start;
@@ -177,25 +180,24 @@
 }
 .pn-chain-link-line {
   inline-size: 100%;
-  border-block-start: 2px dashed var(--borderStrong);
+  border-block-start: var(--pn-line-width) var(--pn-line-ink);
 }
-.pn-chain-link[data-strength="strong"],
-.pn-chain-link[data-strength="moderate"] {
-  padding-block-start: calc(var(--pn-avatar) / 2 - 2px);
-}
-.pn-chain-link[data-strength="strong"] .pn-chain-link-line {
-  border-block-start: 4px solid var(--accent);
-  border-radius: var(--r-full);
-  corner-shape: round;
-}
+.pn-chain-link[data-strength="strong"] .pn-chain-link-line,
 .pn-chain-link[data-strength="moderate"] .pn-chain-link-line {
-  border-block-start: 3px solid var(--accentMed);
   border-radius: var(--r-full);
   corner-shape: round;
 }
-.pn-chain-link[data-strength="weak"] .pn-chain-link-line,
-.pn-chain-link[data-strength="none"] .pn-chain-link-line {
-  border-block-start-style: solid;
+.pn-chain-link[data-strength="strong"] {
+  --pn-line-width: 4px;
+  --pn-line-ink: solid var(--accent);
+}
+.pn-chain-link[data-strength="moderate"] {
+  --pn-line-width: 3px;
+  --pn-line-ink: solid var(--accentMed);
+}
+.pn-chain-link[data-strength="weak"],
+.pn-chain-link[data-strength="none"] {
+  --pn-line-ink: solid var(--borderStrong);
 }
 .pn-chain-link-words {
   font: var(--fontBodySmall);
@@ -527,21 +529,73 @@
 /* 40rem of card is where the chain stacks and the figures fold to one
    column. */
 @container way (max-width: 40rem) {
+  /* The chain turns into a short upright list: each person a row with the
+     avatar first, each tie an upright line in the avatars' column with its
+     words beside it. */
   .pn-chain {
     flex-direction: column;
-    align-items: center;
-    gap: var(--space-2);
+    align-items: stretch;
+    padding: var(--space-4);
   }
   .pn-chain-node {
     flex: none;
+    grid-template-columns: var(--pn-avatar) minmax(0, 1fr);
+    justify-items: start;
+    align-items: center;
+    column-gap: var(--space-3);
+    row-gap: 0;
+    text-align: start;
+  }
+  .pn-chain-node > .avatar {
+    grid-row: 1 / span 2;
+  }
+  .pn-chain-node b {
+    margin-block-start: 0;
+  }
+  /* A name with no role under it centres on the avatar. */
+  .pn-chain-node b:last-child {
+    grid-row: 1 / span 2;
   }
   .pn-chain .pn-chain-link {
+    flex: none;
     margin: 0;
-    padding: 0;
+    padding: var(--space-3) 0;
+    min-block-size: var(--space-8);
+    grid-template-columns: var(--pn-avatar) minmax(0, 1fr);
+    justify-items: start;
+    align-items: center;
+    align-content: center;
+    column-gap: var(--space-3);
+    row-gap: var(--space-1);
+    text-align: start;
   }
   .pn-chain-link-line {
-    display: none;
+    grid-row: 1 / span 2;
+    grid-column: 1;
+    justify-self: center;
+    align-self: stretch;
+    inline-size: 0;
+    margin-block: calc(-1 * var(--space-3));
+    border-block-start: 0;
+    border-inline-start: var(--pn-line-width) var(--pn-line-ink);
   }
+  .pn-chain-link > :not(.pn-chain-link-line) {
+    grid-column: 2;
+  }
+  .pn-chain-link .strength-meter {
+    grid-auto-flow: column;
+    align-items: center;
+  }
+  .pn-chain-link-words {
+    padding-inline: 0;
+  }
+  .pn-figures {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* A phone: one reading a row. */
+@container way (max-width: 24rem) {
   .pn-figures {
     grid-template-columns: minmax(0, 1fr);
   }
