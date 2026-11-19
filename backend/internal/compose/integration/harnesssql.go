@@ -24,7 +24,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -40,6 +42,18 @@ func (e *Env) WsExec(t *testing.T, sql string, args ...any) {
 	}); err != nil {
 		t.Fatalf("setup exec: %v", err)
 	}
+}
+
+// VaultHolds reports whether the vault still resolves ref in the test workspace.
+func (e *Env) VaultHolds(v keyvault.Vault, ref string) bool {
+	_, err := v.Get(context.Background(), ids.From[ids.WorkspaceKind](e.WS), keyvault.Ref(ref))
+	return err == nil
+}
+
+// DestroyErasedLinks runs the post-erasure link destruction as the system
+// actor the worker runs it as.
+func (e *Env) DestroyErasedLinks(store *activities.Store) error {
+	return store.DestroyErasedLinks(principal.SystemActing(e.Admin(), "system"))
 }
 
 // WsExecErr is WsExec for a statement the estate is EXPECTED to refuse: it
