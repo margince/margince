@@ -1,16 +1,162 @@
 /** @vitest-environment happy-dom */
 
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render as rtlRender, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
 import { HistoryFieldDiff } from "./historyfielddiff";
 
-function show(node: ReactNode) {
-  return rtlRender(<LocaleProvider initial="en">{node}</LocaleProvider>);
+function show(
+  node: ReactNode,
+  client = new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+) {
+  return rtlRender(
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">{node}</LocaleProvider>
+    </QueryClientProvider>,
+  );
 }
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
+
+const NEGOTIATION = "01a1e47b-0afd-7dc3-a750-72c1bd631d7b";
+const QUALIFIED = "01a1e47b-0afc-766e-9f87-b5ae37545df9";
+const OWNER_BEFORE = "01a1e489-5d05-7e59-a427-e897c19b4879";
+const OWNER_AFTER = "01a1e489-5d12-7486-9f86-666ea4c6556f";
+const COMPANY = "01a1e489-5d12-7486-9f86-000000000001";
+
+// The reads the page names these records with: the pipelines, the colleague
+// names and the record references.
+function serveNames() {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(input instanceof Request ? input.url : String(input));
+      if (url.pathname.endsWith("/pipelines")) {
+        return Response.json({
+          data: [
+            {
+              id: "p-1",
+              name: "Sales",
+              stages: [
+                { id: NEGOTIATION, name: "Negotiation" },
+                { id: QUALIFIED, name: "Qualified" },
+              ],
+            },
+          ],
+        });
+      }
+      if (url.pathname.endsWith("/users/names")) {
+        return Response.json({
+          data: [
+            { id: OWNER_BEFORE, display_name: "QA Deals" },
+            { id: OWNER_AFTER, display_name: "QA Spare One" },
+          ],
+        });
+      }
+      if (url.pathname.endsWith("/records/references")) {
+        return Response.json({
+          data: [{ id: COMPANY, name: "Akeneo", archived: false }],
+        });
+      }
+      return Response.json(
+        { title: "Not found", status: 404 },
+        { status: 404 },
+      );
+    }),
+  );
+}
+
+describe("HistoryFieldDiff names the records a change points at", () => {
+  const values = { currency: null, locale: "en" as const, zone: "UTC" };
+
+  it("names a stage by its pipeline", async () => {
+    serveNames();
+    show(
+      <HistoryFieldDiff
+        field="stage_id"
+        oldValue={NEGOTIATION}
+        newValue={QUALIFIED}
+        values={values}
+      />,
+    );
+    expect(await screen.findByText("Negotiation")).toBeTruthy();
+    expect(screen.getByText("Qualified")).toBeTruthy();
+    expect(screen.queryByText(NEGOTIATION)).toBeNull();
+  });
+
+  it("names a stage from the pipelines the page holds, with no second read", async () => {
+    serveNames();
+    const client = new QueryClient();
+    client.setQueryData(
+      ["pipelines", "all"],
+      [
+        {
+          id: "p-1",
+          name: "Sales",
+          stages: [{ id: QUALIFIED, name: "Qualified" }],
+        },
+      ],
+    );
+    show(
+      <HistoryFieldDiff
+        field="stage_id"
+        oldValue={null}
+        newValue={QUALIFIED}
+        values={values}
+      />,
+      client,
+    );
+    expect(await screen.findByText("Qualified")).toBeTruthy();
+    expect(vi.mocked(fetch)).not.toHaveBeenCalled();
+  });
+
+  it("names an owner as a colleague", async () => {
+    serveNames();
+    show(
+      <HistoryFieldDiff
+        field="owner_id"
+        oldValue={OWNER_BEFORE}
+        newValue={OWNER_AFTER}
+        values={values}
+      />,
+    );
+    expect(await screen.findByText("QA Deals")).toBeTruthy();
+    expect(screen.getByText("QA Spare One")).toBeTruthy();
+  });
+
+  it("names a company by its record", async () => {
+    serveNames();
+    show(
+      <HistoryFieldDiff
+        field="company_id"
+        oldValue={null}
+        newValue={COMPANY}
+        values={values}
+      />,
+    );
+    expect(await screen.findByText("Akeneo")).toBeTruthy();
+  });
+
+  it("keeps an id no reader can name exactly as stored", async () => {
+    serveNames();
+    const unknown = "01a1e47b-0afd-7dc3-a750-ffffffffffff";
+    show(
+      <HistoryFieldDiff
+        field="stage_id"
+        oldValue={NEGOTIATION}
+        newValue={unknown}
+        values={values}
+      />,
+    );
+    expect(await screen.findByText("Negotiation")).toBeTruthy();
+    expect(screen.getByText(unknown)).toBeTruthy();
+  });
+});
 
 describe("HistoryFieldDiff", () => {
   // The audit spine projects every value as a string, including the integer
