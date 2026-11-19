@@ -3227,8 +3227,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "merge.pickTarget": "Datensatz auswählen, der bleibt",
   "merge.confirm":
     "{source} mit {target} zusammenführen? {source} wird dabei archiviert.",
-  "merge.confirmDetail":
-    "{source} mit {target} ({detail}) zusammenführen? {source} wird dabei archiviert.",
+  "merge.recordDetail": "{name} ({detail})",
+  "merge.done": "{source} wurde in {target} zusammengeführt.",
   "merge.targetReadOnly":
     "Du kannst diesen Datensatz nur lesen, deshalb kann er nicht bleiben.",
   "merge.submit": "Zusammenführen",
@@ -3278,10 +3278,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "commission.column.rate": "Satz",
   "commission.column.basis": "Deal-Wert",
   "commission.column.status": "Status",
+  "commission.column.date": "Datum",
   "commission.status.accrued": "Aufgelaufen",
   "commission.status.approved": "Freigegeben",
   "commission.status.paid": "Ausgezahlt",
   "commission.status.void": "Storniert",
+  "commission.status.reversal": "Gegenposten",
   "commission.outstanding": "Offen",
   "commission.outstandingDetail_one":
     "1 Eintrag · aufgelaufen oder freigegeben",
@@ -3417,7 +3419,23 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "rel.empty": "Noch keine Beziehungen",
   "rel.counterparty": "Verknüpft mit",
   "rel.dates": "Zeitraum",
-  "rel.addConfirm": "Verknüpfung „{kind}“ zu {target} hinzufügen.",
+  "rel.addConfirm.employment": "Anstellungsverknüpfung zu {target} hinzufügen.",
+  "rel.addConfirm.dealStakeholder":
+    "Stakeholder-Verknüpfung zu {target} hinzufügen.",
+  "rel.addConfirm.projectStakeholder":
+    "Projekt-Stakeholder-Verknüpfung zu {target} hinzufügen.",
+  "rel.addConfirm.partnerOf": "Partner-Verknüpfung zu {target} hinzufügen.",
+  "rel.addConfirm.referredBy":
+    "Empfehlungsverknüpfung hinzufügen: {target} hat dieses Unternehmen empfohlen.",
+  "rel.addConfirm.coSellWith": "Co-Selling-Verknüpfung zu {target} hinzufügen.",
+  "rel.addConfirm.worksWith":
+    "Zusammenarbeitsverknüpfung zu {target} hinzufügen.",
+  "rel.addConfirm.billingContact":
+    "Rechnungskontakt-Verknüpfung zu {target} hinzufügen.",
+  "rel.edit": "Beziehung bearbeiten",
+  "rel.editStakeholder": "Stakeholder bearbeiten",
+  "rel.removeRelationship": "Beziehung entfernen?",
+  "rel.removeStakeholder": "Stakeholder entfernen?",
   "rel.kind.employment": "Anstellung",
   "rel.kind.dealStakeholder": "Deal-Stakeholder",
   "rel.kind.projectStakeholder": "Projekt-Stakeholder",
@@ -3839,6 +3857,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "company.relType.portfolio_company": "Portfoliounternehmen",
   "company.relType.competitor": "Wettbewerber",
   "company.relType.other": "Sonstiges",
+  "co.archived.overview":
+    "Dieses Unternehmen ist archiviert. Verlauf, Dokumente und Profil stehen weiter auf den anderen Tabs.",
   // Warum ein Fakt seinem eigenen Feld widerspricht. Der Fakt bleibt mit
   // seinem Beleg sichtbar — ein Mensch erkennt es, Ausblenden wäre schlechter.
   "co.factSuspect.phoneShapedLocation": "Sieht wie eine Telefonnummer aus",
@@ -4967,6 +4987,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filter.label": "Filter",
   "chronology.all": "Alles",
   "chronology.conversations": "Threads",
+  "chronology.filteredEmpty": "Keine Aktivität passt zu diesen Filtern.",
   "chronology.conversationsEmpty": "Noch keine Threads.",
   "chronology.changesEmpty":
     "Seit dem Erstellen dieses Datensatzes wurde kein Feld geändert.",
@@ -5377,6 +5398,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.contacts.band.untried":
     "Nicht kontaktiert: {count} · Wartet auf deine Antwort: {waiting}",
   "co.contacts.board.nobodyHolds": "Niemand hat diese Rolle",
+  "co.contacts.board.count_one": "Kontakt: {count}",
+  "co.contacts.board.count_other": "Kontakte: {count}",
   "co.contacts.band.noOpenDeal": "Kein offener Deal",
   "co.contacts.band.noOpenDealWhy": "Rollen werden pro Deal vergeben",
   "co.contacts.band.committeePartial": "Teilweise ausgeblendet",
@@ -5408,7 +5431,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.contacts.map.onDeal": "am Deal beteiligt",
   "co.contacts.map.routesWithheld":
     "Zugänge zu diesem Kontakt sind für dich ausgeblendet",
-  "co.contacts.map.assignHint": "Für diesen Deal ist niemand verantwortlich",
   "co.contacts.map.scope":
     "{count} im Buying Center · nur der ausgewählte Deal.",
   "co.contacts.map.scopePartial":
@@ -6163,7 +6185,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.ownerMe": "Mir zuweisen",
   "deal.ownerUnassign": "Zuweisung aufheben",
   "deal.partnerCompany": "Vermittelndes Partnerunternehmen",
-  "deal.partnerNoneYet": "Noch keine Partner. Ein Admin kann einen anlegen.",
+  "deal.partnerNoneYet":
+    "Noch keine Partner. Richte einen in einem Unternehmen unter „Weitere Aktionen“ ein.",
   "deal.referredBy": "Partner",
   "deal.supportedBy": "Partner",
   "deal.referral.sourced": "(vermittelt)",
@@ -9288,6 +9311,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.installAppDismissed":
     "Installiere Margince später über das Menü des Browsers oder das Symbol zum Installieren in der Adressleiste.",
   "settings.installAppAction": "Installieren",
+  "settings.installAppManualMac":
+    "Zum Installieren wähle „Ablage“ und dann „Zum Dock hinzufügen“.",
+  "installHint.title": "Margince als App installieren",
+  "installHint.value":
+    "Öffnet sich mit einem Tipp auf dem Home-Bildschirm im eigenen Fenster. Kein App Store, nichts herunterzuladen.",
+  "installHint.manual":
+    "Tippe auf {share} „Teilen“ und dann auf „Zum Home-Bildschirm“.",
+  "installHint.notNow": "Nicht jetzt",
   "role.admin": "Admin",
   "role.management": "Geschäftsleitung",
   "role.manager": "Teamleitung",
@@ -9532,6 +9563,26 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "agent.activity.offerDraft.failed": "Angebotsentwurf fehlgeschlagen",
   "agent.activity.offerDraft.stalled":
     "Der Angebotsentwurf dauert ungewöhnlich lange.",
+  "agent.activity.draftReplyNamed.queued": "Antwortentwurf zu „{name}“ geplant",
+  "agent.activity.draftReplyNamed.running":
+    "Die Antwort auf „{name}“ wird entworfen…",
+  "agent.activity.draftReplyNamed.done": "Antwortentwurf zu „{name}“ bereit",
+  "agent.activity.draftReplyNamed.degraded":
+    "Der Antwortentwurf zu „{name}“ wurde vorzeitig abgebrochen.",
+  "agent.activity.draftReplyNamed.failed":
+    "Antwortentwurf zu „{name}“ fehlgeschlagen",
+  "agent.activity.draftReplyNamed.stalled":
+    "Der Antwortentwurf zu „{name}“ dauert ungewöhnlich lange.",
+  "agent.activity.offerDraftNamed.queued": "Angebotsentwurf für {name} geplant",
+  "agent.activity.offerDraftNamed.running":
+    "Das Angebot für {name} wird entworfen…",
+  "agent.activity.offerDraftNamed.done": "Angebotsentwurf für {name} bereit",
+  "agent.activity.offerDraftNamed.degraded":
+    "Der Angebotsentwurf für {name} wurde vorzeitig abgebrochen.",
+  "agent.activity.offerDraftNamed.failed":
+    "Angebotsentwurf für {name} fehlgeschlagen",
+  "agent.activity.offerDraftNamed.stalled":
+    "Der Angebotsentwurf für {name} dauert ungewöhnlich lange.",
   "agent.rail.region": "Margince-Agent",
   "agent.panel.label": "Agentenbereich",
   "agent.rail.open": "Agentenbereich öffnen",
@@ -9558,6 +9609,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "agent.fact.offline": "offline",
   "agent.fact.sourceOnProvider": "{account} ({provider})",
   "agent.fact.searchIndex": "Suchindex: {model}",
+  "agent.fact.noAnswers": "Keine Antworten von {model}",
   "agent.fact.noCalls": "Noch keine Modellaufrufe",
   "agent.fact.hidden": "Für deine Rolle ausgeblendet",
   "agent.fact.noModel": "Kein Modell konfiguriert",
@@ -16871,6 +16923,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Aufgaben, gruppiert nach der Stufe, die sie ausführt. Wähle den Namen einer Aufgabe, um zu sehen, was sie tut, oder öffne eine Zeile, um Denkstufe und Zeitlimits festzulegen.",
   "aiTasks.whatItDoes": "{task}: was die Aufgabe tut",
   "aiTasks.decisionFirst": "Zuerst Entscheidungsmodell",
+  "aiTasks.mode.interactive": "Im Vordergrund",
+  "aiTasks.mode.background": "Im Hintergrund",
+  "aiTasks.mode.embedding": "Suchindex",
   "aiTasks.viewCalls": "Aufrufe ansehen",
   "aiTasks.deferral.nowEmbedding":
     "Gerade abgelehnt: Die Suchindexierung versucht es nach eigenem Zeitplan erneut.",
@@ -20054,6 +20109,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.pair.notDuplicate": "Keine Duplikate",
   "worklist.pair.mergeBlocked":
     "Diese Datensätze können nicht zusammengeführt werden, da beide laufende Projekte haben und nicht erkennbar ist, welche Arbeit wohin gehört. Du kannst trotzdem festhalten, dass es keine Duplikate sind.",
+  "worklist.pair.created": "Erstellt am {date}",
+  "worklist.pair.dismissed": "Als keine Duplikate markiert.",
   "worklist.pair.related": "{count} verknüpft",
   "worklist.pair.failed":
     "Das Paar konnte nicht geklärt werden. Bitte versuche es erneut.",
@@ -21258,6 +21315,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiProviders.state.active": "Aktiv",
   "aiProviders.state.ready": "Bereit",
   "aiProviders.state.needsKey": "Schlüssel fehlt",
+  "aiProviders.state.needsService": "Dienst fehlt",
   "aiProviders.state.inactive": "Nicht aktiv",
   "aiProviders.colUsedBy": "Verwendet von",
   "aiProviders.colStatus": "Status",
@@ -22099,7 +22157,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiTaskSheet.fixed": "Durch Vertrag festgelegt",
   "aiTaskSheet.tiersTried": "Versuchte Stufen",
   "aiTaskSheet.runs": "Ausführung",
-  "aiTaskSheet.fixed.help": "Ändere diese Werte in ai-tasks.yaml.",
+  "aiTaskSheet.fixed.help":
+    "Diese Werte ändert ein Entwickler in der Definition der Aufgabe; sie gelten ab dem nächsten Release.",
   "aiTaskSheet.addTask": "KI-Aufgabe hinzufügen oder ändern ↗",
   "aiTaskSheet.conflict":
     "Jemand hat diese Einstellungen während deiner Bearbeitung gespeichert",
@@ -22131,7 +22190,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiOutcome.role.decision": "Entscheidungsmodell",
   "aiOutcome.role.tier": "Modell der Stufe",
   "aiOutcome.role.fallback": "Fallback-Modell",
-  "aiOutcome.answered": "{answered} von {attempts} beantwortet",
+  "aiOutcome.answered_one": "{answered} beantwortet in {attempts} Versuch",
+  "aiOutcome.answered_other": "{answered} beantwortet in {attempts} Versuchen",
+  "aiOutcome.triesNote":
+    "Ein fehlgeschlagener oder abgelaufener Versuch kann auf derselben Stufe wiederholt werden. Deshalb zählt eine Stufe mehr Versuche als Aufrufe.",
   "aiOutcome.usually": "meist in {latency}",
   "aiOutcome.notNeeded": "In diesem Zeitraum nicht gebraucht",
   "aiOutcome.gaveUp.on_one": "{count} {reason} → weitergegeben",

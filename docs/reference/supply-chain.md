@@ -16,8 +16,9 @@ git archive HEAD ─▶ syft ─▶ 3 SBOM docs ─▶ normalize ─▶ suppleme
 
 The SBOM lane covers the whole repository (`backend/`, `frontend/` and `extensions/`), so
 its targets live in the root `Makefile`, outside `backend/`. It is not part of
-`make check`: CI runs it as its own workflow, `.github/workflows/sbom.yml`, and
-only when someone starts it by hand. The dependency license policy still runs on
+`make check`. CI runs it in `.github/workflows/sbom.yml`, started by hand, and once per
+release tag in `_release-sbom.yml` on a `linux/amd64` runner
+([ci-workflows.md](ci-workflows.md#release-tagyml)). The dependency license policy still runs on
 its own on every PR that touches a dependency, as the `license gate` job in
 `ci.yml`.
 
@@ -43,8 +44,7 @@ One scan, three documents:
 | `sboms/margince.spdx221.json` | SPDX JSON 2.2.1 | `spdx-json@2.2` |
 | `sboms/margince.spdx300.json` | SPDX JSON 3.0 | `spdx-json@3.0` |
 
-`/sboms/` is in `.gitignore`: these are build files that CI publishes, never
-committed.
+`/sboms/` is in `.gitignore`: these are build files that CI publishes, never committed.
 
 Scan policy lives in [`.syft.yaml`](../../.syft.yaml). The `Makefile` owns the
 "what is scanned" policy (the clean export), and the config owns the rest:

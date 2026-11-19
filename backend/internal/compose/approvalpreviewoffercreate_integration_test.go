@@ -102,7 +102,7 @@ func TestOfferCreationApprovalMatchesTheWriter(t *testing.T) {
 			if details["arr_minor"].Kind != "money" || details["arr_minor"].Text != "80000" || details["net_tcv_minor"].Text != "40000" {
 				t.Fatalf("incorrect recurring figures: %+v", details)
 			}
-			parent, input, err := offerCreationRequest(proposal)
+			parent, input, err := offerCreationRequest(t.Context(), proposal)
 			if err != nil {
 				t.Fatal(err)
 			}

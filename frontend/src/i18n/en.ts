@@ -3131,9 +3131,9 @@ export const en = {
   "merge.searchPlaceholder": "Search…",
   "merge.pickTarget": "Select record to keep",
   "merge.confirm": "Merge {source} into {target}? This archives {source}.",
-  // The picked record's detail line, so two look-alike names stay apart here too.
-  "merge.confirmDetail":
-    "Merge {source} into {target} ({detail})? This archives {source}.",
+  // A record's name with its detail line, so two look-alike names stay apart.
+  "merge.recordDetail": "{name} ({detail})",
+  "merge.done": "{source} was merged into {target}.",
   "merge.targetReadOnly":
     "You can only read this record, so it cannot be kept.",
   "merge.submit": "Merge",
@@ -3183,10 +3183,12 @@ export const en = {
   "commission.column.rate": "Rate",
   "commission.column.basis": "Deal value",
   "commission.column.status": "Status",
+  "commission.column.date": "Date",
   "commission.status.accrued": "Accrued",
   "commission.status.approved": "Approved",
   "commission.status.paid": "Paid",
   "commission.status.void": "Reversed",
+  "commission.status.reversal": "Reversal",
   "commission.outstanding": "Outstanding",
   "commission.outstandingDetail_one": "1 entry · accrued or approved",
   "commission.outstandingDetail_other": "{count} entries · accrued or approved",
@@ -3319,7 +3321,20 @@ export const en = {
   "rel.empty": "No relationships yet",
   "rel.counterparty": "Linked to",
   "rel.dates": "Dates",
-  "rel.addConfirm": "Add a {kind} link to {target}.",
+  "rel.addConfirm.employment": "Add an employment link to {target}.",
+  "rel.addConfirm.dealStakeholder": "Add a stakeholder link to {target}.",
+  "rel.addConfirm.projectStakeholder":
+    "Add a project stakeholder link to {target}.",
+  "rel.addConfirm.partnerOf": "Add a partner link to {target}.",
+  "rel.addConfirm.referredBy":
+    "Add a referral link: {target} referred this company.",
+  "rel.addConfirm.coSellWith": "Add a co-selling link to {target}.",
+  "rel.addConfirm.worksWith": "Add a colleague link to {target}.",
+  "rel.addConfirm.billingContact": "Add a billing contact link to {target}.",
+  "rel.edit": "Edit relationship",
+  "rel.editStakeholder": "Edit stakeholder",
+  "rel.removeRelationship": "Remove relationship?",
+  "rel.removeStakeholder": "Remove stakeholder?",
   "rel.kind.employment": "Employment",
   "rel.kind.dealStakeholder": "Deal stakeholder",
   "rel.kind.projectStakeholder": "Project stakeholder",
@@ -3771,6 +3786,8 @@ export const en = {
   "company.relType.portfolio_company": "Portfolio company",
   "company.relType.competitor": "Competitor",
   "company.relType.other": "Other",
+  "co.archived.overview":
+    "This company is archived. Its history, documents and profile are still on the other tabs.",
   // Why a stored fact contradicts its own field. The fact is still shown
   // with its evidence — a reader can tell, and hiding it would be worse.
   "co.factSuspect.phoneShapedLocation": "Looks like a phone number",
@@ -4912,6 +4929,7 @@ export const en = {
   "filter.label": "Filter",
   "chronology.all": "All",
   "chronology.conversations": "Threads",
+  "chronology.filteredEmpty": "No activity matches these filters.",
   "chronology.conversationsEmpty": "No threads yet.",
   "chronology.changesEmpty":
     "No field has changed since this record was created.",
@@ -5322,6 +5340,8 @@ export const en = {
   "co.contacts.band.untried":
     "{count} not contacted · {waiting} awaiting your reply",
   "co.contacts.board.nobodyHolds": "No one holds this role",
+  "co.contacts.board.count_one": "{count} contact",
+  "co.contacts.board.count_other": "{count} contacts",
   "co.contacts.band.noOpenDeal": "No open deal",
   "co.contacts.band.noOpenDealWhy": "Roles are set per deal",
   "co.contacts.band.committeePartial": "Partly hidden",
@@ -5344,7 +5364,7 @@ export const en = {
     "Select a contact to see the best route to them.",
   "co.contacts.map.ourSide": "Your team",
   "co.contacts.map.account": "Company",
-  "co.contacts.map.missing": "{role} missing",
+  "co.contacts.map.missing": "No {role} yet",
   "co.contacts.map.awaiting": "awaiting reply",
   "co.contacts.map.owed": "reply owed",
   "co.contacts.map.replied": "they replied",
@@ -5352,7 +5372,6 @@ export const en = {
   "co.contacts.map.onDeal": "on the deal",
   "co.contacts.map.routesWithheld":
     "Routes to this contact are hidden from you",
-  "co.contacts.map.assignHint": "No one owns this deal",
   "co.contacts.map.scope":
     "{count} on the buying committee · selected deal only.",
   "co.contacts.map.scopePartial":
@@ -6088,7 +6107,8 @@ export const en = {
   "deal.ownerMe": "Assign to me",
   "deal.ownerUnassign": "Unassign",
   "deal.partnerCompany": "Referring partner",
-  "deal.partnerNoneYet": "No partners yet. Ask an admin to add one.",
+  "deal.partnerNoneYet":
+    "No partners yet. Set one up from a company’s More actions.",
   "deal.referredBy": "Referred by",
   "deal.supportedBy": "Supported by",
   "deal.referral.sourced": "(sourced)",
@@ -9245,6 +9265,13 @@ export const en = {
   "settings.installAppDismissed":
     "Install Margince later from the browser’s menu or the install icon in its address bar.",
   "settings.installAppAction": "Install",
+  "settings.installAppManualMac":
+    "To install, choose “File”, then “Add to Dock”.",
+  "installHint.title": "Install Margince as an app",
+  "installHint.value":
+    "Opens from your home screen with one tap, in its own window. No app store, nothing to download.",
+  "installHint.manual": "Tap {share} “Share”, then “Add to Home Screen”.",
+  "installHint.notNow": "Not now",
   "role.admin": "Admin",
   "role.management": "Management",
   "role.manager": "Team lead",
@@ -9492,6 +9519,22 @@ export const en = {
   "agent.activity.offerDraft.degraded": "Offer draft stopped partway",
   "agent.activity.offerDraft.failed": "Offer draft failed",
   "agent.activity.offerDraft.stalled": "Offer draft is taking unusually long",
+  "agent.activity.draftReplyNamed.queued": "Reply draft for “{name}” queued",
+  "agent.activity.draftReplyNamed.running": "Drafting a reply to “{name}”…",
+  "agent.activity.draftReplyNamed.done": "Draft reply to “{name}” ready",
+  "agent.activity.draftReplyNamed.degraded":
+    "Reply draft for “{name}” stopped partway",
+  "agent.activity.draftReplyNamed.failed": "Reply draft for “{name}” failed",
+  "agent.activity.draftReplyNamed.stalled":
+    "Reply draft for “{name}” is taking unusually long",
+  "agent.activity.offerDraftNamed.queued": "Offer draft for {name} queued",
+  "agent.activity.offerDraftNamed.running": "Drafting an offer for {name}…",
+  "agent.activity.offerDraftNamed.done": "Draft offer for {name} ready",
+  "agent.activity.offerDraftNamed.degraded":
+    "Offer draft for {name} stopped partway",
+  "agent.activity.offerDraftNamed.failed": "Offer draft for {name} failed",
+  "agent.activity.offerDraftNamed.stalled":
+    "Offer draft for {name} is taking unusually long",
   // ── THE AGENT SURFACE'S OWN WORDS ──────────────────────────────────────────
   //
   // The rail's one line and the panel it opens, in one place. They were split
@@ -9555,8 +9598,9 @@ export const en = {
   "agent.fact.sources": "Sources",
   "agent.fact.offline": "offline",
   "agent.fact.sourceOnProvider": "{account} ({provider})",
-  // The two reasons there is no model to name, in the value's own slot.
+  // Why no answering model is named, in the value's own slot.
   "agent.fact.searchIndex": "Search index: {model}",
+  "agent.fact.noAnswers": "No answers from {model}",
   "agent.fact.noCalls": "No model calls yet",
   "agent.fact.hidden": "Hidden for your role",
   // The fault a badge carries, above the facts it invalidates.
@@ -16746,6 +16790,9 @@ export const en = {
     "Tasks grouped by the tier that runs them; select a name for what a task does, or open a row to set its thinking level and timeouts.",
   "aiTasks.whatItDoes": "{task}: what it does",
   "aiTasks.decisionFirst": "Decision model first",
+  "aiTasks.mode.interactive": "While the user waits",
+  "aiTasks.mode.background": "In the background",
+  "aiTasks.mode.embedding": "Search indexing",
   "aiTasks.viewCalls": "View calls",
   "aiTasks.deferral.nowEmbedding":
     "Refused now: search indexing tries again on its own schedule.",
@@ -19830,6 +19877,8 @@ export const en = {
   "worklist.pair.notDuplicate": "Not duplicates",
   "worklist.pair.mergeBlocked":
     "These records cannot be merged: both have live projects, and nothing shows which work belongs where. You can still mark them as not duplicates.",
+  "worklist.pair.created": "Created {date}",
+  "worklist.pair.dismissed": "Marked as not duplicates.",
   "worklist.pair.related": "{count} linked",
   "worklist.pair.failed": "Pair was not resolved. Retry.",
   "worklist.pair.refused":
@@ -21000,6 +21049,7 @@ export const en = {
   "aiProviders.state.active": "Active",
   "aiProviders.state.ready": "Ready",
   "aiProviders.state.needsKey": "Needs key",
+  "aiProviders.state.needsService": "Needs service",
   "aiProviders.state.inactive": "Not active",
   "aiProviders.colUsedBy": "Used by",
   "aiProviders.colStatus": "Status",
@@ -21821,7 +21871,8 @@ export const en = {
   "aiTaskSheet.fixed": "Fixed by contract",
   "aiTaskSheet.tiersTried": "Tiers tried",
   "aiTaskSheet.runs": "Runs",
-  "aiTaskSheet.fixed.help": "Change these in ai-tasks.yaml.",
+  "aiTaskSheet.fixed.help":
+    "A developer changes these in the task’s definition, and they take effect with the next release.",
   "aiTaskSheet.addTask": "Add or change an AI task ↗",
   "aiTaskSheet.conflict": "Someone saved these settings while you were editing",
   "aiTaskSheet.conflict.help":
@@ -21849,7 +21900,10 @@ export const en = {
   "aiOutcome.role.decision": "decision model",
   "aiOutcome.role.tier": "tier model",
   "aiOutcome.role.fallback": "fallback",
-  "aiOutcome.answered": "{answered} of {attempts} answered",
+  "aiOutcome.answered_one": "{answered} answered in {attempts} try",
+  "aiOutcome.answered_other": "{answered} answered in {attempts} tries",
+  "aiOutcome.triesNote":
+    "A failed or timed-out try can be retried at the same step, so a step can count more tries than there are calls.",
   "aiOutcome.usually": "usually in {latency}",
   "aiOutcome.notNeeded": "Not needed in this window",
   "aiOutcome.gaveUp.on_one": "{count} {reason} → passed on",

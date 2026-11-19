@@ -35,6 +35,18 @@ export function stillHeld(
   return end > today();
 }
 
+// A career date at the precision it was recorded: a month-only date stays a
+// month rather than gaining a first of the month. `formatDay` writes a full day.
+export function careerDate(
+  value: string,
+  precision: Employment["started_precision"],
+  formatDay: (day: string) => string,
+): string {
+  return precision === "month"
+    ? value.slice(0, 7)
+    : formatDay(value.slice(0, 10));
+}
+
 // An expired primary flag must not make a former employer look current.
 export function currentEmployer(
   employments: ReadonlyArray<Employment> | undefined,

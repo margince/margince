@@ -44,8 +44,17 @@ function stringField(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
 
+// The primary domain is a company's detail line in a merge, on either side.
+export function companyMergeDetail(
+  company: Readonly<{
+    domains?: readonly { domain: string; is_primary: boolean }[];
+  }>,
+): string | undefined {
+  return company.domains?.find((domain) => domain.is_primary)?.domain;
+}
+
 // Merge-target search (P-2): mirrors searchContactsTargets
-// (contactrecordactions.tsx), with the primary domain as the detail line.
+// (contactrecordactions.tsx).
 export async function searchCompanyTargets(
   q: string,
 ): Promise<RecordPickerCandidate[]> {
@@ -58,7 +67,7 @@ export async function searchCompanyTargets(
     id: candidate.id,
     name: candidate.display_name,
     writable: candidate.writable,
-    detail: candidate.domains?.find((domain) => domain.is_primary)?.domain,
+    detail: companyMergeDetail(candidate),
   }));
 }
 

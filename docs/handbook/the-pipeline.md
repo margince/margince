@@ -387,7 +387,7 @@ No. Margince has no merge for deals: merging covers contacts, companies, and lea
 
 ## Partners on a deal
 
-A deal in Margince can name the partner that found it, under **via partner**.
+A deal in Margince can name the partner that found it, under **Referring partner**.
 Under **Partner attribution** it says whether the partner **Sourced the deal** or
 only **Influenced an existing deal**. Commission builds up only on a sourced deal
 that is won. Setting up partners, naming one on a deal, and approving their

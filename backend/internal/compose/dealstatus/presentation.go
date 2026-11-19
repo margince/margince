@@ -57,7 +57,7 @@ func (s *Service) cardAndTimeline(
 	if err != nil {
 		return crmcontracts.DealStatusCard{}, nil, err
 	}
-	verdict := s.decideFromCache(ctx, userID, dealID, fingerprint, policy.refresh, f.now)
+	verdict := s.decideFromCache(ctx, userID, dealID, fingerprint, policy, f.now)
 	if verdict.serve {
 		card := verdict.card
 		card.MailCoverage = f.mailCoverage
@@ -88,6 +88,7 @@ func (s *Service) cardAndTimeline(
 		GeneratedAt: card.GeneratedAt,
 		GeneratedBy: card.GeneratedBy,
 		Card:        card,
+		FactsOnly:   policy.factsOnly && verdict.askModel && s.lane != nil,
 	}); err != nil {
 		return crmcontracts.DealStatusCard{}, nil, err
 	}

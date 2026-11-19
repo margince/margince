@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import type { ComponentProps } from "react";
 import { within } from "storybook/test";
+import type { WorklistItem } from "../../lib/worklisttypes";
 import { taskRow } from "../../testing/brief.fixtures";
 import {
   installFetchStub,
@@ -19,9 +19,10 @@ const meta: Meta<typeof TaskCard> = {
   component: TaskCard,
 };
 export default meta;
+
 type Story = StoryObj<typeof TaskCard>;
 
-function card(item: ComponentProps<typeof TaskCard>["item"]) {
+function card(item: WorklistItem) {
   return () => {
     installFetchStub({ "GET /me": meRoute({}, { roles: ["rep"] }) });
     return (
@@ -31,6 +32,19 @@ function card(item: ComponentProps<typeof TaskCard>["item"]) {
     );
   };
 }
+
+// The round tick completes the task.
+export const Completable: Story = {
+  render: card(taskRow("call-alice", "Call Alice back about the retrofit")),
+};
+
+// A task the reader may not complete keeps the tick's column empty.
+export const ReadOnly: Story = {
+  render: card({
+    ...taskRow("call-alice", "Call Alice back about the retrofit"),
+    actions: ["open"],
+  }),
+};
 
 const LONG_CONTACT = "Maximilian Konstantinopoulou-Wertheimer";
 

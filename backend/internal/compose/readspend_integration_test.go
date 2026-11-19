@@ -50,13 +50,16 @@ func agentReading(ctx context.Context, t *testing.T, scopes ...principal.Scope) 
 	return principal.WithActor(ctx, p)
 }
 
-func TestAnAgentWithoutEnrichReadsAPanelWithoutStartingAModelCall(t *testing.T) {
-	o := setupOffering(t)
+// panelRead reads one cached panel through lane and reports who wrote it.
+type panelRead func(ctx context.Context, lane *spendCountingLane) (crmcontracts.WrittenBy, error)
+
+// cachedPanels names each panel that writes itself on a cache miss.
+func cachedPanels(t *testing.T, o *offeringEnv) map[string]panelRead {
+	t.Helper()
 	company, _ := o.customer(t, "Spend Motors")
 	contact := o.SeedContact(t, "Spent Subject", &o.AdminUser)
 	clock := func() time.Time { return time.Date(2026, 6, 1, 12, 0, 0, 0, time.UTC) }
-
-	for name, read := range map[string]func(ctx context.Context, lane *spendCountingLane) (crmcontracts.WrittenBy, error){
+	return map[string]panelRead{
 		"the dossier": func(ctx context.Context, lane *spendCountingLane) (crmcontracts.WrittenBy, error) {
 			out, err := companydossier.NewService(o.Pool, o.Contacts, lane, func() string { return "routing" }, clock).Get(ctx, company, false)
 			return out.GeneratedBy, err
@@ -74,7 +77,12 @@ func TestAnAgentWithoutEnrichReadsAPanelWithoutStartingAModelCall(t *testing.T) 
 			out, err := contactbrief.NewService(o.Pool, briefPageOf(contact), lane, func() string { return "routing" }, clock).Get(ctx, ids.From[ids.ContactKind](contact), false)
 			return out.GeneratedBy, err
 		},
-	} {
+	}
+}
+
+func TestAnAgentWithoutEnrichReadsAPanelWithoutStartingAModelCall(t *testing.T) {
+	o := setupOffering(t)
+	for name, read := range cachedPanels(t, o) {
 		t.Run(name, func(t *testing.T) {
 			lane := &spendCountingLane{}
 			by, err := read(agentReading(o.ctx, t, principal.ScopeRead), lane)
@@ -89,6 +97,29 @@ func TestAnAgentWithoutEnrichReadsAPanelWithoutStartingAModelCall(t *testing.T) 
 			}
 			if lane.calls == 0 {
 				t.Error("the user's read started no model call, so the agent's floor was cached or the lane is gone")
+			}
+		})
+	}
+}
+
+// A floor written because the model call failed is served but never cached.
+// The next read asks the model again, so an outage does not outlast itself.
+func TestAFailedModelCallLeavesNoPanelInTheCache(t *testing.T) {
+	o := setupOffering(t)
+	for name, read := range cachedPanels(t, o) {
+		t.Run(name, func(t *testing.T) {
+			lane := &spendCountingLane{}
+			for range 2 {
+				by, err := read(o.ctx, lane)
+				if err != nil {
+					t.Fatalf("read: %v", err)
+				}
+				if by != crmcontracts.WrittenByDeterministic {
+					t.Fatalf("generated_by = %q after a failed call, want deterministic", by)
+				}
+			}
+			if lane.calls != 2 {
+				t.Errorf("model calls = %d over two reads, want 2: the failed call's floor was served from the cache", lane.calls)
 			}
 		})
 	}

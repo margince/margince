@@ -15,7 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-const employmentRepairAfterArg = "after"
+const afterCursorArg = "after"
 
 const unresolvedEmploymentScope = `c.archived_at IS NULL AND EXISTS(SELECT 1 FROM provider_employment_resolution r WHERE r.contact_id=c.id AND r.state='needs_review')`
 
@@ -31,7 +31,7 @@ func (s *Store) RepairUndatedEmploymentTx(ctx context.Context, tx pgx.Tx, after 
 	if err := auth.RequireSystem(ctx); err != nil {
 		return nil, 0, err
 	}
-	rows, err := tx.Query(ctx, `SELECT c.id FROM contact c WHERE c.id>@after AND `+unresolvedEmploymentScope+` ORDER BY c.id LIMIT @limit`, pgx.NamedArgs{employmentRepairAfterArg: after, signaturePhoneLimitParam: limit})
+	rows, err := tx.Query(ctx, `SELECT c.id FROM contact c WHERE c.id>@after AND `+unresolvedEmploymentScope+` ORDER BY c.id LIMIT @limit`, pgx.NamedArgs{afterCursorArg: after, signaturePhoneLimitParam: limit})
 	if err != nil {
 		return nil, 0, err
 	}
