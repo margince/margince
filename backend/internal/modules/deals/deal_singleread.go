@@ -137,6 +137,7 @@ func scanDeal(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmcontr
 	if waitUntil != nil {
 		d.WaitUntil = &openapi_types.Date{Time: *waitUntil}
 	}
+	d.WaitEndsAt = pauseEnds
 	d.Version = &version
 	d.Author = sourceAuthorOf(authorID, authorSeatName, authorName, sourceSystem)
 	d.ImportedFrom = provenance.ImportedFrom(sourceSystem)

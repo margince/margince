@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -70,6 +71,13 @@ func TestAPauseEndsAtTheStartOfItsDayInTheOwnersZone(t *testing.T) {
 		if got == nil || !got.Equal(tc.want) {
 			t.Errorf("%s: the pause ends at %v, want %v", tc.name, got, tc.want)
 		}
+		read, err := e.Deals.GetDeal(e.Admin(), ids.From[ids.DealKind](deal), storekit.LiveOnly)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if read.WaitEndsAt == nil || !read.WaitEndsAt.Equal(tc.want) {
+			t.Errorf("%s: the deal read carries the pause end %v, want %v", tc.name, read.WaitEndsAt, tc.want)
+		}
 	}
 
 	if _, err := owner.Exec(ctx, `UPDATE deal SET wait_until = NULL WHERE id = $1`, deal); err != nil {
@@ -90,19 +98,18 @@ func TestAPauseEndsAtTheStartOfItsDayInTheOwnersZone(t *testing.T) {
 // of UTC and Pago Pago behind it, and one of the two always sits on another day.
 func TestADepartureDayIsJudgedInTheInstallationZone(t *testing.T) {
 	e := Setup(t)
-	now := time.Now()
-	zone := "Pacific/Kiritimati"
-	if kiritimati, err := time.LoadLocation(zone); err != nil {
-		t.Fatal(err)
-	} else if storekit.WorkspaceDay(now, kiritimati).Equal(storekit.WorkspaceDay(now, time.UTC)) {
-		zone = "Pacific/Pago_Pago"
-	}
+	// The database clock is the one the predicate reads, so the zone and its day
+	// are asked of the same clock with plain AT TIME ZONE.
+	var zone string
+	var today time.Time
+	inWorkspaceTx(t, e, func(ctx context.Context, tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `
+			WITH pick AS (
+			  SELECT CASE WHEN (now() AT TIME ZONE 'Pacific/Kiritimati')::date <> (now() AT TIME ZONE 'UTC')::date
+			              THEN 'Pacific/Kiritimati' ELSE 'Pacific/Pago_Pago' END AS zone)
+			SELECT zone, (now() AT TIME ZONE zone)::date FROM pick`).Scan(&zone, &today)
+	})
 	useInstallationZone(t, e, zone)
-	loc, err := time.LoadLocation(zone)
-	if err != nil {
-		t.Fatal(err)
-	}
-	today := storekit.WorkspaceDay(now, loc)
 
 	current := func(end time.Time) bool {
 		var held bool

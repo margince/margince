@@ -12,7 +12,6 @@ import {
   activityIsAhead,
   type OccurredPrecision,
 } from "../../../format/activitywhen";
-import { calendarDaysUntil } from "../../../format/daysuntil";
 import { calendarDaysBetween } from "../../../format/format";
 import { committeeContacts, ghostCount } from "./dealcommittee";
 
@@ -96,17 +95,18 @@ export type Momentum =
   | Readonly<{ state: "quiet" }>;
 
 /**
- * Whether the buyer's wait date still pauses the deal on `now`. The server's
- * stall rule ends the pause on that day, so the page must not outlast it.
+ * Whether the buyer's wait date still pauses the deal at `now`. The server
+ * ends the pause at `waitEndsAt`, the start of that day in the deal owner's
+ * zone, so the page reads that instant and never re-cuts the date in the
+ * viewer's zone. A server that sends no instant is read as UTC midnight.
  */
 export function waitHolds(
   waitUntil: string | null | undefined,
-  zone: string,
+  waitEndsAt: string | null | undefined,
   now: Date,
 ): waitUntil is string {
-  return (
-    Boolean(waitUntil) && calendarDaysUntil(waitUntil ?? "", zone, now) > 0
-  );
+  if (!waitUntil) return false;
+  return Date.parse(waitEndsAt ?? waitUntil) > now.getTime();
 }
 
 /**
@@ -115,8 +115,10 @@ export function waitHolds(
  * on hold only on a deal that is not stalled, and only until that day.
  */
 export function momentumOf(
-  deal: Pick<Deal, "stalled" | "wait_until" | "last_activity_at">,
-  zone: string,
+  deal: Pick<
+    Deal,
+    "stalled" | "wait_until" | "wait_ends_at" | "last_activity_at"
+  >,
   now: Date,
 ): Momentum {
   if (deal.stalled) {
@@ -124,7 +126,7 @@ export function momentumOf(
       ? { state: "stalled", since: deal.last_activity_at }
       : { state: "stalled" };
   }
-  if (waitHolds(deal.wait_until, zone, now)) {
+  if (waitHolds(deal.wait_until, deal.wait_ends_at, now)) {
     return { state: "on_hold", until: deal.wait_until };
   }
   if (deal.last_activity_at) {

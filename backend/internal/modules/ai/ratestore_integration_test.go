@@ -680,3 +680,53 @@ func TestSheetHeadLeavesOutTheRowThatNamesNoModelWhilePricingStillReadsIt(t *tes
 		t.Fatal("the fake binding's call reads as unpriced; the row must still price it")
 	}
 }
+
+// Two calls on one UTC date fall on different Los Angeles days, so the report
+// lists them under different days and prices each at the rate in force on its
+// own installation day.
+func TestCostReportDatesACallByTheInstallationDay(t *testing.T) {
+	e := setupRateStore(t)
+	ctx := context.Background()
+	ws, wsCtx := e.seedWorkspace(ctx, t)
+	store := e.storeFor(ws)
+	if _, err := e.owner.Exec(ctx, `INSERT INTO setting (key, value) VALUES ('installation.timezone', '"America/Los_Angeles"')
+		ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, r := range []ModelRate{
+		{
+			Provider: providerAnthropic, ModelID: "zone-model", InputPerMTokMicroUSD: 1_000_000,
+			EffectiveDate: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+		},
+		{
+			Provider: providerAnthropic, ModelID: "zone-model", InputPerMTokMicroUSD: 2_000_000,
+			EffectiveDate: time.Date(2026, 2, 6, 0, 0, 0, 0, time.UTC),
+		},
+	} {
+		e.insertRate(ctx, t, r)
+	}
+	// 2026-02-06 03:00 UTC is 19:00 on the 5th in Los Angeles; 20:00 UTC is 12:00 on the 6th.
+	for _, at := range []time.Time{
+		time.Date(2026, 2, 6, 3, 0, 0, 0, time.UTC),
+		time.Date(2026, 2, 6, 20, 0, 0, 0, time.UTC),
+	} {
+		e.insertCall(ctx, t, callFixture{
+			task: TaskSummarize, tier: TierPremium, provider: providerAnthropic, model: "zone-model",
+			tokensIn: 1000, occurredAt: at,
+		})
+	}
+
+	report, err := store.CostReport(wsCtx, time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC), time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]int64{}
+	for _, dc := range report {
+		got[dc.Day.Format(time.DateOnly)] = dc.CostMicroUSD
+	}
+	want := map[string]int64{"2026-02-05": 1000, "2026-02-06": 2000}
+	if len(got) != len(want) || got["2026-02-05"] != want["2026-02-05"] || got["2026-02-06"] != want["2026-02-06"] {
+		t.Errorf("report by day = %v, want %v", got, want)
+	}
+}

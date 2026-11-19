@@ -145,7 +145,7 @@ func costReportSQL() string {
 	for _, column := range rateKeyColumns {
 		keyMatch = append(keyMatch, "r."+column+" = ac."+column)
 	}
-	keyMatch = append(keyMatch, "r.occurred_at = ac.occurred_at::date")
+	keyMatch = append(keyMatch, "r.occurred_at = "+callDaySQL("ac"))
 	return `
 			WITH key_rate AS MATERIALIZED (
 			  SELECT k.*,
@@ -154,13 +154,13 @@ func costReportSQL() string {
 			         ` + longContextColumns("r") + `
 			  FROM (
 			    -- The day keeps the name occurred_at, the column pricedRate dates a call by.
-			    SELECT DISTINCT ac.` + strings.Join(rateKeyColumns, ", ac.") + `, ac.occurred_at::date AS occurred_at
+			    SELECT DISTINCT ac.` + strings.Join(rateKeyColumns, ", ac.") + `, ` + callDaySQL("ac") + ` AS occurred_at
 			    FROM ai_call ac WHERE ` + inWindow + `
 			  ) k
-			  LEFT JOIN LATERAL (` + pricedRate("k", 3, 4) + `) r ON true
+			  LEFT JOIN LATERAL (` + pricedRate("k", "k.occurred_at", 3, 4) + `) r ON true
 			)
 			SELECT
-			  ac.occurred_at::date AS day,
+			  ` + callDaySQL("ac") + ` AS day,
 			  ac.task,
 			  ac.tier,
 			  COALESCE(SUM(` + callCostMicroUSD("ac") + `), 0) AS cost_microusd,
@@ -168,7 +168,7 @@ func costReportSQL() string {
 			FROM ai_call ac
 			LEFT JOIN key_rate r ON ` + strings.Join(keyMatch, " AND ") + `
 			WHERE ` + inWindow + `
-			GROUP BY ac.occurred_at::date, ac.task, ac.tier
+			GROUP BY ` + callDaySQL("ac") + `, ac.task, ac.tier
 			ORDER BY day, ac.task, ac.tier`
 }
 

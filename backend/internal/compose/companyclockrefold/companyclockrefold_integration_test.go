@@ -130,3 +130,42 @@ func TestTheUpgradeTaskRefoldsACompanyClockStoredUnderTheOldPredicate(t *testing
 		t.Errorf("the upgrade task left the clock at %v, want none", got)
 	}
 }
+
+// An install that finished the task at version 1 runs it again after the
+// migration that moved "today" to the installation zone, because the engine
+// treats a step stored at an older version as unfinished.
+func TestAnInstallThatFinishedVersionOneRefoldsAfterTheNewMigration(t *testing.T) {
+	a := newAccount(t)
+	now := clocktest.Now(t)
+	run := func(task datatask.Task) {
+		t.Helper()
+		task.Steps[0].Limit, task.Steps[0].MinLimit = 1, 1
+		engine, err := datatask.New(a.e.Pool, []datatask.Task{task}, "test", func() time.Time { return now },
+			func(context.Context, pgx.Tx, datatask.Progress) error { return nil })
+		ctx := principal.SystemActing(a.e.Admin(), "system:datatask-test")
+		if err == nil {
+			err = engine.Seed(ctx)
+		}
+		for i := 0; err == nil && i < 40; i++ {
+			_, err = engine.Execute(ctx)
+		}
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	previous := DataTask()
+	previous.Version = 1
+	previous.Requires = []string{"core/1795101500"}
+	run(previous)
+
+	former := "former"
+	a.endYesterday(t, &former)
+	if a.clock(t) == nil {
+		t.Fatal("the fixture has no stale clock to refold")
+	}
+	run(DataTask())
+	if got := a.clock(t); got != nil {
+		t.Errorf("the version-2 run left the clock at %v, want none", got)
+	}
+}
