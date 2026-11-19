@@ -6652,6 +6652,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Pipeline dieses Deals ist stillgelegt, daher sind ihre Phasen schreibgeschützt. Stelle die Pipeline in den Einstellungen wieder her, um den Deal zu verschieben.",
   "deal.stageOtherPipeline":
     "Diese Phase gehört zu einer anderen Pipeline. Wähle eine Phase der Pipeline dieses Deals.",
+  "deal.movePipeline": "In Pipeline verschieben",
+  "deal.movePipelinePick": "Pipeline wählen",
+  "deal.movePipelineDone": "Nach {pipeline} verschoben.",
   "deal.reopen": "Wieder öffnen",
   "deal.reopenPick": "Diesen Deal in eine offene Phase zurücksetzen",
   "deal.reopenConfirm": "Wieder öffnen",

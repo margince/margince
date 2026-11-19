@@ -58423,6 +58423,12 @@ type MorningDigestConnectorsProvider string
 // MorningDigestConnectorsStatus defines model for MorningDigest.Connectors.Status.
 type MorningDigestConnectorsStatus string
 
+// MoveDealPipelineRequest defines model for MoveDealPipelineRequest.
+type MoveDealPipelineRequest struct {
+	// PipelineId The live pipeline to move the deal to. It must differ from the deal's own.
+	PipelineId openapi_types.UUID `json:"pipeline_id"`
+}
+
 // MyAgentGrant One rep's standing answer for one scheduled agent.
 type MyAgentGrant struct {
 	// CredentialFundsAgent Whether that passport still covers what this agent does. Read at request time
@@ -79045,6 +79051,26 @@ type ListDealMarginceChangesParams struct {
 	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
 
+// MoveDealPipelineParams defines parameters for MoveDealPipeline.
+type MoveDealPipelineParams struct {
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
+// UndoDealPipelineMoveParams defines parameters for UndoDealPipelineMove.
+type UndoDealPipelineMoveParams struct {
+	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+	// the last-seen entity `version`. If the row's current `version` differs, the write is
+	// rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+	// re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+	// Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+	IfMatch *IfMatch `json:"If-Match,omitempty"`
+}
+
 // RestoreDealMoveParams defines parameters for RestoreDealMove.
 type RestoreDealMoveParams struct {
 	// Fingerprint The `fingerprint` of the move that was set aside, unchanged.
@@ -84268,6 +84294,9 @@ type UseDealEstimateJSONRequestBody = DealRevisionRequest
 
 // UpdateDealLineJSONRequestBody defines body for UpdateDealLine for application/json ContentType.
 type UpdateDealLineJSONRequestBody = UpdateDealLineRequest
+
+// MoveDealPipelineJSONRequestBody defines body for MoveDealPipeline for application/json ContentType.
+type MoveDealPipelineJSONRequestBody = MoveDealPipelineRequest
 
 // DismissDealMoveJSONRequestBody defines body for DismissDealMove for application/json ContentType.
 type DismissDealMoveJSONRequestBody = DismissDealMoveRequest
@@ -100129,6 +100158,12 @@ type ServerInterface interface {
 	// Every change Margince made to this deal, newest first.
 	// (GET /deals/{id}/margince-changes)
 	ListDealMarginceChanges(w http.ResponseWriter, r *http.Request, id Id, params ListDealMarginceChangesParams)
+	// Move an open deal to another pipeline, onto its first open stage.
+	// (POST /deals/{id}/move-pipeline)
+	MoveDealPipeline(w http.ResponseWriter, r *http.Request, id Id, params MoveDealPipelineParams)
+	// Put a deal back on the pipeline and stage its last move left.
+	// (POST /deals/{id}/move-pipeline/undo)
+	UndoDealPipelineMove(w http.ResponseWriter, r *http.Request, id Id, params UndoDealPipelineMoveParams)
 	// Put a set-aside move back on the deal card, the undo behind "Not now".
 	// (DELETE /deals/{id}/move/dismiss)
 	RestoreDealMove(w http.ResponseWriter, r *http.Request, id Id, params RestoreDealMoveParams)
@@ -105016,6 +105051,18 @@ func (_ Unimplemented) UpdateDealLine(w http.ResponseWriter, r *http.Request, id
 // Every change Margince made to this deal, newest first.
 // (GET /deals/{id}/margince-changes)
 func (_ Unimplemented) ListDealMarginceChanges(w http.ResponseWriter, r *http.Request, id Id, params ListDealMarginceChangesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Move an open deal to another pipeline, onto its first open stage.
+// (POST /deals/{id}/move-pipeline)
+func (_ Unimplemented) MoveDealPipeline(w http.ResponseWriter, r *http.Request, id Id, params MoveDealPipelineParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Put a deal back on the pipeline and stage its last move left.
+// (POST /deals/{id}/move-pipeline/undo)
+func (_ Unimplemented) UndoDealPipelineMove(w http.ResponseWriter, r *http.Request, id Id, params UndoDealPipelineMoveParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -132977,6 +133024,120 @@ func (siw *ServerInterfaceWrapper) ListDealMarginceChanges(w http.ResponseWriter
 	handler.ServeHTTP(w, r)
 }
 
+// MoveDealPipeline operation middleware
+func (siw *ServerInterfaceWrapper) MoveDealPipeline(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params MoveDealPipelineParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.MoveDealPipeline(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UndoDealPipelineMove operation middleware
+func (siw *ServerInterfaceWrapper) UndoDealPipelineMove(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params UndoDealPipelineMoveParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch IfMatch
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = &IfMatch
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UndoDealPipelineMove(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // RestoreDealMove operation middleware
 func (siw *ServerInterfaceWrapper) RestoreDealMove(w http.ResponseWriter, r *http.Request) {
 
@@ -159303,6 +159464,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/deals/{id}/margince-changes", wrapper.ListDealMarginceChanges)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/deals/{id}/move-pipeline", wrapper.MoveDealPipeline)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/deals/{id}/move-pipeline/undo", wrapper.UndoDealPipelineMove)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/deals/{id}/move/dismiss", wrapper.RestoreDealMove)

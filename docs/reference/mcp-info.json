@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 281550,
+    "tool_catalog_bytes": 281737,
     "resource_catalog_bytes": 5622,
-    "approx_wire_tokens_total": 71793,
+    "approx_wire_tokens_total": 71839,
     "largest_tool_bytes": 17890,
     "largest_tool": "read_details",
     "tool_catalog_composition": {
-      "description_bytes": 54992,
-      "input_schema_bytes": 161555,
+      "description_bytes": 55012,
+      "input_schema_bytes": 161722,
       "output_schema_bytes": 52895,
-      "description_plus_input_schema_bytes": 216547
+      "description_plus_input_schema_bytes": 216734
     }
   },
   "tools": {
@@ -2779,11 +2779,11 @@
           "readOnlyHint": false,
           "title": "Move a lead, deal, project or partner"
         },
-        "description": "Move a lead, deal or project on, or set up a company as a partner. promote needs a trigger naming the engagement; cold outreach nobody answered never promotes. demote needs a reason and is refused once the contact owns a deal. set_up_partner always waits for a human, takes no margin tier (a human sets that on the company's Partner tab) and is refused for a company that already is a partner. move_deal to a won or lost stage closes or reopens the deal, which is the user's decision: unless they named the deal and stage, name them and get their yes first. move_project to closed needs a reason and leaves the project's tasks open. When the user asked for the close, report what is still open and close: an open task is news for them, not a reason to hold back. read_workspace topic pipelines gives the stage ids. merge_member_accounts needs a confirmed preview first: read_workspace topic member_retirement with mode merge. Use update_record for a record's other fields, and enrich to learn about a company from its website. A promotion answers with the new contact's id. A staged answer's approval id is what the retry carries; do not report the change until the retry has answered. (Governance: runs immediately for accept_partner_lead, clear_lead_signal, correct_close_day, correct_project_health, decide_commission, decide_legal_review, demote, disqualify, link_lead_company, move_project, promote, publish_contact, qualify, record_project_health, reopen_lead, request_legal_review, review_outcome, set_lead_signal, transfer_projects, withdraw_legal_review; a human approves first for merge_member_accounts, set_up_partner; decided per call from its arguments for move_deal; the user's yes is needed for the actions decide_commission, disqualify, transfer_projects, so tell them what the call will change and get it before calling, unless they asked for this call themselves; requires passport scope \"write\".)",
+        "description": "Move a lead, deal or project on, or set up a company as a partner. promote needs a trigger naming the engagement; cold outreach nobody answered never promotes. demote needs a reason and is refused once the contact owns a deal. set_up_partner always waits for a human, takes no margin tier (a human sets that on the company's Partner tab) and is refused for a company that already is a partner. move_deal to a won or lost stage closes or reopens the deal, which is the user's decision: unless they named the deal and stage, name them and get their yes first. move_project to closed needs a reason and leaves the project's tasks open. When the user asked for the close, report what is still open and close: an open task is news for them, not a reason to hold back. read_workspace topic pipelines gives the stage ids. merge_member_accounts needs a confirmed preview first: read_workspace topic member_retirement with mode merge. Use update_record for a record's other fields, and enrich to learn about a company from its website. A promotion answers with the new contact's id. A staged answer's approval id is what the retry carries; do not report the change until the retry has answered. (Governance: runs immediately for accept_partner_lead, clear_lead_signal, correct_close_day, correct_project_health, decide_commission, decide_legal_review, demote, disqualify, link_lead_company, move_deal_pipeline, move_project, promote, publish_contact, qualify, record_project_health, reopen_lead, request_legal_review, review_outcome, set_lead_signal, transfer_projects, withdraw_legal_review; a human approves first for merge_member_accounts, set_up_partner; decided per call from its arguments for move_deal; the user's yes is needed for the actions decide_commission, disqualify, transfer_projects, so tell them what the call will change and get it before calling, unless they asked for this call themselves; requires passport scope \"write\".)",
         "inputSchema": {
           "properties": {
             "action": {
-              "description": "accept_partner_lead: Accept a lead for the partner that referred it\nclear_lead_signal: Withdraw a manual scoring factor\ncorrect_close_day: Correct the day a won or lost deal closed\ncorrect_project_health: Correct one reading, keeping when it was said\ndecide_commission: Approve, pay, or void one entry\ndecide_legal_review: Record legal's answer on a request\ndemote: Reverse a promotion that should not have happened, putting the lead back on the open ladder\ndisqualify: Close out a lead that is not going anywhere, so it stops appearing as live work\nlink_lead_company: Link a lead to a company\nmerge_member_accounts: Transfer an unused imported or invited duplicate member's work to the selected account and remove the duplicate\nmove_deal: Move a deal to a different stage of its pipeline, optionally leaving a note on its timeline saying why, in one call\nmove_project: Move a project to another phase — initiative, pursuing, delivering, closed\npromote: Turn a lead who has genuinely engaged into a contact record, carrying their history across\npublish_contact: Share a contact your mailbox created with the rest of the company\nqualify: Fill in what a lead's own data already implies — today the company name, from the domain of its email address — and report which qualification fields are still empty\nrecord_project_health: Record how this project is going\nreopen_lead: Put a disqualified lead back on the open ladder\nrequest_legal_review: Ask legal to review this deal\nreview_outcome: Write a review of how this deal's current closing went\nset_lead_signal: Enter or replace a manual scoring factor\nset_up_partner: Set up a partner program on a company that has none, with its kinds, a relationship stage and a next step\ntransfer_projects: Move every live project one user owns to another user, in one transaction\nwithdraw_legal_review: Take back an open request",
+              "description": "accept_partner_lead: Accept a lead for the partner that referred it\nclear_lead_signal: Withdraw a manual scoring factor\ncorrect_close_day: Correct the day a won or lost deal closed\ncorrect_project_health: Correct one reading, keeping when it was said\ndecide_commission: Approve, pay, or void one entry\ndecide_legal_review: Record legal's answer on a request\ndemote: Reverse a promotion that should not have happened, putting the lead back on the open ladder\ndisqualify: Close out a lead that is not going anywhere, so it stops appearing as live work\nlink_lead_company: Link a lead to a company\nmerge_member_accounts: Transfer an unused imported or invited duplicate member's work to the selected account and remove the duplicate\nmove_deal: Move a deal to a different stage of its pipeline, optionally leaving a note on its timeline saying why, in one call\nmove_deal_pipeline: Move an open deal to another pipeline, onto its first open stage\nmove_project: Move a project to another phase — initiative, pursuing, delivering, closed\npromote: Turn a lead who has genuinely engaged into a contact record, carrying their history across\npublish_contact: Share a contact your mailbox created with the rest of the company\nqualify: Fill in what a lead's own data already implies — today the company name, from the domain of its email address — and report which qualification fields are still empty\nrecord_project_health: Record how this project is going\nreopen_lead: Put a disqualified lead back on the open ladder\nrequest_legal_review: Ask legal to review this deal\nreview_outcome: Write a review of how this deal's current closing went\nset_lead_signal: Enter or replace a manual scoring factor\nset_up_partner: Set up a partner program on a company that has none, with its kinds, a relationship stage and a next step\ntransfer_projects: Move every live project one user owns to another user, in one transaction\nwithdraw_legal_review: Take back an open request",
               "enum": [
                 "accept_partner_lead",
                 "clear_lead_signal",
@@ -2796,6 +2796,7 @@
                 "link_lead_company",
                 "merge_member_accounts",
                 "move_deal",
+                "move_deal_pipeline",
                 "move_project",
                 "promote",
                 "publish_contact",
@@ -2874,7 +2875,7 @@
               "type": "string"
             },
             "id": {
-              "description": "accept_partner_lead, clear_lead_signal, correct_close_day, correct_project_health, decide_commission, decide_legal_review, link_lead_company, publish_contact, record_project_health, reopen_lead, request_legal_review, review_outcome, set_lead_signal, withdraw_legal_review only",
+              "description": "accept_partner_lead, clear_lead_signal, correct_close_day, correct_project_health, decide_commission, decide_legal_review, link_lead_company, move_deal_pipeline, publish_contact, record_project_health, reopen_lead, request_legal_review, review_outcome, set_lead_signal, withdraw_legal_review only",
               "type": "string"
             },
             "idempotency_key": {
@@ -2883,7 +2884,7 @@
               "type": "string"
             },
             "if_version": {
-              "description": "correct_close_day, decide_commission, move_deal, move_project only: The version the caller read; the write is refused as skew if the record moved since",
+              "description": "correct_close_day, decide_commission, move_deal, move_deal_pipeline, move_project only: The version the caller read; the write is refused as skew if the record moved since",
               "type": "integer"
             },
             "lead_id": {
@@ -2960,7 +2961,7 @@
               "type": "string"
             },
             "request_body": {
-              "description": "correct_close_day, correct_project_health, decide_commission, decide_legal_review, link_lead_company, record_project_health, request_legal_review, review_outcome, set_lead_signal, transfer_projects only: The chosen action's request body; read_workspace topic actions lists its shape",
+              "description": "correct_close_day, correct_project_health, decide_commission, decide_legal_review, link_lead_company, move_deal_pipeline, record_project_health, request_legal_review, review_outcome, set_lead_signal, transfer_projects only: The chosen action's request body; read_workspace topic actions lists its shape",
               "type": "object"
             },
             "settle": {
