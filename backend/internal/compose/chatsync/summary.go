@@ -32,19 +32,32 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
+// summariser asks the episode site on its lane, reading the extra context
+// from pool.
+type summariser struct {
+	lane ai.Completer
+	pool *pgxpool.Pool
+}
+
 // errNoModel is an installation with no chat_summary lane: nothing is filed.
 var errNoModel = errors.New("chat summary: no model is bound to the chat_summary task")
 
 // summarise asks the episode site about messages of the link's channel. A
 // lane that cannot answer at all reads as errNoModel.
-func summarise(ctx context.Context, lane ai.Completer, link chatlinks.Link, record chatRecord, messages []dispact.Message, chosen bool) (chatsummary.Reply, error) {
-	if lane == nil {
+func (p summariser) summarise(ctx context.Context, link chatlinks.Link, record chatRecord, messages []dispact.Message, chosen bool) (chatsummary.Reply, error) {
+	if p.lane == nil {
 		return chatsummary.Reply{}, errNoModel
 	}
 	in := chatsummary.Input{Record: record.kind + " " + record.name, Channel: link.ChannelName, Chosen: chosen}
 	if record.stage != "" {
 		in.Facts = append(in.Facts, "Stage: "+record.stage)
 	}
+	extra, err := readSummaryContext(ctx, p.pool, link, record, messages[0].PostedAt)
+	if err != nil {
+		return chatsummary.Reply{}, err
+	}
+	in.Facts = append(in.Facts, extra.facts...)
+	in.Earlier = extra.earlier
 	for _, m := range messages {
 		in.Messages = append(in.Messages, chatsummary.Message{Author: authorOf(m), At: m.PostedAt, Text: m.Text})
 	}
@@ -66,7 +79,7 @@ func summarise(ctx context.Context, lane ai.Completer, link chatlinks.Link, reco
 		return err
 	}
 	ctx = ai.WithSubject(ctx, recordRef(record), record.name)
-	res, err := ai.Ask(ctx, lane, chatsummary.Request(in, about), check)
+	res, err := ai.Ask(ctx, p.lane, chatsummary.Request(in, about), check)
 	if errors.Is(err, ai.ErrUnconfiguredModel) {
 		return chatsummary.Reply{}, errNoModel
 	}
