@@ -334,17 +334,17 @@ type Extension struct {
 	// operator which secrets a unit expects before it ever runs.
 	Secrets []SecretsRequest
 
+	MailHooks MailHooks // the two mail-capture hooks, see MailHooks
 	// Jobs are the scheduled background jobs the unit contributes: named
 	// cadenced passes that fan out over the fleet, one workspace per tick.
 	// Like a Tool this carries BEHAVIOR only — the cadence, wall clocks,
 	// queue and attempt cap are MECHANICS and live in the unit's
 	// api/jobs.yaml fragment, reaching the process as a JobDeclaration.
 	//
-	// A job is not a tool with a timer, and the difference is who is there
-	// when it runs: nobody. That is why the job seam refuses a confirm-first
-	// tier outright (a confirmation nobody can ever give) and refuses an
-	// outbound scope (autonomous outbound authority on a clock), where the
-	// served-tool seam refuses the same two shapes for weaker reasons.
+	// A job is not a tool with a timer: nobody is there when it runs. So the
+	// job seam refuses a confirm-first tier outright (a confirmation nobody can
+	// ever give) and an outbound scope (autonomous outbound authority on a
+	// clock). The served-tool seam refuses both shapes for weaker reasons.
 	Jobs []Job
 
 	// Subscriptions are the events the unit reacts to: named listeners over the

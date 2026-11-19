@@ -214,3 +214,14 @@ func TestTheFixtureDeclaresPrivacyForTheTableItReaches(t *testing.T) {
 		}
 	}
 }
+
+func TestTheFixtureDeclaresAMailHookThatKeepsCoresAnswer(t *testing.T) {
+	hook := New().MailHooks.Deal
+	if hook == nil {
+		t.Fatal("no deal hook declared")
+	}
+	in := extension.MailDeal{Outcome: "none"}
+	if out, err := hook(extension.MailView{}, in); err != nil || out.Outcome != in.Outcome {
+		t.Fatalf("hook changed core's answer: %v, %v", out, err)
+	}
+}

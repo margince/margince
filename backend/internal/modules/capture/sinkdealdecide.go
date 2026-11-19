@@ -32,13 +32,15 @@ type dealFacts struct {
 	contacts  []ids.UUID
 	companies []ids.UUID
 	thread    []ids.UUID
+	// hooks are the extension changes already made to contacts and companies.
+	hooks []HookChange
 	// topicMemo is the digest of the topic question last answered for it.
 	topicMemo string
 }
 
 // readDealFacts reads the facts. refiling reads past the mail's own deal
 // links, for the repair re-checking a link the rule wrote.
-func readDealFacts(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, refiling bool) (dealFacts, error) {
+func readDealFacts(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, refiling bool, hooks MailHooks) (dealFacts, error) {
 	facts := dealFacts{activity: activityID}
 	var kind string
 	var channel *string
@@ -71,6 +73,9 @@ func readDealFacts(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, re
 	if facts.companies, err = mailCompanies(ctx, tx, activityID, facts.contacts); err != nil {
 		return facts, err
 	}
+	if err = hooks.adjustParties(ctx, tx, &facts); err != nil {
+		return facts, err
+	}
 	if kind == kindEmail && len(facts.companies) == 1 {
 		facts.thread, err = threadDeals(ctx, tx, activityID, facts.companies[0])
 	}
@@ -81,7 +86,17 @@ func readDealFacts(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, re
 // for this mail. Every writer of a machine deal link decides through it, so a
 // decline holds for capture, the refile pass and the repair alike. A
 // suggestion carries the candidates its topic check weighs. It writes nothing.
-func decideDeal(ctx context.Context, tx pgx.Tx, facts dealFacts, candidates DealCandidates) (DealVerdict, error) {
+// Extension hooks run last, over what the rule and the declines left.
+func decideDeal(ctx context.Context, tx pgx.Tx, facts dealFacts, candidates DealCandidates, hooks MailHooks) (DealVerdict, error) {
+	verdict, err := decideCore(ctx, tx, facts, candidates)
+	if err != nil {
+		return verdict, err
+	}
+	return hooks.adjustVerdict(ctx, tx, facts, candidates, verdict)
+}
+
+// decideCore is the rule with a colleague's declines applied and no extension.
+func decideCore(ctx context.Context, tx pgx.Tx, facts dealFacts, candidates DealCandidates) (DealVerdict, error) {
 	verdict, err := decideByRule(ctx, tx, facts, candidates)
 	if err != nil {
 		return verdict, err

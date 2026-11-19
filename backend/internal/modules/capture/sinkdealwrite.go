@@ -42,7 +42,7 @@ func linkActivityToDeal(f dealFiling, tx pgx.Tx, activityID ids.ActivityID, deal
 		return DealNotWritable, err
 	}
 	// Deal edits may have committed while the candidate read waited for its lock.
-	facts, err := readDealFacts(f.decider, tx, activityID, false)
+	facts, err := readDealFacts(f.decider, tx, activityID, false, f.hooks)
 	if err != nil {
 		return "", err
 	}
@@ -50,7 +50,7 @@ func linkActivityToDeal(f dealFiling, tx pgx.Tx, activityID ids.ActivityID, deal
 	if err != nil || current.Outcome != DealLinked || current.Deal != dealID {
 		return DealNotWritable, err
 	}
-	landed, filed, err := f.filer.FileOnDealIfUnfiled(f.writer, tx, activityID, dealID, f.evidence)
+	landed, filed, err := f.filer.FileOnDealIfUnfiled(f.writer, tx, activityID, dealID, withHookEvidence(f.evidence, current.Hooks))
 	switch {
 	case err != nil:
 		return "", err

@@ -171,6 +171,7 @@ var lifecycleCompanyReads = gatekit.Waive(map[string]string{
 // graph is by NAME and a gated Store.X would then vouch for an ungated
 // Handlers.X. rbacgate_test.go's header records being bitten by exactly that.
 var calleeGatedCompanyReads = gatekit.Waive(map[string]string{
+	"internal/modules/capture/mailhooks.go:partiesAreLive":                        "the hook's own contacts, counted to check they are live and never returned. Its one caller is adjustParties, which returns at once without auth.ReadGranted for both contact and company, and the hook's ids came from core's own reads of the mail",
 	"internal/modules/finance/customerpaymentrows.go:customerPaymentRows":         "called only by readCustomerPayments from Store.CustomerPayments, which requires company and finance read before opening the transaction; SQL also intersects company identity and financial owner scopes",
 	"internal/modules/activities/emailtarget.go:companyCandidatesSQL":             "the record an email about a written-about row goes to (activities.emailTargets). linkedCandidates asks auth.ReadGranted for the object it reads and renders that object's row scope, so a caller with no company grant is told about none; the census cannot see it because the object arrives as a PARAMETER",
 	"internal/modules/activities/emailtarget.go:dealCompanyCandidatesSQL":         "the company of a task's deal, as the record an email about the task goes to. linkedCandidates asks auth.ReadGranted for company and renders its row scope, and asks it for deal too; the object arrives as a PARAMETER",
