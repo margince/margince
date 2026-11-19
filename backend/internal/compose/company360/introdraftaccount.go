@@ -92,7 +92,7 @@ func (s *Service) accountIntroFactsFor(
 	if req.Function != nil {
 		if !holdsFunction(colleague, *req.Function) {
 			return accountIntroFacts{}, fmt.Errorf(
-				"company360: %s's connections at this account do not work in %s: %w",
+				"%s's connections at this account do not work in %s: %w",
 				colleague.DisplayName, *req.Function, apperrors.ErrInvalidArgument)
 		}
 		facts.function = *req.Function

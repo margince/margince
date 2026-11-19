@@ -42,7 +42,7 @@ func (h Handlers) UpdateFollowUpSettings(w http.ResponseWriter, r *http.Request)
 	// could be steered by the very mail it would expose.
 	if actor, ok := principal.Actor(r.Context()); (req.PrivateMailRequests != nil || req.SharePrivateQuoteRequests != nil) &&
 		(!ok || actor.Type != principal.PrincipalHuman) {
-		writeStoreErr(w, r, fmt.Errorf("activities: only a human may change %s or %s: %w",
+		writeStoreErr(w, r, fmt.Errorf("only a human may change %s or %s: %w",
 			PrivateMailRequests.Key(), SharePrivateQuoteRequests.Key(), apperrors.ErrPermissionDenied))
 		return
 	}

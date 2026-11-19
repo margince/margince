@@ -4,8 +4,15 @@
 package contacts
 
 import (
+	"context"
+	"errors"
 	"slices"
+	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // LinkedIn's company field is a member-edited headline, not a company name.
@@ -100,5 +107,24 @@ func TestOnlyADifferentLegalFormNamesAnotherEntity(t *testing.T) {
 		if got := account.namesAnotherEntity(companyLegalForm(tc.employer)); got != tc.another {
 			t.Errorf("%q at %q: names another entity = %v, want %v", tc.employer, tc.account, got, tc.another)
 		}
+	}
+}
+
+// A LinkedIn network is one member's own. A caller holding the grant but naming
+// no member is refused, and so is a refusal of a match recorded for nobody.
+func TestALinkedInImportOrRefusalWithoutAMemberIsDenied(t *testing.T) {
+	ctx := principal.WithActor(context.Background(), principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:test",
+		Permissions: principal.Permissions{
+			Objects: map[string]principal.ObjectGrant{"contact": {Create: true}}, RowScope: principal.RowScopeAll,
+		},
+	})
+	_, err := (&Store{}).ImportLinkedInConnections(ctx, strings.NewReader("First Name,Last Name\n"))
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("an import naming no member = %v, want ErrPermissionDenied", err)
+	}
+	err = RecordLinkedInMatchRefusedTx(context.Background(), nil, ids.NewV7(), ids.Nil, ids.NewV7())
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a refusal for no owner = %v, want ErrPermissionDenied", err)
 	}
 }

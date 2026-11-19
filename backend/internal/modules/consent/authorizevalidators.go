@@ -447,7 +447,7 @@ func refuseUnreadableEvidence(ctx context.Context, tx pgx.Tx, req commsauthz.Req
 		if err := auth.Require(ctx, named.object, principal.ActionRead); err != nil {
 			// The grant refusal becomes a not-found, so naming an id the
 			// caller may not read discloses nothing about whether it exists.
-			return fmt.Errorf("consent: this message names a record that is not available: %w",
+			return fmt.Errorf("this message names a record that is not available: %w",
 				apperrors.ErrNotFound)
 		}
 	}

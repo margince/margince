@@ -384,7 +384,7 @@ func upsertVerdict(ctx context.Context, tx pgx.Tx, in RecordInput, key, captured
 		in.Verdict, in.CorrectedValue, in.Note, capturedBy, in.ValueCapturedAt, in.ValueShown,
 	).Scan(&id); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return ids.Nil, fmt.Errorf("ai: this claim moved on while the verdict was being made: %w", ErrValueMovedOn)
+			return ids.Nil, fmt.Errorf("this claim moved on while the verdict was being made: %w", ErrValueMovedOn)
 		}
 		return ids.Nil, fmt.Errorf("ai: recording a human's verdict on a derived claim: %w", err)
 	}

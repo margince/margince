@@ -102,7 +102,7 @@ func RecordLinkedInMatchRefusedTx(ctx context.Context, tx pgx.Tx, connectionID, 
 // refusal means, so it is a parameter rather than two statements.
 func refuseLinkedInMatchInTx(ctx context.Context, tx pgx.Tx, connectionID, ownerID, contactID ids.UUID) error {
 	if ownerID == ids.Nil {
-		return fmt.Errorf("contacts: refusing a LinkedIn match names no owner: %w", apperrors.ErrPermissionDenied)
+		return fmt.Errorf("a refusal of a LinkedIn match needs the owner it is refused for: %w", apperrors.ErrPermissionDenied)
 	}
 	var wasStatus string
 	var wasContact *ids.UUID

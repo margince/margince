@@ -22,6 +22,6 @@ func StagingRefusal(set commsauthz.DecisionSet) error {
 	if blocking := BlockingRefusals(set); len(blocking) > 0 {
 		cause = blocking[0].ReasonCode
 	}
-	return fmt.Errorf("consent: %d of %d recipients may not be written to (%s): %w",
+	return fmt.Errorf("%d of %d recipients may not be written to (%s): %w",
 		len(denied), len(set.Decisions), cause, apperrors.ErrConsentNotGranted)
 }
