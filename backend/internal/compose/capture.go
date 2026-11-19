@@ -350,7 +350,7 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 				now:   cfg.clock(),
 			}.Ask,
 			Filer: ActivityDealFiler{},
-			Check: NewDealTopicCheck(pool, cfg.DealTopicBrain),
+			Check: NewDealTopicCheck(pool, cfg.DealTopicBrain), Hooks: composedMailHooks(),
 		}).
 		// The audience derivation, from the module that owns `activity`. It
 		// runs INSIDE the capture transaction because the audience it derives

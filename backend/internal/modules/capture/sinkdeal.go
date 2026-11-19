@@ -59,6 +59,8 @@ type DealAttribution struct {
 	Ask        AskWhichDeal
 	Filer      DealFiler
 	Check      DealTopicCheck
+	// Hooks are the extension hooks. The zero value is none.
+	Hooks MailHooks
 }
 
 // WithDealAttribution returns a copy that files captured mail under its deal.
@@ -91,6 +93,8 @@ type DealVerdict struct {
 	Question   WhichDeal
 	Basis      DealBasis
 	Candidates []ids.UUID
+	// Hooks are the extension changes behind this verdict, for the record.
+	Hooks []HookChange
 }
 
 // dealFiling is who decides and who writes. Live capture is both. The repair
@@ -100,6 +104,7 @@ type dealFiling struct {
 	decider, writer context.Context
 	evidence        map[string]any
 	filer           DealFiler
+	hooks           MailHooks
 	topic           *dealTopicState
 }
 
@@ -113,7 +118,7 @@ func fileOnDeal(f dealFiling, tx pgx.Tx, activityID ids.ActivityID, candidates D
 	if live, err := lockForDeal(f.writer, tx, activityID); err != nil || !live {
 		return DealVerdict{Outcome: DealNone}, nil, err
 	}
-	facts, err := readDealFacts(f.decider, tx, activityID, false)
+	facts, err := readDealFacts(f.decider, tx, activityID, false, f.hooks)
 	if err != nil || facts.outcome != "" {
 		return DealVerdict{Outcome: facts.outcome}, nil, err
 	}

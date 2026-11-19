@@ -117,11 +117,11 @@ func (r DealRepair) recheckTopic(f dealFiling, tx pgx.Tx, mail ids.ActivityID, c
 // Where it no longer reaches current, as for a closed deal, the link is a
 // suggestion unless the mail's project or proven thread names it.
 func (r DealRepair) suggestedLink(f dealFiling, tx pgx.Tx, mail ids.ActivityID, current ids.UUID) (bool, error) {
-	facts, err := readDealFacts(f.decider, tx, mail, true)
+	facts, err := readDealFacts(f.decider, tx, mail, true, f.hooks)
 	if err != nil || facts.outcome != "" {
 		return false, err
 	}
-	verdict, err := decideDeal(f.decider, tx, facts, r.Candidates)
+	verdict, err := decideDeal(f.decider, tx, facts, r.Candidates, f.hooks)
 	if err != nil {
 		return false, err
 	}

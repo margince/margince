@@ -174,6 +174,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
   deal is erased, or a deal is merged.
 - [send-a-notice-from-an-extension.md](how-to/send-a-notice-from-an-extension.md): tell a user or a role about
   a record from an extension.
+- [adjust-mail-capture-from-an-extension.md](how-to/adjust-mail-capture-from-an-extension.md): adjust a mail's
+  contacts, companies and deal.
 - [debug-an-ai-task.md](how-to/debug-an-ai-task.md): run one AI task on your own input
   (`make ai-probe`).
 - [update-the-handbook.md](how-to/update-the-handbook.md): change the handbook so **Ask your documents** can answer

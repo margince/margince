@@ -146,7 +146,7 @@ func askTopic(check DealTopicCheck, q topicQuestion) (topicAnswer, error) {
 // files nothing and asks nobody. Doubt or no answer files nothing, and an
 // ambiguous mail still asks its question.
 func settleSuggestion(verdict DealVerdict, answer topicAnswer) DealVerdict {
-	none := DealVerdict{Outcome: DealNone, Basis: verdict.Basis}
+	none := DealVerdict{Outcome: DealNone, Basis: verdict.Basis, Hooks: verdict.Hooks}
 	switch {
 	case !answer.answered || !answer.topic.Confident:
 		if verdict.Outcome == DealAmbiguous {
@@ -156,14 +156,14 @@ func settleSuggestion(verdict DealVerdict, answer topicAnswer) DealVerdict {
 	case answer.topic.Deal.IsZero() || !slices.Contains(verdict.Candidates, answer.topic.Deal):
 		return none
 	}
-	return DealVerdict{Outcome: DealLinked, Deal: answer.topic.Deal, Basis: verdict.Basis, Candidates: verdict.Candidates}
+	return DealVerdict{Outcome: DealLinked, Deal: answer.topic.Deal, Basis: verdict.Basis, Candidates: verdict.Candidates, Hooks: verdict.Hooks}
 }
 
 // decideFiling is the deal rule with the topic check folded in. A suggestion
 // whose question was already answered for this mail files nothing more. One
 // still to ask comes back as a question, with no verdict to write.
 func decideFiling(f dealFiling, tx pgx.Tx, facts dealFacts, candidates DealCandidates) (DealVerdict, *topicQuestion, error) {
-	verdict, err := decideDeal(f.decider, tx, facts, candidates)
+	verdict, err := decideDeal(f.decider, tx, facts, candidates, f.hooks)
 	if err != nil || !verdict.Basis.NeedsTopicCheck() || len(verdict.Candidates) == 0 {
 		return verdict, nil, err
 	}
@@ -197,7 +197,7 @@ func FileOnDealChecked(ctx context.Context, db TxRunner, mail ids.ActivityID, ru
 	_, err := checkedFiling(ctx, db, rule.Check, func(tx pgx.Tx, topic *dealTopicState) (*topicQuestion, error) {
 		var question *topicQuestion
 		var err error
-		f := dealFiling{decider: ctx, writer: ctx, filer: rule.Filer, topic: topic}
+		f := dealFiling{decider: ctx, writer: ctx, filer: rule.Filer, hooks: rule.Hooks, topic: topic}
 		verdict, question, err = fileOnDeal(f, tx, mail, rule.Candidates, rule.Ask)
 		return question, err
 	})
