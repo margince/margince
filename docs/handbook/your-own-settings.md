@@ -112,7 +112,7 @@ Keep your backup codes where you can find them without your phone. If you lose b
 <!-- opens: settings/account -->
 To change your display name in Margince, open Settings → **Account**, edit the **Display name** field, and choose **Save** or press Enter. **Save** shows once you change the name.
 Your display name is what colleagues see on records you edit, in pickers and in the audit log.
-It cannot be empty, and it can be up to 255 characters long. Your email address shows under it, and you do not change it here.
+It cannot be empty, and it can be up to 255 characters long. Margince keeps it on one line: a line break or tab becomes a space, and characters that draw nothing are removed. Your email address shows under it, and you do not change it here.
 Also called: my name, profile name, rename myself.
 
 ### How do I change my profile picture?

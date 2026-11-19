@@ -119,6 +119,18 @@ func TestCorrectingYourNameWritesTheSeatItsAuditAndItsEvent(t *testing.T) {
 	}
 }
 
+func TestASavedNameIsStoredAsOneVisibleLine(t *testing.T) {
+	svc, ctx, userID := seatChoosingALanguage(t)
+
+	seat, err := svc.SaveMyDisplayName(ctx, "Ada\u202e\u200b  Love\n\tlace")
+	if err != nil {
+		t.Fatalf("saving a pasted name: %v", err)
+	}
+	if got := storedName(t, svc, userID); got != "Ada Love lace" || seat.DisplayName != got {
+		t.Errorf("app_user holds %q and the answer %q, want both \"Ada Love lace\"", got, seat.DisplayName)
+	}
+}
+
 func TestABlankOrOverlongNameIsRefused(t *testing.T) {
 	svc, ctx, userID := seatChoosingALanguage(t)
 	before := storedName(t, svc, userID)

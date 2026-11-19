@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 	"unicode/utf8"
 
@@ -19,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -33,6 +33,12 @@ type MemberEdit struct {
 	// LegalEntity moves the member to that entity; nil keeps their entity.
 	LegalEntity       *ids.LegalEntityID
 	ExpectedUpdatedAt time.Time
+}
+
+// displayNameLine is a typed name as colleagues read it, on one line. The zero-width and
+// bidi characters that hide or reorder text in a picker or the audit log are dropped.
+func displayNameLine(raw string) string {
+	return draftfloor.NameLine(values.WithoutZeroWidth(raw))
 }
 
 func validateDisplayName(name string) error {
@@ -51,7 +57,7 @@ func (s *Service) UpdateMember(ctx context.Context, actor Identity, member ids.U
 	if err != nil {
 		return err
 	}
-	in.Name = strings.TrimSpace(in.Name)
+	in.Name = displayNameLine(in.Name)
 	email, err := values.ParseEmail(in.Email)
 	if err != nil {
 		return err
