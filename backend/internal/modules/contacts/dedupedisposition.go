@@ -239,7 +239,7 @@ func reopenDedupeCandidateTx(ctx context.Context, tx pgx.Tx, id ids.UUID) error 
 	err := tx.QueryRow(ctx, `
 		SELECT disposition FROM dedupe_candidate WHERE id = $1 FOR UPDATE`, id).Scan(&was)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return fmt.Errorf("contacts: re-opening dedupe candidate %s: %w", id, apperrors.ErrNotFound)
+		return fmt.Errorf("the duplicate candidate to re-open is gone: %w", apperrors.ErrNotFound)
 	}
 	if err != nil {
 		return fmt.Errorf("contacts: reading the disposition to lift: %w", err)
@@ -279,7 +279,7 @@ func (s *Store) UndoDedupeDisposition(ctx context.Context, id ids.UUID) (DedupeC
 	}
 	switch row.Disposition {
 	case dispositionOpen:
-		return DedupeCandidateRow{}, fmt.Errorf("contacts: candidate is already open: %w", apperrors.ErrConflict)
+		return DedupeCandidateRow{}, fmt.Errorf("the duplicate candidate is already open: %w", apperrors.ErrConflict)
 	case dispositionMerged:
 		return DedupeCandidateRow{}, ErrNotUndoable
 	}

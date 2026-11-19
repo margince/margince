@@ -95,20 +95,20 @@ describe("problemMessage", () => {
   });
 
   // The gate's own wrapping, which is the other real producer of this code. Its
-  // detail names the admission spec and the resolver state. Those are the
-  // authority model's internals, not a sentence for a reader. So the copy
-  // stands in for this one too, and none of it reaches the screen.
+  // detail names the tool and the authority model's state, which an agent can
+  // act on and a reader of this screen cannot. So the copy stands in for this
+  // one too, and none of it reaches the screen.
   it("stands in for the admission gate's detail, and shows none of it", () => {
     const message = problemMessage(
       {
         code: "permission_denied",
         detail:
-          "gate: deal.advance: no authority resolver composed: permission denied",
+          "deal.advance cannot run here, because this server cannot check whose authority a call carries: permission denied",
       },
       t,
     );
     expect(message).toBe(t("common.permissionDenied"));
-    expect(message).not.toContain("resolver");
+    expect(message).not.toContain("deal.advance");
   });
 
   // The wrapped form of the same sentinel, which `auth.Require` sends for every

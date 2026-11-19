@@ -55,7 +55,7 @@ func (g *Gate) RequireGrantedForRecipients(ctx context.Context, recipients []con
 // nil reads each from the record.
 func (g *Gate) checkGrantedRecipients(ctx context.Context, recipients []connector.Recipient, purposeKey string, record bool, countries []RecipientCountry) error {
 	if len(recipients) == 0 {
-		return fmt.Errorf("consent: a send needs at least one recipient: %w", apperrors.ErrConsentNotGranted)
+		return fmt.Errorf("a send needs at least one recipient: %w", apperrors.ErrConsentNotGranted)
 	}
 	for _, r := range recipients {
 		if err := r.Validate(); err != nil {
@@ -79,7 +79,7 @@ func (g *Gate) checkGrantedRecipients(ctx context.Context, recipients []connecto
 			 FROM consent_purpose WHERE key = $1 AND archived_at IS NULL`,
 			purposeKey).Scan(&purpose.ID, &purpose.Key, &purpose.Label, &purpose.Class, &purpose.RequiresDOI)
 		if errors.Is(err, pgx.ErrNoRows) {
-			return fmt.Errorf("consent: purpose %q is not defined: %w", purposeKey, apperrors.ErrConsentNotGranted)
+			return fmt.Errorf("the purpose %q is not defined: %w", purposeKey, apperrors.ErrConsentNotGranted)
 		}
 		if err != nil {
 			return fmt.Errorf("consent: reading the sending purpose: %w", err)
@@ -107,7 +107,7 @@ func (g *Gate) checkGrantedRecipients(ctx context.Context, recipients []connecto
 				// server-side from the conversation, so the caller never held the
 				// account id — which is why recipientLabel keeps the channel
 				// spelling non-identifying.
-				return fmt.Errorf("consent: no active %q grant for %s: %w",
+				return fmt.Errorf("no active %q grant for %s: %w",
 					purposeKey, recipientLabel(r), apperrors.ErrConsentNotGranted)
 			}
 		}
@@ -254,7 +254,7 @@ func resolveContact(ctx context.Context, tx pgx.Tx, r connector.Recipient) (stri
 		return matches[0], true, nil
 	default:
 		return "", false, fmt.Errorf(
-			"consent: this recipient resolves to more than one live contact, so no consent answer is about one contact: %w",
+			"this recipient resolves to more than one live contact, so no consent answer is about one contact: %w",
 			apperrors.ErrConsentNotGranted)
 	}
 }

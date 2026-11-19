@@ -113,7 +113,7 @@ func (s *Store) promoteCohortTx(
 	// answer to "gone" differs from its answer to a failed read, and only the
 	// sentinel tells the two apart.
 	if errors.Is(err, pgx.ErrNoRows) {
-		return CohortPromotion{}, fmt.Errorf("contacts: the contact a cohort belongs to is gone: %w", apperrors.ErrNotFound)
+		return CohortPromotion{}, fmt.Errorf("the contact a cohort belongs to is gone: %w", apperrors.ErrNotFound)
 	}
 	if err != nil {
 		return CohortPromotion{}, fmt.Errorf("contacts: resolving the contact a cohort belongs to: %w", err)

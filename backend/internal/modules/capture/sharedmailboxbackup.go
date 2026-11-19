@@ -68,7 +68,7 @@ func changeBackupOwnerTx(ctx context.Context, tx pgx.Tx, next SharedMailboxView,
 		return next, fmt.Errorf("capture: naming the shared mailbox's backup owner: %w", err)
 	}
 	if tag.RowsAffected() != 1 {
-		return next, fmt.Errorf("capture: the shared mailbox changed under this edit: %w", apperrors.ErrConflict)
+		return next, fmt.Errorf("the shared mailbox changed under this edit: %w", apperrors.ErrConflict)
 	}
 	before := next
 	next.BackupOwner = want

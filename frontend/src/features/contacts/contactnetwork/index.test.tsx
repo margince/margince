@@ -328,10 +328,10 @@ describe("the verdict and its evidence", () => {
       ),
     ).toBeTruthy();
     expect(screen.getByText("2 visible receipts")).toBeTruthy();
-    // A mail is cited as a mail; a meeting keeps the plain line, so the
+    // A mail is cited as a mail; a meeting is cited by its own kind, so the
     // reader is not told it was a message.
     expect(screen.getByText("Re: Q4 rollout")).toBeTruthy();
-    expect(screen.getByText(/Northgate pilot ·/)).toBeTruthy();
+    expect(screen.getByText("Northgate pilot").closest(".emailref")).toBeNull();
 
     await user.click(
       screen.getByRole("button", {
