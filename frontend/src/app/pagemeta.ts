@@ -214,7 +214,16 @@ export function useRouteSubject(route: Route): string {
     recordKind && route.id,
   );
   if (recordKind && route.id) {
-    return name ?? (reading === "failed" ? t("ref.nameLoadFailed") : route.id);
+    if (name) {
+      return name;
+    }
+    if (reading === "failed") {
+      return t("ref.nameLoadFailed");
+    }
+    // A lead may legitimately have no name; its id is no label for it.
+    return reading === "unnamed" && recordKind === "lead"
+      ? t("ref.leadUnnamed")
+      : route.id;
   }
   if (unit) {
     return unitTitle(unit, locale);

@@ -91,7 +91,7 @@ func (h consumerMailDomainHandlers) AddConsumerMailDomain(w http.ResponseWriter,
 		httperr.Write(w, r, httperr.Validation("domain", "invalid_domain", err.Error()))
 		return
 	}
-	entry, err := h.store.Add(r.Context(), req.Domain, string(req.Kind))
+	entry, err := h.store.AddConfirmed(r.Context(), req.Domain, string(req.Kind), req.Confirm != nil && *req.Confirm)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

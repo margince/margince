@@ -20,13 +20,12 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/importkeys"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // linkKey is one ref of one record type.
@@ -60,6 +59,8 @@ type linkResolver struct {
 	// pendingNatural holds the natural keys of those rows (a contact's email,
 	// a company's domain), so a link written with one resolves as the commit's does.
 	pendingNatural map[linkKey]bool
+	// claims are the unique keys of the run's landing rows (newRecordRefusal).
+	claims importkeys.Ledger
 	// landed holds the rows of this slice that named their record by id, so a
 	// link answers before the identity map is read.
 	landed map[linkKey]ids.UUID
@@ -84,6 +85,7 @@ func newLinkResolver(db *database.DB, sourceSystem string) *linkResolver {
 		pending:        map[linkKey]bool{},
 		refused:        map[linkKey]bool{},
 		pendingNatural: map[linkKey]bool{},
+		claims:         importkeys.Ledger{},
 		landed:         map[linkKey]ids.UUID{},
 		cache:          map[linkKey]linkAnswer{},
 		employers:      map[string]employerCandidate{},
@@ -289,9 +291,9 @@ func (r *linkResolver) naturalKeyOf(ctx context.Context, object, key string) (li
 	}
 	// A domain holds no space, so a name such as "Acme Inc." skips the read.
 	if strings.Contains(key, ".") && !strings.ContainsRune(key, ' ') {
-		answer, err := r.visibleByDomain(ctx, canonicalFor(fieldDomain, key))
-		if err != nil || answer.Found {
-			return answer, err
+		id, found, err := importkeys.VisibleDomainHolder(ctx, r.pool, canonicalFor(fieldDomain, key))
+		if err != nil || found {
+			return linkAnswer{ID: id, Found: found}, err
 		}
 	}
 	hit, err := r.employerFor(ctx, employerKey(key))
@@ -311,41 +313,6 @@ func employerAnswer(hit employerCandidate, name string) linkAnswer {
 	default:
 		return linkAnswer{}
 	}
-}
-
-// visibleByDomain finds the live company holding a domain inside the caller's
-// row scope. A domain is unique among live rows, so one row is the whole answer.
-func (r *linkResolver) visibleByDomain(ctx context.Context, domain string) (linkAnswer, error) {
-	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
-		return linkAnswer{}, err
-	}
-	var answer linkAnswer
-	err := database.WithWorkspaceTx(ctx, r.pool, func(tx pgx.Tx) error {
-		var args []any
-		arg := func(v any) int { args = append(args, v); return len(args) }
-		domainPos := arg(domain)
-		scope, err := auth.ScopeClauseFor(ctx, "company", "o", arg)
-		if err != nil {
-			return err
-		}
-		if scope == "" {
-			scope = "TRUE"
-		}
-		err = tx.QueryRow(ctx, storekit.SQLf(`
-			SELECT o.id FROM company_domain d JOIN company o ON o.id = d.company_id
-			 WHERE d.domain = $%d AND d.archived_at IS NULL
-			   AND o.archived_at IS NULL AND o.merged_into_id IS NULL AND %s
-			 LIMIT 1`, domainPos, scope), args...).Scan(&answer.ID)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil
-		}
-		answer.Found = err == nil
-		return err
-	})
-	if err != nil {
-		return linkAnswer{}, fmt.Errorf("import: finding the linked company: %w", err)
-	}
-	return answer, nil
 }
 
 // naturalKeyField is the column holding a row's natural key. It is empty when

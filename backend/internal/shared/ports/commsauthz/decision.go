@@ -97,6 +97,22 @@ type Evidence struct {
 	// the engine decides about that lead alone, at staging and at transmit, and
 	// refuses a recipient address the lead does not hold.
 	LeadID ids.UUID
+	// AuthoredOffer says the words the sender wrote make an offer. The engine
+	// sets it at staging from the Authored* request fields; transmit reads
+	// the staged value, because the delivery keeps no authored text.
+	AuthoredOffer bool
+	// QuotedSubjectOffer says only the subject reads as an offer, and it
+	// carries the anchor's subject over. Staging settles it per recipient:
+	// the subject is quoted for the one who wrote the anchor, authored for
+	// everyone else. Never stored.
+	QuotedSubjectOffer bool
+	// QuotedAnchorID is the mail a quoted subject was carried over from, kept
+	// on the staged row so transmit asks again whether the recipient wrote it.
+	QuotedAnchorID ids.UUID
+	// RecipientCountries are the countries the sender stated for this
+	// message's recipients. On a decision it holds that recipient's entry
+	// alone, which is what staging stores and transmit reads back.
+	RecipientCountries []CountryOverride
 }
 
 // Request is one message put to the engine.
@@ -132,6 +148,16 @@ type Request struct {
 	// Subject and Body are fingerprinted, never stored on the decision.
 	Subject string
 	Body    string
+	// AuthoredSubject and AuthoredBody are what the sender wrote, without the
+	// signature and footer a send adds. Empty for a notice no sender wrote.
+	AuthoredSubject string
+	AuthoredBody    string
+	// AuthoredHTML is the markup the sender wrote beside the plain body. A
+	// client shows it, so its visible text is read for an offer too.
+	AuthoredHTML string
+	// AuthoredFileNames are the names of the files the sender attached, which
+	// say what a message offers as plainly as its body does.
+	AuthoredFileNames []string
 	// HTMLBody is the markup alternative, carried for the reason
 	// TransmitRequest carries it: the fingerprint stamped here is what the
 	// transmit phase compares against, so a field missing from one side is a
@@ -172,8 +198,12 @@ type Decision struct {
 	ReasonCode  string
 	Basis       Basis
 	Evidence    Evidence
-	Suppression string
-	Mode        Mode
+	// Country is the recipient's country whose marketing rules judged this
+	// decision, empty for the baseline. CountrySource says where it came from.
+	Country       string
+	CountrySource string
+	Suppression   string
+	Mode          Mode
 	// LegacyVerdict is what the old purpose gate said, so a disagreement is
 	// visible in the row rather than only in a metric.
 	LegacyVerdict string
@@ -225,6 +255,11 @@ type Decision struct {
 	// ConsentPurpose is the purpose a consent request to a LawfulBasisMissing
 	// recipient would ask about, zero when none can be asked.
 	ConsentPurpose ids.UUID
+
+	// Citations are the provisions this recipient's pack shows, by code, for
+	// the sending entity, resolved when the decision was taken. A review
+	// stores the one it shows, so a later pack never rewrites it.
+	Citations map[string]Provision
 }
 
 // DecisionSet holds the per-recipient answers for one delivery and phase.

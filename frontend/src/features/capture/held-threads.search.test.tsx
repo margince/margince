@@ -13,6 +13,7 @@ import {
 import { routeHash } from "../../lib/router";
 import { hashWithParams } from "../../lib/urlstate";
 import { heldThreadList } from "../../testing/heldthreads.fixtures";
+import { READS_RECORDS } from "../../testing/mefixture";
 import { renderWithQueryClient } from "../../testing/queryrender";
 import { linkedInReachFixture } from "../../testing/reachfixture";
 import { steppedClock } from "../../testing/steppedclock";
@@ -56,7 +57,7 @@ function serveHeld(
   const asked: URLSearchParams[] = [];
   installFetchStub({
     ...routes,
-    "GET /me": meRoute({}),
+    "GET /me": meRoute(READS_RECORDS),
     "GET /capture/senders": () => jsonResponse({ data: [] }),
     "GET /capture/contacts-awaiting-decision": () => jsonResponse({ data: [] }),
     "GET /me/linkedin-reach": () => jsonResponse(linkedInReachFixture()),

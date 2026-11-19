@@ -37,7 +37,7 @@ func (s *Service) planned(
 	if err != nil {
 		return nil, 0, err
 	}
-	open := remindersFirst(read.Reminders, append(read.Open, read.Upcoming...))
+	open := remindersFirst(read.Reminders, append(read.Open, laterWindow(read.Upcoming)...))
 	// How many there ARE, beside the page. The lane is capped at a dozen, so a
 	// badge of len(items) tells a reader with thirteen that they have twelve —
 	// and there is no second page on this lane to find the thirteenth by. The
@@ -70,6 +70,15 @@ func plannedItems(tasks []Task, asOf, until time.Time, loc *time.Location) []crm
 		items = append(items, item)
 	}
 	return items
+}
+
+// laterWindow marks the tasks a later window read. An undated one there is a
+// task a user, an agent or an importer wrote with no date (openTaskWindowClauses).
+func laterWindow(tasks []Task) []Task {
+	for i := range tasks {
+		tasks[i].later = true
+	}
+	return tasks
 }
 
 // remindersFirst puts the due reminders ahead of the other rows. It lists each

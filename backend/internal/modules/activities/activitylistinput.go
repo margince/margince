@@ -249,8 +249,8 @@ type ListActivitiesInput struct {
 	// the rows that qualify, which means the test belongs here.
 	//
 	// A task with no due date is excluded: it is agreed work, but it is not
-	// work for a given instant, and a queue that promised today's list would be
-	// lying if it carried the undated backlog too.
+	// work for a given instant. Paired with OpenAndDueAfter, the later window
+	// carries that undated backlog instead.
 	OpenAndDueBy *time.Time
 	// IncludeEmailRequests adds undated captured requests and undated commitments
 	// to the execution queue, not overdue counts.

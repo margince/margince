@@ -137,7 +137,12 @@ describe("My prospecting's results", () => {
       ADDRESS,
       weekAnd(
         prospectingEvaluation([
-          metric("meetings_held", 4, { target: 24, target_actual: 18 }),
+          metric("meetings_held", 4, {
+            target: 24,
+            target_actual: 18,
+            target_delta: -6,
+            attainment: 75,
+          }),
           metric("accepted_opportunities", null, {
             coverage: { status: "ok", withheld: true },
           }),

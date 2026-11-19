@@ -13,6 +13,7 @@ import { TEXT_LIMITS } from "../lib/textlimits_gen";
 import { addressPatch } from "./companyform";
 import type { CreateField, FormRows } from "./create";
 import type { NameOffer } from "./create.offered";
+import { withPrimaryDefault } from "./createrows";
 import { searchCompanies } from "./filterreference";
 import { normalizeProfileUrl } from "./profileurl";
 
@@ -41,26 +42,30 @@ function asPhoneType(
 // both: create and update describing an address differently is exactly what
 // that shared schema exists to prevent.
 function contactEmailInputs(rows: FormRows) {
-  return (rows.emails ?? [])
-    .filter((row) => (row.email ?? "").trim().length > 0)
-    .map((row, index) => ({
-      email: (row.email ?? "").trim(),
-      email_type: asEmailType(row.email_type),
-      is_primary: row.is_primary === "true",
-      position: index,
-    }));
+  return withPrimaryDefault(
+    (rows.emails ?? [])
+      .filter((row) => (row.email ?? "").trim().length > 0)
+      .map((row, index) => ({
+        email: (row.email ?? "").trim(),
+        email_type: asEmailType(row.email_type),
+        is_primary: row.is_primary === "true",
+        position: index,
+      })),
+  );
 }
 
 // The phone rows, the same way and for the same reason.
 function contactPhoneInputs(rows: FormRows) {
-  return (rows.phones ?? [])
-    .filter((row) => (row.phone ?? "").trim().length > 0)
-    .map((row, index) => ({
-      phone: (row.phone ?? "").trim(),
-      phone_type: asPhoneType(row.phone_type),
-      is_primary: row.is_primary === "true",
-      position: index,
-    }));
+  return withPrimaryDefault(
+    (rows.phones ?? [])
+      .filter((row) => (row.phone ?? "").trim().length > 0)
+      .map((row, index) => ({
+        phone: (row.phone ?? "").trim(),
+        phone_type: asPhoneType(row.phone_type),
+        is_primary: row.is_primary === "true",
+        position: index,
+      })),
+  );
 }
 
 // The first work address typed, the primary one first, once it reads as a whole
@@ -294,7 +299,7 @@ export function contactCreateFields(t: ReturnType<typeof useT>): CreateField[] {
       ],
       primaryKey: "is_primary",
       typeKey: "email_type",
-      typeDefault: "work", // matches asEmailType's own fallback
+      typeDefault: "work",
     },
     {
       key: "phones",
@@ -316,7 +321,7 @@ export function contactCreateFields(t: ReturnType<typeof useT>): CreateField[] {
       ],
       primaryKey: "is_primary",
       typeKey: "phone_type",
-      typeDefault: "work", // matches asPhoneType's own fallback
+      typeDefault: "work",
     },
     {
       key: "acquisition_source",
@@ -378,17 +383,21 @@ export function contactEditComparison(
   return {
     ...record,
     social: listedSocial(record.social),
-    emails: (record.emails ?? []).map((row, position) => ({
-      email: row.email,
-      email_type: row.email_type ?? "work",
-      is_primary: row.is_primary,
-      position,
-    })),
-    phones: (record.phones ?? []).map((row, position) => ({
-      phone: row.phone,
-      phone_type: row.phone_type ?? "work",
-      is_primary: row.is_primary,
-      position,
-    })),
+    emails: withPrimaryDefault(
+      (record.emails ?? []).map((row, position) => ({
+        email: row.email,
+        email_type: row.email_type ?? "work",
+        is_primary: row.is_primary,
+        position,
+      })),
+    ),
+    phones: withPrimaryDefault(
+      (record.phones ?? []).map((row, position) => ({
+        phone: row.phone,
+        phone_type: row.phone_type ?? "work",
+        is_primary: row.is_primary,
+        position,
+      })),
+    ),
   };
 }

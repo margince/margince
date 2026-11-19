@@ -25,12 +25,16 @@ func (s *Store) PreviewMailFooter(ctx context.Context, origin SendOrigin, links 
 	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
 		return MailFooterPreview{}, err
 	}
-	surface, err := surfaceForRecipients(ctx, in, origin, links, gate)
+	files, err := s.PreviewSendAttachments(ctx, in.AttachmentIDs)
+	if err != nil {
+		return MailFooterPreview{}, err
+	}
+	surface, err := surfaceForRecipients(ctx, in, origin, links, files, gate)
 	if err != nil {
 		return MailFooterPreview{}, err
 	}
 	lang := s.footerLanguage(ctx, in.Body, in.Subject)
-	owed, err := s.disclosuresFor(ctx, string(surface.disclosureCategory()), in.Recipients, in.SendingEntity, string(lang))
+	owed, err := s.disclosuresFor(ctx, string(surface.disclosureCategory()), in.Recipients, in.Evidence.RecipientCountries, in.SendingEntity, string(lang))
 	if err != nil {
 		return MailFooterPreview{}, err
 	}

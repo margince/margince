@@ -208,7 +208,7 @@ it("adds the first phone from Details without changing email", async () => {
           {
             phone: "+442079460001",
             phone_type: "work",
-            is_primary: false,
+            is_primary: true,
             position: 0,
           },
         ],

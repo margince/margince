@@ -20,12 +20,12 @@ func TestEnrichmentApprovalShowsTheActualReadTarget(t *testing.T) {
 	for _, tc := range []struct{ depth, operation, target string }{
 		{"page", "scrapeCompany", "https://example.org/team"},
 		{"site", "deepReadCompany", "https://example.org/team"},
-		{"technical", "technicalEnrichCompany", "example.com"},
+		{"technical", "technicalEnrichCompany", "example.test"},
 	} {
 		for _, rest := range []bool{false, true} {
 			t.Run(fmt.Sprintf("%s/rest=%t", tc.depth, rest), func(t *testing.T) {
 				e := integration.Setup(t)
-				company, err := e.Contacts.CreateCompany(e.Admin(), contacts.CreateCompanyInput{DisplayName: "Harbor", Domains: []contacts.CompanyDomainInput{{Domain: "example.com", IsPrimary: true}}})
+				company, err := e.Contacts.CreateCompany(e.Admin(), contacts.CreateCompanyInput{DisplayName: "Harbor", Domains: []contacts.CompanyDomainInput{{Domain: "example.test", IsPrimary: true}}})
 				if err != nil {
 					t.Fatal(err)
 				}

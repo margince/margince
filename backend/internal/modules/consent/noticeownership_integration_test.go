@@ -534,7 +534,7 @@ func TestACursorTheQueueDidNotMintIsRefused(t *testing.T) {
 	// — the envelope is shared and `id` is spelled the same — and names no
 	// deadline, so a queue that trusted the id alone would page from the year
 	// zero and serve the whole queue again as the officer's next page.
-	foreign, err := storekit.EncodeCursor(time.Now(), ids.NewV7())
+	foreign, err := storekit.EncodeCursor("notices", time.Now(), ids.NewV7())
 	if err != nil {
 		t.Fatalf("minting another route's cursor: %v", err)
 	}

@@ -5,7 +5,7 @@ import { usePageName } from "../../app/pagemeta";
 import { BULK_MAX_ITEMS } from "../../components/bulkchangeapi";
 import { searchCompanyTargets } from "../../components/companyform";
 import { CreateAction } from "../../components/create";
-import { currencyField } from "../../components/currencyfield";
+import { amountField, currencyField } from "../../components/currencyfield";
 import {
   type ObjectCustomFields,
   useObjectCustomFields,
@@ -133,6 +133,7 @@ function DealCreateAction({
             { ...values, project_id: projectId ?? "" },
             pipeline.id,
             leading[0],
+            locale,
           ),
           ...cf.toBody(values),
         },
@@ -151,14 +152,15 @@ function DealCreateAction({
       onValuesChange={(values) => setFormCompany(values.company_id ?? "")}
       fields={[
         { key: "name", label: "create.dealName", required: true },
-        {
-          key: "amount",
-          label: "create.amount",
-          type: "number",
-          step: "any",
-          min: "0",
-          wireField: "amount_minor",
-        },
+        amountField(
+          { key: "amount", label: "create.amount", wireField: "amount_minor" },
+          {
+            currency: (values) => values.currency || leading[0],
+            locale,
+            t,
+            nonNegative: true,
+          },
+        ),
         currencyField(leading, locale),
         {
           key: "stage_id",

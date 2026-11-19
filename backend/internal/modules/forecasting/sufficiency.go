@@ -57,6 +57,9 @@ const (
 	// AbsenceInsufficientBasis means neither a call nor four completed periods.
 	// There is nothing honest to compare the pipeline against.
 	AbsenceInsufficientBasis SufficiencyAbsence = "insufficient_basis"
+	// AbsenceCallWithheld means fewer than four completed periods, and a call
+	// this reader may not see. It does not say whether a call exists.
+	AbsenceCallWithheld SufficiencyAbsence = "call_withheld"
 	// AbsenceInsufficientHistory means fewer than twenty closed deals, so no
 	// conversion rate is worth dividing by.
 	AbsenceInsufficientHistory SufficiencyAbsence = "insufficient_history"
@@ -105,13 +108,16 @@ type ConversionHistory struct {
 
 // AssessSufficiency answers whether the open pipeline supports the reference.
 //
-// call is the current manager call, or nil. It OUTRANKS history: a manager who
-// has written a number down has said what this period is for, and a median of
-// what happened before is the fallback for when nobody has.
+// call is the current manager call this reader sees. It OUTRANKS history. A
+// manager who wrote a number down has said what this period is for. A median
+// of past periods is the fallback for when nobody has.
 func AssessSufficiency(
-	readings Readings, history ConversionHistory, call *int64,
+	readings Readings, history ConversionHistory, call SeenCall,
 ) (Sufficiency, error) {
-	basis, reference, ok := referenceLanding(history, call)
+	basis, reference, ok := referenceLanding(history, call.Amount)
+	if !ok && call.Withheld {
+		return Sufficiency{Absent: AbsenceCallWithheld}, nil
+	}
 	if !ok {
 		return Sufficiency{Absent: AbsenceInsufficientBasis}, nil
 	}

@@ -17,6 +17,9 @@ export type ComposeProps = Readonly<{
   // reply keeps threading and inherits its links. A new message files itself
   // under the record it started from.
   initialMessage?: Readonly<{ subject: string; body: string }>;
+  /** The message a forward carries. Its draft is kept apart from the reply's
+   *  and the record's own. */
+  forwarding?: string;
   initialReason?: CommunicationContext;
   initialDealId?: string;
   activityId?: string;

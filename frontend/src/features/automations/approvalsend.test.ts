@@ -83,6 +83,8 @@ describe("the automation's held draft", () => {
             to: "anna@example.test",
             subject: "Re: the quote",
             body: "Attached.",
+            html_body: "<p>Attached.</p>",
+            attachment_ids: ["file-1"],
             communication_context: "reply_to_inbound",
           },
         }),
@@ -92,6 +94,14 @@ describe("the automation's held draft", () => {
       anchorActivityId: "act-1",
       context: "reply_to_inbound",
       marketingPurpose: undefined,
+      // The words and files travel, so the preview reads them for an offer
+      // as the send does.
+      draft: {
+        subject: "Re: the quote",
+        body: "Attached.",
+        htmlBody: "<p>Attached.</p>",
+        attachmentIds: ["file-1"],
+      },
     });
   });
 
@@ -130,6 +140,7 @@ describe("an agent's reply", () => {
       anchorActivityId: "act-9",
       context: undefined,
       marketingPurpose: undefined,
+      draft: { subject: "Follow-up", body: "Hi" },
     });
   });
 
@@ -174,6 +185,7 @@ describe("an agent's account-started mail", () => {
       ],
       context: "marketing",
       marketingPurpose: "newsletter",
+      draft: {},
     });
   });
 

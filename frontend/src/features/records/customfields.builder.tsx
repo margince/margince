@@ -174,7 +174,7 @@ export function FieldBuilder({
         )}
 
         {type === "record" && (
-          <Field label={t("cf.recordKind")}>
+          <Field label={t("cf.recordKind")} hint={t("cf.recordKindHint")}>
             {(control) => (
               <Select
                 {...control}

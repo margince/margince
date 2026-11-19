@@ -302,7 +302,7 @@ func (t *StageEvidenceTrigger) onActivityUpdated(ctx context.Context, env events
 	if !t.readPayload(ctx, env, &payload) {
 		return nil
 	}
-	if payload.ChangedFields.MeetingStatus == nil && payload.ChangedFields.Relinked == nil {
+	if payload.ChangedFields.MeetingStatus == nil && payload.ChangedFields.MeetingStatusCleared == nil && payload.ChangedFields.Relinked == nil {
 		return nil
 	}
 	return t.judgeActivity(ctx, env.Entity.ID)

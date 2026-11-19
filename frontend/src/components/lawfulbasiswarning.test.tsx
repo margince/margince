@@ -32,11 +32,14 @@ const ANNA: Recipient = {
 };
 const MARKED: Preview = { allowed: true, recipients: [LAN, ANNA] };
 
+type Stated = components["schemas"]["RecipientCountry"];
+
 function Sender({
   preview,
   onSend,
-}: Readonly<{ preview: Preview; onSend: () => void }>) {
-  const gate = useLawfulBasisGate(preview);
+  stated,
+}: Readonly<{ preview: Preview; onSend: () => void; stated?: Stated[] }>) {
+  const gate = useLawfulBasisGate(preview, stated);
   return (
     <>
       <LawfulBasisCallout preview={preview} />
@@ -48,14 +51,14 @@ function Sender({
   );
 }
 
-function draw(preview: Preview, onSend: () => void) {
+function draw(preview: Preview, onSend: () => void, stated?: Stated[]) {
   const client = new QueryClient({
     defaultOptions: { mutations: { retry: false } },
   });
   return render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <Sender preview={preview} onSend={onSend} />
+        <Sender preview={preview} onSend={onSend} stated={stated} />
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -98,6 +101,38 @@ describe("the no-lawful-basis warning", () => {
         {
           entity_type: "contact",
           entity_id: "018f3a1b-0000-7000-8000-000000000042",
+        },
+      ],
+    });
+  });
+
+  it("confirms under the country the sender stated for the recipient", async () => {
+    const fetched = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(JSON.stringify({ confirmed: [] }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    const onSend = vi.fn();
+    draw(MARKED, onSend, [
+      { address: "lan@example.test", country: "vn" },
+      { address: "anna@example.test", country: null },
+    ]);
+    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await userEvent.click(
+      screen.getByRole("button", {
+        name: translate("en", "lawfulBasis.confirm"),
+      }),
+    );
+    await waitFor(() => expect(onSend).toHaveBeenCalledTimes(1));
+    const request = fetched.mock.calls[0]?.[0];
+    if (!(request instanceof Request)) throw new Error("no request was sent");
+    expect(await request.json()).toEqual({
+      subjects: [
+        {
+          entity_type: "contact",
+          entity_id: "018f3a1b-0000-7000-8000-000000000042",
+          stated_country: { country: "vn" },
         },
       ],
     });

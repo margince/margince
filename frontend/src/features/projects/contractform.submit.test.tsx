@@ -137,3 +137,20 @@ it("brings a repeated identical refusal back into view", async () => {
   await waitFor(() => expect(scroll).toHaveBeenCalledTimes(2));
   expect(screen.getByRole("alert")).toHaveTextContent("Already recorded.");
 });
+
+// Enter submits while focus is still in the value box, before any blur. The
+// box's custom validity is what stops the save past a refused amount.
+it("sends nothing on Enter while the value text is refused", async () => {
+  const writes = stubApi();
+  show();
+  const user = userEvent.setup();
+  const { title, form } = await fieldsForm();
+  await user.type(title, "MSA");
+  await user.type(screen.getByRole("textbox", { name: /^Value/ }), "1,500");
+  fireEvent.submit(form);
+
+  expect(
+    await screen.findByText("Enter the amount as 1500 or 1500.00."),
+  ).toBeTruthy();
+  expect(writes).toHaveLength(0);
+});

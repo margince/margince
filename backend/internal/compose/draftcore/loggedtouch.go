@@ -16,8 +16,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
-// ClassifyWithLogged counts notes and past meetings as prior contact, even without mail.
-// It counts as our side: nothing claims the contact wrote.
+// ClassifyWithLogged counts past meetings as prior contact, even without mail.
+// A note is internal and never counts. A meeting counts as our side: nothing
+// claims the contact wrote.
 func ClassifyWithLogged(now time.Time, zone *time.Location, lastIn, lastOut time.Time, activities []crmcontracts.Activity) convstate.State {
 	if logged := lastLoggedTouch(activities, now, zone); logged.After(lastOut) {
 		lastOut = logged
@@ -29,7 +30,7 @@ func ClassifyWithLogged(now time.Time, zone *time.Location, lastIn, lastOut time
 func lastLoggedTouch(activities []crmcontracts.Activity, now time.Time, zone *time.Location) time.Time {
 	var latest time.Time
 	for _, activity := range activities {
-		if !IsLoggedTouch(activity, now, zone) {
+		if !CountsAsContact(activity, now, zone) {
 			continue
 		}
 		moment := activitywhen.MomentOf(activity)
@@ -48,6 +49,13 @@ func lastLoggedTouch(activities []crmcontracts.Activity, now time.Time, zone *ti
 // mailbox.
 func IsLoggedKind(kind crmcontracts.ActivityKind) bool {
 	return kind == crmcontracts.ActivityKindNote || kind == crmcontracts.ActivityKindMeeting
+}
+
+// CountsAsContact reports whether a logged row is an exchange with the contact,
+// which is only a meeting that took place. A note is the rep's own writing, so it
+// opens no conversation, however recent.
+func CountsAsContact(activity crmcontracts.Activity, now time.Time, zone *time.Location) bool {
+	return activity.Kind == crmcontracts.ActivityKindMeeting && IsLoggedTouch(activity, now, zone)
 }
 
 // IsLoggedTouch reports a note or meeting that has happened by now in zone
@@ -77,14 +85,14 @@ type LoggedOn struct {
 	ProjectID  *ids.ProjectID
 }
 
-// LoggedTouchReader reads the newest note or past meeting on one record that
-// the caller may read. The timeline page a draft folds is bounded, and a note
-// older than a page of newer activity is still contact.
+// LoggedTouchReader reads the newest past meeting on one record that the caller
+// may read. The timeline page a draft folds is bounded, and a meeting older
+// than a page of newer activity is still contact.
 type LoggedTouchReader interface {
 	NewestLoggedTouch(ctx context.Context, on LoggedOn, now time.Time) ([]crmcontracts.Activity, error)
 }
 
-// WithNewestLogged is rows with the newest logged touch on the record added,
+// WithNewestLogged is rows with the newest past meeting on the record added,
 // for ClassifyWithLogged. A nil reader adds nothing.
 func WithNewestLogged(ctx context.Context, reader LoggedTouchReader, on LoggedOn, now time.Time, rows []crmcontracts.Activity) ([]crmcontracts.Activity, error) {
 	if reader == nil {

@@ -393,7 +393,8 @@ describe("Add task writes only tasks", () => {
     expect(within(drawer).queryByLabelText(en["log.kind"])).toBeNull();
     const due = within(drawer).getByLabelText("Due date");
     await user.clear(due);
-    await user.type(due, "16/03/2099");
+    const year = new Date().getFullYear() + 1;
+    await user.type(due, `16/03/${year}`);
     await user.type(within(drawer).getByLabelText("Subject *"), "Demo prep");
     await user.click(within(drawer).getByRole("button", { name: "Add task" }));
 
@@ -405,7 +406,7 @@ describe("Add task writes only tasks", () => {
     });
     expect(posted[0]?.body).toHaveProperty(
       "due_at",
-      expect.stringMatching(/^2099-03-1[56]T/),
+      expect.stringMatching(new RegExp(`^${year}-03-1[56]T`)),
     );
   });
 

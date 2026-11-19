@@ -319,6 +319,51 @@ describe("ProjectScreen", () => {
     expect(screen.queryByText("Brandt Automotive")).toBeNull();
   });
 
+  it("says a project with no customer has none, never hidden, and explains the missing New deal", async () => {
+    projectsBackend({
+      view: project360({
+        project: project({ company_id: undefined, writable: true }),
+        company: undefined,
+        sections_omitted: [],
+      }),
+    });
+    render(<ProjectScreen id="pr-1" />);
+    await screen.findByRole("heading", { name: "CRM rollout" });
+    expect(screen.queryByText("Hidden for your role")).toBeNull();
+    expect(screen.queryByTestId("project-company-withheld")).toBeNull();
+    expect(screen.getByTestId("project-company-none").textContent).toBe(
+      "No customer company",
+    );
+    expect(
+      await screen.findByTestId("project-new-deal-needs-company"),
+    ).toBeTruthy();
+  });
+
+  it("offers neither New deal nor its customer hint to a reader who may not create deals", async () => {
+    projectsBackend({
+      view: project360({
+        project: project({ company_id: undefined, writable: true }),
+        company: undefined,
+      }),
+      respond: async (url) =>
+        url.endsWith("/v1/me")
+          ? jsonResponse(
+              meFixture({
+                allow: {
+                  project: ["read", "update"],
+                  deal: ["read"],
+                  activity: ["read", "create", "update"],
+                },
+              }),
+            )
+          : null,
+    });
+    render(<ProjectScreen id="pr-1" />);
+    await screen.findByRole("heading", { name: "CRM rollout" });
+    expect(screen.queryByTestId("project-new-deal-needs-company")).toBeNull();
+    expect(screen.queryByRole("button", { name: "New deal" })).toBeNull();
+  });
+
   it("closing asks for a reason, holds Confirm until it is given, and posts the move", async () => {
     const user = userEvent.setup();
     let posted: { body: unknown; ifMatch: string | null } | null = null;
@@ -378,6 +423,44 @@ describe("ProjectScreen", () => {
     await user.click(within(dialog).getByRole("button", { name: "Move" }));
     await waitFor(() => expect(posted).toBeTruthy());
     expect(posted).toEqual({ to_phase: "pursuing", reason: null });
+  });
+
+  it("shows the new phase from the move's answer and closes the dialog only once the page is read again", async () => {
+    const user = userEvent.setup();
+    let moved = false;
+    let releaseReread: (response: Response) => void = () => {};
+    projectsBackend({
+      respond: async (url, method) => {
+        if (method === "POST" && url.endsWith("/projects/pr-1/advance")) {
+          moved = true;
+          return jsonResponse(project({ phase: "pursuing" }));
+        }
+        if (moved && method === "GET" && url.endsWith("/projects/pr-1/360")) {
+          return new Promise<Response>((resolve) => {
+            releaseReread = resolve;
+          });
+        }
+        return null;
+      },
+    });
+    render(<ProjectScreen id="pr-1" />);
+    await screen.findByRole("heading", { name: "CRM rollout" });
+    await user.click(screen.getByTestId("project-step-pursuing"));
+    const dialog = await screen.findByRole("dialog");
+    await user.click(within(dialog).getByRole("button", { name: "Move" }));
+
+    await waitFor(() => {
+      const here = [...document.querySelectorAll("[aria-current='step']")];
+      expect(
+        here.some((node) => node.textContent?.startsWith("Pursuing")),
+      ).toBe(true);
+    });
+    expect(screen.queryByRole("dialog")).toBeTruthy();
+
+    releaseReread(
+      jsonResponse(project360({ project: project({ phase: "pursuing" }) })),
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 
   // `writable` is what the server's write gate would answer on a mutation. A
@@ -700,6 +783,63 @@ describe("a commitment's tick", () => {
     expect(
       urls.filter((url) => url.includes(`/v1/activities/${row.activity_id}`)),
     ).toHaveLength(1);
+  });
+});
+
+describe("the Next bar's task write", () => {
+  it("says a task changed elsewhere when Snooze is refused as stale", async () => {
+    const row = {
+      activity_id: "a-next",
+      subject: "Confirm the depot slot",
+      due_at: "2099-09-11T09:00:00Z",
+      due_has_time: false,
+      version: 7,
+      assignee_id: null,
+      assignee_name: null,
+      overdue: false,
+    };
+    projectsBackend({
+      view: project360({
+        commitments: { data: [row], page: { has_more: false } },
+      }),
+      respond: async (url, method) => {
+        if (url.endsWith("/v1/me")) {
+          return jsonResponse(
+            meFixture({
+              allow: {
+                project: ["read", "update"],
+                activity: ["read", "update"],
+              },
+            }),
+          );
+        }
+        if (method === "PATCH" && url.includes("/v1/activities/a-next")) {
+          return jsonResponse(
+            {
+              type: "about:blank",
+              title: "Stale",
+              status: 409,
+              code: "version_skew",
+            },
+            409,
+          );
+        }
+        return null;
+      },
+    });
+    render(<ProjectScreen id={project().id} />);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: /^Snooze/ }),
+    );
+
+    const alerts = await screen.findAllByRole("alert");
+    expect(
+      alerts.some((alert) =>
+        alert.textContent?.includes(en["common.versionSkew"]),
+      ),
+    ).toBe(true);
+    expect(screen.getAllByRole("button", { name: "Reload" }).length).toBe(1);
   });
 });
 

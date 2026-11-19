@@ -557,10 +557,17 @@ func TestTheFrozenRateCountSumsEveryKindOfRecord(t *testing.T) {
 		INSERT INTO finance_connection (id, provider, credential_ref, source, captured_by)
 		VALUES ($1, 'lexoffice', 'ref', 'seed', 'system:test')`)
 	e.SeedID(t, `
-		INSERT INTO finance_invoice (id, connection_id, company_id, external_id, issued_at, status, currency,
+		WITH directory AS (
+		    INSERT INTO finance_external_customer (connection_id, external_customer_id, display_name, sync_hash, source, captured_by)
+		    VALUES ($2::uuid, 'cust-census', 'Census GmbH', '', 'seed', 'system:test') RETURNING external_customer_id
+		), link AS (
+		    INSERT INTO finance_customer_link (connection_id, company_id, external_customer_id, sync_hash, source, captured_by)
+		    SELECT $2::uuid, $3::uuid, external_customer_id, '', 'seed', 'system:test' FROM directory RETURNING id
+		)
+		INSERT INTO finance_invoice (id, connection_id, company_id, customer_link_id, external_id, issued_at, status, currency,
 		                             net_minor, gross_minor, fx_rate_to_base, fx_rate_date, sync_hash, source, captured_by)
-		VALUES ($1, $2, $3, 'ext-census', current_date, 'open', 'EUR', 1000, 1190, 1.0850000000, current_date,
-		        'hash', 'lexoffice', 'system:test')`, connection, company)
+		SELECT $1::uuid, $2::uuid, $3::uuid, link.id, 'ext-census', current_date, 'open', 'EUR', 1000, 1190, 1.0850000000,
+		       current_date, 'hash', 'lexoffice', 'system:test' FROM link`, connection, company)
 	e.SeedID(t, `
 		INSERT INTO commission_entry (id, deal_id, partner_company_id, attribution_at_accrual, basis_amount_minor,
 		                              rate_bps, amount_minor, currency, fx_rate_to_base, captured_by)

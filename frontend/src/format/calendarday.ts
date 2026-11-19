@@ -132,6 +132,27 @@ export function todayIn(zone: string): string {
   return calendarDay(new Date(), zone);
 }
 
+// The days a task's due date may fall on: one day inside the server's window
+// of ten years back and ten ahead. A day the box accepts is then never one
+// the server refuses at that day's clock time.
+export const DUE_YEARS_BACK = 10;
+export const DUE_YEARS_AHEAD = 10;
+
+export function dueDayBounds(zone: string): { min: ISODate; max: ISODate } {
+  const today = todayIn(zone);
+  // Year arithmetic on the day itself. A 29 February with no twin rolls on to
+  // 1 March, as the server's time.AddDate does.
+  const yearsFrom = (years: number, nudge: number) => {
+    const day = `${Number(today.slice(0, 4)) + years}${today.slice(4)}`;
+    const real = isRealCalendarDay(day) ? day : `${day.slice(0, 5)}03-01`;
+    return shiftCalendarDay(real, nudge);
+  };
+  return {
+    min: yearsFrom(-DUE_YEARS_BACK, 1),
+    max: yearsFrom(DUE_YEARS_AHEAD, -1),
+  };
+}
+
 // The calendar MONTH an instant falls in, in a named IANA zone, as `yyyy-mm`.
 //
 // Derived from calendarDay rather than assembled again, so the two granularities

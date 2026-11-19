@@ -235,6 +235,9 @@ const (
 	edgeSubjectColumns   = `e.edge_kind, e.other_type, e.other_id, e.other_label`
 	noEdgeSubjectColumns = `NULL::text AS edge_kind, NULL::text AS other_type,
 			NULL::uuid AS other_id, NULL::text AS other_label`
+	// sideFieldColumn is the window's fifth trailing column: the company field a
+	// sidecar row was about, NULL on every other row.
+	noSideFieldColumn = `, NULL::text AS side_field`
 )
 
 // scanEdgeAuditRow decodes one window row: the shared audit projection, then the
@@ -244,11 +247,12 @@ const (
 // marker there is — the audit row's own entity_type is not projected, because
 // the branch it arrived on already answers what it was about.
 func scanEdgeAuditRow(src auditRowScanner, r *recordAuditRow) error {
-	var kind, otherType, otherLabel *string
+	var kind, otherType, otherLabel, sideField *string
 	var otherID *ids.UUID
-	if err := scanRecordAuditRowWith(src, r, &kind, &otherType, &otherID, &otherLabel); err != nil {
+	if err := scanRecordAuditRowWith(src, r, &kind, &otherType, &otherID, &otherLabel, &sideField); err != nil {
 		return err
 	}
+	r.sideField = sideField
 	if otherType == nil || otherID == nil {
 		return nil
 	}
@@ -275,7 +279,7 @@ func scanEdgeAuditRow(src auditRowScanner, r *recordAuditRow) error {
 // conds are the boundary and cursor predicates, aliased on `a` so both branches
 // take them verbatim — a keyset applied to one arm and not the other would page
 // the two timelines at different speeds.
-func recordHistoryWindowSQL(typePos, idPos, fetchPos int, conds []string, edgeCTE string) string {
+func recordHistoryWindowSQL(typePos, idPos, fetchPos int, conds []string, edgeCTE, sideCTE string) string {
 	keyset, edgeWhere := "", ""
 	if len(conds) > 0 {
 		keyset = " AND " + strings.Join(conds, " AND ")
@@ -283,29 +287,36 @@ func recordHistoryWindowSQL(typePos, idPos, fetchPos int, conds []string, edgeCT
 	}
 	own := fmt.Sprintf(`
 			SELECT`+recordAuditColumns+`,
-				`+noEdgeSubjectColumns+`
+				`+noEdgeSubjectColumns+noSideFieldColumn+`
 			FROM audit_log a`+auditattribution.ActorNameJoins+auditattribution.AgentClientNameJoin+`
 			WHERE a.entity_type = $%d AND a.entity_id = $%d%s
 			ORDER BY a.occurred_at DESC, a.id DESC
 			LIMIT $%d`, typePos, idPos, keyset, fetchPos)
-	if edgeCTE == "" {
-		return own
-	}
-	edges := fmt.Sprintf(`
+	var ctes, arms []string
+	arms = append(arms, own)
+	if edgeCTE != "" {
+		ctes = append(ctes, edgeCTE)
+		arms = append(arms, fmt.Sprintf(`
 			SELECT`+recordAuditColumns+`,
-				`+edgeSubjectColumns+`
+				`+edgeSubjectColumns+noSideFieldColumn+`
 			FROM edge e
 			JOIN audit_log a ON a.entity_type = '`+EdgeEntityType+`' AND a.entity_id = e.rel_id`+
-		auditattribution.ActorNameJoins+auditattribution.AgentClientNameJoin+`%s
+			auditattribution.ActorNameJoins+auditattribution.AgentClientNameJoin+`%s
 			ORDER BY a.occurred_at DESC, a.id DESC
-			LIMIT $%d`, edgeWhere, fetchPos)
+			LIMIT $%d`, edgeWhere, fetchPos))
+	}
+	if sideCTE != "" {
+		ctes = append(ctes, sideCTE)
+		arms = append(arms, sidecarArmSQL(conds, fetchPos))
+	}
+	if len(ctes) == 0 {
+		return own
+	}
 	return fmt.Sprintf(`
 		WITH %s
-		SELECT * FROM ((%s)
-			UNION ALL
-			(%s)) AS spine
+		SELECT * FROM (%s) AS spine
 		ORDER BY occurred_at DESC, id DESC
-		LIMIT $%d`, edgeCTE, own, edges, fetchPos)
+		LIMIT $%d`, strings.Join(ctes, ",\n\t\t"), "("+strings.Join(arms, ")\n\t\t\tUNION ALL\n\t\t\t(")+")", fetchPos)
 }
 
 // HistoryEdge is the edge a history line was about, as the wire declares it: the

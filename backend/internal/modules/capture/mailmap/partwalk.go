@@ -19,6 +19,7 @@ import (
 	"github.com/emersion/go-message/mail"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // forwardedType is a whole message carried as one part: a forward as attachment.
@@ -169,6 +170,32 @@ func (w *partWalker) readForwarded() *partWalker {
 	inner := &partWalker{files: newCollector(), textOnly: true}
 	inner.run(root)
 	return inner
+}
+
+// forwardedOriginal is what the held original's own headers say about it, kept
+// apart from the message's author: the forwarder could have typed every one.
+// nil when nothing is held or the original names no sender.
+func (w *partWalker) forwardedOriginal() *connector.ForwardedOriginal {
+	if w.forwarded == nil {
+		return nil
+	}
+	root, err := readEntity(w.forwarded)
+	if err != nil {
+		return nil
+	}
+	header := mail.Header{Header: root.Header}
+	from, err := addressList(header, "From")
+	if err != nil || len(from) == 0 {
+		return nil
+	}
+	messageID, _ := header.MessageID()
+	return &connector.ForwardedOriginal{
+		From:        strings.ToLower(strings.TrimSpace(from[0].Address)),
+		DisplayName: from[0].Name,
+		Subject:     strings.TrimSpace(headerText(header, "Subject")),
+		MessageID:   strings.TrimSpace(messageID),
+		Date:        strings.TrimSpace(header.Get("Date")),
+	}
 }
 
 // completeness says how much of the mail's text was read. It is none when the

@@ -32,7 +32,7 @@ import {
   useSalesProgress,
 } from "./progress.queries";
 import { goalText, ProgressReadings, ProgressResult } from "./progress.result";
-import { ProgressSummary } from "./progress.summary";
+import { ProgressScenarios, ProgressSummary } from "./progress.summary";
 import { ProgressMembers, ProgressMonths } from "./progress.tables";
 import { ProgressWork } from "./progress.work";
 import { ReportingEvidenceDrawer } from "./reporting.evidence";
@@ -222,6 +222,7 @@ function ProgressBody({ progress }: Readonly<{ progress: SalesProgress }>) {
               navigate({ screen: "goals" }, goalDials(askOf(progress)))
             }
           />
+          <ProgressScenarios progress={progress} />
           <ProgressReadings progress={progress} onEvidence={open} />
           {team && <ProgressMembers progress={progress} />}
           <ProgressWork progress={progress} />

@@ -68,6 +68,14 @@ export function sendHoldOf(
   }
 }
 
+/**
+ * The hold on Send when the send itself is the check. Nothing is asked while
+ * the rep writes, so only an older server's footer refusal holds it.
+ */
+export function inlineSendHold(legacyFooter: boolean): SendHold {
+  return legacyFooter ? { blocks: true, withReason: false } : FREE;
+}
+
 // What the dialog promises. A scheduled message waits and can be withdrawn,
 // so its title and body say so; a channel reply has no send-later field.
 export function sendWording(

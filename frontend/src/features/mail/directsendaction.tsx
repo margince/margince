@@ -20,7 +20,7 @@ import { throwProblem } from "../../lib/problem";
 import { DirectSendModal } from "./directsendmodal";
 import type { SendReview } from "./sendreview";
 
-async function fetchReview(reviewId: string) {
+export async function fetchReview(reviewId: string) {
   const { data, error, response } = await api.GET(
     "/communication-reviews/{id}",
     {

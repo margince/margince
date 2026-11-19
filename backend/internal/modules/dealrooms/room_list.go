@@ -123,7 +123,7 @@ func roomPage(ctx context.Context, tx pgx.Tx, in ListRoomsInput) ([]crmcontracts
 		// Through the sort's own keyset, which refuses a token minted under a
 		// different ordering rather than resuming on an axis this page is not
 		// ordered by.
-		keyset, err := sorted.KeysetClause(*in.Cursor, arg)
+		keyset, err := sorted.KeysetClause("deal_rooms", *in.Cursor, arg)
 		if err != nil {
 			return nil, storekit.Page{}, err
 		}
@@ -158,7 +158,7 @@ func roomPage(ctx context.Context, tx pgx.Tx, in ListRoomsInput) ([]crmcontracts
 	if len(out) > size {
 		out = out[:size]
 		createdAt, id := roomKey(out[size-1])
-		next, err := sorted.EncodePageCursor(cursorKeys[size-1], createdAt, id)
+		next, err := sorted.EncodePageCursor("deal_rooms", cursorKeys[size-1], createdAt, id)
 		if err != nil {
 			return nil, storekit.Page{}, err
 		}

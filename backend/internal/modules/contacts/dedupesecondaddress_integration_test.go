@@ -174,7 +174,8 @@ func TestTheAddressBaseAgreesInGoAndSQL(t *testing.T) {
 func TestASubdomainOfTheEmployersDomainCountsAsTheSameEmployer(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	incumbent, _ := e.seedEmployedContact(ctx, t, "Bernd Beispiel", "bb@example.com", "Company A", "example.com")
+	incumbent, employer := e.seedEmployedContact(ctx, t, "Bernd Beispiel", "bb@example.com", "Company A", "company-a.test")
+	e.addLegacyDomain(ctx, t, employer, "example.com")
 	got := e.dedupeInTx(ctx, t, ContactCandidate{FullName: "Bernd Beispiel", Emails: []string{"bb@cloud.example.com"}})
 	if got.Decision != DecisionFuzzyReview || got.ContactID != incumbent {
 		t.Fatalf("got %s on %s, want %s on %s", got.Decision, got.ContactID, DecisionFuzzyReview, incumbent)
@@ -293,13 +294,13 @@ func TestTheDigraphArmIsInTheCandidateQuery(t *testing.T) {
 func TestACompanyOnASubdomainOfAHeldDomainIsAReviewPair(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	holder := e.createNamedCompany(ctx, t, "Example Group", "example.com")
-	got := e.dedupeCompanyInTx(ctx, t, CompanyCandidate{DisplayName: "Cloudy", Domains: []string{"cloud.example.com"}})
+	holder := e.createNamedCompany(ctx, t, "Example Group", "example-group.test")
+	got := e.dedupeCompanyInTx(ctx, t, CompanyCandidate{DisplayName: "Cloudy", Domains: []string{"cloud.example-group.test"}})
 	if got.Decision != DecisionFuzzyReview || got.CompanyID != holder || got.Ranked[0].MatchedField != laneDomain {
 		t.Fatalf("got %+v, want a domain review pair with %s", got, holder)
 	}
 
-	created := e.createNamedCompany(ctx, t, "Cloudy", "cloud.example.com")
+	created := e.createNamedCompany(ctx, t, "Cloudy", "cloud.example-group.test")
 	if field := e.filedPairField(ctx, t, created, holder); field != laneDomain {
 		t.Fatalf("the create filed field %q, want %q", field, laneDomain)
 	}
@@ -308,10 +309,10 @@ func TestACompanyOnASubdomainOfAHeldDomainIsAReviewPair(t *testing.T) {
 func TestACompanyOnSubdomainsOfTwoHeldDomainsListsBoth(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	first := e.createNamedCompany(ctx, t, "Example Group", "example.com")
+	first := e.createNamedCompany(ctx, t, "Example Group", "example-group.test")
 	second := e.createNamedCompany(ctx, t, "Other Group", "other.test")
 	got := e.dedupeCompanyInTx(ctx, t, CompanyCandidate{
-		DisplayName: "Cloudy", Domains: []string{"a.example.com", "b.other.test"},
+		DisplayName: "Cloudy", Domains: []string{"a.example-group.test", "b.other.test"},
 	})
 	listed := map[ids.CompanyID]bool{}
 	for _, scored := range got.Ranked {
@@ -325,7 +326,7 @@ func TestACompanyOnSubdomainsOfTwoHeldDomainsListsBoth(t *testing.T) {
 func TestACompanyOnItsOwnRegistrableDomainHasNoSubdomainPair(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	e.createNamedCompany(ctx, t, "Example Group", "example.com")
+	e.createNamedCompany(ctx, t, "Example Group", "example-group.test")
 	got := e.dedupeCompanyInTx(ctx, t, CompanyCandidate{DisplayName: "Cloudy", Domains: []string{"other.example"}})
 	if got.Decision != DecisionNoMatch {
 		t.Fatalf("got %+v, want no match", got)

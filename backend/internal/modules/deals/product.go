@@ -359,7 +359,7 @@ func (s *Store) ListProducts(ctx context.Context, in ListProductsInput) ([]crmco
 	}
 	// The catalogue carries no custom columns, so the vocabulary is the
 	// fixed one and there is nothing to append to the select.
-	pre, err := storekit.BuildListPrelude(ctx, "", productListFields, nil,
+	pre, err := storekit.BuildListPrelude(ctx, "", "products", productListFields, nil,
 		in.Sort, in.Limit, in.Cursor, nil)
 	if err != nil {
 		return nil, storekit.Page{}, err

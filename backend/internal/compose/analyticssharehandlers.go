@@ -25,6 +25,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
+	"github.com/margince/margince/backend/internal/platform/database/rowvalue"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -207,11 +208,22 @@ func (h analyticsShareHandlers) serveSnapshot(
 		out.Readings.ContributionsLimitedReason = &frozen.Reason
 	}
 	out.Withheld = shared.Withheld
+	mayAssert, err := forecasting.MayAssertAbout(ctx, tx, ForecastWritableScope, share.Scope)
+	if err != nil {
+		return err
+	}
+	call, noneStood := forecasting.FrozenCallSeen(mayAssert, forecasting.FrozenCall{
+		ForwardMeasure: frame.ForwardMeasure, LandingMeasure: frame.LandingMeasure,
+		OnePipeline: frame.PipelineID != nil, CallMinor: frame.LandingCallMinor,
+	})
+	if !noneStood {
+		out.Readings.CallWithheld = new(true)
+	}
 	// A snapshot frozen before the landing was kept states none.
 	if frame.LandingMeasure == nil {
 		return nil
 	}
-	landing, err := frozenShareLanding(ctx, tx, share.Scope, shared, frame)
+	landing, err := frozenShareLanding(call, shared, frame)
 	out.Readings.Landing = &landing
 	return err
 }
@@ -237,13 +249,16 @@ func (h analyticsShareHandlers) serveLive(
 	out.Readings = forecasting.ReadingsToWire(period, share.Scope, assembly.Readings, baseCurrency, at)
 	out.Readings.SelfCorrecting = &assembly.SelfCorrecting
 	out.Withheld = assembly.Limited
-	// The landing GET /forecast gives this reader, with the call only where
-	// the reader may see it.
-	call, seen, err := forecastCallSeen(ctx, tx, h.forecast, period, share.Scope, false)
+	// The call and landing GET /forecast states for this reader.
+	mayAssert, err := forecasting.MayAssertAbout(ctx, tx, ForecastWritableScope, share.Scope)
 	if err != nil {
 		return err
 	}
-	landing, err := forecasting.LandingFor(ctx, tx, ForecastForwardMeasure, assembly.Readings, seenCall(call, seen))
+	called, err := forecasting.StateCall(ctx, tx, h.forecast, mayAssert, period, share.Scope, &out.Readings)
+	if err != nil {
+		return err
+	}
+	landing, err := forecasting.LandingFor(ctx, tx, ForecastForwardMeasure, assembly.Readings, called)
 	if err != nil {
 		return err
 	}
@@ -354,7 +369,7 @@ func (h analyticsShareHandlers) ExportForecastShare(
 		return
 	}
 
-	body, err := shareRowsCSV(frozen, frame.SelfCorrecting)
+	body, err := shareRowsCSV(frozen, frame.SelfCorrecting, frame.BaseCurrency)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -388,15 +403,13 @@ var shareExportColumns = []string{
 	"in_won", "in_open", "exclusion_reason",
 	"weighted_minor", "typed_probability", "chance_in_use", "evidence_n", "risk_signals", "risk_effect",
 	"self_correcting", "risk_signal_facts", "range_low_minor", "range_high_minor",
-	"contributions_limited", "contributions_limited_reason",
+	"contributions_limited", "contributions_limited_reason", "base_currency",
 }
 
-// shareRowsCSV renders the rows, neutralising formula leads through the same
-// csvCell every other export in this package uses.
-// selfCorrecting is the snapshot's own, repeated on each row so a sheet filtered
-// to some rows still says which definition they were frozen under. The range and
-// the contributions_limited flag and its reason are the shared headline's, repeated the same way.
-func shareRowsCSV(frozen frozenForReader, selfCorrecting *bool) ([]byte, error) {
+// shareRowsCSV renders the rows through rowvalue.CSVScalar, which neutralises formula
+// leads. Snapshot-wide cells repeat on each row. A filtered sheet then still says
+// how it was frozen and the currency of its base, weighted and range columns.
+func shareRowsCSV(frozen frozenForReader, selfCorrecting *bool, baseCurrency string) ([]byte, error) {
 	var low, high *int64
 	if frozen.Range != nil {
 		low, high = &frozen.Range.LowMinor, &frozen.Range.HighMinor
@@ -408,22 +421,22 @@ func shareRowsCSV(frozen frozenForReader, selfCorrecting *bool) ([]byte, error) 
 	}
 	for _, row := range frozen.Rows {
 		record := []string{
-			csvCell(row.DealID), csvCell(row.DealName), csvCellPtr(row.Owner),
-			csvCellPtr(row.AmountMinor), csvCell(row.Currency),
+			rowvalue.CSVScalar(row.DealID), rowvalue.CSVScalar(row.DealName), csvCellPtr(row.Owner),
+			csvCellPtr(row.AmountMinor), rowvalue.CSVScalar(row.Currency),
 			csvCellPtr(row.BaseMinor), csvCellPtr(row.EffectiveClose),
-			csvCell(row.ProbabilitySource), csvCell(row.InWon), csvCell(row.InOpen),
-			csvCell(row.ExclusionReason),
+			rowvalue.CSVScalar(row.ProbabilitySource), rowvalue.CSVScalar(row.InWon), rowvalue.CSVScalar(row.InOpen),
+			rowvalue.CSVScalar(row.ExclusionReason),
 			csvCellPtr(row.WeightedMinor), csvCellPtr(row.TypedProbability), csvCellPtr(row.ChanceInUse),
-			csvCellPtr(row.EvidenceN), csvCell(strings.Join(row.Signals, ";")), csvCellPtr(row.Effect),
+			csvCellPtr(row.EvidenceN), rowvalue.CSVScalar(strings.Join(row.Signals, ";")), csvCellPtr(row.Effect),
 			csvCellPtr(selfCorrecting), csvCellPtr(row.SignalFacts), csvCellPtr(low), csvCellPtr(high),
-			csvCell(frozen.Limited), csvCell(frozen.Reason),
+			rowvalue.CSVScalar(frozen.Limited), rowvalue.CSVScalar(frozen.Reason), rowvalue.CSVScalar(baseCurrency),
 		}
 		if err := out.Write(record); err != nil {
 			return nil, fmt.Errorf("compose: writing an export row: %w", err)
 		}
 	}
 	if frozen.Limited && len(frozen.Rows) == 0 {
-		if err := out.Write(shareSummaryRecord(selfCorrecting, low, high, frozen.Reason)); err != nil {
+		if err := out.Write(shareSummaryRecord(selfCorrecting, low, high, frozen.Reason, baseCurrency)); err != nil {
 			return nil, fmt.Errorf("compose: writing the export's summary row: %w", err)
 		}
 	}
@@ -437,7 +450,7 @@ func shareRowsCSV(frozen frozenForReader, selfCorrecting *bool) ([]byte, error) 
 // shareSummaryRecord is the one row a file gets when every row was withheld
 // from its reader. A header alone would not say the headline counts deals.
 // Its deal cells are empty, and only the headline's own cells are filled.
-func shareSummaryRecord(selfCorrecting *bool, low, high *int64, limitedReason string) []string {
+func shareSummaryRecord(selfCorrecting *bool, low, high *int64, limitedReason, baseCurrency string) []string {
 	record := make([]string, len(shareExportColumns))
 	for index, column := range shareExportColumns {
 		switch column {
@@ -448,9 +461,11 @@ func shareSummaryRecord(selfCorrecting *bool, low, high *int64, limitedReason st
 		case "range_high_minor":
 			record[index] = csvCellPtr(high)
 		case "contributions_limited":
-			record[index] = csvCell(true)
+			record[index] = rowvalue.CSVScalar(true)
 		case "contributions_limited_reason":
-			record[index] = csvCell(limitedReason)
+			record[index] = rowvalue.CSVScalar(limitedReason)
+		case "base_currency":
+			record[index] = rowvalue.CSVScalar(baseCurrency)
 		}
 	}
 	return record
@@ -466,5 +481,5 @@ func csvCellPtr[T any](v *T) string {
 	if v == nil {
 		return ""
 	}
-	return csvCell(*v)
+	return rowvalue.CSVScalar(*v)
 }

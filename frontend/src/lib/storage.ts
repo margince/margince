@@ -104,11 +104,6 @@ export const STORAGE_KEYS = {
     area: "session",
     lifetime: "seat",
   },
-  buyerRoomSession: {
-    name: "margince.room.session",
-    area: "session",
-    lifetime: "seat",
-  },
   // When this tab last reloaded onto a newer build, so it reloads once per deploy.
   staleBuildReloadedAt: {
     name: "margince.staleBuildReloadedAt",

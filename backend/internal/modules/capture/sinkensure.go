@@ -216,7 +216,8 @@ func (s *Sink) decideCorrespondent(ctx context.Context, tx pgx.Tx, rec connector
 		return counterpartyDecision{}, err
 	}
 	corresponded := dealt.positive()
-	decision.create, decision.replied = dealt.create, dealt.replied
+	// A forward to self is the seat filing the original's sender by hand.
+	decision.create, decision.replied = dealt.create || forwardedOriginalOf(rec) != nil, dealt.replied
 	roleMailbox := refusesToNameAContact(cp.Email, dealt.exchanged)
 	if roleMailbox {
 		decision.create = false

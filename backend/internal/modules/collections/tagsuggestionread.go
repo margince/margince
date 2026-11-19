@@ -156,7 +156,7 @@ func (s *Store) OpenTagSuggestionsAfter(ctx context.Context, after string, limit
 	}
 	var keyset *storekit.Cursor
 	if after != "" {
-		position, err := storekit.DecodeCursor(after)
+		position, err := storekit.DecodeCursor("tag_suggestions", after)
 		if err != nil {
 			return nil, false, err
 		}
@@ -194,7 +194,7 @@ func (s *Store) OpenTagSuggestionsAfter(ctx context.Context, after string, limit
 // TagSuggestionPositionAfter is the position just past the suggestion with
 // this creation time and id, for OpenTagSuggestionsAfter.
 func TagSuggestionPositionAfter(createdAt time.Time, id ids.UUID) (string, error) {
-	return storekit.EncodeCursor(createdAt, id)
+	return storekit.EncodeCursor("tag_suggestions", createdAt, id)
 }
 
 // CountOpenTagSuggestions counts what OpenTagSuggestions would show without a

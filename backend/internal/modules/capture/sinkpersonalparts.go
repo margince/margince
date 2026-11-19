@@ -92,6 +92,9 @@ func storedMessageIsPrivateTx(ctx context.Context, tx pgx.Tx, activity ids.Activ
 func senderIsPersonalTx(
 	ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, fields ActivityFields,
 ) (bool, error) {
+	if original := fields.forwardedFrom; original != nil {
+		return senderIsPersonalForTx(ctx, tx, actorUserID(ctx), original.From, false)
+	}
 	if fields.Kind != kindEmail || fields.Direction != connector.DirectionInbound || rec.Counterparty.SentByOwner() {
 		return false, nil
 	}

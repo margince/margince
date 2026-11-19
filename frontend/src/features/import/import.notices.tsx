@@ -9,6 +9,7 @@ import { formatNumber } from "../../format/format";
 import { type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import type { Locale } from "../../i18n/locale";
+import { recordEnabled, useHiddenCoreFeatures } from "../../lib/corefeatures";
 import { isEntityKind } from "../../lib/entity";
 import { valueFor } from "../../lib/labelfor";
 import {
@@ -44,7 +45,14 @@ export function UndoRecordName({
   object,
   id,
 }: Readonly<{ object: ImportObject; id: string }>) {
-  return isEntityKind(object) ? <EntityRef kind={object} id={id} /> : id;
+  // EntityRef renders nothing for a kind this reader cannot read, and the
+  // undo outcome must still say which record it kept.
+  const hidden = useHiddenCoreFeatures();
+  return isEntityKind(object) && recordEnabled(object, hidden) ? (
+    <EntityRef kind={object} id={id} />
+  ) : (
+    id
+  );
 }
 
 /**

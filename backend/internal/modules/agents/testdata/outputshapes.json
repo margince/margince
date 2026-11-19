@@ -3016,6 +3016,9 @@
       "data": {
         "type": "object",
         "properties": {
+          "awaiting_agent": {
+            "type": "boolean"
+          },
           "bundle_id": {
             "type": "string",
             "format": "uuid"
@@ -3169,6 +3172,9 @@
             }
           },
           "diff_hash": {
+            "type": "string"
+          },
+          "effect_failure": {
             "type": "string"
           },
           "effects": {
@@ -3625,6 +3631,9 @@
             "items": {
               "type": "object",
               "properties": {
+                "awaiting_agent": {
+                  "type": "boolean"
+                },
                 "bundle_id": {
                   "type": "string",
                   "format": "uuid"
@@ -3778,6 +3787,9 @@
                   }
                 },
                 "diff_hash": {
+                  "type": "string"
+                },
+                "effect_failure": {
                   "type": "string"
                 },
                 "effects": {
@@ -6773,6 +6785,9 @@
           "base_currency": {
             "type": "string"
           },
+          "call_withheld": {
+            "type": "boolean"
+          },
           "confirmed_date_count": {
             "type": "integer"
           },
@@ -7649,6 +7664,9 @@
             "items": {
               "type": "object",
               "properties": {
+                "awaiting_agent": {
+                  "type": "boolean"
+                },
                 "bundle_id": {
                   "type": "string",
                   "format": "uuid"
@@ -7802,6 +7820,9 @@
                   }
                 },
                 "diff_hash": {
+                  "type": "string"
+                },
+                "effect_failure": {
                   "type": "string"
                 },
                 "effects": {
@@ -12343,6 +12364,9 @@
       "data": {
         "type": "object",
         "properties": {
+          "awaiting_agent": {
+            "type": "boolean"
+          },
           "bundle_id": {
             "type": "string",
             "format": "uuid"
@@ -12496,6 +12520,9 @@
             }
           },
           "diff_hash": {
+            "type": "string"
+          },
+          "effect_failure": {
             "type": "string"
           },
           "effects": {
@@ -14572,6 +14599,9 @@
               "type": "object"
             },
             "type": "array"
+          },
+          "call_withheld": {
+            "type": "boolean"
           },
           "closing_minor": {
             "type": "integer"

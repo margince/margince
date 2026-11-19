@@ -4,6 +4,7 @@
 package activities
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -85,5 +86,71 @@ func TestThePreviewCarriesTheSupportedAlternatives(t *testing.T) {
 	}
 	if none := out.Recipients[1].SupportedAlternatives; none != nil {
 		t.Errorf("supported_alternatives = %v, want absent", *none)
+	}
+}
+
+// The preview names refused recipients in the order the review and the 409
+// do: repair, the subject's stop, the footer, missing evidence. A recipient
+// the send reaches comes after every refusal.
+func TestThePreviewRanksRefusedRecipientsLikeTheReview(t *testing.T) {
+	t.Parallel()
+	refusal := func(address, code string) commsauthz.Decision {
+		return commsauthz.Decision{
+			Recipient:  connector.Recipient{Email: address},
+			Verdict:    commsauthz.VerdictDeny,
+			ReasonCode: code,
+			Mode:       commsauthz.ModeEnforce,
+		}
+	}
+	findings := refusal("footer-finding@a.test", commsauthz.ReasonNoEvidence)
+	findings.Evidence.FooterFindings = []commsauthz.FooterFinding{{Kind: "privacy"}}
+	out := previewResponse(SendPreview{Decisions: commsauthz.DecisionSet{Decisions: []commsauthz.Decision{
+		{Recipient: connector.Recipient{Email: "allowed@a.test"}, Verdict: commsauthz.VerdictAllow, ReasonCode: "allowed", Mode: commsauthz.ModeEnforce},
+		refusal("no-evidence@a.test", commsauthz.ReasonNoEvidence),
+		refusal("footer@a.test", commsauthz.ReasonFooterIncomplete),
+		findings,
+		refusal("objected@a.test", commsauthz.ReasonObjection),
+		refusal("bounced@a.test", commsauthz.ReasonHardBounce),
+	}}})
+	got := make([]string, 0, len(out.Recipients))
+	for _, r := range out.Recipients {
+		got = append(got, string(r.Address))
+	}
+	want := []string{
+		"bounced@a.test", "objected@a.test", "footer@a.test", "footer-finding@a.test",
+		"no-evidence@a.test", "allowed@a.test",
+	}
+	if !slices.Equal(got, want) {
+		t.Errorf("preview order %v, want %v", got, want)
+	}
+}
+
+// The preview names the law the recipient's pack cites for the refusal, and
+// nothing for a recipient whose pack cites none.
+func TestThePreviewCarriesTheRefusalsCitedLaw(t *testing.T) {
+	t.Parallel()
+	law := commsauthz.Provision{Instrument: "UWG", Provision: "§ 7(2)", SourceURL: "https://example.org/uwg"}
+	out := previewResponse(SendPreview{Decisions: commsauthz.DecisionSet{Decisions: []commsauthz.Decision{
+		{
+			Recipient: connector.Recipient{Email: "anna@example.de"}, Verdict: commsauthz.VerdictDeny,
+			ReasonCode: commsauthz.ReasonObjection, Mode: commsauthz.ModeEnforce,
+			Citations: map[string]commsauthz.Provision{commsauthz.ReasonObjection: law},
+		},
+		{
+			Recipient: connector.Recipient{Email: "binh@example.vn"}, Verdict: commsauthz.VerdictDeny,
+			ReasonCode: commsauthz.ReasonObjection, Mode: commsauthz.ModeEnforce,
+		},
+	}}})
+	for _, recipient := range out.Recipients {
+		switch recipient.Address {
+		case "anna@example.de":
+			if recipient.Provision == nil || recipient.Provision.Provision != law.Provision || recipient.Provision.SourceUrl != law.SourceURL {
+				t.Errorf("anna's refusal cites %+v, want %+v", recipient.Provision, law)
+			}
+		default:
+			if recipient.Provision != nil {
+				t.Errorf("%s cites %+v, and their pack cites nothing", recipient.Address, recipient.Provision)
+			}
+		}
 	}
 }

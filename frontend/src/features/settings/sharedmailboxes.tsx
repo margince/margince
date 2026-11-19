@@ -13,11 +13,13 @@ import { OverflowMenu } from "../../design-system/overflowmenu";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { ProviderList, ProviderRow } from "../../design-system/providerrow";
 import { QueryStates } from "../../design-system/querystates";
-import { useT } from "../../i18n";
+import { formatDateTime } from "../../format/format";
+import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { statusLabel, statusTone } from "../../lib/connector-status";
 import { labelFor } from "../../lib/labelfor";
 import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
+import { useViewerZone } from "../../lib/viewerzone";
 import {
   ChangeSharedMailboxDialog,
   ConnectSharedMailboxDialog,
@@ -161,7 +163,23 @@ function SharedMailboxRow({
   onOpen: (kind: "change" | "history" | "disconnect") => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const zone = useViewerZone();
   const connected = mailbox.status !== "disconnected";
+  const unread = mailbox.unread_period;
+  // A span no sync read is what the row needs an admin for, so the import
+  // that recovers it takes the visible verb.
+  const importFirst = connected && unread != null;
+  const change = (
+    <Button aria-haspopup="dialog" onClick={() => onOpen("change")}>
+      {t("sharedMailboxes.change")}
+    </Button>
+  );
+  const importHistory = (
+    <Button aria-haspopup="dialog" onClick={() => onOpen("history")}>
+      {t("sharedMailboxes.importHistory")}
+    </Button>
+  );
   return (
     <div data-testid="shared-mailbox">
       <ProviderRow
@@ -176,19 +194,21 @@ function SharedMailboxRow({
           team: teamName,
           visibility: t(labelFor(VISIBILITY_LABEL, mailbox.mail_visibility)),
         })}
-        action={
-          <Button aria-haspopup="dialog" onClick={() => onOpen("change")}>
-            {t("sharedMailboxes.change")}
-          </Button>
+        reason={
+          unread
+            ? t("captureHealth.unreadPeriodFolded", {
+                from: formatDateTime(unread.from, locale, zone),
+                to: formatDateTime(unread.to, locale, zone),
+              })
+            : undefined
         }
+        action={importFirst ? importHistory : change}
         menu={
           connected && (
             <OverflowMenu
               label={t("table.rowActions", { name: mailbox.address })}
             >
-              <Button aria-haspopup="dialog" onClick={() => onOpen("history")}>
-                {t("sharedMailboxes.importHistory")}
-              </Button>
+              {importFirst ? change : importHistory}
               <Button
                 aria-haspopup="dialog"
                 onClick={() => onOpen("disconnect")}

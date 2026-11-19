@@ -19,6 +19,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	capturemod "github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -102,7 +103,7 @@ func TestDisconnectDeletesTheCredentialWhenTheCallerHangsUp(t *testing.T) {
 	reqCtx, cancel := context.WithCancel(humanWithScopes(e, e.Rep1, []principal.Scope{principal.ScopeRead}))
 	defer cancel()
 	hangUp.hangUp = cancel
-	if err := registry.Disconnect(reqCtx, "graph"); err != nil {
+	if err := registry.Disconnect(reqCtx, capturemod.ProviderMailbox("graph")); err != nil {
 		t.Fatalf("disconnect: %v", err)
 	}
 
@@ -185,7 +186,7 @@ func TestConnectAndDisconnectLeaveAnAttributableAuditRow(t *testing.T) {
 		t.Errorf("the connect after-image carries credential material: %s", audits[0].After)
 	}
 
-	if err := registry.Disconnect(grantCtx, "graph"); err != nil {
+	if err := registry.Disconnect(grantCtx, capturemod.ProviderMailbox("graph")); err != nil {
 		t.Fatalf("disconnect: %v", err)
 	}
 	audits = connectionAudits(t, e)
@@ -246,7 +247,7 @@ func TestARetriedDisconnectDoesNotReAuditTheWithdrawal(t *testing.T) {
 	// disconnect fails permanently AFTER phase 1 has committed — the half-finished
 	// state every subsequent call converges from.
 	stranded := newTestCaptureRegistry(e, nil)
-	if err := stranded.Disconnect(grantCtx, "graph"); err == nil {
+	if err := stranded.Disconnect(grantCtx, capturemod.ProviderMailbox("graph")); err == nil {
 		t.Fatal("a disconnect that cannot destroy the credential must not report success")
 	}
 	audits := connectionAudits(t, e)
@@ -255,7 +256,7 @@ func TestARetriedDisconnectDoesNotReAuditTheWithdrawal(t *testing.T) {
 	}
 	fenced := connectionGeneration(t, e, connID)
 
-	if err := stranded.Disconnect(grantCtx, "graph"); err == nil {
+	if err := stranded.Disconnect(grantCtx, capturemod.ProviderMailbox("graph")); err == nil {
 		t.Fatal("the retry still cannot destroy the credential and must still say so")
 	}
 	if retried := connectionAudits(t, e); len(retried) != 2 {

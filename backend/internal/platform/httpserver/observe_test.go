@@ -52,7 +52,7 @@ func TestReadyzReportsAIStateOnSuccessNeverAsAGate(t *testing.T) {
 		t.Run(state, func(t *testing.T) {
 			req := httptest.NewRequest("GET", "/readyz", nil)
 			rec := httptest.NewRecorder()
-			Readyz(state, nil)(rec, req)
+			Readyz(func() string { return state }, nil)(rec, req)
 
 			if rec.Code != 200 {
 				t.Fatalf("AI state %q must never turn /readyz unready, got status %d", state, rec.Code)
@@ -72,7 +72,7 @@ func TestReadyzDependencyFailureStillReturns503RegardlessOfAIState(t *testing.T)
 	rec := httptest.NewRecorder()
 	failing := ReadyCheck{Name: "postgres", Check: func(context.Context) error { return errors.New("down") }}
 
-	Readyz("configured", nil, failing)(rec, req)
+	Readyz(func() string { return "configured" }, nil, failing)(rec, req)
 
 	if rec.Code != 503 {
 		t.Fatalf("want 503 on a failed dependency check, got %d", rec.Code)
@@ -103,7 +103,7 @@ func TestReadyzReportsEmbedStateOnSuccessNeverAsAGate(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			req := httptest.NewRequest("GET", "/readyz", nil)
 			rec := httptest.NewRecorder()
-			Readyz("configured", tc.fn)(rec, req)
+			Readyz(func() string { return "configured" }, tc.fn)(rec, req)
 
 			if rec.Code != 200 {
 				t.Fatalf("embed state must never turn /readyz unready, got status %d", rec.Code)
@@ -125,7 +125,7 @@ func TestReadyzDependencyFailureStillReturns503RegardlessOfEmbedState(t *testing
 	rec := httptest.NewRecorder()
 	failing := ReadyCheck{Name: "postgres", Check: func(context.Context) error { return errors.New("down") }}
 
-	Readyz("configured", func(context.Context) string { return "active" }, failing)(rec, req)
+	Readyz(func() string { return "configured" }, func(context.Context) string { return "active" }, failing)(rec, req)
 
 	if rec.Code != 503 {
 		t.Fatalf("want 503 on a failed dependency check regardless of embed state, got %d", rec.Code)

@@ -276,6 +276,9 @@ func (s *Sink) captureRecord(ctx context.Context, rec connector.NormalizedRecord
 			if err := s.prepareActivityCapture(ctx, tx, rec, existingOnly); err != nil {
 				return err
 			}
+			if rec, err = s.readForwardToSelfTx(ctx, tx, rec); err != nil {
+				return err
+			}
 
 			// A skip commits its breadcrumb before the connector advances its cursor.
 			ctx, drop, err := s.dropBeforeStoreTx(ctx, tx, rec)

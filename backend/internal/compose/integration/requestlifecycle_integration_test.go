@@ -88,14 +88,17 @@ func TestWonDealKeepsOldSchedulingRequestUntilItsTaskIsCompleted(t *testing.T) {
 	if task.SourceActivityId == nil || *task.SourceActivityId != message.Id {
 		t.Fatal("task lost its source")
 	}
-	if code := e.Call(t, "GET", "/v1/deals/"+deal+"/status", nil, nil, &card); code != http.StatusOK || card.Next == nil || card.Next.Action != "open_task" || card.ReplyTo == nil || *card.ReplyTo != message.Id || card.RequestBasis == nil || card.RequestBasis.Kind != "current_request" {
-		t.Fatalf("won deal hid its open task: %d %+v", code, card)
+	// Our "Thanks, I will check." came after the request, so the card says we
+	// replied and names the task to mark done, instead of a reply owed.
+	if code := e.Call(t, "GET", "/v1/deals/"+deal+"/status", nil, nil, &card); code != http.StatusOK || card.Next == nil || card.Next.Action != "open_task" ||
+		card.ReplyTo != nil || card.OurReply == nil || card.OurReply.ReminderId == nil || *card.OurReply.ReminderId != task.Id {
+		t.Fatalf("won deal hid its open task or our reply: %d %+v", code, card)
 	}
 	if code := e.Call(t, "PATCH", "/v1/activities/"+task.Id.String(), map[string]bool{"is_done": true}, nil, nil); code != http.StatusOK {
 		t.Fatalf("complete request task: %d", code)
 	}
 	card = crmcontracts.DealStatusCard{}
-	if code := e.Call(t, "GET", "/v1/deals/"+deal+"/status", nil, nil, &card); code != http.StatusOK || card.Next != nil || card.ReplyTo != nil {
+	if code := e.Call(t, "GET", "/v1/deals/"+deal+"/status", nil, nil, &card); code != http.StatusOK || card.Next != nil || card.ReplyTo != nil || card.OurReply != nil {
 		t.Fatalf("completed request stayed open: %d %+v", code, card)
 	}
 }

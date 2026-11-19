@@ -376,3 +376,26 @@ func httpCorpus(ctx context.Context, t *testing.T, h *knowledgeHTTP) crmcontract
 	}
 	return made
 }
+
+// A program renamed to .md is refused with 415, like any file that is not
+// text. Nothing is queued for ingest.
+func TestUploadingAProgramNamedMarkdownOverHTTPIs415(t *testing.T) {
+	e := Setup(t)
+	h := newKnowledgeHTTP(e)
+	ctx := e.As(e.Rep1, nil, corpusAdminPerms)
+	made := httpCorpus(ctx, t, h)
+
+	program := append([]byte("MZ"), make([]byte, 0x100)...)
+	body, ctype := apptest.MultipartDocument(t, "operating.md", "text/markdown", program)
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/v1/knowledge/corpora/x/documents", body).WithContext(ctx)
+	req.Header.Set("Content-Type", ctype)
+	h.handlers.UploadCorpusDocument(rec, req, made.Id)
+
+	if rec.Code != http.StatusUnsupportedMediaType {
+		t.Fatalf("program named .md: status %d, want 415. body %s", rec.Code, rec.Body.String())
+	}
+	if len(h.queued) != 0 {
+		t.Fatalf("a refused upload queued %d ingests", len(h.queued))
+	}
+}

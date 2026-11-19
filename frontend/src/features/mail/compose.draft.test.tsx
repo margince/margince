@@ -13,7 +13,6 @@ import {
   purposeField,
   redraft,
 } from "../../testing/composedraft.testkit";
-import { ComposeModal } from "./compose";
 import {
   activity202,
   DISCLOSURE,
@@ -34,6 +33,7 @@ import {
   WHY_LABEL,
   waitForSendReady,
 } from "./compose.testkit";
+import { ComposeWindow } from "./composewindow";
 
 beforeEach(installComposeClock);
 
@@ -120,7 +120,7 @@ function draftsOnCue() {
 
 function renderComposer(onClose = vi.fn()) {
   render(
-    <ComposeModal
+    <ComposeWindow
       activityId="act-1"
       entityType="contact"
       entityId="p-1"
@@ -133,7 +133,7 @@ function renderComposer(onClose = vi.fn()) {
 
 // The send-time binding to the voice draft: `draft_ref` is what makes the
 // server's accepted/edited_sent verdict about the rep's own words.
-describe("ComposeModal draft binding", () => {
+describe("ComposeWindow draft binding", () => {
   it("sends the reference of the draft whose text it is sending", async () => {
     const sent = stubRoutes({
       "GET /voice-profiles": () => jsonResponse(PROVISIONAL_VOICE_PROFILE),
@@ -730,7 +730,7 @@ describe("ComposeModal draft binding", () => {
 // condition that puts a served draft there, and leaves when they do. A banner
 // that outlived its text would attribute a human's writing to a model, or
 // credit it to a voice version that never touched it.
-describe("ComposeModal draft provenance", () => {
+describe("ComposeWindow draft provenance", () => {
   it("discloses nothing when a draft's words were discarded for the rep's own", async () => {
     const drafts = draftsOnCue();
     stubRoutes({
@@ -836,7 +836,7 @@ const MAILBOX_NOT_SEND_CAPABLE = {
 
 // Each refusal is a product state with a fix, so each reads as its own copy.
 // None may fall into the generic line.
-describe("ComposeModal send refusals", () => {
+describe("ComposeWindow send refusals", () => {
   async function expectReconnect(onClose: () => void) {
     expect(await screen.findByText(/without permission to send/i)).toBeTruthy();
     expect(

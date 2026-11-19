@@ -168,7 +168,8 @@ func pinAutoExecutedWrite(w http.ResponseWriter, r *http.Request, redemption tok
 		r.Header.Set(ifMatchHeader, strconv.FormatInt(admitted, 10))
 		return true
 	}
-	if caller := r.Header.Get(ifMatchHeader); caller != "" {
+	if len(r.Header.Values(ifMatchHeader)) > 0 {
+		caller := r.Header.Get(ifMatchHeader)
 		// Compared as the numbers they are: the contract's If-Match is a bare
 		// integer version, and two spellings of one number must not read as
 		// disagreement. A caller header this parser refuses is left for the
