@@ -8,6 +8,7 @@ package invitationsenders
 import (
 	"context"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -31,20 +32,20 @@ func DataTask() datatask.Task {
 		Title:    systemtext.Literal("datatask.title.core.1795094620_invitation_senders"),
 		Requires: []string{"core/1792969126"},
 		Steps: []datatask.Step{{
-			Name: "name_invitation_senders", Limit: 100, MinLimit: 10,
+			Name: "name_invitation_senders", Limit: 50, MinLimit: 1,
 			Audit:    datatask.AuditPolicy{PerRecord: true},
 			Estimate: estimate, Batch: batch,
 		}},
 	}
 }
 
-// scope is received Gmail invitations that name no sender and keep their
-// original. The sender rule needs Gmail's authentication result, which the
-// other transports do not carry.
+// scope is live received Gmail invitations that name no sender and keep their
+// original. A held row is always archived. The sender rule needs Gmail's
+// authentication result, which the other transports do not carry.
 var scope = `FROM activity a JOIN raw_capture rc ON ` + storekit.StoredOriginalSQL("a", "rc") + `
  WHERE a.kind = 'email' AND a.direction = 'inbound' AND a.has_calendar_part
    AND a.invitation_sender IS NULL AND a.sent_by_colleague IS NULL
-   AND a.archived_at IS NULL AND a.restricted_at IS NULL AND a.counterparty_email IS NOT NULL
+   AND a.archived_at IS NULL AND a.counterparty_email IS NOT NULL
    AND split_part(a.captured_by, ':', 1) = 'connector' AND split_part(a.captured_by, ':', 2) = 'gmail'`
 
 // importerSQL is the seat whose mailbox captured the row, from its provenance.
@@ -54,6 +55,7 @@ const importerSQL = `CASE WHEN split_part(a.captured_by, ':', 3) ~ '^[0-9a-f-]{3
 type storedInvitation struct {
 	ID       ids.UUID
 	Sender   string
+	SentAt   time.Time
 	Importer *ids.UUID
 	Payload  []byte
 }
@@ -63,7 +65,7 @@ func estimate(ctx context.Context, q datatask.Querier, maximum int64) (int64, bo
 }
 
 func batch(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datatask.BatchOut, error) {
-	return storedmail.Page(ctx, tx, in, "a.id, a.counterparty_email, "+importerSQL+", "+originalstore.SQL("rc"), scope,
+	return storedmail.Page(ctx, tx, in, "a.id, a.counterparty_email, a.occurred_at, "+importerSQL+", "+originalstore.SQL("rc"), scope,
 		func(row *storedInvitation) (ids.UUID, *[]byte) { return row.ID, &row.Payload },
 		func(ctx context.Context, tx pgx.Tx, row storedInvitation) (bool, error) {
 			return nameSender(ctx, tx, row, in.RunID)
@@ -87,7 +89,7 @@ func nameSender(ctx context.Context, tx pgx.Tx, row storedInvitation, runID ids.
 	if row.Importer != nil {
 		importer = *row.Importer
 	}
-	seat, err := capture.InvitationSenderTx(ctx, tx, parsed.ToRecord("gmail", raw), importer)
+	seat, err := capture.InvitationSenderTx(ctx, tx, parsed.ToRecord("gmail", raw), importer, row.SentAt)
 	if err != nil || seat.IsZero() {
 		return false, err
 	}
