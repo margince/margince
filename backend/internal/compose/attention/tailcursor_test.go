@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -43,7 +44,7 @@ func (w *windowRecorder) TasksIn(context.Context, TaskWindow, []ids.UUID) ([]Tas
 
 func tailToken(t *testing.T, rest *backlogCursor) string {
 	t.Helper()
-	token, err := storekit.EncodeOpaque(worklistCursor{At: 3, Params: fingerprint(scopeMine, "", ids.Nil), Rest: rest})
+	token, err := storekit.EncodeSigned(worklistCursor{At: 3, Params: fingerprint(scopeMine, "", ids.Nil), Rest: rest}, cursorKey())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -88,7 +89,7 @@ func TestTheTailProtocolIsInTheFingerprint(t *testing.T) {
 	if older == fingerprint(scopeMine, "", ids.Nil) {
 		t.Fatal("the fingerprint does not carry the tail protocol, so an older binary accepts a tailed token")
 	}
-	token, err := storekit.EncodeOpaque(worklistCursor{At: 3, Params: older})
+	token, err := storekit.EncodeSigned(worklistCursor{At: 3, Params: older}, cursorKey())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -181,5 +182,50 @@ func TestAFailedCountLeavesItsCategoryAFloorAndNoPartialTotal(t *testing.T) {
 		case tc.want != nil && (upcoming.Total == nil || *upcoming.Total != *tc.want):
 			t.Errorf("%s: upcoming publishes total %s, want %d", tc.name, total, *tc.want)
 		}
+	}
+}
+
+// editedToken re-signs nothing: it swaps the body of a minted token for the
+// body of an edited cursor and keeps the old signature.
+func editedToken(t *testing.T, minted string, edit func(*worklistCursor)) string {
+	t.Helper()
+	_, signature, _ := strings.Cut(minted, ".")
+	cursor, err := openCursor(minted)
+	if err != nil {
+		t.Fatal(err)
+	}
+	edit(&cursor)
+	body, err := storekit.EncodeOpaque(cursor)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return body + "." + signature
+}
+
+func TestAnEditedTailIsRefusedAndAnUntouchedOneResumes(t *testing.T) {
+	window := tailWindow{AsOf: rankInstant, Until: rankInstant.Add(time.Hour), Zone: "UTC"}
+	minted := tailToken(t, &backlogCursor{At: map[string]string{"task": ""}, Window: window})
+	if _, err := decodeCursor(minted, scopeMine, "", ids.Nil); err != nil {
+		t.Fatalf("an untouched cursor was refused: %v", err)
+	}
+	position, err := storekit.EncodeOpaque(map[string]string{"id": ids.NewV7().String()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, edit := range map[string]func(*worklistCursor){
+		"a shifted tail position": func(c *worklistCursor) { c.Rest.At["task"] = position },
+		"a moved AsOf":            func(c *worklistCursor) { c.Rest.Window.AsOf = c.Rest.Window.AsOf.Add(-time.Hour) },
+		"a changed offset":        func(c *worklistCursor) { c.At = 0 },
+	} {
+		_, err := decodeCursor(editedToken(t, minted, edit), scopeMine, "", ids.Nil)
+		if _, ok := errors.AsType[*storekit.MalformedCursorError](err); !ok {
+			t.Errorf("%s: decoded with %v, want the invalid-cursor refusal", name, err)
+		}
+	}
+	unsigned, _, _ := strings.Cut(minted, ".")
+	if _, err := decodeCursor(unsigned, scopeMine, "", ids.Nil); err == nil {
+		t.Error("a cursor with no signature was accepted")
+	} else if _, ok := errors.AsType[*storekit.MalformedCursorError](err); !ok {
+		t.Errorf("an unsigned cursor answered %v, want the invalid-cursor refusal", err)
 	}
 }
