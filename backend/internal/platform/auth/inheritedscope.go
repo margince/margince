@@ -43,8 +43,30 @@ func discoverGateFor(p principal.Principal, alias string, arg func(any) int) str
 }
 
 // discoverReach is the discover gate past availability. taskArm is the task
-// holder's way in, which only a task can use; nil leaves it out.
+// holder's way in, which only a task can use; nil leaves it out. The chat
+// summary arm sits here so every gate that composes the reach carries it.
 func discoverReach(p principal.Principal, alias string, arg func(any) int, taskArm clauseBuilder) string {
+	return chatSummaryArm(p, alias, arg) + " AND " + linkedReach(p, alias, arg, taskArm)
+}
+
+// chatSummaryArm limits a chat summary note to seats that hold read on a record
+// it is linked to, and that row scope reaches. Row scope opens every deal and
+// project to every seat. The object grant is what keeps the note's names from a
+// seat that may not open the record.
+func chatSummaryArm(p principal.Principal, alias string, arg func(any) int) string {
+	if p.Type == principal.PrincipalSystem {
+		return "TRUE"
+	}
+	granted := func(table string) bool {
+		return (table == tableDeal || table == tableProject) &&
+			Check{Object: table, Actions: []principal.Action{principal.ActionRead}}.HeldBy(p)
+	}
+	return fmt.Sprintf(`(%[1]s.kind <> 'note' OR coalesce(%[1]s.source_system, '') <> '%[2]s'
+	   OR EXISTS (SELECT 1 FROM activity_link chat_link WHERE chat_link.activity_id = %[1]s.id AND %[3]s))`,
+		alias, provenance.ChatSummarySource, linkTargetVisible(p, "chat_link", arg, granted))
+}
+
+func linkedReach(p principal.Principal, alias string, arg func(any) int, taskArm clauseBuilder) string {
 	access := internalMailAccessClause(p, alias, arg)
 	if UnboundedFor(p, linkTargetTables...) {
 		return access
