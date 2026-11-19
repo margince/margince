@@ -42,7 +42,7 @@ func TestARefusalForAnErasedRecipientOpensNoReview(t *testing.T) {
 				t.Fatalf("recording the erasure: %v", err)
 			}
 		}
-		stager := &reviewRecordingStager{recordingStager: recordingStager{err: apperrors.ErrConsentNotGranted}}
+		stager := &reviewRecordingStager{err: apperrors.ErrConsentNotGranted}
 		_, err := draftStore(e).SendEmail(ctx, FromActivity(anchor), soloSendInput("transactional"), stubConsentGate{}, stager)
 		if !errors.Is(err, apperrors.ErrConsentNotGranted) {
 			t.Fatalf("erased=%v: the sender got %v, want the consent refusal", erased, err)
