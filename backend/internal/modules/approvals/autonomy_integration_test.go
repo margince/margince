@@ -16,7 +16,9 @@ import (
 	"bytes"
 	"context"
 	"testing"
+	"time"
 
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -71,6 +73,8 @@ type dealSeeder struct {
 	env      *stagingEnv
 	pipeline ids.UUID
 	stage    ids.UUID
+	// closes is the close date every proposal stages, read once per suite.
+	closes string
 }
 
 // newDealSeeder creates the pipeline and stage every deal below shares. One
@@ -79,7 +83,7 @@ type dealSeeder struct {
 func newDealSeeder(t *testing.T, e *stagingEnv) *dealSeeder {
 	t.Helper()
 	ctx := context.Background()
-	s := &dealSeeder{env: e, pipeline: ids.NewV7(), stage: ids.NewV7()}
+	s := &dealSeeder{env: e, pipeline: ids.NewV7(), stage: ids.NewV7(), closes: countedCloseDate(t, 1)}
 	// The name carries the id because pipeline names are unique installation-wide
 	// and this package's suites share one database.
 	if _, err := e.owner.Exec(ctx,
@@ -120,7 +124,7 @@ func (s *dealSeeder) stageCounted(ctx context.Context, t *testing.T) ids.Approva
 	target := s.deal(t)
 	id, err := s.env.svc.Stage(ctx, StageInput{
 		Kind:           countedKind,
-		ProposedChange: []byte(`{"deal_id":"` + target.String() + `","expected_close_date":"2026-12-01"}`),
+		ProposedChange: []byte(`{"deal_id":"` + target.String() + `","expected_close_date":"` + s.closes + `"}`),
 		DiffHash:       target.String(),
 		TargetType:     tableDeal,
 		TargetID:       target,
@@ -130,6 +134,13 @@ func (s *dealSeeder) stageCounted(ctx context.Context, t *testing.T) ids.Approva
 		t.Fatalf("staging %s: %v", countedKind, err)
 	}
 	return id
+}
+
+// countedCloseDate is a close date months ahead of the fixture clock, so a
+// writer that refuses a past close date takes it on any day.
+func countedCloseDate(t *testing.T, months int) string {
+	t.Helper()
+	return clocktest.Now(t).AddDate(0, months, 0).Format(time.DateOnly)
 }
 
 // policyOf reads one rep's stored row straight from the table, so an assertion
@@ -205,7 +216,7 @@ func TestAnEditedApprovalIsNotACleanOne(t *testing.T) {
 	// The same deal, a different date: an edit may correct the proposal but
 	// never re-aim it, so the deal_id has to survive verbatim.
 	edited := bytes.Replace(staged.ProposedChange,
-		[]byte(`"2026-12-01"`), []byte(`"2027-03-15"`), 1)
+		[]byte(`"`+seed.closes+`"`), []byte(`"`+countedCloseDate(t, 4)+`"`), 1)
 	if bytes.Equal(edited, staged.ProposedChange) {
 		t.Fatal("the edit changed nothing, so this proves nothing about editing")
 	}
