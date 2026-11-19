@@ -31,6 +31,7 @@ type certFixture struct {
 	Record   string        `json:"record"`
 	Facts    []string      `json:"facts"`
 	Channel  string        `json:"channel"`
+	Earlier  string        `json:"earlier,omitempty"`
 	Messages []certMessage `json:"messages"`
 }
 
@@ -66,7 +67,7 @@ func (CertCases) Prepare(fixture, expected json.RawMessage) (aitasks.PreparedCas
 	if err := json.Unmarshal(expected, &want); err != nil {
 		return nil, fmt.Errorf("%s: the expected value is not {relevant, keeps, omits}: %w", certSite, err)
 	}
-	in := Input{Record: f.Record, Facts: f.Facts, Channel: f.Channel}
+	in := Input{Record: f.Record, Facts: f.Facts, Channel: f.Channel, Earlier: f.Earlier}
 	var said strings.Builder
 	for _, m := range f.Messages {
 		in.Messages = append(in.Messages, Message(m))

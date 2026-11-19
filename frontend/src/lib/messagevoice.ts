@@ -47,12 +47,15 @@ export function owesOrIsOwed(row: Activity): boolean {
 }
 
 // Mirrors activities.WroteItOurSide: authorship names the side when known;
-// direction supplies the answer for older or unresolved projections.
+// direction supplies the answer for older or unresolved projections. On a
+// logged call the author is whoever wrote it down, so only direction counts.
 export function correspondenceSide(
   row: Activity,
 ): "ours" | "theirs" | undefined {
   if (!row.direction) return undefined;
-  switch (row.voice?.author?.kind) {
+  const voiceNamesSender =
+    row.kind === "email" || row.kind === "message" || row.kind === "meeting";
+  switch (voiceNamesSender ? row.voice?.author?.kind : undefined) {
     case "colleague":
       return "ours";
     case "contact_record":
