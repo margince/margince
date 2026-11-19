@@ -223,11 +223,14 @@
   gap: var(--space-1);
   min-inline-size: 7rem;
 }
+/* One track that may shrink: an `auto` track grows to the widest subject,
+   which is one nowrap line that has to truncate inside its row instead. */
 .pn-figure-receipts .pn-receipts {
   margin: 0;
   padding: 0;
   list-style: none;
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-2);
 }
 .pn-figure-receipts .pn-receipts > li {

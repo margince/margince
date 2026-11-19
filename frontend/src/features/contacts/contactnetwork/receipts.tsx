@@ -28,11 +28,14 @@ type Receipt = components["schemas"]["ContactGraphReceipt"];
 export function ReceiptList({
   receipts,
   relayMember = "unknown",
+  stacked = false,
   onOpenEmail,
 }: Readonly<{
   receipts: readonly Receipt[];
   /** Whose relationship these receipts are, so a relay send says whom it was for. */
   relayMember?: RelaySend["member"];
+  /** Puts a mail's date under its subject, for a column too narrow for both. */
+  stacked?: boolean;
   /**
    * Opens one of these messages in the contact page's email drawer.
    *
@@ -53,6 +56,7 @@ export function ReceiptList({
           {r.kind === "email" ? (
             <EmailReference
               subject={r.subject}
+              stacked={stacked}
               occurredAt={activityDay(
                 r.occurred_at,
                 r.occurred_precision,
