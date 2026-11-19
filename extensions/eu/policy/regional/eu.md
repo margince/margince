@@ -46,7 +46,7 @@ without a recorded consent, so this layer adds no key for it.
 
 Art. 13(5) leaves the rule for legal persons to each member state. Some states ask for consent,
 and others ask only that the recipient has not objected. The engine cannot tell a legal person's
-address from a person's address, so every pack here asks for consent for both.
+address from an individual's address, so every pack here asks for consent for both.
 
 ## The existing-customer exception (Art. 13(2))
 

@@ -23,7 +23,7 @@ Act on Electronic Communications Services (laki sähköisen viestinnän palvelui
 ## Advertising to a company
 
 Section 201 lets a sender advertise to a legal person unless it has refused. The engine cannot tell
-a company's general address from a person's own address, so this pack asks for consent for every
+a company's general address from an individual's own address, so this pack asks for consent for every
 address. That is stricter than the law, and the core already applies it.
 
 ## The existing-customer exception

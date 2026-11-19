@@ -130,8 +130,8 @@ func codeFindings(dir string, files []*ast.File) []string {
 }
 
 // handedOutTables are the declarations that state which codes a package's
-// run-time allocators hand out, as prefix, first and last rune: the one for
-// test rule sets and the one for the shipped packs.
+// run-time allocators hand out, as prefix, first and last rune. One is for test
+// rule sets and one for the shipped packs.
 var handedOutTables = []string{"testCodeRanges", "shippedPackCodeRanges"}
 
 // codeRange is one prefix and the second letters handed out under it.

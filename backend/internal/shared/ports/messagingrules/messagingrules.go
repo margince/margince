@@ -202,8 +202,8 @@ type Applied struct {
 
 	// SubjectPrefixes are the distinct advertising labels the contributing
 	// packs owe, first declared first. Rules.SubjectPrefix holds the first one
-	// only, because one subject begins with one label; the subject check reads
-	// this list so that a second, different label is still owed.
+	// only, because one subject begins with one label. The subject check reads
+	// this list, so a second, different label is still owed.
 	SubjectPrefixes []string
 }
 

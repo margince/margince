@@ -25,7 +25,7 @@ This layer sits on `regional/eu.md` and may only tighten it. It rests on art. 13
 ## Advertising to a company
 
 Art. 13.º-B lets a sender advertise to a legal person unless it has refused, and keeps a national
-list of those who refuse. The engine cannot tell a company's general address from a person's own
+list of those who refuse. The engine cannot tell a company's general address from an individual's own
 address, so this pack asks for consent for every address. That is stricter than the law, and the
 core already applies it.
 

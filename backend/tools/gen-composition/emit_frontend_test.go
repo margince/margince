@@ -102,9 +102,8 @@ func TestFrontendRegistryCarriesEveryDeclaredVerbUnderItsUnit(t *testing.T) {
 
 // A unit that composes but declares no governed operation is a real state
 // (a Go-only unit with no api/ fragment, such as extensions/eu). It must reach
-// the registry with an empty verb list rather than disappearing from it: the
-// SPA's not-found card is a claim that the unit is not ENABLED, and it would
-// be a lie for a unit that is.
+// the registry with an empty verb list rather than disappear from it. The SPA's
+// not-found card says the unit is not enabled, which is false for this one.
 func TestAUnitWithNoVerbsStillReachesTheRegistry(t *testing.T) {
 	got := string(frontendGen([]derivedManifest{{Unit: extensionUnit{Name: "de"}}}, nil, nil))
 	if !strings.Contains(got, "    name: \"de\",\n    secretScope: \"\",\n    title: \"\",\n    verbs: [\n    ],\n") {

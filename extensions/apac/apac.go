@@ -4,8 +4,7 @@
 // Package apac holds the jurisdiction packs of Asia-Pacific countries as one
 // stable-tier extension, enabled by default in the vanilla tree. Each
 // country's messaging rules compile from policy/<code>/, which lists that
-// country's own layer and nothing else: the region shares no law to put in a
-// common layer. Vietnam also carries its request deadlines. Core code never
+// country's own layer only. The region shares no law to put in a common layer. Vietnam also carries its request deadlines. Core code never
 // contains a jurisdiction string, so this unit is where these countries live.
 package apac
 
@@ -16,8 +15,8 @@ import (
 	"github.com/margince/margince/backend/pkg/extension/subjectrights"
 )
 
-// New returns the unit's declaration (the ADR-0120 §4 constructor
-// contract the generated composition calls).
+// New returns the unit's declaration, which the generated composition calls
+// (ADR-0120).
 func New() extension.Extension {
 	return extension.Extension{
 		Name:    "apac",
@@ -31,7 +30,7 @@ func New() extension.Extension {
 }
 
 // packsFor answers one jurisdiction pack per compiled rule set, so the policy
-// folders are the one list of countries. A unit may declare messaging rules
+// folders decide which countries the unit holds. A unit may declare messaging rules
 // only for a code it carries a pack for.
 func packsFor(rules []messaging.Rules) []jurisdiction.Pack {
 	out := make([]jurisdiction.Pack, 0, len(rules))

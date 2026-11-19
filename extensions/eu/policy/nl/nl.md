@@ -23,7 +23,7 @@ Telecommunicatiewet.
 ## Advertising to a company
 
 Art. 11.7 sets a lighter rule for an address a legal person has published for contact. The engine
-cannot tell a company's general address from a person's own address, so this pack asks for consent
+cannot tell a company's general address from an individual's own address, so this pack asks for consent
 for every address. That is stricter than the law, and the core already applies it.
 
 ## The existing-customer exception

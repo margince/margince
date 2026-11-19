@@ -40,7 +40,7 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "8001736140c6e2497145dac3afeea547fe0aba44c0a4644fc9e9f242eeb544e5",
+		Digest: "d55846c74e5d3f03cf11357260d2e50494f4542bd439410d97ac52137e09b838",
 	}, {
 		Jurisdiction: "be",
 		Version:      1,
@@ -76,7 +76,7 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "942b68510bc30cc10cc3e0889b928d715da259b65bdd897cedf2f31d3e8ca88d",
+		Digest: "2637b7bc65df379d14d0dee769d11872b799aa953a7e116e36765162787feea9",
 	}, {
 		Jurisdiction: "bg",
 		Version:      1,
@@ -105,7 +105,7 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "36bdbdf2fba24088007acff3aebc35ba3b23ce00bce9566202eb9c6e3e9f8720",
+		Digest: "31fce3477dc72573da6a0596ce25b3243aefad4967d1fc17bd7a474861664793",
 	}, {
 		Jurisdiction: "cy",
 		Version:      1,
@@ -139,7 +139,7 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "94e16e4c91261ecfd11fe9d9f8e6a2c04880f79b63ae6e3c314cc179f47d458c",
+		Digest: "8c007b6d664866b1c256991916ac9c01114ac23a7aee0bef121f6a1a5c6e685b",
 	}, {
 		Jurisdiction: "cz",
 		Version:      1,
@@ -173,7 +173,7 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "258387867ab67505be323be1e1be1f1bc02f303dbae0825fb1aafeb1c0334568",
+		Digest: "a18932e6f14e49eacf86278bb0590f482aac79a0ef4e3648a8c91797dd15926b",
 	}, {
 		Jurisdiction:       "de",
 		Version:            2,
@@ -198,7 +198,7 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.September, 4, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "55d46bbef00ad7e96bd5eebb3c80304d04bd5f6ee852e0e023f33f72098f9f92",
+		Digest: "08545dbef099ad9d9dd6812adb7814fdd66e32dad4843e4234445cc0b4766e5f",
 	}, {
 		Jurisdiction: "dk",
 		Version:      1,
@@ -232,7 +232,7 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "f961c5968167ba588a7aff1e4a3e8079dd05d88f43f455043c7d24ce2f0f2213",
+		Digest: "35dc318abc8a5002ce835e455be1fc1356b9a9e799e763ccb3095a5c236df20f",
 	}, {
 		Jurisdiction: "ee",
 		Version:      1,
@@ -269,7 +269,7 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "ab864383508211bf167df8db2df3f821278312a67970224a8c34cc5799689ef5",
+		Digest: "66ed47728751162582b10986d451c2226f5cb908e1c3bb860265cb78acedaec4",
 	}, {
 		Jurisdiction: "es",
 		Version:      1,
@@ -304,7 +304,7 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "85cc68b785c901f2de95758e4a7585b5542e55a562f357ed5478712419644118",
+		Digest: "7e02fdd4323b65f5d774709c13968a79054f142d34dda4f59a3d485e99412f93",
 	}, {
 		Jurisdiction: "fi",
 		Version:      1,
@@ -338,7 +338,7 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "ec6e063a32f1e7741fc3035801c529ec2910a31a838223bd55118a0bb2f261fe",
+		Digest: "5eecca3bc03d961ef30c62c0f20a33154720271ad4d7922ba18036281c766db7",
 	}, {
 		Jurisdiction: "fr",
 		Version:      1,
@@ -375,7 +375,7 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "4ae5578b95c28db13757c2763dc9c7e646bc46948561255964794beb0fde2e50",
+		Digest: "96e30f2cb4748a490103954e4a41fefb269741bcb9d5d2062e14e0af8559968a",
 	}, {
 		Jurisdiction: "gr",
 		Version:      1,
@@ -409,7 +409,7 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "b1d505b4e48c08c01b776f5bac2a7441f7b3a55e76cedb89f2d8101331dc45aa",
+		Digest: "0533d4c811130e0d3e70e3d444d6909bf3c895b289d69bfdf12bb15d669090c9",
 	}, {
 		Jurisdiction: "hr",
 		Version:      1,
@@ -442,7 +442,7 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "ef809b1dccb72c36caf03d2288af3a424300ac73e3a1c36b7a7d2e2c15c6c281",
+		Digest: "533f28d5f7f8e7839c13229c432ff292c211ec7b9135bc833f67cd43485cad2f",
 	}, {
 		Jurisdiction: "hu",
 		Version:      1,
@@ -472,7 +472,7 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "966e71294c554187fa5d91c7bb8e606174e3eaf3ad0c2e77a813d4aa838ad717",
+		Digest: "0522f4a48ff6bebcdbce4608477e3fc853da90c7e02106b1d94e14ba248f6929",
 	}, {
 		Jurisdiction: "ie",
 		Version:      1,
@@ -499,7 +499,7 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "20e5b3807f505a5abffd87e2c1479b7419fff0319b7bc0bd4dc461f0a2f8c84d",
+		Digest: "2e57d39180c0a803ddba6968d1ac278046bc650036341d93eab080a66a13272a",
 	}, {
 		Jurisdiction: "it",
 		Version:      1,
@@ -534,7 +534,7 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "759e6ff0e5d9b5b270b01e5042cb18704b4118e1282a5c44e6eb5d4f42002463",
+		Digest: "8e2ac5766e3c91fba9fe538412aa8d8e76cb938a2283dac6a85d6c950585b507",
 	}, {
 		Jurisdiction: "lt",
 		Version:      1,
@@ -567,7 +567,7 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "67c19ea9727c9f82cf17695df3675360f369a9e3028cd16e6e14d1f9212d0629",
+		Digest: "14b8ad9db77801b0ac28c5b43160b3375ff1162cb2259710d34f81f5d47726d6",
 	}, {
 		Jurisdiction: "lu",
 		Version:      1,
@@ -601,7 +601,7 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "b36dc43d9ad7ea04b66973482cd153f68143ad1fcc7629e5b807e53e3bce978f",
+		Digest: "5f56ad63ce2974b8e41a2556b138cfc20e90aad92f50186af4cbdde4c6b29d9a",
 	}, {
 		Jurisdiction: "lv",
 		Version:      1,
@@ -635,7 +635,7 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "2997c150dc514f2550537536690330d16c16323ac8d2f8cb715a848609ac1e3b",
+		Digest: "322fe60ac3da739cd50ed8c000702a713fdabf6380d2409623ad045ec233cb49",
 	}, {
 		Jurisdiction: "mt",
 		Version:      1,
@@ -669,7 +669,7 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "746d04a27bb9ab951441fe22ea7f294221a7bbaacafc432082f4c3c1a6f73a19",
+		Digest: "8a7d00f5db367197626c11a6b097b751f19a7858825f9ee2acefb298de722bc9",
 	}, {
 		Jurisdiction: "nl",
 		Version:      1,
@@ -703,7 +703,7 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "11774b03f760fc5f66c5cc329cca0da693200f26be61bc154ae039d9ecb32b9c",
+		Digest: "ff3dde571459428abcdb189c9991c006b1faa6357d8302d321d5b6cec1478a75",
 	}, {
 		Jurisdiction: "pl",
 		Version:      1,
@@ -730,7 +730,7 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "caaa3b4130cb90df243f40cb58211fd638460df92c1f3c7382df2c6b58a13aac",
+		Digest: "42a9581b4b3e556a4a2413c3f256facae1defa1ae48c7e3ddf3c5ace91d441d1",
 	}, {
 		Jurisdiction: "pt",
 		Version:      1,
@@ -767,7 +767,7 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "dcbed5de51e9d967e51d371b8ae49e6effbd1e31a955f664b0021e361036d0bd",
+		Digest: "8c6634e5fe3103607f6e0fe890744f780f18d55400aec7c1d28ef8d8e902803a",
 	}, {
 		Jurisdiction: "ro",
 		Version:      1,
@@ -801,7 +801,7 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "7c104cc6c728a216091fcdd059c5fa53d2989563bde87cb0f96083b3e938226a",
+		Digest: "628c8a9b0c256449cc7625249f9a184a94e2d6d6dbe624347209e7b33597e57f",
 	}, {
 		Jurisdiction: "se",
 		Version:      1,
@@ -835,7 +835,7 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "5002891a77a52d780bc53ebb24c1241df3388162bcd8ba089c52ab2135b4235d",
+		Digest: "9e9ece41235e8cdde4431bc054c55535ba3d2eea77cb6aaabbd6880cc2617918",
 	}, {
 		Jurisdiction: "si",
 		Version:      1,
@@ -868,7 +868,7 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "3c02babdd7a9a497881b24db8fc5ebf0e18d7769b41622ad27edf668c444132e",
+		Digest: "bceb39134510c7d89c6a6854410950c38889af52efc8d8fc5829a488e39a24b5",
 	}, {
 		Jurisdiction: "sk",
 		Version:      1,
@@ -902,6 +902,6 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "252f3175b6f75da0f9b37687568ef7603a876644b57786aba26729e4b4aff439",
+		Digest: "c9b6ebef7d495496f5d22c8e7ee2a5e32c8214b155e37d74381419a8f5d7909d",
 	}}
 }

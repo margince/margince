@@ -6,10 +6,10 @@ instruments:
   - name: "Measures for the Administration of Internet E-mail Services (MII Order No. 38)"
     effective: 2006-03-30
     provision: "arts. 13 and 14"
-  - name: Advertising Law of the People's Republic of China
+  - name: Advertising Law of the PRC
     effective: 2015-09-01
     provision: "art. 43"
-  - name: Personal Information Protection Law of the People's Republic of China
+  - name: Personal Information Protection Law of the PRC (PIPL)
     effective: 2021-11-01
     provision: "arts. 13 and 17"
 reply-window: 8760h
@@ -81,7 +81,7 @@ PIPL lists the grounds for processing, and a legitimate interest is not among th
 
 ## What this layer does not state
 
-- PIPL art. 3 reaches a processor abroad that serves people in China. The pack does not set
+- PIPL art. 3 reaches a processor abroad that serves individuals in China. The pack does not set
   `data-protection-follows-recipient`. That key would also move request deadlines and the privacy
   page to this pack, which states neither. It is a question for review.
 - Advertising Law art. 9 bans words such as 最佳 and 国家级. The `claims-need-proof` key flags a

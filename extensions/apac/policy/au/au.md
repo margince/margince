@@ -58,7 +58,7 @@ opens fewer sends than inferred consent does.
 
 ## Disclosures
 
-- s. 17: a commercial message names the organisation that authorised it and says how to reach it
+- s. 17: a commercial message names the business that authorised it and says how to reach it
   (`advertiser_contact`).
 - s. 18: a commercial message carries a working unsubscribe facility (`objection_route`).
 - APP 7.3: direct marketing gives a simple way to opt out.

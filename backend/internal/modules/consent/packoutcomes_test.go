@@ -234,9 +234,9 @@ type shippedSend struct {
 }
 
 // sendFindings answers the codes the engine's draft, subject and footer checks
-// raise for one send. A sender in the recipient's own country, or a fixture
-// that names no sender, sends under that pack; any other sender is established
-// under no pack this test loads.
+// raise for one send. A sender in the recipient's own country sends under that
+// pack, and so does a fixture that names no sender. Any other sender is under
+// no pack this test loads.
 func sendFindings(t *testing.T, s shippedSend) []string {
 	t.Helper()
 	recipient := shippedPackCodes(t)[s.country]

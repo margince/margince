@@ -17,8 +17,8 @@ import (
 	"github.com/margince/margince/backend/pkg/extension/subjectrights"
 )
 
-// New returns the unit's declaration (the ADR-0120 §4 constructor
-// contract the generated composition calls).
+// New returns the unit's declaration, which the generated composition calls
+// (ADR-0120).
 func New() extension.Extension {
 	return extension.Extension{
 		Name:          "eu",
@@ -32,7 +32,7 @@ func New() extension.Extension {
 }
 
 // packsFor answers one jurisdiction pack per compiled rule set, so the policy
-// folders are the one list of member states. A unit may declare messaging
+// folders decide which member states the unit holds. A unit may declare messaging
 // rules only for a code it carries a pack for.
 func packsFor(rules []messaging.Rules) []jurisdiction.Pack {
 	out := make([]jurisdiction.Pack, 0, len(rules))

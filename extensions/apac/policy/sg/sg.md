@@ -34,8 +34,8 @@ This layer rests on the Spam Control Act 2007 and the Personal Data Protection A
 ## Advertising needs consent
 
 The Spam Control Act lets unsolicited commercial email go out in bulk if it meets the Second
-Schedule. The PDPA still needs consent to use a person's email address for marketing (s. 13). Deemed
-consent (s. 15) covers a purpose that is obvious when the person gave the address. Marketing is
+Schedule. The PDPA still needs consent to use an individual's email address for marketing (s. 13). Deemed
+consent (s. 15) covers a purpose that is obvious when the individual gave the address. Marketing is
 seldom that purpose, so this layer offers no exception. The core refuses advertising without a
 recorded consent.
 

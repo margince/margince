@@ -44,7 +44,7 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "8c877a36cfcd13ebca8da8db5b7f5029dfd03527b340d9adc45e2ab4bdd0dfbd",
+		Digest: "0f595c56d172a368b9db43fec6fdab7f826313a695f130f6ba80509419f5e36f",
 	}, {
 		Jurisdiction: "cn",
 		Version:      1,
@@ -53,11 +53,11 @@ func messagingRules() []messaging.Rules {
 			EffectiveFrom: time.Date(2006, time.March, 30, 0, 0, 0, 0, time.UTC),
 			Provision:     "arts. 13 and 14",
 		}, {
-			Name:          "Advertising Law of the People's Republic of China",
+			Name:          "Advertising Law of the PRC",
 			EffectiveFrom: time.Date(2015, time.September, 1, 0, 0, 0, 0, time.UTC),
 			Provision:     "art. 43",
 		}, {
-			Name:          "Personal Information Protection Law of the People's Republic of China",
+			Name:          "Personal Information Protection Law of the PRC (PIPL)",
 			EffectiveFrom: time.Date(2021, time.November, 1, 0, 0, 0, 0, time.UTC),
 			Provision:     "arts. 13 and 17",
 		}},
@@ -81,7 +81,7 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "901ea27730960909821bbcd030fe5507b9eb0daabb0e5803b4ec62a55e909e09",
+		Digest: "cec16e30d47018c8abe06e6cfe37c27e490ea1c3655830e479f7af0130e44227",
 	}, {
 		Jurisdiction: "hk",
 		Version:      1,
@@ -128,7 +128,7 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "b44ccddf7ef6717f4cab3c7bb3595c7edcf9b5218f4802eafaf1a7173d0d4bfa",
+		Digest: "facc89e6676c7c0e593234c8f8ad793ed5ed4a59149fb6e834c0a0a749dd5930",
 	}, {
 		Jurisdiction: "in",
 		Version:      1,
@@ -185,7 +185,7 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "7678d668bc54df1a1c7b7b7e00c289a30d667cb1f5afdb8cac2225e17b57acae",
+		Digest: "9df89e3331c421b1aa0514e3a1576c620b52ff4c318157c46464373a562666b5",
 	}, {
 		Jurisdiction: "kr",
 		Version:      1,
@@ -318,7 +318,7 @@ func messagingRules() []messaging.Rules {
 		Provenance: messaging.Provenance{
 			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Digest: "c1cd1acd348f61f91af106d34d57d136fbb95afc1572466aa956d28b8fafcb10",
+		Digest: "8c3145c332b4a044866ee04cbff636b68c1a75692be8b78882166ef06d88487d",
 	}, {
 		Jurisdiction: "th",
 		Version:      1,

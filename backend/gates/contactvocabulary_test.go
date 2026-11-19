@@ -47,7 +47,7 @@ var theRetiredWord = regexp.MustCompile(`(?i)person|people`)
 
 // notThisRecord is the words that merely spell those letters: a mask, an
 // adjective, a payroll noun, the German for persons, a forgery, a job title,
-// and the one that means physically present. Removed before the match rather
+// the law's natural and legal persons, and the one that means physically present. Removed before the match rather
 // than waived per site, because they are a property of the language and not of
 // any one file.
 //
@@ -59,6 +59,9 @@ var theRetiredWord = regexp.MustCompile(`(?i)person|people`)
 var notThisRecord = regexp.MustCompile(
 	`(?i)personal\w*|personnel\w*|personas?(?:[^a-z]|$)|personen\w*` +
 		`|impersonat\w*|salespe(?:rson|ople)\w*` +
+		// The law's two kinds of addressee, as the ePrivacy Directive and its
+		// national acts name them.
+		`|(?:natural|legal) persons?(?:'s)?` +
 		// Physically present. The separator decides how far this reaches:
 		// `in_person` and `InPerson` are one name, so nothing after them
 		// matters, while a prose "in person" ends where the word ends — "it

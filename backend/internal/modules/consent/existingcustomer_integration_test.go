@@ -87,9 +87,8 @@ func (e *resolveEnv) archivedEntity(t *testing.T) ids.UUID {
 	return entity
 }
 
-// saleAt plants a sale: a deal with the env's contact as its economic buyer
-// from before, holding the env's address from before, and an offer of entity
-// accepted at a moment.
+// saleAt plants a sale: a deal whose economic buyer is the env's contact, with
+// the env's address on it from before. An offer of entity is accepted at a.
 func (e *resolveEnv) saleAt(t *testing.T, entity ids.UUID, at time.Time) (deal, offer ids.UUID) {
 	t.Helper()
 	e.heldSince(t, e.address, at.Add(-30*24*time.Hour))

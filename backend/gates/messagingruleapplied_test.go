@@ -17,8 +17,8 @@ package gates
 // The consequence is a pack that states a country's law and an installation
 // that does not follow it. extensions/apac declares the Decree 91/2020/ND-CP
 // subject label, the advertiser-identification disclosure and the acknowledged
-// opt-out; the engine applies none of the three today, and no decision records
-// the ruleset version it was taken under. Before this gate nothing held that
+// opt-out. The engine applied none of the three, and no decision recorded the
+// ruleset version it was taken under. Before this gate nothing held that
 // apart: the pack's Rules literal reads as a complete statement of the decree,
 // and which of its fields reach a consumer could only be learnt by grepping for
 // each one. The field comments now say which are unapplied, and this is what
@@ -309,10 +309,10 @@ func TestTheEngineReadsAtLeastOneRuleField(t *testing.T) {
 	// to a subpackage would report the movers unapplied rather than say what
 	// happened.
 	//
-	// No shipped pack narrows the two windows — extensions/eu and extensions/apac
-	// all declare the core defaults. What the scan proves is that the reader
-	// exists, which is what this gate asks; a pack that one day sends a shorter
-	// window reaches an engine that reads it.
+	// No shipped pack narrows the two windows: extensions/eu and extensions/apac
+	// all declare the core defaults. The scan proves that the reader exists,
+	// which is what this gate asks. A pack that one day sends a shorter window
+	// reaches an engine that reads it.
 	for _, field := range []string{"FrequencyCap", "ReplyWindow", "DealFollowUpWindow", "MarketingExceptions"} {
 		if !readers[field] {
 			t.Fatalf("the reader scan finds nothing applying messaging.Rules.%s, which %s does apply.\n\n"+

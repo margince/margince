@@ -168,9 +168,8 @@ func TestPublishedVocabularyDerivesFromTheSeamSource(t *testing.T) {
 }
 
 // TestEuManifestMatchesItsDerivation binds the committed artifact to the
-// committed declaration: eu holds jurisdiction packs only (passive policy,
-// requesting no risk tier), so its manifest is identity with an empty
-// risk-tiers list.
+// committed declaration. eu holds jurisdiction packs only and requests no risk
+// tier, so its manifest is its identity with an empty risk-tiers list.
 func TestEuManifestMatchesItsDerivation(t *testing.T) {
 	assertCommittedManifest(t, filepath.Join(repoRoot, "extensions", "eu"), "eu",
 		`"name": "eu"`, `"version": "1.0.0"`, `"risk_tiers": []`)

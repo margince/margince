@@ -25,8 +25,8 @@ electronic mail sets the exceptions.
 ## Advertising to a company
 
 The royal decree lets a sender write to a legal person at an impersonal address, such as a general
-company mailbox, unless it objects. The engine cannot tell a company's general address from a
-person's own address, so this pack asks for consent for every address. That is stricter than the
+company mailbox, unless it objects. The engine cannot tell a company's general address from an
+individual's own address, so this pack asks for consent for every address. That is stricter than the
 law, and the core already applies it.
 
 ## The existing-customer exception

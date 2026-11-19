@@ -65,7 +65,7 @@ const (
 // classOf answers which layer a policy file is, from where it sits. Names are
 // relative to the policy folder. pack is the folder of the pack being compiled,
 // "." when the policy folder is the one pack. fallback.md and regional/ sit at
-// the top and may be shared by every pack; the country and overlay layers sit
+// the top and may be shared by every pack. The country and overlay layers sit
 // in the pack's own folder, and a pack folder holds the country named for it.
 func classOf(pack, name string) (layerClass, error) {
 	if top, file := path.Split(name); name == "fallback.md" || (top == "regional/" && strings.HasSuffix(file, ".md")) {

@@ -110,9 +110,9 @@ type RequirementFinding struct {
 	Detail string
 }
 
-// owedSubjectLabels are the labels one subject line owes: one per distinct
-// label among the packs that judged an advertising recipient, each recipient's
-// codes given as one ruleset. A fold keeps its first label in SubjectPrefix and
+// owedSubjectLabels are the labels one subject line owes, one per distinct
+// label among the packs that judged an advertising recipient. Each ruleset is
+// one recipient's codes. A fold keeps its first label in SubjectPrefix and
 // every distinct one in the applied list.
 func owedSubjectLabels(rulesets [][]jurisdiction.Code) []string {
 	var owed []string
@@ -130,7 +130,7 @@ func owedSubjectLabels(rulesets [][]jurisdiction.Code) []string {
 // on its reason, and transmit parks on it. reason is empty when the subject
 // carries every owed label.
 //
-// ADVERTISING ONLY: the caller passes the labels of advertising recipients. A
+// Advertising only: the caller passes the labels of advertising recipients. A
 // label on an invoice would tell a recipient their payment reminder is an
 // advertisement.
 //

@@ -3034,6 +3034,8 @@
   "sendPermission.reason.restricted": "Die Verarbeitung der Daten dieses Kontakts ist eingeschränkt. Der Versand dieser E-Mail hebt die Einschränkung nicht auf.",
   "sendPermission.reason.askedUsToStop": "Der Kontakt möchte nicht mehr kontaktiert werden. Der Versand dieser E-Mail ändert seinen Wunsch nicht.",
   "sendPermission.reason.bounced": "Diese Adresse nimmt keine E-Mails an. Korrigiere die Adresse. Eine Ausnahme ist hier nicht möglich.",
+  "sendPermission.reason.subjectLabelMissing": "Marketing an eine empfangende Person in diesem Land muss den Betreff mit der Kennzeichnung beginnen, die ihr Recht vorschreibt. Ergänze sie im Betreff.",
+  "sendPermission.reason.subjectLabelsConflict": "Die Länder dieser empfangenden Personen schreiben für Marketing verschiedene Kennzeichnungen im Betreff vor, und ein Betreff beginnt mit einer. Sende eine Nachricht je Kennzeichnung.",
   "sendPermission.reason.optedOutAfterRequest": "Der Kontakt hat nach der Angebotsanfrage Werbung abgelehnt. Der Versand dieser E-Mail ändert seine Entscheidung nicht.",
   "sendPermission.reason.permissionRequired": "Für diese Marketingnachricht ist nach den geltenden Regeln keine Erlaubnis belegt. Erfasse die Einwilligung oder die erforderlichen Nachweise.",
   "sendPermission.reason.consentRequired": "Marketing an eine empfangende Person in diesem Land braucht ihre vorherige Einwilligung.",

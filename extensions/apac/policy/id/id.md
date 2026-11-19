@@ -29,7 +29,7 @@ Information and Transactions (UU ITE) and on the Personal Data Protection Law (U
 
 ## Advertising needs consent
 
-UU ITE art. 26 asks for the person's consent to use their personal data by electronic means. UU PDP
+UU ITE art. 26 asks for the data subject's consent to use their personal data by electronic means. UU PDP
 art. 20 lists other grounds too, but the layer reads art. 26 as binding marketing by email. The core
 refuses advertising without a recorded consent, and the layer states `marketing-exceptions` empty.
 

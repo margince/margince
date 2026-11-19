@@ -56,10 +56,10 @@ func TestOnlyGermanyDeclaresRetentionFloors(t *testing.T) {
 	}
 }
 
-// Where national law adds a condition the engine cannot check (Austria's ECG
-// list, Ireland's 12 months) or names no exception (Bulgaria, Hungary,
-// Poland), the pack offers none. Every other member state keeps the four
-// conditions of Art. 13(2).
+// A pack offers no exception where national law adds a condition the engine
+// cannot check (Austria's ECG list, Ireland's 12 months). It offers none where
+// the law names no exception (Bulgaria, Hungary, Poland). Every other member
+// state keeps the four conditions of Art. 13(2).
 func TestTheExistingCustomerExceptionFollowsNationalLaw(t *testing.T) {
 	without := []jurisdiction.Code{"at", "bg", "hu", "ie", "pl"}
 	for _, r := range New().Messaging {

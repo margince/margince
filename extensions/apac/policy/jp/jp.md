@@ -44,7 +44,7 @@ advertising without a recorded consent, so this layer adds no key for it.
 
 ## The transaction-relationship exception (art. 3(1)(iii))
 
-Art. 3(1) exempts a person who has a business relationship with the sender. The engine models this
+Art. 3(1) exempts a recipient who has a business relationship with the sender. The engine models this
 route as the existing-customer exception, and asks for each of its conditions:
 
 - a recorded sale to this contact;

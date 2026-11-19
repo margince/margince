@@ -148,7 +148,7 @@ var absoluteDenials = map[string]bool{
 	ReasonOptedOutAfterRequest:        true,
 	ReasonMarketingConsentRequired:    true,
 	ReasonMarketingPermissionRequired: true,
-	// A label the law fixes is not softened by a rollout mode either, and the
+	// A label the law fixes is not softened by a rollout mode either. The
 	// sender repairs it by editing the subject or splitting the recipients.
 	ReasonSubjectLabelMissing:   true,
 	ReasonSubjectLabelsConflict: true,

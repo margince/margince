@@ -26,7 +26,7 @@ var sharedFolders = map[string]bool{"regional": true, "fixtures": true, "researc
 
 // CompileUnit compiles a policy folder in either layout. With an index.md at
 // the top it is one pack, as Compile reads it. Without one, every other folder
-// is a pack named for its country, with its own index.md, and the packs share
+// is a pack named for its country, with its own index.md. The packs share
 // fallback.md, regional/ and fixtures/ at the top.
 func CompileUnit(fsys fs.FS) (Unit, error) {
 	_, err := fs.Stat(fsys, IndexFile)

@@ -24,8 +24,8 @@ Communications) Regulations 2011, S.I. No. 336 of 2011.
 
 ## Advertising to a company
 
-Regulation 13 lets a sender advertise to a person who is not a natural person unless it has
-objected. The engine cannot tell a company's general address from a person's own address, so this
+Regulation 13 lets a sender advertise to an addressee who is not a natural person unless it has
+objected. The engine cannot tell a company's general address from an individual's own address, so this
 pack asks for consent for every address. That is stricter than the law, and the core already applies
 it.
 

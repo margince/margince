@@ -27,7 +27,7 @@ numérique (LCEN) asks that advertising is recognisable as such and names who it
 
 L34-5 binds advertising to natural persons. The CNIL accepts advertising to a professional address
 without consent when it concerns the recipient's profession. The engine cannot tell a company's
-general address from a person's own address, so this pack asks for consent for every address. That
+general address from an individual's own address, so this pack asks for consent for every address. That
 is stricter than the law, and the core already applies it.
 
 ## The existing-customer exception

@@ -66,10 +66,10 @@ func TestNewDeclaresTheGoBDFloors(t *testing.T) {
 // conditions in a function nobody wires and three in the one it does is a
 // §7(3) that looks lawful in its own tests.
 //
-// This asserts the DECLARATION and no more, deliberately: a pack states rules
-// and the core evaluates them, and this unit cannot reach the evaluator — it is
-// unexported in internal/modules/consent, and backend cannot import this module
-// back without a cycle. The consent integration tests run the route itself.
+// This asserts the declaration and no more. A pack states rules and the core
+// evaluates them. This unit cannot reach the evaluator: it is unexported in
+// internal/modules/consent, and backend cannot import this module back without
+// a cycle. The consent integration tests run the route itself.
 func TestTheExistingCustomerExceptionCarriesAllFourConditions(t *testing.T) {
 	rules := germanRules(t)
 	if len(rules.MarketingExceptions) != 1 {
