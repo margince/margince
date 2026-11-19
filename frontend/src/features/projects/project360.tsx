@@ -28,14 +28,12 @@ import {
 import { Badge, Button, OverflowMenu } from "../../design-system/atoms";
 import { QueryGate } from "../../design-system/querystates";
 import { RecordView } from "../../design-system/recordview";
-import { omitted } from "../../design-system/surfacestate";
 import { useT } from "../../i18n";
 import { taskWriteKeys } from "../../lib/activitykeys";
-import { useCan, useCanWrite } from "../../lib/capability";
+import { useCan } from "../../lib/capability";
 import { labelFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
 import { useShortcut } from "../../lib/shortcuts";
-import { NewDealAction } from "../companies/companyactions";
 import { ShareAction } from "../records/share";
 import { TaskDetailModal } from "../worklist/taskdetailmodal";
 import { project360Key } from "./project360.key";
@@ -51,6 +49,7 @@ import { ProjectDrawer } from "./projectdrawer";
 import type { ProjectHealthAssessment } from "./projecthealth.queries";
 import { ProjectHealthModal } from "./projecthealthmodal";
 import { type LogDrawer, ProjectLogVerbs } from "./projectlogverbs";
+import { ProjectNewDeal } from "./projectnewdeal";
 import { ProjectNext } from "./projectnext";
 import { AssignProjectOwnerAction } from "./projectowner";
 import { AdvanceProjectModal } from "./projectphase";
@@ -126,7 +125,6 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
   // control describes itself by pointing at the same explanation.
   const readOnlyReason = useProjectVerbRefusal(project);
   const readOnly = Boolean(readOnlyReason);
-  const canCreateDeal = useCanWrite("deal", "create");
   // The task detail and the health dialog are owned here rather than by the
   // cards. One modal per page, so two cards cannot both put one on screen.
   const [openTask, setOpenTask] = useState<string | null>(null);
@@ -217,22 +215,7 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
           // Winning the deal later advances the project's phase without
           // re-checking, so `EnsureAttachable` proves the authority at the
           // moment of attaching.
-          !readOnly &&
-          canCreateDeal &&
-          (project.company_id ? (
-            <NewDealAction
-              companyId={project.company_id}
-              companyName={view.company?.name ?? project.name}
-              projectId={project.id}
-              link
-            />
-          ) : (
-            !omitted(view, "company") && (
-              <span data-testid="project-new-deal-needs-company">
-                {t("project.newDealNeedsCustomer")}
-              </span>
-            )
-          ))
+          !readOnly && <ProjectNewDeal view={view} />
         }
         tick={
           canUpdateTask

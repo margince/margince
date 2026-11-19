@@ -20025,7 +20025,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "project.endDate": "Enddatum",
   "project.noCustomer": "Kein Kundenunternehmen",
   "project.noCustomerSet":
-    "Kein Kundenunternehmen. Legen Sie eines unter Mehr, Unternehmen und Kontakte fest.",
+    "Kein Kundenunternehmen. Leg eines unter Mehr, Unternehmen und Kontakte fest.",
   "project.newDealNeedsCustomer":
     "Ein neuer Deal braucht ein Kundenunternehmen.",
   "project.new": "Neues Projekt",
