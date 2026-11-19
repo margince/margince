@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/voice-knowledge frontend/src/features/deals/dealfiles.tsx frontend/src/features/records/activityfiles.tsx backend/internal/compose/uploadsettings.go backend/internal/modules/activities/attachmenttypes.go backend/internal/modules/activities/documents.go backend/internal/modules/knowledge frontend/src/features/contacts/contactchatcapture.tsx backend/internal/compose/chatcapturefile.go -->
+<!-- describes: frontend/src/features/voice-knowledge frontend/src/features/deals/dealfiles.tsx frontend/src/features/records/activityfiles.tsx backend/internal/compose/uploadsettings.go backend/internal/modules/activities/attachmenttypes.go backend/internal/modules/activities/documents.go backend/internal/modules/activities/attachmentlink.go backend/internal/modules/knowledge frontend/src/features/contacts/contactchatcapture.tsx backend/internal/compose/chatcapturefile.go -->
 # Documents and files
 
 Margince holds files in three different places, for three different reasons:
@@ -18,6 +18,14 @@ To upload a document in Margince, such as a customer's signed contract, open the
 3. Drop the file on **File**, or click to choose one, and click **Upload**.
 Without write access the button is not shown. The contract record itself is added on its own, see [Contracts and invoices](contracts-and-invoices.md).
 Also called: attach a file, add an attachment, add a PDF, upload a contract document.
+
+### How do I add a link, such as a Google Doc?
+To add a link to a document kept elsewhere, such as a Google Doc, Sheet or a web page, open the company, contact or deal. Choose its **Documents** tab and click **Add document**.
+1. Choose **Link** at the top of the form and paste the address into **Address**. It must start with `https://` or `http://`.
+2. Margince reads the page and fills **Title** with the name the page gives. A Google file shows its contents only after sign-in, so type a title for it. Without a title the link shows the site's address.
+3. Choose a **Category** and, on a company, **About**, as for a file. Click **Add link**.
+The link shows on the **Documents** tab with **Docs**, **Sheets**, **Slides**, **Forms**, **Drive** or **Web** on its tile, and opens in a new tab. Margince stores only the address, never the document. Whoever opens it needs access to it where it lives. The same address can be listed only once on a record.
+Also called: link a Google Drive file, add a URL, add a web link to a company.
 
 ### How do I attach a file to a contact?
 To attach or upload a file to a contact in Margince, open the contact, choose its **Documents** tab and click **Add document**.
