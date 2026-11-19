@@ -86,3 +86,15 @@ func TestANameRefusedTwiceSaysToRenameNotToTryAgain(t *testing.T) {
 		t.Errorf("answer = %d %s, want 422 channel_name_refused without a retry", rec.Code, rec.Body.String())
 	}
 }
+
+func TestABlankNameIsDerivedFromTheRecord(t *testing.T) {
+	chat := fakeChatClient(t)
+	id := ids.NewV7()
+	ch, err := createFor(t, chat, id, "   ")
+	if want := "deal-" + idSuffix(id); err != nil || ch.Name != want {
+		t.Fatalf("a blank name = %q, %v; want %s", ch.Name, err, want)
+	}
+	if got := fallbackName(RecordDeal, id, "", &dispact.CodeError{Code: dispact.CodeNameTaken}); got != "deal-"+idSuffix(id) {
+		t.Errorf("a taken blank name falls back to %q, want deal-%s", got, idSuffix(id))
+	}
+}

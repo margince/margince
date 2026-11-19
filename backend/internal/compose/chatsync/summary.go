@@ -24,8 +24,10 @@ import (
 	"github.com/margince/margince/backend/internal/modules/chatlinks"
 	"github.com/margince/margince/backend/internal/modules/chatlinks/dispact"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -153,13 +155,6 @@ func fileNote(ctx context.Context, f filing, said talk, reply chatsummary.Reply)
 		"ended_at":      said.ended.UTC().Format(time.RFC3339),
 		"url":           said.url,
 	}
-	var links []activities.ActivityLinkInput
-	if link.DealID != nil {
-		links = append(links, activities.ActivityLinkInput{EntityType: chatlinks.RecordDeal, EntityID: *link.DealID})
-	}
-	if link.ProjectID != nil {
-		links = append(links, activities.ActivityLinkInput{EntityType: chatlinks.RecordProject, EntityID: *link.ProjectID})
-	}
 	record := linkRecord(link)
 	key := said.key + ":" + record.Type + ":" + record.ID.String()
 	body := noteBody(reply)
@@ -177,7 +172,6 @@ func fileNote(ctx context.Context, f filing, said talk, reply chatsummary.Reply)
 		SourceSystem: &system,
 		SourceID:     &key,
 		Raw:          &raw,
-		Links:        links,
 		Source:       summarySource,
 		Origin:       activities.OriginAgent,
 	}
@@ -186,9 +180,17 @@ func fileNote(ctx context.Context, f filing, said talk, reply chatsummary.Reply)
 		if err := f.store.HoldLiveLinkTx(ctx, tx, link); err != nil {
 			return err
 		}
-		var created bool
-		var err error
-		note, created, err = f.acts.LogActivityTx(ctx, tx, in)
+		filed, links, err := priorNote(ctx, tx, link, said.key)
+		created := false
+		switch {
+		case err != nil:
+			return err
+		case !filed.IsZero():
+			note, err = f.acts.GetActivityTx(ctx, tx, ids.ActivityID{UUID: filed}, storekit.IncludeArchived, activities.CustomColumns{})
+		default:
+			in.Links = links
+			note, created, err = f.acts.LogActivityTx(ctx, tx, in)
+		}
 		if err == nil && !created && note.Source != summarySource {
 			return errSummaryKeyTaken
 		}
@@ -198,6 +200,30 @@ func fileNote(ctx context.Context, f filing, said talk, reply chatsummary.Reply)
 		return crmcontracts.Activity{}, fmt.Errorf("chat summary: filing the note for %s: %w", key, err)
 	}
 	return note, nil
+}
+
+// priorNote finds a note of the talk on the link's own record. It looks under
+// every key a summary of it was filed with, the old one without a record too.
+// With none, it answers the records a new note is linked to. A project that
+// already holds the talk through another deal's note is left out.
+func priorNote(ctx context.Context, tx pgx.Tx, link chatlinks.Link, talkKey string) (ids.UUID, []activities.ActivityLinkInput, error) {
+	engine := principal.WithActor(ctx, chatLinksPrincipal)
+	escaped := storekit.EscapeLike(talkKey)
+	keys := []string{escaped, escaped + ":" + chatlinks.RecordDeal + ":%", escaped + ":" + chatlinks.RecordProject + ":%"}
+	record := linkRecord(link)
+	filed, err := activities.SourceFiledOnTx(engine, tx, provenance.ChatSummarySource, keys, record.Type, record.ID)
+	if err != nil || !filed.IsZero() {
+		return filed, nil, err
+	}
+	links := []activities.ActivityLinkInput{{EntityType: record.Type, EntityID: record.ID}}
+	if link.ProjectID == nil || record.Type == chatlinks.RecordProject {
+		return ids.Nil, links, nil
+	}
+	held, err := activities.SourceFiledOnTx(engine, tx, provenance.ChatSummarySource, keys, chatlinks.RecordProject, *link.ProjectID)
+	if err != nil || !held.IsZero() {
+		return ids.Nil, links, err
+	}
+	return ids.Nil, append(links, activities.ActivityLinkInput{EntityType: chatlinks.RecordProject, EntityID: *link.ProjectID}), nil
 }
 
 // noteHeadings name the lists under a summary, in the language it is written in.

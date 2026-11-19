@@ -8,12 +8,16 @@ package chatsync
 import (
 	"context"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/modules/chatlinks"
 	"github.com/margince/margince/backend/internal/modules/chatlinks/dispact"
+	"github.com/margince/margince/backend/internal/modules/chatlinks/dispact/dispacttest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -141,6 +145,8 @@ func TestALinkAskingForTheTalkSoFarDuringAPullRunsThePullOnceMore(t *testing.T) 
 	late := e.secondDeal(t, "Late renewal")
 	e.chat.AddChannel("late")
 	e.history.AddChannel("late")
+	// Talk still going keeps the new link's backfill open across both runs.
+	e.history.Seed("late", dispacttest.Message{Seq: 1, UserName: "Rita Rep", Text: "Still on it", PostedAt: e.now.Add(-5 * time.Minute)})
 	yes := true
 	e.puller.Chats = &hookedChats{Chats: e.puller.Chats, before: func() {
 		if _, err := e.store.Link(e.repCtx(), chatlinks.RecordDeal, late,
@@ -151,5 +157,81 @@ func TestALinkAskingForTheTalkSoFarDuringAPullRunsThePullOnceMore(t *testing.T) 
 	var snooze *river.JobSnoozeError
 	if err := worker.Work(ctx, job); !errors.As(err, &snooze) {
 		t.Fatalf("a pull that a new link's own pull folded into = %v, want it to run once more", err)
+	}
+	if err := worker.Work(ctx, job); err != nil {
+		t.Fatalf("the pull run once more = %v, want it to end once it read the new link", err)
+	}
+}
+
+func TestABareStatusOrATimeoutLeavesTheLinkActive(t *testing.T) {
+	for name, front := range map[string]http.HandlerFunc{
+		"a bare 404": func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNotFound) },
+		"a bare 403": func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusForbidden) },
+		"a 503":      func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusServiceUnavailable) },
+		"a timeout":  func(_ http.ResponseWriter, r *http.Request) { <-r.Context().Done() },
+	} {
+		e := setupPull(t)
+		srv := httptest.NewServer(front)
+		t.Cleanup(srv.Close)
+		client := srv.Client()
+		client.Timeout = 200 * time.Millisecond
+		e.puller.Chats = httpChats{client: dispact.New(client, srv.URL, "gwapp_test"), connection: e.conn}
+		e.pull(t)
+		if got := e.linkStatus(t); got != chatlinks.StatusActive {
+			t.Errorf("%s: link status = %q, want it active: only the chat's own answer pauses a link", name, got)
+		}
+	}
+}
+
+func TestANoteFiledUnderTheKeyWithoutARecordIsNotFiledAgain(t *testing.T) {
+	e := setupPull(t)
+	threeDaysBefore := -3 * 24 * 60
+	e.say("acme", 1, threeDaysBefore, "Maya Brandt asked for 8 percent")
+	at := linkedAt.Add(time.Duration(threeDaysBefore) * time.Minute)
+	e.note(t, "acme:1", "filed before the record joined the key", at, at)
+	e.exec(t, `UPDATE chat_link SET backfill_requested = true WHERE id = $1`, e.link)
+	e.pull(t)
+
+	if notes := e.notes(t); len(notes) != 1 || notes[0].sourceID != "acme:1" {
+		t.Fatalf("notes = %+v, want only the note under the old key", notes)
+	}
+}
+
+func TestAProjectSharedByTwoDealsHoldsTheTalkSoFarOnce(t *testing.T) {
+	e := setupPull(t)
+	project := ids.NewV7()
+	e.exec(t, `INSERT INTO project (id, name, source, captured_by) VALUES ($1, 'Brandt rollout', 'seed', 'system')`, project)
+	threeDaysBefore := -3 * 24 * 60
+	e.say("acme", 1, threeDaysBefore, "Maya Brandt asked for 8 percent")
+	yes := true
+	existing := chatlinks.LinkRequest{Mode: chatlinks.ModeExisting, Channel: "acme", SummarizeHistory: &yes}
+	if err := e.store.Unlink(e.repCtx(), chatlinks.RecordDeal, e.deal); err != nil {
+		t.Fatal(err)
+	}
+	taker := e.secondDeal(t, "Brandt renewal")
+	company := ids.NewV7()
+	e.exec(t, `INSERT INTO company (id, display_name, owner_id, source, captured_by) VALUES ($1, 'Brandt', $2, 'seed', 'system')`, company, e.rep)
+	e.exec(t, `INSERT INTO relationship (kind, project_id, company_id, role, source, captured_by)
+		VALUES ('project_company', $1, $2, 'customer', 'manual', 'human:x')`, project, company)
+	e.exec(t, `UPDATE deal SET company_id = $1, project_id = $2 WHERE id IN ($3, $4)`, company, project, e.deal, taker)
+	for _, deal := range []ids.UUID{e.deal, taker} {
+		state, err := e.store.Link(e.repCtx(), chatlinks.RecordDeal, deal, existing)
+		if err != nil || state.Link.ProjectID == nil {
+			t.Fatalf("linking %s = %+v, %v; want the channel with the project", deal, state.Link, err)
+		}
+		e.pull(t)
+		if err := e.store.Unlink(e.repCtx(), chatlinks.RecordDeal, deal); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	var onTaker, onProject int
+	if err := e.owner.QueryRow(context.Background(), `SELECT
+		(SELECT count(*) FROM activity_link WHERE deal_id = $1),
+		(SELECT count(*) FROM activity_link WHERE project_id = $2)`, taker, project).Scan(&onTaker, &onProject); err != nil {
+		t.Fatal(err)
+	}
+	if onTaker != 1 || onProject != 1 || len(e.notes(t)) != 1 {
+		t.Fatalf("notes on the taking deal %d, the project %d, the first deal %d; want one each", onTaker, onProject, len(e.notes(t)))
 	}
 }

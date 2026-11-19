@@ -203,7 +203,13 @@ func (p *Puller) judge(ctx context.Context, session chatlinks.Session, link chat
 // limit or a model deferral stops the pull until the next tick.
 func (p *Puller) answerFailure(ctx context.Context, link chatlinks.Link, err error) error {
 	var limited *connector.RateLimitedError
+	var bare *dispact.StatusError
 	switch {
+	case errors.As(err, &bare):
+		// A bare status may come from a proxy in front of the chat, and a paused
+		// link is never read again. Only the chat's own answer pauses a link.
+		p.Log.WarnContext(ctx, "chat pull: the chat answered a bare status; the link stays active", "link", link.ID.String(), "err", err)
+		return nil
 	case errors.Is(err, dispact.ErrTokenRejected):
 		return capture.StopPollingChannelConnection(ctx, p.Pool, link.ConnectionID,
 			capture.ChannelPollStoppedByBadToken, "the chat refused the bot token")

@@ -77,7 +77,10 @@ when it ends whether a notice came after it started, and runs once more if one d
 
 `channel.archived` pauses the channel's link through `MarkChannelGone`, the same write a `404` from the
 chat makes. A notice can be lost, and the chat still serves an archived channel's history and takes the
-bot's posts. So each pull also reads every linked channel and pauses the link of an archived one. A notice is matched only to the links of the connected bot, and its `workspace_id` must be
+bot's posts. So each pull also reads every linked channel and pauses the link of an archived one. Only the chat's
+own answer pauses a link: an archived channel, or a refusal such as `channel_not_found`. A bare `404`,
+`403` or `5xx`, which a proxy in front of the chat may send, leaves the link active, because a paused
+link is never read again. A notice is matched only to the links of the connected bot, and its `workspace_id` must be
 that bot's team, so a notice for another team cannot reach this installation's links.
 
 ### The cadence switch
@@ -112,8 +115,11 @@ Each closed episode is judged in order by the `chat_summary` task's `episode` si
 memory. When the model says the talk matters, the title and summary are filed as one note on the
 link's deal and project, under the system actor `system:chat_links`. The note's
 `(source_system, source_id)` is `dispact` and `<channel slug>:<first seq>:<record type>:<record id>`, which
-the activity table holds unique. A replay, or the same record linked to the channel again, files nothing
-twice. A record that takes the channel over files its own note. No other writer
+the activity table holds unique. Before it files, the engine looks for a note of the same talk on the
+record under any key, including the older `<channel slug>:<first seq>` without a record. So a replay, or
+the same record linked to the channel again, files nothing twice. A record that takes the channel over
+files its own note. A project that already holds the talk through another deal's note is left off the
+new one. No other writer
 may stamp `source_system = dispact`, so no one can claim a summary's key before it is written. The note
 is filed in one transaction that first checks the link is still live and still names the same deal and
 project, so an unlink during the model call files nothing.

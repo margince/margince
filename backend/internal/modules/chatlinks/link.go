@@ -330,9 +330,13 @@ func LiveChannel(ctx context.Context, chat Chat, slug string) (dispact.Channel, 
 
 // createChannel makes the record's channel under the record's name. Deals
 // often share a name, so a name the chat refuses is asked once more in a form
-// derived from the record.
+// derived from the record. A blank name starts in that form.
 func createChannel(ctx context.Context, chat Chat, kind string, id ids.UUID, name string) (dispact.Channel, error) {
-	ch, err := chat.CreateChannel(ctx, externalKey(kind, id), channelNameOf(name))
+	name = channelNameOf(name)
+	if name == "" {
+		name = kind + "-" + idSuffix(id)
+	}
+	ch, err := chat.CreateChannel(ctx, externalKey(kind, id), name)
 	if errors.Is(err, dispact.ErrNameRefused) {
 		ch, err = chat.CreateChannel(ctx, externalKey(kind, id), fallbackName(kind, id, name, err))
 	}
@@ -342,14 +346,21 @@ func createChannel(ctx context.Context, chat Chat, kind string, id ids.UUID, nam
 // fallbackName tells a taken name apart by the end of the record's id. A name
 // the chat's rules refuse is replaced by the record's kind and that id.
 func fallbackName(kind string, id ids.UUID, name string, refusal error) string {
-	full := id.String()
-	suffix := full[len(full)-6:]
+	suffix := idSuffix(id)
 	var coded *dispact.CodeError
 	if errors.As(refusal, &coded) && coded.Code == dispact.CodeNameTaken {
-		runes := []rune(channelNameOf(name))
-		return strings.TrimSpace(string(runes[:min(len(runes), channelNameLimit-len(suffix)-1)])) + " " + suffix
+		runes := []rune(name)
+		if kept := strings.TrimSpace(string(runes[:min(len(runes), channelNameLimit-len(suffix)-1)])); kept != "" {
+			return kept + " " + suffix
+		}
 	}
 	return kind + "-" + suffix
+}
+
+// idSuffix is the end of a record's id, its random part.
+func idSuffix(id ids.UUID) string {
+	full := id.String()
+	return full[len(full)-6:]
 }
 
 // externalKey names the channel Margince made for a record, so a retried
