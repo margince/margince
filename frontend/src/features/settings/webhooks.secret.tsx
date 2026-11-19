@@ -91,7 +91,14 @@ export function SecretRevealModal({
   });
 
   return (
-    <Modal open onClose={onClose} labelledBy={headingId} intent="confirm">
+    <Modal
+      open
+      onClose={onClose}
+      labelledBy={headingId}
+      intent="confirm"
+      unsaved={!copy.copied}
+      unsavedBody={t("webhooks.secret.leaveWarning")}
+    >
       <Heading size="large" id={headingId} className="t-h2 modal-title">
         {t("webhooks.secret.title")}
       </Heading>

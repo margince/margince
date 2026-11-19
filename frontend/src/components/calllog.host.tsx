@@ -87,7 +87,9 @@ export function CallLogHost({ children }: Readonly<{ children: ReactNode }>) {
             askedKind="call"
             openOnMount
             onClose={close}
-            about={<EntityRef kind="contact" id={call.entityId} asText />}
+            about={
+              <EntityRef kind={call.entityType} id={call.entityId} asText />
+            }
           />
         </Suspense>
       )}

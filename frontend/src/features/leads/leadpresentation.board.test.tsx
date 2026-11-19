@@ -9,6 +9,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
@@ -70,7 +71,7 @@ function json(body: unknown, status = 200): Response {
 }
 
 // Draws the board, and redraws it under other dials with the same cache.
-function drawBoard(query: ListQuery) {
+function drawBoard(query: ListQuery, rows: Lead[] = [lead]) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -80,7 +81,7 @@ function drawBoard(query: ListQuery) {
       <LocaleProvider initial="en">
         <LeadBoard
           query={dials}
-          rows={[lead]}
+          rows={rows}
           onMoved={() => undefined}
           hasMore={false}
           loadMore={() => undefined}
@@ -453,5 +454,35 @@ describe("the lead board's terminal columns under the queue's dials", () => {
     expect(stated.map((count) => count.textContent).join(" ")).not.toMatch(
       /\b1\b/,
     );
+  });
+});
+
+describe("a lead's card on the board", () => {
+  it("sets the origin and the next step apart, and names no origin it lacks", async () => {
+    serve(() => json({ data: [] }));
+    drawBoard(UNNARROWED_LIST_QUERY, [
+      {
+        ...lead,
+        origin: "partner",
+        origin_label: "Partner",
+        next_task_subject: "Follow up with the new lead",
+      },
+      { ...lead, id: "l-bare", full_name: "Mia Bare" },
+    ]);
+
+    const referred = (await screen.findByText("Jonas Petersen")).closest(
+      ".deal-card",
+    ) as HTMLElement;
+    const origin = within(referred).getByText("Partner");
+    const step = within(referred).getByText("Follow up with the new lead");
+    expect(origin.closest(".deal-flags")).not.toBeNull();
+    expect(origin.closest(".deal-flags")).toBe(step.closest(".deal-flags"));
+    expect(origin).not.toBe(step);
+
+    const bare = screen
+      .getByText("Mia Bare")
+      .closest(".deal-card") as HTMLElement;
+    expect(within(bare).queryByText(en["lead.originUnset"])).toBeNull();
+    expect(within(bare).getByText(en["lead.noNextTask"])).toBeTruthy();
   });
 });

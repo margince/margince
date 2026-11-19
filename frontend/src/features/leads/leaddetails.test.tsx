@@ -125,6 +125,29 @@ describe("a lead's company facts", () => {
   });
 });
 
+describe("a lead's phone", () => {
+  it("dials the number from its row", async () => {
+    serve({ ...lead, phone: "+49301234567" });
+    render(<LeadScreen id="l-1" />);
+    const number = await screen.findByRole("link", { name: "+49301234567" });
+    expect(number).toHaveAttribute("href", "tel:+49301234567");
+  });
+});
+
+describe("the Company routing key row", () => {
+  it("says what the key is for", async () => {
+    serve(lead);
+    const user = userEvent.setup();
+    render(<LeadScreen id="l-1" />);
+    await showEmptyFields(user);
+    expect(
+      await screen.findByRole("button", {
+        name: en["record.companyRoutingKeyWhy"],
+      }),
+    ).toBeInTheDocument();
+  });
+});
+
 describe("the About company row", () => {
   // The name shown is the company's own, so an editor here would change a name
   // the row does not show.

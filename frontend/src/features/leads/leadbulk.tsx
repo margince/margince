@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { useRecordOwnerOptions } from "../../components/assigneepicker";
@@ -64,6 +64,21 @@ function assignOutcomeMessage(
   }
 }
 
+/** The sentence a run that moved rows ends with, naming how many and what. */
+export function useBulkDoneMessage() {
+  const plural = usePlural();
+  const { locale } = useLocale();
+  return (moved: number, action: BulkAction) => {
+    const count = formatNumber(moved, locale);
+    return action.kind === "assign"
+      ? plural("lead.bulkAssignedDone", moved, {
+          count,
+          owner: action.ownerName,
+        })
+      : plural("lead.bulkDisqualifiedDone", moved, { count });
+  };
+}
+
 /**
  * One bulk run: the verb, and the rows it applies to.
  *
@@ -114,6 +129,9 @@ export function LeadBulkBar({
   // a refused batch leaves the bar showing what failed, with the dialog
   // already gone.
   const [confirming, setConfirming] = useState(false);
+  // The reason is asked for once Disqualify is pressed without one, not before.
+  const [reasonAsked, setReasonAsked] = useState(false);
+  const reasonHintId = useId();
   const reasons = useLeadDisqualifyReasons();
   const [outcomes, setOutcomes] = useState<readonly BulkOutcome[]>([]);
 
@@ -259,6 +277,7 @@ export function LeadBulkBar({
   const reasonLabel =
     activeReasons.find((reason) => reason.id === reasonId)?.label ?? "";
 
+  const needsReason = reasonAsked && reasonId === "";
   const failed = outcomes.filter((o) => o.error);
   return (
     <>
@@ -297,11 +316,16 @@ export function LeadBulkBar({
         // The same requirement, and the same sentence, as the single-lead
         // dialog: a batch closed with no reason is exactly what the
         // administered list exists to prevent.
-        reason={reasonId ? undefined : t("lead.disqualify.reasonRequired")}
-        onClick={() => setConfirming(true)}
+        aria-describedby={needsReason ? reasonHintId : undefined}
+        onClick={() => (reasonId ? setConfirming(true) : setReasonAsked(true))}
       >
         {t("lead.bulkDisqualify")}
       </Button>
+      {needsReason && (
+        <ErrorLine inline id={reasonHintId}>
+          {t("lead.disqualify.reasonRequired")}
+        </ErrorLine>
+      )}
       {/* Closing one lead opens a dialog; closing forty from a toolbar used to
           fire on the press. The batch is the LESS reversible of the two — the
           reader cannot see the rows they are about to close, only a count —
