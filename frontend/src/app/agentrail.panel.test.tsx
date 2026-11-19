@@ -279,6 +279,19 @@ describe("the agent panel's hierarchy", () => {
   });
 });
 
+describe("the agent panel's focus", () => {
+  it("takes focus in on the press that opened it and gives it back on Escape", async () => {
+    const opened = await openPanel();
+    await waitFor(() =>
+      expect(opened.contains(document.activeElement)).toBe(true),
+    );
+
+    await userEvent.keyboard("{Escape}");
+
+    expect(document.activeElement?.className).toBe("artoggle");
+  });
+});
+
 describe("the agent panel's report", () => {
   // The mark used to carry the orb's CURRENT tone at a fading opacity, so a
   // brief that failed at four in the morning was drawn in the green of a quiet

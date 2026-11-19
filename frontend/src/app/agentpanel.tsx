@@ -1,7 +1,8 @@
-import { type ReactNode, type RefObject, useId } from "react";
+import { type ReactNode, type RefObject, useEffect, useId } from "react";
 import { AppLink } from "../design-system/applink";
 import { Heading } from "../design-system/heading";
 import type { MarginceCoreState } from "../design-system/margince-core";
+import { stopsIn } from "../design-system/portalfocus";
 import { formatMoney, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -215,6 +216,11 @@ export function AgentPanel({
   // may read diagnostics. A link a rep cannot follow is a dead end, so it is
   // not offered.
   const mayOpenLog = useCan("ai_diagnostics", "read");
+  // Only a press opens the panel. It mounts after its frame is measured and its
+  // code has loaded, so focus moves in here rather than at the press.
+  useEffect(() => {
+    stopsIn(panel.current)[0]?.focus();
+  }, [panel]);
   return (
     <section
       className="arpanel"

@@ -17,6 +17,7 @@ import {
   type MarginceCoreState,
 } from "../design-system/margince-core";
 import { usePrefersReducedMotion } from "../design-system/motion";
+import { usePortalPanelFocus } from "../design-system/portalfocus";
 import { formatMoney } from "../format/format";
 import { useNow } from "../format/now";
 import { type Translator, useLocale, usePlural, useT } from "../i18n";
@@ -281,6 +282,13 @@ export function AgentRail({
   }, []);
   usePopoverDismiss(open, panel, dismiss);
   useClosesWithPage({ open, close: dismiss });
+  // Tab out of the panel goes on from the toggle, as if the panel followed it.
+  const panelFocus = usePortalPanelFocus({
+    open,
+    openedBy: "press",
+    trigger,
+    panel,
+  });
 
   const frame = usePanelFrame(block, well, bar, open, phone);
   const money =
@@ -354,6 +362,7 @@ export function AgentRail({
             className="arloose"
             data-core-state={state}
             style={looseStyle(frame)}
+            {...panelFocus}
           >
             <Suspense fallback={null}>
               <AgentPanel
