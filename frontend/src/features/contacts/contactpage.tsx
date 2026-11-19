@@ -25,9 +25,8 @@ import {
   openingIdentity,
 } from "../../lib/contact.queries";
 import { BRIEF_PARAM } from "../../lib/contactpage.address";
-import { type ContactTab, contactTabRoute } from "../../lib/contacttab";
+import type { ContactTab } from "../../lib/contacttab";
 import { useOpenEmail } from "../../lib/openemail";
-import { scrollPageToTop } from "../../lib/reveal";
 import { useUrlParams } from "../../lib/urlstate";
 import { BriefQueue } from "../brief/brief.queue";
 import { ContactMeetingBrief } from "../brief/meetingbrief";
@@ -49,7 +48,7 @@ import "./contact360.css";
 import { useHiddenCoreFeatures } from "../../lib/corefeatures";
 import { useViewerZone } from "../../lib/viewerzone";
 import {
-  navigateKeepingReturn,
+  openContactTab,
   WorklistReturnLink,
 } from "../worklist/worklist.return";
 import {
@@ -253,10 +252,7 @@ export function ContactPageV2({
     />
   );
 
-  const openTab = (next: ContactTab) => {
-    navigateKeepingReturn(contactTabRoute(id, next));
-    scrollPageToTop();
-  };
+  const openTab = (next: ContactTab) => openContactTab(id, next);
 
   return (
     <div className="wrap">

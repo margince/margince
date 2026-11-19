@@ -11,6 +11,7 @@ import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { attachmentAnchor, attachmentTitle } from "../lib/attachmentlink";
 import { labelFor } from "../lib/labelfor";
+import { linkKind } from "../lib/linkkind";
 import { readStored, STORAGE_KEYS, writeStored } from "../lib/storage";
 import { useViewerZone } from "../lib/viewerzone";
 import { FileOrigin } from "./fileorigin";
@@ -81,6 +82,7 @@ export function AttachmentTile({
   return (
     <DocumentTile
       filename={file.filename}
+      kind={file.url ? t(linkKind(file.url)) : undefined}
       title={title}
       anchor={attachmentAnchor(file)}
       lapsed={superseded || receded}

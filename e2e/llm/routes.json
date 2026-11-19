@@ -38,6 +38,7 @@
         "archive_document": "delete_attachment",
         "assign_inquiry": "assign_website_inquiry",
         "attach": "attach_document",
+        "attach_link": "attach_link",
         "bring_back": "clear_activity_disposition",
         "cancel_send": "cancel_scheduled_send",
         "check_new_send": "preview_account_send_authorization",

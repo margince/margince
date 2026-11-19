@@ -15,16 +15,10 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/documenthost"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
-
-// documentHosts are the hosts whose links are documents. A host is added here
-// when it is seen in real mail and the team names it.
-var documentHosts = map[string]struct{}{
-	"docs.google.com":  {},
-	"drive.google.com": {},
-}
 
 // maxDocumentLinksPerMessage bounds the link rows one message writes.
 const maxDocumentLinksPerMessage = 25
@@ -61,7 +55,7 @@ func documentLinkKey(raw string) (string, bool) {
 		return "", false
 	}
 	host := strings.TrimSuffix(strings.ToLower(parsed.Hostname()), ".")
-	if _, known := documentHosts[host]; !known {
+	if !documenthost.Is(host) {
 		return "", false
 	}
 	parsed.Host = host

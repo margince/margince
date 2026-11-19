@@ -68,6 +68,7 @@ var actDefinitions = map[string]Definition{
 	"act.verbs.assign_notice_case":                 {Words: langcopy.Phrase{En: "Assign notice case", De: "Informationspflicht zuweisen", Vi: "Giao nghĩa vụ thông báo"}},
 	"act.verbs.assign_notice_case_review":          {Words: langcopy.Phrase{En: "Assign notice case review", De: "Quellenprüfung zuweisen", Vi: "Giao việc xem xét nguồn"}},
 	"act.verbs.attach_document":                    {Words: langcopy.Phrase{En: "Attach document", De: "Datei an einen Datensatz anhängen", Vi: "Đính kèm tệp vào một bản ghi"}},
+	"act.verbs.attach_link":                        {Words: langcopy.Phrase{En: "Attach link", De: "Link an einen Datensatz anhängen", Vi: "Đính kèm liên kết vào một bản ghi"}},
 	"act.verbs.backfill_employment_import":         {Words: langcopy.Phrase{En: "Backfill employment import", De: "Arbeitgeberangaben nachträglich übernehmen", Vi: "Bổ sung thông tin nơi làm việc"}},
 	"act.verbs.build_voice_profile":                {Words: langcopy.Phrase{En: "Build voice profile", De: "Voice DNA neu erstellen", Vi: "Tạo lại Voice DNA"}},
 	"act.verbs.bulk_update_records":                {Words: langcopy.Phrase{En: "Bulk update records", De: "Viele Datensätze auf einmal ändern", Vi: "Thay đổi nhiều bản ghi cùng lúc"}},

@@ -20,7 +20,7 @@ export function attachmentTitle(
 // http(s) falls back to the download route, which answers 404 for a link. So a
 // scheme such as javascript: can never become an href.
 export function attachmentAnchor(file: Attachment): AttachmentAnchor {
-  if (file.category === "link" && file.url && WEB_ADDRESS.test(file.url)) {
+  if (file.url && WEB_ADDRESS.test(file.url)) {
     return { href: file.url, target: "_blank", rel: "noopener noreferrer" };
   }
   return { href: `/v1/attachments/${file.id}`, download: file.filename };
