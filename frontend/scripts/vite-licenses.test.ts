@@ -76,7 +76,99 @@ async function fixtureBuild(root: string, inline = false, view = false) {
   );
 }
 
+function withDownloadedUnit(root: string, license: boolean) {
+  const unit = join(root, "build/extensions/acme");
+  mkdirSync(unit, { recursive: true });
+  writeFileSync(join(unit, "screen.js"), "export const screen = 'acme';");
+  if (license) writeFileSync(join(unit, "LICENSE"), "ACME-UNIT-LICENCE-TEXT");
+  writeFileSync(
+    join(root, "build/extensions/fetched-units.txt"),
+    "acme | example.test/acme/crm/v2@v2.1.0\n",
+  );
+  writeFileSync(
+    join(root, "entry.js"),
+    "import {value} from 'fake-pkg';import {screen} from './build/extensions/acme/screen.js';document.body.textContent=value+screen;",
+  );
+}
+
 describe("third-party notices", () => {
+  it("ships a downloaded unit's own licence text, and refuses a unit without one", async () => {
+    const root = fixture(true);
+    try {
+      withDownloadedUnit(root, true);
+      const outputs = await fixtureBuild(root);
+      const notice = outputs.find(
+        (item) => item.fileName === THIRD_PARTY_NOTICES,
+      );
+      const text = notice && "source" in notice ? String(notice.source) : "";
+      expect(text).toContain("example.test/acme/crm/v2@v2.1.0");
+      expect(text).toContain("ACME-UNIT-LICENCE-TEXT");
+      rmSync(join(root, "build/extensions/acme/LICENSE"));
+      await expect(fixtureBuild(root)).rejects.toThrow(/acme\/crm.*no LICENSE/);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("ships and checks the licence of a unit the bundle reaches only through CSS", async () => {
+    const root = fixture(true);
+    try {
+      withDownloadedUnit(root, true);
+      writeFileSync(
+        join(root, "build/extensions/acme/style.css"),
+        "a{color:red}",
+      );
+      writeFileSync(
+        join(root, "entry.js"),
+        "import {value} from 'fake-pkg';import './build/extensions/acme/style.css';document.body.textContent=value;",
+      );
+      const outputs = await fixtureBuild(root);
+      const notice = outputs.find(
+        (item) => item.fileName === THIRD_PARTY_NOTICES,
+      );
+      expect(
+        notice && "source" in notice ? String(notice.source) : "",
+      ).toContain("ACME-UNIT-LICENCE-TEXT");
+      rmSync(join(root, "build/extensions/acme/LICENSE"));
+      await expect(fixtureBuild(root)).rejects.toThrow(/acme\/crm.*no LICENSE/);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("refuses downloaded unit folders that have no index", async () => {
+    const root = fixture(true);
+    try {
+      withDownloadedUnit(root, true);
+      rmSync(join(root, "build/extensions/fetched-units.txt"));
+      await expect(fixtureBuild(root)).rejects.toThrow(
+        /fetched-units.txt.*missing/,
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("leaves out a downloaded unit that the bundle does not ship", async () => {
+    const root = fixture(true);
+    try {
+      withDownloadedUnit(root, true);
+      writeFileSync(
+        join(root, "entry.js"),
+        "import {value} from 'fake-pkg';document.body.textContent=value;",
+      );
+      const outputs = await fixtureBuild(root);
+      const notice = outputs.find(
+        (item) => item.fileName === THIRD_PARTY_NOTICES,
+      );
+      expect(
+        notice && "source" in notice ? String(notice.source) : "",
+      ).not.toContain("ACME-UNIT-LICENCE-TEXT");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("fails the real bundle when a bundled package has no licence text", async () => {
     const root = fixture(false);
     try {
