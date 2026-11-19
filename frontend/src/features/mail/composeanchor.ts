@@ -116,8 +116,11 @@ export function windowTitle(
     isChannelReply: boolean;
     wordingTitle: string;
     replying: boolean;
-    /** The answered message; absent while it loads. */
-    anchor: Readonly<{ subject?: string | null }> | undefined;
+    /** The answered message's read: no activity while it loads or once it failed. */
+    anchorRead: Readonly<{
+      activity?: Readonly<{ subject?: string | null }>;
+      failed: boolean;
+    }>;
     subject: string;
     recordName: string | undefined;
     t: ReturnType<typeof useT>;
@@ -128,9 +131,11 @@ export function windowTitle(
   if (input.isChannelReply) return input.wordingTitle;
   if (stripEveryKeyTag(input.subject).trim()) return input.subject.trim();
   if (input.replying) {
-    // An unread anchor is not one without a subject.
-    if (!input.anchor) return t("compose.replyTitle");
-    return replySubject(input.anchor.subject?.trim() || t("email.noSubject"));
+    // A loading anchor is not one without a subject; a failed read will bring
+    // none, so the title settles instead of waiting.
+    const { activity, failed } = input.anchorRead;
+    if (!activity && !failed) return t("compose.replyTitle");
+    return replySubject(activity?.subject?.trim() || t("email.noSubject"));
   }
   return input.recordName
     ? t("compose.newEmailTo", { name: input.recordName })

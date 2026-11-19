@@ -12,17 +12,19 @@ export type OfferSnapshot = Readonly<{
 }>;
 
 // The field with the offered address in it. A drafted or committed recipient
-// outranks the offer, unless the field holds values beside a vacated slot.
+// outranks the offer, unless the field holds values beside a vacated slot. An
+// address already in Cc or Bcc stays there.
 export function withOffer(
   current: string[],
   address: string,
   fillsVacancy: boolean,
+  copies: readonly string[] = [],
 ): string[] {
   if (current.length > 0 && !fillsVacancy) {
     return current;
   }
   const key = addressKey(address);
-  return current.some((held) => addressKey(held) === key)
+  return [...current, ...copies].some((held) => addressKey(held) === key)
     ? current
     : [...current, address];
 }
@@ -42,12 +44,15 @@ export function useRecipientOffer({
   answering,
   recordAddress,
   setTo,
+  copies,
 }: Readonly<{
   open: boolean;
   isChannelReply: boolean;
   answering: string | undefined;
   recordAddress: string | undefined;
   setTo: (update: (current: string[]) => string[]) => void;
+  /** The Cc and Bcc on screen. */
+  copies: readonly string[];
 }>) {
   // A channel reply resolves its recipient on the server and asks nothing.
   const asksAddress = open && !isChannelReply;
@@ -102,7 +107,9 @@ export function useRecipientOffer({
     // The refs settle before the updater, which StrictMode may run twice.
     const fillsVacancy = vacated.current;
     vacated.current = false;
-    setTo((current) => withOffer(current, threadRecipient, fillsVacancy));
+    setTo((current) =>
+      withOffer(current, threadRecipient, fillsVacancy, copies),
+    );
   }, [threadRecipient, answering]);
 
   return {

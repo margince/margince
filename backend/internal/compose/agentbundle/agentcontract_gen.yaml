@@ -32949,9 +32949,10 @@ components:
       enum: [model, deterministic]
       description: |-
         Which writer produced a piece of generated prose. `model` — the configured model
-        lane. `deterministic` — the structured fallback, used when no lane is configured
-        or the workspace's AI budget is exhausted. Never silently interchangeable: a
-        reader deciding how much to trust a sentence needs to know which wrote it.
+        lane. `deterministic` — the structured fallback, used when no lane is configured,
+        the workspace's AI budget is exhausted, the model call fails, or the checks the
+        surface runs refuse the model's answer. Never silently interchangeable: a reader
+        deciding how much to trust a sentence needs to know which wrote it.
     CompanyQuestion:
       type: string
       enum: [whats_open, meeting_prep, whats_changed]

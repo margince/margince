@@ -26,8 +26,7 @@ import type { ComposeProps } from "./composeprops";
 import { useRecipientOffer } from "./composerecipientoffer";
 import { useDraftRestore, useSavedDraft } from "./composesaveddraft";
 import { savedFieldsOf } from "./composesaveddraftfields";
-
-import { ScheduleDialog } from "./composeschedule";
+import { ScheduleDialogOnDemand } from "./composeschedule";
 import { useComposeSend } from "./composesend";
 import { sendWording } from "./composesendhold";
 import {
@@ -38,7 +37,6 @@ import {
 } from "./composetarget";
 import { ThreadBar } from "./composethreadbar";
 import { useDraftOnOpen, useVoiceDraft } from "./composevoicedraft";
-import { SendRefusalRemedies } from "./sendrefusal";
 import "./compose.css";
 import { ComposeHead } from "./compose.head";
 import {
@@ -46,6 +44,7 @@ import {
   ComposeBody,
   ComposeFoot,
   ComposeFrame,
+  RefusalRemedies,
   ReplyQuote,
 } from "./compose.parts";
 
@@ -149,7 +148,8 @@ export function ComposeWindow({
     open,
   );
   // Whether the moment picker is up, apart from whether a moment is chosen.
-  const [pickingMoment, setPickingMoment] = useState(false);
+  // Null until it first opens: its code loads then.
+  const [pickingMoment, setPickingMoment] = useState<boolean | null>(null);
   // The foot's place for the editor's marks, so they sit beside Send.
   const [markRow, setMarkRow] = useState<HTMLDivElement | null>(null);
   // The account-started path is keyed on the resolved anchor: a record with
@@ -167,6 +167,7 @@ export function ComposeWindow({
     answering,
     recordAddress: account.offeredAddress,
     setTo: fields.setTo,
+    copies: [...fields.cc, ...fields.bcc],
   });
   const names = useConversationNames(open, entityType, entityId);
   const thread = useComposeThread({
@@ -324,14 +325,14 @@ export function ComposeWindow({
     isChannelReply,
     wordingTitle: t(wording.title),
     replying: thread.replying,
-    anchor: thread.anchorActivity,
+    anchorRead: thread.anchorRead,
     subject: fields.subject,
     recordName: records.recordName,
     t,
   });
   return (
     <>
-      <ScheduleDialog
+      <ScheduleDialogOnDemand
         open={pickingMoment}
         onClose={() => setPickingMoment(false)}
         {...fields.scheduleControl}
@@ -440,7 +441,7 @@ export function ComposeWindow({
                     send.permission.refusal && {
                       ...send.permission.refusal,
                       remedies: (
-                        <SendRefusalRemedies
+                        <RefusalRemedies
                           review={send.sendReview}
                           onDirectSent={send.directSent}
                           directOpen={send.directOpen}

@@ -2,12 +2,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
-import { ScheduleDialog, ScheduleMenu } from "./composeschedule";
+import { ScheduleMenu } from "./composeschedule";
+import { ScheduleDialog } from "./composescheduledialog";
 
 const ZONE = "Europe/Berlin";
 // Monday 14 September 2026, 14:30 in Berlin: 08:00, 09:00 and 13:00 are past.
@@ -185,4 +186,71 @@ describe("the schedule send menu", () => {
         .getAttribute("aria-expanded"),
     ).toBe("false");
   });
+
+  it("hands focus back to its trigger when the dialog closes", async () => {
+    vi.useFakeTimers({
+      now: AFTERNOON,
+      toFake: ["Date", "setInterval", "clearInterval"],
+    });
+    const user = userEvent.setup();
+    render(<MenuAndDialog />);
+
+    const trigger = screen.getByRole("button", { name: "Other ways to send" });
+    await user.click(trigger);
+    await user.click(screen.getByRole("button", { name: "Schedule send" }));
+    await screen.findByRole("dialog", { name: "Schedule send" });
+    await user.keyboard("{Escape}");
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(document.activeElement).toBe(trigger);
+  });
 });
+
+describe("opening the dialog again", () => {
+  it("starts from the next hour, not the day picked last time", async () => {
+    vi.useFakeTimers({
+      now: AFTERNOON,
+      toFake: ["Date", "setInterval", "clearInterval"],
+    });
+    const user = userEvent.setup();
+    render(<MenuAndDialog />);
+    const pickAgain = async () => {
+      await user.click(
+        screen.getByRole("button", { name: "Other ways to send" }),
+      );
+      await user.click(screen.getByRole("button", { name: "Schedule send" }));
+      await user.click(
+        await screen.findByRole("button", { name: "Select date and time" }),
+      );
+    };
+
+    await pickAgain();
+    await user.click(
+      screen.getByRole("button", { name: "Tuesday, 15 September 2026" }),
+    );
+    expect(screen.getByText(/^Sends 15\/09\/2026, 17:00/)).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+
+    await pickAgain();
+    expect(screen.getByText(/^Sends 14\/09\/2026, 17:00/)).toBeTruthy();
+  });
+});
+
+// The dialog renders before the menu, as the composer renders it.
+function MenuAndDialog() {
+  const [open, setOpen] = useState(false);
+  return (
+    <LocaleProvider initial="en">
+      <ScheduleDialog
+        open={open}
+        onClose={() => setOpen(false)}
+        sendAt=""
+        timezone={ZONE}
+        onChoose={() => {}}
+        now={AFTERNOON}
+      />
+      <ScheduleMenu onOpen={() => setOpen(true)} />
+    </LocaleProvider>
+  );
+}

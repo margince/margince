@@ -231,7 +231,8 @@ export const NewMessageNoReasonPhone: StoryObj = {
 const CROWDED = editSeedOf({
   id: "019f7e65-fbf7-7114-b114-40af4af63ae9",
   status: "scheduled",
-  scheduled_at: new Date(Date.now() + 86_400_000).toISOString(),
+  // Fixed and far ahead, so the story reads the same on any day.
+  scheduled_at: "2031-03-17T08:00:00Z",
   scheduled_tz: browserZone(),
   subject: "The renewal quote",
   to: ["anna@example.test"],

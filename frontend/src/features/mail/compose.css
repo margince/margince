@@ -38,8 +38,8 @@
 /* The composer window's scrolling sheet: the envelope rows and strips run edge
    to edge and sit flush on one another; what follows keeps the margin. */
 .compose-sheet {
-  /* Six lines of --fontBody under what opens the sheet: To and Subject. */
   --composeHead: calc(2 * (var(--inputHeight) + var(--space-3)));
+  /* After the head and the AI band, 8rem: six 1.25rem lines of --fontBody, and some spare. */
   --composeFloor: calc(var(--composeHead) + var(--composeBand, 0px) + 8rem);
   position: relative;
   flex: 1 1 0;

@@ -12,7 +12,7 @@ import { REWRITES, type RewriteVerb } from "../../lib/rewrites";
 import { useViewerZone } from "../../lib/viewerzone";
 import { openCitation } from "../records/record360";
 import { VoiceDegradedNotice } from "./compose.notices";
-import type { DraftProvenance } from "./composedraftcall";
+import { type DraftProvenance, isTemplateDraft } from "./composedraftcall";
 import { DraftReasons } from "./composedraftcontext";
 import { OpenEmailDrawer } from "./openemaildrawer";
 
@@ -108,16 +108,6 @@ export function DraftBand({
           </p>
         )}
     </div>
-  );
-}
-
-/** The server's floor wrote the words: a template that never read the purpose. */
-export function isTemplateDraft(
-  provenance: DraftProvenance | null,
-): provenance is DraftProvenance {
-  return (
-    provenance?.ai_generated === false &&
-    provenance.generated_by === "deterministic"
   );
 }
 
