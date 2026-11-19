@@ -105,7 +105,7 @@ A contact also holds an owner, a consent record for each purpose, a relationship
 To merge two duplicate contacts in Margince, open the contact you want to remove, choose **More actions**, then **Merge contact**.
 1. Search for the other contact and pick it under **Select record to keep**.
 2. Read the question: "Merge {source} into {target}? This archives {source}." Each name carries its company, title and email, so two contacts with one name stay apart.
-3. Choose **Merge**. Margince opens the contact you kept and says "{source} was merged into {target}." The contact you merged away is archived, not deleted. Its page links the contact you kept under **Merged into**.
+3. Choose **Merge**. Margince opens the contact you kept and says "{source} was merged into {target}." The contact you merged away is archived, not deleted. The band at the top of its page says so and links the contact you kept: "Merged into {target}."
 
 A lead has no **Merge** of its own. Two leads that may be one show in **To review** in the Worklist. Press **Keep {name}** under "Which record should be kept?" and read the same question **Merge** asks. Choose **Merge**, and Margince merges the other lead into it. Two companies that may be one show there too, with a link, a created date and the reasons on each card. **Not duplicates** settles the pair, and **Undo** asks about it again.
 

@@ -3066,7 +3066,7 @@ export const en = {
   "record.companyRoutingKey": "Company routing key",
   "record.companyRoutingKeyWhy": "What the company routing key is",
   "record.companyRoutingKeyHelp":
-    "The company’s web domain, such as example.com, or a short name for it. Lead routing rules can match it, and a domain a company in Margince holds suggests that company.",
+    "The company’s web domain, such as example.com, or a short form of its name when no domain is known. Routing rules can match it, and Margince suggests the company that holds that domain.",
   "record.finishFieldEdit":
     "Save or cancel the current edit before closing details.",
   "record.save": "Save",
@@ -3214,7 +3214,6 @@ export const en = {
   "commission.column.rate": "Rate",
   "commission.column.basis": "Deal value",
   "commission.column.status": "Status",
-  "commission.column.date": "Date",
   "commission.status.accrued": "Accrued",
   "commission.status.approved": "Approved",
   "commission.status.paid": "Paid",
@@ -7484,7 +7483,7 @@ export const en = {
   "common.duplicate.leadHolds":
     "A lead already has this email address or LinkedIn profile, so no contact was created.",
   "common.duplicate.contactHolds":
-    "A contact already has this email address or LinkedIn profile, and someone is either a lead or a contact. For new business with them, open a deal on the contact.",
+    "A contact already has this email address or LinkedIn profile. For new business with them, open a deal on the contact.",
   "contact.leadHeld.title": "This is already a lead.",
   "contact.leadHeld.body":
     "Somebody is a lead or a contact, never both. Convert the lead to make them a contact; the lead’s history moves with them.",

@@ -84,6 +84,8 @@ export function useWaitingDraftBand(input: {
   onOpen: () => void;
   readOnlyReason: string | null | undefined;
   readOnlyReasonId: string;
+  /** Read after the reason, but not part of what a refused control cites. */
+  readOnlyMore?: ReactNode;
 }): ReactNode {
   const read = useWaitingDraft(input.anchor, input.composerOpen);
   // A cached draft is not shown while the composer holds it or after a read
@@ -93,8 +95,9 @@ export function useWaitingDraftBand(input: {
   return (
     <>
       {input.readOnlyReason && (
-        <p id={input.readOnlyReasonId} className="t-caption">
-          {input.readOnlyReason}
+        <p className="t-caption">
+          <span id={input.readOnlyReasonId}>{input.readOnlyReason}</span>
+          {input.readOnlyMore && <> {input.readOnlyMore}</>}
         </p>
       )}
       {waiting && <WaitingDraftNotice draft={waiting} onOpen={input.onOpen} />}

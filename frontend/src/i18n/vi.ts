@@ -3062,7 +3062,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "record.companyRoutingKey": "Khóa định tuyến công ty",
   "record.companyRoutingKeyWhy": "Khóa định tuyến công ty dùng để làm gì",
   "record.companyRoutingKeyHelp":
-    "Tên miền web của công ty, ví dụ example.com, hoặc một tên ngắn của công ty. Quy tắc phân bổ lead có thể so khớp với nó, và tên miền mà một công ty trong Margince đang giữ sẽ gợi ý công ty đó.",
+    "Tên miền web của công ty, ví dụ example.com, hoặc dạng rút gọn của tên công ty khi chưa biết tên miền. Quy tắc phân bổ có thể so khớp với nó, và Margince gợi ý công ty đang giữ tên miền đó.",
   "record.finishFieldEdit":
     "Lưu hoặc hủy chỉnh sửa hiện tại trước khi đóng chi tiết.",
   "record.save": "Lưu",
@@ -3215,7 +3215,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "commission.column.rate": "Tỷ lệ",
   "commission.column.basis": "Giá trị deal",
   "commission.column.status": "Trạng thái",
-  "commission.column.date": "Ngày",
   "commission.status.accrued": "Đã ghi nhận",
   "commission.status.approved": "Đã duyệt",
   "commission.status.paid": "Đã thanh toán",
@@ -7293,7 +7292,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "common.duplicate.leadHolds":
     "Một lead đã có địa chỉ email hoặc hồ sơ LinkedIn này, nên chưa tạo liên hệ nào.",
   "common.duplicate.contactHolds":
-    "Một liên hệ đã có địa chỉ email hoặc hồ sơ LinkedIn này, và mỗi người chỉ là lead hoặc liên hệ. Với cơ hội mới, hãy tạo một deal cho liên hệ đó.",
+    "Một liên hệ đã có địa chỉ email hoặc hồ sơ LinkedIn này. Với cơ hội mới, hãy tạo một deal cho liên hệ đó.",
   "contact.leadHeld.title": "Đây đã là một lead.",
   "contact.leadHeld.body":
     "Ai cũng chỉ là lead hoặc liên hệ, không bao giờ là cả hai. Hãy chuyển đổi lead thành liên hệ; lịch sử của lead sẽ đi theo.",

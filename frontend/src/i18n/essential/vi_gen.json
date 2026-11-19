@@ -2834,7 +2834,7 @@
   "field.yes": "Có",
   "field.no": "Không",
   "common.duplicate.leadHolds": "Một lead đã có địa chỉ email hoặc hồ sơ LinkedIn này, nên chưa tạo liên hệ nào.",
-  "common.duplicate.contactHolds": "Một liên hệ đã có địa chỉ email hoặc hồ sơ LinkedIn này, và mỗi người chỉ là lead hoặc liên hệ. Với cơ hội mới, hãy tạo một deal cho liên hệ đó.",
+  "common.duplicate.contactHolds": "Một liên hệ đã có địa chỉ email hoặc hồ sơ LinkedIn này. Với cơ hội mới, hãy tạo một deal cho liên hệ đó.",
   "approval.preview.leadHoldsEmail": "Một lead đã có địa chỉ email hoặc hồ sơ LinkedIn này. Hãy chuyển đổi lead thay vì tạo liên hệ.",
   "dedupe.viewExisting": "Xem hồ sơ hiện có",
   "co.spine.andOthers": "{names} và {count} người khác",
