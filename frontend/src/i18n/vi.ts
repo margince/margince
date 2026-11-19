@@ -5493,6 +5493,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.facts.addCancel": "Hủy",
   "co.facts.addIncomplete": "Chọn loại dữ kiện và nhập giá trị.",
   "co.facts.remove": "Gỡ {value}",
+  "tokenInput.remove": "Gỡ {value}",
   "co.facts.removeTitle": "Gỡ dữ kiện này?",
   "co.facts.removeConfirm": "Gỡ",
   "co.facts.removeAsk":
@@ -7900,6 +7901,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.voiceDegraded":
     "Không thể tải hồ sơ giọng văn, nên bản nháp này không theo giọng văn của bạn. Soạn lại, hoặc chỉnh sửa trước khi gửi.",
   "compose.voiceDegradedTitle": "Bản nháp này không theo giọng văn của bạn",
+  "compose.templateDraftTitle": "Không thể viết bản nháp bằng AI",
+  "compose.templateDraft":
+    "Đã dùng một mẫu cơ bản thay thế. Mục đích email không được sử dụng.",
   "compose.provisional": "Giọng văn tạm thời",
   "compose.provisionalHint":
     "Voice DNA vẫn đang được xây dựng, nhưng đã định hình bản nháp này giống như khi hoàn thiện.",
@@ -7943,6 +7947,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.recipientHint": "Tên hoặc địa chỉ",
   "compose.bodyPlaceholder": "Nội dung tin nhắn",
   "compose.bcc": "Bcc",
+  "compose.bccHint": "Những ai cùng nhận thư không thấy các địa chỉ này.",
+  "compose.alreadyIn": "Đã có trong ô {field}.",
+  "compose.colleagues": "Đồng nghiệp",
+  "compose.replyTitle": "Trả lời",
   "compose.threadGone":
     "Không thể trả lời chuỗi thư đó nữa, nên đã mở email mới thay thế. Kiểm tra người nhận trước khi gửi.",
   "compose.colleagueMailbox_one":
@@ -8020,6 +8028,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.scheduleDate": "Ngày",
   "compose.scheduleTime": "Giờ",
   "compose.scheduleGoesOut": "Gửi lúc {when}",
+  "compose.schedulePast": "Chọn một thời điểm trong tương lai.",
+  "compose.scheduleHoursPast": "Không thể chọn giờ đã qua.",
   "compose.willGoOut": "Gửi lúc {when}",
   "compose.scheduleAfternoon": "Chiều mai",
   "compose.draftLanguage": "Ngôn ngữ của bản nháp",

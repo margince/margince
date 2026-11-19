@@ -5578,6 +5578,7 @@ export const en = {
   "co.facts.addCancel": "Cancel",
   "co.facts.addIncomplete": "Select a fact type and enter a value.",
   "co.facts.remove": "Remove {value}",
+  "tokenInput.remove": "Remove {value}",
   "co.facts.removeTitle": "Remove this fact?",
   "co.facts.removeConfirm": "Remove",
   "co.facts.removeAsk":
@@ -8093,6 +8094,9 @@ export const en = {
   "compose.voiceDegraded":
     "Your voice profile could not be loaded, so this draft does not use your voice. Draft again, or edit before sending.",
   "compose.voiceDegradedTitle": "This draft is not in your voice",
+  "compose.templateDraftTitle": "AI could not write this draft",
+  "compose.templateDraft":
+    "A basic template was used. Your purpose was not used.",
   "compose.provisional": "Provisional voice",
   "compose.provisionalHint":
     "Your Voice DNA is still being built. It shapes this draft the same way a finished one would.",
@@ -8138,6 +8142,10 @@ export const en = {
   "compose.recipientHint": "Name or address",
   "compose.bodyPlaceholder": "Message text",
   "compose.bcc": "Bcc",
+  "compose.bccHint": "Other recipients do not see these addresses.",
+  "compose.alreadyIn": "Already in {field}.",
+  "compose.colleagues": "Colleagues",
+  "compose.replyTitle": "Reply",
   "compose.threadGone":
     "That thread can no longer be answered, so a new email was opened instead. Check the recipient before sending.",
   "compose.colleagueMailbox_one":
@@ -8215,6 +8223,8 @@ export const en = {
   "compose.scheduleDate": "Date",
   "compose.scheduleTime": "Time",
   "compose.scheduleGoesOut": "Sends {when}",
+  "compose.schedulePast": "Choose a time in the future.",
+  "compose.scheduleHoursPast": "Times that have passed cannot be chosen.",
   "compose.willGoOut": "Sends {when}",
   "compose.scheduleAfternoon": "Tomorrow afternoon",
   "compose.draftLanguage": "Draft language",

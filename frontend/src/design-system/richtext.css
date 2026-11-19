@@ -65,7 +65,9 @@
   justify-content: center;
   min-inline-size: var(--controlHeight);
   min-block-size: var(--controlHeight);
-  border: none;
+  box-sizing: border-box;
+  /* Transparent at rest, so a pressed mark's edge moves nothing. */
+  border: 1px solid transparent;
   border-radius: var(--r-sm);
   background: transparent;
   cursor: pointer;
@@ -95,6 +97,14 @@
 
 .richtext-btn:hover {
   background: var(--groundHover);
+  color: var(--textPrimary);
+}
+
+/* A mark on at the caret takes the pressed toggle row's neutral pair
+   (listtable.css): it says what the next letter gets, not what to press. */
+.richtext-btn[aria-pressed="true"] {
+  border-color: var(--borderStrong);
+  background: var(--bgChip);
   color: var(--textPrimary);
 }
 
