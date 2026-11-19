@@ -1650,7 +1650,7 @@
   "shell.shortcuts.then": "dann",
   "shell.more": "Mehr",
   "shell.unknownPage": "Nicht gefunden",
-  "shell.unavailableForRole": "Für Ihre Rolle nicht verfügbar.",
+  "shell.unavailableForRole": "Für deine Rolle nicht verfügbar.",
   "shell.closeMenu": "Schließen",
   "shell.capture.importing": "Postfachverlauf wird importiert",
   "shell.capture.share": "{percent} · {scanned} von {total} Nachrichten",

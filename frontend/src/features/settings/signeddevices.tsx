@@ -6,7 +6,7 @@ import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
-import { formatDateTime } from "../../format/format";
+import { formatDateTime, formatNumber } from "../../format/format";
 import { formatRelativeTime } from "../../format/relativetime";
 import { type Translator, useLocale, usePlural, useT } from "../../i18n";
 import { deviceLabel } from "../../lib/devicelabel";
@@ -30,6 +30,7 @@ function nameOf(session: MySession, t: Translator): string {
 export function SignedInDevicesPanel() {
   const t = useT();
   const plural = usePlural();
+  const { locale } = useLocale();
   const sessions = useMySessions();
   const end = useEndSessions();
   return (
@@ -72,7 +73,7 @@ export function SignedInDevicesPanel() {
             {end.isError
               ? problemMessageOf(end.error, t)
               : plural("account.devicesFailed", end.data ?? 0, {
-                  count: String(end.data ?? 0),
+                  count: formatNumber(end.data ?? 0, locale),
                 })}
           </ErrorLine>
         </PanelBody>

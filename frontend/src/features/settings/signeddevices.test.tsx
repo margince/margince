@@ -199,5 +199,6 @@ it("tries every other session and says how many could not be signed out", async 
   expect(await screen.findByRole("alert")).toHaveTextContent(
     "1 device was not signed out. Retry.",
   );
-  expect([...tried].sort()).toEqual([PHONE_ID, LAPTOP_ID].sort());
+  const byId = (a: string, b: string) => a.localeCompare(b);
+  expect([...tried].sort(byId)).toEqual([PHONE_ID, LAPTOP_ID].sort(byId));
 });

@@ -2915,7 +2915,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Aktiviere sie unter Einstellungen → Nutzerkonto.",
   "shell.more": "Mehr",
   "shell.unknownPage": "Nicht gefunden",
-  "shell.unavailableForRole": "Für Ihre Rolle nicht verfügbar.",
+  "shell.unavailableForRole": "Für deine Rolle nicht verfügbar.",
   "shell.closeMenu": "Schließen",
   "shell.agent.scope": "Margince liest nur, was du sehen kannst.",
   "shell.capture.importing": "Postfachverlauf wird importiert",
