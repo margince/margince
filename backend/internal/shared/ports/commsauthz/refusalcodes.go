@@ -12,6 +12,8 @@ func RefusalCodes() []string {
 		ReasonRestricted,
 		ReasonSubjectRequest,
 		ReasonHardBounce,
+		ReasonSubjectLabelMissing,
+		ReasonSubjectLabelsConflict,
 		ReasonUnconfirmedDOI,
 		ReasonNoEvidence,
 		ReasonLegacyTransactionalUnevidenced,

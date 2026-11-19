@@ -30,6 +30,10 @@ var refusalFacts = map[string]string{
 		"confirm",
 	commsauthz.ReasonFrequencyCapReached: "this jurisdiction's limit on how often we may write has been " +
 		"reached; it passes with time rather than with evidence",
+	commsauthz.ReasonSubjectLabelMissing: "the law of this recipient's country fixes a label at the start of " +
+		"an advertising subject, and this subject does not begin with it; add the label to the subject",
+	commsauthz.ReasonSubjectLabelsConflict: "the recipients' countries fix different labels at the start of an " +
+		"advertising subject, and a subject begins with one; send one message per label",
 	commsauthz.ReasonNoSubject: "this address does not resolve to one contact, so there is nobody to " +
 		"record the evidence against",
 	commsauthz.ReasonUnknownPurpose: "this message names a purpose this installation does not define, " +
