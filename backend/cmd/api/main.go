@@ -113,9 +113,6 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	if err != nil {
 		return err
 	}
-	if err := compose.BindExtensionObjectsFromConfig(ctx, cfg.settings); err != nil {
-		return err
-	}
 	// What this binary IS and what it CARRIES, both settled before it serves
 	// anything. AFTER bindInstallation, because a pre-bootstrap installation has
 	// no workspace to record against; BEFORE the server is assembled, which
