@@ -26,8 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// keyedTemplateRouter mounts a stub on an idempotency-mapped route, wired per
-// route as the generated router does, so the chi RoutePattern binds.
+// keyedTemplateRouter wires a stub per route, as the generated router does.
 func keyedTemplateRouter(e *integration.Env, handler http.HandlerFunc) chi.Router {
 	r := chi.NewRouter()
 	r.With(idempotency(e.Pool, nil, nil)).Post("/v1/offer-templates", handler)
@@ -128,8 +127,7 @@ func TestARefusalAfterACommittedWriteIsNotRunAgain(t *testing.T) {
 	}
 }
 
-// keyedContactRouter mounts a stub on the contact-update route, which
-// replayScope probes, wired per-route so the chi RoutePattern binds.
+// keyedContactRouter wires a stub on the contact-update route replayScope probes.
 func keyedContactRouter(e *integration.Env, handler http.HandlerFunc) chi.Router {
 	r := chi.NewRouter()
 	r.With(idempotency(e.Pool, nil, nil)).Patch("/v1/contacts/{id}", handler)
@@ -180,8 +178,7 @@ func TestReplayRefusesOnceTheCallerHasLostSightOfTheRecord(t *testing.T) {
 		t.Fatalf("handler ran %d times, want 1 — the replay re-executed instead of replaying", calls)
 	}
 
-	// Capture-private to another rep takes the contact out of this caller's
-	// read scope; the claim itself is unchanged.
+	// Capture-private to another rep takes the contact out of this caller's scope.
 	e.MakeCapturePrivate(t, "contact", contact, e.Rep3)
 
 	after := keyedContactCall(rep1, r, contact, key)
