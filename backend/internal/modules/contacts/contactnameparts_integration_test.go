@@ -188,25 +188,32 @@ func TestAPartsEditDecidesOnTheDisplayNameCommittedBeforeIt(t *testing.T) {
 }
 
 // A rename to another contact's name leaves no old name part behind, and a reload of
-// the record reads the parts as cleared.
+// the record reads the parts as cleared. Restating the stored parts beside it changes nothing.
 func TestRenamingToAnotherNameClearsTheOldNameParts(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	created, err := e.store.CreateContact(ctx, CreateContactInput{
-		FullName: "Stefan Altmann", FirstName: new("Stefan"), LastName: new("Altmann"), Source: "manual",
-	})
-	if err != nil {
-		t.Fatalf("create: %v", err)
-	}
-	id := ids.From[ids.ContactKind](ids.UUID(created.Id))
-	if _, err := e.store.UpdateContact(ctx, id, UpdateContactInput{FullName: new("Maria Neumann")}); err != nil {
-		t.Fatalf("rename: %v", err)
-	}
-	got, err := e.store.GetContact(ctx, id, storekit.LiveOnly)
-	if err != nil {
-		t.Fatalf("read: %v", err)
-	}
-	if got.FullName != "Maria Neumann" || got.FirstName != nil || got.LastName != nil {
-		t.Fatalf("got %q / %v / %v, want Maria Neumann with no parts", got.FullName, got.FirstName, got.LastName)
+	for name, rename := range map[string]UpdateContactInput{
+		"the name alone":         {FullName: new("Maria Neumann")},
+		"the name and its parts": {FullName: new("Maria Neumann"), FirstName: new("Stefan"), LastName: new("Altmann")},
+	} {
+		t.Run(name, func(t *testing.T) {
+			created, err := e.store.CreateContact(ctx, CreateContactInput{
+				FullName: "Stefan Altmann", FirstName: new("Stefan"), LastName: new("Altmann"), Source: "manual",
+			})
+			if err != nil {
+				t.Fatalf("create: %v", err)
+			}
+			id := ids.From[ids.ContactKind](ids.UUID(created.Id))
+			if _, err := e.store.UpdateContact(ctx, id, rename); err != nil {
+				t.Fatalf("rename: %v", err)
+			}
+			got, err := e.store.GetContact(ctx, id, storekit.LiveOnly)
+			if err != nil {
+				t.Fatalf("read: %v", err)
+			}
+			if got.FullName != "Maria Neumann" || got.FirstName != nil || got.LastName != nil {
+				t.Fatalf("got %q / %v / %v, want Maria Neumann with no parts", got.FullName, got.FirstName, got.LastName)
+			}
+		})
 	}
 }

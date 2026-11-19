@@ -25,6 +25,7 @@ func TestARenameDropsTheNamePartsTheNewNameNoLongerHolds(t *testing.T) {
 		{"accents folded keep the part", UpdateContactInput{FullName: new("Stéfan Altmann")}, nil},
 		{"the unchanged name is no rename", UpdateContactInput{FullName: new("Stefan Altmann")}, nil},
 		{"an update that states a part decides it itself", UpdateContactInput{FullName: new("Maria Neumann"), FirstName: new("Maria")}, nil},
+		{"restated stored parts still drop", UpdateContactInput{FullName: new("Maria Neumann"), FirstName: new("Stefan"), LastName: new("Altmann")}, []string{"first_name", "last_name"}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

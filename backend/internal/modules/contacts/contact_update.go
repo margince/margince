@@ -278,8 +278,21 @@ func contactEditPatch(
 // updateAsWritten completes the input with what the request implies: the core
 // fields cleared to NULL, the name parts a rename drops, and the display name.
 func updateAsWritten(current crmcontracts.Contact, in UpdateContactInput, active []fieldcatalog.Column) UpdateContactInput {
+	in = withRestatedNamePartsDropped(current, in)
 	in.Clear = append(storekit.CoreFieldClears(in.Clear, active, in.CustomFields), namePartsARenameDrops(current, in)...)
 	in.FullName = displayNameAfter(current, in)
+	return in
+}
+
+// withRestatedNamePartsDropped forgets a supplied name part equal to the stored
+// one: restating a part moves nothing, so a rename still drops it.
+func withRestatedNamePartsDropped(current crmcontracts.Contact, in UpdateContactInput) UpdateContactInput {
+	if in.FirstName != nil && *in.FirstName == derefString(current.FirstName) {
+		in.FirstName = nil
+	}
+	if in.LastName != nil && *in.LastName == derefString(current.LastName) {
+		in.LastName = nil
+	}
 	return in
 }
 

@@ -49,6 +49,27 @@ it("saves only the corrected scalar", async () => {
   await user.type(screen.getByRole("textbox", { name: "Title" }), "CEO{Enter}");
   await waitFor(() => expect(sent).toEqual([{ title: "CEO" }]));
 });
+it("renames with the full name alone, leaving the server to drop the old parts", async () => {
+  const user = userEvent.setup();
+  const sent: unknown[] = [];
+  const named = {
+    ...contact,
+    full_name: "Stefan Altmann",
+    first_name: "Stefan",
+    last_name: "Altmann",
+  };
+  mount((body) => {
+    sent.push(body);
+    return jsonResponse({ ...named, version: 4 });
+  }, named);
+  await user.click(
+    await screen.findByRole("button", { name: /^Change Full name/ }),
+  );
+  const box = screen.getByRole("textbox", { name: /Full name/ });
+  await user.clear(box);
+  await user.type(box, "Maria Neumann{Enter}");
+  await waitFor(() => expect(sent).toEqual([{ full_name: "Maria Neumann" }]));
+});
 it("corrects an email while preserving other addresses, types and primary flags", async () => {
   const user = userEvent.setup();
   const sent: unknown[] = [];
