@@ -148,7 +148,7 @@ func TestAMemberWithoutUpdateFilesTheDealAlone(t *testing.T) {
 	f := seedDealNoteFixture(t, e)
 	perms := dealNotePerms(principal.ObjectGrant{Create: true, Read: true})
 
-	note := logDealNote(t, e, e.As(e.Rep1, []ids.UUID{e.Team1}, perms), onDeal(f.erpDeal))
+	note := logDealNote(e.As(e.Rep1, []ids.UUID{e.Team1}, perms), t, e, onDeal(f.erpDeal))
 
 	if n := projectsOf(t, e, note); n != 0 {
 		t.Errorf("a note by a member without activity.update is on %d projects, want none", n)
