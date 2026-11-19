@@ -13,11 +13,13 @@ import (
 	"context"
 	"slices"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -85,6 +87,16 @@ func TestMergingThreeContactsThatShareANumberKeepsItOnce(t *testing.T) {
 	if primary != sharedNumber {
 		t.Errorf("the primary number = %q, want the survivor's own %q", primary, sharedNumber)
 	}
+	var counted int64
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT (after->>'relinked_phones')::bigint FROM audit_log
+ WHERE entity_id = $1 AND action = 'merge' AND after->>'merged_from_id' = $2::text`, survivor, second).Scan(&counted)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if counted != 2 {
+		t.Errorf("the merge counted %d relinked numbers, want 2: the folded one counts too", counted)
+	}
 	var moved int
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT count(*) FROM contact_phone WHERE contact_id = ANY($1)`,
@@ -145,7 +157,7 @@ func TestWithoutAPreferenceTheSurvivorKeepsItsSlots(t *testing.T) {
 	e.employAt(ctx, t, fx.contact, fx.second, true)
 	addEmail(ctx, t, e, fx.contact, "cai@other.example")
 
-	mergeWithPreference(ctx, t, e, fx.contact, survivor, MergePreference{MergeFieldEmail: survivor.UUID})
+	mergeWithPreference(ctx, t, e, fx.contact, survivor, nil)
 
 	got := survivorOf(ctx, t, e, survivor)
 	if got.PrimaryEmail == nil || string(*got.PrimaryEmail) != "cai@own.example" {
@@ -207,4 +219,52 @@ func valueOf[T ~string](p *T) string {
 		return "<nil>"
 	}
 	return string(*p)
+}
+
+// A preferred employer the survivor once held and left is a separate edge, not a
+// twin. The member's current edge takes the slot, so the survivor keeps a
+// current employer.
+func TestAPreferredEmployerTheSurvivorLeftBecomesItsCurrentOne(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.editorCtx()
+	fx := e.seedFlipFixture(ctx, t, "Eda Varga", "Current Employer", "Former Employer")
+	survivor := contactWithPhones(t, e, "Eda Varga", "eda@current.example")
+	e.employAt(ctx, t, survivor, fx.first, true)
+	ended, notPrimary := time.Now().AddDate(-1, 0, 0), false
+	if _, err := e.store.CreateRelationship(ctx, CreateRelationshipInput{
+		Kind: employmentKind, ContactID: &survivor, CompanyID: &fx.second, IsCurrentPrimary: &notPrimary, EndedAt: &ended, Source: "manual",
+	}); err != nil {
+		t.Fatalf("the survivor's former employment: %v", err)
+	}
+	e.employAt(ctx, t, fx.contact, fx.second, true)
+
+	mergeWithPreference(ctx, t, e, fx.contact, survivor, MergePreference{MergeFieldEmployment: fx.contact.UUID})
+
+	holder := slotHolder(ctx, t, e, survivor)
+	var current bool
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `SELECT `+employment.IsCurrentSQL("ended_at")+` FROM relationship WHERE id = $1`, holder).Scan(&current)
+	}); err != nil || !current || companyOfEdge(ctx, t, e, holder) != fx.second.UUID {
+		t.Errorf("the slot is held by %v (current=%t), want the member's current edge at the preferred employer: %v", holder, current, err)
+	}
+}
+
+// The address the review shows for a member is its reachable-first one, so a
+// member with no primary address still wins with that address.
+func TestAPreferredMemberWithNoPrimaryAddressWinsWithItsFirstAddress(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.editorCtx()
+	survivor := contactWithPhones(t, e, "Fia Holm", "fia@own.example")
+	member := contactWithPhones(t, e, "Fia H.", "fia@member.example")
+	if _, err := e.store.UpdateContact(ctx, member, UpdateContactInput{
+		Emails: []ContactEmailInput{{Email: "fia@member.example", EmailType: "work"}},
+	}); err != nil {
+		t.Fatalf("clear the member's primary address: %v", err)
+	}
+
+	mergeWithPreference(ctx, t, e, member, survivor, MergePreference{MergeFieldEmail: member.UUID})
+
+	if got := survivorOf(ctx, t, e, survivor); got.PrimaryEmail == nil || string(*got.PrimaryEmail) != "fia@member.example" {
+		t.Errorf("primary email = %s, want the member's address the review showed", valueOf(got.PrimaryEmail))
+	}
 }

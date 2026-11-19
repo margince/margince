@@ -87,13 +87,21 @@ func (p MergePreference) wonBy(source ids.ContactID) []string {
 const mergePhoneHeld = `EXISTS (SELECT 1 FROM contact_phone b
  WHERE b.contact_id = @target AND b.phone = a.phone AND b.archived_at IS NULL)`
 
+// mergeHeldPhonePrimary is true when the survivor's own row of number a.phone is
+// its primary, so the number stays primary after the merge.
+const mergeHeldPhonePrimary = `EXISTS (SELECT 1 FROM contact_phone b
+ WHERE b.contact_id = @target AND b.phone = a.phone AND b.is_primary AND b.archived_at IS NULL)`
+
 // buildSurvivorshipPatch folds the merged-away contact's name and title onto
 // the survivor by rule 2, and fills the survivor's empty address and lead link.
 func buildSurvivorshipPatch(target, source crmcontracts.Contact, sourceID ids.ContactID, prefer MergePreference) *storekit.Patch {
 	p := storekit.NewPatch()
-	if prefer.sourceWins(MergeFieldName, sourceID) && source.FullName != target.FullName {
+	// A chosen name is never mixed with the parts of another member's.
+	_, nameChosen := prefer[MergeFieldName]
+	switch {
+	case prefer.sourceWins(MergeFieldName, sourceID) && source.FullName != target.FullName:
 		takeName(p, target, source)
-	} else {
+	case !nameChosen:
 		takeString(p, columnFirstName, target.FirstName, source.FirstName, false)
 		takeString(p, columnLastName, target.LastName, source.LastName, false)
 	}
@@ -143,14 +151,22 @@ func takeString(p *storekit.Patch, column string, target, source *string, source
 // yieldPreferredSlots frees the survivor's primary address and current
 // employer when the merged-away contact won them and holds one to give. The
 // relink then carries the source's primary flag across, because the slot is
-// empty.
+// empty. A preferred employer always lands. The relink archives the source's
+// current edge only as a twin of an equally current one. That twin then
+// inherits the slot (archiveDuplicatesKeepingPrimarySlot).
 func yieldPreferredSlots(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID, prefer MergePreference) error {
 	args := pgx.NamedArgs{mergeSourceKey: sourceID, mergeTargetKey: targetID}
 	if prefer.sourceWins(MergeFieldEmail, sourceID) {
-		if _, err := tx.Exec(ctx, `UPDATE contact_email SET is_primary = false
+		// The address that wins is the one the review showed for the member: its
+		// reachable-first address, which is its primary when it has one.
+		for _, stmt := range []string{`UPDATE contact_email SET is_primary = false
  WHERE contact_id = @target AND is_primary AND archived_at IS NULL
- AND EXISTS (SELECT 1 FROM contact_email s WHERE s.contact_id = @source AND s.is_primary AND s.archived_at IS NULL)`, args); err != nil {
-			return fmt.Errorf("contacts: handing the primary address to the preferred member: %w", err)
+ AND EXISTS (SELECT 1 FROM contact_email s WHERE s.contact_id = @source AND s.archived_at IS NULL)`,
+			`UPDATE contact_email SET is_primary = true WHERE NOT is_primary AND id = (SELECT id FROM contact_email
+ WHERE contact_id = @source AND archived_at IS NULL` + ReachableEmailOrder + ` LIMIT 1)`} {
+			if _, err := tx.Exec(ctx, stmt, args); err != nil {
+				return fmt.Errorf("contacts: handing the primary address to the preferred member: %w", err)
+			}
 		}
 	}
 	if !prefer.sourceWins(MergeFieldEmployment, sourceID) {
@@ -166,16 +182,27 @@ func yieldPreferredSlots(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.
 
 // relinkPhones moves the merged-away contact's numbers onto the survivor by
 // rule 1. A number the survivor already holds is archived onto it, so the value
-// shows once and the survivor's row keeps its primary flag.
+// shows once and the survivor's row keeps its primary flag. When that number was
+// the source's primary and the survivor has none, the survivor's row of it takes
+// the slot. The count covers both moves.
 func relinkPhones(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID) (int64, error) {
-	if _, err := tx.Exec(ctx, `UPDATE contact_phone a SET contact_id = @target, is_primary = false, archived_at = @archived
- WHERE `+mergeContactAddressSource+` AND `+mergePhoneHeld,
-		pgx.StrictNamedArgs{mergeSourceKey: sourceID, mergeTargetKey: targetID, archiveStateKey: time.Now().UTC()}); err != nil {
+	args := pgx.NamedArgs{mergeSourceKey: sourceID, mergeTargetKey: targetID, archiveStateKey: time.Now().UTC()}
+	if _, err := tx.Exec(ctx, `UPDATE contact_phone SET is_primary = true
+ WHERE id = (SELECT b.id FROM contact_phone b JOIN contact_phone a ON a.phone = b.phone
+   WHERE b.contact_id = @target AND b.archived_at IS NULL AND `+mergeContactAddressSource+` AND a.is_primary
+   ORDER BY b.position, b.id LIMIT 1)
+ AND NOT EXISTS (SELECT 1 FROM contact_phone p WHERE p.contact_id = @target AND p.is_primary AND p.archived_at IS NULL)`, args); err != nil {
+		return 0, fmt.Errorf("contacts: keeping the primary of a number both contacts hold: %w", err)
+	}
+	folded, err := tx.Exec(ctx, `UPDATE contact_phone a SET contact_id = @target, is_primary = false, archived_at = @archived
+ WHERE `+mergeContactAddressSource+` AND `+mergePhoneHeld, args)
+	if err != nil {
 		return 0, fmt.Errorf("contacts: folding a number both contacts hold: %w", err)
 	}
-	return relinkDemotingPrimary(ctx, tx,
+	moved, err := relinkDemotingPrimary(ctx, tx,
 		`UPDATE contact_phone a SET contact_id = @target, is_primary = `+mergePhonePrimary+` WHERE `+mergeContactAddressSource,
 		sourceID.UUID, targetID.UUID)
+	return folded.RowsAffected() + moved, err
 }
 
 // checkMergePreference refuses a preference for a member the decision does not

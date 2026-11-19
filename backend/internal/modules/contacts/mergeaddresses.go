@@ -22,11 +22,12 @@ const (
 
 // MergeAddress pairs a moving address with its destination so collisions remain visible.
 type MergeAddress struct {
-	ID            ids.UUID
-	Kind          string
-	Value         string
-	Usage         string
-	WasPrimary    bool
+	ID         ids.UUID
+	Kind       string
+	Value      string
+	Usage      string
+	WasPrimary bool
+	// WillBePrimary is whether the value is primary on the survivor afterwards.
 	WillBePrimary bool
 	// AlreadyHeld is a number the survivor holds too: it shows once after the merge.
 	AlreadyHeld bool
@@ -42,7 +43,7 @@ func previewMergeAddresses(ctx context.Context, tx pgx.Tx, kind string, source, 
 	}
 	queries := []struct{ kind, sql string }{
 		{fieldEmail, `SELECT a.id, a.email, a.email_type, a.is_primary, ` + mergeEmailPrimary + `, false FROM contact_email a WHERE ` + mergeContactAddressSource + ` ORDER BY a.id LIMIT 501`},
-		{fieldPhone, `SELECT a.id, a.phone, a.phone_type, a.is_primary, ` + mergePhonePrimary + ` AND NOT ` + mergePhoneHeld + `, ` + mergePhoneHeld + ` FROM contact_phone a WHERE ` + mergeContactAddressSource + ` ORDER BY a.id LIMIT 501`},
+		{fieldPhone, `SELECT a.id, a.phone, a.phone_type, a.is_primary, (` + mergePhonePrimary + ` OR ` + mergeHeldPhonePrimary + `), ` + mergePhoneHeld + ` FROM contact_phone a WHERE ` + mergeContactAddressSource + ` ORDER BY a.id LIMIT 501`},
 	}
 	if kind == companyEntity {
 		queries = []struct{ kind, sql string }{{addressKindDomain, `SELECT a.id, a.domain, '', a.is_primary, ` + mergeDomainPrimary + `, false FROM company_domain a WHERE ` + mergeCompanyDomainSource + ` ORDER BY a.id LIMIT 501`}}

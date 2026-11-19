@@ -58,6 +58,11 @@ func TestTheSurvivorshipPatchFollowsThePreference(t *testing.T) {
 	if !maps.Equal(after, want) {
 		t.Errorf("with the source preferred the patch = %v, want %v", after, want)
 	}
+	survivorNamed := MergePreference{MergeFieldName: ids.NewV7()}
+	unnamed := crmcontracts.Contact{FullName: "Ann Lee"}
+	if after := buildSurvivorshipPatch(unnamed, merged, source, survivorNamed).After(); len(after) != 1 {
+		t.Errorf("a name another member won took this member's parts: %v", after)
+	}
 	untitled := target
 	untitled.Title = nil
 	if after := buildSurvivorshipPatch(untitled, merged, source, nil).After(); after["title"] != "Head" {

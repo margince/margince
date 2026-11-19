@@ -65,39 +65,49 @@ func TestContactMergePreviewShowsPrimaryAddressDemotions(t *testing.T) {
 }
 
 // A number both contacts hold shows as held in the preview, and the merge then
-// keeps the survivor's row of it alone.
+// keeps the survivor's row of it alone. That row stays primary, or takes the
+// source's primary flag when the survivor had no primary number.
 func TestContactMergePreviewShowsANumberTheSurvivorHolds(t *testing.T) {
-	e := integration.Setup(t)
-	ctx := e.As(e.AdminUser, nil, integration.AdminPerms)
-	source, err := e.Contacts.CreateContact(ctx, contacts.CreateContactInput{
-		FullName: "Held source", Source: "manual",
-		Phones: []contacts.ContactPhoneInput{{Phone: "+49301235001", PhoneType: "mobile", IsPrimary: true}, {Phone: "+49301235002", PhoneType: "work", Position: 1}},
-	})
-	if err != nil {
-		t.Fatal(err)
+	for _, survivorPrimary := range []bool{true, false} {
+		t.Run(fmt.Sprintf("survivorPrimary=%t", survivorPrimary), func(t *testing.T) {
+			e := integration.Setup(t)
+			ctx := e.As(e.AdminUser, nil, integration.AdminPerms)
+			source, err := e.Contacts.CreateContact(ctx, contacts.CreateContactInput{
+				FullName: "Held source", Source: "manual",
+				Phones: []contacts.ContactPhoneInput{{Phone: "+49301235001", PhoneType: "mobile", IsPrimary: true}, {Phone: "+49301235002", PhoneType: "work", Position: 1}},
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			held := []contacts.ContactPhoneInput{{Phone: "+49301235001", PhoneType: "mobile", IsPrimary: true}}
+			target, err := e.Contacts.CreateContact(ctx, contacts.CreateContactInput{FullName: "Held survivor", Source: "manual", Phones: held})
+			if err != nil {
+				t.Fatal(err)
+			}
+			targetID := ids.From[ids.ContactKind](ids.UUID(target.Id))
+			if !survivorPrimary {
+				held[0].IsPrimary = false
+				if _, err := e.Contacts.UpdateContact(ctx, targetID, contacts.UpdateContactInput{Phones: held}); err != nil {
+					t.Fatal(err)
+				}
+			}
+			sourceID := ids.UUID(source.Id)
+			preview, err := e.Contacts.PreviewMergeSurvivorship(ctx, "contact", sourceID, targetID.UUID, nil, nil)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, address := range preview.Addresses {
+				isHeld := address.Value == "+49301235001"
+				if address.AlreadyHeld != isHeld || (isHeld && !address.WillBePrimary) {
+					t.Errorf("address=%+v want held=%t, and the held number primary on the survivor", address, isHeld)
+				}
+			}
+			if _, err := e.Contacts.MergeContact(ctx, ids.From[ids.ContactKind](sourceID), targetID, &preview.SourceVersion); err != nil {
+				t.Fatal(err)
+			}
+			checkMergedAddresses(ctx, t, e, targetID.UUID, preview.Addresses)
+		})
 	}
-	target, err := e.Contacts.CreateContact(ctx, contacts.CreateContactInput{
-		FullName: "Held survivor", Source: "manual",
-		Phones: []contacts.ContactPhoneInput{{Phone: "+49301235001", PhoneType: "mobile"}},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	sourceID, targetID := ids.UUID(source.Id), ids.UUID(target.Id)
-	preview, err := e.Contacts.PreviewMergeSurvivorship(ctx, "contact", sourceID, targetID, nil, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, address := range preview.Addresses {
-		held := address.Value == "+49301235001"
-		if address.AlreadyHeld != held || (held && address.WillBePrimary) {
-			t.Errorf("address=%+v want held=%t and a held number never primary", address, held)
-		}
-	}
-	if _, err := e.Contacts.MergeContact(ctx, ids.From[ids.ContactKind](sourceID), ids.From[ids.ContactKind](targetID), &preview.SourceVersion); err != nil {
-		t.Fatal(err)
-	}
-	checkMergedAddresses(ctx, t, e, targetID, preview.Addresses)
 }
 
 func TestCompanyMergePreviewShowsDomainDemotions(t *testing.T) {
@@ -173,6 +183,13 @@ func checkMergedAddresses(ctx context.Context, t *testing.T, e *integration.Env,
 			var primary, archived bool
 			if err := tx.QueryRow(ctx, query, pgx.StrictNamedArgs{"id": address.ID, "target": target}).Scan(&value, &primary, &archived); err != nil {
 				return err
+			}
+			if archived {
+				// A held number's primary flag lives on the survivor's own row of it.
+				if err := tx.QueryRow(ctx, `SELECT bool_or(is_primary) FROM contact_phone WHERE contact_id=@target AND phone=@phone AND archived_at IS NULL`,
+					pgx.StrictNamedArgs{"target": target, "phone": value}).Scan(&primary); err != nil {
+					return err
+				}
 			}
 			if value != address.Value || primary != address.WillBePrimary || archived != address.AlreadyHeld {
 				t.Errorf("%s value=%q primary=%t preview=%+v", address.Kind, value, primary, address)
