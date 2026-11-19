@@ -30,10 +30,10 @@ import {
 } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { attachmentTitle } from "../../lib/attachmentlink";
+import { CONTRACT_STATUS_LABEL } from "../../lib/contractstatus";
 import { labelFor } from "../../lib/labelfor";
 import type { LegalReview } from "../../lib/legalreviews.queries";
 import { useViewerZone } from "../../lib/viewerzone";
-import { CONTRACT_STATUS_LABEL } from "../projects/contractlifecycle";
 
 type Packet = LegalReview["packet"];
 type PacketDocument = Packet["documents"][number];
