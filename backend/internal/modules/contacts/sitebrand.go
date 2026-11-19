@@ -87,7 +87,7 @@ var genericBrandWords = map[string]bool{
 // as a letter, or keep whole. "The Boston Consulting Group" is bcg, and "Bank of
 // America" is bofa.
 var initialConnectives = map[string]bool{
-	"the": true, "of": true, "and": true, "und": true, "der": true, "die": true, "das": true, "va": true, "cua": true,
+	"the": true, "of": true, wordAnd: true, "und": true, "der": true, "die": true, "das": true, "va": true, "cua": true,
 }
 
 // statedNameSpellsLabel reports whether a company name accounts for a domain
