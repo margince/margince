@@ -284,8 +284,8 @@ export async function settleSendCheck() {
 
 // Every suite that reaches settleSendCheck calls this in a beforeEach, and
 // drives its session with `advanceTimers: vi.advanceTimersByTime`. The clock
-// still moves 1 ms per real 1 ms: Testing Library drains each wait on a
-// setTimeout(0) it steps only through a `jest` global, and nothing steps the
+// still moves 1 ms per real 1 ms. Testing Library drains each wait on a
+// setTimeout(0) it steps only through a `jest` global. Nothing else steps the
 // composer's autosave or sign-off timers.
 export function installComposeClock() {
   vi.useFakeTimers({
