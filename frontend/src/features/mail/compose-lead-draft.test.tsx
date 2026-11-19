@@ -243,6 +243,36 @@ describe("drafting to a lead", () => {
     ).toBeTruthy();
   });
 
+  it("says a template wrote a lead draft the model could not", async () => {
+    const user = userEvent.setup();
+    stubRoutes({
+      "POST /leads/l-1/draft-email": () =>
+        jsonResponse({
+          ...LEAD_DRAFT,
+          generated_by: "deterministic",
+          ai_generated: false,
+          ai_disclosure: null,
+        }),
+    });
+    render(
+      <ComposeWindow
+        intent="Follow up on our discussion"
+        entityType="lead"
+        entityId="l-1"
+        recordAddress="dung.ly@newsky.example"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    await user.click(draftButton());
+
+    expect(
+      await screen.findByText("AI could not write this draft"),
+    ).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Shorter" })).toBeNull();
+  });
+
   // A deployment running no model answers 501, and the composer says so rather
   // than leaving a button that does nothing when pressed.
   //

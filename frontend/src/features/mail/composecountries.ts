@@ -5,6 +5,7 @@ import { skipToken, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { addressKey } from "../../lib/addresskey";
 import { unwrap } from "../../lib/problem";
 
 /** A country the sender stated for one recipient; `null` is one they cleared. */
@@ -12,15 +13,12 @@ export type RecipientCountry = components["schemas"]["RecipientCountry"];
 export type RecipientCountryReading =
   components["schemas"]["RecipientCountryReading"];
 
-// Mirrors the server's canonical address: trimmed, lower case.
-const canonical = (address: string) => address.trim().toLowerCase();
-
 /** The sender's statement about one address, or undefined for none. */
 export function statedFor(
   stated: readonly RecipientCountry[],
   address: string,
 ): RecipientCountry | undefined {
-  return stated.find((entry) => entry.address === canonical(address));
+  return stated.find((entry) => entry.address === addressKey(address));
 }
 
 /**
@@ -32,7 +30,7 @@ export function countriesOnMessage(
   stated: readonly RecipientCountry[],
   addresses: readonly string[],
 ): RecipientCountry[] | undefined {
-  const held = new Set(addresses.map(canonical));
+  const held = new Set(addresses.map(addressKey));
   const kept = stated.filter((entry) => held.has(entry.address));
   return kept.length > 0 ? kept : undefined;
 }
@@ -56,14 +54,14 @@ export function sameCountries(
 export function useRecipientCountries(seed?: readonly RecipientCountry[]) {
   const [stated, setStated] = useState<readonly RecipientCountry[]>(seed ?? []);
   const without = (list: readonly RecipientCountry[], address: string) =>
-    list.filter((entry) => entry.address !== canonical(address));
+    list.filter((entry) => entry.address !== addressKey(address));
   return {
     stated,
     /** States a country, or clears it with `null`. */
     state: (address: string, country: string | null) =>
       setStated((now) => [
         ...without(now, address),
-        { address: canonical(address), country },
+        { address: addressKey(address), country },
       ]),
     /** Goes back to the record's country. */
     forget: (address: string) => setStated((now) => without(now, address)),
@@ -80,7 +78,7 @@ export type RecipientCountries = ReturnType<typeof useRecipientCountries>;
  */
 export function useRecordCountry(address: string, open: boolean) {
   const query = useQuery({
-    queryKey: ["compose-recipient-country", canonical(address)],
+    queryKey: ["compose-recipient-country", addressKey(address)],
     queryFn: open
       ? async () => {
           const answer = unwrap(

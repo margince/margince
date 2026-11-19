@@ -56,6 +56,7 @@ export function MoneyControl({
           }
           onChange={(next) => onChange(minorListOrText(next, currency, locale))}
           parse={parse}
+          removeLabel={(item) => t("tokenInput.remove", { value: item })}
           aria-label={`${label ?? t("filters.values")} (${currency})`}
           placeholder={t("filters.addValue")}
         />
