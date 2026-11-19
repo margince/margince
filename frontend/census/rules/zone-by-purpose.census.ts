@@ -136,6 +136,10 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The inquiry policy fixture pins Berlin so its deadline example covers a change to daylight saving time independently of the reader's zone.",
   },
   {
+    file: "features/sign-in/magic.records.test.tsx",
+    why: "Pins a reader zone apart from any runner's, so a done line's records are dated on the reader's stored clock and not the browser's.",
+  },
+  {
     file: "features/worklist/worklist.happened.test.ts",
     why: "Pins the reader and record zone to UTC, so a fact at a fixed instant names the same day on every runner, whatever its own zone.",
   },

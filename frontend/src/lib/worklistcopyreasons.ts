@@ -7,6 +7,7 @@ import { middayInstant, sameCalendarDay } from "../format/calendarday";
 import {
   formatDate,
   formatDateTime,
+  formatDue,
   formatMoney,
   formatNumber,
 } from "../format/format";
@@ -253,7 +254,8 @@ export function dealFactsText(
 }
 
 // Notices retain the original change date even when delivery happens later.
-// A meeting's start uses the reader's clock; a held meeting and a task, the record's.
+// A meeting's start and a task's agreed time use the reader's clock; a held
+// meeting and a task's due day, the record's.
 //
 // Today's meeting shows the clock time alone: a rep reads it on that morning,
 // and "today" is the frame they are in. Otherwise the date shows too, or a bare
@@ -261,9 +263,10 @@ export function dealFactsText(
 // The two moments use different clocks because they are different facts. A
 // meeting starts at an instant the reader attends, so it uses their clock. A
 // 09:00 Berlin call is 14:00 in Bangkok; saying 09:00 sends them five hours
-// late. A task is due on a calendar day the team agreed, so it uses the
-// record's clock. Two colleagues quoting one deadline quote the same day, as
-// `dueInstant` mints it.
+// late. A task with an agreed time is such an instant too. A task due by its
+// day is due on a calendar day the team agreed, so it uses the record's clock.
+// Two colleagues quoting one deadline quote the same day, as `dueInstant` mints
+// it.
 export function whenText(
   item: WorklistItem,
   t: T,
@@ -296,7 +299,7 @@ export function whenText(
     return null;
   }
   if (item.source === "task") {
-    return taskWhen(item, item.due_at, key, t, locale, record, now);
+    return taskWhen(item, item.due_at, key, t, locale, viewer, record, now);
   }
   // A meeting's `due_at` is its start, as exact as the meeting is; any other
   // row's is a deadline, which always has its time.
@@ -308,19 +311,27 @@ export function whenText(
 }
 
 // A task with an agreed time reads like any other moment: the time alone
-// today, the date and time otherwise. A task due by its day has no hour to
-// print. Due today, the row's "due today" reason says it already.
+// today, and the date and time otherwise. When the agreed zone is not the
+// reader's, its clock shows too, as `formatDue` prints it in the task's details.
+// A task due by its day has no hour to print. Due today, the "due today" reason
+// says it.
 function taskWhen(
   item: WorklistItem,
   dueAt: string,
   key: "worklist.when.starts" | "worklist.when.due",
   t: T,
   locale: Locale,
+  viewer: string,
   record: string,
   now: Date,
 ): string | null {
   if (item.due_has_time === true) {
-    return t(key, { when: momentText(dueAt, "instant", locale, record, now) });
+    const intent = item.due_intent;
+    const when =
+      intent && intent.timezone !== viewer
+        ? formatDue(dueAt, true, locale, viewer, intent)
+        : momentText(dueAt, "instant", locale, viewer, now);
+    return t(key, { when });
   }
   return sameCalendarDay(new Date(dueAt), now, record)
     ? null
