@@ -1,4 +1,4 @@
-<!-- describes: backend/pkg/extension extensions -->
+<!-- describes: backend/pkg/extension extensions backend/internal/compose/extcapability -->
 # Extensions at a glance
 
 An extension is a small add-on that lives in its own folder, `extensions/<name>/`, and gives Margince
@@ -72,6 +72,63 @@ feed stops when they leave. A service member is the account made for this. No hu
 The member is not counted against the seat limit and is never deleted, only archived. The steps and the
 call are in [declare-a-service-member.md](../how-to/declare-a-service-member.md).
 
+## The doors from a unit into the core
+
+A unit runs in the core's process, so its code could reach anything. The design gives it three doors instead. Each is a published port in `backend/pkg/extension`, and the core builds the other side.
+
+```text
+ unit code (extensions/<name>)
+   │
+   ├─ 1  rt.Tx ─────────▶ the unit's OWN tables      as role ext_runtime;
+   │                      ext.ext_<name>_*            a core table is refused
+   │
+   ├─ 2  tx.Core() ─────▶ core records               the caller's live RBAC, row-scope check,
+   │     read doors       (contacts, deals, ...)     audit row, outbox event; the core stamps
+   │                                                  the unit's name
+   │
+   └─ 3  rt.Models()  ──▶ what the installation OWNS  gate: did the unit declare the need?
+         rt.Objects()     (AI key and budget,         then validate, trace, call, map the
+                          S3 credentials)             error. No secret crosses the line.
+```
+
+| Door | Use it for | What guards it | Page |
+|---|---|---|---|
+| 1. `rt.Tx` | The unit's own data | A database role with no core table | [add-an-extension.md](../how-to/add-an-extension.md) |
+| 2. `tx.Core()` and the read doors | A core record | The write path of the product, under the caller's rights | [read-core-records-from-an-extension.md](../how-to/read-core-records-from-an-extension.md) |
+| 3. `rt.Models()` and `rt.Objects()` | A service the installation pays for or holds a secret for | `Extension.Needs`, checked on each call | [expose-a-core-service-to-extensions.md](../how-to/expose-a-core-service-to-extensions.md) |
+
+Door 3 differs from door 2 in who the call acts as. Door 2 acts as the signed-in member, so the member's rights decide it. A model or file call has no record behind it, so the installation's own choice decides: the model the admin picked, the shared budget, a key prefix of the unit's own. The admin reads each declared need and the author's reason under Settings, Extensions before the unit runs. The reasons are in [extension-capability-grants.md](extension-capability-grants.md).
+
+A new core service for units is a new method on `Runtime`, a published port and a core side that holds the gate. The steps are in [expose-a-core-service-to-extensions.md](../how-to/expose-a-core-service-to-extensions.md).
+
+### What the core lends a unit, and what is built
+
+One row for each thing a unit can ask of the core. The tool bag below lists which records `tx.Core()` reaches.
+
+| Core capability | A unit calls | Declared in | Decided by | State |
+|---|---|---|---|---|
+| Its own tables | `rt.Tx`, `tx.Exec`, `tx.Query` | `Migrations` | The `ext_runtime` role: unit tables only | Built |
+| Core records, read and write | `tx.Core()` | none | The caller's live rights | Built |
+| Tell a member about a record | `tx.Core().Notices()` | none | The member's own notification settings | Built |
+| Propose where a message belongs | `tx.Core().LinkSuggestions()` | none | The caller's live rights | Built |
+| Read for a job tick or a delivery | `rt.Deals`, `Authority`, `Directory`, `Activities`, `SetAside` | `SystemReads` | Nobody; an attended call is refused | Built |
+| Land records from its own system | `rt.Ingest`, `IngestBatch`, `IngestPosition` | `Ingress` | The member whose credential produced the record | Built |
+| Run its own job soon | `rt.SyncNow` | `Jobs` | The unit's own declared job | Built |
+| A vendor's access token | `rt.OAuthAccessToken`, `OAuthDisconnect` | `OAuthApps` | The admin's consent | Built |
+| Its own secrets | `rt.Secrets` | `Secrets` | The unit's own namespace | Built |
+| The installation's AI models | `rt.Models().Complete` | `Needs`, `models` | The installation's model choice and shared budget | Built |
+| The installation's file store | `rt.Objects().Put`, `Get`, `Delete` | `Needs`, `objects` | A key prefix of the unit's own | Built |
+
+What a unit does not get:
+
+| Not offered | State | Why |
+|---|---|---|
+| The core vault | Never | It holds connector tokens and provider keys. A vendor token comes through `OAuthApps`. |
+| The bytes of a core attachment | Never | An attachment follows its record's row-level rights, which a read by key skips. |
+| Custom field values on a core write | Not yet | The write is refused with `ErrInvalid` until the field catalog is checked against it. |
+| A spend cap for each unit's model calls | Not yet | One shared budget serves all units, and the audit rows say which unit spent it. |
+| Expiry or an index of a unit's objects | Not yet | A unit deletes its own objects with `Delete`. |
+
 ## The tool bag: what a unit can do to each core record
 
 Read a row as "can a unit do this to that record?" A ✅ is a door the core offers. A · is no door. Every table
@@ -106,6 +163,8 @@ Every field of `Extension` that brings something to the core.
 | `Jurisdictions` | Unit's jurisdiction packs (policy suppliers to the core retention engine, never actors). |
 | `Messaging` | Unit's outbound-messaging rule sets, the country rules the core authorization engine consults before a message goes out. |
 | `SubjectRights` | Unit's data-subject-request deadlines. |
+| `Reach` | Reach declares the unit's tables holding a core company, contact or lead id. |
+| `Privacy` | Privacy declares, for every table the unit owns, which core record its rows belong to, which columns are personal data and the retention class. |
 | `Documents` | Compliance documents the unit ships for its jurisdictions. |
 | `Tools` | Governed agent tools the unit contributes: named operations running at a requested risk tier. |
 | `Channels` | Messaging providers this unit supplies TRANSPORT for. |
@@ -123,11 +182,13 @@ Every field of `Extension` that brings something to the core.
 | `Inbound` | Session-less HTTP edges this unit asks the core to mount: a signed POST from a party that holds no session and no seat. |
 | `OAuthApps` | Vendors whose consent flow the core runs for this unit. |
 | `SystemReads` | System reads the unit's jobs and subscriptions make. |
+| `Needs` | Core capabilities the unit uses, with a reason each. |
 | `Migrations` | Unit's SQL schema layer: a read-only filesystem holding the MigrationsDir directory of NNNN_name.up.sql/.down.sql pairs, which a unit supplies with `//go:embed migrations`. |
 | `FailureClasses` | Ways this unit's background jobs fail, named in the unit's own vocabulary, each with what an operator does about it. |
 | `Entries` | Unit's ways into its own screen from core screens: the Log activity form and the contact, company and deal headers. |
 | `Settings` | Values an admin can change for the unit, drawn by the core on the unit's card of the Extensions page. |
 | `Panels` | Unit's components drawn inline on core pages, such as a deal page's side column. |
+| `Instrumentation` | Instrumentation observes the whole process and the browser: logs, requests, jobs, panics, errors and navigation. |
 
 ### Slots on a core page
 
@@ -226,4 +287,6 @@ first how-to below.
   records.
 - [declare-a-service-member.md](../how-to/declare-a-service-member.md): the account a timed job runs as.
 - [send-a-notice-from-an-extension.md](../how-to/send-a-notice-from-an-extension.md): tell a user about a record.
+- [expose-a-core-service-to-extensions.md](../how-to/expose-a-core-service-to-extensions.md): let units use a core
+  service that holds a secret.
 - [extensibility.md](extensibility.md): why the tier is built this way, and what it guards.

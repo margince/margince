@@ -39,6 +39,7 @@ bound for its ladder's rungs, and may retain the prompt for debugging.
 | `document_extract` | `premium` | no | yes | none | shipped |
 | `draft_reply` | `cheap_cloud` → `premium` | no | no | none | shipped |
 | `enrich` | `local_small` → `cheap_cloud` | no | no | none | shipped |
+| `extension_call` | `cheap_cloud` → `premium` | no | yes | none | shipped |
 | `growth_fit` | `cheap_cloud` → `premium` | no | no | none | shipped |
 | `nl_search` | `cheap_cloud` → `premium` | no | no | none | shipped |
 | `offer_draft` | `cheap_cloud` → `premium` | no | no | none | shipped |

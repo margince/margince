@@ -8,6 +8,7 @@ package compose
 import (
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/compose/chatsummary"
+	"github.com/margince/margince/backend/internal/compose/extcapability"
 	"github.com/margince/margince/backend/internal/compose/goalproposal"
 	"github.com/margince/margince/backend/internal/compose/reportsetup"
 	"github.com/margince/margince/backend/internal/compose/rewrite"
@@ -31,9 +32,6 @@ func NewTaskCensus() (*aitasks.Registry, error) {
 	multiTurn := func(task ai.Task, variant string, c aitasks.CaseFactory) {
 		register(ai.SiteKindMultiTurn, task, variant, c)
 	}
-	agentLoop := func(task ai.Task, variant string, c aitasks.CaseFactory) {
-		register(ai.SiteKindAgentLoop, task, variant, c)
-	}
 
 	oneShot(ai.TaskCaptureClassify, "classify", captureClassifyCases{})
 	oneShot(ai.TaskCaptureClassify, "deal_topic", dealTopicCases{})
@@ -52,6 +50,7 @@ func NewTaskCensus() (*aitasks.Registry, error) {
 	oneShot(ai.TaskDraftReply, "intro", introDraftCases{})
 	oneShot(ai.TaskDraftReply, "intro_note", introNoteCases{})
 	oneShot(ai.TaskRewrite, "rewrite", rewrite.CertCases{})
+	oneShot(ai.TaskExtensionCall, "extension_call", extcapability.CertCases{})
 	oneShot(ai.TaskChatSummary, "episode", chatsummary.CertCases{})
 	oneShot(ai.TaskProposeRoles, "committee", proposeRolesCases{})
 	oneShot(ai.TaskNlSearch, "filter_propose", filterProposeCases{})
@@ -95,7 +94,7 @@ func NewTaskCensus() (*aitasks.Registry, error) {
 	multiTurn(ai.TaskColdStart, "sitereadmessage", companyReadMessageCases{})
 	multiTurn(ai.TaskColdStart, "acts", onboardingActCases{})
 	for _, agent := range ai.AgentsFor(ai.TaskAgentLoop) {
-		agentLoop(ai.TaskAgentLoop, agent.Name, agentLoopCases{agent: agent.Name})
+		register(ai.SiteKindAgentLoop, ai.TaskAgentLoop, agent.Name, agentLoopCases{agent: agent.Name})
 	}
 
 	return r, r.Validate()
