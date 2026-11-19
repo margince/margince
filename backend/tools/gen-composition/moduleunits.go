@@ -162,8 +162,11 @@ func fetchUnits(root string) error {
 			downloadOf[modPath] = u.download
 		}
 	}
+	if err := os.MkdirAll(outDir, 0o755); err != nil { // #nosec G301 -- build output the image copies, like the units in it
+		return err
+	}
 	if len(wanted) == 0 {
-		return nil
+		return writeFetchedIndex(root, "")
 	}
 	downloaded, err := downloadModules(filepath.Dir(instanceGoMod(root)), wanted)
 	if err != nil {
@@ -184,7 +187,13 @@ func fetchUnits(root string) error {
 		}
 		fmt.Fprintf(&index, "%s | %s\n", name, downloadOf[m.Path])
 	}
-	return os.WriteFile(filepath.Join(root, filepath.FromSlash(fetchedUnitsIndex)), []byte(index.String()), 0o644) // #nosec G306 -- a build listing, not a secret
+	return writeFetchedIndex(root, index.String())
+}
+
+// writeFetchedIndex always writes the index, empty when nothing was fetched,
+// so a reader can tell "no downloaded units" from "an index nobody wrote".
+func writeFetchedIndex(root, content string) error {
+	return os.WriteFile(filepath.Join(root, filepath.FromSlash(fetchedUnitsIndex)), []byte(content), 0o644) // #nosec G306 -- a build listing, not a secret
 }
 
 // dropReplaces removes a downloaded unit's replace lines from its copy: the

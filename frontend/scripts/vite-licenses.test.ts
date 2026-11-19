@@ -110,6 +110,45 @@ describe("third-party notices", () => {
     }
   });
 
+  it("ships and checks the licence of a unit the bundle reaches only through CSS", async () => {
+    const root = fixture(true);
+    try {
+      withDownloadedUnit(root, true);
+      writeFileSync(
+        join(root, "build/extensions/acme/style.css"),
+        "a{color:red}",
+      );
+      writeFileSync(
+        join(root, "entry.js"),
+        "import {value} from 'fake-pkg';import './build/extensions/acme/style.css';document.body.textContent=value;",
+      );
+      const outputs = await fixtureBuild(root);
+      const notice = outputs.find(
+        (item) => item.fileName === THIRD_PARTY_NOTICES,
+      );
+      expect(
+        notice && "source" in notice ? String(notice.source) : "",
+      ).toContain("ACME-UNIT-LICENCE-TEXT");
+      rmSync(join(root, "build/extensions/acme/LICENSE"));
+      await expect(fixtureBuild(root)).rejects.toThrow(/acme\/crm.*no LICENSE/);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it("refuses downloaded unit folders that have no index", async () => {
+    const root = fixture(true);
+    try {
+      withDownloadedUnit(root, true);
+      rmSync(join(root, "build/extensions/fetched-units.txt"));
+      await expect(fixtureBuild(root)).rejects.toThrow(
+        /fetched-units.txt.*missing/,
+      );
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it("leaves out a downloaded unit that the bundle does not ship", async () => {
     const root = fixture(true);
     try {

@@ -51,6 +51,10 @@ goroot="${BACKEND_NOTICES_GOROOT:-$(go env GOROOT)}"
 
 # Own code lives under the repository root; everything else is third party.
 grep -v '^$' "$work/all" | sort -u | awk -F'|' -v root="$root/" 'index($3, root) != 1' >"$work/modules"
+if [ ! -f "$units" ] && [ -d "$(dirname "$units")" ] && [ -n "$(find "$(dirname "$units")" -mindepth 1 -maxdepth 1 -type d)" ]; then
+	echo "backend-notices: $(dirname "$units") holds downloaded units but $units is missing; rerun gen-composition." >&2
+	exit 1
+fi
 if [ -f "$units" ]; then
 	while IFS='|' read -r name source; do
 		name="$(echo "$name" | tr -d ' ')"

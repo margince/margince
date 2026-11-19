@@ -82,6 +82,12 @@ elif ! grep -q 'example.test/bare' "$work/log"; then
 	fail "the refusal does not name the unit: $(cat "$work/log")"
 fi
 
+# --- downloaded units with no index ---------------------------------------------
+rm "$work/fetched/fetched-units.txt"
+if BACKEND_NOTICES_UNITS="$work/fetched/fetched-units.txt" generate "$work/complete"; then
+	fail "downloaded unit folders without an index were accepted"
+fi
+
 # --- the real corpus -----------------------------------------------------------
 if ! sh "$GENERATOR" "$work/real.txt" >"$work/log" 2>&1; then
 	fail "the real corpus was refused: $(cat "$work/log")"

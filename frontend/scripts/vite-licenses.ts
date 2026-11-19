@@ -129,7 +129,19 @@ function licenceTexts(dir: string): string[] {
 // composer's index is what names them.
 function fetchedUnits(root: string): FetchedUnit[] {
   const index = resolve(root, FETCHED_UNITS);
-  if (!existsSync(index)) return [];
+  if (!existsSync(index)) {
+    const folder = dirname(index);
+    if (
+      existsSync(folder) &&
+      readdirSync(folder, { withFileTypes: true }).some((entry) =>
+        entry.isDirectory(),
+      )
+    )
+      throw new Error(
+        `third-party notices: ${folder} holds downloaded units but ${FETCHED_UNITS} is missing; rerun gen-composition`,
+      );
+    return [];
+  }
   return readFileSync(index, "utf8")
     .split(/\r?\n/)
     .filter((line) => line.trim())
@@ -178,23 +190,24 @@ function bundleNotices(
   const copied = copiedFiles(root);
   const packages = new Map<string, BundledPackage>();
   const loaded = new Set<string>();
-  const loadedFiles: string[] = [];
+  const shipped: string[] = [];
   for (const output of Object.values(bundle)) {
     if (output.type !== "chunk") continue;
     for (const id of Object.keys(output.modules)) {
       loaded.add(relative(root, moduleFile(id)));
-      loadedFiles.push(moduleFile(id));
+      shipped.push(moduleFile(id));
       const pkg = bundledPackage(id);
       if (pkg) packages.set(pkg.root, pkg);
     }
   }
   for (const file of cssFiles.filter((file) => file.endsWith(".css"))) {
+    shipped.push(file);
     const pkg = bundledPackage(file);
     if (pkg) packages.set(pkg.root, pkg);
   }
   const units = fetchedUnits(root)
     .filter((unit) =>
-      loadedFiles.some((file) => file.startsWith(`${unit.dir}${sep}`)),
+      shipped.some((file) => file.startsWith(`${unit.dir}${sep}`)),
     )
     .map(unitNotice);
   const notices = [...packages.values()]
