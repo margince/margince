@@ -10400,6 +10400,8 @@ export const en = {
     "You cannot read tags, so the tags column is not imported.",
   "import.reason.cannot_write_type":
     "“{value}” cannot be written to a {type} field.",
+  "import.reason.company_domain_matched":
+    "The company that already holds the domain {value} takes this row, so no second company is created.",
   "import.reason.company_duplicate_found":
     "A company of this name is already in the CRM. Importing this row creates a second one and files the pair for review.",
   "import.reason.company_duplicate_skipped":
@@ -10494,6 +10496,8 @@ export const en = {
     "The “{column}” value “{value}” is already used by row {line}. Each row needs its own, because it is what a re-import matches on and what an undo finds this row by.",
   "import.reason.size_band_invalid":
     "Employees “{value}” is not one of {allowed}.",
+  "import.reason.stored_values_kept":
+    "The row neither created this record nor names it by id, so it keeps its own {column}. The row fills only empty fields.",
   "import.reason.tag_created":
     "No tag had this name, so the import created it.",
   "import.reason.tag_name_invalid":

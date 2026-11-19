@@ -14853,6 +14853,7 @@ const (
 	ImportReasonCodeCannotWriteType              ImportReasonCode = "cannot_write_type"
 	ImportReasonCodeCloseDateFuture              ImportReasonCode = "close_date_future"
 	ImportReasonCodeCloseDatePast                ImportReasonCode = "close_date_past"
+	ImportReasonCodeCompanyDomainMatched         ImportReasonCode = "company_domain_matched"
 	ImportReasonCodeCompanyDuplicateFound        ImportReasonCode = "company_duplicate_found"
 	ImportReasonCodeCompanyDuplicateSkipped      ImportReasonCode = "company_duplicate_skipped"
 	ImportReasonCodeCompanyLinkOnMeeting         ImportReasonCode = "company_link_on_meeting"
@@ -14941,6 +14942,7 @@ const (
 	ImportReasonCodeSizeBandInvalid              ImportReasonCode = "size_band_invalid"
 	ImportReasonCodeStageUnknown                 ImportReasonCode = "stage_unknown"
 	ImportReasonCodeStageUnnamed                 ImportReasonCode = "stage_unnamed"
+	ImportReasonCodeStoredValuesKept             ImportReasonCode = "stored_values_kept"
 	ImportReasonCodeTagCreated                   ImportReasonCode = "tag_created"
 	ImportReasonCodeTagNameInvalid               ImportReasonCode = "tag_name_invalid"
 	ImportReasonCodeTagNew                       ImportReasonCode = "tag_new"
@@ -15002,6 +15004,8 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeCloseDateFuture:
 		return true
 	case ImportReasonCodeCloseDatePast:
+		return true
+	case ImportReasonCodeCompanyDomainMatched:
 		return true
 	case ImportReasonCodeCompanyDuplicateFound:
 		return true
@@ -15178,6 +15182,8 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeStageUnknown:
 		return true
 	case ImportReasonCodeStageUnnamed:
+		return true
+	case ImportReasonCodeStoredValuesKept:
 		return true
 	case ImportReasonCodeTagCreated:
 		return true
