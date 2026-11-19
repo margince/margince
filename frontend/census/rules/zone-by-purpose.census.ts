@@ -357,7 +357,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The reader's zone is the subject: the suite names a reader zone, a company zone that disagrees with it by a calendar day, and a fixed offset the formatters refuse.",
   },
   {
-    file: "features/worklist/taskactions.test.tsx",
+    file: "features/worklist/taskdetail.testkit.tsx",
     why: "The task dialog renders its logged and due dates; the suite names the reader's zone so a snapshot of the dialog does not move with the machine it runs on.",
   },
   {

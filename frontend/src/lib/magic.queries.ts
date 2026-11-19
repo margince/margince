@@ -43,12 +43,15 @@ export function fillsPage(
  * What the machinery did since the reader's last brief: `since` is left to the
  * server, which resolves it to the reader's own last brief cutoff.
  *
- * No `enabled` gate: every line is about the reader's own records, scoped by
- * the same row predicates their record pages use, and the server refuses a
- * caller with no human behind it — which is the only refusal this read has.
+ * `enabled` is false for a reader without `deal.read`, which the server
+ * requires for the whole answer.
  */
-export function useMagic() {
-  return useQuery(magicOptions);
+export function useMagic(enabled = true) {
+  return useQuery({
+    ...magicOptions,
+    enabled,
+    select: (receipt) => (enabled ? receipt : undefined),
+  });
 }
 
 /** The read useMagic makes, which Home's prefetch also starts. */

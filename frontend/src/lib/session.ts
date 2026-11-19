@@ -65,9 +65,12 @@ export function useMe(enabled = true) {
     const previous = previousScope.current;
     const user = query.data?.user?.id;
     if (previousUser.current !== undefined && previousUser.current !== user)
-      // Most record caches are keyed by record, not by reader.
+      // Most record caches are keyed by record, not by reader. Only the
+      // snapshot itself (the bare ["me"] key) survives; ["me", ...] reads such
+      // as the reader's own sessions and two-step state belong to the seat.
       client.removeQueries({
-        predicate: (entry) => entry.queryKey[0] !== "me",
+        predicate: (entry) =>
+          entry.queryKey[0] !== "me" || entry.queryKey.length > 1,
       });
     else if (previous !== undefined && previous !== scope)
       client.removeQueries({

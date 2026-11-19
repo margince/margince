@@ -2817,6 +2817,7 @@ export const en = {
   "shell.shortcuts.singleKeyOffHint": "Turn them on in Settings → Account.",
   "shell.more": "More",
   "shell.unknownPage": "Not found",
+  "shell.unavailableForRole": "Not available for your role.",
   "shell.closeMenu": "Close",
   // The agent panel's one promise, as opposed to its readings: what the agent
   // can REACH. Row scope bounds it on the server, and a guarantee nobody is
@@ -13363,7 +13364,6 @@ export const en = {
   // claims the installation's own configuration can contradict, on the screen a
   // CISO reads on the way in.
   "auth.legalProtected": "Access to this company is restricted.",
-  "auth.legalTerms": "Terms",
   "auth.legalPrivacy": "Privacy",
   "auth.signingIn": "Signing in…",
   "auth.signIn": "Sign in",
@@ -16681,6 +16681,18 @@ export const en = {
     "Other devices were signed out and connected apps need connecting again.",
   "account.signOutHelp":
     "Ends your session in this browser. Other devices stay signed in.",
+  "account.devicesCard": "Signed-in devices",
+  "account.devicesBrowserOn": "{browser} on {system}",
+  "account.devicesUnknown": "Unknown device",
+  "account.devicesWhen": "Signed in {signedIn}. Last active {lastActive}.",
+  "account.devicesThisOne": "This device",
+  "account.devicesSignOut": "Sign out",
+  "account.devicesSignOutNamed": "Sign out {device}",
+  "account.devicesOthers": "Other devices",
+  "account.devicesOthersHelp": "Ends every session except this one.",
+  "account.devicesSignOutOthers": "Sign out all others",
+  "account.devicesFailed_one": "{count} device was not signed out. Retry.",
+  "account.devicesFailed_other": "{count} devices were not signed out. Retry.",
   "account.languageHelp":
     "The language of menus, pages and messages from Margince. Saved to your account, so it follows you to every device you sign in on.",
   "account.appearanceHelp":

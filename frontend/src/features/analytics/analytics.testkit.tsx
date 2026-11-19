@@ -79,6 +79,8 @@ export type ReportsStubOpts = {
   contextStatus?: number;
   // A seat that may also read deals, for the views that probe them.
   dealRead?: boolean;
+  // The seat may open a company, so a row naming one is a link.
+  companyRead?: boolean;
 };
 
 // The rows one report answers with.
@@ -124,6 +126,7 @@ function meAnswer(opts: ReportsStubOpts) {
       reporting_framework: ["read"],
       data_coverage: granted ? ["read"] : [],
       ...(opts.dealRead ? { deal: ["read"] } : {}),
+      ...(opts.companyRead ? { company: ["read"] } : {}),
     },
   });
 }

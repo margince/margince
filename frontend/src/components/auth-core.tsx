@@ -1,15 +1,16 @@
 import "./auth-core.css";
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import { AmbientWaves } from "../design-system/ambient-waves";
-import { AppLink } from "../design-system/applink";
 import { Heading } from "../design-system/heading";
 import {
   MarginceCoreScene,
   type MarginceCoreState,
 } from "../design-system/margince-core";
 import { useDocumentIntro, useTypeStream } from "../design-system/motion";
+import { OffsiteLink } from "../design-system/offsitelink";
 import { ThemeToggle } from "../design-system/theme-toggle";
 import { useT } from "../i18n";
+import { LEGAL_LINKS } from "../lib/legallinks";
 
 /**
  * The unauthenticated surface: two regions (ADR-0076 Decision 1).
@@ -189,11 +190,10 @@ export function AuthCardTitle({
  * `auth.tsx`) is a control and stays the last child of the card column inside
  * `.auth-task-in`. Different grid rows, so neither can push the other around.
  *
- * **The hrefs are server paths, not app routes.** Both documents have to be
+ * **The links are off-site documents, from `lib/legallinks`.** Both have to be
  * readable BEFORE anyone authenticates, so they cannot sit behind the SPA
- * router — the SPA is what a 401 keeps you out of. Nothing serves them yet and
- * they 404: a missing document, which is a content gap rather than a faked
- * capability.
+ * router. They open in a new tab so the form keeps what was typed, and a
+ * document with no address draws no link.
  */
 function LegalFooter({ notice }: Readonly<{ notice: boolean }>) {
   const t = useT();
@@ -211,10 +211,14 @@ function LegalFooter({ notice }: Readonly<{ notice: boolean }>) {
           legal sentence above still reads as a statement and not as a control.
           The row already wraps, so the extra item cannot widen the surface. */}
       <span className="auth-legal-links">
-        <AppLink href="/legal/terms">{t("auth.legalTerms")}</AppLink>
-        <span className="auth-legal-sep" aria-hidden />
-        <AppLink href="/legal/privacy">{t("auth.legalPrivacy")}</AppLink>
-        <span className="auth-legal-sep" aria-hidden />
+        {LEGAL_LINKS.map((link) => (
+          <Fragment key={link.key}>
+            <OffsiteLink href={link.href} className="">
+              {t(link.labelKey)}
+            </OffsiteLink>
+            <span className="auth-legal-sep" aria-hidden />
+          </Fragment>
+        ))}
         <ThemeToggle />
       </span>
     </div>
