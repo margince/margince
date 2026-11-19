@@ -66,15 +66,12 @@ func TestHealthCompositionKeepsReadableEvidenceBesideAFailedSource(t *testing.T)
 }
 
 func TestHealthCompositionNeitherClearsAnUnknownSourceNorAlarmsOnInformation(t *testing.T) {
-	ctx := healthTestContext(map[string]principal.ObjectGrant{"ai_diagnostics": {Read: true}})
-	for want, s := range map[crmcontracts.SystemHealthAssessment]crmcontracts.HealthSource{
-		"incomplete": {Id: "providers", Availability: "unknown", Condition: "unknown"},
-		"checked":    {Id: "unplaced", Availability: "available", Condition: healthInformation},
-	} {
+	unknown, information := crmcontracts.HealthSource{Availability: "unknown", Condition: "unknown"}, crmcontracts.HealthSource{Availability: "available", Condition: healthInformation}
+	for want, s := range map[crmcontracts.SystemHealthAssessment]crmcontracts.HealthSource{"incomplete": unknown, "checked": information} {
 		read := func(context.Context) (crmcontracts.HealthSource, []crmcontracts.HealthFinding, error) {
 			return s, nil, nil
 		}
-		report := composeHealth(ctx, []healthRead{{s.Id, "ai_diagnostics", read}}, func() time.Time { return time.Time{} })
+		report := composeHealth(healthTestContext(map[string]principal.ObjectGrant{"ai_diagnostics": {Read: true}}), []healthRead{{"providers", "ai_diagnostics", read}}, func() time.Time { return time.Time{} })
 		if report.Assessment != want || report.Complete != (want == "checked") || report.ActionCount != 0 {
 			t.Fatalf("%s/%s read as %+v, want %s", s.Availability, s.Condition, report, want)
 		}
