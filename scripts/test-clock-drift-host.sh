@@ -103,8 +103,9 @@ awk '
  inside && /^  [^ #][^:]*:/ { exit }
  inside { print }
 ' "$root/.github/workflows/scheduled.yml" >"$fixtures/job"
-grep -Fq 'run: ./scripts/clock-drift-host.sh run ' "$fixtures/job"
-if grep -Fq 'run: ./scripts/clock-drift-host.sh move ' "$fixtures/job"; then
+# Matched anywhere in a step: the suites step wraps its call to read the verdict.
+grep -Fq './scripts/clock-drift-host.sh run ' "$fixtures/job"
+if grep -Fq './scripts/clock-drift-host.sh move ' "$fixtures/job"; then
  echo 'the runner must not manage a new step while its clock is shifted' >&2
  exit 1
 fi
