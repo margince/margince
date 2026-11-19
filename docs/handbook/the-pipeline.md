@@ -2,10 +2,8 @@
 <!-- describes: frontend/src/features/deals backend/internal/modules/deals/deal_advance.go backend/internal/modules/deals/lossreason.go backend/internal/modules/deals/pipeline.go backend/internal/modules/deals/stages.go backend/internal/modules/deals/stagemoveverdict.go backend/internal/modules/deals/closedatesweep.go backend/internal/modules/deals/health.go -->
 # The pipeline: how a deal moves
 
-The pipeline in Margince is the ladder of stages every deal moves through. Deals
-live under **Deals** in the sidebar. That screen lists them as a **Table**, or
-shows them as a **Board** with one column per stage. The **Pipeline** picker on
-that screen names which ladder you are looking at.
+The pipeline in Margince is the ladder of stages every deal moves through. Deals live under **Deals** in the sidebar.
+That screen lists them as a **Table**, or shows them as a **Board** with one column per stage. The **Pipeline** picker on that screen names which ladder you are looking at.
 
 ## Deal tasks
 
@@ -79,7 +77,9 @@ An agent acting for someone who may edit pipelines can do the same. It cannot ad
 To add a pipeline, open **Settings** → **Deals** and choose **New pipeline**.
 Give it a **Name** and choose **Default** or **Not default**. It starts with a Won and a Lost stage, so add its open stages with **New stage**. Once there are two, **All pipelines** at the top lists each one with its count of open stages. Drag one by its handle to change the order pipelines are offered in. Choose **Make default** on a pipeline to make new deals go there.
 
-New deals need a default pipeline. To stop using a pipeline, choose **Retire**. It leaves the pickers and the forms for new deals, its deals keep their stage and history, and **Restore** brings it back. You cannot retire the default pipeline until another one is the default. Margince does not delete pipelines. A deal on a retired pipeline shows that pipeline's stages and takes no move until you restore it. Also called: second sales process, separate pipeline.
+New deals need a default pipeline. To stop using a pipeline, choose **Retire**. It leaves the pickers and the forms for new deals, its deals keep their stage and history, and **Restore** brings it back. You cannot retire the default pipeline until another one is the default. Margince does not delete pipelines.
+
+A deal on a retired pipeline shows that pipeline's stages and takes no move until you restore it. Also called: second sales process, separate pipeline.
 
 ### How is the weighted pipeline value calculated?
 The weighted value of a deal in Margince is its value times its stage's **Win probability**, rounded for each deal. A column's or report's weighted total is the sum of those rounded numbers.
