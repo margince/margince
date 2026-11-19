@@ -49,13 +49,11 @@ export function useChronologySlots({
   company,
   view,
   loading,
-  failed,
   active,
 }: Readonly<{
   company: Company;
   view?: Company360View;
   loading: boolean;
-  failed: boolean;
   // Whether the chronology is on screen at all. The Partner tab is a form,
   // so it renders no timeline rather than an empty one.
   active: boolean;
@@ -69,6 +67,8 @@ export function useChronologySlots({
   openEmail: string | null;
   setOpenEmail: (activityId: string | null) => void;
 } {
+  const { filter, filters, setFilters, openCut, kinds, read } =
+    useChronologyCut(company.id);
   const t = useT();
   const { locale } = useLocale();
   const readerZone = useViewerZone();
@@ -76,7 +76,7 @@ export function useChronologySlots({
   // than reading useMemberNames by id: `colleagueName` becomes useRecordChronology's
   // `values.nameOf`, called per row as it renders, so the ids are unknown here.
   // roster-failure: names change rows only; nothing here is picked.
-  const roster = useRoster("user", true);
+  const roster = useRoster("user", active && filter === "changes");
   const colleagues = new Map(
     (roster.data ?? []).flatMap((entry) =>
       "display_name" in entry ? [[entry.id, entry.display_name] as const] : [],
@@ -92,17 +92,16 @@ export function useChronologySlots({
     records("contact", id) ??
     records("deal", id) ??
     records("company", id);
-  const { filter, filters, setFilters, openCut, kinds, read } =
-    useChronologyCut(company.id);
-  // Withheld on the 360 is withheld on every cut: a narrowed read would only
-  // collect the refusal.
+  // A 360 denial stops the list, even if a filtered request started first.
   const withheld = view ? omitted(view, "activities") : false;
-  // The 360's own page seeds the list; older pages and every narrowed read
-  // come from the activity list itself.
+  const filtered = hasTimelineFilters(read);
+  // A full 360 already carries the first unfiltered page. A filtered cut
+  // can go straight to its own list, as can a record without a 360.
+  const waitForSeed = loading && !filtered;
   const timeline = useRecordTimeline("company", company.id, {
     filters: read,
     firstPage: view?.activities,
-    enabled: !withheld,
+    enabled: active && filter !== "changes" && !withheld && !waitForSeed,
   });
 
   const [openEmail, setOpenEmail] = useOpenEmail();
@@ -111,6 +110,7 @@ export function useChronologySlots({
     kind: "company",
     recordId: company.id,
     filter,
+    enabled: active,
     activities: timeline.activities,
     activitiesHaveMore: timeline.hasNextPage,
     loadMore: timeline,
@@ -142,6 +142,7 @@ export function useChronologySlots({
       setOpenEmail,
     };
   }
+  const groups = groupChronology(history.entries, timeline.hasNextPage);
   return {
     showChanges,
     openEmail,
@@ -150,7 +151,7 @@ export function useChronologySlots({
       timeline: history.entries,
       // Conversations, not messages. Ungrouped, a product update to three
       // contacts is three rows, and a five-message thread is five.
-      timelineGroups: groupChronology(history.entries, timeline.hasNextPage),
+      timelineGroups: groups,
       timelineHeader: (
         <>
           <ChronologyFilter filter={filter} conversations onFilter={openCut} />
@@ -177,15 +178,10 @@ export function useChronologySlots({
           history,
           {
             withheld,
-            filtered: hasTimelineFilters(read),
-            loading: loading || timeline.isPending,
-            failed: failed || timeline.isError,
-            // A narrowed read is the list's own and is assembled once it
-            // answers. So is an archived account's, whose 360 is refused.
-            assembled:
-              hasTimelineFilters(read) || company.archived_at
-                ? timeline.isSuccess
-                : Boolean(view?.activities),
+            filtered,
+            loading: waitForSeed || timeline.isPending,
+            failed: timeline.isError,
+            assembled: timeline.isSuccess,
           },
           t,
         ) ??
@@ -193,10 +189,7 @@ export function useChronologySlots({
         // somebody can answer. It uses the grouped list every other cut uses,
         // standing where the unfiltered list would.
         (filter === "conversations" ? (
-          <ConversationList
-            groups={groupChronology(history.entries, timeline.hasNextPage)}
-            zone={readerZone}
-          />
+          <ConversationList groups={groups} zone={readerZone} />
         ) : undefined),
     },
   };
