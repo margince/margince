@@ -2,7 +2,7 @@
 //
 // The app's Back must know whether `history.back()` stays in the app. The
 // browser does not say, so each entry carries its depth in `history.state`.
-// Depth 0 is an entry the app did not push; an in-app move adds one.
+// Depth 0 is where the app's run of entries begins; each entry after it adds one.
 // A stamp outlives a reload, and the entries below it are still ours.
 
 const DEPTH_KEY = "marginceDepth";
@@ -77,6 +77,20 @@ function browserIndex(): number | undefined {
   return index !== undefined && index >= 0 ? index : undefined;
 }
 
+// The entries this document made before the app began watching, which a move
+// made while the shell mounted leaves. Back reaches them without leaving.
+function sameDocumentEntriesBefore(index: number | undefined): number {
+  const entries = browserEntries()?.entries();
+  if (index === undefined || entries === undefined) {
+    return 0;
+  }
+  let first = index;
+  while (first > 0 && entries[first - 1]?.sameDocument === true) {
+    first -= 1;
+  }
+  return index - first;
+}
+
 // An entry without a stamp of its own. A replace keeps the entry, so its depth.
 // A move goes as far as the browser's index went, or else is one new entry.
 function unstampedDepth(
@@ -85,7 +99,7 @@ function unstampedDepth(
 ): number {
   if (how === "start" || depth === undefined) {
     seenAt.length = 0;
-    return 0;
+    return sameDocumentEntriesBefore(index);
   }
   if (how === "replaced") {
     return depth;

@@ -23,7 +23,7 @@ func (said momentCopy) awaitingReplyMoment(_ context.Context, now time.Time, pag
 		return crmcontracts.ContactMoment{}, false
 	}
 	outbound := *page.LastOutboundAt
-	if theyWroteSince(page) {
+	if heardSince(page) {
 		return crmcontracts.ContactMoment{}, false
 	}
 	if owesCommitment(page) {
@@ -88,6 +88,13 @@ func (said momentCopy) awaitingWhyNow(waiting int) string {
 func theyWroteSince(page *crmcontracts.Contact360) bool {
 	return page.LastInboundAt != nil && !occurredday.Answers(lastOutbound(page),
 		occurredday.Moment{At: *page.LastInboundAt, DateOnly: occurredday.IsStatedDay(page.LastInboundPrecision)})
+}
+
+// heardSince reports whether anything after our latest mail ends the wait on
+// them: their reply, or a meeting or call held since. Our mail is itself the
+// newest exchange at its own instant, so only a later one is news.
+func heardSince(page *crmcontracts.Contact360) bool {
+	return theyWroteSince(page) || page.LastContactAt != nil && page.LastContactAt.After(*page.LastOutboundAt)
 }
 
 func lastOutbound(page *crmcontracts.Contact360) occurredday.Moment {

@@ -12,7 +12,7 @@ import { useLocale, usePlural, useT } from "../../i18n";
 import { problemMessageOf } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import { settingsHref } from "../../lib/settingsrouting";
-import { UndoConfirm, UndoErrors } from "./import.notices";
+import { UndoConfirm, UndoErrors, UndoRecordName } from "./import.notices";
 import {
   hasProgress,
   ImportProgressPanel,
@@ -343,7 +343,8 @@ function UndoOutcome({ undo }: Readonly<{ undo: ImportReport["undo"] }>) {
               <ul className="import__issues t-sub">
                 {undo.kept.map((row) => (
                   <li key={`${row.object}-${row.id}`}>
-                    {t(`import.object.${row.object}`)}: {row.id}
+                    {t(`import.object.${row.object}`)}:{" "}
+                    <UndoRecordName object={row.object} id={row.id} />
                     {row.reason || row.reason_code
                       ? ` — ${reasonText(t, row.reason ?? "", row.reason_code, row.params)}`
                       : null}

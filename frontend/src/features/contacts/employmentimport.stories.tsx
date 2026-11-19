@@ -7,7 +7,10 @@ import {
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
-import { ImportedEmploymentHistory } from "./employmentimport";
+import {
+  ImportedEmploymentHistory,
+  useEmploymentImport,
+} from "./employmentimport";
 
 const view: components["schemas"]["Contact360"] = {
   as_of: "2026-09-01T00:00:00Z",
@@ -54,10 +57,21 @@ const items: components["schemas"]["EmploymentImportItem"][] = [
     ended: "2019-12",
   },
 ];
-const meta: Meta<typeof ImportedEmploymentHistory> = {
+function History({ canEdit }: Readonly<{ canEdit: boolean }>) {
+  const imported = useEmploymentImport(view, true);
+  return (
+    <ImportedEmploymentHistory
+      view={view}
+      canEdit={canEdit}
+      imported={imported}
+    />
+  );
+}
+
+const meta: Meta<typeof History> = {
   title: "Records/Contact 360/Imported employment",
-  component: ImportedEmploymentHistory,
-  args: { view, canEdit: true },
+  component: History,
+  args: { canEdit: true },
   decorators: [
     (Story) => {
       installFetchStub({

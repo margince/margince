@@ -5,7 +5,10 @@ import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { steppedClock } from "../../testing/steppedclock";
-import { ImportedEmploymentHistory } from "./employmentimport";
+import {
+  ImportedEmploymentHistory,
+  useEmploymentImport,
+} from "./employmentimport";
 
 afterEach(() => {
   cleanup();
@@ -38,6 +41,11 @@ const view: components["schemas"]["Contact360"] = {
     },
   ],
 };
+
+function History() {
+  const imported = useEmploymentImport(view, true);
+  return <ImportedEmploymentHistory view={view} canEdit imported={imported} />;
+}
 
 it.each(["keep", "Current", "Former"])(
   "resolves provider uncertainty with %s status",
@@ -75,7 +83,7 @@ it.each(["keep", "Current", "Former"])(
         }
       >
         <LocaleProvider initial="en">
-          <ImportedEmploymentHistory view={view} canEdit />
+          <History />
         </LocaleProvider>
       </QueryClientProvider>,
     );
