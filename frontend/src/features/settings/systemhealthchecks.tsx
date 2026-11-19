@@ -234,14 +234,11 @@ function CheckList({
 }
 
 function checkStatus(source: Source, t: (key: MessageKey) => string) {
-  if (source.condition === "information")
-    return {
-      tone: "default",
-      label: t("health.condition.information"),
-    } as const;
   const tone = healthTone(source);
   if (tone === "success")
     return { tone, label: t("health.checkPassing") } as const;
+  if (source.condition === "information" && tone === "default")
+    return { tone, label: t("health.condition.information") } as const;
   return {
     tone: tone === "danger" || tone === "warning" ? tone : "default",
     label: t(labelFor(healthAvailability, source.availability)),

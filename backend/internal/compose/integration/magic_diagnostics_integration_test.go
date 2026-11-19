@@ -156,7 +156,7 @@ func TestTheUnplacedBreakdownNamesLinksAndAddsUpToTheReceipt(t *testing.T) {
 	for _, change := range changes {
 		got[change.EntityType+"/"+change.Action] = change.Count
 	}
-	want := map[string]int{"product/update": 1, "list/added": 1, "tag/applied": 1}
+	want := map[string]int{"product/update": 1, "list/added": 1, "list/removed": 1, "tag/applied": 1, "tag/removed": 1}
 	if !maps.Equal(got, want) {
 		t.Fatalf("breakdown %v, want %v", got, want)
 	}
@@ -174,7 +174,7 @@ func TestTheUnplacedBreakdownNamesLinksAndAddsUpToTheReceipt(t *testing.T) {
 }
 
 // seedMachineLinkChanges writes, as a machine and through the real writers, a
-// list membership, a tagging, both renames and a knowledge document edit.
+// membership and a tagging made and undone, both renames and a document edit.
 func seedMachineLinkChanges(t *testing.T, e *Env) {
 	t.Helper()
 	ctx := principal.SystemActing(e.Admin(), "segment-sync")
@@ -192,6 +192,9 @@ func seedMachineLinkChanges(t *testing.T, e *Env) {
 	if _, err := store.UpdateList(ctx, list.ID, collections.UpdateListInput{Name: &renamed, IfVersion: &list.Version}); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := store.RemoveMember(ctx, list.ID, change); err != nil {
+		t.Fatal(err)
+	}
 	tag, err := store.NewTag(e.Admin(), "synced", "")
 	if err != nil {
 		t.Fatal(err)
@@ -202,6 +205,9 @@ func seedMachineLinkChanges(t *testing.T, e *Env) {
 	}
 	weekly := "synced weekly"
 	if _, err := store.UpdateTag(ctx, tagID, collections.TagUpdate{Name: &weekly}, 0); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.RemoveTag(ctx, tagID, "contact", contact); err != nil {
 		t.Fatal(err)
 	}
 	err = database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {

@@ -265,9 +265,8 @@ it, `management` can read it, and nobody else sees it. It is separate from `ai_d
 waiting work, finding tiers no ladder uses) and `ai_routing` (the provider binding itself). So a
 custom role can hold any set of the three. The full matrix: [reference/rbac-matrix.md](../reference/rbac-matrix.md).
 
-`ai_diagnostics` also shows the receipt's count of machine actions it cannot place. It also opens
-the `unplaced` source of System health, which counts them by entity type and action over the last 7
-days.
+`ai_diagnostics` also shows the receipt's count of machine actions it cannot place. System health's
+`unplaced` source, behind the same grant, counts them by entity type and action over the last 7 days.
 
 ## The decision lane
 

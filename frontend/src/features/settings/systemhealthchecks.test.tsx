@@ -12,6 +12,7 @@ import {
   attentionReport,
   healthReport,
   informationReport,
+  unplacedSource,
 } from "./systemhealth.fixtures";
 import { HealthChecks, healthGroups } from "./systemhealthchecks";
 
@@ -121,5 +122,24 @@ describe("HealthChecks", () => {
     renderChecks();
     const passing = screen.getByRole("list", { name: "Passing" });
     expect(within(passing).getAllByRole("listitem")).toHaveLength(5);
+  });
+
+  it("keeps a failed read red even for an information check", () => {
+    render(
+      <LocaleProvider initial="en">
+        <HealthChecks
+          groups={healthGroups(
+            [{ ...unplacedSource, availability: "failed" }],
+            [],
+          )}
+        />
+      </LocaleProvider>,
+    );
+    const group = screen.getByRole("list", { name: "For information" });
+    expect(
+      within(group)
+        .getByText("This source could not be read")
+        .closest(".badge"),
+    ).toHaveClass("badge-danger");
   });
 });

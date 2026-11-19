@@ -326,6 +326,7 @@ function SourceReading({ source }: Readonly<{ source: Source }>) {
               term: t("health.unplacedTotal"),
               value: formatNumber(source.count, locale),
             },
+            // Raw codes: these types have no user label, and an operator reads them against the audit log.
             ...source.unplaced_changes.map((change) => ({
               key: `${change.entity_type}:${change.action}`,
               term: `${change.entity_type} · ${change.action}`,
