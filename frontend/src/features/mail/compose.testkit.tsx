@@ -1,13 +1,16 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
   type RenderResult,
   render as rtlRender,
   screen,
+  waitFor,
 } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import userEvent, { type UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { vi } from "vitest";
 import type { components } from "../../api/schema";
+import { SEARCH_DEBOUNCE_MS } from "../../design-system/debouncedsearch";
 import { writeMessage } from "../../design-system/richtext-testing";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
@@ -163,6 +166,20 @@ export function stubRoutes(
       sent.push({ key, body, headers, query: url.searchParams });
       const override = overrides[key];
       if (override) return override();
+      if (
+        key === "PUT /mail-drafts" &&
+        typeof body === "object" &&
+        body !== null
+      ) {
+        return jsonResponse({
+          ...body,
+          id: "draft-test",
+          version: 1,
+          agent_drafted: false,
+          created_at: "2026-01-01T00:00:00Z",
+          updated_at: "2026-01-01T00:00:00Z",
+        });
+      }
       if (key === "GET /me") {
         return jsonResponse(
           meFixture({ allow: { activity: ["read", "create", "update"] } }),
@@ -225,6 +242,11 @@ export async function fillSendableForm() {
   await userEvent.type(screen.getByLabelText("Subject"), "Hi there");
   writeMessage("Body", "Body content");
   await pickWhy(WHY_LABEL.requestedFollowup);
+  await settleSendCheck();
+  await waitFor(() => {
+    if (screen.queryByText("Checking whether this message can be sent…"))
+      throw new Error("recipient check is pending");
+  });
 }
 
 // The threads the composer offers sit in a menu behind the bar above the
@@ -251,4 +273,48 @@ export function rewrittenBody(body: string, language = "en") {
     language,
     ai_disclosure: "Drafted with AI assistance. Review before sending.",
   });
+}
+
+// The check asks about the subject and body only once typing has paused. A
+// press straight after typing meets the answer for the text before it. The
+// answer for the new text lands after the press. Waiting out that pause
+// inside act lets the newer check start, and the wait then ends on its answer.
+export async function settleSendCheck() {
+  await act(
+    () => new Promise((resolve) => setTimeout(resolve, SEARCH_DEBOUNCE_MS)),
+  );
+}
+
+// The foot's own button of this name, once the check for the message on screen
+// lets it be pressed. A menu entry of the same name is not it.
+export async function footSendButton(name = "Send") {
+  await settleSendCheck();
+  return waitFor(() => {
+    const found = screen
+      .queryAllByRole("button", { name })
+      .find((button) => !button.closest(".compose-sendmenu"));
+    if (!found || found.hasAttribute("disabled")) {
+      throw new Error(`${name} is not ready`);
+    }
+    if (screen.queryByText("Checking whether this message can be sent…")) {
+      throw new Error("the recipient check is running");
+    }
+    return found;
+  });
+}
+
+export async function waitForSendReady() {
+  await footSendButton();
+}
+
+// Presses Send as a reader does, who sees the button free before pressing it.
+export async function pressSend(
+  user: UserEvent = userEvent.setup(),
+  name = "Send",
+) {
+  await user.click(await footSendButton(name));
+}
+
+export function footScheduleConfirm() {
+  return footSendButton("Schedule send");
 }

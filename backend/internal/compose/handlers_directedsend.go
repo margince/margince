@@ -66,11 +66,17 @@ func (h directedSendHandlers) DirectCommunicationSend(
 	if !httperr.Decode(w, r, &body) {
 		return
 	}
+	var shown []string
+	if body.ShownReasons != nil {
+		shown = *body.ShownReasons
+	}
 	sent, err := h.directed.DirectAndSend(r.Context(), ids.UUID(id), consent.DirectInput{
-		ReasonCode:     string(body.ReasonCode),
-		Explanation:    body.Explanation,
-		WarningVersion: body.WarningVersion,
-		Acknowledged:   body.Acknowledged,
+		AssessmentRevision: derefString(body.AssessmentRevision),
+		ReasonCode:         string(body.ReasonCode),
+		Explanation:        body.Explanation,
+		WarningVersion:     body.WarningVersion,
+		Acknowledged:       body.Acknowledged,
+		ShownReasons:       shown,
 	})
 	if err != nil {
 		httperr.Write(w, r, err)

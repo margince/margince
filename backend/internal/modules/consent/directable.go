@@ -27,7 +27,8 @@ func (r Review) DirectableBy(ctx context.Context) bool {
 }
 
 func directableBy(ctx context.Context, refusals []RefusedRecipient) bool {
-	if len(refusals) == 0 || !auth.Allows(ctx, entityCommunicationException, principal.ActionCreate) {
+	if len(refusals) == 0 || requireAHumanAtTheKeyboard(ctx) != nil ||
+		!auth.Allows(ctx, entityCommunicationException, principal.ActionCreate) {
 		return false
 	}
 	for _, refusal := range refusals {
@@ -62,4 +63,37 @@ func refuseDirection(ctx context.Context, refusals []RefusedRecipient) error {
 func undirectable(refusal RefusedRecipient) bool {
 	return !commsauthz.HasRemedy(refusal.ReasonCode, commsauthz.RemedyException) &&
 		!commsauthz.HasRemedy(refusal.ReasonCode, commsauthz.RemedyAdminException)
+}
+
+// mayDirect is DirectSend's whole eligibility test: a refusal the caller may
+// direct past (directableBy), as the caller read it (refusalsAsShown).
+func mayDirect(ctx context.Context, shown []string, refusals []RefusedRecipient) error {
+	if !directableBy(ctx, refusals) {
+		return refuseDirection(ctx, refusals)
+	}
+	return refusalsAsShown(shown, refusals)
+}
+
+// refusalsAsShown holds a decision to the refusals its director read. A resend
+// can rewrite the review's refusals while it waits, so a list that no longer
+// matches is stale.
+func refusalsAsShown(shown []string, refusals []RefusedRecipient) error {
+	if shown == nil {
+		return nil
+	}
+	now := make([]string, 0, len(refusals))
+	for _, r := range refusals {
+		now = append(now, r.ReasonCode)
+	}
+	if !sameReasons(shown, now) {
+		return &InstructionStaleError{Why: "the refusals changed since you read them; open the review again"}
+	}
+	return nil
+}
+
+func sameReasons(a, b []string) bool {
+	a, b = slices.Clone(a), slices.Clone(b)
+	slices.Sort(a)
+	slices.Sort(b)
+	return slices.Equal(slices.Compact(a), slices.Compact(b))
 }

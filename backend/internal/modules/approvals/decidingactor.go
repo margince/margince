@@ -90,9 +90,12 @@ func ReleaseSends(kind string) bool { return sendingKinds[kind] }
 //
 // A human principal carries no ScopeSet at all (scopes are a passport's shape,
 // not a seat's), so this answers nothing for them and must not be asked.
-func agentMayDecide(p principal.Principal, a row, approve bool, own ownRelease) error {
+func agentMayDecide(ctx context.Context, p principal.Principal, a row, approve bool, own ownRelease) error {
 	if p.Type != principal.PrincipalAgent {
 		return nil
+	}
+	if approve && principal.Unattended(ctx) {
+		return fmt.Errorf("an unattended agent cannot supply a human approval: %w", apperrors.ErrPermissionDenied)
 	}
 	if approve {
 		if err := agentReleasesOnlyItsHumansProposal(p, a, own); err != nil {

@@ -58,7 +58,7 @@ test.describe("Network tab — page shape", () => {
 
     // The page has one lead. A second would ask the reader which
     // recommendation to believe.
-    await expect(page.locator(".panel:has(.pn-verdict)")).toHaveCount(1);
+    await expect(page.locator(".pn-way")).toHaveCount(1);
   });
 
   test("draws the map and no ego ring", async ({ page }) => {
@@ -117,8 +117,8 @@ test.describe("Network tab — page shape", () => {
   });
 
   test("offers the ask on the lead route", async ({ page }) => {
-    const lead = page.locator(".panel:has(.pn-verdict)").first();
-    const ask = lead.locator(".pn-verdict-actions button");
+    const lead = page.locator(".pn-way").first();
+    const ask = lead.locator(".pn-lead-foot button");
     const ownRoute = lead.getByText(
       "Es gibt niemanden, den du fragen kannst. Schreibe diesem Kontakt direkt.",
       { exact: true },
@@ -140,9 +140,7 @@ test.describe("Network tab — page shape", () => {
     if (ownsRecommendedRoute) {
       await expect(ownRoute).toBeVisible();
       await expect(ask).toHaveCount(0);
-      await expect(lead.locator(".pn-hero-who strong").first()).toHaveText(
-        "Du",
-      );
+      await expect(lead.locator(".pn-chain-node b").first()).toHaveText("Du");
     } else {
       await expect(ownRoute).toHaveCount(0);
       await expect(ask).toHaveCount(1);
@@ -167,10 +165,7 @@ test.describe("Network tab — visual weight", () => {
    */
   test("the answer is above the picture", async ({ page }) => {
     const answer = await page.locator(".chapter-answer").first().boundingBox();
-    const lead = await page
-      .locator(".panel:has(.pn-verdict)")
-      .first()
-      .boundingBox();
+    const lead = await page.locator(".pn-way").first().boundingBox();
     const map = await page.locator(".rmap").first().boundingBox();
     if (!answer || !lead || !map) {
       throw new Error("the answer, lead and map need visible boxes");

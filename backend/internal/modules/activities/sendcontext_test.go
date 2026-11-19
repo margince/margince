@@ -6,6 +6,7 @@ package activities
 // What a caller may claim about their own send, and what they may not.
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 
@@ -316,7 +317,7 @@ func TestEvidenceOmittedEntirelyIsNotAnError(t *testing.T) {
 	if err != nil {
 		t.Fatalf("a claim naming no evidence was refused: %v", err)
 	}
-	if mail.Evidence != (commsauthz.Evidence{}) {
+	if !reflect.DeepEqual(mail.Evidence, commsauthz.Evidence{}) {
 		t.Errorf("an empty claim invented evidence: %+v", mail.Evidence)
 	}
 }

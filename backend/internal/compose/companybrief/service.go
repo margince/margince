@@ -64,10 +64,9 @@ type Service struct {
 	profile ProfileReader
 	lane    Completer
 	now     func() time.Time
-	// routingVersion identifies the model binding in the fingerprint, so
-	// re-pointing the lane rewrites briefs rather than leaving text
-	// attributed to a model that no longer writes it.
-	routingVersion string
+	// routingVersion names the model binding in the fingerprint. It is read per
+	// request, so a rebind rewrites the briefs the previous model wrote.
+	routingVersion func() string
 	// emailRows opens the messages the brief cites. Held rather than read
 	// inline because the brief is CACHED: the sentences are one reader's to
 	// keep, and the summary behind a citation is another reader's to receive,
@@ -102,7 +101,10 @@ func (s *Service) enrich(ctx context.Context, out crmcontracts.CompanyBrief) (cr
 // NewService binds the brief to the composite read it is written from and
 // the model lane that writes it. lane may be nil: that is a deployment
 // running no model, and the deterministic floor is the answer.
-func NewService(pool *pgxpool.Pool, view Assembler, profile ProfileReader, lane Completer, routingVersion string, now func() time.Time) *Service {
+func NewService(pool *pgxpool.Pool, view Assembler, profile ProfileReader, lane Completer, routingVersion func() string, now func() time.Time) *Service {
+	if routingVersion == nil {
+		routingVersion = func() string { return "" }
+	}
 	return &Service{pool: pool, view: view, profile: profile, lane: lane, routingVersion: routingVersion, now: now}
 }
 
@@ -173,7 +175,7 @@ func (s *Service) GetScoped(
 	}
 	lang := identity.BaseLanguageForPrompt(ctx, s.pool)
 	in = in.WordedIn(lang)
-	fingerprint, err := Fingerprint(in, s.routingVersion, lang)
+	fingerprint, err := Fingerprint(in, s.routingVersion(), lang)
 	if err != nil {
 		return crmcontracts.CompanyBrief{}, err
 	}
@@ -194,9 +196,10 @@ func (s *Service) GetScoped(
 	// a task and a prompt, so without this the reader's rail could say "this
 	// company" and nothing more.
 	lane, withheld := ai.ReadLane(ctx, s.lane)
-	sections, by, err := Write(ai.WithSubject(ctx, companyID.Ref(), in.Name), lane, companyID.String(), in, lang)
-	if err != nil {
-		return crmcontracts.CompanyBrief{}, err
+	sections, by, laneFailed := Write(ai.WithSubject(ctx, companyID.Ref(), in.Name), lane, companyID.String(), in, lang)
+	if laneFailed && found && cached.Version == storedVersion && cached.Fingerprint == fingerprint {
+		// A forced rewrite that failed keeps the model's brief for these facts.
+		return s.enrich(ctx, cached.wire(companyID, scope))
 	}
 	written := stored{
 		Fingerprint: fingerprint,
@@ -208,7 +211,7 @@ func (s *Service) GetScoped(
 		// than trusted from the model's own reply.
 		Sections: withSectionEvidenceNames(sections, in),
 	}
-	if withheld {
+	if laneFailed || withheld {
 		return s.enrich(ctx, written.wire(companyID, scope))
 	}
 	if err := s.save(ctx, userID, companyID, written); err != nil {

@@ -40335,6 +40335,9 @@ type CommunicationEvidenceSubjectEntityType string
 // given — a reader asking why a message was refused on Tuesday needs Tuesday's answer, not
 // what the consent rows say today.
 type CommunicationReview struct {
+	// AssessmentRevision Revision of the displayed refusal and footer details, echoed when confirming.
+	AssessmentRevision *string `json:"assessment_revision,omitempty"`
+
 	// DeliveryIntentId The held message this review can resume. A refused send freezes the message into a held
 	// `scheduled_send` — subject, body, recipients, attachments and the claimed purpose — so
 	// resolving the review fires what the rep wrote rather than something retyped from memory.
@@ -41859,6 +41862,11 @@ type CompanyEmailDraft struct {
 
 	// Body Plain text, end to end. There is no rich-text storage format, no paste sanitiser and no HTML+text send pair, so a formatted draft would be a wire change rather than a toolbar.
 	Body string `json:"body"`
+
+	// CommunicationContext What the drafting instruction says this message is, for the composer to send with it:
+	// `requested_followup` when it asks to move an appointment. Absent otherwise. The send
+	// check still needs an agreed appointment with the recipient.
+	CommunicationContext *CommunicationContext `json:"communication_context,omitempty"`
 
 	// DraftRef Opaque reference identifying this served draft. Null here: recording a draft for voice learning is a WRITE, and this operation performs none.
 	DraftRef *string `json:"draft_ref,omitempty"`
@@ -49052,6 +49060,9 @@ type DirectCommunicationSendRequest struct {
 	// without one would record a decision nobody made.
 	Acknowledged bool `json:"acknowledged"`
 
+	// AssessmentRevision The review revision the sender read. Required when footer findings apply or a refusal is the recipient's own choice, such as an objection.
+	AssessmentRevision *string `json:"assessment_revision,omitempty"`
+
 	// Explanation What this colleague says the reason is, in their own words. Required and must say something:
 	// a blank explanation is an acknowledgement nobody can be held to.
 	Explanation string `json:"explanation"`
@@ -49060,6 +49071,12 @@ type DirectCommunicationSendRequest struct {
 	// of overrides needs to be countable — free text alone cannot answer "how often do we send
 	// on a contract clause".
 	ReasonCode DirectCommunicationSendRequestReasonCode `json:"reason_code"`
+
+	// ShownReasons The refusal reason codes the director was shown, from the review's `refusals`. When the
+	// review's refusals changed since then, the decision is refused with `instruction_stale`
+	// and the director opens the review again. A refusal the subject made themselves (an
+	// objection, a withdrawal, a restriction or a request to stop) is never passed.
+	ShownReasons *[]string `json:"shown_reasons,omitempty"`
 
 	// WarningVersion The compliance text they were shown. Recorded because a record naming no version cannot
 	// say what they were told, and the text changes.
@@ -49603,9 +49620,21 @@ type EmailDraft struct {
 	AiGenerated *bool  `json:"ai_generated,omitempty"`
 	Body        string `json:"body"`
 
+	// CommunicationContext What the drafting instruction says this message is, for the composer to send
+	// with it. `requested_followup` when the instruction asks to move an appointment,
+	// in English, German or Vietnamese. Absent when the instruction says nothing the
+	// send check can use, which leaves the reason to the thread or the sender. The
+	// send check still needs its own evidence, here an agreed appointment with the
+	// recipient.
+	CommunicationContext *CommunicationContext `json:"communication_context,omitempty"`
+
 	// DraftRef Opaque reference identifying this served voice draft for learning feedback (rejectVoiceDraft); null when no voice profile styled it.
-	DraftRef            *string             `json:"draft_ref,omitempty"`
-	InReplyToActivityId *openapi_types.UUID `json:"in_reply_to_activity_id,omitempty"`
+	DraftRef *string `json:"draft_ref,omitempty"`
+
+	// Evidence The record the drafted reason rests on: the meeting itself, when the draft was
+	// written from it. Absent otherwise.
+	Evidence            *CommunicationEvidence `json:"evidence,omitempty"`
+	InReplyToActivityId *openapi_types.UUID    `json:"in_reply_to_activity_id,omitempty"`
 
 	// Language The language this draft is written in: the `language` the request named, else the one the server resolved from the correspondence. The model draft and the deterministic fallback report it alike. A client shows it as the composer's current choice and names it again on a rewrite that must keep it.
 	Language *EmailDraftLanguage    `json:"language,omitempty"`
@@ -50848,6 +50877,18 @@ type FollowUpSettings struct {
 	// Locks The settings in this response that a boot source sets, each with its source. A client
 	// shows each as read-only. Empty when nothing is locked. A write ignores it.
 	Locks *SettingLocks `json:"locks,omitempty"`
+}
+
+// FooterFinding defines model for FooterFinding.
+type FooterFinding struct {
+	// Kind Missing disclosure kind or unavailable private link. Unknown kinds remain visible as an unspecified footer omission.
+	Kind string `json:"kind"`
+
+	// Language Required language, or empty when no language is missing.
+	Language string `json:"language"`
+
+	// MissingMeans Missing contact methods, such as email, phone or web.
+	MissingMeans []string `json:"missing_means"`
 }
 
 // ForecastAssurance What the most recent nightly input check found, and how much of the pipeline it was able to reach.
@@ -61374,8 +61415,14 @@ type RefreshAcceptedStatus string
 // reason code without one says a message was refused and not who for, which is the question
 // the rep is actually asking — and it is why an erasure clears this list.
 type RefusedRecipient struct {
-	Address           string                       `json:"address"`
-	Category          *string                      `json:"category,omitempty"`
+	Address  string  `json:"address"`
+	Category *string `json:"category,omitempty"`
+
+	// FooterFindings Server-derived missing footer disclosures or unavailable private links shown before the sender confirms this message. Contains no credentials.
+	FooterFindings *[]FooterFinding `json:"footer_findings,omitempty"`
+
+	// FooterPreview Configured disclosure text included in this message. Contains no recipient credentials.
+	FooterPreview     *[]string                    `json:"footer_preview,omitempty"`
 	ReasonCode        string                       `json:"reason_code"`
 	RequestedCategory *string                      `json:"requested_category,omitempty"`
 	SendingEntityId   *openapi_types.UUID          `json:"sending_entity_id,omitempty"`
@@ -65107,17 +65154,15 @@ type SendAuthorizationPreviewRecipient struct {
 	// Basis The lawful ground an allow would rest on.
 	Basis *string `json:"basis,omitempty"`
 
-	// CanBeOverruled Whether a contact may lift this refusal by recording why they are writing.
-	//
-	// It needs BOTH halves of a question the engine keeps on two axes, which is why it
-	// is answered here rather than derived. `decided_by` says whose decision it is, and
-	// an absolute reason says no rollout mode softens it — and the two disagree: a hard
-	// bounce, a rolling frequency cap, an unresolvable recipient and an unconfirmed
-	// opt-in are all the engine's own reading (`machine`) AND absolute. A surface that
-	// offered an override on those would render a button that cannot achieve what it
-	// promises, and the rep would type a justification the staging gate then ignores.
-	// A recorded reason lifts one category, so a refusal that resolved to no single
-	// category, such as `unknown_purpose`, answers false.
+	// CanBeOverruled Whether the sender may send this one message past the refusal by recording a
+	// reason. True for every policy refusal except the subject's own stops: the refusal
+	// stays on the record, and the reason is kept with the message. False for a stop
+	// (`decided_by` is `subject`), which nobody sends past, admin included. False for a
+	// hard bounce, because no decision makes a dead address accept mail, and for a
+	// recipient that resolves to nobody or to two contacts, whose stops were never read.
+	// Only a user in their own session sends past it, never an agent, and only with the
+	// `communication_exception` grant. The refused send's review offers `direct_send` only
+	// to such a caller.
 	CanBeOverruled *bool `json:"can_be_overruled,omitempty"`
 
 	// ConsentPurposeId For a recipient marked `lawful_basis_missing`: the purpose a consent request would ask
@@ -65131,7 +65176,7 @@ type SendAuthorizationPreviewRecipient struct {
 	// DecidedBy Whose decision this answer is, which is what says whether anybody may overrule
 	// it. `machine` is the engine reading an incomplete record and a rep who knows
 	// better may say so. `subject` is the contact's own act — an objection or a
-	// withdrawal — and nobody in the installation lifts it, admin included.
+	// withdrawal. Nobody in the installation lifts it or sends past it, admin included.
 	//
 	// It is sent rather than derived because the rule lives in Go
 	// (`commsauthz.LevelForReason`), and a surface that mapped reason codes to
@@ -65143,6 +65188,9 @@ type SendAuthorizationPreviewRecipient struct {
 	// can read it. Absent for newly filed addresses and records unavailable to the
 	// caller. Recording an exchange still requires permission to update that record.
 	EvidenceSubject *CommunicationEvidenceSubject `json:"evidence_subject,omitempty"`
+
+	// FooterFindings Server-derived missing footer disclosures or unavailable private links shown before the sender confirms this message. Contains no credentials.
+	FooterFindings *[]FooterFinding `json:"footer_findings,omitempty"`
 
 	// LawfulBasisMissing The recipient's country has no legitimate-interest basis, and the record holds neither
 	// their consent nor an agreement with them. A privacy notice they were sent is neither.
@@ -65198,7 +65246,7 @@ type SendAuthorizationPreviewRecipient struct {
 // SendAuthorizationPreviewRecipientDecidedBy Whose decision this answer is, which is what says whether anybody may overrule
 // it. `machine` is the engine reading an incomplete record and a rep who knows
 // better may say so. `subject` is the contact's own act — an objection or a
-// withdrawal — and nobody in the installation lifts it, admin included.
+// withdrawal. Nobody in the installation lifts it or sends past it, admin included.
 //
 // It is sent rather than derived because the rule lives in Go
 // (`commsauthz.LevelForReason`), and a surface that mapped reason codes to
@@ -65247,11 +65295,9 @@ type SendCompanyEmailRequest struct {
 	// they were addressed — and they are absent from the headers the recipients
 	// see, which is the whole of what "blind" means.
 	//
-	// A message with a tokenized unsubscribe link may still have only ONE
-	// addressee in total: that token is a bearer credential over one contact's
-	// consent record, so a bcc'd copy of a marketing send is refused 422
-	// `shared_unsubscribe_token` rather than handing a stranger somebody else's
-	// preference link.
+	// Private unsubscribe links are omitted for multiple recipients, preserving
+	// To, Cc and Bcc visibility. The sender must confirm that omission with
+	// a recorded one-message reason before delivery.
 	Bcc *[]openapi_types.Email `json:"bcc,omitempty"`
 
 	// Body The (possibly edited) final body that is sent. Blank or only white space is refused with 422 `required`.
@@ -65435,11 +65481,9 @@ type SendEmailRequest struct {
 	// they were addressed — and they are absent from the headers the recipients
 	// see, which is the whole of what "blind" means.
 	//
-	// A message with a tokenized unsubscribe link may still have only ONE
-	// addressee in total: that token is a bearer credential over one contact's
-	// consent record, so a bcc'd copy of a marketing send is refused 422
-	// `shared_unsubscribe_token` rather than handing a stranger somebody else's
-	// preference link.
+	// Private unsubscribe links are omitted for multiple recipients, preserving
+	// To, Cc and Bcc visibility. The sender must confirm that omission with
+	// a recorded one-message reason before delivery.
 	Bcc *[]openapi_types.Email `json:"bcc,omitempty"`
 
 	// Body The (possibly edited) final body that is sent. Blank or only white space is refused with 422 `required`.
@@ -119334,8 +119378,6 @@ func (siw *ServerInterfaceWrapper) DirectCommunicationSend(w http.ResponseWriter
 	}
 
 	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 

@@ -398,6 +398,9 @@ func (s *Store) UpdateOffer(ctx context.Context, id ids.OfferID, in UpdateOfferI
 		// the edit changes, and a currency this draft may not take is not a
 		// field to record — it is a request to turn down.
 		if in.Currency != nil && *in.Currency != current.Currency {
+			if err := checkCurrency(*in.Currency); err != nil {
+				return err
+			}
 			if err := ensureOfferLinesTyped(current); err != nil {
 				return err
 			}

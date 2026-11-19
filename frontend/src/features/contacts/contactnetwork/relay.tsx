@@ -10,9 +10,7 @@ import { INTRO_STATUS_LABELS } from "../../../format/introstatus";
 // coloured circles. The state is textual, never colour alone.
 
 import { Check } from "lucide-react";
-import type { ReactNode } from "react";
 import { SeatAvatar } from "../../../components/seatavatar";
-import { Panel, PanelBody } from "../../../design-system/panel";
 import { formatDate, formatNumber } from "../../../format/format";
 import { useLocale, useT } from "../../../i18n";
 import { labelFor } from "../../../lib/labelfor";
@@ -23,20 +21,16 @@ import type { IntroRequest } from "../introrequests";
 type StepState = "done" | "current" | "waiting";
 
 /**
- * RelayPanel draws the handoff from the ask to the contact's reply.
+ * RelaySteps draws the handoff from the ask to the contact's reply, as the
+ * head of the Progress card.
  *
  * The fourth step is deliberately not a button. A reply is observed from
  * captured activity, so a control that let somebody declare one would let the
  * record claim an answer the contact never sent.
  */
-export function RelayPanel({
+export function RelaySteps({
   ask,
-  action,
-}: Readonly<{
-  ask: IntroRequest | undefined;
-  // The panel's own verb, such as recording an introduction made elsewhere.
-  action?: ReactNode;
-}>) {
+}: Readonly<{ ask: IntroRequest | undefined }>) {
   const t = useT();
   const { locale } = useLocale();
   const readerZone = useViewerZone();
@@ -45,55 +39,49 @@ export function RelayPanel({
   const owner =
     ask && !SETTLED.has(ask.status) ? ownerOf(ask, t, reader) : undefined;
   return (
-    <Panel
-      title={t("contact.intro.relayTitle")}
-      titleAction={action}
-      className="pn-relay-panel"
-    >
-      <PanelBody>
-        <ol className="pn-relay">
-          {steps.map((step, index) => (
-            <li
-              className={`pn-relay-step pn-relay-${step.state}`}
-              key={step.key}
-              aria-current={step.state === "current" ? "step" : undefined}
-            >
-              <span className="pn-relay-num" aria-hidden="true">
-                {step.state === "done" ? (
-                  <Check size={14} />
-                ) : (
-                  formatNumber(index + 1, locale)
-                )}
-              </span>
-              <div>
-                <strong>{t(step.key)}</strong>
-                {/* The state in words beside the step, because the ring around
+    <div className="pn-relay-panel">
+      <ol className="pn-relay">
+        {steps.map((step, index) => (
+          <li
+            className={`pn-relay-step pn-relay-${step.state}`}
+            key={step.key}
+            aria-current={step.state === "current" ? "step" : undefined}
+          >
+            <span className="pn-relay-num" aria-hidden="true">
+              {step.state === "done" ? (
+                <Check size={14} />
+              ) : (
+                formatNumber(index + 1, locale)
+              )}
+            </span>
+            <div>
+              <strong>{t(step.key)}</strong>
+              {/* The state in words beside the step, because the ring around
                   the number is colour and colour alone is not a state. */}
-                <small>
-                  {t(STATE_WORD[step.state])} · {step.detail}
-                </small>
-              </div>
-            </li>
-          ))}
-        </ol>
-        {/* Who owes the next move, named once under the steps rather than
+              <small>
+                {t(STATE_WORD[step.state])} · {step.detail}
+              </small>
+            </div>
+          </li>
+        ))}
+      </ol>
+      {/* Who owes the next move, named once under the steps rather than
           inferred from which ring is filled. The due date is the colleague's
           answer window and belongs only to the step that has one. */}
-        {ask && owner ? (
-          <p className="pn-relay-owner">
-            <SeatAvatar id={ownerIdOf(ask)} name={owner} size="sm" />
-            <span>{t("contact.intro.handoffOwner", { name: owner })}</span>
-            {ask.status === "requested" && ask.due_at ? (
-              <span className="pn-relay-due t-caption">
-                {t("contact.intro.relayDue", {
-                  date: formatDate(ask.due_at, locale, readerZone),
-                })}
-              </span>
-            ) : null}
-          </p>
-        ) : null}
-      </PanelBody>
-    </Panel>
+      {ask && owner ? (
+        <p className="pn-relay-owner">
+          <SeatAvatar id={ownerIdOf(ask)} name={owner} size="sm" />
+          <span>{t("contact.intro.handoffOwner", { name: owner })}</span>
+          {ask.status === "requested" && ask.due_at ? (
+            <span className="pn-relay-due t-caption">
+              {t("contact.intro.relayDue", {
+                date: formatDate(ask.due_at, locale, readerZone),
+              })}
+            </span>
+          ) : null}
+        </p>
+      ) : null}
+    </div>
   );
 }
 

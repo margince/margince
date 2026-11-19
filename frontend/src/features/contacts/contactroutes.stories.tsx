@@ -88,7 +88,7 @@ function graph(candidates: RouteCandidate[]): ContactGraph {
 // The card asks who the reader is, because a route THEY are cannot be asked
 // for and is written in the second contact. Without the session that question
 // has no answer and every row reads as somebody else's.
-function card(payload: ContactGraph, skipLead: boolean) {
+function card(payload: ContactGraph) {
   return () => {
     installFetchStub({
       "GET /me": meRoute({
@@ -98,7 +98,7 @@ function card(payload: ContactGraph, skipLead: boolean) {
     });
     return (
       <StoryProviders>
-        <RoutesPanel graph={payload} skipLead={skipLead} onAsk={() => {}} />
+        <RoutesPanel graph={payload} onAsk={() => {}} />
       </StoryProviders>
     );
   };
@@ -114,16 +114,10 @@ export default meta;
 type Story = StoryObj<typeof RoutesPanel>;
 
 /** "Ways in": the whole list, headed by the server's recommendation. */
-export const WaysIn: Story = { render: card(graph(routes), false) };
-
-/**
- * "Other routes": the caller has drawn the recommendation as its own lead, so
- * this pane holds the alternatives and says so in its title.
- */
-export const OtherWaysIn: Story = { render: card(graph(routes), true) };
+export const WaysIn: Story = { render: card(graph(routes)) };
 
 /** No route at all — the honest answer, not an empty list. */
-export const NoWayIn: Story = { render: card(graph([]), false) };
+export const NoWayIn: Story = { render: card(graph([])) };
 
 /**
  * Dark, because the pane's ground, its head band and the strength meter's bars
@@ -132,5 +126,5 @@ export const NoWayIn: Story = { render: card(graph([]), false) };
 export const WaysInDark: Story = {
   name: "Ways in — dark",
   globals: { theme: "dark" },
-  render: card(graph(routes), false),
+  render: card(graph(routes)),
 };

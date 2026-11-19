@@ -44,7 +44,6 @@
   .co-facts-add,
   .co-strip-withheld,
   .meetingrows-lead,
-  .pn-hero,
   .roomtab-band,
   .board-doc,
   .board-doc-stage,
@@ -89,6 +88,7 @@
   .compose-reasons-card,
   .page-pane,
   .analytics-sheet,
+  .reachcard,
   .palette-tile,
   .palette-foot
 ) {
@@ -142,7 +142,6 @@
     .co-facts-add,
     .co-strip-withheld,
     .meetingrows-lead,
-    .pn-hero,
     .roomtab-band,
     .board-doc,
     .board-doc-stage,
@@ -187,6 +186,7 @@
     .compose-reasons-card,
     .page-pane,
     .analytics-sheet,
+    .reachcard,
     .palette-tile,
     .palette-foot
   )
@@ -225,7 +225,6 @@
     .co-facts-add,
     .co-strip-withheld,
     .meetingrows-lead,
-    .pn-hero,
     .roomtab-band,
     .board-doc,
     .board-doc-stage,
@@ -270,6 +269,7 @@
     .compose-reasons-card,
     .page-pane,
     .analytics-sheet,
+    .reachcard,
     .palette-tile,
     .palette-foot
   ) {
@@ -323,7 +323,6 @@
     .co-facts-add,
     .co-strip-withheld,
     .meetingrows-lead,
-    .pn-hero,
     .roomtab-band,
     .board-doc,
     .board-doc-stage,
@@ -368,6 +367,7 @@
     .compose-reasons-card,
     .page-pane,
     .analytics-sheet,
+    .reachcard,
     .palette-tile,
     .palette-foot
   )
@@ -406,7 +406,6 @@
     .co-facts-add,
     .co-strip-withheld,
     .meetingrows-lead,
-    .pn-hero,
     .roomtab-band,
     .board-doc,
     .board-doc-stage,
@@ -451,6 +450,7 @@
     .compose-reasons-card,
     .page-pane,
     .analytics-sheet,
+    .reachcard,
     .palette-tile,
     .palette-foot
   )
@@ -489,7 +489,6 @@
     .co-facts-add,
     .co-strip-withheld,
     .meetingrows-lead,
-    .pn-hero,
     .roomtab-band,
     .board-doc,
     .board-doc-stage,
@@ -534,6 +533,7 @@
     .compose-reasons-card,
     .page-pane,
     .analytics-sheet,
+    .reachcard,
     .palette-tile,
     .palette-foot
   ) {
@@ -587,7 +587,6 @@
     .co-facts-add,
     .co-strip-withheld,
     .meetingrows-lead,
-    .pn-hero,
     .roomtab-band,
     .board-doc,
     .board-doc-stage,
@@ -632,6 +631,7 @@
     .compose-reasons-card,
     .page-pane,
     .analytics-sheet,
+    .reachcard,
     .palette-tile,
     .palette-foot
   )
@@ -670,7 +670,6 @@
     .co-facts-add,
     .co-strip-withheld,
     .meetingrows-lead,
-    .pn-hero,
     .roomtab-band,
     .board-doc,
     .board-doc-stage,
@@ -715,6 +714,7 @@
     .compose-reasons-card,
     .page-pane,
     .analytics-sheet,
+    .reachcard,
     .palette-tile,
     .palette-foot
   )
@@ -753,7 +753,6 @@
     .co-facts-add,
     .co-strip-withheld,
     .meetingrows-lead,
-    .pn-hero,
     .roomtab-band,
     .board-doc,
     .board-doc-stage,
@@ -798,6 +797,7 @@
     .compose-reasons-card,
     .page-pane,
     .analytics-sheet,
+    .reachcard,
     .palette-tile,
     .palette-foot
   )
@@ -836,7 +836,6 @@
     .co-facts-add,
     .co-strip-withheld,
     .meetingrows-lead,
-    .pn-hero,
     .roomtab-band,
     .board-doc,
     .board-doc-stage,
@@ -881,6 +880,7 @@
     .compose-reasons-card,
     .page-pane,
     .analytics-sheet,
+    .reachcard,
     .palette-tile,
     .palette-foot
   ) {
@@ -991,7 +991,6 @@
     .co-facts-add,
     .co-strip-withheld,
     .meetingrows-lead,
-    .pn-hero,
     .roomtab-band,
     .board-doc,
     .board-doc-stage,
@@ -1036,6 +1035,7 @@
     .compose-reasons-card,
     .page-pane,
     .analytics-sheet,
+    .reachcard,
     .palette-tile,
     .palette-foot
   ) {
@@ -1110,7 +1110,6 @@
     .co-facts-add,
     .co-strip-withheld,
     .meetingrows-lead,
-    .pn-hero,
     .roomtab-band,
     .board-doc,
     .board-doc-stage,
@@ -1155,6 +1154,7 @@
     .compose-reasons-card,
     .page-pane,
     .analytics-sheet,
+    .reachcard,
     .palette-tile,
     .palette-foot
   )
@@ -1193,7 +1193,6 @@
     .co-facts-add,
     .co-strip-withheld,
     .meetingrows-lead,
-    .pn-hero,
     .roomtab-band,
     .board-doc,
     .board-doc-stage,
@@ -1238,6 +1237,7 @@
     .compose-reasons-card,
     .page-pane,
     .analytics-sheet,
+    .reachcard,
     .palette-tile,
     .palette-foot
   ) {
@@ -1312,7 +1312,6 @@
     .co-facts-add,
     .co-strip-withheld,
     .meetingrows-lead,
-    .pn-hero,
     .roomtab-band,
     .board-doc,
     .board-doc-stage,
@@ -1357,6 +1356,7 @@
     .compose-reasons-card,
     .page-pane,
     .analytics-sheet,
+    .reachcard,
     .palette-tile,
     .palette-foot
   )
@@ -1395,7 +1395,6 @@
     .co-facts-add,
     .co-strip-withheld,
     .meetingrows-lead,
-    .pn-hero,
     .roomtab-band,
     .board-doc,
     .board-doc-stage,
@@ -1440,6 +1439,7 @@
     .compose-reasons-card,
     .page-pane,
     .analytics-sheet,
+    .reachcard,
     .palette-tile,
     .palette-foot
   )
@@ -1478,7 +1478,6 @@
     .co-facts-add,
     .co-strip-withheld,
     .meetingrows-lead,
-    .pn-hero,
     .roomtab-band,
     .board-doc,
     .board-doc-stage,
@@ -1523,6 +1522,7 @@
     .compose-reasons-card,
     .page-pane,
     .analytics-sheet,
+    .reachcard,
     .palette-tile,
     .palette-foot
   ) {
@@ -1624,7 +1624,6 @@
     .co-facts-add,
     .co-strip-withheld,
     .meetingrows-lead,
-    .pn-hero,
     .roomtab-band,
     .board-doc,
     .board-doc-stage,
@@ -1669,6 +1668,7 @@
     .compose-reasons-card,
     .page-pane,
     .analytics-sheet,
+    .reachcard,
     .palette-tile,
     .palette-foot
   ) {

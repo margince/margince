@@ -196,3 +196,50 @@ describe("editing an employment role from a company", () => {
     },
   );
 });
+
+describe("the row dialogs", () => {
+  it.each([
+    ["deal_stakeholder", "Edit stakeholder", "Remove stakeholder?"],
+    ["employment", "Edit relationship", "Remove relationship?"],
+  ] as const)(
+    "name what a %s row's edit and removal act on",
+    async (kind, editTitle, removeTitle) => {
+      stubWithSession(
+        {
+          "GET /relationships": () =>
+            jsonResponse({
+              data: [seat("champion", kind)],
+              page: { next_cursor: null },
+            }),
+          [`GET /contacts/${CONTACT}`]: () =>
+            jsonResponse({ id: CONTACT, full_name: "Mai Trần" }),
+        },
+        { relationship: ["read", "create", "update", "delete"] },
+      );
+      const user = userEvent.setup();
+      renderWithQueryClient(
+        <RelationshipsTab
+          scope={
+            kind === "deal_stakeholder"
+              ? { deal_id: DEAL }
+              : { company_id: COMPANY }
+          }
+        />,
+      );
+      await user.click(await screen.findByTestId("edit-record"));
+      expect(
+        within(await screen.findByRole("dialog")).getByRole("heading", {
+          name: editTitle,
+        }),
+      ).toBeTruthy();
+      await user.keyboard("{Escape}");
+      await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+      await user.click(screen.getByTestId("remove-relationship"));
+      expect(
+        within(await screen.findByRole("dialog")).getByRole("heading", {
+          name: removeTitle,
+        }),
+      ).toBeTruthy();
+    },
+  );
+});

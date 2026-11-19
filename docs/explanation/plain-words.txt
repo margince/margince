@@ -1223,7 +1223,6 @@ run
 rung
 runtime
 safe
-safer
 said
 sale
 same
@@ -1556,7 +1555,6 @@ verdict
 version
 very
 video
-vietnam
 view
 visibility
 visible

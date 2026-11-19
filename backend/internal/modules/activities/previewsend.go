@@ -133,6 +133,9 @@ func (s *Store) PreviewSend(ctx context.Context, origin SendOrigin, in PreviewSe
 	if err != nil {
 		return SendPreview{}, err
 	}
+	if preview.Decisions, err = s.assessPreviewFooter(ctx, in, preview.Decisions); err != nil {
+		return SendPreview{}, err
+	}
 	if preview.ContentFindings, err = s.draftContentFindings(ctx, in, preview.Decisions); err != nil {
 		return SendPreview{}, err
 	}

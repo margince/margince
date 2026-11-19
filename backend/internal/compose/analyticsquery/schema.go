@@ -91,6 +91,8 @@ const (
 	ShapeNumber ColumnShape = "number"
 	// ShapeBoolean is a yes-or-no column: true and "true" alike.
 	ShapeBoolean ColumnShape = "boolean"
+	// ShapeID is a column of record ids: only a canonical UUID's text binds.
+	ShapeID ColumnShape = "id"
 )
 
 // FieldKind is what a field holds.

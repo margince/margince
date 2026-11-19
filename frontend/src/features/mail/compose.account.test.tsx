@@ -13,6 +13,7 @@ import {
   jsonResponse,
   NO_VOICE_PROFILE,
   PURPOSES,
+  pressSend,
   render,
   stubRoutes,
   WHY_ASK,
@@ -45,7 +46,7 @@ describe("ComposeModal started from an account", () => {
     );
     await screen.findByRole("combobox", { name: WHY_ASK });
     await fillSendableForm();
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());
     const req = sent.find((r) => r.key === "POST /emails");
@@ -77,7 +78,7 @@ describe("ComposeModal started from an account", () => {
     );
     await screen.findByRole("combobox", { name: WHY_ASK });
     await fillSendableForm();
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await pressSend();
 
     await waitFor(() =>
       expect(sent.some((r) => r.key === "POST /emails")).toBe(true),

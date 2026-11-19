@@ -5,7 +5,6 @@ package activities
 
 import (
 	"context"
-	"errors"
 	"slices"
 	"strings"
 	"testing"
@@ -62,16 +61,19 @@ func TestACcRecipientAdvertisedToGetsTheAdvertisingDuties(t *testing.T) {
 		if surface.disclosureCategory() != commsauthz.CategoryMarketing || !surface.carries() {
 			t.Fatalf("surface %+v: b@ is advertised to, so the body owes the advertising duties", surface)
 		}
-		return store.deliverability(context.Background(), "As discussed.", "Re: your question", in.Recipients, surface, ids.Nil)
+		return store.deliverability(context.Background(), "As discussed.", "Re: your question", in.Recipients, surface, ids.Nil, "")
 	}
 
-	_, err := derive(SendEmailInput{
+	combined, err := derive(SendEmailInput{
 		Context:    commsauthz.CategoryReplyToInbound,
 		Recipients: []string{"a@example.test", "b@example.test"},
 		Cc:         []string{"b@example.test"},
 	})
-	if _, refused := errors.AsType[*SharedUnsubscribeTokenError](err); !refused {
-		t.Errorf("the reply with an advertised Cc was derived with err %v, want the one-addressee refusal", err)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !slices.ContainsFunc(combined.footerFindings, func(finding commsauthz.FooterFinding) bool { return finding.Kind == "recipient_private_link" }) || combined.listUnsubscribe != "" {
+		t.Fatalf("combined message must warn without sharing a credential: %+v", combined)
 	}
 
 	got, err := derive(SendEmailInput{Context: commsauthz.CategoryReplyToInbound, Recipients: []string{"b@example.test"}})

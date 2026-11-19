@@ -23,6 +23,7 @@ import {
   previewedAddresses,
 } from "../../testing/sendpermission.testkit";
 import { ComposeModal } from "./compose";
+import { pressSend } from "./compose.testkit";
 
 // The head of the message: who it is to, and the two things a rep could not
 // reach from here before — a blind copy, and the paper the mail is about.
@@ -193,7 +194,7 @@ async function fillAndSend(user: ReturnType<typeof userEvent.setup>) {
     screen.getByLabelText("Reason for contact"),
     "Follow-up they requested",
   );
-  await user.click(screen.getByRole("button", { name: "Send" }));
+  await pressSend(user);
 }
 
 function sentMail(sent: Sent[]) {

@@ -10,10 +10,12 @@ import {
   RecordPicker,
   type RecordPickerCandidate,
 } from "../design-system/recordpicker";
+import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { type RequiredGrant, useGrantRefused } from "../lib/capability";
 import { fromHere } from "../lib/navigatefrom";
 import type { Route } from "../lib/router";
+import { mergeSentence } from "./merge.sentence";
 import "../design-system/querystates.css";
 
 // The shared "Merge into…" affordance (P-2): a human direct call that folds
@@ -28,6 +30,7 @@ export function MergeAction<Survivor extends { id: string }>({
   label,
   sourceId,
   sourceName,
+  sourceDetail,
   searchTargets,
   merge,
   invalidate,
@@ -39,6 +42,8 @@ export function MergeAction<Survivor extends { id: string }>({
   label: string;
   sourceId: string;
   sourceName: string;
+  // The same detail line the picker draws under each candidate.
+  sourceDetail?: string;
   // May return the source row; it is dropped here, because a record is never
   // a merge target for itself.
   searchTargets: (q: string) => Promise<RecordPickerCandidate[]>;
@@ -62,9 +67,11 @@ export function MergeAction<Survivor extends { id: string }>({
   const t = useT();
   const refused = useGrantRefused(requires);
   const queryClient = useQueryClient();
+  const toast = useToast();
   const headingId = useId();
   const [open, setOpen] = useState(false);
   const [target, setTarget] = useState<RecordPickerCandidate | null>(null);
+  const source = { name: sourceName, detail: sourceDetail };
   const searchOthers = useCallback(
     async (q: string) =>
       (await searchTargets(q)).filter((candidate) => candidate.id !== sourceId),
@@ -80,6 +87,9 @@ export function MergeAction<Survivor extends { id: string }>({
       queryClient.invalidateQueries({ queryKey: [recordKey, sourceId] });
       queryClient.invalidateQueries({ queryKey: [recordKey, survivor.id] });
       setOpen(false);
+      if (target) {
+        toast.show(mergeSentence(t, "merge.done", source, target));
+      }
       from.closeOnto(survivorRoute(survivor.id));
     },
   });
@@ -120,20 +130,7 @@ export function MergeAction<Survivor extends { id: string }>({
             }
             disabled={mutation.isPending}
           />
-          {target && (
-            <p>
-              {target.detail
-                ? t("merge.confirmDetail", {
-                    source: sourceName,
-                    target: target.name,
-                    detail: target.detail,
-                  })
-                : t("merge.confirm", {
-                    source: sourceName,
-                    target: target.name,
-                  })}
-            </p>
-          )}
+          {target && <p>{mergeSentence(t, "merge.confirm", source, target)}</p>}
           <ErrorLine error={mutation.error} />
         </div>
         <div className="actions">
