@@ -156,24 +156,6 @@ export function toMinorUnits(major: number, currency: string): number {
   return Number.isSafeInteger(minor) ? minor : Number.NaN;
 }
 
-/**
- * Why toMinorUnits refuses a typed amount, so a form can say so before the
- * NaN reaches a request; undefined for a blank or storable one.
- */
-export function amountFault(
-  text: string,
-  currency: string,
-): "too_precise" | "too_large" | undefined {
-  const typed = text.trim();
-  if (typed === "") return undefined;
-  const major = Number(typed);
-  if (!Number.isNaN(toMinorUnits(major, currency))) return undefined;
-  const digits = minorUnitDigits(currency);
-  return Number.isFinite(major) && Number(major.toFixed(digits)) !== major
-    ? "too_precise"
-    : "too_large";
-}
-
 function roundHalfAwayFromZero(value: number): number {
   return value < 0 ? -Math.round(-value) : Math.round(value);
 }
