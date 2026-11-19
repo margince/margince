@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/viability"
 )
 
@@ -201,10 +202,10 @@ func Rules() []Rule {
 // there is, and the one that quietly inflates a quarter: nobody moved the date,
 // so the deal still counts toward a period it cannot close in.
 func closePast() Rule {
-	return Rule{Type: TypeClosePast, Version: "v1", Ask: func(asOf time.Time, s Subject, _ Config) *Finding {
+	return Rule{Type: TypeClosePast, Version: "v2", Ask: func(asOf time.Time, s Subject, _ Config) *Finding {
 		today := day(asOf)
 		if s.Zone != nil {
-			today = day(asOf.In(s.Zone))
+			today = storekit.WorkspaceDay(asOf, s.Zone)
 		}
 		if s.ExpectedClose == nil || !closeDayOn(s.ExpectedClose, today.Location()).Before(today) {
 			return nil

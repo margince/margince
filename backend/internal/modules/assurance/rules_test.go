@@ -315,3 +315,23 @@ func TestClosePastReadsTheDayInTheInstallationZone(t *testing.T) {
 		t.Error("in Auckland the 14th is over, and the rule stayed quiet")
 	}
 }
+
+// 03:00 UTC on 15 May is still the evening of the 14th in Los Angeles.
+// A deal due on the 14th is due today there and already past in UTC.
+func TestClosePastReadsTheDayWestOfUTC(t *testing.T) {
+	t.Parallel()
+	losAngeles, err := time.LoadLocation("America/Los_Angeles")
+	if err != nil {
+		t.Fatalf("loading the zone: %v", err)
+	}
+	asOf := time.Date(testYear, time.May, 15, 3, 0, 0, 0, time.UTC)
+	due := healthy()
+	due.ExpectedClose = new(at(time.May, 14))
+	if got := ask(t, TypeClosePast, asOf, due, DefaultConfig()); got == nil {
+		t.Error("in UTC the 14th is over, and the rule stayed quiet")
+	}
+	due.Zone = losAngeles
+	if got := ask(t, TypeClosePast, asOf, due, DefaultConfig()); got != nil {
+		t.Errorf("in Los Angeles the 14th is still today, got %+v", got)
+	}
+}

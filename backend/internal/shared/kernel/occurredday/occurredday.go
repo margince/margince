@@ -201,10 +201,19 @@ func TodaySQL(asOf string) string {
 	return `(CAST(` + asOf + ` AS timestamptz) AT TIME ZONE ` + installationZoneSQL + `)::date`
 }
 
-// DayStartSQL is the instant the installation's day begins, for a date
-// expression day. A bare cast to timestamptz would cut it at the session zone's midnight.
+// DayStartSQL is the first instant of the installation's day for a date
+// expression day, as storekit.StartOfDay answers it. A bare
+// `timestamp AT TIME ZONE` takes the later of two instants at a fall-back
+// midnight, which would cut the first hour of that day off. So each shift a
+// zone makes at midnight is tried: an hour, or Lord Howe's half hour. The
+// earliest instant still on the day wins. Day is SQL the caller renders.
 func DayStartSQL(day string) string {
-	return `((` + day + `)::timestamp AT TIME ZONE ` + installationZoneSQL + `)`
+	local := `((` + day + `)::timestamp AT TIME ZONE ` + installationZoneSQL + `)`
+	earlier := func(shift string) string {
+		return `CASE WHEN ((` + local + ` - interval '` + shift + `') AT TIME ZONE ` + installationZoneSQL +
+			`)::date = (` + day + `)::date THEN ` + local + ` - interval '` + shift + `' END`
+	}
+	return `LEAST(` + local + `, ` + earlier("1 hour") + `, ` + earlier("30 minutes") + `)`
 }
 
 // EndSQL is when the activity under alias ends. An instant ends at its start

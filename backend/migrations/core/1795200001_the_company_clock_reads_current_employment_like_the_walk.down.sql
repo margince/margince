@@ -92,7 +92,6 @@ CREATE OR REPLACE FUNCTION last_activity_reach(contact_ids uuid[], deal_ids uuid
   UNION SELECT 'company', d.company_id FROM deal d
          WHERE d.id = ANY (deal_ids) AND d.company_id IS NOT NULL
   UNION SELECT 'company', r.company_id FROM relationship r
-         WHERE r.contact_id = ANY (contact_ids)
-           AND r.kind = 'employment'
+         WHERE r.contact_id = ANY (contact_ids) AND r.kind = 'employment'
            AND r.ended_at IS NULL AND r.archived_at IS NULL
 $$;
