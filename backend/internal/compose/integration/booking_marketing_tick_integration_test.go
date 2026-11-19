@@ -398,13 +398,8 @@ func TestAMarketingTickFromANonPrimaryAddressIsNotAsked(t *testing.T) {
 	if status := publicCall(t, e, "POST", base, tick("VERA@corp.example", 7*time.Hour), nil, &answer); status != http.StatusCreated {
 		t.Fatalf("a tick from the primary address (differing in case) → %d, want 201", status)
 	}
-	// THE TOKEN COUNT BELOW IS THE CONTROL, not the outcome field. Both presses
-	// report not_asked on this installation, because the confirmation lane is
-	// wired onto the handlers' store and not the adapter's own, so nothing is
-	// staged and the outcome says so honestly —
-	// TestTheMarketingOutcomeAgreesWithWhatWasActuallyStaged is where that
-	// lives. What separates a question asked from one refused is whether a
-	// token exists.
+	// The token count is the control: it separates a question asked from one
+	// refused whatever the installation's mail lane does.
 	if err := e.Owner.QueryRow(context.Background(),
 		`SELECT count(*) FROM confirm_token WHERE contact_id = $1`, contact.ID).Scan(&links); err != nil {
 		t.Fatal(err)

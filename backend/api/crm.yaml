@@ -75660,6 +75660,10 @@ components:
         state: { type: string, enum: [unknown, granted, withdrawn], x-extensible-enum: true }
         lawful_basis: { type: [string, 'null'] }
         double_opt_in_confirmed_at: { type: [string, 'null'], format: date-time }
+        confirmation_pending_until:
+          type: [string, 'null']
+          format: date-time
+          description: When the confirmation link mailed for this purpose stops working. Set only while that link is unspent. A pending request is not consent.
         updated_at: { type: [string, 'null'], format: date-time }
 
     ConsentEvent:

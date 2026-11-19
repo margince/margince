@@ -67,7 +67,15 @@ type mintedLink struct {
 	// a bounce on it can reopen the duty.
 	deliveryID            ids.UUID
 	noticeCasesDischarged int
+	// alreadyPending is set when a recent link for this contact and purpose is
+	// still live, so no second token or mail was made.
+	alreadyPending bool
 }
+
+// automaticResendWindow is how long a live link for one contact and purpose
+// answers a repeat automatic request. An anonymous form can name any address,
+// so a repeat inside the window must not mail its owner again.
+const automaticResendWindow = 24 * time.Hour
 
 // issueLinkTx is the mint itself, on a transaction the caller owns.
 //
@@ -111,6 +119,13 @@ func (s *Store) issueLinkTx(
 			return err
 		}
 		issued := s.now().UTC()
+		if req.lane == mintWithoutMailLane {
+			pending, err := recentLinkLiveTx(ctx, tx, req, issued)
+			if err != nil || pending {
+				out = mintedLink{deliveredTo: deliveredTo, alreadyPending: pending}
+				return err
+			}
+		}
 		expires := issued.Add(confirmTokenTTL)
 		// Per KIND, and per purpose within a kind. A fresh record-confirmation
 		// link must not expire somebody's pending consent link and the other
@@ -238,4 +253,17 @@ func insertContactLinkTx(ctx context.Context, tx pgx.Tx, link contactLink) (ids.
 		VALUES (`+storekit.Placeholders(args)+`)
 		RETURNING id`, args...).Scan(&id)
 	return id, err
+}
+
+// recentLinkLiveTx reports whether this contact already holds an unspent link
+// of the requested kind and purpose that was issued inside the resend window.
+func recentLinkLiveTx(ctx context.Context, tx pgx.Tx, req mintRequest, now time.Time) (bool, error) {
+	var pending bool
+	err := tx.QueryRow(ctx, `
+		SELECT EXISTS (
+		  SELECT 1 FROM confirm_token
+		   WHERE contact_id = $1 AND kind = $2 AND purpose_id IS NOT DISTINCT FROM $3
+		     AND consumed_at IS NULL AND expires_at > $4 AND issued_at > $5)`,
+		req.contactID, req.kind, nullablePurpose(req.purposeID), now, now.Add(-automaticResendWindow)).Scan(&pending)
+	return pending, err
 }

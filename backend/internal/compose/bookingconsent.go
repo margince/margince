@@ -218,17 +218,10 @@ func (a bookingConsentAdapter) askMarketing(ctx context.Context, contactID ids.U
 	issued, err := a.store.IssueBookedConsentLink(ctx,
 		ids.From[ids.ContactKind](contactID), ids.From[ids.PurposeKind](m.PurposeID), m.TickedFrom, m.AskedBySubject)
 	if err == nil {
-		// STAGED, not merely minted. issueLink answers a token it could not
-		// send rather than failing — an installation with no relay gets a link
-		// it can see was not posted — so a nil error alone says the row exists,
-		// never that anybody will receive it.
-		//
-		// This adapter builds its own consent store, and the confirmation lane
-		// is rewired onto the handlers' store rather than that one. So on the
-		// production wiring today the mail is never staged, and reporting the
-		// nil error as pending_confirmation would tell every booker a question
-		// is coming when none is.
-		if !issued.Staged {
+		// A nil error says the token row exists, not that anybody will get the
+		// mail: an installation with no relay mints a link and stages nothing.
+		// Only a staged or already-pending question is reported as asked.
+		if !issued.Staged && !issued.AlreadyPending {
 			return activities.MarketingNotAsked, nil
 		}
 		return activities.MarketingPendingConfirmation, nil

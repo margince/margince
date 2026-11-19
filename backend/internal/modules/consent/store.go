@@ -91,7 +91,10 @@ type State struct {
 	State                  string
 	LawfulBasis            *string
 	DoubleOptInConfirmedAt *time.Time
-	UpdatedAt              *time.Time
+	// ConfirmationPendingUntil is the expiry of a mailed confirmation link not
+	// yet spent. It is shown beside the state and never read as consent.
+	ConfirmationPendingUntil *time.Time
+	UpdatedAt                *time.Time
 	// Changed says whether this call MOVED the record. False for an
 	// idempotent re-assertion and for a capture that declined to override
 	// a decision already on file. The preference centre's unsubscribe
@@ -253,6 +256,9 @@ func subjectConsentInTx(ctx context.Context, tx pgx.Tx, sub subject) ([]State, [
 	}
 	rows.Close()
 	if err := rows.Err(); err != nil {
+		return nil, nil, err
+	}
+	if err := markPendingConfirmations(ctx, tx, sub, states); err != nil {
 		return nil, nil, err
 	}
 
@@ -441,4 +447,36 @@ func (e *ValidationError) Error() string { return "consent: " + e.Field + ": " +
 // without a handler having to know this module's error type.
 func (e *ValidationError) FieldFault() (field, code, message string) {
 	return e.Field, codeInvalid, e.Reason
+}
+
+// markPendingConfirmations sets ConfirmationPendingUntil on each purpose whose
+// confirmation link is mailed and unspent. Only contacts hold link tokens.
+func markPendingConfirmations(ctx context.Context, tx pgx.Tx, sub subject, states []State) error {
+	if sub.entityType != "contact" {
+		return nil
+	}
+	rows, err := tx.Query(ctx, `
+		SELECT purpose_id, max(expires_at) FROM confirm_token
+		 WHERE contact_id = $1 AND kind = $2 AND consumed_at IS NULL
+		   AND expires_at > now() AND purpose_id IS NOT NULL
+		 GROUP BY purpose_id`, sub.id, LinkConsentConfirmation)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	until := map[ids.PurposeID]time.Time{}
+	for rows.Next() {
+		var purpose ids.PurposeID
+		var expires time.Time
+		if err := rows.Scan(&purpose, &expires); err != nil {
+			return err
+		}
+		until[purpose] = expires
+	}
+	for i := range states {
+		if t, ok := until[states[i].PurposeID]; ok && states[i].State != "granted" {
+			states[i].ConfirmationPendingUntil = &t
+		}
+	}
+	return rows.Err()
 }

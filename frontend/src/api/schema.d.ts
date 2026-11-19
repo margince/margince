@@ -55279,6 +55279,11 @@ export interface components {
             lawful_basis?: string | null;
             /** Format: date-time */
             double_opt_in_confirmed_at?: string | null;
+            /**
+             * Format: date-time
+             * @description When the confirmation link mailed for this purpose stops working. Set only while that link is unspent. A pending request is not consent.
+             */
+            confirmation_pending_until?: string | null;
             /** Format: date-time */
             updated_at?: string | null;
         };

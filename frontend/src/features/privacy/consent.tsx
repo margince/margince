@@ -231,6 +231,8 @@ function ConsentRow({
   events: ConsentEvent[];
 }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const zone = useViewerZone();
   const queryClient = useQueryClient();
   const granted = entry.state === "granted";
   const [showLog, setShowLog] = useState(false);
@@ -313,6 +315,17 @@ function ConsentRow({
         </Button>
       </div>
       {requiresDoi && <p>{t("consent.doiBySubject")}</p>}
+      {entry.confirmation_pending_until && (
+        <p>
+          {t("consent.confirmationPending", {
+            date: formatDateTime(
+              entry.confirmation_pending_until,
+              locale,
+              zone,
+            ),
+          })}
+        </p>
+      )}
       <ErrorLine error={setState.error} />
       {showLog && <ConsentProofLog events={events} />}
     </PanelRow>

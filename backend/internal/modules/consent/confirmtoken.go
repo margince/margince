@@ -65,6 +65,8 @@ type IssuedConfirm struct {
 	// catches a log line, which a json tag cannot.
 	Token     string `json:"-"`
 	ExpiresAt time.Time
+	// AlreadyPending: an earlier automatic request is live, nothing new was sent.
+	AlreadyPending bool
 	// DeliveredTo is where the link was posted. Returned rather than taken, so
 	// the mailbox the consent claim rests on is the subject's own.
 	DeliveredTo string
@@ -374,6 +376,7 @@ func (s *Store) issueLink(ctx context.Context, contactID ids.ContactID, kind str
 		ExpiresAt:             minted.expiresAt,
 		DeliveredTo:           minted.deliveredTo,
 		Staged:                minted.staged,
+		AlreadyPending:        minted.alreadyPending,
 		NoticeCasesDischarged: minted.noticeCasesDischarged,
 	}, nil
 }

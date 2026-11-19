@@ -193,11 +193,15 @@ func (s *Server) rewireConfirmationLane(pool *pgxpool.Pool) {
 	// early return above leaves the capability false, which is the answer an
 	// installation with no relay owes a screen.
 	s.authHandlers = s.WithContactMailLane(true)
-	s.siteLeadNotices.store.Store(consent.NewStore(InstallationDB(pool)).
+	laneStore := consent.NewStore(InstallationDB(pool)).
 		WithMailLanguage(consent.MailLanguageFunc(identity.LanguageOf)).
 		WithInstallationZone(identity.ZoneAppliedTx).
 		WithConfirmationLane(queue, confirmLinkVault{s.vault}, s.confirmLinkBase).
-		WithMissedReceipts(receiptAlarm{db: InstallationDB(pool)}))
+		WithMissedReceipts(receiptAlarm{db: InstallationDB(pool)})
+	s.siteLeadNotices.store.Store(laneStore)
+	// The booking form's marketing tick mails its confirmation link through
+	// this same lane; a store without it mints a link and sends nothing.
+	s.activitiesHandlers = s.WithPublicBooking(newBookerContacts(pool), bookingConsentAdapter{store: laneStore})
 }
 
 // errNoWorkspaceForConfirmLink marks a seal attempted with no workspace in

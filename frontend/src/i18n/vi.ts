@@ -3678,6 +3678,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chưa biết có gửi được hay không. Hãy tải lại trang để kiểm tra.",
   "consent.askExpires": "Liên kết có hiệu lực đến",
   "consent.noRecord": "chưa ghi nhận",
+  "consent.confirmationPending":
+    "Đang chờ họ xác nhận qua email. Liên kết có hiệu lực đến {date}.",
   "consent.noPurposes": "Công ty chưa theo dõi mục đích đồng ý nào.",
   "consent.defaultDeny":
     "Lịch sử này ghi nhận sự đồng ý cho từng mục đích. Quyền liên lạc cũng có thể dựa trên các căn cứ khác đã ghi nhận; tin nhắn sẽ được kiểm tra lại trước khi gửi.",

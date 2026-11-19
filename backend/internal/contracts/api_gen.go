@@ -44995,12 +44995,14 @@ type ContactConsentGuardEntryVerdict string
 
 // ContactConsentState A contact's current consent for one purpose.
 type ContactConsentState struct {
-	DoubleOptInConfirmedAt *time.Time               `json:"double_opt_in_confirmed_at,omitempty"`
-	LawfulBasis            *string                  `json:"lawful_basis,omitempty"`
-	PurposeId              openapi_types.UUID       `json:"purpose_id"`
-	PurposeKey             *string                  `json:"purpose_key,omitempty"`
-	State                  ContactConsentStateState `json:"state"`
-	UpdatedAt              *time.Time               `json:"updated_at,omitempty"`
+	// ConfirmationPendingUntil When the confirmation link mailed for this purpose stops working. Set only while that link is unspent. A pending request is not consent.
+	ConfirmationPendingUntil *time.Time               `json:"confirmation_pending_until,omitempty"`
+	DoubleOptInConfirmedAt   *time.Time               `json:"double_opt_in_confirmed_at,omitempty"`
+	LawfulBasis              *string                  `json:"lawful_basis,omitempty"`
+	PurposeId                openapi_types.UUID       `json:"purpose_id"`
+	PurposeKey               *string                  `json:"purpose_key,omitempty"`
+	State                    ContactConsentStateState `json:"state"`
+	UpdatedAt                *time.Time               `json:"updated_at,omitempty"`
 }
 
 // ContactConsentStateState defines model for ContactConsentState.State.

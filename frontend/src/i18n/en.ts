@@ -3730,6 +3730,8 @@ export const en = {
     "Whether this can be sent is not known yet. Reload the page to check again.",
   "consent.askExpires": "The link works until",
   "consent.noRecord": "no record",
+  "consent.confirmationPending":
+    "Waiting for them to confirm by email. The link works until {date}.",
   "consent.noPurposes": "This company tracks no consent purposes yet.",
   "consent.defaultDeny":
     "This history records consent for each purpose. Communication permission may also depend on other recorded grounds; the message is checked again before sending.",
