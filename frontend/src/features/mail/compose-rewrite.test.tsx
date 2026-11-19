@@ -84,12 +84,13 @@ const undoButton = () => screen.getByRole("button", { name: "Undo" });
 
 describe("ComposeModal rewrites over the rep's words", () => {
   it("keeps the rewrites after the rep edits a draft, and revises the edit", async () => {
+    const user = userEvent.setup();
     const calls = await openReply("Draft A body.", "Polished.");
-    await userEvent.click(draftButton());
+    await user.click(draftButton());
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
     writeMessage("Body", "Draft A body. And my own line.");
 
-    await userEvent.click(polish());
+    await user.click(polish());
 
     await waitFor(() => expect(messageText("Body")).toBe("Polished."));
     expect(calls()[0]?.body).toEqual({
@@ -102,18 +103,19 @@ describe("ComposeModal rewrites over the rep's words", () => {
   });
 
   it("polishes a body the rep wrote, discloses it, and an undo restores the rep's words", async () => {
+    const user = userEvent.setup();
     const calls = await openReply("Unused.", "Polished words.");
     const own = "hi anna, can we talk price next week";
     writeMessage("Body", own);
     expect(screen.queryByRole("heading", DISCLOSURE)).toBeNull();
 
-    await userEvent.click(polish());
+    await user.click(polish());
 
     await waitFor(() => expect(messageText("Body")).toBe("Polished words."));
     expect(calls()[0]?.body).toMatchObject({ verb: "polish", body: own });
     expect(screen.getByRole("heading", DISCLOSURE)).toBeTruthy();
 
-    await userEvent.click(undoButton());
+    await user.click(undoButton());
 
     await waitFor(() => expect(messageText("Body")).toBe(own));
     expect(screen.queryByRole("heading", DISCLOSURE)).toBeNull();
@@ -121,14 +123,15 @@ describe("ComposeModal rewrites over the rep's words", () => {
   });
 
   it("offers Undo after every verb, back to the exact words before it", async () => {
+    const user = userEvent.setup();
     await openReply("Draft A body.", "Shorter words.");
-    await userEvent.click(draftButton());
+    await user.click(draftButton());
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
     expect(undo()).toBeNull();
 
-    await userEvent.click(screen.getByRole("button", { name: "Shorter" }));
+    await user.click(screen.getByRole("button", { name: "Shorter" }));
     await waitFor(() => expect(messageText("Body")).toBe("Shorter words."));
-    await userEvent.click(undoButton());
+    await user.click(undoButton());
 
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
     // The model's own draft is back, and its disclosure with it.
@@ -136,9 +139,10 @@ describe("ComposeModal rewrites over the rep's words", () => {
   });
 
   it("withdraws Undo once the rep edits the rewritten words", async () => {
+    const user = userEvent.setup();
     await openReply("Unused.", "Polished words.");
     writeMessage("Body", "hi anna, price next week");
-    await userEvent.click(polish());
+    await user.click(polish());
     await waitFor(() => expect(messageText("Body")).toBe("Polished words."));
     expect(undo()).not.toBeNull();
 
@@ -181,6 +185,7 @@ describe("ComposeModal rewrites over the rep's words", () => {
   });
 
   it("says a body the server finds too long is too long, not that the call failed", async () => {
+    const user = userEvent.setup();
     await openReply("Unused.", () =>
       jsonResponse(
         {
@@ -197,7 +202,7 @@ describe("ComposeModal rewrites over the rep's words", () => {
     );
     writeMessage("Body", "hi anna, price next week");
 
-    await userEvent.click(polish());
+    await user.click(polish());
 
     expect(
       await screen.findByText("This mail is too long to rewrite."),

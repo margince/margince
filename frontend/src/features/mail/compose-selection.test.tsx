@@ -374,6 +374,7 @@ it("retries a failed selected-message read before enabling reply drafting", asyn
 });
 
 it("keeps withheld thread entries unreadable and unavailable as reply targets", async () => {
+  const user = userEvent.setup();
   setup(
     undefined,
     undefined,
@@ -381,7 +382,7 @@ it("keeps withheld thread entries unreadable and unavailable as reply targets", 
     "a2",
   );
   await screen.findByDisplayValue("Re: Delivery");
-  const menu = await threadMenu(userEvent.setup());
+  const menu = await threadMenu(user);
   const held = within(await menu.findByRole("listitem", { name: /Pricing/ }));
   expect(held.queryByRole("button")).toBeNull();
   expect(held.queryByText(/Full text/)).toBeNull();

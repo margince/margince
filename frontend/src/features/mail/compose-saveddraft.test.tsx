@@ -184,7 +184,7 @@ describe("a saved draft", () => {
           answer = resolve;
         }),
     });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(composer(vi.fn()));
     const to = await screen.findByRole<HTMLInputElement>("combobox", {
       name: "To",
@@ -216,6 +216,7 @@ describe("a saved draft", () => {
   // A 200 that is not a draft keeps nothing, so the window stays open and says
   // the save failed instead of restoring an empty shape.
   it("stays open when the save answers something that is not a draft", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const onClose = vi.fn();
     stubRoutes({
       "GET /mail-drafts": () => jsonResponse(SAVED),
@@ -225,7 +226,7 @@ describe("a saved draft", () => {
     await screen.findByText("Saved draft restored");
     writeMessage("Body", "Finished after lunch");
 
-    await userEvent.click(screen.getByRole("button", { name: "Close" }));
+    await user.click(screen.getByRole("button", { name: "Close" }));
 
     expect(await screen.findByText(/The draft was not saved/)).toBeTruthy();
     expect(onClose).not.toHaveBeenCalled();
@@ -233,6 +234,7 @@ describe("a saved draft", () => {
   });
 
   it("saves over the version it restored and closes", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const onClose = vi.fn();
     const sent = stubRoutes({
       "GET /mail-drafts": () => jsonResponse(SAVED),
@@ -242,7 +244,7 @@ describe("a saved draft", () => {
     await screen.findByText("Saved draft restored");
     writeMessage("Body", "Finished after lunch");
 
-    await userEvent.click(screen.getByRole("button", { name: "Close" }));
+    await user.click(screen.getByRole("button", { name: "Close" }));
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());
     const put = calls(sent, "PUT /mail-drafts")[0];
@@ -271,6 +273,7 @@ describe("a saved draft", () => {
   });
 
   it("is written when the composer closes over words nobody saved", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const onClose = vi.fn();
     const sent = stubRoutes({
       "PUT /mail-drafts": () => jsonResponse(SAVED),
@@ -281,7 +284,7 @@ describe("a saved draft", () => {
     );
     writeMessage("Body", "Half written before lunch");
 
-    await userEvent.click(screen.getByRole("button", { name: "Close" }));
+    await user.click(screen.getByRole("button", { name: "Close" }));
 
     // The close waits for the save, so a refused one cannot drop the text.
     await waitFor(() => expect(onClose).toHaveBeenCalled());
@@ -291,6 +294,7 @@ describe("a saved draft", () => {
   });
 
   it("is named restored when the composer reopens still holding it", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent: Sent[] = stubRoutes({
       "DELETE /mail-drafts/md-1": () => new Response(null, { status: 204 }),
       "PUT /mail-drafts": () => {
@@ -322,10 +326,10 @@ describe("a saved draft", () => {
       expect(calls(sent, "GET /mail-drafts")).toHaveLength(1),
     );
     writeMessage("Body", "Half written before lunch");
-    await userEvent.click(screen.getByRole("button", { name: "Close" }));
+    await user.click(screen.getByRole("button", { name: "Close" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 
-    await userEvent.click(screen.getByRole("button", { name: "Write again" }));
+    await user.click(screen.getByRole("button", { name: "Write again" }));
 
     expect(await screen.findByText("Saved draft restored")).toBeTruthy();
     expect(
@@ -340,7 +344,7 @@ describe("a saved draft", () => {
     expect(
       screen.queryByText("Draft saved", { selector: ".toast-said" }),
     ).toBeNull();
-    await userEvent.click(
+    await user.click(
       screen.getByRole("button", { name: "Delete saved draft" }),
     );
     expect(await screen.findByText("Saved draft deleted")).toBeTruthy();
@@ -380,7 +384,7 @@ describe("a saved draft", () => {
         </>
       );
     }
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(<Page />);
     await waitFor(() =>
       expect(calls(sent, "GET /mail-drafts")).toHaveLength(1),
@@ -398,18 +402,20 @@ describe("a saved draft", () => {
   });
 
   it("is not written when the composer closes as it opened", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const onClose = vi.fn();
     const sent = stubRoutes({ "GET /mail-drafts": () => jsonResponse(SAVED) });
     render(composer(onClose));
     await screen.findByText("Saved draft restored");
 
-    await userEvent.click(screen.getByRole("button", { name: "Close" }));
+    await user.click(screen.getByRole("button", { name: "Close" }));
 
     expect(onClose).toHaveBeenCalled();
     expect(calls(sent, "PUT /mail-drafts")).toHaveLength(0);
   });
 
   it("is not created by opening and closing an empty composer", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const onClose = vi.fn();
     const sent = stubRoutes();
     render(composer(onClose));
@@ -417,13 +423,14 @@ describe("a saved draft", () => {
       expect(calls(sent, "GET /mail-drafts")).toHaveLength(1),
     );
 
-    await userEvent.click(screen.getByRole("button", { name: "Close" }));
+    await user.click(screen.getByRole("button", { name: "Close" }));
 
     expect(onClose).toHaveBeenCalled();
     expect(calls(sent, "PUT /mail-drafts")).toHaveLength(0);
   });
 
   it("can be deleted from the toast the close leaves behind", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({
       "PUT /mail-drafts": () => jsonResponse(SAVED),
       "DELETE /mail-drafts/md-1": () => new Response(null, { status: 204 }),
@@ -433,11 +440,9 @@ describe("a saved draft", () => {
       expect(calls(sent, "GET /mail-drafts")).toHaveLength(1),
     );
     writeMessage("Body", "Half written before lunch");
-    await userEvent.click(screen.getByRole("button", { name: "Close" }));
+    await user.click(screen.getByRole("button", { name: "Close" }));
 
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Delete" }),
-    );
+    await user.click(await screen.findByRole("button", { name: "Delete" }));
 
     expect(await screen.findByText("Saved draft deleted")).toBeTruthy();
     expect(calls(sent, "DELETE /mail-drafts/md-1")).toHaveLength(1);
@@ -445,6 +450,7 @@ describe("a saved draft", () => {
   });
 
   it("is deleted from the restored notice, and the fields empty", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({
       "GET /mail-drafts": () => jsonResponse(SAVED),
       "DELETE /mail-drafts/md-1": () => new Response(null, { status: 204 }),
@@ -452,7 +458,7 @@ describe("a saved draft", () => {
     render(composer(vi.fn()));
     await screen.findByText("Saved draft restored");
 
-    await userEvent.click(
+    await user.click(
       screen.getByRole("button", { name: "Delete saved draft" }),
     );
 
@@ -463,6 +469,7 @@ describe("a saved draft", () => {
   });
 
   it("is never overwritten after another window moved it", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const onClose = vi.fn();
     let reads = 0;
     const sent = stubRoutes({
@@ -485,7 +492,7 @@ describe("a saved draft", () => {
     await screen.findByText("Saved draft restored");
     writeMessage("Body", "Written here");
 
-    await userEvent.click(screen.getByRole("button", { name: "Close" }));
+    await user.click(screen.getByRole("button", { name: "Close" }));
 
     expect(
       await screen.findByText("Draft changed in another window"),
@@ -494,7 +501,7 @@ describe("a saved draft", () => {
     expect(messageText("Body")).toBe("Written here");
     expect(calls(sent, "GET /mail-drafts")).toHaveLength(2);
 
-    await userEvent.click(
+    await user.click(
       screen.getByRole("button", { name: "Load saved version" }),
     );
     await waitFor(() =>
@@ -503,6 +510,7 @@ describe("a saved draft", () => {
   });
 
   it("keeps the composer open over a failed save once, and a second close discards", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const onClose = vi.fn();
     const sent = stubRoutes({
       "PUT /mail-drafts": () =>
@@ -514,7 +522,7 @@ describe("a saved draft", () => {
     render(composer(onClose));
     writeMessage("Body", "Half written before lunch");
 
-    await userEvent.click(screen.getByRole("button", { name: "Close" }));
+    await user.click(screen.getByRole("button", { name: "Close" }));
 
     const line = await screen.findByRole("alert");
     expect(line.firstChild?.textContent).toBe(
@@ -524,7 +532,7 @@ describe("a saved draft", () => {
     expect(onClose).not.toHaveBeenCalled();
     expect(messageText("Body")).toBe("Half written before lunch");
 
-    await userEvent.click(screen.getByRole("button", { name: "Close" }));
+    await user.click(screen.getByRole("button", { name: "Close" }));
 
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(calls(sent, "PUT /mail-drafts")).toHaveLength(1);
@@ -532,6 +540,7 @@ describe("a saved draft", () => {
   });
 
   it("holds the send while a first save is still out", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     let answer: (response: Response) => void = () => {};
     const sent = stubRoutes({
       "PUT /mail-drafts": () =>
@@ -553,7 +562,7 @@ describe("a saved draft", () => {
     );
     const send = screen.getByRole("button", { name: "Send" });
     expect(send).toHaveProperty("disabled", true);
-    await userEvent.click(send);
+    await user.click(send);
     expect(calls(sent, "POST /emails")).toHaveLength(0);
 
     answer(jsonResponse(SAVED));
@@ -570,7 +579,7 @@ describe("a saved draft", () => {
       "PUT /mail-drafts": () => problem("internal", 503),
       "POST /emails": () => problem("internal", 500),
     });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(composer(vi.fn()));
     await screen.findByRole("combobox", { name: "Reason for contact" });
     writeMessage("Body", "Half written before lunch");
@@ -597,6 +606,7 @@ describe("a saved draft", () => {
   });
 
   it("is named to the send, which discards it", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const onClose = vi.fn();
     const sent = stubRoutes({
       "GET /mail-drafts": () => jsonResponse(SAVED),
@@ -605,12 +615,12 @@ describe("a saved draft", () => {
     render(composer(onClose));
     await screen.findByText("Saved draft restored");
     await pickOption(
-      userEvent.setup(),
+      user,
       screen.getByRole("combobox", { name: "Reason for contact" }),
       "Follow-up they requested",
     );
 
-    await pressSend();
+    await pressSend(user);
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());
     expect(calls(sent, "POST /emails")[0]?.body).toMatchObject({
@@ -758,7 +768,7 @@ describe("a saved draft put back whole", () => {
         return puts === 1 ? problem("internal", 503) : jsonResponse(SAVED);
       },
     });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(composer(onClose));
     await waitFor(() =>
       expect(calls(sent, "GET /mail-drafts")).toHaveLength(1),

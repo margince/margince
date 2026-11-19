@@ -52,6 +52,7 @@ describe("sending with a recorded exception", () => {
     "consent_withdrawn",
     "opted_out_after_request",
   ])("sends one message with an acknowledged reason for %s", async (reason) => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const saved = {
       id: "md-1",
       anchor_type: "contact",
@@ -126,20 +127,20 @@ describe("sending with a recorded exception", () => {
     const timelineKeys = entityTimelineKeys("contact", "c-1");
     for (const key of timelineKeys) queryClient.setQueryData(key, []);
     await screen.findByText("Saved draft restored");
-    await fillSendableForm();
-    await pressSend();
+    await fillSendableForm(user);
+    await pressSend(user);
 
-    await userEvent.click(
+    await user.click(
       await screen.findByRole("button", {
         name: "Send with a recorded exception",
       }),
     );
-    await userEvent.click(await screen.findByRole("checkbox"));
-    await userEvent.type(
+    await user.click(await screen.findByRole("checkbox"));
+    await user.type(
       screen.getByLabelText("Explanation"),
       "They asked for it on the phone.",
     );
-    await userEvent.click(screen.getByRole("button", { name: "Send email" }));
+    await user.click(screen.getByRole("button", { name: "Send email" }));
 
     await waitFor(() => expect(onClose).toHaveBeenCalled());
     expect(screen.queryByRole("dialog")).toBeNull();

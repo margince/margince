@@ -9,7 +9,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import userEvent, { type UserEvent } from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
@@ -111,7 +111,7 @@ function render(ui: ReactNode) {
   );
 }
 
-async function composeAndSend() {
+async function composeAndSend(user: UserEvent) {
   const onClose = vi.fn();
   render(
     <ComposeModal
@@ -123,17 +123,17 @@ async function composeAndSend() {
     />,
   );
   await screen.findByRole("combobox", { name: WHY_ASK });
-  await userEvent.type(screen.getByLabelText("To"), "a@x.com");
-  await userEvent.tab();
-  await userEvent.type(screen.getByLabelText("Subject"), "Hi there");
+  await user.type(screen.getByLabelText("To"), "a@x.com");
+  await user.tab();
+  await user.type(screen.getByLabelText("Subject"), "Hi there");
   writeMessage("Body", "Body content");
   await pickOption(
-    userEvent.setup(),
+    user,
     screen.getByRole("combobox", { name: WHY_ASK }),
     WHY_LABEL,
   );
   await screen.findByRole("button", { name: /recipients checked/i });
-  await pressSend();
+  await pressSend(user);
   return onClose;
 }
 
@@ -151,8 +151,9 @@ afterEach(() => {
 
 describe("a scheduled send is reachable again", () => {
   it("names the queue and opens it", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     stubSend(201);
-    await composeAndSend();
+    await composeAndSend(user);
 
     // The message says the send has NOT happened, which is the half a rep acts
     // on: a confirmation reading "sent" beside a door to withdraw it would
@@ -162,7 +163,7 @@ describe("a scheduled send is reachable again", () => {
     ).toBeTruthy();
 
     const door = screen.getByRole("button", { name: "Scheduled messages" });
-    await userEvent.click(door);
+    await user.click(door);
     expect(window.location.hash).toBe("#/scheduled");
   });
 
@@ -170,8 +171,9 @@ describe("a scheduled send is reachable again", () => {
   // GONE cannot be moved or taken back, and offering the queue for one would
   // point a rep at a screen their message is not on.
   it("offers no door when the message has already gone", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     stubSend(202);
-    const onClose = await composeAndSend();
+    const onClose = await composeAndSend(user);
 
     // Waited on the send having COMPLETED, not on a duration: an absence
     // asserted before the response landed is an absence that would survive the

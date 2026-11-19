@@ -9,7 +9,7 @@ import {
   writeMessage,
 } from "../../design-system/richtext-testing";
 import {
-  draftButton,
+  pressDraft,
   purposeField,
   redraft,
 } from "../../testing/composedraft.testkit";
@@ -135,6 +135,7 @@ function renderComposer(onClose = vi.fn()) {
 // server's accepted/edited_sent verdict about the rep's own words.
 describe("ComposeModal draft binding", () => {
   it("sends the reference of the draft whose text it is sending", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({
       "GET /voice-profiles": () => jsonResponse(PROVISIONAL_VOICE_PROFILE),
       "POST /activities/act-1/draft-email": () =>
@@ -144,10 +145,10 @@ describe("ComposeModal draft binding", () => {
     renderComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
 
-    await userEvent.click(draftButton());
+    await pressDraft(user);
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
-    await pickWhy(WHY_LABEL.requestedFollowup);
-    await pressSend();
+    await pickWhy(user, WHY_LABEL.requestedFollowup);
+    await pressSend(user);
 
     await waitFor(() =>
       expect(
@@ -162,6 +163,7 @@ describe("ComposeModal draft binding", () => {
   });
 
   it("drafts again with a changed ask", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({
       "GET /voice-profiles": () => jsonResponse(PROVISIONAL_VOICE_PROFILE),
       "POST /activities/act-1/draft-email": draftsInTurn(
@@ -174,13 +176,13 @@ describe("ComposeModal draft binding", () => {
     renderComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
 
-    await userEvent.click(draftButton());
+    await pressDraft(user);
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
     const ask = screen.getByRole("textbox", { name: "Purpose of the reply" });
     expect(screen.queryByRole("button", { name: "Redraft" })).toBeNull();
-    await userEvent.clear(ask);
-    await userEvent.type(ask, "Offer Tuesday instead");
-    await userEvent.click(screen.getByRole("button", { name: "Redraft" }));
+    await user.clear(ask);
+    await user.type(ask, "Offer Tuesday instead");
+    await user.click(screen.getByRole("button", { name: "Redraft" }));
 
     await waitFor(() => expect(messageText("Body")).toBe("Draft B body."));
     const calls = sent.filter(
@@ -194,6 +196,7 @@ describe("ComposeModal draft binding", () => {
   });
 
   it("keeps Redraft beside a changed purpose that a rewrite never read", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({
       "GET /voice-profiles": () => jsonResponse(PROVISIONAL_VOICE_PROFILE),
       "POST /activities/act-1/draft-email": draftsInTurn(
@@ -205,13 +208,13 @@ describe("ComposeModal draft binding", () => {
     });
     renderComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
-    await userEvent.click(draftButton());
+    await pressDraft(user);
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
 
-    await userEvent.type(purposeField(), "Offer Tuesday");
-    await userEvent.click(screen.getByRole("button", { name: "Shorter" }));
+    await user.type(purposeField(), "Offer Tuesday");
+    await user.click(screen.getByRole("button", { name: "Shorter" }));
     await waitFor(() => expect(messageText("Body")).toBe("Short."));
-    await userEvent.click(screen.getByRole("button", { name: "Redraft" }));
+    await user.click(screen.getByRole("button", { name: "Redraft" }));
 
     await waitFor(() => expect(messageText("Body")).toBe("Draft B body."));
     const calls = sent.filter(
@@ -222,6 +225,7 @@ describe("ComposeModal draft binding", () => {
   });
 
   it("announces a failed Redraft and keeps it on offer", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     let call = 0;
     stubRoutes({
       "GET /voice-profiles": () => jsonResponse(PROVISIONAL_VOICE_PROFILE),
@@ -238,10 +242,10 @@ describe("ComposeModal draft binding", () => {
     });
     renderComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
-    await userEvent.click(draftButton());
+    await pressDraft(user);
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
 
-    await redraft();
+    await redraft(user);
 
     const announced = await screen.findAllByRole("alert");
     expect(announced.map((node) => node.textContent)).toContain("no model");
@@ -250,6 +254,7 @@ describe("ComposeModal draft binding", () => {
   });
 
   it("drops a Redraft answer once the purpose moves on, and says the edits were kept", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const drafts = draftsOnCue();
     const sent = stubRoutes({
       "GET /voice-profiles": () => jsonResponse(PROVISIONAL_VOICE_PROFILE),
@@ -258,13 +263,13 @@ describe("ComposeModal draft binding", () => {
     });
     renderComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
-    await userEvent.click(draftButton());
+    await pressDraft(user);
     await drafts.answer(0, voiceDraft("vd-a", "Re: Q3", "Draft A body."));
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
 
-    await redraft();
+    await redraft(user);
     await drafts.asked(1);
-    await userEvent.type(purposeField(), " on Tuesday");
+    await user.type(purposeField(), " on Tuesday");
     await drafts.answer(1, voiceDraft("vd-b", "Re: Q3", "Draft B body."));
 
     expect(await screen.findByText(KEPT_NOTICE)).toBeTruthy();
@@ -275,6 +280,7 @@ describe("ComposeModal draft binding", () => {
   });
 
   it("sends the subject on screen with a reply draft, so it can set the language", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({
       "GET /voice-profiles": () => jsonResponse(PROVISIONAL_VOICE_PROFILE),
       "POST /activities/act-1/draft-email": draftsInTurn(
@@ -286,11 +292,11 @@ describe("ComposeModal draft binding", () => {
     renderComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
 
-    await userEvent.click(draftButton());
+    await pressDraft(user);
     const subjectField = await screen.findByDisplayValue("Re: Q3");
-    await userEvent.clear(subjectField);
-    await userEvent.type(subjectField, "Unsere nächsten Schritte");
-    await redraft();
+    await user.clear(subjectField);
+    await user.type(subjectField, "Unsere nächsten Schritte");
+    await redraft(user);
 
     await waitFor(() =>
       expect(
@@ -301,6 +307,7 @@ describe("ComposeModal draft binding", () => {
   });
 
   it("puts the second reply draft on screen and sends the first as rewrite_of", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({
       "GET /voice-profiles": () => jsonResponse(PROVISIONAL_VOICE_PROFILE),
       "POST /activities/act-1/draft-email": draftsInTurn(
@@ -312,9 +319,9 @@ describe("ComposeModal draft binding", () => {
     renderComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
 
-    await userEvent.click(draftButton());
+    await pressDraft(user);
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
-    await redraft();
+    await redraft(user);
 
     await waitFor(() => expect(messageText("Body")).toBe("Draft B body."));
     const calls = sent.filter(
@@ -326,6 +333,7 @@ describe("ComposeModal draft binding", () => {
   });
 
   it("revises the rep's edit on a reply, sending it as rewrite_of", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({
       "GET /voice-profiles": () => jsonResponse(PROVISIONAL_VOICE_PROFILE),
       "POST /activities/act-1/draft-email": draftsInTurn(
@@ -337,10 +345,10 @@ describe("ComposeModal draft binding", () => {
     renderComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
 
-    await userEvent.click(draftButton());
+    await pressDraft(user);
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
     writeMessage("Body", "Draft A body. And my own line.");
-    await redraft();
+    await redraft(user);
 
     await waitFor(() => expect(messageText("Body")).toBe("Draft B body."));
     const calls = sent.filter(
@@ -353,6 +361,7 @@ describe("ComposeModal draft binding", () => {
   });
 
   it("replaces the body on a reply when the rep presses a rewrite verb", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({
       "GET /voice-profiles": () => jsonResponse(PROVISIONAL_VOICE_PROFILE),
       "POST /activities/act-1/draft-email": draftsInTurn(
@@ -364,9 +373,9 @@ describe("ComposeModal draft binding", () => {
     renderComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
 
-    await userEvent.click(draftButton());
+    await pressDraft(user);
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
-    await userEvent.click(screen.getByRole("button", { name: "Shorter" }));
+    await user.click(screen.getByRole("button", { name: "Shorter" }));
 
     await waitFor(() => expect(messageText("Body")).toBe("Short."));
     expect(sent.find((r) => r.key === REWRITE_ROUTE)?.body).toMatchObject({
@@ -378,6 +387,7 @@ describe("ComposeModal draft binding", () => {
   });
 
   it("keeps the earlier reference when a re-draft leaves the typed body alone", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     // A draft no model revised leaves the typed words on screen, so its words
     // are discarded. Adopting its reference anyway would submit draft B's
     // identity with draft A's text plus the rep's edit. That is an edited_sent
@@ -396,10 +406,10 @@ describe("ComposeModal draft binding", () => {
     renderComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
 
-    await userEvent.click(draftButton());
+    await pressDraft(user);
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
     writeMessage("Body", "Draft A body. And my own line.");
-    await redraft();
+    await redraft(user);
     await waitFor(() =>
       expect(
         sent.filter((r) => r.key === "POST /activities/act-1/draft-email")
@@ -407,8 +417,8 @@ describe("ComposeModal draft binding", () => {
       ).toBe(2),
     );
 
-    await pickWhy(WHY_LABEL.requestedFollowup);
-    await pressSend();
+    await pickWhy(user, WHY_LABEL.requestedFollowup);
+    await pressSend(user);
 
     await waitFor(() =>
       expect(
@@ -423,6 +433,7 @@ describe("ComposeModal draft binding", () => {
   });
 
   it("drops the reference once the body it named is cleared", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({
       "GET /voice-profiles": () => jsonResponse(PROVISIONAL_VOICE_PROFILE),
       "POST /activities/act-1/draft-email": () =>
@@ -432,7 +443,7 @@ describe("ComposeModal draft binding", () => {
     renderComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
 
-    await userEvent.click(draftButton());
+    await pressDraft(user);
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
     // Emptied, then written afresh: two acts, and the first is the one under
     // test. Replacing the words in one stroke keeps the reference, because
@@ -441,8 +452,8 @@ describe("ComposeModal draft binding", () => {
     // screen for a reference to name at all.
     writeMessage("Body", "");
     writeMessage("Body", "Written from scratch.");
-    await pickWhy(WHY_LABEL.requestedFollowup);
-    await pressSend();
+    await pickWhy(user, WHY_LABEL.requestedFollowup);
+    await pressSend(user);
 
     await waitFor(() =>
       expect(
@@ -454,6 +465,7 @@ describe("ComposeModal draft binding", () => {
   });
 
   it("records exactly one rejection when the rep discards the draft", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes({
       "GET /voice-profiles": () => jsonResponse(PROVISIONAL_VOICE_PROFILE),
       "POST /activities/act-1/draft-email": () =>
@@ -464,11 +476,9 @@ describe("ComposeModal draft binding", () => {
     renderComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
 
-    await userEvent.click(draftButton());
+    await pressDraft(user);
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
-    await userEvent.click(
-      screen.getByRole("button", { name: "Discard draft" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Discard draft" }));
 
     await waitFor(() => expect(messageText("Body")).not.toBe("Draft A body."));
     const rejections = sent.filter(
@@ -479,6 +489,7 @@ describe("ComposeModal draft binding", () => {
   });
 
   it("bars a send while a rejection of the same draft is in flight", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     // A rejection and a send are contradictory verdicts on one draft, and the
     // signal keeps whichever lands first. A send that slipped through here
     // would leave the durable learning record saying "rejected" for a message
@@ -498,9 +509,9 @@ describe("ComposeModal draft binding", () => {
     renderComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
 
-    await userEvent.click(draftButton());
+    await pressDraft(user);
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
-    await pickWhy(WHY_LABEL.requestedFollowup);
+    await pickWhy(user, WHY_LABEL.requestedFollowup);
     await waitForSendReady();
     // The form is sendable before the judgment starts, so the refusal below is
     // the rejection holding the draft rather than an unmet precondition.
@@ -508,15 +519,13 @@ describe("ComposeModal draft binding", () => {
       screen.getByRole("button", { name: "Send" }).hasAttribute("disabled"),
     ).toBe(false);
 
-    await userEvent.click(
-      screen.getByRole("button", { name: "Discard draft" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Discard draft" }));
     await waitFor(() =>
       expect(
         screen.getByRole("button", { name: "Send" }).hasAttribute("disabled"),
       ).toBe(true),
     );
-    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+    await user.click(screen.getByRole("button", { name: "Send" }));
     expect(
       sent.some((r) => r.key === "POST /activities/act-1/send-email"),
     ).toBe(false);
@@ -529,6 +538,7 @@ describe("ComposeModal draft binding", () => {
   });
 
   it("hands the reference back to the send when the rejection fails", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     // A rejection that never landed left the signal open, so the draft on
     // screen is still the one it named. The send that follows must still be
     // able to report what the rep did with those words.
@@ -546,15 +556,13 @@ describe("ComposeModal draft binding", () => {
     renderComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
 
-    await userEvent.click(draftButton());
+    await pressDraft(user);
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
-    await userEvent.click(
-      screen.getByRole("button", { name: "Discard draft" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Discard draft" }));
     expect(await screen.findByText(/boom/i)).toBeTruthy();
 
-    await pickWhy(WHY_LABEL.requestedFollowup);
-    await pressSend();
+    await pickWhy(user, WHY_LABEL.requestedFollowup);
+    await pressSend(user);
 
     await waitFor(() =>
       expect(
@@ -566,6 +574,7 @@ describe("ComposeModal draft binding", () => {
   });
 
   it("keeps the draft when a bodiless gateway failure refuses the rejection", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     // openapi-fetch reports a falsy `error` and no `data` for a bodiless
     // non-2xx. So a rejection that never reached the server looks like one that
     // succeeded. Clearing the composer on it would tell the rep their verdict
@@ -581,17 +590,15 @@ describe("ComposeModal draft binding", () => {
     renderComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
 
-    await userEvent.click(draftButton());
+    await pressDraft(user);
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
-    await userEvent.click(
-      screen.getByRole("button", { name: "Discard draft" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Discard draft" }));
 
     expect(await screen.findByText("The request failed. Retry.")).toBeTruthy();
     expect(messageText("Body")).toBe("Draft A body.");
 
-    await pickWhy(WHY_LABEL.requestedFollowup);
-    await pressSend();
+    await pickWhy(user, WHY_LABEL.requestedFollowup);
+    await pressSend(user);
     await waitFor(() =>
       expect(
         sent.some((r) => r.key === "POST /activities/act-1/send-email"),
@@ -602,6 +609,7 @@ describe("ComposeModal draft binding", () => {
   });
 
   it("announces a failed rejection rather than only colouring it", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     // The line appears without any navigation, so a rep who cannot see it is
     // otherwise never told the judgment did not land.
     stubRoutes({
@@ -617,17 +625,16 @@ describe("ComposeModal draft binding", () => {
     renderComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
 
-    await userEvent.click(draftButton());
+    await pressDraft(user);
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
-    await userEvent.click(
-      screen.getByRole("button", { name: "Discard draft" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Discard draft" }));
 
     const announced = await screen.findAllByRole("alert");
     expect(announced.map((node) => node.textContent)).toContain("boom");
   });
 
   it("announces a failed draft rather than only colouring it", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     stubRoutes({
       "POST /activities/act-1/draft-email": () =>
         problemResponse(
@@ -638,13 +645,14 @@ describe("ComposeModal draft binding", () => {
     renderComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
 
-    await userEvent.click(draftButton());
+    await pressDraft(user);
 
     const announced = await screen.findAllByRole("alert");
     expect(announced.map((node) => node.textContent)).toContain("no model");
   });
 
   it("freezes the drafted text while the rejection is in flight", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     // A failed rejection hands its reference back to the surface. If the rep
     // could type meanwhile, that reference would return over words it does not
     // describe. A later send would file an outcome against a draft nobody
@@ -664,7 +672,7 @@ describe("ComposeModal draft binding", () => {
     renderComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
 
-    await userEvent.click(draftButton());
+    await pressDraft(user);
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
     const bodyField = messageBox("Body");
     const subjectField = screen.getByDisplayValue("Re: Q3");
@@ -672,14 +680,12 @@ describe("ComposeModal draft binding", () => {
     // rather than by the `disabled` attribute an input carries.
     expect(bodyField.getAttribute("aria-disabled")).toBeNull();
 
-    await userEvent.click(
-      screen.getByRole("button", { name: "Discard draft" }),
-    );
+    await user.click(screen.getByRole("button", { name: "Discard draft" }));
     await waitFor(() =>
       expect(bodyField.getAttribute("aria-disabled")).toBe("true"),
     );
     expect(subjectField.hasAttribute("disabled")).toBe(true);
-    await userEvent.type(bodyField, " and mine");
+    await user.type(bodyField, " and mine");
     expect(messageText("Body")).toBe("Draft A body.");
 
     landRejection();
@@ -687,6 +693,7 @@ describe("ComposeModal draft binding", () => {
   });
 
   it("records no rejection when the composer is merely closed", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     // `rejected` is a judgment, not an accident of navigation. The reference is
     // deterministic and the drafted signal inserts once. So a rejection logged
     // on a close would stand in for the real outcome of an identical draft that
@@ -717,9 +724,9 @@ describe("ComposeModal draft binding", () => {
     const onClose = renderComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
 
-    await userEvent.click(draftButton());
+    await pressDraft(user);
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
-    await userEvent.click(screen.getByRole("button", { name: "Close" }));
+    await user.click(screen.getByRole("button", { name: "Close" }));
 
     expect(onClose).toHaveBeenCalled();
     expect(sent.some((r) => r.key.includes("draft-rejections"))).toBe(false);
@@ -732,6 +739,7 @@ describe("ComposeModal draft binding", () => {
 // credit it to a voice version that never touched it.
 describe("ComposeModal draft provenance", () => {
   it("discloses nothing when a draft's words were discarded for the rep's own", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const drafts = draftsOnCue();
     stubRoutes({
       "GET /voice-profiles": () => jsonResponse(PROVISIONAL_VOICE_PROFILE),
@@ -741,7 +749,7 @@ describe("ComposeModal draft provenance", () => {
     await screen.findByRole("combobox", { name: WHY_ASK });
 
     writeMessage("Body", "My own words.");
-    await userEvent.click(draftButton());
+    await pressDraft(user);
     await drafts.asked(0);
     writeMessage("Body", "My own words, and more.");
     await drafts.answer(0, voiceDraft("vd-a", "Re: Q3", "Draft A body."));
@@ -752,6 +760,7 @@ describe("ComposeModal draft provenance", () => {
   });
 
   it("keeps the applied draft's voice version when a re-draft is discarded", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const drafts = draftsOnCue();
     stubRoutes({
       "GET /voice-profiles": () => jsonResponse(PROVISIONAL_VOICE_PROFILE),
@@ -760,10 +769,10 @@ describe("ComposeModal draft provenance", () => {
     renderComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
 
-    await userEvent.click(draftButton());
+    await pressDraft(user);
     await drafts.answer(0, voiceDraft("vd-a", "Re: Q3", "Draft A body.", 3));
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
-    await redraft();
+    await redraft(user);
     await drafts.asked(1);
     writeMessage("Body", "Draft A body. And my own line.");
     await drafts.answer(
@@ -782,6 +791,7 @@ describe("ComposeModal draft provenance", () => {
   });
 
   it("drops the disclosure once the body it described is cleared", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     stubRoutes({
       "GET /voice-profiles": () => jsonResponse(PROVISIONAL_VOICE_PROFILE),
       "POST /activities/act-1/draft-email": () =>
@@ -790,7 +800,7 @@ describe("ComposeModal draft provenance", () => {
     renderComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
 
-    await userEvent.click(draftButton());
+    await pressDraft(user);
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
     expect(screen.getByRole("heading", DISCLOSURE)).toBeTruthy();
 
@@ -802,6 +812,7 @@ describe("ComposeModal draft provenance", () => {
   });
 
   it("claims no voice maturity on a draft no voice profile styled", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     // Maturity is a corpus-word band, so it reads `provisional` while the
     // profile is still only collecting. Then drafting serves a plain model
     // draft and the served version is null. The provisional copy says a voice
@@ -817,7 +828,7 @@ describe("ComposeModal draft provenance", () => {
     renderComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
 
-    await userEvent.click(draftButton());
+    await pressDraft(user);
 
     await screen.findByRole("heading", { name: "AI-assisted draft" });
     expect(screen.queryByText("Provisional voice")).toBeNull();
@@ -849,6 +860,7 @@ describe("ComposeModal send refusals", () => {
   }
 
   it("tells the rep to reconnect a mailbox that cannot send, and where", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const onClose = vi.fn();
     stubRoutes({
       "POST /activities/act-1/send-email": () =>
@@ -856,13 +868,14 @@ describe("ComposeModal send refusals", () => {
     });
     renderComposer(onClose);
     await screen.findByRole("combobox", { name: WHY_ASK });
-    await fillSendableForm();
-    await pressSend();
+    await fillSendableForm(user);
+    await pressSend(user);
 
     await expectReconnect(onClose);
   });
 
   it("explains an older server's footer refusal without promising an unusable override", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const onClose = vi.fn();
     stubRoutes({
       "POST /activities/act-1/send-email": () =>
@@ -877,8 +890,8 @@ describe("ComposeModal send refusals", () => {
     });
     renderComposer(onClose);
     await screen.findByRole("combobox", { name: WHY_ASK });
-    await fillSendableForm();
-    await pressSend();
+    await fillSendableForm(user);
+    await pressSend(user);
     expect(
       await screen.findByText(/ask an administrator to update Margince/i),
     ).toBeTruthy();
@@ -890,6 +903,7 @@ describe("ComposeModal send refusals", () => {
   });
 
   it("states the one-send-per-recipient rule on a shared unsubscribe token", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     stubRoutes({
       "POST /activities/act-1/send-email": () =>
         problemResponse(
@@ -903,8 +917,8 @@ describe("ComposeModal send refusals", () => {
     });
     renderComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
-    await fillSendableForm();
-    await pressSend();
+    await fillSendableForm(user);
+    await pressSend(user);
 
     expect(
       await screen.findByText(/goes to one recipient at a time/i),
@@ -913,6 +927,7 @@ describe("ComposeModal send refusals", () => {
   });
 
   it("keeps the generic line for a refusal it has no copy for", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     stubRoutes({
       "POST /activities/act-1/send-email": () =>
         problemResponse(
@@ -926,13 +941,14 @@ describe("ComposeModal send refusals", () => {
     });
     renderComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
-    await fillSendableForm();
-    await pressSend();
+    await fillSendableForm(user);
+    await pressSend(user);
 
     expect(await screen.findByText(/opaque server wording/i)).toBeTruthy();
   });
 
   it("tells the rep to reconnect when a scheduled send meets the same refusal", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const onClose = vi.fn();
     const sent = stubRoutes({
       "POST /activities/act-1/send-email": () =>
@@ -940,17 +956,17 @@ describe("ComposeModal send refusals", () => {
     });
     renderComposer(onClose);
     await screen.findByRole("combobox", { name: WHY_ASK });
-    await fillSendableForm();
-    await userEvent.click(
+    await fillSendableForm(user);
+    await user.click(
       screen.getByRole("button", { name: "Other ways to send" }),
     );
-    await userEvent.click(
+    await user.click(
       await screen.findByRole("button", { name: "Schedule send" }),
     );
-    await userEvent.click(
+    await user.click(
       await screen.findByRole("button", { name: /Tomorrow morning/ }),
     );
-    await userEvent.click(await footScheduleConfirm());
+    await user.click(await footScheduleConfirm());
 
     await expectReconnect(onClose);
     const scheduled = sent.find(
@@ -960,16 +976,17 @@ describe("ComposeModal send refusals", () => {
   });
 
   it("uses the server assessment without an extra multi-recipient warning", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes();
     renderComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
-    await fillSendableForm();
-    await userEvent.click(screen.getByRole("button", { name: "Cc and Bcc" }));
-    await userEvent.type(screen.getByLabelText("Cc"), "second@x.com");
-    await userEvent.tab();
+    await fillSendableForm(user);
+    await user.click(screen.getByRole("button", { name: "Cc and Bcc" }));
+    await user.type(screen.getByLabelText("Cc"), "second@x.com");
+    await user.tab();
 
     expect(screen.queryByText(/more than one recipient/i)).toBeNull();
-    await pickWhy(WHY_LABEL.marketing);
+    await pickWhy(user, WHY_LABEL.marketing);
 
     await screen.findByRole("button", { name: /recipients checked/i });
     expect(screen.queryByText(/more than one recipient/i)).toBeNull();
@@ -979,11 +996,12 @@ describe("ComposeModal send refusals", () => {
   });
 
   it("does not warn about a lone addressee under the same purpose", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     stubRoutes();
     renderComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
-    await fillSendableForm();
-    await pickWhy(WHY_LABEL.marketing);
+    await fillSendableForm(user);
+    await pickWhy(user, WHY_LABEL.marketing);
 
     expect(screen.queryByText(/more than one recipient/i)).toBeNull();
   });

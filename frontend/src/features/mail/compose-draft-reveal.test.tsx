@@ -100,6 +100,7 @@ afterEach(() => {
 
 describe("where a finished draft leaves the reader", () => {
   it("brings the drafted body into view when the disclosure band raises it", async () => {
+    const user = userEvent.setup();
     stubRoutes();
     render(
       <ComposeModal
@@ -117,7 +118,7 @@ describe("where a finished draft leaves the reader", () => {
     const reveal = vi.fn();
     editor.scrollIntoView = reveal;
 
-    await userEvent.click(draftButton());
+    await user.click(draftButton());
     await screen.findByRole("heading", { name: "AI-assisted draft" });
 
     // The BODY is what is brought back, not the band that displaced it: the

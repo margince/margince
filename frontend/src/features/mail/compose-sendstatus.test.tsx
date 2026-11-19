@@ -1,7 +1,7 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { writeMessage } from "../../design-system/richtext-testing";
@@ -94,6 +94,7 @@ describe("a refused send and the check after it", () => {
   // The defect: the preview said ready, Send was refused, and the composer
   // drew the red refusal and "Recipients checked" side by side.
   it("replaces the ready mark with the refusal, then clears it for a changed message", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     let refused = true;
     stubEngine(
       (addresses) => allowedPreview(addresses),
@@ -110,12 +111,12 @@ describe("a refused send and the check after it", () => {
     );
     openComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
-    await fillSendableForm();
+    await fillSendableForm(user);
     expect(
       await screen.findByRole("button", { name: /recipients checked/i }),
     ).toBeInTheDocument();
 
-    await pressSend();
+    await pressSend(user);
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent(/objected to marketing/i);
     expect(alert).toHaveTextContent("This applies to a@x.com.");
@@ -125,7 +126,7 @@ describe("a refused send and the check after it", () => {
 
     // The rep changes what the message is; the old refusal is about another.
     refused = false;
-    await pickWhy(WHY_LABEL.marketing);
+    await pickWhy(user, WHY_LABEL.marketing);
     expect(
       await screen.findByRole("button", { name: /recipients checked/i }),
     ).toBeInTheDocument();
@@ -135,6 +136,7 @@ describe("a refused send and the check after it", () => {
   // The preview allowed it and the send-time check did not: the server's
   // answer at the press is the newer one until the next check.
   it("clears the refusal when a newer check on the same message allows it", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     let checks = 0;
     stubEngine(
       (addresses) => {
@@ -158,10 +160,10 @@ describe("a refused send and the check after it", () => {
     );
     const { queryClient } = openComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
-    await fillSendableForm();
+    await fillSendableForm(user);
     await screen.findByRole("button", { name: /recipients checked/i });
 
-    await pressSend();
+    await pressSend(user);
     const alert = await screen.findByRole("alert");
     // A missing deal is a missing detail, never a consent refusal.
     expect(alert).toHaveTextContent("Choose the deal for this follow-up.");
@@ -183,14 +185,15 @@ describe("a refused send and the check after it", () => {
   // A refusal whose reasons this build cannot read names no cause it does not
   // know, and keeps the review reference.
   it("says the message cannot be sent, without claiming consent, when the reasons are unreadable", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     stubEngine(
       (addresses) => allowedPreview(addresses),
       refusedSend([{ reason: "something new" }]),
     );
     openComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
-    await fillSendableForm();
-    await pressSend();
+    await fillSendableForm(user);
+    await pressSend(user);
 
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent("Message cannot be sent");
@@ -205,8 +208,8 @@ describe("an edited message is a different message", () => {
   it.each([
     [
       "the subject",
-      async () => {
-        await userEvent.type(screen.getByLabelText("Subject"), " again");
+      async (user: UserEvent) => {
+        await user.type(screen.getByLabelText("Subject"), " again");
       },
     ],
     [
@@ -216,6 +219,7 @@ describe("an edited message is a different message", () => {
       },
     ],
   ])("clears the refusal and its remedies when %s changes", async (_, edit) => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     stubEngine(
       (addresses) => allowedPreview(addresses),
       () =>
@@ -240,12 +244,12 @@ describe("an edited message is a different message", () => {
     );
     openComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
-    await fillSendableForm();
-    await pressSend();
+    await fillSendableForm(user);
+    await pressSend(user);
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent("Permission needed for this message");
 
-    await edit();
+    await edit(user);
     await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
     expect(screen.queryByText("Permission needed for this message")).toBeNull();
   });
@@ -255,6 +259,7 @@ describe("the mark beside Send", () => {
   // The consent check passing is not the whole send. A form still missing a
   // field will stop at the button, so the mark makes no passed claim.
   it("claims no passed check while a field is missing", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const asks: string[][] = [];
     stubEngine((addresses) => {
       asks.push(addresses);
@@ -262,16 +267,16 @@ describe("the mark beside Send", () => {
     }, refusedSend([]));
     openComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
-    await userEvent.type(screen.getByLabelText("To"), "a@x.com");
-    await userEvent.tab();
-    await pickWhy(WHY_LABEL.requestedFollowup);
+    await user.type(screen.getByLabelText("To"), "a@x.com");
+    await user.tab();
+    await pickWhy(user, WHY_LABEL.requestedFollowup);
     await waitFor(() => expect(asks.length).toBeGreaterThan(0));
     await waitFor(() =>
       expect(screen.queryByText(/checking whether/i)).toBeNull(),
     );
     expect(screen.queryByRole("button", READY)).toBeNull();
 
-    await userEvent.type(screen.getByLabelText("Subject"), "Hi there");
+    await user.type(screen.getByLabelText("Subject"), "Hi there");
     writeMessage("Body", "Body content");
     expect(
       await screen.findByRole("button", { name: /recipients checked/i }),
@@ -281,6 +286,7 @@ describe("the mark beside Send", () => {
 
 describe("several recipients", () => {
   it("names the recipient that refuses, not the one that is allowed", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     stubEngine(
       (addresses) => ({
         allowed: false,
@@ -300,9 +306,9 @@ describe("several recipients", () => {
     );
     openComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
-    await fillSendableForm();
-    await userEvent.type(screen.getByLabelText("To"), "b@x.com");
-    await userEvent.tab();
+    await fillSendableForm(user);
+    await user.type(screen.getByLabelText("To"), "b@x.com");
+    await user.tab();
 
     expect(
       await screen.findByText("This applies to b@x.com."),
@@ -311,6 +317,7 @@ describe("several recipients", () => {
   });
 
   it("gives each refused recipient of a refused send its own line", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     stubEngine(
       (addresses) => allowedPreview(addresses),
       refusedSend([
@@ -324,8 +331,8 @@ describe("several recipients", () => {
     );
     openComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
-    await fillSendableForm();
-    await pressSend();
+    await fillSendableForm(user);
+    await pressSend(user);
 
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent(
@@ -365,10 +372,11 @@ describe("an answer that is not a full answer is never a passed check", () => {
   };
   for (const [name, engine] of Object.entries(answers)) {
     it(`says the check did not complete on ${name}`, async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       stubEngine(engine, refusedSend([]));
       openComposer();
       await screen.findByRole("combobox", { name: WHY_ASK });
-      await fillSendableForm();
+      await fillSendableForm(user);
 
       expect(
         await screen.findByText(/send check did not complete/i),
@@ -428,6 +436,7 @@ describe("whether a refusal is about the message on screen", () => {
 });
 
 it("carries the selected deal in both the permission check and the queued message", async () => {
+  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
   const sent = stubRoutes({ "POST /emails": () => jsonResponse({}, 201) });
   render(
     <ComposeModal
@@ -439,13 +448,13 @@ it("carries the selected deal in both the permission check and the queued messag
     />,
   );
   await screen.findByRole("combobox", { name: WHY_ASK });
-  await fillSendableForm();
+  await fillSendableForm(user);
   await waitFor(() =>
     expect(
       sent.filter((call) => call.key === "POST /emails:preview").at(-1)?.body,
     ).toMatchObject({ evidence: { deal_id: "deal-one" } }),
   );
-  await pressSend();
+  await pressSend(user);
   await waitFor(() =>
     expect(
       sent.find((call) => call.key === "POST /emails")?.body,

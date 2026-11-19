@@ -150,17 +150,18 @@ function oneRefused(
 
 describe("Send follows the check", () => {
   it("is off for a refusal, waits while the check runs, and frees once it allows", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     let held: ReturnType<typeof heldAnswer> | undefined;
     stubEngine((addresses) =>
       held ? held.answer() : refusedPreview(addresses[0] ?? "", OBJECTED),
     );
     openComposer();
-    await fillSendableForm();
+    await fillSendableForm(user);
     await screen.findByText(OFF);
     expect(sendButton()).toBeDisabled();
 
     held = heldAnswer();
-    await pickWhy(WHY_LABEL.marketing);
+    await pickWhy(user, WHY_LABEL.marketing);
     await screen.findByText(WAITS);
     expect(sendButton()).toBeDisabled();
 
@@ -172,20 +173,22 @@ describe("Send follows the check", () => {
   });
 
   it("names the one refused recipient of two and stays off", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubEngine(oneRefused("b@x.com", OBJECTED));
     openComposer();
-    await fillSendableForm();
-    await userEvent.type(screen.getByLabelText("To"), "b@x.com");
-    await userEvent.tab();
+    await fillSendableForm(user);
+    await user.type(screen.getByLabelText("To"), "b@x.com");
+    await user.tab();
 
     await screen.findByText("This applies to b@x.com.");
     expect(screen.queryByText(/a@x\.com/, { selector: "p" })).toBeNull();
     await screen.findByText(OFF);
-    await userEvent.click(sendButton());
+    await user.click(sendButton());
     expect(posted(sent)).toHaveLength(0);
   });
 
   it("gives each refused recipient its own line", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     stubEngine((addresses) => ({
       allowed: false,
       recipients: addresses.map((address) => ({
@@ -197,9 +200,9 @@ describe("Send follows the check", () => {
       })),
     }));
     openComposer();
-    await fillSendableForm();
-    await userEvent.type(screen.getByLabelText("To"), "b@x.com");
-    await userEvent.tab();
+    await fillSendableForm(user);
+    await user.type(screen.getByLabelText("To"), "b@x.com");
+    await user.tab();
 
     expect(
       await screen.findByText(/^a@x\.com: The recipient objected to marketing/),
@@ -214,12 +217,13 @@ describe("Send follows the check", () => {
   });
 
   it("waits when the check failed, and frees once it is asked again", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     let failing = true;
     stubEngine((addresses) =>
       failing ? new Response(null, { status: 502 }) : allowedPreview(addresses),
     );
     openComposer();
-    await fillSendableForm();
+    await fillSendableForm(user);
     await screen.findByText(WAITS);
     expect(sendButton()).toBeDisabled();
     expect(
@@ -229,25 +233,26 @@ describe("Send follows the check", () => {
     ).toBeInTheDocument();
 
     failing = false;
-    await userEvent.click(screen.getByRole("button", { name: "Check again" }));
+    await user.click(screen.getByRole("button", { name: "Check again" }));
     await waitFor(() => expect(sendButton()).toBeEnabled());
   });
 
   // The key of the answer is the whole question. An answer about the earlier
   // recipients is not one about the message now on screen.
   it("does not free Send with the answer for the recipients before a change", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     let held: ReturnType<typeof heldAnswer> | undefined;
     stubEngine((addresses) =>
       held ? held.answer() : allowedPreview(addresses),
     );
     openComposer();
-    await fillSendableForm();
+    await fillSendableForm(user);
     await screen.findByRole("button", { name: /recipients checked/i });
     expect(sendButton()).toBeEnabled();
 
     held = heldAnswer();
-    await userEvent.type(screen.getByLabelText("To"), "b@x.com");
-    await userEvent.tab();
+    await user.type(screen.getByLabelText("To"), "b@x.com");
+    await user.tab();
     await screen.findByText(WAITS);
     expect(sendButton()).toBeDisabled();
     expect(
@@ -259,6 +264,7 @@ describe("Send follows the check", () => {
   });
 
   it("holds Cmd/Ctrl+Enter whenever it holds the button", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     let allowed = false;
     const sent = stubEngine((addresses) =>
       allowed
@@ -266,7 +272,7 @@ describe("Send follows the check", () => {
         : refusedPreview(addresses[0] ?? "", OBJECTED),
     );
     openComposer();
-    await fillSendableForm();
+    await fillSendableForm(user);
     await screen.findByText(OFF);
 
     fireEvent.keyDown(messageBox("Body"), { key: "Enter", ctrlKey: true });
@@ -276,7 +282,7 @@ describe("Send follows the check", () => {
     // message as allowed: a held press that had gone through would be the
     // earlier, refused one.
     allowed = true;
-    await pickWhy(WHY_LABEL.marketing);
+    await pickWhy(user, WHY_LABEL.marketing);
     await screen.findByRole("button", { name: /recipients checked/i });
     fireEvent.keyDown(messageBox("Body"), { key: "Enter", ctrlKey: true });
     await waitFor(() => expect(posted(sent)).toHaveLength(1));
@@ -288,6 +294,7 @@ describe("Send follows the check", () => {
 
 describe("a refusal a reason may lift", () => {
   it("says so on Send, and the refused press opens the reason form", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubEngine(
       (addresses) => refusedPreview(addresses[0] ?? "", NOTHING_ON_RECORD),
       {
@@ -315,13 +322,13 @@ describe("a refusal a reason may lift", () => {
       },
     );
     openComposer();
-    await fillSendableForm();
+    await fillSendableForm(user);
     await screen.findByRole("button", { name: "Send with a reason…" });
     expect(screen.queryByText(WITH_REASON)).toBeNull();
     const press = sendButton("Send with a reason…");
     expect(press).toBeEnabled();
 
-    await userEvent.click(press);
+    await user.click(press);
     expect(
       await screen.findByRole("button", {
         name: "Send email",
@@ -330,11 +337,11 @@ describe("a refusal a reason may lift", () => {
     expect(posted(sent)).toHaveLength(1);
 
     // Closed without sending, the next press reopens it and asks nothing new.
-    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
     await waitFor(() =>
       expect(screen.queryByRole("button", { name: "Send email" })).toBeNull(),
     );
-    await userEvent.click(sendButton("Send with a reason…"));
+    await user.click(sendButton("Send with a reason…"));
     await screen.findByRole("button", {
       name: "Send email",
     });
@@ -342,11 +349,12 @@ describe("a refusal a reason may lift", () => {
   });
 
   it("offers no exception for a refusal nobody may lift", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubEngine((addresses) =>
       refusedPreview(addresses[0] ?? "", OBJECTED),
     );
     openComposer();
-    await fillSendableForm();
+    await fillSendableForm(user);
     await screen.findByText(OFF);
     expect(sendButton()).toBeDisabled();
     expect(
@@ -361,6 +369,7 @@ describe("a refusal a reason may lift", () => {
 
 describe("an older server's footer refusal", () => {
   it("holds Send for the refused message and frees it once the message changes", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     let presses = 0;
     const sent = stubEngine((addresses) => allowedPreview(addresses), {
       "POST /emails": () => {
@@ -374,13 +383,13 @@ describe("an older server's footer refusal", () => {
       },
     });
     openComposer();
-    await fillSendableForm();
-    await pressSend();
+    await fillSendableForm(user);
+    await pressSend(user);
     await screen.findByText(/ask an administrator to update Margince/i);
     expect(sendButton()).toBeDisabled();
 
-    await userEvent.type(screen.getByLabelText("Subject"), " again");
-    await pressSend();
+    await user.type(screen.getByLabelText("Subject"), " again");
+    await pressSend(user);
     await waitFor(() => expect(posted(sent)).toHaveLength(2));
   });
 });
