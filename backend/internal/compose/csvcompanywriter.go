@@ -33,18 +33,20 @@ func linkedInClaimed(err error) bool {
 }
 
 // keysOf spells the keys a row of this writer's type holds, the way the store
-// compares them.
+// compares them. A company's LinkedIn URL and domain compare without case. A
+// lead's or contact's LinkedIn URL keeps the case of its path.
 func (w *csvWriters) keysOf(row migration.Row, typed map[string]any) map[importkeys.Kind]string {
 	fields := textFields(row.Fields)
 	keys := map[importkeys.Kind]string{}
 	if url, ok := typed[fieldLinkedIn].(string); ok {
-		keys[importkeys.LinkedIn] = strings.ToLower(strings.TrimSpace(url))
+		keys[importkeys.LinkedIn] = strings.TrimSpace(url)
 	}
 	switch w.object {
 	case migration.ObjectContact, migration.ObjectLead:
 		keys[importkeys.Email] = canonicalFor(fieldEmail, fields[fieldEmail])
 	case migration.ObjectCompany:
 		keys[importkeys.Domain] = canonicalFor(fieldDomain, fields[fieldDomain])
+		keys[importkeys.LinkedIn] = strings.ToLower(keys[importkeys.LinkedIn])
 	}
 	return keys
 }
@@ -121,16 +123,20 @@ func (w *csvWriters) newRecordRefusal(ctx context.Context, row migration.Row, ty
 // if the caller may change it. A domain an earlier row of this run claims is no match.
 // The test run has no company yet to file that second row onto.
 func (w *csvWriters) domainHolderOf(ctx context.Context, row migration.Row) (ids.UUID, bool, error) {
-	domain := canonicalFor(fieldDomain, textFields(row.Fields)[fieldDomain])
+	domain := w.keysOf(row, nil)[importkeys.Domain]
 	if w.object != migration.ObjectCompany || domain == "" || w.links.claims.Held(importkeys.Domain, domain, w.object) {
 		return ids.UUID{}, false, nil
 	}
 	return importkeys.WritableDomainHolder(ctx, w.pool, domain)
 }
 
-// domainMatchedWhy is the warning a row filed onto its domain's holder lands with.
-func domainMatchedWhy(row migration.Row) migration.Reason {
-	return migration.Why(migration.ReasonCompanyDomainMatched, "value", canonicalFor(fieldDomain, textFields(row.Fields)[fieldDomain]))
+// domainMatched is the warning a row filed onto its domain's holder lands
+// with. It carries the domain as its value, so the report keeps it apart from
+// the row's other warnings.
+func domainMatched(row migration.Row) migration.SkippedRow {
+	domain := canonicalFor(fieldDomain, textFields(row.Fields)[fieldDomain])
+	warning := migration.SkippedRow{ExternalID: row.ExternalID, Line: row.Line, Value: domain}
+	return warning.Because(migration.Why(migration.ReasonCompanyDomainMatched, "value", domain))
 }
 
 // landOnDomainHolder binds the row's ref to the company holding its domain and
@@ -143,8 +149,8 @@ func (w *csvWriters) landOnDomainHolder(ctx context.Context, row migration.Row, 
 		return migration.EnsureResult{}, err
 	}
 	landed, err := w.reconcile(ctx, id, row, typed)
-	if err == nil && !landed.Skipped && len(landed.Warnings) == 0 {
-		landed.Warnings = append(landed.Warnings, migration.SkippedRow{ExternalID: row.ExternalID, Line: row.Line}.Because(domainMatchedWhy(row)))
+	if err == nil && !landed.Skipped {
+		landed.Warnings = append(landed.Warnings, domainMatched(row))
 	}
 	return landed, err
 }
@@ -152,10 +158,11 @@ func (w *csvWriters) landOnDomainHolder(ctx context.Context, row migration.Row, 
 // predictDomainHolder is landOnDomainHolder without writing.
 func (w *csvWriters) predictDomainHolder(ctx context.Context, row migration.Row, id ids.UUID, typed map[string]any) (predictedOutcome, migration.Reason, error) {
 	outcome, why, err := w.reconcilePrediction(ctx, id, row, typed)
-	if err != nil || why.Code != "" {
+	if err != nil || outcome == predictUnwritable {
 		return outcome, why, err
 	}
-	return outcome, domainMatchedWhy(row), nil
+	w.predictedWarnings = append(w.predictedWarnings, domainMatched(row))
+	return outcome, why, nil
 }
 
 // landingChanges is the fields a row would change on a record it reaches.
@@ -168,7 +175,8 @@ func (w *csvWriters) landingChanges(ctx context.Context, row migration.Row, curr
 		return changed, migration.Reason{}, err
 	}
 	binding, bound, err := w.bindingOf(ctx, row.ExternalID)
-	if err != nil || (bound && binding.Origin != migration.OriginBound) {
+	owned := bound && binding.RunStatus != migration.StatusUndone && binding.Origin != migration.OriginBound
+	if err != nil || owned {
 		return changed, migration.Reason{}, err
 	}
 	var stored map[string]json.RawMessage

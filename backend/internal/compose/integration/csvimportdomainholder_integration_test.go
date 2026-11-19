@@ -67,7 +67,7 @@ func TestACompanyRowOnAHeldDomainKeepsItsContactsLinkAndOnlyFillsEmptyFields(t *
 			if d := predicted.Disposition; d.Created != 1 || d.Updated != 1 || d.Skipped != 0 {
 				t.Fatalf("test run = %+v, want the contact created and the empty description filled", d)
 			}
-			if !hasReasonCode(predicted, tc.warning) || hasIssue(predicted, "broken_link", "SRC-9") {
+			if !hasReasonCode(predicted, tc.warning) || !hasReasonCode(predicted, "company_domain_matched") || hasIssue(predicted, "broken_link", "SRC-9") {
 				t.Fatalf("test run issues = %+v, want %s and no broken link", predicted.Issues, tc.warning)
 			}
 			approveAndRead(t, e, run.ID)
@@ -169,5 +169,104 @@ func TestARowNamingItsCompanyByIDStillOverwritesItsName(t *testing.T) {
 	approveAndRead(t, e, namedCompanyZip(t, e, "ref,id,name,domain\nCO-7,"+named+",Renamed Works,\n").ID)
 	if facts := companyFacts(t, e, named); facts[0] != "Renamed Works" {
 		t.Fatalf("company = %v, want the name the file gave the company it named", facts)
+	}
+}
+
+// A ref whose earlier run was undone binds nothing. Its row is filed onto the
+// company now holding its domain, and fills only empty fields there.
+func TestARefFromAnUndoneRunFillsOnlyEmptyFieldsOfTheDomainsHolder(t *testing.T) {
+	e := setupImportApp(t)
+	files := map[string]string{"companies.csv": "ref,name,domain\nSRC-1,First Name,undone-ref.test\n"}
+	first := stageBundle(t, e, uploadZip(t, e, "undone.zip", zipBytes(t, files)).SourceRef, "undone", companyDomainParts)
+	approveAndRead(t, e, first.ID)
+	if status := importCall(t, e, first.ID, "undo", nil, nil); status != http.StatusAccepted {
+		t.Fatalf("undo → %d, want 202", status)
+	}
+	holder := createdID(t, e, "/v1/companies", AnyMap{
+		"source": "manual", "display_name": "Holder Name", "domains": []AnyMap{{"domain": "undone-ref.test", "is_primary": true}},
+	})
+	files["companies.csv"] = "ref,name,domain\nSRC-1,Second Name,undone-ref.test\n"
+	again := stageBundle(t, e, uploadZip(t, e, "undone2.zip", zipBytes(t, files)).SourceRef, "undone", companyDomainParts)
+	predicted := verdicts(readImportReport(t, e, again.ID))
+	approveAndRead(t, e, again.ID)
+	if committed := verdicts(readImportReport(t, e, again.ID)); !slices.Equal(committed, predicted) {
+		t.Fatalf("import = %v, test run said %v", committed, predicted)
+	}
+	if facts := companyFacts(t, e, holder); facts[0] != "Holder Name" {
+		t.Fatalf("company = %v, want the holder's own name kept", facts)
+	}
+}
+
+// An importer who may read companies but not update them files no row onto a
+// domain's holder. The row stays refused.
+func TestACompanyRowOnAHeldDomainNeedsTheCompanyUpdateGrant(t *testing.T) {
+	e := setupImportApp(t)
+	e.DescribeCompany(t)
+	var role struct {
+		Key string `json:"key"`
+	}
+	if status := e.Call(t, "POST", "/v1/roles", AnyMap{"copy_from": "admin", "name": "No company edits"}, nil, &role); status != http.StatusCreated {
+		t.Fatalf("creating the role → %d, want 201", status)
+	}
+	grant := AnyMap{"create": true, "read": true, "update": false, "delete": false}
+	if status := e.Call(t, "PATCH", "/v1/roles/"+role.Key+"/objects/company", grant, nil, nil); status != http.StatusOK {
+		t.Fatalf("removing the company update grant → %d, want 200", status)
+	}
+	const email, password = "no-update@held-domain.test", "held-domain-no-update-password"
+	importer := createdID(t, e, "/v1/users", AnyMap{"email": email, "display_name": "Importer", "role": role.Key})
+	apptest.SetPasswordByLink(t, e, importer, password)
+	createdID(t, e, "/v1/companies", AnyMap{
+		"source": "manual", "display_name": "Example Telecom",
+		"domains": []AnyMap{{"domain": "example.test", "is_primary": true}},
+	})
+	seat := e.AsSecondSeat(t, email, password)
+	predicted := readImportReport(t, seat, heldDomainZip(t, seat, "Example Telecom", "").ID)
+	if !hasReasonCode(predicted, "domain_held") || hasReasonCode(predicted, "company_domain_matched") {
+		t.Fatalf("test run issues = %+v, want the row refused as domain_held", predicted.Issues)
+	}
+}
+
+// A holder whose domain the store keeps in its Unicode spelling still takes a
+// row that writes the ASCII spelling.
+func TestACompanyRowFindsTheHolderOfAnotherSpellingOfItsDomain(t *testing.T) {
+	e := setupImportApp(t)
+	holder := createdID(t, e, "/v1/companies", AnyMap{
+		"source": "manual", "display_name": "Bücher Haus", "domains": []AnyMap{{"domain": "idn-placeholder.test", "is_primary": true}},
+	})
+	if _, err := e.Owner.Exec(context.Background(),
+		`UPDATE company_domain SET domain = 'bücher-idn.test' WHERE company_id = $1`, holder); err != nil {
+		t.Fatalf("storing the Unicode spelling: %v", err)
+	}
+	files := map[string]string{
+		"companies.csv": "ref,name,domain\nSRC-9,Bücher Haus,xn--bcher-idn-q9a.test\n",
+		"contacts.csv":  "ref,email,name,company\nP-1,ana@idn.example,Ana,SRC-9\n",
+	}
+	run := stageBundle(t, e, uploadZip(t, e, "idn.zip", zipBytes(t, files)).SourceRef, "idn", append(companyDomainParts, contactRefParts()...))
+	predicted := readImportReport(t, e, run.ID)
+	if !hasReasonCode(predicted, "company_domain_matched") || hasReasonCode(predicted, "domain_held") {
+		t.Fatalf("test run issues = %+v, want the row filed onto the holder", predicted.Issues)
+	}
+	approveAndRead(t, e, run.ID)
+	if employer := employerOf(t, e, "ana@idn.example"); employer != "Bücher Haus" {
+		t.Fatalf("employer = %q, want the holder of the Unicode spelling", employer)
+	}
+}
+
+// The holder of a domain may appear after the test run. The import then
+// reports the match it meets and the values it kept.
+func TestTheImportReportsAMatchItMeetsAfterTheTestRun(t *testing.T) {
+	e := setupImportApp(t)
+	run := heldDomainZip(t, e, "Example Telco Ltd", "")
+	if predicted := readImportReport(t, e, run.ID); predicted.Disposition.Created != 2 {
+		t.Fatalf("test run = %+v, want both rows created while no company holds the domain", predicted.Disposition)
+	}
+	createdID(t, e, "/v1/companies", AnyMap{
+		"source": "manual", "display_name": "Example Telecom",
+		"domains": []AnyMap{{"domain": "example.test", "is_primary": true}},
+	})
+	approveAndRead(t, e, run.ID)
+	committed := readImportReport(t, e, run.ID)
+	if !hasReasonCode(committed, "company_domain_matched") || !hasReasonCode(committed, "stored_values_kept") {
+		t.Fatalf("import issues = %+v, want the match and the kept name both reported", committed.Issues)
 	}
 }

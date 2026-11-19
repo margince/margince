@@ -116,9 +116,9 @@ func DomainHeld(ctx context.Context, pool *pgxpool.Pool, domain string) (bool, e
 	return held, err
 }
 
-// VisibleDomainHolder finds the live company holding a domain inside the
-// caller's row scope. A domain is unique among live rows, so one row is the
-// whole answer.
+// VisibleDomainHolder finds the live company holding a domain, in any spelling
+// the store keeps, inside the caller's row scope. A domain is unique among
+// live rows, so one row is the whole answer.
 func VisibleDomainHolder(ctx context.Context, pool *pgxpool.Pool, domain string) (ids.UUID, bool, error) {
 	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
 		return ids.UUID{}, false, err
@@ -128,7 +128,7 @@ func VisibleDomainHolder(ctx context.Context, pool *pgxpool.Pool, domain string)
 	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
-		domainPos := arg(domain)
+		domainPos := arg(owndomain.Spellings(domain))
 		scope, err := auth.ScopeClauseFor(ctx, migration.ObjectCompany, "o", arg)
 		if err != nil {
 			return err
@@ -138,7 +138,7 @@ func VisibleDomainHolder(ctx context.Context, pool *pgxpool.Pool, domain string)
 		}
 		err = tx.QueryRow(ctx, storekit.SQLf(`
 			SELECT o.id FROM company_domain d JOIN company o ON o.id = d.company_id
-			 WHERE d.domain = $%d AND d.archived_at IS NULL
+			 WHERE d.domain = ANY($%d) AND d.archived_at IS NULL
 			   AND o.archived_at IS NULL AND o.merged_into_id IS NULL AND %s
 			 LIMIT 1`, domainPos, scope), args...).Scan(&holder)
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -157,7 +157,7 @@ func VisibleDomainHolder(ctx context.Context, pool *pgxpool.Pool, domain string)
 // onto the holder: the caller must also be allowed to change it. A holder the
 // caller may only read is no answer, so the row keeps its domain_held refusal.
 func WritableDomainHolder(ctx context.Context, pool *pgxpool.Pool, domain string) (ids.UUID, bool, error) {
-	if !auth.Allows(ctx, migration.ObjectCompany, principal.ActionRead) {
+	if !auth.Allows(ctx, migration.ObjectCompany, principal.ActionRead) || !auth.Allows(ctx, migration.ObjectCompany, principal.ActionUpdate) {
 		return ids.UUID{}, false, nil
 	}
 	holder, found, err := VisibleDomainHolder(ctx, pool, domain)

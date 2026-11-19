@@ -7,6 +7,8 @@
 // the same verdict for every row.
 package importkeys
 
+import "strings"
+
 // Kind is one unique key a record holds.
 type Kind int
 
@@ -29,11 +31,20 @@ type Key struct {
 // meets an earlier one only here.
 type Ledger map[Key]bool
 
+// keyOf is the ledger's spelling of one key. A domain compares without case,
+// also when it does not parse and keeps the spelling the file gave it.
+func keyOf(object string, kind Kind, value string) Key {
+	if kind == Domain {
+		value = strings.ToLower(value)
+	}
+	return Key{Object: object, Kind: kind, Value: value}
+}
+
 // Claim records a landing row's keys. An empty value holds nothing.
 func (l Ledger) Claim(object string, values map[Kind]string) {
 	for kind, value := range values {
 		if value != "" {
-			l[Key{Object: object, Kind: kind, Value: value}] = true
+			l[keyOf(object, kind, value)] = true
 		}
 	}
 }
@@ -42,7 +53,7 @@ func (l Ledger) Claim(object string, values map[Kind]string) {
 // value as a key of this kind.
 func (l Ledger) Held(kind Kind, value string, holders ...string) bool {
 	for _, holder := range holders {
-		if value != "" && l[Key{Object: holder, Kind: kind, Value: value}] {
+		if value != "" && l[keyOf(holder, kind, value)] {
 			return true
 		}
 	}

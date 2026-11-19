@@ -115,6 +115,9 @@ type csvWriters struct {
 	updated int
 	// predictedNotes is the notes the dry run predicted filed (noteTwinKey).
 	predictedNotes map[string]bool
+	// predictedWarnings are a predicted row's warnings beyond the one predictRow
+	// returns; predictPages reports and clears them.
+	predictedWarnings []migration.SkippedRow
 }
 
 var _ migration.Writers = (*csvWriters)(nil)
