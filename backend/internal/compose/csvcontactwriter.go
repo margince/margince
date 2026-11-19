@@ -21,11 +21,11 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/importkeys"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/freemail"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -49,9 +49,6 @@ func (w *csvWriters) createContact(ctx context.Context, row migration.Row, typed
 	}
 	var employer contacts.EmployerAttached
 	in.EmployerResult = &employer
-	if in.FullName == "" {
-		return skippedFor(contactUnnamedWhy), nil
-	}
 	err = w.land(ctx, row, func(tx pgx.Tx) (ids.UUID, error) {
 		if err := w.authors.resolve(ctx, tx, &in.Author); err != nil {
 			return ids.UUID{}, err
@@ -154,27 +151,11 @@ func (w *csvWriters) contactEmailAlreadyHeld(ctx context.Context, row migration.
 	if claimed, read := w.heldEmails[email]; read {
 		return claimed, nil
 	}
-	held, err := w.emailsHeld(ctx, []string{email})
+	held, err := importkeys.EmailsHeld(ctx, w.pool, []string{email})
 	if err != nil {
 		return false, err
 	}
 	return held[email], nil
-}
-
-// emailsHeld answers which of these addresses a live contact or a live lead
-// holds, in one query: the identity check the create itself asks.
-func (w *csvWriters) emailsHeld(ctx context.Context, emails []string) (map[string]bool, error) {
-	held := make(map[string]bool, len(emails))
-	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
-		holders, err := storekit.IdentityHoldersOf(ctx, tx, storekit.IdentityKeys{Emails: emails})
-		for _, email := range emails {
-			held[email] = holders.ContactHoldsEmail(email) || holders.LeadHoldsEmail(email)
-		}
-		return err
-	}); err != nil {
-		return nil, fmt.Errorf("import: checking whether %d addresses are already held: %w", len(emails), err)
-	}
-	return held, nil
 }
 
 // readPageEmails answers, in one query, which addresses of a dry run's page a
@@ -190,7 +171,7 @@ func (w *csvWriters) readPageEmails(ctx context.Context, rows []migration.Row) e
 			emails = append(emails, email)
 		}
 	}
-	held, err := w.emailsHeld(ctx, emails)
+	held, err := importkeys.EmailsHeld(ctx, w.pool, emails)
 	if err != nil {
 		return err
 	}

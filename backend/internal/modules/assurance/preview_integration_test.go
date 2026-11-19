@@ -29,7 +29,7 @@ func previewSubjects(owner string) SubjectsFunc {
 		return []Subject{{
 			DealID: "11111111-1111-7111-8111-111111111111", Owner: owner,
 			AmountMinor: &amount, Currency: "EUR",
-			ExpectedClose: &past, CloseOverdue: true,
+			ExpectedClose: &past,
 			Viability: &SubjectViability{Outcome: viability.OutcomeReviewRequired, SilentDays: 120, Reasons: []viability.Reason{
 				viability.ReasonCustomerSilent, viability.ReasonCloseDateUnsupported, viability.ReasonNoNextStep,
 			}},

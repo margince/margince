@@ -198,7 +198,7 @@ func Validate(spec FieldSpec) []FieldError {
 	if strings.TrimSpace(spec.Label) == "" {
 		errs = append(errs, FieldError{Field: fieldLabel, Code: codeRequired})
 	}
-	if spec.Type == TypeCurrency && (spec.Currency == nil || !values.ValidCurrency(*spec.Currency)) {
+	if spec.Type == TypeCurrency && (spec.Currency == nil || !values.AssignableCurrency(*spec.Currency)) {
 		errs = append(errs, FieldError{Field: fieldCurrency, Code: "required_for_type_currency"})
 	}
 	if hasOptions(spec.Type) && len(spec.Options) == 0 {

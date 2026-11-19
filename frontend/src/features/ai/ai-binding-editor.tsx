@@ -22,6 +22,7 @@ import { lockReasonOr, useRefusalId } from "../../format/settinglocks";
 import { useT } from "../../i18n";
 import { type ModelCatalogue, useAvailableModels } from "../../lib/ai-models";
 import { invalidateProviderHealth } from "../../lib/ai-provider-health";
+import { providerName } from "../../lib/ai-provider-names";
 import { ROUTING_KEY, type RoutingRead } from "../../lib/ai-routing-query";
 import { problemMessageOf } from "../../lib/problem";
 import { isConflict, readLatest, writeSlice } from "./ai-binding-write";
@@ -211,7 +212,7 @@ export function BindingEditor({
             title={t("aiRouting.keyMissing")}
           >
             {t("aiRouting.keyMissingHelp", {
-              provider: binding?.provider ?? "",
+              provider: providerName(binding?.provider ?? "", t),
             })}
           </Callout>
         )}
@@ -429,7 +430,7 @@ function NotListedHint({
   }
   return (
     <p className="t-sub" role="status">
-      {t("aiRouting.notListed", { provider })}
+      {t("aiRouting.notListed", { provider: providerName(provider, t) })}
     </p>
   );
 }

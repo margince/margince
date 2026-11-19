@@ -17,7 +17,7 @@ import (
 func TestTheWalkAsksTheViabilityDecisionFirst(t *testing.T) {
 	t.Parallel()
 	weak := healthy()
-	weak.ExpectedClose, weak.CloseOverdue, weak.CloseProvisional = new(at(time.April, 30)), true, true
+	weak.ExpectedClose, weak.CloseProvisional = new(at(time.April, 30)), true
 	weak.HasNextStep = false
 	all := []string{TypeClosePast, TypeCloseUnconfirmed, TypeNoNextStep}
 
@@ -63,7 +63,7 @@ func TestTheWalkAsksTheViabilityDecisionFirst(t *testing.T) {
 			t.Parallel()
 			deal := weak
 			if tc.future {
-				deal.ExpectedClose, deal.CloseOverdue, deal.CloseProvisional = new(at(time.June, 30)), false, false
+				deal.ExpectedClose, deal.CloseProvisional = new(at(time.June, 30)), false
 			}
 			deal.Viability = tc.judged
 			pass := askEveryRule(at(time.May, 14), []Subject{deal}, DefaultConfig(), nil)

@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -187,7 +188,8 @@ func TestAMailboxBaselineAppliesOnlyWhenEveryDeliveringMailboxOfTheSeatExcludes(
 			raw := threadMail(seatAddress(t, e, e.Rep1), "two-mailboxes@buyer.test", baselineMail, "")
 			captureMailVia(t, e, e.Rep1, "gmail", raw)
 			captureMailVia(t, e, e.Rep1, "graph", raw)
-			if got := e.WsCount(t, `SELECT count(*) FROM capture_import WHERE user_id = $1 AND delivered_by = ARRAY['gmail:0','graph:0']`, e.Rep1); got != 1 {
+			if got := e.WsCount(t, `SELECT count(*) FROM capture_import WHERE user_id = $1 AND delivered_by = ARRAY(
+				SELECT `+storekit.MailboxMarkSQL("c")+` FROM capture_connection c WHERE c.user_id = $1 ORDER BY c.provider)`, e.Rep1); got != 1 {
 				t.Fatalf("import rows naming both mailboxes = %d, want 1", got)
 			}
 			setBaseline(t, e, e.Rep1, "gmail", "2026-10-20", "Europe/Berlin")
@@ -227,6 +229,9 @@ func TestAMailboxBaselineNeedsProofOfTheDeliveringMailbox(t *testing.T) {
 			setBaseline(t, e, e.Rep1, "gmail", "2026-10-20", "Europe/Berlin")
 			source := mailSource(t, e, "provenance@buyer.test")
 			e.WsExec(t, `UPDATE capture_import SET delivered_by = '{}' WHERE activity_id = $1`, source)
+			// An import naming no mailbox predates per-mailbox keys, so its
+			// connection still keys by provider.
+			e.WsExec(t, `UPDATE capture_connection SET keys_by_provider = true WHERE user_id = $1 AND provider = 'gmail'`, e.Rep1)
 			want := beforeBaseline
 			if !legacy {
 				e.WsExec(t, `UPDATE activity SET captured_by = 'connector:gmail' WHERE id = $1`, source)

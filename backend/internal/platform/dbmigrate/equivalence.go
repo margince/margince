@@ -114,8 +114,14 @@ func ContentAdmitted(namespace string, m Migration, applied string) bool {
 // equivalentTo answers whether a checked entry for m's version names applied
 // as building the schema m's source builds today.
 func equivalentTo(namespace string, m Migration, applied string) bool {
-	current := Digest(m)
-	for _, eq := range equivalentContent[namespace][m.Version] {
+	return pairedWith(namespace, m.Version, Digest(m), applied)
+}
+
+// pairedWith answers whether a checked entry for version names applied as
+// building what current builds. A replaced version whose file is gone has no
+// source to hash, so its manifest digest stands in as current.
+func pairedWith(namespace, version, current, applied string) bool {
+	for _, eq := range equivalentContent[namespace][version] {
 		if applied == eq.applied && current == eq.source {
 			return true
 		}

@@ -7,7 +7,7 @@
 // it used to send them to the record to press Reply there.
 
 /** @vitest-environment happy-dom */
-import { cleanup, screen } from "@testing-library/react";
+import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { draftButton } from "../../testing/composedraft.testkit";
@@ -174,7 +174,7 @@ describe("a meeting the reader has sent nothing after", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: /draft follow-up/i }),
     );
-    await userEvent.click(await draftButton());
+    await userEvent.click(await waitFor(() => draftButton()));
     await screen.findByDisplayValue("Thanks for today");
     expect(drafts[0]?.url).toContain(`/contacts/${first}/draft-email`);
     expect(drafts[0]?.body).toMatchObject({

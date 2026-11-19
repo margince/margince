@@ -9,6 +9,7 @@ import type { ImportRun } from "./importtypes";
 const file: WizardFile = {
   file: "contacts.csv",
   rowsProfiled: 3,
+  rowCount: 3,
   columns: [],
   detected: "contact",
   suggested: { contact: { Name: "display_name" }, company: { Name: "name" } },

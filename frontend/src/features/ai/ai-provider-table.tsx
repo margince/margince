@@ -36,6 +36,7 @@ type Row = Readonly<{
 // Attention first: failing or bound without a key, then in use, then the rest.
 const ATTENTION: Readonly<Record<ProviderState, number>> = {
   needs_key: 0,
+  needs_service: 0,
   active: 1,
   ready: 2,
   inactive: 3,
@@ -44,12 +45,14 @@ const ATTENTION: Readonly<Record<ProviderState, number>> = {
 export function ProviderTable({
   providers,
   usage,
+  unhosted,
   health,
   canManage,
   onOpen,
 }: Readonly<{
   providers: readonly ProviderStatus[];
   usage: ReadonlyMap<string, ProviderUsage> | null;
+  unhosted: (provider: string) => boolean;
   // Present for a reader who may see diagnostics.
   health: readonly ProviderHealthEntry[] | undefined;
   // Without it the sheet opens read-only, so the verb says Open, not Edit.
@@ -66,7 +69,7 @@ export function ProviderTable({
         name: providerName(status.provider, t),
         usage: used,
         health: health?.find((h) => h.provider === status.provider),
-        state: providerState(status, used),
+        state: providerState(status, used, unhosted(status.provider)),
       };
     })
     .sort((a, b) => rank(a) - rank(b) || forReader(a.name, b.name, locale));

@@ -354,6 +354,9 @@ export function chronologyNotice(
     assembled: boolean;
     // The record's read named the activities as hidden from this reader.
     withheld?: boolean;
+    // A kind, word or date narrows the read, so an empty list says nothing
+    // about the record itself.
+    filtered?: boolean;
   },
   t: ReturnType<typeof useT>,
 ): ReactNode {
@@ -385,6 +388,9 @@ export function chronologyNotice(
   }
   if (chronology.entries.length > 0) {
     return undefined;
+  }
+  if (filter !== "changes" && exchanges.filtered) {
+    return <EmptyState>{t("chronology.filteredEmpty")}</EmptyState>;
   }
   // An empty All is an empty record, and the caller's own sentence says what
   // would land here and how. Only the Changes cut has a fact of its own.

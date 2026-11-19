@@ -59,39 +59,19 @@ export function useOwnRoute(): (route: RouteCandidate) => boolean {
 export function RoutesPanel({
   graph,
   onAsk,
-  skipLead,
 }: Readonly<{
   graph: Graph;
   onAsk?: (route: RouteCandidate) => void;
-  // Drop the head of the list, for a caller that already drew it as the lead.
-  // Showing it twice would ask the reader which of the two is the
-  // recommendation.
-  skipLead?: boolean;
 }>) {
   const t = useT();
-  const all = graph.routes ?? [];
-  const routes = skipLead ? all.slice(1) : all;
-  const legacy = all.length === 0 ? graph.route : undefined;
+  const routes = graph.routes ?? [];
+  const legacy = routes.length === 0 ? graph.route : undefined;
   return (
-    <Panel
-      // With the lead drawn above this card, its rows are the OTHER ways in,
-      // and a card titled "ways in" that omitted the best one would read as a
-      // list that had lost its head.
-      title={
-        skipLead
-          ? t("contact.intro.otherRoutesTitle")
-          : t("contact.intro.routesTitle")
-      }
-    >
-      {/* How the ranking was made, in the body: both wordings run past the one
-          line the head band holds, and a reader who loses the second half
-          loses the reason to prefer a route further down the list. */}
+    <Panel title={t("contact.intro.routesTitle")}>
+      {/* How the ranking was made, in the body: the sentence runs past the one
+          line the head band holds. */}
       <PanelBody>
-        <p className="t-sub">
-          {skipLead
-            ? t("contact.intro.otherRoutesSub")
-            : t("contact.intro.routesSub")}
-        </p>
+        <p className="t-sub">{t("contact.intro.routesSub")}</p>
       </PanelBody>
       {routes.length === 0 && !legacy ? (
         <PanelBody>
@@ -99,30 +79,55 @@ export function RoutesPanel({
         </PanelBody>
       ) : (
         <PanelBody>
-          <ol className="pn-routes">
-            {legacy ? (
-              <li className="pn-route-row">
-                <LegacyRouteRow route={legacy} />
-              </li>
-            ) : (
-              routes.map((route, index) => (
-                <li className="pn-route-row" key={route.route_id}>
-                  <RouteRow
-                    route={route}
-                    // The rank in the SERVER's list, so the first alternative
-                    // under a lead panel reads as the second way in, not the
-                    // first of a different list.
-                    rank={index + (skipLead ? 2 : 1)}
-                    lead={index === 0 && !skipLead}
-                    onAsk={onAsk}
-                  />
-                </li>
-              ))
-            )}
-          </ol>
+          <RouteList
+            routes={routes}
+            legacy={legacy}
+            firstRank={1}
+            onAsk={onAsk}
+          />
         </PanelBody>
       )}
     </Panel>
+  );
+}
+
+/**
+ * RouteList is the ranked rows, for this panel and for the lead card that
+ * draws its alternatives under the recommendation.
+ *
+ * `firstRank` keeps the SERVER's numbering: the first alternative under a lead
+ * reads as the second way in, not the first of a different list.
+ */
+export function RouteList({
+  routes,
+  legacy,
+  firstRank,
+  onAsk,
+}: Readonly<{
+  routes: readonly RouteCandidate[];
+  legacy?: Graph["route"];
+  firstRank: number;
+  onAsk?: (route: RouteCandidate) => void;
+}>) {
+  return (
+    <ol className="pn-routes">
+      {legacy ? (
+        <li className="pn-route-row">
+          <LegacyRouteRow route={legacy} />
+        </li>
+      ) : (
+        routes.map((route, index) => (
+          <li className="pn-route-row" key={route.route_id}>
+            <RouteRow
+              route={route}
+              rank={index + firstRank}
+              lead={index + firstRank === 1}
+              onAsk={onAsk}
+            />
+          </li>
+        ))
+      )}
+    </ol>
   );
 }
 

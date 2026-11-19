@@ -138,6 +138,11 @@ func TestAReceiptNamesWhoDidItAndWhatItMoved(t *testing.T) {
 	})
 	agentCard := e.stageDateCard(agent, t, agentDeal, ids.UUID(message.Id), moved)
 	appliedUnderPolicy(reader, t, e.Pool, e.svc, agentCard, e.Rep1)
+	// An approved agent staging is no receipt until the agent repeats its call.
+	hash := e.WsScalar(t, `SELECT diff_hash FROM approval WHERE id = $1`, agentCard.UUID)
+	if _, _, err := e.svc.Redeem(agent, agentCard, deals.CloseDateCorrectionKind, hash); err != nil {
+		t.Fatalf("the agent repeating its call: %v", err)
+	}
 
 	handled, err := newAttentionService(e.Pool, e.svc, time.Now).HandledForYou(reader, nil)
 	if err != nil {

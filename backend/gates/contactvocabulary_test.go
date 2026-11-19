@@ -206,6 +206,8 @@ var retired = gatekit.Waive(map[string]string{
 	"backend/migrations/core": "shipped migrations are never edited — the SQL that built the " +
 		"old names is the record of how the schema got here",
 	"backend/migrations/custom": "the same, one namespace over",
+	"backend/migrations/baseline": "written from the shipped migrations above, so it carries " +
+		"their names and comments",
 	"backend/migrationrewrites.txt": "each line opens with a shipped migration's file name, verbatim, " +
 		"and a shipped migration is never renamed",
 	"backend/migrations/renumbered.txt": "each line names a shipped migration, verbatim, at the " +

@@ -4,7 +4,8 @@
 package migrations_test
 
 // Loading the embedded migration namespaces, once, for every test in this
-// package that reads or replays them.
+// package that reads or replays them. Core comes without its baseline: these
+// tests walk the history version by version.
 
 import (
 	"testing"
@@ -15,7 +16,7 @@ import (
 
 func namespaces(t *testing.T) (core, custom dbmigrate.Namespace) {
 	t.Helper()
-	core, err := migrations.Core()
+	core, err := migrations.CoreHistory()
 	if err != nil {
 		t.Fatalf("loading the core namespace: %v", err)
 	}

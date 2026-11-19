@@ -15,9 +15,9 @@ import { primaryPhone } from "../../format/contacturi";
 import { formatDateAbbrev } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { useMemberName } from "../../lib/membernames";
+import { dealRoleLabel } from "../../lib/recordlabels";
 import { useViewerId } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
-import { buyingRoleLabel } from "../companies/companycontacts/summary";
 
 type Contact = components["schemas"]["Contact"];
 
@@ -91,7 +91,7 @@ export function ContactFacts({
       </Fact>
       {buyingRole && (
         <Fact label={t("contact.page.buyingRole")}>
-          {buyingRoleLabel(buyingRole, t)}
+          {dealRoleLabel(buyingRole, t)}
         </Fact>
       )}
       <Fact label={t("list.created")}>

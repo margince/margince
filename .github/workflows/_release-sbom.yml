@@ -1,0 +1,55 @@
+# The source SBOMs of one release tag, as a callable unit.
+#
+# release-tag.yml calls it once per tag, and both the GitHub release and the
+# dist release take its artifact. release.yml calls it for a dist release by hand.
+#
+# The full pinned pipeline runs here: generate, normalize, supplement, parity,
+# census and validate. The runner is amd64 because the pinned pyspdxtools
+# wheels resolve for amd64 only, and on an arm64 runner they run emulated.
+#
+# No job here holds id-token: write. The caller signs in a job of its own.
+name: _release-sbom
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: The release tag, such as v1.0.0. Each SBOM names it as its version.
+        type: string
+        required: true
+      ref:
+        description: The commit to scan, given as a SHA or a ref.
+        type: string
+        required: true
+      artifact:
+        description: The name of the artifact that holds the three SBOM files.
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  sbom:
+    name: Generate the SBOMs
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.ref }}
+          persist-credentials: false
+      # The version is given, so the shallow checkout needs no tags for git describe.
+      # Make expands SBOM_VERSION inside a recipe, so only a tag in the release grammar may reach it.
+      - name: Generate the SBOMs at the release commit
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          bash scripts/release-tag-version.sh "$TAG" > /dev/null
+          make sbom SBOM_VERSION="$TAG"
+      - uses: ./.github/actions/upload-artifact-retried
+        with:
+          name: ${{ inputs.artifact }}
+          path: sboms/
+          if-no-files-found: error
+          retention-days: 30

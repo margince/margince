@@ -8,15 +8,13 @@ import { ConversationSuggestionsCard } from "../../components/conversationsugges
 import { EntityRef } from "../../components/entityref";
 import { useEntityName } from "../../components/entityref.queries";
 import { LinkedInChip } from "../../components/linkedinchip";
+import { RecordCustomFields } from "../../components/recordcustomfields";
 import { saveRecordEdit } from "../../components/recordedit";
 import { LeadStops } from "../../components/stops";
 import { TagsPanel } from "../../components/tagspanel";
 import { Badge, PendingBody } from "../../design-system/atoms";
-import {
-  ContactLink,
-  CopyEmail,
-  EmailFace,
-} from "../../design-system/contactlink";
+import { ContactLink } from "../../design-system/contactlink";
+import { InfoTip } from "../../design-system/infotip";
 import { InlineChoice } from "../../design-system/inlinechoice";
 import { InlineText } from "../../design-system/inlinetext";
 import {
@@ -46,6 +44,7 @@ import { leadIndustry } from "./leadindustry";
 import { useLeadPartnerRow } from "./leadpartner";
 import { LeadProductLine } from "./leadproduct";
 import { LeadProjectAttachButton } from "./leadraillinks";
+import { EmailValue, isBlank, reachRows } from "./leadreach";
 import type { Lead, LeadWriter } from "./leads";
 import { mapLeadUpdate } from "./leads.form";
 
@@ -57,10 +56,6 @@ type TextKey =
   | "company_name"
   | "candidate_company_key"
   | "origin_detail";
-
-function isBlank(value: string | null | undefined): boolean {
-  return !value?.trim();
-}
 
 /**
  * One field of the lead, edited from its row. Every row saves through
@@ -84,49 +79,6 @@ export function useFieldSave(lead: Lead) {
         await queryClient.invalidateQueries({ queryKey });
       }
     };
-}
-
-// The address as the door to writing to the lead; its pill opens the edit.
-function EmailValue({
-  lead,
-  canEdit,
-  readOnlyReason,
-  onSave,
-}: Readonly<{
-  lead: Lead;
-  canEdit: boolean;
-  readOnlyReason?: string;
-  onSave: (next: string) => Promise<void>;
-}>) {
-  const t = useT();
-  return (
-    <InlineText
-      label={t("create.email")}
-      value={lead.email ?? ""}
-      type="email"
-      link={
-        lead.email && (
-          <span className="lead-row-email">
-            <ContactLink
-              kind="email"
-              value={lead.email}
-              record={{ entityType: "lead", entityId: lead.id }}
-              readOnly={Boolean(lead.archived_at)}
-              className="link-button lead-row-link"
-              textClassName="lead-row-link"
-            >
-              <EmailFace address={lead.email} />
-            </ContactLink>
-            <CopyEmail address={lead.email} />
-          </span>
-        )
-      }
-      placeholder={t("field.unset")}
-      canEdit={canEdit}
-      readOnlyReason={readOnlyReason}
-      onSave={onSave}
-    />
-  );
 }
 
 // A linked lead's name is the company's own, so it is changed there, not here.
@@ -181,7 +133,7 @@ function useAboutRows(
   const text = (
     key: TextKey,
     label: MessageKey,
-    options: { required?: boolean; type?: "email" } = {},
+    options: { required?: boolean; type?: "email"; link?: ReactNode } = {},
   ): DetailRow => ({
     key,
     term: t(label),
@@ -191,6 +143,7 @@ function useAboutRows(
         label={t(label)}
         value={lead[key] ?? ""}
         type={options.type}
+        link={options.link}
         placeholder={t("field.unset")}
         canEdit={canEdit}
         readOnlyReason={reason}
@@ -245,11 +198,8 @@ function useAboutRows(
             ),
           },
         ]),
-    {
-      key: "email",
-      term: t("create.email"),
-      empty: isBlank(lead.email),
-      value: (
+    ...reachRows(lead, t, {
+      email: (
         <EmailValue
           lead={lead}
           canEdit={canEdit}
@@ -257,8 +207,17 @@ function useAboutRows(
           onSave={save("email")}
         />
       ),
-    },
-    text("phone", "create.phone"),
+      // The number dials, as on a contact; the box around it still edits it.
+      phone: text("phone", "create.phone", {
+        link: lead.phone && (
+          <ContactLink
+            kind="phone"
+            value={lead.phone}
+            record={{ entityType: "lead", entityId: lead.id }}
+          />
+        ),
+      }).value,
+    }),
     {
       key: "origin",
       term: t("lead.origin"),
@@ -306,7 +265,19 @@ function useAboutRows(
         <span title={t("record.leadProfileReadOnly")}>{t("field.unset")}</span>
       ),
     },
-    text("candidate_company_key", "record.companyRoutingKey"),
+    {
+      ...text("candidate_company_key", "record.companyRoutingKey"),
+      term: (
+        <>
+          {t("record.companyRoutingKey")}
+          <InfoTip
+            label={t("record.companyRoutingKeyWhy")}
+            text={t("record.companyRoutingKeyHelp")}
+            mark="help"
+          />
+        </>
+      ),
+    },
     {
       key: "project_id",
       term: t("lead.project"),
@@ -445,6 +416,7 @@ function LeadDetailsBody({
   return (
     <>
       <RecordDetails sections={sections} footnote={t("lead.aside.footnote")} />
+      <RecordCustomFields kind="lead" record={lead} />
       <LeadStops leadId={lead.id} />
       {!lead.archived_at && (
         <ConversationSuggestionsCard

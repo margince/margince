@@ -132,15 +132,6 @@
   padding: var(--controlGap) 9px; /* ds:ignore the inline inset is the row inset it lines up with */
 }
 
-/* The build, at the foot of the help flyout. It takes the rows' inset so it
-   stands on their left edge, and it sits outside the row rule — no hover and
-   no pointer, because it goes nowhere. */
-.acctversion {
-  padding: var(--controlGap) 9px; /* ds:ignore the inline inset is the row inset it lines up with */
-  color: var(--textSecondary);
-  overflow-wrap: anywhere;
-}
-
 /* ===== the flyouts =====
    Theme and help. The seat is what a flyout is measured against; it is
    `role="none"` in the markup and draws nothing of its own. */

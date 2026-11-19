@@ -69,6 +69,7 @@ describe("SettingsScreen page layout", () => {
       "People",
       "Sales",
       "Compliance",
+      "System",
     ]);
     // And the name is one the accessibility tree computes, not only one this
     // file can read off an attribute: the role and the name have to find the

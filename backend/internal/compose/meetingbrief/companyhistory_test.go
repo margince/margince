@@ -48,6 +48,9 @@ func TestEarlierAtTheCompanyIsAnOwnCitedSentence(t *testing.T) {
 	if !strings.Contains(section[0].Text, "Acme") || !strings.Contains(section[0].Text, "Pat") || !strings.Contains(section[0].Text, "Old terms") {
 		t.Errorf("text = %q, want company, contact and topic", section[0].Text)
 	}
+	if storedInstant.MatchString(section[0].Text) {
+		t.Errorf("text = %q, want the day in the installation's notation, not a stored instant", section[0].Text)
+	}
 	if len(section[0].Evidence) != 1 || section[0].Evidence[0].EntityID != "m1" {
 		t.Errorf("evidence = %+v, want the conversation", section[0].Evidence)
 	}

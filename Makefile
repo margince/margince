@@ -33,6 +33,7 @@ ROOT_SCRIPT_GATES := check-craft-doc test-dev-isolation test-dev-dsn test-dev-en
   test-release-version-stamped test-closing-declaration test-release-patch-base test-release-changelog \
   test-docs-describing \
   test-craft-review test-release-tag-version test-release-dist-version test-release-license-stamped \
+  test-release-version-file test-build-revision test-release-tag-on-main \
   test-release-notes test-release-bundle test-release-compose test-backend-notices embedded-binary-licenses third-party-files test-third-party-files \
   test-strict-lint-packages
 
@@ -72,7 +73,7 @@ MINIO_PORT ?= 29000
 
 .PHONY: gate-timings
 .PHONY: repeat-changed-tests test-repeat-changed-tests
-.PHONY: help help-all install dev-fresh check check-config check-all check-backend check-root-gates check-lane-craft check-lane-gates check-lane-backend check-lane-fe check-q check-go check-gates check-fe dev dev-stop dev-sweep dev-snapshot dev-restore dev-logs infra-up seed-dev seed-analytics verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check bench-home home-budget test-home-budget-compare e2e-company e2e-brief e2e-llm e2e-llm-guards fe-install fe-typecheck fe-typecheck-composed fe-lint fe-compiler-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-census fe-unit-merge fe-clock-drift backend-clock-drift fe-edge-padding fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows storybook fe-uat craft-static craft-review test-craft-review craft-residue craft-prose check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-clock-drift-host test-renovate-liveness test-pace-workflow test-ci-verdict test-merge-verdict test-review-coverage test-laneorder test-shardqueue test-lane-binaries test-integration-artifacts secret-scan test-secret-scan test-sbom-sign release-sign test-sbom-census embedded-binary-licenses test-embedded-binary-licenses test-dev-dsn test-dev-env-local test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-disk-headroom test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity test-make-target-parity check-ext-migrations check-extension-modules go-work-sum contract-breaking-check messaging-rules-drift contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length test-budget test-input-census test-input-census-judge test-strict-lint-packages test-test-budget comment-budget test-comment-budget comment-density test-keep-unchanged-mtimes test-check-lane-end test-phase-timer comment-stats comment-stats-pin slop-trend rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze test-pkg-freeze test-release-tag-version test-release-dist-version test-release-license-stamped test-release-notes test-release-bundle test-release-compose test-release-version-stamped test-closing-declaration test-release-patch-base test-release-changelog docs-describing test-docs-describing test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-census sbom-validate sbom-sign release-sign sbom-check sbom-gate
+.PHONY: help help-all install dev-fresh prod prod-stop check check-config check-all check-backend check-root-gates check-lane-craft check-lane-gates check-lane-backend check-lane-fe check-q check-go check-gates check-fe dev dev-stop dev-sweep dev-snapshot dev-restore dev-logs infra-up seed-dev seed-analytics verify-boot frontend-check frontend-e2e bench-mobile bench-mobile-check bench-home home-budget test-home-budget-compare e2e-company e2e-brief e2e-llm e2e-llm-guards fe-install fe-typecheck fe-typecheck-composed fe-lint fe-compiler-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-census fe-unit-merge fe-clock-drift backend-clock-drift fe-edge-padding fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing ds-spacing-roles space-tokens native-controls ext-imports action-rows storybook fe-uat craft-static craft-review test-craft-review craft-residue craft-prose check-craft-doc test-craft-pin test-golangci-guard test-scheduled-report test-clock-drift-host test-renovate-liveness test-pace-workflow test-ci-verdict test-merge-verdict test-review-coverage test-laneorder test-shardqueue test-lane-binaries test-integration-artifacts secret-scan test-secret-scan test-sbom-sign release-sign test-sbom-census embedded-binary-licenses test-embedded-binary-licenses test-dev-dsn test-dev-env-local test-testdb-redis test-lane-timeout-report test-dev-isolation test-dev-cleanup test-disk-headroom test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity test-make-target-parity check-ext-migrations check-extension-modules go-work-sum contract-breaking-check messaging-rules-drift contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length fe-file-length test-fe-file-length test-budget test-input-census test-input-census-judge test-strict-lint-packages test-test-budget comment-budget test-comment-budget comment-density test-keep-unchanged-mtimes test-check-lane-end test-phase-timer comment-stats comment-stats-pin slop-trend rls-store-path no-jurisdiction test-no-jurisdiction pkg-freeze test-pkg-freeze test-release-tag-version test-release-dist-version test-release-license-stamped test-release-version-file test-build-revision test-release-tag-on-main test-release-notes test-release-bundle test-release-compose test-release-version-stamped test-closing-declaration test-release-patch-base test-release-changelog docs-describing test-docs-describing test-dev-postgres-container test-e2e-llm-check hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-census sbom-validate sbom-sign release-sign sbom-check sbom-gate
 # Bare `make` lists every command instead of running the first target.
 .DEFAULT_GOAL := help
 
@@ -327,6 +328,18 @@ dev-fresh:
 ## stack on the machine, including other worktrees', use `make dev-sweep`.
 dev-stop:
 	@bash scripts/dev.sh stop "$(DEV_SLUG)" $(if $(filter 1,$(DROP)),--drop,)
+
+## prod — run this checkout as a customer runs a release: production mode
+## and the 14-day trial, through the release's Compose folder with images built
+## here. Not for working on the code; that is `make dev`. scripts/prod.sh
+## has the details.
+prod:
+	@bash scripts/prod.sh up
+
+## prod-stop — stop the `make prod` stack. DROP=1 also deletes its
+## data and the settings under .tmp/production/.
+prod-stop:
+	@bash scripts/prod.sh stop $(if $(filter 1,$(DROP)),--drop,)
 
 ## dev-snapshot — copy THIS stack's database to `<db>_tmpl`, so `dev-restore`
 ## can put the world back in about a second instead of a migrate and a reseed.
@@ -1677,8 +1690,8 @@ test-release-changelog:
 test-release-tag-version:
 	@./scripts/release-tag-version.test.sh
 
-## test-release-dist-version — the dist version rule's own test: each planted
-## tag maps to its year, edition and patch, and a pre-release drafts nothing.
+## test-release-dist-version — the dist version rule's own test: a plain tag
+## loses its v, a pre-release tag drafts nothing, and a typed x.y.z needs main.
 test-release-dist-version:
 	@./scripts/release-dist-version.test.sh
 
@@ -1687,6 +1700,22 @@ test-release-dist-version:
 ## refuses. Its one caller is a tag push, like the tag reader's.
 test-release-license-stamped:
 	@./scripts/release-license-stamped.test.sh
+
+## test-release-version-file — the VERSION release check's own test: the one
+## spelling of the tag's version it accepts, and the near misses it refuses.
+test-release-version-file:
+	@./scripts/release-version-file.test.sh
+
+## test-release-tag-on-main — the on-main check both release lanes run: a commit
+## on main passes, a commit off main and a checkout without origin/main are
+## refused, each with its own message.
+test-release-tag-on-main:
+	@./scripts/release-tag-on-main.test.sh
+
+## test-build-revision — the build revision reader's own test: a checkout, a
+## source download and a tree that knows neither each name the right commit.
+test-build-revision:
+	@./scripts/build-revision.test.sh
 
 ## test-release-notes — the release notes builder's own test: which merge
 ## subjects a release lists, in which section, and what the size budget cuts.

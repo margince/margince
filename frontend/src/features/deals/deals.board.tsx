@@ -34,7 +34,7 @@ import {
 } from "../../lib/deals.queries";
 import { useMemberAvatars, useMemberNames } from "../../lib/membernames";
 import type { usePipelines } from "../../lib/pipelines.queries";
-import { unwrap } from "../../lib/problem";
+import { problemFieldErrorsOf, unwrap } from "../../lib/problem";
 import { routeHash } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -106,6 +106,15 @@ export function useAdvanceDeal() {
         }),
         t,
       );
+    },
+    onError: (error) => {
+      // A pipeline retired since the page drew it: read the catalog again so
+      // the stages stop being offered.
+      if (
+        problemFieldErrorsOf(error).some((f) => f.code === "pipeline_retired")
+      ) {
+        queryClient.invalidateQueries({ queryKey: ["pipelines"] });
+      }
     },
     onSuccess: (deal, input) => {
       // The advanced deal goes into the cache synchronously, before the

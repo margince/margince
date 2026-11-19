@@ -8,6 +8,8 @@ import (
 	"slices"
 	"time"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/closerisk"
 	"github.com/margince/margince/backend/internal/shared/kernel/viability"
 )
 
@@ -26,9 +28,9 @@ type Subject struct {
 	// The close date the deal carries, and whether anybody confirmed it.
 	ExpectedClose    *time.Time
 	CloseProvisional bool
-	// CloseOverdue is deals.CloseIsOverdue in the installation's zone, the
-	// answer the viability decision reads too.
-	CloseOverdue bool
+	// Zone is the installation's reporting zone, which names the day a close
+	// date is held against. Nil reads asOf's own location.
+	Zone *time.Location
 	// WinProbability is the deal's effective probability, and Likely whether
 	// it reaches the installation's Likely threshold.
 	WinProbability int
@@ -240,14 +242,18 @@ func Rules() []Rule {
 // there is, and the one that quietly inflates a quarter: nobody moved the date,
 // so the deal still counts toward a period it cannot close in.
 func closePast() Rule {
-	return Rule{Type: TypeClosePast, Version: "v2", AnsweredBy: viability.ReasonCloseDateUnsupported, Ask: func(asOf time.Time, s Subject, _ Config) *Finding {
-		if s.ExpectedClose == nil || !s.CloseOverdue {
+	return Rule{Type: TypeClosePast, Version: "v3", AnsweredBy: viability.ReasonCloseDateUnsupported, Ask: func(asOf time.Time, s Subject, _ Config) *Finding {
+		zone := s.Zone
+		if zone == nil {
+			zone = asOf.Location()
+		}
+		if s.ExpectedClose == nil || !closerisk.Overdue(*s.ExpectedClose, asOf, zone) {
 			return nil
 		}
 		return &Finding{
 			Type: TypeClosePast, SubjectID: s.DealID, Severity: SeverityHigh,
 			Claim:         map[string]any{"expected_close": s.ExpectedClose.Format(time.DateOnly)},
-			Observed:      map[string]any{"as_of": day(asOf).Format(time.DateOnly)},
+			Observed:      map[string]any{"as_of": storekit.WorkspaceDay(asOf, zone).Format(time.DateOnly)},
 			AffectedMinor: s.AmountMinor, Currency: s.Currency,
 		}
 	}}
@@ -391,10 +397,10 @@ func LogicalKey(f Finding) string {
 	return fmt.Sprintf("%s:%s", f.Type, f.SubjectID)
 }
 
-// day drops the clock. A rule comparing a date against an instant would answer
-// differently at noon than at midnight on the same day.
-func day(at time.Time) time.Time {
-	return time.Date(at.Year(), at.Month(), at.Day(), 0, 0, 0, 0, at.Location())
+// closeDayOn places a close date, a zoneless day, on loc's calendar, so it
+// compares with a day cut in loc.
+func closeDayOn(closeDate *time.Time, loc *time.Location) time.Time {
+	return time.Date(closeDate.Year(), closeDate.Month(), closeDate.Day(), 0, 0, 0, 0, loc)
 }
 
 // A deal in a stage whose own exit criteria are not met.

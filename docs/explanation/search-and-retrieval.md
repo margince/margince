@@ -122,8 +122,9 @@ for a **grouped** page instead (`groupedShape`).
 
 Each branch that passes the gate is capped at `N + 1` rows before the `UNION`. The last row is
 dropped and reported in `types_with_more`, and the page takes no cursor or limit. To page through
-the rest, narrow to one type with `types`. The `⌘K` menu (`per_type=3`) and the full results screen
-with no type set (`per_type=5`) both ask for it. They show an activity that carries an
+the rest, narrow to one type with `types`. The `⌘K` menu asks for it with `per_type=3`, and with
+`per_type=8` once one type is picked in its bar. The full results screen with no type set asks with
+`per_type=5`. They show an activity that carries an
 `email_summary` under `Emails`, separate from the calls and notes beside it.
 
 **`with_employees=true` finds contacts through their company.** The `search_tsv` of
@@ -165,6 +166,12 @@ text alone.
 A company hit also carries `logo_url`. The own reader of the contacts module reads it for the
 companies on the page (`contacts.CompanyLogoURLsBatch`, passed in by compose). So the URL comes from
 the place that owns the company record.
+
+A contact, company, deal, lead or project hit also carries `standing`. It holds what that type has
+of status, stage, money value, close or due date, job title and last activity. `attachStandings`
+reads them for the page in one statement, each type's part under the caller's read grant and row
+scope. A deal's money value goes through the caller's field mask, and `masked_fields` names what it
+held back.
 
 The **merged** path (`Store.HybridSearch`) is reached through the `shared/ports/retrieval` seam
 (`search.Retriever`), which is what the AI layers build their answers on. `cmd/api` connects it to the
@@ -309,7 +316,7 @@ jobs in the same transaction.
 
 Each workspace job leaves the set when it ends for good, and the job that empties the set hands the
 marker back. Every marker write **fences on the run ID**. So a slow job from a finished run cannot
-move the marker of the run that replaced it. Three things follow:
+move the marker of the run that replaced it. Four things follow:
 
 - **Margince stops a run when its binding changes.** The job carries
   the identity that held when it claimed the marker. A worker whose live embedder no
@@ -320,6 +327,8 @@ move the marker of the run that replaced it. Three things follow:
   has a result left to reach, and *used up its attempts* is one of those results. The `active` of
   `/readyz` takes on that smaller claim. The pending counts on the status endpoint are what tell an
   operator what is missing.
+- **A stopped run writes no model.** A run that a binding change stopped lets go of the marker, and the marker
+  keeps the model it named before. That run's target is a model no role serves any more.
 - **A marker left held has a way back.** A workspace job that is dropped or canceled can leave the
   marker held with nothing running. (River starts again a job that runs too long only if the job
   declares a time limit, and a workspace job declares none.) A confirm with `force` set takes a
@@ -446,6 +455,7 @@ no hop each way, or when two hops on one record share a name.
 | Grouped page (`per_type`) | `internal/modules/search/grouped.go` (`groupedShape`) |
 | Contacts through the company that employs them (`with_employees`) | `internal/modules/search/employerarm.go` (`employerArmSQL`) |
 | Company hit logo | `internal/modules/search/companylogo.go` ← `internal/modules/contacts/companylogobatch.go` |
+| Where a hit stands (`standing`) | `internal/modules/search/standing.go` (`attachStandings`) |
 | Which entities search can find, and who may see one | `internal/modules/search/branches.go` (`searchBranches`, `branchScope`, `SearchedTables`) |
 | Vector write + read by meaning | `internal/modules/search/embedding.go` (`UpsertEmbedding`, `SimilarEntities`) |
 | RRF merge | `internal/modules/search/fuse.go` (`HybridSearch`, `fuseRankedResults`, `rrfK`) |

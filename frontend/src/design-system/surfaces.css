@@ -44,7 +44,6 @@
   .co-facts-add,
   .co-strip-withheld,
   .meetingrows-lead,
-  .pn-hero,
   .roomtab-band,
   .board-doc,
   .board-doc-stage,
@@ -88,7 +87,10 @@
   .voicekind,
   .compose-reasons-card,
   .page-pane,
-  .analytics-sheet
+  .analytics-sheet,
+  .reachcard,
+  .palette-tile,
+  .palette-foot
 ) {
   --ground: var(--ladder1Solid);
   --groundEdge: var(--ladder1Edge);
@@ -140,7 +142,6 @@
     .co-facts-add,
     .co-strip-withheld,
     .meetingrows-lead,
-    .pn-hero,
     .roomtab-band,
     .board-doc,
     .board-doc-stage,
@@ -184,7 +185,10 @@
     .voicekind,
     .compose-reasons-card,
     .page-pane,
-    .analytics-sheet
+    .analytics-sheet,
+    .reachcard,
+    .palette-tile,
+    .palette-foot
   )
   :where(
     .panel,
@@ -221,7 +225,6 @@
     .co-facts-add,
     .co-strip-withheld,
     .meetingrows-lead,
-    .pn-hero,
     .roomtab-band,
     .board-doc,
     .board-doc-stage,
@@ -265,7 +268,10 @@
     .voicekind,
     .compose-reasons-card,
     .page-pane,
-    .analytics-sheet
+    .analytics-sheet,
+    .reachcard,
+    .palette-tile,
+    .palette-foot
   ) {
   --ground: var(--ladder2);
   --groundEdge: var(--ladder2Edge);
@@ -317,7 +323,6 @@
     .co-facts-add,
     .co-strip-withheld,
     .meetingrows-lead,
-    .pn-hero,
     .roomtab-band,
     .board-doc,
     .board-doc-stage,
@@ -361,7 +366,10 @@
     .voicekind,
     .compose-reasons-card,
     .page-pane,
-    .analytics-sheet
+    .analytics-sheet,
+    .reachcard,
+    .palette-tile,
+    .palette-foot
   )
   :where(
     .panel,
@@ -398,7 +406,6 @@
     .co-facts-add,
     .co-strip-withheld,
     .meetingrows-lead,
-    .pn-hero,
     .roomtab-band,
     .board-doc,
     .board-doc-stage,
@@ -442,7 +449,10 @@
     .voicekind,
     .compose-reasons-card,
     .page-pane,
-    .analytics-sheet
+    .analytics-sheet,
+    .reachcard,
+    .palette-tile,
+    .palette-foot
   )
   :where(
     .panel,
@@ -479,7 +489,6 @@
     .co-facts-add,
     .co-strip-withheld,
     .meetingrows-lead,
-    .pn-hero,
     .roomtab-band,
     .board-doc,
     .board-doc-stage,
@@ -523,7 +532,10 @@
     .voicekind,
     .compose-reasons-card,
     .page-pane,
-    .analytics-sheet
+    .analytics-sheet,
+    .reachcard,
+    .palette-tile,
+    .palette-foot
   ) {
   --ground: var(--ladder3);
   --groundEdge: var(--ladder3Edge);
@@ -575,7 +587,6 @@
     .co-facts-add,
     .co-strip-withheld,
     .meetingrows-lead,
-    .pn-hero,
     .roomtab-band,
     .board-doc,
     .board-doc-stage,
@@ -619,7 +630,10 @@
     .voicekind,
     .compose-reasons-card,
     .page-pane,
-    .analytics-sheet
+    .analytics-sheet,
+    .reachcard,
+    .palette-tile,
+    .palette-foot
   )
   :where(
     .panel,
@@ -656,7 +670,6 @@
     .co-facts-add,
     .co-strip-withheld,
     .meetingrows-lead,
-    .pn-hero,
     .roomtab-band,
     .board-doc,
     .board-doc-stage,
@@ -700,7 +713,10 @@
     .voicekind,
     .compose-reasons-card,
     .page-pane,
-    .analytics-sheet
+    .analytics-sheet,
+    .reachcard,
+    .palette-tile,
+    .palette-foot
   )
   :where(
     .panel,
@@ -737,7 +753,6 @@
     .co-facts-add,
     .co-strip-withheld,
     .meetingrows-lead,
-    .pn-hero,
     .roomtab-band,
     .board-doc,
     .board-doc-stage,
@@ -781,7 +796,10 @@
     .voicekind,
     .compose-reasons-card,
     .page-pane,
-    .analytics-sheet
+    .analytics-sheet,
+    .reachcard,
+    .palette-tile,
+    .palette-foot
   )
   :where(
     .panel,
@@ -818,7 +836,6 @@
     .co-facts-add,
     .co-strip-withheld,
     .meetingrows-lead,
-    .pn-hero,
     .roomtab-band,
     .board-doc,
     .board-doc-stage,
@@ -862,7 +879,10 @@
     .voicekind,
     .compose-reasons-card,
     .page-pane,
-    .analytics-sheet
+    .analytics-sheet,
+    .reachcard,
+    .palette-tile,
+    .palette-foot
   ) {
   --ground: var(--ladder4);
   --groundEdge: var(--ladder4Edge);
@@ -971,7 +991,6 @@
     .co-facts-add,
     .co-strip-withheld,
     .meetingrows-lead,
-    .pn-hero,
     .roomtab-band,
     .board-doc,
     .board-doc-stage,
@@ -1015,7 +1034,10 @@
     .voicekind,
     .compose-reasons-card,
     .page-pane,
-    .analytics-sheet
+    .analytics-sheet,
+    .reachcard,
+    .palette-tile,
+    .palette-foot
   ) {
   --ground: var(--ladder2);
   --groundEdge: var(--ladder2Edge);
@@ -1088,7 +1110,6 @@
     .co-facts-add,
     .co-strip-withheld,
     .meetingrows-lead,
-    .pn-hero,
     .roomtab-band,
     .board-doc,
     .board-doc-stage,
@@ -1132,7 +1153,10 @@
     .voicekind,
     .compose-reasons-card,
     .page-pane,
-    .analytics-sheet
+    .analytics-sheet,
+    .reachcard,
+    .palette-tile,
+    .palette-foot
   )
   :where(
     .panel,
@@ -1169,7 +1193,6 @@
     .co-facts-add,
     .co-strip-withheld,
     .meetingrows-lead,
-    .pn-hero,
     .roomtab-band,
     .board-doc,
     .board-doc-stage,
@@ -1213,7 +1236,10 @@
     .voicekind,
     .compose-reasons-card,
     .page-pane,
-    .analytics-sheet
+    .analytics-sheet,
+    .reachcard,
+    .palette-tile,
+    .palette-foot
   ) {
   --ground: var(--ladder3);
   --groundEdge: var(--ladder3Edge);
@@ -1286,7 +1312,6 @@
     .co-facts-add,
     .co-strip-withheld,
     .meetingrows-lead,
-    .pn-hero,
     .roomtab-band,
     .board-doc,
     .board-doc-stage,
@@ -1330,7 +1355,10 @@
     .voicekind,
     .compose-reasons-card,
     .page-pane,
-    .analytics-sheet
+    .analytics-sheet,
+    .reachcard,
+    .palette-tile,
+    .palette-foot
   )
   :where(
     .panel,
@@ -1367,7 +1395,6 @@
     .co-facts-add,
     .co-strip-withheld,
     .meetingrows-lead,
-    .pn-hero,
     .roomtab-band,
     .board-doc,
     .board-doc-stage,
@@ -1411,7 +1438,10 @@
     .voicekind,
     .compose-reasons-card,
     .page-pane,
-    .analytics-sheet
+    .analytics-sheet,
+    .reachcard,
+    .palette-tile,
+    .palette-foot
   )
   :where(
     .panel,
@@ -1448,7 +1478,6 @@
     .co-facts-add,
     .co-strip-withheld,
     .meetingrows-lead,
-    .pn-hero,
     .roomtab-band,
     .board-doc,
     .board-doc-stage,
@@ -1492,7 +1521,10 @@
     .voicekind,
     .compose-reasons-card,
     .page-pane,
-    .analytics-sheet
+    .analytics-sheet,
+    .reachcard,
+    .palette-tile,
+    .palette-foot
   ) {
   --ground: var(--ladder4);
   --groundEdge: var(--ladder4Edge);
@@ -1592,7 +1624,6 @@
     .co-facts-add,
     .co-strip-withheld,
     .meetingrows-lead,
-    .pn-hero,
     .roomtab-band,
     .board-doc,
     .board-doc-stage,
@@ -1636,7 +1667,10 @@
     .voicekind,
     .compose-reasons-card,
     .page-pane,
-    .analytics-sheet
+    .analytics-sheet,
+    .reachcard,
+    .palette-tile,
+    .palette-foot
   ) {
   background-color: var(--ground);
 }

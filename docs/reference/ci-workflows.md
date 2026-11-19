@@ -19,8 +19,9 @@ workflow is outside the gate:
 | `pace.yml` | every push to `main` | No (runs after the merge) |
 | `scheduled.yml` | daily and weekly on `main` | No |
 | `sbom.yml` | manual dispatch only | No |
-| `release.yml` | `v*` tag push (no pre-release), manual dispatch | No |
+| `release.yml` | manual dispatch naming a tag | No |
 | `release-tag.yml` | `v*` tag push | No (runs on a tag, after every merge) |
+| `_release-sbom.yml`, `_release-dist.yml` | called by `release-tag.yml` and `release.yml` | No |
 
 `ci.yml` and `cla.yml` run on `merge_group` too, because the queue asks for each required check again.
 `main-health.yml` is the only workflow that publishes the SonarCloud analysis of `main`.
@@ -247,9 +248,9 @@ Notes on the jobs:
   `backend/gates/testdata/wallclockfixtures.txt` holds the count. Many more compare
   against the `now()` of Postgres, so the change must reach both clocks. Moving the clock of the
   runner is the only change that does, and `scripts/clock-drift-host.sh` says why.
-- Downloads finish before the clock moves. One shell moves it, runs the suites and puts it back.
-  After 45 minutes it stops the suites; the clock goes back on failure too.
-  If that fails, the saved real date stays for the last step to try again.
+- Downloads finish before the clock moves. One shell moves it, runs the suites for at most 45
+  minutes and puts it back, on failure too. Only a suite that failed at the moved clock files the
+  calendar issue. Other red files "the backend clock-drift lane could not complete".
 - `BACKEND_CLOCK_SKEW=database:200 make backend-clock-drift` runs the lane on a laptop with the
   weaker database applier. `backend/internal/shared/clockskew` says what each applier reaches.
 - The model lane costs real tokens. It skips, and does not fail, when `CLAUDE_CODE_OAUTH_TOKEN` is
@@ -313,87 +314,86 @@ Cancel is scoped to the `sbom` job: a newer run replaces a lane that still lists
 upload. A lane cut between the two would leave a signature, for good, for a tree whose bundles
 nobody can get. So a newer run takes over only before signing starts, while `sbom` waits or runs.
 
-## `release.yml`
+## `release.yml` and `_release-dist.yml`
 
-Manual dispatch only. It cuts a margince-constellation release with the version `1970.<build>`, in
-the dist service of the constellation deployment at `test.margince.com`. The year is pinned to 1970
-while this is a PoC, so these releases sort below any real dated release. The build is the
-workflow run number. A constellation release is a server deployment, which GitHub does not host.
-The GitHub release belongs to `release-tag.yml`, which owns the
-`github-release` job.
+`_release-dist.yml` cuts a server release in a dist service: `dist.test.margince.com` or `dist.margince.com`.
+`release-tag.yml` calls it on a plain `vX.Y.Z` tag push, with target `test`. `release.yml` is a manual dispatch
+with a required `tag` input, such as `v1.0.0`, and a `target` input, `test` or `production`. Each run calls
+`_release-sbom.yml` first and hands its artifact to the dist lane.
 
-A release is a decision someone makes; there is no push trigger. So the role images have no other
-build ([#1965](https://github.com/margince/margince/issues/1965)).
+`scripts/release-dist-version.sh` refuses a pre-release part, build metadata or a leading zero
+(`make test-release-dist-version`). The dist version is the tag without its `v`. Either way the run builds the
+commit the tag names, and refuses a tag not on `main` (`make test-release-tag-on-main`). No branch push starts
+it, so the role images have no other build ([#1965](https://github.com/margince/margince/issues/1965)).
 
-What a run does:
+What a run does, after the `version` job checks the tag:
 
-1. The CLI asks the dist service for the patch base (`resolve-patch-base --release`): the newest published
-   release on its line. It cuts the patch from the git commit of that release, and uploads it with `draft-release --release <version> --patch-base <version>`. The first release has no base: its patch is
-   the whole tree, sent with `--first-release`. With the patch go the three SBOM files for the source tree, generated again at the release commit (`make sbom`).
-   The dist service checks that the SBOM files cover every file the patch makes. So the committed `sboms/` files, which may be behind, are never uploaded.
+1. `draft` and `docker-image` start together. `draft` asks the dist service for the patch base
+   (`resolve-patch-base --release`): the newest published release. It cuts the patch from the git commit of
+   that release, and uploads it with `draft-release --release <version> --patch-base <version>`. The first
+   release has no base: its patch is the whole tree, sent with `--first-release`.
+
+   The three SBOM files of the caller's SBOM job go with the patch. The dist service checks that they cover
+   every file the patch makes, so the committed `sboms/` files, which may be behind, are never uploaded.
 
    The changelog goes with the patch too. [`scripts/release_changelog.py`](../../scripts/release_changelog.py) builds it from the non-merge commit subjects since the patch base (`make test-release-changelog`). It lists the breaking, `feat`, `fix` and `perf` subjects, and the compare link shows the rest.
-2. The three role images are built through the bake file (`docker-bake.hcl`, `linux/amd64` +
-   `linux/arm64`, with `mode=max` provenance records).
-   - The builder stages compile for each target on the host; only runtime layers run under
-     emulation.
-   - The bake starts from two Actions caches. `CACHE=gha` stores the layer cache per role.
-   - `buildkit-cache-dance` + `actions/cache` carry the BuildKit cache mount (Go compile cache, pnpm
-     store, tsc `.tsbuildinfo`) across runs.
-   - The Corepack download is not cached: the image builds the pinned pnpm into a layer, and a mount
-     over the Corepack folder would hide it.
-   - The 10 GB Actions cache of the repository drops entries older than some hours. So a release
-     after a quiet night starts with an empty cache.
-3. The images are pushed to the constellation registry (`registry.test.margince.com/margince/<role>`).
-   They log in as the registry publisher through the `MARGINCE_AUTH_PUBLISHER_TOKEN` secret. They
-   are added to the draft with `add-artifacts --release <version>`, as references pinned by digest.
-4. The release is published with `publish-release --release <version>`. The dist uploads log in with the dist
-   publisher token (the `MARGINCE_DIST_PUBLISHER_TOKEN` secret).
+2. `docker-image` builds the three role images through `docker-bake.hcl` (`linux/amd64` + `linux/arm64`, `mode=max` provenance).
+   Builder stages compile on the host, and only runtime layers run under emulation. `CACHE=gha` keeps the layer
+   cache per role; `buildkit-cache-dance` + `actions/cache` keep the BuildKit cache mount. The pinned pnpm is baked
+   into a layer, so the Corepack download needs no cache.
+
+   GitHub deletes a cache entry no run read for 7 days. At the limit, 10 GB by default, it deletes the least
+   recently used. CI keeps the cache near that limit, so a release often starts cold.
+3. The images are pushed by digest, with no tag, to the target's registry. That is `registry.test.margince.com` or
+   `registry.margince.com`, with the target's registry publisher token. The same builder bakes `bundle`. For each
+   Linux platform, `build-archive` packs the bundle tree of `scripts/release-bundle.sh` with three SBOMs.
+4. `attach` waits for both, and adds the images and archives in one `add-artifacts --release <version>` call.
+5. `publish` publishes the release with `publish-release --release <version>`. The dist uploads use the target's dist
+   publisher token. Each job with a token runs in the target's environment, `dist-test` or `dist-production`.
+   Only `dist-production` holds the production tokens.
 
 Where the patch starts, and why: [cut-a-release.md](../how-to/cut-a-release.md#where-the-patch-of-changes-starts).
 
-Runs at once: `draft` and `docker-image` each carry a group that cancels, so an older bake stops. `publish`
+Runs at once: `draft`, `docker-image` and `attach` each carry a group that cancels, so an older bake stops. `publish`
 carries a group that queues runs and does not cancel. A publish that has started always runs to the end,
-and a publish that still waits when a newer one comes gives up its place. That way only one
-publish runs at a time, but in no set order.
+and a publish that still waits when a newer one comes gives up its place. Each group names the target and the tag,
+so a tag run and a run by hand share it.
 
-The workflow does not check the order itself. The dist service does. It refuses `publish-release` for a
-version that is not newer than its newest published one. It also refuses the same version a second time.
-So a new run of an old build fails at the publish step. A dispatch of an older commit fails there too,
-instead of landing after a newer release.
+The dist service checks the order. It refuses `publish-release` for a version that is not newer than its
+newest published one, and the same version a second time. So a new run of an old build fails at the publish
+step. A dispatch of an older commit fails there too, and lands after no newer release.
 
 ## `release-tag.yml`
 
-Runs on a `v*` tag push and nothing else. It is the only lane in this repository that creates a
-GitHub release, and the only one that holds `contents: write`. So two lanes on two version forms
-cannot both claim the one release page.
+Runs on a `v*` tag push and nothing else. It is the only lane that creates a GitHub release, and the only one
+that holds `contents: write`. Its `sbom` job calls `_release-sbom.yml` on an `ubuntu-24.04` runner, because
+the pinned `pyspdxtools` packages resolve for `linux/amd64` only. Both releases take its artifact.
 
-The tag is the version, read and checked by
-[`scripts/release-tag-version.sh`](../../scripts/release-tag-version.sh)
+The GitHub build runs beside the SBOM job, and `assets` then writes `SHA256SUMS`. The `dist` job calls the
+test dist release, and needs only `sbom`. So an open blocker holds the GitHub release and not the dist release,
+and a failed dist release leaves the GitHub release alone. A failed SBOM job stops both.
+
+The tag is the version, read and checked by [`scripts/release-tag-version.sh`](../../scripts/release-tag-version.sh)
 (`make test-release-tag-version`). A plain `v1.0.0` becomes the download the page offers by
 default; a tag with an ending, such as `v1.0.0-rc.1`, becomes a `pre-release`. A tag the script cannot
 read is refused in seconds, before anything is published.
 
 More checks share that first job. The tag points at a commit on `main`. `LICENSE` carries the
-release's Change Date and version, checked by
-[`scripts/release-license-stamped.sh`](../../scripts/release-license-stamped.sh)
-(`make test-release-license-stamped`). No open issue carries `release: blocker`. And
-the commit carries no failing `verdict` from `merge-attest`.
+release's Change Date and version ([`scripts/release-license-stamped.sh`](../../scripts/release-license-stamped.sh)).
+`VERSION` names the tag's version without its `v` ([`scripts/release-version-file.sh`](../../scripts/release-version-file.sh)).
+No open issue carries `release: blocker`. And the commit carries no failing `verdict` from `merge-attest`.
 
 The `draft` job then checks that a plain tag has a draft release with notes. It holds
 `contents: write` only to read: GitHub shows a draft to no token that cannot write.
 
-That last check picks releases, and does not gate merges.
-To merge past `ci` is a standing decision here, so a missing result passes. A result that exists
+The `verdict` check picks releases, and does not gate merges. To merge past `ci` is a standing decision here, so a missing result passes. A result that exists
 but is not done yet refuses.
 
-The release job publishes the draft, or creates the release for a pre-release that has no draft.
-It ships no files: the notes end with a link to the install steps in
-[deploy-margince.md](../how-to/deploy-margince.md).
+The release job publishes the draft, or creates the release for a pre-release that has no draft. The `sign`
+job alone holds `id-token: write`, and runs no build code.
 
-Under the draft's text it lists the pull requests merged since
-the last plain release. A release body holds at most 125,000 characters, and the list gets what the
-draft leaves. The list comes from
+Under the draft's text it lists the pull requests merged since the last plain release. A release body holds
+at most 125,000 characters, and the list gets what the draft leaves. The list comes from
 [`scripts/release_notes.py`](../../scripts/release_notes.py) (`make test-release-notes`).
 
 The release job queues and does not cancel. By that job the lane is making a release and writing its notes, and a stopped run would

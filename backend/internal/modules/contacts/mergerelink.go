@@ -40,9 +40,7 @@ func relinkContactReferences(ctx context.Context, tx pgx.Tx, sourceID, targetID 
 		sourceID.UUID, targetID.UUID); err != nil {
 		return counts, fmt.Errorf("relink emails: %w", err)
 	}
-	if counts.Phones, err = relinkDemotingPrimary(ctx, tx,
-		`UPDATE contact_phone a SET contact_id = @target, is_primary = `+mergePhonePrimary+` WHERE `+mergeContactAddressSource,
-		sourceID.UUID, targetID.UUID); err != nil {
+	if counts.Phones, err = relinkPhones(ctx, tx, sourceID, targetID); err != nil {
 		return counts, fmt.Errorf("relink phones: %w", err)
 	}
 	// The enrichment sidecar moves with the contact. Left behind it is

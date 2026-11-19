@@ -277,7 +277,7 @@ func TestAFixedRecordClearsItsFindingOnTheNextScan(t *testing.T) {
 	past := time.Now().UTC().AddDate(0, 0, -10)
 	sick := Subject{
 		DealID: e.seedDeal(t), Owner: e.rep.String(),
-		ExpectedClose: &past, CloseOverdue: true, WinProbability: 90, Likely: true, HasNextStep: true, HasEconomicBuyer: true,
+		ExpectedClose: &past, WinProbability: 90, Likely: true, HasNextStep: true, HasEconomicBuyer: true,
 	}
 	subjects := []Subject{sick}
 	scanner := NewScanner(e.store,
@@ -290,7 +290,7 @@ func TestAFixedRecordClearsItsFindingOnTheNextScan(t *testing.T) {
 
 	// The rep moves the close date forward; tonight the condition is gone.
 	future := time.Now().UTC().AddDate(0, 0, 20)
-	subjects[0].ExpectedClose, subjects[0].CloseOverdue = &future, false
+	subjects[0].ExpectedClose = &future
 	got, err := scanner.Scan(ctx, time.Now().UTC(), nil)
 	if err != nil {
 		t.Fatal(err)
@@ -332,7 +332,7 @@ func TestADeferredFindingSurvivesItsConditionClearing(t *testing.T) {
 	past := time.Now().UTC().AddDate(0, 0, -10)
 	sick := Subject{
 		DealID: e.seedDeal(t), Owner: e.rep.String(),
-		ExpectedClose: &past, CloseOverdue: true, WinProbability: 90, Likely: true, HasNextStep: true, HasEconomicBuyer: true,
+		ExpectedClose: &past, WinProbability: 90, Likely: true, HasNextStep: true, HasEconomicBuyer: true,
 	}
 	subjects := []Subject{sick}
 	scanner := NewScanner(e.store,
@@ -364,7 +364,7 @@ func TestADeferredFindingSurvivesItsConditionClearing(t *testing.T) {
 
 	// Tonight the condition goes away on its own.
 	future := time.Now().UTC().AddDate(0, 0, 20)
-	subjects[0].ExpectedClose, subjects[0].CloseOverdue = &future, false
+	subjects[0].ExpectedClose = &future
 	if _, err := scanner.Scan(ctx, time.Now().UTC(), nil); err != nil {
 		t.Fatal(err)
 	}
@@ -533,7 +533,7 @@ func TestAFindingReopensWhenItsDealRejoinsTheEligibleSet(t *testing.T) {
 	past := time.Now().UTC().AddDate(0, 0, -10)
 	dealID := e.seedDeal(t)
 	subject := Subject{
-		DealID: dealID, Owner: e.rep.String(), ExpectedClose: &past, CloseOverdue: true,
+		DealID: dealID, Owner: e.rep.String(), ExpectedClose: &past,
 		WinProbability: 90, Likely: true, HasNextStep: true, HasEconomicBuyer: true,
 	}
 	subjects := []Subject{subject}
@@ -586,7 +586,7 @@ func TestAFindingWhoseDealLeftTheEligibleSetIsClosedAsDeparted(t *testing.T) {
 	stayingID := e.seedDeal(t)
 	subject := func(id string) Subject {
 		return Subject{
-			DealID: id, Owner: e.rep.String(), ExpectedClose: &past, CloseOverdue: true,
+			DealID: id, Owner: e.rep.String(), ExpectedClose: &past,
 			WinProbability: 90, Likely: true, HasNextStep: true, HasEconomicBuyer: true,
 		}
 	}
@@ -631,7 +631,7 @@ func TestAPassThatReadNoDealsClosesNothingAsDeparted(t *testing.T) {
 	past := time.Now().UTC().AddDate(0, 0, -10)
 	liveID := e.seedDeal(t)
 	subjects := []Subject{{
-		DealID: liveID, Owner: e.rep.String(), ExpectedClose: &past, CloseOverdue: true,
+		DealID: liveID, Owner: e.rep.String(), ExpectedClose: &past,
 		WinProbability: 90, Likely: true, HasNextStep: true, HasEconomicBuyer: true,
 	}}
 	scanner := NewScanner(e.store,
@@ -693,7 +693,7 @@ func TestNeitherClosingSweepRunsForAReaderWhoMayNotUpdate(t *testing.T) {
 	past := time.Now().UTC().AddDate(0, 0, -10)
 	dealID := e.seedDeal(t)
 	subjects := []Subject{{
-		DealID: dealID, Owner: e.rep.String(), ExpectedClose: &past, CloseOverdue: true,
+		DealID: dealID, Owner: e.rep.String(), ExpectedClose: &past,
 		WinProbability: 90, Likely: true, HasNextStep: true, HasEconomicBuyer: true,
 	}}
 	scanner := NewScanner(e.store,

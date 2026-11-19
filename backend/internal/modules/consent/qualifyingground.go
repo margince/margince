@@ -379,7 +379,7 @@ func meetingQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, si
 	err = tx.QueryRow(ctx, `
 		SELECT a.id, a.occurred_at
 		FROM activity a
-		JOIN activity_participant p ON p.activity_id = a.id AND p.contact_id = $1::uuid
+		JOIN activity_participant p ON p.activity_id = a.id AND p.contact_id = $1::uuid AND p.relinked_at IS NULL
 		WHERE `+capturedMeetingSQL("$3")+`
 		  AND `+occurredday.FromSQL("a", "$2")+`
 		  AND `+visible+`
@@ -403,6 +403,8 @@ func meetingQualifyingEvent(ctx context.Context, tx pgx.Tx, contactID string, si
 // meeting a rep typed by hand is not evidence of anything the contact did.
 // meetingQualifyingEvent and requestedNegotiation both read this one rule.
 func capturedMeetingSQL(asOf string) string {
+	// A caller matching the subject on a participant row also guards
+	// `p.relinked_at IS NULL`: a relinked row is a member's edit, not attendance.
 	return `a.kind = 'meeting' AND a.archived_at IS NULL
 		  AND a.counterparty_email IS NULL
 		  AND a.captured_by LIKE 'connector:%'

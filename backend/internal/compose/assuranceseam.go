@@ -236,6 +236,7 @@ func scanAssuranceSubject(
 		return out, err
 	}
 	out.DealID = dealID.String()
+	out.Zone = zone
 	if owner != nil {
 		out.Owner = owner.String()
 	}
@@ -249,7 +250,6 @@ func scanAssuranceSubject(
 		out.StageID = stageID.String()
 	}
 	evidence.ExpectedClose, evidence.CloseProvisional = out.ExpectedClose, out.CloseProvisional
-	out.CloseOverdue = out.ExpectedClose != nil && deals.CloseIsOverdue(*out.ExpectedClose, asOf, zone)
 	evidence.HasNextStep, evidence.MailCovered = out.HasNextStep, mailCovered(owner, mailboxes)
 	assessed := deals.AssessViability(evidence, asOf, zone)
 	out.Viability = &assurance.SubjectViability{

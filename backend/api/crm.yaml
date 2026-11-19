@@ -8367,7 +8367,9 @@ paths:
         At most one default pipeline per workspace (409 if a second default). The opening
         `stages` keep the ladder's shape: a won or lost stage above an open one is refused
         `422` with the code `closing_stage_before_open`, and two stages naming one position
-        with `duplicate`.
+        with `duplicate`. A ladder without a won or without a lost stage gets the missing one
+        appended behind its last stage, named `Won` or `Lost`, so no pipeline is born unable to
+        close a deal.
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
@@ -8650,7 +8652,9 @@ paths:
         `422` with the code `closing_stage_before_open`; reorder the ladder with `reorderStages`
         instead. A `semantic` change keeps the ladder in shape itself: won and lost stages move
         behind the open ones, published as the same `pipeline.updated` position delta. A change
-        to either moves the pipeline's `version`.
+        to either moves the pipeline's `version`. Changing the `semantic` of a pipeline's only
+        live won (or lost) stage is refused `422` with the code `last_closing_stage` on
+        `semantic`: a pipeline keeps a way to win and a way to lose a deal.
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/IfMatch'
@@ -9464,6 +9468,11 @@ paths:
         `last_exchange` is the newest call, meeting, email or message on the record of any
         age, with whose move it leaves. It says where the record stands when nothing is
         next, such as waiting on them since the last mail sent.
+
+        `last_inbound` and `last_outbound` are the newest message the other side wrote and the
+        newest one we wrote, of any age, read over every row the caller may list and counted as
+        the account's last-touch clocks count them: it has happened, it kept us in touch, and
+        it is not automatic mail. Each is absent when there is none.
       parameters:
         - name: entity_type
           in: query
@@ -37174,7 +37183,19 @@ paths:
 
         The file's rows are counted first. A file with more rows than one test
         run reads is refused 422 `too_many_rows`, and no run and no stored file
-        are left behind.
+        are left behind. Its `max` is the limit and `params.rows` the file's count.
+
+        A file that cannot be read is refused 422 on `file`, with `params` naming
+        why. `not_utf8` names nothing. `unreadable` names the `line` when the
+        reader knows it, with `reason` `field_count` or `quote`.
+        `header_unusable` has `reason` `no_header`, `blank_name` (with
+        `position`) or `repeated_name` (with `name`). `bundle_refused` has
+        `reason` `not_a_zip`, `empty`, `files_too_large` or `zip_too_large`
+        (with `max_mb`), `too_many_files` (with `files` and `max_files`),
+        `password_protected`, `file_damaged` or `file_missing` (with `file`),
+        `two_files_one_type` (with `file`, `other_file` and `object`) or
+        `type_not_importable` (with `object`). A refusal of one file of a ZIP
+        also names it in `file`.
 
         A cell an export quoted against formula evaluation (a quote before `=`,
         `+`, `-`, `@`, a tab or a carriage return) is read without that one
@@ -37188,7 +37209,7 @@ paths:
               type: object
               required: [file]
               properties:
-                file:   { type: string, format: binary, description: 'The delimited file to import, or a ZIP of them named by type (`companies.csv`, `contacts.csv`, `leads.csv`, `deals.csv`, `activities.csv`). UTF-8; the first row is the header. `object` is required for a CSV and ignored for a ZIP, whose file names say each part''s type. A ZIP is known by its content, not its name.' }
+                file:   { type: string, format: binary, description: 'The delimited file to import, or a ZIP of them named by type (`companies.csv`, `contacts.csv`, `leads.csv`, `deals.csv`, `activities.csv`). UTF-8; the first row is the header. `object` is ignored for a ZIP, whose file names say each part''s type. A CSV sent without `object` is typed by its header, and the profile''s `object_chosen_by` says how. A ZIP is known by its content, not its name.' }
                 object: { $ref: '#/components/schemas/ImportObject' }
       responses:
         '200':
@@ -37264,6 +37285,13 @@ paths:
         and moves the run to `awaiting_approval` carrying the report
         `getImportRunReport` reads, or back to `pending` with the reason in
         `error` when the test stopped on the file or ran past its time.
+
+        A mapping the object cannot satisfy is refused 422 with `params`:
+        `duplicate_target` on `mapping` names the `target` and the two columns
+        (`column`, `other_column`); `unmappable` on `source_key` names the
+        `object` and its key `target`, and `ref_target` when a column mapped to
+        `ref` would also identify each row. `invalid` on `source_name` carries
+        `max`. A file refusal reads as it does on `uploadImportSource`.
 
         An upload has one run. This call writes the mapping onto the draft the
         upload opened and tests it, so a second call on one `source_ref`
@@ -43004,7 +43032,7 @@ components:
             words and shows `note` for a decision somebody explained.
         reason_code:
           type: string
-          enum: [stated, company_created, kept_as_company, bulk_sender, unevidenced, stale_evidence, near_duplicate, forwarded_identity, vendor_verdict, reserved_domain, unknown]
+          enum: [stated, company_created, kept_as_company, bulk_sender, unevidenced, stale_evidence, near_duplicate, forwarded_identity, vendor_verdict, reserved_domain, foreign_site, unknown]
           x-extensible-enum: true
           description: |
             Why, as a code the client words in the reader's language.
@@ -43015,7 +43043,7 @@ components:
               as a company.
             - `bulk_sender`: mail from the domain was judged bulk or automated, so it is not a
               company this business works with. `sender_kind` says which, when it is known.
-            - `unevidenced`, `stale_evidence`, `near_duplicate`, `vendor_verdict`: the undecided
+            - `unevidenced`, `stale_evidence`, `near_duplicate`, `vendor_verdict`, `foreign_site`: the undecided
               domain's open question, as `source` describes each one.
             - `unknown`: the row records a reason this server has no word for. `reason` still
               carries its stored sentence.
@@ -43034,7 +43062,7 @@ components:
             a company the reader may not see stays withheld by both.
         source:
           type: string
-          enum: [verdict, heuristic, human, agent, unevidenced, stale_evidence, near_duplicate, forwarded_identity, vendor_verdict, reserved_domain]
+          enum: [verdict, heuristic, human, agent, unevidenced, stale_evidence, near_duplicate, forwarded_identity, vendor_verdict, reserved_domain, foreign_site]
           x-extensible-enum: true
           description: |
             What decided it, or — for an `undecided` domain — what stopped the machine deciding.
@@ -43044,7 +43072,9 @@ components:
             old to mint one from today's site; `near_duplicate` means more than one company
             here already carries the name it resolved to, and which of them this domain belongs
             to is a human's call rather than the machine's; `vendor_verdict` means the site reads
-            as a mail or hosting vendor, and a colleague decides whether its staff get a company.
+            as a mail or hosting vendor, and a colleague decides whether its staff get a company;
+            `foreign_site` means the site names a different business than the domain, which may
+            have changed hands.
         decided_at: { type: string, format: date-time, description: 'When the decision was recorded. For an `undecided` domain, when the row last moved.' }
         company_id:
           type: string
@@ -45662,6 +45692,19 @@ components:
           items: { type: string, format: uuid }
         survivor_id: { type: string, format: uuid, description: 'The record that remains. Its values win where two members disagree.' }
         owner_id: { type: string, format: uuid, description: 'Who owns the remaining contact: the live owner of one of the selected members.' }
+        prefer: { $ref: '#/components/schemas/ContactCasePreference' }
+    ContactCasePreference:
+      type: object
+      additionalProperties: false
+      description: |
+        Where the selected members disagree, the member whose value the remaining contact takes.
+        Each one must be in `member_ids`. A field left out keeps the survivor's value, and an empty one takes another member's.
+        No value is lost: every address, number and employment of every member stays on the remaining contact.
+      properties:
+        name: { type: string, format: uuid, description: 'The member whose first and last name the remaining contact takes.' }
+        title: { type: string, format: uuid, description: 'The member whose title the remaining contact takes.' }
+        email: { type: string, format: uuid, description: "The member whose primary email address becomes the remaining contact's primary one." }
+        employment: { type: string, format: uuid, description: "The member whose current employer becomes the remaining contact's current one." }
     ContactCaseOutcome:
       type: object
       description: What the merge did, or for a preview what it would do. Every selected member's owner other than the chosen one keeps access through a record grant.
@@ -46603,6 +46646,19 @@ components:
         source_ref:    { type: string, description: 'Opaque handle to the stored upload. Supplied verbatim to `createImportRun`; never a path a client can construct.' }
         row_count:     { type: integer, minimum: 0, description: 'Rows the upload holds: the file''s for a single CSV, the sum of `parts[].row_count` for a ZIP.' }
         object:        { $ref: '#/components/schemas/ImportObject' }   # absent for a ZIP, whose files carry their own in `parts`
+        object_chosen_by:
+          type: string
+          enum: [columns, none]
+          x-extensible-enum: true
+          description: |
+            How `object` was chosen for a CSV uploaded without one. The header is
+            matched as `suggested_mapping` matches it, once for each type, and
+            only a column that exactly one type's suggestion maps counts.
+            `columns`: one type's suggestion maps more such columns than any
+            other's. `none`: no type maps strictly the most, so `object` is
+            `lead` and a screen asks the reader to choose. Absent when the upload
+            named its type, and for a ZIP. The run's `profile` keeps it until a
+            draft save names `object`, which is the reader's own choice.
         file_name:     { type: string, description: 'The uploaded file''s name, for display. The client echoes it to `createImportRun`.' }
         suggested_source_name:
           type: string
@@ -46708,7 +46764,7 @@ components:
 
     ImportReasonCode:
       type: string
-      enum: [activity_empty, activity_held, address_erased, address_not_split, activity_link_ambiguous, activity_link_ambiguous_dropped, activity_type_unknown, activity_type_unnamed, activity_unlinked, amount_negative, author_too_long, cannot_create, cannot_create_tags, cannot_edit, cannot_edit_and_tag, cannot_link_stakeholders, cannot_read_pipelines, cannot_read_tags, cannot_write_type, close_date_future, close_date_past, company_duplicate_found, company_duplicate_skipped, company_link_on_meeting, company_name_empty, contact_duplicate_found, contact_duplicate_skipped, contact_email_held, contact_holds_lead, contact_not_found, contact_not_found_dropped, contact_channel_missing, contact_unnamed, currency_not_a_code, currency_unset, deal_already_closed, deal_company_has_contracts, deal_legal_gate, deal_not_found, deal_not_found_dropped, deal_pipeline_fixed, description_too_long, direction_unknown, domain_held, duplicate_email, duration_not_valid_for_kind, email_names_no_contact, duration_out_of_range, employer_column_empty, employer_column_empty_dropped, employer_not_found, employer_not_found_dropped, employer_refused, employer_will_create, empty_payload, field_inactive, fx_rate_missing, id_not_a_company_id, id_not_visible, id_on_non_company, lead_not_found, lead_not_found_dropped, lead_status_not_importable, lead_status_unknown, link_ambiguous, link_ambiguous_dropped, link_contact_not_imported, link_edge_unsupported, link_malformed, link_not_attachable, link_not_found, link_not_found_dropped, link_row_not_imported, link_row_skipped, link_row_skipped_dropped, link_type_unknown, linkedin_held, lost_reason_missing, meeting_not_taken_place, meeting_status_not_valid_for_kind, meeting_status_unknown, message_not_importable, natural_key_taken, not_a_date, note_repeated, not_a_domain, not_a_number, not_an_amount, not_an_email, not_yes_no, occurred_at_future, occurred_at_unnamed, option_not_allowed, option_not_in_list, options_need_semicolons, owner_refused, owner_unknown, phone_needs_country, pipeline_no_open_stage, pipeline_unknown, pipeline_unnamed, record_archived, ref_taken_by_another_company, row_key_empty, row_key_repeated, run_in_flight, size_band_invalid, stage_unknown, stage_unnamed, tag_created, tag_name_invalid, tag_new, task_not_importable, timestamp_needs_zone, too_many_links, undo_edited, undo_failed, undo_grant_lost, undo_not_visible, undo_rule_protects, undo_still_referenced, value_refused, value_too_long, value_unreadable]
+      enum: [activity_empty, activity_held, address_erased, address_not_split, activity_link_ambiguous, activity_link_ambiguous_dropped, activity_type_unknown, activity_type_unnamed, activity_unlinked, amount_negative, author_too_long, cannot_create, cannot_create_tags, cannot_edit, cannot_edit_and_tag, cannot_link_stakeholders, cannot_read_pipelines, cannot_read_tags, cannot_write_type, close_date_future, close_date_past, company_domain_matched, company_duplicate_found, company_duplicate_skipped, company_link_on_meeting, company_name_empty, contact_duplicate_found, contact_duplicate_skipped, contact_email_held, contact_holds_lead, contact_not_found, contact_not_found_dropped, contact_channel_missing, contact_unnamed, currency_not_a_code, currency_unset, deal_already_closed, deal_company_has_contracts, deal_legal_gate, deal_not_found, deal_not_found_dropped, deal_pipeline_fixed, description_too_long, direction_unknown, domain_held, duplicate_email, duration_not_valid_for_kind, email_names_no_contact, duration_out_of_range, employer_column_empty, employer_column_empty_dropped, employer_not_found, employer_not_found_dropped, employer_refused, employer_will_create, empty_payload, field_inactive, fx_rate_missing, id_not_a_company_id, id_not_visible, id_on_non_company, lead_not_found, lead_not_found_dropped, lead_status_not_importable, lead_status_unknown, link_ambiguous, link_ambiguous_dropped, link_contact_not_imported, link_edge_unsupported, link_malformed, link_not_attachable, link_not_found, link_not_found_dropped, link_row_not_imported, link_row_skipped, link_row_skipped_dropped, link_type_unknown, linkedin_held, lost_reason_missing, meeting_not_taken_place, meeting_status_not_valid_for_kind, meeting_status_unknown, message_not_importable, natural_key_taken, not_a_date, note_repeated, not_a_domain, not_a_number, not_an_amount, not_an_email, not_yes_no, occurred_at_future, occurred_at_unnamed, option_not_allowed, option_not_in_list, options_need_semicolons, owner_refused, owner_unknown, phone_needs_country, pipeline_no_open_stage, pipeline_unknown, pipeline_unnamed, record_archived, ref_taken_by_another_company, row_key_empty, row_key_repeated, run_in_flight, size_band_invalid, stage_unknown, stage_unnamed, stored_values_kept, tag_created, tag_name_invalid, tag_new, task_not_importable, timestamp_needs_zone, too_many_links, undo_edited, undo_failed, undo_grant_lost, undo_not_visible, undo_rule_protects, undo_still_referenced, value_refused, value_too_long, value_unreadable]
       x-extensible-enum: true
       description: 'Why a row was skipped or warned about, so a screen can say it in the reader''s language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code. `run_in_flight` is the one refusal code: it answers a commit or undo on a run another attempt holds, and no row carries it.'
 
@@ -46872,9 +46928,12 @@ components:
           type: integer
           minimum: 0
           description: |
-            Links the file asks for. A dry run reports this and nothing else,
-            because resolving an endpoint is a read the dry run has not done —
-            it says how many rows named an employer, not how many will find one.
+            Links the file asks for on the rows the run lands. A link whose own
+            row is skipped is not counted, because that row is reported as a
+            skip; `unresolved` still lists it. A dry run reports this and nothing
+            else, because resolving an endpoint is a read the dry run has not
+            done — it says how many landing rows named an employer, not how many
+            will find one.
         applied:
           type: integer
           minimum: 0
@@ -47485,8 +47544,12 @@ components:
           additionalProperties: true
           description: |
             Structured machine context — e.g. `existing_id` on 409 duplicate, or an
-            `errors` array of `{ field, code, message }` on 422 validation. A `too_long`
-            entry also carries `max`, the limit in characters.
+            `errors` array of `{ field, code, message }` on 422 validation. An entry that
+            refuses at a limit also carries `max`: the limit in characters for `too_long`,
+            in rows for `too_many_rows`, in characters for `source_name`. An entry whose
+            code names other values carries them in `params`, an object of text values by
+            name, so a screen can word the code in the reader's language; `message` stays
+            the English sentence.
 
             A 429 that an agent's limit answers carries `limit`: `kind` names it (`calls`,
             `writes` or `egress` for a window allowance, `pacing` for the per-minute limit),
@@ -48803,15 +48866,18 @@ components:
             stays in `superseded_value`, and a field a human corrected stands.
             `needs_review` — a resemblance, written nowhere; open the candidate and decide.
             `proposed` — a card read from a photo that nobody matched, waiting on an approval.
-            `skipped` — the card states no name, carries a sending system's address, or matches a
-            contact the caller may not write; `reason` says which.
+            `skipped` — the card states no name or one over 120 characters, carries a sending
+            system's address, holds a value that is not readable text or cannot be stored, or
+            matches a contact the caller may not write; `reason` says which.
         contact_id:
           type: [string, 'null']
           format: uuid
           description: The contact created or updated, or — for `needs_review` — the candidate the card resembles.
         reason:
           type: [string, 'null']
-          description: Why a card was skipped, or a warning about an imported contact without a channel.
+          description: |
+            Why a card was skipped. For a written card, a warning: the contact has no channel, or the
+            card's title was cut to the length the field holds.
         lead_id:
           type: [string, 'null']
           format: uuid
@@ -60457,6 +60523,8 @@ components:
           maxItems: 10
           items: { $ref: '#/components/schemas/LatestInbound' }
         last_exchange: { $ref: '#/components/schemas/LastExchange' }
+        last_inbound: { $ref: '#/components/schemas/Activity' }
+        last_outbound: { $ref: '#/components/schemas/Activity' }
 
     LastExchange:
       type: object
@@ -72015,6 +72083,13 @@ components:
           description: >
             For a `company` hit only: the company's logo, the same URL its record carries as
             `Company.logo_url`. Absent when it has none, and on every other hit type.
+        standing:
+          allOf: [{ $ref: '#/components/schemas/SearchHitStanding' }]
+          readOnly: true
+          description: >-
+            Where a contact, company, deal, lead or project hit stands, read with the page
+            under THIS caller's grants and field masks, so a result list can say it without
+            opening each record. Absent on every other hit type.
         is_partner:
           type: [boolean, 'null']
           description: >
@@ -72049,6 +72124,48 @@ components:
             declared for connector-sourced rows and nothing emits either yet, and `null`
             means UNKNOWN rather than authoritative — this field is never guessed. A client
             must accept all four and must not expect any but the first.
+
+    SearchHitStanding:
+      type: object
+      description: >-
+        What a result list shows beside a record hit. A field that does not apply to the hit's
+        type, or that the record does not hold, is null.
+      properties:
+        state:
+          type: [string, 'null']
+          description: >-
+            A deal's status (open, won, lost), a lead's status (new, contacted, engaged,
+            promoted, disqualified) or a project's phase (initiative, pursuing, delivering,
+            closed). Null on a contact and a company.
+        stage:
+          type: [string, 'null']
+          description: A deal's stage, named in the reader's language. Null on every other type.
+        amount_minor:
+          type: [integer, 'null']
+          format: int64
+          description: >-
+            A deal's amount in minor units of `currency`. Null when the deal is unpriced, and
+            null when a field mask withholds it, which `masked_fields` then names.
+        currency:
+          type: [string, 'null']
+          description: The ISO 4217 code of `amount_minor`; null with it.
+        due_on:
+          type: [string, 'null']
+          format: date
+          description: A deal's expected close date or a project's target end date.
+        job_title:
+          type: [string, 'null']
+          description: A contact's job title. Null on every other type.
+        last_activity_at:
+          type: [string, 'null']
+          format: date-time
+          description: >-
+            When the record was last in touch: its newest logged call, mail, meeting or note.
+            Set on a contact, a company and a deal.
+        masked_fields:
+          type: array
+          items: { type: string }
+          description: The fields above a field mask withheld from this caller, by their wire names.
 
     SearchHitEmployer:
       type: object

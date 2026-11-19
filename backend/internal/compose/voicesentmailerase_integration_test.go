@@ -87,7 +87,7 @@ func TestPurgingASentMailEmptiesTheVoiceSampleReadFromIt(t *testing.T) {
 
 func TestErasingTheRecipientEmptiesTheVoiceSampleOfTheirMail(t *testing.T) {
 	l := voiceLearnedFromMail(t)
-	if err := ComposedEraser(l.env.e.Pool, nil, nil).EraseContact(l.env.e.Admin(), l.contact, "Subject requested erasure"); err != nil {
+	if err := ComposedEraser(l.env.e.Pool, nil).EraseContact(l.env.e.Admin(), l.contact, "Subject requested erasure"); err != nil {
 		t.Fatalf("erasing the contact: %v", err)
 	}
 	l.assertSampleErased(t)
@@ -183,7 +183,7 @@ func TestErasingAContactEmptiesEverySampleThatNamesThem(t *testing.T) {
 	o := &owedEnv{e: env.e, owner: env.e.Rep1, now: clocktest.Now(t)}
 	anna := o.contact(t, "Anna Berg", "anna@customer.example")
 
-	if err := ComposedEraser(env.e.Pool, nil, nil).EraseContact(env.e.Admin(), anna, "Subject requested erasure"); err != nil {
+	if err := ComposedEraser(env.e.Pool, nil).EraseContact(env.e.Admin(), anna, "Subject requested erasure"); err != nil {
 		t.Fatalf("erasing the contact: %v", err)
 	}
 	for _, text := range []string{byName, byAddress, bracketed, italic, bold, sentenceEnd} {
@@ -206,7 +206,7 @@ func TestASingleWordNameEmptiesNoSampleByName(t *testing.T) {
 	o := &owedEnv{e: env.e, owner: env.e.Rep1, now: clocktest.Now(t)}
 	madonna := o.contact(t, "Madonna", "madonna@customer.example")
 
-	if err := ComposedEraser(env.e.Pool, nil, nil).EraseContact(env.e.Admin(), madonna, "Subject requested erasure"); err != nil {
+	if err := ComposedEraser(env.e.Pool, nil).EraseContact(env.e.Admin(), madonna, "Subject requested erasure"); err != nil {
 		t.Fatalf("erasing the contact: %v", err)
 	}
 	if sampleEmptied(t, o, samples[greeting]) {

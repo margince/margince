@@ -343,8 +343,8 @@ func appendDealFilters(ctx context.Context, where []string, in ListDealsInput, a
 	if !in.IncludeArchived {
 		where = append(where, "archived_at IS NULL")
 	}
-	if in.Query != nil && *in.Query != "" {
-		where = append(where, storekit.QuickFindClause(arg(*in.Query), dealNameColumn))
+	if q, ok := storekit.QuickFindQuery(in.Query); ok {
+		where = append(where, storekit.QuickFindClause(arg(q), dealNameColumn))
 	}
 	if in.PipelineID != nil {
 		where = append(where, storekit.SQLf("pipeline_id = $%d", arg(*in.PipelineID)))

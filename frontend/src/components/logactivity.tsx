@@ -71,7 +71,7 @@ import { MeetingAttendeeFields } from "./meetingattendees";
 import { useTaskUpdate } from "./taskwrite";
 import { useUnsavedGuard } from "./unsaved";
 
-export type OpeningKind = "note" | "task" | "call";
+export type OpeningKind = "note" | "task" | "call" | "meeting";
 
 function dueBoundsOf(
   kind: ActivityDraft["kind"],

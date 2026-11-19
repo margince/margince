@@ -3,10 +3,11 @@
 #
 # The input is what `docker buildx bake bundle` exports: one folder per platform
 # (linux_amd64/, linux_arm64/), each the Dockerfile's `bundle` stage. Each
-# tarball adds two things the stage cannot hold:
+# tarball adds what the stage cannot hold:
 #
-#   VERSION                 the release and the commit, for a reader who has the
-#                           files and nothing else
+#   VERSION, REVISION       the release and the commit, one line each, as the
+#                           repository root holds them, for a reader who has
+#                           the files and nothing else
 #   deploy/server/web.conf  the web image's own nginx.conf, moved off the port
 #                           the api listens on and onto the bundle's web/ folder
 #
@@ -90,7 +91,8 @@ for arch in amd64 arm64; do
 	cp -R "$from/." "$work/$name/"
 	chmod +x "$work/$name"/bin/* "$work/$name"/deploy/*.sh
 	web_conf >"$work/$name/deploy/server/web.conf"
-	printf 'version=%s\nrevision=%s\n' "$version" "$revision" >"$work/$name/VERSION"
+	printf '%s\n' "${version#v}" >"$work/$name/VERSION"
+	printf '%s\n' "$revision" >"$work/$name/REVISION"
 	tar -czf "$out/$name.tar.gz" -C "$work" "$name"
 	echo "release-bundle: packed $out/$name.tar.gz"
 done
