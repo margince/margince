@@ -56,7 +56,7 @@ type Service struct {
 	seatBatch      SeatBatchReader
 	mailCoverage   mailcoverage.Reader
 	lane           Completer
-	routingVersion string
+	routingVersion func() string
 	now            func() time.Time
 }
 
@@ -79,10 +79,19 @@ func (s *Service) WithSeats(read SeatReader) *Service {
 
 // WithLane binds the deal_health lane that writes the card's words. Without
 // it every card is the deterministic floor, which is a working card.
-func (s *Service) WithLane(lane Completer, routingVersion string) *Service {
+// routingVersion is read per card, so a rebind moves the fingerprint.
+func (s *Service) WithLane(lane Completer, routingVersion func() string) *Service {
 	s.lane = lane
 	s.routingVersion = routingVersion
 	return s
+}
+
+// routing is the binding the card is fingerprinted under; empty with no lane.
+func (s *Service) routing() string {
+	if s.routingVersion == nil {
+		return ""
+	}
+	return s.routingVersion()
 }
 
 // facts are the inputs the card is written from.

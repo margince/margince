@@ -1,5 +1,10 @@
 import { useEffect, useState } from "react";
 import type { components } from "../../api/schema";
+import {
+  KeyTestButton,
+  KeyTestOutcome,
+  useTestProviderKey,
+} from "../../components/ai-provider-key-test";
 import { Badge, Button, EmptyState } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { ConfirmModal } from "../../design-system/confirmmodal";
@@ -26,11 +31,6 @@ import {
   useRemoveProviderKey,
   useSetProviderKey,
 } from "./ai-provider-key-hooks";
-import {
-  KeyTestButton,
-  KeyTestOutcome,
-  useTestProviderKey,
-} from "./ai-provider-key-test";
 import { isOpenRouter } from "./ai-provider-links";
 import {
   hasProviderSettings,
