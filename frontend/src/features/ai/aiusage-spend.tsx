@@ -7,8 +7,8 @@ import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { formatDayMonth, formatMoney, formatNumber } from "../../format/format";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import { aiTaskLabel } from "../../lib/ai-task-label";
+import { tierLabel, tierRank } from "../../lib/ai-tier-label";
 import { useViewerZone } from "../../lib/viewerzone";
-import { tierLabel, tierRank } from "./ai-decision-labels";
 import { TaskName } from "./ai-task-name";
 
 type AiUsage = components["schemas"]["AiUsage"];
@@ -212,6 +212,7 @@ function taskColumn(t: Translator): DataTableColumn<SpendRow> {
           <CellStack>
             <TaskName
               name={aiTaskLabel(row.task, t, row.name)}
+              task={row.task}
               summary={row.summary}
             />
             {row.tier !== undefined && (

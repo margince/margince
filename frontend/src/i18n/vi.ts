@@ -3048,7 +3048,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "record.companyRoutingKey": "Khóa định tuyến công ty",
   "record.companyRoutingKeyWhy": "Khóa định tuyến công ty dùng để làm gì",
   "record.companyRoutingKeyHelp":
-    "Tên miền web của công ty, ví dụ example.com, hoặc một tên ngắn của công ty. Quy tắc phân bổ lead có thể so khớp với nó, và tên miền mà một công ty trong Margince đang giữ sẽ gợi ý công ty đó.",
+    "Tên miền web của công ty, ví dụ example.com, hoặc dạng rút gọn của tên công ty khi chưa biết tên miền. Quy tắc phân bổ có thể so khớp với nó, và Margince gợi ý công ty đang giữ tên miền đó.",
   "record.finishFieldEdit":
     "Lưu hoặc hủy chỉnh sửa hiện tại trước khi đóng chi tiết.",
   "record.save": "Lưu",
@@ -3201,7 +3201,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "commission.column.rate": "Tỷ lệ",
   "commission.column.basis": "Giá trị deal",
   "commission.column.status": "Trạng thái",
-  "commission.column.date": "Ngày",
   "commission.status.accrued": "Đã ghi nhận",
   "commission.status.approved": "Đã duyệt",
   "commission.status.paid": "Đã thanh toán",
@@ -7256,7 +7255,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "common.duplicate.leadHolds":
     "Một lead đã có địa chỉ email hoặc hồ sơ LinkedIn này, nên chưa tạo liên hệ nào.",
   "common.duplicate.contactHolds":
-    "Một liên hệ đã có địa chỉ email hoặc hồ sơ LinkedIn này, và mỗi người chỉ là lead hoặc liên hệ. Với cơ hội mới, hãy tạo một deal cho liên hệ đó.",
+    "Một liên hệ đã có địa chỉ email hoặc hồ sơ LinkedIn này. Với cơ hội mới, hãy tạo một deal cho liên hệ đó.",
   "contact.leadHeld.title": "Đây đã là một lead.",
   "contact.leadHeld.body":
     "Ai cũng chỉ là lead hoặc liên hệ, không bao giờ là cả hai. Hãy chuyển đổi lead thành liên hệ; lịch sử của lead sẽ đi theo.",
@@ -9821,11 +9820,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "import.object.contact": "Liên hệ",
   "import.object.deal": "Deal",
   "import.object.activity": "Hoạt động",
-  "import.profiled": "Số dòng đã phân tích từ đầu tệp: {rows}.",
+  "import.profiled_one": "“Đã điền” và “Giá trị” lấy từ dòng đầu tiên của tệp.",
+  "import.profiled_other":
+    "“Đã điền” và “Giá trị” lấy từ {count} dòng đầu tiên của tệp.",
   "import.mappingTable": "Ánh xạ cột",
   "import.col.column": "Cột",
   "import.col.filled": "Đã điền",
-  "import.col.filledHint": "Tỷ lệ dòng trong tệp này có giá trị ở cột",
+  "import.col.filledHint": "Tỷ lệ dòng đã đọc có giá trị ở cột",
   "import.col.samples": "Giá trị",
   "import.col.destination": "Trường",
   "import.dontImport": "Không nhập",
@@ -9858,6 +9859,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "import.hub.uploadLabel": "Tải dữ liệu lên",
   "import.hub.uploadHint":
     "Tệp ZIP gồm các tệp CSV, hoặc một tệp CSV. Tối đa {mb} MB.",
+  "import.hub.uploadHintCsv": "Một tệp CSV. Tối đa {mb} MB.",
   "import.hub.uploadEmpty": "Chọn tệp hoặc thả vào đây",
   "import.hub.csvOnly": "Ở đây chỉ nhập được tệp CSV. Chọn một tệp .csv.",
   "import.hub.order": "Thứ tự nhập:",
@@ -9886,6 +9888,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "import.closed.stopped":
     "Lần nhập này đã dừng trước khi nhập bất kỳ dữ liệu nào.",
   "import.closed.upload": "Tải tệp lên",
+  "import.missing.title": "Không tìm thấy lần nhập",
+  "import.missing.body": "Lần nhập này không tồn tại hoặc đã bị xóa.",
   "import.cancelFailed": "Chưa hủy được lần nhập này",
   "import.conflictDismiss": "Đã hiểu",
   "import.conflictOtherTab":
@@ -9902,6 +9906,74 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "import.upload.tooManyRowsTitle": "Tệp quá dài cho một lần chạy thử",
   "import.upload.tooManyRows":
     "Tệp này có nhiều hàng hơn mức một lần chạy thử có thể đọc. Hãy chia thành các tệp nhỏ hơn và nhập từng tệp.",
+  "import.refusal.inFile": "Trong “{file}”: {sentence}",
+  "import.refusal.notUtf8":
+    "Tệp không được lưu ở dạng UTF-8. Lưu tệp ở dạng CSV UTF-8 rồi tải lên lại.",
+  "import.refusal.unreadable": "Không đọc được tệp. Tải tệp lên lại.",
+  "import.refusal.unreadable.line":
+    "Không đọc được dòng {line}. Sửa dòng đó rồi tải tệp lên lại.",
+  "import.refusal.unreadable.fieldCount":
+    "Dòng {line} có nhiều hoặc ít trường hơn dòng tiêu đề. Sửa dòng đó rồi tải tệp lên lại.",
+  "import.refusal.unreadable.quote":
+    "Dòng {line} có dấu ngoặc kép đặt sai chỗ. Sửa dòng đó rồi tải tệp lên lại.",
+  "import.refusal.header":
+    "Không dùng được dòng tiêu đề. Đặt cho mỗi cột một tên riêng rồi tải tệp lên lại.",
+  "import.refusal.header.repeatedName":
+    "Dòng tiêu đề có tên “{name}” hai lần. Đặt cho mỗi cột một tên riêng rồi tải tệp lên lại.",
+  "import.refusal.header.blankName":
+    "Cột {position} của dòng tiêu đề không có tên. Đặt tên cho mọi cột rồi tải tệp lên lại.",
+  "import.refusal.header.noHeader":
+    "Tệp không có dòng tiêu đề. Ghi tên các cột ở dòng đầu tiên rồi tải tệp lên lại.",
+  "import.refusal.bundle":
+    "Không nhập được tệp ZIP. Kiểm tra các tệp bên trong rồi tải lên lại.",
+  "import.refusal.bundle.twoFilesOneType":
+    "“{other_file}” và “{file}” đều là {object}. Giữ một tệp rồi tải tệp ZIP lên lại.",
+  "import.refusal.bundle.tooManyFiles":
+    "Tệp ZIP có {files} tệp, mỗi lần nhập đọc tối đa {max_files} tệp. Bỏ các tệp không cần nhập rồi tải lên lại.",
+  "import.refusal.bundle.empty":
+    "Tệp ZIP trống. Thêm một tệp CSV cho mỗi loại hồ sơ rồi tải lên lại.",
+  "import.refusal.bundle.notAZip":
+    "Không mở được tệp ZIP. Tạo lại tệp ZIP rồi tải lên.",
+  "import.refusal.bundle.filesTooLarge":
+    "Các tệp trong tệp ZIP cộng lại lớn hơn {max_mb} MB. Chia ra nhiều tệp ZIP nhỏ hơn và nhập từng tệp.",
+  "import.refusal.bundle.zipTooLarge":
+    "Tệp ZIP lớn hơn {max_mb} MB, mức tối đa của một lần tải lên. Chia ra nhiều tệp ZIP nhỏ hơn.",
+  "import.refusal.bundle.passwordProtected":
+    "“{file}” có mật khẩu. Gỡ mật khẩu rồi tải tệp ZIP lên lại.",
+  "import.refusal.bundle.fileDamaged":
+    "“{file}” trong tệp ZIP bị hỏng. Tạo lại tệp ZIP rồi tải lên.",
+  "import.refusal.bundle.fileMissing":
+    "“{file}” không có trong tệp ZIP. Tải tệp ZIP lên lại.",
+  "import.refusal.bundle.typeNotImportable":
+    "“{object}” không phải loại hồ sơ có thể nhập. Bỏ tệp đó rồi tải tệp ZIP lên lại.",
+  "import.refusal.tooManyRows":
+    "Tệp này có {rows} dòng, một lần chạy thử đọc tối đa {max} dòng. Chia thành các tệp nhỏ hơn và nhập từng tệp.",
+  "import.refusal.unsupported":
+    "Mỗi lần nhập nhận công ty, liên hệ, lead, deal hoặc hoạt động. Chọn loại mà tệp chứa.",
+  "import.refusal.duplicateTarget":
+    "Hai cột được ánh xạ vào cùng một trường. Mỗi trường chỉ ánh xạ một cột.",
+  "import.refusal.duplicateTarget.named":
+    "Cột “{other_column}” và cột “{column}” đều ánh xạ vào “{target}”. Mỗi trường chỉ ánh xạ một cột.",
+  "import.refusal.unmappable":
+    "Không cột nào xác định từng dòng. Ánh xạ một cột vào trường phân biệt các dòng.",
+  "import.refusal.unmappable.target":
+    "Không cột nào xác định từng dòng. Ánh xạ một cột vào “{target}”.",
+  "import.refusal.unmappable.targetOrRef":
+    "Không cột nào xác định từng dòng. Ánh xạ một cột vào “{target}” hoặc “{ref_target}”.",
+  "import.refusal.fileEmpty":
+    "Tệp trống. Chọn tệp có dòng tiêu đề rồi tải lên lại.",
+  "import.refusal.objectMismatch":
+    "Tệp không chứa loại hồ sơ đã chọn cho nó. Kiểm tra “Nhập dưới dạng” rồi chạy thử lại.",
+  "import.refusal.mappingEmpty":
+    "Chưa có cột nào được ánh xạ vào trường. Ánh xạ ít nhất một cột rồi chạy thử lại.",
+  "import.refusal.unknownColumn":
+    "Bản ánh xạ có một cột mà tệp không có. Tải tệp lên lại rồi ánh xạ các cột.",
+  "import.refusal.unknownTarget":
+    "Một cột được ánh xạ vào trường mà loại hồ sơ này không nhận. Chọn trường khác cho cột đó.",
+  "import.refusal.unmappedColumn":
+    "Cột xác định từng dòng chưa được ánh xạ. Ánh xạ cột đó vào một trường rồi chạy thử lại.",
+  "import.refusal.sourceName":
+    "Tên nguồn này không hợp lệ. Dùng tối đa {max} ký tự: chữ cái A đến Z, chữ số, dấu cách, dấu chấm, dấu gạch dưới và dấu gạch nối.",
   "import.undoConfirm.title": "Hoàn tác lần nhập này?",
   "import.undoConfirm.confirm": "Hoàn tác lần nhập",
   "import.undoConfirm.order": "Hoàn tác theo thứ tự ngược: {order}.",
@@ -9946,7 +10018,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "import.wizard.cancel": "Hủy",
   "import.files.table": "Tệp trong lần tải lên",
   "import.files.col.file": "Tệp",
-  "import.files.col.rows": "Số dòng đã đọc",
+  "import.files.col.rows": "Dòng",
   "import.files.col.type": "Nhập dưới dạng",
   "import.files.columns_one": "1 cột",
   "import.files.columns_other": "{count} cột",
@@ -9961,12 +10033,25 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "import.files.sourceName": "Tên nguồn",
   "import.files.sourceNameHint":
     "Dùng cùng tên ở lần tải lên sau để cập nhật các hồ sơ này thay vì thêm lại.",
+  "import.files.sourceNameRule":
+    "Tối đa {max} ký tự: chữ cái A đến Z, chữ số, dấu cách, dấu chấm, dấu gạch dưới và dấu gạch nối.",
+  "import.files.sourceNameInvalid":
+    "Tên nguồn có ký tự không được phép. Chỉ dùng chữ cái A đến Z, chữ số, dấu cách, dấu chấm, dấu gạch dưới hoặc dấu gạch nối.",
+  "import.files.guessed": "Loại hồ sơ được chọn theo các cột",
+  "import.files.guessedCheck":
+    "Tên tệp không nêu loại hồ sơ. Kiểm tra “Nhập dưới dạng” trước khi tiếp tục.",
+  "import.files.unguessed": "Không nhận ra loại hồ sơ",
+  "import.files.unguessedChoose":
+    "Cả tên tệp lẫn các cột đều không nêu loại hồ sơ. Chọn loại ở “Nhập dưới dạng”.",
+  "import.files.retireFailed": "Chưa hủy được bản nháp trước của tệp này",
   "import.files.noneTyped": "Chọn loại hồ sơ cho ít nhất một tệp.",
   "import.files.clash":
     "{first} và {second} đều là {type}. Mỗi loại chỉ nhận một tệp.",
   "import.files.next_one": "Tiếp: ánh xạ 1 tệp",
   "import.files.next_other": "Tiếp: ánh xạ {count} tệp",
   "import.map.tabs": "Tệp cần ánh xạ",
+  "import.map.leftOut_one": "1 cột không nhập",
+  "import.map.leftOut_other": "{count} cột không nhập",
   "import.map.lead":
     "{file} dưới dạng {type}. Cột để ở “Không nhập” sẽ bị bỏ qua.",
   "import.map.link": "liên kết",
@@ -10044,11 +10129,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "import.test.nothing.skipped":
     "Hãy tải problems.csv trước khi bấm Xong: tệp liệt kê các hàng bị bỏ qua và lý do.",
   "import.test.nothing.done": "Xong",
+  "import.test.nothing.empty": "Tệp có dòng tiêu đề nhưng không có dòng nào.",
   "import.test.reupload": "Sửa và tải lại",
   "import.test.issuesUnit": "vấn đề",
   "import.test.import_one": "Nhập 1 dòng",
   "import.test.import_other": "Nhập {count} dòng",
-  "import.test.importAnyway": "Vẫn nhập",
+  "import.test.importAnyway_one": "Vẫn nhập 1 dòng",
+  "import.test.importAnyway_other": "Vẫn nhập {count} dòng",
   "import.test.counts": "Số dòng theo loại hồ sơ",
   "import.test.testing": "Đang kiểm tra tệp của bạn…",
   "import.test.stop": "Dừng kiểm tra",

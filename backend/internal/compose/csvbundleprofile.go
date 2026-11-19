@@ -11,6 +11,7 @@ import (
 	"log/slog"
 	"slices"
 
+	"github.com/margince/margince/backend/internal/compose/importwire"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/migration"
 )
@@ -23,7 +24,7 @@ func (h importHandlers) profileBundle(
 ) (crmcontracts.ImportSourceProfile, error) {
 	bundle, err := migration.OpenBundle(upload.Body, h.uploadLimit)
 	if err != nil {
-		return crmcontracts.ImportSourceProfile{}, importProblem(err)
+		return crmcontracts.ImportSourceProfile{}, importwire.Problem(err)
 	}
 	// OpenBundle matches every part to an object of ImportOrder, so each has a rank.
 	ordered := slices.Clone(bundle.Parts)
@@ -40,7 +41,7 @@ func (h importHandlers) profileBundle(
 	for _, part := range ordered {
 		profiled, err := profilePart(ctx, bundle, part, catalogs)
 		if err != nil {
-			return crmcontracts.ImportSourceProfile{}, importProblem(err)
+			return crmcontracts.ImportSourceProfile{}, importwire.Problem(err)
 		}
 		parts = append(parts, profiled)
 		seeded = append(seeded, migration.PartMapping{
@@ -62,7 +63,7 @@ func (h importHandlers) profileBundle(
 	if err != nil {
 		return crmcontracts.ImportSourceProfile{}, err
 	}
-	sourceName := suggestedSourceName(upload.FileName)
+	sourceName := importwire.SuggestedSourceName(upload.FileName)
 	out := crmcontracts.ImportSourceProfile{
 		SourceRef:           key,
 		FileName:            &upload.FileName,
@@ -88,23 +89,19 @@ func profilePart(
 		return crmcontracts.ImportPartProfile{}, err
 	}
 	if err := migration.CheckUTF8(body); err != nil {
-		return crmcontracts.ImportPartProfile{}, fmt.Errorf("%s: %w", part.Entry, err)
+		return crmcontracts.ImportPartProfile{}, migration.InEntry(part.Entry, err)
 	}
 	profile, err := migration.ProfileCSV(bytes.NewReader(body), migration.ProfileRowLimit)
 	if err != nil {
-		return crmcontracts.ImportPartProfile{}, fmt.Errorf("%s: %w", part.Entry, err)
+		return crmcontracts.ImportPartProfile{}, migration.InEntry(part.Entry, err)
 	}
 	rows, err := migration.CountRecords(bytes.NewReader(body))
 	if err != nil {
-		return crmcontracts.ImportPartProfile{}, fmt.Errorf("%s: %w", part.Entry, err)
+		return crmcontracts.ImportPartProfile{}, migration.InEntry(part.Entry, err)
 	}
-	suggestions := make(map[string]map[string]string, len(migration.ImportOrder))
-	for _, object := range migration.ImportOrder {
-		targets, err := importTargets(object, catalogs[object])
-		if err != nil {
-			return crmcontracts.ImportPartProfile{}, err
-		}
-		suggestions[object] = suggestImportMapping(profile, targets, catalogs[object])
+	suggestions, err := suggestionsByObject(profile, catalogs, migration.ImportOrder)
+	if err != nil {
+		return crmcontracts.ImportPartProfile{}, err
 	}
 	return crmcontracts.ImportPartProfile{
 		File:              part.Entry,

@@ -194,6 +194,21 @@ describe("Chip is a fact, and a link when the fact has somewhere to go", () => {
     expect(screen.getByText("glazedfrog.example")).toBeTruthy();
   });
 
+  it("wraps a name only where the caller asks for it read whole", () => {
+    render(
+      <>
+        <Chip icon={MapPin}>London, UK</Chip>
+        <Chip icon={MapPin} wrap>
+          Maximilian Konstantinopoulou-Wertheimer
+        </Chip>
+      </>,
+    );
+    const wraps = (text: string) =>
+      screen.getByText(text).closest(".chip")?.classList.contains("chip-wrap");
+    expect(wraps("London, UK")).toBe(false);
+    expect(wraps("Maximilian Konstantinopoulou-Wertheimer")).toBe(true);
+  });
+
   it("opens an off-origin destination in a new tab without an opener or referrer", () => {
     render(
       <Chip icon={Globe} href="https://glazedfrog.example">

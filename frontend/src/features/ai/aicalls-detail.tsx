@@ -21,6 +21,7 @@ import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { providerName } from "../../lib/ai-provider-names";
 import { aiTaskLabel } from "../../lib/ai-task-label";
+import { tierLabel } from "../../lib/ai-tier-label";
 import { valueFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -28,8 +29,8 @@ import {
   attemptReasonLabel,
   callCodeName,
   callCodeTone,
-  tierLabel,
 } from "./ai-decision-labels";
+import { TaskName } from "./ai-task-name";
 import {
   type AiCallSummary,
   costLabel,
@@ -367,7 +368,12 @@ export function CallDrawer({
     >
       <DrawerHead>
         <Heading size="large" id={titleId} className="t-h2 modal-title">
-          {aiTaskLabel(call.task, t, call.task_display_name)}
+          <TaskName
+            name={aiTaskLabel(call.task, t, call.task_display_name)}
+            task={call.task}
+            summary={undefined}
+            inTitle
+          />
         </Heading>
         <div className="aicalls-drawer-meta">
           <StatusBadge
