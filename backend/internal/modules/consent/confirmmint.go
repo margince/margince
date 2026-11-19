@@ -258,7 +258,7 @@ const (
 // no delivery is a link nobody was sent.
 const stagedLinkSQL = `EXISTS (SELECT 1 FROM comms_outbound o WHERE o.link_id = ct.id)`
 
-// pendingLinkSQL is the single definition of a pending confirmation: unspent,
+// pendingLinkSQL says what a pending confirmation is: unspent,
 // unexpired at the given instant, and staged. The dedupe, the API marker and
 // the consent panel all read it. nowArg is a placeholder or SQL expression.
 func pendingLinkSQL(nowArg string) string {
