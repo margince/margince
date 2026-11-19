@@ -7474,7 +7474,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "create.dateRangeReversed":
     "Das Enddatum liegt vor dem Startdatum. Wähle ein späteres Enddatum.",
   "create.countryCodeInvalid":
-    "Gib das Land als zweistelligen Code ein, etwa DE oder US.",
+    "Gib das Land als Code aus zwei Buchstaben ein, etwa DE oder US.",
   "create.referenceNotFound":
     "Dieser Datensatz existiert nicht mehr, oder du kannst ihn nicht sehen.",
   "create.currency": "Währung",

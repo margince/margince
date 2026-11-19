@@ -2825,7 +2825,7 @@
   "create.linkedinNotLinkedin": "Gib einen Link zu einer Seite auf linkedin.com ein.",
   "create.linkedinNotProfile": "Gib einen Link zu einem persönlichen Profil ein, etwa linkedin.com/in/name.",
   "create.dateRangeReversed": "Das Enddatum liegt vor dem Startdatum. Wähle ein späteres Enddatum.",
-  "create.countryCodeInvalid": "Gib das Land als zweistelligen Code ein, etwa DE oder US.",
+  "create.countryCodeInvalid": "Gib das Land als Code aus zwei Buchstaben ein, etwa DE oder US.",
   "create.referenceNotFound": "Dieser Datensatz existiert nicht mehr, oder du kannst ihn nicht sehen.",
   "create.stage": "Phase",
   "create.expectedClose": "Erwarteter Abschluss",
