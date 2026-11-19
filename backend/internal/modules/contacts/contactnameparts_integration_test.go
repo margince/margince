@@ -8,6 +8,7 @@ package contacts
 import (
 	"context"
 	"errors"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -79,7 +80,8 @@ func TestChangingANamePartUpdatesOnlyAPlainJoinedDisplayName(t *testing.T) {
 // refused on full_name, and the stored name stays.
 func TestAnImportedPartJoiningPastTheBoundIsRefused(t *testing.T) {
 	e := setupDedupe(t)
-	last := strings.Repeat("b", 100)
+	part := ContactNameLimit * 2 / 3
+	last := strings.Repeat("b", part)
 	created, err := e.store.CreateContact(e.as(), CreateContactInput{
 		FullName: "Ada " + last, FirstName: new("Ada"), LastName: &last, Source: "manual",
 	})
@@ -88,10 +90,10 @@ func TestAnImportedPartJoiningPastTheBoundIsRefused(t *testing.T) {
 	}
 	id := ids.From[ids.ContactKind](ids.UUID(created.Id))
 	imported := storekit.WithImportRun(e.as(), ids.NewV7())
-	_, err = e.store.UpdateContact(imported, id, UpdateContactInput{FirstName: new(strings.Repeat("a", 150))})
+	_, err = e.store.UpdateContact(imported, id, UpdateContactInput{FirstName: new(strings.Repeat("a", part))})
 	refusal, ok := errors.AsType[*httperr.DetailedError](err)
-	if !ok || len(refusal.Fields) != 1 || refusal.Fields[0].Field != contactNameColumn || !strings.Contains(refusal.Detail, "this one has 251") {
-		t.Fatalf("err = %v, want full_name refused at 251 characters", err)
+	if !ok || len(refusal.Fields) != 1 || refusal.Fields[0].Field != contactNameColumn || !strings.Contains(refusal.Detail, "this one has "+strconv.Itoa(2*part+1)) {
+		t.Fatalf("err = %v, want full_name refused at %d characters", err, 2*part+1)
 	}
 	got, err := e.store.GetContact(e.as(), id, storekit.LiveOnly)
 	if err != nil || got.FullName != created.FullName {

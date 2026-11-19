@@ -69768,7 +69768,7 @@ type VCardImportResult struct {
 	// stays in `superseded_value`, and a field a human corrected stands.
 	// `needs_review` — a resemblance, written nowhere; open the candidate and decide.
 	// `proposed` — a card read from a photo that nobody matched, waiting on an approval.
-	// `skipped` — the card states no name or one over 200 characters, carries a sending
+	// `skipped` — the card states no name or one over 120 characters, carries a sending
 	// system's address, or matches a contact the caller may not write; `reason` says which.
 	Outcome VCardImportResultOutcome `json:"outcome"`
 
@@ -69782,7 +69782,7 @@ type VCardImportResult struct {
 // stays in `superseded_value`, and a field a human corrected stands.
 // `needs_review` — a resemblance, written nowhere; open the candidate and decide.
 // `proposed` — a card read from a photo that nobody matched, waiting on an approval.
-// `skipped` — the card states no name or one over 200 characters, carries a sending
+// `skipped` — the card states no name or one over 120 characters, carries a sending
 // system's address, or matches a contact the caller may not write; `reason` says which.
 type VCardImportResultOutcome string
 

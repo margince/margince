@@ -151,7 +151,7 @@ func TestADescriptionOverTheColumnsLengthIsAProblemOfItsCell(t *testing.T) {
 // A contact name part keeps the capture bound, counted in characters. One at
 // the bound lands; one past it is refused on its own cell with its length.
 func TestAContactNameCellPastTheImportBoundIsAProblemOfItsCell(t *testing.T) {
-	atCap := strings.Repeat("ü", contacts.ImportedNameLimit)
+	atCap := strings.Repeat("ü", contacts.ContactNameLimit)
 	for _, target := range []string{fieldFullName, "first_name", "last_name"} {
 		fields := map[string]string{fieldFullName: "Anna Weber", target: atCap}
 		if _, problem := checkRow(migration.ObjectContact, fields, importCatalog{}); problem != nil {
@@ -159,8 +159,8 @@ func TestAContactNameCellPastTheImportBoundIsAProblemOfItsCell(t *testing.T) {
 		}
 		fields[target] = atCap + "x"
 		_, problem := checkRow(migration.ObjectContact, fields, importCatalog{})
-		want := "This value is " + strconv.Itoa(contacts.ImportedNameLimit+1) + " characters. The field holds at most " +
-			strconv.Itoa(contacts.ImportedNameLimit) + "."
+		want := "This value is " + strconv.Itoa(contacts.ContactNameLimit+1) + " characters. The field holds at most " +
+			strconv.Itoa(contacts.ContactNameLimit) + "."
 		if problem == nil || problem.Target != target || problem.Why.Code != migration.ReasonValueTooLong || problem.Message != want {
 			t.Fatalf("%s problem = %+v, want the cell refused as %q", target, problem, want)
 		}
@@ -170,13 +170,15 @@ func TestAContactNameCellPastTheImportBoundIsAProblemOfItsCell(t *testing.T) {
 // Two name parts that fit alone but join past the bound are refused as the full
 // name the join would store. A join at the bound lands.
 func TestContactNamePartsJoiningPastTheImportBoundAreAProblemOfTheFullName(t *testing.T) {
-	fits := map[string]string{"first_name": strings.Repeat("a", 100), "last_name": strings.Repeat("b", 99)}
+	limit := contacts.ContactNameLimit
+	fits := map[string]string{"first_name": strings.Repeat("a", limit/2), "last_name": strings.Repeat("b", limit-limit/2-1)}
 	if _, problem := checkRow(migration.ObjectContact, fits, importCatalog{}); problem != nil {
-		t.Fatalf("problem = %+v, want none for parts joining to %d characters", problem, contacts.ImportedNameLimit)
+		t.Fatalf("problem = %+v, want none for parts joining to %d characters", problem, limit)
 	}
-	over := map[string]string{"first_name": strings.Repeat("a", 150), "last_name": strings.Repeat("b", 150)}
+	part := limit * 2 / 3
+	over := map[string]string{"first_name": strings.Repeat("a", part), "last_name": strings.Repeat("b", part)}
 	_, problem := checkRow(migration.ObjectContact, over, importCatalog{})
-	want := "This value is 301 characters. The field holds at most " + strconv.Itoa(contacts.ImportedNameLimit) + "."
+	want := "This value is " + strconv.Itoa(2*part+1) + " characters. The field holds at most " + strconv.Itoa(limit) + "."
 	if problem == nil || problem.Target != fieldFullName || problem.Why.Code != migration.ReasonValueTooLong || problem.Message != want {
 		t.Fatalf("problem = %+v, want the joined full name refused as %q", problem, want)
 	}

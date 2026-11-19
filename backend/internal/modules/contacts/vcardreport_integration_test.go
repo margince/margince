@@ -206,7 +206,7 @@ func TestACardPastTheNameBoundIsSkippedAndACutTitleIsReported(t *testing.T) {
 		t.Fatalf("results = %+v, want two", results)
 	}
 	if got := results[0]; got.Outcome != VCardSkipped || got.ContactID != nil ||
-		got.Reason != "The name is 410 characters. A contact name holds at most 200." {
+		got.Reason != "The name is 410 characters. A contact name holds at most "+strconv.Itoa(ContactNameLimit)+"." {
 		t.Errorf("long name = %+v, want it skipped with its length", got)
 	}
 	created := results[1]

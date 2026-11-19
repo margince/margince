@@ -258,17 +258,13 @@ func movesANamePart(in UpdateContactInput) bool {
 }
 
 // contactEditPatch reads the edit as written and builds the column patch. It
-// refuses a typed name past the label limit, and an imported full name past the import bound.
+// refuses a typed or imported name, or the full name its parts join to, past ContactNameLimit.
 func contactEditPatch(
 	ctx context.Context, current crmcontracts.Contact, in UpdateContactInput, active []fieldcatalog.Column,
 ) (UpdateContactInput, *storekit.Patch, error) {
 	in = updateAsWritten(current, in, active)
-	if typedWrite(ctx) {
+	if typedWrite(ctx) || storekit.ImportRunOf(ctx) != nil {
 		if err := checkChangedContactNames(current, in); err != nil {
-			return in, nil, err
-		}
-	} else if storekit.ImportRunOf(ctx) != nil {
-		if err := checkImportedFullName(current, in); err != nil {
 			return in, nil, err
 		}
 	}

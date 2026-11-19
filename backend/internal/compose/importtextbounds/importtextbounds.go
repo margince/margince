@@ -29,8 +29,8 @@ var reasons = map[string]migration.ReasonCode{migration.ObjectCompany + ".descri
 func Refusal(object string, fields map[string]string) (target string, why migration.Reason, refused bool) {
 	if object == migration.ObjectContact {
 		// The registry exempts the name columns; the contacts module owns their import bound.
-		if column, length, over := contacts.OverlongImportedName(fields); over {
-			return column, tooLong(migration.ReasonValueTooLong, length, contacts.ImportedNameLimit), true
+		if column, length, over := contacts.OverlongContactName(fields); over {
+			return column, tooLong(migration.ReasonValueTooLong, length, contacts.ContactNameLimit), true
 		}
 	}
 	for _, target := range slices.Sorted(maps.Keys(fields)) {

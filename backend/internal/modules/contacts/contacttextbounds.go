@@ -5,6 +5,8 @@ package contacts
 
 import (
 	"context"
+	"strings"
+	"unicode/utf8"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -32,13 +34,33 @@ func checkCompanyEditText(ctx context.Context, current crmcontracts.Company, in 
 	return checkCompanyDescription(in.Description)
 }
 
+// ContactNameLimit is the most characters a contact name holds: each part, and
+// the full name they join to. A typed name and an imported one answer to it alike.
+const ContactNameLimit = values.TextLabelCharacters
+
+// OverlongContactName answers the first of full_name, first_name and last_name
+// whose trimmed text is past ContactNameLimit, and its length. Two parts that
+// fit alone but join past the limit answer full_name, the column the join fills.
+func OverlongContactName(names map[string]string) (column string, length int, over bool) {
+	for _, column := range []string{contactNameColumn, columnFirstName, columnLastName} {
+		if length := utf8.RuneCountInString(strings.TrimSpace(names[column])); length > ContactNameLimit {
+			return column, length, true
+		}
+	}
+	joined := JoinNameParts(names[columnFirstName], names[columnLastName])
+	if length := utf8.RuneCountInString(joined); length > ContactNameLimit {
+		return contactNameColumn, length, true
+	}
+	return "", 0, false
+}
+
 func checkTypedContactNames(full string, first, last *string) error {
 	for _, field := range []struct {
 		name  string
 		value *string
 	}{{contactNameColumn, &full}, {columnFirstName, first}, {columnLastName, last}} {
 		if field.value != nil {
-			if err := httperr.RequireWithin(field.name, *field.value, values.TextLabelCharacters); err != nil {
+			if err := httperr.RequireWithin(field.name, *field.value, ContactNameLimit); err != nil {
 				return err
 			}
 		}
@@ -54,22 +76,9 @@ func checkChangedContactNames(current crmcontracts.Contact, in UpdateContactInpu
 		if field.after == nil || (field.before != nil && *field.before == *field.after) {
 			continue
 		}
-		if err := httperr.RequireWithin(field.name, *field.after, values.TextLabelCharacters); err != nil {
+		if err := httperr.RequireWithin(field.name, *field.after, ContactNameLimit); err != nil {
 			return err
 		}
-	}
-	return nil
-}
-
-// checkImportedFullName refuses an imported update whose full name is past the
-// import bound once the store joins the row's part to the stored one. The row
-// check cannot see the stored part, so the store asks the same rule here.
-func checkImportedFullName(current crmcontracts.Contact, in UpdateContactInput) error {
-	if in.FullName == nil || *in.FullName == current.FullName {
-		return nil
-	}
-	if column, length, over := OverlongImportedName(map[string]string{contactNameColumn: *in.FullName}); over {
-		return httperr.TooLong(column, ImportedNameLimit, length)
 	}
 	return nil
 }
