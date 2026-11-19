@@ -257,15 +257,17 @@ export function SentenceList({
       onOpenEmail={onOpenEmail}
     />
   );
+  const lines = lead ? rest : sentences;
+  const shown = sourcesNotAbove(lines);
   const list = (
     <ul className="co-brief-lines">
-      {(lead ? rest : sentences).map((sentence, index) => (
+      {lines.map((sentence, index) => (
         // Indexed: two sentences may read the same, and a text key merges them.
         // biome-ignore lint/suspicious/noArrayIndexKey: the list is replaced wholesale on every read, never reordered in place
         <li key={index}>
           <NatureBadge sentence={sentence} />
           {sentence.text}
-          {citations === "per-sentence" && citationsFor(sentence.evidence)}
+          {citations === "per-sentence" && citationsFor(shown[index] ?? [])}
         </li>
       ))}
       {citations === "collected" && (
@@ -287,6 +289,19 @@ export function SentenceList({
       {list}
     </div>
   );
+}
+
+/**
+ * Each line's sources, less the ones the line directly above already shows.
+ * Header lines written from one meeting all cite it, and the same chip under
+ * each of them reads as three sources where there is one.
+ */
+function sourcesNotAbove(sentences: readonly BriefSentence[]): Cited[][] {
+  const key = (cited: Cited) => `${cited.entity_type}:${cited.entity_id}`;
+  return sentences.map((sentence, index) => {
+    const above = new Set((sentences[index - 1]?.evidence ?? []).map(key));
+    return sentence.evidence.filter((cited) => !above.has(key(cited)));
+  });
 }
 
 /**

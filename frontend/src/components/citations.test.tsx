@@ -321,6 +321,58 @@ describe("SentenceList leading claim", () => {
   });
 });
 
+describe("SentenceList sources", () => {
+  const meeting: Cited = {
+    entity_type: "activity",
+    entity_id: "m-1",
+    name: "Kickoff",
+  };
+  const deal: Cited = { entity_type: "deal", entity_id: "d-1", name: "Fleet" };
+  function line(text: string, evidence: BriefSentence["evidence"]) {
+    return { text, nature: "fact", evidence } satisfies BriefSentence;
+  }
+  function chipsUnder(text: string) {
+    const item = screen.getByText(text, { exact: false }).closest("li");
+    return item?.querySelectorAll(".co-brief-cite, .co-brief-cite-flat") ?? [];
+  }
+
+  it("draws a source once for consecutive lines that cite it", () => {
+    render(
+      <LocaleProvider initial="en">
+        <SentenceList
+          sentences={[
+            line("Kickoff in 1 hour.", [meeting]),
+            line("You last met today.", [meeting]),
+            line("Fleet is in Qualified.", [meeting, deal]),
+            line("Nothing else changed.", [meeting]),
+          ]}
+        />
+      </LocaleProvider>,
+    );
+    expect(chipsUnder("Kickoff in 1 hour.")).toHaveLength(1);
+    expect(chipsUnder("You last met today.")).toHaveLength(0);
+    // A new source on a line is drawn; the repeated one beside it is not.
+    expect(chipsUnder("Fleet is in Qualified.")).toHaveLength(1);
+    // Only the line directly above counts: a reader scanning down meets it again.
+    expect(chipsUnder("Nothing else changed.")).toHaveLength(0);
+  });
+
+  it("draws a source again once a line between cites something else", () => {
+    render(
+      <LocaleProvider initial="en">
+        <SentenceList
+          sentences={[
+            line("Kickoff in 1 hour.", [meeting]),
+            line("Fleet is open.", [deal]),
+            line("They asked for a demo.", [meeting]),
+          ]}
+        />
+      </LocaleProvider>,
+    );
+    expect(chipsUnder("They asked for a demo.")).toHaveLength(1);
+  });
+});
+
 // A chip is the reader's receipt, and a receipt that only repeats the chip's
 // kind is no receipt. Where the server sent the record's own words, the date
 // they are dated and where they came from, resting on the chip opens exactly
