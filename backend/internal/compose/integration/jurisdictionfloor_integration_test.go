@@ -189,7 +189,7 @@ func TestAPinOnOldMailPinsToTheCarriedFloor(t *testing.T) {
 		t.Fatal(err)
 	}
 	controller := controllerCtx(f.e, principal.ObjectGrant{Read: true, Update: true})
-	if err := compose.ComposedEraser(f.e.Pool, nil, nil).PinToFloor(controller, old, reason); err != nil {
+	if err := compose.ComposedEraser(f.e.Pool, nil).PinToFloor(controller, old, reason); err != nil {
 		t.Fatalf("PinToFloor: %v", err)
 	}
 	var until time.Time

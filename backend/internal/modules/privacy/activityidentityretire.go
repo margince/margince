@@ -58,7 +58,7 @@ func eraseMeetingProposals(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUI
 	return nil
 }
 
-func eraseContactMeetingCapabilities(ctx context.Context, tx pgx.Tx, contact ids.UUID, payloads PayloadPurger) error {
+func eraseContactMeetingCapabilities(ctx context.Context, tx pgx.Tx, contact ids.UUID) error {
 	rows, err := tx.Query(ctx, `SELECT activity_id FROM activity_link WHERE contact_id=@contact`, pgx.NamedArgs{contactObject: contact})
 	if err != nil {
 		return err
@@ -67,7 +67,7 @@ func eraseContactMeetingCapabilities(ctx context.Context, tx pgx.Tx, contact ids
 	if err != nil {
 		return err
 	}
-	if err := erasePayloads(ctx, tx, activityIDs, payloads); err != nil {
+	if err := erasePayloads(ctx, tx, activityIDs); err != nil {
 		return err
 	}
 	return eraseMeetingProposals(ctx, tx, activityIDs)

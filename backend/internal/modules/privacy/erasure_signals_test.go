@@ -53,7 +53,7 @@ func TestTombstoneSubjectSignalsNamesTheReadThatFailed(t *testing.T) {
 	for name, tx := range cases {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			err := tombstoneSubjectSignals(t.Context(), tx, ids.ContactID{}, "erasure")
+			err := tombstoneSubjectSignals(t.Context(), tx, ids.ContactID{}, "erasure", causeContactErasure)
 			if !errors.Is(err, errSignalsRead) {
 				t.Fatalf("got %v, want it to wrap the refused read", err)
 			}

@@ -139,7 +139,7 @@ func (e *Eraser) purgeContentDerivedFrom(ctx context.Context, tx pgx.Tx, id ids.
 		map[extdecl.RecordKind][]ids.UUID{extdecl.Activity: {id}}); err != nil {
 		return err
 	}
-	return redactDeliveries(ctx, tx, []ids.UUID{id}, erasedActivitySubject, e.payloads)
+	return redactDeliveries(ctx, tx, []ids.UUID{id}, erasedActivitySubject)
 }
 
 // PurgeContentDerivedFromNoiseTx destroys everything the text of hidden noise

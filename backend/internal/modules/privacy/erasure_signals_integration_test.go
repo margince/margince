@@ -62,7 +62,7 @@ func TestErasingAContactWithholdsTheKeptEvidenceOfTheirSignals(t *testing.T) {
 	if served() != 1 {
 		t.Fatal("the correction's audit row is not served before any erasure, so the test proves nothing")
 	}
-	if err := tombstoneSubjectSignals(ctx, tx, subject, "subject request"); err != nil {
+	if err := tombstoneSubjectSignals(ctx, tx, subject, "subject request", causeContactErasure); err != nil {
 		t.Fatalf("tombstoning the subject's signals: %v", err)
 	}
 	if served() != 0 {

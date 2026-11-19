@@ -3,16 +3,17 @@
 
 package privacy
 
-// The one-time link material behind a controller delivery: a live capability
-// sitting in the key vault, referenced by a row Art. 17 is about to scrub.
+// The one-time link material behind a controller delivery and a meeting
+// invitation: a live capability sitting in the key vault, referenced by a row
+// Art. 17 is about to scrub.
 //
-// Its own file beside erasure_attachments.go, which solves the same problem for
-// attachment bytes and in the same order — and the order is the whole point.
-// The reference lives in the row. Clearing the row first would leave a working
-// confirmation link in the vault with no key left to find it, so the material
-// is destroyed FIRST and the row scrubbed after: any failure rolls the
-// transaction back with the reference intact, and a retry destroys it again
-// idempotently.
+// Erasure never touches the vault. The transaction owns the rows, and a
+// rollback would bring back rows naming a secret that was already destroyed.
+// So the rows keep their reference and carry the mark each owner's retrying
+// pass already reads: a delivery's payload is due now, an invitation is erased
+// and an erased proposal's token is the tombstone. The destroying pass deletes
+// the secret after this transaction commits, and clears the reference only once
+// the vault has answered, so a refusing vault is retried.
 
 import (
 	"context"
@@ -20,74 +21,37 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/erasedmark"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// PayloadPurger destroys one piece of stored link material. Compose supplies it
-// over the key vault; privacy neither mints nor reads these values.
-type PayloadPurger interface {
-	Delete(ctx context.Context, ref string) error
-}
-
-// erasePayloads destroys the link material behind the subject's controller
-// deliveries and clears the references that named it.
+// erasePayloads marks the link material behind the subject's deliveries and
+// meetings for destruction after commit, and scrubs what names the subject.
 //
 // A subject is reached through their DELIVERIES rather than through a contact
 // column, because comms_outbound carries no subject id: the tie is the activity,
 // which is exactly how the rest of the delivery scrub finds these rows.
-func erasePayloads(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID, payloads PayloadPurger) error {
+func erasePayloads(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) error {
 	if len(activityIDs) == 0 {
 		return nil
 	}
-	args := []any{activityIDs}
-	bound := fmt.Sprintf("$%d", len(args))
-	rows, err := tx.Query(ctx, `
-		SELECT payload_ref FROM comms_outbound
-		 WHERE activity_id = ANY(`+bound+`) AND payload_ref IS NOT NULL
- UNION ALL SELECT management_ref FROM meeting_invitation WHERE activity_id=ANY(`+bound+`) AND management_ref<>''
- UNION ALL SELECT link_ref FROM meeting_proposal WHERE activity_id=ANY(`+bound+`)`, args...)
-	if err != nil {
-		return fmt.Errorf("privacy: reading the subject's link material: %w", err)
-	}
-	var refs []string
-	for rows.Next() {
-		var ref string
-		if err := rows.Scan(&ref); err != nil {
-			rows.Close()
-			return fmt.Errorf("privacy: reading the subject's link material: %w", err)
-		}
-		refs = append(refs, ref)
-	}
-	if err := rows.Err(); err != nil {
-		return fmt.Errorf("privacy: reading the subject's link material: %w", err)
-	}
-	rows.Close()
-	if len(refs) == 0 {
-		return nil
-	}
-	if payloads == nil {
-		// Loud, like the attachment purge beside it: material exists and this
-		// eraser cannot destroy it, so certifying the erasure would be a false
-		// statement about a live credential.
-		return fmt.Errorf("privacy: %d link secret(s) to destroy but no payload vault is configured", len(refs))
-	}
-	for _, ref := range refs {
-		if err := payloads.Delete(ctx, ref); err != nil {
-			return fmt.Errorf("privacy: destroying the subject's link material: %w", err)
-		}
-	}
-	destroyedOutside(tx, armDeliveryPayload)
 	if _, err := tx.Exec(ctx, `
-		UPDATE comms_outbound SET payload_ref = NULL
-		 WHERE activity_id = ANY(`+bound+`) AND payload_ref IS NOT NULL`, args...); err != nil {
-		return fmt.Errorf("privacy: clearing the subject's link references: %w", err)
+		UPDATE comms_outbound SET payload_expires_at = now()
+		 WHERE activity_id = ANY($1) AND payload_ref IS NOT NULL`, activityIDs); err != nil {
+		return fmt.Errorf("privacy: marking the subject's link material due: %w", err)
 	}
-	if _, err := tx.Exec(ctx, fmt.Sprintf(`UPDATE meeting_invitation SET
+	if _, err := tx.Exec(ctx, `
+		UPDATE meeting_proposal SET request = '{}'::jsonb, used_at = coalesce(used_at, now()),
+		       token_hash = $2 || activity_id::text
+		 WHERE activity_id = ANY($1)`, activityIDs, erasedmark.Prefix); err != nil {
+		return fmt.Errorf("privacy: retiring the subject's scheduling links: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `UPDATE meeting_invitation SET
  appointment=jsonb_build_object('CalendarID',calendar_id,'RequestID',appointment->>'RequestID'),
  receipt=CASE WHEN receipt IS NULL THEN NULL ELSE jsonb_build_object('event_id',receipt->>'event_id') END,
- public_intent=NULL,status='erased',command='cancel',reminder_status='off',management_ref='',management_hash='erased:'||activity_id::text,
+ public_intent=NULL,status='erased',command='cancel',reminder_status='off',management_hash=$2||activity_id::text,
  version=version+1,next_attempt_at=now(),updated_at=now()
- WHERE activity_id=ANY($%d) AND status<>'erased'`, len(args)), args...); err != nil {
+ WHERE activity_id=ANY($1) AND status<>'erased'`, activityIDs, erasedmark.Prefix); err != nil {
 		return err
 	}
 	return nil

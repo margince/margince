@@ -110,13 +110,17 @@ func verifyMeetingPrivacy(t *testing.T, anonymize bool) {
 			t.Errorf("export contains private authority %q", secret)
 		}
 	}
+	refs := []string{
+		e.WsScalar(t, `SELECT management_ref FROM meeting_invitation`),
+		e.WsScalar(t, `SELECT link_ref FROM meeting_proposal`),
+	}
 	if anonymize {
-		service := NewRetentionServiceFor(e.DB(), nil, slog.Default()).WithPayloadVault(controllerPayloads{v: vault})
+		service := NewRetentionServiceFor(e.DB(), nil, slog.Default())
 		if _, err := service.AnonymiseContacts(ctx, []ids.UUID{contact}, privacy.PurgeOwnerRule, anonymiseAsChosen); err != nil {
 			t.Fatal(err)
 		}
 	} else {
-		eraser := eraserWithGraph(e.DB()).WithPayloadVault(controllerPayloads{v: vault})
+		eraser := eraserWithGraph(e.DB())
 		if err := eraser.EraseContact(ctx, contact, "subject request"); err != nil {
 			t.Fatal(err)
 		}
@@ -128,8 +132,24 @@ func verifyMeetingPrivacy(t *testing.T, anonymize bool) {
 	if _, _, err := store.ResolveProposalToken(ctx, token); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("proposal survived erasure: %v", err)
 	}
-	if got := e.WsCount(t, `SELECT count(*) FROM meeting_invitation WHERE status<>'erased' OR management_ref<>'' OR appointment ? 'Attendees'`); got != 0 {
+	if got := e.WsCount(t, `SELECT count(*) FROM meeting_invitation WHERE status<>'erased' OR appointment ? 'Attendees'`); got != 0 {
 		t.Fatalf("pending delivery survived erasure: %d", got)
+	}
+	for _, ref := range refs {
+		if _, err := vault.Get(ctx, ids.From[ids.WorkspaceKind](e.WS), keyvault.Ref(ref)); err != nil {
+			t.Fatalf("erasure destroyed a link secret before the pass that runs after its commit: %v", err)
+		}
+	}
+	if err := store.DestroyErasedLinks(ctx); err != nil {
+		t.Fatalf("destroying the erased links: %v", err)
+	}
+	for _, ref := range refs {
+		if _, err := vault.Get(ctx, ids.From[ids.WorkspaceKind](e.WS), keyvault.Ref(ref)); !errors.Is(err, keyvault.ErrNotFound) {
+			t.Errorf("a link secret survived the destroying pass: %v", err)
+		}
+	}
+	if got := e.WsCount(t, `SELECT (SELECT count(*) FROM meeting_invitation WHERE management_ref<>'') + (SELECT count(*) FROM meeting_proposal)`); got != 0 {
+		t.Errorf("%d row(s) still name a destroyed link secret", got)
 	}
 }
 

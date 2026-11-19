@@ -50,7 +50,7 @@ func (w *meetingDeliveryWorker) Work(ctx context.Context, _ *river.Job[MeetingDe
 		WithInvitationAttention(invitationAttention{pool: w.pool})
 	deliveryErr := store.DeliverInvitations(pass)
 	reconcileErr := store.ReconcileInvitations(pass)
-	return jobs.FaultContext(pass, errors.Join(deliveryErr, reconcileErr, w.remind(pass, store)))
+	return jobs.FaultContext(pass, errors.Join(deliveryErr, reconcileErr, store.DestroyErasedLinks(pass), w.remind(pass, store)))
 }
 
 func addMeetingDeliveryJob(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig) []*river.PeriodicJob {

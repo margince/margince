@@ -32,11 +32,6 @@ type Eraser struct {
 	// erasure queues their keys for the stored-object reap and deletes no
 	// object itself. nil in a deployment with no object store.
 	blob blobstore.Store
-	// payloads destroys the one-time link material behind a controller
-	// delivery. nil where no such material could exist. Unlike the object
-	// store, it deletes the vault entry before the transaction commits, so a
-	// rolled-back erasure leaves rows naming a deleted entry.
-	payloads PayloadPurger
 	// purgeRawCaptures destroys the provider original behind an activity whose
 	// text this eraser destroys.
 	//
@@ -79,14 +74,6 @@ func (e *Eraser) WithRawCapturePurger(purge RawCapturePurger) *Eraser {
 		purge = nil
 	}
 	clone.purgeRawCaptures = purge
-	return &clone
-}
-
-// WithPayloadVault returns an eraser that also destroys the one-time link
-// material behind the subject's controller deliveries.
-func (e *Eraser) WithPayloadVault(p PayloadPurger) *Eraser {
-	clone := *e
-	clone.payloads = p
 	return &clone
 }
 
