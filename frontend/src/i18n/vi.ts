@@ -3026,6 +3026,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "common.dateInFuture": "Không được chọn ngày trong tương lai.",
   "common.fieldDecimalPlaces": "Số chữ số thập phân tối đa cho {field}: {max}.",
   "common.valueDecimalPlaces": "Số chữ số thập phân tối đa: {max}.",
+  "common.characterCount_one": "{count}/{max} ký tự",
+  "common.characterCount_other": "{count}/{max} ký tự",
   "common.valueTooLong": "Giá trị này quá dài.",
   "common.undo": "Hoàn tác",
   "common.close": "Đóng",
@@ -9398,8 +9400,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chữ ký này thay thế mẫu của công ty. Để trống để dùng lại mẫu của công ty. Tối đa {max} ký tự. Bảng, bố cục và hình ảnh từ địa chỉ https được giữ lại; mã script và biểu mẫu sẽ bị xóa.",
   "settings.signatureHtmlHintPlain":
     "Để trống để dùng lại chữ ký văn bản thuần. Tối đa {max} ký tự. Bảng, bố cục và hình ảnh từ địa chỉ https được giữ lại; mã script và biểu mẫu sẽ bị xóa.",
-  "settings.signatureHtmlCount_one": "{count}/{max} ký tự",
-  "settings.signatureHtmlCount_other": "{count}/{max} ký tự",
   "settings.signatureOwnHtml": "Chữ ký HTML của bạn",
   "settings.signatureReviewTitle": "Kiểm tra chữ ký được giữ lại của {name}",
   "settings.signatureReviewIntro":
@@ -14946,13 +14946,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "corpusAsk.notReady":
     "Bộ tài liệu này vẫn đang được đọc: {embedded}/{total} đoạn đã có thể tìm kiếm. Thử lại sau ít phút. Câu hỏi không có vấn đề gì.",
   "corpusAsk.retrievalUnavailable":
-    "Chưa tìm kiếm gì. Bản cài đặt này chưa cấu hình chỉ mục tìm kiếm.",
+    "Chưa chọn mô hình embedding cho tìm kiếm, nên chưa tìm kiếm gì. Câu hỏi không có vấn đề gì.",
+  "corpusAsk.retrievalUnavailableAskAdmin":
+    "Quản trị viên có thể chọn một mô hình trong Mô hình AI, Cấp mô hình.",
   "corpusAsk.unreviewed":
     "Các đoạn này gần nhất với câu hỏi. Chưa có đánh giá xem các đoạn này có trả lời câu hỏi hay không.",
   "corpusAsk.failed": "Không thể trả lời câu hỏi",
   "corpusAsk.unreviewedTitle": "Đoạn trích chưa được đánh giá",
   "corpusAsk.notReadyTitle": "Vẫn đang đọc bộ tài liệu này",
-  "corpusAsk.retrievalUnavailableTitle": "Chưa cấu hình chỉ mục tìm kiếm",
+  "corpusAsk.retrievalUnavailableTitle": "Chưa thể tìm kiếm tài liệu",
   "corpusAsk.noGrantTitle": "Bạn không thể mở tài liệu của công ty này",
   "corpusAsk.noGrant":
     "Bạn không có quyền truy cập bộ tài liệu này. Quản trị viên có thể cấp quyền.",

@@ -3025,6 +3025,8 @@ export const en = {
   "common.dateInFuture": "This date cannot be in the future.",
   "common.fieldDecimalPlaces": "Decimal places allowed in {field}: {max}.",
   "common.valueDecimalPlaces": "Decimal places allowed: {max}.",
+  "common.characterCount_one": "{count} of {max} character",
+  "common.characterCount_other": "{count} of {max} characters",
   "common.valueTooLong": "This value is too long.",
   "common.undo": "Undo",
   "common.close": "Close",
@@ -9600,8 +9602,6 @@ export const en = {
     "Your mail carries this instead of the company template. Leave it empty to use the company template again. Up to {max} characters. Tables, layout and images from https addresses are kept; scripts and forms are removed.",
   "settings.signatureHtmlHintPlain":
     "Leave this empty to use your plain text again. Up to {max} characters. Tables, layout and images from https addresses are kept; scripts and forms are removed.",
-  "settings.signatureHtmlCount_one": "{count} of {max} character",
-  "settings.signatureHtmlCount_other": "{count} of {max} characters",
   "settings.signatureOwnHtml": "Your HTML signature",
   "settings.signatureReviewTitle": "Review {name}’s retained signature",
   "settings.signatureReviewIntro":
@@ -15278,13 +15278,15 @@ export const en = {
   "corpusAsk.notReady":
     "This set is still being read: {embedded} of {total} passages are searchable. Retry shortly. The question is not the problem.",
   "corpusAsk.retrievalUnavailable":
-    "Nothing was searched. This installation has no search index configured.",
+    "No embedding model is chosen for search, so nothing was searched. The question is not the problem.",
+  "corpusAsk.retrievalUnavailableAskAdmin":
+    "An administrator can choose one under AI models, Model tiers.",
   "corpusAsk.unreviewed":
     "These passages are closest to your question. They have not been reviewed for whether they answer it.",
   "corpusAsk.failed": "Question not answered",
   "corpusAsk.unreviewedTitle": "Passages not reviewed",
   "corpusAsk.notReadyTitle": "This set is still being read",
-  "corpusAsk.retrievalUnavailableTitle": "No search index is configured",
+  "corpusAsk.retrievalUnavailableTitle": "Documents cannot be searched yet",
   "corpusAsk.noGrantTitle": "You cannot open this company’s documents",
   "corpusAsk.noGrant":
     "You do not have access to this document set. An administrator can grant access.",

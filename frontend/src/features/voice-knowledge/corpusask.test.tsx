@@ -602,6 +602,49 @@ describe("AskMarginceModal", () => {
     // is fine and so is the set.
     expect(screen.queryByText(/not covered by this set/i)).toBeNull();
     expect(screen.queryAllByText(/still being read/i)).toHaveLength(0);
+    // A reader who cannot choose the model is told who can, and given no link.
+    expect(screen.getByText(/An administrator can choose one/)).toBeTruthy();
+    expect(
+      screen.queryByRole("link", { name: "Choose an embedding model" }),
+    ).toBeNull();
+  });
+
+  it("takes a reader who may choose the search model to where it is chosen", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      backendFor(
+        { ...ASKER, ai_routing: ["read", "update"] },
+        {
+          reply: answer({
+            outcome: "retrieval_unavailable",
+            summary: undefined,
+            claims: [],
+          }),
+        },
+      ).fetchMock,
+    );
+    render(<AskMarginceModal open onClose={() => {}} />);
+    await askAbout(user, "how long are messages kept");
+
+    const link = await screen.findByRole("link", {
+      name: "Choose an embedding model",
+    });
+    expect(link.getAttribute("href")).toBe("/#/settings/models/tiers");
+    expect(screen.queryByText(/An administrator can choose one/)).toBeNull();
+  });
+
+  it("holds the question to the length the server takes, and counts it near the end", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", backendFor(ASKER).fetchMock);
+    render(<AskMarginceModal open onClose={() => {}} />);
+    const box = await screen.findByLabelText(/your question/i);
+    expect(box.getAttribute("maxlength")).toBe("1000");
+    await user.type(box, "Why?");
+    expect(screen.queryByText(/of 1,000 characters/)).toBeNull();
+    await user.click(box);
+    await user.paste("x".repeat(900));
+    expect(screen.getByText("904 of 1,000 characters")).toBeTruthy();
   });
 
   it("says nothing read the passages when no writer was in the path", async () => {

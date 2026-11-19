@@ -3124,6 +3124,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "common.dateInFuture": "Dieses Datum darf nicht in der Zukunft liegen.",
   "common.fieldDecimalPlaces": "Erlaubte Nachkommastellen für {field}: {max}.",
   "common.valueDecimalPlaces": "Erlaubte Nachkommastellen: {max}.",
+  "common.characterCount_one": "{count} von {max} Zeichen",
+  "common.characterCount_other": "{count} von {max} Zeichen",
   "common.valueTooLong": "Dieser Wert ist zu lang.",
   "common.undo": "Rückgängig",
   "common.close": "Schließen",
@@ -9659,8 +9661,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Diese Signatur ersetzt die Unternehmensvorlage. Leere das Feld, um wieder die Unternehmensvorlage zu verwenden. Bis zu {max} Zeichen. Tabellen, Layout und Bilder von https-Adressen bleiben erhalten; Skripte und Formulare werden entfernt.",
   "settings.signatureHtmlHintPlain":
     "Leere das Feld, um wieder deinen Text zu verwenden. Bis zu {max} Zeichen. Tabellen, Layout und Bilder von https-Adressen bleiben erhalten; Skripte und Formulare werden entfernt.",
-  "settings.signatureHtmlCount_one": "{count} von {max} Zeichen",
-  "settings.signatureHtmlCount_other": "{count} von {max} Zeichen",
   "settings.signatureOwnHtml": "Deine HTML-Signatur",
   "settings.signatureReviewTitle": "Gespeicherte Signatur von {name} prüfen",
   "settings.signatureReviewIntro":
@@ -15368,13 +15368,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "corpusAsk.notReady":
     "Diese Sammlung wird noch gelesen: {embedded} von {total} Textstellen sind durchsuchbar. Versuche es gleich erneut. An der Frage liegt es nicht.",
   "corpusAsk.retrievalUnavailable":
-    "Es wurde nichts durchsucht. In dieser Installation ist kein Suchindex eingerichtet.",
+    "Für die Suche ist kein Embedding-Modell gewählt, daher wurde nichts durchsucht. An der Frage liegt es nicht.",
+  "corpusAsk.retrievalUnavailableAskAdmin":
+    "Admins können eines unter KI-Modelle, Modellstufen wählen.",
   "corpusAsk.unreviewed":
     "Diese Textstellen passen am besten zu deiner Frage. Ob sie die Frage beantworten, wurde nicht geprüft.",
   "corpusAsk.failed": "Frage nicht beantwortet",
   "corpusAsk.unreviewedTitle": "Textstellen nicht geprüft",
   "corpusAsk.notReadyTitle": "Diese Sammlung wird noch gelesen",
-  "corpusAsk.retrievalUnavailableTitle": "Kein Suchindex eingerichtet",
+  "corpusAsk.retrievalUnavailableTitle":
+    "Dokumente lassen sich noch nicht durchsuchen",
   "corpusAsk.noGrantTitle":
     "Du kannst die Dokumente dieses Unternehmens nicht öffnen",
   "corpusAsk.noGrant":

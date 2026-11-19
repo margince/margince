@@ -17,7 +17,8 @@ import {
 import { Callout } from "../../design-system/callout";
 import { Heading } from "../../design-system/heading";
 import { Select } from "../../design-system/select";
-import { useT } from "../../i18n";
+import { formatNumber } from "../../format/format";
+import { useLocale, usePlural, useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
 import { CitedDocument } from "./citeddocument";
 import { AnswerView } from "./corpusanswer";
@@ -58,6 +59,11 @@ import { problemMessageOf } from "../../lib/problem";
 // the palette's target, else the first. Never an empty selection — a reader who
 // arrived carrying a question should not have to choose a set before they can
 // ask it.
+// The ask contract's own bound on a question. The count shows only near it, so
+// a short question carries no counter.
+const QUESTION_MAX = 1000;
+const QUESTION_COUNTED_FROM = 900;
+
 function preferredSet(sets: readonly Corpus[]): string {
   const marked = sets.find((set) => set.default_ask);
   return marked?.id ?? sets[0]?.id ?? "";
@@ -73,11 +79,14 @@ export function AskMarginceModal({
   onClose: () => void;
 }>) {
   const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
   const titleId = useId();
   const canAsk = useCan("knowledge_corpus", "read");
   const sets = useAskableSets(canAsk && open);
   const [corpusId, setCorpusId] = useState("");
   const [question, setQuestion] = useState("");
+  const questionLength = question.length;
   // Which citation the document pane is showing, by its position in the answer.
   // Null is "nothing picked yet", which is a different pane from "picked one
   // that turned out to have no passage".
@@ -183,10 +192,21 @@ export function AskMarginceModal({
               what makes a refusal mean something: a set that answers
               everything is worth less than one that says when it cannot. */}
           <p className="t-sub">{t("corpusAsk.sub")}</p>
-          <Field label={t("corpusAsk.question")}>
+          <Field
+            label={t("corpusAsk.question")}
+            hint={
+              questionLength >= QUESTION_COUNTED_FROM
+                ? plural("common.characterCount", questionLength, {
+                    count: formatNumber(questionLength, locale),
+                    max: formatNumber(QUESTION_MAX, locale),
+                  })
+                : undefined
+            }
+          >
             {(control) => (
               <Textarea
                 {...control}
+                maxLength={QUESTION_MAX}
                 value={question}
                 onChange={(event) => setQuestion(event.target.value)}
               />
