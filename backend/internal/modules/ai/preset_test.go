@@ -8,6 +8,8 @@ package ai
 // itself.
 
 import (
+	"os"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -72,5 +74,32 @@ seeds:
 	}
 	if got := cfg.Tiers[TierCheapCloud].BaseURL; got == "" {
 		t.Error("the merged-in base_url did not survive the unwrap")
+	}
+}
+
+// A dev stack runs what the Gemini preset certifies. When the two differ, a
+// model the API retires is changed in one and keeps being called in the other.
+func TestTheDevPostureBindsTheGeminiCloudPreset(t *testing.T) {
+	type binding struct {
+		Profile    Profile
+		Tiers      map[Tier]ProviderConfig
+		Embeddings EmbeddingsConfig
+	}
+	parse := func(path string) binding {
+		raw, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("reading %s: %v", path, err)
+		}
+		cfg, err := ParsePreset(raw)
+		if err != nil {
+			t.Fatalf("%s: %v", path, err)
+		}
+		return binding{Profile: cfg.Profile, Tiers: cfg.Tiers, Embeddings: cfg.Embeddings}
+	}
+	dev := parse("../../../../config/margince.dev.yaml")
+	preset := parse("../../../../config/presets/gemini_cloud.yaml")
+	if !reflect.DeepEqual(dev, preset) {
+		t.Errorf("config/margince.dev.yaml binds\n  %+v\nand config/presets/gemini_cloud.yaml binds\n  %+v\ncopy the preset's seeds.ai_routing into the dev file",
+			dev, preset)
 	}
 }

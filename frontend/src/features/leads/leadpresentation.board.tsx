@@ -127,7 +127,7 @@ function LeadCard({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const origins = useLeadOrigins().data;
+  const origin = originLabelFor(lead, useLeadOrigins().data);
   // A div with a stretched opener, as the deal card has. A company link inside
   // a button would be invalid markup and would not take its own click.
   return (
@@ -146,15 +146,15 @@ function LeadCard({
           </span>
         </span>
       )}
-      <span>
+      <span className="deal-flags">
         <Badge tone={scoreTone(lead.score)}>
           {t("lead.score")}: {formatNumber(lead.score, locale)}
         </Badge>
         <SlaBadge state={lead.sla_state} />
         {lead.title && <span>{lead.title}</span>}
       </span>
-      <span>
-        <span>{originLabelFor(lead, origins) ?? t("lead.originUnset")}</span>
+      <span className="deal-flags">
+        {origin && <Badge>{origin}</Badge>}
         <span>
           {lead.next_task_subject ?? t("lead.noNextTask")}
           {lead.open_task_count

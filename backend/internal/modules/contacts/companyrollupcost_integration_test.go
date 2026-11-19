@@ -186,3 +186,44 @@ func assertRollupCountFields(t *testing.T, company crmcontracts.Company, want ro
 	}
 	t.Fatal("computed fields lack open_pipeline")
 }
+
+// A company with no open deal has no rollup row and shows 0, so it sorts as 0:
+// first going up, last going down.
+func TestTheOpenDealSortCountsACompanyWithoutDealsAsZero(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := companyRollupReader(e, 3, 3)
+	companies := seedRollupCountCompanies(t, e)
+	withDeal, without := companies[0], companies[1]
+	pipeline, stage := ids.NewV7(), ids.NewV7()
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		for _, seed := range []struct {
+			sql  string
+			args []any
+		}{
+			{`INSERT INTO pipeline (id, name) VALUES ($1, 'Sales')`, []any{pipeline}},
+			{`INSERT INTO stage (id, pipeline_id, name, position) VALUES ($1, $2, 'Qualify', 10)`, []any{stage, pipeline}},
+			{`INSERT INTO deal (id, name, pipeline_id, stage_id, company_id, source, captured_by)
+			  VALUES ($1, 'Rollout', $2, $3, $4, 'manual', 'human:test')`, []any{ids.NewV7(), pipeline, stage, withDeal}},
+		} {
+			if _, err := tx.Exec(ctx, seed.sql, seed.args...); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatalf("seed an open deal: %v", err)
+	}
+
+	for sort, first := range map[string]ids.UUID{"open_deal_count": without, "-open_deal_count": withDeal} {
+		rows, _, err := e.store.ListCompanies(ctx, ListCompaniesInput{IDs: companies, Sort: &sort})
+		if err != nil {
+			t.Fatalf("list sorted by %s: %v", sort, err)
+		}
+		if len(rows) != 2 {
+			t.Fatalf("sort %s listed %d rows, want 2", sort, len(rows))
+		}
+		if ids.UUID(rows[0].Id) != first {
+			t.Errorf("sort %s listed %s first, want %s", sort, rows[0].DisplayName, first)
+		}
+	}
+}

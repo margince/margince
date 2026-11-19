@@ -344,7 +344,7 @@ describe("CompanyScreen — Ask Margince", () => {
 });
 
 // The Overview is the design's inventory and nothing else: the Next bar, How
-// it stands, then four cards. Every other reading lives on the tab the design
+// it stands, then its cards. Every other reading lives on the tab the design
 // gives it, so a layout change is never an availability change.
 describe("CompanyScreen — the Overview and the details beside it", () => {
   it("puts the account's details beside the work, as flat groups", async () => {
@@ -362,7 +362,7 @@ describe("CompanyScreen — the Overview and the details beside it", () => {
     expect(pane?.textContent).toContain("Registration");
   });
 
-  it("draws exactly the four cards under How it stands", async () => {
+  it("draws the cards under How it stands, with no tasks card while none is open", async () => {
     stubFetch(companyBackstop, { company360 });
     const { container } = render(<CompanyScreen id="o-1" />);
     await screen.findByRole("heading", { name: company.display_name });
@@ -376,12 +376,7 @@ describe("CompanyScreen — the Overview and the details beside it", () => {
         ".co-overview-grid .panel-head-flat .panel-title",
       ) ?? [],
     ).map((title) => title.textContent);
-    expect(cards).toEqual([
-      "Other open tasks",
-      "Deals and projects",
-      "Latest",
-      "Contacts",
-    ]);
+    expect(cards).toEqual(["Deals and projects", "Latest", "Contacts"]);
     for (const gone of [
       "Growth fit",
       "Signals",

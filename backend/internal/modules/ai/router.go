@@ -78,9 +78,11 @@ type Router struct {
 	cache           *resultCache
 	calls           callStore
 	capturePayloads bool
-	log             *slog.Logger
-	metrics         *callMetrics
-	now             func() time.Time
+	// captureWhole lifts the row caps off the capture; only a DB-less trace sets it.
+	captureWhole bool
+	log          *slog.Logger
+	metrics      *callMetrics
+	now          func() time.Time
 	// cacheOff disables the §6 result cache entirely (ai.WithoutResultCache):
 	// the cert lane and scripted repeat-call tests need every call to reach
 	// the model, not collapse onto a cached answer.

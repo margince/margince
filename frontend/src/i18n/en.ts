@@ -2764,9 +2764,6 @@ export const en = {
   "shell.license.refused": "License refused",
   "shell.signOutAria": "Sign out",
   "shell.signOutErr": "Sign-out failed",
-  "shell.version": "Version {version}",
-  "shell.instanceVersion": "Instance {version}",
-  "shell.coreVersion": "Core {version}",
   "shell.collapse": "Collapse sidebar",
   "shell.expand": "Expand sidebar",
   "shell.accountAria": "Account",
@@ -2778,9 +2775,25 @@ export const en = {
   "shell.help.resources": "Help and resources",
   "shell.help.shortcuts": "Keyboard shortcuts",
   "shell.help.releaseNotes": "Release notes",
-  "shell.help.licenses": "Web app licenses",
-  "shell.help.devBuild": "Development build",
-  "shell.help.devBuildRevision": "Development build · {revision}",
+  "about.title": "About Margince",
+  "about.version": "Version",
+  "about.devBuild": "Development build",
+  "about.instanceBuild": "Instance build",
+  "about.coreRelease": "core {version}",
+  "about.copyHint": "(Copies to clipboard)",
+  "about.copiedVersion": "Copied version to clipboard",
+  "about.viewCommit": "View commit on GitHub",
+  "about.copyrightTerm": "Copyright",
+  "about.links": "Links",
+  "about.copyRemedy": "Select the version below and copy it by hand.",
+  "about.license": "License",
+  "about.licenseName": "Business Source License 1.1",
+  "about.licenseConversion":
+    "Each release converts to the Apache License 2.0 no later than two years after it ships.",
+  "about.copyright": "© 2026 Gradion",
+  "about.website": "Website",
+  "about.source": "Source code",
+  "about.thirdParty": "Third-party licenses",
   "shell.shortcuts.anywhere": "Anywhere",
   "shell.shortcuts.search": "Open search",
   "shell.shortcuts.sidebar": "Show or hide sidebar",
@@ -2892,6 +2905,15 @@ export const en = {
   "palette.empty": "No matches.",
   "palette.recent": "Recent",
   "palette.clearRecent": "Clear",
+  "palette.filter": "Show only",
+  "palette.filterAll": "All",
+  "palette.askGroup": "Ask Margince",
+  "palette.ask": "Ask",
+  "palette.keyMove": "to move",
+  "palette.keyOpen": "to open",
+  "palette.keyClose": "to close",
+  "palette.lastContact": "Last contact {when}",
+  "palette.due": "due {date}",
   "palette.typeScreen": "Screen",
   "palette.typeSetting": "Setting",
   "palette.typeAction": "Action",
@@ -2932,6 +2954,11 @@ export const en = {
   "action.booking": "Booking page",
 
   "common.fieldInvalid": "Check this value and try again.",
+  "common.phone.needsCountryCode":
+    "Start the number with its country code, such as +49 or 0049.",
+  "common.phone.malformed":
+    "This is not a phone number. Write the country code and 8 to 15 digits, such as +49 30 1234567, with no extension.",
+  "common.phone.empty": "Enter a phone number.",
   "common.fieldTooLongMax": "{field}: at most {max} characters.",
   "common.valueTooLongMax": "This value is at most {max} characters.",
   "common.valueTooLong": "This value is too long.",
@@ -3038,6 +3065,9 @@ export const en = {
   "record.fieldsRetry": "Retry",
 
   "record.companyRoutingKey": "Company routing key",
+  "record.companyRoutingKeyWhy": "What the company routing key is",
+  "record.companyRoutingKeyHelp":
+    "The company’s web domain, such as example.com, or a short form of its name when no domain is known. Routing rules can match it, and Margince suggests the company that holds that domain.",
   "record.finishFieldEdit":
     "Save or cancel the current edit before closing details.",
   "record.save": "Save",
@@ -3133,9 +3163,9 @@ export const en = {
   "merge.searchPlaceholder": "Search…",
   "merge.pickTarget": "Select record to keep",
   "merge.confirm": "Merge {source} into {target}? This archives {source}.",
-  // The picked record's detail line, so two look-alike names stay apart here too.
-  "merge.confirmDetail":
-    "Merge {source} into {target} ({detail})? This archives {source}.",
+  // A record's name with its detail line, so two look-alike names stay apart.
+  "merge.recordDetail": "{name} ({detail})",
+  "merge.done": "{source} was merged into {target}.",
   "merge.targetReadOnly":
     "You can only read this record, so it cannot be kept.",
   "merge.submit": "Merge",
@@ -3189,6 +3219,7 @@ export const en = {
   "commission.status.approved": "Approved",
   "commission.status.paid": "Paid",
   "commission.status.void": "Reversed",
+  "commission.status.reversal": "Reversal",
   "commission.outstanding": "Outstanding",
   "commission.outstandingDetail_one": "1 entry · accrued or approved",
   "commission.outstandingDetail_other": "{count} entries · accrued or approved",
@@ -3321,7 +3352,20 @@ export const en = {
   "rel.empty": "No relationships yet",
   "rel.counterparty": "Linked to",
   "rel.dates": "Dates",
-  "rel.addConfirm": "Add a {kind} link to {target}.",
+  "rel.addConfirm.employment": "Add an employment link to {target}.",
+  "rel.addConfirm.dealStakeholder": "Add a stakeholder link to {target}.",
+  "rel.addConfirm.projectStakeholder":
+    "Add a project stakeholder link to {target}.",
+  "rel.addConfirm.partnerOf": "Add a partner link to {target}.",
+  "rel.addConfirm.referredBy":
+    "Add a referral link: {target} referred this company.",
+  "rel.addConfirm.coSellWith": "Add a co-selling link to {target}.",
+  "rel.addConfirm.worksWith": "Add a colleague link to {target}.",
+  "rel.addConfirm.billingContact": "Add a billing contact link to {target}.",
+  "rel.edit": "Edit relationship",
+  "rel.editStakeholder": "Edit stakeholder",
+  "rel.removeRelationship": "Remove relationship?",
+  "rel.removeStakeholder": "Remove stakeholder?",
   "rel.kind.employment": "Employment",
   "rel.kind.dealStakeholder": "Deal stakeholder",
   "rel.kind.projectStakeholder": "Project stakeholder",
@@ -3527,6 +3571,9 @@ export const en = {
   "unit.companies": "companies",
   "unit.deals": "deals",
   "unit.leads": "leads",
+  "unit.contact": "contact",
+  "unit.company": "company",
+  "unit.lead": "lead",
   "unit.worklistItems": "tasks and commitments",
   "unit.partners": "partners",
   "unit.products": "products",
@@ -3776,6 +3823,8 @@ export const en = {
   "company.relType.portfolio_company": "Portfolio company",
   "company.relType.competitor": "Competitor",
   "company.relType.other": "Other",
+  "co.archived.overview":
+    "This company is archived. Its history, documents and profile are still on the other tabs.",
   // Why a stored fact contradicts its own field. The fact is still shown
   // with its evidence — a reader can tell, and hiding it would be worse.
   "co.factSuspect.phoneShapedLocation": "Looks like a phone number",
@@ -3830,7 +3879,6 @@ export const en = {
   "co.overview.otherOpen": "Other open tasks",
   "record.allTasks": "All tasks",
   "co.overview.latest": "Latest",
-  "co.overview.nothingOpen": "Nothing else open",
   "co.overview.for": "for {name}",
   "co.overview.noDate": "No date",
   "co.overview.allDeals": "All deals",
@@ -4920,6 +4968,7 @@ export const en = {
   "filter.label": "Filter",
   "chronology.all": "All",
   "chronology.conversations": "Threads",
+  "chronology.filteredEmpty": "No activity matches these filters.",
   "chronology.conversationsEmpty": "No threads yet.",
   "chronology.changesEmpty":
     "No field has changed since this record was created.",
@@ -5332,6 +5381,8 @@ export const en = {
   "co.contacts.band.untried":
     "{count} not contacted · {waiting} awaiting your reply",
   "co.contacts.board.nobodyHolds": "No one holds this role",
+  "co.contacts.board.count_one": "{count} contact",
+  "co.contacts.board.count_other": "{count} contacts",
   "co.contacts.band.noOpenDeal": "No open deal",
   "co.contacts.band.noOpenDealWhy": "Roles are set per deal",
   "co.contacts.band.committeePartial": "Partly hidden",
@@ -5354,7 +5405,7 @@ export const en = {
     "Select a contact to see the best route to them.",
   "co.contacts.map.ourSide": "Your team",
   "co.contacts.map.account": "Company",
-  "co.contacts.map.missing": "{role} missing",
+  "co.contacts.map.missing": "No {role} yet",
   "co.contacts.map.awaiting": "awaiting reply",
   "co.contacts.map.owed": "reply owed",
   "co.contacts.map.replied": "they replied",
@@ -5362,7 +5413,6 @@ export const en = {
   "co.contacts.map.onDeal": "on the deal",
   "co.contacts.map.routesWithheld":
     "Routes to this contact are hidden from you",
-  "co.contacts.map.assignHint": "No one owns this deal",
   "co.contacts.map.scope":
     "{count} on the buying committee · selected deal only.",
   "co.contacts.map.scopePartial":
@@ -5775,7 +5825,7 @@ export const en = {
   "leadHandling.readOnly": "Your role cannot change this setting.",
   "leadHandling.firstResponse": "First-response target",
   "leadHandling.firstResponseHint":
-    "Off by default. When on, every open lead gets a reply deadline, the list gains an Overdue view, and overdue leads sort first.",
+    "Off by default. When on, every open lead that wrote to you by email or through a website form gets a reply deadline, the list gains an Overdue view, and overdue leads sort first.",
   "leadHandling.targetMinutes": "Target (minutes)",
   "leadHandling.targetOutOfRange":
     "Enter a whole number of minutes from 15 to 10,080 (7 days).",
@@ -5800,6 +5850,10 @@ export const en = {
   "lead.bulkDisqualifyTitle_other": "Disqualify {count} leads?",
   "lead.bulkDisqualifyBody":
     "Closed with the reason “{reason}”. Each lead keeps its record, and they cannot be reopened in one step.",
+  "lead.bulkAssignedDone_one": "{count} lead assigned to {owner}.",
+  "lead.bulkAssignedDone_other": "{count} leads assigned to {owner}.",
+  "lead.bulkDisqualifiedDone_one": "{count} lead disqualified.",
+  "lead.bulkDisqualifiedDone_other": "{count} leads disqualified.",
   "lead.bulkFailed": "{count} not applied:",
   "lead.bulkFailedRow": "not saved",
   "lead.bulkOutcomeConflict": "changed by someone else in the meantime",
@@ -5874,6 +5928,8 @@ export const en = {
   "lead.demoteReason": "Reason (recorded in the audit trail)",
   "lead.demoteReasonRequired": "Enter a reason first.",
   "lead.demoteConfirm": "Reverse",
+  "lead.demoteContactHasDeal":
+    "The contact is on a deal, so this qualification cannot be reversed. Remove them from the deal’s buying committee first, or keep the contact.",
   "lead.reopen": "Reopen",
   "lead.writeRefused": "Change was not saved",
   "lead.reopenDialog": "Reopen this lead?",
@@ -5994,7 +6050,7 @@ export const en = {
   "lead.viewNew": "New",
   "lead.viewNewUnassigned": "New and unassigned",
   "lead.viewUnassigned": "Unassigned",
-  "lead.viewNeedsFollowUp": "Needs follow-up",
+  "lead.viewContacted": "Contacted",
   "lead.viewEngaged": "Engaged",
   "lead.ladder": "Lead status",
   "lead.ladder.automatic": "{label} · set automatically",
@@ -6021,10 +6077,9 @@ export const en = {
   "lead.qualify.stage": "Stage",
   "lead.qualify.dealName": "Deal name",
   "lead.qualify.amount": "Amount ({currency})",
-  "lead.qualify.amountHint":
-    "Optional. Whole units in the installation’s base currency.",
+  "lead.qualify.amountHint": "Optional. In the installation’s base currency.",
   "lead.qualify.amountNoCurrency":
-    "Base currency not loaded yet. Retry shortly, or leave the amount empty.",
+    "Opens once the installation’s base currency has loaded.",
   "lead.qualify.why": "Why",
   "lead.qualify.reasonReplied": "Reason: the lead replied on {at}.",
   "lead.qualify.reasonMeetingBooked": "Reason: a meeting was booked for {at}.",
@@ -6097,7 +6152,8 @@ export const en = {
   "deal.ownerMe": "Assign to me",
   "deal.ownerUnassign": "Unassign",
   "deal.partnerCompany": "Referring partner",
-  "deal.partnerNoneYet": "No partners yet. Ask an admin to add one.",
+  "deal.partnerNoneYet":
+    "No partners yet. Set one up from a company’s More actions.",
   "deal.referredBy": "Referred by",
   "deal.supportedBy": "Supported by",
   "deal.referral.sourced": "(sourced)",
@@ -7385,9 +7441,6 @@ export const en = {
   "create.region": "State or region",
   "create.postalCode": "Postal code",
   "create.country": "Country code (ISO 3166)",
-  "lead.fillFromContact": "Fill from a contact",
-  "lead.fillFromContactSearch": "Search contacts by name or email",
-  "lead.create.fromContact": "Filled in from this contact.",
   "create.companyName": "Company",
   "create.companyPicked": "Adds the contact to this existing company.",
   "create.companyNew":
@@ -7437,7 +7490,7 @@ export const en = {
   "common.duplicate.leadHolds":
     "A lead already has this email address or LinkedIn profile, so no contact was created.",
   "common.duplicate.contactHolds":
-    "A contact already has this email address or LinkedIn profile, so no lead was created. For new business with them, open a deal on the contact.",
+    "A contact already has this email address or LinkedIn profile. For new business with them, open a deal on the contact.",
   "contact.leadHeld.title": "This is already a lead.",
   "contact.leadHeld.body":
     "Somebody is a lead or a contact, never both. Convert the lead to make them a contact; the lead’s history moves with them.",
@@ -9358,6 +9411,13 @@ export const en = {
   "settings.installAppDismissed":
     "Install Margince later from the browser’s menu or the install icon in its address bar.",
   "settings.installAppAction": "Install",
+  "settings.installAppManualMac":
+    "To install, choose “File”, then “Add to Dock”.",
+  "installHint.title": "Install Margince as an app",
+  "installHint.value":
+    "Opens from your home screen with one tap, in its own window. No app store, nothing to download.",
+  "installHint.manual": "Tap {share} “Share”, then “Add to Home Screen”.",
+  "installHint.notNow": "Not now",
   "role.admin": "Admin",
   "role.management": "Management",
   "role.manager": "Team lead",
@@ -9605,6 +9665,22 @@ export const en = {
   "agent.activity.offerDraft.degraded": "Offer draft stopped partway",
   "agent.activity.offerDraft.failed": "Offer draft failed",
   "agent.activity.offerDraft.stalled": "Offer draft is taking unusually long",
+  "agent.activity.draftReplyNamed.queued": "Reply draft for “{name}” queued",
+  "agent.activity.draftReplyNamed.running": "Drafting a reply to “{name}”…",
+  "agent.activity.draftReplyNamed.done": "Draft reply to “{name}” ready",
+  "agent.activity.draftReplyNamed.degraded":
+    "Reply draft for “{name}” stopped partway",
+  "agent.activity.draftReplyNamed.failed": "Reply draft for “{name}” failed",
+  "agent.activity.draftReplyNamed.stalled":
+    "Reply draft for “{name}” is taking unusually long",
+  "agent.activity.offerDraftNamed.queued": "Offer draft for {name} queued",
+  "agent.activity.offerDraftNamed.running": "Drafting an offer for {name}…",
+  "agent.activity.offerDraftNamed.done": "Draft offer for {name} ready",
+  "agent.activity.offerDraftNamed.degraded":
+    "Offer draft for {name} stopped partway",
+  "agent.activity.offerDraftNamed.failed": "Offer draft for {name} failed",
+  "agent.activity.offerDraftNamed.stalled":
+    "Offer draft for {name} is taking unusually long",
   // ── THE AGENT SURFACE'S OWN WORDS ──────────────────────────────────────────
   //
   // The rail's one line and the panel it opens, in one place. They were split
@@ -9668,8 +9744,9 @@ export const en = {
   "agent.fact.sources": "Sources",
   "agent.fact.offline": "offline",
   "agent.fact.sourceOnProvider": "{account} ({provider})",
-  // The two reasons there is no model to name, in the value's own slot.
+  // Why no answering model is named, in the value's own slot.
   "agent.fact.searchIndex": "Search index: {model}",
+  "agent.fact.noAnswers": "No answers from {model}",
   "agent.fact.noCalls": "No model calls yet",
   "agent.fact.hidden": "Hidden for your role",
   // The fault a badge carries, above the facts it invalidates.
@@ -10128,18 +10205,21 @@ export const en = {
     "Only an administrator or operations user can import files.",
   "import.title": "Import file",
   "import.back": "Back to data import",
-  "import.object.lead": "Prospects",
+  "import.object.lead": "Leads",
   "import.object.company": "Companies",
   "import.object.contact": "Contacts",
   "import.object.deal": "Deals",
   "import.object.activity": "Activities",
-  "import.profiled": "Rows profiled from the start of the file: {rows}.",
+  "import.profiled_one":
+    "“Filled in” and “Values” come from the first row of the file.",
+  "import.profiled_other":
+    "“Filled in” and “Values” come from the first {count} rows of the file.",
   // The name the mapping grid announces once it is wider than its box.
   "import.mappingTable": "Column mapping",
   "import.col.column": "Column",
   "import.col.filled": "Filled in",
   "import.col.filledHint":
-    "Share of rows in this file that have a value in the column",
+    "Share of the rows read that have a value in the column",
   "import.col.samples": "Values",
   "import.col.destination": "Field",
   "import.dontImport": "Do not import",
@@ -10173,6 +10253,7 @@ export const en = {
   "import.hub.preview": "Preview template",
   "import.hub.uploadLabel": "Upload your data",
   "import.hub.uploadHint": "A ZIP of CSV files, or one CSV. Up to {mb} MB.",
+  "import.hub.uploadHintCsv": "One CSV file. Up to {mb} MB.",
   "import.hub.uploadEmpty": "Choose a file or drop it here",
   "import.hub.csvOnly":
     "Only a CSV file can be imported here. Choose a .csv file.",
@@ -10201,6 +10282,8 @@ export const en = {
     "This draft is not offered again. Upload the file again to start over.",
   "import.closed.stopped": "This import stopped before anything was imported.",
   "import.closed.upload": "Upload a file",
+  "import.missing.title": "Import not found",
+  "import.missing.body": "This import does not exist or was removed.",
   "import.cancelFailed": "The import was not canceled",
   "import.conflictDismiss": "Dismiss",
   "import.conflictOtherTab":
@@ -10217,11 +10300,79 @@ export const en = {
   "import.upload.tooManyRowsTitle": "File is too long for one test run",
   "import.upload.tooManyRows":
     "This file has more rows than one test run can read. Split it into smaller files and import each one.",
+  "import.refusal.inFile": "In “{file}”: {sentence}",
+  "import.refusal.notUtf8":
+    "The file is not saved as UTF-8. Save it as CSV UTF-8 and upload it again.",
+  "import.refusal.unreadable": "The file could not be read. Upload it again.",
+  "import.refusal.unreadable.line":
+    "Line {line} could not be read. Fix that line and upload the file again.",
+  "import.refusal.unreadable.fieldCount":
+    "Line {line} has more or fewer fields than the header row. Fix that line and upload the file again.",
+  "import.refusal.unreadable.quote":
+    "Line {line} has a quotation mark out of place. Fix that line and upload the file again.",
+  "import.refusal.header":
+    "The header row cannot be used. Give every column a name of its own and upload the file again.",
+  "import.refusal.header.repeatedName":
+    "The header row names “{name}” twice. Give each column its own name and upload the file again.",
+  "import.refusal.header.blankName":
+    "Column {position} of the header row has no name. Name every column and upload the file again.",
+  "import.refusal.header.noHeader":
+    "The file has no header row. Put the column names on the first line and upload it again.",
+  "import.refusal.bundle":
+    "The ZIP cannot be imported. Check the files in it and upload it again.",
+  "import.refusal.bundle.twoFilesOneType":
+    "“{other_file}” and “{file}” are both {object}. Keep one of them and upload the ZIP again.",
+  "import.refusal.bundle.tooManyFiles":
+    "The ZIP holds {files} files, and an import reads at most {max_files}. Remove the files you do not import and upload it again.",
+  "import.refusal.bundle.empty":
+    "The ZIP is empty. Add one CSV file per record type and upload it again.",
+  "import.refusal.bundle.notAZip":
+    "The ZIP could not be opened. Make the ZIP again and upload it.",
+  "import.refusal.bundle.filesTooLarge":
+    "The files in the ZIP add up to more than {max_mb} MB. Split them over smaller ZIPs and import each one.",
+  "import.refusal.bundle.zipTooLarge":
+    "The ZIP is larger than {max_mb} MB, the most one upload holds. Split it into smaller ZIPs.",
+  "import.refusal.bundle.passwordProtected":
+    "“{file}” is password-protected. Remove the password and upload the ZIP again.",
+  "import.refusal.bundle.fileDamaged":
+    "“{file}” in the ZIP is damaged. Make the ZIP again and upload it.",
+  "import.refusal.bundle.fileMissing":
+    "“{file}” is not in the ZIP. Upload the ZIP again.",
+  "import.refusal.bundle.typeNotImportable":
+    "“{object}” is not a record type an import takes. Remove that file and upload the ZIP again.",
+  "import.refusal.tooManyRows":
+    "This file has {rows} rows, and one test run reads at most {max}. Split it into smaller files and import each one.",
+  "import.refusal.unsupported":
+    "An import takes companies, contacts, leads, deals or activities. Choose the type the file holds.",
+  "import.refusal.duplicateTarget":
+    "Two columns map to the same field. Map one column to each field.",
+  "import.refusal.duplicateTarget.named":
+    "The columns “{other_column}” and “{column}” both map to “{target}”. Map one column to each field.",
+  "import.refusal.unmappable":
+    "No column identifies each row. Map a column to the field that tells the rows apart.",
+  "import.refusal.unmappable.target":
+    "No column identifies each row. Map a column to “{target}”.",
+  "import.refusal.unmappable.targetOrRef":
+    "No column identifies each row. Map a column to “{target}” or to “{ref_target}”.",
+  "import.refusal.fileEmpty":
+    "The file is empty. Choose a file with a header row and upload it again.",
+  "import.refusal.objectMismatch":
+    "The file does not hold the record type chosen for it. Check “Import as” and run the test again.",
+  "import.refusal.mappingEmpty":
+    "No column is mapped to a field. Map at least one column and run the test again.",
+  "import.refusal.unknownColumn":
+    "The map names a column the file does not have. Upload the file again and map its columns.",
+  "import.refusal.unknownTarget":
+    "A column is mapped to a field this record type does not take. Choose another field for it.",
+  "import.refusal.unmappedColumn":
+    "The column that identifies each row is not mapped. Map it to a field and run the test again.",
+  "import.refusal.sourceName":
+    "The source name is not allowed. Use up to {max} characters: letters A to Z, digits, spaces, dots, underscores and hyphens.",
   "import.undoConfirm.title": "Undo this import?",
   "import.undoConfirm.confirm": "Undo import",
   "import.undoConfirm.order": "Undo runs in reverse order: {order}.",
   "import.undoConfirm.archived":
-    "Records this import created are archived, and prospects are disqualified.",
+    "Records this import created are archived, and leads are disqualified.",
   "import.undoConfirm.kept":
     "Records edited since the import are kept and listed.",
   "import.undoConfirm.updated":
@@ -10261,7 +10412,7 @@ export const en = {
   "import.wizard.cancel": "Cancel",
   "import.files.table": "Files in the upload",
   "import.files.col.file": "File",
-  "import.files.col.rows": "Rows profiled",
+  "import.files.col.rows": "Rows",
   "import.files.col.type": "Import as",
   "import.files.columns_one": "1 column",
   "import.files.columns_other": "{count} columns",
@@ -10276,12 +10427,26 @@ export const en = {
   "import.files.sourceName": "Source name",
   "import.files.sourceNameHint":
     "Use the same name on a later upload to update these records, not add them again.",
+  "import.files.sourceNameRule":
+    "Up to {max} characters: letters A to Z, digits, spaces, dots, underscores and hyphens.",
+  "import.files.sourceNameInvalid":
+    "The source name holds a character that is not allowed. Use letters A to Z, digits, spaces, dots, underscores or hyphens.",
+  "import.files.guessed": "Record type chosen from the columns",
+  "import.files.guessedCheck":
+    "The file name names no record type. Check “Import as” before you go on.",
+  "import.files.unguessed": "No record type found",
+  "import.files.unguessedChoose":
+    "Neither the file name nor its columns name one. Choose it under “Import as”.",
+  "import.files.retireFailed":
+    "The earlier draft of this file was not canceled",
   "import.files.noneTyped": "Choose a record type for at least one file.",
   "import.files.clash":
     "{first} and {second} are both {type}. Each type takes one file.",
   "import.files.next_one": "Next: map 1 file",
   "import.files.next_other": "Next: map {count} files",
   "import.map.tabs": "Files to map",
+  "import.map.leftOut_one": "1 column not imported",
+  "import.map.leftOut_other": "{count} columns not imported",
   "import.map.lead":
     "{file} as {type}. A column left on “Do not import” is left out.",
   "import.map.link": "link",
@@ -10359,11 +10524,13 @@ export const en = {
   "import.test.nothing.skipped":
     "Download problems.csv before you press Done: it lists the skipped rows and why.",
   "import.test.nothing.done": "Done",
+  "import.test.nothing.empty": "The file has a header and no rows.",
   "import.test.reupload": "Fix and re-upload",
   "import.test.issuesUnit": "issues",
   "import.test.import_one": "Import 1 row",
   "import.test.import_other": "Import {count} rows",
-  "import.test.importAnyway": "Import anyway",
+  "import.test.importAnyway_one": "Import 1 row anyway",
+  "import.test.importAnyway_other": "Import {count} rows anyway",
   "import.test.counts": "Rows per record type",
   "import.test.testing": "Testing your file…",
   "import.test.stop": "Stop test",
@@ -14185,6 +14352,8 @@ export const en = {
     "Extensions in this build, and which roles can access them.",
   "settings.page.reset.sub":
     "Delete this installation’s data. Cannot be undone.",
+  "settings.page.about.sub":
+    "The version, the commit and the license of this build.",
   "settings.scope.self": "Only you",
   "settings.scope.mixed": "Mixed",
   "settings.scope.workspace": "Company",
@@ -14258,6 +14427,7 @@ export const en = {
   "configuration.scope.changed": "Not default",
   "configuration.scope.outside": "Set outside the app",
   "settings.tab.reset": "Reset data",
+  "settings.tab.about": "About Margince",
   "settings.group.me": "You",
   "settings.group.compliance": "Compliance",
   "settings.group.system": "System",
@@ -16904,6 +17074,9 @@ export const en = {
     "Tasks grouped by the tier that runs them; select a name for what a task does, or open a row to set its thinking level and timeouts.",
   "aiTasks.whatItDoes": "{task}: what it does",
   "aiTasks.decisionFirst": "Decision model first",
+  "aiTasks.mode.interactive": "While the user waits",
+  "aiTasks.mode.background": "In the background",
+  "aiTasks.mode.embedding": "Search indexing",
   "aiTasks.viewCalls": "View calls",
   "aiTasks.deferral.nowEmbedding":
     "Refused now: search indexing tries again on its own schedule.",
@@ -18276,6 +18449,8 @@ export const en = {
   "embedreindex.statusReembedding": "Reindexing…",
   "embedreindex.lastProgress": "Last progress {duration} ago",
   "embedreindex.entitiesPending": "{count} records pending",
+  "embedreindex.modelMismatch":
+    "The last reindex ran with {populated}. Search now uses {configured}.",
   "embedreindex.workspacePending": "{count} pending",
   "embedreindex.reviewCta": "Review and reindex",
   "embedreindex.rebuildCta": "Rebuild index",
@@ -18406,45 +18581,31 @@ export const en = {
     "Some contacts at this company are not shown.",
   "contact.intro.askFirstName": "Ask {name} to introduce you",
   "contact.intro.heroDirect": "knows them directly",
-  "contact.intro.heroIndirect": "reaches them through {through}",
   "contact.intro.heroYou": "You",
   "contact.intro.heroDirectYou": "know them directly",
-  "contact.intro.heroIndirectYou": "reach them through {through}",
   "contact.intro.factReciprocal": "Reciprocal",
   "contact.intro.factOneSided": "One-sided",
   "contact.intro.factDirect": "Direct relationship",
   "contact.intro.factIndirect": "Through a colleague",
   "contact.intro.factReceipts_one": "{count} visible receipt",
   "contact.intro.factReceipts_other": "{count} visible receipts",
-  "contact.intro.verdictDirect":
-    "Ask {name}. They already correspond with this contact.",
-  "contact.intro.verdictOneSided":
-    "Ask {name}. They wrote to this contact; no reply is recorded.",
-  "contact.intro.verdictVia":
-    "Ask {name}. They reach this contact through {through}.",
-  "contact.intro.verdictDirectYou": "You already correspond with this contact.",
-  "contact.intro.verdictOneSidedYou":
-    "You wrote to this contact; no reply is recorded.",
-  "contact.intro.verdictViaYou": "You reach them through {through}.",
   // What stands where the ask would be on the reader's own route. The panel
   // is the page's one recommendation, so it says what to do rather than
   // leaving the strongest way in with no move under it.
   "contact.intro.ownRouteNoAsk":
     "No one to ask. Write to this contact directly.",
-  "contact.intro.evidenceEyebrow": "Evidence",
-  "contact.intro.evidenceExchanges": "Exchanges",
-  "contact.intro.evidenceWindow": "in 90 days",
   "contact.intro.evidenceFrom": "{count} from {name}",
   "contact.intro.evidenceFromYou": "{count} from you",
   "contact.intro.evidenceLastContact": "Last contact",
+  "contact.intro.bestWayIn": "Best way in",
+  "contact.intro.sameTeam": "same team",
+  "contact.intro.exchangesWindow": "Exchanges in 90 days",
   "contact.intro.lastToday": "Today",
   "contact.intro.lastYesterday": "Yesterday",
   "contact.intro.lastDays": "{days} days ago",
   "contact.intro.lastNever": "None in 90 days",
   "contact.intro.stripWhoMix": "{direct} direct · {indirect} via a contact",
   "contact.intro.stripWhoOwn": "Includes your own relationship",
-  "contact.intro.otherRoutesTitle": "Other routes",
-  "contact.intro.otherRoutesSub": "Ranked by two-way correspondence.",
   "contact.intro.relayDue": "due {date}",
   "contact.intro.stripDirect": "Direct relationship",
   "contact.intro.stripNoPath": "No one corresponds with this contact",
@@ -18463,7 +18624,6 @@ export const en = {
   "contact.intro.handoffOwner": "Next: {name}",
   "contact.intro.ownerColleague": "a colleague",
   "contact.intro.ownerNobody": "no one",
-  "contact.intro.relayTitle": "Introduction status",
   "contact.chapter.jump": "On this tab",
   "contact.chapter.wayIn": "Way in",
   "contact.chapter.whoAnswer":
@@ -18627,9 +18787,6 @@ export const en = {
   "contact.intro.alreadyRequested": "Already asked",
   "contact.intro.declined": "Declined before",
   "contact.intro.unavailable": "Not available",
-  "contact.network.momentsTitle": "What changed",
-  "contact.network.momentsSub":
-    "Changes read from the messages, and earlier intro requests.",
   "contact.network.noMoments": "No recent changes in this relationship.",
   "contact.change.repliedAfterGap": "They replied after {days} quiet days.",
   "contact.change.wentQuiet": "No activity for {days} days.",
@@ -20030,6 +20187,8 @@ export const en = {
   "worklist.pair.notDuplicate": "Not duplicates",
   "worklist.pair.mergeBlocked":
     "These records cannot be merged: both have live projects, and nothing shows which work belongs where. You can still mark them as not duplicates.",
+  "worklist.pair.created": "Created {date}",
+  "worklist.pair.dismissed": "Marked as not duplicates.",
   "worklist.pair.related": "{count} linked",
   "worklist.pair.failed": "Pair was not resolved. Retry.",
   "worklist.pair.refused":
@@ -21239,6 +21398,7 @@ export const en = {
   "aiProviders.state.active": "Active",
   "aiProviders.state.ready": "Ready",
   "aiProviders.state.needsKey": "Needs key",
+  "aiProviders.state.needsService": "Needs service",
   "aiProviders.state.inactive": "Not active",
   "aiProviders.colUsedBy": "Used by",
   "aiProviders.colStatus": "Status",
@@ -21329,7 +21489,6 @@ export const en = {
   "contact.card.dealTitle": "The deal {name} decides",
   "contact.card.deals": "Deals",
   "contact.card.openTasks": "Open tasks",
-  "contact.card.noOpenTasks": "No open tasks",
   "contact.moment.doneToast":
     "Marked done. It comes back when either of you writes again.",
   "contact.card.understandingTitle": "Understanding {name}",
@@ -22065,7 +22224,8 @@ export const en = {
   "aiTaskSheet.fixed": "Fixed by contract",
   "aiTaskSheet.tiersTried": "Tiers tried",
   "aiTaskSheet.runs": "Runs",
-  "aiTaskSheet.fixed.help": "Change these in ai-tasks.yaml.",
+  "aiTaskSheet.fixed.help":
+    "A developer changes these in the task’s definition, and they take effect with the next release.",
   "aiTaskSheet.addTask": "Add or change an AI task ↗",
   "aiTaskSheet.conflict": "Someone saved these settings while you were editing",
   "aiTaskSheet.conflict.help":
@@ -22093,7 +22253,10 @@ export const en = {
   "aiOutcome.role.decision": "decision model",
   "aiOutcome.role.tier": "tier model",
   "aiOutcome.role.fallback": "fallback",
-  "aiOutcome.answered": "{answered} of {attempts} answered",
+  "aiOutcome.answered_one": "{answered} answered in {attempts} try",
+  "aiOutcome.answered_other": "{answered} answered in {attempts} tries",
+  "aiOutcome.triesNote":
+    "A failed or timed-out try can be retried at the same step, so a step can count more tries than there are calls.",
   "aiOutcome.usually": "usually in {latency}",
   "aiOutcome.notNeeded": "Not needed in this window",
   "aiOutcome.gaveUp.on_one": "{count} {reason} → passed on",
@@ -22327,6 +22490,7 @@ export const en = {
   "contact.handles.more_one": "+{count} more",
   "contact.handles.more_other": "+{count} more",
   "contact.handles.fewer": "Show fewer",
+  "record.reach.label": "Email and phone",
   "record.details.hideEmpty": "Hide empty fields",
   "record.verb.email": "Email",
   "record.verb.call": "Call",

@@ -2,7 +2,7 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   messageBox,
   messageText,
@@ -19,6 +19,7 @@ import {
   emptyResponse,
   fillSendableForm,
   footScheduleConfirm,
+  installComposeClock,
   jsonResponse,
   PROVISIONAL_VOICE_PROFILE,
   pickWhy,
@@ -33,6 +34,8 @@ import {
   waitForSendReady,
 } from "./compose.testkit";
 import { ComposeWindow } from "./composewindow";
+
+beforeEach(installComposeClock);
 
 afterEach(() => {
   cleanup();

@@ -206,27 +206,35 @@ export function useRowBuilders(company: Company, edit: Edit) {
   const choice = (
     key: "size_band" | "lifecycle" | "industry",
     label: MessageKey,
-    options: readonly { value: string; label: string }[],
-  ): DetailRow => ({
-    key,
-    term: t(label),
-    empty: !company[key] || company[key] === "unknown",
-    value: (
-      <InlineChoice
-        label={t(label)}
-        hideLabel
-        value={company[key] ?? ""}
-        options={options}
-        render={(value) =>
-          options.find((option) => option.value === value)?.label ??
-          t("field.unset")
-        }
-        canEdit={edit.canEdit}
-        readOnlyReason={edit.reason}
-        onSave={write(key)}
-      />
-    ),
-  });
+    listed: readonly { value: string; label: string }[],
+  ): DetailRow => {
+    // Industry and size band may be cleared, which the mapper sends as null;
+    // lifecycle has its own "unknown" stage instead.
+    const options =
+      key === "lifecycle"
+        ? listed
+        : [{ value: "", label: t("field.unset") }, ...listed];
+    return {
+      key,
+      term: t(label),
+      empty: !company[key] || company[key] === "unknown",
+      value: (
+        <InlineChoice
+          label={t(label)}
+          hideLabel
+          value={company[key] ?? ""}
+          options={options}
+          render={(value) =>
+            options.find((option) => option.value === value)?.label ??
+            t("field.unset")
+          }
+          canEdit={edit.canEdit}
+          readOnlyReason={edit.reason}
+          onSave={write(key)}
+        />
+      ),
+    };
+  };
   // `flag` sits beside the value rather than inside it, so the edit button's
   // label does not swallow what the flag says.
   const compound = (

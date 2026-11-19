@@ -268,6 +268,10 @@ func (s stubFacts) GetCompany(
 		industry := crmcontracts.CompanyIndustry(s.in.Industry)
 		company.Industry = &industry
 	}
+	if s.in.SizeBand != "" {
+		band := crmcontracts.CompanySizeBand(s.in.SizeBand)
+		company.SizeBand = &band
+	}
 	return company, nil
 }
 

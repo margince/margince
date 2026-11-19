@@ -168,6 +168,31 @@ describe("the schedule panel", () => {
     ).toContain("c-2");
   });
 
+  it("lets every attendee's name wrap inside the panel rather than run past it", () => {
+    draw(
+      <SchedulePanel
+        day={readingsDay({}, [
+          {
+            ...meetingRow("m1", true),
+            contact: {
+              id: "c-1",
+              label: "Anna Weber",
+              employer: { company_id: "co-1", company_name: "Weber GmbH" },
+            },
+          },
+        ])}
+        state="ready"
+        now={EARLY}
+      />,
+    );
+
+    const chips = within(screen.getByRole("region")).getAllByRole("link");
+    expect(chips.map((chip) => chip.classList.contains("chip-wrap"))).toEqual([
+      true,
+      true,
+    ]);
+  });
+
   // A row whose room did not come still names the counterparty the lane chose.
   it("names the meeting's contact when the row carries no room", () => {
     const meeting: WorklistItem = {

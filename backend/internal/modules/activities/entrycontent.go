@@ -4,9 +4,8 @@
 package activities
 
 import (
-	"strings"
-
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // EmptyEntryError maps to 422. A note or a call is what its subject or body
@@ -42,7 +41,7 @@ func CheckEntryHasContent(kind string, subject, body, callOutcome *string) error
 }
 
 func isBlank(text *string) bool {
-	return text == nil || strings.TrimSpace(*text) == ""
+	return text == nil || !values.HasVisibleText(*text)
 }
 
 // firstSet is what a coalescing patch leaves in a column: the patched value

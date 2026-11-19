@@ -160,7 +160,14 @@ export function WebFormSetupModal({
     }
   };
   return (
-    <Modal open onClose={onClose} labelledBy={headingId} intent="confirm">
+    <Modal
+      open
+      onClose={onClose}
+      labelledBy={headingId}
+      intent="confirm"
+      unsaved={Boolean(secret) && !copies.secret.copied}
+      unsavedBody={t("webForms.setup.leaveWarning")}
+    >
       <Heading size="large" id={headingId} className="t-h2 modal-title">
         {t("webForms.setup.title", { name: form.name })}
       </Heading>

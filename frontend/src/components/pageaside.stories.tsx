@@ -46,7 +46,7 @@ function contextCards() {
         <PanelBody>{en["co.overview.noWork"]}</PanelBody>
       </Panel>
       <Panel title={en["co.overview.otherOpen"]}>
-        <PanelBody>{en["co.overview.nothingOpen"]}</PanelBody>
+        <PanelBody>{en["co.next.empty"]}</PanelBody>
       </Panel>
     </>
   );

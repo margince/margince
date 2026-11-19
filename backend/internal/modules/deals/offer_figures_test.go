@@ -3,7 +3,12 @@
 
 package deals
 
-import "testing"
+import (
+	"errors"
+	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
+)
 
 func TestAFigureIsJudgedAsTheCallerWroteIt(t *testing.T) {
 	t.Parallel()
@@ -41,6 +46,21 @@ func TestAMinorAmountMustFitWhatAJSONNumberHoldsExactly(t *testing.T) {
 	for amount, refused := range map[int64]bool{0: false, 100: false, maxPriceMinor: false, maxPriceMinor + 1: true, -1: true} {
 		if err := checkPrice(amount); (err != nil) != refused {
 			t.Errorf("checkPrice(%d) = %v, want refused=%v", amount, err, refused)
+		}
+	}
+}
+
+// Offers, products and lines take the deal's currency rule, so none of them
+// can carry a code its deal would refuse.
+func TestAFigureCurrencyIsOneADealWouldTake(t *testing.T) {
+	t.Parallel()
+	if err := checkCurrency("EUR"); err != nil {
+		t.Fatalf("EUR refused: %v", err)
+	}
+	for _, code := range []string{"ZZZ", "eur", "EURO"} {
+		var refusal *values.ParseError
+		if err := checkCurrency(code); !errors.As(err, &refusal) || refusal.Code != "currency_unassigned" {
+			t.Errorf("%q answered %v, want the deal's currency_unassigned refusal", code, err)
 		}
 	}
 }

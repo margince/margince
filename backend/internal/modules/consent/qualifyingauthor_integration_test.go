@@ -207,6 +207,44 @@ func TestAMeetingThatHappenedMakesCorrespondenceLawful(t *testing.T) {
 	}
 }
 
+// relinkedMeeting plants a captured meeting the subject was never in: a member
+// relinked somebody else's attendee row onto them. The row carries relinked_at,
+// so it is the member's edit, not the calendar's record of who attended.
+func (e *qualifyingEnv) relinkedMeeting(t *testing.T, offset time.Duration) {
+	t.Helper()
+	id := ids.NewV7()
+	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(context.Background(), `
+			INSERT INTO activity (id, kind, source, occurred_at, captured_by, meeting_status, counterparty_email)
+			VALUES ($1, 'meeting', 'gcal', now() + $2::interval, $3, NULLIF($4, ''), NULLIF($5, ''))`,
+			id, fmt.Sprintf("%d seconds", int(offset.Seconds())), capturedMeeting, noAcceptanceState, namesNobody); err != nil {
+			return err
+		}
+		_, err := tx.Exec(context.Background(), `
+			INSERT INTO activity_participant (activity_id, contact_id, role, relinked_at)
+			VALUES ($1, $2, 'attendee', now())`, id, e.contact)
+		return err
+	}); err != nil {
+		t.Fatalf("planting a relinked meeting at %s: %v", offset, err)
+	}
+}
+
+// A meeting the subject was relinked onto is no qualifying ground. The attendee
+// row is a member's edit, not the calendar's record that the contact attended.
+//
+// Mutation: drop the `p.relinked_at IS NULL` guard from meetingQualifyingEvent
+// and this fails, the verdict allowed on a meeting the contact never sat in.
+func TestARelinkedMeetingParticipantIsNoGround(t *testing.T) {
+	e := setupQualifying(t)
+
+	e.relinkedMeeting(t, -24*time.Hour)
+
+	if got := e.verdict(t); got.State == VerdictAllowed {
+		t.Fatalf("verdict %q for a meeting the contact was relinked onto, want not allowed — a "+
+			"member's edit is not evidence the contact attended", got.State)
+	}
+}
+
 // A meeting still in the diary is not evidence yet, however soon it is. The
 // derived row is stamped and read back without revalidating its source, so a
 // booking would otherwise stand as ground even if it never happened.

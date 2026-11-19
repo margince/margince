@@ -552,6 +552,7 @@
 .magic-line-subject {
   margin-inline-start: var(--space-2);
   color: var(--textSecondary);
+  overflow-wrap: anywhere;
 }
 
 .magic-line-controls {

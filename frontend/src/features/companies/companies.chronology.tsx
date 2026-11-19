@@ -177,6 +177,7 @@ export function useChronologySlots({
           history,
           {
             withheld,
+            filtered: hasTimelineFilters(read),
             loading: loading || timeline.isPending,
             failed: failed || timeline.isError,
             // A narrowed read is the list's own and is assembled once it
