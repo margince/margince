@@ -5,7 +5,7 @@
 
 import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { emailDetailKey } from "../../design-system/emailmessage";
 import { threadOrder } from "../../design-system/emailthread";
@@ -17,6 +17,7 @@ import { browserZone } from "../../format/timezone";
 import { meFixture } from "../../testing/mefixture";
 import {
   activity202,
+  installComposeClock,
   jsonResponse,
   pressSend,
   render,
@@ -25,6 +26,8 @@ import {
 import { OpenEmailDrawer } from "./openemaildrawer";
 
 type EmailPresentation = components["schemas"]["EmailPresentation"];
+
+beforeEach(installComposeClock);
 
 afterEach(() => {
   cleanup();
