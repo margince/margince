@@ -17,6 +17,7 @@ import { analyticsSectionHref } from "../../lib/analytics.address";
 import { unwrap } from "../../lib/problem";
 import { OutlookProse, readableAssessment } from "./analytics.assessment";
 import { scopeKey } from "./analytics.context";
+import { landingCaveatLine } from "./analytics.forecast.landing";
 import type { ProgressAsk, SalesProgress } from "./progress.queries";
 import { ProgressDelta } from "./progress.result";
 
@@ -207,21 +208,17 @@ function ScenarioFloor({
   const t = useT();
   const { locale } = useLocale();
   const missing = scenarios.eligible_count - scenarios.priced_count;
+  const caveat = landingCaveatLine(
+    scenarios.landing,
+    (amount) => formatAnalyticsMoney(amount, progress.currency, locale),
+    t,
+  );
   return (
     <p className="t-caption">
       {t("progress.scenarios.asOf", {
         at: formatDateTime(scenarios.as_of, locale, progress.timezone),
       })}
-      {scenarios.landing.caveat === "call_absent" &&
-        ` · ${t("forecast.callAbsentLine")}`}
-      {scenarios.landing.caveat === "call_below_actual" &&
-        ` · ${t("forecast.callBelowLine", {
-          won: formatAnalyticsMoney(
-            scenarios.landing.won_minor,
-            progress.currency,
-            locale,
-          ),
-        })}`}
+      {caveat && ` · ${caveat}`}
       {(missing > 0 || scenarios.fx_missing_count > 0) &&
         ` · ${t("progress.scenarios.unpriced")}`}
       {scenarios.scope_limited && ` · ${t("progress.scenarios.limited")}`}

@@ -99,6 +99,7 @@ export function BindingEditor({
     onSuccess: async (saved) => {
       queryClient.setQueryData(ROUTING_KEY, saved);
       await queryClient.invalidateQueries({ queryKey: ["ai-status"] });
+      await queryClient.invalidateQueries({ queryKey: ["assistant-profile"] });
       await invalidateProviderHealth(queryClient);
     },
   });

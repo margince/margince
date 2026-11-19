@@ -3,7 +3,7 @@
 
 import { useCallback, useState } from "react";
 import { liveDialogs } from "../design-system/dialogfocus";
-import { screenEnabled, useDisabledCoreFeatures } from "../lib/corefeatures";
+import { screenEnabled, useHiddenCoreFeatures } from "../lib/corefeatures";
 import { useClosesWithPage } from "../lib/pageleave";
 import { navigateReplacing, type Route } from "../lib/router";
 import { useShortcutHandler } from "../lib/shortcuts";
@@ -23,7 +23,7 @@ export function usePaletteShortcuts(
   hide: () => void,
   route: Route,
 ): void {
-  const disabled = useDisabledCoreFeatures();
+  const disabled = useHiddenCoreFeatures();
   useShortcutHandler("search", () => {
     // An open dialog makes the app unreachable; only the palette's own layer may close it.
     if (open) {

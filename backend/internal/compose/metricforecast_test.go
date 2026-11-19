@@ -139,7 +139,7 @@ func TestForecastLanguageChangesOnlyEvidenceAndChartLabels(t *testing.T) {
 func TestTheComparisonTakesAManagerCallAsTheWholeQuarter(t *testing.T) {
 	call := int64(76_000_000)
 	readings := forecasting.Readings{WonMinor: 42_000_000, EvidenceMinor: 10_000_000, OpenMinor: 136_000_000}
-	landing, err := forecasting.ProjectLanding(readings, forecasting.MeasureManagerCall, &call)
+	landing, err := forecasting.ProjectLanding(readings, forecasting.MeasureManagerCall, forecasting.SeenCall{Amount: &call})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -166,7 +166,7 @@ func TestAMissingRateLeavesTheOpenTotalUnknown(t *testing.T) {
 func TestACallBelowWhatIsWonIsMarkedForTheComparison(t *testing.T) {
 	call := int64(70_000_000)
 	readings := forecasting.Readings{WonMinor: 90_000_000}
-	landing, err := forecasting.ProjectLanding(readings, forecasting.MeasureManagerCall, &call)
+	landing, err := forecasting.ProjectLanding(readings, forecasting.MeasureManagerCall, forecasting.SeenCall{Amount: &call})
 	if err != nil {
 		t.Fatal(err)
 	}

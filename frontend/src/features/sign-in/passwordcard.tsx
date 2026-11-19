@@ -9,7 +9,7 @@ import { usePasswordReveal } from "../../design-system/passwordreveal";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { useT } from "../../i18n";
 import { problemMessageOf, unwrap } from "../../lib/problem";
-import { isTooShort } from "./passwordrule";
+import { passwordFault } from "./passwordrule";
 
 // Changing your own password, from the account settings page.
 //
@@ -114,12 +114,12 @@ export function PasswordSettingRow({
   const next = usePasswordReveal(revealLabels);
   const confirm = usePasswordReveal(revealLabels);
 
-  const tooShort = isTooShort(fields.next);
+  const fault = passwordFault(fields.next);
   const mismatch = fields.confirm.length > 0 && fields.confirm !== fields.next;
   const ready =
     fields.current !== "" &&
     fields.next !== "" &&
-    !tooShort &&
+    !fault &&
     fields.confirm === fields.next;
 
   // Leaving the dialog discards what was typed, which is the honest outcome for
@@ -212,11 +212,11 @@ export function PasswordSettingRow({
           <Field
             label={t("password.next")}
             required
-            error={tooShort ? t("password.tooShort") : undefined}
+            error={fault ? t(fault) : undefined}
             // The rule, until the rule is being broken — at which point the
             // refusal restates it in the danger tone and a second grey copy of
             // the same sentence underneath is noise.
-            hint={tooShort ? undefined : t("password.hint")}
+            hint={fault ? undefined : t("password.hint")}
             trailing={next.trailing}
           >
             {(control) => (

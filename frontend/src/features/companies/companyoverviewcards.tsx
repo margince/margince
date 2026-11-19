@@ -17,7 +17,7 @@ import { formatDayMonth } from "../../format/format.dates";
 import { PHASE_LABEL } from "../../format/projectphase";
 import { useLocale, useT } from "../../i18n";
 import type { CompanyTab } from "../../lib/companytab";
-import { useDisabledCoreFeatures } from "../../lib/corefeatures";
+import { useHiddenCoreFeatures } from "../../lib/corefeatures";
 import { labelFor } from "../../lib/labelfor";
 import { usePipelines } from "../../lib/pipelines.queries";
 import { routeHash } from "../../lib/router";
@@ -184,7 +184,7 @@ function DealsAndProjects({
   onOpenTab,
 }: Readonly<{ view: Company360; onOpenTab: (tab: CompanyTab) => void }>) {
   const t = useT();
-  const disabled = useDisabledCoreFeatures();
+  const disabled = useHiddenCoreFeatures();
   const rows = workInFlight(view).filter(
     (row) => !disabled.includes(row.kind === "deal" ? "deals" : "projects"),
   );
@@ -299,7 +299,7 @@ function ContactsCard({
   onOpenTab,
 }: Readonly<{ view: Company360; onOpenTab: (tab: CompanyTab) => void }>) {
   const t = useT();
-  const disabled = useDisabledCoreFeatures();
+  const disabled = useHiddenCoreFeatures();
   const contacts = strongestContacts(view);
   if (disabled.includes("contacts")) {
     return null;

@@ -68,12 +68,14 @@ func TestPublicProfileDerivesSafeRoutingPosture(t *testing.T) {
 }
 
 func TestGetAssistantProfileReturnsOnlyPublicFields(t *testing.T) {
-	h := NewHandlers(nil, nil).WithPublicProfile(NewPublicProfile("configured", RoutingConfig{
-		Tiers: map[Tier]ProviderConfig{
-			TierLocalSmall: {Provider: providerOllama, Model: "gemma3"},
-			TierPremium:    {Provider: providerAnthropic, Model: "claude-sonnet"},
-		},
-	}))
+	h := NewHandlers(nil, nil).WithPublicProfile(func() PublicProfile {
+		return NewPublicProfile("configured", RoutingConfig{
+			Tiers: map[Tier]ProviderConfig{
+				TierLocalSmall: {Provider: providerOllama, Model: "gemma3"},
+				TierPremium:    {Provider: providerAnthropic, Model: "claude-sonnet"},
+			},
+		})
+	})
 	recorder := httptest.NewRecorder()
 	h.GetAssistantProfile(recorder, httptest.NewRequest("GET", "/v1/assistant/profile", nil))
 
@@ -103,13 +105,15 @@ func TestGetAssistantProfileReturnsOnlyPublicFields(t *testing.T) {
 }
 
 func TestGetAiProfileReturnsAuthenticatedConfiguredModelsAndLocalDefaults(t *testing.T) {
-	h := NewHandlers(nil, nil).WithPublicProfile(NewPublicProfile("configured", RoutingConfig{
-		Tiers: map[Tier]ProviderConfig{
-			TierLocalSmall: {Provider: providerOllama},
-			TierLocalLarge: {Provider: providerVLLM},
-			TierPremium:    {Provider: providerAnthropic, Model: "claude-sonnet"},
-		},
-	}))
+	h := NewHandlers(nil, nil).WithPublicProfile(func() PublicProfile {
+		return NewPublicProfile("configured", RoutingConfig{
+			Tiers: map[Tier]ProviderConfig{
+				TierLocalSmall: {Provider: providerOllama},
+				TierLocalLarge: {Provider: providerVLLM},
+				TierPremium:    {Provider: providerAnthropic, Model: "claude-sonnet"},
+			},
+		})
+	})
 	recorder := httptest.NewRecorder()
 	request := httptest.NewRequest("GET", "/v1/ai/profile", nil)
 	request = request.WithContext(principal.WithActor(request.Context(), principal.Principal{
@@ -129,7 +133,7 @@ func TestGetAiProfileReturnsAuthenticatedConfiguredModelsAndLocalDefaults(t *tes
 }
 
 func TestGetAiProfileRequiresOperationalConfigurationGrant(t *testing.T) {
-	h := NewHandlers(nil, nil).WithPublicProfile(NewPublicProfile("configured", RoutingConfig{}))
+	h := NewHandlers(nil, nil).WithPublicProfile(func() PublicProfile { return NewPublicProfile("configured", RoutingConfig{}) })
 	request := httptest.NewRequest("GET", "/v1/ai/profile", nil)
 	request = request.WithContext(principal.WithActor(request.Context(), principal.Principal{
 		Type: principal.PrincipalHuman,

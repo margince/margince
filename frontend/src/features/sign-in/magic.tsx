@@ -16,6 +16,7 @@ import { formatNumber } from "../../format/format";
 import { browserZone } from "../../format/timezone";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { useCan } from "../../lib/capability";
 import { labelFor } from "../../lib/labelfor";
 import {
   fillsPage,
@@ -91,7 +92,7 @@ export function MagicPanel({
   // The READER's own zone. A receipt says when something happened to them, and
   // an instant rendered in UTC asks them to do the arithmetic.
   const zone = browserZone();
-  const magic = useMagic();
+  const magic = useMagic(useCan("deal", "read"));
   const titleId = useId();
   const receipt = magic.data;
   const drawsDone = lanes.includes("done");
