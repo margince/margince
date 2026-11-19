@@ -93,24 +93,17 @@ func TestAReimportedNameFollowsTheStoreRule(t *testing.T) {
 	}
 }
 
-// A re-imported first name joining a stored last name past the limit skips only
-// its row, and the stored name stays. Without the NameTooLong case it fails the import.
+// A re-imported first name joining a stored last name past the limit skips only its row; the name stays.
 func TestAReimportedNameJoiningPastTheLimitSkipsOnlyItsRow(t *testing.T) {
-	e := integration.Setup(t)
-	runID, part := ids.NewV7(), contacts.ContactNameLimit*2/3
-	last := strings.Repeat("b", part)
+	e, runID, last := integration.Setup(t), ids.NewV7(), strings.Repeat("b", contacts.ContactNameLimit*2/3)
 	created, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Ada " + last, FirstName: new("Ada"), LastName: &last, Source: "manual"})
 	if err != nil {
 		t.Fatalf("create: %v", err)
 	}
 	w := newCSVWriters(e.DB(), runID, migration.PartMapping{Object: migration.ObjectContact}, runOptions{}, &linkResolver{sourceSystem: "csv:names"}, importColumns{})
-	row := migration.Row{ExternalID: "row-1", Fields: map[string]any{"first_name": strings.Repeat("a", part)}}
-	got, err := w.reconcile(storekit.WithImportRun(e.Admin(), runID), ids.UUID(created.Id), row, nil)
-	if err != nil || !got.Skipped || got.SkipWhy.Code != migration.ReasonValueTooLong {
-		t.Fatalf("overlong row = %+v, %v; want it skipped as value_too_long", got, err)
-	}
-	stored, err := e.Contacts.GetContact(e.Admin(), ids.From[ids.ContactKind](ids.UUID(created.Id)), storekit.LiveOnly)
-	if err != nil || stored.FullName != "Ada "+last {
-		t.Fatalf("stored full_name %q, %v; want it unchanged", stored.FullName, err)
+	got, err := w.reconcile(storekit.WithImportRun(e.Admin(), runID), ids.UUID(created.Id), migration.Row{ExternalID: "row-1", Fields: map[string]any{"first_name": last}}, nil)
+	stored, readErr := e.Contacts.GetContact(e.Admin(), ids.From[ids.ContactKind](ids.UUID(created.Id)), storekit.LiveOnly)
+	if err != nil || readErr != nil || !got.Skipped || got.SkipWhy.Code != migration.ReasonValueTooLong || stored.FullName != "Ada "+last {
+		t.Fatalf("row = %+v, %v; stored %q, %v; want the row skipped as value_too_long and the name kept", got, err, stored.FullName, readErr)
 	}
 }
