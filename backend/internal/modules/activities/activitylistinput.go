@@ -22,8 +22,8 @@ import (
 type ListActivitiesInput struct {
 	InteractionsAsOf *time.Time
 	// ClockDirection with DirectionClockAsOf keeps the rows that move the
-	// "they last wrote" or "we last wrote" clock in that direction, as the
-	// account's clocks count them (relstrength.DirectionClockSQL).
+	// "they last wrote" or "we last wrote" clock in that direction.
+	// relstrength.DirectionClockSQL is the rule, as on the account.
 	ClockDirection     string
 	DirectionClockAsOf *time.Time
 	mailIdentities     map[string][]string

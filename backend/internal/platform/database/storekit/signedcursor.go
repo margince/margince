@@ -21,8 +21,8 @@ func EncodeSigned[T any](position T, key []byte) (string, error) {
 }
 
 // DecodeSigned reads a token EncodeSigned minted under key. A token with no
-// signature, a wrong one or an edited body is refused as MalformedCursorError,
-// the same answer a token this server never minted gets.
+// signature, a wrong one or an edited body is refused as MalformedCursorError.
+// That is the answer a token this server never minted gets.
 func DecodeSigned[T any](token string, key []byte) (T, error) {
 	body, mac, signed := strings.Cut(token, ".")
 	if !signed || !hmac.Equal([]byte(mac), []byte(signedCursorMAC(body, key))) {

@@ -15,8 +15,7 @@ import (
 const cursorKeyLabel = "margince worklist cursor v1"
 
 // processCursorKey stands in where no root key is configured. A cursor then
-// resumes only on the process that minted it, and any other process refuses it
-// as the caller's mistake instead of trusting an unsigned one.
+// resumes only on the process that minted it. Any other process refuses it.
 var processCursorKey = sync.OnceValue(func() []byte {
 	key := make([]byte, 32)
 	if _, err := rand.Read(key); err != nil {
