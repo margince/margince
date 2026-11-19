@@ -171,7 +171,8 @@ address was invited, a new link is on its way." The request always reaches you.
 
 But a new link is only mailed where the installation can send mail. If not,
 the Access panel shows "Asked for a new link {when}. Issue one and send it
-yourself." The note goes away once you issue a new link.
+yourself." The note goes away once you issue a new link, or once the buyer
+is back in the room.
 
 ### What a buyer sees, and what they never see
 A buyer in a Deal Room sees the room's title and welcome, its documents and its

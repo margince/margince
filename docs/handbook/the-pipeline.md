@@ -16,14 +16,14 @@ To move a deal to another stage in Margince, open the deal from **Deals** and cl
 3. On the board, open the card's **…** menu. Choose **Move to** the next stage, or **Move to stage** and pick one. You can also drag the card onto that stage's column.
 4. A move to a won or lost stage asks **Move to {stage}?**. Press **Confirm**, or **Cancel**.
 
-The move is saved at once ("Moved to {stage}"); there is no save button. The menu works with the keyboard and on a touch screen. Also called: advance a deal, change deal stage, progress an opportunity.
+The move is saved at once, with no save button. The note names the stage and the probability the deal now has ("Moved to Proposal · probability now 40%"). **Undo** on the note moves the deal back to the stage it came from. The menu works with the keyboard and on a touch screen. Also called: advance a deal, change deal stage, progress an opportunity.
 
 ### How do I move several deals to a stage at once?
 To move many deals at once, tick them on the **Deals** list and use **Move to stage** in the bar that appears.
 1. On **Deals**, tick the box of each deal.
 2. Choose **Move to stage**, then **Pick a stage**, then **Move**.
 
-This offers open stages only, and skips deals already on that stage. You cannot win or lose many deals at once: close each one on its own page. Only open deals that are not archived have a box to tick. Also called: bulk edit, mass update deal stage.
+This offers open stages only, and skips deals already on that stage. A note then says how many moved and how many were already there. When every ticked deal is already there, nothing moves and the ticks stay. You cannot win or lose many deals at once: close each one on its own page. Only open deals that are not archived have a box to tick. Also called: bulk edit, mass update deal stage.
 
 ### How do I mark a deal as won?
 To mark a deal as won in Margince, move it to a stage whose **Stage type** is **Won**. In the pipeline you start with, that is the stage called Won. On the board, **Mark won** in the card's **…** menu does the same.
@@ -49,6 +49,8 @@ To reopen a won or lost deal in Margince, open it and choose **More actions** �
 1. Open the closed deal. Its ladder is grey: "This deal is closed. Reopen it to move it to another stage."
 2. Choose **More actions** → **Reopen**.
 3. Under **Move this deal back to an open stage**, pick a stage and press **Reopen**.
+
+On **Board**, dragging a won or lost card onto an open column opens the same dialog, with that column's stage picked. Nothing moves until you press **Reopen**. A closed card dropped on the other closed column stays where it is.
 
 Reopening clears the close date and the exchange rate fixed at close, and the dialog does not say so. It needs permission to change the deal, and you cannot reopen an archived deal. Also called: undo a close, reopen a lost deal.
 
@@ -197,9 +199,9 @@ The **How was it won?** list offers these answers:
 - Other, which then needs **Details**, because "other" says nothing on its own
 
 This lets you answer "how many of our wins have no paper, and why". A win with a
-contract carries no reason at all, so your reports can tell the two apart. The
-reason shows on the deal's top line beside the won badge, with the detail you
-typed if the answer was Other.
+contract carries no reason at all, so your reports can tell the two apart.
+**How it stands** shows the reason beside the day the deal closed, with the
+details you typed for Other under it.
 
 One thing missing today: the contract form has no deal field. So attaching a contract to
 the deal you are winning takes a step the form does not offer. Many wins go
@@ -299,12 +301,13 @@ it. A colleague's reads "set by" and their name. Empty the field to use the
 stage's again.
 
 A stage move sets it back to the new stage's and says so:
-"Probability set to 75% by the stage Negotiating". A won deal is at 100%, a lost one at 0%. The forecast weights each open deal by
+"Moved to Negotiating · probability now 75%". A won deal is at 100%, a lost one at 0%. The forecast weights each open deal by
 it, and one at 90% or more (the **Likely threshold** setting) with a confirmed
 close date counts as **Likely**.
 
 An open deal's card on the board shows its probability beside its value, with
-a small round mark that fills to match it. A closed deal's card shows none.
+a small round mark that fills to match it. A closed deal's card shows none. It
+shows the day it closed, not the expected one, with the year if not this year.
 
 ## Close dates Margince sets
 
@@ -378,9 +381,12 @@ To archive a deal, open it and choose **More actions** → **Archive deal**, or
 tick several on the list and use **Archive**. A Team lead, Management, Ops or
 Admin may archive a deal, and so may its owner if they created it or were given it.
 Archived deals leave every list and report. **Show archived** lets you see one,
-read-only. To bring one back (Team lead, Management, Ops or Admin), open it with
-**Show archived**, find the archive entry in its history and press **Undo**. A
-closed or archived deal has no box to tick for acting on many at once.
+read-only, with **Archived** beside its status.
+
+To bring one back (Team lead, Management, Ops or Admin), open it with **Show
+archived** and choose **More actions** → **Restore deal**. Pressing **Undo** on
+the archive entry in its history does the same. A closed or archived deal has no
+box to tick for acting on many at once.
 
 ### Can I merge two duplicate deals?
 No. Margince has no merge for deals: merging covers contacts, companies, and leads from a duplicate pair in the Worklist. When one deal was entered twice, keep the best one and archive the other with **More actions** → **Archive deal**. Archiving carries nothing over, so move what you need first. Link its emails to the deal you keep with **Relink**, and note anything else on that deal. Also called: duplicate deal, combine two opportunities.
