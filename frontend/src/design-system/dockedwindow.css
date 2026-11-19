@@ -3,7 +3,7 @@
  * Nothing behind it is dimmed. It is portalled to the body at the modal
  * scrim's own level (50), so document order stacks it: above a dialog it was
  * opened from, such as the Worklist drawer, and under a dialog opened after
- * it. Popovers (70) still land on top of it. It sits over the phone layout's
+ * it. Popovers, in the top layer, still land on top of it. It sits over the phone layout's
  * bottom rail (30) and the overflow menus (35) of the page it shares. */
 
 .docked {

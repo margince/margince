@@ -16,6 +16,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { useT } from "../i18n";
+import { showInTopLayer } from "./toplayer";
 import "./toast.css";
 
 /**
@@ -377,6 +378,7 @@ export function ToastRegion() {
       setFocusInside(false);
     }
   }, []);
+  useLayoutEffect(() => showInTopLayer(region), [region]);
   const leftFrom = useLeftFrom();
   const handBack = useHandBack();
   // Where focus sat in a message that is about to unmount; a replacement takes
@@ -443,6 +445,7 @@ export function ToastRegion() {
   return createPortal(
     <div
       ref={attachRegion}
+      popover="manual"
       className="toast-region"
       onPointerEnter={() => setPointerInside(true)}
       onPointerLeave={() => setPointerInside(false)}

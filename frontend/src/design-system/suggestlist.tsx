@@ -17,6 +17,7 @@ import {
   useDismissOnOutsidePress,
 } from "./anchoredpopup";
 import { stepEnabled, type Walkable } from "./selectlistbox";
+import { useTopLayer } from "./toplayer";
 import "./suggestlist.css";
 import { foldForMatch, holdsEveryWord, searchWords } from "../format/collate";
 
@@ -315,6 +316,7 @@ export function SuggestPopup({
   list: SuggestList & { frame: ReturnType<typeof useAnchoredPopup> };
   selected?: string;
 }>) {
+  useTopLayer(list.popupRef, list.open && list.frame !== null);
   if (!list.open || !list.frame) {
     return null;
   }
@@ -324,6 +326,7 @@ export function SuggestPopup({
     // would announce twice; no name, as the combobox is named.
     <div
       ref={list.popupRef}
+      popover="manual"
       className="suggest-popup"
       id={list.listboxId}
       role="listbox"

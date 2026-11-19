@@ -16,6 +16,7 @@ import { createPortal } from "react-dom";
 import { isImeCommit } from "../lib/imecommit";
 import { coveredByLayer } from "./dialogfocus";
 import { useHoverIntent } from "./hoverintent";
+import { useTopLayer } from "./toplayer";
 import "./tooltip.css";
 
 // The gap between the anchor's box and the tip, and the margin the tip keeps
@@ -276,6 +277,7 @@ function useTip<T extends HTMLElement>(
   const anchor = useRef<T | null>(null);
   const box = useRef<HTMLDivElement | null>(null);
   const [open, setOpen] = useState(false);
+  useTopLayer(box, open);
   // Whether the text is clipped AT REST, which is a different question from
   // whether to show the tip now: this one decides whether the element is worth
   // a tab stop, and it has to be answered before anybody reaches it.
@@ -351,6 +353,7 @@ function useTip<T extends HTMLElement>(
             className={frame ? "tooltip" : "tooltip tooltip-unmeasured"}
             id={id}
             ref={box}
+            popover="manual"
             role="tooltip"
             // Only the MEASURED placement is inline, because only it is a
             // number the render worked out; the state before it is a class.
