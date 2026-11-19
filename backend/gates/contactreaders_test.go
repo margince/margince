@@ -236,7 +236,7 @@ var lifecycleContactReads = gatekit.Waive(map[string]string{
 // where a reviewer checks it â this census resolves gates FORWARD and cannot
 // resolve them caller-ward, because the call graph is by NAME.
 var calleeGatedContactReads = gatekit.Waive(map[string]string{
-	"internal/modules/capture/mailhooks.go:partiesAreLive":                "the hook's own contacts, counted to check they are live and never returned. Its one caller is adjustParties, which returns at once without auth.ReadGranted for both contact and company, and the hook's ids came from core's own reads of the mail",
+	"internal/modules/capture/mailhooks.go:partiesAreLive":                "the hook's own contacts, counted to check they are live and never returned. Its one caller is adjustParties, which returns at once without auth.ReadGranted for both contact and company, and the ids are the installed unit's own answer, held only to live, unique and at most two companies, not the anchor. They are never returned or shown. A unit is trusted code the administrator installed, so naming a company outside core's own derivation is the feature, and the deal reach check then reads that company's open deals under the same rule",
 	"internal/modules/contacts/signaturerole.go:roleFromSignatureTitleTx": "Called only by applySignature after contact.update and HoldWritableLive. It reads the persisted title for the gated relationship writer and returns no contact data.",
 
 	"internal/modules/activities/meetingfollowup.go:meetingAttendeesSQL":            "meetingFollowUpsPage supplies addressableContactClause from the reader's contact grant and row scope. The recipient aggregate filters by that predicate before returning any contact id; names and other contact fields are never selected",
