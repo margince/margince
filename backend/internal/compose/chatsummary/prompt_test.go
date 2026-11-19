@@ -70,3 +70,78 @@ func TestAnEarlierNoteIsSentFencedAndOnlyWhenThereIsOne(t *testing.T) {
 		t.Fatalf("prompt = %q, want the earlier note inside its fence", prompt)
 	}
 }
+
+var at = time.Date(2026, 11, 12, 12, 36, 0, 0, time.UTC)
+
+// lineOf is the prompt line that starts with prefix, or the empty string.
+func lineOf(prompt, prefix string) string {
+	for line := range strings.SplitSeq(prompt, "\n") {
+		if strings.HasPrefix(line, prefix) {
+			return line
+		}
+	}
+	return ""
+}
+
+func TestEveryAuthorIsMarkedWithTheSideTheyStandOnOutsideTheirFence(t *testing.T) {
+	in := Input{Record: "deal Acme", Channel: "acme", Messages: []Message{
+		{Author: "Uma Manager", Side: SideColleague, At: at, Text: "We can do 5 percent."},
+		{Author: "Carla", Side: SideOutside, At: at, Text: "Could the offer include SSO?"},
+		{Author: "colleague", Side: SideUnknown, At: at, Text: "hi"},
+	}}
+	req := Request(in, nil)
+	prompt := req.Messages[0].Content
+	for prefix, side := range map[string]string{"#1 ": "colleague", "#2 ": "outside", "#3 ": "unknown"} {
+		line := lineOf(prompt, prefix)
+		if !strings.HasPrefix(line, prefix+"2026-11-12 12:36 "+side+" <") {
+			t.Errorf("line %q, want the side %q before the fenced author", line, side)
+		}
+	}
+	if !strings.Contains(req.System, "Only an outside author speaks for the customer") {
+		t.Errorf("system = %q, want the sides explained", req.System)
+	}
+}
+
+func TestAReplyNamesTheMessageWhoseThreadItAnswers(t *testing.T) {
+	in := Input{Record: "deal Acme", Channel: "acme", Messages: []Message{
+		{ID: "1.000001", Author: "Rita", At: at, Text: "move go-live to April?"},
+		{ID: "1.000002", Author: "Sam", At: at, Text: "price question"},
+		{ID: "1.000003", ReplyTo: "1.000001", Author: "Uma", At: at, Text: "yes if legal signs"},
+		{ID: "1.000004", ReplyTo: "1.000002", Author: "Uma", At: at, Text: "5 percent"},
+		{ID: "1.000005", ReplyTo: "1.000000", Author: "Uma", At: at, Text: "late answer"},
+	}}
+	prompt := Request(in, nil).Messages[0].Content
+	for prefix, want := range map[string]string{
+		"#1 ": "", "#2 ": "",
+		"#3 ": "> replying to #1: ", "#4 ": "> replying to #2: ", "#5 ": "> replying to an earlier message: ",
+	} {
+		line := lineOf(prompt, prefix)
+		if replying := strings.Contains(line, "replying to"); want == "" && replying || want != "" && !strings.Contains(line, want) {
+			t.Errorf("line %q, want %q", line, want)
+		}
+	}
+}
+
+func TestAFileIsNamedWithItsTypeInsideTheFenceAndNothingMore(t *testing.T) {
+	in := Input{Record: "deal Acme", Channel: "acme", Messages: []Message{
+		{Author: "Rita", At: at, Text: "pdf attached", Files: []File{{Name: "quote2.pdf", Type: "application/pdf"}, {Name: "notes"}}},
+		{Author: "Sam", At: at, Text: "thanks"},
+	}}
+	prompt := Request(in, nil).Messages[0].Content
+	lines := strings.Split(prompt, "\n")
+	var files []string
+	for _, line := range lines {
+		if strings.Contains(line, " file: ") {
+			files = append(files, line)
+		}
+	}
+	if len(files) != 2 || !strings.HasPrefix(files[0], "#1 file: <") || !strings.HasPrefix(files[1], "#1 file: <") {
+		t.Fatalf("file lines = %q, want two under message #1", files)
+	}
+	if !strings.Contains(files[0], "quote2.pdf<") || !strings.Contains(files[0], ", type <") || !strings.Contains(files[0], "application/pdf<") {
+		t.Errorf("file line = %q, want the fenced name and type", files[0])
+	}
+	if strings.Contains(files[1], "type") {
+		t.Errorf("file line = %q, want no type for a file the chat typed none for", files[1])
+	}
+}

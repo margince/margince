@@ -43,10 +43,15 @@ func (e episode) url(address, slug string) string {
 	return chatlinks.ChannelURL(address, slug)
 }
 
-// judged reports whether a message is talk a note may summarise: a bot's own
-// posts and the chat's notices about members are not.
+// subtypeBroadcast labels a thread reply also sent to the channel. It is the
+// one labelled message a person wrote.
+const subtypeBroadcast = "thread_broadcast"
+
+// judged reports whether a message is talk a note may summarise. A bot's own
+// posts are not, nor is a line the chat labels, such as a member added or a
+// rename. The list is closed, so a label the chat adds later stays out too.
 func judged(m dispact.Message) bool {
-	return !m.IsBot && m.Subtype != "system" && m.Subtype != "member_join"
+	return !m.IsBot && (m.Subtype == "" || m.Subtype == subtypeBroadcast)
 }
 
 // groupEpisodes cuts messages, oldest first, into episodes. An episode is

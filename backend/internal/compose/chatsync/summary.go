@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/chatlinks"
 	"github.com/margince/margince/backend/internal/modules/chatlinks/dispact"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
@@ -58,9 +59,7 @@ func (p summariser) summarise(ctx context.Context, link chatlinks.Link, record c
 	}
 	in.Facts = append(in.Facts, extra.facts...)
 	in.Earlier = extra.earlier
-	for _, m := range messages {
-		in.Messages = append(in.Messages, chatsummary.Message{Author: authorOf(m), At: m.PostedAt, Text: m.Text})
-	}
+	in.Messages = transcript(messages, extra.seats)
 	about := &model.Subjects{}
 	if link.DealID != nil {
 		about.Deals = append(about.Deals, *link.DealID)
@@ -93,6 +92,23 @@ func (p summariser) summarise(ctx context.Context, link chatlinks.Link, record c
 	return chatsummary.Parse(res.Text)
 }
 
+// transcript is the talk as the model reads it. The email the chat gives an
+// author only places them and is never sent.
+func transcript(messages []dispact.Message, seats storekit.SeatAddresses) []chatsummary.Message {
+	out := make([]chatsummary.Message, 0, len(messages))
+	for _, m := range messages {
+		said := chatsummary.Message{ID: m.TS, Author: authorOf(m), Side: sideOf(m, seats), At: m.PostedAt, Text: m.Text}
+		if m.ThreadTS != "" && m.ThreadTS != m.TS {
+			said.ReplyTo = m.ThreadTS
+		}
+		for _, f := range m.Files {
+			said.Files = append(said.Files, chatsummary.File{Name: f.Name, Type: f.MimeType})
+		}
+		out = append(out, said)
+	}
+	return out
+}
+
 func authorOf(m dispact.Message) string {
 	if m.UserName != "" {
 		return m.UserName
@@ -101,6 +117,20 @@ func authorOf(m dispact.Message) string {
 		return m.UserEmail
 	}
 	return "someone"
+}
+
+// sideOf places an author by the email the chat gives them. A colleague's
+// email is a seat address. As for any channel address with no mailbox owner,
+// only a proven one counts, never an alias a seat typed.
+func sideOf(m dispact.Message, seats storekit.SeatAddresses) chatsummary.Side {
+	switch {
+	case m.UserEmail == "":
+		return chatsummary.SideUnknown
+	case seats.Covers(m.UserEmail, ids.Nil):
+		return chatsummary.SideColleague
+	default:
+		return chatsummary.SideOutside
+	}
 }
 
 // talk is what a note says about the messages it summarises. It holds no

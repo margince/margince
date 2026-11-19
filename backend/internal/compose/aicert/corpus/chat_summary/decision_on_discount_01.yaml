@@ -10,9 +10,9 @@ fixture:
   facts: ["Stage: Proposal"]
   channel: "acme-renewal"
   messages:
-    - {author: "Rita Rep", at: "2026-11-10T09:00:00Z", text: "Acme asked again for a better price on the 40 seats."}
-    - {author: "Sam Lead", at: "2026-11-10T09:05:00Z", text: "We can go to 12% if they sign by 30.11.2026."}
-    - {author: "Rita Rep", at: "2026-11-10T09:07:00Z", text: "Agreed, I will send the new offer today. Who checks whether legal needs to see it?"}
+    - {author: "Rita Rep", side: colleague, at: "2026-11-10T09:00:00Z", text: "Acme asked again for a better price on the 40 seats."}
+    - {author: "Sam Lead", side: colleague, at: "2026-11-10T09:05:00Z", text: "We can go to 12% if they sign by 30.11.2026."}
+    - {author: "Rita Rep", side: colleague, at: "2026-11-10T09:07:00Z", text: "Agreed, I will send the new offer today. Who checks whether legal needs to see it?"}
 expect:
   outcome: accepted
   answer:

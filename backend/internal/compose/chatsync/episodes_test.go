@@ -79,19 +79,25 @@ func TestTheEndOfTheDayClosesAnEpisode(t *testing.T) {
 	}
 }
 
-func TestBotPostsAndMemberNoticesAreNotJudged(t *testing.T) {
+func TestBotPostsAndEveryLabelledChatLineAreNotJudged(t *testing.T) {
 	bot := msg(1, day)
 	bot.IsBot = true
-	joined := msg(2, day)
-	joined.Subtype = "member_join"
-	system := msg(3, day)
-	system.Subtype = "system"
-	for _, m := range []dispact.Message{bot, joined, system} {
-		if judged(m) {
-			t.Errorf("message %d (bot=%t subtype=%q) was judged", m.Seq, m.IsBot, m.Subtype)
+	if judged(bot) {
+		t.Error("a bot's post was judged")
+	}
+	for _, subtype := range []string{
+		"system", "member_join", "member_added", "member_removed", "channel_join", "channel_leave",
+		"channel_name", "channel_topic", "call_invite", "a_label_the_chat_adds_later",
+	} {
+		notice := msg(2, day)
+		notice.Subtype = subtype
+		if judged(notice) {
+			t.Errorf("a %q line was judged as talk", subtype)
 		}
 	}
-	if !judged(msg(4, day)) {
-		t.Error("a member's message was not judged")
+	broadcast := msg(3, day)
+	broadcast.ThreadTS, broadcast.Subtype = msg(1, day).TS, subtypeBroadcast
+	if !judged(msg(4, day)) || !judged(broadcast) {
+		t.Error("a member's message, or their reply also sent to the channel, was not judged")
 	}
 }
