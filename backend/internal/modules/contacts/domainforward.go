@@ -56,7 +56,7 @@ func (s *Store) WithholdForwardedDomain(ctx context.Context, evidence DomainForw
 		return err
 	}
 	if !DomainIdentityForwarded(evidence.RequestedDomain, evidence.EffectiveURL) {
-		return fmt.Errorf("contacts: forwarded identity requires different registrable domains: %w", apperrors.ErrInvalidArgument)
+		return fmt.Errorf("a forwarded identity needs different registrable domains: %w", apperrors.ErrInvalidArgument)
 	}
 	encoded, err := json.Marshal(evidence)
 	if err != nil {

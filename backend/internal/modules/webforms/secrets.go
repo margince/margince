@@ -40,7 +40,7 @@ func mintSigningSecret() (string, error) {
 func workspaceOf(ctx context.Context) (ids.WorkspaceID, error) {
 	ws, ok := principal.WorkspaceID(ctx)
 	if !ok {
-		return ids.WorkspaceID{}, fmt.Errorf("webforms: no workspace bound: %w", apperrors.ErrPermissionDenied)
+		return ids.WorkspaceID{}, fmt.Errorf("this request is bound to no workspace: %w", apperrors.ErrPermissionDenied)
 	}
 	return ids.From[ids.WorkspaceKind](ws), nil
 }

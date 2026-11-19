@@ -86,6 +86,7 @@ export function ListTable<Row>({
   scopeKey,
   body,
   bodyOwnsPaging = false,
+  bodyEmpty,
   bodyCount,
   countScope,
   selection,
@@ -110,6 +111,8 @@ export function ListTable<Row>({
   body?: ReactNode;
   /** The alternate body renders its own complete-count/load-more contract. */
   bodyOwnsPaging?: boolean;
+  /** The body settled with nothing in it; see the design-system table. */
+  bodyEmpty?: boolean;
   /** The count for a body that pages itself; see the design-system table. */
   bodyCount?: ReactNode;
   /** What the table's count names its rows as part of (the deals pipeline). */
@@ -190,7 +193,7 @@ export function ListTable<Row>({
   // readers to the top of a list they had scrolled a long way down. Its own
   // lane, so a record page's column and a list's rows are two separate places.
   const rowsScroller = useRef<HTMLDivElement>(null);
-  useScrollMemory(rowsScroller, useHash(), "rows");
+  useScrollMemory(rowsScroller, useHash(), { lane: "rows" });
   const [localSearch, setLocalSearch] = useState(query.q);
   // What this box last put on the wire. It tells a `q` that moved for another
   // reason apart from this box's own debounce landing.
@@ -454,6 +457,7 @@ export function ListTable<Row>({
       widthsKey={layoutKey}
       body={body}
       bodyOwnsPaging={bodyOwnsPaging}
+      bodyEmpty={bodyEmpty}
       bodyCount={bodyCount}
       countScope={countScope}
       selection={selection}

@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
 import { WriteToProvider } from "../lib/writeto";
 import { Badge } from "./atoms";
@@ -158,4 +159,32 @@ export const WithAside: Story = {
       </li>
     </RecordCardList>
   ),
+};
+
+/** On a narrow card the name gives way before a one-word badge breaks. */
+export const NarrowWithOneWordBadge: Story = {
+  decorators: [
+    (Story) => (
+      <div style={{ inlineSize: "13rem", overflowWrap: "anywhere" }}>
+        <Story />
+      </div>
+    ),
+  ],
+  render: () => (
+    <RecordCard
+      kind="company"
+      name="Demo GmbH"
+      identity="o-2"
+      href="#/companies/o-2"
+      position="Customer"
+      aside={<Badge wrap>Current</Badge>}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    const label = await within(canvasElement).findByText("Current");
+    const lines = document.createRange();
+    lines.selectNodeContents(label);
+    await expect(lines.getClientRects()).toHaveLength(1);
+    await expect(label.scrollWidth).toBeLessThanOrEqual(label.clientWidth);
+  },
 };
