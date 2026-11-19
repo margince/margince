@@ -62,8 +62,6 @@ describe("the template preview", () => {
     stubRoutes({ "GET /imports/format": () => jsonResponse(formatFixture) });
     render(<ImportCard subpage="template" />);
     await screen.findByText("companies.csv");
-    expect(
-      screen.getByText("Needs one of: display_name, ref"),
-    ).toBeVisible();
+    expect(screen.getByText("Needs one of: display_name, ref")).toBeVisible();
   });
 });

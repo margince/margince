@@ -212,7 +212,10 @@ describe("a refused file says what is wrong in the reader's words", () => {
         "This is an Excel workbook. Save the sheet as CSV UTF-8 and upload that.",
       ],
       [
-        { reason: "no_importable_file", file_names: "companies.csv, deals.csv" },
+        {
+          reason: "no_importable_file",
+          file_names: "companies.csv, deals.csv",
+        },
         "Name each file after its record type: companies.csv, deals.csv.",
       ],
       [{ reason: "from_a_newer_server" }, "The ZIP cannot be imported."],

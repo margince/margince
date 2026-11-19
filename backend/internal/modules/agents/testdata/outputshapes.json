@@ -4589,6 +4589,12 @@
                     "file": {
                       "type": "string"
                     },
+                    "key_columns": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
                     "object": {
                       "type": "string"
                     }
@@ -4596,6 +4602,7 @@
                   "required": [
                     "columns",
                     "file",
+                    "key_columns",
                     "object"
                   ]
                 }

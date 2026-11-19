@@ -133,10 +133,10 @@ func requestedObjects(req crmcontracts.CreateImportRunRequest) []string {
 	return objects
 }
 
-// suggestImportMapping is migration.SuggestMapping plus a header equal to a
-// custom field's label, or to a core field's label in any language or a common
-// other name. A field two headers reach is suggested for neither, since staging
-// refuses two columns onto one field.
+// suggestImportMapping is migration.SuggestMapping plus a header that names a
+// field another way: a custom field's label, or a core field's label or alias.
+// A field two headers reach is suggested for neither, since staging refuses two
+// columns onto one field.
 func suggestImportMapping(p migration.Profile, object string, targets []string, cat importCatalog) map[string]string {
 	suggested := migration.SuggestMapping(p, targets)
 	byLabel := map[string]string{}

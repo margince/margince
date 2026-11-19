@@ -147,8 +147,8 @@ var csvSourceKeyDefault = map[string]string{
 	migration.ObjectActivity: csvTargetRef,
 }
 
-// rowKeyTargets are the targets partMappingFrom can tell an object's rows
-// apart by, any one of which a file must map: its natural key, the id a
+// rowKeyTargets are the targets partMappingFrom tells an object's rows apart
+// by, and a file must map one of them. They are its natural key, the id a
 // corrections export carries, and the source's own ref.
 func rowKeyTargets(object string) []string {
 	keys := []string{csvSourceKeyDefault[object]}

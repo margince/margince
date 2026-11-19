@@ -16,7 +16,7 @@ import (
 // decision that changes on its own schedule — a new reader lands here and
 // nowhere else — while the upload around it is a write shape that does not.
 
-// acceptedContentTypes lists the types whose bytes ARE their text. A PDF taken
+// acceptedContentTypes lists the types whose bytes are their text. A PDF taken
 // on these terms would file its binary envelope as prose and answer nothing.
 //
 // platform/pdftext is not used here: a corpus is retrieved from unchecked, so a
