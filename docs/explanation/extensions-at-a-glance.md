@@ -226,4 +226,6 @@ first how-to below.
   records.
 - [declare-a-service-member.md](../how-to/declare-a-service-member.md): the account a timed job runs as.
 - [send-a-notice-from-an-extension.md](../how-to/send-a-notice-from-an-extension.md): tell a user about a record.
+- [override-core-wording-from-an-extension.md](../how-to/override-core-wording-from-an-extension.md): change the
+  words the core shows.
 - [extensibility.md](extensibility.md): why the tier is built this way, and what it guards.
