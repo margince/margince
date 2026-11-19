@@ -24,9 +24,8 @@ package gates
 // the rationale that ratified it; a reasonless or stale waiver fails. The
 // key stays coarser than the resolution above — it names the FUNCTION, not
 // the receiver — so if two receivers in one package ever hold the same
-// ungated name, one waiver ratifies both. No pair does today, and the
-// stale-waiver check would not notice if one appeared, so a receiver-keyed
-// waiver is the change to make when one does.
+// ungated name, one waiver ratifies both. No pair does today; if one appears,
+// key the waiver by receiver, since the stale-waiver check would not notice.
 //
 // The tree the gate reads is itself proven rather than assumed:
 // storeEntryPointScope sweeps the whole module for the same entry-point
