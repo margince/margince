@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Lock, Mail } from "lucide-react";
 import type { CSSProperties } from "react";
+import { expect, within } from "storybook/test";
 import { BADGE_TONES, Badge } from "./atoms";
 import { Heading } from "./heading";
 
@@ -140,6 +141,28 @@ export const Wrapping: Story = {
       </Badge>
     </div>
   ),
+};
+
+export const WrappingLongWord: Story = {
+  parameters: badgeDocs(
+    "`wrap` in a box narrower than one word: the word breaks, and none of it is cut.",
+  ),
+  render: () => (
+    <div style={{ ...stack, alignItems: "flex-start", inlineSize: 96 }}>
+      <Badge tone="accent" wrap>
+        Handelsregisternummer
+      </Badge>
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const label = await within(canvasElement).findByText(
+      "Handelsregisternummer",
+    );
+    const lines = document.createRange();
+    lines.selectNodeContents(label);
+    await expect(lines.getClientRects().length).toBeGreaterThan(1);
+    await expect(label.scrollWidth).toBeLessThanOrEqual(label.clientWidth);
+  },
 };
 
 export const InsideUppercaseParent: Story = {

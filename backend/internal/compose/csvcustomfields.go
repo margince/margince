@@ -10,9 +10,9 @@ package compose
 import (
 	"context"
 	"errors"
-	"slices"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/compose/importguide"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/customfields"
@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
@@ -132,19 +133,11 @@ func requestedObjects(req crmcontracts.CreateImportRunRequest) []string {
 	return objects
 }
 
-// commonHeaders are the headers most exports give a field under another name.
-// Each type has one of a header's targets: a company is named by display_name,
-// a contact or lead by full_name.
-var commonHeaders = map[string][]string{
-	acceptFieldName:           {fieldDisplayName, fieldFullName},
-	string(recordTypeCompany): {companyNameField},
-}
-
-// suggestImportMapping is migration.SuggestMapping plus a header equal to a
-// custom field's label or a common header, folded and trimmed. A field two
-// headers reach is suggested for neither, since staging refuses two columns
-// onto one field.
-func suggestImportMapping(p migration.Profile, targets []string, cat importCatalog) map[string]string {
+// suggestImportMapping is migration.SuggestMapping plus a header that names a
+// field another way: a custom field's label, or a core field's label or alias.
+// A field two headers reach is suggested for neither, since staging refuses two
+// columns onto one field.
+func suggestImportMapping(p migration.Profile, object string, targets []string, cat importCatalog) map[string]string {
 	suggested := migration.SuggestMapping(p, targets)
 	byLabel := map[string]string{}
 	for name, label := range cat.labels {
@@ -158,6 +151,7 @@ func suggestImportMapping(p migration.Profile, targets []string, cat importCatal
 		}
 		byLabel[folded] = name
 	}
+	coreNames := importguide.HeaderNames(object, targets, migration.NormalizeFieldName)
 	headersOf := map[string][]string{}
 	for header, target := range suggested {
 		headersOf[target] = append(headersOf[target], header)
@@ -171,19 +165,54 @@ func suggestImportMapping(p migration.Profile, targets []string, cat importCatal
 			headersOf[name] = append(headersOf[name], col.Header)
 			continue
 		}
-		for _, target := range commonHeaders[folded] {
-			if slices.Contains(targets, target) {
-				headersOf[target] = append(headersOf[target], col.Header)
-			}
+		if target := coreNames[migration.NormalizeFieldName(col.Header)]; target != "" {
+			headersOf[target] = append(headersOf[target], col.Header)
 		}
 	}
 	out := make(map[string]string, len(headersOf))
 	for target, headers := range headersOf {
-		if len(headers) == 1 {
+		fits, guarded := sampleGuards[target]
+		if len(headers) == 1 && (!guarded || samplesFit(p, headers[0], fits)) {
 			out[headers[0]] = target
 		}
 	}
 	return out
+}
+
+// sampleGuards are the targets a header names but a value can refuse. Another
+// CRM's "ID" names no Margince record, and a headcount of plain numbers is no
+// size band, so either would skip every row.
+var sampleGuards = map[string]func(string) bool{
+	csvTargetID:   isMarginceID,
+	fieldSizeBand: func(value string) bool { return importableSizeBands[value] },
+}
+
+// isMarginceID reports a version-7 UUID, the only kind ids.NewV7 mints. Another
+// CRM's GUIDs are mostly version 4.
+func isMarginceID(value string) bool {
+	id, err := ids.Parse(value)
+	return err == nil && id[6]>>4 == 7
+}
+
+// samplesFit reports whether a column has a sampled value and every one fits.
+func samplesFit(p migration.Profile, header string, fits func(string) bool) bool {
+	seen := false
+	for _, col := range p.Columns {
+		if col.Header != header {
+			continue
+		}
+		for _, sample := range col.Samples {
+			value := strings.TrimSpace(sample)
+			if value == "" {
+				continue
+			}
+			if !fits(value) {
+				return false
+			}
+			seen = true
+		}
+	}
+	return seen
 }
 
 // suggestionsByObject is the mapping suggested for each of objects, keyed by object.
@@ -196,7 +225,7 @@ func suggestionsByObject(
 		if err != nil {
 			return nil, err
 		}
-		out[object] = suggestImportMapping(p, targets, cats[object])
+		out[object] = suggestImportMapping(p, object, targets, cats[object])
 	}
 	return out, nil
 }

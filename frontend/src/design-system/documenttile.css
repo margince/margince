@@ -141,6 +141,13 @@
   overflow-wrap: anywhere;
 }
 
+/* A fact wraps whole; only one wider than the line breaks inside. */
+.board-doc-fact {
+  display: inline-block;
+  max-width: 100%;
+  white-space: pre-wrap;
+}
+
 .board-doc-status {
   margin-top: var(--space-1);
 }

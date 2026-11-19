@@ -675,6 +675,8 @@ var Declared = map[string][]string{
 	"POST /v1/approvals/{id}/failure-acknowledgement":                          {},
 	"POST /v1/approvals/{id}/reject":                                           {},
 	"POST /v1/attachments":                                                     {},
+	"POST /v1/attachments/links":                                               {},
+	"POST /v1/attachments/links/preview":                                       {},
 	"POST /v1/attachments/{id}/extraction":                                     {},
 	"POST /v1/attachments/{id}/extraction:accept":                              {},
 	"POST /v1/attachments/{id}/extraction:file-chat":                           {},

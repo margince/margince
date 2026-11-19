@@ -7,6 +7,7 @@
 // still be real work. So the close asks, and completes them only when the
 // reader picks Complete all, through the bulk change and its usual undo.
 
+import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import type { components } from "../../../api/schema";
 import {
@@ -27,7 +28,7 @@ import { useTruncationTooltip } from "../../../design-system/tooltip";
 import { formatNumber } from "../../../format/format";
 import { formatDue } from "../../../format/format.dates";
 import { useLocale, usePlural, useT } from "../../../i18n";
-import { useOpenTasks } from "../../../lib/opentasks";
+import { openTasksQuery, useOpenTasks } from "../../../lib/opentasks";
 import { displayedSubject } from "../../../lib/systemdisplay";
 import { useViewerZone } from "../../../lib/viewerzone";
 import "./closetasks.css";
@@ -60,17 +61,28 @@ function completionRequests(tasks: readonly Activity[]): BulkChangeRequest[] {
  * Completes the tasks the dialog listed, in bulk changes of at most
  * BULK_MAX_ITEMS. Each preview mints the confirm token its execute needs above
  * ten records. One note reports them all; its Undo reverses every batch.
+ *
+ * The listed tasks are read again first. A win stamps every activity on the
+ * deal, so the versions the dialog read are stale once the close lands. A
+ * listed task no longer open is left out.
  */
 function useCompleteDealTasks() {
   const t = useT();
   const toast = useToast();
   const report = useBulkOutcome();
-  return async (tasks: readonly Activity[]) => {
+  const client = useQueryClient();
+  return async (dealId: string, tasks: readonly Activity[]) => {
     const batches: BulkBatch[] = [];
     let firstSkip: BulkSkip | undefined;
     let failed = false;
     try {
-      for (const request of completionRequests(tasks)) {
+      const listed = new Set(tasks.map((task) => task.id));
+      const current = await client.fetchQuery({
+        ...openTasksQuery("deal", dealId),
+        staleTime: 0,
+      });
+      const still = current.filter((task) => listed.has(task.id));
+      for (const request of completionRequests(still)) {
         const preview = await previewBulkChange(request, t);
         firstSkip ??= preview.excluded[0];
         if (preview.count === 0) {

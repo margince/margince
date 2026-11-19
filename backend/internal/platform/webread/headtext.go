@@ -35,7 +35,10 @@ const headTextRunes = 1000
 // headTextNames are the <head> declarations that say what a page is ABOUT,
 // in the order a reader would want them: the description first, because it is
 // written for a stranger, then the Open Graph pair a site keeps for sharing.
-var headTextNames = []string{"description", "og:title", "og:description"}
+var headTextNames = []string{"description", metaOGTitle, "og:description"}
+
+// metaOGTitle is the Open Graph name of a page's own title.
+const metaOGTitle = "og:title"
 
 // headTextFrom reads one <meta>'s attributes as a claim about what the page is
 // about. Open Graph names its fields in `property` and some CMSs emit them in

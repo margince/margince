@@ -1,18 +1,17 @@
-/* RecordDetails: flat groups under the record's head. A group is a small
-   grey label over a flat `FactList`, parted from the next by a hairline;
-   nothing is boxed but the footnote. */
+/* RecordDetails: each group is a pane one step up the ladder, a grey label over
+   a flat `FactList`. The footnote shares the shape; "Show more" stays bare. */
 
 .recorddetails {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-3);
   min-inline-size: 0;
 }
-/* Space alone read as one long list; the rule says where a group ends. */
-.recorddetails-group + .recorddetails-group,
-.recorddetails-foot {
-  padding-block-start: var(--space-4);
-  border-block-start: 1px solid var(--borderSubtle);
+.recorddetails-group,
+.recorddetails-note {
+  padding: var(--space-3);
+  border: 1px solid var(--groundEdge);
+  border-radius: var(--r-md);
 }
 .recorddetails-group {
   display: flex;
@@ -38,6 +37,17 @@
 .recorddetails-toggle[aria-expanded="true"] > svg {
   transform: rotate(180deg);
 }
+/* An edit pill keeps the row's own height below its value, so it never reaches
+   into the next row's pill. */
+.recorddetails .editable-value {
+  margin-block-end: 0;
+}
+/* A pencil's touch layer reaches a step past it; its row keeps that step free. */
+@media (pointer: coarse) {
+  .recorddetails .factlist-row:has(.editable-value-edit) {
+    padding-block: var(--space-2);
+  }
+}
 /* An address and its copy glyph share a line as wide as the address, so a
    mark after them sits beside it when the column has room, else under it. */
 .recorddetails .contactlink-copyable {
@@ -58,9 +68,6 @@
 }
 .recorddetails-note {
   margin: 0;
-  padding: var(--space-3) var(--padCard);
-  border: 1px solid var(--groundEdge);
-  border-radius: var(--r-control);
   font: var(--fontBodySmall);
   color: var(--textPrimary);
   text-wrap: pretty;

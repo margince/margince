@@ -1,12 +1,9 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   type ComponentProps,
   type DragEvent,
   type MouseEvent,
   useRef,
 } from "react";
-import { api } from "../../api/client";
-import { ifMatch, requireVersion } from "../../api/version";
 import { useSuggestionGhosts } from "../../components/dealsuggestion";
 import { rosterOwnerNaming } from "../../components/entityref";
 import { Button } from "../../design-system/atoms";
@@ -26,7 +23,6 @@ import { useToast } from "../../design-system/toast";
 import { formatNumber } from "../../format/format";
 import { translatePlural, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { dealRecordKeys, dealWinKeys } from "../../lib/activitykeys";
 import {
   type DealFilters,
   ownerDialParams,
@@ -34,108 +30,18 @@ import {
 } from "../../lib/deals.queries";
 import { useMemberAvatars, useMemberNames } from "../../lib/membernames";
 import type { usePipelines } from "../../lib/pipelines.queries";
-import { unwrap } from "../../lib/problem";
 import { routeHash } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
 import type { AdvanceInput, PendingAdvance } from "./deal360/confirmadvance";
+import { ReopenModal } from "./deal360/reopenmodal";
+import type { useAdvanceDeal } from "./dealadvance";
 import type { StageColumnRead, useStageColumns } from "./dealboard.queries";
 import { useCompanyMarks } from "./dealcompanymarks";
 import { DealPipelineBoard } from "./dealpipelineboard";
-import { probabilityReason, probabilitySetNote } from "./dealprobability";
+import { probabilityReason } from "./dealprobability";
 import type { Company, Deal, Pipeline, Stage } from "./deals";
 import { boardDealCount, buildColumns, stagesInOrder } from "./deals.columns";
-
-/**
- * What a terminal advance says about how the deal closed, on top of the stage
- * and status every advance carries.
- *
- * A lost deal states its reason. A won deal states one only when there is no
- * signed contract to point at. The server looks for the contract first, and a
- * win that has one says nothing here. That keeps "won with paper" and "won
- * without it" apart in reports.
- */
-function closingFields(input: AdvanceInput) {
-  if (input.toStage.semantic === "lost") {
-    return {
-      lost_reason: input.lostReason,
-      lost_reason_code: input.lostReasonCode,
-    };
-  }
-  if (input.toStage.semantic === "won" && input.wonWithoutContractReason) {
-    return {
-      won_without_contract_reason: input.wonWithoutContractReason,
-      won_without_contract_detail: input.wonWithoutContractDetail,
-    };
-  }
-  return {};
-}
-
-/**
- * The one way this screen advances a deal, shared by the board's drag, each
- * card's menu and the record page's stepper.
- *
- * An advance is pinned like any other write: the version the reader's card or
- * record was drawn from rides the variables. When two readers move one deal at
- * once, the second reads the replaced version and fails 409 version_skew. It
- * does not undo a stage change nobody saw.
- */
-export function useAdvanceDeal() {
-  const toast = useToast();
-  const t = useT();
-  const { locale } = useLocale();
-  const queryClient = useQueryClient();
-  return useMutation({
-    // No single record: one instance serves every card on the board, and the
-    // moving deal is known only at mutate() time. So the agent rail names the
-    // write without naming a record (app/agentrail-copy.ts).
-    mutationKey: ["deal-edit"],
-    mutationFn: async (input: AdvanceInput) => {
-      const terminal = input.toStage.semantic !== "open";
-      return unwrap(
-        await api.POST("/deals/{id}/advance", {
-          params: {
-            path: { id: input.dealId },
-            ...ifMatch(requireVersion(input.version)),
-          },
-          body: {
-            to_stage_id: input.toStage.id,
-            ...(terminal ? { status: input.toStage.semantic } : {}),
-            ...closingFields(input),
-          },
-        }),
-        t,
-      );
-    },
-    onSuccess: (deal, input) => {
-      // The advanced deal goes into the cache synchronously, before the
-      // refetch the invalidation schedules. isPending clears the moment this
-      // returns. Without this, a reader who clicks a second stage at once would
-      // pin the version this write replaced and read a 409 they did not cause.
-      if (deal) {
-        const { probability_set: _, ...record } = deal;
-        queryClient.setQueryData(["deal", input.dealId], record);
-      }
-      queryClient.invalidateQueries({ queryKey: ["deals"] });
-      for (const queryKey of dealRecordKeys(input.dealId)) {
-        queryClient.invalidateQueries({ queryKey });
-      }
-      // A win moves the deal's project into delivery in the same server
-      // write, so the project page and list are stale the moment this
-      // returns. Without this, a reader who follows the project chip within
-      // the 30s stale window reads a won deal on a project still being
-      // pursued. The server moves both in one transaction to prevent that.
-      for (const queryKey of dealWinKeys(deal)) {
-        queryClient.invalidateQueries({ queryKey });
-      }
-      // The probability note names the stage too, so it stands for the move.
-      toast.show(
-        probabilitySetNote(deal, t, locale) ??
-          t("deals.advanced", { stage: input.toStage.name }),
-      );
-    },
-  });
-}
 
 // Under a column's cards: its first read's wait or failure, then its "Load more".
 // A failed later read keeps the cards and is named, with Retry once no page is left.
@@ -164,6 +70,17 @@ function uncountedStages(columns: ReadonlyMap<string, StageColumnRead>) {
     [...columns].flatMap(([stageId, read]) =>
       read.isPending || read.isError ? [stageId] : [],
     ),
+  );
+}
+
+// Every column read answered with no card. No column yet is a board still
+// waiting on its pipeline, not an empty one.
+export function boardIsEmpty(stageColumns: ReturnType<typeof useStageColumns>) {
+  return (
+    stageColumns.columns.size > 0 &&
+    !stageColumns.isPending &&
+    stageColumns.error === null &&
+    stageColumns.deals.length === 0
   );
 }
 
@@ -327,6 +244,38 @@ export function DealBoardBody({
   );
 }
 
+// The Reopen question a closed card dropped on an open column asks. It closes
+// once the write settles; a refusal is named on the board behind it.
+export function BoardReopenModal({
+  asked,
+  onClose,
+  openStages,
+  advance,
+}: Readonly<{
+  asked: PendingAdvance | null;
+  onClose: () => void;
+  openStages: readonly Stage[];
+  advance: ReturnType<typeof useAdvanceDeal>;
+}>) {
+  return (
+    <ReopenModal
+      open={asked !== null}
+      onClose={onClose}
+      openStages={openStages}
+      proposedStageId={asked?.toStage.id}
+      pending={advance.isPending}
+      onConfirm={(toStage) => {
+        if (asked) {
+          advance.mutate(
+            { ...asked, toStage, reopens: true },
+            { onSettled: onClose },
+          );
+        }
+      }}
+    />
+  );
+}
+
 // Everything the board does when it is touched. That is the drag it started,
 // the drop it landed, and a click that is not the tail of a drag.
 //
@@ -339,12 +288,17 @@ export function useBoardInteractions({
   loadedDeals,
   advance,
   setPending,
+  setReopening,
 }: Readonly<{
   stages: Stage[];
   loadedDeals: Deal[];
   advance: ReturnType<typeof useAdvanceDeal>;
   setPending: (pending: PendingAdvance | null) => void;
+  // A closed deal dropped on an open column, asked about before it reopens.
+  setReopening: (reopening: PendingAdvance) => void;
 }>) {
+  const toast = useToast();
+  const t = useT();
   // Which card is in flight, and which card a drag last ended on, with when.
   // A drop and a click arrive as the same event pair, so the board tells them
   // apart by time. The id travels with the timestamp, or the window would be
@@ -367,12 +321,23 @@ export function useBoardInteractions({
     // on the board, not as it has become since: the claim optimistic
     // concurrency makes. Text dropped on a column names no card here.
     const drawn = loadedDeals.find((deal) => deal.id === dealId);
-    if (!toStage || !drawn) {
+    if (!toStage || !drawn || drawn.stage_id === stageId) {
       return Promise.resolve(false);
     }
     const version = drawn.version;
+    if (drawn.status !== "open") {
+      // Leaving Won or Lost clears how the deal closed, so it is the record
+      // page's Reopen question. A closed deal never moves to the other close.
+      if (toStage.semantic === "open") {
+        setReopening({ dealId, version, toStage });
+      } else {
+        toast.show(t("deal.closedTakesNoStage"), { tone: "warning" });
+      }
+      return Promise.resolve(false);
+    }
     if (toStage.semantic === "open") {
-      return advance.mutateAsync({ dealId, version, toStage }).then(
+      const fromStage = stages.find((stage) => stage.id === drawn.stage_id);
+      return advance.mutateAsync({ dealId, version, toStage, fromStage }).then(
         () => true,
         () => false,
       );

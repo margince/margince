@@ -28,6 +28,7 @@ import {
   useT,
 } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { attachmentTitle } from "../../lib/attachmentlink";
 import { labelFor } from "../../lib/labelfor";
 import type { LegalReview } from "../../lib/legalreviews.queries";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -273,7 +274,7 @@ function PackDocuments({ packet }: Readonly<{ packet: Packet }>) {
               {doc.available ? (
                 <FileChip
                   href={`/v1/attachments/${doc.attachment_id}`}
-                  filename={doc.title ?? doc.filename ?? ""}
+                  filename={attachmentTitle(doc)}
                   size={
                     doc.byte_size == null
                       ? undefined

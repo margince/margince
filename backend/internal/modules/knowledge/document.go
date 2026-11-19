@@ -196,26 +196,20 @@ func (s *Store) readyUpload(ctx context.Context, in *NewDocument) (string, strin
 	if s.blob == nil {
 		return "", "", 0, ErrBlobstoreUnconfigured
 	}
-	// The name a contact TYPED, made safe — the same call every other uploaded
-	// name in this tree goes through. It is presentational only (nothing opens
-	// a file by it) but it is read back in a citation, a list and an ingest
-	// failure, and a path separator or a bidirectional override in it rewrites
-	// whichever of those quotes it.
-	//
-	// Normalised HERE, above the type check, rather than after it: the 415
-	// detail quotes this name when no media type could be derived, so a
-	// refusal is one of the surfaces that reads it back. Sanitising afterwards
-	// left the one path that handles hostile input quoting it raw.
+	// Made safe the way every uploaded name is: it is read back in a citation,
+	// a list and an ingest failure. The type check reads its ending, so the
+	// check and the stored name see one spelling.
 	in.Filename = extension.SafeFilename(in.Filename, 0)
 
 	media, ok := acceptedType(in.ContentType, in.Filename)
 	if !ok {
-		return "", "", 0, &UnsupportedTypeError{Got: refusedTypeName(media, *in)}
+		return "", "", 0, &UnsupportedTypeError{Kind: refusedKind(media, in.Filename)}
 	}
 	if contradicted, err := filesniff.Contradicts(media, filesniff.DeclaredCharset(in.ContentType), in.Content); err != nil {
 		return "", "", 0, err
 	} else if contradicted {
-		return "", "", 0, &UnsupportedTypeError{Got: refusedTypeName(media, *in)}
+		// The ending names what the bytes are not, so the refusal names no kind.
+		return "", "", 0, &UnsupportedTypeError{}
 	}
 	if err := s.tx(ctx, func(tx pgx.Tx) error {
 		corpus, err := readCorpus(ctx, tx, in.CorpusID, storekit.LiveOnly)
@@ -229,6 +223,10 @@ func (s *Store) readyUpload(ctx context.Context, in *NewDocument) (string, strin
 	checksum, size, err := blobstore.Digest(in.Content)
 	if err != nil {
 		return "", "", 0, err
+	}
+	// The counted size, never a declared one, and before the bytes are stored.
+	if size == 0 {
+		return "", "", 0, &EmptyDocumentError{}
 	}
 	// Refused BEFORE the bytes are stored. Checked again inside the write —
 	// that is the one that decides — but a re-upload is the ORDINARY case here,

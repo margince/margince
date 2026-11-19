@@ -158,9 +158,9 @@ func buyersFrom(participants []crmcontracts.DealRoomParticipant) []BuyerIn {
 	return out
 }
 
-// linkStillOwed reports a link request the buyer has not been in since. The
-// request is kept as history, so a buyer who asked and then signed in again
-// is no longer waiting on a link.
+// linkStillOwed reports a link request the buyer has not been in since. A
+// seller's new link clears the request; a buyer who asked and then came in
+// again is no longer waiting either. The access panel reads it the same way.
 func linkStillOwed(p crmcontracts.DealRoomParticipant) bool {
 	if p.LinkRequestedAt == nil {
 		return false

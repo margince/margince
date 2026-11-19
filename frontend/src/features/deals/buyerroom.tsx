@@ -23,7 +23,6 @@ import {
   BuyerHero,
   ContactCard,
   DeadLink,
-  LinkRequest,
   stewardLabel,
 } from "./buyerroomframe";
 import {
@@ -366,11 +365,6 @@ function RoomView({
               )}
             </p>
           </PanelBody>
-          {view.access === "expired" ? (
-            <PanelBody>
-              <LinkRequest />
-            </PanelBody>
-          ) : null}
         </Panel>
       </>
     );

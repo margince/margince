@@ -21,6 +21,9 @@ func createInput(req crmcontracts.CreateDealRoomRequest) (CreateRoomInput, error
 	if req.Title == "" {
 		return CreateRoomInput{}, &fieldError{field: columnTitle, code: codeRequired, msg: "title is required"}
 	}
+	if err := httperr.RequireWithin(columnTitle, req.Title, values.TextLabelCharacters); err != nil {
+		return CreateRoomInput{}, err
+	}
 	source, err := httperr.RequireNonBlank("source", req.Source)
 	if err != nil {
 		return CreateRoomInput{}, err
@@ -57,7 +60,12 @@ func createInput(req crmcontracts.CreateDealRoomRequest) (CreateRoomInput, error
 //
 // Only the mapping was missing the null case, so a cleared field arrived as a
 // nil request pointer and read as "leave it alone".
-func updateInput(req crmcontracts.UpdateDealRoomRequest, cleared []string, ifVersion *int64) UpdateRoomInput {
+func updateInput(req crmcontracts.UpdateDealRoomRequest, cleared []string, ifVersion *int64) (UpdateRoomInput, error) {
+	if req.Title != nil {
+		if err := httperr.RequireWithin(columnTitle, *req.Title, values.TextLabelCharacters); err != nil {
+			return UpdateRoomInput{}, err
+		}
+	}
 	in := UpdateRoomInput{Title: req.Title, IfVersion: ifVersion}
 	if req.WelcomeMessage != nil {
 		in.WelcomeMessage = &req.WelcomeMessage
@@ -75,7 +83,7 @@ func updateInput(req crmcontracts.UpdateDealRoomRequest, cleared []string, ifVer
 		var none *ids.UserID
 		in.StewardUserID = &none
 	}
-	return in
+	return in, nil
 }
 
 // inviteInput maps the invite request, defaulting the capability to the least

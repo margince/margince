@@ -18,6 +18,14 @@ import { vi as viCatalog } from "./vi";
 // name" from "missed translation" at a glance — an addition to any group
 // must be defensible on the same grounds as its neighbours.
 const KEPT_IN_ENGLISH = new Set<string>([
+  // A link's kind is the product's own name, or "Web".
+  "docs.kind.docs",
+  "docs.kind.sheets",
+  "docs.kind.slides",
+  "docs.kind.forms",
+  "docs.kind.drive",
+  "docs.kind.web",
+  "docs.add.urlPlaceholder",
   // ui-copy-style-vi.md retires the Vietnamese phrase for a best case.
   "progress.scenario.best",
   // Product and protocol names, an example address and an example header name.
