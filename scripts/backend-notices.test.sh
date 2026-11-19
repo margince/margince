@@ -64,6 +64,24 @@ elif grep -q 'margince/backend' <(sed -n '1,/^Embedded binaries$/p' "$work/out/n
 	fail "the repository's own module was listed as a third-party notice"
 fi
 
+# --- a downloaded unit inside the repository tree ------------------------------
+mkdir -p "$work/fetched/acme" "$work/fetched/bare"
+echo 'ACME-UNIT-LICENCE' >"$work/fetched/acme/LICENSE"
+printf 'acme | example.test/acme/crm/v2@v2.1.0\n' >"$work/fetched/fetched-units.txt"
+if ! BACKEND_NOTICES_UNITS="$work/fetched/fetched-units.txt" generate "$work/complete"; then
+	fail "a downloaded unit with licence text was refused: $(cat "$work/log")"
+else
+	for want in ACME-UNIT-LICENCE 'example.test/acme/crm/v2 v2.1.0'; do
+		grep -qF "$want" "$work/out/notices.txt" || fail "the notice file lacks the downloaded unit's: $want"
+	done
+fi
+printf 'bare | example.test/bare@v1.0.0\n' >"$work/fetched/fetched-units.txt"
+if BACKEND_NOTICES_UNITS="$work/fetched/fetched-units.txt" generate "$work/complete"; then
+	fail "a downloaded unit with no licence text was accepted"
+elif ! grep -q 'example.test/bare' "$work/log"; then
+	fail "the refusal does not name the unit: $(cat "$work/log")"
+fi
+
 # --- the real corpus -----------------------------------------------------------
 if ! sh "$GENERATOR" "$work/real.txt" >"$work/log" 2>&1; then
 	fail "the real corpus was refused: $(cat "$work/log")"

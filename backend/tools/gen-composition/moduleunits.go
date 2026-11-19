@@ -31,7 +31,11 @@ const (
 	// cache. The cache is read-only, and the frontend install writes beside a
 	// unit's frontend/.
 	fetchedUnitsDir = "build/extensions"
-	backendModule   = "github.com/margince/margince/backend"
+	// fetchedUnitsIndex lists each copied unit as `name | module@version`.
+	// The frontend notice plugin and scripts/backend-notices.sh read it to
+	// find third-party source that sits inside the repository tree.
+	fetchedUnitsIndex = fetchedUnitsDir + "/fetched-units.txt"
+	backendModule     = "github.com/margince/margince/backend"
 )
 
 var majorVersionSuffix = regexp.MustCompile(`^v[0-9]+$`)
@@ -149,12 +153,13 @@ func fetchUnits(root string) error {
 		return err
 	}
 	var wanted []string
-	unitOf := map[string]string{}
+	unitOf, downloadOf := map[string]string{}, map[string]string{}
 	for _, u := range units {
 		if u.fetched {
 			wanted = append(wanted, u.download)
 			modPath, _, _ := strings.Cut(u.download, "@")
 			unitOf[modPath] = u.name
+			downloadOf[modPath] = u.download
 		}
 	}
 	if len(wanted) == 0 {
@@ -164,6 +169,7 @@ func fetchUnits(root string) error {
 	if err != nil {
 		return err
 	}
+	var index strings.Builder
 	for _, m := range downloaded {
 		name := unitOf[m.Path]
 		if err := extension.Name(name).Validate(); err != nil {
@@ -176,8 +182,9 @@ func fetchUnits(root string) error {
 		if err := dropReplaces(filepath.Join(dst, "go.mod"), filepath.Join(root, "backend")); err != nil {
 			return fmt.Errorf("%s: %w", m.Path, err)
 		}
+		fmt.Fprintf(&index, "%s | %s\n", name, downloadOf[m.Path])
 	}
-	return nil
+	return os.WriteFile(filepath.Join(root, filepath.FromSlash(fetchedUnitsIndex)), []byte(index.String()), 0o644) // #nosec G306 -- a build listing, not a secret
 }
 
 // dropReplaces removes a downloaded unit's replace lines from its copy: the
