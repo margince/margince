@@ -377,3 +377,133 @@ describe("which outside values the reader can undo", () => {
     expect(screen.getByRole("textbox").innerHTML).toBe("<p>Reset</p>");
   });
 });
+
+describe("the marks on at the caret", () => {
+  // The browser answers which marks are on; happy-dom has no such command.
+  function withCaretMarks(block = "p") {
+    const on = new Set<string>();
+    Object.defineProperty(document, "queryCommandState", {
+      value: (command: string) => on.has(command),
+      configurable: true,
+    });
+    Object.defineProperty(document, "queryCommandValue", {
+      value: () => block,
+      configurable: true,
+    });
+    Object.defineProperty(document, "execCommand", {
+      value: (command: string) => {
+        if (on.has(command)) on.delete(command);
+        else on.add(command);
+        return true;
+      },
+      configurable: true,
+    });
+    return on;
+  }
+
+  afterEach(() => {
+    for (const command of [
+      "queryCommandState",
+      "queryCommandValue",
+      "execCommand",
+    ]) {
+      Reflect.deleteProperty(document, command);
+    }
+  });
+
+  function surface() {
+    render(
+      <LocaleProvider initial="en">
+        <p>Outside</p>
+        <RichText
+          value="<p>Words</p>"
+          onChange={() => {}}
+          label="Nachricht"
+          labels={LABELS}
+        />
+      </LocaleProvider>,
+    );
+  }
+
+  function moveCaretInto(node: Node | null | undefined) {
+    if (!node) throw new Error("no text to put the caret in");
+    window.getSelection()?.collapse(node, 1);
+    fireEvent(document, new Event("selectionchange"));
+  }
+
+  const mark = (name: string) => screen.getByRole("button", { name });
+
+  it("shows each toggle as pressed while its mark is on at the caret", async () => {
+    const on = withCaretMarks();
+    surface();
+    const words = await screen.findByText("Words");
+
+    on.add("bold");
+    on.add("insertOrderedList");
+    moveCaretInto(words.firstChild);
+
+    expect(mark("Fett")).toHaveAttribute("aria-pressed", "true");
+    expect(mark("Kursiv")).toHaveAttribute("aria-pressed", "false");
+    expect(mark("Liste")).toHaveAttribute("aria-pressed", "false");
+    expect(mark("Nummerierte Liste")).toHaveAttribute("aria-pressed", "true");
+
+    on.clear();
+    on.add("italic");
+    on.add("insertUnorderedList");
+    moveCaretInto(words.firstChild);
+
+    expect(mark("Fett")).toHaveAttribute("aria-pressed", "false");
+    expect(mark("Kursiv")).toHaveAttribute("aria-pressed", "true");
+    expect(mark("Liste")).toHaveAttribute("aria-pressed", "true");
+    expect(mark("Nummerierte Liste")).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("presses Bold once its command runs, before a letter is typed", async () => {
+    const user = userEvent.setup({ delay: null });
+    withCaretMarks();
+    surface();
+    const bold = mark("Fett");
+    expect(bold).toHaveAttribute("aria-pressed", "false");
+
+    await user.click(bold);
+    expect(bold).toHaveAttribute("aria-pressed", "true");
+
+    await user.click(bold);
+    expect(bold).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("ignores a selection elsewhere on the page", () => {
+    const on = withCaretMarks();
+    surface();
+
+    on.add("bold");
+    moveCaretInto(screen.getByText("Outside").firstChild);
+
+    expect(mark("Fett")).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("shows Heading as pressed while the caret is in a heading", () => {
+    withCaretMarks("h2");
+    render(
+      <RichText
+        format="markdown"
+        value="## Summary"
+        onChange={() => {}}
+        label="Details"
+        labels={{ ...LABELS, heading: "Überschrift" }}
+      />,
+    );
+
+    moveCaretInto(screen.getByRole("heading", { name: "Summary" }).firstChild);
+
+    expect(mark("Überschrift")).toHaveAttribute("aria-pressed", "true");
+    expect(mark("Fett")).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("draws Link as a verb, with no pressed state", () => {
+    withCaretMarks();
+    surface();
+
+    expect(mark("Link")).not.toHaveAttribute("aria-pressed");
+  });
+});

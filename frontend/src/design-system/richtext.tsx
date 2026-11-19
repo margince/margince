@@ -7,6 +7,7 @@ import {
   type KeyboardEvent,
   useEffect,
   useId,
+  useReducer,
   useRef,
   useState,
 } from "react";
@@ -39,6 +40,43 @@ import "./richtext.css";
 const LINK_KEY = "k";
 
 export { paragraphsFrom, plainTextOf, safeEditorHTML } from "./richtext-html";
+
+const MARKS = [
+  "bold",
+  "italic",
+  "bulletList",
+  "numberList",
+  "heading",
+] as const;
+type Marks = Readonly<Record<(typeof MARKS)[number], boolean>>;
+const NO_MARKS: Marks = {
+  bold: false,
+  italic: false,
+  bulletList: false,
+  numberList: false,
+  heading: false,
+};
+
+const headingAtCaret = () => document.queryCommandValue("formatBlock") === "h2";
+
+function marksAtCaret(): Marks {
+  // happy-dom and jsdom carry no editing commands; there no mark is ever on.
+  if (typeof document.queryCommandState !== "function") {
+    return NO_MARKS;
+  }
+  return {
+    bold: document.queryCommandState("bold"),
+    italic: document.queryCommandState("italic"),
+    bulletList: document.queryCommandState("insertUnorderedList"),
+    numberList: document.queryCommandState("insertOrderedList"),
+    heading: headingAtCaret(),
+  };
+}
+
+// The same object back when nothing changed, so a caret move renders nothing.
+function sameOrNext(shown: Marks, next: Marks): Marks {
+  return MARKS.every((mark) => shown[mark] === next[mark]) ? shown : next;
+}
 
 /**
  * RichText — the light formatting a business email needs, and nothing more.
@@ -207,6 +245,18 @@ export function RichText({
     href: string;
     range: Range;
   } | null>(null);
+  const [marks, showMarks] = useReducer(sameOrNext, NO_MARKS);
+
+  useEffect(() => {
+    const follow = () => {
+      const node = editor.current;
+      if (node && selectionIn(node)) {
+        showMarks(marksAtCaret());
+      }
+    };
+    document.addEventListener("selectionchange", follow);
+    return () => document.removeEventListener("selectionchange", follow);
+  }, []);
 
   useEffect(() => {
     const node = editor.current;
@@ -283,13 +333,12 @@ export function RichText({
     // wrong; what it produces is bounded by the server's allowlist anyway.
     document.execCommand(command, false, argument);
     report();
+    // A command on a bare caret moves no selection, yet arms the next letter.
+    showMarks(marksAtCaret());
   };
 
   const toggleHeading = () =>
-    apply(
-      "formatBlock",
-      document.queryCommandValue("formatBlock") === "h2" ? "p" : "h2",
-    );
+    apply("formatBlock", headingAtCaret() ? "p" : "h2");
 
   const openLink = () => {
     const node = editor.current;
@@ -370,6 +419,7 @@ export function RichText({
           <RichTextButton
             onClick={toggleHeading}
             title={labels.heading}
+            pressed={marks.heading}
             disabled={disabled}
           >
             <Heading2 size={14} aria-hidden="true" />
@@ -378,6 +428,7 @@ export function RichText({
         <RichTextButton
           onClick={() => apply("bold")}
           title={labels.bold}
+          pressed={marks.bold}
           disabled={disabled}
         >
           <Bold size={14} aria-hidden="true" />
@@ -385,6 +436,7 @@ export function RichText({
         <RichTextButton
           onClick={() => apply("italic")}
           title={labels.italic}
+          pressed={marks.italic}
           disabled={disabled}
         >
           <Italic size={14} aria-hidden="true" />
@@ -392,6 +444,7 @@ export function RichText({
         <RichTextButton
           onClick={() => apply("insertUnorderedList")}
           title={labels.bulletList}
+          pressed={marks.bulletList}
           disabled={disabled}
         >
           <List size={14} aria-hidden="true" />
@@ -399,6 +452,7 @@ export function RichText({
         <RichTextButton
           onClick={() => apply("insertOrderedList")}
           title={labels.numberList}
+          pressed={marks.numberList}
           disabled={disabled}
         >
           <ListOrdered size={14} aria-hidden="true" />
@@ -471,11 +525,14 @@ export function RichText({
 function RichTextButton({
   onClick,
   title,
+  pressed,
   disabled,
   children,
 }: Readonly<{
   onClick: () => void;
   title: string;
+  /** Whether the mark is on at the caret; absent on a verb such as Link. */
+  pressed?: boolean;
   disabled?: boolean;
   children: React.ReactNode;
 }>) {
@@ -490,6 +547,7 @@ function RichTextButton({
       onClick={onClick}
       title={title}
       aria-label={title}
+      aria-pressed={pressed}
     >
       {children}
     </button>

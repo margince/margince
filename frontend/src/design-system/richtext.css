@@ -98,10 +98,23 @@
   color: var(--textPrimary);
 }
 
+/* A mark on at the caret takes the pressed toggle row's neutral pair
+   (listtable.css): it says what the next letter gets, not what to press. */
+.richtext-btn[aria-pressed="true"] {
+  background: var(--bgChip);
+  box-shadow: inset 0 0 0 1px var(--borderStrong);
+  color: var(--textPrimary);
+}
+
 .richtext-btn:focus-visible {
   outline: var(--focus-ring-forced);
   outline-offset: 2px;
   box-shadow: var(--focus-glow);
+}
+.richtext-btn[aria-pressed="true"]:focus-visible {
+  box-shadow:
+    inset 0 0 0 1px var(--borderStrong),
+    var(--focus-glow);
 }
 
 /* The writing surface. It is `rows` lines TALL and scrolls inside itself, the
