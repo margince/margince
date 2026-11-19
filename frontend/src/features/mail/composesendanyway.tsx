@@ -4,6 +4,7 @@
 import {
   type KeyboardEvent,
   type MouseEvent,
+  type ReactNode,
   useEffect,
   useId,
   useRef,
@@ -85,22 +86,28 @@ export function markedRecipients(
  * with, and nothing asked while the rep writes.
  */
 export function InlineBlockers({
+  isChannelReply,
   refusal,
   sendUnavailable,
   bodyKey,
+  children,
   ...rows
 }: Readonly<{
+  isChannelReply: boolean;
   refusal: Refusal;
   sendUnavailable: boolean;
   bodyKey: MessageKey;
   state: InlineReview;
   explanation: string;
   onExplanationChange: (text: string) => void;
+  /** What the message still needs before Send, such as its reason. */
+  children?: ReactNode;
 }>) {
   return (
     <div className="compose-blockers">
+      {children}
       <ComposeOutcome
-        isChannelReply={false}
+        isChannelReply={isChannelReply}
         bodyKey={bodyKey}
         sendUnavailable={sendUnavailable}
         refusal={refusal}
@@ -125,7 +132,6 @@ export function SendAnywayRows({
   onExplanationChange: (text: string) => void;
 }>) {
   const t = useT();
-  const { locale } = useLocale();
   const warningId = useId();
   if (!state.shown) return null;
   if (state.loading) {
@@ -185,11 +191,9 @@ export function SendAnywayRows({
               : "compose.sendAnyway.editOnly",
           )}
         </p>
-        {lead && refusalCountryText(lead, t, locale) && (
-          <p>{refusalCountryText(lead, t, locale)}</p>
-        )}
+        {lead && <LeadDetails lead={lead} />}
         {state.changed && <p>{t("directSend.changed")}</p>}
-        <EveryFinding refusals={review.refusals} />
+        <MoreFindings refusals={review.refusals.slice(1)} />
       </Callout>
       {state.canSendAnyway && (
         <ReasonRow
@@ -205,6 +209,26 @@ export function SendAnywayRows({
   );
 }
 
+// What the leading finding adds under the warning: the country it was judged
+// under, and the footer details the message would leave out.
+function LeadDetails({ lead }: Readonly<{ lead: RefusedRecipient }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const country = refusalCountryText(lead, t, locale);
+  const footers = lead.footer_findings ?? [];
+  return (
+    <>
+      {country && <p>{country}</p>}
+      {footers.length > 0 && (
+        <p>
+          {footerFindingsText(footers, t, locale)}{" "}
+          <CitedLaws provisions={footers.map((finding) => finding.provision)} />
+        </p>
+      )}
+    </>
+  );
+}
+
 // The country a refusal was judged under, after its finding, or nothing.
 function withCountry(
   refusal: RefusedRecipient,
@@ -215,25 +239,20 @@ function withCountry(
   return country ? ` ${country}` : null;
 }
 
-// Every finding, and every message-wide footer finding, behind one count.
-function EveryFinding({
+// The findings after the leading one, behind one count. The leading finding
+// is already the warning's own text, so it is not listed again.
+function MoreFindings({
   refusals,
 }: Readonly<{ refusals: readonly RefusedRecipient[] }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
-  const more = refusals.length - 1;
-  const footers = refusals.some((refusal) => refusal.footer_findings?.length);
-  if (more < 1 && !footers) return null;
+  if (refusals.length === 0) return null;
   return (
     <Disclosure
-      summary={
-        more > 0
-          ? plural("compose.sendAnyway.more", more, {
-              count: formatNumber(more, locale),
-            })
-          : t("compose.sendAnyway.details")
-      }
+      summary={plural("compose.sendAnyway.more", refusals.length, {
+        count: formatNumber(refusals.length, locale),
+      })}
     >
       <ul>
         {refusals.map((refusal) => (

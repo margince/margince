@@ -6,7 +6,6 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
-import { DraftContentNotice } from "./compose.notices";
 import { render } from "./compose.testkit";
 import type { InlineReview } from "./composeinlinereview";
 import { SendAnywayRows } from "./composesendanyway";
@@ -169,30 +168,5 @@ describe("the direct-send dialog", () => {
 
     expect(screen.getByText("anna@example.de")).toBeInTheDocument();
     expect(screen.queryByText(/Attention:/)).toBeNull();
-  });
-});
-
-describe("the draft content notice", () => {
-  it("links the law a finding cites and leaves an uncited one plain", () => {
-    render(
-      <DraftContentNotice
-        findings={[
-          {
-            requirement: "foreign_advertiser",
-            detail: "not established in vn",
-            country: "vn",
-            provision: DECREE,
-          },
-          {
-            requirement: "advertising_language_first",
-            detail: "does not open in vi",
-            language: "vi",
-          },
-        ]}
-      />,
-    );
-
-    expectLawLink("Decree 91/2020/ND-CP Art. 8", DECREE.source_url);
-    expect(screen.getAllByRole("link")).toHaveLength(1);
   });
 });

@@ -5,7 +5,6 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import type { components } from "../../api/schema";
 import { problemFieldErrorsOf } from "../../lib/problem";
-import { useMe } from "../../lib/session";
 import { refusalOf } from "./composerefusal";
 import type { ComposeSend } from "./composesend";
 import { refusalIsCurrent } from "./composesendrequest";
@@ -73,9 +72,9 @@ function mayDecideInline(reviewed: Reviewed | null): boolean {
 }
 
 // What a refused Send names: its review, embedded or by id. Nothing for any
-// other failure, or while the inline flow is off.
-function refusedReview(inline: boolean, error: unknown) {
-  const consent = inline && refusalOf(error) === "consent";
+// other failure.
+function refusedReview(error: unknown) {
+  const consent = refusalOf(error) === "consent";
   const named = consent ? sendReviewOf(error) : null;
   const embedded = consent ? embeddedReviewOf(error) : null;
   return {
@@ -93,7 +92,7 @@ function refusedReview(inline: boolean, error: unknown) {
  * Once any part of the message changed since the refused Send, the review
  * detaches, and the next press is a normal Send.
  */
-export function useInlineReview(inline: boolean, send: ComposeSend) {
+export function useInlineReview(send: ComposeSend) {
   // The refused Send's error, whose identity marks one attempt.
   const { error } = send.send;
   const current = refusalIsCurrent(
@@ -102,7 +101,7 @@ export function useInlineReview(inline: boolean, send: ComposeSend) {
     undefined,
     true,
   );
-  const { consent, named, embedded, reviewId } = refusedReview(inline, error);
+  const { consent, named, embedded, reviewId } = refusedReview(error);
   const shown = consent && current;
   // An older server names the review without embedding it: one scoped read.
   const fetched = useQuery({
@@ -176,30 +175,11 @@ export function useInlineReview(inline: boolean, send: ComposeSend) {
 
 export type InlineReview = ReturnType<typeof useInlineReview>;
 
-/** The switch that picks the flow, and the reason the inline flow keeps. */
-export function useInlineFlow(open: boolean, isChannelReply: boolean) {
-  return {
-    inline: useInlineSwitch(open, isChannelReply),
-    reason: useOverrideExplanation(open),
-  };
-}
-
-/**
- * The pilot switch, which picks the email flow: decided at Send, or checked
- * while writing. The app's sign-in gate holds /me before any screen opens, so
- * the switch is read from that cache. A channel reply keeps the checked flow.
- */
-function useInlineSwitch(open: boolean, isChannelReply: boolean): boolean {
-  const me = useMe(open);
-  if (isChannelReply) return false;
-  return me.data?.inline_send_review === true;
-}
-
 /**
  * The reason typed for Send anyway, which the saved draft keeps. A composer
  * that closes drops it, so the next composition starts empty.
  */
-function useOverrideExplanation(open: boolean) {
+export function useOverrideExplanation(open: boolean) {
   const [text, setText] = useState("");
   const [wasOpen, setWasOpen] = useState(open);
   if (wasOpen !== open) {

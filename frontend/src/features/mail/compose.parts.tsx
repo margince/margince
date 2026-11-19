@@ -1,7 +1,6 @@
 import { Ellipsis, Trash2 } from "lucide-react";
 import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { EntityRef } from "../../components/entityref";
-import { SendMark } from "../../components/sendpermission";
 import { Button } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { DockedWindow, type DockState } from "../../design-system/dockedwindow";
@@ -235,9 +234,6 @@ export function ComposeFoot({
             <ScheduleMenu onOpen={onPickMoment} reasonId={heldBy} />
           )}
         </span>
-        {!isChannelReply && (
-          <SendMark {...send.permission} blocked={send.blocked} />
-        )}
         <div className="compose-foot-marks" ref={marksRef} />
         <span className="t-caption compose-foot-status" role="status">
           {scheduled
@@ -259,7 +255,6 @@ export function ComposeFoot({
           {t(holdLine)}
         </p>
       )}
-      {send.lawfulBasisDialog}
     </div>
   );
 }

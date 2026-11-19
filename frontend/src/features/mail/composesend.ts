@@ -6,8 +6,6 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "../../api/client";
 import { type IntentKeys, intentKeys } from "../../api/idempotencykey";
 import type { components } from "../../api/schema";
-import { useLawfulBasisGate } from "../../components/lawfulbasiswarning";
-import { useSettledValue } from "../../design-system/debouncedsearch";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import { entityTimelineKeys } from "../../lib/activitykeys";
@@ -15,24 +13,20 @@ import { fileListKeys } from "../../lib/attachmentkeys";
 import { asksWhy, contextFor } from "../../lib/compose-context";
 import { problemMessageOf, throwProblem } from "../../lib/problem";
 import { navigate } from "../../lib/router";
-import { useSendPermission } from "../../lib/usesendpermission";
 import type { ChosenFile } from "./composeattachments";
-import { countriesOnMessage } from "./composecountries";
 import type { ComposeFields } from "./composefields";
 import { composedLinks, type SendGrounding } from "./composelinks";
 import { refusalOf } from "./composerefusal";
 import type { RelinkKind } from "./composerelink";
 import type { useSavedDraft } from "./composesaveddraft";
-import { inlineSendHold, type SendHold, sendHoldOf } from "./composesendhold";
+import { inlineSendHold } from "./composesendhold";
 import {
-  refusalIsCurrent,
   refusalStillShown,
   type SendRequest,
   sendRequest,
 } from "./composesendrequest";
 import { dealOf, reasonEvidence, useReasonForAnchor } from "./reasonanchor";
 import { SCHEDULED_SCREEN } from "./scheduledqueue";
-import { sendReviewOf } from "./sendreview";
 
 type Activity = components["schemas"]["Activity"];
 
@@ -109,30 +103,14 @@ export function missingToSend(
   return missing;
 }
 
-// How long the words must rest before the checked flow asks the engine again,
-// so the warning bar does not redraw between keystrokes.
-const WRITING_PAUSE_MS = 1500;
-
-// The hold on Send. An older server's footer refusal holds it in both flows;
-// otherwise the inline flow asks nothing before the press.
-function holdOf(
-  inline: boolean,
-  legacyFooter: boolean,
-  permission: Parameters<typeof sendHoldOf>[0],
-  review: Parameters<typeof sendHoldOf>[1],
-): SendHold {
-  if (inline) return inlineSendHold(legacyFooter);
-  if (legacyFooter) return { blocks: true, withReason: false };
-  return sendHoldOf(permission, review);
-}
-
 // Both responses accept delivery; only 201 names a scheduled release.
 type SendOutcome =
   | { sent: false }
   | { sent: true; scheduled: boolean; activity: unknown };
 
-// The send: the request, its refusals, the engine's permission answer as the
-// rep writes, and the press that names what is still missing.
+// The send: the request, its refusals, and the press that names what is still
+// missing. The press is the check: nothing is asked while the rep writes, and a
+// refusal comes back with its review.
 export function useComposeSend({
   open,
   isChannelReply,
@@ -149,7 +127,6 @@ export function useComposeSend({
   projectId,
   needsDeal,
   savedDraft,
-  inline = false,
   onSent,
   onClose,
 }: Readonly<{
@@ -169,11 +146,6 @@ export function useComposeSend({
   projectId: string;
   needsDeal: boolean;
   savedDraft: ReturnType<typeof useSavedDraft>;
-  /**
-   * The send is the check. Nothing is asked while the rep writes, and no
-   * reason for contact or deal is required. A refusal comes back as a review.
-   */
-  inline?: boolean;
   onSent?: () => void;
   onClose: () => void;
 }>) {
@@ -252,8 +224,6 @@ export function useComposeSend({
   // A refusal keeps the form open under copy naming the next move, without
   // the raw server detail beside it.
   const refusal = refusalOf(send.error);
-  // The undecided work a consent refusal left behind; null for any other.
-  const sendReview = sendReviewOf(send.error);
   const sendError =
     send.isError && refusal === null ? problemMessageOf(send.error, t) : null;
   const claimedContext = contextFor({
@@ -265,8 +235,8 @@ export function useComposeSend({
     subject: fields.subject,
     body: fields.body,
     context: fields.context,
-    asksContext: !inline && asksWhy(anchorActivity),
-    needsDeal: !inline && needsDeal,
+    asksContext: asksWhy(anchorActivity),
+    needsDeal,
   });
   const links = composedLinks(
     { entityType, entityId, dealId },
@@ -275,37 +245,6 @@ export function useComposeSend({
   );
   const contextDealId = dealOf(answering ? anchorActivity?.links : links);
   const evidence = reasonEvidence(contextDealId, fields.meetingEvidence);
-  // The engine's answer, asked once the rep pauses. Bcc is in the question,
-  // because consent is owed to everyone who receives the message.
-  const settledSubject = useSettledValue(fields.subject, WRITING_PAUSE_MS);
-  const settledBody = useSettledValue(fields.body, WRITING_PAUSE_MS);
-  const settledHTML = useSettledValue(fields.html, WRITING_PAUSE_MS);
-  const answer = useSendPermission({
-    recipients: [...fields.to, ...fields.cc, ...fields.bcc],
-    anchorActivityId: answering,
-    links,
-    context: claimedContext,
-    evidence,
-    recipientCountries: countriesOnMessage(fields.countries.stated, [
-      ...fields.to,
-      ...fields.cc,
-      ...fields.bcc,
-    ]),
-    draft: {
-      subject: settledSubject,
-      body: settledBody,
-      htmlBody: settledHTML,
-      attachmentIds: files.map((file) => file.id),
-    },
-    enabled: open && !isChannelReply && !inline,
-  });
-  // Send waits for the sender to confirm a recipient with no lawful basis on record.
-  const lawfulBasis = useLawfulBasisGate(
-    answer.preview,
-    fields.countries.stated,
-  );
-  // A consent refusal joins the engine's answer as one status, and only while
-  // it is about this message. A stale one would sit red beside a newer check.
   const request = sendRequest(fields, {
     answering,
     isChannelReply,
@@ -314,33 +253,15 @@ export function useComposeSend({
     context: claimedContext,
     evidence,
     links,
-    answerAtSend: answer.preview,
+    answerAtSend: undefined,
   });
-  const [directOpen, setDirectOpen] = useState(false);
-  const refusedNow =
-    refusal === "consent" &&
-    refusalIsCurrent(
-      send.variables,
-      request,
-      answer.preview,
-      directOpen || sendReview?.actions.includes("direct_send"),
-    );
-  const permission = {
-    ...answer,
-    refusal: refusedNow ? { refusals: sendReview?.refusals ?? [] } : null,
-  };
   const shownRefusal = refusalStillShown(
     refusal,
     send.variables,
     request,
-    answer.preview,
+    undefined,
   );
-  const hold = holdOf(
-    inline,
-    shownRefusal === "legacyFooter",
-    permission,
-    refusedNow ? sendReview : null,
-  );
+  const hold = inlineSendHold(shownRefusal === "legacyFooter");
   const [attempted, setAttempted] = useState(false);
   useEffect(() => {
     if (!open) {
@@ -368,31 +289,7 @@ export function useComposeSend({
     if (hold.blocks) {
       return;
     }
-    // The press is the whole question: a refusal comes back as a review.
-    if (inline) {
-      send.mutate(request);
-      return;
-    }
-    // The refusal is already about this message, so the press asks for the
-    // reason instead of asking the server the same question again.
-    if (refusedNow && hold.withReason) {
-      setDirectOpen(true);
-      return;
-    }
-    setDirectOpen(false);
-    const askedWithReason = hold.withReason;
-    lawfulBasis.gate(() =>
-      send.mutate(request, {
-        onError: (error) => {
-          if (
-            askedWithReason &&
-            sendReviewOf(error)?.actions.includes("direct_send")
-          ) {
-            setDirectOpen(true);
-          }
-        },
-      }),
-    );
+    send.mutate(request);
   };
   // What this client already knows will stop the send. The mark beside Send
   // makes no passed claim while any of it stands.
@@ -409,20 +306,15 @@ export function useComposeSend({
     request,
     blocked,
     refusal: shownRefusal,
-    sendReview,
     sendError,
     claimedContext,
     contextDealId,
-    permission,
     flagged,
     fieldsRef,
     confirm,
     clearAttempt: () => setAttempted(false),
     directSent,
     hold,
-    directOpen,
-    setDirectOpen,
-    lawfulBasisDialog: lawfulBasis.dialog,
   };
 }
 
