@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useCallback, useState } from "react";
-import { liveDialogs } from "../design-system/dialogfocus";
 import { screenEnabled, useHiddenCoreFeatures } from "../lib/corefeatures";
+import { layerIsOpen } from "../lib/keyguard";
 import { useClosesWithPage } from "../lib/pageleave";
 import { navigateReplacing, type Route } from "../lib/router";
 import { useShortcutHandler } from "../lib/shortcuts";
@@ -25,10 +25,10 @@ export function usePaletteShortcuts(
 ): void {
   const disabled = useHiddenCoreFeatures();
   useShortcutHandler("search", () => {
-    // An open dialog makes the app unreachable; only the palette's own layer may close it.
+    // An open dialog or menu makes the app unreachable; only the palette's own layer may close it.
     if (open) {
       hide();
-    } else if (liveDialogs().length === 0) {
+    } else if (!layerIsOpen(document.activeElement)) {
       show("all");
     }
   });

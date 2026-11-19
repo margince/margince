@@ -4,6 +4,7 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
   cleanup,
   fireEvent,
   render as rtlRender,
@@ -155,6 +156,48 @@ describe("the palette hotkey", () => {
     } finally {
       exits.mockRestore();
     }
+  });
+
+  it("does nothing while a menu is open beside it", async () => {
+    render(
+      <>
+        <ShellWithDialog dialogOpen={false} />
+        <button type="button" aria-haspopup="menu" aria-expanded="true">
+          Account
+        </button>
+      </>,
+    );
+    const user = userEvent.setup();
+
+    await user.keyboard("{Meta>}k{/Meta}");
+    expect(screen.queryByRole("searchbox")).toBeNull();
+  });
+
+  it("closes when Back moves the page under it", async () => {
+    window.location.hash = "#/contacts";
+    render(<ShellWithDialog dialogOpen={false} />);
+    const user = userEvent.setup();
+    await user.keyboard("{Meta>}k{/Meta}");
+    expect(screen.getByRole("searchbox")).toBeTruthy();
+
+    act(() => {
+      window.location.hash = "#/deals";
+      window.dispatchEvent(new HashChangeEvent("hashchange"));
+    });
+    expect(screen.queryByRole("searchbox")).toBeNull();
+  });
+
+  it("stays open while only the view of the page changes", async () => {
+    window.location.hash = "#/contacts";
+    render(<ShellWithDialog dialogOpen={false} />);
+    const user = userEvent.setup();
+    await user.keyboard("{Meta>}k{/Meta}");
+
+    act(() => {
+      window.location.hash = "#/contacts?sort=-created_at";
+      window.dispatchEvent(new HashChangeEvent("hashchange"));
+    });
+    expect(screen.getByRole("searchbox")).toBeTruthy();
   });
 
   it("opens over a dialog that is already on its way out", async () => {
