@@ -101,12 +101,10 @@ func checkPrice(amountMinor int64) error {
 	return nil
 }
 
-// checkCurrency refuses a currency that is not three upper-case letters.
+// checkCurrency refuses a currency a deal would refuse, so an offer or a
+// product never carries a code its deal could not.
 func checkCurrency(code string) error {
-	if !values.ValidCurrency(code) {
-		return &FigureError{Field: currencyField, Rule: "must be a three-letter upper-case code, such as EUR"}
-	}
-	return nil
+	return values.RequireAssignableCurrency(code)
 }
 
 // Positions must fit the stored positive integer.
