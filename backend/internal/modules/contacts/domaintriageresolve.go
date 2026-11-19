@@ -277,6 +277,9 @@ func (s *Store) adoptOrCreateTriagedCompany(ctx context.Context, tx pgx.Tx, in R
 			return ResolveDomainTriageResult{}, err
 		}
 	}
+	if held, err := withholdForeignSite(ctx, tx, in, match); err != nil || held {
+		return ResolveDomainTriageResult{}, err
+	}
 
 	companyID, err := createCompany(ctx, tx, match, CompanySpec{
 		DisplayName: displayName,

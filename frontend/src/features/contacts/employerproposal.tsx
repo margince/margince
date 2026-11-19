@@ -36,8 +36,12 @@ export type ProfileField = components["schemas"]["ContactProfileField"];
 export function proposedEmployer(
   view: Contact360,
   employments: readonly Employment[],
+  zone: string,
 ): ProfileField | undefined {
-  if (withheldSections(view).employments || employments.some(stillHeld)) {
+  if (
+    withheldSections(view).employments ||
+    employments.some((row) => stillHeld(row, zone))
+  ) {
     return undefined;
   }
   return (view.profile_fields ?? []).find(

@@ -18,6 +18,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // notYetBuiltReason floors a computed field with no backend data model
@@ -105,7 +106,7 @@ type openPipeline struct {
 func openPipelineRollup(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, asOf time.Time) (roll openPipeline, err error) {
 	err = tx.QueryRow(ctx,
 		`SELECT open_pipeline_minor_base, open_deal_count, priced_deal_count
-		 FROM company_open_pipeline_rollup($2) WHERE company_id = $1`,
+		 FROM company_open_pipeline_rollup(`+occurredday.TodaySQL("$2::timestamptz")+`) WHERE company_id = $1`,
 		companyID, asOf).Scan(&roll.minorBase, &roll.dealCount, &roll.pricedCount)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Scan never ran, so roll is still its zero value — return it, not

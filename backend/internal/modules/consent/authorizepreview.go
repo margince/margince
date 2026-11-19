@@ -103,8 +103,12 @@ func (g *Gate) decidePreviewTx(ctx context.Context, tx pgx.Tx, req commsauthz.Re
 	if req, err = withSendFacts(ctx, tx, req); err != nil {
 		return set, err
 	}
-	for _, r := range req.Recipients {
-		d, err := g.decideOne(ctx, tx, r, req, commsauthz.PhaseStaging)
+	countries, err := recipientCountries(ctx, tx, req.Recipients, func(connector.Recipient) commsauthz.Request { return req })
+	if err != nil {
+		return set, err
+	}
+	for i, r := range req.Recipients {
+		d, err := g.decideOneIn(ctx, tx, r, req, commsauthz.PhaseStaging, countries[i])
 		if err != nil {
 			return set, err
 		}
@@ -121,7 +125,7 @@ func (g *Gate) decidePreviewTx(ctx context.Context, tx pgx.Tx, req commsauthz.Re
 		}
 		set.Decisions = append(set.Decisions, d)
 	}
-	return set, nil
+	return withSubjectLabels(set, countries, req.Subject), nil
 }
 
 // switchableClaims are the reasons a sender may switch to in one press. Each

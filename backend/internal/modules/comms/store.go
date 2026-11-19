@@ -162,7 +162,10 @@ type StageInput struct {
 	// so the dispatcher needs none of it. It is stored because the delivery
 	// row is the send log's own record of which conversation the message
 	// joined, held independently of the activity this delivery reports on.
-	ThreadKey       string
+	ThreadKey string
+	// AnswersActivity is the message a reply on a new topic answers. Its own
+	// ThreadKey then names a new conversation; zero on every other delivery.
+	AnswersActivity ids.UUID
 	ListUnsubscribe string // the Post header is derived from this, never stored
 }
 
@@ -218,13 +221,16 @@ func (s *Store) StageTx(ctx context.Context, tx pgx.Tx, in StageInput) (ids.UUID
 		INSERT INTO comms_outbound
 		  (id, activity_id, user_id, provider, message_id,
 		   recipients, cc, bcc, subject, body, html_body, from_name, consent_purpose, in_reply_to,
-		   references_chain, thread_key, list_unsubscribe, status, created_at, attachments, inline_logo_key, connection_id)
+		   references_chain, thread_key, list_unsubscribe, status, created_at, attachments, inline_logo_key, connection_id,
+		   answers_activity_id)
 		VALUES ($1, $2, $3, $4, $5,
 		        $6, $7, $8, $9, $10, NULLIF($11,''), NULLIF($12,''), $13, NULLIF($14,''), $15,
-		        NULLIF($16,''), NULLIF($17,''), 'pending', $18, $19, NULLIF($20,''), NULLIF($21::uuid, '00000000-0000-0000-0000-000000000000'))`,
+		        NULLIF($16,''), NULLIF($17,''), 'pending', $18, $19, NULLIF($20,''), NULLIF($21::uuid, '00000000-0000-0000-0000-000000000000'),
+		        NULLIF($22::uuid, '00000000-0000-0000-0000-000000000000'))`,
 		id, in.ActivityID, userID, in.Provider, in.MessageID,
 		recipients, cc, bcc, in.Subject, in.Body, in.HTMLBody, in.FromName, in.ConsentPurpose,
-		in.InReplyTo, refs, in.ThreadKey, in.ListUnsubscribe, s.now().UTC(), files, in.InlineLogoKey, in.ConnectionID); err != nil {
+		in.InReplyTo, refs, in.ThreadKey, in.ListUnsubscribe, s.now().UTC(), files, in.InlineLogoKey, in.ConnectionID,
+		in.AnswersActivity); err != nil {
 		// The idempotency key is an ANSWER, and it is mapped rather than
 		// wrapped: a raw violation carries the constraint and table names, and
 		// no caller is owed the schema behind a refusal it can act on.

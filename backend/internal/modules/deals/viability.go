@@ -21,7 +21,7 @@ type ViabilityInput struct {
 	// LastCustomerRefusalAt is when the customer last wrote to refuse. A refusal
 	// is not progress; it only counts while nothing they sent since moved the deal.
 	LastCustomerRefusalAt *time.Time
-	// CustomerWaitUntil is the day the customer asked us to wait until.
+	// CustomerWaitUntil is the instant the customer's wait ends (deals.PauseEndsSQL).
 	CustomerWaitUntil *time.Time
 	// ConfirmedMeetingAt is the next meeting still to come that a customer
 	// guest accepted. A booked meeting nobody outside accepted is not one.
@@ -158,7 +158,7 @@ func supportReasons(in ViabilityInput, silent bool, deferral viability.Reason, a
 	switch {
 	case in.ExpectedClose == nil || in.CloseProvisional || silent || CloseIsOverdue(*in.ExpectedClose, asOf, zone):
 		out = append(out, viability.ReasonCloseDateUnsupported)
-	case deferral == viability.ReasonCustomerWait && in.ExpectedClose.Before(*in.CustomerWaitUntil):
+	case deferral == viability.ReasonCustomerWait && in.ExpectedClose.Before(elapsed.CalendarDay(*in.CustomerWaitUntil, zone)):
 		out = append(out, viability.ReasonCloseDateUnsupported)
 	}
 	if !in.HasNextStep && deferral == "" {

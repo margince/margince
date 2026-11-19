@@ -14732,9 +14732,10 @@ export interface paths {
          *     on a deal at risk.
          *
          *     Each row must be one the caller's Worklist draws now, under a scope they hold, with
-         *     every lane's own grant and row scope. Any other row answers 404, the same as one
-         *     that does not exist, and nothing in the batch is written. A source whose rows never
-         *     offer Done answers 422. A row named twice is written once.
+         *     every lane's own grant and row scope, or one the caller already marked done. A row
+         *     already done answers 204 and is not written again. Any other row answers 404, the
+         *     same as one that does not exist, and nothing in the batch is written. A source whose
+         *     rows never offer Done answers 422. A row named twice is written once.
          */
         put: operations["markWorklistRowsDone"];
         post?: never;
@@ -17154,6 +17155,30 @@ export interface paths {
          *     authority of the contact it acts for.
          */
         patch: operations["updateAutonomy"];
+        trace?: never;
+    };
+    "/autonomy/installation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Switch automatic application on or off for the whole installation.
+         * @description Admin only (`approvals.auto_apply_enabled`). Off, no proposal applies itself
+         *     for anybody, whatever a reader's own setting says. On, nothing changes for a
+         *     reader: their own mode per kind still decides, so turning it back on never
+         *     switches on a kind somebody turned off. The switch is read back as
+         *     `auto_apply_enabled` on `GET /autonomy`.
+         */
+        put: operations["updateAutoApplyInstallation"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/me/approval-preferences": {
@@ -29495,13 +29520,13 @@ export interface components {
              *       as a company.
              *     - `bulk_sender`: mail from the domain was judged bulk or automated, so it is not a
              *       company this business works with. `sender_kind` says which, when it is known.
-             *     - `unevidenced`, `stale_evidence`, `near_duplicate`, `vendor_verdict`: the undecided
+             *     - `unevidenced`, `stale_evidence`, `near_duplicate`, `vendor_verdict`, `foreign_site`: the undecided
              *       domain's open question, as `source` describes each one.
              *     - `unknown`: the row records a reason this server has no word for. `reason` still
              *       carries its stored sentence.
              * @enum {string}
              */
-            reason_code: "stated" | "company_created" | "kept_as_company" | "bulk_sender" | "unevidenced" | "stale_evidence" | "near_duplicate" | "forwarded_identity" | "vendor_verdict" | "reserved_domain" | "unknown";
+            reason_code: "stated" | "company_created" | "kept_as_company" | "bulk_sender" | "unevidenced" | "stale_evidence" | "near_duplicate" | "forwarded_identity" | "vendor_verdict" | "reserved_domain" | "foreign_site" | "unknown";
             /** @description The reason as its author wrote it, in their words. Sent only with `reason_code` `stated`. */
             note?: string;
             /**
@@ -29522,10 +29547,12 @@ export interface components {
              *     old to mint one from today's site; `near_duplicate` means more than one company
              *     here already carries the name it resolved to, and which of them this domain belongs
              *     to is a human's call rather than the machine's; `vendor_verdict` means the site reads
-             *     as a mail or hosting vendor, and a colleague decides whether its staff get a company.
+             *     as a mail or hosting vendor, and a colleague decides whether its staff get a company;
+             *     `foreign_site` means the site names a different business than the domain, which may
+             *     have changed hands.
              * @enum {string}
              */
-            source: "verdict" | "heuristic" | "human" | "agent" | "unevidenced" | "stale_evidence" | "near_duplicate" | "forwarded_identity" | "vendor_verdict" | "reserved_domain";
+            source: "verdict" | "heuristic" | "human" | "agent" | "unevidenced" | "stale_evidence" | "near_duplicate" | "forwarded_identity" | "vendor_verdict" | "reserved_domain" | "foreign_site";
             /**
              * Format: date-time
              * @description When the decision was recorded. For an `undecided` domain, when the row last moved.
@@ -40903,6 +40930,11 @@ export interface components {
              * @description 'Customer asked us to wait until' date; suppresses the stalled flag but not the overdue close-date flag.
              */
             wait_until?: string | null;
+            /**
+             * Format: date-time
+             * @description The instant the pause ends: the start of the `wait_until` day in the deal owner's own time zone, the installation's when the owner has none. Clients judge a pause against this, never against the date.
+             */
+            readonly wait_ends_at?: string | null;
             /** Format: date-time */
             closed_at?: string | null;
             /**
@@ -54427,7 +54459,17 @@ export interface components {
          *     that is eligible to apply automatically, whether or not they have ever met it.
          */
         AutonomySettings: {
+            readonly locks?: components["schemas"]["SettingLocks"];
             data: components["schemas"]["KindAutonomy"][];
+            /**
+             * @description The installation's switch over every row. False means nothing applies
+             *     itself for anybody; the modes in `data` stay as the reader set them.
+             */
+            auto_apply_enabled: boolean;
+        };
+        AutoApplyInstallation: {
+            readonly locks?: components["schemas"]["SettingLocks"];
+            enabled: boolean;
         };
         /**
          * @description One kind's standing with the reader — how it will be handled next time, and the
@@ -60899,8 +60941,9 @@ export interface components {
             next_meeting?: components["schemas"]["Contact360NextMeeting"];
         };
         /**
-         * @description Whose weekly plans this read looked at, present only when `scope` is `team` and the
-         *     due commitments were read across the team roster. Absent under every other scope.
+         * @description Whose weekly plans this read looked at, present only when `scope` is `team` or `all`.
+         *     Both read the due commitments across the reader's team roster, the reader included.
+         *     Absent under every other scope.
          *
          *     It exists because "nothing due" and "not looked at" differ. A teammate whose plan
          *     could not be read contributes no rows, and without this a lead would read their
@@ -82857,7 +82900,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
-            /** @description The channel is public (`code: channel_not_private`), the bot is not in it (`code: channel_bot_not_member`), or the request is malformed. */
+            /** @description The channel is public (`code: channel_not_private`), the bot is not in it (`code: channel_bot_not_member`), the chat refused the channel name even in the form derived from the record (`code: channel_name_refused`), or the request is malformed. */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -90369,6 +90412,33 @@ export interface operations {
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    updateAutoApplyInstallation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AutoApplyInstallation"];
+            };
+        };
+        responses: {
+            /** @description The switch as stored. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutoApplyInstallation"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["SettingLocked"];
         };
     };
     listApprovalPreferences: {

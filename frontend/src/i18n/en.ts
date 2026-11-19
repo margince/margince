@@ -8307,6 +8307,10 @@ export const en = {
     "The recipient asked not to be contacted. Sending this email does not change their request.",
   "sendPermission.reason.bounced":
     "This address does not accept mail. Correct the address; an override does not apply.",
+  "sendPermission.reason.subjectLabelMissing":
+    "Marketing to a recipient in this country must start its subject with the label their law sets. Add it to the subject.",
+  "sendPermission.reason.subjectLabelsConflict":
+    "These recipients’ countries set different subject labels for marketing, and a subject starts with one. Send one message per label.",
   "sendPermission.reason.optedOutAfterRequest":
     "The recipient opted out of marketing after requesting this quote. Sending this email does not change their choice.",
   "sendPermission.reason.permissionRequired":
@@ -12791,6 +12795,8 @@ export const en = {
     "No chat bot is connected. An administrator connects one in Settings.",
   "channelLink.refused.channelNotFound":
     "The bot is in no channel with this name. Add the bot to the channel in the chat, then try again.",
+  "channelLink.refused.nameRefused":
+    "The chat refused this channel name. Rename the record, or link an existing channel.",
   "channelLink.refused.channelNotPrivate":
     "This channel is public. Link a private channel instead.",
   "channelLink.refused.botNotMember":
@@ -12895,6 +12901,8 @@ export const en = {
     "Their website was read, but it does not name a company.",
   "worklist.domainQuestion.reason.forwarded":
     "Their website redirects to another website, so Margince could not confidently match their company.",
+  "worklist.domainQuestion.reason.foreignSite":
+    "The site names a different business than this domain. The domain may have changed hands.",
   "worklist.domainQuestion.reason.vendor":
     "Their website looks like a mail or hosting provider, which can host addresses for many companies.",
   "worklist.domainQuestion.reason.nearDuplicate":
@@ -12963,6 +12971,7 @@ export const en = {
   "blockedDomains.source.unevidenced": "No company found from the site",
   "blockedDomains.source.staleEvidence": "Supporting mail too old",
   "blockedDomains.source.nearDuplicate": "Company name already exists",
+  "blockedDomains.source.foreignSite": "Names a different business",
   "blockedDomains.source.vendorVerdict": "Reads as a mail or hosting vendor",
   "blockedDomains.rowAdmit": "Allow",
   "blockedDomains.rowRefuse": "Refuse",
@@ -17178,6 +17187,11 @@ export const en = {
   "autonomy.sub":
     "Each switch lets one kind of change run without your review. It applies to your work, not the whole team.",
   "autonomy.updateFailed": "Setting not saved",
+  "autonomy.installationOff":
+    "An admin turned automatic changes off for everyone. Nothing runs on its own, and your switches below stay as you set them.",
+  "autonomy.installationSwitch": "Automatic changes for everyone",
+  "autonomy.installationHelp":
+    "Off stops every automatic change. Everyone’s own switches stay as they set them.",
   "autonomy.noneDecidedYet":
     "You have not reviewed any of these proposals yet. Automatic changes can already run according to the switches below. Proposals depend on your records and the work routed to you.",
   "autonomy.noRecord": "No decisions of this kind yet.",
@@ -20614,6 +20628,8 @@ export const en = {
   "worklist.disposition.undoFailed":
     "Undo failed. The message is still off your list.",
   "worklist.disposition.failed": "Item was not removed. Retry.",
+  "worklist.disposition.gone":
+    "This item is no longer on your list. The list is up to date now.",
   "worklist.scope.label": "Whose work",
   "worklist.scope.mine": "Mine",
   "worklist.sourceUnavailable": "Source unavailable or not shared with you",

@@ -117,10 +117,14 @@ Some laws change what the mails to a contact about their own data may ask:
 
 - Under German law, the mail that asks a contact to check their details asks nothing about news.
 - Under Vietnamese law, Margince sends the mail that asks a contact to confirm a subscription only when the contact asked for it first. Log the request on the contact first: their call, the form they sent, or their mail.
+- Under Korean law, the same holds for a mail that asks for consent to sales mail or sales calls.
+- Under Italian law, the same holds for every mail that asks for consent.
 
 When you create a contact by hand, say where it came from. The contact's privacy page shows your answer. It says the source is unknown only when you leave the answer empty.
 
 Under Vietnamese law, a contact who refuses marketing email gets a receipt at once. It states when the refusal reached you and when sending stopped, in the contact's local time, and carries no "Powered by Margince" line. A refusal can come by phone or mail. Then tell your agent when it reached you. The receipt prints that time, not the time it was recorded. A receipt not sent within an hour shows in **Settings → System health** under **Opt-out receipts**.
+
+Under Korean law, a contact who refuses marketing email gets a receipt too, with its times in Korean time. A receipt not sent within 14 days shows in the same place.
 
 Vietnamese data-protection law also follows the recipient. When a contact's or lead's address is a Vietnamese one, the Vietnamese rules apply to them whatever law you chose:
 

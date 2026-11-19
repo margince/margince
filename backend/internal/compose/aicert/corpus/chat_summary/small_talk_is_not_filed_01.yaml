@@ -9,8 +9,8 @@ fixture:
   facts: ["Stage: Proposal"]
   channel: "acme-renewal"
   messages:
-    - {author: "Rita Rep", at: "2026-11-10T12:00:00Z", text: "Lunch at the Thai place?"}
-    - {author: "Sam Lead", at: "2026-11-10T12:01:00Z", text: "Sure, 12:30 works."}
+    - {author: "Rita Rep", side: colleague, at: "2026-11-10T12:00:00Z", text: "Lunch at the Thai place?"}
+    - {author: "Sam Lead", side: colleague, at: "2026-11-10T12:01:00Z", text: "Sure, 12:30 works."}
 expect:
   outcome: accepted
   answer:

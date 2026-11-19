@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -97,7 +98,7 @@ func (s *Store) PreviewEmploymentImport(ctx context.Context, contact ids.Contact
 			return err
 		}
 		var today time.Time
-		if err := tx.QueryRow(ctx, `SELECT current_date`).Scan(&today); err != nil {
+		if err := tx.QueryRow(ctx, `SELECT `+occurredday.TodaySQL("now()")).Scan(&today); err != nil {
 			return err
 		}
 		seen := map[string]bool{}

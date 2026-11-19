@@ -3,11 +3,21 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../api/client";
-import { throwProblem } from "../../lib/problem";
+import { problemStatus, throwProblem } from "../../lib/problem";
 import { worklistKey } from "./worklist.queries";
 
 /** One row named the way the server names it: its lane and its id. */
 export type WorklistRowRef = Readonly<{ source: string; row_id: string }>;
+
+/**
+ * What a failed Done says, and in which tone. A 404 means the row is on no list
+ * the reader holds, so asking them to retry would be false.
+ */
+export function doneFailure(error: unknown) {
+  return problemStatus(error) === 404
+    ? ({ key: "worklist.disposition.gone", tone: "info" } as const)
+    : ({ key: "worklist.disposition.failed", tone: "danger" } as const);
+}
 
 /** The most rows one call to the server takes. */
 export const MAX_DONE_ROWS = 200;
@@ -61,6 +71,12 @@ export function useMarkRowsDone() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: worklistKey });
+    },
+    // A row on no list is stale on screen, so the list is read again.
+    onError: (error) => {
+      if (doneFailure(error).key === "worklist.disposition.gone") {
+        queryClient.invalidateQueries({ queryKey: worklistKey });
+      }
     },
   });
 }

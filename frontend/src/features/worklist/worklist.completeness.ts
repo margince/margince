@@ -9,8 +9,17 @@ import { floorFigure } from "../../format/figure";
 import { formatNumber } from "../../format/format";
 import { type Locale, translatePlural } from "../../i18n";
 import type { T } from "../../lib/worklistcopy";
-import { exactCount, unreadSources } from "../../lib/worklistcounts";
-import type { WorklistView } from "../../lib/worklistviews";
+import {
+  type CountFigure,
+  exactCount,
+  pillFigure,
+  unreadSources,
+} from "../../lib/worklistcounts";
+import {
+  categoryInView,
+  UPCOMING,
+  type WorklistView,
+} from "../../lib/worklistviews";
 import { countsUnder } from "./worklist.narrowing";
 import type {
   Worklist,
@@ -22,6 +31,30 @@ import { type Represented, represented } from "./worklistunits";
 type WorklistCount = Worklist["counts"][number];
 
 export { pillCount, pillFigure } from "../../lib/worklistcounts";
+
+/**
+ * pillFigure, where a floor never reads below the items of its cut already
+ * loaded. Later pages bring rows past a source's first-page count.
+ */
+export function loadedFigure(
+  day: Worklist,
+  filter: WorklistFilter,
+  loaded: readonly WorklistItem[],
+  view?: WorklistView,
+): CountFigure | undefined {
+  const figure = pillFigure(day, filter, view);
+  if (!figure?.floor) return figure;
+  const inCut = loaded.filter((item) =>
+    filter === "all"
+      ? item.category !== UPCOMING &&
+        (view === undefined || categoryInView(item.category, view))
+      : item.category === filter,
+  );
+  return {
+    count: Math.max(figure.count, represented(inCut).items),
+    floor: true,
+  };
+}
 
 /**
  * What the cut on screen is not showing, or null when it shows all of it.

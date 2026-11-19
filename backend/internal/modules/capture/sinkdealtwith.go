@@ -33,12 +33,11 @@ func (s *Sink) dealtWithEnoughToRecord(
 	if out.exchanged, out.replied, err = s.exchangedHow(ctx, tx, cp.Email); err != nil {
 		return dealtWith{}, err
 	}
-	// The meeting read is LAST and conditional, because it is the only one of
-	// the three that runs per captured message without an index it can fully
-	// use. Mail that already satisfies both clauses cannot be changed by it —
-	// the answer is already yes — so the ordinary case pays nothing, and the
-	// query runs only for the addresses the mail evidence left short.
-	if !out.corresponded || !out.exchanged {
+	// The meeting read is last and conditional. It is the only read here that
+	// runs per message without an index it can fully use. A proven send already
+	// answers create and positive(), so only an address the send proof left
+	// short pays for it.
+	if !delivered {
 		if out.met, out.metElsewhere, err = metInPersonTx(ctx, tx, cp.Email, capturing); err != nil {
 			return dealtWith{}, err
 		}

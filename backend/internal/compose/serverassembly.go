@@ -177,7 +177,7 @@ func NewCollectionsStore(pool *pgxpool.Pool) *collections.Store {
 
 // dealWorthTodaySQL is what the filter builder's deal amount compares: the
 // forecast's base value, priced at today's rate for an open deal.
-var dealWorthTodaySQL = deals.BaseValueSQL("CURRENT_DATE", installationBaseCurrencySQL, "t")
+var dealWorthTodaySQL = deals.BaseValueSQL("now()", installationBaseCurrencySQL, "t")
 
 // installationBaseCurrencySQL reads the reporting currency inside the filter's
 // own statement, which the segment engine compiles without a Go-side bind.

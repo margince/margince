@@ -17446,7 +17446,7 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
         '422':
-          description: 'The channel is public (`code: channel_not_private`), the bot is not in it (`code: channel_bot_not_member`), or the request is malformed.'
+          description: 'The channel is public (`code: channel_not_private`), the bot is not in it (`code: channel_bot_not_member`), the chat refused the channel name even in the form derived from the record (`code: channel_name_refused`), or the request is malformed.'
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -22253,9 +22253,10 @@ paths:
         on a deal at risk.
 
         Each row must be one the caller's Worklist draws now, under a scope they hold, with
-        every lane's own grant and row scope. Any other row answers 404, the same as one
-        that does not exist, and nothing in the batch is written. A source whose rows never
-        offer Done answers 422. A row named twice is written once.
+        every lane's own grant and row scope, or one the caller already marked done. A row
+        already done answers 204 and is not written again. Any other row answers 404, the
+        same as one that does not exist, and nothing in the batch is written. A source whose
+        rows never offer Done answers 422. A row named twice is written once.
       requestBody:
         required: true
         content:
@@ -25300,6 +25301,35 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
+
+  /autonomy/installation:
+    put:
+      tags: [Approvals]
+      operationId: updateAutoApplyInstallation
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Switch automatic application on or off for the whole installation.
+      description: |
+        Admin only (`approvals.auto_apply_enabled`). Off, no proposal applies itself
+        for anybody, whatever a reader's own setting says. On, nothing changes for a
+        reader: their own mode per kind still decides, so turning it back on never
+        switches on a kind somebody turned off. The switch is read back as
+        `auto_apply_enabled` on `GET /autonomy`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AutoApplyInstallation' }
+      responses:
+        '200':
+          description: The switch as stored.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AutoApplyInstallation' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/SettingLocked' }
 
   /me/approval-preferences:
     get:
@@ -43117,7 +43147,7 @@ components:
             words and shows `note` for a decision somebody explained.
         reason_code:
           type: string
-          enum: [stated, company_created, kept_as_company, bulk_sender, unevidenced, stale_evidence, near_duplicate, forwarded_identity, vendor_verdict, reserved_domain, unknown]
+          enum: [stated, company_created, kept_as_company, bulk_sender, unevidenced, stale_evidence, near_duplicate, forwarded_identity, vendor_verdict, reserved_domain, foreign_site, unknown]
           x-extensible-enum: true
           description: |
             Why, as a code the client words in the reader's language.
@@ -43128,7 +43158,7 @@ components:
               as a company.
             - `bulk_sender`: mail from the domain was judged bulk or automated, so it is not a
               company this business works with. `sender_kind` says which, when it is known.
-            - `unevidenced`, `stale_evidence`, `near_duplicate`, `vendor_verdict`: the undecided
+            - `unevidenced`, `stale_evidence`, `near_duplicate`, `vendor_verdict`, `foreign_site`: the undecided
               domain's open question, as `source` describes each one.
             - `unknown`: the row records a reason this server has no word for. `reason` still
               carries its stored sentence.
@@ -43147,7 +43177,7 @@ components:
             a company the reader may not see stays withheld by both.
         source:
           type: string
-          enum: [verdict, heuristic, human, agent, unevidenced, stale_evidence, near_duplicate, forwarded_identity, vendor_verdict, reserved_domain]
+          enum: [verdict, heuristic, human, agent, unevidenced, stale_evidence, near_duplicate, forwarded_identity, vendor_verdict, reserved_domain, foreign_site]
           x-extensible-enum: true
           description: |
             What decided it, or — for an `undecided` domain — what stopped the machine deciding.
@@ -43157,7 +43187,9 @@ components:
             old to mint one from today's site; `near_duplicate` means more than one company
             here already carries the name it resolved to, and which of them this domain belongs
             to is a human's call rather than the machine's; `vendor_verdict` means the site reads
-            as a mail or hosting vendor, and a colleague decides whether its staff get a company.
+            as a mail or hosting vendor, and a colleague decides whether its staff get a company;
+            `foreign_site` means the site names a different business than the domain, which may
+            have changed hands.
         decided_at: { type: string, format: date-time, description: 'When the decision was recorded. For an `undecided` domain, when the row last moved.' }
         company_id:
           type: string
@@ -56920,6 +56952,7 @@ components:
         expected_close_date: { type: [string, 'null'], format: date, description: 'An open deal may not have a close date in the past: saving one is rejected with 422 close_date_past, and a date that ages into the past is corrected by the nightly run.' }
         close_date_provisional: { type: boolean, readOnly: true, description: 'True while the close date is a machine-computed replacement awaiting human confirmation; a provisional deal stays out of the Likely forecast. Cleared when a human sets the date.' }
         wait_until: { type: [string, 'null'], format: date, description: "'Customer asked us to wait until' date; suppresses the stalled flag but not the overdue close-date flag." }
+        wait_ends_at: { type: [string, 'null'], format: date-time, readOnly: true, description: "The instant the pause ends: the start of the `wait_until` day in the deal owner's own time zone, the installation's when the owner has none. Clients judge a pause against this, never against the date." }
         closed_at: { type: [string, 'null'], format: date-time }
         last_activity_at: { type: [string, 'null'], format: date-time, description: 'The newest `occurred_at` at or before now of an activity filed under the deal, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. Drives the deterministic stalled flag. A message limited to its participants counts by its date alone, so a deal worked through private mail does not read as stalled. The deal timeline already lists such a message to every reader of the deal with its time, so its date reveals nothing new; its text and sender stay with its audience, a message limited to a chosen audience does not count, and no contact or company date moves for it.' }
         stalled: { type: boolean, readOnly: true, description: 'Derived — no activity past the threshold (absolute duration). A booked workspace-audience meeting ahead keeps the deal off stalled until it starts or is called off.' }
@@ -74693,9 +74726,22 @@ components:
       description: |
         What the reader has decided about answering their own queue: one row per kind
         that is eligible to apply automatically, whether or not they have ever met it.
-      required: [data]
+      required: [data, auto_apply_enabled]
       properties:
+        locks: { $ref: '#/components/schemas/SettingLocks', readOnly: true }
         data: { type: array, items: { $ref: '#/components/schemas/KindAutonomy' } }
+        auto_apply_enabled:
+          type: boolean
+          description: |
+            The installation's switch over every row. False means nothing applies
+            itself for anybody; the modes in `data` stay as the reader set them.
+
+    AutoApplyInstallation:
+      type: object
+      required: [enabled]
+      properties:
+        locks: { $ref: '#/components/schemas/SettingLocks', readOnly: true }
+        enabled: { type: boolean }
 
     KindAutonomy:
       type: object
@@ -81763,8 +81809,9 @@ components:
     WorklistPlanCoverage:
       type: object
       description: |
-        Whose weekly plans this read looked at, present only when `scope` is `team` and the
-        due commitments were read across the team roster. Absent under every other scope.
+        Whose weekly plans this read looked at, present only when `scope` is `team` or `all`.
+        Both read the due commitments across the reader's team roster, the reader included.
+        Absent under every other scope.
 
         It exists because "nothing due" and "not looked at" differ. A teammate whose plan
         could not be read contributes no rows, and without this a lead would read their

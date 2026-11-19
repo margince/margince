@@ -12496,7 +12496,7 @@ paths:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
         '422':
-          description: 'The channel is public (`code: channel_not_private`), the bot is not in it (`code: channel_bot_not_member`), or the request is malformed.'
+          description: 'The channel is public (`code: channel_not_private`), the bot is not in it (`code: channel_bot_not_member`), the chat refused the channel name even in the form derived from the record (`code: channel_name_refused`), or the request is malformed.'
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
@@ -27953,7 +27953,7 @@ components:
             words and shows `note` for a decision somebody explained.
         reason_code:
           type: string
-          enum: [stated, company_created, kept_as_company, bulk_sender, unevidenced, stale_evidence, near_duplicate, forwarded_identity, vendor_verdict, reserved_domain, unknown]
+          enum: [stated, company_created, kept_as_company, bulk_sender, unevidenced, stale_evidence, near_duplicate, forwarded_identity, vendor_verdict, reserved_domain, foreign_site, unknown]
           description: |-
             Why, as a code the client words in the reader's language.
         note:
@@ -27970,7 +27970,7 @@ components:
             a company the reader may not see stays withheld by both.
         source:
           type: string
-          enum: [verdict, heuristic, human, agent, unevidenced, stale_evidence, near_duplicate, forwarded_identity, vendor_verdict, reserved_domain]
+          enum: [verdict, heuristic, human, agent, unevidenced, stale_evidence, near_duplicate, forwarded_identity, vendor_verdict, reserved_domain, foreign_site]
           description: |-
             What decided it, or — for an `undecided` domain — what stopped the machine deciding.
             `human` decisions outrank every other. `agent`, an agent deciding for its user, outranks
@@ -27979,7 +27979,9 @@ components:
             old to mint one from today's site; `near_duplicate` means more than one company
             here already carries the name it resolved to, and which of them this domain belongs
             to is a human's call rather than the machine's; `vendor_verdict` means the site reads
-            as a mail or hosting vendor, and a colleague decides whether its staff get a company.
+            as a mail or hosting vendor, and a colleague decides whether its staff get a company;
+            `foreign_site` means the site names a different business than the domain, which may
+            have changed hands.
         decided_at: {type: string, format: date-time, description: 'When the decision was recorded. For an `undecided` domain, when the row last moved.'}
         company_id:
           type: string
@@ -38525,6 +38527,7 @@ components:
         expected_close_date: {type: [string, 'null'], format: date, description: 'An open deal may not have a close date in the past: saving one is rejected with 422 close_date_past, and a date that ages into the past is corrected by the nightly run.'}
         close_date_provisional: {type: boolean, readOnly: true, description: 'True while the close date is a machine-computed replacement awaiting human confirmation; a provisional deal stays out of the Likely forecast. Cleared when a human sets the date.'}
         wait_until: {type: [string, 'null'], format: date, description: "'Customer asked us to wait until' date; suppresses the stalled flag but not the overdue close-date flag."}
+        wait_ends_at: {type: [string, 'null'], format: date-time, readOnly: true, description: "The instant the pause ends: the start of the `wait_until` day in the deal owner's own time zone, the installation's when the owner has none. Clients judge a pause against this, never against the date."}
         closed_at: {type: [string, 'null'], format: date-time}
         last_activity_at: {type: [string, 'null'], format: date-time, description: 'The newest `occurred_at` at or before now of an activity filed under the deal, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. Drives the deterministic stalled flag. A message limited to its participants counts by its date alone, so a deal worked through private mail does not read as stalled. The deal timeline already lists such a message to every reader of the deal with its time, so its date reveals nothing new; its text and sender stay with its audience, a message limited to a chosen audience does not count, and no contact or company date moves for it.'}
         stalled: {type: boolean, readOnly: true, description: 'Derived — no activity past the threshold (absolute duration). A booked workspace-audience meeting ahead keeps the deal off stalled until it starts or is called off.'}
@@ -55978,8 +55981,9 @@ components:
     WorklistPlanCoverage:
       type: object
       description: |-
-        Whose weekly plans this read looked at, present only when `scope` is `team` and the
-        due commitments were read across the team roster. Absent under every other scope.
+        Whose weekly plans this read looked at, present only when `scope` is `team` or `all`.
+        Both read the due commitments across the reader's team roster, the reader included.
+        Absent under every other scope.
       required: [members, truncated]
       properties:
         members:

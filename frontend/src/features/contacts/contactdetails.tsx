@@ -30,7 +30,10 @@ import { industryWords } from "../../format/industry";
 import { linkedinUrl } from "../../format/weburl";
 import { useLocale, useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
-import { currentEmployer } from "../../lib/employmentcurrency";
+import {
+  currentEmployer,
+  useEmploymentZone,
+} from "../../lib/employmentcurrency";
 import { labelFor } from "../../lib/labelfor";
 import { useMemberName } from "../../lib/membernames";
 import { routeHash } from "../../lib/router";
@@ -66,10 +69,11 @@ export function useContactAboutSections(view: Contact360): DetailSection[] {
   const email = contact.primary_email;
   const phone = primaryPhone(contact.phones);
   const address = postalLines(contact.address);
-  const employer = currentEmployer(view.employments?.data);
+  const employmentZone = useEmploymentZone();
+  const employer = currentEmployer(view.employments?.data, employmentZone);
   const proposed = employer
     ? undefined
-    : proposedEmployer(view, view.employments?.data ?? []);
+    : proposedEmployer(view, view.employments?.data ?? [], employmentZone);
   const owner = rosterOwnerName(contact.owner_id, ownerName, t, notSet);
   // Every row opens its edit from its value; an empty one still folds.
   // A handle (an address or number with its marks and glyphs) lays them out.

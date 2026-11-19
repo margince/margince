@@ -35,7 +35,7 @@ func stageCloseDates(
 	staged := map[string]bool{}
 	for range count {
 		deal := e.SeedDeal(t, "Review the date", pipeline, open, &seat)
-		proposal, err := json.Marshal(deals.CloseDateCorrection{DealID: ids.From[ids.DealKind](deal), ExpectedCloseDate: "2026-12-01", Basis: "Review the date"})
+		proposal, err := json.Marshal(deals.CloseDateCorrection{DealID: ids.From[ids.DealKind](deal), ExpectedCloseDate: closeDateAhead(t), Basis: "Review the date"})
 		if err != nil {
 			t.Fatal(err)
 		}

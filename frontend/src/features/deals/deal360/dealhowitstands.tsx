@@ -307,7 +307,7 @@ function momentumDim(
   asOf: Date,
   { t, locale, zone }: Words,
 ): StandingDim {
-  const momentum = momentumOf(deal, zone, asOf);
+  const momentum = momentumOf(deal, asOf);
   const day = (iso: string) => formatDayMonth(iso, locale, zone);
   const base = {
     key: "momentum",

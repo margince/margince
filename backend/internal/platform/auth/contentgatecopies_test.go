@@ -23,6 +23,7 @@ func TestEveryContentGateRendersItsMarkOnce(t *testing.T) {
 		"content":  {ActivityContentClause, 1},
 		"audience": {ActivityAudienceArm, 1},
 		"discover": {ActivityDiscoverClause, 0},
+		"message":  {ActivityMessageContentClause, 0},
 		"readable set": {func(ctx context.Context, _ string, arg func(any) int) (string, error) {
 			return ContentReadableActivitiesSQL(ctx, "SELECT id FROM activity", arg)
 		}, 1},

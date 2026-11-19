@@ -57,6 +57,7 @@ export async function readEmploymentPage(
 export async function currentEmployerCompanyIds(
   client: QueryClient,
   contactId: string,
+  zone: string,
 ): Promise<string[] | undefined> {
   const view = await client.fetchQuery(contact360Query(contactId));
   if (!view.employments) return undefined;
@@ -71,5 +72,11 @@ export async function currentEmployerCompanyIds(
     roles.push(...page.roles);
     cursor = nextEmploymentCursor(page.page);
   }
-  return [...new Set(roles.filter(stillHeld).map((role) => role.company_id))];
+  return [
+    ...new Set(
+      roles
+        .filter((role) => stillHeld(role, zone))
+        .map((role) => role.company_id),
+    ),
+  ];
 }
