@@ -22,10 +22,8 @@ package gates
 //
 // Exceptions are explicit, keyed by "package-dir:FuncName", each with
 // the rationale that ratified it; a reasonless or stale waiver fails. The
-// key stays coarser than the resolution above — it names the FUNCTION, not
-// the receiver — so if two receivers in one package ever hold the same
-// ungated name, one waiver ratifies both. No pair does today; if one appears,
-// key the waiver by receiver, since the stale-waiver check would not notice.
+// key names the function, not the receiver. Two receivers with one ungated
+// name would share a waiver. None do; if one does, key it by receiver.
 //
 // The tree the gate reads is itself proven rather than assumed:
 // storeEntryPointScope sweeps the whole module for the same entry-point
