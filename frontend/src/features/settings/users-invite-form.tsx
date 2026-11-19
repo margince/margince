@@ -146,9 +146,7 @@ export function InviteUserForm({
   const [entityId, setEntityId] = useState<string | null>(null);
   const placedIn = entityId ?? fallback?.id ?? null;
 
-  // Every choice rides as the mutation's variable rather than through the
-  // closure: react-query re-arms a mutation's options in a passive effect, so a
-  // click in that window would otherwise invite with the PREVIOUS selection.
+  // Choices ride as variables: a closure can hold the previous render's.
   const displayName = askName ? name.trim() : nameFromEmail(email);
   // Asked only beside the name: the setup journey derives the name from the
   // address, and the member's first sign-in can fill this instead.

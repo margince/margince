@@ -75,10 +75,7 @@ function companyLabels(t: (key: MessageKey) => string): FieldLabels {
 
 const COMPANY_FIELDS = ["display_name", "offer_summary", "icp"] as const;
 
-/**
- * A refused profile write split between its fields and the foot, keyed by the
- * form's own field: a too-long name names its limit on the name.
- */
+// A refused profile write, keyed by the form's own field names.
 export function companyRefusal(
   error: unknown,
   t: (key: MessageKey) => string,

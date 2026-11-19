@@ -13,9 +13,6 @@ import { meFixture } from "../../testing/mefixture";
 import { installFetchStub, jsonResponse } from "../../testing/story-utils";
 import { InviteUserForm } from "./users-invite-form";
 
-// The invite form says on the field what is wrong: its own checks before it
-// sends, and the server's refusal of an address another member holds.
-
 function renderForm(sent: unknown[], answer: () => Response) {
   installFetchStub({
     "GET /me": () => jsonResponse(meFixture({ roles: ["admin"], allow: {} })),

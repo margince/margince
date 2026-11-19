@@ -12,9 +12,6 @@ import { StoryProviders } from "../../testing/story-utils";
 import type { CompanyInput } from "./company-context";
 import { CompanyProfileDialog } from "./company-context.profile";
 
-// The company form says on the field what it needs: its own check of the
-// required facts before it sends, and the server's limit on the name.
-
 const FORM: CompanyInput = {
   display_name: "Acme",
   website: "acme.test",

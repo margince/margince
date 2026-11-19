@@ -13,9 +13,7 @@ import { meFixture } from "../../testing/mefixture";
 import { installFetchStub, jsonResponse } from "../../testing/story-utils";
 import { InviteUserForm } from "./users-invite-form";
 
-// The invite form's role: it starts on the ordinary seat when the reader may
-// hand it out, and otherwise sends nothing and asks for a role they are
-// offered. An invite the server would refuse is never sent.
+// An invite never goes out with a role the reader may not hand out.
 
 const FIELD_SALES = {
   key: "custom_field_sales",

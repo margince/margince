@@ -232,8 +232,7 @@ export const SetRateDialog: Story = {
   },
 };
 
-// The rate dialog after the server refused the date: the sentence sits on the
-// Effective field, which takes focus, and nothing is said under the form.
+// The server's refusal of the date, on the Effective field.
 export const SetRateRefused: Story = {
   name: "Set rate dialog, refused",
   play: async ({ canvasElement }) => {
