@@ -7614,7 +7614,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "docs.add.linkTitled":
     "Titel von der Seite übernommen. Du kannst ihn ändern.",
   "docs.add.linkGoogle":
-    "Google-Dateien öffnen sich nur nach der Anmeldung, gib also einen Titel ein.",
+    "Margince liest keine Google-Dateien, gib also einen Titel ein.",
   "docs.add.linkUnread":
     "Die Seite konnte nicht gelesen werden. Gib einen Titel ein oder lass das Feld leer, dann steht dort die Website.",
   "docs.add.linkNameHint":

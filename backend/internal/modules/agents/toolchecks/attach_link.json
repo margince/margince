@@ -1,7 +1,7 @@
 {
   "verb": "attach_link",
   "checks": [
-    "company.update"
+    "activity.update,company.update,contact.update,deal.update,lead.update,project.update"
   ],
   "takes": [
     "company"

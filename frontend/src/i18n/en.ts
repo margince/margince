@@ -7626,7 +7626,7 @@ export const en = {
   "docs.add.linkReading": "Reading the page…",
   "docs.add.linkTitled": "Title taken from the page. Change it if you like.",
   "docs.add.linkGoogle":
-    "Google files open only after sign-in, so type a title.",
+    "Margince does not read Google files, so type a title.",
   "docs.add.linkUnread":
     "The page could not be read. Type a title, or leave it to show the site.",
   "docs.add.linkNameHint": "Optional. Defaults to the site’s address.",

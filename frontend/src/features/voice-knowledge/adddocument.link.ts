@@ -30,7 +30,8 @@ export function useLinkPreview(typed: string): Readonly<{
   title: string | undefined;
   hint: MessageKey | undefined;
 }> {
-  const settled = useSettledValue(typed.trim());
+  const current = typed.trim();
+  const settled = useSettledValue(current);
   const ready = looksLikeWebAddress(settled);
   const preview = useQuery({
     queryKey: ["attachmentLinkPreview", settled],
@@ -47,14 +48,15 @@ export function useLinkPreview(typed: string): Readonly<{
   if (!ready) {
     return { title: undefined, hint: undefined };
   }
-  if (preview.isPending) {
+  // Until the address settles, the preview names the address before it.
+  if (current !== settled || preview.isPending) {
     return { title: undefined, hint: "docs.add.linkReading" };
   }
   const read = preview.data;
   if (read?.title) {
     return { title: read.title, hint: "docs.add.linkTitled" };
   }
-  // A Google file answers a sign-in page, so the server does not ask.
+  // The server does not read Google files: they answer a sign-in page.
   if (read && !read.read && /google\.com$/i.test(read.host)) {
     return { title: undefined, hint: "docs.add.linkGoogle" };
   }

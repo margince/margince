@@ -24,7 +24,7 @@ To add a link to a Google Doc, a Google Sheet or a web page, open the company, c
 1. Choose **Link** at the top of the form and paste the address into **Address**.
 2. Margince reads the page and fills **Title** with the name the page gives.
 3. Choose a **Category** and, on a company, **About**, as for a file. Click **Add link**.
-A Google file shows its name only after sign-in, so type a title for it. Without a title, the link shows the site's address.
+Margince does not read Google files, so type a title for one. Without a title, the link shows the site's address.
 
 The link opens in a new tab. Its tile says **Docs**, **Sheets**, **Slides**, **Forms**, **Drive** or **Web**. Margince keeps only the address, so whoever opens it needs access to the file itself. One address can be added to a record only once.
 Also called: link a Google Drive file, add a URL, add a web link to a company.

@@ -12,6 +12,8 @@ describe("linkKind", () => {
     ["https://docs.google.com/forms/d/e/abc/viewform", "docs.kind.forms"],
     ["https://drive.google.com/file/d/abc/view", "docs.kind.drive"],
     ["https://docs.google.com/a/acme.example/", "docs.kind.drive"],
+    ["https://docs.google.com/__proto__", "docs.kind.drive"],
+    ["https://docs.google.com/constructor", "docs.kind.drive"],
     ["https://acme.example/pricing", "docs.kind.web"],
     ["not an address", "docs.kind.web"],
   ])("names %s as %s", (address, kind) => {

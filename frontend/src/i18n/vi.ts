@@ -7433,8 +7433,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Dán liên kết tới một trang hoặc một tệp được chia sẻ, chẳng hạn Google Docs.",
   "docs.add.linkReading": "Đang đọc trang…",
   "docs.add.linkTitled": "Tiêu đề lấy từ trang. Bạn có thể sửa.",
-  "docs.add.linkGoogle":
-    "Tệp Google chỉ mở sau khi đăng nhập, nên hãy nhập tiêu đề.",
+  "docs.add.linkGoogle": "Margince không đọc tệp Google, nên hãy nhập tiêu đề.",
   "docs.add.linkUnread":
     "Không đọc được trang. Hãy nhập tiêu đề, hoặc để trống để hiện tên trang web.",
   "docs.add.linkNameHint": "Không bắt buộc. Mặc định là địa chỉ trang web.",

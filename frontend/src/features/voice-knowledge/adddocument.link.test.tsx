@@ -3,9 +3,17 @@
 
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { SEARCH_DEBOUNCE_MS } from "../../design-system/debouncedsearch";
 import { LocaleProvider } from "../../i18n";
 import { AddDocumentDialog } from "./adddocument";
 
@@ -97,9 +105,20 @@ function show(onClose = () => {}) {
   );
 }
 
+// The preview waits for the address to settle. Fake timers run that pause
+// out at once, so no title check waits on the real clock.
 async function chooseLink(user: UserEvent, address: string) {
   await user.click(screen.getByRole("button", { name: "Link" }));
-  await user.type(screen.getByRole("textbox", { name: /Address/ }), address);
+  const field = screen.getByRole("textbox", { name: /Address/ });
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+  try {
+    fireEvent.change(field, { target: { value: address } });
+    act(() => {
+      vi.advanceTimersByTime(SEARCH_DEBOUNCE_MS);
+    });
+  } finally {
+    vi.useRealTimers();
+  }
 }
 
 async function pressAdd(user: UserEvent) {
@@ -157,14 +176,12 @@ describe("adding a link to a record's documents", () => {
     expect(added[0]?.body).toMatchObject({ title: "2027 price list" });
   });
 
-  it("asks for a title on a Google file, whose page needs sign-in", async () => {
+  it("asks for a title on a Google file, which Margince does not read", async () => {
     const user = userEvent.setup();
     stubApi();
     show();
     await chooseLink(user, "https://docs.google.com/document/d/abc/edit");
-    expect(
-      await screen.findByText(/Google files open only after sign-in/),
-    ).toBeTruthy();
+    expect(await screen.findByText(/does not read Google files/)).toBeTruthy();
   });
 
   it("refuses until the address is a web address", async () => {

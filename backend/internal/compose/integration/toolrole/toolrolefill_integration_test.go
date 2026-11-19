@@ -121,14 +121,14 @@ func pathRecordKind(pattern, param string) string {
 
 func (c toolRoleCall) args(pool *recordPool) map[string]any {
 	args := fillSchema(c.input, c.route.Pattern, pool)
-	if _, takesBody := args["request_body"]; takesBody && len(c.route.Body) > 0 {
-		args["request_body"] = fillSchema(c.route.Body, "", pool)
+	if _, takesBody := args[routeBodyArgument]; takesBody && len(c.route.Body) > 0 {
+		args[routeBodyArgument] = fillSchema(c.route.Body, "", pool)
 	}
 	if fixture, ok := fixtureOf(c.verb); ok {
 		for name, value := range fixture(pool) {
-			if body, isBody := value.(map[string]any); isBody && name == "request_body" {
-				merged, _ := args["request_body"].(map[string]any)
-				args["request_body"] = mergedBody(merged, body)
+			if body, isBody := value.(map[string]any); isBody && name == routeBodyArgument {
+				merged, _ := args[routeBodyArgument].(map[string]any)
+				args[routeBodyArgument] = mergedBody(merged, body)
 				continue
 			}
 			args[name] = value

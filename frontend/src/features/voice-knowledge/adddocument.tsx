@@ -286,11 +286,14 @@ export function AddDocumentDialog({
       }
     },
     onSuccess: async (result) => {
+      // Closed before the refetch, so a dialog reopened meanwhile keeps its draft.
+      if (result.filed) {
+        closeAndClear();
+      }
       for (const queryKey of fileListKeys(result.home)) {
         await queryClient.invalidateQueries({ queryKey });
       }
       if (result.filed) {
-        closeAndClear();
         return;
       }
       // Guarded on the dialog still being open. React Query runs a mutation to
@@ -313,21 +316,18 @@ export function AddDocumentDialog({
       return { ...submitted.parent, companyId: row.company_id };
     },
     onSuccess: async (home) => {
+      closeAndClear();
       for (const queryKey of fileListKeys(home)) {
         await queryClient.invalidateQueries({ queryKey });
       }
-      closeAndClear();
     },
   });
 
   const preview = useLinkTitle(source === "link", url, title, titleTyped);
   const shownTitle = preview.title;
 
-  // Closing empties the form. The dialog is MOUNTED for the life of the card —
-  // Modal renders nothing while shut, it does not unmount its children — so
-  // anything left here is what the next opening starts with. That is a hazard
-  // rather than untidiness: a file still in the field is one a later, unrelated
-  // upload would silently send a second copy of.
+  // Closing empties the form. The dialog stays mounted while shut, so what is
+  // left here starts the next opening, and a later upload would resend a file.
   function closeAndClear() {
     clearDraft();
     setPartial(false);

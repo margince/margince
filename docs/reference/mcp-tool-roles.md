@@ -1400,7 +1400,7 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Documents | `change_activities.accept_document_fields` | `accept_attachment_extraction` | `company.read` `deal.read` `deal.update` `project.read` |
 | Documents | `change_activities.archive_document` | `delete_attachment` | `company.update` |
 | Documents | `change_activities.attach` | `attach_document` | `activity.update,company.update,contact.update,deal.update,lead.update,project.update` |
-| Documents | `change_activities.attach_link` | `attach_link` | `company.update` |
+| Documents | `change_activities.attach_link` | `attach_link` | `activity.update,company.update,contact.update,deal.update,lead.update,project.update` |
 | Documents | `change_activities.hide_document` | `hide_deal_document` | `activity.read` `company.read` `contact.read` `deal.read` `deal.update` |
 | Documents | `change_activities.read_document_fields` | `read_attachment_for_fields` | `deal.update` |
 | Documents | `change_activities.request_document_access` | `request_attachment_access` | `activity.create` `activity.read` `company.read` |
@@ -1451,7 +1451,7 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Sharing, assignment and ownership | `change_access.end_assignment` | `archive_record_assignment` | `company.update` |
 | Sharing, assignment and ownership | `change_access.offer_ownership` | `offer_ownership_transfer` | `activity.read` `deal.read` |
 | Sharing, assignment and ownership | `change_access.request_ownership` | `request_ownership_transfer` | `activity.read` `contact.read` `contact.update` `deal.read` `relationship.read` `scope-narrower-than:all` |
-| Sharing, assignment and ownership | `change_access.share` | `share_record` | `company.update` |
+| Sharing, assignment and ownership | `change_access.share` | `share_record` | `company.update,contact.update,deal.update,lead.update,project.update` |
 | Sharing, assignment and ownership | `change_access.unshare` | `revoke_record_share` | `company.update` |
 | Sharing, assignment and ownership | `change_access.update_assignment` | `update_record_assignment` | `company.read` `company.update` |
 | Sharing, assignment and ownership | `change_access.withdraw_ownership_offer` | `withdraw_ownership_offer` |  |
