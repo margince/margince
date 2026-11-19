@@ -4,7 +4,7 @@
 import { type Mock, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { emptyPage, jsonResponse } from "../../testing/company.fixtures";
-import { meFixture } from "../../testing/mefixture";
+import { meFixture, READS_RECORDS } from "../../testing/mefixture";
 import { COMPANY, project, project360 } from "../../testing/projects.fixtures";
 
 type Project = components["schemas"]["Project"];
@@ -56,6 +56,7 @@ function quietDefault(
       jsonResponse(
         meFixture({
           allow: {
+            ...READS_RECORDS,
             project: ["read", "create", "update", "delete"],
             deal: ["read", "create"],
             activity: ["read", "create", "update"],

@@ -62,18 +62,20 @@ afterEach(async () => {
   window.location.hash = "";
 });
 
-it("asks for Home's day and receipt while the session probe is still out", async () => {
+it("asks for Home's day while the session probe is out, and the deal reads once the grant is known", async () => {
   writeStored(STORAGE_KEYS.sessionSeen, "1");
   const { seen, release } = server(
-    { "/me": () => json(meFixture({ roles: ["rep"] })) },
+    {
+      "/me": () =>
+        json(meFixture({ roles: ["rep"], allow: { deal: ["read"] } })),
+    },
     ["/me"],
   );
   renderApp();
-  await waitFor(() => {
-    expect(asked(seen, "/worklist")).toBeDefined();
-    expect(asked(seen, "/magic")).toBeDefined();
-  });
+  await waitFor(() => expect(asked(seen, "/worklist")).toBeDefined());
+  expect(asked(seen, "/magic")).toBeUndefined();
   release("/me");
+  await waitFor(() => expect(asked(seen, "/magic")).toBeDefined());
 });
 
 it("stops Home's reads once the gate sends the reader to describe the company", async () => {

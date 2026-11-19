@@ -234,6 +234,41 @@ describe("the day a run of work is due", () => {
     }
   });
 
+  it("heads the undated backlog after the dated work", async () => {
+    stub(
+      banded({
+        bands: [
+          { band: "now", shown: 2 },
+          { band: "build_pipeline", shown: 0 },
+          { band: "keep_momentum", shown: 0 },
+          { band: "review", shown: 0 },
+        ],
+        queue: [
+          row({
+            id: "a",
+            band: "now",
+            due_group: "later",
+            title: "Renew the contract",
+          }),
+          row({
+            id: "b",
+            band: "now",
+            due_group: "none",
+            title: "Call back about the renewal",
+          }),
+        ],
+        summary: { urgent: 0, due: 0, lower_priority: 0, total: 2 },
+      }),
+    );
+    renderWorklist("en");
+    await screen.findByText("Call back about the renewal");
+
+    const subHeadings = screen
+      .getAllByRole("heading", { level: 4 })
+      .map((node) => node.textContent);
+    expect(subHeadings).toEqual(["Later", "No due date"]);
+  });
+
   it("draws no sub-heading at all when everything is due today", async () => {
     stub(
       banded({

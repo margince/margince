@@ -11,7 +11,7 @@ import { ErrorLine } from "../design-system/errorline";
 import { formatNumber } from "../format/format";
 import { type Translator, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { useCanWrite } from "../lib/capability";
+import { useCan, useCanWrite } from "../lib/capability";
 import { undoResultText } from "../lib/changecopy";
 import { useHandledForYou } from "../lib/handled";
 import {
@@ -201,7 +201,7 @@ function useUndoRun(
   const seat = useViewerId();
   const kept = useRememberedUndoRun();
   const receipts = useHandledForYou().data?.receipts;
-  const pending = usePendingMarginceChanges().data;
+  const pending = usePendingMarginceChanges(useCan("deal", "read")).data;
   const held = remember ? kept && { ...kept.run, error } : own;
   const named = (dealId: string) =>
     bundles.find((bundle) => bundle.deal_id === dealId)?.deal_name;

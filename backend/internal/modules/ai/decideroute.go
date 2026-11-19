@@ -60,6 +60,9 @@ type decisionTry struct {
 func (r *Router) Decide(ctx context.Context, task Task, site string, dreq decision.Request,
 	req model.Request, validate Validator, gate DecisionGate,
 ) (DecideOutcome, RouteInfo, error) {
+	if err := r.refuseUnbound(); err != nil {
+		return DecideOutcome{}, RouteInfo{}, err
+	}
 	if _, ok := taskLadders[task]; !ok {
 		return DecideOutcome{}, RouteInfo{}, fmt.Errorf("ai: unknown task %q", task)
 	}
@@ -128,6 +131,9 @@ func (r *Router) decideFirst(ctx context.Context, lc *logicalCall, b *binding, t
 func (r *Router) DecideProbe(ctx context.Context, task Task, site string, dreq decision.Request,
 	gate DecisionGate,
 ) (DecisionProbe, error) {
+	if err := r.refuseUnbound(); err != nil {
+		return DecisionProbe{}, err
+	}
 	if _, ok := taskLadders[task]; !ok {
 		return DecisionProbe{}, fmt.Errorf("ai: unknown task %q", task)
 	}

@@ -4,7 +4,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { AppLink } from "../design-system/applink";
 import { useT } from "../i18n";
-import { recordEnabled, useDisabledCoreFeatures } from "../lib/corefeatures";
+import { recordEnabled, useHiddenCoreFeatures } from "../lib/corefeatures";
 import { ENTITY, type EntityKind } from "../lib/entity";
 import { useMemberName } from "../lib/membernames";
 import { routeHash } from "../lib/router";
@@ -273,7 +273,7 @@ function RecordRef({
   // blank is the caller saying it has nothing rather than saying the record is
   // nameless. `usableName` is what decides that, once, so the value that
   // switches the read off is the same value that gets rendered.
-  const available = recordEnabled(kind, useDisabledCoreFeatures());
+  const available = recordEnabled(kind, useHiddenCoreFeatures());
   const supplied = usableName(name);
   const query = useQuery({
     ...entityNameObserverQuery(kind, id),

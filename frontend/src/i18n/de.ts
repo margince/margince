@@ -2915,6 +2915,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Aktiviere sie unter Einstellungen → Nutzerkonto.",
   "shell.more": "Mehr",
   "shell.unknownPage": "Nicht gefunden",
+  "shell.unavailableForRole": "Für deine Rolle nicht verfügbar.",
   "shell.closeMenu": "Schließen",
   "shell.agent.scope": "Margince liest nur, was du sehen kannst.",
   "shell.capture.importing": "Postfachverlauf wird importiert",
@@ -10067,6 +10068,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "setup.step.aiDone": "{name} ist verbunden.",
   "setup.step.aiDoneUnnamed": "Ein KI-Tool ist verbunden.",
   "firstRun.ai.skip": "Nicht jetzt",
+  "firstRun.ai.connectAnyway": "Trotzdem verbinden",
   "ob.gate.noModelSub":
     "Noch ist kein KI-Anbieter eingerichtet, daher kann Margince deine Website nicht lesen. Gib die Angaben zu deinem Unternehmen selbst ein oder füge jetzt einen Schlüssel hinzu.",
   "ob.gate.addModel": "KI-Schlüssel hinzufügen",
@@ -13306,7 +13308,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "auth.noMethodOffered":
     "Die Anmeldung für dieses Unternehmen läuft über einen Identitätsanbieter, der nicht verfügbar ist. Bitte wende dich an einen Admin, der die Einrichtung abschließen kann.",
   "auth.legalProtected": "Der Zugang zu diesem Unternehmen ist beschränkt.",
-  "auth.legalTerms": "Nutzungsbedingungen",
   "auth.legalPrivacy": "Datenschutz",
   "auth.signingIn": "Wird angemeldet…",
   "auth.signIn": "Anmelden",
@@ -13598,6 +13599,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Der Link wurde bereits verwendet, ist abgelaufen oder wurde durch einen neueren ersetzt. Fordern Sie unten einen neuen Link an.",
   "buyer.noLink":
     "Öffnen Sie diese Seite über den Link, den Sie erhalten haben. Falls Sie ihn nicht mehr haben, fordern Sie unten einen neuen an.",
+  "buyer.roomReplacedTitle": "Dieser Tab zeigt einen älteren Raum",
+  "buyer.roomReplaced":
+    "Dieser Browser hat inzwischen einen anderen Deal Room geöffnet. Laden Sie die Seite neu, um ihn zu sehen.",
   "buyer.emailLabel": "Ihre E-Mail-Adresse",
   "buyer.emailHint": "Die Adresse, an die die Einladung gesendet wurde.",
   "buyer.requestLink": "Neuen Link anfordern",
@@ -16728,6 +16732,20 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Andere Geräte wurden abgemeldet, und verbundene Apps müssen neu verbunden werden.",
   "account.signOutHelp":
     "Beendet deine Sitzung in diesem Browser. Andere Geräte bleiben angemeldet.",
+  "account.devicesCard": "Angemeldete Geräte",
+  "account.devicesBrowserOn": "{browser} auf {system}",
+  "account.devicesUnknown": "Unbekanntes Gerät",
+  "account.devicesWhen": "Angemeldet {signedIn}. Zuletzt aktiv {lastActive}.",
+  "account.devicesThisOne": "Dieses Gerät",
+  "account.devicesSignOut": "Abmelden",
+  "account.devicesSignOutNamed": "{device} abmelden",
+  "account.devicesOthers": "Andere Geräte",
+  "account.devicesOthersHelp": "Beendet jede Sitzung außer dieser.",
+  "account.devicesSignOutOthers": "Alle anderen abmelden",
+  "account.devicesFailed_one":
+    "{count} Gerät wurde nicht abgemeldet. Wiederholen.",
+  "account.devicesFailed_other":
+    "{count} Geräte wurden nicht abgemeldet. Wiederholen.",
   "account.languageHelp":
     "Die Sprache von Menüs, Seiten und Nachrichten aus Margince. In deinem Konto gespeichert, sie gilt also auf jedem Gerät, auf dem du dich anmeldest.",
   "account.appearanceHelp":
@@ -20585,6 +20603,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.dueGroup.tomorrow": "Morgen fällig",
   "worklist.dueGroup.this_week": "Diese Woche fällig",
   "worklist.dueGroup.later": "Später",
+  "worklist.dueGroup.none": "Ohne Fälligkeitsdatum",
   "worklist.band.build_pipeline": "Akquise",
   "worklist.band.keep_momentum": "In Bewegung halten",
   "worklist.band.review": "Prüfen",

@@ -3,7 +3,7 @@
 
 import { useEffect, useRef } from "react";
 import { isChordOf, isLetterKey, pressedLetter } from "./chord";
-import { screenEnabled, useDisabledCoreFeatures } from "./corefeatures";
+import { screenEnabled, useHiddenCoreFeatures } from "./corefeatures";
 import { deviceSwitch, useDeviceSwitch } from "./devicepreference";
 import { isImeCommit } from "./imecommit";
 import { characterKeyRefused, isTextEntry } from "./keyguard";
@@ -87,7 +87,7 @@ export function useShortcut(
 
 /** Answer each go-to binding whose screen this installation has turned on. */
 export function useGoToShortcuts(): void {
-  const disabled = useDisabledCoreFeatures();
+  const disabled = useHiddenCoreFeatures();
   useEffect(() => {
     const unmount = KEYMAP.flatMap((entry) => {
       const target = entry.goesTo;
