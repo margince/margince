@@ -11476,6 +11476,27 @@ func (e DealCoverageRiskKind) Valid() bool {
 	}
 }
 
+// Defines values for DealCoverageSeatReach.
+const (
+	DealCoverageSeatReachNotReached DealCoverageSeatReach = "not_reached"
+	DealCoverageSeatReachReached    DealCoverageSeatReach = "reached"
+	DealCoverageSeatReachUnknown    DealCoverageSeatReach = "unknown"
+)
+
+// Valid indicates whether the value is a known member of the DealCoverageSeatReach enum.
+func (e DealCoverageSeatReach) Valid() bool {
+	switch e {
+	case DealCoverageSeatReachNotReached:
+		return true
+	case DealCoverageSeatReachReached:
+		return true
+	case DealCoverageSeatReachUnknown:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DealFollowUpDraftRequestSegment.
 const (
 	DealFollowUpDraftRequestSegmentSlipping DealFollowUpDraftRequestSegment = "slipping"
@@ -16657,6 +16678,33 @@ func (e LegalReviewOutcome) Valid() bool {
 	}
 }
 
+// Defines values for LegalReviewPacketContractStatus.
+const (
+	LegalReviewPacketContractStatusActive     LegalReviewPacketContractStatus = "active"
+	LegalReviewPacketContractStatusCancelled  LegalReviewPacketContractStatus = "cancelled"
+	LegalReviewPacketContractStatusDraft      LegalReviewPacketContractStatus = "draft"
+	LegalReviewPacketContractStatusExpired    LegalReviewPacketContractStatus = "expired"
+	LegalReviewPacketContractStatusSuperseded LegalReviewPacketContractStatus = "superseded"
+)
+
+// Valid indicates whether the value is a known member of the LegalReviewPacketContractStatus enum.
+func (e LegalReviewPacketContractStatus) Valid() bool {
+	switch e {
+	case LegalReviewPacketContractStatusActive:
+		return true
+	case LegalReviewPacketContractStatusCancelled:
+		return true
+	case LegalReviewPacketContractStatusDraft:
+		return true
+	case LegalReviewPacketContractStatusExpired:
+		return true
+	case LegalReviewPacketContractStatusSuperseded:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for LegalReviewPacketDocumentCategory.
 const (
 	LegalReviewPacketDocumentCategoryContract LegalReviewPacketDocumentCategory = "contract"
@@ -16693,6 +16741,33 @@ func (e LegalReviewPacketDocumentDocState) Valid() bool {
 	case LegalReviewPacketDocumentDocStateDraft:
 		return true
 	case LegalReviewPacketDocumentDocStateFinal:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for LegalReviewPacketTouchKind.
+const (
+	LegalReviewPacketTouchKindCall    LegalReviewPacketTouchKind = "call"
+	LegalReviewPacketTouchKindEmail   LegalReviewPacketTouchKind = "email"
+	LegalReviewPacketTouchKindMeeting LegalReviewPacketTouchKind = "meeting"
+	LegalReviewPacketTouchKindMessage LegalReviewPacketTouchKind = "message"
+	LegalReviewPacketTouchKindNote    LegalReviewPacketTouchKind = "note"
+)
+
+// Valid indicates whether the value is a known member of the LegalReviewPacketTouchKind enum.
+func (e LegalReviewPacketTouchKind) Valid() bool {
+	switch e {
+	case LegalReviewPacketTouchKindCall:
+		return true
+	case LegalReviewPacketTouchKindEmail:
+		return true
+	case LegalReviewPacketTouchKindMeeting:
+		return true
+	case LegalReviewPacketTouchKindMessage:
+		return true
+	case LegalReviewPacketTouchKindNote:
 		return true
 	default:
 		return false
@@ -48210,6 +48285,12 @@ type DealCommitments struct {
 type DealCoverage struct {
 	DealId openapi_types.UUID `json:"deal_id"`
 
+	// Lines One entry per current colleague and readable seat who have exchanged mail or met,
+	// from the activities the caller may open, at the time of the read. A seat the caller
+	// cannot read has none. Absent, not empty, when the caller has no `activity` grant or
+	// the edge sections are withheld: absence says nothing about who has talked.
+	Lines *[]DealCoverageLine `json:"lines,omitempty"`
+
 	// OurSide One entry per colleague with recorded interaction with the deal's seats, warmest
 	// first. `interactions_90d` sums the colleague's exchanges with every seat, and the
 	// score is their warmest single relationship. `single_threaded_ours` reads the same
@@ -48237,6 +48318,31 @@ type DealCoverage struct {
 
 // DealCoverageSectionsOmitted defines model for DealCoverage.SectionsOmitted.
 type DealCoverageSectionsOmitted string
+
+// DealCoverageLine One colleague's exchange with one buyer seat, as the newest event in each direction.
+type DealCoverageLine struct {
+	ColleagueName string             `json:"colleague_name"`
+	ContactId     openapi_types.UUID `json:"contact_id"`
+
+	// LastInboundAt When the contact last wrote to this colleague.
+	LastInboundAt *time.Time `json:"last_inbound_at,omitempty"`
+
+	// LastInboundPrecision How to read `last_inbound_at`.
+	LastInboundPrecision *OccurredPrecision `json:"last_inbound_precision,omitempty"`
+
+	// LastMetAt The newest meeting or call of the pair that neither declined.
+	LastMetAt *time.Time `json:"last_met_at,omitempty"`
+
+	// LastMetPrecision How to read `last_met_at`.
+	LastMetPrecision *OccurredPrecision `json:"last_met_precision,omitempty"`
+
+	// LastOutboundAt When this colleague last wrote to the contact, or was copied on our mail to them.
+	LastOutboundAt *time.Time `json:"last_outbound_at,omitempty"`
+
+	// LastOutboundPrecision How to read `last_outbound_at`.
+	LastOutboundPrecision *OccurredPrecision `json:"last_outbound_precision,omitempty"`
+	UserId                openapi_types.UUID `json:"user_id"`
+}
 
 // DealCoverageRisk One finding, with the records behind it. `kind` names the rule so a surface can
 // explain the flag rather than assert it.
@@ -48271,8 +48377,22 @@ type DealCoverageSeat struct {
 
 	// LastInboundPrecision How to read `last_inbound_at`, from the activity it names. Absent when that is absent.
 	LastInboundPrecision *OccurredPrecision `json:"last_inbound_precision,omitempty"`
-	Role                 string             `json:"role"`
+
+	// Reach Whether a current colleague has exchanged mail with or met this seat, as the caller
+	// can prove it. `not_reached` only when no activity links the seat to a colleague at
+	// all. Anything withheld from the caller, or an exchange only with a colleague who has
+	// left, is `unknown`. Absent for a seat the caller cannot read, and without the
+	// `activity` grant.
+	Reach *DealCoverageSeatReach `json:"reach,omitempty"`
+	Role  string                 `json:"role"`
 }
+
+// DealCoverageSeatReach Whether a current colleague has exchanged mail with or met this seat, as the caller
+// can prove it. `not_reached` only when no activity links the seat to a colleague at
+// all. Anything withheld from the caller, or an exchange only with a colleague who has
+// left, is `unknown`. Absent for a seat the caller cannot read, and without the
+// `activity` grant.
+type DealCoverageSeatReach string
 
 // DealDocument One file in a deal's Files area: the attachment, whether it is hidden from this
 // deal, and where a captured file came from, so a reader can tell "the contract
@@ -55663,7 +55783,12 @@ type LegalReviewOutcome string
 type LegalReviewPacket struct {
 	// Binding Every other offer the buyer was sent or accepted. The approval binds to these too.
 	Binding *[]LegalReviewPacketOffer `json:"binding,omitempty"`
-	Deal    LegalReviewPacketDeal     `json:"deal"`
+
+	// Contracts The agreements filed against the deal, newest term first. Absent on a
+	// pack asked for before agreements were packed. An agreement this reader
+	// may not open, and every agreement for a reader without `deal.read`, is not listed.
+	Contracts *[]LegalReviewPacketContract `json:"contracts,omitempty"`
+	Deal      LegalReviewPacketDeal        `json:"deal"`
 
 	// Documents The deal's contract, legal and offer documents, newest first.
 	Documents []LegalReviewPacketDocument `json:"documents"`
@@ -55672,10 +55797,36 @@ type LegalReviewPacket struct {
 	History []LegalReviewPacketStage `json:"history"`
 
 	// Offer The current offer, or null when the deal has none.
-	Offer         *LegalReviewPacketOffer `json:"offer,omitempty"`
-	ValueCurrency *string                 `json:"value_currency,omitempty"`
-	ValueMinor    *int64                  `json:"value_minor,omitempty"`
+	Offer *LegalReviewPacketOffer `json:"offer,omitempty"`
+
+	// Tasks The deal's tasks that were open at the request. One this reader may not read is not listed. Absent on an older pack.
+	Tasks *[]LegalReviewPacketTask `json:"tasks,omitempty"`
+
+	// Touches The deal's latest calls, meetings, messages and notes, newest first. One
+	// this reader may not read, such as mail outside their audience, is not
+	// listed. Absent on an older pack.
+	Touches       *[]LegalReviewPacketTouch `json:"touches,omitempty"`
+	ValueCurrency *string                   `json:"value_currency,omitempty"`
+	ValueMinor    *int64                    `json:"value_minor,omitempty"`
 }
+
+// LegalReviewPacketContract One agreement as it stood at the request. Its title is read now for this
+// reader. The dates and notice terms are the ones frozen with the pack.
+type LegalReviewPacketContract struct {
+	AutoRenew            *bool                           `json:"auto_renew,omitempty"`
+	CancellationNoticeOn *openapi_types.Date             `json:"cancellation_notice_on,omitempty"`
+	ContractNumber       *string                         `json:"contract_number,omitempty"`
+	EndsOn               *openapi_types.Date             `json:"ends_on,omitempty"`
+	Id                   openapi_types.UUID              `json:"id"`
+	NoticePeriodDays     *int                            `json:"notice_period_days,omitempty"`
+	RenewalOn            *openapi_types.Date             `json:"renewal_on,omitempty"`
+	StartsOn             *openapi_types.Date             `json:"starts_on,omitempty"`
+	Status               LegalReviewPacketContractStatus `json:"status"`
+	Title                string                          `json:"title"`
+}
+
+// LegalReviewPacketContractStatus defines model for LegalReviewPacketContract.Status.
+type LegalReviewPacketContractStatus string
 
 // LegalReviewPacketDeal defines model for LegalReviewPacketDeal.
 type LegalReviewPacketDeal struct {
@@ -55771,6 +55922,27 @@ type LegalReviewPacketStage struct {
 	EnteredAt time.Time `json:"entered_at"`
 	StageName string    `json:"stage_name"`
 }
+
+// LegalReviewPacketTask One task that was open at the request. Its subject is read now.
+type LegalReviewPacketTask struct {
+	ActivityId openapi_types.UUID `json:"activity_id"`
+	DueAt      *time.Time         `json:"due_at,omitempty"`
+	Subject    *string            `json:"subject,omitempty"`
+}
+
+// LegalReviewPacketTouch One recent activity on the deal. Its subject is read now, and absent when this reader may not see the content.
+type LegalReviewPacketTouch struct {
+	ActivityId openapi_types.UUID         `json:"activity_id"`
+	Kind       LegalReviewPacketTouchKind `json:"kind"`
+	OccurredAt time.Time                  `json:"occurred_at"`
+
+	// OccurredPrecision How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time.
+	OccurredPrecision OccurredPrecision `json:"occurred_precision"`
+	Subject           *string           `json:"subject,omitempty"`
+}
+
+// LegalReviewPacketTouchKind defines model for LegalReviewPacketTouch.Kind.
+type LegalReviewPacketTouchKind string
 
 // LegalReviewQueueItem One row of the reviewer's queue, with the facts it is sorted by.
 type LegalReviewQueueItem struct {

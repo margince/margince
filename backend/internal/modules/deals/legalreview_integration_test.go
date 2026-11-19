@@ -33,6 +33,8 @@ type reviewEnv struct {
 	reviewer ids.UUID
 	docs     []PacketDocument
 	openable map[ids.UUID]DocumentName
+	// records is what the fixture's activity and agreement readers answer.
+	records recordFixture
 }
 
 // ReviewDocuments stands in for the activities reader, which this package may
@@ -63,6 +65,7 @@ func setupReviewEnv(t *testing.T) *reviewEnv {
 	}
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)), eurInstallation())
 	store.reviewDocs = e
+	store.reviewRecords = e
 	e.store = store
 	return e
 }

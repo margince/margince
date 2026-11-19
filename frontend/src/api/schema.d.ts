@@ -31525,6 +31525,20 @@ export interface components {
             history: components["schemas"]["LegalReviewPacketStage"][];
             /** @description The deal's contract, legal and offer documents, newest first. */
             documents: components["schemas"]["LegalReviewPacketDocument"][];
+            /**
+             * @description The agreements filed against the deal, newest term first. Absent on a
+             *     pack asked for before agreements were packed. An agreement this reader
+             *     may not open, and every agreement for a reader without `deal.read`, is not listed.
+             */
+            contracts?: components["schemas"]["LegalReviewPacketContract"][];
+            /**
+             * @description The deal's latest calls, meetings, messages and notes, newest first. One
+             *     this reader may not read, such as mail outside their audience, is not
+             *     listed. Absent on an older pack.
+             */
+            touches?: components["schemas"]["LegalReviewPacketTouch"][];
+            /** @description The deal's tasks that were open at the request. One this reader may not read is not listed. Absent on an older pack. */
+            tasks?: components["schemas"]["LegalReviewPacketTask"][];
         };
         LegalReviewPacketDeal: {
             /** Format: uuid */
@@ -31596,6 +31610,48 @@ export interface components {
             stage_name: string;
             /** Format: date-time */
             entered_at: string;
+        };
+        /**
+         * @description One agreement as it stood at the request. Its title is read now for this
+         *     reader. The dates and notice terms are the ones frozen with the pack.
+         */
+        LegalReviewPacketContract: {
+            /** Format: uuid */
+            id: string;
+            title: string;
+            contract_number?: string | null;
+            /** @enum {string} */
+            status: "draft" | "active" | "expired" | "cancelled" | "superseded";
+            /** Format: date */
+            starts_on?: string | null;
+            /** Format: date */
+            ends_on?: string | null;
+            /** Format: date */
+            renewal_on?: string | null;
+            /** Format: date */
+            cancellation_notice_on?: string | null;
+            notice_period_days?: number | null;
+            auto_renew?: boolean | null;
+        };
+        /** @description One recent activity on the deal. Its subject is read now, and absent when this reader may not see the content. */
+        LegalReviewPacketTouch: {
+            /** Format: uuid */
+            activity_id: string;
+            /** @enum {string} */
+            kind: "call" | "email" | "meeting" | "message" | "note";
+            /** Format: date-time */
+            occurred_at: string;
+            /** @description How to read `occurred_at`. `day` means only its date is known, its UTC date, so a client draws no time. */
+            occurred_precision: components["schemas"]["OccurredPrecision"];
+            subject?: string | null;
+        };
+        /** @description One task that was open at the request. Its subject is read now. */
+        LegalReviewPacketTask: {
+            /** Format: uuid */
+            activity_id: string;
+            subject?: string | null;
+            /** Format: date-time */
+            due_at?: string | null;
         };
         /**
          * @description One document as it stood at the request, read now for this reader. A
@@ -38333,6 +38389,15 @@ export interface components {
             /** @description The contact's display name. Null when the caller may not read that contact — the seat still counts toward coverage, because how many contacts carry a deal is not a fact this reader is being told they cannot know; only who they are. `our_side` has carried a display name from the start, and a buyer-side seat that carries only an id is the same list rendered half-anonymous. */
             contact_name?: string | null;
             role: string;
+            /**
+             * @description Whether a current colleague has exchanged mail with or met this seat, as the caller
+             *     can prove it. `not_reached` only when no activity links the seat to a colleague at
+             *     all. Anything withheld from the caller, or an exchange only with a colleague who has
+             *     left, is `unknown`. Absent for a seat the caller cannot read, and without the
+             *     `activity` grant.
+             * @enum {string}
+             */
+            reach?: "reached" | "not_reached" | "unknown";
             /** @description A two-way exchange in the window — both directions, not just our sends. */
             engaged: boolean;
             /**
@@ -38342,6 +38407,35 @@ export interface components {
             last_inbound_at?: string | null;
             /** @description How to read `last_inbound_at`, from the activity it names. Absent when that is absent. */
             last_inbound_precision?: components["schemas"]["OccurredPrecision"];
+        };
+        /** @description One colleague's exchange with one buyer seat, as the newest event in each direction. */
+        DealCoverageLine: {
+            /** Format: uuid */
+            user_id: string;
+            /** Format: uuid */
+            contact_id: string;
+            colleague_name: string;
+            /**
+             * Format: date-time
+             * @description When the contact last wrote to this colleague.
+             */
+            last_inbound_at?: string | null;
+            /** @description How to read `last_inbound_at`. */
+            last_inbound_precision?: components["schemas"]["OccurredPrecision"];
+            /**
+             * Format: date-time
+             * @description When this colleague last wrote to the contact, or was copied on our mail to them.
+             */
+            last_outbound_at?: string | null;
+            /** @description How to read `last_outbound_at`. */
+            last_outbound_precision?: components["schemas"]["OccurredPrecision"];
+            /**
+             * Format: date-time
+             * @description The newest meeting or call of the pair that neither declined.
+             */
+            last_met_at?: string | null;
+            /** @description How to read `last_met_at`. */
+            last_met_precision?: components["schemas"]["OccurredPrecision"];
         };
         /**
          * @description One finding, with the records behind it. `kind` names the rule so a surface can
@@ -39250,6 +39344,13 @@ export interface components {
              *     entries, so its colleague is always one of them.
              */
             our_side: components["schemas"]["ContactNetworkColleague"][];
+            /**
+             * @description One entry per current colleague and readable seat who have exchanged mail or met,
+             *     from the activities the caller may open, at the time of the read. A seat the caller
+             *     cannot read has none. Absent, not empty, when the caller has no `activity` grant or
+             *     the edge sections are withheld: absence says nothing about who has talked.
+             */
+            lines?: components["schemas"]["DealCoverageLine"][];
             risks: components["schemas"]["DealCoverageRisk"][];
             /**
              * @description The sections withheld for lack of the `relationship` grant — so a client can say

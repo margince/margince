@@ -60,6 +60,8 @@ export const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
   ["website_form_busy", "webForms.handlingBusy"],
   // The server's detail lists the closed vocabulary by its wire spellings.
   ["win_evidence_required", "deals.winEvidenceRequired"],
+  // The detail is one English sentence per review state.
+  ["legal_review_required", "legalReview.advanceRefused"],
   ["run_in_flight", "import.reason.run_in_flight"],
   // A date-only meeting cannot hold its host's calendar hour.
   ["day_holds_host_slot", "activity.dayHoldsHostSlot"],
