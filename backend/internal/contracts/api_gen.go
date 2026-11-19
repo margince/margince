@@ -16657,6 +16657,33 @@ func (e LegalReviewOutcome) Valid() bool {
 	}
 }
 
+// Defines values for LegalReviewPacketContractStatus.
+const (
+	LegalReviewPacketContractStatusActive     LegalReviewPacketContractStatus = "active"
+	LegalReviewPacketContractStatusCancelled  LegalReviewPacketContractStatus = "cancelled"
+	LegalReviewPacketContractStatusDraft      LegalReviewPacketContractStatus = "draft"
+	LegalReviewPacketContractStatusExpired    LegalReviewPacketContractStatus = "expired"
+	LegalReviewPacketContractStatusSuperseded LegalReviewPacketContractStatus = "superseded"
+)
+
+// Valid indicates whether the value is a known member of the LegalReviewPacketContractStatus enum.
+func (e LegalReviewPacketContractStatus) Valid() bool {
+	switch e {
+	case LegalReviewPacketContractStatusActive:
+		return true
+	case LegalReviewPacketContractStatusCancelled:
+		return true
+	case LegalReviewPacketContractStatusDraft:
+		return true
+	case LegalReviewPacketContractStatusExpired:
+		return true
+	case LegalReviewPacketContractStatusSuperseded:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for LegalReviewPacketDocumentCategory.
 const (
 	LegalReviewPacketDocumentCategoryContract LegalReviewPacketDocumentCategory = "contract"
@@ -16693,6 +16720,33 @@ func (e LegalReviewPacketDocumentDocState) Valid() bool {
 	case LegalReviewPacketDocumentDocStateDraft:
 		return true
 	case LegalReviewPacketDocumentDocStateFinal:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for LegalReviewPacketTouchKind.
+const (
+	LegalReviewPacketTouchKindCall    LegalReviewPacketTouchKind = "call"
+	LegalReviewPacketTouchKindEmail   LegalReviewPacketTouchKind = "email"
+	LegalReviewPacketTouchKindMeeting LegalReviewPacketTouchKind = "meeting"
+	LegalReviewPacketTouchKindMessage LegalReviewPacketTouchKind = "message"
+	LegalReviewPacketTouchKindNote    LegalReviewPacketTouchKind = "note"
+)
+
+// Valid indicates whether the value is a known member of the LegalReviewPacketTouchKind enum.
+func (e LegalReviewPacketTouchKind) Valid() bool {
+	switch e {
+	case LegalReviewPacketTouchKindCall:
+		return true
+	case LegalReviewPacketTouchKindEmail:
+		return true
+	case LegalReviewPacketTouchKindMeeting:
+		return true
+	case LegalReviewPacketTouchKindMessage:
+		return true
+	case LegalReviewPacketTouchKindNote:
 		return true
 	default:
 		return false
@@ -55663,7 +55717,12 @@ type LegalReviewOutcome string
 type LegalReviewPacket struct {
 	// Binding Every other offer the buyer was sent or accepted. The approval binds to these too.
 	Binding *[]LegalReviewPacketOffer `json:"binding,omitempty"`
-	Deal    LegalReviewPacketDeal     `json:"deal"`
+
+	// Contracts The agreements filed against the deal, newest term first. Absent on a
+	// pack asked for before agreements were packed. An agreement this reader
+	// may not open, and every agreement for a reader without `deal.read`, is not listed.
+	Contracts *[]LegalReviewPacketContract `json:"contracts,omitempty"`
+	Deal      LegalReviewPacketDeal        `json:"deal"`
 
 	// Documents The deal's contract, legal and offer documents, newest first.
 	Documents []LegalReviewPacketDocument `json:"documents"`
@@ -55672,10 +55731,36 @@ type LegalReviewPacket struct {
 	History []LegalReviewPacketStage `json:"history"`
 
 	// Offer The current offer, or null when the deal has none.
-	Offer         *LegalReviewPacketOffer `json:"offer,omitempty"`
-	ValueCurrency *string                 `json:"value_currency,omitempty"`
-	ValueMinor    *int64                  `json:"value_minor,omitempty"`
+	Offer *LegalReviewPacketOffer `json:"offer,omitempty"`
+
+	// Tasks The deal's tasks that were open at the request. One this reader may not read is not listed. Absent on an older pack.
+	Tasks *[]LegalReviewPacketTask `json:"tasks,omitempty"`
+
+	// Touches The deal's latest calls, meetings, messages and notes, newest first. One
+	// this reader may not read, such as mail outside their audience, is not
+	// listed. Absent on an older pack.
+	Touches       *[]LegalReviewPacketTouch `json:"touches,omitempty"`
+	ValueCurrency *string                   `json:"value_currency,omitempty"`
+	ValueMinor    *int64                    `json:"value_minor,omitempty"`
 }
+
+// LegalReviewPacketContract One agreement as it stood at the request. Its title is read now for this
+// reader. The dates and notice terms are the ones frozen with the pack.
+type LegalReviewPacketContract struct {
+	AutoRenew            *bool                           `json:"auto_renew,omitempty"`
+	CancellationNoticeOn *openapi_types.Date             `json:"cancellation_notice_on,omitempty"`
+	ContractNumber       *string                         `json:"contract_number,omitempty"`
+	EndsOn               *openapi_types.Date             `json:"ends_on,omitempty"`
+	Id                   openapi_types.UUID              `json:"id"`
+	NoticePeriodDays     *int                            `json:"notice_period_days,omitempty"`
+	RenewalOn            *openapi_types.Date             `json:"renewal_on,omitempty"`
+	StartsOn             *openapi_types.Date             `json:"starts_on,omitempty"`
+	Status               LegalReviewPacketContractStatus `json:"status"`
+	Title                string                          `json:"title"`
+}
+
+// LegalReviewPacketContractStatus defines model for LegalReviewPacketContract.Status.
+type LegalReviewPacketContractStatus string
 
 // LegalReviewPacketDeal defines model for LegalReviewPacketDeal.
 type LegalReviewPacketDeal struct {
@@ -55771,6 +55856,24 @@ type LegalReviewPacketStage struct {
 	EnteredAt time.Time `json:"entered_at"`
 	StageName string    `json:"stage_name"`
 }
+
+// LegalReviewPacketTask One task that was open at the request. Its subject is read now.
+type LegalReviewPacketTask struct {
+	ActivityId openapi_types.UUID `json:"activity_id"`
+	DueAt      *time.Time         `json:"due_at,omitempty"`
+	Subject    *string            `json:"subject,omitempty"`
+}
+
+// LegalReviewPacketTouch One recent activity on the deal. Its subject is read now, and absent when this reader may not see the content.
+type LegalReviewPacketTouch struct {
+	ActivityId openapi_types.UUID         `json:"activity_id"`
+	Kind       LegalReviewPacketTouchKind `json:"kind"`
+	OccurredAt time.Time                  `json:"occurred_at"`
+	Subject    *string                    `json:"subject,omitempty"`
+}
+
+// LegalReviewPacketTouchKind defines model for LegalReviewPacketTouch.Kind.
+type LegalReviewPacketTouchKind string
 
 // LegalReviewQueueItem One row of the reviewer's queue, with the facts it is sorted by.
 type LegalReviewQueueItem struct {

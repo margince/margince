@@ -32,9 +32,20 @@ import { attachmentTitle } from "../../lib/attachmentlink";
 import { labelFor } from "../../lib/labelfor";
 import type { LegalReview } from "../../lib/legalreviews.queries";
 import { useViewerZone } from "../../lib/viewerzone";
+import { CONTRACT_STATUS_LABEL } from "../projects/contractlifecycle";
 
 type Packet = LegalReview["packet"];
 type PacketDocument = Packet["documents"][number];
+type PacketContract = NonNullable<Packet["contracts"]>[number];
+type PacketTouch = NonNullable<Packet["touches"]>[number];
+
+const TOUCH_LABEL: Readonly<Record<PacketTouch["kind"], MessageKey>> = {
+  call: "timeline.kind.call",
+  email: "timeline.kind.email",
+  meeting: "timeline.kind.meeting",
+  message: "timeline.kind.message",
+  note: "timeline.kind.note",
+};
 
 /** A calendar day (`2026-11-01`) in the reader's words. */
 export function calendarDayLabel(
@@ -66,7 +77,10 @@ export function LegalReviewPack({ review }: Readonly<{ review: LegalReview }>) {
       <PackFacts packet={packet} />
       <PackOffer packet={packet} />
       <PackDocuments packet={packet} />
+      {(packet.contracts ?? []).length > 0 && <PackContracts packet={packet} />}
       {packet.history.length > 0 && <PackHistory packet={packet} />}
+      {(packet.touches ?? []).length > 0 && <PackTouches packet={packet} />}
+      {(packet.tasks ?? []).length > 0 && <PackTasks packet={packet} />}
       {review.earlier.length > 0 && (
         <Panel title={t("legalReview.earlier")}>
           {review.earlier.map((earlier) => (
@@ -210,6 +224,17 @@ function OfferFields({ offer }: Readonly<{ offer: PacketOffer }>) {
           <LineTerms line={line} />
         </FieldRow>
       ))}
+      {offer.has_pdf && (
+        <FieldRow label={t("legalReview.offerPdf")}>
+          <a
+            href={`/v1/offers/${offer.id}/pdf`}
+            target="_blank"
+            rel="noreferrer"
+          >
+            {t("offer.viewPdf")}
+          </a>
+        </FieldRow>
+      )}
       {offer.terms_text && (
         <FieldRow label={t("legalReview.offerTerms")}>
           <span className="t-body">{offer.terms_text}</span>
@@ -309,6 +334,123 @@ function PackHistory({ packet }: Readonly<{ packet: Packet }>) {
               date: formatDateTime(stage.entered_at, locale, zone),
             })}
           </span>
+        </PanelRow>
+      ))}
+    </Panel>
+  );
+}
+
+function PackContracts({ packet }: Readonly<{ packet: Packet }>) {
+  const t = useT();
+  return (
+    <Panel title={t("legalReview.packContracts")}>
+      {(packet.contracts ?? []).map((contract) => (
+        <PanelRow key={contract.id}>
+          <ContractFields contract={contract} />
+        </PanelRow>
+      ))}
+    </Panel>
+  );
+}
+
+function ContractFields({ contract }: Readonly<{ contract: PacketContract }>) {
+  const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const zone = useViewerZone();
+  const day = (value: string) => calendarDayLabel(value, locale, zone);
+  const days = contract.notice_period_days;
+  return (
+    <FieldGrid>
+      <FieldRow label={contract.title}>
+        {t(labelFor(CONTRACT_STATUS_LABEL, contract.status))}
+      </FieldRow>
+      {contract.contract_number && (
+        <FieldRow label={t("contracts.form.number")}>
+          {contract.contract_number}
+        </FieldRow>
+      )}
+      {contract.starts_on && (
+        <FieldRow label={t("contracts.form.startsOn")}>
+          {day(contract.starts_on)}
+        </FieldRow>
+      )}
+      {contract.ends_on && (
+        <FieldRow label={t("contracts.form.endsOn")}>
+          {day(contract.ends_on)}
+        </FieldRow>
+      )}
+      {contract.renewal_on && (
+        <FieldRow label={t("contracts.form.renewalOn")}>
+          {day(contract.renewal_on)}
+          {contract.auto_renew != null && (
+            <div className="t-caption">
+              {t(
+                contract.auto_renew
+                  ? "legalReview.contractAutoRenews"
+                  : "legalReview.contractNoAutoRenew",
+              )}
+            </div>
+          )}
+        </FieldRow>
+      )}
+      {days != null && (
+        <FieldRow label={t("legalReview.contractNotice")}>
+          {plural("legalReview.contractNoticeDays", days, {
+            count: formatNumber(days, locale),
+          })}
+        </FieldRow>
+      )}
+      {contract.cancellation_notice_on && (
+        <FieldRow label={t("legalReview.contractCancelBy")}>
+          {day(contract.cancellation_notice_on)}
+        </FieldRow>
+      )}
+    </FieldGrid>
+  );
+}
+
+function PackTouches({ packet }: Readonly<{ packet: Packet }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const zone = useViewerZone();
+  return (
+    <Panel title={t("legalReview.packTouches")}>
+      {(packet.touches ?? []).map((touch) => (
+        <PanelRow key={touch.activity_id} className="meta-row">
+          <span className="meta-row-line t-caption">
+            {t("legalReview.touchLine", {
+              kind: t(labelFor(TOUCH_LABEL, touch.kind)),
+              date: formatDateTime(touch.occurred_at, locale, zone),
+            })}
+          </span>
+          {touch.subject && (
+            <span className="meta-row-entry t-body">{touch.subject}</span>
+          )}
+        </PanelRow>
+      ))}
+    </Panel>
+  );
+}
+
+function PackTasks({ packet }: Readonly<{ packet: Packet }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const zone = useViewerZone();
+  return (
+    <Panel title={t("legalReview.packTasks")}>
+      {(packet.tasks ?? []).map((task) => (
+        <PanelRow key={task.activity_id} className="meta-row">
+          {task.due_at && (
+            <span className="meta-row-line t-caption">
+              {t("legalReview.taskDue", {
+                date: formatDateTime(task.due_at, locale, zone),
+              })}
+            </span>
+          )}
+          {task.subject && (
+            <span className="meta-row-entry t-body">{task.subject}</span>
+          )}
         </PanelRow>
       ))}
     </Panel>

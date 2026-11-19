@@ -5334,6 +5334,7 @@
   "aiOutcome.gaveUp.budgetUnavailable": "Kontingentprüfung fehlgeschlagen",
   "aiOutcome.gaveUp.meteringFailed": "beantwortet, Verbrauch nicht erfasst",
   "legalReview.queueTitle": "Rechtsprüfungen",
+  "legalReview.advanceRefused": "Diese Phase braucht zuerst die Freigabe der Rechtsabteilung. Frage eine Rechtsprüfung an und verschiebe den Deal danach.",
   "aiTask.name.account_scan": "Analyse des Kundenbedarfs",
   "aiTask.name.agent_loop": "Agentensteuerung",
   "aiTask.name.brief_ranking": "Priorisierung der Morgenübersicht",

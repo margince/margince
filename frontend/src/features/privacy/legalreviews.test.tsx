@@ -91,6 +91,23 @@ describe("one review", () => {
     expect(
       screen.getByText(en["legalReview.docUnavailable"]),
     ).toBeInTheDocument();
+    // The agreements, latest contact and open tasks come with the pack, and the
+    // current offer links to its PDF.
+    expect(screen.getByText("Master services agreement")).toBeInTheDocument();
+    expect(screen.getByText("60 days")).toBeInTheDocument();
+    expect(
+      screen.getByText(en["legalReview.contractAutoRenews"]),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Liability cap call")).toBeInTheDocument();
+    expect(
+      screen.getByText("Send the data processing terms"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: en["offer.viewPdf"] }),
+    ).toHaveAttribute(
+      "href",
+      "/v1/offers/019f7e65-0000-7000-8000-0000000000f1/pdf",
+    );
     await user.click(
       await screen.findByRole("radio", {
         name: new RegExp(en["legalReview.outcomeChanges"]),
