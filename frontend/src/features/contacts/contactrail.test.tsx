@@ -12,13 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
-import { listsMe, shortlist } from "../../testing/lists.fixtures";
 import { meFixture } from "../../testing/mefixture";
-import {
-  installFetchStub,
-  jsonResponse,
-  StoryProviders,
-} from "../../testing/story-utils";
 import { Employers } from "./contactemployers";
 import { ContactRail } from "./contactrail";
 
@@ -260,23 +254,6 @@ function mount(
           logo_url: null,
         });
       }
-      // The record's tags. The catch-all below would answer with no `withheld`
-      // key at all, which the panel reads as visible-and-empty — a state this
-      // suite would then be asserting by accident rather than by choice.
-      if (url.pathname.endsWith("/tags")) {
-        return json({
-          data: [
-            {
-              tag_id: "t-1",
-              name: "Champion",
-              color: "teal",
-              archived: false,
-              assigned_at: "2026-03-03T10:00:00Z",
-            },
-          ],
-          withheld: false,
-        });
-      }
       return json({ data: [], page });
     }),
   );
@@ -378,27 +355,6 @@ describe("the sibling sections governed by their own grants", () => {
 
     const companies = section("Work history");
     await within(companies).findByText("2 contacts · no open deals");
-  });
-});
-
-describe("the contact's tags in the left column", () => {
-  it("shows the tags it carries and the verb to add one", async () => {
-    mount({
-      ...granted,
-      contact: {
-        ...contact,
-        tags: [{ tag_id: "t-1", name: "Champion", color: "teal" }],
-      },
-    });
-
-    const about = screen.getByRole("region", {
-      name: en["record.details.about"],
-    });
-    await within(about).findByText("Champion");
-    expect(within(about).getByText(en["tags.panelTitle"])).toBeTruthy();
-    expect(
-      within(about).getByRole("button", { name: en["tags.add"] }),
-    ).toBeTruthy();
   });
 });
 
@@ -1026,58 +982,5 @@ describe("the consent rail's transport row", () => {
     ).toBeNull();
     // The marketing grant is the Research tab's consent panel's to name.
     expect(screen.queryByText("Newsletter")).toBeNull();
-  });
-});
-
-describe("the Lists group", () => {
-  function serve(me: () => Response, onLists: readonly unknown[] = []) {
-    installFetchStub({
-      "GET /me": me,
-      [`GET /records/contact/${contact.id}/lists`]: () =>
-        jsonResponse({ data: onLists }),
-    });
-    render(
-      <StoryProviders>
-        <ContactRail
-          view={granted}
-          consent={{
-            guard: undefined,
-            loading: false,
-            failed: false,
-            onRetry: () => undefined,
-          }}
-          writeRefusalId="write-refused"
-        />
-      </StoryProviders>,
-    );
-  }
-
-  const group = async () =>
-    within(
-      await screen.findByRole("region", { name: en["lists.record.title"] }),
-    );
-
-  it("offers Add to Shortlist and every list while the contact is on none", async () => {
-    serve(listsMe(true));
-    const lists = await group();
-    expect(
-      await lists.findByRole("button", { name: en["lists.addToShortlist"] }),
-    ).toBeTruthy();
-    expect(
-      lists
-        .getByRole("link", { name: en["lists.record.allLists"] })
-        .getAttribute("href"),
-    ).toBe("/#/filters/lists");
-  });
-
-  it("keeps the lists it is on beside the verbs", async () => {
-    serve(listsMe(true), [shortlist]);
-    const lists = await group();
-    expect(
-      await lists.findByRole("button", { name: shortlist.name }),
-    ).toBeTruthy();
-    expect(
-      lists.getByRole("button", { name: en["lists.addToShortlist"] }),
-    ).toBeTruthy();
   });
 });

@@ -388,3 +388,70 @@ describe("the name parts in the About group", () => {
     await waitFor(() => expect(sent).toEqual([{ first_name: "Daniela" }]));
   });
 });
+
+describe("the tags in the About group", () => {
+  function About({ page }: Readonly<{ page: typeof view }>) {
+    return <RecordDetails sections={useContactAboutSections(page)} />;
+  }
+
+  it("folds an untagged contact's Tags row and asks for no tags", async () => {
+    let asked = 0;
+    installFetchStub({
+      "GET /me": meRoute({ contact: ["read", "update"] }, { seat: "full" }),
+      "GET /records/contact/p-1/tags": () => {
+        asked += 1;
+        return jsonResponse({ data: [], withheld: false });
+      },
+    });
+    render(
+      <StoryProviders>
+        <About page={{ ...view, contact: { ...contact, tags: [] } }} />
+      </StoryProviders>,
+    );
+    const about = await screen.findByRole("region", {
+      name: en["record.details.about"],
+    });
+    expect(within(about).queryByText(en["tags.panelTitle"])).toBeNull();
+    expect(asked).toBe(0);
+  });
+
+  it("shows the tags the contact carries and the verb to add one", async () => {
+    installFetchStub({
+      "GET /me": meRoute({ contact: ["read", "update"] }, { seat: "full" }),
+      "GET /records/contact/p-1/tags": () =>
+        jsonResponse({
+          data: [
+            {
+              tag_id: "t-1",
+              name: "Champion",
+              color: "teal",
+              archived: false,
+              assigned_at: "2026-03-03T10:00:00Z",
+            },
+          ],
+          withheld: false,
+        }),
+    });
+    render(
+      <StoryProviders>
+        <About
+          page={{
+            ...view,
+            contact: {
+              ...contact,
+              tags: [{ tag_id: "t-1", name: "Champion", color: "teal" }],
+            },
+          }}
+        />
+      </StoryProviders>,
+    );
+    const about = await screen.findByRole("region", {
+      name: en["record.details.about"],
+    });
+    await within(about).findByText("Champion");
+    expect(within(about).getByText(en["tags.panelTitle"])).toBeTruthy();
+    expect(
+      within(about).getByRole("button", { name: en["tags.add"] }),
+    ).toBeTruthy();
+  });
+});
