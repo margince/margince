@@ -358,6 +358,12 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     await user.type(screen.getByRole("searchbox"), "acme");
 
     expect(await screen.findByText(/Search failed/)).toBeTruthy();
+    // The notice heads the list, so it names what still works, not where.
+    expect(
+      screen.getByText(
+        "Records could not be searched. Screens and actions still work.",
+      ),
+    ).toBeTruthy();
     // Not the empty state: the list is not empty, and saying so would be the
     // false claim this replaces.
     expect(screen.queryByText("No matches.")).toBeNull();

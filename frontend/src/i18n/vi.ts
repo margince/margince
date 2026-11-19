@@ -2955,7 +2955,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "palette.seeAll": "Xem tất cả kết quả cho “{query}”",
   "palette.searching": "Đang tìm hồ sơ…",
   "palette.searchFailedTitle": "Tìm kiếm không thành công",
-  "palette.searchFailed": "Các lệnh ở trên vẫn hoạt động.",
+  "palette.searchFailed":
+    "Không thể tìm hồ sơ. Màn hình và hành động vẫn hoạt động.",
   "palette.askDataRow": "Hỏi dữ liệu CRM: “{query}”",
   "palette.openAnalytics": "Mở trong Phân tích",
   "palette.dataUnsupportedOnly":

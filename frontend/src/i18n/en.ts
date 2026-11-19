@@ -2953,7 +2953,8 @@ export const en = {
   "palette.seeAll": "See all results for “{query}”",
   "palette.searching": "Searching records…",
   "palette.searchFailedTitle": "Search failed",
-  "palette.searchFailed": "The commands above still work.",
+  "palette.searchFailed":
+    "Records could not be searched. Screens and actions still work.",
   "palette.askDataRow": "Ask CRM data: “{query}”",
   "palette.openAnalytics": "Open in Analytics",
   "palette.dataUnsupportedOnly":

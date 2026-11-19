@@ -3048,7 +3048,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "palette.seeAll": "Alle Ergebnisse für „{query}“ anzeigen",
   "palette.searching": "Datensätze werden durchsucht…",
   "palette.searchFailedTitle": "Suche fehlgeschlagen",
-  "palette.searchFailed": "Die Befehle oben funktionieren weiterhin.",
+  "palette.searchFailed":
+    "Datensätze konnten nicht durchsucht werden. Ansichten und Aktionen funktionieren weiterhin.",
   "palette.askDataRow": "CRM-Daten fragen: „{query}“",
   "palette.openAnalytics": "In Analytics öffnen",
   "palette.dataUnsupportedOnly":
