@@ -19,7 +19,7 @@ import { useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
 import { type PluralBase, useLocale, usePlural, useT } from "../i18n";
 import { dealRecordKeys, derivedRecordKeys } from "../lib/activitykeys";
-import { LISTS_KEY } from "../lib/lists.queries";
+import { LISTS_KEY } from "../lib/listkeys";
 import { executeBulkChange, previewBulkChange } from "./bulkchangeapi";
 import { BulkUndoContext } from "./bulkundo";
 import {
