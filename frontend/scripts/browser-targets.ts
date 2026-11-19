@@ -4,6 +4,7 @@
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import browserslist from "browserslist";
+import { stable } from "../src/format/collate";
 
 const FRONTEND = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -67,7 +68,7 @@ export function viteTargets(browsers: readonly string[]): string[] {
   }
   return [...floors]
     .map(([engine, { version }]) => `${engine}${version}`)
-    .sort();
+    .sort(stable);
 }
 
 /** The browsers .browserslistrc supports, as caniuse names and versions. */
