@@ -26,11 +26,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-// meetingStartAhead is a start a month past the clock the capture sink reads,
-// so the meeting is still upcoming whenever the test runs.
+// meetingStartAhead is 10:00 on a Monday a month out: still upcoming, and
+// inside the working hours availability counts.
 func meetingStartAhead(t *testing.T) time.Time {
 	t.Helper()
-	return clocktest.Now(t).AddDate(0, 0, 30).Truncate(24 * time.Hour).Add(10 * time.Hour)
+	day := clocktest.Now(t).AddDate(0, 0, 30).Truncate(24 * time.Hour)
+	return day.AddDate(0, 0, (8-int(day.Weekday()))%7).Add(10 * time.Hour)
 }
 
 func individualRSVPRecord(t *testing.T, start time.Time, provider, owner, first, second, answer string) connector.NormalizedRecord {

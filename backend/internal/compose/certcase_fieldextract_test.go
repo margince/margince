@@ -72,7 +72,7 @@ func fieldExtractFixtureJSON(t *testing.T) json.RawMessage {
 }
 
 // corpusFieldExpectation is a field-to-value expectation, encoded as the corpus
-// carries it — beside the fixture, never inside it.
+// carries it: beside the fixture, never inside it.
 func corpusFieldExpectation(t *testing.T, want map[string]string) json.RawMessage {
 	t.Helper()
 	raw, err := json.Marshal(want)

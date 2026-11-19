@@ -39,7 +39,7 @@ func runFalseCancelTask(t *testing.T, e *integration.Env, task datatask.Task) {
 // declined copy, as the seat whose calendar synced it.
 func (o ownershipEnv) cancelAs(t *testing.T, seat ids.UUID, c mailboxCopy) {
 	t.Helper()
-	c.provider, c.owner = o.provider, o.address[seat]
+	c.provider, c.owner, c.first = o.provider, o.address[seat], o.first
 	if c.uid == "" {
 		c.uid = sharedMeetingUID
 	}
@@ -117,7 +117,7 @@ func TestTheRepairKeepsACancellationAGuestsCalendarSawWithoutDeclining(t *testin
 	o.cancelAs(t, e.Rep2, mailboxCopy{id: "evt-2", uid: "accepted@calendar.test", organizer: organizer, guests: guests})
 
 	// The guest's first delivery already carried the organizer's cancellation.
-	shown := mailboxCopy{provider: sourceGraphCal, id: "evt-4", uid: "shown@calendar.test", owner: guest, organizer: organizer, guests: guests, day: 1}
+	shown := mailboxCopy{provider: sourceGraphCal, id: "evt-4", uid: "shown@calendar.test", owner: guest, organizer: organizer, guests: guests, day: 1, first: o.first}
 	event := shown.event()
 	event["isCancelled"] = true
 	original, err := json.Marshal(event)
