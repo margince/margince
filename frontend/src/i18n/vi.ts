@@ -4534,6 +4534,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "commitment.looksKept":
     "Có vẻ đã làm xong: {name} đã chấp nhận cuộc họp ngày {date}.",
   "commitment.markKept": "Đánh dấu đã làm",
+  "commitment.autoKept":
+    "Margince đã đánh dấu việc này là xong: {name} đã chấp nhận cuộc họp ngày {date}.",
+  "commitment.autoKeptPlain": "Margince đã đánh dấu việc này là xong.",
+  "commitment.undo": "Hoàn tác",
   "commitment.quote": "“{quote}”",
   "co.brief.by.model": "Do Margince viết",
   "co.brief.by.deterministic": "Tổng hợp từ hồ sơ CRM",

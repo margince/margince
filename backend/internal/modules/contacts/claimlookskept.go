@@ -4,8 +4,8 @@
 package contacts
 
 // A promise to invite someone looks kept when that someone accepted a later
-// meeting. This is a hint on the claim and writes nothing. The reader settles
-// it through the settle verb, which has the audit, task and offer effects.
+// meeting. The finder here writes nothing. A claim with a responsible seat is
+// closed from it by promisekept.go; any other claim only carries the hint.
 
 import (
 	"context"
@@ -23,14 +23,24 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
+// KeptEvidence is the accepted meeting that shows one promise kept.
+type KeptEvidence struct {
+	Claim, Meeting ids.UUID
+	Guest          string
+	At             time.Time
+	Precision      crmcontracts.OccurredPrecision
+}
+
+func (e KeptEvidence) contract() *crmcontracts.ConversationClaimLooksKept {
+	return &crmcontracts.ConversationClaimLooksKept{
+		GuestName: e.Guest, MeetingAt: e.At, MeetingId: openapi_types.UUID(e.Meeting),
+		MeetingPrecision: e.Precision,
+	}
+}
+
 // withLooksKept sets `looks_kept` on the open promises of ours that a meeting
 // this reader may open shows kept. The claims were read under the reader's
 // scope, so their sources are readable. The meeting and guest use the same scope.
-//
-// The guest matches by full name on word boundaries, each part at least three
-// letters, and works at the claim contact's company. The claim's own contact
-// is on the meeting. The meeting starts after the promise, the guest accepted,
-// and it is neither archived nor called off.
 func withLooksKept(ctx context.Context, tx pgx.Tx, claims []crmcontracts.ConversationClaim) error {
 	var open []ids.UUID
 	at := map[ids.UUID]int{}
@@ -40,22 +50,41 @@ func withLooksKept(ctx context.Context, tx pgx.Tx, claims []crmcontracts.Convers
 			at[ids.UUID(claim.Id)] = i
 		}
 	}
+	hits, err := FindKeptEvidence(ctx, tx, open)
+	if err != nil {
+		return err
+	}
+	for id, hit := range hits {
+		claims[at[id]].LooksKept = hit.contract()
+	}
+	return nil
+}
+
+// FindKeptEvidence is the one matcher for "this promise to invite someone is
+// kept". It answers, per claim, the earliest meeting that the reader in ctx may
+// open, whatever the claim's status.
+//
+// The guest matches by full name on word boundaries, each part at least three
+// letters, and works at the claim contact's company. The claim's own contact
+// is on the meeting. The meeting starts after the promise, the guest accepted,
+// and it is neither archived nor called off.
+func FindKeptEvidence(ctx context.Context, tx pgx.Tx, open []ids.UUID) (map[ids.UUID]KeptEvidence, error) {
 	if len(open) == 0 || !auth.ReadGranted(ctx, "activity") || !auth.ReadGranted(ctx, "contact") || !auth.ReadGranted(ctx, "relationship") {
-		return nil
+		return nil, nil
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	claimPos := arg(open)
 	meetingScope, err := auth.ActivityContentClause(ctx, "m", arg)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if meetingScope == "" {
 		meetingScope = sqlAlwaysVisible
 	}
 	guestScope, err := auth.ScopeClauseFor(ctx, "contact", "g", arg)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if guestScope == "" {
 		guestScope = sqlAlwaysVisible
@@ -82,23 +111,15 @@ func withLooksKept(ctx context.Context, tx pgx.Tx, claims []crmcontracts.Convers
 		                  AND ours.contact_id = c.contact_id)
 		 ORDER BY c.id, m.occurred_at, m.id`, meetingScope, guestScope, claimPos), args...)
 	if err != nil {
-		return fmt.Errorf("find the promises that look kept: %w", err)
+		return nil, fmt.Errorf("find the promises that look kept: %w", err)
 	}
-	type found struct {
-		Claim, Meeting ids.UUID
-		Guest          string
-		At             time.Time
-		Precision      crmcontracts.OccurredPrecision
-	}
-	hits, err := pgx.CollectRows(rows, pgx.RowToStructByPos[found])
+	hits, err := pgx.CollectRows(rows, pgx.RowToStructByPos[KeptEvidence])
 	if err != nil {
-		return fmt.Errorf("find the promises that look kept: %w", err)
+		return nil, fmt.Errorf("find the promises that look kept: %w", err)
 	}
+	out := make(map[ids.UUID]KeptEvidence, len(hits))
 	for _, hit := range hits {
-		claims[at[hit.Claim]].LooksKept = &crmcontracts.ConversationClaimLooksKept{
-			GuestName: hit.Guest, MeetingAt: hit.At, MeetingId: openapi_types.UUID(hit.Meeting),
-			MeetingPrecision: hit.Precision,
-		}
+		out[hit.Claim] = hit
 	}
-	return nil
+	return out, nil
 }

@@ -4606,6 +4606,10 @@ export const en = {
   "commitment.takenOverUnnamed": "Taken on {date}",
   "commitment.looksKept": "Looks kept: {name} accepted the {date} meeting.",
   "commitment.markKept": "Mark kept",
+  "commitment.autoKept":
+    "Margince marked this kept: {name} accepted the {date} meeting.",
+  "commitment.autoKeptPlain": "Margince marked this kept.",
+  "commitment.undo": "Undo",
   "commitment.quote": "“{quote}”",
   "co.brief.by.model": "Written by Margince",
   "co.brief.by.deterministic": "Compiled from CRM records",

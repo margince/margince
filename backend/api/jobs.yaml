@@ -964,6 +964,21 @@ kinds:
       reaches it at once. Database-only; each transaction is bounded, and
       the timeout bounds the pass.
 
+  promise_kept_sweep:
+    role: worker
+    fleet: true
+    go_type: PromiseKeptSweepArgs
+    queue: default
+    timeout: 5m
+    opts_owner: caller
+    cadence: 15m
+    reason: >-
+      Closes a promise to invite someone once a guest accepted a later meeting its
+      owner may read, and reopens that close when the guest declines or leaves or
+      the meeting is called off or archived. A quarter hour bounds how long a
+      changed answer leaves a promise closed. Database-only; each workspace is one
+      transaction per owner, and the timeout bounds the pass.
+
   initiative_enrolment_sweep:
     role: worker
     fleet: true

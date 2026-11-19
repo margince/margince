@@ -1408,6 +1408,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/claims/{id}/reopen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Undo Margince's close of a promise.
+         * @description Opens again a promise Margince closed itself (`auto_kept` on the claim). The close
+         *     touched only the claim, so nothing else needs undoing. Whoever may settle the claim
+         *     by hand may reopen it. A claim outside the caller's scope is a 404. A claim a person
+         *     settled is a 409: it reopens through the settle path. A claim already open is the
+         *     same success.
+         */
+        post: operations["reopenConversationClaim"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/claims/{id}/settle": {
         parameters: {
             query?: never;
@@ -37288,7 +37315,7 @@ export interface components {
          * @enum {string}
          */
         ConversationClaimKind: "commitment_ours" | "commitment_theirs" | "open_question" | "decision" | "priority" | "objection" | "success_criterion" | "decision_process";
-        /** @description A read-only hint that this open promise to invite someone looks kept: a guest of that name at the same company accepted a later meeting this reader may open. Nothing is settled. The reader decides, through the settle verb. */
+        /** @description A guest of the name the promise to invite someone names, at the same company, accepted a later meeting this reader may open. On an open promise with no responsible seat this is a hint and nothing is settled; the reader decides through the settle verb. On `auto_kept` it is the evidence Margince closed on. */
         ConversationClaimLooksKept: {
             /** Format: uuid */
             meeting_id: string;
@@ -37297,6 +37324,10 @@ export interface components {
             meeting_at: string;
             /** @description How to read `meeting_at`. `day` means only its date is known. */
             meeting_precision: components["schemas"]["OccurredPrecision"];
+        };
+        /** @description Margince closed this promise to invite someone because a guest accepted a later meeting. `POST /claims/{id}/reopen` undoes it. `evidence` is left out when the reader may not open that meeting. */
+        ConversationClaimAutoKept: {
+            evidence?: components["schemas"]["ConversationClaimLooksKept"];
         };
         /**
          * @description One thing said in a captured conversation, with the evidence it was read from.
@@ -37337,6 +37368,7 @@ export interface components {
              */
             corrected_at?: string | null;
             looks_kept?: components["schemas"]["ConversationClaimLooksKept"];
+            auto_kept?: components["schemas"]["ConversationClaimAutoKept"];
             /**
              * Format: uuid
              * @description The task an extracted `commitment_ours` created, so completing either side completes both. Null for every other kind — a reminder about THEIR promise is a rep action, not an auto-task.
@@ -66213,6 +66245,31 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    reopenConversationClaim: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reopened, or was already open. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     settleConversationClaim: {

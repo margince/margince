@@ -4656,6 +4656,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "commitment.looksKept":
     "Sieht erledigt aus: {name} hat den Termin am {date} angenommen.",
   "commitment.markKept": "Als erledigt markieren",
+  "commitment.autoKept":
+    "Margince hat das als erledigt markiert: {name} hat den Termin am {date} angenommen.",
+  "commitment.autoKeptPlain": "Margince hat das als erledigt markiert.",
+  "commitment.undo": "Rückgängig",
   "commitment.quote": "„{quote}“",
   "co.brief.by.model": "Von Margince geschrieben",
   "co.brief.by.deterministic": "Aus CRM-Datensätzen zusammengestellt",
