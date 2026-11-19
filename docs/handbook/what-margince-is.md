@@ -147,7 +147,8 @@ If no screen, action or record matches, the palette says **No matches for “…
 Also called: find, look up, global search.
 
 **Search results** are in groups by kind: Contacts, Companies, Deals, Leads,
-Projects, Products, Offer templates, Emails, Activities and Tags. Each kind
+Projects, Products, Offer templates, Emails, Activities and Tags. Emails and
+activities share one **Show only** choice, **Emails and activities**. Each kind
 shows its best few matches, so a company stays on the page, whatever the number of emails that
 name it. A company's name also finds the contacts who work there now, each with
 the line **Works at** and the company's name. They come after the contacts whose
@@ -160,9 +161,9 @@ names that are written close to what you typed. It lists only names you may open
 ### What is the command palette?
 The command palette is the Margince box that finds any screen, action, setting or record from one place. It opens over the page you are on, and its empty field reads **Search or ask Margince**.
 
-Each row carries a badge. **Screen** marks a sidebar screen, and **Action** marks something it does (**New deal**, **Booking page**, **Keyboard shortcuts**). **Record** marks a record that matches what you typed.
+A badge marks each screen and action. **Screen** marks a sidebar screen, and **Action** marks something it does (**New deal**, **Booking page**, **Keyboard shortcuts**). A record that matches what you typed sits under the heading of its kind, such as **Contacts**, and carries no badge.
+
 It also lists every settings page you may open, and **Scheduled messages**. It knows other words for a page: "price" finds **Products and offers**, "password" or "dark mode" finds **Account**, and "reports" or "forecast" finds **Analytics**.
-Its first row is always **Ask your documents**.
 
 ### How do I open the command palette?
 To open the Margince command palette, press ⌘K on a Mac or Ctrl+K on Windows and Linux. It works from any screen while no dialog or menu is open.
@@ -217,7 +218,7 @@ To ask about one company, open the company and use its **Ask about this company*
 Also called: company summary, meeting prep, what's going on with this account.
 
 ### Where is the Ask box?
-The Margince Ask box is the search field **Search or ask Margince** in the top bar: type a question and press Enter. **Ask your documents**, the first row of the command palette (⌘K), opens a dialog where you pick the document set yourself.
+The Margince Ask box is the search field **Search or ask Margince** in the top bar: type a question and press Enter. **Ask your documents**, the last row of the command palette (⌘K), opens a dialog where you pick the document set yourself.
 That dialog answers from the one set you pick. It is the **Margince handbook** that comes with every installation, or a set filed under Settings → **Knowledge**.
 On a company page there is a second, separate panel, **Ask about this company**, with its own **Ask Margince** questions about that one company.
 If the dialog says **No document sets**, there is nothing filed to search yet.
