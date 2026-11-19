@@ -162,8 +162,10 @@ func TestTheRecipientsPackDecidesTheControllerMailAndThePages(t *testing.T) {
 				t.Errorf("with nothing on record the privacy page names %v, want no basis recorded", bases)
 			}
 
-			lines, err := e.store.Disclosures(e.ctx, commsauthz.CategoryReplyToInbound,
-				[]string{"subject-" + e.contact.String() + "@example.test"}, ids.UUID{}, "")
+			lines, err := e.store.Disclosures(e.ctx, DisclosureQuery{
+				Category:   commsauthz.CategoryReplyToInbound,
+				Recipients: []string{"subject-" + e.contact.String() + "@example.test"},
+			})
 			if err != nil {
 				t.Fatalf("asking what the mail must disclose: %v", err)
 			}

@@ -27,7 +27,7 @@ func (h Handlers) PreviewSendAuthorization(w http.ResponseWriter, r *http.Reques
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	in, err := previewInputFrom(req.To, (*string)(req.CommunicationContext), req.MarketingPurpose, req.ConsentPurpose, req.Evidence)
+	in, err := previewInputFrom(req.To, (*string)(req.CommunicationContext), req.MarketingPurpose, req.ConsentPurpose, req.Evidence, req.RecipientCountries)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
@@ -52,7 +52,7 @@ func (h Handlers) PreviewAccountSendAuthorization(w http.ResponseWriter, r *http
 		writeStoreErr(w, r, &RequiredFieldError{Field: fieldLinks})
 		return
 	}
-	in, err := previewInputFrom(req.To, (*string)(req.CommunicationContext), req.MarketingPurpose, req.ConsentPurpose, req.Evidence)
+	in, err := previewInputFrom(req.To, (*string)(req.CommunicationContext), req.MarketingPurpose, req.ConsentPurpose, req.Evidence, req.RecipientCountries)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
@@ -75,9 +75,12 @@ func (h Handlers) answerPreview(w http.ResponseWriter, r *http.Request, origin S
 // previewInputFrom decodes the claim through sendContextFrom, the same decoder
 // the real send uses, so a category this preview accepts is one the send
 // accepts and a controller-only category is refused identically.
-func previewInputFrom(to []openapi_types.Email, category, marketing, purpose *string, evidence *crmcontracts.CommunicationEvidence) (PreviewSendInput, error) {
+func previewInputFrom(to []openapi_types.Email, category, marketing, purpose *string, evidence *crmcontracts.CommunicationEvidence, countries *[]crmcontracts.RecipientCountry) (PreviewSendInput, error) {
 	claimed, err := sendContextFrom(category, marketing, nil, evidence)
 	if err != nil {
+		return PreviewSendInput{}, err
+	}
+	if claimed.evidence.RecipientCountries, err = countryOverridesFrom(countries); err != nil {
 		return PreviewSendInput{}, err
 	}
 	recipients := make([]string, 0, len(to))

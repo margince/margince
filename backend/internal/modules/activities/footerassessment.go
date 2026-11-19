@@ -36,7 +36,7 @@ func (s *Store) assessPreviewFooter(ctx context.Context, in PreviewSendInput, se
 		surface.category = commsauthz.CategoryMarketing
 	}
 	lang := s.footerLanguage(ctx, in.Body, in.Subject)
-	lines, err := s.disclosuresFor(ctx, string(surface.disclosureCategory()), in.Recipients, entity, string(lang))
+	lines, err := s.disclosuresFor(ctx, string(surface.disclosureCategory()), in.Recipients, in.Evidence.RecipientCountries, entity, string(lang))
 	if err != nil {
 		return set, err
 	}

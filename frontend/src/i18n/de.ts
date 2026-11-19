@@ -6286,6 +6286,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "legalEntities.colName": "Name",
   "legalEntities.colLegalName": "Firmierung",
   "legalEntities.colCountry": "Land",
+  "legalEntities.countryMissing":
+    "Nicht gesetzt: Das Land der Installation gilt",
   "legalEntities.defaultBadge": "Standard",
   "legalEntities.defaultUnnamed": "Dein Unternehmen",
   "legalEntities.displayName": "Name",
@@ -8005,6 +8007,23 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.notOnThreadTitle": "Du bist nicht an diesem Thread beteiligt",
   "compose.notOnThread": "Du bist nicht an diesem Thread beteiligt.",
   "compose.dealOwner": "{owner} ist für diesen Deal verantwortlich.",
+  "compose.country.open": "Land für {address}",
+  "compose.country.label": "Land",
+  "compose.country.none": "Kein Land",
+  "compose.country.fromContact": "{country}, aus der Adresse des Kontakts",
+  "compose.country.fromEmployer": "{country}, aus der Adresse des Arbeitgebers",
+  "compose.country.fromLeadCompany": "{country}, aus dem Unternehmen des Leads",
+  "compose.country.yours": "{country}, deine Angabe für diese Nachricht",
+  "compose.country.cleared": "Kein Land für diese Nachricht.",
+  "compose.country.unknown": "Der Datensatz nennt kein Land.",
+  "compose.country.reading": "Datensatz wird gelesen…",
+  "compose.country.clear": "Land entfernen",
+  "compose.country.useRecord": "Land aus dem Datensatz verwenden",
+  "compose.country.row": "Land: {detail}",
+  "compose.country.fromSender":
+    "{country}, für diese Nachricht beim Senden gesetzt",
+  "compose.country.clearedBySender":
+    "keines, für diese Nachricht beim Senden entfernt",
   "compose.colleagueUnnamed": "einem Teammitglied",
   "compose.threadGoneTitle": "Thread kann nicht beantwortet werden",
   "compose.colleagueMailboxTitle":

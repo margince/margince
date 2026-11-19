@@ -16,11 +16,18 @@ import { Disclosure } from "../../design-system/disclosure";
 import { ErrorLine } from "../../design-system/errorline";
 import { footerFindingsText } from "../../format/footerfindings";
 import { formatNumber } from "../../format/format";
-import { type Translator, useLocale, usePlural, useT } from "../../i18n";
+import {
+  type Locale,
+  type Translator,
+  useLocale,
+  usePlural,
+  useT,
+} from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { ComposeOutcome } from "./compose.parts";
 import type { InlineReview } from "./composeinlinereview";
 import type { Refusal } from "./composerefusal";
+import { refusalCountryText } from "./refusalcountry";
 import "./compose.css";
 
 type RefusedRecipient =
@@ -116,6 +123,7 @@ export function SendAnywayRows({
   onExplanationChange: (text: string) => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const warningId = useId();
   if (!state.shown) return null;
   if (state.loading) {
@@ -168,6 +176,9 @@ export function SendAnywayRows({
               : "compose.sendAnyway.editOnly",
           )}
         </p>
+        {lead && refusalCountryText(lead, t, locale) && (
+          <p>{refusalCountryText(lead, t, locale)}</p>
+        )}
         {state.changed && <p>{t("directSend.changed")}</p>}
         <EveryFinding refusals={review.refusals} />
       </Callout>
@@ -183,6 +194,16 @@ export function SendAnywayRows({
       {state.failed && <ErrorLine>{t("compose.sendAnyway.failed")}</ErrorLine>}
     </>
   );
+}
+
+// The country a refusal was judged under, after its finding, or nothing.
+function withCountry(
+  refusal: RefusedRecipient,
+  t: Translator,
+  locale: Locale,
+): string | null {
+  const country = refusalCountryText(refusal, t, locale);
+  return country ? ` ${country}` : null;
 }
 
 // Every finding, and every message-wide footer finding, behind one count.
@@ -211,6 +232,7 @@ function EveryFinding({
             key={`${refusal.address}-${refusal.subject_id ?? ""}-${refusal.reason_code}`}
           >
             {t(findingKey(refusal.reason_code), { address: refusal.address })}
+            {withCountry(refusal, t, locale)}
             {refusal.footer_findings?.length
               ? ` ${footerFindingsText(refusal.footer_findings, t, locale)}`
               : null}

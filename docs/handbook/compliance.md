@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/settings/settings.jurisdiction.tsx frontend/src/features/settings/controllerparticulars.tsx frontend/src/features/capture/capture-senders.tsx backend/internal/shared/ports/compliancedocs backend/internal/shared/ports/jurisdiction backend/internal/modules/consent/dsrdeadline.go backend/internal/modules/consent/ruleselectors.go backend/internal/modules/consent/optoutack.go backend/internal/modules/consent/optoutrecords.go backend/internal/modules/consent/recipientpack.go backend/internal/modules/consent/draftcontent.go frontend/src/components/lawfulbasiswarning.tsx backend/internal/modules/consent/requesttask.go backend/internal/modules/capture/purgefloor.go backend/internal/modules/identity/settingsindividualperformance.go frontend/src/features/sign-in/installation-settings.individual.tsx -->
+<!-- describes: frontend/src/features/settings/settings.jurisdiction.tsx frontend/src/features/settings/controllerparticulars.tsx frontend/src/features/capture/capture-senders.tsx backend/internal/shared/ports/compliancedocs backend/internal/shared/ports/jurisdiction backend/internal/modules/consent/dsrdeadline.go backend/internal/modules/consent/ruleselectors.go backend/internal/modules/consent/optoutack.go backend/internal/modules/consent/optoutrecords.go backend/internal/modules/consent/recipientpack.go backend/internal/modules/consent/draftcontent.go frontend/src/components/lawfulbasiswarning.tsx frontend/src/features/mail/composecountry.tsx backend/internal/modules/consent/requesttask.go backend/internal/modules/capture/purgefloor.go backend/internal/modules/identity/settingsindividualperformance.go frontend/src/features/sign-in/installation-settings.individual.tsx -->
 # Compliance: what you have to do, and what Margince does not check
 
 **Margince checks none of the compliance papers below.** It will connect a
@@ -110,6 +110,8 @@ Margince follows one law for the whole installation. An admin chooses it at firs
 - the sales-mail rules for recipients under that law.
 
 The sales-mail rules follow the law where each recipient is, not where you are. Margince reads it from the contact's address, then from the address of the company they work for. For a lead, it reads the address of the lead's company. If it is wrong, fix the address. With no address on record, sales mail they did not ask for needs their consent. Every such mail offers a way to unsubscribe.
+
+To fix the law for one message, press the recipient's chip in the composer. It names the law Margince read and where it read it. You can pick another one or clear it for this message only, and the contact's record does not change. With it cleared, mail they did not ask for still needs their consent, and a stop they asked for still holds. Your company's own lines at the foot stay. The audit log names your choice, and an agent cannot make it.
 
 Some laws change what the mails to a contact about their own data may ask:
 
