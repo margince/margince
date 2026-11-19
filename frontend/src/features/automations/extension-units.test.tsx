@@ -3,9 +3,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { ExtensionDescriptor } from "@composition/extensions";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { ExtensionUnitsCard } from "./extension-units";
 
 // The card reads the COMPOSED registry, which is empty in this lane and in
@@ -31,6 +33,7 @@ vi.mock("../../lib/extensions", async (importOriginal) => ({
 // A unit's copy as gen-composition merges it, so a title resolves as it would composed.
 vi.mock("@composition/copy", () => ({
   extensionCopy: { en: { "extDispactConnector.title": "Dispact" } },
+  extensionOverrides: {},
 }));
 
 const DISPACT: ExtensionDescriptor = {
@@ -113,6 +116,38 @@ describe("the units offered on a settings page", () => {
     unitsForSecretScope.mockReturnValue([]);
     const { container } = renderCard("user");
     expect(container.innerHTML).toBe("");
+  });
+
+  it("links a unit that declares an app to it, for a reader who may open it", () => {
+    const withApp: ExtensionDescriptor = {
+      ...DISPACT,
+      app: {
+        icon: "plug",
+        label: "extUnits.user.title",
+        group: "work",
+        object: "ext_dispact_connector_x",
+        export: "DispactApp",
+      },
+    };
+    unitsForSecretScope.mockReturnValue([withApp]);
+    const renderFor = (allow: GrantSpec) => {
+      const client = new QueryClient();
+      client.setQueryData(["me"], meFixture({ allow }));
+      return render(
+        <QueryClientProvider client={client}>
+          <LocaleProvider>
+            <ExtensionUnitsCard scope="user" />
+          </LocaleProvider>
+        </QueryClientProvider>,
+      );
+    };
+    renderFor({ ext_dispact_connector_x: ["read"] });
+    expect(
+      screen.getByRole("link", { name: "Open Dispact" }).getAttribute("href"),
+    ).toBe("/#/app/dispact-connector");
+    cleanup();
+    renderFor({});
+    expect(screen.queryByRole("link", { name: "Open Dispact" })).toBeNull();
   });
 
   it("gives every offered unit its own row", () => {

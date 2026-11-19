@@ -148,6 +148,19 @@ export type ExtensionPanelDescriptor = {
   readonly object: string;
 };
 
+/**
+ * A unit's own destination in the home side drawer. The icon and group are
+ * plain strings here; lib/extensionapps.ts narrows them to the lists the core
+ * draws.
+ */
+export type ExtensionAppDescriptor = {
+  readonly icon: string;
+  readonly label: ` + "`ext${string}`" + `;
+  readonly group: string;
+  readonly object: string;
+  readonly export: string;
+};
+
 /** One enabled extension unit, as the composed installation publishes it. */
 export type ExtensionDescriptor = {
   readonly name: string;
@@ -159,6 +172,8 @@ export type ExtensionDescriptor = {
   readonly verbs: readonly ExtensionVerbDescriptor[];
   readonly entries: readonly ExtensionEntryDescriptor[];
   readonly panels: readonly ExtensionPanelDescriptor[];
+  /** The unit's drawer destination, absent when it declares none. */
+  readonly app?: ExtensionAppDescriptor;
   /**
    * The scope the unit's declared secrets ask for, or "" when it declares
    * none. A unit spanning both scopes is refused at generation time, so this
@@ -242,10 +257,20 @@ func composedFiles(root string) (composition, error) {
 	if err != nil {
 		return composition{}, err
 	}
+	mergedOverrides, err := composedOverrides(root, units)
+	if err != nil {
+		return composition{}, err
+	}
 	if err := checkEntryLabels(manifests, mergedCopy); err != nil {
 		return composition{}, err
 	}
 	if err := checkPanelFrontends(manifests); err != nil {
+		return composition{}, err
+	}
+	if err := checkAppFrontends(manifests); err != nil {
+		return composition{}, err
+	}
+	if err := checkAppLabels(manifests, mergedCopy); err != nil {
 		return composition{}, err
 	}
 	if err := checkInstrumentFrontends(manifests); err != nil {
@@ -260,8 +285,8 @@ func composedFiles(root string) (composition, error) {
 		"backend/go.mod":                 composedGoMod(goVersion),
 		"backend/extensions_gen.go":      wiring,
 		"frontend/extensions.gen.ts":     frontendGen(manifests, verbs, mergedCopy),
-		"frontend/extscreens.gen.ts":     extScreensGen(units, manifestPanels(manifests)),
-		"frontend/extlocales.gen.ts":     extLocalesGen(mergedCopy),
+		"frontend/extscreens.gen.ts":     extScreensGen(units, manifestPanels(manifests), manifestApps(manifests)),
+		"frontend/extlocales.gen.ts":     extLocalesGen(mergedCopy, mergedOverrides),
 		"frontend/extinstruments.gen.ts": extInstrumentsGen(units, manifestBrowserInstruments(manifests)),
 	}
 	// The effective contracts: base + every enabled unit's fragments. With

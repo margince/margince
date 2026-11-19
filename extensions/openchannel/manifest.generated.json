@@ -78,5 +78,12 @@
       "target": "",
       "object": "ext_openchannel_endpoint"
     }
-  ]
+  ],
+  "app": {
+    "icon": "plug",
+    "label": "extOpenchannel.title",
+    "group": "work",
+    "object": "ext_openchannel_endpoint",
+    "export": "OpenchannelApp"
+  }
 }

@@ -15,12 +15,16 @@ package compose
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"sync"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/extcapability"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/extsecrets"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
@@ -75,6 +79,10 @@ type extensionRuntimeBinding struct {
 	// impossible. Nil on a role that composed no capture, and the port then
 	// refuses by name rather than half-working.
 	captureSink *capture.Sink
+	// models and blob are what a unit's Models and Objects reach, bound by
+	// BindExtensionModels and BindExtensionObjects; nil, the capability refuses by name.
+	models completer
+	blob   blobstore.Store
 }
 
 // BindExtensionCapture records the capture pipeline a unit's ingress lands
@@ -122,7 +130,8 @@ func BindExtensionRuntime(pool *pgxpool.Pool, vault keyvault.Vault) {
 		slog.Default().Warn("compose: the extension runtime was rebound to a different pool; " +
 			"every extension capability from now on runs against the new one")
 	}
-	extensionRuntimeDeps.extensionRuntimeBinding = extensionRuntimeBinding{pool: pool, vault: vault}
+	// Only its own two fields: the other dependencies are bound by their own calls.
+	extensionRuntimeDeps.pool, extensionRuntimeDeps.vault = pool, vault
 }
 
 // boundExtensionRuntime reads the binding. Read per CALL rather than
@@ -444,4 +453,29 @@ func (s callSecrets) DeleteUser(ctx context.Context, userID extension.UserID, ke
 		return err
 	}
 	return s.inner.DeleteUser(ctx, userID, key)
+}
+
+// BindExtensionModels records the lane a unit's Models reaches; nil leaves it refusing.
+func BindExtensionModels(lane completer) {
+	extensionRuntimeDeps.mu.Lock()
+	defer extensionRuntimeDeps.mu.Unlock()
+	extensionRuntimeDeps.models = lane
+}
+
+// BindExtensionObjects records the store a unit's Objects reaches.
+func BindExtensionObjects(store blobstore.Store) {
+	extensionRuntimeDeps.mu.Lock()
+	defer extensionRuntimeDeps.mu.Unlock()
+	extensionRuntimeDeps.blob = store
+}
+
+// BindExtensionObjectsFromConfig opens the configured object store and binds it,
+// before RecordComposition sweeps the objects of a unit no longer composed.
+func BindExtensionObjectsFromConfig(ctx context.Context, settings *config.Config) error {
+	store, err := extcapability.OpenStore(ctx, settings)
+	if err != nil {
+		return fmt.Errorf("compose: opening the object store for extensions: %w", err)
+	}
+	BindExtensionObjects(store)
+	return nil
 }

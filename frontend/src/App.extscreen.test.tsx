@@ -69,6 +69,7 @@ vi.mock("@composition/screens", () => ({
     "crm-ghost": () => <Heading size="xlarge">Ghost</Heading>,
   },
   extensionPanels: {},
+  extensionApps: {},
 }));
 
 beforeEach(() => {

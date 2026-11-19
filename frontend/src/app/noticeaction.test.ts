@@ -49,3 +49,20 @@ it("opens an approval-history review on the audit log narrowed to that approval"
   expect(action?.href).toContain("entity_type=approval");
   expect(action?.href).toContain("entity_id=approval-id");
 });
+
+describe("a notice about a unit's own record", () => {
+  const target = { type: "ext:rooms:room", id: "room-id" };
+
+  it("opens the unit's screen at the view the kind declared", () => {
+    const action = noticeAction(target, [
+      { name: "ext:rooms:room", view: "room-page" },
+    ]);
+    expect(action?.href).toContain("#/ext/rooms/room-page?");
+    expect(action?.href).toContain("record_id=room-id");
+    expect(action?.label).toBe("notifications.action.openExtensionRecord");
+  });
+
+  it("opens the unit's screen when the directory has not named a view", () => {
+    expect(noticeAction(target)?.href).toMatch(/^#\/ext\/rooms\?/);
+  });
+});
