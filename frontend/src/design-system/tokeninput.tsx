@@ -295,7 +295,7 @@ export function TokenInput({
         // the PROP rather than on whether it currently has rows, so a field does
         // not change what it is while its suggestions load or while the reader
         // types past the last match.
-        {...(suggestions ? list.fieldAria : {})}
+        {...(suggestions || offerFor ? list.fieldAria : {})}
         ref={inputRef}
         className="token-box"
         autoComplete="off"

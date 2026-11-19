@@ -185,6 +185,30 @@ describe("a glyph verb refused by a sentence elsewhere on the page", () => {
     );
   });
 
+  it("shows its own reason in the tip when no page sentence is named", async () => {
+    const user = userEvent.setup();
+    armHoverIntent();
+    render(
+      <IconAction
+        label="Write"
+        reason={WHY}
+        icon={<span aria-hidden="true">@</span>}
+      />,
+    );
+    const control = screen.getByRole("button", { name: "Write" });
+    expect(control).toHaveProperty("disabled", true);
+    expect(describedTextOf(control)).toBe(WHY);
+
+    const host = control.closest(".icon-action");
+    if (!(host instanceof HTMLElement)) {
+      throw new Error("the glyph lost its tooltip host");
+    }
+    await user.hover(host);
+    expect((await screen.findByRole("tooltip")).textContent).toBe(
+      `Write. ${WHY}`,
+    );
+  });
+
   it("keeps a live control's tip to its name", async () => {
     const user = userEvent.setup();
     render(

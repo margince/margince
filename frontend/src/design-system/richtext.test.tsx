@@ -475,6 +475,23 @@ describe("the marks on at the caret", () => {
     expect(bold).toHaveAttribute("aria-pressed", "false");
   });
 
+  it("presses Bold and Italic after their chords on a bare caret", async () => {
+    const on = withCaretMarks();
+    surface();
+    const words = await screen.findByText("Words");
+    moveCaretInto(words.firstChild);
+    const box = screen.getByRole("textbox");
+
+    on.add("bold");
+    fireEvent.keyUp(box, { key: "b", ctrlKey: true });
+    expect(mark("Fett")).toHaveAttribute("aria-pressed", "true");
+
+    on.add("italic");
+    fireEvent.keyUp(box, { key: "i", metaKey: true });
+    fireEvent.keyUp(box, { key: "Meta" });
+    expect(mark("Kursiv")).toHaveAttribute("aria-pressed", "true");
+  });
+
   it("ignores a selection elsewhere on the page", () => {
     const on = withCaretMarks();
     surface();

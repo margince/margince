@@ -296,6 +296,50 @@ describe("where the cursor starts", () => {
   });
 });
 
+describe("where the cursor goes once the account is read", () => {
+  it("moves to To when the contact it started from has no address", async () => {
+    let answer: (response: Response) => void = () => {};
+    stubRoutes({
+      "GET /companies/co-1/360": () =>
+        new Promise<Response>((resolve) => {
+          answer = resolve;
+        }),
+    });
+    render(
+      <ComposeWindow
+        entityType="company"
+        entityId="co-1"
+        contactId="p-9"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+    const to = await screen.findByLabelText("To");
+    await waitFor(() =>
+      expect(document.activeElement).toBe(messageBox("Body")),
+    );
+
+    answer(
+      jsonResponse({
+        company: { id: "co-1", display_name: "Nordwand" },
+        contacts: {
+          data: [
+            {
+              contact_id: "p-9",
+              full_name: "Ines Ohnemail",
+              primary_email: null,
+              attachable: true,
+            },
+          ],
+        },
+        sections_omitted: [],
+      }),
+    );
+
+    await waitFor(() => expect(document.activeElement).toBe(to));
+  });
+});
+
 describe("an address line pasted or typed as a list", () => {
   it("makes one recipient per address, whatever splits them", async () => {
     const user = userEvent.setup();

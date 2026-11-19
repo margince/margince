@@ -56,6 +56,9 @@ function marksAtCaret(): Marks {
   };
 }
 
+// The keys whose release ends a mark chord, released in either order.
+const CHORD_KEYS = new Set(["b", "i", "control", "meta"]);
+
 // The same object back when nothing changed, so a caret move renders nothing.
 function sameOrNext(shown: Marks, next: Marks): Marks {
   return MARKS.every((mark) => shown[mark] === next[mark]) ? shown : next;
@@ -75,8 +78,18 @@ export function useMarksAtCaret(
         showMarks(marksAtCaret());
       }
     };
+    // Ctrl or Cmd with B or I on a bare caret changes the pending mark and moves
+    // no selection. Read on keyup: on keydown the engine has not applied it yet.
+    const chord = (event: KeyboardEvent) => {
+      if (CHORD_KEYS.has(event.key.toLowerCase())) follow();
+    };
+    const node = editor.current;
     document.addEventListener("selectionchange", follow);
-    return () => document.removeEventListener("selectionchange", follow);
+    node?.addEventListener("keyup", chord);
+    return () => {
+      document.removeEventListener("selectionchange", follow);
+      node?.removeEventListener("keyup", chord);
+    };
   }, [editor]);
   return [disabled ? NO_MARKS : marks, () => showMarks(marksAtCaret())];
 }

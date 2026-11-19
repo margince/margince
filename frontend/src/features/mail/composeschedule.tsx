@@ -131,7 +131,7 @@ export function momentOf(local: string, zone = browserZone()): Date | null {
 
 /** A scheduled moment, spelled the way every line in this drawer spells one. */
 export function momentLabel(at: Date, locale: Locale, zone: string): string {
-  return `${formatDateTime(at.toISOString(), locale, zone)} · ${zoneNameAndOffset(INTL_LOCALE[locale], at)}`;
+  return `${formatDateTime(at.toISOString(), locale, zone)} · ${zoneNameAndOffset(INTL_LOCALE[locale], at, zone)}`;
 }
 
 export function scheduledSendLabel(

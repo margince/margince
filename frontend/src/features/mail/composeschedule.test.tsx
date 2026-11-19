@@ -6,6 +6,7 @@ import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { browserZone } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
 import { ScheduleMenu } from "./composeschedule";
 import { ScheduleDialog } from "./composescheduledialog";
@@ -19,10 +20,12 @@ const EVENING = new Date("2026-09-14T16:00:00Z");
 function Dialog({
   now,
   sendAt = "",
+  zone = ZONE,
   onChoose = () => {},
 }: Readonly<{
   now: Date;
   sendAt?: string;
+  zone?: string;
   onChoose?: (next: string) => void;
 }>) {
   const [chosen, setChosen] = useState(sendAt);
@@ -32,7 +35,7 @@ function Dialog({
         open
         onClose={() => {}}
         sendAt={chosen}
-        timezone={ZONE}
+        timezone={zone}
         onChoose={(next) => {
           setChosen(next);
           onChoose(next);
@@ -43,7 +46,10 @@ function Dialog({
   );
 }
 
-async function openPicker(now: Date, props: { sendAt?: string } = {}) {
+async function openPicker(
+  now: Date,
+  props: { sendAt?: string; zone?: string } = {},
+) {
   vi.useFakeTimers({ now, toFake: ["Date", "setInterval", "clearInterval"] });
   const user = userEvent.setup();
   const onChoose = vi.fn();
@@ -64,6 +70,36 @@ function hour(name: string): HTMLButtonElement {
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
+});
+
+describe("the zone the dialog names", () => {
+  // Not the runner's own zone, so a caption that read the browser's would differ.
+  const away =
+    browserZone() === "Pacific/Auckland"
+      ? { zone: "America/Lima", name: "Peru Standard Time · UTC-5" }
+      : {
+          zone: "Pacific/Auckland",
+          name: "New Zealand Standard Time · UTC+12",
+        };
+
+  it("is the zone it schedules in, on the presets and under the picker", async () => {
+    vi.useFakeTimers({
+      now: AFTERNOON,
+      toFake: ["Date", "setInterval", "clearInterval"],
+    });
+    const user = userEvent.setup();
+    render(<Dialog now={AFTERNOON} zone={away.zone} />);
+    expect(screen.getByText(away.name)).toBeTruthy();
+
+    await user.click(
+      screen.getByRole("button", { name: "Select date and time" }),
+    );
+    expect(
+      screen.getByText(
+        new RegExp(`^Sends .* · ${away.name.replace("+", "\\+")}$`),
+      ),
+    ).toBeTruthy();
+  });
 });
 
 describe("choosing a date and time to send", () => {
@@ -144,6 +180,23 @@ describe("choosing a date and time to send", () => {
     expect(confirm.getAttribute("aria-describedby")).toContain(line.id);
     await user.click(confirm);
     expect(onChoose).not.toHaveBeenCalled();
+  });
+
+  it("refuses a time that passed between two ticks of the clock", async () => {
+    // 16:59:40 in Berlin: 17:00 is still ahead when the dialog opens.
+    const { user, onChoose } = await openPicker(
+      new Date("2026-09-14T14:59:40Z"),
+    );
+    expect(hour("17:00").getAttribute("aria-pressed")).toBe("true");
+
+    act(() => {
+      vi.advanceTimersByTime(30_000);
+    });
+    await user.click(screen.getByRole("button", { name: "Schedule send" }));
+
+    expect(onChoose).not.toHaveBeenCalled();
+    expect(screen.getByText("Choose a time in the future.")).toBeTruthy();
+    expect(screen.getByRole("dialog")).toBeTruthy();
   });
 
   it("refuses a saved time that is already past", async () => {

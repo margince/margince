@@ -613,6 +613,27 @@ describe("offering by what is typed", () => {
     );
   });
 
+  it("is a combobox wired to its list when only offerFor offers", async () => {
+    const user = userEvent.setup();
+    function OfferOnly() {
+      const [values, setValues] = useState<readonly string[]>([]);
+      return (
+        <TokenInput
+          values={values}
+          onChange={setValues}
+          removeLabel={removeLabel}
+          offerFor={offerFor}
+          aria-label="To"
+        />
+      );
+    }
+    render(<OfferOnly />);
+    await user.click(toBox());
+    const listbox = screen.getByRole("listbox");
+    expect(toBox().getAttribute("aria-expanded")).toBe("true");
+    expect(toBox().getAttribute("aria-controls")).toBe(listbox.id);
+  });
+
   it("closes the list after a pick", async () => {
     const user = userEvent.setup();
     render(<CaseBlind offerFor={offerFor} />);

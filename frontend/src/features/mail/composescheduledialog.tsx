@@ -89,7 +89,7 @@ function ScheduleSteps({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const current = useOpenClock(now);
+  const { current, latest } = useOpenClock(now);
   const [picking, setPicking] = useState(false);
   return (
     <>
@@ -101,13 +101,14 @@ function ScheduleSteps({
           sendAt={sendAt}
           zone={zone}
           now={current}
+          latest={latest}
           onChoose={onChoose}
           onClose={onClose}
         />
       ) : (
         <div className="schedule-presets">
           <p className="t-caption">
-            {zoneNameAndOffset(INTL_LOCALE[locale], current)}
+            {zoneNameAndOffset(INTL_LOCALE[locale], current, zone)}
           </p>
           {schedulePresets(current, zone).map((preset) => (
             <button
@@ -150,11 +151,17 @@ function ScheduleSteps({
 
 // The parent's `now`, moved on by the minutes the dialog stays open: an hour can
 // pass before Schedule send is pressed.
-function useOpenClock(now: Date): Date {
+// `latest` reads the clock at the press itself, between two ticks.
+function useOpenClock(now: Date): Readonly<{
+  current: Date;
+  latest: () => Date;
+}> {
   const tick = useNow(60_000);
   const [opened] = useState({ at: now.getTime(), tick });
   // The later of the two: a parent that re-renders passes a `now` already ahead.
-  return new Date(Math.max(now.getTime(), opened.at + tick - opened.tick));
+  const at = (clock: number) =>
+    new Date(Math.max(now.getTime(), opened.at + clock - opened.tick));
+  return { current: at(tick), latest: () => at(Date.now()) };
 }
 
 function hourOn(day: ISODay, hour: number, zone: string): number {
@@ -185,18 +192,22 @@ function SchedulePick({
   sendAt,
   zone,
   now,
+  latest,
   onChoose,
   onClose,
 }: Readonly<{
   sendAt: string;
   zone: string;
   now: Date;
+  latest: () => Date;
   onChoose: (next: string) => void;
   onClose: () => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
   const hoursReasonId = useId();
+  // A moment the press found already past, though the last tick had it ahead.
+  const [lateAt, setLateAt] = useState<number | null>(null);
   const [start] = useState(
     () => momentOf(sendAt, zone) ?? firstOfferedMoment(now, zone),
   );
@@ -227,7 +238,7 @@ function SchedulePick({
   const passed = (option: number) => hourOn(day, option, zone) <= now.getTime();
   const anyPassed = SCHEDULE_HOURS.some(passed);
   const picked = new Date(hourOn(day, hour, zone));
-  const past = picked.getTime() <= now.getTime();
+  const past = picked.getTime() <= now.getTime() || picked.getTime() === lateAt;
   return (
     <>
       <div className="form-stack">
@@ -281,6 +292,10 @@ function SchedulePick({
           variant="primary"
           reason={past ? t("compose.schedulePast") : undefined}
           onClick={() => {
+            if (picked.getTime() <= latest().getTime()) {
+              setLateAt(picked.getTime());
+              return;
+            }
             onChoose(localMoment(picked, zone));
             onClose();
           }}

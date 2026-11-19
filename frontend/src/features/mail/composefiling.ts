@@ -343,11 +343,19 @@ export function useAccountRecipient(
   const startedFrom = contacts.find(
     (contact) => contact.contact_id === started.contactId,
   );
+  const offeredAddress =
+    started.recordAddress ?? startedFrom?.primary_email ?? undefined;
+  // The started contact's address may still be on its way off the account.
+  const offerPending =
+    started.recordAddress === undefined &&
+    started.contactId !== undefined &&
+    company.isLoading;
   return {
     recipientId,
     contactIds,
-    offeredAddress:
-      started.recordAddress ?? startedFrom?.primary_email ?? undefined,
+    offeredAddress,
+    // No address is offered into To, and none is still being read.
+    nothingOffered: !offeredAddress && !offerPending,
     // An account with no contact leaves the draft nobody to write for.
     noContacts: company.isSuccess && contacts.length === 0,
   };

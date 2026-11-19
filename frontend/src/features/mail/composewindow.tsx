@@ -293,7 +293,6 @@ export function ComposeWindow({
     dial.turn(next);
     offer.rearm();
   };
-  const incoming = [account.offeredAddress, contactId, ...fields.to];
   const scheduling = !isChannelReply && fields.sendAt !== "";
   const wording = sendWording(isChannelReply, scheduling);
   const title = windowTitle({
@@ -321,7 +320,7 @@ export function ComposeWindow({
           onClose={savedDraft.requestClose}
           closeDisabled={sendPending}
           bodyId={bodyId}
-          recipientFirst={startsInTo(newMessage, incoming)}
+          recipientFirst={startsInTo(newMessage, account, fields.to)}
           openedFrom={openedFrom}
         >
           <ChannelDraftNotice
@@ -461,9 +460,10 @@ function MomentDialog({
 // The cursor starts in To on a new message with no address on its way there.
 function startsInTo(
   newMessage: boolean,
-  incoming: readonly (string | undefined)[],
+  account: Readonly<{ nothingOffered: boolean }>,
+  to: readonly string[],
 ): boolean {
-  return newMessage && incoming.every((address) => !address);
+  return newMessage && account.nothingOffered && to.length === 0;
 }
 
 // The checked flow's status, with what the server offers after a refused Send.
