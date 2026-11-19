@@ -92,9 +92,9 @@ func TestTheRouteDeadlineCoversTheWholeLadder(t *testing.T) {
 	}
 }
 
-// A route with no model behind it keeps the server's own write deadline — the
-// middleware must not hand an ordinary read the long one — and runs under a
-// context bounded by that same figure.
+// A route with no model behind it keeps the server's own write deadline. The
+// middleware must not hand an ordinary read the long one. Its context ends just
+// before that same figure, leaving time to answer.
 //
 // The context half is what stops a handler outliving the response it was
 // writing. Until it, a read whose answer was already lost kept its goroutine
@@ -120,9 +120,8 @@ func TestAnOrdinaryRouteRunsUnderTheServersOwnDeadline(t *testing.T) {
 	if !bounded {
 		t.Fatal("the handler ran under a context with no deadline, so a lost response costs its connections until the work ends on its own")
 	}
-	if within > httpserver.ResponseDeadline || within < httpserver.ResponseDeadline-time.Second {
-		t.Errorf("the handler had %s left, want the response's own %s",
-			within, httpserver.ResponseDeadline)
+	if want := httpserver.ResponseDeadline - httpserver.AnswerGrace; within > want || within < want-time.Second {
+		t.Errorf("the handler had %s left, want %s: the response's own figure less the time to answer", within, want)
 	}
 }
 
@@ -147,8 +146,8 @@ func TestAModelRouteRunsUnderTheDeadlineItsResponseWasGiven(t *testing.T) {
 	if !bounded {
 		t.Fatal("the model route ran under a context with no deadline")
 	}
-	if within > ai.RouteWriteDeadline || within < ai.RouteWriteDeadline-time.Second {
-		t.Errorf("the handler had %s left, want the route's own %s", within, ai.RouteWriteDeadline)
+	if want := ai.RouteWriteDeadline - httpserver.AnswerGrace; within > want || within < want-time.Second {
+		t.Errorf("the handler had %s left, want %s: the route's own figure less the time to answer", within, want)
 	}
 	// The whole point of the per-route arm: it must be the LONGER figure.
 	if within <= httpserver.ResponseDeadline {

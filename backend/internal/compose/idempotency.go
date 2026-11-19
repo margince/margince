@@ -35,6 +35,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -129,8 +130,13 @@ func idempotency(pool *pgxpool.Pool, probes map[string]replayProbe, restore repl
 			next.ServeHTTP(rec, r)
 			// Zero records: this door records no served count, so its claims carry
 			// none (0198).
-			if err := settleHTTPClaim(r.Context(), pool, hold, route, rec); err != nil {
-				slog.ErrorContext(r.Context(), "idempotency claim settlement failed", "err", err)
+			// Detached, because the request context may be over: the caller left,
+			// or the handler ran out of time. A settle on it fails and leaves the
+			// key "in progress" for the whole replay window.
+			settleCtx, release := context.WithTimeout(context.WithoutCancel(r.Context()), httpserver.DetachedOutcomeTimeout)
+			defer release()
+			if err := settleHTTPClaim(settleCtx, pool, hold, route, rec); err != nil {
+				slog.ErrorContext(settleCtx, "idempotency claim settlement failed", "err", err)
 			}
 		})
 	}

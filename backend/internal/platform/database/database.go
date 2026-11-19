@@ -335,5 +335,20 @@ func runTxWith(ctx context.Context, pool *pgxpool.Pool, opts pgx.TxOptions, fn f
 	if err := guardedTransaction(ctx, tx, fn); err != nil {
 		return err
 	}
-	return tx.Commit(ctx)
+	return commitWhileAnswerable(ctx, tx)
+}
+
+// commitBudget bounds a COMMIT that runs past its caller's context.
+const commitBudget = 10 * time.Second
+
+// commitWhileAnswerable commits only while the caller's context is live, and
+// then lets the COMMIT finish. Cancelled mid-flight, a COMMIT may land with the
+// caller told it failed, so a retry saves the record twice.
+func commitWhileAnswerable(ctx context.Context, tx pgx.Tx) error {
+	if err := ctx.Err(); err != nil {
+		return fmt.Errorf("pg: commit: %w", err)
+	}
+	commitCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), commitBudget)
+	defer cancel()
+	return tx.Commit(commitCtx)
 }

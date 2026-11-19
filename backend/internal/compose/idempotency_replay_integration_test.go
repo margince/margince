@@ -46,9 +46,11 @@ func keyedTemplateCall(ctx context.Context, r chi.Router, key string) *httptest.
 	return rec
 }
 
+// The first request's context ends as it answers; its answer is still recorded.
 func TestIdempotencyReplayRepeatsTheRecordedContentType(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.Admin() // ONE principal: the claim is scoped per (workspace, principal, key, path)
+	ending, end := context.WithCancel(ctx)
 
 	calls := 0
 	r := keyedTemplateRouter(e, func(w http.ResponseWriter, _ *http.Request) {
@@ -58,9 +60,10 @@ func TestIdempotencyReplayRepeatsTheRecordedContentType(t *testing.T) {
 		if _, err := io.WriteString(w, `{"recorded":true}`); err != nil {
 			t.Errorf("writing the stub response: %v", err)
 		}
+		end()
 	})
 
-	first := keyedTemplateCall(ctx, r, "content-type-replay")
+	first := keyedTemplateCall(ending, r, "content-type-replay")
 	if first.Code != http.StatusCreated {
 		t.Fatalf("first keyed call = %d, want 201", first.Code)
 	}
@@ -77,13 +80,15 @@ func TestIdempotencyReplayRepeatsTheRecordedContentType(t *testing.T) {
 	}
 }
 
+// The first attempt's context ends before it answers; its key is still released.
 func TestIdempotencyFailedAttemptRetryIsAFreshExecution(t *testing.T) {
 	e := integration.Setup(t)
-	ctx := e.Admin()
+	ending, end := context.WithCancel(e.Admin())
 
 	calls := 0
 	r := keyedTemplateRouter(e, func(w http.ResponseWriter, _ *http.Request) {
 		calls++
+		end()
 		w.Header().Set("Content-Type", "application/problem+json")
 		w.WriteHeader(http.StatusUnprocessableEntity)
 		if _, err := io.WriteString(w, `{"code":"validation_error"}`); err != nil {
@@ -94,8 +99,8 @@ func TestIdempotencyFailedAttemptRetryIsAFreshExecution(t *testing.T) {
 	// A non-2xx outcome releases the claim, so the keyed retry
 	// re-executes — the 422 the client sees is always the handler's own
 	// problem+json, never a stored copy that could go stale or mistyped.
-	first := keyedTemplateCall(ctx, r, "failure-retry")
-	retry := keyedTemplateCall(ctx, r, "failure-retry")
+	first := keyedTemplateCall(ending, r, "failure-retry")
+	retry := keyedTemplateCall(e.Admin(), r, "failure-retry")
 	if calls != 2 {
 		t.Fatalf("handler ran %d times, want 2 — a failed attempt must release the claim for the retry", calls)
 	}

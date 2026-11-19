@@ -73,6 +73,11 @@ operation a bad value for each parameter and checks.
 | `Idempotency-Key` | Once the first request has finished, a retry with the same key within 24 hours answers its status and body. The key is held per caller and path, and the same key with another body answers `409 idempotency_key_conflict`. While the first request is still running, a retry answers `409 idempotency_key_in_progress` with a `Retry-After` header; send it again after the wait until it answers with the recorded result. If the first request failed after it had started, a retry answers `409 idempotency_key_failed`: check whether it had an effect before using a new key. On an operation that runs an agent tool, the key is held per caller and tool, and the same key with other arguments answers `409 conflict`. Only an operation that lists the header in the OpenAPI document reads it. |
 | `If-Match` | The record `version` you last read. If the record changed since, the write answers `409 version_skew`. Read it again and retry. |
 
+A request has 30 seconds to answer (`httpserver.ResponseDeadline`), and a route that waits on a model has
+longer. The work stops two seconds before that limit, so there is time to answer. A request stopped there
+answers `503 request_timed_out` with a `Retry-After` header. Its `Idempotency-Key` is free again, so send
+the same request after the wait.
+
 ## Changes that wait for a human
 
 A client must get human approval before sending; a direct instruction to send counts.
