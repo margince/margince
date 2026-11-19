@@ -106,13 +106,15 @@ func unplacedChangesSince(ctx context.Context, tx pgx.Tx, since time.Time) ([]Un
 // linkChangeSQL answers the action a row counts under and the predicate that
 // admits it. A list or tag row counts under the link it filed.
 func linkChangeSQL(arg func(any) int) (string, string) {
-	action := "CASE"
+	var action strings.Builder
+	action.WriteString("CASE")
 	linked := make([]string, 0, len(auditentity.LinkChanges()))
 	for _, link := range auditentity.LinkChanges() {
 		key := arg(link.Key)
 		match := fmt.Sprintf("(a.entity_type = $%d AND a.after ? $%d)", arg(link.EntityType), key)
-		action += fmt.Sprintf(" WHEN %s THEN $%d::text", match, key)
+		fmt.Fprintf(&action, " WHEN %s THEN $%d::text", match, key)
 		linked = append(linked, match)
 	}
-	return action + " ELSE a.action END", "(" + strings.Join(linked, " OR ") + ")"
+	action.WriteString(" ELSE a.action END")
+	return action.String(), "(" + strings.Join(linked, " OR ") + ")"
 }
