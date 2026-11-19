@@ -238,9 +238,7 @@ func TestMarginceSetsWhatTheCustomerSaidAndAnUndoHoldsItBack(t *testing.T) {
 
 func TestASwitchedOffKindIsLeftAlone(t *testing.T) {
 	v := setupDealVerdict(t)
-	if _, err := approvals.NewService(InstallationDB(v.Pool)).SetAutoApply(v.owner(t), deals.VerdictAmountCorrection, false); err != nil {
-		t.Fatal(err)
-	}
+	integration.TurnKindOff(v.owner(t), t, approvals.NewService(InstallationDB(v.Pool)), deals.VerdictAmountCorrection)
 	v.run(t)
 	if got := v.field(t, "amount_minor"); got != "4000000" {
 		t.Fatalf("amount = %s, want it untouched with the switch off", got)

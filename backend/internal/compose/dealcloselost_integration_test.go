@@ -179,9 +179,7 @@ func TestANoteAfterTheUndoKeepsTheDealOpen(t *testing.T) {
 
 func TestTheOwnersSwitchStopsTheClose(t *testing.T) {
 	c := setupCloseLost(t)
-	if _, err := approvals.NewService(InstallationDB(c.Pool)).SetAutoApply(c.owner(t), deals.DealCloseLostKind, false); err != nil {
-		t.Fatal(err)
-	}
+	integration.TurnKindOff(c.owner(t), t, approvals.NewService(InstallationDB(c.Pool)), deals.DealCloseLostKind)
 
 	if got := c.run(t); got != 0 {
 		t.Fatalf("closed %d deals with the owner's switch off, want 0", got)
@@ -201,9 +199,7 @@ func TestAnOwnerWhoLeavesBeforeTheSilentCloseWritesKeepsTheDeal(t *testing.T) {
 			c.WsExec(t, `DELETE FROM role_assignment WHERE user_id = $1`, c.Rep1)
 		},
 		"switch turned off": func(c *closeLostEnv, t *testing.T) {
-			if _, err := approvals.NewService(InstallationDB(c.Pool)).SetAutoApply(c.owner(t), deals.DealCloseLostKind, false); err != nil {
-				t.Fatal(err)
-			}
+			integration.TurnKindOff(c.owner(t), t, approvals.NewService(InstallationDB(c.Pool)), deals.DealCloseLostKind)
 		},
 	} {
 		t.Run(name, func(t *testing.T) {

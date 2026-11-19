@@ -37,3 +37,11 @@ func (e *Env) AdminWithRole() context.Context {
 		Objects: map[string]principal.ObjectGrant{"installation_settings": {Read: true, Update: true}},
 	})
 }
+
+// TurnKindOff puts one kind on manual for the rep ctx names, through the real writer.
+func TurnKindOff(ctx context.Context, t *testing.T, svc *approvals.Service, kind string) {
+	t.Helper()
+	if _, err := svc.SetAutoApply(ctx, kind, false); err != nil {
+		t.Fatalf("switching %s off: %v", kind, err)
+	}
+}
