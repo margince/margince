@@ -103,7 +103,7 @@ func clientInputValidation(err error) (error, bool) {
 	// carrying its own field and machine code — the parse-don't-validate
 	// seam's single wire mapping.
 	if badValue, ok := errors.AsType[*values.ParseError](err); ok {
-		return withMax(Validation(badValue.Field, badValue.Code, badValue.Message), badValue.Max), true
+		return Validation(badValue.Field, badValue.Code, badValue.Message).WithMax(badValue.Max), true
 	}
 
 	// A payload the datasource seam refused to decode is a 422, never a 500. A
@@ -215,7 +215,7 @@ func moduleDeclaredFault(err error) (error, bool) {
 		field, code, message := fieldFault.FieldFault()
 		refusal := Validation(boundFaultText(field), boundFaultText(code), boundFaultText(message))
 		if limited, ok := fieldFault.(fieldMaxer); ok {
-			return withMax(refusal, limited.FieldMax()), true
+			return refusal.WithMax(limited.FieldMax()), true
 		}
 		return refusal, true
 	}
@@ -456,6 +456,8 @@ type FieldError struct {
 	// Max is the limit a too_long refusal names, so a screen can say the
 	// number in the reader's language. Zero is "not stated".
 	Max int `json:"max,omitempty"`
+	// Params are the other values the code's sentence names, as text.
+	Params map[string]string `json:"params,omitempty"`
 }
 
 // fieldMaxer is a FieldFault that also states the limit it refused at. It is

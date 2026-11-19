@@ -5,7 +5,6 @@ import type { components } from "../../api/schema";
 import { Badge } from "../../design-system/atoms";
 import { CellStack } from "../../design-system/cellstack";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
-import { KeyedName } from "../../design-system/keyedname";
 import { RowOpen } from "../../design-system/rowopen";
 import { formatDateTime } from "../../format/format";
 import { useNow } from "../../format/now";
@@ -18,6 +17,7 @@ import {
   callCodeTone,
   isKnownCallCode,
 } from "./ai-decision-labels";
+import { TaskName } from "./ai-task-name";
 import { costLabel, ladderAttempts } from "./aicalls-vocab";
 import "./aicalls.css";
 
@@ -81,9 +81,10 @@ function callColumns(
       header: t("aicalls.col.feature"),
       fold: "title",
       render: (call) => (
-        <KeyedName
+        <TaskName
           name={aiTaskLabel(call.task, t, call.task_display_name)}
-          code={call.task}
+          task={call.task}
+          summary={undefined}
         />
       ),
     },

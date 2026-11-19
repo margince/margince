@@ -4,6 +4,7 @@ import {
   problemCode,
   problemDetails,
   problemExistingId,
+  problemFieldErrors,
 } from "./problembody";
 
 describe("reading a problem body", () => {
@@ -42,5 +43,43 @@ describe("reading a problem body", () => {
       }),
     ).toBeNull();
     expect(problemExistingId({ details: { existing_id: "c1" } })).toBeNull();
+  });
+
+  it("reads the values a field refusal names, and only the string ones", () => {
+    expect(
+      problemFieldErrors({
+        code: "validation_error",
+        details: {
+          errors: [
+            {
+              field: "file",
+              code: "too_many_rows",
+              message: "This upload has 15001 rows.",
+              max: 15000,
+              params: { rows: "15001", line: 3 },
+            },
+            {
+              field: "file",
+              code: "not_utf8",
+              message: "The file is not saved as UTF-8.",
+              params: { line: 3 },
+            },
+          ],
+        },
+      }),
+    ).toEqual([
+      {
+        field: "file",
+        code: "too_many_rows",
+        message: "This upload has 15001 rows.",
+        max: 15000,
+        params: { rows: "15001" },
+      },
+      {
+        field: "file",
+        code: "not_utf8",
+        message: "The file is not saved as UTF-8.",
+      },
+    ]);
   });
 });

@@ -80,7 +80,14 @@ describe("the contact page on an archived row", () => {
 
     const link = await screen.findByRole("link", { name: "Kept Contact" });
     expect(link.getAttribute("href")).toMatch(/#\/contacts\/p-2$/);
-    expect(screen.getByText(en["history.field.merged_into_id"])).toBeTruthy();
+    // One sentence after the archived one, not a second line of its own.
+    const reason = screen.getByText(en["contact.rail.archivedReadOnly"]);
+    expect(reason.parentElement?.textContent).toBe(
+      `${en["contact.rail.archivedReadOnly"]} ${en["history.field.merged_into_id"]} Kept Contact.`,
+    );
+    expect(screen.getAllByRole("link", { name: "Kept Contact" })).toHaveLength(
+      1,
+    );
   });
 
   it("refuses the write verbs in the header and in the menu", async () => {

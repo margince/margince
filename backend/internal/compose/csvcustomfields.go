@@ -186,6 +186,21 @@ func suggestImportMapping(p migration.Profile, targets []string, cat importCatal
 	return out
 }
 
+// suggestionsByObject is the mapping suggested for each of objects, keyed by object.
+func suggestionsByObject(
+	p migration.Profile, cats map[string]importCatalog, objects []string,
+) (map[string]map[string]string, error) {
+	out := make(map[string]map[string]string, len(objects))
+	for _, object := range objects {
+		targets, err := importTargets(object, cats[object])
+		if err != nil {
+			return nil, err
+		}
+		out[object] = suggestImportMapping(p, targets, cats[object])
+	}
+	return out, nil
+}
+
 // customFieldsFrom picks the checked custom-field values of the targets in
 // fields. Those are the whole row on a create and the changed cells on an
 // update. It is nil when there are none, which a caller-opened create reads

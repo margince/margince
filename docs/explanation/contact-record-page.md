@@ -63,7 +63,9 @@ contact-scoped queue as Home, with the same grants and row scope. **Review priva
 case itself in Settings → Privacy, so the Worklist page limit does not hide it. Closed cases and
 notices already queued for delivery do not ask for another notice.
 
-The waiting and gone-quiet cards rest on our last message (`last_outbound_activity_id`). Their
+The waiting and gone-quiet cards rest on our last message (`last_outbound_activity_id`). Neither
+shows once `last_contact_at` is later than that message: a meeting or call held since, or their
+reply, ends the wait (`heardSince` in `momentawaiting.go`). Their
 **Done** writes `handled` on it through `PUT /activities/{id}/disposition`, the reader state the
 Worklist's Done writes. `activities.OwnMessageDoneState` says whether this reader has hidden the
 message, and whether the writer would take a Done from them. The writer takes it when the reader

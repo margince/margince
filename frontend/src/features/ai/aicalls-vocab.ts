@@ -67,13 +67,3 @@ export function outcomeLabel(outcome: CallOutcome, t: T): string {
       return t(UNKNOWN_VALUE_LABEL);
   }
 }
-
-// The task as a screen names it, or its key where it has no name.
-export function taskName(call: AiCallSummary): string {
-  return call.task_display_name ?? call.task;
-}
-
-// The served model as one string, the spelling the model dial and search use.
-export function modelLabel(call: AiCallSummary): string {
-  return call.served_model || call.model_id;
-}

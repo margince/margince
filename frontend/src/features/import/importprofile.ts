@@ -41,6 +41,7 @@ export function asProfile(payload: unknown): ImportProfile {
     columns,
     targets,
     suggested_mapping,
+    object_chosen_by: chosenBy(read("object_chosen_by")),
     file_name: optionalText(read("file_name")),
     suggested_source_name: optionalText(read("suggested_source_name")),
     parts: parts?.map(asPart),
@@ -59,6 +60,10 @@ function reader(payload: unknown): (name: string) => unknown {
 
 function optionalText(value: unknown): string | undefined {
   return typeof value === "string" ? value : undefined;
+}
+
+function chosenBy(value: unknown): ImportProfile["object_chosen_by"] {
+  return value === "columns" || value === "none" ? value : undefined;
 }
 
 function asPart(payload: unknown): ImportPartProfile {

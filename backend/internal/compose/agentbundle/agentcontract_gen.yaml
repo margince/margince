@@ -30480,6 +30480,18 @@ components:
         source_ref: {type: string, description: 'Opaque handle to the stored upload. Supplied verbatim to `createImportRun`; never a path a client can construct.'}
         row_count: {type: integer, minimum: 0, description: 'Rows the upload holds: the file''s for a single CSV, the sum of `parts[].row_count` for a ZIP.'}
         object: {$ref: '#/components/schemas/ImportObject'}
+        object_chosen_by:
+          type: string
+          enum: [columns, none]
+          description: |-
+            How `object` was chosen for a CSV uploaded without one. The header is
+            matched as `suggested_mapping` matches it, once for each type, and
+            only a column that exactly one type's suggestion maps counts.
+            `columns`: one type's suggestion maps more such columns than any
+            other's. `none`: no type maps strictly the most, so `object` is
+            `lead` and a screen asks the reader to choose. Absent when the upload
+            named its type, and for a ZIP. The run's `profile` keeps it until a
+            draft save names `object`, which is the reader's own choice.
         file_name: {type: string, description: 'The uploaded file''s name, for display. The client echoes it to `createImportRun`.'}
         suggested_source_name:
           type: string
@@ -30659,9 +30671,12 @@ components:
           type: integer
           minimum: 0
           description: |-
-            Links the file asks for. A dry run reports this and nothing else,
-            because resolving an endpoint is a read the dry run has not done —
-            it says how many rows named an employer, not how many will find one.
+            Links the file asks for on the rows the run lands. A link whose own
+            row is skipped is not counted, because that row is reported as a
+            skip; `unresolved` still lists it. A dry run reports this and nothing
+            else, because resolving an endpoint is a read the dry run has not
+            done — it says how many landing rows named an employer, not how many
+            will find one.
         applied:
           type: integer
           minimum: 0
@@ -31197,8 +31212,12 @@ components:
           additionalProperties: true
           description: |-
             Structured machine context — e.g. `existing_id` on 409 duplicate, or an
-            `errors` array of `{ field, code, message }` on 422 validation. A `too_long`
-            entry also carries `max`, the limit in characters.
+            `errors` array of `{ field, code, message }` on 422 validation. An entry that
+            refuses at a limit also carries `max`: the limit in characters for `too_long`,
+            in rows for `too_many_rows`, in characters for `source_name`. An entry whose
+            code names other values carries them in `params`, an object of text values by
+            name, so a screen can word the code in the reader's language; `message` stays
+            the English sentence.
     PageInfo:
       type: object
       required: [has_more]

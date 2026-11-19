@@ -338,9 +338,9 @@ func (s *CSVSource) open(ctx context.Context) (openFile, error) {
 	if err != nil {
 		file.close(ctx)
 		if errors.Is(err, io.EOF) {
-			return openFile{}, fmt.Errorf("%w: the file has no header row", ErrHeaderInvalid)
+			return openFile{}, headerMissing()
 		}
-		return openFile{}, fmt.Errorf("%w: %v", ErrSourceUnreadable, err)
+		return openFile{}, unreadable(err)
 	}
 	if err := validateHeader(header); err != nil {
 		file.close(ctx)
@@ -363,7 +363,7 @@ func (s *CSVSource) openBody(ctx context.Context) (io.ReadCloser, error) {
 			slog.WarnContext(ctx, "closing the import source", "key", s.key, "err", cerr)
 		}
 		if err != nil {
-			return nil, fmt.Errorf("%w: %v", ErrSourceUnreadable, err)
+			return nil, unreadable(err)
 		}
 		s.body = body
 	}
@@ -435,7 +435,7 @@ func (f openFile) next() (int, []string, error) {
 	// several lines, and the Nth record is then not line N+1.
 	line, _ := f.records.FieldPos(0)
 	if err != nil {
-		return line, nil, fmt.Errorf("%w: line %d: %v", ErrSourceUnreadable, line, err)
+		return line, nil, unreadable(err)
 	}
 	return line, record, nil
 }

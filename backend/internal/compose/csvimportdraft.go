@@ -13,6 +13,7 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/importwire"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -28,9 +29,7 @@ func refuseTooManyRows(rows int) error {
 	if rows <= importRowCap {
 		return nil
 	}
-	return httperr.Validation("file", "too_many_rows", fmt.Sprintf(
-		"this upload has %d rows; a test run takes at most %d, so split it into smaller files and import each one",
-		rows, importRowCap))
+	return importwire.TooManyRows(rows, importRowCap)
 }
 
 // openDraft opens the upload's run in `pending`, keeping the profile so a
@@ -40,6 +39,9 @@ func (h importHandlers) openDraft(
 ) (crmcontracts.ImportSourceProfile, error) {
 	mapping.OnDuplicate = string(crmcontracts.ImportOnDuplicateCreate)
 	mapping.OnBrokenLink = string(crmcontracts.ImportOnBrokenLinkSkipRow)
+	if profile.ObjectChosenBy != nil {
+		mapping.ObjectChosenBy = string(*profile.ObjectChosenBy)
+	}
 	stored, err := json.Marshal(profile)
 	if err != nil {
 		return crmcontracts.ImportSourceProfile{}, fmt.Errorf("encoding the upload's profile: %w", err)
@@ -150,7 +152,7 @@ func draftPatchFrom(req crmcontracts.UpdateImportRunRequest, tagSent bool) (migr
 		return migration.DraftPatch{}, err
 	}
 	if req.SourceName != nil {
-		name, err := sourceNameFrom(req.SourceName)
+		name, err := importwire.SourceName(req.SourceName)
 		if err != nil {
 			return migration.DraftPatch{}, err
 		}
@@ -168,7 +170,7 @@ func draftPatchFrom(req crmcontracts.UpdateImportRunRequest, tagSent bool) (migr
 		parts := make([]migration.PartMapping, 0, len(*req.Parts))
 		for _, p := range *req.Parts {
 			if !p.Object.Valid() {
-				return migration.DraftPatch{}, unsupportedObject()
+				return migration.DraftPatch{}, importwire.UnsupportedObject()
 			}
 			parts = append(parts, migration.PartMapping{
 				File: p.File, Object: string(p.Object), Fields: p.Mapping, SourceKey: optionalText(p.SourceKey),
@@ -194,7 +196,7 @@ func draftPatchFrom(req crmcontracts.UpdateImportRunRequest, tagSent bool) (migr
 func patchEnums(req crmcontracts.UpdateImportRunRequest, patch *migration.DraftPatch) error {
 	if req.Object != nil {
 		if !req.Object.Valid() {
-			return unsupportedObject()
+			return importwire.UnsupportedObject()
 		}
 		patch.Object = new(string(*req.Object))
 	}
@@ -249,5 +251,10 @@ func applySession(out *crmcontracts.ImportRun, run migration.Run) {
 		return
 	}
 	profile.RunId = openapi_types.UUID(run.ID)
+	// The mapping holds how the type was chosen, since a save can clear it.
+	profile.ObjectChosenBy = nil
+	if run.Mapping != nil && run.Mapping.ObjectChosenBy != "" {
+		profile.ObjectChosenBy = new(crmcontracts.ImportSourceProfileObjectChosenBy(run.Mapping.ObjectChosenBy))
+	}
 	out.Profile = &profile
 }
