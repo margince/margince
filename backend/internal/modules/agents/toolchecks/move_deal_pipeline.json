@@ -2,7 +2,6 @@
   "verb": "move_deal_pipeline",
   "checks": [
     "company.read",
-    "deal.read",
     "deal.update",
     "installation_settings.read",
     "project.read"
