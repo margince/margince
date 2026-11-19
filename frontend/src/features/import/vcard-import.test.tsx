@@ -15,7 +15,7 @@ import { UnsavedGuard, useHasUnsavedChanges } from "../../components/unsaved";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { ACCEPTED_ATTACHMENT_EXTENSIONS } from "../../lib/attachmentupload";
-import { meFixture } from "../../testing/mefixture";
+import { meFixture, seedWriter } from "../../testing/mefixture";
 import {
   CARD_PHOTO_EXTENSIONS,
   isCardPhoto,
@@ -35,10 +35,13 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
-function render(ui: ReactNode) {
+function render(ui: ReactNode, seeded = true) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
+  if (seeded) {
+    seedWriter(client);
+  }
   return rtlRender(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">{ui}</LocaleProvider>
@@ -333,6 +336,19 @@ describe("VCardImport", () => {
     expect(field.querySelector("input[type=file]")).toHaveFocus();
   });
 
+  // A file picked is sent at once, so no field shows before the seat's access
+  // is read.
+  it("offers no file field while the seat's access is on its way", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => new Promise<Response>(() => undefined)),
+    );
+    render(<VCardImportPage />, false);
+
+    await screen.findByRole("heading", { level: 1 });
+    expect(screen.queryByTestId("vcard-import-file")).toBeNull();
+  });
+
   // Reached by its address, a seat that may not add contacts sees why and no
   // file field. The import would be refused after the file was chosen.
   it("shows a refused seat why, and no file field", async () => {
@@ -342,7 +358,7 @@ describe("VCardImport", () => {
         jsonResponse(meFixture({ allow: { contact: ["read"] } })),
       ),
     );
-    render(<VCardImportPage />);
+    render(<VCardImportPage />, false);
 
     expect(await screen.findByText(en["record.actionRefused"])).toBeVisible();
     expect(screen.queryByTestId("vcard-import-file")).toBeNull();

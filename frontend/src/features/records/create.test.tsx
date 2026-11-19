@@ -28,7 +28,7 @@ import {
 import { pickOption, toggleOptions } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
-import { meFixture } from "../../testing/mefixture";
+import { meFixture, seedWriter } from "../../testing/mefixture";
 import { CompaniesScreen } from "../companies/companies";
 import { ContactsScreen } from "../contacts/contacts";
 import { DealsScreen } from "../deals/deals";
@@ -57,6 +57,7 @@ function render(ui: ReactNode, retries = 0) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: retries, retryDelay: 50 } },
   });
+  seedWriter(client);
   return rtlRender(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">{ui}</LocaleProvider>
@@ -634,7 +635,7 @@ describe("the deal form's partner fields", () => {
       }),
   };
 
-  it("shows no partner fields when no company is a partner", async () => {
+  it("says there is no partner yet when no company is a partner", async () => {
     // Every unstubbed route answers an empty page, so /partners says none.
     stubApi({
       "GET /pipelines": () =>
@@ -643,7 +644,10 @@ describe("the deal form's partner fields", () => {
     render(<DealsScreen startCreating />);
     await waitFor(() => expect(screen.getByLabelText("Stage *")).toBeTruthy());
 
-    expect(inForm().queryByLabelText("Referring partner")).toBeNull();
+    await userEvent.setup().click(inForm().getByLabelText("Referring partner"));
+    expect(
+      await screen.findByRole("option", { name: en["deal.partnerNoneYet"] }),
+    ).toBeTruthy();
     expect(inForm().queryByLabelText("Partner attribution")).toBeNull();
   });
 

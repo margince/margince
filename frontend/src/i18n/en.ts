@@ -3086,6 +3086,8 @@ export const en = {
     "You cannot edit this company. Ask its owner to hand it over or share it, or ask an administrator.",
   "record.actionRefused":
     "Your role does not include this action. Ask an administrator for the right.",
+  "record.accessUnknown":
+    "Your access could not be read. Reload the page to check it again.",
   "contact.attachRefused":
     "You can only read this contact. Ask its owner for write access.",
   "record.logActivityRefused":

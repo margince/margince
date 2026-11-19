@@ -11,6 +11,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { throwProblem } from "../lib/problem";
+import { seedWriter } from "../testing/mefixture";
 import { CreateAction } from "./create";
 
 // Dedupe "view existing record" foundation (P-16): a create that collides on
@@ -32,6 +33,7 @@ function render(ui: ReactNode) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+  seedWriter(client);
   return rtlRender(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">{ui}</LocaleProvider>

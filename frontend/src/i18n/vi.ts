@@ -3082,6 +3082,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Bạn không có quyền sửa công ty này. Đề nghị người chịu trách nhiệm chuyển giao hoặc chia sẻ, hoặc liên hệ quản trị viên.",
   "record.actionRefused":
     "Vai trò của bạn không bao gồm thao tác này. Liên hệ quản trị viên để được cấp thêm quyền.",
+  "record.accessUnknown":
+    "Không đọc được quyền truy cập của bạn. Tải lại trang để kiểm tra lại.",
   "contact.attachRefused":
     "Bạn chỉ có quyền xem liên hệ này. Hãy nhờ chủ sở hữu cấp quyền ghi.",
   "record.logActivityRefused":

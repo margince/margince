@@ -7,6 +7,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { seedWriter } from "../testing/mefixture";
 import { CreateAction } from "./create";
 import type { CreateField } from "./create.fields";
 
@@ -30,9 +31,9 @@ function renderNewDeal() {
   }));
   render(
     <QueryClientProvider
-      client={
-        new QueryClient({ defaultOptions: { queries: { retry: false } } })
-      }
+      client={seedWriter(
+        new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+      )}
     >
       <LocaleProvider initial="en">
         <CreateAction

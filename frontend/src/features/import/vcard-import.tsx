@@ -8,7 +8,12 @@ import { IMPORT_ID } from "../../app/nav";
 import { useUnsavedGuard } from "../../components/unsaved";
 import { AppLink } from "../../design-system/applink";
 import { useArrivalFocus } from "../../design-system/arrivalfocus";
-import { Badge, Button, EmptyState } from "../../design-system/atoms";
+import {
+  Badge,
+  Button,
+  EmptyState,
+  PendingBody,
+} from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { FileDropzone } from "../../design-system/filedropzone";
 import { Heading } from "../../design-system/heading";
@@ -22,7 +27,7 @@ import { ACTION_PARAM, QUALIFY_ACTION } from "../../lib/leads.address";
 import { postMultipart } from "../../lib/multipart";
 import { problemMessageOf } from "../../lib/problem";
 import { navigate, routeHash } from "../../lib/router";
-import { useActionRefusal } from "../../lib/writerefusal";
+import { useActionRefusal, useMeSettled } from "../../lib/writerefusal";
 import "./vcard-import.css";
 
 type VCardReport = components["schemas"]["VCardImportReport"];
@@ -194,6 +199,9 @@ export function VCardImportAction({
 export function VCardImportPage() {
   const t = useT();
   const refusal = useVCardImportRefusal();
+  // No file field before the seat's access is read: a file picked then would
+  // be sent at once.
+  const settled = useMeSettled();
   const importer = useImportVCards();
   const [picked, setPicked] = useState<File | undefined>(undefined);
   const title = useArrivalFocus<HTMLHeadingElement>();
@@ -224,7 +232,9 @@ export function VCardImportPage() {
         {t("vcardImport.title")}
       </Heading>
       {/* Reached by its address, a refused import shows why and no file field. */}
-      {refusal !== undefined ? (
+      {!settled ? (
+        <PendingBody label={t("vcardImport.title")} />
+      ) : refusal !== undefined ? (
         <EmptyState>{refusal}</EmptyState>
       ) : (
         <Panel>

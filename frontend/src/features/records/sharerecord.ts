@@ -96,8 +96,8 @@ export function useShareStanding(
     action: "update",
   });
   const mayUpdate = useCanWrite(kind, "update");
-  // Settled, not answered: a /me that failed or carried no snapshot leaves
-  // every grant denied, which the screen shows rather than waiting forever.
+  // Settled, not answered: a /me that failed or carried no snapshot refuses
+  // every grant (useActionRefusal), which the screen shows rather than waits.
   const meSettled = useMeSettled();
   const status = record.isError ? problemStatus(record.error) : 0;
   if (status === 404) {

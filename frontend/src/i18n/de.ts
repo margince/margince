@@ -3176,6 +3176,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Du kannst dieses Unternehmen nicht bearbeiten. Frage die verantwortliche Person, ob sie es dir übergibt oder mit dir teilt, oder frage einen Admin.",
   "record.actionRefused":
     "Deine Rolle enthält diese Aktion nicht. Frage einen Admin nach dem Recht.",
+  "record.accessUnknown":
+    "Dein Zugriff konnte nicht gelesen werden. Lade die Seite neu, um ihn erneut zu prüfen.",
   "contact.attachRefused":
     "Du kannst diesen Kontakt nur lesen. Frage das zuständige Teammitglied nach Schreibzugriff.",
   "record.logActivityRefused":

@@ -17,7 +17,7 @@ import { en } from "../i18n/en";
 import { forgetListAddresses, rememberListAddress } from "../lib/listreturn";
 import { ScreenAddress } from "../lib/screenaddress";
 import { setSingleKeyShortcutsOn } from "../lib/shortcuts";
-import { meFixture } from "../testing/mefixture";
+import { meFixture, seedWriter } from "../testing/mefixture";
 import { CreateAction, type CreateField } from "./create";
 
 afterEach(() => {
@@ -41,7 +41,7 @@ function mount(
   }>,
 ) {
   return render(
-    <QueryClientProvider client={props.client ?? new QueryClient()}>
+    <QueryClientProvider client={props.client ?? seedWriter(new QueryClient())}>
       <LocaleProvider initial="en">
         <ScreenAddress.Provider value={props.drawnFor ?? null}>
           <CreateAction
@@ -217,5 +217,20 @@ describe("a list's create the seat may not take", () => {
     const verb = await screen.findByRole("button", { name: /New contact/ });
     expect(verb.hasAttribute("disabled")).toBe(true);
     expect(screen.getByText(en["settings.seatRefused"])).toBeTruthy();
+  });
+
+  // A /me that settled with no snapshot leaves the access unknown: the verb
+  // is refused with a way to recover rather than opening a form.
+  it("refuses the verb while the seat's access could not be read", async () => {
+    window.location.hash = "#/contacts/new";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("{}", { status: 403 })),
+    );
+    mount({ listCreate: { open: true }, client: new QueryClient() });
+
+    expect(await screen.findByText(en["record.accessUnknown"])).toBeTruthy();
+    expect(screen.queryByRole("dialog")).toBeNull();
+    vi.unstubAllGlobals();
   });
 });
