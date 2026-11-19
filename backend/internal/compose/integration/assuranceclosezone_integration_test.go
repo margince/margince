@@ -22,7 +22,7 @@ import (
 // day is late there, though not yet in UTC.
 func TestTheInputCheckReadsAPastCloseInTheInstallationZone(t *testing.T) {
 	e := Setup(t)
-	e.WsExec(t, `UPDATE setting SET value = '"Asia/Ho_Chi_Minh"'::jsonb WHERE key = 'installation.timezone'`)
+	e.WsExec(t, `UPDATE setting SET value = '"UTC"'::jsonb WHERE key = 'installation.timezone'`)
 	pipeline, open, _ := DealFixture(t, e)
 	now := clocktest.Now(t).UTC()
 	closes := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
@@ -34,6 +34,9 @@ func TestTheInputCheckReadsAPastCloseInTheInstallationZone(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// The deal is written in UTC and judged in Saigon. By evening UTC, Saigon's
+	// day has moved on, and a create there would refuse the UTC day as past.
+	e.WsExec(t, `UPDATE setting SET value = '"Asia/Ho_Chi_Minh"'::jsonb WHERE key = 'installation.timezone'`)
 
 	scanner := assurance.NewScanner(assurance.NewStore(compose.InstallationDB(e.Pool)),
 		compose.AssuranceSubjects, compose.AssuranceCoverage, compose.AssuranceConfig())
