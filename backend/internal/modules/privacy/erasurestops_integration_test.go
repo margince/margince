@@ -101,7 +101,7 @@ func contactName(ctx context.Context, t *testing.T, env *sarIdentifierEnv) strin
 	return name
 }
 
-// An erasure clears the register a rep chose for a named person.
+// An erasure clears the register a rep chose for a named contact.
 func TestErasingAContactClearsItsGreetingRegister(t *testing.T) {
 	env := setupSARIdentifiers(t)
 	ctx := context.Background()

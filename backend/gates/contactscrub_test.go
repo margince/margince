@@ -213,7 +213,7 @@ func TestErasingAndAnonymizingClearTheSameContactColumns(t *testing.T) {
 		}
 	}
 	if !slices.Contains(erased, "greeting_register") {
-		t.Errorf("greeting_register is a rep's choice about a named person and no act clears it")
+		t.Errorf("greeting_register is a rep's choice about a named contact and no act clears it")
 	}
 }
 

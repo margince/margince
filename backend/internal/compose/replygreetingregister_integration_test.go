@@ -23,7 +23,7 @@ import (
 
 const duMail = "Hallo, ich wollte dich fragen, ob du im Mai Zeit hast. Ich schicke dir dann die Unterlagen, wie du es wolltest."
 
-func (o *owedEnv) person(t *testing.T, first, address, register string) {
+func (o *owedEnv) contactWith(t *testing.T, first, address, register string) {
 	last := "Surname"
 	if _, err := o.e.Contacts.CreateContact(o.e.Admin(), contacts.CreateContactInput{FullName: first + " " + last, FirstName: &first, LastName: &last, Source: "manual", Emails: []contacts.ContactEmailInput{{Email: address, EmailType: "work", IsPrimary: true}}}); err != nil {
 		t.Fatal(err)
@@ -51,13 +51,13 @@ func TestTheStoredRegisterOfTheDeliveredContactDecidesTheReplyGreeting(t *testin
 		t.Run(name, func(t *testing.T) {
 			o := setupOwed(t)
 			o.e.WsExec(t, `INSERT INTO workspace_email_domain (domain, source, verified) VALUES ('ws.example', 'admin', true)`)
-			o.person(t, "Dietmar", buyer, "formal")
+			o.contactWith(t, "Dietmar", buyer, "formal")
 			mail, own, ownSeat := tc.mail, o.seat, tc.mail.from == ""
 			if strings.HasSuffix(mail.from, "@ws.example") {
-				o.person(t, "Zora", mail.from, "familiar")
+				o.contactWith(t, "Zora", mail.from, "familiar")
 			}
 			if ownSeat {
-				o.person(t, "Sam", own, "familiar")
+				o.contactWith(t, "Sam", own, "familiar")
 				o.capture(t, pricingMail(buyer, own, pricingRoot, duMail, 0, true))
 			}
 			mail.from, mail.to = cmp.Or(mail.from, own), cmp.Or(mail.to, own)

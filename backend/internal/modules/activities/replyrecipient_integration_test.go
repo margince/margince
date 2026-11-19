@@ -19,12 +19,15 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // ourDomain answers the colleague question the way the own-domain store does
@@ -364,6 +367,17 @@ func TestAddressingRefusesACallerWithoutTheContactReadGrant(t *testing.T) {
 		crmcontracts.Id(anchor.UUID))
 	if rec.Code == http.StatusOK {
 		t.Errorf("reply-recipient answered 200 to a caller with no contact read grant: %s", rec.Body.String())
+	}
+	// The no-model draft degrades to no name and no register, never a refusal.
+	if _, err := e.owner.Exec(context.Background(), `UPDATE contact SET greeting_register = 'formal' WHERE id = $1`, sender); err != nil {
+		t.Fatal(err)
+	}
+	activity, err := e.store(nil).GetActivityContent(ctx, anchor, storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, body, _ := e.store(nil).FloorDraft(ctx, anchor.UUID, activity, textlang.English, nil); !strings.HasPrefix(body, "Hello,") {
+		t.Errorf("a caller with no contact read grant got a draft that names or addresses the contact: %q", body)
 	}
 }
 
