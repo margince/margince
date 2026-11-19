@@ -11,8 +11,7 @@ import {
 } from "../../testing/story-utils";
 import { ConnectSharedMailboxDialog } from "./sharedmailboxes.forms";
 
-// The connect dialog on its own: as it opens, with fields it cannot send, and
-// with the mail server's refusal of the login at its foot.
+// The connect dialog on its own, as it opens and as each refusal shows.
 
 const TEAMS = [
   { id: "018f3a1b-0000-7000-8000-0000000000e1", name: "Sales desk" },
