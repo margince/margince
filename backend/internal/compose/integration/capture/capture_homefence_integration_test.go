@@ -69,9 +69,9 @@ func TestACapturedMailLeavesTheHomeFenceWhereItWas(t *testing.T) {
 func TestAnUnfiledSendersMailNamingAProjectLeavesTheHomeFenceWhereItWas(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
-	seed := newProjectSeeder(t, e)
-	erp := seed.project(t, "ERP replacement")
-	phase := seed.dealOnProject(t, "Phase two", erp.ID)
+	w := newDealWorld(t, e)
+	erp := w.project(t, "ERP replacement")
+	phase := w.dealOnProject(t, "Phase two", erp.ID)
 	for _, mail := range []struct{ sender, msgID string }{
 		{"deferred", "fence-pk1@acme.example"},
 		{"suppressed", "fence-pk2@em.vendor.example"},
@@ -95,6 +95,21 @@ func TestAnUnfiledSendersMailNamingAProjectLeavesTheHomeFenceWhereItWas(t *testi
 		if got := dealsOf(t, e, mail.msgID); !slices.Equal(got, []ids.UUID{phase}) {
 			t.Fatalf("mail from a %s sender is filed under deals %v, want the project's one deal %s", mail.sender, got, phase)
 		}
+	}
+
+	// A suppressed mail copying a known contact names no project. The contact's
+	// one open deal is no reason to file it: it is filed under nobody.
+	globex := w.at(t, "Globex")
+	globex.employee(t, "bob@globex.example", globex.customer)
+	globex.deal(t, "Globex rollout")
+	before := captureHomeFence(t, e)
+	env.sync(t, mailFrom("no-reply@em.globex.example", "fence-cc1@em.globex.example", "", "status", "bob@globex.example"))
+	if moved := captureHomeFence(t, e) - before; moved != 0 {
+		t.Errorf("a suppressed mail copying a contact moved the Home fence by %d, want 0", moved)
+	}
+	if n := countRows(t, e, `SELECT count(*) FROM activity_link l JOIN activity a ON a.id = l.activity_id
+		WHERE a.source_id = 'fence-cc1@em.globex.example'`); n != 0 {
+		t.Fatalf("a suppressed mail copying a contact is filed under %d records, want none", n)
 	}
 }
 

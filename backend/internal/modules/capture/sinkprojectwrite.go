@@ -65,6 +65,11 @@ func linkActivityToProject(ctx context.Context, tx pgx.Tx, activityID ids.Activi
 	// STAMP may be owed even when the filing is not.
 	inserted := false
 	if !projectID.IsZero() {
+		// The project row is locked in the shared order before the target check
+		// reads it, so the link trigger never upgrades a weaker lock.
+		if err := storekit.LockLastActivityTargets(ctx, tx, storekit.LastActivityTargets{Projects: []ids.UUID{projectID}}); err != nil {
+			return fmt.Errorf("capture: %w", err)
+		}
 		if err := auth.EnsureLinkTarget(ctx, tx, string(datasource.EntityProject), projectID); err != nil {
 			if errors.Is(err, apperrors.ErrNotFound) {
 				return nil
