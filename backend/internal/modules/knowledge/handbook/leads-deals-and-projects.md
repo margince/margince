@@ -119,7 +119,7 @@ Also called: restore a lead, undo a disqualification.
 ### How do I edit a lead?
 To edit a lead in Margince, open it from **Leads** and press **Edit** in a section of its **Details** panel. The sections are **About**, **Email and phone**, **Ownership** and **Registration**. Each **Edit** opens a dialog with only the fields of its section.
 1. Press **Edit** in the section, change the fields in the dialog, and press **Save**. Nothing in the dialog is stored until **Save**; **Cancel** or Esc closes without saving. To rename the lead, press the name at the top. Pressing the **Email** address starts a message.
-2. **About** holds **Company**, **Title**, **Industry**, **Project** and **Product**. **Email and phone** holds **Email** and **Phone**. **Registration** holds **Origin**, **Origin note**, **Referred by partner**, **Company routing key** and **Tags**. In the dialog, **Change Project**, **Change Product** and **Change Tags** close it and open a list of their own. A pick there saves at once.
+2. **About** holds **Company**, **Title**, **Industry**, **Project** and **Product**, and **Full name** while the lead has none. **Email and phone** holds **Email** and **Phone**. **Registration** holds **Origin**, **Origin note**, **Referred by partner**, **Company routing key** and **Tags**. In the dialog, **Change Project**, **Change Product** and **Change Tags** close it and open a list of their own. A pick there saves at once.
 3. The owner has its own control; see [How do I change a lead's owner?](#how-do-i-change-a-leads-owner). **Added via** shows how the row came into Margince, and Margince writes it.
 
 **LinkedIn URL** cannot be changed on a lead. Status moves on the **Lead status** ladder; score moves with **Override score** and a reason. A closed lead is read-only.
@@ -194,7 +194,7 @@ Also called: opportunity.
 ### How do I edit a deal?
 To edit a deal in Margince, open it from **Deals** and press **Edit** in a section of its **Details** panel. The sections are **About**, **Value**, **Ownership** and **Registration**. Each **Edit** opens a dialog with only the fields of its section. **More actions** → **Edit details** opens every field in one place.
 1. If the panel is hidden, choose **Show details**.
-2. Press **Edit** in the section, change the fields in the dialog, and press **Save**. Nothing is stored until **Save**; **Cancel** or Esc closes without saving. To rename the deal, press the name at the top.
+2. Press **Edit** in the section, change the fields in the dialog, and press **Save**. Nothing in the dialog is stored until **Save**; **Cancel** or Esc closes without saving. To rename the deal, press the name at the top.
 
 **About** holds **Expected close**, **Probability**, **Wait until**, **Commercial motion** and **Priority**. A closed deal offers neither **Expected close** nor **Probability**. **Value** holds **Value**, **Expected ARR** and **Currency**, **Ownership** holds **Owner**, and **Registration** holds **Acquisition source** and **Tags**. In the dialog, **Change Tags** closes it and opens the tags in a panel of their own, where a change saves at once. **Company**, **Project**, **Referring partner** and custom fields change only in **Edit details**, where you press a value; the stage moves on the **Stage** ladder.
 Also called: update an opportunity, rename a deal, change deal details.
