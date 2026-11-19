@@ -315,7 +315,12 @@ function QualificationForm({
         more={preview.hasNextPage}
         fetching={preview.isFetchingNextPage}
         loadMore={() => preview.fetchNextPage()}
-        choose={setDealChoice}
+        choose={(next) => {
+          // A new choice unmounts the amount editor or remounts it on the
+          // committed amount. The refused figure is gone, so its refusal goes.
+          setAmountTooPrecise(false);
+          setDealChoice(next);
+        }}
       />
       {withDeal && (
         <div className="lead-qualify-deal">

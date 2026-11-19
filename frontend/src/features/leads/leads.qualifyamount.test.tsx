@@ -93,6 +93,35 @@ it("refuses a figure finer than the currency beside the field and sends nothing"
   });
 });
 
+// Leaving "Open a new deal" drops the refused text with its editor. The
+// refusal goes with it, and the amount the editor comes back on can be sent.
+it("drops a precision refusal when the deal choice takes its editor away", async () => {
+  const f = await newDealDialog(undefined, "VND");
+  await f.user.type(f.amount, "1");
+  await f.user.type(f.amount, ".5");
+  await f.user.click(
+    screen.getByRole("button", { name: "Qualify and open deal" }),
+  );
+  expect(
+    screen.getByText("This amount has more decimals than VND allows."),
+  ).toBeVisible();
+
+  await f.user.click(
+    screen.getByRole("radio", { name: "Qualify without a deal" }),
+  );
+  await f.user.click(screen.getByRole("radio", { name: "Open a new deal" }));
+  expect(
+    screen.queryByText("This amount has more decimals than VND allows."),
+  ).toBeNull();
+  const confirm = screen.getByRole("button", { name: "Qualify and open deal" });
+  expect(confirm).toBeEnabled();
+  await f.user.click(confirm);
+  await waitFor(() => expect(f.posted).toHaveLength(1));
+  expect(f.posted[0]).toMatchObject({
+    deal: { amount_minor: 1, currency: "VND" },
+  });
+});
+
 it("keeps the last amount it can hold, with its currency, when the typed figure is too large", async () => {
   const f = await newDealDialog();
   await f.user.type(f.amount, "99999999999999999999");
