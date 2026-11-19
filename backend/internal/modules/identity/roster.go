@@ -13,16 +13,14 @@ package identity
 
 import (
 	"context"
-	"errors"
 	"time"
 
 	"github.com/jackc/pgx/v5"
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -227,21 +225,9 @@ func (s *Service) GetUser(ctx context.Context, actor Identity, userID ids.UserID
 	}
 	var u userRow
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		row, scanErr := scanUser(tx.QueryRow(ctx, getUserQuery, true, userID))
-		if errors.Is(scanErr, pgx.ErrNoRows) {
-			return apperrors.ErrNotFound
-		}
-		if scanErr != nil {
-			return scanErr
-		}
-		rows := []userRow{row}
-		grants, err := loadGrantsFor(ctx, tx, rowIDs(rows))
-		if err != nil {
-			return err
-		}
-		withholdActivity(ctx, &actor, rows, grants)
-		u = rows[0]
-		return nil
+		var err error
+		u, err = readMemberTx(ctx, tx, actor, userID)
+		return err
 	})
 	return u, err
 }

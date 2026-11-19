@@ -13402,6 +13402,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Jemand muss die erste Person sein, die in Margince arbeitet. Füge diese Person jetzt hinzu oder später in den Einstellungen unter Personen.",
   "ob.conv.team.invitedLabel": "Bisher eingeladen",
   "ob.conv.team.invitedLine": "{name} ist eingeladen.",
+  "ob.conv.team.inviteUnconfirmed":
+    "Margince konnte die Einladung nicht bestätigen. Vielleicht ist sie trotzdem angekommen, also prüfe Einstellungen → Mitglieder, bevor du diese Adresse erneut einlädst.",
   "ob.conv.team.skip": "Vorerst überspringen",
   "ob.conv.team.finish": "Einrichtung abschließen",
   "ob.conv.team.done":
@@ -15875,6 +15877,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Tu das nur für ein Mitglied, das seine Authenticator-App und seine Wiederherstellungscodes verloren hat. Es wird überall abgemeldet und kann sich danach allein mit seinem Passwort anmelden, bis es die zweistufige Anmeldung wieder einrichtet.",
   "users.mfaRemoved": "Zweistufige Anmeldung für {name} entfernt",
   "users.link.action": "Passwort-Link erstellen",
+  "users.inviteUnconfirmed":
+    "Margince konnte die Einladung nicht bestätigen. Das Mitglied steht vielleicht schon in der Liste, also prüfe sie, bevor du erneut einlädst.",
+  "users.alreadyInvited":
+    "Für diese Adresse wartet schon eine Einladung. Sende sie unter Einstellungen → Mitglieder erneut.",
+  "users.emailTaken":
+    "Ein Mitglied mit dieser Adresse gibt es schon. Wurde es deaktiviert, reaktiviere es in der Liste.",
+  "users.removedEmail":
+    "Diese Adresse gehört einem dauerhaft entfernten Mitglied und bleibt reserviert.",
   "users.resendInvite": "Einladung erneut senden",
   "users.inviteResent": "Einladung erneut an {name} gesendet",
   "users.link.title": "Passwort-Link für {name}",

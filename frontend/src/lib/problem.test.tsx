@@ -16,6 +16,7 @@ import {
   problemMessageOf,
   throwProblem,
   unwrap,
+  writeMayHaveLanded,
 } from "./problem";
 
 const t = (key: Parameters<typeof translate>[1]) => translate("en", key);
@@ -657,5 +658,32 @@ describe("a field refusal read in the reader's language", () => {
         german,
       ),
     ).toBe(german("common.errorNoCause"));
+  });
+});
+
+describe("writeMayHaveLanded", () => {
+  const cut = (unsent: boolean) =>
+    new ConnectivityError(
+      "unreachable",
+      new Request("https://test.local/v1/users", { method: "POST" }),
+      new TypeError("Failed to fetch"),
+      unsent,
+    );
+
+  it("counts a server failure, an empty success and a cut connection as maybe saved", () => {
+    expect(writeMayHaveLanded(new ProblemError({ status: 500 }))).toBe(true);
+    expect(writeMayHaveLanded(new ProblemError({ status: 504 }))).toBe(true);
+    expect(writeMayHaveLanded(new EmptySuccessError(201))).toBe(true);
+    expect(writeMayHaveLanded(cut(false))).toBe(true);
+  });
+
+  it("counts a refusal and a write never sent as not saved", () => {
+    expect(
+      writeMayHaveLanded(
+        new ProblemError({ status: 409, code: "email_taken" }),
+      ),
+    ).toBe(false);
+    expect(writeMayHaveLanded(cut(true))).toBe(false);
+    expect(writeMayHaveLanded(new Error("bug"))).toBe(false);
   });
 });
