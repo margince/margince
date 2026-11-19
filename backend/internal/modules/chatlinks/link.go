@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
 // The link states a reader sees.
@@ -349,8 +350,7 @@ func fallbackName(kind string, id ids.UUID, name string, refusal error) string {
 	suffix := idSuffix(id)
 	var coded *dispact.CodeError
 	if errors.As(refusal, &coded) && coded.Code == dispact.CodeNameTaken {
-		runes := []rune(name)
-		if kept := strings.TrimSpace(string(runes[:min(len(runes), channelNameLimit-len(suffix)-1)])); kept != "" {
+		if kept := strings.TrimSpace(textcut.Runes(name, channelNameLimit-len(suffix)-1)); kept != "" {
 			return kept + " " + suffix
 		}
 	}
@@ -374,8 +374,7 @@ const channelNameLimit = 80
 
 // channelNameOf keeps a record's name within the chat's limit.
 func channelNameOf(name string) string {
-	runes := []rune(strings.TrimSpace(name))
-	return string(runes[:min(len(runes), channelNameLimit)])
+	return textcut.Runes(strings.TrimSpace(name), channelNameLimit)
 }
 
 // ChatFailure turns the chat client's errors into this package's refusals.

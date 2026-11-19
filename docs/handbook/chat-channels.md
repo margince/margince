@@ -66,7 +66,7 @@ Some members may not see deal amounts, and everyone in the channel reads the car
 
 ### What does "Channel paused" mean?
 The channel was archived or deleted in the chat, or the bot lost access to it. Nothing is posted. An
-archive shows here within the hour at the latest.
+archive shows here within the hour.
 Click **Unlink**, then give the record a new channel.
 
 ### How do I stop it?
