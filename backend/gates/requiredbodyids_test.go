@@ -54,6 +54,7 @@ var probedRequiredIDBodies = map[string]bool{
 	"CreateOutcomeReviewRequest":        true,
 	"CreateDealRequest":                 true,
 	"AddDealRoomDocumentRequest":        true,
+	"AddAttachmentLinkRequest":          true,
 	"CreateProjectRequest":              true,
 	"TransferProjectOwnershipRequest":   true,
 	"HandOverUserWorkRequest":           true,

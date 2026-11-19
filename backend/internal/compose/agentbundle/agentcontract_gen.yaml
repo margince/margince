@@ -24176,6 +24176,38 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
+  /attachments/links:
+    post:
+      tags: [Attachments]
+      operationId: addAttachmentLink
+      security: [{bearerAuth: []}]
+      summary: Add a web link to a record's documents.
+      description: |-
+        A document that lives somewhere else, such as a Google Doc or a web page, listed with the
+        record's files. The row keeps the address and holds no bytes: `url` is set,
+        `bytes_withheld` is true, and the download route answers 404 for it. The server does not
+        fetch the address here; `title` is what the caller read or typed.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/AddAttachmentLinkRequest'}
+      responses:
+        '201':
+          description: The listed link.
+          headers:
+            Location: {schema: {type: string}}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Attachment'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /contacts/{id}/network:
     get:
       tags: [Contacts]
@@ -41232,12 +41264,12 @@ components:
           type: boolean
           readOnly: true
           description: >-
-            True for a file a private message carried that was recorded by name, size and type only: no bytes were kept, so there is nothing to download (404) or read. Also true for a `link` row, which is a pointer and has no bytes.
+            True for a file a private message carried that was recorded by name, size and type only: no bytes were kept, so there is nothing to download (404) or read. Also true for any row with a `url`, which is a pointer and has no bytes.
         url:
           type: [string, 'null']
           readOnly: true
           description: >-
-            The address of a `link` row, and null for every other category. It is an http or https address on a known document host. The reader renders it as an outbound link to open in a new tab, never as a download.
+            The address of a document that lives elsewhere: a `link` row a mail carried, or a link a user added. Null for a stored file. It is an http or https address. The reader renders it as an outbound link to open in a new tab, never as a download.
         origin:
           $ref: '#/components/schemas/AttachmentOrigin'
         source: {type: string}
@@ -41261,6 +41293,28 @@ components:
           $ref: '#/components/schemas/EmailParty'
           description: >-
             Who the mail is from, named as the caller may see them: a contact's name only when the caller may see that contact. Absent when capture recorded no sender.
+    AddAttachmentLinkRequest:
+      type: object
+      required: [entity_type, entity_id, url]
+      properties:
+        entity_type: {type: string, enum: [contact, company, deal, activity, lead, project]}
+        entity_id: {type: string, format: uuid}
+        url:
+          type: string
+          maxLength: 2048
+          description: An http or https address, without user info.
+        title:
+          type: [string, 'null']
+          maxLength: 120
+          description: What a reader looks for. Absent or blank lists the link under its host.
+        category:
+          type: string
+          enum: [contract, offer, legal, other]
+          description: What the document is. Absent leaves it uncategorised, as an upload is.
+        contract_id:
+          type: string
+          format: uuid
+          description: The agreement this document is about, as on the upload.
     AttachmentListResponse:
       type: object
       required: [data, page]

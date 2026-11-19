@@ -7463,6 +7463,30 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "docs.add.partialTitle": "Đã tải lên nhưng chưa xếp loại",
   "docs.add.partial":
     "Tệp đã lưu và có trong danh sách bên dưới, nhưng loại và tiêu đề không được lưu, nên tệp được xếp vào mục Khác.",
+  "docs.add.source": "Thêm gì",
+  "docs.add.sourceFile": "Tệp",
+  "docs.add.sourceLink": "Liên kết",
+  "docs.add.url": "Địa chỉ",
+  "docs.add.urlPlaceholder": "https://",
+  "docs.add.urlHint":
+    "Dán liên kết tới một trang hoặc một tệp được chia sẻ, chẳng hạn Google Docs.",
+  "docs.add.linkReading": "Đang đọc trang…",
+  "docs.add.linkTitled": "Tiêu đề lấy từ trang. Bạn có thể sửa.",
+  "docs.add.linkGoogle": "Margince không đọc tệp Google, nên hãy nhập tiêu đề.",
+  "docs.add.linkUnread":
+    "Không đọc được trang. Hãy nhập tiêu đề, hoặc để trống để hiện tên trang web.",
+  "docs.add.linkNameHint": "Không bắt buộc. Mặc định là địa chỉ trang web.",
+  "docs.add.submitLink": "Thêm liên kết",
+  "docs.add.adding": "Đang thêm…",
+  "docs.add.errNoUrl": "Dán một địa chỉ bắt đầu bằng https://.",
+  "docs.add.linkFailedTitle": "Chưa thêm liên kết",
+  "docs.add.linkFailed": "Chưa thêm gì. Hãy kiểm tra địa chỉ rồi thử lại.",
+  "docs.kind.docs": "Docs",
+  "docs.kind.sheets": "Sheets",
+  "docs.kind.slides": "Slides",
+  "docs.kind.forms": "Forms",
+  "docs.kind.drive": "Drive",
+  "docs.kind.web": "Web",
 
   // Bảng đọc tài liệu đã lưu (RD-AC-N-2/-3). Ba trạng thái phải tách bạch cả
   // trong câu chữ: chưa trả lời, đã đọc và không nêu trường nào, và không đọc
