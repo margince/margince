@@ -7002,8 +7002,9 @@ export const en = {
   "brief.feed.changedBadge_one": "1 changed",
   "brief.feed.changedBadge_other": "{count} changed",
   "brief.feed.loading": "Loading Morning brief…",
-  "brief.feed.clear":
-    "No immediate priorities. The full Worklist is available.",
+  "brief.feed.caughtUp": "All caught up",
+  "brief.feed.caughtUpDetail":
+    "Nobody was waiting on you when Margince checked at {time}.",
   "teamweekly.pickTeam": "Choose a team",
 
   "plan.loading": "Loading plan…",

@@ -6850,8 +6850,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.feed.changedBadge_one": "1 đã thay đổi",
   "brief.feed.changedBadge_other": "{count} đã thay đổi",
   "brief.feed.loading": "Đang tải Bản tin sáng…",
-  "brief.feed.clear":
-    "Không có ưu tiên cần xử lý ngay. Có thể xem toàn bộ Danh sách công việc.",
+  "brief.feed.caughtUp": "Bạn đã theo kịp mọi việc",
+  "brief.feed.caughtUpDetail":
+    "Khi Margince kiểm tra lúc {time}, không có ai đang chờ bạn.",
   "teamweekly.pickTeam": "Chọn nhóm",
 
   "plan.loading": "Đang tải kế hoạch…",

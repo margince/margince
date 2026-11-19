@@ -7021,8 +7021,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.feed.changedBadge_one": "1 geändert",
   "brief.feed.changedBadge_other": "{count} geändert",
   "brief.feed.loading": "Morgenbericht wird geladen…",
-  "brief.feed.clear":
-    "Keine unmittelbaren Prioritäten. Die vollständige Worklist ist verfügbar.",
+  "brief.feed.caughtUp": "Alles im Blick",
+  "brief.feed.caughtUpDetail":
+    "Als Margince um {time} nachsah, wartete niemand auf dich.",
   "teamweekly.pickTeam": "Team auswählen",
 
   "plan.loading": "Plan wird geladen…",
