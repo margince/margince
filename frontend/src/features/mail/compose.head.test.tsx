@@ -216,7 +216,7 @@ describe("the recipient lines", () => {
   // read off the 360 the drawer already holds, so it costs no request and
   // cannot disagree with the page behind it.
   it("offers the record's own contacts by name", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     stubRoutes();
     render(drawer());
 
@@ -233,7 +233,7 @@ describe("the recipient lines", () => {
   // Writing to Dana and copying her colleague is the ordinary case: the contacts
   // around the contact are offered by name, and picking one addresses them.
   it("offers the contacts around the contact by name", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes();
     render(drawer());
 
@@ -256,7 +256,7 @@ describe("the recipient lines", () => {
   // has on file is the ordinary case, and a field that refused it would be
   // worse than the plain box it replaced.
   it("still takes an address nobody has on file", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes();
     render(drawer());
 
@@ -275,7 +275,7 @@ describe("the recipient lines", () => {
 
 describe("an address line pasted or typed as a list", () => {
   it("makes one recipient per address, whatever splits them", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes();
     render(drawer());
 
@@ -297,7 +297,7 @@ describe("an address line pasted or typed as a list", () => {
   });
 
   it("takes the address out of an Outlook line, and none twice", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     stubRoutes();
     render(drawer());
 
@@ -316,7 +316,7 @@ describe("an address line pasted or typed as a list", () => {
   });
 
   it("keeps a part that is no address in the box, and names it", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     stubRoutes();
     render(drawer());
 
@@ -340,7 +340,7 @@ describe("an address line pasted or typed as a list", () => {
   });
 
   it("holds Send while a line keeps refused text, and frees it once cleared", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes();
     render(drawer());
 
@@ -364,7 +364,7 @@ describe("an address line pasted or typed as a list", () => {
   });
 
   it("commits Cc on a semicolon, and names a wrong part there too", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     stubRoutes();
     render(drawer());
 
@@ -388,7 +388,7 @@ describe("the copies", () => {
   // field that reaches somebody the recipients cannot see, which is worth an
   // explicit press.
   it("are one link until they are asked for", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     stubRoutes();
     render(drawer());
 
@@ -403,7 +403,7 @@ describe("the copies", () => {
   });
 
   it("travels on the send once the reader fills it", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes();
     render(drawer());
 
@@ -420,7 +420,7 @@ describe("the copies", () => {
 
   // A mail nobody blind-copied sends no key at all, rather than an empty list.
   it("sends no key when nobody was blind-copied", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes();
     render(drawer());
 
@@ -434,7 +434,7 @@ describe("the copies", () => {
 
 describe("what the message carries", () => {
   it("attaches paper already filed on the record", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes();
     render(drawer());
 
@@ -451,7 +451,7 @@ describe("what the message carries", () => {
   });
 
   it("counts the sent file in a recipient's Documents tab", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const docs = contactDocuments(1);
     stubRoutes(
       {
@@ -481,7 +481,7 @@ describe("what the message carries", () => {
   });
 
   it("counts a file uploaded from the drawer in the contact's Documents tab", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const docs = contactDocuments(1);
     stubRoutes(
       {
@@ -520,7 +520,7 @@ describe("what the message carries", () => {
   });
 
   it("takes a file back off before the send", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = stubRoutes();
     render(drawer());
 
@@ -542,7 +542,7 @@ describe("what the message carries", () => {
   // A file already on the message shows as held, and pressing it again takes
   // it off. A message never carries a second copy of one document.
   it("holds a file the message carries once, and a second press takes it off", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     stubRoutes();
     render(drawer());
 
@@ -651,7 +651,7 @@ describe("the project a message files under", () => {
   });
 
   it("sends a project's mail linked to the project", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const sent = fileStubs();
     render(
       <ComposeWindow
@@ -677,7 +677,7 @@ describe("the project a message files under", () => {
   // The account behind the project is where its contacts come from: a project is
   // not a contact and has no roster of its own.
   it("offers the account's contacts on a project", async () => {
-    const user = userEvent.setup();
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     fileStubs();
     render(
       <ComposeWindow
