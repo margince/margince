@@ -241,7 +241,7 @@ func pageKeyedComponents(src string, keyTypes map[string]string) map[string]stri
 		grew = false
 		for _, alias := range aliases {
 			for name, schema := range props {
-				if _, known := props[alias[0]]; !known && regexp.MustCompile(`\b`+name+`\b`).MatchString(alias[1]) {
+				if _, known := props[alias[0]]; !known && pageEmbeds(alias[1], name) {
 					props[alias[0]], grew = schema, true
 				}
 			}
@@ -265,12 +265,31 @@ func pageKeyedComponents(src string, keyTypes map[string]string) map[string]stri
 			out[src[name[0]:name[1]]] = schema
 		}
 		for prop, schema := range props {
-			if regexp.MustCompile(`\b` + prop + `\b`).MatchString(src[open:end]) {
+			if pageEmbeds(src[open:end], prop) {
 				out[src[name[0]:name[1]]] = schema
 			}
 		}
 	}
 	return out
+}
+
+// pageEmbeds reports whether a type body keeps the `field` of the props named.
+// An indexed access does not, nor does a Pick or Omit whose keys leave it out.
+func pageEmbeds(body, props string) bool {
+	for _, at := range regexp.MustCompile(`\b`+props+`\b`).FindAllStringIndex(body, -1) {
+		rest := strings.TrimLeft(body[at[1]:], " \t\n")
+		if strings.HasPrefix(rest, "[") && !strings.HasPrefix(rest, "[]") {
+			continue
+		}
+		keys := rest[:max(strings.IndexByte(rest, '>'), 0)]
+		named, quoted := strings.Contains(keys, `"field"`), strings.Contains(keys, `"`)
+		head := strings.TrimRight(body[:at[0]], " \t\n<")
+		if strings.HasSuffix(head, "Pick") && quoted && !named || strings.HasSuffix(head, "Omit") && named {
+			continue
+		}
+		return true
+	}
+	return false
 }
 
 // pageDeclaredKey answers the schema of the key type a type body declares
@@ -421,7 +440,7 @@ func pageOutsideCallbacks(arg string) string {
 		from = pageSkipSpace(arg, from)
 		end := -1
 		switch {
-		case from < len(arg) && (arg[from] == '{' || arrow && strings.IndexByte("[(", arg[from]) >= 0):
+		case from < len(arg) && arg[from] == '{':
 			end = pageClosingBracket(arg, from) + 1
 		case arrow:
 			end = pageEndOf(arg, from, ",)]}")
@@ -663,6 +682,27 @@ const icp = useRow({
   describe() {
     return note({ field: "registered_address" });
   },
+  field: "icp",
+});
+`, []string{"icp"}},
+		{"an alias that reads one property of keyed props", `type Plain = { label: RowProps["label"]; field: string };
+export function usePlain(target: Plain) { return target; }
+const shown = usePlain({ label: "Shown", field: "display_only" });
+`, nil},
+		{"a parameter that reads one property of keyed props", `export function useLabel(target: { label: RowProps["label"]; field: string }) { return target; }
+const shown = useLabel({ label: "Shown", field: "display_only" });
+`, nil},
+		{"a Pick that leaves the field out", `type Label = Pick<RowProps, "label">;
+export function useLabel(target: Label & { field: string }) { return target; }
+const shown = useLabel({ label: "Shown", field: "display_only" });
+`, nil},
+		{"an Omit of the field", `type Bare = Omit<RowProps, "field">;
+export function useBare(target: Bare & { field: string }) { return target; }
+const shown = useBare({ label: "Shown", field: "display_only" });
+`, nil},
+		{"an arrow body that opens with a bracket", `export function useRow(target: RowProps) { return target; }
+const icp = useRow({
+  render: () => (ready) && note({ field: "display_only" }),
   field: "icp",
 });
 `, []string{"icp"}},
