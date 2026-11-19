@@ -259,6 +259,20 @@ describe("UnsavedGuard with a save", () => {
     expect(await screen.findByText("Second page")).toBeInTheDocument();
   });
 
+  it("opens on Save, so Enter writes the edit rather than discarding it", async () => {
+    const user = userEvent.setup();
+    const save = vi.fn(async () => true);
+    render(<SaveablePage save={save} />);
+    await user.type(screen.getByRole("textbox", { name: /Name/ }), "Jane");
+    await user.click(screen.getByRole("button", { name: "go second" }));
+
+    await waitFor(() =>
+      expect(screen.getByRole("button", { name: "Save" })).toHaveFocus(),
+    );
+    await user.keyboard("{Enter}");
+    expect(save).toHaveBeenCalledTimes(1);
+  });
+
   it("stays on the page and says so when the save is refused", async () => {
     const user = userEvent.setup();
     render(<SaveablePage save={async () => false} />);

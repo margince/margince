@@ -1,4 +1,4 @@
-import type { KeyboardEvent, MouseEvent, ReactNode } from "react";
+import type { KeyboardEvent, MouseEvent, ReactNode, Ref } from "react";
 import { Children, useId } from "react";
 import { useT } from "../i18n";
 import { isParagraphCommit } from "../lib/fieldcommit";
@@ -32,6 +32,7 @@ export function ConfirmModal({
   intent = "confirm",
   returnFocusTo,
   initialFocusTo,
+  confirmRef,
   unsaved,
   unsavedBody,
   children,
@@ -83,6 +84,8 @@ export function ConfirmModal({
   returnFocusTo?: () => HTMLElement | null;
   /** The writing field can take focus before supporting context controls. */
   initialFocusTo?: () => HTMLElement | null;
+  /** The confirm button, for a caller whose `initialFocusTo` is the confirm. */
+  confirmRef?: Ref<HTMLButtonElement>;
   /** The caller holds a draft, so a close other than the confirm asks first. */
   unsaved?: boolean;
   unsavedBody?: string;
@@ -155,6 +158,7 @@ export function ConfirmModal({
           {confirmMenu ? (
             <span className="actions-split">
               <Button
+                ref={confirmRef}
                 variant={confirmVariant}
                 onClick={confirm}
                 pending={pending}
@@ -167,6 +171,7 @@ export function ConfirmModal({
             </span>
           ) : (
             <Button
+              ref={confirmRef}
               variant={confirmVariant}
               onClick={confirm}
               pending={pending}

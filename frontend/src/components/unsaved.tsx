@@ -1,4 +1,11 @@
-import { type ReactNode, useCallback, useEffect, useId, useState } from "react";
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from "react";
 import { Button } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { useT } from "../i18n";
@@ -186,6 +193,7 @@ function LeaveQuestion({
   const t = useT();
   const [saving, setSaving] = useState(false);
   const [refused, setRefused] = useState(false);
+  const saveButton = useRef<HTMLButtonElement>(null);
   if (savers.length === 0) {
     return (
       <ConfirmModal
@@ -221,6 +229,10 @@ function LeaveQuestion({
       cancelLabel={t("unsaved.stay")}
       pending={saving}
       error={refused ? t("unsaved.saveRefused") : null}
+      // Discard comes first in the row, and Enter on it would lose the work
+      // this question exists to keep.
+      confirmRef={saveButton}
+      initialFocusTo={() => saveButton.current}
       actionsLead={
         <Button variant="ghost" disabled={saving} onClick={answer(onLeave)}>
           {t("saveBar.discard")}
