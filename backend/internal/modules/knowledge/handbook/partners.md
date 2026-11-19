@@ -131,7 +131,7 @@ Also called: pay a partner, partner payout, referral fee.
 
 ### The Commission panel
 
-The **Commission** panel on a partner's page holds a line for each deal. Each line shows the **Deal**, the **Date** it was written, what was **Earned**, the **Rate**, the **Deal value** it was taken from, and a **Status**. Above it sits **Outstanding**: lines that are accrued or approved. Nothing earned yet reads "No commission yet".
+The **Commission** panel on a partner's page holds a line for each deal. Each line shows the **Deal**, what was **Earned**, the **Rate**, the **Deal value** it was taken from, and a **Status**. The date the line was written sits under the deal. Above it sits **Outstanding**: lines that are accrued or approved. Nothing earned yet reads "No commission yet".
 
 | Status | What it means |
 |---|---|
