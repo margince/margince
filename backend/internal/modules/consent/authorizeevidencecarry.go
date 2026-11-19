@@ -24,11 +24,8 @@ package consent
 // gives: it would let a message ride an answer the record no longer supports.
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
-
-	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -52,7 +49,7 @@ type stagedEvidence struct {
 	BasisID        *ids.UUID                  `json:"basis_id,omitempty"`
 	LeadID         *ids.UUID                  `json:"lead_id,omitempty"`
 	AuthoredOffer  bool                       `json:"authored_offer,omitempty"`
-	AnsweredThread string                     `json:"answered_thread,omitempty"`
+	QuotedAnchorID *ids.UUID                  `json:"quoted_anchor_id,omitempty"`
 	// StatedCountry is the country the sender stated for this row's recipient,
 	// "" for one they cleared and absent for none. The row's own address names
 	// the recipient; the column never holds one, so erasure has nothing here.
@@ -74,7 +71,7 @@ func evidenceJSON(e commsauthz.Evidence) ([]byte, error) {
 		BasisID:        nonZeroID(e.BasisID),
 		LeadID:         nonZeroID(e.LeadID),
 		AuthoredOffer:  e.AuthoredOffer,
-		AnsweredThread: e.AnsweredThread,
+		QuotedAnchorID: nonZeroID(e.QuotedAnchorID),
 		StatedCountry:  statedCountryJSON(e.RecipientCountries),
 	})
 	if err != nil {
@@ -111,7 +108,7 @@ func evidenceFrom(raw []byte, address string) commsauthz.Evidence {
 		BasisID:            derefID(in.BasisID),
 		LeadID:             derefID(in.LeadID),
 		AuthoredOffer:      in.AuthoredOffer,
-		AnsweredThread:     in.AnsweredThread,
+		QuotedAnchorID:     derefID(in.QuotedAnchorID),
 		RecipientCountries: statedCountryFrom(in.StatedCountry, address),
 	}
 }
@@ -144,19 +141,4 @@ func derefID(id *ids.UUID) ids.UUID {
 		return ids.UUID{}
 	}
 	return *id
-}
-
-// answeredThread names the conversation a reply answers when the reply files
-// itself under another one, as a reply on a new topic does. The engine reads it
-// off the anchor, never off the request, and transmit asks the thread arm there.
-func answeredThread(ctx context.Context, tx pgx.Tx, req commsauthz.Request) (string, error) {
-	answered := threadKeyOf(ctx, tx, req.AnchorActivityID)
-	if answered == "" {
-		return "", nil
-	}
-	own, err := deliveryThreadKey(ctx, tx, req.DeliveryID)
-	if err != nil || own == answered {
-		return "", err
-	}
-	return answered, nil
 }

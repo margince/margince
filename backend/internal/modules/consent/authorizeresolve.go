@@ -19,7 +19,6 @@ package consent
 // make visible.
 
 import (
-	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -353,9 +352,9 @@ func stagedRequestFor(req commsauthz.TransmitRequest, r connector.Recipient, cla
 		// here, never trusted: a voided invoice or an ended employment refuses
 		// at transmit exactly as it would have at staging.
 		Evidence: staged.evidence,
-		// The conversation staging asked about: the one a reply on a new topic
-		// answers, else the delivery's own. Without it a staged reply parks.
-		ThreadKey: cmp.Or(staged.evidence.AnsweredThread, threadKey),
+		// The conversation, carried from the delivery row. Without it the thread
+		// arm cannot run at transmit and a reply authorized at staging parks.
+		ThreadKey: threadKey,
 		// The records this message is filed under, carried the same way.
 		// Without it the live-deal arm can never fire at transmit, and a
 		// message resolved through a staked deal rather than a thread parks
@@ -380,12 +379,17 @@ func stagedRequestFor(req commsauthz.TransmitRequest, r connector.Recipient, cla
 // silently starved every channel reply of thread evidence at transmit — the
 // exact "stages clean, parks at send" shape closing the purpose-key escape
 // hatch was supposed to fix, just moved one phase later.
+//
+// A reply on a new topic is filed under its own key, and its delivery names the
+// message it answers. That message's current key is the conversation staging
+// asked about, so transmit asks it too, after any merge.
 func deliveryThreadKey(ctx context.Context, tx pgx.Tx, deliveryID ids.UUID) (string, error) {
 	var key *string
 	err := tx.QueryRow(ctx, `
-		SELECT a.thread_key
+		SELECT coalesce(answered.thread_key, a.thread_key)
 		  FROM comms_outbound o
 		  JOIN activity a ON a.id = o.activity_id
+		  LEFT JOIN activity answered ON answered.id = o.answers_activity_id
 		 WHERE o.id = $1 AND `+auth.ActivityExternalEvidenceClause("a"), deliveryID).Scan(&key)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// The delivery (or its activity) is gone, or the activity is held under

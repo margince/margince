@@ -98,6 +98,7 @@ func (s commsStager) StageTx(ctx context.Context, tx pgx.Tx, in activities.Deliv
 		InReplyTo:       in.InReplyTo,
 		References:      in.References,
 		ThreadKey:       in.ThreadKey,
+		AnswersActivity: in.AnswersActivity,
 		ListUnsubscribe: in.ListUnsubscribe,
 	})
 	if err != nil {

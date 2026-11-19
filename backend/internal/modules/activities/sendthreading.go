@@ -13,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/mailsubject"
+	"github.com/margince/margince/backend/internal/shared/kernel/threadverdict"
 )
 
 // threading is the RFC 5322 conversation chain one outbound message
@@ -22,8 +23,9 @@ type threading struct {
 	references []string
 	threadKey  string
 	// splitFrom is the stored key of the conversation a reply on a new topic
-	// leaves, empty when the reply stays in it.
+	// leaves, empty when the reply stays in it. answers is then the anchor.
 	splitFrom string
+	answers   ids.UUID
 }
 
 // anchorThreading derives the chain a reply carries from its anchor, inside the
@@ -38,7 +40,9 @@ type threading struct {
 // A reply on a new topic starts its own conversation, by the rule capture
 // applies to mailbox copies (mailsubject.TopicsDifferSQL). It carries no
 // In-Reply-To and no References. Every provider, mail client and echo then
-// derives its own Message-ID as the key, as this row stores it.
+// derives its own Message-ID as the key, as this row stores it. A conversation
+// a seat has not judged yet does not split: its pending question names the old
+// message, and the reply waits in it with the rest.
 func anchorThreading(ctx context.Context, tx pgx.Tx, id ids.ActivityID, messageID, subject string) (threading, error) {
 	if err := auth.EnsureActivityContentVisible(ctx, tx, id.UUID); err != nil {
 		return threading{}, err
@@ -48,10 +52,11 @@ func anchorThreading(ctx context.Context, tx pgx.Tx, id ids.ActivityID, messageI
 	var kind, parent, stored string
 	var newTopic bool
 	err := tx.QueryRow(ctx,
-		`SELECT kind, coalesce(source_id, ''), coalesce(thread_key, ''), `+mailsubject.TopicsDifferSQL("subject", "$2")+`
-		   FROM activity
+		`SELECT kind, coalesce(source_id, ''), coalesce(thread_key, ''), `+mailsubject.TopicsDifferSQL("a.subject", "$2")+`
+		        AND NOT EXISTS (SELECT 1 FROM capture_thread_verdict v WHERE v.thread_key = a.thread_key AND v.status = $3)
+		   FROM activity a
 		  WHERE id = $1 AND restricted_at IS NULL AND archived_at IS NULL`,
-		id, subject).Scan(&kind, &parent, &stored, &newTopic)
+		id, subject, threadverdict.Pending).Scan(&kind, &parent, &stored, &newTopic)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return threading{}, apperrors.ErrNotFound
 	}
@@ -62,7 +67,7 @@ func anchorThreading(ctx context.Context, tx pgx.Tx, id ids.ActivityID, messageI
 	// note names no message, so a reply to one starts a conversation.
 	parent, root := messageIdentity(kind, parent), messageIdentity(kind, stored)
 	if root != "" && newTopic {
-		return threading{threadKey: messageID, splitFrom: stored}, nil
+		return threading{threadKey: messageID, splitFrom: stored, answers: id.UUID}, nil
 	}
 
 	chain := threading{inReplyTo: parent, threadKey: root}

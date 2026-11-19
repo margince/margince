@@ -2975,6 +2975,7 @@ END;
 
 public.comms_outbound acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.comms_outbound.activity_id uuid NOT NULL gen=- def=-
+public.comms_outbound.answers_activity_id uuid gen=- def=-
 public.comms_outbound.attachments jsonb NOT NULL gen=- def='[]'::jsonb
 public.comms_outbound.attempts integer NOT NULL gen=- def=0
 public.comms_outbound.bcc jsonb gen=- def=-
@@ -2986,6 +2987,7 @@ public.comms_outbound.bounced_at timestamp with time zone gen=- def=-
 public.comms_outbound.cc jsonb gen=- def='[]'::jsonb
 public.comms_outbound.channel_user_id text gen=- def=-
 public.comms_outbound.comms_outbound_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
+public.comms_outbound.comms_outbound_answers_activity_id_fkey FOREIGN KEY (answers_activity_id) REFERENCES activity(id) ON DELETE SET NULL
 public.comms_outbound.comms_outbound_attachments_shape CHECK (comms_outbound_attachments_well_formed(attachments))
 public.comms_outbound.comms_outbound_bounce_is_stated CHECK ((((bounced_at IS NULL) = (bounce_kind IS NULL)) AND ((bounce_reason IS NULL) OR (bounced_at IS NOT NULL))))
 public.comms_outbound.comms_outbound_bounce_kind_named CHECK (((bounce_kind IS NULL) OR (bounce_kind = ANY (ARRAY['hard'::text, 'soft'::text]))))
@@ -3052,6 +3054,7 @@ public.comms_outbound_addressed(recipients jsonb, cc jsonb) secdef=false cfg=- a
       FROM jsonb_array_elements_text(
           CASE WHEN jsonb_typeof(recipients || cc) = 'array' THEN recipients || cc END) address
 
+public.comms_outbound_answers_ix CREATE INDEX comms_outbound_answers_ix ON public.comms_outbound USING btree (answers_activity_id) WHERE (answers_activity_id IS NOT NULL)
 public.comms_outbound_attachments_well_formed(files jsonb) secdef=false cfg=- acl=- 
   SELECT jsonb_typeof(files) = 'array'
      AND NOT EXISTS (

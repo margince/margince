@@ -58,6 +58,9 @@ func TestAReplyOnANewTopicStartsItsOwnConversation(t *testing.T) {
 			if staged.SplitFromThread != "root@buyer.test" {
 				t.Fatalf("split from %q, want the anchor's conversation, so its verdicts are carried", staged.SplitFromThread)
 			}
+			if staged.AnswersActivity != anchor.UUID {
+				t.Fatalf("the delivery names %v as the message it answers, want the anchor %v", staged.AnswersActivity, anchor)
+			}
 		})
 	}
 }
@@ -79,7 +82,33 @@ func TestAReplyToANonMailAnchorSplitsNothing(t *testing.T) {
 		e.as(principal.RowScopeAll), FromActivity(anchor), in, stubConsentGate{}, stager); err != nil {
 		t.Fatalf("SendEmail: %v", err)
 	}
-	if staged := stager.only(t); staged.SplitFromThread != "" || staged.ThreadKey != staged.MessageID {
+	staged := stager.only(t)
+	if staged.SplitFromThread != "" || staged.ThreadKey != staged.MessageID {
 		t.Fatalf("split from %q under key %q, want a fresh conversation keyed %q", staged.SplitFromThread, staged.ThreadKey, staged.MessageID)
+	}
+	if staged.AnswersActivity != (ids.UUID{}) {
+		t.Fatalf("the delivery names %v as the message it answers, want none for a calendar entry", staged.AnswersActivity)
+	}
+}
+
+// A conversation a seat has not judged yet keeps a reply on a new topic. The
+// pending question names the old message, so the reply waits with it.
+func TestAReplyStaysInAConversationStillAwaitingItsVerdict(t *testing.T) {
+	e := setupSend(t)
+	anchor := e.seedAnchor(t, "parent@buyer.test", "root@buyer.test")
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO capture_thread_verdict (thread_key, user_id, status) VALUES ('root@buyer.test', $1, 'pending')`, e.rep); err != nil {
+		t.Fatalf("seeding the pending verdict: %v", err)
+	}
+	stager := &recordingStager{}
+	in := sendInput("transactional")
+	in.Subject = "Invoice 4711 overdue"
+
+	if _, err := e.store(stubUnsubscribeLinker{}).SendEmail(
+		e.as(principal.RowScopeAll), FromActivity(anchor), in, stubConsentGate{}, stager); err != nil {
+		t.Fatalf("SendEmail: %v", err)
+	}
+	if staged := stager.only(t); staged.ThreadKey != "root@buyer.test" || staged.SplitFromThread != "" {
+		t.Fatalf("filed under %q, split from %q; want the pending conversation kept", staged.ThreadKey, staged.SplitFromThread)
 	}
 }

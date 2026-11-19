@@ -165,6 +165,7 @@ func (m outboundMessage) delivery(activityID ids.UUID, chain threading, origin S
 		References:      chain.references,
 		ThreadKey:       chain.threadKey,
 		SplitFromThread: chain.splitFrom,
+		AnswersActivity: chain.answers,
 		ListUnsubscribe: m.listUnsubscribe,
 	}
 }

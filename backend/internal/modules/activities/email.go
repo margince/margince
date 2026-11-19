@@ -211,6 +211,9 @@ type DeliveryRequest struct {
 	// SplitFromThread is the conversation a reply on a new topic leaves. The
 	// stager gives ThreadKey each seat's settled verdict on it, as capture does.
 	SplitFromThread string
+	// AnswersActivity is the message that reply answers, zero on any other send.
+	// The delivery keeps it, so the owed reply settles and consent asks there.
+	AnswersActivity ids.UUID
 	// ListUnsubscribe is the RFC 8058 header VALUE (bracketed URL). The
 	// companion List-Unsubscribe-Post value is fixed by the RFC at
 	// "List-Unsubscribe=One-Click", so it is rendered at the wire from this

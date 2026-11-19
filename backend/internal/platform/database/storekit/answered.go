@@ -26,7 +26,8 @@ type answerArm struct {
 // An answer follows its source in event time (occurredday.AnswersSQL); capture order never breaks a tie.
 // Private off-thread evidence cannot clear another reader's work.
 func answerArms(inbound, until string) []answerArm {
-	return append([]answerArm{threadAnswerArm(inbound, answerLater("answer_thread", inbound, until))},
+	later := answerLater("answer_thread", inbound, until)
+	return append([]answerArm{threadAnswerArm(inbound, later), splitAnswerArm(inbound, later)},
 		offThreadAnswerArms(inbound, until)...)
 }
 
@@ -123,15 +124,28 @@ func touchAnswerArm(asker, touch, walk string) answerArm {
 // Same-thread answers retain the waiting lane's established audience semantics.
 // Settlement uses ourOutboundInThisThread's narrower attested-counterparty question instead.
 func threadAnswerArm(inbound, later string) answerArm {
+	return answerArm{at: "answer_thread.occurred_at", id: "answer_thread.id", from: `FROM activity answer_thread
+	  WHERE answer_thread.thread_key = ` + inbound + `.thread_key
+	    AND ` + threadAnswerSQL(inbound, later)}
+}
+
+// splitAnswerArm is our reply on a new topic to a message of the inbound row's
+// conversation. It carries its own key, so only its delivery links it here.
+func splitAnswerArm(inbound, later string) answerArm {
+	return answerArm{at: "answer_thread.occurred_at", id: "answer_thread.id", from: `FROM ` + SplitRepliesSQL("answer_thread", inbound) + `
+	    AND ` + threadAnswerSQL(inbound, later)}
+}
+
+// threadAnswerSQL tests that answer_thread is our delivered reply to the inbound
+// row's sender, in the same medium.
+func threadAnswerSQL(inbound, later string) string {
 	sender := `SELECT ` + inbound + `.counterparty_email
 	     UNION
 	    SELECT lower(btrim(answer_known.email)) FROM activity_participant answer_asker
 	      JOIN contact_email answer_known ON answer_known.contact_id = answer_asker.contact_id
 	       AND answer_known.archived_at IS NULL
 	     WHERE answer_asker.activity_id = ` + inbound + `.id AND answer_asker.role = 'from'`
-	return answerArm{at: "answer_thread.occurred_at", id: "answer_thread.id", from: `FROM activity answer_thread
-	  WHERE answer_thread.thread_key = ` + inbound + `.thread_key
-	    AND answer_thread.kind = ` + inbound + `.kind
+	return `answer_thread.kind = ` + inbound + `.kind
 	    AND answer_thread.kind IN ('email', 'message')
 	    AND answer_thread.channel_provider IS NOT DISTINCT FROM ` + inbound + `.channel_provider
 	    AND answer_thread.direction = 'outbound'
@@ -144,7 +158,7 @@ func threadAnswerArm(inbound, later string) answerArm {
 	      OR EXISTS (SELECT 1 FROM activity_participant answer_told
 	           WHERE answer_told.activity_id = answer_thread.id AND answer_told.role IN ('to', 'cc')
 	             AND lower(btrim(answer_told.address)) IN (` + sender + `)))
-	    AND ` + later}
+	    AND ` + later
 }
 
 // deliveredSQL holds unless our send of the row is still pending, was parked
@@ -160,8 +174,9 @@ func deliveredSQL(row string) string {
 // inbound row's sender happened, or NULL when none did. It is the thread arm of
 // AnsweredSQL at any instant, so a time it names answers the row from then on.
 func ThreadAnsweredAtSQL(inbound string) string {
-	arm := threadAnswerArm(inbound, answerLater("answer_thread", inbound, "'infinity'::timestamptz"))
-	return "(SELECT min(" + arm.at + ") " + arm.from + ")"
+	later := answerLater("answer_thread", inbound, "'infinity'::timestamptz")
+	thread, split := threadAnswerArm(inbound, later), splitAnswerArm(inbound, later)
+	return "least((SELECT min(" + thread.at + ") " + thread.from + "), (SELECT min(" + split.at + ") " + split.from + "))"
 }
 
 // ThreadNewestReplySQL selects the id, occurred_at and occurred_precision of
@@ -169,9 +184,26 @@ func ThreadAnsweredAtSQL(inbound string) string {
 // begun by until. It is the thread arm of AnsweredSQL, read for its newest
 // answer instead of its first.
 func ThreadNewestReplySQL(inbound, until string) string {
-	arm := threadAnswerArm(inbound, answerLater("answer_thread", inbound, until))
-	return "SELECT " + arm.id + " AS id, " + arm.at + " AS occurred_at, answer_thread.occurred_precision " + arm.from +
-		"\n\t  ORDER BY " + arm.at + " DESC, " + arm.id + " DESC LIMIT 1"
+	later := answerLater("answer_thread", inbound, until)
+	arms := make([]string, 0, 2)
+	for _, arm := range []answerArm{threadAnswerArm(inbound, later), splitAnswerArm(inbound, later)} {
+		arms = append(arms, "SELECT "+arm.id+" AS id, "+arm.at+" AS occurred_at, answer_thread.occurred_precision "+arm.from)
+	}
+	return "SELECT newest_reply.* FROM (" + strings.Join(arms, "\n\t UNION ALL ") + ") newest_reply" +
+		"\n\t  ORDER BY newest_reply.occurred_at DESC, newest_reply.id DESC LIMIT 1"
+}
+
+// SplitRepliesSQL joins row to every reply we sent on a new topic that answers
+// a message of anchor's conversation. Such a reply carries a key of its own,
+// and its delivery names the message it answers. The caller adds AND clauses.
+func SplitRepliesSQL(row, anchor string) string {
+	origin, send := "origin_"+row, "split_"+row
+	return `activity ` + origin + `
+	  JOIN comms_outbound ` + send + ` ON ` + send + `.answers_activity_id = ` + origin + `.id
+	  JOIN activity ` + row + ` ON ` + row + `.id = ` + send + `.activity_id
+	 WHERE ` + anchor + `.thread_key <> '' AND ` + origin + `.thread_key = ` + anchor + `.thread_key
+	   AND ` + origin + `.kind = ` + anchor + `.kind
+	   AND ` + origin + `.channel_provider IS NOT DISTINCT FROM ` + anchor + `.channel_provider`
 }
 
 // NormalisedSubjectSQL is a subject with its reply prefixes and outer spaces

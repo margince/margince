@@ -18,32 +18,61 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-// A reply on a new topic is filed under a conversation of its own. The contact
-// wrote only into the one it answers, too long ago for any arm but the thread
-// arm. Transmit must ask that conversation, as staging did.
+// A reply on a new topic is filed under a conversation of its own, and names the
+// message it answers. The contact wrote only into that message's conversation,
+// too long ago for any arm but the thread arm. Transmit asks it, as staging did.
 func TestTransmitAsksTheConversationAReplyOnANewTopicAnswers(t *testing.T) {
 	e := setupResolve(t)
 	anchor := e.inboundFrom(t, "their-question", e.address, longAgo(t))
-	delivery := e.deliveryOnThread(t, "our-new-topic")
+	delivery := e.splitReplyDelivery(t, anchor)
 	e.stageReply(t, delivery, anchor)
 	if allowed, resolved := e.transmitReply(t, delivery); !allowed || resolved != commsauthz.CategoryReplyToInbound {
 		t.Fatalf("transmit = allowed %v as %s, want the reply staging allowed", allowed, resolved)
 	}
 }
 
-// A reply that stays in its conversation carries no answered thread. A merge
-// that renames the conversation before transmit leaves the reply on its ground.
+// A merge that renames the answered conversation before transmit does not strand
+// the reply: transmit reads the answered message's current key.
+func TestASplitReplyFollowsAMergeOfTheConversationItAnswers(t *testing.T) {
+	e := setupResolve(t)
+	anchor := e.inboundFrom(t, "their-question", e.address, longAgo(t))
+	delivery := e.splitReplyDelivery(t, anchor)
+	e.stageReply(t, delivery, anchor)
+	e.renameConversation(t, "their-question", "merged-conversation")
+	if allowed, resolved := e.transmitReply(t, delivery); !allowed || resolved != commsauthz.CategoryReplyToInbound {
+		t.Fatalf("transmit = allowed %v as %s, want the reply on the merged conversation", allowed, resolved)
+	}
+}
+
+// A reply that stays in its conversation follows a merge to transmit too.
 func TestAReplyInItsOwnConversationFollowsAMergeToTransmit(t *testing.T) {
 	e := setupResolve(t)
 	anchor := e.inboundFrom(t, "their-question", e.address, longAgo(t))
 	delivery := e.deliveryOnThread(t, "their-question")
 	e.stageReply(t, delivery, anchor)
-	if _, err := e.owner.Exec(context.Background(),
-		`UPDATE activity SET thread_key = 'merged-conversation' WHERE thread_key = 'their-question'`); err != nil {
-		t.Fatalf("renaming the conversation: %v", err)
-	}
+	e.renameConversation(t, "their-question", "merged-conversation")
 	if allowed, resolved := e.transmitReply(t, delivery); !allowed || resolved != commsauthz.CategoryReplyToInbound {
 		t.Fatalf("transmit = allowed %v as %s, want the reply on the merged conversation", allowed, resolved)
+	}
+}
+
+// splitReplyDelivery is a delivery whose activity sits on its own key and names
+// the anchor it answers, as the send path writes a reply on a new topic.
+func (e *resolveEnv) splitReplyDelivery(t *testing.T, anchor ids.UUID) ids.UUID {
+	t.Helper()
+	delivery := e.deliveryOnThread(t, "our-new-topic")
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE comms_outbound SET answers_activity_id = $2 WHERE id = $1`, delivery, anchor); err != nil {
+		t.Fatalf("naming the answered message: %v", err)
+	}
+	return delivery
+}
+
+func (e *resolveEnv) renameConversation(t *testing.T, from, to string) {
+	t.Helper()
+	if _, err := e.owner.Exec(context.Background(),
+		`UPDATE activity SET thread_key = $2 WHERE thread_key = $1`, from, to); err != nil {
+		t.Fatalf("renaming the conversation: %v", err)
 	}
 }
 
