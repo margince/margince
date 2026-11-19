@@ -10365,6 +10365,8 @@ export const en = {
     "You cannot read tags, so the tags column is not imported.",
   "import.reason.cannot_write_type":
     "“{value}” cannot be written to a {type} field.",
+  "import.reason.company_domain_matched":
+    "The company that already holds the domain {value} takes this row, so no second company is created.",
   "import.reason.company_duplicate_found":
     "A company of this name is already in the CRM. Importing this row creates a second one and files the pair for review.",
   "import.reason.company_duplicate_skipped":

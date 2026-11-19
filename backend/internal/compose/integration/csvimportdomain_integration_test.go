@@ -15,7 +15,6 @@ package integration
 import (
 	"net/http"
 	"slices"
-	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration/importjobtest"
@@ -96,12 +95,10 @@ func TestCSVImportLandsDomainsAndConverges(t *testing.T) {
 	}
 }
 
-// A domain another company already holds refuses the row, and says so.
-//
-// A domain names ONE company across the estate — that is what makes it a real
-// key, and what makes it the thing dedupe should match on. The row is a skip
-// with a reason; the rest of the file lands.
-func TestCSVImportRefusesADomainAnotherCompanyHolds(t *testing.T) {
+// A row on a domain another company already holds is filed onto that company,
+// and the report says so. A domain names one company across the estate, so it
+// is a key, and no second company is created.
+func TestCSVImportFilesARowOntoTheCompanyHoldingItsDomain(t *testing.T) {
 	e := setupImportApp(t)
 	if status := e.Call(t, http.MethodPost, "/v1/companies",
 		map[string]any{"source": "manual", "display_name": "Northwind Traders", "domains": []map[string]any{
@@ -129,8 +126,8 @@ func TestCSVImportRefusesADomainAnotherCompanyHolds(t *testing.T) {
 	if s := e.Call(t, http.MethodGet, "/v1/imports/"+run.ID+"/report", nil, nil, &preview); s != http.StatusOK {
 		t.Fatalf("preview → %d, want 200", s)
 	}
-	if preview.Disposition.Created != 1 || preview.Disposition.Skipped != 1 {
-		t.Fatalf("preview = %+v, want the taken domain predicted as a skip", preview.Disposition)
+	if preview.Disposition.Created != 1 || preview.Disposition.Updated != 1 || preview.Disposition.Skipped != 0 {
+		t.Fatalf("preview = %+v, want the held domain predicted as an update of its holder", preview.Disposition)
 	}
 
 	var approved importjobtest.Run
@@ -142,17 +139,14 @@ func TestCSVImportRefusesADomainAnotherCompanyHolds(t *testing.T) {
 	if s := e.Call(t, http.MethodGet, "/v1/imports/"+run.ID+"/report", nil, nil, &report); s != http.StatusOK {
 		t.Fatalf("report → %d, want 200", s)
 	}
-	if report.Disposition.Created != 1 || report.Disposition.Skipped != 1 {
+	if report.Disposition.Created != 1 || report.Disposition.Updated != 1 || report.Disposition.Skipped != 0 {
 		t.Fatalf("commit = %+v, want the same counts the preview promised", report.Disposition)
 	}
-	var named bool
-	for _, issue := range report.Issues {
-		if strings.Contains(issue.Reason, "already held by another company") {
-			named = true
-		}
+	if !hasReasonCode(report, "company_domain_matched") {
+		t.Fatalf("issues = %+v, want the row reported as filed onto the domain's holder", report.Issues)
 	}
-	if !named {
-		t.Fatalf("issues = %+v, want the skip to say the domain is already held", report.Issues)
+	if companies := len(companyList(t, e).Data); companies != 2 {
+		t.Fatalf("%d companies, want Northwind and Contoso and no twin", companies)
 	}
 }
 

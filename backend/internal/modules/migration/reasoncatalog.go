@@ -23,6 +23,7 @@ const (
 	ReasonEmployerWillCreate         ReasonCode = "employer_will_create"
 	ReasonCompanyNameEmpty           ReasonCode = "company_name_empty"
 	ReasonDomainHeld                 ReasonCode = "domain_held"
+	ReasonCompanyDomainMatched       ReasonCode = "company_domain_matched"
 	ReasonLinkedinHeld               ReasonCode = "linkedin_held"
 	ReasonRecordArchived             ReasonCode = "record_archived"
 	ReasonCannotCreate               ReasonCode = "cannot_create"
@@ -177,6 +178,11 @@ var reasonCatalog = withUndoReasons(withActivityReasons(withDealReasons(map[Reas
 		textlang.English:    "This domain is already held by another company in the CRM, so the row cannot create a second company under it.",
 		textlang.German:     "Diese Domain gehört im CRM bereits einem anderen Unternehmen, daher kann die Zeile kein zweites Unternehmen damit anlegen.",
 		textlang.Vietnamese: "Tên miền này đã thuộc về một công ty khác trong CRM nên hàng không thể tạo công ty thứ hai với nó.",
+	}},
+	ReasonCompanyDomainMatched: {params: []string{paramValue}, text: map[textlang.Lang]string{
+		textlang.English:    "The company that already holds the domain {value} takes this row, so no second company is created.",
+		textlang.German:     "Das Unternehmen, dem die Domain {value} bereits gehört, übernimmt diese Zeile. Es wird kein zweites Unternehmen angelegt.",
+		textlang.Vietnamese: "Công ty đã sở hữu tên miền {value} nhận hàng này, nên không tạo công ty thứ hai.",
 	}},
 	ReasonLinkedinHeld: {params: nil, text: map[textlang.Lang]string{
 		textlang.English:    "This LinkedIn URL is already held by another record in the CRM, so the row cannot claim it.",

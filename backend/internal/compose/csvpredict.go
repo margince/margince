@@ -122,18 +122,25 @@ func (w *csvWriters) predictLanding(ctx context.Context, row migration.Row, type
 	if err != nil {
 		return predictCreate, migration.Reason{}, err
 	}
-	if !found {
-		return w.predictCreatePath(ctx, row, typed)
+	if found {
+		return w.reconcilePrediction(ctx, id, row, typed)
 	}
-	return w.reconcilePrediction(ctx, id, row, typed)
+	holder, matched, err := w.domainHolderOf(ctx, row)
+	if err != nil {
+		return predictCreate, migration.Reason{}, err
+	}
+	if matched {
+		return w.predictDomainHolder(ctx, row, holder, typed)
+	}
+	return w.predictCreatePath(ctx, row, typed)
 }
 
 // predictCreatePath is what the commit will do with a row no previous run of
 // this importer landed.
 //
-// Two kinds of question, in this order and the order matters. First, whether a
-// key the store refuses is already spoken for: a contact's or lead's address, a
-// company's domain, a lead's or company's LinkedIn URL. Each key is estate-wide,
+// Two kinds of question, in this order and the order matters. First comes
+// newRecordRefusal, which the commit asks too. It refuses a row with no name,
+// and a key this run or the estate already holds. Each key is estate-wide,
 // so the store refuses that row whoever holds it, and a preview promising a
 // create would simply be wrong. It runs BEFORE the collision check and is not a
 // disclosure decision — the outcome is identical for an incumbent the caller can
@@ -153,40 +160,8 @@ func (w *csvWriters) predictCreatePath(ctx context.Context, row migration.Row, t
 	case migration.ObjectActivity:
 		return w.predictActivityCreate(ctx, row, typed)
 	}
-	claimed, err := w.contactEmailAlreadyHeld(ctx, row)
-	if err != nil {
-		return predictCreate, migration.Reason{}, err
-	}
-	if claimed {
-		return predictUnwritable, contactEmailClaimedWhy, nil
-	}
-	takenLead, err := w.leadEmailAlreadyHeld(ctx, row)
-	if err != nil {
-		return predictCreate, migration.Reason{}, err
-	}
-	if takenLead {
-		return predictUnwritable, naturalKeyTakenWhy, nil
-	}
-	takenDomain, err := w.companyDomainAlreadyHeld(ctx, row)
-	if err != nil {
-		return predictCreate, migration.Reason{}, err
-	}
-	if takenDomain {
-		return predictUnwritable, domainClaimedWhy, nil
-	}
-	takenLinkedIn, err := w.linkedInAlreadyHeld(ctx, typed)
-	if err != nil {
-		return predictCreate, migration.Reason{}, err
-	}
-	if takenLinkedIn {
-		return predictUnwritable, linkedInClaimedWhy, nil
-	}
-	contactHeld, err := w.leadRowContactHeld(ctx, row, typed)
-	if err != nil {
-		return predictCreate, migration.Reason{}, err
-	}
-	if contactHeld {
-		return predictUnwritable, contactHoldsLeadWhy, nil
+	if why, err := w.newRecordRefusal(ctx, row, typed); err != nil || why.Code != "" {
+		return predictUnwritable, why, err
 	}
 	collides, err := w.collidesWithExisting(ctx, row)
 	if err != nil {

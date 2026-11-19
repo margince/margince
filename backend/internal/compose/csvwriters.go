@@ -226,6 +226,7 @@ func (w *csvWriters) ensureOne(ctx context.Context, object string, row migration
 	landed, err := w.ensureRow(ctx, object, row, link.into(typed))
 	if err == nil && !landed.Skipped {
 		landed.Problem = cmp.Or(link.problem, unknownOwner)
+		w.claimRow(row, typed)
 	}
 	return landed, err
 }
@@ -261,8 +262,22 @@ func (w *csvWriters) ensureRow(ctx context.Context, object string, row migration
 		}
 		return w.reconcile(ctx, id, row, typed)
 	}
+	holder, matched, err := w.domainHolderOf(ctx, row)
+	if err != nil {
+		return migration.EnsureResult{}, err
+	}
+	if matched {
+		return w.landOnDomainHolder(ctx, row, holder, typed)
+	}
 	if expected, reviewed := w.reviewRows[row.ExternalID]; reviewed && expected.TargetID != "" {
 		return migration.EnsureResult{}, apperrors.ErrVersionSkew
+	}
+	why, err := w.newRecordRefusal(ctx, row, typed)
+	if err != nil {
+		return migration.EnsureResult{}, err
+	}
+	if why.Code != "" {
+		return skippedFor(why), nil
 	}
 	// Not a row this importer has landed before — but the estate may hold the
 	// record anyway, and the run says what to do about that. The check runs on
@@ -445,9 +460,6 @@ func (w *csvWriters) apply(
 //nolint:dupl // createContact has the same SHAPE and not the same job: a
 func (w *csvWriters) createCompany(ctx context.Context, row migration.Row, typed map[string]any) (migration.EnsureResult, error) {
 	in := companyCreateFrom(textFields(row.Fields), typed, w.sourceSystem, w.provenanceOf(row.ExternalID))
-	if in.DisplayName == "" {
-		return skippedFor(companyNameEmptyWhy), nil
-	}
 	err := w.land(ctx, row, func(tx pgx.Tx) (ids.UUID, error) {
 		if err := w.authors.resolve(ctx, tx, &in.Author); err != nil {
 			return ids.UUID{}, err
