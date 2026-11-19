@@ -7,7 +7,6 @@ import {
   type KeyboardEvent,
   useEffect,
   useId,
-  useReducer,
   useRef,
   useState,
 } from "react";
@@ -34,6 +33,11 @@ import {
   markdownOf,
   pastedMarkup,
 } from "./richtext-markdown";
+import {
+  headingAtCaret,
+  MARK_COMMANDS,
+  useMarksAtCaret,
+} from "./richtext-marks";
 import "./richtext.css";
 
 // The palette's key too: in the editor it opens the link instead.
@@ -41,42 +45,12 @@ const LINK_KEY = "k";
 
 export { paragraphsFrom, plainTextOf, safeEditorHTML } from "./richtext-html";
 
-const MARKS = [
-  "bold",
-  "italic",
-  "bulletList",
-  "numberList",
-  "heading",
+const TOGGLES = [
+  ["bold", Bold],
+  ["italic", Italic],
+  ["bulletList", List],
+  ["numberList", ListOrdered],
 ] as const;
-type Marks = Readonly<Record<(typeof MARKS)[number], boolean>>;
-const NO_MARKS: Marks = {
-  bold: false,
-  italic: false,
-  bulletList: false,
-  numberList: false,
-  heading: false,
-};
-
-const headingAtCaret = () => document.queryCommandValue("formatBlock") === "h2";
-
-function marksAtCaret(): Marks {
-  // happy-dom and jsdom carry no editing commands; there no mark is ever on.
-  if (typeof document.queryCommandState !== "function") {
-    return NO_MARKS;
-  }
-  return {
-    bold: document.queryCommandState("bold"),
-    italic: document.queryCommandState("italic"),
-    bulletList: document.queryCommandState("insertUnorderedList"),
-    numberList: document.queryCommandState("insertOrderedList"),
-    heading: headingAtCaret(),
-  };
-}
-
-// The same object back when nothing changed, so a caret move renders nothing.
-function sameOrNext(shown: Marks, next: Marks): Marks {
-  return MARKS.every((mark) => shown[mark] === next[mark]) ? shown : next;
-}
 
 /**
  * RichText — the light formatting a business email needs, and nothing more.
@@ -245,18 +219,7 @@ export function RichText({
     href: string;
     range: Range;
   } | null>(null);
-  const [marks, showMarks] = useReducer(sameOrNext, NO_MARKS);
-
-  useEffect(() => {
-    const follow = () => {
-      const node = editor.current;
-      if (node && selectionIn(node)) {
-        showMarks(marksAtCaret());
-      }
-    };
-    document.addEventListener("selectionchange", follow);
-    return () => document.removeEventListener("selectionchange", follow);
-  }, []);
+  const [marks, refreshMarks] = useMarksAtCaret(editor);
 
   useEffect(() => {
     const node = editor.current;
@@ -333,8 +296,7 @@ export function RichText({
     // wrong; what it produces is bounded by the server's allowlist anyway.
     document.execCommand(command, false, argument);
     report();
-    // A command on a bare caret moves no selection, yet arms the next letter.
-    showMarks(marksAtCaret());
+    refreshMarks();
   };
 
   const toggleHeading = () =>
@@ -425,38 +387,17 @@ export function RichText({
             <Heading2 size={14} aria-hidden="true" />
           </RichTextButton>
         )}
-        <RichTextButton
-          onClick={() => apply("bold")}
-          title={labels.bold}
-          pressed={marks.bold}
-          disabled={disabled}
-        >
-          <Bold size={14} aria-hidden="true" />
-        </RichTextButton>
-        <RichTextButton
-          onClick={() => apply("italic")}
-          title={labels.italic}
-          pressed={marks.italic}
-          disabled={disabled}
-        >
-          <Italic size={14} aria-hidden="true" />
-        </RichTextButton>
-        <RichTextButton
-          onClick={() => apply("insertUnorderedList")}
-          title={labels.bulletList}
-          pressed={marks.bulletList}
-          disabled={disabled}
-        >
-          <List size={14} aria-hidden="true" />
-        </RichTextButton>
-        <RichTextButton
-          onClick={() => apply("insertOrderedList")}
-          title={labels.numberList}
-          pressed={marks.numberList}
-          disabled={disabled}
-        >
-          <ListOrdered size={14} aria-hidden="true" />
-        </RichTextButton>
+        {TOGGLES.map(([mark, Glyph]) => (
+          <RichTextButton
+            key={mark}
+            onClick={() => apply(MARK_COMMANDS[mark])}
+            title={labels[mark]}
+            pressed={marks[mark]}
+            disabled={disabled}
+          >
+            <Glyph size={14} aria-hidden="true" />
+          </RichTextButton>
+        ))}
         <RichTextButton
           onClick={openLink}
           title={labels.link}
