@@ -9563,6 +9563,26 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "agent.activity.offerDraft.failed": "Angebotsentwurf fehlgeschlagen",
   "agent.activity.offerDraft.stalled":
     "Der Angebotsentwurf dauert ungewöhnlich lange.",
+  "agent.activity.draftReplyNamed.queued": "Antwortentwurf zu „{name}“ geplant",
+  "agent.activity.draftReplyNamed.running":
+    "Die Antwort auf „{name}“ wird entworfen…",
+  "agent.activity.draftReplyNamed.done": "Antwortentwurf zu „{name}“ bereit",
+  "agent.activity.draftReplyNamed.degraded":
+    "Der Antwortentwurf zu „{name}“ wurde vorzeitig abgebrochen.",
+  "agent.activity.draftReplyNamed.failed":
+    "Antwortentwurf zu „{name}“ fehlgeschlagen",
+  "agent.activity.draftReplyNamed.stalled":
+    "Der Antwortentwurf zu „{name}“ dauert ungewöhnlich lange.",
+  "agent.activity.offerDraftNamed.queued": "Angebotsentwurf für {name} geplant",
+  "agent.activity.offerDraftNamed.running":
+    "Das Angebot für {name} wird entworfen…",
+  "agent.activity.offerDraftNamed.done": "Angebotsentwurf für {name} bereit",
+  "agent.activity.offerDraftNamed.degraded":
+    "Der Angebotsentwurf für {name} wurde vorzeitig abgebrochen.",
+  "agent.activity.offerDraftNamed.failed":
+    "Angebotsentwurf für {name} fehlgeschlagen",
+  "agent.activity.offerDraftNamed.stalled":
+    "Der Angebotsentwurf für {name} dauert ungewöhnlich lange.",
   "agent.rail.region": "Margince-Agent",
   "agent.panel.label": "Agentenbereich",
   "agent.rail.open": "Agentenbereich öffnen",
@@ -9589,6 +9609,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "agent.fact.offline": "offline",
   "agent.fact.sourceOnProvider": "{account} ({provider})",
   "agent.fact.searchIndex": "Suchindex: {model}",
+  "agent.fact.noAnswers": "Keine Antworten von {model}",
   "agent.fact.noCalls": "Noch keine Modellaufrufe",
   "agent.fact.hidden": "Für deine Rolle ausgeblendet",
   "agent.fact.noModel": "Kein Modell konfiguriert",
@@ -16902,6 +16923,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Aufgaben, gruppiert nach der Stufe, die sie ausführt. Wähle den Namen einer Aufgabe, um zu sehen, was sie tut, oder öffne eine Zeile, um Denkstufe und Zeitlimits festzulegen.",
   "aiTasks.whatItDoes": "{task}: was die Aufgabe tut",
   "aiTasks.decisionFirst": "Zuerst Entscheidungsmodell",
+  "aiTasks.mode.interactive": "Im Vordergrund",
+  "aiTasks.mode.background": "Im Hintergrund",
+  "aiTasks.mode.embedding": "Suchindex",
   "aiTasks.viewCalls": "Aufrufe ansehen",
   "aiTasks.deferral.nowEmbedding":
     "Gerade abgelehnt: Die Suchindexierung versucht es nach eigenem Zeitplan erneut.",
@@ -21291,6 +21315,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiProviders.state.active": "Aktiv",
   "aiProviders.state.ready": "Bereit",
   "aiProviders.state.needsKey": "Schlüssel fehlt",
+  "aiProviders.state.needsService": "Dienst fehlt",
   "aiProviders.state.inactive": "Nicht aktiv",
   "aiProviders.colUsedBy": "Verwendet von",
   "aiProviders.colStatus": "Status",
@@ -22132,7 +22157,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiTaskSheet.fixed": "Durch Vertrag festgelegt",
   "aiTaskSheet.tiersTried": "Versuchte Stufen",
   "aiTaskSheet.runs": "Ausführung",
-  "aiTaskSheet.fixed.help": "Ändere diese Werte in ai-tasks.yaml.",
+  "aiTaskSheet.fixed.help":
+    "Diese Werte ändert ein Entwickler in der Definition der Aufgabe; sie gelten ab dem nächsten Release.",
   "aiTaskSheet.addTask": "KI-Aufgabe hinzufügen oder ändern ↗",
   "aiTaskSheet.conflict":
     "Jemand hat diese Einstellungen während deiner Bearbeitung gespeichert",
@@ -22164,7 +22190,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiOutcome.role.decision": "Entscheidungsmodell",
   "aiOutcome.role.tier": "Modell der Stufe",
   "aiOutcome.role.fallback": "Fallback-Modell",
-  "aiOutcome.answered": "{answered} von {attempts} beantwortet",
+  "aiOutcome.answered_one": "{answered} beantwortet in {attempts} Versuch",
+  "aiOutcome.answered_other": "{answered} beantwortet in {attempts} Versuchen",
+  "aiOutcome.triesNote":
+    "Ein fehlgeschlagener oder abgelaufener Versuch kann auf derselben Stufe wiederholt werden. Deshalb zählt eine Stufe mehr Versuche als Aufrufe.",
   "aiOutcome.usually": "meist in {latency}",
   "aiOutcome.notNeeded": "In diesem Zeitraum nicht gebraucht",
   "aiOutcome.gaveUp.on_one": "{count} {reason} → weitergegeben",
