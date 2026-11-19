@@ -139,11 +139,13 @@ func (m mailbox) calendarChange(t *testing.T, message ids.UUID, reader ids.UUID)
 func TestAMeetingUpdateSaysWhatChangedSinceTheInvitation(t *testing.T) {
 	o := setupMailbox(t)
 	now := clocktest.Now(t)
+	// Next year's December keeps the meeting ahead of today and inside Berlin's winter offset.
+	year := now.Year() + 1
 	uid := "040000008200E00074C5B7101A82E008" + ids.NewV7().String()
 	guests := []string{o.seat}
-	invite := meetingSend{method: "REQUEST", start: "20261202T100000", location: "Teams", guests: guests, sentAt: now.Add(-3 * time.Hour)}
+	invite := meetingSend{method: "REQUEST", start: strconv.Itoa(year) + "1202T100000", location: "Teams", guests: guests, sentAt: now.Add(-3 * time.Hour)}
 	update := meetingSend{
-		method: "REQUEST", start: "20261203T150000", location: "Office Berlin", sequence: 1,
+		method: "REQUEST", start: strconv.Itoa(year) + "1203T150000", location: "Office Berlin", sequence: 1,
 		guests: append([]string{"ben@customer.example"}, guests...), sentAt: now.Add(-2 * time.Hour),
 	}
 	cancel := update
@@ -164,8 +166,8 @@ func TestAMeetingUpdateSaysWhatChangedSinceTheInvitation(t *testing.T) {
 		t.Errorf("changed = %v, want time and location", got.Changed)
 	}
 	// 10:00 in Berlin's winter is 09:00 UTC; 15:00 the next day is 14:00 UTC.
-	if got.Before == nil || !got.Before.StartsAt.Equal(time.Date(2026, 12, 2, 9, 0, 0, 0, time.UTC)) ||
-		!got.StartsAt.Equal(time.Date(2026, 12, 3, 14, 0, 0, 0, time.UTC)) {
+	if got.Before == nil || !got.Before.StartsAt.Equal(time.Date(year, 12, 2, 9, 0, 0, 0, time.UTC)) ||
+		!got.StartsAt.Equal(time.Date(year, 12, 3, 14, 0, 0, 0, time.UTC)) {
 		t.Errorf("moved from %v to %v, want 09:00 UTC on the 2nd to 14:00 UTC on the 3rd", got.Before, got.StartsAt)
 	}
 	if got.GuestsAdded == nil || (*got.GuestsAdded)[0].Email != "ben@customer.example" {

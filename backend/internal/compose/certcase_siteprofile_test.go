@@ -97,20 +97,9 @@ func siteProfileFixtureJSON(t *testing.T) json.RawMessage {
 	return raw
 }
 
-// siteProfileExpectationJSON encodes the bare field-to-value expectation as the
-// corpus carries it — beside the fixture, never inside it.
-func siteProfileExpectationJSON(t *testing.T, want map[string]string) json.RawMessage {
-	t.Helper()
-	raw, err := json.Marshal(want)
-	if err != nil {
-		t.Fatalf("encoding the expectation: %v", err)
-	}
-	return raw
-}
-
 func runSiteProfileCase(t *testing.T, want map[string]string, reply string) (aitasks.Outcome, aitasks.Trace) {
 	t.Helper()
-	prepared, err := siteProfileCases{}.Prepare(siteProfileFixtureJSON(t), siteProfileExpectationJSON(t, want))
+	prepared, err := siteProfileCases{}.Prepare(siteProfileFixtureJSON(t), corpusFieldExpectation(t, want))
 	if err != nil {
 		t.Fatalf("preparing the case: %v", err)
 	}
@@ -401,7 +390,7 @@ func TestSiteProfileCaseRefusesAnUnreachableExpectation(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := siteProfileCases{}.Prepare(siteProfileFixtureJSON(t), siteProfileExpectationJSON(t, tc.want))
+			_, err := siteProfileCases{}.Prepare(siteProfileFixtureJSON(t), corpusFieldExpectation(t, tc.want))
 			if err == nil {
 				t.Fatalf("a scenario expecting %v prepared", tc.want)
 			}
@@ -417,7 +406,7 @@ func TestSiteProfileCaseRefusesAnUnreachableExpectation(t *testing.T) {
 // with the passage that grounds it. Refusing one at Prepare would delete the
 // cross-language reads this lane exists to admit.
 func TestSiteProfileCaseAdmitsAParaphraseNoPassageContains(t *testing.T) {
-	_, err := siteProfileCases{}.Prepare(siteProfileFixtureJSON(t), siteProfileExpectationJSON(t, map[string]string{
+	_, err := siteProfileCases{}.Prepare(siteProfileFixtureJSON(t), corpusFieldExpectation(t, map[string]string{
 		string(crmcontracts.ColdStartFieldFieldIcp): "Fertigungsbetriebe in der DACH-Region",
 	}))
 	if err != nil {
@@ -444,7 +433,7 @@ func TestSiteProfileCaseRefusesAFixtureThatWouldIssueNoCall(t *testing.T) {
 			if err != nil {
 				t.Fatalf("encoding the fixture: %v", err)
 			}
-			_, err = siteProfileCases{}.Prepare(fixture, siteProfileExpectationJSON(t, siteProfileWantLegalName))
+			_, err = siteProfileCases{}.Prepare(fixture, corpusFieldExpectation(t, siteProfileWantLegalName))
 			if err == nil {
 				t.Fatal("a crawl the profile lane would never send prepared")
 			}
@@ -465,7 +454,7 @@ func TestSiteProfileCaseRefusesAPageKindTheCrawlerNeverAssigns(t *testing.T) {
 	if err != nil {
 		t.Fatalf("encoding the fixture: %v", err)
 	}
-	_, err = siteProfileCases{}.Prepare(fixture, siteProfileExpectationJSON(t, siteProfileWantLegalName))
+	_, err = siteProfileCases{}.Prepare(fixture, corpusFieldExpectation(t, siteProfileWantLegalName))
 	if err == nil {
 		t.Fatal("a page of an invented kind prepared")
 	}

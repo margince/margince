@@ -16,7 +16,9 @@ import (
 	"bytes"
 	"context"
 	"testing"
+	"time"
 
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -120,7 +122,7 @@ func (s *dealSeeder) stageCounted(ctx context.Context, t *testing.T) ids.Approva
 	target := s.deal(t)
 	id, err := s.env.svc.Stage(ctx, StageInput{
 		Kind:           countedKind,
-		ProposedChange: []byte(`{"deal_id":"` + target.String() + `","expected_close_date":"2026-12-01"}`),
+		ProposedChange: []byte(`{"deal_id":"` + target.String() + `","expected_close_date":"` + countedCloseDate(t, 1) + `"}`),
 		DiffHash:       target.String(),
 		TargetType:     tableDeal,
 		TargetID:       target,
@@ -130,6 +132,13 @@ func (s *dealSeeder) stageCounted(ctx context.Context, t *testing.T) ids.Approva
 		t.Fatalf("staging %s: %v", countedKind, err)
 	}
 	return id
+}
+
+// countedCloseDate is a close date months ahead of the fixture clock, so a
+// writer that refuses a past close date takes it on any day.
+func countedCloseDate(t *testing.T, months int) string {
+	t.Helper()
+	return clocktest.Now(t).AddDate(0, months, 0).Format(time.DateOnly)
 }
 
 // policyOf reads one rep's stored row straight from the table, so an assertion
@@ -205,7 +214,7 @@ func TestAnEditedApprovalIsNotACleanOne(t *testing.T) {
 	// The same deal, a different date: an edit may correct the proposal but
 	// never re-aim it, so the deal_id has to survive verbatim.
 	edited := bytes.Replace(staged.ProposedChange,
-		[]byte(`"2026-12-01"`), []byte(`"2027-03-15"`), 1)
+		[]byte(`"`+countedCloseDate(t, 1)+`"`), []byte(`"`+countedCloseDate(t, 4)+`"`), 1)
 	if bytes.Equal(edited, staged.ProposedChange) {
 		t.Fatal("the edit changed nothing, so this proves nothing about editing")
 	}

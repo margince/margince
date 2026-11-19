@@ -18,9 +18,9 @@ package gates
 // time.Now. This gate owns the literal day.
 //
 // The horizon is a constant, not today. Measured against today, a waiver would
-// stop matching the day its date passed, and the stale-waiver check would turn
-// main red on a calendar day: the defect this gate exists to stop. Move the
-// horizon forward by an edit; the waivers it passes then go stale and come out.
+// stop matching once its day passed. The stale-waiver check would then fail
+// main on a day nobody edited anything. Move the horizon forward by an edit;
+// the waivers it passes then go stale and come out.
 //
 // What this does not cover, so its silence is not read as a wider claim:
 //   - A unit test. Its writer takes an injected clock, and a fixed day there is
@@ -236,8 +236,8 @@ func daysInString(text string) []time.Time {
 }
 
 // timeDateLiteral reads time.Date(year, month, day, ...) with a literal year.
-// A month or day it cannot read is taken as the year's or month's last, so an
-// unreadable part can only make the day later, never hide it.
+// A month or day it cannot read is taken as the last one. An unreadable part
+// then makes the day later and never hides it.
 func timeDateLiteral(call *ast.CallExpr, names map[string]bool) (time.Time, bool) {
 	selector, ok := call.Fun.(*ast.SelectorExpr)
 	if !ok || selector.Sel.Name != "Date" || len(call.Args) < 3 {

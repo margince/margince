@@ -23,10 +23,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-// falseCancelClock is the repair's today: every fixture meeting starts in
-// January 2030, and one 40 days before is outside its window.
-func falseCancelTask() datatask.Task {
-	return falseMeetingCancelsDataTask(func() time.Time { return time.Date(2030, 1, 1, 0, 0, 0, 0, time.UTC) })
+// falseCancelTask runs the repair on the day before the fixture week, so a
+// meeting 40 days before the first start is outside its window.
+func falseCancelTask(first time.Time) datatask.Task {
+	today := first.Truncate(24*time.Hour).AddDate(0, 0, -6)
+	return falseMeetingCancelsDataTask(func() time.Time { return today })
 }
 
 func runFalseCancelTask(t *testing.T, e *integration.Env, task datatask.Task) {
@@ -78,7 +79,7 @@ func TestTheRepairReopensOnlyAMeetingAGuestsCalendarCancelled(t *testing.T) {
 				}
 			}
 
-			runFalseCancelTask(t, e, falseCancelTask())
+			runFalseCancelTask(t, e, falseCancelTask(o.first))
 
 			if status, set := readMeetingStatus(t, e, reopened); set {
 				t.Errorf("the meeting a guest's calendar cancelled reads %s, want its unanswered status back", status)
@@ -131,7 +132,7 @@ func TestTheRepairKeepsACancellationAGuestsCalendarSawWithoutDeclining(t *testin
 	o.sync(t, e.Rep2, mailboxCopy{id: "evt-4", uid: "shown@calendar.test", organizer: organizer, guests: guests, day: 1})
 	o.cancelAs(t, e.Rep2, mailboxCopy{id: "evt-4", uid: "shown@calendar.test", organizer: organizer, guests: guests, day: 1})
 
-	runFalseCancelTask(t, e, falseCancelTask())
+	runFalseCancelTask(t, e, falseCancelTask(o.first))
 
 	for _, id := range []ids.UUID{accepted, cancelledFirst} {
 		if got := meetingStatusOf(t, e, id); got != "canceled" {
@@ -154,7 +155,7 @@ func TestTheRepairKeepsACancellationSomethingLaterFollowed(t *testing.T) {
 		guest: "declined", "buyer@customer.test": "accepted", "second@customer.test": "accepted",
 	}})
 
-	runFalseCancelTask(t, e, falseCancelTask())
+	runFalseCancelTask(t, e, falseCancelTask(o.first))
 
 	if got := meetingStatusOf(t, e, meeting); got != "canceled" {
 		t.Fatalf("a cancellation the organizer's calendar synced after reads %q, want canceled", got)
@@ -171,11 +172,11 @@ func TestTheReopenWritesNothingWhenTheMeetingMovedAfterItWasRead(t *testing.T) {
 	meeting := o.sync(t, e.Rep1, mailboxCopy{id: "evt-1", organizer: organizer, guests: map[string]string{guest: "accepted", "buyer@customer.test": "accepted"}})
 	o.sync(t, e.Rep2, mailboxCopy{id: "evt-2", organizer: organizer, guests: declined})
 	o.cancelAs(t, e.Rep2, mailboxCopy{id: "evt-2", organizer: organizer, guests: declined})
-	repair := datatask.Acting(e.Admin(), falseCancelTask().ID)
+	repair := datatask.Acting(e.Admin(), falseCancelTask(o.first).ID)
 	var read []activities.CalendarCancellation
 	if err := database.WithWorkspaceTx(repair, e.Pool, func(tx pgx.Tx) error {
 		var err error
-		read, err = activities.CalendarCancellationsAfterTx(repair, tx, time.Date(2029, 1, 1, 0, 0, 0, 0, time.UTC), ids.Nil, 10)
+		read, err = activities.CalendarCancellationsAfterTx(repair, tx, o.first.AddDate(-1, 0, 0), ids.Nil, 10)
 		return err
 	}); err != nil || len(read) != 1 {
 		t.Fatalf("reading the candidate: %v, %d found", err, len(read))
@@ -216,7 +217,7 @@ func TestTheRepairRechecksTheScopeItWalkedPast(t *testing.T) {
 	}
 	o.cancelAs(t, e.Rep2, mailboxCopy{id: "evt-guest-ahead@calendar.test", uid: "ahead@calendar.test", organizer: organizer, guests: declined, day: 1})
 
-	task := falseCancelTask()
+	task := falseCancelTask(o.first)
 	ctx := datatask.Acting(e.Admin(), task.ID)
 	in := datatask.BatchIn{Limit: 1, RunID: ids.NewV7()}
 	for batch := 0; ; batch++ {
@@ -262,7 +263,7 @@ func TestTheRepairKeepsAStatusAHumanSetAfterTheCalendar(t *testing.T) {
 		}
 	}
 
-	runFalseCancelTask(t, e, falseCancelTask())
+	runFalseCancelTask(t, e, falseCancelTask(o.first))
 
 	if got := meetingStatusOf(t, e, meeting); got != "canceled" {
 		t.Fatalf("a cancellation a human recorded reads %q after the repair, want canceled", got)
@@ -271,12 +272,12 @@ func TestTheRepairKeepsAStatusAHumanSetAfterTheCalendar(t *testing.T) {
 
 // closedByTheBackfill is the old stored-original backfill's verdict on a
 // meeting: closed by the shared cancel writer, and marked closed.
-func closedByTheBackfill(t *testing.T, e *integration.Env, meeting ids.UUID, eventID string) {
+func closedByTheBackfill(t *testing.T, e *integration.Env, meeting ids.UUID, eventID string, at time.Time) {
 	t.Helper()
 	ctx := principal.SystemActing(e.Admin(), "system:participant_backfill")
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		key := connector.NaturalKey{SourceSystem: sourceGCal, SourceID: eventID}
-		if _, closed, err := activities.CancelCapturedMeetingTx(ctx, tx, key, time.Date(2030, 1, 7, 10, 0, 0, 0, time.UTC)); err != nil || !closed {
+		if _, closed, err := activities.CancelCapturedMeetingTx(ctx, tx, key, at); err != nil || !closed {
 			return errors.Join(err, errors.New("the backfill's cancel closed nothing"))
 		}
 		return markMeetingRSVPSettled(ctx, tx, ids.From[ids.ActivityKind](meeting), rsvpBackfillClosed)
@@ -291,7 +292,7 @@ func TestTheRepairReopensABackfillClosureOnlyWhereTheOriginalNoLongerCancels(t *
 	owner := o.address[e.Rep1]
 	guests := map[string]string{owner: "accepted", "buyer@customer.test": "accepted"}
 	reopened := o.sync(t, e.Rep1, mailboxCopy{id: "evt-on", uid: "on@calendar.test", organizer: "host@customer.test", guests: guests})
-	closedByTheBackfill(t, e, reopened, "evt-on")
+	closedByTheBackfill(t, e, reopened, "evt-on", o.first)
 
 	// The original the first delivery stored said the organizer called it off.
 	cancelled, err := json.Marshal(map[string]any{
@@ -306,9 +307,9 @@ func TestTheRepairReopensABackfillClosureOnlyWhereTheOriginalNoLongerCancels(t *
 		t.Fatal(err)
 	}
 	kept := o.sync(t, e.Rep1, mailboxCopy{id: "evt-off", uid: "off@calendar.test", organizer: owner, guests: guests, day: 1})
-	closedByTheBackfill(t, e, kept, "evt-off")
+	closedByTheBackfill(t, e, kept, "evt-off", o.first)
 
-	runFalseCancelTask(t, e, falseCancelTask())
+	runFalseCancelTask(t, e, falseCancelTask(o.first))
 
 	if status, set := readMeetingStatus(t, e, reopened); set {
 		t.Errorf("a closure today's rules undo reads %s after the repair", status)
@@ -331,7 +332,7 @@ func TestTheRepairPagesReplaysAndRollsBackWithoutChangingAnythingTwice(t *testin
 		o.cancelAs(t, e.Rep2, mailboxCopy{id: guest, uid: uid, organizer: o.address[e.Rep1], guests: declined, day: i})
 	}
 
-	interrupted := falseCancelTask()
+	interrupted := falseCancelTask(o.first)
 	original := interrupted.Steps[0].Batch
 	interrupted.Steps[0].Batch = func(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datatask.BatchOut, error) {
 		out, err := original(ctx, tx, in)
@@ -347,19 +348,19 @@ func TestTheRepairPagesReplaysAndRollsBackWithoutChangingAnythingTwice(t *testin
 		}
 	}
 
-	if changed := walkFalseCancelTask(t, e, nil); changed != 2 {
+	if changed := walkFalseCancelTask(t, o, nil); changed != 2 {
 		t.Fatalf("a walk one meeting at a time reopened %d meetings, want 2", changed)
 	}
-	if changed := walkFalseCancelTask(t, e, nil); changed != 0 {
+	if changed := walkFalseCancelTask(t, o, nil); changed != 0 {
 		t.Fatalf("a replay from the start reopened %d meetings, want none", changed)
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM activity_meeting_history WHERE activity_id = ANY($1) AND status='booked'`, meetings); n != 2 {
 		t.Fatalf("the meetings hold %d reopen transitions, want one each", n)
 	}
 
-	ctx := datatask.Acting(e.Admin(), falseCancelTask().ID)
+	ctx := datatask.Acting(e.Admin(), falseCancelTask(o.first).ID)
 	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
-		_, err := falseCancelTask().Steps[0].Batch(ctx, tx, datatask.BatchIn{Cursor: []byte(`"not an id"`), Limit: 10})
+		_, err := falseCancelTask(o.first).Steps[0].Batch(ctx, tx, datatask.BatchIn{Cursor: []byte(`"not an id"`), Limit: 10})
 		return err
 	})
 	if err == nil {
@@ -369,9 +370,10 @@ func TestTheRepairPagesReplaysAndRollsBackWithoutChangingAnythingTwice(t *testin
 
 // walkFalseCancelTask runs the step one meeting per batch from cursor and
 // answers how many meetings it reopened.
-func walkFalseCancelTask(t *testing.T, e *integration.Env, cursor json.RawMessage) int {
+func walkFalseCancelTask(t *testing.T, o ownershipEnv, cursor json.RawMessage) int {
 	t.Helper()
-	task := falseCancelTask()
+	e := o.e
+	task := falseCancelTask(o.first)
 	ctx := datatask.Acting(e.Admin(), task.ID)
 	in := datatask.BatchIn{Cursor: cursor, Limit: 1, RunID: ids.NewV7()}
 	changed := 0

@@ -71,9 +71,9 @@ func fieldExtractFixtureJSON(t *testing.T) json.RawMessage {
 	return raw
 }
 
-// fieldExtractExpectation is what the corpus asserts, encoded as the corpus will
-// carry it — beside the fixture, never inside it.
-func fieldExtractExpectation(t *testing.T, want map[string]string) json.RawMessage {
+// corpusFieldExpectation is a field-to-value expectation, encoded as the corpus
+// carries it — beside the fixture, never inside it.
+func corpusFieldExpectation(t *testing.T, want map[string]string) json.RawMessage {
 	t.Helper()
 	raw, err := json.Marshal(want)
 	if err != nil {
@@ -84,7 +84,7 @@ func fieldExtractExpectation(t *testing.T, want map[string]string) json.RawMessa
 
 func runFieldExtractCase(t *testing.T, want map[string]string, reply string) (aitasks.Outcome, aitasks.Trace) {
 	t.Helper()
-	prepared, err := fieldExtractCases{}.Prepare(fieldExtractFixtureJSON(t), fieldExtractExpectation(t, want))
+	prepared, err := fieldExtractCases{}.Prepare(fieldExtractFixtureJSON(t), corpusFieldExpectation(t, want))
 	if err != nil {
 		t.Fatalf("preparing the case: %v", err)
 	}
@@ -212,7 +212,7 @@ func TestFieldExtractCaseComparesValuesTheWayTheGateComparesEvidence(t *testing.
 	if err != nil {
 		t.Fatalf("encoding the fixture: %v", err)
 	}
-	prepared, err := fieldExtractCases{}.Prepare(fixture, fieldExtractExpectation(t, map[string]string{
+	prepared, err := fieldExtractCases{}.Prepare(fixture, corpusFieldExpectation(t, map[string]string{
 		string(crmcontracts.ColdStartFieldFieldValueProposition): "Acme's promise",
 	}))
 	if err != nil {
@@ -319,7 +319,7 @@ func TestFieldExtractCaseRefusesAnUnreachableExpectation(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := fieldExtractCases{}.Prepare(fieldExtractFixtureJSON(t), fieldExtractExpectation(t, tc.want))
+			_, err := fieldExtractCases{}.Prepare(fieldExtractFixtureJSON(t), corpusFieldExpectation(t, tc.want))
 			if err == nil {
 				t.Fatalf("a scenario expecting %v prepared", tc.want)
 			}

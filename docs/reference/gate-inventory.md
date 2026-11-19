@@ -628,6 +628,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `errmatch_test.go` | H2 | Postgres failures are classified by SQLSTATE or constraint name (the storekit.UniqueViolation / CheckViolation helpers), never by message text, which breaks on a locale change, a driver upgrade, or an unrelated error that mentions the same identifier. |
 | `evidencedeletes_test.go` | H2 | No domain code deletes an evidence row. |
 | `extensions_arch_test.go` | H2 | Every extension source directory (enabled or fixture) is held to the extension tier's import contract from the moment it exists; the compiler already walls extensions off from internal/\*\*. |
+| `fixedfuturedates_test.go` | H2 | An integration test spells no calendar day after fixedDateHorizon. |
 | `flagdefault_test.go` | H2 | No string flag takes its default straight from the environment. |
 | `followablecitations_test.go` | H1 | A file this push touched does not send its reader to a document they cannot open. |
 | `forkheadcheckout_test.go` | H2 | Code from a pull request's own branch never runs with a token GitHub has not downgraded. |
