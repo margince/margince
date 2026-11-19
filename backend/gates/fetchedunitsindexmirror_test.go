@@ -18,8 +18,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-var goFetchedUnitsDir = regexp.MustCompile(`fetchedUnitsDir\s*=\s*"([^"]+)"`)
-var goFetchedUnitsIndex = regexp.MustCompile(`fetchedUnitsIndex\s*=\s*fetchedUnitsDir\s*\+\s*"([^"]+)"`)
+var (
+	goFetchedUnitsDir   = regexp.MustCompile(`fetchedUnitsDir\s*=\s*"([^"]+)"`)
+	goFetchedUnitsIndex = regexp.MustCompile(`fetchedUnitsIndex\s*=\s*fetchedUnitsDir\s*\+\s*"([^"]+)"`)
+)
 
 func TestEveryReaderOfTheFetchedUnitsIndexNamesTheComposersPath(t *testing.T) {
 	t.Parallel()
