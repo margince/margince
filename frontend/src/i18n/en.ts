@@ -15769,6 +15769,14 @@ export const en = {
     "Do this only for a member who lost both their authenticator app and their recovery codes. They are signed out everywhere and can then sign in with their password alone, until they set up two-step sign-in again.",
   "users.mfaRemoved": "Two-step sign-in removed for {name}",
   "users.link.action": "Get set-password link",
+  "users.inviteUnconfirmed":
+    "Margince could not confirm the invitation. The member may already be on the list, so check it before you invite again.",
+  "users.alreadyInvited":
+    "This address already has an invitation waiting. Use Resend invitation on the member in the list.",
+  "users.emailTaken":
+    "A member with this address already exists. If they were deactivated, reactivate them from the list.",
+  "users.removedEmail":
+    "This address belongs to a permanently removed member and stays reserved.",
   "users.resendInvite": "Resend invitation",
   "users.inviteResent": "Invitation sent again to {name}",
   "users.link.title": "Set-password link for {name}",

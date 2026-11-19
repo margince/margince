@@ -15447,6 +15447,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chỉ làm việc này cho thành viên đã mất cả ứng dụng xác thực lẫn mã khôi phục. Họ sẽ bị đăng xuất ở mọi nơi và sau đó có thể đăng nhập chỉ bằng mật khẩu, cho đến khi thiết lập lại đăng nhập hai bước.",
   "users.mfaRemoved": "Đã gỡ đăng nhập hai bước của {name}",
   "users.link.action": "Lấy liên kết đặt mật khẩu",
+  "users.inviteUnconfirmed":
+    "Margince không thể xác nhận lời mời. Thành viên có thể đã có trong danh sách, vì vậy hãy kiểm tra trước khi mời lại.",
+  "users.alreadyInvited":
+    "Địa chỉ này đã có một lời mời đang chờ. Hãy dùng Gửi lại lời mời ở thành viên đó trong danh sách.",
+  "users.emailTaken":
+    "Đã có thành viên dùng địa chỉ này. Nếu họ đã bị vô hiệu hóa, hãy kích hoạt lại từ danh sách.",
+  "users.removedEmail":
+    "Địa chỉ này thuộc về một thành viên đã bị xóa vĩnh viễn và vẫn được giữ lại.",
   "users.resendInvite": "Gửi lại lời mời",
   "users.inviteResent": "Đã gửi lại lời mời cho {name}",
   "users.link.title": "Liên kết đặt mật khẩu cho {name}",

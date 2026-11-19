@@ -13,7 +13,7 @@ import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
 import { useHoldsAdminRole } from "../../lib/capability";
 import { nameFromEmail } from "../../lib/namefromemail";
-import { unwrap } from "../../lib/problem";
+import { unwrap, writeMayHaveLanded } from "../../lib/problem";
 import { roleOptions, useAssignableRoles } from "../../lib/roles.queries";
 import { AccessPreviewPanel } from "./users-access";
 import {
@@ -21,6 +21,7 @@ import {
   useEntityChoice,
   useMayAssignEntity,
 } from "./users-entitycell";
+import { useMemberRefresh } from "./users-members";
 import { MemberTeamsField } from "./users-teams";
 import "./users-admin.css";
 
@@ -75,6 +76,10 @@ export function InviteUserForm({
   const [entityId, setEntityId] = useState<string | null>(null);
   const placedIn = entityId ?? fallback?.id ?? null;
   const [error, setError] = useState<Error | null>(null);
+  // A failure that may still have created the member sends the admin to the
+  // list, refreshed, instead of to a retry.
+  const unconfirmed = error !== null && writeMayHaveLanded(error);
+  const refreshMembers = useMemberRefresh();
 
   // The role and the team set ride as the mutation's variable rather than
   // through the closure: react-query re-arms a mutation's options in a passive effect,
@@ -122,7 +127,10 @@ export function InviteUserForm({
       setError(null);
       onInvited({ id: newUserId, name: invitedName });
     },
-    onError: (e: Error) => setError(e),
+    onError: (e: Error) => {
+      setError(e);
+      if (writeMayHaveLanded(e)) void refreshMembers();
+    },
   });
 
   const canInvite =
@@ -228,7 +236,11 @@ export function InviteUserForm({
         {/* ABOVE the submit row, where the sibling dialogs in this family put a
           refusal: under the button it reads as a footnote to the form rather
           than as the answer to the press. */}
-        <ErrorLine error={error} />
+        {unconfirmed ? (
+          <ErrorLine>{t("users.inviteUnconfirmed")}</ErrorLine>
+        ) : (
+          <ErrorLine error={error} />
+        )}
       </form>
       {/* Outside a dialog (the onboarding team step) `.form-actions` aligns
           the row; inside one `.modal .actions` does. */}

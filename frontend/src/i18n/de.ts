@@ -15875,6 +15875,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Tu das nur für ein Mitglied, das seine Authenticator-App und seine Wiederherstellungscodes verloren hat. Es wird überall abgemeldet und kann sich danach allein mit seinem Passwort anmelden, bis es die zweistufige Anmeldung wieder einrichtet.",
   "users.mfaRemoved": "Zweistufige Anmeldung für {name} entfernt",
   "users.link.action": "Passwort-Link erstellen",
+  "users.inviteUnconfirmed":
+    "Margince konnte die Einladung nicht bestätigen. Das Mitglied steht vielleicht schon in der Liste, also prüfe sie, bevor du erneut einlädst.",
+  "users.alreadyInvited":
+    "Für diese Adresse wartet schon eine Einladung. Nutze beim Mitglied in der Liste „Einladung erneut senden“.",
+  "users.emailTaken":
+    "Ein Mitglied mit dieser Adresse gibt es schon. Wurde es deaktiviert, reaktiviere es in der Liste.",
+  "users.removedEmail":
+    "Diese Adresse gehört einem dauerhaft entfernten Mitglied und bleibt reserviert.",
   "users.resendInvite": "Einladung erneut senden",
   "users.inviteResent": "Einladung erneut an {name} gesendet",
   "users.link.title": "Passwort-Link für {name}",

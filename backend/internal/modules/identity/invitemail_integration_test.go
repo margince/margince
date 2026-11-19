@@ -87,14 +87,14 @@ func TestAnAgentSendsNoNewLinkToAnInvitedAdministrator(t *testing.T) {
 		return ids.UserID{UUID: ids.UUID(member.Id)}
 	}
 	admin := invite("boss@acme.test", "admin")
-	_, err := e.svc.ResendInvite(e.agentOf(e.admin), e.admin, admin)
+	_, _, err := e.svc.ResendInvite(e.agentOf(e.admin), e.admin, admin)
 	if detailed, ok := errors.AsType[*httperr.DetailedError](err); !ok || detailed.Code != "agent_member_limit" {
 		t.Errorf("an agent's resend to an invited administrator answered %v", err)
 	}
-	if _, err := e.svc.ResendInvite(e.agentOf(e.admin), e.admin, invite("rep@acme.test", "rep")); err != nil {
+	if _, _, err := e.svc.ResendInvite(e.agentOf(e.admin), e.admin, invite("rep@acme.test", "rep")); err != nil {
 		t.Errorf("an agent's resend to an invited colleague answered %v", err)
 	}
-	if _, err := e.svc.ResendInvite(ctx, e.admin, admin); err != nil {
+	if _, _, err := e.svc.ResendInvite(ctx, e.admin, admin); err != nil {
 		t.Errorf("the administrator's own resend answered %v", err)
 	}
 }
@@ -366,7 +366,7 @@ func TestAnInvitationIsMailedOnlyWhileItsLinkAndMemberStillStand(t *testing.T) {
 	ctx := e.wsCtx(e.admin)
 	mint := func() string {
 		t.Helper()
-		raw, err := e.svc.ResendInvite(ctx, e.admin, id)
+		_, raw, err := e.svc.ResendInvite(ctx, e.admin, id)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -377,7 +377,7 @@ func TestAnInvitationIsMailedOnlyWhileItsLinkAndMemberStillStand(t *testing.T) {
 	send := func(raw string) {
 		t.Helper()
 		req := httptest.NewRequest(http.MethodPost, "/", nil).WithContext(withIdentity(ctx, e.admin))
-		if !h.sendInvite(req, "stale@acme.test", raw, e.admin) {
+		if !h.sendInvite(req, raw, e.admin) {
 			t.Fatal("the send was not handed over on an installation that can mail")
 		}
 		<-done
@@ -437,7 +437,7 @@ func TestAResendQueuedBehindARedemptionMintsNothing(t *testing.T) {
 
 	resent := make(chan error, 1)
 	go func() {
-		_, err := e.svc.ResendInvite(e.wsCtx(e.admin), e.admin, id)
+		_, _, err := e.svc.ResendInvite(e.wsCtx(e.admin), e.admin, id)
 		resent <- err
 	}()
 	waitForABlockedBackend(t, redemption, `locktype = 'transactionid'`)
