@@ -355,14 +355,18 @@ func (w *csvWriters) reconcile(ctx context.Context, id ids.UUID, row migration.R
 	if err != nil {
 		return migration.EnsureResult{}, err
 	}
-	changed, err := changedFields(current, textFields(row.Fields), typed)
+	changed, keptWhy, err := w.landingChanges(ctx, row, current, typed)
 	if err != nil {
 		return migration.EnsureResult{}, err
+	}
+	var kept []migration.SkippedRow
+	if keptWhy.Code != "" {
+		kept = append(kept, migration.SkippedRow{}.Because(keptWhy))
 	}
 	if len(changed) == 0 {
 		// Counted as neither a create nor an update: reporting work that never
 		// happened would inflate both the disposition table and the audit log.
-		return migration.EnsureResult{Unchanged: true}, w.tagExisting(ctx, id, row)
+		return migration.EnsureResult{Unchanged: true, Warnings: kept}, w.tagExisting(ctx, id, row)
 	}
 	if !auth.Allows(ctx, w.object, principal.ActionUpdate) {
 		return skippedFor(cannotEditWhy(w.object)), nil
@@ -399,7 +403,7 @@ func (w *csvWriters) reconcile(ctx context.Context, id ids.UUID, row migration.R
 		return migration.EnsureResult{}, err
 	}
 	w.updated++
-	return migration.EnsureResult{Disclosure: fmt.Sprintf("row %s: %d field(s) rewritten from the file", row.ExternalID, len(changed))}, nil
+	return migration.EnsureResult{Disclosure: fmt.Sprintf("row %s: %d field(s) rewritten from the file", row.ExternalID, len(changed)), Warnings: kept}, nil
 }
 
 // apply writes the changed fields. `current` is the stored record's JSON, which

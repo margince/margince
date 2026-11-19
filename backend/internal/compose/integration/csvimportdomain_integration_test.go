@@ -95,9 +95,9 @@ func TestCSVImportLandsDomainsAndConverges(t *testing.T) {
 	}
 }
 
-// A row on a domain another company already holds is filed onto that company,
-// and the report says so. A domain names one company across the estate, so it
-// is a key, and no second company is created.
+// A row on a domain another company already holds is filed onto that company.
+// The company keeps its own name, and the report says so. No second company
+// is created.
 func TestCSVImportFilesARowOntoTheCompanyHoldingItsDomain(t *testing.T) {
 	e := setupImportApp(t)
 	if status := e.Call(t, http.MethodPost, "/v1/companies",
@@ -126,8 +126,8 @@ func TestCSVImportFilesARowOntoTheCompanyHoldingItsDomain(t *testing.T) {
 	if s := e.Call(t, http.MethodGet, "/v1/imports/"+run.ID+"/report", nil, nil, &preview); s != http.StatusOK {
 		t.Fatalf("preview → %d, want 200", s)
 	}
-	if preview.Disposition.Created != 1 || preview.Disposition.Updated != 1 || preview.Disposition.Skipped != 0 {
-		t.Fatalf("preview = %+v, want the held domain predicted as an update of its holder", preview.Disposition)
+	if preview.Disposition.Created != 1 || preview.Disposition.Unchanged != 1 || preview.Disposition.Skipped != 0 {
+		t.Fatalf("preview = %+v, want the held domain filed onto its holder, which keeps its name", preview.Disposition)
 	}
 
 	var approved importjobtest.Run
@@ -139,14 +139,19 @@ func TestCSVImportFilesARowOntoTheCompanyHoldingItsDomain(t *testing.T) {
 	if s := e.Call(t, http.MethodGet, "/v1/imports/"+run.ID+"/report", nil, nil, &report); s != http.StatusOK {
 		t.Fatalf("report → %d, want 200", s)
 	}
-	if report.Disposition.Created != 1 || report.Disposition.Updated != 1 || report.Disposition.Skipped != 0 {
+	if report.Disposition.Created != 1 || report.Disposition.Unchanged != 1 || report.Disposition.Skipped != 0 {
 		t.Fatalf("commit = %+v, want the same counts the preview promised", report.Disposition)
 	}
-	if !hasReasonCode(report, "company_domain_matched") {
-		t.Fatalf("issues = %+v, want the row reported as filed onto the domain's holder", report.Issues)
+	if !hasReasonCode(report, "stored_values_kept") {
+		t.Fatalf("issues = %+v, want the kept name reported", report.Issues)
 	}
 	if companies := len(companyList(t, e).Data); companies != 2 {
 		t.Fatalf("%d companies, want Northwind and Contoso and no twin", companies)
+	}
+	for _, company := range companyList(t, e).Data {
+		if company.DisplayName == "Northwind Copy" {
+			t.Fatalf("the holder was renamed to the file's name; a domain match keeps the stored name")
+		}
 	}
 }
 

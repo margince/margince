@@ -14933,6 +14933,7 @@ const (
 	ImportReasonCodeSizeBandInvalid              ImportReasonCode = "size_band_invalid"
 	ImportReasonCodeStageUnknown                 ImportReasonCode = "stage_unknown"
 	ImportReasonCodeStageUnnamed                 ImportReasonCode = "stage_unnamed"
+	ImportReasonCodeStoredValuesKept             ImportReasonCode = "stored_values_kept"
 	ImportReasonCodeTagCreated                   ImportReasonCode = "tag_created"
 	ImportReasonCodeTagNameInvalid               ImportReasonCode = "tag_name_invalid"
 	ImportReasonCodeTagNew                       ImportReasonCode = "tag_new"
@@ -15172,6 +15173,8 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeStageUnknown:
 		return true
 	case ImportReasonCodeStageUnnamed:
+		return true
+	case ImportReasonCodeStoredValuesKept:
 		return true
 	case ImportReasonCodeTagCreated:
 		return true

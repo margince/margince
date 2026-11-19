@@ -55,7 +55,7 @@ These skip the row:
 - a contact row whose email belongs to a sending system, such as `noreply@`, `notifications@` or `receipts@`;
 - a record type you may not create, or a change to a record you may not edit.
 
-A company row whose domain belongs to one company you may edit lands on that company. Its `ref` then names that company. Contacts that link to the `ref` keep their employer. The row updates that company as a re-import does, and the test run lists it.
+A company row whose domain belongs to one company you may edit lands on that company. Its `ref` then names that company. Contacts that link to the `ref` keep their employer. The row fills only the fields that company has empty. It never renames the company or changes a stored value, also on a later import. The test run lists what it kept.
 
 A contact row with **First name** and **Last name** filled takes its full name from those two. This holds even when the file also has a **Full name** column. A contact you add or edit in Margince keeps the full name you type. A name-only CSV contact is kept, with a warning to add an email, phone or LinkedIn profile link; the import summary counts that warning.
 

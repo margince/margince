@@ -22,35 +22,37 @@ import (
 
 // heldDomainZip stages a companies.csv row on example.test under ref SRC-9,
 // and a contact linking to SRC-9.
-func heldDomainZip(t *testing.T, e *apptest.AppEnv, companyName string) importjobtest.Run {
+func heldDomainZip(t *testing.T, e *apptest.AppEnv, companyName, legalName string) importjobtest.Run {
 	t.Helper()
 	files := map[string]string{
-		"companies.csv": "ref,name,domain\nSRC-9," + companyName + ",https://www.example.test/\n",
+		"companies.csv": "ref,name,legal,domain,about\nSRC-9," + companyName + "," + legalName + ",https://www.example.test/,Fibre and mobile\n",
 		"contacts.csv":  "ref,email,name,company\nP-1,ana@example.test,Ana,SRC-9\n",
 	}
 	parts := append([]AnyMap{{"file": "companies.csv", "object": "company", "mapping": AnyMap{
-		"ref": "ref", "name": "display_name", "domain": "domain",
+		"ref": "ref", "name": "display_name", "legal": "legal_name", "domain": "domain", "about": "description",
 	}}}, contactRefParts()...)
 	return stageBundle(t, e, uploadZip(t, e, "held.zip", zipBytes(t, files)).SourceRef, "held", parts)
 }
 
-// companyFacts reads the fields of one company a domain match must not touch.
-func companyFacts(t *testing.T, e *apptest.AppEnv, id string) (name, legalName string) {
+// companyFacts reads the fields a domain match may fill but never overwrite.
+func companyFacts(t *testing.T, e *apptest.AppEnv, id string) []string {
 	t.Helper()
+	var name, legalName, description string
 	if err := e.Owner.QueryRow(context.Background(),
-		`SELECT display_name, coalesce(legal_name, '') FROM company WHERE id = $1`, id).Scan(&name, &legalName); err != nil {
+		`SELECT display_name, coalesce(legal_name, ''), coalesce(description, '') FROM company WHERE id = $1`,
+		id).Scan(&name, &legalName, &description); err != nil {
 		t.Fatalf("reading the company: %v", err)
 	}
-	return name, legalName
+	return []string{name, legalName, description}
 }
 
-func TestACompanyRowOnAHeldDomainKeepsItsContactsLink(t *testing.T) {
+func TestACompanyRowOnAHeldDomainKeepsItsContactsLinkAndOnlyFillsEmptyFields(t *testing.T) {
+	stored := []string{"Example Telecom", "Example Telecom GmbH", "Fibre and mobile"}
 	for _, tc := range []struct {
-		name, fileName, wantName string
-		wantUpdated              int
+		name, fileName, fileLegal, warning string
 	}{
-		{name: "same name", fileName: "Example Telecom", wantName: "Example Telecom"},
-		{name: "changed name", fileName: "Example Telco Ltd", wantName: "Example Telco Ltd", wantUpdated: 1},
+		{name: "the same name", fileName: "Example Telecom", warning: "company_domain_matched"},
+		{name: "a different name and legal name", fileName: "Example Telco Ltd", fileLegal: "Telco Ltd", warning: "stored_values_kept"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			e := setupImportApp(t)
@@ -59,14 +61,14 @@ func TestACompanyRowOnAHeldDomainKeepsItsContactsLink(t *testing.T) {
 				"domains": []AnyMap{{"domain": "example.test", "is_primary": true}},
 			})
 			before := len(companyList(t, e).Data)
-			run := heldDomainZip(t, e, tc.fileName)
+			run := heldDomainZip(t, e, tc.fileName, tc.fileLegal)
 
 			predicted := readImportReport(t, e, run.ID)
-			if predicted.Disposition.Created != 1 || predicted.Disposition.Updated != tc.wantUpdated || predicted.Disposition.Skipped != 0 {
-				t.Fatalf("test run = %+v, want the contact created and the company row matched", predicted.Disposition)
+			if d := predicted.Disposition; d.Created != 1 || d.Updated != 1 || d.Skipped != 0 {
+				t.Fatalf("test run = %+v, want the contact created and the empty description filled", d)
 			}
-			if !hasReasonCode(predicted, "company_domain_matched") || hasIssue(predicted, "broken_link", "SRC-9") {
-				t.Fatalf("test run issues = %+v, want the match reported and no broken link", predicted.Issues)
+			if !hasReasonCode(predicted, tc.warning) || hasIssue(predicted, "broken_link", "SRC-9") {
+				t.Fatalf("test run issues = %+v, want %s and no broken link", predicted.Issues, tc.warning)
 			}
 			approveAndRead(t, e, run.ID)
 			committed := readImportReport(t, e, run.ID)
@@ -76,20 +78,20 @@ func TestACompanyRowOnAHeldDomainKeepsItsContactsLink(t *testing.T) {
 			if after := len(companyList(t, e).Data); after != before {
 				t.Fatalf("companies went from %d to %d, want no second company", before, after)
 			}
-			if employer := employerOf(t, e, "ana@example.test"); employer != tc.wantName {
+			if employer := employerOf(t, e, "ana@example.test"); employer != "Example Telecom" {
 				t.Fatalf("employer = %q, want the company holding the domain", employer)
 			}
-			if name, legalName := companyFacts(t, e, holder); name != tc.wantName || legalName != "Example Telecom GmbH" {
-				t.Fatalf("company = %q / %q, want the file's name and the legal name it never mentioned", name, legalName)
+			if facts := companyFacts(t, e, holder); !slices.Equal(facts, stored) {
+				t.Fatalf("company = %v, want %v: stored values kept, the empty description filled", facts, stored)
 			}
 
-			again := heldDomainZip(t, e, tc.fileName)
+			again := heldDomainZip(t, e, tc.fileName, tc.fileLegal)
 			approveAndRead(t, e, again.ID)
-			if repeated := readImportReport(t, e, again.ID); repeated.Disposition.Created != 0 || repeated.Disposition.Skipped != 0 {
-				t.Fatalf("repeated import = %+v, want both rows found again", repeated.Disposition)
+			if d := readImportReport(t, e, again.ID).Disposition; d.Created != 0 || d.Updated != 0 || d.Skipped != 0 {
+				t.Fatalf("repeated import = %+v, want both rows found again and nothing written", d)
 			}
-			if after := len(companyList(t, e).Data); after != before {
-				t.Fatalf("companies after a repeated import = %d, want %d", after, before)
+			if facts := companyFacts(t, e, holder); !slices.Equal(facts, stored) {
+				t.Fatalf("company after a repeated import = %v, want %v", facts, stored)
 			}
 		})
 	}
@@ -111,7 +113,7 @@ func TestACompanyRowOnAHiddenHeldDomainStaysRefused(t *testing.T) {
 		`UPDATE company SET visibility = 'owner', owner_id = $2 WHERE id = $1`, hidden, colleague); err != nil {
 		t.Fatalf("making the company private to the colleague: %v", err)
 	}
-	run := heldDomainZip(t, e, "Example Telco Ltd")
+	run := heldDomainZip(t, e, "Example Telco Ltd", "")
 	predicted := readImportReport(t, e, run.ID)
 	if !hasReasonCode(predicted, "domain_held") || hasReasonCode(predicted, "company_domain_matched") {
 		t.Fatalf("test run issues = %+v, want the row refused as domain_held", predicted.Issues)
@@ -153,8 +155,19 @@ func TestACompanyRowOnADomainTheImporterCannotChangeStaysRefused(t *testing.T) {
 		"domains": []AnyMap{{"domain": "example.test", "is_primary": true}},
 	})
 	seat := e.AsSecondSeat(t, email, password)
-	predicted := readImportReport(t, seat, heldDomainZip(t, seat, "Example Telecom").ID)
+	predicted := readImportReport(t, seat, heldDomainZip(t, seat, "Example Telecom", "").ID)
 	if !hasReasonCode(predicted, "domain_held") || hasReasonCode(predicted, "company_domain_matched") {
 		t.Fatalf("test run issues = %+v, want the row refused as domain_held", predicted.Issues)
+	}
+}
+
+// A row naming its company by id still overwrites the stored name. Only a
+// domain match the file did not ask for fills empty fields alone.
+func TestARowNamingItsCompanyByIDStillOverwritesItsName(t *testing.T) {
+	e := setupImportApp(t)
+	named := createdID(t, e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Named Works"})
+	approveAndRead(t, e, namedCompanyZip(t, e, "ref,id,name,domain\nCO-7,"+named+",Renamed Works,\n").ID)
+	if facts := companyFacts(t, e, named); facts[0] != "Renamed Works" {
+		t.Fatalf("company = %v, want the name the file gave the company it named", facts)
 	}
 }

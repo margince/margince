@@ -194,17 +194,17 @@ func (w *csvWriters) reconcilePrediction(
 	if err != nil {
 		return predictCreate, migration.Reason{}, err
 	}
-	changed, err := changedFields(current, textFields(row.Fields), typed)
+	changed, kept, err := w.landingChanges(ctx, row, current, typed)
 	if err != nil {
 		return predictCreate, migration.Reason{}, err
 	}
 	if len(changed) == 0 {
-		return predictUnchanged, migration.Reason{}, nil
+		return predictUnchanged, kept, nil
 	}
 	if !auth.Allows(ctx, w.object, principal.ActionUpdate) {
 		return predictUnwritable, cannotEditWhy(w.object), nil
 	}
-	return predictUpdate, migration.Reason{}, nil
+	return predictUpdate, kept, nil
 }
 
 // collidesWithExisting asks whether the CRM already holds the company this row

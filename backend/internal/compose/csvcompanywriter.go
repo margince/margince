@@ -10,7 +10,10 @@ package compose
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/compose/importkeys"
@@ -140,7 +143,7 @@ func (w *csvWriters) landOnDomainHolder(ctx context.Context, row migration.Row, 
 		return migration.EnsureResult{}, err
 	}
 	landed, err := w.reconcile(ctx, id, row, typed)
-	if err == nil && !landed.Skipped {
+	if err == nil && !landed.Skipped && len(landed.Warnings) == 0 {
 		landed.Warnings = append(landed.Warnings, migration.SkippedRow{ExternalID: row.ExternalID, Line: row.Line}.Because(domainMatchedWhy(row)))
 	}
 	return landed, err
@@ -153,4 +156,35 @@ func (w *csvWriters) predictDomainHolder(ctx context.Context, row migration.Row,
 		return outcome, why, err
 	}
 	return outcome, domainMatchedWhy(row), nil
+}
+
+// landingChanges is the fields a row would change on a record it reaches.
+// The file overwrites only a record this importer created or a row names by
+// id. Any other record keeps every stored value, the row fills only empty
+// fields, and the reason names what was kept.
+func (w *csvWriters) landingChanges(ctx context.Context, row migration.Row, current []byte, typed map[string]any) (map[string]string, migration.Reason, error) {
+	changed, err := changedFields(current, textFields(row.Fields), typed)
+	if err != nil || strings.TrimSpace(textFields(row.Fields)[csvTargetID]) != "" {
+		return changed, migration.Reason{}, err
+	}
+	binding, bound, err := w.bindingOf(ctx, row.ExternalID)
+	if err != nil || (bound && binding.Origin != migration.OriginBound) {
+		return changed, migration.Reason{}, err
+	}
+	var stored map[string]json.RawMessage
+	if err := json.Unmarshal(current, &stored); err != nil {
+		return nil, migration.Reason{}, fmt.Errorf("import: reading the stored record: %w", err)
+	}
+	var kept []string
+	for field := range changed {
+		if textOf(storedValue(stored, field)) != "" {
+			delete(changed, field)
+			kept = append(kept, field)
+		}
+	}
+	if len(kept) == 0 {
+		return changed, migration.Reason{}, nil
+	}
+	slices.Sort(kept)
+	return changed, migration.Why(migration.ReasonStoredValuesKept, "column", strings.Join(kept, ", ")), nil
 }

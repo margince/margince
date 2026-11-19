@@ -10208,6 +10208,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Giá trị “{value}” của cột “{column}” đã được dùng ở dòng {line}. Mỗi hàng cần một giá trị riêng vì nhập lại và hoàn tác nhận ra hàng theo giá trị đó.",
   "import.reason.size_band_invalid":
     "Số nhân viên “{value}” không thuộc: {allowed}.",
+  "import.reason.stored_values_kept":
+    "Hàng này không tạo bản ghi này và không nêu nó theo ID, nên giữ nguyên {column} của nó. Hàng chỉ điền các trường còn trống.",
   "import.reason.tag_created":
     "Không có thẻ nào mang tên này nên quá trình nhập đã tạo thẻ.",
   "import.reason.tag_name_invalid":
