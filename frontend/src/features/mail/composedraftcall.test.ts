@@ -92,4 +92,27 @@ describe("fillFromDraft", () => {
     );
     expect(form.setContext).not.toHaveBeenCalled();
   });
+
+  it("keeps which writer produced the draft in its provenance", () => {
+    const form = formWith("");
+    fillFromDraft(
+      {
+        available: true,
+        draft: {
+          subject: "Hi",
+          body: "A template",
+          to: [],
+          ai_generated: false,
+          generated_by: "deterministic",
+        },
+      },
+      form,
+    );
+    expect(form.setProvenance).toHaveBeenCalledWith(
+      expect.objectContaining({
+        ai_generated: false,
+        generated_by: "deterministic",
+      }),
+    );
+  });
 });

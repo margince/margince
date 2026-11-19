@@ -1325,9 +1325,9 @@ export interface paths {
          *     "Based on" line and the "Why this draft?" chips, and a body that explained itself
          *     would be a body the rep has to edit before sending.
          *
-         *     When no model lane is configured, or the workspace's AI budget is exhausted, the draft
-         *     degrades to a deterministic one rather than failing — `generated_by` says which wrote
-         *     it.
+         *     When no model lane is configured, the workspace's AI budget is exhausted, the model call
+         *     fails, or the draft checks refuse the model's answer, the draft degrades to a
+         *     deterministic one rather than failing — `generated_by` says which wrote it.
          *
          *     Human-only: drafting spends the workspace's model budget on prose for a contact to send
          *     under their own name.
@@ -3287,9 +3287,9 @@ export interface paths {
          *     the "Based on" line and the "Why this draft?" chips, and a body that explained
          *     itself would be a body the rep has to edit before sending.
          *
-         *     When no model lane is configured, or the workspace's AI budget is exhausted, the
-         *     draft degrades to a deterministic one rather than failing — `generated_by` says
-         *     which wrote it.
+         *     When no model lane is configured, the workspace's AI budget is exhausted, the model
+         *     call fails, or the draft checks refuse the model's answer, the draft degrades to a
+         *     deterministic one rather than failing — `generated_by` says which wrote it.
          *
          *     Human-only: drafting spends the workspace's model budget on prose for a contact to
          *     send under their own name.
@@ -9205,9 +9205,9 @@ export interface paths {
          *     A lead with no email address on record is `422`: a draft addressed to nobody is not a
          *     message, and the composer can say so before spending a model call.
          *
-         *     When no model lane is configured, or the workspace's AI budget is exhausted, the draft
-         *     degrades to a deterministic one rather than failing — `generated_by` says which wrote
-         *     it.
+         *     When no model lane is configured, the workspace's AI budget is exhausted, the model call
+         *     fails, or the draft checks refuse the model's answer, the draft degrades to a
+         *     deterministic one rather than failing — `generated_by` says which wrote it.
          *
          *     Human-only: drafting spends the workspace's model budget on prose for a contact to send
          *     under their own name.

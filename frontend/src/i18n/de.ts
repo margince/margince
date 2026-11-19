@@ -7968,6 +7968,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Dieser Entwurf nutzt deinen Schreibstil nicht, da dein Stilprofil nicht geladen werden konnte. Erstelle den Entwurf neu oder bearbeite ihn vor dem Senden.",
   "compose.voiceDegradedTitle":
     "Dieser Entwurf entspricht nicht deinem Schreibstil",
+  "compose.templateDraftTitle": "Die KI konnte diesen Entwurf nicht schreiben",
+  "compose.templateDraft":
+    "Stattdessen wurde eine einfache Vorlage verwendet. Der angegebene Zweck wurde nicht berücksichtigt.",
   "compose.provisional": "Vorläufiger Schreibstil",
   "compose.provisionalHint":
     "Deine Voice DNA wird noch aufgebaut und prägt diesen Entwurf genauso wie eine fertige.",
@@ -8076,6 +8079,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.scheduleDate": "Datum",
   "compose.scheduleTime": "Uhrzeit",
   "compose.scheduleGoesOut": "Versand: {when}",
+  "compose.schedulePast": "Wähle einen Zeitpunkt in der Zukunft.",
+  "compose.scheduleHoursPast":
+    "Vergangene Uhrzeiten können nicht gewählt werden.",
   "compose.willGoOut": "Versand: {when}",
   "compose.scheduleAfternoon": "Morgen Nachmittag",
   "compose.draftLanguage": "Sprache des Entwurfs",

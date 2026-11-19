@@ -18,8 +18,13 @@ import "./compose.css";
 // A fixed clock, so the presets and the calendar month never move with the day
 // the catalog is opened.
 const NOW = new Date("2026-09-14T10:30:00");
+// Late in the afternoon: three of the four hours today have passed.
+const LATE = new Date("2026-09-14T15:30:00");
 
-function Dialog({ sendAt = "" }: Readonly<{ sendAt?: string }>) {
+function Dialog({
+  sendAt = "",
+  now = NOW,
+}: Readonly<{ sendAt?: string; now?: Date }>) {
   const [chosen, setChosen] = useState(sendAt);
   return (
     <StoryProviders>
@@ -28,7 +33,7 @@ function Dialog({ sendAt = "" }: Readonly<{ sendAt?: string }>) {
         onClose={() => {}}
         sendAt={chosen}
         onChoose={setChosen}
-        now={NOW}
+        now={now}
       />
     </StoryProviders>
   );
@@ -58,5 +63,30 @@ export const PickingAnHour: Story = {
       await screen.findByRole("button", { name: "Select date and time" }),
     );
     await screen.findByRole("button", { name: "13:00", pressed: true });
+  },
+};
+
+/**
+ * Late in the day: the days before today and the hours already past are
+ * refused, and the picker opens on the one hour left.
+ */
+export const LateInTheDay: Story = {
+  render: () => <Dialog now={LATE} />,
+  play: async () => {
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Select date and time" }),
+    );
+    await screen.findByRole("button", { name: "17:00", pressed: true });
+  },
+};
+
+/** A saved moment that has since passed: Schedule send is refused, and says why. */
+export const MomentPassed: Story = {
+  render: () => <Dialog now={LATE} sendAt="2026-09-14T09:00" />,
+  play: async () => {
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Select date and time" }),
+    );
+    await screen.findByText("Choose a time in the future.");
   },
 };

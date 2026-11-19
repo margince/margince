@@ -9,7 +9,7 @@ import { LanguageSelect } from "../../design-system/languageselect";
 import { useT } from "../../i18n";
 import { isLocale, LOCALES, type Locale } from "../../i18n/locale";
 import { REWRITE_MAX_CHARACTERS } from "../../lib/rewrites";
-import { DraftBand, RewriteRow } from "./composedraftband";
+import { DraftBand, isTemplateDraft, RewriteRow } from "./composedraftband";
 import { rewriteBlock } from "./composedraftcall";
 import { DraftOffer } from "./composedraftcontext";
 import type { ComposeFields } from "./composefields";
@@ -78,6 +78,18 @@ export function AiDraftBand({
       )}
     />
   );
+  if (isTemplateDraft(provenance)) {
+    return (
+      <div className="compose-aiband">
+        {offer}
+        <DraftBand
+          provenance={provenance}
+          maturity={voiceMaturity}
+          reasons={account.reasoning}
+        />
+      </div>
+    );
+  }
   if (!drafted || !provenance) {
     return (
       <div className="compose-aiband">

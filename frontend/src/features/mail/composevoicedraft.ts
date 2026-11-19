@@ -156,8 +156,8 @@ export function useVoiceDraft({
     });
   };
 
-  // The last draft that reached the body, so it arrives as a model's words do.
-  // A draft the rep's own words held back never shows.
+  // The last model draft that reached the body, so it arrives as a model's
+  // words do. A held-back draft never shows; a template is no model's words.
   const [drafted, setDrafted] = useState<string | null>(null);
   // The words on screen before the last rewrite verb, and the words it left.
   // Undo brings them back while the rewrite's words still stand.
@@ -196,7 +196,11 @@ export function useVoiceDraft({
         // A pick counts once its words are on screen; a kept body keeps its own.
         if (ask.language) fields.setLanguage(ask.language);
         if (!ask.verb) fields.setDraftedIntent(ask.intent);
-        setDrafted(result.draft.body);
+        setDrafted(
+          result.draft.generated_by === "deterministic"
+            ? null
+            : result.draft.body,
+        );
         setRewritten(
           ask.verb
             ? {

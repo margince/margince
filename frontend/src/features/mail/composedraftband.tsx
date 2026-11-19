@@ -3,6 +3,7 @@ import { type ReactNode, useId } from "react";
 import type { components } from "../../api/schema";
 import { ActionRow } from "../../design-system/actionrow";
 import { Badge, Button } from "../../design-system/atoms";
+import { Callout } from "../../design-system/callout";
 import { Heading } from "../../design-system/heading";
 import { identifierNumber } from "../../format/format";
 import { useT } from "../../i18n";
@@ -11,10 +12,10 @@ import { REWRITES, type RewriteVerb } from "../../lib/rewrites";
 import { useViewerZone } from "../../lib/viewerzone";
 import { openCitation } from "../records/record360";
 import { VoiceDegradedNotice } from "./compose.notices";
+import type { DraftProvenance } from "./composedraftcall";
 import { DraftReasons } from "./composedraftcontext";
 import { OpenEmailDrawer } from "./openemaildrawer";
 
-type EmailDraft = components["schemas"]["EmailDraft"];
 type VoiceProfile = components["schemas"]["VoiceProfile"];
 
 // What the AI band says about a draft nobody typed, and the rewrites offered
@@ -23,11 +24,6 @@ type VoiceProfile = components["schemas"]["VoiceProfile"];
 // The two belong together: the band discloses that a machine wrote the words,
 // and a rewrite asks that machine to write them. A rewrite of the rep's own
 // words fills the body with model words, so the disclosure follows it.
-
-type DraftProvenance = Pick<
-  EmailDraft,
-  "ai_generated" | "ai_disclosure" | "voice_profile_version" | "voice_degraded"
->;
 
 // Keep the server's disclosure verbatim, with a fallback when it is missing.
 // One line at the head of the band, then the rep's verbs on the machine's
@@ -48,8 +44,33 @@ export function DraftBand({
   // One shared email drawer keeps sources from opening competing dialogs.
   const [openEmail, setOpenEmail] = useOpenEmail();
   const zone = useViewerZone();
+  const sources = (
+    <>
+      <DraftReasons
+        reasons={reasons}
+        onOpenRecord={openCitation}
+        onOpenEmail={setOpenEmail}
+      />
+      <OpenEmailDrawer
+        activityId={openEmail}
+        zone={zone}
+        onClose={() => setOpenEmail(null)}
+      />
+    </>
+  );
   if (!provenance.ai_generated) {
-    return null;
+    return isTemplateDraft(provenance) ? (
+      <div className="compose-band-body">
+        <Callout
+          tone="info"
+          kind="outcome"
+          title={t("compose.templateDraftTitle")}
+        >
+          {t("compose.templateDraft")}
+        </Callout>
+        {sources}
+      </div>
+    ) : null;
   }
   return (
     <div className="compose-band-body">
@@ -77,16 +98,7 @@ export function DraftBand({
         </p>
         {actions && <ActionRow>{actions}</ActionRow>}
       </div>
-      <DraftReasons
-        reasons={reasons}
-        onOpenRecord={openCitation}
-        onOpenEmail={setOpenEmail}
-      />
-      <OpenEmailDrawer
-        activityId={openEmail}
-        zone={zone}
-        onClose={() => setOpenEmail(null)}
-      />
+      {sources}
       <VoiceDegradedNotice degraded={provenance.voice_degraded} />
       {provenance.voice_profile_version != null &&
         maturity === "provisional" && (
@@ -96,6 +108,16 @@ export function DraftBand({
           </p>
         )}
     </div>
+  );
+}
+
+/** The server's floor wrote the words: a template that never read the purpose. */
+export function isTemplateDraft(
+  provenance: DraftProvenance | null,
+): provenance is DraftProvenance {
+  return (
+    provenance?.ai_generated === false &&
+    provenance.generated_by === "deterministic"
   );
 }
 

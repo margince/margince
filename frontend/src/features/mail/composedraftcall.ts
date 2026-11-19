@@ -15,6 +15,8 @@ import type { RelinkKind } from "./composerelink";
 import { rewriteAsDraft } from "./composerewrite";
 
 type EmailDraft = components["schemas"]["EmailDraft"];
+type RecordDraft = components["schemas"]["CompanyEmailDraft"];
+type WriterOf = Partial<Pick<RecordDraft, "generated_by">>;
 type DraftReason = components["schemas"]["AccountDraftReason"];
 type Translate = ReturnType<typeof useT>;
 
@@ -27,7 +29,8 @@ export type DraftProvenance = Pick<
   | "voice_profile_version"
   | "voice_degraded"
   | "language"
->;
+> &
+  WriterOf;
 
 // Why a draft is not on offer. "no_model" is the deployment's answer, while
 // "unsupported_origin" means the rep can still draft from the account.
@@ -56,6 +59,7 @@ export type DraftResult =
   | {
       available: true;
       draft: Pick<EmailDraft, "subject" | "body" | "to"> &
+        WriterOf &
         Partial<
           Pick<
             EmailDraft,
@@ -187,6 +191,7 @@ export function fillFromDraft(
       voice_profile_version: drafted.voice_profile_version,
       voice_degraded: drafted.voice_degraded ?? false,
       language: drafted.language,
+      generated_by: drafted.generated_by,
     });
     form.setReasoning(result.reasoning ?? []);
     form.setScope(result.scope);
