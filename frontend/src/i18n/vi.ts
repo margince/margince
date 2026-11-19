@@ -6402,6 +6402,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Bạn có thể ghi nhận hoạt động và thêm việc cần làm. Để thay đổi deal này, người chịu trách nhiệm cần chia sẻ deal với bạn.",
   "deal.closedTakesNoStage":
     "Deal này đã đóng. Mở lại deal để chuyển sang giai đoạn khác.",
+  "deal.pipelineRetired":
+    "Pipeline của deal này đã ngừng dùng nên các giai đoạn chỉ để xem. Khôi phục pipeline trong Cài đặt để chuyển deal.",
+  "deal.stageOtherPipeline":
+    "Giai đoạn đó thuộc pipeline khác. Hãy chọn một giai đoạn của pipeline của deal này.",
   "deal.reopen": "Mở lại",
   "deal.reopenPick": "Chuyển deal này về một giai đoạn đang mở",
   "deal.reopenConfirm": "Mở lại",
@@ -11428,6 +11432,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "translation.given": "{name} ({language})",
   "stage.name": "Tên",
   "stage.semantic": "Loại giai đoạn",
+  "stage.lastClosing":
+    "Pipeline cần một giai đoạn Thắng và một giai đoạn Thua. Hãy thêm một giai đoạn cùng loại trước.",
   "stage.winProb": "Xác suất thắng",
   "stage.semOpen": "Đang mở",
   "stage.semWon": "Thắng",

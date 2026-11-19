@@ -6569,6 +6569,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Du kannst Aktivitäten erfassen und Aufgaben hinzufügen. Um diesen Deal zu ändern, muss die verantwortliche Person ihn mit dir teilen.",
   "deal.closedTakesNoStage":
     "Dieser Deal ist abgeschlossen. Öffne den Deal wieder, um ihn in eine andere Phase zu verschieben.",
+  "deal.pipelineRetired":
+    "Die Pipeline dieses Deals ist stillgelegt, daher sind ihre Phasen schreibgeschützt. Stelle die Pipeline in den Einstellungen wieder her, um den Deal zu verschieben.",
+  "deal.stageOtherPipeline":
+    "Diese Phase gehört zu einer anderen Pipeline. Wähle eine Phase der Pipeline dieses Deals.",
   "deal.reopen": "Wieder öffnen",
   "deal.reopenPick": "Diesen Deal in eine offene Phase zurücksetzen",
   "deal.reopenConfirm": "Wieder öffnen",
@@ -11740,6 +11744,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "translation.given": "{language}: {name}",
   "stage.name": "Name",
   "stage.semantic": "Phasentyp",
+  "stage.lastClosing":
+    "Eine Pipeline braucht eine Phase Gewonnen und eine Phase Verloren. Lege zuerst eine weitere dieses Typs an.",
   "stage.winProb": "Gewinnwahrscheinlichkeit",
   "stage.semOpen": "Offen",
   "stage.semWon": "Gewonnen",

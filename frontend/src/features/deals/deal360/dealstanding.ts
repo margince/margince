@@ -29,6 +29,8 @@ type FieldHistoryEntry = components["schemas"]["FieldHistoryEntry"];
 export type DealLadderControl = Readonly<{
   advancing: boolean;
   advanceRefused: boolean;
+  /** The deal's pipeline is retired, so its stages are shown and not offered. */
+  pipelineRetired?: boolean;
   refusedReasonId?: string;
   onAdvance: (toStage: Stage) => void;
 }>;

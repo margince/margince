@@ -5551,7 +5551,9 @@ export interface paths {
          * @description At most one default pipeline per workspace (409 if a second default). The opening
          *     `stages` keep the ladder's shape: a won or lost stage above an open one is refused
          *     `422` with the code `closing_stage_before_open`, and two stages naming one position
-         *     with `duplicate`.
+         *     with `duplicate`. A ladder without a won or without a lost stage gets the missing one
+         *     appended behind its last stage, named `Won` or `Lost`, so no pipeline is born unable to
+         *     close a deal.
          */
         post: operations["createPipeline"];
         delete?: never;
@@ -5770,7 +5772,9 @@ export interface paths {
          *     `422` with the code `closing_stage_before_open`; reorder the ladder with `reorderStages`
          *     instead. A `semantic` change keeps the ladder in shape itself: won and lost stages move
          *     behind the open ones, published as the same `pipeline.updated` position delta. A change
-         *     to either moves the pipeline's `version`.
+         *     to either moves the pipeline's `version`. Changing the `semantic` of a pipeline's only
+         *     live won (or lost) stage is refused `422` with the code `last_closing_stage` on
+         *     `semantic`: a pipeline keeps a way to win and a way to lose a deal.
          */
         patch: operations["updateStage"];
         trace?: never;
