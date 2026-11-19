@@ -16509,7 +16509,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "signInMethods.title": "Anmeldemethoden",
   "signInMethods.saveFailed": "Änderung nicht gespeichert",
   "signInMethods.sub":
-    "Admins können einen Anbieter deaktivieren, aber keinen hinzufügen. Ein Anbieter erscheint auf der Anmeldeseite, sobald seine App unten eingerichtet ist.",
+    "Admins können einen Anbieter deaktivieren, aber keinen hinzufügen. Ein Anbieter erscheint auf der Anmeldeseite, sobald seine App unter {apps} eingerichtet ist.",
   "signInMethods.password": "E-Mail und Passwort",
   "signInMethods.passwordAlways":
     "Immer verfügbar. Alle Nutzenden können sich so anmelden, daher lassen sich die anderen Methoden gefahrlos deaktivieren.",
@@ -16686,6 +16686,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "signInMethods.offScreen": "Nicht auf der Anmeldeseite",
   "signInMethods.offScreenReason.noApp":
     "Die {vendor}-App ist nicht eingerichtet.",
+  "signInMethods.setUpApp": "{vendor}-App einrichten",
   "signInMethods.offScreenReason.noDirectory":
     "Die Microsoft-App ist nicht auf das Verzeichnis deines Unternehmens beschränkt.",
   "signInMethods.offScreenReason.unusable":

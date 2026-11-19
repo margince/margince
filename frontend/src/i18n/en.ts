@@ -16374,7 +16374,7 @@ export const en = {
   "signInMethods.title": "Sign-in methods",
   "signInMethods.saveFailed": "Change not saved",
   "signInMethods.sub":
-    "An administrator can turn a provider off but cannot add one. A provider shows on the sign-in screen once its app below is set up.",
+    "An administrator can turn a provider off but cannot add one. A provider shows on the sign-in screen once its app is set up under {apps}.",
   "signInMethods.password": "Email and password",
   "signInMethods.passwordAlways":
     "Always available, so nobody is locked out when another method is off.",
@@ -16546,6 +16546,7 @@ export const en = {
   "signInMethods.onScreen": "On the sign-in screen",
   "signInMethods.offScreen": "Not on the sign-in screen",
   "signInMethods.offScreenReason.noApp": "The {vendor} app is not set up.",
+  "signInMethods.setUpApp": "Set up the {vendor} app",
   "signInMethods.offScreenReason.noDirectory":
     "The Microsoft app is not limited to your company directory.",
   "signInMethods.offScreenReason.unusable":

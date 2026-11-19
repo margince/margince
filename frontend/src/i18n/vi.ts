@@ -16063,7 +16063,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "signInMethods.title": "Phương thức đăng nhập",
   "signInMethods.saveFailed": "Không thể lưu thay đổi",
   "signInMethods.sub":
-    "Quản trị viên có thể tắt một nhà cung cấp nhưng không thể thêm mới. Nhà cung cấp hiện trên màn hình đăng nhập khi đã thiết lập ứng dụng tương ứng bên dưới.",
+    "Quản trị viên có thể tắt một nhà cung cấp nhưng không thể thêm mới. Nhà cung cấp hiện trên màn hình đăng nhập khi ứng dụng tương ứng đã được thiết lập trong {apps}.",
   "signInMethods.password": "Email và mật khẩu",
   "signInMethods.passwordAlways":
     "Luôn khả dụng, nên không ai bị khóa ngoài khi một phương thức khác bị tắt.",
@@ -16239,6 +16239,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "signInMethods.offScreen": "Không có trên màn hình đăng nhập",
   "signInMethods.offScreenReason.noApp":
     "Ứng dụng {vendor} chưa được thiết lập.",
+  "signInMethods.setUpApp": "Thiết lập ứng dụng {vendor}",
   "signInMethods.offScreenReason.noDirectory":
     "Ứng dụng Microsoft chưa giới hạn trong thư mục công ty bạn.",
   "signInMethods.offScreenReason.unusable":
