@@ -688,6 +688,23 @@ describe("AuthScreen reset deep link", () => {
     expect(await request?.text()).toContain("raw-reset-token");
   });
 
+  // The link is checked only when the password is submitted: the server's one
+  // token verdict spends nothing before then. So the card says nothing about it.
+  it("claims nothing about the link before the server has checked it", async () => {
+    stubApi({ password: true, password_reset: true }, () => ok(204));
+    vi.stubGlobal("location", {
+      ...window.location,
+      pathname: "/",
+      hash: "#/reset-password?token=unchecked-token",
+      origin: "http://localhost",
+    });
+    render(<AuthScreen onAuthed={vi.fn()} />);
+
+    await screen.findByLabelText("New password");
+    expect(screen.getByText("Enter a new password.")).toBeTruthy();
+    expect(screen.queryByText(/valid/i)).toBeNull();
+  });
+
   it("offers a fresh link on a spent token — one neutral refusal", async () => {
     stubApi({ password: true, password_reset: true }, () =>
       ok(401, { title: "unauthorized", detail: "invalid, used, or expired" }),

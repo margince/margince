@@ -13713,7 +13713,7 @@ export const en = {
   "auth.forgotSentBody":
     "If that address has an account, a reset link has been sent. It expires in 1 hour.",
   "auth.resetTitle": "Choose new password",
-  "auth.resetSub": "The link is valid. Enter a new password.",
+  "auth.resetSub": "Enter a new password.",
   "auth.newPassword": "New password",
   "auth.setNewPassword": "Set new password",
   "auth.resetFailed": "This reset link is invalid, already used or expired.",

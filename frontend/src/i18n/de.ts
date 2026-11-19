@@ -13756,7 +13756,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "auth.forgotSentBody":
     "Wenn es zu dieser Adresse ein Nutzerkonto gibt, wurde ein Link zum Zurücksetzen gesendet. Der Link läuft nach 1 Stunde ab.",
   "auth.resetTitle": "Neues Passwort wählen",
-  "auth.resetSub": "Der Link ist gültig. Gib ein neues Passwort ein.",
+  "auth.resetSub": "Gib ein neues Passwort ein.",
   "auth.newPassword": "Neues Passwort",
   "auth.setNewPassword": "Neues Passwort festlegen",
   // "bereits verwendet", nicht "verbraucht": ein Link wird verwendet, nicht

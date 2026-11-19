@@ -13390,7 +13390,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "auth.forgotSentBody":
     "Nếu địa chỉ đó có tài khoản, liên kết đặt lại đã được gửi. Liên kết sẽ hết hạn sau 1 giờ.",
   "auth.resetTitle": "Chọn mật khẩu mới",
-  "auth.resetSub": "Liên kết còn hiệu lực. Nhập mật khẩu mới.",
+  "auth.resetSub": "Nhập mật khẩu mới.",
   "auth.newPassword": "Mật khẩu mới",
   "auth.setNewPassword": "Đặt mật khẩu mới",
   "auth.resetFailed":
