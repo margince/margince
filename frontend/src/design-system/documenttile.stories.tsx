@@ -77,21 +77,6 @@ export const GoogleFile: Story = {
   },
 };
 
-// A link to a Google file: no extension to read, so the caller names the kind.
-export const GoogleFile: Story = {
-  args: {
-    filename: "docs.google.com",
-    kind: "Sheets",
-    title: "Rollout budget 2027",
-    anchor: {
-      href: "https://docs.google.com/spreadsheets/d/abc/edit",
-      target: "_blank",
-      rel: "noopener noreferrer",
-    },
-    meta: "docs.google.com · Offer · 19 Nov 2026",
-  },
-};
-
 export const Superseded: Story = {
   args: {
     ...StoredFile.args,
