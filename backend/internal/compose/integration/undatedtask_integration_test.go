@@ -5,7 +5,7 @@
 
 package integration
 
-// A task a person writes with no due date waits under Upcoming and backlog.
+// A task a user writes with no due date waits under Upcoming and backlog.
 // It sits in a No due date group after the dated work, and never on Today.
 
 import (
@@ -25,7 +25,7 @@ import (
 // rest arrive in the lazy batches, and the total is the store's count.
 const undatedBacklog = 7
 
-// taskSpec is one task to write. An empty sourceSystem writes it as a person
+// taskSpec is one task to write. An empty sourceSystem writes it as a user
 // does; a named one writes it as that automatic source does.
 type taskSpec struct {
 	subject       string
@@ -69,7 +69,7 @@ func TestAnUndatedTaskWaitsUnderUpcomingAndNeverOnToday(t *testing.T) {
 		undated[writeTask(t, e, contact, taskSpec{subject: "Call back about the renewal"})] = true
 	}
 	owedNow := writeTask(t, e, contact, taskSpec{subject: "Follow up as suggested", sourceSystem: provenance.AcceptedRecommendationSource})
-	// An automatic source's undated task is never a person's backlog.
+	// An automatic source's undated task is never a user's backlog.
 	automatic := writeTask(t, e, contact, taskSpec{subject: "Reach out again", sourceSystem: provenance.NoActivityReminderSource})
 
 	for _, scope := range []string{"mine", "all"} {

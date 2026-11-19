@@ -29,9 +29,8 @@ func TestTheCurrentTaskClauseAsksWhetherTheSourceWasAnsweredOnce(t *testing.T) {
 	}
 }
 
-// An automatic task with no date shows only where its source says: Today
-// holds an undated source's task, and the undated backlog holds only a
-// person's. A source stating neither would write tasks no list shows.
+// Today holds an undated source's task with no date. The undated backlog
+// holds only a user's. A source stating neither writes tasks no list shows.
 func TestEveryAutomaticTaskSourceStatesWhetherItsTasksCarryADate(t *testing.T) {
 	for _, source := range TaskSourceFamilies() {
 		if slices.Contains(provenance.RetiredTaskSources(), source) {

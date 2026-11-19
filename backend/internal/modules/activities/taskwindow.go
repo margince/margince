@@ -24,7 +24,7 @@ import (
 // reminders widens the upper bound: a due reminder is today's work.
 func openTaskWindowClauses(in ListActivitiesInput, reminders string, arg func(any) int) []string {
 	openTask := "a.kind = 'task' AND NOT a.is_done AND "
-	// The later window also holds the undated backlog: an open task a person,
+	// The later window also holds the undated backlog: an open task a user,
 	// an agent or an importer wrote with no date. Today never admits it.
 	backlog := ""
 	if in.OpenAndDueAfter != nil {
