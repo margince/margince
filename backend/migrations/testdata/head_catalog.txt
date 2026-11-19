@@ -7009,6 +7009,7 @@ public.lead.email text gen=- def=-
 public.lead.email_domain_folded text gen=- def=-
 public.lead.entered_at timestamp with time zone NOT NULL gen=- def=now()
 public.lead.first_response_at timestamp with time zone gen=- def=-
+public.lead.first_response_marked_by uuid gen=- def=-
 public.lead.from_contact_id uuid gen=- def=-
 public.lead.full_name text gen=- def=-
 public.lead.home_read_fence_lead_owner CREATE TRIGGER home_read_fence_lead_owner AFTER UPDATE ON public.lead FOR EACH ROW WHEN (((old.owner_id IS DISTINCT FROM new.owner_id) OR ((old.archived_at IS NULL) AND (new.archived_at IS NOT NULL)))) EXECUTE FUNCTION advance_home_read_fence()
@@ -10709,8 +10710,8 @@ public.uq_company_rel_type CREATE UNIQUE INDEX uq_company_rel_type ON public.com
 public.uq_company_source CREATE UNIQUE INDEX uq_company_source ON public.company USING btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL))
 public.uq_contact_channel_identity CREATE UNIQUE INDEX uq_contact_channel_identity ON public.contact_channel_identity USING btree (provider, channel_user_id) WHERE (archived_at IS NULL)
 public.uq_contact_email_dedupe CREATE UNIQUE INDEX uq_contact_email_dedupe ON public.contact_email USING btree (email) WHERE (archived_at IS NULL)
-public.uq_contact_email_primary CREATE UNIQUE INDEX uq_contact_email_primary ON public.contact_email USING btree (contact_id, email_type) WHERE (is_primary AND (archived_at IS NULL))
-public.uq_contact_phone_primary CREATE UNIQUE INDEX uq_contact_phone_primary ON public.contact_phone USING btree (contact_id, phone_type) WHERE (is_primary AND (archived_at IS NULL))
+public.uq_contact_email_primary CREATE UNIQUE INDEX uq_contact_email_primary ON public.contact_email USING btree (contact_id) WHERE (is_primary AND (archived_at IS NULL))
+public.uq_contact_phone_primary CREATE UNIQUE INDEX uq_contact_phone_primary ON public.contact_phone USING btree (contact_id) WHERE (is_primary AND (archived_at IS NULL))
 public.uq_contact_profile_field CREATE UNIQUE INDEX uq_contact_profile_field ON public.contact_profile_field USING btree (contact_id, field, value_key)
 public.uq_contact_source CREATE UNIQUE INDEX uq_contact_source ON public.contact USING btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL))
 public.uq_custom_field_column CREATE UNIQUE INDEX uq_custom_field_column ON public.custom_field USING btree (object, column_name)

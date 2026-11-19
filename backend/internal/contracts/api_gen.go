@@ -13640,6 +13640,7 @@ func (e ForecastFocusTeamStatus) Valid() bool {
 const (
 	ForecastLandingCaveatLandingCaveatCallAbsent      ForecastLandingCaveat = "call_absent"
 	ForecastLandingCaveatLandingCaveatCallBelowActual ForecastLandingCaveat = "call_below_actual"
+	ForecastLandingCaveatLandingCaveatCallWithheld    ForecastLandingCaveat = "call_withheld"
 )
 
 // Valid indicates whether the value is a known member of the ForecastLandingCaveat enum.
@@ -13648,6 +13649,8 @@ func (e ForecastLandingCaveat) Valid() bool {
 	case ForecastLandingCaveatLandingCaveatCallAbsent:
 		return true
 	case ForecastLandingCaveatLandingCaveatCallBelowActual:
+		return true
+	case ForecastLandingCaveatLandingCaveatCallWithheld:
 		return true
 	default:
 		return false
@@ -13929,6 +13932,7 @@ func (e ForecastSnapshotRefTrigger) Valid() bool {
 
 // Defines values for ForecastSufficiencyAbsent.
 const (
+	ForecastSufficiencyAbsentSufficiencyAbsenceCallWithheld        ForecastSufficiencyAbsent = "call_withheld"
 	ForecastSufficiencyAbsentSufficiencyAbsenceInsufficientBasis   ForecastSufficiencyAbsent = "insufficient_basis"
 	ForecastSufficiencyAbsentSufficiencyAbsenceInsufficientHistory ForecastSufficiencyAbsent = "insufficient_history"
 )
@@ -13936,6 +13940,8 @@ const (
 // Valid indicates whether the value is a known member of the ForecastSufficiencyAbsent enum.
 func (e ForecastSufficiencyAbsent) Valid() bool {
 	switch e {
+	case ForecastSufficiencyAbsentSufficiencyAbsenceCallWithheld:
+		return true
 	case ForecastSufficiencyAbsentSufficiencyAbsenceInsufficientBasis:
 		return true
 	case ForecastSufficiencyAbsentSufficiencyAbsenceInsufficientHistory:
@@ -44656,7 +44662,7 @@ type ContactEmail struct {
 	EmailType ContactEmailEmailType `json:"email_type"`
 	Id        openapi_types.UUID    `json:"id"`
 
-	// IsPrimary At most one primary per type (DB-enforced).
+	// IsPrimary At most one primary address per contact, whatever its type (DB-enforced). primary_email follows it. A second primary in one request is refused with 409 multiple_primary.
 	IsPrimary bool `json:"is_primary"`
 
 	// Position Explicit ordering.
@@ -44674,8 +44680,10 @@ type ContactEmailInput struct {
 	// Email An address whose local part names a sending system (noreply@, notifications@, receipts@ and the like) is refused with 422 `email_names_no_one`: nobody answers there, so it names no contact.
 	Email     openapi_types.Email         `json:"email"`
 	EmailType *ContactEmailInputEmailType `json:"email_type,omitempty"`
-	IsPrimary *bool                       `json:"is_primary,omitempty"`
-	Position  *int                        `json:"position,omitempty"`
+
+	// IsPrimary The one primary address of the contact, whatever its type. More than one row marked primary is refused with 409 `multiple_primary`. A new contact whose rows name none gets its first row as primary.
+	IsPrimary *bool `json:"is_primary,omitempty"`
+	Position  *int  `json:"position,omitempty"`
 }
 
 // ContactEmailInputEmailType defines model for ContactEmailInput.EmailType.
@@ -45159,7 +45167,9 @@ type ContactPhone struct {
 	ContactId  *openapi_types.UUID `json:"contact_id,omitempty"`
 	CreatedAt  *time.Time          `json:"created_at,omitempty"`
 	Id         openapi_types.UUID  `json:"id"`
-	IsPrimary  bool                `json:"is_primary"`
+
+	// IsPrimary At most one primary number per contact, whatever its type (DB-enforced).
+	IsPrimary bool `json:"is_primary"`
 
 	// Phone E.164 normalized.
 	Phone     string                `json:"phone"`
@@ -45175,6 +45185,7 @@ type ContactPhonePhoneType string
 // ContactPhoneInput One phone number on a contact, as a writer supplies it. One schema for create and
 // update, so the two cannot describe a number differently.
 type ContactPhoneInput struct {
+	// IsPrimary The one primary number of the contact, whatever its type. More than one row marked primary is refused with 409 `multiple_primary`.
 	IsPrimary *bool                       `json:"is_primary,omitempty"`
 	Phone     string                      `json:"phone"`
 	PhoneType *ContactPhoneInputPhoneType `json:"phone_type,omitempty"`
@@ -51362,7 +51373,7 @@ type ForecastLanding struct {
 	// AmountMinor The projection itself, in the installation's base currency.
 	AmountMinor int64 `json:"amount_minor"`
 
-	// Caveat Why this answer is not the plain one, absent when it is. `call_absent` is a manager-call installation with no current call. `call_below_actual` is an authored call less than the money already won — reported and never corrected, because the call is somebody's stated belief and the server does not overrule it.
+	// Caveat Why this answer is not the plain one, absent when it is. `call_absent` is a manager-call installation with no current call. `call_withheld` is a manager-call installation whose call this answer does not show, so it lands on Likely without saying whether a call exists. `call_below_actual` is an authored call less than the money already won — reported and never corrected, because the call is somebody's stated belief and the server does not overrule it.
 	Caveat *ForecastLandingCaveat `json:"caveat,omitempty"`
 
 	// Measure Which reading the forward half was built from — the one ACTUALLY used, which is not always the one configured: a manager-call installation with no current call falls back to commit evidence and says so in `caveat`. The set can grow, so a client shows an unknown value by its name. `qualified_likely` and `qualified_weighted` appear only on a shared snapshot frozen under the retired qualified forecast. Their forward half counts only the open deals that snapshot froze as still supported by their customer.
@@ -51378,7 +51389,7 @@ type ForecastLanding struct {
 	WonMinor int64 `json:"won_minor"`
 }
 
-// ForecastLandingCaveat Why this answer is not the plain one, absent when it is. `call_absent` is a manager-call installation with no current call. `call_below_actual` is an authored call less than the money already won — reported and never corrected, because the call is somebody's stated belief and the server does not overrule it.
+// ForecastLandingCaveat Why this answer is not the plain one, absent when it is. `call_absent` is a manager-call installation with no current call. `call_withheld` is a manager-call installation whose call this answer does not show, so it lands on Likely without saying whether a call exists. `call_below_actual` is an authored call less than the money already won — reported and never corrected, because the call is somebody's stated belief and the server does not overrule it.
 type ForecastLandingCaveat string
 
 // ForecastLandingMeasure Which reading the forward half was built from — the one ACTUALLY used, which is not always the one configured: a manager-call installation with no current call falls back to commit evidence and says so in `caveat`. The set can grow, so a client shows an unknown value by its name. `qualified_likely` and `qualified_weighted` appear only on a shared snapshot frozen under the retired qualified forecast. Their forward half counts only the open deals that snapshot froze as still supported by their customer.
@@ -51441,8 +51452,11 @@ type ForecastReadings struct {
 	BaseCurrency string    `json:"base_currency"`
 
 	// BySource The open and weighted readings split by where each deal's probability comes from. The three raw figures add up to `open_minor` and the three weighted ones to `weighted_minor`.
-	BySource           ForecastBySource `json:"by_source"`
-	ConfirmedDateCount int              `json:"confirmed_date_count"`
+	BySource ForecastBySource `json:"by_source"`
+
+	// CallWithheld True when this answer leaves out a standing call that may exist: the reader may not see calls about this population, the reading covers several populations (`managed_teams`), or a frozen share cannot tell. A client then says nothing about a manager forecast. Absent with no current_call means nobody has made one.
+	CallWithheld       *bool `json:"call_withheld,omitempty"`
+	ConfirmedDateCount int   `json:"confirmed_date_count"`
 
 	// Contributions Present only when asked for with `contributions=true`: the deals behind the won and open readings, ordered by deal id, limited to those the caller may read.
 	Contributions *[]ForecastContribution `json:"contributions,omitempty"`
@@ -51606,7 +51620,7 @@ type ForecastStageChances struct {
 // ForecastSufficiency Whether the open pipeline supports the reference landing, and what the reference is.
 // NOT a target. Margince has no target model: `basis` names where the reference came from so a reader can disagree with the basis rather than with the arithmetic, and the reference is always from OUTSIDE the current projection — a coverage figure divided by a target derived from the same pipeline is always fine and says nothing.
 type ForecastSufficiency struct {
-	// Absent Why there is no answer, when there is none. Every other field is then absent and the surface says this rather than drawing a figure. `insufficient_basis` is neither a manager call nor four completed comparable periods; `insufficient_history` is too few closed deals for a conversion rate to be a rate rather than an anecdote.
+	// Absent Why there is no answer, when there is none. Every other field is then absent and the surface says this rather than drawing a figure. `insufficient_basis` is neither a manager call nor four completed comparable periods; `call_withheld` is fewer than four completed periods and a call this reader may not see, without saying whether one exists; `insufficient_history` is too few closed deals for a conversion rate to be a rate rather than an anecdote.
 	Absent *ForecastSufficiencyAbsent `json:"absent,omitempty"`
 
 	// Basis Where the reference came from. A current authored call outranks history: a manager who wrote a number down has said what this period is for, and the median of the last four completed comparable periods is the fallback for when nobody has.
@@ -51624,7 +51638,7 @@ type ForecastSufficiency struct {
 	RemainingToSupportMinor *int64 `json:"remaining_to_support_minor,omitempty"`
 }
 
-// ForecastSufficiencyAbsent Why there is no answer, when there is none. Every other field is then absent and the surface says this rather than drawing a figure. `insufficient_basis` is neither a manager call nor four completed comparable periods; `insufficient_history` is too few closed deals for a conversion rate to be a rate rather than an anecdote.
+// ForecastSufficiencyAbsent Why there is no answer, when there is none. Every other field is then absent and the surface says this rather than drawing a figure. `insufficient_basis` is neither a manager call nor four completed comparable periods; `call_withheld` is fewer than four completed periods and a call this reader may not see, without saying whether one exists; `insufficient_history` is too few closed deals for a conversion rate to be a rate rather than an anecdote.
 type ForecastSufficiencyAbsent string
 
 // ForecastSufficiencyBasis Where the reference came from. A current authored call outranks history: a manager who wrote a number down has said what this period is for, and the median of the last four completed comparable periods is the fallback for when nobody has.
@@ -54688,6 +54702,9 @@ type Lead struct {
 
 	// FirstResponseAt First real response to this lead: an outbound activity, a human status change off `new`, or an explicit disposition. A cold-outbound auto-touch does NOT satisfy it.
 	FirstResponseAt *time.Time `json:"first_response_at,omitempty"`
+
+	// FirstResponseMarkedBy The user whose status move off `new` wrote `first_response_at`, with no activity behind it. Null when an activity or a disposition wrote the stamp, or when none is set. Moving the lead back to `new` before any activity is logged clears both.
+	FirstResponseMarkedBy *openapi_types.UUID `json:"first_response_marked_by,omitempty"`
 
 	// FromContactId The contact an older lead was created from, and null for every newly created lead.
 	FromContactId *openapi_types.UUID `json:"from_contact_id,omitempty"`
@@ -92395,6 +92412,14 @@ func (a *Lead) UnmarshalJSON(b []byte) error {
 		delete(object, "first_response_at")
 	}
 
+	if raw, found := object["first_response_marked_by"]; found {
+		err = json.Unmarshal(raw, &a.FirstResponseMarkedBy)
+		if err != nil {
+			return fmt.Errorf("error reading 'first_response_marked_by': %w", err)
+		}
+		delete(object, "first_response_marked_by")
+	}
+
 	if raw, found := object["from_contact_id"]; found {
 		err = json.Unmarshal(raw, &a.FromContactId)
 		if err != nil {
@@ -92881,6 +92906,13 @@ func (a Lead) MarshalJSON() ([]byte, error) {
 		object["first_response_at"], err = json.Marshal(a.FirstResponseAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'first_response_at': %w", err)
+		}
+	}
+
+	if a.FirstResponseMarkedBy != nil {
+		object["first_response_marked_by"], err = json.Marshal(a.FirstResponseMarkedBy)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'first_response_marked_by': %w", err)
 		}
 	}
 

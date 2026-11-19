@@ -6590,6 +6590,8 @@ export const en = {
     "Loaded deals only. Totals are unavailable with a stage filter.",
   "deals.totalsNoTeamFilter":
     "Loaded deals only. The stage totals cannot narrow by team or to unassigned deals, so none is shown.",
+  "deals.totalsNoLinkFilter":
+    "Loaded deals only. The stage totals cannot narrow by link type, so none is shown.",
   "deals.totalsNoRangeFilter":
     "Loaded deals only. The stage totals cannot narrow by close date, value, currency, country or a probability range other than a band, so none is shown.",
   "deals.filterCloseDate": "Close date",
@@ -8782,6 +8784,9 @@ export const en = {
   "analytics.field.host_user_id": "Meeting host",
   "analytics.field.kind": "Activity type",
   "analytics.field.last_activity_at": "Last activity",
+  "analytics.field.acquisition_source": "Acquisition source",
+  "analytics.field.commercial_motion": "Commercial motion",
+  "analytics.field.priority": "Priority",
   "analytics.field.link_type": "Linked as",
   "analytics.field.lost_reason": "Lost reason",
   "analytics.field.loss_reason": "Loss reason from the list",
@@ -9164,6 +9169,7 @@ export const en = {
     "Manager forecast: {call}. Won plus Likely deals: {evidence}.",
   "forecast.answerNoCall":
     "Won plus Likely deals: {evidence}. No manager forecast submitted.",
+  "forecast.answerCallWithheld": "Won plus Likely deals: {evidence}.",
   "forecast.partialTitle": "Not every deal is priced",
   "forecast.partial":
     "{priced} of {eligible} deals are priced. Unpriced deals add nothing to the totals above.",
@@ -9198,6 +9204,7 @@ export const en = {
   "forecast.supportingNote": "Supporting note",
   "forecast.cancel": "Cancel",
   "forecast.saveCall": "Save forecast",
+  "forecast.callAmountNeeded": "Type the expected total first.",
   "analytics.scopeLabel": "Record scope",
   "analytics.scopeFixed": "These numbers cover {scope}.",
   "forecast.period": "Period",
@@ -13308,7 +13315,7 @@ export const en = {
   "auth.emailPlaceholder": "name@example.com",
   "auth.password": "Password",
   "auth.passwordPlaceholder": "Password",
-  "auth.passwordHint": "At least 12 characters",
+  "auth.passwordHint": "12 to 256 characters",
   "auth.showPassword": "Show password",
   "auth.hidePassword": "Hide password",
   "auth.capsLock": "Caps Lock is on",
@@ -13377,8 +13384,11 @@ export const en = {
   "password.current": "Current password",
   "password.next": "New password",
   "password.confirm": "Confirm new password",
-  "password.hint": "At least 12 characters",
+  "password.hint": "12 to 256 characters",
   "password.tooShort": "Password is too short. Use at least 12 characters.",
+  "password.tooLong": "Password is too long. Use at most 256 characters.",
+  "password.blank": "Password cannot be only spaces.",
+  "password.repeated": "Password cannot be one character repeated.",
   "password.mismatch": "Passwords do not match.",
   "password.changing": "Changing password…",
   "password.open": "Change password",
@@ -13469,8 +13479,7 @@ export const en = {
   "setup.adminName": "Your name",
   "setup.adminEmail": "Your email",
   "setup.adminPassword": "Password",
-  "setup.passwordHint": "At least 12 characters",
-  "setup.passwordShort": "Password is too short. Use at least 12 characters.",
+  "setup.passwordHint": "12 to 256 characters",
   "setup.rootWarning":
     "This creates the administrator account for the whole installation, with every permission, including managing all other users.",
   "setup.claim": "Create company",
@@ -16055,6 +16064,8 @@ export const en = {
   "forecast.split": "{won} won + {remaining} to come",
   "forecast.callNotAdded": "Manager’s call {call}, not added",
   "forecast.recordsProject": "Records alone project {amount}",
+  "forecast.callWithheldLine":
+    "Manager’s call not shown here, so Likely is shown",
   "forecast.callAbsentLine": "No call recorded, so Likely is shown",
   "forecast.callBelowLine": "Below the {won} already won, shown as recorded",
   "forecast.model.quarter": "Modelled quarter finish",
@@ -16078,6 +16089,8 @@ export const en = {
   "forecast.landingRecordsDetail":
     "Won plus Likely deals, without the manager’s call",
   "forecast.landingCaveat": "Landing has a caveat",
+  "forecast.landing.caveat.call_withheld":
+    "The manager’s call is not shown here, so this shows the Likely deals.",
   "forecast.landing.caveat.call_absent":
     "No call recorded for this period, so this shows the Likely deals.",
   "forecast.landing.caveat.call_below_actual":
@@ -16089,6 +16102,8 @@ export const en = {
   "forecast.pipelineBasisWhy.historical_median":
     "Measured against the median of the last 4 comparable periods.",
   "forecast.pipelineAbsentTitle": "No coverage figure for this period",
+  "forecast.pipelineAbsent.call_withheld":
+    "The manager’s call is not shown here, and fewer than 4 comparable periods have finished. Measuring against these open deals themselves would always look sufficient.",
   "forecast.pipelineAbsent.insufficient_basis":
     "No call is recorded for this period, and fewer than 4 comparable periods have finished. Measuring against these open deals themselves would always look sufficient.",
   "forecast.pipelineAbsent.insufficient_history":
@@ -21410,6 +21425,8 @@ export const en = {
   "lead.filterRefused": "Your role cannot narrow leads by {dial}.",
   "lead.timeline.received": "{at} · received",
   "lead.timeline.weReplied": "You replied",
+  "lead.timeline.markedContacted": "Marked contacted by {user}",
+  "lead.timeline.markedContactedNoName": "Marked contacted",
   "lead.timeline.repliedIn": "{at} · in {span}",
   "lead.timeline.lastContact": "{at} · last contact",
   "lead.timeline.booked": "{at} · booked",

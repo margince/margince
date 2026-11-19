@@ -80,6 +80,10 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The career-date story passes dateRange a zone so its dates read the same on every runner.",
   },
   {
+    file: "features/deals/dealfilters.census.test.ts",
+    why: "Pins the zone so the date chips build the same options on every runner: the census compares requests, and the runner's own zone could move a date bound.",
+  },
+  {
     file: "features/companies/evidencesource.test.ts",
     why: "Pins the record zone so the meeting's date reads the same on every runner: the line under test prints a day, and the runner's own zone could move it.",
   },

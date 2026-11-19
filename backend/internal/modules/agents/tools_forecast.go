@@ -119,8 +119,10 @@ type ForecastReadingsResult struct {
 	ScopeLimited *bool `json:"scope_limited,omitempty"`
 
 	// CurrentCall is the standing call for this period, when somebody has made
-	// one. Absent means nobody has, which is a real answer.
-	CurrentCall json.RawMessage `json:"current_call,omitempty"`
+	// one. Absent means nobody has, unless CallWithheld says this seat may not
+	// see calls about the population.
+	CurrentCall  json.RawMessage `json:"current_call,omitempty"`
+	CallWithheld bool            `json:"call_withheld,omitempty"`
 
 	// Snapshots are this period's frozen states, newest first — the ids
 	// forecast_movement takes. Empty is a real answer: nothing was frozen.

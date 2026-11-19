@@ -6456,6 +6456,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chỉ hiển thị deal đã tải. Không có tổng khi lọc theo giai đoạn.",
   "deals.totalsNoTeamFilter":
     "Chỉ hiển thị deal đã tải. Tổng theo giai đoạn không thể lọc theo nhóm hay theo deal chưa giao nên không hiển thị.",
+  "deals.totalsNoLinkFilter":
+    "Chỉ hiển thị deal đã tải. Không hiển thị tổng khi đang dùng bộ lọc loại liên kết.",
   "deals.totalsNoRangeFilter":
     "Chỉ hiển thị deal đã tải. Tổng theo giai đoạn không thể lọc theo ngày chốt, giá trị, loại tiền, quốc gia hay khoảng xác suất ngoài các mức có sẵn nên không hiển thị.",
   "deals.filterCloseDate": "Ngày chốt",
@@ -8579,6 +8581,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.field.host_user_id": "Chủ trì cuộc họp",
   "analytics.field.kind": "Loại hoạt động",
   "analytics.field.last_activity_at": "Hoạt động gần nhất",
+  "analytics.field.acquisition_source": "Nguồn tiếp cận",
+  "analytics.field.commercial_motion": "Hình thức bán hàng",
+  "analytics.field.priority": "Độ ưu tiên",
   "analytics.field.link_type": "Liên kết dạng",
   "analytics.field.lost_reason": "Lý do thua",
   "analytics.field.loss_reason": "Lý do thua theo danh sách",
@@ -8961,6 +8966,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Nhận định của quản lý: {call}. Deal đã chốt và deal khả năng cao: {evidence}.",
   "forecast.answerNoCall":
     "Deal đã chốt và deal khả năng cao: {evidence}. Quản lý chưa gửi nhận định.",
+  "forecast.answerCallWithheld":
+    "Deal đã chốt và deal khả năng cao: {evidence}.",
   "forecast.partialTitle": "Không phải deal nào cũng có giá",
   "forecast.partial":
     "{priced} trên {eligible} deal có giá. Deal chưa có giá không cộng thêm gì vào các tổng ở trên.",
@@ -8998,6 +9005,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "forecast.supportingNote": "Ghi chú kèm theo",
   "forecast.cancel": "Hủy",
   "forecast.saveCall": "Lưu dự báo",
+  "forecast.callAmountNeeded": "Hãy nhập tổng dự kiến trước.",
   "analytics.scopeLabel": "Phạm vi hồ sơ",
   "analytics.scopeFixed": "Các số liệu này bao gồm {scope}.",
   "forecast.period": "Kỳ",
@@ -13003,7 +13011,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "auth.emailPlaceholder": "ten@example.com",
   "auth.password": "Mật khẩu",
   "auth.passwordPlaceholder": "Mật khẩu",
-  "auth.passwordHint": "Ít nhất 12 ký tự",
+  "auth.passwordHint": "Từ 12 đến 256 ký tự",
   "auth.showPassword": "Hiện mật khẩu",
   "auth.hidePassword": "Ẩn mật khẩu",
   "auth.capsLock": "Caps Lock đang bật",
@@ -13061,8 +13069,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "password.current": "Mật khẩu hiện tại",
   "password.next": "Mật khẩu mới",
   "password.confirm": "Xác nhận mật khẩu mới",
-  "password.hint": "Ít nhất 12 ký tự",
+  "password.hint": "Từ 12 đến 256 ký tự",
   "password.tooShort": "Mật khẩu quá ngắn. Dùng ít nhất 12 ký tự.",
+  "password.tooLong": "Mật khẩu quá dài. Dùng tối đa 256 ký tự.",
+  "password.blank": "Mật khẩu không được chỉ gồm dấu cách.",
+  "password.repeated": "Mật khẩu không được là một ký tự lặp lại.",
   "password.mismatch": "Mật khẩu không khớp.",
   "password.changing": "Đang đổi mật khẩu…",
   "password.open": "Đổi mật khẩu",
@@ -13148,8 +13159,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "setup.adminName": "Tên của bạn",
   "setup.adminEmail": "Email của bạn",
   "setup.adminPassword": "Mật khẩu",
-  "setup.passwordHint": "Ít nhất 12 ký tự",
-  "setup.passwordShort": "Mật khẩu quá ngắn. Dùng ít nhất 12 ký tự.",
+  "setup.passwordHint": "Từ 12 đến 256 ký tự",
   "setup.rootWarning":
     "Thao tác này tạo tài khoản quản trị viên cho toàn bộ bản cài đặt, với mọi quyền, kể cả quản lý mọi tài khoản khác.",
   "setup.claim": "Tạo công ty",
@@ -15748,6 +15758,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "forecast.split": "{won} đã chốt + {remaining} sắp tới",
   "forecast.callNotAdded": "Ước tính của quản lý {call}, không cộng thêm",
   "forecast.recordsProject": "Riêng dữ liệu deal cho ra {amount}",
+  "forecast.callWithheldLine":
+    "Nhận định không hiển thị ở đây, nên hiển thị deal khả năng cao",
   "forecast.callAbsentLine": "Chưa có ước tính, nên hiển thị deal khả năng cao",
   "forecast.callBelowLine": "Thấp hơn {won} đã chốt, hiển thị như đã ghi",
   "forecast.model.quarter": "Kết quả quý theo mô hình",
@@ -15770,6 +15782,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "forecast.landingRecordsDetail":
     "Đã chốt cộng các deal khả năng cao, chưa tính dự báo của quản lý",
   "forecast.landingCaveat": "Dự kiến cuối kỳ có lưu ý",
+  "forecast.landing.caveat.call_withheld":
+    "Nhận định của quản lý không hiển thị ở đây, nên số này hiển thị deal khả năng cao.",
   "forecast.landing.caveat.call_absent":
     "Kỳ này chưa có nhận định nào, nên số này hiển thị deal khả năng cao.",
   "forecast.landing.caveat.call_below_actual":
@@ -15780,6 +15794,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "forecast.pipelineBasisWhy.historical_median":
     "Đo theo trung vị của 4 kỳ tương đương gần nhất.",
   "forecast.pipelineAbsentTitle": "Không có số liệu độ bao phủ cho kỳ này",
+  "forecast.pipelineAbsent.call_withheld":
+    "Nhận định của quản lý không hiển thị ở đây, và chưa đủ 4 kỳ tương đương đã kết thúc. Đo theo chính các deal đang mở này thì lúc nào cũng trông như đủ.",
   "forecast.pipelineAbsent.insufficient_basis":
     "Kỳ này chưa ghi nhận định nào, và chưa đủ 4 kỳ tương đương đã kết thúc. Đo theo chính các deal đang mở này thì lúc nào cũng trông như đủ.",
   "forecast.pipelineAbsent.insufficient_history":
@@ -21120,6 +21136,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.filterRefused": "Vai trò hiện tại không lọc được lead theo {dial}.",
   "lead.timeline.received": "{at} · đã nhận",
   "lead.timeline.weReplied": "Bạn đã trả lời",
+  "lead.timeline.markedContacted": "{user} đã đánh dấu là đã liên hệ",
+  "lead.timeline.markedContactedNoName": "Đã đánh dấu là đã liên hệ",
   "lead.timeline.repliedIn": "{at} · sau {span}",
   "lead.timeline.lastContact": "{at} · liên hệ gần nhất",
   "lead.timeline.booked": "{at} · đã đặt",

@@ -47,8 +47,8 @@ func readReportingForecast(ctx context.Context, tx pgx.Tx, frame crmcontracts.Re
 	if err != nil {
 		return nil, crmcontracts.ReportingCoverage{}, err
 	}
-	called := seenCall(record.AmountMinor, seen)
-	landing, err := forecasting.ProjectLanding(readings, measure, called)
+	called := seen.Amount
+	landing, err := forecasting.ProjectLanding(readings, measure, seen)
 	if err != nil {
 		return nil, crmcontracts.ReportingCoverage{}, err
 	}
@@ -72,7 +72,7 @@ func readReportingForecast(ctx context.Context, tx pgx.Tx, frame crmcontracts.Re
 		}
 		e.compared.operands = operands
 		e.compared.basis = reportingForecastBasis(period, readings, landing, called)
-		if seen {
+		if called != nil {
 			e.compared.basis.CallAt = &record.CreatedAt
 		}
 	}
@@ -88,31 +88,18 @@ func readReportingForecast(ctx context.Context, tx pgx.Tx, frame crmcontracts.Re
 	return facts, reportingForecastCoverage(frame, readings, landing, withheld), nil
 }
 
-// forecastCallSeen is the call GET /forecast shows this seat, by the same
+// forecastCallRecord is the call GET /forecast shows this seat, by the same
 // rule. A call covers every pipeline, so a reading of one pipeline has none.
-// The reporting landing and a live share both read the call through it.
-func forecastCallSeen(ctx context.Context, tx pgx.Tx, store *forecasting.Store, period forecasting.Period, scope forecasting.Scope, onePipeline bool) (int64, bool, error) {
-	call, seen, err := forecastCallRecord(ctx, tx, store, period, scope, onePipeline)
-	return call.AmountMinor, seen, err
-}
-
-func forecastCallRecord(ctx context.Context, tx pgx.Tx, store *forecasting.Store, period forecasting.Period, scope forecasting.Scope, onePipeline bool) (forecasting.Call, bool, error) {
+// The reporting landing and Progress both read the call through it.
+func forecastCallRecord(ctx context.Context, tx pgx.Tx, store *forecasting.Store, period forecasting.Period, scope forecasting.Scope, onePipeline bool) (forecasting.Call, forecasting.SeenCall, error) {
 	if onePipeline {
-		return forecasting.Call{}, false, nil
+		return forecasting.Call{}, forecasting.SeenCall{}, nil
 	}
 	mayAssert, err := forecasting.MayAssertAbout(ctx, tx, ForecastWritableScope, scope)
 	if err != nil {
-		return forecasting.Call{}, false, err
+		return forecasting.Call{}, forecasting.SeenCall{}, err
 	}
 	return forecasting.CallSeen(ctx, tx, store, mayAssert, period, scope)
-}
-
-// seenCall is the call amount a landing takes: nil when no call was seen.
-func seenCall(amount int64, seen bool) *int64 {
-	if !seen {
-		return nil
-	}
-	return &amount
 }
 
 const forecastWonContext = "forecast_won"

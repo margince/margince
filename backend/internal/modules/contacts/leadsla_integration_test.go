@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -420,6 +421,7 @@ func TestTakingOnALeadClearsTheBreachItEarnedWhileUnowned(t *testing.T) {
 // unanswered lead is an explicit disposition and stamps it too.
 func TestFirstResponseFromHumanStatusChangeAndDisposition(t *testing.T) {
 	e := setupPromoteConsent(t)
+	e.enableFirstResponseSLA(t)
 	now := pinLeadAuditClock(t)
 	worked := e.seedLeadCreatedAt(t, "worked@example.test", now.Add(-time.Hour))
 	status := "contacted"
@@ -433,11 +435,11 @@ func TestFirstResponseFromHumanStatusChangeAndDisposition(t *testing.T) {
 	if after.SlaState != nil {
 		t.Errorf("an answered lead reads sla_state=%v, want null — it owes nothing", *after.SlaState)
 	}
+	if after.FirstResponseMarkedBy == nil || *after.FirstResponseMarkedBy != openapi_types.UUID(e.user) {
+		t.Errorf("first_response_marked_by = %v, want the user who moved the lead (%v)", after.FirstResponseMarkedBy, e.user)
+	}
 	stamped := *after.FirstResponseAt
 	back := "new"
-	if _, err := e.store.UpdateLead(e.ctx, worked, UpdateLeadInput{Status: &back}); err != nil {
-		t.Fatalf("update back: %v", err)
-	}
 	if _, err := e.store.UpdateLead(e.ctx, worked, UpdateLeadInput{Status: &status}); err != nil {
 		t.Fatalf("update again: %v", err)
 	}
@@ -449,6 +451,18 @@ func TestFirstResponseFromHumanStatusChangeAndDisposition(t *testing.T) {
 		t.Errorf("first_response_at moved from %v to %v; the first stamp is the one that counts", stamped, again.FirstResponseAt)
 	}
 
+	released, err := e.store.UpdateLead(e.ctx, worked, UpdateLeadInput{Status: &back})
+	if err != nil {
+		t.Fatalf("update back: %v", err)
+	}
+	if released.FirstResponseAt != nil || released.FirstResponseMarkedBy != nil {
+		t.Errorf("moving back to new with no activity left first_response_at=%v marked_by=%v, want both cleared",
+			released.FirstResponseAt, released.FirstResponseMarkedBy)
+	}
+	if released.SlaState == nil {
+		t.Error("a lead put back to new owes a reply again, so sla_state must be read again")
+	}
+
 	dropped := e.seedLeadCreatedAt(t, "dropped@example.test", now.Add(-time.Hour))
 	closed, err := e.store.DisqualifyLead(e.ctx, dropped, DisqualifyLeadInput{})
 	if err != nil {
@@ -457,7 +471,49 @@ func TestFirstResponseFromHumanStatusChangeAndDisposition(t *testing.T) {
 	if closed.FirstResponseAt == nil {
 		t.Error("disqualifying is an explicit disposition and must stamp first_response_at")
 	}
-	requireStoredLeadClockAudit(e.ctx, t, e.store, worked)
+	kept := e.seedLeadCreatedAt(t, "kept-stamp@example.test", now.Add(-time.Hour))
+	if _, err := e.store.UpdateLead(e.ctx, kept, UpdateLeadInput{Status: &status}); err != nil {
+		t.Fatalf("update: %v", err)
+	}
+	requireStoredLeadClockAudit(e.ctx, t, e.store, kept)
+}
+
+// A reply logged on the lead answers it whatever a status move did. Moving the
+// lead back to new keeps the stamp. A reply earlier than a status stamp takes
+// the stamp over and drops the name.
+func TestAReplyOnTheLeadOutlivesAMovedStatus(t *testing.T) {
+	e := setupPromoteConsent(t)
+	now := pinLeadAuditClock(t)
+	contacted := "contacted"
+	back := "new"
+
+	kept := e.seedLeadCreatedAt(t, "kept@example.test", now.Add(-3*time.Hour))
+	e.seedLeadTouch(t, kept, "email", "outbound", "human:"+e.user.String(), "manual", now.Add(-2*time.Hour))
+	if _, err := e.store.UpdateLead(e.ctx, kept, UpdateLeadInput{Status: &contacted}); err != nil {
+		t.Fatal(err)
+	}
+	got, err := e.store.UpdateLead(e.ctx, kept, UpdateLeadInput{Status: &back})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.FirstResponseAt == nil {
+		t.Error("a lead with a logged reply lost its first response when moved back to new")
+	}
+
+	taken := e.seedLeadCreatedAt(t, "taken@example.test", now.Add(-3*time.Hour))
+	if _, err := e.store.UpdateLead(e.ctx, taken, UpdateLeadInput{Status: &contacted}); err != nil {
+		t.Fatal(err)
+	}
+	if set, err := e.store.RecordLeadFirstResponse(e.ctx, taken, now.Add(-2*time.Hour)); err != nil || !set {
+		t.Fatalf("an earlier reply over a status stamp: set=%t err=%v", set, err)
+	}
+	got, err = e.store.GetLead(e.ctx, taken, storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.FirstResponseMarkedBy != nil {
+		t.Errorf("first_response_marked_by = %v after a reply took the stamp, want null", got.FirstResponseMarkedBy)
+	}
 }
 
 // The bus is unordered: a reply that happened at 09:00 may be processed

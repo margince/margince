@@ -82,9 +82,14 @@ func TestAnAgentDefinesAnInitiative(t *testing.T) {
 	}
 }
 
-// What the forecast page writes: a call, and a link for a colleague.
+// What the forecast page writes: a call, and a link for a colleague. A call
+// with no amount is refused rather than recorded as zero.
 func TestAnAgentCallsTheForecastAndSharesIt(t *testing.T) {
 	d := newTwoDoors(t, "agent-forecast-writes", "read", "write")
+	refused := d.mcp.Call(t, "change_reports", map[string]any{"action": "record_forecast_call", "request_body": AnyMap{"currency": "EUR"}})
+	if !refused.IsError || !strings.Contains(refused.Text, "amount_minor") {
+		t.Errorf("a call with no amount answered %+v, want a refusal naming amount_minor", refused)
+	}
 	reportAct(t, d, "record_forecast_call", map[string]any{"request_body": AnyMap{"amount_minor": 1200000, "currency": "EUR"}})
 	share := answerID(t, []byte(reportAct(t, d, "create_forecast_share", map[string]any{"request_body": AnyMap{
 		"kind": "live", "target": "forecast",

@@ -6626,6 +6626,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Nur geladene Deals. Keine Summen, solange ein Phasenfilter aktiv ist.",
   "deals.totalsNoTeamFilter":
     "Nur geladene Deals. Es wird keine Summe angezeigt, da sich die Phasensummen nicht nach Team oder auf nicht zugewiesene Deals eingrenzen lassen.",
+  "deals.totalsNoLinkFilter":
+    "Nur geladene Deals. Es wird keine Summe angezeigt, da sich die Phasensummen nicht nach Verknüpfungsart eingrenzen lassen.",
   "deals.totalsNoRangeFilter":
     "Nur geladene Deals. Es wird keine Summe angezeigt, da sich die Phasensummen nicht nach Abschlussdatum, Wert, Währung, Land oder einer Abschlusschance außerhalb der festen Stufen eingrenzen lassen.",
   "deals.filterCloseDate": "Abschlussdatum",
@@ -8813,6 +8815,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.field.host_user_id": "Organisiert von",
   "analytics.field.kind": "Aktivitätstyp",
   "analytics.field.last_activity_at": "Letzte Aktivität",
+  "analytics.field.acquisition_source": "Akquisitionsquelle",
+  "analytics.field.commercial_motion": "Deal-Typ",
+  "analytics.field.priority": "Priorität",
   "analytics.field.link_type": "Verknüpft als",
   "analytics.field.lost_reason": "Verlustgrund",
   "analytics.field.loss_reason": "Verlustgrund aus der Liste",
@@ -9203,6 +9208,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Einschätzung: {call}. Gewonnene plus wahrscheinliche Deals: {evidence}.",
   "forecast.answerNoCall":
     "Gewonnene plus wahrscheinliche Deals: {evidence}. Keine Einschätzung abgegeben.",
+  "forecast.answerCallWithheld":
+    "Gewonnene plus wahrscheinliche Deals: {evidence}.",
   "forecast.partialTitle": "Nicht jeder Deal ist bepreist",
   "forecast.partial":
     "{priced} von {eligible} Deals sind bepreist. Deals ohne Preis tragen nichts zu den Summen oben bei.",
@@ -9241,6 +9248,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forecast.supportingNote": "Begründung",
   "forecast.cancel": "Abbrechen",
   "forecast.saveCall": "Einschätzung speichern",
+  "forecast.callAmountNeeded": "Gib zuerst die erwartete Summe ein.",
   "analytics.scopeLabel": "Auswahl der Datensätze",
   "analytics.scopeFixed": "Diese Zahlen umfassen {scope}.",
   "forecast.period": "Zeitraum",
@@ -13353,7 +13361,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "auth.emailPlaceholder": "name@example.com",
   "auth.password": "Passwort",
   "auth.passwordPlaceholder": "Passwort",
-  "auth.passwordHint": "Mindestens 12 Zeichen",
+  "auth.passwordHint": "12 bis 256 Zeichen",
   "auth.showPassword": "Passwort anzeigen",
   "auth.hidePassword": "Passwort ausblenden",
   "auth.capsLock": "Feststelltaste ist aktiviert",
@@ -13402,9 +13410,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "password.current": "Aktuelles Passwort",
   "password.next": "Neues Passwort",
   "password.confirm": "Neues Passwort bestätigen",
-  "password.hint": "Mindestens 12 Zeichen",
+  "password.hint": "12 bis 256 Zeichen",
   "password.tooShort":
     "Das Passwort ist zu kurz. Verwende mindestens 12 Zeichen.",
+  "password.tooLong":
+    "Das Passwort ist zu lang. Verwende höchstens 256 Zeichen.",
+  "password.blank": "Das Passwort darf nicht nur aus Leerzeichen bestehen.",
+  "password.repeated":
+    "Das Passwort darf nicht aus einem einzigen wiederholten Zeichen bestehen.",
   "password.mismatch": "Die Passwörter stimmen nicht überein.",
   "password.changing": "Passwort wird geändert…",
   "password.open": "Passwort ändern",
@@ -13498,9 +13511,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "setup.adminName": "Dein Name",
   "setup.adminEmail": "Deine E-Mail-Adresse",
   "setup.adminPassword": "Passwort",
-  "setup.passwordHint": "Mindestens 12 Zeichen",
-  "setup.passwordShort":
-    "Das Passwort ist zu kurz. Verwende mindestens 12 Zeichen.",
+  "setup.passwordHint": "12 bis 256 Zeichen",
   "setup.rootWarning":
     "Damit wird das Adminkonto für die gesamte Installation erstellt, mit allen Berechtigungen, einschließlich der Verwaltung aller anderen Nutzerkonten.",
   "setup.claim": "Unternehmen erstellen",
@@ -16173,6 +16184,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forecast.callNotAdded":
     "Einschätzung der Führungskraft {call}, nicht addiert",
   "forecast.recordsProject": "Die Deal-Daten allein ergeben {amount}",
+  "forecast.callWithheldLine":
+    "Einschätzung hier nicht sichtbar, daher wahrscheinliche Deals",
   "forecast.callAbsentLine":
     "Keine Einschätzung erfasst, daher wahrscheinliche Deals",
   "forecast.callBelowLine":
@@ -16199,6 +16212,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forecast.landingRecordsDetail":
     "Gewonnen plus wahrscheinliche Deals, ohne die Einschätzung",
   "forecast.landingCaveat": "Das erwartete Ergebnis hat einen Vorbehalt",
+  "forecast.landing.caveat.call_withheld":
+    "Angezeigt werden die wahrscheinlichen Deals, da die Einschätzung hier nicht sichtbar ist.",
   "forecast.landing.caveat.call_absent":
     "Angezeigt werden die wahrscheinlichen Deals, da für diesen Zeitraum keine Einschätzung erfasst ist.",
   "forecast.landing.caveat.call_below_actual":
@@ -16211,6 +16226,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Gemessen am Median der letzten 4 vergleichbaren Zeiträume.",
   "forecast.pipelineAbsentTitle":
     "Keine Pipeline-Abdeckung für diesen Zeitraum",
+  "forecast.pipelineAbsent.call_withheld":
+    "Die Einschätzung ist hier nicht sichtbar, und weniger als 4 vergleichbare Zeiträume sind abgeschlossen. Gemessen an diesen offenen Deals selbst sähe die Abdeckung immer ausreichend aus.",
   "forecast.pipelineAbsent.insufficient_basis":
     "Für diesen Zeitraum ist keine Einschätzung erfasst, und weniger als 4 vergleichbare Zeiträume sind abgeschlossen. Gemessen an diesen offenen Deals selbst sähe die Abdeckung immer ausreichend aus.",
   "forecast.pipelineAbsent.insufficient_history":
@@ -21682,6 +21699,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.filterRefused": "Deine Rolle kann Leads nicht nach {dial} eingrenzen.",
   "lead.timeline.received": "{at} · eingegangen",
   "lead.timeline.weReplied": "Du hast geantwortet",
+  "lead.timeline.markedContacted": "Als kontaktiert markiert von {user}",
+  "lead.timeline.markedContactedNoName": "Als kontaktiert markiert",
   "lead.timeline.repliedIn": "{at} · in {span}",
   "lead.timeline.lastContact": "{at} · letzter Kontakt",
   "lead.timeline.booked": "{at} · gebucht",

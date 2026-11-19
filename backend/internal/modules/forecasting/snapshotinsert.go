@@ -81,14 +81,11 @@ func (s *Store) frozenLanding(ctx context.Context, tx pgx.Tx, in NewSnapshot) (L
 		return Landing{}, nil
 	}
 	// A call covers every pipeline, so a one-pipeline snapshot has none.
-	var call *int64
+	var call SeenCall
 	if in.ForwardMeasure == MeasureManagerCall && in.PipelineID == nil {
-		standing, seen, err := CallSeen(ctx, tx, s, true, in.Period, in.Scope)
-		if err != nil {
+		var err error
+		if _, call, err = CallSeen(ctx, tx, s, true, in.Period, in.Scope); err != nil {
 			return Landing{}, err
-		}
-		if seen {
-			call = &standing.AmountMinor
 		}
 	}
 	return ProjectLanding(in.Readings, in.ForwardMeasure, call)

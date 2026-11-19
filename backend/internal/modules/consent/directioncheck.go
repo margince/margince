@@ -5,6 +5,7 @@ package consent
 
 import (
 	"context"
+	"errors"
 
 	"github.com/jackc/pgx/v5"
 
@@ -59,4 +60,11 @@ func (r directableReview) admits(ctx context.Context, in DirectInput) error {
 		}
 	}
 	return nil
+}
+
+// WrongWarningVersion reports whether a direction was refused because it named
+// a warning this build does not serve, or one this review was not shown with.
+func WrongWarningVersion(err error) bool {
+	refusal, ok := errors.AsType[*ValidationError](err)
+	return ok && refusal.Field == fieldWarningVersion
 }
