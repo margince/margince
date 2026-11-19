@@ -434,13 +434,51 @@ export function endOfDayInZone(dateOnly: string, zone: string): string {
   ).toISOString();
 }
 
+// Zones ICU still lists under the name IANA has since replaced. A reader looks
+// for today's city, so the list shows that name and finds the old one too.
+const RENAMED_ZONES: Readonly<Record<string, string>> = {
+  "Africa/Asmera": "Africa/Asmara",
+  "America/Buenos_Aires": "America/Argentina/Buenos_Aires",
+  "America/Catamarca": "America/Argentina/Catamarca",
+  "America/Coral_Harbour": "America/Atikokan",
+  "America/Cordoba": "America/Argentina/Cordoba",
+  "America/Godthab": "America/Nuuk",
+  "America/Indianapolis": "America/Indiana/Indianapolis",
+  "America/Jujuy": "America/Argentina/Jujuy",
+  "America/Louisville": "America/Kentucky/Louisville",
+  "America/Mendoza": "America/Argentina/Mendoza",
+  "Asia/Calcutta": "Asia/Kolkata",
+  "Asia/Katmandu": "Asia/Kathmandu",
+  "Asia/Rangoon": "Asia/Yangon",
+  "Asia/Saigon": "Asia/Ho_Chi_Minh",
+  "Atlantic/Faeroe": "Atlantic/Faroe",
+  "Europe/Kiev": "Europe/Kyiv",
+  "Pacific/Enderbury": "Pacific/Kanton",
+  "Pacific/Ponape": "Pacific/Pohnpei",
+  "Pacific/Truk": "Pacific/Chuuk",
+};
+
+const FORMER_NAMES = new Map<string, string[]>();
+for (const [former, current] of Object.entries(RENAMED_ZONES)) {
+  FORMER_NAMES.set(current, [...(FORMER_NAMES.get(current) ?? []), former]);
+}
+
+/**
+ * The current IANA name of `zone`. An older browser that cannot render the
+ * new name keeps the old one, so a pick never breaks the dates it formats.
+ */
+export function currentZoneName(zone: string): string {
+  const current = RENAMED_ZONES[zone];
+  return current && isRenderableZone(current) ? current : zone;
+}
+
 /** City-first labels keep typeahead useful; values remain IANA identifiers. */
 export function timezoneOptions(locale: string, selected: string, at: Date) {
   const zones = new Set([
     UTC_ZONE,
-    browserZone(),
+    currentZoneName(browserZone()),
     ...(typeof Intl.supportedValuesOf === "function"
-      ? Intl.supportedValuesOf("timeZone")
+      ? Intl.supportedValuesOf("timeZone").map(currentZoneName)
       : []),
     ...(selected ? [selected] : []),
   ]);
@@ -450,8 +488,18 @@ export function timezoneOptions(locale: string, selected: string, at: Date) {
   );
 }
 
+// The filter also matches the IANA id and a former city name, so "Saigon" and
+// "Europe/Berlin" find their zone as well as the label does.
 export function timezoneOption(locale: string, zone: string, at: Date) {
-  return { value: zone, label: timezoneOptionLabel(locale, zone, at) };
+  const named = currentZoneName(zone);
+  const formerCities = (FORMER_NAMES.get(named) ?? []).map((former) =>
+    (former.split("/").pop() ?? former).replaceAll("_", " "),
+  );
+  return {
+    value: zone,
+    label: timezoneOptionLabel(locale, named, at),
+    keywords: [zone, ...formerCities],
+  };
 }
 
 function timezoneOptionLabel(locale: string, zone: string, at: Date): string {
