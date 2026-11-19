@@ -7900,6 +7900,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.savedDraftDelete": "Löschen",
   "compose.savedDraftDeleted": "Gespeicherter Entwurf gelöscht",
   "compose.savedDraftRestored": "Gespeicherter Entwurf wiederhergestellt",
+  "compose.savedDraftUndoSent":
+    "Die Nachricht wurde gesendet, der Entwurf bleibt gelöscht.",
   "compose.savedDraftRemove": "Gespeicherten Entwurf löschen",
   "compose.savedDraftByAgent":
     "Entwurf eines Agenten wiederhergestellt. Lies den Entwurf vor dem Senden.",
@@ -21117,6 +21119,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.verb.meetingNoShow": "Nicht erschienen",
   "worklist.verb.meetingCanceled": "Hat nicht stattgefunden",
   "worklist.verb.meetingOutcomeRecorded": "Terminergebnis erfasst",
+  "worklist.verb.meetingCanceledRecorded":
+    "Als nicht stattgefunden markiert (abgesagt).",
   "worklist.verb.meetingOutcomeFailed":
     "Das Ergebnis konnte nicht erfasst werden. Bitte versuche es erneut.",
   "worklist.verb.meetingDayMissing":

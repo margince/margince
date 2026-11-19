@@ -68536,10 +68536,10 @@ type UpdateActivityRequest struct {
 	// moment a human actually knows the answer — the meeting is over — was the one
 	// moment the API could not be told.
 	//
-	// An omitted field is unchanged, like every other field on this patch. Sending
-	// an explicit `null` is also unchanged rather than a clear, unlike `due_at`,
-	// `remind_at` and `assignee_id`, where `null` removes the value. Recording the
-	// wrong outcome is fixed by sending the right one.
+	// An omitted field is unchanged, like every other field on this patch. An explicit
+	// `null` removes the status, so the meeting is unanswered again; that is how a
+	// recorded outcome is taken back. A meeting held by a live calendar invitation
+	// refuses it like any status other than `held` or `no_show`.
 	MeetingStatus *UpdateActivityRequestMeetingStatus `json:"meeting_status,omitempty"`
 	OccurredAt    *time.Time                          `json:"occurred_at,omitempty"`
 
@@ -68570,10 +68570,10 @@ type UpdateActivityRequestCallOutcome string
 // moment a human actually knows the answer — the meeting is over — was the one
 // moment the API could not be told.
 //
-// An omitted field is unchanged, like every other field on this patch. Sending
-// an explicit `null` is also unchanged rather than a clear, unlike `due_at`,
-// `remind_at` and `assignee_id`, where `null` removes the value. Recording the
-// wrong outcome is fixed by sending the right one.
+// An omitted field is unchanged, like every other field on this patch. An explicit
+// `null` removes the status, so the meeting is unanswered again; that is how a
+// recorded outcome is taken back. A meeting held by a live calendar invitation
+// refuses it like any status other than `held` or `no_show`.
 type UpdateActivityRequestMeetingStatus string
 
 // UpdateActivityReviewTemplateRequest defines model for UpdateActivityReviewTemplateRequest.
