@@ -55,7 +55,7 @@ func (s *Store) ResumeHeldSend(
 		// and saying which of those it was would disclose the row.
 		return crmcontracts.Activity{}, apperrors.ErrNotFound
 	}
-	if err := refuseAnotherSeatsFireHold(ctx, held); err != nil {
+	if err := refuseAnotherSeatsHold(ctx, held); err != nil {
 		return crmcontracts.Activity{}, err
 	}
 	origin, in, err := held.replay()
@@ -177,39 +177,14 @@ func (s *Store) heldRow(ctx context.Context, tx pgx.Tx, id ids.UUID, lock string
 	return c, true, nil
 }
 
-// refuseAnotherSeatsFireHold lets only its sender resume a message held at its
-// scheduled time. A resume sends as the caller, with their mailbox, name and
-// signature. Whether one seat may send another's scheduled message that way is
-// not decided. A message refused at the keyboard keeps its old rule.
-func refuseAnotherSeatsFireHold(ctx context.Context, held claimedSend) error {
-	if held.HeldReason != HeldConsentWithdrawn {
-		return nil
-	}
+// refuseAnotherSeatsHold lets only the author who scheduled a held message
+// resume it, whatever it was held for.
+func refuseAnotherSeatsHold(ctx context.Context, held claimedSend) error {
 	actor, err := storekit.Actor(ctx)
 	if err != nil {
 		return err
 	}
-	if actor.UserID != held.ScheduledBy {
-		return &HeldForSenderError{}
-	}
-	return nil
-}
-
-// HeldForSenderError refuses a colleague who confirms a message held at its
-// scheduled time. It answers 403 with a sentence naming who may confirm it.
-type HeldForSenderError struct{}
-
-func (*HeldForSenderError) Error() string {
-	return "held send: only the sender can confirm a message held at its scheduled time"
-}
-
-// Is keeps the refusal on the permission sentinel's 403 row.
-func (*HeldForSenderError) Is(target error) bool { return target == apperrors.ErrPermissionDenied }
-
-// MessageFault says who may confirm it.
-func (*HeldForSenderError) MessageFault() (code, message string) {
-	return "permission_denied", "Only the colleague who scheduled this message can confirm it, " +
-		"because it was held at its scheduled time."
+	return heldreason.RefuseAnotherSeat(actor.UserID, held.ScheduledBy)
 }
 
 // releaseHeldInTx records that the held message reached the delivery

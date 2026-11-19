@@ -126,7 +126,7 @@ type Instruction struct {
 
 // DirectSend records that a named human decided this refused message goes.
 //
-// GATED ON THREE THINGS, and each answers a different question.
+// GATED ON FOUR THINGS, and each answers a different question.
 //
 // A human at the keyboard, because the row says a named user took this on. An
 // agent or a connector holds that user's grants and was not the one deciding,
@@ -135,6 +135,10 @@ type Instruction struct {
 // auth.Require on communication_exception:create, because directing a send is
 // its own authority. A seat that may edit a contact has not thereby been given
 // the right to act against the engine's answer about them.
+//
+// The message's author, because the release sends from the caller's mailbox
+// with their name and signature. A colleague or admin holding the grant may not
+// direct another seat's message.
 //
 // And the review's own state, because an instruction against a review that is
 // already resolved, superseded or answered is a decision about a message that
@@ -367,7 +371,8 @@ type directableReview struct {
 	// IntentID is the held message this review is about, so the decision can
 	// fingerprint what the human is looking at.
 	IntentID ids.UUID
-	// InitiatedBy is the sender, who alone is served the composer's warning.
+	// InitiatedBy is the sender, who alone may direct the message and alone is
+	// served the composer's warning.
 	InitiatedBy ids.UUID
 	// Refusals are the reasons the message was held, which decide whether this
 	// caller may direct past them (directableBy).
@@ -376,11 +381,8 @@ type directableReview struct {
 
 // claimReviewForDirectionTx takes the review this decision is about.
 //
-// NOT SCOPED TO THE INITIATOR, unlike every other read of this row, and the
-// difference is the point: directing a send is precisely the act of somebody
-// OTHER than the sender deciding. The authority is the grant checked above, and
-// scoping to the seat that opened the review would make the reviewer path
-// impossible.
+// Not scoped to the initiator in SQL. A colleague holding the grant may read
+// the review, so directableReview.admits refuses them by name instead of 404.
 func claimReviewForDirectionTx(ctx context.Context, tx pgx.Tx, id ids.UUID) (directableReview, error) {
 	var out directableReview
 	var refusals []byte
