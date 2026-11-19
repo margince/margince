@@ -13,8 +13,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/greetingregister"
 )
 
-// A register a rep stored on the contact decides the German form whatever the
-// thread reads like, and an unset one leaves the reading of the thread alone.
+// A stored register decides the German form whatever the thread reads like.
+// An unset one leaves the reading of the thread alone.
 func TestAStoredGreetingRegisterOutranksTheThread(t *testing.T) {
 	t.Parallel()
 	const familiarThread = "Hallo Jonas, ich wollte dich fragen, ob du im Mai Zeit hast. Ich schicke dir dann die Unterlagen."

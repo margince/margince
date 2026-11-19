@@ -20,8 +20,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
-const familiarGermanMail = "Hallo, ich wollte dich fragen, ob du im Mai Zeit hast. Ich schicke dir dann die Unterlagen, wie du es wolltest."
-const formalGermanMail = "Guten Tag, vielen Dank für Ihre Nachricht. Ich sende Ihnen die Unterlagen, wie Sie es wünschen."
+const (
+	familiarGermanMail = "Hallo, ich wollte dich fragen, ob du im Mai Zeit hast. Ich schicke dir dann die Unterlagen, wie du es wolltest."
+	formalGermanMail   = "Guten Tag, vielen Dank für Ihre Nachricht. Ich sende Ihnen die Unterlagen, wie Sie es wünschen."
+)
 
 // setGreetingRegister stores the register on the contact writing from address.
 func (o *owedEnv) setGreetingRegister(t *testing.T, address, register string) {
