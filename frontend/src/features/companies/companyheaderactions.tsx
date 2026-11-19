@@ -46,7 +46,7 @@ function stripRefusals(
   state: Readonly<{
     archived: boolean;
     pageStatesArchive: boolean;
-    activityRefused: boolean;
+    activityRefusalKey: ActivityGate["refusalKey"];
   }>,
 ): Readonly<{
   ownArchived?: string;
@@ -58,9 +58,9 @@ function stripRefusals(
       ? {}
       : { ownArchived: t("record.archivedReadOnly") };
   }
-  return state.activityRefused
+  return state.activityRefusalKey
     ? {
-        activityRefusal: t("record.logActivityRefused"),
+        activityRefusal: t(state.activityRefusalKey),
         bookRefusal: t("scheduling.bookRefused"),
       }
     : {};
@@ -108,7 +108,7 @@ export function CompanyHeaderActions({
   const { ownArchived, activityRefusal, bookRefusal } = stripRefusals(t, {
     archived: archived !== undefined,
     pageStatesArchive: archivedReasonId !== undefined,
-    activityRefused: activity.refusedId !== undefined,
+    activityRefusalKey: activity.refusalKey,
   });
   const logRefusal = ownArchived ?? activityRefusal;
   const logPending = !archived && activity.pending;
@@ -256,7 +256,10 @@ function CompanyBookMeeting({
         variant="ghost"
         disabled={pending}
         reasonId={reasonId}
-        title={tipText(t("scheduling.bookContact"), reasonId && reasonTip)}
+        title={tipText(
+          t("scheduling.bookContact"),
+          reasonId ? reasonTip : undefined,
+        )}
       >
         {face}
       </Button>

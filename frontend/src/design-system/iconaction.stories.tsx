@@ -92,7 +92,7 @@ export const RefusedByThePage: Story = {
     <>
       <IconAction
         label="Write"
-        icon={<Mail size={15} aria-hidden="true" />}
+        icon={<Mail aria-hidden="true" />}
         reasonId="refused-by-page"
         reasonTip="No address and no thread to reply to."
       />

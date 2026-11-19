@@ -16,7 +16,10 @@ import { useCallback, useState } from "react";
 import { api } from "../../../api/client";
 import type { components } from "../../../api/schema";
 import { ifMatch, requireVersion } from "../../../api/version";
-import { useActivityGate } from "../../../components/activitygate";
+import {
+  type ActivityGate,
+  useActivityGate,
+} from "../../../components/activitygate";
 import { ArchiveAction } from "../../../components/archive";
 import { ExtensionEntries } from "../../../components/extensionentries";
 import { LogActivityAction } from "../../../components/logactivity.action";
@@ -93,10 +96,10 @@ function DealEmailVerb({
 function activityRefusal(
   t: ReturnType<typeof useT>,
   refusedByArchive: string | undefined,
-  refusedId: string | undefined,
+  activity: ActivityGate,
 ): string | undefined {
-  return !refusedByArchive && refusedId
-    ? t("record.logActivityRefused")
+  return !refusedByArchive && activity.refusalKey
+    ? t(activity.refusalKey)
     : undefined;
 }
 
@@ -225,7 +228,7 @@ export function DealActions({
   const [drawer, setDrawer] = useState<"log" | "task" | "call" | null>(null);
   const activity = useActivityGate();
   const logRefused = refusedByArchive ?? activity.refusedId;
-  const logRefusal = activityRefusal(t, refusedByArchive, activity.refusedId);
+  const logRefusal = activityRefusal(t, refusedByArchive, activity);
   const logPending = !refusedByArchive && activity.pending;
   const [writing, setWriting] = useState(false);
   const logOpen = !logPending && !logRefused;

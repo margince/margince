@@ -93,9 +93,7 @@ export function LeadActions({
   const logRefused = archived ?? activity.refusedId;
   // An archive is the page's sentence, so only its id reaches here.
   const logRefusal =
-    !archived && activity.refusedId
-      ? t("record.logActivityRefused")
-      : undefined;
+    !archived && activity.refusalKey ? t(activity.refusalKey) : undefined;
   const logPending = !archived && activity.pending;
   // The verb the reader arrived to perform, named by the address rather than
   // guessed. A link sent here to log a call says so. The drawer then opens on
