@@ -12794,6 +12794,8 @@ export const en = {
     "No chat bot is connected. An administrator connects one in Settings.",
   "channelLink.refused.channelNotFound":
     "The bot is in no channel with this name. Add the bot to the channel in the chat, then try again.",
+  "channelLink.refused.nameRefused":
+    "The chat refused this channel name. Rename the record, or link an existing channel.",
   "channelLink.refused.channelNotPrivate":
     "This channel is public. Link a private channel instead.",
   "channelLink.refused.botNotMember":
@@ -17184,6 +17186,11 @@ export const en = {
   "autonomy.sub":
     "Each switch lets one kind of change run without your review. It applies to your work, not the whole team.",
   "autonomy.updateFailed": "Setting not saved",
+  "autonomy.installationOff":
+    "An admin turned automatic changes off for everyone. Nothing runs on its own, and your switches below stay as you set them.",
+  "autonomy.installationSwitch": "Automatic changes for everyone",
+  "autonomy.installationHelp":
+    "Off stops every automatic change. Everyone’s own switches stay as they set them.",
   "autonomy.noneDecidedYet":
     "You have not reviewed any of these proposals yet. Automatic changes can already run according to the switches below. Proposals depend on your records and the work routed to you.",
   "autonomy.noRecord": "No decisions of this kind yet.",

@@ -3,7 +3,6 @@
 
 import { describe, expect, it } from "vitest";
 import type { components } from "../../../api/schema";
-import { UTC_ZONE } from "../../../format/timezone";
 import { deal, offer } from "../deals.testkit";
 import {
   closeTone,
@@ -109,13 +108,36 @@ describe("momentum", () => {
     [{ stalled: false, last_activity_at: "2026-08-11" }, "active", "success"],
     [{ stalled: false }, "quiet", "neutral"],
   ] as const)("%o reads %s on 20 Aug", (fields, state, tone) => {
-    const momentum = momentumOf(
-      fields,
-      UTC_ZONE,
-      new Date("2026-08-20T12:00:00Z"),
-    );
+    const momentum = momentumOf(fields, new Date("2026-08-20T12:00:00Z"));
     expect(momentum.state).toBe(state);
     expect(momentumTone(momentum)).toBe(tone);
+  });
+});
+
+describe("a pause is read at the server's instant", () => {
+  // Wait until 21 Aug, owned by an Auckland user: the server ends it at 21 Aug
+  // 00:00 NZST, which is 20 Aug 12:00 UTC. A Los Angeles viewer's own midnight
+  // of 21 Aug comes 19 hours later and must not extend it.
+  const fields = {
+    stalled: false,
+    wait_until: "2026-08-21",
+    wait_ends_at: "2026-08-20T12:00:00Z",
+  } as const;
+
+  it("is over at the owner's midnight whatever zone the viewer is in", () => {
+    expect(momentumOf(fields, new Date("2026-08-20T11:59:00Z")).state).toBe(
+      "on_hold",
+    );
+    expect(momentumOf(fields, new Date("2026-08-20T13:00:00Z")).state).toBe(
+      "quiet",
+    );
+  });
+
+  it("falls back to the date at UTC midnight when the server sends no instant", () => {
+    const bare = { stalled: false, wait_until: "2026-08-21" } as const;
+    expect(momentumOf(bare, new Date("2026-08-20T23:00:00Z")).state).toBe(
+      "on_hold",
+    );
   });
 });
 

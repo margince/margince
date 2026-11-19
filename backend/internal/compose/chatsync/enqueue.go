@@ -13,6 +13,7 @@ import (
 	"github.com/riverqueue/river"
 	"github.com/riverqueue/river/rivertype"
 
+	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -22,18 +23,20 @@ type TxInserter interface {
 	EnqueueTx(ctx context.Context, tx pgx.Tx, args river.JobArgs, opts *river.InsertOpts) error
 }
 
-// Enqueuer schedules a link's flush in the caller's transaction. Job builds
-// the flush's args. The flush is unique per link while it waits or runs, so
-// ten events in a window make one post.
+// Enqueuer schedules a link's jobs in the caller's transaction. Job builds
+// the flush's args and Pull the pull's. The flush is unique per link while it
+// waits or runs, so ten events in a window make one post. The pull carries
+// its own insert options.
 type Enqueuer struct {
 	Inserter    TxInserter
 	Delay       time.Duration
 	Job         func(workspace, linkID ids.UUID) river.JobArgs
+	Pull        func(workspace, connectionID ids.UUID) river.JobArgs
 	MaxAttempts int
 	States      []rivertype.JobState
 }
 
-// EnqueueFlushTx implements chatlinks.FlushEnqueuer.
+// EnqueueFlushTx implements chatlinks.Scheduler.
 func (e Enqueuer) EnqueueFlushTx(ctx context.Context, tx pgx.Tx, linkID ids.UUID) error {
 	ws, ok := principal.WorkspaceID(ctx)
 	if !ok {
@@ -44,6 +47,16 @@ func (e Enqueuer) EnqueueFlushTx(ctx context.Context, tx pgx.Tx, linkID ids.UUID
 		ScheduledAt: time.Now().Add(e.Delay),
 		UniqueOpts:  river.UniqueOpts{ByArgs: true, ByState: e.States},
 	})
+}
+
+// EnqueuePullTx implements chatlinks.Scheduler.
+func (e Enqueuer) EnqueuePullTx(ctx context.Context, tx pgx.Tx, connectionID ids.UUID) error {
+	ws, ok := principal.WorkspaceID(ctx)
+	if !ok {
+		return errors.New("chat links: scheduling a pull outside a workspace context")
+	}
+	args := e.Pull(ws, connectionID)
+	return e.Inserter.EnqueueTx(ctx, tx, args, jobs.QueuedAsArgs(args, nil))
 }
 
 // AmbientInserter schedules through the River client working the current

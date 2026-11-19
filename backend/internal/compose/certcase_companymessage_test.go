@@ -113,9 +113,9 @@ func companyMessageChangeRequestFixture() onboardingCompanyMessageFixture {
 	return fixture
 }
 
-// companyMessageExpectationJSON is what the corpus asserts, encoded as the
-// corpus will carry it — beside the fixture, never inside it.
-func companyMessageExpectationJSON(t *testing.T, kind string, changes map[string]string) json.RawMessage {
+// companyConversationExpectationJSON is what the corpus asserts, encoded as
+// the corpus carries it: beside the fixture, never inside it.
+func companyConversationExpectationJSON(t *testing.T, kind string, changes map[string]string) json.RawMessage {
 	t.Helper()
 	raw, err := json.Marshal(companyConversationExpectation{Kind: kind, Changes: changes})
 	if err != nil {
@@ -126,7 +126,7 @@ func companyMessageExpectationJSON(t *testing.T, kind string, changes map[string
 
 func companyMessageNameExpectation(t *testing.T) json.RawMessage {
 	t.Helper()
-	return companyMessageExpectationJSON(t, "correction", map[string]string{fieldDisplayName: "Acme Robotics"})
+	return companyConversationExpectationJSON(t, "correction", map[string]string{fieldDisplayName: "Acme Robotics"})
 }
 
 func runCompanyMessageCase(
@@ -197,7 +197,7 @@ func TestCompanyMessageCaseReportsWhatTheGateRefused(t *testing.T) {
 			// would accept this one too.
 			name:       "the clicked change, in the turn without the click",
 			fixture:    clickWithoutTheClick,
-			expected:   companyMessageExpectationJSON(t, "answer", nil),
+			expected:   companyConversationExpectationJSON(t, "answer", nil),
 			reply:      companyMessageLegalNameReply,
 			wantResult: aitasks.OutcomeInvalid,
 			wantDetail: `proposes "legal_name" without an administrator change request`,
@@ -270,7 +270,7 @@ func TestCompanyMessageCaseSeparatesTheRightAnswerFromAWellFormedWrongOne(t *tes
 			// The clicked option, granted verbatim and to nothing else.
 			name:     "the change the administrator clicked",
 			fixture:  companyMessageClickFixture(),
-			expected: companyMessageExpectationJSON(t, "correction", map[string]string{fieldLegalName: "Acme Robotics GmbH"}),
+			expected: companyConversationExpectationJSON(t, "correction", map[string]string{fieldLegalName: "Acme Robotics GmbH"}),
 			reply:    companyMessageLegalNameReply,
 
 			wantResult: aitasks.OutcomeAccepted,
@@ -291,7 +291,7 @@ func TestCompanyMessageCaseSeparatesTheRightAnswerFromAWellFormedWrongOne(t *tes
 			// which grounded value was the right one.
 			name:       "a grounded change carrying the wrong value",
 			fixture:    companyMessageChangeRequestFixture(),
-			expected:   companyMessageExpectationJSON(t, "correction", map[string]string{fieldIndustry: "Robotics manufacturing"}),
+			expected:   companyConversationExpectationJSON(t, "correction", map[string]string{fieldIndustry: "Robotics manufacturing"}),
 			reply:      companyMessageUnaskedChangeReply,
 			wantResult: aitasks.OutcomeWrongAnswer,
 			wantDetail: "industry reads",

@@ -30,7 +30,10 @@ import { industryWords } from "../../format/industry";
 import { linkedinUrl } from "../../format/weburl";
 import { useLocale, useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
-import { currentEmployer } from "../../lib/employmentcurrency";
+import {
+  currentEmployer,
+  useEmploymentZone,
+} from "../../lib/employmentcurrency";
 import { labelFor } from "../../lib/labelfor";
 import { useMemberName } from "../../lib/membernames";
 import { routeHash } from "../../lib/router";
@@ -62,10 +65,11 @@ export function useContactAboutSections(
   const notSet = t("field.unset");
   const linkedin =
     typeof contact.social?.linkedin === "string" ? contact.social.linkedin : "";
-  const employer = currentEmployer(view.employments?.data);
+  const employmentZone = useEmploymentZone();
+  const employer = currentEmployer(view.employments?.data, employmentZone);
   const proposed = employer
     ? undefined
-    : proposedEmployer(view, view.employments?.data ?? []);
+    : proposedEmployer(view, view.employments?.data ?? [], employmentZone);
   const owner = rosterOwnerName(contact.owner_id, ownerName, t, notSet);
   const edits = useSectionEdits(view, employer, proposed);
   const field = (

@@ -34,11 +34,13 @@ const StalledThresholdDays = 60
 // "quiet 19 days" and "stalled" are different claims about the same deal.
 const QuietThresholdDays = 19
 
-// IsStalled evaluates §8.1 at one instant. Idle is an absolute-duration
-// comparison on UTC instants, never a calendar-day count — stable under
-// a fixed test clock, identical across zones.
-// meetingAhead is MeetingAheadSQL's answer for the deal, read in the same
-// statement as lastActivityAt.
+// IsStalled evaluates the stalled rule at one instant. A deal is stalled when it
+// is open, has no meeting ahead, has been idle longer than the threshold and is
+// not paused. waitUntil is the instant the pause ends (PauseEndsSQL), never the
+// picked date. Idle is an absolute-duration comparison on UTC instants, never a
+// calendar-day count, so it is stable under a fixed test clock and identical
+// across zones. meetingAhead is MeetingAheadSQL's answer for the deal, read in
+// the same statement as lastActivityAt.
 func IsStalled(status string, createdAt time.Time, lastActivityAt, waitUntil *time.Time, meetingAhead bool, now time.Time) bool {
 	return IsQuietFor(StalledThresholdDays, status, createdAt, lastActivityAt, waitUntil, meetingAhead, now)
 }
@@ -91,9 +93,21 @@ func QuietSQL(alias string, days int) string {
 func quietAtSQL(alias string, days int, instant string) string {
 	return fmt.Sprintf(`(%[1]sstatus = 'open'
 		AND %[3]s < %[5]s - interval '%[2]d days'
-		AND (%[1]swait_until IS NULL OR %[1]swait_until <= %[5]s)
+		AND (%[1]swait_until IS NULL OR %[6]s <= %[5]s)
 		AND NOT %[4]s)`,
-		columnPrefix(alias), days, idlebase.SQL(alias), MeetingAheadSQL(alias), instant)
+		columnPrefix(alias), days, idlebase.SQL(alias), MeetingAheadSQL(alias), instant, PauseEndsSQL(alias))
+}
+
+// PauseEndsSQL is the instant a deal's pause ends. That is the start of the
+// picked wait_until day in the owner's own time zone. The installation's zone
+// applies when the owner has none. The function deal_pause_ends_at holds the rule.
+// Every reader compares this instant, so none cuts the day at UTC midnight.
+// The zone is the owner's, not the viewer's, so all readers judge one deal alike.
+func PauseEndsSQL(alias string) string {
+	if alias == "" {
+		alias = dealTable
+	}
+	return "deal_pause_ends_at(" + alias + ")"
 }
 
 // MeetingAheadSQL is true when the deal has a meeting nobody called off that

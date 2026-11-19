@@ -11,7 +11,11 @@ import { SurfaceState } from "../../design-system/surfacestate";
 import { stable } from "../../format/collate";
 import { useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
-import { stillHeld, today } from "../../lib/employmentcurrency";
+import {
+  stillHeld,
+  today,
+  useEmploymentZone,
+} from "../../lib/employmentcurrency";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useAddEmployment } from "./addemploymentmodal";
 import { BoughtMark, boughtFields } from "./boughtmarks";
@@ -63,10 +67,13 @@ export async function searchCompanyCandidates(
 // counts each company's contacts, and a create and link adds a company to it.
 // The track reads as a career, so each employer sits where its latest role
 // ended. A role still held sorts above every ended one.
-function lastHeldByCompany(roles: readonly Employment[]): Map<string, string> {
+function lastHeldByCompany(
+  roles: readonly Employment[],
+  zone: string,
+): Map<string, string> {
   const lastHeld = new Map<string, string>();
   for (const role of roles) {
-    const held = stillHeld(role)
+    const held = stillHeld(role, zone)
       ? "\uffff"
       : (role.ended_at ?? role.started_at ?? "");
     const known = lastHeld.get(role.company_id);
@@ -78,6 +85,7 @@ function lastHeldByCompany(roles: readonly Employment[]): Map<string, string> {
 
 export function useEmploymentActions(contactId: string) {
   const t = useT();
+  const zone = useEmploymentZone();
   const queryClient = useQueryClient();
   const invalidate = async () => {
     await queryClient.invalidateQueries({
@@ -99,7 +107,7 @@ export function useEmploymentActions(contactId: string) {
   });
   const end = useMutation({
     mutationFn: (employment: Employment) =>
-      patchEmployment(employment, contactId, { ended_at: today() }, t),
+      patchEmployment(employment, contactId, { ended_at: today(zone) }, t),
     onSuccess: invalidate,
   });
   const update = useMutation({
@@ -151,6 +159,7 @@ function unreadImport(
 // know which company to email has already lost the point of the marker.
 export function Employers({ view }: Readonly<{ view: Contact360 }>) {
   const t = useT();
+  const employmentZone = useEmploymentZone();
   const contact = view.contact;
   const readOnlyReason = useContactReadOnlyReason(contact);
   const canEdit = useCanEditEmployment(contact);
@@ -177,7 +186,7 @@ export function Employers({ view }: Readonly<{ view: Contact360 }>) {
   const [editingOpen, setEditingOpen] = useState(false);
   const [removing, setRemoving] = useState<Employment | null>(null);
   const primaryCompany = allEmployments.find(
-    (e) => e.is_current_primary && stillHeld(e),
+    (e) => e.is_current_primary && stillHeld(e, employmentZone),
   )?.company_id;
   // A contact who still works somewhere and has no primary employer is a
   // DELIBERATE gap, not a missing value: a human cleared the flag, or their
@@ -188,8 +197,9 @@ export function Employers({ view }: Readonly<{ view: Contact360 }>) {
   // Not the empty state — the list is not empty — and not a warning, because
   // nothing is wrong. A prompt, and the hook the row's own edit offers.
   const noPrimaryEmployer =
-    primaryCompany === undefined && allEmployments.some(stillHeld);
-  const lastHeld = lastHeldByCompany(allEmployments);
+    primaryCompany === undefined &&
+    allEmployments.some((row) => stillHeld(row, employmentZone));
+  const lastHeld = lastHeldByCompany(allEmployments, employmentZone);
   const employments = [...allEmployments].sort(
     (a, b) =>
       Number(b.company_id === primaryCompany) -
@@ -202,7 +212,7 @@ export function Employers({ view }: Readonly<{ view: Contact360 }>) {
       stable(b.started_at ?? "", a.started_at ?? ""),
   );
   const adding = useAddEmployment(contact.id, actions.create, employments);
-  const proposed = proposedEmployer(view, employments);
+  const proposed = proposedEmployer(view, employments, employmentZone);
   const withheld = withheldSections(view).employments;
   const importView = {
     ...view,
@@ -284,7 +294,8 @@ export function Employers({ view }: Readonly<{ view: Contact360 }>) {
               // only the primary one: the title is contact-wide, and offered
               // on every live row it would be saved to each of them.
               fallbackRole={
-                stillHeld(employment) && employment.is_current_primary
+                stillHeld(employment, employmentZone) &&
+                employment.is_current_primary
                   ? (contact.title ?? undefined)
                   : undefined
               }

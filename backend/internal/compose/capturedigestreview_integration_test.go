@@ -84,7 +84,7 @@ func (b *backfillWireEnv) stageCloseDateProposal(t *testing.T, deal ids.UUID) {
 	svc := approvals.NewService(b.env.DB())
 	if _, err := svc.Stage(b.env.Admin(), approvals.StageInput{
 		Kind:           deals.CloseDateCorrectionKind,
-		ProposedChange: []byte(`{"deal_id":"` + deal.String() + `","expected_close_date":"2026-12-01"}`),
+		ProposedChange: []byte(`{"deal_id":"` + deal.String() + `","expected_close_date":"` + closeDateAhead(t) + `"}`),
 		DiffHash:       deal.String(),
 		TargetType:     "deal",
 		TargetID:       deal,

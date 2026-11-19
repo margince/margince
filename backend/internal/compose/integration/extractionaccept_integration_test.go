@@ -21,6 +21,7 @@ import (
 	"image"
 	imagepng "image/png"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -30,6 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -39,12 +41,12 @@ import (
 // acceptExtractionFields is the evidence set these tests accept against: four
 // deal-writable grounded fields, one grounded row reference the allowlist must
 // refuse, one omitted key.
-func acceptExtractionFields() []extraction.ExtractedField {
+func acceptExtractionFields(closeDate string) []extraction.ExtractedField {
 	return []extraction.ExtractedField{
 		{Field: "name", Value: "Acme Renewal Q3", SourceQuote: "Subject: Acme Renewal Q3", PageOrSection: "p.1", Confidence: "high"},
 		{Field: "amount_minor", Value: "150000", SourceQuote: "Total: EUR 1,500.00", PageOrSection: "p.2", Confidence: "high"},
 		{Field: "currency", Value: "EUR", SourceQuote: "all amounts in EUR", PageOrSection: "p.2", Confidence: "medium"},
-		{Field: "expected_close_date", Value: "2030-12-31", SourceQuote: "offer valid until 2030-12-31", PageOrSection: "p.3", Confidence: "medium"},
+		{Field: "expected_close_date", Value: closeDate, SourceQuote: "offer valid until " + closeDate, PageOrSection: "p.3", Confidence: "medium"},
 		{Field: "owner_id", Value: "3e0f5a9c-0000-0000-0000-000000000001", SourceQuote: "account executive", PageOrSection: "p.1", Confidence: "medium"},
 		{Field: "payment_terms", Omitted: true, OmittedReason: "not_stated_in_file"},
 	}
@@ -111,7 +113,10 @@ type acceptEnv struct {
 	// reading is the id of the seeded reading these tests accept against — the
 	// one a human would have been shown.
 	reading ids.UUID
-	engine  *compose.ExtractionAccept
+	// closeDate is the reading's expected close date. The deal writer refuses a
+	// past one, so it is dated from the clock.
+	closeDate string
+	engine    *compose.ExtractionAccept
 }
 
 // acceptRequest names the seeded reading, which every accept must.
@@ -130,12 +135,14 @@ func setupExtractionAccept(t *testing.T) acceptEnv {
 	pipeline, open, _ := DealFixture(t, e)
 	deal := e.SeedDeal(t, "Accept Target", pipeline, open, &e.Rep1)
 	att := uploadDealAttachment(e.Admin(), t, h, deal, "quote.pdf", []byte("%PDF-1.4 quote bytes"))
+	closeDate := clocktest.Now(t).AddDate(1, 0, 0).Format(time.DateOnly)
 	return acceptEnv{
-		Env:     e,
-		deal:    deal,
-		att:     att,
-		reading: seedExtractionReading(e.Admin(), t, e, ids.UUID(att.Id), acceptExtractionFields()),
-		engine:  compose.NewExtractionAccept(e.Pool),
+		Env:       e,
+		deal:      deal,
+		att:       att,
+		closeDate: closeDate,
+		reading:   seedExtractionReading(e.Admin(), t, e, ids.UUID(att.Id), acceptExtractionFields(closeDate)),
+		engine:    compose.NewExtractionAccept(e.Pool),
 	}
 }
 
@@ -206,7 +213,7 @@ func TestAcceptAttachmentExtractionPersistsFieldsAndAuditNotes(t *testing.T) {
 	if n := a.WsCount(t, `
 		SELECT count(*) FROM deal
 		WHERE id = $1 AND name = 'Acme Renewal Q3' AND amount_minor = 150000
-		  AND currency = 'EUR' AND expected_close_date = DATE '2030-12-31'`, a.deal); n != 1 {
+		  AND currency = 'EUR' AND expected_close_date = $2::date`, a.deal, a.closeDate); n != 1 {
 		t.Error("the accepted fields did not land on the deal row as their coerced column values")
 	}
 
@@ -215,7 +222,7 @@ func TestAcceptAttachmentExtractionPersistsFieldsAndAuditNotes(t *testing.T) {
 		"name":                "Subject: Acme Renewal Q3",
 		"amount_minor":        "Total: EUR 1,500.00",
 		"currency":            "all amounts in EUR",
-		"expected_close_date": "offer valid until 2030-12-31",
+		"expected_close_date": "offer valid until " + a.closeDate,
 	} {
 		if n := a.acceptNoteCount(t, field, quote, "agent:attachment-extractor"); n != 1 {
 			t.Errorf("audit notes for %s = %d, want exactly 1 (subject/body/captured_by/deal link all pinned)", field, n)
@@ -270,7 +277,7 @@ func TestAcceptAttachmentExtractionRefusesNonDealAttachment(t *testing.T) {
 	h := activities.NewHandlers(e.DB()).WithUploadLimit(uploadCeiling).WithBlobstore(blobstore.NewMemory())
 	company := e.SeedCompany(t, "Non-Deal Accept Parent", &e.Rep1)
 	att := uploadTestAttachmentForCompany(e.Admin(), t, h, company, "company-notes.pdf", []byte("%PDF-1.4 company bytes"))
-	reading := seedExtractionReading(e.Admin(), t, e, ids.UUID(att.Id), acceptExtractionFields())
+	reading := seedExtractionReading(e.Admin(), t, e, ids.UUID(att.Id), acceptExtractionFields(clocktest.Now(t).AddDate(1, 0, 0).Format(time.DateOnly)))
 	engine := compose.NewExtractionAccept(e.Pool)
 
 	_, err := engine.Accept(e.Admin(), ids.UUID(att.Id), crmcontracts.AcceptExtractionRequest{
@@ -403,7 +410,7 @@ func TestAcceptAttachmentExtractionRefusesAReadingOfAnotherDocument(t *testing.T
 	a := setupExtractionAccept(t)
 	h := activities.NewHandlers(a.DB()).WithUploadLimit(uploadCeiling).WithBlobstore(blobstore.NewMemory())
 	other := uploadDealAttachment(a.Admin(), t, h, a.deal, "other.pdf", []byte("%PDF-1.4 other bytes"))
-	elsewhere := seedExtractionReading(a.Admin(), t, a.Env, ids.UUID(other.Id), acceptExtractionFields())
+	elsewhere := seedExtractionReading(a.Admin(), t, a.Env, ids.UUID(other.Id), acceptExtractionFields(a.closeDate))
 
 	_, err := a.engine.Accept(a.Admin(), ids.UUID(a.att.Id), crmcontracts.AcceptExtractionRequest{
 		ExtractionId: openapi_types.UUID(elsewhere), FieldKeys: []string{"amount_minor"},

@@ -1019,6 +1019,7 @@ var Declared = map[string][]string{
 	"PUT /v1/analytics/initiatives/{id}/members":                               {},
 	"PUT /v1/analytics/reports/{id}/draft":                                     {},
 	"PUT /v1/analytics/sales-goals/{owner_id}/{year}/draft":                    {},
+	"PUT /v1/autonomy/installation":                                            {},
 	"PUT /v1/brief/annotations":                                                {},
 	"PUT /v1/capture/blocked-domains":                                          {},
 	"PUT /v1/capture/senders/{address}/decision":                               {},

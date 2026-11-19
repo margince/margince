@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
@@ -174,7 +175,7 @@ func (s *Store) matchEmploymentCompany(ctx context.Context, tx pgx.Tx, e employm
 func (s *Store) applyEmploymentEvidence(ctx context.Context, tx pgx.Tx, contact ids.ContactID, episodes []employmentEvidence, req crmcontracts.EmploymentImportRequest, action string) error {
 	activeCurrent := currentEmploymentKeys(episodes)
 	var today time.Time
-	if err := tx.QueryRow(ctx, `SELECT current_date`).Scan(&today); err != nil {
+	if err := tx.QueryRow(ctx, `SELECT `+occurredday.TodaySQL("now()")).Scan(&today); err != nil {
 		return err
 	}
 	group := employmentGroup(episodes, req, action)

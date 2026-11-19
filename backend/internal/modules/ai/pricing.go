@@ -3,7 +3,11 @@
 
 package ai
 
-import "time"
+import (
+	"time"
+
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+)
 
 // Lane is what a model is FOR: the chat tiers, or the embeddings lane. It rides
 // the price sheet because the priced row is the one that must exist for a model
@@ -158,7 +162,7 @@ type DayCost struct {
 // effective is the day every seeded row's effective_date carries — the
 // caller's "as of" anchor (typically the day the seed runs).
 func SeedModelRates(effective time.Time) []ModelRate {
-	day := effective.UTC().Truncate(24 * time.Hour)
+	day := storekit.AsDate(effective)
 	rates := vendorSheetRates(day)
 	rates = append(rates, brokerSheetRates(day)...)
 	return append(rates, localZeroRates(day)...)
