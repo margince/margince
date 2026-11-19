@@ -1,15 +1,15 @@
 /** @vitest-environment happy-dom */
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   ASYNC_UTIL_TIMEOUT_MS,
   SLOWEST_MEASURED_TEST_MS,
 } from "../../../vitest.budget";
 import { pickOption } from "../../design-system/select-testing";
 import { draftButton } from "../../testing/composedraft.testkit";
-import { ComposeModal } from "./compose";
 import {
+  installComposeClock,
   jsonResponse,
   pickWhy,
   render,
@@ -17,11 +17,14 @@ import {
   WHY_LABEL,
   waitForSendReady,
 } from "./compose.testkit";
+import { ComposeWindow } from "./composewindow";
 
 // The project a reply files under, and the key it carries in the subject.
 
 const EIGHT_WAITS_TEST_MS =
   ASYNC_UTIL_TIMEOUT_MS * 8 + SLOWEST_MEASURED_TEST_MS;
+
+beforeEach(installComposeClock);
 
 afterEach(() => {
   cleanup();
@@ -86,7 +89,7 @@ describe("the project a reply files under", () => {
 
   const openReply = async () => {
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="deal"
         entityId="d-1"

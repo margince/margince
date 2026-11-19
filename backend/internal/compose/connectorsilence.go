@@ -13,7 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
-func (h connectorHandlers) DismissConnectorSilence(w http.ResponseWriter, r *http.Request, provider crmcontracts.CaptureProvider) {
+func (h connectorHandlers) DismissConnectorSilence(w http.ResponseWriter, r *http.Request, provider crmcontracts.CaptureProvider, params crmcontracts.DismissConnectorSilenceParams) {
 	if h.registry == nil {
 		httperr.NotImplemented(w, r, "DismissConnectorSilence")
 		return
@@ -22,7 +22,7 @@ func (h connectorHandlers) DismissConnectorSilence(w http.ResponseWriter, r *htt
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	view, err := h.registry.DismissSilence(r.Context(), string(provider), req.Since)
+	view, err := h.registry.DismissSilence(r.Context(), capture.MailboxNamed(string(provider), params.ConnectionId), req.Since)
 	if errors.Is(err, capture.ErrNoConnection) {
 		err = apperrors.ErrNotFound
 	}

@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/gmail"
 	"github.com/margince/margince/backend/internal/modules/capture/graph"
 	"github.com/margince/margince/backend/internal/modules/capture/oauthflow"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -108,7 +109,7 @@ func TestProviderSyncCapturesAndRemovesTheRealStoredEmailKey(t *testing.T) {
 			if err != nil {
 				t.Fatal("connector did not write the normalized email key")
 			}
-			if count := e.WsCount(t, `SELECT count(*) FROM capture_import i JOIN capture_connection c ON c.user_id=i.user_id WHERE c.provider=$1 AND i.provider_message_ids @> ARRAY[c.provider || ':' || c.generation || ':provider-opaque-id']`, tc.provider); count != 1 {
+			if count := e.WsCount(t, `SELECT count(*) FROM capture_import i JOIN capture_connection c ON c.user_id=i.user_id WHERE c.provider=$1 AND i.provider_message_ids @> ARRAY[`+storekit.MailboxMarkSQL("c")+` || ':provider-opaque-id']`, tc.provider); count != 1 {
 				t.Fatal("connector did not persist its mailbox-specific provider id")
 			}
 			switch tc.outlookCase {

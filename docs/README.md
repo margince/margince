@@ -232,6 +232,7 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [Watch an installation](operations/observability.md): how to watch work, check a problem and show that it is fixed.
 - [operator-endpoints.md](reference/operator-endpoints.md) and [job-surfaces.md](reference/job-surfaces.md):
   the checks and numbers the api and the worker serve.
+- [send-metrics.md](reference/send-metrics.md): the numbers the api counts for each email Send.
 - [worker-diagnostics.md](reference/worker-diagnostics.md): profile the worker, read one site, stop it.
 - [feature-settings.md](reference/feature-settings.md), [connectors-and-sign-in.md](reference/connectors-and-sign-in.md),
   [storage-secrets-and-license.md](reference/storage-secrets-and-license.md),

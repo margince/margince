@@ -119,13 +119,18 @@ type LoneProvider = Exclude<Provider, OAuthConnectProvider>;
  *  and for Google the meeting notes. */
 export type ConnectionAccount = Readonly<{
   key: AccountVendor | LoneProvider;
+  /** Names this account among others of one vendor: a member may connect
+   *  several, so the vendor alone is not a key. */
+  id: string;
   mail: CaptureConnection | null;
   calendar: CaptureConnection | null;
   notes: CaptureConnection | null;
 }>;
 
 /** The roster folded into accounts, Google first, then Microsoft 365, then the
- *  rest in roster order. A calendar with no mailbox beside it stays an account.
+ *  rest in roster order. One vendor's services belong to one account when they
+ *  name the same address, so a second Google account is a second row. A
+ *  calendar with no mailbox beside it stays an account.
  *
  *  Takes the rows the caller shows: a disconnected gcal left in the input
  *  would read as a connected calendar, so the caller filters those out first. */
@@ -133,17 +138,49 @@ export function accountsOf(
   connections: readonly CaptureConnection[],
 ): ConnectionAccount[] {
   const vendors: readonly AccountVendor[] = ["google", "microsoft"];
-  const paired = vendors.map((vendor) => ({
-    key: vendor,
-    mail: rowFor(connections, VENDOR_SERVICES[vendor].mail),
-    calendar: rowFor(connections, VENDOR_SERVICES[vendor].calendar),
-    notes:
-      vendor === "google" ? rowFor(connections, MEETING_NOTES_PROVIDER) : null,
-  }));
+  const paired = vendors.flatMap((vendor) => {
+    const services = VENDOR_SERVICES[vendor];
+    const own = connections.filter(
+      (c) =>
+        c.provider === services.mail ||
+        c.provider === services.calendar ||
+        (vendor === "google" && c.provider === MEETING_NOTES_PROVIDER),
+    );
+    // Mail and calendar name the accounts. Meeting notes, and a row that names
+    // no address, join the vendor's first account unless one names theirs.
+    // That is where they sat while a member held one account per vendor.
+    const named = own.filter((c) => c.provider !== MEETING_NOTES_PROVIDER);
+    const addresses = addressesOf(named.length > 0 ? named : own);
+    return addresses.map((address, i) => {
+      const row = (provider: Provider) =>
+        rowFor(own, provider, address) ??
+        (i === 0
+          ? (own.find(
+              (c) =>
+                c.provider === provider && !addresses.includes(addressOf(c)),
+            ) ?? null)
+          : null);
+      return {
+        key: vendor,
+        id: `${vendor}:${address}`,
+        mail: row(services.mail),
+        calendar: row(services.calendar),
+        notes: vendor === "google" ? row(MEETING_NOTES_PROVIDER) : null,
+      };
+    });
+  });
   const lone = connections.flatMap((connection) => {
     const provider = connection.provider;
     return isLoneProvider(provider)
-      ? [{ key: provider, mail: connection, calendar: null, notes: null }]
+      ? [
+          {
+            key: provider,
+            id: connection.id,
+            mail: connection,
+            calendar: null,
+            notes: null,
+          },
+        ]
       : [];
   });
   return [...paired, ...lone].filter(
@@ -154,11 +191,27 @@ export function accountsOf(
   );
 }
 
+/** The account address a connection names, compared without case as the
+ *  server's key does. A connection that names none is the empty address. */
+function addressOf(connection: CaptureConnection): string {
+  return (connection.account_label ?? "").toLowerCase();
+}
+
+function addressesOf(connections: readonly CaptureConnection[]): string[] {
+  const named = [...new Set(connections.map(addressOf))].filter(Boolean);
+  return named.length > 0 ? named : [""];
+}
+
 function rowFor(
   connections: readonly CaptureConnection[],
   provider: Provider,
+  address: string,
 ): CaptureConnection | null {
-  return connections.find((c) => c.provider === provider) ?? null;
+  return (
+    connections.find(
+      (c) => c.provider === provider && addressOf(c) === address,
+    ) ?? null
+  );
 }
 
 function isLoneProvider(provider: Provider): provider is LoneProvider {

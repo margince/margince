@@ -75,7 +75,7 @@ func TestAMailboxKeepsItsOwnSignatureAnswer(t *testing.T) {
 	registry, owner := connectedMailbox(t, e)
 
 	off := false
-	view, err := registry.SetSignatureEnrichment(owner, "graph", &off)
+	view, err := registry.SetSignatureEnrichment(owner, capturemod.ProviderMailbox("graph"), &off)
 	if err != nil {
 		t.Fatalf("switching the mailbox off: %v", err)
 	}
@@ -96,10 +96,10 @@ func TestAMailboxCanHandTheQuestionBackToTheTenantDefault(t *testing.T) {
 	registry, owner := connectedMailbox(t, e)
 
 	on := true
-	if _, err := registry.SetSignatureEnrichment(owner, "graph", &on); err != nil {
+	if _, err := registry.SetSignatureEnrichment(owner, capturemod.ProviderMailbox("graph"), &on); err != nil {
 		t.Fatalf("switching the mailbox on: %v", err)
 	}
-	if _, err := registry.SetSignatureEnrichment(owner, "graph", nil); err != nil {
+	if _, err := registry.SetSignatureEnrichment(owner, capturemod.ProviderMailbox("graph"), nil); err != nil {
 		t.Fatalf("handing the question back: %v", err)
 	}
 	if got := listedAnswer(owner, t, registry); got != nil {
@@ -112,7 +112,7 @@ func TestSettingSignatureEnrichmentAuditsTheChange(t *testing.T) {
 	registry, owner := connectedMailbox(t, e)
 
 	off := false
-	if _, err := registry.SetSignatureEnrichment(owner, "graph", &off); err != nil {
+	if _, err := registry.SetSignatureEnrichment(owner, capturemod.ProviderMailbox("graph"), &off); err != nil {
 		t.Fatalf("switching the mailbox off: %v", err)
 	}
 
@@ -147,7 +147,7 @@ func TestSettingSignatureEnrichmentRefusesAMailboxTheCallerHasNot(t *testing.T) 
 	// Nothing connected: the answer is that the mailbox is not there, rather
 	// than a write that silently touches no row and reports success.
 	off := false
-	if _, err := registry.SetSignatureEnrichment(caller, "graph", &off); err == nil {
+	if _, err := registry.SetSignatureEnrichment(caller, capturemod.ProviderMailbox("graph"), &off); err == nil {
 		t.Fatal("setting an answer on an unconnected mailbox succeeded")
 	}
 }

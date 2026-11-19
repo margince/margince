@@ -40,6 +40,27 @@ const NO_GRANT: ObjectGrant = {
   delete: false,
 };
 
+/**
+ * The grant a flipped switch writes. A write verb needs Read, as the server
+ * holds it: turning Read off turns the writes off, and turning a write on turns
+ * Read on. An object that offers no Read keeps its writes as they are.
+ */
+export function nextGrant(
+  grant: ObjectGrant,
+  action: CrudAction,
+  next: boolean,
+  verbs: readonly CrudAction[] = CRUD,
+): ObjectGrant {
+  const out = { ...grant, [action]: next };
+  if (!verbs.includes("read")) {
+    return out;
+  }
+  if (action === "read") {
+    return next ? out : { ...out, create: false, update: false, delete: false };
+  }
+  return out.create || out.update || out.delete ? { ...out, read: true } : out;
+}
+
 export function grantOf(role: Role, object: string): ObjectGrant {
   const objects: Readonly<Record<string, ObjectGrant | undefined>> =
     role.objects;
@@ -55,6 +76,8 @@ export type GrantMatrixRow = Readonly<{
   /** A label beside the name, for the rows that differ from the rest. */
   badge?: string;
   grant: ObjectGrant;
+  /** The verbs this subject offers, in column order; every verb when absent. */
+  verbs?: readonly CrudAction[];
   /** Each switch's full accessible name, identifiable out of context. */
   cellLabel: (action: CrudAction) => string;
   /** Whether a write carrying this row's whole grant is in flight. */
@@ -177,6 +200,13 @@ function GrantRow({
         </span>
       </th>
       {CRUD.map((action) => {
+        if (row.verbs !== undefined && !row.verbs.includes(action)) {
+          return (
+            <td key={action} className="grant-cell">
+              <span aria-hidden="true">–</span>
+            </td>
+          );
+        }
         const refusal = !canManage
           ? readOnlyReason
           : valueFor(row.grant, action, false)

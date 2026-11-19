@@ -5,12 +5,14 @@ package reporting
 
 import (
 	"context"
+	"errors"
 	"slices"
 
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -156,4 +158,18 @@ func (g OwnerGoals) sum(owners []ids.UUID, months []int) goalSum {
 		}
 	}
 	return sum
+}
+
+// GoalReadable answers whether the reader may read the goal of scope. That
+// needs the sales target grant and no seller withheld, as GoalSellers decides
+// for Progress. A refused read is an answer, not an error.
+func (s *Service) GoalReadable(ctx context.Context, tx pgx.Tx, scope crmcontracts.ReportingScope) (bool, error) {
+	if !auth.Allows(ctx, "sales_target", principal.ActionRead) {
+		return false, nil
+	}
+	sellers, err := s.GoalSellers(ctx, tx, scope)
+	if errors.Is(err, apperrors.ErrPermissionDenied) {
+		return false, nil
+	}
+	return err == nil && !sellers.Withheld, err
 }

@@ -11,7 +11,8 @@ import (
 	"golang.org/x/text/language"
 	"golang.org/x/text/language/display"
 
-	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/kernel/moneynotation"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // Date formats a display date without changing its reporting boundary.
@@ -53,24 +54,9 @@ func (c Copy) clock(at time.Time) string {
 	return at.Format("15:04")
 }
 
-// Money groups the canonical minor-unit conversion without floating-point rounding.
+// Money is the figure in this language's digit marks, followed by its code.
 func (c Copy) Money(minor int64, currency string) string {
-	whole, fraction, decimal := strings.Cut(values.MajorUnits(minor, currency), ".")
-	sign := ""
-	if strings.HasPrefix(whole, "-") {
-		sign, whole = "-", whole[1:]
-	}
-	group, point := ",", "."
-	if c.Language == German || c.Language == Vietnamese {
-		group, point = ".", ","
-	}
-	for i := len(whole) - 3; i > 0; i -= 3 {
-		whole = whole[:i] + group + whole[i:]
-	}
-	if decimal {
-		whole += point + fraction
-	}
-	return sign + whole + " " + currency
+	return moneynotation.Grouped(minor, currency, textlang.Lang(c.Language)) + " " + currency
 }
 
 func zoneOffset(at time.Time) string {

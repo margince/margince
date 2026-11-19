@@ -5,6 +5,7 @@ import {
   type ActivityGate,
   useActivityGate,
 } from "../../components/activitygate";
+import { MergedIntoSentence } from "../../components/historymergedref";
 import {
   LatestInboundLine,
   useLatestInbound,
@@ -45,7 +46,7 @@ import { ContactRail } from "./contactrail";
 import { ContactSubtitle } from "./contactsubtitle";
 import { ContactLatestInbound } from "./contacttabs";
 import "./contact360.css";
-import { useDisabledCoreFeatures } from "../../lib/corefeatures";
+import { useHiddenCoreFeatures } from "../../lib/corefeatures";
 import { useViewerZone } from "../../lib/viewerzone";
 import {
   navigateKeepingReturn,
@@ -100,11 +101,17 @@ function refusalsOf(
   );
 }
 
+// An archived contact that was merged says where it went, after its reason.
+function mergedInto(row: Contact | undefined): ReactNode {
+  if (!row?.archived_at || !row.merged_into_id) return undefined;
+  return <MergedIntoSentence kind="contact" id={row.merged_into_id} />;
+}
+
 export function ContactPageV2({
   id,
   tab: addressedTab,
 }: Readonly<{ id: string; tab: ContactTab }>) {
-  const tab = contactTabForFeatures(addressedTab, useDisabledCoreFeatures());
+  const tab = contactTabForFeatures(addressedTab, useHiddenCoreFeatures());
 
   // Which message the drawer is showing. One drawer over the record, owned by
   // the page: the timeline and the rail both open into it, so a citation in
@@ -185,6 +192,7 @@ export function ContactPageV2({
     onOpen: () => openComposer(""),
     readOnlyReason: record.data?.archived_at ? readOnlyReason : undefined,
     readOnlyReasonId,
+    readOnlyMore: mergedInto(record.data),
   });
 
   const archived = archivedContactRow(record);

@@ -131,6 +131,20 @@ describe("assigning a task at create time", () => {
     expect(post?.body).not.toHaveProperty("remind_at");
   });
 
+  it("refuses a due year far outside the window and posts nothing", async () => {
+    const captured: Captured[] = [];
+    renderTaskComposer(captured);
+    const user = userEvent.setup();
+    await user.type(await screen.findByLabelText("Subject *"), "Call back");
+    await user.tripleClick(screen.getByRole("textbox", { name: "Due date" }));
+    await user.keyboard("01/01/1900");
+    await user.tab();
+    await user.click(screen.getByRole("button", { name: "Log" }));
+
+    expect(await screen.findByText(/Earliest date:/)).toBeTruthy();
+    expect(captured.some((e) => e.key === "POST /activities")).toBe(false);
+  });
+
   it("offers no callback time on a note", async () => {
     stubApi({
       "GET /contacts/p1": () => jsonResponse(contact),

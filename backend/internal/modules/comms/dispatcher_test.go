@@ -125,12 +125,29 @@ func TestDispatchParksWhenTheGrantLacksSendScope(t *testing.T) {
 	}
 }
 
+// An IMAP mailbox whose owner never turned sending on holds no send scope, and
+// its delivery parks with the reason that names reconnecting.
+func TestDispatchParksAnIMAPDeliveryWhoseMailboxDoesNotSend(t *testing.T) {
+	sender := &fakeSender{}
+	store := &fakeStore{delivery: liveDelivery()}
+	store.delivery.Provider = "imap"
+	d := newTestDispatcher(store, fakeResolver{sender: sender, granted: []string{}}, &stubConsent{})
+
+	got, _ := dispatch(context.Background(), d, store.delivery.ID)
+	if got != OutcomeParked || sender.calls != 0 {
+		t.Errorf("outcome=%v calls=%d, want OutcomeParked/0", got, sender.calls)
+	}
+	if !strings.Contains(store.parked, "not granted the send scope") {
+		t.Errorf("parked reason = %q, want the send-scope reason", store.parked)
+	}
+}
+
 // A provider with no send capability at all has nothing to grant, so the
 // authority gate must refuse it rather than fall through to a nil scope.
 func TestDispatchParksWhenTheProviderCannotSendAtAll(t *testing.T) {
 	sender := &fakeSender{}
 	store := &fakeStore{delivery: liveDelivery()}
-	store.delivery.Provider = "imap"
+	store.delivery.Provider = "carrier-pigeon"
 	d := newTestDispatcher(store, fakeResolver{sender: sender, granted: []string{sendScope}}, &stubConsent{})
 
 	got, _ := dispatch(context.Background(), d, store.delivery.ID)
@@ -376,5 +393,41 @@ func TestADispatcherConfiguredWithOneRungStillTransmitsOnce(t *testing.T) {
 	}
 	if got != OutcomeSent || sender.calls != 1 {
 		t.Errorf("outcome=%v calls=%d, want OutcomeSent/1 — the first attempt must reach the provider", got, sender.calls)
+	}
+}
+
+// noLookupSender is a mail sender that declares no prior-send lookup, as the
+// IMAP connector does.
+type noLookupSender struct{ fakeSender }
+
+func (*noLookupSender) DetectsPriorSend() bool { return false }
+
+// A mail sender without a lookup is marked in flight before the call. A retry
+// after an attempt whose outcome was never learned parks unsent.
+func TestAMailSenderWithoutAPriorSendLookupSendsAtMostOnce(t *testing.T) {
+	sender := &noLookupSender{}
+	store := &fakeStore{delivery: liveDelivery()}
+	d := newTestDispatcher(store, fakeResolver{sender: sender, granted: []string{sendScope}}, &stubConsent{})
+
+	if got, _ := dispatch(context.Background(), d, store.delivery.ID); got != OutcomeSent || store.marked != 1 {
+		t.Fatalf("outcome=%v marked=%d, want sent with the marker set first", got, store.marked)
+	}
+
+	store = &fakeStore{delivery: liveDelivery()}
+	at := testNow
+	store.delivery.InFlightAt = &at
+	d = newTestDispatcher(store, fakeResolver{sender: sender, granted: []string{sendScope}}, &stubConsent{})
+	got, _ := dispatch(context.Background(), d, store.delivery.ID)
+	if got != OutcomeParked || sender.calls != 1 {
+		t.Errorf("outcome=%v calls=%d, want parked with no second transmission", got, sender.calls)
+	}
+}
+
+// Gmail and Graph declare nothing and keep their retry lookup: no marker.
+func TestAMailSenderWithALookupRidesTheRetryLadder(t *testing.T) {
+	store := &fakeStore{delivery: liveDelivery()}
+	d := newTestDispatcher(store, fakeResolver{sender: &fakeSender{}, granted: []string{sendScope}}, &stubConsent{})
+	if got, _ := dispatch(context.Background(), d, store.delivery.ID); got != OutcomeSent || store.marked != 0 {
+		t.Errorf("outcome=%v marked=%d, want sent without a marker", got, store.marked)
 	}
 }

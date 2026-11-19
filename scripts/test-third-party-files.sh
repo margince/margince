@@ -20,7 +20,7 @@ asset = fixture / "vendor/nested"
 asset.mkdir(parents=True)
 (asset / "LICENCE.md").write_text("Permission to use this file")
 (asset / "mark.svg").write_text("<svg/>")
-(asset / "README.md").write_text("provenance")
+(asset / "README.md").write_text("Copied from example 1, " + chr(0xA9) + " 2019 Example Corp")
 manifest = fixture / "third-party-files.txt"
 record = "vendor/nested/mark.svg | example 1 | MIT | vendor/nested/LICENCE.md\n"
 manifest.write_text(record)
@@ -78,6 +78,41 @@ manifest.write_text(record)
 (asset / "LICENCE.md").unlink()
 assert "missing vendor/nested/LICENCE.md" in run("check", fixture, False)
 (asset / "LICENCE.md").write_text("Permission to use this file")
+run("check", fixture, True)
+
+
+def planted(path, text):
+    file = fixture / path
+    file.parent.mkdir(parents=True, exist_ok=True)
+    file.write_text(text)
+    subprocess.run(["git", "-C", str(fixture), "add", "."], check=True)
+    return file
+
+
+def removed(file):
+    file.unlink()
+    subprocess.run(["git", "-C", str(fixture), "add", "-u"], check=True)
+
+
+# A copy with no licence text beside it. The markers are split so this tracked
+# script does not carry them itself.
+copyright_line = "Copy" + "right (c) 2019-2024 Example Corp\n"
+spdx_line = "SPDX-License-" + "Identifier: MIT\n"
+for path, text in (("data/words.txt", copyright_line), ("data/schema.json", chr(0xA9) + " 2019 Example Corp\n"),
+                   ("data/table.xml", "<!-- " + spdx_line + "-->")):
+    copy = planted(path, text)
+    assert "third-party licence or copyright line" in run("check", fixture, False)
+    removed(copy)
+first_party = planted("src/own.py", "# SPDX-FileCopy" + "rightText: 2026 Gradion\n# SPDX-License-Identifier: BUSL-1.1\n")
+run("check", fixture, True)
+removed(first_party)
+twin = planted("elsewhere/icon.svg", "<svg/>")
+assert "unrecorded copy of vendor/nested/mark.svg at elsewhere/icon.svg" in run("check", fixture, False)
+removed(twin)
+# A file list that misses a recorded copy must fail, not pass on fewer files.
+subprocess.run(["git", "-C", str(fixture), "rm", "-q", "--cached", "vendor/nested/mark.svg"], check=True)
+assert "recorded copy is not tracked" in run("check", fixture, False)
+subprocess.run(["git", "-C", str(fixture), "add", "."], check=True)
 run("check", fixture, True)
 
 sboms = work / "sboms"

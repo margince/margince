@@ -15,3 +15,15 @@ it("names the kind of work that is clear, not all of it", () => {
   );
   expect(clearSentence(false, "all", null, t)).toBe(en["worklist.clear"]);
 });
+
+it("says decisions are waiting instead of that nothing is", () => {
+  expect(clearSentence(false, "all", null, t, false, "today", true)).toBe(
+    en["worklist.clearDecisionsWaiting"],
+  );
+  expect(clearSentence(false, "all", null, t, false, "today", false)).toBe(
+    en["worklist.clear"],
+  );
+  expect(clearSentence(false, "all", null, t, false, "decisions", true)).toBe(
+    en["worklist.clear.decisions"],
+  );
+});

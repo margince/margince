@@ -186,7 +186,7 @@ type fakeResolver struct {
 	err     error
 }
 
-func (f fakeResolver) Resolve(context.Context, ids.UserID, string) (connector.EmailSender, connector.Auth, []string, error) {
+func (f fakeResolver) Resolve(context.Context, ids.UserID, string, *ids.UUID) (connector.EmailSender, connector.Auth, []string, error) {
 	return f.sender, connector.Auth("cred"), f.granted, f.err
 }
 

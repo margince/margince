@@ -10,7 +10,7 @@ import {
   allowedPreview,
   isPreviewDoor,
 } from "../../testing/sendpermission.testkit";
-import { ComposeModal } from "./compose";
+import { ComposeWindow } from "./composewindow";
 
 // The composer, opened onto a message that is no longer there.
 //
@@ -87,7 +87,7 @@ describe("drafting a reply to a message that is gone", () => {
         jsonResponse({ title: "not found", code: "not_found" }, 404),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -119,7 +119,7 @@ describe("drafting a reply to a message that is gone", () => {
         ),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="contact"
         entityId="c-1"
         contactId="c-1"
@@ -160,7 +160,7 @@ describe("drafting a reply to a message that is gone", () => {
         ),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"

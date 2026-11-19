@@ -62,6 +62,8 @@ type outboundMessage struct {
 	// — including a colleague's IMAP when we sent over Gmail, which used to be
 	// a second timeline row nothing could fold.
 	provider string
+	// connection is the sender's mailbox of provider the send goes out from.
+	connection ids.UUID
 }
 
 // htmlAlternativeNote marks a timeline row whose message also went out as
@@ -91,6 +93,7 @@ func (m outboundMessage) activity(chain threading) LogActivityInput {
 	}
 	return SentRecord(LogActivityInput{
 		correspondenceEntity: m.in.SendingEntity,
+		statedCountries:      m.statedCountries(),
 		SystemText:           outboundMessageText(m.recordedBody, m.htmlBody != ""),
 		Kind:                 "email",
 		Subject:              &m.in.Subject,
@@ -136,6 +139,7 @@ func (m outboundMessage) delivery(activityID ids.UUID, chain threading, origin S
 	return DeliveryRequest{
 		ActivityID:     ids.From[ids.ActivityKind](activityID),
 		Provider:       m.provider,
+		ConnectionID:   m.connection,
 		MessageID:      m.messageID,
 		Recipients:     m.to,
 		Cc:             m.in.Cc,
@@ -185,10 +189,14 @@ func (m outboundMessage) authorization(origin SendOrigin) commsauthz.Request {
 		// continuing a thread the subject started is a reply whether or not the
 		// caller thought to say so. Zero on an account-started send, which is
 		// exactly what tells the engine there is no thread to lean on.
-		AnchorActivityID: origin.anchor.UUID,
-		Links:            linkedRecordIDs(m.links),
-		Subject:          m.in.Subject,
-		Body:             m.body,
+		AnchorActivityID:  origin.anchor.UUID,
+		Links:             linkedRecordIDs(m.links),
+		Subject:           m.in.Subject,
+		Body:              m.body,
+		AuthoredSubject:   m.in.Subject,
+		AuthoredBody:      m.in.Body,
+		AuthoredHTML:      m.in.HTMLBody,
+		AuthoredFileNames: fileNames(m.files),
 		// The markup alternative travels with the plain one: both are the
 		// message, and the fingerprint stamped from this request is what the
 		// transmit phase later compares the wire against.
@@ -215,12 +223,31 @@ func (m outboundMessage) evidence(origin SendOrigin) commsauthz.Evidence {
 	return e
 }
 
+// statedCountries keeps the sender's statements about addresses this message
+// carries; an entry about any other address decides nothing and is not named.
+func (m outboundMessage) statedCountries() []commsauthz.CountryOverride {
+	var out []commsauthz.CountryOverride
+	for _, addr := range m.in.Recipients {
+		out = append(out, commsauthz.CountryOverridesFor(m.in.Evidence.RecipientCountries, addr)...)
+	}
+	return out
+}
+
 // linkedRecordIDs names the records this message is filed under, which is where
 // a deal, an invoice or a contract validator looks when the caller named none.
 func linkedRecordIDs(links []ActivityLinkInput) []ids.UUID {
 	out := make([]ids.UUID, 0, len(links))
 	for _, l := range links {
 		out = append(out, l.EntityID)
+	}
+	return out
+}
+
+// fileNames are the names of the files a message carries.
+func fileNames(files []OutboundFile) []string {
+	out := make([]string, 0, len(files))
+	for _, f := range files {
+		out = append(out, f.Filename)
 	}
 	return out
 }

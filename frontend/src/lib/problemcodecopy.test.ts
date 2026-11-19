@@ -102,3 +102,16 @@ describe("a lead's refusals read as the product's own sentences", () => {
     expect(says).toMatch(/open a deal on the contact/);
   });
 });
+
+// The server's timeout detail is English; every reader is told in their own words.
+it.each([en, de, vi])(
+  "localizes a request the server stopped for time",
+  (catalog) => {
+    expect(
+      problemMessage(
+        { code: "request_timed_out", detail: "English server detail" },
+        (key) => catalog[key],
+      ),
+    ).toBe(catalog["common.requestTimedOut"]);
+  },
+);

@@ -43,6 +43,7 @@ import {
   ROLES_KEY,
   type Role,
   useRoles,
+  useRoleVerbs,
   useSetRoleGrant,
 } from "../../lib/roles.queries";
 import {
@@ -50,6 +51,7 @@ import {
   type GrantMatrixRow,
   type GrantMatrixSection,
   grantOf,
+  nextGrant,
 } from "../settings/grantmatrix";
 import { UnitGovernance } from "./extension-governance";
 import { bringsCount, UnitNeeds } from "./extension-needs";
@@ -425,6 +427,7 @@ function UnitMatrix({
 }>) {
   const t = useT();
   const setGrant = useSetRoleGrant();
+  const verbs = useRoleVerbs(true).data;
   const badges = roleBadges(roles, t);
   // Only a ProblemError carries a server code, so a rejected fetch can never be
   // mistaken for a concurrent edit.
@@ -438,11 +441,13 @@ function UnitMatrix({
       title: label,
       rows: roles.map((role): GrantMatrixRow => {
         const grant = grantOf(role, object);
+        const offered = verbs?.[object];
         return {
           key: role.key,
           name: role.name,
           badge: badges.get(role.key),
           grant,
+          verbs: offered,
           cellLabel: (action) =>
             t("extAccess.cell", {
               role: role.name,
@@ -458,7 +463,7 @@ function UnitMatrix({
             setGrant.mutate({
               roleKey: role.key,
               object,
-              grant: { ...grant, [action]: next },
+              grant: nextGrant(grant, action, next, offered),
               // The version this cell was read from: the server compares against
               // what the operator saw.
               version: role.version,

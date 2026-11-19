@@ -47,7 +47,7 @@ afterEach(() => {
 
 // Records every request the card makes, and answers a PATCH as the server
 // does: with the meeting at its next version.
-function stubServer(sent: Sent[], meetingStatus = "booked") {
+function stubServer(sent: Sent[], meetingStatus: string | null = "booked") {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL) => {
@@ -285,6 +285,114 @@ describe("MeetingOutcome", () => {
     expect(
       sent.filter((request) => request.method === "PATCH").map((r) => r.body),
     ).toEqual([{ meeting_status: "held", body: "Budget approved" }]);
+  });
+
+  it("says what Did not happen recorded and Undo writes the meeting back at the cancel's version", async () => {
+    const user = userEvent.setup();
+    const sent: Sent[] = [];
+    stubServer(sent);
+    renderCard();
+
+    await user.click(
+      screen.getByRole("button", { name: "Did not happen: Site visit" }),
+    );
+    expect(
+      await screen.findByText("Marked as not held (canceled)."),
+    ).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Undo" }));
+
+    await waitFor(() =>
+      expect(sent.filter((r) => r.method === "PATCH")).toHaveLength(2),
+    );
+    expect(
+      sent
+        .filter((request) => request.method === "PATCH")
+        .map((r) => [r.ifMatch, r.body]),
+    ).toEqual([
+      ["7", { meeting_status: "canceled" }],
+      ["8", { meeting_status: "booked" }],
+    ]);
+  });
+
+  it("Undo clears the status when the meeting had none before the cancel", async () => {
+    const user = userEvent.setup();
+    const sent: Sent[] = [];
+    stubServer(sent, null);
+    renderCard();
+
+    await user.click(
+      screen.getByRole("button", { name: "Did not happen: Site visit" }),
+    );
+    await user.click(await screen.findByRole("button", { name: "Undo" }));
+
+    await waitFor(() =>
+      expect(sent.filter((r) => r.method === "PATCH")).toHaveLength(2),
+    );
+    expect(
+      sent.filter((r) => r.method === "PATCH").map((r) => [r.ifMatch, r.body]),
+    ).toEqual([
+      ["7", { meeting_status: "canceled" }],
+      ["8", { meeting_status: null }],
+    ]);
+  });
+
+  it("takes the prior status from the surface that knows it, without a read", async () => {
+    const user = userEvent.setup();
+    const sent: Sent[] = [];
+    stubServer(sent, "booked");
+    renderCard(
+      <MeetingOutcome
+        id={MEETING_ID}
+        version={7}
+        title="Site visit"
+        invalidateKeys={[]}
+        cancellable
+        priorStatus={null}
+      />,
+    );
+
+    await user.click(
+      screen.getByRole("button", { name: "Did not happen: Site visit" }),
+    );
+    await user.click(await screen.findByRole("button", { name: "Undo" }));
+
+    await waitFor(() =>
+      expect(sent.filter((r) => r.method === "PATCH")).toHaveLength(2),
+    );
+    expect(sent.some((r) => r.method === "GET")).toBe(false);
+    expect(sent.filter((r) => r.method === "PATCH")[1]?.body).toEqual({
+      meeting_status: null,
+    });
+  });
+
+  it("says the meeting changed when the Undo is refused as stale", async () => {
+    const user = userEvent.setup();
+    const sent: Sent[] = [];
+    stubServer(sent);
+    renderCard();
+    await user.click(
+      screen.getByRole("button", { name: "Did not happen: Site visit" }),
+    );
+    const undo = await screen.findByRole("button", { name: "Undo" });
+    const answer = vi.mocked(fetch).getMockImplementation();
+    vi.mocked(fetch).mockImplementation(async (input, init) => {
+      const request = input instanceof Request ? input : null;
+      if (request?.method === "PATCH") {
+        return new Response(
+          JSON.stringify({ code: "version_skew", title: "Conflict" }),
+          {
+            status: 409,
+            headers: { "content-type": "application/problem+json" },
+          },
+        );
+      }
+      return (answer as typeof fetch)(input, init);
+    });
+    await user.click(undo);
+
+    expect(
+      await screen.findByText(/changed after you opened it/i),
+    ).toBeTruthy();
   });
 
   it("spins only Did not happen while its write runs", async () => {

@@ -28,10 +28,10 @@ func TestOlderHistoricalMailCanFillATitleAfterANewerMailWasAlreadyRead(t *testin
 	if _, err := capture.NewSettings(NewSettingsStore(b.env.Pool), StoredConfig(b.env.Pool)).Update(b.env.Admin(), capture.SettingsPatch{MailSharing: new(true), SharedPostureAllowed: new(true), SignatureEnrich: new(true)}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := b.registry.SetMailPosture(b.human, "gmail", "shared", false); err != nil {
+	if _, err := b.registry.SetMailPosture(b.human, capture.ProviderMailbox("gmail"), "shared", false); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := b.registry.SetSignatureEnrichment(b.human, "gmail", new(true)); err != nil {
+	if _, err := b.registry.SetSignatureEnrichment(b.human, capture.ProviderMailbox("gmail"), new(true)); err != nil {
 		t.Fatal(err)
 	}
 	run := strandedBackfill(t, b)
@@ -89,7 +89,7 @@ func TestOlderHistoricalMailCanFillATitleAfterANewerMailWasAlreadyRead(t *testin
 	if err := trigger.HandleEvent(context.Background(), all[1]); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := b.registry.CancelBackfill(b.human, "gmail", ids.From[ids.UserKind](b.env.Rep1)); err != nil {
+	if _, err := b.registry.CancelBackfill(b.human, capture.ProviderMailbox("gmail"), ids.From[ids.UserKind](b.env.Rep1)); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := releaseTerminalImportWork(system, b.env.Pool); err != nil {

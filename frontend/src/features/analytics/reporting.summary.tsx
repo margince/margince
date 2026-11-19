@@ -2,10 +2,18 @@ import type { ComponentProps } from "react";
 import { StatCard } from "../../design-system/atoms";
 import { StatStrip } from "../../design-system/statstrip";
 import { formatAnalyticsNumber, formatDateAbbrev } from "../../format/format";
-import { useLocale, usePlural, useT, type Words } from "../../i18n";
+import {
+  type Locale,
+  type Translator,
+  useLocale,
+  usePlural,
+  useT,
+  type Words,
+} from "../../i18n";
 import { analyticsSectionHref } from "../../lib/analytics.address";
 import { scopeKey } from "./analytics.context";
 import {
+  type ReportingChart,
   type ReportingEvaluation,
   type ReportingEvidenceRef,
   reportingAmount,
@@ -14,26 +22,66 @@ import {
 } from "./reporting.model";
 import { useMetricNames } from "./reporting.queries";
 
+type Metric = ReportingEvaluation["metrics"][number];
+
+/**
+ * How far a target chart's metric stands from its target, as the server
+ * states it. A chart held against no target says nothing.
+ */
 export function TargetProgress({
-  value,
-  target,
+  chart,
+  evaluation,
   format,
 }: Readonly<{
-  value: number | null;
-  target?: number | null;
+  chart: ReportingChart;
+  evaluation: ReportingEvaluation;
   format: (value: number) => string;
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  if (target == null || value == null) return null;
+  const metric = evaluation.metrics.find((each) => each.id === chart.metric);
+  const held = chart.points.some((point) => point.target != null);
+  if (!held || metric?.target_delta == null) return null;
   return (
     <p className="t-caption">
-      {t("reporting.remaining")}: {format(Math.max(0, target - value))}
-      {target > 0
-        ? ` · ${t("reporting.attainment", { percent: formatAnalyticsNumber(Math.round((value / target) * 100), locale) })}`
+      {t("reporting.remaining")}: {format(Math.max(0, -metric.target_delta))}
+      {metric.attainment != null
+        ? ` · ${t("reporting.attainment", { percent: formatAnalyticsNumber(Math.round(metric.attainment), locale) })}`
         : ""}
     </p>
   );
+}
+
+// The target sentences of a headline figure, from the delta and share the
+// server worked out. A figure with no positive target has no share to read.
+function targetLines(
+  metric: Metric,
+  amount: (value: number | null | undefined) => string,
+  t: Translator,
+  locale: Locale,
+) {
+  const { target, target_actual: actual, target_delta: delta } = metric;
+  if (
+    target == null ||
+    actual == null ||
+    delta == null ||
+    metric.attainment == null
+  )
+    return null;
+  return {
+    summary: t("reporting.targetPeriodSummary", {
+      actual: amount(actual),
+      target: amount(target),
+      percent: formatAnalyticsNumber(Math.round(metric.attainment), locale),
+    }),
+    gap: t(
+      delta <= 0 ? "reporting.targetRemaining" : "reporting.targetExceeded",
+      {
+        amount: amount(Math.abs(delta)),
+      },
+    ),
+    meter: { filled: actual, total: target },
+  };
 }
 
 // Results over the period first, then where this quarter is heading, then
@@ -87,9 +135,7 @@ export function ResultsSummary({
             evaluation.context.currency,
             locale,
           );
-        const actual = metric.target_actual;
-        const target = metric.target;
-        const comparable = target != null && target > 0 && actual != null;
+        const lines = targetLines(metric, amount, t, locale);
         return (
           <StatCard
             key={metric.id}
@@ -99,23 +145,9 @@ export function ResultsSummary({
             detail={
               <>
                 <OutcomePeriod evaluation={evaluation} metric={metric} />
-                {comparable && (
+                {lines && (
                   <span>
-                    {t("reporting.targetPeriodSummary", {
-                      actual: amount(actual),
-                      target: amount(target),
-                      percent: formatAnalyticsNumber(
-                        Math.round((actual / target) * 100),
-                        locale,
-                      ),
-                    })}{" "}
-                    ·{" "}
-                    {t(
-                      actual <= target
-                        ? "reporting.targetRemaining"
-                        : "reporting.targetExceeded",
-                      { amount: amount(Math.abs(target - actual)) },
-                    )}
+                    {lines.summary} · {lines.gap}
                     {evaluation.context.target_interval &&
                       ` · ${reportingPeriodLabel(evaluation.context.target_interval, evaluation.context.timezone, locale)}`}
                   </span>
@@ -132,16 +164,7 @@ export function ResultsSummary({
                     locale,
                   )}
                 </p>
-                {comparable && (
-                  <p>
-                    {t(
-                      actual <= target
-                        ? "reporting.targetRemaining"
-                        : "reporting.targetExceeded",
-                      { amount: amount(Math.abs(target - actual)) },
-                    )}
-                  </p>
-                )}
+                {lines && <p>{lines.gap}</p>}
                 <p>
                   {metric.coverage.reason ??
                     t(`reporting.status.${metric.coverage.status}`)}
@@ -155,7 +178,7 @@ export function ResultsSummary({
                 ? forecastHref(evaluation.selection)
                 : undefined
             }
-            meter={comparable ? { filled: actual, total: target } : undefined}
+            meter={lines?.meter}
           />
         );
       })}

@@ -100,8 +100,8 @@ and date of the proof document.
 Both are checked while a mail is written, and neither stops the send:
 
 - A draft whose first paragraph in a known language is not Vietnamese gets a note.
-- A draft that uses a word of `superlatives()` in `vn.go` gets a note, unless a line holds a document
-  number and a date.
+- A draft that uses a word of `claims-need-proof` in `policy/vn.md` gets a note, unless a line holds
+  a document number and a date.
 
 The check leaves out a sign-off line that holds "best", such as "Best regards" or "Best," above a
 name. The core's sign-off check decides which lines those are. It looks for "the only" and not "only", because a bare "only" most often sets a limit, as in
@@ -248,3 +248,8 @@ declares none.
 
 `vn_test.go` checks every claim above. A changed label, limit, disclosure or window is a change to
 legal content. Edit the test in the same commit, and say in the PR body which article moved.
+
+The messaging rules live in `policy/`, as Markdown with front matter. `gen-messaging-rules`
+compiles them into `messagingrules_gen.go`: run `go generate` here, or `make -C backend gen`. Each
+policy file names pairs of fixture drafts in `policy/fixtures/`, one that must raise a finding and
+one that must not. The consent tests in the backend run each pair through the engine's own checks.

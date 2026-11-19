@@ -246,9 +246,15 @@ export function prospectingEvaluation(
     metric("meetings_held", 4, {
       target: 24,
       target_actual: 18,
+      target_delta: -6,
       attainment: 75,
     }),
-    metric("accepted_opportunities", 2, { target: 8, target_actual: 6 }),
+    metric("accepted_opportunities", 2, {
+      target: 8,
+      target_actual: 6,
+      target_delta: -2,
+      attainment: 75,
+    }),
     metric("leads_qualified", 3, { denominator: 11 }),
     metric("lead_first_response", 1.7),
     metric("leads_awaiting_response", 3),

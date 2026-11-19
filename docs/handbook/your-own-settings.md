@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/settings/account-settings.tsx frontend/src/features/settings/notification-settings.tsx frontend/src/features/sign-in/mfasetup.tsx frontend/src/features/booking/booking-setup.tsx frontend/src/features/voice-knowledge/voice-dna.tsx frontend/src/features/capture/connection-settings.tsx backend/internal/modules/identity/mfa.go backend/internal/modules/activities/scheduling_profile.go frontend/src/features/settings/settingssignaturerow.tsx backend/internal/modules/contacts/emailsignature.go backend/internal/modules/activities/signature.go frontend/src/app/setup-reminder.tsx frontend/src/app/account.tsx backend/internal/modules/identity/avatar.go backend/internal/modules/identity/providerpicture.go backend/internal/modules/identity/federatedidentity.go backend/internal/compose/avatarprovider.go backend/internal/compose/connectors_picture.go frontend/src/lib/shortcuts.ts -->
+<!-- describes: frontend/src/features/settings/account-settings.tsx frontend/src/features/settings/signeddevices.tsx frontend/src/features/settings/notification-settings.tsx frontend/src/features/sign-in/mfasetup.tsx frontend/src/features/booking/booking-setup.tsx frontend/src/features/voice-knowledge/voice-dna.tsx frontend/src/features/capture/connection-settings.tsx backend/internal/modules/identity/mfa.go backend/internal/modules/activities/scheduling_profile.go frontend/src/features/settings/settingssignaturerow.tsx backend/internal/modules/contacts/emailsignature.go backend/internal/modules/activities/signature.go frontend/src/app/setup-reminder.tsx frontend/src/app/account.tsx backend/internal/modules/identity/avatar.go backend/internal/modules/identity/providerpicture.go backend/internal/modules/identity/federatedidentity.go backend/internal/compose/avatarprovider.go backend/internal/compose/connectors_picture.go frontend/src/lib/shortcuts.ts -->
 # Your own settings
 
 Your own settings in Margince are the pages under **You** in Settings: **Account**, **Notifications**, **Meetings**, **Writing voice**, **AI assistants** and **Connections**. Everything here changes your own seat and nobody else's.
@@ -48,7 +48,9 @@ In **Appointments**, edit the booking link to offer more choices for meeting min
 
 ## Account
 
-The Account page in Settings has four panels. **Profile** holds who you are: your picture, your display and greeting names, and your email signature. **Sign-in** holds your password, two-step sign-in and **Sign out**. **Language and time zone** holds which language the product uses with you (English, Deutsch or Tiếng Việt), and your time zone. **This browser** holds what applies in this browser only: **Appearance** and **Single-key shortcuts**. **Appearance** is also in the account menu, where it is called **Theme**, and both change the same setting.
+The Account page in Settings has five panels. **Profile** holds who you are: your picture, your display and greeting names, and your email signature. **Sign-in** holds your password, two-step sign-in and **Sign out**. **Signed-in devices** lists every browser or phone signed in as you.
+
+Two more panels follow. **Language and time zone** holds which language the product uses with you (English, Deutsch or Tiếng Việt), and your time zone. **This browser** holds what applies in this browser only: **Appearance** and **Single-key shortcuts**. **Appearance** is also in the account menu, where it is called **Theme**, and both change the same setting.
 
 Where your browser can add Margince to this device as an app, **This browser** also has a **Margince app** row. It offers **Install**, says how to add the app, or says **Installed**.
 
@@ -56,10 +58,16 @@ Where your browser can add Margince to this device as an app, **This browser** a
 <!-- opens: settings/account -->
 To change your password in Margince, open Settings → **Account** and choose **Change password** in the **Password** row.
 1. Enter your **Current password**.
-2. Enter a **New password** of at least 12 characters, and type it again in **Confirm new password**.
+2. Enter a **New password** of 12 to 256 characters, and type it again in **Confirm new password**.
 3. Choose **Save new password**.
 
 Margince says **Password changed** and signs you out on all your other computers and phones. Forgot it? Use **Forgot password?** on the sign-in page where it is shown, or ask an administrator for a new link to set a password. Also called: reset my password, update login.
+
+### How do I sign out a device I lost or share?
+<!-- opens: settings/account -->
+To sign out another device in Margince, open Settings → **Account** and find the **Signed-in devices** panel. Each line names the browser and system, when it signed in and when it was last active. Choose **Sign out** on the line you do not know.
+
+**Sign out all others** ends every session except the one you are using. If some devices could not be signed out, Margince says how many; choose it again to retry. This device is marked **This device** and has no button; use **Sign out** in the **Sign-in** panel to end it. Also called: log out other devices, lost phone, shared computer.
 
 ### How do I turn on two-step sign-in?
 <!-- opens: settings/account -->

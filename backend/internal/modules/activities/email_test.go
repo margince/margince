@@ -33,8 +33,8 @@ type stubUnsubscribeLinker struct {
 	manage string
 }
 
-func (l stubUnsubscribeLinker) UnsubscribeToken(context.Context, string, string) (string, bool, error) {
-	return l.token, l.ok, l.err
+func (l stubUnsubscribeLinker) UnsubscribeToken(_ context.Context, _, purposeKey string) (string, string, bool, error) {
+	return l.token, purposeKey, l.ok, l.err
 }
 
 // ManageToken answers the same token unless the case sets its own. The stop
@@ -67,17 +67,17 @@ func (m *stubSendAuthority) SendCapable(_ context.Context, provider string) (boo
 	return m.capable, m.err
 }
 
-func (m *stubSendAuthority) SendableMailProvider(context.Context) (string, error) {
+func (m *stubSendAuthority) SendableMailbox(context.Context, ids.UUID, ids.ActivityID) (string, ids.UUID, error) {
 	if m.err != nil {
-		return "", m.err
+		return "", ids.Nil, m.err
 	}
 	if !m.capable {
-		return "", nil
+		return "", ids.Nil, nil
 	}
 	if m.mailProvider != "" {
-		return m.mailProvider, nil
+		return m.mailProvider, ids.Nil, nil
 	}
-	return DefaultSendProvider, nil
+	return DefaultSendProvider, ids.Nil, nil
 }
 
 // draftOutcomeCall is what the send path handed the learning loop: the
@@ -317,17 +317,17 @@ func TestTheMailboxResolutionRefusesOnlyWhenNothingCanTransmit(t *testing.T) {
 
 	// No authority wired: the pre-flight is advisory, so an absent one must not
 	// change which mailbox a send uses.
-	if got, err := store.sendableMailProvider(context.Background()); err != nil || got != DefaultSendProvider {
+	if got, _, err := store.sendableMailbox(context.Background(), ids.Nil, ids.ActivityID{}); err != nil || got != DefaultSendProvider {
 		t.Errorf("unwired authority = (%q, %v), want the historical default", got, err)
 	}
 
 	sending := store.WithSendAuthority(&stubSendAuthority{capable: true, mailProvider: "graph"})
-	if got, err := sending.sendableMailProvider(context.Background()); err != nil || got != "graph" {
+	if got, _, err := sending.sendableMailbox(context.Background(), ids.Nil, ids.ActivityID{}); err != nil || got != "graph" {
 		t.Errorf("resolved = (%q, %v), want the mailbox the authority named", got, err)
 	}
 
 	none := store.WithSendAuthority(&stubSendAuthority{capable: false})
-	_, err := none.sendableMailProvider(context.Background())
+	_, _, err := none.sendableMailbox(context.Background(), ids.Nil, ids.ActivityID{})
 	if _, ok := errors.AsType[*MailboxNotSendCapableError](err); !ok {
 		t.Fatalf("no transmitting mailbox = %v, want the refusal naming what to fix", err)
 	}

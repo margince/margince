@@ -14,12 +14,15 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/contactbrief"
 	"github.com/margince/margince/backend/internal/compose/contactcontext"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/shared/kernel/datenotation"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/moneynotation"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
-	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // Input is the room, the deal, what was promised, and what recently happened.
@@ -38,6 +41,8 @@ type Input struct {
 	// Zone is the installation zone every "N days ago" in the brief is counted
 	// in: the zone the reader sees the dates in.
 	Zone *time.Location
+	// Dates is how the installation writes a day and a time, with Zone.
+	Dates datenotation.Notation `json:"-"`
 
 	Company string
 	Deal    *DealIn
@@ -78,6 +83,16 @@ type Input struct {
 	// bounded and audience-gated. Also out of the sections prompt: the plan is
 	// what reads them.
 	Excerpts []ExcerptIn `json:"-"`
+	// LooksKept are promises of ours an accepted invitation shows are probably
+	// kept. They are not in Commitments, so nothing plans around them.
+	LooksKept []LooksKeptIn
+	// CompanyHistory is what other contacts at the room's company already
+	// exchanged with us in the last year, newest topics first per contact. It
+	// holds only rows this reader may open.
+	CompanyHistory []CompanyTopicIn
+	// CompanyWithheld counts company conversations the reader may know of and
+	// not open, for the history omission.
+	CompanyWithheld int `json:"-"`
 	// Seats are the COLLEAGUES in this room, as against the attendees, who are
 	// the counterparty. The coaching projection reads them to ask whether this
 	// reader is a lead looking at somebody else's meeting. Out of the prompt:
@@ -112,17 +127,29 @@ type DealIn struct {
 	AmountMinor *int64 `json:"-"`
 	Currency    string
 	CloseDate   *time.Time
+	// lang is the brief's language, which decides the digit marks of amount.
+	lang textlang.Lang
 }
 
-// MarshalJSON adds the amount in major units: "18500.00" for 1850000 EUR, and
-// "1850000" for the same integer in JPY. values.MajorUnits owns that scale.
+// inLanguage is the deal as a brief in lang shows it: 12.345,00 in German.
+func (d *DealIn) inLanguage(lang string) *DealIn {
+	if d == nil {
+		return nil
+	}
+	worded := *d
+	worded.lang = textlang.Lang(lang)
+	return &worded
+}
+
+// MarshalJSON adds the amount in major units: "18,500.00" for 1850000 EUR, and
+// "1,850,000" for the same integer in JPY. values.MajorUnits owns that scale.
 // A zero amount is stated as zero. Only a deal with no amount or no currency
 // carries no amount.
 func (d DealIn) MarshalJSON() ([]byte, error) {
 	type plain DealIn // no methods, so no recursion back into this one
 	var amount string
 	if d.AmountMinor != nil && d.Currency != "" {
-		amount = values.MajorUnits(*d.AmountMinor, d.Currency)
+		amount = moneynotation.Grouped(*d.AmountMinor, d.Currency, d.lang)
 	}
 	return json.Marshal(struct {
 		plain
@@ -208,6 +235,10 @@ type ActIn struct {
 	// inbound mail to the counterpart.
 	WroteOurSide bool `json:"-"`
 	SideKnown    bool `json:"-"`
+	// Speaker says who wrote this row (contactbrief.SpeakerFor), because the
+	// direction names the transport and not the author. Absent when the record
+	// names no author.
+	Speaker *contactbrief.Speaker `json:"speaker,omitempty"`
 }
 
 // FromMeeting folds the gated meeting read into the brief's input.
@@ -250,6 +281,7 @@ func FromMeeting(room meeting, perAttendee map[ids.UUID][]crmcontracts.Conversat
 		})
 		in.LastTouchAt = latest(in.LastTouchAt, attendee.LastTouch.occurred())
 		in.Commitments = append(in.Commitments, foldClaims(attendee.FullName, perAttendee[attendee.ContactID])...)
+		in.LooksKept = append(in.LooksKept, foldLooksKept(attendee.FullName, perAttendee[attendee.ContactID])...)
 	}
 	in.Commitments = foldSameClaims(in.Commitments)
 	return in
@@ -264,7 +296,7 @@ func FromMeeting(room meeting, perAttendee map[ids.UUID][]crmcontracts.Conversat
 func foldClaims(contactName string, found []crmcontracts.ConversationClaim) []ClaimIn {
 	out := make([]ClaimIn, 0, len(found))
 	for _, claim := range found {
-		if claim.Status == crmcontracts.ConversationClaimStatusDismissed {
+		if claim.Status == crmcontracts.ConversationClaimStatusDismissed || notCurrentPromise(claim) || claim.LooksKept != nil {
 			continue
 		}
 		folded := ClaimIn{
@@ -284,6 +316,45 @@ func foldClaims(contactName string, found []crmcontracts.ConversationClaim) []Cl
 		out = append(out, folded)
 	}
 	return out
+}
+
+// LooksKeptIn is an open promise of ours that an accepted invitation shows is
+// probably kept. It is no open driver of the meeting: the prep says it looks
+// kept, and the reader settles it.
+type LooksKeptIn struct {
+	ContactName string
+	Body        string
+	Guest       string
+	MeetingAt   Occurred
+	// SourceID is the conversation the promise was made in, which a line about
+	// it cites.
+	SourceID string
+}
+
+// foldLooksKept takes the promises the claims read marks as looking kept.
+func foldLooksKept(contactName string, found []crmcontracts.ConversationClaim) []LooksKeptIn {
+	var out []LooksKeptIn
+	for _, claim := range found {
+		if claim.LooksKept == nil || claim.Status != crmcontracts.ConversationClaimStatusOpen {
+			continue
+		}
+		out = append(out, LooksKeptIn{
+			ContactName: contactName, Body: claim.Body, Guest: claim.LooksKept.GuestName,
+			MeetingAt: Occurred{At: claim.LooksKept.MeetingAt, DateOnly: occurredday.IsDay(claim.LooksKept.MeetingPrecision)},
+			SourceID:  ids.UUID(claim.SourceActivityId).String(),
+		})
+	}
+	return out
+}
+
+// notCurrentPromise is an open promise the claims read marks as not current
+// (needs_review folds in the commitment admission). The commitments card, the
+// worklist and the project rollup list only current promises. A prep must not
+// plan on work they no longer show.
+func notCurrentPromise(claim crmcontracts.ConversationClaim) bool {
+	promise := claim.Kind == crmcontracts.ConversationClaimKindCommitmentOurs ||
+		claim.Kind == crmcontracts.ConversationClaimKindCommitmentTheirs
+	return promise && claim.Status == crmcontracts.ConversationClaimStatusOpen && claim.NeedsReview
 }
 
 // WithCounterpart folds in what the lead attendee's own page already knows:
@@ -332,6 +403,7 @@ func WithCounterpart(in *Input, view crmcontracts.Contact360) {
 			folded.Direction = string(*activity.Direction)
 		}
 		folded.WroteOurSide, folded.SideKnown = activities.WroteItOurSide(activity)
+		folded.Speaker = contactbrief.SpeakerFor(activity.Voice)
 		in.Recent = append(in.Recent, folded)
 	}
 }
@@ -407,7 +479,8 @@ func (in Input) MarshalJSON() ([]byte, error) {
 		plain
 		StartsAt string
 		Recent   []promptAct
-	}{plain: plain(in), StartsAt: in.startsText(), Recent: recent})
+		Deal     *DealIn
+	}{plain: plain(in), StartsAt: in.startsText(), Recent: recent, Deal: in.Deal.inLanguage(in.Language)})
 }
 
 // startsText is the meeting's start as a prompt states it.

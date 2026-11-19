@@ -4,6 +4,7 @@
 import type { operations } from "../../api/schema";
 import { dealStatusFilter } from "../../format/dealstatus";
 import { useT } from "../../i18n";
+import { motionFilter, priorityFilter } from "../../lib/dealcommercialvalues";
 import {
   admitCloseDay,
   admitCountry,
@@ -38,6 +39,8 @@ const ENUM_DIALS: Readonly<
   Record<string, (value: string | undefined) => string | undefined>
 > = {
   status: dealStatusFilter,
+  commercial_motion: motionFilter,
+  priority: priorityFilter,
   // The range dials hold a shape rather than a word; a broken one goes the same way.
   [CLOSE_DAY_DIAL]: admitCloseDay,
   [VALUE_DIAL]: admitValueRange,

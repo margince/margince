@@ -13,6 +13,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/dealscout"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/testdb"
@@ -82,7 +83,7 @@ func TestTheScoutReachesACitedActivityByItsPrimaryKey(t *testing.T) {
 	if _, err := owner.Exec(context.Background(), `ANALYZE activity`); err != nil {
 		t.Fatalf("analyzing activities: %v", err)
 	}
-	query, args := dealScoutSQL(now.Add(-dealScoutWindow), now, dealScoutCompanyCap)
+	query, args := dealscout.EvidenceSQL(now.Add(-dealScoutWindow), now, dealScoutCompanyCap, true)
 
 	var raw []byte
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {

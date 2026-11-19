@@ -244,7 +244,12 @@ func applyMetricTargets(ctx context.Context, out *crmcontracts.ReportingEvaluati
 			metric.TargetRevision = &target.Revision
 		}
 		metric.TargetSource = &source
-		if value > 0 && metric.TargetActual != nil {
+		if metric.TargetActual == nil {
+			continue
+		}
+		delta := *metric.TargetActual - value
+		metric.TargetDelta = &delta
+		if value > 0 {
 			attainment := *metric.TargetActual / value * 100
 			metric.Attainment = &attainment
 		}

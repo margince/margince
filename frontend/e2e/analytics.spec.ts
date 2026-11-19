@@ -1,4 +1,4 @@
-import { expect, type Page, test } from "@playwright/test";
+import { expect, type Locator, type Page, test } from "@playwright/test";
 import { de } from "../src/i18n/de";
 import type { MessageKey } from "../src/i18n/en";
 import { mockApi } from "./seed";
@@ -46,6 +46,25 @@ async function openAnalytics(page: Page, section?: string) {
   });
 }
 
+/**
+ * The open "More" panel holding the tabs the row is too narrow for, or null
+ * when every tab fits. Its entries are as much the strip's as the drawn tabs.
+ */
+async function foldedTabs(page: Page, strip: Locator) {
+  const more = strip.getByRole("button", { name: t("record.tabs.moreLabel") });
+  if ((await more.count()) === 0) return null;
+  if ((await more.getAttribute("aria-expanded")) !== "true") await more.click();
+  return page.locator(`[id="${await more.getAttribute("aria-controls")}"]`);
+}
+
+/** The control that opens a section: its tab, or its entry under "More". */
+async function sectionControl(page: Page, strip: Locator, name: string) {
+  const tab = strip.getByRole("button", { name, exact: true });
+  if (await tab.isVisible()) return tab;
+  const folded = await foldedTabs(page, strip);
+  return (folded ?? strip).getByRole("button", { name, exact: true });
+}
+
 test.describe("Analytics sections", () => {
   test("every declared section draws its own answer", async ({ page }) => {
     await openAnalytics(page);
@@ -64,10 +83,11 @@ test.describe("Analytics sections", () => {
       "analytics.sectionForecast",
       "analytics.sectionPipeline",
       "analytics.sectionPerformance",
+      "analytics.sectionAccounts",
       "analytics.sectionDelivery",
     ] as const) {
       await expect(
-        strip.getByRole("button", { name: t(key) }),
+        await sectionControl(page, strip, t(key)),
         `the ${t(key)} section has no control`,
       ).toBeVisible();
     }
@@ -79,7 +99,7 @@ test.describe("Analytics sections", () => {
       ["analytics.sectionPerformance", "reporting.bookings_trend"],
       ["analytics.sectionDelivery", "analytics.reportProjectsByPhase"],
     ] as const) {
-      await strip.getByRole("button", { name: t(key), exact: true }).click();
+      await (await sectionControl(page, strip, t(key))).click();
       await expect(
         page.getByText(t(expected)).first(),
         `pressing ${t(key)} drew no ${t(expected)} — the control routes nowhere`,
@@ -99,18 +119,19 @@ test.describe("Analytics sections", () => {
     // rule visible: a build that showed an ops tab to everyone would fail
     // here rather than look complete.
     //
-    // The four assertions above are what makes this safe to assert. A count of
-    // zero passes on a page that rendered nothing at all, so an absence is only
-    // evidence once something PRESENT has been seen on the same strip — which
-    // is why these come after the loop rather than standing alone.
+    // A count of zero also passes on a page that drew nothing. So these run
+    // after the sections above were seen on the same strip.
+    const folded = await foldedTabs(page, strip);
     for (const key of [
       "analytics.sectionOutcomes",
       "analytics.sectionCoverage",
     ] as const) {
-      await expect(
-        strip.getByRole("button", { name: t(key) }),
-        `${t(key)} is drawn for a reader who cannot use it`,
-      ).toHaveCount(0);
+      for (const place of folded ? [strip, folded] : [strip]) {
+        await expect(
+          place.getByRole("button", { name: t(key) }),
+          `${t(key)} is drawn for a reader who cannot use it`,
+        ).toHaveCount(0);
+      }
     }
   });
 

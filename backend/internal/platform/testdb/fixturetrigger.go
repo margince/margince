@@ -17,6 +17,24 @@ import (
 // WithFixtureTriggerDisabled recreates legacy rows without disabling unrelated constraints.
 func WithFixtureTriggerDisabled(t *testing.T, table, trigger string, mutate func(pgx.Tx) error) {
 	t.Helper()
+	statement := `ALTER TABLE ` + pgx.Identifier{table}.Sanitize() + ` %s TRIGGER ` + pgx.Identifier{trigger}.Sanitize()
+	withFixtureOwnerTx(t, func(tx pgx.Tx) error {
+		// One transaction restores the trigger even when the fixture mutation fails.
+		if _, err := tx.Exec(t.Context(), strings.Replace(statement, "%s", "DISABLE", 1)); err != nil {
+			return err
+		}
+		if err := mutate(tx); err != nil {
+			return err
+		}
+		_, err := tx.Exec(t.Context(), strings.Replace(statement, "%s", "ENABLE", 1))
+		return err
+	})
+}
+
+// withFixtureOwnerTx runs mutate as the owner in one transaction on an isolated
+// integration database, and commits it.
+func withFixtureOwnerTx(t *testing.T, mutate func(pgx.Tx) error) {
+	t.Helper()
 	ctx := t.Context()
 	cfg, err := pgx.ParseConfig(os.Getenv("MARGINCE_TEST_DSN"))
 	if err != nil {
@@ -43,15 +61,7 @@ func WithFixtureTriggerDisabled(t *testing.T, table, trigger string, mutate func
 			t.Error(err)
 		}
 	}()
-	statement := `ALTER TABLE ` + pgx.Identifier{table}.Sanitize() + ` %s TRIGGER ` + pgx.Identifier{trigger}.Sanitize()
-	// One transaction restores the trigger even when the fixture mutation fails.
-	if _, err := tx.Exec(ctx, strings.Replace(statement, "%s", "DISABLE", 1)); err != nil {
-		t.Fatal(err)
-	}
 	if err := mutate(tx); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := tx.Exec(ctx, strings.Replace(statement, "%s", "ENABLE", 1)); err != nil {
 		t.Fatal(err)
 	}
 	if err := tx.Commit(ctx); err != nil {

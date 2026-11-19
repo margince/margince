@@ -295,7 +295,7 @@ func timelineKeyset(in ListActivitiesInput, sorted *storekit.ListSort, arg func(
 	if in.RequestReviewAsOf != nil || in.RequestCurrentAsOf != nil {
 		return "", errRequestReviewWithCursor
 	}
-	return sorted.KeysetClause(*in.Cursor, arg)
+	return sorted.KeysetClause("activities", *in.Cursor, arg)
 }
 
 // activityRowClauses narrows on columns of the activity row itself: the

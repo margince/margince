@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
-import { meFixture } from "./mefixture";
+import { meFixture, READS_RECORDS } from "./mefixture";
 
 type Company = components["schemas"]["Company"];
 type Company360 = components["schemas"]["Company360"];
@@ -272,6 +272,7 @@ export async function withSession(answer: Response): Promise<Response> {
   return jsonResponse(
     meFixture({
       allow: {
+        ...READS_RECORDS,
         company: ["read", "create", "update", "delete"],
         deal: ["read", "create", "update"],
         relationship: ["read", "create", "update", "delete"],

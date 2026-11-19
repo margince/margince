@@ -295,7 +295,7 @@ func seedWorkspaceExclusion(t *testing.T, e *integration.Env, value string) ids.
 	if strings.Contains(value, "@") {
 		kind = capture.ExclusionKindAddress
 	}
-	rule, err := store.Add(adminCtx(e), capture.ExclusionScopeWorkspace, kind, value)
+	rule, err := store.Add(adminCtx(e), capture.ExclusionScopeWorkspace, kind, value, ids.Nil)
 	if err != nil {
 		t.Fatalf("adding the workspace exclusion rule: %v", err)
 	}

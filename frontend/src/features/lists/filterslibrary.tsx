@@ -129,7 +129,8 @@ export function FiltersLibrary({
         <div
           key={group}
           ref={group === "mine" ? anchors.mine : anchors.shared}
-          className="library-anchor"
+          className="arrival-focus"
+          data-testid="library-anchor"
           tabIndex={-1}
         >
           {firstRun ? (

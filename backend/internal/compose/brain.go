@@ -198,11 +198,11 @@ type ModelPath struct {
 // SetCompanyContextEnabled applies the operator's ordered task-rollout stage
 // to every lane sharing this path. Task policy remains exhaustive even while
 // injection is disabled.
-func (p *ModelPath) SetCompanyContextEnabled(enabled bool) {
-	if p == nil {
+func (m *ModelPath) SetCompanyContextEnabled(enabled bool) {
+	if m == nil {
 		return
 	}
-	if brain, ok := p.AgentLoop.(agentBrain); ok && brain.companyContext != nil {
+	if brain, ok := m.AgentLoop.(agentBrain); ok && brain.companyContext != nil {
 		brain.companyContext.enabled = enabled
 	}
 }
@@ -220,6 +220,9 @@ func (m ModelPath) RoutingVersion() string {
 	}
 	return m.router.RoutingVersion()
 }
+
+// Bound reports whether the lanes serve a binding; a path with no router does.
+func (m ModelPath) Bound() bool { return m.router == nil || m.router.Bound() }
 
 func (m ModelPath) WithAgentTokenSpend(spend ai.AgentTokenSpender) ModelPath {
 	if m.router != nil {
@@ -248,9 +251,16 @@ func (e *UnservableBindingError) Unwrap() error { return e.Cause }
 // router's ai_call tracing (ai.NewRouter) — the deployment's
 // AI.CapturePayloads posture and the process logger, never a stand-in.
 func NewModelPath(ctx context.Context, cfg ai.RoutingConfig, pool *pgxpool.Pool, capturePayloads bool, log *slog.Logger) (ModelPath, error) {
-	router, err := ai.NewRouter(cfg, ai.NewMeter(InstallationDB(pool)), NewSeatBudget(pool), ai.NewCallMeter(InstallationDB(pool)).WithLogger(log), capturePayloads, log)
-	if err != nil {
-		return ModelPath{}, &UnservableBindingError{Cause: err}
+	meter, calls := ai.NewMeter(InstallationDB(pool)), ai.NewCallMeter(InstallationDB(pool)).WithLogger(log)
+	// No binding yet still gets a Router; the watcher binds it when one is saved.
+	var router *ai.Router
+	if cfg.Unconfigured() {
+		router = ai.NewUnboundRouter(meter, NewSeatBudget(pool), calls, capturePayloads, log)
+	} else {
+		var err error
+		if router, err = ai.NewRouter(cfg, meter, NewSeatBudget(pool), calls, capturePayloads, log); err != nil { //nolint:contextcheck // the provider tracker's drain goroutine owns its own deadline
+			return ModelPath{}, &UnservableBindingError{Cause: err}
+		}
 	}
 	router.WithSubjectRestrictions(subjectRestrictions{pool: pool})
 	if err := seedEmbedBinding(ctx, search.NewStore(InstallationDB(pool)), router, log); err != nil {
@@ -396,8 +406,8 @@ func NewLocalRouterForCert(cfg ai.RoutingConfig, opts ...ai.LocalOption) (*ai.Ro
 // CurrentModelForTier resolvers). Nil when no router backs this path (a nil-AgentLoop
 // ModelPath), so a caller wires no priced estimate rather than pricing against an
 // absent ladder.
-func (p ModelPath) Router() *ai.Router {
-	if r, ok := p.AgentLoop.(agentBrain); ok {
+func (m ModelPath) Router() *ai.Router {
+	if r, ok := m.AgentLoop.(agentBrain); ok {
 		return r.router
 	}
 	return nil

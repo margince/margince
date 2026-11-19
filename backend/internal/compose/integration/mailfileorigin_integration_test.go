@@ -40,7 +40,7 @@ func TestAMailFileNamesTheMailItCameWith(t *testing.T) {
 	mail, file := mailFromBuyer(t, e, contact, "Signed order")
 	store := activities.NewStore(e.DB()).WithBlobstore(blobstore.NewMemory())
 	upload, err := store.UploadAttachment(e.As(e.Rep1, []ids.UUID{e.Team1}, docUploadPerms), activities.AttachmentInput{
-		EntityType: "company", EntityID: company, Filename: "nda.pdf", Content: bytes.NewReader([]byte("bytes")),
+		EntityType: "company", EntityID: company, Filename: "nda.pdf", Content: bytes.NewReader([]byte("%PDF-1.4 bytes")),
 	})
 	if err != nil {
 		t.Fatalf("uploading on the company: %v", err)

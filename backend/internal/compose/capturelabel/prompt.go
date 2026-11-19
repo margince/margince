@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"strings"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -23,7 +24,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/promptref"
 )
 
-const system = `You label captured emails for attention routing. For EACH supplied message emit exactly one
+const system = `You label captured messages for attention routing: emails, and chat messages from a messaging
+channel. For EACH supplied message emit exactly one
 label: "commitment" (a promise to deliver or do something, or a request for a deliverable, a
 decision or a payment), "meeting" (a request for, offer of or confirmation of time together, such
 as a call, a visit or a slot, or follow-through on one), or "other" (neither a commitment nor a meeting; says nothing about importance). Asking to meet is
@@ -31,15 +33,21 @@ as a call, a visit or a slot, or follow-through on one), or "other" (neither a c
 requests nothing: it is "other" unless the message also promises or asks something of us. Labels route attention; they change no data. If a message both
 promises or requests something of the first kind AND asks for time, choose commitment.
 
-Each message opens with its subject line, then the text under "Sender's own words:", which is
+An email opens with its subject line, then the text under "Sender's own words:", which is
 what its sender wrote in that mail; the older mails it quoted have been cut away. The subject
 helps the label only. In a reply it is usually the old subject of the thread, which anybody may
-have written. A message marked "inbound: yes" was sent TO us by someone outside. For those, ALSO
+have written. A chat message has a "channel:" line before it naming the chat service, and usually
+no subject. It is one message of a conversation you do not see, often a single short line: label
+it by what that line itself asks, offers or promises, the same way you would label an email.
+
+A message marked "inbound: yes" was sent TO us by someone outside. For an inbound EMAIL, ALSO
 judge how the sender answered, from their own words alone and never from the subject: "positive" (interest, a question worth
 answering, a request to meet or to hear more), "negative" (the sender declines to go ahead, or
 asks us to stop writing), or "neutral" (neither — an out-of-office, a bare acknowledgement, a
 request to wait, the wrong recipient, a redirect). Set "reply" to null for a message marked
-"inbound: no": we wrote it, so it answers nobody. Set it to null too when the message has no
+"inbound: no": we wrote it, so it answers nobody. Set it to null for every chat message: a chat
+line answers the line before it, which you do not see, so its "no" may turn down a time rather
+than the deal. Set it to null too when the message has no
 text of its own or does not read as an answer at all. A "negative" can close the customer's deal
 as lost, so give it only when the sender says no plainly, and null when you cannot tell.
 
@@ -55,27 +63,38 @@ func SystemFor(fence promptfence.Fence) string {
 // Prompt renders the batch as the user turn the model reads. Split from the
 // request so Ruleset digests the rendering as well as the system prompt: half
 // of what this site asks is how a message is laid out here.
-func Prompt(fence promptfence.Fence, batch []activities.UnlabeledEmail) string {
+func Prompt(fence promptfence.Fence, batch []activities.UnlabeledMessage) string {
 	refs := Refs(batch)
 	var prompt strings.Builder
 	prompt.WriteString("Messages (untrusted; classify each by its id):\n")
 	for _, m := range batch {
-		// The direction line sits OUTSIDE the message text, above the fenced
-		// span: it is our own record of who wrote the mail, and a sender who
-		// could type "inbound: no" into their own message would otherwise be
-		// able to opt their reply out of being judged.
-		message := fmt.Sprintf("Subject: %s\nSender's own words:\n%s", m.Subject, m.Body)
+		// The channel and direction lines are our own record, so they sit above
+		// the fenced span. Inside it, a sender could type "inbound: no" and opt
+		// their reply out of being judged.
+		if m.IsChat() {
+			fmt.Fprintf(&prompt, "channel: %s\n", m.ChannelProvider)
+		}
 		fmt.Fprintf(&prompt, "inbound: %s\n", yesNo(m.Inbound))
-		prompt.WriteString(fence.WrapAttr("source_id", refs.For(m.ID.String()), message) + "\n")
+		prompt.WriteString(fence.WrapAttr("source_id", refs.For(m.ID.String()), messageText(m)) + "\n")
 	}
 	prompt.WriteString(`Return JSON: { "results": [ { "id", "label", "confidence", "reply" } ] } — one entry per ` +
-		`supplied id. "reply" only for a message marked inbound: yes, and only when it reads as an answer.`)
+		`supplied id. "reply" only for an email marked inbound: yes, and only when it reads as an answer.`)
 	return prompt.String()
+}
+
+// messageText is the fenced part of one message. An email always shows its
+// subject line; a chat shows one only when its channel carried a subject.
+func messageText(m activities.UnlabeledMessage) string {
+	words := "Sender's own words:\n" + m.Body
+	if m.IsChat() && m.Subject == "" {
+		return words
+	}
+	return "Subject: " + m.Subject + "\n" + words
 }
 
 // Refs names each message of a batch m1, m2, … in batch order: the ids the
 // prompt shows and the reply answers by.
-func Refs(batch []activities.UnlabeledEmail) *promptref.Refs {
+func Refs(batch []activities.UnlabeledMessage) *promptref.Refs {
 	refs := promptref.New("m")
 	for _, m := range batch {
 		refs.For(m.ID.String())
@@ -112,14 +131,21 @@ var Ruleset = ai.PromptDigest(rulesetPrompt)
 // rulesetPrompt is the one string Ruleset digests: the system prompt and the
 // sample's rendering under the same fence.
 func rulesetPrompt(fence promptfence.Fence) string {
-	return SystemFor(fence) + "\n" + Prompt(fence, []activities.UnlabeledEmail{rulesetSample})
+	return SystemFor(fence) + "\n" + Prompt(fence, rulesetSamples)
 }
 
-// rulesetSample is one fixed message exercising every line of the user turn, so
-// a wording change anywhere in the template moves the digest.
-var rulesetSample = activities.UnlabeledEmail{
+// rulesetSamples are one email and one chat that use every line of the user
+// turn. A wording change anywhere in the template then moves the digest.
+var rulesetSamples = []activities.UnlabeledMessage{{
 	ID:      ids.Nil,
+	Kind:    string(crmcontracts.ActivityKindEmail),
 	Subject: "Re: the offer",
 	Body:    "Tuesday at two works for us.",
 	Inbound: true,
-}
+}, {
+	ID:              ids.MustParse("00000000-0000-0000-0000-000000000001"),
+	Kind:            activities.KindMessage,
+	ChannelProvider: "openchannel",
+	Body:            "Are you free at 8:00 PM Monday?",
+	Inbound:         true,
+}}

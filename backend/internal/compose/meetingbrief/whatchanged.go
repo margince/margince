@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // readLastSpoke returns when the reader last dealt with anyone in the room
@@ -47,7 +48,7 @@ func (s *Service) readLastSpoke(ctx context.Context, tx pgx.Tx, room meeting, pr
 	// Before the meeting, and happened by now: a brief read for a meeting already
 	// held must not take a later conversation as "before we spoke".
 	opensPos := arg(room.Opens)
-	happened := occurredday.HappenedSQL("a", fmt.Sprintf("$%d", arg(now)))
+	happened := relstrength.InteractionCountsAtSQL("a", fmt.Sprintf("$%d", arg(now)))
 	contactsPos := arg(room.Room)
 	scope, err := auth.ActivityDiscoverClause(ctx, "a", arg)
 	if err != nil {
@@ -96,7 +97,7 @@ func (s *Service) readLastSpoke(ctx context.Context, tx pgx.Tx, room meeting, pr
 // from the ranked set it takes from, and the conversations captured since.
 // The first line names the baseline, so the reader knows what "since" means.
 func whatChangedSection(in Input, ranked *rankedClaims) []Sentence {
-	said := briefCopyFor(in.Language)
+	said := in.words()
 	if in.LastSpokeAt == nil {
 		return []Sentence{{
 			Text:     said.Say(changedWords.First),

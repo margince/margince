@@ -80,7 +80,7 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 
 ## forecast_contribution
 
-38 columns · primary key `(id)` · referenced by 0 foreign keys
+40 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -96,6 +96,8 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 | `effective_close_date` | `date` |  |  |
 | `evidence_n` | `integer` |  | How many recorded deals that entered this stage in the last two years have closed. |
 | `exclusion_reason` | `text` |  | Why a deal in the reading contributes no money. |
+| `focus_rank` | `smallint` |  |  |
+| `focus_reason` | `jsonb` |  |  |
 | `fx_date` | `date` |  |  |
 | `fx_rate` | `numeric(20,10)` |  |  |
 | `in_best_case` | `boolean`, default `false` | yes |  |
@@ -136,6 +138,9 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 - `forecast_contribution_base_minor_js_safe`: `CHECK (((base_minor >= '-9007199254740991'::bigint) AND (base_minor <= '9007199254740991'::bigint)))`
 - `forecast_contribution_evidence_n_is_a_tally`: `CHECK (((evidence_n IS NULL) OR (evidence_n >= 0)))`
 - `forecast_contribution_exclusion_reason_check`: `CHECK (((exclusion_reason IS NULL) OR (exclusion_reason = ANY (ARRAY['unpriced', 'fx_missing', 'out_of_period', 'not_eligible']))))`
+- `forecast_contribution_focus_rank_in_list`: `CHECK (((focus_rank IS NULL) OR ((focus_rank >= 1) AND (focus_rank <= 20))))`
+- `forecast_contribution_focus_reason_object`: `CHECK (((focus_reason IS NULL) OR (jsonb_typeof(focus_reason) = 'object')))`
+- `forecast_contribution_focus_reason_pair`: `CHECK (((focus_rank IS NULL) = (focus_reason IS NULL)))`
 - `forecast_contribution_probability_is_a_percent`: `CHECK (((stage_probability IS NULL) OR ((stage_probability >= 0) AND (stage_probability <= 100))))`
 - `forecast_contribution_probability_source_known`: `CHECK (((probability_source IS NULL) OR (probability_source = ANY (ARRAY['stage', 'human', 'margince']))))`
 - `forecast_contribution_qualification_check`: `CHECK (((qualification IS NULL) OR (qualification = ANY (ARRAY['eligible', 'excluded', 'unsupported', 'unknown']))))`
@@ -166,7 +171,7 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 
 ## forecast_snapshot
 
-40 columns · primary key `(id)` · referenced by 2 foreign keys
+41 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -179,6 +184,7 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 | `eligible_count` | `integer` | yes |  |
 | `evidence_cutoff` | `timestamp with time zone` |  |  |
 | `evidence_minor` | `bigint` | yes |  |
+| `focus_on_target` | `boolean` |  |  |
 | `forward_measure` | `text` |  | One of `likely`, `qualified_likely`, `commit_evidence`, `qualified_commit_evidence`, `weighted`, `qualified_weighted` and 1 more. |
 | `fx_missing_count` | `integer` | yes |  |
 | `input_fingerprint` | `text` |  |  |

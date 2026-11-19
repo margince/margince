@@ -101,7 +101,7 @@ func TestConversationSuggestionsUseTheRealContactAndLeadRoutes(t *testing.T) {
 			if e.WsCount(t, `SELECT count(*) FROM audit_log`) != before {
 				t.Fatal("suggestion read mutated the record")
 			}
-			if _, err := capture.NewExclusionStore(InstallationDB(e.Pool)).Add(e.Admin(), capture.ExclusionScopeUser, capture.ExclusionKindAddress, "casey@buyer.test"); err != nil {
+			if _, err := capture.NewExclusionStore(InstallationDB(e.Pool)).Add(e.Admin(), capture.ExclusionScopeUser, capture.ExclusionKindAddress, "casey@buyer.test", ids.Nil); err != nil {
 				t.Fatal(err)
 			}
 			if out := read(); len(out.Data) != 0 {

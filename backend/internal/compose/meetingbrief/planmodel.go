@@ -25,9 +25,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/contactbrief"
 	"github.com/margince/margince/backend/internal/compose/promptlang"
 	"github.com/margince/margince/backend/internal/compose/promptvoice"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -37,6 +39,9 @@ const planSystem = `You prepare a salesperson for one meeting, from a JSON brief
 Return ONLY a JSON object: {"objective":{"text":"...","evidence":[{"entity_type":"activity|deal|contact","entity_id":"<the record's ref, such as a1>"}]},"opening":{...},"top_risk":{"text":"...","evidence":[...],"say":"...","show":"...","avoid":"..."},"likely_asks":[{"question":"...","basis":"...","evidence":[...],"relevance":"high|medium|low","prepare":"..."}],"questions":[{"ask":"...","why":"...","listen_for":"...","evidence":[...]}],"scenarios":[{"label":"...","play":"...","coach":"...","evidence":[...]}]}.
 Write every word from the briefing and from nothing else. Never invent a fact, a name, a date or a number. If the briefing does not say it, do not write it.
 Each message says whether it is on this meeting's deal ("on_this_deal"), or names the other deal it is filed under and that deal's state. The objective and the opening serve this meeting's deal. A conversation about another deal is background only. Name a deal whose state is "lost" as lost and a "won" one as won, never as a live opportunity.
+` + speakerRule + `
+"looks_kept" lists promises that an accepted invitation shows are probably kept. They are not open: never make one the objective, a risk or a question, and say once that it looks kept where it matters.
+"earlier_at_company" is what the company's other contacts already received from us. Never contradict it, and say plainly when the meeting would.
 Quote what contacts actually asked for. A question that would read the same about any other company is worthless — name the thing this account said, in their words where the briefing has them.
 Cite the refs the briefing gave you, in evidence only. A ref must never appear in the text a reader sees.
 "opening" has the same shape as "objective", and every "evidence" list in every field holds objects shaped exactly as in "objective" — {"entity_type":...,"entity_id":...} — never a bare ref string.
@@ -56,17 +61,21 @@ func planSystemFor(fence promptfence.Fence, lang string) string {
 // PlanPrompt is what the model is shown: enough to be specific, bounded enough
 // to be affordable.
 type PlanPrompt struct {
-	Subject     string          `json:"subject"`
-	StartsAt    string          `json:"starts_at"`
-	Company     string          `json:"company,omitempty"`
-	MeetingType string          `json:"meeting_type"`
-	TypeSignals []string        `json:"meeting_type_signals,omitempty"`
-	Deal        *DealIn         `json:"deal,omitempty"`
-	Project     *ProjectIn      `json:"project,omitempty"`
-	Attendees   []AttendeeIn    `json:"attendees,omitempty"`
-	Claims      []ClaimIn       `json:"captured_claims,omitempty"`
-	Moments     []PromptMoment  `json:"account_moments,omitempty"`
-	Unknowns    []PromptUnknown `json:"what_the_record_does_not_say,omitempty"`
+	Subject     string         `json:"subject"`
+	StartsAt    string         `json:"starts_at"`
+	Company     string         `json:"company,omitempty"`
+	MeetingType string         `json:"meeting_type"`
+	TypeSignals []string       `json:"meeting_type_signals,omitempty"`
+	Deal        *DealIn        `json:"deal,omitempty"`
+	Project     *ProjectIn     `json:"project,omitempty"`
+	Attendees   []AttendeeIn   `json:"attendees,omitempty"`
+	Claims      []ClaimIn      `json:"captured_claims,omitempty"`
+	Moments     []PromptMoment `json:"account_moments,omitempty"`
+	// EarlierAtCompany is what the company's other contacts already received.
+	EarlierAtCompany []PromptCompanyTopic `json:"earlier_at_company,omitempty"`
+	// LooksKept are promises an accepted invitation shows are probably kept.
+	LooksKept []LooksKeptIn   `json:"looks_kept,omitempty"`
+	Unknowns  []PromptUnknown `json:"what_the_record_does_not_say,omitempty"`
 	// MeetingID is the activity every recommendation may cite when it rests on
 	// the meeting itself rather than on a conversation.
 	MeetingID string `json:"meeting_id"`
@@ -86,13 +95,24 @@ type PromptMoment struct {
 // it is filed under. Without the deal, a thread on a lost deal reads as the
 // reason for this meeting.
 type PromptMessage struct {
-	ActivityID string      `json:"activity_id"`
-	At         string      `json:"at"`
-	Direction  string      `json:"direction,omitempty"`
-	Subject    string      `json:"subject,omitempty"`
-	Text       string      `json:"text,omitempty"`
-	OnThisDeal bool        `json:"on_this_deal"`
-	OtherDeal  *PromptDeal `json:"other_deal,omitempty"`
+	ActivityID string                `json:"activity_id"`
+	At         string                `json:"at"`
+	Direction  string                `json:"direction,omitempty"`
+	Speaker    *contactbrief.Speaker `json:"speaker,omitempty"`
+	Subject    string                `json:"subject,omitempty"`
+	Text       string                `json:"text,omitempty"`
+	OnThisDeal bool                  `json:"on_this_deal"`
+	OtherDeal  *PromptDeal           `json:"other_deal,omitempty"`
+}
+
+// PromptCompanyTopic is one earlier conversation of a colleague's contact at
+// the room's company, with the id a citation must name.
+type PromptCompanyTopic struct {
+	ActivityID string `json:"activity_id"`
+	Contact    string `json:"contact"`
+	At         string `json:"at"`
+	Subject    string `json:"subject"`
+	Direction  string `json:"direction,omitempty"`
 }
 
 // PromptDeal is another deal a message is filed under.
@@ -117,11 +137,12 @@ func planPromptOf(in Input, floor Plan) PlanPrompt {
 		Company:     in.Company,
 		MeetingType: string(floor.Type.Value),
 		TypeSignals: floor.Type.Signals,
-		Deal:        in.Deal,
+		Deal:        in.Deal.inLanguage(in.Language),
 		Project:     in.Project,
 		Attendees:   in.Attendees,
 		Claims:      in.Commitments,
 		MeetingID:   in.ActivityID,
+		LooksKept:   in.LooksKept,
 	}
 	byActivity := map[string]ExcerptIn{}
 	for _, excerpt := range in.Excerpts {
@@ -148,6 +169,12 @@ func planPromptOf(in Input, floor Plan) PlanPrompt {
 		}
 		prompt.Moments = append(prompt.Moments, shown)
 	}
+	for _, topic := range in.CompanyHistory {
+		prompt.EarlierAtCompany = append(prompt.EarlierAtCompany, PromptCompanyTopic{
+			ActivityID: topic.ID, Contact: topic.Contact, Subject: topic.Subject, Direction: topic.Direction,
+			At: occurredday.When(occurredday.Moment{At: topic.At.At, DateOnly: topic.At.DateOnly}),
+		})
+	}
 	for _, unknown := range floor.Unknowns {
 		prompt.Unknowns = append(prompt.Unknowns, PromptUnknown{
 			Kind: string(unknown.Kind), Question: unknown.Question,
@@ -163,6 +190,7 @@ func promptMessageOf(excerpt ExcerptIn, row HistoryIn) PromptMessage {
 		ActivityID: excerpt.ActivityID,
 		At:         excerpt.At.UTC().Format(time.DateOnly),
 		Direction:  excerpt.Direction,
+		Speaker:    excerpt.Speaker,
 		Subject:    excerpt.Subject,
 		Text:       excerpt.Text,
 		OnThisDeal: row.OnDeal,

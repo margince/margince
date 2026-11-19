@@ -11,7 +11,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { writeMessage } from "../../design-system/richtext-testing";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
@@ -21,8 +21,8 @@ import {
   isPreviewDoor,
   previewedAddresses,
 } from "../../testing/sendpermission.testkit";
-import { ComposeModal } from "./compose";
-import { pressSend } from "./compose.testkit";
+import { installComposeClock, pressSend } from "./compose.testkit";
+import { ComposeWindow } from "./composewindow";
 
 // WHICH WAY a message leaves, asked inside the one composer.
 //
@@ -122,7 +122,7 @@ function drawer(
   open = true,
 ) {
   return (
-    <ComposeModal
+    <ComposeWindow
       entityType="contact"
       entityId="p-1"
       contactId="p-1"
@@ -134,6 +134,8 @@ function drawer(
     />
   );
 }
+
+beforeEach(installComposeClock);
 
 afterEach(() => {
   cleanup();
@@ -280,7 +282,7 @@ describe("the composer's transport dial", () => {
   // reader writing into a conversation they did not choose.
   it("says so when the conversation a caller named is gone", async () => {
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="contact"
         entityId="p-1"
         contactId="p-1"

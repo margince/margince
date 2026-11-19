@@ -25,6 +25,7 @@ import (
 	"unicode"
 
 	"github.com/margince/margince/backend/internal/platform/mailrole"
+	"github.com/margince/margince/backend/internal/platform/namematch"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
@@ -44,12 +45,6 @@ type ParsedName struct {
 	// guess. Only a confident parse may fill the split-name columns.
 	Confident bool
 }
-
-// maxNameTokens bounds what reads as "first last". Three admits a middle name
-// or a particle surname ("Ludwig van Beethoven"); beyond that the string is
-// carrying something that is not a name — a department, a company, a title —
-// and splitting it would invent a surname out of the tail.
-const maxNameTokens = 3
 
 // honorifics are stripped off the front of a display name. Deliberately short:
 // only forms that are unambiguously a salutation. "Ing" or "Mag" would swallow
@@ -172,7 +167,7 @@ func readableLocalPart(email string) (local string, tokens []string, ok bool) {
 	if hasRoleToken(local) {
 		return local, nil, false
 	}
-	tokens, complete := localPartTokens(local)
+	tokens, complete := namematch.LocalPartTokens(local)
 	if len(tokens) == 0 || !complete {
 		return local, nil, false
 	}
@@ -207,36 +202,6 @@ func parseLocalPart(email string) ParsedName {
 	return parsed
 }
 
-// localPartTokens splits a local part into name-shaped words: separators become
-// boundaries, digits are dropped, and anything left that is not a word is
-// refused. A token run like `trung314578` is a handle with a number stuck to
-// it, so the digits go and `trung` remains; `2016` alone is not a name at all.
-//
-// The hyphen is deliberately NOT a boundary. It separates words in `anne-marie`
-// exactly as it does in `first-last`, and the two are indistinguishable here —
-// so it stays inside the token, where capitalizeParts still cases both halves.
-// Splitting on it would turn "Anne-Marie O'Brien" into a three-token name and
-// hand "Marie" to the surname.
-// It reports complete=false when any field failed to read as a word. The caller
-// must then abstain: dropping a field silently would rename the contact.
-func localPartTokens(local string) ([]string, bool) {
-	fields := strings.FieldsFunc(local, func(r rune) bool {
-		return r == '.' || r == '_'
-	})
-	tokens := make([]string, 0, len(fields))
-	for _, field := range fields {
-		word := strings.TrimFunc(field, unicode.IsDigit)
-		if word == "" || !isWordLike(word) {
-			return nil, false
-		}
-		tokens = append(tokens, word)
-	}
-	if len(tokens) > maxNameTokens {
-		return nil, false
-	}
-	return tokens, true
-}
-
 // hasRoleToken reports whether a local part names an organizational mailbox
 // rather than a human — the whole of it, or any of its dot/underscore parts.
 // `support.eu@` and `sales.emea@` are the same kind of address as `support@`,
@@ -250,40 +215,17 @@ func hasRoleToken(local string) bool {
 	return mailrole.IsRoleLocalPart(local)
 }
 
-// isWordLike reports whether a token could be part of a name: letters, plus the
-// apostrophes and hyphens real names carry. A token with a digit in the MIDDLE
-// (`user2name`) is a handle, not a name.
-func isWordLike(token string) bool {
-	letters := 0
-	for _, r := range token {
-		switch {
-		case unicode.IsLetter(r):
-			letters++
-		case unicode.IsMark(r):
-			// A combining diacritic belongs to the letter before it: decomposed
-			// "é" is e + U+0301, and refusing the mark would drop the field and
-			// rename the contact.
-		case r == '\'' || r == '’' || r == '-':
-		default:
-			return false
-		}
-	}
-	// Punctuation alone is not a word. Without this, "Alice -" reads as a
-	// contact whose surname is a hyphen.
-	return letters > 0
-}
-
 // splitFirstLast decides whether tokens read as a given name and a surname.
 //
 // A single token never does: it is a surname with no first name, or a handle.
 // Particles bind to the surname that follows them, so "Ludwig van Beethoven"
 // is Ludwig + "van Beethoven", not Ludwig van + Beethoven.
 func splitFirstLast(tokens []string) (string, string, bool) {
-	if len(tokens) < 2 || len(tokens) > maxNameTokens {
+	if len(tokens) < 2 || len(tokens) > namematch.MaxNameTokens {
 		return "", "", false
 	}
 	for _, token := range tokens {
-		if !isWordLike(token) {
+		if !namematch.IsWordLike(token) {
 			return "", "", false
 		}
 	}
@@ -303,7 +245,7 @@ func splitFirstLast(tokens []string) (string, string, bool) {
 	// second given name, or — in a family-name-first convention written without
 	// a comma — the given name itself, and NOTHING in the string says which.
 	// Two plausible readings mean the honest answer is that we do not know.
-	if len(tokens) == maxNameTokens && !nameParticles[strings.ToLower(tokens[1])] {
+	if len(tokens) == namematch.MaxNameTokens && !nameParticles[strings.ToLower(tokens[1])] {
 		return "", "", false
 	}
 	first := tokens[0]

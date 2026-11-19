@@ -532,7 +532,9 @@ type noSendableMailbox struct{}
 
 func (noSendableMailbox) SendCapable(context.Context, string) (bool, error) { return false, nil }
 
-func (noSendableMailbox) SendableMailProvider(context.Context) (string, error) { return "", nil }
+func (noSendableMailbox) SendableMailbox(context.Context, ids.UUID, ids.ActivityID) (string, ids.UUID, error) {
+	return "", ids.Nil, nil
+}
 
 // releaseServiceWithoutASendableMailbox is releaseService with the send
 // pre-flight failing, so the precheck refuses before the decision is read.

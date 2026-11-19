@@ -51,7 +51,15 @@ func (s *Store) SendEmail(ctx context.Context, origin SendOrigin, in SendEmailIn
 		// The hold runs first because the review binds to it. Both writes
 		// happen after the unwind, and in this order: a review naming an intent
 		// that does not exist yet would violate its own foreign key.
-		return crmcontracts.Activity{}, recordRefusal(ctx, stager, err, s.holdRefusedSend(ctx, origin, in, err))
+		held := s.holdRefusedSend(ctx, origin, in, err)
+		if held.erased {
+			return crmcontracts.Activity{}, err
+		}
+		refusal := recordRefusal(ctx, stager, err, held.id)
+		if held.reused {
+			refusal = &repeatedSendError{refusal: refusal}
+		}
+		return crmcontracts.Activity{}, refusal
 	}
 	return sent, nil
 }
@@ -127,7 +135,7 @@ func (s *Store) prepareRenderedSend(ctx context.Context, origin SendOrigin, in S
 			return PreparedSend{}, err
 		}
 	}
-	provider, err := s.refuseUnsendable(ctx, in, gate, checkDelivery)
+	provider, connection, err := s.refuseUnsendable(ctx, in, origin.anchor, gate, checkDelivery)
 	if err != nil {
 		return PreparedSend{}, err
 	}
@@ -159,28 +167,27 @@ func (s *Store) prepareRenderedSend(ctx context.Context, origin SendOrigin, in S
 	}
 	signed := sign.under(in.Body)
 
-	// Deliverability is derived here, after the gates, so both transports
-	// get it and neither can send marketing mail without it.
-	surface, err := surfaceForRecipients(ctx, in, origin, links, gate)
+	// The files, resolved to snapshots while the sender's read gate applies.
+	// One file that cannot be resolved refuses the send: a message with fewer
+	// files than attached is one nobody is told is wrong. Resolved before
+	// deliverability, because the engine reads the file names for an offer.
+	files, err := s.PreviewSendAttachments(ctx, in.AttachmentIDs)
 	if err != nil {
 		return PreparedSend{}, err
 	}
-	derived, err := s.deliverability(ctx, signed, in.Subject, in.Recipients, surface, in.SendingEntity, s.footerLanguage(ctx, in.Body, in.Subject))
+
+	// Deliverability is derived here, after the gates, so both transports
+	// get it and neither can send marketing mail without it.
+	surface, err := surfaceForRecipients(ctx, in, origin, links, files, gate)
+	if err != nil {
+		return PreparedSend{}, err
+	}
+	derived, err := s.deliverability(ctx, signed, in.Subject, in.Recipients, in.Evidence.RecipientCountries, surface, in.SendingEntity, s.footerLanguage(ctx, in.Body, in.Subject))
 	if err != nil {
 		return PreparedSend{}, err
 	}
 	in.Evidence = footerEvidence(in.Evidence, derived, strings.TrimPrefix(derived.recorded, signed))
 	messageID := MintMessageID(s.messageIDDomain())
-
-	// The files, resolved to snapshots while the sender's own read gate still
-	// applies. It runs before the transaction for the same reason the body work
-	// does — the transaction holds writes only — and it refuses the whole send
-	// when one file cannot be resolved, because a message carrying fewer files
-	// than the sender attached is one nobody is told is wrong.
-	files, err := s.PreviewSendAttachments(ctx, in.AttachmentIDs)
-	if err != nil {
-		return PreparedSend{}, err
-	}
 
 	// Caller markup is filtered BEFORE anything of ours is added to it, so the
 	// signature and the unsubscribe footer below are not themselves subject to
@@ -220,6 +227,7 @@ func (s *Store) prepareRenderedSend(ctx context.Context, origin SendOrigin, in S
 			to:              ToRecipients(in.Recipients, in.Cc, in.Bcc),
 			links:           links,
 			provider:        provider,
+			connection:      connection,
 		},
 	}, nil
 }

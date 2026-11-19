@@ -51,7 +51,11 @@ import { UnsavedGuard } from "./components/unsaved";
 import { RESET_ROUTE } from "./features/sign-in/auth.route";
 import { CompleteLocale } from "./i18n";
 import { isContactTab } from "./lib/contacttab";
-import { screenEnabled, useDisabledCoreFeatures } from "./lib/corefeatures";
+import {
+  screenEnabled,
+  useDisabledCoreFeatures,
+  useHiddenCoreFeatures,
+} from "./lib/corefeatures";
 import { bootsOnEssentialCopy } from "./lib/essentialscreens";
 import { EXTENSION_APP_SCREEN } from "./lib/extensionapps";
 import { EXTENSION_SCREEN } from "./lib/extensions";
@@ -257,6 +261,7 @@ export function ScreenView({
   id2,
 }: Readonly<{ screen: Screen; id?: string; id2?: string }>) {
   const disabled = useDisabledCoreFeatures();
+  const hidden = useHiddenCoreFeatures();
   const shown = useShownAddress(
     askedAddress({ screen, id, id2 }, useLiveHash()),
   );
@@ -270,10 +275,16 @@ export function ScreenView({
           {(held) => (
             <DrawnFor address={held}>
               <Fragment key={identityOfAddress(held)}>
-                {screenEnabled(parseHash(held).screen, disabled) ? (
+                {screenEnabled(parseHash(held).screen, hidden) ? (
                   screenWithLocale(held)
                 ) : (
-                  <ScreenNotice messageKey="shell.unknownPage" />
+                  <ScreenNotice
+                    messageKey={
+                      screenEnabled(parseHash(held).screen, disabled)
+                        ? "shell.unavailableForRole"
+                        : "shell.unknownPage"
+                    }
+                  />
                 )}
               </Fragment>
             </DrawnFor>

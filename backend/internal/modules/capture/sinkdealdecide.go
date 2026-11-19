@@ -25,13 +25,16 @@ const sqlUnscoped = "true"
 // dealFacts is what the rule reads about one mail, all of it recorded on the
 // mail's own rows. outcome is set when the rule has nothing to decide.
 type dealFacts struct {
-	meeting   bool
-	outcome   DealOutcome
-	activity  ids.ActivityID
-	project   ids.UUID
-	contacts  []ids.UUID
-	companies []ids.UUID
-	thread    []ids.UUID
+	meeting  bool
+	outcome  DealOutcome
+	activity ids.ActivityID
+	project  ids.UUID
+	contacts []ids.UUID
+	// provenContacts are the contacts whose part in the mail no header can forge.
+	// They are the authenticated sender, and the recipients of mail we sent.
+	provenContacts []ids.UUID
+	companies      []ids.UUID
+	thread         []ids.UUID
 	// hooks are the extension changes already made to contacts and companies.
 	hooks []HookChange
 	// topicMemo is the digest of the topic question last answered for it.
@@ -67,7 +70,7 @@ func readDealFacts(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, re
 		facts.project = *project
 		return facts, nil
 	}
-	if facts.contacts, err = mailContacts(ctx, tx, activityID); err != nil {
+	if facts.contacts, facts.provenContacts, err = mailContacts(ctx, tx, activityID); err != nil {
 		return facts, err
 	}
 	if facts.companies, err = mailCompanies(ctx, tx, activityID, facts.contacts); err != nil {
@@ -109,7 +112,7 @@ func decideCore(ctx context.Context, tx pgx.Tx, facts dealFacts, candidates Deal
 		}
 		verdict.Candidates = []ids.UUID{verdict.Deal}
 	case verdict.Outcome == DealAmbiguous && verdict.Basis.NeedsTopicCheck():
-		open, err := candidates.OpenDealsOfCompanyUpTo(ctx, tx, verdict.Question.CompanyID, DealTopicCandidates)
+		open, err := topicCandidates(ctx, tx, candidates, verdict.Question)
 		if err != nil {
 			return DealVerdict{}, err
 		}
@@ -118,6 +121,16 @@ func decideCore(ctx context.Context, tx pgx.Tx, facts dealFacts, candidates Deal
 		}
 	}
 	return verdict, nil
+}
+
+// topicCandidates is the open deals a topic check weighs for an ambiguous mail.
+// They are the company's, or the contacts' seats when no company stands behind
+// the question.
+func topicCandidates(ctx context.Context, tx pgx.Tx, candidates DealCandidates, question WhichDeal) ([]ids.UUID, error) {
+	if len(question.StakeholderIDs) > 0 {
+		return candidates.OpenDealsOfStakeholders(ctx, tx, question.StakeholderIDs, DealTopicCandidates)
+	}
+	return candidates.OpenDealsOfCompanyUpTo(ctx, tx, question.CompanyID, DealTopicCandidates)
 }
 
 // undeclinedDeals is deals less those a colleague declined for the mail.
@@ -163,6 +176,34 @@ func decideByRule(ctx context.Context, tx pgx.Tx, facts dealFacts, candidates De
 		deals, err := candidates.OpenDealsOfProject(ctx, tx, facts.project)
 		return withBasis(oneDeal(deals, WhichDeal{ProjectID: facts.project}), DealBasisProject, DealBasisProject), err
 	}
+	verdict, err := decideByCompany(ctx, tx, facts, candidates)
+	if err != nil || verdict.Outcome != DealNone || len(facts.contacts) == 0 {
+		return verdict, err
+	}
+	return decideByStakeholderElsewhere(ctx, tx, facts, candidates)
+}
+
+// decideByStakeholderElsewhere ties the mail to an open deal at another company
+// through a seat, as for a consultant on a client's deal. A seat of a proven
+// participant files the mail. A seat of a contact only named in a header asks a
+// colleague instead, because a sender could name anyone there.
+func decideByStakeholderElsewhere(ctx context.Context, tx pgx.Tx, facts dealFacts, candidates DealCandidates) (DealVerdict, error) {
+	if len(facts.provenContacts) > 0 {
+		staked, err := candidates.OpenDealsOfStakeholders(ctx, tx, facts.provenContacts, 2)
+		if err != nil || len(staked) > 0 {
+			return withBasis(oneDeal(staked, WhichDeal{StakeholderIDs: facts.provenContacts}), DealBasisStakeholder, DealBasisNamedStakeholder), err
+		}
+	}
+	named, err := candidates.OpenDealsOfStakeholders(ctx, tx, facts.contacts, 1)
+	if err != nil || len(named) == 0 {
+		return DealVerdict{Outcome: DealNone}, err
+	}
+	return DealVerdict{Outcome: DealAmbiguous, Question: WhichDeal{StakeholderIDs: facts.contacts}, Basis: DealBasisNamedStakeholder}, nil
+}
+
+// decideByCompany is the rungs that start from the mail's company: its thread,
+// its only open deal, and the stakeholders among several.
+func decideByCompany(ctx context.Context, tx pgx.Tx, facts dealFacts, candidates DealCandidates) (DealVerdict, error) {
 	if len(facts.companies) > 1 {
 		return DealVerdict{Outcome: DealConflictingFirms}, nil
 	}
@@ -220,24 +261,49 @@ func oneDeal(deals []ids.UUID, question WhichDeal) DealVerdict {
 }
 
 // Participant evidence survives the link cap; explicit contact filings also count.
-func mailContacts(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID) ([]ids.UUID, error) {
+// The second answer is the contacts no header can forge. They are the From of
+// authenticated inbound mail, and the To and Cc of mail a colleague sent. The
+// sender check covers the domain, not the address, so a consumer-mail From
+// proves nothing.
+func mailContacts(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID) (all, proven []ids.UUID, err error) {
 	if !auth.ReadGranted(ctx, "contact") {
-		return nil, nil
+		return nil, nil, nil
+	}
+	consumer, err := MatcherTx(ctx, tx)
+	if err != nil {
+		return nil, nil, err
 	}
 	rows, err := tx.Query(ctx, `
-		SELECT named.contact_id FROM (
-		 SELECT p.contact_id FROM activity_participant p WHERE p.activity_id=$1
-		 UNION SELECT l.contact_id FROM activity_link l WHERE l.activity_id=$1 AND l.entity_type='contact'
+		SELECT named.contact_id, named.signed, named.sent, named.domain FROM (
+		 SELECT p.contact_id, (`+correspondence.AuthenticatedInboundSQL("a")+` AND p.role = 'from') AS signed,
+		        (`+correspondence.OurOutboundSQL("a")+` AND p.role IN ('to', 'cc')) AS sent,
+		        coalesce(p.address_domain_folded, '') AS domain
+		   FROM activity_participant p JOIN activity a ON a.id = p.activity_id WHERE p.activity_id=$1
+		 UNION ALL SELECT l.contact_id, false, false, '' FROM activity_link l WHERE l.activity_id=$1 AND l.entity_type='contact'
 		) named JOIN contact c ON c.id=named.contact_id AND c.archived_at IS NULL
 		ORDER BY named.contact_id`, activityID)
 	if err != nil {
-		return nil, fmt.Errorf("capture: reading the mail's participants: %w", err)
+		return nil, nil, fmt.Errorf("capture: reading the mail's participants: %w", err)
 	}
-	contacts, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
-	if err != nil {
-		return nil, fmt.Errorf("capture: reading the mail's participants: %w", err)
+	defer rows.Close()
+	for rows.Next() {
+		var contact ids.UUID
+		var signed, sent bool
+		var domain string
+		if err := rows.Scan(&contact, &signed, &sent, &domain); err != nil {
+			return nil, nil, fmt.Errorf("capture: reading the mail's participants: %w", err)
+		}
+		if len(all) == 0 || all[len(all)-1] != contact {
+			all = append(all, contact)
+		}
+		if (sent || signed && !consumer.IsConsumer(domain)) && (len(proven) == 0 || proven[len(proven)-1] != contact) {
+			proven = append(proven, contact)
+		}
 	}
-	return contacts, nil
+	if err := rows.Err(); err != nil {
+		return nil, nil, fmt.Errorf("capture: reading the mail's participants: %w", err)
+	}
+	return all, proven, nil
 }
 
 // mailCompanies is the customer companies the mail names, at most two: its

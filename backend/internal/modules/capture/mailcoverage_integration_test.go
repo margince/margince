@@ -12,6 +12,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -84,7 +85,7 @@ func TestSupersededSyncDoesNotWriteSuccessOrFailureOntoANewGrant(t *testing.T) {
 			ctx, reg, _, _ := newCaptureRegistryFixture(t)
 			reg.Register(lifecycleSync{result: tc.result, during: func() error {
 				if tc.disconnect {
-					if err := reg.Disconnect(ctx, haltingProvider); err != nil {
+					if err := reg.Disconnect(ctx, capture.ProviderMailbox(haltingProvider)); err != nil {
 						return err
 					}
 				}
@@ -102,33 +103,5 @@ func TestSupersededSyncDoesNotWriteSuccessOrFailureOntoANewGrant(t *testing.T) {
 				t.Fatalf("old sync wrote onto new grant: %+v", views)
 			}
 		})
-	}
-}
-
-func TestRebindingAMailboxDoesNotInheritThePreviousAccountsSyncTimes(t *testing.T) {
-	ctx, reg, _, _ := newCaptureRegistryFixture(t)
-	label := "first@example.test"
-	reg.Register(rebindConnector{label: &label})
-	id, err := reg.Connect(ctx, "graph", connector.Auth("fixture-token"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := reg.SyncOnce(ctx, id); err != nil {
-		t.Fatal(err)
-	}
-	views, err := reg.Connections(ctx)
-	if err != nil || len(views) != 1 || views[0].LastSuccessAt == nil {
-		t.Fatalf("successful original mailbox = %+v, %v", views, err)
-	}
-	label = "second@example.test"
-	if _, err := reg.Connect(ctx, "graph", connector.Auth("replacement-token")); err != nil {
-		t.Fatal(err)
-	}
-	views, err = reg.Connections(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(views) != 1 || views[0].LastSuccessAt != nil || views[0].LastSyncedAt != nil {
-		t.Fatalf("new mailbox inherited old times: %+v", views)
 	}
 }

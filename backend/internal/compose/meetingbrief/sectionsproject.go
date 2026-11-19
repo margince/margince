@@ -27,20 +27,20 @@ func (said briefCopy) projectHeaderLine(project ProjectIn) string {
 		parts = append(parts, project.Phase)
 	}
 	if project.TargetEndDate != nil {
-		parts = append(parts, fmt.Sprintf(said.Say(headerWords.Target), project.TargetEndDate.Format(time.DateOnly)))
+		parts = append(parts, fmt.Sprintf(said.Say(headerWords.Target), said.dates.CalendarDay(*project.TargetEndDate)))
 	}
 	return strings.Join(parts, " · ") + "."
 }
 
 func meetingLine(in Input) string {
-	said := briefCopyFor(in.Language)
+	said := in.words()
 	subject := in.Subject
 	if subject == "" {
 		subject = said.Say(headerWords.Meeting)
 	}
-	when := in.StartsAt.Format("2006-01-02 15:04 MST")
+	when := said.dates.Day(in.StartsAt) + " " + said.dates.Clock(in.StartsAt)
 	if in.StartsDateOnly {
-		when = in.startsText()
+		when = said.dates.CalendarDay(in.StartsAt.UTC())
 	}
 	if in.Company == "" {
 		return fmt.Sprintf("%s, %s.", subject, when)
@@ -57,7 +57,7 @@ func (said briefCopy) projectGoalLine(project ProjectIn) string {
 	}
 	return fmt.Sprintf(said.Say(headerWords.MoveTarget),
 		project.Name, said.phaseOrUnnamed(project.Phase),
-		project.TargetEndDate.Format(time.DateOnly))
+		said.dates.CalendarDay(*project.TargetEndDate))
 }
 
 func (said briefCopy) phaseOrUnnamed(phase string) string {

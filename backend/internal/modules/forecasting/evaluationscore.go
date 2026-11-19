@@ -203,7 +203,7 @@ func configuredPrediction(method string) prediction {
 		case MethodCommitEvidence:
 			measure = MeasureLikely
 		}
-		landing, err := ProjectLanding(readings, measure, nil)
+		landing, err := ProjectLanding(readings, measure, SeenCall{})
 		return landing.AmountMinor, err
 	}
 }

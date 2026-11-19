@@ -14,12 +14,12 @@ import { type Translator, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import type { ConnectAccountInput } from "../../lib/connect-account";
 import type { Service } from "../../lib/connect-flow-draft";
+import { mailboxParams } from "../../lib/connectors";
 import { problemMessageOf, throwProblem } from "../../lib/problem";
 
 // Disconnecting an account, or some of its services, behind one confirm.
 
 type CaptureConnection = components["schemas"]["CaptureConnection"];
-type Provider = CaptureConnection["provider"];
 
 // Disconnecting deletes OUR stored credential and does not revoke the grant at
 // the vendor, so the confirm names where a careful reader finishes that.
@@ -52,7 +52,10 @@ export type PendingStop = Readonly<{
 
 // A target with no service is the meeting-notes connection, which a whole-account
 // stop takes with it and no service label names.
-type StopTarget = Readonly<{ service: Service | null; provider: Provider }>;
+type StopTarget = Readonly<{
+  service: Service | null;
+  connection: CaptureConnection;
+}>;
 
 export function servicesOf(account: ConnectionAccount): Service[] {
   const services: Service[] = [];
@@ -117,10 +120,10 @@ export function StopConfirm({
   }, [stop, reset]);
   const targets = services.flatMap((service): StopTarget[] => {
     const connection = service === "mail" ? account.mail : account.calendar;
-    return connection ? [{ service, provider: connection.provider }] : [];
+    return connection ? [{ service, connection }] : [];
   });
   if (whole && account.notes) {
-    targets.push({ service: null, provider: account.notes.provider });
+    targets.push({ service: null, connection: account.notes });
   }
   return (
     <ConfirmModal
@@ -162,9 +165,9 @@ function useDisconnectServices() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (targets: readonly StopTarget[]) => {
-      for (const { provider } of targets) {
+      for (const { connection } of targets) {
         const { error } = await api.POST("/connectors/{provider}/disconnect", {
-          params: { path: { provider } },
+          params: mailboxParams(connection),
         });
         if (error) {
           throwProblem(error);
@@ -202,7 +205,7 @@ export function NotesStopConfirm({
       error={disconnect.isError ? problemMessageOf(disconnect.error, t) : null}
       onConfirm={() => {
         if (!notes) return;
-        disconnect.mutate([{ service: null, provider: notes.provider }], {
+        disconnect.mutate([{ service: null, connection: notes }], {
           onSuccess: onClose,
         });
       }}

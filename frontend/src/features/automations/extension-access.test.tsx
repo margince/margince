@@ -711,7 +711,7 @@ describe("ExtensionAccessCard", () => {
       ["extension-access", "extensions"],
       EXTENSIONS.extensions,
     );
-    client.setQueryData(rolesKey(false), ROLES.roles);
+    client.setQueryData(rolesKey(false), { roles: ROLES.roles, verbs: {} });
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {

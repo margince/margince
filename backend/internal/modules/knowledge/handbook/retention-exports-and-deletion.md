@@ -25,7 +25,7 @@ Margince has an export of the whole company: a ZIP with one CSV for each record 
 Also called: full export, data handover, migrate away, leave Margince.
 
 ### How do I import contacts from a spreadsheet?
-To import contacts, companies or prospects, save them as CSV files, or as a ZIP of CSV files, and open **Settings → Data import**.
+To import contacts, companies or leads, save them as CSV files, or as a ZIP of CSV files, and open **Settings → Data import**.
 1. Drop the file on **Upload your data**, or fill in the file from **Download template** first.
 2. On **Check your files**, check **Import as** for each file, then choose **Next: map {count} files**.
 3. In **Map columns**, pick a **Field** for each column on each tab, or **Do not import**.
@@ -36,7 +36,7 @@ Also called: upload a CSV, bulk import, Excel import, import a ZIP.
 
 ### How do I undo an import?
 To undo an import in Margince, open **Settings → Data import** and choose **Undo** beside it in **Recent imports**, or **Undo this import** on its result.
-Undo goes in reverse order: deals first, then prospects, then contacts, then companies. It archives the records that import created (a prospect is disqualified), unless someone edited them since. A deal edited after the import stays. Those are listed under "Left in place by the undo:".
+Undo goes in reverse order: activities first, then deals, leads, contacts and companies. It archives the records that import created (a lead is disqualified), unless someone edited them since. A deal edited after the import stays. Those are listed under "Left in place by the undo:" by name.
 
 Records the import only updated keep their new values. New tags stay, because they may be in use. If the undo stops part of the way, choose **Continue undo**. When done it says **Import undone**.
 

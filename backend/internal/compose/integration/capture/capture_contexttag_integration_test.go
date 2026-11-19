@@ -45,7 +45,7 @@ func TestAConnectorTakesAWordTheVocabularyCarries(t *testing.T) {
 	env := newCaptureEnv(t)
 	word := putWord(t, env, "Nord inbox", false)
 
-	view, err := env.registry.SetContextTag(seatContext(env.e, env.e.Rep1), "gmail", &word)
+	view, err := env.registry.SetContextTag(seatContext(env.e, env.e.Rep1), capturemod.ProviderMailbox("gmail"), &word)
 	if err != nil {
 		t.Fatalf("filing the mailbox under a word: %v", err)
 	}
@@ -61,7 +61,7 @@ func TestAConnectorTakesAWordTheVocabularyCarries(t *testing.T) {
 
 	// Cleared, and the connection then files nothing — the same state as never
 	// having chosen.
-	cleared, err := env.registry.SetContextTag(seatContext(env.e, env.e.Rep1), "gmail", nil)
+	cleared, err := env.registry.SetContextTag(seatContext(env.e, env.e.Rep1), capturemod.ProviderMailbox("gmail"), nil)
 	if err != nil {
 		t.Fatalf("clearing the word: %v", err)
 	}
@@ -86,7 +86,7 @@ func TestAConnectorRefusesAWordTheVocabularyDoesNotOffer(t *testing.T) {
 			env := newCaptureEnv(t)
 			word := tc.word(t, env)
 
-			_, err := env.registry.SetContextTag(seatContext(env.e, env.e.Rep1), "gmail", &word)
+			_, err := env.registry.SetContextTag(seatContext(env.e, env.e.Rep1), capturemod.ProviderMailbox("gmail"), &word)
 			if _, ok := errors.AsType[*capturemod.UnknownContextTagError](err); !ok {
 				t.Fatalf("setting %s word: err = %v, want an unknown-word refusal", tc.name, err)
 			}
@@ -105,7 +105,7 @@ func TestAConnectorRefusesAWordTheVocabularyDoesNotOffer(t *testing.T) {
 func TestAWordArchivedAfterwardsIsReportedOnTheConnection(t *testing.T) {
 	env := newCaptureEnv(t)
 	word := putWord(t, env, "Nord inbox", false)
-	if _, err := env.registry.SetContextTag(seatContext(env.e, env.e.Rep1), "gmail", &word); err != nil {
+	if _, err := env.registry.SetContextTag(seatContext(env.e, env.e.Rep1), capturemod.ProviderMailbox("gmail"), &word); err != nil {
 		t.Fatalf("filing the mailbox under a word: %v", err)
 	}
 

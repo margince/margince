@@ -7,7 +7,6 @@ package compose
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -42,32 +41,22 @@ func TestAnIssuedShareIsListedWithoutItsToken(t *testing.T) {
 
 	created := serveShareRoute(seat, routes.CreateForecastShare, http.MethodPost,
 		`{"kind":"live","target":"forecast","scope_kind":"workspace"}`)
-	if created.Code != http.StatusCreated {
-		t.Fatalf("issuing answered %d: %s", created.Code, created.Body)
-	}
 	var issued map[string]any
-	if err := json.Unmarshal(created.Body.Bytes(), &issued); err != nil {
-		t.Fatalf("reading the issued share: %v", err)
-	}
+	decodeWire(t, created, http.StatusCreated, &issued)
 	if token, _ := issued["token"].(string); token == "" {
-		t.Fatalf("the issue response carries no token, so nothing was handed out: %s", created.Body)
+		t.Fatalf("the issue response carries no token, so nothing was handed out: %v", issued)
 	}
 	if issued["kind"] != "live" || issued["scope_kind"] != "workspace" || issued["target"] != "forecast" {
-		t.Errorf("the issue response does not describe the link asked for: %s", created.Body)
+		t.Errorf("the issue response does not describe the link asked for: %v", issued)
 	}
 
 	listed := serveShareRoute(seat, routes.ListForecastShares, http.MethodGet, "")
-	if listed.Code != http.StatusOK {
-		t.Fatalf("listing answered %d: %s", listed.Code, listed.Body)
-	}
 	var page struct {
 		Data []map[string]any `json:"data"`
 	}
-	if err := json.Unmarshal(listed.Body.Bytes(), &page); err != nil {
-		t.Fatalf("reading the list: %v", err)
-	}
+	decodeWire(t, listed, http.StatusOK, &page)
 	if len(page.Data) != 1 || page.Data[0]["id"] != issued["id"] {
-		t.Fatalf("the list is %s, want exactly the link just issued (%v)", listed.Body, issued["id"])
+		t.Fatalf("the list is %v, want exactly the link just issued (%v)", page.Data, issued["id"])
 	}
 	if value, present := page.Data[0]["token"]; present {
 		t.Errorf("the list re-disclosed the token %v; it is shown once, at issue", value)

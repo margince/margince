@@ -16,6 +16,7 @@ import { Switch } from "../../design-system/switch";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { mailboxParams } from "../../lib/connectors";
 import { labelFor } from "../../lib/labelfor";
 import { throwProblem } from "../../lib/problem";
 import { navigate } from "../../lib/router";
@@ -52,7 +53,7 @@ export function AccountSettings({
   const plural = usePlural();
   const { locale } = useLocale();
   const otherTags = others.map((conn) => (
-    <ConnectorContextTagRow key={conn.provider} conn={conn} />
+    <ConnectorContextTagRow key={conn.id} conn={conn} />
   ));
   if (!mailbox) {
     return others.length > 0 ? <SettingList>{otherTags}</SettingList> : null;
@@ -167,7 +168,7 @@ function isMailPosture(value: string): value is MailPosture {
 function MailPostureRow({ conn }: Readonly<{ conn: CaptureConnection }>) {
   const t = useT();
   const settings = useCaptureSettings();
-  const save = useSetMailPosture(conn.provider);
+  const save = useSetMailPosture(conn);
   const [draft, setDraft] = useState<MailPosture | null>(null);
   const [applyToHistory, setApplyToHistory] = useState(false);
   const sharedAllowed = settings.data?.shared_posture_allowed ?? false;
@@ -248,7 +249,7 @@ function MailPostureRow({ conn }: Readonly<{ conn: CaptureConnection }>) {
   );
 }
 
-function useSetMailPosture(provider: CaptureConnection["provider"]) {
+function useSetMailPosture(conn: CaptureConnection) {
   const queryClient = useQueryClient();
   return useMutation({
     // Both halves of the decision arrive as variables: a mutationFn closing
@@ -258,7 +259,7 @@ function useSetMailPosture(provider: CaptureConnection["provider"]) {
       applyToHistory: boolean;
     }) => {
       const { error } = await api.PUT("/connectors/{provider}/mail-posture", {
-        params: { path: { provider } },
+        params: mailboxParams(conn),
         body: { posture: vars.posture, apply_to_history: vars.applyToHistory },
       });
       if (error) {
@@ -279,7 +280,7 @@ function SignatureEnrichmentRow({
 }: Readonly<{ conn: CaptureConnection }>) {
   const t = useT();
   const settings = useCaptureSettings();
-  const save = useSetSignatureEnrichment(conn.provider);
+  const save = useSetSignatureEnrichment(conn);
   const workspaceDefault = settings.data?.signature_enrich ?? true;
   const own = conn.signature_enrich_enabled;
   const effective = own ?? workspaceDefault;
@@ -306,14 +307,14 @@ function SignatureEnrichmentRow({
   );
 }
 
-function useSetSignatureEnrichment(provider: CaptureConnection["provider"]) {
+function useSetSignatureEnrichment(conn: CaptureConnection) {
   const queryClient = useQueryClient();
   return useMutation({
     // The new answer is a VARIABLE, so the press belongs to the committed render.
     mutationFn: async (enabled: boolean) => {
       const { error } = await api.PUT(
         "/connectors/{provider}/signature-enrichment",
-        { params: { path: { provider } }, body: { enabled } },
+        { params: mailboxParams(conn), body: { enabled } },
       );
       if (error) {
         throwProblem(error);

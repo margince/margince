@@ -14,6 +14,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/config/configtest"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -107,5 +109,41 @@ func TestAnUpdateOnlySeatSeesItsChangeConfirmed(t *testing.T) {
 	})
 	if code, days := followUpCall(ctx, t, h, http.MethodPatch, `{"follow_up_after_days": 4}`); code != http.StatusOK || days != 4 {
 		t.Fatalf("PATCH by an update-only seat = %d, %d days; want 200 and 4", code, days)
+	}
+}
+
+// Sharing a private quotation request is its own switch: turning it off keeps
+// the AI reading private mail, and stops anything of it being shared.
+func TestAnAdminTurnsSharingPrivateQuoteRequestsOff(t *testing.T) {
+	e := setupLoad(t)
+	e.restoreFollowUpWindow(t)
+	t.Cleanup(func() {
+		if _, err := e.owner.Exec(context.Background(), `DELETE FROM setting WHERE key = $1`, SharePrivateQuoteRequests.Key()); err != nil {
+			t.Errorf("restoring the share setting: %v", err)
+		}
+	})
+	db := database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws))
+	h := NewHandlers(db).WithSettings(configtest.StoredOver(t, e.pool, ConfigSettings()))
+	admin := e.settingsAdmin(true)
+	shares := func() bool {
+		t.Helper()
+		var on bool
+		if err := database.WithWorkspaceTx(admin, e.pool, func(tx pgx.Tx) (err error) {
+			on, err = SharesPrivateRequestsTx(admin, tx)
+			return err
+		}); err != nil {
+			t.Fatal(err)
+		}
+		return on
+	}
+	if !shares() {
+		t.Fatal("private quotation requests are not shared by default")
+	}
+	privateMailCall(admin, t, h, http.MethodPatch, `{"follow_up_after_days": 2, "share_private_quote_requests": false}`)
+	if on := privateMailCall(admin, t, h, http.MethodGet, ""); on == nil || !*on {
+		t.Fatalf("turning sharing off changed reading private mail to %v", on)
+	}
+	if shares() {
+		t.Error("requests from private mail are still shared once switched off")
 	}
 }

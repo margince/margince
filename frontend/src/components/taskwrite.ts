@@ -75,12 +75,19 @@ export function useTaskUpdate(invalidateKeys: readonly QueryKey[]) {
   });
 }
 
-/** A task's Done write, shared by every control that offers it. */
-export function useTaskDone(id: string, version: number | undefined) {
+/**
+ * A task's Done write, shared by every control that offers it. `alsoRefresh`
+ * names the reads the control's own screen shows the task through.
+ */
+export function useTaskDone(
+  id: string,
+  version: number | undefined,
+  alsoRefresh: readonly QueryKey[] = [],
+) {
   const t = useT();
   const toast = useToast();
   const onHome = useRoute().screen === "home";
-  const update = useTaskUpdate([worklistKey]);
+  const update = useTaskUpdate([worklistKey, ...alsoRefresh]);
   // A rejected PATCH otherwise leaves the control idle with nothing on screen
   // to say so, and the reader has no reason to try again.
   const complete = useCompleteTask(update, (error) =>

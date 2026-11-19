@@ -6,7 +6,7 @@ The 1 table owned by `comms`, as the migrations build them. [Back to the entity 
 
 ## comms_outbound
 
-45 columns · primary key `(id)` · referenced by 5 foreign keys
+46 columns · primary key `(id)` · referenced by 5 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -22,6 +22,7 @@ The 1 table owned by `comms`, as the migrations build them. [Back to the entity 
 | `bounced_at` | `timestamp with time zone` |  |  |
 | `cc` | `jsonb`, default `'[]'::jsonb` |  |  |
 | `channel_user_id` | `text` |  |  |
+| `connection_id` | `uuid` |  | Points at `capture_connection.id`. |
 | `consent_purpose` | `text` |  |  |
 | `delivery_due_at` | `timestamp with time zone` |  |  |
 | `execution_authority` | `text`, default `'supported'::text` | yes | One of `supported`, `instruction`. |
@@ -61,6 +62,7 @@ The 1 table owned by `comms`, as the migrations build them. [Back to the entity 
 | Columns | Table | When the parent goes |
 |---|---|---|
 | `activity_id` | `activity` | deleting the parent deletes this row |
+| `connection_id` | `capture_connection` | deleting the parent keeps this row and clears the link |
 | `instruction_id` | `communication_instruction` | the parent cannot be deleted while this row points at it |
 | `link_id` | `confirm_token` | deleting the parent keeps this row and clears the link |
 | `user_id` | `app_user` | the parent cannot be deleted while this row points at it |
@@ -100,6 +102,7 @@ The 1 table owned by `comms`, as the migrations build them. [Back to the entity 
 - `comms_outbound_provider_message`: `btree (user_id, provider, provider_message_id) WHERE (provider_message_id IS NOT NULL)`
 - `comms_outbound_workspace_activity_ix`: `btree (activity_id, id)`
 - `idx_comms_outbound_addressed`: `gin (comms_outbound_addressed(recipients, cc)) WHERE ((sender_kind = 'user') AND (status = 'sent') AND (user_id IS NOT NULL) AND (channel_user_id IS NULL))`
+- `idx_comms_outbound_connection`: `btree (connection_id) WHERE (connection_id IS NOT NULL)`
 - `idx_comms_outbound_parked`: `btree (user_id, parked_at DESC) WHERE (parked_at IS NOT NULL)`
 
 **Triggers**

@@ -70,6 +70,7 @@ type signalExtractExpectation struct {
 	Workstream      string             `json:"workstream,omitempty"`
 	Buyer           string             `json:"buyer,omitempty"`
 	CommercialRole  string             `json:"commercial_role,omitempty"`
+	RequestKind     string             `json:"request_kind,omitempty"`
 	Meaning         *commitmentMeaning `json:"meaning,omitempty"`
 	Optional        bool               `json:"optional,omitempty"`
 	Kind            string             `json:"kind"`
@@ -441,6 +442,9 @@ func (c *signalExtractCase) disagreements(payload extractPayload) []string {
 			}
 			if expected.CommercialRole != "" && event.CommercialRole != expected.CommercialRole {
 				out = append(out, "the commercial role does not match the request")
+			}
+			if expected.RequestKind != "" && event.RequestKind != expected.RequestKind {
+				out = append(out, "the request kind does not match what the buyer asked")
 			}
 			if !expectedMeaningMatches(expected.Meaning, event.Meaning) {
 				out = append(out, "the commitment meaning does not match the source")

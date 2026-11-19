@@ -12,10 +12,10 @@ import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { ImportContextTag } from "./import.contexttag";
 import { ImportRefusal } from "./import.notices";
-import type { WizardFile } from "./importflow";
+import { SOURCE_NAME_MAX, sourceNameFits, type WizardFile } from "./importflow";
 import type { ImportFormat, ImportObject, ImportProfile } from "./importtypes";
 import { isImportObject } from "./importtypes";
-import type { ImportWizardState } from "./importwizard";
+import type { ImportWizardState, TypeGuess } from "./importwizard";
 
 /** The drop zone the hub and the wizard's first step share. */
 export function ImportDropzone({
@@ -44,9 +44,12 @@ export function ImportDropzone({
         hint={
           sizeLimitMb === undefined
             ? undefined
-            : t("import.hub.uploadHint", {
-                mb: formatNumber(sizeLimitMb, locale),
-              })
+            : t(
+                csvOnly ? "import.hub.uploadHintCsv" : "import.hub.uploadHint",
+                {
+                  mb: formatNumber(sizeLimitMb, locale),
+                },
+              )
         }
         emptyLabel={t("import.hub.uploadEmpty")}
         accept={csvOnly ? ".csv" : ".zip,.csv"}
@@ -77,8 +80,8 @@ function firstClash(
 
 /**
  * The files of an upload, each with its type, plus the run's source name and
- * the tag for created records. Next is refused,
- * with the reason beside it, while no file has a type or two share one.
+ * the tag for created records. Next is refused, with the reason beside it,
+ * while no file has a type, two share one, or the source name breaks its rule.
  */
 export function FilesStep({
   wizard,
@@ -89,6 +92,9 @@ export function FilesStep({
   const { locale } = useLocale();
   const typed = wizard.files.filter((file) => wizard.objects[file.file]);
   const clash = firstClash(wizard.files, wizard.objects);
+  const badName = sourceNameFits(wizard.sourceName)
+    ? undefined
+    : t("import.files.sourceNameInvalid");
   let refusal: string | undefined;
   if (typed.length === 0) {
     refusal = t("import.files.noneTyped");
@@ -98,6 +104,8 @@ export function FilesStep({
       second: clash.second,
       type: t(`import.object.${clash.object}`),
     });
+  } else {
+    refusal = badName;
   }
   const types = [
     { value: "", label: t("import.files.skip") },
@@ -108,6 +116,11 @@ export function FilesStep({
   ];
   return (
     <div className="import">
+      <TypeGuessNote
+        guess={wizard.typeGuess}
+        chosen={wizard.objects[wizard.files[0]?.file ?? ""] ?? null}
+        guessed={wizard.profile?.object ?? null}
+      />
       <DataTable<WizardFile>
         label={t("import.files.table")}
         rows={wizard.files}
@@ -132,7 +145,7 @@ export function FilesStep({
             key: "rows",
             header: t("import.files.col.rows"),
             align: "end",
-            render: (file) => formatNumber(file.rowsProfiled, locale),
+            render: (file) => formatNumber(file.rowCount, locale),
           },
           {
             key: "type",
@@ -160,11 +173,15 @@ export function FilesStep({
       <IgnoredFiles ignored={wizard.profile?.ignored ?? []} />
       <Field
         label={t("import.files.sourceName")}
-        hint={t("import.files.sourceNameHint")}
+        hint={`${t("import.files.sourceNameRule", {
+          max: formatNumber(SOURCE_NAME_MAX, locale),
+        })} ${t("import.files.sourceNameHint")}`}
+        error={badName}
       >
         {(control) => (
           <TextInput
             {...control}
+            maxLength={SOURCE_NAME_MAX}
             value={wizard.sourceName}
             onChange={(event) => wizard.setSourceName(event.target.value)}
           />
@@ -174,6 +191,12 @@ export function FilesStep({
         value={wizard.contextTagID}
         onChange={wizard.setContextTagID}
       />
+      {wizard.retiring.error ? (
+        <ImportRefusal
+          title={t("import.files.retireFailed")}
+          error={wizard.retiring.error}
+        />
+      ) : null}
       {wizard.cancelling.error ? (
         <ImportRefusal
           title={t("import.cancelFailed")}
@@ -202,6 +225,35 @@ export function FilesStep({
       </div>
     </div>
   );
+}
+
+// What chose a single CSV's type when its name named none: its header, or
+// nothing. It shows while the type on screen is the one the server chose.
+function TypeGuessNote({
+  guess,
+  chosen,
+  guessed,
+}: Readonly<{
+  guess: TypeGuess | null;
+  chosen: ImportObject | null;
+  guessed: ImportObject | null;
+}>) {
+  const t = useT();
+  if (guess === "columns" && chosen !== null && chosen === guessed) {
+    return (
+      <Callout kind="standing" title={t("import.files.guessed")}>
+        {t("import.files.guessedCheck")}
+      </Callout>
+    );
+  }
+  if (guess === "none" && chosen === null) {
+    return (
+      <Callout kind="standing" title={t("import.files.unguessed")}>
+        {t("import.files.unguessedChoose")}
+      </Callout>
+    );
+  }
+  return null;
 }
 
 // The ZIP entries no file was made from, each with why, so a file left out is

@@ -45,3 +45,21 @@ func TestAnExtensionFieldWithOptionsIsAPicklistAndTheRestStayText(t *testing.T) 
 		t.Errorf("code = %+v, want text with no options", got)
 	}
 }
+
+func TestAnExtensionKindCanBeFilteredByIdSoAPickerCanNameItsRecord(t *testing.T) {
+	recordkinds.Reset()
+	t.Cleanup(recordkinds.Reset)
+	recordkinds.Register("alpha", []extension.RecordKindDeclaration{{
+		Kind: "visit", DisplayName: "Visit", Table: "ext_alpha_visit",
+		Fields:     []extension.RecordKindField{{Name: "code", Label: "Code"}},
+		NaturalKey: []string{"code"},
+	}})
+	reader := principal.WithActor(context.Background(), principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:test",
+		Permissions: principal.Permissions{Objects: map[string]principal.ObjectGrant{"ext_alpha_visit": {Read: true}}},
+	})
+	engine, _ := extensionEngine(reader, "ext:alpha:visit")
+	if got := engine.Fields["id"]; got.Type != storekit.FieldText || got.Expr != "t.id::text" {
+		t.Errorf("id = %+v, want a text field over the id column", got)
+	}
+}

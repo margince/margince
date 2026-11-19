@@ -12,22 +12,24 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// connectionMatch names one capture_connection row in SQL. A seat's mailbox is
-// found by (user, provider), a shared mailbox by its id. The settings writers
-// take one, so a personal and a shared change run the same statements.
+// connectionMatch names one capture_connection row in SQL by its id: a
+// member's mailbox also by its owner, a shared mailbox by having none. The
+// settings writers take one, so a personal and a shared change run the same
+// statements.
 type connectionMatch struct {
 	where string
 	args  []any
 	// seat owns the row; zero for a shared mailbox.
 	seat ids.UUID
+	id   ids.UUID
 }
 
-func seatConnection(user ids.UUID, provider string) connectionMatch {
-	return connectionMatch{where: "user_id = $1 AND provider = $2", args: []any{user, provider}, seat: user}
+func memberConnection(user, connection ids.UUID) connectionMatch {
+	return connectionMatch{where: "id = $1 AND user_id = $2", args: []any{connection, user}, seat: user, id: connection}
 }
 
 func sharedConnection(connection ids.UUID) connectionMatch {
-	return connectionMatch{where: "id = $1 AND user_id IS NULL", args: []any{connection}}
+	return connectionMatch{where: "id = $1 AND user_id IS NULL", args: []any{connection}, id: connection}
 }
 
 // shared reports whether the row is a shared mailbox.

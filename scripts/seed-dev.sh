@@ -646,18 +646,9 @@ carol_id="$(contact_id "Carol Wagner" "carol@demo.test")"
 [[ -n "$bob_id" ]] && [[ -n "$carol_id" ]] \
   || fail "the demo contacts this seed just wrote are not readable back — nothing to hang a conversation on"
 
-# Both directions on the same contact, deliberately: the strength score's
-# reciprocity term has nothing to say about a one-way exchange, so a seed that
-# only ever sends draws every edge at the floor and the ranking demonstrates
-# nothing. And they are dated BACK, because a decay lane whose every row arrived
-# this second has nothing decaying in it.
-# ONE contact on the reciprocal pair. Both rows are about Alice — that is what
-# makes them reciprocal — and adding Bob to the outbound one draws a
-# contact-to-contact edge from a conversation that is not about a peer
-# relationship at all. The meeting below is where peers are meant to come from,
-# and a seed that populates that arm twice cannot show either case cleanly.
-ensure_conversation "conversation:renewal-terms-outbound" "Renewal terms for Demo GmbH" email outbound 12 "$alice_id"
-ensure_conversation "conversation:renewal-terms-inbound" "Re: Renewal terms for Demo GmbH" email inbound 9 "$alice_id"
+# The reciprocal pair with Alice, both directions dated back for the strength
+# score, is in seed-dev.sql. A reply to it must count as a thread, and only a
+# thread_key makes one, which this API refuses to write.
 ensure_conversation "conversation:quarterly-review" "Quarterly review with Demo GmbH" meeting - 40 "$bob_id" "$carol_id"
 
 echo ""

@@ -48,10 +48,6 @@ func RecheckMembersTx(ctx context.Context, tx pgx.Tx, userIDs []ids.UUID) error 
 	if len(userIDs) == 0 {
 		return nil
 	}
-	_, err := tx.Exec(ctx, `
-		UPDATE capture_sync_state s SET next_sync_at = now()
-		  FROM capture_connection c
-		 WHERE c.id = s.connection_id AND c.user_id = ANY($1) AND `+liveConnectionPredicate+`
-		   AND s.next_sync_at > now()`, userIDs)
+	_, err := makeDueNowTx(ctx, tx, `c.user_id = ANY(@users)`, pgx.NamedArgs{"users": userIDs})
 	return err
 }

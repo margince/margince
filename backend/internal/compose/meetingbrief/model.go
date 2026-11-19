@@ -25,6 +25,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"regexp"
+	"strings"
+	"time"
 
 	"github.com/margince/margince/backend/internal/compose/claims"
 	"github.com/margince/margince/backend/internal/compose/promptlang"
@@ -50,9 +53,11 @@ const briefSystem = `You write a pre-meeting brief for a salesperson, from a JSO
 Return ONLY a JSON object: {"sections":[{"kind":"header|goal|what_changed|attendees|risks|commitments|deal_state|talking_points|company_context","sentences":[{"text":"...","nature":"fact|assessment|recommendation","evidence":[{"entity_type":"activity|deal|contact","entity_id":"<the record's ref, such as a1>"}]}]}]}.
 Write every sentence from the summary and from nothing else. Never invent a fact, a name, a date or a number. If the summary does not say it, do not write it.
 Label every sentence. A FACT restates what the summary says. An ASSESSMENT is a reading you draw from it — allowed only in risks and deal_state. A RECOMMENDATION is one concrete move — allowed only in goal and talking_points, at most three in the whole brief.
+` + speakerRule + `
 Cite the refs the summary gave you, in evidence only. A ref must never appear in the text a reader sees.
 When a sentence rests on one message, name that message by its subject in the text, so the reader can find the thread.
 A sentence that names a message cites that message's id in its evidence.
+company_context may list earlier conversations other contacts at the company had with us. Never contradict them, and say plainly when the meeting would.
 Build the brief around the conversation this meeting is about: the message an open commitment or question came from, named by its subject wherever a sentence rests on it. A newer message on another subject is at most one company_context fact.
 Never open with "Absolutely", "Great question", "I'd be happy to", "Based on the provided context", or any greeting. No exclamation marks. No praise. No summary of what the reader already knows.
 Say plainly when something is uncertain or missing rather than filling the gap. If a section has nothing real to say, omit the section.
@@ -357,7 +362,34 @@ func knownRecords(in Input) map[Evidence]string {
 		}
 		known[Evidence{EntityType: citeActivity, EntityID: row.ID}] += claims.Source(row)
 	}
+	for _, topic := range in.CompanyHistory {
+		known[Evidence{EntityType: citeActivity, EntityID: topic.ID}] += claims.Source(topic)
+	}
+	for _, kept := range in.LooksKept {
+		known[Evidence{EntityType: citeActivity, EntityID: kept.SourceID}] += claims.Source(kept)
+	}
+	for evidence, source := range known {
+		known[evidence] = source + localDays(source, in.Zone)
+	}
 	return known
+}
+
+// storedInstant matches an instant as a record's source spells it.
+var storedInstant = regexp.MustCompile(`\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})`)
+
+// localDays names the day each stored instant falls on in the installation
+// zone. A line may then state the day the reader sees, not only the UTC one.
+func localDays(source string, zone *time.Location) string {
+	if zone == nil {
+		return ""
+	}
+	var days strings.Builder
+	for _, written := range storedInstant.FindAllString(source, -1) {
+		if at, err := time.Parse(time.RFC3339Nano, written); err == nil {
+			days.WriteString("\n" + at.In(zone).Format(time.DateOnly))
+		}
+	}
+	return days.String()
 }
 
 // meetingItself is the meeting's OWN facts: the input with its lists emptied.
@@ -367,7 +399,7 @@ func knownRecords(in Input) map[Evidence]string {
 // for them.
 func meetingItself(in Input) string {
 	in.Deal, in.Attendees, in.Commitments = nil, nil, nil
-	in.Recent, in.PriorMeetings, in.History = nil, nil, nil
+	in.Recent, in.PriorMeetings, in.History, in.CompanyHistory, in.LooksKept = nil, nil, nil, nil, nil
 	return claims.Source(in)
 }
 
@@ -390,6 +422,12 @@ func (in Input) subjects() *model.Subjects {
 	}
 	for _, row := range in.History {
 		activities = append(activities, row.ID)
+	}
+	for _, topic := range in.CompanyHistory {
+		activities = append(activities, topic.ID)
+	}
+	for _, kept := range in.LooksKept {
+		activities = append(activities, kept.SourceID)
 	}
 	return model.SubjectsOf(contacts, activities)
 }

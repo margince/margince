@@ -67,13 +67,17 @@ func (s *Store) CaptureEmailRequests(ctx context.Context, asOf time.Time) error 
 		if err != nil {
 			return err
 		}
+		private, err := privateMailRequests(ctx, tx)
+		if err != nil {
+			return err
+		}
 		assigneeSQL := fmt.Sprintf(emailRequestAssigneeSQL(identities), auth.AssigneeEligibleSQL("u"))
 		wake := messageSnoozeLiftedSQL(fmt.Sprintf("$%d", arg(asOf)), "TRUE")
 		eligible, err := waitingReplyExistsClause(ctx, arg, asOf, nil, nil, domains, nil, automaticRequestHorizonDays,
 			outstandingRequestSQL+`
      AND `+storekit.AutomaticRequestIntentClause("a")+`
      AND a.occurred_at >= $`+fmt.Sprint(arg(asOf.AddDate(0, 0, -automaticRequestHorizonDays)))+`
-     AND (`+auth.WorkspaceAudienceSQL("a")+` OR `+storekit.SharedMailWorkOwnerSQL("a")+` IS NOT NULL) AND a.restricted_at IS NULL
+     AND (`+judgeableAudienceSQL("a", private)+` OR (`+storekit.SharedMailWorkOwnerSQL("a")+` IS NOT NULL AND a.restricted_at IS NULL))
      AND NOT `+answerableInvitationSQL+`
      AND NOT `+invitationNeverOwedSQL(fmt.Sprintf("$%d::timestamptz", arg(asOf)), fmt.Sprintf("$%d", arg(domains)))+`
      AND NOT EXISTS (SELECT 1 FROM activity task WHERE task.source_system = 'email_request' AND task.source_activity_id = a.id)
@@ -139,6 +143,9 @@ func (s *Store) captureEmailRequest(ctx context.Context, tx pgx.Tx, messageID id
 		return err
 	}
 	request, err := emailRequestTask(ctx, tx, source, seat, asOf)
+	if errors.Is(err, errSeatMayNotHoldPrivateMail) {
+		return nil
+	}
 	if err != nil {
 		return err
 	}

@@ -17,7 +17,7 @@ import { Badge } from "../design-system/atoms";
 import { useHoverIntent } from "../design-system/hoverintent";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { useDisabledCoreFeatures } from "../lib/corefeatures";
+import { useHiddenCoreFeatures } from "../lib/corefeatures";
 import { appsFor } from "../lib/extensionapps";
 import { useReadsTeamProgress } from "../lib/progressreader";
 import { navigate, type Route, routeHash } from "../lib/router";
@@ -150,7 +150,7 @@ export function useNavLevel(
   container: RefObject<HTMLElement | null>,
   onNavigate: () => void,
 ) {
-  const disabled = useDisabledCoreFeatures();
+  const disabled = useHiddenCoreFeatures();
   const readsTeam = useReadsTeamProgress();
   const apps = appsFor(useMe().data);
   const trail = railTrail(route, section, disabled, readsTeam, apps);

@@ -27,7 +27,7 @@ func TestEveryDigestDoorRefusesAnEmptyDigest(t *testing.T) {
 	for door, call := range map[string]func() error{
 		"MarkCaptureLabelDeclined": func() error { _, err := store.MarkCaptureLabelDeclined(ctx, id, ""); return err },
 		"MarkOwedVerdictDeclined":  func() error { _, err := store.MarkOwedVerdictDeclined(ctx, id, ""); return err },
-		"UnlabeledCaptureEmails":   func() error { _, err := store.UnlabeledCaptureEmails(ctx, "", 1, 1); return err },
+		"UnlabeledCaptureMessages": func() error { _, err := store.UnlabeledCaptureMessages(ctx, "", 1, 1); return err },
 		"ReadPipelineFacts":        func() error { _, err := store.ReadPipelineFacts(ctx, id, ""); return err },
 		"OwedBacklog":              func() error { _, _, err := store.OwedBacklog(ctx, "", time.Now(), 1, 1, 1); return err },
 		"OwedRestale":              func() error { _, _, err := store.OwedRestale(ctx, "", 1, 1, 1); return err },
