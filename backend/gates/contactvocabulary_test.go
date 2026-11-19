@@ -45,11 +45,11 @@ import (
 // suffix and needs no arm of its own.
 var theRetiredWord = regexp.MustCompile(`(?i)person|people`)
 
-// notThisRecord is the words that merely spell those letters: a mask, an
-// adjective, a payroll noun, the German for persons, a forgery, a job title,
-// the law's natural and legal persons, and the one that means physically present. Removed before the match rather
-// than waived per site, because they are a property of the language and not of
-// any one file.
+// notThisRecord is the words that merely spell those letters. They are a mask,
+// an adjective, a payroll noun, the German for persons, a forgery, a job title,
+// the law's natural and legal persons, and the one that means physically
+// present. They are removed before the match rather than waived per site,
+// because they are a property of the language and not of any one file.
 //
 // Each is a STEM and not a next-character rule, which is the case this test was
 // written without. A lowercase run has no boundary in it: `personname.go` and

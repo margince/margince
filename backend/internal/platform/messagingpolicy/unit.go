@@ -82,8 +82,8 @@ func sameSharedLayers(fsys fs.FS, policies []Policy) error {
 	if err != nil {
 		return err
 	}
-	if _, err := fs.Stat(fsys, "fallback.md"); err == nil {
-		onDisk = append([]string{"fallback.md"}, onDisk...)
+	if _, err := fs.Stat(fsys, fallbackFile); err == nil {
+		onDisk = append([]string{fallbackFile}, onDisk...)
 	}
 	want := sharedOf(policies[0])
 	for _, policy := range policies {
@@ -106,7 +106,7 @@ func sameSharedLayers(fsys fs.FS, policies []Policy) error {
 func sharedOf(policy Policy) []string {
 	var out []string
 	for _, source := range policy.Sources[1:] {
-		if source == "fallback.md" || strings.HasPrefix(source, "regional/") {
+		if source == fallbackFile || strings.HasPrefix(source, "regional/") {
 			out = append(out, source)
 		}
 	}

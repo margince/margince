@@ -294,8 +294,10 @@ func TestStagingRefusesTheLabelItsRecipientsOwe(t *testing.T) {
 	codes := shippedPackCodes(t)
 	kr, sg, de := RecipientCountry{Code: codes["kr"]}, RecipientCountry{Code: codes["sg"]}, RecipientCountry{Code: codes["de"]}
 	advertising := commsauthz.Decision{Resolved: commsauthz.CategoryMarketing, Verdict: commsauthz.VerdictAllow}
-	objected := commsauthz.Decision{Resolved: commsauthz.CategoryMarketing, Verdict: commsauthz.VerdictDeny,
-		ReasonCode: commsauthz.ReasonObjection}
+	objected := commsauthz.Decision{
+		Resolved: commsauthz.CategoryMarketing, Verdict: commsauthz.VerdictDeny,
+		ReasonCode: commsauthz.ReasonObjection,
+	}
 	invoice := commsauthz.Decision{Resolved: commsauthz.CategoryInvoiceOrPayment, Verdict: commsauthz.VerdictAllow}
 	for _, tc := range []struct {
 		name      string
@@ -305,13 +307,28 @@ func TestStagingRefusesTheLabelItsRecipientsOwe(t *testing.T) {
 		want      []string
 	}{
 		{"labelled", []commsauthz.Decision{advertising}, []RecipientCountry{kr}, "(광고) Offer", []string{""}},
-		{"unlabelled", []commsauthz.Decision{advertising, advertising}, []RecipientCountry{kr, de}, "Offer",
-			[]string{commsauthz.ReasonSubjectLabelMissing, ""}},
+		{
+			"unlabelled",
+			[]commsauthz.Decision{advertising, advertising},
+			[]RecipientCountry{kr, de},
+			"Offer",
+			[]string{commsauthz.ReasonSubjectLabelMissing, ""},
+		},
 		{"not advertising", []commsauthz.Decision{invoice}, []RecipientCountry{kr}, "Invoice", []string{""}},
-		{"a stop stays", []commsauthz.Decision{objected}, []RecipientCountry{kr}, "Offer",
-			[]string{commsauthz.ReasonObjection}},
-		{"two labels", []commsauthz.Decision{advertising, advertising, advertising}, []RecipientCountry{kr, sg, de},
-			"(광고) Offer", []string{commsauthz.ReasonSubjectLabelsConflict, commsauthz.ReasonSubjectLabelsConflict, ""}},
+		{
+			"a stop stays",
+			[]commsauthz.Decision{objected},
+			[]RecipientCountry{kr},
+			"Offer",
+			[]string{commsauthz.ReasonObjection},
+		},
+		{
+			"two labels",
+			[]commsauthz.Decision{advertising, advertising, advertising},
+			[]RecipientCountry{kr, sg, de},
+			"(광고) Offer",
+			[]string{commsauthz.ReasonSubjectLabelsConflict, commsauthz.ReasonSubjectLabelsConflict, ""},
+		},
 	} {
 		set := withSubjectLabels(commsauthz.DecisionSet{Decisions: slices.Clone(tc.decisions)}, tc.countries, tc.subject)
 		for i, d := range set.Decisions {

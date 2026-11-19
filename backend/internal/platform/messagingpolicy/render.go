@@ -24,18 +24,18 @@ var messagingPath = reflect.TypeFor[messaging.Rules]().PkgPath()
 // is written out as a keyed literal, so a gate reading the source sees the
 // citations it would see in a hand-written pack.
 func Render(pkg string, rules messaging.Rules) ([]byte, error) {
-	return render(pkg, reflect.ValueOf(rules), "messaging.Rules",
+	return renderLiteral(pkg, reflect.ValueOf(rules), "messaging.Rules",
 		"is the rule set compiled from the policy folder: edit the\n// Markdown there")
 }
 
 // RenderSet is Render for a unit with one pack per country folder: its
 // messagingRules() answers every pack, in the order given.
 func RenderSet(pkg string, rules []messaging.Rules) ([]byte, error) {
-	return render(pkg, reflect.ValueOf(rules), "[]messaging.Rules",
+	return renderLiteral(pkg, reflect.ValueOf(rules), "[]messaging.Rules",
 		"answers the rule sets compiled from the policy folder, one\n// per country folder: edit the Markdown there")
 }
 
-func render(pkg string, value reflect.Value, result, doc string) ([]byte, error) {
+func renderLiteral(pkg string, value reflect.Value, result, doc string) ([]byte, error) {
 	w := &literalWriter{}
 	literal, err := w.value(value, true)
 	if err != nil {

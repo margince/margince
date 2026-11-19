@@ -20,6 +20,10 @@ import (
 // IndexFile names the layers of a policy folder, most general first.
 const IndexFile = "index.md"
 
+// fallbackFile is the floor every pack of a unit may share, at the top of its
+// policy folder.
+const fallbackFile = "fallback.md"
+
 // Policy is one pack's compiled policy.
 type Policy struct {
 	// Rules is what the pack declares, its Digest stamped from Sources.
@@ -68,28 +72,49 @@ const (
 // the top and may be shared by every pack. The country and overlay layers sit
 // in the pack's own folder, and a pack folder holds the country named for it.
 func classOf(pack, name string) (layerClass, error) {
-	if top, file := path.Split(name); name == "fallback.md" || (top == "regional/" && strings.HasSuffix(file, ".md")) {
-		if top == "" {
-			return fallbackLayer, nil
-		}
-		return regionalLayer, nil
+	if class, shared := sharedClass(name); shared {
+		return class, nil
 	}
-	rest, inPack := name, true
-	if pack != "." {
-		rest, inPack = strings.CutPrefix(name, pack+"/")
-	}
-	folder, file := path.Split(rest)
-	switch {
-	case inPack && folder == "overlay/" && strings.HasSuffix(file, ".md"):
-		return overlayLayer, nil
-	case inPack && folder == "" && file != IndexFile && strings.HasSuffix(file, ".md") && (pack == "." || file == pack+".md"):
-		return countryLayer, nil
+	if class, inPack := packClass(pack, name); inPack {
+		return class, nil
 	}
 	if pack == "." {
 		return 0, fmt.Errorf("%s is not a policy layer: name fallback.md, regional/*.md, <country>.md or overlay/*.md", name)
 	}
 	return 0, fmt.Errorf("%s is not a layer of pack %s: name fallback.md, regional/*.md, %s/%s.md or %s/overlay/*.md",
 		name, pack, pack, pack, pack)
+}
+
+// sharedClass answers the class of a layer at the top of the policy folder.
+func sharedClass(name string) (layerClass, bool) {
+	top, file := path.Split(name)
+	switch {
+	case name == fallbackFile:
+		return fallbackLayer, true
+	case top == "regional/" && strings.HasSuffix(file, ".md"):
+		return regionalLayer, true
+	}
+	return 0, false
+}
+
+// packClass answers the class of a layer in the pack's own folder: its
+// overlays, and the country layer named for the pack.
+func packClass(pack, name string) (layerClass, bool) {
+	rest, inPack := name, true
+	if pack != "." {
+		rest, inPack = strings.CutPrefix(name, pack+"/")
+	}
+	folder, file := path.Split(rest)
+	if !inPack || !strings.HasSuffix(file, ".md") {
+		return 0, false
+	}
+	switch {
+	case folder == "overlay/":
+		return overlayLayer, true
+	case folder == "" && file != IndexFile && (pack == "." || file == pack+".md"):
+		return countryLayer, true
+	}
+	return 0, false
 }
 
 // Compile reads the policy folder fsys, which holds one pack, and answers what

@@ -19,9 +19,8 @@ package gates
 // subject label, the advertiser-identification disclosure and the acknowledged
 // opt-out. The engine applied none of the three, and no decision recorded the
 // ruleset version it was taken under. Before this gate nothing held that
-// apart: the pack's Rules literal reads as a complete statement of the decree,
-// and which of its fields reach a consumer could only be learnt by grepping for
-// each one. The field comments now say which are unapplied, and this is what
+// apart. The pack's Rules literal reads as a complete statement of the decree,
+// and only a grep for each field told which of them reach a consumer. The field comments now say which are unapplied, and this is what
 // keeps them true.
 //
 // So the register below is the answer to "which ones bind": a field is applied

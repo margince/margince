@@ -10,14 +10,14 @@ import (
 )
 
 // perCountryFS is a policy folder with packs aa and bb on one regional layer
-// that states regional. Each country layer states its own front matter.
-func perCountryFS(regional, aa, bb string) fstest.MapFS {
+// that states regional. aa states its own front matter, and bb states none.
+func perCountryFS(regional, aa string) fstest.MapFS {
 	fsys := fstest.MapFS{
 		"regional/eu.md": {Data: []byte("---\n" + regional + pairKeys + "---\nWhat every member state shares.\n")},
 		"fixtures/a.md":  {Data: []byte(draft)},
 		"fixtures/b.md":  {Data: []byte(draft)},
 	}
-	for code, front := range map[string]string{"aa": aa, "bb": bb} {
+	for code, front := range map[string]string{"aa": aa, "bb": ""} {
 		fsys[code+"/index.md"] = &fstest.MapFile{Data: []byte("---\nlayers: [regional/eu.md, " + code + "/" + code + ".md]\n---\nThe layers.\n")}
 		fsys[code+"/"+code+".md"] = &fstest.MapFile{Data: []byte("---\njurisdiction: " + code + "\nversion: 1\ncreated: 2026-01-02\n" +
 			front + "fixtures:\n  - finding: objection_route\n    triggers: " + code + "/fixtures/a.md\n    clears: fixtures/b.md\n" +
@@ -28,7 +28,7 @@ func perCountryFS(regional, aa, bb string) fstest.MapFS {
 }
 
 func TestEveryCountryFolderCompilesOnTheSharedRegionalLayer(t *testing.T) {
-	unit, err := CompileUnit(perCountryFS("reply-window: 720h\n", "consent-only: true\n", ""))
+	unit, err := CompileUnit(perCountryFS("reply-window: 720h\n", "consent-only: true\n"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -67,7 +67,7 @@ func TestASingleIndexStillCompilesAsOnePack(t *testing.T) {
 }
 
 func TestACountryThatLoosensTheRegionalLayerIsRefused(t *testing.T) {
-	_, err := CompileUnit(perCountryFS("reply-window: 720h\n", "reply-window: 8760h\n", ""))
+	_, err := CompileUnit(perCountryFS("reply-window: 720h\n", "reply-window: 8760h\n"))
 	if err == nil || !strings.Contains(err.Error(), "aa/aa.md loosens ReplyWindow") {
 		t.Errorf("a country layer with a longer window than the regional one compiled: %v", err)
 	}
@@ -110,13 +110,13 @@ func TestAPerCountryFolderIsRefused(t *testing.T) {
 			fsys["bb/index.md"] = &fstest.MapFile{Data: []byte("---\nlayers: [regional/nordic.md, regional/eu.md, bb/bb.md]\n---\nThe layers.\n")}
 		},
 	} {
-		fsys := perCountryFS("", "", "")
+		fsys := perCountryFS("", "")
 		change(fsys)
 		if _, err := CompileUnit(fsys); err == nil {
 			t.Errorf("a policy folder with %s compiled", name)
 		}
 	}
-	if _, err := CompileUnit(perCountryFS("", "", "")); err != nil {
+	if _, err := CompileUnit(perCountryFS("", "")); err != nil {
 		t.Errorf("the unchanged folder does not compile, so the cases above prove nothing: %v", err)
 	}
 }

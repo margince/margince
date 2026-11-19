@@ -30,8 +30,10 @@ func TestARepMayDirectASendPastEveryPolicyRefusal(t *testing.T) {
 		t.Run(role, func(t *testing.T) {
 			ctx := seat(role, true)
 			for _, reason := range commsauthz.RefusalCodes() {
-				want := !slices.Contains([]string{commsauthz.ReasonHardBounce, commsauthz.ReasonNoSubject,
-					commsauthz.ReasonSubjectLabelMissing, commsauthz.ReasonSubjectLabelsConflict}, reason)
+				want := !slices.Contains([]string{
+					commsauthz.ReasonHardBounce, commsauthz.ReasonNoSubject,
+					commsauthz.ReasonSubjectLabelMissing, commsauthz.ReasonSubjectLabelsConflict,
+				}, reason)
 				if got := directableBy(ctx, []RefusedRecipient{{ReasonCode: reason}}); got != want {
 					t.Errorf("directable past %s = %v, want %v", reason, got, want)
 				}
