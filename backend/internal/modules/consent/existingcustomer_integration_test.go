@@ -88,9 +88,11 @@ func (e *resolveEnv) archivedEntity(t *testing.T) ids.UUID {
 }
 
 // saleAt plants a sale: a deal with the env's contact as its economic buyer
-// from before, and an offer of entity accepted at a moment.
+// from before, holding the env's address from before, and an offer of entity
+// accepted at a moment.
 func (e *resolveEnv) saleAt(t *testing.T, entity ids.UUID, at time.Time) (deal, offer ids.UUID) {
 	t.Helper()
+	e.heldSince(t, e.address, at.Add(-30*24*time.Hour))
 	deal = ids.NewV7()
 	e.ownerExec(t, `
 		INSERT INTO deal (id, name, pipeline_id, stage_id, status, source, captured_by)
@@ -102,6 +104,13 @@ func (e *resolveEnv) saleAt(t *testing.T, entity ids.UUID, at time.Time) (deal, 
 	offer = e.offerOn(t, deal, "accepted")
 	e.ownerExec(t, `UPDATE offer SET legal_entity_id = $2, accepted_at = $3 WHERE id = $1`, offer, entity, at)
 	return deal, offer
+}
+
+// heldSince dates the contact's address row to a moment, as if the writer had
+// stored it then.
+func (e *resolveEnv) heldSince(t *testing.T, address string, at time.Time) {
+	t.Helper()
+	e.ownerExec(t, `UPDATE contact_email SET created_at = $3 WHERE contact_id = $1 AND email = $2`, e.contact, address, at)
 }
 
 // declare records a declaration through the store's door.
@@ -350,6 +359,7 @@ func TestOnlyTheBuyerOfASaleIsItsCustomer(t *testing.T) {
 		INSERT INTO relationship (kind, company_id, contact_id, role, source, captured_by, created_at)
 		VALUES ('billing_contact', $1, $2, 'recipient', 'manual', 'human:x', $3)`,
 		company, adviser.contact, soldAt.Add(-time.Hour))
+	adviser.heldSince(t, adviser.address, soldAt.Add(-time.Hour))
 	if got := adviser.decide(t, newsletterSend); got.Verdict != commsauthz.VerdictAllow {
 		t.Fatalf("the buyer company's billing contact got %q (%s), want allow", got.Verdict, got.ReasonCode)
 	}
@@ -421,4 +431,44 @@ func TestTheDecisionRowNamesTheGroundItRestedOn(t *testing.T) {
 		t.Fatalf("row = entity %s purpose %q notice %s offer %v, want the default entity, newsletter, %s and the sale",
 			entity, purpose, notice, offer, n.ID)
 	}
+}
+
+// The address the message goes to must have come with the sale. An offer
+// records no address, so it is the buyer's address row held from before the
+// acceptance.
+func TestOnlyTheAddressThatCameWithTheSaleCarriesTheRoute(t *testing.T) {
+	e, newsletter, soldAt := customerEnv(t)
+	e.declare(t, e.defaultEntity(t), soldAt.Add(-year), nil, newsletter)
+	if got := e.decide(t, newsletterSend); got.Verdict != commsauthz.VerdictAllow {
+		t.Fatalf("the address held at the sale got %q (%s), want allow", got.Verdict, got.ReasonCode)
+	}
+
+	later := e.anotherAddress(t, "dana.private@buyer.test")
+	if got := later.decide(t, newsletterSend); got.Verdict == commsauthz.VerdictAllow {
+		t.Fatalf("an address added to the buyer after the sale was allowed on basis %q", got.Basis)
+	}
+
+	second := e.anotherAddress(t, "dana.second@buyer.test")
+	second.heldSince(t, second.address, soldAt.Add(time.Minute))
+	if got := second.decide(t, newsletterSend); got.Verdict == commsauthz.VerdictAllow {
+		t.Fatalf("a second address stored a minute after the sale inherited the route on basis %q", got.Basis)
+	}
+
+	e.ownerExec(t, `UPDATE contact_email SET archived_at = now() WHERE contact_id = $1 AND email = $2`, e.contact, e.address)
+	e.ownerExec(t, `INSERT INTO contact_email (contact_id, email, source, captured_by) VALUES ($1, $2, 'manual', 'human:x')`,
+		e.contact, e.address)
+	if got := e.decide(t, newsletterSend); got.Verdict == commsauthz.VerdictAllow {
+		t.Fatalf("the sale's address, archived and added again after the sale, was allowed on basis %q", got.Basis)
+	}
+}
+
+// anotherAddress adds an address to the env's contact, stored now, and answers
+// the env that writes to it.
+func (e *resolveEnv) anotherAddress(t *testing.T, address string) *resolveEnv {
+	t.Helper()
+	e.ownerExec(t, `INSERT INTO contact_email (contact_id, email, source, captured_by) VALUES ($1, $2, 'manual', 'human:x')`,
+		e.contact, address)
+	other := *e
+	other.address = address
+	return &other
 }
