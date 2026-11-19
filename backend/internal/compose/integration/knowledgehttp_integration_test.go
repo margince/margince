@@ -183,8 +183,8 @@ func TestKnowledgeHandlersHTTPRoundTrip(t *testing.T) {
 	}
 }
 
-// A file this product has no reader for is 415 with the accepted types NAMED,
-// not a 422 about a form field and not a 500. The refusal is about the FILE.
+// A file this product has no reader for is 415 naming the kinds it takes, not
+// a 422 about a form field and not a 500. The refusal is about the file.
 func TestUploadingAPDFOverHTTPIs415NamingTheAcceptedTypes(t *testing.T) {
 	e := Setup(t)
 	h := newKnowledgeHTTP(e)

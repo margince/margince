@@ -215,7 +215,8 @@ func (s *Store) readyUpload(ctx context.Context, in *NewDocument) (string, strin
 	if contradicted, err := filesniff.Contradicts(media, filesniff.DeclaredCharset(in.ContentType), in.Content); err != nil {
 		return "", "", 0, err
 	} else if contradicted {
-		return "", "", 0, &UnsupportedTypeError{Got: refusedTypeName(media, *in)}
+		// The ending names what the bytes are not, so the refusal names no kind.
+		return "", "", 0, &UnsupportedTypeError{}
 	}
 	if err := s.tx(ctx, func(tx pgx.Tx) error {
 		corpus, err := readCorpus(ctx, tx, in.CorpusID, storekit.LiveOnly)
