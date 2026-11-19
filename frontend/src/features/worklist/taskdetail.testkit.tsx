@@ -15,6 +15,8 @@ export const taskAllow = (verb: "update" | "create") => ({
 export const taskMe = (verb: "update" | "create") =>
   meRoute(taskAllow(verb), { seat: "full" });
 
+// The reader's zone is named, so the due day and hour do not move with the
+// machine the suite runs on.
 export const READER_ZONE = "Europe/Berlin";
 
 export function openTask() {

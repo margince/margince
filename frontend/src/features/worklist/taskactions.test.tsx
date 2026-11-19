@@ -66,15 +66,8 @@ function stubTask(sourceActivityId: string | null, capturedBy = "human:u-1") {
   });
 }
 
-// The reader's zone is named, so the due day and hour do not move with the
-// machine the suite runs on.
-// The provenance sentence and the way back to the record behind it.
-//
-// A task read out of a meeting says so in words — "committed to this in the
-// meeting transcript (line 6)" — and for as long as that sentence was all it
-// carried, the only route to the meeting was the record's history tab and a
-// search for its exact subject. These hold the link, and hold that a task
-// nobody read out of anything does not offer one.
+// A task read out of a meeting links to that meeting. A task nobody read out
+// of anything offers no such link.
 test("a task read out of a meeting opens that meeting", async () => {
   const user = userEvent.setup();
   stubTask("meeting-9");
