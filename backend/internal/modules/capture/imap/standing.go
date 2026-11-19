@@ -99,6 +99,13 @@ func normalizeCredentials(creds Credentials) (Credentials, error) {
 	case creds.MaxMessages > maxMessagesCap:
 		creds.MaxMessages = maxMessagesCap
 	}
+	if creds.SMTP != nil {
+		smtp, err := normalizeSMTP(*creds.SMTP, creds.Host, creds.Email)
+		if err != nil {
+			return Credentials{}, err
+		}
+		creds.SMTP = &smtp
+	}
 	return creds, nil
 }
 
@@ -153,9 +160,9 @@ func announceClient(client *imapclient.Client) {
 	}).Wait()
 }
 
-// authenticateStanding probes the credentials end to end (dial, login,
-// close) and returns the normalized bundle as the sealed Auth — the vault
-// stores it; this method keeps no session.
+// authenticateStanding probes the credentials end to end: dial, login, close,
+// and the SMTP login when sending is on. It returns the normalized bundle as
+// the sealed Auth for the vault, and keeps no session.
 func (c *Connector) authenticateStanding(ctx context.Context, req connector.AuthRequest) (connector.Auth, error) {
 	var creds Credentials
 	if err := json.Unmarshal(req.Payload, &creds); err != nil {
@@ -173,6 +180,11 @@ func (c *Connector) authenticateStanding(ctx context.Context, req connector.Auth
 	_ = client.Logout().Wait()
 	//craft:ignore swallowed-errors best-effort close of the probe session on the success path — nothing left to read from it
 	_ = client.Close()
+	if creds.SMTP != nil {
+		if err := c.checkSMTP(ctx, creds); err != nil {
+			return nil, err
+		}
+	}
 	bundle, err := json.Marshal(creds) //nolint:gosec // the sealed credential bundle — the registry vaults it, the row never sees it
 	if err != nil {
 		return nil, fmt.Errorf("imap: encoding credential bundle: %w", err)

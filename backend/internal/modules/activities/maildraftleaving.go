@@ -66,14 +66,18 @@ func discardComposedDraftTx(ctx context.Context, tx pgx.Tx, draftID ids.UUID, or
 	return discardComposedDraftForAuthorTx(ctx, tx, draftID, origin, actor.UserID)
 }
 
+// A forward starts a new conversation, and its send does not say which message
+// it carried. So an account-started send also takes the forward draft it names.
 func discardComposedDraftForAuthorTx(ctx context.Context, tx pgx.Tx, draftID ids.UUID, origin SendOrigin, author ids.UUID) error {
 	types, anchorIDs := origin.draftAnchors()
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	_, err := deleteDrafts(ctx, tx, fmt.Sprintf(`
 		id = $%d AND author_id = $%d
-		AND (anchor_type, anchor_id) IN (SELECT * FROM unnest($%d::text[], $%d::uuid[]))`,
-		arg(draftID), arg(author), arg(types), arg(anchorIDs)), args)
+		AND ((anchor_type, anchor_id) IN (SELECT * FROM unnest($%d::text[], $%d::uuid[]))
+		  OR ($%d::boolean AND anchor_type = $%d))`,
+		arg(draftID), arg(author), arg(types), arg(anchorIDs),
+		arg(!origin.isReply()), arg(string(crmcontracts.MailDraftAnchorTypeForward))), args)
 	return err
 }
 

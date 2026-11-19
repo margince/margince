@@ -12,3 +12,9 @@
     align-items: flex-start;
   }
 }
+
+/* An address has no break points, so it wraps anywhere rather than running out
+   of the card's right edge. */
+.owner-identity-value {
+  overflow-wrap: anywhere;
+}

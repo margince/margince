@@ -111,7 +111,7 @@ export function DoneForYou({
           state === "ready" ? groups.flatMap((group) => group.receipts) : []
         }
         lines={
-          state !== "failed" && magic.isSuccess ? rowsOf(magic.data.done) : []
+          state !== "failed" && magic.isSuccess ? rowsOf(magic.data?.done) : []
         }
       />
       {state !== "empty" && (

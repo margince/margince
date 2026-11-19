@@ -117,3 +117,101 @@ func TestConsumerMailDomainsRefusesWhatTheMatcherCouldNeverRead(t *testing.T) {
 		}
 	}
 }
+
+type domainProblemDTO struct {
+	Code    string `json:"code"`
+	Details struct {
+		Role    string `json:"role"`
+		Company string `json:"company_name"`
+		Errors  []struct {
+			Field string `json:"field"`
+			Code  string `json:"code"`
+		} `json:"errors"`
+	} `json:"details"`
+}
+
+// The shipped list already answers for its own domains, and a customer's
+// domain is stored only after the request says yes.
+func TestConsumerMailDomainsAnswerWhatIsAlreadyOnFile(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	const path = "/v1/capture/consumer-mail-domains"
+
+	var shipped domainProblemDTO
+	if status := e.Call(t, "POST", path, map[string]any{"domain": "gmail.com", "kind": "extra"}, nil, &shipped); status != http.StatusUnprocessableEntity {
+		t.Fatalf("a shipped domain → %d, want 422", status)
+	}
+	if len(shipped.Details.Errors) != 1 || shipped.Details.Errors[0].Code != "already_on_shipped_list" {
+		t.Fatalf("shipped refusal = %+v", shipped)
+	}
+
+	if status := e.Call(t, "POST", "/v1/companies", map[string]any{
+		"display_name": "Demo GmbH",
+		"source":       "manual",
+		"domains":      []map[string]any{{"domain": "demo-customer.test", "is_primary": true}},
+	}, nil, nil); status != http.StatusCreated {
+		t.Fatalf("seeding the customer → %d, want 201", status)
+	}
+
+	var question domainProblemDTO
+	if status := e.Call(t, "POST", path, map[string]any{"domain": "demo-customer.test", "kind": "extra"}, nil, &question); status != http.StatusConflict {
+		t.Fatalf("a customer's domain → %d, want 409", status)
+	}
+	if question.Code != "domain_needs_confirmation" || question.Details.Company != "Demo GmbH" {
+		t.Fatalf("the question = %+v, want domain_needs_confirmation naming Demo GmbH", question)
+	}
+	var list consumerMailDomainListDTO
+	if e.Call(t, "GET", path, nil, nil, &list); len(list.Data) != 0 {
+		t.Fatalf("an unanswered question stored %+v", list.Data)
+	}
+
+	if status := e.Call(t, "POST", path, map[string]any{"domain": "demo-customer.test", "kind": "extra", "confirm": true}, nil, nil); status != http.StatusCreated {
+		t.Fatalf("the confirmed domain → %d, want 201", status)
+	}
+}
+
+// A company's domain list refuses consumer mail, and the other-address list
+// refuses it as a whole domain but asks about a customer's.
+func TestConsumerMailDomainIsRefusedWhereItNamesACompanyOrASeat(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+
+	var refusal domainProblemDTO
+	if status := e.Call(t, "POST", "/v1/companies", map[string]any{
+		"display_name": "Webmail GmbH",
+		"source":       "manual",
+		"domains":      []map[string]any{{"domain": "gmail.com", "is_primary": true}},
+	}, nil, &refusal); status != http.StatusUnprocessableEntity {
+		t.Fatalf("a company on gmail.com → %d, want 422", status)
+	}
+	if len(refusal.Details.Errors) != 1 || refusal.Details.Errors[0].Code != "consumer_mail_domain" {
+		t.Fatalf("company refusal = %+v", refusal)
+	}
+
+	var identity domainProblemDTO
+	if status := e.Call(t, "POST", "/v1/capture/owner-identities",
+		map[string]any{"kind": "domain", "value": "gmail.com", "confirm": true}, nil, &identity); status != http.StatusUnprocessableEntity {
+		t.Fatalf("gmail.com as a whole domain → %d, want 422 even when confirmed", status)
+	}
+	if len(identity.Details.Errors) != 1 || identity.Details.Errors[0].Code != "consumer_mail_domain" {
+		t.Fatalf("identity refusal = %+v", identity)
+	}
+}
+
+// The agent door judges a company's domain by the same list the app does,
+// including a domain only this workspace added.
+func TestTheAgentDoorRefusesAWorkspaceAddedConsumerDomainOnACompany(t *testing.T) {
+	d := newTwoDoors(t, "agent-company-domain", "read", "write")
+	if status := d.e.Call(t, "POST", "/v1/capture/consumer-mail-domains", map[string]any{"domain": "overlay-mail.example", "kind": "extra"}, nil, nil); status != http.StatusCreated {
+		t.Fatalf("adding the overlay domain → %d, want 201", status)
+	}
+
+	d.mcp.CallRefused(t, "create_record", map[string]any{"record_type": "company", "fields": map[string]any{
+		"display_name": "Overlay GmbH", "source": "manual",
+		"domains": []map[string]any{{"domain": "overlay-mail.example", "is_primary": true}},
+	}})
+	d.mcp.CallOK(t, "create_record", map[string]any{"record_type": "company", "fields": map[string]any{
+		"display_name": "Plain GmbH", "source": "manual",
+		"domains": []map[string]any{{"domain": "plain-gmbh.example", "is_primary": true}},
+	}})
+}

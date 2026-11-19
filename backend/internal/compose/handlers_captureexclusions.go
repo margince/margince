@@ -42,7 +42,8 @@ func (h captureExclusionHandlers) CreateCaptureExclusion(w http.ResponseWriter, 
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	rule, err := h.store.Add(r.Context(), string(req.Scope), string(req.Kind), req.Value)
+	rule, err := h.store.Add(r.Context(), string(req.Scope), string(req.Kind), req.Value,
+		capture.MailboxNamed("", req.ConnectionId).ID)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
@@ -64,6 +65,7 @@ func toContractExclusion(rule capture.Exclusion) crmcontracts.CaptureExclusion {
 		Scope:         crmcontracts.CaptureExclusionScope(rule.Scope),
 		Kind:          crmcontracts.CaptureExclusionKind(rule.Kind),
 		Value:         rule.Value,
+		ConnectionId:  (*openapi_types.UUID)(rule.ConnectionID),
 		CreatedAt:     rule.CreatedAt,
 		CreatedByName: rule.CreatedByName,
 	}

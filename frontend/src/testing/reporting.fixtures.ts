@@ -95,6 +95,7 @@ export const reportingStoryEvaluation: ReportingEvaluation = {
       value: 21600000,
       target: 30000000,
       target_actual: 21600000,
+      target_delta: -8400000,
       attainment: 72,
       coverage,
       evidence: { metric: "bookings_won", context_id: "interval" },

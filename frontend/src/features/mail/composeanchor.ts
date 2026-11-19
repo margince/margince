@@ -18,12 +18,12 @@ import { correspondenceSide } from "../../lib/messagevoice";
 import { useViewerId } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
 import { recordNamesIn, useCompany360 } from "../companies/company360";
-import { stripEveryKeyTag, withSubjectTag } from "../projects/projectrecord";
 import { keptTag } from "./composedraftcall";
 import type { RelinkKind } from "./composerelink";
 import { useRecentConversations, useThreadMessages } from "./composethread";
 import { replySubject } from "./replysubject";
 import { rowAnswer } from "./rowanswer";
+import { stripEveryKeyTag, withSubjectTag } from "./subjecttag";
 
 type Activity = components["schemas"]["Activity"];
 type ThreadProject = ReturnType<typeof useThreadProject>;

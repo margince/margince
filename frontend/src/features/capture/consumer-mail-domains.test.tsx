@@ -7,6 +7,7 @@ import {
   waitFor,
   within,
 } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { SEARCH_DEBOUNCE_MS } from "../../components/listquery";
@@ -48,6 +49,13 @@ function backend(allow: GrantSpec) {
     return new Response(JSON.stringify(body), {
       headers: { "Content-Type": "application/json" },
     });
+  });
+}
+
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json" },
   });
 }
 
@@ -170,5 +178,133 @@ describe("ConsumerMailDomainsCard", () => {
     // Three shown of forty matched: the list is a first page, and says so
     // rather than reading as every consumer domain that starts with "gm".
     expect(screen.getByText("Showing the first 3 of 40 matches.")).toBeTruthy();
+  });
+
+  // The list refuses what is not consumer mail and asks about a customer.
+  describe("adding a domain that is already something", () => {
+    const COMPANY_QUESTION = {
+      code: "domain_needs_confirmation",
+      status: 409,
+      detail: "demo.test is already on file",
+      details: {
+        domain: "demo.test",
+        role: "company",
+        company_name: "Demo GmbH",
+      },
+    };
+
+    function addingWith(post: (body: unknown) => Response) {
+      const base = backend(CAPTURE_EDITOR);
+      const posts: unknown[] = [];
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+          const request = input instanceof Request ? input : null;
+          const method = request?.method ?? init?.method ?? "GET";
+          if (method === "POST") {
+            const text = request ? await request.text() : String(init?.body);
+            posts.push(JSON.parse(text));
+            return post(posts[posts.length - 1]);
+          }
+          return base(input);
+        }),
+      );
+      return posts;
+    }
+
+    async function typeDomain(domain: string) {
+      const user = userEvent.setup();
+      render(
+        <Providers>
+          <ConsumerMailDomainsCard />
+        </Providers>,
+      );
+      await waitFor(() => expect(screen.getByText("gmx.test")).toBeTruthy());
+      await user.click(addButton());
+      await user.type(screen.getByTestId("consumer-mail-domain-input"), domain);
+      await user.click(
+        within(screen.getByRole("dialog")).getByRole("button", {
+          name: en["consumerMail.add"],
+        }),
+      );
+      return user;
+    }
+
+    it("names the company and resends with confirm once the user says yes", async () => {
+      const posts = addingWith((body) =>
+        typeof body === "object" && body !== null && "confirm" in body
+          ? json({ id: "cmd-2", domain: "demo.test", kind: "extra" }, 201)
+          : json(COMPANY_QUESTION, 409),
+      );
+      const user = await typeDomain("demo.test");
+
+      expect(
+        await screen.findByText(
+          "demo.test is the domain of Demo GmbH. Mail from it will no longer create a company. Add anyway?",
+        ),
+      ).toBeTruthy();
+      await user.click(
+        screen.getByRole("button", { name: en["captureValue.addAnyway"] }),
+      );
+      await waitFor(() => expect(posts).toHaveLength(2));
+      expect(posts[1]).toMatchObject({ domain: "demo.test", confirm: true });
+    });
+
+    it("says a shipped domain is already there and offers no way around it", async () => {
+      addingWith(() =>
+        json(
+          {
+            code: "validation_error",
+            status: 422,
+            detail: "gmail.com is already on the shipped list",
+            details: {
+              errors: [
+                {
+                  field: "domain",
+                  code: "already_on_shipped_list",
+                  message: "gmail.com is already on the shipped list",
+                },
+              ],
+            },
+          },
+          422,
+        ),
+      );
+      await typeDomain("gmail.com");
+
+      expect(
+        await screen.findByText("gmail.com is already on the shipped list."),
+      ).toBeTruthy();
+      expect(
+        screen.queryByRole("button", { name: en["captureValue.addAnyway"] }),
+      ).toBeNull();
+    });
+
+    it("says the own domain cannot be listed as consumer mail", async () => {
+      addingWith(() =>
+        json(
+          {
+            code: "validation_error",
+            status: 422,
+            detail: "ours.test is your own domain",
+            details: {
+              errors: [
+                {
+                  field: "domain",
+                  code: "own_domain",
+                  message: "ours.test is your own domain",
+                },
+              ],
+            },
+          },
+          422,
+        ),
+      );
+      await typeDomain("ours.test");
+
+      expect(
+        await screen.findByText("ours.test is your own domain."),
+      ).toBeTruthy();
+    });
   });
 });

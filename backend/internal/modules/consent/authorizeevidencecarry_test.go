@@ -33,18 +33,22 @@ func TestEveryEvidenceIDSurvivesTheRoundTrip(t *testing.T) {
 		ContractID:     ids.NewV7(),
 		ConsentEventID: ids.NewV7(),
 		BasisID:        ids.NewV7(),
+		AuthoredOffer:  true,
 	}
 	raw, err := evidenceJSON(in)
 	if err != nil {
 		t.Fatalf("rendering: %v", err)
 	}
-	got := evidenceFrom(raw)
+	got := evidenceFrom(raw, "")
 
 	if got.PolicyRevision != in.PolicyRevision {
 		t.Fatal("policy revision did not survive")
 	}
 	if !reflect.DeepEqual(got.FooterFindings, in.FooterFindings) {
 		t.Fatalf("footer findings did not survive: %v", got.FooterFindings)
+	}
+	if !got.AuthoredOffer {
+		t.Fatal("the authored offer did not survive")
 	}
 	for _, c := range []struct {
 		field    string
@@ -88,7 +92,7 @@ func TestAnUnusableEvidenceColumnYieldsNoEvidenceRatherThanAnError(t *testing.T)
 		{"an id that is not a uuid", []byte(`{"invoice_id":"not-a-uuid"}`)},
 	} {
 		t.Run(c.name, func(t *testing.T) {
-			got := evidenceFrom(c.raw)
+			got := evidenceFrom(c.raw, "")
 			if !reflect.DeepEqual(got, commsauthz.Evidence{}) {
 				t.Errorf("decoded %v, want no evidence at all", got)
 			}
@@ -114,7 +118,7 @@ func TestFooterDecisionEvidenceStoresADigestRatherThanTheDisplayedText(t *testin
 	if err != nil {
 		t.Fatal(err)
 	}
-	got := evidenceFrom(raw)
+	got := evidenceFrom(raw, "")
 	if got.FooterDigest != in.FooterDigest || len(got.FooterPreview) != 0 || len(got.FooterFindings) != 1 {
 		t.Fatalf("stored footer evidence = %+v", got)
 	}

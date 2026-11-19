@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Package imap is a read-only mail-capture connector: it dials a user's
-// mailbox over IMAPS, pulls the most recent messages, and normalizes each
-// into an email activity for the timeline. It implements
-// connector.Connector, so every captured row still lands through the ONE
-// capture Sink (audit + outbox in one transaction) — this package owns the
+// Package imap is a mail-capture connector. It dials a user's mailbox over
+// IMAPS, pulls the recent messages, and maps each to an email activity.
+// Sending through the mailbox's SMTP server is opt-in (send.go).
+//
+// It implements connector.Connector, so every captured row lands through the
+// one capture Sink (audit + outbox in one transaction). This package owns the
 // provider I/O and the pure RFC822→activity mapping, nothing about the write.
 //
 // It is a STANDING connector, at parity with gmail: NewStanding builds one,
@@ -25,6 +26,7 @@ package imap
 
 import (
 	"context"
+	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -117,6 +119,11 @@ type Connector struct {
 	// Injectable so a test fires it at a chosen point in the phase rather than
 	// racing one.
 	schedulePhase phaseTimer
+
+	// smtpDial and smtpRoots replace the SMTP transport in tests; nil is the
+	// guarded dialer and the system trust store.
+	smtpDial  func(ctx context.Context, network, addr string) (net.Conn, error)
+	smtpRoots *x509.CertPool
 }
 
 // WithBounceSink returns a copy that records delivery reports instead of
@@ -173,6 +180,8 @@ type Credentials struct {
 	Password    string `json:"password"`
 	Mailbox     string `json:"mailbox"`
 	MaxMessages int    `json:"max_messages"`
+	// SMTP, when set, turns sending on. Nil keeps the connection read-only.
+	SMTP *SMTPSettings `json:"smtp,omitempty"`
 }
 
 // AuthRequestFrom packages credentials into the opaque connector AuthRequest.

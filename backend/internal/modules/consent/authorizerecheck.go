@@ -48,9 +48,12 @@ func (g *Gate) readTransmitTicket(ctx context.Context, req commsauthz.TransmitRe
 	if err := transmittable(req); err != nil {
 		return commsauthz.TransmitTicket{}, err
 	}
-	legacy := g.legacyTransmitAnswer(ctx, req, false)
+	legacy, err := g.legacyTransmitAnswer(ctx, req, false)
+	if err != nil {
+		return commsauthz.TransmitTicket{}, err
+	}
 	var fresh commsauthz.TransmitTicket
-	err := g.readTransmitTx(ctx, func(tx pgx.Tx) error {
+	err = g.readTransmitTx(ctx, func(tx pgx.Tx) error {
 		var err error
 		if fresh, _, err = g.transmitVerdictTx(ctx, tx, req, issued.DecisionSetID, legacy, false); err != nil {
 			return err

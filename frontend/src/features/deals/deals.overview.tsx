@@ -272,6 +272,7 @@ export function DealOverviewPane({
         <div className="deal-overview-column">
           <DealBrief
             brief={deal.description}
+            byModel={deal.ai_written_fields?.includes("description")}
             // The record's own write refusal, not the advance verb's.
             onEdit={readOnly ? undefined : onEditDetails}
           />

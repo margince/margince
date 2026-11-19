@@ -110,8 +110,8 @@ func storedAsThisSeatsTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, dire
 
 // MailboxIsOwnAloneTx reports whether the mailbox a connector stored a message
 // from belongs to the acting seat alone. capturedBy is the activity's stamp,
-// whose second part names the provider; the seat connects at most one mailbox
-// per provider. A mailbox whose address another seat also holds is shared and
+// whose second part names the provider; the run names which of the seat's
+// mailboxes of that provider it came through. A mailbox whose address another seat also holds is shared and
 // nobody's own. The same rule decides when a received reading is turned round.
 func MailboxIsOwnAloneTx(ctx context.Context, tx pgx.Tx, capturedBy string) (bool, error) {
 	_, seat := capturePrincipal(ctx)
@@ -120,10 +120,14 @@ func MailboxIsOwnAloneTx(ctx context.Context, tx pgx.Tx, capturedBy string) (boo
 	if kind != "connector" || provider == "" || seat == ids.Nil {
 		return false, nil
 	}
+	connection, found, err := seatMailboxTx(ctx, tx, seat, provider)
+	if err != nil || !found {
+		return false, err
+	}
 	var label string
-	err := tx.QueryRow(ctx, `
+	err = tx.QueryRow(ctx, `
 		SELECT coalesce(account_label, '') FROM capture_connection
-		 WHERE user_id = $1 AND provider = $2 AND archived_at IS NULL`, seat, provider).Scan(&label)
+		 WHERE id = $1 AND user_id = $2 AND archived_at IS NULL`, connection, seat).Scan(&label)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
 	}

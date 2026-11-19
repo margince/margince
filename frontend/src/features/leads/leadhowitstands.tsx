@@ -10,6 +10,7 @@ import { StatStrip } from "../../design-system/statstrip";
 import { formatDayMonth } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { addedViaFor } from "../../lib/leadorigins";
+import { useMemberName } from "../../lib/membernames";
 import { navigate } from "../../lib/router";
 import { latestWord } from "../../lib/standinglatest";
 import { activityMarks } from "../../lib/standingmarks";
@@ -60,7 +61,15 @@ export function LeadHowItStands({
   const t = useT();
   const { locale } = useLocale();
   const zone = useViewerZone();
-  const ctx: ReadingContext = { t, locale, zone, record: zone, asOf };
+  const markedBy = useMemberName(lead.first_response_marked_by).data;
+  const ctx: ReadingContext = {
+    t,
+    locale,
+    zone,
+    record: zone,
+    asOf,
+    markedBy,
+  };
   const changes = useLeadStatusChanges(lead);
   const explain = useLeadScore(lead);
   const reasons = useLeadDisqualifyReasons();

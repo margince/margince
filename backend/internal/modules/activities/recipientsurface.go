@@ -18,9 +18,11 @@ import (
 // the authority staging asks again. Staging refuses a body composed without
 // these duties that a recipient then resolves to marketing
 // (commsauthz.Request.OmitsAdvertisingDuties).
-func surfaceForRecipients(ctx context.Context, in SendEmailInput, origin SendOrigin, links []ActivityLinkInput, gate ConsentGate) (unsubscribeSurface, error) {
+func surfaceForRecipients(ctx context.Context, in SendEmailInput, origin SendOrigin, links []ActivityLinkInput, files []OutboundFile, gate ConsentGate) (unsubscribeSurface, error) {
 	surface := surfaceFor(in.Context, in.MarketingPurpose, in.ConsentPurpose)
-	if surface.disclosureCategory() == commsauthz.CategoryMarketing {
+	// A stated country is still put to the engine, which refuses one the user
+	// did not state. A scheduled send then learns it now rather than at fire.
+	if surface.disclosureCategory() == commsauthz.CategoryMarketing && len(in.Evidence.RecipientCountries) == 0 {
 		return surface, nil
 	}
 	previewer, ok := gate.(decisionPreviewer)
@@ -29,7 +31,7 @@ func surfaceForRecipients(ctx context.Context, in SendEmailInput, origin SendOri
 	}
 	// The question staging will ask, built by the same builder, before the body
 	// exists.
-	set, err := previewer.Preview(ctx, outboundMessage{in: in, links: links}.authorization(origin))
+	set, err := previewer.Preview(ctx, outboundMessage{in: in, links: links, files: files}.authorization(origin))
 	if err != nil {
 		return unsubscribeSurface{}, err
 	}

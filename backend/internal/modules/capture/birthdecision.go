@@ -335,7 +335,11 @@ func mailboxPostureForTx(ctx context.Context, tx pgx.Tx, user ids.UUID, provider
 	if user == ids.Nil || provider == "" {
 		return PostureHeld, nil
 	}
-	return connectionPostureTx(ctx, tx, seatConnection(user, provider))
+	connection, ok, err := seatMailboxTx(ctx, tx, user, provider)
+	if err != nil || !ok {
+		return PostureHeld, err
+	}
+	return connectionPostureTx(ctx, tx, memberConnection(user, connection))
 }
 
 // connectionPostureTx reads the posture of the one live connection match

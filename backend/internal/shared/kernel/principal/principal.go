@@ -127,7 +127,9 @@ type Principal struct {
 	Areas WorkAreas
 
 	// Locale is the display language a human chose, empty when they never did.
-	// It rides the principal so wording written for the caller needs no query.
+	// An agent, and work resumed from a stored actor, carry the language their
+	// human reads, base language included. It rides the principal so wording
+	// written for the caller needs no query.
 	Locale string
 
 	// SeatType is the licensing ceiling of the human behind the call — for

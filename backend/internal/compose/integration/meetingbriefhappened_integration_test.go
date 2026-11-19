@@ -113,6 +113,52 @@ func TestABriefTakesNoDayMeetingDatedTodayAsWhenWeLastSpoke(t *testing.T) {
 	}
 }
 
+// An internal note is no conversation.
+// The brief lists it in no arc and still calls the room a first contact.
+func TestABriefCountsNoInternalNoteAsAConversation(t *testing.T) {
+	now := time.Date(2026, 8, 4, 13, 0, 0, 0, time.UTC)
+	room := newBriefRoom(t, "UTC", now, now.Add(48*time.Hour))
+	note := room.log(t, "note", now.Add(-time.Hour), activities.PrecisionInstant)
+	lastSpoke, arc := room.read(t)
+	if !strings.HasPrefix(lastSpoke, neverSpoke) {
+		t.Errorf("last spoke = %q, but the only record is a note", lastSpoke)
+	}
+	if strings.Contains(arc, note.String()) {
+		t.Errorf("the arc cites the note: %s", arc)
+	}
+}
+
+// Rows the contact page refuses as an exchange are no conversation.
+// That holds for the arc, the last-spoke line and the attendee's last touch.
+// The rows are a voicemail, a system-sent mail, a newsletter and a note with a participant row.
+func TestABriefCountsNoRowTheContactPageRefusesAsAnExchange(t *testing.T) {
+	now := time.Date(2026, 8, 4, 13, 0, 0, 0, time.UTC)
+	room := newBriefRoom(t, "UTC", now, now.Add(48*time.Hour))
+	at := now.Add(-time.Hour)
+	voicemail := room.log(t, "call", at, activities.PrecisionInstant)
+	machine := room.log(t, "email", at, activities.PrecisionInstant)
+	bulk := room.log(t, "email", at, activities.PrecisionInstant)
+	note := room.log(t, "note", at, activities.PrecisionInstant)
+	room.e.WsExec(t, `UPDATE activity SET call_outcome = 'voicemail' WHERE id = $1`, voicemail)
+	room.e.WsExec(t, `UPDATE activity SET sender_is_machine = true WHERE id = $1`, machine)
+	room.e.WsExec(t, `UPDATE activity SET bulk_mail_attested = true WHERE id = $1`, bulk)
+	room.e.WsExec(t, `INSERT INTO activity_participant (activity_id, contact_id, role)
+		SELECT $1, $2, 'attendee'`, note, room.contact)
+
+	lastSpoke, arc := room.read(t)
+	if !strings.HasPrefix(lastSpoke, neverSpoke) {
+		t.Errorf("last spoke = %q, but nothing here is an exchange", lastSpoke)
+	}
+	for name, id := range map[string]ids.UUID{"voicemail": voicemail, "machine mail": machine, "bulk mail": bulk, "note": note} {
+		if strings.Contains(arc, id.String()) {
+			t.Errorf("the arc cites the %s: %s", name, arc)
+		}
+	}
+	if line := room.attendeeLine(t); !strings.Contains(line, "first time you are meeting them") {
+		t.Errorf("attendee = %q, but nothing here is an exchange", line)
+	}
+}
+
 // A call logged for today's date has happened from the start of that date. In
 // Kiritimati its stored noon is a day ahead, and both reads count it already.
 func TestABriefCountsADayCallDatedTodayBeforeItsStoredNoon(t *testing.T) {

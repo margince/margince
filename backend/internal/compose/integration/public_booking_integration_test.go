@@ -45,6 +45,15 @@ func publicCall(t *testing.T, e *apptest.AppEnv, method, path string, body any, 
 //craft:ignore naked-any generic JSON test helper: body and out are each call's own shape
 func publicCallWithHeaders(t *testing.T, e *apptest.AppEnv, method, path string, body any, headers map[string]string, out any) (int, http.Header) {
 	t.Helper()
+	return publicCallVia(t, e.TS.Client(), e, method, path, body, headers, out)
+}
+
+// publicCallVia is publicCallWithHeaders on the caller's own client. A test
+// uses it to stand for a second browser with its own cookie jar.
+//
+//craft:ignore naked-any generic JSON test helper: body and out are each call's own shape
+func publicCallVia(t *testing.T, client *http.Client, e *apptest.AppEnv, method, path string, body any, headers map[string]string, out any) (int, http.Header) {
+	t.Helper()
 	var reqBody io.Reader
 	if body != nil {
 		raw, err := json.Marshal(body)
@@ -61,7 +70,7 @@ func publicCallWithHeaders(t *testing.T, e *apptest.AppEnv, method, path string,
 	for k, v := range headers {
 		req.Header.Set(k, v)
 	}
-	resp, err := e.TS.Client().Do(req) //nolint:bodyclose // closed by apptest.CloseBody below; bodyclose only recognises a Close in the same package
+	resp, err := client.Do(req) //nolint:bodyclose // closed by apptest.CloseBody below; bodyclose only recognises a Close in the same package
 	if err != nil {
 		t.Fatalf("%s %s: %v", method, capabilitypath.Redact(path), err)
 	}

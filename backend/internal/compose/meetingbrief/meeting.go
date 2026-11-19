@@ -136,10 +136,10 @@ func (s *Service) readMeeting(ctx context.Context, tx pgx.Tx, activityID ids.UUI
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	idPos := arg(activityID)
 	requestedPos := arg(nullableProject(requested))
-	// A last touch is contact we had: a past meeting nobody called off, not a
-	// call that reached nobody (relstrength.HadContactSQL).
+	// A last touch is an exchange as the contact page counts it, so the arc and
+	// the attendee line read one rule (relstrength.InteractionCountsAtSQL).
 	nowAt := fmt.Sprintf("$%d", arg(now))
-	happened := occurredday.HappenedSQL("pa", nowAt) + " AND " + relstrength.HadContactSQL("pa", nowAt)
+	happened := relstrength.InteractionCountsAtSQL("pa", nowAt)
 	clauses, err := roomClauses(ctx, arg)
 	if err != nil {
 		return meeting{}, err

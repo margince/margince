@@ -250,6 +250,7 @@ function DrawerComposer({
         subject: forwardSubject(presentation.summary.subject ?? ""),
         body: forwardedText(presentation, formatWhen, t),
       }}
+      forwarding={presentation.id}
       open
       onClose={onClose}
       onSent={onSent}

@@ -111,6 +111,51 @@ func TestAcceptingAnOfferAllocatesTheDealsProducts(t *testing.T) {
 	}
 }
 
+// An accept can price the deal as before and still swap its products. That
+// changes the deal, so its deal.updated points at a deal audit row holding the
+// products before and after.
+func TestAnAcceptThatOnlySwapsProductsAuditsTheDeal(t *testing.T) {
+	e := setupReviewEnv(t)
+	dealID, _, _ := twoStagePipeline(t, e.configEnv)
+	ctx := e.productCtx()
+	suite := seedKindProduct(t, e, "Suite", "software")
+	onboarding := seedKindProduct(t, e, "Onboarding", "implementation")
+	price, tax := int64(100_000), "19.00"
+	for _, product := range []ids.ProductID{suite, onboarding} {
+		offer, err := e.store.CreateOffer(ctx, dealID, CreateOfferInput{Currency: "EUR", Source: "manual", LineItems: []OfferLineInputRow{
+			{ProductID: &product, Quantity: "1", UnitPriceMinor: &price, TaxRate: &tax},
+		}})
+		if err != nil {
+			t.Fatalf("seeding the offer: %v", err)
+		}
+		acceptOfferOf(t, e, offer)
+	}
+
+	var announced, strayed int
+	if err := e.owner.QueryRow(context.Background(), `
+		SELECT count(*), count(*) FILTER (WHERE NOT (a.entity_type = 'deal' AND a.entity_id = $1))
+		  FROM event_outbox o
+		  JOIN audit_log a ON a.id::text = o.envelope->'trace'->>'audit_log_id'
+		 WHERE o.envelope->>'type' = 'deal.updated' AND o.envelope->'entity'->>'id' = $2`,
+		dealID.UUID, dealID.String()).Scan(&announced, &strayed); err != nil {
+		t.Fatalf("reading the outbox: %v", err)
+	}
+	if announced < 2 || strayed != 0 {
+		t.Errorf("%d deal.updated events, %d pointing at another record's audit row; want at least 2 and none", announced, strayed)
+	}
+	var swapped int
+	if err := e.owner.QueryRow(context.Background(), `
+		SELECT count(*) FROM audit_log
+		 WHERE entity_type = 'deal' AND entity_id = $1 AND evidence ? 'offer_id'
+		   AND before->'products' IS NOT NULL AND after->'products' IS NOT NULL
+		   AND NOT (after ? 'amount_minor')`, dealID.UUID).Scan(&swapped); err != nil {
+		t.Fatalf("reading the audit log: %v", err)
+	}
+	if swapped != 1 {
+		t.Errorf("%d deal audit rows show only a product swap, want 1", swapped)
+	}
+}
+
 // A manual set replaces the offer's allocations and a later accepted offer
 // leaves it alone: the human's answer outlives the document's.
 func TestAManualProductSetOutlivesTheNextAcceptedOffer(t *testing.T) {

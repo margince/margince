@@ -79,14 +79,20 @@ func owedRulesSQL(asOf, ownDomains, informsStillOwed, unjudgedResponseStillOwed,
 // newerInboundSQL is a message under alias newer that came in after the inbound
 // row under alias a, on its thread, and has begun by asOf.
 func newerInboundSQL(asOf string) string {
+	return inboundOnThreadSQL(asOf) + `
+	           AND (newer.occurred_at, newer.id) > (a.occurred_at, a.id)`
+}
+
+// inboundOnThreadSQL is a message under alias newer that came in on the thread
+// of the inbound row under alias a and has begun by asOf.
+func inboundOnThreadSQL(asOf string) string {
 	return `newer.thread_key = a.thread_key
 	           AND newer.kind = a.kind
 	           AND newer.kind IN ('email', 'message')
 	           AND newer.channel_provider IS NOT DISTINCT FROM a.channel_provider
 	           AND newer.direction = 'inbound'
 	           AND newer.archived_at IS NULL
-	           AND ` + occurredday.BegunSQL("newer", asOf) + `
-	           AND (newer.occurred_at, newer.id) > (a.occurred_at, a.id)`
+	           AND ` + occurredday.BegunSQL("newer", asOf)
 }
 
 // notSettledBySQL keeps the inbound row under alias a unless its kept stamp

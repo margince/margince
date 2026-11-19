@@ -67,6 +67,7 @@ export function TaskOutcomeForm({
       )}
       {record && !selecting && (
         <LogActivityForm
+          key={task.id}
           askedKind="note"
           entityType={record.entity_type}
           entityId={record.entity_id}

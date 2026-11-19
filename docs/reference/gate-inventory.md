@@ -87,6 +87,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendcountries_test.go` | H3 | The country filters offer the codes the server stores, and no other. |
 | `frontendcurrencies_test.go` | H3 | The currency picker must never offer a code the server refuses. |
 | `frontenddatenotation_test.go` | H3 | A server-written brief and the app around it must write one day the same way, or the reader sees 16/11/2026 beside 2026-11-16 on one screen. |
+| `frontenddue_window_test.go` | H3 | The task due-date box offers days inside the window the server accepts. |
 | `frontendemailtext_test.go` | H3 | The browser and the server split a mail body by the same rules, or a row's preview and the message it opens disagree about where the sender stopped writing. |
 | `frontendentrymounts_test.go` | H3 | Every slot pkg/extension accepts is mounted on a core screen, read from the screens themselves. |
 | `frontendentryslots_test.go` | H3 | A unit's entry names a slot and a glyph, and a panel names a slot, and two sides must agree on each. |
@@ -108,6 +109,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendminorunits_test.go` | H3 | The browser and the server must scale money by the same table, or the integer they exchange means two different amounts. |
 | `frontendnoevidencemarker_test.go` | H3 | The server stores one sentence for a manual signal whose evidence was taken away. |
 | `frontendoauthoutcomes_test.go` | H3 | The OAuth landing outcome is one vocabulary spelled on both sides of a redirect: the api puts it in the URL the provider sends a human back to, and the SPA turns it into the sentence that human reads. |
+| `frontendpasswordrule_test.go` | H3 | The sign-in screens refuse a password before the server is asked, and the server refuses it again. |
 | `frontendphoneparse_test.go` | H3 | The browser reads a phone number with ParsePhone's trunk mark, separators, dial prefix and E.164 pattern. |
 | `frontendpicturelimits_test.go` | H3 | The profile picture row refuses a file before it is sent, so its list and its cap must be the server's. |
 | `frontendportfaultcopy_test.go` | H3 | A port error that answers a reader with its own code through MessageFault needs catalog copy on the screen. |
@@ -129,6 +131,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendunitspellings_test.go` | H3 | The browser and the server must read a unit's spelling as the same key. |
 | `frontendvendorservices_test.go` | H3 | Which calendar belongs beside which mailbox is answered on both sides of the wire, and the two answers must be the same pairs. |
 | `frontendwebformsigning_test.go` | H3 | The setup dialog hands a website's developer the code that signs a server form's posts. |
+| `frontendwriteverbs_test.go` | H3 | The browser hides a moment verb a seat may not take by asking whether the verb writes an activity. |
 | `geocodestatuses_test.go` | H3 | A company's geocode status is spelled once in Go and once in the column's CHECK, and the two are the same set. |
 | `goversionpins_test.go` | H3 | One Go version, pinned in several places, and they have to agree. |
 | `grantrenewalcauses_test.go` | H1 | Every reason a standing grant needs renewing must reach the card that asks for it. |
@@ -211,6 +214,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `servertrimparity_test.go` | H3 | The browser and the server must agree on which values are empty, or a form refuses what the save would have taken. |
 | `settingbounds_test.go` | H3 | A bounded setting's range is one fact stated in three places: the entry's validator, which refuses past it; api/crm.yaml's minimum and maximum, which a caller reads; and the screen that refuses an out-of-range value in the box before the request. |
 | `shippingloopreachesthelane_test.go` | H2 | A backend change cannot land without the integration lane. |
+| `singlelinecontract_test.go` | H3 | Every text field the contract declares `x-single-line: true` must reach the request decoders as a generated field carrying the tag datasource.RejectUnsafeSingleLine reads. |
 | `sitereadstops_test.go` | H3 | A website read that stopped is classified twice, and both answers reach the same reader. |
 | `statedreasonbound_test.go` | H2 | The written reason on a decision that narrows what the installation keeps is bounded by one number. |
 | `summarytiermarks_test.go` | H2 | A 🟢 or 🟡 in an operation's summary is a claim about that operation's autonomy tier, and it has to be the tier the operation actually declares. |
@@ -220,6 +224,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `textlimitparity_test.go` | H2 | Each text cap a module applies is a hand-typed mirror of a number `api/crm.yaml` publishes, because the generated server enforces no string length. |
 | `transcriptmarker_test.go` | H3 | One value, spelled once. |
 | `uniqueitemscontract_test.go` | H3 | Every list the contract declares `uniqueItems: true` must reach the request decoders as a tagged generated field. |
+| `vietnamesedatawords_test.go` | H3 | The search box picks a Vietnamese data question by its own word list. |
 | `voicereasoncoverage_test.go` | H3 | The forwarding method's argument is checked at every call above. |
 | `webhookeventsdoc_test.go` | H3 | eventSchema is the part of a public-events.yaml schema the reference prints. |
 | `webtierheaders_test.go` | H2 | The app shell and the api send the same browser-facing headers. |
@@ -391,6 +396,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `mergequeuereach_test.go` | H3 | Every workflow that reports a check on a pull request also runs on the merge queue, unless it is waived as one no ruleset requires. |
 | `messagevoice_test.go` | H1 | Who wrote a message has one answer: Activity.voice. |
 | `messagingruleapplied_test.go` | H2 | Every obligation a messaging pack declares is one the engine applies, or one this file records as not yet applied and says why. |
+| `messagingtestcodes_test.go` | H2 | The messaging-rules registry panics when one code is registered twice in a process. |
 | `metricsuffix_test.go` | H2 | A `\_total` suffix means counter, in both directions. |
 | `migrationcitations_test.go` | H1 | No file acquires a citation of a migration version that does not exist. |
 | `modelverbenrich_test.go` | H2 | modelVerbsOffEnrich names the agent verbs marked always that spend another scope, and the source that shows why. |

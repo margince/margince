@@ -119,7 +119,10 @@ func (r approvalPreviewReader) importRow(ctx, execCtx context.Context, writer *c
 	if err != nil {
 		return out, err
 	}
-	out.Changes, err = r.importFieldChanges(ctx, writer.object, current, textFields(row.Fields), typed)
+	changed, _, err := writer.landingChanges(execCtx, row, current, typed)
+	if err == nil {
+		out.Changes, err = r.importFieldChanges(ctx, writer.object, current, changed, textFields(row.Fields), typed)
+	}
 	if err == nil {
 		err = r.importPendingCompanyChange(ctx, writer.object, current, reviewed.Links, &out)
 	}
@@ -129,11 +132,7 @@ func (r approvalPreviewReader) importRow(ctx, execCtx context.Context, writer *c
 	return out, err
 }
 
-func (r approvalPreviewReader) importFieldChanges(ctx context.Context, object string, current []byte, fields map[string]string, typed map[string]any) ([]crmcontracts.ApprovalPreviewChange, error) {
-	changed, err := changedFields(current, fields, typed)
-	if err != nil {
-		return nil, err
-	}
+func (r approvalPreviewReader) importFieldChanges(ctx context.Context, object string, current []byte, changed, fields map[string]string, typed map[string]any) ([]crmcontracts.ApprovalPreviewChange, error) {
 	var stored map[string]json.RawMessage
 	if err := json.Unmarshal(current, &stored); err != nil {
 		return nil, err

@@ -28,7 +28,7 @@ import {
   useRowHandoff,
   useUndoableRemoval,
 } from "../../lib/undoableremoval";
-import { useFolderOptions } from "./capture-exclusions.queries";
+import { folderRule, useFolderOptions } from "./capture-exclusions.queries";
 import { PurgeDialog } from "./capture-purge-dialog";
 import { captureValueMessage } from "./capturevalue";
 import "./capture-exclusions.css";
@@ -66,7 +66,12 @@ function useExclusions() {
   });
 }
 
-type ExclusionBody = { scope: Scope; kind: Kind; value: string };
+type ExclusionBody = {
+  scope: Scope;
+  kind: Kind;
+  value: string;
+  connection_id?: string;
+};
 
 // Without an outcome it is the dialog's add. With one it is an Undo putting a
 // removed rule back, which says so in its own words.
@@ -99,7 +104,12 @@ function useRemoveExclusion(outcome: MutationOutcome<ExclusionBody | null>) {
           params: { path: { id: rule.id } },
         }),
       );
-      return { scope: rule.scope, kind: rule.kind, value: rule.value };
+      return {
+        scope: rule.scope,
+        kind: rule.kind,
+        value: rule.value,
+        connection_id: rule.connection_id ?? undefined,
+      };
     },
     onError: outcome.onError,
     onSuccess: (removed) => {
@@ -354,7 +364,9 @@ function ExcludeDialog({
             return;
           }
           add.mutate(
-            { scope: effectiveScope, kind, value },
+            kind === "container"
+              ? { scope: effectiveScope, kind, ...folderRule(value) }
+              : { scope: effectiveScope, kind, value },
             { onSuccess: onClose },
           );
         }}

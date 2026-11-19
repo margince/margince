@@ -181,6 +181,9 @@ function seatMetric(id: string, figure: SeatFigure, basis: SeatBasis) {
       ? {}
       : {
           target,
+          ...(figure.actual == null
+            ? {}
+            : { target_delta: figure.actual - target }),
           attainment:
             figure.actual != null && target > 0
               ? (figure.actual / target) * 100

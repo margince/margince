@@ -22,6 +22,7 @@ import {
   snoozedDueAt,
   TaskCompleteCheck,
   TaskQuickActions,
+  TaskWriteFailure,
   useTaskUpdate,
 } from "../../components/taskactions";
 import { Badge, Button, OverflowMenu } from "../../design-system/atoms";
@@ -33,7 +34,6 @@ import { useCan } from "../../lib/capability";
 import { labelFor } from "../../lib/labelfor";
 import { unwrap } from "../../lib/problem";
 import { useShortcut } from "../../lib/shortcuts";
-import { NewDealAction } from "../companies/companyactions";
 import { ShareAction } from "../records/share";
 import { TaskDetailModal } from "../worklist/taskdetailmodal";
 import { project360Key } from "./project360.key";
@@ -49,6 +49,7 @@ import { ProjectDrawer } from "./projectdrawer";
 import type { ProjectHealthAssessment } from "./projecthealth.queries";
 import { ProjectHealthModal } from "./projecthealthmodal";
 import { type LogDrawer, ProjectLogVerbs } from "./projectlogverbs";
+import { ProjectNewDeal } from "./projectnewdeal";
 import { ProjectNext } from "./projectnext";
 import { AssignProjectOwnerAction } from "./projectowner";
 import { AdvanceProjectModal } from "./projectphase";
@@ -214,15 +215,7 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
           // Winning the deal later advances the project's phase without
           // re-checking, so `EnsureAttachable` proves the authority at the
           // moment of attaching.
-          !readOnly &&
-          project.company_id && (
-            <NewDealAction
-              companyId={project.company_id}
-              companyName={view.company?.name ?? project.name}
-              projectId={project.id}
-              link
-            />
-          )
+          !readOnly && <ProjectNewDeal view={view} />
         }
         tick={
           canUpdateTask
@@ -313,12 +306,15 @@ function useNextTaskVerbs(
   return {
     // No due date here: the bar draws its own Snooze beside Done.
     action: (
-      <TaskQuickActions
-        activityId={next.activityId}
-        version={next.version}
-        dueAt={null}
-        update={update}
-      />
+      <>
+        <TaskQuickActions
+          activityId={next.activityId}
+          version={next.version}
+          dueAt={null}
+          update={update}
+        />
+        <TaskWriteFailure taskId={next.activityId} update={update} />
+      </>
     ),
     snooze: next.dueAt
       ? {
@@ -337,7 +333,7 @@ function useNextTaskVerbs(
                 body: nextDue,
               });
           },
-          pending: update.isPending && update.variables?.id === next.activityId,
+          pending: update.isPending,
         }
       : undefined,
   };

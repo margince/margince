@@ -122,7 +122,7 @@ func Deterministic(in Input) []Section {
 		{Kind: crmcontracts.MeetingBriefSectionKindWhatChanged, Sentences: whatChangedSection(in, ranked)},
 		{Kind: crmcontracts.MeetingBriefSectionKindAttendees, Sentences: attendeesSection(in)},
 		{Kind: crmcontracts.MeetingBriefSectionKindRisks, Sentences: risksSection(in, ranked)},
-		{Kind: crmcontracts.MeetingBriefSectionKindCommitments, Sentences: in.words().commitmentsSection(ranked)},
+		{Kind: crmcontracts.MeetingBriefSectionKindCommitments, Sentences: append(in.words().commitmentsSection(ranked), looksKeptLines(in)...)},
 		{Kind: crmcontracts.MeetingBriefSectionKindDealState, Sentences: dealStateSection(in, ranked)},
 		{Kind: crmcontracts.MeetingBriefSectionKindTalkingPoints, Sentences: in.words().talkingPointsSection(ranked)},
 		{Kind: crmcontracts.MeetingBriefSectionKindCompanyContext, Sentences: companyContextSection(in)},
@@ -464,14 +464,35 @@ func (said briefCopy) talkingPointLine(claim ClaimIn) string {
 	}
 }
 
+// looksKeptLines say once, plainly, that a promise looks kept and is no open
+// driver of this meeting.
+func looksKeptLines(in Input) []Sentence {
+	said := in.words()
+	out := make([]Sentence, 0, len(in.LooksKept))
+	for _, kept := range in.LooksKept {
+		out = append(out, Sentence{
+			Text:     fmt.Sprintf(said.Say(touchWords.LooksKept), kept.Body, kept.Guest, said.occurredDay(kept.MeetingAt)),
+			Evidence: []Evidence{{EntityType: citeActivity, EntityID: kept.SourceID}},
+		})
+	}
+	return out
+}
+
 // companyContextSection recalls earlier meetings with this room; no history
 // means no background section.
 func companyContextSection(in Input) []Sentence {
-	out := make([]Sentence, 0, len(in.PriorMeetings))
+	out := make([]Sentence, 0, len(in.PriorMeetings)+len(in.CompanyHistory))
 	for _, prior := range in.PriorMeetings {
 		out = append(out, Sentence{
 			Text:     in.words().priorMeetingLine(prior, in.Now, in.Zone),
 			Evidence: []Evidence{{EntityType: citeActivity, EntityID: prior.ID}},
+		})
+	}
+	said := in.words()
+	for _, topic := range in.CompanyHistory {
+		out = append(out, Sentence{
+			Text:     fmt.Sprintf(said.Say(touchWords.EarlierAt), in.Company, topic.Contact, topic.Subject, said.occurredDay(topic.At)),
+			Evidence: []Evidence{{EntityType: citeActivity, EntityID: topic.ID}},
 		})
 	}
 	return out

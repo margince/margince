@@ -10,19 +10,18 @@ import { formatNumber } from "../format/format";
 import {
   type RefusalKind,
   type RefusalSurface,
-  sendPermissionReasonKey,
+  refusalSentenceKey,
 } from "../format/sendpermissionreason";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
-  decidingRefusal,
   previewStatus,
   type RefusedRecipient,
-  refusalOf,
   refusedStatus,
   remedyCategoryOf,
   type SendStatus,
 } from "../lib/sendstatus";
+import { CitedLaws } from "./citedlaw";
 import { LawfulBasisCallout } from "./lawfulbasiswarning";
 
 // What the engine decided about this message, said where the rep is writing it.
@@ -91,10 +90,9 @@ export function decidingRecipient(
   // a deny is recorded and the send still goes. Drawing the verdict would talk
   // a rep out of lawful mail.
   const refusing = preview.recipients.filter((r) => r.would_refuse);
-  // The same rule picks the deciding refusal after a refused Send.
-  const refusals = refusing.map(refusalOf);
-  const deciding = decidingRefusal(refusals);
-  const recipient = deciding && refusing[refusals.indexOf(deciding)];
+  // The server ranks refusals, so the first is the deciding one, as it is
+  // after a refused Send.
+  const recipient = refusing[0];
   if (!recipient) return { state: "allowed" };
   // `can_be_overruled` and not `decided_by`: a frequency cap is the engine's
   // own reading, yet one message may pass it with a reason. Absent is not a yes.
@@ -194,6 +192,8 @@ type SendPermissionProps = Readonly<{
   override?: ReactNode;
   /** The surface also draws the message's own reason-for-contact pick. */
   picksReason?: boolean;
+  /** The message was checked with no reason for contact of its own. */
+  unclaimed?: boolean;
   /** The viewer wrote every address, so the refused one may be named. */
   namesRecipients?: boolean;
   /**
@@ -224,6 +224,7 @@ function PermissionNotice({
   onOverride,
   override,
   picksReason = false,
+  unclaimed = false,
   namesRecipients = false,
   onRecheck,
 }: SendPermissionProps) {
@@ -248,7 +249,7 @@ function PermissionNotice({
         <Button onClick={onOverride}>{t("sendPermission.sayWhy")}</Button>
       ) : undefined))
     : undefined;
-  const surface = { recordable: Boolean(control), picksReason };
+  const surface = { recordable: Boolean(control), picksReason, unclaimed };
   const look = calloutLook(
     status.kind,
     status.deciding?.canBeOverruled === true,
@@ -277,12 +278,29 @@ function PermissionNotice({
           )}
         </p>
       ) : null}
+      <CitedLawsOf refused={status.refused} />
       <RefusalDetail
         status={status}
         named={namesRecipients}
         surface={surface}
       />
     </Callout>
+  );
+}
+
+// The law each refusal and its footer findings cite, after the facts.
+function CitedLawsOf({
+  refused,
+}: Readonly<{ refused: readonly RefusedRecipient[] }>) {
+  const provisions = refused.flatMap((item) => [
+    item.provision,
+    ...(item.footerFindings ?? []).map((finding) => finding.provision),
+  ]);
+  if (!provisions.some(Boolean)) return null;
+  return (
+    <p>
+      <CitedLaws provisions={provisions} />
+    </p>
   );
 }
 
@@ -317,7 +335,7 @@ function RefusalDetail({
   const t = useT();
   const hintFor = (refused: RefusedRecipient | undefined) =>
     t(
-      sendPermissionReasonKey(
+      refusalSentenceKey(
         refused?.reasonCode,
         surface,
         refused && remedyCategoryOf(refused),

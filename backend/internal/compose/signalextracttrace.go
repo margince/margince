@@ -19,6 +19,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/pipelinetrace"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -49,7 +50,11 @@ func (r *ThreadReadings) ReadThread(
 	now := r.clock()
 	var out pipelinetrace.ThreadReading
 	err = r.db.Tx(ctx, func(tx pgx.Tx) error {
-		row := tx.QueryRow(ctx, threadOfferQuery,
+		private, err := activities.SharesPrivateRequestsTx(ctx, tx)
+		if err != nil {
+			return err
+		}
+		row := tx.QueryRow(ctx, threadOfferQuery(private),
 			now.Add(-extractSettleHours*time.Hour), threadOfferPassCap,
 			extractRefusalCap, now.Add(-extractParkFor), threadKey)
 		switch err := row.Scan(&out.HasAHumanSender, &out.ReachesOneAccount, &out.IsOneBodyOfWork,

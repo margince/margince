@@ -18,7 +18,7 @@ func TestAnAddressAnswersTheCompanyOnItsDomain(t *testing.T) {
 	ctx := e.as()
 	parent := e.createNamedCompany(ctx, t, "Addrco", "addrco.test")
 	regional := e.createNamedCompany(ctx, t, "Addrco EU", "eu.addrco.test")
-	e.createNamedCompany(ctx, t, "Mailbox Co", "gmail.com")
+	e.addLegacyDomain(ctx, t, e.createNamedCompany(ctx, t, "Mailbox Co", "mailbox.test"), "gmail.com")
 	e.createNamedCompany(ctx, t, "Refusedco", "refusedco.test")
 	if _, err := e.store.SetDomainAdmission(ctx, "refusedco.test", DomainSuppressed, "a tool we use, not a customer"); err != nil {
 		t.Fatalf("refusing refusedco.test a company: %v", err)

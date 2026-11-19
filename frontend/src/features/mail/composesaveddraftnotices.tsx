@@ -14,6 +14,7 @@ export function SavedDraftNotices({ draft }: Readonly<{ draft: SavedDraft }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
+  if (draft.conflict === "found") return <FoundDraftNotice draft={draft} />;
   if (draft.changedElsewhere) {
     return (
       <Callout
@@ -66,6 +67,31 @@ export function SavedDraftNotices({ draft }: Readonly<{ draft: SavedDraft }>) {
         {t("compose.savedDraftRemove")}
       </Button>
     </div>
+  );
+}
+
+// A draft held here under other words than the ones on screen: the reader
+// picks which words stay before anything is saved over it.
+function FoundDraftNotice({ draft }: Readonly<{ draft: SavedDraft }>) {
+  const t = useT();
+  return (
+    <Callout
+      tone="warning"
+      kind="outcome"
+      title={t("compose.savedDraftFoundTitle")}
+      actions={
+        <>
+          <Button onClick={draft.loadSaved}>
+            {t("compose.savedDraftLoadFound")}
+          </Button>
+          <Button variant="ghost" onClick={draft.keepScreen}>
+            {t("compose.savedDraftReplace")}
+          </Button>
+        </>
+      }
+    >
+      {t("compose.savedDraftFoundBody")}
+    </Callout>
   );
 }
 

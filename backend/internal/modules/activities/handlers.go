@@ -36,6 +36,8 @@ type Handlers struct {
 	emailDrafter EmailDrafter
 	// consent gates the send path; nil fails closed (WithConsent wires it).
 	consent ConsentGate
+	// sendObserver hears each email Send's outcome; nil reports to nobody.
+	sendObserver SendObserver
 	// calendars answers whether a host's own diary reaches this product, which
 	// decides what an empty availability window may claim. Nil answers no.
 	calendars CalendarConnected

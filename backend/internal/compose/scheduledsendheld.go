@@ -112,23 +112,29 @@ func (n scheduledSendHeldNotifier) NotifyHeldInTx(ctx context.Context, tx pgx.Tx
 	return err
 }
 
-// ResolveHeldInTx withdraws the card once the rep has acted on the message
-// directly — rescheduled or cancelled it from its own surface, which IS the
-// answer. Without this a rep answers once and the card asks again.
+// ResolveHeldInTx withdraws the card once the message is answered: the rep
+// rescheduled or cancelled it, or it was sent after a confirmed review.
+// Without this a rep answers once and the card asks again.
 //
 // Found by the message named in the payload: the card carries no target id, for
 // the reason heldScheduledSendTarget gives.
-func (n scheduledSendHeldNotifier) ResolveHeldInTx(ctx context.Context, tx pgx.Tx, scheduledSendID ids.UUID) error {
+func (n scheduledSendHeldNotifier) ResolveHeldInTx(ctx context.Context, tx pgx.Tx, scheduledSendID ids.UUID, how activities.HeldResolution) error {
 	pending, err := n.pendingCardsFor(ctx, tx, scheduledSendID)
 	if err != nil {
 		return err
 	}
 	for _, id := range pending {
-		if _, err := n.approvals.WithdrawInTx(ctx, tx, id, "the rep rescheduled or cancelled this message"); err != nil {
+		if _, err := n.approvals.WithdrawInTx(ctx, tx, id, heldWithdrawalReasons[how]); err != nil {
 			return fmt.Errorf("compose: clearing the held message's card: %w", err)
 		}
 	}
 	return nil
+}
+
+// heldWithdrawalReasons is the audit reason a withdrawn card records.
+var heldWithdrawalReasons = map[activities.HeldResolution]string{
+	activities.HeldResolvedByRep:     "the rep rescheduled or cancelled this message",
+	activities.HeldResolvedBySending: "the message was sent after its review was confirmed",
 }
 
 // pendingCardsFor finds the live cards raised for one message.
@@ -195,15 +201,8 @@ var _ activities.HeldNotifier = scheduledSendHeldNotifier{}
 
 // heldAcceptEffect is what Accept does: re-arm the message for a fresh moment.
 //
-// "Yes, still send this." The rep is not choosing a new time here — the card has
-// no time picker and should not grow one — so it goes shortly, which is long
-// enough that somebody who has just fixed a consent record is not racing the
-// timer. A rep who wants a specific moment reschedules from the message itself.
-//
-// The gates run again when it fires, exactly as they did the first time. A rep
-// who accepts without having fixed the underlying problem gets a second hold
-// rather than a send, which is the correct answer and the reason this is safe to
-// offer as a one-click action.
+// "Yes, still send this", shortly; a rep who wants a moment reschedules the
+// message. The gates run again at fire, so accepting without a fix holds again.
 func heldAcceptEffect(svc *approvals.Service, store *activities.Store, timer activities.ScheduleTimer) approvals.ApprovedEffect {
 	return func(ctx context.Context, approvalID ids.ApprovalID, proposedChange json.RawMessage, diffHash string) error {
 		id, err := heldMessageID(proposedChange)
@@ -230,12 +229,8 @@ func heldAcceptEffect(svc *approvals.Service, store *activities.Store, timer act
 	}
 }
 
-// heldDeclineEffect is what Reject does: abandon the message.
-//
-// Without this the card would leave the inbox and the message would stay held
-// forever — a decision recorded against a subject that never heard it. Rejecting
-// a proposal usually means "do not apply it" and needs no effect; rejecting THIS
-// means "stop waiting", because the thing it names is already waiting.
+// heldDeclineEffect is what Reject does: abandon the message. Without it the
+// card would leave the inbox while the message stayed held forever.
 func heldDeclineEffect(store *activities.Store) approvals.DeclinedEffect {
 	return func(ctx context.Context, tx pgx.Tx, _ ids.ApprovalID, proposedChange json.RawMessage) error {
 		id, err := heldMessageID(proposedChange)
@@ -266,11 +261,8 @@ func heldMessageID(proposedChange json.RawMessage) (ids.UUID, error) {
 // heldSendActors builds what the two held-card effects need: the store that owns
 // the message and the timer that re-arms it.
 //
-// Insert-only runner, like every other surface that stages a job it does not
-// work — the api enqueues and the worker role runs it. A pool this cannot open a
-// runner on reports false rather than panicking: the effects are then
-// unregistered, and the decidability gate is what makes that loud (a kind with a
-// decision-grant mapping and no effect fails TestEveryRegisteredEffectKind…).
+// Insert-only runner: the api enqueues and the worker runs it. A pool with no
+// runner reports false, and TestEveryRegisteredEffectKind… makes that loud.
 func heldSendActors(pool *pgxpool.Pool) (*activities.Store, scheduleTimer, bool) {
 	if pool == nil {
 		return nil, scheduleTimer{}, false

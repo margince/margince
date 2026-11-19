@@ -9,6 +9,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/closerisk"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 )
 
@@ -98,13 +99,11 @@ func materialOf(item crmcontracts.AttentionItem, bar materialBar, money dayMoney
 // recoveryDue is a dated recovery decision, independent of portfolio size.
 // A provisional close calls for requalification, not a claim that the customer
 // committed to that date. The row carries that distinction with its deal facts.
-const recoveryHorizonDays = 14
-
 func recoveryDue(item crmcontracts.AttentionItem, asOf time.Time) bool {
 	if item.DueAt == nil {
 		return false
 	}
-	horizon := asOf.AddDate(0, 0, recoveryHorizonDays)
+	horizon := asOf.AddDate(0, 0, closerisk.RecoveryHorizonDays)
 	return deadline.Passed(item.DueAt, horizon) || item.DueAt.Equal(horizon)
 }
 

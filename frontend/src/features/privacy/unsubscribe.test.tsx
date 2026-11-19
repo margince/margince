@@ -253,9 +253,61 @@ describe("UnsubscribeScreen", () => {
     expect(screen.getByText(/open your preferences/i)).toBeInTheDocument();
   });
 
-  it("early-returns honestly when the address carries no purpose", () => {
-    stubEdge();
+  // A link without a purpose is a link for all marketing, not a dead one.
+  it("offers to stop all marketing when the link names no purpose", async () => {
+    const sent = stubEdge();
     render(<UnsubscribeScreen token="tok-123" />);
+    await userEvent.click(
+      await screen.findByRole("button", { name: /stop all marketing/i }),
+    );
+    expect(
+      await screen.findByRole("heading", { name: /^unsubscribed$/i }),
+    ).toBeInTheDocument();
+    const post = sent.find((s) => s.key.startsWith("POST"));
+    expect(post?.url).toBe("/v1/public/preferences/tok-123/unsubscribe");
+    expect(screen.queryByText(/no longer valid/i)).not.toBeInTheDocument();
+  });
+
+  // The withdraw-only page presses without a purpose too, and the server
+  // stops what the credential carries.
+  it("withdraws from the read-less page when the link names no purpose", async () => {
+    const sent = stubEdge({
+      "GET /public/preferences/tok-123": () =>
+        jsonResponse({ title: "not found" }, 404),
+    });
+    render(<UnsubscribeScreen token="tok-123" />);
+    await userEvent.click(
+      await screen.findByRole("button", {
+        name: /unsubscribe from these emails/i,
+      }),
+    );
+    expect(
+      await screen.findByRole("heading", { name: /^unsubscribed$/i }),
+    ).toBeInTheDocument();
+    const post = sent.find((s) => s.key.startsWith("POST"));
+    expect(post?.url).not.toContain("purpose=");
+  });
+
+  // A raw purpose key is not copy, so the read-less page names none.
+  it("shows no raw purpose key on the read-less page", async () => {
+    stubEdge({
+      "GET /public/preferences/tok-123": () =>
+        jsonResponse({ title: "not found" }, 404),
+    });
+    render(
+      <UnsubscribeScreen token="tok-123" purpose="business_correspondence" />,
+    );
+    await screen.findByRole("button", {
+      name: /unsubscribe from these emails/i,
+    });
+    expect(
+      screen.queryByText(/business_correspondence/),
+    ).not.toBeInTheDocument();
+  });
+
+  it("calls a link with no token dead", () => {
+    stubEdge();
+    render(<UnsubscribeScreen />);
     expect(screen.getByText(/no longer valid/i)).toBeInTheDocument();
   });
 });

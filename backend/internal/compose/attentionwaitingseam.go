@@ -81,14 +81,15 @@ func (w attentionWaiting) Hidden(
 		return attention.HiddenWork{}, err
 	}
 	return attention.HiddenWork{
-		Shown:       got.Shown,
-		SetAside:    got.SetAside,
-		NotSales:    got.NotSales,
-		PastHorizon: got.PastHorizon,
-		Unlinked:    got.Unlinked,
-		Colleagues:  got.Colleagues,
-		InformsUs:   got.InformsUs,
-		Truncated:   got.Truncated,
+		Shown:            got.Shown,
+		SetAside:         got.SetAside,
+		NotSales:         got.NotSales,
+		PastHorizon:      got.PastHorizon,
+		Unlinked:         got.Unlinked,
+		Colleagues:       got.Colleagues,
+		InformsUs:        got.InformsUs,
+		PrivateUnchecked: got.PrivateUnchecked,
+		Truncated:        got.Truncated,
 	}, nil
 }
 
@@ -151,19 +152,21 @@ func (w attentionWaiting) asWaitingCustomers(
 			// the module's vocabulary to the queue's. Only "informs us" changes
 			// a ranking; unjudged and "asks us" both leave it alone, so the
 			// queue never needs the word.
-			AsksNothing:       row.OwedVerdict == activities.OwedVerdictInformsUs,
-			ConfirmedRequest:  row.OwedVerdict == activities.OwedVerdictAsksUs,
-			ActionUnconfirmed: row.OwedVerdict == "",
-			NonBuyer:          row.CaptureLabel == capturekind.Other || (!row.HasOpenDeal && supplier),
-			DirectRecipients:  row.DirectRecipients,
-			OwnerID:           row.OwnerID,
-			OwnerKnown:        row.OwnerKnown,
-			EarlierRequests:   row.EarlierRequests,
-			FirstAskedAt:      row.FirstAskedAt,
-			MeetingBookedAt:   row.MeetingBookedAt,
-			SenderWasStranger: row.SenderWasStranger,
-			BccOnly:           row.BccOnly,
-			ForeignLink:       row.ForeignLink,
+			AsksNothing:        row.OwedVerdict == activities.OwedVerdictInformsUs,
+			ConfirmedRequest:   row.OwedVerdict == activities.OwedVerdictAsksUs,
+			ActionUnconfirmed:  row.OwedVerdict == "",
+			JudgeWithheld:      row.JudgeWithheld,
+			OwnerWroteOnThread: row.OwnerWroteOnThread,
+			NonBuyer:           row.CaptureLabel == capturekind.Other || (!row.HasOpenDeal && supplier),
+			DirectRecipients:   row.DirectRecipients,
+			OwnerID:            row.OwnerID,
+			OwnerKnown:         row.OwnerKnown,
+			EarlierRequests:    row.EarlierRequests,
+			FirstAskedAt:       row.FirstAskedAt,
+			MeetingBookedAt:    row.MeetingBookedAt,
+			SenderWasStranger:  row.SenderWasStranger,
+			BccOnly:            row.BccOnly,
+			ForeignLink:        row.ForeignLink,
 		})
 	}
 	return out, nil

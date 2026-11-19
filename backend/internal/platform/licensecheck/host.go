@@ -17,13 +17,13 @@ package licensecheck
 // upstream's decision: a raw, gzipped or brotli-compressed module, decided by
 // the bytes rather than by a file name.
 //
-// THE ONE DIVERGENCE, and it is additive: a rejection is wrapped in ErrVerdict so
-// a caller can tell "the module judged this license" from "the module could not
-// run" without reading the message. The wording is unchanged; this repository
-// forbids classifying errors by message text (backend/gates/errmatch_test.go), and it is
-// right to — the two mean opposite things to a running installation, and a
-// reworded string upstream would silently turn every fault into a refusal. Worth
-// offering upstream so the divergence closes.
+// Two divergences, both additive. First, run() wraps a rejection in ErrVerdict.
+// A caller then tells "the module judged this license" from "the module could
+// not run" without reading the message. The wording is unchanged. This
+// repository forbids classifying errors by message text
+// (backend/gates/errmatch_test.go), because the two mean opposite things here.
+// Second, run() stops the module when its context ends, and reports that stop
+// as a fault rather than a verdict. Both are worth offering upstream.
 //
 // That commit is NEWER than the release module/VERSION pins, and the two are
 // expected to move independently: this side is the reader, and it reads every
@@ -151,8 +151,10 @@ func readAll(reader io.Reader, what string) ([]byte, error) {
 // run instantiates the module and returns its stdout. A non-zero exit is the
 // module's way of rejecting a license; run turns it into an error carrying the
 // module's stderr.
+//
+// The run ends with ctx, so a hung module cannot outlive its caller's budget.
 func run(ctx context.Context, module []byte, issuer, product string, generation int, token string) ([]byte, error) {
-	runtime := wazero.NewRuntime(ctx)
+	runtime := wazero.NewRuntimeWithConfig(ctx, wazero.NewRuntimeConfig().WithCloseOnContextDone(true))
 	//craft:ignore swallowed-errors the runtime is torn down after its single-shot verdict is already in hand; a close failure cannot change it
 	defer func() { _ = runtime.Close(ctx) }()
 	wasi_snapshot_preview1.MustInstantiate(ctx, runtime)
@@ -176,10 +178,22 @@ func run(ctx context.Context, module []byte, issuer, product string, generation 
 	if err == nil {
 		return stdout.Bytes(), nil
 	}
-	if _, ok := errors.AsType[*sys.ExitError](err); ok {
+	if exit, ok := errors.AsType[*sys.ExitError](err); ok {
+		if stoppedByContext(ctx, exit) {
+			return nil, fmt.Errorf("run module: stopped before the module answered: %w", exit)
+		}
 		return nil, fmt.Errorf("%w: %s", ErrVerdict, strings.TrimSpace(stderr.String()))
 	}
 	return nil, fmt.Errorf("run module: %w", err)
+}
+
+// stoppedByContext reports wazero's own stop on context end, which arrives as an
+// ExitError too. It said nothing about the license, so it must not read as a
+// refusal. A module that exited by itself keeps its verdict, even past the
+// deadline, and the context check stops a module from forging the stop code.
+func stoppedByContext(ctx context.Context, exit *sys.ExitError) bool {
+	code := exit.ExitCode()
+	return ctx.Err() != nil && (code == sys.ExitCodeDeadlineExceeded || code == sys.ExitCodeContextCanceled)
 }
 
 // decodeResult parses the module's JSON output.

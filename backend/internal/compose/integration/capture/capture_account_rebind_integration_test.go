@@ -12,7 +12,6 @@ package capture
 
 import (
 	"context"
-	"errors"
 	"testing"
 	"time"
 
@@ -65,7 +64,7 @@ func startImportReconnectingMidPage(t *testing.T, e *integration.SearchEnv, acco
 	if _, err := registry.Connect(grantCtx, "gmail", connector.Auth(account)); err != nil {
 		t.Fatalf("connecting %s: %v", account, err)
 	}
-	run, err := registry.StartBackfill(grantCtx, "gmail", ids.From[ids.UserKind](e.Rep1), 6, connector.BackfillEstimate{Messages: 25}, enqueueNothing)
+	run, err := registry.StartBackfill(grantCtx, capturemod.ProviderMailbox("gmail"), ids.From[ids.UserKind](e.Rep1), 6, connector.BackfillEstimate{Messages: 25}, enqueueNothing)
 	if err != nil {
 		t.Fatalf("StartBackfill: %v", err)
 	}
@@ -93,20 +92,6 @@ func TestAReauthOfTheSameAccountLetsAnInFlightPageCommit(t *testing.T) {
 	}
 	if scanned != 10 || len(cursor) == 0 {
 		t.Fatalf("the page was fenced off by its own human's reauth: scanned=%d cursor=%q", scanned, cursor)
-	}
-}
-
-// A rebind is the other case, and it must still fence: the page was fetched from
-// a mailbox this connection no longer points at, so its counters and its cursor
-// are not history the new account gets to inherit.
-func TestRebindingToAnotherAccountFencesAnInFlightPage(t *testing.T) {
-	e := integration.SetupSearch(t)
-	status, scanned, cursor := startImportReconnectingMidPage(t, e, "first@example.com", "second@example.com")
-	if scanned != 0 || len(cursor) != 0 {
-		t.Fatalf("the second mailbox was credited with the first one's page: scanned=%d cursor=%q", scanned, cursor)
-	}
-	if status != "cancelled" {
-		t.Fatalf("status = %s, want cancelled — every remaining page is fenced the same way, and a live run nothing can finish blocks every later start", status)
 	}
 }
 
@@ -143,28 +128,6 @@ func connectAndSync(t *testing.T, registry *capturemod.Registry, e *integration.
 	return connID
 }
 
-func TestReconnectingADifferentAccountDropsTheFirstAccountsWatermark(t *testing.T) {
-	e := integration.SetupSearch(t)
-	seedCaptureRole(t, e)
-	registry := newTestCaptureRegistry(e, newTestKeyvault(t, e))
-	registry.Register(&accountBoundConnector{pagedConnector: &pagedConnector{messages: 5, pageSize: 10}})
-
-	connID := connectAndSync(t, registry, e, "first@example.com")
-
-	grantCtx := humanWithScopes(e, e.Rep1, []principal.Scope{principal.ScopeRead})
-	if _, err := registry.Connect(grantCtx, "gmail", connector.Auth("second@example.com")); err != nil {
-		t.Fatalf("reconnecting as a different account: %v", err)
-	}
-
-	label, cursor := readConnectionAccount(t, e, connID)
-	if label == nil || *label != "second@example.com" {
-		t.Fatalf("account_label = %v, want second@example.com", label)
-	}
-	if len(cursor) != 0 {
-		t.Fatalf("sync_cursor = %q, want cleared — the second mailbox has never been read, and resuming from the first one's watermark skips everything before it", cursor)
-	}
-}
-
 func TestReconnectingTheSameAccountKeepsItsWatermark(t *testing.T) {
 	e := integration.SetupSearch(t)
 	seedCaptureRole(t, e)
@@ -183,32 +146,6 @@ func TestReconnectingTheSameAccountKeepsItsWatermark(t *testing.T) {
 	}
 }
 
-// The signature-enrichment answer belongs to the MAILBOX, not to the row that
-// happens to hold it. A rebind points that row at somebody else's mail, so one
-// contact's opt-out must not silently start governing another contact's — in
-// either direction.
-func TestReconnectingADifferentAccountDropsTheFirstAccountsSignatureAnswer(t *testing.T) {
-	e := integration.SetupSearch(t)
-	seedCaptureRole(t, e)
-	registry := newTestCaptureRegistry(e, newTestKeyvault(t, e))
-	registry.Register(&accountBoundConnector{pagedConnector: &pagedConnector{messages: 5, pageSize: 10}})
-
-	connID := connectAndSync(t, registry, e, "first@example.com")
-	grantCtx := humanWithScopes(e, e.Rep1, []principal.Scope{principal.ScopeRead})
-	off := false
-	if _, err := registry.SetSignatureEnrichment(grantCtx, "gmail", &off); err != nil {
-		t.Fatalf("switching the first mailbox off: %v", err)
-	}
-
-	if _, err := registry.Connect(grantCtx, "gmail", connector.Auth("second@example.com")); err != nil {
-		t.Fatalf("reconnecting as a different account: %v", err)
-	}
-
-	if answer := readSignatureAnswer(t, e, connID); answer != nil {
-		t.Fatalf("signature_enrich_enabled = %v, want cleared — the second mailbox never made that choice, and inheriting it applies one contact's answer to another contact's mail", *answer)
-	}
-}
-
 func TestReconnectingTheSameAccountKeepsItsSignatureAnswer(t *testing.T) {
 	e := integration.SetupSearch(t)
 	seedCaptureRole(t, e)
@@ -218,7 +155,7 @@ func TestReconnectingTheSameAccountKeepsItsSignatureAnswer(t *testing.T) {
 	connID := connectAndSync(t, registry, e, "same@example.com")
 	grantCtx := humanWithScopes(e, e.Rep1, []principal.Scope{principal.ScopeRead})
 	off := false
-	if _, err := registry.SetSignatureEnrichment(grantCtx, "gmail", &off); err != nil {
+	if _, err := registry.SetSignatureEnrichment(grantCtx, capturemod.ProviderMailbox("gmail"), &off); err != nil {
 		t.Fatalf("switching the mailbox off: %v", err)
 	}
 
@@ -245,39 +182,4 @@ func readSignatureAnswer(t *testing.T, e *integration.SearchEnv, connID ids.UUID
 		t.Fatalf("reading the connection's signature answer: %v", err)
 	}
 	return answer
-}
-
-func TestANewAccountMayImportANarrowerWindowThanTheOldOne(t *testing.T) {
-	e := integration.SetupSearch(t)
-	seedCaptureRole(t, e)
-	registry := newTestCaptureRegistry(e, newTestKeyvault(t, e))
-	registry.Register(&accountBoundConnector{pagedConnector: &pagedConnector{messages: 5, pageSize: 10}})
-	rep := ids.From[ids.UserKind](e.Rep1)
-	grantCtx := humanWithScopes(e, e.Rep1, []principal.Scope{principal.ScopeRead})
-	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
-
-	connectAndSync(t, registry, e, "first@example.com")
-	wide, err := registry.StartBackfill(grantCtx, "gmail", rep, 12, connector.BackfillEstimate{Messages: 5}, enqueueNothing)
-	if err != nil {
-		t.Fatalf("the first account's twelve-month import: %v", err)
-	}
-	done, _, _, err := registry.RunBackfillStep(wsCtx, wide.ID)
-	if err != nil || !done {
-		t.Fatalf("paging the first import to completion: done=%v err=%v", done, err)
-	}
-
-	if _, err := registry.Connect(grantCtx, "gmail", connector.Auth("second@example.com")); err != nil {
-		t.Fatalf("reconnecting as a different account: %v", err)
-	}
-
-	// Widen-only protects a mailbox from silently losing history it already
-	// imported. The second mailbox has imported nothing, so there is nothing to
-	// narrow — refusing here would leave the human with no way to import it at
-	// all short of importing a year of a mailbox they just connected.
-	if _, err := registry.StartBackfill(grantCtx, "gmail", rep, 3, connector.BackfillEstimate{Messages: 5}, enqueueNothing); err != nil {
-		if errors.Is(err, capturemod.ErrWindowNarrowing) {
-			t.Fatal("the new account inherited the previous account's import window")
-		}
-		t.Fatalf("the second account's three-month import: %v", err)
-	}
 }

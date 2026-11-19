@@ -74,6 +74,10 @@ const (
 	// substituted, because a manager who set this expects their own number. A
 	// Likely total wearing that label is the wrong number under a right word.
 	CaveatCallAbsent LandingCaveat = "call_absent"
+	// CaveatCallWithheld means the figure is the Likely measure because this
+	// reader may not see the calls about the population. It does not say
+	// whether one exists, so the reader is never told that none does.
+	CaveatCallWithheld LandingCaveat = "call_withheld"
 	// CaveatCallBelowActual means the authored call is less than the money
 	// already won. It is reported rather than corrected, because the call is
 	// somebody's stated belief and this code does not overrule it. A landing
@@ -81,13 +85,21 @@ const (
 	CaveatCallBelowActual LandingCaveat = "call_below_actual"
 )
 
+// SeenCall is the standing call as one reader may know it. Amount is nil when
+// no call stands or the reader may not see it, and Withheld tells the two apart.
+type SeenCall struct {
+	Amount   *int64
+	Withheld bool
+}
+
 // ProjectLanding answers where the period finishes.
 //
-// call is the current manager call for this period and scope, or nil. It is
-// only consulted for MeasureManagerCall. A Likely or weighted installation has
-// made a different choice, and quietly preferring an authored number would make
-// the setting a lie.
-func ProjectLanding(readings Readings, measure ForwardMeasure, call *int64) (Landing, error) {
+// call is the current manager call this reader sees. It is only consulted for
+// MeasureManagerCall. A Likely or weighted installation has made a different
+// choice, and preferring an authored number unasked would make the setting a
+// lie.
+func ProjectLanding(readings Readings, measure ForwardMeasure, seen SeenCall) (Landing, error) {
+	call := seen.Amount
 	switch measure {
 	case MeasureLikely:
 		return remainingLanding(readings, measure, readings.EvidenceMinor)
@@ -103,6 +115,9 @@ func ProjectLanding(readings Readings, measure ForwardMeasure, call *int64) (Lan
 				return Landing{}, err
 			}
 			out.Caveat = CaveatCallAbsent
+			if seen.Withheld {
+				out.Caveat = CaveatCallWithheld
+			}
 			return out, nil
 		}
 		system, err := remainingLanding(readings, MeasureLikely, readings.EvidenceMinor)
@@ -148,4 +163,30 @@ func remainingLanding(
 		WonMinor:       readings.WonMinor,
 		RemainingMinor: remaining,
 	}, nil
+}
+
+// Scenarios are the three finishes a manager weighs a goal against. The worst
+// is where nothing more closes, the expected is the landing itself, and the
+// best is where every open deal closes.
+type Scenarios struct {
+	WorstMinor int64
+	Expected   Landing
+	BestMinor  int64
+}
+
+// ProjectScenarios answers the three finishes from one set of readings. The
+// expected case is ProjectLanding under the same measure and call, so the
+// Overview and Progress cannot state two landings for one period.
+func ProjectScenarios(readings Readings, measure ForwardMeasure, call SeenCall) (Scenarios, error) {
+	expected, err := ProjectLanding(readings, measure, call)
+	if err != nil {
+		return Scenarios{}, err
+	}
+	// OpenMinor, like the other remaining readings, holds no won deal, so the
+	// best case is a sum of two disjoint sets.
+	best, err := addMinor(readings.WonMinor, readings.OpenMinor)
+	if err != nil {
+		return Scenarios{}, err
+	}
+	return Scenarios{WorstMinor: readings.WonMinor, Expected: expected, BestMinor: best}, nil
 }

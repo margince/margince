@@ -112,9 +112,11 @@ func TestCallbackRefusesARoleThatCannotCaptureBeforeExchangingTheCode(t *testing
 // nil-pool registry here would fail any read of the connection row.
 func TestABackfillPreviewAndStartRefuseARoleThatCannotCapture(t *testing.T) {
 	h := backfillHandlers{registry: capture.NewRegistry(nil, nil, readOnlyAuthority{}, nil)}
+	var preview crmcontracts.PreviewConnectorBackfillParams
+	var start crmcontracts.StartConnectorBackfillParams
 	for op, invoke := range map[string]func(http.ResponseWriter, *http.Request){
-		"preview": func(w http.ResponseWriter, r *http.Request) { h.PreviewConnectorBackfill(w, r, "gmail") },
-		"start":   func(w http.ResponseWriter, r *http.Request) { h.StartConnectorBackfill(w, r, "gmail") },
+		"preview": func(w http.ResponseWriter, r *http.Request) { h.PreviewConnectorBackfill(w, r, "gmail", preview) },
+		"start":   func(w http.ResponseWriter, r *http.Request) { h.StartConnectorBackfill(w, r, "gmail", start) },
 	} {
 		rec := httptest.NewRecorder()
 		req := httptest.NewRequest(http.MethodPost, "/v1/connectors/gmail/backfill",

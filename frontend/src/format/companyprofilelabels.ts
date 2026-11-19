@@ -27,6 +27,12 @@ const PROFILE_FIELD_LABELS: Record<string, MessageKey> = {
   history: "co.profileField.history",
 };
 
+// The key of a company profile field's own label, for a surface that has its
+// own words for other fields and falls back to these.
+export function profileFieldLabelKey(field: string): MessageKey | undefined {
+  return PROFILE_FIELD_LABELS[field];
+}
+
 // The onboarding wording is the fallback, so a field added there still reads
 // as words rather than as a column name here.
 export function profileFieldLabel(field: string, t: Translator): string {

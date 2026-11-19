@@ -24,8 +24,8 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/rowvalue"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -238,29 +238,19 @@ func scanReportRows(pgRows pgx.Rows, columns []string) ([]map[string]any, error)
 	// "unknown". Normalized here so no transport can put null on the wire —
 	// reportOutcome.Rows is marshalled straight through on the tool surface.
 	rows := []map[string]any{}
+	reader := rowvalue.NewReader()
 	for pgRows.Next() {
-		values, err := pgRows.Values()
+		values, err := reader.Values(pgRows)
 		if err != nil {
 			return nil, err
 		}
 		row := make(map[string]any, len(columns))
 		for i, col := range columns {
-			row[col] = wireValue(values[i])
+			row[col] = rowvalue.Document(values[i])
 		}
 		rows = append(rows, row)
 	}
 	return rows, pgRows.Err()
-}
-
-// wireValue renders driver-native values JSON-friendly: uuids as their
-// canonical string, not a 16-byte array.
-//
-//craft:ignore naked-any report rows are schemaless by design — values arrive driver-native and leave JSON-wire-shaped
-func wireValue(v any) any {
-	if raw, ok := v.([16]byte); ok {
-		return ids.UUID(raw).String()
-	}
-	return v
 }
 
 // quoteIdent admits caller-chosen aggregate aliases into the SQL text safely:

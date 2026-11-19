@@ -80,7 +80,8 @@ func (in UpdateActivityInput) clearsAValue(current crmcontracts.Activity) bool {
 	return (in.clears("due_at") && current.DueAt != nil) ||
 		(in.clears("remind_at") && current.RemindAt != nil) ||
 		(in.clears("assignee_id") && current.AssigneeId != nil) ||
-		(in.clearsDeclared(fieldCallOutcome, current) && current.CallOutcome != nil)
+		(in.clearsDeclared(fieldCallOutcome, current) && current.CallOutcome != nil) ||
+		(in.clears(auditFieldMeetingStatus) && current.MeetingStatus != nil)
 }
 
 // asksOnlyForTheDoneItHolds is true when the patch sets is_done to true and

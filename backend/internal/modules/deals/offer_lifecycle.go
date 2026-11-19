@@ -206,15 +206,20 @@ func (s *Store) AcceptOffer(ctx context.Context, id ids.OfferID, ifVersion *int6
 		}
 
 		dealID := ids.From[ids.DealKind](ids.UUID(current.DealId))
-		dealChanged, err := s.syncDealAmountFromOffer(ctx, tx, dealID, current)
+		dealSync, err := s.syncDealAmountFromOffer(ctx, tx, dealID, current)
 		if err != nil {
 			return err
 		}
-		allocated, err := syncDealProductsFromOffer(ctx, tx, dealID, current)
+		dealChanged := dealSync.after
+		allocatedBefore, allocated, err := syncDealProductsFromOffer(ctx, tx, dealID, current)
 		if err != nil {
 			return err
 		}
 		dealChanged = noteAllocations(dealChanged, allocated)
+		dealBefore := dealSync.before
+		if allocated != nil {
+			dealBefore = withProducts(dealBefore, allocatedBefore)
+		}
 
 		auditID, err := storekit.Audit(ctx, tx, "update", "offer", id.UUID, p.Before(),
 			acceptedOfferImage(now, dealChanged))
@@ -224,18 +229,8 @@ func (s *Store) AcceptOffer(ctx context.Context, id ids.OfferID, ifVersion *int6
 		if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, offerAcceptedPayload(current)); err != nil {
 			return fmt.Errorf("emit offer.accepted: %w", err)
 		}
-		// The paired deal.updated carries the FULL set of deal columns the sync
-		// actually wrote — including the re-frozen fx_rate_to_base/fx_rate_date
-		// on a closed deal — so a subscriber never retains stale
-		// base-currency state. An accept that priced the deal at what it already
-		// held wrote none, and emits nothing: a deal.updated naming no field
-		// tells a subscriber the deal changed when it did not.
-		if len(dealChanged) > 0 {
-			if err := storekit.EmitEvent(ctx, tx, auditID, dealID.UUID, crmcontracts.PublicEventDealUpdated{
-				ChangedFields: dealChanged,
-			}); err != nil {
-				return fmt.Errorf("emit paired deal.updated: %w", err)
-			}
+		if err := auditDealRepricing(ctx, tx, dealID, id, dealBefore, dealChanged); err != nil {
+			return err
 		}
 		if out, err = readOfferWithLines(ctx, tx, id, storekit.LiveOnly); err != nil {
 			return fmt.Errorf("read accepted offer: %w", err)

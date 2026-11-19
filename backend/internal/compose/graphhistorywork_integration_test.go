@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
@@ -126,7 +127,7 @@ func TestHistoricalGraphArrivalsCoalesceUntilTheImportEnds(t *testing.T) {
 	if reads := observer.folds.Load(); reads != 6 {
 		t.Fatalf("existing-pair removal needed %d extra folds, want two", reads-4)
 	}
-	if _, err := b.registry.CancelBackfill(b.human, "gmail", ids.From[ids.UserKind](b.env.Rep1)); err != nil {
+	if _, err := b.registry.CancelBackfill(b.human, capture.ProviderMailbox("gmail"), ids.From[ids.UserKind](b.env.Rep1)); err != nil {
 		t.Fatal(err)
 	}
 	system := principal.SystemActing(principal.WithWorkspaceID(context.Background(), b.env.WS), "system:graph_edge_reconcile")

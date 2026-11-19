@@ -164,18 +164,16 @@ func stagedActionFrom(a crmcontracts.Approval, withPayload bool) agents.StagedAp
 		CreatedAt:      a.CreatedAt,
 		ExpiresAt:      a.ExpiresAt,
 		DecidedAt:      a.DecidedAt,
+		AwaitingAgent:  a.AwaitingAgent != nil && *a.AwaitingAgent,
+		EffectFailure:  derefString(a.EffectFailure),
+		DiffHash:       derefString(a.DiffHash),
+		TargetType:     derefString(a.TargetEntityType),
 	}
 	// A withheld plan stays behind here too, whatever the wire carried.
 	withheld := approvalplan.Withheld(a.Preview)
 	if a.Summary != nil && !withheld {
 		out.Summary = *a.Summary
 		out.SummaryParts = a.SummaryParts
-	}
-	if a.DiffHash != nil {
-		out.DiffHash = *a.DiffHash
-	}
-	if a.TargetEntityType != nil {
-		out.TargetType = *a.TargetEntityType
 	}
 	out.TargetID = optionalID(a.TargetEntityId)
 	out.BundleID = optionalID(a.BundleId)

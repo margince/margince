@@ -22,6 +22,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/threadverdict"
 )
 
 // ThreadHoldsItsCounterparty reports whether the thread carrying this activity
@@ -83,8 +84,5 @@ func CounterpartyHeldOn(alias string) string {
 	held := "'" + strings.Join(append(slices.Clone(verdictProofReasons), audienceReasonInheritedVerdict), "', '") + "'"
 	return fmt.Sprintf(`(%[1]s.restricted_at IS NOT NULL
 		OR (`+"NOT ("+auth.WorkspaceAudienceSQL("%[1]s")+")"+` AND %[1]s.audience_reason IN (%[2]s))
-		OR EXISTS (
-		      SELECT 1 FROM capture_thread_verdict v
-		       WHERE v.thread_key = %[1]s.thread_key AND %[1]s.thread_key <> ''
-		         AND v.status IN ('held', 'unsure', 'held_by_owner', 'pending')))`, alias, held)
+		OR `+threadverdict.AnySeatHoldsSQL("%[1]s")+`)`, alias, held)
 }

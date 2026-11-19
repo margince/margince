@@ -36,6 +36,23 @@ type EmailSender interface {
 	SendEmail(ctx context.Context, auth Auth, msg EmailMessage) (SendReceipt, error)
 }
 
+// PriorSendLookup is how a mail sender declares whether a retry can find an
+// earlier attempt at the provider. A sender that does not implement it can,
+// as the EmailSender contract asks. One answering false gets each send marked
+// in flight, and a retry of an unlearned outcome parks.
+type PriorSendLookup interface {
+	DetectsPriorSend() bool
+}
+
+// DetectsPriorSend asks a resolved mail sender whether a retry can find an
+// earlier attempt.
+//
+//craft:ignore naked-any the type assertion seam: a sender is whichever connector the resolver bound
+func DetectsPriorSend(sender any) bool {
+	lookup, ok := sender.(PriorSendLookup)
+	return !ok || lookup.DetectsPriorSend()
+}
+
 // AttachmentCarrier is how a sending connector declares whether it can transmit
 // files.
 //

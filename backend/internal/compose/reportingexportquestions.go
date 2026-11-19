@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+	"github.com/margince/margince/backend/internal/compose/reportingcsv"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/shared/kernel/formulacell"
@@ -81,7 +82,7 @@ func keptAnswerRows(question crmcontracts.ReportingCardQuestion, answer crmcontr
 				continue
 			}
 			unit, currency, coverage := money.of(measure, row)
-			value := csvAnswerNumber(row[column])
+			value := reportingcsv.AnswerCell(row[column], unit == reportingMoney, currency)
 			if coverage != "ok" {
 				value = ""
 			}
@@ -109,12 +110,12 @@ func (m answerMoney) of(measure analyticsquery.Measure, row map[string]any) (uni
 		if own == "" {
 			return "", "", "mixed_currency"
 		}
-		return reportingMinorUnits, own, "ok"
+		return reportingMoney, own, "ok"
 	}
 	if m.base == "" {
 		return "", "", "no_base_currency"
 	}
-	return reportingMinorUnits, m.base, "ok"
+	return reportingMoney, m.base, "ok"
 }
 
 // groupLabel names a row by its group keys, a company or project by the name
@@ -133,18 +134,4 @@ func groupLabel(groupBy []string, row map[string]any, labels *crmcontracts.Analy
 		}
 	}
 	return strings.Join(parts, " · ")
-}
-
-// csvAnswerNumber writes a measure as the analytics answer carried it.
-//
-//craft:ignore naked-any an answer row's values are schemaless JSON, decoded as any
-func csvAnswerNumber(value any) string {
-	switch number := value.(type) {
-	case nil:
-		return ""
-	case float64:
-		return reportingCSVNumber(&number)
-	default:
-		return formulacell.Guard(fmt.Sprint(number))
-	}
 }

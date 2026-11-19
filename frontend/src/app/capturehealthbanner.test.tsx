@@ -2,7 +2,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { formatDateTime } from "../format/format";
+import { browserZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
 import { CaptureHealthBanner } from "./capturehealthbanner";
 
@@ -11,6 +13,7 @@ function mount(
   failure = false,
   extra?: string,
   dismissConflict = false,
+  sync: Record<string, string> = {},
 ) {
   let dismissed = false;
   const fetch = vi.fn(async (input: RequestInfo | URL) => {
@@ -41,6 +44,7 @@ function mount(
                   account_label: "mailbox@example.test",
                   concern,
                   concern_since: "2026-10-01T09:00:00Z",
+                  ...sync,
                 },
                 ...(extra
                   ? [
@@ -160,4 +164,53 @@ it("shows a refused dismissal and refreshes its health evidence", async () => {
   expect(
     screen.getByText("mailbox@example.test: No recent mail delivered"),
   ).toBeTruthy();
+});
+
+describe("a rate-limited sync", () => {
+  const retry = "2026-10-01T13:00:00Z";
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("names the provider's limit and when the sync tries again", async () => {
+    vi.setSystemTime(new Date("2026-10-01T12:00:00Z"));
+    mount("sync_failing", false, undefined, false, {
+      last_sync_error_class: "rate_limited",
+      next_sync_due_at: retry,
+    });
+    expect(
+      await screen.findByText(
+        "mailbox@example.test: The provider is limiting requests. Capture is slower than usual; nothing is lost.",
+      ),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(
+        `Next try at ${formatDateTime(retry, "en", browserZone())}`,
+      ),
+    ).toBeTruthy();
+  });
+
+  it("says it is trying again once the retry time has passed", async () => {
+    vi.setSystemTime(new Date("2026-10-01T13:00:00Z"));
+    mount("sync_failing", false, undefined, false, {
+      last_sync_error_class: "rate_limited",
+      next_sync_due_at: retry,
+    });
+    expect(await screen.findByText("Trying again now")).toBeTruthy();
+    expect(screen.queryByText(/^Next try at /)).toBeNull();
+  });
+});
+
+it("keeps the plain failure words for a sync that fails another way", async () => {
+  mount("sync_failing", false, undefined, false, {
+    last_sync_error_class: "unreachable",
+    next_sync_due_at: "2026-10-01T13:00:00Z",
+  });
+  expect(
+    await screen.findByText("mailbox@example.test: Sync is failing"),
+  ).toBeTruthy();
+  expect(screen.queryByText(/^Next try at |^Trying again now$/)).toBeNull();
 });

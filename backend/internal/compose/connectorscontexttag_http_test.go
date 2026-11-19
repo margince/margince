@@ -18,6 +18,7 @@ import (
 	"strings"
 	"testing"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -42,7 +43,7 @@ func TestSettingAWordOnAMailboxTheCallerHasNotConnectedReadsAsAbsent(t *testing.
 	req := httptest.NewRequest(http.MethodPut, "/v1/connectors/gmail/context-tag",
 		strings.NewReader(`{"tag_id":null}`))
 	req.Header.Set("Content-Type", "application/json")
-	h.SetConnectorContextTag(rec, asSeat(req), "gmail")
+	h.SetConnectorContextTag(rec, asSeat(req), "gmail", crmcontracts.SetConnectorContextTagParams{})
 
 	if rec.Code != http.StatusNotFound {
 		t.Errorf("status = %d, want 404 — a mailbox this caller has not connected is not theirs to "+
@@ -59,7 +60,7 @@ func TestSettingAWordWithNoRegistryComposedIsUnwiredRatherThanBroken(t *testing.
 	req := httptest.NewRequest(http.MethodPut, "/v1/connectors/gmail/context-tag",
 		strings.NewReader(`{"tag_id":null}`))
 	req.Header.Set("Content-Type", "application/json")
-	h.SetConnectorContextTag(rec, req, "gmail")
+	h.SetConnectorContextTag(rec, req, "gmail", crmcontracts.SetConnectorContextTagParams{})
 
 	if rec.Code != http.StatusNotImplemented {
 		t.Errorf("status = %d, want 501 — an unwired seam is not a failure", rec.Code)
@@ -75,7 +76,7 @@ func TestAMalformedBodyIsRefusedBeforeAnythingIsWritten(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPut, "/v1/connectors/gmail/context-tag",
 		strings.NewReader(`{"tag_id":`))
 	req.Header.Set("Content-Type", "application/json")
-	h.SetConnectorContextTag(rec, req, "gmail")
+	h.SetConnectorContextTag(rec, req, "gmail", crmcontracts.SetConnectorContextTagParams{})
 
 	if rec.Code == http.StatusOK {
 		t.Error("a malformed body answered 200")
@@ -89,9 +90,11 @@ func TestAMalformedBodyIsRefusedBeforeAnythingIsWritten(t *testing.T) {
 // names neither is a mistake, refused before the registry is asked.
 func TestAConnectorSettingLeftOutOfTheBodyIsRefused(t *testing.T) {
 	h := connectorHandlers{registry: capture.NewRegistry(nil, nil, deadAuthority{}, nil)}
+	var tag crmcontracts.SetConnectorContextTagParams
+	var enrich crmcontracts.SetConnectorSignatureEnrichmentParams
 	for name, set := range map[string]func(http.ResponseWriter, *http.Request){
-		"context-tag":          func(w http.ResponseWriter, r *http.Request) { h.SetConnectorContextTag(w, r, "gmail") },
-		"signature-enrichment": func(w http.ResponseWriter, r *http.Request) { h.SetConnectorSignatureEnrichment(w, r, "gmail") },
+		"context-tag":          func(w http.ResponseWriter, r *http.Request) { h.SetConnectorContextTag(w, r, "gmail", tag) },
+		"signature-enrichment": func(w http.ResponseWriter, r *http.Request) { h.SetConnectorSignatureEnrichment(w, r, "gmail", enrich) },
 	} {
 		rec := httptest.NewRecorder()
 		req := httptest.NewRequest(http.MethodPut, "/v1/connectors/gmail/"+name, strings.NewReader(`{}`))

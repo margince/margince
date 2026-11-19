@@ -81,6 +81,9 @@ type Validator func(text string) error
 const maxLadderWalks = 3
 
 func (r *Router) CompleteStructured(ctx context.Context, task Task, req model.Request, validate Validator) (model.Response, RouteInfo, error) {
+	if err := r.refuseUnbound(); err != nil {
+		return model.Response{}, RouteInfo{}, err
+	}
 	if _, ok := taskLadders[task]; !ok {
 		return model.Response{}, RouteInfo{}, fmt.Errorf("ai: unknown task %q", task)
 	}

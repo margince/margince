@@ -67,13 +67,13 @@ func TestReplacingAnAddressWithAnUnrelatedOneFilesNothing(t *testing.T) {
 func TestAddingASubdomainOfAHeldDomainToACompanyFilesOnePair(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	holder := e.createNamedCompany(ctx, t, "Example Group", "example.com")
+	holder := e.createNamedCompany(ctx, t, "Example Group", "example-group.test")
 	edited := e.createNamedCompany(ctx, t, "Cloudy", "cloudy.test")
 	if field := e.filedPairField(ctx, t, edited, holder); field != "" {
 		t.Fatalf("a pair with field %q before the edit, want none", field)
 	}
 
-	desired := []CompanyDomainInput{{Domain: "cloudy.test", IsPrimary: true}, {Domain: "cloud.example.com"}}
+	desired := []CompanyDomainInput{{Domain: "cloudy.test", IsPrimary: true}, {Domain: "cloud.example-group.test"}}
 	if _, err := e.store.UpdateCompany(ctx, edited, UpdateCompanyInput{Domains: &desired}); err != nil {
 		t.Fatalf("add the domain: %v", err)
 	}
@@ -90,7 +90,7 @@ func TestAddingASubdomainOfAHeldDomainToACompanyFilesOnePair(t *testing.T) {
 func TestAddingAnUnrelatedDomainToACompanyFilesNothing(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	e.createNamedCompany(ctx, t, "Example Group", "example.com")
+	e.createNamedCompany(ctx, t, "Example Group", "example-group.test")
 	edited := e.createNamedCompany(ctx, t, "Cloudy", "cloudy.test")
 
 	desired := []CompanyDomainInput{{Domain: "cloudy.test", IsPrimary: true}, {Domain: "cloud.other.test"}}

@@ -40,7 +40,7 @@ func TestBootSetMailPosturesWinInsideTheMailboxGateAndTheSink(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := registry.SetMailPosture(grantCtx, "graph", capturemod.PostureShared, false); err != nil {
+	if _, err := registry.SetMailPosture(grantCtx, capturemod.ProviderMailbox("graph"), capturemod.PostureShared, false); err != nil {
 		t.Fatalf("the boot-set opt-in did not admit a shared mailbox: %v", err)
 	}
 	if err := registry.SyncOnce(grantCtx, connID); err != nil {

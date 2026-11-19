@@ -134,6 +134,26 @@ func TestSafeFilenameTruncatesVisiblyAndOnARuneBoundary(t *testing.T) {
 	}
 }
 
+// The extension is what the tile's type badge and the downloaded file read, so a
+// long name is shortened in the middle and keeps it.
+func TestSafeFilenameKeepsTheExtensionWhenItShortensALongName(t *testing.T) {
+	for _, c := range []struct{ name, in, wantSuffix string }{
+		{"ascii", strings.Repeat("a", 500) + ".pdf", "….pdf"},
+		{"umlaut and han", strings.Repeat("Lüdenscheidt 李小龙 ", 30) + ".txt", "….txt"},
+		{"two byte cut", strings.Repeat("é", 300) + ".docx", "….docx"},
+		{"no extension", strings.Repeat("a", 500), "…"},
+		{"a dotted sentence is no extension", strings.Repeat("a", 300) + "." + strings.Repeat("b", 40), "…"},
+	} {
+		got := extension.SafeFilename(c.in, 1)
+		if !strings.HasSuffix(got, c.wantSuffix) {
+			t.Errorf("%s: %q does not end in %q", c.name, got, c.wantSuffix)
+		}
+		if len(got) > 200 || !utf8.ValidString(got) {
+			t.Errorf("%s: %d bytes, valid UTF-8 %v; want at most 200 and valid", c.name, len(got), utf8.ValidString(got))
+		}
+	}
+}
+
 // The four bounds are pinned to their VALUES, not to a symbol. Comparing the
 // published constant to the alias that is defined as it — which is how mail
 // declares its four — compiles to `20 != 20` and can only fail by panicking.

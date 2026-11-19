@@ -23,17 +23,17 @@ func TestAnOwnerCursorMintedUnderTheIDSortIsRefused(t *testing.T) {
 		t.Fatal(err)
 	}
 	key := ids.NewV7().String()
-	legacy := mustEncodeOpaque(t, Cursor{CreatedAt: time.Date(2026, 7, 11, 12, 0, 0, 0, time.UTC), ID: ids.NewV7(), SortField: "owner_id", SortKey: &key})
-	if _, err := sorted.KeysetClause(legacy, arg); !errors.As(err, new(*CursorSortMismatchError)) {
+	legacy := mustEncodeOpaque(t, Cursor{Scope: "list", CreatedAt: time.Date(2026, 7, 11, 12, 0, 0, 0, time.UTC), ID: ids.NewV7(), SortField: "owner_id", SortKey: &key})
+	if _, err := sorted.KeysetClause("list", legacy, arg); !errors.As(err, new(*CursorSortMismatchError)) {
 		t.Fatalf("a cursor from the id sort: err = %v, want CursorSortMismatchError", err)
 	}
 
 	name := "Anna Becker"
-	current, err := sorted.EncodePageCursor(&name, time.Date(2026, 7, 11, 12, 0, 0, 0, time.UTC), ids.NewV7())
+	current, err := sorted.EncodePageCursor("list", &name, time.Date(2026, 7, 11, 12, 0, 0, 0, time.UTC), ids.NewV7())
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := sorted.KeysetClause(current, arg); err != nil {
+	if _, err := sorted.KeysetClause("list", current, arg); err != nil {
 		t.Fatalf("a cursor this sort minted itself was refused: %v", err)
 	}
 }

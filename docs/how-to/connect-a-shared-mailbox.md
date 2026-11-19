@@ -80,7 +80,8 @@ curl -sS -X POST "$API/v1/shared-mailboxes" -b "$COOKIE" -H 'Content-Type: appli
 }'
 ```
 
-Margince logs in once to check the password. A refused login answers `422 imap_login_rejected`.
+Margince logs in once to check the password. A refused login answers `422 imap_login_rejected`. A shared
+mailbox only captures, so `imap.smtp` is refused with `422 shared_mailbox_cannot_send`.
 
 ## Microsoft 365
 

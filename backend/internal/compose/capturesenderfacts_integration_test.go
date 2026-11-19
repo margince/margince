@@ -186,7 +186,7 @@ func TestAnExclusionNamesTheMemberWhoAddedIt(t *testing.T) {
 	e := integration.Setup(t)
 	store := capture.NewExclusionStore(InstallationDB(e.Pool))
 	seat := purgeCtx(e, e.Rep1)
-	added, err := store.Add(seat, capture.ExclusionScopeUser, capture.ExclusionKindDomain, "newsletter.example")
+	added, err := store.Add(seat, capture.ExclusionScopeUser, capture.ExclusionKindDomain, "newsletter.example", ids.Nil)
 	if err != nil {
 		t.Fatalf("adding the rule: %v", err)
 	}

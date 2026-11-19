@@ -55,6 +55,26 @@ function callDetail(
   );
 }
 
+// The call beside won plus Likely. A reader who may not see calls is told
+// nothing about one, since "none submitted" would be a claim about it.
+function answerSentence(
+  readings: Readings,
+  money: (minor: number) => string,
+  t: ReturnType<typeof useT>,
+): string {
+  const evidence = money(readings.won_minor + readings.evidence_minor);
+  const call = readings.current_call;
+  if (call) {
+    return t("forecast.answerWithCall", {
+      call: money(call.amount_minor),
+      evidence,
+    });
+  }
+  return readings.call_withheld
+    ? t("forecast.answerCallWithheld", { evidence })
+    : t("forecast.answerNoCall", { evidence });
+}
+
 // The answer, in one sentence and then in three readings. A shared view has no
 // deals panel, so it passes no `onOpenDeals`.
 export function ForecastAnswer({
@@ -101,16 +121,7 @@ export function ForecastAnswer({
           {/* The call and the supported figure, and the gap between them. A
               reader shown only one of the two has no way to tell whether the
               call is ahead of the evidence or behind it. */}
-          <p>
-            {call
-              ? t("forecast.answerWithCall", {
-                  call: money(call.amount_minor),
-                  evidence: money(readings.won_minor + readings.evidence_minor),
-                })
-              : t("forecast.answerNoCall", {
-                  evidence: money(readings.won_minor + readings.evidence_minor),
-                })}
-          </p>
+          <p>{answerSentence(readings, money, t)}</p>
           {/* The same answer as one shape: what is banked, what is Likely, and
               the call across them. The two are DISJOINT on the server, since
               Likely counts open deals only, so they are laid end to end. */}

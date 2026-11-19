@@ -6,7 +6,6 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { writeMessage } from "../../design-system/richtext-testing";
 import { pickOption } from "../../design-system/select-testing";
-import { ComposeModal } from "./compose";
 import {
   installComposeClock,
   jsonResponse,
@@ -15,6 +14,7 @@ import {
   render,
   stubRoutes,
 } from "./compose.testkit";
+import { ComposeWindow } from "./composewindow";
 import type { EditSeed } from "./schedulededit";
 
 // Which deal a message to a contact is about.
@@ -75,7 +75,7 @@ function openContactComposer(
     "POST /emails": () => jsonResponse({ id: "sent-1" }, 202),
   });
   render(
-    <ComposeModal
+    <ComposeWindow
       entityType="contact"
       entityId="c-1"
       contactId="c-1"
@@ -274,7 +274,7 @@ it("saves the chosen deal and uses the same filing after reopening", async () =>
     "POST /emails": () => jsonResponse({ id: "sent-1" }, 202),
   });
   const composer = () => (
-    <ComposeModal
+    <ComposeWindow
       entityType="contact"
       entityId="c-1"
       contactId="c-1"
@@ -340,7 +340,7 @@ it("keeps an explicit cleared filing instead of reviving an agent's old deal", a
       }),
   });
   render(
-    <ComposeModal
+    <ComposeWindow
       entityType="contact"
       entityId="c-1"
       contactId="c-1"
@@ -392,7 +392,7 @@ it("keeps the saved deal while its visible choices are still loading", async () 
       }),
   });
   render(
-    <ComposeModal
+    <ComposeWindow
       entityType="contact"
       entityId="c-1"
       contactId="c-1"
@@ -444,7 +444,7 @@ it("saves a cleared deal from an older draft even when its words stay the same",
     "PUT /mail-drafts": () => jsonResponse({ ...saved, version: 4 }),
   });
   render(
-    <ComposeModal
+    <ComposeWindow
       entityType="contact"
       entityId="c-1"
       contactId="c-1"

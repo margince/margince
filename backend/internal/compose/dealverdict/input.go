@@ -46,6 +46,15 @@ type Input struct {
 	StageMoves   []StageMove
 	Prior        []PriorAction
 	Activities   []Activity
+	// PrivateMail is mail limited to its participants and filed on the deal.
+	// It shows the deal was worked, so only its date reaches the prompt, never
+	// a direction, subject, body or address.
+	PrivateMail []PrivateMail
+}
+
+// PrivateMail is the date of one email the deal's whole audience may not read.
+type PrivateMail struct {
+	OccurredAt time.Time
 }
 
 // Activity is one logged mail, meeting, call or note, newest last.

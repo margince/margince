@@ -23,6 +23,8 @@ const (
 	ReasonEmployerWillCreate         ReasonCode = "employer_will_create"
 	ReasonCompanyNameEmpty           ReasonCode = "company_name_empty"
 	ReasonDomainHeld                 ReasonCode = "domain_held"
+	ReasonCompanyDomainMatched       ReasonCode = "company_domain_matched"
+	ReasonStoredValuesKept           ReasonCode = "stored_values_kept"
 	ReasonLinkedinHeld               ReasonCode = "linkedin_held"
 	ReasonRecordArchived             ReasonCode = "record_archived"
 	ReasonCannotCreate               ReasonCode = "cannot_create"
@@ -178,6 +180,16 @@ var reasonCatalog = withUndoReasons(withActivityReasons(withDealReasons(map[Reas
 		textlang.German:     "Diese Domain gehört im CRM bereits einem anderen Unternehmen, daher kann die Zeile kein zweites Unternehmen damit anlegen.",
 		textlang.Vietnamese: "Tên miền này đã thuộc về một công ty khác trong CRM nên hàng không thể tạo công ty thứ hai với nó.",
 	}},
+	ReasonCompanyDomainMatched: {params: []string{paramValue}, text: map[textlang.Lang]string{
+		textlang.English:    "The company that already holds the domain {value} takes this row, so no second company is created.",
+		textlang.German:     "Das Unternehmen, dem die Domain {value} bereits gehört, übernimmt diese Zeile. Es wird kein zweites Unternehmen angelegt.",
+		textlang.Vietnamese: "Công ty đã sở hữu tên miền {value} nhận hàng này, nên không tạo công ty thứ hai.",
+	}},
+	ReasonStoredValuesKept: {params: []string{paramColumn}, text: map[textlang.Lang]string{
+		textlang.English:    "The row neither created this record nor names it by id, so it keeps its own {column}. The row fills only empty fields.",
+		textlang.German:     "Die Zeile hat diesen Datensatz weder angelegt noch per ID benannt, daher bleibt sein Wert für {column}. Die Zeile füllt nur leere Felder.",
+		textlang.Vietnamese: "Hàng này không tạo bản ghi này và không nêu nó theo ID, nên giữ nguyên {column} của nó. Hàng chỉ điền các trường còn trống.",
+	}},
 	ReasonLinkedinHeld: {params: nil, text: map[textlang.Lang]string{
 		textlang.English:    "This LinkedIn URL is already held by another record in the CRM, so the row cannot claim it.",
 		textlang.German:     "Diese LinkedIn-URL gehört im CRM bereits einem anderen Datensatz, daher kann die Zeile sie nicht beanspruchen.",
@@ -279,7 +291,7 @@ var reasonCatalog = withUndoReasons(withActivityReasons(withDealReasons(map[Reas
 		textlang.Vietnamese: "Tham chiếu {ref:q} đã đại diện cho một công ty khác từ lần nhập trước nên hàng này không được áp dụng. Hãy dùng tham chiếu mới cho công ty này hoặc sửa cột mã.",
 	}},
 	ReasonRowKeyRepeated: {params: []string{paramColumn, paramValue, "line"}, text: map[textlang.Lang]string{
-		textlang.English:    "The “{column}” value “{value}” is already used by line {line}. Each row needs its own, because it is what a re-import matches on and what an undo finds this row by.",
+		textlang.English:    "The “{column}” value “{value}” is already used by row {line}. Each row needs its own, because it is what a re-import matches on and what an undo finds this row by.",
 		textlang.German:     "Der Wert {value:q} der Spalte {column:q} wird bereits in Zeile {line} verwendet. Jede Zeile braucht einen eigenen, weil ein erneuter Import und das Rückgängigmachen die Zeile daran erkennen.",
 		textlang.Vietnamese: "Giá trị {value:q} của cột {column:q} đã được dùng ở dòng {line}. Mỗi hàng cần một giá trị riêng vì nhập lại và hoàn tác nhận ra hàng theo giá trị đó.",
 	}},

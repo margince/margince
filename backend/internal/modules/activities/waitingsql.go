@@ -217,7 +217,10 @@ var waitingSelectSQL = `
 	       coalesce(a.thread_key, ''), coalesce(a.channel_provider, ''),
 	       ` + bookedMeetingSQL("$%[1]d", "%[19]s") + `,
 	       ` + strangerMailSQL + `,
-	       a.sender_is_machine
+	       a.sender_is_machine,
+	       -- Slot 23 is withheldColumns: whether no model will judge a, and who
+	       -- of ours wrote on its thread first.
+	       %[23]s
 	  FROM activity a
 	  LEFT JOIN activity_link wl ON wl.activity_id = a.id AND (%[3]s)
 	  -- Who wrote. The sender participant is where capture records the address,
