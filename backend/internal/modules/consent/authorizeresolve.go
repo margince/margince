@@ -19,6 +19,7 @@ package consent
 // make visible.
 
 import (
+	"cmp"
 	"context"
 	"errors"
 	"fmt"
@@ -352,9 +353,9 @@ func stagedRequestFor(req commsauthz.TransmitRequest, r connector.Recipient, cla
 		// here, never trusted: a voided invoice or an ended employment refuses
 		// at transmit exactly as it would have at staging.
 		Evidence: staged.evidence,
-		// The conversation, carried from the delivery row. Without it the thread
-		// arm cannot run at transmit and a reply authorized at staging parks.
-		ThreadKey: threadKey,
+		// The conversation staging asked about: the one a reply on a new topic
+		// answers, else the delivery's own. Without it a staged reply parks.
+		ThreadKey: cmp.Or(staged.evidence.AnsweredThread, threadKey),
 		// The records this message is filed under, carried the same way.
 		// Without it the live-deal arm can never fire at transmit, and a
 		// message resolved through a staked deal rather than a thread parks

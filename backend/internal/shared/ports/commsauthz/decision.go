@@ -101,6 +101,9 @@ type Evidence struct {
 	// sets it at staging from the Authored* request fields; transmit reads
 	// the staged value, because the delivery keeps no authored text.
 	AuthoredOffer bool
+	// AnsweredThread is the conversation a reply on a new topic answers. The
+	// engine sets it at staging from the anchor; transmit asks the same thread.
+	AnsweredThread string
 	// RecipientCountries are the countries the sender stated for this
 	// message's recipients. On a decision it holds that recipient's entry
 	// alone, which is what staging stores and transmit reads back.

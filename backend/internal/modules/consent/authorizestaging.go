@@ -191,6 +191,10 @@ func (g *Gate) recordStagingDecisions(ctx context.Context, tx pgx.Tx, deliveryID
 	if err != nil {
 		return err
 	}
+	answered, err := answeredThread(ctx, tx, req)
+	if err != nil {
+		return err
+	}
 	for i, d := range set.Decisions {
 		// The ids THIS RECIPIENT'S decision was taken on, so the transmit phase
 		// can put the same questions to the same records.
@@ -201,6 +205,7 @@ func (g *Gate) recordStagingDecisions(ctx context.Context, tx pgx.Tx, deliveryID
 		// is absent here rather than being handed to a phase that runs as the
 		// system principal. See authorizeevidencecarry.go, and decideOne's own
 		// note on why the two differ.
+		d.Evidence.AnsweredThread = answered
 		evidence, err := evidenceJSON(d.Evidence)
 		if err != nil {
 			return err

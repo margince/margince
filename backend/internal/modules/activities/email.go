@@ -208,6 +208,9 @@ type DeliveryRequest struct {
 	InReplyTo       string   // unbracketed; empty starts a conversation
 	References      []string // unbracketed ancestry, oldest first
 	ThreadKey       string
+	// SplitFromThread is the conversation a reply on a new topic leaves. The
+	// stager gives ThreadKey each seat's settled verdict on it, as capture does.
+	SplitFromThread string
 	// ListUnsubscribe is the RFC 8058 header VALUE (bracketed URL). The
 	// companion List-Unsubscribe-Post value is fixed by the RFC at
 	// "List-Unsubscribe=One-Click", so it is rendered at the wire from this
@@ -405,89 +408,4 @@ func messageIdentity(kind, value string) string {
 		return ""
 	}
 	return shared
-}
-
-// threading is the RFC 5322 conversation chain one outbound message
-// carries, plus the key the timeline files it under.
-type threading struct {
-	inReplyTo  string
-	references []string
-	threadKey  string
-}
-
-// anchorThreading derives the conversation chain this send must carry from
-// the activity it replies to, inside the staging transaction.
-//
-// The visibility probe is repeated here rather than inherited from the
-// caller's earlier read: this reads an activity's own columns and the
-// staged delivery then names that record, and anything that returns or
-// references a record carries the row-scope gate — an out-of-scope anchor
-// reads as ErrNotFound, the same answer a missing one gives.
-//
-// The chain is rooted at the anchor's thread_key because that is what the
-// recipient's reply will root at: their mail client sets References to ours
-// plus our Message-ID, and capture derives a thread key from the FIRST
-// element of that chain. A chain whose root were not this message's stored
-// thread_key would key the reply to a conversation this send is not part
-// of, and the reply-detection join would miss the very mail it exists for.
-// V1 reconstructs a two-element chain (root, parent) because an activity
-// stores no References column; a deep thread's middle ancestors are lost,
-// which costs nothing to the join and only some clients' visual nesting.
-func anchorThreading(ctx context.Context, tx pgx.Tx, id ids.ActivityID, messageID string) (threading, error) {
-	if err := auth.EnsureActivityContentVisible(ctx, tx, id.UUID); err != nil {
-		return threading{}, err
-	}
-	// LIVE ONLY, the same filter the origin resolution applied before this
-	// transaction opened. Without it the two reads disagree: SendEmail refuses
-	// an archived anchor when it resolves the origin, and this one — the read
-	// that actually builds the chain — accepted a row archived in between, so a
-	// reply went out threaded onto a conversation the workspace had since
-	// archived. The window is small and the answer is wrong for its whole width.
-	var kind, parent, root string
-	err := tx.QueryRow(ctx,
-		`SELECT kind, coalesce(source_id, ''), coalesce(thread_key, '')
-		   FROM activity
-		  WHERE id = $1 AND restricted_at IS NULL AND archived_at IS NULL`,
-		id).Scan(&kind, &parent, &root)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return threading{}, apperrors.ErrNotFound
-	}
-	if err != nil {
-		return threading{}, err
-	}
-	// Only a mail activity's identifiers are RFC822 message identities.
-	// Nothing constrains an anchor to one — a send can be anchored to a
-	// meeting captured from a calendar, or to a note — and emitting that
-	// system's opaque id as In-Reply-To/References produces headers no mail
-	// client can resolve to a message. An anchor that carries none simply
-	// starts a conversation, which is the honest reading of a reply to
-	// something that was never mail.
-	parent, root = messageIdentity(kind, parent), messageIdentity(kind, root)
-
-	chain := threading{inReplyTo: parent, threadKey: root}
-	if root != "" && root != parent {
-		chain.references = append(chain.references, root)
-	}
-	if parent != "" {
-		chain.references = append(chain.references, parent)
-	}
-	if chain.threadKey == "" {
-		// AN ANCHOR WITH NO STORED THREAD KEY STARTS A CONVERSATION, and this
-		// send's own identity is its root — the same key capture derives when
-		// it reads a root message back out of the mailbox.
-		//
-		// NOT the anchor's source_id, which an earlier version fell back to.
-		// source_id is caller-supplied on the REST activity door and thread_key
-		// is not mapped there at all, so that fallback let anybody name a
-		// stranger's thread as this delivery's: post an email activity whose
-		// source_id is a Message-ID from their conversation, reply to it, and
-		// the delivery carried their thread key. The authorization engine reads
-		// that key at transmit to re-derive the reply evidence staging proved
-		// with the anchor, so a forged key manufactured a
-		// subject_initiated_correspondence basis for someone who never wrote to
-		// us. The thread key a delivery carries must be one the workspace
-		// derived, never one a request body chose.
-		chain.threadKey = messageID
-	}
-	return chain, nil
 }

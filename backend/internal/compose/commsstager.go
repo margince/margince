@@ -23,6 +23,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/sendmetrics"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/platform/jobs"
@@ -101,6 +102,11 @@ func (s commsStager) StageTx(ctx context.Context, tx pgx.Tx, in activities.Deliv
 	})
 	if err != nil {
 		return err
+	}
+	if in.SplitFromThread != "" {
+		if err := capture.CarryThreadVerdictsTx(ctx, tx, in.SplitFromThread, in.ThreadKey); err != nil {
+			return err
+		}
 	}
 	// Why this was allowed to be queued, written before the job that will send
 	// it. In the same transaction as the activity, the delivery row, the audit
