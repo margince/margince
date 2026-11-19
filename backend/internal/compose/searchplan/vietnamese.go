@@ -13,7 +13,8 @@ import (
 // few" ("mấy tháng gần đây"), so it asks a count only before a counted noun.
 // The search box reads the same phrases (frontend/src/lib/question.ts).
 var vietnameseCounts = [][]string{
-	{"bao nhiêu"}, {"bao nhieu"},
+	{"bao nhiêu"},
+	{"bao nhieu"},
 	{"mấy deal"},
 	{"mấy khách hàng", "mấy khach hang"},
 	{"mấy công ty", "mấy cong ty"},
