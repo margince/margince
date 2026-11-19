@@ -1654,7 +1654,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.cohortOutcome.accepted": "Übergabe angenommen",
   "reporting.cohortOutcome.qualified": "Qualifiziert",
   "reporting.cohortOutcome.disqualified": "Disqualifiziert",
-  "reporting.cohortOutcome.opportunity_linked": "Mit Verkaufschance verknüpft",
+  "reporting.cohortOutcome.opportunity_linked": "Mit einem Deal verknüpft",
   "reporting.cohortOutcome.not_linked": "Noch nicht verknüpft",
   "reporting.cohortLinkedRate": "Anteil verknüpft",
   "reporting.cohortEntry.repeat": "Erneut in dieser Phase",

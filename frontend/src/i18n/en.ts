@@ -1586,7 +1586,7 @@ export const en = {
   "reporting.cohortOutcome.accepted": "Handoff accepted",
   "reporting.cohortOutcome.qualified": "Qualified",
   "reporting.cohortOutcome.disqualified": "Disqualified",
-  "reporting.cohortOutcome.opportunity_linked": "Linked to an opportunity",
+  "reporting.cohortOutcome.opportunity_linked": "Linked to a deal",
   "reporting.cohortOutcome.not_linked": "Not linked yet",
   "reporting.cohortLinkedRate": "Share linked",
   "reporting.cohortEntry.repeat": "Back in this stage",

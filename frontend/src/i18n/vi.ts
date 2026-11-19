@@ -1621,7 +1621,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.cohortOutcome.accepted": "Bàn giao đã được chấp nhận",
   "reporting.cohortOutcome.qualified": "Đủ điều kiện",
   "reporting.cohortOutcome.disqualified": "Đã loại",
-  "reporting.cohortOutcome.opportunity_linked": "Đã gắn với cơ hội",
+  "reporting.cohortOutcome.opportunity_linked": "Đã gắn với một deal",
   "reporting.cohortOutcome.not_linked": "Chưa gắn với cơ hội",
   "reporting.cohortLinkedRate": "Tỷ lệ đã gắn",
   "reporting.cohortEntry.repeat": "Quay lại giai đoạn này",
