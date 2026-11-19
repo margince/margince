@@ -9493,6 +9493,22 @@ export const en = {
   "agent.activity.offerDraft.degraded": "Offer draft stopped partway",
   "agent.activity.offerDraft.failed": "Offer draft failed",
   "agent.activity.offerDraft.stalled": "Offer draft is taking unusually long",
+  "agent.activity.draftReplyNamed.queued": "Reply draft for “{name}” queued",
+  "agent.activity.draftReplyNamed.running": "Drafting a reply to “{name}”…",
+  "agent.activity.draftReplyNamed.done": "Draft reply to “{name}” ready",
+  "agent.activity.draftReplyNamed.degraded":
+    "Reply draft for “{name}” stopped partway",
+  "agent.activity.draftReplyNamed.failed": "Reply draft for “{name}” failed",
+  "agent.activity.draftReplyNamed.stalled":
+    "Reply draft for “{name}” is taking unusually long",
+  "agent.activity.offerDraftNamed.queued": "Offer draft for {name} queued",
+  "agent.activity.offerDraftNamed.running": "Drafting an offer for {name}…",
+  "agent.activity.offerDraftNamed.done": "Draft offer for {name} ready",
+  "agent.activity.offerDraftNamed.degraded":
+    "Offer draft for {name} stopped partway",
+  "agent.activity.offerDraftNamed.failed": "Offer draft for {name} failed",
+  "agent.activity.offerDraftNamed.stalled":
+    "Offer draft for {name} is taking unusually long",
   // ── THE AGENT SURFACE'S OWN WORDS ──────────────────────────────────────────
   //
   // The rail's one line and the panel it opens, in one place. They were split

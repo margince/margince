@@ -9271,6 +9271,28 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agent.activity.offerDraft.failed": "Không thể soạn bản nháp báo giá",
   "agent.activity.offerDraft.stalled":
     "Quá trình soạn bản nháp báo giá kéo dài bất thường",
+  "agent.activity.draftReplyNamed.queued":
+    "Đang chờ soạn bản nháp trả lời “{name}”",
+  "agent.activity.draftReplyNamed.running": "Đang soạn thư trả lời “{name}”…",
+  "agent.activity.draftReplyNamed.done":
+    "Bản nháp trả lời “{name}” đã sẵn sàng",
+  "agent.activity.draftReplyNamed.degraded":
+    "Quá trình soạn bản nháp trả lời “{name}” bị gián đoạn",
+  "agent.activity.draftReplyNamed.failed":
+    "Không thể soạn bản nháp trả lời “{name}”",
+  "agent.activity.draftReplyNamed.stalled":
+    "Quá trình soạn bản nháp trả lời “{name}” kéo dài bất thường",
+  "agent.activity.offerDraftNamed.queued":
+    "Đang chờ soạn bản nháp báo giá cho {name}",
+  "agent.activity.offerDraftNamed.running": "Đang soạn báo giá cho {name}…",
+  "agent.activity.offerDraftNamed.done":
+    "Bản nháp báo giá cho {name} đã sẵn sàng",
+  "agent.activity.offerDraftNamed.degraded":
+    "Quá trình soạn bản nháp báo giá cho {name} bị gián đoạn",
+  "agent.activity.offerDraftNamed.failed":
+    "Không thể soạn bản nháp báo giá cho {name}",
+  "agent.activity.offerDraftNamed.stalled":
+    "Quá trình soạn bản nháp báo giá cho {name} kéo dài bất thường",
   "agent.rail.region": "Trợ lý AI Margince",
   "agent.panel.label": "Bảng trợ lý AI",
   "agent.rail.open": "Mở bảng trợ lý AI",
