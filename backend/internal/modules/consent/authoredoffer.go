@@ -81,9 +81,8 @@ func withAuthoredOffer(req commsauthz.Request, anchorSubject string) commsauthz.
 
 // quotedSubjectFor settles a carried-over subject for one recipient. It is
 // their own words only when they wrote the anchor; for anyone else it is an
-// offer the rep sends them. Staging asks about the anchor it was given and
-// keeps the anchor on the row; transmit asks that anchor again, so one
-// archived or no longer authenticated since makes the subject the rep's.
+// offer the rep sends them. Staging keeps the anchor on the row, and transmit
+// asks about it again. An anchor archived since makes the subject the rep's.
 func quotedSubjectFor(ctx context.Context, tx pgx.Tx, r connector.Recipient, req commsauthz.Request) (commsauthz.Request, error) {
 	anchor := req.Evidence.QuotedAnchorID
 	if req.Evidence.QuotedSubjectOffer {
