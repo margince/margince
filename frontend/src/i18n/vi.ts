@@ -7546,6 +7546,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "files.hide": "Ẩn khỏi deal này",
   "files.unhide": "Hiển thị lại trên deal này",
   "files.delete": "Xóa",
+  "files.pick.empty":
+    "Tệp trống nên không có gì để thêm. Hãy chọn một tệp có nội dung.",
+  "files.pick.unsupported":
+    "Không thể đính kèm loại tệp này. Hãy chọn tài liệu, hình ảnh, tệp nén zip hoặc email đã lưu.",
   "files.deleteTitle": "Xóa {name}?",
   "files.deleteBody":
     "Tệp sẽ bị gỡ khỏi deal này và bên mua sẽ không còn thấy tệp trong bất kỳ Deal Room nào. Mục trong Deal Room vẫn còn cho đến khi bạn gỡ nó.",
@@ -7605,6 +7609,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "log.filesEmpty": "Thả tệp vào đây, hoặc bấm để chọn tệp",
   "log.fileUnattached":
     "Đã ghi hoạt động, nhưng chưa đính kèm được {filename}. {reason}",
+  "log.fileNotAdded": "Chưa thêm được {filename}. {reason}",
   "log.fileUncertain":
     "Đã ghi hoạt động, nhưng việc tải lên {filename} chưa hoàn tất. Hãy kiểm tra tệp của hoạt động trước khi thêm lại.",
   "log.attendee": "Người tham dự",
@@ -10077,6 +10082,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Tệp ZIP có {files} tệp, mỗi lần nhập đọc tối đa {max_files} tệp. Bỏ các tệp không cần nhập rồi tải lên lại.",
   "import.refusal.bundle.empty":
     "Tệp ZIP trống. Thêm một tệp CSV cho mỗi loại hồ sơ rồi tải lên lại.",
+  "import.refusal.bundle.spreadsheet":
+    "Đây là sổ làm việc Excel. Lưu trang tính dưới dạng CSV UTF-8 rồi tải tệp đó lên.",
+  "import.refusal.bundle.noImportableFile":
+    "Tệp ZIP không có tệp nào mà lần nhập đọc được. Đặt tên mỗi tệp theo loại hồ sơ: {file_names}.",
   "import.refusal.bundle.notAZip":
     "Không mở được tệp ZIP. Tạo lại tệp ZIP rồi tải lên.",
   "import.refusal.bundle.filesTooLarge":
@@ -10141,6 +10150,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "import.template.files": "Tệp trong mẫu",
   "import.template.col.file": "Tệp",
   "import.template.col.columns": "Cột",
+  "import.template.keyColumns": "Cần một trong các cột: {columns}",
   "import.template.legend":
     "Di chuột hoặc chạm vào một cột để xem nội dung cần điền. ● đánh dấu cột mà dòng mới cần có.",
   "import.template.rules": "Cách khớp dòng",

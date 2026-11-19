@@ -29,8 +29,8 @@ func TestAnOversizeUploadIsRefusedByItsSize(t *testing.T) {
 	}
 	// The limit is the one actionable fact. Without it the reader's next move is
 	// to guess at a smaller file.
-	if !strings.Contains(refusal.Detail, "25 MB") {
-		t.Errorf("detail %q does not name the limit", refusal.Detail)
+	if want := "The upload exceeds the 25 MB limit."; refusal.Detail != want {
+		t.Errorf("detail %q, want the sentence %q naming the limit", refusal.Detail, want)
 	}
 }
 

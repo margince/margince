@@ -56,6 +56,8 @@ const (
 	BundleFileDamaged       FileReason = "file_damaged"
 	BundleFileMissing       FileReason = "file_missing"
 	BundleTypeNotImportable FileReason = "type_not_importable"
+	BundleSpreadsheet       FileReason = "spreadsheet"
+	BundleNoImportableFile  FileReason = "no_importable_file"
 )
 
 // fileReasonKinds maps each reason to the sentinel it refines. A fault takes
@@ -66,7 +68,7 @@ var fileReasonKinds = map[FileReason]error{
 	BundleNotAZip: ErrBundleRefused, BundleEmpty: ErrBundleRefused, BundleFilesTooLarge: ErrBundleRefused,
 	BundleZipTooLarge: ErrBundleRefused, BundleTooManyFiles: ErrBundleRefused, BundlePasswordProtected: ErrBundleRefused,
 	BundleTwoFilesOneType: ErrBundleRefused, BundleFileDamaged: ErrBundleRefused, BundleFileMissing: ErrBundleRefused,
-	BundleTypeNotImportable: ErrBundleRefused,
+	BundleTypeNotImportable: ErrBundleRefused, BundleSpreadsheet: ErrBundleRefused, BundleNoImportableFile: ErrBundleRefused,
 }
 
 // FileFaultReasons answers every reason a file refusal may carry, sorted.
