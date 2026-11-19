@@ -72,7 +72,7 @@ func (a reportingAuthority) visibleFacts(ctx context.Context, tx pgx.Tx, owners 
 			projections = append(projections, fact)
 			continue
 		}
-		if !visible[factVisibilityKey(fact)][fact.SourceID] || (fact.ViaID != nil && !leads[fact.Metric][*fact.ViaID]) {
+		if !visible[factVisibilityKey(fact)][fact.SourceID] || !leadAdmits(fact, leads) {
 			withheld = true
 			continue
 		}
@@ -218,4 +218,13 @@ func markOwnerWithheld(owners reporting.MeasurableOwners, facts []reporting.Fact
 	for i := range facts {
 		facts[i].OwnerWithheld = !facts[i].OwnerID.IsZero() && !owners.Includes(facts[i].OwnerID)
 	}
+}
+
+// leadAdmits holds a lead-derived fact to the lead it came from. A company
+// fact of account progression with no lead recorded fails closed.
+func leadAdmits(fact reporting.Fact, leads map[crmcontracts.ReportingMetricID]map[ids.UUID]bool) bool {
+	if fact.ViaID == nil {
+		return !(fact.Metric == reportingAccountProgression && fact.SourceType == string(recordTypeCompany))
+	}
+	return leads[fact.Metric][*fact.ViaID]
 }
