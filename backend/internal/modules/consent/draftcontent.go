@@ -20,6 +20,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/salutation"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -51,6 +52,9 @@ type DraftFinding struct {
 	Language string
 	// Country is the recipient's country, for DraftForeignAdvertiser.
 	Country string
+	// Provision is the law the recipient's pack cites for Requirement, zero
+	// when it shows none.
+	Provision commsauthz.Provision
 }
 
 // CheckAdvertisingDraft answers what an advertising draft to recipients does
@@ -78,9 +82,14 @@ func (s *Store) CheckAdvertisingDraft(ctx context.Context, recipients []string, 
 		if err != nil {
 			return err
 		}
+		at := s.now()
 		for _, code := range codes {
 			for _, f := range packDraftFindings(code, sender, subject, body) {
-				if !slices.ContainsFunc(findings, func(have DraftFinding) bool { return have.Detail == f.Detail }) {
+				f.Provision = shownProvision(f.Requirement, citationContext{Recipient: RecipientCountry{Code: code}, Sender: sender, At: at})
+				// The same words under two laws are two findings, one per law.
+				if !slices.ContainsFunc(findings, func(have DraftFinding) bool {
+					return have.Detail == f.Detail && have.Provision == f.Provision
+				}) {
 					findings = append(findings, f)
 				}
 			}
@@ -113,6 +122,12 @@ func (s *Store) senderCountryTx(ctx context.Context, tx pgx.Tx) (jurisdiction.Co
 	if err != nil {
 		return "", err
 	}
+	return s.senderCountryOf(ctx, tx, entity)
+}
+
+// senderCountryOf is the country of a legal entity in the lower case the packs
+// are keyed by.
+func (s *Store) senderCountryOf(ctx context.Context, tx pgx.Tx, entity ids.UUID) (jurisdiction.Code, error) {
 	code, err := s.dataProtectionCountryTx(ctx, tx, entity)
 	return jurisdiction.Code(strings.ToLower(string(code))), err
 }

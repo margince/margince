@@ -10,6 +10,7 @@ import (
 	"context"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/commsauthzwire"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
@@ -102,9 +103,10 @@ func (e *SendRefusedError) FaultReference() map[string]any {
 }
 
 // refusalReference is what a sender may read of each refused recipient. That
-// is the address, the reason, the category the engine resolved, the category
-// the sender asked for, and whether a reason may lift it. The subject id stays
-// off the wire, because the sender may not be able to read that record.
+// is the address and the reason, the category resolved and the one asked for,
+// whether a reason may lift it, and the law cited.
+// The subject id stays off the wire, because the sender may not be able to read
+// that record.
 func refusalReference(refusals []RefusedRecipient) []map[string]any {
 	out := make([]map[string]any, 0, len(refusals))
 	for _, r := range refusals {
@@ -117,6 +119,9 @@ func refusalReference(refusals []RefusedRecipient) []map[string]any {
 		}
 		if r.RequestedCategory != "" {
 			entry["requested_category"] = r.RequestedCategory
+		}
+		if cited := commsauthzwire.Provision(r.Provision); cited != nil {
+			entry["provision"] = cited
 		}
 		out = append(out, entry)
 	}

@@ -3063,6 +3063,8 @@
   "sendPermission.reason.claimContradicts": "The contact reason you picked does not match this thread. Pick another reason, or leave it empty so Margince reads it from the thread.",
   "sendPermission.reason.claimContradictsFact": "The contact reason given does not match this thread.",
   "sendPermission.reason.other": "This message cannot be sent as it stands.",
+  "compose.sendAnyway.cited": "Attention: sending to {address} may break",
+  "compose.citation.law": "Law:",
   "compose.mailboxNotSendCapableGoto": "Reconnect your mailbox",
   "compose.relinkTitle": "Relink this activity",
   "compose.relinkTarget": "Search contacts, companies, deals, leads or projects",

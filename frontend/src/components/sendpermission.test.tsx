@@ -808,3 +808,50 @@ describe("the mark makes no passed claim on a blocked form", () => {
     ).toBeInTheDocument();
   });
 });
+
+describe("the law a refusal cites", () => {
+  const UWG = {
+    instrument: "UWG",
+    provision: "§ 7(2)",
+    source_url: "https://example.org/uwg",
+  };
+  const objected = (over: Partial<Recipient> = {}) =>
+    answer({
+      reason_code: "marketing_objection",
+      decided_by: "subject",
+      would_refuse: true,
+      can_be_overruled: false,
+      ...over,
+    });
+
+  it("links the cited law, opening in a tab that cannot reach back", () => {
+    draw(preview(objected({ provision: UWG })));
+    const link = screen.getByRole("link", { name: "UWG § 7(2)" });
+    expect(link).toHaveAttribute("href", UWG.source_url);
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+  });
+
+  it("links a footer finding's law too", () => {
+    draw(
+      preview(
+        objected({
+          footer_findings: [
+            {
+              kind: "objection_route",
+              language: "",
+              missing_means: [],
+              provision: UWG,
+            },
+          ],
+        }),
+      ),
+    );
+    expect(screen.getByRole("link", { name: "UWG § 7(2)" })).toBeVisible();
+  });
+
+  it("shows no law where none is cited", () => {
+    draw(preview(objected()));
+    expect(screen.queryByRole("link")).toBeNull();
+  });
+});

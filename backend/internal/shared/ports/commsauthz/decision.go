@@ -255,6 +255,11 @@ type Decision struct {
 	// ConsentPurpose is the purpose a consent request to a LawfulBasisMissing
 	// recipient would ask about, zero when none can be asked.
 	ConsentPurpose ids.UUID
+
+	// Citations are the provisions this recipient's pack shows, by code, for
+	// the sending entity, resolved when the decision was taken. A review
+	// stores the one it shows, so a later pack never rewrites it.
+	Citations map[string]Provision
 }
 
 // DecisionSet holds the per-recipient answers for one delivery and phase.

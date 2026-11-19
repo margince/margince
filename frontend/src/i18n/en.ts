@@ -8325,6 +8325,8 @@ export const en = {
     "This message cannot be sent to {address} as it stands.",
   "compose.sendAnyway.finding.none":
     "This message cannot be sent as it stands.",
+  "compose.sendAnyway.cited": "Attention: sending to {address} may break",
+  "compose.citation.law": "Law:",
   "compose.sendAnyway.warning":
     "The send check still blocks this message. Send anyway sends only this message and grants no permission for later ones. Your name, your reason and the message are kept in a record that cannot be edited.",
   "compose.sendAnyway.editOnly":
