@@ -144,7 +144,15 @@ describe("a locale the server reports but this release does not ship", () => {
 function AccountProbe({ chosen }: Readonly<{ chosen: string }>) {
   // Cast for the reason Probe's is: the account's language comes off the wire.
   useAccountLocale(chosen as Locale);
-  return <span data-testid="locale">{useLocale().locale}</span>;
+  const { locale, setLocale } = useLocale();
+  return (
+    <>
+      <span data-testid="locale">{locale}</span>
+      <button type="button" onClick={() => setLocale("de")}>
+        pick de
+      </button>
+    </>
+  );
 }
 
 // The sign-in screen this browser shows next reads storage. So it speaks the
@@ -162,6 +170,21 @@ describe("the language of the account signed in here", () => {
     cleanup();
     mount();
     expect(shown()).toBe("en");
+  });
+
+  it("does not overwrite a pick made after it was adopted", async () => {
+    const user = userEvent.setup();
+    render(
+      <LocaleProvider>
+        <AccountProbe chosen="en" />
+      </LocaleProvider>,
+    );
+    await user.click(screen.getByRole("button", { name: "pick de" }));
+    expect(shown()).toBe("de");
+    expect(localStorage.getItem(STORAGE_KEY)).toBe("de");
+    cleanup();
+    mount();
+    expect(shown()).toBe("de");
   });
 
   it("is not stored when this release does not ship it", () => {

@@ -8,6 +8,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { pluralCategory } from "../format/plural";
@@ -356,10 +357,16 @@ export function useLocale(): LocaleContextValue {
  */
 export function useAccountLocale(chosen: Locale | undefined): void {
   const { adoptLocale } = useLocale();
+  // A later pick on this page re-runs the effect. Only a new account language
+  // overwrites the stored choice, so the pick is what the next mount reads.
+  const stored = useRef<Locale | undefined>(undefined);
   useEffect(() => {
     if (!chosen) return;
     adoptLocale(chosen);
-    if (isLocale(chosen)) rememberLocale(chosen);
+    if (isLocale(chosen) && stored.current !== chosen) {
+      stored.current = chosen;
+      rememberLocale(chosen);
+    }
   }, [chosen, adoptLocale]);
 }
 
