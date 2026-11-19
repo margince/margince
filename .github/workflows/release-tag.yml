@@ -79,6 +79,13 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: bash scripts/release-tag-on-main.sh "$TAG"
 
+      - name: Go recorded no other commit for the tag
+        env:
+          TAG: ${{ github.ref_name }}
+        # HEAD, not github.sha: for an annotated tag the event can name the tag
+        # object rather than the commit Go records.
+        run: bash scripts/release-tag-go-proxy.sh "$TAG" "$(git rev-parse HEAD)"
+
       - name: LICENSE carries this release's values
         env:
           TAG: ${{ github.ref_name }}

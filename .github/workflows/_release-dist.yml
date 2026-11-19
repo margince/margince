@@ -85,6 +85,7 @@ jobs:
         run: |
           set -euo pipefail
           bash scripts/release-tag-on-main.sh "$TAG"
+          bash scripts/release-tag-go-proxy.sh "$TAG" "$(git rev-parse HEAD)"
           bash scripts/release-dist-version.sh "$TAG" >> "$GITHUB_OUTPUT"
           echo "revision=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
