@@ -6424,6 +6424,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chỉ hiển thị deal đã tải. Không có tổng khi lọc theo giai đoạn.",
   "deals.totalsNoTeamFilter":
     "Chỉ hiển thị deal đã tải. Tổng theo giai đoạn không thể lọc theo nhóm hay theo deal chưa giao nên không hiển thị.",
+  "deals.totalsNoLinkFilter":
+    "Chỉ hiển thị deal đã tải. Không hiển thị tổng khi đang dùng bộ lọc loại liên kết.",
   "deals.totalsNoRangeFilter":
     "Chỉ hiển thị deal đã tải. Tổng theo giai đoạn không thể lọc theo ngày chốt, giá trị, loại tiền, quốc gia hay khoảng xác suất ngoài các mức có sẵn nên không hiển thị.",
   "deals.filterCloseDate": "Ngày chốt",
@@ -8547,6 +8549,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.field.host_user_id": "Chủ trì cuộc họp",
   "analytics.field.kind": "Loại hoạt động",
   "analytics.field.last_activity_at": "Hoạt động gần nhất",
+  "analytics.field.acquisition_source": "Nguồn tiếp cận",
+  "analytics.field.commercial_motion": "Hình thức bán hàng",
+  "analytics.field.priority": "Độ ưu tiên",
   "analytics.field.link_type": "Liên kết dạng",
   "analytics.field.lost_reason": "Lý do thua",
   "analytics.field.loss_reason": "Lý do thua theo danh sách",

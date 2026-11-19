@@ -2467,6 +2467,7 @@
   "deals.totalsNoArchived": "Chỉ hiển thị deal đã tải. Không có tổng khi bao gồm deal đã lưu trữ.",
   "deals.totalsNoStageFilter": "Chỉ hiển thị deal đã tải. Không có tổng khi lọc theo giai đoạn.",
   "deals.totalsNoTeamFilter": "Chỉ hiển thị deal đã tải. Tổng theo giai đoạn không thể lọc theo nhóm hay theo deal chưa giao nên không hiển thị.",
+  "deals.totalsNoLinkFilter": "Chỉ hiển thị deal đã tải. Không hiển thị tổng khi đang dùng bộ lọc loại liên kết.",
   "deals.totalsNoRangeFilter": "Chỉ hiển thị deal đã tải. Tổng theo giai đoạn không thể lọc theo ngày chốt, giá trị, loại tiền, quốc gia hay khoảng xác suất ngoài các mức có sẵn nên không hiển thị.",
   "deals.statusOpen": "Đang mở",
   "deals.statusWon": "Thắng",
