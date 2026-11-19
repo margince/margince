@@ -418,7 +418,7 @@ describe("AutonomySettingsCard", () => {
         const req =
           input instanceof Request ? input : new Request(String(input), init);
         if (req.url.endsWith("/v1/me")) {
-          return jsonResponse(meFixture({ roles }));
+          return jsonResponse(meFixture({ roles: ["rep"] }));
         }
         if (req.method === "PATCH") {
           return jsonResponse(
