@@ -43,15 +43,18 @@ func (e episode) url(address, slug string) string {
 	return chatlinks.ChannelURL(address, slug)
 }
 
-// subtypeBroadcast labels a thread reply also sent to the channel. It is the
-// one labelled message a person wrote.
-const subtypeBroadcast = "thread_broadcast"
+// notices are the labels the chat puts on its own lines about the channel and
+// its members. Any other label, such as a file share, is a person's message.
+var notices = map[string]bool{
+	"system": true, "member_join": true, "member_added": true, "member_removed": true, "member_left": true,
+	"channel_join": true, "channel_leave": true, "channel_name": true, "channel_topic": true,
+	"channel_purpose": true, "channel_archive": true, "channel_unarchive": true, "call_invite": true,
+}
 
-// judged reports whether a message is talk a note may summarise. A bot's own
-// posts are not, nor is a line the chat labels, such as a member added or a
-// rename. The list is closed, so a label the chat adds later stays out too.
+// judged reports whether a message is talk a note may summarise: not a bot's
+// own post and not one of the chat's notices.
 func judged(m dispact.Message) bool {
-	return !m.IsBot && (m.Subtype == "" || m.Subtype == subtypeBroadcast)
+	return !m.IsBot && !notices[m.Subtype]
 }
 
 // groupEpisodes cuts messages, oldest first, into episodes. An episode is

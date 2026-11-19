@@ -5,7 +5,7 @@ package chatsync
 
 // What a summary request carries besides the talk. It holds the note filed for
 // the channel's previous stretch and the parties on the record. It also holds
-// the seat addresses that tell a colleague. The note and the parties are read
+// the seat addresses and own domains that tell a colleague. The note and the parties are read
 // the way every member may read them, because the note is filed where the
 // whole workspace reads it. The deal's amount is never among them.
 
@@ -19,6 +19,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/chatlinks"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -38,7 +39,7 @@ const maxContactFacts = 8
 type summaryContext struct {
 	facts   []string
 	earlier string
-	seats   storekit.SeatAddresses
+	place   placing
 }
 
 // readSummaryContext reads the owner, and for a deal its company and contact
@@ -68,7 +69,10 @@ func readSummaryContext(ctx context.Context, pool *pgxpool.Pool, link chatlinks.
 		if out.earlier, err = previousNote(ctx, tx, link, before); err != nil {
 			return err
 		}
-		out.seats, err = storekit.WorkspaceSeatAddresses(ctx, tx)
+		if out.place.seats, err = storekit.WorkspaceSeatAddresses(ctx, tx); err != nil {
+			return err
+		}
+		out.place.own, err = capture.TrustedColleagueDomainsTx(ctx, tx)
 		return err
 	})
 	return out, err

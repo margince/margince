@@ -94,8 +94,9 @@ and losing it only means the sweep polls every minute until the next notice. Whe
 read Redis, the sweep reads every minute.
 
 For each active link, the pull reads the channel's history after the link's `history_cursor`, at most
-five pages of 99 messages. It skips the bot's own posts and the chat's `system` and `member_join`
-notices, and talk from before the link was made. Then it cuts the messages into episodes:
+five pages of 99 messages. It skips the bot's own posts, the chat's notices about the channel and its
+members (`notices` in `compose/chatsync/episodes.go`), and talk from before the link was made. A message
+with any other label, such as a shared file, is talk. Then it cuts the messages into episodes:
 
 - An episode is a run of messages with less than 30 minutes between them, all on one day (UTC). A
   thread's replies are talk like any other, so a thread answered within the half hour stays in its
@@ -108,7 +109,10 @@ notices, and talk from before the link was made. Then it cuts the messages into 
 
 Each closed episode is judged in order by the `chat_summary` task's `episode` site
 (`compose/chatsummary`). The messages are read again from the chat for this and are held only in
-memory. When the model says the talk matters, the title and summary are filed as one note on the
+memory. The model reads each message with its number, the message whose thread it answers, and where
+its author stands: `colleague`, `outside` or `unknown`. An author is a colleague when their chat email
+is a seat's proven address or on an own domain; an unlisted own subdomain is unknown. The email itself
+is never sent. A file is named by its name and type, at most ten per message, never its content. When the model says the talk matters, the title and summary are filed as one note on the
 link's deal and project, under the system actor `system:chat_links`. The note's
 `(source_system, source_id)` is `dispact` and `<channel slug>:<first seq>`, which the activity table
 holds unique, so a replay or a second link to the same channel files nothing twice. No other writer
