@@ -22,7 +22,7 @@ import { CaughtUp } from "./brief.caughtup";
 import { Triage } from "./brief.focus";
 import { identity } from "./brief.focuslink";
 import { HomeListReturnScope } from "./brief.queue";
-import { laneUnread } from "./brief.readings.honesty";
+import { laneUnread, scopeWasCut } from "./brief.readings.honesty";
 import { waitingRows } from "./brief.sentence";
 import { HOME_DAY_TIMING } from "./elementtiming";
 
@@ -64,7 +64,10 @@ export function BriefFeed({
   const { at, choose } = useCardChoice(rows);
   const lead = rows[at];
   const partial = Boolean(
-    !day?.focus || day.readings?.more_available || laneUnread(day),
+    !day?.focus ||
+      day.readings?.more_available ||
+      laneUnread(day) ||
+      scopeWasCut(day),
   );
   const shown =
     state !== "ready" ? state : rows.length > 0 || partial ? "ready" : "empty";

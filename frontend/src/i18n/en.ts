@@ -7004,7 +7004,7 @@ export const en = {
   "brief.feed.loading": "Loading Morning brief…",
   "brief.feed.caughtUp": "All caught up",
   "brief.feed.caughtUpDetail":
-    "Nobody is waiting on you right now. Margince checked at {time}, and anything new lands here first.",
+    "Nobody was waiting on you when Margince checked at {time}.",
   "teamweekly.pickTeam": "Choose a team",
 
   "plan.loading": "Loading plan…",

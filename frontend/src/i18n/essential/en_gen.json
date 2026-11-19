@@ -2660,7 +2660,7 @@
   "brief.feed.changedBadge_other": "{count} changed",
   "brief.feed.loading": "Loading Morning brief…",
   "brief.feed.caughtUp": "All caught up",
-  "brief.feed.caughtUpDetail": "Nobody is waiting on you right now. Margince checked at {time}, and anything new lands here first.",
+  "brief.feed.caughtUpDetail": "Nobody was waiting on you when Margince checked at {time}.",
   "plan.loading": "Loading plan…",
   "plan.due": "due {day}",
   "plan.state.open": "Open",
