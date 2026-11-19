@@ -133,15 +133,15 @@ Also called: email footer, sign-off, signature block.
 
 ### How do I change the language?
 <!-- opens: settings/account -->
-To change the language Margince uses with you, open Settings → **Account**. Pick one in the **Language** row: **English**, **Deutsch** or **Tiếng Việt**.
-The screen changes at once. The choice is saved to your account, so your next sign-in uses it too, and it changes nothing for anyone else.
+To change the language Margince uses with you, open Settings → **Account**. Pick one in the **Language** row: **English**, **Deutsch** or **Tiếng Việt**, then choose **Save**.
+The screen changes once the choice is saved. It is saved to your account, so your next sign-in uses it too, and it changes nothing for anyone else.
 The sign-in page has its own language switch at the foot of the page.
 Also called: change to German, switch to Vietnamese, locale, translation.
 
 ### How do I change the theme?
 <!-- opens: settings/account -->
 To change the theme in Margince, open Settings → **Account** and pick a choice in the **Appearance** row: **Light**, **Dark** or **System**.
-You can do the same from the account menu at the top right, under **Theme**. Both change the same setting.
+You can do the same from the account menu at the top right, under **Theme**. Both change the same setting, and the screen changes at once.
 **System** follows the light or dark setting of your computer or phone, and keeps following it.
 Also called: dark mode, light mode, appearance, colour scheme.
 

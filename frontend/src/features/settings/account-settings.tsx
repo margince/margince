@@ -36,7 +36,6 @@ import {
   setThemeChoice,
   THEME_CHOICES,
   THEME_LABEL_KEYS,
-  type ThemeChoice,
   useThemeChoice,
 } from "../../lib/theme";
 import { useSaveMyTimezone, useViewerZone } from "../../lib/viewerzone";
@@ -301,22 +300,12 @@ function TimeZoneSettingControl({
 /**
  * The appearance choice, here as well as in the account menu.
  *
- * Both read `useThemeChoice` and write `setThemeChoice`. This row holds its pick
- * as a draft and paints it only on Save, so the menu never shows an unsaved theme.
+ * Both read `useThemeChoice` and write `setThemeChoice` on the click, so the two
+ * never show different themes and this row stays out of the page's save bar.
  */
 function AppearanceSettingRow() {
   const t = useT();
   const choice = useThemeChoice();
-  const [draft, setDraft] = useState<ThemeChoice | null>(null);
-  const shown = draft ?? choice;
-  useSaveDraft({
-    dirty: shown !== choice,
-    save: async () => {
-      setThemeChoice(shown);
-      setDraft(null);
-    },
-    discard: () => setDraft(null),
-  });
   const labels = {
     light: t(THEME_LABEL_KEYS.light),
     dark: t(THEME_LABEL_KEYS.dark),
@@ -330,9 +319,9 @@ function AppearanceSettingRow() {
         <SegmentedControl
           label={t("settings.appearance")}
           options={THEME_CHOICES}
-          value={shown}
+          value={choice}
           labels={labels}
-          onChange={setDraft}
+          onChange={setThemeChoice}
         />
       }
     />
