@@ -21606,7 +21606,7 @@ export const en = {
   "worklist.filter.linked.except_decisions":
     "Showing everything except approvals already in your Morning brief.",
   "worklist.filter.linked.changed_since_brief":
-    "Showing only changes since last night’s Morning brief.",
+    "Showing only changes since your last Morning brief.",
   "worklist.filter.linked.clear": "Show full Worklist",
   "worklist.category.customer_waiting": "Customer waiting",
   "worklist.category.leads": "Lead",

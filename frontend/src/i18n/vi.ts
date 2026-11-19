@@ -21343,7 +21343,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.filter.linked.except_decisions":
     "Hiển thị mọi việc trừ các phê duyệt đã có trong Bản tin sáng.",
   "worklist.filter.linked.changed_since_brief":
-    "Chỉ hiển thị thay đổi kể từ Bản tin sáng đêm qua.",
+    "Chỉ hiển thị thay đổi kể từ Bản tin sáng gần nhất.",
   "worklist.filter.linked.clear": "Hiển thị toàn bộ Danh sách công việc",
   "worklist.category.customer_waiting": "Khách hàng đang chờ",
   "worklist.category.leads": "Lead",

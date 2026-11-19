@@ -21918,7 +21918,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.filter.linked.except_decisions":
     "Es werden alle Einträge außer den Freigaben angezeigt, die bereits in deinem Morgenbericht stehen.",
   "worklist.filter.linked.changed_since_brief":
-    "Es werden nur Änderungen seit dem Morgenbericht von gestern Abend angezeigt.",
+    "Es werden nur Änderungen seit deinem letzten Morgenbericht angezeigt.",
   "worklist.filter.linked.clear": "Vollständige Worklist anzeigen",
   "worklist.category.customer_waiting": "Kontakt wartet",
   "worklist.category.leads": "Lead",
