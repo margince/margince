@@ -88,6 +88,27 @@
   padding-left: var(--space-4);
   overflow-wrap: anywhere;
 }
+/* A receipt that is not a mail, in the email citation's one-line shape so the
+   two kinds line up in one list. */
+.pn-receipt {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: 100%;
+}
+.pn-receipt > svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+}
+.pn-receipt-subject {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pn-receipt-when {
+  flex: none;
+}
 /* The way in: one card, the recommendation on top and the other routes
    ranked under it. */
 .pn-way {
@@ -185,7 +206,7 @@
   color: var(--accentText);
   font-weight: var(--fontWeightMedium);
 }
-/* The figures: two readings, then the messages they rest on. */
+/* The figures: two readings, and under them the messages they rest on. */
 .pn-figures {
   margin: 0;
   display: grid;
@@ -223,21 +244,20 @@
   gap: var(--space-1);
   min-inline-size: 7rem;
 }
-/* One track that may shrink: an `auto` track grows to the widest subject,
-   which is one nowrap line that has to truncate inside its row instead. */
+/* The receipts take a row of their own: a subject and its date fit on one
+   line there, where the third column left room for neither. */
+.pn-figures > .pn-figure-receipts {
+  grid-column: 1 / -1;
+}
+/* A track that may shrink, because an `auto` one grows to the longest nowrap
+   subject and pushes every row past the card edge. */
 .pn-figure-receipts .pn-receipts {
   margin: 0;
   padding: 0;
   list-style: none;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: var(--space-2);
-}
-.pn-figure-receipts .pn-receipts > li {
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-md);
-  corner-shape: round;
+  gap: var(--space-1);
 }
 /* Who sent what: the target's share in full accent, the colleague's in the
    lighter one, and the counts in words under it. */

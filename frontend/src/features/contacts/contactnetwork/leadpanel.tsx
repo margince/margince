@@ -307,7 +307,6 @@ function Figures({
               <ReceiptList
                 receipts={receipts}
                 relayMember={relayMemberFor(route.via_user_id, viewerId)}
-                stacked
                 onOpenEmail={onOpenEmail}
               />
             </dd>

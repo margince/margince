@@ -165,8 +165,8 @@ export const WithOtherRoutes: Story = {
   ]),
 };
 
-/** Long subjects on a card wide enough for three columns: each subject
- *  truncates inside its own row and every date stays on screen. */
+/** Long subjects: each receipt keeps to one line under the figures, its
+ *  subject truncating and its date always on screen. */
 export const LongReceipts: Story = {
   render: draw(
     route({
