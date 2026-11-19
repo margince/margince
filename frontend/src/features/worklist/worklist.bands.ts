@@ -139,9 +139,7 @@ export type DueRun = {
 
 /** The copy key for a run's heading, so the caller never builds one by hand. */
 export function dueRunHeading(group: HeadedDueGroup) {
-  return group === "none"
-    ? "brief.task.undated"
-    : (`worklist.dueGroup.${group}` as const);
+  return `worklist.dueGroup.${group}` as const;
 }
 
 /**

@@ -72,8 +72,8 @@ func plannedItems(tasks []Task, asOf, until time.Time, loc *time.Location) []crm
 	return items
 }
 
-// laterWindow marks the tasks a later window read. The store admits there
-// only an undated task Today never holds, which is the undated backlog.
+// laterWindow marks the tasks a later window read. An undated one there is a
+// task a person, an agent or an importer wrote with no date (openTaskWindowClauses).
 func laterWindow(tasks []Task) []Task {
 	for i := range tasks {
 		tasks[i].later = true

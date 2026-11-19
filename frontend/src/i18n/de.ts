@@ -20544,6 +20544,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.dueGroup.tomorrow": "Morgen fällig",
   "worklist.dueGroup.this_week": "Diese Woche fällig",
   "worklist.dueGroup.later": "Später",
+  "worklist.dueGroup.none": "Ohne Fälligkeitsdatum",
   "worklist.band.build_pipeline": "Akquise",
   "worklist.band.keep_momentum": "In Bewegung halten",
   "worklist.band.review": "Prüfen",

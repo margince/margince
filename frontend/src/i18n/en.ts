@@ -20288,6 +20288,7 @@ export const en = {
   "worklist.dueGroup.tomorrow": "Due tomorrow",
   "worklist.dueGroup.this_week": "Due this week",
   "worklist.dueGroup.later": "Later",
+  "worklist.dueGroup.none": "No due date",
   "worklist.band.build_pipeline": "Prospecting",
   "worklist.band.keep_momentum": "Keep momentum",
   "worklist.band.review": "Review",

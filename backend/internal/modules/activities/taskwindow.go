@@ -24,12 +24,11 @@ import (
 // reminders widens the upper bound: a due reminder is today's work.
 func openTaskWindowClauses(in ListActivitiesInput, reminders string, arg func(any) int) []string {
 	openTask := "a.kind = 'task' AND NOT a.is_done AND "
-	// The later window also holds the undated backlog: an open task nobody
-	// dated and no automatic source marks as owed now. Today never admits it.
+	// The later window also holds the undated backlog: an open task a person,
+	// an agent or an importer wrote with no date. Today never admits it.
 	backlog := ""
 	if in.OpenAndDueAfter != nil {
-		backlog = sprintf(" OR ("+storekit.TaskDueSQL("a")+" IS NULL AND NOT COALESCE(a.source_system = ANY($%d), FALSE))",
-			arg(storekit.UndatedTaskSources()))
+		backlog = " OR (" + storekit.TaskDueSQL("a") + " IS NULL AND " + storekit.HumanOrImportedTaskSQL("a") + ")"
 	}
 	var clauses []string
 	if in.OpenAndDueBy != nil {

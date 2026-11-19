@@ -37,9 +37,9 @@ var worklistStages = []string{
 // savepoint statements count where the exchange that carries them does.
 const worklistOutsideStatements = 9
 
-// The seeded read includes every bound lane and an open task, which is undated
-// and so drawn under Upcoming. Lower this pgx-call ceiling when a batch or
-// empty-set shortcut removes calls.
+// The seeded read includes every bound lane and three open tasks, which are
+// undated and so drawn under Upcoming. Lower this pgx-call ceiling when a
+// batch or empty-set shortcut removes calls.
 const worklistExchangeBudget = 73
 
 const worklistRoundTripBudget = worklistExchangeBudget
@@ -78,15 +78,20 @@ func meterRead(ctx context.Context, t *testing.T, read func(context.Context) err
 	}
 	return delta, meter.Cost()
 }
+
+// seedOpenTask writes three open tasks, so a read made once per task costs
+// more than the budget allows.
 func seedOpenTask(t *testing.T, e *Env) {
 	t.Helper()
 	pipeline, stage, _ := DealFixture(t, e)
 	deal := e.SeedDeal(t, "Renewal", pipeline, stage, nil)
-	if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
-		Kind: "task", Subject: new("Send the renewal terms"), Source: "manual",
-		Links: []activities.ActivityLinkInput{{EntityType: "deal", EntityID: deal}},
-	}); err != nil {
-		t.Fatal(err)
+	for _, subject := range []string{"Send the renewal terms", "Call the buyer", "Book the review"} {
+		if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+			Kind: "task", Subject: &subject, Source: "manual",
+			Links: []activities.ActivityLinkInput{{EntityType: "deal", EntityID: deal}},
+		}); err != nil {
+			t.Fatal(err)
+		}
 	}
 }
 
