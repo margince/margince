@@ -5,6 +5,11 @@ import type { components } from "../../api/schema";
 import { watchStartedAiRun } from "../../app/ai-activity";
 import { ActionRow } from "../../design-system/actionrow";
 import { Button } from "../../design-system/atoms";
+import {
+  ConnectAiFirst,
+  isAiNotConnected,
+  useConnectAiGate,
+} from "../../design-system/connectai";
 import type { ConfidenceLevel } from "../../design-system/trust";
 import { StagingCard } from "../../design-system/trust";
 import { formatNumber } from "../../format/format";
@@ -245,7 +250,7 @@ export function DocumentExtractionPanel({
       <ReadOffer
         onRead={() => read.mutate()}
         pending={read.isPending}
-        failed={read.isError}
+        error={read.error}
       />
     );
   }
@@ -258,6 +263,7 @@ export function DocumentExtractionPanel({
       onAccept={(fields) => accept.mutate(fields)}
       onDismiss={() => setDismissed(true)}
       onReadAgain={() => read.mutate()}
+      readError={read.error}
       accepting={accept.isPending}
       acceptFailed={accept.isError}
     />
@@ -297,9 +303,10 @@ function editedOnly(
 function ReadOffer({
   onRead,
   pending,
-  failed,
-}: Readonly<{ onRead: () => void; pending: boolean; failed: boolean }>) {
+  error,
+}: Readonly<{ onRead: () => void; pending: boolean; error: unknown }>) {
   const t = useT();
+  const aiGate = useConnectAiGate("extraction-ai");
   return (
     <div className="staging-card">
       <p>{t("extraction.neverRead")}</p>
@@ -307,11 +314,44 @@ function ReadOffer({
         onClick={onRead}
         pending={pending}
         busyLabel={t("extraction.starting")}
+        reasonId={aiGate.reasonId}
       >
         {t("extraction.readIt")}
       </Button>
-      {failed && <p>{t("extraction.startFailed")}</p>}
+      {aiGate.notice}
+      {error !== null && error !== undefined && (
+        <p>
+          {isAiNotConnected(error) ? (
+            <ConnectAiFirst />
+          ) : (
+            t("extraction.startFailed")
+          )}
+        </p>
+      )}
     </div>
+  );
+}
+
+// The press that reads a file again. It is refused with the link to AI settings
+// while no model is connected, and says the same after a refused press.
+function ReadAgain({
+  onReadAgain,
+  error,
+}: Readonly<{ onReadAgain: () => void; error: unknown }>) {
+  const t = useT();
+  const aiGate = useConnectAiGate("extraction-again-ai");
+  return (
+    <>
+      <Button onClick={onReadAgain} reasonId={aiGate.reasonId}>
+        {t("extraction.readAgain")}
+      </Button>
+      {aiGate.notice}
+      {aiGate.notice === null && isAiNotConnected(error) && (
+        <p>
+          <ConnectAiFirst />
+        </p>
+      )}
+    </>
   );
 }
 
@@ -323,6 +363,7 @@ function ExtractionBody({
   onAccept,
   onDismiss,
   onReadAgain,
+  readError,
   accepting,
   acceptFailed,
 }: Readonly<{
@@ -333,6 +374,7 @@ function ExtractionBody({
   onAccept: (fields: readonly ExtractedField[]) => void;
   onDismiss: () => void;
   onReadAgain: () => void;
+  readError: unknown;
   accepting: boolean;
   acceptFailed: boolean;
 }>) {
@@ -349,7 +391,7 @@ function ExtractionBody({
       return (
         <div className="staging-card">
           <p>{t("extraction.stalled")}</p>
-          <Button onClick={onReadAgain}>{t("extraction.readAgain")}</Button>
+          <ReadAgain onReadAgain={onReadAgain} error={readError} />
         </div>
       );
     }
@@ -365,7 +407,7 @@ function ExtractionBody({
         {extraction.status_detail && (
           <p className="t-caption">{extraction.status_detail}</p>
         )}
-        <Button onClick={onReadAgain}>{t("extraction.readAgain")}</Button>
+        <ReadAgain onReadAgain={onReadAgain} error={readError} />
       </div>
     );
   }

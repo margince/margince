@@ -88,7 +88,7 @@ func (s *reportSetups) ProposeSetup(ctx context.Context, req crmcontracts.Report
 	}
 	if s.lane == nil {
 		return crmcontracts.ReportSetupProposal{}, &httperr.DetailedError{
-			Status: http.StatusConflict, Code: codeAINotConfigured,
+			Status: http.StatusConflict, Code: httperr.CodeAINotConfigured,
 			Detail: "a proposal from plain words needs an AI model — an administrator can bind one under Settings → AI; the setup can still be chosen by hand",
 		}
 	}

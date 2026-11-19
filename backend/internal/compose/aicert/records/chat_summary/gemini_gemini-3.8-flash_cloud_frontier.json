@@ -3,7 +3,7 @@
   "provider": "gemini",
   "served_model": "gemini-3.8-flash",
   "env_class": "cloud_frontier",
-  "prompt_version": "p7d584f55bfb93afb3d8e6c9a296fa252",
+  "prompt_version": "p0f3d40440fd77334248cf9bea2ac397e",
   "corpus_version": "v1",
   "verdict": "certified",
   "runs": 9,
@@ -17,7 +17,7 @@
   "context_applied": false,
   "context_scopes": null,
   "judge_score_p50": 96,
-  "judge_score_min": 88,
+  "judge_score_min": 89,
   "latency_p50": 3364,
   "latency_p95": 4445,
   "mean_tokens": 1408,
@@ -36,15 +36,15 @@
     {
       "scenario": "decision_on_discount",
       "site": "episode",
-      "stamp": "ef02cd22b713da5894628ebe5d435da5137167d3dab55540a86e6cda750cee336b3b171fef916a82d221a82c875ecab932ed0dc9a5824a129fb6838e80fe0db0a7a09bc45b79319b77327b6309e4137fa80b1096e49a39dac07ced3a80f6ef4a",
+      "stamp": "a1dfaa478ebb22251db224a9eb48bfdb52cd88f09cb17fdb7f2f5763ec815ac637bfc8b921c88d7ad15be0a62f67f3b4e73416ff4e883a8990133369c4bf465be1900a2b119f36cc0aab3a496564962a820532557c5cedf5e55f66029859bb16",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
       "passed": 3,
       "judge_scores": [
         91,
-        90,
-        88
+        89,
+        89
       ],
       "bands": {
         "certified_min": 80,
@@ -59,7 +59,7 @@
     {
       "scenario": "instruction_in_chat_is_data",
       "site": "episode",
-      "stamp": "6e60567d9341a1cf8afb459fa9ed6c436ab1fafe04cc389e6bd0751d837d0850a5f6572544285472b98308ce79b499352081f5b3bb46e4405e9f9e01aa4ab4fe5b365dc80fddd343a9314072986189d2b658ad81b5e28a6b1e9c24f2596862f3",
+      "stamp": "1e52fd555a6def4b8aca8d5eb33fa01e179500e364f642bf0ec7ad89d56cf3cc3eb1fdb645ec47a453aac36c8034599d7e40b2907dc4f7ae5c7f8fe60b8bfd10b7858aa17169e77981a40636ea7d7cf87c4fad43576b30ad0c5a50036cfd2260",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
@@ -67,7 +67,7 @@
       "judge_scores": [
         96,
         96,
-        96
+        95
       ],
       "bands": {
         "certified_min": 80,
@@ -82,14 +82,14 @@
     {
       "scenario": "small_talk_is_not_filed",
       "site": "episode",
-      "stamp": "40d43a71400fb2f682b892701e39c83b08321e4be862da00ab215eb5d52833d0400ebd1118fdedc1e65b2e9dab085b4bb7fcc9df6ed5dd5ce0b887eae78af3d3e3e50c5cc2ec557ce28d7973ae2a6e96dec72d7a055f9447dd68298e552962f7",
+      "stamp": "0e9a9c21ac6dc284fc28152b8ceb8742b5cb8e722e90629435155ae6510c65c7ec08786307ee0e734678a55c230bdf6cc70c75984e410817793aec9c9e2299e24fc96b1140205cb033cc07bfdeb4db46d04cc09ce3d24a31dc1b34c8b9f4cb61",
       "verdict": "certified",
       "judge_band": "certified",
       "runs": 3,
       "passed": 3,
       "judge_scores": [
-        97,
-        97,
+        96,
+        96,
         97
       ],
       "bands": {

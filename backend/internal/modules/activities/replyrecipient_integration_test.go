@@ -19,12 +19,15 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // ourDomain answers the colleague question the way the own-domain store does
@@ -167,11 +170,10 @@ func TestOurOwnSenderIsNeverTheAddressOnOurOutboundMail(t *testing.T) {
 	if got.Address != "dietmar@buyer.test" {
 		t.Errorf("address = %q, want the counterparty dietmar@buyer.test", got.Address)
 	}
-	// The GREETING still names the sender, and that is correct rather than a
-	// mismatch: the two fields answer different questions, and only the
-	// address is constrained to a counterparty.
-	if got.FullName != "Sofia Meier" {
-		t.Errorf("full name = %q, want the greeted sender Sofia Meier", got.FullName)
+	// The greeting names the same counterparty the address goes to, so our own
+	// sender is never greeted.
+	if got.FullName != "Dietmar Rietsch" {
+		t.Errorf("full name = %q, want the counterparty Dietmar Rietsch", got.FullName)
 	}
 }
 
@@ -366,6 +368,17 @@ func TestAddressingRefusesACallerWithoutTheContactReadGrant(t *testing.T) {
 	if rec.Code == http.StatusOK {
 		t.Errorf("reply-recipient answered 200 to a caller with no contact read grant: %s", rec.Body.String())
 	}
+	// The no-model draft degrades to no name and no register, never a refusal.
+	if _, err := e.owner.Exec(context.Background(), `UPDATE contact SET greeting_register = 'formal' WHERE id = $1`, sender); err != nil {
+		t.Fatal(err)
+	}
+	activity, err := e.store(nil).GetActivityContent(ctx, anchor, storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, body, _ := e.store(nil).FloorDraft(ctx, anchor.UUID, activity, textlang.English, nil); !strings.HasPrefix(body, "Hello,") {
+		t.Errorf("a caller with no contact read grant got a draft that names or addresses the contact: %q", body)
+	}
 }
 
 func TestAWithheldContactIsStillAnsweredAtTheAddressTheyWroteFrom(t *testing.T) {
@@ -402,15 +415,10 @@ func TestAWithheldContactIsStillAnsweredAtTheAddressTheyWroteFrom(t *testing.T) 
 	if got.Address != "dietmar@buyer.test" {
 		t.Errorf("address = %q, want the address on the message itself", got.Address)
 	}
-	// The NAME cannot come from the withheld contact, so it falls through to
-	// the readable contact — the two fields name two different contacts here.
-	// Worth pinning: a reader who assumed they were one contact would greet
-	// the colleague and mail the sender.
-	if got.FullName != "Anne Wiegert" {
-		t.Errorf("full name = %q, want the readable Anne Wiegert — the withheld contact cannot be named", got.FullName)
-	}
-	if got.FullName == "Dietmar Rietsch" {
-		t.Error("the withheld contact was named through the drafting door")
+	// The name cannot come from the withheld contact, and the copied contact
+	// does not stand in for them: the greeting names nobody.
+	if got.FullName != "" {
+		t.Errorf("full name = %q, want none: the withheld sender cannot be named and a copied contact is not the addressee", got.FullName)
 	}
 }
 
@@ -427,7 +435,7 @@ func TestTheSurnameAFormalGreetingNeedsIsResolvedWithTheFirstName(t *testing.T) 
 	e.seedContactEmail(t, sender, "dietmar@buyer.test")
 	e.participate(t, anchor, sender, "from", nil)
 
-	got, err := e.store(nil).ReplyRecipientFor(e.as(principal.RowScopeAll), anchor)
+	got, err := e.store(nil).ReplyRecipientFor(e.as(principal.RowScopeAll), anchor, nil)
 	if err != nil {
 		t.Fatalf("ReplyRecipientFor: %v", err)
 	}
@@ -450,7 +458,7 @@ func TestAContactWithNoSurnameOnRecordOffersNone(t *testing.T) {
 	e.seedContactEmail(t, sender, "cher@buyer.test")
 	e.participate(t, anchor, sender, "from", nil)
 
-	got, err := e.store(nil).ReplyRecipientFor(e.as(principal.RowScopeAll), anchor)
+	got, err := e.store(nil).ReplyRecipientFor(e.as(principal.RowScopeAll), anchor, nil)
 	if err != nil {
 		t.Fatalf("ReplyRecipientFor: %v", err)
 	}
@@ -482,7 +490,7 @@ func TestASharedMailboxIsGreetedByNoName(t *testing.T) {
 	e.seedContactEmail(t, sender, "partner@steireif.net")
 	e.participate(t, anchor, sender, "from", nil)
 
-	got, err := e.store(nil).ReplyRecipientFor(e.as(principal.RowScopeAll), anchor)
+	got, err := e.store(nil).ReplyRecipientFor(e.as(principal.RowScopeAll), anchor, nil)
 	if err != nil {
 		t.Fatalf("ReplyRecipientFor: %v", err)
 	}
@@ -510,7 +518,7 @@ func TestAContactAtTheSameDomainIsStillGreetedByName(t *testing.T) {
 	e.seedContactEmail(t, sender, "anna@steireif.net")
 	e.participate(t, anchor, sender, "from", nil)
 
-	got, err := e.store(nil).ReplyRecipientFor(e.as(principal.RowScopeAll), anchor)
+	got, err := e.store(nil).ReplyRecipientFor(e.as(principal.RowScopeAll), anchor, nil)
 	if err != nil {
 		t.Fatalf("ReplyRecipientFor: %v", err)
 	}

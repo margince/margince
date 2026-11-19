@@ -36,10 +36,6 @@ import (
 // description, not a document to be summarised.
 const filterProposalMaxRunes = 500
 
-// codeAINotConfigured answers a deployment with no model bound: there is no
-// deterministic reading of a sentence to fall back to, so it says so instead.
-const codeAINotConfigured = "ai_not_configured"
-
 // customFieldLabels answers the admin's label for each cf_* column, keyed by
 // column name. A reader without custom_field:read gets none and the model reads
 // the column names alone.
@@ -94,7 +90,7 @@ func (h filterProposalHandlers) ProposeFilter(w http.ResponseWriter, r *http.Req
 	}
 	if h.lane == nil {
 		httperr.Write(w, r, &httperr.DetailedError{
-			Status: http.StatusConflict, Code: codeAINotConfigured,
+			Status: http.StatusConflict, Code: httperr.CodeAINotConfigured,
 			Detail: "plain-words filters need an AI model — an administrator can bind one under Settings → AI; the filter can still be built by hand",
 		})
 		return

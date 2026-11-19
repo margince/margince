@@ -1,10 +1,11 @@
 import { Check } from "lucide-react";
-import type { ChangeEvent, RefObject } from "react";
+import type { ChangeEvent, ReactNode, RefObject } from "react";
 import { useEffect, useId, useRef, useState } from "react";
 import type { components } from "../../../api/schema";
 import { VoiceKinds } from "../../../components/voicekinds";
 import { Voiceprint } from "../../../components/voiceprint";
 import { Button, Disclosure, Radio } from "../../../design-system/atoms";
+import { useConnectAiGate } from "../../../design-system/connectai";
 import { ErrorLine } from "../../../design-system/errorline";
 import { Eyebrow } from "../../../design-system/eyebrow";
 import { Meter } from "../../../design-system/readings";
@@ -170,7 +171,7 @@ export function VoiceCollectScene({
   onSkip: () => void;
   canBuild: boolean;
   startPending: boolean;
-  startError: string | null;
+  startError: ReactNode;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -179,6 +180,7 @@ export function VoiceCollectScene({
   // flight. A meter that dims for a busy corpus it has already cleared
   // would tell the reader they lost ground they never lost.
   const floorCleared = words >= VOICE_MIN_WORDS;
+  const aiGate = useConnectAiGate("voice-collect-ai");
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteText, setPasteText] = useState("");
   return (
@@ -279,6 +281,7 @@ export function VoiceCollectScene({
             </section>
           )}
 
+          {aiGate.notice}
           <ErrorLine>{startError}</ErrorLine>
         </div>
         <div className="ob-voice-collect-side">
@@ -299,15 +302,16 @@ export function VoiceCollectScene({
       <WayOnward
         label={t("ob.conv.voice.buildChip")}
         pending={startPending}
-        blockers={
-          canBuild
+        blockers={[
+          ...(canBuild
             ? []
             : [
                 t("ob.conv.voice.footFloor", {
                   min: formatNumber(VOICE_MIN_WORDS, locale),
                 }),
-              ]
-        }
+              ]),
+          ...(aiGate.reasonId === undefined ? [] : [t("connectAi.first")]),
+        ]}
         stillNeeded={(why) => why.join(" ")}
         onGo={onBuild}
       >

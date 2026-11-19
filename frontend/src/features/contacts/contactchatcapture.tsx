@@ -7,6 +7,11 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Badge, Button, Field } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
+import {
+  ConnectAiFirst,
+  isAiNotConnected,
+  useConnectAiGate,
+} from "../../design-system/connectai";
 import { Checkbox, Textarea } from "../../design-system/field";
 import { FileDropzone } from "../../design-system/filedropzone";
 import { Panel, PanelBody } from "../../design-system/panel";
@@ -107,6 +112,7 @@ export function ContactChatCapture({
   const [attachmentId, setAttachmentId] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const start = useStartReading(contactId, setAttachmentId);
+  const aiGate = useConnectAiGate("chat-capture-ai");
   const reading = useChatReading(start.data);
   const discard = useMutation({
     mutationFn: async () => {
@@ -152,13 +158,18 @@ export function ContactChatCapture({
             emptyLabel={t("chatCapture.dropEmpty")}
             accept="image/*"
             pasteable
-            disabled={start.isPending}
+            disabled={start.isPending || aiGate.reasonId !== undefined}
             onPick={(file) => start.mutate(file)}
           />
         )}
+        {aiGate.notice}
         {start.isError && (
           <Callout tone="danger" title={t("chatCapture.startFailed")}>
-            {problemMessageOf(start.error, t)}
+            {isAiNotConnected(start.error) ? (
+              <ConnectAiFirst />
+            ) : (
+              problemMessageOf(start.error, t)
+            )}
           </Callout>
         )}
         {start.isSuccess && !finished && !reading.isError && (

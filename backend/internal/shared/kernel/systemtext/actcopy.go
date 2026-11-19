@@ -95,6 +95,7 @@ var actDefinitions = map[string]Definition{
 	"act.verbs.confirm_notice_source":              {Words: langcopy.Phrase{En: "Confirm notice source", De: "Quelle eines Kontakts bestätigen", Vi: "Xác nhận nguồn của liên hệ"}},
 	"act.verbs.control_data_task":                  {Words: langcopy.Phrase{En: "Control data task", De: "Hintergrundkorrektur steuern", Vi: "Điều khiển tác vụ sửa dữ liệu nền"}},
 	"act.verbs.correct_deal_close_day":             {Words: langcopy.Phrase{En: "Correct deal close day", De: "Abschlusstag eines Deals korrigieren", Vi: "Sửa ngày đóng giao dịch"}},
+	"act.verbs.move_deal_pipeline":                 {Words: langcopy.Phrase{En: "Move deal to another pipeline", De: "Deal in eine andere Pipeline verschieben", Vi: "Chuyển giao dịch sang pipeline khác"}},
 	"act.verbs.correct_project_health_assessment":  {Words: langcopy.Phrase{En: "Correct project health assessment", De: "Projektstand korrigieren", Vi: "Sửa tình trạng dự án"}},
 	"act.verbs.create_acquisition_source":          {Words: langcopy.Phrase{En: "Create acquisition source", De: "Akquisequelle hinzufügen", Vi: "Thêm nguồn khách hàng"}},
 	"act.verbs.create_automation":                  {Words: langcopy.Phrase{En: "Create automation", De: "Automatisierung anlegen", Vi: "Tạo tự động hóa"}},

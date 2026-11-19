@@ -99,6 +99,25 @@ type ColleagueDomains interface {
 	Covers(ctx context.Context) (func(address string) bool, error)
 }
 
+// ownAddress is the predicate naming addresses that are ours by domain. With no
+// reader wired it names none.
+func (h Handlers) ownAddress(ctx context.Context) (func(address string) bool, error) {
+	if h.colleagues == nil {
+		return func(string) bool { return false }, nil
+	}
+	return h.colleagues.Covers(ctx)
+}
+
+// replyRecipient is the contact a reply is delivered to, with colleagues skipped
+// by the same own-domain predicate the address uses.
+func (h Handlers) replyRecipient(ctx context.Context, anchor ids.ActivityID) (ReplyRecipient, error) {
+	covers, err := h.ownAddress(ctx)
+	if err != nil {
+		return ReplyRecipient{}, err
+	}
+	return h.store.ReplyRecipientFor(ctx, anchor, covers)
+}
+
 // WithColleagues wires the own-domain reader that addressing a reply needs.
 func (h Handlers) WithColleagues(domains ColleagueDomains) Handlers {
 	h.colleagues = domains

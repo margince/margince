@@ -204,6 +204,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `PATCH /deals/{id}` | updateDeal | Update a deal (partial). Closing is `POST /deals/{id}/advance`'s; a patch naming a closing field is refused 422 `set_by_advance`. | Change records | at once |
 | `DELETE /deals/{id}` | archiveDeal | Archive (soft-delete) a deal. | Change records | at once |
 | `POST /deals/{id}/advance` | advanceDeal | Advance a deal to a new stage (audit-logged with prior + next stage). | Change records | may wait for approval |
+| `POST /deals/{id}/move-pipeline` | moveDealPipeline | Move an open deal to another pipeline, onto its first open stage. | Change records | at once |
 | `POST /deals/{id}/close-day` | correctDealCloseDay | Correct the day a won or lost deal closed. | Change records | at once |
 | `POST /deals/{id}/progress` | progressDeal | Move a deal to a stage and note why, in one call. | Change records | may wait for approval |
 | `GET /deals/{id}/stakeholders` | listDealStakeholders | List a deal's stakeholders (deal↔contact relationships). | Read records | at once |
