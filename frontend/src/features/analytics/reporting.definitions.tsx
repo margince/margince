@@ -139,6 +139,9 @@ function FrameworkEditor({ framework }: Readonly<{ framework: Framework }>) {
   const scopes = useAnalyticsContext();
   const [definition, setDefinition] = useState(framework.definition);
   const [reason, setReason] = useState("");
+  // Publish stays pressable; a press without a reason marks the field instead.
+  const [attempted, setAttempted] = useState(false);
+  const reasonMissing = reason.trim() === "";
   const pipelines = usePipelines();
   const write = useMutation({
     mutationFn: async ({
@@ -187,6 +190,11 @@ function FrameworkEditor({ framework }: Readonly<{ framework: Framework }>) {
       className="reporting-dialog"
       onSubmit={(event) => {
         event.preventDefault();
+        if (write.isPending) return;
+        if (reasonMissing) {
+          setAttempted(true);
+          return;
+        }
         write.mutate({
           version: framework.version,
           definition: { ...definition, reason },
@@ -351,7 +359,13 @@ function FrameworkEditor({ framework }: Readonly<{ framework: Framework }>) {
           ))}
         </div>
       </fieldset>
-      <Field label={t("reporting.reason")} required>
+      <Field
+        label={t("reporting.reason")}
+        required
+        error={
+          attempted && reasonMissing ? t("record.fieldRequired") : undefined
+        }
+      >
         {(field) => (
           <TextInput
             {...field}
@@ -361,7 +375,7 @@ function FrameworkEditor({ framework }: Readonly<{ framework: Framework }>) {
         )}
       </Field>
       <ErrorLine error={write.error} />
-      <Button type="submit" disabled={write.isPending || !reason.trim()}>
+      <Button type="submit" disabled={write.isPending}>
         {t("reporting.publish")}
       </Button>
     </form>

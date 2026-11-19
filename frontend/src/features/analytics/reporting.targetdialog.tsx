@@ -216,9 +216,8 @@ export function ReportingTargetDialog({
               {(field) => (
                 <TextInput
                   {...field}
-                  type="number"
-                  min="1900"
-                  max="9999"
+                  inputMode="numeric"
+                  maxLength={4}
                   disabled={!!target}
                   value={periodStart.split("-")[0]}
                   onChange={(event) =>

@@ -1027,6 +1027,8 @@ export const en = {
   "reporting.daysUnit": "Days",
   "reporting.countUnit": "Count",
   "reporting.wholeCount": "Enter a whole count.",
+  "reporting.needsChart": "Add at least one chart.",
+  "reporting.needsInterval": "Give the custom interval an end after its start.",
   "reporting.retired": "Target retired",
   "reporting.comparisonHelp":
     "Choose adjacent completed periods. Snapshots of the same period cannot show period-over-period change.",
@@ -17475,6 +17477,7 @@ export const en = {
   "inquiry.result.failed": "Handling failed. Review the run before retrying.",
   "inquiry.handling": "Inquiry handling",
   "inquiry.review": "Review handling",
+  "inquiry.stillNeeded": "Required: {fields}",
   "inquiry.pausedConversionWarning":
     "Saving this plan replaces the old lead handling for this form. Save paused keeps the plan off: new submissions get no automatic task until you turn it on.",
   "inquiry.savePaused": "Save paused",

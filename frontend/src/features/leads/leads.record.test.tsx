@@ -683,8 +683,8 @@ describe("LeadScreen — owner display + assign to me (P-11)", () => {
     expect(screen.queryByRole("button", { name: "Change owner" })).toBeNull();
     // The plain value says why, in the seat's words: a role change would not lift it.
     const reason = translate("en", "settings.seatRefused");
-    await waitFor(() => expect(owner).toHaveAttribute("title", reason));
-    expect(owner).toHaveAccessibleDescription(reason);
+    await waitFor(() => expect(owner).toHaveAccessibleDescription(reason));
+    expect(owner).toHaveAttribute("tabindex", "0");
   });
 
   it("names the missing grant when a full seat may not assign leads", async () => {
@@ -716,8 +716,8 @@ describe("LeadScreen — owner display + assign to me (P-11)", () => {
 
     const owner = await screen.findByText("Unassigned");
     const reason = translate("en", "record.actionRefused");
-    await waitFor(() => expect(owner).toHaveAttribute("title", reason));
-    expect(owner).toHaveAccessibleDescription(reason);
+    await waitFor(() => expect(owner).toHaveAccessibleDescription(reason));
+    expect(owner).toHaveAttribute("tabindex", "0");
   });
 
   it("writes nothing when the viewer picks themselves on a lead they own", async () => {

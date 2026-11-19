@@ -9,6 +9,7 @@ import {
   useFieldEditor,
 } from "./fieldeditdialog";
 import "./inlinechoice.css";
+import { ReadOnlyValue } from "./readonlyvalue";
 
 // The field for a reader who cannot edit it. `placeholder` is written for
 // someone about to press it ("Add legal name"), so it never stands in here.
@@ -28,18 +29,18 @@ function ReadOnlyText({
 }>) {
   const t = useT();
   return (
-    <span
+    <ReadOnlyValue
       className={
         !value && suggested ? "inlinetext inlinetext-suggested" : "inlinetext"
       }
-      title={readOnlyReason}
+      reason={readOnlyReason}
     >
       {(value && display) ||
         value ||
         suggested ||
         emptyText ||
         t("field.unset")}
-    </span>
+    </ReadOnlyValue>
   );
 }
 

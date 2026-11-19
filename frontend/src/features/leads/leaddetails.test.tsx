@@ -157,8 +157,7 @@ describe("the About company row", () => {
     const name = await screen.findByText("Nordwind Holding SE", {
       selector: ".inlinetext",
     });
-    expect(name).toHaveAttribute(
-      "title",
+    expect(name).toHaveAccessibleDescription(
       "The name comes from the linked company. Rename it on the company’s page.",
     );
     expect(screen.queryByText("Nordwind Logistik")).toBeNull();

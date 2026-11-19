@@ -38,6 +38,31 @@ afterEach(() => {
   vi.restoreAllMocks();
   window.location.hash = "";
 });
+it("names a blank report name on the save press and sends nothing", async () => {
+  const user = userEvent.setup({ delay: null });
+  const write = vi.fn(() => jsonResponse(reportingStoryReport));
+  installFetchStub({
+    ...reportingStoryRoutes(),
+    "POST /analytics/reports": write,
+  });
+  render(
+    <StoryProviders>
+      <SaveReportingDialog
+        selection={reportingStoryEvaluation.selection}
+        onClose={() => {}}
+        onSaved={() => {}}
+      />
+    </StoryProviders>,
+  );
+  const name = await screen.findByRole("textbox", { name: "Report name" });
+  await user.type(name, "   ");
+  const save = screen.getByRole("button", { name: "Save report" });
+  expect(save).toBeEnabled();
+  await user.click(save);
+  expect(name).toHaveAccessibleDescription("This field is required.");
+  expect(write).not.toHaveBeenCalled();
+});
+
 it("saves the full selected graph layout and context", async () => {
   const user = userEvent.setup({ delay: null });
   const saved = vi.fn();

@@ -189,9 +189,16 @@ it("publishes stage qualification and capture contexts with a reason and version
   await user.click(screen.getByRole("button", { name: "Add capture" }));
   const pipelinePickers = screen.getAllByRole("combobox", { name: "Pipeline" });
   await pickOption(user, pipelinePickers[pipelinePickers.length - 1], "Sales");
-  expect(
+  // A blank reason is refused on the press, named on the field, and not sent.
+  await user.type(screen.getByLabelText(/Reason/), "   ");
+  await user.click(
     screen.getByRole("button", { name: "Save reporting settings" }),
-  ).toBeDisabled();
+  );
+  expect(screen.getByLabelText(/Reason/)).toHaveAccessibleDescription(
+    "This field is required.",
+  );
+  expect(publish).not.toHaveBeenCalled();
+  await user.clear(screen.getByLabelText(/Reason/));
   await user.type(
     screen.getByLabelText(/Reason/),
     "Align qualification across markets",

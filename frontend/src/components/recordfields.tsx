@@ -5,6 +5,7 @@ import { InlineChoice } from "../design-system/inlinechoice";
 import { InlineText } from "../design-system/inlinetext";
 import { OffsiteLink } from "../design-system/offsitelink";
 import { Panel, PanelBody } from "../design-system/panel";
+import { ReadOnlyValue } from "../design-system/readonlyvalue";
 import { useLocale, useT } from "../i18n";
 import type { EntityKind } from "../lib/entity";
 import { sameEditValue } from "../lib/independentedit";
@@ -274,7 +275,13 @@ function GroupReading({
         props.readOnlyFields,
       ));
   if (!editable || (!rendered && !canEdit))
-    return rendered ?? <span title={reason}>{value || t("field.unset")}</span>;
+    return (
+      rendered ?? (
+        <ReadOnlyValue reason={reason}>
+          {value || t("field.unset")}
+        </ReadOnlyValue>
+      )
+    );
   return (
     <EditableValue
       editLabel={

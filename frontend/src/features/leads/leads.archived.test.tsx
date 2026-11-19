@@ -219,8 +219,12 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
     // qualifiable one, and the header's primary action is for live leads.
     expect(screen.queryByRole("button", { name: "Qualify" })).toBeNull();
     const owner = screen.getByText("Unassigned");
-    expect(owner).toHaveAttribute("title", en["lead.terminalReadOnly"]);
+    // The terminal reason on the page describes it; the shorter one is its tip.
     expect(owner).toHaveAccessibleDescription(reason);
+    owner.focus();
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(
+      en["lead.terminalReadOnly"],
+    );
   });
 
   it("shows an 'overridden' badge when the score is human-overridden", async () => {

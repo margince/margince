@@ -14,6 +14,7 @@ import { OwnerPick } from "../../components/ownerpick";
 import { fetchGrants } from "../../components/share.parts";
 import { Badge } from "../../design-system/atoms";
 import { IdentityLine } from "../../design-system/identityline";
+import { ReadOnlyValue } from "../../design-system/readonlyvalue";
 import { useT } from "../../i18n";
 import { useCanWrite, useWriteRefusal } from "../../lib/capability";
 import { labelFor } from "../../lib/labelfor";
@@ -157,14 +158,16 @@ export function LeadOwnerControl({
   }
   if (refused) {
     return (
-      <span
-        title={
-          lead.archived_at ? writer.readOnlyReason : me.data && assignRefusal
+      <ReadOnlyValue
+        reason={
+          lead.archived_at
+            ? writer.readOnlyReason
+            : (me.data && assignRefusal) || undefined
         }
-        aria-describedby={lead.archived_at ? terminalReasonId : undefined}
+        describedBy={lead.archived_at ? terminalReasonId : undefined}
       >
         {owner}
-      </span>
+      </ReadOnlyValue>
     );
   }
   return (
