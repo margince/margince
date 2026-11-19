@@ -81,7 +81,7 @@ func reportingVisibleSources(ctx context.Context, tx pgx.Tx, key reportingVisibi
 	out := map[ids.UUID]bool{}
 	object := key.table
 	switch key.table {
-	case string(recordTypeDeal), string(recordTypeActivity):
+	case string(recordTypeDeal), string(recordTypeActivity), string(recordTypeLead), string(recordTypeCompany):
 	case "sdr_handoff":
 		object = reportingCreditObject
 	default:
@@ -136,7 +136,7 @@ func reportingSourceScope(ctx context.Context, key reportingVisibilityKey, b *re
 	switch key.table {
 	case string(recordTypeActivity):
 		clause, err = auth.ActivityContentClause(ctx, "source", b.arg)
-	case string(recordTypeDeal):
+	case string(recordTypeDeal), string(recordTypeLead), string(recordTypeCompany):
 		clause, err = auth.ScopeClauseFor(ctx, key.table, "source", b.arg)
 	}
 	if err != nil {
@@ -151,6 +151,17 @@ func reportingSourceScope(ctx context.Context, key reportingVisibilityKey, b *re
 			return "", err
 		}
 		clause += " AND " + fields
+	}
+	if key.table == string(recordTypeLead) || key.table == string(recordTypeCompany) {
+		fields := reportingLeadFields(key.metric)
+		if key.table == string(recordTypeCompany) {
+			fields = []string{companyDisplayName}
+		}
+		scoped, _, err := reportingFieldScope(ctx, key.table, "source", fields, b)
+		if err != nil {
+			return "", err
+		}
+		clause += " AND " + scoped
 	}
 	if key.table == string(recordTypeActivity) {
 		fields, _, err := reportingFieldScope(ctx, string(recordTypeActivity), "source", reportingMeetingFields(), b)

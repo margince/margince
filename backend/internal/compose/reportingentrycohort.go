@@ -110,7 +110,7 @@ func readReportingSourceQuality(ctx context.Context, tx pgx.Tx, frame crmcontrac
 	query := ctes + `
  SELECT l.id::text,l.id,` + label + `,l.arrival_owner_id,COALESCE(u.display_name,''),` + leadArrivalSQL + `,
  CASE WHEN ` + linked + ` THEN 1 ELSE 0 END::float8,` + leadCohortProvenanceSQL + `,
- '` + sourceGroupPrefix + `'||COALESCE(l.origin,'')||CASE WHEN ` + linked + ` THEN ':` + sourceLinked + `' ELSE ':` + sourceNotLinked + `' END,
+ '` + sourceGroupPrefix + `'||replace(replace(COALESCE(l.origin,''),'%','%25'),':','%3A')||CASE WHEN ` + linked + ` THEN ':` + sourceLinked + `' ELSE ':` + sourceNotLinked + `' END,
  COALESCE(lo.label,` + b.add(said.Say(reportingBreakdownLabels.NoOrigin)) + `)
  FROM lead l JOIN arrived ON arrived.id=l.id LEFT JOIN lead_origin lo ON lo.key=l.origin LEFT JOIN app_user u ON u.id=l.arrival_owner_id
  ORDER BY l.id LIMIT ` + b.add(reportingFactLimit+1)
