@@ -86,8 +86,11 @@ export const SettledEmptyBody: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await canvas.findByText(/No deals match these filters\./);
-    expect(canvas.getByRole("region", { name: "Proposal" })).toBeTruthy();
+    const line = await canvas.findByText(/No deals match these filters\./);
+    const stage = canvas.getByRole("region", { name: "Proposal" });
+    expect(
+      line.compareDocumentPosition(stage) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
     await userEvent.click(
       canvas.getByRole("button", { name: "Clear filters" }),
     );
