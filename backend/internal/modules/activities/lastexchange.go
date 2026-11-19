@@ -76,6 +76,45 @@ func (s *Store) lastExchange(
 	return &crmcontracts.LastExchange{Activity: row, WhoseMove: WhoseMove(move, direction, owed)}, nil
 }
 
+// lastWrote reads the record's newest human-written message in one direction
+// over every row the reader may open, by the clock the account's header uses.
+// Only mail and chat count, and a withheld row is out before the page is cut.
+// SQL decides the direction and the human-written test. WroteItOurSide then
+// decides whose pen it was on the projected row, so a colleague's mail that
+// arrives inbound is not theirs. Nil when there is none.
+func (s *Store) lastWrote(
+	ctx context.Context, tx pgx.Tx, entityType string, entityID ids.UUID, direction crmcontracts.ActivityDirection,
+	now time.Time, columns CustomColumns,
+) (*crmcontracts.Activity, error) {
+	in := ListActivitiesInput{
+		EntityType: &entityType, EntityID: &entityID, ClockDirection: string(direction), DirectionClockAsOf: &now,
+		AsOf: &now, Columns: columns, ReadableOnly: true,
+		Kinds: []string{string(crmcontracts.ActivityKindEmail), string(crmcontracts.ActivityKindMessage)},
+	}
+	size := lastWroteBatch
+	for {
+		in.Limit = &size
+		rows, page, err := s.ListActivitiesIn(ctx, tx, in)
+		if err != nil {
+			return nil, err
+		}
+		for i := range rows {
+			ours, known := WroteItOurSide(rows[i])
+			if known && ours == (direction == crmcontracts.ActivityDirectionOutbound) {
+				return &rows[i], nil
+			}
+		}
+		if !page.HasMore {
+			return nil, nil //nolint:nilnil // no such message is an absent field on the wire
+		}
+		in.Cursor = &page.NextCursor
+	}
+}
+
+// lastWroteBatch is how many rows one read of lastWrote takes. A colleague's
+// copies are the common rows it walks past, so one read usually decides.
+const lastWroteBatch = 20
+
 // earlierInboundMailSQL keeps the live inbound mail the row aliased their that
 // the row aliased ours comes after. It asks the answer rule, so a reply logged
 // on the mail's date follows it.

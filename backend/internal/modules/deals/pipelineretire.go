@@ -152,6 +152,9 @@ func (s *Store) RestorePipeline(ctx context.Context, id ids.PipelineID) (crmcont
 		case err != nil:
 			return fmt.Errorf("restore pipeline: %w", err)
 		default:
+			if err := ensureClosingPair(ctx, tx, id); err != nil {
+				return err
+			}
 			if _, err := storekit.Audit(ctx, tx, "restore", "pipeline", id.UUID,
 				map[string]any{"archived_at": wasArchivedAt},
 				map[string]any{"archived_at": nil}); err != nil {

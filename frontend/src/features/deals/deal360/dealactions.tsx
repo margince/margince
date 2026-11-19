@@ -110,6 +110,7 @@ function ReopenAction({
   dealId,
   dealVersion,
   openStages,
+  pipelineRetired,
   disabledReasonId,
 }: Readonly<{
   dealId: string;
@@ -119,6 +120,8 @@ function ReopenAction({
   // and a fresh one would be the wrong answer anyway.
   dealVersion: number | undefined;
   openStages: Stage[];
+  // A retired pipeline takes no stage, so a closed deal on it cannot reopen.
+  pipelineRetired?: boolean;
   // The id of the sentence saying why this reopen is refused, when it is.
   // STATE-4a: a control blocked by the record's STATE rather than by a
   // permission stays visible and says why, because the reason is the
@@ -167,6 +170,9 @@ function ReopenAction({
       queryClient.invalidateQueries({ queryKey: ["deals"] });
     },
   });
+  if (pipelineRetired) {
+    return null;
+  }
   return (
     <>
       <Button
@@ -215,11 +221,13 @@ function DealArchiveAction({
 export function DealActions({
   deal,
   openStages,
+  pipelineRetired,
   refusedReasonId,
   onEditDetails,
 }: Readonly<{
   deal: Deal;
   openStages: Stage[];
+  pipelineRetired?: boolean;
   // Opens the drawer that holds every field of the deal and its editors.
   onEditDetails: () => void;
   // The id of the page's one sentence about why this deal takes no changes —
@@ -361,6 +369,7 @@ export function DealActions({
               dealId={deal.id}
               dealVersion={deal.version}
               openStages={openStages}
+              pipelineRetired={pipelineRetired}
               disabledReasonId={refusedReasonId}
             />
           </>

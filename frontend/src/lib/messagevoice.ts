@@ -37,28 +37,6 @@ export function writtenByReader(row: Activity): boolean {
 }
 
 /**
- * Somebody outside the workspace wrote this row: a contact or a sender not on
- * record. A colleague or a sending system is not the other side speaking.
- */
-export function writtenFromOutside(row: Activity): boolean {
-  const kind = row.voice?.author?.kind;
-  return kind === "contact_record" || kind === "unresolved";
-}
-
-/**
- * A message that came in and that somebody outside the workspace wrote. Only
- * mail and chat qualify: an imported note naming a historical author, or a
- * meeting an outsider organised, is not the other side writing.
- */
-export function messageFromOutside(row: Activity): boolean {
-  return (
-    (row.kind === "email" || row.kind === "message") &&
-    row.direction === "inbound" &&
-    writtenFromOutside(row)
-  );
-}
-
-/**
  * The page's contact may owe or be owed a move on this row. Only a stated part
  * other than author or addressee rules it out; a row that states no part keeps
  * whatever duty it carries.

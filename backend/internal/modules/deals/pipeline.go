@@ -61,6 +61,7 @@ func (s *Store) CreatePipeline(ctx context.Context, in CreatePipelineInput) (crm
 // atomic bootstrap seeds defaults in the same transaction that mints the
 // workspace (C5), so a seed failure rolls the whole tenant back.
 func createPipelineTx(ctx context.Context, tx pgx.Tx, in CreatePipelineInput) (crmcontracts.Pipeline, error) {
+	in.Stages = withClosingPair(in.Stages)
 	if err := checkNewLadder(in.Stages); err != nil {
 		return crmcontracts.Pipeline{}, err
 	}
@@ -256,8 +257,8 @@ var defaultStages = []StageInput{
 	{Name: "Discovery", Position: 2, Semantic: string(DealOpen), WinProbability: 25},
 	{Name: "Proposal", Position: 3, Semantic: string(DealOpen), WinProbability: 50},
 	{Name: "Negotiation", Position: 4, Semantic: string(DealOpen), WinProbability: 75},
-	{Name: "Won", Position: 5, Semantic: "won", WinProbability: 100},
-	{Name: "Lost", Position: 6, Semantic: "lost", WinProbability: 0},
+	{Name: defaultWonStageName, Position: 5, Semantic: string(SemanticWon), WinProbability: 100},
+	{Name: defaultLostStageName, Position: 6, Semantic: string(SemanticLost), WinProbability: 0},
 }
 
 // SeedDefaults provisions a fresh workspace's default pipeline. Called by
@@ -311,8 +312,8 @@ func (s *Store) SeedPipelineTx(ctx context.Context, tx pgx.Tx, name string, open
 	}
 	stages = append(
 		stages,
-		StageInput{Name: "Won", Position: len(open) + 1, Semantic: "won", WinProbability: 100},
-		StageInput{Name: "Lost", Position: len(open) + 2, Semantic: "lost", WinProbability: 0},
+		StageInput{Name: defaultWonStageName, Position: len(open) + 1, Semantic: string(SemanticWon), WinProbability: 100},
+		StageInput{Name: defaultLostStageName, Position: len(open) + 2, Semantic: string(SemanticLost), WinProbability: 0},
 	)
 	_, err := createPipelineTx(ctx, tx, CreatePipelineInput{
 		Name: name, IsDefault: true, Position: 0, Stages: stages,
@@ -342,8 +343,8 @@ func (s *Store) StageSemantic(ctx context.Context, stageID ids.UUID) (semantic s
 // pipeline's first open stage; or the default pipeline's first open stage.
 // Runs on the caller's transaction so a seam that already holds one — the
 // lead qualify path — takes no second pooled connection while it waits.
-// An archived or terminal target reads as missing, and a stage that is not
-// in the pipeline it was named with is a missing stage too.
+// An archived or terminal target, or one in a retired pipeline, reads as
+// missing. So does a stage outside the pipeline it was named with.
 func BirthStageTx(ctx context.Context, tx pgx.Tx, pipelineID *ids.UUID, stageID *ids.UUID) (ids.PipelineID, ids.StageID, error) {
 	if err := auth.Require(ctx, "pipeline", principal.ActionRead); err != nil {
 		return ids.PipelineID{}, ids.StageID{}, err
@@ -352,7 +353,8 @@ func BirthStageTx(ctx context.Context, tx pgx.Tx, pipelineID *ids.UUID, stageID 
 	var err error
 	switch {
 	case stageID != nil:
-		query := `SELECT pipeline_id, id FROM stage WHERE id = $1 AND semantic = 'open' AND archived_at IS NULL`
+		query := `SELECT pipeline_id, id FROM stage WHERE id = $1 AND semantic = 'open' AND archived_at IS NULL
+			AND pipeline_id IN (SELECT id FROM pipeline WHERE archived_at IS NULL)`
 		args := []any{*stageID}
 		if pipelineID != nil {
 			query += ` AND pipeline_id = $2`
@@ -362,6 +364,7 @@ func BirthStageTx(ctx context.Context, tx pgx.Tx, pipelineID *ids.UUID, stageID 
 	case pipelineID != nil:
 		err = tx.QueryRow(ctx,
 			`SELECT pipeline_id, id FROM stage WHERE pipeline_id = $1 AND semantic = 'open' AND archived_at IS NULL
+			 AND pipeline_id IN (SELECT id FROM pipeline WHERE archived_at IS NULL)
 			 ORDER BY position, created_at LIMIT 1`, *pipelineID).Scan(&pipeline, &stage)
 	default:
 		err = tx.QueryRow(ctx,

@@ -15,7 +15,7 @@ import (
 // redactLeadDeliveries parks and scrubs queued mail whose only subject is an
 // anonymized lead. Sent deliveries remain correspondence under their own
 // retention rules; explicit erasure reaches them through the timeline scrub.
-func redactLeadDeliveries(ctx context.Context, tx pgx.Tx, leads []ids.UUID, payloads PayloadPurger) error {
+func redactLeadDeliveries(ctx context.Context, tx pgx.Tx, leads []ids.UUID) error {
 	if len(leads) == 0 {
 		return nil
 	}
@@ -31,5 +31,5 @@ func redactLeadDeliveries(ctx context.Context, tx pgx.Tx, leads []ids.UUID, payl
 	if err != nil {
 		return err
 	}
-	return redactDeliveries(ctx, tx, waiting, erasedName, payloads)
+	return redactDeliveries(ctx, tx, waiting, erasedName)
 }

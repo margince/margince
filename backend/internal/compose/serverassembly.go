@@ -406,7 +406,7 @@ func (s *Server) wireOnboardingSurface(pool *pgxpool.Pool) {
 func newConsentHandlers(pool *pgxpool.Pool) consent.Handlers {
 	return consent.NewHandlers(InstallationDB(pool)).
 		WithEntityNames(consentEntityName).
-		WithEraser(ComposedEraser(pool, nil, nil)).
+		WithEraser(ComposedEraser(pool, nil)).
 		// Wired with or without a mail lane. A receipt owed where no lane can
 		// send it is one the privacy operators must hear about.
 		WithMissedReceipts(receiptAlarm{db: InstallationDB(pool)}).

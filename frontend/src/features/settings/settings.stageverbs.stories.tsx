@@ -36,6 +36,7 @@ function served(stage: Stage) {
           verbs={{
             writable: true,
             canRemove: true,
+            onlyOfKind: new Set(),
             onAddCriterion: fn(),
             onRemove: fn(),
           }}

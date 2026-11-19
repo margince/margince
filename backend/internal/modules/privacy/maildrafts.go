@@ -21,12 +21,11 @@ import (
 // a lead twin.
 func redactUnsentMessages(
 	ctx context.Context, tx pgx.Tx, reason string, subject ids.ContactID, leads []ids.UUID, emails []string,
-	payloads PayloadPurger,
 ) error {
 	if err := redactScheduledSends(ctx, tx, reason, emails); err != nil {
 		return err
 	}
-	if err := redactLeadDeliveries(ctx, tx, leads, payloads); err != nil {
+	if err := redactLeadDeliveries(ctx, tx, leads); err != nil {
 		return err
 	}
 	return purgeMailDrafts(ctx, tx, subject, leads, emails)

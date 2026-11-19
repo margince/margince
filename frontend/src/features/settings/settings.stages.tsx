@@ -32,6 +32,7 @@ import { useStageOrder } from "./settings.pipelineorder";
 import { useStageChances } from "./settings.stagechances";
 import {
   ladderOf,
+  onlyClosingStages,
   StageCreate,
   StageMenu,
   StageRemoveConfirm,
@@ -275,6 +276,7 @@ export function StageLadderEditor({
   const verbs: StageVerbs = {
     writable,
     canRemove,
+    onlyOfKind: onlyClosingStages(ladder),
     onAddCriterion: (stage) => {
       toggle(stage.id, true);
       setAdding(stage);

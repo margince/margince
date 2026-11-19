@@ -168,7 +168,7 @@ func TestErasingASubjectClearsItsWebhookBodiesAndCancelsWhatIsStillToSend(t *tes
 	delivered := seedDelivery(t, owner, sub, subject, "delivered", 1)
 	retrying := seedDelivery(t, owner, sub, subject, "retrying", 1)
 
-	if err := ComposedEraser(e.Pool, nil, nil).EraseContact(e.Admin(), subject, "test"); err != nil {
+	if err := ComposedEraser(e.Pool, nil).EraseContact(e.Admin(), subject, "test"); err != nil {
 		t.Fatal(err)
 	}
 	if bodyKept(t, e, delivered) || bodyKept(t, e, retrying) {
