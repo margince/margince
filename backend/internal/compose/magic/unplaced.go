@@ -11,6 +11,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/auditentity"
@@ -32,6 +33,19 @@ func UnplacedTotal(changes []UnplacedChange) int {
 		total += change.Count
 	}
 	return total
+}
+
+// maxUnplacedKinds is the contract's bound on System health's breakdown.
+const maxUnplacedKinds = 50
+
+// UnplacedBreakdown keeps the first maxUnplacedKinds kinds and the whole total.
+func UnplacedBreakdown(changes []UnplacedChange) (int, []crmcontracts.HealthUnplacedChange) {
+	kept := changes[:min(len(changes), maxUnplacedKinds)]
+	breakdown := make([]crmcontracts.HealthUnplacedChange, 0, len(kept))
+	for _, change := range kept {
+		breakdown = append(breakdown, crmcontracts.HealthUnplacedChange{EntityType: change.EntityType, Action: change.Action, Count: change.Count})
+	}
+	return UnplacedTotal(changes), breakdown
 }
 
 // UnplacedChanges is the breakdown System health reads, outside any receipt.

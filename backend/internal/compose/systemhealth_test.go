@@ -65,29 +65,19 @@ func TestHealthCompositionKeepsReadableEvidenceBesideAFailedSource(t *testing.T)
 	}
 }
 
-func TestHealthCompositionCannotTurnAnUnknownSourceIntoAllClear(t *testing.T) {
+func TestHealthCompositionNeitherClearsAnUnknownSourceNorAlarmsOnInformation(t *testing.T) {
 	ctx := healthTestContext(map[string]principal.ObjectGrant{"ai_diagnostics": {Read: true}})
-	reads := []healthRead{{"providers", "ai_diagnostics", func(context.Context) (crmcontracts.HealthSource, []crmcontracts.HealthFinding, error) {
-		s := healthSource("providers", "ai_diagnostics")
-		s.Availability = "unknown"
-		return s, nil, nil
-	}}}
-	report := composeHealth(ctx, reads, func() time.Time { return time.Time{} })
-	if report.Assessment != "incomplete" || report.Complete {
-		t.Fatalf("unknown became clear: %+v", report)
-	}
-}
-
-func TestHealthCompositionLeavesAnInformationSourceOutOfTheVerdict(t *testing.T) {
-	ctx := healthTestContext(map[string]principal.ObjectGrant{"ai_diagnostics": {Read: true}})
-	reads := []healthRead{{"unplaced", "ai_diagnostics", func(context.Context) (crmcontracts.HealthSource, []crmcontracts.HealthFinding, error) {
-		s := healthSource("unplaced", "ai_diagnostics")
-		s.Condition = healthInformation
-		return s, nil, nil
-	}}}
-	report := composeHealth(ctx, reads, func() time.Time { return time.Time{} })
-	if report.Assessment != "checked" || !report.Complete || report.ActionCount != 0 || len(report.Findings) != 0 {
-		t.Fatalf("an information source changed the verdict: %+v", report)
+	for want, s := range map[crmcontracts.SystemHealthAssessment]crmcontracts.HealthSource{
+		"incomplete": {Id: "providers", Availability: "unknown", Condition: "unknown"},
+		"checked":    {Id: "unplaced", Availability: "available", Condition: healthInformation},
+	} {
+		read := func(context.Context) (crmcontracts.HealthSource, []crmcontracts.HealthFinding, error) {
+			return s, nil, nil
+		}
+		report := composeHealth(ctx, []healthRead{{s.Id, "ai_diagnostics", read}}, func() time.Time { return time.Time{} })
+		if report.Assessment != want || report.Complete != (want == "checked") || report.ActionCount != 0 {
+			t.Fatalf("%s/%s read as %+v, want %s", s.Availability, s.Condition, report, want)
+		}
 	}
 }
 

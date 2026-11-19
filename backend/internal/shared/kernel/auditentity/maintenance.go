@@ -34,7 +34,9 @@ type LinkChange struct{ EntityType, Key string }
 // joining or leaving a list, a tag put on or taken off a record.
 func LinkChanges() []LinkChange {
 	return []LinkChange{
-		{List, ListMemberAdded}, {List, ListMemberRemoved},
-		{Tag, TagApplied}, {Tag, TagRemoved},
+		{List, ListMemberAdded},
+		{List, ListMemberRemoved},
+		{Tag, TagApplied},
+		{Tag, TagRemoved},
 	}
 }

@@ -135,9 +135,6 @@ func (s Server) providersSummary(ctx context.Context) (crmcontracts.HealthSource
 // unplacedWindow is a rolling 7 days; the copy says "last 7 days".
 const unplacedWindow = 7 * 24 * time.Hour
 
-// maxUnplacedKinds is the contract's bound on the breakdown; the count stays whole.
-const maxUnplacedKinds = 50
-
 // unplacedSummary reports the machine changes Home's receipt cannot place. It
 // is a coverage fact rather than a fault, so it is information whatever the count.
 func (s Server) unplacedSummary(ctx context.Context) (crmcontracts.HealthSource, []crmcontracts.HealthFinding, error) {
@@ -149,7 +146,7 @@ func (s Server) unplacedSummary(ctx context.Context) (crmcontracts.HealthSource,
 	if err != nil {
 		return source, nil, err
 	}
-	total, breakdown := unplacedBreakdown(changes)
+	total, breakdown := magic.UnplacedBreakdown(changes)
 	unit := crmcontracts.HealthSourceUnit("items")
 	source.ObservedAt, source.WindowStart, source.WindowEnd = &now, &from, &now
 	source.Count, source.Unit, source.UnplacedChanges = &total, &unit, &breakdown
@@ -158,16 +155,6 @@ func (s Server) unplacedSummary(ctx context.Context) (crmcontracts.HealthSource,
 		source.Code = "unplaced_counted"
 	}
 	return source, nil, nil
-}
-
-// unplacedBreakdown keeps the first maxUnplacedKinds kinds and the whole total.
-func unplacedBreakdown(changes []magic.UnplacedChange) (int, []crmcontracts.HealthUnplacedChange) {
-	kept := changes[:min(len(changes), maxUnplacedKinds)]
-	breakdown := make([]crmcontracts.HealthUnplacedChange, 0, len(kept))
-	for _, change := range kept {
-		breakdown = append(breakdown, crmcontracts.HealthUnplacedChange{EntityType: change.EntityType, Action: change.Action, Count: change.Count})
-	}
-	return magic.UnplacedTotal(changes), breakdown
 }
 
 func dataTaskHealth(row datatask.Progress, now time.Time) (string, crmcontracts.HealthSourceCondition, bool) {
