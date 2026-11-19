@@ -65,6 +65,12 @@ type FieldShapeError struct {
 	// cause keeps the decoder's original reachable for an operator's log.
 	// Withholding a message is not the same as losing it.
 	cause error
+	// code is the wire code a value of the wrong shape answers with; empty
+	// for a refusal that names its own (a range, a repeat).
+	code string
+	// Params are the values a screen words the refusal with, by name, as the
+	// contract spells them: the `min` and `max` of a range.
+	Params map[string]string
 }
 
 func (e *FieldShapeError) Error() string {
@@ -94,6 +100,15 @@ func (e *FieldShapeError) Error() string {
 }
 
 func (e *FieldShapeError) Unwrap() error { return e.cause }
+
+// ShapeCode is the wire code for a value this field cannot hold. The shape the
+// field takes chooses it, so a screen can word it without the message.
+func (e *FieldShapeError) ShapeCode() string {
+	if e.code == "" {
+		return codeInvalidType
+	}
+	return e.code
+}
 
 // ProbeDecoder re-runs a decode over one key's worth of a payload.
 //
@@ -172,7 +187,9 @@ func LocalizeFieldFault(raw json.RawMessage, into any, err error, decode ProbeDe
 			continue
 		}
 		want, shape, perItem := wantedShape(field.Type)
-		refusal := &FieldShapeError{Field: key, Want: want, shape: shape, perItem: perItem, cause: probeErr}
+		refusal := &FieldShapeError{
+			Field: key, Want: want, shape: shape, perItem: perItem, cause: probeErr, code: shapeCode(field.Type),
+		}
 		// Got only when it CONTRADICTS Want. A fault inside an item of a
 		// correctly-shaped array reports the array's own shape, and "must be an
 		// array of objects, not an array of objects" is a sentence that tells

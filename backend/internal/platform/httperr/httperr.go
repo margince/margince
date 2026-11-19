@@ -111,7 +111,7 @@ func clientInputValidation(err error) (error, bool) {
 	// does. Any other cause is restated as the native body decode restates it,
 	// and Write logs what that withheld.
 	if refused, ok := errors.AsType[*datasource.DecodedValueError](err); ok {
-		return Validation(refused.Field, refused.Code, refused.Error()), true
+		return Validation(refused.Field, refused.Code, refused.Error()).WithParams(refused.Params), true
 	}
 	if badFields, ok := errors.AsType[*datasource.FieldDecodeError](err); ok {
 		detail, _ := fieldDecodeRefusal(badFields.Cause)

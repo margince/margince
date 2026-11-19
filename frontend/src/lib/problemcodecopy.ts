@@ -72,6 +72,12 @@ export const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
   ["phone_malformed", "common.phone.malformed"],
   // The detail speaks of a promotion; the screen calls it a qualification.
   ["contact_has_deal", "lead.demoteContactHasDeal"],
+  // Invite and Deal Room refusals: each detail is an English API sentence.
+  ["email_taken", "users.emailTaken"],
+  ["removed_member_email", "users.emailReserved"],
+  ["deal_room_document_already_present", "room.docs.alreadyPresent"],
+  // The detail says to regenerate, which a draft cannot; one sentence serves both.
+  ["offer_lapsed", "offer.lapsed"],
 ]);
 
 // The held refusal names no record; its words depend only on whether the

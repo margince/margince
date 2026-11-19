@@ -11,10 +11,11 @@ import {
 } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, expect, it, vi } from "vitest";
-import { LocaleProvider } from "../i18n";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { LocaleProvider, translate } from "../i18n";
+import { ProblemError } from "../lib/problem";
 import { KeyCode } from "./keyedname";
-import { NameDialog } from "./namedialog";
+import { NameDialog, nameRefusal } from "./namedialog";
 
 afterEach(cleanup);
 
@@ -198,4 +199,39 @@ it("prints both when the label differs from the title", () => {
   render(<Titled title="Rename deal" label="Deal name" />);
   expect(screen.getByText("Rename deal")).toBeVisible();
   expect(screen.getByText("Deal name")).not.toHaveClass("sr-only");
+});
+
+describe("nameRefusal", () => {
+  const t = (key: Parameters<typeof translate>[1]) => translate("en", key);
+
+  it("puts a conflict on the name, in the caller's words", () => {
+    const taken = new ProblemError({
+      status: 409,
+      code: "conflict",
+      detail: 'a team named "Ops" already exists: conflict',
+    });
+    expect(nameRefusal(taken, t, "users.teamDuplicate")).toEqual({
+      problem: null,
+      nameProblem: t("users.teamDuplicate"),
+    });
+  });
+
+  it("keeps any other refusal under the form", () => {
+    const denied = new ProblemError({
+      status: 403,
+      code: "permission_denied",
+      detail: "x",
+    });
+    expect(nameRefusal(denied, t, "users.teamDuplicate")).toEqual({
+      problem: t("common.permissionDenied"),
+      nameProblem: null,
+    });
+  });
+
+  it("says nothing before a write is refused", () => {
+    expect(nameRefusal(null, t, "users.teamDuplicate")).toEqual({
+      problem: null,
+      nameProblem: null,
+    });
+  });
 });

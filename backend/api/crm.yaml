@@ -47527,6 +47527,13 @@ components:
             name, so a screen can word the code in the reader's language; `message` stays
             the English sentence.
 
+            A value its field cannot hold names the field's path, with a code for the shape
+            the field takes: `not_integer`, `not_number`, `invalid_date`, `datetime_malformed`,
+            `email_malformed`, `invalid_uuid`, or `invalid_type` for any other shape. A body
+            that is not one JSON object answers `malformed_json` on `body`. `out_of_range`
+            carries its bounds as `params.min` and `params.max`, as the schema spells them;
+            a date-time range states them as ISO dates.
+
             A 429 that an agent's limit answers carries `limit`: `kind` names it (`calls`,
             `writes` or `egress` for a window allowance, `pacing` for the per-minute limit),
             `ceiling` is the limit in force, and a window allowance adds `used` and `resets_at`.

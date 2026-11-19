@@ -60,6 +60,36 @@ func wantedShape(t reflect.Type) (want, shape string, perItem bool) {
 	}
 }
 
+// shapeCode names the wire code for a value a field of this type cannot hold.
+// Each spelling but not_integer and not_number is one a value object or a
+// handler already answers the same mistake with.
+func shapeCode(t reflect.Type) string {
+	t = derefType(t)
+	if t == nil {
+		return codeInvalidType
+	}
+	switch t.Name() {
+	case "UUID":
+		return "invalid_uuid"
+	case "Time":
+		return "datetime_malformed"
+	case "Date":
+		return "invalid_date"
+	case "Email":
+		return "email_malformed"
+	}
+	switch scalarShape(t.Kind()) {
+	case integerShape:
+		return "not_integer"
+	case numberShape:
+		return "not_number"
+	}
+	return codeInvalidType
+}
+
+// codeInvalidType answers a value whose shape has no code of its own.
+const codeInvalidType = "invalid_type"
+
 // The two shape phrases repeated across this file, named so the array form and
 // the bare form cannot drift apart.
 const (
@@ -69,6 +99,12 @@ const (
 	// RECOGNISE it to pluralize a nested array's head rather than its tail, so
 	// the phrase built here and the phrase matched there are one string.
 	arrayOfPrefix = "an array of "
+)
+
+// The two numeric phrases, named so shapeCode reads the phrase scalarShape writes.
+const (
+	integerShape = "an integer"
+	numberShape  = "a number"
 )
 
 // namedShape names the WIRE shape of a type whose Go representation is not it.
@@ -103,9 +139,9 @@ func scalarShape(kind reflect.Kind) string {
 		return "a boolean"
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
 		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		return "an integer"
+		return integerShape
 	case reflect.Float32, reflect.Float64:
-		return "a number"
+		return numberShape
 	default:
 		return anyShape
 	}

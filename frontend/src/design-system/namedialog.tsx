@@ -3,7 +3,7 @@
 
 import { type FormEvent, type ReactNode, useEffect, useState } from "react";
 import type { MessageKey } from "../i18n/en";
-import { problemCodeOf, problemMessageOf } from "../lib/problem";
+import { refusalSentences } from "../lib/problem";
 import { Field, TextInput } from "./atoms";
 import { ConfirmModal } from "./confirmmodal";
 import { useSinglePress } from "./presslatch";
@@ -14,13 +14,19 @@ export function nameRefusal(
   t: (key: MessageKey) => string,
   duplicate: MessageKey,
 ): { problem: string | null; nameProblem: string | null } {
-  if (error === null || error === undefined) {
-    return { problem: null, nameProblem: null };
-  }
-  return problemCodeOf(error) === "conflict"
-    ? { problem: null, nameProblem: t(duplicate) }
-    : { problem: problemMessageOf(error, t), nameProblem: null };
+  const refused = refusalSentences(
+    error,
+    t,
+    {},
+    { conflict: { field: NAME_FIELD, sentence: t(duplicate) } },
+  );
+  return {
+    problem: refused.rest,
+    nameProblem: refused.byField.get(NAME_FIELD) ?? null,
+  };
 }
+
+const NAME_FIELD = "name";
 
 // A refused name stays on its field only while the field still holds it, so
 // an edit clears the refusal without a second round trip.
