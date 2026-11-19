@@ -17,7 +17,6 @@ package contacts
 import (
 	"context"
 	"strings"
-	"unicode"
 
 	"github.com/jackc/pgx/v5"
 
@@ -143,31 +142,12 @@ func isNameSeparator(r rune) bool { return r == '-' || r == '_' || r == '.' || r
 // That is an employer on a personal page, or a founder's brand, and a machine
 // cannot tell which.
 func siteNameIsOffTheSendersDomain(ctx context.Context, tx pgx.Tx, in ResolveDomainTriageInput) (bool, error) {
-	label := freemail.RegistrableLabel(in.Domain)
-	if in.decidedByAUser() || in.DossierName == "" || statedNameSpellsLabel(in.DossierName, label) {
+	if in.decidedByAUser() || in.DossierName == "" || in.siteSpeaksForDomain() {
 		return false, nil
 	}
 	contacts, err := OnDomain(ctx, tx, in.Domain)
 	if err != nil {
 		return false, err
 	}
-	return DomainLooksPersonal(label, contacts), nil
-}
-
-// statedNameSpellsLabel reports whether a company name accounts for a domain
-// label: "Kestner Consulting" spells kestnerconsulting, and "Marsh Advisory"
-// spells rowanmarsh through its word "marsh".
-func statedNameSpellsLabel(stated, label string) bool {
-	label = namematch.Fold(strings.Join(strings.FieldsFunc(label, isNameSeparator), ""))
-	words := strings.FieldsFunc(namematch.Fold(stated), func(r rune) bool { return !unicode.IsLetter(r) && !unicode.IsDigit(r) })
-	if label == "" || strings.Contains(strings.Join(words, ""), label) {
-		return true
-	}
-	for _, word := range words {
-		// Four runes keeps a legal suffix ("AG", "Ltd") from matching by itself.
-		if (len([]rune(word)) >= 4 && strings.Contains(label, word)) || namematch.JaroWinkler(word, label) >= domainPersonalSimilarity {
-			return true
-		}
-	}
-	return false
+	return DomainLooksPersonal(freemail.RegistrableLabel(in.Domain), contacts), nil
 }

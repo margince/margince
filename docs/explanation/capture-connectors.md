@@ -137,8 +137,8 @@ One pipeline step runs *inside* the Sink, before anything is written:
   name and domain matches are refused. Without a name, a business domain reuses a known company
   or enters durable triage; a personal domain never supplies a made-up company name.
   - The resolver records an open question in `company_domain_disposition`, and a `domain_triage` site read
-    answers it. A `company` verdict makes the company from what the site states. A `personal` or
-    `provider` verdict refuses one for good.
+    answers it. A `company` verdict makes the company from what the site states. A `personal` or `provider` verdict refuses one for good.
+    A site whose name spells neither the domain nor a company here stays open, as an expired domain may serve another business (`contacts.SiteSpeaksFor`).
   - Mail from a consumer domain is answered by that domain, and asks nothing. The list is the shipped baseline plus
     the workspace's own `capture_freemail_domain` list.
 

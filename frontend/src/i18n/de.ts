@@ -12894,6 +12894,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Website wurde gelesen, nennt aber kein Unternehmen.",
   "worklist.domainQuestion.reason.forwarded":
     "Die Website leitet auf eine andere Website weiter. Deshalb konnte Margince das Unternehmen nicht sicher zuordnen.",
+  "worklist.domainQuestion.reason.foreignSite":
+    "Die Website nennt ein anderes Unternehmen als diese Domain. Die Domain gehört vielleicht inzwischen jemand anderem.",
   "worklist.domainQuestion.reason.vendor":
     "Die Website wirkt wie ein Mail- oder Hosting-Anbieter, der Adressen für viele Unternehmen bereitstellen kann.",
   "worklist.domainQuestion.reason.nearDuplicate":
@@ -12964,6 +12966,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Kein Unternehmen über die Website gefunden",
   "blockedDomains.source.staleEvidence": "Belegende E-Mails zu alt",
   "blockedDomains.source.nearDuplicate": "Unternehmensname existiert bereits",
+  "blockedDomains.source.foreignSite": "Nennt ein anderes Unternehmen",
   "blockedDomains.source.vendorVerdict":
     "Wirkt wie ein Mail- oder Hosting-Anbieter",
   "blockedDomains.rowAdmit": "Zulassen",
