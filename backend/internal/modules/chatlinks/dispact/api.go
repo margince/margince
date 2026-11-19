@@ -78,6 +78,14 @@ type Message struct {
 	EditedAt   time.Time
 	Subtype    string
 	IsBot      bool
+	Files      []File
+}
+
+// File is a file attached to a message, as the history read lists it. Its
+// content is never read.
+type File struct {
+	Name     string
+	MimeType string
 }
 
 // HistoryPage is one page of a channel's history, oldest first.

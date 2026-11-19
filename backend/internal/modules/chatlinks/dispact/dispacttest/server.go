@@ -34,6 +34,12 @@ type Message struct {
 	PostedAt   time.Time
 	Subtype    string
 	Bot        bool
+	Files      []File
+}
+
+// File is a file attached to a seeded message.
+type File struct {
+	Name, MimeType string
 }
 
 // Post is one message the bot sent.
@@ -411,6 +417,13 @@ func wire(m Message) map[string]any {
 	}
 	if m.Subtype != "" {
 		out["subtype"] = m.Subtype
+	}
+	if len(m.Files) > 0 {
+		files := make([]map[string]any, 0, len(m.Files))
+		for i, f := range m.Files {
+			files = append(files, map[string]any{"id": "F" + strconv.Itoa(i), "name": f.Name, "mimetype": f.MimeType, "size": 1})
+		}
+		out["files"] = files
 	}
 	switch {
 	case m.ThreadSeq != 0:

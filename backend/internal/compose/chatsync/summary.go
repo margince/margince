@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/chatlinks"
 	"github.com/margince/margince/backend/internal/modules/chatlinks/dispact"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -60,9 +61,7 @@ func (p summariser) summarise(ctx context.Context, link chatlinks.Link, record c
 	}
 	in.Facts = append(in.Facts, extra.facts...)
 	in.Earlier = extra.earlier
-	for _, m := range messages {
-		in.Messages = append(in.Messages, chatsummary.Message{Author: authorOf(m), At: m.PostedAt, Text: m.Text})
-	}
+	in.Messages = transcript(messages, extra.place)
 	about := &model.Subjects{}
 	if link.DealID != nil {
 		about.Deals = append(about.Deals, *link.DealID)
@@ -95,14 +94,56 @@ func (p summariser) summarise(ctx context.Context, link chatlinks.Link, record c
 	return chatsummary.Parse(res.Text)
 }
 
+// transcript is the talk as the model reads it. The email the chat gives an
+// author only places them and is never sent.
+func transcript(messages []dispact.Message, place placing) []chatsummary.Message {
+	out := make([]chatsummary.Message, 0, len(messages))
+	for _, m := range messages {
+		said := chatsummary.Message{ID: m.TS, Author: authorOf(m), Side: place.sideOf(m.UserEmail), At: m.PostedAt, Text: m.Text}
+		if m.ThreadTS != "" && m.ThreadTS != m.TS {
+			said.ReplyTo = m.ThreadTS
+		}
+		for _, f := range m.Files {
+			said.Files = append(said.Files, chatsummary.File{Name: f.Name, Type: f.MimeType})
+		}
+		out = append(out, said)
+	}
+	return out
+}
+
+// authorOf is the name the chat shows. An author with no name is "someone",
+// never their email.
 func authorOf(m dispact.Message) string {
 	if m.UserName != "" {
 		return m.UserName
 	}
-	if m.UserEmail != "" {
-		return m.UserEmail
-	}
 	return "someone"
+}
+
+// placing is what tells a colleague: the seat addresses and the vouched-for
+// own domains.
+type placing struct {
+	seats storekit.SeatAddresses
+	own   []string
+}
+
+// sideOf places an author by their chat email. A proven seat address is a
+// colleague, as for any channel address with no mailbox owner. Otherwise the
+// deal-evidence rule judges the domain (deals.AddressSide).
+func (p placing) sideOf(email string) chatsummary.Side {
+	if email == "" {
+		return chatsummary.SideUnknown
+	}
+	if p.seats.Covers(email, ids.Nil) {
+		return chatsummary.SideColleague
+	}
+	switch deals.AddressSide(email, p.own) {
+	case deals.AuthorSeller:
+		return chatsummary.SideColleague
+	case deals.AuthorUnknown:
+		return chatsummary.SideUnknown
+	}
+	return chatsummary.SideOutside
 }
 
 // talk is what a note says about the messages it summarises. It holds no
