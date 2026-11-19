@@ -431,3 +431,27 @@ func addressReleasedSQL(address string) string {
 	          WHERE lower(released.email) = ` + address + ` AND released.archived_at IS NOT NULL),
 	        '-infinity'::timestamptz)`
 }
+
+// ReasonRemovedBeforeAnswer is the ledger reason for a question whose record
+// was removed before the machine answered it.
+const ReasonRemovedBeforeAnswer = "contact removed before the sender check answered"
+
+// RemovedSinceAskedTx reports whether a machine answer settling the sender as
+// real is about a message dated before the address last left a contact. That
+// is the bound the send proof and the meeting read keep, applied to the
+// verdict. The owner's own answer is newer than the removal, so it is never
+// refused.
+func RemovedSinceAskedTx(ctx context.Context, tx pgx.Tx, row PendingCounterparty, status string, byOwner bool) (bool, error) {
+	if byOwner || status != PendingStatusReal {
+		return false, nil
+	}
+	var removed bool
+	if err := tx.QueryRow(ctx, `
+		SELECT coalesce(a.occurred_at, q.created_at) <= -- occurred_at raw: the judged message against the address's release
+		       `+addressReleasedSQL("q.email")+`
+		  FROM capture_pending_counterparty q LEFT JOIN activity a ON a.id = q.activity_id
+		 WHERE q.id = $1`, row.ID).Scan(&removed); err != nil {
+		return false, fmt.Errorf("capture: reading whether the asked-about contact was removed: %w", err)
+	}
+	return removed, nil
+}
