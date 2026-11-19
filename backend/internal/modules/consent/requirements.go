@@ -88,18 +88,7 @@ func (s *Store) CheckMessage(
 		// being applied — which is the failure the register exists to prevent,
 		// running backwards.
 		//
-		// One subject line goes to every recipient, so it owes the label of
-		// each pack that judged an advertising row. A fold keeps its first
-		// label in SubjectPrefix and every distinct one in the applied list.
-		var owed []string
-		for _, codes := range rulesets {
-			rules, applied, applicable := applicableRules(codes...)
-			if !applicable || rules.SubjectPrefix == "" {
-				continue
-			}
-			owed = messagingrules.AddSubjectPrefixes(owed, applied.SubjectPrefixes...)
-		}
-		findings = subjectPrefixFindings(owed, subject)
+		findings = subjectPrefixFindings(owedSubjectLabels(rulesets), subject)
 		return nil
 	})
 	if err != nil {
@@ -121,35 +110,82 @@ type RequirementFinding struct {
 	Detail string
 }
 
-// subjectPrefixFindings reports an advertising message whose subject does not
-// carry the label each of its packs fixes. One subject begins with one label,
-// so a message owing two different ones is held until its recipients are split.
+// owedSubjectLabels are the labels one subject line owes: one per distinct
+// label among the packs that judged an advertising recipient, each recipient's
+// codes given as one ruleset. A fold keeps its first label in SubjectPrefix and
+// every distinct one in the applied list.
+func owedSubjectLabels(rulesets [][]jurisdiction.Code) []string {
+	var owed []string
+	for _, codes := range rulesets {
+		rules, applied, applicable := applicableRules(codes...)
+		if !applicable || rules.SubjectPrefix == "" {
+			continue
+		}
+		owed = messagingrules.AddSubjectPrefixes(owed, applied.SubjectPrefixes...)
+	}
+	return owed
+}
+
+// subjectLabelCheck is the one subject-label check. Preview and staging refuse
+// on its reason, and transmit parks on it. reason is empty when the subject
+// carries every owed label.
 //
-// ADVERTISING ONLY. The packs declare the prefix as a marking on advertising,
-// and putting it on an invoice would tell a recipient their payment reminder is
-// an advertisement — a false statement made to satisfy a check, which is worse
-// than the omission it would be fixing.
+// ADVERTISING ONLY: the caller passes the labels of advertising recipients. A
+// label on an invoice would tell a recipient their payment reminder is an
+// advertisement.
 //
-// The comparison is case-insensitive on a trimmed subject. A composer that
-// wrote "[qc]" met the decree's purpose, and refusing over the case of a label
-// would park lawful mail on a typographic reading nobody argues for.
-func subjectPrefixFindings(owed []string, subject string) []RequirementFinding {
+// One subject begins with one label, so two different ones owed are a conflict
+// whatever the subject says. The comparison is case-insensitive on a trimmed
+// subject: "[qc]" meets the decree's purpose.
+func subjectLabelCheck(owed []string, subject string) (reason, detail string) {
 	switch {
 	case len(owed) == 0:
-		return nil
+		return "", ""
 	case len(owed) > 1:
-		return []RequirementFinding{{
-			Requirement: RequirementSubjectPrefix,
-			Detail: fmt.Sprintf("the recipients owe the different subject labels %q, and a subject begins with one; "+
-				"split the recipients into one message per label", owed),
-		}}
+		return commsauthz.ReasonSubjectLabelsConflict, fmt.Sprintf("the recipients owe the different subject labels %q, "+
+			"and a subject begins with one; split the recipients into one message per label", owed)
 	case strings.HasPrefix(strings.ToUpper(strings.TrimSpace(subject)), strings.ToUpper(owed[0])):
+		return "", ""
+	}
+	return commsauthz.ReasonSubjectLabelMissing, fmt.Sprintf("an advertising subject carries %q, and this one begins %q",
+		owed[0], firstRunes(subject, 24))
+}
+
+// subjectPrefixFindings is subjectLabelCheck as the finding a parked delivery
+// records.
+func subjectPrefixFindings(owed []string, subject string) []RequirementFinding {
+	reason, detail := subjectLabelCheck(owed, subject)
+	if reason == "" {
 		return nil
 	}
-	return []RequirementFinding{{
-		Requirement: RequirementSubjectPrefix,
-		Detail:      fmt.Sprintf("an advertising subject carries %q, and this one begins %q", owed[0], firstRunes(subject, 24)),
-	}}
+	return []RequirementFinding{{Requirement: RequirementSubjectPrefix, Detail: detail}}
+}
+
+// withSubjectLabels refuses, before anything is staged, each advertising
+// recipient whose label the subject does not carry, or every labelled one when
+// the labels conflict. countries are the recipients' own, in set order. A stop
+// or a repair already on a recipient stays: it is what the sender meets first.
+func withSubjectLabels(set commsauthz.DecisionSet, countries []RecipientCountry, subject string) commsauthz.DecisionSet {
+	labelled := make([]bool, len(set.Decisions))
+	var rulesets [][]jurisdiction.Code
+	for i, d := range set.Decisions {
+		if d.Resolved != commsauthz.CategoryMarketing {
+			continue
+		}
+		rulesets = append(rulesets, []jurisdiction.Code{countries[i].Code})
+		labelled[i] = len(owedSubjectLabels(rulesets[len(rulesets)-1:])) > 0
+	}
+	// With one label owed, each labelled recipient owes that one label.
+	reason, _ := subjectLabelCheck(owedSubjectLabels(rulesets), subject)
+	for i, d := range set.Decisions {
+		if reason == "" || !labelled[i] ||
+			(d.Verdict != commsauthz.VerdictAllow && commsauthz.RefusalRank(d.ReasonCode, len(d.Evidence.FooterFindings)) < 2) {
+			continue
+		}
+		d.Verdict, d.ReasonCode = commsauthz.VerdictDeny, reason
+		set.Decisions[i] = d
+	}
+	return set
 }
 
 // advertisedRulesetsTx answers the ruleset of every recipient this send

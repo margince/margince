@@ -471,8 +471,8 @@ adds the unsubscribe link in every case. The email domain, the jurisdiction of t
 and the least strict pack never stand in for the recipient's jurisdiction.
 
 Each decision row records its recipient's ruleset (`ruleset_codes`, `ruleset_version`, and a compiled
-pack's `ruleset_digest`) and the `data_protection_country` of the user who sends. `CheckMessage` reads the codes back, so the advertising label is
-owed if any recipient's pack asks for it. One message goes to every recipient, so its foot carries
+pack's `ruleset_digest`) and the `data_protection_country` of the user who sends. Preview and staging refuse an advertising subject without a recipient's label (`subject_label_missing`).
+They also refuse recipients whose packs fix different labels (`subject_labels_conflict`); no exception passes either. `CheckMessage` parks a delivery that got past them at transmit; all three ask `subjectLabelCheck` in `internal/modules/consent/requirements.go`. One message goes to every recipient, so its foot carries
 each recipient's marketing duties.
 
 ### Request deadlines

@@ -6,6 +6,7 @@ package consent
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -29,7 +30,8 @@ func TestARepMayDirectASendPastEveryPolicyRefusal(t *testing.T) {
 		t.Run(role, func(t *testing.T) {
 			ctx := seat(role, true)
 			for _, reason := range commsauthz.RefusalCodes() {
-				want := reason != commsauthz.ReasonHardBounce && reason != commsauthz.ReasonNoSubject
+				want := !slices.Contains([]string{commsauthz.ReasonHardBounce, commsauthz.ReasonNoSubject,
+					commsauthz.ReasonSubjectLabelMissing, commsauthz.ReasonSubjectLabelsConflict}, reason)
 				if got := directableBy(ctx, []RefusedRecipient{{ReasonCode: reason}}); got != want {
 					t.Errorf("directable past %s = %v, want %v", reason, got, want)
 				}

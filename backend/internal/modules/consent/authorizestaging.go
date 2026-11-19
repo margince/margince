@@ -121,6 +121,9 @@ func (g *Gate) stageDecisions(ctx context.Context, tx pgx.Tx, deliveryID ids.UUI
 		d.Requested = req.Context
 		set.Decisions = append(set.Decisions, d)
 	}
+	// Refused here, while the draft can still be edited; transmit holds what
+	// slips past.
+	set = withSubjectLabels(set, countries, req.Subject)
 	if req.OmitsAdvertisingDuties && set.AdvertisesToASubject() {
 		return commsauthz.DecisionSet{}, errAdvertisingDutiesMissing
 	}

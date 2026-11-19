@@ -8307,6 +8307,10 @@ export const en = {
     "The recipient asked not to be contacted. Sending this email does not change their request.",
   "sendPermission.reason.bounced":
     "This address does not accept mail. Correct the address; an override does not apply.",
+  "sendPermission.reason.subjectLabelMissing":
+    "Marketing to a recipient in this country must start its subject with the label their law sets. Add it to the subject.",
+  "sendPermission.reason.subjectLabelsConflict":
+    "These recipients’ countries set different subject labels for marketing, and a subject starts with one. Send one message per label.",
   "sendPermission.reason.optedOutAfterRequest":
     "The recipient opted out of marketing after requesting this quote. Sending this email does not change their choice.",
   "sendPermission.reason.permissionRequired":

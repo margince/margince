@@ -70,6 +70,10 @@ export function sendPermissionReasonKey(
       return "sendPermission.reason.askedUsToStop" as const;
     case "hard_bounce":
       return "sendPermission.reason.bounced" as const;
+    case "subject_label_missing":
+      return "sendPermission.reason.subjectLabelMissing" as const;
+    case "subject_labels_conflict":
+      return "sendPermission.reason.subjectLabelsConflict" as const;
     case "frequency_cap_reached":
       return "sendPermission.reason.tooMany" as const;
     case "opted_out_after_request":

@@ -286,3 +286,38 @@ func TestAMessageOwingTwoDifferentLabelsIsHeldUntilItsRecipientsAreSplit(t *test
 		}
 	}
 }
+
+// Staging refuses a missing or conflicting label before anything is queued,
+// on the recipients it binds, and leaves a stop the sender meets first.
+func TestStagingRefusesTheLabelItsRecipientsOwe(t *testing.T) {
+	t.Parallel()
+	codes := shippedPackCodes(t)
+	kr, sg, de := RecipientCountry{Code: codes["kr"]}, RecipientCountry{Code: codes["sg"]}, RecipientCountry{Code: codes["de"]}
+	advertising := commsauthz.Decision{Resolved: commsauthz.CategoryMarketing, Verdict: commsauthz.VerdictAllow}
+	objected := commsauthz.Decision{Resolved: commsauthz.CategoryMarketing, Verdict: commsauthz.VerdictDeny,
+		ReasonCode: commsauthz.ReasonObjection}
+	invoice := commsauthz.Decision{Resolved: commsauthz.CategoryInvoiceOrPayment, Verdict: commsauthz.VerdictAllow}
+	for _, tc := range []struct {
+		name      string
+		decisions []commsauthz.Decision
+		countries []RecipientCountry
+		subject   string
+		want      []string
+	}{
+		{"labelled", []commsauthz.Decision{advertising}, []RecipientCountry{kr}, "(광고) Offer", []string{""}},
+		{"unlabelled", []commsauthz.Decision{advertising, advertising}, []RecipientCountry{kr, de}, "Offer",
+			[]string{commsauthz.ReasonSubjectLabelMissing, ""}},
+		{"not advertising", []commsauthz.Decision{invoice}, []RecipientCountry{kr}, "Invoice", []string{""}},
+		{"a stop stays", []commsauthz.Decision{objected}, []RecipientCountry{kr}, "Offer",
+			[]string{commsauthz.ReasonObjection}},
+		{"two labels", []commsauthz.Decision{advertising, advertising, advertising}, []RecipientCountry{kr, sg, de},
+			"(광고) Offer", []string{commsauthz.ReasonSubjectLabelsConflict, commsauthz.ReasonSubjectLabelsConflict, ""}},
+	} {
+		set := withSubjectLabels(commsauthz.DecisionSet{Decisions: slices.Clone(tc.decisions)}, tc.countries, tc.subject)
+		for i, d := range set.Decisions {
+			if d.ReasonCode != tc.want[i] || (tc.want[i] != "" && d.Verdict != commsauthz.VerdictDeny) {
+				t.Errorf("%s: recipient %d got %s %q, want %q", tc.name, i, d.Verdict, d.ReasonCode, tc.want[i])
+			}
+		}
+	}
+}

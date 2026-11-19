@@ -22,6 +22,12 @@ const (
 	ReasonSubjectRequest = "subject_request"
 	// ReasonHardBounce is an address that does not accept mail.
 	ReasonHardBounce = "hard_bounce"
+	// ReasonSubjectLabelMissing is an advertising subject that does not begin
+	// with the label the recipient's pack fixes.
+	ReasonSubjectLabelMissing = "subject_label_missing"
+	// ReasonSubjectLabelsConflict is advertising to recipients whose packs fix
+	// different labels; a subject begins with one, so the recipients are split.
+	ReasonSubjectLabelsConflict = "subject_labels_conflict"
 	// ReasonUnconfirmedDOI is a marketing grant whose round trip never happened.
 	ReasonUnconfirmedDOI = "unconfirmed_double_opt_in"
 	// ReasonNoEvidence is a category whose evidence is absent or does not match.
@@ -142,6 +148,10 @@ var absoluteDenials = map[string]bool{
 	ReasonOptedOutAfterRequest:        true,
 	ReasonMarketingConsentRequired:    true,
 	ReasonMarketingPermissionRequired: true,
+	// A label the law fixes is not softened by a rollout mode either, and the
+	// sender repairs it by editing the subject or splitting the recipients.
+	ReasonSubjectLabelMissing:   true,
+	ReasonSubjectLabelsConflict: true,
 }
 
 // Absolute reports whether this reason denies regardless of Mode.

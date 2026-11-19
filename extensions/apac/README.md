@@ -69,10 +69,12 @@ row; this pack does not state them again.
 An advertising email is labelled as advertising in its subject line, with the label the decree
 fixes: `[QC]`.
 
-The engine checks the finished subject before the provider is called. An advertising message whose
-subject does not begin with `[QC]` (in any case) is parked and not sent. The check applies to
-advertising only: a message that is not advertising but has an advertising label would describe
-itself wrong to the recipient.
+The engine checks the subject when the sender presses Send. An advertising message whose subject
+does not begin with `[QC]` (in any case) is refused there, and the draft stays open to fix. When
+recipients owe different labels, such as `[QC]` and `(광고)`, the send is refused until they get one
+message per label. The same check runs again before the provider is called, and parks a message that
+got past it. It applies to advertising only: a message that is not advertising but has an
+advertising label would describe itself wrong to the recipient.
 
 ### Who is advertising (Art. 19)
 

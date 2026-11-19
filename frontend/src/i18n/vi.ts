@@ -8114,6 +8114,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Người nhận đã yêu cầu không liên hệ nữa. Gửi email này không thay đổi yêu cầu của họ.",
   "sendPermission.reason.bounced":
     "Địa chỉ này không nhận thư. Sửa lại địa chỉ; trường hợp này không thể bỏ qua.",
+  "sendPermission.reason.subjectLabelMissing":
+    "Tin tiếp thị gửi người nhận ở quốc gia này phải bắt đầu tiêu đề bằng nhãn mà luật của họ quy định. Thêm nhãn vào tiêu đề.",
+  "sendPermission.reason.subjectLabelsConflict":
+    "Quốc gia của những người nhận này quy định nhãn tiêu đề khác nhau cho tin tiếp thị, và một tiêu đề chỉ bắt đầu bằng một nhãn. Gửi riêng một tin cho mỗi nhãn.",
   "sendPermission.reason.optedOutAfterRequest":
     "Người nhận đã từ chối quảng cáo sau khi yêu cầu báo giá. Gửi email này không thay đổi lựa chọn của họ.",
   "sendPermission.reason.permissionRequired":
