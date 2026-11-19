@@ -14,7 +14,7 @@ import { navigateReplacing, useHash, useRoute } from "./lib/router";
 import { settingsRouteTarget } from "./lib/settingsrouting";
 import { useUnsavedGuard } from "./lib/unsavedclaims";
 import { type UrlParams, useUrlParams } from "./lib/urlstate";
-import { meFixture } from "./testing/mefixture";
+import { meFixture, READS_RECORDS } from "./testing/mefixture";
 
 // Each routed screen shows the address it reads, carries a draft, and exposes
 // its dial writer so a test can write late.
@@ -64,7 +64,7 @@ function renderRouted(at: string) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  client.setQueryData(["me"], meFixture({}));
+  client.setQueryData(["me"], meFixture({ allow: READS_RECORDS }));
   return render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">

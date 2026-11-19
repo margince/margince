@@ -9,7 +9,7 @@ import type { Receipt } from "../lib/handled";
 import { receiptAuditId } from "../lib/receiptstate";
 import { readingsDay } from "./brief.fixtures";
 import { noCustomerPayments } from "./customerpayments.fixtures";
-import { meFixture } from "./mefixture";
+import { meFixture, READS_RECORDS } from "./mefixture";
 
 // Brief's suites share one harness, because they share one screen.
 //
@@ -81,7 +81,7 @@ const DEFAULTS: Routes = {
   "GET /teams": () => jsonResponse({ data: [], page: { has_more: false } }),
   "GET /finance/customer-payments": () => jsonResponse(noCustomerPayments),
   "GET /link-suggestions": () => jsonResponse({ data: [] }),
-  "GET /me": () => jsonResponse(meFixture()),
+  "GET /me": () => jsonResponse(meFixture({ allow: READS_RECORDS })),
   "GET /brief": () => jsonResponse({ title: "Not Found" }, 404),
   // The Brief's strip, sentence and Do next section are all drawn from this ONE
   // answer, so an unrouted read has to reply with the real shape. The generic
