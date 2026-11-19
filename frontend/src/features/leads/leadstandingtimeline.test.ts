@@ -51,7 +51,7 @@ describe("leadTimeline", () => {
   it("names who marked the lead contacted instead of claiming a reply", () => {
     const marked = { ...lead, first_response_marked_by: "u2" };
     const title = (context: ReadingContext) =>
-      leadTimeline(marked, [], undefined, context).events.find(
+      leadTimeline(marked, [], "", context).events.find(
         (event) => event.key === "first-response",
       )?.title;
     expect(title({ ...ctx, markedBy: "Ana" })).toBe(
@@ -59,7 +59,7 @@ describe("leadTimeline", () => {
     );
     expect(title(ctx)).toBe("lead.timeline.markedContactedNoName");
     expect(
-      leadTimeline(lead, [], undefined, ctx).events.find(
+      leadTimeline(lead, [], "", ctx).events.find(
         (event) => event.key === "first-response",
       )?.title,
     ).toBe("lead.timeline.weReplied");
