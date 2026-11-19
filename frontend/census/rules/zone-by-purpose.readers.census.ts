@@ -90,6 +90,10 @@ const DATE_ONLY =
 export const browserZoneSites: { file: string; why: string }[] = [
   { file: "features/deals/buyerroomframe.tsx", why: PUBLIC },
   {
+    file: "format/timezoneoptions.ts",
+    why: "The time zone list always offers the browser's own zone, so a reader can pick the clock they are on. It renders no time in it.",
+  },
+  {
     file: "features/booking/booking-guest.tsx",
     why: "A guest on the public booking page has only the browser's clock; a host previewing their own page starts from their own zone instead.",
   },

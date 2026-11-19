@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import type { Locale } from "../i18n";
+import { forReader } from "./collate";
+import { INTL_LOCALE } from "./intllocale";
 import { browserZone, isRenderableZone, UTC_ZONE } from "./timezone";
 
 // Zones ICU still lists under the name IANA has since replaced. A reader looks
@@ -42,7 +45,7 @@ export function currentZoneName(zone: string): string {
 }
 
 /** City-first labels keep typeahead useful; values remain IANA identifiers. */
-export function timezoneOptions(locale: string, selected: string, at: Date) {
+export function timezoneOptions(locale: Locale, selected: string, at: Date) {
   const zones = new Set([
     UTC_ZONE,
     currentZoneName(browserZone()),
@@ -51,15 +54,14 @@ export function timezoneOptions(locale: string, selected: string, at: Date) {
       : []),
     ...(selected ? [selected] : []),
   ]);
-  const collator = new Intl.Collator(locale);
   return Array.from(zones, (zone) => timezoneOption(locale, zone, at)).sort(
-    (left, right) => collator.compare(left.label, right.label),
+    (left, right) => forReader(left.label, right.label, locale),
   );
 }
 
 // The filter also matches the IANA id and a former city name, so "Saigon" and
 // "Europe/Berlin" find their zone as well as the label does.
-export function timezoneOption(locale: string, zone: string, at: Date) {
+export function timezoneOption(locale: Locale, zone: string, at: Date) {
   const named = currentZoneName(zone);
   const formerCities = (FORMER_NAMES.get(named) ?? []).map((former) =>
     (former.split("/").pop() ?? former).replaceAll("_", " "),
@@ -71,13 +73,13 @@ export function timezoneOption(locale: string, zone: string, at: Date) {
   };
 }
 
-function timezoneOptionLabel(locale: string, zone: string, at: Date): string {
+function timezoneOptionLabel(locale: Locale, zone: string, at: Date): string {
   if (zone === UTC_ZONE) return UTC_ZONE;
   const parts = zone.replaceAll("_", " ").split("/");
   const city = parts.pop() ?? zone;
   const place = parts.length ? `${city} (${parts.join(" / ")})` : city;
   try {
-    const offset = new Intl.DateTimeFormat(locale, {
+    const offset = new Intl.DateTimeFormat(INTL_LOCALE[locale], {
       timeZone: zone,
       timeZoneName: "shortOffset",
     })
