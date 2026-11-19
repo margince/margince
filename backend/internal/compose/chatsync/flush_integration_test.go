@@ -52,6 +52,8 @@ type noFlush struct{}
 
 func (noFlush) EnqueueFlushTx(context.Context, pgx.Tx, ids.UUID) error { return nil }
 
+func (noFlush) EnqueuePullTx(context.Context, pgx.Tx, ids.UUID) error { return nil }
+
 type flushEnv struct {
 	owner           *pgx.Conn
 	pool            *pgxpool.Pool

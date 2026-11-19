@@ -12865,6 +12865,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Es ist kein Chat-Bot verbunden. Ein Admin verbindet ihn in den Einstellungen.",
   "channelLink.refused.channelNotFound":
     "Der Bot ist in keinem Kanal mit diesem Namen. Füge den Bot im Chat zum Kanal hinzu und versuche es dann erneut.",
+  "channelLink.refused.nameRefused":
+    "Der Chat lehnt diesen Kanalnamen ab. Benenne den Datensatz um oder verknüpfe einen bestehenden Kanal.",
   "channelLink.refused.channelNotPrivate":
     "Dieser Kanal ist öffentlich. Verknüpfe stattdessen einen privaten Kanal.",
   "channelLink.refused.botNotMember":

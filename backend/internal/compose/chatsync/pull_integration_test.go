@@ -96,6 +96,9 @@ func (e *pullEnv) pull(t *testing.T) {
 	}
 }
 
+// key is the source_id the engine files a talk's note under on the test deal.
+func (e *pullEnv) key(talk string) string { return talk + ":deal:" + e.deal.String() }
+
 func (e *pullEnv) cursor(t *testing.T) *int64 {
 	t.Helper()
 	var cursor *int64
@@ -114,7 +117,7 @@ func (e *pullEnv) notes(t *testing.T) []filedNote {
 	t.Helper()
 	rows, err := e.owner.Query(context.Background(), `SELECT a.subject, a.body, a.source_id, a.raw FROM activity a
 		JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = $1
-		WHERE a.source_system = 'dispact' ORDER BY a.source_id`, e.deal)
+		WHERE a.source_system = 'dispact' ORDER BY a.occurred_at, a.source_id`, e.deal)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -136,8 +139,8 @@ func TestAPullFilesOneNoteForAClosedEpisodeAndAReplayFilesNone(t *testing.T) {
 	e.pull(t)
 
 	notes := e.notes(t)
-	if len(notes) != 1 || notes[0].subject != "Discount agreed" || notes[0].sourceID != "acme:1" {
-		t.Fatalf("notes = %+v, want one note keyed acme:1", notes)
+	if len(notes) != 1 || notes[0].subject != "Discount agreed" || notes[0].sourceID != e.key("acme:1") {
+		t.Fatalf("notes = %+v, want one note keyed acme:1 and the deal", notes)
 	}
 	if !strings.HasPrefix(notes[0].body, "The team agreed a discount for the renewal.") {
 		t.Errorf("body = %q, want the summary", notes[0].body)
@@ -201,7 +204,7 @@ func TestTalkFromBeforeTheLinkIsJudgedOnlyWhenAskedAndAtMostFiveTimes(t *testing
 	e.exec(t, `UPDATE chat_link SET history_cursor = NULL, backfill_requested = true WHERE id = $1`, e.link)
 	e.pull(t)
 	notes := e.notes(t)
-	if len(notes) != backfillEpisodes || notes[0].sourceID != "acme:3" {
+	if len(notes) != backfillEpisodes || notes[0].sourceID != e.key("acme:3") {
 		t.Fatalf("notes = %d starting %v, want the 5 latest episodes from acme:3", len(notes), notes)
 	}
 	var asked bool
@@ -226,12 +229,12 @@ func TestEachLinkReadsAndFilesOnlyItsOwnChannel(t *testing.T) {
 	if e.history.Reads("other") == 0 || e.history.Reads("acme") == 0 {
 		t.Fatalf("reads = %d of other and %d of acme, want both channels read", e.history.Reads("other"), e.history.Reads("acme"))
 	}
-	if notes := e.notes(t); len(notes) != 1 || notes[0].sourceID != "acme:1" {
+	if notes := e.notes(t); len(notes) != 1 || notes[0].sourceID != e.key("acme:1") {
 		t.Fatalf("the deal's notes = %+v, want only its own channel's acme:1", notes)
 	}
 	var onProject string
 	if err := e.owner.QueryRow(context.Background(), `SELECT a.source_id FROM activity a
-		JOIN activity_link l ON l.activity_id = a.id AND l.project_id = $1`, project).Scan(&onProject); err != nil || onProject != "other:1" {
+		JOIN activity_link l ON l.activity_id = a.id AND l.project_id = $1`, project).Scan(&onProject); err != nil || onProject != "other:1:project:"+project.String() {
 		t.Fatalf("the project's note = %q, %v; want other:1", onProject, err)
 	}
 	if _, err := e.filer.FileMessage(e.memberCtx(), chatlinks.RecordDeal, e.deal, "#other:1", false); !errors.Is(err, chatlinks.ErrMessageNotFound) {
@@ -356,13 +359,13 @@ func TestAnEpisodeCutByThePageCapIsFiledOnceWhole(t *testing.T) {
 		e.say("acme", seq, 120+int(seq), "Acme rollout talk")
 	}
 	e.pull(t)
-	if notes := e.notes(t); len(notes) != 1 || notes[0].sourceID != "acme:1" {
+	if notes := e.notes(t); len(notes) != 1 || notes[0].sourceID != e.key("acme:1") {
 		t.Fatalf("first pull filed %+v, want only the episode the page cap did not cut", notes)
 	}
 
 	e.pull(t)
 	notes := e.notes(t)
-	if len(notes) != 2 || notes[1].sourceID != "acme:11" || notes[1].raw["message_count"] != float64(490) {
+	if len(notes) != 2 || notes[1].sourceID != e.key("acme:11") || notes[1].raw["message_count"] != float64(490) {
 		t.Fatalf("second pull filed %+v, want the cut episode once, all 490 messages", notes)
 	}
 }
@@ -403,7 +406,7 @@ func TestANoteUnderAMessageKeyThatTheChatDidNotWriteIsRefused(t *testing.T) {
 	e.say("acme", 1, 60, "The 12% is fine with me")
 	planted := ids.NewV7()
 	e.exec(t, `INSERT INTO activity (id, kind, subject, source, source_system, source_id, raw, captured_by)
-		VALUES ($1, 'note', 'Fake', 'manual', 'dispact', 'acme:1:message', '{"message_count":1,"url":"https://evil.test"}', 'human:x')`, planted)
+		VALUES ($1, 'note', 'Fake', 'manual', 'dispact', $2, '{"message_count":1,"url":"https://evil.test"}', 'human:x')`, planted, e.key("acme:1:message"))
 
 	if _, err := e.filer.FileMessage(e.memberCtx(), chatlinks.RecordDeal, e.deal, "1", false); !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("filing over a planted note = %v, want a conflict", err)
@@ -548,7 +551,7 @@ func TestANoteLimitedToItsParticipantsIsNotSent(t *testing.T) {
 	e := setupParties(t)
 	e.secondRequest(t)
 	e.exec(t, `UPDATE activity SET audience = 'participants' WHERE source_system = 'dispact'`)
-	e.exec(t, `DELETE FROM activity WHERE source_id = 'acme:2'`)
+	e.exec(t, `DELETE FROM activity WHERE source_id = $1`, e.key("acme:2"))
 	e.exec(t, `UPDATE chat_link SET history_cursor = 1 WHERE id = $1`, e.link)
 	e.pull(t)
 	requireNotIn(t, e.rec.prompts[len(e.rec.prompts)-1], "Which discount for two years?")

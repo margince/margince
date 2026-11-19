@@ -12524,6 +12524,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chưa có bot chat nào được kết nối. Quản trị viên kết nối bot trong Cài đặt.",
   "channelLink.refused.channelNotFound":
     "Bot không ở trong kênh nào có tên này. Hãy thêm bot vào kênh trong chat, rồi thử lại.",
+  "channelLink.refused.nameRefused":
+    "Chat từ chối tên kênh này. Hãy đổi tên hồ sơ, hoặc liên kết một kênh có sẵn.",
   "channelLink.refused.channelNotPrivate":
     "Kênh này là kênh công khai. Hãy liên kết một kênh riêng tư.",
   "channelLink.refused.botNotMember":
