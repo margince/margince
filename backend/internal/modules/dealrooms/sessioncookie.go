@@ -66,12 +66,21 @@ func GuardPublicRequest(w http.ResponseWriter, r *http.Request, origin string) b
 	return true
 }
 
+// errBodyNotJSON names no field: the body as a whole is in the wrong format.
+var errBodyNotJSON = bodyRefusal{code: "unsupported_media_type", msg: "send the body as application/json"}
+
+type bodyRefusal struct{ code, msg string }
+
+func (e bodyRefusal) Error() string { return e.msg }
+
+func (e bodyRefusal) MessageFault() (code, message string) { return e.code, e.msg }
+
 // requireJSON refuses a body sent as anything but JSON. A cross-site HTML form
 // can post text/plain without a preflight; JSON it cannot.
 func requireJSON(w http.ResponseWriter, r *http.Request) bool {
 	mediaType, _, err := mime.ParseMediaType(r.Header.Get("Content-Type"))
 	if err != nil || mediaType != "application/json" {
-		httperr.Write(w, r, httperr.Validation("Content-Type", "unsupported", "send the body as application/json"))
+		httperr.Write(w, r, errBodyNotJSON)
 		return false
 	}
 	return true
