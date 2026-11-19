@@ -16,8 +16,8 @@ type BackfillTuning struct {
 	Lookahead int
 }
 
-// Resolve answers the page size, fetch workers and look-ahead to use, with the
-// connector's own page size and workers standing in for a field left zero. The
+// Resolve answers the page size, fetch workers and look-ahead to use. The
+// connector's own page size and workers stand in for a field left zero. The
 // look-ahead never falls below the workers, or the extra workers would sit idle.
 func (t BackfillTuning) Resolve(pageSize, workers int) (page, fetchWorkers, lookahead int) {
 	page, fetchWorkers = pageSize, workers

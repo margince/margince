@@ -573,7 +573,7 @@
           "default": 1
         },
         "history_fetch_workers": {
-          "description": "Messages one history page downloads at once. 0 keeps the built-in 4 for Gmail and 2 for Microsoft. Microsoft allows four requests at once per mailbox, so it never uses more than 4. Memory held by Gmail downloads stays bounded however high this is.",
+          "description": "Messages one history page downloads at once. 0 keeps the built-in 4 for Gmail and 2 for Microsoft. Microsoft allows four requests at once per mailbox, so it never uses more than 4. Memory held by Gmail downloads stays bounded at any value.",
           "type": [
             "integer",
             "null"
@@ -589,7 +589,7 @@
           "default": false
         },
         "history_lookahead": {
-          "description": "How many messages a history page may download ahead of the ones saved. 0 means twice the fetch workers; a value under the workers is raised to match.",
+          "description": "How many messages a history page may download before the earlier ones are saved. 0 means twice the fetch workers; a value under the workers is raised to match.",
           "type": [
             "integer",
             "null"

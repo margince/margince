@@ -68,7 +68,7 @@ var (
 			}
 			return nil
 		},
-		Doc: "Messages one history page downloads at once. 0 keeps the built-in 4 for Gmail and 2 for Microsoft. Microsoft allows four requests at once per mailbox, so it never uses more than 4. Memory held by Gmail downloads stays bounded however high this is.",
+		Doc: "Messages one history page downloads at once. 0 keeps the built-in 4 for Gmail and 2 for Microsoft. Microsoft allows four requests at once per mailbox, so it never uses more than 4. Memory held by Gmail downloads stays bounded at any value.",
 	})
 	CaptureHistoryLookahead = config.Define(config.Spec[int]{
 		Key: "capture.history_lookahead", Env: "MARGINCE_CAPTURE_HISTORY_LOOKAHEAD", Type: config.Int, Default: config.Some(0), Roles: bothRoles,
@@ -78,7 +78,7 @@ var (
 			}
 			return nil
 		},
-		Doc: "How many messages a history page may download ahead of the ones saved. 0 means twice the fetch workers; a value under the workers is raised to match.",
+		Doc: "How many messages a history page may download before the earlier ones are saved. 0 means twice the fetch workers; a value under the workers is raised to match.",
 	})
 	CaptureHistoryPageDelay = config.Define(config.Spec[time.Duration]{
 		Key: "capture.history_page_delay", Env: "MARGINCE_CAPTURE_HISTORY_PAGE_DELAY", Type: config.Duration, Default: config.Some(time.Duration(0)), Roles: bothRoles,
