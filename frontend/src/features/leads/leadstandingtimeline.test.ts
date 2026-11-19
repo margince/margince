@@ -48,6 +48,23 @@ function row(extra: Partial<Activity>): Activity {
 }
 
 describe("leadTimeline", () => {
+  it("names who marked the lead contacted instead of claiming a reply", () => {
+    const marked = { ...lead, first_response_marked_by: "u2" };
+    const title = (context: ReadingContext) =>
+      leadTimeline(marked, [], "", context).events.find(
+        (event) => event.key === "first-response",
+      )?.title;
+    expect(title({ ...ctx, markedBy: "Ana" })).toBe(
+      'lead.timeline.markedContacted:{"user":"Ana"}',
+    );
+    expect(title(ctx)).toBe("lead.timeline.markedContactedNoName");
+    expect(
+      leadTimeline(lead, [], "", ctx).events.find(
+        (event) => event.key === "first-response",
+      )?.title,
+    ).toBe("lead.timeline.weReplied");
+  });
+
   it("draws arrival, our answer, their newest message and a meeting ahead", () => {
     const { events } = leadTimeline(
       lead,

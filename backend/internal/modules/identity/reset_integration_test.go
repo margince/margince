@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // capturedMail is the fake A74 transport: it records what would have
@@ -120,6 +121,24 @@ func TestPasswordResetFlowEndToEnd(t *testing.T) {
 // TestPasswordResetRevokesPassportsToo pins the invariant: a completed
 // reset must end every credential that could act as the account, not just
 // the session cookie that prompted the recovery.
+func TestPasswordResetRefusesTheAccountAddressAndKeepsTheToken(t *testing.T) {
+	e := setupRevocationEnv(t, "reset-email-password")
+	ctx := e.wsOnlyCtx()
+
+	rawToken, err := e.svc.CreatePasswordReset(ctx, e.member.Email)
+	if err != nil || rawToken == "" {
+		t.Fatalf("CreatePasswordReset: token=%q err=%v", rawToken, err)
+	}
+	var parseErr *values.ParseError
+	err = e.svc.RedeemPasswordReset(ctx, rawToken, e.member.Email)
+	if !errors.As(err, &parseErr) || parseErr.Field != "new_password" || parseErr.Code != "email" {
+		t.Fatalf("redeeming with the account address gave %v, want a new_password/email refusal", err)
+	}
+	if err := e.svc.RedeemPasswordReset(ctx, rawToken, "a password that is no address"); err != nil {
+		t.Fatalf("the token must still redeem after a refused password: %v", err)
+	}
+}
+
 func TestPasswordResetRevokesPassportsToo(t *testing.T) {
 	e := setupRevocationEnv(t, "reset-passport-cascade")
 	ctx := e.wsOnlyCtx()

@@ -6778,6 +6778,9 @@
           "base_currency": {
             "type": "string"
           },
+          "call_withheld": {
+            "type": "boolean"
+          },
           "confirmed_date_count": {
             "type": "integer"
           },
@@ -14589,6 +14592,9 @@
               "type": "object"
             },
             "type": "array"
+          },
+          "call_withheld": {
+            "type": "boolean"
           },
           "closing_minor": {
             "type": "integer"

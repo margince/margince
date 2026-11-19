@@ -7,7 +7,7 @@ import { Button, Field, TextInput } from "../../design-system/atoms";
 import { usePasswordReveal } from "../../design-system/passwordreveal";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { isTooShort, MIN_PASSWORD } from "./passwordrule";
+import { MIN_PASSWORD, passwordFault } from "./passwordrule";
 
 /*
  * Why a reset failure has to be classified at all.
@@ -98,8 +98,8 @@ export function ResetForm({
   // Code points, through the shared rule, so this screen and the change-password
   // card agree on what a character is. `password.length` counts UTF-16 units, so
   // an emoji password could clear the floor here and be refused there.
-  const tooShort = isTooShort(password);
-  const ready = password !== "" && !tooShort;
+  const fault = passwordFault(password);
+  const ready = password !== "" && !fault;
   const submit = (event: FormEvent) => {
     event.preventDefault();
     if (ready && !reset.isPending) {
@@ -115,10 +115,10 @@ export function ResetForm({
         <Field
           label={t("auth.newPassword")}
           icon={<Lock aria-hidden />}
-          error={tooShort ? t("password.tooShort") : undefined}
+          error={fault ? t(fault) : undefined}
           // The rule, until the rule is being broken. Then the refusal restates
           // it in the danger tone, and a grey copy underneath is noise.
-          hint={tooShort ? undefined : t("auth.passwordHint")}
+          hint={fault ? undefined : t("auth.passwordHint")}
           trailing={reveal.trailing}
         >
           {(control) => (

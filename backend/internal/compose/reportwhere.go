@@ -401,5 +401,8 @@ func filterClause(spec reportSpec, key, expr string, pos int) string {
 	if template, set := spec.filterPredicates[key]; set {
 		return fmt.Sprintf(template, ref)
 	}
+	if template, listed := spec.listPredicates[key]; listed {
+		return fmt.Sprintf(template, ref)
+	}
 	return expr + " = " + ref
 }

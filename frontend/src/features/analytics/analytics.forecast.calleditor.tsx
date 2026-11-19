@@ -33,8 +33,10 @@ export function ForecastCallEditor({
 }>) {
   const t = useT();
   const client = useQueryClient();
-  const [amountMinor, setAmountMinor] = useState<number>(
-    readings.current_call?.amount_minor ?? 0,
+  // Null until a number is typed, so an untouched editor never records 0. A
+  // typed 0 is a call like any other.
+  const [amountMinor, setAmountMinor] = useState<number | null>(
+    readings.current_call?.amount_minor ?? null,
   );
   const [note, setNote] = useState("");
   // The box keeps a refused text in view; the save waits until it reads.
@@ -94,9 +96,14 @@ export function ForecastCallEditor({
           <Button
             variant="primary"
             disabled={save.isPending || amountRefused}
-            onClick={() =>
-              save.mutate({ amountMinor, note, key: idempotency.key })
+            reason={
+              amountMinor === null ? t("forecast.callAmountNeeded") : undefined
             }
+            onClick={() => {
+              if (amountMinor !== null) {
+                save.mutate({ amountMinor, note, key: idempotency.key });
+              }
+            }}
           >
             {t("forecast.saveCall")}
           </Button>
@@ -112,9 +119,11 @@ export function ForecastCallEditor({
           {(control) => (
             <MoneyInput
               {...control}
-              valueMinor={amountMinor}
+              valueMinor={amountMinor ?? 0}
+              blankWhenZero={amountMinor === null}
               currency={readings.base_currency}
-              onChangeMinor={(next) => setAmountMinor(next ?? 0)}
+              onChangeMinor={setAmountMinor}
+              onClear={() => setAmountMinor(null)}
               onRefusedChange={setAmountRefused}
             />
           )}
