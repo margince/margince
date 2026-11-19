@@ -38,7 +38,7 @@ func TestTheMailReaderQueueProbesEachThreadsScanRowByKey(t *testing.T) {
 		if _, err := tx.Exec(ctx, `SET LOCAL enable_seqscan = off`); err != nil {
 			return err
 		}
-		return tx.QueryRow(ctx, `EXPLAIN (FORMAT JSON) `+dueThreadsQuery,
+		return tx.QueryRow(ctx, `EXPLAIN (FORMAT JSON) `+dueThreadsQuery(false),
 			now.Add(-extractSettleHours*time.Hour), 200, extractRefusalCap, now.Add(-extractParkFor)).Scan(&raw)
 	}); err != nil {
 		t.Fatalf("planning the queue: %v", err)

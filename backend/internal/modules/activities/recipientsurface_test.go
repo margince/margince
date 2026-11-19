@@ -61,7 +61,7 @@ func TestACcRecipientAdvertisedToGetsTheAdvertisingDuties(t *testing.T) {
 		if surface.disclosureCategory() != commsauthz.CategoryMarketing || !surface.carries() {
 			t.Fatalf("surface %+v: b@ is advertised to, so the body owes the advertising duties", surface)
 		}
-		return store.deliverability(context.Background(), "As discussed.", "Re: your question", in.Recipients, surface, ids.Nil, "")
+		return store.deliverability(context.Background(), "As discussed.", "Re: your question", in.Recipients, nil, surface, ids.Nil, "")
 	}
 
 	combined, err := derive(SendEmailInput{

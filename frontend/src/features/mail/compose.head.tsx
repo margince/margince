@@ -11,6 +11,7 @@ import { useProjectRecord } from "../projects/projectrecord";
 import { FromMailboxRow } from "./compose.from";
 import { StaleThreadNotice } from "./compose.notices";
 import { colleagueMailboxesOf } from "./composeanchor";
+import type { RecipientCountries } from "./composecountries";
 import { RelatedFiling } from "./composedraftcontext";
 import type { ComposeFields } from "./composefields";
 import type { ComposeRecords } from "./composefiling";
@@ -122,6 +123,7 @@ function MailOnlyFields({
   filing,
   tagging,
   marked,
+  countries,
 }: Readonly<{
   to: string[];
   onToChange: (next: string[]) => void;
@@ -151,6 +153,7 @@ function MailOnlyFields({
   filing: ReactNode;
   tagging: ReactNode;
   marked?: Readonly<{ values: ReadonlySet<string>; label: string }>;
+  countries?: RecipientCountries;
 }>) {
   const t = useT();
   return (
@@ -174,6 +177,7 @@ function MailOnlyFields({
         deadRecipients={deadRecipients}
         disabled={rejectionInFlight}
         marked={marked}
+        countries={countries}
       />
       <SubjectRow
         subject={subject}
@@ -331,6 +335,7 @@ export function ComposeHead({
       {!dial.isChannelReply && (
         <MailOnlyFields
           marked={marked}
+          countries={fields.countries}
           flagged={flagged}
           to={fields.to}
           onToChange={fields.setTo}

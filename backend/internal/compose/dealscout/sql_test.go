@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+package dealscout
 
 import (
 	"regexp"
@@ -16,7 +16,7 @@ import (
 // and the cap is applied to companies that already qualify.
 func TestTheScoutReadsOnlyTheCompaniesItChose(t *testing.T) {
 	const companyCap = 7
-	query, args := dealScoutSQL(time.Now().Add(-time.Hour), time.Now(), companyCap)
+	query, args := EvidenceSQL(time.Now().Add(-time.Hour), time.Now(), companyCap, true)
 	chosen := strings.Index(query, "chosen AS (")
 	cited := strings.Index(query, "cited AS (")
 	final := strings.LastIndex(query, "FROM cited")
@@ -30,7 +30,7 @@ func TestTheScoutReadsOnlyTheCompaniesItChose(t *testing.T) {
 		t.Fatal("a document reading is looked up outside the final select over the chosen companies' evidence")
 	}
 	chosenBody := query[chosen:cited]
-	for _, rule := range []string{"FROM pairs"} {
+	for _, rule := range []string{"FROM pairs", "FROM requests"} {
 		if !strings.Contains(chosenBody, rule) {
 			t.Fatalf("the cap chooses among companies without %q qualifying them first", rule)
 		}

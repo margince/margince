@@ -284,6 +284,7 @@ export const SETTINGS_SECTIONS = {
       "aiTasks.title",
       "privateMailRequests.title",
       "privateMailRequests.switch",
+      "privateMailRequests.share",
     ],
     prices: [
       "settings.part.models.prices",

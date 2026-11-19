@@ -5,6 +5,7 @@ import { X } from "lucide-react";
 import {
   type ClipboardEvent,
   type KeyboardEvent,
+  type ReactNode,
   useRef,
   useState,
 } from "react";
@@ -111,6 +112,9 @@ export type TokenInputProps = Readonly<{
   /** Values drawn in the warning tone, with `label` read after each one, for a
    *  set where some values need the reader's attention. */
   marked?: Readonly<{ values: ReadonlySet<string>; label: string }>;
+  /** A small control drawn inside each token before its remove button, for a
+   *  fact about that one value the reader may change (a recipient's country). */
+  aside?: (value: string) => ReactNode;
   id?: string;
   "aria-label"?: string;
   "aria-labelledby"?: string;
@@ -128,6 +132,7 @@ export function TokenInput({
   placeholder,
   disabled,
   marked,
+  aside,
   ...aria
 }: TokenInputProps) {
   const [typed, setTyped] = useState("");
@@ -247,6 +252,7 @@ export function TokenInput({
           offer={offers.get(value)}
           disabled={disabled}
           mark={marked?.values.has(value) ? marked.label : undefined}
+          aside={aside?.(value)}
           onRemove={() => onChange(values.filter((v) => v !== value))}
         />
       ))}
@@ -300,12 +306,14 @@ function TokenChip({
   offer,
   disabled,
   mark,
+  aside,
   onRemove,
 }: Readonly<{
   value: string;
   offer: TokenSuggestion | undefined;
   disabled: boolean | undefined;
   mark: string | undefined;
+  aside: ReactNode;
   onRemove: () => void;
 }>) {
   const label = offer?.label;
@@ -342,6 +350,7 @@ function TokenChip({
           {named ? label : value}
         </span>
         {mark !== undefined && <span className="sr-only">, {mark}</span>}
+        {aside}
         <button
           type="button"
           className="token-remove"
