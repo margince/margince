@@ -32,7 +32,7 @@ import { useListsAvailable, useRecordLists } from "../../lib/lists.queries";
 import { useRecordTags } from "../../lib/tags.queries";
 import { useViewerZone } from "../../lib/viewerzone";
 import { LeadCompany, useLeadCompanyFactsSection } from "./leadcompany";
-import { useLeadAboutFlows } from "./leaddetailsflows";
+import { useLeadPickerFlows } from "./leaddetailsflows";
 import { useLeadEdit } from "./leadedit";
 import { LeadOwnerReading, statusSetBy, useLeadOwnerFlow } from "./leadheader";
 import { leadIndustry } from "./leadindustry";
@@ -71,24 +71,27 @@ function useLinkedCompanyRow(lead: Lead): DetailRow | null {
   };
 }
 
-/** The About rows in the order the design reads them, blanks folded. */
-function useAboutRows(lead: Lead, mayChange: boolean): DetailRow[] {
-  const readerZone = useViewerZone();
+type RowText = (key: TextKey, label: MessageKey) => DetailRow;
+
+function useRowText(lead: Lead): RowText {
   const t = useT();
-  const { locale } = useLocale();
-  const origins = useLeadOrigins();
-  const tags = useRecordTags("lead", lead.id, !lead.archived_at);
-  const partnerRow = useLeadPartnerRow(lead);
-  const text = (key: TextKey, label: MessageKey): DetailRow => ({
+  return (key, label) => ({
     key,
     term: t(label),
     empty: isBlank(lead[key]),
     value: isBlank(lead[key]) ? t("field.unset") : lead[key],
   });
+}
+
+/** Who the lead is and what it asks about, blanks folded. */
+function useAboutRows(lead: Lead, mayChange: boolean): DetailRow[] {
+  const t = useT();
+  const text = useRowText(lead);
   const companyName =
     useLinkedCompanyRow(lead) ?? text("company_name", "create.companyName");
-  const tagged = (tags.data?.data ?? []).length > 0;
   return [
+    // The name heads the card; the row is only here to fill a blank one.
+    ...(isBlank(lead.full_name) ? [text("full_name", "create.fullName")] : []),
     {
       ...companyName,
       // A domain can match a company the lead never named, and the offer must show.
@@ -114,6 +117,29 @@ function useAboutRows(lead: Lead, mayChange: boolean): DetailRow[] {
               : t("field.unset"),
           },
         ]),
+    {
+      key: "project_id",
+      term: t("lead.project"),
+      empty: !lead.project_id,
+      value: lead.project_id ? (
+        <EntityRef kind="project" id={lead.project_id} />
+      ) : (
+        t("field.unset")
+      ),
+    },
+    {
+      key: "product_id",
+      term: t("lead.product"),
+      empty: !lead.product_id,
+      value: <LeadProductName lead={lead} />,
+    },
+  ];
+}
+
+/** The ways to reach the lead: the reach card, then the profile it came with. */
+function useReachRows(lead: Lead): DetailRow[] {
+  const t = useT();
+  return [
     ...reachRows(lead, t, {
       email: <EmailValue lead={lead} />,
       // The number dials, as on a contact.
@@ -127,6 +153,30 @@ function useAboutRows(lead: Lead, mayChange: boolean): DetailRow[] {
         />
       ),
     }),
+    {
+      key: "linkedin_url",
+      term: t("create.linkedinUrl"),
+      empty: isBlank(lead.linkedin_url),
+      value: lead.linkedin_url ? (
+        <LinkedInChip href={lead.linkedin_url} name={lead.full_name} />
+      ) : (
+        <span title={t("record.leadProfileReadOnly")}>{t("field.unset")}</span>
+      ),
+    },
+  ];
+}
+
+/** Where the lead came from and how it is filed. */
+function useRegistrationRows(lead: Lead): DetailRow[] {
+  const readerZone = useViewerZone();
+  const t = useT();
+  const { locale } = useLocale();
+  const origins = useLeadOrigins();
+  const tags = useRecordTags("lead", lead.id, !lead.archived_at);
+  const partnerRow = useLeadPartnerRow(lead);
+  const text = useRowText(lead);
+  const tagged = (tags.data?.data ?? []).length > 0;
+  return [
     {
       key: "origin",
       term: t("lead.origin"),
@@ -147,18 +197,6 @@ function useAboutRows(lead: Lead, mayChange: boolean): DetailRow[] {
       term: t("lead.aside.received"),
       value: formatDateAbbrev(lead.created_at, locale, readerZone),
     },
-    // The name heads the card; the row is only here to fill a blank one.
-    ...(isBlank(lead.full_name) ? [text("full_name", "create.fullName")] : []),
-    {
-      key: "linkedin_url",
-      term: t("create.linkedinUrl"),
-      empty: isBlank(lead.linkedin_url),
-      value: lead.linkedin_url ? (
-        <LinkedInChip href={lead.linkedin_url} name={lead.full_name} />
-      ) : (
-        <span title={t("record.leadProfileReadOnly")}>{t("field.unset")}</span>
-      ),
-    },
     {
       ...text("candidate_company_key", "record.companyRoutingKey"),
       term: (
@@ -171,22 +209,6 @@ function useAboutRows(lead: Lead, mayChange: boolean): DetailRow[] {
           />
         </>
       ),
-    },
-    {
-      key: "project_id",
-      term: t("lead.project"),
-      empty: !lead.project_id,
-      value: lead.project_id ? (
-        <EntityRef kind="project" id={lead.project_id} />
-      ) : (
-        t("field.unset")
-      ),
-    },
-    {
-      key: "product_id",
-      term: t("lead.product"),
-      empty: !lead.product_id,
-      value: <LeadProductName lead={lead} />,
     },
     {
       key: "tags",
@@ -209,15 +231,15 @@ function useAboutRows(lead: Lead, mayChange: boolean): DetailRow[] {
 }
 
 // The reach card holds the address and the number, so it offers both.
-function aboutKeys(rows: readonly DetailRow[]): string[] {
+function sectionKeys(rows: readonly DetailRow[]): string[] {
   const keys = rows.flatMap((row) =>
     row.key === "reach" ? ["email", "phone"] : [row.key],
   );
   return [...new Set(keys)];
 }
 
-/** What the About dialog shows of a field without offering it, and why. */
-function useAboutLocks(
+/** What a section's dialog shows of a field without offering it, and why. */
+function useDetailLocks(
   lead: Lead,
   edit: RailEdit,
 ): Record<string, SectionLock> {
@@ -296,17 +318,36 @@ function LeadDetailsBody({
   lists,
 }: DetailsProps & Readonly<{ lists?: ReactNode }>) {
   const t = useT();
+  const shown = (rows: DetailRow[]) =>
+    // A lead nobody may change has no blank to fill, so it has none to show.
+    writer.readOnly ? rows.filter((row) => !row.empty) : rows;
   const about = useAboutRows(lead, !writer.readOnly);
+  const reach = useReachRows(lead);
+  const registration = useRegistrationRows(lead);
   const edit = useLeadEdit(lead, writer);
-  const aboutFlows = useLeadAboutFlows(lead, writer);
-  const locks = useAboutLocks(lead, edit);
-  const aboutLabel = t("record.details.about");
-  const aboutEdit = useSectionEdit(edit, {
-    label: aboutLabel,
-    keys: aboutKeys(about),
-    flows: aboutFlows.flows,
-    readOnly: locks,
+  const pickers = useLeadPickerFlows(lead, writer);
+  const locks = useDetailLocks(lead, edit);
+  const section = (key: string, label: string, rows: DetailRow[]) => ({
+    key,
+    label,
+    rows,
+    options: {
+      label,
+      keys: sectionKeys(rows),
+      flows: pickers.flows,
+      readOnly: locks,
+    },
   });
+  const aboutPart = section("about", t("record.details.about"), about);
+  const reachPart = section("reach", t("record.reach.label"), reach);
+  const registrationPart = section(
+    "registration",
+    t("record.registration"),
+    registration,
+  );
+  const aboutEdit = useSectionEdit(edit, aboutPart.options);
+  const reachEdit = useSectionEdit(edit, reachPart.options);
+  const registrationEdit = useSectionEdit(edit, registrationPart.options);
   const owner = useLeadOwnerFlow(lead, writer);
   const ownershipLabel = t("record.details.ownership");
   const ownershipEdit = useSectionEdit(edit, {
@@ -317,14 +358,9 @@ function LeadDetailsBody({
   const setBy = statusSetBy(lead, t);
   const companyFacts = useLeadCompanyFactsSection(lead);
   const sections: DetailSection[] = [
-    {
-      key: "about",
-      label: aboutLabel,
-      edit: aboutEdit.edit,
-      // A lead nobody may change has no blank to fill, so it has none to show.
-      rows: writer.readOnly ? about.filter((row) => !row.empty) : about,
-    },
+    { ...aboutPart, rows: shown(about), edit: aboutEdit.edit },
     ...(companyFacts ? [companyFacts] : []),
+    { ...reachPart, rows: shown(reach), edit: reachEdit.edit },
     {
       key: "ownership",
       label: ownershipLabel,
@@ -350,13 +386,20 @@ function LeadDetailsBody({
         },
       ],
     },
+    {
+      ...registrationPart,
+      rows: shown(registration),
+      edit: registrationEdit.edit,
+    },
     { key: "lists", label: t("lists.record.title"), children: lists },
   ];
   return (
     <>
       <RecordDetails sections={sections} footnote={t("lead.aside.footnote")} />
       {aboutEdit.element}
-      {aboutFlows.element}
+      {reachEdit.element}
+      {registrationEdit.element}
+      {pickers.element}
       {ownershipEdit.element}
       {owner.element}
       <LeadStops leadId={lead.id} />

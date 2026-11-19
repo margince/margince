@@ -122,14 +122,16 @@ describe("LeadScreen — edit with If-Match (P-1)", () => {
       return jsonResponse(lead);
     });
     render(<LeadScreen id="l-1" />);
-    const about = await editSection(user, "About");
+    const registration = await editSection(user, "Registration");
     await pickOption(
       user,
-      within(about).getByRole("combobox", { name: "Origin" }),
+      within(registration).getByRole("combobox", { name: "Origin" }),
       "Partner",
     );
     expect(patchBody).toBeNull();
-    await user.click(within(about).getByRole("button", { name: "Save" }));
+    await user.click(
+      within(registration).getByRole("button", { name: "Save" }),
+    );
 
     await waitFor(() => expect(patchBody).toBeTruthy());
     expect(patchBody).toMatchObject({ origin: "partner" });

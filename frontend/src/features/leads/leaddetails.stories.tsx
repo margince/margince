@@ -205,6 +205,28 @@ export const AboutEditDark: Story = {
 
 export const AboutEditPhone: Story = { ...AboutEdit, tags: ["uat-phone"] };
 
+/** Email and phone holds the address, the number and the profile, which stays fixed with why. */
+export const ReachEdit: Story = {
+  render: page({ ...base, phone: "+49301234567" }),
+  play: async () => {
+    const user = userEvent.setup();
+    await user.click(
+      await screen.findByRole("button", { name: "Edit Email and phone" }),
+    );
+    const reach = within(
+      await screen.findByRole("dialog", { name: "Email and phone" }),
+    );
+    await expect(reach.getByRole("textbox", { name: "Email" })).toHaveValue(
+      "jonas@nordwind.example",
+    );
+    await waitFor(() =>
+      expect(reach.getByRole("group", { name: "LinkedIn URL" })).toBeVisible(),
+    );
+  },
+};
+
+export const ReachEditPhone: Story = { ...ReachEdit, tags: ["uat-phone"] };
+
 /** The project row leaves the dialog for the project search, which stands alone. */
 export const ProjectFlow: Story = {
   render: page(base),

@@ -13,7 +13,7 @@ import {
 import { LeadScreen } from "./leads";
 import { SIGNAL_CATALOG } from "./leadsignals.fixture";
 
-// The About rows a lead changes through a picker of their own: project, product and tags.
+// The rows a lead changes through a picker of their own: project and product in About, tags in Registration.
 
 const meta: Meta = {
   title: "Records/Leads/About flows",
@@ -72,21 +72,21 @@ function Page() {
   );
 }
 
-async function openAbout() {
+async function openSection(name: string) {
   const user = userEvent.setup();
-  await user.click(await screen.findByRole("button", { name: "Edit About" }));
-  const about = within(await screen.findByRole("dialog", { name: "About" }));
-  return { user, about };
+  await user.click(await screen.findByRole("button", { name: `Edit ${name}` }));
+  const dialog = within(await screen.findByRole("dialog", { name }));
+  return { user, dialog };
 }
 
-// About reads the lead's tags, and Tags opens their own editor.
+// Registration reads the lead's tags, and Tags opens their own editor.
 export const TagsFlow: Story = {
   render: () => <Page />,
   play: async () => {
-    const { user, about } = await openAbout();
-    const reading = await about.findByText("Fleet");
+    const { user, dialog } = await openSection("Registration");
+    const reading = await dialog.findByText("Fleet");
     await waitFor(() => expect(reading).toBeVisible());
-    await user.click(about.getByRole("button", { name: "Change Tags" }));
+    await user.click(dialog.getByRole("button", { name: "Change Tags" }));
     const tags = await screen.findByRole("dialog", { name: "Tags" });
     await waitFor(() => expect(tags).toBeVisible());
   },
@@ -98,10 +98,10 @@ export const TagsFlowPhone: Story = { ...TagsFlow, tags: ["uat-phone"] };
 export const ProductFlow: Story = {
   render: () => <Page />,
   play: async () => {
-    const { user, about } = await openAbout();
-    const reading = await about.findByText("Suite");
+    const { user, dialog } = await openSection("About");
+    const reading = await dialog.findByText("Suite");
     await waitFor(() => expect(reading).toBeVisible());
-    await user.click(about.getByRole("button", { name: "Change Product" }));
+    await user.click(dialog.getByRole("button", { name: "Change Product" }));
     const search = await screen.findByRole("dialog", {
       name: "Change product",
     });

@@ -3,6 +3,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { FORM_DIALOG_MAX_FIELDS } from "../../design-system/modal";
 import { pickOption } from "../../design-system/select-testing";
 import { en } from "../../i18n/en";
 import { companyNamesAnswer } from "../../testing/companynames.testkit";
@@ -59,6 +60,15 @@ function serve(served: Record<string, unknown>) {
     return jsonResponse(served);
   });
   return patches;
+}
+
+function labels(dialog: HTMLElement): string[] {
+  return (
+    [...dialog.querySelectorAll("label, legend")]
+      // A required field's label ends in its marker, which is not its name.
+      .map((label) => label.textContent?.replace(/\s*\*$/, "").trim() ?? "")
+      .filter(Boolean)
+  );
 }
 
 async function chooseIndustry(user: UserEvent, industry: string) {
@@ -265,22 +275,62 @@ describe("the details' Edit", () => {
     );
   });
 
-  it("saves a nameless lead's phone without asking for the name first", async () => {
+  it("saves a nameless lead's title without asking for the name first", async () => {
     const patches = serve({ ...lead, full_name: null });
     const user = userEvent.setup();
     render(<LeadScreen id="l-1" />);
     const about = await editSection(user, "About");
+    expect(
+      within(about).getByRole("textbox", { name: "Full name" }),
+    ).toHaveValue("");
     await user.type(
-      within(about).getByRole("textbox", { name: "Phone" }),
-      "+49301234567",
+      within(about).getByRole("textbox", { name: "Title" }),
+      "Fleet manager",
     );
     await user.click(within(about).getByRole("button", { name: "Save" }));
     await waitFor(() =>
       expect(patches).toEqual([
-        expect.objectContaining({ phone: "+49301234567" }),
+        expect.objectContaining({ title: "Fleet manager" }),
       ]),
     );
     expect(patches[0]).not.toHaveProperty("full_name");
+  });
+
+  it("opens each section with only its own fields, none past a small form", async () => {
+    serve({ ...lead, full_name: null, partner_company_id: "c-9" });
+    const user = userEvent.setup();
+    render(<LeadScreen id="l-1" />);
+    const expected: Record<string, string[]> = {
+      About: [
+        en["create.fullName"],
+        en["create.companyName"],
+        en["create.contactTitle"],
+        en["create.industry"],
+        en["lead.project"],
+        en["lead.product"],
+      ],
+      [en["record.reach.label"]]: [
+        en["create.email"],
+        en["create.phone"],
+        en["create.linkedinUrl"],
+      ],
+      [en["record.registration"]]: [
+        en["lead.origin"],
+        en["lead.originDetail"],
+        en["lead.partner"],
+        en["record.companyRoutingKey"],
+        en["tags.panelTitle"],
+      ],
+    };
+    for (const [section, fields] of Object.entries(expected)) {
+      const dialog = await editSection(user, section);
+      expect(labels(dialog)).toEqual(fields);
+      expect(labels(dialog).length).toBeLessThanOrEqual(FORM_DIALOG_MAX_FIELDS);
+      await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+      await waitFor(() =>
+        expect(screen.queryByRole("dialog", { name: section })).toBeNull(),
+      );
+    }
   });
 
   it("leaves the dialog for the project search, and gives focus back to Edit", async () => {

@@ -15,18 +15,18 @@ import { LeadProductName, LeadProductPicker } from "./leadproduct";
 import { LeadProjectPicker } from "./leadraillinks";
 import type { Lead, LeadWriter } from "./leads";
 
-type AboutFlow = "project" | "product" | "tags";
+type PickerFlow = "project" | "product" | "tags";
 
 /**
- * The About rows a lead changes through a picker of their own: its project,
- * its product and its tags. None for a lead nobody may change.
+ * The rows a lead changes through a picker of their own: its project, its
+ * product and its tags. None for a lead nobody may change.
  */
-export function useLeadAboutFlows(
+export function useLeadPickerFlows(
   lead: Lead,
   writer: LeadWriter,
 ): Readonly<{ flows: Record<string, SectionFlow>; element: ReactNode }> {
   const t = useT();
-  const [open, setOpen] = useState<AboutFlow | null>(null);
+  const [open, setOpen] = useState<PickerFlow | null>(null);
   const tags = useRecordTags("lead", lead.id, !lead.archived_at);
   const mayTag = useCanWriteRecord("lead", lead);
   if (writer.readOnly) {
