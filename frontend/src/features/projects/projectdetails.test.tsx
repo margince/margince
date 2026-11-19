@@ -137,6 +137,25 @@ describe("the details groups", () => {
     expect(screen.getByTestId("project-company-withheld")).toBeTruthy();
   });
 
+  it("says a project with no customer company has none, not that it is hidden", async () => {
+    show(
+      <ProjectDetails
+        view={project360({
+          company: undefined,
+          sections_omitted: [],
+          project: project({ company_id: undefined }),
+        })}
+      />,
+    );
+    await userEvent
+      .setup()
+      .click(screen.getByRole("button", { name: /Show \d+ empty fields?/ }));
+    expect(screen.getByTestId("project-company-none").textContent).toBe(
+      en["project.noCustomerSet"],
+    );
+    expect(screen.queryByTestId("project-company-withheld")).toBeNull();
+  });
+
   it("drops the closing rule once the project is closed", () => {
     show(
       <ProjectDetails

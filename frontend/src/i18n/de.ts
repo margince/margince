@@ -20021,6 +20021,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "project.assignOwner": "Einem Teammitglied zuweisen",
   "project.description": "Beschreibung",
   "project.targetEnd": "Geplantes Enddatum",
+  "project.startDate": "Startdatum",
+  "project.endDate": "Enddatum",
+  "project.noCustomer": "Kein Kundenunternehmen",
+  "project.noCustomerSet":
+    "Kein Kundenunternehmen. Leg eines unter Mehr, Unternehmen und Kontakte fest.",
+  "project.newDealNeedsCustomer":
+    "Ein neuer Deal braucht ein Kundenunternehmen.",
   "project.new": "Neues Projekt",
   "project.edit": "Projekt bearbeiten",
   "project.archive": "Projekt archivieren",
