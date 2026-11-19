@@ -100,7 +100,7 @@ const parkedByPrivacyScrub = "content removed by a privacy scrub before this mes
 // every transition are guarded on `status = 'pending'`), and the park reason
 // is a fixed sentence rather than anything read off the row, since it lands
 // in the very column the scrub above is clearing.
-func redactDeliveries(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID, tombstone string, payloads PayloadPurger) error {
+func redactDeliveries(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID, tombstone string) error {
 	if len(activityIDs) == 0 {
 		return nil
 	}
@@ -110,7 +110,7 @@ func redactDeliveries(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID, to
 	// that lived at one call site would be absent from the other two, leaving a
 	// working confirmation link in the vault that the scrubbed row no longer
 	// even names. Two lists is how an invariant stops being true.
-	if err := erasePayloads(ctx, tx, activityIDs, payloads); err != nil {
+	if err := erasePayloads(ctx, tx, activityIDs); err != nil {
 		return err
 	}
 	if _, err := tx.Exec(ctx, `

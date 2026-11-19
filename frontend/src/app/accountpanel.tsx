@@ -110,6 +110,7 @@ export function AccountPanel({
   onDismiss,
   onFocusLost,
   onShortcuts,
+  onAbout,
 }: Readonly<{
   identity: Identity;
   id: string;
@@ -117,6 +118,7 @@ export function AccountPanel({
   onDismiss: () => void;
   onFocusLost: () => void;
   onShortcuts: () => void;
+  onAbout: () => void;
 }>) {
   const t = useT();
   const setup = useSetupReminder(usePhoneViewport());
@@ -250,6 +252,7 @@ export function AccountPanel({
           onBack={help.close}
           onLeave={onDismiss}
           onShortcuts={onShortcuts}
+          onAbout={onAbout}
         />
       </FlyoutRow>
       {setup && (

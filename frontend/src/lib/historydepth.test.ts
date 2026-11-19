@@ -33,9 +33,18 @@ const goPending = () =>
 const depthBehind = () => depth.depthBackOutOf(() => false);
 
 // The Navigation API as Chromium has it, reduced to the entry list and events.
-function browserEntries(hashes: string[], at: () => number) {
+// The entries from `documentFrom` on belong to the document now loaded.
+function browserEntries(
+  hashes: string[],
+  at: () => number,
+  documentFrom = hashes.length,
+) {
   const navigation = Object.assign(new EventTarget(), {
-    entries: () => hashes.map((hash) => ({ url: `http://localhost/${hash}` })),
+    entries: () =>
+      hashes.map((hash, index) => ({
+        url: `http://localhost/${hash}`,
+        sameDocument: index >= documentFrom,
+      })),
   });
   Object.defineProperty(navigation, "currentEntry", {
     get: () => ({ index: at() }),
@@ -218,6 +227,20 @@ describe("what the browser's own entry list adds", () => {
     depth.noteHistoryEntry("start");
     push("#/deals");
     expect(depth.entryDepth()).toBe(1);
+  });
+});
+
+describe("the entry the app starts watching on", () => {
+  it("counts the entries this document made before the app watched", () => {
+    browserEntries(["#/elsewhere", "#/home", "#/settings"], () => 2, 1);
+    globalThis.history.replaceState(null, "", "#/settings");
+    depth.noteHistoryEntry("start");
+    const go = goPending();
+
+    expect(depth.entryDepth()).toBe(1);
+    expect(depth.hashAt(0)).toBe("#/home");
+    expect(depth.traverseTo(0)).toBe(true);
+    expect(go.mock.calls).toEqual([[-1]]);
   });
 });
 

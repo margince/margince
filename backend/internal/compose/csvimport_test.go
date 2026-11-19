@@ -5,8 +5,6 @@ package compose
 
 import (
 	"context"
-	"errors"
-	"fmt"
 	"maps"
 	"slices"
 	"strings"
@@ -14,10 +12,9 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/importwire"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/migration"
-	"github.com/margince/margince/backend/internal/platform/blobstore"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -38,7 +35,7 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 	for object, build := range map[string]func(map[string]string, map[string]any) (created, patched map[string]bool){
 		migration.ObjectLead: leadRoundTrip,
 		migration.ObjectCompany: func(fields map[string]string, typed map[string]any) (map[string]bool, map[string]bool) {
-			in := companyCreateFrom(fields, typed, importSourceSystem(""), "src")
+			in := companyCreateFrom(fields, typed, importwire.SourceSystem(""), "src")
 			up := companyUpdateFrom(fields, typed)
 			created := map[string]bool{
 				"display_name":        in.DisplayName != "",
@@ -85,7 +82,7 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 			return created, patched
 		},
 		migration.ObjectContact: func(fields map[string]string, typed map[string]any) (map[string]bool, map[string]bool) {
-			in := contactCreateFrom(fields, typed, importSourceSystem(""), "src")
+			in := contactCreateFrom(fields, typed, importwire.SourceSystem(""), "src")
 			up := contactUpdateFrom(fields, typed)
 			created := map[string]bool{
 				"full_name":           in.FullName != "",
@@ -331,25 +328,6 @@ func TestMappingFromDefaultsTheSourceKeyToTheIdentifyingColumn(t *testing.T) {
 	}
 }
 
-// A vanished upload is the caller's to fix by re-uploading, so it is named as
-// missing rather than blamed on the server. Asserted through the sentinel the
-// transport maps, not merely as "some error": a misclassified one answers 500.
-func TestImportProblemNamesAVanishedUploadAsNotFound(t *testing.T) {
-	err := importProblem(fmt.Errorf("import source %q: %w", "ws/import/x", blobstore.ErrNotFound))
-	if !errors.Is(err, apperrors.ErrNotFound) {
-		t.Fatalf("err = %v, want it to carry ErrNotFound so the transport answers 404", err)
-	}
-
-	// A file the customer can fix is a 422 naming the field, never a 500.
-	unreadable := importProblem(fmt.Errorf("%w: line 4", migration.ErrSourceUnreadable))
-	if errors.Is(unreadable, apperrors.ErrNotFound) {
-		t.Fatalf("an unreadable file was classified as missing: %v", unreadable)
-	}
-	if unreadable == nil {
-		t.Fatal("importProblem dropped the error")
-	}
-}
-
 // The disposition is what a human judges an import by, and the contract states
 // its invariant outright: the four counts sum to the rows read. A completed
 // run's stored report carries BOTH the prediction and the outcome — the engine
@@ -497,7 +475,7 @@ func TestCSVWritersRefuseARowForAnotherObject(t *testing.T) {
 // wire mappers refuse — so a client cannot pre-plant a row under a guessed
 // import id and have the store hand it back as already imported.
 func TestImportedRowsCarryTheReservedProvenance(t *testing.T) {
-	w := &csvWriters{object: migration.ObjectLead, sourceSystem: importSourceSystem("hubspot")}
+	w := &csvWriters{object: migration.ObjectLead, sourceSystem: importwire.SourceSystem("hubspot")}
 
 	stamp := w.provenanceOf("ada@lovelace.example")
 	if !strings.HasPrefix(stamp, provenance.ReservedSourceSystemPrefix) {
@@ -506,8 +484,8 @@ func TestImportedRowsCarryTheReservedProvenance(t *testing.T) {
 	if !strings.Contains(stamp, migration.ObjectLead) || !strings.Contains(stamp, "ada@lovelace.example") {
 		t.Fatalf("provenance %q does not name the object and the source row", stamp)
 	}
-	if !strings.HasPrefix(importSourceSystem("hubspot"), provenance.ReservedSourceSystemPrefix) {
-		t.Fatalf("source system %q is not reserved", importSourceSystem("hubspot"))
+	if !strings.HasPrefix(importwire.SourceSystem("hubspot"), provenance.ReservedSourceSystemPrefix) {
+		t.Fatalf("source system %q is not reserved", importwire.SourceSystem("hubspot"))
 	}
 }
 

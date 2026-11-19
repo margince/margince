@@ -2,7 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
+import { isRecord } from "../../lib/problembody";
 import { formatFixture } from "../../testing/import.fixtures";
 import {
   installFetchStub,
@@ -17,7 +18,8 @@ import type { ImportRowIssue } from "./importtypes";
 // The test run shows the counts per type and every problem with where it is.
 // It offers to bring rows with broken links in without the link. The first
 // story reaches it the way a reader does. The second opens a staged run by
-// address, where no file is in hand to stage again. Then a test still running,
+// address, where no file is in hand to stage again. Then the box that imports
+// rows without their broken links, a file with no rows, a test still running,
 // and one the worker refused.
 
 const meta: Meta = {
@@ -104,7 +106,7 @@ const PROFILE = {
   targets: ["email"],
 };
 
-function page(address: string, current: object = RUN) {
+function page(address: string, current: object = RUN, report: object = REPORT) {
   return () => {
     globalThis.history.replaceState(null, "", address);
     // The draft answers as itself until the worker is started, then as the
@@ -114,6 +116,7 @@ function page(address: string, current: object = RUN) {
     // posts to validate. A stub answering none of those leaves the wizard on
     // the map step with nothing to wait for.
     let tested = false;
+    let brokenLinks = "skip_row";
     installFetchStub({
       "GET /me": meRoute({ import_run: ["create", "read", "update"] }),
       "GET /imports/format": () => jsonResponse(formatFixture),
@@ -133,9 +136,18 @@ function page(address: string, current: object = RUN) {
         tested = true;
         return jsonResponse({ ...current, id: PROFILE.run_id }, 202);
       },
-      [`GET /imports/${PROFILE.run_id}/report`]: () => jsonResponse(REPORT),
-      [`GET /imports/${RUN.id}`]: () => jsonResponse(current),
-      [`GET /imports/${RUN.id}/report`]: () => jsonResponse(REPORT),
+      [`GET /imports/${PROFILE.run_id}/report`]: () => jsonResponse(report),
+      [`PATCH /imports/${RUN.id}`]: (body: unknown) => {
+        if (isRecord(body) && typeof body.on_broken_link === "string") {
+          brokenLinks = body.on_broken_link;
+        }
+        return jsonResponse({ ...current, on_broken_link: brokenLinks });
+      },
+      [`POST /imports/${RUN.id}/validate`]: () =>
+        jsonResponse({ ...current, on_broken_link: brokenLinks }, 202),
+      [`GET /imports/${RUN.id}`]: () =>
+        jsonResponse({ ...current, on_broken_link: brokenLinks }),
+      [`GET /imports/${RUN.id}/report`]: () => jsonResponse(report),
     });
     return (
       <StoryProviders>
@@ -182,6 +194,39 @@ export const ProblemsDark: Story = {
 /** A staged run opened by its address: no file is in hand to stage again. */
 export const OpenedByAddress: Story = {
   render: page(`#/settings/import/run?run=${RUN.id}`),
+};
+
+/** Ticked: the button names the rows it imports without their links. */
+export const ImportAnyway: Story = {
+  render: page(`#/settings/import/run?run=${RUN.id}`),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("checkbox", { name: /anyway/ }),
+    );
+    const button = await canvas.findByRole("button", {
+      name: /^Import [\d,]+ rows anyway$/,
+    });
+    await waitFor(() => expect(button).toBeEnabled());
+  },
+};
+
+/** A file with a header and no rows: nothing to import, and Done. */
+export const EmptyFile: Story = {
+  render: page(`#/settings/import/run?run=${RUN.id}`, RUN, {
+    ...REPORT,
+    rows_read: 0,
+    disposition: { created: 0, updated: 0, unchanged: 0, skipped: 0 },
+    parts: [
+      {
+        file: "contacts.csv",
+        object: "contact",
+        rows_read: 0,
+        disposition: { created: 0, updated: 0, unchanged: 0, skipped: 0 },
+      },
+    ],
+    issues: [],
+  }),
 };
 
 /** A run the worker is still testing, which the reader can stop. */

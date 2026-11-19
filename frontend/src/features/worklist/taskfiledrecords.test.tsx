@@ -74,8 +74,8 @@ test("a task filed under a deal and its company names the deal first", async () 
   await screen.findByRole("link", { name: "Brandt Automotive" });
   const chips = screen.getAllByRole("link");
   expect(chips.map((chip) => chip.className)).toEqual([
-    "chip chip-dense chip-link",
-    "chip chip-dense chip-lead chip-link",
+    "chip chip-dense chip-wrap chip-link",
+    "chip chip-dense chip-lead chip-wrap chip-link",
   ]);
   // The company chip leads with its avatar, the deal chip with its kind's icon.
   expect(chips[1]?.querySelector(".chip-mark")?.textContent).toBe("BA");

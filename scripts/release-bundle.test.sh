@@ -57,8 +57,8 @@ for arch in amd64 arm64; do
 	mkdir -p "$work/unpacked"
 	tar -xzf "$tarball" -C "$work/unpacked"
 	top="$work/unpacked/margince-v1.2.0-linux-$arch"
-	if [[ "$(cat "$top/VERSION" 2>/dev/null)" != $'version=v1.2.0\nrevision=4e1b736eb' ]]; then
-		fail "linux/$arch VERSION does not name the release and the revision, so the files alone cannot say which release they are"
+	if [[ "$(cat "$top/VERSION" 2>/dev/null)" != 1.2.0 || "$(cat "$top/REVISION" 2>/dev/null)" != 4e1b736eb ]]; then
+		fail "linux/$arch VERSION and REVISION do not name the release and the revision, so the files alone cannot say which release they are"
 	fi
 	if [[ "$("$top/bin/margince-api" 2>/dev/null)" != "margince-api-$arch" ]]; then
 		fail "linux/$arch carries another platform's api, or one that is not executable"

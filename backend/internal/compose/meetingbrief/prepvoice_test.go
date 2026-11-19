@@ -121,6 +121,9 @@ func TestAPromiseThatLooksKeptIsNotAnOpenDriverAndIsSaidOnce(t *testing.T) {
 	if len(lines) != 1 || !strings.Contains(lines[0].Text, "Looks kept") || !strings.Contains(lines[0].Text, "Riley Reed") {
 		t.Fatalf("lines = %+v, want one plain looks-kept line naming the guest", lines)
 	}
+	if storedInstant.MatchString(lines[0].Text) {
+		t.Errorf("text = %q, want the day in the installation's notation, not a stored instant", lines[0].Text)
+	}
 	if len(lines[0].Evidence) != 1 || lines[0].Evidence[0].EntityID != kept[0].SourceID {
 		t.Errorf("evidence = %+v, want the conversation the promise was made in", lines[0].Evidence)
 	}

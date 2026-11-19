@@ -155,3 +155,59 @@ func (e *resolveEnv) deliveryOnThread(t *testing.T, threadKey string) ids.UUID {
 	}
 	return delivery
 }
+
+// A subject quoted at staging is asked about again at transmit. While the
+// contact's own mail stands, the reply goes as a reply. Archived in between,
+// the subject is the rep's offer and transmit refuses it.
+func TestTransmitAsksAgainWhoWroteAQuotedSubject(t *testing.T) {
+	for name, archive := range map[string]bool{"the anchor stands": false, "the anchor was archived": true} {
+		t.Run(name, func(t *testing.T) {
+			e, anchor := offerEnv(t)
+			if _, err := e.owner.Exec(context.Background(), `
+				UPDATE activity SET subject = 'Termin und Angebot', captured_by = 'connector:gmail', inbound_sender_authenticated = true
+				 WHERE id = $1`, anchor); err != nil {
+				t.Fatalf("making the anchor the contact's authenticated mail: %v", err)
+			}
+			// An earlier mail of theirs keeps the thread a reply after the
+			// anchor is archived, so only the subject can change the answer.
+			e.inboundFrom(t, "their-question", e.address, clocktest.Now(t).Add(-2*time.Hour))
+			delivery := e.deliveryOnThread(t, "their-question")
+			recipients := []connector.Recipient{{Email: e.address}}
+			req := commsauthz.Request{
+				AnchorActivityID: anchor, AuthoredSubject: "Re: Termin und Angebot", AuthoredBody: rescheduleReply,
+				Recipients: recipients, Subject: "Re: Termin und Angebot", Body: rescheduleReply,
+			}
+			var staged commsauthz.DecisionSet
+			if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+				var err error
+				staged, err = e.gate.AuthorizeStagingTx(e.ctx, tx, delivery, req)
+				return err
+			}); err != nil {
+				t.Fatalf("staging: %v", err)
+			}
+			if d := staged.Decisions[0]; d.Verdict != commsauthz.VerdictAllow || d.Resolved != commsauthz.CategoryReplyToInbound {
+				t.Fatalf("staging = %s/%s %q, want an allowed reply: the fixture proves nothing", d.Verdict, d.Resolved, d.ReasonCode)
+			}
+			if archive {
+				if _, err := e.owner.Exec(context.Background(), `UPDATE activity SET archived_at = now() WHERE id = $1`, anchor); err != nil {
+					t.Fatal(err)
+				}
+			}
+			ticket, err := e.gate.AuthorizeTransmit(e.ctx, commsauthz.TransmitRequest{
+				DeliveryID: delivery, Attempt: 1, Recipients: recipients, Subject: req.Subject, Body: req.Body,
+			})
+			if err != nil {
+				t.Fatalf("transmit: %v", err)
+			}
+			var resolved string
+			if err := e.owner.QueryRow(context.Background(), `
+				SELECT resolved_category FROM communication_decision
+				 WHERE delivery_id = $1 AND phase = 'transmit'`, delivery).Scan(&resolved); err != nil {
+				t.Fatalf("reading the transmit decision: %v", err)
+			}
+			if ticket.Allowed == archive || (commsauthz.Category(resolved) == commsauthz.CategoryMarketing) != archive {
+				t.Fatalf("transmit = allowed %v as %s with the anchor archived: %v", ticket.Allowed, resolved, archive)
+			}
+		})
+	}
+}

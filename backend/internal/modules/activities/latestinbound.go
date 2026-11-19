@@ -66,7 +66,13 @@ func (s *Store) LatestInbound(ctx context.Context, entityType string, entityID i
 		if out.Data, err = markLatestInboundTasks(ctx, tx, unansweredInbound(waiting, forms, answers), now); err != nil {
 			return err
 		}
-		out.LastExchange, err = s.lastExchange(ctx, tx, entityType, entityID, now, columns)
+		if out.LastExchange, err = s.lastExchange(ctx, tx, entityType, entityID, now, columns); err != nil {
+			return err
+		}
+		if out.LastInbound, err = s.lastWrote(ctx, tx, entityType, entityID, crmcontracts.ActivityDirectionInbound, now, columns); err != nil {
+			return err
+		}
+		out.LastOutbound, err = s.lastWrote(ctx, tx, entityType, entityID, crmcontracts.ActivityDirectionOutbound, now, columns)
 		return err
 	})
 	return out, err

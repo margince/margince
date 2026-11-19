@@ -17,7 +17,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/claims"
-	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/kernel/moneynotation"
 )
 
 // Deterministic writes the brief without a model. Every sentence cites the
@@ -116,16 +116,14 @@ func pipelineLine(in Input, say spoken) string {
 	line := countPhrase(len(in.OpenDeals), say.Say(floor.OpenDealOne), say.Say(floor.OpenDealMany))
 	total, currency, ok := oneCurrencyTotal(in.OpenDeals)
 	if ok && total > 0 {
-		// Minor units are rendered as a plain major-unit figure; the card
-		// formats money properly, and this text is the fallback.
-		line += fmt.Sprintf(say.Say(floor.WorthAbout), values.MajorUnits(total, currency), currency)
+		line += fmt.Sprintf(say.Say(floor.WorthAbout), moneynotation.Grouped(total, currency, say.Lang()), currency)
 	}
 	// The won total carries its OWN currency: the 360 converts it to the
 	// workspace base at each deal's frozen close-time rate, which has no
 	// relation to whatever the open deals are priced in. Labelling it with
 	// the open currency reported a real figure under the wrong unit.
 	if in.WonLifetime > 0 && in.WonCurrency != "" {
-		line += fmt.Sprintf(say.Say(floor.WonToDate), values.MajorUnits(in.WonLifetime, in.WonCurrency), in.WonCurrency)
+		line += fmt.Sprintf(say.Say(floor.WonToDate), moneynotation.Grouped(in.WonLifetime, in.WonCurrency, say.Lang()), in.WonCurrency)
 	}
 	return line + "."
 }

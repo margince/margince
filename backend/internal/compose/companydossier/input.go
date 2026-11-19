@@ -61,6 +61,9 @@ type Input struct {
 	// had. The model is shown the code worded in the prompt language
 	// (encodeInput), which the language component of the fingerprint covers.
 	Industry string `json:"industry,omitempty"`
+	// SizeBand is the company column's employee band, kept as Industry is:
+	// omitted when empty so a company without one keeps its fingerprint.
+	SizeBand string `json:"size_band,omitempty"`
 	// AssessAgainst is the legal entity whose offering this company is judged
 	// against, empty for the main one. The offering read and the model request
 	// both take it from here, so the cache key and the prompt use one value. It
@@ -102,6 +105,7 @@ func BuildInput(ctx context.Context, facts Facts, id ids.CompanyID) (Input, erro
 		CompanyID:     id.String(),
 		Name:          company.DisplayName,
 		Industry:      companyIndustry(company),
+		SizeBand:      companySizeBand(company),
 		AssessAgainst: assessAgainstOf(company),
 		ProfileFields: fields,
 		Facts:         extracted,
@@ -150,6 +154,13 @@ func companyIndustry(company crmcontracts.Company) string {
 		return ""
 	}
 	return strings.TrimSpace(string(*company.Industry))
+}
+
+func companySizeBand(company crmcontracts.Company) string {
+	if company.SizeBand == nil {
+		return ""
+	}
+	return string(*company.SizeBand)
 }
 
 func assessAgainstOf(company crmcontracts.Company) string {

@@ -50,9 +50,37 @@ func (r Review) AssessmentRevision() string {
 		parts = append(parts, refusal.Address, refusal.SubjectKind, refusal.SubjectID, refusal.ReasonCode, string(refusal.claim()), refusal.FooterDigest, refusal.PolicyRevision, refusal.Country, refusal.CountrySource)
 		// The scope sameInstructionScope compares, by value: a pointer prints as an address.
 		parts = append(parts, optionalIDText(refusal.SendingEntity), optionalIDText(refusal.PurposeID), optionalIDText(refusal.DealID))
-		parts = append(parts, fmt.Sprintf("%q", refusal.FooterFindings), fmt.Sprintf("%q", refusal.FooterPreview))
+		parts = append(parts, fmt.Sprintf("%q", footerOmissions(refusal.FooterFindings)), fmt.Sprintf("%q", refusal.FooterPreview))
+		parts = append(parts, shownProvisions(refusal)...)
 	}
 	return fmt.Sprintf("%x", sha256.Sum256([]byte(fmt.Sprintf("%q", parts))))
+}
+
+// footerOmission is a footer finding without its provision, in the shape the
+// revision has always printed, so a review that cites nothing keeps its revision.
+type footerOmission struct {
+	Kind, Language string
+	MissingMeans   []string
+}
+
+func footerOmissions(findings []commsauthz.FooterFinding) []footerOmission {
+	out := make([]footerOmission, 0, len(findings))
+	for _, f := range findings {
+		out = append(out, footerOmission{Kind: f.Kind, Language: f.Language, MissingMeans: f.MissingMeans})
+	}
+	return out
+}
+
+// shownProvisions are the citations the sender reads beside this refusal. A
+// changed citation asks for a new confirmation, as changed words do.
+func shownProvisions(refusal RefusedRecipient) []string {
+	var out []string
+	for _, p := range citedLaw(refusal) {
+		if p.Cited() {
+			out = append(out, p.Instrument, p.Provision, p.SourceURL)
+		}
+	}
+	return out
 }
 
 func optionalIDText(id *ids.UUID) string {

@@ -13,8 +13,8 @@ package compose
 // execute: the loser sees the claim and answers 409 while the first is
 // in flight.
 //
-// A 2xx outcome is recorded for replay. A refusal releases the claim, so the
-// client may retry the same key. Replaying stored failures would pin transient
+// A 2xx outcome is recorded for replay. A refusal that saved nothing releases
+// the claim, so the client may retry the same key. Replaying stored failures would pin transient
 // faults for 24h and would break the stage-then-redeem approval flow, whose
 // retry is the same request.
 
@@ -35,6 +35,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -126,11 +127,17 @@ func idempotency(pool *pgxpool.Pool, probes map[string]replayProbe, restore repl
 			}
 
 			rec := &replayRecorder{ResponseWriter: w, status: http.StatusOK}
-			next.ServeHTTP(rec, r)
+			work, committed := database.WatchCommits(r.Context())
+			next.ServeHTTP(rec, r.WithContext(work))
 			// Zero records: this door records no served count, so its claims carry
 			// none (0198).
-			if err := settleHTTPClaim(r.Context(), pool, hold, route, rec); err != nil {
-				slog.ErrorContext(r.Context(), "idempotency claim settlement failed", "err", err)
+			// Detached, because the request context may be over: the caller left,
+			// or the handler ran out of time. A settle on it fails and leaves the
+			// key "in progress" for the whole replay window.
+			settleCtx, release := context.WithTimeout(context.WithoutCancel(r.Context()), httpserver.DetachedOutcomeTimeout)
+			defer release()
+			if err := settleHTTPClaim(settleCtx, pool, hold, route, rec, committed()); err != nil {
+				slog.ErrorContext(settleCtx, "idempotency claim settlement failed", "err", err)
 			}
 		})
 	}
@@ -333,9 +340,10 @@ func resolveClaimRow(ctx context.Context, tx pgx.Tx, principalID, key, endpoint,
 }
 
 // settleClaim records a 2xx outcome for replay. It gives the key back for a
-// refusal, so the caller can fix the call and retry under the same key.
+// refusal that saved nothing, so the caller can fix the call and retry under
+// the same key. A refusal after a write committed is recorded as failed.
 func settleClaim(ctx context.Context, pool *pgxpool.Pool, hold claimHold,
-	status int, body, contentType string,
+	status int, body, contentType string, committed bool,
 ) error {
 	// A caller that took no claim settles nothing. It reached here after
 	// reading somebody else's row — a replay, a mismatch, or an infrastructure
@@ -344,20 +352,21 @@ func settleClaim(ctx context.Context, pool *pgxpool.Pool, hold claimHold,
 	if !hold.holdsClaim() {
 		return nil
 	}
-	if claimIsReleased(status) {
+	if claimIsReleased(status, committed) {
 		return releaseClaim(ctx, pool, hold)
 	}
 	return recordClaimOutcome(ctx, pool, hold, status, body, contentType, 0)
 }
 
-// claimIsReleased is the rule a refusal is judged by: a key goes back for any
-// outcome that is not a success.
+// claimIsReleased is the rule a refusal is judged by. A key goes back for any
+// outcome that is not a success, unless a write already committed. A retry
+// would then save a second time, as agents.Registry.settleRun also refuses.
 //
 // A function rather than an inline condition because it is the whole of what
 // settleClaim decides, and a case can then state it without a database — the
 // two arms it chooses between are each already held.
-func claimIsReleased(status int) bool {
-	return status < 200 || status >= 300
+func claimIsReleased(status int, committed bool) bool {
+	return !committed && (status < 200 || status >= 300)
 }
 
 // recordClaimOutcome writes a settled response onto a held claim, whatever that

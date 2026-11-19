@@ -17,35 +17,46 @@ import {
 } from "./dealranges";
 import { useHealthScope } from "./healthscope";
 import { translatedPipeline } from "./labeltranslation";
-import { defaultPipelineOf, pipelinesOptions } from "./pipelines.queries";
+import {
+  defaultPipelineOf,
+  pipelinesOptions,
+  pipelinesWithArchivedOptions,
+} from "./pipelines.queries";
 import { throwProblem, unwrap } from "./problem";
 import { parseTagIDs, parseTagMode, tagQueryParams } from "./tagfilter";
 import { useInstallationSettings } from "./uploadlimit";
 import { bandOfDial } from "./winprobabilitybands";
 
 /**
- * The pipeline a record belongs to, falling back to the default.
+ * The pipeline a record belongs to: the deal's own, retired ones included.
  *
- * `pipelineId` is the deal's own. Without it, every deal would get the default
- * pipeline, and the stepper offers its stages as moves. The stages of a
- * pipeline the deal is not in are targets the server refuses as a pipeline
- * mismatch.
+ * The active catalog the pickers share answers first. Only a pipeline missing
+ * there is looked up among the retired ones. One found in neither is a load
+ * error, since another pipeline's stages would offer moves the server refuses.
+ * Without an id, the default pipeline answers.
  */
 export function usePipeline(pipelineId?: string | null) {
   const { locale } = useLocale();
-  return useQuery({
-    ...pipelinesOptions,
-    select: (pipelines) => {
-      const pipeline =
-        (pipelineId &&
-          pipelines.find((candidate) => candidate.id === pipelineId)) ||
-        defaultPipelineOf(pipelines);
-      if (!pipeline) {
-        throw new Error("no pipeline");
-      }
-      return translatedPipeline(pipeline, locale);
-    },
+  const active = useQuery(pipelinesOptions);
+  const inActive = pipelineId
+    ? active.data?.find((candidate) => candidate.id === pipelineId)
+    : defaultPipelineOf(active.data ?? []);
+  const lookUpRetired = Boolean(pipelineId) && active.isSuccess && !inActive;
+  const retired = useQuery({
+    ...pipelinesWithArchivedOptions,
+    enabled: lookUpRetired,
   });
+  const found =
+    inActive ?? retired.data?.find((candidate) => candidate.id === pipelineId);
+  const missing =
+    active.isSuccess && !found && (!lookUpRetired || retired.isSuccess);
+  const failed = active.error ?? retired.error ?? null;
+  return {
+    data: found ? translatedPipeline(found, locale) : undefined,
+    error: failed ?? (missing ? new Error("no pipeline") : null),
+    isError: failed !== null || missing,
+    isPending: !found && failed === null && !missing,
+  };
 }
 
 export type DealFilters = {

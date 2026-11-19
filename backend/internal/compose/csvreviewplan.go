@@ -20,6 +20,8 @@ func (w *csvWriters) markPredictedRow(row migration.Row, outcome predictedOutcom
 		return
 	}
 	w.links.markPending(w.object, row.ExternalID)
+	typed, _, _ := w.landingCells(row)
+	w.claimRow(row, typed)
 	w.links.markNaturalPending(w.object, textFields(row.Fields)[naturalKeyField(w.object)])
 	if w.object == migration.ObjectCompany {
 		fields := textFields(row.Fields)
@@ -118,13 +120,17 @@ func (w *csvWriters) reviewTarget(ctx context.Context, row migration.Row) (ids.U
 		return target.id, nil
 	}
 	id, found, err := w.lookup(ctx, w.object, row.ExternalID)
+	if err != nil || found {
+		return id, err
+	}
+	holder, matched, err := w.domainHolderOf(ctx, row)
 	if err != nil {
 		return ids.UUID{}, err
 	}
-	if !found {
+	if !matched {
 		return ids.UUID{}, apperrors.ErrNotFound
 	}
-	return id, nil
+	return holder, nil
 }
 
 func (w *csvWriters) reviewRowValues(ctx context.Context, row migration.Row, out *migration.ReviewRow) error {

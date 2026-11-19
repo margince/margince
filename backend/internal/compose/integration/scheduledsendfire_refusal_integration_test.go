@@ -389,8 +389,8 @@ func TestARowHeldAtFireTakesAWordingCorrection(t *testing.T) {
 // resume sends as the caller. A second seat holding the exception grant is
 // refused and sends nothing; the sender's own confirmation still sends once.
 //
-// Mutation: drop refuseAnotherSeatsFireHold from ResumeHeldSend and the second
-// seat sends the message.
+// Mutation: drop both author checks (directableReview.admits and
+// refuseAnotherSeatsHold) and the second seat sends the message.
 func TestOnlyTheSenderConfirmsAMessageHeldAtItsScheduledTime(t *testing.T) {
 	p, id := heldByAnObjectionAtFire(t)
 	review := p.liveReviewFor(t, id)

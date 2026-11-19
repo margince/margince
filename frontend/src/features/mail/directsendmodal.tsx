@@ -19,7 +19,9 @@
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
+import { intentKeys } from "../../api/idempotencykey";
 import type { components } from "../../api/schema";
+import { CitedAttention, CitedLaws } from "../../components/citedlaw";
 import { Button, Checkbox, Field, Textarea } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { Select } from "../../design-system/select";
@@ -52,23 +54,33 @@ export type DirectSendCommand = Readonly<{
   shownReasons: readonly string[];
 }>;
 
+// A decision retried after a lost answer reuses its key, whichever reviews
+// were decided in between. The server then replays the send it recorded
+// instead of answering that the review is gone.
+const decisionKeys = intentKeys();
+
 export async function directSend(command: DirectSendCommand): Promise<string> {
-  const { data, error, response } = await api.POST(
-    "/communication-reviews/{id}/direct-send",
-    {
-      params: { path: { id: command.reviewId } },
-      body: {
-        reason_code: command.reasonCode as "other",
-        explanation: command.explanation,
-        warning_version: command.warningVersion,
-        assessment_revision: command.assessmentRevision,
-        shown_reasons: [...command.shownReasons],
-        // The server refuses a decision without an acknowledgement. Each
-        // caller reaches this only from the press that is one. That is the
-        // modal's confirm once ticked, or Send anyway beside its warning.
-        acknowledged: true,
-      },
-    },
+  const body = {
+    reason_code: command.reasonCode as "other",
+    explanation: command.explanation,
+    warning_version: command.warningVersion,
+    assessment_revision: command.assessmentRevision,
+    shown_reasons: [...command.shownReasons],
+    // The server refuses a decision without an acknowledgement. Each
+    // caller reaches this only from the press that is one. That is the
+    // modal's confirm once ticked, or Send anyway beside its warning.
+    acknowledged: true as const,
+  };
+  const { data, error, response } = await decisionKeys(
+    [command.reviewId, body],
+    (key) =>
+      api.POST("/communication-reviews/{id}/direct-send", {
+        params: {
+          path: { id: command.reviewId },
+          header: { "Idempotency-Key": key },
+        },
+        body,
+      }),
   );
   // Success is a real 2xx WITH a body: openapi-fetch reports a falsy error and
   // undefined data for a bodiless non-2xx, which would otherwise read as a
@@ -246,7 +258,16 @@ export function DirectSendModal({
         <div
           key={`${refusal.address}-${refusal.subject_id ?? ""}-${refusal.category ?? ""}`}
         >
-          <p>{refusal.address}</p>
+          <p>
+            {refusal.provision ? (
+              <CitedAttention
+                address={refusal.address}
+                provision={refusal.provision}
+              />
+            ) : (
+              refusal.address
+            )}
+          </p>
           {refusalCountryText(refusal, t, locale) && (
             <p className="t-caption">
               {refusalCountryText(refusal, t, locale)}
@@ -338,7 +359,14 @@ function ConfirmationFooter({
         </div>
       ) : null}
       {refusal.footer_findings?.length ? (
-        <p>{footerFindingsText(refusal.footer_findings, t, locale)}</p>
+        <p>
+          {footerFindingsText(refusal.footer_findings, t, locale)}{" "}
+          <CitedLaws
+            provisions={refusal.footer_findings.map(
+              (finding) => finding.provision,
+            )}
+          />
+        </p>
       ) : null}
     </>
   );

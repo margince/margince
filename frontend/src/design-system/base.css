@@ -46,6 +46,18 @@
   border: 0;
 }
 
+/* Focusable only so a page can hand the reader here (`useArrivalFocus`): no
+   ring after a click, which would mark a control that is not one. */
+.arrival-focus:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.arrival-focus:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
 .btn {
   /* The body's own size and leading, so a verb is set in the same type as the
      sentence that asked for it. The weight comes AFTER: `font` is a shorthand

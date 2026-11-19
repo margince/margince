@@ -101,6 +101,7 @@ function ContactsList({ startCreating }: Readonly<{ startCreating: boolean }>) {
         title={pageName}
         state={state}
         unit="unit.contacts"
+        unitOne="unit.contact"
         emptyNote={
           mineEmptyNote({ t, state, viewerId, unit: "unit.contacts" }) ??
           sharedEmptyNote({ t, state, unit: "unit.contacts" })

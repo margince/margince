@@ -9,11 +9,14 @@ package contacts
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // RefoldClocksTx moves the clock of every contact and company a write filed
@@ -32,4 +35,25 @@ func RefoldClocksTx(ctx context.Context, tx pgx.Tx, targets storekit.LastActivit
 		return fmt.Errorf("contacts: refolding last-activity clocks: %w", err)
 	}
 	return nil
+}
+
+// CompaniesWhoseEmploymentEndedTx answers the next limit companies after
+// `after`, in id order, that have an employment which stopped being current
+// in (from, to]. No row changes when a future ended_at day arrives, so no
+// trigger moves the company's clock. The moment is UTC midnight of the end
+// day because last_activity_of_company reads current_date in the UTC session.
+func CompaniesWhoseEmploymentEndedTx(ctx context.Context, tx pgx.Tx, from, to time.Time, after ids.UUID, limit int) ([]ids.UUID, error) {
+	if err := auth.RequireSystem(ctx); err != nil {
+		return nil, err
+	}
+	ended := "(" + employment.EndDaySQL("r.ended_at", "r.ended_precision") + ")::timestamp AT TIME ZONE 'UTC'"
+	rows, err := tx.Query(ctx, `
+		SELECT DISTINCT r.company_id FROM relationship r
+		 WHERE r.kind = 'employment' AND r.archived_at IS NULL AND r.company_id > $3
+		   AND `+ended+` > $1 AND `+ended+` <= $2
+		 ORDER BY r.company_id LIMIT $4`, from, to, after, limit)
+	if err != nil {
+		return nil, fmt.Errorf("contacts: reading companies whose employment ended: %w", err)
+	}
+	return pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
 }

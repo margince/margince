@@ -31,7 +31,7 @@ func TestARefusalRecordedAfterSelectionKeepsItsRecord(t *testing.T) {
 		       (NULL, $2, 'marketing_objection', 'operator_ui', 'human:x', 'user', now() + interval '1 year')`,
 		contact, lead)
 
-	svc := &RetentionService{eraser: &Eraser{payloads: noPayloads{t: t}}}
+	svc := &RetentionService{eraser: &Eraser{}}
 	for action, act := range map[string]func() error{
 		"contact/anonymize": func() error { return svc.anonymizeContact(ctx, tx, contact.UUID) },
 		"lead/anonymize":    func() error { return svc.anonymizeLead(ctx, tx, lead) },

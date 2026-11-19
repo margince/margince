@@ -4,8 +4,9 @@
 package aicert
 
 // The opt-in payload trace: a dev/tuning dump of every candidate and judge
-// call's post-SecretStripper request and response — the SAME content the
-// production router writes to ai_call_payload — to a JSONL file under a
+// call's post-SecretStripper request and response. It holds what the
+// production router writes to ai_call_payload, without that table's row caps
+// (ai.WithPayloadCapture). It goes to a JSONL file under a
 // caller-named directory (MARGINCE_AICERT_TRACE). Off unless a directory is
 // named: the lane's durable output is the verdict record, never the prompts.
 // This exists so an author tuning a scenario can read exactly what the model

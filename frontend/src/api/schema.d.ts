@@ -5551,7 +5551,9 @@ export interface paths {
          * @description At most one default pipeline per workspace (409 if a second default). The opening
          *     `stages` keep the ladder's shape: a won or lost stage above an open one is refused
          *     `422` with the code `closing_stage_before_open`, and two stages naming one position
-         *     with `duplicate`.
+         *     with `duplicate`. A ladder without a won or without a lost stage gets the missing one
+         *     appended behind its last stage, named `Won` or `Lost`, so no pipeline is born unable to
+         *     close a deal.
          */
         post: operations["createPipeline"];
         delete?: never;
@@ -5770,7 +5772,9 @@ export interface paths {
          *     `422` with the code `closing_stage_before_open`; reorder the ladder with `reorderStages`
          *     instead. A `semantic` change keeps the ladder in shape itself: won and lost stages move
          *     behind the open ones, published as the same `pipeline.updated` position delta. A change
-         *     to either moves the pipeline's `version`.
+         *     to either moves the pipeline's `version`. Changing the `semantic` of a pipeline's only
+         *     live won (or lost) stage is refused `422` with the code `last_closing_stage` on
+         *     `semantic`: a pipeline keeps a way to win and a way to lose a deal.
          */
         patch: operations["updateStage"];
         trace?: never;
@@ -6274,6 +6278,11 @@ export interface paths {
          *     `last_exchange` is the newest call, meeting, email or message on the record of any
          *     age, with whose move it leaves. It says where the record stands when nothing is
          *     next, such as waiting on them since the last mail sent.
+         *
+         *     `last_inbound` and `last_outbound` are the newest message the other side wrote and the
+         *     newest one we wrote, of any age, read over every row the caller may list and counted as
+         *     the account's last-touch clocks count them: it has happened, it kept us in touch, and
+         *     it is not automatic mail. Each is absent when there is none.
          */
         get: operations["listLatestInbound"];
         put?: never;
@@ -17879,7 +17888,9 @@ export interface paths {
          *     is the one thing a dispute about that override needs not to be possible.
          *
          *     SPENT ONCE. The decision authorizes this message to this envelope and is consumed when it
-         *     goes. The next message to the same contact needs its own.
+         *     goes. The next message to the same contact needs its own. A retry under the same
+         *     `Idempotency-Key` answers the recorded 201, so a client whose first answer was lost learns
+         *     the message went.
          */
         post: operations["directCommunicationSend"];
         delete?: never;
@@ -25452,7 +25463,19 @@ export interface paths {
          *
          *     The file's rows are counted first. A file with more rows than one test
          *     run reads is refused 422 `too_many_rows`, and no run and no stored file
-         *     are left behind.
+         *     are left behind. Its `max` is the limit and `params.rows` the file's count.
+         *
+         *     A file that cannot be read is refused 422 on `file`, with `params` naming
+         *     why. `not_utf8` names nothing. `unreadable` names the `line` when the
+         *     reader knows it, with `reason` `field_count` or `quote`.
+         *     `header_unusable` has `reason` `no_header`, `blank_name` (with
+         *     `position`) or `repeated_name` (with `name`). `bundle_refused` has
+         *     `reason` `not_a_zip`, `empty`, `files_too_large` or `zip_too_large`
+         *     (with `max_mb`), `too_many_files` (with `files` and `max_files`),
+         *     `password_protected`, `file_damaged` or `file_missing` (with `file`),
+         *     `two_files_one_type` (with `file`, `other_file` and `object`) or
+         *     `type_not_importable` (with `object`). A refusal of one file of a ZIP
+         *     also names it in `file`.
          *
          *     A cell an export quoted against formula evaluation (a quote before `=`,
          *     `+`, `-`, `@`, a tab or a carriage return) is read without that one
@@ -25498,6 +25521,13 @@ export interface paths {
          *     and moves the run to `awaiting_approval` carrying the report
          *     `getImportRunReport` reads, or back to `pending` with the reason in
          *     `error` when the test stopped on the file or ran past its time.
+         *
+         *     A mapping the object cannot satisfy is refused 422 with `params`:
+         *     `duplicate_target` on `mapping` names the `target` and the two columns
+         *     (`column`, `other_column`); `unmappable` on `source_key` names the
+         *     `object` and its key `target`, and `ref_target` when a column mapped to
+         *     `ref` would also identify each row. `invalid` on `source_name` carries
+         *     `max`. A file refusal reads as it does on `uploadImportSource`.
          *
          *     An upload has one run. This call writes the mapping onto the draft the
          *     upload opened and tests it, so a second call on one `source_ref`
@@ -29399,13 +29429,13 @@ export interface components {
              *       as a company.
              *     - `bulk_sender`: mail from the domain was judged bulk or automated, so it is not a
              *       company this business works with. `sender_kind` says which, when it is known.
-             *     - `unevidenced`, `stale_evidence`, `near_duplicate`, `vendor_verdict`: the undecided
+             *     - `unevidenced`, `stale_evidence`, `near_duplicate`, `vendor_verdict`, `foreign_site`: the undecided
              *       domain's open question, as `source` describes each one.
              *     - `unknown`: the row records a reason this server has no word for. `reason` still
              *       carries its stored sentence.
              * @enum {string}
              */
-            reason_code: "stated" | "company_created" | "kept_as_company" | "bulk_sender" | "unevidenced" | "stale_evidence" | "near_duplicate" | "forwarded_identity" | "vendor_verdict" | "reserved_domain" | "unknown";
+            reason_code: "stated" | "company_created" | "kept_as_company" | "bulk_sender" | "unevidenced" | "stale_evidence" | "near_duplicate" | "forwarded_identity" | "vendor_verdict" | "reserved_domain" | "foreign_site" | "unknown";
             /** @description The reason as its author wrote it, in their words. Sent only with `reason_code` `stated`. */
             note?: string;
             /**
@@ -29426,10 +29456,12 @@ export interface components {
              *     old to mint one from today's site; `near_duplicate` means more than one company
              *     here already carries the name it resolved to, and which of them this domain belongs
              *     to is a human's call rather than the machine's; `vendor_verdict` means the site reads
-             *     as a mail or hosting vendor, and a colleague decides whether its staff get a company.
+             *     as a mail or hosting vendor, and a colleague decides whether its staff get a company;
+             *     `foreign_site` means the site names a different business than the domain, which may
+             *     have changed hands.
              * @enum {string}
              */
-            source: "verdict" | "heuristic" | "human" | "agent" | "unevidenced" | "stale_evidence" | "near_duplicate" | "forwarded_identity" | "vendor_verdict" | "reserved_domain";
+            source: "verdict" | "heuristic" | "human" | "agent" | "unevidenced" | "stale_evidence" | "near_duplicate" | "forwarded_identity" | "vendor_verdict" | "reserved_domain" | "foreign_site";
             /**
              * Format: date-time
              * @description When the decision was recorded. For an `undecided` domain, when the row last moved.
@@ -31844,6 +31876,34 @@ export interface components {
              * @description Who owns the remaining contact: the live owner of one of the selected members.
              */
             owner_id: string;
+            prefer?: components["schemas"]["ContactCasePreference"];
+        };
+        /**
+         * @description Where the selected members disagree, the member whose value the remaining contact takes.
+         *     Each one must be in `member_ids`. A field left out keeps the survivor's value, and an empty one takes another member's.
+         *     No value is lost: every address, number and employment of every member stays on the remaining contact.
+         */
+        ContactCasePreference: {
+            /**
+             * Format: uuid
+             * @description The member whose first and last name the remaining contact takes.
+             */
+            name?: string;
+            /**
+             * Format: uuid
+             * @description The member whose title the remaining contact takes.
+             */
+            title?: string;
+            /**
+             * Format: uuid
+             * @description The member whose primary email address becomes the remaining contact's primary one.
+             */
+            email?: string;
+            /**
+             * Format: uuid
+             * @description The member whose current employer becomes the remaining contact's current one.
+             */
+            employment?: string;
         };
         /** @description What the merge did, or for a preview what it would do. Every selected member's owner other than the chosen one keeps access through a record grant. */
         ContactCaseOutcome: {
@@ -32712,6 +32772,18 @@ export interface components {
             /** @description Rows the upload holds: the file's for a single CSV, the sum of `parts[].row_count` for a ZIP. */
             row_count: number;
             object?: components["schemas"]["ImportObject"];
+            /**
+             * @description How `object` was chosen for a CSV uploaded without one. The header is
+             *     matched as `suggested_mapping` matches it, once for each type, and
+             *     only a column that exactly one type's suggestion maps counts.
+             *     `columns`: one type's suggestion maps more such columns than any
+             *     other's. `none`: no type maps strictly the most, so `object` is
+             *     `lead` and a screen asks the reader to choose. Absent when the upload
+             *     named its type, and for a ZIP. The run's `profile` keeps it until a
+             *     draft save names `object`, which is the reader's own choice.
+             * @enum {string}
+             */
+            object_chosen_by?: "columns" | "none";
             /** @description The uploaded file's name, for display. The client echoes it to `createImportRun`. */
             file_name?: string;
             /**
@@ -32801,7 +32873,7 @@ export interface components {
          * @description Why a row was skipped or warned about, so a screen can say it in the reader's language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code. `run_in_flight` is the one refusal code: it answers a commit or undo on a run another attempt holds, and no row carries it.
          * @enum {string}
          */
-        ImportReasonCode: "activity_empty" | "activity_held" | "address_erased" | "address_not_split" | "activity_link_ambiguous" | "activity_link_ambiguous_dropped" | "activity_type_unknown" | "activity_type_unnamed" | "activity_unlinked" | "amount_negative" | "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_future" | "close_date_past" | "company_duplicate_found" | "company_duplicate_skipped" | "company_link_on_meeting" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_holds_lead" | "contact_not_found" | "contact_not_found_dropped" | "contact_channel_missing" | "contact_unnamed" | "currency_not_a_code" | "currency_unset" | "deal_already_closed" | "deal_company_has_contracts" | "deal_legal_gate" | "deal_not_found" | "deal_not_found_dropped" | "deal_pipeline_fixed" | "description_too_long" | "direction_unknown" | "domain_held" | "duplicate_email" | "duration_not_valid_for_kind" | "email_names_no_contact" | "duration_out_of_range" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_not_found" | "employer_not_found_dropped" | "employer_refused" | "employer_will_create" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_visible" | "id_on_non_company" | "lead_not_found" | "lead_not_found_dropped" | "lead_status_not_importable" | "lead_status_unknown" | "link_ambiguous" | "link_ambiguous_dropped" | "link_contact_not_imported" | "link_edge_unsupported" | "link_malformed" | "link_not_attachable" | "link_not_found" | "link_not_found_dropped" | "link_row_not_imported" | "link_row_skipped" | "link_row_skipped_dropped" | "link_type_unknown" | "linkedin_held" | "lost_reason_missing" | "meeting_not_taken_place" | "meeting_status_not_valid_for_kind" | "meeting_status_unknown" | "message_not_importable" | "natural_key_taken" | "not_a_date" | "note_repeated" | "not_a_domain" | "not_a_number" | "not_an_amount" | "not_an_email" | "not_yes_no" | "occurred_at_future" | "occurred_at_unnamed" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "row_key_empty" | "row_key_repeated" | "run_in_flight" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "tag_created" | "tag_name_invalid" | "tag_new" | "task_not_importable" | "timestamp_needs_zone" | "too_many_links" | "undo_edited" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "undo_still_referenced" | "value_refused" | "value_too_long" | "value_unreadable";
+        ImportReasonCode: "activity_empty" | "activity_held" | "address_erased" | "address_not_split" | "activity_link_ambiguous" | "activity_link_ambiguous_dropped" | "activity_type_unknown" | "activity_type_unnamed" | "activity_unlinked" | "amount_negative" | "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_future" | "close_date_past" | "company_domain_matched" | "company_duplicate_found" | "company_duplicate_skipped" | "company_link_on_meeting" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_holds_lead" | "contact_not_found" | "contact_not_found_dropped" | "contact_channel_missing" | "contact_unnamed" | "currency_not_a_code" | "currency_unset" | "deal_already_closed" | "deal_company_has_contracts" | "deal_legal_gate" | "deal_not_found" | "deal_not_found_dropped" | "deal_pipeline_fixed" | "description_too_long" | "direction_unknown" | "domain_held" | "duplicate_email" | "duration_not_valid_for_kind" | "email_names_no_contact" | "duration_out_of_range" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_not_found" | "employer_not_found_dropped" | "employer_refused" | "employer_will_create" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_visible" | "id_on_non_company" | "lead_not_found" | "lead_not_found_dropped" | "lead_status_not_importable" | "lead_status_unknown" | "link_ambiguous" | "link_ambiguous_dropped" | "link_contact_not_imported" | "link_edge_unsupported" | "link_malformed" | "link_not_attachable" | "link_not_found" | "link_not_found_dropped" | "link_row_not_imported" | "link_row_skipped" | "link_row_skipped_dropped" | "link_type_unknown" | "linkedin_held" | "lost_reason_missing" | "meeting_not_taken_place" | "meeting_status_not_valid_for_kind" | "meeting_status_unknown" | "message_not_importable" | "natural_key_taken" | "not_a_date" | "note_repeated" | "not_a_domain" | "not_a_number" | "not_an_amount" | "not_an_email" | "not_yes_no" | "occurred_at_future" | "occurred_at_unnamed" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "row_key_empty" | "row_key_repeated" | "run_in_flight" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "stored_values_kept" | "tag_created" | "tag_name_invalid" | "tag_new" | "task_not_importable" | "timestamp_needs_zone" | "too_many_links" | "undo_edited" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "undo_still_referenced" | "value_refused" | "value_too_long" | "value_unreadable";
         /**
          * @description Exactly one of two shapes: `object` and `mapping` (and optionally
          *     `source_key`) for one CSV, or `parts` for a ZIP, each part with its own
@@ -32948,9 +33020,12 @@ export interface components {
          */
         ImportRunLinks: {
             /**
-             * @description Links the file asks for. A dry run reports this and nothing else,
-             *     because resolving an endpoint is a read the dry run has not done —
-             *     it says how many rows named an employer, not how many will find one.
+             * @description Links the file asks for on the rows the run lands. A link whose own
+             *     row is skipped is not counted, because that row is reported as a
+             *     skip; `unresolved` still lists it. A dry run reports this and nothing
+             *     else, because resolving an endpoint is a read the dry run has not
+             *     done — it says how many landing rows named an employer, not how many
+             *     will find one.
              */
             offered: number;
             /** @description Links actually written. Zero on a dry run, which writes nothing. */
@@ -33515,8 +33590,12 @@ export interface components {
             instance?: string;
             /**
              * @description Structured machine context — e.g. `existing_id` on 409 duplicate, or an
-             *     `errors` array of `{ field, code, message }` on 422 validation. A `too_long`
-             *     entry also carries `max`, the limit in characters.
+             *     `errors` array of `{ field, code, message }` on 422 validation. An entry that
+             *     refuses at a limit also carries `max`: the limit in characters for `too_long`,
+             *     in rows for `too_many_rows`, in characters for `source_name`. An entry whose
+             *     code names other values carries them in `params`, an object of text values by
+             *     name, so a screen can word the code in the reader's language; `message` stays
+             *     the English sentence.
              *
              *     A 429 that an agent's limit answers carries `limit`: `kind` names it (`calls`,
              *     `writes` or `egress` for a window allowance, `pacing` for the per-minute limit),
@@ -34452,8 +34531,9 @@ export interface components {
              *     stays in `superseded_value`, and a field a human corrected stands.
              *     `needs_review` — a resemblance, written nowhere; open the candidate and decide.
              *     `proposed` — a card read from a photo that nobody matched, waiting on an approval.
-             *     `skipped` — the card states no name, carries a sending system's address, or matches a
-             *     contact the caller may not write; `reason` says which.
+             *     `skipped` — the card states no name or one over 120 characters, carries a sending
+             *     system's address, holds a value that is not readable text or cannot be stored, or
+             *     matches a contact the caller may not write; `reason` says which.
              * @enum {string}
              */
             outcome: "created" | "updated" | "needs_review" | "proposed" | "skipped";
@@ -34462,7 +34542,10 @@ export interface components {
              * @description The contact created or updated, or — for `needs_review` — the candidate the card resembles.
              */
             contact_id?: string | null;
-            /** @description Why a card was skipped, or a warning about an imported contact without a channel. */
+            /**
+             * @description Why a card was skipped. For a written card, a warning: the contact has no channel, or the
+             *     card's title was cut to the length the field holds.
+             */
             reason?: string | null;
             /**
              * Format: uuid
@@ -43763,6 +43846,8 @@ export interface components {
         LatestInboundList: {
             data: components["schemas"]["LatestInbound"][];
             last_exchange?: components["schemas"]["LastExchange"];
+            last_inbound?: components["schemas"]["Activity"];
+            last_outbound?: components["schemas"]["Activity"];
         };
         /** @description The newest call, meeting, email or message on the record. Absent when there is none. */
         LastExchange: {
@@ -45038,6 +45123,25 @@ export interface components {
             language?: string;
             /** @description The recipient's country, lower-case ISO 3166-1 alpha-2, for `foreign_advertiser`. */
             country?: string;
+            provision?: components["schemas"]["CitedProvision"];
+        };
+        /**
+         * @description The law a finding or refusal rests on, as the recipient's own jurisdiction pack cites it
+         *     for the sending legal entity. Shown beside the engine's sentence; it decides nothing.
+         *     Absent when the pack cites no law for it, or when the citation may not be shown: the pack's
+         *     review is overdue or not yet done, or the law has not taken effect or has expired. On a
+         *     review it is the citation shown when the refusal was assessed, never today's.
+         */
+        CitedProvision: {
+            /** @description The law or decree, as a regulator cites it. Not translated. */
+            instrument: string;
+            /** @description The part of the instrument, such as "§ 7(2)". */
+            provision: string;
+            /**
+             * Format: uri
+             * @description The official published text, over https.
+             */
+            source_url: string;
         };
         /** @description An existing recipient record the caller can read. */
         CommunicationEvidenceSubject: {
@@ -45053,9 +45157,12 @@ export interface components {
             language: string;
             /** @description Missing contact methods, such as email, phone or web. */
             missing_means: string[];
+            provision?: components["schemas"]["CitedProvision"];
         };
         /** @description One recipient's answer. It describes the MESSAGE, never the contact's file. */
         SendAuthorizationPreviewRecipient: {
+            /** @description The law the recipient's pack cites for `reason_code`, absent when none may be shown. */
+            provision?: components["schemas"]["CitedProvision"];
             /** @description Server-derived missing footer disclosures or unavailable private links shown before the sender confirms this message. Contains no credentials. */
             footer_findings?: components["schemas"]["FooterFinding"][];
             /** Format: email */
@@ -52323,6 +52430,8 @@ export interface components {
             readonly works_at?: components["schemas"]["SearchHitEmployer"] | null;
             /** @description For a `company` hit only: the company's logo, the same URL its record carries as `Company.logo_url`. Absent when it has none, and on every other hit type. */
             readonly logo_url?: string | null;
+            /** @description Where a contact, company, deal, lead or project hit stands, read with the page under THIS caller's grants and field masks, so a result list can say it without opening each record. Absent on every other hit type. */
+            readonly standing?: components["schemas"]["SearchHitStanding"];
             /** @description For a `company` hit only: whether the account carries a LIVE partner programme. True when a partner record exists and has not been retired, false when it was checked and carries none. Null on every other hit type, and null when the marker was not taken — a caller who may not read partner programmes gets null rather than false, because null means UNKNOWN while false would tell them this account is not a partner. A client renders the partner marker, with a route to the company's partner record, on `true` alone. */
             is_partner?: boolean | null;
             /** @description The canonical email row, on an `activity` hit whose activity is an email THIS caller may read. Null on every other hit type, and null for a non-email activity — a call, a note, a task and a meeting are activities too, and each keeps its generic hit. An email whose content is not this caller's produces no hit at all, because the activity branch is content-gated. A client renders the canonical row when this is present and falls back to `title`/`snippet` when it is not. */
@@ -52332,6 +52441,34 @@ export interface components {
              * @enum {string|null}
              */
             trust_tier?: "authoritative" | "external" | "unverified" | null;
+        };
+        /** @description What a result list shows beside a record hit. A field that does not apply to the hit's type, or that the record does not hold, is null. */
+        SearchHitStanding: {
+            /** @description A deal's status (open, won, lost), a lead's status (new, contacted, engaged, promoted, disqualified) or a project's phase (initiative, pursuing, delivering, closed). Null on a contact and a company. */
+            state?: string | null;
+            /** @description A deal's stage, named in the reader's language. Null on every other type. */
+            stage?: string | null;
+            /**
+             * Format: int64
+             * @description A deal's amount in minor units of `currency`. Null when the deal is unpriced, and null when a field mask withholds it, which `masked_fields` then names.
+             */
+            amount_minor?: number | null;
+            /** @description The ISO 4217 code of `amount_minor`; null with it. */
+            currency?: string | null;
+            /**
+             * Format: date
+             * @description A deal's expected close date or a project's target end date.
+             */
+            due_on?: string | null;
+            /** @description A contact's job title. Null on every other type. */
+            job_title?: string | null;
+            /**
+             * Format: date-time
+             * @description When the record was last in touch: its newest logged call, mail, meeting or note. Set on a contact, a company and a deal.
+             */
+            last_activity_at?: string | null;
+            /** @description The fields above a field mask withheld from this caller, by their wire names. */
+            masked_fields?: string[];
         };
         /** @description A company a contact currently works at, by any current employment — the same reading as the company's own roster, not only the contact's primary employer. */
         SearchHitEmployer: {
@@ -55180,6 +55317,8 @@ export interface components {
             /** Format: uuid */
             subject_id?: string;
             reason_code: string;
+            /** @description The law the recipient's pack cites for `reason_code`, as shown when the refusal was assessed. */
+            provision?: components["schemas"]["CitedProvision"];
             category?: string;
             /** Format: uuid */
             sending_entity_id?: string;
@@ -63494,6 +63633,9 @@ export interface components {
          *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
          *     request under the key failed after it had started, so check whether it took effect before
          *     retrying under a new key.
+         *     A request the server stopped for time answers `503 code: request_timed_out` with
+         *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+         *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
          *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
          *     answer lost": without it the blind retry answers `409 version_skew`, because the first
          *     attempt already bumped the version.
@@ -64917,6 +65059,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -64993,6 +65138,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -65199,6 +65347,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -65262,6 +65413,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -65331,6 +65485,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -66489,6 +66646,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -66564,6 +66724,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -66648,6 +66811,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -66923,6 +67089,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -67069,6 +67238,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -67139,6 +67311,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -67202,6 +67377,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -67638,6 +67816,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -67720,6 +67901,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -69033,6 +69217,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -69219,6 +69406,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -69294,6 +69484,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -69770,6 +69963,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -69825,6 +70021,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -70043,6 +70242,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -70262,6 +70464,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -70323,6 +70528,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -70975,6 +71183,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -71222,6 +71433,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -71318,6 +71532,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -71429,6 +71646,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -71517,6 +71737,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -71637,6 +71860,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -71709,6 +71935,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -71883,6 +72112,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -71937,6 +72169,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -71992,6 +72227,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -72248,6 +72486,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -72358,6 +72599,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -72438,6 +72682,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -72497,6 +72744,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -72578,6 +72828,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -72688,6 +72941,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -72937,6 +73193,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -73179,6 +73438,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -73337,6 +73599,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -73511,6 +73776,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -73970,6 +74238,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -74320,6 +74591,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -74371,6 +74645,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -74712,6 +74989,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -74794,6 +75074,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -75168,6 +75451,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -75546,6 +75832,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -75883,6 +76172,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -76082,6 +76374,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -76226,6 +76521,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -77582,6 +77880,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -77880,6 +78181,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -77953,6 +78257,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -78171,6 +78478,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -78245,6 +78555,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -78307,6 +78620,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -78583,6 +78899,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -78658,6 +78977,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -78733,6 +79055,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -78808,6 +79133,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -78883,6 +79211,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -78941,6 +79272,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -79016,6 +79350,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -79074,6 +79411,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -79153,6 +79493,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -79254,6 +79597,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -79304,6 +79650,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -79384,6 +79733,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -79463,6 +79815,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -79538,6 +79893,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -79621,6 +79979,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -80645,6 +81006,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -81354,6 +81718,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -81472,6 +81839,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -84346,6 +84716,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -85132,6 +85505,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -85283,6 +85659,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -90059,6 +90438,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -90314,6 +90696,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -90771,7 +91156,33 @@ export interface operations {
     directCommunicationSend: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
             path: {
                 id: string;
             };
@@ -91258,6 +91669,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -91342,6 +91756,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -91432,6 +91849,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -91490,6 +91910,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -91800,6 +92223,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -91858,6 +92284,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -91962,6 +92391,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -92052,6 +92484,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -92111,6 +92546,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -92307,6 +92745,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -93115,6 +93556,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -93239,6 +93683,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -93405,6 +93852,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -93690,6 +94140,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -94255,6 +94708,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -95058,6 +95514,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -95235,6 +95694,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -95347,6 +95809,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -95482,6 +95947,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -95531,6 +95999,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -95660,6 +96131,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -95719,6 +96193,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -95770,6 +96247,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -95888,6 +96368,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -95999,6 +96482,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -96296,6 +96782,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -97103,6 +97592,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -97198,6 +97690,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -97436,6 +97931,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -97720,6 +98218,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -97849,6 +98350,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -97898,6 +98402,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -98044,6 +98551,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -98154,6 +98664,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -98214,6 +98727,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -98898,6 +99414,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -101370,6 +101889,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -101966,7 +102488,7 @@ export interface operations {
                 "multipart/form-data": {
                     /**
                      * Format: binary
-                     * @description The delimited file to import, or a ZIP of them named by type (`companies.csv`, `contacts.csv`, `leads.csv`, `deals.csv`, `activities.csv`). UTF-8; the first row is the header. `object` is required for a CSV and ignored for a ZIP, whose file names say each part's type. A ZIP is known by its content, not its name.
+                     * @description The delimited file to import, or a ZIP of them named by type (`companies.csv`, `contacts.csv`, `leads.csv`, `deals.csv`, `activities.csv`). UTF-8; the first row is the header. `object` is ignored for a ZIP, whose file names say each part's type. A CSV sent without `object` is typed by its header, and the profile's `object_chosen_by` says how. A ZIP is known by its content, not its name.
                      */
                     file: string;
                     object?: components["schemas"]["ImportObject"];
@@ -102699,6 +103221,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -102781,6 +103306,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -102859,6 +103387,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -102931,6 +103462,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.
@@ -103009,6 +103543,9 @@ export interface operations {
                  *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
                  *     request under the key failed after it had started, so check whether it took effect before
                  *     retrying under a new key.
+                 *     A request the server stopped for time answers `503 code: request_timed_out` with
+                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
+                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
                  *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
                  *     answer lost": without it the blind retry answers `409 version_skew`, because the first
                  *     attempt already bumped the version.

@@ -85,7 +85,7 @@ func TestTheArchiveDeletionKeepsWhatTheLawKeeps(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := compose.ComposedEraser(e.Pool, nil, nil).PinToFloor(
+	if err := compose.ComposedEraser(e.Pool, nil).PinToFloor(
 		controllerCtx(e, principal.ObjectGrant{Read: true, Update: true}), pinned, reason); err != nil {
 		t.Fatalf("pinning the supplier letter: %v", err)
 	}

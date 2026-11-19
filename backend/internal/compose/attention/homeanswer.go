@@ -90,7 +90,7 @@ func walkStartedBy(out crmcontracts.Worklist) (*ids.UUID, error) {
 	}
 	// Read as minted, not as decodeCursor asks: the page was minted under the
 	// question the service resolved, which the request may spell differently.
-	cursor, err := storekit.DecodeOpaque[worklistCursor](*out.NextCursor)
+	cursor, err := openCursor(*out.NextCursor)
 	if err != nil {
 		return nil, fmt.Errorf("attention: reading the walk a page started: %w", err)
 	}

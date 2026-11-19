@@ -18,13 +18,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func offerCreationRequest(approval crmcontracts.Approval) (ids.DealID, deals.CreateOfferInput, error) {
+func offerCreationRequest(ctx context.Context, approval crmcontracts.Approval) (ids.DealID, deals.CreateOfferInput, error) {
 	raw, tool, err := creationRequest[json.RawMessage](approval, "offer")
 	if err != nil {
 		return ids.DealID{}, deals.CreateOfferInput{}, err
 	}
 	if tool {
-		return deals.OfferCreationFromFields(raw, agents.ToolSource)
+		return deals.OfferCreationFromFields(ctx, raw, agents.ToolSource)
 	}
 	operation, opOK := (*approval.ProposedChange)["operation"].(string)
 	path, pathOK := (*approval.ProposedChange)["path"].(string)
@@ -37,12 +37,12 @@ func offerCreationRequest(approval crmcontracts.Approval) (ids.DealID, deals.Cre
 	if err != nil || id.IsZero() {
 		return ids.DealID{}, deals.CreateOfferInput{}, apperrors.ErrInvalidArgument
 	}
-	in, err := deals.OfferCreationInput(raw)
+	in, err := deals.OfferCreationInput(ctx, raw)
 	return ids.From[ids.DealKind](id), in, err
 }
 
 func (r approvalPreviewReader) offerCreationPreview(ctx context.Context, approval crmcontracts.Approval, out *crmcontracts.ApprovalPreview) (*crmcontracts.ApprovalPreview, error) {
-	dealID, in, err := offerCreationRequest(approval)
+	dealID, in, err := offerCreationRequest(ctx, approval)
 	if previewUnavailable(err) {
 		return out, nil
 	}

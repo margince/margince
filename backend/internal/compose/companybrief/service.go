@@ -196,9 +196,10 @@ func (s *Service) GetScoped(
 	// a task and a prompt, so without this the reader's rail could say "this
 	// company" and nothing more.
 	lane, withheld := ai.ReadLane(ctx, s.lane)
-	sections, by, err := Write(ai.WithSubject(ctx, companyID.Ref(), in.Name), lane, companyID.String(), in, lang)
-	if err != nil {
-		return crmcontracts.CompanyBrief{}, err
+	sections, by, laneFailed := Write(ai.WithSubject(ctx, companyID.Ref(), in.Name), lane, companyID.String(), in, lang)
+	if laneFailed && found && cached.Version == storedVersion && cached.Fingerprint == fingerprint {
+		// A forced rewrite that failed keeps the model's brief for these facts.
+		return s.enrich(ctx, cached.wire(companyID, scope))
 	}
 	written := stored{
 		Fingerprint: fingerprint,
@@ -210,7 +211,7 @@ func (s *Service) GetScoped(
 		// than trusted from the model's own reply.
 		Sections: withSectionEvidenceNames(sections, in),
 	}
-	if withheld {
+	if laneFailed || withheld {
 		return s.enrich(ctx, written.wire(companyID, scope))
 	}
 	if err := s.save(ctx, userID, companyID, written); err != nil {

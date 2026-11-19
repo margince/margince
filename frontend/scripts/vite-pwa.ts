@@ -3,9 +3,17 @@
 
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
+import { IncomingMessage } from "node:http";
+import { Socket } from "node:net";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { build, type Plugin, type Rolldown, runnerImport } from "vite";
+import {
+  build,
+  type Plugin,
+  type ProxyOptions,
+  type Rolldown,
+  runnerImport,
+} from "vite";
 
 const FRONTEND = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const WORKER_SOURCE = resolve(FRONTEND, "src/offline/serviceworker.js");
@@ -130,23 +138,50 @@ async function buildPwaFiles(
   ];
 }
 
+type DevProxy = Readonly<Record<string, string | ProxyOptions>>;
+
+async function servesTheApp(path: string, proxied: string | ProxyOptions) {
+  if (typeof proxied === "string" || proxied.bypass === undefined) {
+    return false;
+  }
+  const navigation = new IncomingMessage(new Socket());
+  navigation.url = path;
+  navigation.headers = { "sec-fetch-dest": "document" };
+  return (
+    typeof (await proxied.bypass(navigation, undefined, proxied)) === "string"
+  );
+}
+
+/** The dev server's proxy keys, less those whose bypass hands a browser navigation
+ *  to the app, as nginx does for a record card or a booking page. */
+export async function apiNavigationPaths(proxy: DevProxy): Promise<string[]> {
+  const paths: string[] = [];
+  for (const [path, proxied] of Object.entries(proxy)) {
+    if (!(await servesTheApp(path, proxied))) {
+      paths.push(path.replace(/\/+$/, ""));
+    }
+  }
+  return paths;
+}
+
 /** The worker leaves alone every path under a key the dev server proxies to the api,
  *  by whole segment. */
 export function pwa(options: Readonly<{ release: string }>): Plugin {
-  let passThrough: readonly string[] = [];
+  let proxy: DevProxy = {};
   return {
     name: "margince-pwa",
     apply: "build",
     // After Vite's own HTML plugin, whose index.html is how this knows it is the SPA.
     enforce: "post",
     configResolved(config) {
-      passThrough = Object.keys(config.server.proxy ?? {});
+      proxy = config.server.proxy ?? {};
     },
     async generateBundle(_output, bundle) {
       // Storybook builds through this config too, and its bundle has no app to serve.
       if (!("index.html" in bundle)) {
         return;
       }
+      const passThrough = await apiNavigationPaths(proxy);
       if (passThrough.length === 0) {
         throw new Error(
           "vite.config.ts proxies nothing, so the service worker would take every api navigation for the app's",

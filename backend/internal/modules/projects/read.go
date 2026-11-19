@@ -216,8 +216,8 @@ func appendProjectFilters(ctx context.Context, where []string, in ListProjectsIn
 	if !in.IncludeArchived {
 		where = append(where, "archived_at IS NULL")
 	}
-	if in.Query != nil && *in.Query != "" {
-		where = append(where, storekit.QuickFindClause(arg(*in.Query), projectQuickFindExpr))
+	if q, ok := storekit.QuickFindQuery(in.Query); ok {
+		where = append(where, storekit.QuickFindClause(arg(q), projectQuickFindExpr))
 	}
 	if in.CompanyID != nil {
 		// Any of the project's live companies, not the legacy anchor column.

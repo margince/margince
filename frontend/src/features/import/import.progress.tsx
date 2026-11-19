@@ -193,7 +193,7 @@ function Counts({
   const t = useT();
   const { locale } = useLocale();
   return (
-    <StatStrip label={t("import.progress.counts")}>
+    <StatStrip label={t("import.progress.counts")} density="compact">
       {COUNT_KEYS.map((key) => (
         <StatCard
           key={key}

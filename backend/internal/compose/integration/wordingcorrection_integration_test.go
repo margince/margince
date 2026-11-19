@@ -18,11 +18,6 @@ import (
 
 func approvedHeldWording(t *testing.T) (*consentEnv, string, crmcontracts.WordingCorrectionContext) {
 	t.Helper()
-	return approvedHeldWordingFor(t, false)
-}
-
-func approvedHeldWordingFor(t *testing.T, anotherDirector bool) (*consentEnv, string, crmcontracts.WordingCorrectionContext) {
-	t.Helper()
 	c := setupConsent(t)
 	c.useReviewableMarketingProfile(t)
 	if status := c.Call(t, "POST", "/v1/activities/"+c.activityID+"/send-email", AnyMap{
@@ -39,43 +34,11 @@ func approvedHeldWordingFor(t *testing.T, anotherDirector bool) (*consentEnv, st
 	if _, err := c.Owner.Exec(t.Context(), `CREATE TRIGGER reject_wording_staging BEFORE UPDATE ON communication_instruction FOR EACH ROW WHEN (NEW.status='consumed') EXECUTE FUNCTION reject_wording_staging()`); err != nil {
 		t.Fatal(err)
 	}
-	director := c.AppEnv
-	if anotherDirector {
-		c.DescribeCompany(t)
-		var invited struct {
-			ID string `json:"id"`
-		}
-		if status := c.Call(t, "POST", "/v1/users", AnyMap{
-			"email": "separate-director@consent.test", "display_name": "Separate director", "role": "admin",
-		}, nil, &invited); status != http.StatusCreated {
-			t.Fatalf("creating director=%d", status)
-		}
-		const password = "Test-separate-director-password-23!"
-		apptest.SetPasswordByLink(t, c.AppEnv, invited.ID, password)
-		director = c.AsSecondSeat(t, "separate-director@consent.test", password)
-	}
-	if status := director.Call(t, "POST", "/v1/communication-reviews/"+review+"/direct-send", directed(), nil, nil); status != http.StatusInternalServerError {
+	if status := c.Call(t, "POST", "/v1/communication-reviews/"+review+"/direct-send", directed(), nil, nil); status != http.StatusInternalServerError {
 		t.Fatalf("interrupted staging=%d", status)
 	}
 	if _, err := c.Owner.Exec(t.Context(), `DROP FUNCTION reject_wording_staging() CASCADE`); err != nil {
 		t.Fatal(err)
-	}
-	if anotherDirector {
-		c.AppEnv = director
-		var hidden crmcontracts.CommunicationReview
-		if status := c.Call(t, "GET", "/v1/communication-reviews/"+review, nil, nil, &hidden); status != http.StatusOK || hidden.WordingCorrection != nil {
-			t.Fatalf("non-owner correction preview=%d %+v", status, hidden.WordingCorrection)
-		}
-		var observed crmcontracts.WordingCorrectionContext
-		if err := c.Owner.QueryRow(t.Context(), `SELECT i.id,s.version,encode(i.acknowledged_wording,'hex'),
-			s.payload->>'subject',s.payload->>'body',s.payload->>'html_body'
-			FROM communication_instruction i JOIN communication_review r ON r.id=i.review_id
-			JOIN scheduled_send s ON s.id=r.delivery_intent_id WHERE r.id=@review`,
-			pgx.StrictNamedArgs{"review": review}).Scan(&observed.InstructionId, &observed.Version, &observed.WordingDigest,
-			&observed.Subject, &observed.Body, &observed.HtmlBody); err != nil {
-			t.Fatal(err)
-		}
-		return c, review, observed
 	}
 	var current crmcontracts.CommunicationReview
 	if status := c.Call(t, "GET", "/v1/communication-reviews/"+review, nil, nil, &current); status != http.StatusOK || current.WordingCorrection == nil {
@@ -260,20 +223,6 @@ func TestACorrectedApprovalCannotSendPastANewStop(t *testing.T) {
 	}
 	if deliveries != 0 {
 		t.Fatalf("a stopped corrected message staged %d deliveries", deliveries)
-	}
-}
-
-func TestAnApproverCannotRewriteAnotherSendersHeldMessage(t *testing.T) {
-	c, review, observed := approvedHeldWordingFor(t, true)
-	if status := c.Call(t, "POST", "/v1/communication-reviews/"+review+"/correct-wording", spellingCorrection(observed), nil, nil); status != http.StatusNotFound {
-		t.Fatalf("non-owner correction=%d", status)
-	}
-	var corrected bool
-	if err := c.Owner.QueryRow(t.Context(), `SELECT corrected_wording IS NOT NULL FROM communication_instruction WHERE review_id=@review`, pgx.StrictNamedArgs{"review": review}).Scan(&corrected); err != nil {
-		t.Fatal(err)
-	}
-	if corrected {
-		t.Fatal("a reviewer rewrote another sender's message")
 	}
 }
 

@@ -141,12 +141,12 @@ func normalizedFilter(filter string) string {
 //
 // Held by: TestACursorRoundTripsThePositionItWasMintedAt.
 func encodeCursor(at int, scope, filter string, owner, snapshot ids.UUID, rest *backlogCursor) string {
-	token, err := storekit.EncodeOpaque(worklistCursor{
+	token, err := storekit.EncodeSigned(worklistCursor{
 		At:       at,
 		Params:   fingerprint(scope, filter, owner),
 		Snapshot: snapshot,
 		Rest:     rest,
-	})
+	}, cursorKey())
 	if err != nil {
 		// Unreachable for an int and a string. An empty token is refused by
 		// decodeCursor on the way back in, so the walk ends with a 422 the
@@ -165,12 +165,12 @@ func decodeCursor(token, scope, filter string, owner ids.UUID) (worklistCursor, 
 	if token == "" {
 		return worklistCursor{}, nil
 	}
-	cursor, err := storekit.DecodeOpaque[worklistCursor](token)
+	cursor, err := openCursor(token)
 	if err != nil {
 		return worklistCursor{}, err
 	}
-	// Well-formed JSON is not yet a position, and the token is client-supplied
-	// and unsigned, so every shape this never mints is refused rather than
+	// The signature proves this server minted the token, and so its tail
+	// state. A shape this never mints is still refused rather than
 	// interpreted:
 	//
 	//   - A NEGATIVE offset reaches `rows[n:]` and panics. A crafted token must
@@ -191,6 +191,12 @@ func decodeCursor(token, scope, filter string, owner ids.UUID) (worklistCursor, 
 		return worklistCursor{}, &storekit.CursorSortMismatchError{}
 	}
 	return cursor, nil
+}
+
+// openCursor reads a token this package minted. A token from before cursors
+// were signed has no signature and is refused like any edited one.
+func openCursor(token string) (worklistCursor, error) {
+	return storekit.DecodeSigned[worklistCursor](token, cursorKey())
 }
 
 // resumeAt answers where in the current ranking this page starts.

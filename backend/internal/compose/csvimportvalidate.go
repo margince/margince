@@ -10,6 +10,7 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/importwire"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -98,7 +99,7 @@ func (h importHandlers) checkedTest(
 	}
 	source, _, err := bundleSourceFor(h.blobs, mapping, run.SourceRef, h.uploadLimit)
 	if err != nil {
-		return nil, migration.RunMapping{}, importProblem(err)
+		return nil, migration.RunMapping{}, importwire.Problem(err)
 	}
 	if err := checkEveryPartsColumns(ctx, source, mapping); err != nil {
 		return nil, migration.RunMapping{}, err

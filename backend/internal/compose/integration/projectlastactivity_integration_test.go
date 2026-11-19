@@ -133,8 +133,7 @@ func TestProjectLastActivity_MovesOnEveryWriteThatChangesTheTimeline(t *testing.
 }
 
 // The clock counts activities filed against the PROJECT, not activities that
-// reach it through one of its deals. The project timeline offers that union
-// separately; the stored column stays one cheap, unambiguous question.
+// reach it only through one of its deals.
 func TestProjectLastActivity_CountsOnlyDirectlyLinkedActivities(t *testing.T) {
 	e := Setup(t)
 	company := e.SeedCompany(t, "Deal-Reached Client", nil)
@@ -150,7 +149,8 @@ func TestProjectLastActivity_CountsOnlyDirectlyLinkedActivities(t *testing.T) {
 	}
 
 	when := time.Date(2026, 8, 11, 9, 0, 0, 0, time.UTC)
-	logProjectNote(e.Admin(), t, e, when,
+	// An agent's note: a member's note on the deal is filed under its project too.
+	logProjectNote(e.AgentFor(t, e.AdminUser, nil, AdminPerms), t, e, when,
 		activities.ActivityLinkInput{EntityType: "deal", EntityID: ids.UUID(deal.Id)})
 
 	if got := projectClock(e.Admin(), t, e, project.ID); got != nil {

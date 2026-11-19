@@ -78,6 +78,27 @@ describe("LeadsScreen — search/sort/pagination + status filter (P-14)", () => 
     );
   });
 
+  it("a status filter naming a closed status reads the archived leads it names", async () => {
+    // Qualifying or disqualifying archives the lead, so the filter alone would
+    // match nothing while Show archived is off.
+    const user = userEvent.setup();
+    const { urls } = stubFetch(async () => emptyPage());
+    render(<LeadsScreen />);
+    await waitFor(() => expect(urls.length).toBeGreaterThan(0));
+
+    await pickFilter(user, "Status", "Disqualified");
+
+    await waitFor(() =>
+      expect(
+        urls.some(
+          (url) =>
+            url.includes("status=disqualified") &&
+            url.includes("include_archived=true"),
+        ),
+      ).toBe(true),
+    );
+  });
+
   it("an overdue lead wears the badge, and the Overdue view asks for sla_state=breached", async () => {
     // The badge is the first-response clock as the list shows it. A lead within
     // target carries no badge, so the list stays quiet until something needs a hand.
@@ -192,6 +213,10 @@ describe("LeadsScreen — search/sort/pagination + status filter (P-14)", () => 
     // The row that refused is named, with the outcome the server reported.
     expect(await screen.findByText(/1 not applied/)).toBeTruthy();
     expect(screen.getByText(/Otto Fischer: /)).toBeTruthy();
+    // The row that moved is counted, whatever the view shows of it.
+    expect(
+      await screen.findByText(/^1 lead assigned to Lena F\./),
+    ).toBeTruthy();
   });
 
   it("says so when the whole bulk assign is refused, not just when rows are", async () => {
@@ -594,6 +619,20 @@ describe("LeadsScreen — archived marking (P-3)", () => {
       .getAllByText("Disqualified", { selector: ".badge-label" })
       .filter((label) => label.closest(".badge.badge-warning"));
     expect(warned).toHaveLength(1);
+  });
+});
+
+describe("LeadsScreen — the count line", () => {
+  it("names one lead in the singular", async () => {
+    stubFetch(async () =>
+      jsonResponse({
+        data: [lead],
+        page: { next_cursor: null, has_more: false },
+      }),
+    );
+    render(<LeadsScreen />);
+    expect(await screen.findByText(/1 to 1 of 1 lead\b/)).toBeTruthy();
+    expect(screen.queryByText(/of 1 leads/)).toBeNull();
   });
 });
 

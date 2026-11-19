@@ -384,10 +384,10 @@ never named. Margince suggests a company only when one company you can see fits,
 what Margince decided about each. That is a contact, a role mailbox, an
 automated tool, a newsletter, an advisor, or personal. You can change any of them.
 
-**Mark as business** lets a sender back in; **Exclude** destroys their mail, also what they send
-later ([how](#how-do-i-tell-margince-a-sender-is-business-or-exclude-one)). **Waiting on a decision**, under the
-list, names the contacts only you see until their sender is decided. Each says if it waits on Margince or on you.
-Decide the sender there, or remove the contact, which archives it and keeps its mail. An administrator sees only how many there are.
+**Mark as business** lets a sender back in; **Exclude** destroys their mail, also what they send later
+([how](#how-do-i-tell-margince-a-sender-is-business-or-exclude-one)). **Waiting on a decision**, under the list, names the contacts
+only you see until their sender is decided. Each says if it waits on Margince or on you. Decide the sender there, or remove the
+contact, which archives it and keeps its mail. Mail and meetings from before the removal do not create it again. An administrator sees only how many there are.
 
 **Mail not shared with the team** (Settings → Connections → Activity) lists the threads your mailbox holds
 back now. Each shows the reason and its outside addresses. No action is needed. To share one,

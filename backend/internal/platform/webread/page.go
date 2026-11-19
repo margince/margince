@@ -74,6 +74,9 @@ type Page struct {
 	// wants it — which for a client-rendered site is the only prose the server
 	// ever sends.
 	HeadText []string
+	// SiteName is the name the page's <head> gives the site: og:site_name, else
+	// its <title>. "" when it gives neither.
+	SiteName string
 	// ExternalScripts counts the <script src=…> tags the page loads, and
 	// ModuleScripts how many of those are ES modules.
 	//
@@ -174,6 +177,7 @@ func (f *Fetcher) FetchPage(ctx context.Context, rawURL string) (Page, error) {
 		Logos:           declaredLogos(body, base),
 		Refresh:         head.refresh,
 		HeadText:        append(head.text, linkedDataClaims(body)...),
+		SiteName:        head.siteName(),
 		ExternalScripts: external,
 		ModuleScripts:   modules,
 		Fingerprint:     fingerprintOf(got.header, body, base),
@@ -188,6 +192,9 @@ type headAssets struct {
 	icons   []IconRef
 	refresh string
 	text    []string
+	// ogSiteName and title feed SiteName.
+	ogSiteName string
+	title      string
 }
 
 // extractHeadAssets harvests what a page's <head> declares about itself: its
@@ -211,6 +218,10 @@ func extractHeadAssets(rawHTML string, base *url.URL) headAssets {
 		if endsHead(tokenType, string(name)) {
 			return head
 		}
+		if tokenType == html.StartTagToken && string(name) == "title" {
+			head.readTitle(tokenizer)
+			continue
+		}
 		if !hasAttr {
 			continue
 		}
@@ -233,6 +244,7 @@ func extractHeadAssets(rawHTML string, base *url.URL) headAssets {
 			if found, ok := headTextFrom(attrs, seenText); ok {
 				head.text = append(head.text, found)
 			}
+			head.readOGSiteName(attrs)
 		case "link":
 			if icon, ok := iconFrom(tokenizer, base); ok && !seen[icon.URL] {
 				seen[icon.URL] = true

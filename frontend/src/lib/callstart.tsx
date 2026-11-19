@@ -3,9 +3,9 @@
 
 import { createContext, type ReactNode, useContext } from "react";
 
-/** The contact a dialled number belongs to, which the logged call is filed on. */
+/** The record a dialled number belongs to, which the logged call is filed on. */
 export type CallRecord = Readonly<{
-  entityType: "contact";
+  entityType: "contact" | "lead";
   entityId: string;
 }>;
 

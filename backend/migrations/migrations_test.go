@@ -15,6 +15,10 @@ func TestEmbeddedMigrationNamespacesLoad(t *testing.T) {
 			_, err := migrations.Core()
 			return err
 		},
+		"core history": func() error {
+			_, err := migrations.CoreHistory()
+			return err
+		},
 		"custom": func() error {
 			_, err := migrations.Custom()
 			return err

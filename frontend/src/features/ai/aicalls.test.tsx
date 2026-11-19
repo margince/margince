@@ -357,6 +357,23 @@ it("reads each call in five columns: when, feature, model, outcome and cost", as
   expect(within(row).getByText("provider_unavailable")).toBeTruthy();
 });
 
+it("names a call's task, with its key behind the name rather than under it", async () => {
+  const user = userEvent.setup();
+  mount();
+  const row = await screen.findByTestId(`call-${summary.id}`);
+  expect(row.textContent).not.toContain("capture_classify");
+
+  await user.click(
+    within(row).getByRole("button", {
+      name: "Message classification: what it does",
+    }),
+  );
+
+  expect(await screen.findByText("capture_classify")).toBeTruthy();
+  // The name answers on its own: the row's call is not opened by it.
+  expect(screen.queryByRole("dialog")).toBeNull();
+});
+
 it("opens a call in a drawer and leaves the table exactly as it was", async () => {
   const user = userEvent.setup();
   mount();
@@ -366,7 +383,12 @@ it("opens a call in a drawer and leaves the table exactly as it was", async () =
   const drawer = await openCall(user);
   // Nothing is inserted under the row: the detail lives beside the table.
   expect(table.querySelectorAll("tr").length).toBe(rowsBefore);
-  expect(within(drawer).getByText("Message classification")).toBeTruthy();
+  expect(screen.getByRole("dialog", { name: "Message classification" })).toBe(
+    drawer,
+  );
+  expect(
+    within(drawer).getByRole("heading", { name: "Message classification" }),
+  ).toBeTruthy();
   expect(await within(drawer).findByText(/retry.on.5xx/i)).toBeTruthy();
   expect(within(drawer).getByText("Request payload")).toBeTruthy();
   expect(

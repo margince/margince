@@ -45,6 +45,9 @@ const (
 	// PendingVendorVerdict: the site reads as a mail or hosting vendor. The
 	// site cannot tell the vendor's own staff from its customers, so a colleague does.
 	PendingVendorVerdict = "vendor_verdict"
+	// PendingForeignSite: the site names a business that neither the domain nor
+	// a company here accounts for. A lapsed domain may now serve somebody else.
+	PendingForeignSite = "foreign_site"
 )
 
 // DomainUndecided is the admission value an open question carries on the wire.
