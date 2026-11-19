@@ -3,7 +3,7 @@
 
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -11,7 +11,10 @@ import { LocaleProvider, translate } from "../i18n";
 import { PageSaveBar, SavePageProvider, useSaveDraft } from "./savepage";
 import { ToastProvider, ToastRegion } from "./toast";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.useRealTimers();
+});
 
 const SAVE = translate("en", "saveBar.save");
 const DISCARD = translate("en", "saveBar.discard");
@@ -117,13 +120,17 @@ describe("PageSaveBar", () => {
   });
 
   it("says Saved once the page's drafts are written, whichever cards held them", async () => {
-    const user = userEvent.setup();
+    // The toast leaves on a timer, so the clock is the test's.
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(<Page />);
     await user.type(field("Name"), "Jane");
     await user.type(field("Title"), "CEO");
     await user.click(screen.getByRole("button", { name: SAVE }));
 
     expect(await screen.findAllByText(SAVED)).toHaveLength(1);
+    await act(() => vi.advanceTimersByTimeAsync(10_000));
+    expect(screen.queryByText(SAVED)).toBeNull();
   });
 
   it("keeps the bar and every refused draft, and says why once", async () => {
