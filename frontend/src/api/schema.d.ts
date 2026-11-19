@@ -56360,6 +56360,8 @@ export interface components {
             keep: string;
             /** @description The period counts from the end of the calendar year. */
             from_year_end: boolean;
+            /** @description The statute and article that set the period. Absent when the pack names none. */
+            law?: string;
         };
         /**
          * @description The correspondence floor in force. With no jurisdiction selected it is the strictest floor

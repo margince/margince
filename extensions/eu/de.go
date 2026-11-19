@@ -53,7 +53,7 @@ type germanFloors struct{}
 
 func (germanFloors) Classes() []jurisdiction.RetentionClass {
 	return []jurisdiction.RetentionClass{
-		{Name: jurisdiction.CommercialCorrespondence, Keep: jurisdiction.Period{Years: 6}, Anchor: jurisdiction.AnchorCalendarYearEnd},
-		{Name: jurisdiction.AccountingRecords, Keep: jurisdiction.Period{Years: 8}, Anchor: jurisdiction.AnchorCalendarYearEnd},
+		correspondence(6, "Handelsgesetzbuch (HGB) §257(4); Abgabenordnung (AO) §147(3)"),
+		accounting(8, "Abgabenordnung (AO) §147(3); Handelsgesetzbuch (HGB) §257(4)"),
 	}
 }

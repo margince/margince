@@ -42,17 +42,41 @@ func TestEveryMemberStateRegistersOnePackAndOneRuleSet(t *testing.T) {
 	}
 }
 
-// Germany alone carries retention floors. Every other member state's duties
-// bind books and invoices, which a CRM does not hold.
-func TestOnlyGermanyDeclaresRetentionFloors(t *testing.T) {
+// Every member state but Slovenia carries an accounting floor that names its
+// law, and only the states whose law names business letters carry a
+// correspondence floor.
+func TestEveryMemberStateDeclaresItsStatutoryFloors(t *testing.T) {
+	keepsLetters := []jurisdiction.Code{"at", "de", "es", "fi", "it", "lu", "mt", "pt"}
 	for _, p := range New().Jurisdictions {
 		classes := p.Retention().Classes()
-		if p.Code() == "de" && len(classes) == 0 {
-			t.Error("the German pack lost its GoBD floors")
+		if p.Code() == "si" {
+			if len(classes) != 0 {
+				t.Errorf("si declares %d retention classes; no statutory period was confirmed", len(classes))
+			}
+			continue
 		}
-		if p.Code() != "de" && len(classes) != 0 {
-			t.Errorf("%s declares %d retention classes, want none", p.Code(), len(classes))
+		assertFloors(t, p.Code(), classes, slices.Contains(keepsLetters, p.Code()))
+	}
+}
+
+func assertFloors(t *testing.T, code jurisdiction.Code, classes []jurisdiction.RetentionClass, keepsLetters bool) {
+	t.Helper()
+	var letters, books bool
+	for _, c := range classes {
+		if err := c.Name.Validate(); err != nil {
+			t.Errorf("%s: %v", code, err)
 		}
+		if c.Law == "" {
+			t.Errorf("%s: the %s floor names no law", code, c.Name)
+		}
+		letters = letters || c.Name == jurisdiction.CommercialCorrespondence
+		books = books || c.Name == jurisdiction.AccountingRecords
+	}
+	if !books {
+		t.Errorf("%s declares no accounting floor", code)
+	}
+	if letters != keepsLetters {
+		t.Errorf("%s correspondence floor = %t, want %t", code, letters, keepsLetters)
 	}
 }
 

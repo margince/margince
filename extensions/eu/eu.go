@@ -5,8 +5,9 @@
 // stable-tier extension, enabled by default in the vanilla tree. Each member
 // state's messaging rules compile from policy/<code>/, which layers its
 // national law on the ePrivacy layer every member state shares
-// (policy/regional/eu.md). Germany also carries its retention floors, its
-// request deadline and the documents an employer signs. Core code never
+// (policy/regional/eu.md), and its retention floors sit in retention.go.
+// Germany also carries its request deadline and the documents an employer
+// signs. Core code never
 // contains a jurisdiction string, so this unit is where the member states live.
 package eu
 
@@ -23,7 +24,7 @@ func New() extension.Extension {
 	return extension.Extension{
 		Name:          "eu",
 		Version:       "1.0.0",
-		Description:   "EU member-state packs: the messaging rules of all 27 member states on the shared ePrivacy layer, and the German retention floors (§147 AO), request deadline and staff documents.",
+		Description:   "EU member-state packs: the messaging rules and retention floors of all 27 member states, and the German request deadline and staff documents.",
 		Jurisdictions: packsFor(messagingRules()),
 		Messaging:     messagingRules(),
 		SubjectRights: []subjectrights.Rules{germanSubjectRights()},
@@ -46,15 +47,12 @@ func packsFor(rules []messaging.Rules) []jurisdiction.Pack {
 	return out
 }
 
-// memberState is the pack of a member state with no retention floor here. Its
-// record-keeping duties bind books and invoices, which a CRM does not hold, and
-// a floor no record can carry would read as coverage.
+// memberState is the pack of a member state other than Germany. Its floors
+// come from memberStateFloors.
 type memberState jurisdiction.Code
 
 func (m memberState) Code() jurisdiction.Code { return jurisdiction.Code(m) }
 
-func (memberState) Retention() jurisdiction.Retention { return noFloors{} }
-
-type noFloors struct{}
-
-func (noFloors) Classes() []jurisdiction.RetentionClass { return nil }
+func (m memberState) Retention() jurisdiction.Retention {
+	return floors(memberStateFloors()[jurisdiction.Code(m)])
+}

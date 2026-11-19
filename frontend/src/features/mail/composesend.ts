@@ -109,6 +109,10 @@ export function missingToSend(
   return missing;
 }
 
+// How long the words must rest before the checked flow asks the engine again,
+// so the warning bar does not redraw between keystrokes.
+const WRITING_PAUSE_MS = 1500;
+
 // The hold on Send. An older server's footer refusal holds it in both flows;
 // otherwise the inline flow asks nothing before the press.
 function holdOf(
@@ -271,11 +275,11 @@ export function useComposeSend({
   );
   const contextDealId = dealOf(answering ? anchorActivity?.links : links);
   const evidence = reasonEvidence(contextDealId, fields.meetingEvidence);
-  // The engine's answer, asked while the rep writes. Bcc is in the question,
+  // The engine's answer, asked once the rep pauses. Bcc is in the question,
   // because consent is owed to everyone who receives the message.
-  const settledSubject = useSettledValue(fields.subject);
-  const settledBody = useSettledValue(fields.body);
-  const settledHTML = useSettledValue(fields.html);
+  const settledSubject = useSettledValue(fields.subject, WRITING_PAUSE_MS);
+  const settledBody = useSettledValue(fields.body, WRITING_PAUSE_MS);
+  const settledHTML = useSettledValue(fields.html, WRITING_PAUSE_MS);
   const answer = useSendPermission({
     recipients: [...fields.to, ...fields.cc, ...fields.bcc],
     anchorActivityId: answering,

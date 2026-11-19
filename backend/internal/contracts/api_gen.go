@@ -54777,6 +54777,9 @@ type JurisdictionRetentionClass struct {
 	// Keep The ISO 8601 period the class keeps, e.g. `P6Y`.
 	Keep string `json:"keep"`
 
+	// Law The statute and article that set the period. Absent when the pack names none.
+	Law *string `json:"law,omitempty"`
+
 	// Name The class, e.g. `commercial_correspondence`.
 	Name string `json:"name"`
 }

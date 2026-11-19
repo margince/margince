@@ -184,7 +184,7 @@ func TestRequestsAreCarriedOutWithinTheDecreesDays(t *testing.T) {
 		t.Fatalf("the declared deadlines do not validate: %v", err)
 	}
 	for kind, days := range map[subjectrights.RequestKind]int{
-		subjectrights.Rectify: 10, subjectrights.Erasure: 20, subjectrights.Restriction: 15,
+		subjectrights.Access: 10, subjectrights.Rectify: 10, subjectrights.Erasure: 20, subjectrights.Restriction: 15,
 	} {
 		if got := rules.Deadlines[kind].Period.Days; got != days {
 			t.Errorf("%s is due in %d days, want %d", kind, got, days)
@@ -195,9 +195,6 @@ func TestRequestsAreCarriedOutWithinTheDecreesDays(t *testing.T) {
 	}
 	if rules.ReplyWithinWorkingDays != 2 {
 		t.Errorf("a first answer is owed in %d working days, want 2", rules.ReplyWithinWorkingDays)
-	}
-	if _, declared := rules.Deadlines[subjectrights.Access]; declared {
-		t.Error("the pack declares an access deadline the decree does not set")
 	}
 }
 

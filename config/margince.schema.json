@@ -189,7 +189,7 @@
             "boolean",
             "null"
           ],
-          "default": false
+          "default": true
         },
         "private_mail_requests": {
           "description": "Let the AI read private mail for requests: what a customer asks of its reader, and a request for a quote. Only mail private because of a setting is read; mail held for any other reason never is. Sharing a quote request with the workspace is a separate setting.",

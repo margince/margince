@@ -53247,6 +53247,7 @@ components:
         name: {type: string, description: 'The class, e.g. `commercial_correspondence`.'}
         keep: {type: string, description: 'The ISO 8601 period the class keeps, e.g. `P6Y`.'}
         from_year_end: {type: boolean, description: 'The period counts from the end of the calendar year.'}
+        law: {type: string, description: 'The statute and article that set the period. Absent when the pack names none.'}
     RetentionFloorPolicy:
       type: object
       description: |-

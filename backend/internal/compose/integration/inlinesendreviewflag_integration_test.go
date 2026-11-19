@@ -12,8 +12,8 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
-// The composer's pilot switch reaches the session: off until an installation
-// turns it on, then on for the next /me.
+// The composer's switch reaches the session: on until an installation turns it
+// off, then off for the next /me.
 func TestTheInlineSendReviewSwitchReachesTheSession(t *testing.T) {
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Inline Pilot", "admin@inline-pilot.test", "Admin")
@@ -26,15 +26,15 @@ func TestTheInlineSendReviewSwitchReachesTheSession(t *testing.T) {
 		}
 		return me.InlineSendReview
 	}
-	if on := read(); on == nil || *on {
-		t.Fatalf("inline_send_review = %v before anyone chose, want false", on)
+	if on := read(); on == nil || !*on {
+		t.Fatalf("inline_send_review = %v before anyone chose, want true", on)
 	}
 	if _, err := e.Owner.Exec(t.Context(), `
-		INSERT INTO setting (key, value, updated_at) VALUES ('activities.inline_send_review', 'true'::jsonb, now())
+		INSERT INTO setting (key, value, updated_at) VALUES ('activities.inline_send_review', 'false'::jsonb, now())
 		ON CONFLICT (key) DO UPDATE SET value = excluded.value, updated_at = now()`); err != nil {
-		t.Fatalf("turning the pilot on: %v", err)
+		t.Fatalf("turning the switch off: %v", err)
 	}
-	if on := read(); on == nil || !*on {
-		t.Fatalf("inline_send_review = %v after the pilot was turned on, want true", on)
+	if on := read(); on == nil || *on {
+		t.Fatalf("inline_send_review = %v after the switch was turned off, want false", on)
 	}
 }

@@ -43,12 +43,20 @@ func TestEveryCountryRegistersOnePackAndOneRuleSet(t *testing.T) {
 	}
 }
 
-// No country here declares a retention floor: their record-keeping duties
-// bind books and invoices, which a CRM does not hold.
-func TestNoCountryDeclaresARetentionFloor(t *testing.T) {
+// Every country but the Philippines carries one accounting floor that names
+// its law, and none carries a correspondence floor: no law here names business
+// letters.
+func TestEveryCountryDeclaresItsAccountingFloor(t *testing.T) {
 	for _, p := range New().Jurisdictions {
-		if classes := p.Retention().Classes(); len(classes) != 0 {
-			t.Errorf("%s declares %d retention classes, want none", p.Code(), len(classes))
+		classes := p.Retention().Classes()
+		if p.Code() == "ph" {
+			if len(classes) != 0 {
+				t.Errorf("ph declares %d retention classes; its tax-code anchor cannot be stated", len(classes))
+			}
+			continue
+		}
+		if len(classes) != 1 || classes[0].Name != jurisdiction.AccountingRecords || classes[0].Law == "" {
+			t.Errorf("%s declares %+v, want one accounting floor naming its law", p.Code(), classes)
 		}
 	}
 }
