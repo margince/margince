@@ -65,11 +65,8 @@ func acmeDeepSite() *fakeSite {
 	}}
 }
 
-// acmeDeepBrain answers both lanes for acmeDeepSite: the profile call
-// grounds a positioning field on the home passage (excerpt ids are
-// global over the RANK-SORTED pages — imprint s0, home s1) and the
-// legal name on the imprint's; the page calls yield the phone, a market
-// signal, and the single-entity census that lets the trio stand.
+// acmeDeepBrain answers both lanes for acmeDeepSite (excerpt ids follow the
+// rank-sorted pages: imprint s0, home s1).
 func acmeDeepBrain() laneFake {
 	return laneFake{
 		profileReply: `{"fields":[
@@ -183,9 +180,7 @@ func TestDeepReadCrawlsExtractsAppliesWhatItEvidencedAndFinishesDone(t *testing.
 		t.Fatal("no audit row on behalf of the requesting human")
 	}
 
-	// A River retry after the terminal outcome no-ops on the Begin CAS: no
-	// second crawl, and — now that the findings land rather than stage —
-	// nothing written twice.
+	// A River retry after the terminal outcome no-ops: no second crawl, nothing written twice.
 	if err := worker.run(context.Background(), args); err != nil {
 		t.Fatalf("retry after done: %v", err)
 	}
