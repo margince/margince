@@ -96,7 +96,7 @@ var companyNameStopwords = map[string]bool{
 //
 // Stopwords too, folded in by init below rather than written out twice.
 var companyNameArticles = map[string]bool{
-	"the": true, "a": true, "an": true, wordAnd: true, "of": true, "for": true,
+	"the": true, "a": true, "an": true, "and": true, "of": true, "for": true,
 	"le": true, "la": true, "les": true, "der": true, "die": true, "das": true,
 }
 

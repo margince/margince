@@ -40,10 +40,7 @@ var legalSuffixes = map[string]bool{
 // "miller", so two unrelated accounts could meet at the same key. A connective
 // is consumed only when a real suffix has already been stripped and another
 // one follows it — which is exactly the compound case and nothing else.
-// wordAnd is the English connective the name rules each skip.
-const wordAnd = "and"
-
-var legalConnectives = map[string]bool{"&": true, "und": true, wordAnd: true}
+var legalConnectives = map[string]bool{"&": true, "und": true, "and": true}
 
 // NormalizeContactName is the contact-name key: namematch.Fold plus a
 // collapse of internal whitespace. Both halves are

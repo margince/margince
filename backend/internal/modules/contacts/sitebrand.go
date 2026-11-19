@@ -73,21 +73,22 @@ func nameAccountsFor(stated string, known CompanyIdentity) bool {
 // genericBrandWords are words that many unrelated companies share, in English,
 // German and Vietnamese, folded. Sharing one says nothing about being the same
 // business, so they never match alone.
-var genericBrandWords = map[string]bool{
-	"group": true, "solutions": true, "services": true, "service": true, "consulting": true,
-	"tech": true, "digital": true, "global": true, "holding": true, "holdings": true,
-	"international": true, "systems": true, "partners": true, "partner": true,
-	"gruppe": true, "losungen": true, "loesungen": true, "dienstleistungen": true, "beratung": true,
-	"technik": true, "technologie": true, "technologien": true, "systeme": true, "gmbh": true,
-	"cong": true, "tnhh": true, "phan": true, "doan": true, "dich": true, "giai": true, "phap": true,
-	"nghe": true, "quoc": true, "toan": true, "thong": true,
-}
+var genericBrandWords = wordSet(`group solutions services service consulting tech digital global holding
+	holdings international systems partners partner gruppe losungen loesungen dienstleistungen beratung
+	technik technologie technologien systeme gmbh cong tnhh phan doan dich giai phap nghe quoc toan thong`)
 
 // initialConnectives are the small words a name's initials may leave out, keep
 // as a letter, or keep whole. "The Boston Consulting Group" is bcg, and "Bank of
 // America" is bofa.
-var initialConnectives = map[string]bool{
-	"the": true, "of": true, wordAnd: true, "und": true, "der": true, "die": true, "das": true, "va": true, "cua": true,
+var initialConnectives = wordSet("the of and und der die das va cua")
+
+// wordSet reads a list of words separated by spaces.
+func wordSet(words string) map[string]bool {
+	set := map[string]bool{}
+	for _, w := range strings.Fields(words) {
+		set[w] = true
+	}
+	return set
 }
 
 // statedNameSpellsLabel reports whether a company name accounts for a domain
