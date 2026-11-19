@@ -288,7 +288,7 @@ export function useAddEmployment(
   );
   const modal = (
     <AddEmploymentModal
-      key={`add-employment-${adding.seq}`}
+      key={adding.seq}
       open={adding.open}
       onClose={() => setAdding((prior) => ({ ...prior, open: false }))}
       initialTerm={adding.company ? undefined : adding.term}
