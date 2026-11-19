@@ -27143,6 +27143,34 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /custom-fields/{id}/choices:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [CustomFields]
+      operationId: listCustomFieldChoiceUse
+      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
+      summary: How many records hold each choice of a picklist or multiselect field.
+      description: |
+        What removing a choice would clear, asked before an options edit is confirmed. Every
+        record of the field's object counts, archived ones included, because the edit clears
+        them all. Each current choice is listed, with zero where no record holds it. Needs the
+        grant that edits a field's options.
+      responses:
+        '200':
+          description: The records holding each choice.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CustomFieldChoiceUse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422':
+          description: The field is not a picklist or multiselect.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
   /custom-fields/{id}/retire:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -27188,17 +27216,24 @@ paths:
       operationId: updateCustomFieldOptions
       summary: Edit a picklist custom field's allowed options (regenerates the column's CHECK).
       description: |
-        CUSTOM-FIELDS-PARAM-5. Only valid for `type=picklist` fields (422 `not_picklist`
+        CUSTOM-FIELDS-PARAM-5. Only valid for `type=picklist` and `type=multiselect` fields (422 `not_picklist`
         otherwise). Replaces the catalog's `options` array and regenerates the physical
         column's CHECK constraint from the new set via the governed engine (the same
         one-transaction owner-ALTER shape as `createCustomField` — this is the
         one DDL path rename/retire never touch). Removing every option is refused (422,
         detail "A picklist needs at least one option") — a picklist always keeps at least
         one allowed value. Like `retireCustomField`, an agent asks its user first: this
-        mutates a schema-adjacent CHECK constraint. A retired field
+        mutates a schema-adjacent CHECK constraint, and clears data. A retired field
         refuses the edit with a 409 `conflict` — retirement is terminal, so its options
-        are frozen; removing an option that stored values still use is also a 409
-        (`ADD CONSTRAINT` validates existing rows — migrate the values first).
+        are frozen.
+
+        Removing a choice that records hold clears it from them in the same transaction:
+        a picklist value becomes null, and a multiselect keeps its other choices. Archived
+        records are cleared too. Each changed record gets its own audit entry and its
+        object's `*.updated` event, and the answer's `records_changed` counts them.
+        `listCustomFieldChoiceUse` tells the caller that count before they confirm. A Live
+        List whose filter names a removed choice keeps evaluating and matches no record
+        through it.
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: update_custom_field_options, router: change_settings, action: update_custom_field_options, tier: auto_execute, scope: write, served_by: route, ask_user_first: true }
       parameters:
@@ -27223,21 +27258,21 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409':
           description: >-
-            Stored values still use a removed option, the field is retired (options are
-            frozen — retirement is terminal), or the target table is busy with concurrent
-            activity — the last is retryable.
+            The field is retired (options are frozen — retirement is terminal), a record that
+            holds a removed choice belongs to a member who has left and must be handed on
+            first, or the target table is busy with concurrent activity — the last is retryable.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
               examples:
-                removedOptionInUse:
-                  summary: Records still carry an option the edit removes
+                removedChoiceOnDepartedWork:
+                  summary: A record holding a removed choice still belongs to a departed member
                   value:
                     type: 'https://errors.gradion.com/conflict'
                     title: Conflict
                     status: 409
                     code: conflict
-                    detail: 'existing deal values still use a removed option; migrate them first: conflict'
+                    detail: 'a deal that holds a removed choice belongs to a member who has left; hand it to a colleague first: conflict'
                 fieldRetired:
                   summary: The field is retired — its options are frozen
                   value:
@@ -65255,10 +65290,10 @@ components:
             since the catalog owns labels and this vocabulary does not.
         type:
           type: string
-          enum: [text, number, date, currency, picklist, multiselect, boolean, record, id, domain, distance]
+          enum: [text, number, date, currency, picklist, multiselect, boolean, record, url, id, domain, distance]
           x-extensible-enum: true
           description: |
-            The six custom-field types, plus `id` for a reference to another record,
+            The custom-field types, plus `id` for a reference to another record,
             `domain` for a host column and `distance` for a place on the earth. A `distance`
             field admits only `within_radius`, whose value is `{lat, lon, radius_km, label?}`;
             `lat` and `lon` are the center, `radius_km` is greater than zero, and `label` is the
@@ -71948,9 +71983,9 @@ components:
         slug: { type: string, description: Admin-facing key the column_name derives from. }
         type:
           type: string
-          enum: [text, number, date, currency, picklist, multiselect, boolean, record]
+          enum: [text, number, date, currency, picklist, multiselect, boolean, record, url]
           x-extensible-enum: true
-          description: The supported field types. Multiselect values are JSON string arrays; empty arrays clear the selection. A record field holds the id of one record of the kind named by its single option, and that option must be a record kind a unit declared. Immutable once created.
+          description: The supported field types. Multiselect values are JSON string arrays; empty arrays clear the selection. A record field holds the id of one record of the kind named by its single option, and that option must be a record kind a unit declared. A url field holds an absolute `http` or `https` address of at most 2000 characters, with no user name or password; any other value is refused with `invalid_value`. Immutable once created.
         status:
           type: string
           enum: [active, retired]
@@ -72000,6 +72035,28 @@ components:
           description: >-
             Base envelope field; stays null even when `status=retired`, because retiring is a status flip rather than an archive.
         version: { $ref: '#/components/schemas/RowVersion' }
+        records_changed:
+          type: integer
+          minimum: 0
+          description: >-
+            Only on the answer to `updateCustomFieldOptions`: how many records held a choice the
+            edit removed and had it cleared.
+
+    CustomFieldChoiceUse:
+      type: object
+      description: How many records hold each current choice of a picklist or multiselect field.
+      required: [choices]
+      properties:
+        choices:
+          type: array
+          items: { $ref: '#/components/schemas/CustomFieldChoiceCount' }
+
+    CustomFieldChoiceCount:
+      type: object
+      required: [choice, records]
+      properties:
+        choice: { type: string }
+        records: { type: integer, minimum: 0, description: 'Records that hold the choice, archived ones included.' }
 
     CustomFieldLiveLists:
       type: object
@@ -72047,7 +72104,7 @@ components:
         label: { type: string }
         type:
           type: string
-          enum: [text, number, date, currency, picklist, multiselect, boolean, record]
+          enum: [text, number, date, currency, picklist, multiselect, boolean, record, url]
         currency: { type: [string, 'null'], pattern: '^[A-Z]{3}$' }
         options: { type: [array, 'null'], items: { type: string } }
         source: { type: string }

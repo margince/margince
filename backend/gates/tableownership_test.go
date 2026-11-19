@@ -108,17 +108,18 @@ func owningDir(pkgDir string) string {
 }
 
 // storekitTableArg names the storekit calls that carry their table as the third
-// argument. The four Patch appliers issue the UPDATE themselves; LockRow and
-// LockPair do not write, but they are where ApplyLocked's table comes from —
-// the lock carries it in an unexported field, so the lock site is the only
-// place the table is legible, and without it every ApplyLocked write is
-// invisible here.
+// argument. The four Patch appliers and ClearRemovedChoices issue the UPDATE
+// themselves; LockRow and LockPair do not write, but they are where
+// ApplyLocked's table comes from — the lock carries it in an unexported field,
+// so the lock site is the only place the table is legible, and without it every
+// ApplyLocked write is invisible here.
 var storekitTableArg = map[string]bool{
-	"ApplyWithVersion": true,
-	"ApplyGuarded":     true,
-	"ApplyGuardedIn":   true,
-	"LockRow":          true,
-	"LockPair":         true,
+	"ApplyWithVersion":    true,
+	"ApplyGuarded":        true,
+	"ApplyGuardedIn":      true,
+	"ClearRemovedChoices": true,
+	"LockRow":             true,
+	"LockPair":            true,
 }
 
 // stringConstsByPackage maps each walked directory to the string constants its
@@ -310,10 +311,11 @@ func collectTableWrites(t *testing.T) map[string][]tableWrite {
 						return
 					}
 					// Not "insert", and that is checkable rather than assumed:
-					// storekitTableArg holds Apply* and Lock* only, and none
-					// of them creates a row. TestNoPendingWriterHasAWriter
-					// leans on that — an INSERT cannot arrive through this arm
-					// and be read as an update.
+					// storekitTableArg holds Apply*, Lock* and
+					// ClearRemovedChoices only, and none of them creates a
+					// row. TestNoPendingWriterHasAWriter leans on that — an
+					// INSERT cannot arrive through this arm and be read as an
+					// update.
 					// The call's own text, for the arm that has no SQL to take a
 					// first line from. Two storekit writes to one table in one
 					// declaration differ in their arguments, which is what

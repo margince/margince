@@ -193,3 +193,28 @@ func TestACallerOpenedCreateWithValuesAndNoCatalogIsStillRefused(t *testing.T) {
 		t.Errorf("deal: err = %v with %d rows, want the custom-field refusal before any write", probe.err, probe.rows)
 	}
 }
+
+func TestAURLCustomFieldImportsAWebAddressAndSkipsAnythingElse(t *testing.T) {
+	e := setupCustomFieldImportApp(t)
+	column := apptest.CreateCustomField(t, e, AnyMap{"object": "company", "label": "Order portal", "type": "url", "source": "manual"})
+	csv := "Name,Order portal\n" +
+		"Portal Linked GmbH,https://orders.example.com/acme\n" +
+		"Portal Script GmbH,javascript:alert(1)\n" +
+		"Portal Bare GmbH,orders.example.com\n"
+	profile, _ := importjobtest.UploadCSV(t, e, "company", csv)
+	run, status := importjobtest.CreateRunWithMapping(t, e, "company", profile.SourceRef, map[string]string{"Name": "display_name", "Order portal": column})
+	if status != http.StatusAccepted {
+		t.Fatalf("stage → %d, want 202", status)
+	}
+	var report importReportDTO
+	if status := e.Call(t, http.MethodGet, "/v1/imports/"+run.ID+"/report", nil, nil, &report); status != http.StatusOK {
+		t.Fatalf("report → %d, want 200", status)
+	}
+	if report.Disposition.Created != 1 || report.Disposition.Skipped != 2 {
+		t.Fatalf("report = %+v, want the web address landed and the script and the bare host skipped", report.Disposition)
+	}
+	approveAndRead(t, e, run.ID)
+	if got := companyField(t, e, "Portal Linked GmbH", column); got != "https://orders.example.com/acme" {
+		t.Fatalf("%s = %q, want the imported address", column, got)
+	}
+}

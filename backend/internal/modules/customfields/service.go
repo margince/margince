@@ -48,6 +48,7 @@ type Service struct {
 	pool       *pgxpool.Pool
 	schemaPool *pgxpool.Pool
 	liveLists  LiveListReader
+	removers   map[string]ChoiceRemover
 }
 
 // NewService wires the engine. schemaPool MAY be nil: the schema-change

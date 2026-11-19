@@ -21,25 +21,24 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
 )
 
-// The closed type/object sets (CUSTOM-FIELDS-PARAM-1/PARAM-2). No cap,
-// no widening — the surface itself is the knob (custom-fields.md). The
-// literal spellings mirror the migration's CHECK constraints
-// (migrations/core/0063_custom_field_catalog.up.sql) exactly — Validate,
-// the catalog CHECK, and this package must never drift apart.
+// The closed type set is the port's (fieldcatalog.Types), so this module, the
+// record stores and the filter vocabularies read one list. The names here are
+// short spellings for this package's own switches.
 const (
-	TypeText        = "text"
-	TypeNumber      = "number"
-	TypeDate        = "date"
-	TypeCurrency    = "currency"
-	TypePicklist    = "picklist"
-	TypeMultiselect = "multiselect"
-	TypeBoolean     = "boolean"
-	TypeRecord      = "record"
+	TypeText        = fieldcatalog.TypeText
+	TypeNumber      = fieldcatalog.TypeNumber
+	TypeDate        = fieldcatalog.TypeDate
+	TypeCurrency    = fieldcatalog.TypeCurrency
+	TypePicklist    = fieldcatalog.TypePicklist
+	TypeMultiselect = fieldcatalog.TypeMultiselect
+	TypeBoolean     = fieldcatalog.TypeBoolean
+	TypeRecord      = fieldcatalog.TypeRecord
+	TypeURL         = fieldcatalog.TypeURL
 )
 
 // FieldTypes is the closed, ordered set of supported field types, spelled
 // the way the custom_field.type CHECK constraint spells them.
-var FieldTypes = []string{TypeText, TypeNumber, TypeDate, TypeCurrency, TypePicklist, TypeMultiselect, TypeBoolean, TypeRecord}
+var FieldTypes = fieldcatalog.Types()
 
 // FieldObjects is the closed, ordered set of core objects a custom field can
 // attach to. A member must satisfy BOTH properties, and neither is something the
@@ -97,9 +96,13 @@ var allowedObjects = func() map[string]bool {
 	return m
 }()
 
-var allowedTypes = map[string]bool{
-	TypeText: true, TypeNumber: true, TypeDate: true, TypeCurrency: true, TypePicklist: true, TypeMultiselect: true, TypeBoolean: true, TypeRecord: true,
-}
+var allowedTypes = func() map[string]bool {
+	m := make(map[string]bool, len(FieldTypes))
+	for _, t := range FieldTypes {
+		m[t] = true
+	}
+	return m
+}()
 
 // FieldSpec is a candidate custom-field definition — the only source the
 // DDL generator is permitted to read from. Unlike the poc-1 reference this
@@ -325,7 +328,7 @@ func sqlType(fieldType string) (string, error) {
 		return "text", nil
 	case TypeBoolean:
 		return "boolean", nil
-	case TypeRecord:
+	case TypeRecord, TypeURL:
 		return "text", nil
 	default:
 		return "", fmt.Errorf("customfields: unsupported type %q", fieldType)
@@ -394,12 +397,12 @@ func BuildDDL(object, columnName string, spec FieldSpec) (string, error) {
 	}
 	stmt := fmt.Sprintf("ALTER TABLE %s ADD COLUMN %s %s NULL",
 		quoteIdentifier(object), quoteIdentifier(columnName), colType)
-	if spec.Type == TypeText {
+	if limit, bounded := textBound(spec.Type); bounded {
 		// A new column contains only nulls, so its bound needs no legacy-value
 		// exception. The name carries the column and limit a refusal reports.
 		stmt += fmt.Sprintf(" CONSTRAINT %s CHECK (%s IS NULL OR char_length(%s) <= %d)",
-			quoteIdentifier(storekit.TextMaxConstraint(columnName, values.TextDocumentCharacters)),
-			quoteIdentifier(columnName), quoteIdentifier(columnName), values.TextDocumentCharacters)
+			quoteIdentifier(storekit.TextMaxConstraint(columnName, limit)),
+			quoteIdentifier(columnName), quoteIdentifier(columnName), limit)
 	}
 	if hasOptions(spec.Type) {
 		checkName, clause, err := typedCheckConstraintClause(columnName, spec.Type, spec.Options)
@@ -482,6 +485,19 @@ func namesOneRegisteredKind(options []string) bool {
 	}
 	_, ok := recordkinds.Lookup(options[0])
 	return ok
+}
+
+// textBound is the character limit of a free text column, and false for a type
+// whose values the write checks some other way.
+func textBound(fieldType string) (int, bool) {
+	switch fieldType {
+	case TypeText:
+		return values.TextDocumentCharacters, true
+	case TypeURL:
+		return values.WebAddressCharacters, true
+	default:
+		return 0, false
+	}
 }
 
 func hasOptions(fieldType string) bool {
