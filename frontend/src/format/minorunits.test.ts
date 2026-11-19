@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { minorUnitDigits, toMajorUnits, toMinorUnits } from "./minorunits";
+import {
+  amountFault,
+  minorUnitDigits,
+  toMajorUnits,
+  toMinorUnits,
+} from "./minorunits";
 
 // The defect this module closes: eleven call sites hard-coded 100, so a dong
 // price typed as 18,000,000 was stored as 1,800,000,000. The zero-decimal rows
@@ -134,4 +139,28 @@ describe("the scale between what a human types and what we store", () => {
       expect(toMinorUnits(10, currency)).toBe(1000);
     },
   );
+});
+
+// A form names the refusal before it sends, so a field can say what is wrong
+// instead of posting the NaN that toMinorUnits returns.
+describe("why a typed amount cannot be stored", () => {
+  it.each([
+    ["", "EUR"],
+    ["  ", "VND"],
+    ["12.34", "EUR"],
+    ["18000000", "VND"],
+  ])("%o in %s is storable, so it has no fault", (text, currency) => {
+    expect(amountFault(text, currency)).toBeUndefined();
+  });
+
+  it.each([
+    ["1.5", "VND"],
+    ["12.345", "EUR"],
+  ])("%o in %s has more decimals than the currency holds", (text, currency) => {
+    expect(amountFault(text, currency)).toBe("too_precise");
+  });
+
+  it("a figure past what a minor-unit integer holds is too large", () => {
+    expect(amountFault("1e300", "EUR")).toBe("too_large");
+  });
 });
