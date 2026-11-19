@@ -40176,6 +40176,22 @@ type ChatEpisode struct {
 	Url string `json:"url"`
 }
 
+// CitedProvision The law a finding or refusal rests on, as the recipient's own jurisdiction pack cites it
+// for the sending legal entity. Shown beside the engine's sentence; it decides nothing.
+// Absent when the pack cites no law for it, or when the citation may not be shown: the pack's
+// review is overdue or not yet done, or the law has not taken effect or has expired. On a
+// review it is the citation shown when the refusal was assessed, never today's.
+type CitedProvision struct {
+	// Instrument The law or decree, as a regulator cites it. Not translated.
+	Instrument string `json:"instrument"`
+
+	// Provision The part of the instrument, such as "§ 7(2)".
+	Provision string `json:"provision"`
+
+	// SourceUrl The official published text, over https.
+	SourceUrl string `json:"source_url"`
+}
+
 // ClaimEvidence The receipt behind one cited record (DOSS-WIRE-3). Each `source_kind` owes its own
 // identifying fields (DOSS-PARAM-9), carried in `identity`; a receipt that cannot fill one
 // names the gap in `gaps` rather than substituting a plausible value.
@@ -49582,6 +49598,13 @@ type DraftContentFinding struct {
 	// Language The language the draft must lead with, for `advertising_language_first`.
 	Language *string `json:"language,omitempty"`
 
+	// Provision The law a finding or refusal rests on, as the recipient's own jurisdiction pack cites it
+	// for the sending legal entity. Shown beside the engine's sentence; it decides nothing.
+	// Absent when the pack cites no law for it, or when the citation may not be shown: the pack's
+	// review is overdue or not yet done, or the law has not taken effect or has expired. On a
+	// review it is the citation shown when the refusal was assessed, never today's.
+	Provision *CitedProvision `json:"provision,omitempty"`
+
 	// Requirement `claim_without_proof`: the draft makes a claim the pack allows only beside a stated
 	// proof (the document's name, number and date), and states none.
 	// `advertising_language_first`: the draft does not open in the pack's disclosure
@@ -51150,6 +51173,13 @@ type FooterFinding struct {
 
 	// MissingMeans Missing contact methods, such as email, phone or web.
 	MissingMeans []string `json:"missing_means"`
+
+	// Provision The law a finding or refusal rests on, as the recipient's own jurisdiction pack cites it
+	// for the sending legal entity. Shown beside the engine's sentence; it decides nothing.
+	// Absent when the pack cites no law for it, or when the citation may not be shown: the pack's
+	// review is overdue or not yet done, or the law has not taken effect or has expired. On a
+	// review it is the citation shown when the refusal was assessed, never today's.
+	Provision *CitedProvision `json:"provision,omitempty"`
 }
 
 // ForecastAssurance What the most recent nightly input check found, and how much of the pipeline it was able to reach.
@@ -61885,7 +61915,10 @@ type RefusedRecipient struct {
 	FooterFindings *[]FooterFinding `json:"footer_findings,omitempty"`
 
 	// FooterPreview Configured disclosure text included in this message. Contains no recipient credentials.
-	FooterPreview     *[]string                    `json:"footer_preview,omitempty"`
+	FooterPreview *[]string `json:"footer_preview,omitempty"`
+
+	// Provision The law the recipient's pack cites for `reason_code`, as shown when the refusal was assessed.
+	Provision         *CitedProvision              `json:"provision,omitempty"`
 	ReasonCode        string                       `json:"reason_code"`
 	RequestedCategory *string                      `json:"requested_category,omitempty"`
 	SendingEntityId   *openapi_types.UUID          `json:"sending_entity_id,omitempty"`
@@ -65755,6 +65788,9 @@ type SendAuthorizationPreviewRecipient struct {
 	// the sender, before the message is checked, and this answer is the one that new
 	// contact gets. Absent or false for an address a record already holds.
 	NewContact *bool `json:"new_contact,omitempty"`
+
+	// Provision The law the recipient's pack cites for `reason_code`, absent when none may be shown.
+	Provision *CitedProvision `json:"provision,omitempty"`
 
 	// ReasonCode Why, in the engine's own vocabulary — `allowed`, `no_compatible_evidence`,
 	// `marketing_objection`, `no_marketing_consent` and the rest. A composer maps it to

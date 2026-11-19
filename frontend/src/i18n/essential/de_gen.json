@@ -3063,6 +3063,8 @@
   "sendPermission.reason.claimContradicts": "Der gewählte Kontaktgrund passt nicht zu diesem Thread. Wähle einen anderen Grund oder lass das Feld leer, damit Margince ihn aus dem Thread liest.",
   "sendPermission.reason.claimContradictsFact": "Der angegebene Kontaktgrund passt nicht zu diesem Thread.",
   "sendPermission.reason.other": "Diese Nachricht kann so nicht gesendet werden.",
+  "compose.sendAnyway.cited": "Achtung: Eine E-Mail an {address} verstößt vielleicht gegen",
+  "compose.citation.law": "Vorschrift:",
   "compose.mailboxNotSendCapableGoto": "Postfach neu verbinden",
   "compose.relinkTitle": "Diese Aktivität neu verknüpfen",
   "compose.relinkTarget": "Kontakte, Unternehmen, Deals, Leads oder Projekte suchen",

@@ -242,6 +242,10 @@ func (g *Gate) decideOneIn(ctx context.Context, tx pgx.Tx, r connector.Recipient
 		return commsauthz.Decision{}, err
 	}
 	decision, err := g.decideRecipientIn(ctx, tx, r, req, phase, country)
+	if err == nil {
+		// Before the footer findings, which read their provision from here.
+		decision.Citations, err = g.citationsFor(ctx, tx, country, req.SendingEntity)
+	}
 	decision = decision.WithFooterFindings(req.Evidence.FooterFindings)
 	decision.Evidence.FooterPreview = req.Evidence.FooterPreview
 	decision.Evidence.FooterDigest = req.Evidence.FooterDigest
