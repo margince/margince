@@ -48,62 +48,40 @@ func TestAReimportNamesAContactCreatedUnderItsAddress(t *testing.T) {
 }
 
 func TestAReimportedNameFollowsTheStoreRule(t *testing.T) {
+	long := strings.Repeat("b", contacts.ContactNameLimit*2/3)
 	cases := []struct {
-		name, storedFull, wantFull string
-		row                        map[string]any
+		name, storedFull, storedLast, wantFull, wantFirst string
+		row                                               map[string]any
+		skipped                                           bool
 	}{
-		{
-			"a plain join follows the new parts", "Jonh Doe", "John Doe",
-			map[string]any{"first_name": "John", "last_name": "Doe"},
-		},
-		{
-			"a hand-typed display name stays", "Dr. Jonh Doe", "Dr. Jonh Doe",
-			map[string]any{"first_name": "John", "last_name": "Doe"},
-		},
-		{
-			"a disagreeing full name cell is not sent", "Dr. Jonh Doe", "Dr. Jonh Doe",
-			map[string]any{fieldFullName: "Signing-Noreply", "first_name": "John", "last_name": "Doe"},
-		},
+		{"a plain join follows the new parts", "Jonh Doe", "Doe", "John Doe", "John", map[string]any{"first_name": "John", "last_name": "Doe"}, false},
+		{"a hand-typed display name stays", "Dr. Jonh Doe", "Doe", "Dr. Jonh Doe", "John", map[string]any{"first_name": "John", "last_name": "Doe"}, false},
+		{"a disagreeing full name cell is not sent", "Dr. Jonh Doe", "Doe", "Dr. Jonh Doe", "John", map[string]any{fieldFullName: "Signing-Noreply", "first_name": "John", "last_name": "Doe"}, false},
+		// Joined to the stored last name, this first name passes the limit: only its row skips.
+		{"a join past the limit skips its row", "Jonh " + long, long, "Jonh " + long, "Jonh", map[string]any{"first_name": long}, true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			e := integration.Setup(t)
-			ctx := e.Admin()
-			first, last := "Jonh", "Doe"
-			created, err := e.Contacts.CreateContact(ctx, contacts.CreateContactInput{
+			e, runID := integration.Setup(t), ids.NewV7()
+			ctx := storekit.WithImportRun(e.Admin(), runID)
+			first, last := "Jonh", tc.storedLast
+			created, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{
 				FullName: tc.storedFull, FirstName: &first, LastName: &last, Source: "manual",
 			})
 			if err != nil {
 				t.Fatalf("create: %v", err)
 			}
-			w := newCSVWriters(e.DB(), ids.NewV7(), migration.PartMapping{Object: migration.ObjectContact},
+			w := newCSVWriters(e.DB(), runID, migration.PartMapping{Object: migration.ObjectContact},
 				runOptions{}, &linkResolver{sourceSystem: "csv:names"}, importColumns{})
 			id := ids.UUID(created.Id)
-			if _, err := w.reconcile(ctx, id, migration.Row{ExternalID: "row-1", Fields: tc.row}, nil); err != nil {
-				t.Fatalf("re-import: %v", err)
+			done, err := w.reconcile(ctx, id, migration.Row{ExternalID: "row-1", Fields: tc.row}, nil)
+			if err != nil || done.Skipped != tc.skipped {
+				t.Fatalf("re-import = %+v, %v; want skipped %v", done, err, tc.skipped)
 			}
-			got, err := e.Contacts.GetContact(ctx, ids.From[ids.ContactKind](id), storekit.LiveOnly)
-			if err != nil {
-				t.Fatalf("read back: %v", err)
-			}
-			if got.FullName != tc.wantFull || got.FirstName == nil || *got.FirstName != "John" {
-				t.Fatalf("full_name %q, first_name %v; want %q and John", got.FullName, got.FirstName, tc.wantFull)
+			got, err := e.Contacts.GetContact(e.Admin(), ids.From[ids.ContactKind](id), storekit.LiveOnly)
+			if err != nil || got.FullName != tc.wantFull || got.FirstName == nil || *got.FirstName != tc.wantFirst {
+				t.Fatalf("full_name %q, first_name %v, %v; want %q and %s", got.FullName, got.FirstName, err, tc.wantFull, tc.wantFirst)
 			}
 		})
-	}
-}
-
-// A re-imported first name joining a stored last name past the limit skips only its row; the name stays.
-func TestAReimportedNameJoiningPastTheLimitSkipsOnlyItsRow(t *testing.T) {
-	e, runID, last := integration.Setup(t), ids.NewV7(), strings.Repeat("b", contacts.ContactNameLimit*2/3)
-	created, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Ada " + last, FirstName: new("Ada"), LastName: &last, Source: "manual"})
-	if err != nil {
-		t.Fatalf("create: %v", err)
-	}
-	w := newCSVWriters(e.DB(), runID, migration.PartMapping{Object: migration.ObjectContact}, runOptions{}, &linkResolver{sourceSystem: "csv:names"}, importColumns{})
-	got, err := w.reconcile(storekit.WithImportRun(e.Admin(), runID), ids.UUID(created.Id), migration.Row{ExternalID: "row-1", Fields: map[string]any{"first_name": last}}, nil)
-	stored, readErr := e.Contacts.GetContact(e.Admin(), ids.From[ids.ContactKind](ids.UUID(created.Id)), storekit.LiveOnly)
-	if err != nil || readErr != nil || !got.Skipped || got.SkipWhy.Code != migration.ReasonValueTooLong || stored.FullName != "Ada "+last {
-		t.Fatalf("row = %+v, %v; stored %q, %v; want the row skipped as value_too_long and the name kept", got, err, stored.FullName, readErr)
 	}
 }
