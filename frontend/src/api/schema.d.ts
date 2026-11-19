@@ -8254,8 +8254,14 @@ export interface paths {
         /**
          * Exchange a one-time Deal Room credential for a room session (anonymous).
          * @description Consumes the credential — a second exchange of the same string is refused —
-         *     and issues a session token the buyer presents as a Bearer on every other
-         *     `/public/rooms` operation. The session is bound to ONE participant in ONE
+         *     and issues a session token the buyer presents on every other
+         *     `/public/rooms` operation. The same answer sets it as the
+         *     `__Host-crm_room_session` cookie: HttpOnly, Secure, SameSite=Strict,
+         *     Path=/ and expiring with the session, so a browser keeps access after its
+         *     tab closes. Only `/public/rooms` reads that cookie. The body must be
+         *     `application/json`. A write another site starts is refused with 403 on
+         *     every `/public/rooms` operation: `Sec-Fetch-Site: cross-site`, or an
+         *     `Origin` that is not this installation's. The session is bound to ONE participant in ONE
          *     room and is resolved fresh on every request, so revocation binds on the next
          *     call. A paused room still exchanges: the session is established and the
          *     room bootstrap then says access is paused.
@@ -8421,9 +8427,9 @@ export interface paths {
         put?: never;
         /**
          * End the room session.
-         * @description Revokes this session only. The participant keeps their standing; a fresh
-         *     link admits them again. Works in every room state, because ending a session
-         *     is an access act, not a content one.
+         * @description Revokes this session only and clears the `__Host-crm_room_session` cookie. The
+         *     participant keeps their standing; a fresh link admits them again. Works in
+         *     every room state, because ending a session is an access act, not a content one.
          */
         post: operations["signOutBuyerRoom"];
         delete?: never;
@@ -57517,7 +57523,7 @@ export interface components {
             exchangeable: boolean;
         };
         DealRoomSessionIssued: {
-            /** @description Present as `Authorization: Bearer`. Returned once; only its hash is stored. */
+            /** @description Present as `Authorization: Bearer`, or let the browser send the `__Host-crm_room_session` cookie. Returned once; only its hash is stored. */
             session_token: string;
             /**
              * Format: date-time
@@ -76560,6 +76566,8 @@ export interface operations {
             /** @description The session token, returned once. */
             200: {
                 headers: {
+                    /** @description The `__Host-crm_room_session` cookie carrying the same session token. */
+                    "Set-Cookie"?: string;
                     [name: string]: unknown;
                 };
                 content: {

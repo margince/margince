@@ -13599,6 +13599,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Der Link wurde bereits verwendet, ist abgelaufen oder wurde durch einen neueren ersetzt. Fordern Sie unten einen neuen Link an.",
   "buyer.noLink":
     "Öffnen Sie diese Seite über den Link, den Sie erhalten haben. Falls Sie ihn nicht mehr haben, fordern Sie unten einen neuen an.",
+  "buyer.roomReplacedTitle": "Dieser Tab zeigt einen älteren Raum",
+  "buyer.roomReplaced":
+    "Dieser Browser hat inzwischen einen anderen Deal Room geöffnet. Laden Sie die Seite neu, um ihn zu sehen.",
   "buyer.emailLabel": "Ihre E-Mail-Adresse",
   "buyer.emailHint": "Die Adresse, an die die Einladung gesendet wurde.",
   "buyer.requestLink": "Neuen Link anfordern",

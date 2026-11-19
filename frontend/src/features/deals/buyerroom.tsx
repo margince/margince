@@ -5,12 +5,13 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Button, EmptyState } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
+import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryStates } from "../../design-system/querystates";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { labelFor } from "../../lib/labelfor";
-import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
+import { problemMessageOf, throwProblem } from "../../lib/problem";
 import {
   forgetHashCredential,
   takeHashCredential,
@@ -26,23 +27,18 @@ import {
   stewardLabel,
 } from "./buyerroomframe";
 import {
-  bearer,
-  readSession,
+  refuseOrThrow,
+  retireOnRefusal,
   SessionRefusedError,
-  writeSession,
 } from "./buyerroomsession";
 import "./buyerroom.css";
 
-// The Deal Room as its BUYER sees it — the one screen an outside contact ever
-// reaches in this app, drawn like the front of a small, well-made site: a
-// hero, the documents as a gallery with the conversation under each, and the
-// contact beside them. Anonymous: no seat, no cookie. The invitation link lands
-// on `#/room?c=<credential>`. The router takes the credential off the hash
-// (lib/router.tsx's takeHashCredential, ahead of every gate that can render
-// instead of this screen). This screen exchanges it for a room session the tab
-// keeps in sessionStorage and presents as a Bearer on every call. A dead link,
-// a paused room and an expired one each get a plain screen and a way back.
-// None names anything the link did not.
+// The Deal Room as its BUYER sees it, the one screen an outside contact
+// reaches. The invitation link lands on `#/room?c=<credential>`, and the router
+// takes the credential off the hash (takeHashCredential). This screen exchanges
+// it for a room session. The server keeps that session in an HttpOnly cookie,
+// which outlives the tab. A dead link, a paused room and an expired one each
+// get a plain screen and a way back.
 
 type BuyerRoomView = components["schemas"]["BuyerRoomView"];
 
@@ -75,10 +71,10 @@ export function BuyerRoomScreen() {
       }
     });
   }, []);
-  // A link in hand outranks a kept session from the first render: a tab that
-  // still holds room A's session must not show room A for a breath while
-  // room B's link is being exchanged.
-  const [token, setToken] = useState(() => (credential ? null : readSession()));
+  // Which session the reads run under; no script sees the token itself. Each
+  // exchange takes a new number, so no read cached for the last session
+  // answers for the next. Null means the server has said no.
+  const [session, setSession] = useState<number | null>(0);
   // What the exchange answered, held HERE rather than read off the mutation:
   // the replayed mount (StrictMode) swaps the observer that ran it for one that
   // never hears the result, so isSuccess/isError would stay false for ever.
@@ -106,13 +102,10 @@ export function BuyerRoomScreen() {
   });
 
   // A fresh link outranks a kept session: the contact clicked it on purpose.
-  // Exchanged at most ONCE per mount, held in a ref rather than in state: the
-  // credential is single-use, and an effect that runs twice (StrictMode replays
-  // mount effects in development) would spend it on the first run and be
-  // refused on the second, showing a dead-link page for a live link. The token
-  // comes off the promise rather than an onSuccess option, because the replayed
-  // mount unsubscribes the first observer and an option callback on an observer
-  // nobody listens to never runs.
+  // It is exchanged at most once per mount, tracked in a ref. StrictMode runs
+  // the effect twice, and a second exchange of a single-use link is refused.
+  // The answer comes off the promise, because the replayed mount drops the
+  // observer an onSuccess option would run on.
   const exchangeAsync = exchange.mutateAsync;
   // Which credential the tab is currently exchanging. A reply for anything else
   // is a superseded link answering late and must not touch the session — two
@@ -128,10 +121,7 @@ export function BuyerRoomScreen() {
     // remount that found it there would spend it again and be refused.
     forgetHashCredential(ROOM_ROUTE, credential);
     awaiting.current = credential;
-    // The session the tab already holds is KEPT while the new link is checked.
-    // Cleared first, an expired new link drew the dead-link page over a room
-    // the contact could still read, and a refresh brought it back from storage —
-    // two answers to one question a moment apart.
+    // The session the browser holds is KEPT while the new link is checked.
     setRefusal(null);
     exchangeAsync(credential).then(
       (issued) => {
@@ -139,8 +129,7 @@ export function BuyerRoomScreen() {
           return;
         }
         awaiting.current = null;
-        writeSession(issued.session_token);
-        setToken(issued.session_token);
+        setSession((held) => (held ?? 0) + 1);
         setSettled(credential);
       },
       (error: unknown) => {
@@ -154,10 +143,7 @@ export function BuyerRoomScreen() {
     );
   }, [credential, exchangeAsync]);
 
-  const signOut = () => {
-    writeSession(null);
-    setToken(null);
-  };
+  const endSession = () => setSession(null);
 
   // "Opening" until this credential's exchange has answered, not merely while
   // the mutation is in flight: the first render comes before the effect.
@@ -168,6 +154,8 @@ export function BuyerRoomScreen() {
       </BuyerFrame>
     );
   }
+  // A refused link never falls back to the kept session: that session may be
+  // another room's, and the buyer asked for this one.
   if (credential && refusal) {
     return (
       <BuyerFrame>
@@ -181,7 +169,7 @@ export function BuyerRoomScreen() {
       </BuyerFrame>
     );
   }
-  if (!token) {
+  if (session === null) {
     return (
       <BuyerFrame>
         <DeadLink message={t("buyer.noLink")} />
@@ -190,23 +178,21 @@ export function BuyerRoomScreen() {
   }
   return (
     <BuyerFrame>
-      <RoomBody token={token} onSessionLost={signOut} />
+      <RoomBody key={session} session={session} onSessionLost={endSession} />
     </BuyerFrame>
   );
 }
 
-function useBuyerRoom(token: string, onSessionLost: () => void) {
+function useBuyerRoom(session: number, onSessionLost: () => void) {
   const t = useT();
   const query = useQuery({
-    queryKey: ["buyer-room", token],
+    queryKey: ["buyer-room", session],
     retry: false,
     // Re-asked whenever the tab comes back: a revocation or a pause made while
     // the buyer was away must bind on their return, not on their next click.
     refetchOnWindowFocus: "always",
     queryFn: async () => {
-      const { data, error, response } = await api.GET("/public/rooms/me", {
-        ...bearer(token),
-      });
+      const { data, error, response } = await api.GET("/public/rooms/me");
       if (error) {
         if (response.status === 401) {
           throw new SessionRefusedError();
@@ -226,24 +212,40 @@ function useBuyerRoom(token: string, onSessionLost: () => void) {
 }
 
 function RoomBody({
-  token,
+  session,
   onSessionLost,
-}: Readonly<{ token: string; onSessionLost: () => void }>) {
+}: Readonly<{ session: number; onSessionLost: () => void }>) {
   const t = useT();
-  const room = useBuyerRoom(token, onSessionLost);
+  const room = useBuyerRoom(session, onSessionLost);
+  // The seat this tab drew first. One cookie serves the whole browser, so a
+  // link opened in another tab can move it to another room under this one.
+  const [drawn, setDrawn] = useState<string | null>(null);
+  const shown = room.data?.participant.id;
+  if (shown !== undefined && drawn === null) {
+    setDrawn(shown);
+  }
   const signOut = useMutation({
     mutationKey: ["buyer-room-sign-out"],
-    mutationFn: async (session: string) => {
-      unwrap(
-        await api.POST("/public/rooms/sign-out", {
-          ...bearer(session),
-        }),
-        t,
-      );
+    mutationFn: async () => {
+      const { error, response } = await api.POST("/public/rooms/sign-out");
+      if (!response.ok) {
+        refuseOrThrow(error, response, t);
+      }
     },
-    // Whatever the server said, this tab is done with the token.
-    onSettled: onSessionLost,
+    // A failed sign-out stays on screen, so a buyer on a shared computer knows
+    // they are still signed in. A refused one means there was nothing to end.
+    onSuccess: onSessionLost,
+    onError: retireOnRefusal(onSessionLost),
   });
+  if (drawn !== null && shown !== undefined && shown !== drawn) {
+    return (
+      <Panel title={t("buyer.roomReplacedTitle")}>
+        <PanelBody>
+          <p>{t("buyer.roomReplaced")}</p>
+        </PanelBody>
+      </Panel>
+    );
+  }
   return (
     <QueryStates
       query={room}
@@ -254,7 +256,8 @@ function RoomBody({
         <>
           <RoomView
             view={room.data}
-            token={token}
+            session={session}
+            participantId={drawn ?? room.data.participant.id}
             onSessionLost={onSessionLost}
           />
           <div className="buyer-foot">
@@ -266,11 +269,12 @@ function RoomBody({
             <Button
               variant="ghost"
               pending={signOut.isPending}
-              onClick={() => signOut.mutate(token)}
+              onClick={() => signOut.mutate()}
             >
               <LogOut aria-hidden />
               {t("buyer.signOut")}
             </Button>
+            <ErrorLine error={signOut.error} />
           </div>
         </>
       ) : null}
@@ -330,11 +334,13 @@ function PreviewBanner() {
 
 function RoomView({
   view,
-  token,
+  session,
+  participantId,
   onSessionLost,
 }: Readonly<{
   view: BuyerRoomView;
-  token: string;
+  session: number;
+  participantId: string;
   onSessionLost: () => void;
 }>) {
   const t = useT();
@@ -393,7 +399,8 @@ function RoomView({
       <div className="buyer-grid">
         <div className="buyer-main">
           <BuyerBoard
-            token={token}
+            session={session}
+            participantId={participantId}
             onSessionLost={onSessionLost}
             mayWrite={writeRefusal === undefined}
             refusal={writeRefusal}

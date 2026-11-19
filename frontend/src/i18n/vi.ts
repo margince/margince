@@ -13242,6 +13242,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Liên kết đã được sử dụng, đã hết hạn hoặc đã bị thay bằng liên kết mới hơn. Vui lòng yêu cầu liên kết mới bên dưới.",
   "buyer.noLink":
     "Mở trang này từ liên kết quý khách đã nhận. Nếu không còn liên kết, vui lòng yêu cầu liên kết mới bên dưới.",
+  "buyer.roomReplacedTitle": "Thẻ này đang hiển thị một phòng cũ",
+  "buyer.roomReplaced":
+    "Trình duyệt này đã mở một Deal Room khác. Vui lòng tải lại trang để xem phòng đó.",
   "buyer.emailLabel": "Địa chỉ email",
   "buyer.emailHint": "Địa chỉ đã nhận lời mời.",
   "buyer.requestLink": "Yêu cầu liên kết mới",

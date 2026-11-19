@@ -48758,7 +48758,7 @@ type DealRoomSessionIssued struct {
 	// ExpiresAt Absolute expiry. The buyer exchanges a fresh link after it.
 	ExpiresAt time.Time `json:"expires_at"`
 
-	// SessionToken Present as `Authorization: Bearer`. Returned once; only its hash is stored.
+	// SessionToken Present as `Authorization: Bearer`, or let the browser send the `__Host-crm_room_session` cookie. Returned once; only its hash is stored.
 	SessionToken string `json:"session_token"`
 }
 
