@@ -229,7 +229,7 @@ func originalMessageTime(payload []byte) time.Time {
 }
 
 func (d *CommitmentDispatcher) renewTask(ctx context.Context, tx pgx.Tx, c Commitment, reason activities.CommitmentAdmissionReason) (CommitmentOutcome, ids.UUID, error) {
-	if c.withheldOutcome() != "" || c.NeedsConfirmation || c.AdmissionSourceID == nil || c.DueDate == "" || c.Confidence < CommitmentTaskConfidence {
+	if c.withheldOutcome() != "" || c.NeedsConfirmation || c.AdmissionSourceID == nil || c.DueDate == "" || dueday.Odd(c.DueDate) != "" || c.Confidence < CommitmentTaskConfidence {
 		return CommitmentRemembered, ids.UUID{}, nil
 	}
 	if reason != activities.CommitmentCurrent {

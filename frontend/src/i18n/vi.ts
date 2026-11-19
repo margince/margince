@@ -21577,6 +21577,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.commitment.proposalExpiresIn": "Đề xuất hết hạn sau {countdown}",
   "approval.commitment.noDueDay": "Chưa nêu ngày",
   "approval.commitment.strength": "Mức chắc chắn",
+  "approval.commitment.oddDue": "Ngày này có vẻ quá xa: giữ, đổi hoặc xóa",
   "approval.commitment.tentative": "Chưa chắc chắn: họ nói sẽ cố gắng",
   "approval.commitment.promiseStatus": "Trạng thái cam kết",
   "approval.commitment.notFulfilled":

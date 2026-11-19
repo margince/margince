@@ -12,7 +12,18 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
+
+// Odd returns a stated day the task writer would refuse as too far from today,
+// and "" for an ordinary or empty day. A caller asks the rep about an odd day
+// instead of writing or dropping it.
+func Odd(day string) string {
+	if day == "" || values.DueDayInWindow(day, time.Now()) {
+		return ""
+	}
+	return day
+}
 
 // EndOf is the moment a stated day ends in zone, or in the installation's
 // zone when zone is empty. A deadline is the last moment still on time. It is

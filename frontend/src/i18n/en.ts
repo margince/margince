@@ -21868,6 +21868,7 @@ export const en = {
   "approval.commitment.proposalExpiresIn": "Proposal expires in {countdown}",
   "approval.commitment.noDueDay": "No day stated",
   "approval.commitment.strength": "How firm",
+  "approval.commitment.oddDue": "This date looks far off: keep it, change it or clear it",
   "approval.commitment.tentative": "Tentative: they said they would try",
   "approval.commitment.promiseStatus": "Commitment status",
   "approval.commitment.notFulfilled":
