@@ -11,7 +11,6 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/textbounds"
-	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
 func parseOneCard(t *testing.T, file string) VCardEntry {
@@ -40,28 +39,30 @@ func TestACardNamePastTheImportBoundIsRefusedWithItsLength(t *testing.T) {
 func TestOverlongContactNameNamesThePartPastTheBound(t *testing.T) {
 	over := strings.Repeat("a", ContactNameLimit+1)
 	for _, column := range []string{contactNameColumn, columnFirstName, columnLastName} {
-		got, length, refused := OverlongContactName(map[string]string{contactNameColumn: "Anna", column: over})
+		got, _, length, refused := OverlongContactName(map[string]string{contactNameColumn: "Anna", column: over})
 		if !refused || got != column || length != ContactNameLimit+1 {
 			t.Errorf("%s: got %q, %d, %v; want it refused at %d", column, got, length, refused, ContactNameLimit+1)
 		}
 	}
-	if _, _, refused := OverlongContactName(map[string]string{contactNameColumn: "  " + over[1:] + "  "}); refused {
+	if _, _, _, refused := OverlongContactName(map[string]string{contactNameColumn: "  " + over[1:] + "  "}); refused {
 		t.Errorf("a name at the bound with surrounding spaces was refused; the bound counts the trimmed name")
 	}
 }
 
 // The full name a join stores obeys the bound its parts do. With the label
 // limit of 120, 60 and 59 join to the bound; 80 and 80 join past it at 161.
+// The refusal points at last_name, a cell the row has, with the joined text.
 func TestOverlongContactNameRefusesPartsThatJoinPastTheBound(t *testing.T) {
 	first, last := ContactNameLimit/2, ContactNameLimit-ContactNameLimit/2-1
 	fits := map[string]string{columnFirstName: strings.Repeat("a", first), columnLastName: strings.Repeat("b", last)}
-	if column, length, refused := OverlongContactName(fits); refused {
+	if column, _, length, refused := OverlongContactName(fits); refused {
 		t.Errorf("got %q, %d refused; want a %d-character join admitted", column, length, ContactNameLimit)
 	}
 	part := ContactNameLimit * 2 / 3
 	over := map[string]string{columnFirstName: strings.Repeat("a", part), columnLastName: strings.Repeat("b", part)}
-	if column, length, refused := OverlongContactName(over); !refused || column != contactNameColumn || length != 2*part+1 {
-		t.Errorf("got %q, %d, %v; want full_name refused at %d", column, length, refused, 2*part+1)
+	column, text, length, refused := OverlongContactName(over)
+	if !refused || column != columnLastName || text != over[columnFirstName]+" "+over[columnLastName] || length != 2*part+1 {
+		t.Errorf("got %q, %q, %d, %v; want last_name refused with the join at %d", column, text, length, refused, 2*part+1)
 	}
 }
 
@@ -73,9 +74,9 @@ func TestAnUpdateJoiningPastTheBoundIsRefused(t *testing.T) {
 	current := crmcontracts.Contact{FullName: "Ada " + last, FirstName: new("Ada"), LastName: &last}
 	in := updateAsWritten(current, UpdateContactInput{FirstName: new(strings.Repeat("a", part))}, nil)
 	err := checkChangedContactNames(current, in)
-	want := "full_name holds at most " + strconv.Itoa(ContactNameLimit) + " characters; this one has " + strconv.Itoa(2*part+1)
-	if _, ok := errors.AsType[*httperr.DetailedError](err); !ok || !strings.Contains(err.Error(), want) {
-		t.Fatalf("err = %v, want %q", err, want)
+	refusal, ok := errors.AsType[*ContactNameTooLongError](err)
+	if !ok || refusal.Field != contactNameColumn || refusal.Runes != 2*part+1 {
+		t.Fatalf("err = %v, want full_name refused at %d characters", err, 2*part+1)
 	}
 	if err := checkChangedContactNames(current, UpdateContactInput{FullName: &current.FullName}); err != nil {
 		t.Errorf("err = %v, want an unchanged full name admitted", err)

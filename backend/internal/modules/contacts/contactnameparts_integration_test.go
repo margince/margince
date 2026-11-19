@@ -8,7 +8,6 @@ package contacts
 import (
 	"context"
 	"errors"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -16,7 +15,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -91,8 +89,8 @@ func TestAnImportedPartJoiningPastTheBoundIsRefused(t *testing.T) {
 	id := ids.From[ids.ContactKind](ids.UUID(created.Id))
 	imported := storekit.WithImportRun(e.as(), ids.NewV7())
 	_, err = e.store.UpdateContact(imported, id, UpdateContactInput{FirstName: new(strings.Repeat("a", part))})
-	refusal, ok := errors.AsType[*httperr.DetailedError](err)
-	if !ok || len(refusal.Fields) != 1 || refusal.Fields[0].Field != contactNameColumn || !strings.Contains(refusal.Detail, "this one has "+strconv.Itoa(2*part+1)) {
+	refusal, ok := errors.AsType[*ContactNameTooLongError](err)
+	if !ok || refusal.Field != contactNameColumn || refusal.Runes != 2*part+1 {
 		t.Fatalf("err = %v, want full_name refused at %d characters", err, 2*part+1)
 	}
 	got, err := e.store.GetContact(e.as(), id, storekit.LiveOnly)

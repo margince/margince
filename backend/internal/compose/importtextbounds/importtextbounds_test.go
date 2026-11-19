@@ -33,10 +33,10 @@ func TestEveryBoundedTargetIsReadFromItsColumn(t *testing.T) {
 
 func TestATitlePastTheLabelLimitIsRefused(t *testing.T) {
 	atLimit := strings.Repeat("界", values.TextLabelCharacters)
-	if _, _, refused := Refusal(migration.ObjectContact, map[string]string{"title": atLimit}); refused {
+	if _, _, _, refused := Refusal(migration.ObjectContact, map[string]string{"title": atLimit}); refused {
 		t.Fatal("a title at the limit was refused")
 	}
-	target, why, refused := Refusal(migration.ObjectContact, map[string]string{"title": atLimit + "界"})
+	target, _, why, refused := Refusal(migration.ObjectContact, map[string]string{"title": atLimit + "界"})
 	if !refused || target != "title" || why.Code != migration.ReasonValueTooLong {
 		t.Fatalf("a title past the limit = %v %q %+v, want value_too_long on title", refused, target, why)
 	}

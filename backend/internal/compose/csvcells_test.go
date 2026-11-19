@@ -167,20 +167,22 @@ func TestAContactNameCellPastTheImportBoundIsAProblemOfItsCell(t *testing.T) {
 	}
 }
 
-// Two name parts that fit alone but join past the bound are refused as the full
-// name the join would store. A join at the bound lands.
-func TestContactNamePartsJoiningPastTheImportBoundAreAProblemOfTheFullName(t *testing.T) {
+// Two name parts that fit alone but join past the limit are refused on the
+// file's last-name column, with the joined name as the value. A join at the limit lands.
+func TestContactNamePartsJoiningPastTheLimitAreRefusedOnTheLastNameColumn(t *testing.T) {
 	limit := contacts.ContactNameLimit
-	fits := map[string]string{"first_name": strings.Repeat("a", limit/2), "last_name": strings.Repeat("b", limit-limit/2-1)}
-	if _, problem := checkRow(migration.ObjectContact, fits, importCatalog{}); problem != nil {
-		t.Fatalf("problem = %+v, want none for parts joining to %d characters", problem, limit)
+	w := &csvWriters{object: migration.ObjectContact, columns: map[string]string{"Vorname": "first_name", "Nachname": "last_name"}}
+	fits := map[string]any{"first_name": strings.Repeat("a", limit/2), "last_name": strings.Repeat("b", limit-limit/2-1)}
+	if _, skipped := w.checkedCells(migration.Row{ExternalID: "1", Line: 2, Fields: fits}); skipped != nil {
+		t.Fatalf("skipped = %+v, want none for parts joining to %d characters", skipped, limit)
 	}
 	part := limit * 2 / 3
-	over := map[string]string{"first_name": strings.Repeat("a", part), "last_name": strings.Repeat("b", part)}
-	_, problem := checkRow(migration.ObjectContact, over, importCatalog{})
+	first, last := strings.Repeat("a", part), strings.Repeat("b", part)
+	_, skipped := w.checkedCells(migration.Row{ExternalID: "1", Line: 2, Fields: map[string]any{"first_name": first, "last_name": last}})
 	want := "This value is " + strconv.Itoa(2*part+1) + " characters. The field holds at most " + strconv.Itoa(limit) + "."
-	if problem == nil || problem.Target != fieldFullName || problem.Why.Code != migration.ReasonValueTooLong || problem.Message != want {
-		t.Fatalf("problem = %+v, want the joined full name refused as %q", problem, want)
+	if skipped == nil || skipped.Column != "Nachname" || skipped.Value != first+" "+last ||
+		skipped.Code != migration.ReasonValueTooLong || skipped.Reason != want {
+		t.Fatalf("skipped = %+v, want the Nachname cell refused with the joined name as %q", skipped, want)
 	}
 }
 

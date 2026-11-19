@@ -5,6 +5,7 @@ package contacts
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"unicode/utf8"
 
@@ -39,19 +40,47 @@ func checkCompanyEditText(ctx context.Context, current crmcontracts.Company, in 
 const ContactNameLimit = values.TextLabelCharacters
 
 // OverlongContactName answers the first of full_name, first_name and last_name
-// whose trimmed text is past ContactNameLimit, and its length. Two parts that
-// fit alone but join past the limit answer full_name, the column the join fills.
-func OverlongContactName(names map[string]string) (column string, length int, over bool) {
+// whose trimmed text is past ContactNameLimit, with that text and its length.
+// Two parts that fit alone but join past the limit answer last_name with the
+// joined text. A file's refusal then points at a cell the file has.
+func OverlongContactName(names map[string]string) (column, text string, length int, over bool) {
 	for _, column := range []string{contactNameColumn, columnFirstName, columnLastName} {
-		if length := utf8.RuneCountInString(strings.TrimSpace(names[column])); length > ContactNameLimit {
-			return column, length, true
+		text := strings.TrimSpace(names[column])
+		if length := utf8.RuneCountInString(text); length > ContactNameLimit {
+			return column, text, length, true
 		}
 	}
 	joined := JoinNameParts(names[columnFirstName], names[columnLastName])
 	if length := utf8.RuneCountInString(joined); length > ContactNameLimit {
-		return contactNameColumn, length, true
+		return columnLastName, joined, length, true
 	}
-	return "", 0, false
+	return "", "", 0, false
+}
+
+// ContactNameTooLongError refuses a contact name past ContactNameLimit. It
+// answers 422 too_long on every surface, and an import reads its length.
+type ContactNameTooLongError struct {
+	Field string
+	Runes int
+}
+
+func (e *ContactNameTooLongError) Error() string {
+	return fmt.Sprintf("%s holds at most %d characters; this one has %d", e.Field, ContactNameLimit, e.Runes)
+}
+
+// FieldFault names the refused name column.
+func (e *ContactNameTooLongError) FieldFault() (field, code, message string) {
+	return e.Field, "too_long", e.Error()
+}
+
+// FieldMax is the name limit.
+func (e *ContactNameTooLongError) FieldMax() int { return ContactNameLimit }
+
+func requireNameWithin(field, name string) error {
+	if runes := utf8.RuneCountInString(name); runes > ContactNameLimit {
+		return &ContactNameTooLongError{Field: field, Runes: runes}
+	}
+	return nil
 }
 
 func checkTypedContactNames(full string, first, last *string) error {
@@ -60,7 +89,7 @@ func checkTypedContactNames(full string, first, last *string) error {
 		value *string
 	}{{contactNameColumn, &full}, {columnFirstName, first}, {columnLastName, last}} {
 		if field.value != nil {
-			if err := httperr.RequireWithin(field.name, *field.value, ContactNameLimit); err != nil {
+			if err := requireNameWithin(field.name, *field.value); err != nil {
 				return err
 			}
 		}
@@ -76,7 +105,7 @@ func checkChangedContactNames(current crmcontracts.Contact, in UpdateContactInpu
 		if field.after == nil || (field.before != nil && *field.before == *field.after) {
 			continue
 		}
-		if err := httperr.RequireWithin(field.name, *field.after, ContactNameLimit); err != nil {
+		if err := requireNameWithin(field.name, *field.after); err != nil {
 			return err
 		}
 	}

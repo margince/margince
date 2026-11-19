@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/importtextbounds"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -377,6 +378,10 @@ func (w *csvWriters) reconcile(ctx context.Context, id ids.UUID, row migration.R
 		}
 		if refusedAsErased(err) {
 			return skippedFor(addressErasedWhy), nil
+		}
+		// Joined to a stored part, a name can pass the limit the row check could not see.
+		if why, over := importtextbounds.NameTooLong(err); over {
+			return skippedFor(why), nil
 		}
 		return migration.EnsureResult{}, err
 	}

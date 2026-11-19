@@ -7,6 +7,7 @@
 package importtextbounds
 
 import (
+	"errors"
 	"maps"
 	"slices"
 	"strconv"
@@ -24,13 +25,14 @@ import (
 // ReasonValueTooLong.
 var reasons = map[string]migration.ReasonCode{migration.ObjectCompany + ".description": migration.ReasonDescriptionTooLong}
 
-// Refusal answers a contact name past the import bound first. Otherwise it
-// answers the first target, in name order, whose trimmed cell is past its column's limit.
-func Refusal(object string, fields map[string]string) (target string, why migration.Reason, refused bool) {
+// Refusal answers a contact name past the name limit first, with the text it
+// measured. Otherwise it answers the first target, in name order, whose trimmed
+// cell is past its column's limit.
+func Refusal(object string, fields map[string]string) (target, value string, why migration.Reason, refused bool) {
 	if object == migration.ObjectContact {
-		// The registry exempts the name columns; the contacts module owns their import bound.
-		if column, length, over := contacts.OverlongContactName(fields); over {
-			return column, tooLong(migration.ReasonValueTooLong, length, contacts.ContactNameLimit), true
+		// The registry exempts the name columns; the contacts module owns their limit.
+		if column, text, length, over := contacts.OverlongContactName(fields); over {
+			return column, text, tooLong(migration.ReasonValueTooLong, length, contacts.ContactNameLimit), true
 		}
 	}
 	for _, target := range slices.Sorted(maps.Keys(fields)) {
@@ -41,10 +43,20 @@ func Refusal(object string, fields map[string]string) (target string, why migrat
 			if !worded {
 				reason = migration.ReasonValueTooLong
 			}
-			return target, tooLong(reason, length, limit), true
+			return target, fields[target], tooLong(reason, length, limit), true
 		}
 	}
-	return "", migration.Reason{}, false
+	return "", "", migration.Reason{}, false
+}
+
+// NameTooLong reads a store's contact-name refusal as the reason an import
+// skips its row, in the wording the row check gives.
+func NameTooLong(err error) (migration.Reason, bool) {
+	refusal, ok := errors.AsType[*contacts.ContactNameTooLongError](err)
+	if !ok {
+		return migration.Reason{}, false
+	}
+	return tooLong(migration.ReasonValueTooLong, refusal.Runes, contacts.ContactNameLimit), true
 }
 
 func tooLong(reason migration.ReasonCode, length, limit int) migration.Reason {

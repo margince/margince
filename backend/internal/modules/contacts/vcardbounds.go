@@ -15,7 +15,7 @@ func cardRefusal(entry VCardEntry) string {
 	if cardNamesASendingSystem(entry) {
 		return vcardMachineAddress
 	}
-	if _, length, over := OverlongContactName(map[string]string{contactNameColumn: entry.FullName}); over {
+	if _, _, length, over := OverlongContactName(map[string]string{contactNameColumn: entry.FullName}); over {
 		return fmt.Sprintf("The name is %d characters. A contact name holds at most %d.", length, ContactNameLimit)
 	}
 	return ""
