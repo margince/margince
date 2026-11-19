@@ -48,10 +48,10 @@ export const E2E_ADMIN_GRANTS: GrantSpec = {
   // card's draft outlives its dialog, so a reader can hold it while leaving.
   installation_settings: ["read", "update"],
   // The consent registry's gate: the server reads purposes under
-  // `contact:read` (consent/store.go), not under a role. Read alone, because no
-  // spec writes a contact from here. The Privacy & retention entry opens on
-  // `privacy_request` below, and its card still needs this read.
-  contact: ["read"],
+  // `contact:read` (consent/store.go), not under a role. Create, because
+  // AC-create-1 adds a contact from the list. The Privacy & retention entry
+  // opens on `privacy_request` below, and its card still needs this read.
+  contact: ["read", "create"],
   // The rail offers Companies and Sales targets only on these reads. Read
   // alone keeps a company's name plain text on the record chrome.
   company: ["read"],
