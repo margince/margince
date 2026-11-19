@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/heldreason"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -44,9 +45,13 @@ func (s *Store) CheckDirection(ctx context.Context, reviewID ids.UUID, in Direct
 }
 
 // admits checks that this caller may direct the review as they read it. It
-// asks for the revision they confirmed, the refusals they were shown and a
-// warning the review was served with.
+// asks for the message's author first, so a colleague is refused before any
+// acknowledgement is weighed. Then the revision they confirmed, the refusals
+// they were shown and a warning the review was served with.
 func (r directableReview) admits(ctx context.Context, in DirectInput) error {
+	if err := heldreason.RefuseAnotherSeat(initiatingSeat(ctx), r.InitiatedBy); err != nil {
+		return err
+	}
 	if err := (Review{Refusals: r.Refusals}).checkAcknowledgement(in.AssessmentRevision); err != nil {
 		return err
 	}

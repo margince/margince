@@ -75891,6 +75891,30 @@ type ListOpenCommitmentsParams struct {
 	Limit *int `form:"limit,omitempty" json:"limit,omitempty" maximum:"50" minimum:"1"`
 }
 
+// DirectCommunicationSendParams defines parameters for DirectCommunicationSend.
+type DirectCommunicationSendParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
 // ListCompaniesParams defines parameters for ListCompanies.
 type ListCompaniesParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
@@ -98747,7 +98771,7 @@ type ServerInterface interface {
 	CorrectCommunicationWording(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Send a refused message anyway, on a named human's recorded decision.
 	// (POST /communication-reviews/{id}/direct-send)
-	DirectCommunicationSend(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	DirectCommunicationSend(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params DirectCommunicationSendParams)
 	// List companies (live by default; cursor-paginated).
 	// (GET /companies)
 	ListCompanies(w http.ResponseWriter, r *http.Request, params ListCompaniesParams)
@@ -102947,7 +102971,7 @@ func (_ Unimplemented) CorrectCommunicationWording(w http.ResponseWriter, r *htt
 
 // Send a refused message anyway, on a named human's recorded decision.
 // (POST /communication-reviews/{id}/direct-send)
-func (_ Unimplemented) DirectCommunicationSend(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+func (_ Unimplemented) DirectCommunicationSend(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, params DirectCommunicationSendParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -120767,8 +120791,32 @@ func (siw *ServerInterfaceWrapper) DirectCommunicationSend(w http.ResponseWriter
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params DirectCommunicationSendParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.DirectCommunicationSend(w, r, id)
+		siw.Handler.DirectCommunicationSend(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {

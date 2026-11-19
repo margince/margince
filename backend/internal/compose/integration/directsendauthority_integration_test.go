@@ -7,6 +7,7 @@ package integration
 
 import (
 	"net/http"
+	"slices"
 	"testing"
 )
 
@@ -53,5 +54,60 @@ func TestOnlyAnAdmittedDirectorReleasesAHeldMessage(t *testing.T) {
 				t.Fatalf("%d held messages after the refused direction, want 1", held)
 			}
 		})
+	}
+}
+
+// Only the author of a message held at Send may send it anyway, because the
+// release goes from the caller's mailbox. A second admin holding the exception
+// grant is refused before anything is recorded or sent; the author's own
+// direction sends it once.
+//
+// Mutation: drop both author checks (directableReview.admits and
+// refuseAnotherSeatsHold) and the colleague sends the message. Each alone has
+// its own test in its module.
+func TestOnlyTheAuthorReleasesAMessageHeldAtSend(t *testing.T) {
+	c := setupConsent(t)
+	c.useReviewableMarketingProfile(t)
+	var refused struct {
+		Details struct {
+			AvailableActions []string `json:"available_actions"`
+		} `json:"details"`
+	}
+	if status := c.Call(t, "POST", "/v1/activities/"+c.activityID+"/send-email", AnyMap{
+		"subject": "Re: Inbound question", "body": "answer",
+		"to": []string{"subject@consent.test"}, "consent_purpose": "marketing_email",
+	}, nil, &refused); status != http.StatusConflict {
+		t.Fatalf("a marketing send without consent → %d, want 409", status)
+	}
+	if !slices.Equal(refused.Details.AvailableActions, []string{"direct_send"}) {
+		t.Fatalf("the author is offered %v, want [direct_send]", refused.Details.AvailableActions)
+	}
+	review := liveReviewID(t, c)
+	path := "/v1/communication-reviews/" + review + "/direct-send"
+
+	var denied struct {
+		Code string `json:"code"`
+	}
+	if status := c.colleague(t).Call(t, "POST", path, directed(), nil, &denied); status != http.StatusForbidden {
+		t.Fatalf("a second admin directing the author's message → %d, want 403", status)
+	}
+	if denied.Code != "permission_denied" {
+		t.Errorf("the refusal reads code %q, want permission_denied", denied.Code)
+	}
+	if n := c.count(t, `SELECT count(*) FROM communication_instruction`); n != 0 {
+		t.Fatalf("%d instruction(s) after the refused direction, want 0", n)
+	}
+	if n := c.count(t, `SELECT count(*) FROM comms_outbound`); n != 0 {
+		t.Fatalf("%d deliveries after the refused direction, want 0", n)
+	}
+	if n := c.count(t, `SELECT count(*) FROM scheduled_send WHERE status = 'held' AND held_reason = 'send_refused'`); n != 1 {
+		t.Fatalf("%d messages held at Send after the refused direction, want 1", n)
+	}
+
+	if status := c.Call(t, "POST", path, directed(), nil, nil); status != http.StatusCreated {
+		t.Fatalf("the author directing their own message → %d, want 201", status)
+	}
+	if n := c.count(t, `SELECT count(*) FROM comms_outbound`); n != 1 {
+		t.Fatalf("%d deliveries after the author directed it, want 1", n)
 	}
 }

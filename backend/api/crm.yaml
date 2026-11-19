@@ -26253,7 +26253,11 @@ paths:
         is the one thing a dispute about that override needs not to be possible.
 
         SPENT ONCE. The decision authorizes this message to this envelope and is consumed when it
-        goes. The next message to the same contact needs its own.
+        goes. The next message to the same contact needs its own. A retry under the same
+        `Idempotency-Key` answers the recorded 201, so a client whose first answer was lost learns
+        the message went.
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
       requestBody:
         required: true
         content:
