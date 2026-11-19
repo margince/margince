@@ -225,12 +225,12 @@ func nonEmpty(clauses []string) []string {
 // the later channel sequence. It reads as empty when that note is private,
 // archived or restricted.
 func previousNote(ctx context.Context, tx pgx.Tx, link chatlinks.Link, before time.Time) (string, error) {
-	record, column := link.DealID, "deal_id"
-	if record == nil {
-		record, column = link.ProjectID, "project_id"
-	}
-	if record == nil {
+	record, column := linkRecord(link), "project_id"
+	if record.ID.IsZero() {
 		return "", nil
+	}
+	if record.Type == chatlinks.RecordDeal {
+		column = "deal_id"
 	}
 	const seq = `split_part(substring(a.source_id from length($2::text) + 2), ':', 1)::bigint`
 	note, err := sharedRow(ctx, tx, `a.kind = 'note' AND a.source_system = $1
@@ -238,7 +238,7 @@ func previousNote(ctx context.Context, tx pgx.Tx, link chatlinks.Link, before ti
 		AND (a.raw->>'ended_at')::timestamptz < $3
 		AND EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = a.id AND l.`+column+` = $4)`,
 		`(a.raw->>'ended_at')::timestamptz DESC, `+seq+` DESC, a.id DESC`,
-		provenance.ChatSummarySource, link.ChannelSlug, before, *record)
+		provenance.ChatSummarySource, link.ChannelSlug, before, record.ID)
 	if err != nil || !note.ok {
 		return "", err
 	}

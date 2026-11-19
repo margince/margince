@@ -10,6 +10,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/programsettings"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -48,6 +49,7 @@ func allSettings() []config.Any {
 		activities.ConfigSettings(),
 		consent.ConfigSettings(),
 		contacts.ConfigSettings(),
+		approvals.ConfigSettings(),
 		deals.ConfigSettings(),
 		privacy.ConfigSettings(),
 		webforms.ConfigSettings(),

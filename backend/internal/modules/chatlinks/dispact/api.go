@@ -341,6 +341,9 @@ func refusalOf(raw []byte, route string) error {
 	return &CodeError{Route: route, Code: envelope.Error, wrapped: refusalKind(envelope.Error)}
 }
 
+// CodeNameTaken is Dispact's refusal of a channel name another channel holds.
+const CodeNameTaken = "name_taken"
+
 // refusalKind maps a Dispact error code to this package's typed errors.
 func refusalKind(code string) error {
 	switch code {
@@ -350,6 +353,8 @@ func refusalKind(code string) error {
 		return ErrNotMember
 	case "channel_not_found", "message_not_found", "is_archived":
 		return ErrChannelGone
+	case CodeNameTaken, "invalid_name":
+		return ErrNameRefused
 	case "internal_error", "channel_create_failed", "":
 		return ErrUnreachable
 	default:

@@ -3,7 +3,7 @@
 
 //go:build integration
 
-package compose
+package integration
 
 // A percentile below the sample floor answers NULL, and the count beside it
 // still answers.

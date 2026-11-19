@@ -127,6 +127,8 @@ func TestARefusalSentWithStatus200IsTyped(t *testing.T) {
 		{"message_not_found", ErrChannelGone},
 		{"internal_error", ErrUnreachable},
 		{"invalid_payload", ErrRequestRejected},
+		{"name_taken", ErrNameRefused},
+		{"invalid_name", ErrNameRefused},
 	}
 	for _, c := range cases {
 		client := serve(t, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {

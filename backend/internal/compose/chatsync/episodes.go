@@ -30,9 +30,8 @@ type episode struct {
 func (e episode) firstSeq() int64 { return e.messages[0].Seq }
 func (e episode) lastSeq() int64  { return e.messages[len(e.messages)-1].Seq }
 
-// key is the episode's source_id on the note it files. It names the channel
-// and the episode's first message, so linking the channel again files nothing
-// twice.
+// key names the channel and the episode's first message. The note's source_id
+// adds the record (fileNote), so linking the channel again files nothing twice.
 func (e episode) key(slug string) string {
 	return slug + ":" + strconv.FormatInt(e.firstSeq(), 10)
 }

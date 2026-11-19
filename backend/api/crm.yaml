@@ -17446,7 +17446,7 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
         '422':
-          description: 'The channel is public (`code: channel_not_private`), the bot is not in it (`code: channel_bot_not_member`), or the request is malformed.'
+          description: 'The channel is public (`code: channel_not_private`), the bot is not in it (`code: channel_bot_not_member`), the chat refused the channel name even in the form derived from the record (`code: channel_name_refused`), or the request is malformed.'
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
@@ -25301,6 +25301,35 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
+
+  /autonomy/installation:
+    put:
+      tags: [Approvals]
+      operationId: updateAutoApplyInstallation
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Switch automatic application on or off for the whole installation.
+      description: |
+        Admin only (`approvals.auto_apply_enabled`). Off, no proposal applies itself
+        for anybody, whatever a reader's own setting says. On, nothing changes for a
+        reader: their own mode per kind still decides, so turning it back on never
+        switches on a kind somebody turned off. The switch is read back as
+        `auto_apply_enabled` on `GET /autonomy`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AutoApplyInstallation' }
+      responses:
+        '200':
+          description: The switch as stored.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AutoApplyInstallation' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/SettingLocked' }
 
   /me/approval-preferences:
     get:
@@ -74670,9 +74699,22 @@ components:
       description: |
         What the reader has decided about answering their own queue: one row per kind
         that is eligible to apply automatically, whether or not they have ever met it.
-      required: [data]
+      required: [data, auto_apply_enabled]
       properties:
+        locks: { $ref: '#/components/schemas/SettingLocks', readOnly: true }
         data: { type: array, items: { $ref: '#/components/schemas/KindAutonomy' } }
+        auto_apply_enabled:
+          type: boolean
+          description: |
+            The installation's switch over every row. False means nothing applies
+            itself for anybody; the modes in `data` stay as the reader set them.
+
+    AutoApplyInstallation:
+      type: object
+      required: [enabled]
+      properties:
+        locks: { $ref: '#/components/schemas/SettingLocks', readOnly: true }
+        enabled: { type: boolean }
 
     KindAutonomy:
       type: object
