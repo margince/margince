@@ -87,7 +87,7 @@ describe("committeeLines", () => {
     ]);
   });
 
-  it("says we wrote or we met when that is the newest event", () => {
+  it("says the colleague wrote or met when that is the newest event", () => {
     const drawn = committeeLines(
       coverage({
         lines: [
@@ -110,7 +110,7 @@ describe("committeeLines", () => {
     );
     expect(drawn?.lines.map((line) => line.text)).toEqual([
       "Jonas Weber with Mai Tran: Met 2026-11-06",
-      "Lena Fischer with Mai Tran: We wrote 2026-11-02",
+      "Lena Fischer with Mai Tran: Wrote to them 2026-11-02",
     ]);
   });
 

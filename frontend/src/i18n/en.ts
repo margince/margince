@@ -6189,7 +6189,7 @@ export const en = {
   "deal.committee.carriesContact": "Handles most exchanges",
   "deal.committee.teamUnread": "Could not read who else works on this deal.",
   "deal.committee.lines.title": "Who talks to whom",
-  "deal.committee.lines.wrote": "We wrote {date}",
+  "deal.committee.lines.wrote": "Wrote to them {date}",
   "deal.committee.lines.replied": "They wrote {date}",
   "deal.committee.lines.met": "Met {date}",
   "deal.committee.lines.pair": "{colleague} with {contact}: {how}",

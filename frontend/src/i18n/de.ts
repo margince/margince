@@ -20446,8 +20446,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.committee.teamUnread":
     "Nicht lesbar, wer sonst an diesem Deal arbeitet.",
   "deal.committee.lines.title": "Wer mit wem spricht",
-  "deal.committee.lines.wrote": "Wir haben am {date} geschrieben",
-  "deal.committee.lines.replied": "Am {date} geschrieben",
+  "deal.committee.lines.wrote": "Am {date} angeschrieben",
+  "deal.committee.lines.replied": "Hat am {date} geschrieben",
   "deal.committee.lines.met": "Am {date} getroffen",
   "deal.committee.lines.pair": "{colleague} mit {contact}: {how}",
   "deal.committee.lines.unreached":
