@@ -26,8 +26,8 @@ export function TaskName({
   summary: string | undefined;
   // What else the reader may want behind the name, below what the task does.
   details?: ReactNode;
-  // A dialog's title is named by its content, so there the trigger says the
-  // name alone and the dialog reads the task's name, not "what it does".
+  // A dialog's title is named by its content. There the trigger says the name
+  // alone, so the dialog reads the task's name rather than "what it does".
   inTitle?: boolean;
 }>) {
   const t = useT();
