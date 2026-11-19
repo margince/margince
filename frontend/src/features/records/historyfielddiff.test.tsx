@@ -142,6 +142,32 @@ describe("HistoryFieldDiff names the records a change points at", () => {
     expect(await screen.findByText("Akeneo")).toBeTruthy();
   });
 
+  it("keeps a stage's id as stored in a field that does not hold a stage", async () => {
+    serveNames();
+    const client = new QueryClient();
+    client.setQueryData(
+      ["pipelines", "all"],
+      [
+        {
+          id: "p-1",
+          name: "Sales",
+          stages: [{ id: QUALIFIED, name: "Qualified" }],
+        },
+      ],
+    );
+    show(
+      <HistoryFieldDiff
+        field="title"
+        oldValue={null}
+        newValue={QUALIFIED}
+        values={values}
+      />,
+      client,
+    );
+    expect(await screen.findByText(QUALIFIED)).toBeTruthy();
+    expect(screen.queryByText("Qualified")).toBeNull();
+  });
+
   it("keeps an id no reader can name exactly as stored", async () => {
     serveNames();
     const unknown = "01a1e47b-0afd-7dc3-a750-ffffffffffff";

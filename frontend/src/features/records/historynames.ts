@@ -78,5 +78,9 @@ export function useHistoryNameOf(
       named.set(id, read.data);
     }
   });
-  return (id) => named.get(id) ?? live.data?.get(id) ?? archived.data?.get(id);
+  return (id) =>
+    named.get(id) ??
+    (kind === "stage"
+      ? (live.data?.get(id) ?? archived.data?.get(id))
+      : undefined);
 }
