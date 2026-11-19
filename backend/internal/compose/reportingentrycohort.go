@@ -150,7 +150,7 @@ func reportingSourceQualityChart(out *reporting.Evaluation, chart crmcontracts.R
 	chart.ContextId = reportingInterval
 	chart.Interval = &frame.Interval
 	// The metric counts linked leads; each point's value is a share of entrants.
-	chart.Unit = "percent"
+	chart.Unit = reportingPercentUnit
 	sources := map[string][]reporting.Fact{}
 	for _, fact := range metricFacts(out.Facts, chart.Metric, chart.ContextId) {
 		source, _ := sourceOfGroup(fact.GroupKey)
