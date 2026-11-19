@@ -316,6 +316,45 @@ describe("TaskSheet", () => {
     expect(await within(sheet).findByText(/p95 is close to it/)).toBeTruthy();
   });
 
+  it("is titled by the task's name, which opens what it does and its key", async () => {
+    server();
+    const user = userEvent.setup();
+    render(
+      <TaskSheet
+        route={{ ...DECIDING, summary: "Decides whether a thread is private." }}
+        canManage
+        canSeeCalls
+        onClose={() => {}}
+      />,
+    );
+
+    const sheet = await screen.findByRole("dialog", {
+      name: "Thread confidentiality check",
+    });
+    expect(
+      within(sheet).getByRole("heading", {
+        name: "Thread confidentiality check",
+      }),
+    ).toBeTruthy();
+    expect(
+      within(sheet).queryByText(/capture_confidentiality_verdict/),
+    ).toBeNull();
+
+    await user.click(
+      within(sheet).getByRole("button", {
+        name: "Thread confidentiality check: what it does",
+      }),
+    );
+
+    expect(
+      await screen.findByText("Decides whether a thread is private."),
+    ).toBeTruthy();
+    expect(
+      screen.getByText("capture_confidentiality_verdict").parentElement
+        ?.textContent,
+    ).toBe("capture_confidentiality_verdict · While the user waits");
+  });
+
   it("words the task's mode and a model-less step's tier, and says why tries outnumber calls", async () => {
     server();
     render(

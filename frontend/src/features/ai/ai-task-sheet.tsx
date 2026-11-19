@@ -28,6 +28,7 @@ import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useRouting } from "../../lib/ai-routing-query";
 import { aiTaskLabel } from "../../lib/ai-task-label";
+import { tierLabel } from "../../lib/ai-tier-label";
 import { useCan } from "../../lib/capability";
 import { problemCodeOf, throwProblem, unwrap } from "../../lib/problem";
 import {
@@ -37,7 +38,8 @@ import {
   WINDOWS,
   type Window,
 } from "./ai-call-figures";
-import { executionModeLabel, tierLabel } from "./ai-decision-labels";
+import { executionModeLabel } from "./ai-decision-labels";
+import { TaskName } from "./ai-task-name";
 import { LatencyAgainstTimeout, TaskOutcome } from "./ai-task-outcome";
 import { ReadProblem, SaveProblem, TimeoutField } from "./ai-task-sheet-fields";
 import { CALL_TASK_PARAM, callsHrefFor } from "./aicalls";
@@ -139,6 +141,7 @@ export function TaskSheet({
 }>) {
   const t = useT();
   const titleId = useId();
+  const mode = executionModeLabel(route.execution_mode, t);
   const stored = useTaskOverrides(true);
   // The overrides' own read is a map, so their lock rides on the routing read.
   // Nothing is editable until that read has answered.
@@ -178,14 +181,21 @@ export function TaskSheet({
       unsaved={changed}
     >
       <DrawerHead>
-        <Heading size="large" id={titleId} className="t-h2 modal-title">
-          {aiTaskLabel(route.task, t, route.display_name)}
+        <Heading
+          size="large"
+          className="t-h2 modal-title"
+          aria-labelledby={titleId}
+        >
+          <TaskName
+            name={aiTaskLabel(route.task, t, route.display_name)}
+            task={route.task}
+            mode={mode}
+            summary={route.summary}
+            nameId={titleId}
+          />
         </Heading>
         <p className="t-caption">
-          {[
-            decides ? t("aiTaskSheet.decision") : null,
-            executionModeLabel(route.execution_mode, t),
-          ]
+          {[decides ? t("aiTaskSheet.decision") : null, mode]
             .filter(Boolean)
             .join(" · ")}
         </p>
