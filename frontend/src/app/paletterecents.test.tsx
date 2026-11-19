@@ -148,7 +148,11 @@ it("never paints a stored name and shows the current name before the screens", a
   expect(await screen.findByText("Renamed contact")).toBeTruthy();
   const rows = screen
     .getAllByRole("button")
-    .filter((button) => button.classList.contains("palette-row"));
+    .filter(
+      (button) =>
+        button.classList.contains("palette-row") &&
+        !button.classList.contains("palette-ask"),
+    );
   expect(rows.map((row) => row.querySelector(".label")?.textContent)).toEqual([
     "Renamed contact",
     "Acme",

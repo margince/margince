@@ -88,7 +88,9 @@
   .compose-reasons-card,
   .page-pane,
   .analytics-sheet,
-  .reachcard
+  .reachcard,
+  .palette-tile,
+  .palette-foot
 ) {
   --ground: var(--ladder1Solid);
   --groundEdge: var(--ladder1Edge);
@@ -184,7 +186,9 @@
     .compose-reasons-card,
     .page-pane,
     .analytics-sheet,
-    .reachcard
+    .reachcard,
+    .palette-tile,
+    .palette-foot
   )
   :where(
     .panel,
@@ -265,7 +269,9 @@
     .compose-reasons-card,
     .page-pane,
     .analytics-sheet,
-    .reachcard
+    .reachcard,
+    .palette-tile,
+    .palette-foot
   ) {
   --ground: var(--ladder2);
   --groundEdge: var(--ladder2Edge);
@@ -361,7 +367,9 @@
     .compose-reasons-card,
     .page-pane,
     .analytics-sheet,
-    .reachcard
+    .reachcard,
+    .palette-tile,
+    .palette-foot
   )
   :where(
     .panel,
@@ -442,7 +450,9 @@
     .compose-reasons-card,
     .page-pane,
     .analytics-sheet,
-    .reachcard
+    .reachcard,
+    .palette-tile,
+    .palette-foot
   )
   :where(
     .panel,
@@ -523,7 +533,9 @@
     .compose-reasons-card,
     .page-pane,
     .analytics-sheet,
-    .reachcard
+    .reachcard,
+    .palette-tile,
+    .palette-foot
   ) {
   --ground: var(--ladder3);
   --groundEdge: var(--ladder3Edge);
@@ -619,7 +631,9 @@
     .compose-reasons-card,
     .page-pane,
     .analytics-sheet,
-    .reachcard
+    .reachcard,
+    .palette-tile,
+    .palette-foot
   )
   :where(
     .panel,
@@ -700,7 +714,9 @@
     .compose-reasons-card,
     .page-pane,
     .analytics-sheet,
-    .reachcard
+    .reachcard,
+    .palette-tile,
+    .palette-foot
   )
   :where(
     .panel,
@@ -781,7 +797,9 @@
     .compose-reasons-card,
     .page-pane,
     .analytics-sheet,
-    .reachcard
+    .reachcard,
+    .palette-tile,
+    .palette-foot
   )
   :where(
     .panel,
@@ -862,7 +880,9 @@
     .compose-reasons-card,
     .page-pane,
     .analytics-sheet,
-    .reachcard
+    .reachcard,
+    .palette-tile,
+    .palette-foot
   ) {
   --ground: var(--ladder4);
   --groundEdge: var(--ladder4Edge);
@@ -1015,7 +1035,9 @@
     .compose-reasons-card,
     .page-pane,
     .analytics-sheet,
-    .reachcard
+    .reachcard,
+    .palette-tile,
+    .palette-foot
   ) {
   --ground: var(--ladder2);
   --groundEdge: var(--ladder2Edge);
@@ -1132,7 +1154,9 @@
     .compose-reasons-card,
     .page-pane,
     .analytics-sheet,
-    .reachcard
+    .reachcard,
+    .palette-tile,
+    .palette-foot
   )
   :where(
     .panel,
@@ -1213,7 +1237,9 @@
     .compose-reasons-card,
     .page-pane,
     .analytics-sheet,
-    .reachcard
+    .reachcard,
+    .palette-tile,
+    .palette-foot
   ) {
   --ground: var(--ladder3);
   --groundEdge: var(--ladder3Edge);
@@ -1330,7 +1356,9 @@
     .compose-reasons-card,
     .page-pane,
     .analytics-sheet,
-    .reachcard
+    .reachcard,
+    .palette-tile,
+    .palette-foot
   )
   :where(
     .panel,
@@ -1411,7 +1439,9 @@
     .compose-reasons-card,
     .page-pane,
     .analytics-sheet,
-    .reachcard
+    .reachcard,
+    .palette-tile,
+    .palette-foot
   )
   :where(
     .panel,
@@ -1492,7 +1522,9 @@
     .compose-reasons-card,
     .page-pane,
     .analytics-sheet,
-    .reachcard
+    .reachcard,
+    .palette-tile,
+    .palette-foot
   ) {
   --ground: var(--ladder4);
   --groundEdge: var(--ladder4Edge);
@@ -1636,7 +1668,9 @@
     .compose-reasons-card,
     .page-pane,
     .analytics-sheet,
-    .reachcard
+    .reachcard,
+    .palette-tile,
+    .palette-foot
   ) {
   background-color: var(--ground);
 }
