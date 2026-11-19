@@ -529,7 +529,7 @@
 /* 40rem of card is where the chain stacks and the figures fold to one
    column. */
 @container way (max-width: 40rem) {
-  /* The chain turns into a short upright list: each person a row with the
+  /* The chain turns into a short upright list: each node a row with the
      avatar first, each tie an upright line in the avatars' column with its
      words beside it. */
   .pn-chain {
