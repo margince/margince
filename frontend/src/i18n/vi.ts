@@ -18243,6 +18243,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "embedreindex.unbound":
     "Chưa gán mô hình embedding nào, nên không có chỉ mục tìm kiếm để dựng lại.",
   "embedreindex.unboundLink": "Mở cài đặt AI",
+  "connectAi.first": "Hãy kết nối AI trước",
+  "connectAi.link": "Mở cài đặt AI",
   "embedreindex.statusLabel": "Trạng thái chỉ mục",
   "embedreindex.reindexLabel": "Lập chỉ mục lại phần thay đổi",
   "embedreindex.reindexHelp":

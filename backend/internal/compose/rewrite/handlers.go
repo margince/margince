@@ -19,8 +19,7 @@ import (
 
 // The problem codes this endpoint adds to modelfailure's.
 const (
-	codeAINotConfigured = "ai_not_configured"
-	codeRestricted      = "subject_restricted"
+	codeRestricted = "subject_restricted"
 )
 
 // Handlers shadows the generated RewriteText stub.
@@ -52,7 +51,7 @@ func (h Handlers) RewriteText(w http.ResponseWriter, r *http.Request) {
 	switch {
 	case errors.Is(err, ErrNoModel):
 		httperr.Write(w, r, &httperr.DetailedError{
-			Status: http.StatusConflict, Code: codeAINotConfigured,
+			Status: http.StatusConflict, Code: httperr.CodeAINotConfigured,
 			Detail: "rewriting words needs an AI model; an administrator can bind one under Settings → AI",
 		})
 	case errors.Is(err, model.ErrSubjectRestricted):

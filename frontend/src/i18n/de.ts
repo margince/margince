@@ -18738,6 +18738,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "embedreindex.unbound":
     "Es gibt keinen Suchindex zum Neuaufbauen, da kein Embedding-Modell zugeordnet ist.",
   "embedreindex.unboundLink": "KI-Einstellungen öffnen",
+  "connectAi.first": "Zuerst eine KI verbinden",
+  "connectAi.link": "KI-Einstellungen öffnen",
   "embedreindex.statusLabel": "Indexstatus",
   "embedreindex.reindexLabel": "Änderungen neu indexieren",
   "embedreindex.reindexHelp":

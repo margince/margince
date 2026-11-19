@@ -224,6 +224,11 @@ func (s *Dispatcher) explainClassified(tool string, err error) string {
 		return "This installation does not offer what this call needs, so nothing was changed and no argument " +
 			"would change that. (" + explained + ") Do not retry; tell the user it is not available here."
 	}
+	if fault.Code == httperr.CodeAINotConfigured {
+		// Nothing about the call is wrong: the installation has no AI model.
+		return "No AI model is connected to this installation, so nothing was changed and no argument would " +
+			"change that. (" + explained + ") Do not retry; tell the user to connect an AI model under Settings, AI."
+	}
 	if fault.Transient() {
 		return "This tool is temporarily unavailable — nothing was changed. (" + explained + ") " +
 			"The same call can succeed later; wait before retrying, and tell the user if they are waiting on it."

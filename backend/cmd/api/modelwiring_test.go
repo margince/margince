@@ -23,7 +23,6 @@ import (
 	"io"
 	"log/slog"
 	"maps"
-	"net/http"
 	"strings"
 	"testing"
 
@@ -66,10 +65,10 @@ func TestAnUnboundBootAdoptsTheBindingSavedAfterwards(t *testing.T) {
 		t.Fatal("a role booted without a binding got no routing watcher, so a saved binding would wait for a restart")
 	}
 
-	// A wired surface answers what an unwired one did: a 501, not a model error.
+	// A wired surface on an unbound path answers the typed ai_not_configured refusal, not a model error.
 	_, laneErr := modelPath.Rewrite.Complete(context.Background(), model.Request{})
-	if fault, ok := httperr.Classify(laneErr); !ok || fault.Status != http.StatusNotImplemented {
-		t.Fatalf("a lane call on an unbound path answered %v, want a 501", laneErr)
+	if fault, ok := httperr.Classify(laneErr); !ok || fault.Code != httperr.CodeAINotConfigured {
+		t.Fatalf("a lane call on an unbound path answered %v, want 409 ai_not_configured", laneErr)
 	}
 
 	bound, err := ai.ParseRouting([]byte(`profile: eu_hosted

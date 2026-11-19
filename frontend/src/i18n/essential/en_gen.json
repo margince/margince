@@ -4309,6 +4309,8 @@
   "linkSuggestions.unavailable": "The suggested links could not be read. Try again later.",
   "reindexbanner.needed": "Reindex needed",
   "reindexbanner.link": "Review in settings",
+  "connectAi.first": "Connect an AI first",
+  "connectAi.link": "Open AI settings",
   "contact.intro.stateRequested": "Awaiting reply",
   "contact.intro.stateAccepted": "Intro agreed",
   "contact.intro.stateNameDropApproved": "Name approved",

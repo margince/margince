@@ -18525,6 +18525,8 @@ export const en = {
   "embedreindex.unbound":
     "No embedding model is bound, so there is no search index to rebuild.",
   "embedreindex.unboundLink": "Open AI settings",
+  "connectAi.first": "Connect an AI first",
+  "connectAi.link": "Open AI settings",
   "embedreindex.statusLabel": "Index status",
   "embedreindex.reindexLabel": "Reindex changes",
   "embedreindex.reindexHelp":
