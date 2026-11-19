@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { useContext, useId } from "react";
 import type { components } from "../../api/schema";
 import { ChannelPanel } from "../../components/channelpanel";
 import { Badge, Button } from "../../design-system/atoms";
@@ -26,7 +26,8 @@ import { offerRow, otherOpenTaskRows } from "./deal360/dealoverviewrows";
 import { DealProductsCard } from "./deal360/dealproducts";
 import { DealRoomCard } from "./deal360/dealroomcard";
 import type { DealStandingInputs } from "./deal360/dealstanding";
-import type { Offer } from "./deals";
+import { DealEditContext } from "./dealedit";
+import type { Deal, Offer } from "./deals";
 import { DealStatusCardPanel, unreadHead } from "./dealstatus";
 import "./deal360/deal360.css";
 
@@ -142,7 +143,6 @@ export function DealOverviewPane({
   refusedReasonId,
   onOpenEmail,
   onOpenTab,
-  onEditDetails,
   threadComplete,
   dealApprovals,
   onDecide,
@@ -164,8 +164,6 @@ export function DealOverviewPane({
   onOpenEmail?: (activityId: string) => void;
   // Switches the page to another of the deal's tabs.
   onOpenTab: (tab: "room" | "history") => void;
-  // Opens the drawer that holds the deal's fields.
-  onEditDetails: () => void;
   // Whether the thread read holds every row. A count of tasks off a page
   // with more behind it would be a floor the bar cannot mark. So it is left
   // out until then.
@@ -270,12 +268,7 @@ export function DealOverviewPane({
           <DealLinksCard deal={deal} />
         </div>
         <div className="deal-overview-column">
-          <DealBrief
-            brief={deal.description}
-            byModel={deal.ai_written_fields?.includes("description")}
-            // The record's own write refusal, not the advance verb's.
-            onEdit={readOnly ? undefined : onEditDetails}
-          />
+          <DealBriefCard deal={deal} readOnly={readOnly} />
           {!deal.archived_at && (
             <DealProductsCard
               dealId={deal.id}
@@ -299,5 +292,21 @@ export function DealOverviewPane({
         </div>
       </div>
     </>
+  );
+}
+
+// The brief writes through the page's own deal edit. `readOnly` is the
+// record's write refusal, not the advance verb's.
+function DealBriefCard({
+  deal,
+  readOnly,
+}: Readonly<{ deal: Deal; readOnly: boolean }>) {
+  const edit = useContext(DealEditContext);
+  return (
+    <DealBrief
+      brief={deal.description}
+      byModel={deal.ai_written_fields?.includes("description")}
+      edit={readOnly ? undefined : edit}
+    />
   );
 }

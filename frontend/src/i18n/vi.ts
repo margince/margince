@@ -2989,7 +2989,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "board.unpriced_one": "{count} chưa định giá",
   "board.unpriced_other": "{count} chưa định giá",
   "board.totalsTip":
-    "{total} đang mở, {weighted} có trọng số theo {probability}.",
+    "{total} đang mở, {weighted} có trọng số theo xác suất của từng deal.",
   "board.unpricedTip_one":
     "{count} deal chưa có giá và không được tính vào hai tổng.",
   "board.unpricedTip_other":
@@ -3005,6 +3005,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.staged": "Chờ duyệt",
   "deal.archived": "Trong kho lưu trữ",
   "deal.closes": "chốt {date}",
+  "deal.closed": "đã chốt {date}",
   "deal.undated": "chưa có ngày chốt",
   "deal.lastMail": "Email gần nhất",
   "deal.mail.title": "Email trước đó",
@@ -3068,6 +3069,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "record.save": "Lưu",
   "record.saveDone": "Đã lưu “{name}”",
   "record.archiveDone": "Đã chuyển “{name}” vào kho lưu trữ",
+  "record.restoreDone": "Đã khôi phục “{name}”",
   "record.archive": "Chuyển vào kho lưu trữ",
   "record.disqualify": "Loại lead",
   "record.archiveConfirm":
@@ -6064,6 +6066,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deals.confirm": "Xác nhận",
   "deals.cancel": "Hủy",
   "deals.advanced": "Đã chuyển sang {stage}",
+  "deals.advancedProbability":
+    "Đã chuyển sang {stage} · xác suất giờ là {percent}",
+  "deals.closedWon": "Đã đóng: thắng",
+  "deals.closedWonProbability": "Đã đóng: thắng · xác suất {percent}",
+  "deals.closedLost": "Đã đóng: thua",
+  "deals.closedLostProbability": "Đã đóng: thua · xác suất {percent}",
+  "deals.reopened": "Đã mở lại ở {stage}",
+  "deals.reopenedProbability": "Đã mở lại ở {stage} · xác suất {percent}",
 
   "deal.ownerKeep": "Giữ người chịu trách nhiệm hiện tại",
   "deal.ownerMe": "Giao cho tôi",
@@ -6138,8 +6148,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.winProbability.reason.clear": "Xóa con số để theo lại giai đoạn.",
   "deal.winProbability.reason.stageNamed": "giai đoạn {name}",
   "deal.winProbability.reason.stageUnnamed": "giai đoạn của deal",
-  "deal.winProbability.setByStage":
-    "Giai đoạn {stage} đã đặt xác suất thành {percent}",
   "deal.winProbability.band.90_plus": "Từ 90% trở lên",
   "deal.winProbability.band.60_89": "60 đến 89%",
   "deal.winProbability.band.30_59": "30 đến 59%",
@@ -6441,7 +6449,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.acquisitionUnset": "Chưa chọn",
   "deal.acquisitionRetired": "(đã ngừng dùng)",
   "deal.waitUntil": "Chờ đến",
-  "deal.fxBase": "Gốc {value} · tỷ giá {rate} tính đến {date}",
+  "deal.fxBase": "{value} · tỷ giá {rate} ngày {date}",
   "deal.archiveRefused":
     "Chỉ chủ deal hoặc quản lý mới có thể lưu trữ deal này.",
   "contact.archiveRefused":
@@ -6449,6 +6457,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "company.archiveRefused":
     "Chỉ chủ sở hữu công ty hoặc quản lý mới có thể lưu trữ công ty này.",
   "deal.archive": "Chuyển deal vào kho lưu trữ",
+  "deal.restore": "Khôi phục deal",
   "deal.archiveConfirm":
     "Khi chuyển vào kho lưu trữ, deal này sẽ không còn trong danh sách deal đang mở. Có thể khôi phục từ lịch sử của deal.",
   "deal.archivedReadOnly":
@@ -6528,6 +6537,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deals.bulkStage": "Chuyển sang giai đoạn",
   "deals.bulkStagePick": "Chọn giai đoạn",
   "deals.bulkMove": "Chuyển",
+  "deals.bulkMoved_one": "Đã chuyển {count} deal sang {stage}.",
+  "deals.bulkMoved_other": "Đã chuyển {count} deal sang {stage}.",
+  "deals.bulkAlreadyThere_one": "{count} deal đã ở {stage} từ trước.",
+  "deals.bulkAlreadyThere_other": "{count} deal đã ở {stage} từ trước.",
+  "deals.bulkNothingToMove_one": "Deal đã chọn đã ở {stage}.",
+  "deals.bulkNothingToMove_other": "Cả {count} deal đã chọn đều đã ở {stage}.",
   "deals.bulkFailed": "Không thể áp dụng cho {count} deal:",
   "deals.bulkFailedRow": "không thể lưu",
   "bulk.selected_one": "Đã chọn {count}",
@@ -6849,8 +6864,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.feed.changedBadge_one": "1 đã thay đổi",
   "brief.feed.changedBadge_other": "{count} đã thay đổi",
   "brief.feed.loading": "Đang tải Bản tin sáng…",
-  "brief.feed.clear":
-    "Không có ưu tiên cần xử lý ngay. Có thể xem toàn bộ Danh sách công việc.",
+  "brief.feed.caughtUp": "Bạn đã theo kịp mọi việc",
+  "brief.feed.caughtUpDetail":
+    "Khi Margince kiểm tra lúc {time}, không có ai đang chờ bạn.",
   "teamweekly.pickTeam": "Chọn nhóm",
 
   "plan.loading": "Đang tải kế hoạch…",
@@ -13470,9 +13486,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "{steward} đã tạm dừng Deal Room này. Liên kết vẫn hợp lệ, quý khách có thể tiếp tục khi quyền truy cập mở lại.",
   "buyer.expiredTitle": "Quyền truy cập đã kết thúc",
   "buyer.expiredBody":
-    "Quyền truy cập Deal Room này đã hết hạn. Vui lòng liên hệ {steward} hoặc yêu cầu liên kết mới bên dưới.",
+    "Quyền truy cập Deal Room này đã hết hạn. Vui lòng liên hệ {steward} nếu quý khách cần truy cập lại.",
   "buyer.eyebrow": "Deal Room",
-  "buyer.contact": "Người liên hệ: {steward}.",
   "buyer.closed": "Deal Room này đã đóng. Nội dung vẫn được lưu lại làm hồ sơ.",
   "buyer.previewBannerTitle": "Đang xem trước Deal Room này",
   "buyer.previewBanner":

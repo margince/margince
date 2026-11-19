@@ -4,7 +4,6 @@
 import { ListPlus, Mail, MailPlus, Send, Sparkles } from "lucide-react";
 import { type ReactNode, type RefObject, useRef } from "react";
 import { type ActivityMoment, activityAgo } from "../format/activitywhen";
-import { calendarDay } from "../format/calendarday";
 import {
   formatAge,
   formatDayMonthNearYear,
@@ -15,6 +14,7 @@ import { formatMoneyOrWord } from "../format/moneyword";
 import { type Locale, useLocale, useT } from "../i18n";
 import { AppLink } from "./applink";
 import { Avatar, Badge } from "./atoms";
+import { DealCardClose } from "./dealcardclose";
 import { DealOwner, handOnTo } from "./dealowner";
 import { IconAction } from "./iconaction";
 import { OverflowMenu } from "./overflowmenu";
@@ -126,37 +126,6 @@ function DealCardCompany({
         </AppLink>
       ) : (
         <span className="deal-company-name">{deal.company}</span>
-      )}
-    </span>
-  );
-}
-
-/**
- * When the deal closes, on the card's figure line.
- *
- * Read as a calendar day in the record's zone, never as the instant midnight
- * UTC — that instant is the previous date for half the world. The tone marks
- * the DATE when it is one nobody confirmed or one already behind us, and says
- * so in words for a reader who does not get the colour; the deal strip states
- * the same fact the same two ways.
- */
-function DealCloses({
-  day,
-  provisional,
-  zone,
-}: Readonly<{ day: string; provisional: boolean; zone: string }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const overdue = day < calendarDay(new Date(), zone);
-  const classes =
-    provisional || overdue ? "deal-closes deal-closes-warning" : "deal-closes";
-  return (
-    <span className={classes}>
-      {t("deal.closes", {
-        date: formatDayMonthNearYear(day, locale, zone, new Date()),
-      })}
-      {provisional && (
-        <span className="sr-only"> · {t("deal.closesProvisional")}</span>
       )}
     </span>
   );
@@ -472,17 +441,7 @@ export function DealCard({
             />
           )}
         </span>
-        {closed !== undefined ? (
-          <span className="deal-closes">{closed ?? t("deal.undated")}</span>
-        ) : deal.closeDate ? (
-          <DealCloses
-            day={deal.closeDate}
-            provisional={deal.closeDateProvisional ?? false}
-            zone={zone}
-          />
-        ) : (
-          <span className="deal-closes">{t("deal.undated")}</span>
-        )}
+        <DealCardClose deal={deal} closed={closed} zone={zone} />
       </span>
       {standing != null && <span className="deal-standing">{standing}</span>}
       <DealCardFoot

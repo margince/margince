@@ -8,8 +8,8 @@ company and contact.
 
 ## Where do I find the links?
 
-On a deal, the **Overview** has a **Links** card. Each row names the other record and the type of the link. The row
-says which way the link points: **From this deal** or **To this deal**.
+On a deal, the **Overview** has a **Links** card. Each row names the other record, its kind (deal, company or contact)
+and the type of the link. The row says which way the link points: **From this deal** or **To this deal**.
 
 ## How do I add or remove one?
 
@@ -17,7 +17,7 @@ says which way the link points: **From this deal** or **To this deal**.
 |---|---|
 | 1 | Choose **Add link**. |
 | 2 | Pick a **Link type** from the list. An extension your admin turned on can add more. |
-| 3 | Search for the record to link and pick it. |
+| 3 | Search for the record to link and pick it. Each result names its kind. The deal itself is not offered. |
 
 **Remove** deletes the link. The two records stay as they are.
 

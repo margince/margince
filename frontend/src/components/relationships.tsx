@@ -344,11 +344,12 @@ export function AddRelationshipAction({
               label names the kind being searched rather than a generic
               "other side", reusing the same singular each search result
               screen already carries for its own kind. */}
-          <Field label={t(SEARCH_HIT_KIND_KEY[entity])}>
+          <Field label={t(SEARCH_HIT_KIND_KEY[entity])} required>
             {(control) => (
               <RecordPicker
                 {...control}
                 key={kind}
+                placeholder={t("merge.searchPlaceholder")}
                 searchTargets={searchTargets}
                 searchOnFocus={entity === "deal"}
                 selected={target}

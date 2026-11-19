@@ -71,6 +71,6 @@ export function checkFieldValue(
 ): void {
   if (field.required && !next.trim())
     throw new ProblemError({ detail: t("record.fieldRequired") });
-  const refusal = field.validate?.(next);
+  const refusal = field.validate?.(next, { [field.key]: next });
   if (refusal) throw new ProblemError({ detail: refusal });
 }

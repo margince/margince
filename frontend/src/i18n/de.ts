@@ -3080,7 +3080,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "board.ratesOn": "Kurse vom {date}",
   "board.unpriced_one": "{count} ohne Preis",
   "board.unpriced_other": "{count} ohne Preis",
-  "board.totalsTip": "{total} offen, {weighted} gewichtet mit {probability}.",
+  "board.totalsTip":
+    "{total} offen, {weighted} gewichtet mit der Abschlusschance jedes Deals.",
   "board.unpricedTip_one":
     "{count} Deal hat keinen Preis und zählt in keiner der beiden Summen.",
   "board.unpricedTip_other":
@@ -3096,6 +3097,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.singleThreaded": "Nur ein Kontakt",
   "deal.staged": "Vorgemerkt",
   "deal.closes": "Abschluss {date}",
+  "deal.closed": "Abgeschlossen {date}",
   "deal.undated": "kein Abschlussdatum",
   "deal.lastMail": "Letzte E-Mail",
   "deal.mail.title": "Bisherige E-Mails",
@@ -3161,6 +3163,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "record.save": "Speichern",
   "record.saveDone": "„{name}“ gespeichert",
   "record.archiveDone": "„{name}“ archiviert",
+  "record.restoreDone": "„{name}“ wiederhergestellt",
   "record.archive": "Archivieren",
   "record.disqualify": "Disqualifizieren",
   "record.archiveConfirm":
@@ -6224,6 +6227,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deals.confirm": "Bestätigen",
   "deals.cancel": "Abbrechen",
   "deals.advanced": "Nach {stage} verschoben",
+  "deals.advancedProbability":
+    "Nach {stage} verschoben · Abschlusschance jetzt {percent}",
+  "deals.closedWon": "Als gewonnen abgeschlossen",
+  "deals.closedWonProbability":
+    "Als gewonnen abgeschlossen · Abschlusschance {percent}",
+  "deals.closedLost": "Als verloren abgeschlossen",
+  "deals.closedLostProbability":
+    "Als verloren abgeschlossen · Abschlusschance {percent}",
+  "deals.reopened": "In {stage} wieder geöffnet",
+  "deals.reopenedProbability":
+    "In {stage} wieder geöffnet · Abschlusschance {percent}",
 
   "deal.ownerKeep": "Aktuelle Verantwortung behalten",
   "deal.ownerMe": "Mir zuweisen",
@@ -6301,8 +6315,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Leere das Feld, um wieder der Phase zu folgen.",
   "deal.winProbability.reason.stageNamed": "die Phase {name}",
   "deal.winProbability.reason.stageUnnamed": "die Phase des Deals",
-  "deal.winProbability.setByStage":
-    "Abschlusschance durch die Phase {stage} auf {percent} gesetzt",
   "deal.winProbability.band.90_plus": "90 % oder mehr",
   "deal.winProbability.band.60_89": "60 bis 89 %",
   "deal.winProbability.band.30_59": "30 bis 59 %",
@@ -6610,7 +6622,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deal.acquisitionUnset": "Nicht festgelegt",
   "deal.acquisitionRetired": "(stillgelegt)",
   "deal.waitUntil": "Warten bis",
-  "deal.fxBase": "Basis {value} · Kurs {rate} vom {date}",
+  "deal.fxBase": "{value} · Kurs {rate} vom {date}",
   "deal.archiveRefused":
     "Nur der Verantwortliche des Deals oder eine Führungskraft kann diesen Deal archivieren.",
   "contact.archiveRefused":
@@ -6618,6 +6630,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "company.archiveRefused":
     "Nur der Verantwortliche des Unternehmens oder eine Führungskraft kann dieses Unternehmen archivieren.",
   "deal.archive": "Deal archivieren",
+  "deal.restore": "Deal wiederherstellen",
   "deal.archiveConfirm":
     "Das Archivieren entfernt diesen Deal aus den offenen Deals. Über den Verlauf kannst du den Deal zurückholen.",
   "deal.archivedReadOnly":
@@ -6697,6 +6710,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deals.bulkStage": "In Phase verschieben",
   "deals.bulkStagePick": "Phase wählen",
   "deals.bulkMove": "Verschieben",
+  "deals.bulkMoved_one": "{count} Deal nach {stage} verschoben.",
+  "deals.bulkMoved_other": "{count} Deals nach {stage} verschoben.",
+  "deals.bulkAlreadyThere_one": "{count} war schon in {stage}.",
+  "deals.bulkAlreadyThere_other": "{count} waren schon in {stage}.",
+  "deals.bulkNothingToMove_one": "Der ausgewählte Deal ist schon in {stage}.",
+  "deals.bulkNothingToMove_other":
+    "Alle {count} ausgewählten Deals sind schon in {stage}.",
   "deals.bulkFailed": "{count} nicht übernommen:",
   "deals.bulkFailedRow": "konnte nicht gespeichert werden",
   "bulk.selected_one": "{count} ausgewählt",
@@ -7020,8 +7040,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.feed.changedBadge_one": "1 geändert",
   "brief.feed.changedBadge_other": "{count} geändert",
   "brief.feed.loading": "Morgenbericht wird geladen…",
-  "brief.feed.clear":
-    "Keine unmittelbaren Prioritäten. Die vollständige Worklist ist verfügbar.",
+  "brief.feed.caughtUp": "Alles im Blick",
+  "brief.feed.caughtUpDetail":
+    "Als Margince um {time} nachsah, wartete niemand auf dich.",
   "teamweekly.pickTeam": "Team auswählen",
 
   "plan.loading": "Plan wird geladen…",
@@ -13835,9 +13856,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "{steward} hat diesen Raum pausiert. Ihr Link bleibt gültig, und Sie können weitermachen, sobald der Zugang fortgesetzt wird.",
   "buyer.expiredTitle": "Zugang beendet",
   "buyer.expiredBody":
-    "Der Zugang zu diesem Raum ist abgelaufen. Wenden Sie sich an {steward}, oder fordern Sie unten einen neuen Link an.",
+    "Der Zugang zu diesem Raum ist abgelaufen. Wenden Sie sich an {steward}, wenn Sie ihn wieder brauchen.",
   "buyer.eyebrow": "Deal Room",
-  "buyer.contact": "Ihre Ansprechperson: {steward}.",
   "buyer.closed":
     "Dieser Raum ist geschlossen. Die Inhalte bleiben als Aufzeichnung erhalten.",
   "buyer.previewBannerTitle": "Du siehst eine Vorschau dieses Raums",

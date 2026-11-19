@@ -55,6 +55,7 @@ function mount(
   const sent: Sent[] = [];
   installFetchStub({
     "GET /me": meRoute({ deal: grant }, { seat: "full" }),
+    "GET /records/deal/d1/tags": () => jsonResponse({ data: [] }),
   });
   const stub = globalThis.fetch;
   globalThis.fetch = async (input, init) => {
@@ -182,6 +183,20 @@ it("leaves a closed deal's close day and probability out of About", async () => 
   expect(labels(about)).toContain(en["deal.waitUntil"]);
 });
 
+it("names an open deal's close day as the forecast field and a decided one's as its close", async () => {
+  mount(["read", "update"], { ...deal, expected_close_date: "2026-12-01" });
+  expect(await screen.findByText(en["deals.close"])).toBeTruthy();
+  cleanup();
+  mount(["read", "update"], {
+    ...deal,
+    status: "won",
+    closed_at: "2026-10-01T00:00:00Z",
+  });
+  // A decided deal's day is no forecast, so it is not called one.
+  expect(await screen.findByText(en["deal.standing.close"])).toBeTruthy();
+  expect(screen.queryByText(en["deals.close"])).toBeNull();
+});
+
 it("shows the ARR an offer set in its currency, locked with the reason", async () => {
   const user = userEvent.setup();
   mount(["read", "update"], { ...deal, arr_source_offer_id: "o1" });
@@ -202,6 +217,22 @@ it("offers no money to change beside a masked currency", async () => {
   mount(["read", "update"], shown);
   await screen.findByRole("button", { name: "Edit About" });
   expect(screen.queryByRole("button", { name: "Edit Value" })).toBeNull();
+});
+
+it("adds a tag from the Tags row and offers no add to a reader", async () => {
+  const user = userEvent.setup();
+  mount(["read", "update"]);
+  await user.click(
+    await screen.findByRole("button", { name: /^Show \d+ empty fields$/ }),
+  );
+  expect(await screen.findByRole("button", { name: "Add tag" })).toBeTruthy();
+  cleanup();
+  mount(["read"]);
+  await user.click(
+    await screen.findByRole("button", { name: /^Show \d+ empty fields$/ }),
+  );
+  await screen.findByText("Tags");
+  expect(screen.queryByRole("button", { name: "Add tag" })).toBeNull();
 });
 
 // German groups thousands with a dot: "12,5" is twelve and a half, and

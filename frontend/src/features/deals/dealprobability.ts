@@ -8,6 +8,7 @@ import type { MessageKey } from "../../i18n/en";
 import { labelFor } from "../../lib/labelfor";
 
 type Deal = components["schemas"]["Deal"];
+type Stage = components["schemas"]["Stage"];
 type Source = NonNullable<Deal["win_probability_source"]>;
 
 // A probability a colleague set names them where the deal says who it was;
@@ -179,20 +180,43 @@ function setterSentence(
 
 type Advanced = Pick<components["schemas"]["DealAdvanced"], "probability_set">;
 
+// Each kind of move with and without the probability its stage set.
+const ADVANCE_NOTE: Record<
+  "moved" | "won" | "lost" | "reopened",
+  readonly [bare: MessageKey, withProbability: MessageKey]
+> = {
+  moved: ["deals.advanced", "deals.advancedProbability"],
+  won: ["deals.closedWon", "deals.closedWonProbability"],
+  lost: ["deals.closedLost", "deals.closedLostProbability"],
+  reopened: ["deals.reopened", "deals.reopenedProbability"],
+};
+
+function moveKind(
+  move: Readonly<{ toStage: Stage; reopens?: boolean }>,
+): keyof typeof ADVANCE_NOTE {
+  if (move.reopens) {
+    return "reopened";
+  }
+  return move.toStage.semantic === "open" ? "moved" : move.toStage.semantic;
+}
+
 /**
- * What a stage move did to the deal's probability, or undefined when it set
- * none. Written from the two fields; the answer's own `note` is English.
+ * What a stage move did: moved, closed or reopened, and the probability the
+ * new stage set when it set one. Written from the fields; the answer's own
+ * `note` is English.
  */
-export function probabilitySetNote(
+export function advanceNote(
   advanced: Advanced | undefined,
+  move: Readonly<{ toStage: Stage; reopens?: boolean }>,
   t: Translator,
   locale: Locale,
-): string | undefined {
+): string {
+  const [bare, withProbability] = ADVANCE_NOTE[moveKind(move)];
   const set = advanced?.probability_set;
   return set
-    ? t("deal.winProbability.setByStage", {
+    ? t(withProbability, {
+        stage: move.toStage.name,
         percent: formatPercent(set.win_probability / 100, locale),
-        stage: set.stage_name,
       })
-    : undefined;
+    : t(bare, { stage: move.toStage.name });
 }

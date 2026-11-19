@@ -12,6 +12,7 @@ import {
 } from "../../components/customfields.form";
 import { EntityRef } from "../../components/entityref";
 import { type SectionLock, useSectionEdit } from "../../components/sectionedit";
+import { TagsPanel } from "../../components/tagspanel";
 import { AppLink } from "../../design-system/applink";
 import { Badge } from "../../design-system/atoms";
 import { OffsiteLink } from "../../design-system/offsitelink";
@@ -342,7 +343,8 @@ function aboutRows(facts: Facts, stages: readonly Stage[]): DetailRow[] {
     row("stage", "deals.stage", stageName),
     row(
       "close",
-      "deal.standing.close",
+      // An open deal's day is the forecast field the create form names.
+      closed ? "deal.standing.close" : "deals.close",
       day(closeDayOf(deal), facts),
       "expected_close_date",
     ),
@@ -407,17 +409,21 @@ function registrationRows(
       "acquisition_source",
     ),
     row("created", "list.created", day(deal.created_at, facts)),
-    row(
-      "tags",
-      "tags.panelTitle",
-      tags.length > 0 ? (
-        <span className="deal-aside-chips">
-          {tags.map((tag) => (
-            <Badge key={tag.tag_id}>{tag.name}</Badge>
-          ))}
-        </span>
-      ) : null,
-    ),
+    {
+      key: "tags",
+      term: t("tags.panelTitle"),
+      block: true,
+      empty: tags.length === 0,
+      value: (
+        <TagsPanel
+          entityType="deal"
+          entityID={deal.id}
+          bare
+          archived={Boolean(deal.archived_at)}
+          canEdit={facts.canEdit}
+        />
+      ),
+    },
   ];
 }
 
