@@ -24,7 +24,7 @@ import (
 
 // seedPairMail writes one hand-written exchange between a colleague and a
 // contact, in the given audience.
-func seedPairMail(t *testing.T, e *Env, user, contact ids.UUID, direction, audience string) ids.UUID {
+func seedPairMail(t *testing.T, user, contact ids.UUID, direction, audience string) ids.UUID {
 	t.Helper()
 	owner := OwnerConn(t)
 	activity := ids.NewV7()
@@ -104,7 +104,7 @@ func TestAWorkspaceMessageDrawsALineWithItsDirectionAndDate(t *testing.T) {
 	e := Setup(t)
 	buyer := e.SeedContact(t, "Mai Tran", nil)
 	dealID := seatedDeal(t, e, buyer)
-	seedPairMail(t, e, e.Rep2, buyer, "outbound", "workspace")
+	seedPairMail(t, e.Rep2, buyer, "outbound", "workspace")
 
 	got := coverageAs(t, e, e.Rep1, coverageReaderPerms(true), dealID)
 
@@ -147,7 +147,7 @@ func TestAMessageOutsideTheReadersAudienceShowsNoDateAndNoGap(t *testing.T) {
 			e := Setup(t)
 			buyer := e.SeedContact(t, "Mai Tran", nil)
 			dealID := seatedDeal(t, e, buyer)
-			seedPairMail(t, e, e.Rep2, buyer, "outbound", audience)
+			seedPairMail(t, e.Rep2, buyer, "outbound", audience)
 
 			outside := coverageAs(t, e, e.Rep1, coverageReaderPerms(true), dealID)
 			if lines := linesFor(outside, e.Rep2, buyer); len(lines) != 0 {
@@ -170,7 +170,7 @@ func TestANarrowedAudienceHidesTheLineAtOnceWithoutARefold(t *testing.T) {
 	buyer := e.SeedContact(t, "Mai Tran", nil)
 	dealID := seatedDeal(t, e, buyer)
 	owner := OwnerConn(t)
-	activity := seedPairMail(t, e, e.Rep2, buyer, "outbound", "workspace")
+	activity := seedPairMail(t, e.Rep2, buyer, "outbound", "workspace")
 
 	if lines := linesFor(coverageAs(t, e, e.Rep1, coverageReaderPerms(true), dealID), e.Rep2, buyer); len(lines) != 1 {
 		t.Fatalf("the workspace message drew %d lines before narrowing, want 1", len(lines))
@@ -197,7 +197,7 @@ func TestAContactTheReaderCannotReadGetsNoLineAndNoState(t *testing.T) {
 	if _, err := owner.Exec(t.Context(), `UPDATE deal SET owner_id = $1 WHERE id = $2`, e.Rep1, dealID.UUID); err != nil {
 		t.Fatal(err)
 	}
-	seedPairMail(t, e, e.Rep2, hidden, "outbound", "workspace")
+	seedPairMail(t, e.Rep2, hidden, "outbound", "workspace")
 	perms := coverageReaderPerms(true)
 	perms.RowScope = principal.RowScopeOwn
 
@@ -218,7 +218,7 @@ func TestAColleagueWhoLeftDrawsNoLineAndLeavesTheSeatUnknown(t *testing.T) {
 	owner := OwnerConn(t)
 	buyer := e.SeedContact(t, "Mai Tran", nil)
 	dealID := seatedDeal(t, e, buyer)
-	seedPairMail(t, e, e.Rep2, buyer, "outbound", "workspace")
+	seedPairMail(t, e.Rep2, buyer, "outbound", "workspace")
 	if _, err := owner.Exec(t.Context(), `UPDATE app_user SET archived_at = now() WHERE id = $1`, e.Rep2); err != nil {
 		t.Fatal(err)
 	}
@@ -237,7 +237,7 @@ func TestAReaderWithoutTheActivityGrantGetsNeitherLinesNorStates(t *testing.T) {
 	e := Setup(t)
 	buyer := e.SeedContact(t, "Mai Tran", nil)
 	dealID := seatedDeal(t, e, buyer)
-	seedPairMail(t, e, e.Rep2, buyer, "outbound", "workspace")
+	seedPairMail(t, e.Rep2, buyer, "outbound", "workspace")
 	perms := coverageReaderPerms(true)
 	delete(perms.Objects, "activity")
 
