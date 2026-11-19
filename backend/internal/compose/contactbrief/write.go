@@ -114,6 +114,7 @@ func briefSystemFor(fence promptfence.Fence, lang string) string {
 // is fenced with a nonce that writer has never seen, so no subject line or
 // quoted sentence can close the span and be read as instruction.
 func BriefRequest(in Input, lang string) model.Request {
+	in = in.inLanguage(lang)
 	fence := promptfence.New()
 	return model.Request{
 		System:         briefSystemFor(fence, lang),

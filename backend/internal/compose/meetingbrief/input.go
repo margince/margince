@@ -19,8 +19,9 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/kernel/datenotation"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/moneynotation"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
-	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // Input is the room, the deal, what was promised, and what recently happened.
@@ -115,17 +116,29 @@ type DealIn struct {
 	AmountMinor *int64 `json:"-"`
 	Currency    string
 	CloseDate   *time.Time
+	// lang is the brief's language, which decides the digit marks of amount.
+	lang textlang.Lang
 }
 
-// MarshalJSON adds the amount in major units: "18500.00" for 1850000 EUR, and
-// "1850000" for the same integer in JPY. values.MajorUnits owns that scale.
+// inLanguage is the deal as a brief in lang shows it: 12.345,00 in German.
+func (d *DealIn) inLanguage(lang string) *DealIn {
+	if d == nil {
+		return nil
+	}
+	worded := *d
+	worded.lang = textlang.Lang(lang)
+	return &worded
+}
+
+// MarshalJSON adds the amount in major units: "18,500.00" for 1850000 EUR, and
+// "1,850,000" for the same integer in JPY. values.MajorUnits owns that scale.
 // A zero amount is stated as zero. Only a deal with no amount or no currency
 // carries no amount.
 func (d DealIn) MarshalJSON() ([]byte, error) {
 	type plain DealIn // no methods, so no recursion back into this one
 	var amount string
 	if d.AmountMinor != nil && d.Currency != "" {
-		amount = values.MajorUnits(*d.AmountMinor, d.Currency)
+		amount = moneynotation.Grouped(*d.AmountMinor, d.Currency, d.lang)
 	}
 	return json.Marshal(struct {
 		plain
@@ -410,7 +423,8 @@ func (in Input) MarshalJSON() ([]byte, error) {
 		plain
 		StartsAt string
 		Recent   []promptAct
-	}{plain: plain(in), StartsAt: in.startsText(), Recent: recent})
+		Deal     *DealIn
+	}{plain: plain(in), StartsAt: in.startsText(), Recent: recent, Deal: in.Deal.inLanguage(in.Language)})
 }
 
 // startsText is the meeting's start as a prompt states it.
