@@ -69,7 +69,9 @@ export function GroundedField({
         <Button
           variant="ghost"
           onClick={() =>
-            onEdit(money ? majorUnits(field.value, currency) : field.value)
+            onEdit(
+              money ? majorUnits(field.value, currency, locale) : field.value,
+            )
           }
         >
           {t("extraction.edit")}

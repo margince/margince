@@ -13,6 +13,7 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/capturehealth"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -101,6 +102,15 @@ func (h Handlers) Connect(w http.ResponseWriter, r *http.Request) {
 func (h Handlers) sharedCredential(w http.ResponseWriter, r *http.Request, req crmcontracts.ConnectSharedMailboxRequest) (connector.Auth, bool) {
 	switch req.Provider {
 	case crmcontracts.ConnectSharedMailboxRequestProviderImap:
+		// A shared mailbox belongs to no member, so no one's mail may go out
+		// from it, and its credential must never carry the send scope.
+		if req.Imap != nil && req.Imap.Smtp != nil {
+			httperr.Write(w, r, &httperr.DetailedError{
+				Status: http.StatusUnprocessableEntity, Code: "shared_mailbox_cannot_send",
+				Detail: "A shared mailbox only captures mail. Leave out the smtp settings.",
+			})
+			return nil, false
+		}
 		return h.ProbeIMAP(r.Context(), w, r, req.Imap)
 	case crmcontracts.ConnectSharedMailboxRequestProviderGraph:
 		return graphBundle(w, r, string(req.Address), req.Graph)
@@ -184,5 +194,6 @@ func sharedMailboxOnWire(v capture.SharedMailboxView) crmcontracts.SharedMailbox
 		backup := openapi_types.UUID(*v.BackupOwner)
 		out.BackupOwnerId = &backup
 	}
+	out.UnreadPeriod = capturehealth.UnreadPeriodOf(v.UnreadFrom, v.UnreadTo)
 	return out
 }

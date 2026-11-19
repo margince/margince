@@ -366,6 +366,7 @@
     "getFollowUpSettings": "workspace_settings",
     "getForecast": "business",
     "getForecastAssurance": "business",
+    "getForecastFocus": "business",
     "getForecastMovement": "business",
     "getForecastStageChances": "business",
     "getHandledForYou": "business",
@@ -1319,6 +1320,7 @@
     "getForecast": "forecast",
     "getForecastAssurance": "forecast",
     "getForecastAssuranceEnforcement": "forecast",
+    "getForecastFocus": "forecast",
     "getForecastMovement": "forecast",
     "getForecastStageChances": "forecast",
     "getHandledForYou": "worklist",
@@ -1819,6 +1821,7 @@
     "resolveDealRoomThread": "deal_rooms",
     "resolveEntities": "search",
     "resolveInputCheck": "forecast",
+    "resolveRecipientCountries": "activities",
     "resolveSignal": "signals",
     "restoreCaptureOwnerIdentity": "capture_rules",
     "restoreCompanySuggestion": "companies",
@@ -1832,6 +1835,7 @@
     "restoreRelationshipNudge": "contacts",
     "restoreReportingReportRevision": "reports",
     "restoreRole": "members",
+    "restoreRoleGrants": "members",
     "restoreTag": "tags",
     "restoreTagApplication": "tags",
     "resumeDealRoom": "deal_rooms",
@@ -2777,6 +2781,9 @@
     ],
     "get_finance_source": [
       "finance_source"
+    ],
+    "get_forecast_focus": [
+      "forecast"
     ],
     "get_forecast_stage_chances": [
       "forecast"
@@ -4890,6 +4897,9 @@
     ],
     "get_finance_source": [
       "capture"
+    ],
+    "get_forecast_focus": [
+      "business"
     ],
     "get_forecast_stage_chances": [
       "business"

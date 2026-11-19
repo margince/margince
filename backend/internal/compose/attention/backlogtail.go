@@ -283,13 +283,17 @@ func (s *Service) moreTasks(ctx context.Context, page tailPage, walk tailWindow,
 	if err != nil {
 		return tailBatch{}, err
 	}
-	read, more, err := s.backlog.tasks.TasksAfter(ctx, s.taskStream(walk, page.filter), after, limit)
+	stream := s.taskStream(walk, page.filter)
+	read, more, err := s.backlog.tasks.TasksAfter(ctx, stream, after, limit)
 	if err != nil {
 		return tailBatch{}, err
 	}
 	tasks := make([]Task, len(read))
 	for i, task := range read {
 		tasks[i] = task.Row
+	}
+	if !stream.From.IsZero() {
+		tasks = laterWindow(tasks)
 	}
 	items := plannedItems(tasks, walk.AsOf, walk.Until, zone)
 	// plannedItems and appendLane each draw one row per task, in order.

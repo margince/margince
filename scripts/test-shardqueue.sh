@@ -93,11 +93,14 @@ done
 
 # The uutils mkdir of Ubuntu 26.04 exits 0 after losing the race to create a
 # directory. This one does so every time, so a claim that trusts mkdir fails here.
-mkdir() { command mkdir "$@" 2> /dev/null || [[ -d "${!#}" ]]; }
+# A program on PATH, as the real one is: a shell function named mkdir stops the
+# shards under the bash 3.2 that macOS ships.
+mkdir -p "$work/bin"
+printf '#!/usr/bin/env bash\n/bin/mkdir "$@" 2> /dev/null || [[ -d "${!#}" ]]\n' > "$work/bin/mkdir"
+chmod +x "$work/bin/mkdir"
 rm -rf "$work"/claimed-* "$work/q"
-for k in 1 2 3 4 5 6 7 8; do shard "dir:$work/q" "$k" 8 61 0.01 & done
+for k in 1 2 3 4 5 6 7 8; do (PATH="$work/bin:$PATH" shard "dir:$work/q" "$k" 8 61 0.01) & done
 start_race
-unset -f mkdir
 expect_whole "under a mkdir that exits 0 for a directory already there" 61
 
 rm -rf "$work"/claimed-* "$work/q"

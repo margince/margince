@@ -15,6 +15,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/commsauthzwire"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -27,12 +28,13 @@ func (h Handlers) PreviewSendAuthorization(w http.ResponseWriter, r *http.Reques
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	in, err := previewInputFrom(req.To, (*string)(req.CommunicationContext), req.MarketingPurpose, req.ConsentPurpose, req.Evidence)
+	in, err := previewInputFrom(req.To, (*string)(req.CommunicationContext), req.MarketingPurpose, req.ConsentPurpose, req.Evidence, req.RecipientCountries)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
 	}
-	in.Subject, in.Body = deref(req.Subject), deref(req.Body)
+	in.Subject, in.Body, in.HTMLBody = deref(req.Subject), deref(req.Body), deref(req.HtmlBody)
+	in.AttachmentIDs = attachmentIDsFrom(req.AttachmentIds)
 	h.answerPreview(w, r, FromActivity(pathID[ids.ActivityKind](id)), in)
 }
 
@@ -51,12 +53,13 @@ func (h Handlers) PreviewAccountSendAuthorization(w http.ResponseWriter, r *http
 		writeStoreErr(w, r, &RequiredFieldError{Field: fieldLinks})
 		return
 	}
-	in, err := previewInputFrom(req.To, (*string)(req.CommunicationContext), req.MarketingPurpose, req.ConsentPurpose, req.Evidence)
+	in, err := previewInputFrom(req.To, (*string)(req.CommunicationContext), req.MarketingPurpose, req.ConsentPurpose, req.Evidence, req.RecipientCountries)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
 	}
-	in.Subject, in.Body = deref(req.Subject), deref(req.Body)
+	in.Subject, in.Body, in.HTMLBody = deref(req.Subject), deref(req.Body), deref(req.HtmlBody)
+	in.AttachmentIDs = attachmentIDsFrom(req.AttachmentIds)
 	h.answerPreview(w, r, FromAccount(links), in)
 }
 
@@ -73,9 +76,12 @@ func (h Handlers) answerPreview(w http.ResponseWriter, r *http.Request, origin S
 // previewInputFrom decodes the claim through sendContextFrom, the same decoder
 // the real send uses, so a category this preview accepts is one the send
 // accepts and a controller-only category is refused identically.
-func previewInputFrom(to []openapi_types.Email, category, marketing, purpose *string, evidence *crmcontracts.CommunicationEvidence) (PreviewSendInput, error) {
+func previewInputFrom(to []openapi_types.Email, category, marketing, purpose *string, evidence *crmcontracts.CommunicationEvidence, countries *[]crmcontracts.RecipientCountry) (PreviewSendInput, error) {
 	claimed, err := sendContextFrom(category, marketing, nil, evidence)
 	if err != nil {
+		return PreviewSendInput{}, err
+	}
+	if claimed.evidence.RecipientCountries, err = countryOverridesFrom(countries); err != nil {
 		return PreviewSendInput{}, err
 	}
 	recipients := make([]string, 0, len(to))
@@ -102,7 +108,9 @@ func previewInputFrom(to []openapi_types.Email, category, marketing, purpose *st
 // a surface that re-derived either would be a second implementation of a rule
 // that decides whether mail reaches a contact.
 func previewResponse(preview SendPreview) crmcontracts.SendAuthorizationPreview {
-	set := preview.Decisions
+	// In the order the review and the 409 rank refusals, so the first refused
+	// recipient is the one every surface explains.
+	set := preview.Decisions.RankedForSender()
 	out := crmcontracts.SendAuthorizationPreview{
 		Allowed:         set.Allowed(),
 		Recipients:      make([]crmcontracts.SendAuthorizationPreviewRecipient, 0, len(set.Decisions)),
@@ -113,17 +121,10 @@ func previewResponse(preview SendPreview) crmcontracts.SendAuthorizationPreview 
 			Address:    openapi_types.Email(d.Recipient.Email),
 			Verdict:    crmcontracts.SendAuthorizationPreviewRecipientVerdict(d.Verdict),
 			ReasonCode: d.ReasonCode,
+			Provision:  commsauthzwire.Provision(d.ProvisionFor(d.ReasonCode)),
 		}
 		if len(d.Evidence.FooterFindings) > 0 {
-			findings := make([]crmcontracts.FooterFinding, 0, len(d.Evidence.FooterFindings))
-			for _, finding := range d.Evidence.FooterFindings {
-				wireFinding := crmcontracts.FooterFinding(finding)
-				if wireFinding.MissingMeans == nil {
-					wireFinding.MissingMeans = []string{}
-				}
-				findings = append(findings, wireFinding)
-			}
-			entry.FooterFindings = &findings
+			entry.FooterFindings = commsauthzwire.FooterFindings(d.Evidence.FooterFindings)
 		}
 		if preview.readableSubjects[previewSubject{kind: d.SubjectKind, id: d.SubjectID}] {
 			entry.EvidenceSubject = &crmcontracts.CommunicationEvidenceSubject{
@@ -212,6 +213,7 @@ func wireContentFindings(findings []DraftContentFinding) *[]crmcontracts.DraftCo
 			country := f.Country
 			wire.Country = &country
 		}
+		wire.Provision = commsauthzwire.Provision(f.Provision)
 		out = append(out, wire)
 	}
 	return &out

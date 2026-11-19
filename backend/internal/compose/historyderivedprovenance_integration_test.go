@@ -51,10 +51,10 @@ func TestAHistoryMintedContactDoesNotTurnItsLiveMailIntoHistory(t *testing.T) {
 	if _, err := capture.NewSettings(NewSettingsStore(b.env.Pool), StoredConfig(b.env.Pool)).Update(b.env.Admin(), capture.SettingsPatch{MailSharing: new(true), SignatureEnrich: new(true)}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := b.registry.SetMailPosture(b.human, "gmail", "classified", false); err != nil {
+	if _, err := b.registry.SetMailPosture(b.human, capture.ProviderMailbox("gmail"), "classified", false); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := b.registry.SetSignatureEnrichment(b.human, "gmail", new(true)); err != nil {
+	if _, err := b.registry.SetSignatureEnrichment(b.human, capture.ProviderMailbox("gmail"), new(true)); err != nil {
 		t.Fatal(err)
 	}
 	run := strandedBackfill(t, b)

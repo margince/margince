@@ -123,7 +123,7 @@ func TestArchivingADealFreezesRelistingItsDocumentAndNeverDelisting(t *testing.T
 	filed, err := files.UploadAttachment(ctx, activities.AttachmentInput{
 		EntityType: "deal", EntityID: deal,
 		Filename: "msa.pdf", ContentType: "application/pdf",
-		Content: strings.NewReader("PDF-BYTES"),
+		Content: strings.NewReader("%PDF-1.4 BYTES"),
 	})
 	if err != nil {
 		t.Fatalf("filing the document: %v", err)

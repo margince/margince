@@ -63,7 +63,7 @@ func admissionRunWith(t *testing.T, provider connector.Connector) (context.Conte
 	if !ok {
 		t.Fatal("actor not bound")
 	}
-	run, err := reg.StartBackfill(ctx, "gmail", ids.From[ids.UserKind](actor.UserID), 3, connector.BackfillEstimate{Messages: 100},
+	run, err := reg.StartBackfill(ctx, capture.ProviderMailbox("gmail"), ids.From[ids.UserKind](actor.UserID), 3, connector.BackfillEstimate{Messages: 100},
 		func(context.Context, pgx.Tx, ids.UUID) error { return nil })
 	if err != nil {
 		t.Fatal(err)
@@ -192,7 +192,7 @@ func TestHoldAndLowerLimitPreserveTheQueuedRunsRetryDeadline(t *testing.T) {
 	if !ok {
 		t.Fatal("actor not bound")
 	}
-	second, err := registry.StartBackfill(ctx, "graph", ids.From[ids.UserKind](actor.UserID), 3, connector.BackfillEstimate{Messages: 100},
+	second, err := registry.StartBackfill(ctx, capture.ProviderMailbox("graph"), ids.From[ids.UserKind](actor.UserID), 3, connector.BackfillEstimate{Messages: 100},
 		func(context.Context, pgx.Tx, ids.UUID) error { return nil })
 	if err != nil {
 		t.Fatal(err)

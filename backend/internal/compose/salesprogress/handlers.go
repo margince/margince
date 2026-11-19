@@ -29,6 +29,8 @@ type Reading struct {
 	Reports *reporting.Service
 	// Deals lists the open work, under the deal list's own row scope and masks.
 	Deals *deals.Store
+	// Forecast reads a month's forecast for its scenarios; nil reads none.
+	Forecast ForecastReader
 }
 
 // GetSalesProgress answers closed revenue against the goal for one period.
@@ -176,6 +178,9 @@ func (h Reading) read(ctx context.Context, tx pgx.Tx, params crmcontracts.GetSal
 		return out, err
 	}
 	if err := h.fillItems(ctx, tx, headline, &out); err != nil {
+		return out, err
+	}
+	if err := h.fillScenarios(ctx, tx, frame, &out); err != nil {
 		return out, err
 	}
 	if scope.Kind == crmcontracts.ReportingScopeKindOwner {

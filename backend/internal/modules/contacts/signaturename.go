@@ -13,6 +13,7 @@ import (
 	"unicode"
 
 	"github.com/margince/margince/backend/internal/platform/evidencefold"
+	"github.com/margince/margince/backend/internal/platform/namematch"
 )
 
 // The orders a signature reading may report.
@@ -62,7 +63,7 @@ func MapSignatureName(p SignatureNameParts) (SignatureName, bool) {
 		words = append(words, strings.Fields(part)...)
 	}
 	for _, word := range words {
-		if !isWordLike(word) {
+		if !namematch.IsWordLike(word) {
 			return SignatureName{}, false
 		}
 	}

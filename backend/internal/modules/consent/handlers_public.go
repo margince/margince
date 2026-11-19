@@ -15,7 +15,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -49,7 +48,7 @@ func (h Handlers) OneClickUnsubscribe(w http.ResponseWriter, r *http.Request, to
 		httperr.Write(w, r, err)
 		return
 	}
-	subject, scoped, viaCredential, err := h.oneClickSubject(r.Context(), token, params)
+	press, err := h.oneClickSubject(r.Context(), token, params)
 	if errors.Is(err, errNoConsentSubject) {
 		// A lead or a bare address: no per-purpose state exists to withdraw,
 		// so the press records a stop instead. See StopForCredentialTx.
@@ -60,7 +59,7 @@ func (h Handlers) OneClickUnsubscribe(w http.ResponseWriter, r *http.Request, to
 		writeConsentErr(w, r, err)
 		return
 	}
-	withdrawn, err := h.unsubscribe(r.Context(), subject, scoped, viaCredential)
+	withdrawn, err := h.unsubscribe(r.Context(), press)
 	if err != nil {
 		writeConsentErr(w, r, err)
 		return
@@ -68,7 +67,7 @@ func (h Handlers) OneClickUnsubscribe(w http.ResponseWriter, r *http.Request, to
 	if withdrawn == nil {
 		withdrawn = []string{}
 	}
-	httperr.WriteJSON(w, http.StatusOK, map[string]any{"unsubscribed": answeredKeys(withdrawn, viaCredential)})
+	httperr.WriteJSON(w, http.StatusOK, map[string]any{"unsubscribed": answeredKeys(withdrawn, press.viaCredential)})
 }
 
 // answeredKeys decides how much of the outcome the press is told back.
@@ -109,98 +108,91 @@ func answeredKeys(withdrawn []string, viaCredential bool) []string {
 // constant is enough and a real key would defeat the point.
 const withdrawalStoppedPlaceholder = "stopped"
 
-// unsubscribe stops what this press asked to stop.
+// oneClickPress is what a resolved press may stop.
+type oneClickPress struct {
+	contactID ids.ContactID
+	// credentialPurpose is the purpose a named credential was minted for. When
+	// set it binds: the press stops that purpose by id and nothing else.
+	credentialPurpose ids.UUID
+	// requested is the key the query string names, empty when it names none.
+	requested     string
+	viaCredential bool
+}
+
+// unsubscribe stops what this press may stop.
 //
-// A named purpose is taken as given — it is the one the message was sent
-// under, and the mailbox provider naming it must not be second-guessed.
+// A named credential stops its own purpose, looked up by id. A key would be
+// re-derived, and a stored key that no longer matches would widen the press.
+//
+// Any other press naming a key stops that purpose when the key passes the
+// store's test, and all marketing otherwise. See PublicStopNamedOrAll.
 //
 // Unnamed means "all of it", and the store decides WHICH inside the
-// transaction that withdraws them. Choosing here would be a selection made in
-// one transaction and acted on in another, and a purpose granted in that
-// window would survive the press that reported success.
-func (h Handlers) unsubscribe(
-	ctx context.Context, contactID ids.ContactID, params crmcontracts.OneClickUnsubscribeParams,
-	viaCredential bool,
-) ([]string, error) {
-	if params.Purpose != nil && strings.TrimSpace(*params.Purpose) != "" {
-		named := strings.ToLower(strings.TrimSpace(*params.Purpose))
-		if viaCredential {
-			// THE CREDENTIAL'S SCOPE BOUNDS WHAT THE REQUEST MAY NAME. A
-			// named-purpose credential has already had its own key written
-			// into params by oneClickSubject, so reaching here with a
-			// different one is impossible; an ALL-MARKETING credential,
-			// though, would otherwise stop whatever the query string asked
-			// for — including business correspondence, which is the thing the
-			// class filter below exists to spare. The scope says marketing,
-			// so a purpose outside that class is beyond the link's authority.
-			return h.store.WithdrawMarketingNamed(ctx, contactID, named)
-		}
-		return h.store.PublicWithdrawAll(ctx, contactID, []string{named})
+// transaction that withdraws them. A selection made in an earlier transaction
+// would miss a purpose granted in between.
+func (h Handlers) unsubscribe(ctx context.Context, press oneClickPress) ([]string, error) {
+	switch {
+	case !press.credentialPurpose.IsZero():
+		return h.store.PublicWithdrawPurposeID(ctx, press.contactID, press.credentialPurpose)
+	case press.requested != "":
+		return h.store.PublicStopNamedOrAll(ctx, press.contactID, press.requested, press.viaCredential)
 	}
 	// BOTH CREDENTIAL FAMILIES STOP THE SAME THING, which is what an
-	// unsubscribe means: the marketing classes and nothing else. No branch on
-	// which link carried the press, because the answer no longer differs.
-	//
-	// It used to. The legacy sweep stopped every purpose except the locked
-	// transactional one, so a press there also ended business correspondence —
-	// a contact who unsubscribed from a newsletter stopped receiving replies to
-	// their own enquiries. Narrowing it changes what links already sitting in
-	// mailboxes do, and that is the point: those links say "unsubscribe", and
-	// stopping somebody's replies was never what they offered.
+	// unsubscribe means: the marketing classes and nothing else.
 	//
 	// A subject who wants everything stopped has a different route, and it is a
 	// different legal act: an Art. 21 objection recorded as a subject_request
 	// suppression, not a withdrawal of a consent that was never the basis for
 	// those messages.
-	return h.store.PublicStopAllMarketing(ctx, contactID)
+	return h.store.PublicStopAllMarketing(ctx, press.contactID)
 }
 
 // oneClickSubject resolves the press to the contact it acts for, accepting a
 // preference token OR a withdrawal credential.
 //
-// BOTH FAMILIES, because the whole point of the credential is that the link in
-// an old message keeps working after the preference token that rode with it has
-// rotated. A press is a press; which credential carried it is our bookkeeping,
-// not the recipient's problem.
+// Both families, so the link in an old message keeps working after the
+// preference token that rode with it has rotated.
 //
-// THE CREDENTIAL'S SCOPE OVERRIDES A NAMED PURPOSE from the query string. A
-// named-purpose credential may stop the one subscription it was minted for and
-// nothing else, so a request naming a different purpose is refused rather than
-// quietly widened — a link that stopped more than it was for would be acting
-// beyond the authority the recipient was handed.
+// The credential's scope overrides a purpose the query string names. A named
+// credential stops only its own purpose. A request naming another is refused.
 func (h Handlers) oneClickSubject(
 	ctx context.Context, token string, params crmcontracts.OneClickUnsubscribeParams,
-) (ids.ContactID, crmcontracts.OneClickUnsubscribeParams, bool, error) {
-	if ref, err := h.store.ResolvePreferenceToken(ctx, token); err == nil {
-		return ref.ContactID, params, false, nil
+) (oneClickPress, error) {
+	press := oneClickPress{}
+	if params.Purpose != nil {
+		press.requested = normalizedPurposeKey(*params.Purpose)
 	}
+	if ref, err := h.store.ResolvePreferenceToken(ctx, token); err == nil {
+		press.contactID = ref.ContactID
+		return press, nil
+	}
+	press.viaCredential = true
 	ref, err := h.store.ResolveWithdrawalToken(ctx, token)
 	if err != nil {
-		return ids.ContactID{}, params, false, err
+		return press, err
 	}
 	if ref.ContactID.IsZero() {
 		// A lead-only or address-only credential. Withdrawing a per-purpose
 		// consent state needs a contact to hold it, and there is none — so the
-		// caller records a stop rather than refusing. Answering 404 here, as
-		// this did first, handed a lead a link that resolved and then said no,
-		// which defeats the mint that issued it.
-		return ids.ContactID{}, params, true, errNoConsentSubject
+		// caller records a stop rather than refusing.
+		return press, errNoConsentSubject
 	}
+	press.contactID = ref.ContactID
 	if ref.Scope == WithdrawalScopeNamedPurpose {
 		named, err := h.store.purposeKeyByID(ctx, ref.PurposeID)
 		if err != nil {
-			return ids.ContactID{}, params, true, err
+			return press, err
 		}
-		if params.Purpose != nil && !strings.EqualFold(strings.TrimSpace(*params.Purpose), named) {
-			return ids.ContactID{}, params, true, &ValidationError{
+		if press.requested != "" && press.requested != normalizedPurposeKey(named) {
+			return press, &ValidationError{
 				Field: fieldKeyPurpose,
 				Reason: "this unsubscribe link stops one named subscription, and the request names " +
 					"a different one",
 			}
 		}
-		params.Purpose = &named
+		press.credentialPurpose = ref.PurposeID
 	}
-	return ref.ContactID, params, true, nil
+	return press, nil
 }
 
 // errNoConsentSubject says the credential names nobody who can hold a

@@ -42,7 +42,8 @@ func (b HistoryBaseline) Excludes(at time.Time) (bool, error) {
 
 // SetHistoryBaseline sets or, with a nil date, clears the calling user's own
 // baseline for one mailbox. It completes, deletes and rewrites nothing else.
-func (r *Registry) SetHistoryBaseline(ctx context.Context, name string, date *time.Time, timezone string) (ConnectionView, error) {
+func (r *Registry) SetHistoryBaseline(ctx context.Context, mb Mailbox, date *time.Time, timezone string) (ConnectionView, error) {
+	name := mb.Provider
 	actor, ok := principal.Actor(ctx)
 	if !ok || !actor.HumanOrItsAgent() {
 		return ConnectionView{}, fmt.Errorf("capture: only a user or their agent sets a mailbox's history baseline: %w", apperrors.ErrPermissionDenied)
@@ -57,7 +58,11 @@ func (r *Registry) SetHistoryBaseline(ctx context.Context, name string, date *ti
 		}
 		after = &HistoryBaseline{Date: storekit.AsDate(*date), Timezone: timezone, SetBy: actor.ID, SetAt: time.Now().UTC()}
 	}
-	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
+	match, err := r.resolveMemberMailbox(ctx, actor.UserID, mb)
+	if err != nil {
+		return ConnectionView{}, err
+	}
+	err = r.db.Tx(ctx, func(tx pgx.Tx) error {
 		var before historyBaselineColumns
 		// The before-image comes out of the statement that replaces it, as the
 		// sibling mailbox settings do.
@@ -65,10 +70,10 @@ func (r *Registry) SetHistoryBaseline(ctx context.Context, name string, date *ti
 			UPDATE capture_connection
 			   SET history_baseline_date = $3, history_baseline_tz = $4,
 			       history_baseline_set_by = $5, history_baseline_set_at = $6
-			 WHERE user_id = $1 AND provider = $2 AND archived_at IS NULL
+			 WHERE `+match.where+` AND archived_at IS NULL
 			RETURNING (SELECT c.history_baseline_date FROM capture_connection c WHERE c.id = capture_connection.id),
 			          (SELECT c.history_baseline_tz FROM capture_connection c WHERE c.id = capture_connection.id)`,
-			append([]any{actor.UserID, name}, historyBaselineArgs(after)...)...).Scan(&before.date, &before.timezone)
+			append(append([]any{}, match.args...), historyBaselineArgs(after)...)...).Scan(&before.date, &before.timezone)
 		if err != nil {
 			return err
 		}
@@ -84,7 +89,7 @@ func (r *Registry) SetHistoryBaseline(ctx context.Context, name string, date *ti
 	if err != nil {
 		return ConnectionView{}, fmt.Errorf("capture: setting the mailbox's history baseline: %w", err)
 	}
-	return r.connectionFor(ctx, name)
+	return r.connectionFor(ctx, match.id)
 }
 
 // historyBaselineColumns scans the four nullable columns one baseline is stored in.

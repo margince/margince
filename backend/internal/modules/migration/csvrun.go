@@ -248,7 +248,7 @@ func (s *RunStore) ListStaged(ctx context.Context, cursor string, limit int, vie
 		where += storekit.SQLf(` AND status = $%d`, arg(StatusPending))
 	}
 	if cursor != "" {
-		after, err := storekit.DecodeCursor(cursor)
+		after, err := storekit.DecodeCursor("csv_import_rows", cursor)
 		if err != nil {
 			return nil, storekit.Page{}, err
 		}
@@ -280,7 +280,7 @@ func (s *RunStore) ListStaged(ctx context.Context, cursor string, limit int, vie
 	}
 	runs = runs[:limit]
 	last := runs[limit-1]
-	next, err := storekit.EncodeCursor(last.CreatedAt, last.ID)
+	next, err := storekit.EncodeCursor("csv_import_rows", last.CreatedAt, last.ID)
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}

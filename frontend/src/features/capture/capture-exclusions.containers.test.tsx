@@ -61,10 +61,13 @@ describe("the container kind", () => {
     // The provider-qualified TOKEN is stored, never the display name: a
     // rename must not silently re-point a rule. And the scope is the
     // reader's own, because a label means nothing in anybody else's mailbox.
+    // It names the mailbox it was picked from: the same id is another label
+    // in the reader's other mailbox.
     expect(posted?.body).toMatchObject({
       kind: "container",
       value: "gmail:Label_7",
       scope: "user",
+      connection_id: "conn-1",
     });
   });
 

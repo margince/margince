@@ -41,10 +41,7 @@ const (
 // statement from "there were none", and the direction to fail in is toward
 // keeping the message.
 func internalOnlyTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) (bool, error) {
-	if _, ok := rec.Fields.(ActivityFields); !ok {
-		return false, nil
-	}
-	if len(rec.Addresses) == 0 || rec.PartiesIncomplete {
+	if !partiesReadable(rec) {
 		return false, nil
 	}
 	own, err := TrustedOwnDomainsTx(ctx, tx)
@@ -83,6 +80,13 @@ func internalOnlyTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedReco
 		return true, nil
 	}
 	return calendarOwnerDomainProvesInternalTx(ctx, tx, own, rec.OwnerDomainOnly)
+}
+
+// partiesReadable reports an activity record whose connector enumerated every
+// party. Only such a record can be judged by who was on it.
+func partiesReadable(rec connector.NormalizedRecord) bool {
+	_, ok := rec.Fields.(ActivityFields)
+	return ok && len(rec.Addresses) > 0 && !rec.PartiesIncomplete
 }
 
 // calendarOwnerDomainProvesInternalTx answers whether a meeting whose parties

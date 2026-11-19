@@ -110,7 +110,7 @@ func connectThenDemote(t *testing.T) *demotedFixture {
 func TestARefusedMembersImportPreviewUnsealsNothingAndAsksNoProvider(t *testing.T) {
 	f := connectThenDemote(t)
 
-	_, err := f.reg.EstimateBackfill(f.ctx, "gmail", f.user, 6)
+	_, err := f.reg.EstimateBackfill(f.ctx, capture.ProviderMailbox("gmail"), f.user, 6)
 
 	if _, refused := errors.AsType[*capture.RoleCannotCaptureError](err); !refused {
 		t.Fatalf("EstimateBackfill = %v, want the role refusal", err)

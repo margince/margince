@@ -31,6 +31,7 @@ export type AssignableRole = components["schemas"]["AssignableRole"];
 export type Role = components["schemas"]["Role"];
 export type ObjectGrant = components["schemas"]["RbacObjectGrant"];
 export type RowScope = Role["row_scope"];
+export type RoleDirectory = components["schemas"]["RoleDirectory"];
 
 /** The query key every read of the assignable roles shares. */
 export const ASSIGNABLE_ROLES_KEY = ["assignable-roles"] as const;
@@ -109,18 +110,43 @@ export function rolesKey(includeArchived: boolean) {
  * asked.
  */
 export function useRoles(enabled: boolean, includeArchived = false) {
+  return useRoleDirectory(
+    enabled,
+    includeArchived,
+    (directory) => directory.roles,
+  );
+}
+
+/**
+ * The verbs each object offers a role, as the server draws them: an object
+ * that offers no Delete has no Delete switch. Read from the directory the
+ * roles come from, so the two never disagree.
+ */
+export function useRoleVerbs(enabled: boolean, includeArchived = false) {
+  return useRoleDirectory(
+    enabled,
+    includeArchived,
+    (directory) => directory.verbs,
+  );
+}
+
+// One cached read of the directory, which `select` narrows for each caller.
+function useRoleDirectory<Selected>(
+  enabled: boolean,
+  includeArchived: boolean,
+  select: (directory: RoleDirectory) => Selected,
+) {
   return useQuery({
     queryKey: rolesKey(includeArchived),
     enabled,
-    queryFn: async (): Promise<readonly Role[]> => {
+    select,
+    queryFn: async (): Promise<RoleDirectory> =>
       // The flag rides only when asked: the live read is the plain URL.
-      const data = unwrap(
+      unwrap(
         await api.GET("/roles", {
           params: { query: includeArchived ? { include_archived: true } : {} },
         }),
-      );
-      return data.roles;
-    },
+      ),
   });
 }
 
@@ -152,8 +178,15 @@ function refreshReadersOfRoles(client: QueryClient) {
 
 // Puts the role a write answered with into every directory read.
 function replaceRole(client: QueryClient, role: Role) {
-  client.setQueriesData<readonly Role[]>({ queryKey: ROLES_KEY }, (roles) =>
-    roles?.map((existing) => (existing.key === role.key ? role : existing)),
+  client.setQueriesData<RoleDirectory>(
+    { queryKey: ROLES_KEY },
+    (directory) =>
+      directory && {
+        ...directory,
+        roles: directory.roles.map((existing) =>
+          existing.key === role.key ? role : existing,
+        ),
+      },
   );
 }
 
@@ -206,6 +239,8 @@ const ROLE_REFUSAL: Readonly<Record<string, MessageKey>> = {
   system_role: "roles.refusal.system",
   admin_role_floor: "roles.refusal.adminFloor",
   role_name_taken: "roles.refusal.nameTaken",
+  write_needs_read: "roles.refusal.writeNeedsRead",
+  custom_role: "roles.refusal.customRole",
 };
 
 /**
@@ -280,12 +315,16 @@ export function useCreateRole() {
 // Puts a newly made role into every directory read, in the server's key order:
 // keys are ASCII and the server sorts them bytewise, not by any locale.
 function addRole(client: QueryClient, role: Role) {
-  client.setQueriesData<readonly Role[]>({ queryKey: ROLES_KEY }, (roles) =>
-    roles === undefined || roles.some((existing) => existing.key === role.key)
-      ? roles
-      : [...roles, role].sort((left, right) =>
-          left.key < right.key ? -1 : Number(left.key > right.key),
-        ),
+  client.setQueriesData<RoleDirectory>({ queryKey: ROLES_KEY }, (directory) =>
+    directory === undefined ||
+    directory.roles.some((existing) => existing.key === role.key)
+      ? directory
+      : {
+          ...directory,
+          roles: [...directory.roles, role].sort((left, right) =>
+            left.key < right.key ? -1 : Number(left.key > right.key),
+          ),
+        },
   );
 }
 
@@ -309,6 +348,30 @@ export function useMoveRole() {
     },
     // The answer carries the role's new version; the next write on it must
     // send that one, so the directory takes it before the refetch lands.
+    onSuccess: (role) => replaceRole(client, role),
+    onSettled: () => refreshAfterRoleEdit(client),
+  });
+}
+
+/**
+ * Puts a shipped role's grants back to the ones the product ships. The server
+ * answers with the whole role, which every directory read takes verbatim.
+ */
+export function useRestoreRoleGrants() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      roleKey: string;
+      version: number;
+    }): Promise<Role> =>
+      unwrap(
+        await api.POST("/roles/{key}/restore-grants", {
+          params: {
+            path: { key: input.roleKey },
+            ...ifMatch(input.version),
+          },
+        }),
+      ),
     onSuccess: (role) => replaceRole(client, role),
     onSettled: () => refreshAfterRoleEdit(client),
   });

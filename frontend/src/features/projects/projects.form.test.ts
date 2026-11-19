@@ -44,7 +44,16 @@ describe("projectFields", () => {
       "company_id",
       "owner_id",
       "description",
+      "started_at",
       "target_end_date",
+    ]);
+    expect(edit.map((field) => field.key)).toEqual([
+      "name",
+      "owner_id",
+      "description",
+      "started_at",
+      "target_end_date",
+      "ended_at",
     ]);
     expect(edit.map((field) => field.key)).not.toContain("company_id");
     expect(edit.map((field) => field.key)).toContain("owner_id");
@@ -60,6 +69,7 @@ describe("mapProjectCreate / mapProjectUpdate", () => {
         company_id: "o-1",
         owner_id: "",
         description: "",
+        started_at: "2026-10-01",
         target_end_date: "2026-12-31",
       }),
     ).toEqual({
@@ -67,6 +77,7 @@ describe("mapProjectCreate / mapProjectUpdate", () => {
       company_id: "o-1",
       owner_id: null,
       description: null,
+      started_at: "2026-10-01",
       target_end_date: "2026-12-31",
       key: "RO",
       phase: null,
@@ -81,13 +92,17 @@ describe("mapProjectCreate / mapProjectUpdate", () => {
       key: "ACME",
       owner_id: "",
       description: "Phase two",
+      started_at: "2026-10-20",
       target_end_date: "",
+      ended_at: "",
     });
     expect(patch).toEqual({
       name: undefined,
       owner_id: null,
       description: "Phase two",
+      started_at: "2026-10-20",
       target_end_date: null,
+      ended_at: null,
     });
     expect("phase" in patch).toBe(false);
   });

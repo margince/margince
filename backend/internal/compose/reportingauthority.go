@@ -12,6 +12,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/forecasting"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -181,7 +182,7 @@ func (a reportingAuthority) ValidateFramework(ctx context.Context, tx pgx.Tx, in
 		if err := reportingPipeline(ctx, tx, capture.PipelineId); err != nil {
 			return err
 		}
-		key := reportingCaptureKey(capture)
+		key := forecasting.CaptureContextKey(capture)
 		if contexts[key] {
 			return httperr.Validation("capture_contexts", "duplicate", "choose each capture context once")
 		}

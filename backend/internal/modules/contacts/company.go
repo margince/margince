@@ -76,6 +76,9 @@ func (s *Store) CreateCompany(ctx context.Context, in CreateCompanyInput) (crmco
 	var out crmcontracts.Company
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		var err error
+		if err = s.refuseConsumerCompanyDomains(ctx, tx, ids.CompanyID{}, in.Domains); err != nil {
+			return err
+		}
 		out, err = createCompanyInTx(ctx, tx, in, by, active)
 		if err != nil {
 			return err

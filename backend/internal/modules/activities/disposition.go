@@ -184,7 +184,7 @@ func threadOf(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (threadIdentity
 // channel message. threadOf and ensureInboundMessage both ask it, so the two
 // verbs that judge a message agree on what one is.
 func inboundMessageShape(kind string, direction *string) error {
-	if kind != kindEmail && kind != kindMessage {
+	if kind != kindEmail && kind != KindMessage {
 		return &values.ParseError{
 			Field: "id", Code: "not_a_message",
 			Message: "only an email or a channel message carries a disposition",
@@ -199,13 +199,9 @@ func inboundMessageShape(kind string, direction *string) error {
 	return nil
 }
 
-// The other two halves of what the waiting lane reads. kindEmail is already
-// spelled in this package (pipelinefacts.go) and is reused rather than given a
-// second spelling here.
-const (
-	kindMessage      = "message"
-	directionInbound = "inbound"
-)
+// directionInbound is what the waiting lane reads beside the two message kinds,
+// kindEmail (pipelinefacts.go) and KindMessage (channelvocabulary.go).
+const directionInbound = "inbound"
 
 // SnoozeMessage puts one message down for this reader until its reopen
 // condition is met.

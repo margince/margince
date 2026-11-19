@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -31,6 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
+	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 )
 
 // lawfulBasisWarning names the warning in the audit row's after image.
@@ -49,6 +51,9 @@ const confirmationLifetime = 15 * time.Minute
 type ConfirmedSubject struct {
 	Kind string
 	ID   ids.UUID
+	// Stated is the country the sender stated for this recipient on the
+	// message, nil when they stated none. An empty Country is one cleared.
+	Stated *commsauthz.CountryOverride
 }
 
 // ConfirmSendWithoutLawfulBasis records that the signed-in user read the
@@ -104,8 +109,7 @@ func (s *Store) confirmOneTx(ctx context.Context, tx pgx.Tx, user ids.UUID, subj
 	if err := requireSubjectVisible(ctx, tx, subject); err != nil {
 		return false, err
 	}
-	who := ruleSubject{Kind: subject.Kind, ID: subject.ID.String()}
-	country, err := recipientCountryTx(ctx, tx, who)
+	country, err := confirmedCountryTx(ctx, tx, subject)
 	if err != nil {
 		return false, err
 	}
@@ -116,8 +120,9 @@ func (s *Store) confirmOneTx(ctx context.Context, tx pgx.Tx, user ids.UUID, subj
 	var open bool
 	if err := tx.QueryRow(ctx, `
 		SELECT EXISTS (SELECT 1 FROM lawful_basis_confirmation
-		                WHERE `+column+` = $1 AND confirmed_by = $2 AND spent_at IS NULL AND expires_at > now())`,
-		subject.ID, user).Scan(&open); err != nil {
+		                WHERE `+column+` = $1 AND confirmed_by = $2 AND country = $3
+		                  AND spent_at IS NULL AND expires_at > now())`,
+		subject.ID, user, string(country.Code)).Scan(&open); err != nil {
 		return false, fmt.Errorf("consent: reading the open confirmation: %w", err)
 	}
 	if open {
@@ -125,15 +130,27 @@ func (s *Store) confirmOneTx(ctx context.Context, tx pgx.Tx, user ids.UUID, subj
 	}
 	var id ids.UUID
 	if err := tx.QueryRow(ctx, `
-		INSERT INTO lawful_basis_confirmation (`+column+`, confirmed_by, expires_at)
-		VALUES ($1, $2, now() + $3::interval) RETURNING id`,
-		subject.ID, user, confirmationLifetime.String()).Scan(&id); err != nil {
+		INSERT INTO lawful_basis_confirmation (`+column+`, confirmed_by, expires_at, country)
+		VALUES ($1, $2, now() + $3::interval, $4) RETURNING id`,
+		subject.ID, user, confirmationLifetime.String(), string(country.Code)).Scan(&id); err != nil {
 		return false, fmt.Errorf("consent: recording the confirmation: %w", err)
 	}
 	_, err = storekit.AuditEvent(ctx, tx, "approve", subject.Kind, subject.ID, map[string]any{
 		"warning": lawfulBasisWarning, "confirmation_id": id, "country": string(country.Code),
+		"country_source": string(country.Source),
 	})
 	return err == nil, err
+}
+
+// confirmedCountryTx is the country the warning was shown under: the one the
+// sender stated for the message, else the record's, as the preview read it.
+func confirmedCountryTx(ctx context.Context, tx pgx.Tx, subject ConfirmedSubject) (RecipientCountry, error) {
+	if subject.Stated != nil {
+		if stated, ok := statedCountryOf(*subject.Stated); ok {
+			return stated, nil
+		}
+	}
+	return recipientCountryTx(ctx, tx, ruleSubject{Kind: subject.Kind, ID: subject.ID.String()})
 }
 
 // confirmationColumn is the subject column of lawful_basis_confirmation, a
@@ -160,9 +177,9 @@ func requireConfirmationTx(ctx context.Context, tx pgx.Tx, d commsauthz.Decision
 			UPDATE lawful_basis_confirmation SET spent_at = now(), delivery_id = $3
 			 WHERE id = (SELECT id FROM lawful_basis_confirmation
 			              WHERE `+confirmationColumn(d.SubjectKind)+` = $1 AND confirmed_by = $2
-			                AND spent_at IS NULL AND expires_at > now()
+			                AND country = $4 AND spent_at IS NULL AND expires_at > now()
 			              ORDER BY confirmed_at DESC LIMIT 1 FOR UPDATE)
-			RETURNING id`, d.SubjectID, user, deliveryID).Scan(&spent)
+			RETURNING id`, d.SubjectID, user, deliveryID, d.Country).Scan(&spent)
 		if err == nil {
 			return d, nil
 		}
@@ -189,6 +206,19 @@ func confirmingUser(ctx context.Context) ids.UUID {
 	return ids.UUID{}
 }
 
+// statedCountryFromWire reads a stated country, null for one cleared. A code
+// that is not a country is refused: read as cleared, it would drop a warning.
+func statedCountryFromWire(country *string) (commsauthz.CountryOverride, error) {
+	if country == nil {
+		return commsauthz.CountryOverride{}, nil
+	}
+	code := jurisdiction.Code(strings.ToLower(strings.TrimSpace(*country)))
+	if code.Validate() != nil {
+		return commsauthz.CountryOverride{}, &ValidationError{Field: fieldSubjects, Reason: "a stated country is a two-letter ISO 3166-1 code or null"}
+	}
+	return commsauthz.CountryOverride{Country: string(code)}, nil
+}
+
 // ConfirmSendWithoutLawfulBasis serves POST /lawful-basis-confirmations.
 func (h Handlers) ConfirmSendWithoutLawfulBasis(w http.ResponseWriter, r *http.Request) {
 	var req crmcontracts.LawfulBasisConfirmationRequest
@@ -197,7 +227,16 @@ func (h Handlers) ConfirmSendWithoutLawfulBasis(w http.ResponseWriter, r *http.R
 	}
 	subjects := make([]ConfirmedSubject, 0, len(req.Subjects))
 	for _, s := range req.Subjects {
-		subjects = append(subjects, ConfirmedSubject{Kind: string(s.EntityType), ID: ids.UUID(s.EntityId)})
+		subject := ConfirmedSubject{Kind: string(s.EntityType), ID: ids.UUID(s.EntityId)}
+		if s.StatedCountry != nil {
+			stated, err := statedCountryFromWire(s.StatedCountry.Country)
+			if err != nil {
+				httperr.Write(w, r, err)
+				return
+			}
+			subject.Stated = &stated
+		}
+		subjects = append(subjects, subject)
 	}
 	confirmed, err := h.store.ConfirmSendWithoutLawfulBasis(r.Context(), subjects)
 	if err != nil {

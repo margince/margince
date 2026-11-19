@@ -48,8 +48,15 @@ var contactUnarchive = storekit.UnarchiveShape{
 		LIMIT 1`,
 	TakenFrom: tableContactEmail, TakenField: takenEmail,
 	Children: []storekit.ChildRestore{
-		{Table: tableContactEmail, Statement: `UPDATE contact_email SET archived_at = NULL WHERE id = $1 AND archived_at = $2`},
-		{Table: tableContactPhone, Statement: `UPDATE contact_phone p SET archived_at = NULL
+		{Table: tableContactEmail, Statement: `UPDATE contact_email e SET archived_at = NULL,
+			is_primary = e.is_primary AND NOT EXISTS (SELECT 1 FROM contact_email o
+			  WHERE o.contact_id = e.contact_id AND o.id <> e.id AND o.is_primary
+			    AND (o.archived_at IS NULL OR (o.archived_at = $2 AND (o.position, o.created_at, o.email) < (e.position, e.created_at, e.email))))
+			WHERE e.id = $1 AND e.archived_at = $2`},
+		{Table: tableContactPhone, Statement: `UPDATE contact_phone p SET archived_at = NULL,
+			is_primary = p.is_primary AND NOT EXISTS (SELECT 1 FROM contact_phone o
+			  WHERE o.contact_id = p.contact_id AND o.id <> p.id AND o.is_primary
+			    AND (o.archived_at IS NULL OR (o.archived_at = $2 AND (o.position, o.created_at, o.id) < (p.position, p.created_at, p.id))))
 			WHERE p.id = $1 AND p.archived_at = $2 AND ` + supportedSignaturePhone},
 		{Table: "contact_channel_identity", Statement: `UPDATE contact_channel_identity SET archived_at = NULL WHERE id = $1 AND archived_at = $2`},
 		{Table: tableRelationship, Statement: restoreRelationship},

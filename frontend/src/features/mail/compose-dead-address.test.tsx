@@ -14,7 +14,7 @@ import {
   allowedPreview,
   isPreviewDoor,
 } from "../../testing/sendpermission.testkit";
-import { ComposeModal } from "./compose";
+import { ComposeWindow } from "./composewindow";
 
 // The composer warns about an address that is known not to arrive.
 //
@@ -102,7 +102,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe("ComposeModal dead recipients", () => {
+describe("ComposeWindow dead recipients", () => {
   it("warns when the prefilled recipient is an address that bounces", async () => {
     stubRoutes({
       "GET /activities/act-1/reply-recipient": () =>
@@ -111,7 +111,7 @@ describe("ComposeModal dead recipients", () => {
         jsonResponse(contact360({ dead_addresses: ["anna@dead.example"] })),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -137,7 +137,7 @@ describe("ComposeModal dead recipients", () => {
         jsonResponse(contact360({ dead_addresses: ["anna@dead.example"] })),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -174,7 +174,7 @@ describe("ComposeModal dead recipients", () => {
         jsonResponse(contact360({ dead_addresses: ["anna@dead.example"] })),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -204,7 +204,7 @@ describe("ComposeModal dead recipients", () => {
         jsonResponse(contact360({ sections_omitted: ["dead_addresses"] })),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -229,7 +229,7 @@ describe("ComposeModal dead recipients", () => {
         jsonResponse(THREAD_RECIPIENT),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="deal"
         entityId="d-1"
@@ -262,7 +262,7 @@ describe("ComposeModal dead recipients", () => {
         jsonResponse(contact360({ dead_addresses: ["anna@dead.example"] })),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"
@@ -318,7 +318,7 @@ describe("ComposeModal dead recipients", () => {
         jsonResponse(contact360({ dead_addresses: ["anna@dead.example"] })),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         open
@@ -349,7 +349,7 @@ describe("ComposeModal dead recipients", () => {
         jsonResponse(contact360({ dead_addresses: ["anna@dead.example"] })),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"

@@ -123,7 +123,7 @@ func companyDocumentsQuery(ctx context.Context, companyID ids.UUID, in DocumentF
 		if err != nil {
 			return "", nil, err
 		}
-		clause, err := sort.KeysetClause(*in.Cursor, arg)
+		clause, err := sort.KeysetClause("company_documents", *in.Cursor, arg)
 		if err != nil {
 			return "", nil, err
 		}
@@ -489,7 +489,7 @@ func documentPage(ctx context.Context, last crmcontracts.Attachment) (storekit.P
 		return storekit.Page{}, err
 	}
 	pinned := strconv.FormatBool(last.Pinned != nil && *last.Pinned)
-	next, err := sort.EncodePageCursor(&pinned, last.CreatedAt, ids.UUID(last.Id))
+	next, err := sort.EncodePageCursor("company_documents", &pinned, last.CreatedAt, ids.UUID(last.Id))
 	if err != nil {
 		return storekit.Page{}, err
 	}

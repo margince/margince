@@ -1,15 +1,15 @@
 /** @vitest-environment happy-dom */
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { messageText } from "../../design-system/richtext-testing";
 import { draftButton } from "../../testing/composedraft.testkit";
-import { ComposeModal } from "./compose";
 import {
   type Activity,
   activity202,
   fillSendableForm,
   findThreadChoice,
+  installComposeClock,
   jsonResponse,
   NO_VOICE_PROFILE,
   PURPOSES,
@@ -18,6 +18,9 @@ import {
   stubRoutes,
   WHY_ASK,
 } from "./compose.testkit";
+import { ComposeWindow } from "./composewindow";
+
+beforeEach(installComposeClock);
 
 afterEach(() => {
   cleanup();
@@ -30,14 +33,14 @@ afterEach(() => {
 // These three cases check that the composer picks the right endpoint. The
 // reply path and the account path are one component, and a refactor most
 // easily breaks which endpoint it reaches for.
-describe("ComposeModal started from an account", () => {
+describe("ComposeWindow started from an account", () => {
   it("sends through POST /emails, filed under the record it started from", async () => {
     const onClose = vi.fn();
     const sent = stubRoutes({
       "POST /emails": () => jsonResponse(activity202, 202),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         open
@@ -69,7 +72,7 @@ describe("ComposeModal started from an account", () => {
       "POST /emails": () => jsonResponse(activity202, 202),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         open
@@ -95,7 +98,7 @@ describe("ComposeModal started from an account", () => {
   it("will not draft from an account until a recipient is in To", async () => {
     const sent = stubRoutes({});
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         open
@@ -187,7 +190,7 @@ describe("ComposeModal started from an account", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         intent="Discuss the renewal"
         entityType="company"
         entityId="company-1"
@@ -232,7 +235,7 @@ describe("ComposeModal started from an account", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         contactId="p-2"
@@ -280,7 +283,7 @@ describe("ComposeModal started from an account", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         open
@@ -333,7 +336,7 @@ describe("what the composer says it is answering", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         open
@@ -368,7 +371,7 @@ describe("what the composer says it is answering", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         open
@@ -397,7 +400,7 @@ describe("what the composer says it is answering", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         open
@@ -451,7 +454,7 @@ describe("what the composer says it is answering", () => {
       }),
     );
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         open
@@ -489,7 +492,7 @@ describe("what the composer says it is answering", () => {
       "POST /activities/act-latest/send-email": () => jsonResponse({}, 202),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         open
@@ -539,7 +542,7 @@ describe("what the composer says it is answering", () => {
         }),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         entityType="company"
         entityId="company-1"
         open
@@ -561,7 +564,7 @@ describe("what the composer says it is answering", () => {
       "GET /activities/act-1": () => jsonResponse(activity202),
     });
     render(
-      <ComposeModal
+      <ComposeWindow
         activityId="act-1"
         entityType="contact"
         entityId="p-1"

@@ -83,7 +83,7 @@ func TestAMergedContactsLeadIsWorkedFromTheSurvivor(t *testing.T) {
 	}
 	sourceID := ids.From[ids.ContactKind](ids.UUID(source.Id))
 	targetID := ids.From[ids.ContactKind](ids.UUID(target.Id))
-	seedHistoricalWorkedLead(e.Admin(), t, e, sourceID, contacts.CreateLeadInput{Source: "manual"})
+	seedHistoricalWorkedLead(e.Admin(), t, e, sourceID, contacts.CreateLeadInput{FullName: new("Worked Lead"), Source: "manual"})
 
 	if _, err := e.Contacts.MergeContact(e.Admin(), sourceID, targetID, nil); err != nil {
 		t.Fatalf("merging the contacts: %v", err)
@@ -103,7 +103,7 @@ func TestAMergedLeadHandsItsContactToTheSurvivor(t *testing.T) {
 		t.Fatalf("creating the contact: %v", err)
 	}
 	contactID := ids.From[ids.ContactKind](ids.UUID(contact.Id))
-	worked := seedHistoricalWorkedLead(e.Admin(), t, e, contactID, contacts.CreateLeadInput{Source: "manual"})
+	worked := seedHistoricalWorkedLead(e.Admin(), t, e, contactID, contacts.CreateLeadInput{FullName: new("Worked Lead"), Source: "manual"})
 	name, email := "Dana Example", "dana@contoso.example"
 	survivor, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{Source: "import", FullName: &name, Email: &email})
 	if err != nil {
@@ -172,7 +172,7 @@ func TestALeadWithholdsAContactItsReaderCannotOpen(t *testing.T) {
 	}
 	contactID := ids.From[ids.ContactKind](private)
 	owner := ids.From[ids.UserKind](e.Rep1)
-	lead := seedHistoricalWorkedLead(e.As(e.Rep3, nil, AdminPerms), t, e, contactID, contacts.CreateLeadInput{Source: "manual", OwnerID: &owner})
+	lead := seedHistoricalWorkedLead(e.As(e.Rep3, nil, AdminPerms), t, e, contactID, contacts.CreateLeadInput{FullName: new("Worked Lead"), Source: "manual", OwnerID: &owner})
 	rep := e.As(e.Rep1, nil, AdminPerms)
 
 	read, err := e.Contacts.GetLead(rep, ids.From[ids.LeadKind](ids.UUID(lead.Id)), storekit.LiveOnly)

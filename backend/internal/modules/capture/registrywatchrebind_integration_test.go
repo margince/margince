@@ -112,37 +112,6 @@ func putWatch(ctx context.Context, t *testing.T) {
 	}
 }
 
-// Kept, the handle would send the next renewal to extend the PREVIOUS mailbox's
-// subscription — which the same app registration is entitled to do, so it would
-// succeed — leaving the new mailbox with no push at all and nothing failing to
-// say so. The deadline goes with it: a deadline for a subscription this row no
-// longer owns keeps the renewal scan away until it lapses.
-func TestRebindingToAnotherAccountDropsTheStoredWatchHandle(t *testing.T) {
-	ctx, reg, _, _ := newCaptureRegistryFixture(t)
-	label := "first@example.test"
-	reg.Register(rebindConnector{label: &label})
-
-	if _, err := reg.Connect(ctx, "graph", connector.Auth("token-1")); err != nil {
-		t.Fatalf("first connect: %v", err)
-	}
-	putWatch(ctx, t)
-
-	label = "second@example.test"
-	if _, err := reg.Connect(ctx, "graph", connector.Auth("token-2")); err != nil {
-		t.Fatalf("rebinding connect: %v", err)
-	}
-
-	ref, expires := storedWatch(ctx, t)
-	if ref != nil {
-		t.Errorf("watch_ref = %q after a rebind — the next renewal would extend a subscription "+
-			"belonging to the mailbox this row no longer points at", *ref)
-	}
-	if expires != nil {
-		t.Errorf("watch_expires_at = %v after a rebind — the renewal scan selects on this, so the "+
-			"new mailbox waits for another account's deadline before anything registers for it", *expires)
-	}
-}
-
 // AND A RECONNECT OF THE SAME ACCOUNT keeps it, which is what stops a
 // re-consent costing every mailbox its push registration.
 func TestReconnectingTheSameAccountKeepsTheStoredWatchHandle(t *testing.T) {

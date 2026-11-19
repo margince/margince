@@ -96,6 +96,10 @@ func (s *Store) waitingQueueSlots(
 		}
 		readerAddresses = storekit.MailSeatAddressesSQL(identities, fmt.Sprintf("$%d::uuid", reader))
 	}
+	withheld, err := withheldColumns(ctx, tx, arg)
+	if err != nil {
+		return waitingSlots{}, err
+	}
 	values := []any{
 		instant, content, linkVisible, "",
 		horizon,
@@ -111,6 +115,7 @@ func (s *Store) waitingQueueSlots(
 		neverRelaxed,
 		noKeyset, bookedDiscover,
 		neverRelaxed, neverRelaxed, requestTaskDiscover,
+		withheld,
 	}
 	return waitingSlots{identities: identities, values: values}, nil
 }

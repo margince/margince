@@ -20,6 +20,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	capturemod "github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -167,7 +168,7 @@ func TestARotationThatLosesToADisconnectLandsNowhere(t *testing.T) {
 		t.Fatalf("Connect: %v", err)
 	}
 	fake.duringSync = func() {
-		if err := registry.Disconnect(grantCtx, "gmail"); err != nil {
+		if err := registry.Disconnect(grantCtx, capturemod.ProviderMailbox("gmail")); err != nil {
 			t.Errorf("mid-sync disconnect: %v", err)
 		}
 	}

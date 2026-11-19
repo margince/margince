@@ -73,7 +73,7 @@ func NewCaptureClassifier(pool *pgxpool.Pool, brain completer, log *slog.Logger)
 }
 
 // unlabeledMessage is one backlog row as the prompt sees it.
-type unlabeledMessage = activities.UnlabeledEmail
+type unlabeledMessage = activities.UnlabeledMessage
 
 // classifyResult is one model verdict.
 type classifyResult struct {
@@ -113,7 +113,7 @@ func (c *CaptureClassifier) RunWorkspace(ctx context.Context, maxLabels int) err
 	calls := newSweepCalls(maxLabels, classifyBatchSize)
 	labeled := 0
 	for labeled < maxLabels && calls.remain() {
-		batch, err := c.store.UnlabeledCaptureEmails(ctx, capturelabel.Ruleset, classifyBatchSize, classifyBodyLimit)
+		batch, err := c.store.UnlabeledCaptureMessages(ctx, capturelabel.Ruleset, classifyBatchSize, classifyBodyLimit)
 		if err != nil {
 			return fmt.Errorf("classify: reading backlog: %w", err)
 		}
@@ -232,9 +232,10 @@ func (c *CaptureClassifier) classifyEach(ctx context.Context, msgs []unlabeledMe
 // in one transaction. A label that did not apply takes no reply verdict,
 // because both are about the text read. The reply rides the label's confidence,
 // so a message below the floor stores neither. A mail with no words of its own
-// answers nothing, so it takes no reply verdict whatever the model said.
+// answers nothing, and takes no reply verdict whatever the model said. Nor does
+// a chat line, read without the line it answers.
 func (c *CaptureClassifier) commitLabel(ctx context.Context, msg unlabeledMessage, v classifyResult, judge string) (bool, error) {
-	if v.Reply == "" || msg.Body == "" {
+	if v.Reply == "" || msg.Body == "" || msg.IsChat() {
 		return c.store.SetCaptureLabel(ctx, msg.ID, v.Label, msg.Version)
 	}
 	return c.store.SetCaptureLabelAndReply(ctx, msg.ID, v.Label, msg.Version, v.Reply, judge)

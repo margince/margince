@@ -58,12 +58,12 @@ import (
 // job carries, a predicate written in the SQL, an aggregate that returns no
 // row, or authentication itself.
 //
-// So an entry added here is a security decision, and the reason has to survive
-// being read on its own: "a sweep runs it" is not one, "no row leaves this
-// call" is.
+// So an entry here is a security decision. "No row leaves this call" is a
+// reason; "a sweep runs it" is not.
 var ungatedEntryPoints = gatekit.Waive(map[string]string{
 	"internal/modules/activities:DefaultMeetingSubject":   "reads only the installation language to render the built-in booking caption, which anonymous booking pages already publish; it reads and returns no activity or account data",
 	"internal/modules/identity:EffectiveAuthorityTx":      "The same current identity authority snapshot as EffectiveAuthority, inside a caller transaction. This supplies RBAC to an admission gate, so gating it on itself would recurse; the service method also serializes the live member with mutation.",
+	"internal/modules/identity:ReadingLanguage":           "reads only the reading language of the actor it is given: that seat's own saved locale, else the installation base language through the gated settings read. It reads and returns no record, and it runs for an actor the caller has already resolved",
 	"internal/modules/identity:HeldAuthorityTx":           "The same authority snapshot as EffectiveAuthorityTx, under the shared authorization lock and with no member row lock. It supplies RBAC to the capture admission check, so gating it on itself would recurse; every role, team, seat and deactivation change takes that lock exclusively.",
 	"internal/modules/contacts:TellContactOwnerOfLead":    "the follow-up to a refusal the caller's own gated lead write produced: it acts only on a ContactHoldsIdentityError that a create behind auth.Require(lead, create) returned, and files a task for the contact's owner as the system. It reads and returns no record; the caller learns only whether the owner was told",
 	"internal/modules/contacts:TellContactOwnerOfArrival": "the same follow-up for a door that found the contact itself: the capture sink after its lead create was gated by auth.Require(lead, create), and TellContactOwnerOfLead. It reads only the contact's owner, to address the task, and returns no record",
@@ -410,7 +410,7 @@ var ungatedEntryPoints = gatekit.Waive(map[string]string{
 	"internal/modules/search:SweepWorkspaceEmbeddingDrift":   "periodic worker sweep (ADR-0069 §3a): heals identity-matched embedding gaps under the system principal, same posture as Reembed — no request, no human actor to gate",
 	"internal/modules/customfields:ActiveColumns":            "called from inside a record store's own gated Get/List/Create/Update, whose object-level RBAC already ran; the column names/types it answers are workspace-visible schema (the same shape custom_field:read already exposes), not row data a second gate would need to narrow",
 	"internal/modules/customfields:FilterableColumns":        "the filter-side twin of ActiveColumns and ungated for the same reason: it answers which cf_* columns exist and of what type — workspace-visible schema, the same shape custom_field:read already exposes — never row data a second gate would narrow. It additionally answers retired columns, which is still schema: the values behind them are reached only through a record store's own gated read",
-	"internal/modules/activities:UnlabeledCaptureEmails":     "classify-backlog read driven by the worker sweep under the workspace GUC, no human principal (ADR-0063); the rows were admitted at capture time and the labels route attention only",
+	"internal/modules/activities:UnlabeledCaptureMessages":   "classify-backlog read driven by the worker sweep under the workspace GUC, no human principal (ADR-0063); the rows were admitted at capture time and the labels route attention only",
 	"internal/modules/activities:SetCaptureLabel":            "classify verdict write driven by the worker sweep under the workspace GUC; a CAS on capture_label IS NULL that touches nothing but the two label columns — attention routing, not a record mutation (§3.2)",
 	"internal/modules/activities:MarkCaptureLabelDeclined":   "the classify sweep's own bookkeeping, driven by the worker under the workspace GUC with no human principal, same posture as SetCaptureLabel: it stamps when every rung declined to label the message and which classify prompt they declined, which removes it from that prompt's backlog; it states no verdict, discloses nothing and writes no other column",
 	"internal/modules/activities:HideCapturedNoiseTx":        "the ADR-0072 noise disposition's hide, driven by the verdict engine's system principal on the caller's transaction; its authority is the floored verdict that resolved the ledger row, and there is no human principal in a sweep for object-RBAC to admit — the write is idempotent, reversible, and touches only archived_at",

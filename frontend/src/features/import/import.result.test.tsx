@@ -7,6 +7,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { meFixture, READS_RECORDS } from "../../testing/mefixture";
 import { recordNamesAnswer } from "../../testing/recordnames.testkit";
 import {
   dryRun,
@@ -152,6 +153,16 @@ describe("the import and its result", () => {
                 : undefined,
           }),
         "GET /imports/r1": () => jsonResponse({ ...run, id: "r1", status }),
+        "GET /me": () =>
+          jsonResponse(
+            meFixture({
+              roles: ["admin"],
+              allow: {
+                ...READS_RECORDS,
+                import_run: ["create", "update", "read"],
+              },
+            }),
+          ),
         "GET /records/references": (url) =>
           recordNamesAnswer(url, { lead: { "l-1": "Jo Tran" } }) ??
           jsonResponse({ data: [] }),

@@ -53,6 +53,7 @@ func offThreadAnswerArms(inbound, until string) []answerArm {
 	    AND answer_mail.channel_provider IS NOT DISTINCT FROM ` + inbound + `.channel_provider
 	    AND answer_mail.direction = 'outbound'
 	    AND answer_mail.counterparty_outbound_attested
+	    AND ` + deliveredSQL("answer_mail") + `
 	    AND ` + everyoneReads("answer_mail") + `
 	    AND ` + later("answer_mail") + `
 	    AND ` + sameSubject
@@ -134,6 +135,7 @@ func threadAnswerArm(inbound, later string) answerArm {
 	    AND answer_thread.kind IN ('email', 'message')
 	    AND answer_thread.channel_provider IS NOT DISTINCT FROM ` + inbound + `.channel_provider
 	    AND answer_thread.direction = 'outbound'
+	    AND ` + deliveredSQL("answer_thread") + `
 	    AND (` + inbound + `.counterparty_email IS NULL
 	      OR (answer_thread.counterparty_email IN (` + sender + `)
 	        AND NOT EXISTS (SELECT 1 FROM activity_participant answer_blind
@@ -145,12 +147,31 @@ func threadAnswerArm(inbound, later string) answerArm {
 	    AND ` + later}
 }
 
+// deliveredSQL holds unless our send of the row is still pending, was parked
+// or bounced: mail that never reached them answers nothing. Captured mail has
+// no send row and stands.
+func deliveredSQL(row string) string {
+	return `NOT EXISTS (SELECT 1 FROM comms_outbound undelivered
+	     WHERE undelivered.activity_id = ` + row + `.id
+	       AND (undelivered.status <> 'sent' OR undelivered.bounced_at IS NOT NULL))`
+}
+
 // ThreadAnsweredAtSQL is when our earliest same-thread reply that reached the
 // inbound row's sender happened, or NULL when none did. It is the thread arm of
 // AnsweredSQL at any instant, so a time it names answers the row from then on.
 func ThreadAnsweredAtSQL(inbound string) string {
 	arm := threadAnswerArm(inbound, answerLater("answer_thread", inbound, "'infinity'::timestamptz"))
 	return "(SELECT min(" + arm.at + ") " + arm.from + ")"
+}
+
+// ThreadNewestReplySQL selects the id, occurred_at and occurred_precision of
+// our newest same-thread reply that reached the inbound row's sender and had
+// begun by until. It is the thread arm of AnsweredSQL, read for its newest
+// answer instead of its first.
+func ThreadNewestReplySQL(inbound, until string) string {
+	arm := threadAnswerArm(inbound, answerLater("answer_thread", inbound, until))
+	return "SELECT " + arm.id + " AS id, " + arm.at + " AS occurred_at, answer_thread.occurred_precision " + arm.from +
+		"\n\t  ORDER BY " + arm.at + " DESC, " + arm.id + " DESC LIMIT 1"
 }
 
 // NormalisedSubjectSQL is a subject with its reply prefixes and outer spaces

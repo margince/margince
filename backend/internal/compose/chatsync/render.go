@@ -12,6 +12,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"regexp"
 	"slices"
 	"strings"
 	"time"
@@ -24,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/labeltranslation"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
 // chatRecord is the record a card shows: the deal when the link has one,
@@ -71,6 +73,23 @@ func readRecord(ctx context.Context, pool *pgxpool.Pool, link chatlinks.Link) (c
 // channelLanguage is the language Margince writes a channel in.
 const channelLanguage = "en"
 
+// maxSubjectRunes caps a record-derived subject before it enters a channel post.
+const maxSubjectRunes = 200
+
+// chatSafe neutralises chat markup in a value that came from a record. A name
+// or subject cannot then forge a mention, a link or a broadcast in the bot's
+// voice. It escapes the three mrkdwn metacharacters and breaks the broadcast
+// keywords the provider posts live.
+func chatSafe(s string) string {
+	s = chatMetachars.Replace(s)
+	return broadcastKeyword.ReplaceAllString(s, "@\u200b$1")
+}
+
+var (
+	chatMetachars    = strings.NewReplacer("&", "&amp;", "<", "&lt;", ">", "&gt;")
+	broadcastKeyword = regexp.MustCompile(`(?i)@(channel|here|everyone)`)
+)
+
 // chatSignature closes every bot text, so a reader knows who wrote it and
 // where the record lives.
 func chatSignature(record chatRecord, origin string) string {
@@ -98,7 +117,7 @@ func chatCardText(record chatRecord, origin string) string {
 	if record.ownerEmail != "" {
 		facts = append(facts, "Owner "+mention(record.ownerEmail, record.ownerName))
 	}
-	lines := []string{"*" + strings.TrimSpace(record.name) + "*"}
+	lines := []string{"*" + chatSafe(strings.TrimSpace(record.name)) + "*"}
 	if len(facts) > 0 {
 		lines = append(lines, strings.Join(facts, " · "))
 	}
@@ -112,7 +131,7 @@ func chatPostText(record chatRecord, lines []string, origin string) string {
 		return "An update here is no longer shared.\n" + chatSignature(record, origin)
 	}
 	var b strings.Builder
-	b.WriteString(strings.TrimSpace(record.name))
+	b.WriteString(chatSafe(strings.TrimSpace(record.name)))
 	b.WriteString("\n")
 	for _, line := range lines {
 		b.WriteString("• " + line + "\n")
@@ -121,11 +140,13 @@ func chatPostText(record chatRecord, lines []string, origin string) string {
 	return b.String()
 }
 
+// mention names the owner by their app_user email, a value Margince controls.
+// The label is the display name, which the viewer set and chatSafe cleans.
 func mention(email, name string) string {
 	if name == "" {
 		name = email
 	}
-	return "<@" + email + "|" + name + ">"
+	return "<@" + email + "|" + chatSafe(name) + ">"
 }
 
 func chatFingerprint(text string) string {
@@ -181,6 +202,8 @@ func activityLine(item chatlinks.Item, shared sharedText) string {
 	subject := strings.TrimSpace(shared.subject)
 	if subject == "" {
 		subject = "(no subject)"
+	} else {
+		subject = chatSafe(textcut.Runes(subject, maxSubjectRunes))
 	}
 	if item.EventType == "activity.updated" {
 		if fields, ok := item.Detail[detailFields].(map[string]any); ok && fields["meeting_status"] == "held" {

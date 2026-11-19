@@ -32,6 +32,10 @@ type rulesetStampValue struct {
 	// NULL, and the CHECK in migration 1789240000 refuses an empty array so
 	// that "no jurisdiction applied" has exactly one spelling in the record.
 	Codes []string
+	// Digest is the pack's source digest, non-nil only with Version and only
+	// for a pack compiled from a source. The tag keeps it out of a fingerprint
+	// taken before the field existed.
+	Digest *string `json:",omitempty"` //nolint:tagliatelle // the stamp's fields marshal under their Go names
 }
 
 // rulesetStamp answers what to record about the rules that judged this message.
@@ -65,5 +69,10 @@ func rulesetStamp(country RecipientCountry) rulesetStampValue {
 		return rulesetStampValue{Codes: codes}
 	}
 	version := rules.Version
-	return rulesetStampValue{Version: &version, Codes: codes}
+	stamp := rulesetStampValue{Version: &version, Codes: codes}
+	if rules.Digest != "" {
+		digest := rules.Digest
+		stamp.Digest = &digest
+	}
+	return stamp
 }

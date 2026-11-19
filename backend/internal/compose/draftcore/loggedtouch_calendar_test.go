@@ -17,12 +17,12 @@ func TestDatedNoteSilenceKeepsItsStatedDay(t *testing.T) {
 		t.Fatal(err)
 	}
 	now := time.Date(2026, 6, 12, 9, 0, 0, 0, zone)
-	notes := []crmcontracts.Activity{{
-		Kind:              crmcontracts.ActivityKindNote,
+	meetings := []crmcontracts.Activity{{
+		Kind:              crmcontracts.ActivityKindMeeting,
 		OccurredAt:        time.Date(2026, 6, 10, 12, 0, 0, 0, time.UTC),
 		OccurredPrecision: "day",
 	}}
-	state := ClassifyWithLogged(now, zone, time.Time{}, time.Time{}, notes)
+	state := ClassifyWithLogged(now, zone, time.Time{}, time.Time{}, meetings)
 	if state.SilenceDays != 2 {
 		t.Fatalf("silence = %d, want 2 from the stated date", state.SilenceDays)
 	}
@@ -34,11 +34,11 @@ func TestLoggedTouchOrderFollowsTheRecordCalendar(t *testing.T) {
 		t.Fatal(err)
 	}
 	now := time.Date(2026, 6, 12, 9, 0, 0, 0, zone)
-	notes := []crmcontracts.Activity{
-		{Kind: crmcontracts.ActivityKindNote, OccurredAt: time.Date(2026, 6, 10, 12, 0, 0, 0, time.UTC), OccurredPrecision: "day"},
-		{Kind: crmcontracts.ActivityKindNote, OccurredAt: time.Date(2026, 6, 10, 11, 0, 0, 0, time.UTC), OccurredPrecision: "instant"},
+	meetings := []crmcontracts.Activity{
+		{Kind: crmcontracts.ActivityKindMeeting, OccurredAt: time.Date(2026, 6, 10, 12, 0, 0, 0, time.UTC), OccurredPrecision: "day"},
+		{Kind: crmcontracts.ActivityKindMeeting, OccurredAt: time.Date(2026, 6, 10, 11, 0, 0, 0, time.UTC), OccurredPrecision: "instant"},
 	}
-	state := ClassifyWithLogged(now, zone, time.Time{}, time.Time{}, notes)
+	state := ClassifyWithLogged(now, zone, time.Time{}, time.Time{}, meetings)
 	if state.SilenceDays != 1 {
 		t.Fatalf("silence = %d, want 1 from the latest local activity day", state.SilenceDays)
 	}
@@ -74,5 +74,22 @@ func TestAPastMeetingNobodyCalledOffIsPriorContact(t *testing.T) {
 		if met := state.Band != convstate.BandNone; met != tc.want {
 			t.Errorf("%s: the meeting is prior contact = %v (state %+v), want %v", name, met, state, tc.want)
 		}
+	}
+}
+
+// A note is the rep's own writing and opens no conversation.
+// The first mail to a contact stays a first mail however many notes exist.
+func TestANoteIsNoPriorContact(t *testing.T) {
+	now := time.Date(2026, 6, 12, 9, 0, 0, 0, time.UTC)
+	notes := []crmcontracts.Activity{{
+		Kind:       crmcontracts.ActivityKindNote,
+		OccurredAt: now.Add(-time.Hour), OccurredPrecision: "instant",
+	}}
+	state := ClassifyWithLogged(now, time.UTC, time.Time{}, time.Time{}, notes)
+	if state.Band != convstate.BandNone {
+		t.Fatalf("band = %v after a note and no exchange, want %v", state.Band, convstate.BandNone)
+	}
+	if CountsAsContact(notes[0], now, time.UTC) {
+		t.Error("a note counts as contact")
 	}
 }

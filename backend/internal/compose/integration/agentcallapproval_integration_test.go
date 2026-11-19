@@ -237,7 +237,7 @@ func TestTheRESTDoorAlsoCollectsExactlyOneApprovalPerIdenticalCall(t *testing.T)
 	}
 	if status := e.Call(t, "POST", "/v1/companies", AnyMap{
 		"source": "manual", "display_name": "Duplicate Approval GmbH",
-		"domains": []AnyMap{{"domain": "example.com", "is_primary": true}},
+		"domains": []AnyMap{{"domain": "example.test", "is_primary": true}},
 	}, nil, &company); status != http.StatusCreated {
 		t.Fatalf("company create → %d", status)
 	}

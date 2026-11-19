@@ -46,6 +46,20 @@ func TestAnUndatedDecisionIsNotAReceipt(t *testing.T) {
 	}
 }
 
+// An approval an agent has yet to run changed nothing, so it is not a receipt.
+func TestAnApprovalAwaitingItsAgentIsNotAReceipt(t *testing.T) {
+	since := time.Date(2026, 8, 25, 7, 0, 0, 0, time.UTC)
+	waiting := approvalRow("Read the page and propose enrichment", since.Add(time.Hour))
+	waiting.AwaitingAgent = new(true)
+	ran := approvalRow("Moved the Acme close date to 27 Sep", since.Add(time.Hour))
+
+	receipts := ReceiptsWithin([]crmcontracts.Approval{waiting, ran}, since)
+
+	if len(receipts) != 1 || receipts[0].Summary != "Moved the Acme close date to 27 Sep" {
+		t.Fatalf("receipts = %+v, want only the approval whose work ran", receipts)
+	}
+}
+
 func approvalRow(summary string, decidedAt time.Time) crmcontracts.Approval {
 	return crmcontracts.Approval{
 		Id:        openapi_types.UUID(ids.NewV7()),

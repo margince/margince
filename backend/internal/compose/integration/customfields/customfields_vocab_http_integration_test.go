@@ -116,7 +116,7 @@ func assertCursorSortRefusals(t *testing.T, e *apptest.AppEnv) {
 	t.Run("crafted cursor sort key answers 422 malformed_cursor, never 500", func(t *testing.T) {
 		badKey := "abc"
 		crafted := integration.CraftCursor(t, storekit.Cursor{
-			CreatedAt: time.Now().UTC(), ID: ids.NewV7(),
+			Scope: "contact", CreatedAt: time.Now().UTC(), ID: ids.NewV7(),
 			SortField: score.ColumnName, SortKey: &badKey,
 		})
 		assert422Code(t, e,

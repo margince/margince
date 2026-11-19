@@ -59,16 +59,6 @@ export type PreviewFile = Readonly<{
    * would carry it into our own page with our own cookies.
    */
   mediaType: string;
-  /**
-   * The session token that admits the reader to these bytes, on the one
-   * surface with no cookie: a Deal Room's buyer, who holds no seat and is
-   * known to the server by a Bearer alone. Absent, the read rides the session
-   * cookie like every other file in the product.
-   *
-   * With a bearer there is no link the browser could follow on its own, so the
-   * saved copy is the drawn bytes, and Download waits with Print for them.
-   */
-  bearer?: string;
 }>;
 
 type FilePreview = Readonly<{ open: (file: PreviewFile) => void }>;
@@ -147,13 +137,11 @@ function FilePreviewDialog({
               {file.filename}
             </Heading>
             <div className="file-preview-verbs">
-              {(file.bearer === undefined || object.status === "ready") && (
-                <IconAction
-                  label={t("filePreview.download")}
-                  icon={<Download aria-hidden="true" />}
-                  onClick={() => save(file, object)}
-                />
-              )}
+              <IconAction
+                label={t("filePreview.download")}
+                icon={<Download aria-hidden="true" />}
+                onClick={() => save(file)}
+              />
               {/* Print stands beside the other two only once there IS a
                   document: until the bytes arrive, and after a read that
                   failed, there is nothing on the stage for it to put on paper.
@@ -256,18 +244,9 @@ function printing(frame: HTMLIFrameElement | null) {
  * is how a tree grows a second icon button. The act is still the anchor's —
  * `download` on the same href the chip carries — so the saved copy is the one
  * the server names, whether or not the preview above ever loaded.
- *
- * A file read on a bearer has no href a link could follow — the anchor would
- * arrive without the token and be refused — so its saved copy is the object
- * URL the stage is drawing, which is the same bytes under the same name.
  */
-function save(file: PreviewFile, object: PreviewObject) {
-  downloadFrom(
-    file.bearer !== undefined && object.status === "ready"
-      ? object.url
-      : file.href,
-    file.filename,
-  );
+function save(file: PreviewFile) {
+  downloadFrom(file.href, file.filename);
 }
 
 type PreviewObject =
@@ -294,9 +273,6 @@ function usePreviewObject(file: PreviewFile | null): PreviewObject {
     fetch(file.href, {
       credentials: "include",
       signal: abort.signal,
-      ...(file.bearer === undefined
-        ? {}
-        : { headers: { Authorization: `Bearer ${file.bearer}` } }),
     })
       .then(async (response) => {
         if (!response.ok) {

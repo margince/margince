@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -198,14 +199,14 @@ func (e *financeEnv) foreignInvoice(t *testing.T, company ids.UUID) ids.UUID {
 	return invoice
 }
 
-// A row mirrored before rows named their link gets its link on the next pass.
+// A sync that rewrites a row mirrored before rows named their link names it,
+// so the link check never refuses the pass.
 func TestASyncNamesTheLinkOnARowMirroredBeforeRowsNamedOne(t *testing.T) {
 	e := setupFinance(t)
 	if _, err := e.store.SyncConnection(e.ctx, e.provider()); err != nil {
 		t.Fatal(err)
 	}
-	e.ownerExec(t, `UPDATE finance_invoice SET customer_link_id = NULL WHERE connection_id = $1`, e.connection)
-	e.ownerExec(t, `UPDATE finance_payment SET customer_link_id = NULL WHERE connection_id = $1`, e.connection)
+	testdb.WithCustomerLinkChecksLifted(t, e.unlinkTheFixtureRows)
 	if _, err := e.store.SyncConnection(e.ctx, e.provider()); err != nil {
 		t.Fatal(err)
 	}
@@ -224,15 +225,19 @@ func TestTheBackfillNamesTheArchivedLinkAndLeavesAnUnmappedRow(t *testing.T) {
 		t.Fatal(err)
 	}
 	link := e.linkOf(t)
-	e.ownerExec(t, `UPDATE finance_invoice SET customer_link_id = NULL WHERE connection_id = $1`, e.connection)
-	e.ownerExec(t, `UPDATE finance_payment SET customer_link_id = NULL WHERE connection_id = $1`, e.connection)
 	e.ownerExec(t, `UPDATE finance_customer_link SET archived_at = now() WHERE id = $1`, link)
 	unmapped := ids.NewV7()
 	other := e.otherCompany(t)
-	e.ownerExec(t, `INSERT INTO finance_invoice (id, connection_id, company_id, external_id, issued_at, status,
-		currency, net_minor, gross_minor, sync_hash, source, captured_by)
-		VALUES ($1, $2, $3, 'NEVER-MAPPED', current_date, 'open', 'EUR', 1000, 1190, 'hash', 'test', 'system:test')`,
-		unmapped, e.connection, other)
+	testdb.WithCustomerLinkChecksLifted(t, func(tx pgx.Tx) error {
+		if err := e.unlinkTheFixtureRows(tx); err != nil {
+			return err
+		}
+		_, err := tx.Exec(e.ctx, `INSERT INTO finance_invoice (id, connection_id, company_id, external_id, issued_at, status,
+			currency, net_minor, gross_minor, sync_hash, source, captured_by)
+			VALUES ($1, $2, $3, 'NEVER-MAPPED', current_date, 'open', 'EUR', 1000, 1190, 'hash', 'test', 'system:test')`,
+			unmapped, e.connection, other)
+		return err
+	})
 
 	ctx := principal.SystemActing(e.ctx, "system:datatask-test")
 	for _, table := range []MirrorTable{MirrorInvoices, MirrorPayments} {

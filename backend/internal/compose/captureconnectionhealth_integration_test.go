@@ -84,11 +84,11 @@ func TestAdminReadsAnotherMembersStalledConnection(t *testing.T) {
 		t.Fatalf("connection absent from overview: source=%+v findings=%+v", source, findings)
 	}
 	b.registry.SetClock(func() time.Time { return at })
-	if _, err := b.registry.DismissSilence(b.human, "gmail", at.Add(-48*time.Hour)); !errors.Is(err, apperrors.ErrConflict) {
+	if _, err := b.registry.DismissSilence(b.human, capture.ProviderMailbox("gmail"), at.Add(-48*time.Hour)); !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("stalled dismissal = %v, want conflict", err)
 	}
 	other := e.As(e.Rep2, nil, principal.Permissions{})
-	if _, err := b.registry.DismissSilence(other, "gmail", at); !errors.Is(err, capture.ErrNoConnection) {
+	if _, err := b.registry.DismissSilence(other, capture.ProviderMailbox("gmail"), at); !errors.Is(err, capture.ErrNoConnection) {
 		t.Fatalf("another member's dismissal = %v", err)
 	}
 }
@@ -111,7 +111,7 @@ func TestDismissSilenceHandlerPreservesItsErrorContract(t *testing.T) {
 			}
 			req := httptest.NewRequest(http.MethodPost, "/v1/connectors/gmail/silence/dismiss", strings.NewReader(tc.body)).WithContext(ctx)
 			rec := httptest.NewRecorder()
-			connectorHandlers{registry: b.registry}.DismissConnectorSilence(rec, req, crmcontracts.CaptureProviderGmail)
+			connectorHandlers{registry: b.registry}.DismissConnectorSilence(rec, req, crmcontracts.CaptureProviderGmail, crmcontracts.DismissConnectorSilenceParams{})
 			if rec.Code != tc.want {
 				t.Fatalf("status = %d, body = %s", rec.Code, rec.Body.String())
 			}
@@ -126,7 +126,7 @@ func TestMeetingNotesHealthAgreesForTheOwnerAndTheFleet(t *testing.T) {
 	e := b.env
 	e.WsExec(t, `INSERT INTO capture_connection(provider,user_id,status,account_label,provider_scopes)
  VALUES ('gcal',$1,'connected','alex@example.org','{}'), ('gdocs',$1,'connected','alex@example.org','{}')
- ON CONFLICT (user_id,provider) DO UPDATE
+ ON CONFLICT (user_id, provider, lower(account_label)) WHERE user_id IS NOT NULL DO UPDATE
  SET status='connected', account_label=EXCLUDED.account_label, provider_scopes=EXCLUDED.provider_scopes`, e.Rep1)
 	for _, tc := range []struct {
 		name, label, want string

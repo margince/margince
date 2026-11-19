@@ -276,7 +276,7 @@ func listAttachments(ctx context.Context, tx pgx.Tx, entityType string, entityID
 			arg(entityType), arg(entityID))
 	}
 	if cursor != nil && *cursor != "" {
-		c, err := storekit.DecodeCursor(*cursor)
+		c, err := storekit.DecodeCursor("attachments", *cursor)
 		if err != nil {
 			return nil, storekit.Page{}, err
 		}
@@ -303,7 +303,7 @@ func listAttachments(ctx context.Context, tx pgx.Tx, entityType string, entityID
 	if len(out) > lim {
 		out = out[:lim]
 		last := out[len(out)-1]
-		next, err := storekit.EncodeCursor(last.CreatedAt, ids.UUID(last.Id))
+		next, err := storekit.EncodeCursor("attachments", last.CreatedAt, ids.UUID(last.Id))
 		if err != nil {
 			return nil, storekit.Page{}, err
 		}

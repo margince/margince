@@ -10,7 +10,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// The export reads activity ids off the rows readableValue rendered. An id in
+// The export reads activity ids off the rows rowvalue.Document rendered. An id in
 // any other shape is a fault in that rendering, refused before any query runs.
 func TestTheExtensionExportRefusesAnActivityIDItCannotRead(t *testing.T) {
 	for name, id := range map[string]any{

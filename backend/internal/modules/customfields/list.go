@@ -89,7 +89,7 @@ func (in ListInput) predicate(ctx context.Context) (string, *storekit.ListSort, 
 		// Through the sort's own keyset, which refuses a token minted under a
 		// different ordering rather than resuming on an axis this page is not
 		// ordered by.
-		keyset, err := sorted.KeysetClause(*in.Cursor, arg)
+		keyset, err := sorted.KeysetClause("custom_fields", *in.Cursor, arg)
 		if err != nil {
 			return "", nil, nil, err
 		}
@@ -141,7 +141,7 @@ func (s *Service) List(ctx context.Context, in ListInput) ([]crmcontracts.Custom
 			// The sort's own token, so the next page can only continue THIS
 			// ordering: a cursor minted under one sort and replayed under
 			// another is refused rather than resumed on the wrong axis.
-			next, err := sorted.EncodePageCursor(cursorKeys[limit-1], last.CreatedAt, ids.UUID(last.Id))
+			next, err := sorted.EncodePageCursor("custom_fields", cursorKeys[limit-1], last.CreatedAt, ids.UUID(last.Id))
 			if err != nil {
 				return err
 			}

@@ -10,9 +10,9 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { keyTestReasonKey } from "../../components/ai-provider-key-test";
 import { LocaleProvider } from "../../i18n";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
-import { keyTestReasonKey } from "./ai-provider-key-test";
 import { AiProviderKeysCard } from "./ai-provider-keys";
 
 // The Test button on a provider row: the server asks the vendor with the key
