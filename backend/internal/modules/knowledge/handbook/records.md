@@ -222,13 +222,13 @@ Yes, for a contact, company or deal. Open the record with **Show archived** and 
 
 Its email addresses, phone numbers, links, list members and tags come back too, where they still can. Anything that could not come back is named in the history. Undo is refused when the record was archived again since, merged into another record, or erased. It is also refused when another record now holds its email address or domain.
 
-Margince archives some records on its own, such as emails it judged to be of no use. Those are listed in the **Since your last brief** panel on Home. That panel says what Margince has done while you were away. A contact, company or deal there has its own **Undo**.
+Margince archives some records on its own, such as emails it judged to be of no use. Those show under **Done for you** on Home, with the other work Margince did for you. A contact, company or deal there has its own **Undo**.
 
  You cannot bring back an archived email or meeting yet. You cannot bring back a project from the app; create it again, or ask an admin. An archived record takes no edits or merges. Tags and pipelines do have a **Restore**; an archived team comes back with **Undo** on its archived notice. You can open a disqualified lead again with **Reopen**.
 Also called: unarchive, undelete, bring back a record.
 
 ### Can I undo a record Margince created?
-Yes. The **Since your last brief** panel on Home groups what Margince created on its own. For example, "Created contact" holds the contacts it found in your mail. Open the line to see every record, and press **Undo** on one to archive it. The same **Undo** is on the "Created" entry in the record's history.
+Yes. **Done for you** on Home groups what Margince created on its own, in its small-changes card. For example, "Created contact" holds the contacts it found in your mail. Open the line to see every record, and press **Undo** on one to archive it. The same **Undo** is on the "Created" entry in the record's history.
 
 Undo is refused once a colleague has changed the record, so their work is never archived with it. A lead cannot be undone this way; disqualify it instead.
 Also called: remove an imported contact, take back an automatic record.

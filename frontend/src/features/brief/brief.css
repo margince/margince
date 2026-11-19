@@ -620,18 +620,11 @@
   margin-bottom: 0;
 }
 
-/* The two caveats: what could not be read, above the summary, and what was
-   left out, under the lanes. Both are lists of captions and neither wants a
-   bullet. */
-.magic-withheld,
-.magic-notshown {
+/* The sources the receipt could not read, above the lanes: captions, no bullet. */
+.magic-withheld {
   list-style: none;
   margin: 0 0 var(--space-3);
   padding: 0;
-}
-
-.magic-notshown {
-  margin: 0;
 }
 
 /* An opened line: one row per record, its name and its undo on one line, the

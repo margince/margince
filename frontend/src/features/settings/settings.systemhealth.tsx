@@ -8,6 +8,7 @@ import { Badge, Button } from "../../design-system/atoms";
 import { Disclosure } from "../../design-system/disclosure";
 import { FactList } from "../../design-system/factlist";
 import { Heading } from "../../design-system/heading";
+import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { formatAge } from "../../format/interval";
@@ -91,7 +92,12 @@ export function SystemHealthPage({
   );
 }
 
-const NO_GROUPS: HealthGroups = { setup: [], waiting: [], passing: [] };
+const NO_GROUPS: HealthGroups = {
+  setup: [],
+  waiting: [],
+  passing: [],
+  information: [],
+};
 
 function Overview({
   report,
@@ -157,14 +163,16 @@ function Overview({
       </p>
       <OverviewFindings findings={shown} />
       <HealthChecks groups={groups} />
-      <Disclosure summary={t("health.capabilities")}>
-        {report.sources
-          .filter((source) => source.availability !== "withheld")
-          .map((source) => (
-            <SourceReading key={source.id} source={source} />
-          ))}
-        <PublicOriginCard status={report.public_origin} />
-      </Disclosure>
+      <Panel title={t("health.capabilities")}>
+        <PanelBody>
+          {report.sources
+            .filter((source) => source.availability !== "withheld")
+            .map((source) => (
+              <SourceReading key={source.id} source={source} />
+            ))}
+        </PanelBody>
+      </Panel>
+      <PublicOriginCard status={report.public_origin} />
     </>
   );
 }
@@ -310,6 +318,23 @@ function SourceReading({ source }: Readonly<{ source: Source }>) {
         />
       )}
       {source.id === "automatic" && <p>{t("health.automaticLimits")}</p>}
+      {source.unplaced_changes && source.count !== undefined && (
+        <FactList
+          facts={[
+            {
+              key: "total",
+              term: t("health.unplacedTotal"),
+              value: formatNumber(source.count, locale),
+            },
+            // Raw codes: these types have no user label, and an operator reads them against the audit log.
+            ...source.unplaced_changes.map((change) => ({
+              key: `${change.entity_type}:${change.action}`,
+              term: `${change.entity_type} · ${change.action}`,
+              value: formatNumber(change.count, locale),
+            })),
+          ]}
+        />
+      )}
     </Disclosure>
   );
 }

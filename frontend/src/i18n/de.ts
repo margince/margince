@@ -22109,20 +22109,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Es gibt nichts zurückzunehmen, da sich nichts geändert hat.",
   "magic.undoReason.notEvaluated":
     "Diese Installation hat nicht geprüft, ob sich das zurücknehmen lässt.",
-  "magic.notShown_one": "{count} Änderung wird nicht gezeigt: {reason}",
-  "magic.notShown_other": "{count} Änderungen werden nicht gezeigt: {reason}",
-  "magic.notShown.unknownEntityType":
-    "ein Datensatztyp, den diese Seite nicht einordnen kann",
-  "magic.notShown.outOfScope": "außerhalb deiner eigenen Datensätze",
-  "magic.visibleScope":
-    "Hier siehst du nur Änderungen, auf die du zugreifen darfst.",
-  "magic.coverageIncomplete":
-    "Einige Aktivitäten konnten nicht gezählt werden.",
+  "magic.failed": "Die letzten Änderungen konnten nicht geladen werden.",
   "magic.laneCut": "Es gibt mehr, als hier steht.",
-  "magic.done.all_one": "{count} Änderung im Einzelnen",
-  "magic.done.all_other": "Alle {count} Änderungen im Einzelnen",
-  "magic.done.atLeast_one": "{count} Änderung im Einzelnen",
-  "magic.done.atLeast_other": "{count} Änderungen im Einzelnen",
+  "magic.done.fold_one": "{count} Änderung im Einzelnen",
+  "magic.done.fold_other": "{count} Änderungen im Einzelnen",
   "magic.action.advance_stage": "Ein Deal ist eine Phase weitergerückt",
   "magic.action.promote": "Aus einem Lead wurde ein Deal",
   "magic.action.update": "Ein Datensatz wurde aktualisiert",
@@ -23327,6 +23317,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "health.group.setup": "Noch nicht eingerichtet",
   "health.group.waiting": "Noch nicht bestätigt",
   "health.group.passing": "In Ordnung",
+  "health.group.information": "Zur Information",
   "health.checkPassing": "In Ordnung",
   "health.whatHappened": "Was passiert ist",
   "health.whyItMatters": "Warum es wichtig ist",
@@ -23382,6 +23373,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "health.condition.technical": "Technische Prüfung erforderlich",
   "health.condition.unverified": "Behebung nicht nachgewiesen",
   "health.condition.recovered": "Wiederhergestellt",
+  "health.condition.information": "Information",
   "health.source.jobs": "Hintergrundverarbeitung",
   "health.source.capture": "E-Mail-Erfassung",
   "health.source.intake": "Konnektoreingang",
@@ -23391,6 +23383,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "health.source.recovery": "Wiederherstellungsnachweise",
   "health.source.automatic": "Qualität automatischer Arbeit",
   "health.source.receipts": "Bestätigungen von Werbewidersprüchen",
+  "health.source.unplaced": "Von Home ausgelassene Änderungen",
+  "health.code.unplaced_none":
+    "Keine automatische Änderung der letzten 7 Tage fehlt auf Home",
+  "health.code.unplaced_counted":
+    "Einige automatische Änderungen der letzten 7 Tage zeigt Home nicht",
+  "health.unplacedTotal": "In den letzten 7 Tagen ausgelassen",
   "health.scope": "Betroffener Umfang",
   "health.window": "Berichtszeitraum",
   "health.observed": "Letzte Beobachtung",

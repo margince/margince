@@ -109,10 +109,10 @@ const DEFAULTS: Routes = {
       bundles: [],
       truncated: false,
     }),
-  // The receipt at the foot of the page. Every lane, `totals` and both caveat
-  // lists are required by the contract, so the generic empty page would fail
-  // the panel in a way no server could produce — the same reason /worklist is
-  // answered above. A QUIET receipt: nothing ran, and nothing was withheld.
+  // The receipt of recent changes. Every lane, `totals`, `not_shown` and
+  // `sources_unavailable` are required by the contract, so the generic empty
+  // page would fail the panel in a way no server could produce. A QUIET
+  // receipt: nothing ran, and nothing was withheld.
   "GET /magic": () =>
     jsonResponse({
       as_of: "2026-09-13T08:00:00Z",
