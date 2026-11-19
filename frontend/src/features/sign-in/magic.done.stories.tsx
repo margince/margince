@@ -104,7 +104,10 @@ const NIGHT: MagicReceipt = {
 
 // The done lane as Home embeds it under the Done for you band.
 function smallChanges(receipt: MagicReceipt = NIGHT) {
-  stubWithSession({ "GET /magic": () => jsonResponse(receipt) }, {});
+  stubWithSession(
+    { "GET /magic": () => jsonResponse(receipt) },
+    { deal: ["read", "update"] },
+  );
   return (
     <StoryProviders>
       <section className="brief-section brief-done">

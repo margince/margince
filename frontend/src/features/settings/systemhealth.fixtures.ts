@@ -84,6 +84,26 @@ export const healthReport: Report = {
   ],
   findings: [],
 };
+export const unplacedSource: components["schemas"]["HealthSource"] = {
+  id: "unplaced",
+  permission: "ai_diagnostics:read",
+  scope: "installation",
+  availability: "available",
+  condition: "information",
+  code: "unplaced_counted",
+  observed_at: HEALTH_AT,
+  count: 5,
+  unit: "items",
+  unplaced_changes: [
+    { entity_type: "product", action: "update", count: 3 },
+    { entity_type: "list", action: "added", count: 1 },
+    { entity_type: "tag", action: "applied", count: 1 },
+  ],
+};
+export const informationReport: Report = {
+  ...healthReport,
+  sources: [...healthReport.sources, unplacedSource],
+};
 export const overdueFinding: components["schemas"]["HealthFinding"] = {
   id: "jobs:queue_overdue",
   source: "jobs",

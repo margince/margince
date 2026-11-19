@@ -32,18 +32,20 @@ const address = (id: string, value: string, position: number): Email => ({
 function About() {
   return (
     <RecordDetails
-      sections={useContactAboutSections({
-        ...view,
-        contact: {
-          ...view.contact,
-          emails: [
-            address("pe-1", LONG, 0),
-            address("pe-2", "dana@brandt.example", 1),
-          ],
-          phones: [],
-          primary_email: LONG,
-        },
-      })}
+      sections={
+        useContactAboutSections({
+          ...view,
+          contact: {
+            ...view.contact,
+            emails: [
+              address("pe-1", LONG, 0),
+              address("pe-2", "dana@brandt.example", 1),
+            ],
+            phones: [],
+            primary_email: LONG,
+          },
+        }).sections
+      }
     />
   );
 }

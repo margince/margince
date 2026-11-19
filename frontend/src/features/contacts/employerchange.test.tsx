@@ -1,6 +1,12 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
@@ -127,6 +133,17 @@ function driver() {
   return userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
 }
 
+async function changeEmployer(user: ReturnType<typeof driver>) {
+  await user.click(await screen.findByRole("button", { name: "Edit About" }));
+  const about = await screen.findByRole("dialog", { name: "About" });
+  await user.click(
+    within(about).getByRole("button", { name: "Change Employer" }),
+  );
+  await waitFor(() =>
+    expect(screen.queryByRole("dialog", { name: "About" })).toBeNull(),
+  );
+}
+
 const writes = () => sent.filter((request) => request.path !== "/me");
 
 beforeEach(() => {
@@ -144,9 +161,7 @@ describe("the About column's employer", () => {
   it("moves the contact to another company and keeps the old one as former", async () => {
     mount(viewWith([brandt]));
     const user = driver();
-    await user.click(
-      await screen.findByRole("button", { name: "Change Employer" }),
-    );
+    await changeEmployer(user);
     await user.type(screen.getByRole("searchbox"), "emp");
     await user.click(await screen.findByText("Employer GmbH"));
     expect(
@@ -178,9 +193,7 @@ describe("the About column's employer", () => {
   it("clears a wrong employer by removing the link, and writes no new one", async () => {
     mount(viewWith([brandt]));
     const user = driver();
-    await user.click(
-      await screen.findByRole("button", { name: "Change Employer" }),
-    );
+    await changeEmployer(user);
     await user.click(
       screen.getByRole("checkbox", { name: "No current employer" }),
     );
@@ -208,9 +221,7 @@ describe("the About column's employer", () => {
     };
     mount(viewWith([brandt]), [other]);
     const user = driver();
-    await user.click(
-      await screen.findByRole("button", { name: "Change Employer" }),
-    );
+    await changeEmployer(user);
     await user.type(screen.getByRole("searchbox"), "emp");
     await user.click(await screen.findByText("Employer GmbH"));
     await user.click(screen.getByRole("button", { name: "Save" }));
@@ -233,9 +244,7 @@ describe("the About column's employer", () => {
   it("asks nothing and saves nothing until the employer changes", async () => {
     mount(viewWith([brandt]));
     const user = driver();
-    await user.click(
-      await screen.findByRole("button", { name: "Change Employer" }),
-    );
+    await changeEmployer(user);
     expect(screen.queryByRole("radio")).toBeNull();
     expect(screen.getByRole("button", { name: "Save" })).toHaveProperty(
       "disabled",
@@ -247,9 +256,7 @@ describe("the About column's employer", () => {
     mount(viewWith([]));
     const user = driver();
     await user.click(await screen.findByText(/Show \d+ empty field/));
-    await user.click(
-      await screen.findByRole("button", { name: /Change Employer/ }),
-    );
+    await changeEmployer(user);
     expect(
       await screen.findByRole("checkbox", {
         name: "This is their current employer",
@@ -257,11 +264,23 @@ describe("the About column's employer", () => {
     ).toHaveProperty("checked", true);
   });
 
+  it("draws the employer's dialogs without a duplicate key", async () => {
+    const logged = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    mount(viewWith([brandt]));
+    await screen.findByRole("button", { name: "Edit About" });
+    expect(
+      logged.mock.calls.filter(([message]) =>
+        String(message).includes("same key"),
+      ),
+    ).toEqual([]);
+    logged.mockRestore();
+  });
+
   it("stays read-only for a reader who cannot change the contact", async () => {
     mount(viewWith([brandt], false));
     await screen.findByText("Brandt Automotive GmbH");
-    expect(
-      screen.queryByRole("button", { name: "Change Employer" }),
-    ).toBeNull();
+    expect(screen.queryByRole("button", { name: "Edit About" })).toBeNull();
   });
 });

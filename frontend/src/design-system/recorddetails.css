@@ -1,4 +1,4 @@
-/* RecordDetails: each group is a pane one step up the ladder, a grey label over
+/* RecordDetails: each group is a pane one step up the ladder, a bold label over
    a flat `FactList`. The footnote shares the shape; "Show more" stays bare. */
 
 .recorddetails {
@@ -25,11 +25,36 @@
   gap: var(--space-1);
   margin-block-end: var(--space-1);
 }
+.recorddetails-labelline:last-child {
+  margin-block-end: 0;
+}
 /* Scoped under the line so it outranks the heading's own size rule. */
 .recorddetails-labelline > .recorddetails-label.heading {
   font: var(--fontBodySmall);
-  font-weight: var(--fontWeightMedium);
-  color: var(--textSecondary);
+  font-weight: var(--fontWeightBold);
+}
+.recorddetails-labelline > .btn.recorddetails-edit {
+  margin-inline-start: auto;
+  padding-block: 0;
+  font: var(--fontBodySmall);
+}
+/* A thumb gets a 44px target from a layer that draws nothing, so the line keeps its height.
+   Below, it stops at the first row (the line's margin and the group's gap); the rest goes above. */
+.recorddetails-edit {
+  position: relative;
+}
+.recorddetails-edit::before {
+  content: "";
+  position: absolute;
+  inset-inline: calc((100% - max(44px, 100%)) / 2);
+  inset-block-end: calc(-2 * var(--space-1));
+  block-size: max(44px, 100%);
+  pointer-events: none;
+}
+@media (pointer: coarse) {
+  .recorddetails-edit::before {
+    pointer-events: auto;
+  }
 }
 .recorddetails-foot > .btn.recorddetails-toggle {
   padding-inline: 0;

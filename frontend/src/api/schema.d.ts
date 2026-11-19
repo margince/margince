@@ -51883,8 +51883,11 @@ export interface components {
             id: string;
             /** @enum {string} */
             availability: "available" | "unknown" | "stale" | "failed" | "withheld" | "not_configured" | "not_monitored";
-            /** @enum {string} */
-            condition: "clear" | "processing" | "retrying" | "waiting_human" | "technical" | "unverified" | "recovered" | "unknown";
+            /**
+             * @description `information` is a fact an operator may want, never a fault: it needs no action, raises no finding and leaves the assessment and completeness as they are.
+             * @enum {string}
+             */
+            condition: "clear" | "processing" | "retrying" | "waiting_human" | "technical" | "unverified" | "recovered" | "unknown" | "information";
             /** @description Safe presentation code, never raw failure text. */
             code: string;
             permission: string;
@@ -51902,6 +51905,14 @@ export interface components {
             window_start?: string;
             /** Format: date-time */
             window_end?: string;
+            /** @description The `unplaced` source's breakdown of the machine changes in its window that the `/magic` receipt cannot place, most first. `count` is the whole total, and exceeds the sum of these entries when more kinds occurred than are listed. */
+            unplaced_changes?: components["schemas"]["HealthUnplacedChange"][];
+        };
+        HealthUnplacedChange: {
+            entity_type: string;
+            /** @description The audit action, or for a list membership or a tagging the link it filed: `added`, `removed` or `applied`. */
+            action: string;
+            count: number;
         };
         HealthFinding: {
             /** @description Stable identity of the source condition and affected scope. */

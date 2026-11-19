@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { formatDateTime } from "../../format/format";
 import { browserZone } from "../../format/timezone";
 import { en } from "../../i18n/en";
+import { type MagicReceipt, magicKey } from "../../lib/magic.queries";
 import {
   line,
   receipt,
@@ -14,6 +15,8 @@ import {
   stubPending,
   stubRefusal,
 } from "../../testing/magic.testkit";
+import { type GrantSpec, meFixture } from "../../testing/mefixture";
+import { type MagicPanel, WAITING_LANES } from "./magic";
 
 afterEach(() => {
   cleanup();
@@ -27,6 +30,21 @@ afterEach(() => {
 // asks of it, so a lane is found whether or not it is open.
 function lane(name: string): Promise<HTMLElement> {
   return screen.findByRole("list", { name, hidden: true });
+}
+
+// A part that stays away draws nothing while its read runs too. A case that
+// asserts an absence first waits for the read to answer.
+async function renderSettled(
+  visible: Parameters<typeof MagicPanel>[0] = {},
+): Promise<HTMLElement> {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  const { container } = renderMagic("en", client, visible);
+  await waitFor(() =>
+    expect(client.getQueryState(magicKey)?.status).not.toBe("pending"),
+  );
+  return container;
 }
 
 describe("the receipt draws every lane it promises", () => {
@@ -137,116 +155,114 @@ describe("the receipt draws every lane it promises", () => {
     expect(reads[0]).not.toContain("since=");
   });
 
-  it("names a withheld source", async () => {
+  it("names a source that failed, and beside it one the reader may not see", async () => {
     stub(
       receipt({
-        sources_unavailable: [{ source: "approval", reason: "withheld" }],
+        sources_unavailable: [
+          { source: "approval", reason: "failed" },
+          { source: "automation_health", reason: "withheld" },
+        ],
       }),
     );
-    renderMagic();
+    renderMagic("en", undefined, { lanes: WAITING_LANES });
     expect(
-      await screen.findByText("Source not available to you: Proposals"),
+      await screen.findByRole("region", { name: "Since your last brief" }),
     ).toBeTruthy();
+    expect(screen.getByText("Source did not load: Proposals")).toBeTruthy();
+    expect(screen.getByText(/^Source not available to you:/)).toBeTruthy();
   });
 
   // A quiet window draws nothing: four empty lanes would be a section saying
   // nothing beside the sections that have news.
   it("draws nothing over a quiet window", async () => {
     stub(receipt());
-    const { container } = renderMagic();
-    await waitFor(() =>
-      expect(vi.mocked(fetch).mock.calls.length).toBeGreaterThan(0),
-    );
-    await waitFor(() =>
-      expect(container.querySelector("[aria-busy='true']")).toBeNull(),
-    );
-    expect(container.querySelector(".brief-section")).toBeNull();
+    const container = await renderSettled();
+    expect(container.innerHTML).toBe("");
   });
 
-  it("leaves a fully read empty receipt quiet", async () => {
-    stub(receipt({ not_shown_count_withheld: false, not_shown: [] }));
-    const { container } = renderMagic();
-    await waitFor(() =>
-      expect(vi.mocked(fetch).mock.calls.length).toBeGreaterThan(0),
-    );
-    await waitFor(() =>
-      expect(container.querySelector("[aria-busy='true']")).toBeNull(),
-    );
-    expect(
-      screen.queryByText("Some activity could not be counted."),
-    ).toBeNull();
+  // What the reader cannot act on is no news: housekeeping, a record type this
+  // build cannot place, and the edges of the reader's own access.
+  const noNews: ReadonlyArray<[string, Partial<MagicReceipt>]> = [
+    [
+      "housekeeping",
+      { not_shown: [{ reason: "unadmitted_action", count: 12 }] },
+    ],
+    [
+      "unplaceable record types",
+      { not_shown: [{ reason: "unknown_entity_type", count: 2 }] },
+    ],
+    ["a withheld count", { not_shown_count_withheld: true }],
+    [
+      "changes out of scope",
+      { not_shown: [{ reason: "out_of_scope", count: 4 }] },
+    ],
+    [
+      "a source the reader may not see",
+      { sources_unavailable: [{ source: "approval", reason: "withheld" }] },
+    ],
+  ];
+  it.each(noNews)("draws no Home part for %s alone", async (_, over) => {
+    stub(receipt(over));
+    expect((await renderSettled({ lanes: WAITING_LANES })).innerHTML).toBe("");
+    cleanup();
+    stub(receipt(over));
+    const done = await renderSettled({ lanes: ["done"], embedded: true });
+    expect(done.innerHTML).toBe("");
   });
 
-  it("keeps housekeeping separate from missing receipt coverage", async () => {
-    stub(receipt({ not_shown: [{ reason: "unadmitted_action", count: 12 }] }));
-    const { container } = renderMagic();
-    await waitFor(() =>
-      expect(vi.mocked(fetch).mock.calls.length).toBeGreaterThan(0),
-    );
-    await waitFor(() =>
-      expect(container.querySelector("[aria-busy='true']")).toBeNull(),
-    );
-    expect(
-      screen.queryByText("Some activity could not be counted."),
-    ).toBeNull();
-    // Housekeeping is left out without a count.
-    expect(screen.queryByText(/12 changes are not shown/)).toBeNull();
+  it("lets a waiting row shown elsewhere on Home take the section with it", async () => {
+    const waiting = receipt({
+      needs_you: [
+        line({
+          id: "00000000-0000-7000-8000-000000000002",
+          lane: "needs_you",
+          summary: { key: "magic.action.approval_send_email" },
+        }),
+      ],
+    });
+    stub(waiting);
+    renderMagic("en", undefined, { lanes: WAITING_LANES });
+    await lane("Waiting on you");
+    cleanup();
+
+    stub(waiting);
+    const container = await renderSettled({
+      lanes: WAITING_LANES,
+      visibleApprovalIds: ["00000000-0000-7000-8000-000000000002"],
+    });
+    expect(container.innerHTML).toBe("");
   });
 
-  it("does not call an empty receipt clear when entity kinds cannot be placed", async () => {
-    stub(receipt({ not_shown: [{ reason: "unknown_entity_type", count: 2 }] }));
-    renderMagic();
-    expect(
-      await screen.findByText("Some activity could not be counted."),
-    ).toBeTruthy();
-    expect(screen.queryByText("Nothing done for you")).toBeNull();
-  });
-
-  it("says an ordinary seat's empty window covers only what it may see", async () => {
-    stub(receipt({ not_shown_count_withheld: true }));
-    renderMagic();
-    expect(
-      await screen.findByText("Only changes visible to you are shown."),
-    ).toBeTruthy();
-    expect(screen.queryByText("Nothing done for you")).toBeNull();
-  });
-
-  it("states a nonempty receipt's visible scope without inventing missing changes", async () => {
-    stub(receipt({ done: [line()], not_shown_count_withheld: true }));
-    renderMagic();
-    expect(
-      await screen.findByText("Only changes visible to you are shown."),
-    ).toBeTruthy();
-    expect(await screen.findByText("1 change, in full")).toBeTruthy();
-    expect(screen.queryByText("1+ change, one by one")).toBeNull();
-  });
-
-  it("qualifies visible changes when unsupported rows were actually counted", async () => {
-    stub(
-      receipt({
-        done: [line()],
-        not_shown: [{ reason: "unknown_entity_type", count: 2 }],
-      }),
-    );
-    renderMagic();
-    expect(await screen.findByText("1+ change, one by one")).toBeTruthy();
-  });
-
-  it("says how much it left out, so five lines never imply five things happened", async () => {
-    stub(
-      receipt({
-        done: [line()],
-        totals: { done: 1, needs_you: 0, could_not_complete: 0, watching: 0 },
-        not_shown: [{ reason: "out_of_scope", count: 12 }],
-      }),
-    );
-    renderMagic();
-    expect(
-      await screen.findByText(
-        "12 changes are not shown: outside your own records",
-      ),
-    ).toBeTruthy();
-  });
+  // The count of changes this build cannot place is an installation's
+  // diagnostic, so neither seat reads it on Home, and neither fold says "All".
+  const seats: ReadonlyArray<[string, GrantSpec, Partial<MagicReceipt>]> = [
+    [
+      "an administrator",
+      { ai_diagnostics: ["read"] },
+      { not_shown: [{ reason: "unknown_entity_type", count: 7 }] },
+    ],
+    ["an ordinary seat", {}, { not_shown_count_withheld: true }],
+  ];
+  it.each(seats)(
+    "shows %s the visible changes and no count",
+    async (_, grant, over) => {
+      stub(receipt({ done: [line()], ...over }));
+      const client = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      });
+      client.setQueryData(
+        ["me"],
+        meFixture({ allow: { deal: ["read", "update"], ...grant } }),
+      );
+      renderMagic("en", client);
+      expect(await screen.findByText("1 change, one by one")).toBeTruthy();
+      expect(screen.queryByText(/\b7 changes?\b/)).toBeNull();
+      expect(
+        screen.queryByText(/not shown|could not be counted|visible to you/),
+      ).toBeNull();
+      expect(screen.queryByText(/^All /)).toBeNull();
+    },
+  );
 
   it("describes unsupported receipt sentences without printing the key", async () => {
     stub(
@@ -528,9 +544,19 @@ describe("the receipt draws every lane it promises", () => {
   it("reports a refusal as a refusal, never as a quiet morning", async () => {
     stubRefusal();
     renderMagic();
-    expect(await screen.findByText("This section did not load.")).toBeTruthy();
+    expect(await screen.findByText(en["magic.failed"])).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: en["state.retry"] }),
+    ).toBeTruthy();
     expect(screen.queryByRole("list", { name: "Summary" })).toBeNull();
     expect(screen.queryByText("Nothing done for you")).toBeNull();
+  });
+
+  // The done part says it on Home, so the waiting part beside it does not.
+  it("leaves a refusal to the done part, drawing no waiting section", async () => {
+    stubRefusal();
+    const container = await renderSettled({ lanes: WAITING_LANES });
+    expect(container.innerHTML).toBe("");
   });
 
   it("offers no undo from a receipt whose refresh failed", async () => {
@@ -563,7 +589,7 @@ describe("the receipt draws every lane it promises", () => {
     await client.refetchQueries();
     // The cached answer is still in the query, and an undo drawn from it
     // would sit under a section that says it did not load.
-    expect(await screen.findByText("This section did not load.")).toBeTruthy();
+    expect(await screen.findByText(en["magic.failed"])).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
     // Nor does it date a window it could not read.
     expect(screen.queryByText(/What Margince did since/)).toBeNull();
@@ -631,7 +657,7 @@ describe("the receipt draws every lane it promises", () => {
     stub(receipt({ done: [line()], done_is_floor: true }));
     renderMagic();
     expect(await screen.findByText("1+ change, one by one")).toBeTruthy();
-    expect(screen.queryByText("1 change, in full")).toBeNull();
+    expect(screen.queryByText("1 change, one by one")).toBeNull();
   });
 
   it("says a lane the server cut at its bound shows only its first lines", async () => {
@@ -676,6 +702,21 @@ describe("the receipt draws every lane it promises", () => {
     stub({ data: [] } as unknown as ReturnType<typeof receipt>);
     renderMagic();
     expect(await screen.findByText(en["state.unavailable"])).toBeTruthy();
+  });
+
+  // A lane a newer server renamed is unread, not quiet. Done for you says so
+  // once, and the waiting part does not add a section saying only that.
+  it("says once, in the done part, that a receipt came back without a lane", async () => {
+    // Sent as JSON, an undefined lane is a lane the server never named.
+    const skewed = receipt({ done: [line()], watching: undefined });
+    stub(skewed);
+    const waiting = await renderSettled({ lanes: WAITING_LANES });
+    expect(waiting.innerHTML).toBe("");
+    cleanup();
+    stub(skewed);
+    renderMagic("en", undefined, { lanes: ["done"], embedded: true });
+    expect(await screen.findByText(en["state.unavailable"])).toBeTruthy();
+    expect(screen.getByText("1 small change")).toBeTruthy();
   });
 });
 

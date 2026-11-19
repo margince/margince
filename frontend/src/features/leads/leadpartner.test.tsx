@@ -16,10 +16,8 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-const WRITER = { readOnly: false, readOnlyReason: undefined };
-
 function Host({ record }: Readonly<{ record: Lead }>) {
-  const row = useLeadPartnerRow(record, WRITER, async () => {});
+  const row = useLeadPartnerRow(record);
   return <div>{row ? row.value : "no partner row"}</div>;
 }
 
