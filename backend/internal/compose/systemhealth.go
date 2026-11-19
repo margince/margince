@@ -42,6 +42,7 @@ const (
 	healthReadObject    = "job_health"
 	healthDataTasks     = "data_task"
 	healthSearchID      = string(crmcontracts.HealthActionDestinationSearch)
+	healthUnplacedID    = "unplaced"
 )
 
 type healthRead struct {
@@ -191,6 +192,7 @@ func (s Server) healthReads() []healthRead {
 		{healthSearchID, "embedding_reindex", s.searchSummary},
 		{"updates", healthDataTasks, s.updatesSummary},
 		{"providers", "ai_diagnostics", s.providersSummary},
+		{healthUnplacedID, "ai_diagnostics", s.unplacedSummary},
 	}
 }
 

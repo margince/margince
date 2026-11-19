@@ -52036,8 +52036,11 @@ type HealthSource struct {
 	Permission         string                `json:"permission"`
 	Scope              HealthSourceScope     `json:"scope"`
 	Unit               *HealthSourceUnit     `json:"unit,omitempty"`
-	WindowEnd          *time.Time            `json:"window_end,omitempty"`
-	WindowStart        *time.Time            `json:"window_start,omitempty"`
+
+	// UnplacedChanges The `unplaced` source's breakdown of the machine changes in its window that the `/magic` receipt cannot place, most first. `count` is the whole total, and exceeds the sum of these entries when more kinds occurred than are listed.
+	UnplacedChanges *[]HealthUnplacedChange `json:"unplaced_changes,omitempty"`
+	WindowEnd       *time.Time              `json:"window_end,omitempty"`
+	WindowStart     *time.Time              `json:"window_start,omitempty"`
 }
 
 // HealthSourceAvailability defines model for HealthSource.Availability.
@@ -52051,6 +52054,14 @@ type HealthSourceScope string
 
 // HealthSourceUnit defines model for HealthSource.Unit.
 type HealthSourceUnit string
+
+// HealthUnplacedChange defines model for HealthUnplacedChange.
+type HealthUnplacedChange struct {
+	// Action The audit action, or for a list membership or a tagging the link it filed: `added`, `removed` or `applied`.
+	Action     string `json:"action"`
+	Count      int    `json:"count" minimum:"1"`
+	EntityType string `json:"entity_type"`
+}
 
 // HeldEntityType defines model for HeldEntityType.
 type HeldEntityType string

@@ -18,3 +18,23 @@ const (
 func MaintenanceTypes() []string {
 	return []string{KnowledgeDocument, ModelRate, ForecastCaptureStatus, Tag, List}
 }
+
+// The after-image keys a list or tag audit row files a record link under.
+const (
+	ListMemberAdded   = "added"
+	ListMemberRemoved = "removed"
+	TagApplied        = "applied"
+	TagRemoved        = "removed"
+)
+
+// LinkChange is a record link filed under a maintenance subject.
+type LinkChange struct{ EntityType, Key string }
+
+// LinkChanges are business work although their subject is upkeep: a record
+// joining or leaving a list, a tag put on or taken off a record.
+func LinkChanges() []LinkChange {
+	return []LinkChange{
+		{List, ListMemberAdded}, {List, ListMemberRemoved},
+		{Tag, TagApplied}, {Tag, TagRemoved},
+	}
+}

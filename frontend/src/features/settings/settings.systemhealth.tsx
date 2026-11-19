@@ -310,6 +310,22 @@ function SourceReading({ source }: Readonly<{ source: Source }>) {
         />
       )}
       {source.id === "automatic" && <p>{t("health.automaticLimits")}</p>}
+      {source.unplaced_changes && source.count !== undefined && (
+        <FactList
+          facts={[
+            {
+              key: "total",
+              term: t("health.unplacedTotal"),
+              value: formatNumber(source.count, locale),
+            },
+            ...source.unplaced_changes.map((change) => ({
+              key: `${change.entity_type}:${change.action}`,
+              term: `${change.entity_type} · ${change.action}`,
+              value: formatNumber(change.count, locale),
+            })),
+          ]}
+        />
+      )}
     </Disclosure>
   );
 }

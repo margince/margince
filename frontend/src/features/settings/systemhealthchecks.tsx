@@ -5,6 +5,7 @@ import {
   Activity,
   ArchiveRestore,
   Bot,
+  EyeOff,
   Inbox,
   type LucideIcon,
   Mail,
@@ -88,6 +89,7 @@ const SOURCE_ICONS: Readonly<Record<string, LucideIcon>> = {
   updates: RefreshCw,
   recovery: ArchiveRestore,
   automatic: Bot,
+  unplaced: EyeOff,
 };
 
 function guideFor(source: Source): SetupGuide | undefined {

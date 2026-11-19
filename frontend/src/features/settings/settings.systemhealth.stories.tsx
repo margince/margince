@@ -66,6 +66,30 @@ export const Narrow: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
 };
+export const UnplacedChanges: Story = {
+  render: story({
+    ...healthReport,
+    sources: [
+      ...healthReport.sources,
+      {
+        id: "unplaced",
+        permission: "ai_diagnostics:read",
+        scope: "installation",
+        availability: "available",
+        condition: "clear",
+        code: "unplaced_counted",
+        observed_at: healthReport.generated_at,
+        count: 5,
+        unit: "items",
+        unplaced_changes: [
+          { entity_type: "product", action: "update", count: 3 },
+          { entity_type: "list", action: "added", count: 1 },
+          { entity_type: "tag", action: "applied", count: 1 },
+        ],
+      },
+    ],
+  }),
+};
 export const SourceFailed: Story = {
   render: story({
     ...healthReport,

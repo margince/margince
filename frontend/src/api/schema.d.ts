@@ -51716,6 +51716,14 @@ export interface components {
             window_start?: string;
             /** Format: date-time */
             window_end?: string;
+            /** @description The `unplaced` source's breakdown of the machine changes in its window that the `/magic` receipt cannot place, most first. `count` is the whole total, and exceeds the sum of these entries when more kinds occurred than are listed. */
+            unplaced_changes?: components["schemas"]["HealthUnplacedChange"][];
+        };
+        HealthUnplacedChange: {
+            entity_type: string;
+            /** @description The audit action, or for a list membership or a tagging the link it filed: `added`, `removed` or `applied`. */
+            action: string;
+            count: number;
         };
         HealthFinding: {
             /** @description Stable identity of the source condition and affected scope. */

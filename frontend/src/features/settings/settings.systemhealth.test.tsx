@@ -298,6 +298,38 @@ it("shows what a successful refusal check established about connector activity",
   expect(screen.queryByText("Working normally")).toBeNull();
 });
 
+it("lists the changes Home leaves out under a passing check, with no action", async () => {
+  const user = userEvent.setup();
+  stub({
+    ...healthReport,
+    sources: [
+      {
+        id: "unplaced",
+        permission: "ai_diagnostics:read",
+        scope: "installation",
+        availability: "available",
+        condition: "clear",
+        code: "unplaced_counted",
+        observed_at: healthReport.generated_at,
+        count: 3,
+        unit: "items",
+        unplaced_changes: [
+          { entity_type: "product", action: "update", count: 2 },
+          { entity_type: "list", action: "added", count: 1 },
+        ],
+      },
+    ],
+  });
+  render(<SystemHealthPage />);
+  await user.click(await screen.findByText("All checks"));
+  const value = (term: string) =>
+    screen.getByText(term, { selector: "dt" }).nextElementSibling;
+  expect(value("product · update")).toHaveTextContent("2");
+  expect(value("list · added")).toHaveTextContent("1");
+  expect(screen.getByText("Passing", { selector: "h2, h3" })).toBeVisible();
+  expect(screen.queryByText(/Problems? needing action/)).toBeNull();
+});
+
 it("does not assume rejected imports are still missing after a possible later success", async () => {
   stub({
     ...attentionReport,

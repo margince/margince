@@ -8,6 +8,7 @@ import (
 	"slices"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/magic"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/buildinfo"
@@ -129,6 +130,38 @@ func (s Server) providersSummary(ctx context.Context) (crmcontracts.HealthSource
 		}
 	}
 	return source, []crmcontracts.HealthFinding{f}, nil
+}
+
+// unplacedWindow is the week the intake and automatic-work sources report over.
+const unplacedWindow = 7 * 24 * time.Hour
+
+// maxUnplacedKinds is the contract's bound on the breakdown; the count stays whole.
+const maxUnplacedKinds = 50
+
+// unplacedSummary reports the machine changes Home's receipt cannot place. It
+// is a coverage fact rather than a fault, so it reads clear whatever the count.
+func (s Server) unplacedSummary(ctx context.Context) (crmcontracts.HealthSource, []crmcontracts.HealthFinding, error) {
+	source := healthSource(healthUnplacedID, "ai_diagnostics")
+	source.Scope = healthInstallation
+	now := utcNow()
+	from := now.Add(-unplacedWindow)
+	changes, err := s.magicService.UnplacedChanges(ctx, from)
+	if err != nil {
+		return source, nil, err
+	}
+	total := magic.UnplacedTotal(changes)
+	breakdown := make([]crmcontracts.HealthUnplacedChange, 0, min(len(changes), maxUnplacedKinds))
+	for _, change := range changes[:min(len(changes), maxUnplacedKinds)] {
+		breakdown = append(breakdown, crmcontracts.HealthUnplacedChange{EntityType: change.EntityType, Action: change.Action, Count: change.Count})
+	}
+	unit := crmcontracts.HealthSourceUnit("items")
+	source.ObservedAt, source.WindowStart, source.WindowEnd = &now, &from, &now
+	source.Count, source.Unit, source.UnplacedChanges = &total, &unit, &breakdown
+	source.Condition, source.Code = healthClear, "unplaced_none"
+	if total > 0 {
+		source.Code = "unplaced_counted"
+	}
+	return source, nil, nil
 }
 
 func dataTaskHealth(row datatask.Progress, now time.Time) (string, crmcontracts.HealthSourceCondition, bool) {
