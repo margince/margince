@@ -307,6 +307,20 @@ describe("a postal address whose country does not fit", () => {
     expect(screen.getByText("10115 Berlin AT")).toBeInTheDocument();
   });
 
+  it("keeps the flag on an address row that reads empty", async () => {
+    show({
+      ...view.contact,
+      address: {},
+      address_country_mismatch: { resolved_country: "DE" },
+    });
+    await userEvent.click(
+      await screen.findByRole("button", { name: /^Show \d+ empty field/ }),
+    );
+    expect(
+      await screen.findByText("Postal code and city are in Germany"),
+    ).toBeInTheDocument();
+  });
+
   it("shows no flag when the server reports no mismatch", async () => {
     show({ ...view.contact, address: berlin });
     expect(await screen.findByText("10115 Berlin AT")).toBeInTheDocument();

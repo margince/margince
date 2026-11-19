@@ -135,6 +135,7 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
     t("project.edit"),
     edit.fields,
     edit.canEdit,
+    "project",
   );
   return (
     <RecordView

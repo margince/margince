@@ -3,14 +3,10 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { expect, fn, userEvent, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import { Field } from "../design-system/atoms";
 import { LocaleProvider, useT } from "../i18n";
-import {
-  FlowFieldRow,
-  fieldControl,
-  ReadOnlyFieldRow,
-} from "./create.controls";
+import { fieldControl } from "./create.controls";
 import { type CreateField, fieldLabel } from "./create.fields";
 
 const meta: Meta = {
@@ -73,48 +69,6 @@ export const TextAndDate: Story = {
 
 export const TextAndDatePhone: Story = {
   ...TextAndDate,
-  globals: { viewport: { value: "phone" } },
-  tags: ["uat-phone"],
-};
-
-const arrField: CreateField = {
-  key: "expected_arr",
-  labelText: "Expected ARR",
-};
-const ownerField: CreateField = { key: "owner", labelText: "Owner" };
-
-type RowArgs = Readonly<{ onFollow: (open: () => void) => void }>;
-
-// A locked field reads with its reason; a field another flow changes offers
-// that flow's verb.
-export const LockedAndFlowRows: StoryObj<RowArgs> = {
-  args: { onFollow: fn() },
-  render: ({ onFollow }) => (
-    <div className="form-stack" style={{ maxWidth: 340 }}>
-      <ReadOnlyFieldRow
-        field={arrField}
-        readOnly={{ reading: "€48,000.00", reason: "Set by the signed offer" }}
-      />
-      <FlowFieldRow
-        field={ownerField}
-        flow={{ open: () => {}, reading: "Ana Brandt" }}
-        disabled={false}
-        onFollow={onFollow}
-      />
-    </div>
-  ),
-  play: async ({ args, canvasElement }) => {
-    const canvas = within(canvasElement);
-    const arr = await canvas.findByRole("group", { name: "Expected ARR" });
-    await expect(arr).toHaveTextContent("€48,000.00");
-    await expect(arr).toHaveAccessibleDescription("Set by the signed offer");
-    await userEvent.click(canvas.getByRole("button", { name: "Change Owner" }));
-    await expect(args.onFollow).toHaveBeenCalledOnce();
-  },
-};
-
-export const LockedAndFlowRowsPhone: StoryObj<RowArgs> = {
-  ...LockedAndFlowRows,
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
 };

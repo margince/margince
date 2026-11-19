@@ -265,6 +265,24 @@ describe("the details' Edit", () => {
     );
   });
 
+  it("saves a nameless lead's phone without asking for the name first", async () => {
+    const patches = serve({ ...lead, full_name: null });
+    const user = userEvent.setup();
+    render(<LeadScreen id="l-1" />);
+    const about = await editSection(user, "About");
+    await user.type(
+      within(about).getByRole("textbox", { name: "Phone" }),
+      "+49301234567",
+    );
+    await user.click(within(about).getByRole("button", { name: "Save" }));
+    await waitFor(() =>
+      expect(patches).toEqual([
+        expect.objectContaining({ phone: "+49301234567" }),
+      ]),
+    );
+    expect(patches[0]).not.toHaveProperty("full_name");
+  });
+
   it("leaves the dialog for the project search, and gives focus back to Edit", async () => {
     serve(lead);
     const user = userEvent.setup();

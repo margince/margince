@@ -19,8 +19,8 @@ import { useEntityName } from "../../components/entityref";
 import type { RailEdit } from "../../components/railfield";
 import { saveRecordEdit } from "../../components/recordedit";
 import { type FieldRecord, rawRecord } from "../../components/recordfieldtypes";
-import { INDUSTRY_CODES, industryOptions } from "../../format/industry";
 import { useLocale, useT } from "../../i18n";
+import { useIndustryOptions } from "../../lib/industryoptions";
 import { invalidateCompany } from "../../lib/recordwritekeys";
 
 type Company = components["schemas"]["Company"];
@@ -41,27 +41,11 @@ export function useCompanyFieldSave(company: Company) {
   );
 }
 
-// The fixed list in the reader's order. A value that is no code, from a row not
-// yet repaired, is offered as it is stored so the row never reads as unset.
-export function useIndustryOptions(company: Company) {
-  const t = useT();
-  const { locale } = useLocale();
-  const options = industryOptions(t, locale);
-  const stored = company.industry;
-  return stored && !INDUSTRY_CODES.some((code) => code === stored)
-    ? [{ value: stored, label: stored }, ...options]
-    : options;
-}
-
-/**
- * How the account's own fields change in the record's edit form: the details'
- * section dialogs and the Profile tab's grouped rows. The owner is not one of
- * them; it changes through its own flow (`useCompanyOwnerFlow`).
- */
+/** The account's own fields. The owner is not one: it changes through `useCompanyOwnerFlow`. */
 export function useCompanyEdit(company: Company, canEdit: boolean): RailEdit {
   const t = useT();
   const { locale } = useLocale();
-  const industries = useIndustryOptions(company);
+  const industries = useIndustryOptions(company.industry);
   const parent = useEntityName("company", company.parent_company_id);
   const fields = companyEditFields([], false, t, locale).flatMap(
     (field): CreateField[] => {

@@ -11,7 +11,6 @@ import {
   useObjectCustomFields,
 } from "../../components/customfields.form";
 import { EntityRef } from "../../components/entityref";
-import type { RailEdit } from "../../components/railfield";
 import { type SectionLock, useSectionEdit } from "../../components/sectionedit";
 import { AppLink } from "../../design-system/applink";
 import { Badge } from "../../design-system/atoms";
@@ -171,7 +170,7 @@ const MONEY_KEYS = ["amount", "expected_arr", "currency"] as const;
 
 // A closed deal shows the day it closed and the stage's probability, so
 // neither is offered.
-function useSectionEdits(deal: Deal, edit: RailEdit, locale: Locale) {
+function useSectionEdits(deal: Deal, edit: DealEdit, locale: Locale) {
   const t = useT();
   const closed = deal.status === "won" || deal.status === "lost";
   const about = useSectionEdit(edit, {
@@ -186,7 +185,7 @@ function useSectionEdits(deal: Deal, edit: RailEdit, locale: Locale) {
   const value = useSectionEdit(edit, {
     label: t("deals.amount"),
     keys: MONEY_KEYS,
-    readOnly: moneyLocks(deal, edit, locale),
+    readOnly: moneyLocks(deal, edit, locale, t("record.notShown")),
   });
   const ownership = useSectionEdit(edit, {
     label: t("record.details.ownership"),
@@ -212,19 +211,24 @@ function useSectionEdits(deal: Deal, edit: RailEdit, locale: Locale) {
   };
 }
 
+type DealEdit = ReturnType<typeof useDealEdit>;
+
 // A locked figure reads in its currency, as its row does, never as a bare number.
+// The server withholds the money as one unit, so a mask on any part locks all three.
 function moneyLocks(
   deal: Deal,
-  edit: RailEdit,
+  edit: DealEdit,
   locale: Locale,
+  notShown: string,
 ): Record<string, SectionLock> {
+  const masked = edit.maskedFields.length > 0;
   const figures: Record<string, string | null> = {
     amount: money(deal.amount_minor, deal.currency, locale),
     expected_arr: money(deal.expected_arr_minor, deal.currency, locale),
   };
   return Object.fromEntries(
     MONEY_KEYS.flatMap((key) => {
-      const reason = edit.readOnlyFields?.[key];
+      const reason = masked ? notShown : edit.readOnlyFields?.[key];
       if (!reason) return [];
       return [[key, { reason, reading: figures[key] ?? undefined }]];
     }),

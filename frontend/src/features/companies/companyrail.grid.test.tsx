@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom/vitest";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
+import { en } from "../../i18n/en";
 import { openChoiceDialog } from "../../testing/choicedialog.testkit";
 import { meFixture } from "../../testing/mefixture";
 import {
@@ -48,10 +49,15 @@ describe("the details' Edit links", () => {
 
   it("offer none to a reader without the grant to change accounts", async () => {
     stub({
-      "/me": () => jsonResponse(meFixture({ allow: { company: ["read"] } })),
+      "/me": () =>
+        jsonResponse({
+          ...meFixture({ allow: { company: ["read"] } }),
+          settings_availability: { lists: true },
+        }),
     });
     renderRail();
-    expect(await screen.findByText("Mira Voss")).toBeInTheDocument();
+    // Only a loaded /me draws the Lists group, so the grants have been read.
+    await screen.findByRole("region", { name: en["lists.record.title"] });
     expect(screen.queryByRole("button", { name: /^Edit / })).toBeNull();
   });
 

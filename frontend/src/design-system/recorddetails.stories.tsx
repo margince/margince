@@ -134,6 +134,30 @@ export const EditablePhone: Story = {
   },
 };
 
+/** The Edit link's touch layer stops above the first row, so a thumb on the
+ *  row's top edge reaches the row. */
+export const EditTouchLayerPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  args: Editable.args,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const link = await canvas.findByRole("button", { name: "Edit About" });
+    const value = canvas.getByText("brandt.example");
+    const layer = getComputedStyle(link, "::before");
+    const top = value.getBoundingClientRect().top;
+    const layerEnd =
+      link.getBoundingClientRect().bottom - Number.parseFloat(layer.bottom);
+    await expect(Number.parseFloat(layer.height)).toBeGreaterThanOrEqual(44);
+    await expect(layerEnd).toBeLessThanOrEqual(top + 0.5);
+    const hit = document.elementFromPoint(
+      value.getBoundingClientRect().left + 2,
+      top + 1,
+    );
+    await expect(value.contains(hit)).toBe(true);
+  },
+};
+
 /** An editable section with every row still empty keeps its pane, so its
  *  Edit link is the way to add the first value; a read-only one folds away. */
 export const EditableEmpty: Story = {

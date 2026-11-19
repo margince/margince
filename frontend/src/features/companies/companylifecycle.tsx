@@ -41,7 +41,7 @@ export function CompanyNameLine({ company }: Readonly<{ company: Company }>) {
 // metadata a reader could not act on. So it is the design system's own
 // dropdown worn as a filled button at `--controlHeight`. It writes through the
 // PATCH the owner flow uses (useCompanyFieldPatch). The details read the stage
-// as a row, changed in About's dialog.
+// as a row.
 export function CompanyLifecycleControl({
   company,
 }: Readonly<{ company: Company }>) {

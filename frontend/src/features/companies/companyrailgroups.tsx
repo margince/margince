@@ -133,10 +133,7 @@ async function fetchShareCount(
   return { count: data.data.length, more: data.page.has_more };
 }
 
-/**
- * The register's facts about the account and how its own row was written. The
- * VAT number is the one change here, on its own profile-field write.
- */
+/** The VAT number is the one change here, through its own profile-field write. */
 export function useRegistrationSection(
   company: Company,
   edit: RailEdit,

@@ -610,6 +610,33 @@ describe("Edit project in the More menu", () => {
     );
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
+
+  it("opens only once the custom fields have read, so a quick press still shows them", async () => {
+    const user = userEvent.setup();
+    let answer: (response: Response) => void = () => undefined;
+    const fieldsRead = new Promise<Response>((resolve) => {
+      answer = resolve;
+    });
+    projectsBackend({
+      view: project360(),
+      respond: async (url) =>
+        new URL(url).pathname === "/v1/custom-fields" ? fieldsRead : null,
+    });
+    render(<ProjectScreen id="pr-1" />);
+    await screen.findByRole("heading", { name: "CRM rollout" });
+    await user.click(screen.getByRole("button", { name: "More actions" }));
+    await user.click(screen.getByRole("button", { name: en["project.edit"] }));
+    expect(
+      screen.queryByRole("dialog", { name: en["project.edit"] }),
+    ).toBeNull();
+    answer(jsonResponse({ data: [region] }));
+    const dialog = await screen.findByRole("dialog", {
+      name: en["project.edit"],
+    });
+    expect(
+      within(dialog).getByRole("textbox", { name: "Region" }),
+    ).toBeTruthy();
+  });
 });
 
 // A task's verbs answer to the TASK's permission, not the project's.

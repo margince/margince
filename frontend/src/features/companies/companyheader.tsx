@@ -129,11 +129,7 @@ export function useCompanyReadOnlyReason(company: Company): string | undefined {
   return undefined;
 }
 
-/**
- * The account's owner as a flow of its own: how the row reads, the dialog that
- * changes it, and `open` when this reader may. On an unowned account the
- * dialog is the claim door. The same roster names the owner in both places.
- */
+/** The owner as a flow of its own; on an unowned account its dialog is the claim door. */
 export function useCompanyOwnerFlow(company: Company): Readonly<{
   reading: ReactNode;
   open?: () => void;

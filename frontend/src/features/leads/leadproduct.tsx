@@ -24,11 +24,7 @@ export function LeadProductName({ lead }: Readonly<{ lead: Lead }>) {
   return name.data ?? t("lead.product.loading");
 }
 
-/**
- * The search that names, changes or clears a lead's product, opened by the
- * details' Edit. Product reports count the lead under it, so a writer sets it
- * here when the lead did not arrive with one.
- */
+/** Product reports count a lead under its product, so a writer sets one the lead came without. */
 export function LeadProductPicker({
   lead,
   writer,

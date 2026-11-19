@@ -222,16 +222,20 @@ function readingRow(
   notSet: string,
   { handle, beside }: RowShape,
 ): DetailRow {
-  if (!reading) return { key, term, value: notSet, empty: true };
   return {
     key,
     term,
     value: (
       <>
-        {handle ? <span className="fieldgrid-handle">{reading}</span> : reading}
+        {handle && reading ? (
+          <span className="fieldgrid-handle">{reading}</span>
+        ) : (
+          reading || notSet
+        )}
         {beside}
       </>
     ),
+    empty: !reading,
   };
 }
 

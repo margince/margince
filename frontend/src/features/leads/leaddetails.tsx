@@ -7,6 +7,7 @@ import { ConversationSuggestionsCard } from "../../components/conversationsugges
 import { EntityRef } from "../../components/entityref";
 import { useEntityName } from "../../components/entityref.queries";
 import { LinkedInChip } from "../../components/linkedinchip";
+import type { RailEdit } from "../../components/railfield";
 import { type SectionLock, useSectionEdit } from "../../components/sectionedit";
 import { LeadStops } from "../../components/stops";
 import { TagsPanel } from "../../components/tagspanel";
@@ -216,15 +217,18 @@ function aboutKeys(rows: readonly DetailRow[]): string[] {
 }
 
 /** What the About dialog shows of a field without offering it, and why. */
-function useAboutLocks(lead: Lead): Record<string, SectionLock> {
+function useAboutLocks(
+  lead: Lead,
+  edit: RailEdit,
+): Record<string, SectionLock> {
   const t = useT();
   const partners = useLeadPartnerOptions();
+  const companyReason = edit.readOnlyFields?.company_name;
   return {
-    linkedin_url: { reason: t("record.leadProfileReadOnly") },
-    ...(lead.company_id
+    ...(lead.company_id && companyReason
       ? {
           company_name: {
-            reason: t("lead.company.nameFollowsLink"),
+            reason: companyReason,
             reading: <EntityRef kind="company" id={lead.company_id} asText />,
           },
         }
@@ -251,12 +255,7 @@ type DetailsProps = Readonly<{
   terminalReasonId: string;
 }>;
 
-/**
- * The lead's details under its head: About, Ownership and Lists as flat
- * groups, each changed through its section's Edit. Every blank folds behind
- * one link, and a line says what a lead is. The deal and project cards live
- * on the Deals tab.
- */
+/** The lead's details under its head. The deal and project cards live on the Deals tab. */
 export function LeadDetails(props: DetailsProps) {
   // The server answers no lists for an archived record. So the read sits
   // in a component that only a lead it can answer for mounts.
@@ -300,7 +299,7 @@ function LeadDetailsBody({
   const about = useAboutRows(lead, !writer.readOnly);
   const edit = useLeadEdit(lead, writer);
   const aboutFlows = useLeadAboutFlows(lead, writer);
-  const locks = useAboutLocks(lead);
+  const locks = useAboutLocks(lead, edit);
   const aboutLabel = t("record.details.about");
   const aboutEdit = useSectionEdit(edit, {
     label: aboutLabel,

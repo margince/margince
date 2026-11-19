@@ -3,12 +3,14 @@
 
 import { type ReactNode, useState } from "react";
 import { type Locale, useLocale, useT } from "../i18n";
+import type { CfObject } from "../lib/customfields.logic";
 import {
   ProblemError,
   problemExistingId,
   problemMessageOf,
 } from "../lib/problem";
 import type { CreateField } from "./create";
+import { useSettledOpen } from "./create.dialog";
 import { EditRecordModal } from "./edit";
 import { prefillFromRecord } from "./edit.prefill";
 import type { RailEdit } from "./railfield";
@@ -16,17 +18,19 @@ import { dateDisplay, groupValue } from "./recordfieldvalues";
 import { useRecordFieldWrite } from "./recordfieldwrite";
 
 /**
- * The edit form over some of a record's fields, saved through the record's one
- * field write. `start` opens it; it closes itself once `canOpen` turns false.
+ * The edit form over some of a record's fields, saved through its one field write.
+ * It opens once `catalog`'s fields have read, so a quick press still shows them.
  */
 export function useFieldsDialog(
   edit: RailEdit,
   title: string,
   fields: readonly CreateField[],
   canOpen = true,
+  catalog?: CfObject,
 ) {
   const t = useT();
   const [open, setOpen] = useState(false);
+  const shown = useSettledOpen(open, catalog);
   const { mutation, pending } = useRecordFieldWrite(edit.kind, edit.record);
   if (open && !canOpen) setOpen(false);
   const start = () => {
@@ -35,7 +39,7 @@ export function useFieldsDialog(
   };
   const element = (
     <EditRecordModal
-      open={open}
+      open={shown}
       onClose={() => setOpen(false)}
       title={title}
       fields={[...fields]}
@@ -85,10 +89,8 @@ export type SectionLock = Readonly<{ reason: string; reading?: ReactNode }>;
 export type SectionEdit = Readonly<{ onEdit: () => void }>;
 
 /**
- * One details section's Edit: a dialog with only the section's fields, saved as
- * `RailField` saves them. `edit` is undefined when the reader may change
- * nothing there; when the one thing they may change is a flow, it opens that
- * flow directly. Render `element` beside the section.
+ * A section's Edit: a dialog of only its fields, or its one flow opened directly.
+ * `edit` is undefined when the reader may change nothing there.
  */
 export function useSectionEdit(
   edit: RailEdit,

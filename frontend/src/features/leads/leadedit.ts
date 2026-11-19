@@ -5,8 +5,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { RailEdit } from "../../components/railfield";
 import { saveRecordEdit } from "../../components/recordedit";
 import { type FieldRecord, rawRecord } from "../../components/recordfieldtypes";
-import { industryOptions } from "../../format/industry";
-import { useLocale, useT } from "../../i18n";
+import { useT } from "../../i18n";
+import { useIndustryOptions } from "../../lib/industryoptions";
 import { leadWriteKeys } from "../../lib/leadkeys";
 import { originPickOptions, useLeadOrigins } from "../../lib/leadorigins";
 import { ProblemError } from "../../lib/problem";
@@ -28,33 +28,35 @@ export function useLeadEdit(
   writer: Pick<LeadWriter, "readOnly">,
 ): RailEdit {
   const t = useT();
-  const { locale } = useLocale();
   const origins = useLeadOrigins();
   const partners = useLeadPartnerOptions() ?? [];
-  // A stored industry the list no longer offers stays choosable, so a save keeps it.
-  const industries = industryOptions(t, locale);
-  const legacy =
-    lead.industry &&
-    !industries.some((option) => option.value === lead.industry)
-      ? [{ value: lead.industry, label: lead.industry }]
-      : [];
+  const industries = useIndustryOptions(lead.industry);
+  const fields = leadEditFields({
+    industries: [{ value: "", label: t("field.unset") }, ...industries],
+    // "Not set" is a real choice: choosing it sends null and the lead scores neutral.
+    origins: [
+      { value: "", label: t("lead.originNone") },
+      ...originPickOptions(origins.data, lead.origin),
+    ],
+    partners: [{ value: "", label: t("lead.partnerNone") }, ...partners],
+  });
   return {
     kind: "lead",
     record: lead,
     canEdit: !writer.readOnly,
-    fields: leadEditFields({
-      industries: [
-        { value: "", label: t("field.unset") },
-        ...legacy,
-        ...industries,
-      ],
-      // "Not set" is a real choice: choosing it sends null and the lead scores neutral.
-      origins: [
-        { value: "", label: t("lead.originNone") },
-        ...originPickOptions(origins.data, lead.origin),
-      ],
-      partners: [{ value: "", label: t("lead.partnerNone") }, ...partners],
-    }),
+    // A blank name is not required here, or it would hold every other change hostage.
+    fields: fields.map((field) =>
+      field.key === "full_name"
+        ? { ...field, required: Boolean(lead.full_name) }
+        : field,
+    ),
+    readOnlyFields: {
+      linkedin_url: t("record.leadProfileReadOnly"),
+      // A linked lead's company name is the company's own.
+      ...(lead.company_id
+        ? { company_name: t("lead.company.nameFollowsLink") }
+        : {}),
+    },
     save: (values, _rows, opened) => saveLeadFields(opened, values),
   };
 }

@@ -27,6 +27,7 @@ import { postalLines } from "../../format/address";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCanWriteRecord } from "../../lib/capability";
+import { useIndustryOptions } from "../../lib/industryoptions";
 import { labelFor } from "../../lib/labelfor";
 import { useListsAvailable, useRecordLists } from "../../lib/lists.queries";
 import { CompanyContactCard } from "./companycontactcard";
@@ -35,11 +36,7 @@ import {
   displayHost,
   useCompanyReadOnlyReason,
 } from "./companyheader";
-import {
-  useCompanyEdit,
-  useCompanyFieldSave,
-  useIndustryOptions,
-} from "./companyrailedit";
+import { useCompanyEdit, useCompanyFieldSave } from "./companyrailedit";
 import {
   useOwnershipSection,
   useRegistrationSection,
@@ -326,7 +323,7 @@ function useAboutRows(
   loading: boolean,
 ): DetailRow[] {
   const t = useT();
-  const industries = useIndustryOptions(company);
+  const industries = useIndustryOptions(company.industry);
   const website = companyWebsite(company);
   const wayIn = useWayIn(company, view, loading);
   const choice = (
