@@ -213,8 +213,6 @@ function useAboutRows(
             kind="phone"
             value={lead.phone}
             record={{ entityType: "lead", entityId: lead.id }}
-            className="link-button lead-row-link"
-            textClassName="lead-row-link"
           />
         ),
       }).value,

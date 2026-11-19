@@ -57,11 +57,7 @@ function pairRow(over: Partial<WorklistItem> = {}): WorklistItem {
     consequence: "data_drifts",
     because: [],
     actions: ["merge", "dismiss"],
-    subject: {
-      type: "company",
-      id: "01a05500-0000-7000-8000-0000000000a1",
-      label: "Acme GmbH",
-    },
+    kind: "company",
     pair: {
       left: {
         id: "01a05500-0000-7000-8000-0000000000a1",
@@ -138,11 +134,7 @@ export const TheReviewInDark: Story = {
 export const WithoutCounts: Story = {
   args: {
     item: pairRow({
-      subject: {
-        type: "contact",
-        id: "01a05500-0000-7000-8000-0000000000b1",
-        label: "Katrin Seibert",
-      },
+      kind: "contact",
       pair: {
         left: {
           id: "01a05500-0000-7000-8000-0000000000b1",

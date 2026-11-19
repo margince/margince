@@ -248,28 +248,33 @@ function CommissionLedger({
             // ledger of bare figures cannot be reconciled against anything.
             // EntityRef resolves the name and links to the record, so a
             // partner's earnings are traceable to the deals that produced them.
+            // The day the line was written sits under it: accrued for an
+            // entry, reversed for the line that cancels one.
             key: "deal",
             header: t("commission.column.deal"),
-            render: (entry) => <EntityRef kind="deal" id={entry.deal_id} />,
-          },
-          {
-            // The day the line was written: accrued for an entry, reversed
-            // for the line that cancels one.
-            key: "date",
-            header: t("commission.column.date"),
-            render: (entry) => formatDate(entry.created_at, locale, zone),
+            render: (entry) => (
+              <Stack gap="1">
+                <EntityRef kind="deal" id={entry.deal_id} />
+                <span className="t-caption">
+                  {formatDate(entry.created_at, locale, zone)}
+                </span>
+              </Stack>
+            ),
           },
           {
             // A reversal carries the amount it takes back; drawn negative, it
             // reads as the offsetting line it is.
             key: "amount",
             header: t("commission.column.amount"),
-            render: (entry) =>
-              formatMoney(
-                entry.reversal_of ? -entry.amount_minor : entry.amount_minor,
-                entry.currency,
-                locale,
-              ),
+            render: (entry) => (
+              <span className="partnercommissions-earned">
+                {formatMoney(
+                  entry.reversal_of ? -entry.amount_minor : entry.amount_minor,
+                  entry.currency,
+                  locale,
+                )}
+              </span>
+            ),
           },
           {
             key: "rate",
