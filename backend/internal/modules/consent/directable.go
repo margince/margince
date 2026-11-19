@@ -13,12 +13,16 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
+// ActionDirectSend is the action a refusal offers when its caller may send the
+// held message anyway, under a recorded one-message decision.
+const ActionDirectSend = "direct_send"
+
 // DirectableBy reports whether the caller may direct this refused message past
 // every refusal on it.
 //
 // This is the exception's one eligibility test. DirectSend asks it before it
 // records an instruction. The refusal's offered actions ask it before they list
-// "direct_send", so the offer and the door give one answer. It needs the
+// ActionDirectSend, so the offer and the door give one answer. It needs the
 // exception grant and, for each refusal, a declared remedy the caller may take.
 // Any holder of the grant may take the plain exception; only an admin may take
 // the admin exception. A refusal that declares neither cannot be directed past.

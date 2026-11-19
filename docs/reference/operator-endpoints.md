@@ -25,7 +25,7 @@ Served next to `/v1`:
 - `/metrics`: Prometheus text format. It carries the **HTTP section** below,
   `margince_outbox_unpublished`, `margince_relay_published_total`, the **connection pool section**
   below, and the counters of the AI router. It also carries the **day stage section** and the **job
-  runtime section** below. Closed by default.
+  runtime section** below, and the [email send counters](send-metrics.md). Closed by default.
   Set `--metrics-token` to need a Bearer credential. Or set `--metrics-access=open` for a scraper
   that finds targets by annotation, where the port itself is already closed off.
 

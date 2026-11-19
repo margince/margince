@@ -34,7 +34,7 @@ func TestAResumeCannotSendWordingFromBeforeAConcurrentEdit(t *testing.T) {
 	ctx := e.as(principal.RowScopeAll)
 	store := e.store(stubUnsubscribeLinker{token: testUnsubscribeTok, ok: true})
 	anchor := e.seedAnchor(t, "", "")
-	intent := store.holdForReview(ctx, FromActivity(anchor), soloSendInput("transactional"))
+	intent := store.holdForReview(ctx, FromActivity(anchor), soloSendInput("transactional")).id
 	if intent.IsZero() {
 		t.Fatal("the refused message was not held")
 	}
