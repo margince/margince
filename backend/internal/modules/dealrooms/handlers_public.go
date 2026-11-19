@@ -72,6 +72,9 @@ func (h Handlers) PeekDealRoomCredential(w http.ResponseWriter, r *http.Request)
 
 // ExchangeDealRoomCredential consumes a credential and opens a session.
 func (h Handlers) ExchangeDealRoomCredential(w http.ResponseWriter, r *http.Request) {
+	if !requireJSON(w, r) {
+		return
+	}
 	var req crmcontracts.DealRoomCredentialRequest
 	if !httperr.Decode(w, r, &req) {
 		return
@@ -85,8 +88,7 @@ func (h Handlers) ExchangeDealRoomCredential(w http.ResponseWriter, r *http.Requ
 		httperr.Write(w, r, err)
 		return
 	}
-	setSessionCookie(w, issued.Token, issued.ExpiresAt, time.Now())
-	w.Header().Set("Cache-Control", "no-store")
+	setSessionCookie(w, issued)
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.DealRoomSessionIssued{
 		SessionToken: issued.Token,
 		ExpiresAt:    issued.ExpiresAt,
@@ -207,7 +209,6 @@ func (h Handlers) SignOutBuyerRoom(w http.ResponseWriter, r *http.Request) {
 		writeBuyerFault(w, r, err)
 		return
 	}
-	clearSessionCookie(w)
 	w.WriteHeader(http.StatusNoContent)
 }
 

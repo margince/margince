@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { api } from "../../api/client";
 import type { useT } from "../../i18n";
 import { throwProblem } from "../../lib/problem";
 
@@ -24,6 +25,22 @@ export function refuseOrThrow(
   }
   throwProblem(error, t);
   throw new Error("unreachable");
+}
+
+// confirmSameRoom re-reads which seat the cookie names before a write. One
+// cookie serves the whole browser, so another tab's link may have moved it.
+// The write would then land in that other room.
+export async function confirmSameRoom(
+  participantId: string,
+  t: ReturnType<typeof useT>,
+): Promise<void> {
+  const { data, error, response } = await api.GET("/public/rooms/me");
+  if (error) {
+    refuseOrThrow(error, response, t);
+  }
+  if (data?.participant.id !== participantId) {
+    throwProblem({ status: 409, detail: t("buyer.roomReplaced") });
+  }
 }
 
 export function retireOnRefusal(onSessionLost: () => void) {

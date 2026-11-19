@@ -167,11 +167,14 @@ Buyers are invited to a Deal Room one address at a time. Each buyer gets a
 needs an invitation of their own.
 
 Once a buyer has opened their link, that browser keeps them signed in for
-7 days. They can close the tab and come back later, or open the old link
-again, and the room opens. **Sign out** on the buyer page ends this at once,
-which matters on a shared computer. Revoking the buyer or archiving the room
-also ends it on their next click. A paused room still shows no content, and a
-closed room stays read-only.
+7 days. They can close the tab and open the room page again later. A used
+link still shows "This link no longer works". **Sign out** on the buyer page
+ends access at once, which matters on a shared computer. Revoking the buyer
+or archiving the room also ends it on their next click.
+
+A paused room still shows no content, and a closed room stays read-only. One
+browser holds one room at a time, so a second room's link replaces the first.
+A tab still showing the first room then asks the buyer to open the page again.
 
 A buyer who loses their link can ask for a new one from the room's sign-in
 page, with **Request new link**. The answer is always the same: "If that

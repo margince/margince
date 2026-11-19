@@ -97,6 +97,7 @@ function Board({
   return (
     <BuyerBoard
       session={1}
+      participantId="p-1"
       onSessionLost={() => {}}
       mayWrite={mayWrite}
       refusal={refusalKey ? t(refusalKey) : undefined}

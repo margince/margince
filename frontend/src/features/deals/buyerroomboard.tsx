@@ -15,6 +15,7 @@ import { useT } from "../../i18n";
 import { downloadBytes } from "../../lib/download";
 import { throwProblem } from "../../lib/problem";
 import {
+  confirmSameRoom,
   refuseOrThrow,
   retireOnRefusal,
   SessionRefusedError,
@@ -124,11 +125,13 @@ function BuyerDocumentVerbs({ doc }: Readonly<{ doc: BuyerRoomDocument }>) {
 // reply — and never resolve.
 export function BuyerBoard({
   session,
+  participantId,
   onSessionLost,
   mayWrite,
   refusal,
 }: Readonly<{
   session: number;
+  participantId: string;
   onSessionLost: () => void;
   mayWrite: boolean;
   refusal: string | undefined;
@@ -163,6 +166,12 @@ export function BuyerBoard({
     queryClient.invalidateQueries({
       queryKey: ["buyer-room-threads", session],
     });
+  // A failed write re-reads the room as well, so a room another tab switched
+  // to replaces this screen instead of taking the write.
+  const writeFailed = (error: unknown) => {
+    retireOnRefusal(onSessionLost)(error);
+    return queryClient.invalidateQueries({ queryKey: ["buyer-room", session] });
+  };
   const open = useMutation({
     mutationKey: ["buyer-room-thread-open"],
     mutationFn: async (input: {
@@ -170,6 +179,7 @@ export function BuyerBoard({
       body: string;
       requiredChange: boolean;
     }) => {
+      await confirmSameRoom(participantId, t);
       const { data, error, response } = await api.POST(
         "/public/rooms/threads",
         {
@@ -185,12 +195,13 @@ export function BuyerBoard({
       }
       return data;
     },
-    onError: retireOnRefusal(onSessionLost),
+    onError: writeFailed,
     onSuccess: refresh,
   });
   const reply = useMutation({
     mutationKey: ["buyer-room-thread-reply"],
     mutationFn: async (input: { threadId: string; body: string }) => {
+      await confirmSameRoom(participantId, t);
       const { data, error, response } = await api.POST(
         "/public/rooms/threads/{threadId}/comments",
         {
@@ -203,7 +214,7 @@ export function BuyerBoard({
       }
       return data;
     },
-    onError: retireOnRefusal(onSessionLost),
+    onError: writeFailed,
     onSuccess: refresh,
   });
   const documents: BoardDocument[] = (docs.data?.data ?? []).map((doc) => {

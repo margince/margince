@@ -5,8 +5,8 @@
 
 package integration
 
-// The buyer's session survives a closed tab as an HttpOnly cookie scoped to
-// the buyer edge. The server resolves it on every request. So revocation,
+// The buyer's session survives a closed tab as an HttpOnly __Host- cookie.
+// The server resolves it on every request. So revocation,
 // expiry, archiving and sign-out end access while the cookie still lives.
 // The cookie opens no seller route.
 
@@ -48,8 +48,8 @@ func openInBrowser(t *testing.T, e *apptest.AppEnv, room buyerRoom) buyerBrowser
 		t.Fatalf("the exchange set no %s cookie carrying the session, so the session ends with the tab: %v",
 			dealrooms.SessionCookieName, header.Values("Set-Cookie"))
 	}
-	if !b.cookie.HttpOnly || !b.cookie.Secure || b.cookie.SameSite != http.SameSiteStrictMode || b.cookie.Path != dealrooms.PublicPathPrefix {
-		t.Fatalf("cookie attributes = %+v, want HttpOnly, Secure, SameSite=Strict, Path=%s", b.cookie, dealrooms.PublicPathPrefix)
+	if !b.cookie.HttpOnly || !b.cookie.Secure || b.cookie.SameSite != http.SameSiteStrictMode || b.cookie.Path != "/" || b.cookie.Domain != "" {
+		t.Fatalf("cookie attributes = %+v, want HttpOnly, Secure, SameSite=Strict, Path=/ and no Domain", b.cookie)
 	}
 	expiresAt, err := time.Parse(time.RFC3339Nano, fmt.Sprint(issued["expires_at"]))
 	if err != nil {
@@ -117,12 +117,61 @@ func TestTheKeptCookieAdmitsTheBuyerWithoutABearerAndOpensNoSellerRoute(t *testi
 	if status, _ := publicCallVia(t, b.client, e, "GET", "/v1/public/rooms/me", nil, bearer("mdrs_not-a-session"), nil); status != http.StatusUnauthorized {
 		t.Fatalf("me with a dead Bearer beside a live cookie = %d, want 401", status)
 	}
-	// The browser never sends the cookie to a seller route; one sent there by
-	// hand is no seat either.
-	cookie := map[string]string{"Cookie": b.cookie.Name + "=" + b.cookie.Value}
-	for _, path := range []string{"/v1/me", "/v1/deal-rooms"} {
-		if status, _ := publicCallVia(t, b.client, e, "GET", path, nil, cookie, nil); status != http.StatusUnauthorized {
+	// The browser sends the Path=/ cookie to every route. Every route but the
+	// buyer edge reads it as no session at all.
+	for _, path := range []string{"/v1/me", "/v1/deal-rooms", "/v1/deals"} {
+		if status, _ := b.call(t, "GET", path, nil, nil); status != http.StatusUnauthorized {
 			t.Fatalf("seller %s on the room cookie = %d, want 401", path, status)
+		}
+	}
+}
+
+// A page on another site can post a form to the exchange without a preflight,
+// as text/plain. It must not plant its own session in the buyer's browser.
+func TestAnExchangeAnotherSiteForgesPlantsNoCookie(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	room := openRoomWithABuyer(t, e)
+	body := AnyMap{"credential": room.credential}
+
+	for name, headers := range map[string]map[string]string{
+		"a cross-site JSON post": {"Sec-Fetch-Site": "cross-site"},
+		"a same-site text body":  {"Content-Type": "text/plain"},
+	} {
+		status, header := publicCallWithHeaders(t, e, "POST", "/v1/public/rooms/exchange", body, headers, nil)
+		if status == http.StatusOK || sessionCookieIn(t, header) != nil {
+			t.Fatalf("%s: exchange = %d with cookie %v, want a refusal and no cookie", name, status, header.Values("Set-Cookie"))
+		}
+	}
+	var peek AnyMap
+	if status := publicCall(t, e, "POST", "/v1/public/rooms/peek", body, nil, &peek); status != http.StatusOK || peek["exchangeable"] != true {
+		t.Fatalf("the refused exchanges spent the credential: peek = %d %v", status, peek)
+	}
+}
+
+// Every buyer answer depends on the session, so none may sit in a cache.
+func TestNoBuyerEdgeAnswerIsCached(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	room := openRoomWithABuyer(t, e)
+	jar, err := cookiejar.New(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stranger := &http.Client{Transport: e.TS.Client().Transport, Jar: jar}
+
+	for _, call := range []struct {
+		method, path string
+		body         any
+	}{
+		{"GET", "/v1/public/rooms/me", nil},
+		{"POST", "/v1/public/rooms/peek", AnyMap{"credential": room.credential}},
+		{"POST", "/v1/public/rooms/exchange", AnyMap{"credential": room.credential}},
+		{"GET", "/v1/public/rooms/me", nil},
+	} {
+		status, header := publicCallVia(t, stranger, e, call.method, call.path, call.body, nil, nil)
+		if got := header.Get("Cache-Control"); got != "private, no-store" {
+			t.Fatalf("%s %s = %d with Cache-Control %q, want private, no-store", call.method, call.path, status, got)
 		}
 	}
 }
@@ -136,13 +185,18 @@ func TestSigningOutEndsTheKeptCookieAndClearsIt(t *testing.T) {
 	if status != http.StatusNoContent {
 		t.Fatalf("sign-out = %d, want 204", status)
 	}
-	if cleared := sessionCookieIn(t, header); cleared == nil || cleared.MaxAge >= 0 || cleared.Path != dealrooms.PublicPathPrefix {
+	if cleared := sessionCookieIn(t, header); cleared == nil || cleared.MaxAge >= 0 || cleared.Path != "/" {
 		t.Fatalf("sign-out left the cookie in the browser: %+v", cleared)
 	}
 	// The token itself is dead too, for a copy kept outside the browser.
 	stolen := map[string]string{"Cookie": b.cookie.Name + "=" + b.cookie.Value}
 	if status := publicCall(t, e, "GET", "/v1/public/rooms/me", nil, stolen, nil); status != http.StatusUnauthorized {
 		t.Fatalf("me on the signed-out token = %d, want 401", status)
+	}
+	// Signing out again is refused, and still tells the browser to drop it.
+	status, header = publicCallWithHeaders(t, e, "POST", "/v1/public/rooms/sign-out", nil, stolen, nil)
+	if cleared := sessionCookieIn(t, header); status != http.StatusUnauthorized || cleared == nil || cleared.MaxAge >= 0 {
+		t.Fatalf("a refused sign-out = %d with cookie %+v, want 401 that clears it", status, cleared)
 	}
 }
 

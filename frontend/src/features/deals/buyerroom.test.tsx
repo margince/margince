@@ -201,16 +201,49 @@ describe("BuyerRoomScreen", () => {
     );
   });
 
-  it("an old link opened again opens the room the browser still holds", async () => {
+  // The kept session may be another room's. A refused link says so rather
+  // than opening whatever room the browser last held.
+  it("a refused link shows the dead-link page even with a kept session", async () => {
     globalThis.location.hash = "#/room?c=mdr_used";
-    stubRoom({
+    const sent = stubRoom({
       "POST /public/rooms/exchange": () =>
         jsonResponse({ status: 404, code: "not_found" }, 404),
     });
     render(<BuyerRoomScreen />);
 
-    await screen.findByRole("heading", { name: "Acme rollout" });
-    expect(screen.queryByText("This link no longer works")).toBeNull();
+    await screen.findByText(/The link was already used/);
+    expect(screen.queryByRole("heading", { name: "Acme rollout" })).toBeNull();
+    expect(sent.some((s) => s.key === "GET /public/rooms/me")).toBe(false);
+  });
+
+  // One cookie serves the browser. A link opened in another tab moves it to
+  // another room; this tab must neither draw that room nor write into it.
+  it("a tab whose room another tab replaced draws nothing and writes nothing", async () => {
+    let seat = "p-1";
+    const sent = stubRoom({
+      "GET /public/rooms/me": () =>
+        jsonResponse({
+          ...LIVE,
+          participant: { ...LIVE.participant, id: seat },
+          room: {
+            ...LIVE.room,
+            title: seat === "p-1" ? "Acme rollout" : "Other room",
+          },
+        }),
+    });
+    const user = userEvent.setup();
+    render(<BuyerRoomScreen />);
+    await screen.findByText("Does clause 4 work for you?");
+
+    seat = "p-2";
+    await user.type(screen.getByLabelText("Reply"), "Thirty days would.");
+    await user.click(screen.getByRole("button", { name: "Reply" }));
+
+    await screen.findByText("This tab shows an older room");
+    expect(screen.queryByRole("heading", { name: "Other room" })).toBeNull();
+    expect(
+      sent.some((s) => s.key === "POST /public/rooms/threads/th-1/comments"),
+    ).toBe(false);
   });
 
   // The credential no longer waits in the address bar for the screen to read
@@ -316,6 +349,27 @@ describe("BuyerRoomScreen", () => {
     expect(sent.some((s) => s.key === "POST /public/rooms/sign-out")).toBe(
       true,
     );
+  });
+
+  // On a shared computer, a sign-out that failed must not look like one that
+  // worked: the room stays and the failure shows.
+  it("a failed sign-out stays in the room and says it failed", async () => {
+    stubRoom({
+      "POST /public/rooms/sign-out": () =>
+        jsonResponse(
+          { status: 500, detail: "The server could not sign you out." },
+          500,
+        ),
+    });
+    const user = userEvent.setup();
+    render(<BuyerRoomScreen />);
+
+    await user.click(await screen.findByRole("button", { name: "Sign out" }));
+    await screen.findByRole("alert");
+    expect(
+      screen.getByRole("heading", { name: "Acme rollout" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("This link no longer works")).toBeNull();
   });
 
   it("hides the open room while a second link's exchange is pending", async () => {

@@ -5,12 +5,13 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Button, EmptyState } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
+import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryStates } from "../../design-system/querystates";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { labelFor } from "../../lib/labelfor";
-import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
+import { problemMessageOf, throwProblem } from "../../lib/problem";
 import {
   forgetHashCredential,
   takeHashCredential,
@@ -25,7 +26,11 @@ import {
   LinkRequest,
   stewardLabel,
 } from "./buyerroomframe";
-import { SessionRefusedError } from "./buyerroomsession";
+import {
+  refuseOrThrow,
+  retireOnRefusal,
+  SessionRefusedError,
+} from "./buyerroomsession";
 import "./buyerroom.css";
 
 // The Deal Room as its BUYER sees it, the one screen an outside contact
@@ -117,7 +122,6 @@ export function BuyerRoomScreen() {
     forgetHashCredential(ROOM_ROUTE, credential);
     awaiting.current = credential;
     // The session the browser holds is KEPT while the new link is checked.
-    // A dead link falls back to it, so an old invitation opens the room.
     setRefusal(null);
     exchangeAsync(credential).then(
       (issued) => {
@@ -150,11 +154,9 @@ export function BuyerRoomScreen() {
       </BuyerFrame>
     );
   }
-  // Only a refused link falls back to the kept session. Any other failure is
-  // the server's own explanation, shown as it is.
-  const keptSessionMayAnswer =
-    refusal instanceof SessionRefusedError && session !== null;
-  if (credential && refusal && !keptSessionMayAnswer) {
+  // A refused link never falls back to the kept session: that session may be
+  // another room's, and the buyer asked for this one.
+  if (credential && refusal) {
     return (
       <BuyerFrame>
         <DeadLink
@@ -176,7 +178,7 @@ export function BuyerRoomScreen() {
   }
   return (
     <BuyerFrame>
-      <RoomBody session={session} onSessionLost={endSession} />
+      <RoomBody key={session} session={session} onSessionLost={endSession} />
     </BuyerFrame>
   );
 }
@@ -215,14 +217,37 @@ function RoomBody({
 }: Readonly<{ session: number; onSessionLost: () => void }>) {
   const t = useT();
   const room = useBuyerRoom(session, onSessionLost);
+  // The seat this tab drew first. One cookie serves the whole browser, so a
+  // link opened in another tab can move it to another room under this one.
+  const [drawn, setDrawn] = useState<string | null>(null);
+  const shown = room.data?.participant.id;
+  useEffect(() => {
+    if (shown !== undefined && drawn === null) {
+      setDrawn(shown);
+    }
+  }, [shown, drawn]);
   const signOut = useMutation({
     mutationKey: ["buyer-room-sign-out"],
     mutationFn: async () => {
-      unwrap(await api.POST("/public/rooms/sign-out"), t);
+      const { error, response } = await api.POST("/public/rooms/sign-out");
+      if (!response.ok) {
+        refuseOrThrow(error, response, t);
+      }
     },
-    // Whatever the server said, this tab is done with the session.
-    onSettled: onSessionLost,
+    // A failed sign-out stays on screen, so a buyer on a shared computer knows
+    // they are still signed in. A refused one means there was nothing to end.
+    onSuccess: onSessionLost,
+    onError: retireOnRefusal(onSessionLost),
   });
+  if (drawn !== null && shown !== undefined && shown !== drawn) {
+    return (
+      <Panel title={t("buyer.roomReplacedTitle")}>
+        <PanelBody>
+          <p>{t("buyer.roomReplaced")}</p>
+        </PanelBody>
+      </Panel>
+    );
+  }
   return (
     <QueryStates
       query={room}
@@ -234,6 +259,7 @@ function RoomBody({
           <RoomView
             view={room.data}
             session={session}
+            participantId={drawn ?? room.data.participant.id}
             onSessionLost={onSessionLost}
           />
           <div className="buyer-foot">
@@ -250,6 +276,7 @@ function RoomBody({
               <LogOut aria-hidden />
               {t("buyer.signOut")}
             </Button>
+            <ErrorLine error={signOut.error} />
           </div>
         </>
       ) : null}
@@ -310,10 +337,12 @@ function PreviewBanner() {
 function RoomView({
   view,
   session,
+  participantId,
   onSessionLost,
 }: Readonly<{
   view: BuyerRoomView;
   session: number;
+  participantId: string;
   onSessionLost: () => void;
 }>) {
   const t = useT();
@@ -373,6 +402,7 @@ function RoomView({
         <div className="buyer-main">
           <BuyerBoard
             session={session}
+            participantId={participantId}
             onSessionLost={onSessionLost}
             mayWrite={writeRefusal === undefined}
             refusal={writeRefusal}

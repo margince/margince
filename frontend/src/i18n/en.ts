@@ -13555,6 +13555,9 @@ export const en = {
     "The link was already used, has expired or was replaced by a newer one. Request a new link below.",
   "buyer.noLink":
     "Open this page from the link you received. If you no longer have it, request a new one below.",
+  "buyer.roomReplacedTitle": "This tab shows an older room",
+  "buyer.roomReplaced":
+    "This browser has opened another Deal Room since. Reload the page to see it.",
   "buyer.emailLabel": "Your email address",
   "buyer.emailHint": "The address the invitation was sent to.",
   "buyer.requestLink": "Request new link",

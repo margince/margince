@@ -5,60 +5,39 @@ package dealrooms
 
 import (
 	"net/http"
-	"net/http/cookiejar"
 	"net/http/httptest"
-	"net/url"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 )
 
-// A browser sends the buyer cookie to the buyer edge and to no other route.
-// So the token never reaches the seller's API.
-func TestTheBuyerCookieReachesOnlyTheBuyerEdge(t *testing.T) {
-	recorder := httptest.NewRecorder()
-	now := clocktest.Now(t)
-	setSessionCookie(recorder, "mdrs_token", now.Add(sessionTTL), now)
-	jar, err := cookiejar.New(nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	at := func(scheme, path string) *url.URL { return &url.URL{Scheme: scheme, Host: "crm.example", Path: path} }
-	jar.SetCookies(at("https", PublicPathPrefix+"exchange"), recorder.Result().Cookies())
+const testOrigin = "https://crm.example"
 
-	for path, sent := range map[string]bool{
-		"/v1/public/rooms/me":        true,
-		"/v1/public/rooms/threads/x": true,
-		"/v1/me":                     false,
-		"/v1/deal-rooms/x":           false,
-		"/v1/public/roomsx":          false,
-		"/":                          false,
-	} {
-		got := len(jar.Cookies(at("https", path))) > 0
-		if got != sent {
-			t.Errorf("cookie sent to %s = %v, want %v", path, got, sent)
-		}
-	}
-	if got := jar.Cookies(at("http", PublicPathPrefix+"me")); len(got) != 0 {
-		t.Errorf("the Secure cookie went out over plain http: %v", got)
-	}
-}
-
-func TestTheBuyerCookieIsHiddenFromScriptsAndCrossSiteRequests(t *testing.T) {
-	recorder := httptest.NewRecorder()
-	now := clocktest.Now(t)
-	setSessionCookie(recorder, "mdrs_token", now.Add(sessionTTL), now)
+func onlyCookie(t *testing.T, recorder *httptest.ResponseRecorder) *http.Cookie {
+	t.Helper()
 	cookies := recorder.Result().Cookies()
 	if len(cookies) != 1 {
 		t.Fatalf("set %d cookies, want 1", len(cookies))
 	}
-	cookie := cookies[0]
-	if !cookie.HttpOnly || !cookie.Secure || cookie.SameSite != http.SameSiteStrictMode {
-		t.Fatalf("cookie = %+v, want HttpOnly, Secure and SameSite=Strict", cookie)
+	return cookies[0]
+}
+
+// A __Host- cookie is one a sibling subdomain cannot plant: the browser takes
+// it only with Secure, Path=/ and no Domain.
+func TestTheBuyerCookieIsAHostCookieHiddenFromScriptsAndCrossSiteRequests(t *testing.T) {
+	recorder := httptest.NewRecorder()
+	setSessionCookie(recorder, IssuedSession{Token: "mdrs_token", ExpiresAt: clocktest.Now(t).Add(sessionTTL), Lifetime: sessionTTL})
+	cookie := onlyCookie(t, recorder)
+	if !strings.HasPrefix(cookie.Name, "__Host-") || cookie.Path != "/" || cookie.Domain != "" || !cookie.Secure {
+		t.Fatalf("cookie = %+v, want a __Host- name, Path=/, no Domain and Secure", cookie)
+	}
+	if !cookie.HttpOnly || cookie.SameSite != http.SameSiteStrictMode {
+		t.Fatalf("cookie = %+v, want HttpOnly and SameSite=Strict", cookie)
 	}
 	if time.Duration(cookie.MaxAge)*time.Second != sessionTTL {
-		t.Fatalf("Max-Age %ds, want within the session's %v", cookie.MaxAge, sessionTTL)
+		t.Fatalf("Max-Age %ds, want the session's %v", cookie.MaxAge, sessionTTL)
 	}
 }
 
@@ -87,5 +66,67 @@ func TestThePresentedTokenPrefersABearerOverTheCookie(t *testing.T) {
 				t.Fatalf("presented token = %q, want %q", got, tc.want)
 			}
 		})
+	}
+}
+
+// An exchange needs no cookie, so SameSite cannot stop a forged one. The edge
+// refuses any write another site starts, before a handler runs.
+func TestTheBuyerEdgeRefusesAWriteAnotherSiteStarts(t *testing.T) {
+	for name, tc := range map[string]struct {
+		method, fetchSite, origin, configured string
+		admitted                              bool
+	}{
+		"cross-site fetch":              {method: http.MethodPost, fetchSite: "cross-site", admitted: false},
+		"another origin":                {method: http.MethodPost, origin: "https://evil.example", configured: testOrigin, admitted: false},
+		"this origin":                   {method: http.MethodPost, fetchSite: "same-origin", origin: testOrigin, configured: testOrigin, admitted: true},
+		"an API client with no headers": {method: http.MethodPost, configured: testOrigin, admitted: true},
+		"a cross-site read":             {method: http.MethodGet, fetchSite: "cross-site", admitted: true},
+	} {
+		t.Run(name, func(t *testing.T) {
+			r := httptest.NewRequest(tc.method, PublicPathPrefix+"exchange", nil)
+			if tc.fetchSite != "" {
+				r.Header.Set("Sec-Fetch-Site", tc.fetchSite)
+			}
+			if tc.origin != "" {
+				r.Header.Set("Origin", tc.origin)
+			}
+			recorder := httptest.NewRecorder()
+			if got := GuardPublicRequest(recorder, r, tc.configured); got != tc.admitted {
+				t.Fatalf("admitted = %v, want %v", got, tc.admitted)
+			}
+			if !tc.admitted && recorder.Code != http.StatusForbidden {
+				t.Fatalf("refusal = %d, want 403", recorder.Code)
+			}
+			if got := recorder.Header().Get("Cache-Control"); got != "private, no-store" {
+				t.Fatalf("Cache-Control = %q, want private, no-store on every answer", got)
+			}
+		})
+	}
+}
+
+// The handler may answer 401 or fail; the browser drops the cookie either way.
+func TestSignOutClearsTheCookieBeforeAnyHandlerAnswers(t *testing.T) {
+	recorder := httptest.NewRecorder()
+	r := httptest.NewRequest(http.MethodPost, PublicPathPrefix+"sign-out", nil)
+	if !GuardPublicRequest(recorder, r, testOrigin) {
+		t.Fatal("a same-site sign-out was refused")
+	}
+	if cookie := onlyCookie(t, recorder); cookie.Name != SessionCookieName || cookie.MaxAge >= 0 {
+		t.Fatalf("sign-out cookie = %+v, want %s cleared", cookie, SessionCookieName)
+	}
+}
+
+func TestAnExchangeBodyMustBeJSON(t *testing.T) {
+	for contentType, admitted := range map[string]bool{
+		"application/json":                true,
+		"application/json; charset=utf-8": true,
+		"text/plain":                      false,
+		"":                                false,
+	} {
+		r := httptest.NewRequest(http.MethodPost, PublicPathPrefix+"exchange", nil)
+		r.Header.Set("Content-Type", contentType)
+		if got := requireJSON(httptest.NewRecorder(), r); got != admitted {
+			t.Errorf("Content-Type %q admitted = %v, want %v", contentType, got, admitted)
+		}
 	}
 }

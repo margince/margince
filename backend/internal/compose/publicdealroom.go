@@ -73,11 +73,14 @@ func newPublicDealRoomLimiters() publicDealRoomLimiters {
 // linkSharedKey is the one bucket every link request shares.
 const linkSharedKey = "deal_room_link_request"
 
-func publicDealRoom(store *dealrooms.Store, limits publicDealRoomLimiters) func(http.Handler) http.Handler {
+func publicDealRoom(store *dealrooms.Store, limits publicDealRoomLimiters, origin string) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if !strings.HasPrefix(r.URL.Path, publicDealRoomPrefix) {
 				next.ServeHTTP(w, r)
+				return
+			}
+			if !dealrooms.GuardPublicRequest(w, r, origin) {
 				return
 			}
 			operation, _, _ := strings.Cut(strings.TrimPrefix(r.URL.Path, publicDealRoomPrefix), "/")
