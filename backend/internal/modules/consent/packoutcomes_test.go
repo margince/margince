@@ -52,13 +52,15 @@ func shippedPackCodes(t *testing.T) map[string]jurisdiction.Code {
 // shippedPackCodeRange is a prefix and the second letters handed out under it.
 type shippedPackCodeRange struct{ prefix, first, last rune }
 
-// shippedPackCodeRanges are the codes shippedPackCodes hands out. They sit
-// outside the ranges testMessagingRules hands out, and
+// shippedPackCodeRanges are the codes shippedPackCodes hands out, enough for
+// the EU and Asia-Pacific units with room to grow. They sit outside the ranges
+// testMessagingRules hands out, and
 // gates/messagingtestcodes_test.go fails a literal code another test in this
 // package registers inside them.
 var shippedPackCodeRanges = [...]shippedPackCodeRange{
 	{prefix: 'm', first: 'a', last: 'z'},
 	{prefix: 'n', first: 'a', last: 'z'},
+	{prefix: 'o', first: 'a', last: 'z'},
 }
 
 var registerShipped sync.Once
@@ -97,6 +99,28 @@ var shippedOutcomes = map[string]packOutcome{
 	"mt": memberStateOutcome(true, ""), "nl": memberStateOutcome(true, ""), "pl": memberStateOutcome(false, ""),
 	"pt": memberStateOutcome(true, ""), "ro": memberStateOutcome(true, ""), "se": memberStateOutcome(true, ""),
 	"si": memberStateOutcome(true, ""), "sk": memberStateOutcome(true, ""),
+	"au": apacOutcome(existingCustomer, commsauthz.ReasonMarketingPermissionRequired, ""),
+	"nz": apacOutcome(existingCustomer, commsauthz.ReasonMarketingPermissionRequired, ""),
+	"jp": apacOutcome(existingCustomer, commsauthz.ReasonMarketingPermissionRequired, ""),
+	"kr": apacOutcome(nil, commsauthz.ReasonMarketingConsentRequired, "(광고)"),
+	"cn": apacOutcome(nil, commsauthz.ReasonMarketingConsentRequired, "广告"),
+	"sg": apacOutcome(nil, commsauthz.ReasonNoMarketingConsent, "<ADV>"),
+	"hk": apacOutcome(nil, commsauthz.ReasonNoMarketingConsent, ""),
+	"id": apacOutcome(nil, commsauthz.ReasonNoMarketingConsent, ""),
+	"in": apacOutcome(nil, commsauthz.ReasonNoMarketingConsent, ""),
+	"my": apacOutcome(nil, commsauthz.ReasonNoMarketingConsent, ""),
+	"ph": apacOutcome(nil, commsauthz.ReasonNoMarketingConsent, ""),
+	"th": apacOutcome(nil, commsauthz.ReasonNoMarketingConsent, ""),
+	"tw": apacOutcome(nil, commsauthz.ReasonNoMarketingConsent, ""),
+}
+
+// apacOutcome is what an Asia-Pacific pack other than Vietnam's gives: the
+// core windows, no cap, and its own exception, refusal and label.
+func apacOutcome(exception *messagingrules.MarketingException, unconsented, prefix string) packOutcome {
+	return packOutcome{
+		reply: 365 * 24 * time.Hour, dealFollow: 182 * 24 * time.Hour,
+		exception: exception, unconsentedReason: unconsented, prefix: prefix,
+	}
 }
 
 // memberStateOutcome is what an EU member-state pack other than Germany's

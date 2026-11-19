@@ -1,13 +1,55 @@
 <!-- prose:plain -->
-# The Vietnamese pack
+# The `apac` packs
 
-What Vietnamese law requires of the outbound messages of this product, stated as data that the core
-engines apply. The pack decides nothing: it declares, and the engine reads.
+What the law of 14 countries requires of the outbound messages of this product. It is stated as
+data that the core engines apply. The packs decide nothing: they declare, and the engine reads.
 
-Most of it comes from **Decree 91/2020/ND-CP** on spam messages, email and calls. The rules on
-advertising content come from the `Law on Advertising`.
+Each country has a pack here with its outbound-message rules. Vietnam also has its request
+deadlines. Every other country gets the core's own answer for those: no retention floor, and the
+core month for every request.
 
-## Advertising email needs prior consent, with no exception
+## The messaging rules of each country
+
+The rules live in `policy/`, as Markdown with front matter. Each country has a folder named for its
+code, such as `policy/jp/`. Its `index.md` lists one layer, `<code>/<code>.md`. The countries share
+no law, so no layer sits under the country layer.
+
+Each layer body names the act it rests on and the points where it takes the stricter reading.
+Where a law has no rule the engine can apply, the body says so. Where the facts were not sure, the
+layer asks for more than the law may need.
+
+No pack here except Vietnam's has a legal review yet. None states a review date, so a rep sees no
+citation from any of them. A legal review adds the date.
+
+| Code | Main act | What the pack asks for |
+|---|---|---|
+| `au` | `Spam Act 2003, ss. 16-18` | consent or `inferred consent`, sender contact, unsubscribe |
+| `cn` | `Internet E-mail Measures 2006`, `Advertising Law art. 43`, `PIPL` | consent only, the `广告` label, sender contact, a refusal by email, no `legitimate interests` |
+| `hk` | `Cap. 593`, `Cap. 486 Part 6A` | consent, sender contact, unsubscribe |
+| `id` | `UU ITE art. 26`, `UU PDP` | consent, a way to refuse |
+| `in` | `DPDP Act 2023` | consent, notice, a way to refuse, no `legitimate interests` |
+| `jp` | `Specified Electronic Mail Act, arts. 3-4` | consent or a business relationship, sender contact, a way to refuse |
+| `kr` | `Network Act art. 50` | consent only, the `(광고)` label, sender contact, a way to refuse, an answer within 14 days |
+| `my` | `PDPA 2010, ss. 6 and 43` | consent, a way to refuse |
+| `nz` | `Unsolicited Electronic Messages Act 2007` | consent or `inferred consent`, sender contact, unsubscribe |
+| `ph` | `Data Privacy Act 2012` and its rules | consent, notice, a way to refuse |
+| `sg` | `Spam Control Act 2007`, `PDPA 2012` | consent, the `<ADV>` label, unsubscribe |
+| `th` | `PDPA 2019`, `Computer-Related Crime Act s. 11` | consent, notice, a way to refuse |
+| `tw` | `Personal Data Protection Act art. 20` | consent, a way to refuse |
+| `vn` | `Decree 91/2020/ND-CP` | see below |
+
+Three packs offer a route to advertising without consent: `inferred consent` for `au` and `nz`, and
+the business relationship for `jp`. Each one asks for all four conditions of the existing-customer
+exception: a sale, a notice at collection, similar goods and no objection. The law asks for fewer,
+so these packs open fewer sends than the law allows.
+
+## Vietnam
+
+What Vietnamese law requires of the outbound messages of this product. Most of it comes from
+**Decree 91/2020/ND-CP** on spam messages, email and calls. The rules on advertising content come
+from the `Law on Advertising`.
+
+### Advertising email needs prior consent, with no exception
 
 Art. 10 allows an advertising email only where the recipient has given prior consent. The decree
 grants **no** route that comes from a sale: nothing here matches the German exception for a current
@@ -22,7 +64,7 @@ The consent itself must be provable in three ways. These are what was agreed to,
 and how often the recipient agreed to hear from us. The core consent engine records all three on the proof
 row; this pack does not state them again.
 
-## The `[QC]` subject label (Art. 18)
+### The `[QC]` subject label (Art. 18)
 
 An advertising email is labelled as advertising in its subject line, with the label the decree
 fixes: `[QC]`.
@@ -32,7 +74,7 @@ subject does not begin with `[QC]` (in any case) is parked and not sent. The che
 advertising only: a message that is not advertising but has an advertising label would describe
 itself wrong to the recipient.
 
-## Who is advertising (Art. 19)
+### Who is advertising (Art. 19)
 
 An advertising message names the advertiser and gives a way to reach them: name, phone, email,
 address and website.
@@ -48,7 +90,7 @@ come from different laws.
 | Objection route: web page, email and phone | advertising |
 | Advertiser contact: name, phone, email, address, website | advertising |
 
-## How to refuse (Art. 20)
+### How to refuse (Art. 20)
 
 A recipient must have three ways to refuse advertising: a web page or a network page, an email
 address, and a phone number. So the objection route of the pack names all three. A reply word such as STOP
@@ -65,7 +107,7 @@ A route that meets the rule:
 trả lời email này với từ STOP, gửi email đến privacy@example.com, gọi số +84 00 0000 0000 hoặc dùng trang [đường dẫn trang tùy chọn nhận tin].
 ```
 
-## Company details in Vietnamese
+### Company details in Vietnamese
 
 A reader must understand what they act on (`Law 91/2025/QH15` Art. 9.2). So the controller details
 have a Vietnamese version of each text field. A Vietnamese mail or page shows the Vietnamese text where
@@ -76,7 +118,7 @@ recipient, the objection route and the advertiser contact must be stated in Viet
 send is refused. The name and the address may stay in the default text. An installation whose own
 language is Vietnamese meets this with its default text.
 
-## The end of an advertising mail (Art. 19 and 20.1)
+### The end of an advertising mail (Art. 19 and 20.1)
 
 An advertising mail ends with the refusal section. It says that the recipient may refuse all advertising
 from the advertiser, then gives the objection route and the opt-out links. Directly before it stands the
@@ -86,7 +128,7 @@ The same section tells the recipient that they choose if their data is used for 
 page the settings link opens. This meets `Law on Protection of Consumers' Rights` Art. 10.1(b) and
 18.4(b).
 
-## Vietnamese first, and no claim to be the best without proof
+### Vietnamese first, and no claim to be the best without proof
 
 `Law on Advertising` Art. 18 asks for advertising content in Vietnamese first. Text in another language
 comes below it, and its size is at most three fourths of the Vietnamese text. Art. 8.11 of that law and
@@ -110,7 +152,7 @@ name. The core's sign-off check decides which lines those are. It looks for "the
 The size of text in another language is not checked. A plain text mail has one size, and the check
 does not read the styles of an HTML part.
 
-## Advertisers from other countries (Law on Advertising Art. 39.2)
+### Advertisers from other countries (Law on Advertising Art. 39.2)
 
 An organisation from outside Vietnam that does no business there must advertise there through a
 Vietnamese advertising service business. The advertiser is the customer of the installation, and the
@@ -120,7 +162,7 @@ So the pack sets `ForeignAdvertiserNeedsLocalAgency`. Take a legal entity that i
 Vietnam. A draft of advertising mail it sends to a Vietnamese recipient gets a note that says so.
 The note does not stop the send.
 
-## The sending server
+### The sending server
 
 No rule that applies today requires advertising email to be sent from a server in Vietnam, so the pack blocks
 nothing on it. `Decree 330/2026/ND-CP` Art. 38.3(a) fines product information sent by email from a
@@ -131,7 +173,7 @@ and it has no such rule.
 The installation can send through its own SMTP relay (`email.smtp.*`). For advertising mail to
 Vietnamese recipients, use a relay in Vietnam where one is available.
 
-## When marketing mail to Vietnamese recipients is cleared
+### When marketing mail to Vietnamese recipients is cleared
 
 Marketing mail to Vietnamese recipients is cleared on these conditions:
 
@@ -151,7 +193,7 @@ contact grants consent on grants only the consent it asks about.
 
 This is the legal position as of `2026-11-16`.
 
-## Three per address per day (Art. 13.5)
+### Three per address per day (Art. 13.5)
 
 At most **3** advertising emails reach one address in any rolling **24 hours**, unless that recipient
 has agreed to a different frequency.
@@ -177,7 +219,7 @@ country states which law it sends under. A setting that let it pass that country
 would make the declaration false. Waiting clears it, because the window rolls and the same message
 becomes lawful. So to refuse costs a delay, not the message.
 
-## An opt-out is acknowledged (Art. 20)
+### An opt-out is acknowledged (Art. 20)
 
 A recipient who refuses advertising email is owed a receipt at once (Art. 20.3). It states when the
 refusal reached the sender and when sending stopped (Art. 20.4(a)), and holds no advertising
@@ -205,7 +247,7 @@ The pack sets the receipt's alert time to one hour. A receipt not sent by then r
 notice to the privacy operators, and **Settings → System health** counts it under **Opt-out
 receipts** for 30 days.
 
-## Records kept (Art. 11)
+### Records kept (Art. 11)
 
 Consents given, refusals and receipts stay at least one year (Art. 11.7). The pack declares the year as
 `OptOutRecordsKeep`.
@@ -216,7 +258,7 @@ usual policies apply. A request to delete the subject still removes their detail
 **Download opt-out records** on a contact's consent panel exports all three when the state asks to
 see them (Art. 11.3).
 
-## A consent request answers the contact's own request (Art. 11.2)
+### A consent request answers the contact's own request (Art. 11.2)
 
 A mail that asks a contact to confirm a subscription they never asked for is itself a message they
 did not ask for. So this pack declares `ConsentConfirmationNeedsRequest`. A user can send the
@@ -231,13 +273,13 @@ nothing, so a user may send it without being asked. That is the request the
 **Ask for consent** button of the no-basis warning sends, and its proof row names no request of the
 contact's own.
 
-## Windows
+### Windows
 
 A reply stays a reply for **12 months**; a live deal supports a follow-up no one asked for during
 **6 months**. These are the core defaults, stated again so the pack says what it applies. Neither one
 limits a reply in the same thread.
 
-## Retention
+### Retention
 
 None. The core retention engine reads the classes of a pack as statutory floors on records the
 product holds. The record-keeping duties of Vietnam fall on accounting books and invoices, which a
@@ -246,10 +288,11 @@ declares none.
 
 ## Changing any of this
 
-`vn_test.go` checks every claim above. A changed label, limit, disclosure or window is a change to
+`apac_test.go` checks that every country has one pack and what each one asks for. `vn_test.go`
+checks every claim about Vietnam above. A changed label, limit, disclosure or window is a change to
 legal content. Edit the test in the same commit, and say in the PR body which article moved.
 
-The messaging rules live in `policy/`, as Markdown with front matter. `gen-messaging-rules`
-compiles them into `messagingrules_gen.go`: run `go generate` here, or `make -C backend gen`. Each
-policy file names pairs of fixture drafts in `policy/vn/fixtures/`, one that must raise a finding and
-one that must not. The consent tests in the backend run each pair through the engine's own checks.
+`gen-messaging-rules` compiles `policy/` into `messagingrules_gen.go`: run `go generate` here, or
+`make -C backend gen`. Each policy file names pairs of fixture drafts in its country's own
+`fixtures/`. One draft of a pair must raise a finding, and one must not. The consent tests in the
+backend run each pair through the engine's own checks.

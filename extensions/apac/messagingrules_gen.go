@@ -12,6 +12,358 @@ import (
 // per country folder: edit the Markdown there and run go generate.
 func messagingRules() []messaging.Rules {
 	return []messaging.Rules{{
+		Jurisdiction: "au",
+		Version:      1,
+		Instruments: []messaging.Instrument{{
+			Name:          "Spam Act 2003 (Cth)",
+			EffectiveFrom: time.Date(2004, time.April, 10, 0, 0, 0, 0, time.UTC),
+			Provision:     "ss. 16-18",
+		}, {
+			Name: "Spam Regulations 2021 (Cth)",
+		}, {
+			Name:          "Privacy Act 1988 (Cth), Schedule 1",
+			EffectiveFrom: time.Date(2014, time.March, 12, 0, 0, 0, 0, time.UTC),
+			Provision:     "APP 7",
+		}},
+		ReplyWindow:        8760 * time.Hour,
+		DealFollowUpWindow: 4368 * time.Hour,
+		MarketingExceptions: []messaging.MarketingException{{
+			Kind:                         "existing_customer",
+			RequiresSaleEvidence:         true,
+			RequiresCollectionTimeOptOut: true,
+			RequiresSimilarity:           true,
+			RequiresNoObjection:          true,
+		}},
+		Disclosures: []messaging.Disclosure{{
+			Kind:          "objection_route",
+			MarketingOnly: true,
+		}, {
+			Kind:          "advertiser_contact",
+			MarketingOnly: true,
+		}},
+		Provenance: messaging.Provenance{
+			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
+		},
+		Digest: "8c877a36cfcd13ebca8da8db5b7f5029dfd03527b340d9adc45e2ab4bdd0dfbd",
+	}, {
+		Jurisdiction: "cn",
+		Version:      1,
+		Instruments: []messaging.Instrument{{
+			Name:          "Measures for the Administration of Internet E-mail Services (MII Order No. 38)",
+			EffectiveFrom: time.Date(2006, time.March, 30, 0, 0, 0, 0, time.UTC),
+			Provision:     "arts. 13 and 14",
+		}, {
+			Name:          "Advertising Law of the People's Republic of China",
+			EffectiveFrom: time.Date(2015, time.September, 1, 0, 0, 0, 0, time.UTC),
+			Provision:     "art. 43",
+		}, {
+			Name:          "Personal Information Protection Law of the People's Republic of China",
+			EffectiveFrom: time.Date(2021, time.November, 1, 0, 0, 0, 0, time.UTC),
+			Provision:     "arts. 13 and 17",
+		}},
+		ReplyWindow:        8760 * time.Hour,
+		DealFollowUpWindow: 4368 * time.Hour,
+		ConsentOnly:        true,
+		Disclosures: []messaging.Disclosure{{
+			Kind: "controller_identity",
+		}, {
+			Kind: "privacy_contact",
+		}, {
+			Kind:          "objection_route",
+			MarketingOnly: true,
+			Means:         []messaging.ContactMeans{"email"},
+		}, {
+			Kind:          "advertiser_contact",
+			MarketingOnly: true,
+		}},
+		SubjectPrefix:         "广告",
+		NoLegitimateInterests: true,
+		Provenance: messaging.Provenance{
+			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
+		},
+		Digest: "901ea27730960909821bbcd030fe5507b9eb0daabb0e5803b4ec62a55e909e09",
+	}, {
+		Jurisdiction: "hk",
+		Version:      1,
+		Instruments: []messaging.Instrument{{
+			Name:      "Unsolicited Electronic Messages Ordinance (Cap. 593)",
+			Provision: "ss. 8 to 10",
+			SourceURL: "https://www.elegislation.gov.hk/hk/cap593",
+		}, {
+			Name:          "Personal Data (Privacy) Ordinance (Cap. 486), Part 6A",
+			EffectiveFrom: time.Date(2013, time.April, 1, 0, 0, 0, 0, time.UTC),
+			Provision:     "ss. 35C to 35G",
+			SourceURL:     "https://www.elegislation.gov.hk/hk/cap486",
+		}},
+		ReplyWindow:        8760 * time.Hour,
+		DealFollowUpWindow: 4368 * time.Hour,
+		Disclosures: []messaging.Disclosure{{
+			Kind:          "objection_route",
+			MarketingOnly: true,
+		}, {
+			Kind:          "advertiser_contact",
+			MarketingOnly: true,
+		}},
+		Provenance: messaging.Provenance{
+			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
+		},
+		Digest: "c0f5c4eab4f7823b4bd330ea34fb5d8de413c95e183bdfa47bc43fce4e979248",
+	}, {
+		Jurisdiction: "id",
+		Version:      1,
+		Instruments: []messaging.Instrument{{
+			Name:      "Law No. 11 of 2008 on Electronic Information and Transactions, as amended by Law No. 19 of 2016 and Law No. 1 of 2024",
+			Provision: "art. 26",
+		}, {
+			Name:          "Law No. 27 of 2022 on Personal Data Protection",
+			EffectiveFrom: time.Date(2022, time.October, 17, 0, 0, 0, 0, time.UTC),
+			Provision:     "arts. 9 and 20",
+		}},
+		ReplyWindow:        8760 * time.Hour,
+		DealFollowUpWindow: 4368 * time.Hour,
+		Disclosures: []messaging.Disclosure{{
+			Kind:          "objection_route",
+			MarketingOnly: true,
+		}},
+		Provenance: messaging.Provenance{
+			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
+		},
+		Digest: "b44ccddf7ef6717f4cab3c7bb3595c7edcf9b5218f4802eafaf1a7173d0d4bfa",
+	}, {
+		Jurisdiction: "in",
+		Version:      1,
+		Instruments: []messaging.Instrument{{
+			Name:          "Information Technology Act, 2000",
+			EffectiveFrom: time.Date(2000, time.October, 17, 0, 0, 0, 0, time.UTC),
+		}, {
+			Name:      "Digital Personal Data Protection Act, 2023",
+			Provision: "ss. 5, 6 and 7",
+		}},
+		ReplyWindow:        8760 * time.Hour,
+		DealFollowUpWindow: 4368 * time.Hour,
+		Disclosures: []messaging.Disclosure{{
+			Kind: "controller_identity",
+		}, {
+			Kind: "privacy_contact",
+		}, {
+			Kind:          "objection_route",
+			MarketingOnly: true,
+		}},
+		NoLegitimateInterests: true,
+		Provenance: messaging.Provenance{
+			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
+		},
+		Digest: "29478d6cb6855a3fef998db62859cb530db0d160ef5ef598ae1959c6d9c41199",
+	}, {
+		Jurisdiction: "jp",
+		Version:      1,
+		Instruments: []messaging.Instrument{{
+			Name:          "Act on Regulation of Transmission of Specified Electronic Mail (Act No. 26 of 2002)",
+			EffectiveFrom: time.Date(2002, time.July, 1, 0, 0, 0, 0, time.UTC),
+			Provision:     "arts. 3 and 4",
+			SourceURL:     "https://elaws.e-gov.go.jp/document?lawid=414AC0000000026",
+		}, {
+			Name:          "Act No. 54 of 2008, amending Act No. 26 of 2002",
+			EffectiveFrom: time.Date(2008, time.December, 1, 0, 0, 0, 0, time.UTC),
+		}},
+		ReplyWindow:        8760 * time.Hour,
+		DealFollowUpWindow: 4368 * time.Hour,
+		MarketingExceptions: []messaging.MarketingException{{
+			Kind:                         "existing_customer",
+			RequiresSaleEvidence:         true,
+			RequiresCollectionTimeOptOut: true,
+			RequiresSimilarity:           true,
+			RequiresNoObjection:          true,
+		}},
+		Disclosures: []messaging.Disclosure{{
+			Kind:          "objection_route",
+			MarketingOnly: true,
+		}, {
+			Kind:          "advertiser_contact",
+			MarketingOnly: true,
+		}},
+		Provenance: messaging.Provenance{
+			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
+		},
+		Digest: "7678d668bc54df1a1c7b7b7e00c289a30d667cb1f5afdb8cac2225e17b57acae",
+	}, {
+		Jurisdiction: "kr",
+		Version:      1,
+		Instruments: []messaging.Instrument{{
+			Name:          "Act on Promotion of Information and Communications Network Utilization and Information Protection",
+			EffectiveFrom: time.Date(2014, time.November, 29, 0, 0, 0, 0, time.UTC),
+			Provision:     "art. 50",
+		}, {
+			Name:      "Enforcement Decree of the Act on Promotion of Information and Communications Network Utilization and Information Protection",
+			Provision: "arts. 61 and 62-2",
+		}},
+		ReplyWindow:        8760 * time.Hour,
+		DealFollowUpWindow: 4368 * time.Hour,
+		ConsentOnly:        true,
+		Disclosures: []messaging.Disclosure{{
+			Kind:          "objection_route",
+			MarketingOnly: true,
+		}, {
+			Kind:          "advertiser_contact",
+			MarketingOnly: true,
+		}},
+		SubjectPrefix:                   "(광고)",
+		OptOutAcknowledgement:           true,
+		OptOutAcknowledgementWithin:     336 * time.Hour,
+		OptOutAcknowledgementUTCOffset:  9 * time.Hour,
+		ConsentConfirmationNeedsRequest: true,
+		ConsentRequestFirstFor:          []messaging.PurposeClass{"marketing", "phone_outreach"},
+		Provenance: messaging.Provenance{
+			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
+		},
+		Digest: "421e4f3c9b79d7be82e1c19b298b5a0e1c9a92e01209b45578af65f8bebaa49a",
+	}, {
+		Jurisdiction: "my",
+		Version:      1,
+		Instruments: []messaging.Instrument{{
+			Name:          "Personal Data Protection Act 2010 (Act 709)",
+			EffectiveFrom: time.Date(2013, time.November, 15, 0, 0, 0, 0, time.UTC),
+			Provision:     "ss. 6 and 43",
+		}, {
+			Name:          "Communications and Multimedia Act 1998 (Act 588)",
+			EffectiveFrom: time.Date(1999, time.April, 1, 0, 0, 0, 0, time.UTC),
+			Provision:     "s. 233",
+		}},
+		ReplyWindow:        8760 * time.Hour,
+		DealFollowUpWindow: 4368 * time.Hour,
+		Disclosures: []messaging.Disclosure{{
+			Kind:          "objection_route",
+			MarketingOnly: true,
+		}},
+		Provenance: messaging.Provenance{
+			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
+		},
+		Digest: "3b0ebce5755dadfee002ceb2f163416f7176820993128613925e8691536d955d",
+	}, {
+		Jurisdiction: "nz",
+		Version:      1,
+		Instruments: []messaging.Instrument{{
+			Name:          "Unsolicited Electronic Messages Act 2007",
+			EffectiveFrom: time.Date(2007, time.September, 5, 0, 0, 0, 0, time.UTC),
+			Provision:     "ss. 9-11",
+			SourceURL:     "https://www.legislation.govt.nz/act/public/2007/0007/latest/whole.html",
+		}},
+		ReplyWindow:        8760 * time.Hour,
+		DealFollowUpWindow: 4368 * time.Hour,
+		MarketingExceptions: []messaging.MarketingException{{
+			Kind:                         "existing_customer",
+			RequiresSaleEvidence:         true,
+			RequiresCollectionTimeOptOut: true,
+			RequiresSimilarity:           true,
+			RequiresNoObjection:          true,
+		}},
+		Disclosures: []messaging.Disclosure{{
+			Kind:          "objection_route",
+			MarketingOnly: true,
+		}, {
+			Kind:          "advertiser_contact",
+			MarketingOnly: true,
+		}},
+		Provenance: messaging.Provenance{
+			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
+		},
+		Digest: "e20106b668877c2c26374b2b1485ab874dae9d78e21c5ae26e48f75e8671d8dc",
+	}, {
+		Jurisdiction: "ph",
+		Version:      1,
+		Instruments: []messaging.Instrument{{
+			Name:          "Data Privacy Act of 2012 (Republic Act No. 10173)",
+			EffectiveFrom: time.Date(2012, time.September, 8, 0, 0, 0, 0, time.UTC),
+			Provision:     "ss. 12 and 16",
+		}, {
+			Name:          "Implementing Rules and Regulations of the Data Privacy Act of 2012",
+			EffectiveFrom: time.Date(2016, time.September, 9, 0, 0, 0, 0, time.UTC),
+			Provision:     "s. 34",
+		}},
+		ReplyWindow:        8760 * time.Hour,
+		DealFollowUpWindow: 4368 * time.Hour,
+		Disclosures: []messaging.Disclosure{{
+			Kind: "controller_identity",
+		}, {
+			Kind: "privacy_contact",
+		}, {
+			Kind:          "objection_route",
+			MarketingOnly: true,
+		}},
+		Provenance: messaging.Provenance{
+			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
+		},
+		Digest: "01c5821edbd2e17a1df37a30d94d866c315605b180251326bf25cefd9c2a323f",
+	}, {
+		Jurisdiction: "sg",
+		Version:      1,
+		Instruments: []messaging.Instrument{{
+			Name:          "Spam Control Act 2007",
+			EffectiveFrom: time.Date(2007, time.June, 15, 0, 0, 0, 0, time.UTC),
+			Provision:     "s. 11 and Second Schedule",
+			SourceURL:     "https://sso.agc.gov.sg/Act/SCA2007",
+		}, {
+			Name:          "Personal Data Protection Act 2012",
+			EffectiveFrom: time.Date(2014, time.July, 2, 0, 0, 0, 0, time.UTC),
+			Provision:     "ss. 13 to 15",
+			SourceURL:     "https://sso.agc.gov.sg/Act/PDPA2012",
+		}},
+		ReplyWindow:        8760 * time.Hour,
+		DealFollowUpWindow: 4368 * time.Hour,
+		Disclosures: []messaging.Disclosure{{
+			Kind:          "objection_route",
+			MarketingOnly: true,
+		}},
+		SubjectPrefix: "<ADV>",
+		Provenance: messaging.Provenance{
+			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
+		},
+		Digest: "c1cd1acd348f61f91af106d34d57d136fbb95afc1572466aa956d28b8fafcb10",
+	}, {
+		Jurisdiction: "th",
+		Version:      1,
+		Instruments: []messaging.Instrument{{
+			Name:          "Personal Data Protection Act B.E. 2562 (2019)",
+			EffectiveFrom: time.Date(2022, time.June, 1, 0, 0, 0, 0, time.UTC),
+			Provision:     "ss. 19, 23, 25 and 32",
+		}, {
+			Name:          "Computer-Related Crime Act B.E. 2550 (2007), as amended by Act (No. 2) B.E. 2560 (2017)",
+			EffectiveFrom: time.Date(2017, time.May, 24, 0, 0, 0, 0, time.UTC),
+			Provision:     "s. 11",
+		}},
+		ReplyWindow:        8760 * time.Hour,
+		DealFollowUpWindow: 4368 * time.Hour,
+		Disclosures: []messaging.Disclosure{{
+			Kind: "controller_identity",
+		}, {
+			Kind: "privacy_contact",
+		}, {
+			Kind:          "objection_route",
+			MarketingOnly: true,
+		}},
+		Provenance: messaging.Provenance{
+			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
+		},
+		Digest: "8404a53cc5e382a3af6bc5520752864a3ecd91ba653b29cb44286abf3868a896",
+	}, {
+		Jurisdiction: "tw",
+		Version:      1,
+		Instruments: []messaging.Instrument{{
+			Name:          "Personal Data Protection Act",
+			EffectiveFrom: time.Date(2012, time.October, 1, 0, 0, 0, 0, time.UTC),
+			Provision:     "arts. 19 and 20",
+		}},
+		ReplyWindow:        8760 * time.Hour,
+		DealFollowUpWindow: 4368 * time.Hour,
+		Disclosures: []messaging.Disclosure{{
+			Kind:          "objection_route",
+			MarketingOnly: true,
+		}},
+		Provenance: messaging.Provenance{
+			CreatedAt: time.Date(2026, time.November, 19, 0, 0, 0, 0, time.UTC),
+		},
+		Digest: "b507ec6d4c18431bb482ae99d60c689fd795a40a6aff5e9eac115d112491779e",
+	}, {
 		Jurisdiction: "vn",
 		Version:      5,
 		Instruments: []messaging.Instrument{{

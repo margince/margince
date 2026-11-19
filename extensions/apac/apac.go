@@ -22,7 +22,7 @@ func New() extension.Extension {
 	return extension.Extension{
 		Name:    "apac",
 		Version: "1.0.0",
-		Description: "Asia-Pacific packs: the Vietnamese advertising-email rules of Decree 91/2020/ND-CP " +
+		Description: "Asia-Pacific packs: the outbound-messaging rules of 14 countries from Australia to Vietnam, " +
 			"and the Vietnamese request deadlines.",
 		Jurisdictions: packsFor(messagingRules()),
 		Messaging:     messagingRules(),
