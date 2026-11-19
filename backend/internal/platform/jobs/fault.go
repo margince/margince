@@ -12,6 +12,7 @@ import (
 
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
@@ -77,6 +78,11 @@ func FaultForKind(ctx context.Context, kind string, err error) error {
 func faultFor(ctx context.Context, kind string, err error) error {
 	if err == nil {
 		return nil
+	}
+	// The refusal of an unbound model passes through untouched. It names no
+	// tenant data, and Govern completes a quiet job on it without a fault line.
+	if errors.Is(err, httperr.ErrNotConfigured) {
+		return err
 	}
 	// River's own control returns pass through UNTOUCHED. A snooze
 	// reschedules and a cancel deliberately stops; neither is a failure and

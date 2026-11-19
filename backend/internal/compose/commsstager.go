@@ -21,6 +21,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/sendmetrics"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
@@ -122,13 +123,17 @@ func (s commsStager) StageTx(ctx context.Context, tx pgx.Tx, in activities.Deliv
 	// resolved and spent inside this transaction, BEFORE the decision rows are
 	// written, because the authority is part of what each row records and
 	// those rows are never updated afterwards (migration 1788529047).
+	decisionStarted := time.Now()
 	set, instruction, err := s.authority.AuthorizeStagingWithDecisionTx(
 		ctx, tx, id, in.Authorization, in.ResumingIntentID,
 		consent.SendingDigest(in.AuthoredSubject, in.AuthoredBody, in.AuthoredHTML))
 	if err != nil {
 		return err
 	}
-	if refusal := refuseAtStaging(set); refusal != nil {
+	decided := time.Since(decisionStarted)
+	refusal := refuseAtStaging(set)
+	sendmetrics.ObserveDecision(ctx, in.ResumingIntentID, decided, refusal == nil)
+	if refusal != nil {
 		// A REFUSAL IS NOT ALWAYS THE END. If this message is being resumed
 		// from a held row, a named human may have read this very refusal and
 		// decided in writing that it goes anyway. That decision is spent here,
@@ -304,7 +309,7 @@ func actionsForRefusal(ctx context.Context, review consent.Review) []string {
 	// The one move is directing this one message past every refusal. A caller
 	// who may not gets the review reference alone.
 	if review.DirectableBy(ctx) {
-		return []string{"direct_send"}
+		return []string{consent.ActionDirectSend}
 	}
 	return nil
 }

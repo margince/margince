@@ -14,7 +14,7 @@ import (
 )
 
 // PublicProfile is the deliberately small pre-auth view of the process's AI
-// posture. It describes boot-time configuration, never provider health.
+// posture. It describes the bound configuration, never provider health.
 type PublicProfile struct {
 	State            crmcontracts.AssistantProfileState
 	InferenceMode    crmcontracts.AssistantProfileInferenceMode
@@ -126,18 +126,20 @@ func publicInferenceMode(providers []crmcontracts.AssistantProfileProviders) crm
 	}
 }
 
-// WithPublicProfile binds the boot-derived view to the transport surface.
-func (h Handlers) WithPublicProfile(profile PublicProfile) Handlers {
+// WithPublicProfile binds the view to the transport surface. It is read per
+// request, so a rebind reaches it.
+func (h Handlers) WithPublicProfile(profile func() PublicProfile) Handlers {
 	h.publicProfile = profile
 	return h
 }
 
 // GetAssistantProfile implements (GET /assistant/profile).
 func (h Handlers) GetAssistantProfile(w http.ResponseWriter, _ *http.Request) {
+	profile := h.publicProfile()
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.AssistantProfile{
 		Name: crmcontracts.AssistantProfileNameMargince, Kind: crmcontracts.AssistantProfileKindAi,
-		State: h.publicProfile.State, InferenceMode: h.publicProfile.InferenceMode,
-		Providers: h.publicProfile.Providers,
+		State: profile.State, InferenceMode: profile.InferenceMode,
+		Providers: profile.Providers,
 	})
 }
 
@@ -149,12 +151,13 @@ func (h Handlers) GetAiProfile(w http.ResponseWriter, r *http.Request) {
 		httperr.Write(w, r, err)
 		return
 	}
+	profile := h.publicProfile()
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.AiProfile{
 		Name: crmcontracts.AiProfileNameMargince, Kind: crmcontracts.AiProfileKindAi,
-		State:            crmcontracts.AiProfileState(h.publicProfile.State),
-		InferenceMode:    crmcontracts.AiProfileInferenceMode(h.publicProfile.InferenceMode),
-		Providers:        makeAiProfileProviders(h.publicProfile.Providers),
-		ConfiguredModels: h.publicProfile.ConfiguredModels,
+		State:            crmcontracts.AiProfileState(profile.State),
+		InferenceMode:    crmcontracts.AiProfileInferenceMode(profile.InferenceMode),
+		Providers:        makeAiProfileProviders(profile.Providers),
+		ConfiguredModels: profile.ConfiguredModels,
 	})
 }
 
