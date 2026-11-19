@@ -209,7 +209,9 @@ describe("CompanyScreen — an archived account", () => {
 
     const link = await screen.findByRole("link", { name: "Kept Holdings" });
     expect(link.getAttribute("href")).toMatch(/#\/companies\/o-2$/);
-    expect(screen.getByText(en["history.field.merged_into_id"])).toBeTruthy();
+    expect(link.closest(".callout-text")?.textContent).toBe(
+      `${en["history.field.merged_into_id"]} Kept Holdings.`,
+    );
   });
 
   it("reads no contracts on its documents tab", async () => {

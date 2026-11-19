@@ -131,6 +131,8 @@ describe("a lead's phone", () => {
     render(<LeadScreen id="l-1" />);
     const number = await screen.findByRole("link", { name: "+49301234567" });
     expect(number).toHaveAttribute("href", "tel:+49301234567");
+    // As on a contact: a block link would push the chat action to a line of its own.
+    expect(number).not.toHaveClass("lead-row-link");
   });
 });
 
