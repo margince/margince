@@ -95,13 +95,22 @@ func TooLong(field string, limit, actual int) *DetailedError {
 	if actual > 0 {
 		message += fmt.Sprintf("; this one has %d", actual)
 	}
-	return withMax(Validation(field, "too_long", message), limit)
+	return Validation(field, "too_long", message).WithMax(limit)
 }
 
-// withMax states the limit on a one-field refusal.
-func withMax(refusal *DetailedError, limit int) *DetailedError {
-	refusal.Fields[0].Max = limit
-	return refusal
+// WithMax states the limit a one-field refusal names.
+func (e *DetailedError) WithMax(limit int) *DetailedError {
+	e.Fields[0].Max = limit
+	return e
+}
+
+// WithParams states the values a one-field refusal's code names, so a screen
+// can word the code in the reader's language without reading the message.
+func (e *DetailedError) WithParams(params map[string]string) *DetailedError {
+	if len(params) > 0 {
+		e.Fields[0].Params = params
+	}
+	return e
 }
 
 // RequirePair refuses a filter that names half of a discriminated reference.
@@ -190,6 +199,9 @@ func fieldDetails(fields []FieldError) map[string]any {
 		}
 		if f.Max > 0 {
 			entry["max"] = f.Max
+		}
+		if len(f.Params) > 0 {
+			entry["params"] = f.Params
 		}
 		errs = append(errs, entry)
 	}

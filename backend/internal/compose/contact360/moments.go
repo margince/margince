@@ -58,7 +58,7 @@ import (
 // ruleVersion stamps the ladder that selected a moment. It changes whenever a
 // rung's condition or order changes, so the same evidence rendering differently
 // across two clients is visible rather than silent.
-const ruleVersion = "contact-moment-ladder-v8"
+const ruleVersion = "contact-moment-ladder-v9"
 
 // meetingHorizonHours is how far ahead a meeting is worth preparing for
 // (ADR-0096 D2 rung 1). Three days, not the week the earlier ladder used: a
@@ -350,7 +350,8 @@ func (said momentCopy) reEngagedMoment(_ context.Context, now time.Time, page *c
 	}, true
 }
 
-// goneQuietMoment: our outbound has gone unanswered past the configured rule.
+// goneQuietMoment: our outbound has gone unanswered past the configured rule,
+// and nothing has been exchanged with them since.
 //
 // The moment names the rule in its own text. A reader who disagrees with the
 // verdict can see what produced it, which is the difference between a system
@@ -360,8 +361,8 @@ func (said momentCopy) goneQuietMoment(_ context.Context, now time.Time, page *c
 		return crmcontracts.ContactMoment{}, false
 	}
 	outbound := *page.LastOutboundAt
-	if theyWroteSince(page) {
-		// They answered. Silence is not the story.
+	if heardSince(page) {
+		// They answered, or we met them since. Silence is not the story.
 		return crmcontracts.ContactMoment{}, false
 	}
 	// The headline and the explanation count from one date, our last message.

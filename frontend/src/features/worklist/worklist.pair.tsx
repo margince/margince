@@ -106,6 +106,12 @@ function keepLabel(
   return `${visible} — ${side.detail}`;
 }
 
+// The two names are the cards' own titles, so a name match repeats them.
+const TITLE_FIELDS: ReadonlySet<string> = new Set([
+  "display_name",
+  "full_name",
+]);
+
 const FAILURE_MESSAGES = {
   refused: "worklist.pair.refused",
   settled: "worklist.pair.alreadySettled",
@@ -139,7 +145,7 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
   const mayMerge = item.actions?.includes("merge") ?? false;
   // Two contacts merge only through the review, where the reader ticks both
   // and sees the preview. Keep opens it on the contact they chose to keep.
-  const reviewed = item.subject?.type === "contact";
+  const reviewed = item.kind === "contact";
   const mayDismiss = item.actions?.includes("dismiss") ?? false;
   const created = (iso: string) =>
     t("worklist.pair.created", { date: formatDate(iso, locale, zone) });
@@ -183,9 +189,7 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
         disposition,
         winnerId,
         companyIds:
-          item.subject?.type === "company"
-            ? [pair.left.id, pair.right.id]
-            : undefined,
+          item.kind === "company" ? [pair.left.id, pair.right.id] : undefined,
       })
       .then(settled, refused);
   const merge = (keptId: string) => {
@@ -206,6 +210,9 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
       }),
     );
   const confirmed = confirming ? merging(confirming) : null;
+  const evidence = pair.evidence.filter(
+    (line) => !TITLE_FIELDS.has(line.field),
+  );
   return (
     <div className="worklist-pair-review">
       {reviewing && (
@@ -251,12 +258,12 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
             : "worklist.pair.ask",
         )}
       </p>
-      {pair.evidence.length > 0 && (
+      {evidence.length > 0 && (
         <ul className="worklist-pair-evidence">
-          {pair.evidence.map((evidence) => (
+          {evidence.map((line) => (
             <EvidenceLine
-              key={`${evidence.field}-${evidence.signal}`}
-              evidence={evidence}
+              key={`${line.field}-${line.signal}`}
+              evidence={line}
             />
           ))}
         </ul>
@@ -266,7 +273,7 @@ export function PairDecision({ item }: Readonly<{ item: WorklistItem }>) {
           <PairSideCard
             key={side.id}
             side={side}
-            kind={item.subject?.type}
+            kind={item.kind}
             created={created}
             told={told.step >= MINUTE_STEP ? toldOf(side) : undefined}
             byId={told.step >= ID_STEP}

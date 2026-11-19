@@ -15,14 +15,20 @@ import (
 
 // uploadFieldError is one field refusal in an upload's problem document.
 type uploadFieldError struct {
-	Code  string `json:"code"`
-	Field string `json:"field"`
+	Code   string            `json:"code"`
+	Field  string            `json:"field"`
+	Params map[string]string `json:"params"`
 }
 
 // uploadRefusal posts a file and returns the status with the field refusals.
 func uploadRefusal(t *testing.T, e *apptest.AppEnv, object, body string) (int, []uploadFieldError) {
 	t.Helper()
 	raw, status := importjobtest.PostCSVFile(t, e, object, body)
+	return status, fieldRefusalsOf(t, raw)
+}
+
+func fieldRefusalsOf(t *testing.T, raw []byte) []uploadFieldError {
+	t.Helper()
 	var problem struct {
 		Details struct {
 			Errors []uploadFieldError `json:"errors"`
@@ -31,5 +37,5 @@ func uploadRefusal(t *testing.T, e *apptest.AppEnv, object, body string) (int, [
 	if err := json.Unmarshal(raw, &problem); err != nil {
 		t.Fatalf("decoding %q: %v", raw, err)
 	}
-	return status, problem.Details.Errors
+	return problem.Details.Errors
 }

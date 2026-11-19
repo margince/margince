@@ -1,6 +1,7 @@
 import {
   MutationCache,
   onlineManager,
+  type Query,
   QueryCache,
   QueryClient,
   type QueryKey,
@@ -21,6 +22,7 @@ import {
   logUnexpectedError,
   ProblemError,
   problemCodeOf,
+  refusalShown,
 } from "../lib/problem";
 import { INSTALLATION_SETTINGS_KEY } from "../lib/uploadlimit";
 import { SEND_PERMISSION_KEY } from "../lib/usesendpermission";
@@ -197,10 +199,13 @@ export function retryQuery(failureCount: number, error: Error): boolean {
 // the surface whose query failed renders its own error state, and a second,
 // global one would talk over it. An outage is not reported per read: the
 // connectivity banner already states it, once.
-function reportQueryError(error: Error): void {
-  if (!(error instanceof ConnectivityError)) {
-    console.error("margince: query failed", error);
-  }
+function reportQueryError(
+  error: Error,
+  query: Query<unknown, unknown, unknown, QueryKey>,
+): void {
+  if (error instanceof ConnectivityError) return;
+  if (refusalShown(query.meta, error)) return;
+  console.error("margince: query failed", error);
 }
 
 // A write can rename the record it touches, and the chrome around the reader is

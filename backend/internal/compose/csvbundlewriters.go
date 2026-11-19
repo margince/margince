@@ -11,6 +11,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/importwire"
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -83,7 +84,7 @@ func newBundleWriters(
 		seen[part.Object] = true
 	}
 	options := runOptionsOf(settled)
-	b := &bundleWriters{parts: map[string]*csvWriters{}, links: newLinkResolver(db, importSourceSystem(settled.SourceName))}
+	b := &bundleWriters{parts: map[string]*csvWriters{}, links: newLinkResolver(db, importwire.SourceSystem(settled.SourceName))}
 	if err := b.resolveOwnersAndTags(ctx, db, src); err != nil {
 		return nil, err
 	}

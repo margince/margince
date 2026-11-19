@@ -9,13 +9,14 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/importwire"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
 func TestARowWithoutATypeOrADateIsNotFiled(t *testing.T) {
-	w := &csvWriters{object: migration.ObjectActivity, sourceSystem: importSourceSystem("crm-old")}
+	w := &csvWriters{object: migration.ObjectActivity, sourceSystem: importwire.SourceSystem("crm-old")}
 	when := time.Date(2025, 3, 2, 0, 0, 0, 0, time.UTC)
 	row := migration.Row{ExternalID: "A-1", Fields: map[string]any{
 		activityTargetOccurredAt: "2025-03-02", activityTargetSubject: "Intro call notes",
