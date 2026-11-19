@@ -129,8 +129,9 @@ var (
 	pageRowAlias      = regexp.MustCompile(`\btype (\w+) = components\["schemas"\]\["(\w+)"\];`)
 	pageKeyAlias      = regexp.MustCompile(`\btype (\w+) = (?:components\["schemas"\]\["(\w+)"\]|(\w+))\["field"\];`)
 	pageParamKeyAlias = regexp.MustCompile(`\btype (\w+) = components\["parameters"\]\["ProfileFieldKey"\];`)
-	pagePropsDecl     = regexp.MustCompile(`(?s)\b(?:type|interface) (\w+)\s*=?\s*(?:Readonly<)?\{(.*?)\n\}`)
-	pageComponentDecl = regexp.MustCompile(`\bfunction (\w+)\s*\(|\bconst (\w+)\s*=\s*(?:async\s*)?\(`)
+	pagePropsDecl     = regexp.MustCompile(`(?s)\b(?:type|interface) (\w+)(?:\s+extends\s[^{]*)?\s*=?\s*(?:Readonly<)?\{(.*?)\n\}`)
+	pageInterfaceBase = regexp.MustCompile(`\binterface (\w+)\s+extends\s([^{]*)\{`)
+	pageComponentDecl = regexp.MustCompile(`\bfunction (\w+)\s*(?:<[^>]*>)?\s*\(|\bconst (\w+)\s*=\s*(?:async\s*)?(?:<[^>]*>)?\s*\(`)
 	pageArrowTail     = regexp.MustCompile(`^\s*(?::[^=;{]*)?=>`)
 	pageConstDecl     = regexp.MustCompile(`const (\w+)(?::([^=]+))?\s*=\s*([\[{])`)
 	pageQuotedKey     = regexp.MustCompile(`"([a-z][a-z0-9_]*)"`)
@@ -223,6 +224,9 @@ func pageKeyedComponents(src string, keyTypes map[string]string) map[string]stri
 	var aliases [][2]string
 	for _, m := range pageTypeAlias.FindAllStringSubmatchIndex(src, -1) {
 		aliases = append(aliases, [2]string{src[m[2]:m[3]], src[m[1]:pageEndOf(src, m[1], ";")]})
+	}
+	for _, m := range pageInterfaceBase.FindAllStringSubmatch(src, -1) {
+		aliases = append(aliases, [2]string{m[1], m[2]})
 	}
 	// An alias may build on another alias, so derive until a pass adds nothing.
 	for grew := true; grew; {
@@ -560,6 +564,24 @@ const address = useWrapped({ label: "Address", row: { field: "registered_address
 `, []string{"registered_address"}},
 		{"a hook declared as an arrow", `export const useArrow = (target: RowProps) => target;
 const icp = useArrow({ field: "icp" });
+`, []string{"icp"}},
+		{"a generic hook declared as a function", `export function useGeneric<T>(target: RowProps, extra: T) { return target; }
+const icp = useGeneric({ field: "icp" }, 1);
+`, []string{"icp"}},
+		{"a generic hook declared as an arrow", `export const useGenericArrow = <T,>(target: RowProps, extra: T) => target;
+const address = useGenericArrow({ field: "registered_address" }, 1);
+`, []string{"registered_address"}},
+		{"a hook typed by an interface extending keyed props", `interface Extended extends RowProps {
+  note: string;
+}
+export function useExtended(target: Extended) { return target; }
+const vat = useExtended({ field: "register_vat" });
+`, []string{"register_vat"}},
+		{"a hook typed by an extending interface that declares the key", `interface Own extends Readonly<{ note: string }> {
+  field: Key;
+}
+export function useOwn(target: Own) { return target; }
+const icp = useOwn({ field: "icp" });
 `, []string{"icp"}},
 		{"several field keys in one argument", `export function useRows(targets: readonly RowProps[]) { return targets; }
 const rows = useRows([{ field: "icp" }, { field: "register_vat" }]);
