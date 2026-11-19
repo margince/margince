@@ -272,9 +272,8 @@ func TestTeamExceptionsChargesTheDayItReadsToItselfOnce(t *testing.T) {
 	t.Logf("team exceptions acquired %d pool connections", seen.Acquires)
 }
 
-// cutWaitingStageExchangeBudget is the waiting_customers stage of a read whose
-// waiting scan was cut: the scan, its email rows, and one read of the at-risk
-// deals waited on past it.
+// cutWaitingStageExchangeBudget caps the waiting_customers stage when the scan
+// is cut. It covers the scan, its email rows, and one read of the deals past it.
 const cutWaitingStageExchangeBudget = 18
 
 // cutScan is Rep1's waiting scan cut by plain mail, with two at-risk deals
