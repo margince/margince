@@ -57,8 +57,8 @@ func seedSignalTraces(t *testing.T) signalTraceFixture {
 	seedSignal := func(id ids.UUID, about ids.ContactID) {
 		mustExec(ctx, t, tx, `INSERT INTO signal (id, kind, source_channel, entity_type, entity_id, resolution_state,
 				severity, summary, evidence, fingerprint, status, detected_at, source, captured_by)
-			VALUES ($1, 'ext:erasetest:loss', 'derived', 'contact', $2, 'resolved', 'info', 'Quiet',
-				'[{"snippet":"Hedda wrote she is leaving"}]'::jsonb, 'ext:erasetest:loss|hedda@signals.test|'||$1::text,
+			VALUES ($1::uuid, 'ext:erasetest:loss', 'derived', 'contact', $2, 'resolved', 'info', 'Quiet',
+				'[{"snippet":"Hedda wrote she is leaving"}]'::jsonb, 'ext:erasetest:loss|hedda@signals.test|'||$1::uuid::text,
 				'open', now(), 'erasetest', 'test')`, id, about)
 	}
 	seedSignal(f.subjectSignal, f.subject)
@@ -170,11 +170,11 @@ func TestErasureLeavesTheLinkSecretsForThePassAfterTheCommit(t *testing.T) {
 		user, "admin-"+user.String()+"@signals.test")
 	mustExec(ctx, t, tx, `INSERT INTO activity (id, kind, occurred_at, source, captured_by)
 		VALUES ($1, 'email', now(), 'manual', 'user:'||$2::text)`, activity, user)
-	mustExec(ctx, t, tx, `INSERT INTO comms_outbound (id, activity_id, user_id, provider, message_id, recipients, cc,
-			subject, body, references_chain, consent_purpose, status, sender_kind, payload_ref, payload_expires_at)
-		VALUES ($1, $2, $3, 'gmail', $4, jsonb_build_array('hedda@signals.test'), '[]'::jsonb, 'Confirm', 'link',
-			'[]'::jsonb, 'transactional', 'staged', 'controller', 'vault-ref-1', now() + interval '2 days')`,
-		delivery, activity, user, delivery.String()+"@margince.test")
+	mustExec(ctx, t, tx, `INSERT INTO comms_outbound (id, activity_id, provider, message_id, recipients, cc,
+			subject, body, references_chain, status, sender_kind, template_key, template_version, payload_ref, payload_expires_at)
+		VALUES ($1, $2, 'gmail', $3, jsonb_build_array('hedda@signals.test'), '[]'::jsonb, 'Confirm', 'link',
+			'[]'::jsonb, 'pending', 'controller', 'confirm', 1, 'vault-ref-1', now() + interval '2 days')`,
+		delivery, activity, delivery.String()+"@margince.test")
 
 	if err := erasePayloads(ctx, tx, []ids.UUID{activity}); err != nil {
 		t.Fatal(err)

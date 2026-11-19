@@ -143,9 +143,9 @@ func verifyMeetingPrivacy(t *testing.T, anonymize bool) {
 	if err := store.DestroyErasedLinks(ctx); err != nil {
 		t.Fatalf("destroying the erased links: %v", err)
 	}
-	for _, ref := range refs {
+	for i, ref := range refs {
 		if _, err := vault.Get(ctx, ids.From[ids.WorkspaceKind](e.WS), keyvault.Ref(ref)); !errors.Is(err, keyvault.ErrNotFound) {
-			t.Errorf("a link secret survived the destroying pass: %v", err)
+			t.Errorf("link secret %d survived the destroying pass: %v", i, err)
 		}
 	}
 	if got := e.WsCount(t, `SELECT (SELECT count(*) FROM meeting_invitation WHERE management_ref<>'') + (SELECT count(*) FROM meeting_proposal)`); got != 0 {
