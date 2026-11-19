@@ -80,7 +80,7 @@ func (r *Registry) RenewWatch(ctx context.Context, connectionID ids.UUID, topic 
 			Scan(&name, &grantedBy, &credentialRef, &authBytes, &watchRef, &generation)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		return fmt.Errorf("capture: connection %s: %w", connectionID, apperrors.ErrNotFound)
+		return fmt.Errorf("the connection is gone, or was never yours to reach: %w", apperrors.ErrNotFound)
 	}
 	if err != nil {
 		return err

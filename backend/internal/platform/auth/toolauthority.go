@@ -22,7 +22,7 @@ func RequireToolScope(p principal.Principal, spec mcp.ToolSpec) error {
 // RequireToolSeat keeps approvals subject to the direct-call seat requirement.
 func RequireToolSeat(p principal.Principal, spec mcp.ToolSpec) error {
 	if p.Type == principal.PrincipalAgent && spec.RequiredScope != principal.ScopeRead && !p.SeatType.CanMutate() {
-		return fmt.Errorf("gate: %s needs a full seat; %s acts for a read seat: %w", spec.Name, p.ID, apperrors.ErrSeatTierInsufficient)
+		return fmt.Errorf("%s needs a full seat, and this agent acts for a read seat: %w", spec.Name, apperrors.ErrSeatTierInsufficient)
 	}
 	return nil
 }

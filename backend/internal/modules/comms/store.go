@@ -42,7 +42,7 @@ var ErrTerminal = errors.New("comms: delivery is already terminal")
 // wrapped pgx violation carries the constraint and table names, and a client
 // is owed neither.
 var ErrDuplicateMessage = fmt.Errorf(
-	"comms: this message identity is already staged for delivery: %w", apperrors.ErrConflict)
+	"this message identity is already staged for delivery: %w", apperrors.ErrConflict)
 
 // ErrNoAddressee marks a delivery staged with nobody to reach. A message with
 // neither a To nor a Cc address can only be refused later — the consent gate

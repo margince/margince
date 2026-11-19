@@ -173,7 +173,7 @@ func (r *Registry) Connections(ctx context.Context) ([]ConnectionView, error) {
 func (r *Registry) connectionViews(ctx context.Context, includeBackfill bool) ([]ConnectionView, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || !actor.HumanOrItsAgent() {
-		return nil, fmt.Errorf("capture: only a user or their agent lists their connections: %w", apperrors.ErrPermissionDenied)
+		return nil, fmt.Errorf("only a user or their agent lists their connections: %w", apperrors.ErrPermissionDenied)
 	}
 	var out []ConnectionView
 	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
@@ -258,7 +258,7 @@ func (r *Registry) connectionViews(ctx context.Context, includeBackfill bool) ([
 func (r *Registry) Disconnect(ctx context.Context, mb Mailbox) error {
 	actor, ok := principal.Actor(ctx)
 	if !ok || !actor.HumanOrItsAgent() {
-		return fmt.Errorf("capture: only a user or their agent disconnects a connector: %w", apperrors.ErrPermissionDenied)
+		return fmt.Errorf("only a user or their agent disconnects a connector: %w", apperrors.ErrPermissionDenied)
 	}
 	match, err := r.resolveMemberMailbox(ctx, actor.UserID, mb)
 	if errors.Is(err, ErrNoConnection) {

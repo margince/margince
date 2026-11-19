@@ -39,7 +39,7 @@ import (
 func (r *Registry) SetSignatureEnrichment(ctx context.Context, mb Mailbox, enabled *bool) (ConnectionView, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || !actor.HumanOrItsAgent() {
-		return ConnectionView{}, fmt.Errorf("capture: only a user or their agent sets a mailbox's signature-enrichment answer: %w", apperrors.ErrPermissionDenied)
+		return ConnectionView{}, fmt.Errorf("only a user or their agent sets a mailbox's signature-enrichment answer: %w", apperrors.ErrPermissionDenied)
 	}
 	name := mb.Provider
 	if _, ok := r.connectors[name]; !ok {
