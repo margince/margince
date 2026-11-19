@@ -46,3 +46,43 @@ func TestATypedZeroIsACall(t *testing.T) {
 		t.Fatalf("a typed 0 was refused with %s, want only the missing scope_id named", got)
 	}
 }
+
+// A snapshot share says nobody had called only where the snapshot recorded
+// it: a manager-call setting over every pipeline, with no call amount kept.
+func TestASnapshotSaysNobodyCalledOnlyWhereItRecordedThat(t *testing.T) {
+	t.Parallel()
+	managerCall, likely, kept := string(MeasureManagerCall), string(MeasureLikely), int64(3_000_000)
+	for _, tc := range []struct {
+		name                   string
+		mayAssert, onePipeline bool
+		forward, landing       *string
+		callMinor              *int64
+		wantAmount             *int64
+		wantWithheld, wantNone bool
+	}{
+		{"manager call, every pipeline, no call", true, false, &managerCall, &likely, nil, nil, false, true},
+		{"manager call, a call kept", true, false, &managerCall, &managerCall, &kept, &kept, false, false},
+		{"the Likely measure", true, false, &likely, &likely, nil, nil, true, false},
+		{"one pipeline", true, true, &managerCall, &likely, nil, nil, true, false},
+		{"no landing kept", true, false, nil, nil, nil, nil, true, false},
+		{"a reader who may not see calls", false, false, &managerCall, &managerCall, &kept, nil, true, false},
+	} {
+		got, noneStood := FrozenCallSeen(tc.mayAssert, FrozenCall{
+			ForwardMeasure: tc.forward, LandingMeasure: tc.landing, OnePipeline: tc.onePipeline, CallMinor: tc.callMinor,
+		})
+		if got.Withheld != tc.wantWithheld || noneStood != tc.wantNone || (got.Amount == nil) != (tc.wantAmount == nil) {
+			t.Errorf("%s: landing call %+v, none stood %v; want withheld %v, none stood %v, amount %v",
+				tc.name, got, noneStood, tc.wantWithheld, tc.wantNone, tc.wantAmount)
+		}
+	}
+}
+
+// A managed-teams reading covers several populations, so it has no one call.
+// It withholds the call rather than say nobody made one, and reads nothing.
+func TestAManagedTeamsReadingWithholdsTheCall(t *testing.T) {
+	t.Parallel()
+	_, seen, err := CallSeen(t.Context(), nil, nil, true, Period{}, Scope{Kind: ScopeManagedTeams})
+	if err != nil || !seen.Withheld || seen.Amount != nil {
+		t.Fatalf("a managed-teams reading saw %+v (%v), want the call withheld", seen, err)
+	}
+}

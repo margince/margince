@@ -15976,6 +15976,8 @@ export const en = {
   "forecast.split": "{won} won + {remaining} to come",
   "forecast.callNotAdded": "Manager’s call {call}, not added",
   "forecast.recordsProject": "Records alone project {amount}",
+  "forecast.callWithheldLine":
+    "Manager’s call not shown here, so Likely is shown",
   "forecast.callAbsentLine": "No call recorded, so Likely is shown",
   "forecast.callBelowLine": "Below the {won} already won, shown as recorded",
   "forecast.model.quarter": "Modelled quarter finish",
@@ -15999,6 +16001,8 @@ export const en = {
   "forecast.landingRecordsDetail":
     "Won plus Likely deals, without the manager’s call",
   "forecast.landingCaveat": "Landing has a caveat",
+  "forecast.landing.caveat.call_withheld":
+    "The manager’s call is not shown here, so this shows the Likely deals.",
   "forecast.landing.caveat.call_absent":
     "No call recorded for this period, so this shows the Likely deals.",
   "forecast.landing.caveat.call_below_actual":

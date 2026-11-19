@@ -46,6 +46,25 @@ type Money = (minor: number) => string;
  * added to what is won; a call beside a projection is named, not added.
  * Without a landing the basis is unknown and said so, never guessed.
  */
+// The line a landing's caveat adds, or none. The Forecast page and Progress
+// both print it, so a withheld call reads alike on both.
+export function landingCaveatLine(
+  landing: Landing,
+  money: Money,
+  t: Translator,
+): string | undefined {
+  switch (landing.caveat) {
+    case "call_below_actual":
+      return t("forecast.callBelowLine", { won: money(landing.won_minor) });
+    case "call_absent":
+      return t("forecast.callAbsentLine");
+    case "call_withheld":
+      return t("forecast.callWithheldLine");
+    default:
+      return undefined;
+  }
+}
+
 export function landingBasisLines(
   landing: Landing | undefined,
   callMinor: number | undefined,
@@ -54,14 +73,13 @@ export function landingBasisLines(
 ): Readonly<{ basis: string; beside?: string; warning: boolean }> {
   if (!landing) return { basis: t("forecast.basis.unknown"), warning: false };
   const basis = t(`forecast.basis.${landing.measure}`);
-  if (landing.caveat === "call_below_actual")
+  const caveat = landingCaveatLine(landing, money, t);
+  if (caveat)
     return {
       basis,
-      beside: t("forecast.callBelowLine", { won: money(landing.won_minor) }),
-      warning: true,
+      beside: caveat,
+      warning: landing.caveat === "call_below_actual",
     };
-  if (landing.caveat === "call_absent")
-    return { basis, beside: t("forecast.callAbsentLine"), warning: false };
   if (landing.measure === "manager_call")
     return {
       basis,

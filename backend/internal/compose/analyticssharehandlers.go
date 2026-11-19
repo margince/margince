@@ -208,20 +208,22 @@ func (h analyticsShareHandlers) serveSnapshot(
 		out.Readings.ContributionsLimitedReason = &frozen.Reason
 	}
 	out.Withheld = shared.Withheld
-	// A snapshot keeps a call's amount and not its record. It states that
-	// nobody had called only to a reader who may see calls.
 	mayAssert, err := forecasting.MayAssertAbout(ctx, tx, ForecastWritableScope, share.Scope)
 	if err != nil {
 		return err
 	}
-	if !mayAssert || frame.LandingMeasure == nil || frame.LandingCallMinor != nil {
+	call, noneStood := forecasting.FrozenCallSeen(mayAssert, forecasting.FrozenCall{
+		ForwardMeasure: frame.ForwardMeasure, LandingMeasure: frame.LandingMeasure,
+		OnePipeline: frame.PipelineID != nil, CallMinor: frame.LandingCallMinor,
+	})
+	if !noneStood {
 		out.Readings.CallWithheld = new(true)
 	}
 	// A snapshot frozen before the landing was kept states none.
 	if frame.LandingMeasure == nil {
 		return nil
 	}
-	landing, err := frozenShareLanding(mayAssert, shared, frame)
+	landing, err := frozenShareLanding(call, shared, frame)
 	out.Readings.Landing = &landing
 	return err
 }

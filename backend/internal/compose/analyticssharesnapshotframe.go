@@ -35,6 +35,8 @@ type shareFrame struct {
 	ForwardMeasure   *string
 	LandingMeasure   *string
 	LandingCallMinor *int64
+	// PipelineID names the one pipeline a snapshot read, nil for every pipeline.
+	PipelineID *ids.UUID
 	// QualifiedPolicy is the viability policy the retired qualified forecast
 	// enforced when the snapshot was taken, nil while it was off.
 	QualifiedPolicy *string
@@ -51,13 +53,13 @@ func snapshotFrame(ctx context.Context, tx pgx.Tx, id ids.UUID) (shareFrame, err
 	if err := tx.QueryRow(ctx, `
 		SELECT s.period_start, s.period_end, s.base_currency, s.taken_at,
 		       COALESCE(st.value #>> '{}', 'UTC'), s.self_correcting,
-		       s.forward_measure, s.landing_measure, s.landing_call_minor, s.qualified_policy_version
+		       s.forward_measure, s.landing_measure, s.landing_call_minor, s.qualified_policy_version, s.pipeline_id
 		FROM forecast_snapshot s
 		LEFT JOIN setting st ON st.key = 'installation.timezone'
 		WHERE s.id = $1`, id).Scan(
 		&out.Period.StartDate, &out.Period.EndDate, &out.BaseCurrency, &out.TakenAt,
 		&zoneName, &out.SelfCorrecting,
-		&out.ForwardMeasure, &out.LandingMeasure, &out.LandingCallMinor, &out.QualifiedPolicy); err != nil {
+		&out.ForwardMeasure, &out.LandingMeasure, &out.LandingCallMinor, &out.QualifiedPolicy, &out.PipelineID); err != nil {
 		return shareFrame{}, fmt.Errorf("compose: reading a shared snapshot's frame: %w", err)
 	}
 	zone, err := time.LoadLocation(zoneName)
@@ -70,10 +72,9 @@ func snapshotFrame(ctx context.Context, tx pgx.Tx, id ids.UUID) (shareFrame, err
 }
 
 // frozenShareLanding is a snapshot's landing over the rows this reader may
-// read. It takes the frozen measure, and the frozen call only where the reader
-// may see it (mayAssert). A reader who may not falls back as GET /forecast
-// does. The caller passes only a frame that kept its landing.
-func frozenShareLanding(mayAssert bool, shared SharedSnapshot, frame shareFrame) (crmcontracts.ForecastLanding, error) {
+// read. It takes the frozen measure and the call FrozenCallSeen gives this
+// reader. The caller passes only a frame that kept its landing.
+func frozenShareLanding(call forecasting.SeenCall, shared SharedSnapshot, frame shareFrame) (crmcontracts.ForecastLanding, error) {
 	stored := frame.LandingMeasure
 	if frame.ForwardMeasure != nil {
 		stored = frame.ForwardMeasure
@@ -87,10 +88,6 @@ func frozenShareLanding(mayAssert bool, shared SharedSnapshot, frame shareFrame)
 	if qualified {
 		readings.EvidenceMinor = shared.Supported.LikelyMinor
 		readings.WeightedMinor = shared.Supported.WeightedMinor
-	}
-	var call *int64
-	if mayAssert {
-		call = frame.LandingCallMinor
 	}
 	landing, err := forecasting.ProjectLanding(readings, measure, call)
 	if err != nil {

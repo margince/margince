@@ -110,6 +110,22 @@ describe("the projected landing", () => {
     ).toBeTruthy();
   });
 
+  it("names a withheld call without saying nobody called", () => {
+    draw(
+      <LandingCard
+        landing={landing({ caveat: "call_withheld" })}
+        currency="EUR"
+        locale="en"
+      />,
+    );
+
+    expect(
+      screen.getByText(en["forecast.landing.caveat.call_withheld"]),
+    ).toBeTruthy();
+    expect(screen.getByText(en["forecast.callWithheldLine"])).toBeTruthy();
+    expect(screen.queryByText(en["forecast.callAbsentLine"])).toBeNull();
+  });
+
   it("reports a call below the money already won rather than correcting it", () => {
     draw(
       <LandingCard

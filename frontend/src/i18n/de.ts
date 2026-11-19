@@ -16087,6 +16087,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forecast.callNotAdded":
     "Einschätzung der Führungskraft {call}, nicht addiert",
   "forecast.recordsProject": "Die Deal-Daten allein ergeben {amount}",
+  "forecast.callWithheldLine":
+    "Einschätzung hier nicht sichtbar, daher wahrscheinliche Deals",
   "forecast.callAbsentLine":
     "Keine Einschätzung erfasst, daher wahrscheinliche Deals",
   "forecast.callBelowLine":
@@ -16113,6 +16115,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forecast.landingRecordsDetail":
     "Gewonnen plus wahrscheinliche Deals, ohne die Einschätzung",
   "forecast.landingCaveat": "Das erwartete Ergebnis hat einen Vorbehalt",
+  "forecast.landing.caveat.call_withheld":
+    "Angezeigt werden die wahrscheinlichen Deals, da die Einschätzung hier nicht sichtbar ist.",
   "forecast.landing.caveat.call_absent":
     "Angezeigt werden die wahrscheinlichen Deals, da für diesen Zeitraum keine Einschätzung erfasst ist.",
   "forecast.landing.caveat.call_below_actual":
