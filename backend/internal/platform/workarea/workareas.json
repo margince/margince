@@ -1790,6 +1790,7 @@
     "renderAnalyticsReport": "reports",
     "renderOffer": "offers",
     "renewContract": "contracts",
+    "reopenConversationClaim": "contacts",
     "reopenLead": "leads",
     "reopenWithheldDomain": "capture_rules",
     "reopenWorklistRows": "worklist",

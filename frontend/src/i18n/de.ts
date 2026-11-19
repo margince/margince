@@ -6,6 +6,8 @@ import type { MessageKey } from "./en";
 // en.ts and written to docs/reference/ui-copy-style-de.md.
 export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.import_identity_links": "Importierte E-Mail verknüpfen",
+  "systemJob.promise_kept":
+    "Ein Versprechen schließen, das ein Termin als erfüllt zeigt",
   "systemJob.transcript_audience":
     "Terminnotizen erhalten die Lesenden des Termins",
   "systemJob.meeting_profile":
@@ -11029,6 +11031,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.import_commit": "Ausführung des Imports",
   "jobs.kind.import_undo": "Rücknahme des Imports",
   "jobs.kind.import_validate": "Import-Testlauf",
+  "jobs.kind.promise_kept_sweep": "Durch Termine erfüllte Versprechen",
   "jobs.kind.transcript_audience_sweep": "Lesende von Terminnotizen",
   "jobs.kind.meeting_profile_retract_sweep": "Unternehmensfelder aus Terminen",
   "jobs.kind.initiative_enrolment_sweep":

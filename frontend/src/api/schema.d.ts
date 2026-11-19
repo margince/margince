@@ -1424,7 +1424,7 @@ export interface paths {
          * Undo Margince's close of a promise.
          * @description Opens again a promise Margince closed itself (`auto_kept` on the claim). The close
          *     touched only the claim, so nothing else needs undoing. Whoever may settle the claim
-         *     by hand may reopen it. A claim outside the caller's scope is a 404. A claim a person
+         *     by hand may reopen it. A claim outside the caller's scope is a 404. A claim a human
          *     settled is a 409: it reopens through the settle path. A claim already open is the
          *     same success.
          */

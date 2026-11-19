@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+//go:build integration
+
+package integration
 
 import (
 	"context"
@@ -9,16 +11,17 @@ import (
 	"log/slog"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 )
 
-// A trigger with no stores panics if it tries to settle anything, so a clean
-// return proves the automatic close reached no task and no offer.
+// A trigger over no database fails if it tries to settle anything. A clean
+// return shows an automatic close reaches no task and no offer.
 func TestAnAutomaticCloseRetiresNoTaskAndNoOffer(t *testing.T) {
-	trigger := &CommitmentSettleTrigger{log: slog.New(slog.NewTextHandler(io.Discard, nil))}
+	trigger := compose.NewCommitmentSettleTrigger(nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	env := events.Envelope{
-		Type:    eventClaimChanged,
+		Type:    "conversation_claim.changed",
 		Actor:   events.Actor{Type: "system", ID: contacts.PromiseKeptActor},
 		Payload: []byte(`{"claim_id":"0193c6e0-0000-7000-8000-000000000001","status":"done"}`),
 	}

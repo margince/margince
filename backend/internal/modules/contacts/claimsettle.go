@@ -77,9 +77,8 @@ func moveClaimStatus(ctx context.Context, tx pgx.Tx, claimID ids.UUID, from, to 
 		return err
 	}
 	if current == to {
-		// The caller's goal state already holds. Settling twice is one
-		// settlement, so this is success and writes nothing — a second audit
-		// row would say a contact's record changed when it did not.
+		// The goal state already holds, so this is success. Nothing is written:
+		// a second audit row would say the contact's record changed.
 		return nil
 	}
 	if current != from {
@@ -130,7 +129,7 @@ func lockWritableClaim(ctx context.Context, tx pgx.Tx, claimID ids.UUID) (ids.UU
 // image after.
 func writeClaimStatus(ctx context.Context, tx pgx.Tx, claimID, contactID ids.UUID, current, to string, extra map[string]any) error {
 	if _, err := tx.Exec(ctx, `
-		UPDATE conversation_claim SET status = $2 WHERE id = $1`,
+		UPDATE conversation_claim SET status = $2 WHERE id = $1 AND archived_at IS NULL`,
 		claimID, to); err != nil {
 		return fmt.Errorf("settle the claim: %w", err)
 	}

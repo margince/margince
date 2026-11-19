@@ -92,6 +92,21 @@ func TestAnAcceptedLaterMeetingClosesTheOwnersPromiseAndNamesTheEvidence(t *test
 	}
 }
 
+func TestTheAuditRowOfAnAutomaticCloseNamesNoMeetingOrGuest(t *testing.T) {
+	f := ownedPromise(t)
+	f.sweep(t)
+	for _, leak := range []string{"Riley", f.meeting.String(), "meeting"} {
+		if got := f.e.countAs(f.ctx, t, `SELECT count(*) FROM audit_log WHERE after->>'claim_id' = $1 AND after::text ILIKE '%' || $2 || '%'`,
+			f.claim.String(), leak); got != 0 {
+			t.Errorf("the audit image carries %q", leak)
+		}
+	}
+	f.e.execAs(f.ctx, t, `UPDATE activity SET audience = 'participants' WHERE id = $1`, f.meeting)
+	if claim := f.claimRead(t); claim.AutoKept == nil || claim.AutoKept.Evidence != nil {
+		t.Errorf("a reader who cannot open the meeting sees %+v, want the close without detail", claim.AutoKept)
+	}
+}
+
 func TestAPromiseNobodyIsResponsibleForIsOnlyHinted(t *testing.T) {
 	f := looksKeptPromise(t)
 	f.sweep(t)
@@ -150,7 +165,7 @@ func TestAHumanCloseIsNotReopenedByADecline(t *testing.T) {
 	f.e.execAs(f.ctx, t, `UPDATE activity_participant SET response = 'declined' WHERE activity_id = $1 AND response IS NOT NULL`, f.meeting)
 	f.sweep(t)
 	if got := f.status(t); got != "done" {
-		t.Errorf("a person's close became %q", got)
+		t.Errorf("a human's close became %q", got)
 	}
 }
 
@@ -177,7 +192,7 @@ func TestUndoReopensTheClaimAndChangesNothingElse(t *testing.T) {
 	}
 	f.sweep(t)
 	if got := f.status(t); got != "open" {
-		t.Errorf("the sweep closed a promise a person reopened: %q", got)
+		t.Errorf("the sweep closed a promise a human reopened: %q", got)
 	}
 	if err := f.e.store.ReopenAutoKeptClaim(f.ctx, f.claim); err != nil {
 		t.Errorf("undoing an open promise = %v, want success", err)
@@ -195,7 +210,7 @@ func (f looksKeptFixture) rowText(t *testing.T, sql string) string {
 	return out
 }
 
-func TestUndoRefusesAPersonsCloseAndHidesAClaimOutsideTheReadersScope(t *testing.T) {
+func TestUndoRefusesAHumansCloseAndHidesAClaimOutsideTheReadersScope(t *testing.T) {
 	f := ownedPromise(t)
 	f.sweep(t)
 	f.e.execAs(f.ctx, t, `UPDATE activity SET audience = 'participants' WHERE id = $1`, f.source)
@@ -222,6 +237,6 @@ func TestUndoRefusesAPersonsCloseAndHidesAClaimOutsideTheReadersScope(t *testing
 		t.Fatal(err)
 	}
 	if err := g.e.store.ReopenAutoKeptClaim(g.ctx, g.claim); !errors.Is(err, apperrors.ErrConflict) {
-		t.Errorf("undoing a person's close = %v, want conflict", err)
+		t.Errorf("undoing a human's close = %v, want conflict", err)
 	}
 }

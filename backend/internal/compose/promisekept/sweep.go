@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // Package promisekept runs the sweep that closes a promise to invite someone
-// once an accepted later meeting shows it kept, and reopens a close whose
+// once an accepted later meeting shows it kept. It reopens a close whose
 // evidence is gone.
 package promisekept
 

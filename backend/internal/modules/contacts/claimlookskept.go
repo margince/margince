@@ -61,16 +61,15 @@ func withLooksKept(ctx context.Context, tx pgx.Tx, claims []crmcontracts.Convers
 }
 
 // FindKeptEvidence is the one matcher for "this promise to invite someone is
-// kept". It answers, per claim, the earliest meeting that the reader in ctx may
-// open, whatever the claim's status.
+// kept": per claim, the earliest meeting the reader in ctx may open.
 //
 // The guest matches by full name on word boundaries, each part at least three
-// letters, and works at the claim contact's company. The claim's own contact
-// is on the meeting. The meeting starts after the promise, the guest accepted,
-// and it is neither archived nor called off.
+// letters, and works at the claim contact's company. The claim's contact is on
+// the meeting. It starts after the promise, the guest accepted, and it is
+// neither archived nor called off.
 func FindKeptEvidence(ctx context.Context, tx pgx.Tx, open []ids.UUID) (map[ids.UUID]KeptEvidence, error) {
 	if len(open) == 0 || !auth.ReadGranted(ctx, "activity") || !auth.ReadGranted(ctx, "contact") || !auth.ReadGranted(ctx, "relationship") {
-		return nil, nil
+		return map[ids.UUID]KeptEvidence{}, nil
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }

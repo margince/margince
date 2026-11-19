@@ -33,16 +33,17 @@ const PromiseKeptActor = "system:promise-kept"
 // autoKeptKey marks the audit image of an automatic close.
 const autoKeptKey = "auto_kept"
 
-// recheckWindow is how long after its meeting an automatic close is still
-// compared with the meeting's answers.
-const recheckWindow = 7 * 24 * time.Hour
+// recheckWindow is how long after the close it is still compared with the
+// meetings. The audit image holds only a marker, so no meeting detail sits in
+// the record history for a reader who may not open the meeting.
+const recheckWindow = 90 * 24 * time.Hour
 
 // latestClaimImage is the audit image of the claim's newest change.
 const latestClaimImage = `(SELECT a.after FROM audit_log a WHERE a.entity_type = 'contact'
 	AND a.entity_id = c.contact_id AND a.after->>'claim_id' = c.id::text
 	ORDER BY a.occurred_at DESC, a.id DESC LIMIT 1)`
 
-// reopenedByAHuman holds a claim someone took out of done. A person saying a
+// reopenedByAHuman holds a claim someone took out of done. A human saying a
 // promise is not kept outranks what the meeting shows.
 var reopenedByAHuman = `EXISTS (SELECT 1 FROM audit_log h WHERE h.entity_type = 'contact'
 	AND h.entity_id = c.contact_id AND h.after->>'claim_id' = c.id::text
@@ -57,10 +58,13 @@ type KeptCandidate struct {
 }
 
 // KeptPromiseCandidatesTx lists the open promises to invite someone and the
-// automatic closes still inside their recheck window, each with the seat
-// responsible for it: the task's assignee, else who took it over, else the user
-// who recorded it. A promise nobody is responsible for is left to its hint.
+// automatic closes still inside their recheck window. Each has a responsible
+// seat: the task's assignee, else who took it over, else the user who
+// recorded it. A promise with none is left to its hint.
 func (s *Store) KeptPromiseCandidatesTx(ctx context.Context, tx pgx.Tx) ([]KeptCandidate, error) {
+	if err := auth.RequireSystem(ctx); err != nil {
+		return nil, err
+	}
 	rows, err := tx.Query(ctx, `
 		SELECT c.id, c.status = 'done', t.assignee_id, c.taken_by_user_id, c.captured_by
 		  FROM conversation_claim c
@@ -68,8 +72,7 @@ func (s *Store) KeptPromiseCandidatesTx(ctx context.Context, tx pgx.Tx) ([]KeptC
 		 WHERE c.kind = 'commitment_ours' AND c.archived_at IS NULL AND NOT c.needs_review
 		   AND c.body ~* '\yinvit'
 		   AND ((c.status = 'open' AND NOT `+reopenedByAHuman+`)
-		     OR (c.status = 'done' AND `+latestClaimImage+` ? '`+autoKeptKey+`'
-		         AND (`+latestClaimImage+`->'`+autoKeptKey+`'->>'meeting_at')::timestamptz > $1))
+		     OR (c.status = 'done' AND `+latestClaimImage+` ? '`+autoKeptKey+`' AND c.updated_at > $1))
 		 ORDER BY c.id`, s.clock().Add(-recheckWindow))
 	if err != nil {
 		return nil, fmt.Errorf("read the promises to check against meetings: %w", err)
@@ -111,6 +114,9 @@ func responsibleSeat(assignee, taker *ids.UUID, capturedBy string) (ids.UUID, bo
 // is gone is reopened first, so a promise that lost one meeting can close on
 // another in the same pass.
 func (s *Store) ReconcileKeptPromisesTx(ctx, reader context.Context, tx pgx.Tx, candidates []KeptCandidate) error {
+	if err := auth.RequireSystem(ctx); err != nil {
+		return err
+	}
 	var named []ids.UUID
 	for _, candidate := range candidates {
 		named = append(named, candidate.Claim)
@@ -130,14 +136,12 @@ func (s *Store) ReconcileKeptPromisesTx(ctx, reader context.Context, tx pgx.Tx, 
 		return err
 	}
 	for _, candidate := range candidates {
-		hit, shown := found[candidate.Claim]
+		_, shown := found[candidate.Claim]
 		switch {
 		case candidate.Closed && !shown:
 			err = autoMove(ctx, tx, candidate.Claim, claimStatusDone, claimStatusOpen, map[string]any{"auto_reopened": true})
 		case !candidate.Closed && shown:
-			err = autoMove(ctx, tx, candidate.Claim, claimStatusOpen, claimStatusDone, map[string]any{autoKeptKey: map[string]any{
-				"meeting_id": hit.Meeting.String(), "meeting_at": hit.At, "guest_name": hit.Guest,
-			}})
+			err = autoMove(ctx, tx, candidate.Claim, claimStatusOpen, claimStatusDone, map[string]any{autoKeptKey: true})
 		}
 		if err != nil {
 			return err
@@ -147,7 +151,7 @@ func (s *Store) ReconcileKeptPromisesTx(ctx, reader context.Context, tx pgx.Tx, 
 }
 
 // autoMove moves one claim as the system, and only when it still stands where
-// the pass read it. A person who settled or reopened it meanwhile wins.
+// the pass read it. A human who settled or reopened it meanwhile wins.
 func autoMove(ctx context.Context, tx pgx.Tx, claimID ids.UUID, from, to string, extra map[string]any) error {
 	if _, err := storekit.LockRow(ctx, tx, "conversation_claim", claimID, storekit.LiveOnly); err != nil {
 		if errors.Is(err, apperrors.ErrNotFound) {
@@ -207,7 +211,7 @@ func withAutoKept(ctx context.Context, tx pgx.Tx, claims []crmcontracts.Conversa
 
 // ReopenAutoKeptClaim undoes Margince's close of a promise. Whoever may settle
 // the claim by hand may undo it; a claim outside the caller's scope is absent.
-// A claim a person closed is theirs to reopen through the settle path.
+// A claim a human closed is theirs to reopen through the settle path.
 func (s *Store) ReopenAutoKeptClaim(ctx context.Context, claimID ids.UUID) error {
 	if err := auth.RequireHumanOrItsAgent(ctx); err != nil {
 		return err
@@ -229,7 +233,7 @@ func (s *Store) ReopenAutoKeptClaim(ctx context.Context, claimID ids.UUID) error
 			return fmt.Errorf("read who closed the claim: %w", err)
 		}
 		if current != claimStatusDone || !auto {
-			return fmt.Errorf("a person settled this claim, so only the settle path reopens it: %w", apperrors.ErrConflict)
+			return fmt.Errorf("a human settled this claim, so only the settle path reopens it: %w", apperrors.ErrConflict)
 		}
 		return writeClaimStatus(ctx, tx, claimID, contactID, current, claimStatusOpen, nil)
 	})
