@@ -224,7 +224,7 @@ func markOwnerWithheld(owners reporting.MeasurableOwners, facts []reporting.Fact
 // fact of account progression with no lead recorded fails closed.
 func leadAdmits(fact reporting.Fact, leads map[crmcontracts.ReportingMetricID]map[ids.UUID]bool) bool {
 	if fact.ViaID == nil {
-		return !(fact.Metric == reportingAccountProgression && fact.SourceType == string(recordTypeCompany))
+		return fact.Metric != reportingAccountProgression || fact.SourceType != string(recordTypeCompany)
 	}
 	return leads[fact.Metric][*fact.ViaID]
 }
