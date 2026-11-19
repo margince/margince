@@ -1,7 +1,7 @@
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { INTL_LOCALE } from "../format/format";
-import type { Locale } from "../i18n";
+import { type Locale, useLocale, useT } from "../i18n";
 import { throwProblem } from "./problem";
 
 // The installation's own settings, and the one field on them a form has to act
@@ -79,4 +79,59 @@ export function formatUploadLimit(bytes: number, locale: Locale): string {
     unitDisplay: "short",
     maximumFractionDigits: Number.isInteger(mb) ? 0 : 1,
   }).format(mb);
+}
+
+/** What a picked file is held to before it is sent. Unset, a rule is the server's alone. */
+export type PickRules = Readonly<{
+  maxBytes: number | undefined;
+  // The kinds the server keeps, read as it reads them. A declared type must be
+  // in `mediaTypes`; a file with none needs an ending in `extensions`.
+  kinds?: Readonly<{
+    extensions: readonly string[];
+    mediaTypes: readonly string[];
+  }>;
+}>;
+
+// The declared type without its parameters, or "" when it says nothing.
+function declaredTypeOf(file: File): string {
+  const media = (file.type.split(";")[0] ?? "").trim().toLowerCase();
+  return media === "application/octet-stream" ? "" : media;
+}
+
+// The last ".ending" of a name, as the server reads it, or "" for none.
+function endingOf(filename: string): string {
+  const dot = filename.lastIndexOf(".");
+  return dot >= 0 ? filename.slice(dot).toLowerCase() : "";
+}
+
+/**
+ * Why a file the reader just picked cannot be sent, in their words, or null.
+ *
+ * Asked as the file is dropped, so a file the server would refuse never waits
+ * in the form. The server still refuses it, so a stale rule here costs a request.
+ */
+export function usePickRefusal(
+  rules: PickRules,
+): (file: File) => string | null {
+  const t = useT();
+  const { locale } = useLocale();
+  return (file) => {
+    if (file.size === 0) {
+      return t("files.pick.empty");
+    }
+    if (rules.maxBytes !== undefined && file.size > rules.maxBytes) {
+      return t("docs.add.errTooLarge", {
+        size: formatUploadLimit(rules.maxBytes, locale),
+      });
+    }
+    if (rules.kinds) {
+      const declared = declaredTypeOf(file);
+      const kept =
+        declared === ""
+          ? rules.kinds.extensions.includes(endingOf(file.name))
+          : rules.kinds.mediaTypes.includes(declared);
+      if (!kept) return t("files.pick.unsupported");
+    }
+    return null;
+  };
 }

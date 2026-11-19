@@ -9,6 +9,7 @@ import { ErrorLine } from "../../design-system/errorline";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { attachmentTitle } from "../../lib/attachmentlink";
 import { unwrap } from "../../lib/problem";
 import { AddDocumentDialog } from "../voice-knowledge/adddocument";
 import { roomBriefKey } from "./dealroombrief.key";
@@ -83,7 +84,7 @@ export function AddDocument({
   }
   const options = (files.data?.data ?? []).map((doc) => ({
     value: doc.attachment.id,
-    label: doc.attachment.title || doc.attachment.filename,
+    label: attachmentTitle(doc.attachment),
   }));
   return (
     <>

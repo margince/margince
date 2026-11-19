@@ -11,7 +11,7 @@ In a ZIP the file name gives the record type: `companies.csv`, `contacts.csv`, `
 
 Margince imports the files in that order, companies first and activities last. So a contact can name a company from the same ZIP, and a deal can name a company or a contact. An activity can name any of them.
 
-A file in a ZIP whose name gives no record type is listed under **Files left out**. Nothing in it is read.
+A file in a ZIP whose name gives no record type is listed under **Files left out**. Nothing in it is read. A ZIP with no file named for a record type is refused. So is an Excel file: save the sheet as CSV UTF-8 and upload that.
 
 One CSV whose name gives no record type is typed by its columns. **Check your files** then says **Record type chosen from the columns**; check **Import as** before you go on. When the columns name no type either, it says **No record type found**, and **Next** waits until you choose one under **Import as**.
 
@@ -22,7 +22,7 @@ Also called: bulk import, upload a spreadsheet, move from another CRM, Excel imp
 
 The ZIP holds `companies.csv`, `contacts.csv`, `leads.csv`, `deals.csv` and `activities.csv`.
 
-`README.txt` in the ZIP lists every pipeline with its stages, so a deal row can name them as written there. **Preview template** shows the files first. Point at a column to see what goes in it, an example, and whether a new row needs it.
+`README.txt` in the ZIP lists every pipeline with its stages, so a deal row can name them as written there. **Preview template** shows the files first. Point at a column to see what goes in it, an example, and whether a new row needs it. A file that needs one column of a few, such as a contact's email or `ref`, says **Needs one of** under its columns.
 
 Also called: import template, column help, import format.
 
@@ -33,6 +33,8 @@ To import a file, open **Settings → Data import** and drop the file on **Uploa
 3. Read the **Test run**. Fix the file and choose **Fix and re-upload**, or choose **Import {count} rows**.
 4. **Importing** shows each file as it goes. **Result** shows what was written.
 5. To take the import back, choose **Undo this import** on the result, or **Undo** in **Recent imports**.
+
+A column named like a field starts with that field chosen. Its name may be in any language of the app, or a common name such as **Website**. An **ID** column starts as **Margince ID** only when the first values read from it are Margince IDs.
 Also called: upload a CSV, import steps, import a ZIP.
 
 ### What does the test run tell me?
@@ -281,7 +283,8 @@ A file Margince cannot read is refused before any test run, and the message says
 - **Not UTF-8:** save the file as CSV UTF-8 and upload it again.
 - **A line it cannot read:** the message names the line. It may have more or fewer fields than the header, or a quotation mark out of place.
 - **A header it cannot use:** no header row, a column with no name, or a name given twice.
-- **A ZIP it cannot use:** empty, broken, password-protected, more than 20 files, or two files of one record type. The message names the files.
+- **A ZIP it cannot use:** empty, broken, password-protected, more than 20 files, two files of one record type, or no file named for a record type. The message names the files.
+- **An Excel file:** save the sheet as CSV UTF-8 and upload that.
 - **Too many rows:** the message gives the file's row count and the limit.
 
 At **Run test**, a map is refused when two columns map to one field, or when no column tells the rows apart. Then map a column to the field the message names. That is the email address for contacts and leads, or the company name for companies. **Your own key (ref)** works for any type. Inside a ZIP, the message names the file it is about.

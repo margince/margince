@@ -27,6 +27,7 @@ import {
   fileListKeys,
   homeOf,
 } from "../../lib/attachmentkeys";
+import { attachmentTitle } from "../../lib/attachmentlink";
 import { useCanWriteRecord } from "../../lib/capability";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { AddDocumentDialog } from "../voice-knowledge/adddocument";
@@ -233,7 +234,7 @@ function FileVerbs({
         open={confirmingDelete}
         onClose={() => setConfirmingDelete(false)}
         returnFocusTo={() => (deleted.current ? focusLanding() : null)}
-        title={t("files.deleteTitle", { name: file.filename })}
+        title={t("files.deleteTitle", { name: attachmentTitle(file) })}
         confirmLabel={t("files.delete")}
         confirmVariant="danger"
         pending={verbs.remove.isPending}
@@ -272,7 +273,7 @@ function FileMenu({
   const captured = doc.attachment.entity_type === "activity";
   return (
     <OverflowMenu
-      label={t("table.rowActions", { name: doc.attachment.filename })}
+      label={t("table.rowActions", { name: attachmentTitle(doc.attachment) })}
     >
       {captured && !doc.hidden ? (
         <Button

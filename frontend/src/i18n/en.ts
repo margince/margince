@@ -7740,6 +7740,10 @@ export const en = {
   "files.hide": "Hide from this deal",
   "files.unhide": "Show on this deal again",
   "files.delete": "Delete",
+  "files.pick.empty":
+    "The file is empty, so there is nothing to add. Choose a file that has content.",
+  "files.pick.unsupported":
+    "This kind of file cannot be attached. Choose a document, image, zip archive or saved email.",
   "files.deleteTitle": "Delete {name}?",
   "files.deleteBody":
     "The file is removed from this deal, and buyers no longer see it in any Deal Room. The room entry stays until you remove it from the room.",
@@ -7805,6 +7809,7 @@ export const en = {
   "log.filesEmpty": "Drop files here, or click to choose them",
   "log.fileUnattached":
     "The activity is logged, but {filename} was not attached. {reason}",
+  "log.fileNotAdded": "{filename} was not added. {reason}",
   "log.fileUncertain":
     "The activity is logged, but the upload of {filename} did not finish. Check the activity’s files before you add it again.",
   "log.callOutcome": "Outcome",
@@ -10346,6 +10351,10 @@ export const en = {
     "The ZIP holds {files} files, and an import reads at most {max_files}. Remove the files you do not import and upload it again.",
   "import.refusal.bundle.empty":
     "The ZIP is empty. Add one CSV file per record type and upload it again.",
+  "import.refusal.bundle.spreadsheet":
+    "This is an Excel workbook. Save the sheet as CSV UTF-8 and upload that.",
+  "import.refusal.bundle.noImportableFile":
+    "The ZIP holds no file the import reads. Name each file after its record type: {file_names}.",
   "import.refusal.bundle.notAZip":
     "The ZIP could not be opened. Make the ZIP again and upload it.",
   "import.refusal.bundle.filesTooLarge":
@@ -10410,6 +10419,7 @@ export const en = {
   "import.template.files": "Template files",
   "import.template.col.file": "File",
   "import.template.col.columns": "Columns",
+  "import.template.keyColumns": "Needs one of: {columns}",
   "import.template.legend":
     "Hover or tap a column to see what goes in it. ● marks a column a new row needs.",
   "import.template.rules": "How rows are matched",

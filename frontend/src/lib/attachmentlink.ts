@@ -8,6 +8,13 @@ type AttachmentAnchor =
 
 const WEB_ADDRESS = /^https?:\/\//i;
 
+/** The name a file goes by on screen: the title someone gave it, or its filename. */
+export function attachmentTitle(
+  file: Readonly<{ title?: string | null; filename?: string | null }>,
+): string {
+  return file.title || file.filename || "";
+}
+
 // Where a document row's name points. A file downloads from the API. A link row
 // has no bytes and opens its address in a new tab. An address that is not
 // http(s) falls back to the download route, which answers 404 for a link. So a
