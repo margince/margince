@@ -27,6 +27,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/greetingregister"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -73,6 +74,10 @@ func (s *Store) ReplyAddressFor(ctx context.Context, id ids.ActivityID, colleagu
 type ReplyAddressee struct {
 	Address   string
 	ContactID string
+	// GreetingRegister is the register a rep stored on that contact, empty when
+	// there is no readable contact or none was set. Read here so a draft's
+	// register comes from the contact the mail is delivered to.
+	GreetingRegister greetingregister.Register
 }
 
 // ReplyAddresseeFor answers the single address a reply to this activity is
@@ -189,7 +194,12 @@ func (s *Store) ReplyAddresseeFor(ctx context.Context, id ids.ActivityID, collea
 		}
 		defer rows.Close()
 		to, err = firstOutside(rows, colleague)
-		return err
+		rows.Close()
+		if err != nil || to.ContactID == "" {
+			return err
+		}
+		return tx.QueryRow(ctx, `SELECT coalesce(greeting_register, '') FROM contact WHERE id = $1`,
+			to.ContactID).Scan(&to.GreetingRegister)
 	})
 	if err != nil {
 		return ReplyAddressee{}, err

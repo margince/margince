@@ -146,11 +146,11 @@ func (d replyDrafter) DraftEmail(ctx context.Context, anchor ids.UUID, intent st
 // profile exists, with the deterministic anti-AI floor on top; without one,
 // the plain model draft is unchanged (clean fallback per drafting.md).
 func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.UUID, steering draftfloor.Steering) (activities.DraftResult, error) {
-	addressee := d.recipientFor(ctx, ids.From[ids.ActivityKind](anchor))
-	activity, written, err := d.languageInputsFor(ctx, anchor, steering, addressee)
+	activity, written, err := d.languageInputs(ctx, anchor, steering)
 	if err != nil {
 		return activities.DraftResult{}, err
 	}
+	addressee := d.recipientFor(ctx, ids.From[ids.ActivityKind](anchor))
 	topic, body := stringValue(activity.Subject), stringValue(activity.Body)
 	threaded := activity.Kind == crmcontracts.ActivityKindEmail && draftcore.FromThem(activity)
 	state := d.conversationState(ctx, activity)
@@ -166,6 +166,8 @@ func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.U
 		Band:      state.Band,
 		Threaded:  threaded,
 		Recipient: recipient,
+		LastName:  surname,
+		Formal:    envelope.Formal(),
 	})
 	data := replyActivityData{
 		// Already bounded: NewEnvelope caps the two identity fields, which are
@@ -326,13 +328,7 @@ func (d replyDrafter) deliveredTo(ctx context.Context, anchor ids.ActivityID) ac
 	return to
 }
 
-func (d replyDrafter) languageInputs(ctx context.Context, anchor ids.UUID, steering draftfloor.Steering) (crmcontracts.Activity, draftfloor.Written, error) {
-	return d.languageInputsFor(ctx, anchor, steering, d.recipientFor(ctx, ids.From[ids.ActivityKind](anchor)))
-}
-
-// languageInputsFor reads what the reply is written into; the register comes
-// from the addressee the caller already resolved.
-func (d replyDrafter) languageInputsFor(ctx context.Context, anchor ids.UUID, steering draftfloor.Steering, addressee activities.ReplyRecipient) (activity crmcontracts.Activity, written draftfloor.Written, err error) {
+func (d replyDrafter) languageInputs(ctx context.Context, anchor ids.UUID, steering draftfloor.Steering) (activity crmcontracts.Activity, written draftfloor.Written, err error) {
 	activity, err = d.store.GetActivityContent(ctx, ids.From[ids.ActivityKind](anchor), storekit.LiveOnly)
 	if err != nil {
 		return activity, written, err
@@ -343,8 +339,10 @@ func (d replyDrafter) languageInputsFor(ctx context.Context, anchor ids.UUID, st
 		return activity, written, err
 	}
 	return activity, draftfloor.Written{
-		Chosen:       steering.Language,
-		Greeting:     addressee.GreetingRegister,
+		Chosen: steering.Language,
+		// The contact the mail is delivered to, so a CC or an internal sender
+		// never lends the draft its register.
+		Greeting:     delivery.GreetingRegister,
 		Addressee:    thread.addresseeEvidence(delivery.ContactID),
 		Stored:       activityLanguage(activity),
 		Body:         textlang.MessageOpening(stringValue(activity.Body), draftcore.LanguageEvidenceRunes),

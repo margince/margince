@@ -73,3 +73,39 @@ func TestAStoredGreetingRegisterReachesANonGermanDraft(t *testing.T) {
 		t.Errorf("envelope = %q/%q/%q, want en, no register, formal", got.Language, got.Register, got.GreetingRegister)
 	}
 }
+
+// A stored register shapes the no-model greeting in every language: formal names
+// the surname beside the first name, familiar names the first name only.
+func TestTheFallbackGreetingHonoursTheStoredRegisterInEveryLanguage(t *testing.T) {
+	t.Parallel()
+	for name, tc := range map[string]struct {
+		lang, register, first, last, want string
+	}{
+		"en formal":                  {"en", "formal", "Dietmar", "Rietsch", "Dear Dietmar Rietsch,"},
+		"en familiar":                {"en", "familiar", "Dietmar", "Rietsch", "Hi Dietmar,"},
+		"de formal":                  {"de", "formal", "Dietmar", "Rietsch", "Guten Tag Dietmar Rietsch,"},
+		"de familiar":                {"de", "familiar", "Dietmar", "Rietsch", "Hallo Dietmar,"},
+		"vi formal":                  {"vi", "formal", "Dũng", "Nguyễn", "Kính gửi Dũng Nguyễn,"},
+		"vi familiar":                {"vi", "familiar", "Dũng", "Nguyễn", "Chào Dũng,"},
+		"formal without a surname":   {"en", "formal", "Dietmar", "", "Hi Dietmar,"},
+		"unset English stays casual": {"en", "", "Dietmar", "Rietsch", "Hi Dietmar,"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			envelope := draftfloor.Envelope{Language: tc.lang, GreetingRegister: tc.register}
+			if got := envelope.Greeting(tc.first, tc.last); got != tc.want {
+				t.Errorf("Greeting = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestAFamiliarRegisterBeatsAGermanSieThreadInTheFallbackGreeting(t *testing.T) {
+	t.Parallel()
+	envelope := draftfloor.NewEnvelopeWithRegister("de", "Sie", convstate.State{Band: convstate.BandFresh},
+		time.Date(2026, 10, 5, 9, 0, 0, 0, time.UTC), "", "")
+	envelope.GreetingRegister = "familiar"
+	if got := envelope.Greeting("Dietmar", "Rietsch"); got != "Hallo Dietmar," {
+		t.Errorf("Greeting = %q, want the familiar form", got)
+	}
+}

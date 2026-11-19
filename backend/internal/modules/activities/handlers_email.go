@@ -166,7 +166,7 @@ func (h Handlers) replyAddress(ctx context.Context, anchor ids.ActivityID) (stri
 	if h.colleagues == nil {
 		return "", nil
 	}
-	covers, err := h.colleagues.Covers(ctx)
+	covers, err := h.ownAddress(ctx)
 	if err != nil {
 		return "", err
 	}
@@ -227,7 +227,7 @@ func DeterministicEmailDraft(answering DraftContext) (subject, body string) {
 	if topic != "" {
 		thread = draftfloor.Fill(draftfloor.SubstanceFor(lang).Thread, topic)
 	}
-	greeting := draftfloor.Greeting(lang, band, answering.Recipient)
+	greeting := draftfloor.OpeningLine(lang, band, answering.Formal, answering.Recipient, answering.LastName)
 	return subject, draftfloor.Body(lang, greeting, phrases.Opener, thread, phrases.Ask)
 }
 
@@ -260,6 +260,10 @@ type DraftContext struct {
 	// Empty means the caller has no envelope — the two-tier detection below is
 	// then the honest answer rather than a guess at one.
 	Language textlang.Lang
+	// LastName and Formal choose the opening: a formal draft names the
+	// surname beside the first name, in every language.
+	LastName string
+	Formal   bool
 	// Band is where the correspondence stands. The zero value is BandNone.
 	Band convstate.Band
 }

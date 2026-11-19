@@ -26,7 +26,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/mailrole"
 	"github.com/margince/margince/backend/internal/shared/kernel/contactaddress"
-	"github.com/margince/margince/backend/internal/shared/kernel/greetingregister"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -53,9 +52,6 @@ type ReplyRecipient struct {
 	// Empty where the record holds no surname, which is an answer: the greeting
 	// falls back to the familiar form rather than to a guess.
 	LastName string
-	// GreetingRegister is the register a rep set on the contact, empty when
-	// nobody did. A draft takes it before reading the thread.
-	GreetingRegister greetingregister.Register
 	// WrittenAbout marks a row that records work about a contact rather than
 	// correspondence with one: its To comes from FiledAddress, never the participants.
 	WrittenAbout bool
@@ -132,11 +128,14 @@ func (s *Store) ReplyRecipientFor(ctx context.Context, id ids.ActivityID) (Reply
 		// picking whichever was linked first addresses the reply to whoever
 		// happens to sort earliest.
 		//
+		// A participant with a user_id is one of our own seats. A reply is never
+		// addressed to us, so ReplyAddresseeFor skips it too.
+		//
 		// Rank: the sender of an inbound message is who we are answering, then
 		// a "to" recipient (our own outbound, where the addressee is the
 		// counterparty), then anyone else on it, then the bare link.
 		q := `
-				SELECT p.id, p.full_name, coalesce(p.first_name, ''), coalesce(p.last_name, ''), coalesce(p.greeting_register, ''),
+				SELECT p.id, p.full_name, coalesce(p.first_name, ''), coalesce(p.last_name, ''),
 				       coalesce((SELECT pe.email
 				                   FROM contact_email pe
 				                  WHERE pe.contact_id = p.id AND pe.archived_at IS NULL` +
@@ -149,6 +148,7 @@ func (s *Store) ReplyRecipientFor(ctx context.Context, id ids.ActivityID) (Reply
 				              created_at, id
 				         FROM activity_participant
 				        WHERE activity_id = $1 AND contact_id IS NOT NULL
+				          AND user_id IS NULL
 				       UNION ALL
 				       SELECT contact_id, 4 AS rank, created_at, id
 				         FROM activity_link
@@ -163,7 +163,7 @@ func (s *Store) ReplyRecipientFor(ctx context.Context, id ids.ActivityID) (Reply
 		var contactID ids.UUID
 		var address string
 		err = tx.QueryRow(ctx, q, args...).Scan(
-			&contactID, &out.FullName, &out.FirstName, &out.LastName, &out.GreetingRegister, &address)
+			&contactID, &out.FullName, &out.FirstName, &out.LastName, &address)
 		if errors.Is(err, pgx.ErrNoRows) {
 			// Linked to nobody, or to a contact out of scope. Both mean no
 			// name, which the floor renders as an unnamed greeting rather
@@ -213,21 +213,4 @@ func writtenAboutTarget(ctx context.Context, tx pgx.Tx, id ids.ActivityID, kind 
 		return false, EmailTarget{}, err
 	}
 	return true, targets[id.UUID], nil
-}
-
-// GreetingName is the one name a floor draft greets by, or empty.
-//
-// The same resolution every drafting transport uses, so the HTTP fallback, the
-// MCP tool and the model drafter's own degrade path cannot greet three
-// different ways. A failure is empty rather than an error: this is a greeting,
-// and a draft with no name is a draft.
-func (s *Store) GreetingName(ctx context.Context, id ids.ActivityID) string {
-	recipient, err := s.ReplyRecipientFor(ctx, id)
-	if err != nil {
-		return ""
-	}
-	if recipient.FirstName != "" {
-		return recipient.FirstName
-	}
-	return recipient.FullName
 }

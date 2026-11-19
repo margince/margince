@@ -28,3 +28,13 @@ func patchGreetingRegister(p *storekit.Patch, current crmcontracts.Contact, in U
 	p.Set(fieldGreetingRegister, current.GreetingRegister, string(register))
 	return nil
 }
+
+// greetingRegisterText is the stored register as the plain text a column patch
+// takes, nil when none is set.
+func greetingRegisterText(contact crmcontracts.Contact) *string {
+	if contact.GreetingRegister == nil {
+		return nil
+	}
+	text := string(*contact.GreetingRegister)
+	return &text
+}

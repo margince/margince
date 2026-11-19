@@ -188,3 +188,80 @@ func tablesReachableFrom(graph map[string]*privacyFunc, root string) []string {
 	sort.Strings(tables)
 	return tables
 }
+
+// A column one act clears on the contact row and the other leaves is the same
+// defect one level down. The table census above cannot see it, because the
+// table is shared. The columns come from the UPDATE statements the two acts
+// reach, so a column added to one act fails here the day it is added.
+func TestErasingAndAnonymizingClearTheSameContactColumns(t *testing.T) {
+	t.Parallel()
+	graph := packageCallGraph(t, privacyPackage)
+	erased := contactColumnsAssignedFrom(graph, eraseRoot)
+	anonymized := contactColumnsAssignedFrom(graph, anonymizeRoot)
+	if len(erased) == 0 || len(anonymized) == 0 {
+		t.Fatalf("the census read %d contact columns from %s and %d from %s: it is not reading the statements",
+			len(erased), eraseRoot, len(anonymized), anonymizeRoot)
+	}
+	for _, column := range erased {
+		if !slices.Contains(anonymized, column) {
+			t.Errorf("contact.%s is cleared when a contact is erased and kept when it is anonymized; clear it in both", column)
+		}
+	}
+	for _, column := range anonymized {
+		if !slices.Contains(erased, column) {
+			t.Errorf("contact.%s is cleared when a contact is anonymized and kept when it is erased; clear it in both", column)
+		}
+	}
+	if !slices.Contains(erased, "greeting_register") {
+		t.Errorf("greeting_register is a rep's choice about a named person and no act clears it")
+	}
+}
+
+// contactColumnsAssignedFrom lists the columns the UPDATE statements of root
+// and everything it calls assign on the contact table.
+func contactColumnsAssignedFrom(graph map[string]*graphFunc, root string) []string {
+	seen, found := map[string]bool{}, map[string]bool{}
+	var walk func(string)
+	walk = func(name string) {
+		if seen[name] {
+			return
+		}
+		seen[name] = true
+		entry, known := graph[name]
+		if !known {
+			return
+		}
+		for _, statement := range entry.statements {
+			for _, column := range contactUpdateColumns(statement) {
+				found[column] = true
+			}
+		}
+		for called := range entry.calls {
+			walk(called)
+		}
+	}
+	walk(root)
+	columns := make([]string, 0, len(found))
+	for column := range found {
+		columns = append(columns, column)
+	}
+	sort.Strings(columns)
+	return columns
+}
+
+// contactUpdateColumns are the columns an `UPDATE contact SET ...` assigns.
+func contactUpdateColumns(statement string) []string {
+	if !strings.HasPrefix(strings.ToLower(strings.TrimSpace(statement)), "update contact ") {
+		return nil
+	}
+	var columns []string
+	for _, clause := range setClauses(statement) {
+		assignments, _ := splitSetClause(clause)
+		for _, assignment := range assignments {
+			if column, _, assigns := strings.Cut(assignment, "="); assigns {
+				columns = append(columns, strings.TrimSpace(column))
+			}
+		}
+	}
+	return columns
+}

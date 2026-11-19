@@ -134,6 +134,16 @@ func (s *Service) WithVoice(reader draftvoice.Reader, log *slog.Logger) *Service
 	return s
 }
 
+// groupRegister is the one register the message takes: the path contact's and
+// every further recipient's, decided together.
+func groupRegister(contact crmcontracts.Contact, alsoTo []CoRecipientIn) greetingregister.Register {
+	each := []greetingregister.Register{greetingregister.Of(contact.GreetingRegister)}
+	for _, other := range alsoTo {
+		each = append(each, other.Register)
+	}
+	return greetingregister.Shared(each...)
+}
+
 // Draft writes one email, and names the records it was written from so a
 // caller that keeps it can re-prove them. It performs no write of any kind.
 func (s *Service) Draft(
@@ -160,17 +170,19 @@ func (s *Service) Draft(
 	if err != nil {
 		return crmcontracts.CompanyEmailDraft{}, nil, err
 	}
+	alsoTo, err := s.coRecipients(ctx, contactID, req.AlsoTo)
+	if err != nil {
+		return crmcontracts.CompanyEmailDraft{}, nil, err
+	}
 	req.Envelope = s.envelope.Resolve(ctx,
 		draftfloor.Written{
-			Chosen: req.Language, Greeting: greetingregister.Of(view.Contact.GreetingRegister),
+			Chosen: req.Language, Greeting: groupRegister(view.Contact, alsoTo),
 			Thread:  languageEvidence(view, s.envelope.Now(), zone),
 			Rewrite: req.RewriteOf, Purpose: req.Intent, DraftSubject: req.Subject,
 		},
 		ConversationState(view, s.envelope.Now(), zone, logged...)).InZone(zone)
 	in := FromView(view, req)
-	if in.AlsoTo, err = s.coRecipients(ctx, contactID, req.AlsoTo); err != nil {
-		return crmcontracts.CompanyEmailDraft{}, nil, err
-	}
+	in.AlsoTo = alsoTo
 	if req.AboutActivityID != nil {
 		if in.About, err = s.aboutActivity(ctx, *req.AboutActivityID, req.Envelope); err != nil {
 			return crmcontracts.CompanyEmailDraft{}, nil, err

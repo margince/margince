@@ -7,6 +7,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"strings"
 	"testing"
@@ -14,9 +15,12 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
@@ -74,5 +78,86 @@ func TestAStoredGreetingRegisterReachesTheReplyPromptAndOutranksTheThread(t *tes
 				t.Errorf("the prompt lacks %s: %s", tc.wantStored, prompt)
 			}
 		})
+	}
+}
+
+// namedContact is a contact with both name parts, so a formal greeting has a
+// surname to use.
+func (o *owedEnv) namedContact(t *testing.T, first, last, address, register string) {
+	t.Helper()
+	if _, err := o.e.Contacts.CreateContact(o.e.Admin(), contacts.CreateContactInput{
+		FullName: first + " " + last, FirstName: &first, LastName: &last, Source: "manual",
+		Emails: []contacts.ContactEmailInput{{Email: address, EmailType: "work", IsPrimary: true}},
+	}); err != nil {
+		t.Fatalf("creating %s %s: %v", first, last, err)
+	}
+	o.setGreetingRegister(t, address, register)
+}
+
+func TestAFollowUpToOurOwnMailTakesTheRegisterOfWhoItIsDeliveredTo(t *testing.T) {
+	o := setupOwed(t)
+	o.namedContact(t, "Dietmar", "Rietsch", "buyer@alpha.test", "formal")
+	o.namedContact(t, "Sam", "Colleague", o.seat, "familiar")
+	o.capture(t, pricingMail("buyer@alpha.test", o.seat, pricingRoot, familiarGermanMail, 0, true))
+	ours := o.capture(t, pricingMail(o.seat, "buyer@alpha.test", "pricing-ours@ws.example", familiarGermanMail, 30, false))
+	prompt := replyPrompt(t, o, ours)
+	if !strings.Contains(prompt, `"greeting_register":"formal"`) || strings.Contains(prompt, `"greeting_register":"familiar"`) {
+		t.Errorf("a follow-up took the register of someone other than the addressee: %s", prompt)
+	}
+}
+
+func TestACcdContactDoesNotLendItsRegisterToAnUnknownSender(t *testing.T) {
+	o := setupOwed(t)
+	o.namedContact(t, "Dietmar", "Rietsch", "buyer@alpha.test", "formal")
+	mail := pricingMail("stranger@unknown.test", o.seat, pricingRoot, familiarGermanMail, 0, true)
+	mail.cc = "buyer@alpha.test"
+	anchor := o.capture(t, mail)
+	if prompt := replyPrompt(t, o, anchor); strings.Contains(prompt, `"greeting_register"`) {
+		t.Errorf("a CC lent its register to the unknown sender: %s", prompt)
+	}
+}
+
+// With the model down, the fallback draft opens in the stored register in every
+// language, through the same greeting the model's draft is checked against.
+func TestTheFallbackDraftOpensInTheStoredRegister(t *testing.T) {
+	for name, tc := range map[string]struct {
+		mail, stored, wantOpening string
+	}{
+		"de formal":   {formalGermanMail, "formal", "Guten Tag Dietmar Rietsch,"},
+		"de familiar": {formalGermanMail, "familiar", "Hallo Dietmar,"},
+		"en formal":   {alphaAsks, "formal", "Dear Dietmar Rietsch,"},
+		"en familiar": {alphaAsks, "familiar", "Hi Dietmar,"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			o := setupOwed(t)
+			o.namedContact(t, "Dietmar", "Rietsch", "buyer@alpha.test", tc.stored)
+			anchor := o.capture(t, pricingMail("buyer@alpha.test", o.seat, pricingRoot, tc.mail, 0, true))
+			brain := &replyBrainStub{err: errors.New("model down")}
+			drafter := newReplyDrafter(o.e.Pool, brain, slog.New(slog.DiscardHandler))
+			reader := o.e.As(o.owner, []ids.UUID{o.e.Team1}, integration.AdminPerms)
+			draft, err := drafter.DraftEmailWithProvenance(reader, anchor, draftfloor.Steering{})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !strings.HasPrefix(draft.Body, tc.wantOpening) {
+				t.Errorf("fallback body = %q, want it to open %q", draft.Body, tc.wantOpening)
+			}
+		})
+	}
+}
+
+func TestTheNoModelActivityPathOpensInTheStoredRegister(t *testing.T) {
+	o := setupOwed(t)
+	o.namedContact(t, "Dietmar", "Rietsch", "buyer@alpha.test", "formal")
+	anchor := o.capture(t, pricingMail("buyer@alpha.test", o.seat, pricingRoot, alphaAsks, 0, true))
+	drafter := newReplyDrafter(o.e.Pool, &replyBrainStub{}, slog.New(slog.DiscardHandler))
+	reader := o.e.As(o.owner, []ids.UUID{o.e.Team1}, integration.AdminPerms)
+	activity, err := drafter.store.GetActivityContent(reader, ids.From[ids.ActivityKind](anchor), storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, body, _ := drafter.store.FloorDraft(reader, anchor, activity, textlang.English, nil)
+	if !strings.HasPrefix(body, "Dear Dietmar Rietsch,") {
+		t.Errorf("floor body = %q, want the formal opening", body)
 	}
 }

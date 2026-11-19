@@ -38,3 +38,23 @@ func TestValidAcceptsOnlyTheColumnsValues(t *testing.T) {
 		}
 	}
 }
+
+func TestSharedTakesFormalWhenTheStoredRegistersDiffer(t *testing.T) {
+	t.Parallel()
+	f, fam := greetingregister.Formal, greetingregister.Familiar
+	cases := map[string]struct {
+		each []greetingregister.Register
+		want greetingregister.Register
+	}{
+		"familiar primary with a formal co-recipient": {[]greetingregister.Register{fam, f}, f},
+		"formal primary with a familiar co-recipient": {[]greetingregister.Register{f, fam}, f},
+		"all familiar":       {[]greetingregister.Register{fam, fam}, fam},
+		"unset says nothing": {[]greetingregister.Register{"", fam}, fam},
+		"nothing set":        {[]greetingregister.Register{"", ""}, ""},
+	}
+	for name, tc := range cases {
+		if got := greetingregister.Shared(tc.each...); got != tc.want {
+			t.Errorf("%s: Shared = %q, want %q", name, got, tc.want)
+		}
+	}
+}

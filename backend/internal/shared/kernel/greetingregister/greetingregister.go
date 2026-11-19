@@ -43,6 +43,23 @@ func Of[S ~string](stored *S) Register {
 	return Register(*stored)
 }
 
+// Shared is the register one message to several contacts takes. Registers a
+// rep left unset say nothing. Where the set ones differ the message is formal,
+// because a formal opening offends nobody who asked for a familiar one.
+func Shared(each ...Register) Register {
+	var chosen Register
+	for _, register := range each {
+		switch {
+		case register == "":
+		case chosen == "":
+			chosen = register
+		case chosen != register:
+			return Formal
+		}
+	}
+	return chosen
+}
+
 // Address is the German du or Sie a stored register fixes, and Unknown for
 // anything else, which leaves the register to the correspondence.
 func Address(r Register) textlang.Register {
