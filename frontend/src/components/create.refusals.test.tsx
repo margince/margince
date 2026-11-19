@@ -157,4 +157,22 @@ describe("CreateAction refusals of a row list or a set", () => {
       expect(screen.getByText(/^tags refused\.$/i)).toBeTruthy(),
     );
   });
+
+  it("shows a picker's own refusal before the form sends", async () => {
+    render(
+      <CreateAction
+        label="New contact"
+        fields={listFields.map((field) =>
+          field.type === "multiselect"
+            ? { ...field, validate: () => "Pick one tag at most." }
+            : field,
+        )}
+        create={() => throwProblem(refusal("tags", "unknown_tag"))}
+        invalidate="contacts"
+        screen="contacts"
+      />,
+    );
+    await userEvent.click(screen.getByText("New contact"));
+    expect(await screen.findByText("Pick one tag at most.")).toBeTruthy();
+  });
 });
