@@ -3,7 +3,15 @@ import "@testing-library/jest-dom/vitest";
 import { QueryClient } from "@tanstack/react-query";
 import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import { pickOption } from "../../design-system/select-testing";
 import { translate } from "../../i18n";
 import { leadKey } from "../../lib/leadkeys";
@@ -836,6 +844,12 @@ describe("terminalBadge (archived/terminal labelling)", () => {
 });
 
 describe("LeadScreen — the header's Email verb", () => {
+  // The composer is a lazy chunk. Loaded here, a press opens it at once rather
+  // than racing a cold import on a slow runner.
+  beforeAll(async () => {
+    await import("../mail/compose");
+  });
+
   it("carries the same Email verb every record header does", async () => {
     stubFetchWithMe(async () => jsonResponse(lead));
     render(<LeadScreen id="l-1" />);
@@ -859,7 +873,7 @@ describe("LeadScreen — the header's Email verb", () => {
       name: "jonas@nordwind.example",
     });
     expect(address.hasAttribute("href")).toBe(false);
-    await userEvent.click(address);
+    await userEvent.setup().click(address);
 
     const dialog = await screen.findByRole("dialog", {
       name: /New email/,
