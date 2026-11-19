@@ -22,8 +22,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// seedMail writes one exchange between a colleague and a contact, in the given
-// audience, as a person wrote it.
+// seedPairMail writes one hand-written exchange between a colleague and a
+// contact, in the given audience.
 func seedPairMail(t *testing.T, e *Env, user, contact ids.UUID, direction, audience string) ids.UUID {
 	t.Helper()
 	owner := OwnerConn(t)
