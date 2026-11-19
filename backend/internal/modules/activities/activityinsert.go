@@ -81,7 +81,7 @@ func writeActivitySatellites(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, in LogActivityInput,
 	occurredAt time.Time, by string,
 ) error {
-	if err := insertActivityLinks(ctx, tx, id, in.Kind, in.Links, in.LinksFromRequest); err != nil {
+	if err := insertActivityLinks(ctx, tx, id, in, in.inheritedProject); err != nil {
 		return err
 	}
 	// The first transition, where this capture named a status. A meeting
@@ -134,6 +134,9 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 		return crmcontracts.Activity{}, false, err
 	}
 	if err := applyLoggedDealFiling(ctx, tx, &in); err != nil {
+		return crmcontracts.Activity{}, false, err
+	}
+	if err := inheritDealProject(ctx, tx, &in); err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
 

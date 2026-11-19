@@ -375,6 +375,7 @@ func TestAnAgentReshapesNoLadderATransitionIsTrustedOn(t *testing.T) {
 		{"name": "Two", "position": 2, "semantic": "open"},
 		{"name": "Three", "position": 3, "semantic": "open"},
 		{"name": "Won", "position": 4, "semantic": "won"},
+		{"name": "Lost", "position": 5, "semantic": "lost"},
 	}}, nil, &pipeline); status != http.StatusCreated {
 		t.Fatalf("creating the pipeline → %d", status)
 	}
@@ -394,7 +395,7 @@ func TestAnAgentReshapesNoLadderATransitionIsTrustedOn(t *testing.T) {
 	if status := d.e.Call(t, "POST", "/v1/stages/"+stage("One")+"/exit-criteria", AnyMap{"key": "budget", "label": "Budget known", "kind": "custom", "required": true}, nil, &criterion); status != http.StatusCreated {
 		t.Fatalf("adding the criterion → %d", status)
 	}
-	order := []string{stage("One"), stage("Three"), stage("Two"), stage("Won")}
+	order := []string{stage("One"), stage("Three"), stage("Two"), stage("Won"), stage("Lost")}
 	calls := map[string]map[string]any{
 		"archiving a criterion": {"action": "archive_exit_criterion", "id": stage("One"), "criterion_id": criterion.ID},
 		"making it optional":    {"action": "update_exit_criterion", "id": stage("One"), "criterion_id": criterion.ID, "request_body": AnyMap{"required": false}},

@@ -43,7 +43,7 @@ func (failingRows) CommandTag() pgconn.CommandTag { return pgconn.CommandTag{} }
 
 // A signal read that fails stops the erasure with the cause named, so the
 // erasure never reports a tombstone it did not write.
-func TestTombstoneSubjectSignalsNamesTheReadThatFailed(t *testing.T) {
+func TestScrubSubjectSignalsNamesTheReadThatFailed(t *testing.T) {
 	t.Parallel()
 
 	cases := map[string]queryFailsTx{
@@ -53,7 +53,7 @@ func TestTombstoneSubjectSignalsNamesTheReadThatFailed(t *testing.T) {
 	for name, tx := range cases {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			err := tombstoneSubjectSignals(t.Context(), tx, ids.ContactID{}, "erasure")
+			err := scrubSubjectSignals(t.Context(), tx, ids.ContactID{}, nil, "erasure", causeContactErasure)
 			if !errors.Is(err, errSignalsRead) {
 				t.Fatalf("got %v, want it to wrap the refused read", err)
 			}

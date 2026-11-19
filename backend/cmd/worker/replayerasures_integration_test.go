@@ -185,7 +185,7 @@ func journalledEraser(t *testing.T, e *integration.Env) *privacy.Eraser {
 	if err != nil {
 		t.Fatalf("opening the object store: %v", err)
 	}
-	return compose.ComposedEraser(e.Pool, store, nil)
+	return compose.ComposedEraser(e.Pool, store)
 }
 
 func eraseAndExport(t *testing.T, e *integration.Env, eraser *privacy.Eraser, contact ids.UUID) {

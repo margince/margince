@@ -289,6 +289,9 @@ Then comes **Open tasks**: the open tasks filed under the project, soonest due f
 
 The side column of a project page in Margince holds **Companies**, **Responsibilities**, **Stakeholders**, **Contracts**, **Documents** and **Phase history**. **Phase history** records every phase move, with who made it and the reason. A move an AI agent made names the colleague it worked for and the tool, as in "Anna Weber, via Claude, moved it". If nobody recorded who made a move, Phase history says so; it is never shown as **System**. Files attached to the project's deals stay on the deals.
 
+### Does a note on a deal show on its project?
+Yes. In Margince, what you log on a deal, or relink onto it, also goes under the deal's project, unless you pick a project yourself. Deals of two projects, or a deal with no project, add none. A note an AI agent or Margince itself logs stays on the deal only. Take the note off the deal, and the project goes too; moving the deal later moves no older note.
+
 ### How do I edit or rename a project?
 To rename a project in Margince, open it from **Projects**, press its name at the top, type the new name and press **Save**. To edit the rest, choose **More actions** → **Edit project**, change the fields and choose **Save**.
 You can change **Project name** (required), **Owner**, **Description**, **Target end date** and custom fields. It confirms "“{name}” saved". Emptying **Description** or **Target end date** clears it. To change only **Owner**, **Target end date** or **Description** (behind **Show {count} empty fields**), press its value in the project's **Details** panel instead.

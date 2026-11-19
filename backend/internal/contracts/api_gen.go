@@ -44496,6 +44496,11 @@ type ContactCaseDecisionRequest struct {
 	// OwnerId Who owns the remaining contact: the live owner of one of the selected members.
 	OwnerId openapi_types.UUID `json:"owner_id"`
 
+	// Prefer Where the selected members disagree, the member whose value the remaining contact takes.
+	// Each one must be in `member_ids`. A field left out keeps the survivor's value, and an empty one takes another member's.
+	// No value is lost: every address, number and employment of every member stays on the remaining contact.
+	Prefer *ContactCasePreference `json:"prefer,omitempty"`
+
 	// Revision The case revision the reviewer looked at.
 	Revision string `json:"revision"`
 
@@ -44589,6 +44594,23 @@ type ContactCaseOwner struct {
 
 // ContactCaseOwnerSeat defines model for ContactCaseOwner.Seat.
 type ContactCaseOwnerSeat string
+
+// ContactCasePreference Where the selected members disagree, the member whose value the remaining contact takes.
+// Each one must be in `member_ids`. A field left out keeps the survivor's value, and an empty one takes another member's.
+// No value is lost: every address, number and employment of every member stays on the remaining contact.
+type ContactCasePreference struct {
+	// Email The member whose primary email address becomes the remaining contact's primary one.
+	Email *openapi_types.UUID `json:"email,omitempty"`
+
+	// Employment The member whose current employer becomes the remaining contact's current one.
+	Employment *openapi_types.UUID `json:"employment,omitempty"`
+
+	// Name The member whose first and last name the remaining contact takes.
+	Name *openapi_types.UUID `json:"name,omitempty"`
+
+	// Title The member whose title the remaining contact takes.
+	Title *openapi_types.UUID `json:"title,omitempty"`
+}
 
 // ContactCaseResolution defines model for ContactCaseResolution.
 type ContactCaseResolution struct {

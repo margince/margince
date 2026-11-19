@@ -242,8 +242,8 @@ var erasureColumnBaseline = map[string][]string{
 		// anything a subject wrote or anything written about them, so the
 		// Art. 17 scrub leaves them standing.
 		//
-		// payload_ref is deliberately NOT here: erasure_payloads.go clears it,
-		// after destroying the vault material the reference names.
+		// Names vault material, nothing a subject wrote; the sweep clears it.
+		"payload_ref",
 		"sender_kind",
 		"template_key",
 		"bounce_kind",

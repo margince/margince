@@ -362,6 +362,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.merge.address_usage": "Verwendung der Adresse",
   "approval.merge.address_primary_before": "Primäradresse der Quelle",
   "approval.merge.address_primary_after": "Primäradresse des Ziels",
+  "approval.merge.address_already_held": "Ziel hat sie schon",
   "approval.merge.assignment_collapsed": "Doppelte Zuständigkeit entfernt",
   "approval.merge.assignment_moved": "Übernommene Zuständigkeit",
   "approval.merge.assignment_role": "Rolle",
@@ -6627,6 +6628,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Du kannst Aktivitäten erfassen und Aufgaben hinzufügen. Um diesen Deal zu ändern, muss die verantwortliche Person ihn mit dir teilen.",
   "deal.closedTakesNoStage":
     "Dieser Deal ist abgeschlossen. Öffne den Deal wieder, um ihn in eine andere Phase zu verschieben.",
+  "deal.pipelineRetired":
+    "Die Pipeline dieses Deals ist stillgelegt, daher sind ihre Phasen schreibgeschützt. Stelle die Pipeline in den Einstellungen wieder her, um den Deal zu verschieben.",
+  "deal.stageOtherPipeline":
+    "Diese Phase gehört zu einer anderen Pipeline. Wähle eine Phase der Pipeline dieses Deals.",
   "deal.reopen": "Wieder öffnen",
   "deal.reopenPick": "Diesen Deal in eine offene Phase zurücksetzen",
   "deal.reopenConfirm": "Wieder öffnen",
@@ -11915,6 +11920,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "translation.given": "{language}: {name}",
   "stage.name": "Name",
   "stage.semantic": "Phasentyp",
+  "stage.lastClosing":
+    "Eine Pipeline braucht eine Phase Gewonnen und eine Phase Verloren. Lege zuerst eine weitere dieses Typs an.",
   "stage.winProb": "Gewinnwahrscheinlichkeit",
   "stage.semOpen": "Offen",
   "stage.semWon": "Gewonnen",
@@ -22940,6 +22947,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contactCase.ownerHint":
     "Nur wer für einen markierten Kontakt verantwortlich ist, kann den verbleibenden Kontakt übernehmen.",
   "contactCase.ownerPlaceholder": "Verantwortliche Person wählen",
+  "contactCase.prefer.legend": "Welcher Wert bleibt",
+  "contactCase.prefer.hint":
+    "Hier unterscheiden sich die Kontakte. Wähle den Wert, den der verbleibende Kontakt zuerst zeigt. Die anderen E-Mail-Adressen und Arbeitgeber bleiben auch erhalten.",
+  "contactCase.prefer.name": "Name",
+  "contactCase.prefer.email": "Primäre E-Mail-Adresse",
+  "contactCase.prefer.employment": "Aktueller Arbeitgeber",
+  "contactCase.prefer.title": "Position",
+  "contactCase.prefer.placeholder": "Wert wählen",
   "contactCase.previewVerb": "Vorschau anzeigen",
   "contactCase.merge_one": "{count} Kontakt zusammenführen",
   "contactCase.merge_other": "{count} Kontakte zusammenführen",
