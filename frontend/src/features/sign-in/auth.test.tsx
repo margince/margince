@@ -122,6 +122,37 @@ describe("AuthScreen login", () => {
     expect(request?.headers.has("X-Workspace-Slug")).toBe(false);
   });
 
+  // The page's own words, in the page's language: a browser's bubble speaks the
+  // browser's language, whatever the reader chose at the foot of the form.
+  it("names an empty or malformed field in the page's language, not the browser's", async () => {
+    const calls = stubApi({ password: true, password_reset: false }, () =>
+      ok(200, { user: {}, roles: [], teams: [] }),
+    );
+    render(<AuthScreen onAuthed={vi.fn()} />);
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Deutsch" }),
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Anmelden" }));
+    expect(screen.getByText(translate("de", "auth.emailMissing"))).toBeTruthy();
+    expect(
+      screen.getByText(translate("de", "auth.passwordMissing")),
+    ).toBeTruthy();
+
+    await userEvent.type(screen.getByLabelText("E-Mail"), "not-an-email");
+    await userEvent.type(
+      screen.getByLabelText("Passwort"),
+      "a-password{enter}",
+    );
+    expect(
+      screen.getByText(translate("de", "auth.emailMalformed")),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(translate("de", "auth.passwordMissing")),
+    ).toBeNull();
+    expect(calls).toHaveLength(0);
+  });
+
   it("does not show success until the authenticated session probe succeeds", async () => {
     stubApi({ password: true, password_reset: false }, () =>
       ok(200, { user: {}, roles: [], teams: [] }),

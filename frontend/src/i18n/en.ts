@@ -13514,6 +13514,10 @@ export const en = {
   "auth.emailPlaceholder": "name@example.com",
   "auth.password": "Password",
   "auth.passwordPlaceholder": "Password",
+  "auth.emailMissing": "Enter your email address.",
+  "auth.emailMalformed":
+    "Enter a full email address, such as name@example.com.",
+  "auth.passwordMissing": "Enter your password.",
   "auth.passwordHint": "12 to 256 characters",
   "auth.showPassword": "Show password",
   "auth.hidePassword": "Hide password",

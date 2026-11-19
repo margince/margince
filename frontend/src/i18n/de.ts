@@ -13570,6 +13570,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "auth.emailPlaceholder": "name@example.com",
   "auth.password": "Passwort",
   "auth.passwordPlaceholder": "Passwort",
+  "auth.emailMissing": "Gib deine E-Mail-Adresse ein.",
+  "auth.emailMalformed":
+    "Gib eine vollständige E-Mail-Adresse ein, etwa name@example.com.",
+  "auth.passwordMissing": "Gib dein Passwort ein.",
   "auth.passwordHint": "12 bis 256 Zeichen",
   "auth.showPassword": "Passwort anzeigen",
   "auth.hidePassword": "Passwort ausblenden",
