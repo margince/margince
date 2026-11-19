@@ -69,7 +69,7 @@ import {
 import { MeetingAttendeeFields } from "./meetingattendees";
 import { useUnsavedGuard } from "./unsaved";
 
-export type OpeningKind = "note" | "task" | "call";
+export type OpeningKind = "note" | "task" | "call" | "meeting";
 
 function latestDayOf(
   kind: ActivityDraft["kind"],

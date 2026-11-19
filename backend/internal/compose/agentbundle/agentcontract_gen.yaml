@@ -49659,6 +49659,11 @@ components:
           readOnly: true
           description: >-
             For a `company` hit only: the company's logo, the same URL its record carries as `Company.logo_url`. Absent when it has none, and on every other hit type.
+        standing:
+          allOf: [{$ref: '#/components/schemas/SearchHitStanding'}]
+          readOnly: true
+          description: >-
+            Where a contact, company, deal, lead or project hit stands, read with the page under THIS caller's grants and field masks, so a result list can say it without opening each record. Absent on every other hit type.
         is_partner:
           type: [boolean, 'null']
           description: >-
@@ -49674,6 +49679,42 @@ components:
           enum: [authoritative, external, unverified, null]
           description: >-
             Provenance tier of the underlying record. EVERY hit this server returns carries `authoritative`, with no exception: search reads the store the record lives in, so a hit is never a copy of somebody else's. `external` and `unverified` are declared for connector-sourced rows and nothing emits either yet, and `null` means UNKNOWN rather than authoritative — this field is never guessed. A client must accept all four and must not expect any but the first.
+    SearchHitStanding:
+      type: object
+      description: >-
+        What a result list shows beside a record hit. A field that does not apply to the hit's type, or that the record does not hold, is null.
+      properties:
+        state:
+          type: [string, 'null']
+          description: >-
+            A deal's status (open, won, lost), a lead's status (new, contacted, engaged, promoted, disqualified) or a project's phase (initiative, pursuing, delivering, closed). Null on a contact and a company.
+        stage:
+          type: [string, 'null']
+          description: A deal's stage, named in the reader's language. Null on every other type.
+        amount_minor:
+          type: [integer, 'null']
+          format: int64
+          description: >-
+            A deal's amount in minor units of `currency`. Null when the deal is unpriced, and null when a field mask withholds it, which `masked_fields` then names.
+        currency:
+          type: [string, 'null']
+          description: The ISO 4217 code of `amount_minor`; null with it.
+        due_on:
+          type: [string, 'null']
+          format: date
+          description: A deal's expected close date or a project's target end date.
+        job_title:
+          type: [string, 'null']
+          description: A contact's job title. Null on every other type.
+        last_activity_at:
+          type: [string, 'null']
+          format: date-time
+          description: >-
+            When the record was last in touch: its newest logged call, mail, meeting or note. Set on a contact, a company and a deal.
+        masked_fields:
+          type: array
+          items: {type: string}
+          description: The fields above a field mask withheld from this caller, by their wire names.
     SearchHitEmployer:
       type: object
       description: >-

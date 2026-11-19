@@ -51700,6 +51700,8 @@ export interface components {
             readonly works_at?: components["schemas"]["SearchHitEmployer"] | null;
             /** @description For a `company` hit only: the company's logo, the same URL its record carries as `Company.logo_url`. Absent when it has none, and on every other hit type. */
             readonly logo_url?: string | null;
+            /** @description Where a contact, company, deal, lead or project hit stands, read with the page under THIS caller's grants and field masks, so a result list can say it without opening each record. Absent on every other hit type. */
+            readonly standing?: components["schemas"]["SearchHitStanding"];
             /** @description For a `company` hit only: whether the account carries a LIVE partner programme. True when a partner record exists and has not been retired, false when it was checked and carries none. Null on every other hit type, and null when the marker was not taken — a caller who may not read partner programmes gets null rather than false, because null means UNKNOWN while false would tell them this account is not a partner. A client renders the partner marker, with a route to the company's partner record, on `true` alone. */
             is_partner?: boolean | null;
             /** @description The canonical email row, on an `activity` hit whose activity is an email THIS caller may read. Null on every other hit type, and null for a non-email activity — a call, a note, a task and a meeting are activities too, and each keeps its generic hit. An email whose content is not this caller's produces no hit at all, because the activity branch is content-gated. A client renders the canonical row when this is present and falls back to `title`/`snippet` when it is not. */
@@ -51709,6 +51711,34 @@ export interface components {
              * @enum {string|null}
              */
             trust_tier?: "authoritative" | "external" | "unverified" | null;
+        };
+        /** @description What a result list shows beside a record hit. A field that does not apply to the hit's type, or that the record does not hold, is null. */
+        SearchHitStanding: {
+            /** @description A deal's status (open, won, lost), a lead's status (new, contacted, engaged, promoted, disqualified) or a project's phase (initiative, pursuing, delivering, closed). Null on a contact and a company. */
+            state?: string | null;
+            /** @description A deal's stage, named in the reader's language. Null on every other type. */
+            stage?: string | null;
+            /**
+             * Format: int64
+             * @description A deal's amount in minor units of `currency`. Null when the deal is unpriced, and null when a field mask withholds it, which `masked_fields` then names.
+             */
+            amount_minor?: number | null;
+            /** @description The ISO 4217 code of `amount_minor`; null with it. */
+            currency?: string | null;
+            /**
+             * Format: date
+             * @description A deal's expected close date or a project's target end date.
+             */
+            due_on?: string | null;
+            /** @description A contact's job title. Null on every other type. */
+            job_title?: string | null;
+            /**
+             * Format: date-time
+             * @description When the record was last in touch: its newest logged call, mail, meeting or note. Set on a contact, a company and a deal.
+             */
+            last_activity_at?: string | null;
+            /** @description The fields above a field mask withheld from this caller, by their wire names. */
+            masked_fields?: string[];
         };
         /** @description A company a contact currently works at, by any current employment — the same reading as the company's own roster, not only the contact's primary employer. */
         SearchHitEmployer: {

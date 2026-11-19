@@ -229,17 +229,16 @@ func socialNote(shapes map[datasource.EntityType]reflect.Type, patch bool) []str
 // sourceNote says what naming `source` does on this write.
 //
 // Only where the shapes actually carry the field. On create it is accepted and
-// then overwritten, so believing it took effect would be wrong. On update the
-// one record type that carries it is the lead, where `source` is the
-// administered "where did this come from" value and a patch genuinely
-// corrects it — the opposite of the create advice, so the two sentences are
-// kept apart by which write this is rather than by one shared note.
+// then overwritten, so believing it took effect would be wrong. On update only
+// the lead carries it. There a changed `source` is refused, and `origin` is the
+// field a caller means to correct.
 func sourceNote(shapes map[datasource.EntityType]reflect.Type, patch bool) []string {
 	if !describesField(shapes, "source") {
 		return nil
 	}
 	if patch {
-		return []string{"`source` on a lead is the administered lead-source key (see Settings › Data model); a patch corrects it, and the score follows."}
+		return []string{"`source` on a lead says how the row reached Margince and is read-only: any value but the stored one is refused, and it never scores. " +
+			"Where the lead came from is `origin`, an active key from `/lead-origins` (Settings › Leads); while the lead is open (new, contacted or engaged), a patch to it rescores the lead."}
 	}
 	return []string{"`source` is accepted but overwritten — this surface stamps its own provenance."}
 }
