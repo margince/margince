@@ -9,6 +9,7 @@ import (
 	"go/parser"
 	"go/token"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -16,6 +17,10 @@ import (
 	"github.com/margince/margince/backend/internal/modules/chatlinks"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 )
+
+// activityRead matches a read of the activity table under any alias, case and
+// whitespace; activity_link and the like do not match.
+var activityRead = regexp.MustCompile(`(?i)\b(from|join)\s+activity\s+(as\s+)?[a-z_]\w*`)
 
 // TestTheChatEngineReadsActivityTextOnlyThroughSharedRow holds the
 // audience rule's one door. A second query of the activity table in the chat
@@ -45,7 +50,7 @@ func TestTheChatEngineReadsActivityTextOnlyThroughSharedRow(t *testing.T) {
 					return true
 				}
 				text, err := strconv.Unquote(lit.Value)
-				if err == nil && strings.Contains(text, "FROM activity a") {
+				if err == nil && activityRead.MatchString(text) {
 					readers[file+":"+fn.Name.Name] = true
 				}
 				return true

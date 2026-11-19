@@ -131,18 +131,18 @@ type sharedText struct {
 
 // sharedActivity is an activity as a channel may show it, by id.
 func sharedActivity(ctx context.Context, tx pgx.Tx, id ids.UUID) (sharedText, error) {
-	return sharedRow(ctx, tx, "a.id = $1", id)
+	return sharedRow(ctx, tx, "a.id = $1", "a.occurred_at DESC, a.id DESC", id)
 }
 
 // sharedRow is the only reader of activity text in the chat engine. It reads
-// the newest row that where selects, under the workspace-only audience rule.
+// the first row that where selects in order, under the workspace-only audience rule.
 // Private, selectively shared, archived and restricted activities read as absent.
 // Held by: TestTheChatEngineReadsActivityTextOnlyThroughSharedRow (backend/internal/compose/chatsync/sync_test.go)
-func sharedRow(ctx context.Context, tx pgx.Tx, where string, args ...any) (sharedText, error) {
+func sharedRow(ctx context.Context, tx pgx.Tx, where, order string, args ...any) (sharedText, error) {
 	var out sharedText
 	err := tx.QueryRow(ctx, `SELECT a.kind, coalesce(a.subject, ''), coalesce(a.body, ''), coalesce(a.source_system, '')
 		FROM activity a WHERE a.archived_at IS NULL AND a.restricted_at IS NULL AND `+where+
-		auth.AudienceWorkspaceOnly("a")+` ORDER BY a.occurred_at DESC, a.id DESC LIMIT 1`, args...).
+		auth.AudienceWorkspaceOnly("a")+` ORDER BY `+order+` LIMIT 1`, args...).
 		Scan(&out.kind, &out.subject, &out.body, &out.sourceSystem)
 	if err == pgx.ErrNoRows {
 		return sharedText{}, nil
