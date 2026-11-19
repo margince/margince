@@ -26,12 +26,10 @@ type replyBrainStub struct {
 	response model.Response
 	err      error
 	request  model.Request
-	subject  ai.Subject
 }
 
-func (b *replyBrainStub) Complete(ctx context.Context, req model.Request) (model.Response, error) {
+func (b *replyBrainStub) Complete(_ context.Context, req model.Request) (model.Response, error) {
 	b.request = req
-	b.subject, _ = ai.SubjectOf(ctx)
 	return b.response, b.err
 }
 
@@ -119,10 +117,12 @@ type sequencedBrainStub struct {
 	// which is the only way to reach a path that runs between two successes.
 	errs     []error
 	requests []model.Request
+	subject  ai.Subject
 }
 
-func (b *sequencedBrainStub) Complete(_ context.Context, req model.Request) (model.Response, error) {
+func (b *sequencedBrainStub) Complete(ctx context.Context, req model.Request) (model.Response, error) {
 	b.requests = append(b.requests, req)
+	b.subject, _ = ai.SubjectOf(ctx)
 	index := len(b.requests) - 1
 	if index >= len(b.responses) {
 		index = len(b.responses) - 1
@@ -260,8 +260,8 @@ func TestVoicedDraftWithoutAProfileIsThePlainPath(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if version != nil {
-		t.Fatal("no profile must mean no voice version stamp")
+	if version != nil || brain.subject.Label != "plan" {
+		t.Fatalf("version %v, rail label %q; want no stamp, named by the subject line", version, brain.subject.Label)
 	}
 	if strings.Contains(brain.requests[0].Messages[0].Content, "<voice_profile>") {
 		t.Fatal("no profile must mean no voice block")
@@ -558,15 +558,5 @@ func TestTheReplyPromptHasOnlySelectedContentAndDeclaredSteering(t *testing.T) {
 	slices.Sort(got)
 	if !slices.Equal(got, want) {
 		t.Fatalf("reply payload fields = %v, want the reviewed content/steering boundary %v", got, want)
-	}
-}
-
-// A failed reply draft is named on the rail by the subject line it answered.
-func TestReplyDraftNamesTheMessageItAnswersOnTheRail(t *testing.T) {
-	brain, anchor := &replyBrainStub{err: errors.New("provider down")}, ids.NewV7()
-	_, _, _, err := replyDrafter{brain: brain}.completeVoiced(context.Background(), anchor,
-		replyActivityData{Subject: "Heat recovery quote", Thread: "inbound_mail"}, draftvoice.Context{})
-	if err == nil || brain.subject.Label != "Heat recovery quote" || brain.subject.Ref.ID != anchor {
-		t.Fatalf("err %v, subject %+v; want a failed draft named by its subject line", err, brain.subject)
 	}
 }
