@@ -66,12 +66,12 @@ func readErasedLinks(ctx context.Context, tx pgx.Tx, query string, args ...any) 
 	})
 }
 
-func (s *Store) settleErasedLink(ctx context.Context, link erasedLink, clear string) error {
+func (s *Store) settleErasedLink(ctx context.Context, link erasedLink, dropRef string) error {
 	if err := s.deleteMeetingLink(ctx, link.ref); err != nil {
 		return fmt.Errorf("activities: destroying an erased meeting link: %w", err)
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
-		_, err := tx.Exec(ctx, clear, link.activity, link.ref)
+		_, err := tx.Exec(ctx, dropRef, link.activity, link.ref)
 		return err
 	})
 }
