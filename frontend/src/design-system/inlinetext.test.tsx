@@ -108,7 +108,7 @@ describe("a text value edited in a dialog", () => {
       onSave: vi.fn(async () => {
         throw new ProblemError({
           code: "permission_denied",
-          detail: "contact.update: permission denied",
+          detail: "your role does not grant update on contact",
         });
       }),
     });

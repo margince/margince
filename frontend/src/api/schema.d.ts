@@ -33562,6 +33562,12 @@ export interface components {
              *     `writes` or `egress` for a window allowance, `pacing` for the per-minute limit),
              *     `ceiling` is the limit in force, and a window allowance adds `used` and `resets_at`.
              *     The `Retry-After` header says how many seconds until the call can succeed.
+             *
+             *     A 403 that a role's grants answer carries `missing_grant`: the grant the caller
+             *     lacks, in the notation the tool table uses for a tool's requirement (`deal.update`,
+             *     `deal.create|update`, `admin`, `scope:team`, or alternatives joined by `,`). An
+             *     agent hands it to an admin as the grant to add. A refusal that no grant lifts,
+             *     such as a Deal Room participant's, carries none.
              */
             details?: {
                 [key: string]: unknown;

@@ -295,7 +295,7 @@ it("distinguishes an empty window from a refused read", async () => {
   mount(
     {
       title: "Forbidden",
-      detail: "automation.update: permission denied",
+      detail: "your role does not grant update on automation",
       status: 403,
       code: "permission_denied",
     },

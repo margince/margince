@@ -64,8 +64,13 @@ Three things new readers do not expect:
   records as well as their own, worked out through live team membership. The seat above it,
   `management`, has the same object grants at `all`: the sales leader over every row.
 - **Config objects are read-only below admin and ops.** That covers pipeline, `custom_field` and
-  `automation`. So a `rep` sees an error such as `pipeline.read: permission denied` only when they
-  have **no role at all**. With the `rep` role they *can* read pipelines; they only cannot edit them.
+  `automation`. So a `rep` is refused a pipeline read only when they have **no role at all**. With
+  the `rep` role they *can* read pipelines; they only cannot edit them.
+
+A refusal on a grant answers 403 with a sentence such as "your role does not grant read on
+pipeline". `details.missing_grant` names the grant in the tool table's notation (`pipeline.read`),
+and an agent reads it at the end of the refusal text, because MCP has no structured error. The
+sentence is built in `platform/auth/grantrefusal.go`.
 
 Custom roles add to the same shape. An admin makes one in **Settings → Roles and permissions** by
 copying a role that exists. Then they rename it, move its row scope and switch its object grants

@@ -460,7 +460,7 @@ describe("PrivacyInboxCard", () => {
             // What auth.Require actually sends: the RBAC object and verb
             // wrapped around the sentinel. Internals, not copy — so the screen
             // must show the catalog sentence instead of echoing it.
-            detail: "data_subject_request.update: permission denied",
+            detail: "your role does not grant update on data subject request",
             status: 403,
             code: "permission_denied",
           },
@@ -600,7 +600,7 @@ describe("PrivacyInboxCard", () => {
             // What auth.Require actually sends: the RBAC object and verb
             // wrapped around the sentinel. Internals, not copy — so the screen
             // must show the catalog sentence instead of echoing it.
-            detail: "data_subject_request.update: permission denied",
+            detail: "your role does not grant update on data subject request",
             status: 403,
             code: "permission_denied",
           },

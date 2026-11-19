@@ -5,10 +5,8 @@ package auth
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/margince/margince/backend/internal/platform/corefeatures"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -45,10 +43,10 @@ func probeCheck(ctx context.Context, c Check) error {
 		return err
 	}
 	if p.Type == principal.PrincipalBuyer {
-		return refuseBuyer(p, c.String())
+		return refuseBuyer(p)
 	}
 	if !corefeatures.FromContext(ctx).RecordEnabled(c.Object) || !c.HeldBy(p) {
-		return fmt.Errorf("%s: %w", c, apperrors.ErrPermissionDenied)
+		return refuseGrant(c)
 	}
 	return nil
 }

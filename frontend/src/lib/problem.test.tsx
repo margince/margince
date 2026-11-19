@@ -119,7 +119,7 @@ describe("problemMessage", () => {
     const message = problemMessage(
       {
         code: "permission_denied",
-        detail: "contact.update: permission denied",
+        detail: "your role does not grant update on contact",
       },
       t,
     );

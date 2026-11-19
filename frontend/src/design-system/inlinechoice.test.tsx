@@ -99,7 +99,7 @@ describe("a choice edited in a dialog", () => {
       onSave: vi.fn(async () => {
         throw new ProblemError({
           code: "permission_denied",
-          detail: "company.update: permission denied",
+          detail: "your role does not grant update on company",
         });
       }),
     });

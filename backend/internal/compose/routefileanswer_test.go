@@ -157,3 +157,17 @@ func TestASchemaJSONAnswerPassesAsItsDocument(t *testing.T) {
 		t.Errorf("the answer reads %s", raw)
 	}
 }
+
+// A route's refusal keeps its structured details on the tool surface.
+func TestARoutedRefusalKeepsTheMissingGrant(t *testing.T) {
+	rec := &cappedRecorder{ResponseRecorder: httptest.NewRecorder(), fileLimit: agents.MaxInlineFileBytes}
+	rec.WriteHeader(http.StatusForbidden)
+	if _, err := rec.Write([]byte(`{"code":"permission_denied","detail":"your role does not grant update on deal","details":{"missing_grant":"deal.update"}}`)); err != nil {
+		t.Fatal(err)
+	}
+	_, err := routeAnswer(agents.RouteVerb{Verb: "update_deal", Method: http.MethodPatch}, rec)
+	fault, classified := httperr.Classify(err)
+	if !classified || fault.Status != http.StatusForbidden || fault.Details["missing_grant"] != "deal.update" {
+		t.Fatalf("a routed 403 answered %+v (classified %v), want a 403 naming deal.update", fault, classified)
+	}
+}
