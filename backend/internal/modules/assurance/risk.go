@@ -13,7 +13,7 @@ import (
 
 // RiskSignalsVersion names the rules RiskSignals applies. A forecast frozen
 // under another version measured other signals, so its effects are not pooled.
-const RiskSignalsVersion = "v2"
+const RiskSignalsVersion = "v3"
 
 // The risk signals a forecast weighs. Each is a fact about the deal, not a
 // finding: no review is raised for one, and a deal may carry several.
@@ -56,7 +56,7 @@ func RiskSignals(asOf time.Time, s Subject, cfg Config, stuckAfter *time.Duratio
 		signal.ClosePassed = closesIn != nil && *closesIn < 0
 		out = append(out, signal)
 	}
-	if !s.HasNextStep {
+	if lacksNextStep(s) {
 		signal := RiskSignal{Code: SignalNoNextStep}
 		if closesIn != nil && *closesIn >= 0 && *closesIn <= soonDays {
 			signal.ClosesInDays = closesIn
