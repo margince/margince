@@ -37,8 +37,10 @@ type MemberEdit struct {
 
 // displayNameLine is a typed name as colleagues read it, on one line. The zero-width and
 // bidi characters that hide or reorder text in a picker or the audit log are dropped.
+// Controls go first, so a joiner is judged by the letters left beside it and a second
+// pass changes nothing.
 func displayNameLine(raw string) string {
-	return draftfloor.NameLine(values.WithoutZeroWidth(raw))
+	return draftfloor.NameLine(values.WithoutZeroWidth(draftfloor.NameLine(raw)))
 }
 
 func validateDisplayName(name string) error {

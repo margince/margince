@@ -19,9 +19,15 @@ func TestADisplayNameIsStoredAsOneVisibleLine(t *testing.T) {
 		"Ada\u0000\u001b Lovelace":       "Ada Lovelace",
 		"Nguyễn Thị Hương":               "Nguyễn Thị Hương",
 		"\u0915\u094d\u200d\u0937\u093e": "\u0915\u094d\u200d\u0937\u093e",
+		"Ada\u200d\u202e":                "Ada",
 	} {
-		if got := displayNameLine(typed); got != want {
+		got := displayNameLine(typed)
+		if got != want {
 			t.Errorf("displayNameLine(%q) = %q, want %q", typed, got, want)
+		}
+		// A name read back and saved again must not differ, or the save writes a change.
+		if again := displayNameLine(got); again != got {
+			t.Errorf("displayNameLine(%q) = %q, not the %q it was given", got, again, got)
 		}
 	}
 }
