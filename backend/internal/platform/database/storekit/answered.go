@@ -125,6 +125,7 @@ func touchAnswerArm(asker, touch, walk string) answerArm {
 func threadAnswerArm(inbound, until string) answerArm {
 	return answerArm{at: "answer_thread.occurred_at", id: "answer_thread.id", from: `FROM activity answer_thread
 	  WHERE answer_thread.thread_key = ` + inbound + `.thread_key
+	    AND answer_thread.direction = 'outbound'
 	    AND ` + ourReplySQL("answer_thread", inbound, until)}
 }
 
@@ -138,11 +139,12 @@ func ourReplyArms(inbound, until string) []answerArm {
 // conversation. It carries its own key, so only its delivery links it here.
 func splitAnswerArm(inbound, until string) answerArm {
 	return answerArm{at: "answer_split.occurred_at", id: "answer_split.id", from: `FROM ` + SplitRepliesSQL("answer_split", inbound) + `
+	    AND answer_split.direction = 'outbound'
 	    AND ` + ourReplySQL("answer_split", inbound, until)}
 }
 
-// ourReplySQL tests that row is our delivered reply to the inbound row's sender,
-// in the same medium, by until.
+// ourReplySQL tests that row, an outbound message, was delivered to the inbound
+// row's sender in the same medium by until.
 func ourReplySQL(row, inbound, until string) string {
 	sender := `SELECT ` + inbound + `.counterparty_email
 	     UNION
@@ -153,7 +155,6 @@ func ourReplySQL(row, inbound, until string) string {
 	return row + `.kind = ` + inbound + `.kind
 	    AND ` + row + `.kind IN ('email', 'message')
 	    AND ` + row + `.channel_provider IS NOT DISTINCT FROM ` + inbound + `.channel_provider
-	    AND ` + row + `.direction = 'outbound'
 	    AND ` + deliveredSQL(row) + `
 	    AND (` + inbound + `.counterparty_email IS NULL
 	      OR (` + row + `.counterparty_email IN (` + sender + `)
