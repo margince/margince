@@ -34,6 +34,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -58,16 +59,13 @@ func directOpenPipelineReadPriced(
 	ctx context.Context, t *testing.T, e *Env, companyID ids.UUID,
 ) (minor *int64, count, priced int, found bool) {
 	t.Helper()
-	// The same day the reader binds (contacts.rollupAsOf): the rollup is asked for
-	// a date, and a test that let the database pick its own CURRENT_DATE would
-	// be reading a rollup at a date the product never asks for — a whole day
-	// apart at midnight in the database's zone, which is the divergence binding
-	// the date removed.
-	asOf := time.Now().UTC().Truncate(24 * time.Hour)
+	// The same instant the reader binds (contacts.rollupAsOf), cut to the
+	// installation's day the way the reader cuts it.
+	asOf := time.Now()
 	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
 			`SELECT open_pipeline_minor_base, open_deal_count, priced_deal_count
-			 FROM company_open_pipeline_rollup($2) WHERE company_id = $1`,
+			 FROM company_open_pipeline_rollup(`+occurredday.TodaySQL("$2::timestamptz")+`) WHERE company_id = $1`,
 			companyID, asOf).Scan(&minor, &count, &priced)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {

@@ -72,11 +72,10 @@ func TestLanguageEvidenceKeepsAnOldInboundMessageBehindManyNewerOutboundOnes(t *
 
 func TestLanguageEvidencePrefersTheAddresseesMailOverAnotherParticipants(t *testing.T) {
 	t.Parallel()
-	in := string(crmcontracts.ActivityDirectionInbound)
 	turns := []draftcore.Turn{
-		{Direction: in, SenderID: "cc-colleague", At: turnsNow, Text: "colleague newest"},
-		{Direction: in, SenderID: "addressee", At: turnsNow.Add(-48 * time.Hour), Text: "addressee older"},
-		{Direction: in, At: turnsNow.Add(-24 * time.Hour), Text: "unknown sender"},
+		{SideKnown: true, SenderID: "cc-colleague", At: turnsNow, Text: "colleague newest"},
+		{SideKnown: true, SenderID: "addressee", At: turnsNow.Add(-48 * time.Hour), Text: "addressee older"},
+		{SideKnown: true, At: turnsNow.Add(-24 * time.Hour), Text: "unknown sender"},
 	}
 	got := draftcore.LanguageEvidence(turns, "addressee")
 	want := []string{"addressee older", "colleague newest", "unknown sender"}
@@ -92,15 +91,14 @@ func TestLanguageEvidencePrefersTheAddresseesMailOverAnotherParticipants(t *test
 
 func TestAddresseeEvidenceIsOnlyTheAddresseesOwnTextNewestFirst(t *testing.T) {
 	t.Parallel()
-	in, out := string(crmcontracts.ActivityDirectionInbound), string(crmcontracts.ActivityDirectionOutbound)
 	mail, chat, call := crmcontracts.ActivityKindEmail, crmcontracts.ActivityKindMessage, crmcontracts.ActivityKindCall
 	turns := []draftcore.Turn{
-		{Kind: mail, Direction: in, SenderID: "addressee", At: turnsNow.Add(-72 * time.Hour), Subject: "Pricing", Text: "addressee oldest"},
-		{Kind: mail, Direction: in, SenderID: "cc-colleague", At: turnsNow, Text: "colleague newest"},
-		{Kind: mail, Direction: out, SenderID: "addressee", At: turnsNow, Text: "our mail"},
-		{Kind: chat, Direction: in, SenderID: "addressee", At: turnsNow.Add(-time.Hour), Text: "addressee newest"},
-		{Kind: mail, Direction: in, SenderID: "addressee", At: turnsNow.Add(-2 * time.Hour), Subject: "subject only"},
-		{Kind: call, Direction: in, SenderID: "addressee", At: turnsNow, Text: "the rep's call note", Logged: true},
+		{Kind: mail, SideKnown: true, SenderID: "addressee", At: turnsNow.Add(-72 * time.Hour), Subject: "Pricing", Text: "addressee oldest"},
+		{Kind: mail, SideKnown: true, SenderID: "cc-colleague", At: turnsNow, Text: "colleague newest"},
+		{Kind: mail, Ours: true, SideKnown: true, SenderID: "addressee", At: turnsNow, Text: "our mail"},
+		{Kind: chat, SideKnown: true, SenderID: "addressee", At: turnsNow.Add(-time.Hour), Text: "addressee newest"},
+		{Kind: mail, SideKnown: true, SenderID: "addressee", At: turnsNow.Add(-2 * time.Hour), Subject: "subject only"},
+		{Kind: call, SideKnown: true, SenderID: "addressee", At: turnsNow, Text: "the rep's call note", Logged: true},
 	}
 	got := draftcore.AddresseeEvidence(turns, "addressee")
 	want := []string{"addressee newest", "addressee oldest"}
@@ -117,37 +115,52 @@ func TestAddresseeEvidenceIsOnlyTheAddresseesOwnTextNewestFirst(t *testing.T) {
 // mirrored our own writing back at them. The row's voice says who wrote it.
 func TestLanguageEvidenceSkipsAColleaguesOwnInboundMail(t *testing.T) {
 	t.Parallel()
-	in := string(crmcontracts.ActivityDirectionInbound)
-	turns := []draftcore.Turn{
-		{Direction: in, ByColleague: true, At: turnsNow, Text: "our own words"},
-		{Direction: in, At: turnsNow.Add(-24 * time.Hour), Text: "their words"},
-	}
+	in := crmcontracts.ActivityDirectionInbound
+	ours := turnRow(crmcontracts.ActivityKindEmail, in, 1, "our own words")
+	ours.Voice = authoredBy(crmcontracts.ActivityAuthorKindColleague)
+	turns := draftcore.Conversation([]crmcontracts.Activity{
+		ours, turnRow(crmcontracts.ActivityKindEmail, in, 24, "their words"),
+	}, nil, turnsNow, time.UTC, 6)
 	got := draftcore.LanguageEvidence(turns, "")
-	if len(got) == 0 || got[0] != "their words" {
-		t.Fatalf("language evidence leads with %v, want their words first", got)
+	if len(got) == 0 || !strings.HasSuffix(got[0], "their words") {
+		t.Fatalf("language evidence leads with %q, want their words first", got)
 	}
 }
 
-// The turn answers whose word it is, and its readers ask that rather than
-// combining the voice and the transport themselves. A colleague writing from
-// one of our own domains arrives inbound, which is the case direction alone
-// reads wrong.
+// Conversation reads whose word a turn is from the row's author, never its
+// transport, so its readers never combine the two themselves. A logged call
+// keeps its direction: the voice there names who wrote the record down.
 func TestATurnSaysWhoseWordItIs(t *testing.T) {
 	t.Parallel()
-	in := string(crmcontracts.ActivityDirectionInbound)
-	out := string(crmcontracts.ActivityDirectionOutbound)
+	in, out := crmcontracts.ActivityDirectionInbound, crmcontracts.ActivityDirectionOutbound
+	mail := crmcontracts.ActivityKindEmail
 	for _, c := range []struct {
-		name  string
-		turn  draftcore.Turn
-		their bool
+		name       string
+		row        crmcontracts.Activity
+		their, our bool
 	}{
-		{"their inbound mail", draftcore.Turn{Direction: in}, true},
-		{"our colleague's inbound mail", draftcore.Turn{Direction: in, ByColleague: true}, false},
-		{"our outbound mail", draftcore.Turn{Direction: out}, false},
-		{"a row naming no direction", draftcore.Turn{}, false},
+		{"their inbound mail", turnRow(mail, in, 1, "x"), true, false},
+		{"our colleague's inbound mail", withAuthor(turnRow(mail, in, 1, "x"), crmcontracts.ActivityAuthorKindColleague), false, true},
+		{"the contact's mail sent from here", withAuthor(turnRow(mail, out, 1, "x"), crmcontracts.ActivityAuthorKindContactRecord), true, false},
+		{"our outbound mail", turnRow(mail, out, 1, "x"), false, true},
+		{"an inbound call a colleague logged", withAuthor(turnRow(crmcontracts.ActivityKindCall, in, 1, "x"), crmcontracts.ActivityAuthorKindColleague), true, false},
+		{"a note naming no direction", turnRow(crmcontracts.ActivityKindNote, "", 1, "x"), false, false},
 	} {
-		if got := c.turn.TheirWord(); got != c.their {
-			t.Errorf("%s: TheirWord() = %v, want %v", c.name, got, c.their)
+		turns := draftcore.Conversation([]crmcontracts.Activity{c.row}, nil, turnsNow, time.UTC, 6)
+		if len(turns) != 1 {
+			t.Fatalf("%s: got %d turns, want 1", c.name, len(turns))
+		}
+		if their, our := turns[0].TheirWord(), turns[0].OurWord(); their != c.their || our != c.our {
+			t.Errorf("%s: TheirWord=%v OurWord=%v, want %v and %v", c.name, their, our, c.their, c.our)
 		}
 	}
+}
+
+func authoredBy(kind crmcontracts.ActivityAuthorKind) *crmcontracts.ActivityVoice {
+	return &crmcontracts.ActivityVoice{Author: &crmcontracts.ActivityAuthor{Kind: kind}}
+}
+
+func withAuthor(row crmcontracts.Activity, kind crmcontracts.ActivityAuthorKind) crmcontracts.Activity {
+	row.Voice = authoredBy(kind)
+	return row
 }

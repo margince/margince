@@ -39,6 +39,6 @@ func FinanceRates() finance.Rates {
 func financeRateOn(
 	ctx context.Context, tx pgx.Tx, currency, base string, day time.Time,
 ) (finance.Rate, bool, error) {
-	rate, found, err := deals.NewFXRates(base, day).For(ctx, tx, currency)
+	rate, found, err := deals.NewFXRatesOnDay(base, day).For(ctx, tx, currency)
 	return finance.Rate{Value: rate.Rate, On: rate.On}, found, err
 }

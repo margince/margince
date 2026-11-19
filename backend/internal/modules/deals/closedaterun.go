@@ -209,7 +209,7 @@ func (c *CloseDateCorrector) nextMembers(
 	// — a number for a reader, not a predicate for the query.
 	rows, err := tx.Query(ctx, `
 		SELECT m.deal_id, m.deal_created_at,
-		       d.id, d.name, d.created_at, d.last_activity_at, d.wait_until, `+MeetingAheadSQL("d")+`,
+		       d.id, d.name, d.created_at, d.last_activity_at, `+PauseEndsSQL("d")+`, `+MeetingAheadSQL("d")+`,
 		       d.expected_close_date, d.close_date_provisional, d.win_probability_override, d.win_probability_set_by,
 		       d.pipeline_id, d.owner_id, s.win_probability, d.stage_id,
 		       (SELECT count(*) FROM stage s2

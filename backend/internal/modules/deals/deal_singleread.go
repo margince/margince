@@ -37,7 +37,7 @@ var dealColumns = `id, name, amount_minor, expected_arr_minor, arr_source_offer_
 	lost_reason_code, lost_reason_basis, won_without_contract_reason, won_without_contract_detail,
 	description, commercial_motion, priority, acquisition_source,
 	expected_close_date, close_date_provisional, closed_at, win_probability_override, win_probability_set_by,
-	` + StageWinProbabilitySQL("") + `, wait_until, last_activity_at,
+	` + StageWinProbabilitySQL("") + `, wait_until, ` + PauseEndsSQL("") + `, last_activity_at,
 	` + MeetingAheadSQL("") + `,
 	source, captured_by,
 	source_system, source_author_id, source_author_name,
@@ -70,7 +70,7 @@ func scanDeal(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmcontr
 	var override *int
 	var overrideBy *string
 	var stageProbability int
-	var expectedClose, waitUntil, fxRateDate *time.Time
+	var expectedClose, waitUntil, fxRateDate, pauseEnds *time.Time
 	var closeDateProvisional, meetingAhead bool
 	var version int64
 
@@ -83,7 +83,7 @@ func scanDeal(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmcontr
 		&companyID, &projectID, &ownerID, &partnerID, &d.PartnerAttribution, &status, &d.LostReason,
 		&d.LostReasonCode, &lossBasis, &wonReason, &d.WonWithoutContractDetail,
 		&d.Description, &motion, &priority, &d.AcquisitionSource,
-		&expectedClose, &closeDateProvisional, &d.ClosedAt, &override, &overrideBy, &stageProbability, &waitUntil, &d.LastActivityAt,
+		&expectedClose, &closeDateProvisional, &d.ClosedAt, &override, &overrideBy, &stageProbability, &waitUntil, &pauseEnds, &d.LastActivityAt,
 		&meetingAhead,
 		&d.Source, &d.CapturedBy,
 		&sourceSystem, &authorID, &authorName, &authorSeatName,
@@ -99,22 +99,7 @@ func scanDeal(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmcontr
 	probability, source := EffectiveWinProbability(override, overrideBy, stageProbability)
 	wireSource := crmcontracts.DealWinProbabilitySource(source)
 	d.WinProbability, d.WinProbabilitySource, d.StageWinProbability = &probability, &wireSource, &stageProbability
-	if wonReason != nil {
-		reason := crmcontracts.DealWonWithoutContractReason(*wonReason)
-		d.WonWithoutContractReason = &reason
-	}
-	if lossBasis != nil {
-		basis := crmcontracts.DealLostReasonBasis(*lossBasis)
-		d.LostReasonBasis = &basis
-	}
-	if motion != nil {
-		m := crmcontracts.DealCommercialMotion(*motion)
-		d.CommercialMotion = &m
-	}
-	if priority != nil {
-		pr := crmcontracts.DealPriority(*priority)
-		d.Priority = &pr
-	}
+	setDealEnums(&d, wonReason, lossBasis, motion, priority)
 
 	d.Id = openapi_types.UUID(id)
 	pid := openapi_types.UUID(pipelineID)
@@ -137,12 +122,33 @@ func scanDeal(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmcontr
 	if waitUntil != nil {
 		d.WaitUntil = &openapi_types.Date{Time: *waitUntil}
 	}
+	d.WaitEndsAt = pauseEnds
 	d.Version = &version
 	d.Author = sourceAuthorOf(authorID, authorSeatName, authorName, sourceSystem)
 	d.ImportedFrom = provenance.ImportedFrom(sourceSystem)
-	stalled := IsStalled(status, d.CreatedAt, d.LastActivityAt, waitUntil, meetingAhead, time.Now().UTC())
+	stalled := IsStalled(status, d.CreatedAt, d.LastActivityAt, pauseEnds, meetingAhead, time.Now().UTC())
 	d.Stalled = &stalled
 	return d, nil
+}
+
+// setDealEnums maps the four nullable enum columns onto their wire types.
+func setDealEnums(d *crmcontracts.Deal, wonReason, lossBasis, motion, priority *string) {
+	if wonReason != nil {
+		reason := crmcontracts.DealWonWithoutContractReason(*wonReason)
+		d.WonWithoutContractReason = &reason
+	}
+	if lossBasis != nil {
+		basis := crmcontracts.DealLostReasonBasis(*lossBasis)
+		d.LostReasonBasis = &basis
+	}
+	if motion != nil {
+		m := crmcontracts.DealCommercialMotion(*motion)
+		d.CommercialMotion = &m
+	}
+	if priority != nil {
+		pr := crmcontracts.DealPriority(*priority)
+		d.Priority = &pr
+	}
 }
 
 // attachModelWritten names the deal's fields a model wrote and nobody edited

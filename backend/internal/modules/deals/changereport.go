@@ -106,7 +106,7 @@ func (s *Store) PendingChangesOwnedBy(ctx context.Context, since *time.Time) (Ch
 			where = " AND " + scope
 		}
 		value, err := auth.MaskedExpressionSQL(ctx, maskObject, "amount_minor", "d",
-			BaseValueSQL("CURRENT_DATE", fmt.Sprintf("$%d", basePos), "d"), arg)
+			BaseValueSQL("now()", fmt.Sprintf("$%d", basePos), "d"), arg)
 		if err != nil {
 			return err
 		}
@@ -272,7 +272,7 @@ func (s *Store) TeamChanges(ctx context.Context, owners []ids.UUID, since time.T
 			return err
 		}
 		value, err := auth.MaskedExpressionSQL(ctx, maskObject, "amount_minor", "d",
-			BaseValueSQL("CURRENT_DATE", fmt.Sprintf("$%d", countArg(base)), "d"), countArg)
+			BaseValueSQL("now()", fmt.Sprintf("$%d", countArg(base)), "d"), countArg)
 		if err != nil {
 			return err
 		}

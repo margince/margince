@@ -67,6 +67,8 @@ type CalendarMeeting struct {
 	// DeliveredTo is the calendar owner's address. It records the seat's
 	// import of the meeting where the seat's connection proves that address.
 	DeliveredTo string
+	// Private is the owner marking the entry private on their calendar.
+	Private bool
 }
 
 // Capture lands the meeting as a calendar pull does and answers its id.
@@ -90,7 +92,7 @@ func (m CalendarMeeting) CaptureThrough(t *testing.T, e *Env, sink *capture.Sink
 		EntityType: "activity",
 		NaturalKey: connector.NaturalKey{SourceSystem: CalendarSystem, SourceID: m.Event},
 		Fields: capture.ActivityFields{
-			Kind: "meeting", Subject: "Account review", OccurredAt: m.At,
+			Kind: "meeting", Subject: "Account review", OccurredAt: m.At, ProviderPrivate: m.Private,
 		},
 		Links:             m.Links,
 		Participants:      m.Parties,

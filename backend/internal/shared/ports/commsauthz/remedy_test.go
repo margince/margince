@@ -3,7 +3,10 @@
 
 package commsauthz
 
-import "testing"
+import (
+	"slices"
+	"testing"
+)
 
 // TestEveryReasonDeclaresItsRemedy fails when a Reason constant has no entry in
 // the remedy table, so a new refusal cannot be a silent dead end.
@@ -92,12 +95,14 @@ func TestNoStaffExceptionAnswersAHardBounce(t *testing.T) {
 	}
 }
 
-// Transport faults remain outside the human policy decision.
+// Transport faults remain outside the human policy decision, and so does a
+// subject label: the transmit check would hold the message anyway.
 func TestARepMaySendPastEveryPolicyRefusal(t *testing.T) {
 	t.Parallel()
+	repairs := []string{ReasonHardBounce, ReasonNoSubject, ReasonSubjectLabelMissing, ReasonSubjectLabelsConflict}
 	for _, reason := range RefusalCodes() {
 		refused := Decision{Verdict: VerdictDeny, ReasonCode: reason}
-		mayPass := reason != ReasonHardBounce && reason != ReasonNoSubject
+		mayPass := !slices.Contains(repairs, reason)
 		if got := (DecisionSet{Decisions: []Decision{refused}}).ExceptionMayAnswer(false); got != mayPass {
 			t.Errorf("a rep's exception over %q = %v, want %v", reason, got, mayPass)
 		}

@@ -79,7 +79,7 @@ func TestSiteProfileCaseRefusesAForbiddenFieldThePromptNeverOffers(t *testing.T)
 // scenario's claim would depend on which form its author reached for.
 func TestSiteProfileCaseReadsBothSpellingsOfOneExpectation(t *testing.T) {
 	reply := siteProfileReply(siteProfileLegalNameClaim(t, "Acme Robotics GmbH"))
-	bare := siteProfileExpectationJSON(t, siteProfileWantLegalName)
+	bare := corpusFieldExpectation(t, siteProfileWantLegalName)
 	explicit := json.RawMessage(`{"grounded":{"legal_name":"Acme Robotics GmbH"}}`)
 
 	for name, expected := range map[string]json.RawMessage{"bare": bare, "explicit": explicit} {

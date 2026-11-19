@@ -26,7 +26,7 @@ func TestHomeAndDigestApprovalCountsAreExactPastTheScanCap(t *testing.T) {
 	staged := approvals.PendingScanCap + 5
 	for range staged {
 		deal := e.SeedDeal(t, "Review date", pipeline, open, &e.AdminUser)
-		proposal, err := json.Marshal(deals.CloseDateCorrection{DealID: ids.From[ids.DealKind](deal), ExpectedCloseDate: "2026-12-01", Basis: "Review the date"})
+		proposal, err := json.Marshal(deals.CloseDateCorrection{DealID: ids.From[ids.DealKind](deal), ExpectedCloseDate: closeDateAhead(t), Basis: "Review the date"})
 		if err != nil {
 			t.Fatal(err)
 		}

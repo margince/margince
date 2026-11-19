@@ -127,6 +127,8 @@ func TestARefusalSentWithStatus200IsTyped(t *testing.T) {
 		{"message_not_found", ErrChannelGone},
 		{"internal_error", ErrUnreachable},
 		{"invalid_payload", ErrRequestRejected},
+		{"name_taken", ErrNameRefused},
+		{"invalid_name", ErrNameRefused},
 	}
 	for _, c := range cases {
 		client := serve(t, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -191,7 +193,10 @@ func TestHistoryDecodesTheSeqThreadAndCursor(t *testing.T) {
 	chat.Seed("acme",
 		dispacttest.Message{Seq: 1_000_041, Text: "old", PostedAt: at},
 		dispacttest.Message{Seq: 1_000_042, Text: "root", ReplyCount: 1, UserName: "Rita", PostedAt: at},
-		dispacttest.Message{Seq: 1_000_043, Text: "reply", ThreadSeq: 1_000_042, UserName: "Tom", PostedAt: at},
+		dispacttest.Message{
+			Seq: 1_000_043, Text: "reply", ThreadSeq: 1_000_042, UserName: "Tom", PostedAt: at,
+			Files: []dispacttest.File{{Name: "quote.pdf", MimeType: "application/pdf"}},
+		},
 		dispacttest.Message{Seq: 1_000_044, Text: "card", Bot: true, PostedAt: at},
 	)
 	client := serve(t, chat)
@@ -206,6 +211,9 @@ func TestHistoryDecodesTheSeqThreadAndCursor(t *testing.T) {
 	}
 	if reply.ThreadTS != root.TS || reply.IsBot {
 		t.Errorf("reply = %+v, want it in the root's thread", reply)
+	}
+	if len(reply.Files) != 1 || reply.Files[0] != (File{Name: "quote.pdf", MimeType: "application/pdf"}) || len(root.Files) != 0 {
+		t.Errorf("files = %+v on the reply and %+v on the root, want the PDF on the reply alone", reply.Files, root.Files)
 	}
 	if !card.IsBot {
 		t.Errorf("card = %+v, want a bot message", card)

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -21,14 +22,14 @@ func TestTranscriptAdmissionProposesLateLogsAndFutureDeadlines(t *testing.T) {
 	for _, future := range []bool{false, true} {
 		t.Run(map[bool]string{false: "late log", true: "future deadline"}[future], func(t *testing.T) {
 			e := setupTranscript(t)
-			now := time.Date(2026, 10, 18, 12, 0, 0, 0, time.UTC)
+			now := clocktest.Now(t).Truncate(24 * time.Hour).Add(12 * time.Hour)
 			old := now.AddDate(-2, 0, 0)
 			if _, err := e.Activities.UpdateActivity(e.ctx, e.activity, activities.UpdateActivityInput{OccurredAt: &old}); err != nil {
 				t.Fatal(err)
 			}
 			due := ""
 			if future {
-				due = "2026-11-20"
+				due = now.AddDate(0, 0, 33).Format(time.DateOnly)
 			}
 			payload, err := json.Marshal(map[string]any{"proposals": []map[string]any{{"summary": "Send revised pricing", "owner": "Priya", "promiser_ref": "seat:" + e.Rep1.String(), "source_lines": []int{3}, "confidence": 0.9, "due_date": due, "commitment": openCommitmentMeaning(due, "Friday")}}})
 			if err != nil {

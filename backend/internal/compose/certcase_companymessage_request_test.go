@@ -32,7 +32,7 @@ import (
 // The assistant's answer path reads no store, so a brain is the whole of what it
 // needs: the certified turn runs against the same struct the transport calls.
 func TestCompanyMessageCaseRunsWhatProductionRuns(t *testing.T) {
-	clickExpectation := companyMessageExpectationJSON(
+	clickExpectation := companyConversationExpectationJSON(
 		t, "correction", map[string]string{fieldLegalName: "Acme Robotics GmbH"})
 	cases := []struct {
 		name     string
@@ -150,7 +150,7 @@ func TestCompanyMessageCaseSpeaksTheClickedOptionAsAnAdministratorStatement(t *t
 
 	_, trace := runCompanyMessageCase(
 		t, fixture,
-		companyMessageExpectationJSON(t, "correction", map[string]string{fieldLegalName: "Acme Robotics GmbH"}),
+		companyConversationExpectationJSON(t, "correction", map[string]string{fieldLegalName: "Acme Robotics GmbH"}),
 		companyMessageLegalNameReply,
 	)
 

@@ -99,7 +99,7 @@ func orderByBaseValue(v dealValuation) func(context.Context, func(any) int) (str
 // valueInBaseSQL is the deal's base-currency value on the valuation day, the one
 // expression the Value sort and the value filter both read.
 func valueInBaseSQL(v dealValuation, arg func(any) int) string {
-	return BaseValueSQL(storekit.SQLf("$%d::date", arg(v.day)), storekit.SQLf("$%d::text", arg(v.base)), dealTable)
+	return BaseValueSQL(storekit.SQLf("$%d::timestamptz", arg(v.at)), storekit.SQLf("$%d::text", arg(v.base)), dealTable)
 }
 
 // closeDayField sorts by the "Close" column: the day a deal closed, or for an
@@ -151,6 +151,9 @@ type dealValuation struct {
 	base string
 	day  string
 	zone string
+	// at is the instant the sorts convert at. BaseValueSQL cuts the installation's
+	// day from it, and day names that same day in a cursor's digest.
+	at time.Time
 }
 
 // digest names the valuation in a cursor without spelling it out. Only
@@ -179,7 +182,7 @@ func (s *Store) valuationTx(ctx context.Context, tx pgx.Tx) (dealValuation, erro
 	if err != nil {
 		return dealValuation{}, err
 	}
-	return dealValuation{base: base, day: day.Format(time.DateOnly), zone: zone}, nil
+	return dealValuation{base: base, day: day.Format(time.DateOnly), zone: zone, at: s.clock()}, nil
 }
 
 // sortsByCloseDay reports whether a sort spec names the close day, in either

@@ -325,6 +325,8 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "sendPermission.reason.noMarketingConsentFact",
     "sendPermission.reason.tooMany",
     "sendPermission.reason.consentRequired",
+    "sendPermission.reason.subjectLabelMissing",
+    "sendPermission.reason.subjectLabelsConflict",
     "sendPermission.reason.dealNotRequested",
     "sendPermission.reason.unconfirmed",
     // A human being on the committee, or who owns or sets something, not the record type.
@@ -593,6 +595,8 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "sendPermission.reason.tooMany",
     "sendPermission.reason.optedOutAfterRequest",
     "sendPermission.reason.consentRequired",
+    "sendPermission.reason.subjectLabelMissing",
+    "sendPermission.reason.subjectLabelsConflict",
     "sendPermission.reason.dealNotRequested",
     "sendPermission.reason.unconfirmed",
     "sendPermission.reason.withdrawn",

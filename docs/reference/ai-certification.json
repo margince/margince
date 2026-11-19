@@ -15147,8 +15147,13 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): decision_on_discount, instruction_in_chat_is_data, small_talk_is_not_filed",
+          "stale_reason": "3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): decision_on_discount, instruction_in_chat_is_data, small_talk_is_not_filed",
           "stale_cause": {
+            "case_changed": [
+              "decision_on_discount",
+              "instruction_in_chat_is_data",
+              "small_talk_is_not_filed"
+            ],
             "prompt_changed": [
               "decision_on_discount",
               "instruction_in_chat_is_data",
@@ -15182,8 +15187,13 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): decision_on_discount, instruction_in_chat_is_data, small_talk_is_not_filed",
+          "stale_reason": "3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): decision_on_discount, instruction_in_chat_is_data, small_talk_is_not_filed",
           "stale_cause": {
+            "case_changed": [
+              "decision_on_discount",
+              "instruction_in_chat_is_data",
+              "small_talk_is_not_filed"
+            ],
             "prompt_changed": [
               "decision_on_discount",
               "instruction_in_chat_is_data",
@@ -15218,8 +15228,13 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): decision_on_discount, instruction_in_chat_is_data, small_talk_is_not_filed",
+          "stale_reason": "3 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): decision_on_discount, instruction_in_chat_is_data, small_talk_is_not_filed",
           "stale_cause": {
+            "case_changed": [
+              "decision_on_discount",
+              "instruction_in_chat_is_data",
+              "small_talk_is_not_filed"
+            ],
             "prompt_changed": [
               "decision_on_discount",
               "instruction_in_chat_is_data",

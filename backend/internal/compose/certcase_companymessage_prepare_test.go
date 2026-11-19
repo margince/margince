@@ -157,7 +157,7 @@ func TestCompanyMessageCaseRefusesAFixtureProductionCouldNotProduce(t *testing.T
 func TestCompanyMessageCaseTakesACompletedDraftWithNoPlanLeft(t *testing.T) {
 	prepared, err := onboardingCompanyMessageCases{}.Prepare(
 		fixtureJSON(t, companyMessageChangeRequestFixture()),
-		companyMessageExpectationJSON(t, "correction", map[string]string{fieldIndustry: "Robotics manufacturing"}),
+		companyConversationExpectationJSON(t, "correction", map[string]string{fieldIndustry: "Robotics manufacturing"}),
 	)
 	if err != nil {
 		t.Fatalf("preparing a completed draft: %v", err)
@@ -241,7 +241,7 @@ func TestCompanyMessageCaseRefusesAnUnreachableExpectation(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := onboardingCompanyMessageCases{}.Prepare(
-				fixtureJSON(t, tc.fixture), companyMessageExpectationJSON(t, tc.kind, tc.changes),
+				fixtureJSON(t, tc.fixture), companyConversationExpectationJSON(t, tc.kind, tc.changes),
 			)
 			if err == nil {
 				t.Fatal("an unreachable expectation prepared")

@@ -19,7 +19,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/labeltranslation"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -65,7 +64,7 @@ func scopedPopulation(ctx context.Context, pop *coveragePopulation) (*coverageSc
 // baseValue renders the deal's value in the installation currency under alias
 // d, NULL where the reader's field mask withholds the amount.
 func (scope *coverageScope) baseValue(ctx context.Context, pop *coveragePopulation) (string, error) {
-	asOf := fmt.Sprintf("$%d::date", scope.arg(storekit.WorkspaceDay(pop.now, pop.zone)))
+	asOf := fmt.Sprintf("$%d::timestamptz", scope.arg(pop.now))
 	return auth.MaskedExpressionSQL(ctx, tableDeal, "amount_minor", "d",
 		deals.BaseValueSQL(asOf, installationBaseCurrencySQL, "d"), scope.arg)
 }

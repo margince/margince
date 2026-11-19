@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // The client test reads this same corpus; both sides must implement its statuses
@@ -42,7 +43,11 @@ func TestEmploymentCurrencySharedClientServerCases(t *testing.T) {
 			var args []any
 			arg := func(v any) string { args = append(args, v); return storekit.SQLf("$%d", len(args)) }
 			predicate := employment.IsCurrentSQL(arg(c.End)+"::date", arg(c.Status)+"::text", arg(c.Precision)+"::text")
-			predicate = strings.ReplaceAll(predicate, "current_date", arg(c.Today)+"::date")
+			today := occurredday.TodaySQL("now()")
+			if !strings.Contains(predicate, today) {
+				t.Fatalf("IsCurrentSQL no longer reads today as %s; pin the corpus day where it does", today)
+			}
+			predicate = strings.ReplaceAll(predicate, today, arg(c.Today)+"::date")
 			var got bool
 			if err := tx.QueryRow(e.Admin(), "SELECT "+predicate, args...).Scan(&got); err != nil {
 				return err

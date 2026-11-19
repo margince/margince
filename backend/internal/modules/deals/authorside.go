@@ -89,24 +89,20 @@ func AuthorSideOf(direction string, participants []Participant, ownDomains []str
 	if author.UserID != "" {
 		return AuthorSeller
 	}
-	switch domainSideOf(author.Address, ownDomains) {
+	return AddressSide(author.Address, ownDomains)
+}
+
+// AddressSide is the side an author's address puts them on, once no seat
+// claimed them. An own domain is ours, an unlisted own subdomain is unknown.
+func AddressSide(address string, ownDomains []string) AuthorSide {
+	switch domainSideOf(address, ownDomains) {
 	case ownDomain:
 		return AuthorSeller
 	case ownSubdomain:
 		return AuthorUnknown
 	}
-	// An identified author who is neither a seat nor on one of our domains is
-	// the counterparty, direction or no direction.
-	//
-	// A MEETING has no direction by nature — it was neither sent nor
-	// received — so requiring one would make every meeting unattributable and
-	// no event_held criterion could ever be settled by the writer built to
-	// settle it. What identifies the author is the same fact in both cases:
-	// an address we do not own, on a participant who holds no seat.
-	//
-	// This is not the guess the unknown branch above refuses. That one is
-	// reached when nobody is identifiable at all; this one has a named author
-	// and has ruled out both ways of being ours.
+	// A named author who holds no seat and writes from no own domain is the
+	// counterparty, direction or no direction: a meeting has none.
 	return AuthorBuyer
 }
 

@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"slices"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -172,6 +173,7 @@ func Strictest(codes ...jurisdiction.Code) (Rules, Applied, bool) {
 			continue
 		}
 		applied.Codes = append(applied.Codes, code)
+		applied.SubjectPrefixes = AddSubjectPrefixes(applied.SubjectPrefixes, r.SubjectPrefix)
 		if !found {
 			out, found = r, true
 			continue
@@ -197,6 +199,24 @@ type Applied struct {
 	// Unknown are the codes named that no pack declares. They bound nothing;
 	// the baseline applies to them.
 	Unknown []jurisdiction.Code
+
+	// SubjectPrefixes are the distinct advertising labels the contributing
+	// packs owe, first declared first. Rules.SubjectPrefix holds the first one
+	// only, because one subject begins with one label. The subject check reads
+	// this list, so a second, different label is still owed.
+	SubjectPrefixes []string
+}
+
+// AddSubjectPrefixes appends each declared label that labels does not already
+// hold. Two packs owing the same label, in any case, owe it once.
+func AddSubjectPrefixes(labels []string, declared ...string) []string {
+	for _, d := range declared {
+		label := strings.TrimSpace(d)
+		if label != "" && !slices.ContainsFunc(labels, func(l string) bool { return strings.EqualFold(l, label) }) {
+			labels = append(labels, label)
+		}
+	}
+	return labels
 }
 
 // Folded reports whether more than one jurisdiction contributed, which is
@@ -221,10 +241,9 @@ func stricter(a, b Rules) Rules {
 	// Every disclosure either side requires. An obligation one country imposes
 	// is not lifted by another that does not.
 	out.Disclosures = append(append([]Disclosure{}, a.Disclosures...), b.Disclosures...)
-	// A prefix either side requires. Two different prefixes cannot both be
-	// satisfied by one subject line, so the first declared wins and the caller
-	// is expected not to compose two prefixing jurisdictions — a case no
-	// shipped pack creates today.
+	// The first prefix either side requires. A second, different one cannot
+	// stand on the same subject; Strictest keeps it in Applied.SubjectPrefixes,
+	// and the subject check holds such a message.
 	if out.SubjectPrefix == "" {
 		out.SubjectPrefix = b.SubjectPrefix
 	}

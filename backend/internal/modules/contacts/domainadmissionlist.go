@@ -136,6 +136,8 @@ const domainPendingReason = `
 	    THEN 'This domain forwards to a different site. Confirm its identity before linking a company.'
 	  WHEN '` + PendingVendorVerdict + `'
 	    THEN 'The site reads as a mail or hosting vendor. Create the company anyway?'
+	  WHEN '` + PendingForeignSite + `'
+	    THEN 'The site names a different business than this domain. The domain may have changed hands.'
 	  WHEN '` + PendingReservedDomain + `'
 	    THEN 'Reserved domain: automatic company identification is paused.'
 	  ELSE '' END`

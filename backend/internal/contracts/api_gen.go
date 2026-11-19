@@ -4331,6 +4331,7 @@ func (e BlockedDomainAdmission) Valid() bool {
 const (
 	BlockedDomainReasonCodeBulkSender        BlockedDomainReasonCode = "bulk_sender"
 	BlockedDomainReasonCodeCompanyCreated    BlockedDomainReasonCode = "company_created"
+	BlockedDomainReasonCodeForeignSite       BlockedDomainReasonCode = "foreign_site"
 	BlockedDomainReasonCodeForwardedIdentity BlockedDomainReasonCode = "forwarded_identity"
 	BlockedDomainReasonCodeKeptAsCompany     BlockedDomainReasonCode = "kept_as_company"
 	BlockedDomainReasonCodeNearDuplicate     BlockedDomainReasonCode = "near_duplicate"
@@ -4348,6 +4349,8 @@ func (e BlockedDomainReasonCode) Valid() bool {
 	case BlockedDomainReasonCodeBulkSender:
 		return true
 	case BlockedDomainReasonCodeCompanyCreated:
+		return true
+	case BlockedDomainReasonCodeForeignSite:
 		return true
 	case BlockedDomainReasonCodeForwardedIdentity:
 		return true
@@ -4396,6 +4399,7 @@ func (e BlockedDomainSenderKind) Valid() bool {
 // Defines values for BlockedDomainSource.
 const (
 	BlockedDomainSourceAgent             BlockedDomainSource = "agent"
+	BlockedDomainSourceForeignSite       BlockedDomainSource = "foreign_site"
 	BlockedDomainSourceForwardedIdentity BlockedDomainSource = "forwarded_identity"
 	BlockedDomainSourceHeuristic         BlockedDomainSource = "heuristic"
 	BlockedDomainSourceHuman             BlockedDomainSource = "human"
@@ -4411,6 +4415,8 @@ const (
 func (e BlockedDomainSource) Valid() bool {
 	switch e {
 	case BlockedDomainSourceAgent:
+		return true
+	case BlockedDomainSourceForeignSite:
 		return true
 	case BlockedDomainSourceForwardedIdentity:
 		return true
@@ -38005,6 +38011,15 @@ type AuthorizationRowScope string
 // AuthorizationSeatType The licensing seat. A read seat may read but never mutate over REST, whatever its role grants. A client that cannot read a recognized value MUST assume a read seat: the ceiling fails closed, so an omission never buys the ability to mutate.
 type AuthorizationSeatType string
 
+// AutoApplyInstallation defines model for AutoApplyInstallation.
+type AutoApplyInstallation struct {
+	Enabled bool `json:"enabled"`
+
+	// Locks The settings in this response that a boot source sets, each with its source. A client
+	// shows each as read-only. Empty when nothing is locked. A write ignores it.
+	Locks *SettingLocks `json:"locks,omitempty"`
+}
+
 // AutomaticWorkColleague defines model for AutomaticWorkColleague.
 type AutomaticWorkColleague struct {
 	DisplayName string                       `json:"display_name"`
@@ -38336,7 +38351,14 @@ type AutomationRunTier string
 // AutonomySettings What the reader has decided about answering their own queue: one row per kind
 // that is eligible to apply automatically, whether or not they have ever met it.
 type AutonomySettings struct {
-	Data []KindAutonomy `json:"data"`
+	// AutoApplyEnabled The installation's switch over every row. False means nothing applies
+	// itself for anybody; the modes in `data` stay as the reader set them.
+	AutoApplyEnabled bool           `json:"auto_apply_enabled"`
+	Data             []KindAutonomy `json:"data"`
+
+	// Locks The settings in this response that a boot source sets, each with its source. A client
+	// shows each as read-only. Empty when nothing is locked. A write ignores it.
+	Locks *SettingLocks `json:"locks,omitempty"`
 }
 
 // AvailableModel One model a vendor says it serves.
@@ -38588,7 +38610,7 @@ type BlockedDomain struct {
 	//   as a company.
 	// - `bulk_sender`: mail from the domain was judged bulk or automated, so it is not a
 	//   company this business works with. `sender_kind` says which, when it is known.
-	// - `unevidenced`, `stale_evidence`, `near_duplicate`, `vendor_verdict`: the undecided
+	// - `unevidenced`, `stale_evidence`, `near_duplicate`, `vendor_verdict`, `foreign_site`: the undecided
 	//   domain's open question, as `source` describes each one.
 	// - `unknown`: the row records a reason this server has no word for. `reason` still
 	//   carries its stored sentence.
@@ -38604,7 +38626,9 @@ type BlockedDomain struct {
 	// old to mint one from today's site; `near_duplicate` means more than one company
 	// here already carries the name it resolved to, and which of them this domain belongs
 	// to is a human's call rather than the machine's; `vendor_verdict` means the site reads
-	// as a mail or hosting vendor, and a colleague decides whether its staff get a company.
+	// as a mail or hosting vendor, and a colleague decides whether its staff get a company;
+	// `foreign_site` means the site names a different business than the domain, which may
+	// have changed hands.
 	Source BlockedDomainSource `json:"source"`
 }
 
@@ -38621,7 +38645,7 @@ type BlockedDomainAdmission string
 //     as a company.
 //   - `bulk_sender`: mail from the domain was judged bulk or automated, so it is not a
 //     company this business works with. `sender_kind` says which, when it is known.
-//   - `unevidenced`, `stale_evidence`, `near_duplicate`, `vendor_verdict`: the undecided
+//   - `unevidenced`, `stale_evidence`, `near_duplicate`, `vendor_verdict`, `foreign_site`: the undecided
 //     domain's open question, as `source` describes each one.
 //   - `unknown`: the row records a reason this server has no word for. `reason` still
 //     carries its stored sentence.
@@ -38637,7 +38661,9 @@ type BlockedDomainSenderKind string
 // old to mint one from today's site; `near_duplicate` means more than one company
 // here already carries the name it resolved to, and which of them this domain belongs
 // to is a human's call rather than the machine's; `vendor_verdict` means the site reads
-// as a mail or hosting vendor, and a colleague decides whether its staff get a company.
+// as a mail or hosting vendor, and a colleague decides whether its staff get a company;
+// `foreign_site` means the site names a different business than the domain, which may
+// have changed hands.
 type BlockedDomainSource string
 
 // BlockedDomainListResponse defines model for BlockedDomainListResponse.
@@ -47872,6 +47898,9 @@ type Deal struct {
 	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty" minimum:"1"`
 
+	// WaitEndsAt The instant the pause ends: the start of the `wait_until` day in the deal owner's own time zone, the installation's when the owner has none. Clients judge a pause against this, never against the date.
+	WaitEndsAt *time.Time `json:"wait_ends_at,omitempty"`
+
 	// WaitUntil 'Customer asked us to wait until' date; suppresses the stalled flag but not the overdue close-date flag.
 	WaitUntil *openapi_types.Date `json:"wait_until,omitempty"`
 
@@ -48040,6 +48069,9 @@ type DealAdvanced struct {
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty" minimum:"1"`
+
+	// WaitEndsAt The instant the pause ends: the start of the `wait_until` day in the deal owner's own time zone, the installation's when the owner has none. Clients judge a pause against this, never against the date.
+	WaitEndsAt *time.Time `json:"wait_ends_at,omitempty"`
 
 	// WaitUntil 'Customer asked us to wait until' date; suppresses the stalled flag but not the overdue close-date flag.
 	WaitUntil *openapi_types.Date `json:"wait_until,omitempty"`
@@ -72543,8 +72575,9 @@ type Worklist struct {
 	// OptionalRelationshipsMoreAvailable More optional contacts exist beyond the existing relationship read bound.
 	OptionalRelationshipsMoreAvailable *bool `json:"optional_relationships_more_available,omitempty"`
 
-	// PlanCoverage Whose weekly plans this read looked at, present only when `scope` is `team` and the
-	// due commitments were read across the team roster. Absent under every other scope.
+	// PlanCoverage Whose weekly plans this read looked at, present only when `scope` is `team` or `all`.
+	// Both read the due commitments across the reader's team roster, the reader included.
+	// Absent under every other scope.
 	//
 	// It exists because "nothing due" and "not looked at" differ. A teammate whose plan
 	// could not be read contributes no rows, and without this a lead would read their
@@ -73799,8 +73832,9 @@ type WorklistPinRequest struct {
 	Source string `json:"source"`
 }
 
-// WorklistPlanCoverage Whose weekly plans this read looked at, present only when `scope` is `team` and the
-// due commitments were read across the team roster. Absent under every other scope.
+// WorklistPlanCoverage Whose weekly plans this read looked at, present only when `scope` is `team` or `all`.
+// Both read the due commitments across the reader's team roster, the reader included.
+// Absent under every other scope.
 //
 // It exists because "nothing due" and "not looked at" differ. A teammate whose plan
 // could not be read contributes no rows, and without this a lead would read their
@@ -83602,6 +83636,9 @@ type PreviewAutomationJSONRequestBody = AutomationPreviewRequest
 // UpdateAutonomyJSONRequestBody defines body for UpdateAutonomy for application/json ContentType.
 type UpdateAutonomyJSONRequestBody = UpdateAutonomyRequest
 
+// UpdateAutoApplyInstallationJSONRequestBody defines body for UpdateAutoApplyInstallation for application/json ContentType.
+type UpdateAutoApplyInstallationJSONRequestBody = AutoApplyInstallation
+
 // BookMeetingJSONRequestBody defines body for BookMeeting for application/json ContentType.
 type BookMeetingJSONRequestBody BookMeetingJSONBody
 
@@ -90810,6 +90847,14 @@ func (a *Deal) UnmarshalJSON(b []byte) error {
 		delete(object, "version")
 	}
 
+	if raw, found := object["wait_ends_at"]; found {
+		err = json.Unmarshal(raw, &a.WaitEndsAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'wait_ends_at': %w", err)
+		}
+		delete(object, "wait_ends_at")
+	}
+
 	if raw, found := object["wait_until"]; found {
 		err = json.Unmarshal(raw, &a.WaitUntil)
 		if err != nil {
@@ -91194,6 +91239,13 @@ func (a Deal) MarshalJSON() ([]byte, error) {
 		object["version"], err = json.Marshal(a.Version)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'version': %w", err)
+		}
+	}
+
+	if a.WaitEndsAt != nil {
+		object["wait_ends_at"], err = json.Marshal(a.WaitEndsAt)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'wait_ends_at': %w", err)
 		}
 	}
 
@@ -91663,6 +91715,14 @@ func (a *DealAdvanced) UnmarshalJSON(b []byte) error {
 		delete(object, "version")
 	}
 
+	if raw, found := object["wait_ends_at"]; found {
+		err = json.Unmarshal(raw, &a.WaitEndsAt)
+		if err != nil {
+			return fmt.Errorf("error reading 'wait_ends_at': %w", err)
+		}
+		delete(object, "wait_ends_at")
+	}
+
 	if raw, found := object["wait_until"]; found {
 		err = json.Unmarshal(raw, &a.WaitUntil)
 		if err != nil {
@@ -92054,6 +92114,13 @@ func (a DealAdvanced) MarshalJSON() ([]byte, error) {
 		object["version"], err = json.Marshal(a.Version)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'version': %w", err)
+		}
+	}
+
+	if a.WaitEndsAt != nil {
+		object["wait_ends_at"], err = json.Marshal(a.WaitEndsAt)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'wait_ends_at': %w", err)
 		}
 	}
 
@@ -98862,6 +98929,9 @@ type ServerInterface interface {
 	// Turn automatic application on or off for one kind.
 	// (PATCH /autonomy)
 	UpdateAutonomy(w http.ResponseWriter, r *http.Request)
+	// Switch automatic application on or off for the whole installation.
+	// (PUT /autonomy/installation)
+	UpdateAutoApplyInstallation(w http.ResponseWriter, r *http.Request)
 	// Free/busy availability for one or more hosts in a window (the `check_availability` MCP verb).
 	// (GET /availability)
 	GetAvailability(w http.ResponseWriter, r *http.Request, params GetAvailabilityParams)
@@ -102846,6 +102916,12 @@ func (_ Unimplemented) GetAutonomy(w http.ResponseWriter, r *http.Request) {
 // Turn automatic application on or off for one kind.
 // (PATCH /autonomy)
 func (_ Unimplemented) UpdateAutonomy(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Switch automatic application on or off for the whole installation.
+// (PUT /autonomy/installation)
+func (_ Unimplemented) UpdateAutoApplyInstallation(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -118340,6 +118416,26 @@ func (siw *ServerInterfaceWrapper) UpdateAutonomy(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateAutonomy(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateAutoApplyInstallation operation middleware
+func (siw *ServerInterfaceWrapper) UpdateAutoApplyInstallation(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateAutoApplyInstallation(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -158007,6 +158103,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/autonomy", wrapper.UpdateAutonomy)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/autonomy/installation", wrapper.UpdateAutoApplyInstallation)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/availability", wrapper.GetAvailability)

@@ -142,7 +142,7 @@ Only the owner can offer a record. A manager who does not own it changes the own
 Also called: give away a record, hand over an account, offer a contact, reassign to a colleague.
 
 ### How do I stop Margince making automatic changes?
-To make Margince ask before changing close dates, company names or lifecycle stages, open **Settings → AI assistants**, then **For developers**, then **Agent rules**. Turn off the matching switch under **Automatic changes**. The switches apply to your work only. A kind you switch off comes back to your Worklist as an approval.
+To make Margince ask before changing close dates, company names or lifecycle stages, open **Settings → AI assistants**, then **For developers**, then **Agent rules**. Turn off the matching switch under **Automatic changes**. The switches apply to your work only. A kind you switch off comes back to your Worklist as an approval. An administrator can stop all automatic changes with **Automatic changes for everyone**; your own switches stay as you set them.
 Also called: autopilot, auto-apply, stop the AI editing my records.
 
 ### How do I hide a kind of proposal from my own queue?

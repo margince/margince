@@ -158,9 +158,8 @@ var exempt = gatekit.Waive(map[string]string{
 	"backend/internal/modules/contacts/vcardarms.go":                            "vCard's ORG property (RFC 6350)",
 	"backend/internal/modules/contacts/vcardsourceliveness_integration_test.go": "vCard's ORG property (RFC 6350)",
 	"backend/internal/compose/vcardproposal_integration_test.go":                "vCard's ORG property (RFC 6350)",
-	"extensions/vn/vn.go": "an organisation in the ordinary sense — the party holding data and " +
+	"extensions/apac/README.md": "an organisation in the ordinary sense — the party holding data and " +
 		"the party advertising need not be the same one",
-	"extensions/vn/README.md": "the same sentence as vn.go",
 
 	"e2e/llm/testdata": "recorded model output — what a model actually said on a run, which " +
 		"editing would falsify",

@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/capture backend/internal/compose/capturejobs.go backend/internal/modules/capture/pending.go backend/internal/modules/capture/senderoverride.go backend/internal/modules/capture/exclusionstore.go backend/internal/modules/capture/sinkproject.go backend/internal/modules/activities/activityrelink.go backend/internal/modules/activities/dealdecline.go frontend/src/features/records/dealdecline.tsx frontend/src/components/whichdealdecline.tsx backend/internal/modules/capture/sinkensure.go backend/internal/modules/capture/sinkdealdecide.go backend/internal/modules/capture/dealrefile.go backend/internal/modules/capture/dealtopic.go backend/internal/modules/capture/dealrecheck.go backend/internal/compose/capturedealtopic.go backend/internal/compose/dealrefiletrigger.go backend/internal/compose/jobs_dealrefile.go backend/internal/modules/capture/threadboundary.go frontend/src/features/worklist/worklist.domainquestion.tsx frontend/src/features/worklist/worklist.domainreview.tsx backend/internal/modules/contacts/domainquestioncontext.go -->
+<!-- describes: frontend/src/features/capture backend/internal/compose/capturejobs.go backend/internal/modules/capture/pending.go backend/internal/modules/capture/senderoverride.go backend/internal/modules/capture/exclusionstore.go backend/internal/modules/capture/sinkproject.go backend/internal/modules/activities/activityrelink.go backend/internal/modules/activities/dealdecline.go frontend/src/features/records/dealdecline.tsx frontend/src/components/whichdealdecline.tsx backend/internal/modules/capture/sinkensure.go backend/internal/modules/capture/sinkdealdecide.go backend/internal/modules/capture/dealrefile.go backend/internal/modules/capture/dealtopic.go backend/internal/modules/capture/dealrecheck.go backend/internal/compose/capturedealtopic.go backend/internal/compose/dealrefiletrigger.go backend/internal/compose/jobs_dealrefile.go backend/internal/modules/capture/threadboundary.go backend/internal/modules/activities/sendthreading.go frontend/src/features/worklist/worklist.domainquestion.tsx frontend/src/features/worklist/worklist.domainreview.tsx backend/internal/modules/contacts/domainquestioncontext.go -->
 # Capture: how conversations get into Margince
 
 Nobody should have to copy an email into a CRM by hand. **Capture** is the part of Margince that connects to your mailbox, your calendar and your chat. It files what arrives against the right contacts, their companies and projects. Connecting a mailbox or calendar, and importing your older mail, is its own page: [Connecting your mailbox and calendar](connecting-mail-and-calendars.md).
@@ -241,7 +241,7 @@ Also called: email history, correspondence, all mails with a customer.
 ### What counts as one email thread?
 A reply starts a new conversation only when its subject shares no word with the message it answers. Tags in brackets, reply prefixes, marks, capital letters and words such as "the" do not count. "Signature requested" and "Signature completed" stay together. A reply stays with its parent when either subject has no words left. A conversation you kept private stays private under its new subject.
 
-Margince splits a reply this way when the message it answers is already in Margince. Older mail from a mailbox you connect later can stay in one conversation. Ask whoever runs your Margince to split it.
+A reply you send from Margince follows the same rule. It goes out as a new email, so your recipient sees a new conversation too. Margince splits a reply this way when the message it answers is already in Margince. Older mail from a mailbox you connect later can stay in one conversation. Ask whoever runs your Margince to split it.
 Also called: thread split, new subject, separate conversation.
 
 ### How do I read a whole email thread?
@@ -384,10 +384,10 @@ never named. Margince suggests a company only when one company you can see fits,
 what Margince decided about each. That is a contact, a role mailbox, an
 automated tool, a newsletter, an advisor, or personal. You can change any of them.
 
-**Mark as business** lets a sender back in; **Exclude** destroys their mail, also what they send
-later ([how](#how-do-i-tell-margince-a-sender-is-business-or-exclude-one)). **Waiting on a decision**, under the
-list, names the contacts only you see until their sender is decided. Each says if it waits on Margince or on you.
-Decide the sender there, or remove the contact, which archives it and keeps its mail. An administrator sees only how many there are.
+**Mark as business** lets a sender back in; **Exclude** destroys their mail, also what they send later
+([how](#how-do-i-tell-margince-a-sender-is-business-or-exclude-one)). **Waiting on a decision**, under the list, names the contacts
+only you see until their sender is decided. Each says if it waits on Margince or on you. Decide the sender there, or remove the
+contact, which archives it and keeps its mail. Mail and meetings from before the removal do not create it again. An administrator sees only how many there are.
 
 **Mail not shared with the team** (Settings → Connections → Activity) lists the threads your mailbox holds
 back now. Each shows the reason and its outside addresses. No action is needed. To share one,

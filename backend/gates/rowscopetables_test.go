@@ -680,5 +680,9 @@ const (
 	// 166: forecasting.FocusLists reads the deal ids of a team's stored focus
 	// list. Each list passes the store's SnapshotLens, which compose binds and
 	// which applies the deal row scope, as it does for SnapshotSide.
-	modulesTierUnscopedCeiling = 166
+	//
+	// 167: contacts.CompaniesWhoseEmploymentEndedTx reads the company ids of
+	// employments that ended, as the system principal (auth.RequireSystem). The
+	// clock refold job takes them and returns nothing to a caller.
+	modulesTierUnscopedCeiling = 167
 )
