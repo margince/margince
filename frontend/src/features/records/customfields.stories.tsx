@@ -131,9 +131,12 @@ export const BuilderCurrency: Story = {
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.type(canvas.getByLabelText("Label"), "Ceiling");
+    await userEvent.type(
+      canvas.getByRole("textbox", { name: "Label" }),
+      "Ceiling",
+    );
     await pickType(canvasElement, "Currency");
-    await canvas.findByLabelText("Currency code");
+    await canvas.findByRole("textbox", { name: "Currency code" });
   },
 };
 
@@ -153,7 +156,10 @@ export const BuilderPicklist: Story = {
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.type(canvas.getByLabelText("Label"), "Stage reason");
+    await userEvent.type(
+      canvas.getByRole("textbox", { name: "Label" }),
+      "Stage reason",
+    );
     await pickType(canvasElement, "Picklist");
     const [first] = await canvas.findAllByLabelText("Option label");
     if (first === undefined) throw new Error("the picklist drew no option");
@@ -182,7 +188,7 @@ export const BuilderRefusal: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.type(
-      canvas.getByLabelText("Label"),
+      canvas.getByRole("textbox", { name: "Label" }),
       "Link to parent account",
     );
     // The refusal is STANDING — true of the label as it stands, and redrawn on
@@ -378,7 +384,10 @@ export const CardObjectPickerPhone: Story = {
 // because nothing is keyed on it.
 const chooseMultiple: Story["play"] = async ({ canvasElement }) => {
   const canvas = within(canvasElement);
-  await userEvent.type(canvas.getByLabelText("Label"), "Capabilities");
+  await userEvent.type(
+    canvas.getByRole("textbox", { name: "Label" }),
+    "Capabilities",
+  );
   await pickType(canvasElement, "Multiple choice");
   const [first] = await canvas.findAllByLabelText("Option label");
   if (first === undefined) throw new Error("the choice list drew no option");

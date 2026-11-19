@@ -45,7 +45,7 @@ export const Phone: Story = {
     await userEvent.click(
       await page.findByRole("option", { name: "Currency" }),
     );
-    await canvas.findByLabelText("Currency code");
+    await canvas.findByRole("textbox", { name: "Currency code" });
   },
 };
 
