@@ -23971,6 +23971,61 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/attachments/links": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add a web link to a record's documents.
+         * @description A document that lives somewhere else, such as a Google Doc or a web page, listed with the
+         *     record's files. The row keeps the address and holds no bytes: `url` is set,
+         *     `bytes_withheld` is true, and the download route answers 404 for it. The server does not
+         *     fetch the address here; `title` is what the caller read or typed.
+         *
+         *     The parent rules are the upload's: Update on the parent's type, and a parent the caller can
+         *     see (a hidden or cross-tenant one answers 404). `category` is what the document is; the two
+         *     provenance values and `link`, which marks a link a mail carried, are refused (422
+         *     `category_not_assertable`). The same address listed live on the same record answers 422
+         *     `link_already_listed`.
+         */
+        post: operations["addAttachmentLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/attachments/links/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Read the title a web page gives itself, before the link is added.
+         * @description Fetches the address once through the public-web reader: SSRF-guarded, robots.txt honored,
+         *     no cookies sent. Answers the page's Open Graph title, else its `<title>`, and its Open
+         *     Graph site name. Writes nothing.
+         *
+         *     A page that cannot be read still answers 200 with `read: false` and no title, because the
+         *     link can be added all the same. Google Docs, Sheets, Slides, Forms and Drive addresses are
+         *     not fetched: they answer a sign-in page, never the document's title.
+         */
+        post: operations["previewAttachmentLink"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/contacts/{id}/network": {
         parameters: {
             query?: never;
@@ -25464,9 +25519,12 @@ export interface paths {
          *     `reason` `not_a_zip`, `empty`, `files_too_large` or `zip_too_large`
          *     (with `max_mb`), `too_many_files` (with `files` and `max_files`),
          *     `password_protected`, `file_damaged` or `file_missing` (with `file`),
-         *     `two_files_one_type` (with `file`, `other_file` and `object`) or
-         *     `type_not_importable` (with `object`). A refusal of one file of a ZIP
-         *     also names it in `file`.
+         *     `two_files_one_type` (with `file`, `other_file` and `object`),
+         *     `type_not_importable` (with `object`), `spreadsheet` (an Excel
+         *     workbook, which holds no CSV) or `no_importable_file` (with
+         *     `file_names`, the names the import reads). A ZIP with no file the
+         *     import reads opens no run. A refusal of one file of a ZIP also names
+         *     it in `file`.
          *
          *     A cell an export quoted against formula evaluation (a quote before `=`,
          *     `+`, `-`, `@`, a tab or a carriage return) is read without that one
@@ -26290,7 +26348,7 @@ export interface paths {
         put?: never;
         /**
          * Add a document to this corpus.
-         * @description Accepts only files whose bytes are their own text — text/plain, text/markdown, text/csv, application/json. Anything else is refused naming what is accepted; there is no parser in this product, and a PDF arriving as an empty corpus is worse than a PDF refused. A file whose content is not text, such as a program renamed to `.md`, is refused the same way. Ingest is asynchronous: the document lands `queued` and its progress is read back from this path's GET. The set that ships with Margince takes no uploads: only Margince files pages in it.
+         * @description Accepts only files whose bytes are their own text — text/plain, text/markdown, text/csv, application/json. A `.txt`, `.md`, `.csv` or `.json` ending names the type whatever type the client sent with it. Anything else is refused 415, naming the kind of file in words and what to save it as; there is no parser in this product, and a PDF arriving as an empty corpus is worse than a PDF refused. A file whose content is not text, such as a program renamed to `.md`, is refused the same way. An empty file is refused 422 `empty_file` on `file`, and nothing is stored. Ingest is asynchronous: the document lands `queued` and its progress is read back from this path's GET. The set that ships with Margince takes no uploads: only Margince files pages in it.
          */
         post: operations["uploadCorpusDocument"];
         delete?: never;
@@ -27816,6 +27874,14 @@ export interface components {
              *     little room rather than compare a file against it exactly.
              */
             max_upload_bytes: number;
+            /**
+             * Format: int64
+             * @description The largest document `uploadCorpusDocument` accepts, in bytes. Set by whoever operates
+             *     the installation, on the same terms as `max_upload_bytes`, and lower than it by
+             *     default because a corpus document becomes passages every ask scans. Absent from a
+             *     server older than this field; a client then leaves the refusal to the server.
+             */
+            max_knowledge_document_bytes?: number;
             /**
              * @description How long the access token an MCP connector's OAuth handshake mints lives, in minutes —
              *     for the code exchange and every refresh rotation alike. 30 days by default, at most
@@ -33051,6 +33117,13 @@ export interface components {
             /** @description The file name a ZIP entry needs for this object to be detected. */
             file: string;
             object: components["schemas"]["ImportObject"];
+            /**
+             * @description The columns that tell this file's rows apart. A file needs at
+             *     least one of them mapped, or the test run does not start, unless
+             *     the request names its own `source_key` column. Absent from a
+             *     server older than this field.
+             */
+            key_columns?: string[];
             columns: components["schemas"]["ImportFormatColumn"][];
         };
         /**
@@ -43902,7 +43975,9 @@ export interface components {
              *
              *     `link` is a document link a mail carried (a Google Docs, Sheets, Slides, Forms or
              *     Drive share). It has no bytes: `url` holds the address, `bytes_withheld` is true,
-             *     and the category cannot be set or changed through a metadata patch.
+             *     and the category cannot be set or changed through a metadata patch. A link a user
+             *     added (`POST /attachments/links`) holds an address the same way under the category
+             *     they chose, never `link`; its `source` is `link`.
              *
              *     `email_attachment` and `message_attachment` record PROVENANCE rather than
              *     content: capture derives them from the transport the file arrived on, so a
@@ -43939,9 +44014,9 @@ export interface components {
              * @description The agreement this file belongs to: the same kind of roll-up as company_id above, and likewise not a second parent. Set at upload by the contact filing the paper; never inferred from a filename or a date, which is the guess the document state exists to refuse.
              */
             readonly contract_id?: string | null;
-            /** @description True for a file a private message carried that was recorded by name, size and type only: no bytes were kept, so there is nothing to download (404) or read. Also true for a `link` row, which is a pointer and has no bytes. */
+            /** @description True for a file a private message carried that was recorded by name, size and type only: no bytes were kept, so there is nothing to download (404) or read. Also true for any row with a `url`, which is a pointer and has no bytes. */
             readonly bytes_withheld?: boolean;
-            /** @description The address of a `link` row, and null for every other category. It is an http or https address on a known document host. The reader renders it as an outbound link to open in a new tab, never as a download. */
+            /** @description The address of a document that lives elsewhere: a `link` row a mail carried, or a link a user added. Null for a stored file. It is an http or https address. The reader renders it as an outbound link to open in a new tab, never as a download. */
             readonly url?: string | null;
             origin?: components["schemas"]["AttachmentOrigin"];
             source: string;
@@ -43969,6 +44044,38 @@ export interface components {
             occurred_precision: components["schemas"]["OccurredPrecision"];
             /** @description Who the mail is from, named as the caller may see them: a contact's name only when the caller may see that contact. Absent when capture recorded no sender. */
             sender?: components["schemas"]["EmailParty"];
+        };
+        AddAttachmentLinkRequest: {
+            /** @enum {string} */
+            entity_type: "contact" | "company" | "deal" | "activity" | "lead" | "project";
+            /** Format: uuid */
+            entity_id: string;
+            /** @description An http or https address, without user info. */
+            url: string;
+            /** @description What a reader looks for. Absent or blank lists the link under its host. */
+            title?: string | null;
+            /**
+             * @description What the document is. Absent leaves it uncategorised, as an upload is.
+             * @enum {string}
+             */
+            category?: "contract" | "offer" | "legal" | "other";
+            /**
+             * Format: uuid
+             * @description The agreement this document is about, as on the upload.
+             */
+            contract_id?: string;
+        };
+        AttachmentLinkPreview: {
+            /** @description The address as it will be stored. */
+            url: string;
+            /** @description The lowercased host the address names. */
+            host: string;
+            /** @description False when the page was not fetched or did not answer. */
+            read: boolean;
+            /** @description The page's Open Graph title, else its <title>. Absent when it gave none. */
+            title?: string;
+            /** @description The page's Open Graph site name. Absent when it gave none. */
+            site_name?: string;
         };
         AttachmentListResponse: {
             data: components["schemas"]["Attachment"][];
@@ -100665,6 +100772,64 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    addAttachmentLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AddAttachmentLinkRequest"];
+            };
+        };
+        responses: {
+            /** @description The listed link. */
+            201: {
+                headers: {
+                    Location?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Attachment"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    previewAttachmentLink: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    url: string;
+                };
+            };
+        };
+        responses: {
+            /** @description What the page says about itself. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AttachmentLinkPreview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
         };
     };

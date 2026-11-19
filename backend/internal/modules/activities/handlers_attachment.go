@@ -273,7 +273,7 @@ func (h Handlers) UpdateAttachmentMetadata(w http.ResponseWriter, r *http.Reques
 	// A JSON null is an EDIT — "this document replaces nothing after all" — and
 	// an absent field is not. openapi's nullable pointer collapses the two, so
 	// the raw body decides which one arrived.
-	if raw, present := httperr.PresentField(r, "title"); present {
+	if raw, present := httperr.PresentField(r, fieldTitle); present {
 		in.ClearTitle = raw == nil
 		if raw != nil {
 			in.Title = req.Title
@@ -292,4 +292,36 @@ func (h Handlers) UpdateAttachmentMetadata(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// AddAttachmentLink lists a web link with a record's files.
+func (h Handlers) AddAttachmentLink(w http.ResponseWriter, r *http.Request) {
+	var req crmcontracts.AddAttachmentLinkRequest
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	if !req.EntityType.Valid() {
+		httperr.Write(w, r, httperr.Validation("entity_type", "invalid_enum",
+			"entity_type must be one of contact, company, deal, activity, lead, project"))
+		return
+	}
+	in := LinkInput{
+		EntityType: string(req.EntityType),
+		EntityID:   ids.UUID(req.EntityId),
+		URL:        req.Url,
+		ContractID: (*ids.UUID)(req.ContractId),
+	}
+	if req.Title != nil {
+		in.Title = *req.Title
+	}
+	if req.Category != nil {
+		in.Category = string(*req.Category)
+	}
+	att, err := h.store.AddAttachmentLink(r.Context(), in)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	w.Header().Set("Location", "/v1/attachments/"+att.Id.String())
+	httperr.WriteJSON(w, http.StatusCreated, att)
 }

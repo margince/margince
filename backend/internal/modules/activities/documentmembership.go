@@ -40,7 +40,7 @@ func mailFileIDs(linkedTo string) string {
 // The arms are a `UNION ALL` of ids, so the plan starts from the holder.
 // An `OR` reads every mail file of the installation. No file is in both arms.
 //
-// A link row has no bytes and is admitted by its category. The deal room's
+// A link row has no bytes and is admitted by its address. The deal room's
 // predicate leaves that arm out, so a link never reaches a buyer's download.
 func documentMembership(holder string, pos int) string {
 	var own, linked string
@@ -62,15 +62,14 @@ func documentMembership(holder string, pos int) string {
 		//craft:ignore panic-in-domain a holder outside the three constants is a coding error, never request data
 		panic("activities: no document membership for holder " + holder)
 	}
-	return fmt.Sprintf(`at.archived_at IS NULL AND (NOT at.bytes_withheld OR at.category = '%s') AND at.id IN (
+	return fmt.Sprintf(`at.archived_at IS NULL AND (NOT at.bytes_withheld OR at.url IS NOT NULL) AND at.id IN (
 		SELECT own.id FROM attachment own WHERE %s AND own.archived_at IS NULL
-		UNION ALL %s)`, categoryLink, own, mailFileIDs(linked))
+		UNION ALL %s)`, own, mailFileIDs(linked))
 }
 
 // arrivedWithMessage says an attachment is a file that came with its message. A
-// link row is a pointer the message mentioned, not a file it carried. The
-// paperclip count and the mail's file list both leave it out through this one
-// fragment.
+// row with an address is a pointer, not a file it carried. The paperclip count
+// and the mail's file list both leave it out through this one fragment.
 func arrivedWithMessage(alias string) string {
-	return alias + ".category <> '" + categoryLink + "'"
+	return alias + ".url IS NULL"
 }

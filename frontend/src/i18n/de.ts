@@ -7643,6 +7643,34 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "docs.add.partialTitle": "Hochgeladen, aber nicht eingeordnet",
   "docs.add.partial":
     "Die Datei ist gespeichert und steht unter „Sonstiges“ in der Liste unten, da Kategorie und Titel nicht gespeichert werden konnten.",
+  "docs.add.source": "Was hinzufügen",
+  "docs.add.sourceFile": "Datei",
+  "docs.add.sourceLink": "Link",
+  "docs.add.url": "Adresse",
+  "docs.add.urlPlaceholder": "https://",
+  "docs.add.urlHint":
+    "Füge den Link zu einer Seite oder einer geteilten Datei ein, etwa einem Google-Dokument.",
+  "docs.add.linkReading": "Seite wird gelesen…",
+  "docs.add.linkTitled":
+    "Titel von der Seite übernommen. Du kannst ihn ändern.",
+  "docs.add.linkGoogle":
+    "Margince liest keine Google-Dateien, gib also einen Titel ein.",
+  "docs.add.linkUnread":
+    "Die Seite konnte nicht gelesen werden. Gib einen Titel ein oder lass das Feld leer, dann steht dort die Website.",
+  "docs.add.linkNameHint":
+    "Optional. Ohne Titel steht dort die Adresse der Website.",
+  "docs.add.submitLink": "Link hinzufügen",
+  "docs.add.adding": "Wird hinzugefügt…",
+  "docs.add.errNoUrl": "Füge eine Adresse ein, die mit https:// beginnt.",
+  "docs.add.linkFailedTitle": "Link nicht hinzugefügt",
+  "docs.add.linkFailed":
+    "Es wurde nichts hinzugefügt. Prüfe die Adresse und versuche es erneut.",
+  "docs.kind.docs": "Docs",
+  "docs.kind.sheets": "Sheets",
+  "docs.kind.slides": "Slides",
+  "docs.kind.forms": "Forms",
+  "docs.kind.drive": "Drive",
+  "docs.kind.web": "Web",
 
   // Das Panel für die abgelegte Dokumentenlesung (RD-AC-N-2/-3). Drei Zustände,
   // die auch in den Worten getrennt bleiben müssen: noch keine Antwort, gelesen
@@ -7707,6 +7735,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "files.hide": "An diesem Deal ausblenden",
   "files.unhide": "Wieder an diesem Deal anzeigen",
   "files.delete": "Löschen",
+  "files.pick.empty":
+    "Die Datei ist leer, es gibt also nichts hinzuzufügen. Wähle eine Datei mit Inhalt.",
+  "files.pick.unsupported":
+    "Diese Art von Datei kann nicht angehängt werden. Wähle ein Dokument, ein Bild, ein ZIP-Archiv oder eine gespeicherte E-Mail.",
   "files.deleteTitle": "{name} löschen?",
   "files.deleteBody":
     "Die Datei wird aus diesem Deal entfernt, und die Käuferseite sieht sie in keinem Deal Room mehr. Der Eintrag im Raum bleibt, bis du ihn entfernst.",
@@ -7768,6 +7800,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "log.filesEmpty": "Dateien hier ablegen oder zum Auswählen klicken",
   "log.fileUnattached":
     "Die Aktivität ist erfasst, aber {filename} wurde nicht angehängt. {reason}",
+  "log.fileNotAdded": "{filename} wurde nicht hinzugefügt. {reason}",
   "log.fileUncertain":
     "Die Aktivität ist erfasst, aber der Upload von {filename} wurde nicht abgeschlossen. Prüfe die Dateien der Aktivität, bevor du die Datei erneut hinzufügst.",
   "log.attendee": "Teilnehmende",
@@ -10345,6 +10378,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die ZIP-Datei enthält {files} Dateien, ein Import liest höchstens {max_files}. Entferne die Dateien, die du nicht importierst, und lade sie erneut hoch.",
   "import.refusal.bundle.empty":
     "Die ZIP-Datei ist leer. Lege eine CSV-Datei pro Datensatztyp hinein und lade sie erneut hoch.",
+  "import.refusal.bundle.spreadsheet":
+    "Das ist eine Excel-Arbeitsmappe. Speichere das Blatt als CSV UTF-8 und lade diese Datei hoch.",
+  "import.refusal.bundle.noImportableFile":
+    "Die ZIP-Datei enthält keine Datei, die der Import liest. Benenne jede Datei nach ihrem Datensatztyp: {file_names}.",
   "import.refusal.bundle.notAZip":
     "Die ZIP-Datei ließ sich nicht öffnen. Erstelle die ZIP-Datei neu und lade sie hoch.",
   "import.refusal.bundle.filesTooLarge":
@@ -10411,6 +10448,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "import.template.files": "Dateien der Vorlage",
   "import.template.col.file": "Datei",
   "import.template.col.columns": "Spalten",
+  "import.template.keyColumns": "Braucht eine davon: {columns}",
   "import.template.legend":
     "Zeige auf eine Spalte oder tippe sie an, um zu sehen, was hineingehört. ● markiert eine Spalte, die eine neue Zeile braucht.",
   "import.template.rules": "So werden Zeilen zugeordnet",

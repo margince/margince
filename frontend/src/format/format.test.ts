@@ -188,6 +188,16 @@ describe("localized compact currency units", () => {
   ])("renders Vietnamese business units for %s", (minor, expected) => {
     expect(formatMoneyCompact(minor, "EUR", "vi")).toBe(expected);
   });
+  // German compact notation has no form for thousands, so Intl alone keeps
+  // the whole figure and cuts its cents to one digit: "12.345,6 $".
+  it.each([
+    [1_234_567, "USD", "12,3\u00a0Tsd.\u00a0$"],
+    [5_045_650, "EUR", "50,4\u00a0Tsd.\u00a0€"],
+    [99_999_999, "USD", "999,9\u00a0Tsd.\u00a0$"],
+    [-5_045_650, "EUR", "-50,4\u00a0Tsd.\u00a0€"],
+  ])("abbreviates German thousands for %s %s", (minor, currency, expected) => {
+    expect(formatMoneyCompact(minor, currency, "de")).toBe(expected);
+  });
   it("keeps the English and German locale conventions", () => {
     expect(formatMoneyCompact(120_000_000, "EUR", "en").toLowerCase()).toBe(
       "€1.2m",

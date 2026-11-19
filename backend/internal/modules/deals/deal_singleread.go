@@ -31,7 +31,8 @@ import (
 // A var rather than a const: the seat-name and meeting-ahead subselects are
 // built by functions. The meeting-ahead one sits beside last_activity_at so the
 // stalled flag reads both from one snapshot.
-var dealColumns = `id, name, amount_minor, expected_arr_minor, arr_source_offer_id, currency, pipeline_id, stage_id,
+var dealColumns = `id, name, amount_minor, expected_arr_minor, arr_source_offer_id, currency,
+	fx_rate_to_base::text, fx_rate_date, pipeline_id, stage_id,
 	company_id, project_id, owner_id, partner_company_id, partner_attribution, status, lost_reason,
 	lost_reason_code, lost_reason_basis, won_without_contract_reason, won_without_contract_detail,
 	description, commercial_motion, priority, acquisition_source,
@@ -69,7 +70,7 @@ func scanDeal(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmcontr
 	var override *int
 	var overrideBy *string
 	var stageProbability int
-	var expectedClose, waitUntil *time.Time
+	var expectedClose, waitUntil, fxRateDate *time.Time
 	var closeDateProvisional, meetingAhead bool
 	var version int64
 
@@ -77,7 +78,8 @@ func scanDeal(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmcontr
 	var sourceSystem, authorName, authorSeatName *string
 	var authorID *ids.UUID
 	dests := []any{
-		&id, &d.Name, &d.AmountMinor, &d.ExpectedArrMinor, &arrSource, &d.Currency, &pipelineID, &stageID,
+		&id, &d.Name, &d.AmountMinor, &d.ExpectedArrMinor, &arrSource, &d.Currency,
+		&d.FxRateToBase, &fxRateDate, &pipelineID, &stageID,
 		&companyID, &projectID, &ownerID, &partnerID, &d.PartnerAttribution, &status, &d.LostReason,
 		&d.LostReasonCode, &lossBasis, &wonReason, &d.WonWithoutContractDetail,
 		&d.Description, &motion, &priority, &d.AcquisitionSource,
@@ -127,6 +129,9 @@ func scanDeal(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmcontr
 	d.Status = crmcontracts.DealStatus(status)
 	if expectedClose != nil {
 		d.ExpectedCloseDate = &openapi_types.Date{Time: *expectedClose}
+	}
+	if fxRateDate != nil {
+		d.FxRateDate = &openapi_types.Date{Time: *fxRateDate}
 	}
 	d.CloseDateProvisional = &closeDateProvisional
 	if waitUntil != nil {

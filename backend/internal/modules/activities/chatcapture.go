@@ -125,7 +125,7 @@ func (s *Store) FileChatCapture(ctx context.Context, in ChatCaptureFiling) (ids.
 	}
 	if utf8.RuneCountInString(in.Body) > MaxChatText {
 		return ids.UUID{}, &ChatCaptureError{
-			Field: fieldBody, Code: "too_long", Max: MaxChatText,
+			Field: fieldBody, Code: codeTooLong, Max: MaxChatText,
 			Message: fmt.Sprintf("a chat holds at most %d characters; shorten the text", MaxChatText),
 		}
 	}

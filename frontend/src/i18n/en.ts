@@ -2523,7 +2523,7 @@ export const en = {
   "history.verb.erase": "{subject} erased the record",
   "history.verb.anonymize": "{subject} anonymized the record",
   "history.verb.assign": "{subject} assigned the record",
-  "history.verb.advanceStage": "{subject} advanced the stage of the record",
+  "history.verb.advanceStage": "{subject} moved the record to another stage",
   "history.verb.advancePhase": "{subject} advanced the phase of the record",
   "history.verb.sendEmail": "{subject} sent an email for the record",
   "history.verb.consentGrant": "{subject} granted consent for the record",
@@ -7654,6 +7654,31 @@ export const en = {
   "docs.add.partialTitle": "Uploaded, but not filed",
   "docs.add.partial":
     "The file is stored and listed below, but its category and title were not saved, so it is filed under Other.",
+  "docs.add.source": "What to add",
+  "docs.add.sourceFile": "File",
+  "docs.add.sourceLink": "Link",
+  "docs.add.url": "Address",
+  "docs.add.urlPlaceholder": "https://",
+  "docs.add.urlHint":
+    "Paste the link to a page or a shared file, such as a Google Doc.",
+  "docs.add.linkReading": "Reading the page…",
+  "docs.add.linkTitled": "Title taken from the page. Change it if you like.",
+  "docs.add.linkGoogle":
+    "Margince does not read Google files, so type a title.",
+  "docs.add.linkUnread":
+    "The page could not be read. Type a title, or leave it to show the site.",
+  "docs.add.linkNameHint": "Optional. Defaults to the site’s address.",
+  "docs.add.submitLink": "Add link",
+  "docs.add.adding": "Adding…",
+  "docs.add.errNoUrl": "Paste an address starting with https://.",
+  "docs.add.linkFailedTitle": "Link not added",
+  "docs.add.linkFailed": "Nothing was added. Check the address and retry.",
+  "docs.kind.docs": "Docs",
+  "docs.kind.sheets": "Sheets",
+  "docs.kind.slides": "Slides",
+  "docs.kind.forms": "Forms",
+  "docs.kind.drive": "Drive",
+  "docs.kind.web": "Web",
 
   // The staged-document-reading panel (RD-AC-N-2/-3). Three states that must
   // stay apart in the words as well as in the data: not answered yet, answered
@@ -7716,6 +7741,10 @@ export const en = {
   "files.hide": "Hide from this deal",
   "files.unhide": "Show on this deal again",
   "files.delete": "Delete",
+  "files.pick.empty":
+    "The file is empty, so there is nothing to add. Choose a file that has content.",
+  "files.pick.unsupported":
+    "This kind of file cannot be attached. Choose a document, image, zip archive or saved email.",
   "files.deleteTitle": "Delete {name}?",
   "files.deleteBody":
     "The file is removed from this deal, and buyers no longer see it in any Deal Room. The room entry stays until you remove it from the room.",
@@ -7781,6 +7810,7 @@ export const en = {
   "log.filesEmpty": "Drop files here, or click to choose them",
   "log.fileUnattached":
     "The activity is logged, but {filename} was not attached. {reason}",
+  "log.fileNotAdded": "{filename} was not added. {reason}",
   "log.fileUncertain":
     "The activity is logged, but the upload of {filename} did not finish. Check the activity’s files before you add it again.",
   "log.callOutcome": "Outcome",
@@ -10331,6 +10361,10 @@ export const en = {
     "The ZIP holds {files} files, and an import reads at most {max_files}. Remove the files you do not import and upload it again.",
   "import.refusal.bundle.empty":
     "The ZIP is empty. Add one CSV file per record type and upload it again.",
+  "import.refusal.bundle.spreadsheet":
+    "This is an Excel workbook. Save the sheet as CSV UTF-8 and upload that.",
+  "import.refusal.bundle.noImportableFile":
+    "The ZIP holds no file the import reads. Name each file after its record type: {file_names}.",
   "import.refusal.bundle.notAZip":
     "The ZIP could not be opened. Make the ZIP again and upload it.",
   "import.refusal.bundle.filesTooLarge":
@@ -10395,6 +10429,7 @@ export const en = {
   "import.template.files": "Template files",
   "import.template.col.file": "File",
   "import.template.col.columns": "Columns",
+  "import.template.keyColumns": "Needs one of: {columns}",
   "import.template.legend":
     "Hover or tap a column to see what goes in it. ● marks a column a new row needs.",
   "import.template.rules": "How rows are matched",
