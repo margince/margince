@@ -11192,6 +11192,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "notifications.action.openDeal": "Deal öffnen",
   "notifications.action.openLead": "Lead öffnen",
   "notifications.action.openProject": "Projekt öffnen",
+  "notifications.action.openExtensionRecord": "Datensatz öffnen",
   "notifications.action.review": "Anfrage prüfen",
   "notifications.action.systemHealth": "Systemzustand öffnen",
   "notifications.markAllFailed": "Es wurde nichts als gelesen markiert",
@@ -12077,6 +12078,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   // die Art von Zugangsdaten trägt, mit der die jeweilige Einheit konfiguriert
   // wird.
   "extUnits.openNamed": "Einstellungen für {name}",
+  "extUnits.openApp": "{name} öffnen",
   "extUnits.user.title": "Weitere Konten",
   "extUnits.user.sub":
     "Erweiterungen dieser Installation, die sich in deinem Namen anmelden. Jede ist privat, und das Trennen betrifft nur dich.",
@@ -15337,6 +15339,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "extAccess.brings.objects": "Berechtigungsobjekte",
   "extAccess.brings.routes": "Routen",
   "extAccess.brings.jobs": "Hintergrund-Jobs",
+  "extAccess.brings.needs": "Nutzt vom Kern",
+  "extAccess.need.models": "KI-Modelle",
+  "extAccess.need.objects": "Dateispeicher",
   "extAccess.brings.none": "Keine",
   "extAccess.noObjects":
     "Es gibt nichts zu vergeben, da diese Einheit keine Berechtigungsobjekte registriert.",
@@ -22395,6 +22400,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiTask.name.document_extract": "Dokumentenauswertung",
   "aiTask.name.draft_reply": "Antwortentwurf",
   "aiTask.name.enrich": "Ergänzung aus Signaturen",
+  "aiTask.name.extension_call": "Modellaufruf einer Erweiterung",
   "aiTask.name.growth_fit": "Bewertung der Unternehmenseignung",
   "aiTask.name.nl_search": "Suche in natürlicher Sprache",
   "aiTask.name.offer_draft": "Angebotsentwurf",

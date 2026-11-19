@@ -11164,6 +11164,7 @@ export const en = {
   "notifications.action.openDeal": "Open deal",
   "notifications.action.openLead": "Open lead",
   "notifications.action.openProject": "Open project",
+  "notifications.action.openExtensionRecord": "Open record",
   "notifications.action.review": "Review request",
   "notifications.action.systemHealth": "Open System health",
   "notifications.markAllFailed": "Nothing was marked read",
@@ -12024,6 +12025,7 @@ export const en = {
   // headings differ because the two pages mean different things: one is your
   // own account somewhere, the other is the installation's.
   "extUnits.openNamed": "Settings for {name}",
+  "extUnits.openApp": "Open {name}",
   "extUnits.user.title": "Other accounts",
   "extUnits.user.sub":
     "Add-ons this installation offers that sign in as you. Each is private to you, and disconnecting one affects only you.",
@@ -15245,6 +15247,9 @@ export const en = {
   "extAccess.brings.objects": "Permission objects",
   "extAccess.brings.routes": "Routes",
   "extAccess.brings.jobs": "Background jobs",
+  "extAccess.brings.needs": "Uses from the core",
+  "extAccess.need.models": "AI models",
+  "extAccess.need.objects": "File storage",
   "extAccess.brings.none": "None",
   "extAccess.noObjects":
     "This unit registers no permission objects, so there is nothing to grant.",
@@ -22103,6 +22108,7 @@ export const en = {
   "aiTask.name.document_extract": "Document extraction",
   "aiTask.name.draft_reply": "Reply drafting",
   "aiTask.name.enrich": "Signature enrichment",
+  "aiTask.name.extension_call": "Extension model call",
   "aiTask.name.growth_fit": "Company fit assessment",
   "aiTask.name.nl_search": "Natural-language search",
   "aiTask.name.offer_draft": "Offer drafting",
