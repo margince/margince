@@ -16,6 +16,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
@@ -82,22 +83,27 @@ func TestPostsSentTogetherAreAllAccepted(t *testing.T) {
 	}
 	ctx := principal.WithWorkspaceID(t.Context(), workspace.UUID)
 	emails := []string{"together-1@visitor.example", "together-2@visitor.example", "together-3@visitor.example"}
-	answers := make(chan formAnswer, len(emails))
+	posts := make(chan postResult, len(emails))
 	held, err := e.DB().WithWorkLease(ctx, provenance.WebFormSource, id, slog.New(slog.DiscardHandler), func(context.Context) error {
 		for _, email := range emails {
+			fields := withRenderTime(t, url.Values{"email": {email}, "message": {"Please call"}})
 			go func() {
-				answers <- browserPost(t, e, form.FormKey, url.Values{"email": {email}, "message": {"Please call"}}, siteOrigin)
+				answer, err := sendBrowserForm(e, form.FormKey, fields, siteOrigin)
+				posts <- postResult{answer: answer, err: err}
 			}()
 		}
-		waitForIntakesWaitingOnTheLease(t, len(emails), answers)
+		waitForIntakesWaitingOnTheLease(t, len(emails), posts)
 		return nil
 	})
 	if err != nil || !held {
 		t.Fatalf("hold form handling: held=%v, error=%v", held, err)
 	}
 	for range emails {
-		if answer := <-answers; answer.Status != http.StatusAccepted {
-			t.Errorf("a post that met the lease held = %d %s", answer.Status, answer.Body)
+		post := <-posts
+		if post.err != nil {
+			t.Errorf("a post that met the lease held failed: %v", post.err)
+		} else if post.answer.Status != http.StatusAccepted {
+			t.Errorf("a post that met the lease held = %d %s", post.answer.Status, post.answer.Body)
 		}
 	}
 	for _, email := range emails {
@@ -107,15 +113,33 @@ func TestPostsSentTogetherAreAllAccepted(t *testing.T) {
 	}
 }
 
+// postResult carries a post's answer or failure to the test goroutine, which
+// alone may end the test.
+type postResult struct {
+	answer formAnswer
+	err    error
+}
+
+// intakeArrivalBound fails a post that never reaches the fence's wait; a post
+// the fence turns away answers within its own patience, far inside this bound.
+const intakeArrivalBound = 30 * time.Second
+
 // waitForIntakesWaitingOnTheLease returns once n intakes have found the lease
 // busy and sleep in the fence's wait. The server runs in this process, so its
 // goroutines are the evidence; any answer before then came while the lease was held.
-func waitForIntakesWaitingOnTheLease(t *testing.T, n int, answers <-chan formAnswer) {
+func waitForIntakesWaitingOnTheLease(t *testing.T, n int, posts <-chan postResult) {
 	t.Helper()
+	bound, stop := context.WithTimeout(t.Context(), intakeArrivalBound)
+	defer stop()
 	for {
 		select {
-		case answer := <-answers:
-			t.Fatalf("a post was answered while the form's lease was held: %d %s", answer.Status, answer.Body)
+		case post := <-posts:
+			if post.err != nil {
+				t.Fatalf("a post failed while the form's lease was held: %v", post.err)
+			}
+			t.Fatalf("a post was answered while the form's lease was held: %d %s", post.answer.Status, post.answer.Body)
+		case <-bound.Done():
+			t.Fatalf("%d of %d intakes reached the fence's wait within %s", intakesInTheFenceWait(), n, intakeArrivalBound)
 		default:
 		}
 		if intakesInTheFenceWait() >= n {

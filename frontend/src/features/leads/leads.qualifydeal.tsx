@@ -204,6 +204,31 @@ export function qualifyRefusals(
   };
 }
 
+// The sentence under the amount: the box's own refusal first, then the
+// server's. Only the box's own (local) holds the confirm back.
+export function amountRefusal(
+  amount: {
+    amountMinor: number | null;
+    tooPrecise: boolean;
+    currency?: string;
+  },
+  server: string | undefined,
+  t: ReturnType<typeof useT>,
+) {
+  if (amount.tooPrecise) {
+    return {
+      local: true,
+      sentence: t("record.amountTooPrecise", {
+        currency: amount.currency ?? "",
+      }),
+    };
+  }
+  if (amount.amountMinor !== null && amount.amountMinor < 0) {
+    return { local: true, sentence: t("create.amountNegative") };
+  }
+  return { local: false, sentence: server };
+}
+
 export function openStagesOf(pipeline: Pipeline | undefined) {
   return [...(pipeline?.stages ?? [])]
     .filter((stage) => stage.semantic === "open")

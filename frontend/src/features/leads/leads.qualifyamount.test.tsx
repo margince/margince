@@ -18,9 +18,9 @@ afterEach(() => {
   localStorage.clear();
 });
 
-// The dialog opened on "Open a new deal" in a EUR installation. refusal, when
-// given, is the server's answer to the promotion.
-async function newDealDialog(refusal?: unknown) {
+// The dialog opened on "Open a new deal" in an installation keeping currency.
+// refusal, when given, is the server's answer to the promotion.
+async function newDealDialog(refusal?: unknown, currency = "EUR") {
   const user = steppedClock();
   vi.setSystemTime(new Date("2026-10-05T12:00:00Z"));
   const posted: unknown[] = [];
@@ -34,7 +34,7 @@ async function newDealDialog(refusal?: unknown) {
         : jsonResponse({ contact: { id: "contact-one" }, merged: false });
     }
     if (url.includes("/installation/settings"))
-      return jsonResponse({ base_currency: "EUR" });
+      return jsonResponse({ base_currency: currency });
     return jsonResponse({ data: [] });
   });
   render(
@@ -44,7 +44,7 @@ async function newDealDialog(refusal?: unknown) {
   await user.click(
     await screen.findByRole("radio", { name: "Open a new deal" }),
   );
-  const amount = await screen.findByLabelText("Amount (EUR)");
+  const amount = await screen.findByLabelText(`Amount (${currency})`);
   return { user, amount, posted };
 }
 
@@ -70,6 +70,27 @@ it("refuses a negative amount beside the field and sends nothing", async () => {
   expect(confirm).toBeDisabled();
   await f.user.click(confirm);
   expect(f.posted).toHaveLength(0);
+});
+
+it("refuses a figure finer than the currency beside the field and sends nothing", async () => {
+  const f = await newDealDialog(undefined, "VND");
+  await f.user.type(f.amount, "1.5");
+  const confirm = screen.getByRole("button", { name: "Qualify and open deal" });
+  await f.user.click(confirm);
+  expect(
+    screen.getByText("This amount has more decimals than VND allows."),
+  ).toBeVisible();
+  expect(f.amount).toHaveValue(1.5);
+  expect(confirm).toBeDisabled();
+  expect(f.posted).toHaveLength(0);
+
+  await f.user.clear(f.amount);
+  await f.user.type(f.amount, "2");
+  await f.user.click(confirm);
+  await waitFor(() => expect(f.posted).toHaveLength(1));
+  expect(f.posted[0]).toMatchObject({
+    deal: { amount_minor: 2, currency: "VND" },
+  });
 });
 
 it("keeps the last amount it can hold, with its currency, when the typed figure is too large", async () => {

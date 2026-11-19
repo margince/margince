@@ -31,6 +31,7 @@ import { useViewerZone } from "../../lib/viewerzone";
 import { useLeadCompanyNameReading } from "./leadcompany";
 import { leadIdentityName } from "./leadname";
 import {
+  amountRefusal,
   dealBlock,
   ExistingQualificationDeal,
   openStagesOf,
@@ -195,6 +196,8 @@ function QualificationForm({
   const [stageId, setStageId] = useState("");
   const [dealName, setDealName] = useState("");
   const [amountMinor, setAmountMinor] = useState<number | null>(null);
+  // The box holds a figure finer than the currency, so amountMinor is not what it says.
+  const [amountTooPrecise, setAmountTooPrecise] = useState(false);
   const [note, setNote] = useState("");
   const typedCompany = preview.data?.typed_company;
 
@@ -263,12 +266,16 @@ function QualificationForm({
     });
   };
 
-  const amountInvalid = amountMinor !== null && amountMinor < 0;
   const refused = qualifyRefusals(qualify.error, t);
+  const amountError = amountRefusal(
+    { amountMinor, tooPrecise: amountTooPrecise, currency },
+    refused.amount,
+    t,
+  );
   const confirmation = qualificationConfirmState(
     { selectedDeal, withDeal, invalidSelection },
     preview,
-    { amountInvalid },
+    { amountInvalid: amountError.local },
     { nameSettling: company.settling && !dealName.trim() },
   );
   const name = leadIdentityName(lead);
@@ -359,7 +366,7 @@ function QualificationForm({
                 ? "lead.qualify.amountHint"
                 : "lead.qualify.amountNoCurrency",
             )}
-            error={amountInvalid ? t("create.amountNegative") : refused.amount}
+            error={amountError.sentence}
           >
             {(control) => (
               <MoneyInput
@@ -377,10 +384,15 @@ function QualificationForm({
                     ? (minor) => formatMoney(minor, currency, locale)
                     : undefined
                 }
-                onChangeMinor={(minor) =>
-                  setAmountMinor(Number.isNaN(minor) ? null : minor)
-                }
-                onClear={() => setAmountMinor(null)}
+                onChangeMinor={(minor) => {
+                  setAmountTooPrecise(false);
+                  setAmountMinor(Number.isNaN(minor) ? null : minor);
+                }}
+                onClear={() => {
+                  setAmountTooPrecise(false);
+                  setAmountMinor(null);
+                }}
+                onTooPrecise={() => setAmountTooPrecise(true)}
               />
             )}
           </Field>
