@@ -868,9 +868,8 @@ describe("LeadScreen — the header's Email verb", () => {
       data: [{ id: "g1", provider: "gmail", status: "connected", scopes: [] }],
     });
     render(<LeadScreen id="l-1" />);
-    // The grants have answered once the section offers its Edit.
-    await screen.findByRole("button", { name: "Edit About" });
-    const address = screen.getByRole("button", {
+    // The address is a button only once the mailbox roster has answered.
+    const address = await screen.findByRole("button", {
       name: "jonas@nordwind.example",
     });
     expect(address.hasAttribute("href")).toBe(false);
