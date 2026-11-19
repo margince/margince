@@ -362,6 +362,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.merge.address_usage": "Verwendung der Adresse",
   "approval.merge.address_primary_before": "Primäradresse der Quelle",
   "approval.merge.address_primary_after": "Primäradresse des Ziels",
+  "approval.merge.address_already_held": "Ziel hat sie schon",
   "approval.merge.assignment_collapsed": "Doppelte Zuständigkeit entfernt",
   "approval.merge.assignment_moved": "Übernommene Zuständigkeit",
   "approval.merge.assignment_role": "Rolle",
@@ -22776,6 +22777,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contactCase.ownerHint":
     "Nur wer für einen markierten Kontakt verantwortlich ist, kann den verbleibenden Kontakt übernehmen.",
   "contactCase.ownerPlaceholder": "Verantwortliche Person wählen",
+  "contactCase.prefer.legend": "Welcher Wert bleibt",
+  "contactCase.prefer.hint":
+    "Hier unterscheiden sich die Kontakte. Wähle den Wert, den der verbleibende Kontakt zuerst zeigt. Die anderen E-Mail-Adressen und Arbeitgeber bleiben auch erhalten.",
+  "contactCase.prefer.name": "Name",
+  "contactCase.prefer.email": "Primäre E-Mail-Adresse",
+  "contactCase.prefer.employment": "Aktueller Arbeitgeber",
+  "contactCase.prefer.title": "Position",
+  "contactCase.prefer.placeholder": "Wert wählen",
   "contactCase.previewVerb": "Vorschau anzeigen",
   "contactCase.merge_one": "{count} Kontakt zusammenführen",
   "contactCase.merge_other": "{count} Kontakte zusammenführen",

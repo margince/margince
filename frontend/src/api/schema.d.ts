@@ -31850,6 +31850,34 @@ export interface components {
              * @description Who owns the remaining contact: the live owner of one of the selected members.
              */
             owner_id: string;
+            prefer?: components["schemas"]["ContactCasePreference"];
+        };
+        /**
+         * @description Where the selected members disagree, the member whose value the remaining contact takes.
+         *     Each one must be in `member_ids`. A field left out keeps the survivor's value, and an empty one takes another member's.
+         *     No value is lost: every address, number and employment of every member stays on the remaining contact.
+         */
+        ContactCasePreference: {
+            /**
+             * Format: uuid
+             * @description The member whose first and last name the remaining contact takes.
+             */
+            name?: string;
+            /**
+             * Format: uuid
+             * @description The member whose title the remaining contact takes.
+             */
+            title?: string;
+            /**
+             * Format: uuid
+             * @description The member whose primary email address becomes the remaining contact's primary one.
+             */
+            email?: string;
+            /**
+             * Format: uuid
+             * @description The member whose current employer becomes the remaining contact's current one.
+             */
+            employment?: string;
         };
         /** @description What the merge did, or for a preview what it would do. Every selected member's owner other than the chosen one keeps access through a record grant. */
         ContactCaseOutcome: {

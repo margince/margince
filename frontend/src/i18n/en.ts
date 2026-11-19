@@ -337,6 +337,7 @@ export const en = {
   "approval.merge.address_usage": "Address use",
   "approval.merge.address_primary_before": "Primary on source",
   "approval.merge.address_primary_after": "Primary on survivor",
+  "approval.merge.address_already_held": "Survivor already has it",
   "approval.merge.assignment_collapsed": "Duplicate responsibility removed",
   "approval.merge.assignment_moved": "Responsibility moved",
   "approval.merge.assignment_role": "Role",
@@ -22460,6 +22461,14 @@ export const en = {
   "contactCase.ownerHint":
     "Only an owner of a ticked contact can own the remaining contact.",
   "contactCase.ownerPlaceholder": "Choose owner",
+  "contactCase.prefer.legend": "Which value to keep",
+  "contactCase.prefer.hint":
+    "The merged contacts disagree here. Pick the value the remaining contact shows first. The other email addresses and employers stay on it too.",
+  "contactCase.prefer.name": "Name",
+  "contactCase.prefer.email": "Primary email",
+  "contactCase.prefer.employment": "Current employer",
+  "contactCase.prefer.title": "Title",
+  "contactCase.prefer.placeholder": "Choose a value",
   "contactCase.previewVerb": "Preview merge",
   "contactCase.merge_one": "Merge {count} contact",
   "contactCase.merge_other": "Merge {count} contacts",
