@@ -47,7 +47,8 @@ type Puller struct {
 
 // Pull reads every active link of the connection. ctx carries the job's
 // workspace; the pull acts as the chat engine's system actor. One link's gone
-// channel pauses that link and the others go on.
+// or archived channel pauses that link and the others go on. The archive is
+// read here because its notice may never arrive.
 func (p *Puller) Pull(ctx context.Context, connectionID ids.UUID) error {
 	ctx = principal.WithActor(ctx, chatLinksPrincipal)
 	session, err := p.Chats.Open(ctx)
@@ -65,10 +66,12 @@ func (p *Puller) Pull(ctx context.Context, connectionID ids.UUID) error {
 		return err
 	}
 	for _, link := range links {
-		var err error
-		if link.BackfillRequested {
+		_, err := chatlinks.LiveChannel(ctx, session.Chat, link.ChannelSlug)
+		switch {
+		case err != nil:
+		case link.BackfillRequested:
 			err = p.backfill(ctx, session, link)
-		} else {
+		default:
 			err = p.pullLink(ctx, session, link)
 		}
 		if err == nil {
@@ -78,6 +81,29 @@ func (p *Puller) Pull(ctx context.Context, connectionID ids.UUID) error {
 			return nil
 		} else if stop != nil {
 			return stop
+		}
+	}
+	return p.unreadBackfill(ctx, connectionID, links)
+}
+
+// errPullAgain asks the worker to run the pull once more soon.
+var errPullAgain = errors.New("chat pull: a link asking for the talk so far came in during the pull")
+
+// unreadBackfill answers errPullAgain when a link that asks for the talk so far
+// was made after this pull read its links. Its own queued pull was then
+// folded into this one, which is unique per bot.
+func (p *Puller) unreadBackfill(ctx context.Context, connectionID ids.UUID, read []chatlinks.Link) error {
+	links, err := p.Store.PullLinks(ctx, connectionID)
+	if err != nil {
+		return err
+	}
+	seen := make(map[ids.UUID]bool, len(read))
+	for _, link := range read {
+		seen[link.ID] = true
+	}
+	for _, link := range links {
+		if link.BackfillRequested && !seen[link.ID] {
+			return errPullAgain
 		}
 	}
 	return nil
@@ -177,7 +203,13 @@ func (p *Puller) judge(ctx context.Context, session chatlinks.Session, link chat
 // limit or a model deferral stops the pull until the next tick.
 func (p *Puller) answerFailure(ctx context.Context, link chatlinks.Link, err error) error {
 	var limited *connector.RateLimitedError
+	var bare *dispact.StatusError
 	switch {
+	case errors.As(err, &bare):
+		// A bare status may come from a proxy in front of the chat, and a paused
+		// link is never read again. Only the chat's own answer pauses a link.
+		p.Log.WarnContext(ctx, "chat pull: the chat answered a bare status; the link stays active", "link", link.ID.String(), "err", err)
+		return nil
 	case errors.Is(err, dispact.ErrTokenRejected):
 		return capture.StopPollingChannelConnection(ctx, p.Pool, link.ConnectionID,
 			capture.ChannelPollStoppedByBadToken, "the chat refused the bot token")

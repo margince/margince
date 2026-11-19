@@ -23,6 +23,10 @@ type historyWire struct {
 		EditedAt   string `json:"edited_at"`
 		Subtype    string `json:"subtype"`
 		BotID      string `json:"bot_id"`
+		Files      []struct {
+			Name     string `json:"name"`
+			MimeType string `json:"mimetype"`
+		} `json:"files"`
 	} `json:"messages"`
 	ResponseMetadata struct {
 		NextCursor string `json:"next_cursor"`
@@ -44,10 +48,14 @@ func (w historyWire) page() (HistoryPage, error) {
 		if err != nil {
 			return HistoryPage{}, err
 		}
+		files := make([]File, 0, len(m.Files))
+		for _, f := range m.Files {
+			files = append(files, File(f))
+		}
 		out.Messages = append(out.Messages, Message{
 			TS: m.TS, Seq: seq, ThreadTS: m.ThreadTS, ReplyCount: m.ReplyCount,
 			UserName: m.UserName, UserEmail: m.UserEmail, Text: m.Text,
-			PostedAt: posted, EditedAt: edited, Subtype: m.Subtype, IsBot: m.BotID != "",
+			PostedAt: posted, EditedAt: edited, Subtype: m.Subtype, IsBot: m.BotID != "", Files: files,
 		})
 	}
 	if next := w.ResponseMetadata.NextCursor; next != "" {

@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/dealscout"
+	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/deals"
@@ -119,9 +120,7 @@ func TestNoOwnerOrASwitchOffKeepsTheSuggestion(t *testing.T) {
 	e.GrantRole(t, e.AdminUser, "admin")
 	owned := e.SeedCompany(t, "Globex", &e.AdminUser)
 	e.buyerPair(t, owned, e.daysAgo(10))
-	if _, err := approvals.NewService(e.DB()).SetAutoApply(e.Admin(), deals.DealOpenKind, false); err != nil {
-		t.Fatalf("switching deal_open off: %v", err)
-	}
+	integration.TurnKindOff(e.Admin(), t, approvals.NewService(e.DB()), deals.DealOpenKind)
 
 	if opened := e.openScouted(t); opened != 0 {
 		t.Fatalf("opened %d deals, want none", opened)

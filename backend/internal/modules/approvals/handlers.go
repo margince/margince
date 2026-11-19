@@ -16,6 +16,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
@@ -26,6 +27,10 @@ import (
 // Handlers is the module's transport surface: the /approvals inbox ops.
 type Handlers struct {
 	svc *Service
+	// settings holds the installation switch; nil answers 501 on its route.
+	settings *config.Config
+	// locks reports the settings a boot source sets on the switch's response.
+	locks func(surface []config.Any) *[]crmcontracts.SettingLock
 }
 
 func NewHandlers(svc *Service) Handlers { return Handlers{svc: svc} }
