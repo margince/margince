@@ -13234,7 +13234,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "auth.failed": "Đăng nhập không thành công",
   "auth.errCredentials":
     "Đăng nhập không thành công. Kiểm tra email và mật khẩu rồi thử lại.",
-  "auth.errRateLimited": "Quá nhiều lần thử đăng nhập. Thử lại sau.",
+  "auth.errRateLimited":
+    "Quá nhiều lần thử đăng nhập. Đợi một phút rồi thử lại.",
   "auth.errUnreachable":
     "Không thể kết nối tới Margince. Kiểm tra kết nối rồi thử lại.",
   "auth.retry": "Thử lại",

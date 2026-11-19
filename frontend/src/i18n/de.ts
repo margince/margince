@@ -13585,7 +13585,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "auth.failed": "Anmeldung fehlgeschlagen",
   "auth.errCredentials":
     "Anmeldung fehlgeschlagen. Prüfe E-Mail-Adresse und Passwort und versuche es erneut.",
-  "auth.errRateLimited": "Zu viele Anmeldeversuche. Versuche es später erneut.",
+  "auth.errRateLimited":
+    "Zu viele Anmeldeversuche. Warte eine Minute und versuche es dann erneut.",
   "auth.errUnreachable":
     "Margince war nicht erreichbar. Prüfe die Verbindung und versuche es erneut.",
   "auth.retry": "Erneut versuchen",

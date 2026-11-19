@@ -178,8 +178,9 @@ describe("AuthScreen login", () => {
     await userEvent.type(screen.getByLabelText("Password"), "whatever{enter}");
 
     const alert = await screen.findByRole("alert");
+    // The budget refills within a minute, so the sentence names that wait.
     expect(alert.textContent).toContain(
-      "Too many sign-in attempts. Retry later.",
+      "Too many sign-in attempts. Wait a minute, then retry.",
     );
   });
 

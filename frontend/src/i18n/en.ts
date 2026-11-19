@@ -13545,7 +13545,8 @@ export const en = {
   "auth.failed": "Sign-in failed",
   "auth.errCredentials":
     "Sign-in failed. Check the email and password and retry.",
-  "auth.errRateLimited": "Too many sign-in attempts. Retry later.",
+  "auth.errRateLimited":
+    "Too many sign-in attempts. Wait a minute, then retry.",
   "auth.errUnreachable":
     "Margince could not be reached. Check the connection and retry.",
   "auth.retry": "Retry",
