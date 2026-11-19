@@ -16,7 +16,7 @@ import {
   DrawerHead,
 } from "../design-system/drawerbands";
 import { Heading } from "../design-system/heading";
-import { Modal } from "../design-system/modal";
+import { DiscardDraftQuestion, Modal } from "../design-system/modal";
 import { QueryGate, WriteRefused } from "../design-system/querystates";
 import { Chip } from "../design-system/readings";
 import { useT } from "../i18n";
@@ -158,10 +158,13 @@ function SetupForm({
     clientSecret.trim() !== "";
   const locked = !canManage || save.isPending || lockReason !== undefined;
   // While the PUT is out the drawer refuses to close at all, so nothing asks.
-  useUnsavedGuard(
+  const dirty =
     !save.isPending &&
-      (clientId !== undefined || tenant !== undefined || clientSecret !== ""),
-  );
+    (clientId !== undefined || tenant !== undefined || clientSecret !== "");
+  useUnsavedGuard(dirty);
+  // Cancel asks as Escape and the X do. A save closes without asking.
+  const [asking, setAsking] = useState(false);
+  const cancel = () => (dirty ? setAsking(true) : onCancel());
 
   function submit() {
     save.mutate(
@@ -264,7 +267,7 @@ function SetupForm({
       <DrawerFoot>
         <span className="t-caption">{t("oauthApp.drawer.foot")}</span>
         <div className="form-actions">
-          <Button onClick={onCancel} disabled={save.isPending}>
+          <Button onClick={cancel} disabled={save.isPending}>
             {t("create.cancel")}
           </Button>
           <Button
@@ -278,6 +281,11 @@ function SetupForm({
           </Button>
         </div>
       </DrawerFoot>
+      <DiscardDraftQuestion
+        open={asking}
+        onKeep={() => setAsking(false)}
+        onDiscard={onCancel}
+      />
     </>
   );
 }

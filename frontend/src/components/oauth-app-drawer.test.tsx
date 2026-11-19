@@ -347,6 +347,22 @@ describe("the app setup drawer", () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
+  it("asks before Cancel drops a typed pair, and Discard then closes", async () => {
+    const user = userEvent.setup();
+    const { onClose } = mount(absent(), "google", { view: "drawer" });
+    await user.type(await openFields(), CLIENT_ID);
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    const question = await screen.findByRole("dialog", {
+      name: "Discard unsaved changes?",
+    });
+    expect(onClose).not.toHaveBeenCalled();
+    await user.click(
+      within(question).getByRole("button", { name: "Discard changes" }),
+    );
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+  });
+
   it("cannot be dismissed while the save is on its way", async () => {
     const user = userEvent.setup();
     let answer = () => {};
