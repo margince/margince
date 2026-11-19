@@ -232,16 +232,16 @@ describe("the agent panel's hierarchy", () => {
     );
   });
 
-  // The log opens the AI usage page, which a seat without the diagnostics read
+  // The log opens the AI call log, which a seat without the diagnostics read
   // grant cannot open. Offering it would send a rep to a refusal.
   it("offers the full log only to a seat that can open it", async () => {
     const rep = await openPanel({ allow: { license: ["read"] } });
     expect(rep.querySelector("a.link-button")).toBeNull();
     cleanup();
     const admin = await openPanel();
-    expect(admin.querySelector("a.link-button")?.textContent).toBe(
-      en["agent.panel.fullLog"],
-    );
+    const log = admin.querySelector("a.link-button");
+    expect(log?.textContent).toBe(en["agent.panel.fullLog"]);
+    expect(log?.getAttribute("href")).toBe("/#/settings/model-calls");
   });
 
   // The Core's vocabulary is five machine words and this is the one place they
