@@ -11,6 +11,7 @@ import {
   useTaskNextSteps,
 } from "../../components/tasknextsteps";
 import { Button, Card } from "../../design-system/atoms";
+import { useFocusHandoff } from "../../design-system/focushandoff";
 import { Heading } from "../../design-system/heading";
 import { useLocale, useT } from "../../i18n";
 import { useActivity } from "../../lib/activityread";
@@ -179,15 +180,14 @@ export function Triage({
             </div>
           </li>
         ) : (
-          <li key={identity(item)}>
-            <QueuedCard
-              item={item}
-              onOpen={() => {
-                pressed.current = true;
-                onChoose(item);
-              }}
-            />
-          </li>
+          <QueuedCard
+            key={identity(item)}
+            item={item}
+            onOpen={() => {
+              pressed.current = true;
+              onChoose(item);
+            }}
+          />
         ),
       )}
     </ol>
@@ -199,7 +199,23 @@ function QueuedCard({
   item,
   onOpen,
 }: Readonly<{ item: WorklistItem; onOpen: () => void }>) {
-  return <TaskCard item={item} onOpen={onOpen} rowDone={useRowDone(item)} />;
+  // Done from its own tick, the card leaves holding focus. The card that takes
+  // its place takes it, or the one before it at the end.
+  const card = useRef<HTMLLIElement>(null);
+  useFocusHandoff(card, () => {
+    const after = card.current?.nextElementSibling;
+    const before = card.current?.previousElementSibling;
+    return (
+      (after ?? before)?.querySelector<HTMLElement>(
+        ".brief-triage-frame, .brief-task-open",
+      ) ?? null
+    );
+  });
+  return (
+    <li ref={card}>
+      <TaskCard item={item} onOpen={onOpen} rowDone={useRowDone(item)} />
+    </li>
+  );
 }
 
 /** The tick on the card in hand, sharing the one write its row's verbs use. */
