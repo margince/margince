@@ -29,8 +29,9 @@ func TestTheSurvivorSpelledAsTypedWinsAMergedLineage(t *testing.T) {
 	const unicodeAddress = "gone@bücher.example"
 	const punycodeAddress = "gone@xn--bcher-kva.example"
 
-	// Both spellings first, then each merged: the invite refuses a second
-	// spelling once the first is retired.
+	// Both spellings first, then each merged. The invite refuses a second
+	// spelling of one login, so the older row is renamed into it, as data from
+	// before the folding holds.
 	roots := map[string]ids.UserID{}
 	merged := map[string]ids.UserID{}
 	for i, seat := range []struct{ email, name string }{
@@ -38,10 +39,15 @@ func TestTheSurvivorSpelledAsTypedWinsAMergedLineage(t *testing.T) {
 		{punycodeAddress, "Gone Punycode"},
 	} {
 		id, _, err := e.svc.InviteUser(e.wsCtx(e.admin), e.admin, InviteUserInput{
-			Email: seat.email, DisplayName: seat.name, Role: "rep",
+			Email: fmt.Sprintf("legacy%d@plain.example", i), DisplayName: seat.name, Role: "rep",
 		})
 		if err != nil {
 			t.Fatalf("inviting %s: %v", seat.email, err)
+		}
+		if _, err := e.owner.Exec(ctx,
+			`UPDATE app_user SET email = $2, email_domain_folded = 'xn--bcher-kva.example' WHERE id = $1`,
+			id.UUID, seat.email); err != nil {
+			t.Fatalf("respelling %s: %v", seat.email, err)
 		}
 		merged[seat.email] = id
 
