@@ -7617,6 +7617,30 @@ export const en = {
   "docs.add.partialTitle": "Uploaded, but not filed",
   "docs.add.partial":
     "The file is stored and listed below, but its category and title were not saved, so it is filed under Other.",
+  "docs.add.source": "What to add",
+  "docs.add.sourceFile": "File",
+  "docs.add.sourceLink": "Link",
+  "docs.add.url": "Address",
+  "docs.add.urlHint":
+    "Paste the link to a page or a shared file, such as a Google Doc.",
+  "docs.add.linkReading": "Reading the page…",
+  "docs.add.linkTitled": "Title taken from the page. Change it if you like.",
+  "docs.add.linkGoogle":
+    "Google files open only after sign-in, so type a title.",
+  "docs.add.linkUnread":
+    "The page could not be read. Type a title, or leave it to show the site.",
+  "docs.add.linkNameHint": "Optional. Defaults to the site’s address.",
+  "docs.add.submitLink": "Add link",
+  "docs.add.adding": "Adding…",
+  "docs.add.errNoUrl": "Paste an address starting with https://.",
+  "docs.add.linkFailedTitle": "Link not added",
+  "docs.add.linkFailed": "Nothing was added. Check the address and retry.",
+  "docs.kind.docs": "Docs",
+  "docs.kind.sheets": "Sheets",
+  "docs.kind.slides": "Slides",
+  "docs.kind.forms": "Forms",
+  "docs.kind.drive": "Drive",
+  "docs.kind.web": "Web",
 
   // The staged-document-reading panel (RD-AC-N-2/-3). Three states that must
   // stay apart in the words as well as in the data: not answered yet, answered

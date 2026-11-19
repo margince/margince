@@ -152,3 +152,4 @@
 1794844773_a_consent_names_its_request_and_its_frequency.up.sql | * | adds columns that are empty or take a constant default, checks and foreign keys NOT VALID, and replaces two text-bound triggers; no existing row is read or changed
 1794844773_a_consent_names_its_request_and_its_frequency.down.sql | * | drops the columns this migration added and restores the two text-bound triggers; no existing row is changed
 1794844774_the_consent_request_and_frequency_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795064395_the_link_shape_follows_the_address.down.sql | attachment | runs only on a rollback and touches only links users added by hand, each typed into a dialog one at a time, so the set is small

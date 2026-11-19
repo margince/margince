@@ -27,6 +27,9 @@ type Handlers struct {
 	// nil leaves the field out.
 	locks func(surface []config.Any) *[]crmcontracts.SettingLock
 	store *Store
+	// linkPages reads the page a link names for its preview; nil reads the
+	// public web through webread.
+	linkPages LinkPageReader
 	// settings reads and writes the follow-up window; nil refuses both its
 	// endpoints.
 	settings *config.Config

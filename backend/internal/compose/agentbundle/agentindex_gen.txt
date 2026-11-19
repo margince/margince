@@ -770,6 +770,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | --- | --- | --- | --- | --- |
 | `GET /attachments` | listAttachments | List the attachments hung off one entity (cursor-paginated metadata). | Read records | at once |
 | `POST /attachments` | uploadAttachment | Upload a file and attach it to an entity. | Change records | at once |
+| `POST /attachments/links` | addAttachmentLink | Add a web link to a record's documents. | Change records | at once |
 | `GET /deals/{id}/documents` | listDealDocuments | The deal's Files area — its own uploads and the files of every message linked to it. | Read records | at once |
 | `PUT /deals/{id}/documents/{attachmentId}/hide` | hideDealDocument | Stop listing a captured file on this deal without touching the file. | Change records | at once |
 | `DELETE /deals/{id}/documents/{attachmentId}/hide` | unhideDealDocument | List the file on this deal again. | Change records | at once |

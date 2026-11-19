@@ -20,12 +20,10 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/storedobjects"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -86,7 +84,7 @@ func (s *Store) mayUpload(ctx context.Context, in AttachmentInput) error {
 	if s.blob == nil {
 		return ErrBlobstoreUnconfigured
 	}
-	if err := auth.Require(ctx, in.EntityType, principal.ActionUpdate); err != nil {
+	if err := requireAttachmentWrite(ctx, in.EntityType); err != nil {
 		return err
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
