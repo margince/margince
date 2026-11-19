@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { ComponentProps } from "react";
 import { within } from "storybook/test";
 import { taskRow } from "../../testing/brief.fixtures";
 import {
@@ -10,7 +11,6 @@ import {
   StoryProviders,
 } from "../../testing/story-utils";
 import { expectTextFits } from "../../testing/unbrokentext";
-import type { WorklistItem } from "../worklist/worklist.queries";
 import { TaskCard } from "./brief.taskcard";
 import "./brief.feed.css";
 
@@ -21,7 +21,7 @@ const meta: Meta<typeof TaskCard> = {
 export default meta;
 type Story = StoryObj<typeof TaskCard>;
 
-function card(item: WorklistItem) {
+function card(item: ComponentProps<typeof TaskCard>["item"]) {
   return () => {
     installFetchStub({ "GET /me": meRoute({}, { roles: ["rep"] }) });
     return (
