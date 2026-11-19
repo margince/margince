@@ -50,6 +50,7 @@ function backendFor(
   rows: Row[],
   installationOn = true,
   roles: string[] = ["rep"],
+  locks?: unknown[],
 ) {
   let state = rows;
   let bound = installationOn;
@@ -75,7 +76,7 @@ function backendFor(
               : r,
           );
         }
-        return jsonResponse({ data: state, auto_apply_enabled: bound });
+        return jsonResponse({ data: state, auto_apply_enabled: bound, locks });
       }
       throw new Error(`unexpected request: ${req.method} ${req.url}`);
     },
@@ -131,6 +132,29 @@ describe("AutonomySettingsCard", () => {
     expect(
       await screen.findByText(/turned automatic changes off/i),
     ).not.toBeNull();
+  });
+
+  it("disables the installation switch when a boot source sets it", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor(
+        [row("close_date_correction", "auto")],
+        true,
+        ["admin"],
+        [
+          {
+            key: "approvals.auto_apply_enabled",
+            origin: {
+              source: "env",
+              name: "MARGINCE_APPROVALS_AUTO_APPLY_ENABLED",
+            },
+          },
+        ],
+      ).fetchMock,
+    );
+    render(<AutonomySettingsCard />);
+    const toggle = await screen.findByTestId("autonomy-installation-switch");
+    expect(toggle.hasAttribute("disabled")).toBe(true);
   });
 
   it("offers a rep no installation switch", async () => {

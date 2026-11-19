@@ -54443,6 +54443,7 @@ export interface components {
          *     that is eligible to apply automatically, whether or not they have ever met it.
          */
         AutonomySettings: {
+            readonly locks?: components["schemas"]["SettingLocks"];
             data: components["schemas"]["KindAutonomy"][];
             /**
              * @description The installation's switch over every row. False means nothing applies

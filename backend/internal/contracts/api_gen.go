@@ -38355,6 +38355,10 @@ type AutonomySettings struct {
 	// itself for anybody; the modes in `data` stay as the reader set them.
 	AutoApplyEnabled bool           `json:"auto_apply_enabled"`
 	Data             []KindAutonomy `json:"data"`
+
+	// Locks The settings in this response that a boot source sets, each with its source. A client
+	// shows each as read-only. Empty when nothing is locked. A write ignores it.
+	Locks *SettingLocks `json:"locks,omitempty"`
 }
 
 // AvailableModel One model a vendor says it serves.

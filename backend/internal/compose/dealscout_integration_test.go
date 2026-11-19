@@ -468,3 +468,16 @@ func TestEvidenceFromAWithheldConversationIsIgnored(t *testing.T) {
 		t.Fatalf("withheld evidence raised %d suggestions, want none", n)
 	}
 }
+
+func TestTheInstallationSwitchStopsOpeningAndReviving(t *testing.T) {
+	e := setupScout(t)
+	e.GrantRole(t, e.AdminUser, "admin")
+	fresh, lost := e.SeedCompany(t, "Globex", &e.AdminUser), e.SeedCompany(t, "Initech", &e.AdminUser)
+	e.buyerPair(t, fresh, e.daysAgo(10))
+	deal := e.lostDeal(t, lost, e.AdminUser, e.daysAgo(40))
+	e.buyerPair(t, lost, e.daysAgo(10))
+	integration.SetAutoApplyEnabled(t, e.Env, false)
+	if done := e.openScouted(t); done != 0 || e.WsCount(t, `SELECT count(*) FROM deal WHERE company_id = $1 OR (company_id = $2 AND (id <> $3 OR status <> 'lost'))`, fresh, lost, deal) != 0 {
+		t.Fatalf("acted on %d suggestions with the installation switch off, want none", done)
+	}
+}

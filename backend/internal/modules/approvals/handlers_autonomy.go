@@ -43,6 +43,7 @@ func (h Handlers) writeAutonomy(w http.ResponseWriter, r *http.Request, settings
 	}
 	wire := autonomyWire(settings)
 	wire.AutoApplyEnabled = on
+	wire.Locks = h.installationLocks()
 	httperr.WriteJSON(w, http.StatusOK, wire)
 }
 
@@ -65,10 +66,16 @@ func (h Handlers) UpdateAutoApplyInstallation(w http.ResponseWriter, r *http.Req
 		httperr.Write(w, r, err)
 		return
 	}
-	if h.locks != nil {
-		req.Locks = h.locks([]config.Any{AutoApplyEnabled})
-	}
+	req.Locks = h.installationLocks()
 	httperr.WriteJSON(w, http.StatusOK, req)
+}
+
+// installationLocks names the boot source that sets the switch, if one does.
+func (h Handlers) installationLocks() *[]crmcontracts.SettingLock {
+	if h.locks == nil {
+		return nil
+	}
+	return h.locks([]config.Any{AutoApplyEnabled})
 }
 
 // WithSettings binds the stored configuration the installation switch lives in.

@@ -14,30 +14,23 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"runtime"
+	"strings"
 	"testing"
+	"time"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/config/configtest"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
-
-// setInstallationAutoApply flips the switch as an admin does, through its real
-// writer.
-func setInstallationAutoApply(t *testing.T, e *Env, on bool) {
-	t.Helper()
-	t.Cleanup(func() { e.WsExec(t, `DELETE FROM setting WHERE key = $1`, approvals.AutoApplyEnabled.Key()) })
-	cfg := configtest.StoredOver(t, e.Pool, approvals.ConfigSettings())
-	admin := e.As(e.AdminUser, nil, principal.Permissions{
-		RoleKeys: []string{"admin"}, RowScope: principal.RowScopeAll,
-		Objects: map[string]principal.ObjectGrant{"installation_settings": {Read: true, Update: true}},
-	})
-	if err := approvals.SetAutoApplyEnabled(admin, cfg, on); err != nil {
-		t.Fatalf("switching the installation to %v: %v", on, err)
-	}
-}
 
 func sweepApplied(ctx context.Context, t *testing.T, e *Env) int {
 	t.Helper()
@@ -72,7 +65,7 @@ func TestNothingAppliesWhileTheInstallationSwitchIsOff(t *testing.T) {
 	turnAutoApplyOn(t, svc, e, e.Rep1)
 	approvalID := stageCloseDateCorrection(t, svc, e, deal)
 
-	setInstallationAutoApply(t, e, false)
+	SetAutoApplyEnabled(t, e, false)
 	if got := sweepApplied(sweepCtx(e), t, e); got != 0 {
 		t.Fatalf("applied %d proposals with the installation switch off, want none", got)
 	}
@@ -92,7 +85,7 @@ func TestNothingAppliesWhileTheInstallationSwitchIsOff(t *testing.T) {
 		t.Errorf("the rep's own mode reads %q while the bound is off, want auto kept", row.Mode)
 	}
 
-	setInstallationAutoApply(t, e, true)
+	SetAutoApplyEnabled(t, e, true)
 	if got := sweepApplied(sweepCtx(e), t, e); got != 1 {
 		t.Fatalf("applied %d proposals after the switch came back on, want the rep's automatic kind to apply", got)
 	}
@@ -110,12 +103,144 @@ func TestTurningTheInstallationSwitchOnLeavesAManualRepManual(t *testing.T) {
 	}
 	approvalID := stageCloseDateCorrection(t, svc, e, deal)
 
-	setInstallationAutoApply(t, e, false)
-	setInstallationAutoApply(t, e, true)
+	SetAutoApplyEnabled(t, e, false)
+	SetAutoApplyEnabled(t, e, true)
 	if got := sweepApplied(sweepCtx(e), t, e); got != 0 {
 		t.Fatalf("applied %d proposals for a rep on manual after the switch went on, want none", got)
 	}
 	if status, _ := statusOf(t, approvalID); status != "pending" {
 		t.Fatalf("status = %q, want the proposal still waiting", status)
 	}
+}
+
+// A switch-off must wait for a transaction that already read "on", so nothing
+// applies after the admin's change has returned.
+func TestTheSwitchOffWaitsForAnApplyAlreadyInFlight(t *testing.T) {
+	e := Setup(t)
+	ctx := e.Admin()
+	done := make(chan error, 1)
+	waiting := func() bool {
+		var n int
+		err := OwnerConn(t).QueryRow(context.Background(),
+			`SELECT count(*) FROM pg_locks WHERE locktype = 'advisory' AND NOT granted`).Scan(&n)
+		if err != nil {
+			t.Fatalf("reading lock waits: %v", err)
+		}
+		return n > 0
+	}
+	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		mode, err := approvals.AutoApplyModeTx(ctx, tx, e.Rep1, deals.CloseDateCorrectionKind)
+		if err != nil || mode != approvals.ModeAuto {
+			t.Fatalf("in-flight read = %q, %v; want auto", mode, err)
+		}
+		go func() {
+			SetAutoApplyEnabled(t, e, false)
+			done <- nil
+		}()
+		patience, stop := context.WithTimeout(context.Background(), 20*time.Second)
+		defer stop()
+		for !waiting() {
+			if patience.Err() != nil {
+				t.Fatal("the switch-off never queued behind the in-flight apply")
+			}
+			runtime.Gosched()
+		}
+		select {
+		case <-done:
+			t.Fatal("the switch-off returned while an apply that read on was still open")
+		default:
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("in-flight transaction: %v", err)
+	}
+	<-done
+	err = database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		mode, err := approvals.AutoApplyModeTx(ctx, tx, e.Rep1, deals.CloseDateCorrectionKind)
+		if mode != approvals.ModeManual {
+			t.Errorf("after the switch-off returned, mode = %q, want manual", mode)
+		}
+		return err
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func putSwitch(ctx context.Context, h approvals.Handlers) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(http.MethodPut, "/autonomy/installation", strings.NewReader(`{"enabled":false}`)).WithContext(ctx)
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	h.UpdateAutoApplyInstallation(rec, req)
+	return rec
+}
+
+func switchHandlers(t *testing.T, e *Env, environ ...string) approvals.Handlers {
+	t.Helper()
+	t.Cleanup(func() { e.WsExec(t, `DELETE FROM setting WHERE key = $1`, approvals.AutoApplyEnabled.Key()) })
+	cfg := configtest.StoredOver(t, e.Pool, approvals.ConfigSettings(), environ...)
+	locks := func(surface []config.Any) *[]crmcontracts.SettingLock {
+		l := compose.Locks(cfg, surface)
+		return &l
+	}
+	return approvals.NewHandlers(approvals.NewService(e.DB())).WithSettings(cfg).WithLocks(locks)
+}
+
+func TestTheSwitchRouteTakesAnAdminAndRefusesEveryoneElse(t *testing.T) {
+	e := Setup(t)
+	h := switchHandlers(t, e)
+
+	if rec := putSwitch(e.As(e.Rep1, nil, RepPerms), h); rec.Code != http.StatusForbidden {
+		t.Errorf("a rep switching it off got %d, want 403", rec.Code)
+	}
+	agent := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS), principal.Principal{
+		Type: principal.PrincipalAgent, ID: "agent:test", UserID: e.AdminUser, OnBehalfOf: e.AdminUser,
+		PassportID: ids.NewV7(),
+		Permissions: principal.Permissions{
+			RoleKeys: []string{"admin"}, RowScope: principal.RowScopeAll,
+			Objects: map[string]principal.ObjectGrant{"installation_settings": {Read: true, Update: true}},
+		},
+	})
+	if rec := putSwitch(agent, h); rec.Code != http.StatusForbidden {
+		t.Errorf("an agent switching it off got %d, want 403", rec.Code)
+	}
+	if !getAutonomy(e.As(e.Rep1, nil, RepPerms), h).On {
+		t.Fatal("after two refusals the switch reads off, want still on")
+	}
+	if rec := putSwitch(e.AdminWithRole(), h); rec.Code != http.StatusOK {
+		t.Fatalf("an admin switching it off got %d: %s", rec.Code, rec.Body.String())
+	}
+	if getAutonomy(e.As(e.Rep1, nil, RepPerms), h).On {
+		t.Error("GET /autonomy still reports the switch on after the admin's PUT")
+	}
+}
+
+func TestABootLockedSwitchAnswers409WithItsLocks(t *testing.T) {
+	e := Setup(t)
+	h := switchHandlers(t, e, "MARGINCE_APPROVALS_AUTO_APPLY_ENABLED=true")
+
+	rec := putSwitch(e.AdminWithRole(), h)
+	if rec.Code != http.StatusConflict {
+		t.Fatalf("changing a boot-locked switch got %d, want 409", rec.Code)
+	}
+	got := getAutonomy(e.AdminWithRole(), h)
+	if got.Locks == nil || len(got.Locks) != 1 || got.Locks[0].Key != approvals.AutoApplyEnabled.Key() {
+		t.Fatalf("GET /autonomy locks = %+v, want the switch named as locked", got.Locks)
+	}
+}
+
+type autonomyAnswer struct {
+	On    bool                       `json:"auto_apply_enabled"`
+	Locks []crmcontracts.SettingLock `json:"locks"`
+}
+
+func getAutonomy(ctx context.Context, h approvals.Handlers) autonomyAnswer {
+	rec := httptest.NewRecorder()
+	h.GetAutonomy(rec, httptest.NewRequest(http.MethodGet, "/autonomy", nil).WithContext(ctx))
+	var out autonomyAnswer
+	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil || rec.Code != http.StatusOK {
+		panic("GET /autonomy answered " + rec.Body.String())
+	}
+	return out
 }

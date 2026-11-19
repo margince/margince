@@ -672,3 +672,11 @@ func openWriter(t *testing.T) pgx.Tx {
 	})
 	return writer
 }
+
+func TestTheInstallationSwitchStopsTheClose(t *testing.T) {
+	c := setupCloseLost(t)
+	integration.SetAutoApplyEnabled(t, c.Env, false)
+	if got := c.run(t); got != 0 {
+		t.Fatalf("closed %d deals with the installation switch off", got)
+	}
+}

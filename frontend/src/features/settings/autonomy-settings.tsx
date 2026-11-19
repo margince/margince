@@ -9,6 +9,7 @@ import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { Switch } from "../../design-system/switch";
 import { useToast } from "../../design-system/toast";
 import { formatNumber } from "../../format/format";
+import { lockReasonOr } from "../../format/settinglocks";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCanMutate, useHoldsAdminRole } from "../../lib/capability";
@@ -243,6 +244,7 @@ export function AutonomySettingsCard() {
           <AutonomyChoices
             rows={settings.data}
             installationOn={settings.auto_apply_enabled}
+            locks={settings.locks}
           />
         )}
       </QueryGate>
@@ -253,7 +255,12 @@ export function AutonomySettingsCard() {
 function AutonomyChoices({
   rows,
   installationOn,
-}: Readonly<{ rows: readonly KindAutonomy[]; installationOn: boolean }>) {
+  locks,
+}: Readonly<{
+  rows: readonly KindAutonomy[];
+  installationOn: boolean;
+  locks: components["schemas"]["AutonomySettings"]["locks"];
+}>) {
   const t = useT();
   const admin = useHoldsAdminRole();
   const mutable = useCanMutate();
@@ -282,6 +289,12 @@ function AutonomyChoices({
                 labelHidden
                 checked={installationOn}
                 disabled={!mutable || bound.isPending}
+                reason={lockReasonOr(
+                  locks,
+                  "approvals.auto_apply_enabled",
+                  t,
+                  undefined,
+                )}
                 onChange={(next) => bound.mutate(next)}
               />
             }

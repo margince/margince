@@ -74701,6 +74701,7 @@ components:
         that is eligible to apply automatically, whether or not they have ever met it.
       required: [data, auto_apply_enabled]
       properties:
+        locks: { $ref: '#/components/schemas/SettingLocks', readOnly: true }
         data: { type: array, items: { $ref: '#/components/schemas/KindAutonomy' } }
         auto_apply_enabled:
           type: boolean

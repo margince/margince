@@ -13,6 +13,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/settings"
 )
 
 // installationSettingsObject is the grant that reads the installation's settings.
@@ -38,7 +39,14 @@ var AutoApplyEnabled = config.DefineStored(config.Spec[bool]{
 
 // AutoApplyEnabledTx is the one read of the switch, for the applier, the
 // sweeps and the rep's settings screen, in the caller's transaction.
+//
+// The shared decision lock makes a switch-off wait for every transaction that
+// read "on" here, and makes this wait for one in flight. It holds when no row
+// exists yet, so the default cannot slip past an off request either.
 func AutoApplyEnabledTx(ctx context.Context, tx pgx.Tx) (bool, error) {
+	if err := settings.ShareLockForDecision(ctx, tx, AutoApplyEnabled.Key()); err != nil {
+		return false, err
+	}
 	return config.StoredApplyTx(ctx, tx, config.Bound(), AutoApplyEnabled)
 }
 
