@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+package dealscout
 
 // Which sent documents Deal Scout reads as a proposal or a contract. The
 // decision is the file's type and the WORDS of its name, never a substring: a
@@ -53,7 +53,7 @@ func filenameWordsSQL(filename string) string {
 
 // proposalDocumentSQL is the condition that an attachment is a document whose
 // name says it is a proposal or a contract. arg binds the vocabularies.
-func proposalDocumentSQL(filename, contentType string, arg func(any) int) string {
+func ProposalDocumentSQL(filename, contentType string, arg func(any) int) string {
 	words := filenameWordsSQL(filename)
 	bareType := `lower(btrim(split_part(coalesce(` + contentType + `, ''), ';', 1)))`
 	ext := `lower(coalesce(substring(` + filename + ` from '\.[^./]*$'), ''))`

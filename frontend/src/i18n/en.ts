@@ -6124,6 +6124,7 @@ export const en = {
     "Fewer than two engaged. Reach a second contact.",
   "deal.committee.foot": "{named} named · {engaged} of {named} engaged",
   "deal.brief.title": "What this deal is",
+  "deal.brief.byModel": "Written by Margince from the customer’s email",
   "deal.room.open": "Open",
   "deal.room.setUp": "Set up",
   "deal.room.none": "No room yet",
@@ -6218,6 +6219,8 @@ export const en = {
   "deal.winProbability.band.zero": "0%",
   "field.unset": "Not set",
   "deal.standing.figure.offer": "Offer {number} · version {revision}",
+  "deal.standing.figure.amountByModel": "Read by Margince from the email",
+  "deal.standing.figure.currencyGuessed": "Currency assumed, check it",
   "deal.standing.figure.next": "Next step",
   "standing.noneYet": "None yet",
   "deal.standing.figure.daysInStage": "Days in stage",
@@ -22176,7 +22179,10 @@ export const en = {
   "privateMailRequests.title": "Requests in private mail",
   "privateMailRequests.switch": "Check private mail for requests",
   "privateMailRequests.hint":
-    "The AI reads private mail to find what a customer asks of its reader. Mail marked confidential or held on purpose is never read.",
+    "The AI reads private mail to find what a customer asks of its reader, and requests for a quotation. This decides only what the AI reads. Mail marked confidential or held on purpose is never read.",
+  "privateMailRequests.share": "Share quotation requests from private mail",
+  "privateMailRequests.shareHint":
+    "A request for a quotation in private mail opens a deal. With this on, everyone in your company sees on that deal what the customer asked for. Mail marked confidential or held on purpose is never shared.",
   "privateMailRequests.readOnly": "An admin changes this setting.",
   "privateMailRequests.notSaved": "Setting was not saved.",
   "stage.criteria.kindLegalReviewed": "Legal approved",

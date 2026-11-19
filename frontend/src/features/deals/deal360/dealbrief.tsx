@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button } from "../../../design-system/atoms";
+import { Badge, Button } from "../../../design-system/atoms";
 import {
   OverviewCard,
   OverviewText,
@@ -18,9 +18,13 @@ const COLLAPSED_LINES = 6;
  */
 export function DealBrief({
   brief,
+  byModel,
   onEdit,
 }: Readonly<{
   brief?: string | null;
+  // Margince wrote the brief from the customer's mail and nobody edited it
+  // since. The rep checks it before trusting it.
+  byModel?: boolean;
   // Opens the deal's fields where the brief is written; absent while the
   // deal takes no writes from this reader.
   onEdit?: () => void;
@@ -48,6 +52,7 @@ export function DealBrief({
     >
       {text ? (
         <>
+          <ByModelMark shown={byModel} />
           <OverviewText>
             <span
               className={
@@ -71,4 +76,10 @@ export function DealBrief({
       ) : undefined}
     </OverviewCard>
   );
+}
+
+/** Says Margince wrote the brief from the customer's email. */
+function ByModelMark({ shown }: Readonly<{ shown?: boolean }>) {
+  const t = useT();
+  return shown ? <Badge tone="ai">{t("deal.brief.byModel")}</Badge> : null;
 }

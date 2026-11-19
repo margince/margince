@@ -44,7 +44,7 @@ var subjectRenderers = map[string]bool{
 // countsSendingSystemMail are the readers that keep mail from a
 // sending system. Each says why that is right.
 var countsSendingSystemMail = gatekit.Waive(map[string]string{
-	"internal/compose/dealscoutsql.go :: scoutEvidenceSQL": "reads outbound mail only, and a sending system never receives a reply from us as its own mail, so no row of it carries the stamp",
+	"internal/compose/dealscout/sql.go :: scoutEvidenceSQL": "reads outbound mail only, and a sending system never receives a reply from us as its own mail, so no row of it carries the stamp",
 })
 
 type declUnit struct {
