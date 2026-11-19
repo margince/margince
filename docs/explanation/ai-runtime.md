@@ -262,10 +262,12 @@ learn its identity, this gap comes back on every tick. It lasts for as long as o
 
 RBAC: reading and changing the allowance is its own object, `ai_budget`. `admin` and `ops` can change
 it, `management` can read it, and nobody else sees it. It is separate from `ai_diagnostics` (counts of
-waiting work, finding tiers no ladder uses) and `ai_routing` (the provider binding itself).
-`ai_diagnostics` also shows the receipt's count of machine actions it cannot place, and the
-`unplaced` source of System health, which counts them by entity type and action over the last 7
-days. So a custom role can hold any set of the three. The full matrix: [reference/rbac-matrix.md](../reference/rbac-matrix.md).
+waiting work, finding tiers no ladder uses) and `ai_routing` (the provider binding itself). So a
+custom role can hold any set of the three. The full matrix: [reference/rbac-matrix.md](../reference/rbac-matrix.md).
+
+`ai_diagnostics` also shows the receipt's count of machine actions it cannot place. It also opens
+the `unplaced` source of System health, which counts them by entity type and action over the last 7
+days.
 
 ## The decision lane
 
