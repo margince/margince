@@ -18,16 +18,10 @@ export const CATEGORY_KEYS: Record<Category, MessageKey> = {
   other: "docs.category.other",
 };
 
-// WHAT A HUMAN MAY CHOOSE, which is not the whole vocabulary. The two
-// `*_attachment` values record PROVENANCE — capture derives them from the
-// transport a file arrived on — and a file being uploaded from this dialog
-// arrived on none. Offering them would let the picker mint a claim about where a
-// file came from that is false the moment it is chosen, and the document library
-// reads that column as an answer to exactly that question.
-//
-// Derived by subtraction from CATEGORY_KEYS rather than listed, so a value added
-// to the contract lands in the picker by default and only a deliberate edit here
-// keeps it out. Not a second hand-kept list: the two drift apart.
+// What a user may choose, which is not the whole vocabulary. The two
+// `*_attachment` values record where a file arrived from, which capture derives.
+// A file added here arrived on no channel, so offering them would be a false claim.
+// The list is CATEGORY_KEYS minus these two, so a new contract value is offered.
 const CAPTURED_ONLY: readonly Category[] = [
   "email_attachment",
   "message_attachment",
