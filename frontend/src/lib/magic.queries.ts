@@ -16,6 +16,22 @@ export type MagicLane = MagicLine["lane"];
 
 export { magicKey } from "./workkeys";
 
+/** Every lane, in reading order: what waits, what broke, what needs restoring, what happened. */
+export const MAGIC_LANES = [
+  "needs_you",
+  "could_not_complete",
+  "watching",
+  "done",
+] as const satisfies readonly MagicLane[];
+
+/** Whether a receipt lacks a lane this client draws: version skew, so not a quiet one. */
+export function lacksLane(receipt: MagicReceipt | undefined): boolean {
+  return (
+    receipt !== undefined &&
+    MAGIC_LANES.some((lane) => !Array.isArray(receipt[lane]))
+  );
+}
+
 // The most lines a lane's page may hold, asked for rather than left to the
 // server's default so the client knows its own bound: the receipt carries no
 // "more" flag, so a lane that FILLS its page may have more beyond it, and every
@@ -50,6 +66,9 @@ export function useMagic(enabled = true) {
   return useQuery({
     ...magicOptions,
     enabled,
+    // The part that mounts to say the read failed would read again, blank the
+    // failure and unmount itself, in a loop. Retry is what reads again.
+    retryOnMount: false,
     select: (receipt) => (enabled ? receipt : undefined),
   });
 }

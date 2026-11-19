@@ -27,7 +27,7 @@ import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { Receipt } from "../../lib/handled";
 import { useHandledForYou } from "../../lib/handled";
-import { type MagicLine, useMagic } from "../../lib/magic.queries";
+import { lacksLane, type MagicLine, useMagic } from "../../lib/magic.queries";
 import { doneLinesApart, lineSentence } from "../../lib/magiccopy";
 import {
   type MarginceChangeBundle,
@@ -73,11 +73,14 @@ export function DoneForYou({
   // state: a failed summary is a failed panel, never a quieter list.
   const state = listReadState(summary, pending ? groups : undefined);
   const doneLines = rowsOf(magic.data?.done).length > 0;
+  // The small changes card is where Home says the receipt did not load or came
+  // back short, so either keeps the section up.
+  const magicShort = magic.isError || lacksLane(magic.data);
   // The last Undo of many keeps the section up after it emptied the list.
   const lastRun = useRememberedUndoRun() !== null;
   if (
     state === "loading" ||
-    (state === "empty" && !doneLines && !lastRun && !magic.isError)
+    (state === "empty" && !doneLines && !lastRun && !magicShort)
   ) {
     return null;
   }

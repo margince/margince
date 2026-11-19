@@ -295,6 +295,32 @@ export const OnePanelRefused: Story = {
   }),
 };
 
+/** The receipt of recent changes refused: Done for you says so once, with
+ *  Retry, and no second section repeats it. */
+export const RecentChangesDidNotLoad: Story = {
+  render: brief({
+    approvals: [...singles],
+    extra: {
+      "GET /magic": () =>
+        jsonResponse({ title: "Server Error", status: 500 }, 500),
+    },
+  }),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const done = await canvas.findByRole("region", {
+      name: en["brief.done.title"],
+    });
+    await within(done).findByText(en["magic.failed"]);
+    await expect(canvas.getAllByText(en["magic.failed"])).toHaveLength(1);
+    await expect(
+      within(done).getAllByRole("button", { name: en["state.retry"] }),
+    ).toHaveLength(1);
+    await expect(
+      canvas.queryByRole("region", { name: en["magic.heading.brief"] }),
+    ).toBeNull();
+  },
+};
+
 // The figures arrived, but a field mask kept rows out of them. Saying so keeps
 // a partial answer from reading as a wrong one.
 export const PipelinePartial: Story = {
