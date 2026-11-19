@@ -106,7 +106,7 @@ func TestANewPipelineIsBornWithAWonAndALostStage(t *testing.T) {
 			if err != nil {
 				t.Fatalf("creating the pipeline: %v", err)
 			}
-			stages, err := e.store.ListStages(e.as(), ptrTo(ids.From[ids.PipelineKind](ids.UUID(pipeline.Id))), storekit.LiveOnly)
+			stages, err := e.store.ListStages(e.as(), new(ids.From[ids.PipelineKind](ids.UUID(pipeline.Id))), storekit.LiveOnly)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -120,8 +120,6 @@ func TestANewPipelineIsBornWithAWonAndALostStage(t *testing.T) {
 		})
 	}
 }
-
-func ptrTo[T any](v T) *T { return &v }
 
 func TestADealTakesNoStageInARetiredPipeline(t *testing.T) {
 	e := setupConfigEnv(t)
