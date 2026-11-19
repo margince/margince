@@ -47,7 +47,8 @@ function ReadOnlyText({
 // reader chooses rather than the browser.
 type TextKind = "text" | "email" | "number" | "date" | "decimal";
 
-function InlineTextControl({
+/** The one control a text field's edit dialog holds. */
+export function InlineTextControl({
   field,
   multiline,
   type,

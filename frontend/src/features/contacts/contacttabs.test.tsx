@@ -625,7 +625,7 @@ describe("the deals tab", () => {
     // `employment` and the picker searches COMPANIES, so a reader typing a deal
     // name would find nothing and never learn why.
     await userEvent.type(
-      screen.getByRole("searchbox", { name: "Deal" }),
+      screen.getByRole("searchbox", { name: /^Deal/ }),
       "Depot",
     );
     await waitFor(

@@ -7,6 +7,7 @@ import type { LeadingCurrencies } from "../../format/currencychoices";
 import type { Locale } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import type { AcquisitionSource } from "../../lib/acquisitionsources.queries";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import type { Project } from "../projects/projects.form";
 import {
   dealCommercialFields,
@@ -100,7 +101,7 @@ export const dealCloseDateField = {
 } satisfies CreateField;
 
 export function dealEditFields(
-  t: (k: MessageKey) => string,
+  t: (k: MessageKey, params?: Record<string, string>) => string,
   opts: {
     partnerOptions: { value: string; label: string }[];
     // The partner this deal already names, when it names one. Keeps the field
@@ -142,9 +143,15 @@ export function dealEditFields(
       values.currency || opts.currency,
     locale: opts.locale,
     t,
+    nonNegative: true,
   };
   return [
-    { key: "name", label: "create.dealName", required: true },
+    {
+      key: "name",
+      label: "create.dealName",
+      required: true,
+      maxLength: TEXT_LIMITS.label,
+    },
     amountField({ key: "amount", label: "create.amount" }, money),
     // The recurring half of the price, annual, in the same currency as the
     // amount above. Beside it, not in a section of its own: the two are one
