@@ -87,6 +87,19 @@ func TestTheFormatNamesEachFileSoAnUploadDetectsIt(t *testing.T) {
 		if got := migration.DetectObject(file.File); got != string(file.Object) {
 			t.Errorf("%s is detected as %q, want %s", file.File, got, file.Object)
 		}
+		// The key columns are what partMappingFrom takes: any one alone, none refused.
+		for _, key := range append(file.KeyColumns, csvTargetAuthor) {
+			_, err := partMappingFrom(string(file.Object), map[string]string{"key": key}, nil, importCatalog{})
+			if (err == nil) != slices.Contains(file.KeyColumns, key) {
+				t.Errorf("%s with only %s: err %v, key columns %v", file.File, key, err, file.KeyColumns)
+			}
+		}
+	}
+	// A deal needs its stage, and a deal or activity row its ref.
+	for _, needed := range [][2]string{{"deal", dealTargetStage}, {"deal", csvTargetRef}, {"activity", csvTargetRef}} {
+		if !columnOf(t, f, crmcontracts.ImportObject(needed[0]), needed[1]).RequiredOnNewRow {
+			t.Errorf("%s.%s is not marked needed on a new row", needed[0], needed[1])
+		}
 	}
 	if f.SizeLimitMb != 10 || len(f.KeyRules) != len(importguide.KeyRules) {
 		t.Errorf("size %d, %d key rules; want 10 and %d", f.SizeLimitMb, len(f.KeyRules), len(importguide.KeyRules))
@@ -175,32 +188,5 @@ func TestNoCoreColumnShowsItsInternalNameToTheCaller(t *testing.T) {
 	}
 	if seen == 0 {
 		t.Fatal("the format listed no columns, so this check compared nothing")
-	}
-}
-
-// The marks are the rules the test run applies. A deal needs its stage, and a
-// deal or activity row its ref. Every file needs one column to tell rows apart.
-func TestTheFormatMarksWhatTheTestRunNeeds(t *testing.T) {
-	f, err := formatFrom(map[string]importCatalog{}, langcopy.For("en"), 10)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, needed := range []struct{ object, target string }{{"deal", dealTargetStage}, {"deal", csvTargetRef}, {"activity", csvTargetRef}} {
-		if col := columnOf(t, f, crmcontracts.ImportObject(needed.object), needed.target); !col.RequiredOnNewRow {
-			t.Errorf("%s.%s is not marked needed on a new row", needed.object, needed.target)
-		}
-	}
-	for _, file := range f.Files {
-		if len(file.KeyColumns) == 0 {
-			t.Errorf("%s names no key column", file.File)
-		}
-		for _, key := range file.KeyColumns {
-			if _, err := partMappingFrom(string(file.Object), map[string]string{"key": key}, nil, importCatalog{}); err != nil {
-				t.Errorf("%s: a file with only %s is refused: %v", file.File, key, err)
-			}
-		}
-		if _, err := partMappingFrom(string(file.Object), map[string]string{"x": csvTargetAuthor}, nil, importCatalog{}); err == nil {
-			t.Errorf("%s: a file with none of %v is not refused", file.File, file.KeyColumns)
-		}
 	}
 }

@@ -49,21 +49,28 @@ func (e *UnsupportedTypeError) Error() string {
 // acceptedKindsInWords is acceptedContentTypes as an uploader names them.
 const acceptedKindsInWords = "plain text, Markdown, CSV or JSON"
 
+// The kinds an uploader names an office file by.
+const (
+	kindWord       = "Word"
+	kindExcel      = "Excel"
+	kindPowerPoint = "PowerPoint"
+)
+
 // officeKinds name the files whose kind is not their own letters: nobody calls a
 // .docx a "DOCX file". Keyed by ending and by media type, so either one names it.
 var officeKinds = map[string]string{
-	"doc":                "Word",
-	"docx":               "Word",
-	"xls":                "Excel",
-	"xlsx":               "Excel",
-	"ppt":                "PowerPoint",
-	"pptx":               "PowerPoint",
-	"application/msword": "Word",
-	"application/vnd.openxmlformats-officedocument.wordprocessingml.document": "Word",
-	"application/vnd.ms-excel": "Excel",
-	"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":         "Excel",
-	"application/vnd.ms-powerpoint":                                             "PowerPoint",
-	"application/vnd.openxmlformats-officedocument.presentationml.presentation": "PowerPoint",
+	"doc":                kindWord,
+	"docx":               kindWord,
+	"xls":                kindExcel,
+	"xlsx":               kindExcel,
+	"ppt":                kindPowerPoint,
+	"pptx":               kindPowerPoint,
+	"application/msword": kindWord,
+	"application/vnd.openxmlformats-officedocument.wordprocessingml.document": kindWord,
+	"application/vnd.ms-excel": kindExcel,
+	"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":         kindExcel,
+	"application/vnd.ms-powerpoint":                                             kindPowerPoint,
+	"application/vnd.openxmlformats-officedocument.presentationml.presentation": kindPowerPoint,
 }
 
 // maxKindEnding bounds the ending quoted back as a kind. A longer one is not a
