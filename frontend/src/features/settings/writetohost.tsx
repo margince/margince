@@ -6,8 +6,13 @@ import { lazy } from "../../i18n/lazy";
 import { useMailboxConnected } from "../../lib/connectors";
 import { WriteToProvider, type WriteToTarget } from "../../lib/writeto";
 
+/** The composer's one import path: the lazy host below, and a test loading it before a press. */
+export function loadComposer() {
+  return import("../mail/compose");
+}
+
 const ComposeModal = lazy(async () => ({
-  default: (await import("../mail/compose")).ComposeModal,
+  default: (await loadComposer()).ComposeModal,
 }));
 
 /**

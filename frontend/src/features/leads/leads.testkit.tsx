@@ -13,6 +13,9 @@ import { LocaleProvider } from "../../i18n";
 import { meFixture } from "../../testing/mefixture";
 import { RecordShell } from "../../testing/recordshell.testkit";
 import { WriteToHost } from "../settings/writetohost";
+
+export { loadComposer } from "../settings/writetohost";
+
 import { SIGNAL_CATALOG } from "./leadsignals.fixture";
 
 // Edit, Share and Disqualify live behind the header's overflow trigger, whose

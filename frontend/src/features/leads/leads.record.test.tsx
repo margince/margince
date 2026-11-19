@@ -24,6 +24,7 @@ import {
   jsonResponse,
   LEAD_GRANTS,
   lead,
+  loadComposer,
   openLeadActions,
   render,
   SHIPPED_LEAD_ORIGINS,
@@ -847,7 +848,7 @@ describe("LeadScreen — the header's Email verb", () => {
   // The composer is a lazy chunk. Loaded here, a press opens it at once rather
   // than racing a cold import on a slow runner.
   beforeAll(async () => {
-    await import("../mail/compose");
+    await loadComposer();
   });
 
   it("carries the same Email verb every record header does", async () => {
