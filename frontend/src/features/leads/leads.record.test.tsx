@@ -845,8 +845,8 @@ describe("terminalBadge (archived/terminal labelling)", () => {
 });
 
 describe("LeadScreen — the header's Email verb", () => {
-  // The composer is a lazy chunk. Loaded here, a press opens it at once rather
-  // than racing a cold import on a slow runner.
+  // The composer's chunks load here, so a press waits on its render and not on
+  // a cold import of the window on a slow runner.
   beforeAll(async () => {
     await loadComposer();
   });
