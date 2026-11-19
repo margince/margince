@@ -367,8 +367,8 @@ func day(at time.Time) time.Time {
 
 // closeDayOn places a close date, a zoneless day, on loc's calendar, so it
 // compares with a day cut in loc.
-func closeDayOn(close *time.Time, loc *time.Location) time.Time {
-	return time.Date(close.Year(), close.Month(), close.Day(), 0, 0, 0, 0, loc)
+func closeDayOn(closeDate *time.Time, loc *time.Location) time.Time {
+	return time.Date(closeDate.Year(), closeDate.Month(), closeDate.Day(), 0, 0, 0, 0, loc)
 }
 
 // A deal in a stage whose own exit criteria are not met.

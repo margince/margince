@@ -271,9 +271,9 @@ func TestAStartDateBoundsTheSameInEverySessionZone(t *testing.T) {
 	}
 }
 
-// The stored clock asks "does this contact work there now" the way the walk
-// does: a departure still ahead is a notice period, and an employment
-// asserted as former is over though it has no end date.
+// The stored clock asks "does this contact work there now" as the walk does.
+// A departure still ahead is a notice period. An employment asserted as former
+// is over even with no end date.
 func TestTheCompanyClockReadsCurrentEmploymentLikeTheWalk(t *testing.T) {
 	e := Setup(t)
 	notice := time.Date(2099, time.January, 1, 0, 0, 0, 0, time.UTC)
