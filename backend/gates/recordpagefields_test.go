@@ -522,8 +522,10 @@ func TestEverySidecarFieldTheRecordPagesRenderIsOneAnAgentCanRead(t *testing.T) 
 
 func TestRecordPageCensusReadsTheFieldOfEveryKeyedShape(t *testing.T) {
 	t.Parallel()
-	kinds := []sidecarKind{{schema: "CompanyProfileField", pageDir: "page/",
-		vocabulary: []string{"icp", "register_vat", "registered_address"}}}
+	kinds := []sidecarKind{{
+		schema: "CompanyProfileField", pageDir: "page/",
+		vocabulary: []string{"icp", "register_vat", "registered_address"},
+	}}
 	const head = `type Key = components["parameters"]["ProfileFieldKey"];
 type RowProps = Readonly<{
   label: string;
