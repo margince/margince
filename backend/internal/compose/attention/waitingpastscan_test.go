@@ -39,7 +39,7 @@ func (d *dealsWaitingStore) DealsWaiting(_ context.Context, _ time.Time, _ Waiti
 }
 
 func (d *dealsWaitingStore) CardsAmong(context.Context, time.Time, WaitingFor, []ids.UUID) (map[ids.UUID]bool, error) {
-	return nil, nil
+	return map[ids.UUID]bool{}, nil
 }
 
 // atRiskDay is a day whose at-risk lane holds these deals.
