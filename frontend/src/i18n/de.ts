@@ -9469,7 +9469,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.signatureSub":
     "Steht unter jeder Nachricht, die du sendest, oberhalb der Fußzeile zum Abbestellen.",
   "settings.signatureLabel": "Grußformel",
-  "settings.signaturePlaceholder": "Marek Janetzke\nGradion · +49 40 123456",
+  "settings.signaturePlaceholder": "Dein Name\nUnternehmen · Telefon",
   "settings.signatureHint":
     "Nur Text. Ohne Grußformel enden E-Mails mit einem Gruß und deinem Namen. Die KI fügt nie eine Grußformel hinzu.",
   "settings.signatureSaving": "Wird gespeichert…",

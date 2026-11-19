@@ -9211,7 +9211,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.signatureSub":
     "Chèn vào dưới mỗi email bạn gửi, phía trên chân trang hủy đăng ký.",
   "settings.signatureLabel": "Lời kết",
-  "settings.signaturePlaceholder": "Nguyễn Minh Anh\nGradion · +84 28 123456",
+  "settings.signaturePlaceholder": "Tên của bạn\nCông ty · Điện thoại",
   "settings.signatureHint":
     "Văn bản thuần. Nếu để trống, thư sẽ kết thúc bằng lời chào và tên của bạn. AI không bao giờ tự thêm chữ ký.",
   "settings.signatureSaving": "Đang lưu…",

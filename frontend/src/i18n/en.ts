@@ -9408,7 +9408,7 @@ export const en = {
   "settings.signatureSub":
     "Added below every message you send, above the unsubscribe footer.",
   "settings.signatureLabel": "Sign-off",
-  "settings.signaturePlaceholder": "Marek Janetzke\nGradion · +49 40 123456",
+  "settings.signaturePlaceholder": "Your name\nCompany · Phone",
   "settings.signatureHint":
     "Plain text. If empty, mail closes with a greeting and your name. AI never adds one.",
   "settings.signatureSaving": "Saving…",
