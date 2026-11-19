@@ -34,7 +34,7 @@ function story(data: Row[]) {
   return () => {
     installFetchStub({
       "GET /me": meRoute({}),
-      "GET /autonomy": () => jsonResponse({ data }),
+      "GET /autonomy": () => jsonResponse({ data, auto_apply_enabled: true }),
     });
     return (
       <StoryProviders>
