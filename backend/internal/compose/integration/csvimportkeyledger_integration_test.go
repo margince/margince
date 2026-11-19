@@ -107,10 +107,14 @@ func TestAResumedCommitRefusesADomainAnEarlierAttemptLanded(t *testing.T) {
 // so the test run must not fold it before asking.
 func TestALeadRowMeetsAMixedCaseLinkedInURLAsTheStoreDoes(t *testing.T) {
 	e := setupImportApp(t)
-	createdID(t, e, "/v1/leads", AnyMap{"source": "manual", "full_name": "Stored Lee", "email": "stored-lee@case.test",
-		"linkedin_url": "https://www.linkedin.com/in/Mixed-Case-Lee"})
-	createdID(t, e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Stored Con",
-		"linkedin_url": "https://www.linkedin.com/in/Mixed-Case-Con"})
+	createdID(t, e, "/v1/leads", AnyMap{
+		"source": "manual", "full_name": "Stored Lee", "email": "stored-lee@case.test",
+		"linkedin_url": "https://www.linkedin.com/in/Mixed-Case-Lee",
+	})
+	createdID(t, e, "/v1/contacts", AnyMap{
+		"source": "manual", "full_name": "Stored Con",
+		"linkedin_url": "https://www.linkedin.com/in/Mixed-Case-Con",
+	})
 	files := map[string]string{"leads.csv": "ref,full_name,email,linkedin\n" +
 		"l1,Lee File,lee-file@case.test,https://www.linkedin.com/in/Mixed-Case-Lee\n" +
 		"l2,Con File,con-file@case.test,https://www.linkedin.com/in/Mixed-Case-Con\n"}

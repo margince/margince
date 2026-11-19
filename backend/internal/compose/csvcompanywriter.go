@@ -71,23 +71,36 @@ type keyCheck struct {
 func (w *csvWriters) keyChecks(ctx context.Context, row migration.Row, typed map[string]any) []keyCheck {
 	keys, ledger := w.keysOf(row, typed), w.links.claims
 	email, url := strings.TrimSpace(textFields(row.Fields)[fieldEmail]), keys[importkeys.LinkedIn]
-	linkedIn := keyCheck{linkedInClaimedWhy, ledger.Held(importkeys.LinkedIn, url, w.object),
-		func() (bool, error) { return importkeys.LinkedInHeld(ctx, w.pool, w.object, url) }}
+	linkedIn := keyCheck{
+		linkedInClaimedWhy, ledger.Held(importkeys.LinkedIn, url, w.object),
+		func() (bool, error) { return importkeys.LinkedInHeld(ctx, w.pool, w.object, url) },
+	}
 	switch w.object {
 	case migration.ObjectContact:
-		return []keyCheck{{contactEmailClaimedWhy,
+		return []keyCheck{{
+			contactEmailClaimedWhy,
 			ledger.Held(importkeys.Email, keys[importkeys.Email], migration.ObjectContact, migration.ObjectLead),
-			func() (bool, error) { return w.contactEmailAlreadyHeld(ctx, row) }}}
+			func() (bool, error) { return w.contactEmailAlreadyHeld(ctx, row) },
+		}}
 	case migration.ObjectLead:
-		return []keyCheck{{naturalKeyTakenWhy, ledger.Held(importkeys.Email, keys[importkeys.Email], migration.ObjectLead),
-			func() (bool, error) { return importkeys.LeadEmailHeld(ctx, w.pool, email) }}, linkedIn,
-			{contactHoldsLeadWhy, ledger.Held(importkeys.Email, keys[importkeys.Email], migration.ObjectContact) ||
-				ledger.Held(importkeys.LinkedIn, url, migration.ObjectContact),
-				func() (bool, error) { return importkeys.ContactHoldsLeadKeys(ctx, w.pool, email, url) }}}
+		return []keyCheck{
+			{
+				naturalKeyTakenWhy, ledger.Held(importkeys.Email, keys[importkeys.Email], migration.ObjectLead),
+				func() (bool, error) { return importkeys.LeadEmailHeld(ctx, w.pool, email) },
+			},
+			linkedIn,
+			{
+				contactHoldsLeadWhy, ledger.Held(importkeys.Email, keys[importkeys.Email], migration.ObjectContact) ||
+					ledger.Held(importkeys.LinkedIn, url, migration.ObjectContact),
+				func() (bool, error) { return importkeys.ContactHoldsLeadKeys(ctx, w.pool, email, url) },
+			},
+		}
 	case migration.ObjectCompany:
 		domain := keys[importkeys.Domain]
-		return []keyCheck{{domainClaimedWhy, ledger.Held(importkeys.Domain, domain, migration.ObjectCompany),
-			func() (bool, error) { return importkeys.DomainHeld(ctx, w.pool, domain) }}, linkedIn}
+		return []keyCheck{{
+			domainClaimedWhy, ledger.Held(importkeys.Domain, domain, migration.ObjectCompany),
+			func() (bool, error) { return importkeys.DomainHeld(ctx, w.pool, domain) },
+		}, linkedIn}
 	}
 	return nil
 }
