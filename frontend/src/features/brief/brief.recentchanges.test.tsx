@@ -4,7 +4,12 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
 import { magicKey } from "../../lib/magic.queries";
-import { jsonResponse, render, stubApi } from "../../testing/brief.testkit";
+import {
+  type Call,
+  jsonResponse,
+  render,
+  stubApi,
+} from "../../testing/brief.testkit";
 import { line, receipt } from "../../testing/magic.fixtures";
 import { BriefScreen } from "./brief";
 
@@ -44,6 +49,10 @@ function doneForYou(): Promise<HTMLElement> {
   return screen.findByRole("region", { name: en["brief.done.title"] });
 }
 
+function magicReads(calls: readonly Call[]): number {
+  return calls.filter((call) => call.path === "/magic").length;
+}
+
 function waitingSection(): HTMLElement | null {
   return screen.queryByRole("region", { name: en["magic.heading.brief"] });
 }
@@ -66,11 +75,11 @@ it("says once, inside Done for you, that recent changes did not load, and Retry 
   answer = () => jsonResponse(night);
   await user.click(retry[0]);
   expect(await within(done).findByText("1 small change")).toBeTruthy();
-  await waitFor(() => expect(waitingSection()).toBeTruthy());
+  const waiting = await screen.findByRole("region", {
+    name: en["magic.heading.brief"],
+  });
   expect(
-    within(waitingSection() as HTMLElement).getByRole("list", {
-      name: en["magic.lane.needsYou"],
-    }),
+    within(waiting).getByRole("list", { name: en["magic.lane.needsYou"] }),
   ).toBeTruthy();
   expect(screen.queryByText(en["magic.failed"])).toBeNull();
 });
@@ -112,4 +121,58 @@ it("offers no Undo from the cached receipt once its refresh fails", async () => 
   ).toEqual([]);
   expect(screen.queryByText("1 small change")).toBeNull();
   expect(waitingSection()).toBeNull();
+});
+
+it("reads a failed receipt once, though Done for you mounts to say so", async () => {
+  const calls = stubApi({ "GET /magic": refused });
+  const { client } = render(<BriefScreen />);
+  const done = await doneForYou();
+  await within(done).findByText(en["magic.failed"]);
+  await waitFor(() =>
+    expect(client.isFetching({ queryKey: magicKey })).toBe(0),
+  );
+  expect(magicReads(calls)).toBe(1);
+  expect(within(done).getByText(en["magic.failed"])).toBeTruthy();
+});
+
+it("keeps the failure and a busy Retry in Done for you while it reads again", async () => {
+  let answer: () => Response | Promise<Response> = refused;
+  stubApi({ "GET /magic": () => answer() });
+  const user = userEvent.setup();
+  render(<BriefScreen />);
+  const done = await doneForYou();
+  const retry = await within(done).findByRole("button", {
+    name: en["state.retry"],
+  });
+  let answerNow: (response: Response) => void = () => undefined;
+  answer = () =>
+    new Promise<Response>((resolve) => {
+      answerNow = resolve;
+    });
+  await user.click(retry);
+  await waitFor(() =>
+    expect(
+      within(done)
+        .getByRole("button", { name: en["state.retry"] })
+        .getAttribute("aria-busy"),
+    ).toBe("true"),
+  );
+  expect(within(done).getByText(en["magic.failed"])).toBeTruthy();
+
+  answerNow(jsonResponse(night));
+  expect(await within(done).findByText("1 small change")).toBeTruthy();
+});
+
+it("reads the receipt again when the reader comes back to Home after a failure", async () => {
+  const calls = stubApi({ "GET /magic": refused });
+  const { rerender } = render(<BriefScreen />);
+  await within(await doneForYou()).findByText(en["magic.failed"]);
+  expect(magicReads(calls)).toBe(1);
+
+  rerender(<p>Elsewhere</p>);
+  rerender(<BriefScreen />);
+  await waitFor(() => expect(magicReads(calls)).toBe(2));
+  expect(
+    await within(await doneForYou()).findByText(en["magic.failed"]),
+  ).toBeTruthy();
 });

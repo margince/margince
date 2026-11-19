@@ -707,12 +707,13 @@ describe("the receipt draws every lane it promises", () => {
   // A lane a newer server renamed is unread, not quiet. Done for you says so
   // once, and the waiting part does not add a section saying only that.
   it("says once, in the done part, that a receipt came back without a lane", async () => {
-    const { watching: _, ...skewed } = receipt({ done: [line()] });
-    stub(skewed as MagicReceipt);
+    // Sent as JSON, an undefined lane is a lane the server never named.
+    const skewed = receipt({ done: [line()], watching: undefined });
+    stub(skewed);
     const waiting = await renderSettled({ lanes: WAITING_LANES });
     expect(waiting.innerHTML).toBe("");
     cleanup();
-    stub(skewed as MagicReceipt);
+    stub(skewed);
     renderMagic("en", undefined, { lanes: ["done"], embedded: true });
     expect(await screen.findByText(en["state.unavailable"])).toBeTruthy();
     expect(screen.getByText("1 small change")).toBeTruthy();

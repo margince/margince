@@ -27,6 +27,7 @@ import {
   type MagicLane,
   type MagicLine,
   type MagicReceipt,
+  magicFailed,
   useMagic,
 } from "../../lib/magic.queries";
 import { doneLinesApart } from "../../lib/magiccopy";
@@ -73,7 +74,9 @@ export function MagicPanel({
   // The READER's own zone. A receipt says when something happened to them, and
   // an instant rendered in UTC asks them to do the arithmetic.
   const zone = browserZone();
-  const magic = useMagic(useCan("deal", "read"));
+  // Embedded, this part mounts to say a read failed. Reading again on that
+  // mount would blank the failure and unmount it, so only Retry reads again.
+  const magic = useMagic(useCan("deal", "read"), !embedded);
   const titleId = useId();
   const receipt = magic.data;
   const state = queryState(magic);
@@ -204,10 +207,10 @@ function DrawnLane({
 }
 
 function queryState(
-  query: Readonly<{ isPending: boolean; isError: boolean }>,
+  query: Parameters<typeof magicFailed>[0],
 ): "loading" | "failed" | "ready" {
-  if (query.isPending) return "loading";
-  return query.isError ? "failed" : "ready";
+  if (magicFailed(query)) return "failed";
+  return query.isPending ? "loading" : "ready";
 }
 
 // Home says a failed or short read once: the part that draws the done lane says

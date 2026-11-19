@@ -160,7 +160,7 @@ Each item names its record and shows the facts that call for action. A badge say
 - Proposals, commitments due today and meetings in the next 24 hours sit there too. A task due later shows once its reminder is due. A quiet day says "No immediate priorities. The full Worklist is available."
 - **Review N deal suggestions** opens the saved brief. Its deals stay separate from the work that needs action now. A brief with no deals shows no opener.
 - **Show Worklist**, under the list: the whole list, with its own filters and pages, and work that is not due yet. Stage change notices stay in the notification center.
-- **Since your last brief**: what waits on you, what Margince could not finish and what needs restoring. It shows only when one of these has something for you.
+- **Since your last brief**: what waits on you, what Margince could not finish and what needs restoring. It shows only when one of these has something for you, or a source it reads did not load.
 - **Done for you**, the deals Margince changed, to keep or undo, and the other work it finished; beside them **External meetings** and **Numbers**.
 - **External meetings** lists today's meetings with someone from outside your company, by start time. A meeting among colleagues is not on it. Each row names the account and the contacts you meet, each a link to their record. The next meeting says how soon it starts and offers **Prepare for meeting**. Margince then writes the brief for that meeting and opens it on Home. With no calendar connected, the panel says so and shows the meetings booked, logged or imported in Margince.
 
@@ -187,7 +187,7 @@ Today names each source it could not read, with **Refresh brief**, and never sho
 
 The work counts come from the current Worklist read. Each part of Home can refresh at a different time. Home reads your day when it holds no copy under five minutes old, and again right after you act on it. For a few seconds, Home may show a copy up to 15 minutes old. It then reads your day again and shows the new copy on its own. Another Worklist page keeps the same members but reads their current state; pages do not share one fixed time.
 
-**Since your last brief** leaves out a proposal that already has a card under **Needs you**. When nothing is left, Home does not show it. When the recent changes did not load, only **Done for you** says so, with **Retry**, and it shows no **Undo** until they load. A change that covers several records lists each record with its time and its full values, before and after. Each record keeps the **Undo** its change allows.
+**Since your last brief** leaves out a proposal that already has a card under **Needs you**. When nothing is left, Home does not show it. When the recent changes did not load, only **Done for you** says so, with **Retry**. Its small changes show no **Undo** until they load; the deal cards keep theirs. A change that covers several records lists each record with its time and its full values, before and after. Each record keeps the **Undo** its change allows.
 
 ### Done for you
 **Done for you**, on **Today**, shows what Margince finished for you. Its band counts the deals Margince changed in the last 7 days and holds **Change history**, which opens the Worklist at its **Change history** panel. Each deal it changed is a card, and the last card holds the small changes, such as **8 small changes**.

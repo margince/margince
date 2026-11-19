@@ -32,7 +32,10 @@ const QUIET: MagicReceipt = {
 };
 
 function panel(receipt: MagicReceipt) {
-  stubWithSession({ "GET /magic": () => jsonResponse(receipt) }, {});
+  stubWithSession(
+    { "GET /magic": () => jsonResponse(receipt) },
+    { deal: ["read", "update"] },
+  );
   return (
     <StoryProviders>
       <MagicPanel />
@@ -150,7 +153,7 @@ export const DidNotLoad: Story = {
         "GET /magic": () =>
           jsonResponse({ title: "Server Error", status: 500 }, 500),
       },
-      {},
+      { deal: ["read"] },
     );
     return (
       <StoryProviders>

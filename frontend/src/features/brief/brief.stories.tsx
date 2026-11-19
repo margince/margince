@@ -301,6 +301,7 @@ export const RecentChangesDidNotLoad: Story = {
   render: brief({
     approvals: [...singles],
     extra: {
+      "GET /me": meRoute({ deal: ["read"] }),
       "GET /magic": () =>
         jsonResponse({ title: "Server Error", status: 500 }, 500),
     },

@@ -62,15 +62,31 @@ export function fillsPage(
  * `enabled` is false for a reader without `deal.read`, which the server
  * requires for the whole answer.
  */
-export function useMagic(enabled = true) {
+export function useMagic(enabled = true, retryOnMount = true) {
   return useQuery({
     ...magicOptions,
     enabled,
-    // The part that mounts to say the read failed would read again, blank the
-    // failure and unmount itself, in a loop. Retry is what reads again.
-    retryOnMount: false,
+    retryOnMount,
     select: (receipt) => (enabled ? receipt : undefined),
   });
+}
+
+/**
+ * Whether the receipt's last answer was a failure: failed now, or read again
+ * after failing with nothing cached, which React Query reports as pending.
+ */
+export function magicFailed(
+  query: Readonly<{
+    isError: boolean;
+    isPending: boolean;
+    isFetching: boolean;
+    errorUpdateCount: number;
+  }>,
+): boolean {
+  return (
+    query.isError ||
+    (query.isPending && query.isFetching && query.errorUpdateCount > 0)
+  );
 }
 
 /** The read useMagic makes, which Home's prefetch also starts. */
