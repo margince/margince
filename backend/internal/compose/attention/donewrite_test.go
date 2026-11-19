@@ -105,6 +105,22 @@ func TestASecondDoneOnARowItsLaneHidesSucceedsWithoutAWrite(t *testing.T) {
 	}
 }
 
+// A row the reader put down does not carry a foreign row past the check. The
+// batch is not found and nothing of it is written.
+func TestARowAlreadyDoneDoesNotAdmitAForeignRowBesideIt(t *testing.T) {
+	t.Parallel()
+	putDown := RowRef{Source: string(sourceAwaitingReply), RowID: ids.NewV7().String()}
+	foreign := RowRef{Source: string(sourceAwaitingReply), RowID: ids.NewV7().String()}
+	spy := &doneStoreSpy{already: map[RowRef]time.Time{putDown: rankInstant.Add(-time.Hour)}}
+	err := meetingPrepService(nil).WithDone(spy).MarkRowsDone(meetingPrepReader(), []RowRef{putDown, foreign})
+	if !errors.Is(err, apperrors.ErrNotFound) {
+		t.Errorf("answered %v, want not found", err)
+	}
+	if len(spy.marked) != 0 {
+		t.Errorf("wrote %v for a refused batch", spy.marked)
+	}
+}
+
 // A row in a lane that never offers Done is a fault in the body, answered as
 // the contract's 422 naming `rows`, and nothing is written.
 func TestDoneOnALaneThatNeverOffersItIsAValidationRefusal(t *testing.T) {
