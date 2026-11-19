@@ -6973,6 +6973,48 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /deals/{id}/move-pipeline:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Deals]
+      operationId: moveDealPipeline
+      security: [ { cookieAuth: [] }, { bearerAuth: [] } ]
+      summary: Move an open deal to another pipeline, onto its first open stage.
+      description: |
+        Puts the deal on the first open stage of a live pipeline other than its own, or on
+        `stage_id` when one is named (an Undo names the stage the deal left). It is a stage advance
+        in every other way: it writes one `deal_stage_history` row and one `advance_stage` audit row,
+        emits `deal.stage_changed`, sets the probability from the new stage, and the legal review
+        gate and the object and row permissions of an advance hold. The stage the deal leaves
+        keeps its exit criteria; only a required legal review blocks a move, and the first open
+        stage has no gated stage before it. The history row keeps no stage positions, because the
+        positions of two pipelines do not compare.
+
+        A won or lost deal answers 422 `deal_closed`, the pipeline the deal is in answers 422
+        `same_pipeline`, a retired pipeline answers 422 `pipeline_retired`, a pipeline with no open
+        stage answers 422 `pipeline_has_no_open_stage`, and a named stage that is not an open stage
+        of the pipeline answers 422 `stage_not_in_pipeline` or `stage_not_open`.
+      x-mcp-tool: { verb: move_deal_pipeline, router: change_state, action: move_deal_pipeline, tier: auto_execute, scope: write, served_by: route }
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MoveDealPipelineRequest' }
+      responses:
+        '200':
+          description: The deal on its new stage, and the probability the move set.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DealAdvanced' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /deals/{id}/close-day:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -57321,6 +57363,12 @@ components:
           type: string
           format: date
           description: The calendar day the deal closed, in the installation's zone. Not after today.
+    MoveDealPipelineRequest:
+      type: object
+      required: [pipeline_id]
+      properties:
+        pipeline_id: { type: string, format: uuid, description: The live pipeline to move the deal to. It must differ from the deal's own. }
+        stage_id: { type: string, format: uuid, description: An open stage of that pipeline. Omit it for the pipeline's first open stage. }
     AdvanceDealRequest:
       type: object
       required: [to_stage_id]

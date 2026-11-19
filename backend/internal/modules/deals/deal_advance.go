@@ -61,6 +61,9 @@ type AdvanceDealInput struct {
 	// imported win keeps the day its source closed it, and the Undo of a
 	// reopen keeps the day the deal was lost.
 	closedAt *time.Time
+	// toPipeline marks a move to another pipeline. ToStageID then names an open
+	// stage of it, or is zero for that pipeline's first open stage.
+	toPipeline *ids.PipelineID
 	// auditEvidence rides into the move's audit row. Margince's own close sets
 	// it, so the Home receipt can say why the deal was closed.
 	auditEvidence map[string]any
@@ -162,14 +165,14 @@ func (s *Store) advanceOnTx(
 		// Moving to the stage the deal already holds changes nothing. Answering
 		// with the deal as it stands makes a retried call safe, where running the
 		// move again would close a closed deal a second time and move its day.
-		if ids.UUID(*current.StageId) == in.ToStageID.UUID {
+		if in.toPipeline == nil && ids.UUID(*current.StageId) == in.ToStageID.UUID {
 			if err := storekit.EnsureIfMatch(ctx, tx, dealTable, id.UUID, in.IfVersion); err != nil {
 				return err
 			}
 			out.Deal, err = readDealForCaller(ctx, tx, id, storekit.LiveOnly, active)
 			return err
 		}
-		semantic, winProbability, err := resolveAdvanceTarget(ctx, tx, in.ToStageID, current)
+		semantic, winProbability, err := resolveMoveTarget(ctx, tx, &in, current)
 		if err != nil {
 			if in.ReferencesFromRequest {
 				err = auth.NameMissingReference(advanceTargetField, err)
@@ -206,7 +209,7 @@ func (s *Store) advanceOnTx(
 		// it was not.
 		from := ids.UUID(*current.StageId)
 		out.HistoryID, err = s.recordStageHistory(ctx, tx, stageHistoryInput{
-			DealID: id, FromStageID: &from, ToStageID: in.ToStageID, ChangedBy: by, OwnerID: (*ids.UUID)(current.OwnerId), PipelineID: ids.UUID(*current.PipelineId),
+			DealID: id, FromStageID: &from, ToStageID: in.ToStageID, ChangedBy: by, OwnerID: (*ids.UUID)(current.OwnerId), PipelineID: pipelineAfterMove(current, in),
 			Amount: current.AmountMinor, Currency: current.Currency,
 			Probability: &winProbability, ApprovalID: in.ApprovalID,
 			ReversalOf: in.ReversalOf, Semantic: &semantic, LostReasonCode: lostReasonCodeFromPatch(p),
@@ -234,6 +237,15 @@ func (s *Store) advanceOnTx(
 		return nil
 	}()
 	return out, err
+}
+
+// pipelineAfterMove is the pipeline the deal stands in after the move.
+// The history row records it as the pipeline at the change.
+func pipelineAfterMove(current crmcontracts.Deal, in AdvanceDealInput) ids.UUID {
+	if in.toPipeline != nil {
+		return in.toPipeline.UUID
+	}
+	return ids.UUID(*current.PipelineId)
 }
 
 // dealStageChangedPayload builds the deal.stage_changed wire payload from
@@ -410,6 +422,9 @@ func (s *Store) stageTransitionPatch(ctx context.Context, tx pgx.Tx,
 
 	p := storekit.NewPatch()
 	p.Set(stageIDColumn, current.StageId, in.ToStageID)
+	if in.toPipeline != nil {
+		p.Set(pipelineIDColumn, current.PipelineId, *in.toPipeline)
+	}
 	if status != string(current.Status) {
 		p.Set("status", current.Status, status)
 	}

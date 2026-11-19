@@ -648,6 +648,7 @@
     "mergeMembers": "admin_settings",
     "mergeTags": "business",
     "messageAnchorCompanySiteRead": "workspace_settings",
+    "moveDealPipeline": "business",
     "nameSeats": "workspace_settings",
     "offerOwnershipTransfer": "business",
     "openDealRoomThread": "business",
@@ -1665,6 +1666,7 @@
     "mergeTags": "tags",
     "messageAnchorCompanySiteRead": "company_profile",
     "messageOnboardingCompany": "company_profile",
+    "moveDealPipeline": "deals",
     "nameSeats": "members",
     "offerOwnershipTransfer": "sharing",
     "oidcSignInCallback": "sign_in",
@@ -3301,6 +3303,9 @@
     ],
     "message_anchor_company_site_read": [
       "company_profile"
+    ],
+    "move_deal_pipeline": [
+      "deals"
     ],
     "offer_ownership_transfer": [
       "sharing"
@@ -5406,6 +5411,9 @@
     ],
     "message_anchor_company_site_read": [
       "workspace_settings"
+    ],
+    "move_deal_pipeline": [
+      "business"
     ],
     "offer_ownership_transfer": [
       "business"

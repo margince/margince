@@ -285,6 +285,9 @@ var routeVerbFixtures = map[string]func(p *recordPool) map[string]any{
 	"correct_deal_close_day": func(p *recordPool) map[string]any {
 		return map[string]any{"id": p.take("lost_deal"), "request_body": map[string]any{"closed_on": pastDay(p)}}
 	},
+	"move_deal_pipeline": func(p *recordPool) map[string]any {
+		return map[string]any{"id": p.take("deal"), "request_body": map[string]any{"pipeline_id": p.take("pipeline")}}
+	},
 	"create_deal_outcome_review": func(p *recordPool) map[string]any {
 		deal := p.take("lost_deal")
 		return map[string]any{"id": deal, "request_body": map[string]any{

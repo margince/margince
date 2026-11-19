@@ -6615,6 +6615,9 @@ export const en = {
     "This deal’s pipeline is retired, so its stages are read-only. Restore the pipeline in Settings to move the deal.",
   "deal.stageOtherPipeline":
     "That stage belongs to another pipeline. Pick a stage of the pipeline the deal is in.",
+  "deal.movePipeline": "Move to pipeline",
+  "deal.movePipelinePick": "Pick a pipeline",
+  "deal.movePipelineDone": "Moved to {pipeline}.",
   "deal.reopen": "Reopen",
   "deal.reopenPick": "Move this deal back to an open stage",
   "deal.reopenConfirm": "Reopen",

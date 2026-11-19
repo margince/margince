@@ -203,6 +203,35 @@ func (h Handlers) AdvanceDeal(w http.ResponseWriter, r *http.Request, id crmcont
 	httperr.WriteJSON(w, http.StatusOK, wire)
 }
 
+// MoveDealPipeline moves an open deal to another pipeline through the stage
+// advance path, so the same gates, history and audit rows apply.
+func (h Handlers) MoveDealPipeline(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.MoveDealPipelineParams) {
+	ifVersion, ok := httperr.IfMatchVersion(w, r)
+	if !ok {
+		return
+	}
+	var req crmcontracts.MoveDealPipelineRequest
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	in, err := moveDealPipelineInput(req, ifVersion)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	moved, err := h.store.MoveDealToPipeline(r.Context(), pathID[ids.DealKind](id), in)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	wire, err := moved.Wire()
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, wire)
+}
+
 // CorrectDealCloseDay moves a closed deal's close day. The store refuses an
 // agent; the contract's human-only mark refuses it at the gate first.
 func (h Handlers) CorrectDealCloseDay(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.CorrectDealCloseDayParams) {

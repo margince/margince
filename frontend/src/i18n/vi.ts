@@ -6479,6 +6479,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Pipeline của deal này đã ngừng dùng nên các giai đoạn chỉ để xem. Khôi phục pipeline trong Cài đặt để chuyển deal.",
   "deal.stageOtherPipeline":
     "Giai đoạn đó thuộc pipeline khác. Hãy chọn một giai đoạn của pipeline của deal này.",
+  "deal.movePipeline": "Chuyển sang pipeline",
+  "deal.movePipelinePick": "Chọn pipeline",
+  "deal.movePipelineDone": "Đã chuyển sang {pipeline}.",
   "deal.reopen": "Mở lại",
   "deal.reopenPick": "Chuyển deal này về một giai đoạn đang mở",
   "deal.reopenConfirm": "Mở lại",

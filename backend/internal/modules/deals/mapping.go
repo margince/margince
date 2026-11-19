@@ -90,6 +90,23 @@ func advanceDealInput(req crmcontracts.AdvanceDealRequest, ifVersion *int64) (Ad
 	return in, nil
 }
 
+// moveDealPipelineInput maps the move-pipeline body onto the store input. The
+// zero UUID would otherwise reach the lookups and answer a bare not-found.
+func moveDealPipelineInput(req crmcontracts.MoveDealPipelineRequest, ifVersion *int64) (MoveDealPipelineInput, error) {
+	if err := requireBodyID(movePipelineField, req.PipelineId); err != nil {
+		return MoveDealPipelineInput{}, err
+	}
+	in := MoveDealPipelineInput{PipelineID: pathID[ids.PipelineKind](req.PipelineId), IfVersion: ifVersion}
+	if req.StageId != nil {
+		if err := requireBodyID("stage_id", *req.StageId); err != nil {
+			return MoveDealPipelineInput{}, err
+		}
+		stage := pathID[ids.StageKind](*req.StageId)
+		in.StageID = &stage
+	}
+	return in, nil
+}
+
 // stageCreateInput maps the create-stage body onto the store input. A stage
 // without a pipeline has nowhere to be: unguarded, the zero UUID reaches the
 // pipeline probe and answers not-found for a pipeline the caller never named.
