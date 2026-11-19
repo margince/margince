@@ -9387,7 +9387,6 @@ export const en = {
   "settings.signatureReviewUseLatest": "Use latest version",
   "settings.signatureReviewKeepDraft": "Keep my draft",
   "settings.signatureReviewLoading": "Loading the retained signature…",
-  "settings.signatureReviewSaved": "Signature review saved",
   "settings.signatureReviewMember": "the member",
   "settings.signatureChoicePlain":
     "Your own signature goes under every mail you send. Without one, mail closes with a greeting and your name.",

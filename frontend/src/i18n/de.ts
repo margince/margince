@@ -9448,7 +9448,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.signatureReviewUseLatest": "Gespeicherte Version verwenden",
   "settings.signatureReviewKeepDraft": "Meinen Entwurf behalten",
   "settings.signatureReviewLoading": "Gespeicherte Signatur wird geladen…",
-  "settings.signatureReviewSaved": "Signaturprüfung gespeichert",
   "settings.signatureReviewMember": "dem Mitglied",
   "settings.signatureChoicePlain":
     "Deine eigene Signatur steht unter jeder E-Mail, die du sendest. Ohne sie endet die E-Mail mit einem Gruß und deinem Namen.",

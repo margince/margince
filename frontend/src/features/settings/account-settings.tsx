@@ -70,7 +70,7 @@ export function AccountSettings() {
 function ProfilePanel({ toast }: Readonly<{ toast: Toast }>) {
   const t = useT();
   const query = useMe();
-  const names = useAccountNames(toast);
+  const names = useAccountNames();
   return (
     <Panel title={t("account.profileCard")}>
       <PanelBody>

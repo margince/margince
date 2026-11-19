@@ -9190,7 +9190,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.signatureReviewUseLatest": "Dùng phiên bản mới nhất",
   "settings.signatureReviewKeepDraft": "Giữ bản nháp của tôi",
   "settings.signatureReviewLoading": "Đang tải chữ ký được giữ lại…",
-  "settings.signatureReviewSaved": "Đã lưu kiểm tra chữ ký",
   "settings.signatureReviewMember": "thành viên",
   "settings.signatureChoicePlain":
     "Chữ ký riêng của bạn nằm dưới mọi email bạn gửi. Nếu không có, email kết thúc bằng lời chào và tên bạn.",

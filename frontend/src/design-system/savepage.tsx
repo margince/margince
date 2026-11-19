@@ -12,12 +12,13 @@ import {
   useRef,
   useState,
 } from "react";
-import { useT } from "../i18n";
+import { translate, useLocale, useT } from "../i18n";
 import { problemFieldErrorsOf } from "../lib/problem";
 import { ActionRow } from "./actionrow";
 import { Button } from "./atoms";
 import { ErrorLine } from "./errorline";
 import { SaveBar } from "./savebar";
+import { useToast } from "./toast";
 
 /** One card's draft, as the page's save bar sees it. */
 export type SaveDraft = Readonly<{
@@ -86,6 +87,10 @@ function placedAt(reason: unknown, placed: readonly string[] = []): boolean {
 export function SavePageProvider({
   children,
 }: Readonly<{ children: ReactNode }>) {
+  // The locale, not a translator: `useT` answers a new function every render,
+  // and a `save` that changed with it would re-register every draft in a loop.
+  const { locale } = useLocale();
+  const toast = useToast();
   const drafts = useRef(new Map<string, SaveDraft>());
   const [marks, setMarks] = useState<ReadonlyMap<string, Mark>>(new Map());
   const [pending, setPending] = useState(false);
@@ -133,8 +138,10 @@ export function SavePageProvider({
       setErrorPlaced(placedAt(refused.reason, due[at]?.placed));
       return false;
     }
+    // The page answers once for every card, so no card has to say it itself.
+    toast.show(translate(locale, "settings.saved"));
     return true;
-  }, []);
+  }, [toast, locale]);
   const discard = useCallback(() => {
     for (const draft of drafts.current.values()) {
       if (waiting(draft)) draft.discard();
