@@ -43,7 +43,7 @@ it.each<CoreFeature>([
       </LocaleProvider>
     </QueryClientProvider>,
   );
-  expect(await screen.findByText(en["shell.unknownPage"])).toBeTruthy();
+  expect(await screen.findByText(en["shell.unknownAddress"])).toBeTruthy();
   expect(fetcher).not.toHaveBeenCalled();
 });
 
@@ -66,7 +66,7 @@ it.each<CoreFeature>(["contacts", "companies", "leads", "deals", "projects"])(
         </LocaleProvider>
       </QueryClientProvider>,
     );
-    expect(await screen.findByText(en["shell.unknownPage"])).toBeTruthy();
+    expect(await screen.findByText(en["shell.unknownAddress"])).toBeTruthy();
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(fetcher).not.toHaveBeenCalled();
   },

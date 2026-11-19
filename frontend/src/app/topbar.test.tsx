@@ -76,6 +76,11 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+// Record ids in the form the server reads.
+const ANNA_ID = "0a7e5c1d-6b2f-4c8e-9d3a-1f2e3d4c5b6a";
+const DEAL_ID = "5d1c2b3a-4e5f-4a6b-8c7d-9e0f1a2b3c4d";
+const LEAD_ID = "7b3e9a10-2c4d-4e6f-8a1b-3c5d7e9f1a2b";
+
 // The collapse control is minted only when the bar is handed a toggle, so a case
 // that needs it on screen supplies one that records nothing.
 const ignoreToggle = () => undefined;
@@ -228,7 +233,7 @@ describe("Top bar at phone width", () => {
       return (
         url.pathname === "/v1/records/references" &&
         url.searchParams.get("kind") === "deal" &&
-        url.searchParams.getAll("id").includes("d-1")
+        url.searchParams.getAll("id").includes(DEAL_ID)
       );
     };
     const recordReads = (fetch: ReturnType<typeof vi.fn>) =>
@@ -236,19 +241,19 @@ describe("Top bar at phone width", () => {
     const answer = async (request: RequestInfo | URL) =>
       asksForDeal(request)
         ? Response.json({
-            data: [{ id: "d-1", name: "Renewal", archived: false }],
+            data: [{ id: DEAL_ID, name: "Renewal", archived: false }],
           })
         : new Response(null, { status: 404 });
     const wideFetch = vi.fn(answer);
     vi.stubGlobal("fetch", wideFetch);
-    renderTopBar({ screen: "deals", id: "d-1" });
+    renderTopBar({ screen: "deals", id: DEAL_ID });
     await waitFor(() => expect(recordReads(wideFetch)).not.toEqual([]));
     cleanup();
 
     stubPhoneViewport();
     const phoneFetch = vi.fn(answer);
     vi.stubGlobal("fetch", phoneFetch);
-    renderTopBar({ screen: "deals", id: "d-1" });
+    renderTopBar({ screen: "deals", id: DEAL_ID });
     await waitFor(() => expect(phoneFetch).toHaveBeenCalled());
     expect(recordReads(phoneFetch)).toEqual([]);
   });
@@ -333,12 +338,12 @@ describe("Top bar trail", () => {
         return url.pathname === "/v1/records/references" &&
           url.searchParams.get("kind") === "lead"
           ? Response.json({
-              data: [{ id: "l-1", name: null, archived: false }],
+              data: [{ id: LEAD_ID, name: null, archived: false }],
             })
           : new Response(null, { status: 404 });
       }),
     );
-    renderTopBar({ screen: "leads", id: "l-1" }, { onToggle: ignoreToggle });
+    renderTopBar({ screen: "leads", id: LEAD_ID }, { onToggle: ignoreToggle });
     await waitFor(() => expect(stopTexts().at(-1)).toBe("Unnamed lead"));
   });
 
@@ -353,11 +358,11 @@ describe("Top bar trail", () => {
 
   it("leads a record back to the list it was opened from", () => {
     const client = newClient();
-    client.setQueryData(["contact", "ref", "p-anna"], "Anna Weber");
+    client.setQueryData(["contact", "ref", ANNA_ID], "Anna Weber");
     renderWith(
       client,
       <TopBar
-        route={{ screen: "contacts", id: "p-anna" }}
+        route={{ screen: "contacts", id: ANNA_ID }}
         collapsed={false}
         onToggle={ignoreToggle}
         onOpenSearch={ignoreSearch}
@@ -377,18 +382,49 @@ describe("Top bar trail", () => {
     expect(trail().querySelectorAll('[aria-current="page"]')).toHaveLength(1);
   });
 
-  // Loading, or a record this principal cannot read: the id is not a name, but
-  // it is true, and it is what the reader can quote. A blank stop is not.
-  it("falls back to the record id when the name cannot be resolved", () => {
+  // Still loading: the id is not a name, but it is true, and it is what the
+  // reader can quote. A blank stop is not.
+  it("shows the record id while the name is still on its way", () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => new Response(null, { status: 404 })),
+      vi.fn(() => new Promise<Response>(() => undefined)),
     );
     renderTopBar(
-      { screen: "contacts", id: "p-anna" },
+      { screen: "contacts", id: ANNA_ID },
       { onToggle: ignoreToggle },
     );
-    expect(stopTexts()).toEqual(["Contacts", "p-anna"]);
+    expect(stopTexts()).toEqual(["Contacts", ANNA_ID]);
+  });
+
+  // A record the reader may not see is left out of the answer, as a missing
+  // one is. The page under the trail then says it is not there.
+  it("says Not found once the answer leaves the record out", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => Response.json({ data: [] })),
+    );
+    renderTopBar(
+      { screen: "contacts", id: ANNA_ID },
+      { onToggle: ignoreToggle },
+    );
+    await waitFor(() =>
+      expect(stopTexts()).toEqual(["Contacts", en["shell.unknownPage"]]),
+    );
+  });
+
+  // The server refuses a name read for an id that is no record id.
+  it("says Not found for an id that is no record id", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => Response.json({ status: 422 }, { status: 422 })),
+    );
+    renderTopBar(
+      { screen: "deals", id: "not-a-record" },
+      { onToggle: ignoreToggle },
+    );
+    await waitFor(() =>
+      expect(stopTexts()).toEqual(["Deals", en["shell.unknownPage"]]),
+    );
   });
 
   it("leads a section entry back to the section it belongs to", () => {

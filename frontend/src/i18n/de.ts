@@ -2963,6 +2963,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "shell.more": "Mehr",
   "shell.unknownPage": "Nicht gefunden",
   "shell.unavailableForRole": "Für deine Rolle nicht verfügbar.",
+  "shell.unknownAddress": "Diese Adresse führt in Margince nirgendwohin.",
+  "shell.unknownAddress.home": "Zu Home",
   "shell.closeMenu": "Schließen",
   "shell.agent.scope": "Margince liest nur, was du sehen kannst.",
   "shell.capture.importing": "Postfachverlauf wird importiert",
@@ -20521,6 +20523,18 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lists.unavailable": "Listen sind in dieser Installation deaktiviert.",
   "lists.gone":
     "Diese Liste gibt es nicht, oder sie ist nicht mit dir geteilt.",
+  "record.gone.contact":
+    "Diesen Kontakt gibt es nicht, oder er ist nicht mit dir geteilt.",
+  "record.gone.company":
+    "Dieses Unternehmen gibt es nicht, oder es ist nicht mit dir geteilt.",
+  "record.gone.lead":
+    "Diesen Lead gibt es nicht, oder er ist nicht mit dir geteilt.",
+  "record.gone.deal":
+    "Diesen Deal gibt es nicht, oder er ist nicht mit dir geteilt.",
+  "record.gone.project":
+    "Dieses Projekt gibt es nicht, oder es ist nicht mit dir geteilt.",
+  "record.gone.offer":
+    "Dieses Angebot gibt es nicht, oder es ist nicht mit dir geteilt.",
   "lists.unnamed": "Ohne Namen",
   "lists.filterLine": "Filter: {sentence}",
   "lists.head.exported_one": "{count}-mal, zuletzt am {when}",

@@ -1659,6 +1659,8 @@
   "shell.more": "More",
   "shell.unknownPage": "Not found",
   "shell.unavailableForRole": "Not available for your role.",
+  "shell.unknownAddress": "This address does not lead anywhere in Margince.",
+  "shell.unknownAddress.home": "Go to Home",
   "shell.closeMenu": "Close",
   "shell.capture.importing": "Importing mailbox history",
   "shell.capture.share": "{percent} · {scanned} of {total} messages",

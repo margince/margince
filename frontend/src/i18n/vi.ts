@@ -2870,6 +2870,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "shell.more": "Thêm",
   "shell.unknownPage": "Không tìm thấy",
   "shell.unavailableForRole": "Không khả dụng cho vai trò của bạn.",
+  "shell.unknownAddress": "Địa chỉ này không dẫn đến đâu trong Margince.",
+  "shell.unknownAddress.home": "Đến Trang chủ",
   "shell.closeMenu": "Đóng",
   "shell.agent.scope": "Margince chỉ đọc những gì bạn xem được.",
   "shell.capture.importing": "Đang nhập lịch sử hộp thư",
@@ -19975,6 +19977,18 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lists.restore": "Kh\u00f4i ph\u1ee5c",
   "lists.unavailable": "Danh sách đang tắt trên bản cài đặt này.",
   "lists.gone": "Danh sách này không tồn tại, hoặc không được chia sẻ với bạn.",
+  "record.gone.contact":
+    "Liên hệ này không tồn tại, hoặc không được chia sẻ với bạn.",
+  "record.gone.company":
+    "Công ty này không tồn tại, hoặc không được chia sẻ với bạn.",
+  "record.gone.lead":
+    "Lead này không tồn tại, hoặc không được chia sẻ với bạn.",
+  "record.gone.deal":
+    "Deal này không tồn tại, hoặc không được chia sẻ với bạn.",
+  "record.gone.project":
+    "Dự án này không tồn tại, hoặc không được chia sẻ với bạn.",
+  "record.gone.offer":
+    "Báo giá này không tồn tại, hoặc không được chia sẻ với bạn.",
   "lists.unnamed": "Ch\u01b0a \u0111\u1eb7t t\u00ean",
   "lists.filterLine": "Bộ lọc: {sentence}",
   "lists.head.exported_one": "{count} lần, lần gần nhất vào {when}",

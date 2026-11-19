@@ -61,6 +61,7 @@ import { nextCommitment } from "./projectstanding";
 import { ProjectStanding } from "./projectstandingcard";
 import { ProjectTabs } from "./projecttabs";
 import "./projects.css";
+import { RecordGone } from "../../components/recordgone";
 import { useViewerZone } from "../../lib/viewerzone";
 import { ProjectHistory, ProjectLatestInbound } from "./project360.chronology";
 import { ProjectCards } from "./projectcards";
@@ -92,7 +93,11 @@ export function ProjectScreen({ id }: Readonly<{ id: string }>) {
   const view = useProject360(id);
   return (
     <div className="wrap">
-      <QueryGate query={view} pendingLabel={t("nav.projects")}>
+      <QueryGate
+        query={view}
+        pendingLabel={t("nav.projects")}
+        gone={<RecordGone kind="project" />}
+      >
         {(data) => <ProjectPage view={data} />}
       </QueryGate>
     </div>

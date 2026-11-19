@@ -45,7 +45,9 @@ import { ContactRail } from "./contactrail";
 import { ContactSubtitle } from "./contactsubtitle";
 import { ContactLatestInbound } from "./contacttabs";
 import "./contact360.css";
+import { RecordGone } from "../../components/recordgone";
 import { useHiddenCoreFeatures } from "../../lib/corefeatures";
+import { readsNoRecord } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
 import {
   openContactTab,
@@ -206,7 +208,7 @@ export function ContactPageV2({
     return <ContactOpening id={id} {...openingIdentity(record, view)} />;
   }
   if (reads === "notOpened" || !view.data) {
-    return <div className="wrap">{t("contact.page.notOpened")}</div>;
+    return <ContactNotOpened gone={readsNoRecord(record.error)} />;
   }
 
   const contact = view.data.contact;
@@ -443,4 +445,15 @@ function ContactRecordView({
     t("create.fullName"),
   );
   return <RecordView {...view} rename={rename} />;
+}
+
+// A row read no retry can answer says the contact is not there; any other
+// failure keeps the page's own sentence.
+function ContactNotOpened({ gone }: Readonly<{ gone: boolean }>) {
+  const t = useT();
+  return (
+    <div className="wrap">
+      {gone ? <RecordGone kind="contact" /> : t("contact.page.notOpened")}
+    </div>
+  );
 }

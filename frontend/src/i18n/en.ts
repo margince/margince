@@ -2849,6 +2849,8 @@ export const en = {
   "shell.more": "More",
   "shell.unknownPage": "Not found",
   "shell.unavailableForRole": "Not available for your role.",
+  "shell.unknownAddress": "This address does not lead anywhere in Margince.",
+  "shell.unknownAddress.home": "Go to Home",
   "shell.closeMenu": "Close",
   // The agent panel's one promise, as opposed to its readings: what the agent
   // can REACH. Row scope bounds it on the server, and a guarantee nobody is
@@ -20300,6 +20302,15 @@ export const en = {
   "lists.restore": "Restore",
   "lists.unavailable": "Lists are switched off for this installation.",
   "lists.gone": "This list is not there, or it is not shared with you.",
+  "record.gone.contact":
+    "This contact is not there, or it is not shared with you.",
+  "record.gone.company":
+    "This company is not there, or it is not shared with you.",
+  "record.gone.lead": "This lead is not there, or it is not shared with you.",
+  "record.gone.deal": "This deal is not there, or it is not shared with you.",
+  "record.gone.project":
+    "This project is not there, or it is not shared with you.",
+  "record.gone.offer": "This offer is not there, or it is not shared with you.",
   "lists.unnamed": "Unnamed",
   "lists.filterLine": "Filter: {sentence}",
   "lists.head.exported_one": "{count} time, last on {when}",

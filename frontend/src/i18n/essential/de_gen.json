@@ -1659,6 +1659,8 @@
   "shell.more": "Mehr",
   "shell.unknownPage": "Nicht gefunden",
   "shell.unavailableForRole": "Für deine Rolle nicht verfügbar.",
+  "shell.unknownAddress": "Diese Adresse führt in Margince nirgendwohin.",
+  "shell.unknownAddress.home": "Zu Home",
   "shell.closeMenu": "Schließen",
   "shell.capture.importing": "Postfachverlauf wird importiert",
   "shell.capture.share": "{percent} · {scanned} von {total} Nachrichten",
