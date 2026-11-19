@@ -1594,6 +1594,7 @@ span.error-line {
 .input-icon-flush .input {
   border: 0;
   background: transparent;
+  box-shadow: none;
   border-radius: 0;
   height: auto;
   padding: 0 0 0 24px;

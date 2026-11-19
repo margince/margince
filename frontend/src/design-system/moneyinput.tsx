@@ -33,6 +33,7 @@ export function MoneyInput({
   onBlur,
   blankWhenZero = false,
   onClear,
+  onTooPrecise,
   display,
   onFocus,
   ...rest
@@ -54,6 +55,9 @@ export function MoneyInput({
     // the reader is taking back. Without it an emptied box keeps the last
     // amount, which is right for a priced record (see onChange below).
     onClear?: () => void;
+    // Called when the reader types more decimals than the currency has. The box
+    // then keeps that text on blur, so the caller's error names what is on screen.
+    onTooPrecise?: () => void;
     // The amount as the page writes money, shown while the box is not being
     // edited. Focus brings back the plain number, which is what a reader types.
     display?: (minor: number) => string;
@@ -69,6 +73,8 @@ export function MoneyInput({
   // Whether the reader's last edit emptied the box through onClear, so blur
   // leaves it empty rather than restoring the amount it held.
   const cleared = useRef(false);
+  // Whether the text on screen is a figure refused through onTooPrecise.
+  const heldTooPrecise = useRef(false);
   // The currency the text on screen is written in, tracked beside the amount
   // because the SCALE is part of what that text says: an offer switched from
   // EUR to VND holds the same minor integer and must not keep showing the euro
@@ -100,13 +106,15 @@ export function MoneyInput({
   }, [valueMinor, currency, blankWhenZero]);
 
   const [editing, setEditing] = useState(false);
-  if (display && !editing && text !== "") {
+  const shownMinor = lastShownMinor(text, valueMinor, currency);
+  // A held figure the currency cannot store stays in the editor, as typed.
+  if (display && !editing && text !== "" && Number.isFinite(shownMinor)) {
     return (
       <TextInput
         {...rest}
         type="text"
         inputMode="decimal"
-        value={display(lastShownMinor(text, valueMinor, currency))}
+        value={display(shownMinor)}
         // Only focus brings a key press here, and focus has already swapped
         // this face for the editor.
         onChange={() => setEditing(true)}
@@ -142,6 +150,7 @@ export function MoneyInput({
         // component that reads a half-deleted buffer as an intention. Changing
         // it here would also make every mid-edit keystroke commit a zero.
         if (event.target.value.trim() === "") {
+          heldTooPrecise.current = false;
           if (onClear) {
             cleared.current = true;
             onClear();
@@ -159,19 +168,26 @@ export function MoneyInput({
         // body as a number no column can hold.
         const parsed = Number(event.target.value);
         if (!Number.isFinite(parsed) || exceedsPrecision(parsed, digits)) {
+          if (onTooPrecise && finerThanCurrency(parsed, digits)) {
+            heldTooPrecise.current = true;
+            onTooPrecise();
+          }
           return;
         }
         {
           const minor = toMinorUnits(parsed, currency);
           cleared.current = false;
+          heldTooPrecise.current = false;
           lastCommittedMinor.current = minor;
           onChangeMinor(minor);
         }
       }}
       onBlur={(event) => {
-        setText(
-          cleared.current ? "" : asText(lastCommittedMinor.current, currency),
-        );
+        if (!heldTooPrecise.current) {
+          setText(
+            cleared.current ? "" : asText(lastCommittedMinor.current, currency),
+          );
+        }
         setEditing(false);
         onBlur?.(event);
       }}
@@ -223,5 +239,11 @@ function exceedsPrecision(value: number, digits: number): boolean {
   if (!Number.isSafeInteger(Math.trunc(value) * 10 ** digits)) {
     return true;
   }
-  return Number(value.toFixed(digits)) !== value;
+  return finerThanCurrency(value, digits);
+}
+
+// finerThanCurrency reports whether a finite value has more decimals than
+// digits. From 1e21 toFixed writes exponential notation and this answers false.
+function finerThanCurrency(value: number, digits: number): boolean {
+  return Number.isFinite(value) && Number(value.toFixed(digits)) !== value;
 }

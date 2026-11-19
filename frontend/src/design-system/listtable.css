@@ -1744,6 +1744,14 @@
   margin-bottom: var(--space-2);
 }
 
+/* A picker is one item beside its verb. At `.input`'s full width each one took
+ * a line of its own and the bar stacked into rows above the table. */
+.lt-bulkbar .select-control {
+  flex: 0 0 auto;
+  inline-size: auto;
+  min-inline-size: 9rem;
+}
+
 /* Select all and Clear sit at the bar's far end, apart from the verbs. */
 .lt-bulkall {
   display: inline-flex;

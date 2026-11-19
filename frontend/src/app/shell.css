@@ -1050,51 +1050,88 @@
 }
 
 /* ===== ⌘K palette ===== */
-.palette-overlay {
+/* Two classes, so the palette hangs from the top even though the centred
+   dialog's own `.overlay` rule (atoms.css) loads after this sheet. Centred, the
+   box moved up and down as each answer changed the list's height. */
+.overlay.palette-overlay {
   place-items: start center;
   padding-top: 12vh;
 }
 .palette {
-  width: min(560px, calc(100vw - 40px));
+  width: min(720px, calc(100vw - 40px));
+  max-height: calc(88vh - var(--space-8));
+  display: flex;
+  flex-direction: column;
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-pop);
   overflow: hidden;
 }
+.palette-input,
+.palette-filter,
+.palette-foot {
+  flex: none;
+}
 .palette-input {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  padding: 12px 14px; /* ds:ignore 14 is 2 shy of the list's inset, because this glyph is 2px wider: the query sits on the results' own text column */
-  border-bottom: 1px solid var(--borderSubtle);
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
 }
-/* The magnifier belongs to the field now (SearchField `flush`), which places it
-   on the bar's own left inset. This keeps its size and tone; the position is
-   the field's. */
+/* The magnifier belongs to the field (SearchField `flush`), which places it on
+   the bar's own left inset. This keeps its size and tone; the position is the
+   field's. */
 .palette-input svg {
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
   flex: none;
 }
-/* No type and no ink here: the box IS a `.input` (SearchField `flush`), and the
-   face, size, weight, colour and placeholder tone all come from that one rule.
-   Restating them made the bar a second opinion about what a field looks like. */
+/* The box IS a `.input` (SearchField `flush`); only its size steps up here, so
+   the words being typed read as the panel's headline. */
 .palette-input input {
   flex: 1;
   border: 0;
   outline: none;
   background: transparent;
+  font: var(--fontBodyLarge);
+}
+.palette-input,
+.palette-filter {
+  border-bottom: 1px solid var(--borderSubtle);
+}
+.palette-input:has(+ .palette-filter) {
+  border-bottom: 0;
+}
+/* A strip wider than the panel scrolls sideways, its cut edge faded so the
+   last type reads as more to scroll to rather than as clipped. */
+.palette-filter {
+  position: relative;
+  padding: 0 var(--space-8) var(--space-3) var(--space-4);
+  overflow-x: auto;
+  scrollbar-width: none;
+  mask-image: linear-gradient(
+    to right,
+    black calc(100% - var(--space-8)),
+    transparent
+  );
+}
+.palette-filter .segmented {
+  flex-wrap: nowrap;
+}
+.palette-filter .segmented button {
+  white-space: nowrap;
+  padding-inline: var(--space-2);
 }
 .palette-list {
   position: relative;
-  max-height: 320px;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
-  padding: var(--space-2);
+  padding: var(--space-1) var(--space-2) var(--space-2);
 }
-.palette-row,
-.palette-ask {
+.palette-row {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-3);
   width: 100%;
   border: 0;
   background: transparent;
@@ -1104,67 +1141,120 @@
   font-family: var(--fontFamilyBody);
   text-align: left;
 }
-/* Asking is not one of the destinations, so it does not sit in their list: a
-   hairline under it says the rows below answer a different question. */
-.palette-ask {
-  border-bottom: 1px solid var(--borderSubtle);
-  border-radius: 0;
-  margin-bottom: var(--space-1);
-}
-.palette-row > svg,
-.palette-ask svg {
-  width: 14px;
-  height: 14px;
-  flex: none;
-}
 .palette-row.selected,
 .palette-row:hover {
   background: var(--groundHover);
   color: var(--textPrimary);
 }
-.palette-row .label,
-.palette-ask .label {
+/* Name over a quieter second line; both truncate before the status does. */
+.palette-text {
   flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-/* The second line yields first: a long "Works at …" employer truncates, and
-   the record's own name keeps at least half the row. */
-.palette-row .sub {
-  flex: 0 1 auto;
   min-width: 0;
-  max-width: 50%;
+  display: grid;
+}
+.palette-text .label,
+.palette-text .sub {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-/* A record's mark stands where the glyph does, a rung under the list chip so
-   a row of records stands at the height of a row of commands. */
+.palette-text .label {
+  font-weight: var(--fontWeightMedium);
+  color: var(--textPrimary);
+}
+.palette-text .sub,
+.palette-aside {
+  color: var(--textSecondary);
+}
+.palette-row > .badge,
+.palette-aside {
+  flex: none;
+}
+/* Every glyph stands in a square the size of a record's mark, so names start
+   on one column whether the row is a record or a screen. */
+.palette-tile,
+.palette-mark .avatar {
+  width: 28px;
+  height: 28px;
+}
 .palette-mark {
   display: flex;
   flex: none;
 }
-.palette-mark .avatar {
-  width: 20px;
-  height: 20px;
+.palette-tile {
+  flex: none;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--borderSubtle);
+  color: var(--textSecondary);
 }
-/* A cited message takes the row's free space, as a label does, so a long
-   subject truncates inside the row rather than past it. */
-.palette-row > .emailref {
-  flex: 1;
+.palette-tile svg {
+  width: 16px;
+  height: 16px;
 }
-/* The kind a run of record hits is, over the first of them: on the rows' own
-   text column, and closer to the rows it heads than to the ones above it. */
+.palette-tile-ai {
+  border-color: var(--borderNoticeAi);
+  background: var(--aiLight);
+  color: var(--aiText);
+}
+/* Held in place on every row, so statuses line up; shown on the active one. */
+.palette-chevron {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--textSecondary);
+  visibility: hidden;
+}
+.palette-row.selected .palette-chevron,
+.palette-ask:is(:hover, :focus-visible) .palette-chevron {
+  visibility: visible;
+}
+/* The kind a run of hits is, over the first of them, on the rows' own text
+   column and closer to the rows it heads than to the ones above. */
 .palette-group {
   margin: 0;
-  padding: var(--space-2) var(--space-2) var(--space-1);
+  padding: var(--space-3) var(--space-2) var(--space-1);
+  color: var(--textSecondary);
+}
+/* With an action beside it, the inset moves to the pair so both share one line. */
+.eyebrow-head:has(> .palette-group) {
+  /* ds:ignore the heading's own inset, moved up to the pair so its action shares the line */
+  padding: var(--space-3) var(--space-2) var(--space-1);
+  align-items: baseline;
+}
+.eyebrow-head > .palette-group {
+  padding: 0;
+}
+.palette-list .eyebrow-head.palette-group {
+  padding-block: var(--space-1) 0;
 }
 /* The one thing the list says that is not a row. It sits on the list's own
    inset so the sentence starts on the same text column the results do. */
 .palette-list .pending {
   /* ds:ignore the palette draws its rows on the list's own inset */
   padding: var(--space-2);
+}
+.palette-foot {
+  display: flex;
+  gap: var(--space-5);
+  padding: var(--space-2) var(--space-4);
+  border-top: 1px solid var(--borderSubtle);
+  color: var(--textSecondary);
+}
+.palette-foot > span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+.palette-foot .kbd {
+  display: inline-flex;
+  align-items: center;
+}
+.palette-foot .kbd svg {
+  width: 12px;
+  height: 12px;
 }
 
 /* At phone width the palette is a SHEET, for the reason every other dialog in
@@ -1180,7 +1270,7 @@
    `vh` — on iOS Safari `vh` is the address-bar-collapsed height, which is
    taller than what a reader can actually see while typing. */
 @media (max-width: 700px) {
-  .palette-overlay {
+  .overlay.palette-overlay {
     padding-top: 0;
     place-items: stretch;
   }
@@ -1189,8 +1279,11 @@
     max-height: 100dvh;
     height: 100dvh;
     border-radius: 0;
-    display: grid;
-    grid-template-rows: auto 1fr;
+  }
+  /* The keyboard covers the bottom of the sheet, and the keys it names are
+     not on a phone's keyboard anyway. */
+  .palette-foot {
+    display: none;
   }
   .palette-input {
     /* Clear of a notch when the sheet runs to the top edge. */

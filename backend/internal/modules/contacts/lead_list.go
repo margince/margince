@@ -57,9 +57,11 @@ var leadListFields = map[string]storekit.SortField{
 	updatedAtColumn:   storekit.Column(storekit.KindTimestamp),
 	leadNameColumn:    storekit.Column(fieldcatalog.TypeText),
 	leadCompanyColumn: storekit.Column(fieldcatalog.TypeText),
-	leadStatusColumn:  storekit.Column(fieldcatalog.TypeText),
-	leadScoreColumn:   storekit.Column(fieldcatalog.TypeNumber),
-	ownerIDColumn:     storekit.OwnerNameSort(leadEntity),
+	// The ladder position, so New sorts before Contacted. The cursor field is
+	// renamed so a cursor from the alphabetical order is refused.
+	leadStatusColumn: {Kind: fieldcatalog.TypeNumber, CursorField: "status_rung", Expr: orderByLeadStatusRung},
+	leadScoreColumn:  storekit.Column(fieldcatalog.TypeNumber),
+	ownerIDColumn:    storekit.OwnerNameSort(leadEntity),
 	// The three the list draws and does not store. Each reads the same
 	// expression the row is PRINTED from (lead_read.go), so a reader sees the
 	// value the page was arranged by.
@@ -89,6 +91,12 @@ func orderByLeadNextTaskDue(ctx context.Context, arg func(any) int) (string, err
 		return "", err
 	}
 	return leadNextTaskDueSQL(work), nil
+}
+
+// orderByLeadStatusRung orders by the status's place in the lead's lifecycle:
+// the open ladder, then the terminal pair.
+func orderByLeadStatusRung(context.Context, func(any) int) (string, error) {
+	return LeadStatusRungSQL("lead.status", true), nil
 }
 
 // orderByLeadSourceLabel orders by the words the Source column prints rather

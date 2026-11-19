@@ -203,21 +203,21 @@ async function runDisqualify(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe("LeadBulkBar — disqualify", () => {
-  it("refuses the verb until a reason is chosen, and says why", async () => {
+  it("asks for a reason when pressed without one, and closes nothing", async () => {
     const { deletions } = stubFetch();
+    const user = userEvent.setup();
     render(<LeadBulkBar leads={leads} onDone={() => undefined} />);
 
-    // The sentence is the refusal: the reader is told what to answer, not
-    // handed a dimmed button with no explanation.
-    const sentence = await screen.findByText("Choose a reason first.");
+    // Nothing is refused before the reader has tried: the bar stays one row.
     const verb = disqualifyButton();
-    expect(verb.hasAttribute("disabled")).toBe(true);
-    // And the sentence is attached to the control, not merely near it — a
-    // disabled button cannot be focused, so a reason only in `title` or in a
-    // neighbouring span reaches nobody using a screen reader.
-    expect(verb.getAttribute("aria-describedby")).toBe(sentence.id);
+    expect(screen.queryByText("Choose a reason first.")).toBeNull();
 
-    await userEvent.setup().click(verb);
+    await user.click(verb);
+    // The sentence is attached to the control, not merely near it, so a
+    // screen reader on the button hears what to answer.
+    const sentence = await screen.findByText("Choose a reason first.");
+    expect(verb.getAttribute("aria-describedby")).toContain(sentence.id);
+    expect(screen.queryByRole("dialog")).toBeNull();
     expect(deletions).toEqual([]);
   });
 
