@@ -5,19 +5,8 @@
 
 package compose
 
-// The nightly input check against a real database.
-//
-// It has to be an integration test rather than a unit one, because what was
-// missing was never a function — Scan, every rule and both seams have been here
-// and covered all along — but a CALLER wired to them. What is asserted here is
-// the thing whose absence nothing could fail on: that after the pass runs,
-// LatestRun answers a run.
-//
-// That read is what the Forecast tab opens on. Before this job existed it
-// returned ErrNotFound on every installation for ever, and the tab rendered it
-// as "Couldn't load this view." above a dead Retry — the one element on the
-// page that looks like the application is broken, on every load, for every
-// seat.
+// The nightly input check against a real database: after the pass runs,
+// LatestRun answers a run, which is what the Forecast tab opens on.
 
 import (
 	"context"
@@ -60,12 +49,8 @@ func setupAssuranceJob(t *testing.T) *assuranceJobEnv {
 		t.Fatalf("seeding the deal the check examines: %v", err)
 	}
 
-	// A deal the rules FAULT, and fault more than once: its expected close is in
-	// the past (close_past, high) and it is committed with no next step
-	// (no_next_step, low). The healthy deal above is what keeps the eligible
-	// count honest; this one is what gives the bundling suite something to
-	// bundle. Two findings on ONE deal is the shape #4004 is about — a rep
-	// clearing them should clear one task, not two.
+	// Several findings on this one deal are one task. Rep1 has no mailbox that was
+	// read, so viability is unknown and the past close and next step still file it.
 	if _, err := owner.Exec(context.Background(), `
 		INSERT INTO deal (pipeline_id, stage_id, name, owner_id, status, source, captured_by,
 		                  amount_minor, currency, expected_close_date, win_probability_override, win_probability_set_by)
@@ -90,11 +75,8 @@ func setupAssuranceJob(t *testing.T) *assuranceJobEnv {
 	}
 }
 
-// run drives the pass a human asked for, which is also the only thing that
-// STARTS a workspace: the nightly sweep skips one nobody has started, so a
-// suite that reached for the sweep here would be asserting against a pass that
-// never ran. Work rather than the inner call because these args carry their
-// workspace, so there is no fleet to enumerate.
+// run drives the pass a human asked for, the only thing that starts a
+// workspace; the nightly sweep skips one nobody started.
 func (e *assuranceJobEnv) run(t *testing.T) error {
 	t.Helper()
 	worker := &assuranceRunWorker{sweep: e.worker}
@@ -111,11 +93,8 @@ func (e *assuranceJobEnv) sweep(t *testing.T) error {
 	return e.worker.assureWorkspace(context.Background(), e.WS)
 }
 
-// The nightly sweep does not check a workspace nobody has started.
-//
-// This is the whole of the first-use guarantee. The first pass over a backlog
-// raises every exception it can see at once and mints a task per faulted deal,
-// and a queue that arrives on the calendar's schedule is one nobody chose.
+// The nightly sweep does not check a workspace nobody has started, so no
+// queue of tasks arrives that nobody chose.
 func TestTheNightlySweepSkipsAWorkspaceNobodyHasStarted(t *testing.T) {
 	e := setupAssuranceJob(t)
 
@@ -129,12 +108,8 @@ func TestTheNightlySweepSkipsAWorkspaceNobodyHasStarted(t *testing.T) {
 	}
 }
 
-// Once somebody has started it, the sweep checks it every night as before.
-//
-// This is the direction that can fail SHORT: a workspace wrongly read as
-// unstarted simply stops being checked, the read keeps answering the last run,
-// and nothing asserts. An installation already being checked must never enter
-// that branch.
+// Once somebody has started it, the sweep checks it every night. A workspace
+// wrongly read as unstarted would stop being checked with nothing failing.
 func TestTheNightlySweepChecksAWorkspaceSomebodyStarted(t *testing.T) {
 	e := setupAssuranceJob(t)
 

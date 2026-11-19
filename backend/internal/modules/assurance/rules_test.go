@@ -66,10 +66,13 @@ func TestEveryRuleAdmitsAndRefuses(t *testing.T) {
 	}{
 		{
 			ruleType: TypeClosePast,
-			fires:    func(s Subject) Subject { s.ExpectedClose = new(at(time.April, 30)); return s },
-			// Due TODAY has not gone by. The boundary, and the case a `<=`
-			// would get wrong on the one day it matters most.
-			quiet: func(s Subject) Subject { s.ExpectedClose = new(at(time.May, 14)); return s },
+			fires: func(s Subject) Subject {
+				s.ExpectedClose, s.CloseOverdue = new(at(time.April, 30)), true
+				return s
+			},
+			// Whether the date went by is deals.CloseIsOverdue's answer, in
+			// the installation's zone; the rule reads it and decides no other way.
+			quiet: func(s Subject) Subject { s.ExpectedClose = new(at(time.April, 30)); return s },
 		},
 		{
 			ruleType: TypeCloseUnconfirmed,
@@ -101,7 +104,10 @@ func TestEveryRuleAdmitsAndRefuses(t *testing.T) {
 		},
 		{
 			ruleType: TypeNoNextStep,
-			fires:    func(s Subject) Subject { s.HasNextStep = false; return s },
+			fires: func(s Subject) Subject {
+				s.HasNextStep, s.Viability = false, unsupportedFor(viability.ReasonNoNextStep)
+				return s
+			},
 			// No next step on a deal nobody is forecasting is not a finding.
 			quiet: func(s Subject) Subject { s.HasNextStep, s.Likely = false, false; return s },
 		},
@@ -186,7 +192,7 @@ func TestEveryRuleQuotingMoneyIsADealAmountType(t *testing.T) {
 	t.Parallel()
 	loaded := healthy()
 	loaded.AmountMinor = new(int64(987_654_321))
-	loaded.ExpectedClose = new(at(time.April, 30))
+	loaded.ExpectedClose, loaded.CloseOverdue = new(at(time.April, 30)), true
 	loaded.CloseProvisional = true
 	loaded.CloseDatePushes = 5
 	loaded.Viability = reviewRequired()
@@ -239,7 +245,7 @@ func TestNoRuleCopiesFreeTextIntoAFinding(t *testing.T) {
 	loaded := healthy()
 	loaded.HasNextStep = true
 	loaded.StageName = "Negotiation — blocked on legal review of clause 7"
-	loaded.ExpectedClose = new(at(time.April, 30))
+	loaded.ExpectedClose, loaded.CloseOverdue = new(at(time.April, 30)), true
 	loaded.CloseProvisional = true
 	loaded.CloseDatePushes = 5
 	loaded.Viability = reviewRequired()
@@ -268,6 +274,12 @@ func TestNoRuleCopiesFreeTextIntoAFinding(t *testing.T) {
 			}
 		}
 	}
+}
+
+// unsupportedFor is the assessment of a deal the customer talks about that
+// lacks what the reasons name.
+func unsupportedFor(reasons ...viability.Reason) *SubjectViability {
+	return &SubjectViability{Outcome: viability.OutcomeUnsupported, Reasons: reasons}
 }
 
 // reviewRequired is the assessment of a deal whose customer went silent.

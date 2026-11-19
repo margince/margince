@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/retiredstagecards"
 	"github.com/margince/margince/backend/internal/compose/retiredthreadsplit"
 	"github.com/margince/margince/backend/internal/compose/unaskedcommitments"
+	"github.com/margince/margince/backend/internal/compose/viabilitytasks"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -128,6 +129,7 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		technicalAddressDataTask(pool),
 		gmailDedupeScanDataTask(),
 		retiredReviewsDataTask(pool),
+		viabilitytasks.DataTask(activities.NewStore(InstallationDB(pool))),
 		auditRedactionDataTask(),
 		linkedAuditRedactionDataTask(pool),
 		markedAuditRedactionDataTask(),
