@@ -7242,9 +7242,12 @@ paths:
       security: [{bearerAuth: []}]
       summary: Say a captured message is not about a deal, or about none of the deals its question offered.
       description: |-
-        With `deal_id`, the message is not about that deal. Its link to the deal comes off, and no
-        automatic pass (capture, the refile pass, the repair) files it on that deal again. Other
-        deals stay open to it, and a colleague's own relink still files it anywhere.
+        With `deal_id`, the message is not about that deal. Its link to the deal stays and is marked
+        `unrelated` by a human, as `setActivityDealRelevance` marks it, so the deal's timeline still
+        shows the message and "About this deal" takes it back. A link marked so keeps the deal
+        alive in no reading of it. No automatic pass (capture, the refile pass, the repair, the
+        topic recheck) files the message on that deal again or changes the mark. A colleague's own
+        relink still files it anywhere.
 
         Needs the passport permission Change records.
 
@@ -7260,6 +7263,42 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/ActivityDealDecline'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+        '423': {$ref: '#/components/responses/RetentionHeld'}
+  /activities/{id}/deal-relevance:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    put:
+      tags: [Activities]
+      operationId: setActivityDealRelevance
+      security: [{bearerAuth: []}]
+      summary: Say whether an activity linked to a deal is about that deal, or take that back.
+      description: |-
+        Marks the activity's link to `deal_id` as `relevant` or `unrelated`, with `human` as its
+        source. The link is never taken off: the deal's timeline still shows the activity with its
+        mark, and the opposite call is the undo. A link marked `unrelated`, or `uncertain` by the
+        classifier, warms the deal in no reading of it: its last-activity date, the quiet and
+        stalled rules, a meeting ahead and engagement all leave it out. The deal's last-activity
+        date moves back at once. Only `unrelated` also leaves it out of the silent close, so the
+        classifier's doubt never closes a deal.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: '#/components/schemas/SetActivityDealRelevanceRequest'}
+      responses:
+        '200':
+          description: The link's mark after the call.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ActivityDealRelevance'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
@@ -18210,6 +18249,31 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
+  /custom-fields/{id}/choices:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [CustomFields]
+      operationId: listCustomFieldChoiceUse
+      summary: How many records hold each choice of a picklist or multiselect field.
+      description: |-
+        What removing a choice would clear, asked before an options edit is confirmed. Every
+        record of the field's object counts, archived ones included, because the edit clears
+        them all. Each current choice is listed, with zero where no record holds it.
+      responses:
+        '200':
+          description: The records holding each choice.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CustomFieldChoiceUse'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '422':
+          description: The field is not a picklist or multiselect.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
   /custom-fields/{id}/retire:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -18257,17 +18321,16 @@ paths:
       operationId: updateCustomFieldOptions
       summary: Edit a picklist custom field's allowed options (regenerates the column's CHECK).
       description: |-
-        Only valid for `type=picklist` fields (422 `not_picklist`
+        Only valid for `type=picklist` and `type=multiselect` fields (422 `not_picklist`
         otherwise). Replaces the catalog's `options` array and regenerates the physical
         column's CHECK constraint from the new set via the governed engine (the same
         one-transaction owner-ALTER shape as `createCustomField` — this is the
         one DDL path rename/retire never touch). Removing every option is refused (422,
         detail "A picklist needs at least one option") — a picklist always keeps at least
         one allowed value. Like `retireCustomField`, an agent asks its user first: this
-        mutates a schema-adjacent CHECK constraint. A retired field
+        mutates a schema-adjacent CHECK constraint, and clears data. A retired field
         refuses the edit with a 409 `conflict` — retirement is terminal, so its options
-        are frozen; removing an option that stored values still use is also a 409
-        (`ADD CONSTRAINT` validates existing rows — migrate the values first).
+        are frozen.
 
         Needs the passport permission Change records.
 
@@ -18295,19 +18358,19 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '409':
           description: >-
-            Stored values still use a removed option, the field is retired (options are frozen — retirement is terminal), or the target table is busy with concurrent activity — the last is retryable.
+            The field is retired (options are frozen — retirement is terminal), a record that holds a removed choice belongs to a member who has left and must be handed on first, a record that holds one is under a retention hold, or the target table is busy with concurrent activity — the last is retryable.
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
               examples:
-                removedOptionInUse:
-                  summary: Records still carry an option the edit removes
+                removedChoiceOnDepartedWork:
+                  summary: A record holding a removed choice still belongs to a departed member
                   value:
                     type: 'https://errors.gradion.com/conflict'
                     title: Conflict
                     status: 409
                     code: conflict
-                    detail: 'existing deal values still use a removed option; migrate them first: conflict'
+                    detail: 'a deal that holds a removed choice belongs to a member who has left; hand it to a colleague first: conflict'
                 fieldRetired:
                   summary: The field is retired — its options are frozen
                   value:
@@ -19609,7 +19672,7 @@ paths:
               schema: {$ref: '#/components/schemas/Problem'}
         '409':
           description: >-
-            Refused, with the reason distinguished by the problem `code`: `email_taken` (a member with this email already exists), `no_delivery_channel` (this installation has neither an outbound-email channel nor a public base URL, so neither the mailed link nor an admin-issued one could reach the member — an invite would create an ACTIVE account nobody could ever sign in as), or `company_not_described` (this installation has not yet saved its own company through `PUT /company`; the onboarding gate holds every admin on the company form until it is saved, so no seat of any role is added before then, and a client may read any non-admin seat as proof that the company exists. Asked after the caller's grant, so a caller who may not invite is answered 403 either way).
+            Refused, with the reason distinguished by the problem `code`: `already_invited` (a member with this email exists and is still waiting on an invitation; resend it with `POST /users/{id}/resend-invite`. Answered only to a caller who may read `user_admin`; any other caller is answered `email_taken` or the seat refusal, as for any other taken address), `email_taken` (a member with this email already exists), `no_delivery_channel` (this installation has neither an outbound-email channel nor a public base URL, so neither the mailed link nor an admin-issued one could reach the member — an invite would create an ACTIVE account nobody could ever sign in as), or `company_not_described` (this installation has not yet saved its own company through `PUT /company`; the onboarding gate holds every admin on the company form until it is saved, so no seat of any role is added before then, and a client may read any non-admin seat as proof that the company exists. Asked after the caller's grant, so a caller who may not invite is answered 403 either way).
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
@@ -34847,7 +34910,7 @@ components:
     ConversationClaimLooksKept:
       type: object
       description: >-
-        A read-only hint that this open promise to invite someone looks kept: a guest of that name at the same company accepted a later meeting this reader may open. Nothing is settled. The reader decides, through the settle verb.
+        A guest of the name the promise to invite someone names, at the same company, accepted a later meeting this reader may open. On an open promise with no responsible seat this is a hint and nothing is settled; the reader decides through the settle verb. On `auto_kept` it is the evidence Margince closed on.
       required: [meeting_id, guest_name, meeting_at, meeting_precision]
       properties:
         meeting_id: {type: string, format: uuid}
@@ -34856,6 +34919,12 @@ components:
         meeting_precision:
           allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
           description: How to read `meeting_at`. `day` means only its date is known.
+    ConversationClaimAutoKept:
+      type: object
+      description: >-
+        Margince closed this promise to invite someone because a guest accepted a later meeting. `POST /claims/{id}/reopen` undoes it. `evidence` is left out when the reader may not open that meeting.
+      properties:
+        evidence: {$ref: '#/components/schemas/ConversationClaimLooksKept'}
     ConversationClaim:
       type: object
       description: |-
@@ -34893,6 +34962,7 @@ components:
           format: date-time
           description: When a human typed over the machine. Set means the claim is theirs, not the extractor's.
         looks_kept: {$ref: '#/components/schemas/ConversationClaimLooksKept'}
+        auto_kept: {$ref: '#/components/schemas/ConversationClaimAutoKept'}
         task_activity_id:
           type: [string, 'null']
           format: uuid
@@ -40161,6 +40231,17 @@ components:
         activity_id: {type: string, format: uuid}
         entity_type: {type: string, enum: [contact, company, deal, lead, project]}
         entity_id: {type: string, format: uuid}
+        deal_relevance:
+          type: string
+          enum: [relevant, unrelated, uncertain]
+          description: |-
+            On a deal link only: whether the activity is about the deal. Absent when nobody judged
+            it, which counts as relevant. `unrelated` and `uncertain` warm the deal in no reading of
+            it; only `unrelated` also leaves it out of the silent close.
+        relevance_source:
+          type: string
+          enum: [human, classifier]
+          description: Who set `deal_relevance`. The classifier never changes a mark a human set.
     RelinkThreadRequest:
       type: object
       description: |-
@@ -41213,9 +41294,47 @@ components:
           type: string
           format: uuid
           description: The deal the message is not about. Leave it out to answer "none of them".
+    SetActivityDealRelevanceRequest:
+      type: object
+      additionalProperties: false
+      required: [deal_id, deal_relevance]
+      properties:
+        deal_id:
+          type: string
+          format: uuid
+          description: The deal whose link to the activity is judged.
+        deal_relevance:
+          type: string
+          enum: [relevant, unrelated]
+          description: '`relevant` says the activity is about the deal; `unrelated` says it is not.'
+    ActivityDealRelevance:
+      type: object
+      required: [deal_id, deal_relevance, relevance_source, changed, project_unfiled, project_kept, project_filed]
+      properties:
+        deal_id: {type: string, format: uuid}
+        deal_relevance:
+          type: string
+          enum: [relevant, unrelated, uncertain]
+          description: The link's mark after the call.
+        relevance_source:
+          type: string
+          enum: [human, classifier]
+          description: Who set the mark. Always `human` after this call.
+        changed:
+          type: boolean
+          description: The call changed the mark.
+        project_unfiled:
+          type: boolean
+          description: The project link that came from the deal came off the activity.
+        project_kept:
+          type: boolean
+          description: A project link came from the deal and stays, because a retention rule keeps it or the caller cannot read the project.
+        project_filed:
+          type: boolean
+          description: The activity was filed on the deal's project again.
     ActivityDealDecline:
       type: object
-      required: [declined_deal_ids, unlinked, project_unfiled, project_kept, questions_closed]
+      required: [declined_deal_ids, unlinked, marked_unrelated, project_unfiled, project_kept, questions_closed]
       properties:
         declined_deal_ids:
           type: array
@@ -41223,7 +41342,11 @@ components:
           description: The deals this call declined on the message. A deal declined before is not listed again.
         unlinked:
           type: boolean
-          description: A deal link came off the message.
+          deprecated: true
+          description: Always false. A declined deal link stays on the message, marked `unrelated`; `marked_unrelated` says so.
+        marked_unrelated:
+          type: boolean
+          description: A deal link of the message is now marked `unrelated` by a human.
         project_unfiled:
           type: boolean
           description: The project link that came from a declined deal came off the message.
@@ -44725,9 +44848,9 @@ components:
             since the catalog owns labels and this vocabulary does not.
         type:
           type: string
-          enum: [text, number, date, currency, picklist, multiselect, boolean, record, id, domain, distance]
+          enum: [text, number, date, currency, picklist, multiselect, boolean, record, url, id, domain, distance]
           description: |-
-            The six custom-field types, plus `id` for a reference to another record,
+            The custom-field types, plus `id` for a reference to another record,
             `domain` for a host column and `distance` for a place on the earth. A `distance`
             field admits only `within_radius`, whose value is `{lat, lon, radius_km, label?}`;
             `lat` and `lon` are the center, `radius_km` is greater than zero, and `label` is the
@@ -50017,8 +50140,8 @@ components:
         slug: {type: string, description: Admin-facing key the column_name derives from.}
         type:
           type: string
-          enum: [text, number, date, currency, picklist, multiselect, boolean, record]
-          description: The supported field types. Multiselect values are JSON string arrays; empty arrays clear the selection. A record field holds the id of one record of the kind named by its single option, and that option must be a record kind a unit declared. Immutable once created.
+          enum: [text, number, date, currency, picklist, multiselect, boolean, record, url]
+          description: The supported field types. Multiselect values are JSON string arrays; empty arrays clear the selection. A record field holds the id of one record of the kind named by its single option, and that option must be a record kind a unit declared. A url field holds an absolute `http` or `https` address of at most 2000 characters, with no user name or password; any other value is refused with `invalid_value`. Immutable once created.
         status:
           type: string
           enum: [active, retired]
@@ -50060,6 +50183,25 @@ components:
           description: >-
             Base envelope field; stays null even when `status=retired`, because retiring is a status flip rather than an archive.
         version: {$ref: '#/components/schemas/RowVersion'}
+        records_changed:
+          type: integer
+          minimum: 0
+          description: >-
+            Only on the answer to `updateCustomFieldOptions`: how many records held a choice the edit removed and had it cleared.
+    CustomFieldChoiceUse:
+      type: object
+      description: How many records hold each current choice of a picklist or multiselect field.
+      required: [choices]
+      properties:
+        choices:
+          type: array
+          items: {$ref: '#/components/schemas/CustomFieldChoiceCount'}
+    CustomFieldChoiceCount:
+      type: object
+      required: [choice, records]
+      properties:
+        choice: {type: string}
+        records: {type: integer, minimum: 0, description: 'Records that hold the choice, archived ones included.'}
     CustomFieldLiveLists:
       type: object
       description: >-
@@ -50102,7 +50244,7 @@ components:
         label: {type: string}
         type:
           type: string
-          enum: [text, number, date, currency, picklist, multiselect, boolean, record]
+          enum: [text, number, date, currency, picklist, multiselect, boolean, record, url]
         currency: {type: [string, 'null'], pattern: '^[A-Z]{3}$'}
         options: {type: [array, 'null'], items: {type: string}}
         source: {type: string}

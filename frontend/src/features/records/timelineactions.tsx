@@ -50,7 +50,7 @@ import {
   RelinkModal,
 } from "../mail/compose";
 import { ActivityFilesAction } from "./activityfiles";
-import { DealDeclineAction } from "./dealdecline";
+import { DealRelevanceAction, DealRelevanceBadge } from "./dealdecline";
 import { MoveButton } from "./movebutton";
 import { ProjectFilingAction } from "./projectfiling";
 
@@ -136,6 +136,9 @@ export function TimelineActions(props: RowVerbProps) {
   return (
     <>
       <RowAnswerActions {...props} />
+      {entityType === "deal" && (
+        <DealRelevanceBadge activity={activity} dealId={entityId} />
+      )}
       {entityType === "contact" && (
         <HeldMailLink activity={activity} contactId={entityId} />
       )}
@@ -152,10 +155,10 @@ export function TimelineActions(props: RowVerbProps) {
           entityType={entityType}
           entityId={entityId}
         />
-        {/* An email on a deal's timeline may have been filed there by
-            capture alone, so this is where a reader says it is not. */}
-        {entityType === "deal" && activity.kind === "email" && (
-          <DealDeclineAction activity={activity} dealId={entityId} />
+        {/* A row on a deal's timeline may have been filed there by capture
+            or an import alone, so this is where a reader says it is not. */}
+        {entityType === "deal" && activity.kind !== "task" && (
+          <DealRelevanceAction activity={activity} dealId={entityId} />
         )}
         {/* Every row on a project's timeline is filed under that project, so
             this is the one surface where taking the filing back is always

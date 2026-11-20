@@ -3,7 +3,13 @@
 
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
@@ -72,7 +78,11 @@ const booked: Company360 = view({
   },
 });
 
-function mount(shown: Company360 | undefined, routes: RouteMap = {}) {
+function mount(
+  shown: Company360 | undefined,
+  routes: RouteMap = {},
+  loading = false,
+) {
   installFetchStub({
     "GET /me": meRoute({ activity: ["read"] }, { seat: "full" }),
     "GET /activities": () =>
@@ -84,29 +94,33 @@ function mount(shown: Company360 | undefined, routes: RouteMap = {}) {
   });
   const requests = vi.spyOn(globalThis, "fetch");
   const onBriefMeeting = vi.fn();
-  render(
-    <QueryClientProvider
-      client={
-        new QueryClient({ defaultOptions: { queries: { retry: false } } })
-      }
-    >
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  const tab = (view: Company360 | undefined, pending: boolean) => (
+    <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
         <CompanyMeetingsTab
           companyId="o-1"
-          view={shown}
-          loading={false}
+          view={view}
+          loading={pending}
           onBriefMeeting={onBriefMeeting}
         />
       </LocaleProvider>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+  const { rerender } = render(tab(shown, loading));
   // The client sends a Request, not a bare URL.
   const asked = () =>
     requests.mock.calls.map(
       ([input]) =>
         new URL(input instanceof Request ? input.url : String(input)),
     );
-  return { asked, onBriefMeeting };
+  return {
+    asked,
+    onBriefMeeting,
+    show: (view: Company360) => rerender(tab(view, false)),
+  };
 }
 
 it("reads the account's own meetings and leads with the next one and who is in it", async () => {
@@ -134,6 +148,28 @@ it("says the meetings are withheld when the account read leaves them out", async
     view({ sections_omitted: ["activities", "next_meeting"] }),
   );
   expect((await screen.findAllByText("Hidden for your role")).length).toBe(2);
+  expect(asked().some((url) => url.pathname.endsWith("/activities"))).toBe(
+    false,
+  );
+});
+
+it("starts one meeting read while the overview loads and hides rows when it withholds them", async () => {
+  const { asked, show } = mount(undefined, {}, true);
+  const reads = () =>
+    asked().filter((url) => url.pathname.endsWith("/activities"));
+  await waitFor(() => expect(reads()).toHaveLength(1));
+  expect(reads()[0]?.searchParams.getAll("kind")).toEqual(["meeting"]);
+  show(view({ sections_omitted: ["activities", "next_meeting"] }));
+  expect(await screen.findAllByText("Hidden for your role")).toHaveLength(2);
+  expect(screen.queryByText("Quarterly review")).toBeNull();
+  expect(reads()).toHaveLength(1);
+});
+
+it("leaves the meeting read off while the overview loads without the activity grant", async () => {
+  const { asked } = mount(undefined, { "GET /me": meRoute({}) }, true);
+  await waitFor(() =>
+    expect(asked().some((url) => url.pathname.endsWith("/me"))).toBe(true),
+  );
   expect(asked().some((url) => url.pathname.endsWith("/activities"))).toBe(
     false,
   );

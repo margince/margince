@@ -385,7 +385,7 @@ The 34 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity_link
 
-9 columns · primary key `(id)` · referenced by 0 foreign keys
+11 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -394,9 +394,11 @@ The 34 tables owned by `activities`, as the migrations build them. [Back to the 
 | `company_id` | `uuid` |  | Points at `company.id`. |
 | `contact_id` | `uuid` |  | Points at `contact.id`. |
 | `deal_id` | `uuid` |  | Points at `deal.id`. |
+| `deal_relevance` | `text` |  | On a deal link only: whether the activity is about the deal. |
 | `entity_type` | `text` | yes | One of `contact`, `company`, `deal`, `lead`, `project`. |
 | `lead_id` | `uuid` |  | Points at `lead.id`. |
 | `project_id` | `uuid` |  | Points at `project.id`. |
+| `relevance_source` | `text` |  | Who set `deal_relevance`. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 
 **Points at**
@@ -412,7 +414,10 @@ The 34 tables owned by `activities`, as the migrations build them. [Back to the 
 
 **Rules**
 
+- `activity_link_deal_relevance_check`: `CHECK ((deal_relevance = ANY (ARRAY['relevant', 'unrelated', 'uncertain'])))`
+- `activity_link_deal_relevance_shape`: `CHECK ((((deal_relevance IS NULL) = (relevance_source IS NULL)) AND ((deal_relevance IS NULL) OR (entity_type = 'deal'))))`
 - `activity_link_entity_type_check`: `CHECK ((entity_type = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'project'])))`
+- `activity_link_relevance_source_check`: `CHECK ((relevance_source = ANY (ARRAY['human', 'classifier'])))`
 - `activity_link_shape`: `CHECK ((((entity_type = 'contact') AND (contact_id IS NOT NULL) AND (company_id IS NULL) AND (deal_id IS NULL) AND (lead_id IS NULL) AND (project_id IS NULL)) OR ((entity_type = 'company') AND (company_id IS NOT NULL) AND (contact_id IS NULL) AND (deal_id IS NULL) AND (lead_id IS NULL) AND (project_id IS NULL)) OR ((entity_type = 'deal') AND (deal_id IS NOT NULL) AND (contact_id IS NULL) AND (company_id IS NULL) AND (lead_id IS NULL) AND (project_id IS NULL)) OR ((entity_type = 'lead') AND (lead_id IS NOT NULL) AND (contact_id IS NULL) AND (company_id IS NULL) AND (deal_id IS NULL) AND (project_id IS NULL)) OR ((entity_type = 'project') AND (project_id IS NOT NULL) AND (contact_id IS NULL) AND (company_id IS NULL) AND (deal_id IS NULL) AND (lead_id IS NULL))))`
 
 **Indexes**
@@ -436,8 +441,8 @@ The 34 tables owned by `activities`, as the migrations build them. [Back to the 
 - `home_read_fence_link_change`: `AFTER UPDATE FOR EACH ROW WHEN (((old.activity_id IS DISTINCT FROM new.activity_id) OR (old.contact_id IS DISTINCT FROM new.contact_id) OR (old.company_id IS DISTINCT FROM new.company_id) OR (old.deal_id IS DISTINCT FROM new.deal_id) OR (old.lead_id IS DISTINCT FROM new.lead_id) OR (old.project_id IS DISTINCT FROM new.project_id))) EXECUTE FUNCTION advance_home_read_fence()`
 - `home_read_fence_link_removed`: `AFTER DELETE FOR EACH STATEMENT EXECUTE FUNCTION advance_home_read_fence()`
 - `settlement_evidence_share`: `BEFORE INSERT OR DELETE OR UPDATE FOR EACH ROW EXECUTE FUNCTION settlement_evidence_share_link()`
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"entity_type": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"entity_type":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"entity_type": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"entity_type":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"entity_type": 20000, "deal_relevance": 20000, "relevance_source": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"deal_relevance":20000,"entity_type":20000,"relevance_source":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"entity_type": 20000, "deal_relevance": 20000, "relevance_source": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"deal_relevance":20000,"entity_type":20000,"relevance_source":20000}')`
 
 ## activity_link_suggestion
 

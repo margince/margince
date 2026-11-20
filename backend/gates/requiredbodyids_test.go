@@ -63,6 +63,7 @@ var probedRequiredIDBodies = map[string]bool{
 	"CreateStageRequest":                true,
 	"MoveDealPipelineRequest":           true,
 	"ApplyTagRequest":                   true,
+	"SetActivityDealRelevanceRequest":   true,
 	"ListMemberChangeRequest":           true,
 	"MergeTagsRequest":                  true,
 	"RecordConsentRequest":              true,

@@ -75,14 +75,17 @@ var errAgentSeatHasNoPassword = errors.New("identity: the agent seat has no pass
 // image or the event payload. Losing it means issuing another, never recovering
 // this one.
 func (s *Service) IssuePasswordLink(ctx context.Context, actor Identity, userID ids.UserID) (string, time.Time, error) {
-	return s.issueSetPasswordToken(ctx, actor, userID, linkTarget, false)
+	return s.issueSetPasswordToken(ctx, actor, userID, linkTarget, false, nil)
 }
 
 // issueSetPasswordToken is IssuePasswordLink with the target rule passed in.
 // A resent invitation runs the same supersede, audit and event on fewer
-// members. mailed marks the link as handed to the mail sender.
+// members. mailed marks the link as handed to the mail sender. andThen, when
+// set, runs last in the same transaction, for a caller that answers with what
+// the mint committed.
 func (s *Service) issueSetPasswordToken(
 	ctx context.Context, actor Identity, userID ids.UserID, refuseTarget targetRule, mailed bool,
+	andThen func(pgx.Tx) error,
 ) (string, time.Time, error) {
 	// The seat ceiling sits ABOVE RBAC (A62/ADR-0047) and the HTTP middleware
 	// already refuses a read seat every mutating method. It is re-checked here
@@ -138,8 +141,14 @@ func (s *Service) issueSetPasswordToken(
 		if err != nil {
 			return err
 		}
-		return storekit.EmitEvent(ctx, tx, auditID, userID.UUID,
-			passwordLinkIssuedPayload(userID, actor.UserID, expiresAt))
+		if err := storekit.EmitEvent(ctx, tx, auditID, userID.UUID,
+			passwordLinkIssuedPayload(userID, actor.UserID, expiresAt)); err != nil {
+			return err
+		}
+		if andThen == nil {
+			return nil
+		}
+		return andThen(tx)
 	})
 	if err != nil {
 		return "", time.Time{}, err

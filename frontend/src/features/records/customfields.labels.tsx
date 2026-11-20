@@ -18,6 +18,7 @@ export function typeLabels(t: ReturnType<typeof useT>): Record<CfType, string> {
     picklist: t("cf.type.picklist"),
     boolean: t("cf.type.boolean"),
     record: t("cf.type.record"),
+    url: t("cf.type.url"),
   };
 }
 

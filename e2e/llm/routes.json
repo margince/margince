@@ -43,6 +43,7 @@
         "cancel_send": "cancel_scheduled_send",
         "check_new_send": "preview_account_send_authorization",
         "check_send": "preview_send_authorization",
+        "deal_relevance": "set_activity_deal_relevance",
         "decline_deal": "decline_activity_deal",
         "discard_draft": "discard_mail_draft",
         "file_channel_message": "file_channel_message",

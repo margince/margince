@@ -29,6 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // inheritedProjectEvidence is the mark on the audit row of an inherited link.
@@ -167,15 +168,17 @@ func settleDisplaced(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in Relin
 }
 
 // dropOrphanedInheritedProject takes off an inherited project link that no
-// deal of the activity, nor the incoming one, still belongs to. A link that
-// stamped retention stays for the project-filing undo to judge. It answers
-// whether a link came off.
+// deal of the activity, nor the incoming one, still belongs to. A deal the
+// activity is marked not about holds no project. A link that stamped
+// retention stays for the project-filing undo to judge. It answers whether a
+// link came off.
 func dropOrphanedInheritedProject(ctx context.Context, tx pgx.Tx, id ids.ActivityID, incoming ids.UUID) (bool, error) {
 	rows, err := tx.Query(ctx, `DELETE FROM activity_link l
 		 WHERE l.activity_id = $1 AND l.entity_type = 'project'
 		   AND `+provenance.InheritedProjectLinkSQL("l.activity_id", "l.project_id")+`
 		   AND NOT EXISTS (SELECT 1 FROM deal d WHERE d.project_id = l.project_id AND (d.id = $2
-		         OR d.id IN (SELECT dl.deal_id FROM activity_link dl WHERE dl.activity_id = $1 AND dl.entity_type = 'deal')))
+		         OR d.id IN (SELECT dl.deal_id FROM activity_link dl WHERE dl.activity_id = $1 AND dl.entity_type = 'deal'
+		                       AND `+relstrength.DealLinkStandsSQL("dl")+`)))
 		   AND NOT EXISTS (SELECT 1 FROM activity_retention_evidence e
 		         WHERE e.activity_id = l.activity_id AND e.project_id = l.project_id)
 		 RETURNING l.project_id`, id, incoming)

@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/customfields backend/internal/shared/ports/fieldcatalog backend/internal/platform/database/storekit/customcolumns.go backend/internal/platform/database/storekit/listquery.go frontend/src/features/records/customfields.tsx -->
+<!-- describes: backend/internal/modules/customfields backend/internal/shared/ports/fieldcatalog backend/internal/platform/database/storekit/customcolumns.go backend/internal/platform/database/storekit/listquery.go backend/internal/platform/database/storekit/removedchoices.go frontend/src/features/records/customfields.tsx frontend/src/features/records/customfields.choices.tsx -->
 # Custom fields: the governed add-field engine
 
 How a workspace admin adds a field to `contact` at runtime without anyone shipping code. And why so many
@@ -24,8 +24,8 @@ extra metadata layer on the path every read takes. One governed DDL path is the 
 
 ## What a custom field may be: the closed sets
 
-The types are `text`, `number`, `date`, `currency`, `picklist`, `multiselect`, `boolean` and `record`
-(`FieldTypes` in `engine.go`). The objects are `contact`, `company`, `deal`, `lead`, `project` and
+The types are `text`, `number`, `date`, `currency`, `picklist`, `multiselect`, `boolean`, `record` and
+`url` (`fieldcatalog.Types()`, which `FieldTypes` in `engine.go` is). The objects are `contact`, `company`, `deal`, `lead`, `project` and
 `contract` (`FieldObjects` in `engine.go`). The catalog's `CHECK` on `object` allows more than that
 list. The engine is the only writer of the table, so the list is what binds. There is no cap on how many
 fields an object carries, and no way to add to what a field may be.
@@ -42,10 +42,16 @@ Each type maps to one column type:
   extension declared, such as `ext:<unit>:<kind>`. Creating the field is refused with `invalid_record_kind`
   on `options` unless it names one registered kind and no other. A write is refused with `invalid_value` unless
   the value is a UUID. Core does not yet check that the row exists, and the lists filter the value as text.
+- `url` → a `text` with a 2000-character `CHECK`. A write is refused with `invalid_value` unless the value is
+  an absolute `http` or `https` address. It needs a host and no user name or password (`values.IsWebAddress`).
+  The scheme matches in any case. The lists filter the value as text, and the record page draws it as a
+  link through `OffsiteLink`.
 
-The type names are written in three places: the engine's constants, the catalog's `CHECK` constraints
-(in `migrations/core/`), and `ports/fieldcatalog`. They must never drift apart. The port carries its own
-copy because `shared` may not import `modules` without breaking the DAG.
+The type names are written in three places: `ports/fieldcatalog`, the catalog's `CHECK` constraint (in
+`migrations/core/`), and `CF_TYPES` in `frontend/src/lib/customfields.logic.ts`. The engine's constants
+are the port's. `TestFieldTypes_IsTheCatalogCheckSet` holds the port against the `CHECK` in the head
+schema, and `backend/gates/frontendcustomfieldtypes_test.go` holds `CF_TYPES` against the port. Both fail
+in either direction.
 
 The admin never names the column. `label` is the only text a caller supplies. The engine derives the
 slug from it, and the column from the slug.
@@ -60,8 +66,8 @@ the label and nothing else.
 `multiselect` is a governed custom field type, next to `picklist`. Its values are JSON lists of
 strings, stored in a `text[]` column that may be `NULL`. Admins supply the allowed choices when they create the
 field; the product ships no fields or choice lists made for one install. The generated `CHECK`
-refuses unknown choices. An edit to the choice list refuses to remove any choice still stored on a
-record, retired records included.
+refuses unknown choices. An edit to the choice list takes a removed choice off every record that holds
+it, as [Removing a choice](#removing-a-choice) says.
 
 Create and edit forms offer one checkbox per choice. A label with a `,` in it stays a single choice.
 Leaving a key out of a `PATCH` keeps its value, and `null` clears the field. `[]` stores an empty
@@ -93,7 +99,7 @@ relationship but would not be one. Refusing only makes an admin change the words
 
 The engine uses two pools with different authority. The app pool (`margince_app`, DML only) serves
 every operation that only touches the catalog. The **schema pool**, which has owner rights, serves two
-paths only: create, and an edit to the options of a `picklist`. Only those two run DDL.
+paths only: create, and an edit to the options of a `picklist` or `multiselect`. Only those two run DDL.
 
 Inside one transaction on that pool:
 
@@ -141,9 +147,46 @@ out by default, because it is the one surface that still shows a retired field.
 Retiring is **for good**: a retired field refuses rename and options edits with a 409. Retiring it again
 does nothing. It returns the row as it is and writes nothing to the audit log.
 
-An options edit generates the `CHECK` of the `picklist` again from the new set, and `ADD CONSTRAINT` checks
-existing rows. Removing an option that records still use refuses the edit (`migrate them first`). It does not
-leave data outside its own constraint. A `picklist` always keeps one value or more.
+An options edit generates the `CHECK` of the field again from the new set, and `ADD CONSTRAINT` checks
+existing rows. A choice the edit removes is first cleared from the records that hold it, so no data is
+left outside its own constraint. A `picklist` always keeps one value or more.
+
+### Removing a choice
+
+The options edit clears a removed choice from every record of the field's object, archived ones too,
+because the `CHECK` covers them. It runs in the same schema-pool transaction as the `ALTER`, after the
+advisory lock and before the `CHECK` is made again. A `picklist` value becomes `NULL`. A `multiselect` keeps
+its other choices in their order, and one left with none becomes `NULL`.
+
+Removing a choice changes records, so the caller also needs the grant to update the field's object. Before
+the clear, the edit takes the `ACCESS EXCLUSIVE` lock the `ALTER` needs. So no record can take a removed
+choice between the clear and the `CHECK`.
+
+Each record module owns its table, so it does the clearing. `customfields` holds a `ChoiceRemover` for
+each object, and compose injects them (`CustomFieldChoiceRemovers` in
+`internal/compose/customfieldchoices.go`). Most removers call `storekit.ClearRemovedChoices` with their own
+table and their own `<object>.updated` payload. That helper locks the rows that hold a removed choice and
+updates them. It writes the update, the audit rows and the events in one statement each per 1000 records.
+
+The contract remover takes the locked rows from `storekit.LockRemovedChoices` and writes each through
+`applyContractUpdate`, the one writer of a contract update. Both refuse a column the catalog does not list
+on that table with that type. The table ownership gate counts
+`ClearRemovedChoices` as a write by the module that calls it.
+
+The cost grows with the records that hold the choice. The `ALTER` already reads the whole table to check
+the new `CHECK`. The 2-second `lock_timeout` covers the row locks too, so a record being edited answers
+`ErrTableBusy`, which a client may retry. A record that holds the choice and still belongs to a member who has left is
+refused by the retired-member trigger. An activity under a retention hold refuses any change. The edit
+then answers 409 and names the reason.
+
+The answer carries `records_changed`. `GET /custom-fields/{id}/choices` answers how many records hold
+each choice, for a reader of the field and its object. The **Edit choices** dialog shows those counts and the total a save
+clears.
+
+A Live List whose filter names the removed choice keeps working. A filter condition does not
+refuse a value outside the set at read time (`storekit.RefuseUnknownPicklistValues` runs only when a
+filter is saved). It matches no record by that choice. Saving a `picklist` filter that still names the choice is refused until the
+choice is taken out of it.
 
 Changing the catalog is **owned by admins and operators**, and every role may read it, as with pipeline config. A
 field changes what the system stores for every user's records. The catalog is config shared
@@ -233,13 +276,14 @@ the cost visible, but it is new surface to govern. The choice is an open product
 | The engine with no database calls (checks, making the slug and DDL, `quoteLiteral`) | `internal/modules/customfields/engine.go` |
 | The service seam, the typed errors for a refused call, catalog scan | `internal/modules/customfields/service.go` |
 | The two DDL paths | `internal/modules/customfields/create.go`, `options.go` |
+| Clearing a removed choice, and the count before it | `internal/modules/customfields/removedchoices.go`, `internal/platform/database/storekit/removedchoices.go` |
 | Rename + retire (catalog only, app pool) | `internal/modules/customfields/lifecycle.go` |
 | The `fieldcatalog` provider half | `internal/modules/customfields/catalogreader.go` |
 | The seam between modules | `internal/shared/ports/fieldcatalog/` |
 | The record store code | `internal/platform/database/storekit/customcolumns.go` |
 | The sort and filter words that `cf_*` columns are part of | `internal/platform/database/storekit/listquery.go` |
 | The catalog table + its RBAC grants | `backend/migrations/core/` (the `custom_field` table is in the `0001` migration) |
-| The admin UI | `frontend/src/features/records/customfields.tsx` |
+| The admin UI | `frontend/src/features/records/customfields.tsx`, `customfields.choices.tsx` |
 
 The owner pool flag and its `/readyz` check: [reference/configuration.md](../reference/configuration.md).
 The write shape these changes still go through: [write-backbone.md](write-backbone.md). The role table
