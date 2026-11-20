@@ -370,16 +370,10 @@ describe("a relative date operand", () => {
 });
 
 describe("the day count a relative date may hold", () => {
-  // storekit.MaxRelativeDays in predicateoperand.go: the server refuses a
-  // larger count, so this pins the mirror at the same number.
-  it("is a century, as the engine bounds it", () => {
-    expect(MAX_DAYS_AGO).toBe(36600);
-  });
-
-  it("admits 0 to that bound and nothing past it", () => {
+  it("admits 0 to the engine's bound and nothing past it", () => {
     expect(isRelativeDate({ days_ago: 0 })).toBe(true);
-    expect(isRelativeDate({ days_ago: 36600 })).toBe(true);
-    expect(isRelativeDate({ days_ago: 36601 })).toBe(false);
+    expect(isRelativeDate({ days_ago: MAX_DAYS_AGO })).toBe(true);
+    expect(isRelativeDate({ days_ago: MAX_DAYS_AGO + 1 })).toBe(false);
     expect(isRelativeDate({ days_ago: -1 })).toBe(false);
   });
 });

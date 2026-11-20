@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, within } from "storybook/test";
 import type { Reference } from "../../components/filterreference";
 import type { VocabularyField } from "../../lib/filterdata";
 import type { FilterOp, LeafValue } from "../../lib/segmentpredicate";
@@ -115,6 +115,8 @@ export const DaysAgoRefused: Story = {
     const days = await canvas.findByDisplayValue("30");
     await userEvent.clear(days);
     await userEvent.type(days, "-1");
+    await canvas.findByText("Enter a whole number of days from 0 to 36,600.");
+    await expect(days).toHaveAttribute("aria-invalid", "true");
   },
 };
 

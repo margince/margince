@@ -19,6 +19,7 @@ import {
 } from "../../lib/filterdata";
 import {
   type FilterOp,
+  isFilterOp,
   isGroup,
   type Leaf,
   type LeafValue,
@@ -156,6 +157,17 @@ export function ClauseRow({
     }));
   };
 
+  const reop = (nextOp: string) => {
+    if (!isFilterOp(nextOp)) {
+      return;
+    }
+    edit((found) => ({
+      ...found,
+      op: nextOp,
+      value: carriedValue(found.op, nextOp, found.value, chosen?.type),
+    }));
+  };
+
   return (
     <div
       ref={row}
@@ -173,21 +185,12 @@ export function ClauseRow({
       <Select
         options={operatorOptions}
         value={op}
-        onChange={(nextOp) =>
-          edit((found) => ({
-            ...found,
-            op: nextOp as FilterOp,
-            value: carriedValue(
-              found.op,
-              nextOp as FilterOp,
-              found.value,
-              chosen?.type,
-            ),
-          }))
-        }
+        onChange={reop}
         aria-label={t("filters.operator")}
       />
+      {/* A new field starts its value control afresh, typed text included. */}
       <ValueControl
+        key={field}
         type={chosen?.type ?? "text"}
         references={chosen?.references}
         options={chosen?.options}

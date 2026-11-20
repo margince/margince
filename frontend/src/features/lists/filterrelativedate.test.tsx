@@ -9,10 +9,14 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { ShortlistVerb } from "../../components/bulkshortlist";
+import { pickOption } from "../../design-system/select-testing";
 import { en } from "../../i18n/en";
+import type { VocabularyField } from "../../lib/filterdata";
 import {
   isComplete,
   type LeafValue,
+  type Node,
+  newGroup,
   newLeaf,
 } from "../../lib/segmentpredicate";
 import { listsMe, shortlist } from "../../testing/lists.fixtures";
@@ -21,9 +25,12 @@ import {
   jsonResponse,
   StoryProviders,
 } from "../../testing/story-utils";
+import { FilterBuilder } from "./filterbuilder";
 import { ValueControl } from "./filtervalue";
 
 afterEach(cleanup);
+
+const REFUSAL = "Enter a whole number of days from 0 to 36,600.";
 
 function DateClause({ seen }: Readonly<{ seen: LeafValue[] }>) {
   const [value, setValue] = useState<LeafValue>("");
@@ -68,8 +75,6 @@ describe("a date clause", () => {
 });
 
 describe("a count of days the engine cannot take", () => {
-  const REFUSAL = "Enter a whole number of days from 0 to 36,600.";
-
   it.each(["-1", "1.5", "abc", "36601"])(
     "keeps %s as typed, says why, and holds the clause back",
     async (typed) => {
@@ -150,6 +155,55 @@ describe("a count of days the engine cannot take", () => {
       screen.queryByRole("textbox", { name: "Last touch: days before today" }),
     ).toBeNull();
     expect(screen.queryByText(REFUSAL)).toBeNull();
+  });
+});
+
+describe("a date clause whose field changes", () => {
+  const DATE_FIELDS: VocabularyField[] = [
+    { name: "created_at", type: "date", operators: ["gte"], custom: false },
+    {
+      name: "last_activity_at",
+      type: "date",
+      operators: ["gte"],
+      custom: false,
+    },
+  ];
+
+  function Builder() {
+    const [tree, setTree] = useState<Node>(() =>
+      newGroup("and", [newLeaf("created_at", "gte", "")]),
+    );
+    return (
+      <FilterBuilder tree={tree} onChange={setTree} fields={DATE_FIELDS} />
+    );
+  }
+
+  it("starts over on a calendar day, even from a count being corrected", async () => {
+    const user = userEvent.setup();
+    render(
+      <StoryProviders>
+        <Builder />
+      </StoryProviders>,
+    );
+    await user.click(
+      screen.getByRole("button", { name: en["filters.date.daysAgo"] }),
+    );
+    fireEvent.change(screen.getByRole("textbox", { name: /days before/ }), {
+      target: { value: "abc" },
+    });
+    await pickOption(
+      user,
+      screen.getByRole("combobox", { name: en["filters.field"] }),
+      "Last activity",
+    );
+
+    expect(screen.queryByRole("textbox", { name: /days before/ })).toBeNull();
+    expect(screen.queryByText(REFUSAL)).toBeNull();
+    expect(
+      screen
+        .getByRole("button", { name: en["filters.date.on"] })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
   });
 });
 

@@ -429,8 +429,7 @@ function DateValue({
             aria-label={label}
           />
         ) : (
-          <input
-            className="input"
+          <TextInput
             inputMode="numeric"
             value={days}
             onChange={(event) => {
