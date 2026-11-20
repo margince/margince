@@ -18432,6 +18432,36 @@ paths:
                 properties:
                   data: {type: array, items: {$ref: '#/components/schemas/ConsentPurpose'}}
                   page: {$ref: '#/components/schemas/PageInfo'}
+  /consent-purposes/send-counts:
+    get:
+      tags: [Compliance]
+      operationId: listConsentPurposeSendCounts
+      summary: How many messages went out under each declared consent purpose, and how many the record disputes.
+      description: |-
+        Needs `consent_config:read`. A send names a consent purpose, and may claim what kind of
+        message it is. The send engine records, for every message it stages, what was claimed and
+        what the record bore out. This read counts those staged messages per purpose in the window,
+        most sent first.
+      parameters:
+        - name: days
+          in: query
+          required: false
+          schema: {type: integer, minimum: 1, maximum: 366, default: 30}
+          description: How many days back the window reaches from now.
+      responses:
+        '200':
+          description: The send counts.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, days]
+                properties:
+                  data: {type: array, items: {$ref: '#/components/schemas/ConsentPurposeSendCount'}}
+                  days: {type: integer, description: 'The window the counts cover.'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /retention/settings:
     get:
       tags: [Compliance]
@@ -42141,6 +42171,7 @@ components:
             that the evidence does not carry is visible rather than silently honoured.
         marketing_purpose:
           type: [string, 'null']
+          maxLength: 200
           description: |-
             For a marketing send, the consent purpose key naming the topic it is for.
             Marketing consent is purpose-specific: a grant for one topic authorizes that
@@ -42172,6 +42203,7 @@ components:
             `invalid`.
         consent_purpose:
           type: string
+          maxLength: 200
           description: |-
             DEPRECATED, and no longer required. The engine resolves what a message is from
             the record — the thread it answers, the deal or invoice it names, the evidence
@@ -42542,9 +42574,11 @@ components:
             allowed.
         marketing_purpose:
           type: string
+          maxLength: 200
           description: Which marketing purpose, when the context is `marketing`.
         consent_purpose:
           type: string
+          maxLength: 200
           description: |-
             The deprecated purpose key, when the composer still has one. It authorizes
             nothing on its own, and it is accepted here for one reason: the SEND still
@@ -42605,8 +42639,10 @@ components:
           allOf: [{$ref: '#/components/schemas/CommunicationContext'}]
         marketing_purpose:
           type: string
+          maxLength: 200
         consent_purpose:
           type: string
+          maxLength: 200
           description: |-
             The deprecated purpose key, when the composer still has one. It authorizes
             nothing on its own, and it is accepted here for one reason: the SEND still
@@ -42911,6 +42947,7 @@ components:
             that the evidence does not carry is visible rather than silently honoured.
         marketing_purpose:
           type: [string, 'null']
+          maxLength: 200
           description: |-
             For a marketing send, the consent purpose key naming the topic it is for.
             Marketing consent is purpose-specific: a grant for one topic authorizes that
@@ -42942,6 +42979,7 @@ components:
             `invalid`.
         consent_purpose:
           type: string
+          maxLength: 200
           description: |-
             DEPRECATED, and no longer required. The engine resolves what a message is from
             the record — the thread it answers, the deal or invoice it names, the evidence
@@ -42998,6 +43036,7 @@ components:
             that the evidence does not carry is visible rather than silently honoured.
         marketing_purpose:
           type: [string, 'null']
+          maxLength: 200
           description: |-
             For a marketing send, the consent purpose key naming the topic it is for.
             Marketing consent is purpose-specific: a grant for one topic authorizes that
@@ -43016,6 +43055,7 @@ components:
           description: Records the caller names in support of this send. Checked, never trusted.
         consent_purpose:
           type: string
+          maxLength: 200
           description: |-
             DEPRECATED, and no longer required. The engine resolves what a message is from
             the record — the thread it answers, the deal or invoice it names, the evidence
@@ -52494,10 +52534,24 @@ components:
         requires_double_opt_in: {type: boolean, default: false, description: 'When true, a grant is only effective after a confirmed DOI event (German email norm).'}
         class:
           type: string
-          enum: [business_correspondence, transactional, marketing, phone_outreach]
+          allOf: [{$ref: '#/components/schemas/ConsentPurposeClass'}]
           description: What kind of message the purpose is for. Only a `marketing` purpose can be named on a collection-notice declaration.
         frequency: {$ref: '#/components/schemas/ConsentPurposeFrequency'}
         created_at: {type: string, format: date-time}
+    ConsentPurposeClass:
+      type: string
+      enum: [business_correspondence, transactional, marketing, phone_outreach]
+      description: Which consent rules a purpose's messages answer to. `business_correspondence` and `transactional` need no consent.
+    ConsentPurposeSendCount:
+      type: object
+      required: [purpose_key, sends, disputed]
+      properties:
+        purpose_key: {type: string, description: 'The key of a live purpose, or `unknown` for a key no live purpose defines and for a message that named none.'}
+        class:
+          allOf: [{$ref: '#/components/schemas/ConsentPurposeClass'}]
+          description: The purpose's class. Absent under `unknown`.
+        sends: {type: integer, description: 'Messages staged under this purpose in the window.'}
+        disputed: {type: integer, description: 'Of those, the messages whose claimed kind differs from the kind the record bore out.'}
     ConsentPurposeFrequency:
       type: string
       enum: [weekly, monthly, quarterly]

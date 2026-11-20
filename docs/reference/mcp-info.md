@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 48 |
 | Resources | 14 |
-| Tool catalog | 275.5 KB |
+| Tool catalog | 275.6 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 71927 |
+| Approx. wire tokens | 71946 |
 | Largest tool | `read_details` (17.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -36,7 +36,7 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Descriptions (incl. governance clause) | 53.7 KB | 19% | Yes, every step |
 | Input schemas | 158.3 KB | 57% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.8 KB | 4% | Partly |
-| **Description + input schema** | **212.0 KB** | **76%** | **the recurring cost** |
+| **Description + input schema** | **212.1 KB** | **76%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -104,7 +104,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
 | [`read_reports`](#read_reports) | Read sales reports | yes |  | 2825 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 358 |
-| [`read_view`](#read_view) | Read a view | yes |  | 1896 |
+| [`read_view`](#read_view) | Read a view | yes |  | 1915 |
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 2779 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 618 |
 | [`run_research`](#run_research) | Run AI work for your user |  |  | 1365 |
@@ -11531,6 +11531,10 @@ find_records to find or list records, and read_reports for the standard metrics 
     },
     "cursor": {
       "type": "string"
+    },
+    "days": {
+      "description": "views: consent_purpose_send_counts",
+      "type": "integer"
     },
     "deal_id": {
       "description": "views: relationships",

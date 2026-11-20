@@ -261,6 +261,7 @@ var Declared = map[string][]string{
 	"GET /v1/connectors/{provider}/backfill":                                   {"connection_id"},
 	"GET /v1/connectors/{provider}/containers":                                 {"connection_id"},
 	"GET /v1/consent-purposes":                                                 {},
+	"GET /v1/consent-purposes/send-counts":                                     {"days"},
 	"GET /v1/contacts":                                                         {"ai_written", "captured_by_kind", "company_id", "cursor", "include_archived", "limit", "list_id", "owner_id", "owner_team_id", "q", "related_to", "relationship_mark", "shared_with_me", "sort", "tag_id", "tag_mode", "unassigned"},
 	"GET /v1/contacts/{id}":                                                    {},
 	"GET /v1/contacts/{id}/360":                                                {"project_id"},
