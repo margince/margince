@@ -128,7 +128,6 @@
   padding: 0;
   border: 0;
   border-radius: 50%;
-  corner-shape: round;
   background: none;
   cursor: pointer;
 }
@@ -440,7 +439,6 @@
     padding: 0;
     border: 1px solid var(--borderSubtle);
     border-radius: 50%;
-    corner-shape: round;
     /* The bar's ground, not the page's: the well is the bar rising, and a
        different fill would read as an object resting on it. Solid where the bar
        is glass, because a translucent circle over the content it floats above
@@ -704,7 +702,6 @@
   width: 6px;
   height: 6px;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--arTone);
   box-shadow: 0 0 6px -1px var(--arTone);
 }
@@ -837,7 +834,6 @@
   height: 6px;
   margin-top: 5px; /* ds:ignore drops the 6px mark onto the first line's baseline */
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--info);
 }
 .armark[data-tone="success"] {
@@ -927,7 +923,6 @@
   outline: var(--focus-ring);
   outline-offset: 2px;
   border-radius: var(--r-full);
-  corner-shape: round;
 }
 /* Only the sources it CANNOT reach are listed, so the dot is the danger tone
    and there is no second state for it to be in. Every mark in the panel's body
@@ -946,7 +941,6 @@
   width: 6px;
   height: 6px;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--danger);
 }
 

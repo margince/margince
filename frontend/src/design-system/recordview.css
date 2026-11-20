@@ -284,7 +284,6 @@
   min-inline-size: 0;
   padding: 0 var(--space-1);
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--bgInset);
   color: var(--textSecondary);
   font: var(--fontBodySmall);

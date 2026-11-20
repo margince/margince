@@ -1,23 +1,12 @@
-import { useEntityName } from "../components/entityref";
-import { useLocale, useT } from "../i18n";
+import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { EXTENSION_SCREEN, findExtension, unitTitle } from "../lib/extensions";
 import { opensAFocusedFiltersPage } from "../lib/filtersaddress";
 import { useReadsTeamProgress } from "../lib/progressreader";
 import type { Route, Screen } from "../lib/router";
-import {
-  NAV,
-  type NavLevelEntry,
-  type NavSection,
-  navLabelKey,
-  recordKindOf,
-  reservedPageTitle,
-} from "./nav";
+import { NAV, type NavLevelEntry, type NavSection, navLabelKey } from "./nav";
 
 // What the chrome knows about a page before the page renders: its name, its
-// one-line description, and which entry of a section it is. The top bar's trail
-// and the content column's heading both answer from here, so the crumb and the
-// h1 under it can never name the same page two different things.
+// one-line description, and which entry of a section it is.
 
 // The line under the page's name, for the screens whose name alone does not
 // say what the page is for. It belongs to the page rather than to anything on
@@ -129,12 +118,9 @@ export function resolveTitle(
 /**
  * The name of a page, in the words the sidebar uses for it.
  *
- * For a screen that heads ITSELF. The shell's `PageTitle` resolves the same
- * fact the same way for every other route, and a list screen printing its own
- * name in its table header must print the name the rail and the trail say —
- * spelling `t("nav.contacts")` at the call site instead would put a second
- * copy of the mapping in a screen file, where a rename of the rail's label
- * leaves the page heading behind.
+ * For a screen that heads itself; the shell's `PageTitle` names every other
+ * route. Not `t("nav.contacts")` at the call site: a rename of the rail's label
+ * would leave that heading behind.
  *
  * The screen is a parameter rather than read from the route, so a story that
  * renders the surface outside the router still names it correctly.
@@ -170,66 +156,4 @@ export function sectionHead(
     }
   }
   return undefined;
-}
-
-/**
- * What this page is ABOUT, in the words a reader would use: the record's name on
- * a record route, the page's own name everywhere else.
- *
- * One spelling, because two surfaces ask the same question and a reader sees
- * both at once — the trail at the top of the window and the agent at the foot of
- * the column. The agent asked it separately once and printed the route's raw id,
- * so the chrome offered to answer questions about `01a01811-c847-…` while the
- * trail two inches above it said "Carol Wagner".
- *
- * A hook, because the answer is a read. `useEntityName` is called on every route
- * so the hook order never depends on which page is on screen, and it makes no
- * request without an id to resolve.
- *
- * The three ways a read can leave this without a name are not one case. A read
- * that FAILED says so: the id is the thing the reader cannot act on, and
- * printing it for a 403 made a refusal indistinguishable from a record whose
- * display field is blank. A read still in flight, and one that answered with no
- * name, both fall back to the id — which is not a name, but is true, and is what
- * the reader can quote.
- */
-export function useRouteSubject(route: Route): string {
-  const t = useT();
-  const { locale } = useLocale();
-  const navItem = NAV.find((item) => item.screen === route.screen);
-  const readsTeam = useReadsTeamProgress();
-  // A composed unit's page is named by the UNIT, which is not in `NAV` and has
-  // no title key: without this the subject fell through to `shell.unknownPage`
-  // while the trail two inches above it printed the unit's name, and the agent
-  // offered to answer questions about "Unknown page" on a page the product
-  // knows perfectly well.
-  const unit =
-    route.screen === EXTENSION_SCREEN ? findExtension(route.id) : null;
-  // A record kind, and only then: an id segment that names no record is a
-  // screen's own state — the settings tab, for one — and the subject is still
-  // the page.
-  const recordKind = recordKindOf(route);
-  const { name, reading } = useEntityName(
-    recordKind ?? "contact",
-    recordKind && route.id,
-  );
-  if (recordKind && route.id) {
-    if (name) {
-      return name;
-    }
-    if (reading === "failed") {
-      return t("ref.nameLoadFailed");
-    }
-    // A lead may legitimately have no name; its id is no label for it.
-    return reading === "unnamed" && recordKind === "lead"
-      ? t("ref.leadUnnamed")
-      : route.id;
-  }
-  if (unit) {
-    return unitTitle(unit, locale);
-  }
-  const reserved = reservedPageTitle(route);
-  return reserved
-    ? t(reserved)
-    : resolveTitle(route.screen, navLabelKey(navItem, readsTeam), t);
 }

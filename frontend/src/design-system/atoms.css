@@ -904,7 +904,6 @@
   flex-shrink: 0;
   margin-left: 5px;
   border-radius: 50%;
-  corner-shape: round;
   background: var(--accent);
 }
 /* Keyboard focus reads an accent-token ring (matches .input/.textarea) rather
@@ -1857,7 +1856,6 @@ span.error-line {
   padding-inline: var(--space-2) var(--space-3);
   gap: var(--space-1);
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--ground);
 }
 .overflow-menu-labelled[aria-busy="true"] > svg:not(.busy-mark) {
@@ -2418,7 +2416,6 @@ span.error-line {
   display: block;
   block-size: 4px;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--bgHover);
   overflow: hidden;
 }

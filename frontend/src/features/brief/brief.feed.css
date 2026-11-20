@@ -33,7 +33,6 @@
   min-inline-size: var(--space-5);
   padding: 0 var(--space-2);
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--ground);
   color: var(--accentText);
   text-align: center;
@@ -438,7 +437,6 @@
 .brief-task-tick .icon-action .btn.btn-icon {
   border-color: transparent;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: none;
   box-shadow: none;
 }

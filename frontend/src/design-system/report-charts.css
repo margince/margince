@@ -31,7 +31,6 @@
   height: 0.5rem;
   border: 0;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--accent);
 }
 .report-chart-key-bar::before {
@@ -116,14 +115,12 @@
   padding: 0;
   transform: translate(-50%, -50%);
   border-radius: var(--r-full);
-  corner-shape: round;
 }
 .report-chart-dot {
   display: block;
   width: 10px;
   height: 10px;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--accent);
   border: 2px solid var(--bgElevated);
 }
@@ -213,7 +210,6 @@
   align-self: center;
   height: 10px;
   border-radius: var(--r-full);
-  corner-shape: round;
 }
 .report-chart-bullet-fill {
   position: absolute;
@@ -222,14 +218,12 @@
   width: var(--report-mark-width);
   background: linear-gradient(90deg, var(--accentFade), var(--accent));
   border-radius: var(--r-full);
-  corner-shape: round;
 }
 .report-chart-bullet-target {
   position: absolute;
   inset-block: calc(-1 * var(--space-1));
   width: 2px;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--textPrimary);
 }
 .report-chart-row[data-tone="success"] .report-chart-bullet-fill {
@@ -259,7 +253,6 @@
   left: var(--report-mark-left);
   background: linear-gradient(90deg, var(--accentFade), var(--accent));
   border-radius: var(--r-full);
-  corner-shape: round;
 }
 .report-chart-range-dot {
   position: absolute;
@@ -268,7 +261,6 @@
   width: 11px;
   height: 11px;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--accent);
 }
 .report-chart-range-end {

@@ -87,10 +87,6 @@ The shell comes last in this group: it is the part users see most, and the safes
    All three read `--r-sm`, 8px, which a chip also takes, so every box has the same corner.
    `--r-xs` is 4px for a key, and `--r-full` is for a pill or a monogram (`DESIGN.md` section 5).
 
-   Where a browser has `corner-shape: squircle`, every step but `--r-full` is twice its size. A superellipse of
-   radius `R` looks about as round as a round corner of `R/2`. One `@supports` block in `tokens.css` does this, and no
-   call site touches it.
-
    There are three shadow tokens. `--shadow-rest` is one 1px/2px layer, used by every surface at rest and every
    filled control. `--shadow-well` is the same layer turned `inset`, used by every field, because a field has a
    floor instead of a top. `--shadow-pop` is for each popover and the drawer. A control drops its layer on hover,

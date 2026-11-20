@@ -262,7 +262,6 @@
    control edge a picture has everywhere, so a pale mesh keeps its edge too. */
 .account-trigger:has(.account-face) {
   border-radius: var(--r-full);
-  corner-shape: round;
 }
 .account-face {
   display: flex;
@@ -278,10 +277,8 @@
 @media (pointer: coarse) {
   .topbar-trail .account-trigger:has(.account-face) {
     border-radius: var(--r-full);
-    corner-shape: round;
   }
   .topbar-trail .account-trigger:has(.account-face):focus-visible::after {
     border-radius: var(--r-full);
-    corner-shape: round;
   }
 }

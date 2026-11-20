@@ -258,7 +258,6 @@
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  corner-shape: round;
   background: var(--accent);
   color: var(--textOnAccentControl);
   opacity: 0;

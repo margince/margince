@@ -3565,7 +3565,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "common.loading": "Wird geladen…",
   "ref.nameLoadFailed": "Name wurde nicht geladen",
   "ref.memberLeft": "{name} (ausgeschieden)",
-  "ref.leadUnnamed": "Lead ohne Namen",
   "roster.failedUsers": "Die Teammitglieder konnten nicht geladen werden.",
   "roster.failedTeams": "Die Teams konnten nicht geladen werden.",
   "owner.rosterFailed":

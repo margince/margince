@@ -777,7 +777,6 @@
   inline-size: 0.5rem;
   block-size: 0.5rem;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--borderStrong);
   border: 1px solid var(--borderStrong);
 }
@@ -833,7 +832,6 @@
   width: 24px;
   height: 24px;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--ground);
   border: 1px solid var(--borderStrong);
   display: grid;
@@ -1145,7 +1143,6 @@
   width: 28px;
   height: 28px;
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--ground);
   border: 1px solid var(--borderStrong);
 }

@@ -69,8 +69,7 @@ screen against it. The sources are listed at the end of the section.
 
    Rule: a pane, a card and a control share one radius, 8px, at every width. `--r-lg`,
    `--r-md` and `--r-control` all read `--r-sm`, and a keycap takes 4. The ladder runs in fours
-   (4 / 8 and the pill). It is twice as large under `corner-shape: squircle`, where a superellipse of
-   radius R looks about as round as a plain round corner of R/2.
+   (4 / 8 and the pill).
 5. **Text is near-black slate**; greys carry the hue. Stripe sets text in deep slate on an
    almost white ground, never plain black.
 

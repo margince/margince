@@ -142,35 +142,12 @@ size or a lighter weight; there is no third neutral.
 
 `Foundations/Typography` in Storybook draws the body levels, the heading ladder and the pairs.
 
-## Corners come from the ladder, and they are smooth
+## Corners come from the ladder
 
 Every radius in the tree reads a token: `--r-xs` 4, `--r-sm` 8 or `--r-full` the pill. A control,
 a card and a pane name their role (`--r-control`, `--r-md`, `--r-lg`), and all three read `--r-sm`.
-So every box rounds alike at every width. A raw px corner is a value that nobody chose.
-
-`tokens.css` also declares `corner-shape: squircle` on `:where(*)` inside an `@supports` query, and
-doubles the ladder inside it. A superellipse of radius R looks about as round as a plain round
-corner of R/2. So a corner keeps the size it seems to have, and gives up its two points. Nothing
-where a component is used has to ask for it.
-
-**A round thing opts out**, beside its own radius:
-
-```css
-.badge {
-  border-radius: var(--r-full);
-  corner-shape: round;
-}
-```
-
-`:where(*)` carries zero specificity, so that one line always wins. Write it wherever you write
-`--r-full` or `50%`. A superellipse at full radius is a long rounded shape, and on an avatar it is
-a squircle tile.
-
-A box that CSS adds itself takes the shape too. `*` matches elements and not pseudo-elements, so
-`::before`, `::after` and `::backdrop` are named beside it in that rule. The doubled tokens reach a
-pseudo-element anyway, because a custom property inherits and `corner-shape` does not. So an
-unlisted one would draw a round corner at twice the radius its author asked for. `census/rules/corners.census.ts`
-holds the list against the pseudo-elements the tree gives a corner to.
+So every box rounds alike at every width. A raw px corner is a value that nobody chose. Every corner
+is a plain `border-radius`, round at the size its token names.
 
 ## A pane's ground is its depth
 
@@ -909,7 +886,7 @@ a comment or a string.
 | `census/rules/selectedstate.census.ts` | A selected, pressed or current state (`.on`, `.active`, `.is-selected`, a class ending in `-selected`, `[aria-pressed="true"]`, `[aria-current]`, `[aria-selected="true"]`, outside a `:not()`) whose ground, ink, edge or shadow comes from an `--accent*` token, in every sheet the app ships. It fails when a marker stops matching any rule in the tree |
 | `design-system/tokens.test.ts` | A token whose value drifted from the design canon |
 | `design-system/type-tokens.test.ts` | The type half of the same sheet. The three weight tokens and the ten size shorthands must be declared with no condition (not inside a `@media`). Each weight and control token must have its expected value, with no second control height. No `--fontBody*`/`--fontHeading*` may spell a weight by value instead of reading `--fontWeight*`. It checks the file that `census/rules/type-source.census.ts` lets through; both read `tokens.css` through `tokens-testing.ts` |
-| `census/rules/corners.census.ts` | A `border-radius` that names a length instead of a step (it can be waived in the line, with a reason); a `--r-full` or `50%` corner without `corner-shape: round`; a second `corner-shape: squircle` outside `tokens.css`; a step that is not a multiple of four, or has no doubled twin in the `@supports` block |
+| `census/rules/corners.census.ts` | A `border-radius` that names a length instead of a step (it can be waived in the line, with a reason); a step that is not a multiple of four |
 | `census/rules/cardzones.census.ts` | A `Card` under `src/features/` or `src/components/` that carries a `title` or draws a `SectionHeader` as its own head band; that surface is a `Panel`. Read from the syntax tree. A card inside another surface is named in the test with its reason, and an entry that is out of date fails |
 | `census/rules/inlinelayout.census.ts` | Layout written as a literal inline `style`: a margin, padding, gap, display, flex, grid, alignment, inset, size, position, overflow, order or transform property with a literal value. It checks every module under `src/` and every unit's frontend layer (all forms of the language). A computed value (a popover position, a bar's percent) passes. It sees through ternaries, guards, defaults, `Object.assign`, casts, conditional spreads and hoisted `CSSProperties`. It checks the `style` attribute, a spread props object, and the `createElement` / `jsx` call. Every file is held at zero; the fix is a class in the screen's sheet, or `Stack` / `Row` in a unit. A fixture suite plants each shape |
 | `design-system/panelhead.test.tsx` and `census/rules/panelhead.census.ts` | A description back in a panel or card head. That is a `sub` / `description` / `intro` prop declared by `Panel`, `PanelGroupHead`, `Card` or `SectionHeader`, or a `.tsx` under `src/` that passes one. It is also a `className` that names `card-sub`, or a stylesheet that declares `*-head-sub` / `*-title-sub` / `card-sub` or a `.sub` inside `.panel-head` / `.section-header`. It also refuses a head title at any size but `medium` (except the page-naming `level={1}`), read off `data-size`. Both walks fail closed under a floor |

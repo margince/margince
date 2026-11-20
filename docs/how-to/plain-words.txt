@@ -1158,7 +1158,6 @@ such
 suffixed
 suggestion
 summary
-superellipse
 superuser
 supplies
 support

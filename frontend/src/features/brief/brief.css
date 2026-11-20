@@ -787,7 +787,6 @@
   box-sizing: border-box;
   border: 2px solid var(--ai);
   border-radius: var(--r-full);
-  corner-shape: round;
   background: var(--ground);
 }
 .brief-done-change:not([data-state="open"])::before {
