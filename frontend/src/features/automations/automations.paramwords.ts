@@ -4,6 +4,7 @@
 import { humanizeToken } from "../../format/humanizetoken";
 import type { Translator } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { valueFor } from "../../lib/labelfor";
 import { SEARCH_HIT_KIND_KEY } from "../../lib/searchkinds";
 import type { ParamField } from "./automations.params";
 
@@ -60,7 +61,7 @@ const CHOOSE: Readonly<Record<string, MessageKey>> = {
 };
 
 export function paramLabel(field: ParamField, t: Translator): string {
-  const key = PARAM_LABELS[field.key];
+  const key = valueFor(PARAM_LABELS, field.key, undefined);
   return key ? t(key) : humanizeToken(field.key);
 }
 
@@ -69,14 +70,9 @@ export function optionLabel(
   value: string,
   t: Translator,
 ): string {
-  const key = OPTION_LABELS[field.key]?.[value];
+  const options = valueFor(OPTION_LABELS, field.key, undefined);
+  const key = options && valueFor(options, value, undefined);
   return key ? t(key) : humanizeToken(value);
-}
-
-// A typed box has always refused an empty value; a picker does when the
-// schema says so.
-export function isRequired(field: ParamField): boolean {
-  return field.required || field.kind === "integer" || field.kind === "string";
 }
 
 function isEmpty(field: ParamField, value: string): boolean {
@@ -91,10 +87,10 @@ export function missingParam(
   t: Translator,
 ): string | undefined {
   const empty = fields.find(
-    (field) => isRequired(field) && isEmpty(field, values[field.key] ?? ""),
+    (field) => field.required && isEmpty(field, values[field.key] ?? ""),
   );
   if (!empty) return undefined;
-  const key = CHOOSE[empty.key];
+  const key = valueFor(CHOOSE, empty.key, undefined);
   return key
     ? t(key)
     : t("common.fieldRequiredNamed", { field: paramLabel(empty, t) });

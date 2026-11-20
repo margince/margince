@@ -188,8 +188,7 @@ export const FailingSincePhone: Story = {
   },
 };
 
-// A rule that could not finish: the sentence says what went wrong, and the rule
-// follows it once, set off as a label.
+// A rule that could not finish, named once.
 const TROUBLED: MagicLine[] = [
   {
     id: "00000000-0000-7000-8000-0000000c0005",

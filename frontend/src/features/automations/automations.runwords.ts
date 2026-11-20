@@ -4,6 +4,7 @@
 import type { components } from "../../api/schema";
 import type { Translator } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { valueFor } from "../../lib/labelfor";
 import { knownTriggerLabel } from "./automations.recipe";
 
 type AutomationRun = components["schemas"]["AutomationRun"];
@@ -76,7 +77,7 @@ export const UNNAMED_TARGET: Readonly<Record<string, MessageKey>> = {
 };
 
 export function unnamedTarget(type: string | undefined, t: Translator): string {
-  const key = type ? UNNAMED_TARGET[type] : undefined;
+  const key = type ? valueFor(UNNAMED_TARGET, type, undefined) : undefined;
   return t(key ?? "auto.runs.unnamed.record");
 }
 
@@ -97,7 +98,9 @@ export function runSentences(
         ? "queued"
         : undefined;
   if (!mood || kinds.length === 0) return undefined;
-  const words = kinds.map((kind) => RUN_ACTION_WORDS[kind]);
+  const words = kinds.map((kind) =>
+    valueFor(RUN_ACTION_WORDS, kind, undefined),
+  );
   if (words.some((word) => word === undefined)) return undefined;
   const title = run.created?.label;
   return kinds.map((kind, i) => {

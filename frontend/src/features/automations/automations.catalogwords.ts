@@ -4,6 +4,7 @@
 import type { components } from "../../api/schema";
 import type { Translator } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { valueFor } from "../../lib/labelfor";
 
 type CatalogEntry = components["schemas"]["AutomationCatalogEntry"];
 type Automation = components["schemas"]["Automation"];
@@ -63,7 +64,7 @@ export const TEMPLATE_WORDS: Readonly<Record<string, TemplateWords>> = {
 };
 
 export function templateName(entry: CatalogEntry, t: Translator): string {
-  const words = TEMPLATE_WORDS[entry.key];
+  const words = valueFor(TEMPLATE_WORDS, entry.key, undefined);
   return words ? t(words.name) : entry.name;
 }
 
@@ -71,7 +72,7 @@ export function templateDescription(
   entry: CatalogEntry,
   t: Translator,
 ): string | undefined {
-  const words = TEMPLATE_WORDS[entry.key];
+  const words = valueFor(TEMPLATE_WORDS, entry.key, undefined);
   return words ? t(words.description) : entry.description;
 }
 

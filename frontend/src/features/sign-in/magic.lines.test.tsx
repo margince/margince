@@ -332,7 +332,6 @@ describe("a line names its record once", () => {
       "Could not finish (Failed): the record it acts on no longer exists",
     );
     expect(rowOf(item).subject).toBe("Route new lead to a task");
-    // The subject reads as a label set off after the sentence, not as its end.
     const separator = item.querySelector(".magic-line-sep");
     expect(separator?.textContent).toBe("·");
     expect(separator?.getAttribute("aria-hidden")).toBe("true");

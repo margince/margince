@@ -248,3 +248,25 @@ describe("a rule's name", () => {
     );
   });
 });
+
+it("says every refusal of a field the form does not draw", async () => {
+  const user = userEvent.setup();
+  refusing("PATCH", "unused", {
+    title: "Unprocessable",
+    status: 422,
+    code: "validation_error",
+    details: {
+      errors: [
+        { field: "params.owners", code: "invalid", message: "must be a list" },
+        { field: "params.rules", code: "invalid", message: "must be rules" },
+      ],
+    },
+  });
+  render(<AutomationsAdmin />);
+  await screen.findByText(configured.name);
+  const dialog = await openRowEditor();
+  await user.click(within(dialog).getByRole("button", { name: "Save" }));
+  const alert = await within(dialog).findByRole("alert");
+  expect(alert).toHaveTextContent("Must be a list.");
+  expect(alert).toHaveTextContent("Must be rules.");
+});

@@ -106,14 +106,12 @@ export function ConfiguredAutomations({
     onSettled: () =>
       queryClient.invalidateQueries({ queryKey: ["automations"] }),
   });
-  const toggle = (id: string, panel: Panel, opening: boolean) => {
-    setInspecting((prior) => {
-      const was = prior[id] ?? CLOSED;
-      return { ...prior, [id]: { ...was, [panel]: !was[panel] } };
-    });
-    setFocusRequest((prior) =>
-      opening ? { id, panel, seq: (prior?.seq ?? 0) + 1 } : null,
-    );
+  const open = (id: string, panel: Panel) => {
+    setInspecting((prior) => ({
+      ...prior,
+      [id]: { ...(prior[id] ?? CLOSED), [panel]: true },
+    }));
+    setFocusRequest((prior) => ({ id, panel, seq: (prior?.seq ?? 0) + 1 }));
   };
   const rows = automations.map((automation) => ({
     ...automation,
@@ -129,9 +127,8 @@ export function ConfiguredAutomations({
         canEdit={canEdit && entryFor(automation.key) !== undefined}
         canViewRuns={canViewRuns}
         canDelete={canDelete}
-        inspecting={inspecting[automation.id] ?? CLOSED}
         focusAfterDelete={focusAfterDelete}
-        onToggle={(panel, opening) => toggle(automation.id, panel, opening)}
+        onOpen={(panel) => open(automation.id, panel)}
         onEdit={() => {
           edit.reset();
           setEditing((prior) => ({
@@ -222,10 +219,13 @@ export function ConfiguredAutomations({
               const current =
                 automations.find((one) => one.id === editing.automation.id) ??
                 editing.automation;
+              // The name the row shows may be its template's words in this
+              // reader's language, so it is stored only when they changed it.
+              const renamed = name !== editing.automation.name;
               const patch = {
                 id: current.id,
                 version: current.version,
-                body: { name, params },
+                body: { ...(renamed ? { name } : {}), params },
               };
               if (
                 current.status === "enabled" &&
@@ -450,19 +450,17 @@ function AutomationVerbs({
   canEdit,
   canViewRuns,
   canDelete,
-  inspecting,
   focusAfterDelete,
-  onToggle,
+  onOpen,
   onEdit,
 }: Readonly<{
   automation: Automation;
   canEdit: boolean;
   canViewRuns: boolean;
   canDelete: boolean;
-  inspecting: Inspecting;
   focusAfterDelete?: () => HTMLElement | null;
-  /** `opening` says the press opens the panel, which then takes focus. */
-  onToggle: (panel: Panel, opening: boolean) => void;
+  /** Opens the panel, or takes focus back to it; the row's chevron closes it. */
+  onOpen: (panel: Panel) => void;
   onEdit: () => void;
 }>) {
   const t = useT();
@@ -474,12 +472,8 @@ function AutomationVerbs({
       {canEdit && <Button onClick={onEdit}>{t("trust.edit")}</Button>}
       {canViewRuns && (
         <>
-          {/* Not `aria-pressed`: the menu stays open under a press that sets
-              something, and these open a panel the row's chevron closes. */}
-          <Button onClick={() => onToggle("runs", !inspecting.runs)}>
-            {t("auto.runs.open")}
-          </Button>
-          <Button onClick={() => onToggle("preview", !inspecting.preview)}>
+          <Button onClick={() => onOpen("runs")}>{t("auto.runs.open")}</Button>
+          <Button onClick={() => onOpen("preview")}>
             {t("auto.preview.open")}
           </Button>
         </>

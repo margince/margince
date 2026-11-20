@@ -132,10 +132,13 @@ export function paramsFromValues(
 ): Record<string, unknown> {
   return Object.fromEntries(
     fields
+      // An optional parameter left empty is left out: the server then keeps
+      // its default, or for a cap, no cap at all.
       .filter(
         (field) =>
-          field.kind !== "timezone" ||
-          (values[field.key] ?? field.initial) !== "",
+          field.required ||
+          field.kind === "boolean" ||
+          (values[field.key] ?? field.initial).trim() !== "",
       )
       .map((field) => {
         const value = values[field.key] ?? field.initial;

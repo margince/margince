@@ -419,8 +419,82 @@ describe("a rule's Actions menu", () => {
           screen.getByRole("region", { name: panel }),
         ),
       );
+      // Chosen again it keeps the panel open and takes focus back to it.
+      trigger.focus();
+      await user.click(trigger);
+      await user.click(screen.getByRole("button", { name: item }));
+      await waitFor(() =>
+        expect(document.activeElement).toBe(
+          screen.getByRole("region", { name: panel }),
+        ),
+      );
     },
   );
+});
+
+describe("editing a rule that keeps its template's name", () => {
+  const SEEDED = "Remind me when an active deal goes quiet";
+
+  async function editQuietRule(rename?: string) {
+    const user = userEvent.setup();
+    const bodies: unknown[] = [];
+    const rules = configuredAutomations(RECORDED_AT).map((rule) =>
+      rule.id === "au-1" ? { ...rule, name: SEEDED } : rule,
+    );
+    mount(
+      OPERATOR,
+      {
+        "GET /automations": () =>
+          jsonResponse({ data: rules, page: { next_cursor: null } }),
+        "GET /pipelines": () =>
+          jsonResponse({ data: [], page: { next_cursor: null } }),
+        "PATCH /automations/au-1": () => jsonResponse(rules[0]),
+      },
+      "mine",
+      "de",
+    );
+    const stubbed = globalThis.fetch;
+    globalThis.fetch = async (input, init) => {
+      const request = new Request(input, init);
+      if (request.method === "PATCH") {
+        bodies.push(await request.clone().json());
+      }
+      return stubbed(input, init);
+    };
+    const shown = de["auto.template.no_activity_reminder.name"];
+    await user.click(
+      within(await row("au-1")).getByRole("button", {
+        name: `Aktionen für ${shown}`,
+      }),
+    );
+    await user.click(screen.getByRole("button", { name: "Bearbeiten" }));
+    const dialog = within(await screen.findByRole("dialog"));
+    expect(dialog.getByRole("textbox", { name: "Name" })).toHaveValue(shown);
+    if (rename) {
+      await user.clear(dialog.getByRole("textbox", { name: "Name" }));
+      await user.type(dialog.getByRole("textbox", { name: "Name" }), rename);
+    }
+    const days = dialog.getByRole("spinbutton", {
+      name: de["auto.quiet.days"],
+    });
+    await user.clear(days);
+    await user.type(days, "21");
+    await user.click(dialog.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(bodies).toHaveLength(1));
+    return bodies[0];
+  }
+
+  it("leaves the stored name alone when only a parameter changed", async () => {
+    const body = await editQuietRule();
+    expect(body).not.toHaveProperty("name");
+    expect(body).toMatchObject({ params: { no_activity_days: 21 } });
+  });
+
+  it("stores a name the reader typed", async () => {
+    expect(await editQuietRule("Ruhige Deals")).toMatchObject({
+      name: "Ruhige Deals",
+    });
+  });
 });
 
 describe("the catalog's words", () => {

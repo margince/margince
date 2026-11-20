@@ -13,6 +13,7 @@ import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { RUN_OUTCOME_WORD, runReasonWords } from "../../lib/automationrun";
 import { recordRoute } from "../../lib/entity";
+import { valueFor } from "../../lib/labelfor";
 import { routeHash } from "../../lib/router";
 import { useViewerZone } from "../../lib/viewerzone";
 import "./automationdetail.css";
@@ -22,10 +23,13 @@ import {
   unnamedTarget,
 } from "./automations.runwords";
 
-// One run of an automation, as the run history lists it.
-
 type AutomationRun = components["schemas"]["AutomationRun"];
 type Outcome = AutomationRun["outcome"];
+
+const TIER_DOT: Readonly<Record<AutomationRun["tier"], "auto" | "confirm">> = {
+  auto_execute: "auto",
+  confirmation_required: "confirm",
+};
 
 // Outcome → tone, glyph and word. A Record over the enum stops compiling when
 // the contract adds an outcome, so a new one cannot ship as a blank badge.
@@ -118,8 +122,9 @@ function RunAction({ run }: Readonly<{ run: AutomationRun }>) {
   if (sentences) {
     return (
       <>
-        {sentences.map(([before, after]) => (
-          <p key={before + after} className="auto-run-sentence">
+        {sentences.map(([before, after], index) => (
+          // biome-ignore lint/suspicious/noArrayIndexKey: a run's actions are drawn once in its own order, and two of one kind read alike
+          <p key={index} className="auto-run-sentence">
             {before}
             <RunTarget run={run} />
             {after}
@@ -153,7 +158,8 @@ export function RunRow({ run }: Readonly<{ run: AutomationRun }>) {
   // In the viewer's own zone, as every audit-style event reads.
   const zone = useViewerZone();
   const trigger = runTrigger(run, t);
-  const tier = run.tier === "auto_execute" ? "auto" : "confirm";
+  // A mode newer than this client reads as the one that waits for a person.
+  const tier = valueFor(TIER_DOT, run.tier, "confirm");
   return (
     <li className="auto-run">
       <div className="auto-run-head">

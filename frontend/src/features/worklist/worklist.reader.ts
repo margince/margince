@@ -12,6 +12,7 @@ import {
   isAuditActorType,
 } from "../../lib/auditactor";
 import { runReasonWords } from "../../lib/automationrun";
+import { valueFor } from "../../lib/labelfor";
 import type { Viewer } from "../../lib/worklistcopy";
 import {
   domainQuestionHeading,
@@ -42,7 +43,7 @@ export function codedDetail(
   }
   const failure =
     item.source === "failed_approval" && item.effect_failure_code
-      ? EFFECT_FAILURE_WORDS[item.effect_failure_code]
+      ? valueFor(EFFECT_FAILURE_WORDS, item.effect_failure_code, undefined)
       : undefined;
   return failure ? t(failure) : item.detail;
 }

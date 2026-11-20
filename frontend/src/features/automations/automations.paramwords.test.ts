@@ -11,8 +11,12 @@ import { vi } from "../../i18n/vi";
 import { WEBSITE_INQUIRY_RECIPE } from "../../lib/websiteinquiries";
 import { TEMPLATE_WORDS } from "./automations.catalogwords";
 import { AUTOMATION_CATALOG } from "./automations.fixtures";
-import { paramFields } from "./automations.params";
-import { OPTION_LABELS, PARAM_LABELS } from "./automations.paramwords";
+import { paramFields, paramsFromValues } from "./automations.params";
+import {
+  missingParam,
+  OPTION_LABELS,
+  PARAM_LABELS,
+} from "./automations.paramwords";
 
 const backend = join(
   dirname(fileURLToPath(import.meta.url)),
@@ -120,4 +124,26 @@ describe("the automation catalog's words", () => {
       }
     },
   );
+});
+
+describe("an optional parameter", () => {
+  const routing = AUTOMATION_CATALOG.find(
+    (entry) => entry.key === "assign_lead_owner",
+  );
+  const fields = paramFields(routing?.params_schema ?? {});
+  const t = (key: MessageKey) => en[key];
+
+  it("is optional when the schema does not require it", () => {
+    expect(
+      fields.find((field) => field.key === "cap_per_owner")?.required,
+    ).toBe(false);
+    expect(missingParam(fields, { cap_per_owner: "" }, t)).toBeUndefined();
+  });
+
+  it("is left out when empty, and sent when set", () => {
+    expect(paramsFromValues(fields, { cap_per_owner: "" })).toEqual({});
+    expect(paramsFromValues(fields, { cap_per_owner: "5" })).toEqual({
+      cap_per_owner: 5,
+    });
+  });
 });

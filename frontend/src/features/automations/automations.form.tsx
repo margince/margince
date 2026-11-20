@@ -7,7 +7,13 @@ import { RecordFormDialog } from "../../design-system/recordformdialog";
 import { Select } from "../../design-system/select";
 import { TimezoneSelect } from "../../design-system/timezoneselect";
 import { useT } from "../../i18n";
-import { type FieldLabels, refusalSentences } from "../../lib/problem";
+import {
+  type FieldLabels,
+  faultSentenceFor,
+  problemFieldErrorsOf,
+  refusalSentences,
+} from "../../lib/problem";
+import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import { templateDescription } from "./automations.catalogwords";
 import { DateFieldSelect } from "./automations.datefield";
 import { ListParamSelect } from "./automations.lists";
@@ -18,7 +24,6 @@ import {
   scalarText,
 } from "./automations.params";
 import {
-  isRequired,
   missingParam,
   optionLabel,
   paramLabel,
@@ -29,8 +34,6 @@ import { StageParamSelect } from "./automations.stageparams";
 type CatalogEntry = components["schemas"]["AutomationCatalogEntry"];
 type Automation = components["schemas"]["Automation"];
 
-// The longest name the server stores.
-const NAME_LIMIT = 120;
 const NAME = "name";
 
 // The dialog an automation is named and parameterised through, and the
@@ -71,7 +74,7 @@ function ParamFieldControl({
     );
   }
   return (
-    <Field label={label} required={isRequired(field)} error={error}>
+    <Field label={label} required={field.required} error={error}>
       {(control) => {
         switch (field.kind) {
           case "pipeline":
@@ -202,6 +205,11 @@ export function AutomationDialog({
     ),
   };
   const refused = refusalSentences(error, t, labels);
+  // Every fault on a field the form does not draw, where `rest` keeps one.
+  const unplaced = problemFieldErrorsOf(error)
+    .filter((fault) => !Object.hasOwn(labels, fault.field))
+    .map((fault) => faultSentenceFor(fault, t, labels));
+  const rest = unplaced.length > 0 ? unplaced.join(" ") : refused.rest;
   const missing = missingParam(fields, values, t);
 
   return (
@@ -241,7 +249,7 @@ export function AutomationDialog({
             {(control) => (
               <TextInput
                 {...control}
-                maxLength={NAME_LIMIT}
+                maxLength={TEXT_LIMITS.label}
                 value={name}
                 onChange={(event) => {
                   setNameBlank(false);
@@ -270,7 +278,7 @@ export function AutomationDialog({
               }
             />
           ))}
-          <ErrorLine>{refused.rest}</ErrorLine>
+          <ErrorLine>{rest}</ErrorLine>
           <DraftGuard dirty={dirty} />
         </form>
       }

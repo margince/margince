@@ -381,8 +381,8 @@ const GLOBEX = {
 
 /**
  * Runs as a current server traces them. A task on a named deal, a draft that
- * waits for approval, a notice on a hidden deal. The last is an older server's
- * run, with only its English lines.
+ * waits for approval, a notice on a hidden deal. The last is a run with only
+ * its English lines.
  */
 export const TRACED_RUNS: readonly AutomationRun[] = [
   {
