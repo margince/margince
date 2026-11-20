@@ -62702,7 +62702,8 @@ type RefusedRecipient struct {
 	// FooterPreview Configured disclosure text included in this message. Contains no recipient credentials.
 	FooterPreview *[]string `json:"footer_preview,omitempty"`
 
-	// Provision The law the recipient's pack cites for `reason_code`, as shown when the refusal was assessed.
+	// Provision The first law cited for `reason_code` when the refusal was assessed: the recipient's
+	// pack's, or the sending entity's when only that pack cites one.
 	Provision *CitedProvision `json:"provision,omitempty"`
 
 	// Provisions Every law cited for `reason_code` when the refusal was assessed, `provision` first: the
@@ -66619,7 +66620,8 @@ type SendAuthorizationPreviewRecipient struct {
 	// contact gets. Absent or false for an address a record already holds.
 	NewContact *bool `json:"new_contact,omitempty"`
 
-	// Provision The law the recipient's pack cites for `reason_code`, absent when none may be shown.
+	// Provision The first law cited for `reason_code`: the recipient's pack's, or the sending entity's
+	// when only that pack cites one. Absent when none may be shown.
 	Provision *CitedProvision `json:"provision,omitempty"`
 
 	// Provisions Every law cited for `reason_code`, `provision` first: the recipient's pack, then the
@@ -67193,7 +67195,8 @@ type SendRefusalRecipient struct {
 	// Category The category the engine resolved.
 	Category *string `json:"category,omitempty"`
 
-	// Provision The first law cited for `reason_code`, absent when none may be shown.
+	// Provision The first law cited for `reason_code`: the recipient's pack's, or the sending entity's
+	// when only that pack cites one. Absent when none may be shown.
 	Provision *CitedProvision `json:"provision,omitempty"`
 
 	// Provisions Every law cited for `reason_code`, `provision` first. Absent when none may be shown.

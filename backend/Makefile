@@ -330,7 +330,9 @@ test-uncached: composition
 	# runs beside other legs. The parse cache alone holds ~1.9 GB, so a limit
 	# near it spends the run collecting: 3GiB cost 1.4x the wall time of 4GiB
 	# for the same 4 GB peak. A CI job with a runner to itself passes 6GiB.
-	GOMEMLIMIT=$(GATES_GOMEMLIMIT) $(GOWORK_COMPOSED) $(GO) test -count=1 -timeout 25m $(TEST_SHUFFLE_FLAGS) $(UNCACHED_TEST_PKGS)
+	# CHECK_BASE_REF, because the citation gate diffs against it and reads no
+	# make variable: unset, it judges a develop branch against main.
+	CHECK_BASE_REF="$(CHECK_BASE_REF)" GOMEMLIMIT=$(GATES_GOMEMLIMIT) $(GOWORK_COMPOSED) $(GO) test -count=1 -timeout 25m $(TEST_SHUFFLE_FLAGS) $(UNCACHED_TEST_PKGS)
 
 # The gates a few added lines turn red, asked alone: they answer in the time
 # the gates package takes to link, where the full package takes minutes.

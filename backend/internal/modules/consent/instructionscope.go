@@ -59,16 +59,26 @@ func sameWarningShown(before, now RefusedRecipient) bool {
 	return (before.PolicyRevision == "" || before.PolicyRevision == now.PolicyRevision) &&
 		(before.FooterDigest == now.FooterDigest || before.FooterDigest == "" && len(before.FooterFindings) == 0) &&
 		commsauthz.SameFooterFindings(before.FooterFindings, now.FooterFindings) &&
-		slices.Equal(citedLaw(before), citedLaw(now))
+		slices.EqualFunc(citedLaw(before), citedLaw(now), slices.Equal)
 }
 
-// citedLaw is the provision of the refusal and of each footer finding, in order.
-func citedLaw(refusal RefusedRecipient) []commsauthz.Provision {
-	out := []commsauthz.Provision{refusal.Provision}
+// citedLaw is the law cited for the refusal and for each footer finding, in
+// order: one list each, as the sender reads it.
+func citedLaw(refusal RefusedRecipient) [][]commsauthz.Provision {
+	out := [][]commsauthz.Provision{lawsShown(refusal.Provision, refusal.Provisions)}
 	for _, finding := range refusal.FooterFindings {
-		out = append(out, finding.Provision)
+		out = append(out, lawsShown(finding.Provision, finding.Provisions))
 	}
 	return out
+}
+
+// lawsShown is every citation beside one refusal or finding. A snapshot from
+// before the list was stored showed only its first citation.
+func lawsShown(first commsauthz.Provision, all []commsauthz.Provision) []commsauthz.Provision {
+	if len(all) == 0 {
+		return []commsauthz.Provision{first}
+	}
+	return all
 }
 
 func sameOptionalID(a, b *ids.UUID) bool {

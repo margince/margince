@@ -169,7 +169,7 @@ When the check allows every recipient, the email is queued and the composer clos
 Some purposes that Margince knows, such as a security notice, are not offered here. A sender who could pick one could send marketing that looks like a security notice.
 
 ### Why can't I send an email to this contact?
-When Margince does not send an email, the bar above **Send** names the first reason. An example is "{address} objected to marketing.". The bar also names the law behind it, with a link to its text. When both laws apply, it names both, the recipient's first: "(GDPR Art. 6(1); Law 91/2025/QH15 Art. 9)".
+When Margince does not send an email, the bar above **Send** names the first reason. An example is "{address} objected to marketing.". When Margince has the law behind it on file, the bar names that law, with a link to its text. When the reason rests on both laws, it names both, the recipient's first: "(GDPR Art. 6(1); Law 91/2025/QH15 Art. 9)". A marketing rule names only the law where the recipient lives.
 
 Below the reason, the bar says where Margince takes the recipient to live, and where it read that, such as their employer's address. When that is wrong, open the place on the recipient in **To** and pick the right one for this message.
 

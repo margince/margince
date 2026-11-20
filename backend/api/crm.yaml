@@ -62811,7 +62811,9 @@ components:
       properties:
         provision:
           allOf: [{ $ref: '#/components/schemas/CitedProvision' }]
-          description: The law the recipient's pack cites for `reason_code`, absent when none may be shown.
+          description: |
+            The first law cited for `reason_code`: the recipient's pack's, or the sending entity's
+            when only that pack cites one. Absent when none may be shown.
         provisions:
           type: array
           items: { $ref: '#/components/schemas/CitedProvision' }
@@ -70291,7 +70293,9 @@ components:
         requested_category: { type: string, description: The category the sender claimed. }
         provision:
           allOf: [{ $ref: '#/components/schemas/CitedProvision' }]
-          description: The first law cited for `reason_code`, absent when none may be shown.
+          description: |
+            The first law cited for `reason_code`: the recipient's pack's, or the sending entity's
+            when only that pack cites one. Absent when none may be shown.
         provisions:
           type: array
           items: { $ref: '#/components/schemas/CitedProvision' }
@@ -76401,7 +76405,9 @@ components:
         reason_code: { type: string }
         provision:
           allOf: [{ $ref: '#/components/schemas/CitedProvision' }]
-          description: The law the recipient's pack cites for `reason_code`, as shown when the refusal was assessed.
+          description: |
+            The first law cited for `reason_code` when the refusal was assessed: the recipient's
+            pack's, or the sending entity's when only that pack cites one.
         provisions:
           type: array
           items: { $ref: '#/components/schemas/CitedProvision' }
