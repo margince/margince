@@ -153,6 +153,13 @@ endif
 	PHASE_TIMER_OWNED=1 $(MAKE) -C backend check
 	@bash scripts/phase-timer.sh report
 
+## preflight — the gates a few added lines turn red, in seconds: the file-length
+## caps, the comment budget and density, and the root compose size ceiling.
+## Optional, before a gate run; `make check` runs every one of them again.
+preflight:
+	$(MAKE) -k go-file-length fe-file-length comment-budget comment-density
+	$(MAKE) -C backend preflight
+
 ## check-root-gates — the root deterministic script gates, side by side.
 ##
 ## The gates run as a FAN-OUT rather than as a prerequisite list. Every one of
@@ -173,7 +180,7 @@ endif
 check-root-gates:
 	@[ -n "$$PHASE_TIMER_OWNED" ] || bash scripts/phase-timer.sh reset
 	@bash scripts/phase-timer.sh start "root script gates (x$(words $(ROOT_SCRIPT_GATES)), -j$(GATE_JOBS))"
-	$(MAKE) -j$(GATE_JOBS) $(ROOT_SCRIPT_GATES)
+	$(MAKE) -k -j$(GATE_JOBS) $(ROOT_SCRIPT_GATES)
 	@bash scripts/phase-timer.sh stop
 	@[ -n "$$PHASE_TIMER_OWNED" ] || bash scripts/phase-timer.sh report
 
@@ -591,15 +598,11 @@ verify-boot:
 ## same thing. A leg added here reaches CI through the `fe-quality` /
 ## `fe-unit` / `fe-bundle` aggregates; a leg added only to a CI job would run
 ## in no local gate at all.
+##
+## One sub-make under -k, so a red leg does not hide the legs after it: a run
+## names every finding. The legs still run one at a time and in this order.
 frontend-check:
-	$(MAKE) fe-ds-gates
-	$(MAKE) fe-drift
-	$(MAKE) fe-file-length
-	$(MAKE) fe-lint
-	$(MAKE) fe-compiler-lint
-	$(MAKE) fe-unit
-	$(MAKE) fe-census
-	$(MAKE) fe-build
+	$(MAKE) -k fe-ds-gates fe-drift fe-file-length fe-lint fe-compiler-lint fe-unit fe-census fe-build
 
 ## fe-ds-gates — the frontend's cheap grep gates on their own, so the CI job that
 ## wants only them does not also pull a vitest run behind them. Most are
@@ -1091,7 +1094,7 @@ fe-edge-padding:
 ## BLOCKER and MAJOR findings both fail it. The code checks judge every
 ## hand-written Go file, and they are green because the backlog was cleared to
 ## arm them. The comment checks read Go and TypeScript and judge only the lines
-## added since CHECK_BASE_REF (origin/main unless set), so old comments improve as
+## added since CHECK_BASE_REF (the branch this one was cut from, unless set), so old comments improve as
 ## files are touched; with no such ref the gate fails instead of judging nothing. `make check` runs
 ## it locally.
 ##
@@ -1412,9 +1415,9 @@ test-make-target-parity:
 	@./scripts/check-make-target-parity.test.sh
 
 ## contract-breaking-check — strict compatibility against CHECK_BASE_REF
-## (origin/main by default). Set origin/develop when that is the target branch.
+## (the branch this one was cut from, by default: scripts/check-base-ref.sh).
 ## A deliberate spec resync uses CONTRACT_STABILITY=pre-live.
-CHECK_BASE_REF ?= origin/main
+CHECK_BASE_REF ?= $(shell ./scripts/check-base-ref.sh)
 contract-breaking-check:
 	@bash scripts/check-contract-breaking.test.sh
 	@CONTRACT_BREAKING_REQUIRE_BASE="$(if $(filter file,$(origin CHECK_BASE_REF)),$(CONTRACT_BREAKING_REQUIRE_BASE),1)" ./scripts/check-contract-breaking.sh "$(CHECK_BASE_REF)"
@@ -1439,7 +1442,7 @@ test-contract-frontend-drift:
 	@./scripts/check-contract-frontend-drift.test.sh
 
 ## migration-versions — a migration this branch adds claims a version no
-## migration on CHECK_BASE_REF (origin/main by default) already claims, and sorts
+## migration on CHECK_BASE_REF (the branch this one was cut from) already claims, and sorts
 ## after all of them. Two
 ## PRs numbering against the same main is how core 0240 (and then 0248) ended
 ## up claimed twice, which the per-tree loader test cannot see.

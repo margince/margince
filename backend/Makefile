@@ -181,7 +181,8 @@ check: ## The merge gate: everything a PR must pass
 	$(MAKE) build
 	@bash ../scripts/phase-timer.sh stop
 	@bash ../scripts/phase-timer.sh start "backend: $(CHECK_LEGS) (-j4)"
-	$(MAKE) -j4 $(CHECK_LEGS)
+	# -k: one red leg does not stop the others, so a run names every finding.
+	$(MAKE) -k -j4 $(CHECK_LEGS)
 	@bash ../scripts/phase-timer.sh stop
 ifneq ($(CHECK_TREE_GATES),off)
 ifndef CHECK_WRITERS_RAN
@@ -330,6 +331,12 @@ test-uncached: composition
 	# near it spends the run collecting: 3GiB cost 1.4x the wall time of 4GiB
 	# for the same 4 GB peak. A CI job with a runner to itself passes 6GiB.
 	GOMEMLIMIT=$(GATES_GOMEMLIMIT) $(GOWORK_COMPOSED) $(GO) test -count=1 -timeout 25m $(TEST_SHUFFLE_FLAGS) $(UNCACHED_TEST_PKGS)
+
+# The gates a few added lines turn red, asked alone: they answer in the time
+# the gates package takes to link, where the full package takes minutes.
+PREFLIGHT_GATE_TESTS := TestTheRootComposePackageDoesNotGrow
+preflight: composition ## The size gates a small diff trips, in seconds; `make check` still runs them
+	GOMEMLIMIT=$(GATES_GOMEMLIMIT) $(GOWORK_COMPOSED) $(GO) test -count=1 -run '^($(PREFLIGHT_GATE_TESTS))$$' ./gates
 
 # -v is load-bearing, not chattiness: `go test` only names skipped tests in
 # verbose mode, and the zero-skip teeth below grep for them. A skip in this
@@ -757,7 +764,7 @@ GOLANGCI_LINT ?= $(shell test -x $(GOLANGCI_LINT_BIN) && echo $(GOLANGCI_LINT_BI
 # issues — with that checkout's path, and therefore without the //nolint: and
 # path-anchored waivers that path carried. This lane is exposed to it exactly
 # as the module lane is, so it is guarded in the same place rather than twice.
-CHECK_BASE_REF ?= origin/main
+CHECK_BASE_REF ?= $(shell ../scripts/check-base-ref.sh)
 
 lint: lint-base lint-strict ## golangci-lint: repo-wide baseline + new-code strict set
 
@@ -933,9 +940,13 @@ drift: messaging-rules-drift ## Fail when a committed generated file drifted fro
 # disagree on; tools/check-generators-twice says how it finds them and which it
 # skips. It puts the work tree back, so it judges determinism and leaves
 # currency to drift.
+#
+# Outside CI it runs nothing when the branch changed no generator and no
+# generated file since CHECK_BASE_REF: such a branch runs what its base ran.
+# CI passes no -since, so every pull request still gets both passes.
 generators-twice: ## Fail when two runs of the generators found in the tree disagree in any byte
 	@../scripts/keep-unchanged-mtimes.sh save ../.tmp/generators-twice-mtimes
-	$(GOWORK_ROOT) $(GO) run ./tools/check-generators-twice -root ..
+	$(GOWORK_ROOT) $(GO) run ./tools/check-generators-twice -root .. $(if $(CI),,-since "$(CHECK_BASE_REF)")
 	@../scripts/keep-unchanged-mtimes.sh restore ../.tmp/generators-twice-mtimes
 
 # The MCP App admission vocabulary and the per-view action lists are AUTHORED in frontend/src/mcp-apps, where
