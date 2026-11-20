@@ -34,6 +34,7 @@ import type { MessageKey } from "../../i18n/en";
 import { summaryWords } from "../../lib/approvalpreviewfields";
 import { invalidateApprovalViews } from "../../lib/approvals.queries";
 import { approvalDotTier, useAgentTierMap } from "../../lib/autonomy";
+import { hideHomeRows } from "../../lib/homerows";
 import { fromHere } from "../../lib/navigatefrom";
 import { isVersionSkewOf, problemMessageOf } from "../../lib/problem";
 import { useViewerId } from "../../lib/session";
@@ -55,7 +56,11 @@ import {
   useApprovalNames,
 } from "../automations/approvalresponsibility";
 import { worklistLaneHref } from "../worklist/worklist.header";
-import { type CommitResult, commitTray } from "./brief.decisions.commit";
+import {
+  type CommitResult,
+  commitTray,
+  decidedRows,
+} from "./brief.decisions.commit";
 import { DECK_KEY_WORDS } from "./brief.deckwords";
 
 // The decisions half of Brief: the deck, its tray, and the one act that sends
@@ -248,8 +253,14 @@ export function DecisionsSection({
     // the last render left behind, which on this page is a queue that has just
     // been invalidated.
     mutationFn: commitTray,
-    onMutate: fromHere,
-    onSuccess: (result, _tray, from) => {
+    onMutate: async (tray) => ({
+      from: fromHere(),
+      hide: await hideHomeRows(queryClient, decidedRows(tray)),
+    }),
+    onError: (_error, _tray, sent) => sent?.hide.restore(),
+    onSuccess: (result, _tray, sent) => {
+      if (result.failure) sent?.hide.restore();
+      else sent?.hide.settle();
       setAlreadyDecided(result.alreadyDecided);
       if (result.alreadyDecided) {
         onAlreadyDecided();
@@ -268,7 +279,7 @@ export function DecisionsSection({
       // The full queue is where an edit's form lives, so a tray carrying one
       // takes the reader there rather than telling them the deck cannot do it.
       if (result.edits > 0) {
-        from.navigate({ screen: "worklist" });
+        sent?.from.navigate({ screen: "worklist" });
       }
     },
   });

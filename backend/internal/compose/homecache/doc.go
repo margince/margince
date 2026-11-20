@@ -21,9 +21,10 @@
 // it. So a reader who keeps Home open does not wait on its expiry. A refresh
 // that fails is not tried again for a minute. The reader's own writes end their
 // answers (AfterWrite), which covers writes that emit no event and no audit row.
-// A POST that only adds marks the day behind the write. The next day read serves
-// it flagged stale and reads it again behind; a receipt is read fresh.
-// A write on a row, a worklist action or a 409 drops the answers. So a settled
+// A POST that only adds marks the day behind the write. So do Done and a
+// set-aside, whose row the app has already taken off Home. The next day read
+// serves it flagged stale and reads it again behind; a receipt is read fresh.
+// Any other write on a row, an undo or a 409 drops the answers. So a settled
 // row is never listed as open, and a retry never meets the old version.
 // The fence still ends an answer, stale or not, on a permission, team or reach change.
 //

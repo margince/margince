@@ -27,6 +27,7 @@ import {
 } from "../../lib/approvals.queries";
 import { approvalDotTier, useAgentTierMap } from "../../lib/autonomy";
 import { recordRoute } from "../../lib/entity";
+import { hideHomeRows } from "../../lib/homerows";
 import {
   isAlreadyDecided,
   isVersionSkew,
@@ -237,7 +238,9 @@ function DecidableApprovalRow({
         }),
       );
     },
-    onSuccess: (data, input) => {
+    onMutate: () => hideHomeRows(queryClient, [{ id: approval.id }]),
+    onSuccess: (data, input, hide) => {
+      hide?.settle();
       void invalidateApprovalViews(queryClient);
       for (const queryKey of extraInvalidateKeys ?? []) {
         queryClient.invalidateQueries({ queryKey });
@@ -245,7 +248,8 @@ function DecidableApprovalRow({
       if (input.verdict === "approve")
         announceApproval(toast, t, data, undoTarget);
     },
-    onError: (error) => {
+    onError: (error, _input, hide) => {
+      hide?.restore();
       const problem = error instanceof ProblemError ? error.problem : null;
       const alreadyDecided = problem && isAlreadyDecided(problem);
       if (alreadyDecided) onAlreadyDecided?.();

@@ -8,10 +8,13 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, cleanup, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { forgetHiddenHomeRows } from "../../lib/homerows";
+import { homeDayOptions } from "../../lib/worklistday";
 import { MAX_DONE_ROWS, useMarkRowsDone } from "./worklist.donequeries";
 
 afterEach(() => {
   cleanup();
+  forgetHiddenHomeRows();
   vi.unstubAllGlobals();
 });
 
@@ -73,5 +76,56 @@ describe("Done on more rows than one call takes", () => {
       { path: "PUT /v1/worklist/done", count: 1 },
       { path: "POST /v1/worklist/done/undo", count: MAX_DONE_ROWS },
     ]);
+  });
+});
+
+describe("Done on a Home row", () => {
+  it("takes the row off the cached Home day before the server answers, and brings it back when the write fails", async () => {
+    const client = new QueryClient({
+      defaultOptions: { mutations: { retry: false } },
+    });
+    const key = homeDayOptions().queryKey;
+    const item = (id: string) => ({ id, source: "deal_at_risk" });
+    client.setQueryData(key, {
+      pages: [{ queue: [item("row-1"), item("row-2")] }],
+      pageParams: [undefined],
+    });
+    const settled: { release: () => void } = { release: () => {} };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        () =>
+          new Promise<Response>((resolve) => {
+            settled.release = () =>
+              resolve(
+                new Response(JSON.stringify({ title: "nope" }), {
+                  status: 500,
+                }),
+              );
+          }),
+      ),
+    );
+    const { result } = renderHook(() => useMarkRowsDone(), {
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <QueryClientProvider client={client}>{children}</QueryClientProvider>
+      ),
+    });
+    const ids = () =>
+      (
+        client.getQueryData<{ pages: { queue: { id: string }[] }[] }>(key)
+          ?.pages[0]?.queue ?? []
+      ).map((row) => row.id);
+    let sent: Promise<void> = Promise.resolve();
+    act(() => {
+      sent = result.current
+        .mutateAsync({
+          rows: [{ source: "deal_at_risk", row_id: "row-1" }],
+        })
+        .catch(() => {});
+    });
+    await vi.waitFor(() => expect(ids()).toEqual(["row-2"]));
+    settled.release();
+    await act(() => sent);
+    expect(ids()).toEqual(["row-1", "row-2"]);
   });
 });

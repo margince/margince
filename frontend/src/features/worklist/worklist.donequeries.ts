@@ -3,6 +3,7 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../api/client";
+import { hideHomeRows } from "../../lib/homerows";
 import { problemStatus, throwProblem } from "../../lib/problem";
 import { worklistKey } from "./worklist.queries";
 
@@ -69,11 +70,21 @@ export function useMarkRowsDone() {
         written.push(...run);
       }
     },
-    onSuccess: () => {
+    // Done takes the row off Home at once; Undo brings it back with the read.
+    onMutate: (input) =>
+      input.reopen
+        ? undefined
+        : hideHomeRows(
+            queryClient,
+            input.rows.map((row) => ({ source: row.source, id: row.row_id })),
+          ),
+    onSuccess: (_data, _input, hide) => {
+      hide?.settle();
       queryClient.invalidateQueries({ queryKey: worklistKey });
     },
     // A row on no list is stale on screen, so the list is read again.
-    onError: (error) => {
+    onError: (error, _input, hide) => {
+      hide?.restore();
       if (doneFailure(error).key === "worklist.disposition.gone") {
         queryClient.invalidateQueries({ queryKey: worklistKey });
       }

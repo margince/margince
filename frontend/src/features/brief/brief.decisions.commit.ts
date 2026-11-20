@@ -7,6 +7,7 @@ import type {
   DecisionDeckItem,
   StagedDecision,
 } from "../../design-system/decisiondeck";
+import type { HomeRow } from "../../lib/homerows";
 import { isAlreadyDecided, ProblemError, unwrap } from "../../lib/problem";
 
 // Sending the Brief's staging tray: what one verdict does, and what a whole
@@ -23,6 +24,24 @@ export type Approval = components["schemas"]["Approval"];
 /** Every approval one deck item answers for. */
 function approvalsOf(item: DecisionDeckItem): readonly Approval[] {
   return item.kind === "single" ? [item.approval] : item.members;
+}
+
+/** The Home rows a tray's accepted and rejected items settle. */
+export function decidedRows(tray: {
+  staged: readonly StagedDecision[];
+  items: readonly DecisionDeckItem[];
+}): HomeRow[] {
+  const byId = new Map(tray.items.map((item) => [item.id, item]));
+  return tray.staged.flatMap((decision) => {
+    const item = byId.get(decision.id);
+    if (!item || decision.verdict === "skip" || decision.verdict === "edit") {
+      return [];
+    }
+    const members = approvalsOf(item).map((approval) => ({ id: approval.id }));
+    return item.kind === "bundle"
+      ? [{ id: item.bundleId }, ...members]
+      : members;
+  });
 }
 
 /** What a commit sent, and what came back for each item in it. */
