@@ -18,7 +18,11 @@ import { useCan, useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
 import { WEBSITE_INQUIRY_RECIPE } from "../../lib/websiteinquiries";
-import { templateDescription, templateName } from "./automations.catalogwords";
+import {
+  nameToStore,
+  templateDescription,
+  templateName,
+} from "./automations.catalogwords";
 import { AutomationDialog } from "./automations.form";
 import { ConfiguredAutomations, shut } from "./automations.instances";
 import { triggerLabel } from "./automations.recipe";
@@ -170,7 +174,15 @@ export function AutomationsAdmin({
           pending={create.isPending}
           error={create.error}
           onSubmit={(name, params) =>
-            create.mutate({ key: staged.entry.key, name, params })
+            create.mutate({
+              key: staged.entry.key,
+              name: nameToStore(
+                name,
+                templateName(staged.entry, t),
+                staged.entry.name,
+              ),
+              params,
+            })
           }
           onClose={() => setStaged(shut)}
         />

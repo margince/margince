@@ -7,12 +7,7 @@ import { RecordFormDialog } from "../../design-system/recordformdialog";
 import { Select } from "../../design-system/select";
 import { TimezoneSelect } from "../../design-system/timezoneselect";
 import { useT } from "../../i18n";
-import {
-  type FieldLabels,
-  faultSentenceFor,
-  problemFieldErrorsOf,
-  refusalSentences,
-} from "../../lib/problem";
+import { type FieldLabels, refusalSentences } from "../../lib/problem";
 import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import { templateDescription } from "./automations.catalogwords";
 import { DateFieldSelect } from "./automations.datefield";
@@ -205,11 +200,6 @@ export function AutomationDialog({
     ),
   };
   const refused = refusalSentences(error, t, labels);
-  // Every fault on a field the form does not draw, where `rest` keeps one.
-  const unplaced = problemFieldErrorsOf(error)
-    .filter((fault) => !Object.hasOwn(labels, fault.field))
-    .map((fault) => faultSentenceFor(fault, t, labels));
-  const rest = unplaced.length > 0 ? unplaced.join(" ") : refused.rest;
   const missing = missingParam(fields, values, t);
 
   return (
@@ -278,7 +268,7 @@ export function AutomationDialog({
               }
             />
           ))}
-          <ErrorLine>{rest}</ErrorLine>
+          <ErrorLine>{refused.rest}</ErrorLine>
           <DraftGuard dirty={dirty} />
         </form>
       }

@@ -531,3 +531,47 @@ describe("the catalog's words", () => {
     );
   });
 });
+
+describe("creating a rule from a template in another language", () => {
+  async function createRouteLead(rename?: string) {
+    const user = userEvent.setup();
+    const bodies: unknown[] = [];
+    mount(
+      OPERATOR,
+      { "POST /automations": () => jsonResponse({}, 201) },
+      "library",
+      "de",
+    );
+    const stubbed = globalThis.fetch;
+    globalThis.fetch = async (input, init) => {
+      const request = new Request(input, init);
+      if (request.method === "POST") bodies.push(await request.clone().json());
+      return stubbed(input, init);
+    };
+    const template = await screen.findByTestId("template-route_lead");
+    await user.click(within(template).getByRole("button"));
+    const dialog = within(await screen.findByRole("dialog"));
+    const name = dialog.getByRole("textbox", { name: "Name" });
+    expect(name).toHaveValue(de["auto.template.route_lead.name"]);
+    if (rename) {
+      await user.clear(name);
+      await user.type(name, rename);
+    }
+    await user.click(dialog.getByRole("button", { name: "Erstellen" }));
+    await waitFor(() => expect(bodies).toHaveLength(1));
+    return bodies[0];
+  }
+
+  it("stores the template's own name when the suggested one is kept", async () => {
+    expect(await createRouteLead()).toMatchObject({
+      key: "route_lead",
+      name: "Route new lead to a task",
+    });
+  });
+
+  it("stores a name the reader typed", async () => {
+    expect(await createRouteLead("Neue Leads")).toMatchObject({
+      name: "Neue Leads",
+    });
+  });
+});

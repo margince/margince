@@ -20,7 +20,7 @@ import { problemMessageOf } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
 import { WEBSITE_INQUIRY_RECIPE } from "../../lib/websiteinquiries";
 import { AutomationInspectors } from "./automationdetail";
-import { ruleName } from "./automations.catalogwords";
+import { nameToStore, ruleName } from "./automations.catalogwords";
 import { DeleteAutomationAction } from "./automations.delete";
 import { AutomationDialog } from "./automations.form";
 import {
@@ -31,7 +31,7 @@ import {
 import { ScheduledPopulationReview } from "./automations.populationreview";
 import { recipeSentence } from "./automations.recipe";
 import { AutomationRecipientSummary } from "./automations.recipient";
-import { OUTCOME_LOOK } from "./automations.runrow";
+import { outcomeLook } from "./automations.runrow";
 import { AutomationStatus } from "./automations.status";
 import "./automations.css";
 
@@ -219,13 +219,18 @@ export function ConfiguredAutomations({
               const current =
                 automations.find((one) => one.id === editing.automation.id) ??
                 editing.automation;
-              // The name the row shows may be its template's words in this
-              // reader's language, so it is stored only when they changed it.
-              const renamed = name !== editing.automation.name;
+              const stored = nameToStore(
+                name,
+                editing.automation.name,
+                current.name,
+              );
               const patch = {
                 id: current.id,
                 version: current.version,
-                body: { ...(renamed ? { name } : {}), params },
+                body: {
+                  ...(stored === current.name ? {} : { name: stored }),
+                  params,
+                },
               };
               if (
                 current.status === "enabled" &&
@@ -357,7 +362,7 @@ function RunOutcome({
   if (!outcome) {
     return null;
   }
-  const look = OUTCOME_LOOK[outcome];
+  const look = outcomeLook(outcome);
   return outcome === "failed" || outcome === "blocked" ? (
     <Badge tone={look.tone}>{t(look.word)}</Badge>
   ) : (

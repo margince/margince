@@ -8,41 +8,16 @@ import { vi } from "../../i18n/vi";
 import { TEMPLATE_WORDS } from "./automations.catalogwords";
 import { AUTOMATION_CATALOG } from "./automations.fixtures";
 import { paramFields, paramsFromValues } from "./automations.params";
-import {
-  missingParam,
-  OPTION_LABELS,
-  PARAM_LABELS,
-} from "./automations.paramwords";
+import { missingParam } from "./automations.paramwords";
 
-// The backend gates ask which keys need words. This asks that each word the
-// maps name is written in every language.
-
-function wordedInEveryLanguage(key: MessageKey) {
-  for (const [lang, catalog] of Object.entries({ en, de, vi })) {
-    expect(catalog[key].trim(), `${lang} ${key}`).not.toBe("");
-  }
-}
-
+// The backend gates ask which keys need words, and the catalog tests that none
+// is empty. This asks that a description is translated, not copied.
 describe("the automation catalog's words", () => {
   it.each(Object.entries(TEMPLATE_WORDS))(
-    "names and describes %s in every language",
+    "describes %s in each language's own words",
     (_, words) => {
-      wordedInEveryLanguage(words.name);
-      wordedInEveryLanguage(words.description);
       expect(de[words.description]).not.toBe(en[words.description]);
       expect(vi[words.description]).not.toBe(en[words.description]);
-    },
-  );
-
-  it.each(Object.entries(PARAM_LABELS))(
-    "labels %s in every language",
-    (_, key) => wordedInEveryLanguage(key),
-  );
-
-  it.each(Object.entries(OPTION_LABELS))(
-    "words every option of %s in every language",
-    (_, options) => {
-      for (const key of Object.values(options)) wordedInEveryLanguage(key);
     },
   );
 });

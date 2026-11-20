@@ -132,8 +132,8 @@ export function paramsFromValues(
 ): Record<string, unknown> {
   return Object.fromEntries(
     fields
-      // An optional parameter left empty is left out: the server then keeps
-      // its default, or for a cap, no cap at all.
+      // An optional parameter left empty is left out, and is read as its
+      // default, or for a cap, no cap.
       .filter(
         (field) =>
           field.required ||

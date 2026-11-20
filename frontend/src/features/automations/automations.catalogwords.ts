@@ -87,3 +87,16 @@ export function ruleName(
     ? templateName(entry, t)
     : automation.name;
 }
+
+/**
+ * The name a create or an edit stores. A name kept as the form showed it may
+ * be the template's words in the reader's language. So the stored one stays,
+ * and every reader goes on seeing it in their own.
+ */
+export function nameToStore(
+  submitted: string,
+  shown: string,
+  stored: string,
+): string {
+  return submitted === shown ? stored : submitted;
+}

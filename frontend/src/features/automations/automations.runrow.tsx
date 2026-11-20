@@ -31,18 +31,14 @@ const TIER_DOT: Readonly<Record<AutomationRun["tier"], "auto" | "confirm">> = {
   confirmation_required: "confirm",
 };
 
-// Outcome → tone, glyph and word. A Record over the enum stops compiling when
-// the contract adds an outcome, so a new one cannot ship as a blank badge.
-export const OUTCOME_LOOK: Readonly<
-  Record<
-    Outcome,
-    Readonly<{
-      tone: "success" | "warning" | "danger";
-      icon: LucideIcon;
-      word: MessageKey;
-    }>
-  >
-> = {
+type OutcomeLook = Readonly<{
+  tone: "success" | "warning" | "danger";
+  icon: LucideIcon;
+  word: MessageKey;
+}>;
+
+// Outcome → tone, glyph and word, for each outcome this build knows.
+const OUTCOME_LOOK: Readonly<Record<Outcome, OutcomeLook>> = {
   fired: { tone: "success", icon: Check, word: RUN_OUTCOME_WORD.fired },
   failed: { tone: "danger", icon: X, word: RUN_OUTCOME_WORD.failed },
   blocked: { tone: "warning", icon: Ban, word: RUN_OUTCOME_WORD.blocked },
@@ -54,9 +50,20 @@ export const OUTCOME_LOOK: Readonly<
   },
 };
 
+// An outcome newer than this build reads as a failure, as its word does.
+const UNKNOWN_OUTCOME: OutcomeLook = {
+  tone: "danger",
+  icon: X,
+  word: RUN_OUTCOME_WORD.failed,
+};
+
+export function outcomeLook(outcome: Outcome): OutcomeLook {
+  return valueFor(OUTCOME_LOOK, outcome, UNKNOWN_OUTCOME);
+}
+
 export function OutcomeBadge({ outcome }: Readonly<{ outcome: Outcome }>) {
   const t = useT();
-  const look = OUTCOME_LOOK[outcome];
+  const look = outcomeLook(outcome);
   return (
     <Badge tone={look.tone} icon={look.icon}>
       {t(look.word)}
@@ -66,7 +73,7 @@ export function OutcomeBadge({ outcome }: Readonly<{ outcome: Outcome }>) {
 
 // The reason line reads in its badge's tone, so a run's row reads one way.
 function reasonColor(outcome: Outcome): string {
-  return OUTCOME_LOOK[outcome].tone === "danger"
+  return outcomeLook(outcome).tone === "danger"
     ? "var(--dangerText)"
     : "var(--warningText)";
 }
@@ -158,7 +165,7 @@ export function RunRow({ run }: Readonly<{ run: AutomationRun }>) {
   // In the viewer's own zone, as every audit-style event reads.
   const zone = useViewerZone();
   const trigger = runTrigger(run, t);
-  // A mode newer than this client reads as the one that waits for a person.
+  // A mode newer than this client reads as the one that waits for approval.
   const tier = valueFor(TIER_DOT, run.tier, "confirm");
   return (
     <li className="auto-run">
