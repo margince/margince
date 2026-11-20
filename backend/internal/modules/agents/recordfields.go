@@ -259,7 +259,7 @@ func noteTimestamps(node *jsonSchema, rule string) {
 	if node == nil {
 		return
 	}
-	if node.Format == "date-time" && node.Description == "" {
+	if node.Format == formatDateTime && node.Description == "" {
 		node.Description = rule
 	}
 	for _, member := range node.Properties {

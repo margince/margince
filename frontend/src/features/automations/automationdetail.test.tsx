@@ -13,11 +13,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
-import {
-  AutomationPreview,
-  AutomationRuns,
-  OutcomeBadge,
-} from "./automationdetail";
+import { AutomationPreview, AutomationRuns } from "./automationdetail";
+import { OutcomeBadge } from "./automations.runrow";
 
 type AutomationRun = components["schemas"]["AutomationRun"];
 
@@ -523,7 +520,7 @@ describe("AutomationPreview", () => {
     await waitFor(() =>
       expect(
         screen.getByText(
-          "Read-only dry run. No records are changed and nothing is sent.",
+          "Read-only preview. No records are changed and nothing is sent.",
         ),
       ).toBeTruthy(),
     );

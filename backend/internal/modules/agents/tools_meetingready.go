@@ -64,7 +64,8 @@ func (t meetingReady) Spec() mcp.ToolSpec {
 		Name: t.name, Title: title, Version: toolVersionV1,
 		Description: t.copy.render(), Instead: t.copy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute, Unlisted: true,
-		OpenAPIOp: t.op,
+		ProductMadeAnswer: true,
+		OpenAPIOp:         t.op,
 		InputSchema: schema(`{"type":"object","required":["activity_id","preparation_revision"],"properties":{
 			"activity_id":{"type":"string","format":"uuid","description":"The meeting"},
 			"preparation_revision":{"type":"string","minLength":1,"maxLength":64,

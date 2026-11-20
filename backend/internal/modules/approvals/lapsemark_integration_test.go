@@ -93,8 +93,8 @@ func TestAnApprovalTheAgentNeverRedeemedIsMarkedRatherThanLeftSilent(t *testing.
 	// The approver's own sentence. It has to say the work did not happen AND
 	// what to do, because a human told only "expired" decides again and the row
 	// refuses them as already decided.
-	if *sentence != lapsedRedemptionSentence {
-		t.Errorf("stored sentence = %q, want %q", *sentence, lapsedRedemptionSentence)
+	if *sentence != failureLapsed.sentence {
+		t.Errorf("stored sentence = %q, want %q", *sentence, failureLapsed.sentence)
 	}
 	// The status is untouched. A human DID approve this, and rewriting that to
 	// something else would put a decision in the record they never made.
@@ -273,8 +273,11 @@ func TestALapseBeforeTheSweepIsInTheFailureLaneLikeASweptOne(t *testing.T) {
 		t.Fatalf("lane before the sweep = %+v, want the one lapsed approval with its failure", listed)
 	}
 	before := *listed[0].Approval.EffectFailedAt
-	if *listed[0].Approval.EffectFailure != lapsedRedemptionSentence {
+	if *listed[0].Approval.EffectFailure != failureLapsed.sentence {
 		t.Errorf("sentence = %q, want the lapse sentence", *listed[0].Approval.EffectFailure)
+	}
+	if code := listed[0].Approval.EffectFailureCode; code == nil || *code != "approval_lapsed" {
+		t.Errorf("code before the sweep = %v, want approval_lapsed", code)
 	}
 
 	if marked, err := e.svc.MarkLapsedRedemptions(e.sweeping()); err != nil || marked != 1 {
@@ -286,6 +289,9 @@ func TestALapseBeforeTheSweepIsInTheFailureLaneLikeASweptOne(t *testing.T) {
 	after, err := e.svc.OwnFailedDecisions(e.asDecider(), 8)
 	if err != nil || len(after) != 1 || !after[0].Approval.EffectFailedAt.Equal(before) {
 		t.Fatalf("lane after the sweep = (%v, %v), want the same single failure", after, err)
+	}
+	if code := after[0].Approval.EffectFailureCode; code == nil || *code != "approval_lapsed" {
+		t.Errorf("code after the sweep = %v, want approval_lapsed", code)
 	}
 }
 

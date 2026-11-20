@@ -2,10 +2,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Plus } from "lucide-react";
+import type { ReactNode } from "react";
 import { AppLink } from "../design-system/applink";
 import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { useT } from "../i18n";
+import { problemMessageOf } from "../lib/problem";
 import { routeHash } from "../lib/router";
 import { settingsHref } from "../lib/settingsrouting";
 import "./tagpicker.css";
@@ -43,6 +45,23 @@ export function TagListFooter({
       </p>
     </>
   );
+}
+
+/**
+ * What a tag list with no rows says. A failed read gives its reason. Otherwise
+ * the list holds no tags yet, or no tag carries the typed name.
+ */
+export function useEmptyTagWords(
+  vocabulary: Readonly<{ isError: boolean; error: unknown }>,
+  canCreate: boolean,
+): Readonly<{ empty: ReactNode; none: ReactNode | undefined }> {
+  const t = useT();
+  if (vocabulary.isError) {
+    return { empty: problemMessageOf(vocabulary.error, t), none: undefined };
+  }
+  return canCreate
+    ? { empty: t("tags.noMatchYouCanCreate"), none: t("tags.noneYouCanCreate") }
+    : { empty: t("tags.noMatch"), none: t("tags.noneAskForOne") };
 }
 
 /** "Create tag {name}", for a seat that may coin a word. */

@@ -21664,6 +21664,7 @@ const (
 	ReportingMetricIDClosedWinRate                 ReportingMetricID = "closed_win_rate"
 	ReportingMetricIDForecastLanding               ReportingMetricID = "forecast_landing"
 	ReportingMetricIDInitiativePipeline            ReportingMetricID = "initiative_pipeline"
+	ReportingMetricIDIntroductionsMade             ReportingMetricID = "introductions_made"
 	ReportingMetricIDLeadCohortOutcomes            ReportingMetricID = "lead_cohort_outcomes"
 	ReportingMetricIDLeadFirstResponse             ReportingMetricID = "lead_first_response"
 	ReportingMetricIDLeadStatusMoves               ReportingMetricID = "lead_status_moves"
@@ -21672,6 +21673,7 @@ const (
 	ReportingMetricIDLeadsCreated                  ReportingMetricID = "leads_created"
 	ReportingMetricIDLeadsPromoted                 ReportingMetricID = "leads_promoted"
 	ReportingMetricIDLeadsQualified                ReportingMetricID = "leads_qualified"
+	ReportingMetricIDMeetingsBookedForColleagues   ReportingMetricID = "meetings_booked_for_colleagues"
 	ReportingMetricIDMeetingsHeld                  ReportingMetricID = "meetings_held"
 	ReportingMetricIDOpenPipeline                  ReportingMetricID = "open_pipeline"
 	ReportingMetricIDPartnerActivity               ReportingMetricID = "partner_activity"
@@ -21702,6 +21704,8 @@ func (e ReportingMetricID) Valid() bool {
 		return true
 	case ReportingMetricIDInitiativePipeline:
 		return true
+	case ReportingMetricIDIntroductionsMade:
+		return true
 	case ReportingMetricIDLeadCohortOutcomes:
 		return true
 	case ReportingMetricIDLeadFirstResponse:
@@ -21717,6 +21721,8 @@ func (e ReportingMetricID) Valid() bool {
 	case ReportingMetricIDLeadsPromoted:
 		return true
 	case ReportingMetricIDLeadsQualified:
+		return true
+	case ReportingMetricIDMeetingsBookedForColleagues:
 		return true
 	case ReportingMetricIDMeetingsHeld:
 		return true
@@ -36292,6 +36298,11 @@ type Approval struct {
 	// EffectFailure The sentence a reader is shown about that failure, written for them and never copied from the executor's error. Present exactly when `effect_failed_at` is.
 	EffectFailure *string `json:"effect_failure,omitempty"`
 
+	// EffectFailureCode `effect_failure` as a code a client words in the reader's language: approval_lapsed,
+	// effect_not_run, effect_unconfirmed, follow_up_failed or window_not_widened. Absent when
+	// the sentence has no code; the client then shows `effect_failure`.
+	EffectFailureCode *string `json:"effect_failure_code,omitempty"`
+
 	// Evidence Per-claim evidence (snippet + source id) backing the proposal.
 	Evidence *[]ApprovalEvidence `json:"evidence,omitempty"`
 
@@ -37744,6 +37755,10 @@ type AttentionItem struct {
 	// DueIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
 	DueIntent *IntentTime `json:"due_intent,omitempty"`
 
+	// EffectFailureCode On a `failed_approval` item: Approval.effect_failure_code, rendered in the reader's
+	// language. `detail` keeps the English sentence.
+	EffectFailureCode *string `json:"effect_failure_code,omitempty"`
+
 	// HostUserId Whose calendar a meeting came off. Sent by `source: meeting` and
 	// `source: meeting_outcome`. It moves to the organizer, whichever calendar
 	// synced first, when the organizer is a colleague with exactly one bound seat
@@ -38639,6 +38654,9 @@ type AutomationRetryResultRefusal string
 // EVERY outcome are first-class — including errored/blocked/skipped — so the designer's run history is
 // honest, not success-only (ADR-0035 Am.1). Read-only: produced by the engine, never created via API.
 type AutomationRun struct {
+	// ActionKinds The action kinds the run applied, or for a run queued for approval the kinds it queued, in order. A create another rule had already made is left out. Empty when the run did nothing.
+	ActionKinds *[]string `json:"action_kinds,omitempty"`
+
 	// ActionResult What happened (e.g. "created task", "queued to approval inbox").
 	ActionResult     *string `json:"action_result,omitempty"`
 	ApprovalRequired *bool   `json:"approval_required,omitempty"`
@@ -38646,7 +38664,13 @@ type AutomationRun struct {
 	// AuditId Link into the audit_log row for this run.
 	AuditId      *string            `json:"audit_id,omitempty"`
 	AutomationId openapi_types.UUID `json:"automation_id"`
-	Id           openapi_types.UUID `json:"id"`
+
+	// Created A task a fired run created. Its id is absent for a run recorded before runs kept it. Its label is the task's subject, present only when the reader may read the task itself.
+	Created *AutomationRunCreatedRecord `json:"created,omitempty"`
+
+	// EventId The event that fired the run, for technical details. A clock rule's run names its scan.
+	EventId *openapi_types.UUID `json:"event_id,omitempty"`
+	Id      openapi_types.UUID  `json:"id"`
 
 	// OccurredAt Maps to automation_run.ran_at.
 	OccurredAt time.Time `json:"occurred_at"`
@@ -38662,21 +38686,39 @@ type AutomationRun struct {
 	// not_completed or blocked. A code a client does not know reads as not_completed.
 	ReasonCode *string `json:"reason_code,omitempty"`
 
+	// Target The record the run acted on. Its label is absent when the reader may not see the record.
+	Target *MagicEntityRef `json:"target,omitempty"`
+
 	// TargetRef Record the run acted on (type + id or label).
 	TargetRef *string `json:"target_ref,omitempty"`
 
-	// Tier The tier that fired for this run.
+	// Tier The rule's mode, as its catalog entry reads it: confirmation_required when every run waits for approval.
 	Tier AutomationRunTier `json:"tier"`
+
+	// TriggerEventType What fires the rule, in the catalog's trigger vocabulary, e.g. deal.stage_changed or clock:renewal_scan.
+	TriggerEventType *string `json:"trigger_event_type,omitempty"`
 
 	// TriggerEvidence What matched (e.g. "no activity 14d on deal BÄR Pharma") — the "why did this fire?" line.
 	TriggerEvidence *string `json:"trigger_evidence,omitempty"`
+
+	// TriggerStageName For a run a stage move fired, the stage the deal moved to. Absent once the event is no longer on record, and when the reader may not see the run's target.
+	TriggerStageName *string `json:"trigger_stage_name,omitempty"`
 }
 
 // AutomationRunOutcome Maps 1:1 to automation_run.status; `blocked` added by ADR-0035 Am.1.
 type AutomationRunOutcome string
 
-// AutomationRunTier The tier that fired for this run.
+// AutomationRunTier The rule's mode, as its catalog entry reads it: confirmation_required when every run waits for approval.
 type AutomationRunTier string
+
+// AutomationRunCreatedRecord A task a fired run created. Its id is absent for a run recorded before runs kept it. Its label is the task's subject, present only when the reader may read the task itself.
+type AutomationRunCreatedRecord struct {
+	Id    *openapi_types.UUID `json:"id,omitempty"`
+	Label *string             `json:"label,omitempty"`
+
+	// Type The record type, e.g. activity for a task.
+	Type string `json:"type"`
+}
 
 // AutonomySettings What the reader has decided about answering their own queue: one row per kind
 // that is eligible to apply automatically, whether or not they have ever met it.
@@ -73956,6 +73998,10 @@ type WorklistItem struct {
 	// DueIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
 	DueIntent *IntentTime `json:"due_intent,omitempty"`
 
+	// EffectFailureCode On a `failed_approval` item: Approval.effect_failure_code, rendered in the reader's
+	// language. `detail` keeps the English sentence.
+	EffectFailureCode *string `json:"effect_failure_code,omitempty"`
+
 	// EmailSummary The canonical email row, on a `customer_waiting` row whose message is an EMAIL this reader may read. The waiting lane spans email and channel messages, and only an email has an email's shape — a chat drawn as one would carry a mail icon and an email's access badge over a message that never travelled on one. Null on a channel message, null on every other source, and null when the message's content is not this reader's, though such a message produces no waiting row at all. A client renders the canonical row when this is present and falls back to `title` when it is not.
 	EmailSummary *EmailSummary `json:"email_summary,omitempty"`
 
@@ -82819,6 +82865,9 @@ type SearchParams struct {
 
 	// WithEmployees Also find the contacts who currently work at a company the query matches, each carrying that company as `works_at`. A contact the query matches by its own text is returned once, as itself; one found only through its employer ranks after every contact matched by its own text. Staff are read from the best-matching companies only, as many as a grouped page can show (20), so a word matching hundreds of accounts reaches the contacts at its strongest matches rather than at all of them. It needs the caller to read contacts, companies and the employment between them, and finds no one through the installation's own company or through a query using the websearch operators (`or`, `-word`, quotes), where `-acme` would reach every other company in the workspace. Honoured by both page shapes, so a contact a grouped page shows is also on the ranked list narrowed to `types=contact`.
 	WithEmployees *bool `form:"with_employees,omitempty" json:"with_employees,omitempty"`
+
+	// Typeahead The caller is a search box answering each keystroke. Messages (`activity`) are left out of the answer while the word being typed is under 4 letters, because a short prefix matches a large share of all messages and ranking them is the slow part. Every other type is searched from the first letter as usual. A query that ends in a finished word, or uses the websearch operators, has no word being typed and keeps its messages, and so does a request whose `types` names messages alone. Only a human caller's flag is honoured.
+	Typeahead *bool `form:"typeahead,omitempty" json:"typeahead,omitempty"`
 
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
@@ -152249,6 +152298,19 @@ func (siw *ServerInterfaceWrapper) Search(w http.ResponseWriter, r *http.Request
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "with_employees"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "with_employees", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "typeahead" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "typeahead", r.URL.Query(), &params.Typeahead, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "typeahead"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "typeahead", Err: err})
 		}
 		return
 	}

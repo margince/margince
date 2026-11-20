@@ -57,7 +57,7 @@ func TestALapsedUnredeemedStagingReadsAsFailedBeforeTheSweepMarksIt(t *testing.T
 
 	out := wire(context.Background(), a, now)
 
-	if out.EffectFailedAt == nil || out.EffectFailure == nil || *out.EffectFailure != lapsedRedemptionSentence {
+	if out.EffectFailedAt == nil || out.EffectFailure == nil || *out.EffectFailure != failureLapsed.sentence {
 		t.Errorf("failure = (%v, %v), want the lapse sentence", out.EffectFailedAt, out.EffectFailure)
 	}
 	if out.AwaitingAgent != nil {

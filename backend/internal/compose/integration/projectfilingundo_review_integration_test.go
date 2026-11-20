@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/retentionscope"
+	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
 // A legal hold on the project an activity was filed under outranks the undo: the
@@ -312,9 +313,10 @@ func waitUntilBlockedBy(t *testing.T, holder interface {
 	}
 }
 
-// A credential files an activity under a project as its colleague could in the
-// app, also while an erasure is open on the activity's contact. Nothing waits.
-func TestACredentialFilesAnActivityUnderErasureAsItsColleagueCould(t *testing.T) {
+// A credential's filing under a project waits for a human. Once approved, it
+// files the activity as its colleague could in the app. An open erasure on the
+// activity's contact does not stop it.
+func TestACredentialFilesAnActivityUnderErasureOnceAHumanApproves(t *testing.T) {
 	e := Setup(t)
 	owner := FreshOwnerConn(t)
 	f := seedThreadFixture(t, e, owner)
@@ -329,10 +331,18 @@ func TestACredentialFilesAnActivityUnderErasureAsItsColleagueCould(t *testing.T)
 	e.WsExec(t, `INSERT INTO data_subject_request (kind, status, subject_ref, due_at, contact_id)
 		VALUES ('erasure', 'open', $1::text, now() + interval '30 days', $2)`, contact.String(), contact)
 
+	args := `{"activity_ids":["` + f.mine[0].String() + `"],"entity_type":"project","entity_id":"` + f.project.String() + `"`
+	_, err := registry.Invoke(agent, "relink_activities", json.RawMessage(args+`}`))
+	staged, ok := errors.AsType[*workflow.StagedApprovalError](err)
+	if !ok {
+		t.Fatalf("relink_activities onto a project on a passport → %v, want it staged for a human", err)
+	}
+	if _, err := compose.NewApprovalsService(e.DB()).Decide(e.Admin(), staged.ApprovalID, true, nil); err != nil {
+		t.Fatalf("approving the filing: %v", err)
+	}
 	if _, err := registry.Invoke(agent, "relink_activities", json.RawMessage(
-		`{"activity_ids":["`+f.mine[0].String()+`"],"entity_type":"project","entity_id":"`+f.project.String()+`"}`,
-	)); err != nil {
-		t.Fatalf("relink_activities on a passport → %v, want it filed at once", err)
+		args+`,"approval_id":"`+staged.ApprovalID.String()+`"}`)); err != nil {
+		t.Fatalf("the approved relink → %v, want it filed", err)
 	}
 	if projectLinks(t, e, f.mine[0], f.project) != 1 {
 		t.Error("the relink did not file the activity under the project")

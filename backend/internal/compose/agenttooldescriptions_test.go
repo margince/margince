@@ -185,98 +185,16 @@ func TestTheOperatorConsoleServesTheTextAnMCPClientIsServed(t *testing.T) {
 	}
 }
 
-// What every step pays before its transcript — the frame, the tool listing and
-// the step schema, runner.FixedStepCost — may take at most
-// listingBudgetNumerator/listingBudgetDenominator of the runner's prompt
-// ceiling. Elision never touches any of the three — only the transcript gives
-// way — so a catalog that grew past this would not overflow, it would quietly
-// leave the run less and less room for the observations it is reasoning over.
-// The history below measured the listing alone.
+// Every step first pays runner.FixedStepCost: the frame, the tool listing and the
+// step schema. That may take at most
+// listingBudgetNumerator/listingBudgetDenominator of the runner's prompt ceiling.
+// Elision never shortens those three, so a growing catalog would leave the run
+// less room for the observations it reasons over.
 //
-// It was 1/2, and the comment there said half was "generous next to where the
-// surface sits today". That stopped being true at 33 tools: the catalog reached
-// ~11,900 tokens against a 12,000 bound, and the two tools after it did not fit.
-//
-// Raised to 5/8 rather than answered by trimming copy, and the choice is worth
-// stating because the cheaper option is the wrong one. What is in these
-// descriptions is the ONE thing measured to move tool selection — A2 took
-// gemini from 0.80 to 0.87 by making tools say what they are for, and took one
-// restraint scenario from 0/3 to 3/3 on a single sentence. Cutting that to fit a
-// fraction chosen when the catalog was smaller would trade a measured gain for
-// an unmeasured one. 5/8 still leaves 9,000 tokens for the goal and the
-// transcript, which is a working run.
-//
-// Scope-filtering the listing did NOT earn 1/2 back, and the arithmetic belongs
-// here because the intuition runs the other way. A run is now offered only what
-// its passport admits, which cuts the typical run hard — a read-scoped one
-// renders ~5,200 tokens rather than ~12,745. But this measures the WHOLE catalog
-// deliberately: an all-scope passport is a legitimate configuration, it is
-// offered every tool, and at 35 tools that is still ~12,745 — past 1/2 (12,000).
-// Re-pointing this at a narrower principal would lower the bound by measuring
-// something smaller than the worst case, which is the same failure as raising
-// one to fit and harder to see afterwards.
-//
-// So this stays a ceiling on growth against the all-scope run, and it is closer
-// than it looks. The listing is O(catalog): the next few tools reach 5/8 too,
-// and what scope filtering leaves behind is mostly schemas, which are half the
-// bytes. Deferring those is a protocol change — a model needs the schema to CALL
-// a tool — so it wants its own decision rather than being reached for the next
-// time this bound is hit.
-//
-// Publishing the per-record_type write vocabulary as a document rather than
-// reciting it in two tool descriptions bought most of the room back: the listing
-// measures ~12,132 tokens against the 15,000 bound, ~2,868 of headroom where
-// there was ~1,355. That is a measurement and not a constant — descriptions move
-// with every change that touches one — so treat it as the order of the headroom.
-// What is asserted below is the bound.
-//
-// The room is deliberately NOT spent by lowering the fraction here. It is what
-// the next tools are for, and re-tightening the bound in the change that creates
-// the room would spend it before anyone can argue for how.
-//
-// RAISED to 2/3 on 2026-08-21, with the measurement that argues for it.
-//
-// 5/8 was set when the listing measured ~12,132 against 15,000. Four tools
-// later — whoami, list_colleagues, apply_tag, remove_tag, each answering a
-// question the surface previously could not — it measures ~15,377, and the
-// last three changes each paid for themselves by cutting prose the tools
-// needed: an alias nobody could discover, a language rule trimmed to one
-// clause, four tag verbs cut to two. That is the bound spending features
-// rather than bounding growth.
-//
-// The repeated-boilerplate wins were taken first, and they were real:
-// retryKeyProperty prints once per mutating tool (eighteen), approval_id's
-// description ten times, timestampNote eight. Trimming those three bought
-// ~200 tokens between them. What is left is per-tool schema, which is the
-// tool, and prose already cut to the bone.
-//
-// 2/3 of 24,000 is 16,000 — the run still keeps a third of its window, and the
-// ~600 tokens this adds is the room the next verb needs rather than a licence
-// to stop counting. What has NOT changed is that the listing is O(catalog):
-// the honest next answer is scope-filtering or deferring schemas, both of them
-// protocol decisions, and both still ahead of us.
-//
-// RAISED to 17/24 on 2026-08-22, with the measurement that argues for it.
-//
-// 2/3 was set when the listing measured ~15,377. One tool later —
-// read_project_360, the project page read under the same per-section gates
-// the HTTP route applies, and a read the surface owed because every one of
-// its parts was already agent-readable — it measured ~15,997 before the tool
-// and ~16,160 after it, against 16,000.
-//
-// The bound is per declared agent, not global, because no run is offered the
-// whole catalog: each scheduled agent declares its tools in api/ai-tasks.yaml,
-// compose refuses to assemble one that does not, the runner refuses a Job with
-// no Tools, and no file outside the three sanctioned ones may build a Job.
-//
-// So the fraction bounds a DECLARED agent's step, and the fattest agent that
-// runs is well inside it. The figures are not written here, because every change
-// to a description moves them: docs/reference/agent-tool-budget.md is
-// regenerated from the served surface and is the place that carries them.
-//
-// The fraction itself is deliberately UNCHANGED at 17/24. Re-tightening it in
-// the change that creates the room would spend the room before anyone can argue
-// for how — the same objection this comment has made twice already.
+// The bound is per declared agent: each scheduled agent declares its tools in
+// api/ai-tasks.yaml, and no run is offered the whole catalog. Description copy is
+// the one thing measured to move tool selection, so it is not trimmed to fit.
+// docs/reference/agent-tool-budget.md carries the current figures.
 const (
 	listingBudgetNumerator   = 17
 	listingBudgetDenominator = 24

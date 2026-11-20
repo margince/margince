@@ -203,7 +203,7 @@ Where not every deal has an amount, a note says "{priced} of {total} priced".
 
 The default **SDR outcomes** tab follows your workflow: first qualifications without handoffs, or accepted handoffs when used. It also shows held meetings, first response time and leads still waiting for a reply. The period’s count includes only leads that came in during that period. Saved reports keep their chosen figures.
 
-**Leads** shows new leads, status changes and the same three lead figures. **Partners** shows partner pipeline, sales won, commission and active partners. A tab is not offered when your role cannot read its figures.
+**Leads** shows new leads, status changes and the same three lead figures. **Partners** shows partner pipeline, sales won, commission and active partners. It also counts introductions made and meetings booked for colleagues, as [Sales reporting](sales-reporting.md) explains. A tab is not offered when your role cannot read its figures.
 
 ## My outcomes
 

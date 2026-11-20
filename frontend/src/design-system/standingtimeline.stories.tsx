@@ -272,6 +272,25 @@ export const WithMarks: Story = {
   },
 };
 
+/** Only logged items, the oldest from before the last quarter: the line opens
+ *  wide enough to show it. */
+export const OnlyOldMarks: Story = {
+  args: {
+    label: "Dana Reyes over time",
+    asOf: "2026-08-13T09:00:00Z",
+    events: [],
+    marks: [
+      mark("1", "2026-01-12", "12 Jan", "email", "Intro", "theirs"),
+      mark("2", "2026-07-20", "20 Jul", "call", "Catch-up call", "ours"),
+    ],
+  },
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByRole("button", { name: "Email, 12 Jan" }),
+    ).toBeTruthy();
+  },
+};
+
 /** The same account with its close years out: the close sits past a break
  *  that names its month and year, so the recent months keep their room. */
 export const FarClose: Story = {

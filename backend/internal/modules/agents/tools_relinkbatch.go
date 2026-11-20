@@ -44,15 +44,15 @@ type relinkThread struct {
 func (t relinkThread) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "relink_thread", Title: "Re-associate a whole conversation to a record", Version: toolVersionV1,
-		Description: relinkThreadCopy.render(),
-		Instead:     relinkThreadCopy.Instead,
-		// Dynamic for the reason relink_activity is: a PROJECT destination is
-		// a retention classification a human confirms, here over every
-		// message in the thread. relinkActivityTier reads `entity_type` off these
-		// arguments exactly as it does off the single form's.
+		ProductMadeAnswer: true,
+		Description:       relinkThreadCopy.render(),
+		Instead:           relinkThreadCopy.Instead,
+		// Every thread move is raised to confirmation, whatever its destination,
+		// so on both doors it reaches the staging refusal. An admitted move would
+		// let the REST door run a whole-conversation move the tool refuses.
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierDynamic, WaitsEvenForItsUser: true,
 		Unlisted:     true, // replaced by relink_activities, which this refuses every call in favour of
-		TierResolver: relinkActivityTier,
+		TierResolver: everyThreadMoveNeedsConfirmation,
 		OpenAPIOp:    "relinkThread",
 		InputSchema: schema(`{"type":"object","required":["thread_key","entity_type","entity_id"],"properties":{
 			"thread_key":{"type":"string","minLength":1},
@@ -63,6 +63,10 @@ func (t relinkThread) Spec() mcp.ToolSpec {
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[RelinkBatchResult](),
 	}
+}
+
+func everyThreadMoveNeedsConfirmation(mcp.TierResolverInput) mcp.RiskTier {
+	return mcp.TierConfirmationRequired
 }
 
 // StageInfo decodes this door's arguments into the thread command and
@@ -111,9 +115,12 @@ type relinkActivities struct {
 func (t relinkActivities) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: relinkActivitiesTool, Title: "Re-associate a set of activities to a record", Version: toolVersionV1,
-		Description:   relinkActivitiesCopy.render(),
-		Instead:       relinkActivitiesCopy.Instead,
-		RequiredScope: principal.ScopeWrite, Tier: mcp.TierDynamic,
+		ProductMadeAnswer: true,
+		Description:       relinkActivitiesCopy.render(),
+		Instead:           relinkActivitiesCopy.Instead,
+		// Dynamic, and waiting even for its user's own agent on a project
+		// destination, for the reason relink_activity gives.
+		RequiredScope: principal.ScopeWrite, Tier: mcp.TierDynamic, WaitsEvenForItsUser: true,
 		Unlisted:     true,
 		TierResolver: relinkActivityTier,
 		OpenAPIOp:    "relinkActivities",

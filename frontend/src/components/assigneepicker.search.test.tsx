@@ -4,7 +4,7 @@
 
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, renderHook, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { Select } from "../design-system/select";
@@ -75,3 +75,46 @@ it.each(["owner", "assignee"])(
     expect(onChange).toHaveBeenCalledWith("user-13");
   },
 );
+
+it("lists the owners by name, in the order the owner filter uses", async () => {
+  const members = ["Rep Two", "Demo Admin", "Ömer Kaya", "Anna Weber"].map(
+    (display_name, index) => ({
+      id: `user-${index}`,
+      display_name,
+      is_agent: false,
+      can_own_records: true,
+    }),
+  );
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL) => {
+      const url = new URL(
+        input instanceof Request ? input.url : String(input),
+        "https://test.local",
+      );
+      return Response.json(
+        url.pathname.endsWith("/me")
+          ? meFixture()
+          : { data: members, page: { has_more: false, next_cursor: null } },
+      );
+    }),
+  );
+  const { result } = renderHook(() => useRecordOwnerOptions(), {
+    wrapper: ({ children }) => (
+      <QueryClientProvider
+        client={
+          new QueryClient({ defaultOptions: { queries: { retry: false } } })
+        }
+      >
+        <LocaleProvider initial="de">{children}</LocaleProvider>
+      </QueryClientProvider>
+    ),
+  });
+  await vi.waitFor(() => expect(result.current.options).toHaveLength(4));
+  expect(result.current.options.map((option) => option.label)).toEqual([
+    "Anna Weber",
+    "Demo Admin",
+    "Ömer Kaya",
+    "Rep Two",
+  ]);
+});

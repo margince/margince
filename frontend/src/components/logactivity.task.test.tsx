@@ -81,11 +81,17 @@ describe("assigning a task at create time", () => {
     expect(post?.body).toMatchObject({ kind: "task", task_type: "meet" });
   });
 
-  it("posts no assignee when the task is left unassigned", async () => {
+  // The server gives a task that names nobody to its writer, so the default
+  // choice says "Me" rather than promising a task nobody holds.
+  it("starts on Me and posts no assignee, leaving the task to its writer", async () => {
     const captured: Captured[] = [];
     renderTaskComposer(captured);
     const user = userEvent.setup();
     await user.type(await screen.findByLabelText("Subject *"), "Send proposal");
+    expect(screen.getByLabelText("Assignee").textContent).toContain("Me");
+    await user.click(screen.getByLabelText("Assignee"));
+    expect(screen.queryByRole("option", { name: "Unassigned" })).toBeNull();
+    await user.click(await screen.findByRole("option", { name: "Me" }));
     await user.click(screen.getByRole("button", { name: "Log" }));
 
     await waitFor(() =>

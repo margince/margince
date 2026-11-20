@@ -93,11 +93,12 @@ export function useSearchCommands(
   const t = useT();
   const { locale } = useLocale();
   const zone = useViewerZone();
-  const typed = query.trim();
+  // Leading blanks only: a trailing one tells the server the word is finished.
+  const typed = query.trimStart();
   const settled = useSettledValue(typed);
   // The typed floor hides a cleared box's hits at once (its fetch aborts a
   // pause later, when `settled` moves); the settled one never asks one letter.
-  const enabled = typed.length >= 2 && settled.length >= 2;
+  const enabled = typed.trim().length >= 2 && settled.trim().length >= 2;
   // Hits are records the reader's row scope narrows.
   const readerScope = useHealthScope();
   const result = useQuery({
@@ -116,6 +117,7 @@ export function useSearchCommands(
             q: settled,
             per_type: kind ? PALETTE_PER_KIND : PALETTE_PER_TYPE,
             with_employees: true,
+            typeahead: true,
             ...(kind ? { types: [kind] } : {}),
           },
         },

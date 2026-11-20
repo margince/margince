@@ -360,9 +360,10 @@ func wire(ctx context.Context, a row, now time.Time) crmcontracts.Approval {
 		// The sweep will record this same outcome. Until it does, the row must
 		// not read as done.
 		lapsedAt := a.DecidedAt.Add(redemptionTTL)
-		sentence := lapsedRedemptionSentence
+		sentence := failureLapsed.sentence
 		out.EffectFailedAt, out.EffectFailure = &lapsedAt, &sentence
 	}
+	out.EffectFailureCode = effectFailureCode(out.EffectFailure)
 	if awaitsAgent(a, now) {
 		out.AwaitingAgent = new(true)
 	}

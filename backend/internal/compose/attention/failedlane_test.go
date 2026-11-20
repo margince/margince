@@ -38,6 +38,7 @@ func TestAFailedDecisionComesBackToItsDecider(t *testing.T) {
 		ID: ids.NewV7(), Kind: "send_email",
 		Summary:    new("Send the revised offer"),
 		Sentence:   "this was approved, but the work it released did not run",
+		Code:       new("effect_not_run"),
 		FailedAt:   readInstant,
 		TargetType: "contact", TargetID: contact,
 	}, {
@@ -63,6 +64,9 @@ func TestAFailedDecisionComesBackToItsDecider(t *testing.T) {
 	}
 	if targeted.Detail == nil || *targeted.Detail != "this was approved, but the work it released did not run" {
 		t.Fatalf("failure explanation missing: %+v", targeted)
+	}
+	if targeted.EffectFailureCode == nil || *targeted.EffectFailureCode != "effect_not_run" || items[1].EffectFailureCode != nil {
+		t.Errorf("failure codes = %v and %v, want effect_not_run and none", targeted.EffectFailureCode, items[1].EffectFailureCode)
 	}
 	if targeted.Subject == nil || targeted.Subject.Type != "contact" || !slices.Contains(targeted.Actions, "open") {
 		t.Errorf("a failure about a named record must offer open on it: %+v", targeted)
