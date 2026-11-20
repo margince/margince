@@ -38,7 +38,9 @@ import (
 // caller that already holds it, and what crosses this boundary is the DIGEST
 // and the LINK.
 type mintRequest struct {
-	contactID       ids.ContactID
+	contactID ids.ContactID
+	// leadID is set instead of contactID when the link is for a lead.
+	leadID          ids.LeadID
 	kind            string
 	purposeID       ids.PurposeID
 	expectedAddress string
@@ -93,11 +95,13 @@ type mintedLink struct {
 func (s *Store) issueLinkTx(
 	ctx context.Context, tx pgx.Tx, req mintRequest,
 ) (mintedLink, error) {
-	contactID, kind, purposeID := req.contactID, req.kind, req.purposeID
+	kind, purposeID := req.kind, req.purposeID
+	who := linkSubjectOf(req.contactID, req.leadID)
 	var out mintedLink
 	err := func(tx pgx.Tx) error {
 		admitted, err := admitLinkTx(ctx, tx, linkRequest{
 			contactID:         req.contactID,
+			leadID:            req.leadID,
 			purposeID:         purposeID,
 			expectedAddress:   req.expectedAddress,
 			askedByTheSubject: req.askedByTheSubject,
@@ -112,7 +116,7 @@ func (s *Store) issueLinkTx(
 		if req.lane == refuseWithoutMailLane && !s.canSendConfirm() {
 			return ErrNoMailLane
 		}
-		rules, err := s.confirmRulesTx(ctx, tx, contactID, kind, admitted.purpose, deliveredTo, req.operatorAsks)
+		rules, err := s.confirmRulesTx(ctx, tx, who, kind, admitted.purpose, deliveredTo, req.operatorAsks)
 		if err != nil {
 			return err
 		}
@@ -134,19 +138,19 @@ func (s *Store) issueLinkTx(
 		// stamp: never before its own issue, which the lifetime check refuses.
 		if _, err := tx.Exec(ctx, `
 			UPDATE confirm_token SET expires_at = greatest($2, issued_at + interval '1 microsecond')
-			WHERE contact_id = $1 AND consumed_at IS NULL AND expires_at > $2
+			WHERE `+who.column+` = $1 AND consumed_at IS NULL AND expires_at > $2
 			  AND kind = $3 AND purpose_id IS NOT DISTINCT FROM $4`,
-			contactID, issued, kind, nullablePurpose(purposeID)); err != nil {
+			who.id, issued, kind, nullablePurpose(purposeID)); err != nil {
 			return err
 		}
 		// The mail below is rendered in this same language, so the row and the
 		// page cannot disagree about which one.
-		questionLocale, err := s.subjectSendLanguage(ctx, tx, ruleSubject{Kind: entityContact, ID: contactID.String()}, req.language)
+		questionLocale, err := s.subjectSendLanguage(ctx, tx, ruleSubject{Kind: who.entityType, ID: who.id.String()}, req.language)
 		if err != nil {
 			return err
 		}
 		tokenRowID, err := insertContactLinkTx(ctx, tx, contactLink{
-			contactID: contactID, tokenHash: req.tokenHash, deliveredTo: deliveredTo,
+			contactID: req.contactID, leadID: req.leadID, tokenHash: req.tokenHash, deliveredTo: deliveredTo,
 			issued: issued, expires: expires, kind: kind, purposeID: purposeID, purpose: admitted.purpose,
 			language: questionLocale, rules: rules,
 		})
@@ -156,7 +160,7 @@ func (s *Store) issueLinkTx(
 		// The address is audited because it is the evidence: a later reader
 		// asking why a grant counted needs to see which mailbox was reached.
 		// The plaintext token never lands in audit or outbox payloads.
-		if err := auditLinkTx(ctx, tx, tokenRowID, contactID, deliveredTo, kind, expires); err != nil {
+		if err := auditLinkTx(ctx, tx, tokenRowID, who, deliveredTo, kind, expires); err != nil {
 			return err
 		}
 		out = mintedLink{expiresAt: expires, deliveredTo: deliveredTo}
@@ -166,7 +170,8 @@ func (s *Store) issueLinkTx(
 		// token is a link that resolves to nothing.
 		deliveryID, err := s.stageConfirmMail(ctx, tx, confirmMailInput{
 			purposeID:  purposeID,
-			contactID:  contactID,
+			contactID:  req.contactID,
+			leadID:     req.leadID,
 			recipient:  deliveredTo,
 			kind:       kind,
 			language:   questionLocale,
@@ -193,7 +198,7 @@ func (s *Store) issueLinkTx(
 		// met by a message that was never staged, and the cooldown would then
 		// suppress the genuine send once an operator fixed the relay.
 		if route, discharges := noticeRouteFor(kind); discharges && !deliveryID.IsZero() {
-			moved, err := dischargeNoticeCases(ctx, tx, contactID, route, issued, deliveryID)
+			moved, err := dischargeNoticeCases(ctx, tx, req.contactID, route, issued, deliveryID)
 			if err != nil {
 				return err
 			}
@@ -210,6 +215,7 @@ func (s *Store) issueLinkTx(
 // contactLink is one confirm_token row a contact's link is minted as.
 type contactLink struct {
 	contactID       ids.ContactID
+	leadID          ids.LeadID
 	tokenHash       string
 	deliveredTo     string
 	issued, expires time.Time
@@ -233,13 +239,13 @@ func insertContactLinkTx(ctx context.Context, tx pgx.Tx, link contactLink) (ids.
 		key, version = &questionKey, &questionVersion
 	}
 	args := []any{
-		link.contactID, link.tokenHash, link.deliveredTo, link.issued, link.expires, link.kind,
+		zeroUUIDAsNull(link.contactID.UUID), zeroUUIDAsNull(link.leadID.UUID), link.tokenHash, link.deliveredTo, link.issued, link.expires, link.kind,
 		nullablePurpose(link.purposeID), key, link.language, version,
 		link.rules.asksNews, zeroUUIDAsNull(link.rules.subjectRequest),
 	}
 	var id ids.UUID
 	err := tx.QueryRow(ctx, `
-		INSERT INTO confirm_token (contact_id, token_hash, delivered_to, issued_at, expires_at, kind, purpose_id,
+		INSERT INTO confirm_token (contact_id, lead_id, token_hash, delivered_to, issued_at, expires_at, kind, purpose_id,
 		                           question_key, question_locale, question_version, asks_news, subject_request_id)
 		VALUES (`+storekit.Placeholders(args)+`)
 		RETURNING id`, args...).Scan(&id)
@@ -282,7 +288,8 @@ func (s *Store) automaticAnswerTx(ctx context.Context, tx pgx.Tx, req mintReques
 	if !s.canSendConfirm() {
 		return automaticStop{stop: true, noLane: true}, nil
 	}
-	held, err := subjectGrantedTx(ctx, tx, "contact_id", req.contactID.String(), req.purposeID.String(), admitted.purpose.requiresDOI)
+	who := linkSubjectOf(req.contactID, req.leadID)
+	held, err := subjectGrantedTx(ctx, tx, who.column, who.id.String(), req.purposeID.String(), admitted.purpose.requiresDOI)
 	if err != nil || held {
 		return automaticStop{stop: err == nil}, err
 	}
@@ -292,7 +299,7 @@ func (s *Store) automaticAnswerTx(ctx context.Context, tx pgx.Tx, req mintReques
 	var pending, spent bool
 	err = tx.QueryRow(ctx, `
 		SELECT EXISTS (SELECT 1 FROM confirm_token ct
-		                WHERE ct.contact_id = $1 AND ct.kind = $2 AND ct.purpose_id IS NOT DISTINCT FROM $3
+		                WHERE ct.`+who.column+` = $1 AND ct.kind = $2 AND ct.purpose_id IS NOT DISTINCT FROM $3
 		                  AND `+pendingLinkSQL("$4")+`),
 		       EXISTS (SELECT 1 FROM confirm_token ct
 		                WHERE lower(ct.delivered_to) = lower($5) AND ct.kind = $2
@@ -300,7 +307,7 @@ func (s *Store) automaticAnswerTx(ctx context.Context, tx pgx.Tx, req mintReques
 		    OR (SELECT count(*) FROM confirm_token ct
 		         WHERE lower(ct.delivered_to) = lower($5) AND ct.kind = $2
 		           AND ct.issued_at > $7 AND `+stagedLinkSQL+`) >= $8`,
-		req.contactID, req.kind, nullablePurpose(req.purposeID), now, admitted.deliveredTo,
+		who.id, req.kind, nullablePurpose(req.purposeID), now, admitted.deliveredTo,
 		now.Add(-automaticShortWindow), now.Add(-automaticLongWindow), automaticLongMax).Scan(&pending, &spent)
 	return automaticStop{stop: spent, pending: pending && spent}, err
 }
@@ -313,7 +320,7 @@ func stopBindsConfirmationTx(ctx context.Context, tx pgx.Tx, req mintRequest, ad
 	if err := tx.QueryRow(ctx, `SELECT class FROM consent_purpose WHERE id = $1`, req.purposeID).Scan(&class); err != nil {
 		return false, err
 	}
-	stops, err := liveSuppression(ctx, tx, req.contactID.String(), connector.Recipient{Email: admitted.deliveredTo})
+	stops, err := liveSuppression(ctx, tx, linkSubjectOf(req.contactID, req.leadID).id.String(), connector.Recipient{Email: admitted.deliveredTo})
 	if err != nil {
 		return false, err
 	}
@@ -322,9 +329,9 @@ func stopBindsConfirmationTx(ctx context.Context, tx pgx.Tx, req mintRequest, ad
 }
 
 // auditLinkTx records the minted link. The plaintext token never enters the payload.
-func auditLinkTx(ctx context.Context, tx pgx.Tx, tokenRowID ids.UUID, contactID ids.ContactID, deliveredTo, kind string, expires time.Time) error {
+func auditLinkTx(ctx context.Context, tx pgx.Tx, tokenRowID ids.UUID, who subject, deliveredTo, kind string, expires time.Time) error {
 	_, err := storekit.Audit(ctx, tx, "create", "confirm_token", tokenRowID, nil, map[string]any{
-		contactIDKey:   contactID,
+		who.column:     who.id,
 		"delivered_to": deliveredTo,
 		"expires_at":   expires,
 		auditKeyKind:   kind,

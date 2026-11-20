@@ -44,12 +44,12 @@ import (
 // consent cannot itself require consent, or no one could ever be asked.
 func validateConfirmation(ctx context.Context, tx pgx.Tx, delivery ids.UUID, subject subjectRef, category commsauthz.Category) (resolution, error) {
 	unsupported := resolution{Category: category, Supported: false, Reason: commsauthz.ReasonNoEvidence}
-	// A lead holds one kind of link, the privacy notice a website lead is sent;
-	// the table refuses any other kind for one. Both columns are compile-time
-	// literals.
+	// A lead holds two kinds of link: the privacy notice a website lead is sent
+	// and the consent question a booking asks; the table refuses any other
+	// kind for one. Both columns are compile-time literals.
 	column := subjectColumnContact
 	switch {
-	case subject.Kind == entityLead && category == commsauthz.CategoryPrivacyNotice:
+	case subject.Kind == entityLead && (category == commsauthz.CategoryPrivacyNotice || category == commsauthz.CategoryConsentConfirmation):
 		column = subjectColumnLead
 	case subject.Kind != entityContact:
 		return unsupported, nil

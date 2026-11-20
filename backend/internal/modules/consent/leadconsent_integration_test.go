@@ -8,7 +8,7 @@ package consent
 // The lead arm of consent (E12.20) over a real migrated Postgres: a
 // grant recorded against a lead lands lead-scoped (contact_id NULL),
 // stays idempotent on re-assertion, reads back through LeadConsent, is
-// refused for DOI purposes (the round-trip is contact-keyed), and
+// refused for DOI purposes unless a spent confirm link backs it, and
 // authorizes the outbound gate for the lead's email.
 
 import (
@@ -187,14 +187,14 @@ func TestLeadScopedConsentRecordsProofAndReadsBack(t *testing.T) {
 	}
 }
 
-func TestLeadScopedDOIGrantIsRefused(t *testing.T) {
+func TestLeadScopedDOIGrantWithoutALinkIsRefused(t *testing.T) {
 	e := setupLeadConsent(t)
 	_, err := e.store.Record(e.ctx, RecordInput{
 		LeadID: e.lead, PurposeID: e.doiNews, NewState: "granted",
 		PolicyText: &grantWording,
 	})
 	if _, ok := errors.AsType[*ValidationError](err); !ok {
-		t.Fatalf("a DOI grant on a lead subject: got %v, want a ValidationError (the round-trip is contact-keyed)", err)
+		t.Fatalf("a DOI grant on a lead subject: got %v, want a ValidationError (no spent link behind it)", err)
 	}
 }
 

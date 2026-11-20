@@ -39,7 +39,8 @@ import (
 //
 // FALSE for promotion: the lead-scoped events ARE the evidence that the
 // consent predates the promotion, and re-keying them to the contact destroys
-// the only record of when it was given and to whom.
+// the only record of when it was given and to whom. A confirmed double opt-in
+// proof is copied, not moved; see TestAPromotionCopiesTheConfirmedProofOfACarriedGrant.
 var proofRehomesExpected = map[consentCarryKind]bool{
 	consentCarryContactMerge:  true,
 	consentCarryLeadMerge:     true,
@@ -101,6 +102,47 @@ func (e *promoteConsentEnv) assertProofRule(t *testing.T, kind consentCarryKind,
 	// would satisfy the counts above while carrying nothing.
 	if state, found := e.consentRow(t, string(spec.to), survivor, e.newsletter); !found || state != "granted" {
 		t.Errorf("%s left the survivor without the carried state (found=%v state=%q)", spec.name, found, state)
+	}
+}
+
+// A lead's confirmed double opt-in grant must still authorize mail once the lead
+// is promoted: the gate reads the proof off the contact, so the carry copies it
+// and leaves the lead's own events in place.
+func TestAPromotionCopiesTheConfirmedProofOfACarriedGrant(t *testing.T) {
+	e := setupPromoteConsent(t)
+	ctx := context.Background()
+	lead := e.seedConsentSubject(t, consentSubjectLead)
+	contact := e.seedConsentSubject(t, consentSubjectContact)
+	e.seedCarriedConsent(t, consentSubjectLead, lead, e.newsletter)
+	if _, err := e.owner.Exec(ctx, `
+		INSERT INTO consent_event (lead_id, purpose_id, new_state, source, policy_text, policy_version,
+		                           double_opt_in_confirmed_at, captured_at, captured_by, issuance_trigger)
+		VALUES ($1, $2, 'granted', 'consent_link', 'seeded wording', 'v1', now(), now(), 'human:x', 'confirm_link')`,
+		lead, e.newsletter); err != nil {
+		t.Fatal(err)
+	}
+	tx, err := e.owner.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		if err := tx.Rollback(ctx); err != nil && err != pgx.ErrTxClosed {
+			t.Errorf("rolling back the carry: %v", err)
+		}
+	}()
+	if err := carryConsent(ctx, tx, consentCarryLeadPromotion, lead, contact, "human:gate"); err != nil {
+		t.Fatal(err)
+	}
+	var confirmed int
+	if err := tx.QueryRow(ctx, `
+		SELECT count(*) FROM consent_event WHERE contact_id = $1 AND purpose_id = $2
+		   AND double_opt_in_confirmed_at IS NOT NULL AND issuance_trigger IS NOT NULL`,
+		contact, e.newsletter).Scan(&confirmed); err != nil {
+		t.Fatal(err)
+	}
+	if confirmed != 1 || countProof(t, tx, consentSubjectLead, lead) == 0 {
+		t.Errorf("contact holds %d confirmed proofs, lead keeps %d events; want 1 copied and the lead's left in place",
+			confirmed, countProof(t, tx, consentSubjectLead, lead))
 	}
 }
 

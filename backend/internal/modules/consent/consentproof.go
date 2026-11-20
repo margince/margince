@@ -47,20 +47,11 @@ func loadConsentPurpose(ctx context.Context, tx pgx.Tx, purposeID ids.PurposeID)
 // thing that confirms one is the subject spending a single-use link that was
 // mailed to their own live primary address. Non-DOI paths return nil.
 //
-// The round trip is contact-keyed, so a DOI grant on a lead subject is refused
-// rather than recorded unconfirmed — the lead promotes first, then confirms.
+// A contact and a lead confirm the same way, by spending the link mailed to
+// their own address, so the subject kind does not change the answer.
 func (s *Store) resolveDOIConfirmation(ctx context.Context, tx pgx.Tx, in RecordInput, sub subject, requiresDOI bool) (*time.Time, error) {
 	if ConsentState(in.NewState) != StateGranted || !requiresDOI {
 		return nil, nil
-	}
-	if sub.entityType != entityContact {
-		return nil, &ValidationError{
-			// The subject, not the purpose: the purpose is fine and the caller
-			// cannot fix it. What they must change is which subject they named,
-			// which is the field consentSubject's own refusals already use.
-			Field:  "subject",
-			Reason: "a double opt-in purpose needs a contact subject; promote the lead before granting it",
-		}
 	}
 	// A mailbox already proven by the single-use link that carried the subject
 	// here answers what the round trip would ask, so the grant confirms on the

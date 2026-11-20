@@ -3914,7 +3914,7 @@ public.confirm_token.confirm_token_expires_after_creation CHECK ((expires_at > i
 public.confirm_token.confirm_token_hash_key UNIQUE (token_hash)
 public.confirm_token.confirm_token_kind CHECK ((kind = ANY (ARRAY['record_confirmation'::text, 'consent_confirmation'::text, 'privacy_notice'::text])))
 public.confirm_token.confirm_token_lead_id_fkey FOREIGN KEY (lead_id) REFERENCES lead(id) ON DELETE CASCADE
-public.confirm_token.confirm_token_lead_is_only_told CHECK (((lead_id IS NULL) OR (kind = 'privacy_notice'::text)))
+public.confirm_token.confirm_token_lead_is_only_told CHECK (((lead_id IS NULL) OR (kind = ANY (ARRAY['privacy_notice'::text, 'consent_confirmation'::text]))))
 public.confirm_token.confirm_token_one_subject CHECK (((contact_id IS NULL) <> (lead_id IS NULL)))
 public.confirm_token.confirm_token_pkey PRIMARY KEY (id)
 public.confirm_token.confirm_token_purpose_id_fkey FOREIGN KEY (purpose_id) REFERENCES consent_purpose(id) ON DELETE RESTRICT

@@ -123,7 +123,7 @@ func TestANarrowPressBindsOnlyItsOwnPurpose(t *testing.T) {
 	ctx := context.Background()
 
 	// Two marketing purposes, neither requiring DOI: a lead subject cannot be
-	// granted a DOI purpose at all (TestLeadScopedDOIGrantIsRefused), so a
+	// granted a DOI purpose at all (TestLeadScopedDOIGrantWithoutALinkIsRefused), so a
 	// plain purpose is what lets both the pressed one and its sibling be
 	// granted the same way — the only way a later denial proves the STOP
 	// bound rather than merely reflecting a grant that was never there.

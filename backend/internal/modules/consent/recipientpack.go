@@ -152,7 +152,7 @@ func requestGateTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) (req
 	if err != nil && !errors.As(err, &noAddress) {
 		return requestGate{}, err
 	}
-	ask, err := subjectAskTx(ctx, tx, contactID, address)
+	ask, err := subjectAskTx(ctx, tx, linkSubjectOf(contactID, ids.LeadID{}), address)
 	gate.asked = ask.found
 	return gate, err
 }
