@@ -177,6 +177,12 @@ func directAuditInserts(t *testing.T) (others []string, seedSeen bool) {
 			if decl, isDecl := n.(*ast.FuncDecl); isDecl {
 				fn = decl
 			}
+			// A bare name refers to a constant whose statement is reported
+			// where it is spelled; reading it here would report it twice.
+			switch n.(type) {
+			case *ast.Ident, *ast.SelectorExpr:
+				return true
+			}
 			expr, isExpr := n.(ast.Expr)
 			if !isExpr || !c.insertsIntoAuditLog(src, expr) {
 				return true

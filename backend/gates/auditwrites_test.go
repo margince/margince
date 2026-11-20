@@ -110,22 +110,10 @@ var (
 func auditWriteSites(t *testing.T) []auditWriteSite {
 	t.Helper()
 	auditCensusOnce.Do(func() {
-		c := &auditCensus{
-			repo: filepath.Join(gatekit.ModuleRoot(t), ".."), funcs: map[auditFuncKey]*ast.FuncDecl{},
-			srcOf: map[*ast.FuncDecl]*auditSource{}, consts: map[string]map[string]auditConst{},
-			structs: map[string][]string{}, fields: map[string][]auditLiteralField{}, wholeWrites: map[string]bool{},
-			importers: map[string]map[string]bool{},
-			calls:     map[string][]auditCall{}, writers: map[auditFuncKey]int{},
-		}
+		c := newAuditCensus(filepath.Join(gatekit.ModuleRoot(t), ".."))
 		auditCensusFailed = c.load()
-		for _, src := range c.sources {
-			c.indexBodies(src)
-		}
 		if auditCensusFailed == "" {
-			auditCensusFailed = c.grow()
-		}
-		if auditCensusFailed == "" {
-			c.writersUsedAsValues()
+			auditCensusFailed = c.build()
 		}
 		auditCensusRead = c
 	})
@@ -133,6 +121,29 @@ func auditWriteSites(t *testing.T) []auditWriteSite {
 		t.Fatal(auditCensusFailed)
 	}
 	return auditCensusRead.sites
+}
+
+func newAuditCensus(repo string) *auditCensus {
+	return &auditCensus{
+		repo: repo, funcs: map[auditFuncKey]*ast.FuncDecl{},
+		srcOf: map[*ast.FuncDecl]*auditSource{}, consts: map[string]map[string]auditConst{},
+		structs: map[string][]string{}, fields: map[string][]auditLiteralField{}, wholeWrites: map[string]bool{},
+		importers: map[string]map[string]bool{},
+		calls:     map[string][]auditCall{}, writers: map[auditFuncKey]int{},
+	}
+}
+
+// build reads the bodies of every indexed source and grows the writers from
+// the seed. A falsification test plants its own sources through index first.
+func (c *auditCensus) build() string {
+	for _, src := range c.sources {
+		c.indexBodies(src)
+	}
+	if failed := c.grow(); failed != "" {
+		return failed
+	}
+	c.writersUsedAsValues()
+	return ""
 }
 
 // auditPackageMapKeys reads the string keys of a package-level map literal.

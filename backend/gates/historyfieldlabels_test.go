@@ -21,19 +21,19 @@ package gates
 // writer rendered raw as its own column name until somebody noticed; a key
 // whose writer was deleted looked like coverage and answered nothing.
 //
-// It walks the same audit doors auditbeforeimage_test.go does, for the reason
-// that gate states about its own corpus: a second way of finding a write is a
-// second thing to keep current, and the copy that stopped finding them reads
-// green over whatever it no longer sees.
+// It walks the audit write census at storekit's doors, as
+// auditbeforeimage_test.go does. A second way of finding a write is a second
+// thing to keep current. The copy that stops finding writes reads green over
+// whatever it no longer sees.
 //
-// THE EVENT DOORS, not the imaged ones. AuditEvent and AuditEventWithEvidence
-// are the writes with NO before-image — an occurrence recorded on a record —
-// and a free-form key is what such a write has instead of a column. Audit and
-// its two siblings record a field TRANSITION, which is the contract census's
-// subject. The line is not watertight: RecordVatCheck writes the same map
-// through Audit on a re-check and AuditEvent on a first one, and there are 65
-// imaged sites whose images this walk cannot read at all — margince#5863 holds
-// that half, with the measurement.
+// The event doors, not the imaged ones. AuditEvent and AuditEventWithEvidence
+// write no before-image: they record an occurrence on a record. A free-form
+// key is what such a write has instead of a column. A door with a
+// before parameter records a field transition, the contract census's subject.
+// The line is not watertight. RecordVatCheck writes the same map through Audit
+// on a re-check and AuditEvent on a first one. And 65 imaged sites carry images
+// this walk cannot read at all; margince#5863 holds that half, with the
+// measurement.
 //
 // What the line does NOT leave open is a key quietly migrating out of scope. A
 // writer moved from an event door to an imaged one leaves its label here with
@@ -43,8 +43,8 @@ package gates
 import (
 	"fmt"
 	"go/ast"
-	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -74,40 +74,38 @@ func TestEveryProjectedAuditKeyHasALabel(t *testing.T) {
 	defer sharedHistoryWords.AssertAllMatched(t)
 
 	actions, entities := fieldHistoryProjection(t)
-	files := gatekit.Scope{Roots: []string{"internal"}, Subject: fileReachesAnAuditDoor}.Files(t)
-	constantsByPackage := packageConstants(t, files)
+	sites, _ := auditDoorSites(t)
+	constantsByPackage := map[string]map[string]string{}
 	callsByPackage := map[string]callIndex{}
-	for _, parsed := range files {
-		dir := filepath.Dir(parsed.Path)
-		if _, indexed := callsByPackage[dir]; !indexed {
-			callsByPackage[dir] = callsWithin(t, dir)
+	for _, site := range sites {
+		if _, indexed := callsByPackage[site.src.dir]; !indexed {
+			constantsByPackage[site.src.dir] = auditPackageStrings(site.census, site.src.dir)
+			callsByPackage[site.src.dir] = callsWithin(t, strings.TrimPrefix(site.src.dir, "backend/"))
 		}
 	}
 
 	emitted := map[string]string{}
-	for _, parsed := range files {
-		consts := constantsByPackage[filepath.Dir(parsed.Path)]
-		for _, site := range auditSitesIn(parsed) {
-			action, known := site.action(consts)
-			// The record's history prints a merge's images beside an update's
-			// fields, on the archived record and on the survivor.
-			readAsALine := known && action == mergeAuditVerb
-			if auditDoorsWithBeforeImage[site.door] && !readAsALine {
-				continue
-			}
-			entity, entityKnown := resolveAuditEntity(t, parsed.File, site.argAt(auditEntityTypeArg), consts)
-			// An unresolvable verb or record type is READ AS PROJECTED rather
-			// than skipped. Under-recognition is the one direction a census
-			// must not have: a site this walk cannot place would otherwise
-			// carry its keys past the map unasked, which is exactly how the
-			// original gap survived.
-			if (known && !actions[action] && !readAsALine) || (entityKnown && !entities[entity]) {
-				continue
-			}
-			for _, key := range site.imageKeys(t, consts, callsByPackage[filepath.Dir(parsed.Path)]) {
-				if _, seen := emitted[key]; !seen {
-					emitted[key] = site.key
-				}
+	for _, site := range sites {
+		consts := constantsByPackage[site.src.dir]
+		verbs, known := site.verbs()
+		// The record's history prints a merge's images beside an update's
+		// fields, on the archived record and on the survivor.
+		readAsALine := known && slices.Contains(verbs, mergeAuditVerb)
+		if site.door.before >= 0 && !readAsALine {
+			continue
+		}
+		entity, entityKnown := resolveAuditEntity(t, site.src.file, site.argAt(site.door.entity), consts)
+		// An unresolvable verb or record type is read as projected rather
+		// than skipped. Under-recognition is the one direction a census must
+		// not have. A site this walk cannot place would otherwise carry its
+		// keys past the map unasked.
+		if (known && !slices.ContainsFunc(verbs, func(verb string) bool { return actions[verb] }) && !readAsALine) ||
+			(entityKnown && !entities[entity]) {
+			continue
+		}
+		for _, key := range site.imageKeys(t, consts, callsByPackage[site.src.dir]) {
+			if _, seen := emitted[key]; !seen {
+				emitted[key] = site.key()
 			}
 		}
 	}
@@ -188,9 +186,9 @@ func (s auditSite) imageKeys(t *testing.T, consts map[string]string, callers cal
 	for _, arg := range s.imageArgs() {
 		literals, resolved := s.resolveImage(arg, callers)
 		if !resolved {
-			if !runtimeAuditImages.Waived(t, s.key) {
+			if !runtimeAuditImages.Waived(t, s.key()) {
 				t.Errorf("%s: %s builds its audit image where this gate cannot read it, so the field names inside it are judged by nobody.\n"+
-					"\tSpell the map at the call, or ratify it in runtimeAuditImages with what keeps its keys off the History tab.", s.key, s.door)
+					"\tSpell the map at the call, or ratify it in runtimeAuditImages with what keeps its keys off the History tab.", s.key(), s.door.name)
 			}
 			continue
 		}
@@ -201,8 +199,8 @@ func (s auditSite) imageKeys(t *testing.T, consts map[string]string, callers cal
 			}
 			if key, resolved := resolveString(pair.Key, consts); resolved {
 				keys = append(keys, key)
-			} else if !runtimeAuditImages.Waived(t, s.key) {
-				t.Errorf("%s: %s names an audit field this gate cannot resolve to a string, so the History tab's word for it is judged by nobody.", s.key, s.door)
+			} else if !runtimeAuditImages.Waived(t, s.key()) {
+				t.Errorf("%s: %s names an audit field this gate cannot resolve to a string, so the History tab's word for it is judged by nobody.", s.key(), s.door.name)
 			}
 		}
 	}
@@ -343,8 +341,7 @@ func (c callIndex) literalsAt(fn string, at int) ([]*ast.CompositeLit, bool) {
 // callsWithin indexes a package's calls to its own plain functions, so an
 // auditing helper's parameters can be read from the sites that fill them.
 //
-// The whole DIRECTORY, for the reason packageConstants reads one: a helper's
-// callers sit wherever the writes are, which is rarely the file that holds the
+// The whole DIRECTORY: a helper's callers sit wherever the writes are, which is rarely the file that holds the
 // audit door. Indexing only the swept files would find some of them and union a
 // subset of the keys — a census short by exactly the callers it could not see.
 func callsWithin(t *testing.T, dir string) callIndex {
@@ -390,16 +387,11 @@ func returnedComposites(body *ast.BlockStmt) []*ast.CompositeLit {
 // imageArgs are the before and after images this door carries. `nil` is a real
 // answer for a before-image and carries no keys.
 func (s auditSite) imageArgs() []ast.Expr {
-	after := auditBeforeArg
 	var args []ast.Expr
-	if auditDoorsWithBeforeImage[s.door] {
-		after++
-		if before := s.argAt(auditBeforeArg); !isNilExpr(before) {
-			args = append(args, before)
+	for _, at := range []int{s.door.before, s.door.after} {
+		if image := s.argAt(at); at >= 0 && !isNilExpr(image) {
+			args = append(args, image)
 		}
-	}
-	if image := s.argAt(after); !isNilExpr(image) {
-		args = append(args, image)
 	}
 	return args
 }

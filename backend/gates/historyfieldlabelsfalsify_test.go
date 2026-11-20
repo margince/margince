@@ -23,8 +23,6 @@ import (
 	"slices"
 	"strings"
 	"testing"
-
-	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 func TestAKeyNoMapNamesIsReported(t *testing.T) {
@@ -115,12 +113,13 @@ func TestEveryImageShapeTheTreeUsesIsFollowed(t *testing.T) {
 // keysOfPlantedWriter runs the gate's own reader over one planted source file.
 func keysOfPlantedWriter(t *testing.T, body string) []string {
 	t.Helper()
-	file, err := parser.ParseFile(gatekit.SourceFileSet(), "planted.go", "package planted\n\nimport \""+storekitPath+"\"\n\n"+body, 0)
-	if err != nil {
-		t.Fatalf("parsing the planted writer: %v", err)
-	}
+	census := plantedAuditCensus(t, body)
 	index := callIndex{calls: map[string][]*ast.CallExpr{}, returns: map[string][]*ast.CompositeLit{}}
-	ast.Inspect(file, func(n ast.Node) bool {
+	sites, _ := census.doorSites()
+	if len(sites) == 0 {
+		t.Fatal("the census found no door call in the planted writer")
+	}
+	ast.Inspect(sites[0].src.file, func(n ast.Node) bool {
 		if call, isCall := n.(*ast.CallExpr); isCall {
 			if name, isPlain := call.Fun.(*ast.Ident); isPlain {
 				index.calls[name.Name] = append(index.calls[name.Name], call)
@@ -133,7 +132,7 @@ func keysOfPlantedWriter(t *testing.T, body string) []string {
 		return true
 	})
 	var keys []string
-	for _, site := range auditSitesIn(gatekit.ParsedFile{Path: "planted.go", File: file}) {
+	for _, site := range sites {
 		keys = append(keys, site.imageKeys(t, nil, index)...)
 	}
 	return keys

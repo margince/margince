@@ -23,10 +23,12 @@ package gates
 // is the authority — an H2 walk cannot resolve a call reached through an
 // interface, a stored field, or a closure, nor an action argument built at
 // runtime (privacy/retentionactions.go passes a verb read from a database row).
-// The gate censuses the direct writers of audit_log too, because the chokepoint
-// binds only what goes through it: the approvals module sends its own INSERT for
-// its own row. Between them, the gate says who writes the table and the
-// chokepoint says what a door will accept.
+// The gate refuses a direct writer of audit_log too, because the chokepoint
+// binds only what goes through it. Between them, the gate says who writes the
+// table and the chokepoint says what a door will accept.
+//
+// The sites are the audit write census's (auditwrites_test.go), read at the
+// doors: storekit's exported writers whose verb the caller chooses.
 //
 // Only `update` is judged. `archive` sites also pass an absent before-image and
 // are deliberately left alone: un-archiving is not a before-image replay but
@@ -34,47 +36,10 @@ package gates
 // it, which is a per-type product decision and not this gate's to force.
 
 import (
-	"go/ast"
-	"go/token"
-	"path/filepath"
-	"strconv"
-	"strings"
+	"slices"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
-)
-
-// The doors into audit_log, and which of them carries a before-image.
-var auditDoorsWithBeforeImage = map[string]bool{
-	"Audit":                  true,
-	"AuditWithEvidence":      true,
-	"AuditWithTrail":         true,
-	"AuditEvent":             false,
-	"AuditEventWithEvidence": false,
-}
-
-// Doors whose verb is fixed by construction rather than passed as an argument.
-// AuditWithTrail takes a verb the caller cannot spell freely — Trail.Resolve
-// admits update and restore and nothing else — so every call through it is
-// update-shaped and the rule binds it without this walk having to reduce
-// anything.
-//
-// This is why threading a runtime verb through the record types costs no
-// ratification: the one door that carries a verb the walk cannot see is also
-// the one door whose verb set is closed.
-var auditDoorsAlwaysUpdateShaped = map[string]bool{
-	"AuditWithTrail": true,
-}
-
-// Argument positions shared by every door: (ctx, tx, verb, entityType,
-// entityID, …). Only the images differ after that, which is the point of the
-// split. AuditWithTrail carries a Trail where the others carry an action
-// string; the positions are the same, and its verb is answered by
-// auditDoorsAlwaysUpdateShaped rather than read from the argument.
-const (
-	auditActionArg     = 2
-	auditEntityTypeArg = 3
-	auditBeforeArg     = 5
 )
 
 // eventShapedUpdates: writes that record an occurrence on a record rather than a
@@ -230,344 +195,65 @@ var unresolvableAuditActions = gatekit.Waive(map[string]string{
 	"internal/modules/commissions/decide.go:voidOne":                                      "a void is spelled as its own verb and carries the patch images for the row it retired",
 	"internal/modules/consent/recordadmitted.go:recordAdmittedTx":                         "a grant and a withdrawal are separate verbs, and both record the consent state they moved from",
 	"internal/modules/dealrooms/lifecycle.go:moveRoom":                                    "each room transition names its own verb and carries the patch images the move built",
-	"internal/platform/settings/delete.go:DeleteRawTx":                                    "each setting declares its own verb; the before image is the stored row it removes, and the after image is the registered default the key reads as once the row is gone",
-	"internal/platform/settings/store.go:SetRawTxReceipt":                                 "each setting declares its own verb, and the value on either side is rendered by the same declaration",
 
 	// The one site no static reading could ever judge, and the reason the
 	// chokepoint is not optional.
 	"internal/modules/privacy/retentionactions.go:auditRetentionAction": "the verb is a column of the policy row being applied, read at run time; retention_policy_action_check admits only archive, anonymize and erase, so this site cannot reach update at all",
 })
 
-// directAuditLogWriters: files that send their own INSERT into audit_log rather
-// than calling a door. Every rule this gate and the chokepoint hold is built on
-// the doors, so a direct writer is outside both — and one nobody ratified is a
-// second spelling of the write nobody noticed.
-//
-// storekit itself is absent on purpose: it IS the doors, and its own statement
-// is what they reach.
-var directAuditLogWriters = gatekit.Waive(map[string]string{
-	"internal/compose/integration/harnessseed.go": "the integration harness's scrub-tombstone fixture, and the only writer here that is not product code. Its rows are erase tombstones — no before or after column, so there is no image for the door's rule to be about — and there is no door to reach: every product path that stamps one also archives its subject, and a tombstone on a LIVE record is the one seed that isolates an erasure boundary from that cascade",
-})
-
 func TestEveryAuditedUpdateRecordsWhatItChangedFrom(t *testing.T) {
 	t.Parallel()
 	defer eventShapedUpdates.AssertAllMatched(t)
 	defer unresolvableAuditActions.AssertAllMatched(t)
-	defer directAuditLogWriters.AssertAllMatched(t)
 
-	files := gatekit.Scope{
-		Roots:   []string{"internal"},
-		Subject: fileReachesAnAuditDoor,
-		// The extension tier is absent on purpose. extensions/ holds separate Go
-		// modules that cannot import internal/platform/database/storekit at all —
-		// the dependency DAG forbids it — so an extension reaches audit_log only
-		// through compose/extledger.go, which is inside this root and ratified
-		// below like any other wrapper.
-	}.Files(t)
+	direct, seedSeen := directAuditInserts(t)
+	for _, at := range direct {
+		t.Errorf("%s writes audit_log with its own statement, so neither this gate's rule nor "+
+			"storekit's refusal reaches it.\n\tCall a storekit door.", at)
+	}
+	sites, asValues := auditDoorSites(t)
+	for _, at := range asValues {
+		t.Errorf("%s names a storekit audit door as a value, so the calls made through it are judged by nobody.\n"+
+			"\tCall the door directly.", at)
+	}
 
-	constantsByPackage := packageConstants(t, files)
-
-	var withBefore, eventShaped, unresolvable, direct int
-	for _, parsed := range files {
-		if writesAuditLogDirectly(parsed.File) && !strings.Contains(parsed.Path, "/storekit/") {
-			direct++
-			if !directAuditLogWriters.Waived(t, filepath.Dir(parsed.Path)+"/"+filepath.Base(parsed.Path)) {
-				t.Errorf("%s writes audit_log with its own statement, so neither this gate's rule nor "+
-					"storekit's refusal reaches it.\n"+
-					"\tCall a door, or ratify the file in directAuditLogWriters with what its rows are.",
-					parsed.Path)
+	var withBefore, eventShaped, unresolvable int
+	for _, site := range sites {
+		switch verbs, known := site.verbs(); {
+		case !known:
+			unresolvable++
+			if !unresolvableAuditActions.Waived(t, site.key()) {
+				t.Errorf("%s: %s builds its audit verb at runtime, so this gate cannot judge it.\n"+
+					"\tRatify it in unresolvableAuditActions with the guarantee that holds it, "+
+					"or spell the verb as a literal.", site.key(), site.door.name)
 			}
-		}
-		consts := constantsByPackage[filepath.Dir(parsed.Path)]
-		for _, site := range auditSitesIn(parsed) {
-			switch action, known := site.action(consts); {
-			case !known:
-				unresolvable++
-				if !unresolvableAuditActions.Waived(t, site.key) {
-					t.Errorf("%s: %s builds its audit verb at runtime, so this gate cannot judge it.\n"+
-						"\tRatify it in unresolvableAuditActions with the guarantee that holds it, "+
-						"or spell the verb as a literal.", site.key, site.door)
-				}
-			case action != "update":
-				// archive, create, erase and the rest: out of this gate's scope.
-			case auditDoorsWithBeforeImage[site.door]:
-				withBefore++
-				if site.beforeIsAbsent {
-					t.Errorf("%s: audits an update to %s with no before-image.\n"+
-						"\tRecord what the fields held (the row is readable in this transaction), "+
-						"or call storekit.AuditEvent and say here what this write has instead.",
-						site.key, site.entityType(consts))
-				}
-			default:
-				eventShaped++
-				if !eventShapedUpdates.Waived(t, site.key) {
-					t.Errorf("%s: records an update to %s as an occurrence.\n"+
-						"\tRatify it in eventShapedUpdates with what this write has instead of a "+
-						"prior state, or record the before-image and call storekit.Audit.",
-						site.key, site.entityType(consts))
-				}
+		case !slices.Contains(verbs, "update"):
+			// archive, create, erase and the rest: out of this gate's scope.
+		case site.door.before >= 0:
+			withBefore++
+			if site.beforeIsAbsent() {
+				t.Errorf("%s: audits an update to %s with no before-image.\n"+
+					"\tRecord what the fields held (the row is readable in this transaction), "+
+					"or call storekit.AuditEvent and say here what this write has instead.",
+					site.key(), site.entityType())
+			}
+		default:
+			eventShaped++
+			if !eventShapedUpdates.Waived(t, site.key()) {
+				t.Errorf("%s: records an update to %s as an occurrence.\n"+
+					"\tRatify it in eventShapedUpdates with what this write has instead of a "+
+					"prior state, or record the before-image and call storekit.Audit.",
+					site.key(), site.entityType())
 			}
 		}
 	}
 
-	// Counted last, and reported rather than fatal: a Fatalf here would abort
-	// before the findings above print, and those findings are the worklist.
-	//
-	// Three counts, because the walk has three ways to fail short and one total
-	// would hide which. Each floor sits BELOW the real number, so a scan that
-	// stopped working fails instead of quietly finding nothing.
-	if withBefore < 80 || eventShaped+unresolvable < 15 || direct < 1 {
+	// Reported rather than fatal, so the findings above still print. Each
+	// floor sits below the real number, so a census that stops finding one
+	// kind of write fails instead of passing on none.
+	if withBefore < 80 || eventShaped+unresolvable < 15 || !seedSeen {
 		t.Errorf("resolved %d image-carrying, %d occurrence-shaped and %d runtime-verb audit site(s), "+
-			"and %d direct writer(s) of the table — one of the ways of finding a write has stopped working",
-			withBefore, eventShaped, unresolvable, direct)
-	}
-}
-
-// auditSite is one call into audit_log, located and pre-read.
-type auditSite struct {
-	key            string // path:function — what a waiver is keyed by
-	door           string // which of the four doors
-	args           []ast.Expr
-	beforeIsAbsent bool
-	// fn is the function the call sits in, so a reader can follow an image the
-	// call names rather than spells — a local, or a parameter its own callers
-	// fill. historyfieldlabels_test.go needs it; this gate reads only the
-	// argument.
-	fn *ast.FuncDecl
-}
-
-// action resolves the site's verb: a literal, or a package-level constant this
-// file's package declares. Anything else — a parameter, a struct field, a value
-// read at runtime — is unknown, and saying so is the point.
-func (s auditSite) action(consts map[string]string) (string, bool) {
-	if auditDoorsAlwaysUpdateShaped[s.door] {
-		return "update", true
-	}
-	return resolveString(s.argAt(auditActionArg), consts)
-}
-
-// entityType is for the failure message only, so an unresolvable one degrades to
-// the expression's own spelling rather than costing a finding.
-func (s auditSite) entityType(consts map[string]string) string {
-	if value, known := resolveString(s.argAt(auditEntityTypeArg), consts); known {
-		return value
-	}
-	return "an entity named at runtime"
-}
-
-func (s auditSite) argAt(i int) ast.Expr {
-	if i >= len(s.args) {
-		return nil
-	}
-	return s.args[i]
-}
-
-func resolveString(expr ast.Expr, consts map[string]string) (string, bool) {
-	switch node := expr.(type) {
-	case *ast.BasicLit:
-		if node.Kind != token.STRING {
-			return "", false
-		}
-		value, err := strconv.Unquote(node.Value)
-		return value, err == nil
-	case *ast.Ident:
-		value, declared := consts[node.Name]
-		return value, declared
-	default:
-		return "", false
-	}
-}
-
-// storekitPath is the package whose doors this gate judges. The subject
-// predicate, the qualifier resolution and the direct-INSERT sweep all read it,
-// so they cannot come to mean different packages.
-const storekitPath = "github.com/margince/margince/backend/internal/platform/database/storekit"
-
-// fileReachesAnAuditDoor is the Scope subject, asked identically inside the
-// roots and outside them: a file that calls a door, or that writes audit_log
-// with its own statement.
-func fileReachesAnAuditDoor(path string, file *ast.File) bool {
-	if strings.HasSuffix(path, "_test.go") {
-		return false
-	}
-	if writesAuditLogDirectly(file) {
-		return true
-	}
-	qualifier := auditDoorQualifier(file)
-	found := false
-	ast.Inspect(file, func(n ast.Node) bool {
-		if _, isDoor := auditDoorAt(n, qualifier); isDoor {
-			found = true
-		}
-		return !found
-	})
-	return found
-}
-
-// auditDoorQualifier is the name THIS file reaches storekit by. A gate that
-// assumed the canonical spelling would stop seeing a file that aliases the
-// import, and would report nothing rather than fail — the way a census fails
-// short. Empty means the file cannot reach the doors at all.
-func auditDoorQualifier(file *ast.File) string {
-	if file.Name != nil && file.Name.Name == "storekit" {
-		return ""
-	}
-	qualifier, dotImported := gatekit.ImportedAs(file, storekitPath)
-	if dotImported {
-		// A dot-import leaves the door bare. No file in this tree does it, and
-		// the gate would silently stop judging one that did.
-		return "."
-	}
-	return qualifier
-}
-
-// writesAuditLogDirectly reports whether a file sends its own INSERT into
-// audit_log. The doors are a chokepoint only for callers that use them, and a
-// module writing the table itself is outside every check built on them.
-func writesAuditLogDirectly(file *ast.File) bool {
-	found := false
-	ast.Inspect(file, func(n ast.Node) bool {
-		if found {
-			return false
-		}
-		if text, ok := gatekit.LiteralText(asExpr(n)); ok &&
-			strings.Contains(strings.ToUpper(text), "INSERT INTO AUDIT_LOG") {
-			found = true
-		}
-		return !found
-	})
-	return found
-}
-
-func asExpr(n ast.Node) ast.Expr {
-	expr, _ := n.(ast.Expr)
-	return expr
-}
-
-func auditSitesIn(parsed gatekit.ParsedFile) []auditSite {
-	qualifier := auditDoorQualifier(parsed.File)
-	var sites []auditSite
-	for _, decl := range parsed.File.Decls {
-		fn, isFunc := decl.(*ast.FuncDecl)
-		if !isFunc || fn.Body == nil {
-			continue
-		}
-		ast.Inspect(fn.Body, func(n ast.Node) bool {
-			call, isCall := n.(*ast.CallExpr)
-			if !isCall {
-				return true
-			}
-			door, isDoor := auditDoorAt(call.Fun, qualifier)
-			if !isDoor {
-				return true
-			}
-			sites = append(sites, auditSite{
-				key:            parsed.Path + ":" + fn.Name.Name,
-				door:           door,
-				args:           call.Args,
-				beforeIsAbsent: auditDoorsWithBeforeImage[door] && isAbsentImageExpr(call),
-				fn:             fn,
-			})
-			return true
-		})
-	}
-	return sites
-}
-
-// auditDoorAt names the door a node calls, if it calls one.
-func auditDoorAt(n ast.Node, qualifier string) (string, bool) {
-	selector, isSelector := n.(*ast.SelectorExpr)
-	if !isSelector {
-		return "", false
-	}
-	pkg, isIdent := selector.X.(*ast.Ident)
-	if !isIdent || qualifier == "" || pkg.Name != qualifier {
-		return "", false
-	}
-	if _, isDoor := auditDoorsWithBeforeImage[selector.Sel.Name]; !isDoor {
-		return "", false
-	}
-	return selector.Sel.Name, true
-}
-
-// isAbsentImageExpr reads the before argument the one way source can be read
-// here: the bare `nil` identifier, written at the call.
-//
-// Everything else is invisible to it — a variable assigned nil, a parameter, a
-// field, and any helper that builds an image conditionally, such as
-// `imageOrNil(ch.Before)`. Each of those reaches audit_log as SQL NULL exactly
-// as a bare nil does, and only storekit's refusal catches them. That is the
-// division of labour this gate's doc comment describes, and the reason the
-// refusal is not optional.
-func isAbsentImageExpr(call *ast.CallExpr) bool {
-	if auditBeforeArg >= len(call.Args) {
-		return false
-	}
-	ident, isIdent := call.Args[auditBeforeArg].(*ast.Ident)
-	return isIdent && ident.Name == "nil"
-}
-
-// packageConstants collects every package-level string constant in the tree,
-// grouped by the directory that declares it. Go puts a package in a directory,
-// so the directory is the resolution scope.
-//
-// By PACKAGE and not by file, because that is where the verbs live that are not
-// written as literals. `actionUpdate` is a package-level constant used from
-// many files in that package; resolving only a file's own declarations would call
-// those sites unresolvable, and an unresolvable site gets RATIFIED. That would
-// turn "we could not read this verb" into a standing waiver over sites whose
-// verb is plainly `update` — the census failing short into the one bucket that
-// forgives it.
-// It reads the whole DIRECTORY rather than only the swept files, for the same
-// reason it groups by package at all: a constant lives wherever its author put
-// it, and `kindEmail` sits in the file that defines the sink parts, not in the
-// one that audits them. Resolving only the audit-door files calls such a site
-// unresolvable, and an unresolvable site gets ratified.
-func packageConstants(t *testing.T, files []gatekit.ParsedFile) map[string]map[string]string {
-	t.Helper()
-	byPackage := map[string]map[string]string{}
-	fset := gatekit.SourceFileSet()
-	for _, parsed := range files {
-		dir := filepath.Dir(parsed.Path)
-		if byPackage[dir] != nil {
-			continue
-		}
-		byPackage[dir] = map[string]string{}
-		parsed := parsePackageDir(t, fset, dir)
-		for _, file := range parsed {
-			collectStringConstants(file, byPackage[dir])
-		}
-		// A second pass, because a constant may name another rather than a
-		// literal — `freemailDomainObject = captureSettingsObject`, the capture
-		// settings object under the name the free-mail list calls it. One pass
-		// leaves the alias unresolved, and an unresolved entity type is the
-		// answer that gets a site ratified.
-		for _, file := range parsed {
-			collectStringConstants(file, byPackage[dir])
-		}
-	}
-	return byPackage
-}
-
-func collectStringConstants(file *ast.File, into map[string]string) {
-	for _, decl := range file.Decls {
-		gen, isGen := decl.(*ast.GenDecl)
-		if !isGen || gen.Tok != token.CONST {
-			continue
-		}
-		for _, spec := range gen.Specs {
-			value, isValue := spec.(*ast.ValueSpec)
-			if !isValue {
-				continue
-			}
-			for i, name := range value.Names {
-				if i >= len(value.Values) {
-					continue
-				}
-				if literal, known := resolveString(value.Values[i], into); known {
-					into[name.Name] = literal
-				}
-			}
-		}
+			"and storekit's own INSERT seen: %v — one of the ways of finding a write has stopped working",
+			withBefore, eventShaped, unresolvable, seedSeen)
 	}
 }
