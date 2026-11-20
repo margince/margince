@@ -55,16 +55,15 @@ func TestTheFrontendDealRolesMatchTheGoVocabulary(t *testing.T) {
 // comments removed so a key named in a comment does not count.
 func labelKeys(t *testing.T, source, opens string) []string {
 	t.Helper()
-	start := strings.Index(source, opens)
-	if start < 0 {
+	_, body, found := strings.Cut(source, opens)
+	if !found {
 		t.Fatalf("%s no longer declares %q; this gate reads a shape that is gone", frontendRecordLabels, opens)
 	}
-	body := source[start+len(opens):]
-	end := strings.Index(body, "};")
-	if end < 0 {
+	declared, _, closed := strings.Cut(body, "};")
+	if !closed {
 		t.Fatalf("%s: the literal after %q is unterminated", frontendRecordLabels, opens)
 	}
-	literal := tsComment.ReplaceAllString(body[:end], " ")
+	literal := tsComment.ReplaceAllString(declared, " ")
 	var keys []string
 	for _, match := range tsLabelKey.FindAllStringSubmatch(literal, -1) {
 		keys = append(keys, match[1])
