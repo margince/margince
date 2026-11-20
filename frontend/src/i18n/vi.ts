@@ -2872,7 +2872,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "shell.unknownPage": "Không tìm thấy",
   "shell.unavailableForRole": "Không khả dụng cho vai trò của bạn.",
   "shell.unknownAddress": "Địa chỉ này không dẫn đến đâu trong Margince.",
-  "shell.unknownAddress.home": "Đến Trang chủ",
+  "shell.unknownAddress.goTo": "Đến {name}",
   "shell.closeMenu": "Đóng",
   "shell.agent.scope": "Margince chỉ đọc những gì bạn xem được.",
   "shell.capture.importing": "Đang nhập lịch sử hộp thư",

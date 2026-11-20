@@ -1661,7 +1661,7 @@
   "shell.unknownPage": "Không tìm thấy",
   "shell.unavailableForRole": "Không khả dụng cho vai trò của bạn.",
   "shell.unknownAddress": "Địa chỉ này không dẫn đến đâu trong Margince.",
-  "shell.unknownAddress.home": "Đến Trang chủ",
+  "shell.unknownAddress.goTo": "Đến {name}",
   "shell.closeMenu": "Đóng",
   "shell.capture.importing": "Đang nhập lịch sử hộp thư",
   "shell.capture.share": "{percent} · {scanned} trên {total} thư",

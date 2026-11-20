@@ -1,7 +1,8 @@
 import { lazy, useEffect } from "react";
 import { AuthScreen } from "./app/authscreens";
 import { findCustomScreen } from "./app/custom";
-import { opensReservedPage } from "./app/nav";
+import { firstAvailableRoute, opensReservedPage } from "./app/nav";
+import { usePageName } from "./app/pagemeta";
 import {
   Button,
   Card,
@@ -11,6 +12,7 @@ import {
 } from "./design-system/atoms";
 import { useLocale, useT } from "./i18n";
 import type { MessageKey } from "./i18n/en";
+import { useHiddenCoreFeatures } from "./lib/corefeatures";
 import { composedScreens, findExtension, unitTitle } from "./lib/extensions";
 import { navigate } from "./lib/router";
 import { useAddressWriters } from "./lib/urlstate";
@@ -305,15 +307,18 @@ export function ScreenNotice({
 }
 
 // An address no page answers. It says what happened and offers a way on,
-// because the shell's heading has already said "Not found".
+// because the shell's heading has already said "Not found". The way on is the
+// first page the sidebar offers, since an installation may turn Home off.
 export function UnknownAddress() {
   const t = useT();
+  const { screen } = firstAvailableRoute(useHiddenCoreFeatures());
+  const name = usePageName(screen);
   return (
     <div className="wrap">
       <EmptyState>
         <p>{t("shell.unknownAddress")}</p>
-        <Button variant="link" onClick={() => navigate({ screen: "home" })}>
-          {t("shell.unknownAddress.home")}
+        <Button variant="link" onClick={() => navigate({ screen })}>
+          {t("shell.unknownAddress.goTo", { name })}
         </Button>
       </EmptyState>
     </div>

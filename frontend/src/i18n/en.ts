@@ -2851,7 +2851,7 @@ export const en = {
   "shell.unknownPage": "Not found",
   "shell.unavailableForRole": "Not available for your role.",
   "shell.unknownAddress": "This address does not lead anywhere in Margince.",
-  "shell.unknownAddress.home": "Go to Home",
+  "shell.unknownAddress.goTo": "Go to {name}",
   "shell.closeMenu": "Close",
   // The agent panel's one promise, as opposed to its readings: what the agent
   // can REACH. Row scope bounds it on the server, and a guarantee nobody is

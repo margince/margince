@@ -2965,7 +2965,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "shell.unknownPage": "Nicht gefunden",
   "shell.unavailableForRole": "Für deine Rolle nicht verfügbar.",
   "shell.unknownAddress": "Diese Adresse führt in Margince nirgendwohin.",
-  "shell.unknownAddress.home": "Zu Home",
+  "shell.unknownAddress.goTo": "Zu {name}",
   "shell.closeMenu": "Schließen",
   "shell.agent.scope": "Margince liest nur, was du sehen kannst.",
   "shell.capture.importing": "Postfachverlauf wird importiert",
