@@ -52,19 +52,7 @@ func foldPairsSQL(advanceSnapshot bool) string {
 		  FROM folded f
 		 ORDER BY f.user_id, f.contact_id
 		ON CONFLICT (user_id, contact_id) DO UPDATE SET
-		    last_at          = EXCLUDED.last_at,
-		    last_inbound_at  = EXCLUDED.last_inbound_at,
-		    last_outbound_at = EXCLUDED.last_outbound_at,
-		    last_met_at      = EXCLUDED.last_met_at,
-		    count_90d        = EXCLUDED.count_90d,
-		    in_count_90d     = EXCLUDED.in_count_90d,
-		    out_count_90d    = EXCLUDED.out_count_90d,
-		    sent_count_90d   = EXCLUDED.sent_count_90d,
-		    late_count_90d     = EXCLUDED.late_count_90d,
-		    late_out_count_90d = EXCLUDED.late_out_count_90d,
-		    count_total      = EXCLUDED.count_total,
-		    computed_at      = EXCLUDED.computed_at,
-            read_snapshot = EXCLUDED.read_snapshot` + unchangedEdgeGuard(advanceSnapshot, interactionEdgeFacts) + `
+		    ` + edgeUpsertSet(interactionEdgeFacts) + unchangedEdgeGuard(advanceSnapshot, interactionEdgeFacts) + `
         RETURNING e.user_id, e.contact_id`
 }
 

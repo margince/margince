@@ -248,3 +248,25 @@ func TestARealChangeStillUpdatesTheEdgeAndTheRebuildAgrees(t *testing.T) {
 		}
 	}
 }
+
+func TestAChangeThatOnlyMovesTheSentCountRewritesTheEdge(t *testing.T) {
+	v := graphSkipEnv{Setup(t)}
+	contact := v.contact(t, "Sent Count Contact")
+	activity := v.interaction(t, v.e.Rep1, contact, clocktest.Now(t).AddDate(0, 0, -2), "outbound")
+	v.e.WsExec(t, `UPDATE activity_participant SET role = 'cc' WHERE activity_id = $1 AND user_id = $2`, activity, v.e.Rep1)
+	v.recompute(t, activity)
+	sent := func() int {
+		return v.e.WsCount(t, `SELECT coalesce(sent_count_90d, -1) FROM graph_interaction_edge WHERE user_id = $1 AND contact_id = $2`, v.e.Rep1, contact)
+	}
+	before, _ := v.edge(t, v.e.Rep1, contact)
+	if sent() != 0 {
+		t.Fatalf("a copied colleague has sent %d messages, want 0", sent())
+	}
+
+	v.e.WsExec(t, `UPDATE activity_participant SET role = 'from' WHERE activity_id = $1 AND user_id = $2`, activity, v.e.Rep1)
+	v.handle(t, v.event(t, "activity.updated", activity, `{"changed_fields":{"relinked":{"entity_type":"contact","entity_id":"`+contact.String()+`"}}}`))
+	after, _ := v.edge(t, v.e.Rep1, contact)
+	if sent() != 1 || after.xmin == before.xmin {
+		t.Fatalf("sent=%d rewritten=%t, want the edge rewritten with one sent message", sent(), after.xmin != before.xmin)
+	}
+}

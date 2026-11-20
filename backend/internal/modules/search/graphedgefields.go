@@ -11,6 +11,21 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 )
 
+// edgeBookkeeping are the columns every refold rewrites besides the facts.
+// The facts lists say which columns an edge holds. The SET list and the
+// unchanged guard are both built from them.
+var edgeBookkeeping = []string{"computed_at", "read_snapshot"}
+
+// edgeUpsertSet is the DO UPDATE SET list: every fact, then the bookkeeping.
+func edgeUpsertSet(facts []string) string {
+	columns := append(append([]string(nil), facts...), edgeBookkeeping...)
+	assignments := make([]string, len(columns))
+	for i, column := range columns {
+		assignments[i] = column + " = EXCLUDED." + column
+	}
+	return strings.Join(assignments, ",\n\t\t    ")
+}
+
 // unchangedEdgeGuard makes the upsert a no-op for a row whose folded facts
 // already match, so computed_at and the tuple stay as they were.
 //

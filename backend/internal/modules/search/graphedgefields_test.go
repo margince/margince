@@ -6,6 +6,8 @@ package search
 import (
 	"encoding/json"
 	"reflect"
+	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
@@ -87,6 +89,64 @@ func TestAnUnchangedGuardComparesEveryFoldedFact(t *testing.T) {
 	for _, want := range []string{"(e.last_at, e.count_90d, e.count_total)", "IS DISTINCT FROM (EXCLUDED.last_at, EXCLUDED.count_90d, EXCLUDED.count_total)"} {
 		if !strings.Contains(guard, want) {
 			t.Errorf("guard %q lacks %q", guard, want)
+		}
+	}
+}
+
+var (
+	upsertSetColumn    = regexp.MustCompile(`(\w+)\s*=\s*EXCLUDED\.\w+`)
+	guardComparedBlock = regexp.MustCompile(`WHERE \(([^)]*)\) IS DISTINCT FROM`)
+	insertColumnList   = regexp.MustCompile(`(?s)INSERT INTO graph_\w+_edge AS e\s*\(([^)]*)\)`)
+)
+
+var edgeKeyColumns = []string{"user_id", "contact_id", "contact_a", "contact_b"}
+
+func splitColumns(list string) []string {
+	var out []string
+	for _, column := range strings.Split(list, ",") {
+		column = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(column), "e."))
+		if column != "" {
+			out = append(out, column)
+		}
+	}
+	slices.Sort(out)
+	return out
+}
+
+func TestTheUnchangedGuardComparesEveryColumnTheUpsertAssigns(t *testing.T) {
+	for name, statement := range map[string]string{
+		"interaction": foldPairsSQL(false),
+		"contact":     foldContactPairsSQL(false),
+	} {
+		var assigned []string
+		_, set, found := strings.Cut(statement, "DO UPDATE SET")
+		if !found {
+			t.Fatalf("%s statement has no DO UPDATE SET", name)
+		}
+		for _, match := range upsertSetColumn.FindAllStringSubmatch(set, -1) {
+			if !slices.Contains(edgeBookkeeping, match[1]) {
+				assigned = append(assigned, match[1])
+			}
+		}
+		slices.Sort(assigned)
+		guard := guardComparedBlock.FindStringSubmatch(statement)
+		if guard == nil {
+			t.Fatalf("%s upsert has no unchanged guard", name)
+		}
+		if compared := splitColumns(guard[1]); !slices.Equal(compared, assigned) {
+			t.Errorf("%s guard compares %v, the upsert assigns %v", name, compared, assigned)
+		}
+		var facts []string
+		for _, column := range splitColumns(insertColumnList.FindStringSubmatch(statement)[1]) {
+			if !slices.Contains(edgeBookkeeping, column) && !slices.Contains(edgeKeyColumns, column) {
+				facts = append(facts, column)
+			}
+		}
+		if !slices.Equal(facts, assigned) {
+			t.Errorf("%s inserts the facts %v but the upsert assigns %v", name, facts, assigned)
+		}
+		if len(assigned) == 0 {
+			t.Errorf("%s upsert assigns no fact, so the comparison passed vacuously", name)
 		}
 	}
 }

@@ -125,11 +125,7 @@ func foldContactPairsSQL(advanceSnapshot bool) string {
 		  FROM folded f
 		 ORDER BY f.contact_a, f.contact_b
 		ON CONFLICT (contact_a, contact_b) DO UPDATE SET
-		    last_at     = EXCLUDED.last_at,
-		    count_90d   = EXCLUDED.count_90d,
-		    count_total = EXCLUDED.count_total,
-		    computed_at = EXCLUDED.computed_at,
-            read_snapshot = EXCLUDED.read_snapshot` + unchangedEdgeGuard(advanceSnapshot, contactEdgeFacts) + `
+		    ` + edgeUpsertSet(contactEdgeFacts) + unchangedEdgeGuard(advanceSnapshot, contactEdgeFacts) + `
         RETURNING e.contact_a, e.contact_b`
 }
 
