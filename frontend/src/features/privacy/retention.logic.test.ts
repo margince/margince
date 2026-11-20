@@ -14,6 +14,7 @@ import {
   policyEffect,
   RETENTION_ACTIONS,
   RETENTION_SCOPES,
+  retainDaysFault,
   SCOPE_LABEL_KEYS,
   scopeLabelKey,
 } from "./retention.logic";
@@ -133,6 +134,19 @@ describe("parseRetainDays", () => {
     expect(parseRetainDays("-30")).toBeNull();
     expect(parseRetainDays("30.5")).toBeNull();
     expect(parseRetainDays("thirty")).toBeNull();
+    expect(parseRetainDays("36501")).toBeNull();
+    expect(parseRetainDays("99999999999")).toBeNull();
+  });
+
+  it("says the window's bounds once one is typed past them", () => {
+    expect(parseRetainDays("36500")).toBe(36500);
+    expect(retainDaysFault("", "en", "Window in days")).toBeUndefined();
+    expect(retainDaysFault("99999999999", "en", "Window in days")).toBe(
+      "Window in days must be from 1 to 36,500.",
+    );
+    expect(retainDaysFault("30.5", "en", "Window in days")).toBe(
+      "Enter a whole number for Window in days.",
+    );
   });
 });
 
