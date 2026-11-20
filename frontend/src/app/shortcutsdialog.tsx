@@ -78,7 +78,7 @@ function keymapGroup(
       continue;
     }
     const way: ShortcutWay = {
-      caps: bindingCaps(entry.keys),
+      caps: bindingCaps(entry.keys, t),
       sequence: entry.keys.kind === "sequence",
     };
     const row = rows.get(entry.labelKey);

@@ -4,13 +4,17 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  QueryClient,
+  QueryClientProvider,
+  useQuery,
+} from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactNode } from "react";
+import { type ReactNode, useRef } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { useThreadAudience } from "./audienceservice";
+import { useMessageAudience, useThreadAudience } from "./audienceservice";
 
 // A thread decision changes several messages at once, and they are filed
 // against whatever records each one touches. The caller names what its own
@@ -167,5 +171,144 @@ describe("useThreadAudience", () => {
     // A share that did not open the thread means somebody else still holds it,
     // and the count reaches the caller so it can say so. Never a name.
     expect(outcomes[0]).toMatchObject({ shared: false, held_by_others: 1 });
+  });
+});
+
+// The open message is drawn from its own read, and the write's answer cannot
+// stand in for it. A write reported done before that read lands closes the
+// dialog over a message that still says its old audience. A write that waits
+// on every other read the sweep reaches holds the dialog for as long as the
+// slowest one takes.
+describe("an audience write reports done only once the open message shows it", () => {
+  const MESSAGE = "44444444-4444-4444-8444-444444444444";
+  const OPEN_MESSAGE = ["email-presentation", MESSAGE, 1];
+  // What the drawer's editor names as its own read: the message, by prefix.
+  const CALLER_KEY = ["email-presentation", MESSAGE];
+  // A timeline the sweep reaches, whose re-read never comes back, as one
+  // offline or retrying would.
+  const STALLED_TIMELINE = ["activities", "contact", "p-1"];
+
+  function StalledTimeline() {
+    const reads = useRef(0);
+    useQuery({
+      queryKey: STALLED_TIMELINE,
+      queryFn: () => {
+        reads.current += 1;
+        return reads.current === 1
+          ? Promise.resolve({ drawn: "before the save" })
+          : new Promise<never>(() => undefined);
+      },
+    });
+    return null;
+  }
+
+  function serverWithAudience(before: string, after: string) {
+    const server = { audience: before };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        server.audience = after;
+        return new Response(
+          JSON.stringify({ id: MESSAGE, audience: after, version: 4 }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }),
+    );
+    return server;
+  }
+
+  function OpenMessage({
+    server,
+    children,
+  }: Readonly<{ server: { audience: string }; children: ReactNode }>) {
+    const read = useQuery({
+      queryKey: OPEN_MESSAGE,
+      queryFn: async () => ({ audience: server.audience }),
+    });
+    return (
+      <>
+        <p>{read.data?.audience}</p>
+        {children}
+      </>
+    );
+  }
+
+  function MessageSave({ onDone }: Readonly<{ onDone: () => void }>) {
+    const mutation = useMessageAudience({
+      invalidate: () => [CALLER_KEY],
+      onSettled: onDone,
+    });
+    return (
+      <button
+        type="button"
+        onClick={() =>
+          mutation.mutate({
+            activityId: MESSAGE,
+            version: 3,
+            audience: "participants",
+          })
+        }
+      >
+        save
+      </button>
+    );
+  }
+
+  function ThreadSave({ onDone }: Readonly<{ onDone: () => void }>) {
+    const mutation = useThreadAudience({
+      invalidate: () => [CALLER_KEY],
+      onSettled: onDone,
+    });
+    return (
+      <button
+        type="button"
+        onClick={() => mutation.mutate({ threadKey: "t-1", share: false })}
+      >
+        save
+      </button>
+    );
+  }
+
+  async function shownWhenDone(
+    server: { audience: string },
+    Save: typeof MessageSave,
+  ) {
+    const user = userEvent.setup();
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const seenWhenDone: unknown[] = [];
+    render(
+      <QueryClientProvider client={client}>
+        <StalledTimeline />
+        <OpenMessage server={server}>
+          <Save
+            onDone={() => seenWhenDone.push(client.getQueryData(OPEN_MESSAGE))}
+          />
+        </OpenMessage>
+      </QueryClientProvider>,
+    );
+    await screen.findByText("workspace");
+    await user.click(screen.getByRole("button", { name: "save" }));
+    await waitFor(() => expect(seenWhenDone).toHaveLength(1));
+    // The sweep still reached the timeline; the save only did not wait on it.
+    expect(client.getQueryState(STALLED_TIMELINE)?.fetchStatus).toBe(
+      "fetching",
+    );
+    return seenWhenDone[0];
+  }
+
+  it("a message's own audience", async () => {
+    const server = serverWithAudience("workspace", "participants");
+    expect(await shownWhenDone(server, MessageSave)).toEqual({
+      audience: "participants",
+    });
+  });
+
+  it("a thread's audience", async () => {
+    const server = serverWithAudience("workspace", "private");
+    expect(await shownWhenDone(server, ThreadSave)).toEqual({
+      audience: "private",
+    });
   });
 });

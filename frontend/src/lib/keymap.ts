@@ -196,9 +196,15 @@ function readerPlatform(): string {
   return globalThis.navigator?.platform ?? "";
 }
 
-/** The platform modifier as the cap its keyboard prints. */
-function modifierCap(platform: string): string {
-  return APPLE_PLATFORM.test(platform) ? "⌘" : "Ctrl";
+/** The reader's words for a shortcut: the Ctrl cap, which a German keyboard
+ *  prints as "Strg", and the word between a sequence's keys. */
+export type ShortcutWords = (
+  key: "shell.shortcuts.ctrl" | "shell.shortcuts.then",
+) => string;
+
+/** The platform modifier as the cap its keyboard prints. ⌘ has one name. */
+function modifierCap(platform: string, words: ShortcutWords): string {
+  return APPLE_PLATFORM.test(platform) ? "⌘" : words("shell.shortcuts.ctrl");
 }
 
 const KEY_CAPS: Readonly<Record<string, string>> = {
@@ -216,11 +222,12 @@ export function capOf(key: string): string {
 
 export function bindingCaps(
   keys: BindingKeys,
+  words: ShortcutWords,
   platform = readerPlatform(),
 ): readonly string[] {
   switch (keys.kind) {
     case "chord":
-      return [modifierCap(platform), capOf(keys.key)];
+      return [modifierCap(platform, words), capOf(keys.key)];
     case "sequence":
       return keys.keys.map(capOf);
     default:
@@ -230,20 +237,20 @@ export function bindingCaps(
 
 export function shortcutCaps(
   id: ShortcutId,
+  words: ShortcutWords,
   platform = readerPlatform(),
 ): readonly string[] {
-  return bindingCaps(binding(id).keys, platform);
+  return bindingCaps(binding(id).keys, words, platform);
 }
 
-/** A label and its keys as one tip, "Contacts · G then C"; `then` is the
- *  reader's word between a sequence's keys. */
+/** A label and its keys as one tip, "Contacts · G then C". */
 export function shortcutTip(
   label: string | undefined,
   keys: BindingKeys,
-  then: string,
+  words: ShortcutWords,
 ): string {
-  const caps = bindingCaps(keys).join(
-    keys.kind === "sequence" ? ` ${then} ` : " ",
+  const caps = bindingCaps(keys, words).join(
+    keys.kind === "sequence" ? ` ${words("shell.shortcuts.then")} ` : " ",
   );
   return label === undefined ? caps : `${label} · ${caps}`;
 }

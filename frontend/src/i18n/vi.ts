@@ -2863,6 +2863,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "shell.shortcuts.sendEmail": "Gửi email",
   "shell.shortcuts.submitDialog": "Gửi biểu mẫu hộp thoại",
   "shell.shortcuts.then": "rồi",
+  "shell.shortcuts.ctrl": "Ctrl",
   "shell.shortcuts.or": "hoặc",
   "shell.shortcuts.singleKeyOff": "Đã tắt phím tắt một phím",
   "shell.shortcuts.singleKeyOffHint": "Bật lại trong Cài đặt, mục Tài khoản.",
@@ -3218,8 +3219,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "share.whoHasAccess": "Đã chia sẻ với",
   "share.grantedBy": "người cấp",
   "share.revoke": "Thu hồi",
+  "share.revokeFor": "Thu hồi quyền truy cập {record} của {name}",
   "share.revokeConfirm":
-    "Thu hồi quyền truy cập này? Quyền sẽ bị hủy ở yêu cầu tiếp theo và không thể hoàn tác.",
+    "Thu hồi quyền {access} với {record} của {name}? Quyền sẽ bị hủy ở yêu cầu tiếp theo và không thể hoàn tác.",
+  "share.granted": "{name} giờ có quyền {access} với {record}.",
+  "share.thisRecord": "hồ sơ này",
+  "share.until": "Đến {date}",
   "share.approvalRequired":
     "Lần chia sẻ này chỉ có hiệu lực sau khi được duyệt. Hiện chưa được áp dụng.",
   "share.teamMembers_one": "Nhóm · {count} thành viên",
@@ -3231,6 +3236,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Không thể tải danh sách nhóm. Các thành viên hiển thị bên dưới.",
   "share.rosterErrorBoth": "Không thể tải danh sách thành viên và nhóm.",
   "share.rosterEmpty": "Không có thành viên hay nhóm nào để chia sẻ.",
+  "share.rosterNoMatch": "Không có thành viên hay nhóm nào khớp với tìm kiếm.",
 
   "merge.contact": "Gộp liên hệ",
   "merge.company": "Gộp công ty",
@@ -8848,8 +8854,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.firstRunAction": "Mở Deal",
   "analytics.emptyOwnTitle": "Bạn chưa sở hữu deal nào",
   "analytics.emptyOwnBody":
-    "Các số liệu này chỉ gồm deal của riêng bạn, và bạn chưa có deal nào. Chọn Whole company để xem số liệu của công ty.",
-  "analytics.emptyOwnAction": "Xem Whole company",
+    "Các số liệu này chỉ gồm deal của riêng bạn, và bạn chưa có deal nào. Chọn Cả công ty để xem số liệu của công ty.",
+  "analytics.emptyOwnAction": "Xem cả công ty",
   "analytics.emptyTeamTitle": "{scope} chưa có deal nào",
   "analytics.emptyTeamBody": "Không ai trong {scope} sở hữu deal nào.",
   "analytics.deliveryCoversAll":
@@ -9160,6 +9166,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.share.listCreated": "Tạo ngày {date}",
   "analytics.share.listExpires": "Hết hạn {date}",
   "analytics.share.populationCompany": "Cả công ty",
+  "analytics.scope.workspace": "Cả công ty",
   "analytics.share.populationTeam": "Nhóm",
   "analytics.share.populationOwner": "Đồng nghiệp",
   "analytics.share.closeTitle": "Đóng liên kết này?",
