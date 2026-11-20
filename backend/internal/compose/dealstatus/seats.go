@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/dealrole"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -89,7 +90,7 @@ func namedRole(seats []Seat, role string) (Seat, bool) {
 	var unnamed Seat
 	var found bool
 	for _, s := range seats {
-		if s.Role != role {
+		if dealrole.Recorded(s.Role) != role {
 			continue
 		}
 		if s.Name != "" {
