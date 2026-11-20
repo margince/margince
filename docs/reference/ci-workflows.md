@@ -234,9 +234,9 @@ asks "is this diff good?", and runs because a diff exists.
 | Home growth (`make bench-growth`) | daily | Home's reads over `4` steps of mail history, each a year more, with a fixed wait per round trip. It fails when the fit expects a read to reach `10 s` soon | A merge gate cannot wait for it, and history grows with the calendar, not with a diff. |
 | `MOBILE-AC-2` budget | weekly | `make bench-mobile`: record open `p95` on a throttled Fast-3G profile at 390px, writing a record | The browser half of the PERF-1 budget, which no merge gate measures. |
 | vendor live check (`make vendor-live`) | daily | `GET /v1/credits` on Surfe, through the production adapter, against the fields `surfe/testdata/vendor-wire.json` records | The offline tests read a recording, which stays green when the vendor changes its API. |
-| use cases a model drives (`make e2e-llm`) | weekly | The deck test cases run by a real model, checking what it said, writing a verdict per case | The fixed tests pin payloads and the cases where it refuses, and stay green while a model can no longer drive the product. |
+| use cases a model drives (`make e2e-llm`) | by hand: a dispatch with `llm` | The deck test cases run by a real model, checking what it said, writing a verdict per case | The fixed tests pin payloads and the cases where it refuses, and stay green while a model can no longer drive the product. It is off the weekly schedule until a human-run certification of a pull request and the prompts it measures are stable. |
 | MCP role sweep (`make test-roles`) | weekly | Every MCP tool and action called as every seeded role, held to the `mcp-tool-roles/` and `toolchecks/` folders | It takes longer than a merge-gate job allows. Each PR still holds the committed table to the registry and to `tools/list`. |
-| weekly records (`records`, `records-pr`) | weekly | Renders the pages built from the three weekly records, then opens one pull request with them | A record reaches `main` only when a maintainer merges it. |
+| weekly records (`records`, `records-pr`) | weekly, and after a dispatch that records | Renders the pages built from the records of that run, then opens one pull request with them | A record reaches `main` only when a maintainer merges it. |
 
 Notes on the jobs:
 
@@ -262,7 +262,7 @@ Notes on the jobs:
   passes at two. It uploads each transcript as an artifact, because the result line names the failed
   scenario, and only the transcript shows what the model did.
 
-The three weekly jobs record what they measure, and none of them writes to `main`:
+The two weekly budget jobs and the model lane record what they measure, and none of them writes to `main`:
 
 - Each job uploads its record as an artifact: `bench-perf-record`, `bench-mobile-record` and
   `e2e-llm-verdicts`. A failed job still uploads, because a budget that is over is recorded before its gate fails.

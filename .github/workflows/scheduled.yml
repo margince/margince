@@ -66,7 +66,8 @@ name: scheduled
 #                        judge only added lines, and this is what shows whether
 #                        the rest of the tree gets better.
 #
-# The three weekly measurements also RECORD what they measured. records-pr
+# The two weekly measurements, and the model lane when dispatched, also RECORD
+# what they measured. records-pr
 # proposes those records as one pull request and never writes to main: a
 # record is published when a human reviews and merges it.
 #
@@ -435,15 +436,18 @@ jobs:
 
   # The six deck use cases, driven by a REAL assistant.
   #
-  # WEEKLY, and gated on a secret that may not exist. This is the half the Go
+  # ON DEMAND, and gated on a secret that may not exist. This is the half the Go
   # suite in integration/e2e/usecases/ cannot answer: those tests pin the
   # payloads, the refusals and the legibility fields, and they would all stay
   # green while the product became unusable to a model. The only way to learn
   # whether an assistant can drive this surface and say something TRUE is to
   # have one try.
   #
-  # It costs real tokens, which is why it is weekly and not per-merge, and why
-  # it shares the Monday cron with perf-budgets rather than the daily one.
+  # It costs real tokens, so it runs only when dispatched with `llm`, never per
+  # merge and not on the Monday cron. An unattended verdict earns its tokens
+  # only once a human-run certification of a pull request and the prompts it
+  # measures hold steady; before that, a cancelled or partial run opens a
+  # records pull request nobody can merge.
   #
   # NOT DETERMINISTIC, by construction. Each scenario runs three times and
   # passes at two, because one bad run out of three is the weather and two is a
@@ -459,17 +463,15 @@ jobs:
   # better answer the day there is one — but this job supplies exactly one
   # credential either way, for the reason given at the step. If the secret is
   # absent the job SKIPS rather than fails: a lane nobody has funded yet must
-  # not turn main red every Monday, and a skipped job says "not configured"
+  # not turn the run red, and a skipped job says "not configured"
   # where a red one says "broken".
   llm-use-cases:
-    name: use cases, driven by a model (weekly)
+    name: use cases, driven by a model (on demand)
     outputs:
       outcome: ${{ steps.lane.outputs.outcome }}
-    # Same Monday cron as perf-budgets. A dispatch runs it only when asked, so
-    # somebody re-checking govulncheck by hand does not spend tokens.
-    if: >-
-      (github.event.schedule == '0 2 * * 1'
-        || (github.event_name == 'workflow_dispatch' && inputs.llm))
+    # A dispatch runs it only when asked, so somebody re-checking govulncheck by
+    # hand does not spend tokens.
+    if: github.event_name == 'workflow_dispatch' && inputs.llm
     runs-on: ubuntu-latest
     # Eighteen model calls, plus a database rebuild between the runs of each
     # write scenario. Locally the sweep takes about 25 minutes; 60 leaves room
@@ -983,7 +985,7 @@ jobs:
           esac
           exit "$status"
 
-  # Lays what the three weekly measurements recorded over the run's own tree
+  # Lays what the measurements recorded over the run's own tree
   # and renders the pages those records feed. It runs the tree's generators, so
   # it holds no write token; records-pr pushes the patch it hands over.
   records:
