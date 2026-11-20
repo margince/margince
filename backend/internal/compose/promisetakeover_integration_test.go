@@ -340,3 +340,28 @@ func TestAPromiseAnAgentRecordedIsOpenOnItsContact(t *testing.T) {
 		t.Error("a claim a product pass stamped was admitted as an agent acting for its user")
 	}
 }
+
+// A source subject with quote marks is named in the language's own marks with
+// no backslash. A second press still finds the first task.
+func TestAPromiseFromAQuotedSubjectIsTakenOverOnceWithoutBackslashes(t *testing.T) {
+	f := setupTakeOver(t)
+	subject := `Re: „Angebot“ "Q4"`
+	f.e.WsExec(t, `UPDATE activity SET subject = $1 WHERE id = $2`, subject, f.source)
+	first, err := f.h.TakeOver(f.priya, f.claim)
+	if err != nil {
+		t.Fatalf("taking over the promise: %v", err)
+	}
+	if _, err := f.h.TakeOver(f.priya, f.claim); err != nil {
+		t.Fatalf("pressing a second time: %v", err)
+	}
+	if n := f.tasks(t); n != 1 {
+		t.Fatalf("two presses wrote %d tasks, want 1", n)
+	}
+	body := f.e.WsScalar(t, `SELECT body FROM activity WHERE id = $1`, ids.UUID(first.TaskActivityId))
+	if want := "Promise taken over from “" + subject + "”. Nobody was asked to keep it."; body != want {
+		t.Errorf("the task body reads %s, want %s", body, want)
+	}
+	if bound := f.e.WsCount(t, `SELECT count(*) FROM activity WHERE id = $1 AND system_text ? 'body'`, ids.UUID(first.TaskActivityId)); bound != 1 {
+		t.Error("the task body lost its descriptor, so a German reader would read it in English")
+	}
+}

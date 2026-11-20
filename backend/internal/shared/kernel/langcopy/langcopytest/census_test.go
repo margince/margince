@@ -74,7 +74,7 @@ func TestCensusReportsAnUnwrittenLanguage(t *testing.T) {
 	bad := table{Greeting: langcopy.Phrase{En: "hi", Vi: "chào"}}
 	s := run(func(r reporter) { Census(r, bad) })
 	// A bare language code is not a safe needle: "de" is a substring of
-	// "renders", which every entry message carries. Tying the code to
+	// "renders", which every censusEntry message carries. Tying the code to
 	// the unwritten branch's own wording and the field name is a fragment no
 	// other branch's message can produce.
 	want := fmt.Sprintf("%s leaves Greeting unwritten", textlang.German)
@@ -123,22 +123,6 @@ func TestCensusReportsGoQuoting(t *testing.T) {
 	s := run(func(r reporter) { Census(r, bad) })
 	if !reports(s.errors, "Named with %q") {
 		t.Fatalf("a German sentence quoting with %%q was not reported: %v", s.errors)
-	}
-}
-
-func TestCensusHoldsAGoQuotingWaiverToTheEntriesThatNeedIt(t *testing.T) {
-	t.Parallel()
-	table := map[string]langcopy.Phrase{
-		"held":  {En: "Fold %q", De: "%q überführen", Vi: "Gộp %q"},
-		"plain": {En: "Fold “%s”", De: "„%s“ überführen", Vi: "Gộp “%s”"},
-	}
-	s := run(func(r reporter) { Census(r, table, WaiveGoQuoting("[held]")) })
-	if len(s.errors) != 0 {
-		t.Fatalf("a waived %%q entry was reported: %v", s.errors)
-	}
-	s = run(func(r reporter) { Census(r, table, WaiveGoQuoting("[held]", "[plain]")) })
-	if !reports(s.errors, "[plain] is waived for %q but no longer uses it") {
-		t.Fatalf("a waiver for an entry without %%q was not reported: %v", s.errors)
 	}
 }
 
@@ -194,10 +178,12 @@ func TestCensusReportsAFieldThatIsNeitherAPhraseNorAMapOfThem(t *testing.T) {
 	}
 }
 
-// census.field admits a map field by its Kind alone, not by its element type.
-// So a field typed as a map of an interface reaches census.entries with an
-// entry that is not a Phrase. Census takes `any`, and census.field admits no
-// less, so this path is real and is planted here.
+// censusField admits a map field by its Kind alone, not by its element type,
+// so a field typed as a map of an interface (not the map[string]langcopy.Phrase
+// every production table uses) reaches censusMap with an entry that is not
+// actually a Phrase. Planted here rather than deleted as dead code: Census's
+// own contract takes `any`, and censusField's admission is not narrower than
+// that, so this is a real path, not a hypothetical one.
 func TestCensusNamesABadEntryInAnInterfaceValuedMap(t *testing.T) {
 	t.Parallel()
 	type table struct {

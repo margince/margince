@@ -14,7 +14,6 @@ package langcopytest
 
 import (
 	"fmt"
-	"maps"
 	"reflect"
 	"regexp"
 	"slices"
@@ -75,74 +74,47 @@ type reporter interface {
 // Held by: TestOneCensusReadsEveryPhraseTable (backend/gates/langcopyonecensus_test.go)
 //
 //craft:ignore naked-any every caller passes a different copy table's own struct or map type — the parameter names the shape this walks, not a shape of ours
-func Census(t reporter, table any, waivers ...Waiver) {
+func Census(t reporter, table any) {
 	t.Helper()
 	shape := reflect.TypeOf(table)
 	value := reflect.ValueOf(table)
-	walk := census{t: t, goQuoted: map[string]bool{}}
-	for _, waiver := range waivers {
-		for _, name := range waiver.names {
-			walk.goQuoted[name] = false
-		}
-	}
 	phrases := 0
 	switch {
 	case shape != nil && shape.Kind() == reflect.Struct:
 		for i := range shape.NumField() {
-			phrases += walk.field(shape.Field(i).Name, value.Field(i))
+			phrases += censusField(t, shape.Field(i).Name, value.Field(i))
 		}
 	case shape != nil && shape.Kind() == reflect.Map:
-		phrases += walk.entries("", value)
+		phrases += censusMap(t, "", value)
 	default:
 		t.Fatalf("a census needs a struct or map of phrases, got %T", table)
 	}
 	if phrases == 0 {
 		t.Fatalf("the table holds no phrases; this census would certify nothing")
 	}
-	for _, name := range slices.Sorted(maps.Keys(walk.goQuoted)) {
-		if !walk.goQuoted[name] {
-			t.Errorf("%s is waived for %%q but no longer uses it; remove the waiver", name)
-		}
-	}
 }
 
-// Waiver names entries a census lets keep %q. The one reason is a stored
-// subject whose writer formats the same bytes from its own copy. The
-// descriptor binds only while both render alike, so the two change together.
-type Waiver struct{ names []string }
-
-// WaiveGoQuoting is that waiver, by the names the census reports ("[code]"
-// for an entry of a table that is a map).
-func WaiveGoQuoting(names ...string) Waiver { return Waiver{names: names} }
-
-// census is one walk over a table, holding the waivers it was given and
-// whether each one was still needed.
-type census struct {
-	t        reporter
-	goQuoted map[string]bool
-}
-
-// field reads one struct field, which is either a phrase directly or a
+// censusField reads one struct field, which is either a phrase directly or a
 // map of them, and reports how many phrases it found.
-func (c census) field(name string, field reflect.Value) int {
-	c.t.Helper()
+func censusField(t reporter, name string, field reflect.Value) int {
+	t.Helper()
 	if p, ok := reflect.TypeAssert[langcopy.Phrase](field); ok {
-		c.entry(name, p)
+		censusEntry(t, name, p)
 		return 1
 	}
 	if field.Kind() == reflect.Map {
-		return c.entries(name, field)
+		return censusMap(t, name, field)
 	}
-	c.t.Errorf("%s is not a phrase, so this census says nothing about it", name)
+	t.Errorf("%s is not a phrase, so this census says nothing about it", name)
 	return 0
 }
 
-// entries walks a map of phrases in a fixed order, sorted rather than the
+// censusMap walks a map of phrases in a fixed order, sorted rather than the
 // map's own random iteration order. An unsorted walk reorders its failures
 // between runs, and a reader comparing two runs cannot tell what changed.
 // prefix names the enclosing field, empty for a table that is itself a map.
-func (c census) entries(prefix string, table reflect.Value) int {
-	c.t.Helper()
+func censusMap(t reporter, prefix string, table reflect.Value) int {
+	t.Helper()
 	keys := table.MapKeys()
 	sort.Slice(keys, func(i, j int) bool {
 		return fmt.Sprint(keys[i].Interface()) < fmt.Sprint(keys[j].Interface())
@@ -152,20 +124,19 @@ func (c census) entries(prefix string, table reflect.Value) int {
 		name := fmt.Sprintf("%s[%v]", prefix, key.Interface())
 		p, ok := reflect.TypeAssert[langcopy.Phrase](table.MapIndex(key))
 		if !ok {
-			c.t.Errorf("%s is not a phrase, so this census says nothing about it", name)
+			t.Errorf("%s is not a phrase, so this census says nothing about it", name)
 			continue
 		}
-		c.entry(name, p)
+		censusEntry(t, name, p)
 		phrases++
 	}
 	return phrases
 }
 
-// entry holds the one check every phrase answers to, however it was reached.
-// It is written in every shipped language, with the placeholders of its
-// English sentence, and never with Go's own quoting.
-func (c census) entry(name string, p langcopy.Phrase) {
-	t := c.t
+// censusEntry holds the one check every phrase answers to, however it was
+// reached. It is written in every shipped language, with the placeholders of
+// its English sentence, and never with Go's own quoting.
+func censusEntry(t reporter, name string, p langcopy.Phrase) {
 	t.Helper()
 	english := p.In(textlang.English)
 	if strings.TrimSpace(english) == "" {
@@ -181,7 +152,10 @@ func (c census) entry(name string, p langcopy.Phrase) {
 		}
 		got, want := Placeholders(text), Placeholders(english)
 		if slices.Contains(got, "%q") {
-			c.goQuoting(lang, name)
+			t.Errorf("%s writes %s with %%q, which prints Go string syntax: a backslash before every "+
+				"quote mark the value holds, and straight quotes in every language. Put the language's "+
+				"own marks around %%s („%%s“ in German, “%%s” in English and Vietnamese), or pass the "+
+				"value through langcopy.Spoken.Quote", lang, name)
 		}
 		if !reflect.DeepEqual(got, want) {
 			t.Errorf("%s writes %s with placeholders %v, but the sentence is given %v.\n  %s\n"+
@@ -189,19 +163,6 @@ func (c census) entry(name string, p langcopy.Phrase) {
 				"argument nobody passed.", lang, name, got, want, text)
 		}
 	}
-}
-
-// goQuoting reports one %q, unless the entry is waived.
-func (c census) goQuoting(lang textlang.Lang, name string) {
-	c.t.Helper()
-	if _, waived := c.goQuoted[name]; waived {
-		c.goQuoted[name] = true
-		return
-	}
-	c.t.Errorf("%s writes %s with %%q, which prints Go string syntax: a backslash before every "+
-		"quote mark the value holds, and straight quotes in every language. Put the language's "+
-		"own marks around %%s („%%s“ in German, “%%s” in English and Vietnamese), or pass the value "+
-		"through langcopy.Spoken.Quote", lang, name)
 }
 
 // NoCount fails unless each named phrase is written without a placeholder, for
