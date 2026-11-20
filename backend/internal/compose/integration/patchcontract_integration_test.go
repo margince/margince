@@ -135,9 +135,35 @@ func TestAPassportLifetimeFaultNamesTheLifetimeField(t *testing.T) {
 				} `json:"errors"`
 			} `json:"details"`
 		}
-		status := e.Call(t, "POST", "/v1/passports", AnyMap{"scopes": []string{"read"}, "ttl_hours": hours}, nil, &problem)
+		status := e.Call(t, "POST", "/v1/passports", AnyMap{"label": "ttl probe", "scopes": []string{"read"}, "ttl_hours": hours}, nil, &problem)
 		if status != http.StatusUnprocessableEntity || len(problem.Details.Errors) == 0 || problem.Details.Errors[0].Field != "ttl_hours" {
 			t.Errorf("ttl_hours %d → %d %+v, want 422 naming ttl_hours", hours, status, problem)
+		}
+	}
+}
+
+func TestAPassportRequestWithoutAUsableNameIsRefusedOnTheLabelField(t *testing.T) {
+	e := apptest.SetupApp(t)
+	apptest.BootstrapWorkspaceSession(t, e, "Passport name", "name@fable.test", "Admin")
+
+	for name, body := range map[string]AnyMap{
+		"no label":     {"scopes": []string{"read"}},
+		"null label":   {"label": nil, "scopes": []string{"read"}},
+		"empty label":  {"label": "", "scopes": []string{"read"}},
+		"spaces label": {"label": "   ", "scopes": []string{"read"}},
+	} {
+		var problem struct {
+			Details struct {
+				Errors []struct {
+					Field string `json:"field"`
+					Code  string `json:"code"`
+				} `json:"errors"`
+			} `json:"details"`
+		}
+		status := e.Call(t, "POST", "/v1/passports", body, nil, &problem)
+		if status != http.StatusUnprocessableEntity || len(problem.Details.Errors) == 0 ||
+			problem.Details.Errors[0].Field != "label" || problem.Details.Errors[0].Code != "required" {
+			t.Errorf("%s → %d %+v, want 422 naming label as required", name, status, problem)
 		}
 	}
 }

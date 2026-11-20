@@ -147,8 +147,9 @@ it("sends a follow-up's callback time as its due time, flagged as a time", async
     screen.getByRole("textbox", { name: "Next step" }),
     "Call back",
   );
-  const time = screen.getByRole("textbox", { name: "Time (optional)" });
-  expect(time.hasAttribute("disabled")).toBe(true);
+  const timeBox = () =>
+    screen.getByRole("textbox", { name: "Time (optional)" });
+  expect(timeBox().hasAttribute("disabled")).toBe(true);
   const dueField = screen.getByRole("textbox", {
     name: "Due date",
   }).parentElement;
@@ -159,8 +160,8 @@ it("sends a follow-up's callback time as its due time, flagged as a time", async
   await user.click(
     await screen.findByRole("button", { name: "Tuesday, 27 October 2026" }),
   );
-  expect(time.hasAttribute("disabled")).toBe(false);
-  await user.type(time, "15:00{Enter}");
+  expect(timeBox().hasAttribute("disabled")).toBe(false);
+  await user.type(timeBox(), "15:00{Enter}");
   await user.click(screen.getByRole("button", { name: "Log" }));
 
   await waitFor(() => expect(posted).toHaveLength(1));
