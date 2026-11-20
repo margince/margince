@@ -49,6 +49,11 @@ paths:
   /contacts:
     parameters:
       - $ref: '#/components/parameters/Cursor'
+      - $ref: '#/components/parameters/ScreenLayout'
+      - name: compact
+        x-agent-hidden: true
+        in: query
+        schema: { type: boolean }
     get:
       tags: [Contacts]
       operationId: listContacts
@@ -148,6 +153,7 @@ components:
     cookieAuth: { type: apiKey, in: cookie, name: crm_session }
   parameters:
     Cursor: { name: cursor, in: query, schema: { type: string } }
+    ScreenLayout: { name: screen_layout, x-agent-hidden: true, in: query, schema: { type: string } }
   responses:
     Minted: { description: minted }
   schemas:
@@ -422,8 +428,10 @@ func TestTheIndexCarriesEveryOperationTheContractKeeps(t *testing.T) {
 
 func TestAParameterMarkedAgentHiddenIsLeftOutOfTheContract(t *testing.T) {
 	_, out := generate(t)
-	if strings.Contains(out, "typeahead") {
-		t.Errorf("the agent contract still publishes a hidden parameter:\n%s", out)
+	for _, hidden := range []string{"typeahead", "compact", "screen_layout"} {
+		if strings.Contains(out, hidden) {
+			t.Errorf("the agent contract still publishes the hidden parameter %s:\n%s", hidden, out)
+		}
 	}
 	if !strings.Contains(out, "name: q") {
 		t.Error("the parameter beside the hidden one was dropped with it")
