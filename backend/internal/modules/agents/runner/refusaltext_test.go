@@ -11,7 +11,7 @@ import (
 )
 
 // The model reads a refusal in the surface's words, never in the error's own.
-// An unclassified fault's text, such as a driver error, stays in the log.
+// An unclassified fault's text, such as a driver error, stays in the trace.
 func TestARefusalReachesTheModelInTheSurfacesWords(t *testing.T) {
 	const raw = "pg: dial tcp 10.0.0.7:5432: connection refused"
 	surface := &fakeSurface{
@@ -30,8 +30,11 @@ func TestARefusalReachesTheModelInTheSurfacesWords(t *testing.T) {
 	for _, m := range brain.requests[len(brain.requests)-1].Messages {
 		prompt.WriteString(m.Content)
 	}
-	if strings.Contains(prompt.String(), raw) || strings.Contains(res.Steps[0].Observation, raw) {
-		t.Fatalf("the fault's own text reached the model or the trace: %q", res.Steps[0].Observation)
+	if strings.Contains(prompt.String(), raw) {
+		t.Fatalf("the fault's own text reached the model: %q", prompt.String())
+	}
+	if !strings.Contains(res.Steps[0].Observation, raw) {
+		t.Fatalf("the trace lost the real cause: %q", res.Steps[0].Observation)
 	}
 	if !strings.Contains(prompt.String(), surface.explained) {
 		t.Fatalf("the model was not told the surface's explanation: %q", prompt.String())

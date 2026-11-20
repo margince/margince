@@ -5,6 +5,7 @@ package agents
 
 import (
 	"context"
+	"fmt"
 	"maps"
 
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -32,18 +33,27 @@ func RouteRetryKey(ctx context.Context) string {
 // surface's own claim onto the context the route runs under. The surface then
 // claims nothing, so the route's claim is the only one and a retry through
 // either door replays the same answer.
-func (r *Registry) handKeyToRoute(ctx context.Context, spec mcp.ToolSpec, res reserved) (context.Context, reserved) {
+//
+// The route claims only once the call runs, after any approval is redeemed. So
+// a keyed call that also presents an approval is refused: its retry would meet
+// the spent approval before the route could replay the first answer.
+func (r *Registry) handKeyToRoute(ctx context.Context, spec mcp.ToolSpec, res reserved) (context.Context, reserved, error) {
 	if res.RetryKey == "" {
-		return ctx, res
+		return ctx, res, nil
 	}
 	r.mu.RLock()
 	_, runsRoute := r.tools[spec.Name].(routeVerbTool)
 	keyed := runsRoute && r.routeKeyed[spec.Name]
 	r.mu.RUnlock()
 	if !keyed {
-		return ctx, res
+		return ctx, res, nil
+	}
+	if !res.ApprovalID.IsZero() {
+		return ctx, res, &BadArgsError{Cause: fmt.Errorf(
+			"%s runs at once and is never staged, so it takes `%s` or `approval_id`, not both; repeat it with `%s` alone",
+			spec.Name, idempotencyKeyArg, idempotencyKeyArg)}
 	}
 	ctx = context.WithValue(ctx, routeRetryKey{}, res.RetryKey)
 	res.RetryKey = ""
-	return ctx, res
+	return ctx, res, nil
 }

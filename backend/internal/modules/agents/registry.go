@@ -333,7 +333,10 @@ func (r *Registry) InvokeServing(ctx context.Context, name string, in json.RawMe
 // approval it already spent. Redemption comes second, so a refused redemption
 // gives the key straight back — nothing ran.
 func (r *Registry) runClaimed(ctx context.Context, t mcp.Tool, spec mcp.ToolSpec, res reserved) (json.RawMessage, int, error) {
-	ctx, res = r.handKeyToRoute(ctx, spec, res)
+	ctx, res, err := r.handKeyToRoute(ctx, spec, res)
+	if err != nil {
+		return nil, 0, err
+	}
 	fresh, attempt, answered, records, err := r.claimFor(ctx, spec, res)
 	if !fresh {
 		// A replay hands over the records the original call served, and claimFor

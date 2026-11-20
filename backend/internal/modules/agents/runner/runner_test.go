@@ -74,7 +74,7 @@ type fakeSurface struct {
 }
 
 // Explain stands in for the registry's wording, which agents tests hold.
-func (s *fakeSurface) Explain(_ string, err error) string {
+func (s *fakeSurface) Explain(_ context.Context, _ string, err error) string {
 	if s.explained != "" {
 		return s.explained
 	}

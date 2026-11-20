@@ -58,6 +58,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/compose/promptlang"
+	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -319,7 +320,9 @@ func (agentLoopToolSurface) Specs() []mcp.ToolSpec { return agentLoopRegistry() 
 
 func (agentLoopToolSurface) Runnable(context.Context) []mcp.ToolSpec { return agentLoopRegistry() }
 
-func (agentLoopToolSurface) Explain(_ string, err error) string { return err.Error() }
+func (agentLoopToolSurface) Explain(_ context.Context, _ string, err error) string {
+	return agents.RunRefusal(err)
+}
 
 func (agentLoopToolSurface) Invoke(context.Context, string, json.RawMessage) (json.RawMessage, error) {
 	return nil, &workflow.StagedApprovalError{ApprovalID: ids.New[ids.ApprovalKind]()}

@@ -4,6 +4,7 @@
 package runner
 
 import (
+	"context"
 	"errors"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -18,11 +19,11 @@ const AdmissionRefused = "refused"
 // refusalText is what the model reads about a refused call. The allowlist
 // refusal is the runner's own words. Anything else is told as the MCP door
 // tells it, so an unclassified fault's text never reaches a model.
-func (r *Runner) refusalText(tool string, err error) string {
+func (r *Runner) refusalText(ctx context.Context, tool string, err error) string {
 	if errors.Is(err, errOutsideAgentSpec) {
 		return err.Error()
 	}
-	return r.tools.Explain(tool, err)
+	return r.tools.Explain(ctx, tool, err)
 }
 
 // observeRefusal feeds a refusal back as an observation and returns the
@@ -54,7 +55,8 @@ func observeRefusal(win *window, step modelStep, explained string, err error, me
 	if directive != "" {
 		suffix = " — " + directive
 	}
-	recorded := truncateTo(observation, traceObservationLimit-len(suffix)) + suffix
+	// The trace is read by people, so it keeps the real cause the model never sees.
+	recorded := truncateTo("tool call refused: "+err.Error(), traceObservationLimit-len(suffix)) + suffix
 	return Step{
 		Tool: step.Tool, Args: step.Args, Observation: recorded,
 		ModelID: meta.ModelID, Tier: meta.Tier, TokensIn: resp.InputTokens, TokensOut: resp.OutputTokens,

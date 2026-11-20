@@ -6,7 +6,7 @@
 package agentaccess
 
 // A route-backed write takes a caller's retry key when its route claims one, and
-// the repeat replays the first answer instead of writing again. Each call is its
+// the repeat replays the first answer and charges nothing. Each call is its
 // own trace, so the record the envelope carries is what must match.
 
 import (
@@ -20,7 +20,7 @@ import (
 
 func TestARouteBackedWriteRepeatedUnderItsRetryKeyWritesOnce(t *testing.T) {
 	e := setupConnector(t)
-	bearer := apptest.PassportBearer(t, e.AppEnv, "retrying client", "read", "write")
+	bearer, passport := apptest.PassportWithID(t, e.AppEnv, "retrying client", "read", "write")
 	const label = "Retry Keyed Lead Source"
 	create := func() string {
 		got := mcpRaw(t, e.AppEnv, http.MethodPost, "/mcp", fmt.Sprintf(
@@ -49,5 +49,28 @@ func TestARouteBackedWriteRepeatedUnderItsRetryKeyWritesOnce(t *testing.T) {
 	}
 	if count != 1 {
 		t.Fatalf("%d lead sources named %q, want the one the first call wrote", count, label)
+	}
+	// The replay changed nothing, so it spent no second write.
+	var listed struct {
+		Data []struct {
+			ID    string `json:"id"`
+			Usage struct {
+				Writes struct {
+					Used int `json:"used"`
+				} `json:"writes"`
+			} `json:"usage"`
+		} `json:"data"`
+	}
+	if status := e.Call(t, "GET", "/v1/passports", nil, nil, &listed); status != http.StatusOK {
+		t.Fatalf("passport list → %d", status)
+	}
+	spent := -1
+	for _, p := range listed.Data {
+		if p.ID == passport.String() {
+			spent = p.Usage.Writes.Used
+		}
+	}
+	if spent != 1 {
+		t.Errorf("a run and its replay spent %d writes (-1: passport not listed), want 1", spent)
 	}
 }

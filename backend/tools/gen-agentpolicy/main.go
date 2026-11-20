@@ -195,7 +195,7 @@ func derivePolicies(paths map[string]map[string]yaml.Node) ([]policy, []string) 
 					defects = append(defects, fmt.Sprintf("%s %s (%s): x-mcp-tool needs a verb and an auto_execute|confirmation_required|dynamic tier", httpMethod, path, op.OperationID))
 					continue
 				}
-				if defect := capDefect(p.Scope, op.MCPTool.Egress); defect != "" {
+				if defect := capDefect(p.Scope, p.ServedBy, op.MCPTool.Egress); defect != "" {
 					defects = append(defects, fmt.Sprintf("%s %s (%s): %s", httpMethod, path, op.OperationID, defect))
 					continue
 				}
@@ -224,8 +224,9 @@ func derivePolicies(paths map[string]map[string]yaml.Node) ([]policy, []string) 
 // defensible default, so there is no default: say which cap the act spends.
 //
 // The outbound caps leave the workspace unless an operation says it does not.
-// So an operation may declare `egress: false`, and only on a send or enrich cap.
-func capDefect(scope string, declared *bool) string {
+// So an operation may declare `egress: false`, only on a send or enrich cap, and
+// only where a route verb reads it: a registry tool states its own egress.
+func capDefect(scope, servedBy string, declared *bool) string {
 	switch {
 	case scope == "":
 		return "x-mcp-tool declares no scope — name the passport cap this operation consumes"
@@ -233,6 +234,8 @@ func capDefect(scope string, declared *bool) string {
 		return ""
 	case *declared:
 		return "x-mcp-tool egress: true is what the scope already says; declare only `egress: false`, on an operation that sends nothing out"
+	case servedBy != "route":
+		return "x-mcp-tool egress: false is read only by a route-backed verb; a registry tool states its own egress in its spec"
 	case scope != "send" && scope != "enrich":
 		return "x-mcp-tool egress: false lowers only a send or enrich cap, and scope " + scope + " sends nothing out already"
 	default:

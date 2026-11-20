@@ -5,6 +5,7 @@ package agents
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -260,16 +261,21 @@ func TestExplainSendsAMissingModelToTheSettings(t *testing.T) {
 	}
 }
 
-// The registry answers the scheduled runner in the MCP door's words. A fault the
-// taxonomy does not know is withheld, and a governed refusal keeps its detail.
-func TestTheRegistryExplainsARefusalAsTheMCPDoorDoes(t *testing.T) {
+// A scheduled run's model is told a refusal in words a run can act on. A fault
+// the taxonomy does not know is withheld, and a governed refusal keeps its detail.
+func TestARunIsToldARefusalItCanActOn(t *testing.T) {
 	r := NewRegistry(nil, nil)
 	const raw = "pg: dial tcp 10.0.0.7:5432: connection refused"
-	if got := r.Explain("read_record", errors.New(raw)); got != internalFaultAdvice {
+	if got := r.Explain(context.Background(), "read_record", errors.New(raw)); got != runFaultAdvice {
 		t.Errorf("an unclassified fault was explained as %q, want the fixed sentence", got)
 	}
-	denied := r.Explain("read_record", fmt.Errorf("compose: %w", apperrors.ErrPermissionDenied))
+	denied := r.Explain(context.Background(), "read_record", fmt.Errorf("compose: %w", apperrors.ErrPermissionDenied))
 	if !strings.Contains(denied, "permission_denied") {
 		t.Errorf("a governed refusal was explained as %q, want its code and detail", denied)
+	}
+	for _, door := range []string{"tools/list", "list_approvals", "admin"} {
+		if strings.Contains(runFaultAdvice, door) || strings.Contains(denied, door) {
+			t.Errorf("a run was pointed at %q, which it cannot reach", door)
+		}
 	}
 }
