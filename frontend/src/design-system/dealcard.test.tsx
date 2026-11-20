@@ -259,7 +259,7 @@ describe("DealCard name held to two lines", () => {
 
     const tip = screen.getByRole("tooltip");
     expect(tip).toHaveTextContent(LONG_NAME);
-    expect(link).toHaveAttribute("aria-describedby", tip.id);
+    expect(link).not.toHaveAttribute("aria-describedby");
     fireEvent.keyDown(link, { key: "Escape" });
     expect(screen.queryByRole("tooltip")).toBeNull();
     expect(link).toHaveFocus();
@@ -286,6 +286,50 @@ describe("DealCard name held to two lines", () => {
     act(() => link.focus());
 
     expect(screen.queryByRole("tooltip")).toBeNull();
-    expect(link).not.toHaveAttribute("tabindex");
+  });
+
+  it("raises no tip when a press, not the keyboard, focused the link", () => {
+    stubLineClamp({ lines: "2", scroll: 72, client: 40 });
+    focusFromPointer();
+    const link = nameLink(LONG_NAME);
+
+    act(() => link.focus());
+
+    expect(screen.queryByRole("tooltip")).toBeNull();
+  });
+
+  it("takes a hover's tip down as the pointer leaves a link a press focused", () => {
+    takeHoverClock();
+    armHoverIntent();
+    stubLineClamp({ lines: "2", scroll: 72, client: 40 });
+    focusFromPointer();
+    const link = nameLink(LONG_NAME);
+    const name = within(link).getByText(LONG_NAME);
+    act(() => link.focus());
+    fireEvent.pointerEnter(name);
+    act(() => {
+      vi.advanceTimersByTime(10_000);
+    });
+    expect(screen.getByRole("tooltip")).toBeInTheDocument();
+
+    fireEvent.pointerLeave(name);
+
+    expect(screen.queryByRole("tooltip")).toBeNull();
   });
 });
+
+// happy-dom matches `:focus-visible` on every focus; a pointer's focus in a
+// browser does not.
+function focusFromPointer() {
+  const matches = Element.prototype.matches;
+  vi.spyOn(Element.prototype, "matches").mockImplementation(function (
+    this: Element,
+    selector: string,
+  ) {
+    if (selector === ":focus-visible") return false;
+    if (selector === ":focus:not(:focus-visible)") {
+      return matches.call(this, ":focus");
+    }
+    return matches.call(this, selector);
+  });
+}

@@ -372,7 +372,8 @@ export function DealCard({
   const { locale } = useLocale();
   const {
     ref: dealLink,
-    trigger: { onPointerEnter, onPointerLeave, ...nameFocus },
+    // No `aria-describedby`: the link's own name is already the whole name.
+    trigger: { onPointerEnter, onPointerLeave, onFocus, onBlur: hideName },
     tip: nameTip,
   } = useTruncationTooltipAround<HTMLAnchorElement>(deal.name);
   // No `stalled` class: the warning Badge in the foot says it in words, and an
@@ -421,14 +422,25 @@ export function DealCard({
         // would also catch the company link's bubbled click, and the drop
         // guard would then refuse a navigation the reader did ask for.
         onClick={(event) => onOpen?.(deal, event)}
-        {...nameFocus}
+        // A press anywhere on the card focuses this link through its
+        // stretched `::after`; only keyboard focus asks for the name's tip.
+        onFocus={(event) => {
+          if (event.currentTarget.matches(":focus-visible")) onFocus(event);
+        }}
+        onBlur={hideName}
       >
         {/* The hover rides the name's own box: on the link it would ride the
             stretched `::after`, and the whole card would raise the tip. */}
         <span
           className="deal-name-text"
           onPointerEnter={onPointerEnter}
-          onPointerLeave={onPointerLeave}
+          onPointerLeave={() => {
+            onPointerLeave();
+            // Focus a press gave the link does not hold a hover's tip up.
+            if (dealLink.current?.matches(":focus:not(:focus-visible)")) {
+              hideName();
+            }
+          }}
         >
           {deal.name}
         </span>

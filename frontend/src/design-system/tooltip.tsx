@@ -16,6 +16,7 @@ import { createPortal } from "react-dom";
 import { isImeCommit } from "../lib/imecommit";
 import { coveredByLayer } from "./dialogfocus";
 import { useHoverIntent } from "./hoverintent";
+import { hidesLines } from "./lineclamp";
 import "./tooltip.css";
 
 // The gap between the anchor's box and the tip, and the margin the tip keeps
@@ -140,9 +141,9 @@ function clipped(element: Element | null): boolean {
 }
 
 // Asks for the clamp itself: a box under `overflow: visible` draws text taller
-// than itself whole. The pixel of slack is the one `useLineClamped` allows.
+// than itself whole.
 function clampedLines(element: Element): boolean {
-  if (element.scrollHeight <= element.clientHeight + 1) {
+  if (!hidesLines(element)) {
     return false;
   }
   const lines =
