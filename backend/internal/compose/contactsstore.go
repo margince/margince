@@ -4,6 +4,7 @@
 package compose
 
 import (
+	"github.com/margince/margince/backend/internal/compose/employerchange"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -12,5 +13,7 @@ import (
 
 func newContactsStore(db *database.DB) *contacts.Store {
 	return contacts.NewStore(db).WithConsumerMail(capture.MatcherTx).WithFloorCarry(EntityFloorCarry(db.Pool())).
-		WithSenderStamp(activities.StampProvenSendersTx)
+		WithSenderStamp(activities.StampProvenSendersTx).WithEmployerChangeProposer(employerchange.Proposer{DB: db})
 }
+
+func init() { employerchange.NewInbox = NewApprovalsService }

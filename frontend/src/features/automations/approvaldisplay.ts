@@ -126,6 +126,15 @@ export const DISPLAY_FIELDS: Readonly<Record<string, readonly DisplayField[]>> =
     // A colleague's request: the summary names who asked and what it moves.
     contact_share: [],
     legal_review_request: [],
+    // Who moved, from where to where, and the mail that says so.
+    employer_change: [
+      textRow("contact_name", "approval.field.contact_name"),
+      textRow("from_company_name", "approval.field.from_company"),
+      textRow("to_company_name", "approval.field.to_company"),
+      textRow("domain", "approval.field.domain"),
+      textRow("signature", "approval.field.signature"),
+      { field: "observed_on", label: "approval.field.observed_on", as: "date" },
+    ],
     task_due_date: [
       { field: "summary", label: "approval.field.step", as: "text" },
       { field: "due_date", label: "approval.field.due_date", as: "date" },

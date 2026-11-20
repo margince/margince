@@ -113,6 +113,7 @@ const memberStaffingMetadataReadVerdict = "retiring a member must find live depe
 // records why asking was never the point.
 
 var lifecycleCompanyReads = gatekit.Waive(map[string]string{
+	"internal/modules/contacts/employerchange.go:employerChangeSQL":             "capture's employer-change check, run inside the capture, triage or signature transaction under that machine principal. It reads the contact's owner, name and current employment and the two company names to stage a question only the contact's owner may open (a payload-owned approval kind). Nothing is returned to a caller, and accepting the question re-asks every grant as the owner",
 	"internal/modules/assignments/memberwork.go:memberAssignmentParents":        memberStaffingMetadataReadVerdict,
 	"internal/modules/privacy/erasure_manualreview.go:manualMentionSourcesSQL":  "the contact-delete-authorized eraser selects only identifiers of retained text requiring manual review. The compose flagger selects live controllers with unrestricted row scope, no field masks and current object read permission before issuing any notification; no matched text is copied",
 	"internal/modules/contacts/mergeprimaryrepair.go:mergeDroppedHeir":          "the merge-dropped-primary data task asks, as the system principal, whether a contact's archived primary sat at a company merged into its kept employer. Only merged_into_id is compared; no company column leaves the query, and the edge id goes to the audited promotion",
