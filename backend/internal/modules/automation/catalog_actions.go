@@ -202,8 +202,7 @@ func RuleTier(action string) string {
 	if def.Tier != tierDynamic {
 		return def.Tier
 	}
-	// The engine fires assign_owner at the zero scope.
-	if resolveAssignOwnerTier(AssignOwnerScope{}) == mcp.TierConfirmationRequired {
+	if resolveAssignOwnerTier(ruleFiringScope) == mcp.TierConfirmationRequired {
 		return tierConfirmationRequired
 	}
 	return tierAutoExecute

@@ -308,10 +308,6 @@ func authorableOnlyCatalogEntries() []CatalogEntry {
 	return []CatalogEntry{
 		inquiryCatalogEntry(),
 		{
-			// AUTHORABLE, not seeded: the honest name for the owner-
-			// assignment behaviour the OLD route_lead key carried before
-			// AUTO-NOTE-2's reconciliation (migrations/core/0078 re-keys
-			// any live row).
 			Key:          assignLeadOwnerName,
 			Group:        crmcontracts.AutomationCatalogEntryGroupInquiries,
 			Name:         "Assign new leads an owner",

@@ -205,3 +205,46 @@ func TestArchivingAFormWithoutAHandlingPlanSucceeds(t *testing.T) {
 		t.Fatalf("archive form: %d", status)
 	}
 }
+
+func TestArchivingAFormWithAPlanNeedsTheRightToChangeAutomations(t *testing.T) {
+	e := setupFormsApp(t)
+	e.DescribeCompany(t)
+	form := createForm(t, e, integration.AnyMap{"name": "Inquiries", "sender": "browser", "allowed_origins": []string{siteOrigin}})
+	var saved crmcontracts.WebsiteInquiryHandling
+	if status := e.Call(t, "PUT", "/v1/web-forms/"+form.ID+"/handling", inquirySettingsBody(t, e, form),
+		map[string]string{"If-Match": strconv.FormatInt(form.Version, 10)}, &saved); status != http.StatusOK {
+		t.Fatalf("save inquiry handling: %d", status)
+	}
+	var role struct {
+		Key string `json:"key"`
+	}
+	if status := e.Call(t, "POST", "/v1/roles", integration.AnyMap{"copy_from": "ops", "name": "Forms without automations"}, nil, &role); status != http.StatusCreated {
+		t.Fatalf("copy the ops role: %d", status)
+	}
+	if status := e.Call(t, "PATCH", "/v1/roles/"+role.Key+"/objects/automation",
+		integration.AnyMap{"create": false, "read": true, "update": false, "delete": false}, nil, nil); status != http.StatusOK {
+		t.Fatalf("take automation update from the role: %d", status)
+	}
+	var seat crmcontracts.User
+	if status := e.Call(t, "POST", "/v1/users", integration.AnyMap{"email": "forms@no-automations.example", "display_name": "Forms only", "role": role.Key}, nil, &seat); status != http.StatusCreated {
+		t.Fatalf("invite the seat: %d", status)
+	}
+	apptest.SetPasswordByLink(t, e, seat.Id.String(), "Forms-only-2026!")
+	formsOnly := e.AsSecondSeat(t, "forms@no-automations.example", "Forms-only-2026!")
+
+	if status := formsOnly.Call(t, "DELETE", "/v1/web-forms/"+form.ID, nil, nil, nil); status != http.StatusForbidden {
+		t.Fatalf("archive without automation update: %d, want 403", status)
+	}
+	var live, enabled bool
+	if err := e.Owner.QueryRow(t.Context(), `SELECT w.archived_at IS NULL, a.enabled FROM web_form w JOIN automation a ON a.id = w.handling_automation_id WHERE w.id = $1`,
+		form.ID).Scan(&live, &enabled); err != nil {
+		t.Fatal(err)
+	}
+	if !live || !enabled {
+		t.Fatalf("after the refused archive: form live=%v plan enabled=%v, want both", live, enabled)
+	}
+	plain := createForm(t, e, integration.AnyMap{"name": "Plain", "sender": "browser", "allowed_origins": []string{siteOrigin}})
+	if status := formsOnly.Call(t, "DELETE", "/v1/web-forms/"+plain.ID, nil, nil, nil); status != http.StatusOK {
+		t.Fatalf("the same seat archiving a form with no plan: %d, want 200", status)
+	}
+}

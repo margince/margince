@@ -108,7 +108,7 @@ func (s *Service) runDecisionEffect(ctx context.Context, id ids.ApprovalID, a ro
 	// (quotarelease.go).
 	if approve && a.Kind == KindVolumeRelease {
 		if err := s.applyVolumeRelease(ctx, a); err != nil {
-			return s.recordEffectFailure(ctx, a, windowNotWidenedSentence,
+			return s.recordEffectFailure(ctx, a, failureWindowNotWidened,
 				fmt.Errorf("approved, but widening the agent's window failed: %w", err))
 		}
 		s.recordEffectRan(ctx, id)
@@ -123,7 +123,7 @@ func (s *Service) runDecisionEffect(ctx context.Context, id ids.ApprovalID, a ro
 			return obsolete
 		}
 		if err != nil {
-			return s.recordEffectFailure(ctx, a, effectFailureSentence(err),
+			return s.recordEffectFailure(ctx, a, effectFailureOf(err),
 				fmt.Errorf("approved, but executing the %s effect failed: %w", a.Kind, err))
 		}
 		s.recordEffectRan(ctx, id)
@@ -140,25 +140,15 @@ var ErrEffectUnconfirmed = errors.New("approvals: the released write was not con
 // bookkeeping did not. It too is returned only after redeeming.
 var ErrEffectFollowUpFailed = errors.New("approvals: the released change landed and a later step failed")
 
-// The sentences a decider reads about a failed effect.
-const (
-	followUpFailedSentence = "this was approved and the change was made, but the automation that asked for it " +
-		"could not be marked finished"
-	effectUnconfirmedSentence = "this was approved and sent on, but the system it went to never confirmed it, " +
-		"so it may have happened. Check the record before you ask for it again"
-	effectNotRunSentence     = "this was approved, but the work it released did not run"
-	windowNotWidenedSentence = "the agent's window could not be widened, so the approval has not taken effect"
-)
-
-// effectFailureSentence is what the decider reads about a failed effect.
-func effectFailureSentence(err error) string {
+// effectFailureOf is what the decider is told about a failed effect.
+func effectFailureOf(err error) effectFailure {
 	switch {
 	case errors.Is(err, ErrEffectFollowUpFailed):
-		return followUpFailedSentence
+		return failureFollowUpFailed
 	case errors.Is(err, ErrEffectUnconfirmed):
-		return effectUnconfirmedSentence
+		return failureUnconfirmed
 	default:
-		return effectNotRunSentence
+		return failureNotRun
 	}
 }
 
@@ -187,7 +177,7 @@ func effectFailureSentence(err error) string {
 // tells them nothing at all.
 const failureMarkTimeout = 30 * time.Second
 
-func (s *Service) recordEffectFailure(ctx context.Context, a row, reader string, cause error) error {
+func (s *Service) recordEffectFailure(ctx context.Context, a row, failure effectFailure, cause error) error {
 	// Another attempt redeemed this approval, so the work is that attempt's to
 	// report. Marking it here would say the work failed while it may have run.
 	if _, lost := errors.AsType[*alreadyRedeemedError](cause); lost {
@@ -208,7 +198,7 @@ func (s *Service) recordEffectFailure(ctx context.Context, a row, reader string,
 		tag, err := tx.Exec(ctx,
 			`UPDATE approval SET effect_failed_at = now(), effect_failure = $2
 			  WHERE id = $1 AND effect_failed_at IS NOT DISTINCT FROM $3
-			    AND effect_ran_at IS NOT DISTINCT FROM $4`, id, reader, a.EffectFailedAt, a.EffectRanAt)
+			    AND effect_ran_at IS NOT DISTINCT FROM $4`, id, failure.sentence, a.EffectFailedAt, a.EffectRanAt)
 		if err == nil && tag.RowsAffected() == 0 {
 			s.logger().InfoContext(ctx, "approvals: effect failure already marked", "approval_id", id.String())
 		}

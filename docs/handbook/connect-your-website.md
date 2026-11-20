@@ -166,5 +166,7 @@ When you run Margince yourself, you decide what happens to what the form asks fo
 Also called: privacy notice, privacy policy, GDPR notice.
 
 ### How do I stop a form?
-To stop a form for a while, choose **Pause form** in the row's **⋯** menu. A paused form refuses posts until you choose **Resume form**. To stop it for good, choose **Archive**. An archived form's address stops working, and a new form gets a new address. Archiving also turns off the form's handling plan, which stays in **Settings** → **Automations** with its run history.
+To stop a form for a while, choose **Pause form** in the row's **⋯** menu. A paused form refuses posts until you choose **Resume form**.
+
+To stop it for good, choose **Archive**. An archived form's address stops working, and a new form gets a new address. Archiving also turns off the form's handling plan, which stays in **Settings** → **Automations** with its run history. To archive a form with a handling plan, you also need the right to change automations.
 Also called: turn off form, disable form, delete form.

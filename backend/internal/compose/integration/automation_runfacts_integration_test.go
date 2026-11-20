@@ -8,15 +8,18 @@ package integration
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"slices"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // stageRuleFixture is a deal moved into the stage a create-task rule watches,
@@ -144,4 +147,46 @@ func TestARunWhoseRecordTheReaderCannotSeeCarriesNoNames(t *testing.T) {
 		t.Fatalf("created = %+v stage = %v, want neither named", run.Created, run.TriggerStageName)
 	}
 	requireStr(t, "trigger_event_type", run.TriggerEventType, "deal.stage_changed")
+}
+
+// A run on a captured contact only its owner may see. The reader holds contact
+// and deal read, and still gets none of the run's names.
+func TestARunOnARecordOutsideTheReadersScopeCarriesNoNames(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	e.DescribeCompany(t)
+	f := moveADealIntoAWatchedStage(t, e)
+	contact := createdRecord(t, e, "/v1/contacts", AnyMap{"linkedin_url": apptest.ContactProfile(), "full_name": "Private Pat", "source": "manual"})
+	if _, err := e.Owner.Exec(t.Context(), `UPDATE contact SET visibility = 'owner', owner_id = $2 WHERE id = $1`, contact, signedInUser(t, e)); err != nil {
+		t.Fatal(err)
+	}
+	rule := createRouteLeadAutomation(t, e)
+	trigger, err := ids.Parse(f.eventID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	trace := fmt.Sprintf(`[{"Kind":"create_task","Target":{"Type":"contact","ID":"%s"},"Args":{"subject":"Call Pat back"}}]`, contact)
+	apptest.SeedWorkflowRun(t, e, apptest.WorkflowRun{Automation: rule, Status: "applied", Trigger: trigger, Planned: &trace, Applied: &trace, At: time.Now().UTC()})
+
+	admin := onlyRun(t, e, rule)
+	if admin.Target == nil || admin.Target.Label == nil || admin.Created == nil || admin.Created.Label == nil || admin.TriggerStageName == nil {
+		t.Fatalf("the contact's owner reads target=%+v created=%+v stage=%v, want all three named", admin.Target, admin.Created, admin.TriggerStageName)
+	}
+	const email, password = "rep@run-scope.test", "run-scope-rep-password"
+	apptest.SetPasswordByLink(t, e, createdRecord(t, e, "/v1/users", AnyMap{"email": email, "display_name": "Rae Rep", "role": "rep"}), password)
+	reader := e.AsSecondSeat(t, email, password)
+	if status := reader.Call(t, "GET", "/v1/deals/"+f.deal, nil, nil, nil); status != http.StatusOK {
+		t.Fatalf("the rep reading a deal → %d, want 200: the rep holds deal read", status)
+	}
+	if status := reader.Call(t, "GET", "/v1/contacts/"+contact, nil, nil, nil); status == http.StatusOK {
+		t.Fatal("the rep opened the private contact, want it outside their scope")
+	}
+
+	run := onlyRun(t, reader, rule)
+	if run.Target == nil || run.Target.Id.String() != contact || run.Target.Label != nil {
+		t.Fatalf("target = %+v, want the contact's id with no name", run.Target)
+	}
+	if run.Created == nil || run.Created.Label != nil || run.TriggerStageName != nil {
+		t.Fatalf("created = %+v stage = %v, want neither named", run.Created, run.TriggerStageName)
+	}
 }
