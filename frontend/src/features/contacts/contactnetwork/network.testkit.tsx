@@ -56,6 +56,7 @@ function stub(
   asks: readonly IntroRequest[] = [],
   captureGaps: readonly unknown[] = [],
   asksPending = false,
+  asksFail = false,
 ) {
   let answered: () => void = () => {};
   const seatAnswered = new Promise<void>((resolve) => {
@@ -79,6 +80,15 @@ function stub(
       if (url.includes("/intro-requests")) {
         if (asksPending) {
           return new Promise<Response>(() => {});
+        }
+        if (asksFail) {
+          return new Response(
+            JSON.stringify({ status: 500, code: "internal", detail: "down" }),
+            {
+              status: 500,
+              headers: { "content-type": "application/problem+json" },
+            },
+          );
         }
         return jsonResponse({ data: asks });
       }
@@ -105,6 +115,8 @@ export function renderTab(
     captureGaps?: readonly unknown[];
     // The ask list never answers, for a case about the page before it does.
     asksPending?: boolean;
+    // The ask list answers with a server error.
+    asksFail?: boolean;
     // The page's composer, for a case about the reader's own way in.
     onWrite?: () => void;
   }> = {},
@@ -115,6 +127,7 @@ export function renderTab(
     beside.asks,
     beside.captureGaps,
     beside.asksPending,
+    beside.asksFail,
   );
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },

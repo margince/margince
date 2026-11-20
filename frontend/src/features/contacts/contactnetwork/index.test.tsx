@@ -96,6 +96,28 @@ describe("a contact nobody here reaches", () => {
     // With nothing to hold, a chapter frames no empty card.
     expect(document.querySelector(".chapter-card")).toBeNull();
   });
+
+  it("keeps the Retry of an introduction list that could not be read", async () => {
+    renderTab(
+      {
+        contact_id: CONTACT,
+        nodes: [anchor],
+        edges: [],
+        routes: [],
+        groups_omitted: [],
+      },
+      "en",
+      {},
+      { asksFail: true },
+    );
+
+    expect(
+      await screen.findByText(en["contact.intro.asksFailed"]),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: en["common.retry"] }),
+    ).toBeTruthy();
+  });
 });
 
 // A server that predates the candidate list answers with the singular `route`

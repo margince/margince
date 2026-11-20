@@ -220,6 +220,9 @@ function NetworkChapters({
           read={read}
           view={view}
           settledAsks={settledAsks}
+          // Still true while a retry runs, so the card holding the Retry is
+          // not taken away by the read its own mount starts.
+          asksFailed={asks.errorUpdatedAt > asks.dataUpdatedAt}
         />
 
         {asking ? (
@@ -296,6 +299,7 @@ function ProgressChapter({
   read,
   view,
   settledAsks,
+  asksFailed,
 }: Readonly<{
   id: string;
   answer: ReactNode;
@@ -303,10 +307,14 @@ function ProgressChapter({
   read: GraphReading;
   view?: RelationshipMoments;
   settledAsks: readonly IntroRequest[];
+  asksFailed: boolean;
 }>) {
   const t = useT();
   const progressShown =
     read.showRelay || view !== undefined || settledAsks.length > 0;
+  const asksPanel = (
+    <IntroAsksPanel contactId={contactId} contactName={read.targetName} />
+  );
   return (
     <Chapter
       id={id}
@@ -332,8 +340,11 @@ function ProgressChapter({
             <MomentsTimeline view={view} asks={settledAsks} />
           </Panel>
           {/* An open ask keeps its verbs in a card of its own. */}
-          <IntroAsksPanel contactId={contactId} contactName={read.targetName} />
+          {asksPanel}
         </>
+      ) : asksFailed ? (
+        // A failed read holds the only Retry for it, so its card stays.
+        asksPanel
       ) : null}
     </Chapter>
   );
