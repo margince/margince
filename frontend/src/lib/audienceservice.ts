@@ -137,8 +137,7 @@ export function useMessageAudience(options: {
  *
  * The write's answer is an Activity, not the access block a message draws, so
  * it cannot stand in for the read. Awaiting the refetch keeps the control
- * pending until then; reporting the write done first left the open message
- * saying its old audience for as long as the refetch took.
+ * pending until the open message shows the new audience.
  */
 async function refreshMessageReads(
   queryClient: QueryClient,
