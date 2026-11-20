@@ -247,3 +247,24 @@ func TestTheRosterOffersTheSoleAdminARoleChangeThatKeepsAdmin(t *testing.T) {
 		t.Errorf("the sole admin after keeping admin alone = %q, want %q", got, "active admin")
 	}
 }
+
+// Removal is offered only on a deactivated member. The retirement preview
+// blocks it on anyone else, and an offer there opens a dialog that cannot
+// confirm.
+func TestTheRosterOffersRemovalOnlyOnADeactivatedMember(t *testing.T) {
+	e := setupRevocationEnv(t, "allowed-remove")
+	h := NewHandlers(e.svc)
+	active := e.seat(t, "remove-active", "rep")
+	gone := e.seat(t, "remove-gone", "rep")
+	if err := e.svc.DeactivateUser(e.wsCtx(e.admin), e.admin, DeactivateUserInput{UserID: gone.UserID}); err != nil {
+		t.Fatal(err)
+	}
+	offers := rosterActions(t, e, h, e.admin)
+	remove := crmcontracts.UserAllowedActions(actionRemove)
+	if slices.Contains(offers[active.UserID.UUID], remove) {
+		t.Errorf("an active member is offered remove: %v", offers[active.UserID.UUID])
+	}
+	if !slices.Contains(offers[gone.UserID.UUID], remove) {
+		t.Errorf("a deactivated member is not offered remove: %v", offers[gone.UserID.UUID])
+	}
+}

@@ -138,7 +138,7 @@ describe("SettingsScreen RBAC surfaces", () => {
   // never notifies anybody — the menu would sit there stale, which is the exact
   // failure "one state" is supposed to rule out. So the real account menu is
   // mounted beside the settings screen, and the assertion is that it followed.
-  it("shares its saved answer with the account menu", async () => {
+  it("shares the clicked theme with the account menu, with no Save", async () => {
     const user = userEvent.setup();
     render(
       <>
@@ -154,8 +154,7 @@ describe("SettingsScreen RBAC surfaces", () => {
         { name: "Dark" },
       ),
     );
-    await user.click(pressProfileSave());
-    await waitFor(() => expect(profileSave()).toBeNull());
+    expect(profileSave()).toBeNull();
 
     // The menu's own radio, read through the menu rather than through the store
     // underneath it. `setThemeChoice` publishes to `useSyncExternalStore`

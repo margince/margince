@@ -102,6 +102,8 @@
   align-items: center;
   gap: var(--space-2);
   flex-wrap: wrap;
+  /* A name with no space in it still wraps inside the card. */
+  overflow-wrap: anywhere;
 }
 
 /* PassportCard. The design system draws the mint form; this sheet draws only

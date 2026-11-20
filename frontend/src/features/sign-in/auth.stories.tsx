@@ -8,7 +8,7 @@ import {
   type RouteMap,
   StoryProviders,
 } from "../../testing/story-utils";
-import { AuthScreen, AvailabilityScreen } from "./auth";
+import { type AuthNotice, AuthScreen, AvailabilityScreen } from "./auth";
 import { ProviderButtons } from "./auth-providers";
 import { MfaForm } from "./auth-signin";
 
@@ -67,16 +67,18 @@ function AuthStory({
   // at the render boundary and leaves the wire alone.
   oidcProviders = [],
   locale = "en",
+  passwordReset = true,
 }: Readonly<{
-  notice?: "session-expired" | "signed-out";
+  notice?: AuthNotice;
   oidcProviders?: ReadonlyArray<{ key: string; label: string }>;
   locale?: Locale;
+  passwordReset?: boolean;
 }>) {
   installFetchStub({
     "GET /auth/capabilities": () =>
       jsonResponse({
         password: true,
-        password_reset: true,
+        password_reset: passwordReset,
         oidc_providers: oidcProviders,
       }),
   });
@@ -174,6 +176,16 @@ export const UnknownProvider: Story = {
 
 export const SessionExpired: Story = {
   render: () => <AuthStory notice="session-expired" />,
+};
+
+/** No self-service reset: no "Forgot password?", and a line names who can help. */
+export const NoPasswordReset: Story = {
+  render: () => <AuthStory passwordReset={false} />,
+};
+
+/** A reset address that arrived without its token, or was opened already. */
+export const ResetLinkIncomplete: Story = {
+  render: () => <AuthStory notice="reset-incomplete" />,
 };
 
 /**

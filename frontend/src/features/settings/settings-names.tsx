@@ -5,7 +5,6 @@ import { Field, TextInput } from "../../design-system/atoms";
 import { describedByIds } from "../../design-system/describedby";
 import { useSaveDraft, useSavePage } from "../../design-system/savepage";
 import { SettingRow } from "../../design-system/settingrow";
-import type { Toast } from "../../design-system/toast";
 import { formatNumber } from "../../format/format";
 import { greetingNameOf } from "../../format/greetingname";
 import { type Locale, useLocale, useT } from "../../i18n";
@@ -46,7 +45,7 @@ function runeCount(text: string): number {
  * The drafts of both names, handed to the page's save bar. A null draft means
  * "not edited", so a `/me` refetch never overwrites what is being typed.
  */
-export function useAccountNames(toast: Toast): AccountNames {
+export function useAccountNames(): AccountNames {
   const t = useT();
   const { locale } = useLocale();
   const me = useMe();
@@ -69,7 +68,6 @@ export function useAccountNames(toast: Toast): AccountNames {
       await sendNames(patch, attempt, t);
     },
     onSuccess: async () => {
-      toast.show(t("settings.saved"));
       // Awaited before the drafts drop, so the fields never flash the old names.
       await queryClient.invalidateQueries({ queryKey: ["me"] });
       void queryClient.invalidateQueries({ queryKey: ["scheduling-profile"] });

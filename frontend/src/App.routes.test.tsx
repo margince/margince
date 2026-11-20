@@ -122,7 +122,7 @@ describe("the address dispatch", () => {
     ],
     ["#/unsubscribe/tok?lang=en", screens.UnsubscribeScreen, { token: "tok" }],
     ["#/confirm/tok", screens.ConfirmDetailsScreen, { token: "tok" }],
-    ["#/reset-password", screens.ResetRoute, {}],
+    ["#/reset-password", screens.ResetAddressSignedIn, {}],
     ["#/x/fork", screens.CustomRoute, { name: "fork" }],
     [
       "#/no-such-page",

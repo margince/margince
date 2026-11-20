@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   type ReactNode,
   Suspense,
@@ -16,29 +16,25 @@ import { ScreenView } from "./App.views";
 import { useWarmRouteChunks } from "./App.warmchunks";
 import { ApprovalHost } from "./app/approvalhost";
 import { AskFromAddress } from "./app/askfromaddress";
-import {
-  AuthScreen,
-  AvailabilityScreen,
-  ReleaseSkewScreen,
-  SetupClaimScreen,
-} from "./app/authscreens";
+import { AuthScreen, ReleaseSkewScreen } from "./app/authscreens";
 import { isPublicBookingId } from "./app/bookingroute";
 import { AuthSplash } from "./app/bootsplash";
 import { lockScreen, useProbeAnswer } from "./app/confinement";
 import { DateFormatsProvider } from "./app/dateformats";
 import { useFeatureLanding } from "./app/featurelanding";
-import { mayReadHomeDeals, prefetchHome } from "./app/homeprefetch";
+import { useHomePrefetch } from "./app/homeprefetch";
 import { passesOnboardingGate } from "./app/onboarding-gate";
 import { useCommandPalette } from "./app/palettehotkey";
 import { Shell, useRoute } from "./app/shell";
 import { SourceHost } from "./app/sourcehost";
+import { UnavailableOrClaimable } from "./app/unavailableorclaimable";
 import { CallLogHost } from "./components/calllog.host";
+import { UnsavedExits } from "./components/unsaved";
 import { useJourneyProgress } from "./features/onboarding/onboarding-journey";
 import { WriteToHost } from "./features/settings/writetohost";
 import type { AuthNotice } from "./features/sign-in/auth";
 import { RESET_ROUTE } from "./features/sign-in/auth.route";
-import { fetchSetupStatus } from "./features/sign-in/setupclaim.queries";
-import { useLocale } from "./i18n";
+import { useAccountLocale, useLocale } from "./i18n";
 import { lazy } from "./i18n/lazy";
 import { useSkewedApiRelease } from "./lib/capabilities";
 import {
@@ -52,7 +48,7 @@ import { markJourney } from "./lib/journeymarks";
 import { useWarmProgressName } from "./lib/progressreader";
 import { SPA_RELEASE } from "./lib/release";
 import { routePattern } from "./lib/routepattern";
-import type { Screen } from "./lib/router";
+import { type Screen, takeHashCredential, watchAddress } from "./lib/router";
 import { AuthProbeError, consumeAuthExitNotice, useMe } from "./lib/session";
 import { sessionSeenNow } from "./lib/session.read";
 import {
@@ -62,7 +58,7 @@ import {
   writeStored,
 } from "./lib/storage";
 import { useTaskReminderNotifications } from "./lib/taskreminders";
-import { currentParams, useAddressWriters } from "./lib/urlstate";
+import { useAddressWriters } from "./lib/urlstate";
 import {
   renderableViewerZone,
   useBrowserZoneOnFirstSignIn,
@@ -130,60 +126,36 @@ export function App() {
       </Shell>
     );
   }
-  // The emailed reset link is a bearer credential, not a session check: it
-  // must reach the reset form whether or not this browser already carries a
-  // live cookie, so it is routed here, ahead of AuthedApp's session gate,
-  // rather than left for AuthedApp to reach only when unauthenticated (where
-  // an existing session instead rendered the authenticated shell's fallback
-  // for an unrecognised route).
   if (route.screen === RESET_ROUTE) {
-    return (
-      <RaillessFrame>
-        <ResetRoute />
-      </RaillessFrame>
-    );
+    return <ResetEntry route={route} />;
   }
   return <AuthedApp route={route} />;
 }
 
-// UnavailableOrClaimable splits the 503 the boundary already reached into its
-// two product states. "Not ready" is true of both, but only one of them has
-// something the contact in front of the browser can do: an installation that
-// holds no company and is WAITING to be claimed (ADR-0105) gets the claim
-// screen; anything else keeps the availability message.
-//
-// The probe runs only on this branch, and only for the installation kind: a
-// connectivity failure says nothing about whether a claim is possible, and
-// asking would replace a true message with a guess. While it is in flight the
-// availability screen stands — it is the honest answer until the probe says
-// otherwise, and it is what the user would have seen anyway.
-function UnavailableOrClaimable({
-  kind,
-  onRetry,
-}: Readonly<{ kind: "connection" | "installation"; onRetry: () => void }>) {
-  const claimable = useQuery({
-    queryKey: ["setup-status"],
-    queryFn: fetchSetupStatus,
-    enabled: kind === "installation",
-    retry: false,
-  });
-  // Retry re-probes BOTH. fetchSetupStatus resolves rather than throws, so a
-  // one-off failure caches a `false` under this key — without refetching it,
-  // "Try again" would keep showing the availability screen for an installation
-  // that has been claimable all along, and only a page reload would recover.
-  const retryBoth = () => {
-    onRetry();
-    if (kind === "installation") {
-      void claimable.refetch();
-    }
-  };
-  if (kind === "installation" && claimable.data?.claimable) {
-    // A successful claim provisions the installation, so the same /v1/me probe
-    // that sent us here now answers — the boundary re-resolves rather than this
-    // screen deciding where to go next.
-    return <SetupClaimScreen onClaimed={onRetry} status={claimable.data} />;
+// The emailed reset link is a bearer credential, not a session check. With its
+// token it reaches the reset form ahead of AuthedApp's session gate; without one
+// it goes through the gate. A link pasted while the gate waits is scrubbed back
+// to this same address, so the router is watched, not the route. A token once
+// seen stays decided, since the form forgets it as it takes it.
+function ResetEntry({
+  route,
+}: Readonly<{ route: ReturnType<typeof useRoute> }>) {
+  const tokenHeld = useSyncExternalStore(
+    watchAddress,
+    () => takeHashCredential(RESET_ROUTE) !== null,
+  );
+  const [carriesToken, setCarriesToken] = useState(tokenHeld);
+  if (tokenHeld && !carriesToken) {
+    setCarriesToken(true);
   }
-  return <AvailabilityScreen kind={kind} onRetry={retryBoth} />;
+  if (!carriesToken) {
+    return <AuthedApp route={route} />;
+  }
+  return (
+    <RaillessFrame>
+      <ResetRoute />
+    </RaillessFrame>
+  );
 }
 
 // Watched, so a sign-out here or in another tab ends Home's early reads at once.
@@ -250,25 +222,13 @@ function AuthedApp({
   // above this component. It cannot ask for `/me` itself, and this is the first
   // place the answer exists — so a choice made on another browser reaches the
   // catalog here or nowhere.
-  const { adoptLocale } = useLocale();
-  useEffect(() => {
-    const chosen = me.data?.user?.locale;
-    if (chosen) {
-      adoptLocale(chosen);
-    }
-  }, [me.data, adoptLocale]);
+  useAccountLocale(me.data?.user?.locale);
   // A user with no stored zone gets the browser's as a first guess. They
   // change it under Settings → Account.
   useBrowserZoneOnFirstSignIn(me.data);
   useEffect(() => {
-    const refused = noteSessionSeen(me.data, me.error);
-    if (me.data) {
-      hadSession.current = true;
-      setNotice(null);
-      markJourney("session");
-      return;
-    }
-    if (refused) {
+    // The refusal is tested first: a refused re-read still holds the old data.
+    if (noteSessionSeen(me.data, me.error)) {
       const exit = consumeAuthExitNotice();
       if (exit) {
         setNotice(exit);
@@ -276,6 +236,12 @@ function AuthedApp({
         setNotice("session-expired");
       }
       hadSession.current = false;
+      return;
+    }
+    if (me.data) {
+      hadSession.current = true;
+      setNotice(null);
+      markJourney("session");
     }
   }, [me.data, me.error]);
 
@@ -356,19 +322,12 @@ function AuthedApp({
     described,
     unfinished: progress.unfinished,
   });
-  const queryClient = useQueryClient();
-  const readsDeals = mayReadHomeDeals(me.data);
   useEffect(() => {
     if (shellReady) {
       markJourney("gates");
     }
   }, [shellReady]);
-  useEffect(() => {
-    if (!opensHome) {
-      return;
-    }
-    return prefetchHome(queryClient, currentParams(), readsDeals);
-  }, [opensHome, queryClient, readsDeals]);
+  useHomePrefetch(opensHome, me.data);
   useTaskReminderNotifications(authed);
   useFeatureLanding(shellReady, confinement !== null, disabled);
 
@@ -448,13 +407,16 @@ function AuthedApp({
             <CallLogHost>
               <SourceHost>
                 <ApprovalHost>
-                  <AuthedShell onOpenSearch={() => palette.show("all")}>
-                    <ScreenView
-                      screen={route.screen}
-                      id={route.id}
-                      id2={route.id2}
-                    />
-                  </AuthedShell>
+                  {/* Sign out in the shell's account menu asks the page's guard. */}
+                  <UnsavedExits>
+                    <AuthedShell onOpenSearch={() => palette.show("all")}>
+                      <ScreenView
+                        screen={route.screen}
+                        id={route.id}
+                        id2={route.id2}
+                      />
+                    </AuthedShell>
+                  </UnsavedExits>
                 </ApprovalHost>
               </SourceHost>
             </CallLogHost>

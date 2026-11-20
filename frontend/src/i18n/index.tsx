@@ -97,8 +97,8 @@ export function localeNameKey(locale: Locale): MessageKey {
   return `locale.name.${locale}`;
 }
 
-// Until /v1/me carries a locale, storage is the only place a pick made on the
-// sign-in screen can survive a reload.
+// Storage is where a pick made on the sign-in screen survives a reload, and the
+// only language a signed-out page can read.
 function rememberLocale(locale: Locale): void {
   writeStored(STORAGE_KEYS.locale, locale);
 }
@@ -238,9 +238,9 @@ type LocaleContextValue = {
    * Separate from `setLocale` because it is not a choice being MADE: it is one
    * already on record arriving late, so it must not be written back as a fresh
    * pick. The caller is whoever holds `/me` — the provider sits above it and
-   * cannot ask.
+   * cannot ask. Returns whether it changed the adopted language.
    */
-  adoptLocale: (locale: Locale) => void;
+  adoptLocale: (locale: Locale) => boolean;
 };
 
 const LocaleContext = createContext<
@@ -249,7 +249,7 @@ const LocaleContext = createContext<
   locale: DEFAULT_LOCALE,
   formats: dateTimePreferences(),
   setLocale: () => {},
-  adoptLocale: () => {},
+  adoptLocale: () => false,
 });
 
 export function LocaleProvider({
@@ -307,10 +307,11 @@ export function LocaleProvider({
       // chose.
       const usable = isLocale(next) ? next : preferredLocale();
       if (usable === adopted) {
-        return;
+        return false;
       }
       setAdopted(usable);
       switchLocale(usable, setLocaleState);
+      return true;
     },
     [adopted],
   );
@@ -354,6 +355,23 @@ export function LocaleProvider({
 
 export function useLocale(): LocaleContextValue {
   return useContext(LocaleContext);
+}
+
+/**
+ * The signed-in account's language, from `/me`, adopted for this page. It is
+ * stored as this browser's choice, so the sign-in screen after a sign-out or a
+ * reload speaks it too. A language this release does not ship is adopted as a
+ * fallback and never stored.
+ */
+export function useAccountLocale(chosen: Locale | undefined): void {
+  const { adoptLocale } = useLocale();
+  // Stored only when the provider adopts it anew. The provider outlives the
+  // signed-in screens, so a later pick stays stored through a remount.
+  useEffect(() => {
+    if (chosen && adoptLocale(chosen) && isLocale(chosen)) {
+      rememberLocale(chosen);
+    }
+  }, [chosen, adoptLocale]);
 }
 
 export function useT() {

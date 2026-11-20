@@ -11,7 +11,7 @@ import (
 // maxJPEGBlockScans bounds decode work, because image/jpeg walks every 8x8 block once per
 // scan. It admits 64 scans of the largest canvas Decode takes, so a small picture may carry
 // far more scans than the about 10 a progressive encoder writes.
-const maxJPEGBlockScans = maxSourcePixels
+const maxJPEGBlockScans = MaxSourcePixels
 
 // jpegScanCap is how many scans a width x height JPEG may carry within maxJPEGBlockScans.
 func jpegScanCap(width, height int) int {

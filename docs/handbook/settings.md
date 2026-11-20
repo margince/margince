@@ -157,11 +157,11 @@ The switch keeps its setting when someone resets data.
 Also called: require MFA, password MFA.
 
 ### How do I offer sign-in with Google or Microsoft?
-To offer sign-in with Google or Microsoft in Margince, store that company's app on Settings → **Sign-in and security** and keep its switch on.
-1. Under **Google app** or **Microsoft app**, open **Authorized redirect URIs**. Add each address to the app at Google or Microsoft.
-2. Enter the **Client ID** and **Client secret**, then choose **Store app**.
-3. Under **Sign-in methods**, check that **Continue with Google** or **Continue with Microsoft** is on.
-A provider that is on but has no app yet says it is not on the sign-in screen.
+To offer sign-in with Google or Microsoft in Margince, set up that company's app on Settings → **Sign-in and security** → **Sign-in apps**.
+1. Choose **Set up Google app** or **Set up Microsoft app**. The panel lists the addresses Google or Microsoft sends people back to: add each one to the app there.
+2. Enter the **Client ID** and **Client secret**, then choose **Save Google app** or **Save Microsoft app**.
+3. On the **Sign-in methods** tab, check that **Continue with Google** or **Continue with Microsoft** is on.
+A provider that is on but has no app yet says that it is not on the sign-in screen. It links to where you set up its app.
 Also called: single sign-on, Google login, Microsoft login.
 
 ## Members, Teams, and Seats and license

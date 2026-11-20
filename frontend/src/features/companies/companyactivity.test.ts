@@ -37,18 +37,28 @@ function view(over: Partial<Company360> = {}): Company360 {
   };
 }
 
-const lastContact = (at: string): Company360["last_contact"] => ({
-  at,
-  occurred_precision: "instant",
-  kind: "email",
-  activity_id: "a-1",
-});
+type Reading = NonNullable<NonNullable<Company360["state_strip"]>["dormancy"]>;
+
+function reading(over: Partial<Reading>): Company360 {
+  return view({
+    state_strip: {
+      account: { lifecycle: "customer", relationship_types: [] },
+      dormancy: {
+        rung: "active",
+        silent_days: 0,
+        no_activity: false,
+        ladder_days: [30, 60, 90],
+        ...over,
+      },
+    },
+  });
+}
 
 describe("an unrated account's verdict", () => {
-  it("is active after an exchange this month", () => {
+  it("is active and names the last activity", () => {
     expect(
       companyActivityVerdict(
-        view({ last_contact: lastContact("2026-10-20T10:00:00Z") }),
+        reading({ last_activity_at: "2026-10-20T10:00:00Z", silent_days: 8 }),
         words,
       ),
     ).toEqual({
@@ -58,42 +68,50 @@ describe("an unrated account's verdict", () => {
     });
   });
 
-  it("is going quiet after two silent months", () => {
+  it("names each colder rung with the silent days and the ladder behind it", () => {
+    for (const [rung, word, tone] of [
+      ["cooling", "co.verdict.cooling", "warning"],
+      ["dormant", "co.verdict.dormant", "warning"],
+      ["stale", "co.verdict.stale", "neutral"],
+    ] as const) {
+      expect(
+        companyActivityVerdict(
+          reading({
+            rung,
+            last_activity_at: "2026-08-20T10:00:00Z",
+            silent_days: 69,
+            ladder_days: [14, 45, 120],
+          }),
+          words,
+        ),
+      ).toEqual({
+        word,
+        sentence: t("co.verdict.silentFor", {
+          days: "69",
+          date: "20 Aug",
+          cooling: "14",
+          dormant: "45",
+          stale: "120",
+        }),
+        tone,
+      });
+    }
+  });
+
+  it("says no activity is recorded when there is none", () => {
     expect(
       companyActivityVerdict(
-        view({ last_contact: lastContact("2026-08-20T10:00:00Z") }),
+        reading({ rung: "stale", no_activity: true }),
         words,
       ),
-    ).toMatchObject({ word: "co.verdict.goingQuiet", tone: "warning" });
-  });
-
-  it("is dormant after half a year with nothing open", () => {
-    expect(
-      companyActivityVerdict(
-        view({ last_contact: lastContact("2026-03-02T10:00:00Z") }),
-        words,
-      ),
-    ).toMatchObject({ word: "co.verdict.dormant", tone: "neutral" });
-  });
-
-  it("is never dormant when the deal list was cut", () => {
-    const cut = view({ last_contact: lastContact("2026-03-02T10:00:00Z") });
-    const deals = cut.deals && { ...cut.deals, page: { has_more: true } };
-    expect(companyActivityVerdict({ ...cut, deals }, words)).toMatchObject({
-      word: "co.verdict.goingQuiet",
-    });
-  });
-
-  it("says nobody was contacted when no exchange is recorded", () => {
-    expect(companyActivityVerdict(view(), words)).toMatchObject({
-      word: "co.verdict.noContact",
+    ).toEqual({
+      word: "co.verdict.stale",
+      sentence: t("co.verdict.noActivity", { date: "5 Jan" }),
       tone: "neutral",
     });
   });
 
-  it("makes no call when the last exchange is withheld", () => {
-    expect(
-      companyActivityVerdict(view({ sections_omitted: ["last_touch"] }), words),
-    ).toBeUndefined();
+  it("makes no call when the page carries no reading", () => {
+    expect(companyActivityVerdict(view(), words)).toBeUndefined();
   });
 });

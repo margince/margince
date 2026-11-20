@@ -7,6 +7,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useIdempotencyKey } from "../api/idempotencykey";
+import { awaitArrival } from "../design-system/arrivalfocus";
 import { Button } from "../design-system/atoms";
 import { useT } from "../i18n";
 import type { RequiredGrant } from "../lib/capability";
@@ -123,7 +124,11 @@ export function useCreateRecord<Created extends { id: string }>({
       onCreated?.(created);
       onDone(session);
       if (opens) {
-        navigate({ screen, id: created.id });
+        // Focus is not on the new record's page, so its name takes it once
+        // that page mounts (design-system/arrivalfocus.ts).
+        const page = { screen, id: created.id };
+        awaitArrival(page);
+        navigate(page);
       }
     },
   });

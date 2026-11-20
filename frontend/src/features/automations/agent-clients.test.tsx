@@ -45,10 +45,12 @@ describe("MCP clients", () => {
     expect(gemini.getByText("By an admin")).toBeTruthy();
     expect(gemini.getByText("12")).toBeTruthy();
     expect(gemini.queryByText("Disabled")).toBeNull();
+    expect(gemini.getByText("Active")).toBeTruthy();
     const old = within(row(SELF_REGISTERED_CLIENT));
     expect(old.getByText("Registered itself")).toBeTruthy();
     expect(old.getByText("Never")).toBeTruthy();
     expect(old.getByText("Disabled")).toBeTruthy();
+    expect(old.queryByText("Active")).toBeNull();
     expect(
       within(row(PUBLISHED_CLIENT)).getByText("Published identity"),
     ).toBeTruthy();

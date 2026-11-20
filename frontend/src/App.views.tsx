@@ -31,7 +31,7 @@ import {
   ProgressScreen,
   ProjectScreen,
   ProjectsScreen,
-  ResetRoute,
+  ResetAddressSignedIn,
   SalesGoalsScreen,
   ScheduledSendsScreen,
   ScreenNotice,
@@ -171,7 +171,7 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
     // reached only via the server's redirect off GET /oauth/authorize
     // (#/oauth-consent?…&consent=<nonce>), never a rail destination.
     "oauth-consent": () => <OAuthConsent />,
-    [RESET_ROUTE]: () => <ResetRoute />,
+    [RESET_ROUTE]: () => <ResetAddressSignedIn />,
     [EXTENSION_SCREEN]: ({ id }) => <ExtensionRoute name={id} />,
     // The fork seam (app/custom.ts). Upstream's registry is empty, so in
     // vanilla this arm renders the not-found card for every address. That is

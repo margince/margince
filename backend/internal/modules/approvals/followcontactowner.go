@@ -5,9 +5,10 @@ package approvals
 
 // A pending request follows the owner of the record it names.
 //
-// contact_share and ownership_transfer name the owner read when they were
-// staged. Once the record changes hands, or its owner leaves, that member may
-// no longer answer, so the request is withdrawn on the writer's transaction.
+// contact_share, employer_change and ownership_transfer name the owner read
+// when they were staged. Once the record changes hands, or its owner leaves,
+// that member may no longer answer, so the request is withdrawn on the
+// writer's transaction.
 // Withdrawn is not declined: the colleague may ask the new owner.
 
 import (
@@ -22,28 +23,52 @@ import (
 )
 
 const (
-	contactShareOwnerMoved = "the contact changed owner; the previous owner may no longer share it"
-	contactShareOwnerLeft  = "the contact's owner left; their share requests go with them"
-	transferOwnerMoved     = "the record changed owner; the colleague it names no longer holds it"
+	employerChangeOwnerMoved = "the contact changed owner; the question about its employer was put to the previous owner"
+	employerChangeOwnerLeft  = "the contact's owner left; the question about its employer goes with them"
+	contactShareOwnerMoved   = "the contact changed owner; the previous owner may no longer share it"
+	contactShareOwnerLeft    = "the contact's owner left; their share requests go with them"
+	transferOwnerMoved       = "the record changed owner; the colleague it names no longer holds it"
 )
 
-// FollowContactOwnerInTx withdraws every pending share request on the contact
-// that names an owner other than to. to is nil for a contact nobody owns.
-func FollowContactOwnerInTx(ctx context.Context, tx pgx.Tx, contactID ids.UUID, to *ids.UUID) (int, error) {
-	withdrawn, err := withdrawPending(ctx, tx, approvalsubject.KindContactShare, contactShareOwnerMoved, func(arg func(any) int) string {
-		return fmt.Sprintf(`target_entity_type = 'contact' AND target_entity_id = $%d
-			AND proposed_change->>'owner_id' IS DISTINCT FROM $%d::text`, arg(contactID), arg(nullUUIDText(to)))
-	})
-	return len(withdrawn), err
+// ownerPutKinds are the contact questions put to its owner, each with why an
+// owner change and an owner's departure withdraw it.
+var ownerPutKinds = []struct{ kind, moved, left string }{
+	{approvalsubject.KindContactShare, contactShareOwnerMoved, contactShareOwnerLeft},
+	{approvalsubject.KindEmployerChange, employerChangeOwnerMoved, employerChangeOwnerLeft},
 }
 
-// WithdrawSharesDecidedByInTx withdraws every pending share request put to
-// member, for the handover of a member who left.
+// FollowContactOwnerInTx withdraws every pending share request and employer
+// question on the contact that names an owner other than to. to is nil for a
+// contact nobody owns.
+func FollowContactOwnerInTx(ctx context.Context, tx pgx.Tx, contactID ids.UUID, to *ids.UUID) (int, error) {
+	total := 0
+	for _, put := range ownerPutKinds {
+		withdrawn, err := withdrawPending(ctx, tx, put.kind, put.moved, func(arg func(any) int) string {
+			return fmt.Sprintf(`target_entity_type = 'contact' AND target_entity_id = $%d
+				AND proposed_change->>'owner_id' IS DISTINCT FROM $%d::text`, arg(contactID), arg(nullUUIDText(to)))
+		})
+		if err != nil {
+			return total, err
+		}
+		total += len(withdrawn)
+	}
+	return total, nil
+}
+
+// WithdrawSharesDecidedByInTx withdraws every pending share request and
+// employer question put to member, for the handover of a member who left.
 func WithdrawSharesDecidedByInTx(ctx context.Context, tx pgx.Tx, member ids.UUID) (int, error) {
-	withdrawn, err := withdrawPending(ctx, tx, approvalsubject.KindContactShare, contactShareOwnerLeft, func(arg func(any) int) string {
-		return fmt.Sprintf(`proposed_change->>'owner_id' = $%d::text`, arg(member.String()))
-	})
-	return len(withdrawn), err
+	total := 0
+	for _, put := range ownerPutKinds {
+		withdrawn, err := withdrawPending(ctx, tx, put.kind, put.left, func(arg func(any) int) string {
+			return fmt.Sprintf(`proposed_change->>'owner_id' = $%d::text`, arg(member.String()))
+		})
+		if err != nil {
+			return total, err
+		}
+		total += len(withdrawn)
+	}
+	return total, nil
 }
 
 // WithdrawnRequest is one pending request a follow withdrew, with the payload

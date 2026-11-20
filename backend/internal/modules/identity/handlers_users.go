@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"strings"
 	"unicode/utf8"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -50,7 +49,7 @@ func seatIdentity(
 		httperr.Write(w, r, httperr.Validation("email", "invalid_email", "a valid email address is required"))
 		return values.Email{}, "", false
 	}
-	name := strings.TrimSpace(rawName)
+	name := displayNameLine(rawName)
 	if !values.HasVisibleText(name) || utf8.RuneCountInString(name) > 255 {
 		httperr.Write(w, r, httperr.Validation("display_name", "length", "a display name of 1–255 characters is required"))
 		return values.Email{}, "", false

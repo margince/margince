@@ -1855,7 +1855,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## partner
 
-29 columns · primary key `(id)` · referenced by 0 foreign keys
+27 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1869,7 +1869,6 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `certified_staff` | `smallint`, default `0` | yes |  |
 | `company_id` | `uuid` | yes | The company this partner record extends (PK = FK). |
 | `joined_at` | `date` |  |  |
-| `last_contact_at` | `timestamp with time zone` |  |  |
 | `margin_tier` | `text` |  | The partner's margin tier; the allowed values are in the table's CHECK constraint. |
 | `next_step` | `text` |  | Deprecated as stored text: a value sent here is written as a task on the partner's company, held by the caller (or the human an agent acts for), and is not stored on the partner. |
 | `next_step_due_at` | `date` |  | Deprecated as stored text: the day the next step's task is due. |
@@ -1877,7 +1876,6 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `partner_fit_score` | `smallint` |  | Current partner-fit score; if partner_fit_override_reason is non-null this is the Commercial Judgement value. |
 | `partner_fit_score_computed` | `smallint` |  | Retained machine-computed partner-fit value while a Commercial Judgement override is in force. |
 | `partner_kinds` | `text[]`, default `'{}'::text[]` | yes | What the partner does with us, one or more kinds, sorted and without repeats. |
-| `relationship_health` | `numeric(3,2)` |  | Decimal-as-string 0..1 computed by the partner relationship-health formula; basis for 30/60/90 partner dormancy flags. |
 | `relationship_stage` | `text` | yes | The key of the stage from `/partner-stages` the partner stands on. |
 | `renews_at` | `date` |  |  |
 | `retention_rate` | `smallint` |  |  |
@@ -1908,7 +1906,6 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `partner_partner_fit_score_check`: `CHECK (((partner_fit_score IS NULL) OR ((partner_fit_score >= 0) AND (partner_fit_score <= 100))))`
 - `partner_partner_fit_score_computed_check`: `CHECK (((partner_fit_score_computed IS NULL) OR ((partner_fit_score_computed >= 0) AND (partner_fit_score_computed <= 100))))`
 - `partner_partner_kinds_check`: `CHECK ((partner_kinds <@ ARRAY['hosting', 'consulting', 'strategic', 'referral']))`
-- `partner_relationship_health_check`: `CHECK (((relationship_health IS NULL) OR ((relationship_health >= (0)::numeric) AND (relationship_health <= (1)::numeric))))`
 - `partner_retention_rate_check`: `CHECK (((retention_rate IS NULL) OR ((retention_rate >= 0) AND (retention_rate <= 100))))`
 - `partner_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
