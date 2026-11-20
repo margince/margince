@@ -50,7 +50,6 @@ type RouteVerb struct {
 	AnswerSchema json.RawMessage
 	// AskUserFirst is true when the app confirms the act before it runs.
 	AskUserFirst bool
-	// Egress is true when the act sends something out of the workspace.
 	Egress bool
 }
 

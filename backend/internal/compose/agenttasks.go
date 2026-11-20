@@ -99,7 +99,7 @@ func (t agentTasks) Create(ctx context.Context, in agents.NewTask) (agents.Task,
 		// makes RETURNING fire; approval_id is the conflict key, so the write is a
 		// no-op by construction.
 		//
-		// The WHERE answers an existing row only to the agent that holds it, and
+		// The `WHERE` answers an existing row only to the agent that holds it, and
 		// only while it is live (see above). Any other row returns nothing, and
 		// the caller gets the plain refusal.
 		row := tx.QueryRow(ctx, `
