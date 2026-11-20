@@ -24,8 +24,17 @@ applies to it.
 
 ## Which country judges a recipient
 
-Rules follow the recipient, not the sender. `recipientRequestCountry` in
-`backend/internal/modules/consent/pinnedsubject.go` picks one country per recipient:
+Two countries judge each recipient, each for its own kind of rule:
+
+| Rule | Follows | Why |
+|---|---|---|
+| Marketing: consent or an exception, the advertising cap, the subject label, the objection route | The recipient's country | Anti-spam law applies where the mail is received. The sender's own anti-spam law does not follow its mail abroad. |
+| The lawful basis: legitimate interest or not, the evidence windows, the lawful-basis warning | The recipient's country and the sending entity's, the stricter winning | The recipient's data-protection law reaches them where they are, such as GDPR Art. 3(2). The sender's binds the sender wherever the recipient is, such as GDPR Art. 3(1) or Vietnam's Law 91/2025/QH15 Art. 1. |
+| Who the controller is, who answers about the data, request deadlines | The sending entity's country | The controller owes them under its own law. |
+
+`recipientRequestCountry` in `backend/internal/modules/consent/pinnedsubject.go` resolves both
+countries once per recipient. It takes the sending entity's country from `senderCountryOf` and puts
+it in `RecipientCountry.Sender`. It picks the recipient's country from:
 
 - a country the sender stated for this message, through `recipient_countries` on the send or the
   preview. `CountryOverridesFor` in `backend/internal/shared/ports/commsauthz/countryoverride.go`
@@ -35,14 +44,21 @@ Rules follow the recipient, not the sender. `recipientRequestCountry` in
 - otherwise `recipientCountryTx` in `ruleselectors.go`, which reads the record: the contact's own
   address, then the address of the company they work for, or for a lead, the lead's company.
 
-A record that states no usable code resolves to no pack, and marketing to that recipient needs
-their consent.
+A record that states no usable code resolves to no marketing pack, and marketing to that recipient
+needs their consent. The lawful basis is then judged under the sending entity's pack alone.
+
+`RecipientCountry.dataProtectionRules` in `ruleselectors.go` folds the recipient's pack and the
+sender's with `Strictest`. `settlePackBasisTx` in `backend/internal/modules/consent/recipientpack.go`
+reads it: when either pack sets `no-legitimate-interests`, a legitimate-interest basis becomes the
+recipient's consent, or no basis. So a sender in Vietnam writing to a recipient in Germany needs
+consent or a case Vietnamese law names, although GDPR alone would accept a legitimate interest.
+`packRulesFor` in `authorizewindows.go` takes the shorter evidence windows of the two packs. It takes
+the marketing exception from the recipient's pack alone. `ConfirmSendWithoutLawfulBasis` in
+`lawfulbasiswarning.go` asks the same fold before it records a confirmation.
 
 A pack that sets `data-protection-follows-recipient` also takes the disclosures, the privacy page,
 the mail language and the request deadlines for its recipients, whatever country the sender is in.
-`backend/internal/modules/consent/recipientpack.go` holds that rule. A pack that sets
-`no-legitimate-interests` has `settlePackBasisTx` in the same file turn a legitimate-interest basis
-into the recipient's consent, or into no basis.
+`recipientpack.go` holds that rule too.
 
 ## The send preview
 
@@ -112,10 +128,20 @@ through `backend/internal/modules/activities/draftcontent.go`.
 ## The citations in the warning
 
 A pack may cite the provision behind a finding or a refusal, whether or not a review stamps it.
-`citationsFor` and `citationFor` in `backend/internal/modules/consent/citation.go` look the code up
-in the recipient's pack, for the sender's territory. They show none for an instrument not yet in
-force or already expired, or for a reviewed pack whose `review-due` has passed. The pack still
-applies in each of those cases; only the citation is withheld.
+`citationsFor` and `provisionsShown` in `backend/internal/modules/consent/citation.go` look the code
+up in the recipient's pack, for the sender's territory. For a finding about the lawful basis, a
+restriction, a withdrawn consent or the controller's particulars, they also look it up in the sending
+entity's pack (`senderCitesFinding`). The warning then names both laws, the recipient's first:
+"(GDPR Art. 6(1); Law 91/2025/QH15 Art. 9)". A marketing finding cites the recipient's pack alone.
+
+The answer carries every law in `provisions`, and the first one again in `provision` for older
+clients. A citation is withheld for an instrument not yet in force or already expired, or for a
+reviewed pack whose `review-due` has passed. The pack still applies in each of those cases; only the
+citation is withheld.
+
+The composer's warning also names the country the recipient was judged under and where it was read,
+such as "Country: Germany, from the employer’s address" (`refusalCountryText` in
+`frontend/src/features/mail/refusalcountry.ts`). The sender can correct it on the recipient's chip.
 
 ## Mail the engine sends for the pack
 
