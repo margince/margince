@@ -168,7 +168,10 @@ func (s *Store) ensureCompanyAndEmployment(ctx context.Context, tx pgx.Tx, in En
 		return err
 	}
 
-	return plantEmploymentEdge(ctx, tx, in, base, res.ContactID, companyID)
+	if err := plantEmploymentEdge(ctx, tx, in, base, res.ContactID, companyID); err != nil {
+		return err
+	}
+	return s.offerEmployerChangeTx(ctx, tx, capturedEmployerSignal(in, base, res.ContactID, companyID))
 }
 
 // employerMatchTx is the company match a sender of this domain is filed under,
