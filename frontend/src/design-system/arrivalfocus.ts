@@ -21,9 +21,9 @@ export function useArrivalFocus<Target extends HTMLElement>(
 
 // The page a press is opening, set just before it navigates there. A page that
 // many places open cannot tell which mount a press caused, so the press says
-// so. It holds while the reader stays on that page and has not yet pressed or
-// typed anything: a title that mounts again there, once the record has loaded,
-// still takes the focus, and after that the reader decides where focus goes.
+// so. It holds while the reader stays on that page and has not pressed or typed.
+// A title that mounts again there once the record loads still takes the focus.
+// After that, the reader decides where focus goes.
 let awaited: Route | null = null;
 let stopWatching: (() => void) | null = null;
 
