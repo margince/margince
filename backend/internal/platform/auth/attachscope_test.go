@@ -43,8 +43,8 @@ func TestAnAttachNeedsTheOwnerArmOrAWriteGrant(t *testing.T) {
 // half must still be there for an owner-private contact.
 func TestAnAttachStillFacesCapturePrivacy(t *testing.T) {
 	got := attachClause(t, human(principal.RowScopeTeam), tableContact)
-	if !strings.Contains(got, "t.visibility") || !strings.Contains(got, "rg.access = 'write'") {
-		t.Errorf("the attach clause lost capture privacy or the write arm:\n%s", got)
+	if !strings.Contains(got, "t.visibility") || !strings.Contains(got, "team_membership") {
+		t.Errorf("the attach clause lost capture privacy or the team's write arm:\n%s", got)
 	}
 }
 
