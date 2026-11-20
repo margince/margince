@@ -6,6 +6,8 @@ import type { MessageKey } from "./en";
 // en.ts and written to docs/reference/ui-copy-style-de.md.
 export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.import_identity_links": "Importierte E-Mail verknüpfen",
+  "systemJob.promise_kept":
+    "Eine Zusage schließen, die ein Termin als erfüllt zeigt",
   "systemJob.transcript_audience":
     "Terminnotizen erhalten die Lesenden des Termins",
   "systemJob.meeting_profile":
@@ -4656,6 +4658,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "commitment.looksKept":
     "Sieht erledigt aus: {name} hat den Termin am {date} angenommen.",
   "commitment.markKept": "Als erledigt markieren",
+  "commitment.autoKept":
+    "Margince hat das als erledigt markiert: {name} hat den Termin am {date} angenommen.",
+  "commitment.autoKeptPlain": "Margince hat das als erledigt markiert.",
+  "commitment.undo": "Rückgängig",
   "commitment.quote": "„{quote}“",
   "co.brief.by.model": "Von Margince geschrieben",
   "co.brief.by.deterministic": "Aus CRM-Datensätzen zusammengestellt",
@@ -11025,6 +11031,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.import_commit": "Ausführung des Imports",
   "jobs.kind.import_undo": "Rücknahme des Imports",
   "jobs.kind.import_validate": "Import-Testlauf",
+  "jobs.kind.promise_kept_sweep": "Durch Termine erfüllte Zusagen",
   "jobs.kind.transcript_audience_sweep": "Lesende von Terminnotizen",
   "jobs.kind.meeting_profile_retract_sweep": "Unternehmensfelder aus Terminen",
   "jobs.kind.initiative_enrolment_sweep":

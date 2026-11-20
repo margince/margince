@@ -6243,6 +6243,7 @@ public.idx_attachment_extraction_latest CREATE INDEX idx_attachment_extraction_l
 public.idx_attachment_held_copy CREATE INDEX idx_attachment_held_copy ON public.attachment USING btree (checksum, byte_size) WHERE ((checksum IS NOT NULL) AND (NOT bytes_withheld))
 public.idx_attachment_storage_key CREATE INDEX idx_attachment_storage_key ON public.attachment USING btree (storage_key) WHERE (storage_key <> ''::text)
 public.idx_audit_actor CREATE INDEX idx_audit_actor ON public.audit_log USING btree (actor_id, occurred_at DESC)
+public.idx_audit_claim_status CREATE INDEX idx_audit_claim_status ON public.audit_log USING btree (((after ->> 'claim_id'::text)), occurred_at DESC, id DESC) WHERE (after ? 'claim_status'::text)
 public.idx_audit_entity CREATE INDEX idx_audit_entity ON public.audit_log USING btree (entity_type, entity_id, occurred_at DESC)
 public.idx_audit_erasure_reason CREATE INDEX idx_audit_erasure_reason ON public.audit_log USING btree (((evidence ->> 'reason'::text))) WHERE ((action = 'erase'::text) AND (entity_type = 'contact'::text))
 public.idx_audit_log_batch CREATE INDEX idx_audit_log_batch ON public.audit_log USING btree (batch_id) WHERE (batch_id IS NOT NULL)
