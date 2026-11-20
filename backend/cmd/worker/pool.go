@@ -12,6 +12,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/dbsettings"
+	"github.com/margince/margince/backend/internal/platform/settings"
 )
 
 func openWorkerPool(ctx context.Context, cfg workerConfig, log *slog.Logger) (*pgxpool.Pool, error) {
@@ -31,5 +32,6 @@ func openWorkerPool(ctx context.Context, cfg workerConfig, log *slog.Logger) (*p
 		pool.Close()
 		return nil, err
 	}
+	settings.EnableCache(pool)
 	return pool, nil
 }

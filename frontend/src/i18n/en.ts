@@ -1784,7 +1784,7 @@ export const en = {
   "scheduling.reminder.pending": "Email reminder scheduled.",
   "scheduling.reminder.queued": "Email reminder queued for delivery.",
   "scheduling.reminder.unavailable":
-    "The reminder could not be sent. Check your email connection and email the guest directly.",
+    "The reminder could not be sent. If Margince’s email rules stopped it, your notifications say why. Email the guest directly.",
   "history.field.reminder_status": "Reminder status",
   "scheduling.myLink": "My booking link",
   "scheduling.linkIntro":
@@ -14899,6 +14899,8 @@ export const en = {
   "jurisdiction.documents.close": "Close",
   "jurisdiction.documents.readFailed": "The document could not be loaded.",
   "jurisdiction.documents.note": "For {audience} · {kind} · {language}",
+  "jurisdiction.legalNote":
+    "* The rules, deadlines and documents on this page are AI-generated drafts, not legal advice. Have a lawyer check them before you rely on them.",
   "jurisdiction.audience.employer": "the employer",
   "jurisdiction.audience.operator": "the operator",
   "jurisdiction.audience.employee": "staff",

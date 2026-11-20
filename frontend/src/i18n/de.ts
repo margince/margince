@@ -1862,7 +1862,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "scheduling.reminder.pending": "E-Mail-Erinnerung geplant.",
   "scheduling.reminder.queued": "E-Mail-Erinnerung zum Versand vorgemerkt.",
   "scheduling.reminder.unavailable":
-    "Die Erinnerung konnte nicht gesendet werden. Prüfe deine E-Mail-Verbindung und schreibe dem Gast direkt.",
+    "Die Erinnerung konnte nicht gesendet werden. Haben die E-Mail-Regeln von Margince sie gestoppt, steht der Grund in deinen Benachrichtigungen. Schreib dem Gast direkt.",
   "history.field.reminder_status": "Erinnerungsstatus",
   "scheduling.myLink": "Dein Buchungslink",
   "scheduling.linkIntro":
@@ -6435,13 +6435,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "legalEntities.legalName": "Firmierung",
   "legalEntities.country": "Land",
   "legalEntities.defaultCountry":
-    "Land: {country}. Die Standardfirma folgt dem Rechtsraum der Installation.",
+    "Land: {country}. Das Standardunternehmen folgt dem Rechtsraum der Installation.",
   "legalEntities.defaultCountryNone":
-    "Kein Land gesetzt. Die Standardfirma folgt dem Rechtsraum der Installation.",
+    "Kein Land gesetzt. Das Standardunternehmen folgt dem Rechtsraum der Installation.",
   "legalEntities.defaultCountryLink": "Unter Rechtsraum ändern",
   "jurisdiction.entities.title": "Unternehmen",
   "jurisdiction.entities.lead":
-    "Das Land jedes Unternehmens bestimmt das Recht für die Mails seiner Leute und die Datensätze, die es verantwortet.",
+    "Das Land jedes Unternehmens bestimmt das Recht für die Mails seines Teams und die Datensätze, die sie verantworten.",
   "jurisdiction.entities.default": "{country}, die Auswahl oben",
   "jurisdiction.entities.none": "Kein Land gesetzt",
   "jurisdiction.entities.edit": "Unternehmen ändern",
@@ -14974,6 +14974,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jurisdiction.documents.readFailed":
     "Das Dokument konnte nicht geladen werden.",
   "jurisdiction.documents.note": "Für {audience} · {kind} · {language}",
+  "jurisdiction.legalNote":
+    "* Die Regeln, Fristen und Dokumente auf dieser Seite sind KI-generierte Entwürfe und keine Rechtsberatung. Lass sie von einer Anwältin oder einem Anwalt prüfen, bevor du dich auf sie verlässt.",
   "jurisdiction.audience.employer": "den Arbeitgeber",
   "jurisdiction.audience.operator": "die betreibende Stelle",
   "jurisdiction.audience.employee": "Beschäftigte",

@@ -1817,7 +1817,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "scheduling.reminder.pending": "Đã lên lịch email nhắc.",
   "scheduling.reminder.queued": "Đang chờ gửi email nhắc.",
   "scheduling.reminder.unavailable":
-    "Không thể gửi lời nhắc. Kiểm tra kết nối email và gửi email trực tiếp cho khách.",
+    "Không thể gửi lời nhắc. Nếu quy tắc email của Margince đã chặn, thông báo của bạn sẽ nêu lý do. Hãy gửi email trực tiếp cho khách.",
   "history.field.reminder_status": "Trạng thái lời nhắc",
   "scheduling.myLink": "Liên kết đặt lịch của tôi",
   "scheduling.linkIntro":
@@ -14572,6 +14572,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "jurisdiction.documents.close": "Đóng",
   "jurisdiction.documents.readFailed": "Không tải được tài liệu.",
   "jurisdiction.documents.note": "Cho {audience} · {kind} · {language}",
+  "jurisdiction.legalNote":
+    "* Các quy tắc, thời hạn và tài liệu trên trang này là bản nháp do AI tạo, không phải tư vấn pháp lý. Hãy nhờ luật sư kiểm tra trước khi dựa vào chúng.",
   "jurisdiction.audience.employer": "doanh nghiệp",
   "jurisdiction.audience.operator": "đơn vị vận hành",
   "jurisdiction.audience.employee": "nhân viên",

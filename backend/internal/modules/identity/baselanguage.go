@@ -46,7 +46,7 @@ var BaseLanguage = config.DefineStored(config.Spec[string]{
 		return nil
 	},
 	Doc: "The language AI writes the shared record in: en, de or vi.",
-}, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, MachineryApplied: true, SurvivesDataReset: true})
+}, config.Store{Cacheable: true, RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, MachineryApplied: true, SurvivesDataReset: true})
 
 // BaseLanguageOf resolves the language shared AI writing is written in, inside
 // a transaction the caller already holds.
