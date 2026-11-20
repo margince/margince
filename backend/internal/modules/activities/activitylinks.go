@@ -178,12 +178,13 @@ func mayAttach(ctx context.Context, tx pgx.Tx, link ActivityLinkInput) error {
 	return mayLink(ctx, tx, link, auth.EnsureAttachTarget)
 }
 
-// mayCarry is mayAttach for a link the continued activity already holds: a
-// reply on its thread, a transcript on its meeting, a reminder on its message.
-// The record already shows that conversation, so the caller must see it and
+// mayCarry is mayAttach for a link the continued activity already holds. That
+// is a reply on its thread, a transcript on its meeting, a reminder on its
+// message.
+// The record already shows that conversation. So the caller must see it and
 // need not be allowed to change it. Mail capture files a colleague's contact
-// the same way, and a reply that refused what capture then files anyway would
-// only move the row.
+// the same way. A reply that refused what capture then files anyway would only
+// move the row.
 func mayCarry(ctx context.Context, tx pgx.Tx, link ActivityLinkInput) error {
 	return mayLink(ctx, tx, link, auth.EnsureLinkTarget)
 }

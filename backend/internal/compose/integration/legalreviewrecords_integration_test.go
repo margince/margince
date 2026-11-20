@@ -99,8 +99,10 @@ func packDeal(t *testing.T, e *Env) ids.UUID {
 	company := e.SeedCompany(t, "Audience Holdings", nil)
 	pipeline, open, _ := DealFixture(t, e)
 	companyID := ids.From[ids.CompanyKind](company)
+	// Rep1 owns it, so Rep1 may file mail onto it.
+	owner := ids.From[ids.UserKind](e.Rep1)
 	created, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
-		Name: "Audience renewal", PipelineID: pipeline, StageID: open, CompanyID: &companyID,
+		Name: "Audience renewal", PipelineID: pipeline, StageID: open, CompanyID: &companyID, OwnerID: &owner,
 	})
 	if err != nil {
 		t.Fatalf("seeding the deal: %v", err)

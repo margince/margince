@@ -8,15 +8,15 @@ package integration
 // "Add" splits by direction, and this is the pair that says so against a real
 // database.
 //
-// REFERENCE — naming a record you can see, from a row of your own — needs only
-// read. ATTACH — hanging a child row onto a record, where every reader of that
-// record will now see it — needs write authority over the record: the caller
-// owns it, shares a team with its owner, or holds a `write` grant.
+// REFERENCE (naming a record you can see, from a row of your own) needs only
+// read. ATTACH (hanging a child row onto a record that every reader of it will
+// see) needs write authority over the record. The caller owns it, shares a
+// team with its owner, or holds a `write` grant.
 //
-// Each test moves one thing between its arms (the grant level, or who calls).
-// A refusal on its own would prove nothing here: a probe that refused
-// everything would pass, and so would one that refused the reference direction
-// too, which no CRM does: you may name an account you can see on your own deal.
+// Each test moves one thing between its arms: the grant level, or who calls.
+// A refusal on its own would prove nothing. A probe that refused everything
+// would pass, and so would one that refused the reference direction too. No
+// CRM does that: you may name an account you can see on your own deal.
 
 import (
 	"context"
@@ -163,7 +163,7 @@ func attachPaths(t *testing.T, e *Env, company ids.UUID) map[string]func(ctx con
 }
 
 // A company every seat reads, owned by another team. Reading it lets the
-// caller name it on their own deal and nothing more: each attach door answers
+// caller name it on their own deal and nothing more. Each attach door answers
 // 403 until the caller holds write authority, as owner or through a write
 // share. An agent acting for the reader is refused like the reader.
 func TestAttachingToAReadableRecordNeedsWriteAuthority(t *testing.T) {
@@ -208,6 +208,27 @@ func TestAttachingToAReadableRecordNeedsWriteAuthority(t *testing.T) {
 		if err := attach(reader, e.Rep1); err != nil {
 			t.Errorf("%s under a write share → %v, want success", name, err)
 		}
+	}
+}
+
+// An all-scope seat holds write authority over every row. A capture-private
+// company it sees only through a read share still takes nothing from it.
+func TestAnAllScopeReaderCannotFileThroughAReadShare(t *testing.T) {
+	e := Setup(t)
+	company := e.SeedCompany(t, "Halden Werke", &e.Rep3)
+	e.MakeCapturePrivate(t, "company", company, e.Rep3)
+	perms := attachAuthorityPerms
+	perms.RowScope = principal.RowScopeAll
+	reader := onFullSeat(e.As(e.Rep1, []ids.UUID{e.Team1}, perms))
+	note := attachPaths(t, e, company)["note"]
+
+	shareCompany(t, e, company, "read")
+	if err := note(reader, e.Rep1); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("a note through a read share → %v, want permission-denied", err)
+	}
+	shareCompany(t, e, company, "write")
+	if err := note(reader, e.Rep1); err != nil {
+		t.Fatalf("a note through a write share → %v, want success", err)
 	}
 }
 

@@ -3,17 +3,15 @@
 
 package auth
 
-// The ATTACH direction of the row question: hanging a child row (an activity,
-// a note, a task, a file, a record link) onto a record somebody can read.
+// The ATTACH direction of the row question: hanging a child row onto a record.
+// The child is an activity, a note, a task, a file or a record link.
 //
-// The attached row is something every reader of that record will now see, so
-// it is a write to the record and needs write authority over it: the caller
-// owns it, shares a team with its owner, or holds a live `write` grant. Seeing
-// the record is not enough, whether the caller sees it through workspace
-// readability or through a `read` share. Naming a visible record as a value
-// in a row of the caller's own (a company on a new deal) stays a REFERENCE and
-// asks EnsureLinkTarget alone. The test a call site applies is: whose record
-// changes?
+// Every reader of the record will now see the attached row. So it is a write
+// to the record and needs write authority. The caller owns it, shares a team
+// with its owner, or holds a live `write` grant. Seeing the record is not
+// enough. Naming a visible record in a row of the caller's own (a company on a
+// new deal) is a REFERENCE and asks EnsureLinkTarget alone. The test a call
+// site applies is: whose record changes?
 //
 // The system principal holds write authority over every row, so automatic
 // filing that runs as the system is unaffected.
@@ -31,11 +29,10 @@ import (
 )
 
 // shareLevel selects which record_grant rows the visibility predicate's share
-// arm admits. Reading a shared record takes any live grant. Attaching takes a
-// `write` grant, and this matters where write authority alone would not
-// refuse: a row_scope=all caller holds write authority over every row, yet
-// sees a capture-private contact only through its share, and a share the
-// sharing screen called read-only must not let them add to it.
+// arm admits. Reading takes any live grant; attaching takes a `write` grant.
+// Write authority alone does not cover this. A row_scope=all caller holds it
+// over every row. Yet they may see a capture-private contact only through a
+// read share, and that share must not let them add to it.
 type shareLevel bool
 
 const (
@@ -96,9 +93,8 @@ func attachRefusal(ctx context.Context, table string) error {
 }
 
 // AttachClauseFor is EnsureAttachTarget as a clause, for a list that marks
-// which rows the caller may attach to: the visibility clause and the write
-// authority clause together. Empty means no narrowing, read exactly as
-// ScopeClauseFor's empty is.
+// which rows the caller may attach to. It joins the visibility clause and the
+// write authority clause. Empty means no narrowing, as ScopeClauseFor's does.
 func AttachClauseFor(ctx context.Context, table, alias string, arg func(any) int) (string, error) {
 	visible, err := writeShareClauseFor(ctx, table, alias, arg)
 	if err != nil {

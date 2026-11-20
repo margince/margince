@@ -37,11 +37,11 @@ package gates
 //     a `read` share anyway — a gate that accepted it would read green over the
 //     defect it exists for.
 //
-// One probe family is deliberately outside the census: auth.EnsureLinkTarget
-// and its attach-direction twin auth.EnsureAttachTarget. They ask whether the
-// caller may put this record in a row. Naming a record you can see from a row
-// of your own needs read; hanging a child row onto a record needs write
-// authority over it, which EnsureAttachTarget asks. Which callers of the read
+// One probe family is outside the census: auth.EnsureLinkTarget and its
+// attach-direction twin auth.EnsureAttachTarget. They ask whether the caller
+// may put this record in a row. Naming a record you can see from your own row
+// needs read. Hanging a child row onto a record needs write authority over it,
+// which EnsureAttachTarget asks. Which callers of the read
 // probe may stay on it is attachauthority_test.go's census, not this one.
 //
 // The LIST predicates (auth.ScopeClauseFor, auth.VisiblePredicate) are IN the

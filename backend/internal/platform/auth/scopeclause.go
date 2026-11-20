@@ -35,7 +35,7 @@ func ScopeClause(ctx context.Context, arg func(any) int) (string, error) {
 
 // writeShareClauseFor is ScopeClauseFor with the share arm narrowed to a
 // `write` grant, the visibility half of AttachClauseFor. Empty means no
-// narrowing, read exactly as ScopeClauseFor's empty is.
+// narrowing, as ScopeClauseFor's does.
 func writeShareClauseFor(ctx context.Context, table, alias string, arg func(any) int) (string, error) {
 	return clauseFor(ctx, table, alias, arg, writeShare)
 }

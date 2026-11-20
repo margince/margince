@@ -6,8 +6,8 @@
 package gates
 
 // A path that hangs a child row onto a record (an activity, a note, a task, a
-// file) must ask auth.EnsureAttachTarget, which needs write authority over the
-// record. auth.EnsureLinkTarget and auth.EnsureReferenceTarget ask only whether
+// file) must ask auth.EnsureAttachTarget. That probe needs write authority over
+// the record. auth.EnsureLinkTarget and auth.EnsureReferenceTarget ask only whether
 // the caller can SEE it. So every function that calls one of the two read
 // probes says here why seeing is enough, and a new caller fails until it does.
 //
