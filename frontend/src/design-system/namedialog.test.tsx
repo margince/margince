@@ -14,7 +14,6 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider, translate } from "../i18n";
 import { ProblemError } from "../lib/problem";
-import { KeyCode } from "./keyedname";
 import { NameDialog, nameRefusal } from "./namedialog";
 
 afterEach(cleanup);
@@ -61,7 +60,7 @@ it("sends one write for a double Enter", async () => {
   expect(write).toHaveBeenCalledExactlyOnceWith("Berlin");
 });
 
-it("describes the name field by its hint, the key in the code face", async () => {
+it("describes the name field by its hint line", async () => {
   render(
     <LocaleProvider initial="en">
       <NameDialog
@@ -70,7 +69,7 @@ it("describes the name field by its hint, the key in the code face", async () =>
         title="Rename field"
         label="Field name"
         initial="Fleet size"
-        hint={<KeyCode code="deal.cf_fleet_size" />}
+        hint="Existing records keep the old name."
         confirmLabel="Save"
         onSave={() => undefined}
       />
@@ -81,10 +80,8 @@ it("describes the name field by its hint, the key in the code face", async () =>
   const described = document.getElementById(
     field.getAttribute("aria-describedby") ?? "",
   );
-  expect(described).toHaveTextContent("Key: deal.cf_fleet_size");
-  expect(described?.querySelector("code")).toHaveTextContent(
-    "deal.cf_fleet_size",
-  );
+  expect(described).toHaveTextContent("Existing records keep the old name.");
+  expect(described?.querySelector("code")).toBeNull();
 });
 
 function Name({

@@ -6507,7 +6507,10 @@ paths:
       security: [{bearerAuth: []}]
       summary: Add an exit criterion to a stage.
       description: |-
-        Requires `pipeline:update`, like every other pipeline-shape edit.
+        Requires `pipeline:update`, like every other pipeline-shape edit. Leave
+        `key` out and Margince makes it from the label, adding a number on a clash
+        in the stage. A `key` you send is validated, and a live clash is
+        `criterion_key_taken`.
 
         Needs the passport permission Change records.
 

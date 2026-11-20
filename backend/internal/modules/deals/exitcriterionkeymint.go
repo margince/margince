@@ -5,6 +5,7 @@ package deals
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"unicode"
@@ -12,7 +13,9 @@ import (
 	"github.com/jackc/pgx/v5"
 	"golang.org/x/text/unicode/norm"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // criterionKeyFallback is the key stem of a label with no a-z letters or
@@ -21,6 +24,11 @@ const criterionKeyFallback = "criterion"
 
 // criterionKeyStemMax leaves room under maxCriterionKey for a clash suffix.
 const criterionKeyStemMax = 48
+
+// mintInsertAttempts bounds the retries after a lost race on a minted key.
+const mintInsertAttempts = 5
+
+const liveCriterionKeyIndex = "stage_exit_criterion_stage_key_live_ux"
 
 // criterionKeyFromLabel turns a label into the stem of its key. Accents fold
 // away and anything but a-z and digits becomes one underscore. A leading digit
@@ -54,27 +62,85 @@ func criterionKeyFromLabel(label string) string {
 	return stem
 }
 
-// mintCriterionKey answers the key of a criterion created without one: the
-// label's stem, or the stem with the lowest free number among live keys.
-// The caller holds the stage's criteria lock, so the answer stays free.
+// mintCriterionKey answers the key of a criterion created without one. It is
+// the label's stem, or the stem plus one above the highest number in use among
+// the stage's live keys. One query reads it, so no ceiling caps same-stem keys.
 func mintCriterionKey(ctx context.Context, tx pgx.Tx, stageID ids.StageID, label string) (string, error) {
 	stem := criterionKeyFromLabel(label)
-	for next := 1; next <= 1000; next++ {
-		candidate := stem
-		if next > 1 {
-			candidate = fmt.Sprintf("%s_%d", stem, next)
+	var bareTaken bool
+	var highest int64
+	// The stem holds only a-z, 0-9 and `_`, so it is safe inside the pattern.
+	// The suffix is capped at six digits so the cast cannot overflow.
+	err := tx.QueryRow(ctx, `
+		SELECT COALESCE(bool_or(key = $2::text), false),
+		       COALESCE(max(substring(key from '_([0-9]{1,6})$')::bigint) FILTER (WHERE key <> $2::text), 1)
+		  FROM stage_exit_criterion
+		 WHERE stage_id = $1 AND archived_at IS NULL
+		   AND (key = $2::text OR key ~ ('^' || $2::text || '_[0-9]{1,6}$'))`,
+		stageID, stem).Scan(&bareTaken, &highest)
+	if err != nil {
+		return "", fmt.Errorf("read the criterion keys sharing %q: %w", stem, err)
+	}
+	if !bareTaken {
+		return stem, nil
+	}
+	return fmt.Sprintf("%s_%d", stem, highest+1), nil
+}
+
+// insertCriterionKeyed inserts the row. A key the caller chose that loses a
+// race on the live-key index answers criterion_key_taken. A minted key asks
+// `mint` again, a bounded number of times, because the winner is now visible.
+func insertCriterionKeyed(
+	ctx context.Context, tx pgx.Tx, in CreateCriterionInput, kind CriterionKind, position int,
+	mint func() (string, error),
+) (ids.ExitCriterionID, error) {
+	attempts := 1
+	if in.MintKey {
+		attempts = mintInsertAttempts
+	}
+	var id ids.ExitCriterionID
+	for range attempts {
+		if in.MintKey {
+			key, err := mint()
+			if err != nil {
+				return id, err
+			}
+			in.Key = key
 		}
-		var taken bool
-		if err := tx.QueryRow(ctx, `
-			SELECT EXISTS (
-				SELECT 1 FROM stage_exit_criterion
-				 WHERE stage_id = $1 AND key = $2 AND archived_at IS NULL)`,
-			stageID, candidate).Scan(&taken); err != nil {
-			return "", fmt.Errorf("check the minted criterion key: %w", err)
-		}
-		if !taken {
-			return candidate, nil
+		var err error
+		if id, err = insertCriterionSavepointed(ctx, tx, in, kind, position); !isLiveCriterionKeyClash(err) {
+			return id, err
 		}
 	}
-	return "", fmt.Errorf("every key number up to 1000 is in use for the stem %q", stem)
+	return id, &values.ParseError{
+		Field: criterionKeyField, Code: codeCriterionKeyTaken,
+		Message: "this stage already asks for a criterion under that key",
+	}
+}
+
+// insertCriterionSavepointed runs the insert inside a savepoint, so a unique
+// violation leaves the surrounding transaction usable for a retry.
+func insertCriterionSavepointed(
+	ctx context.Context, tx pgx.Tx, in CreateCriterionInput, kind CriterionKind, position int,
+) (ids.ExitCriterionID, error) {
+	sp, err := tx.Begin(ctx)
+	if err != nil {
+		return ids.ExitCriterionID{}, fmt.Errorf("open the criterion savepoint: %w", err)
+	}
+	id, err := insertCriterion(ctx, sp, in, kind, position)
+	if err != nil {
+		if rbErr := sp.Rollback(ctx); rbErr != nil {
+			return id, errors.Join(err, rbErr)
+		}
+		return id, err
+	}
+	if err := sp.Commit(ctx); err != nil {
+		return id, fmt.Errorf("release the criterion savepoint: %w", err)
+	}
+	return id, nil
+}
+
+func isLiveCriterionKeyClash(err error) bool {
+	constraint, ok := storekit.UniqueViolation(err)
+	return ok && constraint == liveCriterionKeyIndex
 }

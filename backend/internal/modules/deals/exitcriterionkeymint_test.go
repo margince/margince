@@ -4,8 +4,12 @@
 package deals
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func TestCriterionKeyFromLabelAlwaysPassesTheKeyShape(t *testing.T) {
@@ -26,6 +30,22 @@ func TestCriterionKeyFromLabelAlwaysPassesTheKeyShape(t *testing.T) {
 		}
 		if err := validCriterionKey(got + "_999"); err != nil {
 			t.Errorf("key %q from %q fails the shape once suffixed: %v", got, label, err)
+		}
+	}
+}
+
+func TestAnOmittedKeyIsToldFromAnEmptyOne(t *testing.T) {
+	for body, wantMint := range map[string]bool{
+		`{"label":"A","kind":"custom"}`:             true,
+		`{"key":"","label":"A","kind":"custom"}`:    false,
+		`{"key":"a_b","label":"A","kind":"custom"}`: false,
+	} {
+		var req crmcontracts.CreateStageExitCriterionRequest
+		if err := json.Unmarshal([]byte(body), &req); err != nil {
+			t.Fatal(err)
+		}
+		if got := criterionInputOf(ids.StageID{}, req).MintKey; got != wantMint {
+			t.Errorf("%s: MintKey = %v, want %v", body, got, wantMint)
 		}
 	}
 }
