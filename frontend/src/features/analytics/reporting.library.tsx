@@ -15,7 +15,7 @@ import { unwrap } from "../../lib/problem";
 import { navigate, useRoute } from "../../lib/router";
 import { useUrlParams } from "../../lib/urlstate";
 import { AnalyticsBoard } from "./analytics.board";
-import type { AnalyticsScope } from "./analytics.context";
+import { type AnalyticsScope, scopeName } from "./analytics.context";
 import { CustomReportDrawer } from "./reporting.custombuilder";
 import { CustomReportPreview } from "./reporting.custompreview";
 import { REPORTING_PERIODS } from "./reporting.filters";
@@ -160,7 +160,7 @@ export function ReportingLibrary({
                                 {report.name}
                               </Button>
                               <p className="t-sub">
-                                {report.selection.scope.label} ·{" "}
+                                {scopeName(report.selection.scope, t)} ·{" "}
                                 {t(`reporting.${report.selection.period}`)}
                               </p>
                             </>

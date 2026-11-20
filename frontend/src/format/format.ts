@@ -32,6 +32,7 @@ export {
   weekdayInitial,
 } from "./format.dates";
 export { INTL_LOCALE } from "./intllocale";
+export { formatFinePercent, formatPercent } from "./percent";
 
 // Money arrives as integer minor units + ISO currency (data-semantics §1).
 // The only transformation is the currency's minor-unit scaling — display,
@@ -214,28 +215,6 @@ export function formatUsdPerMTok(price: string, locale: Locale): string {
   }).format(value);
 }
 
-/**
- * A share of a whole where the FRACTION matters: "0.4 %", "12.0 %".
- *
- * `formatPercent` rounds to whole numbers, which is right for progress. It is
- * wrong for a rate held to a threshold below one percent — a transition sitting
- * at 0.4% undone would print "0%" and read as flawless, which is the rounding
- * that flatters exactly where flattery is dangerous.
- *
- * Zero is still "0 %": nothing went wrong is a whole fact, and "0.0 %" claims a
- * measurement where there is simply nothing to measure.
- */
-export function formatFinePercent(fraction: number, locale: Locale): string {
-  if (fraction === 0) {
-    return formatPercent(0, locale);
-  }
-  return new Intl.NumberFormat(INTL_LOCALE[locale], {
-    style: "percent",
-    minimumFractionDigits: 1,
-    maximumFractionDigits: 1,
-  }).format(fraction);
-}
-
 export function formatNumber(
   value: number,
   locale: Locale,
@@ -255,21 +234,6 @@ export function formatHours(hours: number, locale: Locale): string {
     unitDisplay: "short",
     maximumFractionDigits: 1,
   }).format(hours);
-}
-
-/**
- * A share of a whole as a whole-number percentage: "42%", or "42 %" for a
- * German reader, whose typography puts a space before the sign.
- *
- * Whole numbers only, because what this labels is progress — a ring, a chip —
- * where "41.7%" claims a precision a count of scanned messages does not have.
- * A rate that carries a real fraction is `formatFinePercent`'s job.
- */
-export function formatPercent(fraction: number, locale: Locale): string {
-  return new Intl.NumberFormat(INTL_LOCALE[locale], {
-    style: "percent",
-    maximumFractionDigits: 0,
-  }).format(fraction);
 }
 
 /**
@@ -497,4 +461,5 @@ export {
   formatAnalyticsMoneyOrAbsent,
   formatAnalyticsNumber,
   formatAnalyticsPercent,
+  formatAnalyticsPercentPoints,
 } from "./format.analytics";

@@ -54,12 +54,12 @@ var activityColumns = map[string]Column{
 	}, Example: same("held")},
 	"direction": {Description: langcopy.Phrase{
 		En: "Which way it went: inbound if the contact reached you, outbound if you reached them. Written only when a row creates the activity.",
-		De: "In welche Richtung es ging: inbound, wenn der Kontakt dich erreicht hat, outbound, wenn du ihn erreicht hast. Wird nur geschrieben, wenn eine Zeile die Aktivität anlegt.",
+		De: "In welche Richtung es ging: inbound, wenn der Kontakt dich erreicht hat, outbound, wenn du ihn erreicht hast. Wird nur geschrieben, wenn eine Zeile die Aktivität erstellt.",
 		Vi: "Chiều của hoạt động: inbound nếu liên hệ tìm bạn, outbound nếu bạn tìm họ. Chỉ được ghi khi dòng tạo hoạt động mới.",
 	}, Example: same("outbound")},
 	"activity.owner_email": {Description: langcopy.Phrase{
 		En: "Email of the Margince user the activity is attributed to, and who hosts a meeting. If no user has this email, you become the author and the import preview says so. Written only when a row creates the activity.",
-		De: "E-Mail-Adresse des Mitglieds, dem die Aktivität zugeschrieben wird und das einen Termin leitet. Hat kein Mitglied diese Adresse, wirst du Verfasser, und die Importvorschau weist darauf hin. Wird nur geschrieben, wenn eine Zeile die Aktivität anlegt.",
+		De: "E-Mail-Adresse des Mitglieds, dem die Aktivität zugeschrieben wird und das einen Termin leitet. Hat kein Mitglied diese Adresse, wirst du Verfasser, und die Importvorschau weist darauf hin. Wird nur geschrieben, wenn eine Zeile die Aktivität erstellt.",
 		Vi: "Email của thành viên Margince được ghi là tác giả hoạt động và là chủ trì cuộc họp. Nếu không thành viên nào có email này, bạn sẽ là tác giả và bản xem trước lần nhập sẽ báo điều này. Chỉ được ghi khi dòng tạo hoạt động mới.",
 	}, Example: same("mai@yourcompany.com")},
 }

@@ -4,12 +4,10 @@ German is translated from the English catalog beside it: `frontend/src/i18n/en.t
 for `frontend/src/i18n/de.ts`, and the sibling `en.json` for each extension's
 `de.json` (for example `extensions/openchannel/frontend/i18n/en.json`).
 [ui-copy-style.md](ui-copy-style.md) binds it too. This page states only what
-German adds or changes. Vietnamese has its own page,
-[ui-copy-style-vi.md](ui-copy-style-vi.md).
+German adds or changes. Vietnamese has [its own page](ui-copy-style-vi.md).
 
-Part of it is mechanical: [What the gate holds](#what-the-gate-holds) names
-the three tests that hold it. Everything else is the author's judgement, and a
-reviewer reads a German change against this page.
+[What the gate holds](#what-the-gate-holds) names the three tests that hold the
+mechanical part. A reviewer reads the rest of a German change against this page.
 
 ## Source and claim strength
 
@@ -282,6 +280,7 @@ gives, because it is ordinary German in another sense.
 | Daily digest | Morgenbericht | `Briefing`, `Tagesbericht`, Digest |
 | Agent decisions awaiting a human | Freigaben (one Freigabe) | Entscheidungen as the name of this surface (a decision in ordinary prose is an Entscheidung) |
 | Approve, approval | freigeben, Freigabe | `genehmigen`, `genehmigt`, `Genehmigung`, `Genehmigungen` |
+| Share, shared | teilen, geteilt ("Kontakte teilen", "Mit dir geteilt") | freigeben, Freigabe for sharing |
 | A classifier's result | Ergebnis, Prüfung | `Urteil`, `Urteile`, `Verdikt` |
 | A read result | Befund, Befunde | Fund, Funde |
 | Something a party said they would do | Zusage | `Versprechen` |
@@ -291,7 +290,7 @@ gives, because it is ordinary German in another sense.
 | The legal entity behind an installation | Rechtsträger | rechtliche Einheit, juristische Person |
 | The running Margince system | Installation | `Deployment`, `Instanz`, Bereitstellung for the running system |
 | Administrator | Admin, Admins | `Administrator`, `Administratoren`, `Verwalter` |
-| Whoever runs the installation (system administrator) | die Systemadministration ("Bitte wende dich an die Systemadministration.") | Admin for the operator (Admin is the role inside the product), `Systemadministrator` and other gendered singulars |
+| Whoever runs the installation (system administrator) | die Systemadministration ("Bitte wende dich an die Systemadministration.") | Admin for the operator (Admin is the role inside the product), `Systemadministrator`, `Systembetreiber`, `Betreiber` and other gendered singulars |
 | Somebody with a seat in this installation | Mitglied, Mitglieder ("Mitglied einladen"); the account object is the Nutzerkonto | Person for a member; `Kollege`, `Kollegin`, `Kollegen` for a teammate (Teammitglied) |
 | Users in general | Nutzende | `Nutzer`, `Nutzern`, `Benutzer`, `Benutzern`, `Benutzende`, `Anwender`, `Anwenders`, `Anwendern` |
 | A human in a role: author, owner, participant, buyer, seller, creator, reader | Teilnehmende, Lesende, die Käuferseite, Zielgruppen; one human is written around ("wer den Eintrag erstellt hat") | `Autor`, `Autors`, `Autoren`, `Eigentümer`, `Eigentümers`, `Eigentümern`, `Teilnehmer`, `Teilnehmers`, `Teilnehmern`, `Käufer`, `Käufers`, `Käufern`, `Verkäufer`, `Verkäufers`, `Verkäufern`, `Ersteller`, `Erstellers`, `Erstellern`, `Leser`, `Lesers`, `Lesern` |
@@ -311,7 +310,7 @@ gives, because it is ordinary German in another sense.
 | Writing voice | Schreibstil; the built profile is the Stilprofil, its corpus the Stilkorpus; Voice DNA where the English says Voice DNA | Stimme, Stimmprofil, Schreibstimme |
 | Proposals from the product | Vorschläge | Empfehlungen for proposals |
 | Drop a file | hier ablegen | hierher ziehen |
-| Make a new item | erstellen ("Aufgaben erstellen") | anlegen |
+| Make a new item | erstellen ("Aufgaben erstellen") | `anlegen`, `Anlegen`, `angelegt`, `anzulegen`; the split form "lege … an" |
 | Turn a setting on or off | aktivieren, deaktivieren; aktiviert, deaktiviert | einschalten, ausschalten, eingeschaltet, ausgeschaltet for a setting |
 | Pick from a list | auswählen, ausgewählt ("Wählen Sie aus, welche E-Mails Sie erhalten möchten") | anhaken, angehakt |
 | A job waiting its turn | geplant ("Zusammenfassung von {name} geplant"); the background queue keeps the noun Warteschlange | eingereiht |
@@ -324,7 +323,7 @@ gives, because it is ordinary German in another sense.
 | The in-app Home area | Home (nav label, title); "die Home-Seite" in running text | Startseite for the in-app page (a public website keeps its Startseite) |
 | An AI routing lane | Lane, Lanes (die Lane) | Strecke |
 | A saved report snapshot | Snapshot, Snapshots (der Snapshot) | Stand for a snapshot ("Stand {when}" for "as of" stays) |
-| The host of a booked meeting | die organisierende Person; the label "Organisiert von" | Ansprechperson, einladende Person for the host; `Gastgeber` |
+| The host of a booked meeting | die organisierende Person; the label "Organisiert von" | Ansprechperson, einladende Person for the host; `Gastgeber`, `Organisator`, `Organisatoren` |
 | A kind of email or item | Typ ("E-Mail-Typ") | Art for a kind of email or item |
 | A source no human runs | automatisiert ("eine automatisierte Quelle") | automatisch for a source |
 | A record named in running text | Eintrag ("Partnereintrag"); Datensatz stays the record noun in labels | Datensatz where it reads technical in a sentence, judged per key |
@@ -344,6 +343,7 @@ gives, because it is ordinary German in another sense.
 | Consent (the legal concept) | Einwilligung | Zustimmung for legal consent (the OAuth Zustimmungsbildschirm is the vendor's label) |
 | Data protection | Datenschutz, DSGVO | `Privatsphäre`, `GDPR` |
 | Loading a record | Wird geladen…, Deals werden geladen… | Wird gelesen… as the loading state of a record |
+| The Ctrl key on a shortcut cap | Strg, as a German keyboard prints it (⌘ stays) | `Ctrl` |
 
 Terms that carry over unchanged, so no second word is needed: Lead, Commit,
 Best Case, Follow-up, Entwurf, Notiz, Verlauf, Datensatz, Feldhistorie,
@@ -364,6 +364,8 @@ source file, key and value. Placeholders are removed before the word rules run.
 | Ellipsis | Three dots in a row |
 | Spacing | Two spaces in a row |
 | No exclamation marks | Any `!` |
+| Imperative with -e | A short du imperative as a whole word, in lower case or with a capital: leg, schreib, prüf, markier, zieh, füg, trag, schick, geh, mach, frag, sag, verschieb, setz, bleib |
+| Share is teilen | freigeben or Freigabe in any case or compound, or "gib … frei", in a value whose English says share, shares, shared or sharing and does not say approve |
 | "Bitte" only before a recovery step | Read on the raw value. "bitte" in any case, unless it opens a sentence (at the start, or after a period, question mark, exclamation mark, colon or `}` and a space) straight before versuche, lade or wende, or in the four outsider families before versuchen Sie, laden Sie or wenden Sie; a second one in a value; one in a value with no sentence period |
 | Abbreviations | z. B., d. h., usw., u. a., ggf., bzgl., bzw., inkl., ca., Tg., with or without the inner space |
 | No contractions | ’s or 's straight after a letter |
@@ -388,13 +390,11 @@ a listed key that no longer says it.
 
 None of them can see the rest of this page, which the author and the reviewer
 judge. That covers word order, tone, sentence case, articles, periods, slot
-grammar, the imperative form, idiom, fragment or sentence, the failure shape and
-semicolons. It covers the order of result and reason, whether a "Bitte" follows
-a system fault, officialese other than the retired words, and claim strength. It
-covers du where nobody needed addressing or beside a neutral value on one
-surface, an edge space the English value does not have, number format, ranges,
-spelled dates and compact units. No rule matches inside a closed compound, so a
-retired or gendered word there (Firmenkontingent, Käufergruppe) is the
-reviewer's. So are gendered singulars other than the listed nouns, the plain
-words of the Never column, mein or mir as the product's voice, length ceilings
-and message shapes.
+grammar, idiom, fragment or sentence, the failure shape and semicolons. It
+covers an imperative short form the gate does not list, the order of result and
+reason, whether a "Bitte" follows a system fault, officialese other than the
+retired words, and claim strength. It covers du where nobody needed addressing,
+an edge space the English value lacks, number format, ranges, spelled dates and
+compact units. It covers a retired or gendered word inside a closed compound
+(Firmenkontingent, Käufergruppe), other gendered singulars, the plain words of
+the Never column, mein or mir as the product's voice, length and message shapes.
