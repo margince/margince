@@ -1,6 +1,8 @@
 <!-- prose:plain -->
 # Test the MCP surface end to end with a real assistant
 
+How the tests work, in plain words: [How we test your AI assistant](../explanation/how-we-test-your-ai-assistant.md).
+
 Find out whether a real assistant (Claude, GPT, Gemini or Mistral) can do the daily jobs of a user through the MCP surface of Margince. It must also say true things while it works. `make e2e-llm` starts its own stack, and fills it with test data. It gives a real model the scenario prompts under `e2e/llm/scenarios/`, and grades what the model called and what it said. The results go to [reference/mcp-tool-coverage.md](../reference/mcp-tool-coverage.md).
 
 This is the **lane that costs money**, and you turn it on yourself. Every run uses real model tokens on your own credentials. The Go tests pin payloads and errors for free. This lane answers the question they cannot: whether a model can use the surface. To add a case, read [add-an-mcp-e2e-case.md](add-an-mcp-e2e-case.md).
@@ -55,8 +57,8 @@ reset. The step writes through the REST API as the admin. The lane restores the
 snapshot before the next run, and that restore undoes the step. A step the file
 does not name stops the lane before the first run.
 
-The judge (the model that decides the `judge:` criteria of each scenario) is Haiku
-4.5, for every candidate. `E2E_LLM_JUDGE_VIA=cli|api|openrouter` chooses how to
+The judge (the model that decides the `judge:` criteria of each scenario) is
+`claude-haiku-5-5` (`DEFAULT_MODEL` in `e2e/llm/judge.py`), for every candidate. `E2E_LLM_JUDGE_VIA=cli|api|openrouter` chooses how to
 reach it. `cli` (the default) needs the `claude` CLI and a Claude credential.
 
 ## 2. Give the stack a search that works

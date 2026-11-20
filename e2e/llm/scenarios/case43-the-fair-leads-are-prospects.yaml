@@ -14,6 +14,7 @@
 # says so. Nothing is staged and nothing asks for approval, so an answer that
 # talks of sign-off reports a gate the product does not raise.
 name: case43_the_fair_leads_are_prospects
+title: The fair leads are prospects now
 criteria: [1, 2]
 
 # WRITES: the author's own statement that this case changes the world. It is not

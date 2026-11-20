@@ -23,6 +23,7 @@
 # given, and one that executes with no preview has skipped the half that makes the
 # change reviewable.
 name: case47_tidy_the_fair_list
+title: Tidy the fair list
 criteria: [1, 2, 3]
 
 # WRITES: the author's own statement that this case changes the world. It is not

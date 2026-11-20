@@ -54,6 +54,7 @@ func keepAgentOperations(root, paths *yaml.Node) ([]operation, map[string]bool) 
 				if security, own := oasnode.Lookup(value, "security"); own {
 					passportOnly(security)
 				}
+				dropHiddenParameters(value)
 				kept = append(kept, readOperation(method, path, value))
 				collectNames(tags, value, "tags")
 			}
@@ -139,4 +140,17 @@ func collectNames(into map[string]bool, node *yaml.Node, key string) {
 	for _, item := range seq.Content {
 		into[item.Value] = true
 	}
+}
+
+// dropHiddenParameters removes the parameters marked `x-agent-hidden: true`:
+// switches that serve one human screen and would silently narrow an agent's answer.
+func dropHiddenParameters(op *yaml.Node) {
+	params, ok := oasnode.Lookup(op, "parameters")
+	if !ok {
+		return
+	}
+	params.Content = slices.DeleteFunc(params.Content, func(p *yaml.Node) bool {
+		hidden, _ := oasnode.Lookup(p, "x-agent-hidden")
+		return hidden != nil && hidden.Value == "true"
+	})
 }

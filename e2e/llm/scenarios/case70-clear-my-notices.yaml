@@ -1,5 +1,6 @@
 # CASE 70 — Marking notices read belongs to change_attention, not to update_record.
 name: case70_clear_my_notices
+title: Clear my notices
 criteria: [1]
 writes: true
 

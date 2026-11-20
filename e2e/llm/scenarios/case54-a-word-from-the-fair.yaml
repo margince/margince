@@ -12,6 +12,7 @@
 # list_tags is the call that turns it into the spelling that does; this prompt
 # gives the whole word so the case measures the offer, not the lookup case 30 holds.
 name: case54_a_word_from_the_fair
+title: A word from the fair, offered and not claimed
 criteria: [1]
 
 writes: true

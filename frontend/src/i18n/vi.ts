@@ -945,6 +945,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.arrivedOn": "Ngày đến",
   "reporting.enteredOn": "Ngày vào giai đoạn",
   "reporting.accruedOn": "Ngày ghi nhận",
+  "reporting.introducedOn": "Ngày giới thiệu",
+  "reporting.bookedOn": "Ngày đặt",
   "reporting.commissionAmount": "Hoa hồng",
   "reporting.hoursUnit": "Giờ",
   "reporting.outOf": "Trên tổng {total}",
@@ -1060,6 +1062,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.daysUnit": "Ngày",
   "reporting.countUnit": "Số lượng",
   "reporting.wholeCount": "Nhập số nguyên.",
+  "reporting.needsChart": "Thêm ít nhất một biểu đồ.",
+  "reporting.needsInterval":
+    "Ngày kết thúc của khoảng tùy chỉnh phải sau ngày bắt đầu.",
   "reporting.retired": "Mục tiêu đã ngừng",
   "reporting.comparisonHelp":
     "Chọn các kỳ đã hoàn tất liền kề nhau. Ảnh chụp của cùng một kỳ không cho thấy thay đổi giữa các kỳ.",
@@ -6922,6 +6927,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "brief.view.weekly": "Tuần",
   // Câu mở đầu của bản tóm tắt, ghép từ chính những dòng trang đang hiển thị —
   // không do mô hình viết.
+  "brief.updating": "Đang cập nhật…",
   "brief.briefedAt": "Margince tóm tắt lúc {time}",
   "brief.task.done": "Đánh dấu xong: {title}",
   "brief.task.reply": "Trả lời {name}: {subject}",
@@ -14568,7 +14574,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "jurisdiction.rule.pack": "Bộ quy tắc {rule}",
   "jurisdiction.documents.title": "Tài liệu",
   "jurisdiction.documents.empty":
-    "Gói của khu vực pháp lý này không có tài liệu.",
+    "Không có mẫu tài liệu tuân thủ tích hợp sẵn cho quốc gia này.",
   "jurisdiction.documents.emptyUnset":
     "Chưa đặt khu vực pháp lý, nên không có tài liệu để hiển thị.",
   "jurisdiction.documents.read": "Đọc",
@@ -17811,6 +17817,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "inquiry.result.failed": "Xử lý thất bại. Xem lần chạy trước khi thử lại.",
   "inquiry.handling": "Xử lý yêu cầu",
   "inquiry.review": "Xem lại cách xử lý",
+  "inquiry.stillNeeded": "Bắt buộc: {fields}",
   "inquiry.pausedConversionWarning":
     "Lưu kế hoạch này sẽ thay thế cách xử lý lead trước đây của biểu mẫu. Nếu lưu ở trạng thái tạm dừng, yêu cầu mới sẽ chưa có việc tự động cho đến khi bạn bật kế hoạch.",
   "inquiry.savePaused": "Lưu và tạm dừng",

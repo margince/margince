@@ -29,6 +29,7 @@
 # Fixture checksum (sha256 of the decoded bytes):
 #   servicevertrag-signiert.pdf  418 bytes  0f955ace05f1d83c7f3c99fa432be3e44f00a2161a0c81f6662e42e666f88219
 name: case59_file_it_on_the_meeting_and_the_contract
+title: File it on the meeting and the contract
 criteria: [1, 2]
 
 writes: true

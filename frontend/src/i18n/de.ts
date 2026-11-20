@@ -971,6 +971,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.arrivedOn": "Eingegangen am",
   "reporting.enteredOn": "In die Phase gekommen am",
   "reporting.accruedOn": "Angefallen am",
+  "reporting.introducedOn": "Vorgestellt am",
+  "reporting.bookedOn": "Gebucht am",
   "reporting.commissionAmount": "Provision",
   "reporting.hoursUnit": "Stunden",
   "reporting.outOf": "Von insgesamt {total}",
@@ -1087,6 +1089,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.daysUnit": "Tage",
   "reporting.countUnit": "Anzahl",
   "reporting.wholeCount": "Gib eine ganze Anzahl ein.",
+  "reporting.needsChart": "Füge mindestens ein Diagramm hinzu.",
+  "reporting.needsInterval":
+    "Gib dem eigenen Zeitraum ein Ende nach seinem Start.",
   "reporting.retired": "Ziel stillgelegt",
   "reporting.comparisonHelp":
     "Wähle benachbarte abgeschlossene Zeiträume. Snapshots desselben Zeitraums zeigen keinen Periodenvergleich.",
@@ -7103,6 +7108,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "brief.view.weekly": "Woche",
   // Der Eröffnungssatz des Briefings, aus den Zeilen zusammengesetzt, die die
   // Seite zeigt — nie von einem Modell geschrieben.
+  "brief.updating": "Wird aktualisiert…",
   "brief.briefedAt": "Von Margince zusammengefasst um {time}",
   "brief.task.done": "Als erledigt markieren: {title}",
   "brief.task.reply": "{name} antworten: {subject}",
@@ -14969,7 +14975,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jurisdiction.rule.pack": "Regelwerk {rule}",
   "jurisdiction.documents.title": "Dokumente",
   "jurisdiction.documents.empty":
-    "Das Paket dieses Rechtsraums enthält keine Dokumente.",
+    "Für dieses Land sind keine integrierten Compliance-Vorlagen verfügbar.",
   "jurisdiction.documents.emptyUnset":
     "Es gibt keine Dokumente zum Anzeigen, da kein Rechtsraum festgelegt ist.",
   "jurisdiction.documents.read": "Lesen",
@@ -18291,6 +18297,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Bearbeitung fehlgeschlagen. Vor dem Wiederholen den Lauf prüfen.",
   "inquiry.handling": "Anfragen bearbeiten",
   "inquiry.review": "Bearbeitung prüfen",
+  "inquiry.stillNeeded": "Erforderlich: {fields}",
   "inquiry.pausedConversionWarning":
     "Wenn du diesen Plan speicherst, ersetzt er die bisherige Lead-Bearbeitung dieses Formulars. Mit „Pausiert speichern“ bleibt der Plan aus: Neue Anfragen erhalten erst nach dem Einschalten automatisch eine Aufgabe.",
   "inquiry.savePaused": "Pausiert speichern",

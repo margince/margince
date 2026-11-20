@@ -52,6 +52,11 @@ what does the AI do
 can the AI send email on my behalf
 what is an agent passport
 how do I give an agent access
+which model should I choose
+which AI model works best with Margince
+which AI assistant can I connect to Margince
+can I use an assistant that is not tested
+how well was the AI tested
 # approvals
 how do I approve an action
 where are my approvals

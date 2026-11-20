@@ -13,7 +13,9 @@
   "presets": [
     {
       "file": "gemini_cloud.yaml",
+      "title": "Google Gemini",
       "profile": "cloud_frontier",
+      "where_data_goes": "global cloud",
       "tiers": [
         {
           "tier": "local_small",
@@ -1039,7 +1041,9 @@
     },
     {
       "file": "gemini_vertex_eu.yaml",
+      "title": "Google Gemini in the EU, through Vertex AI",
       "profile": "eu_hosted",
+      "where_data_goes": "EU-hosted cloud",
       "tiers": [
         {
           "tier": "local_small",
@@ -2429,7 +2433,9 @@
     },
     {
       "file": "openrouter_openai.yaml",
+      "title": "OpenAI GPT-6, through OpenRouter",
       "profile": "cloud_frontier",
+      "where_data_goes": "global cloud",
       "tiers": [
         {
           "tier": "local_small",
@@ -3424,7 +3430,9 @@
     },
     {
       "file": "openrouter_cloud.yaml",
+      "title": "Open models from OpenAI and Mistral, through OpenRouter",
       "profile": "cloud_frontier",
+      "where_data_goes": "global cloud",
       "tiers": [
         {
           "tier": "local_small",
@@ -4419,7 +4427,9 @@
     },
     {
       "file": "consumer_class_brokered.yaml",
+      "title": "Gemma 4 you could run yourself, through OpenRouter",
       "profile": "cloud_frontier",
+      "where_data_goes": "global cloud",
       "tiers": [
         {
           "tier": "local_small",
@@ -5414,7 +5424,9 @@
     },
     {
       "file": "openrouter_cloud_eu.yaml",
+      "title": "Mistral models in the EU, through OpenRouter",
       "profile": "eu_hosted",
+      "where_data_goes": "EU-hosted cloud",
       "tiers": [
         {
           "tier": "local_small",
@@ -6409,7 +6421,9 @@
     },
     {
       "file": "gemma4_local_ollama.yaml",
+      "title": "Gemma 4 on your own server, through Ollama",
       "profile": "sovereign",
+      "where_data_goes": "your own servers",
       "tiers": [
         {
           "tier": "local_small",
@@ -7404,7 +7418,9 @@
     },
     {
       "file": "qwen3_local_vllm.yaml",
+      "title": "Qwen3 on your own server, through vLLM",
       "profile": "sovereign",
+      "where_data_goes": "your own servers",
       "tiers": [
         {
           "tier": "local_small",

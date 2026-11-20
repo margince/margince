@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -109,6 +110,8 @@ func reportingVisibleSources(ctx context.Context, tx pgx.Tx, key reportingVisibi
 	case string(recordTypeDeal), string(recordTypeActivity), string(recordTypeLead), string(recordTypeCompany):
 	case "sdr_handoff":
 		object = reportingCreditObject
+	case introductions.Table:
+		object = introductions.Object
 	default:
 		return nil, apperrors.ErrInvalidArgument
 	}
@@ -163,6 +166,8 @@ func reportingSourceScope(ctx context.Context, key reportingVisibilityKey, b *re
 		clause, err = auth.ActivityContentClause(ctx, "source", b.arg)
 	case string(recordTypeDeal), string(recordTypeLead), string(recordTypeCompany):
 		clause, err = auth.ScopeClauseFor(ctx, key.table, "source", b.arg)
+	case introductions.Table:
+		clause, err = introductions.ReadableSQL(ctx, "source", b.arg)
 	}
 	if err != nil {
 		return "", err

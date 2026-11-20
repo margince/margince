@@ -55,6 +55,8 @@ const UNITS: Readonly<Record<MetricID, string>> = {
   bookings_mix: "Commercial mix",
   qualified_opportunities_created: "Qualified opportunities",
   initiative_pipeline: "Initiative pipeline by origin",
+  introductions_made: "count",
+  meetings_booked_for_colleagues: "count",
 };
 
 const SALES_METRICS: readonly MetricID[] = [

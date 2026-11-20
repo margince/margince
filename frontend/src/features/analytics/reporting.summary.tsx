@@ -104,6 +104,8 @@ const HEADLINE_METRICS = [
   "partner_won",
   "partner_commission",
   "partner_activity",
+  "introductions_made",
+  "meetings_booked_for_colleagues",
 ] as const;
 
 export function ResultsSummary({

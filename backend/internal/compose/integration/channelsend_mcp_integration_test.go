@@ -17,11 +17,11 @@ package integration
 // sendMessageTool.StageInfo nor Invoke's staging branch. This file is the
 // one proof of the MCP loop.
 //
-// It drives Registry.Invoke directly rather than the wire transport: the
+// It drives Registry.Invoke directly rather than the wire transport. The
 // JSON-RPC framing, discovery and admission machinery is already proven end
-// to end by mcp_transport_integration_test.go against a different tool, and
-// Invoke is the one call every transport — stdio, hosted MCP, Surface B —
-// dispatches through (registry.go's package comment). What was missing is
+// to end by mcp_transport_integration_test.go against a different tool.
+// Invoke is the one call every transport dispatches through: stdio, hosted
+// MCP and the night helpers' runner (registry.go's package comment). What was missing is
 // the send_message-specific stage → approve → redeem loop against real
 // Postgres, which is what this test drives.
 

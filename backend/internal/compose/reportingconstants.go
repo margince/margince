@@ -61,4 +61,6 @@ const (
 	reportingSourceQuality                 = "source_quality"
 	reportingAmountField                   = "amount_minor"
 	reportingPartnerField                  = "partner_company_id"
+	reportingIntroductionsMade             = "introductions_made"
+	reportingMeetingsBookedForColleagues   = "meetings_booked_for_colleagues"
 )

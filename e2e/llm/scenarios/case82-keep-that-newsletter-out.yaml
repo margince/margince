@@ -1,5 +1,6 @@
 # CASE 82 — Keeping a domain out of the user's own capture runs through change_capture, at the user's scope. No company is rejected for it.
 name: case82_keep_that_newsletter_out
+title: Keep that newsletter out
 criteria: [1]
 writes: true
 

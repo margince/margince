@@ -42825,7 +42825,9 @@ components:
       properties:
         provision:
           allOf: [{$ref: '#/components/schemas/CitedProvision'}]
-          description: The law the recipient's pack cites for `reason_code`, absent when none may be shown.
+          description: |-
+            The first law cited for `reason_code`: the recipient's pack's, or the sending entity's
+            when only that pack cites one. Absent when none may be shown.
         provisions:
           type: array
           items: {$ref: '#/components/schemas/CitedProvision'}
@@ -45293,6 +45295,8 @@ components:
         - initiative_pipeline
         - account_progression
         - source_quality
+        - introductions_made
+        - meetings_booked_for_colleagues
     ReportingBlockKind:
       type: string
       description: |-
@@ -48880,7 +48884,9 @@ components:
         requested_category: {type: string, description: The category the sender claimed.}
         provision:
           allOf: [{$ref: '#/components/schemas/CitedProvision'}]
-          description: The first law cited for `reason_code`, absent when none may be shown.
+          description: |-
+            The first law cited for `reason_code`: the recipient's pack's, or the sending entity's
+            when only that pack cites one. Absent when none may be shown.
         provisions:
           type: array
           items: {$ref: '#/components/schemas/CitedProvision'}
@@ -52987,7 +52993,9 @@ components:
         reason_code: {type: string}
         provision:
           allOf: [{$ref: '#/components/schemas/CitedProvision'}]
-          description: The law the recipient's pack cites for `reason_code`, as shown when the refusal was assessed.
+          description: |-
+            The first law cited for `reason_code` when the refusal was assessed: the recipient's
+            pack's, or the sending entity's when only that pack cites one.
         provisions:
           type: array
           items: {$ref: '#/components/schemas/CitedProvision'}
@@ -56375,7 +56383,7 @@ components:
           type: boolean
           description: |-
             True when this answer is Home's kept answer past its five-minute freshness,
-            served while the server reads it again. It still holds every access rule the
+            or older than the reader's own latest write, served while the server reads it again. It still holds every access rule the
             fresh read would apply. A client asks again a few seconds later for the fresh
             answer. Absent or false means the answer is fresh.
         scope:

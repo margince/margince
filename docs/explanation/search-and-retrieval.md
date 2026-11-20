@@ -127,6 +127,25 @@ the rest, narrow to one type with `types`. The `⌘K` menu asks for it with `per
 `per_type=5`. They show an activity that carries an
 `email_summary` under `Emails`, separate from the calls and notes beside it.
 
+A grouped page of one plain word reads a type's own matches first (`withOwnMatches`). For
+contacts, companies and leads, these are the rows the name index finds. A whole address or domain
+counts too, and so does a prefix that gets a tier. A row found only by part of an address then scores
+0, or at most 0.1 for a company. The employer arm scores below 0.
+
+When the own matches fill the `N + 1` rows above that score, the statement skips the scans for
+part of an address and the employer arm. Postgres reads that check as a constant and never runs
+their plans. So a two-letter prefix no longer reads every address that holds it.
+
+A plain word holds letters and digits only (`plainWord`). With more words, an apostrophe or an
+operator, a row found by part of an address can score above 0. Such a page reads every branch
+whole, and so does the ranked page.
+
+**`typeahead=true` leaves mail out of a short prefix.** A short prefix matches a large share of
+all activities, and ranking them is slow. The `⌘K` menu sends `typeahead=true`. `Store.Search` then
+drops the `activity` type for a word under four letters (`fragmentTooShortForMail`, counted in runes). Other types are searched from the first letter. A
+query that ends in a finished word, or a request for mail alone, keeps its mail, and only a
+human's flag counts.
+
 **`with_employees=true` finds contacts through their company.** The `search_tsv` of
 a contact holds its name and title, never the company. So "Acme" alone would find Acme, and none
 of the contacts who work there. The flag adds one more `UNION` part, the **employer arm**
@@ -176,7 +195,7 @@ held back.
 The **merged** path (`Store.HybridSearch`) is reached through the `shared/ports/retrieval` seam
 (`search.Retriever`), which is what the AI layers build their answers on. `cmd/api` connects it to the
 embedder of the resolved model path for the offer draft surface. `cmd/worker` connects it as the
-source for the Surface-B runner. The agent intent tools in `compose/registry.go` are built with a
+source for the runner of the night helpers. The agent intent tools in `compose/registry.go` are built with a
 **nil** embedder. They use the context graph walk, which needs no embed lane.
 
 ## Row scope is not a filter on the results

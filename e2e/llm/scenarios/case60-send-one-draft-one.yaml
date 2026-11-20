@@ -17,6 +17,7 @@
 #
 # Needs the wide passport: draft and send are scopes the default one never holds.
 name: case60_send_one_draft_one
+title: Send one, draft one
 criteria: [1, 2]
 passport: wide
 

@@ -921,6 +921,8 @@ export const en = {
   "reporting.arrivedOn": "Arrived on",
   "reporting.enteredOn": "Entered the stage on",
   "reporting.accruedOn": "Earned on",
+  "reporting.introducedOn": "Introduced on",
+  "reporting.bookedOn": "Booked on",
   "reporting.commissionAmount": "Commission",
   "reporting.hoursUnit": "Hours",
   "reporting.outOf": "Out of {total}",
@@ -1032,6 +1034,8 @@ export const en = {
   "reporting.daysUnit": "Days",
   "reporting.countUnit": "Count",
   "reporting.wholeCount": "Enter a whole count.",
+  "reporting.needsChart": "Add at least one chart.",
+  "reporting.needsInterval": "Give the custom interval an end after its start.",
   "reporting.retired": "Target retired",
   "reporting.comparisonHelp":
     "Choose adjacent completed periods. Snapshots of the same period cannot show period-over-period change.",
@@ -7079,6 +7083,7 @@ export const en = {
   "brief.view.weekly": "Weekly",
   // The Brief's opening sentence, composed from the rows the page is showing —
   // never model-written, so it cannot say what the rows contradict.
+  "brief.updating": "Updating…",
   "brief.briefedAt": "Briefed by Margince at {time}",
   "brief.task.done": "Mark done: {title}",
   "brief.task.reply": "Reply to {name}: {subject}",
@@ -14895,7 +14900,7 @@ export const en = {
   "jurisdiction.rule.pack": "Rule set {rule}",
   "jurisdiction.documents.title": "Documents",
   "jurisdiction.documents.empty":
-    "This jurisdiction’s pack ships no documents.",
+    "No built-in compliance templates are available for this country.",
   "jurisdiction.documents.emptyUnset":
     "No jurisdiction is set, so there are no documents to show.",
   "jurisdiction.documents.read": "Read",
@@ -18119,6 +18124,7 @@ export const en = {
   "inquiry.result.failed": "Handling failed. Review the run before retrying.",
   "inquiry.handling": "Inquiry handling",
   "inquiry.review": "Review handling",
+  "inquiry.stillNeeded": "Required: {fields}",
   "inquiry.pausedConversionWarning":
     "Saving this plan replaces the old lead handling for this form. Save paused keeps the plan off: new submissions get no automatic task until you turn it on.",
   "inquiry.savePaused": "Save paused",

@@ -83,54 +83,63 @@ type Answer interface {
 	crmcontracts.Worklist | crmcontracts.MagicReceipt
 }
 
-// Lookup answers the reader's kept answer to read and key, how old it is, and
-// whether one was still valid.
-func Lookup[A Answer](ctx context.Context, c *Cache, reader ids.UUID, read Read, key string) (A, time.Duration, bool, error) {
+// Kept says how old a kept answer is and whether its reader has written since
+// it was assembled.
+type Kept struct {
+	Age     time.Duration
+	Written bool
+}
+
+// Lookup answers the reader's kept answer to read and key, how it stands, and
+// whether one was still valid. An answer behind the reader's write stays valid
+// and says so in Kept.Written. The access fence, expiry and the walk end it.
+func Lookup[A Answer](ctx context.Context, c *Cache, reader ids.UUID, read Read, key string) (A, Kept, bool, error) {
 	var out A
 	var payload []byte
 	var ageSeconds float64
+	var written bool
 	err := database.WithWorkspaceTx(ctx, c.pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
-			SELECT c.payload, extract(epoch FROM now() - c.computed_at)::float8
+			SELECT c.payload, extract(epoch FROM now() - c.computed_at)::float8,
+			       EXISTS (SELECT 1 FROM home_read_forgotten fg
+			                WHERE fg.reader_id = c.reader_id AND fg.at >= c.computed_at)
 			  FROM home_read_cache c
 			  JOIN home_read_fence f ON f.generation = c.fence
 			 WHERE c.reader_id = $1 AND c.read = $2 AND c.request_key = $3
 			   AND c.valid_until > now()
-			   AND NOT EXISTS (
-			         SELECT 1 FROM home_read_forgotten fg
-			          WHERE fg.reader_id = c.reader_id AND fg.at >= c.computed_at)
 			   AND (c.walk_id IS NULL OR EXISTS (
 			         SELECT 1 FROM worklist_snapshot w
 			          WHERE w.id = c.walk_id AND w.reader_id = c.reader_id AND w.expires_at > now()))`,
-			reader, string(read), key).Scan(&payload, &ageSeconds)
+			reader, string(read), key).Scan(&payload, &ageSeconds, &written)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		return out, 0, false, nil
+		return out, Kept{}, false, nil
 	}
 	if err != nil {
-		return out, 0, false, fmt.Errorf("homecache: reading a cached %s: %w", read, err)
+		return out, Kept{}, false, fmt.Errorf("homecache: reading a cached %s: %w", read, err)
 	}
 	if err := json.Unmarshal(payload, &out); err != nil {
-		return out, 0, false, fmt.Errorf("homecache: decoding a cached %s: %w", read, err)
+		return out, Kept{}, false, fmt.Errorf("homecache: decoding a cached %s: %w", read, err)
 	}
-	return out, time.Duration(ageSeconds * float64(time.Second)), true, nil
+	return out, Kept{Age: time.Duration(ageSeconds * float64(time.Second)), Written: written}, true, nil
 }
 
 // Serve answers read from the reader's kept answer while it holds, and from
 // fresh otherwise, keeping what fresh answered. An answer served near or past
-// the end of its Life is read again in the background, and stale says it is
-// past it. Only the Worklist is served past its Life; a receipt is read fresh. The cache only saves work: one that cannot be read or written is
-// logged and passed over, and the answer is the fresh read's. walkOf names the
+// the end of its Life, or one the reader has written past, is read again in the
+// background. Stale says it is past its Life or behind a write. Only the
+// Worklist is served stale; a receipt is read fresh. The cache only saves work.
+// One that cannot be read or written is logged and passed over, and the answer is the fresh read's. walkOf names the
 // walk an answer's first page started.
 func Serve[A Answer](
 	ctx context.Context, c *Cache, reader ids.UUID, read Read, key string,
 	fresh func(context.Context) (A, error), walkOf func(A) (*ids.UUID, error),
 ) (answer A, stale bool, err error) {
-	kept, age, hit, err := Lookup[A](ctx, c, reader, read, key)
+	kept, standing, hit, err := Lookup[A](ctx, c, reader, read, key)
 	if err != nil {
 		logFault(ctx, "a kept Home answer could not be read; reading it fresh", read, err)
 	}
-	stale = hit && age > Life
+	stale = hit && (standing.Age > Life || standing.Written)
 	served := hit && (!stale || read == Worklist)
 	switch {
 	case !served:
@@ -144,7 +153,7 @@ func Serve[A Answer](
 		answer, err = keepFresh(ctx, c, reader, read, key, fresh, walkOf)
 		return answer, false, err
 	}
-	if age > Life-refreshAhead {
+	if stale || standing.Age > Life-refreshAhead {
 		c.refresh(ctx, string(read)+"\x00"+reader.String()+"\x00"+key, func(ctx context.Context) error {
 			_, err := keepFresh(ctx, c, reader, read, key, fresh, walkOf)
 			return err
@@ -272,20 +281,34 @@ func Store[A Answer](
 // It is one upsert, so a writer never waits longer than this for their answer.
 const forgetTimeout = 5 * time.Second
 
-// Forget ends every answer these readers were computed before now, including
-// one a read already in flight stores afterwards. It follows a committed write,
-// so a caller who has left must not cancel it and leave their Home stale.
+// Forget marks every answer these readers were computed before now as behind a
+// write, including one a read already in flight stores afterwards. The next
+// worklist read serves it flagged stale and reads it again behind; a receipt is
+// read fresh. It follows a committed write, so a caller who has left must not
+// cancel it and leave their Home unmarked.
 func (c *Cache) Forget(ctx context.Context, readers []ids.UUID) error {
+	return c.end(ctx, readers, false)
+}
+
+// end marks the readers' answers behind a write and, when drop is set, deletes
+// them too, so the next read assembles a fresh day.
+func (c *Cache) end(ctx context.Context, readers []ids.UUID, drop bool) error {
 	if len(readers) == 0 {
 		return nil
 	}
 	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), forgetTimeout)
 	defer cancel()
 	err := database.WithWorkspaceTx(ctx, c.pool, func(tx pgx.Tx) error {
-		_, err := tx.Exec(ctx, `
+		if _, err := tx.Exec(ctx, `
 			INSERT INTO home_read_forgotten (reader_id, at)
 			SELECT r, clock_timestamp() FROM unnest($1::uuid[]) r
-			ON CONFLICT (reader_id) DO UPDATE SET at = greatest(home_read_forgotten.at, EXCLUDED.at)`, readers)
+			ON CONFLICT (reader_id) DO UPDATE SET at = greatest(home_read_forgotten.at, EXCLUDED.at)`, readers); err != nil {
+			return err
+		}
+		if !drop {
+			return nil
+		}
+		_, err := tx.Exec(ctx, `DELETE FROM home_read_cache WHERE reader_id = ANY($1::uuid[])`, readers)
 		return err
 	})
 	if err != nil {

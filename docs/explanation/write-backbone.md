@@ -288,7 +288,7 @@ time reports it.
 | `cg:notice-case-open` | open, and later end, the case for what the installation owes a contact it learned of without asking them | **live** |
 | `cg:approval-notify` | on `approval.requested`, put the card in the queue of the one member it names | **live** (worker) |
 | `cg:approval-notice-retract` | on a decided or timed-out card, take back the lines it put in other seats' queues | **live** |
-| `cg:overnight-agent` | on `approval.decided`, start again the waiting Surface-B run with the human's answer | **live** (worker; only when a model is set up) |
+| `cg:overnight-agent` | on `approval.decided`, start again the waiting run of a night helper with the human's answer | **live** (worker; only when a model is set up) |
 | `cg:workflows` | start the workflow engine on matching events | **live** (worker) |
 | `cg:webhooks` | send subscribed events to outbound endpoints | **live** (the relay inside the API) |
 | `cg:capture` | (reserved) | declared, no subscriber |

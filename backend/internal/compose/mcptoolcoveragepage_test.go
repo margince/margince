@@ -18,8 +18,10 @@ import (
 
 func renderMCPToolCoveragePage(r mcpToolCoverage) []byte {
 	var p strings.Builder
-	p.WriteString("# What the assistant can be relied on to do\n\n")
+	p.WriteString("# Your AI assistant: test results\n\n")
 	p.WriteString("<!-- Generated together with mcp-tool-coverage.json; do not edit by hand. -->\n\n")
+	p.WriteString("Which AI you can use, both ways, is on one page: [Which AI can I use with Margince?](which-ai-you-can-use.md). " +
+		"The results for the AI inside the product are in [Margince AI: test results](ai-certification.md).\n\n")
 	writeCoverageIntro(&p, r)
 	writeCoverageAssistants(&p, r)
 	writeCoverageJobs(&p, r)

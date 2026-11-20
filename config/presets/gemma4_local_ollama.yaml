@@ -1,4 +1,5 @@
 # yaml-language-server: $schema=../margince.schema.json
+# Model setup: Gemma 4 on your own server, through Ollama
 # config/presets/gemma4_local_ollama.yaml — Gemma 4 on the operator's own box,
 # through Ollama on loopback. Zero egress.
 #

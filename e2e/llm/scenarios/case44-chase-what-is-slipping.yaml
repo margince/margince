@@ -30,6 +30,7 @@
 # now and the LIST is tomorrow's. Read as "send the reply tomorrow", a careful assistant
 # rightly declines, since send_message cannot schedule, and never meets the refusal.
 name: case44_chase_what_is_slipping
+title: Chase what is slipping
 criteria: [1, 2, 3]
 passport: wide
 
