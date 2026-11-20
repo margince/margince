@@ -48,9 +48,10 @@ export function careerDate(
   value: string,
   precision: Employment["started_precision"],
   formatDay: (day: string) => string,
+  formatMonth: (day: string) => string,
 ): string {
   return precision === "month"
-    ? value.slice(0, 7)
+    ? formatMonth(value.slice(0, 10))
     : formatDay(value.slice(0, 10));
 }
 

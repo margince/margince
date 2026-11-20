@@ -139,6 +139,8 @@ var predicateContactReads = gatekit.Waive(map[string]string{
 // (platform/auth/rbac.go), so the gate would admit them anyway and the entry
 // records why asking was never the point.
 var lifecycleContactReads = gatekit.Waive(map[string]string{
+	"internal/modules/contacts/restrictedauthors.go:restrictedAuthorsSQL": "the chat summary engine's restricted-author filter, run under the chat engine's system principal (system:chat_links), so auth.Require would short-circuit and asking a grant was never the point. The contact table is joined only to read archived_at; no contact column is selected, and what leaves is a per-address boolean that only ever WITHHOLDS a chat author's messages from the summary, never discloses a contact.",
+
 	"internal/modules/contacts/employmentrepair.go:CountUnresolvedEmploymentContacts": "Bounded data-task estimate counts unresolved contacts for operator progress; no contact row or identity is returned.",
 	"internal/modules/contacts/employmentrepair.go:RepairUndatedEmploymentTx":         "System-only bounded repair selects candidate IDs, then HoldWritableLive locks each contact before the shared import writer. IDs stay inside the batch.",
 

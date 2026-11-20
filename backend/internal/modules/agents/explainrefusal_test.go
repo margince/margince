@@ -5,6 +5,7 @@ package agents
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // Each sentinel branch of explain quotes the refusal as the REST surface
@@ -80,5 +82,19 @@ func TestEverySentinelRefusalQuotesTheCallerFacingText(t *testing.T) {
 		if strings.Contains(got, tc.withheld) {
 			t.Errorf("%s: explain = %q, shows %q", name, got, tc.withheld)
 		}
+	}
+}
+
+// MCP has no structured error, so an agent reads the grant it lacks in the
+// text. The form is stable, so the agent can hand it to an admin.
+func TestARefusalOnAGrantTellsTheAgentWhichGrantToAskFor(t *testing.T) {
+	rep := principal.WithActor(context.Background(), principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:rep",
+		Permissions: principal.Permissions{Objects: map[string]principal.ObjectGrant{"deal": {Read: true}}},
+	})
+	got := refusalDetail(auth.Require(rep, "deal", principal.ActionUpdate))
+	want := "permission_denied: your role does not grant update on deal (missing grant deal.update; an admin changes your roles to allow it)"
+	if got != want {
+		t.Errorf("the agent read %q, want %q", got, want)
 	}
 }

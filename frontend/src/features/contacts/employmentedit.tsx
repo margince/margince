@@ -10,10 +10,13 @@ import {
 } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
-import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
 import { stillHeld, useEmploymentZone } from "../../lib/employmentcurrency";
 import { datePatch, patchEmployment, validDateEntry } from "./employmentpatch";
+import {
+  type EmploymentStatusChoice,
+  EmploymentStatusFields,
+} from "./employmentstatusfields";
 import "../../design-system/querystates.css";
 
 type Employment = components["schemas"]["Contact360Employment"];
@@ -43,7 +46,7 @@ export function EmploymentEdit({
   const employmentZone = useEmploymentZone();
   const [primary, setPrimary] = useState(employment.is_current_primary);
   const [role, setRole] = useState(employment.role ?? "");
-  const [status, setStatus] = useState<"current" | "former" | "">(
+  const [status, setStatus] = useState<EmploymentStatusChoice>(
     stillHeld(employment, employmentZone)
       ? "current"
       : employment.employment_status === "unknown"
@@ -93,26 +96,6 @@ export function EmploymentEdit({
             />
           )}
         </Field>
-        <Field label={t("employment.statusLabel")}>
-          {(control) => (
-            <Select
-              {...control}
-              value={status}
-              placeholder={t("employment.statusChoose")}
-              onChange={(value) => {
-                if (value === "current" || value === "former") setStatus(value);
-              }}
-              options={["current", "former"].map((value) => ({
-                value,
-                label: t(
-                  value === "current"
-                    ? "employment.status.current"
-                    : "employment.status.former",
-                ),
-              }))}
-            />
-          )}
-        </Field>
         <Field label={t("employment.start")} hint={t("employment.dateHint")}>
           {(control) => (
             <TextInput
@@ -122,17 +105,14 @@ export function EmploymentEdit({
             />
           )}
         </Field>
-        <Field label={t("employment.end")} hint={t("employment.dateHint")}>
-          {(control) => (
-            <TextInput
-              {...control}
-              value={end}
-              onChange={(e) => setEnd(e.target.value)}
-            />
-          )}
-        </Field>
+        <EmploymentStatusFields
+          status={status}
+          onStatusChange={setStatus}
+          end={end}
+          onEndChange={setEnd}
+        />
         <Checkbox
-          label={t("contact.rail.isCurrentEmployer")}
+          label={t("contact.rail.isPrimaryEmployer")}
           checked={status === "current" && primary}
           disabled={status !== "current" || saving.isPending}
           onChange={(e) => setPrimary(e.target.checked)}

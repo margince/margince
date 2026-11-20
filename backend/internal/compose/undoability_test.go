@@ -351,27 +351,27 @@ func TestAnAddressIsNotFoldedForAShapeThatCannotTakeOne(t *testing.T) {
 	}
 }
 
-// A merged field is put back with every key the entry wrote. The before-image
-// gives the handles, and a key the entry added goes back as null to be removed.
-func TestAMergedObjectFieldIsRestoredWithEveryKeyTheEntryWrote(t *testing.T) {
-	for _, tc := range []struct{ name, before, after, want string }{
-		{"a key the entry added", `{"social":null}`, `{"social":{"linkedin":"https://www.linkedin.com/in/ada"}}`, `{"linkedin":null}`},
-		{"a key the entry changed", `{"social":{"linkedin":"a"}}`, `{"social":{"linkedin":"b","github":"ada"}}`, `{"github":null,"linkedin":"a"}`},
-		{"a key the entry removed", `{"social":{"linkedin":"a"}}`, `{"social":{"linkedin":null}}`, `{"linkedin":"a"}`},
+// A merged field is put back with every key the entry wrote: a key the entry
+// added goes back as null to be removed. A list held empty goes back as [].
+func TestAMergedObjectOrListIsRestoredAsTheUpdateCanSayIt(t *testing.T) {
+	for _, tc := range []struct{ name, entity, key, before, after, want string }{
+		{"a key the entry added", "contact", "social", `{"social":null}`, `{"social":{"linkedin":"https://www.linkedin.com/in/ada"}}`, `{"linkedin":null}`},
+		{"a key the entry changed", "contact", "social", `{"social":{"linkedin":"a"}}`, `{"social":{"linkedin":"b","github":"ada"}}`, `{"github":null,"linkedin":"a"}`},
+		{"a key the entry removed", "contact", "social", `{"social":{"linkedin":"a"}}`, `{"social":{"linkedin":null}}`, `{"linkedin":"a"}`},
+		{"phones held none", "contact", "phones", `{"phones":null}`, `{"phones":[{"value":"x"}]}`, `[]`},
+		{"emails held none", "contact", "emails", `{"emails":null}`, `{"emails":[{"value":"x"}]}`, `[]`},
+		{"domains held none", "company", "domains", `{"domains":null}`, `{"domains":[{"value":"x"}]}`, `[]`},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			patch, unspellable, err := filterImage("contact", json.RawMessage(tc.before), json.RawMessage(tc.after))
-			if err != nil {
-				t.Fatalf("filter: %v", err)
+			patch, unspellable, err := filterImage(tc.entity, json.RawMessage(tc.before), json.RawMessage(tc.after))
+			if err != nil || len(unspellable) > 0 {
+				t.Fatalf("filter: unspellable %v, err %v", unspellable, err)
 			}
-			if len(unspellable) > 0 {
-				t.Fatalf("social reported unspellable: %v", unspellable)
+			if string(patch[tc.key]) != tc.want {
+				t.Errorf("%s = %s, want %s", tc.key, patch[tc.key], tc.want)
 			}
-			if string(patch["social"]) != tc.want {
-				t.Errorf("social = %s, want %s", patch["social"], tc.want)
-			}
-			if _, _, unclearable := splitNulls("contact", patch); len(unclearable) > 0 {
-				t.Errorf("social still reads as an unclearable null: %v", unclearable)
+			if _, _, unclearable := splitNulls(tc.entity, patch); len(unclearable) > 0 {
+				t.Errorf("%s still reads as an unclearable null: %v", tc.key, unclearable)
 			}
 		})
 	}

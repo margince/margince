@@ -22,7 +22,6 @@ import {
 } from "../../design-system/recordview";
 import { useLocale, useT } from "../../i18n";
 import { useTargetApprovals } from "../../lib/approvals.queries";
-import { useRecordWriteRefusal } from "../../lib/capability";
 import { useDeal } from "../../lib/dealread";
 import { usePipeline } from "../../lib/deals.queries";
 import { useLegalReviewAvailable } from "../../lib/legalreviews.queries";
@@ -33,6 +32,7 @@ import type { RecordTabId } from "../../lib/recordtaborder";
 import { scrollPageToTop } from "../../lib/reveal";
 import { useMe, useViewerId } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
+import { useKindWriteRefusal } from "../../lib/writerefusal";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
 import { WorklistReturnLink } from "../worklist/worklist.return";
 import {
@@ -197,10 +197,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   // Every write affordance on this page answers one question, asked once. An
   // archived deal takes no changes, and its verbs stay, refused. One this
   // caller cannot write takes none from them, so its verbs are left out.
-  const readOnlyReason = useRecordWriteRefusal("deal", dealQuery.data, {
-    archived: t("deal.archivedReadOnly"),
-    notYours: t("deal.notYoursToChange"),
-  });
+  const readOnlyReason = useKindWriteRefusal("deal", dealQuery.data);
   const readOnly = Boolean(readOnlyReason);
   // The id every refused control points at, or nothing while the deal takes
   // changes, resolved once here so the render below reads one name.

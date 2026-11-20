@@ -263,6 +263,9 @@ describe("UsersAdminCard role picker", () => {
         if (req.url.includes("/users") && req.method === "GET") {
           return jsonResponse(ROSTER);
         }
+        if (req.method !== "PATCH") {
+          return jsonResponse({}, 404);
+        }
         patches.push(req.url);
         return jsonResponse({ title: "Conflict", detail: "Try again." }, 409);
       }),

@@ -324,6 +324,7 @@ function NewDocumentSet() {
   return (
     <CreateAction
       label={t("knowledge.new.title")}
+      requires={{ object: "knowledge_corpus", action: "create" }}
       invalidate={SETS_KEY[0]}
       screen="settings"
       stay

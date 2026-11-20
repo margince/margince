@@ -22,9 +22,12 @@ type BulkTask = components["schemas"]["BulkTask"];
 
 export function TaskVerb({
   disabled,
+  reasonId,
   onReady,
 }: Readonly<{
   disabled: boolean;
+  /** The bar's sentence saying why filing a task is refused, when it is. */
+  reasonId?: string;
   /** The task, once the reader has said what it is. */
   onReady: (task: BulkTask) => void;
 }>) {
@@ -44,7 +47,7 @@ export function TaskVerb({
   };
   return (
     <>
-      <Button disabled={disabled} onClick={start}>
+      <Button disabled={disabled} reasonId={reasonId} onClick={start}>
         {t("bulk.createTask")}
       </Button>
       <ConfirmModal
