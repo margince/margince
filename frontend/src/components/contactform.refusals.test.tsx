@@ -34,6 +34,7 @@ function NewContact({ problem }: Readonly<{ problem: unknown }>) {
   const t = useT();
   return (
     <CreateAction
+      requires={{ object: "contact", action: "create" }}
       label="New contact"
       fields={contactCreateFields(t)}
       create={() => throwProblem(problem)}
@@ -45,10 +46,9 @@ function NewContact({ problem }: Readonly<{ problem: unknown }>) {
 }
 
 async function submit(problem: unknown, locale: Locale = "en") {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  seedWriter(client);
+  const client = seedWriter(
+    new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+  );
   const { container } = rtlRender(
     <QueryClientProvider client={client}>
       <LocaleProvider initial={locale}>

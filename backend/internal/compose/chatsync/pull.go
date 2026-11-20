@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/chatlinks"
 	"github.com/margince/margince/backend/internal/modules/chatlinks/dispact"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -37,6 +38,9 @@ type Puller struct {
 	Store      *chatlinks.Store
 	Chats      chatlinks.Chats
 	Activities *activities.Store
+	// Contacts resolves a chat author's address to a contact, so a restricted or
+	// erased subject's talk is left out of the summary.
+	Contacts *contacts.Store
 	// Lane is the chat_summary lane; nil files nothing.
 	Lane ai.Completer
 	Now  func() time.Time
@@ -167,6 +171,11 @@ func cutByPageCap(episodes []episode, ended bool) {
 	}
 }
 
+// restricted answers which of the author addresses the summary must withhold.
+func (p *Puller) restricted(ctx context.Context, emails []string) (map[string]bool, error) {
+	return lookupRestricted(ctx, p.Pool, p.Contacts, emails)
+}
+
 // judge summarises one closed episode and files it when it matters. An
 // episode no model can judge, or whose answer was refused, is passed over.
 // The cursor moves on, so a channel never waits for a model.
@@ -175,10 +184,13 @@ func (p *Puller) judge(ctx context.Context, session chatlinks.Session, link chat
 	if err != nil {
 		return err
 	}
-	reply, err := summariser{lane: p.Lane, pool: p.Pool}.summarise(ctx, link, record, ep.messages, false)
+	reply, err := summariser{lane: p.Lane, pool: p.Pool, restricted: p.restricted}.summarise(ctx, link, record, ep.messages, false)
 	switch {
 	case errors.Is(err, errNoModel):
 		p.Log.InfoContext(ctx, "chat episode passed over", "link", link.ID.String(), "first_seq", ep.firstSeq(), "reason", "no_model")
+		return nil
+	case errors.Is(err, errUnmatchableAuthor):
+		p.Log.InfoContext(ctx, "chat episode passed over", "link", link.ID.String(), "first_seq", ep.firstSeq(), "reason", "restricted_author")
 		return nil
 	case errors.Is(err, ai.ErrOutputRejected):
 		p.Log.WarnContext(ctx, "chat episode passed over", "link", link.ID.String(), "first_seq", ep.firstSeq(), "reason", "answer_rejected")

@@ -467,7 +467,7 @@ func emissionBearingFunctions(fset *token.FileSet, dir string) (map[string]bool,
 }
 
 // storekitWriterSets are storekit's exported writers, derived from its call
-// graph. Emits reach emitEnvelope, the INSERT into event_outbox. Audits reach
+// graph. Emits reach insertEvents, the INSERT into event_outbox. Audits reach
 // insertAuditRows, the INSERT into audit_log, and do not emit. A new
 // writer is held by the event rule the day it is added.
 type storekitWriterSets struct {
@@ -477,7 +477,7 @@ type storekitWriterSets struct {
 func storekitWriters(t *testing.T) storekitWriterSets {
 	t.Helper()
 	calls := storekitCalls(t)
-	audit, emit := reachersOf(calls, "insertAuditRows"), reachersOf(calls, "emitEnvelope")
+	audit, emit := reachersOf(calls, "insertAuditRows"), reachersOf(calls, "insertEvents")
 	sets := storekitWriterSets{audits: map[string]bool{}, emits: map[string]bool{}}
 	for name := range emit {
 		sets.emits[name] = ast.IsExported(name)
@@ -490,7 +490,7 @@ func storekitWriters(t *testing.T) storekitWriterSets {
 			t.Fatalf("the derived audit writers miss storekit.%s; the call graph is reading too little", known)
 		}
 	}
-	for _, known := range []string{"Emit", "EmitEvent"} {
+	for _, known := range []string{"Emit", "EmitEvent", "ClearRemovedChoices"} {
 		if !sets.emits[known] {
 			t.Fatalf("the derived emitters miss storekit.%s; the call graph is reading too little", known)
 		}

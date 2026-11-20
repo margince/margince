@@ -133,21 +133,30 @@ export const AudienceOpen: Story = {
   },
 };
 
-/** Captured mail on a deal's timeline: "Not about this deal", open. */
+/** Captured mail on a deal's timeline, marked not about it: the mark, and "About this deal" in the menu. */
 export const NotAboutThisDeal: Story = {
-  args: { activity: { ...CAPTURED, subject: "Rechnungslauf Oktober" } },
+  args: {
+    activity: {
+      ...CAPTURED,
+      subject: "Rechnungslauf Oktober",
+      links: [
+        {
+          entity_type: "deal",
+          entity_id: "d1",
+          deal_relevance: "unrelated",
+          relevance_source: "human",
+        },
+      ],
+    },
+  },
   play: async ({ canvasElement }) => {
+    await within(canvasElement).findByText("Not about this deal");
     await userEvent.click(
       await within(canvasElement).findByRole("button", {
         name: "More actions for Rechnungslauf Oktober",
       }),
     );
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Not about this deal" }),
-    );
-    await screen.findByRole("dialog", {
-      name: "Take this email off the deal?",
-    });
+    await screen.findByRole("button", { name: "About this deal" });
   },
 };
 export const NotAboutThisDealDark: Story = {

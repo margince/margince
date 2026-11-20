@@ -128,3 +128,33 @@ func TestAPromiseThatLooksKeptIsNotAnOpenDriverAndIsSaidOnce(t *testing.T) {
 		t.Errorf("evidence = %+v, want the conversation the promise was made in", lines[0].Evidence)
 	}
 }
+
+// A promise Margince closed itself is said as closed by Margince, with the
+// meeting when the reader may open it, and is no open driver.
+func TestAPromiseTheProductClosedIsSaidAsSuchOnce(t *testing.T) {
+	claim := claimOf(crmcontracts.ConversationClaimKindCommitmentOurs, crmcontracts.ConversationClaimStatusDone, false)
+	claim.SourceActivityId = openapi_types.UUID(ids.NewV7())
+	claim.AutoKept = &crmcontracts.ConversationClaimAutoKept{Evidence: &crmcontracts.ConversationClaimLooksKept{
+		GuestName: "Riley Reed", MeetingAt: at(9), MeetingPrecision: "instant",
+	}}
+	withheld := claim
+	withheld.AutoKept = &crmcontracts.ConversationClaimAutoKept{}
+	for name, tc := range map[string]struct {
+		claim crmcontracts.ConversationClaim
+		want  string
+	}{
+		"with the meeting":    {claim, "Riley Reed"},
+		"meeting not visible": {withheld, "Margince marked this kept"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			found := []crmcontracts.ConversationClaim{tc.claim}
+			if open := foldClaims("Pat", found); len(open) != 0 {
+				t.Fatalf("a closed promise still drives the prep: %+v", open)
+			}
+			lines := looksKeptLines(Input{Language: "en", LooksKept: foldLooksKept("Pat", found)})
+			if len(lines) != 1 || !strings.Contains(lines[0].Text, "Margince marked this kept") || !strings.Contains(lines[0].Text, tc.want) {
+				t.Fatalf("lines = %+v, want one line saying Margince marked it kept and %q", lines, tc.want)
+			}
+		})
+	}
+}

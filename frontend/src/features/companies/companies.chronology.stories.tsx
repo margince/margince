@@ -20,7 +20,6 @@ function History() {
     company,
     view: company360,
     loading: false,
-    failed: false,
     active: true,
   });
   return (

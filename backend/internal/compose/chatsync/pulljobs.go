@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/chatlinks"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -100,11 +101,14 @@ func (s Sweeper) Swept(ctx context.Context, connection ids.UUID) {
 func NewPuller(pool *pgxpool.Pool, store *chatlinks.Store, chats LiveChats, lane ai.Completer, log *slog.Logger) *Puller {
 	return &Puller{
 		Pool: pool, Store: store, Chats: chats, Activities: activities.NewStore(chats.DB),
-		Lane: lane, Now: time.Now, Zone: time.UTC, Log: log,
+		Contacts: contacts.NewStore(chats.DB), Lane: lane, Now: time.Now, Zone: time.UTC, Log: log,
 	}
 }
 
 // NewFiler builds the file_channel_message engine of an api role.
 func NewFiler(pool *pgxpool.Pool, store *chatlinks.Store, chats LiveChats, lane ai.Completer) *Filer {
-	return &Filer{Pool: pool, Store: store, Chats: chats, Activities: activities.NewStore(chats.DB), Lane: lane}
+	return &Filer{
+		Pool: pool, Store: store, Chats: chats, Activities: activities.NewStore(chats.DB),
+		Contacts: contacts.NewStore(chats.DB), Lane: lane,
+	}
 }

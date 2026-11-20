@@ -18,7 +18,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/stateddeadline"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -243,6 +245,9 @@ func (d *CommitmentDispatcher) renewTask(ctx context.Context, tx pgx.Tx, c Commi
 	if err != nil {
 		return CommitmentRemembered, ids.UUID{}, err
 	}
+	if !values.DueInWindow(due, d.now()) {
+		return CommitmentRemembered, ids.UUID{}, nil
+	}
 	changed, err := d.tasks.RenewCommitmentTaskTx(extractorContext(ctx, c.Extractor), tx, c.Locator, c.Summary, c.Body, due, c.PrivateTo)
 	if err != nil || !changed {
 		return CommitmentRemembered, ids.UUID{}, err
@@ -261,4 +266,15 @@ func (outcome CommitmentOutcome) wroteWork() bool {
 
 func (outcome CommitmentOutcome) withheld() bool {
 	return outcome != CommitmentRemembered && outcome != CommitmentRetained && !outcome.wroteWork()
+}
+
+// commitmentWindow is how long a proposal waits for its promiser. An invited
+// colleague finds the card when they first sign in, which may be weeks away,
+// and the default 72 hours would expire it unseen. A promise from a late
+// report is as old as the horizon already, so it gets the same wait.
+func commitmentWindow(state activities.SeatWorkState, late bool) *time.Duration {
+	if state != activities.SeatInvited && !late {
+		return nil
+	}
+	return new(time.Duration(provenance.CommitmentHorizonDays) * 24 * time.Hour)
 }

@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // sqlUnscoped stands in for a scope clause a caller's grant leaves empty.
@@ -384,7 +385,7 @@ func threadDeals(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, comp
 		SELECT DISTINCT d.id
 		  FROM activity self
 		  JOIN activity a ON a.id <> self.id AND `+correspondence.ConversationSQL("a", "self")+`
-		  JOIN activity_link l ON l.activity_id = a.id AND l.entity_type = 'deal'
+		  JOIN activity_link l ON l.activity_id = a.id AND l.entity_type = 'deal' AND `+relstrength.DealLinkStandsSQL("l")+`
 		  JOIN deal d ON d.id = l.deal_id
 		 WHERE self.id = $1 AND `+correspondence.ProvenSQL("self")+`
 		   AND `+correspondence.ProvenSQL("a")+`

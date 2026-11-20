@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/chatlinks"
 	"github.com/margince/margince/backend/internal/modules/chatlinks/dispact"
 	"github.com/margince/margince/backend/internal/modules/chatlinks/dispact/dispacttest"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -71,11 +72,12 @@ func setupPull(t *testing.T) *pullEnv {
 	db := database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws))
 	chats := httpChats{client: dispact.New(srv.Client(), srv.URL, "gwapp_test"), connection: e.conn}
 	acts := activities.NewStore(db)
+	contactStore := contacts.NewStore(db)
 	e.puller = &Puller{
-		Pool: e.pool, Store: e.store, Chats: chats, Activities: acts, Lane: e.lane,
+		Pool: e.pool, Store: e.store, Chats: chats, Activities: acts, Contacts: contactStore, Lane: e.lane,
 		Now: func() time.Time { return e.now }, Zone: time.UTC, Log: slog.Default(),
 	}
-	e.filer = &Filer{Pool: e.pool, Store: e.store, Chats: chats, Activities: acts, Lane: e.lane}
+	e.filer = &Filer{Pool: e.pool, Store: e.store, Chats: chats, Activities: acts, Contacts: contactStore, Lane: e.lane}
 	return e
 }
 
@@ -84,10 +86,14 @@ func (e *pullEnv) say(slug string, seq int64, minutes int, text string) {
 	e.sayIn(slug, dispacttest.Message{Seq: seq, Text: text}, minutes)
 }
 
-// sayIn adds a message shaped by the test, as Rita Rep, minutes after the
-// link was made.
+// sayIn adds a message shaped by the test, as Rita Rep, minutes after the link
+// was made. An address lets the restriction check match the author; a test that
+// needs a restricted author sets its own.
 func (e *pullEnv) sayIn(slug string, m dispacttest.Message, minutes int) {
 	m.UserName, m.PostedAt = "Rita Rep", linkedAt.Add(time.Duration(minutes)*time.Minute)
+	if m.UserEmail == "" {
+		m.UserEmail = "rita@acme.test"
+	}
 	e.history.Seed(slug, m)
 }
 
@@ -188,6 +194,24 @@ func TestWithNoModelAnEpisodeIsPassedOverUnfiled(t *testing.T) {
 	}
 	if c := e.cursor(t); c == nil || *c != 1 {
 		t.Fatalf("cursor = %v, want 1: the channel does not wait for a model", c)
+	}
+}
+
+func TestAnEpisodeWhoseAuthorRestrictedProcessingIsPassedOverUnfiled(t *testing.T) {
+	e := setupPull(t)
+	contact := ids.NewV7()
+	e.exec(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, 'Clara Contact', 'manual', 'system')`, contact)
+	e.exec(t, `INSERT INTO contact_email (contact_id, email, source, captured_by) VALUES ($1, 'clara@acme.test', 'manual', 'system')`, contact)
+	e.exec(t, `INSERT INTO communication_suppression (contact_id, kind, source, captured_by, decided_by_level)
+		VALUES ($1, 'processing_restriction', 'test', 'human:x', 'subject')`, contact)
+	e.sayIn("acme", dispacttest.Message{Seq: 1, Text: "Acme wants 12% off the renewal", UserEmail: "clara@acme.test"}, 60)
+	e.pull(t)
+
+	if n := len(e.notes(t)); n != 0 {
+		t.Fatalf("a restricted author's talk filed %d notes", n)
+	}
+	if c := e.cursor(t); c == nil || *c != 1 {
+		t.Fatalf("cursor = %v, want 1: the channel moves past the passed-over episode", c)
 	}
 }
 

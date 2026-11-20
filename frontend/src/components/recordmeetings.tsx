@@ -132,6 +132,15 @@ function heldState(
   return listed.isPending ? "loading" : "empty";
 }
 
+function canStartMeetingList(
+  recordId: string | undefined,
+  view: Withholding | undefined,
+  startWhileLoading: boolean,
+): boolean {
+  if (!recordId) return false;
+  return view ? !omitted(view, "activities") : startWhileLoading;
+}
+
 /** The composite read a Meetings tab stands on: its clock and what it withheld. */
 export type MeetingsView = Withholding & Readonly<{ as_of: string }>;
 
@@ -146,6 +155,7 @@ export function RecordMeetings({
   recordId,
   view,
   loading,
+  startListWhileLoading = false,
   next,
   onBriefMeeting,
   toolbar,
@@ -157,6 +167,7 @@ export function RecordMeetings({
   recordId: string | undefined;
   view?: MeetingsView;
   loading: boolean;
+  startListWhileLoading?: boolean;
   next?: NextMeeting;
   onBriefMeeting?: (activityId: string) => void;
   // The record's own ways to start a meeting, under the figures.
@@ -172,7 +183,7 @@ export function RecordMeetings({
   const { locale } = useLocale();
   const listed = useRecordTimeline(entity, recordId ?? "", {
     filters: MEETINGS_ONLY,
-    enabled: view !== undefined && !omitted(view, "activities"),
+    enabled: canStartMeetingList(recordId, view, startListWhileLoading),
   });
   const { ahead, held, happened, pastReached } = splitMeetings(
     listed.activities,

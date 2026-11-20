@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it } from "vitest";
-import { linkedinUrl, webUrl, withWebScheme } from "./weburl";
+import { isWebAddress, linkedinUrl, webUrl, withWebScheme } from "./weburl";
 
 // The guard three surfaces share: a company link on a reading chip, a
 // provider's source document in the contact drawer, and a custom field holding
@@ -120,6 +120,35 @@ describe("what may be shown as a LinkedIn profile", () => {
       "",
     ]) {
       expect(linkedinUrl(address)).toBeNull();
+    }
+  });
+});
+
+// The url field's write check, the same line values.IsWebAddress draws on the
+// server: a value the form takes is a value the save keeps.
+describe("what a url field may store", () => {
+  it("takes an absolute http or https address, in any case", () => {
+    for (const value of [
+      "https://offers.example.com/42",
+      "http://erp.internal:8080/orders/44",
+      "HTTP://EXAMPLE.COM/",
+    ]) {
+      expect(isWebAddress(value), value).toBe(true);
+    }
+  });
+
+  it("refuses a script, a data address, a bare host and hidden credentials", () => {
+    for (const value of [
+      "javascript:alert(1)",
+      "data:text/html,<b>x</b>",
+      "example.com/offer",
+      "//example.com/offer",
+      "https:///path",
+      "https://bank.example@evil.example/",
+      " https://example.com",
+      `https://example.com/${"a".repeat(2000)}`,
+    ]) {
+      expect(isWebAddress(value), value).toBe(false);
     }
   });
 });

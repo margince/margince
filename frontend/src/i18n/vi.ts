@@ -15,6 +15,7 @@ import type { MessageKey } from "./en";
 //     string in this catalog and must stay that way.
 export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.import_identity_links": "Liên kết email đã nhập",
+  "systemJob.promise_kept": "Đóng cam kết mà cuộc họp cho thấy đã thực hiện",
   "systemJob.transcript_audience": "Cập nhật quyền xem ghi chú theo cuộc họp",
   "systemJob.meeting_profile": "Gỡ giá trị công ty từ cuộc họp đã bị giới hạn",
   "systemJob.optout_receipt": "Báo biên nhận hủy đăng ký bị lỡ",
@@ -2427,6 +2428,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agentJob.coldstart": "Tiếp cận đầu tiên",
   "agentJob.company_name_promotion": "Cập nhật tên công ty",
   "agentJob.contact_share": "Yêu cầu chia sẻ liên hệ",
+  "agentJob.task_due_date": "Câu hỏi về hạn",
   "agentJob.deal_scout": "Trinh sát deal",
   "agentJob.dealscout": "Trinh sát deal",
   "agentJob.deepread": "Trình đọc trang web",
@@ -4572,6 +4574,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "commitment.looksKept":
     "Có vẻ đã làm xong: {name} đã chấp nhận cuộc họp ngày {date}.",
   "commitment.markKept": "Đánh dấu đã làm",
+  "commitment.autoKept":
+    "Margince đã đánh dấu việc này là xong: {name} đã chấp nhận cuộc họp ngày {date}.",
+  "commitment.autoKeptPlain": "Margince đã đánh dấu việc này là xong.",
+  "commitment.undo": "Hoàn tác",
   "commitment.quote": "“{quote}”",
   "co.brief.by.model": "Do Margince viết",
   "co.brief.by.deterministic": "Tổng hợp từ hồ sơ CRM",
@@ -4727,6 +4733,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.kind.capture_counterparty": "Thêm liên hệ từ email",
   "approval.kind.ownership_transfer": "Chuyển giao bản ghi",
   "approval.kind.contact_share": "Chia sẻ liên hệ",
+  "approval.kind.task_due_date": "Kiểm tra hạn",
   "approval.kind.company_name_promotion": "Đổi tên công ty",
   "approval.kind.vcard_create": "Tạo liên hệ từ danh thiếp",
   "approval.kind.lifecycle_change": "Giai đoạn vòng đời",
@@ -10772,6 +10779,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.import_commit": "Ghi dữ liệu nhập",
   "jobs.kind.import_undo": "Hoàn tác lượt nhập",
   "jobs.kind.import_validate": "Chạy thử dữ liệu nhập",
+  "jobs.kind.promise_kept_sweep": "Cam kết đã thực hiện qua cuộc họp",
   "jobs.kind.transcript_audience_sweep": "Quyền xem ghi chú cuộc họp",
   "jobs.kind.meeting_profile_retract_sweep": "Trường công ty từ cuộc họp",
   "jobs.kind.initiative_enrolment_sweep": "Ngày tham gia sáng kiến",
@@ -13112,6 +13120,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Cần có một người đầu tiên làm việc trong Margince. Thêm ngay, hoặc thêm sau trong Cài đặt, mục Nhân sự.",
   "ob.conv.team.invitedLabel": "Đã mời",
   "ob.conv.team.invitedLine": "Đã mời {name}.",
+  "ob.conv.team.inviteUnconfirmed":
+    "Margince không thể xác nhận lời mời. Lời mời có thể vẫn đã được gửi, vì vậy hãy kiểm tra Cài đặt → Thành viên trước khi mời lại địa chỉ này.",
   "ob.conv.team.skip": "Tạm bỏ qua",
   "ob.conv.team.finish": "Hoàn tất thiết lập",
   "ob.conv.team.done":
@@ -14053,6 +14063,21 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "cf.removeOption": "Gỡ lựa chọn",
   "cf.optionPlaceholder": "Nhãn lựa chọn",
   "cf.lastOptionBlocked": "Danh sách lựa chọn cần ít nhất một lựa chọn",
+  "cf.type.url": "Địa chỉ web",
+  "cf.url.invalid": "Nhập địa chỉ web bắt đầu bằng http:// hoặc https://.",
+  "cf.choices.edit": "Sửa lựa chọn",
+  "cf.choices.title": "Lựa chọn của “{label}”",
+  "cf.choices.checking": "Đang đếm số bản ghi giữ từng lựa chọn",
+  "cf.choices.held_one": "{count} bản ghi",
+  "cf.choices.held_other": "{count} bản ghi",
+  "cf.choices.clears_one":
+    "Khi lưu, các lựa chọn đã xóa sẽ bị gỡ khỏi {count} bản ghi.",
+  "cf.choices.clears_other":
+    "Khi lưu, các lựa chọn đã xóa sẽ bị gỡ khỏi {count} bản ghi.",
+  "cf.choices.saved_one":
+    "Đã lưu lựa chọn của “{label}”. {count} bản ghi đã thay đổi.",
+  "cf.choices.saved_other":
+    "Đã lưu lựa chọn của “{label}”. {count} bản ghi đã thay đổi.",
   "cf.gate.title": "Thêm trường này?",
   "cf.gate.body":
     "Khi xác nhận, trường này sẽ thành cột hoạt động trên mọi {object}: trên trang 360, trong tìm kiếm và bộ lọc, danh sách, bản xuất và API. Thao tác thêm này sẽ được ghi vào nhật ký hoạt động.",
@@ -15440,10 +15465,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "users.newTeamLabel": "Nhóm mới",
   "users.newTeamOpen": "Nhóm mới",
   "users.teamNameLabel": "Tên nhóm",
-  "users.emailTaken":
-    "Đã có thành viên dùng email này. Nếu thành viên đó đã bị vô hiệu hóa, kích hoạt lại thay vì mời lại.",
-  "users.emailReserved":
-    "Địa chỉ này thuộc về một thành viên đã bị xóa vĩnh viễn và vẫn được giữ lại.",
   "users.teamDuplicate": "Đã có nhóm mang tên này. Hãy chọn tên khác.",
   "users.newTeamPlaceholder": "Ví dụ: DACH Sales",
   "users.createTeam": "Tạo nhóm",
@@ -15568,6 +15589,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chỉ làm việc này cho thành viên đã mất cả ứng dụng xác thực lẫn mã khôi phục. Họ sẽ bị đăng xuất ở mọi nơi và sau đó có thể đăng nhập chỉ bằng mật khẩu, cho đến khi thiết lập lại đăng nhập hai bước.",
   "users.mfaRemoved": "Đã gỡ đăng nhập hai bước của {name}",
   "users.link.action": "Lấy liên kết đặt mật khẩu",
+  "users.inviteUnconfirmed":
+    "Margince không thể xác nhận lời mời. Thành viên có thể đã có trong danh sách, vì vậy hãy kiểm tra trước khi mời lại.",
+  "users.alreadyInvited":
+    "Địa chỉ này đã có một lời mời đang chờ. Hãy gửi lại lời mời trong Cài đặt → Thành viên.",
+  "users.emailTaken":
+    "Đã có thành viên dùng địa chỉ này. Nếu họ đã bị vô hiệu hóa, hãy kích hoạt lại từ danh sách.",
+  "users.removedEmail":
+    "Địa chỉ này thuộc về một thành viên đã bị xóa vĩnh viễn và vẫn được giữ lại.",
   "users.resendInvite": "Gửi lại lời mời",
   "users.inviteResent": "Đã gửi lại lời mời cho {name}",
   "users.link.title": "Liên kết đặt mật khẩu cho {name}",
@@ -16617,6 +16646,30 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "setup.action.calendar": "Kết nối lịch",
   "setup.action.voice": "Thêm mẫu",
   "setup.action.booking": "Bật",
+  "setup.step.timezone": "Chọn nơi bạn làm việc",
+  "setup.caption.timezone":
+    "Đặt múi giờ của bạn. Giờ, lịch hẹn và email theo múi giờ này.",
+  "setup.action.timezone": "Chọn nơi",
+  "setup.step.timezoneDone": "Giờ theo {zone}.",
+  "setup.step.timezoneDoneUnnamed": "Múi giờ của bạn đã chọn.",
+  "setup.step.language": "Chọn ngôn ngữ của bạn",
+  "setup.caption.language": "Margince hiện màn hình bằng ngôn ngữ này.",
+  "setup.action.language": "Chọn ngôn ngữ",
+  "setup.step.languageDone": "Ngôn ngữ của bạn đã được lưu.",
+  "setup.step.permissions": "Xem Margince được làm gì",
+  "setup.caption.permissions": "Margince đọc gì, ghi gì và cách hoàn tác.",
+  "setup.action.permissions": "Đọc",
+  "setup.step.permissionsDone": "Bạn đã đọc Margince được làm gì.",
+  "account.keepChoice": "Giữ {value}",
+  "setup.permissions.title": "Margince đọc và ghi gì",
+  "setup.permissions.reads":
+    "Margince đọc email và lịch bạn kết nối, tệp bạn tải lên và trang web công khai của công ty. Bạn có thể ngắt kết nối email và lịch bất cứ lúc nào trong Cài đặt, mục Kết nối.",
+  "setup.permissions.writes":
+    "Margince gắn nội dung đã đọc vào liên hệ, công ty và deal, thêm việc và ghi chú, rồi soạn bản nháp trả lời. Thư trả lời của bạn được gửi khi bạn nhấn Gửi, hoặc khi một tin nhắn bạn đã hẹn giờ đến hạn. Lời mời và thư đặt lại mật khẩu do chính Margince gửi.",
+  "setup.permissions.undo":
+    "Những gì Margince thay đổi hiện trong Danh sách công việc, mục Margince đã làm giúp bạn. Bạn hoàn tác phần lớn thay đổi ở đó.",
+  "setup.permissions.confirm": "Đã hiểu",
+  "setup.permissions.later": "Để sau",
   "settings.home.setup.title": "Thiết lập của bạn",
   "connectors.tile.notSetUp": "Chưa thiết lập",
   "connectors.tile.askAdmin": "Quản trị viên bật {vendor} trong {page}.",
@@ -21700,6 +21753,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.commitment.proposalExpiresIn": "Đề xuất hết hạn sau {countdown}",
   "approval.commitment.noDueDay": "Chưa nêu ngày",
   "approval.commitment.strength": "Mức chắc chắn",
+  "approval.commitment.oddDue": "Ngày này có vẻ quá xa: giữ, đổi hoặc xóa",
   "approval.commitment.tentative": "Chưa chắc chắn: họ nói sẽ cố gắng",
   "approval.commitment.promiseStatus": "Trạng thái cam kết",
   "approval.commitment.notFulfilled":
@@ -22219,13 +22273,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiServing.previewFailed":
     "Máy chủ không thể kiểm tra giá trị này: {reason} Nút Lưu sẽ tắt cho đến khi kiểm tra được.",
   "dealDecline.action": "Không thuộc deal này",
-  "dealDecline.title": "Gỡ email khỏi deal này?",
-  "dealDecline.body":
-    "Email rời khỏi deal này và Margince sẽ không gắn lại vào đây. Liên kết dự án có từ deal này cũng bị gỡ.",
-  "dealDecline.confirm": "Gỡ khỏi deal",
-  "dealDecline.done": "Đã gỡ email khỏi deal",
+  "dealDecline.done":
+    "Đã đánh dấu là không thuộc deal này. Mục này không còn giữ deal hoạt động.",
   "dealDecline.doneProjectKept":
-    "Đã gỡ email khỏi deal. Liên kết dự án vẫn giữ nguyên.",
+    "Đã đánh dấu là không thuộc deal này. Liên kết dự án vẫn giữ nguyên.",
+  "dealRelevance.about": "Thuộc deal này",
+  "dealRelevance.restored":
+    "Đã đánh dấu là thuộc deal này. Mục này lại được tính cho deal.",
+  "dealRelevance.unrelated": "Không thuộc deal này",
+  "dealRelevance.uncertain": "Có thể không thuộc deal này",
   "projectFiling.action": "Hoàn tác xếp vào dự án",
   "projectFiling.title": "Hoàn tác xếp vào dự án?",
   "projectFiling.loading": "Đang kiểm tra căn cứ lưu trữ hoạt động này…",

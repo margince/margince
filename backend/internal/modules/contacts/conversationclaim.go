@@ -243,6 +243,9 @@ func (s *Store) readClaims(
 	if err := withLooksKept(ctx, tx, out); err != nil {
 		return nil, err
 	}
+	if err := withAutoKept(ctx, tx, out); err != nil {
+		return nil, err
+	}
 	return out, nil
 }
 

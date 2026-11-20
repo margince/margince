@@ -6,10 +6,11 @@ package emailview
 
 import (
 	"html"
-	"net/url"
 	"strconv"
 	"strings"
 	"unicode"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // PresentationVersion pins queued markup independently of published wording.
@@ -247,8 +248,7 @@ func actionURL(text, placeholder string) bool {
 	if placeholder != "" && text == placeholder {
 		return true
 	}
-	parsed, err := url.Parse(text)
-	return err == nil && parsed.Host != "" && parsed.User == nil && (parsed.Scheme == "https" || parsed.Scheme == "http") && !strings.ContainsAny(text, "\r\n\t ")
+	return values.FollowableWebAddress(text)
 }
 
 func isSection(text string, sections []string) bool {

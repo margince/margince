@@ -32,6 +32,9 @@ type Sink struct {
 	// db binds the workspace this store runs for (ADR-0091 §9 step 3).
 	db     *database.DB
 	stager MergeStager
+	// dueAsker puts an out-of-window due date to the task's owner. Nil refuses
+	// such a task, because a date nobody can be asked about would be lost.
+	dueAsker DueAsker
 	// contactArrivals tells a contact's owner about a captured lead whose
 	// address is the contact's. Nil tells nobody, and the lead is still not made.
 	contactArrivals ContactArrivals

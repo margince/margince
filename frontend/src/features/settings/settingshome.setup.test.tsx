@@ -78,8 +78,17 @@ function serve({ finished }: Readonly<{ finished: boolean }>) {
   );
 }
 
+// The reader already answered the three personal steps, so these cases keep to
+// mail, voice and booking.
 function mountHome() {
-  const snapshot = meFixture({ allow: VOICE_WRITER });
+  const snapshot = meFixture({
+    allow: VOICE_WRITER,
+    personalChoicesMade: true,
+  });
+  writeStored(
+    { family: STORAGE_KEYS.setupPermissionsSeen, member: snapshot.user.id },
+    "1",
+  );
   const client = newClient();
   client.setQueryData(["me"], snapshot);
   renderWith(client, <SettingsHome reach={settingsReach(snapshot)} />);
@@ -110,8 +119,8 @@ describe("Your setup card", () => {
     const headings = screen.getAllByRole("heading", { level: 2 });
     expect(headings[0].textContent).toBe("Your setup");
     expect(within(setup).getByText("Only you")).not.toBeNull();
-    expect(within(setup).getByText("1 of 4 done")).not.toBeNull();
-    expect(within(setup).getAllByRole("listitem")).toHaveLength(4);
+    expect(within(setup).getByText("4 of 7 done")).not.toBeNull();
+    expect(within(setup).getAllByRole("listitem")).toHaveLength(7);
     expect(
       within(setup).getByRole("button", { name: "Connect calendar" }),
     ).not.toBeNull();
@@ -122,7 +131,7 @@ describe("Your setup card", () => {
     serve({ finished: false });
     mountHome();
 
-    expect(within(await card()).getAllByRole("listitem")).toHaveLength(4);
+    expect(within(await card()).getAllByRole("listitem")).toHaveLength(7);
   });
 
   it("is gone once every step is done, and the steps' pages stay listed", async () => {

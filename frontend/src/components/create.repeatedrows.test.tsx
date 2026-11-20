@@ -35,6 +35,7 @@ function Form({
   const { locale } = useLocale();
   return (
     <CreateAction
+      requires={{ object: "contact", action: "create" }}
       label="Open"
       fields={fields(t, locale)}
       create={(values, rows) => {
