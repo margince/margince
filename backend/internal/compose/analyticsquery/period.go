@@ -41,9 +41,9 @@ type PeriodField struct {
 }
 
 // AnchorIn is Anchor with a date-only row's date begun in the zone bind
-// renders, so a kept period places the row by the calendar its bounds were cut
-// in. bind runs only when Anchor reads a zone: Postgres refuses a parameter the
-// statement never uses.
+// renders. A kept period then places the row by the calendar its bounds were
+// cut in. bind runs only when Anchor reads a zone: Postgres refuses a
+// parameter the statement never uses.
 func (p PeriodField) AnchorIn(bind func() string) string {
 	if p.Zone == "" || !strings.Contains(p.Anchor, p.Zone) {
 		return p.Anchor
