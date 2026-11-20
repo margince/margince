@@ -80,7 +80,7 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   await expect(
     page
       .getByRole("region", { name: "Phasenverlauf" })
-      .getByText(/Lars Brandt hat das Projekt angelegt/),
+      .getByText(/Lars Brandt hat das Projekt erstellt/),
   ).toBeVisible();
   // A new project has filed no documents, and its standing says so.
   await expect(
