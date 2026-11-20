@@ -107,7 +107,7 @@ reads the role.
 - 700 bold is for emphasis, for telling one thing from another, and for the heading tokens. Used in
   any other place, it stops meaning anything.
 
-Both text families ship 400, 500 and 700, and `index.html` loads those three. A fourth weight would
+Both text families ship 400, 500 and 700, and `src/fonts.css` declares those three. A fourth weight would
 draw as a face the browser made up, not one the designer drew. `census/rules/weights.census.ts`
 reads the font request and the stylesheets against each other. It reads each weight token through
 `tokens.css`, and fails on any difference.

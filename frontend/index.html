@@ -45,7 +45,9 @@
         if (choice === "light" || choice === "dark") {
           document.documentElement.dataset.theme = choice;
         }
-      } catch {}
+      } catch {
+        // Storage refused: the stylesheet follows the computer's mode.
+      }
     </script>
     <!-- The page ground until app.css defines --bgPage, so the first paint is
       already the theme's. prepaint.test.ts holds the values to tokens.css. -->

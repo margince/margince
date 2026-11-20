@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/App.tsx frontend/src/bootstrap.ts frontend/src/main.tsx frontend/src/app/startup-session.ts frontend/src/app/navigation-prefetch.ts frontend/src/app/nav.ts frontend/src/app/shell.tsx frontend/src/app/pagemeta.ts frontend/src/lib/router.tsx frontend/src/lib/screenaddress.ts frontend/src/lib/navigatefrom.ts frontend/src/lib/historydepth.ts frontend/src/lib/urlstate.ts frontend/src/App.views.tsx frontend/src/design-system/tokens.css frontend/src/i18n frontend/scripts/feature-boundaries.ts -->
+<!-- describes: frontend/src/App.tsx frontend/src/bootstrap.ts frontend/src/main.tsx frontend/index.html frontend/src/app/startup-session.ts frontend/src/app/navigation-prefetch.ts frontend/src/app/nav.ts frontend/src/app/shell.tsx frontend/src/app/pagemeta.ts frontend/src/lib/router.tsx frontend/src/lib/screenaddress.ts frontend/src/lib/navigatefrom.ts frontend/src/lib/historydepth.ts frontend/src/lib/urlstate.ts frontend/src/App.views.tsx frontend/src/design-system/tokens.css frontend/src/i18n frontend/scripts/feature-boundaries.ts -->
 # The frontend: how the web app is put together
 
 Read this before you change anything under `frontend/`. Most of the rules of
@@ -336,10 +336,16 @@ those parts, it points the text, link and focus tokens at the field's own colour
 under it. A new part on the field goes in that list; `frontend/census/rules/inkfield.census.ts` fails one that is missing.
 
 Both themes ship, and **the theme resolves before React starts**.
-`main.tsx` calls `startTheme()` above `createRoot(...).render(...)`. That choice
-lives in `src/lib/theme.ts` and in no other file. A stated choice
+`main.tsx` calls `startTheme()` above `createRoot(...).render(...)`, and
+`src/lib/theme.ts` resolves the choice. A stated choice
 (`margince.theme` in `localStorage`, `light` or `dark`) wins; otherwise the OS
 `prefers-color-scheme` decides.
+
+The first paint comes before any module runs, so a classic script in
+`index.html` sets a stored `light` or `dark` on `<html>` first, and the inline
+style there paints that theme's ground. `src/app/prepaint.test.ts` holds the
+script's key and values to `storage.ts` and `theme.ts`. `nginx.conf` admits the
+script by its sha256 in `script-src`, which `src/app/webtier.test.ts` derives.
 
 A third value, `system`, says to keep following the OS. An install that has
 never made a choice resolves as `system`, and so does any value the build does not
@@ -478,7 +484,7 @@ merge gate and needs Node and pnpm.
 | what a route renders | `src/App.views.tsx` (`ScreenView`), then the screen file |
 | a colour, a `border-radius`, a spacing step | `src/design-system/tokens.css` (and `tokens.test.ts`), never a call site |
 | a derived colour role | `src/design-system/brand.css`: a `color-mix()`, never a new hex value |
-| light and dark themes | `src/lib/theme.ts` and `tokens.css`, which carries all three states: the light colour set on `:root` alone, the `prefers-color-scheme` block for a surface whose host states nothing, and the `[data-theme]` blocks a stated choice sets |
+| light and dark themes | `src/lib/theme.ts`, the inline script and style in `index.html`, and `tokens.css`, which carries all three states: the light colour set on `:root` alone, the `prefers-color-scheme` block for a surface whose host states nothing, and the `[data-theme]` blocks a stated choice sets |
 | how a derived value shows its evidence | `src/design-system/evidencemark.tsx` |
 | a staging or approval surface | `src/design-system/trust.tsx` and `src/features/worklist/worklist.tsx` |
 | copy | `src/i18n/en.ts`, `de.ts` **and** `vi.ts`; the type check holds their keys the same |
