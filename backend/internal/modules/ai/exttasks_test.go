@@ -41,6 +41,21 @@ func TestRegisteredTasksAreRoutedButNotCertified(t *testing.T) {
 	}
 }
 
+func TestAnExtensionTaskDeclaresNoCompanyContext(t *testing.T) {
+	t.Cleanup(ResetExtensionTasks)
+	if err := RegisterExtensionTasks([]ExtensionTask{extTask("ext_a_ask", "a", false)}); err != nil {
+		t.Fatal(err)
+	}
+	policy, declared := CompanyContextFor("ext_a_ask")
+	if !declared || len(policy.Scopes) != 0 || policy.TokenBudget != 0 {
+		t.Errorf("policy = %+v, declared %v, want a declared empty one", policy, declared)
+	}
+	ResetExtensionTasks()
+	if _, declared := CompanyContextFor("ext_a_ask"); declared {
+		t.Error("Reset left the policy behind")
+	}
+}
+
 func TestARefusedTaskRegistersNothing(t *testing.T) {
 	t.Cleanup(ResetExtensionTasks)
 	badTier := extTask("ext_b_bad", "b", false)

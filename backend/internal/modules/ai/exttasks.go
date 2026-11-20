@@ -100,6 +100,8 @@ func (e ExtensionTask) apply() {
 	taskSites[e.Task] = sites
 	noPayloadTasks[e.Task] = true
 	taskSubjectRestriction[e.Task] = SubjectRestrictionPosture{Posture: postureHonour}
+	// The unit writes the whole prompt, so no company context rides it.
+	taskCompanyContext[e.Task] = CompanyContextPolicy{}
 	railOwners[e.Task] = SourceRouter
 }
 
@@ -142,6 +144,7 @@ func ResetExtensionTasks() {
 		delete(taskSites, task)
 		delete(noPayloadTasks, task)
 		delete(taskSubjectRestriction, task)
+		delete(taskCompanyContext, task)
 		delete(railOwners, task)
 	}
 	clear(extensionTasks.units)
