@@ -36,7 +36,6 @@
    panel's edge before a reader ever saw the receipt. */
 .evmark-panel {
   position: fixed;
-  z-index: 70;
   min-width: 240px;
   max-width: min(300px, 80vw);
   /* anchored.ts caps the height to whichever side of the trigger it opened

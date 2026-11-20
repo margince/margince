@@ -10,7 +10,7 @@
  * is the shell's own word for where that foot is — `--space-2` on a desktop and
  * the phone bar's clearance on a phone, so the chip never lands on the bar.
  * Above the page (z-index 50 is the bar's own layer in shell.css) and below the
- * lit edge (90) and the toast (60): the chip reports and the toast confirms, and
+ * lit edge (90) and the toast (top layer): the chip reports and the toast confirms, and
  * a confirmation must not be hidden by a gauge, so a toast covers it for the
  * seconds it is up.
  *
