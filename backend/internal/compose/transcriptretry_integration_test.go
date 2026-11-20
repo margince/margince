@@ -87,15 +87,16 @@ func TestATranscriptReadingsLastTry(t *testing.T) {
 		}
 	}
 	deferral := &ai.BudgetDeferralError{Task: ai.TaskTranscriptPropose, NextAttemptAt: clocktest.Now(t).Add(240 * time.Hour)}
-	for name, tc := range map[string]struct {
-		brain        completer
-		status, code string
-		snooze       bool
+	// In this order: the cases share one meeting, and the last leaves its reading claimed.
+	for _, tc := range []struct {
+		name, status, code string
+		brain              completer
+		snooze             bool
 	}{
-		"model failed":  {cannedBrain{err: ai.ErrAllTiersFailed}, activities.TranscriptReadFailed, activities.TranscriptFailureUnanswered, false},
-		"try timed out": {&interruptedBrain{err: context.Canceled}, activities.TranscriptReadFailed, activities.TranscriptFailureUnfinished, false},
-		"budget stop":   {cannedBrain{err: deferral}, activities.TranscriptReadQueued, "", true},
-		"claim taken":   {&interruptedBrain{before: steal, err: ai.ErrAllTiersFailed}, activities.TranscriptReadRunning, "", true},
+		{"model failed", activities.TranscriptReadFailed, activities.TranscriptFailureUnanswered, cannedBrain{err: ai.ErrAllTiersFailed}, false},
+		{"try timed out", activities.TranscriptReadFailed, activities.TranscriptFailureUnfinished, &interruptedBrain{err: context.Canceled}, false},
+		{"budget stop", activities.TranscriptReadQueued, "", cannedBrain{err: deferral}, true},
+		{"claim taken", activities.TranscriptReadRunning, "", &interruptedBrain{before: steal, err: ai.ErrAllTiersFailed}, true},
 	} {
 		read, errs := e.tryTranscript(t, oneOffJobMaxAttempts, tc.brain)
 		_, snoozed := errors.AsType[*river.JobSnoozeError](errs[0])
@@ -104,7 +105,7 @@ func TestATranscriptReadingsLastTry(t *testing.T) {
 			code = read.Outcome.Failure.Code
 		}
 		if errs[0] == nil || snoozed != tc.snooze || read.Status != tc.status || code != tc.code {
-			t.Errorf("%s: err = %v, reading %q coded %q; want snooze %v, %q coded %q", name, errs[0], read.Status, code, tc.snooze, tc.status, tc.code)
+			t.Errorf("%s: err = %v, reading %q coded %q; want snooze %v, %q coded %q", tc.name, errs[0], read.Status, code, tc.snooze, tc.status, tc.code)
 		}
 	}
 }
