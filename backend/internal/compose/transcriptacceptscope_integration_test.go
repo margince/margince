@@ -15,6 +15,7 @@ import (
 	"maps"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -134,6 +135,31 @@ func TestAcceptingAMeetingPromiseTheDeciderCanSeeWholeCarriesItsLinks(t *testing
 	}
 	if by := s.wsString(t, `SELECT captured_by FROM activity WHERE id = $1`, task); by != "human:"+s.Rep1.String() {
 		t.Errorf("the task is captured by %q, want the human who accepted it", by)
+	}
+}
+
+// The meeting is filed on a contact and a deal another team owns. The task
+// carries on from the meeting. So a team-scope decider who may read but not
+// change those records still accepts it, and the task lands where it is.
+func TestAcceptingAMeetingPromiseOnAColleaguesRecordsCarriesItsLinks(t *testing.T) {
+	e := setupTranscript(t)
+	pipeline, open, _ := integration.DealFixture(t, e.Env)
+	deal := e.SeedDeal(t, "Acme rollout", pipeline, open, &e.Rep3)
+	contact := e.SeedContact(t, "Dana Weiss", &e.Rep3)
+	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, contact_id) VALUES ($1, 'contact', $2)`, e.activity, contact)
+	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, deal_id) VALUES ($1, 'deal', $2)`, e.activity, deal)
+	read := e.read(t, cannedBrain{reply: groundedReply(t, 3, 0.9, e.Rep1)})
+	if len(read.ProposalIDs) != 1 {
+		t.Fatalf("want one staged proposal, got %d (%v)", len(read.ProposalIDs), read.StatusDetail)
+	}
+
+	if _, err := e.svc.Decide(e.ctx, ids.From[ids.ApprovalKind](read.ProposalIDs[0]), true, nil); err != nil {
+		t.Fatalf("accepting a promise from a meeting on a colleague's records: %v", err)
+	}
+	task := e.wsString(t, `SELECT id::text FROM activity WHERE kind = 'task'`)
+	if n := e.WsCount(t, `SELECT count(*) FROM activity_link
+		WHERE activity_id = $1 AND (contact_id = $2 OR deal_id = $3)`, task, contact, deal); n != 2 {
+		t.Errorf("the task carries %d of the meeting's contact and deal, want both", n)
 	}
 }
 

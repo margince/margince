@@ -179,3 +179,153 @@ func readProbeCallersIn(file *ast.File) []string {
 	}
 	return callers
 }
+
+// carrySetters ratifies each function that marks an activity as continuing
+// another, keyed package.function. A carried link skips the write check
+// (activities.mayCarry). So each setter says why the new row carries on from
+// that activity, and why no request can choose it.
+var carrySetters = gatekit.Waive(map[string]string{
+	"activities.anchorThreading":                 "a reply threads onto a mail with a message identity; a note, meeting or task anchor and a new topic carry nothing",
+	"activities.outboundMessage.activity":        "the sent row takes the continuation anchorThreading derived, never the caller's anchor",
+	"activities.emailRequestTaskInput":           "a reminder to answer a request is filed where the request message is; the message id is the source the store read",
+	"activities.Store.LandMeetingNotesTx":        "a capture transcript is filed where its meeting is; the meeting comes from the calendar sync, not a request",
+	"activities.LogActivityInput.ContinueFiling": "the one exported setter; its callers are listed here too",
+	"compose.writeCommitmentTask":                "a commitment task is filed where the message it was read from is; the message id is the extractor's",
+})
+
+// wantMinimumCarrySetters fails the gate when the walk stops seeing setters.
+// Six stand today.
+const wantMinimumCarrySetters = 4
+
+func TestEveryCarrySetterSaysWhyItsActivityIsCarriedOn(t *testing.T) {
+	t.Parallel()
+	defer carrySetters.AssertAllMatched(t)
+	scope := gatekit.Scope{
+		Roots: []string{"internal"},
+		Subject: func(_ string, file *ast.File) bool {
+			return len(carrySettersIn(file)) > 0 || declaresLogActivityInput(file) != nil
+		},
+		Exempt: gatekit.Waive(map[string]string{}),
+	}
+	files := scope.Files(t)
+	var requestFields map[string]bool
+	for _, src := range files {
+		if fields := declaresLogActivityInput(src.File); fields != nil {
+			requestFields = fields
+		}
+	}
+	if len(requestFields) == 0 {
+		t.Fatal("found no exported field of activities.LogActivityInput, so no setter can be checked for a request value")
+	}
+	found := map[string]bool{}
+	for _, src := range files {
+		for _, setter := range carrySettersIn(src.File) {
+			found[setter.name] = true
+			if !carrySetters.Waived(t, setter.name) {
+				t.Errorf("%s: %s marks an activity as continuing another, so its links skip the write check. "+
+					"Add it to carrySetters with the reason no request can choose that activity", src.Path, setter.name)
+			}
+			if field := requestValueIn(setter.value, requestFields); field != "" {
+				t.Errorf("%s: %s continues an activity named by %s, a field a request fills", src.Path, setter.name, field)
+			}
+		}
+	}
+	if len(found) < wantMinimumCarrySetters {
+		t.Errorf("found %d carry setters, want at least %d: the walk has stopped seeing them", len(found), wantMinimumCarrySetters)
+	}
+}
+
+type carrySetter struct {
+	name  string
+	value ast.Expr
+}
+
+// carrySettersIn finds each write of a `continues` field inside package
+// activities, the only package that can write it. It also finds each
+// ContinueFiling call anywhere, with the value written.
+func carrySettersIn(file *ast.File) []carrySetter {
+	var setters []carrySetter
+	for _, decl := range file.Decls {
+		fn, isFunc := decl.(*ast.FuncDecl)
+		if !isFunc || fn.Body == nil {
+			continue
+		}
+		name := file.Name.Name + "." + qualifiedFuncName(fn)
+		ast.Inspect(fn.Body, func(node ast.Node) bool {
+			switch n := node.(type) {
+			case *ast.KeyValueExpr:
+				if key, isIdent := n.Key.(*ast.Ident); isIdent && key.Name == "continues" && file.Name.Name == "activities" {
+					setters = append(setters, carrySetter{name, n.Value})
+				}
+			case *ast.AssignStmt:
+				for i, lhs := range n.Lhs {
+					if sel, isSel := lhs.(*ast.SelectorExpr); isSel && sel.Sel.Name == "continues" &&
+						file.Name.Name == "activities" && i < len(n.Rhs) {
+						setters = append(setters, carrySetter{name, n.Rhs[i]})
+					}
+				}
+			case *ast.CallExpr:
+				if sel, isSel := n.Fun.(*ast.SelectorExpr); isSel && sel.Sel.Name == "ContinueFiling" && len(n.Args) == 1 {
+					setters = append(setters, carrySetter{name, n.Args[0]})
+				}
+			}
+			return true
+		})
+	}
+	return setters
+}
+
+// declaresLogActivityInput answers the exported fields of
+// activities.LogActivityInput when the file declares it: the fields a request
+// fills.
+func declaresLogActivityInput(file *ast.File) map[string]bool {
+	if file.Name.Name != "activities" {
+		return nil
+	}
+	for _, decl := range file.Decls {
+		gen, isGen := decl.(*ast.GenDecl)
+		if !isGen {
+			continue
+		}
+		for _, spec := range gen.Specs {
+			typeSpec, isType := spec.(*ast.TypeSpec)
+			if !isType || typeSpec.Name.Name != "LogActivityInput" {
+				continue
+			}
+			structType, isStruct := typeSpec.Type.(*ast.StructType)
+			if !isStruct {
+				return nil
+			}
+			fields := map[string]bool{}
+			for _, field := range structType.Fields.List {
+				for _, name := range field.Names {
+					if name.IsExported() {
+						fields[name.Name] = true
+					}
+				}
+			}
+			return fields
+		}
+	}
+	return nil
+}
+
+// requestValueIn names the request field or request value a setter's value
+// reads, empty when it reads none.
+func requestValueIn(value ast.Expr, requestFields map[string]bool) string {
+	found := ""
+	ast.Inspect(value, func(node ast.Node) bool {
+		switch n := node.(type) {
+		case *ast.SelectorExpr:
+			if requestFields[n.Sel.Name] {
+				found = n.Sel.Name
+			}
+		case *ast.Ident:
+			if n.Name == "req" || n.Name == "request" {
+				found = n.Name
+			}
+		}
+		return found == ""
+	})
+	return found
+}

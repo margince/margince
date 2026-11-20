@@ -226,7 +226,6 @@ func (s *Store) prepareRenderedSend(ctx context.Context, origin SendOrigin, in S
 			advertising:     surface.disclosureCategory() == commsauthz.CategoryMarketing,
 			to:              ToRecipients(in.Recipients, in.Cc, in.Bcc),
 			links:           links,
-			anchor:          origin.anchor,
 			provider:        provider,
 			connection:      connection,
 		},

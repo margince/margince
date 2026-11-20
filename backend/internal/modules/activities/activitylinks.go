@@ -140,11 +140,7 @@ func insertActivityLinks(ctx context.Context, tx pgx.Tx, activityID ids.Activity
 			continue
 		}
 		seen[link] = struct{}{}
-		gate := mayAttach
-		if carried[link] {
-			gate = mayCarry
-		}
-		if err := gate(ctx, tx, link); err != nil {
+		if err := gateFor(carried, link)(ctx, tx, link); err != nil {
 			return linkRefusal(fromRequest, err)
 		}
 		column := linkColumn(link.EntityType)
@@ -176,6 +172,15 @@ func mayAttach(ctx context.Context, tx pgx.Tx, link ActivityLinkInput) error {
 	// ATTACH: the named record gains an activity that every reader of it will
 	// see, so the caller must be allowed to change the record.
 	return mayLink(ctx, tx, link, auth.EnsureAttachTarget)
+}
+
+// gateFor picks the question one link is asked: mayCarry for a link the
+// continued activity holds, mayAttach for every other.
+func gateFor(carried map[ActivityLinkInput]bool, link ActivityLinkInput) func(context.Context, pgx.Tx, ActivityLinkInput) error {
+	if carried[link] {
+		return mayCarry
+	}
+	return mayAttach
 }
 
 // mayCarry is mayAttach for a link the continued activity already holds. That

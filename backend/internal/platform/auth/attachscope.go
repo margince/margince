@@ -104,6 +104,13 @@ func AttachClauseFor(ctx context.Context, table, alias string, arg func(any) int
 	if err != nil {
 		return "", err
 	}
+	// ensureWriteAuthority admits a merge's admitted rows, so the list does too.
+	if admitted := admittedCaseMembers(ctx, table); writable != "" && len(admitted) > 0 {
+		if alias == "" {
+			alias = table
+		}
+		writable = fmt.Sprintf("(%s OR %s.id = ANY($%d))", writable, alias, arg(admitted))
+	}
 	switch {
 	case visible == "":
 		return writable, nil

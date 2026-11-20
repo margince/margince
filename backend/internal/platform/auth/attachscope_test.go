@@ -9,10 +9,12 @@ package auth
 import (
 	"context"
 	"errors"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -63,6 +65,28 @@ func TestTheSystemPrincipalAttachesWithoutNarrowing(t *testing.T) {
 	system := principal.Principal{Type: principal.PrincipalSystem, ID: "system:test"}
 	if got := attachClause(t, system, tableContact); got != "" {
 		t.Errorf("the system principal's attach clause narrows: %s", got)
+	}
+}
+
+// A merge admission lets ensureWriteAuthority change its rows, so the clause
+// a list renders admits them too.
+func TestAnAttachClauseAdmitsAMergesAdmittedRows(t *testing.T) {
+	left, right := ids.NewV7(), ids.NewV7()
+	ctx, err := WithDuplicatePairAdmission(principal.WithActor(context.Background(), human(principal.RowScopeOwn)), tableContact, left, right)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	clause, err := AttachClauseFor(ctx, tableContact, "t", arg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(clause, "t.id = ANY(") || !slices.ContainsFunc(args, func(v any) bool {
+		admitted, ok := v.([]ids.UUID)
+		return ok && slices.Equal(admitted, []ids.UUID{left, right})
+	}) {
+		t.Errorf("the attach clause leaves out the admitted rows:\n%s", clause)
 	}
 }
 
