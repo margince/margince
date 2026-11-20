@@ -761,6 +761,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | Gate | Hardness | What it holds |
 |---|---|---|
 | `audiencebinding_test.go` | H2 | _(no doc comment)_ |
+| `auditwritescensus_test.go` | H2 | The audit write census resolves, refuses or ignores each shape it has met. |
 | `bookingdisplay_test.go` | H2 | A projection may append display values, but cannot pass addresses to another call or retain them in another assignment for a later send. |
 | `deallinewritersplanted_test.go` | H2 | A census must reject new writers and misleading guard paths, even when they sit outside the files that introduced the line-value engine. |
 | `declinedwritehelpers_test.go` | H2 | _(no doc comment)_ |

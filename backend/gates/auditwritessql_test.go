@@ -23,13 +23,12 @@ var auditColumnList = regexp.MustCompile(`(?s)^"?\s*\(([^)]*)\)`)
 // list.
 var auditInsertAnywhere = regexp.MustCompile(`(?is)INSERT\s+INTO\s+(?:"?public"?\.)?"?audit_log\b`)
 
-// auditMigrationTypes reads the record types the migrations' own audit rows name,
-// by the file that names them. A statement whose entity_type holds no literal is
-// returned as opaque.
-func auditMigrationTypes(t *testing.T) (types map[string]string, opaque []string) {
+// auditMigrationTypes reads the record types the migrations under root name in
+// their own audit rows, by the file that names them. A statement whose
+// entity_type holds no literal is returned as opaque.
+func auditMigrationTypes(t *testing.T, root string) (types map[string]string, opaque []string) {
 	t.Helper()
 	types = map[string]string{}
-	root := filepath.Join(gatekit.ModuleRoot(t), "migrations")
 	err := gatekit.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
 		if err != nil || entry.IsDir() || !strings.HasSuffix(path, ".up.sql") || strings.Contains(path, "testdata") {
 			return err

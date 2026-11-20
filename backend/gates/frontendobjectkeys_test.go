@@ -178,15 +178,24 @@ func tsTopLevel(text string) []string {
 // it fails.
 func tsKeySet(t *testing.T, entries map[string]string) map[string]bool {
 	t.Helper()
-	keys := map[string]bool{}
+	keys, spreads := tsKeys(entries)
+	for _, spread := range spreads {
+		t.Errorf("a compared word map spreads %s, whose keys this gate does not read: write the entries out", spread)
+	}
+	return keys
+}
+
+// tsKeys splits a word map's entries into its keys and the names it spreads.
+func tsKeys(entries map[string]string) (keys map[string]bool, spreads []string) {
+	keys = map[string]bool{}
 	for key := range entries {
-		if strings.HasPrefix(key, "...") {
-			t.Errorf("a compared word map spreads %s, whose keys this gate does not read: write the entries out", key[3:])
+		if spread, isSpread := strings.CutPrefix(key, "..."); isSpread {
+			spreads = append(spreads, spread)
 			continue
 		}
 		keys[key] = true
 	}
-	return keys
+	return keys, spreads
 }
 
 // wordsMatchVocabulary fails each Go value with no frontend key, and each

@@ -13,6 +13,7 @@ package gates
 
 import (
 	"cmp"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -82,7 +83,7 @@ func declaredEntities(keep func(reach.Table) bool) []string {
 func retentionDispatchObjects(t *testing.T) []string {
 	t.Helper()
 	var names []string
-	for _, pair := range auditPackageMapKeys(t, "backend/internal/modules/privacy", "retentionActions") {
+	for _, pair := range repoAuditCensus(t).packageMapKeys(t, privacyDir, "retentionActions") {
 		object, _, _ := strings.Cut(pair, "/")
 		names = append(names, object)
 	}
@@ -125,7 +126,7 @@ func TestEveryAuditedRecordTypeHasWordsInTheAuditLog(t *testing.T) {
 			t.Errorf("runtimeTypedAuditWriters names %s, whose audit call no longer takes its record type at runtime", key)
 		}
 	}
-	direct := directAuditInserts(t)
+	direct := repoAuditCensus(t).directInserts()
 	for _, at := range direct.others {
 		t.Errorf("%s sends its own INSERT into audit_log, which this census does not follow: call a storekit door", at)
 	}
@@ -136,7 +137,7 @@ func TestEveryAuditedRecordTypeHasWordsInTheAuditLog(t *testing.T) {
 	if !direct.seedSeen {
 		t.Errorf("no INSERT into audit_log was found in storekit's %s, so the direct-INSERT check has stopped seeing it", auditSeed)
 	}
-	migrated, opaque := auditMigrationTypes(t)
+	migrated, opaque := auditMigrationTypes(t, filepath.Join(gatekit.ModuleRoot(t), "migrations"))
 	if len(migrated) == 0 {
 		t.Error("read no audit row out of the migrations, so their INSERTs are no longer seen")
 	}

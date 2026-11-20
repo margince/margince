@@ -131,43 +131,55 @@ var (
 	auditCensusFailed string
 )
 
-// auditWriteSites answers every Go call that writes an audit row, read once for
-// the whole gate run.
-func auditWriteSites(t *testing.T) []auditWriteSite {
+// repoAuditCensus is the census of this repository, read once for the whole
+// gate run.
+func repoAuditCensus(t *testing.T) *auditCensus {
 	t.Helper()
 	auditCensusOnce.Do(func() {
-		c := &auditCensus{
-			repo: filepath.Join(gatekit.ModuleRoot(t), ".."), funcs: map[auditFuncKey]*ast.FuncDecl{},
-			srcOf: map[*ast.FuncDecl]*auditSource{}, consts: map[string]map[string]auditConst{},
-			structs: map[string][]string{}, fields: map[string][]auditLiteralField{}, wholeWrites: map[string]bool{},
-			importers: map[string]map[string]bool{},
-			calls:     map[string][]auditCall{}, writers: map[auditFuncKey]map[int]bool{},
-			typeNames: map[string]bool{}, methods: map[string][]auditFuncKey{}, fieldTypes: map[string]auditConst{},
-			mutated: map[string]bool{}, pkgValues: map[string]bool{},
-		}
-		auditCensusFailed = c.load()
-		for _, src := range c.sources {
-			c.indexBodies(src)
-		}
-		if auditCensusFailed == "" {
-			auditCensusFailed = c.grow()
-		}
-		if auditCensusFailed == "" {
-			c.writersUsedAsValues()
-		}
-		auditCensusRead = c
+		auditCensusRead, auditCensusFailed = newAuditCensus(filepath.Join(gatekit.ModuleRoot(t), ".."))
 	})
 	if auditCensusFailed != "" {
 		t.Fatal(auditCensusFailed)
 	}
-	return auditCensusRead.sites
+	return auditCensusRead
 }
 
-// auditPackageMapKeys reads the string keys of a package-level map literal.
-func auditPackageMapKeys(t *testing.T, dir, name string) []string {
+// auditWriteSites answers every Go call in this repository that writes an
+// audit row.
+func auditWriteSites(t *testing.T) []auditWriteSite {
 	t.Helper()
-	auditWriteSites(t)
-	constant, ok := auditCensusRead.consts[dir][name]
+	return repoAuditCensus(t).sites
+}
+
+// newAuditCensus reads the Go code under repo and grows its writers from
+// storekit's seed. A census that could not be read says why.
+func newAuditCensus(repo string) (*auditCensus, string) {
+	c := &auditCensus{
+		repo: repo, funcs: map[auditFuncKey]*ast.FuncDecl{},
+		srcOf: map[*ast.FuncDecl]*auditSource{}, consts: map[string]map[string]auditConst{},
+		structs: map[string][]string{}, fields: map[string][]auditLiteralField{}, wholeWrites: map[string]bool{},
+		importers: map[string]map[string]bool{},
+		calls:     map[string][]auditCall{}, writers: map[auditFuncKey]map[int]bool{},
+		typeNames: map[string]bool{}, methods: map[string][]auditFuncKey{}, fieldTypes: map[string]auditConst{},
+		mutated: map[string]bool{}, pkgValues: map[string]bool{},
+	}
+	if failed := c.load(); failed != "" {
+		return c, failed
+	}
+	for _, src := range c.sources {
+		c.indexBodies(src)
+	}
+	if failed := c.grow(); failed != "" {
+		return c, failed
+	}
+	c.writersUsedAsValues()
+	return c, ""
+}
+
+// packageMapKeys reads the string keys of a package-level map literal.
+func (c *auditCensus) packageMapKeys(t *testing.T, dir, name string) []string {
+	t.Helper()
+	constant, ok := c.consts[dir][name]
 	lit, isLiteral := constant.expr.(*ast.CompositeLit)
 	if !ok || !isLiteral {
 		t.Fatalf("%s no longer declares %s as a map literal", dir, name)
@@ -177,7 +189,7 @@ func auditPackageMapKeys(t *testing.T, dir, name string) []string {
 		kv, isPair := elt.(*ast.KeyValueExpr)
 		values, resolved := []string(nil), false
 		if isPair {
-			values, resolved = auditCensusRead.resolve(constant.src, nil, nil, kv.Key, 0)
+			values, resolved = c.resolve(constant.src, nil, nil, kv.Key, 0)
 		}
 		if !resolved {
 			t.Fatalf("%s.%s has a key this gate cannot read: %s", dir, name, types.ExprString(elt))
@@ -631,7 +643,8 @@ func (c *auditCensus) match(src *auditSource, fn *ast.FuncDecl, fun ast.Expr, wr
 				return !writer.method && dir == writer.dir, 0
 			}
 		}
-		if typeDir, typeName, typed := c.exprType(src, fn, fun.X, 0); typed && c.structs[typeDir+"."+typeName] != nil {
+		typeDir, typeName, typed := c.exprType(src, fn, fun.X, 0)
+		if _, isStruct := c.structs[typeDir+"."+typeName]; typed && isStruct {
 			return writer.method && writer.dir == typeDir && writer.recv == typeName, 0
 		}
 		// A generated handler calls a store through an interface whose method

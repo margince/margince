@@ -34,7 +34,6 @@ package gates
 import (
 	"go/ast"
 	"go/token"
-	"path/filepath"
 	"slices"
 	"sort"
 	"strconv"
@@ -42,7 +41,6 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/corereach"
-	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // scrubbedEntityTypes is what the tree tombstones today, and the list a reader
@@ -117,11 +115,11 @@ var scrubbedEntityTypes = map[string]bool{
 
 func TestEveryScrubbedRecordTypeIsOneAReaderOfTheBoundaryExpects(t *testing.T) {
 	t.Parallel()
-	found, opaque, unreadVerbs := scrubbedTypesInPrivacy(t)
+	found, opaque, unreadVerbs := repoAuditCensus(t).scrubbedTypes(t)
 	for _, site := range opaque {
 		t.Errorf("%s stamps a scrub tombstone whose record type is not a literal, so "+
 			"this census cannot read it and would pass without ever seeing it.\n"+
-			"Spell the entity type at the call site, or extend scrubbedTypesInPrivacy "+
+			"Spell the entity type at the call site, or extend scrubbedTypes "+
 			"to resolve it.", site)
 	}
 	for _, site := range unreadVerbs {
@@ -151,36 +149,35 @@ func TestEveryScrubbedRecordTypeIsOneAReaderOfTheBoundaryExpects(t *testing.T) {
 	}
 }
 
-// scrubbedTypesInPrivacy reads the record type of every scrub tombstone the
+// scrubbedTypes reads the record type of every scrub tombstone the
 // privacy module writes, from the audit write census (auditwrites_test.go). A
 // privacy write whose verb it cannot read is returned apart.
 //
 // Three sites take their type at runtime from a declaration. redactDeclaredTables
 // stamps the declared tables' types, an extension row's table is the ext_*
 // class, and the retention pass reads its own dispatch table.
-func scrubbedTypesInPrivacy(t *testing.T) (found map[string]bool, opaque, unreadVerbs []string) {
+func (c *auditCensus) scrubbedTypes(t *testing.T) (found map[string]bool, opaque, unreadVerbs []string) {
 	t.Helper()
-	privacyDir := filepath.ToSlash(filepath.Join("backend", "internal", "modules", "privacy"))
-	wrappers := privacyScrubWrappers(t)
+	wrappers := c.privacyScrubWrappers()
 	found = map[string]bool{}
-	for _, site := range auditWriteSites(t) {
-		viaWrapper := callsPrivacyWrapper(site, privacyDir, wrappers)
+	for _, site := range c.sites {
+		viaWrapper := c.callsPrivacyWrapper(site, wrappers)
 		if site.asValue || (site.src.dir != privacyDir && !viaWrapper) {
 			continue
 		}
 		if site.fn == "apply" && strings.HasSuffix(site.src.path, "/retentionactions.go") {
-			for _, object := range retentionScrubObjects(t) {
+			for _, object := range c.retentionScrubObjects(t) {
 				found[object] = true
 			}
 			continue
 		}
 		scrub, readable := viaWrapper, true
 		if !viaWrapper {
-			scrub, readable = auditCensusRead.actionScrubs(site.at, site.writer, 0)
+			scrub, readable = c.actionScrubs(site.at, site.writer, 0)
 		}
 		switch {
 		case !scrub:
-		case isExtensionEntity(site):
+		case c.isExtensionEntity(site):
 			// A row of an extension's own table is that class whatever its verb.
 			found[extensionScrubbedTypes] = true
 		case !readable:
@@ -204,10 +201,10 @@ func scrubbedTypesInPrivacy(t *testing.T) (found map[string]bool, opaque, unread
 
 // retentionScrubObjects are the objects the retention pass scrubs, by the
 // verb each pair in its dispatch table names.
-func retentionScrubObjects(t *testing.T) []string {
+func (c *auditCensus) retentionScrubObjects(t *testing.T) []string {
 	t.Helper()
 	var objects []string
-	for _, pair := range auditPackageMapKeys(t, "backend/internal/modules/privacy", "retentionActions") {
+	for _, pair := range c.packageMapKeys(t, privacyDir, "retentionActions") {
 		object, verb, _ := strings.Cut(pair, "/")
 		if isScrubVerb(verb) {
 			objects = append(objects, object)
@@ -280,14 +277,14 @@ func (c *auditCensus) handsOn(decl *ast.FuncDecl, writer auditFuncKey, arg ast.E
 
 // callsPrivacyWrapper reports whether a site, in any package, calls one of
 // privacy's scrub wrappers.
-func callsPrivacyWrapper(site auditWriteSite, privacyDir string, wrappers map[string]bool) bool {
+func (c *auditCensus) callsPrivacyWrapper(site auditWriteSite, wrappers map[string]bool) bool {
 	name := auditCalleeName(site.call)
 	if !wrappers[name] {
 		return false
 	}
-	candidates := append([]auditFuncKey{{dir: privacyDir, name: name}}, auditCensusRead.methods[privacyDir+"."+name]...)
+	candidates := append([]auditFuncKey{{dir: privacyDir, name: name}}, c.methods[privacyDir+"."+name]...)
 	for _, key := range candidates {
-		if matched, _ := auditCensusRead.match(site.src, site.at.fn, unindexed(site.call.Fun), key); matched {
+		if matched, _ := c.match(site.src, site.at.fn, unindexed(site.call.Fun), key); matched {
 			return true
 		}
 	}
@@ -310,7 +307,7 @@ const (
 // isExtensionEntity reports whether a site's record type is an extension
 // table's name. Every value it resolves to is one, or it is a field of a value
 // an extension package types. The named site's cleared row Table is one too.
-func isExtensionEntity(site auditWriteSite) bool {
+func (c *auditCensus) isExtensionEntity(site auditWriteSite) bool {
 	if len(site.types) > 0 {
 		return !slices.ContainsFunc(site.types, func(entity string) bool { return !strings.HasPrefix(entity, "ext_") })
 	}
@@ -321,7 +318,7 @@ func isExtensionEntity(site auditWriteSite) bool {
 	if site.src.path == extensionClearPath && funcName(site.at.fn) == extensionClearWriter && sel.Sel.Name == "Table" {
 		return true
 	}
-	typeDir, _, typed := auditCensusRead.exprType(site.src, site.at.fn, sel.X, 0)
+	typeDir, _, typed := c.exprType(site.src, site.at.fn, sel.X, 0)
 	return typed && strings.HasPrefix(typeDir, "backend/pkg/extension/")
 }
 
@@ -352,28 +349,17 @@ func carriesScrubVerb(call *ast.CallExpr) bool {
 	return false
 }
 
+// privacyDir is the privacy module, whose audit writes this census reads.
+const privacyDir = "backend/internal/modules/privacy"
+
 // privacyScrubWrappers are the privacy functions that carry the verb inside
 // themselves, directly or through another such function. Each call to one
 // stamps a tombstone, and its arguments name only the record type.
-func privacyScrubWrappers(t *testing.T) map[string]bool {
-	t.Helper()
-	dir := filepath.Join(gatekit.ModuleRoot(t), "internal", "modules", "privacy")
-	entries, err := gatekit.ReadDir(dir)
-	if err != nil {
-		t.Fatalf("reading the privacy module: %v", err)
-	}
+func (c *auditCensus) privacyScrubWrappers() map[string]bool {
 	var funcs []*ast.FuncDecl
-	for _, entry := range entries {
-		name := entry.Name()
-		if entry.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
-			continue
-		}
-		file, err := gatekit.ParseFile(filepath.Join(dir, name), 0)
-		if err != nil {
-			t.Fatalf("parsing %s: %v", name, err)
-		}
-		for _, decl := range file.Decls {
-			if fn, ok := decl.(*ast.FuncDecl); ok && fn.Body != nil {
+	for _, src := range c.sources {
+		for _, decl := range src.file.Decls {
+			if fn, ok := decl.(*ast.FuncDecl); ok && fn.Body != nil && src.dir == privacyDir {
 				funcs = append(funcs, fn)
 			}
 		}

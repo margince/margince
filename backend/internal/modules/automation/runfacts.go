@@ -8,7 +8,6 @@ package automation
 
 import (
 	"context"
-	"encoding/json"
 	"strings"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -52,7 +51,7 @@ func runActionResult(rec AutomationRunRecord) string {
 // runTarget is the record the run acted on: the first planned action's target.
 // A run that failed before planning has none.
 func runTarget(rec AutomationRunRecord) (datasource.EntityRef, bool) {
-	actions := traceActions(rec.Planned)
+	actions := rec.Planned
 	if len(actions) == 0 || actions[0].Target.ID == ids.Nil {
 		return datasource.EntityRef{}, false
 	}
@@ -68,20 +67,12 @@ func runTargetRef(rec AutomationRunRecord) string {
 	return string(target.Type) + ":" + target.ID.String()
 }
 
-func traceActions(trace json.RawMessage) []workflow.Action {
-	var actions []workflow.Action
-	if err := json.Unmarshal(trace, &actions); err != nil {
-		return nil
-	}
-	return actions
-}
-
 // runActionKinds lists the distinct action kinds of a run trace, in trace
 // order. A deduplicated create is its own entry: a sibling rule made that write.
-func runActionKinds(trace json.RawMessage) []string {
+func runActionKinds(trace []workflow.Action) []string {
 	var kinds []string
 	seen := map[string]bool{}
-	for _, a := range traceActions(trace) {
+	for _, a := range trace {
 		kind := string(a.Kind)
 		if a.Deduplicated {
 			kind += " (deduplicated)"
@@ -97,7 +88,7 @@ func runActionKinds(trace json.RawMessage) []string {
 // performedActions are the actions a run wrote, or for a queued run the ones
 // it queued. A create a sibling rule already made is not this run's write.
 func performedActions(rec AutomationRunRecord) []workflow.Action {
-	var trace json.RawMessage
+	var trace []workflow.Action
 	switch rec.Status {
 	case runStatusApplied:
 		trace = rec.Applied
@@ -105,7 +96,7 @@ func performedActions(rec AutomationRunRecord) []workflow.Action {
 		trace = rec.Planned
 	}
 	var performed []workflow.Action
-	for _, a := range traceActions(trace) {
+	for _, a := range trace {
 		if !a.Deduplicated {
 			performed = append(performed, a)
 		}

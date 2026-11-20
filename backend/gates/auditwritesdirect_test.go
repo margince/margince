@@ -13,16 +13,14 @@ import (
 	"slices"
 	"strconv"
 	"strings"
-	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// sqlRunners are the pgx calls that run the SQL they are handed.
-var sqlRunners = map[string]bool{
-	"Exec": true, "ExecContext": true, "Query": true, "QueryContext": true, "QueryRow": true,
-	"QueryRowContext": true, "Queue": true, "Prepare": true, "PrepareContext": true,
-}
+// sqlArgument is the position of the SQL in each pgx call that runs it: on a
+// Tx, Conn or Pool, and Batch.Queue. The tree calls no database/sql, so a string
+// handed to one of its forms reaches no entry here and is reported as lost.
+var sqlArgument = map[string]int{"Exec": 1, "Query": 1, "QueryRow": 1, "Prepare": 2, "Queue": 0}
 
 // sqlDescribers are the calls that put a string in an error or log line, which
 // runs nothing.
@@ -56,12 +54,9 @@ type auditRunAt struct {
 	at  token.Pos
 }
 
-// directAuditInserts follows every string that inserts into audit_log, and
+// directInserts follows every string that inserts into audit_log, and
 // every CopyFrom, to the call that runs it.
-func directAuditInserts(t *testing.T) auditDirectWrites {
-	t.Helper()
-	auditWriteSites(t)
-	c := auditCensusRead
+func (c *auditCensus) directInserts() auditDirectWrites {
 	trace := &auditInsertTrace{c: c, followed: map[string]bool{}}
 	for _, src := range c.sources {
 		ast.PreorderStack(src.file, nil, func(n ast.Node, stack []ast.Node) bool {
@@ -193,9 +188,13 @@ func (tr *auditInsertTrace) follow(src *auditSource, use ast.Node, stack []ast.N
 			}
 		case *ast.CallExpr:
 			name := auditCalleeName(parent)
+			sqlAt, runs := sqlArgument[name]
 			switch {
 			case parent.Fun == use:
-			case sqlRunners[name]:
+			case runs && slices.IndexFunc(parent.Args, func(arg ast.Expr) bool { return arg == use }) != sqlAt:
+				// A bound value is data the statement stores, not SQL it runs.
+				return
+			case runs:
 				tr.runs = append(tr.runs, auditRunAt{src: src, fn: enclosingFuncDecl(stack[:i]), at: parent.Pos()})
 				return
 			case sqlDescribers[name] || isErrorsNew(parent):
